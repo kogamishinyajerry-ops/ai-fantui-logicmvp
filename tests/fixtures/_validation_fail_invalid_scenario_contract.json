@@ -1,0 +1,15 @@
+{
+  "contract_name": "well_harness.validation.fail_invalid_scenario_choice",
+  "command": [
+    "run",
+    "nominal-deploy-typo",
+    "--format",
+    "json"
+  ],
+  "schema": {
+    "name": "well_harness.debug",
+    "schema_version": "1.0",
+    "view": "timeline",
+    "scenario_name": "nominal-deploy-typo"
+  }
+}

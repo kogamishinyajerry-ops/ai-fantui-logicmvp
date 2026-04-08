@@ -1,0 +1,59 @@
+{
+  "asset_name": "well_harness.validation_schema_checker_report.v1",
+  "command": [
+    "--format",
+    "json"
+  ],
+  "required_top_level_fields": [
+    "status",
+    "schema_path",
+    "asset_path",
+    "results"
+  ],
+  "schema_path": "docs/json_schema/validation_schema_runner_report_v1.schema.json",
+  "asset_path": "tests/fixtures/validation_schema_runner_report_asset_v1.json",
+  "required_result_fields": [
+    "scenario",
+    "payload_status",
+    "validation_status",
+    "payload_exit_code"
+  ],
+  "pass": {
+    "expected_status": "pass",
+    "expected_result_count": 3,
+    "expected_validation_status": "pass",
+    "expected_scenarios": [
+      "pass",
+      "skip",
+      "fail"
+    ],
+    "expected_scenario_payload_statuses": {
+      "pass": "pass",
+      "skip": "skip",
+      "fail": "fail"
+    }
+  },
+  "skip": {
+    "env": {
+      "WELL_HARNESS_FORCE_JSONSCHEMA_MISSING": "1"
+    },
+    "expected_status": "skip",
+    "expected_result_count": 0,
+    "expected_reason_contains": "optional dependency 'jsonschema' is not installed"
+  },
+  "fail": {
+    "env": {
+      "WELL_HARNESS_FORCE_SCHEMA_PATH": "tests/fixtures/_missing_validation_schema_checker_schema_for_asset.json"
+    },
+    "expected_status": "fail",
+    "expected_failure_kind": "status_mismatch",
+    "expected_result_count": 1,
+    "expected_result_fields": {
+      "scenario": "pass",
+      "payload_status": "fail",
+      "validation_status": "fail",
+      "expected_payload_status": "pass",
+      "payload_exit_code": 1
+    }
+  }
+}

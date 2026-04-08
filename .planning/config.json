@@ -1,0 +1,10 @@
+{
+  "workflow": "gsd",
+  "profile": "balanced",
+  "research": true,
+  "plan_checker": true,
+  "parallelization": true,
+  "nyquist_validation": true,
+  "commit_docs": true,
+  "manual_gate": "Opus 4.6"
+}

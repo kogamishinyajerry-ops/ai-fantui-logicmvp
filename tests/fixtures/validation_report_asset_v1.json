@@ -1,0 +1,119 @@
+{
+  "contract_name": "well_harness.validation_report.v1",
+  "required_top_level_fields": [
+    "status",
+    "schema_path",
+    "results"
+  ],
+  "schema_path": "docs/json_schema/well_harness_debug_v1.schema.json",
+  "required_result_fields": [
+    "contract_name",
+    "contract_path",
+    "scenario_name",
+    "view",
+    "status"
+  ],
+  "scenarios": [
+    {
+      "name": "pass",
+      "args": [
+        "--format",
+        "json"
+      ],
+      "expected_status": "pass",
+      "expected_result_count": 4,
+      "expected_result_status": "pass",
+      "expected_views": [
+        "diagnose",
+        "events",
+        "explain",
+        "timeline"
+      ],
+      "expected_contract_paths": [
+        "tests/fixtures/diagnose_contract_v1.json",
+        "tests/fixtures/events_contract_v1.json",
+        "tests/fixtures/explain_contract_v1.json",
+        "tests/fixtures/timeline_contract_v1.json"
+      ]
+    },
+    {
+      "name": "skip",
+      "args": [
+        "--format",
+        "json"
+      ],
+      "env": {
+        "WELL_HARNESS_FORCE_JSONSCHEMA_MISSING": "1"
+      },
+      "expected_status": "skip",
+      "expected_result_count": 0,
+      "expected_reason_contains": "optional dependency 'jsonschema' is not installed"
+    },
+    {
+      "name": "fail_cli",
+      "args": [
+        "--format",
+        "json"
+      ],
+      "env": {
+        "WELL_HARNESS_FORCE_CONTRACT_PATH": "tests/fixtures/_validation_fail_cli_contract.json"
+      },
+      "expected_status": "fail",
+      "expected_failure_kind": "cli_exit",
+      "expected_result_count": 1,
+      "expected_result_status": "fail",
+      "expected_result_fields": {
+        "contract_name": "well_harness.validation.fail_cli",
+        "contract_path": "tests/fixtures/_validation_fail_cli_contract.json",
+        "scenario_name": "nominal-deploy",
+        "view": "explain",
+        "status": "fail",
+        "failure_kind": "cli_exit",
+        "detail": "cli_error.missing_logic_for_explain",
+        "exit_code": 2
+      }
+    },
+    {
+      "name": "fail_schema_unavailable",
+      "args": [
+        "--format",
+        "json"
+      ],
+      "env": {
+        "WELL_HARNESS_FORCE_SCHEMA_PATH": "tests/fixtures/_missing_validation_report_schema_for_asset.json"
+      },
+      "expected_status": "fail",
+      "expected_schema_path": "tests/fixtures/_missing_validation_report_schema_for_asset.json",
+      "expected_failure_kind": "schema_unavailable",
+      "expected_result_count": 0,
+      "expected_reason_contains": "_missing_validation_report_schema_for_asset.json"
+    },
+    {
+      "name": "fail_schema_validation",
+      "args": [
+        "--format",
+        "json"
+      ],
+      "env": {
+        "WELL_HARNESS_FORCE_SCHEMA_PATH": "tests/fixtures/_validation_mismatch_schema.json",
+        "WELL_HARNESS_FORCE_CONTRACT_PATH": "tests/fixtures/timeline_contract_v1.json"
+      },
+      "expected_status": "fail",
+      "expected_schema_path": "tests/fixtures/_validation_mismatch_schema.json",
+      "expected_failure_kind": "schema_validation",
+      "expected_result_count": 1,
+      "expected_result_status": "fail",
+      "expected_result_fields": {
+        "contract_name": "well_harness.timeline.v1",
+        "contract_path": "tests/fixtures/timeline_contract_v1.json",
+        "scenario_name": "nominal-deploy",
+        "view": "timeline",
+        "status": "fail",
+        "failure_kind": "schema_validation",
+        "errors": [
+          "$: 'impossible_top_level_field' is a required property"
+        ]
+      }
+    }
+  ]
+}

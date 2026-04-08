@@ -1,0 +1,21 @@
+{
+  "contract_name": "well_harness.validation.fail_invalid_logic_choice",
+  "command": [
+    "run",
+    "nominal-deploy",
+    "--view",
+    "explain",
+    "--logic",
+    "logic9",
+    "--time",
+    "1.8",
+    "--format",
+    "json"
+  ],
+  "schema": {
+    "name": "well_harness.debug",
+    "schema_version": "1.0",
+    "view": "explain",
+    "scenario_name": "nominal-deploy"
+  }
+}

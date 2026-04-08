@@ -1,0 +1,17 @@
+{
+  "contract_name": "well_harness.validation.fail_cli",
+  "command": [
+    "run",
+    "nominal-deploy",
+    "--view",
+    "explain",
+    "--format",
+    "json"
+  ],
+  "schema": {
+    "name": "well_harness.debug",
+    "schema_version": "1.0",
+    "view": "explain",
+    "scenario_name": "nominal-deploy"
+  }
+}

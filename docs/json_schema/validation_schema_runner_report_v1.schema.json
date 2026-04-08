@@ -1,0 +1,263 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/validation_schema_runner_report_v1.schema.json",
+  "title": "well_harness validation schema runner report v1",
+  "description": "Machine-readable structure reference for tools/validate_validation_report_schema.py --format json.",
+  "type": "object",
+  "x-well-harness-validation-schema-runner-report": {
+    "schema_name": "well_harness.validation_schema_runner_report",
+    "schema_version": "1.0",
+    "top_level_fields": [
+      "status",
+      "schema_path",
+      "asset_path",
+      "results"
+    ],
+    "result_fields": [
+      "scenario",
+      "report_status",
+      "validation_status",
+      "report_exit_code"
+    ],
+    "report_statuses": [
+      "pass",
+      "skip",
+      "fail"
+    ],
+    "validation_statuses": [
+      "pass",
+      "fail"
+    ],
+    "failure_kinds": [
+      "schema_unavailable",
+      "report_parse",
+      "schema_validation",
+      "status_mismatch",
+      "exit_code_mismatch"
+    ]
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/passReport"
+    },
+    {
+      "$ref": "#/$defs/skipReport"
+    },
+    {
+      "$ref": "#/$defs/failReport"
+    }
+  ],
+  "$defs": {
+    "reportBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "schema_path",
+        "asset_path",
+        "results"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "pass",
+            "skip",
+            "fail"
+          ]
+        },
+        "schema_path": {
+          "type": "string"
+        },
+        "asset_path": {
+          "type": "string"
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/reportResult"
+          }
+        },
+        "failure_kind": {
+          "$ref": "#/$defs/failureKind"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "resultBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scenario",
+        "report_status",
+        "validation_status"
+      ],
+      "properties": {
+        "scenario": {
+          "type": "string"
+        },
+        "report_status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "pass",
+            "skip",
+            "fail",
+            null
+          ]
+        },
+        "validation_status": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "report_exit_code": {
+          "type": "integer"
+        },
+        "expected_report_status": {
+          "enum": [
+            "pass",
+            "skip",
+            "fail"
+          ]
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "passResult": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/resultBase"
+        },
+        {
+          "required": [
+            "report_exit_code"
+          ],
+          "properties": {
+            "validation_status": {
+              "const": "pass"
+            }
+          }
+        }
+      ]
+    },
+    "failResult": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/resultBase"
+        },
+        {
+          "properties": {
+            "validation_status": {
+              "const": "fail"
+            }
+          }
+        }
+      ]
+    },
+    "reportResult": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/passResult"
+        },
+        {
+          "$ref": "#/$defs/failResult"
+        }
+      ]
+    },
+    "failureKind": {
+      "enum": [
+        "schema_unavailable",
+        "report_parse",
+        "schema_validation",
+        "status_mismatch",
+        "exit_code_mismatch"
+      ]
+    },
+    "passReport": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/reportBase"
+        },
+        {
+          "properties": {
+            "status": {
+              "const": "pass"
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/passResult"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "skipReport": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/reportBase"
+        },
+        {
+          "required": [
+            "reason"
+          ],
+          "properties": {
+            "status": {
+              "const": "skip"
+            },
+            "results": {
+              "type": "array",
+              "maxItems": 0
+            },
+            "reason": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "failReport": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/reportBase"
+        },
+        {
+          "required": [
+            "failure_kind"
+          ],
+          "properties": {
+            "status": {
+              "const": "fail"
+            },
+            "failure_kind": {
+              "$ref": "#/$defs/failureKind"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/failResult"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

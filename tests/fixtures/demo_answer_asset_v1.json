@@ -1,0 +1,209 @@
+{
+  "name": "well_harness.demo_answer.asset",
+  "version": "1.0",
+  "description": "Lightweight regression contract for deterministic demo answers. This is not a JSON Schema.",
+  "required_answer_fields": [
+    "intent",
+    "matched_node",
+    "target_logic",
+    "evidence",
+    "outcome",
+    "risks"
+  ],
+  "cases": [
+    {
+      "prompt": "触发 logic3 会发生什么",
+      "intent": "trigger_node",
+      "matched_node": "logic3",
+      "target_logic": "logic3",
+      "required_evidence_fragments": [
+        "nominal-deploy: logic3 在约 1.9s 触发。",
+        "changed_conditions: tra_deg -7.0->-14.0 <= -11.74",
+        "controller_outputs.eec_deploy_cmd False->True",
+        "events@1.9s: logic3_active False->True; eec_deploy_cmd False->True; pls_power_cmd False->True; pdu_motor_cmd False->True"
+      ],
+      "required_outcome_fragments": [
+        "logic3 触发后，EEC deploy、PLS power、PDU motor 命令在同一 trace window 置为 1。",
+        "logic3 不是 throttle lock release"
+      ],
+      "required_possible_causes_fragments": [
+        "failed_conditions: tra_deg"
+      ],
+      "required_changes_fragments": [
+        "不需要修改 controller.py"
+      ],
+      "required_risk_fragments": [
+        "simplified first-cut plant"
+      ]
+    },
+    {
+      "prompt": "触发 THR_LOCK 会发生什么",
+      "intent": "trigger_node",
+      "matched_node": "thr_lock",
+      "target_logic": null,
+      "required_evidence_fragments": [
+        "nominal-deploy: thr_lock 在约 5.0s 触发。",
+        "events@5.0s: deploy_90_percent_vdt False->True; logic4_active False->True; throttle_lock_release_cmd False->True",
+        "upstream_status: name=logic4_active source=logic_diagnosis observed=True time=5.0s",
+        "upstream_status: name=throttle_lock_release_cmd source=event observed=True time=5.0s"
+      ],
+      "required_outcome_fragments": [
+        "THR_LOCK release command 是当前 deploy demo 链路的末端释放命令。",
+        "它是 logic4 之后的末端释放命令节点"
+      ],
+      "required_possible_causes_fragments": [
+        "THR_LOCK 依赖 logic4 / deploy_90_percent_vdt"
+      ],
+      "required_changes_fragments": [
+        "不需要修改 controller.py"
+      ],
+      "required_risk_fragments": [
+        "simplified first-cut plant"
+      ]
+    },
+    {
+      "prompt": "为什么 logic4 还没满足",
+      "intent": "blocked_state",
+      "matched_node": "logic4",
+      "target_logic": "logic4",
+      "required_evidence_fragments": [
+        "node=logic4; category=logic; checkpoint=4.9s; eventual_trigger=5.0s。",
+        "blocked_status: name=deploy_90_percent_vdt source=explain_condition observed=False checkpoint=4.9s value=False required=True",
+        "blocked_status: name=tra_deg source=explain_condition observed=True checkpoint=4.9s value=-14 required=between_exclusive -32..0",
+        "logic4 explain@4.9s failed_conditions: deploy_90_percent_vdt。",
+        "events@5.0s: deploy_90_percent_vdt False->True; logic4_active False->True; throttle_lock_release_cmd False->True"
+      ],
+      "required_outcome_fragments": [
+        "checkpoint=4.9s 时",
+        "deploy_90_percent_vdt 仍未满足",
+        "5.0s deploy_90_percent_vdt 变为 1"
+      ],
+      "required_possible_causes_fragments": [
+        "DeployController.explain(logic4)",
+        "不是另一套控制真值"
+      ],
+      "required_changes_fragments": [
+        "不修改 controller.py"
+      ],
+      "required_risk_fragments": [
+        "blocked-state comparison 只说明 nominal-deploy 中触发前最近一拍的 evidence 缺口",
+        "simplified first-cut plant"
+      ]
+    },
+    {
+      "prompt": "为什么 THR_LOCK 还没释放",
+      "intent": "blocked_state",
+      "matched_node": "thr_lock",
+      "target_logic": "logic4",
+      "required_evidence_fragments": [
+        "node=thr_lock; category=command; checkpoint=4.9s; eventual_trigger=5.0s。",
+        "blocked_status: name=deploy_90_percent_vdt source=trace_field observed=False checkpoint=4.9s value=False required=True",
+        "blocked_status: name=throttle_lock_release_cmd source=trace_field observed=False checkpoint=4.9s value=False required=True",
+        "logic4 explain@4.9s failed_conditions: deploy_90_percent_vdt。",
+        "events@5.0s: deploy_90_percent_vdt False->True; logic4_active False->True; throttle_lock_release_cmd False->True"
+      ],
+      "required_outcome_fragments": [
+        "deploy_90_percent_vdt 仍为 0",
+        "logic4_active 和 throttle_lock_release_cmd 都还没有满足",
+        "THR_LOCK release 同窗触发"
+      ],
+      "required_possible_causes_fragments": [
+        "THR_LOCK 依赖 logic4 / deploy_90_percent_vdt",
+        "DeployController.explain(logic4)"
+      ],
+      "required_changes_fragments": [
+        "不修改 controller.py"
+      ],
+      "required_risk_fragments": [
+        "blocked-state comparison 只说明 nominal-deploy 中触发前最近一拍的 evidence 缺口",
+        "simplified first-cut plant"
+      ]
+    },
+    {
+      "prompt": "为什么 throttle lock 没释放",
+      "intent": "diagnose_problem",
+      "matched_node": "throttle_lock_release_cmd",
+      "target_logic": "logic4",
+      "required_evidence_fragments": [
+        "nominal-deploy: throttle_lock_release_cmd 随 logic4 在约 5.0s 从 0->1。",
+        "logic4 触发前 failed_conditions: deploy_90_percent_vdt。",
+        "changed_conditions: deploy_90_percent_vdt False->True == True",
+        "context_changes: plant_sensors.deploy_90_percent_vdt False->True",
+        "events@5.0s: deploy_90_percent_vdt False->True; logic4_active False->True; throttle_lock_release_cmd False->True"
+      ],
+      "required_outcome_fragments": [
+        "throttle lock 不是永久没释放",
+        "它约 5.0s 才随 logic4 释放"
+      ],
+      "required_possible_causes_fragments": [
+        "deploy_90_percent_vdt 仍为 0",
+        "engine_running"
+      ],
+      "required_changes_fragments": [
+        "不修改 controller.py"
+      ],
+      "required_risk_fragments": [
+        "simplified first-cut plant"
+      ]
+    },
+    {
+      "prompt": "logic4 和 throttle lock 有什么关系",
+      "intent": "logic4_thr_lock_bridge",
+      "matched_node": "logic4->thr_lock",
+      "target_logic": "logic4",
+      "required_evidence_fragments": [
+        "bridge=logic4->THR_LOCK; checkpoint=4.9s; eventual_trigger=5.0s。",
+        "logic4 是上游 logic gate",
+        "throttle_lock_release_cmd / THR_LOCK 是下游末端释放命令",
+        "blocked-state 解释 checkpoint gate 为什么未满足：logic4 explain@4.9s failed_conditions: deploy_90_percent_vdt。",
+        "diagnose_problem 解释下游 release 为什么在该窗口尚未发生",
+        "events@5.0s: deploy_90_percent_vdt False->True; logic4_active False->True; throttle_lock_release_cmd False->True"
+      ],
+      "required_outcome_fragments": [
+        "4.9s checkpoint 时 logic4 仍被 deploy_90_percent_vdt 卡住",
+        "5.0s 时 deploy_90_percent_vdt 翻转"
+      ],
+      "required_possible_causes_fragments": [
+        "DeployController.explain(logic4)",
+        "throttle lock 没释放"
+      ],
+      "required_changes_fragments": [
+        "不修改 controller.py",
+        "不新增 scenario",
+        "不重跑 plant"
+      ],
+      "required_risk_fragments": [
+        "bridge summary 只桥接 nominal-deploy 的现有 evidence",
+        "不是完整异常诊断"
+      ]
+    },
+    {
+      "prompt": "如果把 logic3 的 TRA 阈值从 -11.74 改成 -8，会发生什么",
+      "intent": "propose_logic_change",
+      "matched_node": "logic3.tra_deg",
+      "target_logic": "logic3",
+      "required_evidence_fragments": [
+        "当前 logic3 TRA 条件来自 DeployController.explain: tra_deg <= -11.74。",
+        "当前 nominal-deploy 中 logic3 首次激活约 1.9s。",
+        "dry-run 仅在现有 trace row 上用阈值 -8 重新跑 DeployController.explain",
+        "changed_conditions: tra_deg -7.0->-14.0 <= -11.74"
+      ],
+      "required_outcome_fragments": [
+        "把阈值改成 -8 不会改变首次满足 logic3 的 trace row",
+        "-8 与 -11.74 都是在同一个 1.9s row 首次满足"
+      ],
+      "required_possible_causes_fragments": [
+        "阈值从 -11.74 放宽到 -8",
+        "logic3 可能更早触发"
+      ],
+      "required_changes_fragments": [
+        "dry-run proposal",
+        "本轮没有修改 controller.py"
+      ],
+      "required_risk_fragments": [
+        "更早触发 logic3 可能更早输出 EEC deploy、PLS power、PDU motor。",
+        "logic4 / THR_LOCK 仍取决于 deploy_90_percent_vdt"
+      ]
+    }
+  ]
+}

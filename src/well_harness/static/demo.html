@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Well Harness 反推逻辑演示舱</title>
+    <link rel="stylesheet" href="/demo.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">well-harness 确定性演示</p>
+          <h1 id="page-title">反推逻辑演示舱</h1>
+          <p class="boundary">
+            这是确定性演示层，基于内置 nominal-deploy / retract-reset 和简化 plant；
+            不是开放式 AI，也不是完整物理模型。
+          </p>
+          <p class="showcase-mission">
+            拖动反推拉杆，实时看 SW / logic / plant feedback 如何点亮。
+          </p>
+        </div>
+        <div class="chain-summary" aria-label="固定控制链路">
+          SW1 -> L1/TLS115 -> TLS 解锁 -> SW2 -> L2/540V -> L3/EEC+PLS+PDU -> VDT90 -> L4/THR_LOCK
+        </div>
+      </section>
+
+      <nav class="presenter-route-strip" aria-label="演示走查路径">
+        <p class="route-strip-title">演示路径</p>
+        <ol>
+          <li><span class="route-step">1</span><span class="presenter-callout">[输入]</span> 选问题</li>
+          <li><span class="route-step">2</span><span class="presenter-callout">[链路]</span> 看主板</li>
+          <li><span class="route-step">3</span><span class="presenter-callout">[高亮]</span> 讲关联</li>
+          <li><span class="route-step">4</span><span class="presenter-callout">[结果]</span> 扫证据</li>
+          <li><span class="route-step">5</span><span class="presenter-callout">[调试]</span> 查 JSON</li>
+        </ol>
+        <p class="route-strip-note">人工演示提示，不是自动化验收。</p>
+      </nav>
+
+      <section class="showcase-surface" aria-label="中文演示展示面">
+        <div class="showcase-intro">
+          <p class="showcase-kicker">演示流</p>
+          <p>拉杆 -> HUD -> 逻辑主板 -> 当前结论；问答诊断收在次要抽屉里。</p>
+        </div>
+        <div class="showcase-grid">
+          <section class="panel lever-panel" aria-labelledby="lever-title">
+            <h2 id="lever-title"><span class="presenter-callout">[输入]</span> 反推拉杆</h2>
+            <p class="lever-note">受控拉杆轨迹：复用现有 switch / controller / simplified plant；不是完整实时物理仿真。</p>
+            <div class="lever-console">
+              <div class="lever-readout">
+                <span>TRA</span>
+                <output id="lever-tra-value" for="lever-tra">-14.0°</output>
+              </div>
+              <label class="lever-track" for="lever-tra">
+                <span class="lever-track-label">Forward 0°</span>
+                <input id="lever-tra" name="tra_deg" type="range" min="-32" max="0" step="0.1" value="-14" aria-describedby="lever-threshold-note">
+                <span class="lever-track-label">Reverse -32°</span>
+              </label>
+              <div class="lever-thresholds" id="lever-threshold-note" aria-label="拉杆阈值标尺">
+                <span>SW1 -1.4° ~ -6.2°</span>
+                <span>SW2 -5.0° ~ -9.8°</span>
+                <span>L3 ≤ -11.74°</span>
+                <span>L4 travel (-32°, 0°)</span>
+              </div>
+            </div>
+            <section class="condition-panel" aria-labelledby="condition-panel-title">
+              <div class="condition-panel-heading">
+                <h3 id="condition-panel-title">条件面板</h3>
+                <p>SW1 / SW2 仍随 TRA + latch 推导；这里只调控制条件。</p>
+              </div>
+              <div class="condition-grid">
+                <label class="condition-range" for="condition-ra">
+                  <span>RA <output id="condition-ra-value" for="condition-ra">5.0 ft</output></span>
+                  <input id="condition-ra" name="radio_altitude_ft" type="range" min="0" max="20" step="0.1" value="5" aria-describedby="condition-ra-note">
+                  <small id="condition-ra-note">L1 需要 RA &lt; 6ft</small>
+                </label>
+                <label class="condition-toggle">
+                  <input id="condition-engine-running" name="engine_running" type="checkbox" checked>
+                  <span>发动机运行</span>
+                </label>
+                <label class="condition-toggle">
+                  <input id="condition-aircraft-ground" name="aircraft_on_ground" type="checkbox" checked>
+                  <span>飞机在地面</span>
+                </label>
+                <label class="condition-toggle">
+                  <input id="condition-reverser-inhibited" name="reverser_inhibited" type="checkbox">
+                  <span>反推抑制</span>
+                </label>
+                <label class="condition-toggle">
+                  <input id="condition-eec-enable" name="eec_enable" type="checkbox" checked>
+                  <span>EEC enable</span>
+                </label>
+                <label class="condition-range" for="condition-n1k">
+                  <span>N1K <output id="condition-n1k-value" for="condition-n1k">35.0</output></span>
+                  <input id="condition-n1k" name="n1k" type="range" min="0" max="120" step="0.5" value="35" aria-describedby="condition-n1k-note">
+                  <small id="condition-n1k-note">L3 需要 N1K &lt; limit</small>
+                </label>
+                <label class="condition-number" for="condition-n1k-limit">
+                  <span>N1K limit</span>
+                  <input id="condition-n1k-limit" name="max_n1k_deploy_limit" type="number" min="0.1" max="120" step="0.5" value="60">
+                </label>
+                <label class="condition-select condition-wide" for="condition-feedback-mode">
+                  <span>VDT 模式</span>
+                  <select id="condition-feedback-mode" name="feedback_mode" aria-describedby="condition-feedback-note">
+                    <option value="auto_scrubber">自动反馈</option>
+                    <option value="manual_feedback_override" selected>手动 override</option>
+                  </select>
+                  <small id="condition-feedback-note">VDT feedback 只是 simplified plant diagnostic override，不是新的控制真值。</small>
+                </label>
+                <label class="condition-range condition-wide feedback-override-control" for="condition-deploy-position">
+                  <span>VDT 反馈 <output id="condition-deploy-position-value" for="condition-deploy-position">0%</output></span>
+                  <input id="condition-deploy-position" name="deploy_position_percent" type="range" min="0" max="100" step="1" value="0" aria-describedby="condition-deploy-note">
+                  <small id="condition-deploy-note">用于演示 VDT90 / L4 / THR_LOCK；>=90% 点亮 VDT90。它是 simplified plant feedback，不是完整实时物理仿真。</small>
+                </label>
+              </div>
+              <p class="condition-note">TLS / PLS / VDT / 位移是 simplified plant feedback，不是完整实时物理模型。</p>
+            </section>
+            <dl class="hud-grid" aria-label="拉杆状态 HUD">
+              <div><dt>TRA deg</dt><dd id="hud-tra">-</dd></div>
+              <div><dt>SW1 / SW2</dt><dd id="hud-switches">-</dd></div>
+              <div><dt>无线电高度</dt><dd id="hud-ra">-</dd></div>
+              <div><dt>发动机 / 地面</dt><dd id="hud-engine-ground">-</dd></div>
+              <div><dt>反推抑制</dt><dd id="hud-inhibited">-</dd></div>
+              <div><dt>EEC enable</dt><dd id="hud-eec-enable">-</dd></div>
+              <div><dt>N1K / limit</dt><dd id="hud-n1k">-</dd></div>
+            </dl>
+            <details class="feedback-panel" id="lever-feedback-details">
+              <summary>反馈 / 诊断（simplified plant）</summary>
+              <dl class="feedback-grid" aria-label="反馈与诊断">
+                <div><dt>TLS / PLS 解锁</dt><dd id="hud-locks">-</dd></div>
+                <div><dt>位移 / VDT90</dt><dd id="hud-position">-</dd></div>
+              </dl>
+              <p>这些是 first-cut feedback / diagnostic 假设，不是完整实时物理模型。</p>
+            </details>
+            <p id="lever-status" class="lever-status" role="status" aria-live="polite">等待拉杆快照。</p>
+          </section>
+
+          <details class="panel qa-drawer" aria-labelledby="qa-drawer-title">
+            <summary id="qa-drawer-title"><span class="presenter-callout">[问答]</span> 诊断问答（冻结 / 后续开发）</summary>
+            <p class="qa-drawer-note">当前主舞台先聚焦拉杆、条件面板、逻辑主板和当前结论；问答入口暂时冻结为次要诊断抽屉。</p>
+            <h2 id="prompt-title"><span class="presenter-callout">[输入]</span> 提问区</h2>
+            <div class="examples grouped-examples" aria-label="演示问题示例">
+              <section class="example-group" aria-labelledby="example-bridge-title">
+                <h3 id="example-bridge-title">链路关系</h3>
+                <button type="button" class="is-selected" aria-pressed="true" data-category="bridge" data-intent="logic4_thr_lock_bridge" data-prompt="logic4 和 throttle lock 有什么关系">logic4 和 throttle lock 有什么关系</button>
+              </section>
+              <section class="example-group" aria-labelledby="example-diagnosis-title">
+                <h3 id="example-diagnosis-title">未释放诊断</h3>
+                <button type="button" aria-pressed="false" data-category="diagnosis" data-intent="diagnose_problem" data-prompt="为什么 throttle lock 没释放">为什么 throttle lock 没释放</button>
+              </section>
+              <section class="example-group" aria-labelledby="example-trigger-title">
+                <h3 id="example-trigger-title">触发影响</h3>
+                <button type="button" aria-pressed="false" data-category="trigger" data-intent="trigger_node" data-prompt="触发 logic3 会发生什么">触发 logic3 会发生什么</button>
+              </section>
+              <section class="example-group" aria-labelledby="example-proposal-title">
+                <h3 id="example-proposal-title">改阈值预演</h3>
+                <button type="button" aria-pressed="false" data-category="proposal" data-intent="propose_logic_change" data-prompt="把 logic3 的 TRA 阈值改成 -8 会发生什么">把 logic3 的 TRA 阈值改成 -8 会发生什么</button>
+              </section>
+            </div>
+            <form id="demo-form" class="prompt-form">
+              <label for="demo-prompt">受控问题</label>
+              <textarea id="demo-prompt" name="prompt" rows="3" aria-describedby="prompt-keyboard-hint">logic4 和 throttle lock 有什么关系</textarea>
+              <p id="prompt-keyboard-hint" class="prompt-hint">按 Cmd/Ctrl+Enter 运行；普通 Enter 换行。</p>
+              <button id="submit-button" type="submit">运行演示</button>
+            </form>
+            <p id="ui-status" class="ui-status" role="status" aria-live="polite">准备运行受控问题。</p>
+            <p id="selected-example" class="selected-example" aria-live="polite">当前示例：logic4 和 throttle lock 有什么关系</p>
+            <details id="demo-help" class="demo-help">
+              <summary>边界说明</summary>
+              <p>
+                仅支持受控短句；答案基于内置场景和简化 plant，不是开放式 LLM 或完整物理模型。
+              </p>
+            </details>
+          </details>
+
+          <section class="panel chain-panel" aria-labelledby="chain-title">
+            <div class="panel-heading">
+              <h2 id="chain-title"><span class="presenter-callout">[链路]</span> 逻辑主板</h2>
+              <p>拉杆模式显示后端快照状态；问答模式显示答案关联。</p>
+            </div>
+            <div class="chain-map mobile-step-rail" aria-label="固定控制链路主板">
+              <div class="chain-node" data-node="sw1" title="SW1">SW1</div>
+              <div class="chain-arrow">➜</div>
+              <div class="logic-stage" aria-label="L1 注释 + TLS115">
+                <span class="logic-note" data-node="logic1" title="logic1: RA < 6ft + SW1 + reverser_inhibited false + reverser_not_deployed_eec true">L1</span>
+                <span class="chain-node sub-node command-node" data-node="tls115" title="tls_115vac_cmd">TLS115</span>
+              </div>
+              <div class="chain-arrow">➜</div>
+              <div class="chain-node sensor-node" data-node="tls_unlocked" title="TLS unlocked">TLS 解锁</div>
+              <div class="chain-arrow">➜</div>
+              <div class="chain-node" data-node="sw2" title="SW2">SW2</div>
+              <div class="chain-arrow">➜</div>
+              <div class="logic-stage" aria-label="L2 注释 + 540V">
+                <span class="logic-note" data-node="logic2" title="logic2: engine_running + aircraft_on_ground + reverser_inhibited false + SW2 + eec_enable">L2</span>
+                <span class="chain-node sub-node command-node" data-node="etrac_540v" title="etrac_540vdc_cmd">540V</span>
+              </div>
+              <div class="chain-arrow">➜</div>
+              <div class="logic-stage logic-stage-wide" aria-label="L3 注释 + EEC / PLS / PDU">
+                <span class="logic-note" data-node="logic3" title="logic3: TLS unlocked + N1K < limit + TRA <= -11.74°">L3</span>
+                <span class="logic-stage-hint">TLS / N1K / TRA</span>
+                <div class="logic-stage-track command-row">
+                  <span class="chain-node sub-node command-node" data-node="eec_deploy" title="eec_deploy_cmd">EEC</span>
+                  <span class="chain-node sub-node command-node" data-node="pls_power" title="pls_power_cmd">PLS</span>
+                  <span class="chain-node sub-node command-node" data-node="pdu_motor" title="pdu_motor_cmd">PDU</span>
+                </div>
+              </div>
+              <div class="chain-arrow">➜</div>
+              <div class="chain-node sensor-node" data-node="vdt90" title="VDT90">VDT90</div>
+              <div class="chain-arrow">➜</div>
+              <div class="logic-stage" aria-label="L4 注释 + THR_LOCK">
+                <span class="logic-note" data-node="logic4" title="logic4: VDT90 + reverse travel + engine_running + aircraft_on_ground">L4</span>
+                <span class="logic-stage-hint">VDT90 / travel / ENG / GND</span>
+                <span class="chain-node sub-node command-node final-node" data-node="thr_lock" title="THR_LOCK / throttle_lock_release_cmd">THR_LOCK</span>
+              </div>
+            </div>
+            <aside id="highlight-explanation" class="highlight-explanation" aria-live="polite">
+              <h3><span class="presenter-callout">[高亮]</span> 为什么高亮</h3>
+              <p id="highlight-payload-fields">等待演示答案。</p>
+              <p id="highlight-node-list">高亮节点：-</p>
+              <ul id="highlight-explanation-list">
+                <li>高亮来自答案里的命中节点 / 目标逻辑。</li>
+                <li>高亮只表示答案关联，不是完整因果证明或物理根因证明。</li>
+              </ul>
+            </aside>
+            <section id="lever-result" class="lever-result chain-conclusion" aria-live="polite">
+              <h3>当前结论</h3>
+              <p id="lever-headline">拉杆快照读取中。</p>
+              <p id="lever-blocker">-</p>
+              <p id="lever-next-step">-</p>
+              <details id="lever-evidence-details" class="lever-evidence-details">
+                <summary>证据 / 风险（默认折叠）</summary>
+                <ul id="lever-evidence-list"></ul>
+              </details>
+            </section>
+          </section>
+
+          <section class="result-grid" aria-label="演示答案">
+            <article class="panel meta-card">
+              <h2>结果摘要</h2>
+              <dl class="meta-list">
+                <div><dt>意图</dt><dd id="intent-value">-</dd></div>
+                <div><dt>命中节点</dt><dd id="matched-node-value">-</dd></div>
+                <div><dt>目标逻辑</dt><dd id="target-logic-value">-</dd></div>
+              </dl>
+            </article>
+
+            <article class="panel output-card">
+              <h2><span class="presenter-callout">[结果]</span> 推理结果</h2>
+              <div class="answer-guide" aria-label="答案字段与结果分区导览">
+                <div class="answer-guide-intro">
+                  <h3>结果导览</h3>
+                  <p>字段说明和数量标签都来自同一份答案。</p>
+                </div>
+                <div class="answer-guide-grid">
+                  <details id="answer-field-legend" class="answer-field-legend">
+                    <summary>字段说明</summary>
+                    <dl>
+                      <div><dt>intent</dt><dd>受控 demo 意图，不是开放式 LLM 意图识别。</dd></div>
+                      <div><dt>matched_node</dt><dd>答案关联的 catalog 节点 / alias。</dd></div>
+                      <div><dt>target_logic</dt><dd>答案关联的逻辑门。</dd></div>
+                      <div><dt>evidence</dt><dd>现有 harness evidence 摘要。</dd></div>
+                      <div><dt>outcome</dt><dd>结果摘要。</dd></div>
+                      <div><dt>possible_causes</dt><dd>受控提示，不是完整根因证明。</dd></div>
+                      <div><dt>required_changes</dt><dd>dry-run / proposal 建议；不会直接修改 controller.py。</dd></div>
+                      <div><dt>risks</dt><dd>简化模型和变更风险提示。</dd></div>
+                      <div><dt>raw JSON</dt><dd>同一份 DemoAnswer 的调试视图，不是第二套答案。</dd></div>
+                    </dl>
+                    <p>
+                      这里只是阅读辅助；不改变 UI/API payload，不创建 schema，也不新增控制真值。
+                    </p>
+                  </details>
+              <div id="answer-section-summary" class="answer-section-summary" aria-live="polite">
+                <h3>结果分区</h3>
+                <p id="answer-section-keyboard-hint" class="summary-hint">方向键可在分区标签之间移动。</p>
+                <div id="answer-section-summary-items" class="summary-chips">
+                  <span class="summary-chip is-empty">默认折叠；展开查看证据 / 风险。</span>
+                </div>
+              </div>
+            </div>
+          </div>
+              <div id="structured-output" class="structured-output" aria-live="polite"></div>
+            </article>
+
+            <article class="panel raw-card">
+              <details id="raw-json-details" class="debug-inspector">
+                <summary><span class="presenter-callout">[调试]</span> 原始 JSON 调试</summary>
+                <pre id="raw-json">{}</pre>
+              </details>
+            </article>
+          </section>
+        </div>
+      </section>
+    </main>
+    <script src="/demo.js"></script>
+  </body>
+</html>

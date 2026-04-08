@@ -1,0 +1,66 @@
+{
+  "contract_name": "well_harness.timeline.v1",
+  "command": [
+    "run",
+    "nominal-deploy",
+    "--format",
+    "json"
+  ],
+  "schema": {
+    "name": "well_harness.debug",
+    "schema_version": "1.0",
+    "view": "timeline",
+    "scenario_name": "nominal-deploy"
+  },
+  "required_top_level_fields": [
+    "schema",
+    "scenario_name",
+    "row_count",
+    "rows"
+  ],
+  "min_row_count": 1,
+  "required_row_fields": [
+    "time_s",
+    "pilot",
+    "resolved_inputs",
+    "plant_sensors",
+    "plant_state",
+    "controller_outputs",
+    "controller_explain"
+  ],
+  "required_row_sections": {
+    "pilot": [
+      "radio_altitude_ft",
+      "tra_deg",
+      "engine_running",
+      "aircraft_on_ground"
+    ],
+    "resolved_inputs": [
+      "sw1",
+      "sw2",
+      "tls_unlocked_ls",
+      "deploy_90_percent_vdt"
+    ],
+    "plant_sensors": [
+      "tls_unlocked_ls",
+      "deploy_90_percent_vdt",
+      "deploy_position_percent"
+    ],
+    "plant_state": [
+      "tls_powered_s",
+      "pls_powered_s"
+    ],
+    "controller_outputs": [
+      "logic1_active",
+      "logic2_active",
+      "logic3_active",
+      "logic4_active"
+    ],
+    "controller_explain": [
+      "logic1",
+      "logic2",
+      "logic3",
+      "logic4"
+    ]
+  }
+}

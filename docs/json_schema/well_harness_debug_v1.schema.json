@@ -1,0 +1,740 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/well_harness_debug_v1.schema.json",
+  "title": "well_harness.debug v1 JSON payload",
+  "description": "Machine-readable structure reference for well-harness debug JSON views.",
+  "type": "object",
+  "x-well-harness-debug": {
+    "schema_name": "well_harness.debug",
+    "schema_version": "1.0",
+    "views": [
+      "timeline",
+      "events",
+      "explain",
+      "diagnose"
+    ]
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/timelinePayload"
+    },
+    {
+      "$ref": "#/$defs/eventsPayload"
+    },
+    {
+      "$ref": "#/$defs/explainPayload"
+    },
+    {
+      "$ref": "#/$defs/diagnosePayload"
+    }
+  ],
+  "$defs": {
+    "schemaMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "scenario_name",
+        "schema_version",
+        "view"
+      ],
+      "properties": {
+        "name": {
+          "const": "well_harness.debug"
+        },
+        "schema_version": {
+          "const": "1.0"
+        },
+        "scenario_name": {
+          "type": "string"
+        },
+        "view": {
+          "enum": [
+            "timeline",
+            "events",
+            "explain",
+            "diagnose"
+          ]
+        }
+      }
+    },
+    "timelinePayload": {
+      "type": "object",
+      "required": [
+        "schema",
+        "scenario_name",
+        "row_count",
+        "rows"
+      ],
+      "properties": {
+        "schema": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/schemaMetadata"
+            },
+            {
+              "properties": {
+                "view": {
+                  "const": "timeline"
+                }
+              }
+            }
+          ]
+        },
+        "scenario_name": {
+          "type": "string"
+        },
+        "row_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/traceRow"
+          }
+        }
+      }
+    },
+    "eventsPayload": {
+      "type": "object",
+      "required": [
+        "schema",
+        "scenario_name",
+        "event_count",
+        "events"
+      ],
+      "properties": {
+        "schema": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/schemaMetadata"
+            },
+            {
+              "properties": {
+                "view": {
+                  "const": "events"
+                }
+              }
+            }
+          ]
+        },
+        "scenario_name": {
+          "type": "string"
+        },
+        "event_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/traceEvent"
+          }
+        }
+      }
+    },
+    "explainPayload": {
+      "type": "object",
+      "required": [
+        "schema",
+        "scenario_name",
+        "time_s",
+        "logic"
+      ],
+      "properties": {
+        "schema": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/schemaMetadata"
+            },
+            {
+              "properties": {
+                "view": {
+                  "const": "explain"
+                }
+              }
+            }
+          ]
+        },
+        "scenario_name": {
+          "type": "string"
+        },
+        "time_s": {
+          "type": "number"
+        },
+        "logic": {
+          "$ref": "#/$defs/logicExplain"
+        }
+      }
+    },
+    "diagnosePayload": {
+      "type": "object",
+      "required": [
+        "schema",
+        "scenario_name",
+        "diagnostic_count",
+        "diagnostics"
+      ],
+      "properties": {
+        "schema": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/schemaMetadata"
+            },
+            {
+              "properties": {
+                "view": {
+                  "const": "diagnose"
+                }
+              }
+            }
+          ]
+        },
+        "scenario_name": {
+          "type": "string"
+        },
+        "diagnostic_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/logicTransitionDiagnosis"
+          }
+        }
+      }
+    },
+    "traceRow": {
+      "type": "object",
+      "required": [
+        "time_s",
+        "pilot",
+        "resolved_inputs",
+        "plant_sensors",
+        "plant_state",
+        "controller_outputs",
+        "controller_explain"
+      ],
+      "properties": {
+        "time_s": {
+          "type": "number"
+        },
+        "pilot": {
+          "$ref": "#/$defs/pilotInputs"
+        },
+        "resolved_inputs": {
+          "$ref": "#/$defs/resolvedInputs"
+        },
+        "plant_sensors": {
+          "$ref": "#/$defs/plantSensors"
+        },
+        "plant_state": {
+          "$ref": "#/$defs/plantDebugState"
+        },
+        "controller_outputs": {
+          "$ref": "#/$defs/controllerOutputs"
+        },
+        "controller_explain": {
+          "$ref": "#/$defs/controllerExplain"
+        }
+      }
+    },
+    "pilotInputs": {
+      "type": "object",
+      "required": [
+        "radio_altitude_ft",
+        "tra_deg",
+        "engine_running",
+        "aircraft_on_ground",
+        "reverser_inhibited",
+        "eec_enable",
+        "n1k",
+        "max_n1k_deploy_limit"
+      ],
+      "properties": {
+        "radio_altitude_ft": {
+          "type": "number"
+        },
+        "tra_deg": {
+          "type": "number"
+        },
+        "engine_running": {
+          "type": "boolean"
+        },
+        "aircraft_on_ground": {
+          "type": "boolean"
+        },
+        "reverser_inhibited": {
+          "type": "boolean"
+        },
+        "eec_enable": {
+          "type": "boolean"
+        },
+        "n1k": {
+          "type": "number"
+        },
+        "max_n1k_deploy_limit": {
+          "type": "number"
+        }
+      }
+    },
+    "resolvedInputs": {
+      "type": "object",
+      "required": [
+        "radio_altitude_ft",
+        "tra_deg",
+        "sw1",
+        "sw2",
+        "engine_running",
+        "aircraft_on_ground",
+        "reverser_inhibited",
+        "eec_enable",
+        "n1k",
+        "max_n1k_deploy_limit",
+        "tls_unlocked_ls",
+        "all_pls_unlocked_ls",
+        "reverser_not_deployed_eec",
+        "reverser_fully_deployed_eec",
+        "deploy_90_percent_vdt"
+      ],
+      "properties": {
+        "radio_altitude_ft": {
+          "type": "number"
+        },
+        "tra_deg": {
+          "type": "number"
+        },
+        "sw1": {
+          "type": "boolean"
+        },
+        "sw2": {
+          "type": "boolean"
+        },
+        "engine_running": {
+          "type": "boolean"
+        },
+        "aircraft_on_ground": {
+          "type": "boolean"
+        },
+        "reverser_inhibited": {
+          "type": "boolean"
+        },
+        "eec_enable": {
+          "type": "boolean"
+        },
+        "n1k": {
+          "type": "number"
+        },
+        "max_n1k_deploy_limit": {
+          "type": "number"
+        },
+        "tls_unlocked_ls": {
+          "type": "boolean"
+        },
+        "all_pls_unlocked_ls": {
+          "type": "boolean"
+        },
+        "reverser_not_deployed_eec": {
+          "type": "boolean"
+        },
+        "reverser_fully_deployed_eec": {
+          "type": "boolean"
+        },
+        "deploy_90_percent_vdt": {
+          "type": "boolean"
+        }
+      }
+    },
+    "plantSensors": {
+      "type": "object",
+      "required": [
+        "tls_unlocked_ls",
+        "pls_unlocked_ls",
+        "reverser_not_deployed_eec",
+        "reverser_fully_deployed_eec",
+        "deploy_90_percent_vdt",
+        "deploy_position_percent"
+      ],
+      "properties": {
+        "tls_unlocked_ls": {
+          "type": "boolean"
+        },
+        "pls_unlocked_ls": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          }
+        },
+        "reverser_not_deployed_eec": {
+          "type": "boolean"
+        },
+        "reverser_fully_deployed_eec": {
+          "type": "boolean"
+        },
+        "deploy_90_percent_vdt": {
+          "type": "boolean"
+        },
+        "deploy_position_percent": {
+          "type": "number"
+        }
+      }
+    },
+    "plantDebugState": {
+      "type": "object",
+      "required": [
+        "tls_powered_s",
+        "pls_powered_s",
+        "tls_unlocked_ls",
+        "pls_unlocked_ls",
+        "deploy_position_percent"
+      ],
+      "properties": {
+        "tls_powered_s": {
+          "type": "number"
+        },
+        "pls_powered_s": {
+          "type": "number"
+        },
+        "tls_unlocked_ls": {
+          "type": "boolean"
+        },
+        "pls_unlocked_ls": {
+          "type": "array",
+          "items": {
+            "type": "boolean"
+          }
+        },
+        "deploy_position_percent": {
+          "type": "number"
+        }
+      }
+    },
+    "controllerOutputs": {
+      "type": "object",
+      "required": [
+        "logic1_active",
+        "logic2_active",
+        "logic3_active",
+        "logic4_active",
+        "tls_115vac_cmd",
+        "etrac_540vdc_cmd",
+        "eec_deploy_cmd",
+        "pls_power_cmd",
+        "pdu_motor_cmd",
+        "throttle_electronic_lock_release_cmd"
+      ],
+      "properties": {
+        "logic1_active": {
+          "type": "boolean"
+        },
+        "logic2_active": {
+          "type": "boolean"
+        },
+        "logic3_active": {
+          "type": "boolean"
+        },
+        "logic4_active": {
+          "type": "boolean"
+        },
+        "tls_115vac_cmd": {
+          "type": "boolean"
+        },
+        "etrac_540vdc_cmd": {
+          "type": "boolean"
+        },
+        "eec_deploy_cmd": {
+          "type": "boolean"
+        },
+        "pls_power_cmd": {
+          "type": "boolean"
+        },
+        "pdu_motor_cmd": {
+          "type": "boolean"
+        },
+        "throttle_electronic_lock_release_cmd": {
+          "type": "boolean"
+        }
+      }
+    },
+    "controllerExplain": {
+      "type": "object",
+      "required": [
+        "logic1",
+        "logic2",
+        "logic3",
+        "logic4"
+      ],
+      "properties": {
+        "logic1": {
+          "$ref": "#/$defs/logicExplain"
+        },
+        "logic2": {
+          "$ref": "#/$defs/logicExplain"
+        },
+        "logic3": {
+          "$ref": "#/$defs/logicExplain"
+        },
+        "logic4": {
+          "$ref": "#/$defs/logicExplain"
+        }
+      }
+    },
+    "traceEvent": {
+      "type": "object",
+      "required": [
+        "time_s",
+        "changes"
+      ],
+      "properties": {
+        "time_s": {
+          "type": "number"
+        },
+        "changes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/fieldChange"
+          }
+        }
+      }
+    },
+    "fieldChange": {
+      "type": "object",
+      "required": [
+        "field_name",
+        "before",
+        "after"
+      ],
+      "properties": {
+        "field_name": {
+          "type": "string"
+        },
+        "before": true,
+        "after": true
+      }
+    },
+    "logicExplain": {
+      "type": "object",
+      "required": [
+        "logic_name",
+        "active",
+        "conditions"
+      ],
+      "properties": {
+        "logic_name": {
+          "enum": [
+            "logic1",
+            "logic2",
+            "logic3",
+            "logic4"
+          ]
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/logicConditionExplain"
+          }
+        }
+      }
+    },
+    "logicConditionExplain": {
+      "type": "object",
+      "required": [
+        "name",
+        "current_value",
+        "comparison",
+        "threshold_value",
+        "passed"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "current_value": true,
+        "comparison": {
+          "type": "string"
+        },
+        "threshold_value": true,
+        "passed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "logicTransitionDiagnosis": {
+      "type": "object",
+      "required": [
+        "time_s",
+        "logic_name",
+        "before_time_s",
+        "after_time_s",
+        "before_active",
+        "after_active",
+        "before_failed_conditions",
+        "after_failed_conditions",
+        "changed_conditions",
+        "context_changes"
+      ],
+      "properties": {
+        "time_s": {
+          "type": "number"
+        },
+        "logic_name": {
+          "enum": [
+            "logic1",
+            "logic2",
+            "logic3",
+            "logic4"
+          ]
+        },
+        "before_time_s": {
+          "type": "number"
+        },
+        "after_time_s": {
+          "type": "number"
+        },
+        "before_active": {
+          "type": "boolean"
+        },
+        "after_active": {
+          "type": "boolean"
+        },
+        "before_failed_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "after_failed_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "changed_conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/logicConditionPassChange"
+          }
+        },
+        "context_changes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/traceFieldValueChange"
+          }
+        }
+      }
+    },
+    "logicConditionPassChange": {
+      "type": "object",
+      "required": [
+        "name",
+        "before_passed",
+        "after_passed",
+        "before_current_value",
+        "after_current_value",
+        "comparison",
+        "threshold_value"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "before_passed": {
+          "type": "boolean"
+        },
+        "after_passed": {
+          "type": "boolean"
+        },
+        "before_current_value": true,
+        "after_current_value": true,
+        "comparison": {
+          "type": "string"
+        },
+        "threshold_value": true
+      }
+    },
+    "contextControllerOutputFieldName": {
+      "enum": [
+        "tls_115vac_cmd",
+        "etrac_540vdc_cmd",
+        "eec_deploy_cmd",
+        "pls_power_cmd",
+        "pdu_motor_cmd",
+        "throttle_lock_release_cmd"
+      ]
+    },
+    "contextPlantSensorFieldName": {
+      "enum": [
+        "tls_unlocked_ls",
+        "all_pls_unlocked_ls",
+        "deploy_90_percent_vdt",
+        "deploy_position_percent"
+      ]
+    },
+    "contextPlantStateFieldName": {
+      "enum": [
+        "tls_powered_s",
+        "pls_powered_s"
+      ]
+    },
+    "traceFieldValueChange": {
+      "type": "object",
+      "required": [
+        "field_group",
+        "field_name",
+        "before_value",
+        "after_value"
+      ],
+      "oneOf": [
+        {
+          "properties": {
+            "field_group": {
+              "const": "controller_outputs"
+            },
+            "field_name": {
+              "$ref": "#/$defs/contextControllerOutputFieldName"
+            }
+          }
+        },
+        {
+          "properties": {
+            "field_group": {
+              "const": "plant_sensors"
+            },
+            "field_name": {
+              "$ref": "#/$defs/contextPlantSensorFieldName"
+            }
+          }
+        },
+        {
+          "properties": {
+            "field_group": {
+              "const": "plant_state"
+            },
+            "field_name": {
+              "$ref": "#/$defs/contextPlantStateFieldName"
+            }
+          }
+        }
+      ],
+      "properties": {
+        "field_group": {
+          "enum": [
+            "controller_outputs",
+            "plant_sensors",
+            "plant_state"
+          ]
+        },
+        "field_name": {
+          "type": "string"
+        },
+        "before_value": true,
+        "after_value": true
+      }
+    }
+  }
+}

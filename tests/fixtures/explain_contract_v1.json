@@ -1,0 +1,45 @@
+{
+  "contract_name": "well_harness.explain.v1",
+  "command": [
+    "run",
+    "nominal-deploy",
+    "--view",
+    "explain",
+    "--logic",
+    "logic3",
+    "--time",
+    "1.8",
+    "--format",
+    "json"
+  ],
+  "schema": {
+    "name": "well_harness.debug",
+    "schema_version": "1.0",
+    "view": "explain",
+    "scenario_name": "nominal-deploy"
+  },
+  "required_top_level_fields": [
+    "schema",
+    "scenario_name",
+    "time_s",
+    "logic"
+  ],
+  "expected_logic_name": "logic3",
+  "required_logic_fields": [
+    "logic_name",
+    "active",
+    "conditions"
+  ],
+  "required_condition_fields": [
+    "name",
+    "current_value",
+    "comparison",
+    "threshold_value",
+    "passed"
+  ],
+  "required_condition_names": [
+    "tls_unlocked_ls",
+    "n1k",
+    "tra_deg"
+  ]
+}

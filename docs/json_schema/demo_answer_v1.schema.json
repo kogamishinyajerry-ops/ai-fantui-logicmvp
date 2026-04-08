@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/demo_answer_v1.schema.json",
+  "title": "well_harness demo answer v1",
+  "description": "Machine-readable structure reference for well_harness demo --format json output. This documents the DemoAnswer payload shape and is not a plant or controller truth model.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "intent",
+    "matched_node",
+    "target_logic",
+    "evidence",
+    "outcome",
+    "possible_causes",
+    "required_changes",
+    "risks"
+  ],
+  "properties": {
+    "intent": {
+      "type": "string",
+      "enum": [
+        "trigger_node",
+        "blocked_state",
+        "diagnose_problem",
+        "logic4_thr_lock_bridge",
+        "propose_logic_change",
+        "unsupported"
+      ]
+    },
+    "matched_node": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "target_logic": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "evidence": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "outcome": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "possible_causes": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "required_changes": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "risks": {
+      "$ref": "#/$defs/stringArray"
+    }
+  },
+  "x-well-harness-demo-answer": {
+    "schema_name": "well_harness.demo_answer",
+    "schema_version": "1.0",
+    "top_level_fields": [
+      "intent",
+      "matched_node",
+      "target_logic",
+      "evidence",
+      "outcome",
+      "possible_causes",
+      "required_changes",
+      "risks"
+    ],
+    "array_fields": [
+      "evidence",
+      "outcome",
+      "possible_causes",
+      "required_changes",
+      "risks"
+    ],
+    "intent_values": [
+      "trigger_node",
+      "blocked_state",
+      "diagnose_problem",
+      "logic4_thr_lock_bridge",
+      "propose_logic_change",
+      "unsupported"
+    ]
+  },
+  "$defs": {
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

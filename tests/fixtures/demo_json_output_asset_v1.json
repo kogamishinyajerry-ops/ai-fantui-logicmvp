@@ -1,0 +1,132 @@
+{
+  "name": "well_harness.demo_json_output.asset",
+  "version": "1.0",
+  "description": "Lightweight regression contract for well_harness demo --format json output. This is not a JSON Schema.",
+  "required_array_fields": [
+    "evidence",
+    "outcome",
+    "possible_causes",
+    "required_changes",
+    "risks"
+  ],
+  "cases": [
+    {
+      "prompt": "logic4 和 throttle lock 有什么关系",
+      "intent": "logic4_thr_lock_bridge",
+      "matched_node": "logic4->thr_lock",
+      "target_logic": "logic4",
+      "required_top_level_fields": [
+        "intent",
+        "matched_node",
+        "target_logic",
+        "evidence",
+        "outcome",
+        "possible_causes",
+        "required_changes",
+        "risks"
+      ],
+      "required_evidence_fragments": [
+        "bridge=logic4->THR_LOCK; checkpoint=4.9s; eventual_trigger=5.0s。",
+        "logic4 是上游 logic gate",
+        "blocked-state 解释 checkpoint gate 为什么未满足：logic4 explain@4.9s failed_conditions: deploy_90_percent_vdt。",
+        "diagnose_problem 解释下游 release 为什么在该窗口尚未发生",
+        "events@5.0s: deploy_90_percent_vdt False->True; logic4_active False->True; throttle_lock_release_cmd False->True"
+      ],
+      "required_outcome_fragments": [
+        "4.9s checkpoint 时 logic4 仍被 deploy_90_percent_vdt 卡住",
+        "5.0s 时 deploy_90_percent_vdt 翻转"
+      ],
+      "required_possible_causes_fragments": [
+        "DeployController.explain(logic4)",
+        "throttle lock 没释放"
+      ],
+      "required_changes_fragments": [
+        "不修改 controller.py",
+        "不新增 scenario",
+        "不重跑 plant"
+      ],
+      "required_risk_fragments": [
+        "bridge summary 只桥接 nominal-deploy 的现有 evidence",
+        "不是完整异常诊断"
+      ]
+    },
+    {
+      "prompt": "为什么 logic4 还没满足",
+      "intent": "blocked_state",
+      "matched_node": "logic4",
+      "target_logic": "logic4",
+      "required_top_level_fields": [
+        "intent",
+        "matched_node",
+        "target_logic",
+        "evidence",
+        "outcome",
+        "possible_causes",
+        "required_changes",
+        "risks"
+      ],
+      "required_evidence_fragments": [
+        "node=logic4; category=logic; checkpoint=4.9s; eventual_trigger=5.0s。",
+        "blocked_state_table:",
+        "blocked_status: name=deploy_90_percent_vdt source=explain_condition observed=False checkpoint=4.9s value=False required=True",
+        "logic4 explain@4.9s failed_conditions: deploy_90_percent_vdt。",
+        "events@5.0s: deploy_90_percent_vdt False->True; logic4_active False->True; throttle_lock_release_cmd False->True"
+      ],
+      "required_outcome_fragments": [
+        "checkpoint=4.9s",
+        "deploy_90_percent_vdt 仍未满足",
+        "5.0s deploy_90_percent_vdt 变为 1"
+      ],
+      "required_possible_causes_fragments": [
+        "DeployController.explain(logic4)",
+        "不是另一套控制真值"
+      ],
+      "required_changes_fragments": [
+        "不修改 controller.py",
+        "不重跑新的 plant / scenario"
+      ],
+      "required_risk_fragments": [
+        "blocked-state comparison 只说明 nominal-deploy 中触发前最近一拍的 evidence 缺口",
+        "simplified first-cut plant"
+      ]
+    },
+    {
+      "prompt": "为什么 throttle lock 没释放",
+      "intent": "diagnose_problem",
+      "matched_node": "throttle_lock_release_cmd",
+      "target_logic": "logic4",
+      "required_top_level_fields": [
+        "intent",
+        "matched_node",
+        "target_logic",
+        "evidence",
+        "outcome",
+        "possible_causes",
+        "required_changes",
+        "risks"
+      ],
+      "required_evidence_fragments": [
+        "nominal-deploy: throttle_lock_release_cmd 随 logic4 在约 5.0s 从 0->1。",
+        "logic4 触发前 failed_conditions: deploy_90_percent_vdt。",
+        "changed_conditions: deploy_90_percent_vdt False->True == True",
+        "context_changes: plant_sensors.deploy_90_percent_vdt False->True",
+        "events@5.0s: deploy_90_percent_vdt False->True; logic4_active False->True; throttle_lock_release_cmd False->True"
+      ],
+      "required_outcome_fragments": [
+        "throttle lock 不是永久没释放",
+        "它约 5.0s 才随 logic4 释放"
+      ],
+      "required_possible_causes_fragments": [
+        "deploy_90_percent_vdt 仍为 0",
+        "engine_running=True"
+      ],
+      "required_changes_fragments": [
+        "deploy_90_percent_vdt=True",
+        "不修改 controller.py"
+      ],
+      "required_risk_fragments": [
+        "simplified first-cut plant"
+      ]
+    }
+  ]
+}

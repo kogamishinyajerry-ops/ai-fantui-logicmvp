@@ -1,0 +1,287 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/validation_schema_checker_report_v1.schema.json",
+  "title": "well_harness validation schema checker report v1",
+  "description": "Machine-readable structure reference for tools/validate_validation_schema_runner_report_schema.py --format json.",
+  "type": "object",
+  "x-well-harness-validation-schema-checker-report": {
+    "schema_name": "well_harness.validation_schema_checker_report",
+    "schema_version": "1.0",
+    "top_level_fields": [
+      "status",
+      "schema_path",
+      "asset_path",
+      "results"
+    ],
+    "result_fields": [
+      "scenario",
+      "payload_status",
+      "validation_status",
+      "payload_exit_code"
+    ],
+    "report_statuses": [
+      "pass",
+      "skip",
+      "fail"
+    ],
+    "payload_statuses": [
+      "pass",
+      "skip",
+      "fail",
+      null
+    ],
+    "validation_statuses": [
+      "pass",
+      "fail"
+    ],
+    "failure_kinds": [
+      "schema_unavailable",
+      "payload_parse",
+      "schema_validation",
+      "status_mismatch",
+      "exit_code_mismatch"
+    ]
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/passReport"
+    },
+    {
+      "$ref": "#/$defs/skipReport"
+    },
+    {
+      "$ref": "#/$defs/failReport"
+    }
+  ],
+  "$defs": {
+    "failureKind": {
+      "type": "string",
+      "enum": [
+        "schema_unavailable",
+        "payload_parse",
+        "schema_validation",
+        "status_mismatch",
+        "exit_code_mismatch"
+      ]
+    },
+    "reportStatus": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "skip",
+        "fail"
+      ]
+    },
+    "payloadStatus": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "pass",
+        "skip",
+        "fail",
+        null
+      ]
+    },
+    "validationStatus": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "reportBase": {
+      "type": "object",
+      "required": [
+        "status",
+        "schema_path",
+        "asset_path",
+        "results"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/reportStatus"
+        },
+        "schema_path": {
+          "type": "string"
+        },
+        "asset_path": {
+          "type": "string"
+        },
+        "results": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/reportResult"
+          }
+        },
+        "failure_kind": {
+          "$ref": "#/$defs/failureKind"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "resultBase": {
+      "type": "object",
+      "required": [
+        "scenario",
+        "payload_status",
+        "validation_status"
+      ],
+      "properties": {
+        "scenario": {
+          "type": "string"
+        },
+        "payload_status": {
+          "$ref": "#/$defs/payloadStatus"
+        },
+        "validation_status": {
+          "$ref": "#/$defs/validationStatus"
+        },
+        "payload_exit_code": {
+          "type": "integer"
+        },
+        "expected_payload_status": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "skip",
+            "fail"
+          ]
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "passResult": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/resultBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "payload_exit_code"
+          ],
+          "properties": {
+            "validation_status": {
+              "const": "pass"
+            }
+          }
+        }
+      ]
+    },
+    "failResult": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/resultBase"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "validation_status": {
+              "const": "fail"
+            }
+          }
+        }
+      ]
+    },
+    "reportResult": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/passResult"
+        },
+        {
+          "$ref": "#/$defs/failResult"
+        }
+      ]
+    },
+    "passReport": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/reportBase"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "status": {
+              "const": "pass"
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/passResult"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "skipReport": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/reportBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "reason"
+          ],
+          "properties": {
+            "status": {
+              "const": "skip"
+            },
+            "results": {
+              "type": "array",
+              "maxItems": 0
+            },
+            "reason": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "failReport": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/reportBase"
+        },
+        {
+          "type": "object",
+          "required": [
+            "failure_kind"
+          ],
+          "properties": {
+            "status": {
+              "const": "fail"
+            },
+            "failure_kind": {
+              "$ref": "#/$defs/failureKind"
+            },
+            "results": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/failResult"
+              }
+            },
+            "reason": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

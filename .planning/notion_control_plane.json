@@ -1,0 +1,15 @@
+{
+  "root_page_url": "https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec",
+  "databases": {
+    "roadmap": "33cc6894-2bed-810a-a2ea-e4f095b44afa",
+    "tasks": "33cc6894-2bed-81ea-bb1b-ef1bc904f407",
+    "sessions": "33cc6894-2bed-8185-9e43-cb92dde87037",
+    "qa": "33cc6894-2bed-81d4-8346-eed39942af18",
+    "plans": "33cc6894-2bed-81f0-a918-e48f51a29f98",
+    "runs": "33cc6894-2bed-8167-9618-fdcbb8849827",
+    "gates": "33cc6894-2bed-812f-82fb-fbee3563adae",
+    "gaps": "33cc6894-2bed-8155-8c86-c4f58295502e"
+  },
+  "default_plan": "P1-01 建立自动执行 / QA 回写闭环",
+  "default_review_gate": "OPUS-4.6 周期审查 Gate"
+}

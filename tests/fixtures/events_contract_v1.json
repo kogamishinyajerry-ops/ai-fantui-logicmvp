@@ -1,0 +1,37 @@
+{
+  "contract_name": "well_harness.events.v1",
+  "command": [
+    "run",
+    "nominal-deploy",
+    "--view",
+    "events",
+    "--format",
+    "json"
+  ],
+  "schema": {
+    "name": "well_harness.debug",
+    "schema_version": "1.0",
+    "view": "events",
+    "scenario_name": "nominal-deploy"
+  },
+  "required_top_level_fields": [
+    "schema",
+    "scenario_name",
+    "event_count",
+    "events"
+  ],
+  "min_event_count": 1,
+  "required_event_fields": [
+    "time_s",
+    "changes"
+  ],
+  "required_event_change_fields": [
+    "field_name",
+    "before",
+    "after"
+  ],
+  "required_event_change_names": [
+    "logic1_active",
+    "logic4_active"
+  ]
+}

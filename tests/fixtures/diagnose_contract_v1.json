@@ -1,0 +1,96 @@
+{
+  "contract_name": "well_harness.diagnose.v1",
+  "command": [
+    "run",
+    "nominal-deploy",
+    "--view",
+    "diagnose",
+    "--logic",
+    "logic3",
+    "--format",
+    "json"
+  ],
+  "schema": {
+    "name": "well_harness.debug",
+    "schema_version": "1.0",
+    "view": "diagnose",
+    "scenario_name": "nominal-deploy"
+  },
+  "required_top_level_fields": [
+    "schema",
+    "scenario_name",
+    "diagnostic_count",
+    "diagnostics"
+  ],
+  "required_diagnostic_fields": [
+    "time_s",
+    "logic_name",
+    "before_time_s",
+    "after_time_s",
+    "before_active",
+    "after_active",
+    "before_failed_conditions",
+    "after_failed_conditions",
+    "changed_conditions",
+    "context_changes"
+  ],
+  "required_changed_condition_fields": [
+    "name",
+    "before_passed",
+    "after_passed",
+    "before_current_value",
+    "after_current_value",
+    "comparison",
+    "threshold_value"
+  ],
+  "required_context_change_fields": [
+    "field_group",
+    "field_name",
+    "before_value",
+    "after_value"
+  ],
+  "min_diagnostic_count": 1,
+  "required_changed_conditions": [
+    {
+      "name": "tra_deg"
+    }
+  ],
+  "required_context_changes": [
+    {
+      "field_group": "controller_outputs",
+      "field_name": "eec_deploy_cmd"
+    },
+    {
+      "field_group": "controller_outputs",
+      "field_name": "pls_power_cmd"
+    },
+    {
+      "field_group": "controller_outputs",
+      "field_name": "pdu_motor_cmd"
+    },
+    {
+      "field_group": "plant_state",
+      "field_name": "tls_powered_s"
+    }
+  ],
+  "supported_context_fields": {
+    "controller_outputs": [
+      "tls_115vac_cmd",
+      "etrac_540vdc_cmd",
+      "eec_deploy_cmd",
+      "pls_power_cmd",
+      "pdu_motor_cmd",
+      "throttle_lock_release_cmd"
+    ],
+    "plant_sensors": [
+      "tls_unlocked_ls",
+      "all_pls_unlocked_ls",
+      "deploy_90_percent_vdt",
+      "deploy_position_percent"
+    ],
+    "plant_state": [
+      "tls_powered_s",
+      "pls_powered_s"
+    ]
+  }
+}
