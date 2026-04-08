@@ -25,4 +25,4 @@ The project prioritizes explainable logic, stable demo behavior, and regression-
 - Notion is the control plane and audit cockpit.
 - GSD owns plan -> execute -> verify routing.
 - Opus 4.6 is the only intended manual review gate for subjective architecture / UX / quality judgment.
-- Any Opus 4.6 review packet must reference Notion pages and the GitHub repo only, never local terminal file paths.
+- Any Opus 4.6 review brief must reference Notion pages and the GitHub repo only, never local terminal file paths.

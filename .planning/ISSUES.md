@@ -1,5 +1,11 @@
 # Deferred Issues
 
+## Auto-Supersede Legacy Gaps
+
+Status: Open
+
+After a later successful run for the same plan, older failure gaps still remain open until someone resolves them manually. Add a control-plane rule that detects superseding success evidence and marks same-plan legacy gaps as resolved or superseded automatically.
+
 ## Opus Review Brief Maintenance
 
 Status: Open
