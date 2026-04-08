@@ -1,13 +1,13 @@
 # Deferred Issues
 
-## Browser Hand-Check Automation
+## Opus Review Packet Maintenance
 
 Status: Open
 
-The cockpit UI still has a manual browser hand-check gap. Phase P2 should replace it with a reproducible validation path that can write results through `tools/gsd_notion_sync.py`.
+The Opus 4.6 prompt library must stay aligned with the latest Notion control-tower structure and the GitHub repo URL. If the review inputs change, update the Notion prompt page first.
 
 ## GitHub Remote Push
 
-Status: Open
+Status: Done
 
-The local repo can be initialized now, but this process currently does not see `GITHUB_TOKEN` or `GH_TOKEN`, and `gh` is not authenticated. Create/push the GitHub remote after authentication is available.
+The local repo is now pushed to GitHub and the automation workflow is live.

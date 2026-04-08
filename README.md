@@ -142,21 +142,23 @@ Example prompts are grouped by bridge / diagnose / trigger / proposal use, the p
 The UI also includes a small highlight explanation that names the `matched_node` / `target_logic` fields and the highlighted chain nodes; this explanation is answer association only, not a causal proof.
 The structured answer panel includes an `Answer sections` summary that counts the existing `DemoAnswer` arrays, marks empty sections, and lets each chip focus its matching answer section; arrow keys move between section chips without changing the demo JSON payload.
 
-For a lightweight manual browser hand-check checklist before a demo, run:
+For a lightweight presenter checklist before a demo, run:
 
 ```bash
 PYTHONPATH=src python3 tools/demo_ui_handcheck.py
 ```
 
-This helper prints the local UI start command, core prompts with guided expected observations, UI checkpoints, and boundary reminders; it is manual hand-check guidance, not browser E2E automation, and it does not start the server or drive a browser by default.
-For a shorter presenter script, run `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`; it prints concise callouts for the bridge / diagnose / trigger / proposal flow and remains manual guidance, not browser automation or a new control-truth source.
-The one-page presenter talk track lives at `docs/demo_presenter_talk_track.md` and keeps the same manual, non-E2E boundary.
+This helper prints the local UI start command, core prompts with guided expected observations, UI checkpoints, and boundary reminders; it is only a presenter aid, not browser E2E automation and not part of the formal GSD approval flow.
+For a shorter presenter script, run `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`; it prints concise callouts for the bridge / diagnose / trigger / proposal flow and remains a presenter aid, not browser automation or a new control-truth source.
+The one-page presenter talk track lives at `docs/demo_presenter_talk_track.md` and keeps the same presenter-only boundary.
 The UI section headers include matching presenter callout labels (`[Input]`, `[Chain]`, `[Highlight]`, `[Structured answer]`, `[Raw JSON]`) so the talk track maps directly to visible page regions.
 The UI also includes a screenshot-free presenter route strip (`[Input] -> [Chain] -> [Highlight] -> [Structured answer] -> [Raw JSON]`) as a visual guide for the talk track; it is not browser automation or a screenshot annotation tool.
 The structured answer area also has a compact audience answer-field legend for explaining `intent`, `matched_node`, `evidence`, `risks`, and raw JSON as reading aids rather than a new schema or second answer payload.
 The legend is grouped with `Answer sections` as a compact answer guide so field meanings and section counts stay together without changing the `DemoAnswer` payload.
 On narrow screens, that compact answer guide stacks the legend and section chips with touch-friendly spacing while keeping the same payload and field semantics.
-That talk track also includes a small presenter readiness run card for manual pre-demo checks; it is not browser automation or an automatic readiness detector.
+That talk track also includes a small presenter readiness run card; it is not browser automation or an automatic readiness detector.
+Formal subjective review now happens through Notion AI Opus 4.6 using the Notion control tower plus the GitHub repo, not by citing local terminal file paths.
+Older repo notes about browser hand-checks remain historical presenter/archive material, not the current approval contract.
 
 Run the unit tests:
 
@@ -236,9 +238,11 @@ python3 tools/gsd_notion_sync.py run \
   --command "PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'"
 ```
 
-When `NOTION_API_KEY` is set, the bridge writes Execution Run, QA, Plan status, and failure UAT Gap records into the `AI FANTUI LogicMVP 控制塔`. Use `--opus-gate` only when the run should pause for manual Opus 4.6 review.
+When `NOTION_API_KEY` is set, the bridge writes Execution Run, QA, Plan status, and failure UAT Gap records into the `AI FANTUI LogicMVP 控制塔`. Use `--opus-gate` only when the run should pause for a Notion AI Opus 4.6 review packet that references Notion pages and the GitHub repo only.
 
 GitHub Actions uses the same bridge in `.github/workflows/gsd-automation.yml`; configure the repository secret `NOTION_API_KEY` before expecting CI-to-Notion writeback.
+
+Historical browser hand-check docs in `docs/coordination/` remain as archival round records only. The active review sources are the Notion control tower, the GitHub repo, and GitHub Actions evidence.
 
 ## Debugging Notes
 

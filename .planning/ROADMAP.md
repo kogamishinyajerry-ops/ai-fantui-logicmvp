@@ -16,27 +16,28 @@ Exit Criteria:
 - Roadmap, task, session, decision, QA, asset, risk, plan, execution run, review gate, and UAT gap objects exist.
 - The control tower treats GitHub / repo as code truth and Notion as control plane.
 
-## Phase P1: Automate Execution And QA Writeback
+## Phase P1: Automate Execution And Evidence Writeback
 
 Status: Active
 
-Goal: Connect the local/GitHub GSD execution loop to Notion so plan runs, QA outcomes, and UAT gaps write back automatically.
+Goal: Connect the local/GitHub GSD execution loop to Notion so plan runs, QA outcomes, and UAT gaps write back automatically, while keeping GitHub and Notion as the only evidence surfaces used by Opus 4.6.
 
 Exit Criteria:
 
 - A local script can run validation commands and write Execution Run + QA + UAT Gap state to Notion.
 - A GitHub Actions workflow reuses the same script.
+- The GitHub repo and workflow runs are usable as review evidence from Notion.
 - Missing Notion or GitHub credentials degrade safely without leaking secrets.
-- Failures become UAT gaps; subjective review is routed through the Opus 4.6 review gate.
+- Failures become UAT gaps; subjective review is routed through the Opus 4.6 review gate without citing local terminal files.
 
-## Phase P2: Remove Remaining Browser Hand-Check Dependency
+## Phase P2: Harden Opus 4.6 Review Packets
 
 Status: Planned
 
-Goal: Replace the remaining manual browser hand-check with a reproducible automated or semi-automated validation asset.
+Goal: Standardize the Opus 4.6 review packet so subjective approval happens from Notion pages and the GitHub repo alone.
 
 Exit Criteria:
 
-- The cockpit demo validation path can be replayed without manual mouse/trackpad work.
-- The boundary between automated checks and Opus 4.6 subjective review is explicit.
-- Results write back to Notion through the same GSD automation bridge.
+- A ready-to-copy Opus 4.6 prompt library exists in Notion.
+- Review Gate instructions explicitly forbid local terminal file references.
+- The boundary between automated validation and Opus 4.6 subjective review is explicit.

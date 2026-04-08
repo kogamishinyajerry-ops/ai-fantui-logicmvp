@@ -1,5 +1,5 @@
 # Concerns
 
-- GitHub authentication is not currently visible in this process.
-- The browser hand-check remains a workflow gap until Phase P2 replaces it.
+- GitHub authentication may not always be visible in every Codex process and may need explicit shell sourcing.
+- Opus 4.6 review packets must reference Notion pages and the GitHub repo only.
 - Notion API writes are control-plane state, not code truth.

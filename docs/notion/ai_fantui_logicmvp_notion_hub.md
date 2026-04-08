@@ -393,7 +393,7 @@
 
 建议初始化：
 
-- `现场浏览器手动 QA 仍未完全替代真实人工操作`
+- `当 Review Gate 进入 Awaiting Opus 4.6 时，审查输入必须只使用 Notion 页面与 GitHub 仓库证据`
 - `部分演示表达依赖 simplified plant feedback，需要持续防止误读`
 - `如果后续继续做 UI polish，需要避免重新挤压逻辑主板主视图`
 
@@ -474,8 +474,13 @@
 
 每次会话结束，只更新一句短说明，例如：
 
-- `继续 Round 92 后续现场 QA，不做功能扩展；先看当前状态、最新 QA、Now 任务视图。`
+- `继续 P1 的 Opus 审查闭环，不做功能扩展；先看当前状态、Review Gate、最新 QA、09C 提示词库。`
 - `继续 demo UI polish，只允许视觉微调，不允许改 controller truth 或 API 契约。`
+
+补充规则：
+
+- 历史 `browser hand-check` / `hand-check` 文档可以保留在仓库里作为归档材料，但不再属于当前审查入口。
+- 当前正式审查入口应该始终落在 Notion 的 `09A Opus 4.6 手动审查协议` 与 `09C Opus 4.6 审查提示词库`。
 
 以后你开新会话时，给 AI 的口令就可以缩成一句：
 
