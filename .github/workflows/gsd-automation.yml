@@ -28,6 +28,10 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install optional validation dependency
+        shell: bash
+        run: python3 -m pip install --disable-pip-version-check jsonschema
+
       - name: Run GSD automation and sync to Notion
         shell: bash
         run: |
