@@ -8,7 +8,20 @@
     "plans": "33cc6894-2bed-81f0-a918-e48f51a29f98",
     "runs": "33cc6894-2bed-8167-9618-fdcbb8849827",
     "gates": "33cc6894-2bed-812f-82fb-fbee3563adae",
-    "gaps": "33cc6894-2bed-8155-8c86-c4f58295502e"
+    "gaps": "33cc6894-2bed-8155-8c86-c4f58295502e",
+    "decisions": "33cc6894-2bed-8116-82de-e0f63f9f5f59",
+    "assets": "33cc6894-2bed-818b-920a-fd13f828d23e"
+  },
+  "pages": {
+    "constitution": "33cc6894-2bed-8148-b2c5-ec68c440f5ef",
+    "status": "33cc6894-2bed-8105-ae6a-d880cb399b73",
+    "control_plane": "33cc6894-2bed-810d-875e-e4e0e464ee31",
+    "opus_protocol": "33cc6894-2bed-8117-b8f5-eda203f3be18",
+    "opus_brief": "33cc6894-2bed-819a-811c-f19885ee595a"
+  },
+  "urls": {
+    "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
+    "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
   "default_plan": "P1-01 建立自动执行 / QA 回写闭环",
   "default_review_gate": "OPUS-4.6 周期审查 Gate"

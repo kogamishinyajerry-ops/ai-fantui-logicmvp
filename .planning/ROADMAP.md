@@ -38,6 +38,6 @@ Goal: Standardize the Opus 4.6 review packet so subjective approval happens from
 
 Exit Criteria:
 
-- A ready-to-copy Opus 4.6 prompt library exists in Notion.
+- A state-driven current Opus 4.6 review brief exists in Notion and can be refreshed from live control-plane state.
 - Review Gate instructions explicitly forbid local terminal file references.
 - The boundary between automated validation and Opus 4.6 subjective review is explicit.

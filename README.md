@@ -238,11 +238,19 @@ python3 tools/gsd_notion_sync.py run \
   --command "PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'"
 ```
 
-When `NOTION_API_KEY` is set, the bridge writes Execution Run, QA, Plan status, and failure UAT Gap records into the `AI FANTUI LogicMVP 控制塔`. Use `--opus-gate` only when the run should pause for a Notion AI Opus 4.6 review packet that references Notion pages and the GitHub repo only.
+When `NOTION_API_KEY` is set, the bridge writes Execution Run, QA, Plan status, and failure UAT Gap records into the `AI FANTUI LogicMVP 控制塔`. Use `--opus-gate` only when the run should pause for a Notion AI Opus 4.6 intervention that references Notion pages and the GitHub repo only.
 
 GitHub Actions uses the same bridge in `.github/workflows/gsd-automation.yml`; configure the repository secret `NOTION_API_KEY` before expecting CI-to-Notion writeback.
 
 Historical browser hand-check docs in `docs/coordination/` remain as archival round records only. The active review sources are the Notion control tower, the GitHub repo, and GitHub Actions evidence.
+
+To refresh the current Opus 4.6 intervention brief from live Notion state, run:
+
+```bash
+python3 tools/gsd_notion_sync.py prepare-opus-review --activate-gate
+```
+
+This does not generate a fixed template library. It reads the current phase, latest runs, QA, gate, and open gaps, then rewrites `09C 当前 Opus 4.6 审查简报` with the specific review intervention Opus should perform now.
 
 ## Debugging Notes
 
