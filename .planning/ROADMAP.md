@@ -43,3 +43,16 @@ Exit Criteria:
 - Review Gate instructions explicitly forbid local terminal file references.
 - The boundary between automated validation and Opus 4.6 subjective review is explicit.
 - The current brief successfully drove an Opus adjudication that approved P1 and resolved legacy gaps.
+
+## Phase P3: Reduce Control-Plane Drift
+
+Status: Active
+
+Goal: Keep the automated loop stable as validation entrypoints, Notion evidence, and Opus review packets evolve.
+
+Exit Criteria:
+
+- Local runs, GitHub Actions, and Notion writeback all reuse a single validation entrypoint.
+- Same-plan legacy automation gaps auto-resolve after later successful runs.
+- The current Opus 4.6 review brief generator stays aligned with the live Notion control-tower structure and GitHub evidence URLs.
+- No stale manual review task remains open when a gate has already been approved.

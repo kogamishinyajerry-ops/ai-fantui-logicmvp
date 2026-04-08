@@ -2,9 +2,15 @@
 
 ## Auto-Supersede Legacy Gaps
 
-Status: Open
+Status: Done
 
-After a later successful run for the same plan, older failure gaps still remain open until someone resolves them manually. Add a control-plane rule that detects superseding success evidence and marks same-plan legacy gaps as resolved or superseded automatically.
+The control-plane rule now detects superseding success evidence and marks same-plan legacy gaps as resolved automatically, with duplicate sibling records labeled as duplicates.
+
+## Unified Validation Entrypoint
+
+Status: Done
+
+Local runs, GitHub Actions, and Notion writeback now share `tools/run_gsd_validation_suite.py`, so the validation command list no longer drifts across automation surfaces.
 
 ## Opus Review Brief Maintenance
 

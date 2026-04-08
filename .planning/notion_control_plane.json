@@ -23,6 +23,6 @@
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P1-01 建立自动执行 / QA 回写闭环",
+  "default_plan": "P3-03 09C 无需审查状态感知",
   "default_review_gate": "OPUS-4.6 周期审查 Gate"
 }

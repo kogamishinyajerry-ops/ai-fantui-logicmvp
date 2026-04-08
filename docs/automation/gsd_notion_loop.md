@@ -9,9 +9,11 @@ Current GitHub repo:
 ## Local Run
 
 ```bash
+python3 tools/run_gsd_validation_suite.py --format json
+
 python3 tools/gsd_notion_sync.py run \
   --title "Local GSD automation smoke" \
-  --command "PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'"
+  --command "python3 tools/run_gsd_validation_suite.py --format json"
 ```
 
 If `NOTION_API_KEY` is set, the run writes:
@@ -25,13 +27,17 @@ Add `--opus-gate` only when the run should pause for an Opus 4.6 intervention th
 
 ## GitHub Actions
 
-`.github/workflows/gsd-automation.yml` reuses the same script.
+`.github/workflows/gsd-automation.yml` reuses the same bridge command, and `tools/run_gsd_validation_suite.py` is the shared validation entrypoint behind it.
 
 Required repository secret:
 
 - `NOTION_API_KEY`
 
 If the secret is missing, the script still runs validation commands and skips Notion writeback, so CI remains safe while secrets are being configured.
+
+The validation suite stops on the first failing check and emits a compact JSON report, so a single command can feed both GitHub Actions evidence and Notion QA digests without drifting command lists.
+
+The active plan is routed from `.planning/notion_control_plane.json` instead of being hardcoded in the GitHub workflow, which keeps future phase changes aligned across local runs, CI, and Notion writeback.
 
 ## Manual Review Rule
 
@@ -52,6 +58,12 @@ python3 tools/gsd_notion_sync.py prepare-opus-review --activate-gate
 ```
 
 That command reads the current Notion state and rewrites `09C 当前 Opus 4.6 审查简报` so Opus gets a situational request, not a frozen prompt template.
+
+If the current state does not actually require subjective review, the refreshed brief now explicitly says `当前无需 Opus 审查` and tells you to keep the loop moving. A non-activating refresh also preserves existing Review Gate decision notes instead of wiping approved conclusions.
+
+## Legacy Gap Cleanup
+
+If a plan previously produced one or more `Automation failure: <plan>` gap records, a later successful run for that same plan now auto-resolves those open legacy gaps. Duplicate sibling records are marked as duplicates in the resolution note so the audit trail stays intact without leaving stale blockers open.
 
 ## Opus Packet Rule
 

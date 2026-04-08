@@ -101,6 +101,7 @@ class ReviewSnapshot:
 @dataclass(frozen=True)
 class CurrentReviewBrief:
     page_title: str
+    review_required: bool
     intervention_kind: str
     review_target: str
     why_now: str
@@ -436,6 +437,39 @@ def first_row(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
     return rows[0] if rows else None
 
 
+def build_superseded_gap_fix_plan(success_run_title: str, duplicate: bool = False) -> str:
+    note = f"Superseded by successful run {success_run_title}."
+    if duplicate:
+        note += " Duplicate of sibling gap record."
+    return note
+
+
+def resolve_superseded_failure_gaps(
+    client: Any,
+    config: dict[str, Any],
+    *,
+    plan_id: str,
+    success_run_title: str,
+) -> list[str]:
+    rows = client.query_database(
+        database_id(config, "gaps"),
+        filter_payload={"property": TITLE_PROPS["gaps"], "title": {"equals": f"Automation failure: {plan_id}"}},
+        page_size=20,
+    )
+    open_rows = [row for row in rows if row_text(row, "Status") != "Resolved"]
+    resolved_ids: list[str] = []
+    for index, row in enumerate(open_rows):
+        client.update_page_properties(
+            row["id"],
+            {
+                "Status": select_value("Resolved"),
+                "Fix Plan": rich_text_value(build_superseded_gap_fix_plan(success_run_title, duplicate=index > 0)),
+            },
+        )
+        resolved_ids.append(row["id"])
+    return resolved_ids
+
+
 def fetch_review_snapshot(client: NotionClient, config: dict[str, Any]) -> ReviewSnapshot:
     active_phase_row = first_row(
         client.query_database(
@@ -537,7 +571,12 @@ def fetch_review_snapshot(client: NotionClient, config: dict[str, Any]) -> Revie
     )
 
 
-def build_current_review_brief(snapshot: ReviewSnapshot, config: dict[str, Any]) -> CurrentReviewBrief:
+def build_current_review_brief(
+    snapshot: ReviewSnapshot,
+    config: dict[str, Any],
+    *,
+    force_review: bool = False,
+) -> CurrentReviewBrief:
     review_target = f"{snapshot.active_phase} / {snapshot.latest_verified_plan}"
     repo_url = config_url(config, "github_repo")
     actions_url = config_url(config, "github_actions")
@@ -556,7 +595,30 @@ def build_current_review_brief(snapshot: ReviewSnapshot, config: dict[str, Any])
         facts.append(f"当前人工任务：{snapshot.ready_task}")
     facts.append(f"当前 Gate 状态：{snapshot.gate_status}")
 
-    if stale_gap_count > 0 and snapshot.latest_success_run:
+    if not force_review and open_gap_count == 0 and snapshot.gate_status != "Awaiting Opus 4.6" and not snapshot.ready_task:
+        intervention_kind = "当前无需 Opus 审查"
+        why_now = (
+            "当前没有 open gap，默认 Review Gate 也不在 Awaiting Opus 4.6，且没有挂着等待人工触发的 Opus 任务。"
+            "现在最正确的动作是继续自动开发，而不是为了例行检查去手动拉起一次主观审查。"
+        )
+        gate_direction = "保持当前 gate 状态不变；只有出现新的 blocker、Awaiting gate 或明确主观裁决需求时，才刷新 09C 并触发 Opus 4.6。"
+        questions = (
+            "当前是否真的存在新的 open gap、Awaiting gate，或必须依赖主观判断才能继续推进的问题？",
+            "如果没有，是否应该继续自动开发并等待下一次真实触发条件，而不是重复发起审查？",
+        )
+        out_of_scope = (
+            "不要为了“例行看一眼”而触发 Opus 4.6。",
+            "不要重开已经 Approved 或 Standby 的 gate。",
+            "不要引用本地终端文件或未同步到 GitHub 的信息。",
+        )
+        writeback_steps = (
+            "保持 Review Gate 当前状态，不要覆盖既有裁决。",
+            "继续自动开发，并等待新的 blocker / open gap / Awaiting gate 出现。",
+            "只有在真的需要主观裁决时，再刷新 09C 并手动触发 Opus 4.6。",
+        )
+        copy_prompt = "当前无需触发 Notion AI Opus 4.6。继续自动开发，并等待新的 blocker、open gap、Awaiting gate 或主观裁决需求出现后，再刷新 09C。"
+        review_required = False
+    elif stale_gap_count > 0 and snapshot.latest_success_run:
         intervention_kind = "P1 phase readiness + 旧失败 Gap 裁决"
         why_now = (
             f"最新自动化证据 `{snapshot.latest_success_run}` 已成功，但 Notion 里仍有 {stale_gap_count} 条旧失败遗留的 "
@@ -594,6 +656,7 @@ def build_current_review_brief(snapshot: ReviewSnapshot, config: dict[str, Any])
             "3. 如果不是 blocker，应该怎样在控制塔中 resolve / merge；4. 当前 Opus 审查机制是否足够稳健；"
             "5. 接下来应该给出 Approved、Changes Requested，还是进入新的 cleanup phase；6. 给出一段可直接回写到 Review Gate 的结论。"
         )
+        review_required = True
     elif open_gap_count > 0:
         intervention_kind = "失败阻塞分流审查"
         why_now = (
@@ -624,6 +687,7 @@ def build_current_review_brief(snapshot: ReviewSnapshot, config: dict[str, Any])
             "请判断这些 gap 哪些是真正 blocker，它们属于 correctness、workflow/configuration 还是更高层架构问题，"
             "并给出最小修复路径与可直接回写 Review Gate 的结论。不要引用任何本地终端文件。"
         )
+        review_required = True
     else:
         intervention_kind = "Phase 收口与下一步优先级审查"
         why_now = (
@@ -654,9 +718,11 @@ def build_current_review_brief(snapshot: ReviewSnapshot, config: dict[str, Any])
             "请判断当前 phase 是否应 Approved、是否还存在必须修正的缺口，以及下一阶段最值得投入的方向是什么。"
             "不要引用任何本地终端文件。"
         )
+        review_required = True
 
     return CurrentReviewBrief(
         page_title="09C 当前 Opus 4.6 审查简报",
+        review_required=review_required,
         intervention_kind=intervention_kind,
         review_target=review_target,
         why_now=why_now,
@@ -670,6 +736,8 @@ def build_current_review_brief(snapshot: ReviewSnapshot, config: dict[str, Any])
 
 
 def render_current_review_brief_blocks(brief: CurrentReviewBrief, snapshot: ReviewSnapshot, config: dict[str, Any]) -> list[dict[str, Any]]:
+    prompt_heading = "可直接复制到 Notion AI 的当前请求" if brief.review_required else "当前不需要触发 Notion AI"
+    next_steps_heading = "审查后如何回写" if brief.review_required else "现在该怎么做"
     blocks: list[dict[str, Any]] = [
         callout_block(
             "这不是固定提示词模板，而是根据当前 phase、run、gap、gate 状态生成的一次当前审查简报。只有当 09C 被刷新后，才应该触发 Notion AI Opus 4.6。",
@@ -716,10 +784,10 @@ def render_current_review_brief_blocks(brief: CurrentReviewBrief, snapshot: Revi
     blocks.extend(
         [
             divider_block(),
-            heading_block("可直接复制到 Notion AI 的当前请求"),
+            heading_block(prompt_heading),
             paragraph_block(brief.copy_prompt),
             divider_block(),
-            heading_block("审查后如何回写"),
+            heading_block(next_steps_heading),
         ]
     )
     blocks.extend(number_block(step) for step in brief.writeback_steps)
@@ -732,6 +800,25 @@ def render_current_review_brief_blocks(brief: CurrentReviewBrief, snapshot: Revi
         )
         blocks.extend(bullet_block(title) for title in snapshot.open_gap_titles[:8])
     return blocks
+
+
+def build_gate_update_properties(brief: CurrentReviewBrief, *, activate_gate: bool) -> dict[str, Any]:
+    if activate_gate:
+        return {
+            "Status": select_value("Awaiting Opus 4.6"),
+            "What To Review": rich_text_value(brief.why_now),
+            "Next Action": rich_text_value("打开 09C 当前 Opus 4.6 审查简报，并把其中的当前请求复制到 Notion AI。"),
+            "Decision Notes": rich_text_value("等待 Opus 4.6 基于当前审查简报给出 Approved 或 Changes Requested。"),
+        }
+    next_action = (
+        "打开 09C 当前 Opus 4.6 审查简报，并把其中的当前请求复制到 Notion AI。"
+        if brief.review_required
+        else "继续自动开发；只有出现新的 gate / blocker / open gap 时，再刷新 09C 并手动触发 Opus 4.6。"
+    )
+    return {
+        "What To Review": rich_text_value(brief.why_now),
+        "Next Action": rich_text_value(next_action),
+    }
 
 
 def write_current_opus_review_brief(
@@ -761,21 +848,15 @@ def write_current_opus_review_brief(
         if activate_gate
         else snapshot
     )
-    brief = build_current_review_brief(effective_snapshot, config)
+    brief = build_current_review_brief(effective_snapshot, config, force_review=activate_gate)
     brief_page_id = page_id(config, "opus_brief")
     client.update_page_properties(brief_page_id, {"title": title_value(brief.page_title)})
     client.replace_page_body(brief_page_id, render_current_review_brief_blocks(brief, effective_snapshot, config))
 
     if snapshot.gate_page_id:
-        gate_status = "Awaiting Opus 4.6" if activate_gate else snapshot.gate_status
         client.update_page_properties(
             snapshot.gate_page_id,
-            {
-                "Status": select_value(gate_status),
-                "What To Review": rich_text_value(brief.why_now),
-                "Next Action": rich_text_value("打开 09C 当前 Opus 4.6 审查简报，并把其中的当前请求复制到 Notion AI。"),
-                "Decision Notes": rich_text_value("等待 Opus 4.6 基于当前审查简报给出 Approved 或 Changes Requested。"),
-            },
+            build_gate_update_properties(brief, activate_gate=activate_gate),
         )
     if snapshot.ready_task_id:
         client.update_page_properties(
@@ -789,6 +870,7 @@ def write_current_opus_review_brief(
     return {
         "page_id": brief_page_id,
         "page_title": brief.page_title,
+        "review_required": brief.review_required,
         "intervention_kind": brief.intervention_kind,
         "review_target": brief.review_target,
         "gate_status": "Awaiting Opus 4.6" if activate_gate else snapshot.gate_status,
@@ -872,6 +954,15 @@ def write_notion_outcome(
                 "Fix Plan": rich_text_value("Generate a follow-up fix plan, then rerun tools/gsd_notion_sync.py."),
             },
         )
+    else:
+        resolved_gap_ids = resolve_superseded_failure_gaps(
+            client,
+            config,
+            plan_id=plan_id,
+            success_run_title=title,
+        )
+        if resolved_gap_ids:
+            written["resolved_gaps"] = resolved_gap_ids
 
     if opus_gate:
         gate_page_id = client.upsert_page(
@@ -1029,6 +1120,7 @@ def handle_prepare_opus_review(args: argparse.Namespace, config: dict[str, Any])
     snapshot = fetch_review_snapshot(client, config)
     brief = build_current_review_brief(snapshot, config)
     payload: dict[str, Any] = {
+        "review_required": brief.review_required,
         "intervention_kind": brief.intervention_kind,
         "review_target": brief.review_target,
         "why_now": brief.why_now,

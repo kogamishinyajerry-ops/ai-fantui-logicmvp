@@ -233,14 +233,20 @@ This repo is wired for a GSD loop where GitHub / the local checkout is the code 
 Run the local automation bridge:
 
 ```bash
+python3 tools/run_gsd_validation_suite.py --format json
+
 python3 tools/gsd_notion_sync.py run \
   --title "Local GSD automation smoke" \
-  --command "PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'"
+  --command "python3 tools/run_gsd_validation_suite.py --format json"
 ```
 
 When `NOTION_API_KEY` is set, the bridge writes Execution Run, QA, Plan status, and failure UAT Gap records into the `AI FANTUI LogicMVP 控制塔`. Use `--opus-gate` only when the run should pause for a Notion AI Opus 4.6 intervention that references Notion pages and the GitHub repo only.
 
 GitHub Actions uses the same bridge in `.github/workflows/gsd-automation.yml`; configure the repository secret `NOTION_API_KEY` before expecting CI-to-Notion writeback.
+
+`tools/run_gsd_validation_suite.py` is now the single validation entrypoint for local runs and GitHub Actions. It executes the unit-test suite plus the schema validators in a stable order, stops on the first failure, and emits either text or machine-readable JSON.
+
+The active automation plan is no longer hardcoded in the GitHub workflow. `tools/gsd_notion_sync.py run` reads the current default plan from `.planning/notion_control_plane.json`, so phase routing now changes in one place instead of drifting between YAML and Notion.
 
 Historical browser hand-check docs in `docs/coordination/` remain as archival round records only. The active review sources are the Notion control tower, the GitHub repo, and GitHub Actions evidence.
 
@@ -251,6 +257,10 @@ python3 tools/gsd_notion_sync.py prepare-opus-review --activate-gate
 ```
 
 This does not generate a fixed template library. It reads the current phase, latest runs, QA, gate, and open gaps, then rewrites `09C 当前 Opus 4.6 审查简报` with the specific review intervention Opus should perform now.
+
+If there is no open gap, no `Awaiting Opus 4.6` gate, and no pending Opus task, the refreshed 09C page now says so explicitly and tells you to keep developing automatically instead of triggering a redundant review. A normal refresh also preserves existing approved gate decision notes.
+
+When a later successful run arrives for the same plan, the bridge now resolves open `Automation failure: <plan>` gaps automatically and marks duplicate sibling records accordingly. That keeps the control tower aligned with the latest passing evidence instead of leaving stale blockers open.
 
 ## Debugging Notes
 

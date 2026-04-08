@@ -42,11 +42,5 @@ jobs:
 
           python3 tools/gsd_notion_sync.py run \
             --title "GitHub GSD automation $GITHUB_RUN_ID" \
-            --plan-id "P1-01 建立自动执行 / QA 回写闭环" \
-            --command "PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'" \
-            --command "PYTHONPATH=src python3 tools/validate_debug_json_schema.py --format json" \
-            --command "PYTHONPATH=src python3 tools/validate_demo_answer_schema.py --format json" \
-            --command "PYTHONPATH=src python3 tools/validate_validation_report_schema.py --format json" \
-            --command "PYTHONPATH=src python3 tools/validate_validation_schema_runner_report_schema.py --format json" \
-            --command "PYTHONPATH=src python3 tools/validate_validation_schema_checker_report_schema.py --format json" \
+            --command "python3 tools/run_gsd_validation_suite.py --format json" \
             $OPUS_FLAG
