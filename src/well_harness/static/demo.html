@@ -441,6 +441,21 @@
             </article>
           </section>
         </div>
+        <section class="panel monitor-panel" aria-labelledby="monitor-panel-title">
+          <div class="monitor-panel-header">
+            <div>
+              <h2 id="monitor-panel-title"><span class="presenter-callout">[监控]</span> 状态 vs 时间</h2>
+              <p class="monitor-panel-note">
+                基于你定义的 `RA -> TRA -> VDT` 监测逻辑，由后端直接生成整条时间线；不是前端手搓假数据。
+              </p>
+            </div>
+            <button type="button" id="monitor-refresh-button" class="monitor-refresh-button">刷新监控图</button>
+          </div>
+          <p id="monitor-status" class="monitor-status" role="status" aria-live="polite">监控时间线读取中...</p>
+          <div id="monitor-summary" class="monitor-summary" aria-label="监控总结"></div>
+          <div id="monitor-events" class="monitor-events" aria-label="监控关键时刻"></div>
+          <div id="monitor-tracks" class="monitor-tracks" aria-live="polite"></div>
+        </section>
       </section>
     </main>
     <script src="/demo.js"></script>

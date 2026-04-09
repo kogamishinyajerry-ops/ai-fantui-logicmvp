@@ -25,6 +25,22 @@ CONTENT_TYPES = {
     ".js": "application/javascript; charset=utf-8",
 }
 TRA_L4_LOCK_DEG = -14.0
+MONITOR_TIMELINE_PATH = "/api/monitor-timeline"
+MONITOR_RA_START_FT = 7.0
+MONITOR_RA_RATE_FT_PER_S = 0.1
+MONITOR_TRA_START_S = 10.0
+MONITOR_TRA_RATE_DEG_PER_S = 1.0
+MONITOR_TRA_LOCK_DEG = -14.0
+MONITOR_VDT_START_S = 24.0
+MONITOR_VDT_RATE_PERCENT_PER_S = 5.0
+MONITOR_ACTIVE_END_S = 44.0
+MONITOR_TIMELINE_END_S = 70.0
+MONITOR_ENGINE_RUNNING = True
+MONITOR_AIRCRAFT_ON_GROUND = True
+MONITOR_REVERSER_INHIBITED = False
+MONITOR_EEC_ENABLE = True
+MONITOR_N1K = 35.0
+MONITOR_MAX_N1K_DEPLOY_LIMIT = 60.0
 LEVER_NUMERIC_INPUTS = {
     "tra_deg": {"default": 0.0, "min": -32.0, "max": 0.0},
     "radio_altitude_ft": {"default": 5.0, "min": 0.0, "max": 20.0},
@@ -53,6 +69,10 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
+        if parsed.path == MONITOR_TIMELINE_PATH:
+            self._send_json(200, monitor_timeline_payload())
+            return
+
         if parsed.path in ("", "/", "/demo.html"):
             self._serve_static("demo.html")
             return
@@ -493,6 +513,197 @@ def _build_tra_lock_payload(
         "unlock_logic": "logic4",
         "unlock_blockers": unlock_blockers,
         "message": message,
+    }
+
+
+def _monitor_ra_ft(time_s: float) -> float:
+    return max(0.0, MONITOR_RA_START_FT - MONITOR_RA_RATE_FT_PER_S * time_s)
+
+
+def _monitor_tra_deg(time_s: float) -> float:
+    if time_s < MONITOR_TRA_START_S:
+        return 0.0
+    return max(MONITOR_TRA_LOCK_DEG, -(time_s - MONITOR_TRA_START_S) * MONITOR_TRA_RATE_DEG_PER_S)
+
+
+def _monitor_vdt_percent(time_s: float) -> float:
+    if time_s < MONITOR_VDT_START_S:
+        return 0.0
+    return min(100.0, (time_s - MONITOR_VDT_START_S) * MONITOR_VDT_RATE_PERCENT_PER_S)
+
+
+def _monitor_series_definition() -> list[dict]:
+    return [
+        {"id": "ra", "label": "RA", "unit": "ft", "display_min": 0.0, "display_max": 7.0, "color": "#ff6f91", "category": "input"},
+        {"id": "tra", "label": "TRA", "unit": "deg", "display_min": -32.0, "display_max": 0.0, "color": "#ffaa33", "category": "input"},
+        {"id": "sw1", "label": "SW1", "unit": "state", "display_min": 0.0, "display_max": 1.0, "color": "#28f4ff", "category": "logic"},
+        {"id": "logic1", "label": "L1", "unit": "state", "display_min": 0.0, "display_max": 1.0, "color": "#34d4ff", "category": "logic"},
+        {"id": "tls", "label": "TLS", "unit": "V", "display_min": 0.0, "display_max": 115.0, "color": "#7dff9a", "category": "power"},
+        {"id": "sw2", "label": "SW2", "unit": "state", "display_min": 0.0, "display_max": 1.0, "color": "#28f4ff", "category": "logic"},
+        {"id": "logic2", "label": "L2", "unit": "state", "display_min": 0.0, "display_max": 1.0, "color": "#34d4ff", "category": "logic"},
+        {"id": "etrac", "label": "ETRAC", "unit": "V", "display_min": 0.0, "display_max": 540.0, "color": "#86ffbf", "category": "power"},
+        {"id": "logic3", "label": "L3", "unit": "state", "display_min": 0.0, "display_max": 1.0, "color": "#34d4ff", "category": "logic"},
+        {"id": "eec", "label": "EEC", "unit": "state", "display_min": 0.0, "display_max": 1.0, "color": "#ffd65c", "category": "command"},
+        {"id": "pls", "label": "PLS", "unit": "state", "display_min": 0.0, "display_max": 1.0, "color": "#ffd65c", "category": "command"},
+        {"id": "pdu", "label": "PDU", "unit": "state", "display_min": 0.0, "display_max": 1.0, "color": "#ffd65c", "category": "command"},
+        {"id": "vdt", "label": "VDT", "unit": "%", "display_min": 0.0, "display_max": 100.0, "color": "#b69dff", "category": "sensor"},
+        {"id": "logic4", "label": "L4", "unit": "state", "display_min": 0.0, "display_max": 1.0, "color": "#34d4ff", "category": "logic"},
+        {"id": "thr_lock", "label": "THR_LOCK", "unit": "state", "display_min": 0.0, "display_max": 1.0, "color": "#ff8c7a", "category": "command"},
+    ]
+
+
+def _monitor_transition_time(rows: list[dict], field_name: str, target_value) -> float | None:
+    for row in rows:
+        if row[field_name] == target_value:
+            return row["time_s"]
+    return None
+
+
+def _monitor_rows(config: HarnessConfig) -> list[dict]:
+    controller = DeployController(config)
+    switches = LatchedThrottleSwitches(config)
+    switch_state = SwitchState(previous_tra_deg=0.0)
+    tls_powered_s = 0.0
+    pls_powered_s = 0.0
+    tls_unlocked_ls = False
+    all_pls_unlocked_ls = False
+    rows: list[dict] = []
+
+    step_count = int(round(MONITOR_TIMELINE_END_S / config.step_s))
+    for step_index in range(step_count + 1):
+        time_s = round(step_index * config.step_s, 3)
+        radio_altitude_ft = _monitor_ra_ft(time_s)
+        tra_deg = _monitor_tra_deg(time_s)
+        vdt_percent = _monitor_vdt_percent(time_s)
+        switch_state = switches.update(switch_state, tra_deg)
+
+        inputs = ResolvedInputs(
+            radio_altitude_ft=radio_altitude_ft,
+            tra_deg=tra_deg,
+            sw1=switch_state.sw1,
+            sw2=switch_state.sw2,
+            engine_running=MONITOR_ENGINE_RUNNING,
+            aircraft_on_ground=MONITOR_AIRCRAFT_ON_GROUND,
+            reverser_inhibited=MONITOR_REVERSER_INHIBITED,
+            eec_enable=MONITOR_EEC_ENABLE,
+            n1k=MONITOR_N1K,
+            max_n1k_deploy_limit=MONITOR_MAX_N1K_DEPLOY_LIMIT,
+            tls_unlocked_ls=tls_unlocked_ls,
+            all_pls_unlocked_ls=all_pls_unlocked_ls,
+            reverser_not_deployed_eec=vdt_percent <= 0.0,
+            reverser_fully_deployed_eec=vdt_percent >= 100.0,
+            deploy_90_percent_vdt=vdt_percent >= config.deploy_90_threshold_percent,
+        )
+        outputs, explain = controller.evaluate_with_explain(inputs)
+
+        rows.append(
+            {
+                "time_s": time_s,
+                "ra": round(radio_altitude_ft, 3),
+                "tra": round(tra_deg, 3),
+                "sw1": 1.0 if inputs.sw1 else 0.0,
+                "logic1": 1.0 if outputs.logic1_active else 0.0,
+                "tls": 115.0 if outputs.tls_115vac_cmd else 0.0,
+                "sw2": 1.0 if inputs.sw2 else 0.0,
+                "logic2": 1.0 if outputs.logic2_active else 0.0,
+                "etrac": 540.0 if outputs.etrac_540vdc_cmd else 0.0,
+                "logic3": 1.0 if outputs.logic3_active else 0.0,
+                "eec": 1.0 if outputs.eec_deploy_cmd else 0.0,
+                "pls": 1.0 if outputs.pls_power_cmd else 0.0,
+                "pdu": 1.0 if outputs.pdu_motor_cmd else 0.0,
+                "vdt": round(vdt_percent, 3),
+                "logic4": 1.0 if outputs.logic4_active else 0.0,
+                "thr_lock": 1.0 if outputs.throttle_electronic_lock_release_cmd else 0.0,
+                "logic4_failed_conditions": [condition.name for condition in explain.logic4.failed_conditions],
+            }
+        )
+
+        tls_powered_s = tls_powered_s + config.step_s if outputs.tls_115vac_cmd else 0.0
+        tls_unlocked_ls = tls_unlocked_ls or (
+            outputs.tls_115vac_cmd and tls_powered_s >= config.tls_unlock_delay_s
+        )
+
+        pls_powered_s = pls_powered_s + config.step_s if outputs.pls_power_cmd else 0.0
+        pls_ready = outputs.pls_power_cmd and pls_powered_s >= config.pls_unlock_delay_s
+        all_pls_unlocked_ls = all_pls_unlocked_ls or pls_ready
+
+        if not (
+            outputs.tls_115vac_cmd
+            or outputs.etrac_540vdc_cmd
+            or outputs.pls_power_cmd
+            or outputs.pdu_motor_cmd
+        ):
+            tls_unlocked_ls = False
+            all_pls_unlocked_ls = False
+
+    return rows
+
+
+def monitor_timeline_payload() -> dict:
+    config = HarnessConfig()
+    rows = _monitor_rows(config)
+    series = []
+    for definition in _monitor_series_definition():
+        samples = [[row["time_s"], row[definition["id"]]] for row in rows]
+        series.append({**definition, "samples": samples})
+
+    l4_ready_time = _monitor_transition_time(rows, "logic4", 1.0)
+    events = [
+        {
+            "time_s": 0.0,
+            "label": "流程开始",
+            "detail": "RA 从 7.0 ft 起步；TRA=0°；VDT=0%。",
+        },
+        {
+            "time_s": 10.0,
+            "label": "RA=6.0 ft",
+            "detail": "TRA 从 0° 开始以 1°/s 推向 -14°。",
+        },
+        {
+            "time_s": 24.0,
+            "label": "TRA=-14°",
+            "detail": "碰到 L4 条件限位；VDT 开始以 5%/s 从 0% 变化。",
+        },
+        {
+            "time_s": 42.0,
+            "label": "VDT90",
+            "detail": "VDT 达到 90%，L4 / THR_LOCK 首次满足。",
+        },
+        {
+            "time_s": MONITOR_ACTIVE_END_S,
+            "label": "监测结束",
+            "detail": "VDT=100%，主动监测流程完成。",
+        },
+        {
+            "time_s": MONITOR_TIMELINE_END_S,
+            "label": "RA=0 ft",
+            "detail": "展示保持段：RA 继续匀速降到 0 ft 后保持。",
+        },
+    ]
+
+    return {
+        "mode": "timeline_monitor",
+        "title": "受控状态监控时间线",
+        "time_start_s": 0.0,
+        "time_end_s": MONITOR_TIMELINE_END_S,
+        "active_end_s": MONITOR_ACTIVE_END_S,
+        "step_s": config.step_s,
+        "model_note": (
+            "这条监控图按用户定义的 RA -> TRA -> VDT 受控时间线生成；"
+            "VDT 按现有 demo 反馈语义绘制为 0%-100% 监测量，控制逻辑仍由 DeployController 评估。"
+        ),
+        "timeline_summary": {
+            "ra_start_ft": MONITOR_RA_START_FT,
+            "ra_hits_six_ft_at_s": 10.0,
+            "tra_lock_deg": MONITOR_TRA_LOCK_DEG,
+            "tra_reaches_lock_at_s": 24.0,
+            "vdt_reaches_90_percent_at_s": 42.0,
+            "vdt_reaches_100_percent_at_s": MONITOR_ACTIVE_END_S,
+            "ra_reaches_zero_ft_at_s": MONITOR_TIMELINE_END_S,
+            "l4_ready_at_s": l4_ready_time,
+        },
+        "events": events,
+        "series": series,
     }
 
 

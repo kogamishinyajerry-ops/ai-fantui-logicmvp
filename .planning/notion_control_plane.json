@@ -23,7 +23,7 @@
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P5-09 纠正 TRA 启动位与拖动方向语义",
+  "default_plan": "P5-10 增加 RA-TRA-VDT 受控状态监控时间线",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {

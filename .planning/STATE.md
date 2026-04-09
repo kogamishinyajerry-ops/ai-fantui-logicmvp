@@ -1,10 +1,10 @@
 # State
 
-Last activity: 2026-04-09 - P5-09 moved the cockpit off the threshold-bound startup preset, so TRA now boots from a neutral 0° state with correct left-to-deeper-reverse guidance while preserving the same L4-gated deep-range rule and the 164-test / 8-check baseline.
+Last activity: 2026-04-09 - P5-10 added a backend-generated state-vs-time monitoring panel for the user-defined RA -> TRA -> VDT sequence, keeping the cockpit readable while lifting the validated baseline to 167 tests and 8 shared validation checks.
 
 ## Current Position
 
-- Round 92 is complete, and the current validated baseline is local `run_gsd_validation_suite.py` with 164 tests plus 8 shared validation checks.
+- Round 92 is complete, and the current validated baseline is local `run_gsd_validation_suite.py` with 167 tests plus 8 shared validation checks.
 - Notion control tower is live at https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec.
 - GitHub repo is live at https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp.
 - P1 is closed as Approved in the Review Gate after GitHub-backed Opus adjudication.
@@ -31,6 +31,7 @@ Last activity: 2026-04-09 - P5-09 moved the cockpit off the threshold-bound star
 - `P5-07 明确条件深拉区语义并放松桌面舱面密度` is now implemented locally: the slider always shows `-32°..0°`, browser-side free dragging stays inside `-14°..0°` until the `L4` boundary unlock is ready, and the desktop lever/preset/condition areas now breathe more clearly without crowding the right-side logic board.
 - `P5-08 修复 VDT live-control wiring 与条件深拉解锁回归` is now implemented locally: the moved VDT mode/percentage controls are again part of live snapshot scheduling, so dragging VDT updates the visible readout and can reopen the deep TRA drag band when the backend `L4` boundary unlock becomes ready.
 - `P5-09 纠正 TRA 启动位与拖动方向语义` is now implemented locally: the cockpit no longer boots on a near-threshold preset, the TRA rail now explains that deeper reverse lives to the left, and the default interaction demonstrates the free `-14° .. 0°` band before any `L4` unlock.
+- `P5-10 增加 RA-TRA-VDT 受控状态监控时间线` is now implemented locally: the demo exposes a dedicated full-width monitoring panel driven by a backend `GET /api/monitor-timeline` trace, with event markers and multi-row status curves for the user-defined RA / TRA / VDT process.
 - `P6 Reconcile Control Tower And Freeze Demo Packet` is now drafted locally as the next planned phase, pending the current P5 Opus adjudication.
 
 ## Active Objective
@@ -47,6 +48,7 @@ Keep the development loop operational while shifting the active roadmap from P4 
 - Convert residual confidence checks into GitHub-verifiable smoke coverage before resuming deeper automatic demo changes.
 - Maintain the boundary between controller truth and simplified plant feedback in demo copy and UI affordances.
 - Keep the TRA conditional deep-range drag semantics and same-screen cockpit layout aligned with the same `POST /api/lever-snapshot` truth surface.
+- Add a deterministic state-vs-time monitor for the cockpit chain without reintroducing a second control-truth layer or crowding the presenter surface.
 
 ## Blockers/Concerns
 

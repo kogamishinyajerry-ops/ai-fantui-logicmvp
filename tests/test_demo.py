@@ -71,6 +71,16 @@ def start_demo_server():
     return server, thread
 
 
+def monitor_track_samples(payload):
+    tracks = {}
+    for track in payload["series"]:
+        tracks[track["id"]] = {
+            round(float(sample[0]), 3): float(sample[1])
+            for sample in track["samples"]
+        }
+    return tracks
+
+
 class DemoIntentLayerTests(unittest.TestCase):
     def test_demo_answers_match_lightweight_fixture_contract(self):
         asset = load_demo_answer_asset()
@@ -657,6 +667,84 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertEqual(payload["tra_lock"]["visual_reverse_min_deg"], HarnessConfig().reverse_travel_min_deg)
         self.assertIn("TRA 现在可以在 -32.0° 到 0.0° 区间自由拖动", payload["tra_lock"]["message"])
         self.assertFalse(payload["outputs"]["logic4_active"])
+
+    def test_demo_server_api_returns_monitor_timeline_payload(self):
+        server, thread = start_demo_server()
+        try:
+            connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+            connection.request("GET", "/api/monitor-timeline")
+            response = connection.getresponse()
+            payload = json.loads(response.read().decode("utf-8"))
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+        self.assertEqual(response.status, 200)
+        self.assertEqual(payload["mode"], "timeline_monitor")
+        self.assertEqual(payload["time_start_s"], 0.0)
+        self.assertEqual(payload["time_end_s"], 70.0)
+        self.assertEqual(payload["active_end_s"], 44.0)
+        self.assertIn("VDT 按现有 demo 反馈语义绘制为 0%-100%", payload["model_note"])
+        self.assertEqual(payload["timeline_summary"]["ra_hits_six_ft_at_s"], 10.0)
+        self.assertEqual(payload["timeline_summary"]["tra_reaches_lock_at_s"], 24.0)
+        self.assertEqual(payload["timeline_summary"]["vdt_reaches_100_percent_at_s"], 44.0)
+        self.assertIn("VDT90", {event["label"] for event in payload["events"]})
+        self.assertEqual(
+            [track["id"] for track in payload["series"]],
+            [
+                "ra",
+                "tra",
+                "sw1",
+                "logic1",
+                "tls",
+                "sw2",
+                "logic2",
+                "etrac",
+                "logic3",
+                "eec",
+                "pls",
+                "pdu",
+                "vdt",
+                "logic4",
+                "thr_lock",
+            ],
+        )
+
+    def test_demo_server_api_monitor_timeline_matches_key_transition_times(self):
+        server, thread = start_demo_server()
+        try:
+            connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+            connection.request("GET", "/api/monitor-timeline")
+            response = connection.getresponse()
+            payload = json.loads(response.read().decode("utf-8"))
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+        self.assertEqual(response.status, 200)
+        samples = monitor_track_samples(payload)
+
+        self.assertAlmostEqual(samples["ra"][0.0], 7.0)
+        self.assertAlmostEqual(samples["ra"][10.0], 6.0)
+        self.assertAlmostEqual(samples["ra"][44.0], 2.6)
+        self.assertAlmostEqual(samples["ra"][70.0], 0.0)
+
+        self.assertAlmostEqual(samples["tra"][0.0], 0.0)
+        self.assertAlmostEqual(samples["tra"][10.0], 0.0)
+        self.assertAlmostEqual(samples["tra"][24.0], -14.0)
+        self.assertAlmostEqual(samples["tra"][70.0], -14.0)
+
+        self.assertAlmostEqual(samples["vdt"][24.0], 0.0)
+        self.assertAlmostEqual(samples["vdt"][42.0], 90.0)
+        self.assertAlmostEqual(samples["vdt"][44.0], 100.0)
+        self.assertAlmostEqual(samples["vdt"][70.0], 100.0)
+
+        self.assertEqual(samples["logic4"][24.0], 0.0)
+        self.assertEqual(samples["logic4"][42.0], 1.0)
+        self.assertEqual(samples["thr_lock"][42.0], 1.0)
+        self.assertEqual(samples["thr_lock"][70.0], 1.0)
 
     def test_demo_server_api_rejects_invalid_extended_lever_snapshot_input(self):
         server, thread = start_demo_server()
@@ -1644,6 +1732,58 @@ class DemoIntentLayerTests(unittest.TestCase):
             ".lever-result {",
         ):
             self.assertIn(fragment, css)
+
+    def test_demo_static_assets_include_monitor_timeline_panel(self):
+        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
+        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
+        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
+
+        for fragment in (
+            "class=\"panel monitor-panel\"",
+            "id=\"monitor-panel-title\"",
+            "状态 vs 时间",
+            "RA -> TRA -> VDT",
+            "id=\"monitor-refresh-button\"",
+            "id=\"monitor-status\"",
+            "id=\"monitor-summary\"",
+            "id=\"monitor-events\"",
+            "id=\"monitor-tracks\"",
+        ):
+            self.assertIn(fragment, html)
+
+        for fragment in (
+            ".monitor-panel",
+            ".monitor-panel-header",
+            ".monitor-refresh-button",
+            ".monitor-summary",
+            ".monitor-summary-chip",
+            ".monitor-events",
+            ".monitor-event-card",
+            ".monitor-tracks",
+            ".monitor-track",
+            ".monitor-track-meta",
+            ".monitor-track-chart",
+            ".monitor-grid-line",
+            ".monitor-event-line",
+            ".monitor-series-line",
+            ".monitor-axis-label",
+            ".monitor-value-label",
+        ):
+            self.assertIn(fragment, css)
+
+        for fragment in (
+            "const monitorXAxisTicks = [0, 10, 20, 30, 40, 50, 60, 70];",
+            "function renderMonitorTimeline(payload)",
+            "function renderMonitorSummary(payload)",
+            "function renderMonitorEvents(payload)",
+            "function buildMonitorTrackRow(track, payload)",
+            "function renderMonitorTimelineError(message)",
+            "async function loadMonitorTimeline()",
+            "fetch(\"/api/monitor-timeline\"",
+            "monitorRefreshButton?.addEventListener(\"click\"",
+            "loadMonitorTimeline();",
+        ):
+            self.assertIn(fragment, script)
 
     def test_demo_static_assets_include_cockpit_toggle_and_hud_polish(self):
         html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")

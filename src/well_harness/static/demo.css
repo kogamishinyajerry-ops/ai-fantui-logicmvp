@@ -1741,6 +1741,201 @@ button.summary-chip,
   overflow-x: auto;
 }
 
+.monitor-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 6px;
+  background:
+    linear-gradient(180deg, rgba(10, 16, 28, 0.98), rgba(4, 8, 15, 0.95)),
+    radial-gradient(circle at 12% 12%, rgba(61, 126, 255, 0.1), transparent 18rem);
+  border-color: rgba(61, 126, 255, 0.26);
+}
+
+.monitor-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.monitor-panel-note,
+.monitor-status {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.monitor-status.is-error {
+  color: var(--accent-red);
+}
+
+.monitor-refresh-button {
+  border: 1px solid rgba(40, 244, 255, 0.26);
+  border-radius: 999px;
+  background: rgba(7, 18, 30, 0.96);
+  color: var(--accent-cyan);
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.monitor-refresh-button:hover {
+  transform: translateY(-1px);
+  background: rgba(14, 30, 47, 0.98);
+  border-color: rgba(40, 244, 255, 0.42);
+}
+
+.monitor-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.monitor-summary-chip {
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(61, 126, 255, 0.18);
+  background: rgba(7, 15, 28, 0.86);
+  color: var(--text-main);
+  font-size: 0.73rem;
+  font-family: var(--font-mono);
+}
+
+.monitor-events {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.monitor-event-card {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 176, 55, 0.18);
+  background: linear-gradient(180deg, rgba(14, 22, 34, 0.98), rgba(6, 12, 22, 0.94));
+}
+
+.monitor-event-time {
+  color: var(--accent-orange);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.monitor-event-card strong {
+  font-size: 0.86rem;
+  color: #fff;
+}
+
+.monitor-event-card span {
+  color: var(--text-muted);
+  font-size: 0.77rem;
+  line-height: 1.45;
+}
+
+.monitor-tracks {
+  display: grid;
+  gap: 10px;
+  max-height: 980px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.monitor-track {
+  display: grid;
+  grid-template-columns: minmax(160px, 190px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: linear-gradient(180deg, rgba(7, 14, 24, 0.94), rgba(3, 7, 14, 0.9));
+}
+
+.monitor-track-meta {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+
+.monitor-track-title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.monitor-track-title strong {
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.monitor-track-unit,
+.monitor-track-range,
+.monitor-track-note {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.monitor-track-chart {
+  border-radius: 14px;
+  border: 1px solid rgba(61, 126, 255, 0.16);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent),
+    rgba(8, 13, 23, 0.96);
+  padding: 8px;
+}
+
+.monitor-track-chart svg {
+  display: block;
+  width: 100%;
+  height: 78px;
+}
+
+.monitor-grid-line {
+  stroke: rgba(140, 160, 180, 0.18);
+  stroke-width: 1;
+  stroke-dasharray: 4 4;
+}
+
+.monitor-axis-line {
+  stroke: rgba(227, 237, 247, 0.22);
+  stroke-width: 1;
+}
+
+.monitor-event-line {
+  stroke: rgba(255, 176, 55, 0.26);
+  stroke-width: 1;
+  stroke-dasharray: 3 5;
+}
+
+.monitor-series-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.4;
+}
+
+.monitor-series-endpoint {
+  stroke: #fff;
+  stroke-width: 1.2;
+}
+
+.monitor-axis-label,
+.monitor-value-label {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+
+.monitor-value-label.is-strong {
+  fill: var(--text-main);
+}
+
 @media (min-width: 1101px) and (max-height: 1120px) {
   .shell {
     padding-top: 14px;
@@ -1880,6 +2075,10 @@ button.summary-chip,
     flex-wrap: nowrap;
   }
 
+  .monitor-tracks {
+    max-height: 780px;
+  }
+
   .result-grid {
     grid-template-columns: 1fr;
   }
@@ -1921,6 +2120,16 @@ button.summary-chip,
   .lever-thresholds,
   .lever-presets-grid,
   .lever-result-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .monitor-panel-header,
+  .monitor-track,
+  .monitor-events {
+    grid-template-columns: 1fr;
+  }
+
+  .monitor-track {
     grid-template-columns: 1fr;
   }
 
