@@ -60,7 +60,7 @@ Exit Criteria:
 
 ## Phase P4: Elevate Cockpit Demo To Presenter-Ready
 
-Status: Active
+Status: Done
 
 Goal: Turn the current cockpit demo candidate into a presenter-ready local demo that stays deterministic, explainable, and honest about the simplified plant boundary.
 
@@ -70,3 +70,16 @@ Exit Criteria:
 - Presenter-critical prompts and lever interactions are regression-protected without introducing browser-only approval steps or a second control-truth layer.
 - Demo copy and UI make the distinction between controller truth and simplified plant feedback explicit wherever a live audience could misread it.
 - `POST /api/demo`, `POST /api/lever-snapshot`, `well_harness demo`, and `well_harness demo_server` remain stable unless a later plan explicitly changes their contracts.
+
+## Phase P5: Demo Polish And Edge-Case Hardening
+
+Status: Active
+
+Goal: Harden the presenter demo against edge-case interactions and replace residual browser-only confidence checks with GitHub-verifiable smoke coverage.
+
+Exit Criteria:
+
+- Rapid lever edits, fast condition toggles, and extreme-value inputs are regression-protected by automated tests.
+- A demo-path smoke suite runs in GitHub Actions without requiring browser-only approval steps.
+- Residual "manual browser QA" expectations are either automated, narrowed into explicit scripts, or retired as no longer needed.
+- The controller-truth versus simplified-plant boundary remains explicit, and no second control-truth layer is introduced while polishing the demo.
