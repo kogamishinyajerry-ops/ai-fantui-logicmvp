@@ -50,7 +50,7 @@ Keep the development loop operational while shifting the active roadmap from P4 
 - GitHub credentials live in `~/.zshrc`, so non-interactive shells may need explicit sourcing or env injection.
 - Opus 4.6 review packets must never rely on local terminal file paths.
 - Historical browser hand-check notes in archived coordination docs are not part of the active review contract.
-- `P5-05` is verified locally and should replace the older `P5-04` review target once Notion/GitHub evidence writeback lands.
+- `P5-05` is verified locally, and the control-plane default plan now points to it so future GitHub/Notion writebacks stop drifting back to `P5-04`.
 - The Notion `01 当前状态` page is still stale (`129 tests OK` and manual-browser-QA wording), so the next planned phase should prioritize truth reconciliation and freeze-packet closure rather than new demo features.
 
 ## Accumulated Context
