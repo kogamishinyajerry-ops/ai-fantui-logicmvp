@@ -47,6 +47,8 @@ GitHub-backed run rows also store the exact Actions run URL, and the shared vali
 
 The shared validation suite now also runs `tools/validate_notion_control_plane.py`. When `NOTION_API_KEY` is available, it checks that the configured key pages and databases remain readable through the Notion API; when the token is absent, it reports a safe `SKIP` instead of failing the whole loop.
 
+Successful non-gated bridge writebacks now also refresh `09C 当前 Opus 4.6 审查简报` automatically. If the approved default gate is stable and review is not currently required, the bridge archives any configured superseded legacy review artifacts so old standby gates and deprecated browser-QA plans stop polluting active control-plane views.
+
 ## Manual Review Rule
 
 The only intended manual stop is:
@@ -72,6 +74,10 @@ If the current state does not actually require subjective review, the refreshed 
 ## Legacy Gap Cleanup
 
 If a plan previously produced one or more `Automation failure: <plan>` gap records, a later successful run for that same plan now auto-resolves those open legacy gaps. Duplicate sibling records are marked as duplicates in the resolution note so the audit trail stays intact without leaving stale blockers open.
+
+## Legacy Review Artifact Retirement
+
+Configured legacy review artifacts in `.planning/notion_control_plane.json` are validated by `tools/validate_notion_control_plane.py` and archived automatically after a successful non-gated writeback when the default gate is already `Approved` and 09C says review is not required.
 
 ## Opus Packet Rule
 

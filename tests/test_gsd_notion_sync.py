@@ -6,6 +6,7 @@ from tools.gsd_notion_sync import (
     ReviewSnapshot,
     build_gate_update_properties,
     build_current_review_brief,
+    retire_legacy_review_artifacts,
     fetch_review_snapshot,
     build_superseded_gap_fix_plan,
     clip,
@@ -411,6 +412,115 @@ class GsdNotionSyncTests(unittest.TestCase):
             "Superseded by successful run GitHub GSD automation 24150884053. Duplicate of sibling gap record.",
             client.updated[1][1]["Fix Plan"]["rich_text"][0]["text"]["content"],
         )
+
+    def test_retire_legacy_review_artifacts_archives_only_active_configured_pages(self):
+        class FakeClient:
+            def __init__(self):
+                self.archived = []
+
+            def get_page(self, page_id):
+                pages = {
+                    "gate-legacy": {"id": "gate-legacy", "archived": False, "in_trash": False},
+                    "plan-legacy": {"id": "plan-legacy", "archived": False, "in_trash": False},
+                    "already-archived": {"id": "already-archived", "archived": True, "in_trash": True},
+                }
+                return pages[page_id]
+
+            def archive_page(self, page_id):
+                self.archived.append(page_id)
+
+        snapshot = ReviewSnapshot(
+            active_phase="P3 减少控制面漂移",
+            active_phase_goal="保持自动开发闭环稳定",
+            active_phase_summary="P3 正在推进",
+            latest_verified_plan="P3-06 Notion 控制面自检",
+            latest_success_run="GitHub GSD automation 24167870634",
+            latest_failed_run="GitHub GSD automation 24148804383",
+            latest_passing_qa="GitHub GSD automation 24167870634 QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+        brief = build_current_review_brief(
+            snapshot,
+            {
+                "urls": {
+                    "github_repo": "https://github.com/example/repo",
+                    "github_actions": "https://github.com/example/repo/actions",
+                }
+            },
+        )
+
+        retired = retire_legacy_review_artifacts(
+            FakeClient(),
+            {
+                "legacy_review_artifacts": [
+                    {"id": "gate-legacy", "kind": "gate", "title": "P1 自动化目标审查 Gate", "reason": "superseded"},
+                    {"id": "plan-legacy", "kind": "plan", "title": "P1-02 消除手动浏览器 QA 依赖", "reason": "superseded"},
+                    {"id": "already-archived", "kind": "plan", "title": "Archived already", "reason": "superseded"},
+                ]
+            },
+            snapshot=snapshot,
+            brief=brief,
+        )
+
+        self.assertEqual(["gate-legacy", "plan-legacy"], retired)
+
+    def test_retire_legacy_review_artifacts_skips_when_review_is_still_required(self):
+        class FakeClient:
+            def __init__(self):
+                self.archived = []
+
+            def get_page(self, page_id):
+                return {"id": page_id, "archived": False, "in_trash": False}
+
+            def archive_page(self, page_id):
+                self.archived.append(page_id)
+
+        snapshot = ReviewSnapshot(
+            active_phase="P1 建立 Notion + GitHub 的 Opus 审查闭环",
+            active_phase_goal="让主观审查完全通过 Notion 页面 + GitHub 仓库完成",
+            active_phase_summary="P1 正在执行",
+            latest_verified_plan="P1-01 建立自动执行 / QA 回写闭环",
+            latest_success_run=None,
+            latest_failed_run="GitHub GSD automation 24148804383",
+            latest_passing_qa=None,
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Standby",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=("Automation failure: P1-01 建立自动执行 / QA 回写闭环",),
+            stale_gap_titles=(),
+        )
+        brief = build_current_review_brief(
+            snapshot,
+            {
+                "urls": {
+                    "github_repo": "https://github.com/example/repo",
+                    "github_actions": "https://github.com/example/repo/actions",
+                }
+            },
+        )
+        client = FakeClient()
+
+        retired = retire_legacy_review_artifacts(
+            client,
+            {
+                "legacy_review_artifacts": [
+                    {"id": "gate-legacy", "kind": "gate", "title": "P1 自动化目标审查 Gate", "reason": "superseded"},
+                ]
+            },
+            snapshot=snapshot,
+            brief=brief,
+        )
+
+        self.assertEqual([], retired)
+        self.assertEqual([], client.archived)
 
 
 if __name__ == "__main__":

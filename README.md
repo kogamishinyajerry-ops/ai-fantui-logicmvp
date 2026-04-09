@@ -256,6 +256,8 @@ GitHub-backed Execution Run rows now store the exact Actions run URL, and the sh
 
 `tools/run_gsd_validation_suite.py` now also includes `tools/validate_notion_control_plane.py`. With `NOTION_API_KEY` present, that check verifies the configured key Notion pages and databases are still accessible; without the token it exits as a safe `SKIP`.
 
+The control-plane config can also list superseded legacy review artifacts. Successful non-gated `tools/gsd_notion_sync.py run ...` writebacks now refresh `09C 当前 Opus 4.6 审查简报` automatically and archive those configured legacy pages once the default gate is already approved and no review is currently required.
+
 Historical browser hand-check docs in `docs/coordination/` remain as archival round records only. The active review sources are the Notion control tower, the GitHub repo, and GitHub Actions evidence.
 
 To refresh the current Opus 4.6 intervention brief from live Notion state, run:

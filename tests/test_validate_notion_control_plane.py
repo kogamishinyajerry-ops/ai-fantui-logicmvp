@@ -46,6 +46,10 @@ class ValidateNotionControlPlaneTests(unittest.TestCase):
             },
             "default_plan": "P3-06 控制面自检",
             "default_review_gate": "OPUS-4.6 周期审查 Gate",
+            "legacy_review_artifacts": [
+                {"id": "legacy-gate-id", "kind": "gate", "title": "P1 自动化目标审查 Gate", "reason": "Superseded by the current default gate."},
+                {"id": "legacy-plan-id", "kind": "plan", "title": "P1-02 消除手动浏览器 QA 依赖", "reason": "Superseded by the current review contract."},
+            ],
         }
 
     def tearDown(self):
@@ -106,8 +110,9 @@ class ValidateNotionControlPlaneTests(unittest.TestCase):
         self.assertEqual("pass", report["status"])
         self.assertEqual(5, report["checked_pages"])
         self.assertEqual(10, report["checked_databases"])
-        self.assertEqual(15, len(seen))
-        self.assertIn("PASS: validated 5 pages and 10 databases", text_lines[0])
+        self.assertEqual(2, report["checked_legacy_artifacts"])
+        self.assertEqual(17, len(seen))
+        self.assertIn("PASS: validated 5 pages, 10 databases, and 2 legacy artifacts", text_lines[0])
 
 
 if __name__ == "__main__":

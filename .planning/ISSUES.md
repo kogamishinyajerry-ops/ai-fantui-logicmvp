@@ -30,6 +30,12 @@ Status: Done
 
 The shared validation suite now runs `tools/validate_notion_control_plane.py`, so page/database/config drift is detected automatically instead of surfacing only when 09C or Opus review is needed.
 
+## Legacy Review Artifact Retirement
+
+Status: Done
+
+Successful non-gated writebacks now refresh 09C and archive configured superseded review artifacts, so stale standby gates and deprecated browser-QA plans no longer linger in the active control-plane views.
+
 ## Opus Review Brief Maintenance
 
 Status: Open

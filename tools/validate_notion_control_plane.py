@@ -36,6 +36,12 @@ REQUIRED_URL_KEYS = (
     "github_repo",
     "github_actions",
 )
+REQUIRED_LEGACY_ARTIFACT_FIELDS = (
+    "id",
+    "kind",
+    "title",
+    "reason",
+)
 
 
 def parse_output_format(argv: list[str]) -> str:
@@ -70,6 +76,10 @@ def validate_required_keys(config: dict[str, Any]) -> list[str]:
         errors.append("missing default_plan")
     if not config.get("default_review_gate"):
         errors.append("missing default_review_gate")
+    for index, artifact in enumerate(config.get("legacy_review_artifacts", [])):
+        for key in REQUIRED_LEGACY_ARTIFACT_FIELDS:
+            if not artifact.get(key):
+                errors.append(f"missing legacy_review_artifacts[{index}].{key}")
     return errors
 
 
@@ -105,6 +115,19 @@ def check_remote_objects(
         request_get(token, f"/v1/databases/{database_id}")
         results.append({"kind": "database", "key": key, "id": database_id, "status": "ok"})
 
+    for index, artifact in enumerate(config.get("legacy_review_artifacts", [])):
+        artifact_id = artifact["id"]
+        request_get(token, f"/v1/pages/{artifact_id}")
+        results.append(
+            {
+                "kind": "legacy_review_artifact",
+                "key": f"{artifact['kind']}:{artifact['title']}",
+                "id": artifact_id,
+                "status": "ok",
+                "index": str(index),
+            }
+        )
+
     return results
 
 
@@ -120,6 +143,7 @@ def validate_control_plane(
         "config_path": str(config_path),
         "checked_pages": 0,
         "checked_databases": 0,
+        "checked_legacy_artifacts": 0,
         "results": [],
     }
     text_lines: list[str] = []
@@ -156,8 +180,12 @@ def validate_control_plane(
     report["results"] = results
     report["checked_pages"] = len([item for item in results if item["kind"] == "page"])
     report["checked_databases"] = len([item for item in results if item["kind"] == "database"])
+    report["checked_legacy_artifacts"] = len([item for item in results if item["kind"] == "legacy_review_artifact"])
     text_lines.append(
-        f"PASS: validated {report['checked_pages']} pages and {report['checked_databases']} databases in the Notion control plane."
+        "PASS: validated "
+        f"{report['checked_pages']} pages, "
+        f"{report['checked_databases']} databases, and "
+        f"{report['checked_legacy_artifacts']} legacy artifacts in the Notion control plane."
     )
     return 0, report, text_lines
 

@@ -178,6 +178,12 @@ class NotionClient:
     def update_page_properties(self, page_id: str, properties: dict[str, Any]) -> None:
         self.request("PATCH", f"/v1/pages/{page_id}", {"properties": properties})
 
+    def get_page(self, page_id: str) -> dict[str, Any]:
+        return self.request("GET", f"/v1/pages/{page_id}")
+
+    def archive_page(self, page_id: str) -> None:
+        self.request("PATCH", f"/v1/pages/{page_id}", {"archived": True})
+
     def list_block_children(self, block_id: str) -> list[dict[str, Any]]:
         items: list[dict[str, Any]] = []
         cursor: str | None = None
@@ -311,6 +317,7 @@ def load_control_plane_config(config_path: Path) -> dict[str, Any]:
             "urls": dict(DEFAULT_URLS),
             "default_plan": "P1-01 建立自动执行 / QA 回写闭环",
             "default_review_gate": "OPUS-4.6 周期审查 Gate",
+            "legacy_review_artifacts": [],
         }
     with config_path.open(encoding="utf-8") as config_file:
         config = json.load(config_file)
@@ -325,6 +332,7 @@ def load_control_plane_config(config_path: Path) -> dict[str, Any]:
         config["urls"].setdefault(key, value)
     config.setdefault("default_plan", "P1-01 建立自动执行 / QA 回写闭环")
     config.setdefault("default_review_gate", "OPUS-4.6 周期审查 Gate")
+    config.setdefault("legacy_review_artifacts", [])
     return config
 
 
@@ -442,6 +450,33 @@ def build_superseded_gap_fix_plan(success_run_title: str, duplicate: bool = Fals
     if duplicate:
         note += " Duplicate of sibling gap record."
     return note
+
+
+def should_retire_legacy_review_artifacts(snapshot: ReviewSnapshot, brief: CurrentReviewBrief) -> bool:
+    return snapshot.gate_status == "Approved" and not brief.review_required and not snapshot.open_gap_titles
+
+
+def retire_legacy_review_artifacts(
+    client: Any,
+    config: dict[str, Any],
+    *,
+    snapshot: ReviewSnapshot,
+    brief: CurrentReviewBrief,
+) -> list[str]:
+    if not should_retire_legacy_review_artifacts(snapshot, brief):
+        return []
+
+    retired_ids: list[str] = []
+    for artifact in config.get("legacy_review_artifacts", []):
+        page_id_value = artifact.get("id")
+        if not page_id_value:
+            continue
+        page = client.get_page(page_id_value)
+        if page.get("archived") or page.get("in_trash"):
+            continue
+        client.archive_page(page_id_value)
+        retired_ids.append(page_id_value)
+    return retired_ids
 
 
 def resolve_superseded_failure_gaps(
@@ -916,6 +951,12 @@ def write_current_opus_review_brief(
                 "Next Step": rich_text_value("打开 09C 当前 Opus 4.6 审查简报，按其中的当前介入请求执行。"),
             },
         )
+    retired_artifact_ids = retire_legacy_review_artifacts(
+        client,
+        config,
+        snapshot=snapshot,
+        brief=brief,
+    )
 
     return {
         "page_id": brief_page_id,
@@ -929,6 +970,7 @@ def write_current_opus_review_brief(
         "latest_success_run": snapshot.latest_success_run,
         "latest_failed_run": snapshot.latest_failed_run,
         "why_now": brief.why_now,
+        "retired_legacy_artifact_ids": retired_artifact_ids,
     }
 
 
@@ -1022,6 +1064,12 @@ def write_notion_outcome(
         )
         if resolved_gap_ids:
             written["resolved_gaps"] = resolved_gap_ids
+        if not opus_gate and config.get("pages", {}).get("opus_brief"):
+            written["opus_review_brief"] = write_current_opus_review_brief(
+                client,
+                config,
+                activate_gate=False,
+            )
 
     if opus_gate:
         gate_page_id = client.upsert_page(

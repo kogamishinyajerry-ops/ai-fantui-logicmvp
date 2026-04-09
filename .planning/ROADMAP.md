@@ -55,5 +55,5 @@ Exit Criteria:
 - Local runs, GitHub Actions, and Notion writeback all reuse a single validation entrypoint.
 - Same-plan legacy automation gaps auto-resolve after later successful runs.
 - The current Opus 4.6 review brief generator stays aligned with the live Notion control-tower structure and GitHub evidence URLs.
-- No stale manual review task remains open when a gate has already been approved.
+- Superseded legacy review artifacts retire automatically once the default gate is approved and 09C says no review is required.
 - The GitHub Actions workflow stays aligned with GitHub-hosted runner runtime deprecations without reintroducing manual review dependence.
