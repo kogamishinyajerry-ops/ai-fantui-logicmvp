@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-09 - P5-02 added latest-interaction-wins demo request arbitration, and the local validation baseline is now 159 tests plus 8 shared validation checks.
+Last activity: 2026-04-09 - P5-03 extended the demo smoke suite across the visible presenter presets, and the local validation baseline remains 159 tests plus 8 shared validation checks.
 
 ## Current Position
 
@@ -24,6 +24,7 @@ Last activity: 2026-04-09 - P5-02 added latest-interaction-wins demo request arb
 - `P5-01 GitHub 可验证 demo smoke suite` is now implemented locally: `tools/demo_path_smoke.py` covers bridge prompt, extreme clamp, mode-switch reset, and expected invalid-input behavior through the HTTP demo surface.
 - The shared validation suite now includes 8 checks, with `demo_path_smoke` added as the new GitHub-verifiable presenter-demo confidence layer.
 - `P5-02 最新交互胜出 demo 请求仲裁` is now implemented locally: the browser shell ignores stale prompt or lever responses once a newer interaction has started, so rapid edits no longer let an older response repaint the shared result surface.
+- `P5-03 可见演示预设 smoke sweep` is now implemented locally: the smoke suite verifies `L3 等待 VDT90`, `RA blocker`, `N1K blocker`, and `VDT90 ready` through the same `POST /api/lever-snapshot` evidence plane used by the live demo.
 
 ## Active Objective
 
@@ -45,7 +46,7 @@ Keep the development loop operational while shifting the active roadmap from P4 
 - GitHub credentials live in `~/.zshrc`, so non-interactive shells may need explicit sourcing or env injection.
 - Opus 4.6 review packets must never rely on local terminal file paths.
 - Historical browser hand-check notes in archived coordination docs are not part of the active review contract.
-- `P5-02` is verified locally and its Notion/GitHub evidence writeback is the remaining confirmation step before choosing the next P5 hardening slice.
+- `P5-03` is verified locally and its Notion/GitHub evidence writeback is the remaining confirmation step before choosing the next P5 hardening slice.
 
 ## Accumulated Context
 

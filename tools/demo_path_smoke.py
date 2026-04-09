@@ -176,6 +176,149 @@ def scenario_lever_mode_switch_reset(port: int) -> ScenarioResult:
     )
 
 
+def scenario_preset_l3_waiting_vdt90(port: int) -> ScenarioResult:
+    status, payload = request_json(
+        port,
+        "/api/lever-snapshot",
+        {
+            "tra_deg": -14.0,
+            "feedback_mode": "manual_feedback_override",
+            "deploy_position_percent": 0.0,
+        },
+    )
+    if status != 200:
+        return fail_result("preset_l3_waiting_vdt90", status, f"expected HTTP 200 but got {status}")
+
+    checks = (
+        (payload["mode"] == "manual_feedback_override", "preset should stay in manual_feedback_override"),
+        (payload["outputs"]["logic3_active"] is True, "L3 waiting preset should keep logic3 active"),
+        (payload["outputs"]["logic4_active"] is False, "L3 waiting preset should keep logic4 blocked"),
+        (payload["hud"]["deploy_90_percent_vdt"] is False, "L3 waiting preset should keep VDT90 false"),
+        ("deploy_90_percent_vdt" in payload["logic"]["logic4"]["failed_conditions"], "logic4 should explicitly wait on deploy_90_percent_vdt"),
+        ("THR_LOCK 仍未释放" in payload["summary"]["blocker"], "summary blocker should describe the THR_LOCK wait state"),
+    )
+    for passed, message in checks:
+        if not passed:
+            return fail_result("preset_l3_waiting_vdt90", status, message)
+
+    node_states = {node["id"]: node["state"] for node in payload["nodes"]}
+    if node_states.get("logic3") != "active" or node_states.get("thr_lock") != "blocked":
+        return fail_result("preset_l3_waiting_vdt90", status, "preset should show active logic3 with blocked THR_LOCK")
+
+    return pass_result(
+        "preset_l3_waiting_vdt90",
+        status,
+        "visible preset L3 等待 VDT90 keeps L3 active while explicitly blocking L4 / THR_LOCK on deploy_90_percent_vdt.",
+    )
+
+
+def scenario_preset_ra_blocker(port: int) -> ScenarioResult:
+    status, payload = request_json(
+        port,
+        "/api/lever-snapshot",
+        {
+            "tra_deg": -14.0,
+            "radio_altitude_ft": 6.0,
+            "feedback_mode": "manual_feedback_override",
+            "deploy_position_percent": 0.0,
+        },
+    )
+    if status != 200:
+        return fail_result("preset_ra_blocker", status, f"expected HTTP 200 but got {status}")
+
+    checks = (
+        (payload["mode"] == "manual_feedback_override", "RA blocker preset should stay in manual_feedback_override"),
+        ("radio_altitude_ft" in payload["logic"]["logic1"]["failed_conditions"], "logic1 should surface radio_altitude_ft as the blocker"),
+        ("当前卡在 L1" in payload["summary"]["blocker"], "summary blocker should describe the L1 wait state"),
+        (payload["outputs"]["logic4_active"] is False, "RA blocker preset should keep logic4 inactive"),
+    )
+    for passed, message in checks:
+        if not passed:
+            return fail_result("preset_ra_blocker", status, message)
+
+    node_states = {node["id"]: node["state"] for node in payload["nodes"]}
+    if node_states.get("logic1") != "blocked":
+        return fail_result("preset_ra_blocker", status, "RA blocker preset should keep logic1 blocked")
+
+    return pass_result(
+        "preset_ra_blocker",
+        status,
+        "visible preset RA blocker keeps the chain blocked on logic1 with radio_altitude_ft called out in the summary and explain payload.",
+    )
+
+
+def scenario_preset_n1k_blocker(port: int) -> ScenarioResult:
+    status, payload = request_json(
+        port,
+        "/api/lever-snapshot",
+        {
+            "tra_deg": -14.0,
+            "n1k": 60.0,
+            "max_n1k_deploy_limit": 60.0,
+            "feedback_mode": "manual_feedback_override",
+            "deploy_position_percent": 0.0,
+        },
+    )
+    if status != 200:
+        return fail_result("preset_n1k_blocker", status, f"expected HTTP 200 but got {status}")
+
+    checks = (
+        (payload["mode"] == "manual_feedback_override", "N1K blocker preset should stay in manual_feedback_override"),
+        ("n1k" in payload["logic"]["logic3"]["failed_conditions"], "logic3 should surface n1k as the blocker"),
+        ("当前卡在 L3" in payload["summary"]["blocker"], "summary blocker should describe the L3 wait state"),
+        (payload["outputs"]["logic4_active"] is False, "N1K blocker preset should keep logic4 inactive"),
+    )
+    for passed, message in checks:
+        if not passed:
+            return fail_result("preset_n1k_blocker", status, message)
+
+    node_states = {node["id"]: node["state"] for node in payload["nodes"]}
+    if node_states.get("logic3") != "blocked":
+        return fail_result("preset_n1k_blocker", status, "N1K blocker preset should keep logic3 blocked")
+
+    return pass_result(
+        "preset_n1k_blocker",
+        status,
+        "visible preset N1K blocker keeps the chain blocked on logic3 with n1k called out in the summary and explain payload.",
+    )
+
+
+def scenario_preset_vdt90_ready(port: int) -> ScenarioResult:
+    status, payload = request_json(
+        port,
+        "/api/lever-snapshot",
+        {
+            "tra_deg": -14.0,
+            "feedback_mode": "manual_feedback_override",
+            "deploy_position_percent": 95.0,
+        },
+    )
+    if status != 200:
+        return fail_result("preset_vdt90_ready", status, f"expected HTTP 200 but got {status}")
+
+    checks = (
+        (payload["mode"] == "manual_feedback_override", "VDT90 ready preset should stay in manual_feedback_override"),
+        (payload["hud"]["deploy_90_percent_vdt"] is True, "VDT90 ready preset should activate VDT90"),
+        (payload["outputs"]["logic4_active"] is True, "VDT90 ready preset should activate logic4"),
+        (payload["outputs"]["throttle_electronic_lock_release_cmd"] is True, "VDT90 ready preset should activate THR_LOCK release"),
+        ("L4 / THR_LOCK 已点亮" in payload["summary"]["headline"], "summary headline should describe the ready state"),
+        ("当前无 L4 blocker" in payload["summary"]["blocker"], "summary blocker should explain the no-blocker ready state"),
+    )
+    for passed, message in checks:
+        if not passed:
+            return fail_result("preset_vdt90_ready", status, message)
+
+    node_states = {node["id"]: node["state"] for node in payload["nodes"]}
+    if node_states.get("logic4") != "active" or node_states.get("thr_lock") != "active":
+        return fail_result("preset_vdt90_ready", status, "VDT90 ready preset should light both logic4 and THR_LOCK")
+
+    return pass_result(
+        "preset_vdt90_ready",
+        status,
+        "visible preset VDT90 ready drives the ready-state summary and activates L4 / THR_LOCK through the existing manual override path.",
+    )
+
+
 def scenario_invalid_feedback_mode(port: int) -> ScenarioResult:
     status, payload = request_json(
         port,
@@ -198,7 +341,7 @@ def scenario_invalid_feedback_mode(port: int) -> ScenarioResult:
 def run_smoke_suite() -> tuple[int, dict[str, Any], list[str]]:
     report: dict[str, Any] = {
         "status": "pass",
-        "scenario_count": 4,
+        "scenario_count": 8,
         "completed_scenarios": 0,
         "failed_scenario": None,
         "scenarios": [],
@@ -211,6 +354,10 @@ def run_smoke_suite() -> tuple[int, dict[str, Any], list[str]]:
             scenario_demo_bridge_prompt,
             scenario_lever_extreme_clamp,
             scenario_lever_mode_switch_reset,
+            scenario_preset_l3_waiting_vdt90,
+            scenario_preset_ra_blocker,
+            scenario_preset_n1k_blocker,
+            scenario_preset_vdt90_ready,
             scenario_invalid_feedback_mode,
         )
         for scenario in scenarios:
@@ -235,7 +382,7 @@ def run_smoke_suite() -> tuple[int, dict[str, Any], list[str]]:
         server.server_close()
         thread.join(timeout=2)
 
-    text_lines.append("PASS: validated 4 demo smoke scenarios through the local HTTP demo surface.")
+    text_lines.append("PASS: validated 8 demo smoke scenarios through the local HTTP demo surface.")
     return 0, report, text_lines
 
 
