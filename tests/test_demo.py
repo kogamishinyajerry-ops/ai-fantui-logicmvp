@@ -1628,6 +1628,66 @@ class DemoIntentLayerTests(unittest.TestCase):
         ):
             self.assertIn(fragment, result.stdout)
 
+    def test_demo_static_assets_include_lever_result_reading_rails(self):
+        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
+        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
+        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
+        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+
+        for fragment in (
+            "class=\"lever-result-note\"",
+            "Headline -> Blocker -> Next step",
+            "同一份 lever snapshot",
+            "class=\"lever-result-grid\"",
+            "class=\"result-rail result-rail-headline\"",
+            "class=\"result-rail result-rail-blocker\"",
+            "class=\"result-rail result-rail-next-step\"",
+            "class=\"result-rail-kicker\">1. Headline</p>",
+            "class=\"result-rail-kicker\">2. Blocker</p>",
+            "class=\"result-rail-kicker\">3. Next step</p>",
+        ):
+            self.assertIn(fragment, html)
+
+        for fragment in (
+            ".lever-result-note",
+            ".lever-result-grid",
+            ".result-rail",
+            ".result-rail-kicker",
+            ".result-rail-blocker",
+            ".result-rail-next-step",
+        ):
+            self.assertIn(fragment, css)
+
+        for fragment in (
+            "read it top-to-bottom as `Headline -> Blocker -> Next step`",
+            "same lever snapshot payload",
+            "not a second presenter-only explanation layer",
+        ):
+            self.assertIn(fragment, talk_track)
+
+        for fragment in (
+            "fixed presenter reading rails",
+            "`Headline`, `Blocker`, and `Next step`",
+            "same lever snapshot payload",
+        ):
+            self.assertIn(fragment, readme)
+
+        for fragment in (
+            "Read 当前结论 in the fixed order Headline -> Blocker -> Next step",
+            "same lever snapshot payload",
+        ):
+            self.assertIn(fragment, result.stdout)
+
     def test_demo_static_assets_include_presenter_callout_labels(self):
         html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
         css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")

@@ -93,6 +93,7 @@ PRESENTER_WALKTHROUGH_STEPS = (
             "Use the visible Presenter Run Card to launch the bridge / diagnose / trigger / proposal sequence without creating a second presenter-only surface.",
             "Use the visible lever presets to jump between L3 等待 VDT90, RA blocker, N1K blocker, and VDT90 ready without inventing a second state machine.",
             "Use the visible 状态图例 / truth boundary to explain Active / Blocked / Inactive and to separate controller truth from simplified plant feedback.",
+            "Read 当前结论 in the fixed order Headline -> Blocker -> Next step so the live explanation follows the same lever snapshot payload.",
             "If field names need explaining, use the compact answer guide to pair the Audience answer-field legend with Answer sections counts.",
             "On narrow screens, read the same compact answer guide top-to-bottom; section chips stay touch-friendly.",
         ),

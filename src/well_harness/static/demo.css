@@ -781,10 +781,60 @@ a { color: var(--accent-cyan); }
   margin-bottom: 6px;
 }
 
-.lever-result p {
+.lever-result-note {
+  margin: 0 0 10px;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.lever-result-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.result-rail {
+  min-width: 0;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(83, 255, 146, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.result-rail-kicker {
+  margin: 0 0 6px;
+  color: var(--accent-green);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.result-rail p:last-child {
+  margin: 0;
   color: var(--text-main);
   font-size: 0.83rem;
   line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.result-rail-blocker {
+  border-color: rgba(255, 176, 55, 0.14);
+  background: rgba(255, 176, 55, 0.06);
+}
+
+.result-rail-blocker .result-rail-kicker {
+  color: #ffd58e;
+}
+
+.result-rail-next-step {
+  border-color: rgba(79, 184, 255, 0.14);
+  background: rgba(79, 184, 255, 0.06);
+}
+
+.result-rail-next-step .result-rail-kicker {
+  color: var(--accent-cyan);
 }
 
 .lever-evidence-details {
@@ -1590,7 +1640,8 @@ button.summary-chip,
   .hud-grid,
   .feedback-grid,
   .lever-thresholds,
-  .lever-presets-grid {
+  .lever-presets-grid,
+  .lever-result-grid {
     grid-template-columns: 1fr;
   }
 

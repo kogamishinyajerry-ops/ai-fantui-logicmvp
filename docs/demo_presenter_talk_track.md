@@ -18,6 +18,8 @@ This is a one-page presenter talk track for the local UI demo shell. It is manua
 
 [Point] If the audience asks what the node colors mean, point to the visible `状态图例 / truth boundary`: `Active` means the backend snapshot currently lights the node, `Blocked` means the node is waiting on named conditions, and `Inactive` means the current route has not entered that node yet. The same strip also separates controller truth from simplified plant feedback.
 
+[Point] When you switch to the lever cockpit's `当前结论`, read it top-to-bottom as `Headline -> Blocker -> Next step`. That reading rail is still the same lever snapshot payload, not a second presenter-only explanation layer.
+
 [Point] If the audience asks what the answer fields mean, open the `Audience answer-field legend` in the structured answer area. It explains `intent`, `matched_node`, `target_logic`, `evidence`, `outcome`, `possible_causes`, `required_changes`, `risks`, and raw JSON as a reading aid, not a new schema, payload, or control truth.
 
 [Point] The legend and `Answer sections` summary now sit together as the compact answer guide, so field definitions and live section counts read as one guide for the same `DemoAnswer` payload.
@@ -39,10 +41,11 @@ This run card is a manual pre-demo check. It is not browser E2E automation, not 
 6. Confirm the visible `Presenter Run Card` shows the same bridge / diagnose / trigger / proposal order as this talk track and uses clickable steps instead of a separate presenter-only payload.
 7. Confirm the visible `演示场景预设` can jump to `L3 等待 VDT90`, `RA blocker`, `N1K blocker`, and `VDT90 ready` without introducing a separate presenter-only state machine.
 8. Confirm the visible `状态图例 / truth boundary` explains `Active / Blocked / Inactive` and distinguishes controller truth from simplified plant feedback.
-9. Confirm the control chain highlights `logic4 / THR_LOCK`, the highlight explanation names the answer association, the structured answer is readable, and the `Answer sections` summary shows counts.
-10. Expand or review the raw JSON debug panel when you need the machine-readable `DemoAnswer` payload.
-11. If the UI shows loading, empty prompt, API error, or network error, treat that as a UI state, not a control-logic conclusion.
-12. Restate the boundary before presenting: deterministic controlled demo layer, built-in `nominal-deploy` / `retract-reset` scenarios, simplified first-cut plant, not a full LLM, and not a complete physical model.
+9. Confirm the visible `当前结论` rail reads in the fixed order `Headline -> Blocker -> Next step` and does not introduce a second answer payload.
+10. Confirm the control chain highlights `logic4 / THR_LOCK`, the highlight explanation names the answer association, the structured answer is readable, and the `Answer sections` summary shows counts.
+11. Expand or review the raw JSON debug panel when you need the machine-readable `DemoAnswer` payload.
+12. If the UI shows loading, empty prompt, API error, or network error, treat that as a UI state, not a control-logic conclusion.
+13. Restate the boundary before presenting: deterministic controlled demo layer, built-in `nominal-deploy` / `retract-reset` scenarios, simplified first-cut plant, not a full LLM, and not a complete physical model.
 
 ## Demo Path
 
