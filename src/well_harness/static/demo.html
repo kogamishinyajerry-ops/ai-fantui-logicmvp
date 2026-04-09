@@ -124,12 +124,12 @@
                 <div class="lever-track-stack">
                   <div class="lever-readout">
                     <span>TRA</span>
-                    <output id="lever-tra-value" for="lever-tra">-14.0°</output>
+                    <output id="lever-tra-value" for="lever-tra">0.0°</output>
                   </div>
                   <label class="lever-track" for="lever-tra">
-                    <span class="lever-track-label">Forward 0°</span>
-                    <input id="lever-tra" name="tra_deg" type="range" min="-32" max="0" step="0.1" value="-14" data-allowed-reverse-min="-14" data-deep-range-locked="true" data-boundary-unlock-ready="false" aria-describedby="lever-threshold-note lever-lock-status lever-range-note">
-                    <span class="lever-track-label">Reverse -32°</span>
+                    <span class="lever-track-label">左侧更深反推 -32°</span>
+                    <input id="lever-tra" name="tra_deg" type="range" min="-32" max="0" step="0.1" value="0" data-allowed-reverse-min="-14" data-deep-range-locked="true" data-boundary-unlock-ready="false" aria-describedby="lever-threshold-note lever-lock-status lever-range-note">
+                    <span class="lever-track-label">右侧前推 0°</span>
                   </label>
                   <div class="lever-thresholds" id="lever-threshold-note" aria-label="拉杆阈值标尺">
                     <span>SW1 -1.4° ~ -6.2°</span>
@@ -143,7 +143,7 @@
                   </div>
                   <div class="lever-lock-banner" aria-live="polite">
                     <span id="lever-lock-badge" class="lever-lock-badge is-locked">深拉区关闭</span>
-                    <p id="lever-lock-status" class="lever-lock-status">视觉量程始终保持 -32° 到 0°；当 L4 不满足时，只开放 -14° 到 0° 的自由拖动范围。</p>
+                    <p id="lever-lock-status" class="lever-lock-status">默认从 0° 起步；当 L4 不满足时，可以先自由左拉到 -14° 门槛，满足条件后才继续开放 -32° 到 -14° 深拉区。</p>
                   </div>
                 </div>
                 <div class="lever-live-stack">
@@ -175,11 +175,11 @@
                   <h3 id="lever-presets-title">演示场景预设</h3>
                   <p class="lever-presets-note">快速回填当前 `POST /api/lever-snapshot` 输入，用来切镜头，不是第二套状态机。</p>
                 </div>
-                <p id="lever-preset-status" class="lever-preset-status" aria-live="polite">当前场景：L3 等待 VDT90（默认演示位）。</p>
+                <p id="lever-preset-status" class="lever-preset-status" aria-live="polite">当前场景：自定义起步位（先自由左拉到 -14° 门槛，再等待 L4 放开深拉区）。</p>
               </div>
               <div class="lever-presets-grid">
                 <article class="lever-preset-card">
-                  <button type="button" class="lever-preset-trigger is-selected" aria-pressed="true" data-lever-preset="l3_waiting_vdt90">L3 等待 VDT90</button>
+                  <button type="button" class="lever-preset-trigger" aria-pressed="false" data-lever-preset="l3_waiting_vdt90">L3 等待 VDT90</button>
                   <p>L3 已亮，等待 VDT90 / THR_LOCK。</p>
                 </article>
                 <article class="lever-preset-card">

@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-09 - P5-08 restored the moved VDT live-control wiring, so the cockpit once again recomputes snapshots and conditional TRA unlock state during live adjustment while keeping the 164-test / 8-check baseline intact.
+Last activity: 2026-04-09 - P5-09 moved the cockpit off the threshold-bound startup preset, so TRA now boots from a neutral 0° state with correct left-to-deeper-reverse guidance while preserving the same L4-gated deep-range rule and the 164-test / 8-check baseline.
 
 ## Current Position
 
@@ -30,6 +30,7 @@ Last activity: 2026-04-09 - P5-08 restored the moved VDT live-control wiring, so
 - `P5-06 完成锁位语义与同屏观察布局` is now implemented locally: VDT controls sit at the top of the cockpit, the desktop logic board stays visible while the left column scrolls, and the interim lock-state presentation work is in place.
 - `P5-07 明确条件深拉区语义并放松桌面舱面密度` is now implemented locally: the slider always shows `-32°..0°`, browser-side free dragging stays inside `-14°..0°` until the `L4` boundary unlock is ready, and the desktop lever/preset/condition areas now breathe more clearly without crowding the right-side logic board.
 - `P5-08 修复 VDT live-control wiring 与条件深拉解锁回归` is now implemented locally: the moved VDT mode/percentage controls are again part of live snapshot scheduling, so dragging VDT updates the visible readout and can reopen the deep TRA drag band when the backend `L4` boundary unlock becomes ready.
+- `P5-09 纠正 TRA 启动位与拖动方向语义` is now implemented locally: the cockpit no longer boots on a near-threshold preset, the TRA rail now explains that deeper reverse lives to the left, and the default interaction demonstrates the free `-14° .. 0°` band before any `L4` unlock.
 - `P6 Reconcile Control Tower And Freeze Demo Packet` is now drafted locally as the next planned phase, pending the current P5 Opus adjudication.
 
 ## Active Objective
@@ -53,7 +54,7 @@ Keep the development loop operational while shifting the active roadmap from P4 
 - GitHub credentials live in `~/.zshrc`, so non-interactive shells may need explicit sourcing or env injection.
 - Opus 4.6 review packets must never rely on local terminal file paths.
 - Historical browser hand-check notes in archived coordination docs are not part of the active review contract.
-- `P5-08` is verified locally, and the control-plane default plan now points to it so the next GitHub/Notion writeback can move the current Opus review target off the regressed `P5-07` snapshot.
+- `P5-09` is verified locally, and the control-plane default plan now points to it so the next GitHub/Notion writeback can move the current Opus review target onto the corrected startup semantics instead of the threshold-pinned `P5-08` snapshot alone.
 - The Notion `01 当前状态` page is still stale (`129 tests OK` and manual-browser-QA wording), so the next planned phase should prioritize truth reconciliation and freeze-packet closure rather than new demo features.
 
 ## Accumulated Context

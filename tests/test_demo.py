@@ -1228,7 +1228,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             "RA blocker",
             "N1K blocker",
             "VDT90 ready",
-            "当前场景：L3 等待 VDT90（默认演示位）。",
+            "当前场景：自定义起步位（先自由左拉到 -14° 门槛，再等待 L4 放开深拉区）。",
         ):
             self.assertIn(fragment, html)
 
@@ -1252,7 +1252,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             "function applyLeverPresetPayload(payload)",
             "function syncLeverPresetSelection(presetKey)",
             "document.querySelectorAll(\"[data-lever-preset]\")",
-            "applyLeverPresetPayload(leverPresets.l3_waiting_vdt90.payload);",
+            "syncLeverPresetSelection(null);",
         ):
             self.assertIn(fragment, script)
 
@@ -1523,6 +1523,9 @@ class DemoIntentLayerTests(unittest.TestCase):
             "type=\"range\"",
             "min=\"-32\"",
             "max=\"0\"",
+            "value=\"0\"",
+            "左侧更深反推 -32°",
+            "右侧前推 0°",
             "SW1 -1.4° ~ -6.2°",
             "SW2 -5.0° ~ -9.8°",
             "L3 ≤ -11.74°",

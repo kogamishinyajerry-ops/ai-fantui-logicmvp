@@ -23,7 +23,7 @@
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P5-08 修复 VDT live-control wiring 与条件深拉解锁回归",
+  "default_plan": "P5-09 纠正 TRA 启动位与拖动方向语义",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {

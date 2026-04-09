@@ -54,9 +54,9 @@ const nodeLabels = {
 const leverPresets = {
   l3_waiting_vdt90: {
     label: "L3 等待 VDT90",
-    status: "当前场景：L3 等待 VDT90（默认演示位）。",
+    status: "当前场景：L3 等待 VDT90（默认演示位，先留在 -14° 门槛内）。",
     payload: {
-      tra_deg: -14,
+      tra_deg: -12,
       radio_altitude_ft: 5,
       engine_running: true,
       aircraft_on_ground: true,
@@ -72,7 +72,7 @@ const leverPresets = {
     label: "RA blocker",
     status: "当前场景：RA blocker，链路会卡在 L1。",
     payload: {
-      tra_deg: -14,
+      tra_deg: -12,
       radio_altitude_ft: 6,
       engine_running: true,
       aircraft_on_ground: true,
@@ -88,7 +88,7 @@ const leverPresets = {
     label: "N1K blocker",
     status: "当前场景：N1K blocker，链路会卡在 L3。",
     payload: {
-      tra_deg: -14,
+      tra_deg: -12,
       radio_altitude_ft: 5,
       engine_running: true,
       aircraft_on_ground: true,
@@ -102,9 +102,9 @@ const leverPresets = {
   },
   manual_vdt90_ready: {
     label: "VDT90 ready",
-    status: "当前场景：VDT90 ready，manual override 已把 L4 / THR_LOCK 推到可演示状态。",
+    status: "当前场景：VDT90 ready，manual override 已把 L4 / THR_LOCK 推到可演示状态，深拉区可继续向左进入。",
     payload: {
-      tra_deg: -14,
+      tra_deg: -12,
       radio_altitude_ft: 5,
       engine_running: true,
       aircraft_on_ground: true,
@@ -117,6 +117,8 @@ const leverPresets = {
     },
   },
 };
+
+const defaultLeverStartupStatus = "当前场景：自定义起步位（先自由左拉到 -14° 门槛，再等待 L4 放开深拉区）。";
 
 let latestInteractionRequestId = 0;
 
@@ -424,8 +426,8 @@ function renderTraLockState(payload) {
   }
   status.textContent = traLock.message || (
     locked
-      ? "视觉量程保持 -32° 到 0°；当前只开放 -14° 到 0° 的自由拖动范围。"
-      : "L4 已满足：TRA 可在 -32° 到 0° 区间自由拖动。"
+      ? "当前可以先自由左拉到 -14° 门槛；满足 L4 后才继续开放 -32° 到 -14° 深拉区。"
+      : "L4 已满足：TRA 现在可以继续向左进入 -32° 深拉区，也可以自由回到 0°。"
   );
 }
 
@@ -686,7 +688,7 @@ function syncLeverPresetSelection(presetKey) {
   });
   document.getElementById("lever-preset-status").textContent = preset
     ? preset.status
-    : "当前场景：自定义调参。";
+    : defaultLeverStartupStatus;
 }
 
 function collectLeverSnapshotPayload(traDeg) {
@@ -864,8 +866,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   syncSelectedPrompt(promptInput.value);
-  applyLeverPresetPayload(leverPresets.l3_waiting_vdt90.payload);
-  syncLeverPresetSelection("l3_waiting_vdt90");
+  syncConditionReadouts();
+  syncLeverPresetSelection(null);
   runLeverSnapshot(collectLeverSnapshotPayload()).catch((error) => {
     renderErrorPayload(
       {error: "lever_network_error", message: String(error.message || error)},
