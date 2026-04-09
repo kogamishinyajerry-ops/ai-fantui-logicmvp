@@ -776,7 +776,7 @@ def build_current_review_brief(
     else:
         intervention_kind = "Phase 收口与下一步优先级审查"
         why_now = (
-            "自动化证据当前看起来稳定，未见仍然 open 的 gap。现在更适合让 Opus 4.6 判断：P1 是否可以正式收口，"
+            f"自动化证据当前看起来稳定，未见仍然 open 的 gap。现在更适合让 Opus 4.6 判断：{snapshot.active_phase} 是否可以正式收口，"
             "以及下一阶段最值得投入的方向是什么。"
         )
         gate_direction = "这次 Opus 介入的目标，是给出 phase-ready 与 next-phase 优先级判断。"
@@ -1225,13 +1225,33 @@ def handle_prepare_opus_review(args: argparse.Namespace, config: dict[str, Any])
         raise SystemExit("NOTION_API_KEY is required for prepare-opus-review.")
     client = NotionClient(token)
     snapshot = fetch_review_snapshot(client, config)
-    brief = build_current_review_brief(snapshot, config)
+    effective_snapshot = (
+        snapshot
+        if not args.activate_gate
+        else ReviewSnapshot(
+            active_phase=snapshot.active_phase,
+            active_phase_goal=snapshot.active_phase_goal,
+            active_phase_summary=snapshot.active_phase_summary,
+            latest_verified_plan=snapshot.latest_verified_plan,
+            latest_success_run=snapshot.latest_success_run,
+            latest_failed_run=snapshot.latest_failed_run,
+            latest_passing_qa=snapshot.latest_passing_qa,
+            gate_page_id=snapshot.gate_page_id,
+            gate_name=snapshot.gate_name,
+            gate_status="Awaiting Opus 4.6",
+            ready_task_id=snapshot.ready_task_id,
+            ready_task=snapshot.ready_task,
+            open_gap_titles=snapshot.open_gap_titles,
+            stale_gap_titles=snapshot.stale_gap_titles,
+        )
+    )
+    brief = build_current_review_brief(effective_snapshot, config, force_review=args.activate_gate)
     payload: dict[str, Any] = {
         "review_required": brief.review_required,
         "intervention_kind": brief.intervention_kind,
         "review_target": brief.review_target,
         "why_now": brief.why_now,
-        "gate_status": "Awaiting Opus 4.6" if args.activate_gate else snapshot.gate_status,
+        "gate_status": effective_snapshot.gate_status,
         "open_gap_count": len(snapshot.open_gap_titles),
         "stale_gap_count": len(snapshot.stale_gap_titles),
         "latest_success_run": snapshot.latest_success_run,

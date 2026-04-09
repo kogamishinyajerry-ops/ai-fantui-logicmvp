@@ -162,6 +162,36 @@ class GsdNotionSyncTests(unittest.TestCase):
         self.assertEqual("当前无需 Opus 审查", brief.intervention_kind)
         self.assertIn("当前无需触发 Notion AI Opus 4.6", brief.copy_prompt)
 
+    def test_build_current_review_brief_phase_closeout_mentions_current_phase(self):
+        snapshot = ReviewSnapshot(
+            active_phase="P5 Demo Polish And Edge-Case Hardening",
+            active_phase_goal="把 demo 的残余边缘风险收口成 GitHub 可验证证据",
+            active_phase_summary="P5 已覆盖 smoke、preset 和 toggle hardening",
+            latest_verified_plan="P5-04 快速条件 toggle smoke sweep",
+            latest_success_run="GitHub GSD automation 24172898166",
+            latest_failed_run="GitHub GSD automation 24148804383",
+            latest_passing_qa="GitHub GSD automation 24172898166 QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Awaiting Opus 4.6",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+        config = {
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            }
+        }
+
+        brief = build_current_review_brief(snapshot, config, force_review=True)
+
+        self.assertTrue(brief.review_required)
+        self.assertEqual("Phase 收口与下一步优先级审查", brief.intervention_kind)
+        self.assertIn("P5 Demo Polish And Edge-Case Hardening 是否可以正式收口", brief.why_now)
+
     def test_build_gate_update_properties_preserves_decision_notes_when_not_activating_gate(self):
         brief = build_current_review_brief(
             ReviewSnapshot(
