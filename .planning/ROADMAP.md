@@ -57,3 +57,16 @@ Exit Criteria:
 - The current Opus 4.6 review brief generator stays aligned with the live Notion control-tower structure and GitHub evidence URLs.
 - Superseded legacy review artifacts retire automatically once the default gate is approved and 09C says no review is required.
 - The GitHub Actions workflow stays aligned with GitHub-hosted runner runtime deprecations without reintroducing manual review dependence.
+
+## Phase P4: Elevate Cockpit Demo To Presenter-Ready
+
+Status: Planned
+
+Goal: Turn the current cockpit demo candidate into a presenter-ready local demo that stays deterministic, explainable, and honest about the simplified plant boundary.
+
+Exit Criteria:
+
+- The first-screen cockpit flow, presenter talk track, and structured answer panel stay aligned around the same live-demo route.
+- Presenter-critical prompts and lever interactions are regression-protected without introducing browser-only approval steps or a second control-truth layer.
+- Demo copy and UI make the distinction between controller truth and simplified plant feedback explicit wherever a live audience could misread it.
+- `POST /api/demo`, `POST /api/lever-snapshot`, `well_harness demo`, and `well_harness demo_server` remain stable unless a later plan explicitly changes their contracts.

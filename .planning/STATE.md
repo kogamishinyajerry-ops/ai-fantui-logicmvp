@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-09 - P3 control-plane hardening now satisfies its exit criteria after GitHub run 24168293031 verified automatic legacy review artifact retirement, 09C stayed in no-review mode, and the loop remained green with 150 tests OK.
+Last activity: 2026-04-09 - P4 `Elevate Cockpit Demo To Presenter-Ready` was drafted as the next planned product phase, so the roadmap now has a product-facing successor while P3 keeps the control-plane baseline stable.
 
 ## Current Position
 
@@ -22,7 +22,7 @@ Last activity: 2026-04-09 - P3 control-plane hardening now satisfies its exit cr
 
 ## Active Objective
 
-Keep the development loop operational and preserve the stable P3 control-plane baseline until the next planned phase is defined:
+Keep the development loop operational, preserve the stable P3 control-plane baseline, and prepare to plan P4 when we are ready to shift back to the product surface:
 
 - Write Execution Run records to Notion.
 - Write QA records to Notion.
@@ -32,7 +32,8 @@ Keep the development loop operational and preserve the stable P3 control-plane b
 - Automatically supersede same-plan legacy gaps after later successful runs.
 - Keep the current review brief generator aligned with the live Notion control-tower structure and GitHub evidence URLs.
 - Retire superseded legacy review artifacts automatically after the approved default gate settles into a no-review-needed state.
-- Preserve the P3 control-plane hardening baseline until a new product phase is defined.
+- Preserve the P3 control-plane hardening baseline until P4 planning starts.
+- Treat `P4: Elevate Cockpit Demo To Presenter-Ready` as the next intended roadmap move, not as an already-active execution phase.
 
 ## Blockers/Concerns
 
@@ -40,6 +41,12 @@ Keep the development loop operational and preserve the stable P3 control-plane b
 - GitHub credentials live in `~/.zshrc`, so non-interactive shells may need explicit sourcing or env injection.
 - Opus 4.6 review packets must never rely on local terminal file paths.
 - Historical browser hand-check notes in archived coordination docs are not part of the active review contract.
+
+## Accumulated Context
+
+### Roadmap Evolution
+
+- Phase P4 added: Elevate Cockpit Demo To Presenter-Ready
 
 ### Quick Tasks Completed
 
