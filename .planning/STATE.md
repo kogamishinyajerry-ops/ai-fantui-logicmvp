@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-09 - P3 control-plane hardening now auto-retires superseded legacy review artifacts after an approved gate, refreshes 09C on successful runs, and kept the loop green with 150 tests OK.
+Last activity: 2026-04-09 - P3 control-plane hardening now satisfies its exit criteria after GitHub run 24168293031 verified automatic legacy review artifact retirement, 09C stayed in no-review mode, and the loop remained green with 150 tests OK.
 
 ## Current Position
 
@@ -18,10 +18,11 @@ Last activity: 2026-04-09 - P3 control-plane hardening now auto-retires supersed
 - The shared validation suite now also checks live Notion control-plane accessibility, validating the configured key pages and databases before a drift reaches Opus review time.
 - Successful non-gated writebacks now refresh 09C automatically, so the current Opus brief keeps following the latest validated plan without a separate maintenance step.
 - The old `P1 自动化目标审查 Gate` and `P1-02 消除手动浏览器 QA 依赖` records are now treated as configured legacy review artifacts and auto-archived once the approved default gate confirms no review is currently required.
+- GitHub run `24168293031` proved the same retirement logic works from CI, and 09C now points at `P3-07 自动退场旧审查对象` with `当前无需 Opus 审查`.
 
 ## Active Objective
 
-Keep the development loop operational and reduce avoidable manual cleanup:
+Keep the development loop operational and preserve the stable P3 control-plane baseline until the next planned phase is defined:
 
 - Write Execution Run records to Notion.
 - Write QA records to Notion.
@@ -31,6 +32,7 @@ Keep the development loop operational and reduce avoidable manual cleanup:
 - Automatically supersede same-plan legacy gaps after later successful runs.
 - Keep the current review brief generator aligned with the live Notion control-tower structure and GitHub evidence URLs.
 - Retire superseded legacy review artifacts automatically after the approved default gate settles into a no-review-needed state.
+- Preserve the P3 control-plane hardening baseline until a new product phase is defined.
 
 ## Blockers/Concerns
 
