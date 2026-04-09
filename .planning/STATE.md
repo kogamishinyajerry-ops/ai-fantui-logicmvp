@@ -1,10 +1,10 @@
 # State
 
-Last activity: 2026-04-09 - P3 control-plane hardening taught review snapshots to prefer GitHub-backed evidence, removed local Python absolute paths from the shared validation report, migrated the workflow to Node24-compatible GitHub Actions, and kept the loop green with 145 tests OK.
+Last activity: 2026-04-09 - P3 control-plane hardening added a Notion control-plane self-check to the shared validation suite, so page/database drift is now caught automatically, and kept the loop green with 148 tests OK.
 
 ## Current Position
 
-- Round 92 is complete and regression-protected with 145 tests OK in the latest local verification.
+- Round 92 is complete and regression-protected with 148 tests OK in the latest local verification.
 - Notion control tower is live at https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec.
 - GitHub repo is live at https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp.
 - P1 is closed as Approved in the Review Gate after GitHub-backed Opus adjudication.
@@ -15,6 +15,7 @@ Last activity: 2026-04-09 - P3 control-plane hardening taught review snapshots t
 - Review snapshots now prefer GitHub Action run / QA evidence over local Codex runs, so current Opus briefs stay anchored to the GitHub evidence plane.
 - The shared validation suite now emits stable `python3 ...` command labels instead of machine-local Python executable paths.
 - The GitHub workflow now runs Node24-compatible action versions and opts into `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`, matching GitHub's current deprecation path for JavaScript actions.
+- The shared validation suite now also checks live Notion control-plane accessibility, validating the configured key pages and databases before a drift reaches Opus review time.
 
 ## Active Objective
 

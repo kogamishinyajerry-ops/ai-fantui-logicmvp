@@ -45,6 +45,8 @@ When 09C is refreshed, the control plane now prefers GitHub Action Execution Run
 
 GitHub-backed run rows also store the exact Actions run URL, and the shared validation suite emits stable `python3 ...` command labels so local machine paths do not leak into Notion evidence summaries.
 
+The shared validation suite now also runs `tools/validate_notion_control_plane.py`. When `NOTION_API_KEY` is available, it checks that the configured key pages and databases remain readable through the Notion API; when the token is absent, it reports a safe `SKIP` instead of failing the whole loop.
+
 ## Manual Review Rule
 
 The only intended manual stop is:

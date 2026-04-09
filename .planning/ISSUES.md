@@ -24,6 +24,12 @@ Status: Done
 
 The workflow now uses Node24-compatible GitHub Actions versions and opts into `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`, so the control loop stays ahead of the Node20 runner deprecation.
 
+## Notion Control-Plane Self-Check
+
+Status: Done
+
+The shared validation suite now runs `tools/validate_notion_control_plane.py`, so page/database/config drift is detected automatically instead of surfacing only when 09C or Opus review is needed.
+
 ## Opus Review Brief Maintenance
 
 Status: Open

@@ -34,6 +34,7 @@ class ValidationSuiteTests(unittest.TestCase):
                 "validation_report_schema",
                 "validation_schema_runner_report_schema",
                 "validation_schema_checker_report_schema",
+                "notion_control_plane",
             ],
             [command.name for command in commands],
         )

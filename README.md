@@ -254,6 +254,8 @@ Current Opus brief refreshes now prefer GitHub Action runs and matching GitHub Q
 
 GitHub-backed Execution Run rows now store the exact Actions run URL, and the shared validation suite emits stable `python3 ...` command labels instead of machine-local Python executable paths.
 
+`tools/run_gsd_validation_suite.py` now also includes `tools/validate_notion_control_plane.py`. With `NOTION_API_KEY` present, that check verifies the configured key Notion pages and databases are still accessible; without the token it exits as a safe `SKIP`.
+
 Historical browser hand-check docs in `docs/coordination/` remain as archival round records only. The active review sources are the Notion control tower, the GitHub repo, and GitHub Actions evidence.
 
 To refresh the current Opus 4.6 intervention brief from live Notion state, run:

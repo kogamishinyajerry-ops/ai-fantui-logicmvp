@@ -54,6 +54,10 @@ def build_default_commands(python_executable: str | None = None) -> tuple[Valida
             "validation_schema_checker_report_schema",
             (python, "tools/validate_validation_schema_checker_report_schema.py", "--format", "json"),
         ),
+        ValidationCommand(
+            "notion_control_plane",
+            (python, "tools/validate_notion_control_plane.py", "--format", "json"),
+        ),
     )
 
 
