@@ -1,6 +1,7 @@
 import unittest
 
 from tools.run_gsd_validation_suite import (
+    DEFAULT_PYTHON_COMMAND,
     ValidationCommand,
     build_child_env,
     build_default_commands,
@@ -16,6 +17,12 @@ class CompletedProcessStub:
 
 
 class ValidationSuiteTests(unittest.TestCase):
+    def test_build_default_commands_uses_stable_python3_label_by_default(self):
+        commands = build_default_commands()
+
+        self.assertTrue(commands)
+        self.assertEqual(DEFAULT_PYTHON_COMMAND, commands[0].argv[0])
+
     def test_build_default_commands_contains_expected_checks(self):
         commands = build_default_commands("/usr/bin/python3")
 

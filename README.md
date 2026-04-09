@@ -248,6 +248,10 @@ GitHub Actions uses the same bridge in `.github/workflows/gsd-automation.yml`; c
 
 The active automation plan is no longer hardcoded in the GitHub workflow. `tools/gsd_notion_sync.py run` reads the current default plan from `.planning/notion_control_plane.json`, so phase routing now changes in one place instead of drifting between YAML and Notion.
 
+Current Opus brief refreshes now prefer GitHub Action runs and matching GitHub QA rows when selecting the latest evidence. That keeps future review packets anchored to the GitHub evidence plane even if newer local Codex runs also wrote diagnostic records into Notion.
+
+GitHub-backed Execution Run rows now store the exact Actions run URL, and the shared validation suite emits stable `python3 ...` command labels instead of machine-local Python executable paths.
+
 Historical browser hand-check docs in `docs/coordination/` remain as archival round records only. The active review sources are the Notion control tower, the GitHub repo, and GitHub Actions evidence.
 
 To refresh the current Opus 4.6 intervention brief from live Notion state, run:

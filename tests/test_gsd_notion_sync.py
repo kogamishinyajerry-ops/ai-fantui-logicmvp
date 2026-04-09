@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from tools.gsd_notion_sync import (
@@ -5,8 +6,10 @@ from tools.gsd_notion_sync import (
     ReviewSnapshot,
     build_gate_update_properties,
     build_current_review_brief,
+    fetch_review_snapshot,
     build_superseded_gap_fix_plan,
     clip,
+    write_notion_outcome,
     resolve_superseded_failure_gaps,
     summarize_results,
 )
@@ -188,6 +191,154 @@ class GsdNotionSyncTests(unittest.TestCase):
 
         self.assertNotIn("Decision Notes", properties)
         self.assertIn("继续自动开发", properties["Next Action"]["rich_text"][0]["text"]["content"])
+
+    def test_fetch_review_snapshot_prefers_github_runs_and_matching_qa(self):
+        class FakeClient:
+            def query_database(self, database_id, *, filter_payload=None, sorts=None, page_size=10):
+                if database_id == "roadmap-db":
+                    return [
+                        {"id": "phase-id", "properties": {"Round": {"type": "title", "title": [{"plain_text": "P3 减少控制面漂移"}]}}},
+                    ]
+                if database_id == "plans-db":
+                    return [
+                        {"id": "plan-id", "properties": {"Plan": {"type": "title", "title": [{"plain_text": "P3-04 优先 GitHub 审查证据"}]}}},
+                    ]
+                if database_id == "runs-db":
+                    if filter_payload == {
+                        "and": [
+                            {"property": "Status", "select": {"equals": "Succeeded"}},
+                            {"property": "Executor", "select": {"equals": "GitHub Action"}},
+                        ]
+                    }:
+                        return [
+                            {"id": "run-github-success", "properties": {"Run": {"type": "title", "title": [{"plain_text": "GitHub GSD automation 24153107164"}]}}},
+                        ]
+                    if filter_payload == {
+                        "and": [
+                            {"property": "Status", "select": {"equals": "Failed"}},
+                            {"property": "Executor", "select": {"equals": "GitHub Action"}},
+                        ]
+                    }:
+                        return [
+                            {"id": "run-github-fail", "properties": {"Run": {"type": "title", "title": [{"plain_text": "GitHub GSD automation 24148804383"}]}}},
+                        ]
+                    if filter_payload == {"property": "Status", "select": {"equals": "Succeeded"}}:
+                        return [
+                            {"id": "run-local-success", "properties": {"Run": {"type": "title", "title": [{"plain_text": "Local hardening: no-review-aware Opus brief"}]}}},
+                        ]
+                    if filter_payload == {"property": "Status", "select": {"equals": "Failed"}}:
+                        return []
+                if database_id == "qa-db":
+                    if filter_payload == {"property": "Run", "title": {"equals": "GitHub GSD automation 24153107164 QA"}}:
+                        return [
+                            {"id": "qa-github", "properties": {"Run": {"type": "title", "title": [{"plain_text": "GitHub GSD automation 24153107164 QA"}]}}},
+                        ]
+                    return []
+                if database_id == "gates-db":
+                    return [
+                        {"id": "gate-id", "properties": {"Gate": {"type": "title", "title": [{"plain_text": "OPUS-4.6 周期审查 Gate"}]}, "Status": {"type": "select", "select": {"name": "Approved"}}}},
+                    ]
+                if database_id == "tasks-db":
+                    return []
+                if database_id == "gaps-db":
+                    return []
+                return []
+
+        snapshot = fetch_review_snapshot(
+            FakeClient(),
+            {
+                "databases": {
+                    "roadmap": "roadmap-db",
+                    "plans": "plans-db",
+                    "runs": "runs-db",
+                    "qa": "qa-db",
+                    "gates": "gates-db",
+                    "tasks": "tasks-db",
+                    "gaps": "gaps-db",
+                },
+                "default_plan": "fallback-plan",
+                "default_review_gate": "OPUS-4.6 周期审查 Gate",
+            },
+        )
+
+        self.assertEqual("GitHub GSD automation 24153107164", snapshot.latest_success_run)
+        self.assertEqual("GitHub GSD automation 24153107164 QA", snapshot.latest_passing_qa)
+        self.assertEqual("GitHub GSD automation 24148804383", snapshot.latest_failed_run)
+
+    def test_write_notion_outcome_uses_exact_github_run_url_for_artifacts(self):
+        class FakeClient:
+            def __init__(self):
+                self.calls = []
+                self.updated = []
+
+            def upsert_page(self, database_id, title_prop, title, properties):
+                self.calls.append((database_id, title_prop, title, properties))
+                return f"{database_id}:{title}"
+
+            def query_database(self, database_id, *, filter_payload=None, page_size=10, sorts=None):
+                return []
+
+            def update_page_properties(self, page_id, properties):
+                self.updated.append((page_id, properties))
+
+        client = FakeClient()
+        config = {
+            "databases": {
+                "plans": "plans-db",
+                "runs": "runs-db",
+                "qa": "qa-db",
+                "gaps": "gaps-db",
+                "gates": "gates-db",
+            },
+            "default_review_gate": "OPUS-4.6 周期审查 Gate",
+        }
+        summary = summarize_results(
+            [
+                CommandResult(
+                    command="python3 tools/run_gsd_validation_suite.py --format json",
+                    returncode=0,
+                    stdout="PASS",
+                    stderr="",
+                    started_at="2026-04-09T00:00:00+00:00",
+                    ended_at="2026-04-09T00:00:05+00:00",
+                )
+            ]
+        )
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["GITHUB_ACTIONS"] = "true"
+            os.environ["GITHUB_SERVER_URL"] = "https://github.com"
+            os.environ["GITHUB_REPOSITORY"] = "owner/repo"
+            os.environ["GITHUB_RUN_ID"] = "12345"
+            write_notion_outcome(
+                client,  # type: ignore[arg-type]
+                config,
+                title="GitHub GSD automation 12345",
+                plan_id="P3-04 优先 GitHub 审查证据",
+                commands=["python3 tools/run_gsd_validation_suite.py --format json"],
+                results=[
+                    CommandResult(
+                        command="python3 tools/run_gsd_validation_suite.py --format json",
+                        returncode=0,
+                        stdout="PASS",
+                        stderr="",
+                        started_at="2026-04-09T00:00:00+00:00",
+                        ended_at="2026-04-09T00:00:05+00:00",
+                    )
+                ],
+                summary=summary,
+                opus_gate=False,
+            )
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        run_call = next(call for call in client.calls if call[0] == "runs-db")
+        self.assertEqual(
+            "https://github.com/owner/repo/actions/runs/12345",
+            run_call[3]["Artifacts"]["rich_text"][0]["text"]["content"],
+        )
 
     def test_build_superseded_gap_fix_plan_marks_duplicates(self):
         self.assertEqual(

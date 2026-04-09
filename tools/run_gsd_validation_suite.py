@@ -11,6 +11,7 @@ from typing import Any, Callable, Sequence
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_FORMATS = {"text", "json"}
+DEFAULT_PYTHON_COMMAND = "python3"
 
 
 @dataclass(frozen=True)
@@ -27,7 +28,7 @@ def clip(text: str, limit: int = 400) -> str:
 
 
 def build_default_commands(python_executable: str | None = None) -> tuple[ValidationCommand, ...]:
-    python = python_executable or sys.executable
+    python = python_executable or DEFAULT_PYTHON_COMMAND
     return (
         ValidationCommand(
             "unit_tests",

@@ -12,6 +12,12 @@ Status: Done
 
 Local runs, GitHub Actions, and Notion writeback now share `tools/run_gsd_validation_suite.py`, so the validation command list no longer drifts across automation surfaces.
 
+## GitHub-First Review Evidence
+
+Status: Done
+
+Review snapshots and current Opus briefs now prefer GitHub Action runs and matching GitHub QA records over local Codex runs, and GitHub-backed run rows carry the exact Actions run URL.
+
 ## Opus Review Brief Maintenance
 
 Status: Open

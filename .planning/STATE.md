@@ -1,10 +1,10 @@
 # State
 
-Last activity: 2026-04-09 - P3 control-plane hardening added a shared validation entrypoint, kept plan routing in config instead of the workflow YAML, taught 09C to say when no Opus review is currently required, and verified the loop with 142 tests OK.
+Last activity: 2026-04-09 - P3 control-plane hardening taught review snapshots to prefer GitHub-backed evidence, removed local Python absolute paths from the shared validation report, and verified the loop with 145 tests OK.
 
 ## Current Position
 
-- Round 92 is complete and regression-protected with 142 tests OK in the latest local verification.
+- Round 92 is complete and regression-protected with 145 tests OK in the latest local verification.
 - Notion control tower is live at https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec.
 - GitHub repo is live at https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp.
 - P1 is closed as Approved in the Review Gate after GitHub-backed Opus adjudication.
@@ -12,6 +12,8 @@ Last activity: 2026-04-09 - P3 control-plane hardening added a shared validation
 - 09C now functions as a state-driven current Opus review brief, not a fixed prompt template.
 - Local runs, GitHub Actions, and Notion writeback now share a single validation entrypoint via `tools/run_gsd_validation_suite.py`.
 - 09C now explicitly distinguishes between “需要 Opus 审查” and “当前无需 Opus 审查”, and a normal refresh no longer overwrites an already approved gate decision.
+- Review snapshots now prefer GitHub Action run / QA evidence over local Codex runs, so current Opus briefs stay anchored to the GitHub evidence plane.
+- The shared validation suite now emits stable `python3 ...` command labels instead of machine-local Python executable paths.
 
 ## Active Objective
 

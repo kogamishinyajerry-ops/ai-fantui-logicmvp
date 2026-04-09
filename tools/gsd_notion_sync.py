@@ -471,6 +471,32 @@ def resolve_superseded_failure_gaps(
 
 
 def fetch_review_snapshot(client: NotionClient, config: dict[str, Any]) -> ReviewSnapshot:
+    github_success_run_row = first_row(
+        client.query_database(
+            database_id(config, "runs"),
+            filter_payload={
+                "and": [
+                    {"property": "Status", "select": {"equals": "Succeeded"}},
+                    {"property": "Executor", "select": {"equals": "GitHub Action"}},
+                ]
+            },
+            sorts=[{"timestamp": "last_edited_time", "direction": "descending"}],
+            page_size=1,
+        )
+    )
+    github_failed_run_row = first_row(
+        client.query_database(
+            database_id(config, "runs"),
+            filter_payload={
+                "and": [
+                    {"property": "Status", "select": {"equals": "Failed"}},
+                    {"property": "Executor", "select": {"equals": "GitHub Action"}},
+                ]
+            },
+            sorts=[{"timestamp": "last_edited_time", "direction": "descending"}],
+            page_size=1,
+        )
+    )
     active_phase_row = first_row(
         client.query_database(
             database_id(config, "roadmap"),
@@ -486,7 +512,7 @@ def fetch_review_snapshot(client: NotionClient, config: dict[str, Any]) -> Revie
             page_size=1,
         )
     )
-    success_run_row = first_row(
+    success_run_row = github_success_run_row or first_row(
         client.query_database(
             database_id(config, "runs"),
             filter_payload={"property": "Status", "select": {"equals": "Succeeded"}},
@@ -494,7 +520,7 @@ def fetch_review_snapshot(client: NotionClient, config: dict[str, Any]) -> Revie
             page_size=1,
         )
     )
-    failed_run_row = first_row(
+    failed_run_row = github_failed_run_row or first_row(
         client.query_database(
             database_id(config, "runs"),
             filter_payload={"property": "Status", "select": {"equals": "Failed"}},
@@ -502,14 +528,38 @@ def fetch_review_snapshot(client: NotionClient, config: dict[str, Any]) -> Revie
             page_size=1,
         )
     )
-    passing_qa_row = first_row(
-        client.query_database(
-            database_id(config, "qa"),
-            filter_payload={"property": "Result", "select": {"equals": "PASS"}},
-            sorts=[{"timestamp": "last_edited_time", "direction": "descending"}],
-            page_size=1,
+    passing_qa_row = None
+    if success_run_row and row_text(success_run_row, "Run"):
+        passing_qa_row = first_row(
+            client.query_database(
+                database_id(config, "qa"),
+                filter_payload={"property": TITLE_PROPS["qa"], "title": {"equals": f"{row_text(success_run_row, 'Run')} QA"}},
+                page_size=1,
+            )
         )
-    )
+    if not passing_qa_row:
+        passing_qa_row = first_row(
+            client.query_database(
+                database_id(config, "qa"),
+                filter_payload={
+                    "and": [
+                        {"property": "Result", "select": {"equals": "PASS"}},
+                        {"property": TITLE_PROPS["qa"], "title": {"contains": "GitHub GSD automation"}},
+                    ]
+                },
+                sorts=[{"timestamp": "last_edited_time", "direction": "descending"}],
+                page_size=1,
+            )
+        )
+    if not passing_qa_row:
+        passing_qa_row = first_row(
+            client.query_database(
+                database_id(config, "qa"),
+                filter_payload={"property": "Result", "select": {"equals": "PASS"}},
+                sorts=[{"timestamp": "last_edited_time", "direction": "descending"}],
+                page_size=1,
+            )
+        )
     gate_rows = client.query_database(
         database_id(config, "gates"),
         filter_payload={"property": TITLE_PROPS["gates"], "title": {"equals": config["default_review_gate"]}},
@@ -897,6 +947,15 @@ def write_notion_outcome(
     ended_at = results[-1].ended_at if results else utc_now()
     written: dict[str, Any] = {}
 
+    artifact_url = ""
+    if os.environ.get("GITHUB_SERVER_URL") and os.environ.get("GITHUB_REPOSITORY") and os.environ.get("GITHUB_RUN_ID"):
+        artifact_url = (
+            f"{os.environ['GITHUB_SERVER_URL']}/"
+            f"{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}"
+        )
+    elif os.environ.get("GITHUB_SERVER_URL"):
+        artifact_url = os.environ["GITHUB_SERVER_URL"]
+
     written["plan"] = client.upsert_page(
         database_id(config, "plans"),
         TITLE_PROPS["plans"],
@@ -922,7 +981,7 @@ def write_notion_outcome(
             "Executor": select_value("GitHub Action" if os.environ.get("GITHUB_ACTIONS") else "Codex"),
             "Started At": date_value(started_at),
             "Ended At": date_value(ended_at),
-            "Artifacts": rich_text_value(os.environ.get("GITHUB_SERVER_URL", "")),
+            "Artifacts": rich_text_value(artifact_url),
             "Notes": rich_text_value(summary.output_digest),
         },
     )
