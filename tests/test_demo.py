@@ -689,8 +689,9 @@ class DemoIntentLayerTests(unittest.TestCase):
             "OK preset_ra_blocker",
             "OK preset_n1k_blocker",
             "OK preset_vdt90_ready",
+            "OK condition_toggle_sweep",
             "OK invalid_feedback_mode",
-            "PASS: validated 8 demo smoke scenarios through the local HTTP demo surface.",
+            "PASS: validated 9 demo smoke scenarios through the local HTTP demo surface.",
         ):
             self.assertIn(fragment, result.stdout)
 
@@ -709,8 +710,8 @@ class DemoIntentLayerTests(unittest.TestCase):
 
         payload = json.loads(result.stdout)
         self.assertEqual(payload["status"], "pass")
-        self.assertEqual(payload["scenario_count"], 8)
-        self.assertEqual(payload["completed_scenarios"], 8)
+        self.assertEqual(payload["scenario_count"], 9)
+        self.assertEqual(payload["completed_scenarios"], 9)
         self.assertIsNone(payload["failed_scenario"])
         self.assertEqual(
             [
@@ -721,12 +722,13 @@ class DemoIntentLayerTests(unittest.TestCase):
                 "preset_ra_blocker",
                 "preset_n1k_blocker",
                 "preset_vdt90_ready",
+                "condition_toggle_sweep",
                 "invalid_feedback_mode",
             ],
             [scenario["name"] for scenario in payload["scenarios"]],
         )
         self.assertEqual(
-            ["pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass"],
+            ["pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass"],
             [scenario["status"] for scenario in payload["scenarios"]],
         )
         self.assertEqual(400, payload["scenarios"][-1]["http_status"])

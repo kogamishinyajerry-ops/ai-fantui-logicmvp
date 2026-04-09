@@ -319,6 +319,72 @@ def scenario_preset_vdt90_ready(port: int) -> ScenarioResult:
     )
 
 
+def scenario_condition_toggle_sweep(port: int) -> ScenarioResult:
+    cases = (
+        (
+            "engine_running",
+            {"tra_deg": -14.0, "engine_running": False, "feedback_mode": "manual_feedback_override", "deploy_position_percent": 0.0},
+            "logic2",
+            "engine_running",
+            "当前卡在 L2",
+        ),
+        (
+            "aircraft_on_ground",
+            {"tra_deg": -14.0, "aircraft_on_ground": False, "feedback_mode": "manual_feedback_override", "deploy_position_percent": 0.0},
+            "logic2",
+            "aircraft_on_ground",
+            "当前卡在 L2",
+        ),
+        (
+            "reverser_inhibited",
+            {"tra_deg": -14.0, "reverser_inhibited": True, "feedback_mode": "manual_feedback_override", "deploy_position_percent": 0.0},
+            "logic1",
+            "reverser_inhibited",
+            "当前卡在 L1",
+        ),
+        (
+            "eec_enable",
+            {"tra_deg": -14.0, "eec_enable": False, "feedback_mode": "manual_feedback_override", "deploy_position_percent": 0.0},
+            "logic2",
+            "eec_enable",
+            "当前卡在 L2",
+        ),
+    )
+
+    for toggle_name, request_payload, blocked_logic, expected_failed, blocker_prefix in cases:
+        status, payload = request_json(port, "/api/lever-snapshot", request_payload)
+        if status != 200:
+            return fail_result("condition_toggle_sweep", status, f"{toggle_name} expected HTTP 200 but got {status}")
+
+        failed_conditions = payload["logic"][blocked_logic]["failed_conditions"]
+        if expected_failed not in failed_conditions:
+            return fail_result(
+                "condition_toggle_sweep",
+                status,
+                f"{toggle_name} should surface {expected_failed} in {blocked_logic} failed_conditions",
+            )
+        if blocker_prefix not in payload["summary"]["blocker"]:
+            return fail_result(
+                "condition_toggle_sweep",
+                status,
+                f"{toggle_name} should keep the summary blocker aligned with {blocked_logic}",
+            )
+
+        node_states = {node["id"]: node["state"] for node in payload["nodes"]}
+        if node_states.get(blocked_logic) != "blocked":
+            return fail_result(
+                "condition_toggle_sweep",
+                status,
+                f"{toggle_name} should keep {blocked_logic} blocked in the chain state snapshot",
+            )
+
+    return pass_result(
+        "condition_toggle_sweep",
+        200,
+        "visible blocker toggles for engine, ground, reverser inhibit, and EEC enable all keep their expected blocker semantics through POST /api/lever-snapshot.",
+    )
+
+
 def scenario_invalid_feedback_mode(port: int) -> ScenarioResult:
     status, payload = request_json(
         port,
@@ -341,7 +407,7 @@ def scenario_invalid_feedback_mode(port: int) -> ScenarioResult:
 def run_smoke_suite() -> tuple[int, dict[str, Any], list[str]]:
     report: dict[str, Any] = {
         "status": "pass",
-        "scenario_count": 8,
+        "scenario_count": 9,
         "completed_scenarios": 0,
         "failed_scenario": None,
         "scenarios": [],
@@ -358,6 +424,7 @@ def run_smoke_suite() -> tuple[int, dict[str, Any], list[str]]:
             scenario_preset_ra_blocker,
             scenario_preset_n1k_blocker,
             scenario_preset_vdt90_ready,
+            scenario_condition_toggle_sweep,
             scenario_invalid_feedback_mode,
         )
         for scenario in scenarios:
@@ -382,7 +449,7 @@ def run_smoke_suite() -> tuple[int, dict[str, Any], list[str]]:
         server.server_close()
         thread.join(timeout=2)
 
-    text_lines.append("PASS: validated 8 demo smoke scenarios through the local HTTP demo surface.")
+    text_lines.append("PASS: validated 9 demo smoke scenarios through the local HTTP demo surface.")
     return 0, report, text_lines
 
 

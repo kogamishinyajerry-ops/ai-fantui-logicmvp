@@ -167,6 +167,7 @@ For GitHub-verifiable demo-path confidence, run `python3 tools/demo_path_smoke.p
 
 The browser shell also now treats the newest prompt or lever interaction as the only response allowed to repaint the shared result surface, so a slower older request cannot overwrite a newer presenter action during rapid edits.
 That HTTP smoke suite also verifies the visible presenter presets for `L3 等待 VDT90`, `RA blocker`, `N1K blocker`, and `VDT90 ready`, so the most common live-demo jump points are covered by GitHub-verifiable evidence instead of manual browser-only confidence.
+It also sweeps the visible blocker toggles for engine, ground, reverser inhibit, and EEC enable, so the cockpit's key fast-toggle blocker states stay covered by the same automated evidence plane.
 Formal subjective review now happens through Notion AI Opus 4.6 using the Notion control tower plus the GitHub repo, not by citing local terminal file paths.
 Older repo notes about browser hand-checks remain historical presenter/archive material, not the current approval contract.
 
