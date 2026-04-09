@@ -51,6 +51,73 @@ const nodeLabels = {
   thr_lock: "THR_LOCK",
 };
 
+const leverPresets = {
+  l3_waiting_vdt90: {
+    label: "L3 等待 VDT90",
+    status: "当前场景：L3 等待 VDT90（默认演示位）。",
+    payload: {
+      tra_deg: -14,
+      radio_altitude_ft: 5,
+      engine_running: true,
+      aircraft_on_ground: true,
+      reverser_inhibited: false,
+      eec_enable: true,
+      n1k: 35,
+      max_n1k_deploy_limit: 60,
+      feedback_mode: "manual_feedback_override",
+      deploy_position_percent: 0,
+    },
+  },
+  ra_boundary_blocks_logic1: {
+    label: "RA blocker",
+    status: "当前场景：RA blocker，链路会卡在 L1。",
+    payload: {
+      tra_deg: -14,
+      radio_altitude_ft: 6,
+      engine_running: true,
+      aircraft_on_ground: true,
+      reverser_inhibited: false,
+      eec_enable: true,
+      n1k: 35,
+      max_n1k_deploy_limit: 60,
+      feedback_mode: "manual_feedback_override",
+      deploy_position_percent: 0,
+    },
+  },
+  n1k_limit_blocks_logic3: {
+    label: "N1K blocker",
+    status: "当前场景：N1K blocker，链路会卡在 L3。",
+    payload: {
+      tra_deg: -14,
+      radio_altitude_ft: 5,
+      engine_running: true,
+      aircraft_on_ground: true,
+      reverser_inhibited: false,
+      eec_enable: true,
+      n1k: 60,
+      max_n1k_deploy_limit: 60,
+      feedback_mode: "manual_feedback_override",
+      deploy_position_percent: 0,
+    },
+  },
+  manual_vdt90_ready: {
+    label: "VDT90 ready",
+    status: "当前场景：VDT90 ready，manual override 已把 L4 / THR_LOCK 推到可演示状态。",
+    payload: {
+      tra_deg: -14,
+      radio_altitude_ft: 5,
+      engine_running: true,
+      aircraft_on_ground: true,
+      reverser_inhibited: false,
+      eec_enable: true,
+      n1k: 35,
+      max_n1k_deploy_limit: 60,
+      feedback_mode: "manual_feedback_override",
+      deploy_position_percent: 95,
+    },
+  },
+};
+
 function textOrDash(value) {
   return value === null || value === undefined || value === "" ? "-" : value;
 }
@@ -463,6 +530,33 @@ function syncConditionReadouts() {
   document.getElementById("condition-deploy-position").disabled = feedbackMode !== "manual_feedback_override";
 }
 
+function applyLeverPresetPayload(payload) {
+  document.getElementById("lever-tra").value = String(payload.tra_deg);
+  document.getElementById("condition-ra").value = String(payload.radio_altitude_ft);
+  document.getElementById("condition-engine-running").checked = payload.engine_running;
+  document.getElementById("condition-aircraft-ground").checked = payload.aircraft_on_ground;
+  document.getElementById("condition-reverser-inhibited").checked = payload.reverser_inhibited;
+  document.getElementById("condition-eec-enable").checked = payload.eec_enable;
+  document.getElementById("condition-n1k").value = String(payload.n1k);
+  document.getElementById("condition-n1k-limit").value = String(payload.max_n1k_deploy_limit);
+  document.getElementById("condition-feedback-mode").value = payload.feedback_mode;
+  document.getElementById("condition-deploy-position").value = String(payload.deploy_position_percent);
+  document.getElementById("lever-tra-value").textContent = `${Number(payload.tra_deg).toFixed(1)}°`;
+  syncConditionReadouts();
+}
+
+function syncLeverPresetSelection(presetKey) {
+  const preset = leverPresets[presetKey];
+  document.querySelectorAll("[data-lever-preset]").forEach((button) => {
+    const isSelected = button.dataset.leverPreset === presetKey;
+    button.classList.toggle("is-selected", isSelected);
+    button.setAttribute("aria-pressed", isSelected ? "true" : "false");
+  });
+  document.getElementById("lever-preset-status").textContent = preset
+    ? preset.status
+    : "当前场景：自定义调参。";
+}
+
 function collectLeverSnapshotPayload(traDeg) {
   const traValue = traDeg === undefined
     ? Number(document.getElementById("lever-tra").value)
@@ -582,16 +676,44 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   leverInput.addEventListener("input", () => {
+    syncLeverPresetSelection(null);
     document.getElementById("lever-tra-value").textContent = `${Number(leverInput.value).toFixed(1)}°`;
     scheduleLeverSnapshot();
   });
   conditionInputs.forEach((input) => {
-    input.addEventListener("input", scheduleLeverSnapshot);
-    input.addEventListener("change", scheduleLeverSnapshot);
+    input.addEventListener("input", () => {
+      syncLeverPresetSelection(null);
+      scheduleLeverSnapshot();
+    });
+    input.addEventListener("change", () => {
+      syncLeverPresetSelection(null);
+      scheduleLeverSnapshot();
+    });
+  });
+  document.querySelectorAll("[data-lever-preset]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const preset = leverPresets[button.dataset.leverPreset];
+      if (!preset) {
+        return;
+      }
+      window.clearTimeout(leverSnapshotTimer);
+      applyLeverPresetPayload(preset.payload);
+      syncLeverPresetSelection(button.dataset.leverPreset);
+      document.getElementById("lever-status").textContent = `${preset.label} 计算中...`;
+      try {
+        await runLeverSnapshot(collectLeverSnapshotPayload());
+      } catch (error) {
+        renderErrorPayload(
+          {error: "lever_network_error", message: String(error.message || error)},
+          "网络错误：UI 无法访问 POST /api/lever-snapshot。",
+        );
+      }
+    });
   });
 
   syncSelectedPrompt(promptInput.value);
-  syncConditionReadouts();
+  applyLeverPresetPayload(leverPresets.l3_waiting_vdt90.payload);
+  syncLeverPresetSelection("l3_waiting_vdt90");
   runLeverSnapshot(collectLeverSnapshotPayload()).catch((error) => {
     renderErrorPayload(
       {error: "lever_network_error", message: String(error.message || error)},

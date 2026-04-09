@@ -1020,6 +1020,88 @@ class DemoIntentLayerTests(unittest.TestCase):
         ):
             self.assertIn(fragment, result.stdout)
 
+    def test_demo_static_assets_include_lever_presenter_presets(self):
+        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
+        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
+        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
+        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
+        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+
+        for fragment in (
+            "class=\"lever-presets\"",
+            "id=\"lever-presets-title\"",
+            "id=\"lever-preset-status\"",
+            "一键回填既有 `POST /api/lever-snapshot` 输入",
+            "data-lever-preset=\"l3_waiting_vdt90\"",
+            "data-lever-preset=\"ra_boundary_blocks_logic1\"",
+            "data-lever-preset=\"n1k_limit_blocks_logic3\"",
+            "data-lever-preset=\"manual_vdt90_ready\"",
+            "L3 等待 VDT90",
+            "RA blocker",
+            "N1K blocker",
+            "VDT90 ready",
+            "当前场景：L3 等待 VDT90（默认演示位）。",
+        ):
+            self.assertIn(fragment, html)
+
+        for fragment in (
+            ".lever-presets",
+            ".lever-presets-header",
+            ".lever-preset-status",
+            ".lever-presets-grid",
+            ".lever-preset-card",
+            ".lever-preset-trigger",
+            ".lever-preset-trigger.is-selected",
+        ):
+            self.assertIn(fragment, css)
+
+        for fragment in (
+            "const leverPresets = {",
+            "l3_waiting_vdt90:",
+            "ra_boundary_blocks_logic1:",
+            "n1k_limit_blocks_logic3:",
+            "manual_vdt90_ready:",
+            "function applyLeverPresetPayload(payload)",
+            "function syncLeverPresetSelection(presetKey)",
+            "document.querySelectorAll(\"[data-lever-preset]\")",
+            "applyLeverPresetPayload(leverPresets.l3_waiting_vdt90.payload);",
+        ):
+            self.assertIn(fragment, script)
+
+        for fragment in (
+            "visible `演示场景预设` row",
+            "L3 等待 VDT90",
+            "RA blocker",
+            "N1K blocker",
+            "VDT90 ready",
+            "do not create a second state machine",
+        ):
+            self.assertIn(fragment, talk_track)
+
+        for fragment in (
+            "visible `演示场景预设` buttons",
+            "`L3 等待 VDT90`, `RA blocker`, `N1K blocker`, and `VDT90 ready`",
+            "do not create a second state machine",
+        ):
+            self.assertIn(fragment, readme)
+
+        for fragment in (
+            "Use the visible lever presets",
+            "L3 等待 VDT90, RA blocker, N1K blocker, and VDT90 ready",
+            "without inventing a second state machine",
+        ):
+            self.assertIn(fragment, result.stdout)
+
     def test_demo_static_assets_include_audience_answer_field_legend(self):
         html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
         css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")

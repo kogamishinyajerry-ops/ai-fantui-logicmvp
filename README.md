@@ -154,6 +154,7 @@ The one-page presenter talk track lives at `docs/demo_presenter_talk_track.md` a
 The UI section headers include matching presenter callout labels (`[Input]`, `[Chain]`, `[Highlight]`, `[Structured answer]`, `[Raw JSON]`) so the talk track maps directly to visible page regions.
 The UI also includes a screenshot-free presenter route strip (`[Input] -> [Chain] -> [Highlight] -> [Structured answer] -> [Raw JSON]`) as a visual guide for the talk track; it is not browser automation or a screenshot annotation tool.
 The first screen now also includes a clickable `Presenter Run Card` with the same bridge / diagnose / trigger / proposal order as the talk track; it reuses the existing prompt flow and `DemoAnswer` payload rather than inventing a new presenter-only surface.
+The lever cockpit also includes visible `演示场景预设` buttons for `L3 等待 VDT90`, `RA blocker`, `N1K blocker`, and `VDT90 ready`; they only refill the existing `POST /api/lever-snapshot` inputs and do not create a second state machine.
 The structured answer area also has a compact audience answer-field legend for explaining `intent`, `matched_node`, `evidence`, `risks`, and raw JSON as reading aids rather than a new schema or second answer payload.
 The legend is grouped with `Answer sections` as a compact answer guide so field meanings and section counts stay together without changing the `DemoAnswer` payload.
 On narrow screens, that compact answer guide stacks the legend and section chips with touch-friendly spacing while keeping the same payload and field semantics.

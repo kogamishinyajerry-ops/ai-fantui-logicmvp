@@ -136,6 +136,33 @@
                 <span>L4 travel (-32°, 0°)</span>
               </div>
             </div>
+            <section class="lever-presets" aria-labelledby="lever-presets-title">
+              <div class="lever-presets-header">
+                <div>
+                  <h3 id="lever-presets-title">演示场景预设</h3>
+                  <p class="lever-presets-note">一键回填既有 `POST /api/lever-snapshot` 输入，不是第二套状态机或控制真值。</p>
+                </div>
+                <p id="lever-preset-status" class="lever-preset-status" aria-live="polite">当前场景：L3 等待 VDT90（默认演示位）。</p>
+              </div>
+              <div class="lever-presets-grid">
+                <article class="lever-preset-card">
+                  <button type="button" class="lever-preset-trigger is-selected" aria-pressed="true" data-lever-preset="l3_waiting_vdt90">L3 等待 VDT90</button>
+                  <p>TRA 已拉入、L3 已点亮，但 VDT90 / THR_LOCK 仍在等待 simplified plant feedback。</p>
+                </article>
+                <article class="lever-preset-card">
+                  <button type="button" class="lever-preset-trigger" aria-pressed="false" data-lever-preset="ra_boundary_blocks_logic1">RA blocker</button>
+                  <p>把无线电高度推到边界，现场演示为什么链路卡在 L1。</p>
+                </article>
+                <article class="lever-preset-card">
+                  <button type="button" class="lever-preset-trigger" aria-pressed="false" data-lever-preset="n1k_limit_blocks_logic3">N1K blocker</button>
+                  <p>保持拉杆位不变，只把 N1K 拉到阈值边上，演示 L3 阻塞。</p>
+                </article>
+                <article class="lever-preset-card">
+                  <button type="button" class="lever-preset-trigger" aria-pressed="false" data-lever-preset="manual_vdt90_ready">VDT90 ready</button>
+                  <p>把 manual feedback override 推到 95%，直接演示 VDT90 -> L4 -> THR_LOCK。</p>
+                </article>
+              </div>
+            </section>
             <section class="condition-panel" aria-labelledby="condition-panel-title">
               <div class="condition-panel-heading">
                 <h3 id="condition-panel-title">条件面板</h3>

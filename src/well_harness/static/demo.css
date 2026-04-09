@@ -432,6 +432,94 @@ a { color: var(--accent-cyan); }
   text-align: center;
 }
 
+.lever-presets {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 176, 55, 0.18);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(21, 17, 10, 0.94), rgba(9, 8, 6, 0.94));
+}
+
+.lever-presets-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.lever-presets-header h3 {
+  margin: 0;
+  color: #ffe1a8;
+}
+
+.lever-presets-note {
+  margin: 4px 0 0;
+  max-width: 56ch;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.lever-preset-status {
+  margin: 0;
+  padding: 7px 10px;
+  border-radius: 999px;
+  color: #ffe1a8;
+  background: rgba(255, 176, 55, 0.12);
+  font-size: 0.68rem;
+}
+
+.lever-presets-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lever-preset-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 176, 55, 0.12);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.lever-preset-card p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
+.lever-preset-trigger {
+  width: fit-content;
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 176, 55, 0.24);
+  background: rgba(255, 176, 55, 0.06);
+  color: #ffe1a8;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.lever-preset-trigger:hover {
+  transform: translateY(-1px);
+}
+
+.lever-preset-trigger:focus-visible {
+  outline: 2px solid rgba(255, 176, 55, 0.45);
+  outline-offset: 2px;
+}
+
+.lever-preset-trigger.is-selected {
+  border-color: rgba(255, 176, 55, 0.58);
+  background: rgba(255, 176, 55, 0.2);
+}
+
 .condition-panel {
   display: grid;
   gap: 10px;
@@ -1389,7 +1477,8 @@ button.summary-chip,
   .condition-grid,
   .hud-grid,
   .feedback-grid,
-  .lever-thresholds {
+  .lever-thresholds,
+  .lever-presets-grid {
     grid-template-columns: 1fr;
   }
   .showcase-grid {
@@ -1412,6 +1501,10 @@ button.summary-chip,
   }
 
   .run-card-trigger {
+    width: 100%;
+  }
+
+  .lever-preset-trigger {
     width: 100%;
   }
 
