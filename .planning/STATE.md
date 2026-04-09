@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-09 - P5-10 added a backend-generated state-vs-time monitoring panel for the user-defined RA -> TRA -> VDT sequence, keeping the cockpit readable while lifting the validated baseline to 167 tests and 8 shared validation checks.
+Last activity: 2026-04-09 - P6-01 archived a temporary freeze snapshot and a plain-language project history review on top of the current P5-10 monitored-demo baseline.
 
 ## Current Position
 
@@ -32,6 +32,7 @@ Last activity: 2026-04-09 - P5-10 added a backend-generated state-vs-time monito
 - `P5-08 修复 VDT live-control wiring 与条件深拉解锁回归` is now implemented locally: the moved VDT mode/percentage controls are again part of live snapshot scheduling, so dragging VDT updates the visible readout and can reopen the deep TRA drag band when the backend `L4` boundary unlock becomes ready.
 - `P5-09 纠正 TRA 启动位与拖动方向语义` is now implemented locally: the cockpit no longer boots on a near-threshold preset, the TRA rail now explains that deeper reverse lives to the left, and the default interaction demonstrates the free `-14° .. 0°` band before any `L4` unlock.
 - `P5-10 增加 RA-TRA-VDT 受控状态监控时间线` is now implemented locally: the demo exposes a dedicated full-width monitoring panel driven by a backend `GET /api/monitor-timeline` trace, with event markers and multi-row status curves for the user-defined RA / TRA / VDT process.
+- `P6-01 同步控制塔真值与 freeze packet 基线` is now implemented locally as repo-backed archive material: the project now has a temporary freeze snapshot and a five-minute development-history review document for handoff and recap.
 - `P6 Reconcile Control Tower And Freeze Demo Packet` is now drafted locally as the next planned phase, pending the current P5 Opus adjudication.
 
 ## Active Objective
@@ -49,6 +50,7 @@ Keep the development loop operational while shifting the active roadmap from P4 
 - Maintain the boundary between controller truth and simplified plant feedback in demo copy and UI affordances.
 - Keep the TRA conditional deep-range drag semantics and same-screen cockpit layout aligned with the same `POST /api/lever-snapshot` truth surface.
 - Add a deterministic state-vs-time monitor for the cockpit chain without reintroducing a second control-truth layer or crowding the presenter surface.
+- Keep a readable freeze/archive packet in the repo so the current baseline can be resumed or explained quickly after a pause.
 
 ## Blockers/Concerns
 
