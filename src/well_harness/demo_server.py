@@ -339,9 +339,8 @@ def _lever_summary(
 
     if tra_lock and tra_lock["clamped"]:
         summary["blocker"] = (
-            f"{summary['blocker']} TRA 后拉锁仍在位：请求 {tra_lock['requested_tra_deg']:.1f}° "
-            f"已被限制在 {tra_lock['lock_deg']:.1f}°，要先满足 L4 才能继续进入 "
-            f"{tra_lock['lock_deg']:.1f}° 到 {tra_lock['deep_reverse_limit_deg']:.1f}° 区间。"
+            f"{summary['blocker']} TRA 深拉区仍未开放：请求 {tra_lock['requested_tra_deg']:.1f}° "
+            f"已被限制在 {tra_lock['lock_deg']:.1f}°，当前只开放 {tra_lock['lock_deg']:.1f}° 到 0.0° 的自由拖动范围。"
         )
     return summary
 
@@ -459,42 +458,37 @@ def _build_tra_lock_payload(
     effective_tra_deg: float,
     lock_deg: float,
     boundary_unlock_ready: bool,
-    ui_unlocked: bool,
+    deep_range_open: bool,
     unlock_blockers: list[str],
 ) -> dict:
     blocker_text = " / ".join(unlock_blockers) if unlock_blockers else "L4 条件"
-    locked = not ui_unlocked
+    locked = not deep_range_open
     clamped = effective_tra_deg != requested_tra_deg
-    allowed_reverse_min_deg = config.reverse_travel_min_deg if ui_unlocked else lock_deg
-    if ui_unlocked:
+    allowed_reverse_min_deg = config.reverse_travel_min_deg if deep_range_open else lock_deg
+    if deep_range_open:
         message = (
-            f"L4 已满足：TRA 已解锁，可继续拉到 {config.reverse_travel_min_deg:.1f}°。"
-        )
-    elif boundary_unlock_ready:
-        message = (
-            f"L4 的边界条件已经具备；先把 TRA 拖到 {lock_deg:.1f}° 锁位，"
-            f"再继续进入 {lock_deg:.1f}° 到 {config.reverse_travel_min_deg:.1f}° 区间。"
+            f"L4 已满足：TRA 现在可以在 {config.reverse_travel_min_deg:.1f}° 到 0.0° 区间自由拖动。"
         )
     elif clamped:
         message = (
             f"L4 未满足：请求 {requested_tra_deg:.1f}° 已锁回 {lock_deg:.1f}°；"
-            f"先满足 {blocker_text} 才能继续后拉。"
+            f"当前只能在 {lock_deg:.1f}° 到 0.0° 范围内拖动。"
         )
     else:
         message = (
-            f"L4 未满足：TRA 当前锁止在 {lock_deg:.1f}°；"
-            f"满足 {blocker_text} 后才可进入 {lock_deg:.1f}° 到 "
-            f"{config.reverse_travel_min_deg:.1f}° 区间。"
+            f"L4 未满足：当前自由拖动范围只开放 {lock_deg:.1f}° 到 0.0°；"
+            f"满足 {blocker_text} 后，{config.reverse_travel_min_deg:.1f}° 到 {lock_deg:.1f}° 深拉区间才开放。"
         )
     return {
         "locked": locked,
         "clamped": clamped,
-        "unlock_ready": ui_unlocked,
+        "unlock_ready": deep_range_open,
         "boundary_unlock_ready": boundary_unlock_ready,
         "lock_deg": lock_deg,
         "requested_tra_deg": requested_tra_deg,
         "effective_tra_deg": effective_tra_deg,
         "allowed_reverse_min_deg": allowed_reverse_min_deg,
+        "visual_reverse_min_deg": config.reverse_travel_min_deg,
         "deep_reverse_limit_deg": config.reverse_travel_min_deg,
         "unlock_logic": "logic4",
         "unlock_blockers": unlock_blockers,
@@ -517,6 +511,19 @@ def lever_snapshot_payload(
     config = HarnessConfig()
     requested_tra = _clamp_tra(tra_deg, config)
     lock_deg = _clamp_tra(TRA_L4_LOCK_DEG, config)
+    requested_snapshot = _simulate_lever_state(
+        requested_tra,
+        config=config,
+        radio_altitude_ft=radio_altitude_ft,
+        engine_running=engine_running,
+        aircraft_on_ground=aircraft_on_ground,
+        reverser_inhibited=reverser_inhibited,
+        eec_enable=eec_enable,
+        n1k=n1k,
+        max_n1k_deploy_limit=max_n1k_deploy_limit,
+        feedback_mode=feedback_mode,
+        deploy_position_percent=deploy_position_percent,
+    )
     lock_probe = _simulate_lever_state(
         lock_deg,
         config=config,
@@ -537,21 +544,9 @@ def lever_snapshot_payload(
         else lock_deg
     )
     snapshot = (
-        lock_probe
-        if effective_tra == lock_deg
-        else _simulate_lever_state(
-            effective_tra,
-            config=config,
-            radio_altitude_ft=radio_altitude_ft,
-            engine_running=engine_running,
-            aircraft_on_ground=aircraft_on_ground,
-            reverser_inhibited=reverser_inhibited,
-            eec_enable=eec_enable,
-            n1k=n1k,
-            max_n1k_deploy_limit=max_n1k_deploy_limit,
-            feedback_mode=feedback_mode,
-            deploy_position_percent=deploy_position_percent,
-        )
+        requested_snapshot
+        if effective_tra == requested_tra
+        else lock_probe
     )
 
     time_s = snapshot["time_s"]
@@ -561,14 +556,14 @@ def lever_snapshot_payload(
     inputs = snapshot["inputs"]
     outputs = snapshot["outputs"]
     explain = snapshot["explain"]
-    ui_unlocked = outputs.logic4_active and effective_tra <= lock_deg
+    deep_range_open = boundary_unlock_ready
     tra_lock = _build_tra_lock_payload(
         config=config,
         requested_tra_deg=requested_tra,
         effective_tra_deg=effective_tra,
         lock_deg=lock_deg,
         boundary_unlock_ready=boundary_unlock_ready,
-        ui_unlocked=ui_unlocked,
+        deep_range_open=deep_range_open,
         unlock_blockers=[condition.name for condition in lock_probe["explain"].logic4.failed_conditions],
     )
     logic1_completed = sensors.tls_unlocked_ls

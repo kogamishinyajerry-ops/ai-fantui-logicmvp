@@ -579,9 +579,11 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertFalse(payload["tra_lock"]["unlock_ready"])
         self.assertEqual(payload["tra_lock"]["lock_deg"], -14.0)
         self.assertEqual(payload["tra_lock"]["allowed_reverse_min_deg"], -14.0)
+        self.assertEqual(payload["tra_lock"]["visual_reverse_min_deg"], HarnessConfig().reverse_travel_min_deg)
         self.assertIn("deploy_90_percent_vdt", payload["tra_lock"]["unlock_blockers"])
         self.assertIn("已锁回 -14.0°", payload["tra_lock"]["message"])
-        self.assertIn("TRA 后拉锁仍在位", payload["summary"]["blocker"])
+        self.assertIn("当前只能在 -14.0° 到 0.0° 范围内拖动", payload["tra_lock"]["message"])
+        self.assertIn("TRA 深拉区仍未开放", payload["summary"]["blocker"])
         self.assertFalse(payload["outputs"]["logic4_active"])
 
     def test_demo_server_api_unlocks_deeper_reverse_travel_after_logic4_is_ready(self):
@@ -614,15 +616,16 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertFalse(payload["tra_lock"]["clamped"])
         self.assertTrue(payload["tra_lock"]["unlock_ready"])
         self.assertEqual(payload["tra_lock"]["allowed_reverse_min_deg"], HarnessConfig().reverse_travel_min_deg)
+        self.assertEqual(payload["tra_lock"]["visual_reverse_min_deg"], HarnessConfig().reverse_travel_min_deg)
         self.assertEqual(payload["tra_lock"]["unlock_blockers"], [])
-        self.assertIn("TRA 已解锁", payload["tra_lock"]["message"])
+        self.assertIn("TRA 现在可以在 -32.0° 到 0.0° 区间自由拖动", payload["tra_lock"]["message"])
         self.assertTrue(payload["outputs"]["logic4_active"])
         self.assertEqual(
             {node["id"]: node["state"] for node in payload["nodes"]}["thr_lock"],
             "active",
         )
 
-    def test_demo_server_api_keeps_slider_locked_until_current_snapshot_reaches_minus_14(self):
+    def test_demo_server_api_unlocks_deep_range_once_l4_boundary_probe_is_ready(self):
         server, thread = start_demo_server()
         try:
             connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
@@ -648,10 +651,11 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertEqual(payload["input"]["tra_deg"], 0.0)
         self.assertTrue(payload["tra_lock"]["boundary_unlock_ready"])
-        self.assertTrue(payload["tra_lock"]["locked"])
-        self.assertFalse(payload["tra_lock"]["unlock_ready"])
-        self.assertEqual(payload["tra_lock"]["allowed_reverse_min_deg"], -14.0)
-        self.assertIn("先把 TRA 拖到 -14.0° 锁位", payload["tra_lock"]["message"])
+        self.assertFalse(payload["tra_lock"]["locked"])
+        self.assertTrue(payload["tra_lock"]["unlock_ready"])
+        self.assertEqual(payload["tra_lock"]["allowed_reverse_min_deg"], HarnessConfig().reverse_travel_min_deg)
+        self.assertEqual(payload["tra_lock"]["visual_reverse_min_deg"], HarnessConfig().reverse_travel_min_deg)
+        self.assertIn("TRA 现在可以在 -32.0° 到 0.0° 区间自由拖动", payload["tra_lock"]["message"])
         self.assertFalse(payload["outputs"]["logic4_active"])
 
     def test_demo_server_api_rejects_invalid_extended_lever_snapshot_input(self):
@@ -1215,7 +1219,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             "class=\"lever-presets\"",
             "id=\"lever-presets-title\"",
             "id=\"lever-preset-status\"",
-            "一键回填既有 `POST /api/lever-snapshot` 输入",
+            "快速回填当前 `POST /api/lever-snapshot` 输入",
             "data-lever-preset=\"l3_waiting_vdt90\"",
             "data-lever-preset=\"ra_boundary_blocks_logic1\"",
             "data-lever-preset=\"n1k_limit_blocks_logic3\"",
@@ -1517,16 +1521,18 @@ class DemoIntentLayerTests(unittest.TestCase):
             "L1 需要 RA &lt; 6ft",
             "L3 需要 N1K &lt; limit",
             "type=\"range\"",
-            "min=\"-14\"",
+            "min=\"-32\"",
             "max=\"0\"",
             "SW1 -1.4° ~ -6.2°",
             "SW2 -5.0° ~ -9.8°",
             "L3 ≤ -11.74°",
-            "L4 锁位 -14°",
+            "L4 条件限值 -14°",
             "id=\"lever-lock-badge\"",
             "id=\"lever-lock-status\"",
+            "id=\"lever-conditional-range\"",
+            "class=\"lever-deck-grid\"",
             "class=\"lever-live-grid\"",
-            "高频演示控件已上移",
+            "把 VDT 调节上移到主控 deck",
             "id=\"hud-tra\"",
             "id=\"lever-result\"",
             "class=\"panel qa-drawer\"",
@@ -1560,7 +1566,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             ".hud-grid",
             ".lever-result",
             ".qa-drawer",
-            "minmax(360px, 0.94fr) minmax(620px, 1.46fr)",
+            "minmax(500px, 1.08fr) minmax(560px, 1.2fr)",
             "grid-template-areas:",
             "\"prompt chain\"",
             "\"answer answer\"",
@@ -1687,6 +1693,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             "id=\"lever-tra-value\"",
             "id=\"lever-lock-badge\"",
             "id=\"lever-lock-status\"",
+            "id=\"lever-conditional-range\"",
             "id=\"lever-status\"",
             "id=\"hud-switches\"",
             "id=\"hud-locks\"",
@@ -1703,14 +1710,21 @@ class DemoIntentLayerTests(unittest.TestCase):
         for fragment in (
             ".lever-panel",
             ".lever-console",
+            ".lever-deck-grid",
+            ".lever-track-stack",
+            ".lever-live-stack",
             ".lever-lock-banner",
             ".lever-lock-badge",
             ".lever-lock-status",
+            ".lever-range-rail",
+            ".range-chip",
             ".lever-live-grid",
+            ".lever-live-header",
             ".live-control",
             "#lever-tra",
             ".condition-panel",
             ".condition-grid",
+            ".condition-toggle-rail",
             ".condition-range",
             ".condition-toggle",
             ".condition-number",
@@ -1733,12 +1747,18 @@ class DemoIntentLayerTests(unittest.TestCase):
 
         for fragment in (
             "function renderTraLockState(payload)",
+            "function clampLeverTraToUnlockedBand(rawValue)",
             "function syncConditionReadouts()",
             "function collectLeverSnapshotPayload(traDeg)",
             "async function runLeverSnapshot(traDeg, requestId = beginInteractionRequest())",
             "fetch(\"/api/lever-snapshot\"",
             "traLock.boundary_unlock_ready",
             "traLock.allowed_reverse_min_deg",
+            "traLock.visual_reverse_min_deg",
+            "leverInput.dataset.allowedReverseMin",
+            "leverInput.dataset.deepRangeLocked",
+            "clampLeverTraToUnlockedBand(Number(leverInput.value))",
+            "document.getElementById(\"lever-conditional-range\")",
             "document.getElementById(\"lever-lock-status\")",
             "radio_altitude_ft: Number(document.getElementById(\"condition-ra\").value)",
             "engine_running: document.getElementById(\"condition-engine-running\").checked",
@@ -1759,6 +1779,8 @@ class DemoIntentLayerTests(unittest.TestCase):
             "不是完整实时物理仿真",
         ):
             self.assertIn(fragment, script)
+
+        self.assertIn("min=\"-32\"", html)
 
         self.assertIn("<details id=\"raw-json-details\" class=\"debug-inspector\">", html)
         self.assertNotIn("id=\"raw-json-details\" class=\"debug-inspector\" open", html)

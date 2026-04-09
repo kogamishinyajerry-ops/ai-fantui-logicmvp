@@ -106,7 +106,8 @@ def scenario_lever_extreme_clamp(port: int) -> ScenarioResult:
         return fail_result("lever_extreme_clamp", status, f"expected HTTP 200 but got {status}")
 
     expected_checks = (
-        (payload["input"]["tra_deg"] == config.reverse_travel_min_deg, "tra_deg should clamp to reverse_travel_min_deg"),
+        (payload["input"]["requested_tra_deg"] == config.reverse_travel_min_deg, "requested_tra_deg should clamp to reverse_travel_min_deg"),
+        (payload["input"]["tra_deg"] == config.reverse_travel_min_deg, "effective tra_deg should stay at reverse_travel_min_deg once the lock boundary is open"),
         (payload["input"]["radio_altitude_ft"] == 0.0, "radio_altitude_ft should clamp to 0.0"),
         (payload["input"]["n1k"] == 0.0, "n1k should clamp to 0.0"),
         (payload["input"]["max_n1k_deploy_limit"] == 120.0, "max_n1k_deploy_limit should clamp to 120.0"),
@@ -117,8 +118,9 @@ def scenario_lever_extreme_clamp(port: int) -> ScenarioResult:
         (payload["input"]["eec_enable"] is True, "eec_enable should coerce from string on"),
         (payload["mode"] == "manual_feedback_override", "mode should stay on manual_feedback_override"),
         (payload["hud"]["deploy_90_percent_vdt"] is True, "manual override at 100 should activate VDT90"),
+        (payload["tra_lock"]["locked"] is False, "the deep range should be open once the -14° lock boundary satisfies L4"),
         (payload["outputs"]["logic3_active"] is True, "logic3 should remain active after the clamped edge-case request"),
-        ("tra_deg" in payload["logic"]["logic4"]["failed_conditions"], "logic4 should report its blocked tra_deg condition explicitly"),
+        ("tra_deg" in payload["logic"]["logic4"]["failed_conditions"], "logic4 should still expose the deep-angle tra_deg blocker at -32.0°"),
     )
     for passed, message in expected_checks:
         if not passed:
@@ -126,12 +128,12 @@ def scenario_lever_extreme_clamp(port: int) -> ScenarioResult:
 
     node_states = {node["id"]: node["state"] for node in payload["nodes"]}
     if node_states.get("thr_lock") != "blocked":
-        return fail_result("lever_extreme_clamp", status, "THR_LOCK should stay in a controlled blocked state for the fully clamped extreme request")
+        return fail_result("lever_extreme_clamp", status, "THR_LOCK should stay in a controlled blocked state once the deep range is open but logic4 falls back on tra_deg")
 
     return pass_result(
         "lever_extreme_clamp",
         status,
-        "lever snapshot clamps extreme numeric inputs, coerces boolean-like strings, and returns a valid manual-override blocked snapshot instead of drifting or crashing.",
+        "lever snapshot clamps extreme numeric inputs, coerces boolean-like strings, and keeps the full -32°..0° slider open once the -14° L4 lock boundary is satisfied, even if THR_LOCK later falls back to a controlled blocked state at -32°.",
     )
 
 
@@ -215,8 +217,9 @@ def scenario_lever_l4_lock_gate(port: int) -> ScenarioResult:
     checks = (
         (prelock["input"]["tra_deg"] == 0.0, "prelock snapshot should preserve the shallow TRA position"),
         (prelock["tra_lock"]["boundary_unlock_ready"] is True, "prelock snapshot should detect that the lock boundary could unlock"),
-        (prelock["tra_lock"]["locked"] is True, "prelock snapshot should still keep the slider locked"),
-        (prelock["tra_lock"]["allowed_reverse_min_deg"] == -14.0, "prelock snapshot should keep the UI min at -14.0"),
+        (prelock["tra_lock"]["locked"] is False, "prelock snapshot should expose the full range once the -14° lock boundary is satisfied"),
+        (prelock["tra_lock"]["visual_reverse_min_deg"] == -32.0, "prelock snapshot should keep the full visual slider range"),
+        (prelock["tra_lock"]["allowed_reverse_min_deg"] == -32.0, "prelock snapshot should expose the full drag range when the lock boundary is satisfied"),
         (locked["input"]["tra_deg"] == -14.0, "lock-boundary snapshot should reach -14.0"),
         (locked["tra_lock"]["locked"] is False, "lock-boundary snapshot should unlock once logic4 is truly active"),
         (locked["tra_lock"]["unlock_ready"] is True, "lock-boundary snapshot should report unlock_ready=True"),
@@ -224,6 +227,7 @@ def scenario_lever_l4_lock_gate(port: int) -> ScenarioResult:
         (unlocked["input"]["tra_deg"] == -20.0, "unlocked snapshot should allow deeper reverse travel"),
         (unlocked["tra_lock"]["locked"] is False, "unlocked snapshot should report locked=False"),
         (unlocked["tra_lock"]["clamped"] is False, "unlocked snapshot should report clamped=False"),
+        (unlocked["tra_lock"]["visual_reverse_min_deg"] == -32.0, "unlocked snapshot should preserve the full visual slider range"),
         (unlocked["outputs"]["logic4_active"] is True, "unlocked snapshot should keep logic4 active after the gate is satisfied"),
     )
     for passed, message in checks:
@@ -233,7 +237,7 @@ def scenario_lever_l4_lock_gate(port: int) -> ScenarioResult:
     return pass_result(
         "lever_l4_lock_gate",
         unlocked_status,
-        "L4 gate now keeps the slider in the -14°..0° range until the current snapshot reaches the -14° lock point with logic4 active, then releases the deeper reverse range.",
+        "TRA now keeps the visual slider range at -32°..0°, while the -32°..-14° deep-reverse band opens only when the -14° lock boundary satisfies L4; otherwise requests are clamped back to -14°.",
     )
 
 

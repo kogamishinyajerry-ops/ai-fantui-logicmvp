@@ -21,3 +21,4 @@
 
 - The controller truth still remains untouched; this change lives in the demo surface and its presentation layer.
 - The validated baseline after this slice is `163 tests`, `10 demo smoke scenarios`, and `8` shared validation checks.
+- `P5-07` later clarified the final intended lock interaction: the full visual range remains visible at all times, while only the deep `-32° .. -14°` band stays conditionally closed until the `L4` boundary logic is ready.

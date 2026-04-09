@@ -39,9 +39,9 @@ button, textarea, input {
 }
 
 .shell {
-  width: min(1440px, 100% - 32px);
+  width: min(1520px, 100% - 36px);
   margin: 0 auto;
-  padding: 18px 0 56px;
+  padding: 20px 0 60px;
 }
 
 /* Typography Base */
@@ -318,11 +318,11 @@ a { color: var(--accent-cyan); }
 /* Main Grid */
 .showcase-grid {
   display: grid;
-  grid-template-columns: minmax(360px, 0.94fr) minmax(620px, 1.46fr);
+  grid-template-columns: minmax(500px, 1.08fr) minmax(560px, 1.2fr);
   grid-template-areas:
     "prompt chain"
     "answer answer";
-  gap: 14px;
+  gap: 18px;
   align-items: start;
 }
 
@@ -351,16 +351,16 @@ a { color: var(--accent-cyan); }
 /* Left Column: Interactive Lever Cockpit */
 .lever-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1.06fr) minmax(280px, 0.94fr);
+  grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
   grid-template-areas:
     "title title"
     "note note"
     "console console"
-    "presets presets"
+    "presets hud"
     "conditions hud"
     "conditions feedback"
     "status status";
-  gap: 10px 14px;
+  gap: 14px 18px;
   align-items: start;
   background:
     radial-gradient(circle at 20% 10%, rgba(255, 176, 55, 0.14), transparent 18rem),
@@ -384,8 +384,8 @@ a { color: var(--accent-cyan); }
 
 .lever-console {
   display: grid;
-  gap: 10px;
-  padding: 12px;
+  gap: 0;
+  padding: 14px;
   border: 1px solid rgba(255, 176, 55, 0.2);
   border-radius: 16px;
   background:
@@ -393,6 +393,19 @@ a { color: var(--accent-cyan); }
     linear-gradient(180deg, rgba(255, 176, 55, 0.035) 1px, transparent 1px),
     rgba(3, 7, 14, 0.82);
   background-size: 22px 22px;
+}
+
+.lever-deck-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.16fr) minmax(280px, 0.84fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.lever-track-stack,
+.lever-live-stack {
+  display: grid;
+  gap: 12px;
 }
 
 .lever-readout {
@@ -435,8 +448,8 @@ a { color: var(--accent-cyan); }
 
 .lever-thresholds {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 8px;
 }
 
 .lever-thresholds span {
@@ -450,10 +463,46 @@ a { color: var(--accent-cyan); }
   text-align: center;
 }
 
+.lever-range-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.range-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  line-height: 1.35;
+}
+
+.range-chip.is-open {
+  color: #cffff0;
+  border-color: rgba(83, 255, 146, 0.24);
+  background: rgba(83, 255, 146, 0.08);
+}
+
+.range-chip.is-conditional.is-locked {
+  color: #ffd9a2;
+  border-color: rgba(255, 176, 55, 0.28);
+  background: rgba(255, 176, 55, 0.09);
+}
+
+.range-chip.is-conditional.is-open {
+  color: #d8f7ff;
+  border-color: rgba(40, 244, 255, 0.28);
+  background: rgba(40, 244, 255, 0.08);
+}
+
 .lever-lock-banner {
   display: grid;
-  gap: 6px;
-  padding: 9px 10px;
+  gap: 8px;
+  padding: 11px 12px;
   border-radius: 14px;
   border: 1px solid rgba(255, 176, 55, 0.18);
   background: rgba(255, 176, 55, 0.08);
@@ -489,16 +538,32 @@ a { color: var(--accent-cyan); }
   line-height: 1.45;
 }
 
+.lever-live-header {
+  display: grid;
+  gap: 4px;
+}
+
+.lever-live-header h3 {
+  color: #dffbff;
+}
+
+.lever-live-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+}
+
 .lever-live-grid {
   display: grid;
-  grid-template-columns: minmax(220px, 0.38fr) minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
 .live-control {
   display: grid;
-  gap: 5px;
-  padding: 9px 10px;
+  gap: 6px;
+  padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid rgba(79, 184, 255, 0.16);
   background: rgba(7, 12, 20, 0.78);
@@ -533,8 +598,8 @@ a { color: var(--accent-cyan); }
 
 .lever-presets {
   display: grid;
-  gap: 12px;
-  padding: 12px;
+  gap: 14px;
+  padding: 14px;
   border: 1px solid rgba(255, 176, 55, 0.18);
   border-radius: 16px;
   background: linear-gradient(180deg, rgba(21, 17, 10, 0.94), rgba(9, 8, 6, 0.94));
@@ -544,7 +609,7 @@ a { color: var(--accent-cyan); }
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
@@ -571,14 +636,14 @@ a { color: var(--accent-cyan); }
 
 .lever-presets-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
 .lever-preset-card {
   display: grid;
-  gap: 8px;
-  padding: 10px;
+  gap: 10px;
+  padding: 14px;
   border-radius: 14px;
   border: 1px solid rgba(255, 176, 55, 0.12);
   background: rgba(255, 255, 255, 0.02);
@@ -587,7 +652,7 @@ a { color: var(--accent-cyan); }
 .lever-preset-card p {
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -596,15 +661,17 @@ a { color: var(--accent-cyan); }
 }
 
 .lever-preset-trigger {
-  width: fit-content;
-  max-width: 100%;
-  padding: 8px 12px;
-  border-radius: 999px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 14px;
   border: 1px solid rgba(255, 176, 55, 0.24);
   background: rgba(255, 176, 55, 0.06);
   color: #ffe1a8;
   font: inherit;
   font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
   cursor: pointer;
   transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
 }
@@ -625,8 +692,8 @@ a { color: var(--accent-cyan); }
 
 .condition-panel {
   display: grid;
-  gap: 10px;
-  padding: 12px;
+  gap: 12px;
+  padding: 14px;
   border: 1px solid rgba(61, 126, 255, 0.18);
   border-radius: 16px;
   background: linear-gradient(180deg, rgba(8, 14, 24, 0.94), rgba(5, 9, 18, 0.94));
@@ -654,8 +721,8 @@ a { color: var(--accent-cyan); }
 
 .condition-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .condition-range,
@@ -663,8 +730,8 @@ a { color: var(--accent-cyan); }
 .condition-toggle,
 .condition-select {
   display: grid;
-  gap: 4px;
-  padding: 8px 10px;
+  gap: 5px;
+  padding: 10px 12px;
   border: 1px solid rgba(79, 184, 255, 0.14);
   border-radius: 12px;
   background: rgba(3, 7, 14, 0.72);
@@ -693,6 +760,12 @@ a { color: var(--accent-cyan); }
 
 .condition-span-3 {
   grid-column: span 3;
+}
+
+.condition-toggle-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
 }
 
 .condition-range output {
@@ -791,8 +864,8 @@ a { color: var(--accent-cyan); }
 
 .hud-grid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
   align-self: start;
 }
 
@@ -830,7 +903,7 @@ a { color: var(--accent-cyan); }
 .feedback-panel {
   border: 1px dashed rgba(79, 184, 255, 0.22);
   border-radius: 14px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   background: rgba(5, 10, 18, 0.66);
   align-self: start;
 }
@@ -846,7 +919,7 @@ a { color: var(--accent-cyan); }
   margin-top: 8px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
 }
 
 .feedback-grid div {
@@ -873,7 +946,7 @@ a { color: var(--accent-cyan); }
 }
 
 .feedback-panel p {
-  margin: 8px 0 0;
+  margin: 10px 0 0;
   color: var(--text-muted);
   font-size: 0.68rem;
 }
@@ -1127,9 +1200,9 @@ button:disabled {
     linear-gradient(180deg, rgba(12, 21, 33, 0.98), rgba(3, 8, 15, 0.98));
   border-color: rgba(40, 244, 255, 0.36);
   position: sticky;
-  top: 14px;
+  top: 10px;
   align-self: start;
-  max-height: calc(100vh - 24px);
+  max-height: calc(100vh - 20px);
   overflow: auto;
 }
 
@@ -1716,8 +1789,16 @@ button.summary-chip,
     padding: 10px;
   }
 
+  .lever-deck-grid {
+    gap: 10px;
+  }
+
   .condition-grid {
     gap: 6px;
+  }
+
+  .condition-toggle-rail {
+    gap: 8px;
   }
 
   .hud-grid div,
@@ -1774,16 +1855,14 @@ button.summary-chip,
     grid-column: auto;
   }
 
+  .condition-toggle-rail,
+  .lever-deck-grid,
   .hud-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .lever-live-grid {
     grid-template-columns: 1fr;
   }
 
   .lever-presets-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .chain-panel {

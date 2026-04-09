@@ -133,6 +133,15 @@ function textOrDash(value) {
   return value === null || value === undefined || value === "" ? "-" : value;
 }
 
+function clampLeverTraToUnlockedBand(rawValue) {
+  const leverInput = document.getElementById("lever-tra");
+  const visualReverseMin = Number(leverInput.min ?? -32);
+  const allowedReverseMin = Number(leverInput.dataset.allowedReverseMin ?? visualReverseMin);
+  const reverseMax = Number(leverInput.max ?? 0);
+  const normalizedValue = Number.isFinite(rawValue) ? rawValue : Number(leverInput.value ?? 0);
+  return Math.min(reverseMax, Math.max(allowedReverseMin, Math.max(visualReverseMin, normalizedValue)));
+}
+
 function answerSectionId(sectionName) {
   return `answer-section-${sectionName}`;
 }
@@ -375,6 +384,13 @@ function renderTraLockState(payload) {
   const leverInput = document.getElementById("lever-tra");
   const badge = document.getElementById("lever-lock-badge");
   const status = document.getElementById("lever-lock-status");
+  const conditionalRange = document.getElementById("lever-conditional-range");
+  const boundaryUnlockReady = Boolean(traLock.boundary_unlock_ready);
+  const visualReverseMin = Number(
+    traLock.visual_reverse_min_deg
+      ?? leverInput.min
+      ?? -32,
+  );
   const allowedReverseMin = Number(
     traLock.allowed_reverse_min_deg
       ?? payload.input?.tra_deg
@@ -387,20 +403,29 @@ function renderTraLockState(payload) {
       ?? leverInput.value
       ?? 0,
   );
-
-  leverInput.min = String(allowedReverseMin);
-  leverInput.value = String(effectiveTra);
-
   const locked = Boolean(traLock.locked);
-  badge.textContent = locked
-    ? (traLock.boundary_unlock_ready ? "拖到 -14° 解锁" : "L4 未解锁")
-    : "L4 已解锁";
+
+  leverInput.min = String(visualReverseMin);
+  leverInput.value = String(effectiveTra);
+  leverInput.dataset.allowedReverseMin = String(allowedReverseMin);
+  leverInput.dataset.boundaryUnlockReady = boundaryUnlockReady ? "true" : "false";
+  leverInput.dataset.deepRangeLocked = locked ? "true" : "false";
+
+  badge.textContent = locked ? "深拉区关闭" : "深拉区已开放";
   badge.classList.toggle("is-locked", locked);
   badge.classList.toggle("is-unlocked", !locked);
+  if (conditionalRange) {
+    conditionalRange.dataset.boundaryUnlockReady = boundaryUnlockReady ? "true" : "false";
+    conditionalRange.classList.toggle("is-locked", locked);
+    conditionalRange.classList.toggle("is-open", !locked);
+    conditionalRange.textContent = locked
+      ? `条件深拉区 ${visualReverseMin.toFixed(0)}° ~ ${allowedReverseMin.toFixed(0)}°（关闭）`
+      : `条件深拉区 ${visualReverseMin.toFixed(0)}° ~ -14°（已开放）`;
+  }
   status.textContent = traLock.message || (
     locked
-      ? "TRA 当前锁止在 -14°；L4 满足后才能继续进入 -14° 到 -32° 区间。"
-      : "L4 已满足：TRA 已解锁，可继续拉到 -32°。"
+      ? "视觉量程保持 -32° 到 0°；当前只开放 -14° 到 0° 的自由拖动范围。"
+      : "L4 已满足：TRA 可在 -32° 到 0° 区间自由拖动。"
   );
 }
 
@@ -638,7 +663,7 @@ function syncConditionReadouts() {
 }
 
 function applyLeverPresetPayload(payload) {
-  document.getElementById("lever-tra").value = String(payload.tra_deg);
+  document.getElementById("lever-tra").value = String(clampLeverTraToUnlockedBand(Number(payload.tra_deg)));
   document.getElementById("condition-ra").value = String(payload.radio_altitude_ft);
   document.getElementById("condition-engine-running").checked = payload.engine_running;
   document.getElementById("condition-aircraft-ground").checked = payload.aircraft_on_ground;
@@ -668,8 +693,9 @@ function collectLeverSnapshotPayload(traDeg) {
   const traValue = traDeg === undefined
     ? Number(document.getElementById("lever-tra").value)
     : Number(traDeg);
+  const clampedTraValue = clampLeverTraToUnlockedBand(traValue);
   return {
-    tra_deg: traValue,
+    tra_deg: clampedTraValue,
     radio_altitude_ft: Number(document.getElementById("condition-ra").value),
     engine_running: document.getElementById("condition-engine-running").checked,
     aircraft_on_ground: document.getElementById("condition-aircraft-ground").checked,
@@ -797,7 +823,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   leverInput.addEventListener("input", () => {
     syncLeverPresetSelection(null);
-    document.getElementById("lever-tra-value").textContent = `${Number(leverInput.value).toFixed(1)}°`;
+    const clampedValue = clampLeverTraToUnlockedBand(Number(leverInput.value));
+    leverInput.value = String(clampedValue);
+    document.getElementById("lever-tra-value").textContent = `${clampedValue.toFixed(1)}°`;
     scheduleLeverSnapshot();
   });
   conditionInputs.forEach((input) => {
