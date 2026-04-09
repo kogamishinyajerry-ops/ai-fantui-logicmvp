@@ -949,6 +949,77 @@ class DemoIntentLayerTests(unittest.TestCase):
         ):
             self.assertIn(fragment, result.stdout)
 
+    def test_demo_static_assets_include_visible_presenter_run_card(self):
+        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
+        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
+        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
+        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+
+        for fragment in (
+            "class=\"panel presenter-run-card\"",
+            "id=\"presenter-run-card-title\"",
+            "Presenter Run Card",
+            "首屏可点击演示顺序",
+            "不是自动 readiness detector",
+            "人工预演提示，不是浏览器自动化，也不是新的控制真值。",
+            "class=\"presenter-run-card-grid\"",
+            "class=\"run-card-step\"",
+            "class=\"run-card-trigger is-selected\"",
+            "运行桥接题",
+            "运行未释放诊断",
+            "运行触发题",
+            "运行阈值预演",
+            "`controller.py` 仍是唯一控制真值。",
+            "`simplified plant feedback` 只用于演示解释，不是完整实时物理模型。",
+            "Raw JSON 只是同一份 `DemoAnswer` 的调试视图",
+        ):
+            self.assertIn(fragment, html)
+
+        for fragment in (
+            ".presenter-run-card",
+            ".presenter-run-card-header",
+            ".presenter-run-card-grid",
+            ".run-card-step",
+            ".run-card-kicker",
+            ".run-card-trigger",
+            ".run-card-trigger.is-selected",
+            ".presenter-run-card-rails",
+            ".presenter-run-card-boundary",
+        ):
+            self.assertIn(fragment, css)
+
+        for fragment in (
+            "Presenter Run Card",
+            "four clickable bridge / diagnose / trigger / proposal steps",
+            "manual presenter aid",
+            "not an automatic readiness detector",
+        ):
+            self.assertIn(fragment, talk_track)
+
+        for fragment in (
+            "clickable `Presenter Run Card`",
+            "same bridge / diagnose / trigger / proposal order",
+            "reuses the existing prompt flow and `DemoAnswer` payload",
+        ):
+            self.assertIn(fragment, readme)
+
+        for fragment in (
+            "Use the visible Presenter Run Card",
+            "bridge / diagnose / trigger / proposal sequence",
+            "matching visible card on the first screen",
+        ):
+            self.assertIn(fragment, result.stdout)
+
     def test_demo_static_assets_include_audience_answer_field_legend(self):
         html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
         css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")

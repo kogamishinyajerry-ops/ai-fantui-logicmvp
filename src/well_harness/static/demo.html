@@ -37,6 +37,79 @@
         <p class="route-strip-note">人工演示提示，不是自动化验收。</p>
       </nav>
 
+      <section class="panel presenter-run-card" aria-labelledby="presenter-run-card-title">
+        <div class="presenter-run-card-header">
+          <div>
+            <h2 id="presenter-run-card-title"><span class="presenter-callout">[演示]</span> Presenter Run Card</h2>
+            <p class="presenter-run-card-note">
+              首屏可点击演示顺序：复用现有 prompt、`POST /api/demo` 和 `DemoAnswer`，不是自动 readiness detector。
+            </p>
+          </div>
+          <p class="presenter-run-card-boundary">
+            人工预演提示，不是浏览器自动化，也不是新的控制真值。
+          </p>
+        </div>
+        <div class="presenter-run-card-grid" aria-label="首屏 presenter run card">
+          <article class="run-card-step">
+            <p class="run-card-kicker">Step 1</p>
+            <h3>Bridge</h3>
+            <p>先讲 `logic4` 到 `THR_LOCK` 的链路关系。</p>
+            <button
+              type="button"
+              class="run-card-trigger is-selected"
+              aria-pressed="true"
+              data-category="bridge"
+              data-intent="logic4_thr_lock_bridge"
+              data-prompt="logic4 和 throttle lock 有什么关系"
+            >运行桥接题</button>
+          </article>
+          <article class="run-card-step">
+            <p class="run-card-kicker">Step 2</p>
+            <h3>Diagnose</h3>
+            <p>再切到 throttle lock 未释放的受控诊断。</p>
+            <button
+              type="button"
+              class="run-card-trigger"
+              aria-pressed="false"
+              data-category="diagnosis"
+              data-intent="diagnose_problem"
+              data-prompt="为什么 throttle lock 没释放"
+            >运行未释放诊断</button>
+          </article>
+          <article class="run-card-step">
+            <p class="run-card-kicker">Step 3</p>
+            <h3>Trigger</h3>
+            <p>展示 `logic3` 激活后怎样扇出到 EEC / PLS / PDU。</p>
+            <button
+              type="button"
+              class="run-card-trigger"
+              aria-pressed="false"
+              data-category="trigger"
+              data-intent="trigger_node"
+              data-prompt="触发 logic3 会发生什么"
+            >运行触发题</button>
+          </article>
+          <article class="run-card-step">
+            <p class="run-card-kicker">Step 4</p>
+            <h3>Proposal</h3>
+            <p>最后用 dry-run proposal 强调“解释，不改真值”。</p>
+            <button
+              type="button"
+              class="run-card-trigger"
+              aria-pressed="false"
+              data-category="proposal"
+              data-intent="propose_logic_change"
+              data-prompt="把 logic3 的 TRA 阈值改成 -8 会发生什么"
+            >运行阈值预演</button>
+          </article>
+        </div>
+        <ul class="presenter-run-card-rails">
+          <li>`controller.py` 仍是唯一控制真值。</li>
+          <li>`simplified plant feedback` 只用于演示解释，不是完整实时物理模型。</li>
+          <li>Raw JSON 只是同一份 `DemoAnswer` 的调试视图，不是第二套答案。</li>
+        </ul>
+      </section>
+
       <section class="showcase-surface" aria-label="中文演示展示面">
         <div class="showcase-intro">
           <p class="showcase-kicker">演示流</p>

@@ -46,7 +46,7 @@ Exit Criteria:
 
 ## Phase P3: Reduce Control-Plane Drift
 
-Status: Active
+Status: Done
 
 Goal: Keep the automated loop stable as validation entrypoints, Notion evidence, and Opus review packets evolve.
 
@@ -60,7 +60,7 @@ Exit Criteria:
 
 ## Phase P4: Elevate Cockpit Demo To Presenter-Ready
 
-Status: Planned
+Status: Active
 
 Goal: Turn the current cockpit demo candidate into a presenter-ready local demo that stays deterministic, explainable, and honest about the simplified plant boundary.
 

@@ -153,10 +153,11 @@ For a shorter presenter script, run `PYTHONPATH=src python3 tools/demo_ui_handch
 The one-page presenter talk track lives at `docs/demo_presenter_talk_track.md` and keeps the same presenter-only boundary.
 The UI section headers include matching presenter callout labels (`[Input]`, `[Chain]`, `[Highlight]`, `[Structured answer]`, `[Raw JSON]`) so the talk track maps directly to visible page regions.
 The UI also includes a screenshot-free presenter route strip (`[Input] -> [Chain] -> [Highlight] -> [Structured answer] -> [Raw JSON]`) as a visual guide for the talk track; it is not browser automation or a screenshot annotation tool.
+The first screen now also includes a clickable `Presenter Run Card` with the same bridge / diagnose / trigger / proposal order as the talk track; it reuses the existing prompt flow and `DemoAnswer` payload rather than inventing a new presenter-only surface.
 The structured answer area also has a compact audience answer-field legend for explaining `intent`, `matched_node`, `evidence`, `risks`, and raw JSON as reading aids rather than a new schema or second answer payload.
 The legend is grouped with `Answer sections` as a compact answer guide so field meanings and section counts stay together without changing the `DemoAnswer` payload.
 On narrow screens, that compact answer guide stacks the legend and section chips with touch-friendly spacing while keeping the same payload and field semantics.
-That talk track also includes a small presenter readiness run card; it is not browser automation or an automatic readiness detector.
+That same presenter run card remains a manual presenter aid, not browser automation or an automatic readiness detector.
 Formal subjective review now happens through Notion AI Opus 4.6 using the Notion control tower plus the GitHub repo, not by citing local terminal file paths.
 Older repo notes about browser hand-checks remain historical presenter/archive material, not the current approval contract.
 

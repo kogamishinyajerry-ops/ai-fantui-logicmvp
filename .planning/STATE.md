@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-09 - P4 `Elevate Cockpit Demo To Presenter-Ready` was drafted as the next planned product phase, so the roadmap now has a product-facing successor while P3 keeps the control-plane baseline stable.
+Last activity: 2026-04-09 - P4 is now active and its first plan adds a visible Presenter Run Card to the cockpit demo, aligning the first-screen UI with the presenter talk track without changing the demo payload or control truth.
 
 ## Current Position
 
@@ -19,21 +19,20 @@ Last activity: 2026-04-09 - P4 `Elevate Cockpit Demo To Presenter-Ready` was dra
 - Successful non-gated writebacks now refresh 09C automatically, so the current Opus brief keeps following the latest validated plan without a separate maintenance step.
 - The old `P1 自动化目标审查 Gate` and `P1-02 消除手动浏览器 QA 依赖` records are now treated as configured legacy review artifacts and auto-archived once the approved default gate confirms no review is currently required.
 - GitHub run `24168293031` proved the same retirement logic works from CI, and 09C now points at `P3-07 自动退场旧审查对象` with `当前无需 Opus 审查`.
+- P4 is now the active product phase, and `P4-01 首屏 Presenter Run Card` is the first presenter-readiness plan under it.
 
 ## Active Objective
 
-Keep the development loop operational, preserve the stable P3 control-plane baseline, and prepare to plan P4 when we are ready to shift back to the product surface:
+Keep the development loop operational while shifting the active roadmap back to the product surface:
 
 - Write Execution Run records to Notion.
 - Write QA records to Notion.
 - Create UAT Gap records on failure.
 - Route subjective human review through Opus 4.6 Review Gate only.
 - Ensure Opus 4.6 review briefs cite Notion pages and the GitHub repo only.
-- Automatically supersede same-plan legacy gaps after later successful runs.
-- Keep the current review brief generator aligned with the live Notion control-tower structure and GitHub evidence URLs.
-- Retire superseded legacy review artifacts automatically after the approved default gate settles into a no-review-needed state.
-- Preserve the P3 control-plane hardening baseline until P4 planning starts.
-- Treat `P4: Elevate Cockpit Demo To Presenter-Ready` as the next intended roadmap move, not as an already-active execution phase.
+- Preserve the P3 control-plane baseline while P4 product work resumes.
+- Keep the first-screen cockpit flow, presenter run card, talk track, and structured answer area aligned around the same live-demo route.
+- Maintain the boundary between controller truth and simplified plant feedback in demo copy and UI affordances.
 
 ## Blockers/Concerns
 
