@@ -176,6 +176,56 @@ def scenario_lever_mode_switch_reset(port: int) -> ScenarioResult:
     )
 
 
+def scenario_lever_l4_lock_gate(port: int) -> ScenarioResult:
+    locked_status, locked = request_json(
+        port,
+        "/api/lever-snapshot",
+        {
+            "tra_deg": -20.0,
+            "feedback_mode": "manual_feedback_override",
+            "deploy_position_percent": 50.0,
+        },
+    )
+    unlocked_status, unlocked = request_json(
+        port,
+        "/api/lever-snapshot",
+        {
+            "tra_deg": -20.0,
+            "feedback_mode": "manual_feedback_override",
+            "deploy_position_percent": 95.0,
+        },
+    )
+
+    if locked_status != 200 or unlocked_status != 200:
+        return fail_result(
+            "lever_l4_lock_gate",
+            max(locked_status, unlocked_status),
+            "both lock-gate requests must return HTTP 200",
+        )
+
+    checks = (
+        (locked["input"]["requested_tra_deg"] == -20.0, "locked snapshot should preserve requested_tra_deg"),
+        (locked["input"]["tra_deg"] == -14.0, "locked snapshot should cap effective tra_deg at -14.0"),
+        (locked["tra_lock"]["locked"] is True, "locked snapshot should report locked=True"),
+        (locked["tra_lock"]["clamped"] is True, "locked snapshot should report clamped=True"),
+        (locked["tra_lock"]["allowed_reverse_min_deg"] == -14.0, "locked snapshot should keep the UI min at -14.0"),
+        ("deploy_90_percent_vdt" in locked["tra_lock"]["unlock_blockers"], "locked snapshot should surface deploy_90_percent_vdt as the missing unlock blocker"),
+        (unlocked["input"]["tra_deg"] == -20.0, "unlocked snapshot should allow deeper reverse travel"),
+        (unlocked["tra_lock"]["locked"] is False, "unlocked snapshot should report locked=False"),
+        (unlocked["tra_lock"]["clamped"] is False, "unlocked snapshot should report clamped=False"),
+        (unlocked["outputs"]["logic4_active"] is True, "unlocked snapshot should keep logic4 active after the gate is satisfied"),
+    )
+    for passed, message in checks:
+        if not passed:
+            return fail_result("lever_l4_lock_gate", unlocked_status, message)
+
+    return pass_result(
+        "lever_l4_lock_gate",
+        unlocked_status,
+        "L4 gate now caps deep reverse requests at -14° until VDT90 makes logic4 ready, then releases the deeper reverse range.",
+    )
+
+
 def scenario_preset_l3_waiting_vdt90(port: int) -> ScenarioResult:
     status, payload = request_json(
         port,
@@ -407,7 +457,7 @@ def scenario_invalid_feedback_mode(port: int) -> ScenarioResult:
 def run_smoke_suite() -> tuple[int, dict[str, Any], list[str]]:
     report: dict[str, Any] = {
         "status": "pass",
-        "scenario_count": 9,
+        "scenario_count": 10,
         "completed_scenarios": 0,
         "failed_scenario": None,
         "scenarios": [],
@@ -420,6 +470,7 @@ def run_smoke_suite() -> tuple[int, dict[str, Any], list[str]]:
             scenario_demo_bridge_prompt,
             scenario_lever_extreme_clamp,
             scenario_lever_mode_switch_reset,
+            scenario_lever_l4_lock_gate,
             scenario_preset_l3_waiting_vdt90,
             scenario_preset_ra_blocker,
             scenario_preset_n1k_blocker,
@@ -449,7 +500,7 @@ def run_smoke_suite() -> tuple[int, dict[str, Any], list[str]]:
         server.server_close()
         thread.join(timeout=2)
 
-    text_lines.append("PASS: validated 9 demo smoke scenarios through the local HTTP demo surface.")
+    text_lines.append("PASS: validated 10 demo smoke scenarios through the local HTTP demo surface.")
     return 0, report, text_lines
 
 

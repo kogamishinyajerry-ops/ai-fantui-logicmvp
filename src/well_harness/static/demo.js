@@ -370,6 +370,38 @@ function setLeverResultMode(modeText) {
   document.getElementById("lever-result-mode").textContent = modeText;
 }
 
+function renderTraLockState(payload) {
+  const traLock = payload.tra_lock || {};
+  const leverInput = document.getElementById("lever-tra");
+  const badge = document.getElementById("lever-lock-badge");
+  const status = document.getElementById("lever-lock-status");
+  const allowedReverseMin = Number(
+    traLock.allowed_reverse_min_deg
+      ?? payload.input?.tra_deg
+      ?? leverInput.min
+      ?? -14,
+  );
+  const effectiveTra = Number(
+    traLock.effective_tra_deg
+      ?? payload.input?.tra_deg
+      ?? leverInput.value
+      ?? 0,
+  );
+
+  leverInput.min = String(allowedReverseMin);
+  leverInput.value = String(effectiveTra);
+
+  const locked = Boolean(traLock.locked);
+  badge.textContent = locked ? "L4 未解锁" : "L4 已解锁";
+  badge.classList.toggle("is-locked", locked);
+  badge.classList.toggle("is-unlocked", !locked);
+  status.textContent = traLock.message || (
+    locked
+      ? "TRA 当前锁止在 -14°；L4 满足后才能继续进入 -14° 到 -32° 区间。"
+      : "L4 已满足：TRA 已解锁，可继续拉到 -32°。"
+  );
+}
+
 function setLeverResultPlaceholder(headline, blocker, nextStep, evidenceItems, modeText) {
   setLeverResultMode(modeText);
   document.getElementById("lever-headline").textContent = headline;
@@ -446,8 +478,9 @@ function renderLeverSnapshot(payload) {
     feedbackMode === "manual_feedback_override"
       ? payload.input?.deploy_position_percent ?? hud.deploy_position_percent ?? 0
       : hud.deploy_position_percent ?? 0,
-  );
+    );
 
+  renderTraLockState(payload);
   document.getElementById("condition-feedback-mode").value = feedbackMode;
   document.getElementById("condition-deploy-position").disabled = feedbackMode !== "manual_feedback_override";
   document.getElementById("condition-deploy-position").value = Number.isFinite(deployPosition)

@@ -547,6 +547,81 @@ class DemoIntentLayerTests(unittest.TestCase):
             server.server_close()
             thread.join(timeout=2)
 
+    def test_demo_server_api_locks_deeper_reverse_travel_until_logic4_is_ready(self):
+        server, thread = start_demo_server()
+        try:
+            connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+            connection.request(
+                "POST",
+                "/api/lever-snapshot",
+                body=json.dumps(
+                    {
+                        "tra_deg": -20.0,
+                        "feedback_mode": "manual_feedback_override",
+                        "deploy_position_percent": 50.0,
+                    }
+                ).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+            response = connection.getresponse()
+            payload = json.loads(response.read().decode("utf-8"))
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+        self.assertEqual(response.status, 200)
+        self.assertEqual(payload["input"]["requested_tra_deg"], -20.0)
+        self.assertEqual(payload["input"]["tra_deg"], -14.0)
+        self.assertEqual(payload["hud"]["tra_deg"], -14.0)
+        self.assertTrue(payload["tra_lock"]["locked"])
+        self.assertTrue(payload["tra_lock"]["clamped"])
+        self.assertFalse(payload["tra_lock"]["unlock_ready"])
+        self.assertEqual(payload["tra_lock"]["lock_deg"], -14.0)
+        self.assertEqual(payload["tra_lock"]["allowed_reverse_min_deg"], -14.0)
+        self.assertIn("deploy_90_percent_vdt", payload["tra_lock"]["unlock_blockers"])
+        self.assertIn("已锁回 -14.0°", payload["tra_lock"]["message"])
+        self.assertIn("TRA 后拉锁仍在位", payload["summary"]["blocker"])
+        self.assertFalse(payload["outputs"]["logic4_active"])
+
+    def test_demo_server_api_unlocks_deeper_reverse_travel_after_logic4_is_ready(self):
+        server, thread = start_demo_server()
+        try:
+            connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+            connection.request(
+                "POST",
+                "/api/lever-snapshot",
+                body=json.dumps(
+                    {
+                        "tra_deg": -20.0,
+                        "feedback_mode": "manual_feedback_override",
+                        "deploy_position_percent": 95.0,
+                    }
+                ).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+            response = connection.getresponse()
+            payload = json.loads(response.read().decode("utf-8"))
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+        self.assertEqual(response.status, 200)
+        self.assertEqual(payload["input"]["requested_tra_deg"], -20.0)
+        self.assertEqual(payload["input"]["tra_deg"], -20.0)
+        self.assertFalse(payload["tra_lock"]["locked"])
+        self.assertFalse(payload["tra_lock"]["clamped"])
+        self.assertTrue(payload["tra_lock"]["unlock_ready"])
+        self.assertEqual(payload["tra_lock"]["allowed_reverse_min_deg"], HarnessConfig().reverse_travel_min_deg)
+        self.assertEqual(payload["tra_lock"]["unlock_blockers"], [])
+        self.assertIn("TRA 已解锁", payload["tra_lock"]["message"])
+        self.assertTrue(payload["outputs"]["logic4_active"])
+        self.assertEqual(
+            {node["id"]: node["state"] for node in payload["nodes"]}["thr_lock"],
+            "active",
+        )
+
     def test_demo_server_api_rejects_invalid_extended_lever_snapshot_input(self):
         server, thread = start_demo_server()
         try:
@@ -685,13 +760,14 @@ class DemoIntentLayerTests(unittest.TestCase):
             "OK demo_bridge_prompt",
             "OK lever_extreme_clamp",
             "OK lever_mode_switch_reset",
+            "OK lever_l4_lock_gate",
             "OK preset_l3_waiting_vdt90",
             "OK preset_ra_blocker",
             "OK preset_n1k_blocker",
             "OK preset_vdt90_ready",
             "OK condition_toggle_sweep",
             "OK invalid_feedback_mode",
-            "PASS: validated 9 demo smoke scenarios through the local HTTP demo surface.",
+            "PASS: validated 10 demo smoke scenarios through the local HTTP demo surface.",
         ):
             self.assertIn(fragment, result.stdout)
 
@@ -710,14 +786,15 @@ class DemoIntentLayerTests(unittest.TestCase):
 
         payload = json.loads(result.stdout)
         self.assertEqual(payload["status"], "pass")
-        self.assertEqual(payload["scenario_count"], 9)
-        self.assertEqual(payload["completed_scenarios"], 9)
+        self.assertEqual(payload["scenario_count"], 10)
+        self.assertEqual(payload["completed_scenarios"], 10)
         self.assertIsNone(payload["failed_scenario"])
         self.assertEqual(
             [
                 "demo_bridge_prompt",
                 "lever_extreme_clamp",
                 "lever_mode_switch_reset",
+                "lever_l4_lock_gate",
                 "preset_l3_waiting_vdt90",
                 "preset_ra_blocker",
                 "preset_n1k_blocker",
@@ -728,7 +805,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             [scenario["name"] for scenario in payload["scenarios"]],
         )
         self.assertEqual(
-            ["pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass"],
+            ["pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass", "pass"],
             [scenario["status"] for scenario in payload["scenarios"]],
         )
         self.assertEqual(400, payload["scenarios"][-1]["http_status"])
@@ -1408,11 +1485,14 @@ class DemoIntentLayerTests(unittest.TestCase):
             "L1 需要 RA &lt; 6ft",
             "L3 需要 N1K &lt; limit",
             "type=\"range\"",
-            "min=\"-32\"",
+            "min=\"-14\"",
             "max=\"0\"",
             "SW1 -1.4° ~ -6.2°",
             "SW2 -5.0° ~ -9.8°",
             "L3 ≤ -11.74°",
+            "L4 锁位 -14°",
+            "id=\"lever-lock-badge\"",
+            "id=\"lever-lock-status\"",
             "id=\"hud-tra\"",
             "id=\"lever-result\"",
             "class=\"panel qa-drawer\"",
@@ -1437,12 +1517,14 @@ class DemoIntentLayerTests(unittest.TestCase):
             ".condition-toggle",
             ".condition-number",
             ".condition-select",
+            ".condition-span-2",
+            ".condition-span-3",
             ".condition-wide",
             ".feedback-override-control",
             ".hud-grid",
             ".lever-result",
             ".qa-drawer",
-            "minmax(300px, 0.88fr) minmax(640px, 1.52fr)",
+            "minmax(360px, 0.94fr) minmax(620px, 1.46fr)",
             "grid-template-areas:",
             "\"prompt chain\"",
             "\"answer answer\"",
@@ -1494,6 +1576,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             "class=\"lever-note\"",
             "class=\"condition-panel-heading\"",
             "class=\"condition-note\"",
+            "class=\"lever-lock-banner\"",
             "反馈 / 诊断（simplified plant）",
         ):
             self.assertIn(fragment, html)
@@ -1563,6 +1646,8 @@ class DemoIntentLayerTests(unittest.TestCase):
             "name=\"n1k\"",
             "name=\"max_n1k_deploy_limit\"",
             "id=\"lever-tra-value\"",
+            "id=\"lever-lock-badge\"",
+            "id=\"lever-lock-status\"",
             "id=\"lever-status\"",
             "id=\"hud-switches\"",
             "id=\"hud-locks\"",
@@ -1579,6 +1664,9 @@ class DemoIntentLayerTests(unittest.TestCase):
         for fragment in (
             ".lever-panel",
             ".lever-console",
+            ".lever-lock-banner",
+            ".lever-lock-badge",
+            ".lever-lock-status",
             "#lever-tra",
             ".condition-panel",
             ".condition-grid",
@@ -1586,6 +1674,8 @@ class DemoIntentLayerTests(unittest.TestCase):
             ".condition-toggle",
             ".condition-number",
             ".condition-select",
+            ".condition-span-2",
+            ".condition-span-3",
             ".feedback-override-control",
             ".hud-grid",
             ".feedback-panel",
@@ -1601,10 +1691,13 @@ class DemoIntentLayerTests(unittest.TestCase):
             self.assertIn(fragment, css)
 
         for fragment in (
+            "function renderTraLockState(payload)",
             "function syncConditionReadouts()",
             "function collectLeverSnapshotPayload(traDeg)",
             "async function runLeverSnapshot(traDeg, requestId = beginInteractionRequest())",
             "fetch(\"/api/lever-snapshot\"",
+            "traLock.allowed_reverse_min_deg",
+            "document.getElementById(\"lever-lock-status\")",
             "radio_altitude_ft: Number(document.getElementById(\"condition-ra\").value)",
             "engine_running: document.getElementById(\"condition-engine-running\").checked",
             "aircraft_on_ground: document.getElementById(\"condition-aircraft-ground\").checked",

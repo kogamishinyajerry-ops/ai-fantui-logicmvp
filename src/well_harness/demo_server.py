@@ -24,6 +24,7 @@ CONTENT_TYPES = {
     ".css": "text/css; charset=utf-8",
     ".js": "application/javascript; charset=utf-8",
 }
+TRA_L4_LOCK_DEG = -14.0
 LEVER_NUMERIC_INPUTS = {
     "tra_deg": {"default": 0.0, "min": -32.0, "max": 0.0},
     "radio_altitude_ft": {"default": 5.0, "min": 0.0, "max": 20.0},
@@ -277,82 +278,93 @@ def _lever_summary(
     outputs,
     explain,
     feedback_mode: str,
+    tra_lock: dict | None = None,
 ) -> dict:
+    summary = None
     if not inputs.sw1:
-        return {
+        summary = {
             "headline": f"TRA {tra_deg:.1f}°：拉杆还没进入 SW1 窗口，反推链路保持待命。",
             "blocker": "当前卡在 SW1：继续拉入 -1.4° 到 -6.2° 窗口会触发第一段链路。",
             "next_step": "下一步：把拉杆继续向反推方向拉到 SW1 window。",
         }
-    if not outputs.logic1_active and not sensors.tls_unlocked_ls:
+    elif not outputs.logic1_active and not sensors.tls_unlocked_ls:
         failed = ", ".join(condition.name for condition in explain.logic1.failed_conditions)
-        return {
+        summary = {
             "headline": f"TRA {tra_deg:.1f}°：SW1 已触发，但 L1 / TLS115 尚未放行。",
             "blocker": f"当前卡在 L1：{failed or 'logic1 条件未完全满足'}。",
             "next_step": "下一步：恢复 RA / inhibited / EEC feedback 等 L1 条件，或回到默认演示条件。",
         }
-    if not inputs.sw2:
-        return {
+    elif not inputs.sw2:
+        summary = {
             "headline": f"TRA {tra_deg:.1f}°：SW1 / L1 / TLS115 已点亮，正在建立 TLS 解锁反馈。",
             "blocker": "当前卡在 SW2：还没有进入 -5.0° 到 -9.8° 窗口。",
             "next_step": "下一步：继续拉到 SW2 window，点亮 L2 / 540V。",
         }
-    if not outputs.logic2_active:
+    elif not outputs.logic2_active:
         failed = ", ".join(condition.name for condition in explain.logic2.failed_conditions)
-        return {
+        summary = {
             "headline": f"TRA {tra_deg:.1f}°：SW2 已触发，但 L2 / 540V 尚未放行。",
             "blocker": f"当前卡在 L2：{failed or 'logic2 条件未完全满足'}。",
             "next_step": "下一步：恢复 engine / ground / inhibited / EEC enable 等 L2 条件。",
         }
-    if not outputs.logic3_active:
+    elif not outputs.logic3_active:
         failed = ", ".join(condition.name for condition in explain.logic3.failed_conditions)
-        return {
+        summary = {
             "headline": f"TRA {tra_deg:.1f}°：SW1、SW2 与 L2/540V 已点亮，L3 尚未放行。",
             "blocker": f"当前卡在 L3：{failed or 'logic3 条件未完全满足'}。",
             "next_step": "下一步：继续拉到 TRA <= -11.74°，并保持 N1K / TLS 等条件满足。",
         }
-    if not outputs.logic4_active:
+    elif not outputs.logic4_active:
         failed = ", ".join(condition.name for condition in explain.logic4.failed_conditions)
         next_step = "下一步：在受控轨迹中继续保持反推，等 deploy_90_percent_vdt / VDT90 反馈出现。"
         if feedback_mode == "manual_feedback_override" and "deploy_90_percent_vdt" in failed:
             next_step = "下一步：把 deploy feedback override 推到 >= 90%，演示 VDT90 -> L4 -> THR_LOCK。"
-        return {
+        summary = {
             "headline": f"TRA {tra_deg:.1f}°：L3 已点亮，EEC / PLS / PDU 命令正在驱动受控演示轨迹。",
             "blocker": f"THR_LOCK 仍未释放：L4 还在等待 {failed or 'VDT90 / plant feedback'}。",
             "next_step": next_step,
         }
-    if feedback_mode == "manual_feedback_override":
-        return {
+    elif feedback_mode == "manual_feedback_override":
+        summary = {
             "headline": f"TRA {tra_deg:.1f}°：manual feedback override 已把 VDT90 推到触发态，L4 / THR_LOCK 已点亮。",
             "blocker": "当前无 L4 blocker；这是 simplified plant feedback override 的诊断演示结果。",
             "next_step": "下一步：切回 auto scrubber，或降低 deploy feedback 观察 VDT90 / THR_LOCK 退回 blocked。",
         }
-    return {
-        "headline": f"TRA {tra_deg:.1f}°：L4 已满足，THR_LOCK release command 已触发。",
-        "blocker": "当前无 L4 blocker。",
-        "next_step": "下一步：查看证据或返回问答抽屉做诊断解释。",
-    }
+    else:
+        summary = {
+            "headline": f"TRA {tra_deg:.1f}°：L4 已满足，THR_LOCK release command 已触发。",
+            "blocker": "当前无 L4 blocker。",
+            "next_step": "下一步：查看证据或返回问答抽屉做诊断解释。",
+        }
+
+    if tra_lock and tra_lock["clamped"]:
+        summary["blocker"] = (
+            f"{summary['blocker']} TRA 后拉锁仍在位：请求 {tra_lock['requested_tra_deg']:.1f}° "
+            f"已被限制在 {tra_lock['lock_deg']:.1f}°，要先满足 L4 才能继续进入 "
+            f"{tra_lock['lock_deg']:.1f}° 到 {tra_lock['deep_reverse_limit_deg']:.1f}° 区间。"
+        )
+    return summary
 
 
-def lever_snapshot_payload(
-    tra_deg: float,
-    radio_altitude_ft: float = 5.0,
-    engine_running: bool = True,
-    aircraft_on_ground: bool = True,
-    reverser_inhibited: bool = False,
-    eec_enable: bool = True,
-    n1k: float = 35.0,
-    max_n1k_deploy_limit: float = 60.0,
-    feedback_mode: str = "auto_scrubber",
-    deploy_position_percent: float = 0.0,
+def _simulate_lever_state(
+    target_tra: float,
+    *,
+    config: HarnessConfig,
+    radio_altitude_ft: float,
+    engine_running: bool,
+    aircraft_on_ground: bool,
+    reverser_inhibited: bool,
+    eec_enable: bool,
+    n1k: float,
+    max_n1k_deploy_limit: float,
+    feedback_mode: str,
+    deploy_position_percent: float,
 ) -> dict:
-    config = HarnessConfig()
     controller = DeployController(config)
     switches = LatchedThrottleSwitches(config)
     plant = SimplifiedDeployPlant(config)
     switch_state = SwitchState(previous_tra_deg=0.0)
     plant_state = PlantState()
-    target_tra = _clamp_tra(tra_deg, config)
 
     snapshot = None
     for tick, current_tra in enumerate(_canonical_pullback_sequence(target_tra, config)):
@@ -386,25 +398,34 @@ def lever_snapshot_payload(
             deploy_90_percent_vdt=sensors.deploy_90_percent_vdt,
         )
         outputs, explain = controller.evaluate_with_explain(resolved_inputs)
-        snapshot = (round(tick * config.step_s, 3), plant_state, sensors, pilot_inputs, resolved_inputs, outputs, explain)
+        snapshot = {
+            "time_s": round(tick * config.step_s, 3),
+            "plant_state": plant_state,
+            "sensors": sensors,
+            "pilot_inputs": pilot_inputs,
+            "inputs": resolved_inputs,
+            "outputs": outputs,
+            "explain": explain,
+        }
         plant_state = plant.advance(plant_state, outputs, config.step_s)
 
     assert snapshot is not None
-    time_s, plant_debug_state, sensors, pilot_inputs, inputs, outputs, explain = snapshot
+
     if feedback_mode == "manual_feedback_override":
-        plant_debug_state = PlantState(
-            tls_powered_s=plant_debug_state.tls_powered_s,
-            pls_powered_s=plant_debug_state.pls_powered_s,
-            tls_unlocked_ls=plant_debug_state.tls_unlocked_ls,
-            pls_unlocked_ls=plant_debug_state.pls_unlocked_ls,
+        manual_plant_state = PlantState(
+            tls_powered_s=snapshot["plant_state"].tls_powered_s,
+            pls_powered_s=snapshot["plant_state"].pls_powered_s,
+            tls_unlocked_ls=snapshot["plant_state"].tls_unlocked_ls,
+            pls_unlocked_ls=snapshot["plant_state"].pls_unlocked_ls,
             deploy_position_percent=deploy_position_percent,
         )
-        sensors = plant_debug_state.sensors(config)
+        sensors = manual_plant_state.sensors(config)
+        pilot_inputs = snapshot["pilot_inputs"]
         inputs = ResolvedInputs(
             radio_altitude_ft=pilot_inputs.radio_altitude_ft,
             tra_deg=pilot_inputs.tra_deg,
-            sw1=switch_state.sw1,
-            sw2=switch_state.sw2,
+            sw1=snapshot["inputs"].sw1,
+            sw2=snapshot["inputs"].sw2,
             engine_running=pilot_inputs.engine_running,
             aircraft_on_ground=pilot_inputs.aircraft_on_ground,
             reverser_inhibited=pilot_inputs.reverser_inhibited,
@@ -417,7 +438,130 @@ def lever_snapshot_payload(
             reverser_fully_deployed_eec=sensors.reverser_fully_deployed_eec,
             deploy_90_percent_vdt=sensors.deploy_90_percent_vdt,
         )
+        controller = DeployController(config)
         outputs, explain = controller.evaluate_with_explain(inputs)
+        snapshot.update(
+            {
+                "plant_state": manual_plant_state,
+                "sensors": sensors,
+                "inputs": inputs,
+                "outputs": outputs,
+                "explain": explain,
+            }
+        )
+    return snapshot
+
+
+def _build_tra_lock_payload(
+    *,
+    config: HarnessConfig,
+    requested_tra_deg: float,
+    effective_tra_deg: float,
+    lock_deg: float,
+    unlock_ready: bool,
+    unlock_blockers: list[str],
+) -> dict:
+    blocker_text = " / ".join(unlock_blockers) if unlock_blockers else "L4 条件"
+    locked = not unlock_ready
+    clamped = effective_tra_deg != requested_tra_deg
+    allowed_reverse_min_deg = config.reverse_travel_min_deg if unlock_ready else lock_deg
+    if unlock_ready:
+        message = (
+            f"L4 已满足：TRA 已解锁，可继续拉到 {config.reverse_travel_min_deg:.1f}°。"
+        )
+    elif clamped:
+        message = (
+            f"L4 未满足：请求 {requested_tra_deg:.1f}° 已锁回 {lock_deg:.1f}°；"
+            f"先满足 {blocker_text} 才能继续后拉。"
+        )
+    else:
+        message = (
+            f"L4 未满足：TRA 当前锁止在 {lock_deg:.1f}°；"
+            f"满足 {blocker_text} 后才可进入 {lock_deg:.1f}° 到 "
+            f"{config.reverse_travel_min_deg:.1f}° 区间。"
+        )
+    return {
+        "locked": locked,
+        "clamped": clamped,
+        "unlock_ready": unlock_ready,
+        "lock_deg": lock_deg,
+        "requested_tra_deg": requested_tra_deg,
+        "effective_tra_deg": effective_tra_deg,
+        "allowed_reverse_min_deg": allowed_reverse_min_deg,
+        "deep_reverse_limit_deg": config.reverse_travel_min_deg,
+        "unlock_logic": "logic4",
+        "unlock_blockers": unlock_blockers,
+        "message": message,
+    }
+
+
+def lever_snapshot_payload(
+    tra_deg: float,
+    radio_altitude_ft: float = 5.0,
+    engine_running: bool = True,
+    aircraft_on_ground: bool = True,
+    reverser_inhibited: bool = False,
+    eec_enable: bool = True,
+    n1k: float = 35.0,
+    max_n1k_deploy_limit: float = 60.0,
+    feedback_mode: str = "auto_scrubber",
+    deploy_position_percent: float = 0.0,
+) -> dict:
+    config = HarnessConfig()
+    requested_tra = _clamp_tra(tra_deg, config)
+    lock_deg = _clamp_tra(TRA_L4_LOCK_DEG, config)
+    lock_probe = _simulate_lever_state(
+        lock_deg,
+        config=config,
+        radio_altitude_ft=radio_altitude_ft,
+        engine_running=engine_running,
+        aircraft_on_ground=aircraft_on_ground,
+        reverser_inhibited=reverser_inhibited,
+        eec_enable=eec_enable,
+        n1k=n1k,
+        max_n1k_deploy_limit=max_n1k_deploy_limit,
+        feedback_mode=feedback_mode,
+        deploy_position_percent=deploy_position_percent,
+    )
+    unlock_ready = lock_probe["outputs"].logic4_active
+    effective_tra = (
+        requested_tra
+        if unlock_ready or requested_tra >= lock_deg
+        else lock_deg
+    )
+    snapshot = (
+        lock_probe
+        if effective_tra == lock_deg
+        else _simulate_lever_state(
+            effective_tra,
+            config=config,
+            radio_altitude_ft=radio_altitude_ft,
+            engine_running=engine_running,
+            aircraft_on_ground=aircraft_on_ground,
+            reverser_inhibited=reverser_inhibited,
+            eec_enable=eec_enable,
+            n1k=n1k,
+            max_n1k_deploy_limit=max_n1k_deploy_limit,
+            feedback_mode=feedback_mode,
+            deploy_position_percent=deploy_position_percent,
+        )
+    )
+
+    time_s = snapshot["time_s"]
+    plant_debug_state = snapshot["plant_state"]
+    sensors = snapshot["sensors"]
+    pilot_inputs = snapshot["pilot_inputs"]
+    inputs = snapshot["inputs"]
+    outputs = snapshot["outputs"]
+    explain = snapshot["explain"]
+    tra_lock = _build_tra_lock_payload(
+        config=config,
+        requested_tra_deg=requested_tra,
+        effective_tra_deg=effective_tra,
+        lock_deg=lock_deg,
+        unlock_ready=unlock_ready,
+        unlock_blockers=[condition.name for condition in lock_probe["explain"].logic4.failed_conditions],
+    )
     logic1_completed = sensors.tls_unlocked_ls
     logic4_blockers = [condition.name for condition in explain.logic4.failed_conditions]
     logic3_blockers = [condition.name for condition in explain.logic3.failed_conditions]
@@ -446,7 +590,7 @@ def lever_snapshot_payload(
             logic4_blockers if not outputs.throttle_electronic_lock_release_cmd else [],
         ),
     ]
-    summary = _lever_summary(target_tra, inputs, sensors, outputs, explain, feedback_mode)
+    summary = _lever_summary(effective_tra, inputs, sensors, outputs, explain, feedback_mode, tra_lock)
     model_note = (
         "受控拉杆轨迹：复用现有 switch/controller/plant 代码做演示快照；不是完整飞控实时物理仿真。"
         if feedback_mode == "auto_scrubber"
@@ -460,8 +604,10 @@ def lever_snapshot_payload(
             else "manual_feedback_override"
         ),
         "model_note": model_note,
+        "tra_lock": tra_lock,
         "input": {
-            "tra_deg": target_tra,
+            "requested_tra_deg": requested_tra,
+            "tra_deg": effective_tra,
             "radio_altitude_ft": inputs.radio_altitude_ft,
             "engine_running": inputs.engine_running,
             "aircraft_on_ground": inputs.aircraft_on_ground,
@@ -474,7 +620,8 @@ def lever_snapshot_payload(
         },
         "time_s": time_s,
         "hud": {
-            "tra_deg": target_tra,
+            "requested_tra_deg": requested_tra,
+            "tra_deg": effective_tra,
             "sw1": inputs.sw1,
             "sw2": inputs.sw2,
             "radio_altitude_ft": inputs.radio_altitude_ft,
@@ -523,6 +670,7 @@ def lever_snapshot_payload(
             "controller=DeployController.evaluate_with_explain(...)",
             "explain=DeployController.explain(...)",
             "plant=SimplifiedDeployPlant first-cut feedback model",
+            "tra_lock=L4 gate at -14° before deeper reverse travel",
         ],
         "risks": [
             "PLS / VDT feedback comes from simplified first-cut plant timing.",
