@@ -961,6 +961,114 @@ button:disabled {
   border-color: rgba(40, 244, 255, 0.36);
 }
 
+.chain-state-legend {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid rgba(40, 244, 255, 0.16);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.chain-state-legend-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chain-state-legend-header h3 {
+  margin: 0;
+  color: var(--accent-cyan);
+  font-size: 0.86rem;
+}
+
+.chain-state-legend-header p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+}
+
+.chain-state-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.state-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.04em;
+}
+
+.state-chip::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(140, 160, 180, 0.8);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.state-chip.is-active {
+  color: var(--accent-green);
+  border-color: rgba(83, 255, 146, 0.24);
+  background: rgba(83, 255, 146, 0.08);
+}
+
+.state-chip.is-active::before {
+  background: var(--accent-green);
+}
+
+.state-chip.is-blocked {
+  color: #ffd58e;
+  border-color: rgba(255, 176, 55, 0.24);
+  background: rgba(255, 176, 55, 0.08);
+}
+
+.state-chip.is-blocked::before {
+  background: var(--accent-orange);
+}
+
+.state-chip.is-inactive {
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.truth-boundary-rails {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.truth-rail {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.truth-rail.controller {
+  border: 1px solid rgba(40, 244, 255, 0.18);
+  background: rgba(40, 244, 255, 0.06);
+  color: #c9fbff;
+}
+
+.truth-rail.plant {
+  border: 1px solid rgba(255, 176, 55, 0.18);
+  background: rgba(255, 176, 55, 0.06);
+  color: #ffe1a8;
+}
+
 .chain-map.mobile-step-rail {
   display: flex;
   flex-wrap: wrap;
@@ -1451,6 +1559,10 @@ button.summary-chip,
   .result-grid .raw-card {
     grid-column: auto;
   }
+
+  .truth-boundary-rails {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 780px) {
@@ -1480,6 +1592,11 @@ button.summary-chip,
   .lever-thresholds,
   .lever-presets-grid {
     grid-template-columns: 1fr;
+  }
+
+  .chain-state-legend {
+    padding: 10px;
+    border-radius: 14px;
   }
   .showcase-grid {
     grid-template-areas:

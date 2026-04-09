@@ -1564,6 +1564,70 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertNotIn("id=\"raw-json-details\" class=\"debug-inspector\" open", html)
         self.assertNotIn("class=\"chain-node sub-node logic-node\"", html)
 
+    def test_demo_static_assets_include_chain_state_truth_boundary_legend(self):
+        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
+        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
+        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
+        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+
+        for fragment in (
+            "class=\"chain-state-legend\"",
+            "状态图例 / truth boundary",
+            "Active = 当前已点亮",
+            "Blocked = 等待条件",
+            "Inactive = 当前路径未进入",
+            "Controller truth：SW / L1-L4 / command 节点来自后端 controller snapshot。",
+            "Simplified plant feedback：TLS unlock / PLS unlock / VDT90 / 位移只用于演示反馈",
+            "颜色来自后端快照，不是完整因果证明。",
+        ):
+            self.assertIn(fragment, html)
+
+        for fragment in (
+            ".chain-state-legend",
+            ".chain-state-legend-header",
+            ".chain-state-chip-row",
+            ".state-chip",
+            ".state-chip.is-active",
+            ".state-chip.is-blocked",
+            ".state-chip.is-inactive",
+            ".truth-boundary-rails",
+            ".truth-rail.controller",
+            ".truth-rail.plant",
+        ):
+            self.assertIn(fragment, css)
+
+        for fragment in (
+            "visible `状态图例 / truth boundary`",
+            "`Active` means the backend snapshot currently lights the node",
+            "`Blocked` means the node is waiting on named conditions",
+            "separates controller truth from simplified plant feedback",
+        ):
+            self.assertIn(fragment, talk_track)
+
+        for fragment in (
+            "visible `状态图例 / truth boundary` strip",
+            "Active / Blocked / Inactive",
+            "distinguish controller truth from simplified plant feedback",
+        ):
+            self.assertIn(fragment, readme)
+
+        for fragment in (
+            "Use the visible 状态图例 / truth boundary",
+            "Active / Blocked / Inactive",
+            "separate controller truth from simplified plant feedback",
+        ):
+            self.assertIn(fragment, result.stdout)
+
     def test_demo_static_assets_include_presenter_callout_labels(self):
         html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
         css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")

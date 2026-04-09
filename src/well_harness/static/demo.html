@@ -278,6 +278,21 @@
               <h2 id="chain-title"><span class="presenter-callout">[链路]</span> 逻辑主板</h2>
               <p>拉杆模式显示后端快照状态；问答模式显示答案关联。</p>
             </div>
+            <section class="chain-state-legend" aria-label="状态图例与 truth boundary">
+              <div class="chain-state-legend-header">
+                <h3>状态图例 / truth boundary</h3>
+                <p>颜色来自后端快照，不是完整因果证明。</p>
+              </div>
+              <div class="chain-state-chip-row">
+                <span class="state-chip is-active">Active = 当前已点亮</span>
+                <span class="state-chip is-blocked">Blocked = 等待条件</span>
+                <span class="state-chip is-inactive">Inactive = 当前路径未进入</span>
+              </div>
+              <div class="truth-boundary-rails">
+                <p class="truth-rail controller">Controller truth：SW / L1-L4 / command 节点来自后端 controller snapshot。</p>
+                <p class="truth-rail plant">Simplified plant feedback：TLS unlock / PLS unlock / VDT90 / 位移只用于演示反馈，不是完整物理模型。</p>
+              </div>
+            </section>
             <div class="chain-map mobile-step-rail" aria-label="固定控制链路主板">
               <div class="chain-node" data-node="sw1" title="SW1">SW1</div>
               <div class="chain-arrow">➜</div>
