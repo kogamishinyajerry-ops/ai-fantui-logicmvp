@@ -1,10 +1,10 @@
 # State
 
-Last activity: 2026-04-09 - Opus 4.6 approved P4 after GitHub run 24170575224 / 156 tests OK, and the roadmap now shifts to P5 Demo Polish And Edge-Case Hardening.
+Last activity: 2026-04-09 - P5-02 added latest-interaction-wins demo request arbitration, and the local validation baseline is now 159 tests plus 8 shared validation checks.
 
 ## Current Position
 
-- Round 92 is complete, and the current validated baseline is GitHub run `24170575224` with 156 tests OK.
+- Round 92 is complete, and the current validated baseline is local `run_gsd_validation_suite.py` with 159 tests plus 8 shared validation checks.
 - Notion control tower is live at https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec.
 - GitHub repo is live at https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp.
 - P1 is closed as Approved in the Review Gate after GitHub-backed Opus adjudication.
@@ -21,6 +21,9 @@ Last activity: 2026-04-09 - Opus 4.6 approved P4 after GitHub run 24170575224 / 
 - GitHub run `24168293031` proved the same retirement logic works from CI, and 09C now points at `P3-07 自动退场旧审查对象` with `当前无需 Opus 审查`.
 - P4 is now closed as Approved after all six presenter-ready plans (`P4-01` through `P4-06`) verified successfully and GitHub run `24170575224` passed.
 - The next roadmap phase is `P5 Demo Polish And Edge-Case Hardening`, focused on edge-case coverage and GitHub-verifiable smoke confidence instead of new product-surface expansion.
+- `P5-01 GitHub 可验证 demo smoke suite` is now implemented locally: `tools/demo_path_smoke.py` covers bridge prompt, extreme clamp, mode-switch reset, and expected invalid-input behavior through the HTTP demo surface.
+- The shared validation suite now includes 8 checks, with `demo_path_smoke` added as the new GitHub-verifiable presenter-demo confidence layer.
+- `P5-02 最新交互胜出 demo 请求仲裁` is now implemented locally: the browser shell ignores stale prompt or lever responses once a newer interaction has started, so rapid edits no longer let an older response repaint the shared result surface.
 
 ## Active Objective
 
@@ -42,7 +45,7 @@ Keep the development loop operational while shifting the active roadmap from P4 
 - GitHub credentials live in `~/.zshrc`, so non-interactive shells may need explicit sourcing or env injection.
 - Opus 4.6 review packets must never rely on local terminal file paths.
 - Historical browser hand-check notes in archived coordination docs are not part of the active review contract.
-- `.planning/notion_control_plane.json` still points at `P4-06`; draft the first P5 executable plan before resuming automatic execution against a new default plan.
+- `P5-02` is verified locally and its Notion/GitHub evidence writeback is the remaining confirmation step before choosing the next P5 hardening slice.
 
 ## Accumulated Context
 

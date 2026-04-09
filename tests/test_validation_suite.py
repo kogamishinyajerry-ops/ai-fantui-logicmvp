@@ -30,6 +30,7 @@ class ValidationSuiteTests(unittest.TestCase):
             [
                 "unit_tests",
                 "debug_json_schema",
+                "demo_path_smoke",
                 "demo_answer_schema",
                 "validation_report_schema",
                 "validation_schema_runner_report_schema",

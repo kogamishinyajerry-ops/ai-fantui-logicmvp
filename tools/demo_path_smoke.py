@@ -1,0 +1,264 @@
+from __future__ import annotations
+
+import http.client
+import json
+import sys
+import threading
+from dataclasses import dataclass
+from http.server import ThreadingHTTPServer
+from pathlib import Path
+from typing import Any
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+SRC_DIR = PROJECT_ROOT / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from well_harness.demo_server import DemoRequestHandler
+from well_harness.models import HarnessConfig
+
+
+OUTPUT_FORMATS = {"text", "json"}
+
+
+@dataclass(frozen=True)
+class ScenarioResult:
+    name: str
+    status: str
+    http_status: int
+    details: str
+
+
+def parse_output_format(argv: list[str]) -> str:
+    if not argv:
+        return "text"
+    if len(argv) == 2 and argv[0] == "--format" and argv[1] in OUTPUT_FORMATS:
+        return argv[1]
+    raise ValueError("usage: demo_path_smoke.py [--format text|json]")
+
+
+def start_demo_server() -> tuple[ThreadingHTTPServer, threading.Thread]:
+    server = ThreadingHTTPServer(("127.0.0.1", 0), DemoRequestHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    return server, thread
+
+
+def request_json(port: int, path: str, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+    try:
+        connection.request(
+            "POST",
+            path,
+            body=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+        )
+        response = connection.getresponse()
+        body = response.read().decode("utf-8")
+    finally:
+        connection.close()
+    return response.status, json.loads(body)
+
+
+def pass_result(name: str, http_status: int, details: str) -> ScenarioResult:
+    return ScenarioResult(name=name, status="pass", http_status=http_status, details=details)
+
+
+def fail_result(name: str, http_status: int, details: str) -> ScenarioResult:
+    return ScenarioResult(name=name, status="fail", http_status=http_status, details=details)
+
+
+def scenario_demo_bridge_prompt(port: int) -> ScenarioResult:
+    status, payload = request_json(port, "/api/demo", {"prompt": "logic4 和 throttle lock 有什么关系"})
+    if status != 200:
+        return fail_result("demo_bridge_prompt", status, f"expected HTTP 200 but got {status}")
+    if payload.get("intent") != "logic4_thr_lock_bridge":
+        return fail_result("demo_bridge_prompt", status, f"expected intent logic4_thr_lock_bridge but got {payload.get('intent')}")
+    if payload.get("matched_node") != "logic4->thr_lock":
+        return fail_result("demo_bridge_prompt", status, f"expected matched_node logic4->thr_lock but got {payload.get('matched_node')}")
+    return pass_result(
+        "demo_bridge_prompt",
+        status,
+        "demo prompt path returned the bridge intent and logic4->thr_lock association through POST /api/demo.",
+    )
+
+
+def scenario_lever_extreme_clamp(port: int) -> ScenarioResult:
+    config = HarnessConfig()
+    status, payload = request_json(
+        port,
+        "/api/lever-snapshot",
+        {
+            "tra_deg": "-999",
+            "radio_altitude_ft": "-5",
+            "n1k": "-10",
+            "max_n1k_deploy_limit": "999",
+            "feedback_mode": "manual_feedback_override",
+            "deploy_position_percent": "999",
+            "engine_running": "true",
+            "aircraft_on_ground": "1",
+            "reverser_inhibited": "false",
+            "eec_enable": "on",
+        },
+    )
+    if status != 200:
+        return fail_result("lever_extreme_clamp", status, f"expected HTTP 200 but got {status}")
+
+    expected_checks = (
+        (payload["input"]["tra_deg"] == config.reverse_travel_min_deg, "tra_deg should clamp to reverse_travel_min_deg"),
+        (payload["input"]["radio_altitude_ft"] == 0.0, "radio_altitude_ft should clamp to 0.0"),
+        (payload["input"]["n1k"] == 0.0, "n1k should clamp to 0.0"),
+        (payload["input"]["max_n1k_deploy_limit"] == 120.0, "max_n1k_deploy_limit should clamp to 120.0"),
+        (payload["input"]["deploy_position_percent"] == 100.0, "deploy_position_percent should clamp to 100.0"),
+        (payload["input"]["engine_running"] is True, "engine_running should coerce from string true"),
+        (payload["input"]["aircraft_on_ground"] is True, "aircraft_on_ground should coerce from string 1"),
+        (payload["input"]["reverser_inhibited"] is False, "reverser_inhibited should coerce from string false"),
+        (payload["input"]["eec_enable"] is True, "eec_enable should coerce from string on"),
+        (payload["mode"] == "manual_feedback_override", "mode should stay on manual_feedback_override"),
+        (payload["hud"]["deploy_90_percent_vdt"] is True, "manual override at 100 should activate VDT90"),
+        (payload["outputs"]["logic3_active"] is True, "logic3 should remain active after the clamped edge-case request"),
+        ("tra_deg" in payload["logic"]["logic4"]["failed_conditions"], "logic4 should report its blocked tra_deg condition explicitly"),
+    )
+    for passed, message in expected_checks:
+        if not passed:
+            return fail_result("lever_extreme_clamp", status, message)
+
+    node_states = {node["id"]: node["state"] for node in payload["nodes"]}
+    if node_states.get("thr_lock") != "blocked":
+        return fail_result("lever_extreme_clamp", status, "THR_LOCK should stay in a controlled blocked state for the fully clamped extreme request")
+
+    return pass_result(
+        "lever_extreme_clamp",
+        status,
+        "lever snapshot clamps extreme numeric inputs, coerces boolean-like strings, and returns a valid manual-override blocked snapshot instead of drifting or crashing.",
+    )
+
+
+def scenario_lever_mode_switch_reset(port: int) -> ScenarioResult:
+    auto_before_status, auto_before = request_json(port, "/api/lever-snapshot", {"tra_deg": -14.0})
+    manual_status, manual = request_json(
+        port,
+        "/api/lever-snapshot",
+        {
+            "tra_deg": -14.0,
+            "feedback_mode": "manual_feedback_override",
+            "deploy_position_percent": 95.0,
+        },
+    )
+    auto_after_status, auto_after = request_json(port, "/api/lever-snapshot", {"tra_deg": -14.0})
+
+    if auto_before_status != 200 or manual_status != 200 or auto_after_status != 200:
+        return fail_result(
+            "lever_mode_switch_reset",
+            max(auto_before_status, manual_status, auto_after_status),
+            "all three mode-switch smoke requests must return HTTP 200",
+        )
+
+    expected_checks = (
+        (auto_before["mode"] == "canonical_pullback_scrubber", "auto_before should use canonical_pullback_scrubber"),
+        (auto_before["outputs"]["logic4_active"] is False, "auto_before should keep logic4 blocked"),
+        (manual["mode"] == "manual_feedback_override", "manual request should switch into manual feedback override"),
+        (manual["outputs"]["logic4_active"] is True, "manual override 95 should activate logic4"),
+        (auto_after["mode"] == "canonical_pullback_scrubber", "auto_after should return to canonical_pullback_scrubber"),
+        (auto_after["outputs"]["logic4_active"] is False, "auto_after should drop logic4 back to blocked"),
+        (auto_after["input"]["deploy_position_percent"] == 0.0, "auto_after should not retain stale manual deploy_position_percent"),
+        (auto_after["hud"]["deploy_90_percent_vdt"] is False, "auto_after should not retain stale VDT90 state"),
+    )
+    for passed, message in expected_checks:
+        if not passed:
+            return fail_result("lever_mode_switch_reset", auto_after_status, message)
+
+    return pass_result(
+        "lever_mode_switch_reset",
+        auto_after_status,
+        "auto -> manual override -> auto sequence does not retain stale manual feedback state across requests.",
+    )
+
+
+def scenario_invalid_feedback_mode(port: int) -> ScenarioResult:
+    status, payload = request_json(
+        port,
+        "/api/lever-snapshot",
+        {"tra_deg": -14.0, "feedback_mode": "bad_mode"},
+    )
+    if status != 400:
+        return fail_result("invalid_feedback_mode", status, f"expected HTTP 400 but got {status}")
+    if payload.get("error") != "invalid_lever_snapshot_input":
+        return fail_result("invalid_feedback_mode", status, f"expected invalid_lever_snapshot_input but got {payload.get('error')}")
+    if payload.get("field") != "feedback_mode":
+        return fail_result("invalid_feedback_mode", status, f"expected field feedback_mode but got {payload.get('field')}")
+    return pass_result(
+        "invalid_feedback_mode",
+        status,
+        "invalid feedback_mode returns a controlled 400 error instead of silently drifting the demo path.",
+    )
+
+
+def run_smoke_suite() -> tuple[int, dict[str, Any], list[str]]:
+    report: dict[str, Any] = {
+        "status": "pass",
+        "scenario_count": 4,
+        "completed_scenarios": 0,
+        "failed_scenario": None,
+        "scenarios": [],
+    }
+    text_lines: list[str] = []
+
+    server, thread = start_demo_server()
+    try:
+        scenarios = (
+            scenario_demo_bridge_prompt,
+            scenario_lever_extreme_clamp,
+            scenario_lever_mode_switch_reset,
+            scenario_invalid_feedback_mode,
+        )
+        for scenario in scenarios:
+            result = scenario(server.server_port)
+            report["scenarios"].append(
+                {
+                    "name": result.name,
+                    "status": result.status,
+                    "http_status": result.http_status,
+                    "details": result.details,
+                }
+            )
+            report["completed_scenarios"] += 1
+            prefix = "OK" if result.status == "pass" else "FAIL"
+            text_lines.append(f"{prefix} {result.name}: {result.details}")
+            if result.status != "pass":
+                report["status"] = "fail"
+                report["failed_scenario"] = result.name
+                return 1, report, text_lines
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    text_lines.append("PASS: validated 4 demo smoke scenarios through the local HTTP demo surface.")
+    return 0, report, text_lines
+
+
+def emit_report(report: dict[str, Any], text_lines: list[str], output_format: str) -> None:
+    if output_format == "json":
+        print(json.dumps(report, indent=2, sort_keys=True))
+        return
+    for line in text_lines:
+        print(line)
+
+
+def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    try:
+        output_format = parse_output_format(argv)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    exit_code, report, text_lines = run_smoke_suite()
+    emit_report(report, text_lines, output_format)
+    return exit_code
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

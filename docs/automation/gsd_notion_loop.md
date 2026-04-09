@@ -37,6 +37,8 @@ If the secret is missing, the script still runs validation commands and skips No
 
 The validation suite stops on the first failing check and emits a compact JSON report, so a single command can feed both GitHub Actions evidence and Notion QA digests without drifting command lists.
 
+The shared suite now also runs `python3 tools/demo_path_smoke.py --format json`, giving GitHub-verifiable HTTP smoke coverage for the presenter demo path without reintroducing a browser-only approval step.
+
 The active plan is routed from `.planning/notion_control_plane.json` instead of being hardcoded in the GitHub workflow, which keeps future phase changes aligned across local runs, CI, and Notion writeback.
 
 The workflow now also tracks GitHub's JavaScript runtime migration path: it uses `actions/checkout@v5`, `actions/setup-python@v6`, and sets `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`, so the loop is already running the Node24-compatible action stack.

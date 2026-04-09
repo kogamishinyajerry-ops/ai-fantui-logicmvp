@@ -118,6 +118,17 @@ const leverPresets = {
   },
 };
 
+let latestInteractionRequestId = 0;
+
+function beginInteractionRequest() {
+  latestInteractionRequestId += 1;
+  return latestInteractionRequestId;
+}
+
+function isLatestInteractionRequest(requestId) {
+  return requestId === latestInteractionRequestId;
+}
+
 function textOrDash(value) {
   return value === null || value === undefined || value === "" ? "-" : value;
 }
@@ -547,25 +558,37 @@ function renderErrorPayload(payload, statusMessage) {
   setStatus(statusMessage, "error");
 }
 
-async function runPrompt(prompt) {
-  const response = await fetch("/api/demo", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({prompt}),
-  });
+async function runPrompt(prompt, requestId = beginInteractionRequest()) {
+  let response;
+  try {
+    response = await fetch("/api/demo", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({prompt}),
+    });
+  } catch (error) {
+    if (!isLatestInteractionRequest(requestId)) {
+      return {stale: true};
+    }
+    throw error;
+  }
   const payload = await response.json().catch(() => ({
     error: "invalid_json_response",
     message: "API returned a response that was not valid JSON.",
   }));
+  if (!isLatestInteractionRequest(requestId)) {
+    return {stale: true};
+  }
   if (!response.ok) {
     renderErrorPayload(
       payload,
       `API error ${response.status}: ${payload.message || payload.error || "request failed"}`,
     );
-    return;
+    return {stale: false};
   }
   renderPayload(payload);
   setStatus("答案已生成。高亮表示答案关联，不是完整因果证明。", "ready");
+  return {stale: false};
 }
 
 function syncConditionReadouts() {
@@ -624,27 +647,39 @@ function collectLeverSnapshotPayload(traDeg) {
   };
 }
 
-async function runLeverSnapshot(traDeg) {
+async function runLeverSnapshot(traDeg, requestId = beginInteractionRequest()) {
   const requestPayload = typeof traDeg === "object"
     ? traDeg
     : collectLeverSnapshotPayload(traDeg);
-  const response = await fetch("/api/lever-snapshot", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(requestPayload),
-  });
+  let response;
+  try {
+    response = await fetch("/api/lever-snapshot", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(requestPayload),
+    });
+  } catch (error) {
+    if (!isLatestInteractionRequest(requestId)) {
+      return {stale: true};
+    }
+    throw error;
+  }
   const payload = await response.json().catch(() => ({
     error: "invalid_json_response",
     message: "Lever API returned a response that was not valid JSON.",
   }));
+  if (!isLatestInteractionRequest(requestId)) {
+    return {stale: true};
+  }
   if (!response.ok) {
     renderErrorPayload(
       payload,
       `Lever API error ${response.status}: ${payload.message || payload.error || "request failed"}`,
     );
-    return;
+    return {stale: false};
   }
   renderLeverSnapshot(payload);
+  return {stale: false};
 }
 
 function setBusy(isBusy) {
@@ -691,6 +726,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    window.clearTimeout(leverSnapshotTimer);
     setBusy(true);
     setStatus("确定性推理中...", "loading");
     try {

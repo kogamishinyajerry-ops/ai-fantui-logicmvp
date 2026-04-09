@@ -163,6 +163,9 @@ The structured answer area also has a compact audience answer-field legend for e
 The legend is grouped with `Answer sections` as a compact answer guide so field meanings and section counts stay together without changing the `DemoAnswer` payload.
 On narrow screens, that compact answer guide stacks the legend and section chips with touch-friendly spacing while keeping the same payload and field semantics.
 That same presenter run card remains a manual presenter aid, not browser automation or an automatic readiness detector.
+For GitHub-verifiable demo-path confidence, run `python3 tools/demo_path_smoke.py` or `python3 tools/demo_path_smoke.py --format json`; it exercises the HTTP demo surface across the bridge prompt path, clamped extreme lever inputs, auto/manual mode switches, and one expected invalid-input error without relying on browser automation.
+
+The browser shell also now treats the newest prompt or lever interaction as the only response allowed to repaint the shared result surface, so a slower older request cannot overwrite a newer presenter action during rapid edits.
 Formal subjective review now happens through Notion AI Opus 4.6 using the Notion control tower plus the GitHub repo, not by citing local terminal file paths.
 Older repo notes about browser hand-checks remain historical presenter/archive material, not the current approval contract.
 

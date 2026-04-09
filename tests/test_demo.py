@@ -24,6 +24,7 @@ DEMO_JSON_OUTPUT_SCHEMA_PATH = PROJECT_ROOT / "docs" / "json_schema" / "demo_ans
 DEMO_ANSWER_ASSET_PATH = FIXTURES_DIR / "demo_answer_asset_v1.json"
 DEMO_JSON_OUTPUT_ASSET_PATH = FIXTURES_DIR / "demo_json_output_asset_v1.json"
 DEMO_ANSWER_SCHEMA_VALIDATION_SCRIPT_PATH = PROJECT_ROOT / "tools" / "validate_demo_answer_schema.py"
+DEMO_PATH_SMOKE_SCRIPT_PATH = PROJECT_ROOT / "tools" / "demo_path_smoke.py"
 DEMO_UI_HANDCHECK_SCRIPT_PATH = PROJECT_ROOT / "tools" / "demo_ui_handcheck.py"
 DEMO_PRESENTER_TALK_TRACK_PATH = PROJECT_ROOT / "docs" / "demo_presenter_talk_track.md"
 DEMO_UI_STATIC_DIR = PROJECT_ROOT / "src" / "well_harness" / "static"
@@ -667,6 +668,60 @@ class DemoIntentLayerTests(unittest.TestCase):
                     self.assertEqual(demo_server.main(["--host", "127.0.0.1", "--port", "0"]), 0)
 
         open_browser.assert_not_called()
+
+    def test_demo_path_smoke_script_smoke(self):
+        result = subprocess.run(
+            [sys.executable, str(DEMO_PATH_SMOKE_SCRIPT_PATH)],
+            cwd=PROJECT_ROOT,
+            env=demo_answer_schema_script_env(),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+        for fragment in (
+            "OK demo_bridge_prompt",
+            "OK lever_extreme_clamp",
+            "OK lever_mode_switch_reset",
+            "OK invalid_feedback_mode",
+            "PASS: validated 4 demo smoke scenarios through the local HTTP demo surface.",
+        ):
+            self.assertIn(fragment, result.stdout)
+
+    def test_demo_path_smoke_script_json_output(self):
+        result = subprocess.run(
+            [sys.executable, str(DEMO_PATH_SMOKE_SCRIPT_PATH), "--format", "json"],
+            cwd=PROJECT_ROOT,
+            env=demo_answer_schema_script_env(),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["status"], "pass")
+        self.assertEqual(payload["scenario_count"], 4)
+        self.assertEqual(payload["completed_scenarios"], 4)
+        self.assertIsNone(payload["failed_scenario"])
+        self.assertEqual(
+            [
+                "demo_bridge_prompt",
+                "lever_extreme_clamp",
+                "lever_mode_switch_reset",
+                "invalid_feedback_mode",
+            ],
+            [scenario["name"] for scenario in payload["scenarios"]],
+        )
+        self.assertEqual(
+            ["pass", "pass", "pass", "pass"],
+            [scenario["status"] for scenario in payload["scenarios"]],
+        )
+        self.assertEqual(400, payload["scenarios"][-1]["http_status"])
 
     def test_demo_ui_handcheck_script_outputs_manual_checklist(self):
         result = subprocess.run(
@@ -1538,7 +1593,7 @@ class DemoIntentLayerTests(unittest.TestCase):
         for fragment in (
             "function syncConditionReadouts()",
             "function collectLeverSnapshotPayload(traDeg)",
-            "function runLeverSnapshot(traDeg)",
+            "async function runLeverSnapshot(traDeg, requestId = beginInteractionRequest())",
             "fetch(\"/api/lever-snapshot\"",
             "radio_altitude_ft: Number(document.getElementById(\"condition-ra\").value)",
             "engine_running: document.getElementById(\"condition-engine-running\").checked",
@@ -1816,6 +1871,21 @@ class DemoIntentLayerTests(unittest.TestCase):
             "stale lever snapshot text",
         ):
             self.assertIn(fragment, result.stdout)
+
+    def test_demo_static_assets_prefer_latest_interaction_response(self):
+        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
+
+        for fragment in (
+            "let latestInteractionRequestId = 0;",
+            "function beginInteractionRequest()",
+            "function isLatestInteractionRequest(requestId)",
+            "async function runPrompt(prompt, requestId = beginInteractionRequest())",
+            "async function runLeverSnapshot(traDeg, requestId = beginInteractionRequest())",
+            "if (!isLatestInteractionRequest(requestId)) {",
+            "return {stale: true};",
+            "window.clearTimeout(leverSnapshotTimer);",
+        ):
+            self.assertIn(fragment, script)
 
     def test_demo_static_assets_include_presenter_callout_labels(self):
         html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
