@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-09 - P4 stays active and P4-04 turns 当前结论 into fixed Headline / Blocker / Next step reading rails so presenters can explain the lever snapshot in a stable order without inventing a second explanation layer.
+Last activity: 2026-04-09 - P4 stays active and P4-05 adds a visible result-source note so presenters can say whether the page is showing DemoAnswer or lever-snapshot output while keeping a single-payload story.
 
 ## Current Position
 
@@ -19,7 +19,7 @@ Last activity: 2026-04-09 - P4 stays active and P4-04 turns 当前结论 into fi
 - Successful non-gated writebacks now refresh 09C automatically, so the current Opus brief keeps following the latest validated plan without a separate maintenance step.
 - The old `P1 自动化目标审查 Gate` and `P1-02 消除手动浏览器 QA 依赖` records are now treated as configured legacy review artifacts and auto-archived once the approved default gate confirms no review is currently required.
 - GitHub run `24168293031` proved the same retirement logic works from CI, and 09C now points at `P3-07 自动退场旧审查对象` with `当前无需 Opus 审查`.
-- P4 is now the active product phase, `P4-01 首屏 Presenter Run Card`, `P4-02 演示场景预设`, and `P4-03 状态图例与 truth boundary` are verified, and `P4-04 当前结论 reading rails` is the next presenter-readiness plan under it.
+- P4 is now the active product phase, `P4-01 首屏 Presenter Run Card`, `P4-02 演示场景预设`, `P4-03 状态图例与 truth boundary`, and `P4-04 当前结论 reading rails` are verified, and `P4-05 结果来源标记` is the next presenter-readiness plan under it.
 
 ## Active Objective
 
@@ -31,7 +31,7 @@ Keep the development loop operational while shifting the active roadmap back to 
 - Route subjective human review through Opus 4.6 Review Gate only.
 - Ensure Opus 4.6 review briefs cite Notion pages and the GitHub repo only.
 - Preserve the P3 control-plane baseline while P4 product work resumes.
-- Keep the first-screen cockpit flow, presenter run card, lever presets, chain state legend, current conclusion rails, talk track, and structured answer area aligned around the same live-demo route.
+- Keep the first-screen cockpit flow, presenter run card, lever presets, chain state legend, current conclusion rails, result-source note, talk track, and structured answer area aligned around the same live-demo route.
 - Maintain the boundary between controller truth and simplified plant feedback in demo copy and UI affordances.
 
 ## Blockers/Concerns

@@ -23,7 +23,7 @@
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P4-04 当前结论 reading rails",
+  "default_plan": "P4-05 结果来源标记",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {

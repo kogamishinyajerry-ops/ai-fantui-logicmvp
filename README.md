@@ -157,6 +157,7 @@ The first screen now also includes a clickable `Presenter Run Card` with the sam
 The lever cockpit also includes visible `演示场景预设` buttons for `L3 等待 VDT90`, `RA blocker`, `N1K blocker`, and `VDT90 ready`; they only refill the existing `POST /api/lever-snapshot` inputs and do not create a second state machine.
 The chain panel now also exposes a visible `状态图例 / truth boundary` strip so a live audience can read `Active / Blocked / Inactive` state colors and distinguish controller truth from simplified plant feedback without treating the color map as a causal proof.
 The lever `当前结论` card now also renders as fixed presenter reading rails for `Headline`, `Blocker`, and `Next step`; those three rows still come from the same lever snapshot payload instead of a second presenter-only explanation layer.
+The `结果摘要` card now also exposes a visible source note that distinguishes `POST /api/demo / DemoAnswer` from `POST /api/lever-snapshot`, while reminding the presenter that the visible panes still share one payload at a time.
 The structured answer area also has a compact audience answer-field legend for explaining `intent`, `matched_node`, `evidence`, `risks`, and raw JSON as reading aids rather than a new schema or second answer payload.
 The legend is grouped with `Answer sections` as a compact answer guide so field meanings and section counts stay together without changing the `DemoAnswer` payload.
 On narrow screens, that compact answer guide stacks the legend and section chips with touch-friendly spacing while keeping the same payload and field semantics.

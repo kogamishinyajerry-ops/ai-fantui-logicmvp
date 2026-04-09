@@ -350,10 +350,19 @@ function syncSelectedPrompt(prompt) {
     : "当前示例：自定义问题";
 }
 
+function setResultSourceInfo(modeText, payloadNote) {
+  document.getElementById("result-source-mode").textContent = modeText;
+  document.getElementById("result-payload-note").textContent = payloadNote;
+}
+
 function renderPayload(payload) {
   document.getElementById("intent-value").textContent = textOrDash(payload.intent);
   document.getElementById("matched-node-value").textContent = textOrDash(payload.matched_node);
   document.getElementById("target-logic-value").textContent = textOrDash(payload.target_logic);
+  setResultSourceInfo(
+    "当前来源：受控 prompt / POST /api/demo / DemoAnswer。",
+    "结构化结果、高亮解释和 Raw JSON 共用同一份 DemoAnswer payload。",
+  );
 
   const structuredOutput = document.getElementById("structured-output");
   renderAnswerSectionSummary(payload);
@@ -438,6 +447,10 @@ function renderLeverSnapshot(payload) {
           : outputs.logic1_active ? "logic1"
             : "-"
   );
+  setResultSourceInfo(
+    "当前来源：拉杆快照 / POST /api/lever-snapshot。",
+    "当前结论、折叠证据区和 Raw JSON 共用同一份 lever snapshot payload。",
+  );
 
   document.getElementById("lever-headline").textContent = summary.headline || "拉杆快照已更新。";
   document.getElementById("lever-blocker").textContent = summary.blocker || "-";
@@ -490,6 +503,10 @@ function renderErrorPayload(payload, statusMessage) {
   document.getElementById("intent-value").textContent = "ui_error";
   document.getElementById("matched-node-value").textContent = "-";
   document.getElementById("target-logic-value").textContent = "-";
+  setResultSourceInfo(
+    "当前来源：UI/API 错误。",
+    "当前没有生成新的业务 payload；请先修复输入或网络错误。",
+  );
   renderAnswerSectionSummaryUnavailable();
   document.getElementById("structured-output").replaceChildren(renderErrorSection(normalizedPayload));
   document.getElementById("raw-json").textContent = JSON.stringify(normalizedPayload, null, 2);

@@ -1688,6 +1688,71 @@ class DemoIntentLayerTests(unittest.TestCase):
         ):
             self.assertIn(fragment, result.stdout)
 
+    def test_demo_static_assets_include_result_source_note(self):
+        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
+        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
+        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
+        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
+        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+
+        for fragment in (
+            "id=\"result-source-mode\"",
+            "class=\"result-source-mode\"",
+            "当前来源：等待 payload。",
+            "id=\"result-payload-note\"",
+            "结构化结果、当前结论和 Raw JSON 会共用同一份 payload。",
+        ):
+            self.assertIn(fragment, html)
+
+        for fragment in (
+            ".result-source-mode",
+            ".result-payload-note",
+        ):
+            self.assertIn(fragment, css)
+
+        for fragment in (
+            "function setResultSourceInfo(modeText, payloadNote)",
+            "当前来源：受控 prompt / POST /api/demo / DemoAnswer。",
+            "结构化结果、高亮解释和 Raw JSON 共用同一份 DemoAnswer payload。",
+            "当前来源：拉杆快照 / POST /api/lever-snapshot。",
+            "当前结论、折叠证据区和 Raw JSON 共用同一份 lever snapshot payload。",
+            "当前来源：UI/API 错误。",
+            "当前没有生成新的业务 payload；请先修复输入或网络错误。",
+        ):
+            self.assertIn(fragment, script)
+
+        for fragment in (
+            "visible source note in `结果摘要`",
+            "`POST /api/demo / DemoAnswer` or `POST /api/lever-snapshot`",
+            "share one payload",
+        ):
+            self.assertIn(fragment, talk_track)
+
+        for fragment in (
+            "visible source note",
+            "`POST /api/demo / DemoAnswer`",
+            "`POST /api/lever-snapshot`",
+            "share one payload",
+        ):
+            self.assertIn(fragment, readme)
+
+        for fragment in (
+            "Use the visible source note in 结果摘要",
+            "DemoAnswer or lever-snapshot output",
+            "one payload story",
+        ):
+            self.assertIn(fragment, result.stdout)
+
     def test_demo_static_assets_include_presenter_callout_labels(self):
         html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
         css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
