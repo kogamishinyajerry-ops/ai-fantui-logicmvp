@@ -83,3 +83,16 @@ Exit Criteria:
 - A demo-path smoke suite runs in GitHub Actions without requiring browser-only approval steps.
 - Residual "manual browser QA" expectations are either automated, narrowed into explicit scripts, or retired as no longer needed.
 - The controller-truth versus simplified-plant boundary remains explicit, and no second control-truth layer is introduced while polishing the demo.
+
+## Phase P6: Reconcile Control Tower And Freeze Demo Packet
+
+Status: Planned
+
+Goal: Turn the now-stable P5 demo evidence into a consistent freeze-ready control-tower story, so Notion status pages, repo docs, and final presenter handoff materials all match the latest GitHub-backed truth without adding new product surface.
+
+Exit Criteria:
+
+- `01 当前状态` and related control-tower summaries no longer point at stale `129 tests OK` / manual-browser-QA-only guidance once P5 is approved.
+- A concise freeze/demo packet exists that summarizes the latest stable GitHub evidence, current smoke coverage, presenter boundary conditions, and the remaining human signoff step.
+- Historical browser hand-check notes are either archived or explicitly reframed as presenter aids rather than active approval requirements.
+- No new demo features, controller-truth changes, or API-contract changes are introduced while preparing the freeze packet and documentation closure.

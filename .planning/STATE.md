@@ -26,6 +26,7 @@ Last activity: 2026-04-09 - P5-04 extended the demo smoke suite across the visib
 - `P5-02 最新交互胜出 demo 请求仲裁` is now implemented locally: the browser shell ignores stale prompt or lever responses once a newer interaction has started, so rapid edits no longer let an older response repaint the shared result surface.
 - `P5-03 可见演示预设 smoke sweep` is now implemented locally: the smoke suite verifies `L3 等待 VDT90`, `RA blocker`, `N1K blocker`, and `VDT90 ready` through the same `POST /api/lever-snapshot` evidence plane used by the live demo.
 - `P5-04 快速条件 toggle smoke sweep` is now implemented locally: the smoke suite verifies the visible blocker toggles for `engine_running`, `aircraft_on_ground`, `reverser_inhibited`, and `eec_enable` through the same HTTP evidence plane.
+- `P6 Reconcile Control Tower And Freeze Demo Packet` is now drafted locally as the next planned phase, pending the current P5 Opus adjudication.
 
 ## Active Objective
 
@@ -48,6 +49,7 @@ Keep the development loop operational while shifting the active roadmap from P4 
 - Opus 4.6 review packets must never rely on local terminal file paths.
 - Historical browser hand-check notes in archived coordination docs are not part of the active review contract.
 - `P5-04` is verified locally and its Notion/GitHub evidence writeback is the remaining confirmation step before choosing the next P5 hardening slice.
+- The Notion `01 当前状态` page is still stale (`129 tests OK` and manual-browser-QA wording), so the next planned phase should prioritize truth reconciliation and freeze-packet closure rather than new demo features.
 
 ## Accumulated Context
 
@@ -55,6 +57,7 @@ Keep the development loop operational while shifting the active roadmap from P4 
 
 - Phase P4 added: Elevate Cockpit Demo To Presenter-Ready
 - Phase P5 added: Demo Polish And Edge-Case Hardening
+- Phase P6 added: Reconcile Control Tower And Freeze Demo Packet
 
 ### Quick Tasks Completed
 
