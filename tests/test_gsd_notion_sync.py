@@ -3,6 +3,7 @@ import unittest
 
 from tools.gsd_notion_sync import (
     CommandResult,
+    NotionClient,
     ReviewSnapshot,
     build_gate_update_properties,
     build_current_review_brief,
@@ -551,6 +552,44 @@ class GsdNotionSyncTests(unittest.TestCase):
 
         self.assertEqual([], retired)
         self.assertEqual([], client.archived)
+
+    def test_replace_page_body_skips_archived_children_when_clearing_page(self):
+        class FakeClient(NotionClient):
+            def __init__(self):
+                super().__init__("test-token")
+                self.calls = []
+
+            def list_block_children(self, block_id):
+                return [
+                    {"id": "active-block", "archived": False, "in_trash": False},
+                    {"id": "archived-block", "archived": True, "in_trash": False},
+                    {"id": "trashed-block", "archived": False, "in_trash": True},
+                ]
+
+            def request(self, method, path, payload=None):
+                self.calls.append((method, path, payload))
+                return {}
+
+        client = FakeClient()
+
+        client.replace_page_body("page-123", [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}}])
+
+        self.assertEqual(
+            [
+                ("DELETE", "/v1/blocks/active-block", None),
+                (
+                    "PATCH",
+                    "/v1/blocks/page-123/children",
+                    {
+                        "children": [
+                            {"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}},
+                        ],
+                        "position": {"type": "start"},
+                    },
+                ),
+            ],
+            client.calls,
+        )
 
 
 if __name__ == "__main__":

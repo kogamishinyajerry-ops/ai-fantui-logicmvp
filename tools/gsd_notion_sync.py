@@ -199,6 +199,8 @@ class NotionClient:
 
     def replace_page_body(self, page_id: str, blocks: list[dict[str, Any]]) -> None:
         for block in self.list_block_children(page_id):
+            if block.get("archived") or block.get("in_trash"):
+                continue
             self.request("DELETE", f"/v1/blocks/{block['id']}")
         if blocks:
             self.request(
