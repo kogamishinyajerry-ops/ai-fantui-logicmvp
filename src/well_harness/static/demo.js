@@ -392,7 +392,9 @@ function renderTraLockState(payload) {
   leverInput.value = String(effectiveTra);
 
   const locked = Boolean(traLock.locked);
-  badge.textContent = locked ? "L4 未解锁" : "L4 已解锁";
+  badge.textContent = locked
+    ? (traLock.boundary_unlock_ready ? "拖到 -14° 解锁" : "L4 未解锁")
+    : "L4 已解锁";
   badge.classList.toggle("is-locked", locked);
   badge.classList.toggle("is-unlocked", !locked);
   status.textContent = traLock.message || (

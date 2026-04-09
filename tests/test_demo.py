@@ -622,6 +622,38 @@ class DemoIntentLayerTests(unittest.TestCase):
             "active",
         )
 
+    def test_demo_server_api_keeps_slider_locked_until_current_snapshot_reaches_minus_14(self):
+        server, thread = start_demo_server()
+        try:
+            connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+            connection.request(
+                "POST",
+                "/api/lever-snapshot",
+                body=json.dumps(
+                    {
+                        "tra_deg": 0.0,
+                        "feedback_mode": "manual_feedback_override",
+                        "deploy_position_percent": 95.0,
+                    }
+                ).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+            )
+            response = connection.getresponse()
+            payload = json.loads(response.read().decode("utf-8"))
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+        self.assertEqual(response.status, 200)
+        self.assertEqual(payload["input"]["tra_deg"], 0.0)
+        self.assertTrue(payload["tra_lock"]["boundary_unlock_ready"])
+        self.assertTrue(payload["tra_lock"]["locked"])
+        self.assertFalse(payload["tra_lock"]["unlock_ready"])
+        self.assertEqual(payload["tra_lock"]["allowed_reverse_min_deg"], -14.0)
+        self.assertIn("先把 TRA 拖到 -14.0° 锁位", payload["tra_lock"]["message"])
+        self.assertFalse(payload["outputs"]["logic4_active"])
+
     def test_demo_server_api_rejects_invalid_extended_lever_snapshot_input(self):
         server, thread = start_demo_server()
         try:
@@ -1493,6 +1525,8 @@ class DemoIntentLayerTests(unittest.TestCase):
             "L4 锁位 -14°",
             "id=\"lever-lock-badge\"",
             "id=\"lever-lock-status\"",
+            "class=\"lever-live-grid\"",
+            "高频演示控件已上移",
             "id=\"hud-tra\"",
             "id=\"lever-result\"",
             "class=\"panel qa-drawer\"",
@@ -1511,6 +1545,8 @@ class DemoIntentLayerTests(unittest.TestCase):
             ".lever-console",
             ".lever-readout",
             ".lever-thresholds",
+            ".lever-live-grid",
+            ".live-control",
             ".condition-panel",
             ".condition-grid",
             ".condition-range",
@@ -1539,6 +1575,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             ".logic-stage-wide",
             ".logic-note",
             ".chain-panel",
+            "position: sticky",
             "border-color: rgba(40, 244, 255, 0.36)",
             ".chain-node.is-blocked",
             ".chain-node.is-inactive",
@@ -1577,6 +1614,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             "class=\"condition-panel-heading\"",
             "class=\"condition-note\"",
             "class=\"lever-lock-banner\"",
+            "class=\"lever-live-grid\"",
             "反馈 / 诊断（simplified plant）",
         ):
             self.assertIn(fragment, html)
@@ -1591,6 +1629,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             ".lever-console,",
             ".condition-panel {",
             ".condition-grid",
+            ".lever-live-grid",
             ".hud-grid div,",
             ".feedback-grid div {",
             ".lever-result {",
@@ -1667,6 +1706,8 @@ class DemoIntentLayerTests(unittest.TestCase):
             ".lever-lock-banner",
             ".lever-lock-badge",
             ".lever-lock-status",
+            ".lever-live-grid",
+            ".live-control",
             "#lever-tra",
             ".condition-panel",
             ".condition-grid",
@@ -1696,6 +1737,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             "function collectLeverSnapshotPayload(traDeg)",
             "async function runLeverSnapshot(traDeg, requestId = beginInteractionRequest())",
             "fetch(\"/api/lever-snapshot\"",
+            "traLock.boundary_unlock_ready",
             "traLock.allowed_reverse_min_deg",
             "document.getElementById(\"lever-lock-status\")",
             "radio_altitude_ft: Number(document.getElementById(\"condition-ra\").value)",

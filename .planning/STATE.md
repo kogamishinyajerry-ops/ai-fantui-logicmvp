@@ -1,10 +1,10 @@
 # State
 
-Last activity: 2026-04-09 - P5-05 added an L4-gated TRA rear-travel lock plus a denser cockpit layout, and the local validation baseline is now 162 tests plus 8 shared validation checks.
+Last activity: 2026-04-09 - P5-06 finalized the current-snapshot TRA lock semantics and moved VDT into a same-screen desktop cockpit layout, and the local validation baseline is now 163 tests plus 8 shared validation checks.
 
 ## Current Position
 
-- Round 92 is complete, and the current validated baseline is local `run_gsd_validation_suite.py` with 162 tests plus 8 shared validation checks.
+- Round 92 is complete, and the current validated baseline is local `run_gsd_validation_suite.py` with 163 tests plus 8 shared validation checks.
 - Notion control tower is live at https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec.
 - GitHub repo is live at https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp.
 - P1 is closed as Approved in the Review Gate after GitHub-backed Opus adjudication.
@@ -27,6 +27,7 @@ Last activity: 2026-04-09 - P5-05 added an L4-gated TRA rear-travel lock plus a 
 - `P5-03 可见演示预设 smoke sweep` is now implemented locally: the smoke suite verifies `L3 等待 VDT90`, `RA blocker`, `N1K blocker`, and `VDT90 ready` through the same `POST /api/lever-snapshot` evidence plane used by the live demo.
 - `P5-04 快速条件 toggle smoke sweep` is now implemented locally: the smoke suite verifies the visible blocker toggles for `engine_running`, `aircraft_on_ground`, `reverser_inhibited`, and `eec_enable` through the same HTTP evidence plane.
 - `P5-05 L4 锁位与紧凑演示舱布局` is now implemented locally: deep reverse requests are capped at `-14°` until the `L4` gate is ready, the UI shows that lock state explicitly, and the left-side cockpit layout is denser while the demo smoke suite now covers the new lock gate.
+- `P5-06 完成锁位语义与同屏观察布局` is now implemented locally: the browser stays locked in `-14°..0°` until the current snapshot itself reaches the `-14°` lock point with `L4` active, VDT controls sit at the top of the cockpit, and the desktop logic board now remains visible while the left column scrolls.
 - `P6 Reconcile Control Tower And Freeze Demo Packet` is now drafted locally as the next planned phase, pending the current P5 Opus adjudication.
 
 ## Active Objective
@@ -42,7 +43,7 @@ Keep the development loop operational while shifting the active roadmap from P4 
 - Keep the first-screen cockpit flow, presenter run card, lever presets, chain state legend, current conclusion rails, result-source note, stale-state guardrails, talk track, and structured answer area aligned around the same live-demo route.
 - Convert residual confidence checks into GitHub-verifiable smoke coverage before resuming deeper automatic demo changes.
 - Maintain the boundary between controller truth and simplified plant feedback in demo copy and UI affordances.
-- Keep the TRA rear-travel lock semantics and compact cockpit layout aligned with the same `POST /api/lever-snapshot` truth surface.
+- Keep the TRA rear-travel lock semantics and same-screen cockpit layout aligned with the same `POST /api/lever-snapshot` truth surface.
 
 ## Blockers/Concerns
 
@@ -50,7 +51,7 @@ Keep the development loop operational while shifting the active roadmap from P4 
 - GitHub credentials live in `~/.zshrc`, so non-interactive shells may need explicit sourcing or env injection.
 - Opus 4.6 review packets must never rely on local terminal file paths.
 - Historical browser hand-check notes in archived coordination docs are not part of the active review contract.
-- `P5-05` is verified locally, and the control-plane default plan now points to it so future GitHub/Notion writebacks stop drifting back to `P5-04`.
+- `P5-06` is verified locally, and the control-plane default plan now points to it so the next GitHub/Notion writeback can move the current Opus review target off the earlier P5-05 draft.
 - The Notion `01 当前状态` page is still stale (`129 tests OK` and manual-browser-QA wording), so the next planned phase should prioritize truth reconciliation and freeze-packet closure rather than new demo features.
 
 ## Accumulated Context

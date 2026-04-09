@@ -177,13 +177,22 @@ def scenario_lever_mode_switch_reset(port: int) -> ScenarioResult:
 
 
 def scenario_lever_l4_lock_gate(port: int) -> ScenarioResult:
+    prelock_status, prelock = request_json(
+        port,
+        "/api/lever-snapshot",
+        {
+            "tra_deg": 0.0,
+            "feedback_mode": "manual_feedback_override",
+            "deploy_position_percent": 95.0,
+        },
+    )
     locked_status, locked = request_json(
         port,
         "/api/lever-snapshot",
         {
-            "tra_deg": -20.0,
+            "tra_deg": -14.0,
             "feedback_mode": "manual_feedback_override",
-            "deploy_position_percent": 50.0,
+            "deploy_position_percent": 95.0,
         },
     )
     unlocked_status, unlocked = request_json(
@@ -196,20 +205,22 @@ def scenario_lever_l4_lock_gate(port: int) -> ScenarioResult:
         },
     )
 
-    if locked_status != 200 or unlocked_status != 200:
+    if prelock_status != 200 or locked_status != 200 or unlocked_status != 200:
         return fail_result(
             "lever_l4_lock_gate",
-            max(locked_status, unlocked_status),
-            "both lock-gate requests must return HTTP 200",
+            max(prelock_status, locked_status, unlocked_status),
+            "all three lock-gate requests must return HTTP 200",
         )
 
     checks = (
-        (locked["input"]["requested_tra_deg"] == -20.0, "locked snapshot should preserve requested_tra_deg"),
-        (locked["input"]["tra_deg"] == -14.0, "locked snapshot should cap effective tra_deg at -14.0"),
-        (locked["tra_lock"]["locked"] is True, "locked snapshot should report locked=True"),
-        (locked["tra_lock"]["clamped"] is True, "locked snapshot should report clamped=True"),
-        (locked["tra_lock"]["allowed_reverse_min_deg"] == -14.0, "locked snapshot should keep the UI min at -14.0"),
-        ("deploy_90_percent_vdt" in locked["tra_lock"]["unlock_blockers"], "locked snapshot should surface deploy_90_percent_vdt as the missing unlock blocker"),
+        (prelock["input"]["tra_deg"] == 0.0, "prelock snapshot should preserve the shallow TRA position"),
+        (prelock["tra_lock"]["boundary_unlock_ready"] is True, "prelock snapshot should detect that the lock boundary could unlock"),
+        (prelock["tra_lock"]["locked"] is True, "prelock snapshot should still keep the slider locked"),
+        (prelock["tra_lock"]["allowed_reverse_min_deg"] == -14.0, "prelock snapshot should keep the UI min at -14.0"),
+        (locked["input"]["tra_deg"] == -14.0, "lock-boundary snapshot should reach -14.0"),
+        (locked["tra_lock"]["locked"] is False, "lock-boundary snapshot should unlock once logic4 is truly active"),
+        (locked["tra_lock"]["unlock_ready"] is True, "lock-boundary snapshot should report unlock_ready=True"),
+        (locked["outputs"]["logic4_active"] is True, "lock-boundary snapshot should activate logic4"),
         (unlocked["input"]["tra_deg"] == -20.0, "unlocked snapshot should allow deeper reverse travel"),
         (unlocked["tra_lock"]["locked"] is False, "unlocked snapshot should report locked=False"),
         (unlocked["tra_lock"]["clamped"] is False, "unlocked snapshot should report clamped=False"),
@@ -222,7 +233,7 @@ def scenario_lever_l4_lock_gate(port: int) -> ScenarioResult:
     return pass_result(
         "lever_l4_lock_gate",
         unlocked_status,
-        "L4 gate now caps deep reverse requests at -14° until VDT90 makes logic4 ready, then releases the deeper reverse range.",
+        "L4 gate now keeps the slider in the -14°..0° range until the current snapshot reaches the -14° lock point with logic4 active, then releases the deeper reverse range.",
     )
 
 

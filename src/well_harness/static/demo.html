@@ -139,6 +139,21 @@
                 <span id="lever-lock-badge" class="lever-lock-badge is-locked">L4 未解锁</span>
                 <p id="lever-lock-status" class="lever-lock-status">当前后拉锁位在 -14°；只有当 L4 满足时，TRA 才能继续进入 -14° 到 -32° 区间。</p>
               </div>
+              <div class="lever-live-grid" aria-label="高频演示控件">
+                <label class="live-control live-control-mode" for="condition-feedback-mode">
+                  <span>VDT 模式</span>
+                  <select id="condition-feedback-mode" name="feedback_mode" aria-describedby="condition-feedback-note">
+                    <option value="auto_scrubber">自动反馈</option>
+                    <option value="manual_feedback_override" selected>手动 override</option>
+                  </select>
+                  <small id="condition-feedback-note">高频演示控件已上移；VDT feedback 仍然只是 simplified plant diagnostic override，不是新的控制真值。</small>
+                </label>
+                <label class="live-control live-control-vdt" for="condition-deploy-position">
+                  <span>VDT 反馈 <output id="condition-deploy-position-value" for="condition-deploy-position">0%</output></span>
+                  <input id="condition-deploy-position" name="deploy_position_percent" type="range" min="0" max="100" step="1" value="0" aria-describedby="condition-deploy-note">
+                  <small id="condition-deploy-note">用于演示 VDT90 / L4 / THR_LOCK；>=90% 点亮 VDT90。它是 simplified plant feedback，不是完整实时物理仿真。</small>
+                </label>
+              </div>
             </div>
             <section class="lever-presets" aria-labelledby="lever-presets-title">
               <div class="lever-presets-header">
@@ -170,51 +185,38 @@
             <section class="condition-panel" aria-labelledby="condition-panel-title">
               <div class="condition-panel-heading">
                 <h3 id="condition-panel-title">条件面板</h3>
-                <p>SW1 / SW2 仍随 TRA + latch 推导；这里只调控制条件。</p>
+                <p>高频 VDT 控件已上移；这里保留边界条件、限制量和 blocker toggle。</p>
               </div>
               <div class="condition-grid">
-                <label class="condition-range condition-span-3" for="condition-ra">
+                <label class="condition-range condition-span-2" for="condition-ra">
                   <span>RA <output id="condition-ra-value" for="condition-ra">5.0 ft</output></span>
                   <input id="condition-ra" name="radio_altitude_ft" type="range" min="0" max="20" step="0.1" value="5" aria-describedby="condition-ra-note">
                   <small id="condition-ra-note">L1 需要 RA &lt; 6ft</small>
                 </label>
-                <label class="condition-range condition-span-3" for="condition-n1k">
+                <label class="condition-range condition-span-2" for="condition-n1k">
                   <span>N1K <output id="condition-n1k-value" for="condition-n1k">35.0</output></span>
                   <input id="condition-n1k" name="n1k" type="range" min="0" max="120" step="0.5" value="35" aria-describedby="condition-n1k-note">
                   <small id="condition-n1k-note">L3 需要 N1K &lt; limit</small>
                 </label>
-                <label class="condition-toggle condition-span-2">
+                <label class="condition-toggle condition-span-1">
                   <input id="condition-engine-running" name="engine_running" type="checkbox" checked>
                   <span>发动机运行</span>
                 </label>
-                <label class="condition-toggle condition-span-2">
+                <label class="condition-toggle condition-span-1">
                   <input id="condition-aircraft-ground" name="aircraft_on_ground" type="checkbox" checked>
                   <span>飞机在地面</span>
                 </label>
-                <label class="condition-toggle condition-span-2">
+                <label class="condition-toggle condition-span-1">
                   <input id="condition-reverser-inhibited" name="reverser_inhibited" type="checkbox">
                   <span>反推抑制</span>
                 </label>
-                <label class="condition-toggle condition-span-2">
+                <label class="condition-toggle condition-span-1">
                   <input id="condition-eec-enable" name="eec_enable" type="checkbox" checked>
                   <span>EEC enable</span>
                 </label>
                 <label class="condition-number condition-span-2" for="condition-n1k-limit">
                   <span>N1K limit</span>
                   <input id="condition-n1k-limit" name="max_n1k_deploy_limit" type="number" min="0.1" max="120" step="0.5" value="60">
-                </label>
-                <label class="condition-select condition-span-2" for="condition-feedback-mode">
-                  <span>VDT 模式</span>
-                  <select id="condition-feedback-mode" name="feedback_mode" aria-describedby="condition-feedback-note">
-                    <option value="auto_scrubber">自动反馈</option>
-                    <option value="manual_feedback_override" selected>手动 override</option>
-                  </select>
-                  <small id="condition-feedback-note">VDT feedback 只是 simplified plant diagnostic override，不是新的控制真值。</small>
-                </label>
-                <label class="condition-range condition-wide feedback-override-control" for="condition-deploy-position">
-                  <span>VDT 反馈 <output id="condition-deploy-position-value" for="condition-deploy-position">0%</output></span>
-                  <input id="condition-deploy-position" name="deploy_position_percent" type="range" min="0" max="100" step="1" value="0" aria-describedby="condition-deploy-note">
-                  <small id="condition-deploy-note">用于演示 VDT90 / L4 / THR_LOCK；>=90% 点亮 VDT90。它是 simplified plant feedback，不是完整实时物理仿真。</small>
                 </label>
               </div>
               <p class="condition-note">TLS / PLS / VDT / 位移是 simplified plant feedback，不是完整实时物理模型。</p>

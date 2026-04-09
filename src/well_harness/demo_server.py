@@ -458,16 +458,22 @@ def _build_tra_lock_payload(
     requested_tra_deg: float,
     effective_tra_deg: float,
     lock_deg: float,
-    unlock_ready: bool,
+    boundary_unlock_ready: bool,
+    ui_unlocked: bool,
     unlock_blockers: list[str],
 ) -> dict:
     blocker_text = " / ".join(unlock_blockers) if unlock_blockers else "L4 条件"
-    locked = not unlock_ready
+    locked = not ui_unlocked
     clamped = effective_tra_deg != requested_tra_deg
-    allowed_reverse_min_deg = config.reverse_travel_min_deg if unlock_ready else lock_deg
-    if unlock_ready:
+    allowed_reverse_min_deg = config.reverse_travel_min_deg if ui_unlocked else lock_deg
+    if ui_unlocked:
         message = (
             f"L4 已满足：TRA 已解锁，可继续拉到 {config.reverse_travel_min_deg:.1f}°。"
+        )
+    elif boundary_unlock_ready:
+        message = (
+            f"L4 的边界条件已经具备；先把 TRA 拖到 {lock_deg:.1f}° 锁位，"
+            f"再继续进入 {lock_deg:.1f}° 到 {config.reverse_travel_min_deg:.1f}° 区间。"
         )
     elif clamped:
         message = (
@@ -483,7 +489,8 @@ def _build_tra_lock_payload(
     return {
         "locked": locked,
         "clamped": clamped,
-        "unlock_ready": unlock_ready,
+        "unlock_ready": ui_unlocked,
+        "boundary_unlock_ready": boundary_unlock_ready,
         "lock_deg": lock_deg,
         "requested_tra_deg": requested_tra_deg,
         "effective_tra_deg": effective_tra_deg,
@@ -523,10 +530,10 @@ def lever_snapshot_payload(
         feedback_mode=feedback_mode,
         deploy_position_percent=deploy_position_percent,
     )
-    unlock_ready = lock_probe["outputs"].logic4_active
+    boundary_unlock_ready = lock_probe["outputs"].logic4_active
     effective_tra = (
         requested_tra
-        if unlock_ready or requested_tra >= lock_deg
+        if boundary_unlock_ready or requested_tra >= lock_deg
         else lock_deg
     )
     snapshot = (
@@ -554,12 +561,14 @@ def lever_snapshot_payload(
     inputs = snapshot["inputs"]
     outputs = snapshot["outputs"]
     explain = snapshot["explain"]
+    ui_unlocked = outputs.logic4_active and effective_tra <= lock_deg
     tra_lock = _build_tra_lock_payload(
         config=config,
         requested_tra_deg=requested_tra,
         effective_tra_deg=effective_tra,
         lock_deg=lock_deg,
-        unlock_ready=unlock_ready,
+        boundary_unlock_ready=boundary_unlock_ready,
+        ui_unlocked=ui_unlocked,
         unlock_blockers=[condition.name for condition in lock_probe["explain"].logic4.failed_conditions],
     )
     logic1_completed = sensors.tls_unlocked_ls
