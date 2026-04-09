@@ -757,7 +757,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("demo-form");
   const promptInput = document.getElementById("demo-prompt");
   const leverInput = document.getElementById("lever-tra");
-  const conditionInputs = Array.from(document.querySelectorAll(".condition-panel input, .condition-panel select"));
+  const conditionInputs = Array.from(
+    document.querySelectorAll(
+      ".condition-panel input, .condition-panel select, .lever-live-grid input, .lever-live-grid select",
+    ),
+  );
   let leverSnapshotTimer = null;
 
   function scheduleLeverSnapshot() {
