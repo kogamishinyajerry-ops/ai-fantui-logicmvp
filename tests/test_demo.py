@@ -1753,6 +1753,70 @@ class DemoIntentLayerTests(unittest.TestCase):
         ):
             self.assertIn(fragment, result.stdout)
 
+    def test_demo_static_assets_hold_lever_result_when_demoanswer_is_active(self):
+        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
+        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
+        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
+        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
+        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
+        self.assertEqual(result.stderr, "")
+
+        for fragment in (
+            "id=\"lever-result-mode\"",
+            "class=\"lever-result-mode\"",
+            "当前结论来源：等待 lever snapshot。",
+        ):
+            self.assertIn(fragment, html)
+
+        for fragment in (
+            ".lever-result-mode",
+            "border-radius: 999px",
+            "font-family: var(--font-mono)",
+        ):
+            self.assertIn(fragment, css)
+
+        for fragment in (
+            "function setLeverResultMode(modeText)",
+            "function setLeverResultPlaceholder(headline, blocker, nextStep, evidenceItems, modeText)",
+            "当前结论来源：问答模式已激活；lever snapshot rails 已暂停。",
+            "当前结果来自 DemoAnswer；如需当前结论，请重新拖动拉杆或使用场景预设。",
+            "当前不是 lever snapshot。",
+            "继续读 Structured answer，或重新请求 lever snapshot。",
+            "当前结果区显示的是 DemoAnswer，不复用上一次 lever snapshot。",
+            "当前结论来源：lever snapshot / POST /api/lever-snapshot。",
+            "当前结论来源：UI/API 错误；lever snapshot rails 已暂停。",
+            "当前没有新的业务 payload；请先修复错误再看当前结论。",
+        ):
+            self.assertIn(fragment, script)
+
+        for fragment in (
+            "lever `当前结论` rail should switch into a visible hold state",
+            "stale lever evidence",
+        ):
+            self.assertIn(fragment, talk_track)
+
+        for fragment in (
+            "visible hold state",
+            "previous lever snapshot",
+            "active payload source",
+        ):
+            self.assertIn(fragment, readme)
+
+        for fragment in (
+            "confirm 当前结论 switches to a visible hold state",
+            "stale lever snapshot text",
+        ):
+            self.assertIn(fragment, result.stdout)
+
     def test_demo_static_assets_include_presenter_callout_labels(self):
         html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
         css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")

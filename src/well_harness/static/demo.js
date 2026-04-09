@@ -355,6 +355,23 @@ function setResultSourceInfo(modeText, payloadNote) {
   document.getElementById("result-payload-note").textContent = payloadNote;
 }
 
+function setLeverResultMode(modeText) {
+  document.getElementById("lever-result-mode").textContent = modeText;
+}
+
+function setLeverResultPlaceholder(headline, blocker, nextStep, evidenceItems, modeText) {
+  setLeverResultMode(modeText);
+  document.getElementById("lever-headline").textContent = headline;
+  document.getElementById("lever-blocker").textContent = blocker;
+  document.getElementById("lever-next-step").textContent = nextStep;
+  const evidenceList = document.getElementById("lever-evidence-list");
+  evidenceList.replaceChildren(...evidenceItems.map((item) => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    return li;
+  }));
+}
+
 function renderPayload(payload) {
   document.getElementById("intent-value").textContent = textOrDash(payload.intent);
   document.getElementById("matched-node-value").textContent = textOrDash(payload.matched_node);
@@ -362,6 +379,13 @@ function renderPayload(payload) {
   setResultSourceInfo(
     "当前来源：受控 prompt / POST /api/demo / DemoAnswer。",
     "结构化结果、高亮解释和 Raw JSON 共用同一份 DemoAnswer payload。",
+  );
+  setLeverResultPlaceholder(
+    "当前结果来自 DemoAnswer；如需当前结论，请重新拖动拉杆或使用场景预设。",
+    "当前不是 lever snapshot。",
+    "继续读 Structured answer，或重新请求 lever snapshot。",
+    ["当前结果区显示的是 DemoAnswer，不复用上一次 lever snapshot。"],
+    "当前结论来源：问答模式已激活；lever snapshot rails 已暂停。",
   );
 
   const structuredOutput = document.getElementById("structured-output");
@@ -451,6 +475,7 @@ function renderLeverSnapshot(payload) {
     "当前来源：拉杆快照 / POST /api/lever-snapshot。",
     "当前结论、折叠证据区和 Raw JSON 共用同一份 lever snapshot payload。",
   );
+  setLeverResultMode("当前结论来源：lever snapshot / POST /api/lever-snapshot。");
 
   document.getElementById("lever-headline").textContent = summary.headline || "拉杆快照已更新。";
   document.getElementById("lever-blocker").textContent = summary.blocker || "-";
@@ -506,6 +531,13 @@ function renderErrorPayload(payload, statusMessage) {
   setResultSourceInfo(
     "当前来源：UI/API 错误。",
     "当前没有生成新的业务 payload；请先修复输入或网络错误。",
+  );
+  setLeverResultPlaceholder(
+    "当前没有新的业务 payload；请先修复错误再看当前结论。",
+    "当前是 UI/API 错误状态。",
+    "修复输入或网络错误后，再重新请求 DemoAnswer 或 lever snapshot。",
+    [normalizedPayload.message || "UI/API 错误。"],
+    "当前结论来源：UI/API 错误；lever snapshot rails 已暂停。",
   );
   renderAnswerSectionSummaryUnavailable();
   document.getElementById("structured-output").replaceChildren(renderErrorSection(normalizedPayload));

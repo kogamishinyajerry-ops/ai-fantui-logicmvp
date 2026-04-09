@@ -95,6 +95,7 @@ PRESENTER_WALKTHROUGH_STEPS = (
             "Use the visible 状态图例 / truth boundary to explain Active / Blocked / Inactive and to separate controller truth from simplified plant feedback.",
             "Read 当前结论 in the fixed order Headline -> Blocker -> Next step so the live explanation follows the same lever snapshot payload.",
             "Use the visible source note in 结果摘要 to say whether the page is showing DemoAnswer or lever-snapshot output while keeping one payload story.",
+            "When DemoAnswer is active, confirm 当前结论 switches to a visible hold state instead of reusing stale lever snapshot text.",
             "If field names need explaining, use the compact answer guide to pair the Audience answer-field legend with Answer sections counts.",
             "On narrow screens, read the same compact answer guide top-to-bottom; section chips stay touch-friendly.",
         ),
