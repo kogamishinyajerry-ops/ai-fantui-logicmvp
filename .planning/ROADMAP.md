@@ -56,3 +56,4 @@ Exit Criteria:
 - Same-plan legacy automation gaps auto-resolve after later successful runs.
 - The current Opus 4.6 review brief generator stays aligned with the live Notion control-tower structure and GitHub evidence URLs.
 - No stale manual review task remains open when a gate has already been approved.
+- The GitHub Actions workflow stays aligned with GitHub-hosted runner runtime deprecations without reintroducing manual review dependence.

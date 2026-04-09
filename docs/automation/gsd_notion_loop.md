@@ -39,6 +39,8 @@ The validation suite stops on the first failing check and emits a compact JSON r
 
 The active plan is routed from `.planning/notion_control_plane.json` instead of being hardcoded in the GitHub workflow, which keeps future phase changes aligned across local runs, CI, and Notion writeback.
 
+The workflow now also tracks GitHub's JavaScript runtime migration path: it uses `actions/checkout@v5`, `actions/setup-python@v6`, and sets `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`, so the loop is already running the Node24-compatible action stack.
+
 When 09C is refreshed, the control plane now prefers GitHub Action Execution Run rows and their matching QA records over newer local Codex runs. This keeps current Opus briefs aligned with the GitHub evidence plane instead of drifting toward local-only diagnostic artifacts.
 
 GitHub-backed run rows also store the exact Actions run URL, and the shared validation suite emits stable `python3 ...` command labels so local machine paths do not leak into Notion evidence summaries.

@@ -18,6 +18,12 @@ Status: Done
 
 Review snapshots and current Opus briefs now prefer GitHub Action runs and matching GitHub QA records over local Codex runs, and GitHub-backed run rows carry the exact Actions run URL.
 
+## GitHub Actions Node24 Compatibility
+
+Status: Done
+
+The workflow now uses Node24-compatible GitHub Actions versions and opts into `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`, so the control loop stays ahead of the Node20 runner deprecation.
+
 ## Opus Review Brief Maintenance
 
 Status: Open

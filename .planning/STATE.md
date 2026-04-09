@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-09 - P3 control-plane hardening taught review snapshots to prefer GitHub-backed evidence, removed local Python absolute paths from the shared validation report, and verified the loop with 145 tests OK.
+Last activity: 2026-04-09 - P3 control-plane hardening taught review snapshots to prefer GitHub-backed evidence, removed local Python absolute paths from the shared validation report, migrated the workflow to Node24-compatible GitHub Actions, and kept the loop green with 145 tests OK.
 
 ## Current Position
 
@@ -14,6 +14,7 @@ Last activity: 2026-04-09 - P3 control-plane hardening taught review snapshots t
 - 09C now explicitly distinguishes between “需要 Opus 审查” and “当前无需 Opus 审查”, and a normal refresh no longer overwrites an already approved gate decision.
 - Review snapshots now prefer GitHub Action run / QA evidence over local Codex runs, so current Opus briefs stay anchored to the GitHub evidence plane.
 - The shared validation suite now emits stable `python3 ...` command labels instead of machine-local Python executable paths.
+- The GitHub workflow now runs Node24-compatible action versions and opts into `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true`, matching GitHub's current deprecation path for JavaScript actions.
 
 ## Active Objective
 

@@ -23,6 +23,6 @@
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P3-04 优先 GitHub 审查证据",
+  "default_plan": "P3-05 GitHub Actions Node24 兼容性",
   "default_review_gate": "OPUS-4.6 周期审查 Gate"
 }
