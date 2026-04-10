@@ -15,7 +15,7 @@
   "pages": {
     "dashboard": "33cc68942bed8136b5c9f9ba5b4b44ec",
     "constitution": "33cc6894-2bed-8148-b2c5-ec68c440f5ef",
-    "status": "33cc6894-2bed-8105-ae6a-d880cb399b73",
+    "status": "33ec6894-2bed-8169-bb65-feb161fdae6d",
     "control_plane": "33cc6894-2bed-810d-875e-e4e0e464ee31",
     "opus_protocol": "33cc6894-2bed-8117-b8f5-eda203f3be18",
     "opus_brief": "33cc6894-2bed-819a-811c-f19885ee595a",
@@ -25,7 +25,7 @@
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P6-03 Freeze Demo Packet 自动快照同步",
+  "default_plan": "P6-04 用可自动同步状态页旁路旧 archived status 页面",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {

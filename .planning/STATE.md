@@ -38,6 +38,7 @@ Last activity: 2026-04-10 - P5 was accepted for closeout via Opus review, P6 bec
 - `P6-01 同步控制塔真值与 freeze packet 基线` now owns the active reconciliation pass: update stale status surfaces, publish a concise freeze/demo packet, and retire manual-browser-QA wording as an active approval rule.
 - `P6-02 控制塔首页快照自动同步` is now implemented locally: the Notion dashboard page now gets a repo-managed live snapshot section at the top, so users no longer land first on the stale `P1 / 134 tests / Awaiting Opus` view.
 - `P6-03 Freeze Demo Packet 自动快照同步` is now implemented locally: the freeze packet page gets the same kind of repo-managed top snapshot as the dashboard, so the stable evidence summary can keep following the live GitHub-backed baseline instead of drifting behind the latest verified plan, and successful CI runs no longer fail outright just because Notion writeback hits a temporary sharing 404.
+- `P6-04 用可自动同步状态页旁路旧 archived status 页面` is now implemented locally: a new MCP-owned status page can be fully rewritten by repo-side sync, so dashboard / 09C / freeze packet links no longer have to point at the stale archived-ancestor status page.
 - A new requirement set now exists for strict engineer-facing acceptance playback, fault injection and diagnosis, knowledge capture, and future-system generalization; this is large enough to require a new phase instead of being folded into demo freeze work.
 - `P7-01` has an initial local foundation: `src/well_harness/system_spec.py` now defines a reusable control-system workbench spec and captures the current thrust-reverser chain as the first reference system, including acceptance-scenario, fault-mode, and clarification-question scaffolding.
 - `P7-02` is already implemented on `main`: `src/well_harness/document_intake.py` defines a mixed-document intake packet, readiness assessment, and CLI export surface so future systems can arrive as PDF/markdown-heavy packets with explicit system-defined signal semantics.
@@ -52,7 +53,7 @@ Close the P5 -> P6 control-plane gap without adding product surface, while keepi
 - Create UAT Gap records on failure.
 - Route subjective human review through Opus 4.6 Review Gate only.
 - Ensure Opus 4.6 review briefs cite Notion pages and the GitHub repo only.
-- Update `01 当前状态`, roadmap pages, and the freeze/demo packet so they reflect the approved P5 evidence baseline instead of stale `129 tests OK` / manual-browser-QA guidance.
+- Update the active status surface, roadmap pages, and the freeze/demo packet so they reflect the approved P5 evidence baseline instead of stale `129 tests OK` / manual-browser-QA guidance.
 - Keep the first-screen cockpit flow, presenter run card, lever presets, chain state legend, current conclusion rails, result-source note, stale-state guardrails, talk track, and structured answer area aligned around the same live-demo route.
 - Maintain the boundary between controller truth and simplified plant feedback in demo copy and UI affordances.
 - Keep a readable freeze/archive packet in the repo and Notion so the current baseline can be resumed, reviewed, or handed off quickly after a pause.
@@ -68,6 +69,7 @@ Close the P5 -> P6 control-plane gap without adding product surface, while keepi
 - `P5-09` is verified locally, and the control-plane default plan now points to it so the next GitHub/Notion writeback can move the current Opus review target onto the corrected startup semantics instead of the threshold-pinned `P5-08` snapshot alone.
 - `01 当前状态` has been brought onto the P6 baseline, but the wider control tower still contains some historical summary blocks; P6 should keep trimming residual stale wording before reopening deeper P7 execution.
 - The dashboard and freeze packet can now be refreshed from repo-side sync, but `01 当前状态` is still blocked on page-block access for the local integration; treat that as an explicit control-plane dependency until the integration is shared more broadly or a MCP-backed fallback owns that page.
+- The original `01 当前状态` page still exists and remains blocked by archived-ancestor constraints, but the active control-plane `status` pointer now targets a new auto-synced replacement page, so user-visible links no longer need to land on the stale page.
 
 ## Accumulated Context
 

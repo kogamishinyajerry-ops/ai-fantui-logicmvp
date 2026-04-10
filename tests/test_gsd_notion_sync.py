@@ -11,6 +11,7 @@ from tools.gsd_notion_sync import (
     build_current_review_brief,
     render_dashboard_blocks,
     render_freeze_packet_blocks,
+    render_status_page_blocks,
     upsert_dashboard_snapshot_section,
     upsert_freeze_packet_snapshot_section,
     retire_legacy_review_artifacts,
@@ -337,6 +338,52 @@ class GsdNotionSyncTests(unittest.TestCase):
         self.assertIn("P6-02 控制塔首页快照自动同步", joined)
         self.assertIn("175 tests OK; 10 demo smoke scenarios pass.", joined)
         self.assertIn("PASS. 8 validation commands all green.", joined)
+
+    def test_render_status_page_blocks_reflects_live_baseline_and_links(self):
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="P6 正在执行",
+            latest_verified_plan="P6-04 用可自动同步状态页旁路旧 archived status 页面",
+            latest_success_run="GitHub GSD automation 24238846145",
+            latest_failed_run="GitHub GSD automation 24238577807",
+            latest_passing_qa="GitHub GSD automation 24238846145 QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+            latest_success_run_notes="Notion 404 writeback now degrades instead of failing CI.",
+            latest_passing_qa_summary="175 tests OK, 10 demo smoke scenarios pass, 8/8 checks pass.",
+        )
+        config = {
+            "pages": {
+                "dashboard": "dashboard-id",
+                "freeze_packet": "freeze-id",
+                "opus_brief": "brief-id",
+                "constitution": "constitution-id",
+            },
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            },
+        }
+        brief = build_current_review_brief(snapshot, config)
+
+        blocks = render_status_page_blocks(brief, snapshot, config)
+        text_fragments = []
+        for block in blocks:
+            for value in block.values():
+                if isinstance(value, dict) and "rich_text" in value:
+                    text_fragments.extend(item["text"]["content"] for item in value["rich_text"])
+
+        joined = "\n".join(text_fragments)
+        self.assertIn("P6 Reconcile Control Tower And Freeze Demo Packet", joined)
+        self.assertIn("P6-04 用可自动同步状态页旁路旧 archived status 页面", joined)
+        self.assertIn("GitHub GSD automation 24238846145", joined)
+        self.assertIn("当前无需手动触发 Opus 4.6。", joined)
 
     def test_fetch_review_snapshot_prefers_github_runs_and_matching_qa(self):
         class FakeClient:

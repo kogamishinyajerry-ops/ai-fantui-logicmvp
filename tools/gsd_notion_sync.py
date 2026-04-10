@@ -983,6 +983,67 @@ def render_freeze_packet_blocks(
     return blocks
 
 
+def render_status_page_blocks(
+    brief: CurrentReviewBrief,
+    snapshot: ReviewSnapshot,
+    config: dict[str, Any],
+) -> list[dict[str, Any]]:
+    current_opus_state = (
+        "当前无需 Opus 审查"
+        if not brief.review_required
+        else f"需要 Opus 4.6 介入：{brief.intervention_kind}"
+    )
+    current_action = (
+        "继续自动开发；当前无需手动触发 Opus 4.6。"
+        if not brief.review_required
+        else "打开 09C 当前 Opus 4.6 审查简报，并按其中当前请求手动触发 Opus 4.6。"
+    )
+    blocks: list[dict[str, Any]] = [
+        callout_block(
+            "AUTO-SYNCED STATUS SNAPSHOT — 这个状态页由 repo-side sync 接管，用来替代受 archived-ancestor 限制的旧状态页。",
+            "🚦",
+        ),
+        heading_block("当前轮次"),
+        bullet_block(f"活动 phase：{snapshot.active_phase}"),
+        bullet_block(f"当前已验证 plan：{snapshot.latest_verified_plan}"),
+        bullet_block(f"当前 Gate：{snapshot.gate_name}（{snapshot.gate_status}）"),
+        heading_block("当前结论"),
+        bullet_block("当前 demo 基线已经由 GitHub-backed evidence 验证，可作为稳定的 freeze / demo packet 基线。"),
+        bullet_block("dashboard 与 freeze packet 顶部快照已经进入 repo-side 自动同步路径。"),
+        bullet_block(f"当前 Opus 状态：{current_opus_state}"),
+        bullet_block("P7 的 spec-driven workbench foundation 已在 repo 中提前播种，但正式自动执行顺序暂时仍以 P6 为先。"),
+        heading_block("当前回归"),
+        bullet_block(f"最近成功执行证据：{snapshot.latest_success_run or '暂无'}"),
+    ]
+    if snapshot.latest_passing_qa_summary:
+        blocks.append(bullet_block(f"QA 摘要：{snapshot.latest_passing_qa_summary}"))
+    if snapshot.latest_success_run_notes:
+        blocks.append(bullet_block(f"运行摘要：{snapshot.latest_success_run_notes}"))
+    blocks.extend(
+        [
+            heading_block("当前关键边界"),
+            bullet_block("不改 controller.py confirmed truth。"),
+            bullet_block("不改 SimulationRunner。"),
+            bullet_block("不新增另一套控制真值。"),
+            bullet_block("不把 simplified plant 表述成完整实时物理模型。"),
+            bullet_block("Opus 4.6 只使用 Notion + GitHub 证据面。"),
+            heading_block("当前下一步"),
+            bullet_block("继续收口剩余 stale wording，让 control tower summary surfaces 不再依赖手工维护。"),
+            bullet_block("继续把历史 manual-browser-QA 表述降级成 presenter guidance，而不是当前审批规则。"),
+            bullet_block(current_action),
+            bullet_block("在 P6 收口前，不继续扩大 P7 的实现面。"),
+            divider_block(),
+            page_link_block(page_id(config, "dashboard")),
+            page_link_block(page_id(config, "freeze_packet")),
+            page_link_block(page_id(config, "opus_brief")),
+            page_link_block(page_id(config, "constitution")),
+            paragraph_parts_block([notion_text("GitHub Repo / ai-fantui-logicmvp", config_url(config, "github_repo"))]),
+            paragraph_parts_block([notion_text("GitHub Actions / GSD Automation Loop", config_url(config, "github_actions"))]),
+        ]
+    )
+    return blocks
+
+
 def upsert_managed_page_section(
     client: NotionClient,
     page_id_value: str,
@@ -1083,6 +1144,9 @@ def write_current_opus_review_brief(
     dashboard_page_id = page_id(config, "dashboard")
     client.update_page_properties(dashboard_page_id, {"title": title_value("AI FANTUI LogicMVP 控制塔")})
     upsert_dashboard_snapshot_section(client, dashboard_page_id, render_dashboard_blocks(brief, effective_snapshot, config))
+    status_page_id = page_id(config, "status")
+    client.update_page_properties(status_page_id, {"title": title_value("01 当前状态（自动同步）")})
+    client.replace_page_body(status_page_id, render_status_page_blocks(brief, effective_snapshot, config))
     freeze_packet_page_id = page_id(config, "freeze_packet")
     client.update_page_properties(freeze_packet_page_id, {"title": title_value("10 Freeze Demo Packet")})
     upsert_freeze_packet_snapshot_section(
