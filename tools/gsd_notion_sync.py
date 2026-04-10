@@ -1339,6 +1339,11 @@ def render_dashboard_blocks(
         bullet_block(f"Open Gap 数量：{len(snapshot.open_gap_titles)}"),
     ]
     if unavailable_page_keys:
+        blocks.append(
+            bullet_block(
+                "当前控制面模式：dashboard-only degraded mode（dashboard 仍为 live truth，独立 status / 09C / freeze 子页当前不可直写）。"
+            )
+        )
         names = {
             "status": "01 当前状态（自动同步）",
             "opus_brief": "09C 当前 Opus 4.6 审查简报",

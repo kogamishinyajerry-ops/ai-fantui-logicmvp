@@ -96,6 +96,7 @@ Exit Criteria:
 - A concise freeze/demo packet exists that summarizes the latest stable GitHub evidence, current smoke coverage, presenter boundary conditions, and the remaining human signoff step.
 - Historical browser hand-check notes are either archived or explicitly reframed as presenter aids rather than active approval requirements.
 - No new demo features, controller-truth changes, or API-contract changes are introduced while preparing the freeze packet and documentation closure.
+- The control plane can explicitly acknowledge dashboard-only degraded mode when archived Notion subpages block direct writes, without pretending those subpages are still healthy.
 
 ## Phase P7: Build A Spec-Driven Control Analysis Workbench
 

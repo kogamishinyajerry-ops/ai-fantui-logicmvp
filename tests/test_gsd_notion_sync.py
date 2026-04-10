@@ -383,6 +383,64 @@ Ran 189 tests in 20.897s
         self.assertIn("当前无需 Opus 审查", joined)
         self.assertIn("继续自动开发；当前无需手动触发 Opus 4.6。", joined)
 
+    def test_render_dashboard_blocks_switches_to_dashboard_only_mode_when_active_subpages_are_unavailable(self):
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="P6 正在执行",
+            latest_verified_plan="P6-10 显式化 dashboard-only degraded mode",
+            latest_success_run="GitHub GSD automation 24243230588",
+            latest_failed_run=None,
+            latest_passing_qa="GitHub GSD automation 24243230588 QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+        config = {
+            "pages": {
+                "status": "status-id",
+                "opus_brief": "opus-brief-id",
+                "freeze_packet": "freeze-packet-id",
+            },
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            },
+            "default_plan": "P6-10 显式化 dashboard-only degraded mode",
+        }
+        brief = build_current_review_brief(
+            snapshot,
+            {
+                "urls": {
+                    "github_repo": "https://github.com/example/repo",
+                    "github_actions": "https://github.com/example/repo/actions",
+                }
+            },
+        )
+
+        blocks = render_dashboard_blocks(
+            brief,
+            snapshot,
+            config,
+            unavailable_page_keys=("status", "opus_brief", "freeze_packet"),
+        )
+
+        paragraph_blocks = [block for block in blocks if block.get("type") == "paragraph"]
+        self.assertEqual(2, len(paragraph_blocks))
+        joined = "\n".join(
+            item["text"]["content"]
+            for block in blocks
+            for payload in block.values()
+            if isinstance(payload, dict) and "rich_text" in payload
+            for item in payload["rich_text"]
+        )
+        self.assertIn("dashboard-only degraded mode", joined)
+        self.assertIn("当前受 Notion archived page 限制暂不可直写", joined)
+
     def test_render_current_review_brief_blocks_use_database_urls_for_database_refs(self):
         snapshot = ReviewSnapshot(
             active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",

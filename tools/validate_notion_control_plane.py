@@ -44,6 +44,11 @@ REQUIRED_LEGACY_ARTIFACT_FIELDS = (
     "title",
     "reason",
 )
+DEGRADED_ACTIVE_PAGE_KEYS = (
+    "status",
+    "opus_brief",
+    "freeze_packet",
+)
 
 
 def parse_output_format(argv: list[str]) -> str:
@@ -99,6 +104,17 @@ def notion_request(token: str, path: str) -> dict[str, Any]:
         return json.load(response)
 
 
+def remote_object_status(kind: str, key: str, payload: dict[str, Any]) -> tuple[str, str | None]:
+    archived = bool(payload.get("archived")) or bool(payload.get("in_trash"))
+    if kind == "page" and key == "dashboard" and archived:
+        return "fail", "dashboard_archived"
+    if kind == "page" and key in DEGRADED_ACTIVE_PAGE_KEYS and archived:
+        return "degraded", "archived_active_page"
+    if kind == "database" and archived:
+        return "degraded", "database_archived"
+    return "ok", None
+
+
 def check_remote_objects(
     config: dict[str, Any],
     *,
@@ -109,23 +125,49 @@ def check_remote_objects(
 
     for key in REQUIRED_PAGE_KEYS:
         page_id = config["pages"][key]
-        request_get(token, f"/v1/pages/{page_id}")
-        results.append({"kind": "page", "key": key, "id": page_id, "status": "ok"})
+        payload = request_get(token, f"/v1/pages/{page_id}")
+        status, reason = remote_object_status("page", key, payload)
+        results.append(
+            {
+                "kind": "page",
+                "key": key,
+                "id": page_id,
+                "status": status,
+                "reason": reason or "",
+                "archived": str(bool(payload.get("archived"))).lower(),
+                "in_trash": str(bool(payload.get("in_trash"))).lower(),
+            }
+        )
 
     for key in REQUIRED_DATABASE_KEYS:
         database_id = config["databases"][key]
-        request_get(token, f"/v1/databases/{database_id}")
-        results.append({"kind": "database", "key": key, "id": database_id, "status": "ok"})
+        payload = request_get(token, f"/v1/databases/{database_id}")
+        status, reason = remote_object_status("database", key, payload)
+        results.append(
+            {
+                "kind": "database",
+                "key": key,
+                "id": database_id,
+                "status": status,
+                "reason": reason or "",
+                "archived": str(bool(payload.get("archived"))).lower(),
+                "in_trash": str(bool(payload.get("in_trash"))).lower(),
+            }
+        )
 
     for index, artifact in enumerate(config.get("legacy_review_artifacts", [])):
         artifact_id = artifact["id"]
-        request_get(token, f"/v1/pages/{artifact_id}")
+        payload = request_get(token, f"/v1/pages/{artifact_id}")
+        status, reason = remote_object_status("legacy_review_artifact", artifact["kind"], payload)
         results.append(
             {
                 "kind": "legacy_review_artifact",
                 "key": f"{artifact['kind']}:{artifact['title']}",
                 "id": artifact_id,
-                "status": "ok",
+                "status": status,
+                "reason": reason or "",
+                "archived": str(bool(payload.get("archived"))).lower(),
+                "in_trash": str(bool(payload.get("in_trash"))).lower(),
                 "index": str(index),
             }
         )
@@ -183,6 +225,57 @@ def validate_control_plane(
     report["checked_pages"] = len([item for item in results if item["kind"] == "page"])
     report["checked_databases"] = len([item for item in results if item["kind"] == "database"])
     report["checked_legacy_artifacts"] = len([item for item in results if item["kind"] == "legacy_review_artifact"])
+    failed_objects = [item for item in results if item["status"] == "fail"]
+    degraded_page_keys = tuple(
+        item["key"]
+        for item in results
+        if item["kind"] == "page" and item["status"] == "degraded"
+    )
+    degraded_database_keys = tuple(
+        item["key"]
+        for item in results
+        if item["kind"] == "database" and item["status"] == "degraded"
+    )
+    report["degraded_page_keys"] = list(degraded_page_keys)
+    report["degraded_database_keys"] = list(degraded_database_keys)
+    report["degraded"] = bool(degraded_page_keys)
+    report["control_plane_mode"] = (
+        "dashboard_only_degraded"
+        if set(degraded_page_keys) == set(DEGRADED_ACTIVE_PAGE_KEYS)
+        else "full_control_plane"
+    )
+    if failed_objects:
+        report["status"] = "fail"
+        report["reason"] = "remote_object_unhealthy"
+        report["errors"] = [
+            f"{item['kind']}:{item['key']} -> {item.get('reason') or item['status']}"
+            for item in failed_objects
+        ]
+        text_lines.append(
+            "FAIL: unhealthy Notion control-plane objects: "
+            + ", ".join(report["errors"])
+        )
+        return 1, report, text_lines
+    if degraded_page_keys or degraded_database_keys:
+        report["degraded"] = True
+        text_lines.append(
+            "PASS (degraded): validated "
+            f"{report['checked_pages']} pages, "
+            f"{report['checked_databases']} databases, and "
+            f"{report['checked_legacy_artifacts']} legacy artifacts; "
+            "dashboard remains live while archived active pages and/or databases force dashboard-only mode: "
+            + ", ".join(
+                filter(
+                    None,
+                    [
+                        ("pages=" + ",".join(degraded_page_keys)) if degraded_page_keys else "",
+                        ("databases=" + ",".join(degraded_database_keys)) if degraded_database_keys else "",
+                    ],
+                )
+            )
+            + "."
+        )
+        return 0, report, text_lines
     text_lines.append(
         "PASS: validated "
         f"{report['checked_pages']} pages, "

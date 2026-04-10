@@ -116,6 +116,87 @@ class ValidateNotionControlPlaneTests(unittest.TestCase):
         self.assertEqual(19, len(seen))
         self.assertIn("PASS: validated 7 pages, 10 databases, and 2 legacy artifacts", text_lines[0])
 
+    def test_validate_control_plane_reports_dashboard_only_degraded_mode_for_archived_active_pages(self):
+        path = self.save(self.base_config)
+
+        def fake_request(_token, path):
+            key = path.rsplit("/", 1)[-1]
+            if key in {"status-id", "opus-brief-id", "freeze-packet-id"}:
+                return {"id": key, "archived": True, "in_trash": True}
+            return {"id": key, "archived": False, "in_trash": False}
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            exit_code, report, text_lines = validate_control_plane(
+                config_path=path,
+                request_get=fake_request,
+            )
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(0, exit_code)
+        self.assertEqual("pass", report["status"])
+        self.assertTrue(report["degraded"])
+        self.assertEqual("dashboard_only_degraded", report["control_plane_mode"])
+        self.assertEqual(["status", "opus_brief", "freeze_packet"], report["degraded_page_keys"])
+        self.assertIn("PASS (degraded):", text_lines[0])
+
+    def test_validate_control_plane_reports_archived_databases_as_degraded_not_failure(self):
+        path = self.save(self.base_config)
+
+        def fake_request(_token, path):
+            key = path.rsplit("/", 1)[-1]
+            if key.endswith("-id") and key.startswith(("roadmap", "tasks", "sessions", "qa", "plans", "runs", "gates", "gaps", "decisions", "assets")):
+                return {"id": key, "archived": True, "in_trash": False}
+            return {"id": key, "archived": False, "in_trash": False}
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            exit_code, report, text_lines = validate_control_plane(
+                config_path=path,
+                request_get=fake_request,
+            )
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(0, exit_code)
+        self.assertEqual("pass", report["status"])
+        self.assertTrue(report["degraded"])
+        self.assertEqual(
+            ["roadmap", "tasks", "sessions", "qa", "plans", "runs", "gates", "gaps", "decisions", "assets"],
+            report["degraded_database_keys"],
+        )
+        self.assertIn("databases=roadmap,tasks,sessions,qa,plans,runs,gates,gaps,decisions,assets", text_lines[0])
+
+    def test_validate_control_plane_fails_when_dashboard_is_archived(self):
+        path = self.save(self.base_config)
+
+        def fake_request(_token, path):
+            key = path.rsplit("/", 1)[-1]
+            if key == "dashboard-id":
+                return {"id": key, "archived": True, "in_trash": True}
+            return {"id": key, "archived": False, "in_trash": False}
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            exit_code, report, text_lines = validate_control_plane(
+                config_path=path,
+                request_get=fake_request,
+            )
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(1, exit_code)
+        self.assertEqual("fail", report["status"])
+        self.assertIn("page:dashboard -> dashboard_archived", report["errors"][0])
+        self.assertIn("FAIL: unhealthy Notion control-plane objects:", text_lines[0])
+
 
 if __name__ == "__main__":
     unittest.main()

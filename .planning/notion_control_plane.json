@@ -15,17 +15,17 @@
   "pages": {
     "dashboard": "33cc68942bed8136b5c9f9ba5b4b44ec",
     "constitution": "33cc6894-2bed-8148-b2c5-ec68c440f5ef",
-    "status": "33ec6894-2bed-81d3-88ce-d362ea91a757",
+    "status": "33ec6894-2bed-8106-bade-eb101c69141c",
     "control_plane": "33cc6894-2bed-810d-875e-e4e0e464ee31",
     "opus_protocol": "33cc6894-2bed-8117-b8f5-eda203f3be18",
-    "opus_brief": "33ec6894-2bed-81d6-bae6-e2eccccda5da",
-    "freeze_packet": "33ec6894-2bed-810f-ac3d-c01b0c08ad14"
+    "opus_brief": "33ec6894-2bed-8183-9687-df6edcbe7b8d",
+    "freeze_packet": "33ec6894-2bed-8134-8414-ea8738f68837"
   },
   "urls": {
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P6-09 让 repo 入口感知 archived Notion 活跃页",
+  "default_plan": "P6-10 显式化 dashboard-only degraded mode",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {
