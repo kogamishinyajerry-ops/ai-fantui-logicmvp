@@ -5,13 +5,13 @@
 
 - 结论：PASS；当前稳定基线由 GitHub-backed validation evidence 支撑。
 - 当前阶段：`P6 Reconcile Control Tower And Freeze Demo Packet`
-- 当前已验证 Plan：`P6-05 同步 repo 侧交接文档快照`
-- 最近成功执行证据：`GitHub GSD automation 24239973670`
+- 当前已验证 Plan：`P6-06 将历史 repo 交接正文移出活跃文档`
+- 最近成功执行证据：`GitHub GSD automation 24240641848`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
 - 当前 QA 摘要：`185 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
-- 当前运行摘要：`Repo-side coordination docs now expose managed live-snapshot sections while preserving older round notes as historical context.`
+- 当前运行摘要：`Active repo-side coordination and freeze docs now keep only the live snapshot plus archive pointers, while stale long-form Round prose moved into explicit history files.`
 - `manual browser QA` 不再是当前审批规则；相关历史记录只保留为 presenter guidance / 历史上下文。
 
 ## 当前证据入口

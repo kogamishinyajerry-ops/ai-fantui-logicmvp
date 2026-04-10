@@ -4,10 +4,10 @@
 ## 当前自动同步交接基线
 
 - 活动 phase：`P6 Reconcile Control Tower And Freeze Demo Packet`
-- 当前已验证 Plan：`P6-05 同步 repo 侧交接文档快照`
-- 最近成功执行证据：`GitHub GSD automation 24239973670`
+- 当前已验证 Plan：`P6-06 将历史 repo 交接正文移出活跃文档`
+- 最近成功执行证据：`GitHub GSD automation 24240641848`
 - 当前 QA 摘要：`185 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
-- 当前运行摘要：`Repo-side coordination docs now expose managed live-snapshot sections while preserving older round notes as historical context.`
+- 当前运行摘要：`Active repo-side coordination and freeze docs now keep only the live snapshot plus archive pointers, while stale long-form Round prose moved into explicit history files.`
 - 当前 demo 基线已经稳定，P6 的任务是把控制塔、freeze packet 和 repo-side handoff 资料统一到同一份 GitHub-backed 真值。
 - 当前不继续扩大 P7 的实现面；P7 groundwork 继续保留，但执行顺序仍以 P6 收口优先。
 
