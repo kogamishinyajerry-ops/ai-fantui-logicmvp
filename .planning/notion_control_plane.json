@@ -15,17 +15,17 @@
   "pages": {
     "dashboard": "33cc68942bed8136b5c9f9ba5b4b44ec",
     "constitution": "33cc6894-2bed-8148-b2c5-ec68c440f5ef",
-    "status": "33ec6894-2bed-8106-bade-eb101c69141c",
+    "status": "33ec6894-2bed-81f5-a20b-ec67df49053f",
     "control_plane": "33cc6894-2bed-810d-875e-e4e0e464ee31",
     "opus_protocol": "33cc6894-2bed-8117-b8f5-eda203f3be18",
-    "opus_brief": "33ec6894-2bed-8183-9687-df6edcbe7b8d",
-    "freeze_packet": "33ec6894-2bed-8134-8414-ea8738f68837"
+    "opus_brief": "33ec6894-2bed-81ab-9129-c97c55a3d71e",
+    "freeze_packet": "33ec6894-2bed-81c3-a051-dfca8f26359f"
   },
   "urls": {
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P7-04 注入 fault mode 并生成链路诊断报告",
+  "default_plan": "P7-05 捕获 fault resolution knowledge artifact",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {
