@@ -34,11 +34,13 @@ class ValidateNotionControlPlaneTests(unittest.TestCase):
                 "assets": "assets-id",
             },
             "pages": {
+                "dashboard": "dashboard-id",
                 "constitution": "constitution-id",
                 "status": "status-id",
                 "control_plane": "control-plane-id",
                 "opus_protocol": "opus-protocol-id",
                 "opus_brief": "opus-brief-id",
+                "freeze_packet": "freeze-packet-id",
             },
             "urls": {
                 "github_repo": "https://github.com/example/repo",
@@ -108,11 +110,11 @@ class ValidateNotionControlPlaneTests(unittest.TestCase):
 
         self.assertEqual(0, exit_code)
         self.assertEqual("pass", report["status"])
-        self.assertEqual(5, report["checked_pages"])
+        self.assertEqual(7, report["checked_pages"])
         self.assertEqual(10, report["checked_databases"])
         self.assertEqual(2, report["checked_legacy_artifacts"])
-        self.assertEqual(17, len(seen))
-        self.assertIn("PASS: validated 5 pages, 10 databases, and 2 legacy artifacts", text_lines[0])
+        self.assertEqual(19, len(seen))
+        self.assertIn("PASS: validated 7 pages, 10 databases, and 2 legacy artifacts", text_lines[0])
 
 
 if __name__ == "__main__":

@@ -36,6 +36,7 @@ Last activity: 2026-04-10 - P5 was accepted for closeout via Opus review, P6 bec
 - `P5-10 增加 RA-TRA-VDT 受控状态监控时间线` is now implemented locally: the demo exposes a dedicated full-width monitoring panel driven by a backend `GET /api/monitor-timeline` trace, with event markers and multi-row status curves for the user-defined RA / TRA / VDT process.
 - `P5-11 压缩监控图并清理链路主板排版` is now implemented locally: the monitor timeline is compressed to 1/10 duration, rendered as a single selectable chart under the logic board, and the explanation rails are collapsed by default to keep the presenter surface readable.
 - `P6-01 同步控制塔真值与 freeze packet 基线` now owns the active reconciliation pass: update stale status surfaces, publish a concise freeze/demo packet, and retire manual-browser-QA wording as an active approval rule.
+- `P6-02 控制塔首页快照自动同步` is now implemented locally: the Notion dashboard page now gets a repo-managed live snapshot section at the top, so users no longer land first on the stale `P1 / 134 tests / Awaiting Opus` view.
 - A new requirement set now exists for strict engineer-facing acceptance playback, fault injection and diagnosis, knowledge capture, and future-system generalization; this is large enough to require a new phase instead of being folded into demo freeze work.
 - `P7-01` has an initial local foundation: `src/well_harness/system_spec.py` now defines a reusable control-system workbench spec and captures the current thrust-reverser chain as the first reference system, including acceptance-scenario, fault-mode, and clarification-question scaffolding.
 - `P7-02` is already implemented on `main`: `src/well_harness/document_intake.py` defines a mixed-document intake packet, readiness assessment, and CLI export surface so future systems can arrive as PDF/markdown-heavy packets with explicit system-defined signal semantics.
@@ -62,8 +63,9 @@ Close the P5 -> P6 control-plane gap without adding product surface, while keepi
 - GitHub credentials live in `~/.zshrc`, so non-interactive shells may need explicit sourcing or env injection.
 - Opus 4.6 review packets must never rely on local terminal file paths.
 - Historical browser hand-check notes in archived coordination docs are not part of the active review contract.
+- The local `NOTION_API_KEY` integration can write directly to some key pages, but it still lacks access to parts of the shared control-plane database surface; repo-side full-database refresh paths should keep treating that token scope as a deployment dependency, not a guaranteed capability.
 - `P5-09` is verified locally, and the control-plane default plan now points to it so the next GitHub/Notion writeback can move the current Opus review target onto the corrected startup semantics instead of the threshold-pinned `P5-08` snapshot alone.
-- The Notion `01 当前状态` page is still stale (`129 tests OK` and manual-browser-QA wording), so the next planned phase should prioritize truth reconciliation and freeze-packet closure rather than new demo features.
+- `01 当前状态` has been brought onto the P6 baseline, but the wider control tower still contains some historical summary blocks; P6 should keep trimming residual stale wording before reopening deeper P7 execution.
 
 ## Accumulated Context
 

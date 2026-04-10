@@ -7,6 +7,8 @@ from tools.gsd_notion_sync import (
     ReviewSnapshot,
     build_gate_update_properties,
     build_current_review_brief,
+    render_dashboard_blocks,
+    upsert_dashboard_snapshot_section,
     retire_legacy_review_artifacts,
     fetch_review_snapshot,
     build_superseded_gap_fix_plan,
@@ -223,6 +225,66 @@ class GsdNotionSyncTests(unittest.TestCase):
 
         self.assertNotIn("Decision Notes", properties)
         self.assertIn("继续自动开发", properties["Next Action"]["rich_text"][0]["text"]["content"])
+
+    def test_render_dashboard_blocks_reflects_live_phase_and_review_state(self):
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="P6 正在执行",
+            latest_verified_plan="P6-01 同步控制塔真值与 freeze packet 基线",
+            latest_success_run="GitHub GSD automation 24234580061",
+            latest_failed_run=None,
+            latest_passing_qa="GitHub GSD automation 24234580061 QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+        config = {
+            "pages": {
+                "constitution": "constitution-id",
+                "status": "status-id",
+                "control_plane": "control-plane-id",
+                "opus_protocol": "opus-protocol-id",
+                "opus_brief": "opus-brief-id",
+                "freeze_packet": "freeze-packet-id",
+            },
+            "databases": {
+                "roadmap": "roadmap-id",
+                "plans": "plans-id",
+                "runs": "runs-id",
+                "qa": "qa-id",
+                "gates": "gates-id",
+                "gaps": "gaps-id",
+                "assets": "assets-id",
+            },
+            "default_plan": "P6-02 控制塔首页快照自动同步",
+        }
+        brief = build_current_review_brief(
+            snapshot,
+            {
+                "urls": {
+                    "github_repo": "https://github.com/example/repo",
+                    "github_actions": "https://github.com/example/repo/actions",
+                }
+            },
+        )
+
+        blocks = render_dashboard_blocks(brief, snapshot, config)
+        text_fragments = []
+        for block in blocks:
+            for value in block.values():
+                if isinstance(value, dict) and "rich_text" in value:
+                    text_fragments.extend(item["text"]["content"] for item in value["rich_text"])
+
+        joined = "\n".join(text_fragments)
+        self.assertIn("P6 Reconcile Control Tower And Freeze Demo Packet", joined)
+        self.assertIn("P6-01 同步控制塔真值与 freeze packet 基线", joined)
+        self.assertIn("当前无需 Opus 审查", joined)
+        self.assertIn("继续自动开发；当前无需手动触发 Opus 4.6。", joined)
 
     def test_fetch_review_snapshot_prefers_github_runs_and_matching_qa(self):
         class FakeClient:
@@ -586,6 +648,67 @@ class GsdNotionSyncTests(unittest.TestCase):
                         ],
                         "position": {"type": "start"},
                     },
+                ),
+            ],
+            client.calls,
+        )
+
+    def test_upsert_dashboard_snapshot_section_replaces_previous_managed_snapshot_only(self):
+        class FakeClient(NotionClient):
+            def __init__(self):
+                super().__init__("test-token")
+                self.calls = []
+
+            def list_block_children(self, block_id):
+                return [
+                    {
+                        "id": "managed-callout",
+                        "type": "callout",
+                        "archived": False,
+                        "in_trash": False,
+                        "callout": {"rich_text": [{"plain_text": "AUTO-SYNCED DASHBOARD SNAPSHOT — old"}]},
+                    },
+                    {
+                        "id": "managed-heading",
+                        "type": "heading_2",
+                        "archived": False,
+                        "in_trash": False,
+                        "heading_2": {"rich_text": [{"plain_text": "当前快照（自动同步）"}]},
+                    },
+                    {
+                        "id": "managed-divider",
+                        "type": "divider",
+                        "archived": False,
+                        "in_trash": False,
+                        "divider": {},
+                    },
+                    {
+                        "id": "historical-block",
+                        "type": "paragraph",
+                        "archived": False,
+                        "in_trash": False,
+                        "paragraph": {"rich_text": [{"plain_text": "legacy content"}]},
+                    },
+                ]
+
+            def request(self, method, path, payload=None):
+                self.calls.append((method, path, payload))
+                return {}
+
+        client = FakeClient()
+        blocks = [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}}]
+
+        upsert_dashboard_snapshot_section(client, "dashboard-page", blocks)
+
+        self.assertEqual(
+            [
+                ("DELETE", "/v1/blocks/managed-callout", None),
+                ("DELETE", "/v1/blocks/managed-heading", None),
+                ("DELETE", "/v1/blocks/managed-divider", None),
+                (
+                    "PATCH",
+                    "/v1/blocks/dashboard-page/children",
+                    {"children": blocks, "position": {"type": "start"}},
                 ),
             ],
             client.calls,

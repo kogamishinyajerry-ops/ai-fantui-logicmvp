@@ -26,11 +26,13 @@ REQUIRED_DATABASE_KEYS = (
     "assets",
 )
 REQUIRED_PAGE_KEYS = (
+    "dashboard",
     "constitution",
     "status",
     "control_plane",
     "opus_protocol",
     "opus_brief",
+    "freeze_packet",
 )
 REQUIRED_URL_KEYS = (
     "github_repo",

@@ -21,6 +21,7 @@ from typing import Any
 NOTION_VERSION = "2022-06-28"
 DEFAULT_CONFIG_PATH = Path(".planning/notion_control_plane.json")
 TEXT_LIMIT = 1800
+DASHBOARD_SYNC_MARKER = "AUTO-SYNCED DASHBOARD SNAPSHOT"
 DEFAULT_DATABASES = {
     "roadmap": "33cc6894-2bed-810a-a2ea-e4f095b44afa",
     "tasks": "33cc6894-2bed-81ea-bb1b-ef1bc904f407",
@@ -34,11 +35,13 @@ DEFAULT_DATABASES = {
     "assets": "33cc6894-2bed-818b-920a-fd13f828d23e",
 }
 DEFAULT_PAGES = {
+    "dashboard": "33cc6894-2bed-8136-b5c9-f9ba5b4b44ec",
     "constitution": "33cc6894-2bed-8148-b2c5-ec68c440f5ef",
     "status": "33cc6894-2bed-8105-ae6a-d880cb399b73",
     "control_plane": "33cc6894-2bed-810d-875e-e4e0e464ee31",
     "opus_protocol": "33cc6894-2bed-8117-b8f5-eda203f3be18",
     "opus_brief": "33cc6894-2bed-819a-811c-f19885ee595a",
+    "freeze_packet": "33ec6894-2bed-8151-a0a8-ff9a36aa8816",
 }
 DEFAULT_URLS = {
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
@@ -309,6 +312,19 @@ def clip(text: str, limit: int = TEXT_LIMIT) -> str:
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def block_plain_text(block: dict[str, Any]) -> str:
+    block_type = block.get("type")
+    if not block_type:
+        return ""
+    payload = block.get(block_type, {})
+    if not isinstance(payload, dict):
+        return ""
+    rich = payload.get("rich_text", [])
+    if not isinstance(rich, list):
+        return ""
+    return "".join(item.get("plain_text", "") for item in rich)
 
 
 def load_control_plane_config(config_path: Path) -> dict[str, Any]:
@@ -889,6 +905,68 @@ def render_current_review_brief_blocks(brief: CurrentReviewBrief, snapshot: Revi
     return blocks
 
 
+def render_dashboard_blocks(brief: CurrentReviewBrief, snapshot: ReviewSnapshot, config: dict[str, Any]) -> list[dict[str, Any]]:
+    current_action = (
+        "继续自动开发；当前无需手动触发 Opus 4.6。"
+        if not brief.review_required
+        else "打开 09C 当前 Opus 4.6 审查简报，并按其中当前请求手动触发 Opus 4.6。"
+    )
+    current_opus_state = (
+        "当前无需 Opus 审查"
+        if not brief.review_required
+        else f"需要 Opus 4.6 介入：{brief.intervention_kind}"
+    )
+    blocks: list[dict[str, Any]] = [
+        callout_block(
+            f"{DASHBOARD_SYNC_MARKER} — 这个顶部快照由 repo-side sync 自动刷新；下方旧摘要若尚未同步，应以这里为准。",
+            "🧭",
+        ),
+        heading_block("当前快照（自动同步）"),
+        bullet_block(f"当前阶段：{snapshot.active_phase}"),
+        bullet_block(f"当前已验证 Plan：{snapshot.latest_verified_plan}"),
+        bullet_block(f"当前默认 Plan：{config.get('default_plan', snapshot.latest_verified_plan)}"),
+        bullet_block(f"最近成功执行证据：{snapshot.latest_success_run or '暂无'}"),
+        bullet_block(f"当前 Gate：{snapshot.gate_name}（{snapshot.gate_status}）"),
+        bullet_block(f"当前 Opus 状态：{current_opus_state}"),
+        bullet_block(f"当前唯一人工动作：{current_action}"),
+        bullet_block(f"Open Gap 数量：{len(snapshot.open_gap_titles)}"),
+        page_link_block(page_id(config, "status")),
+        page_link_block(page_id(config, "opus_brief")),
+        page_link_block(page_id(config, "freeze_packet")),
+        divider_block(),
+    ]
+    return blocks
+
+
+def upsert_dashboard_snapshot_section(
+    client: NotionClient,
+    dashboard_page_id: str,
+    blocks: list[dict[str, Any]],
+) -> None:
+    children = client.list_block_children(dashboard_page_id)
+    start_index = None
+    end_index = None
+    for index, block in enumerate(children):
+        if block.get("type") == "callout" and block_plain_text(block).startswith(DASHBOARD_SYNC_MARKER):
+            start_index = index
+            end_index = index + 1
+            while end_index < len(children) and children[end_index].get("type") != "divider":
+                end_index += 1
+            if end_index < len(children) and children[end_index].get("type") == "divider":
+                end_index += 1
+            break
+    if start_index is not None and end_index is not None:
+        for block in children[start_index:end_index]:
+            if block.get("archived") or block.get("in_trash"):
+                continue
+            client.request("DELETE", f"/v1/blocks/{block['id']}")
+    client.request(
+        "PATCH",
+        f"/v1/blocks/{dashboard_page_id}/children",
+        {"children": blocks, "position": {"type": "start"}},
+    )
+
+
 def build_gate_update_properties(brief: CurrentReviewBrief, *, activate_gate: bool) -> dict[str, Any]:
     if activate_gate:
         return {
@@ -939,6 +1017,9 @@ def write_current_opus_review_brief(
     brief_page_id = page_id(config, "opus_brief")
     client.update_page_properties(brief_page_id, {"title": title_value(brief.page_title)})
     client.replace_page_body(brief_page_id, render_current_review_brief_blocks(brief, effective_snapshot, config))
+    dashboard_page_id = page_id(config, "dashboard")
+    client.update_page_properties(dashboard_page_id, {"title": title_value("AI FANTUI LogicMVP 控制塔")})
+    upsert_dashboard_snapshot_section(client, dashboard_page_id, render_dashboard_blocks(brief, effective_snapshot, config))
 
     if snapshot.gate_page_id:
         client.update_page_properties(
