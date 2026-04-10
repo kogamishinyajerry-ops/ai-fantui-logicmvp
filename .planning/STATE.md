@@ -1,10 +1,10 @@
 # State
 
-Last activity: 2026-04-10 - P7 moved into active execution with a reusable control-system spec plus a mixed-document intake layer for PDF-heavy future systems.
+Last activity: 2026-04-10 - P5 was accepted for closeout via Opus review, P6 became the active reconciliation phase, and the early P7 foundation work was explicitly deferred behind P6.
 
 ## Current Position
 
-- Round 92 is complete, and the current validated baseline is local `run_gsd_validation_suite.py` with 167 tests plus 8 shared validation checks.
+- Round 92 is complete, and the current approved P5 baseline is GitHub-backed `run_gsd_validation_suite.py` evidence with 175 tests, 10 demo smoke scenarios, and 8 shared validation checks.
 - Notion control tower is live at https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec.
 - GitHub repo is live at https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp.
 - P1 is closed as Approved in the Review Gate after GitHub-backed Opus adjudication.
@@ -20,7 +20,9 @@ Last activity: 2026-04-10 - P7 moved into active execution with a reusable contr
 - The old `P1 自动化目标审查 Gate` and `P1-02 消除手动浏览器 QA 依赖` records are now treated as configured legacy review artifacts and auto-archived once the approved default gate confirms no review is currently required.
 - GitHub run `24168293031` proved the same retirement logic works from CI, and 09C now points at `P3-07 自动退场旧审查对象` with `当前无需 Opus 审查`.
 - P4 is now closed as Approved after all six presenter-ready plans (`P4-01` through `P4-06`) verified successfully and GitHub run `24170575224` passed.
-- The next roadmap phase is `P5 Demo Polish And Edge-Case Hardening`, focused on edge-case coverage and GitHub-verifiable smoke confidence instead of new product-surface expansion.
+- P5 is now closed as Approved after the Opus 4.6 phase-closeout review accepted the GitHub-backed P5 evidence chain through `P5-10`.
+- P6 is now the active phase: reconcile control-tower truth, freeze/demo packet surfaces, and stale manual-browser-QA wording before opening the next deeper workbench arc.
+- `P7-01` and `P7-02` are already landed on `main` as early foundation work for the future spec-driven workbench, but formal P7 execution is intentionally paused until P6 closes and the control plane catches up.
 - `P5-01 GitHub 可验证 demo smoke suite` is now implemented locally: `tools/demo_path_smoke.py` covers bridge prompt, extreme clamp, mode-switch reset, and expected invalid-input behavior through the HTTP demo surface.
 - The shared validation suite now includes 8 checks, with `demo_path_smoke` added as the new GitHub-verifiable presenter-demo confidence layer.
 - `P5-02 最新交互胜出 demo 请求仲裁` is now implemented locally: the browser shell ignores stale prompt or lever responses once a newer interaction has started, so rapid edits no longer let an older response repaint the shared result surface.
@@ -33,31 +35,26 @@ Last activity: 2026-04-10 - P7 moved into active execution with a reusable contr
 - `P5-09 纠正 TRA 启动位与拖动方向语义` is now implemented locally: the cockpit no longer boots on a near-threshold preset, the TRA rail now explains that deeper reverse lives to the left, and the default interaction demonstrates the free `-14° .. 0°` band before any `L4` unlock.
 - `P5-10 增加 RA-TRA-VDT 受控状态监控时间线` is now implemented locally: the demo exposes a dedicated full-width monitoring panel driven by a backend `GET /api/monitor-timeline` trace, with event markers and multi-row status curves for the user-defined RA / TRA / VDT process.
 - `P5-11 压缩监控图并清理链路主板排版` is now implemented locally: the monitor timeline is compressed to 1/10 duration, rendered as a single selectable chart under the logic board, and the explanation rails are collapsed by default to keep the presenter surface readable.
-- `P6-01 同步控制塔真值与 freeze packet 基线` is now implemented locally as repo-backed archive material: the project now has a temporary freeze snapshot and a five-minute development-history review document for handoff and recap.
-- `P6 Reconcile Control Tower And Freeze Demo Packet` is now drafted locally as the next planned phase, pending the current P5 Opus adjudication.
+- `P6-01 同步控制塔真值与 freeze packet 基线` now owns the active reconciliation pass: update stale status surfaces, publish a concise freeze/demo packet, and retire manual-browser-QA wording as an active approval rule.
 - A new requirement set now exists for strict engineer-facing acceptance playback, fault injection and diagnosis, knowledge capture, and future-system generalization; this is large enough to require a new phase instead of being folded into demo freeze work.
 - `P7-01` has an initial local foundation: `src/well_harness/system_spec.py` now defines a reusable control-system workbench spec and captures the current thrust-reverser chain as the first reference system, including acceptance-scenario, fault-mode, and clarification-question scaffolding.
-- `P7-02` is now implemented locally: `src/well_harness/document_intake.py` defines a mixed-document intake packet, readiness assessment, and CLI export surface so future systems can arrive as PDF/markdown-heavy packets with explicit system-defined signal semantics.
+- `P7-02` is already implemented on `main`: `src/well_harness/document_intake.py` defines a mixed-document intake packet, readiness assessment, and CLI export surface so future systems can arrive as PDF/markdown-heavy packets with explicit system-defined signal semantics.
+- Those two P7 slices are treated as seeded groundwork, not as authority to bypass the newly approved P6 reconciliation pass.
 
 ## Active Objective
 
-Keep the existing demo loop operational while preparing the jump from a single-system cockpit demo into a reusable control-analysis workbench:
+Close the P5 -> P6 control-plane gap without adding product surface, while keeping the already-seeded P7 groundwork intact:
 
 - Write Execution Run records to Notion.
 - Write QA records to Notion.
 - Create UAT Gap records on failure.
 - Route subjective human review through Opus 4.6 Review Gate only.
 - Ensure Opus 4.6 review briefs cite Notion pages and the GitHub repo only.
-- Preserve the approved P4 presenter baseline while P5 edge-case hardening is decomposed.
+- Update `01 当前状态`, roadmap pages, and the freeze/demo packet so they reflect the approved P5 evidence baseline instead of stale `129 tests OK` / manual-browser-QA guidance.
 - Keep the first-screen cockpit flow, presenter run card, lever presets, chain state legend, current conclusion rails, result-source note, stale-state guardrails, talk track, and structured answer area aligned around the same live-demo route.
-- Convert residual confidence checks into GitHub-verifiable smoke coverage before resuming deeper automatic demo changes.
 - Maintain the boundary between controller truth and simplified plant feedback in demo copy and UI affordances.
-- Keep the TRA conditional deep-range drag semantics and same-screen cockpit layout aligned with the same `POST /api/lever-snapshot` truth surface.
-- Add a deterministic state-vs-time monitor for the cockpit chain without reintroducing a second control-truth layer or crowding the presenter surface.
-- Keep a readable freeze/archive packet in the repo so the current baseline can be resumed or explained quickly after a pause.
-- Define a canonical control-system spec that future acceptance playback, fault injection, and knowledge capture can all share.
-- Force ambiguity to surface as explicit onboarding questions whenever a new system spec is incomplete.
-- Normalize mixed source packets before simulation or diagnosis starts, so future PDF-heavy system onboarding does not bypass signal semantics or clarification gates.
+- Keep a readable freeze/archive packet in the repo and Notion so the current baseline can be resumed, reviewed, or handed off quickly after a pause.
+- Preserve the seeded P7 foundation work, but do not deepen the spec-driven workbench arc until P6 closes and the control plane is back in sync.
 
 ## Blockers/Concerns
 
