@@ -72,6 +72,14 @@ TITLE_PROPS = {
     "gates": "Gate",
     "gaps": "Gap",
 }
+DATABASE_LINK_LABELS = {
+    "plans": "02A GSD Plan 数据库",
+    "runs": "02B Execution Run 数据库",
+    "qa": "05 QA / 验证数据库",
+    "gates": "04A Review Gate 数据库",
+    "gaps": "05A UAT Gap 数据库",
+    "assets": "06 证据与资产数据库",
+}
 
 
 @dataclass(frozen=True)
@@ -341,6 +349,10 @@ def markdown_link(label: str, url: str) -> str:
     return f"[{label}]({url})"
 
 
+def notion_page_url(page_or_database_id: str) -> str:
+    return f"https://www.notion.so/{page_or_database_id.replace('-', '')}"
+
+
 def block_plain_text(block: dict[str, Any]) -> str:
     block_type = block.get("type")
     if not block_type:
@@ -386,6 +398,15 @@ def database_id(config: dict[str, Any], key: str) -> str:
     if env_name and os.environ.get(env_name):
         return os.environ[env_name]
     return config["databases"][key]
+
+
+def database_page_id(config: dict[str, Any], key: str) -> str:
+    return config["databases"][key]
+
+
+def database_link_paragraph_block(config: dict[str, Any], key: str) -> dict[str, Any]:
+    label = DATABASE_LINK_LABELS.get(key, key)
+    return paragraph_parts_block([notion_text(label, notion_page_url(database_page_id(config, key)))])
 
 
 def page_id(config: dict[str, Any], key: str) -> str:
@@ -1041,12 +1062,12 @@ def render_current_review_brief_blocks(brief: CurrentReviewBrief, snapshot: Revi
             page_link_block(page_id(config, "status")),
             page_link_block(page_id(config, "control_plane")),
             page_link_block(page_id(config, "opus_protocol")),
-            database_link_block(database_id(config, "plans")),
-            database_link_block(database_id(config, "runs")),
-            database_link_block(database_id(config, "qa")),
-            database_link_block(database_id(config, "gates")),
-            database_link_block(database_id(config, "gaps")),
-            database_link_block(database_id(config, "assets")),
+            database_link_paragraph_block(config, "plans"),
+            database_link_paragraph_block(config, "runs"),
+            database_link_paragraph_block(config, "qa"),
+            database_link_paragraph_block(config, "gates"),
+            database_link_paragraph_block(config, "gaps"),
+            database_link_paragraph_block(config, "assets"),
             paragraph_parts_block([notion_text("GitHub Repo / ai-fantui-logicmvp", config_url(config, "github_repo"))]),
             paragraph_parts_block([notion_text("GitHub Actions / GSD Automation Loop", config_url(config, "github_actions"))]),
             divider_block(),
@@ -1942,7 +1963,12 @@ def handle_prepare_opus_review(args: argparse.Namespace, config: dict[str, Any])
         "latest_failed_run": snapshot.latest_failed_run,
     }
     if not args.dry_run:
-        payload["notion"] = write_current_opus_review_brief(client, config, activate_gate=args.activate_gate)
+        payload["notion"] = write_current_opus_review_brief_from_snapshot(
+            client,
+            config,
+            snapshot=effective_snapshot,
+            activate_gate=args.activate_gate,
+        )
     output_review_result(args.format, payload)
     return 0
 

@@ -11,6 +11,7 @@ from tools.gsd_notion_sync import (
     ReviewSnapshot,
     build_gate_update_properties,
     build_current_review_brief,
+    render_current_review_brief_blocks,
     render_dashboard_blocks,
     render_freeze_packet_blocks,
     render_status_page_blocks,
@@ -300,6 +301,64 @@ class GsdNotionSyncTests(unittest.TestCase):
         self.assertIn("P6-01 同步控制塔真值与 freeze packet 基线", joined)
         self.assertIn("当前无需 Opus 审查", joined)
         self.assertIn("继续自动开发；当前无需手动触发 Opus 4.6。", joined)
+
+    def test_render_current_review_brief_blocks_use_database_urls_for_database_refs(self):
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="P6 正在执行",
+            latest_verified_plan="P6-07 数据库写回失败时仍推进活动页快照",
+            latest_success_run="GitHub GSD automation 24241080590",
+            latest_failed_run="GitHub GSD automation 24238577807",
+            latest_passing_qa="GitHub GSD automation 24241080590 QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+        config = {
+            "pages": {
+                "constitution": "constitution-page-id",
+                "status": "status-page-id",
+                "control_plane": "control-plane-page-id",
+                "opus_protocol": "opus-protocol-page-id",
+            },
+            "databases": {
+                "plans": "plans-db-page-id",
+                "runs": "runs-db-page-id",
+                "qa": "qa-db-page-id",
+                "gates": "gates-db-page-id",
+                "gaps": "gaps-db-page-id",
+                "assets": "assets-db-page-id",
+            },
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            },
+        }
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_GSD_GAP_DATABASE_ID"] = "gaps-data-source-id"
+            brief = build_current_review_brief(snapshot, config)
+            blocks = render_current_review_brief_blocks(brief, snapshot, config)
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        paragraph_texts = []
+        for block in blocks:
+            payload = block.get("paragraph")
+            if not isinstance(payload, dict):
+                continue
+            for item in payload.get("rich_text", []):
+                text = item.get("text", {})
+                if text.get("link", {}).get("url"):
+                    paragraph_texts.append(text["link"]["url"])
+        self.assertIn("https://www.notion.so/gapsdbpageid", paragraph_texts)
+        self.assertNotIn("https://www.notion.so/gapsdatasourceid", paragraph_texts)
 
     def test_render_freeze_packet_blocks_reflects_live_baseline(self):
         snapshot = ReviewSnapshot(
