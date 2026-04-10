@@ -2,7 +2,7 @@
 
 ## Current Milestone
 
-Make AI FANTUI LogicMVP run as a GSD-managed, Notion-synced development loop where routine execution is automated and the only planned human checkpoint is Opus 4.6 review.
+Keep AI FANTUI LogicMVP stable as a GSD-managed, Notion-synced control loop while expanding it from a deterministic cockpit demo into a spec-driven control-analysis workbench with strict acceptance, fault injection, and reusable onboarding patterns.
 
 ## Phase P0: Control Tower And GSD Control Plane
 
@@ -96,3 +96,17 @@ Exit Criteria:
 - A concise freeze/demo packet exists that summarizes the latest stable GitHub evidence, current smoke coverage, presenter boundary conditions, and the remaining human signoff step.
 - Historical browser hand-check notes are either archived or explicitly reframed as presenter aids rather than active approval requirements.
 - No new demo features, controller-truth changes, or API-contract changes are introduced while preparing the freeze packet and documentation closure.
+
+## Phase P7: Build A Spec-Driven Control Analysis Workbench
+
+Status: Planned
+
+Goal: Add a reusable control-system specification layer that can drive strict scenario playback, fault injection, diagnosis, and knowledge capture without being locked to the current thrust-reverser chain alone.
+
+Exit Criteria:
+
+- A canonical control-system spec can describe components, logic nodes, monitored signals, acceptance scenarios, fault injection targets, and required clarification questions for new systems.
+- The current thrust-reverser logic is represented as the first reference system through that spec layer without replacing `controller.py` as code truth.
+- The system has a documented path from engineer-supplied process docs to monitor-vs-time traces, even if document adapters are phased in incrementally.
+- A fault-analysis workflow is defined that produces reproducible reasoning artifacts, records confirmed fixes, and emits post-repair optimization suggestions.
+- The onboarding path for a new control system explicitly blocks on unanswered ambiguity, instead of silently guessing at missing details.

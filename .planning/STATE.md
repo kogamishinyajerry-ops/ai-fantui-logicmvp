@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-09 - P6-01 archived a temporary freeze snapshot and a plain-language project history review on top of the current P5-10 monitored-demo baseline.
+Last activity: 2026-04-10 - new product requirements expanded the project toward a spec-driven control-analysis workbench, and a first reusable control-system spec foundation was added locally alongside P7 planning.
 
 ## Current Position
 
@@ -32,12 +32,15 @@ Last activity: 2026-04-09 - P6-01 archived a temporary freeze snapshot and a pla
 - `P5-08 修复 VDT live-control wiring 与条件深拉解锁回归` is now implemented locally: the moved VDT mode/percentage controls are again part of live snapshot scheduling, so dragging VDT updates the visible readout and can reopen the deep TRA drag band when the backend `L4` boundary unlock becomes ready.
 - `P5-09 纠正 TRA 启动位与拖动方向语义` is now implemented locally: the cockpit no longer boots on a near-threshold preset, the TRA rail now explains that deeper reverse lives to the left, and the default interaction demonstrates the free `-14° .. 0°` band before any `L4` unlock.
 - `P5-10 增加 RA-TRA-VDT 受控状态监控时间线` is now implemented locally: the demo exposes a dedicated full-width monitoring panel driven by a backend `GET /api/monitor-timeline` trace, with event markers and multi-row status curves for the user-defined RA / TRA / VDT process.
+- `P5-11 压缩监控图并清理链路主板排版` is now implemented locally: the monitor timeline is compressed to 1/10 duration, rendered as a single selectable chart under the logic board, and the explanation rails are collapsed by default to keep the presenter surface readable.
 - `P6-01 同步控制塔真值与 freeze packet 基线` is now implemented locally as repo-backed archive material: the project now has a temporary freeze snapshot and a five-minute development-history review document for handoff and recap.
 - `P6 Reconcile Control Tower And Freeze Demo Packet` is now drafted locally as the next planned phase, pending the current P5 Opus adjudication.
+- A new requirement set now exists for strict engineer-facing acceptance playback, fault injection and diagnosis, knowledge capture, and future-system generalization; this is large enough to require a new phase instead of being folded into demo freeze work.
+- `P7-01` has an initial local foundation: `src/well_harness/system_spec.py` now defines a reusable control-system workbench spec and captures the current thrust-reverser chain as the first reference system, including acceptance-scenario, fault-mode, and clarification-question scaffolding.
 
 ## Active Objective
 
-Keep the development loop operational while shifting the active roadmap from P4 closeout into P5 planning:
+Keep the existing demo loop operational while preparing the jump from a single-system cockpit demo into a reusable control-analysis workbench:
 
 - Write Execution Run records to Notion.
 - Write QA records to Notion.
@@ -51,6 +54,8 @@ Keep the development loop operational while shifting the active roadmap from P4 
 - Keep the TRA conditional deep-range drag semantics and same-screen cockpit layout aligned with the same `POST /api/lever-snapshot` truth surface.
 - Add a deterministic state-vs-time monitor for the cockpit chain without reintroducing a second control-truth layer or crowding the presenter surface.
 - Keep a readable freeze/archive packet in the repo so the current baseline can be resumed or explained quickly after a pause.
+- Define a canonical control-system spec that future acceptance playback, fault injection, and knowledge capture can all share.
+- Force ambiguity to surface as explicit onboarding questions whenever a new system spec is incomplete.
 
 ## Blockers/Concerns
 
@@ -68,6 +73,7 @@ Keep the development loop operational while shifting the active roadmap from P4 
 - Phase P4 added: Elevate Cockpit Demo To Presenter-Ready
 - Phase P5 added: Demo Polish And Edge-Case Hardening
 - Phase P6 added: Reconcile Control Tower And Freeze Demo Packet
+- Phase P7 added: Build A Spec-Driven Control Analysis Workbench
 
 ### Quick Tasks Completed
 
