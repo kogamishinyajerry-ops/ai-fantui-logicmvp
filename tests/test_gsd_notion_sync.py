@@ -27,6 +27,7 @@ from tools.gsd_notion_sync import (
     summarize_results,
     sync_repo_documents,
     handle_run,
+    handle_prepare_opus_review,
     upsert_managed_markdown_section,
 )
 
@@ -754,6 +755,31 @@ class GsdNotionSyncTests(unittest.TestCase):
                     "tools.gsd_notion_sync.write_notion_outcome",
                     side_effect=RuntimeError("Notion API request failed: HTTP 404 /v1/databases/test/query"),
                 ),
+                patch(
+                    "tools.gsd_notion_sync.fetch_review_snapshot_from_pages",
+                    return_value=ReviewSnapshot(
+                        active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+                        active_phase_goal="对齐控制塔真值与冻结包",
+                        active_phase_summary="P6 正在执行",
+                        latest_verified_plan="P6-05 同步 repo 侧交接文档快照",
+                        latest_success_run="GitHub GSD automation 24239973670",
+                        latest_failed_run="GitHub GSD automation 24238577807",
+                        latest_passing_qa="GitHub GSD automation 24239973670 QA",
+                        gate_page_id="gate-page-id",
+                        gate_name="OPUS-4.6 周期审查 Gate",
+                        gate_status="Approved",
+                        ready_task_id=None,
+                        ready_task=None,
+                        open_gap_titles=(),
+                        stale_gap_titles=(),
+                        latest_success_run_notes="185 tests OK",
+                        latest_passing_qa_summary="PASS. 8 validation commands all green.",
+                    ),
+                ),
+                patch(
+                    "tools.gsd_notion_sync.write_current_opus_review_brief_from_snapshot",
+                    return_value={"intervention_kind": "当前无需 Opus 审查", "review_target": "P6 / P6-06"},
+                ) as fallback_mock,
                 patch("tools.gsd_notion_sync.output_run_result") as output_mock,
             ):
                 exit_code = handle_run(args, config)
@@ -763,9 +789,60 @@ class GsdNotionSyncTests(unittest.TestCase):
 
         self.assertEqual(0, exit_code)
         payload = output_mock.call_args.args[1]
-        self.assertEqual("failed", payload["notion"])
+        self.assertEqual("partial", payload["notion"])
+        self.assertEqual("written", payload["notion_fallback"])
         self.assertIn("HTTP 404", payload["notion_error"])
         self.assertEqual("Succeeded", payload["status"])
+        fallback_snapshot = fallback_mock.call_args.kwargs["snapshot"]
+        self.assertEqual("P6-03 Freeze Demo Packet 自动快照同步", fallback_snapshot.latest_verified_plan)
+        self.assertEqual("GitHub GSD automation 24239999999", fallback_snapshot.latest_success_run)
+
+    def test_handle_prepare_opus_review_falls_back_to_active_pages_when_db_unshared(self):
+        args = argparse.Namespace(activate_gate=False, dry_run=True, format="json")
+        config = {
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            }
+        }
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="P6 正在执行",
+            latest_verified_plan="P6-06 将历史 repo 交接正文移出活跃文档",
+            latest_success_run="GitHub GSD automation 24240641848",
+            latest_failed_run="GitHub GSD automation 24238577807",
+            latest_passing_qa="GitHub GSD automation 24240641848 QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            with (
+                patch(
+                    "tools.gsd_notion_sync.fetch_review_snapshot",
+                    side_effect=RuntimeError("Notion API request failed: HTTP 404 /v1/databases/test/query"),
+                ),
+                patch("tools.gsd_notion_sync.fetch_review_snapshot_from_pages", return_value=snapshot) as fallback_mock,
+                patch("tools.gsd_notion_sync.output_review_result") as output_mock,
+            ):
+                exit_code = handle_prepare_opus_review(args, config)
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(0, exit_code)
+        self.assertEqual(1, fallback_mock.call_count)
+        payload = output_mock.call_args.args[1]
+        self.assertEqual("当前无需 Opus 审查", payload["intervention_kind"])
+        self.assertEqual("Approved", payload["gate_status"])
 
     def test_build_superseded_gap_fix_plan_marks_duplicates(self):
         self.assertEqual(

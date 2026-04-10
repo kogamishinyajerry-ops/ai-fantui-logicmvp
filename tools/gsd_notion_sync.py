@@ -329,6 +329,10 @@ def clip(text: str, limit: int = TEXT_LIMIT) -> str:
     return text[: limit - 20] + "\n...<truncated>"
 
 
+def is_missing_database_error(message: str) -> bool:
+    return "Could not find database" in message or "HTTP 404 /v1/databases/" in message
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -789,6 +793,54 @@ def fetch_review_snapshot_from_pages(client: NotionClient, config: dict[str, Any
         stale_gap_titles=(),
         latest_success_run_notes=latest_success_run_notes,
         latest_passing_qa_summary=latest_passing_qa_summary,
+    )
+
+
+def build_fallback_run_snapshot(
+    client: NotionClient,
+    config: dict[str, Any],
+    *,
+    plan_id: str,
+    title: str,
+    summary: RunSummary,
+) -> ReviewSnapshot:
+    snapshot = fetch_review_snapshot_from_pages(client, config)
+    if summary.succeeded:
+        return ReviewSnapshot(
+            active_phase=snapshot.active_phase,
+            active_phase_goal=snapshot.active_phase_goal,
+            active_phase_summary=snapshot.active_phase_summary,
+            latest_verified_plan=plan_id,
+            latest_success_run=title,
+            latest_failed_run=snapshot.latest_failed_run,
+            latest_passing_qa=f"{title} QA",
+            gate_page_id=snapshot.gate_page_id,
+            gate_name=snapshot.gate_name,
+            gate_status=snapshot.gate_status,
+            ready_task_id=snapshot.ready_task_id,
+            ready_task=snapshot.ready_task,
+            open_gap_titles=snapshot.open_gap_titles,
+            stale_gap_titles=snapshot.stale_gap_titles,
+            latest_success_run_notes=summary.output_digest,
+            latest_passing_qa_summary=f"{summary.qa_result}. {summary.output_digest}",
+        )
+    return ReviewSnapshot(
+        active_phase=snapshot.active_phase,
+        active_phase_goal=snapshot.active_phase_goal,
+        active_phase_summary=snapshot.active_phase_summary,
+        latest_verified_plan=snapshot.latest_verified_plan,
+        latest_success_run=snapshot.latest_success_run,
+        latest_failed_run=title,
+        latest_passing_qa=snapshot.latest_passing_qa,
+        gate_page_id=snapshot.gate_page_id,
+        gate_name=snapshot.gate_name,
+        gate_status=snapshot.gate_status,
+        ready_task_id=snapshot.ready_task_id,
+        ready_task=snapshot.ready_task,
+        open_gap_titles=snapshot.open_gap_titles,
+        stale_gap_titles=snapshot.stale_gap_titles,
+        latest_success_run_notes=snapshot.latest_success_run_notes,
+        latest_passing_qa_summary=snapshot.latest_passing_qa_summary,
     )
 
 
@@ -1453,6 +1505,21 @@ def write_current_opus_review_brief(
     activate_gate: bool,
 ) -> dict[str, Any]:
     snapshot = fetch_review_snapshot(client, config)
+    return write_current_opus_review_brief_from_snapshot(
+        client,
+        config,
+        snapshot=snapshot,
+        activate_gate=activate_gate,
+    )
+
+
+def write_current_opus_review_brief_from_snapshot(
+    client: NotionClient,
+    config: dict[str, Any],
+    *,
+    snapshot: ReviewSnapshot,
+    activate_gate: bool,
+) -> dict[str, Any]:
     effective_snapshot = (
         ReviewSnapshot(
             active_phase=snapshot.active_phase,
@@ -1736,6 +1803,8 @@ def output_run_result(format_name: str, payload: dict[str, Any]) -> None:
         print("Notion writeback: skipped")
     elif payload.get("notion") == "written":
         print("Notion writeback: written")
+    elif payload.get("notion") == "partial":
+        print(f"Notion writeback: partial ({payload.get('notion_error', 'database write failed')})")
     elif payload.get("notion") == "failed":
         print(f"Notion writeback: failed ({payload.get('notion_error', 'unknown error')})")
     if payload.get("opus_review_brief"):
@@ -1785,8 +1854,9 @@ def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
     token = os.environ.get("NOTION_API_KEY")
     if not args.dry_run and token:
         try:
+            client = NotionClient(token)
             written = write_notion_outcome(
-                NotionClient(token),
+                client,
                 config,
                 title=title,
                 plan_id=plan_id,
@@ -1798,6 +1868,27 @@ def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
         except Exception as exc:
             payload["notion"] = "failed"
             payload["notion_error"] = str(exc)
+            if summary.succeeded:
+                try:
+                    fallback_snapshot = build_fallback_run_snapshot(
+                        client,
+                        config,
+                        plan_id=plan_id,
+                        title=title,
+                        summary=summary,
+                    )
+                    payload["opus_review_brief"] = write_current_opus_review_brief_from_snapshot(
+                        client,
+                        config,
+                        snapshot=fallback_snapshot,
+                        activate_gate=False,
+                    )
+                except Exception as fallback_exc:
+                    payload["notion_fallback"] = "failed"
+                    payload["notion_fallback_error"] = str(fallback_exc)
+                else:
+                    payload["notion"] = "partial"
+                    payload["notion_fallback"] = "written"
         else:
             payload["notion"] = "written"
             payload["notion_pages"] = written
@@ -1812,7 +1903,12 @@ def handle_prepare_opus_review(args: argparse.Namespace, config: dict[str, Any])
     if not token:
         raise SystemExit("NOTION_API_KEY is required for prepare-opus-review.")
     client = NotionClient(token)
-    snapshot = fetch_review_snapshot(client, config)
+    try:
+        snapshot = fetch_review_snapshot(client, config)
+    except RuntimeError as exc:
+        if not is_missing_database_error(str(exc)):
+            raise
+        snapshot = fetch_review_snapshot_from_pages(client, config)
     effective_snapshot = (
         snapshot
         if not args.activate_gate
@@ -1859,7 +1955,7 @@ def handle_sync_repo_docs(args: argparse.Namespace, config: dict[str, Any]) -> i
     try:
         snapshot = fetch_review_snapshot(client, config)
     except RuntimeError as exc:
-        if "Could not find database" not in str(exc):
+        if not is_missing_database_error(str(exc)):
             raise
         snapshot = fetch_review_snapshot_from_pages(client, config)
     brief = build_current_review_brief(snapshot, config)
