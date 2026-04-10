@@ -13,6 +13,7 @@ from well_harness.document_intake import (
 )
 from well_harness.runner import SimulationRunner
 from well_harness.scenarios import BUILT_IN_SCENARIOS
+from well_harness.scenario_playback import build_playback_report_from_intake_packet, render_playback_report_text
 from well_harness.system_spec import current_reference_workbench_spec, workbench_spec_to_dict
 
 LOGIC_CHOICES = ("logic1", "logic2", "logic3", "logic4")
@@ -97,6 +98,21 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("text", "json"),
         default="text",
         help="Render the intake report as text or JSON.",
+    )
+    playback_parser = subparsers.add_parser("playback", help="Compile an intake packet scenario into monitor-vs-time playback data")
+    playback_parser.add_argument("packet_path", help="Path to a JSON intake packet.")
+    playback_parser.add_argument("--scenario", required=True, help="Scenario id inside the intake packet to replay.")
+    playback_parser.add_argument(
+        "--sample-period",
+        type=float,
+        default=0.5,
+        help="Sampling interval in seconds for the generated playback trace.",
+    )
+    playback_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Render the playback report as text or JSON.",
     )
     return parser
 
@@ -343,5 +359,28 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(render_intake_assessment_text(report))
         return 0
+    if args.command == "playback":
+        packet = load_intake_packet(args.packet_path)
+        report = assess_intake_packet(packet)
+        if not report["ready_for_spec_build"]:
+            if args.format == "json":
+                print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+            else:
+                print(render_intake_assessment_text(report))
+            return 1
+        playback_report = build_playback_report_from_intake_packet(
+            packet,
+            scenario_id=args.scenario,
+            sample_period_s=args.sample_period,
+        )
+        if args.format == "json":
+            print(json.dumps(playback_report.to_dict(), ensure_ascii=False, indent=2, sort_keys=True))
+        else:
+            print(render_playback_report_text(playback_report))
+        return 0
     parser.error("unsupported command")
     return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

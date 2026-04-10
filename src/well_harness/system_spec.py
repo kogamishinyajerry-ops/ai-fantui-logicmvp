@@ -50,6 +50,14 @@ class TimedTransitionSpec:
 
 
 @dataclass(frozen=True)
+class SteadySignalSpec:
+    signal_id: str
+    value: Any
+    unit: str
+    note: str
+
+
+@dataclass(frozen=True)
 class AcceptanceScenarioSpec:
     id: str
     label: str
@@ -59,6 +67,7 @@ class AcceptanceScenarioSpec:
     monitored_signal_ids: tuple[str, ...]
     transitions: tuple[TimedTransitionSpec, ...]
     completion_condition: str
+    steady_signals: tuple[SteadySignalSpec, ...] = ()
 
 
 @dataclass(frozen=True)

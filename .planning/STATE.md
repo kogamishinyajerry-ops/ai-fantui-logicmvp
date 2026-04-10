@@ -21,8 +21,8 @@ Last activity: 2026-04-10 - P6 now treats the dashboard as the canonical live co
 - GitHub run `24168293031` proved the same retirement logic works from CI, and 09C now points at `P3-07 自动退场旧审查对象` with `当前无需 Opus 审查`.
 - P4 is now closed as Approved after all six presenter-ready plans (`P4-01` through `P4-06`) verified successfully and GitHub run `24170575224` passed.
 - P5 is now closed as Approved after the Opus 4.6 phase-closeout review accepted the GitHub-backed P5 evidence chain through `P5-10`.
-- P6 is now the active phase: reconcile control-tower truth, freeze/demo packet surfaces, and stale manual-browser-QA wording before opening the next deeper workbench arc.
-- `P7-01` and `P7-02` are already landed on `main` as early foundation work for the future spec-driven workbench, but formal P7 execution is intentionally paused until P6 closes and the control plane catches up.
+- P6 remains the active control-plane reconciliation phase in Notion, but the repo-side baseline is now stable enough to resume targeted P7 workbench slices without reopening manual review.
+- `P7-01` and `P7-02` are already landed on `main` as early foundation work for the future spec-driven workbench, and `P7-03` is now the next active repo-side implementation slice.
 - `P5-01 GitHub 可验证 demo smoke suite` is now implemented locally: `tools/demo_path_smoke.py` covers bridge prompt, extreme clamp, mode-switch reset, and expected invalid-input behavior through the HTTP demo surface.
 - The shared validation suite now includes 8 checks, with `demo_path_smoke` added as the new GitHub-verifiable presenter-demo confidence layer.
 - `P5-02 最新交互胜出 demo 请求仲裁` is now implemented locally: the browser shell ignores stale prompt or lever responses once a newer interaction has started, so rapid edits no longer let an older response repaint the shared result surface.
@@ -49,6 +49,7 @@ Last activity: 2026-04-10 - P6 now treats the dashboard as the canonical live co
 - A new requirement set now exists for strict engineer-facing acceptance playback, fault injection and diagnosis, knowledge capture, and future-system generalization; this is large enough to require a new phase instead of being folded into demo freeze work.
 - `P7-01` has an initial local foundation: `src/well_harness/system_spec.py` now defines a reusable control-system workbench spec and captures the current thrust-reverser chain as the first reference system, including acceptance-scenario, fault-mode, and clarification-question scaffolding.
 - `P7-02` is already implemented on `main`: `src/well_harness/document_intake.py` defines a mixed-document intake packet, readiness assessment, and CLI export surface so future systems can arrive as PDF/markdown-heavy packets with explicit system-defined signal semantics.
+- `P7-03 编译 intake scenario 到 monitor-vs-time playback trace` is now in progress locally: the next strict workbench slice turns a ready intake packet into sampled signal/logic playback data without involving the cockpit UI.
 - Those two P7 slices are treated as seeded groundwork, not as authority to bypass the newly approved P6 reconciliation pass.
 
 ## Active Objective

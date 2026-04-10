@@ -14,6 +14,7 @@ from well_harness.system_spec import (
     KnowledgeCaptureSpec,
     LogicConditionSpec,
     LogicNodeSpec,
+    SteadySignalSpec,
     TimedTransitionSpec,
     default_workbench_clarification_questions,
     workbench_spec_to_dict,
@@ -122,6 +123,15 @@ def _timed_transition_from_dict(payload: dict[str, Any]) -> TimedTransitionSpec:
     )
 
 
+def _steady_signal_from_dict(payload: dict[str, Any]) -> SteadySignalSpec:
+    return SteadySignalSpec(
+        signal_id=_require_str(payload, "signal_id"),
+        value=payload.get("value"),
+        unit=_require_str(payload, "unit"),
+        note=_require_str(payload, "note"),
+    )
+
+
 def _acceptance_scenario_from_dict(payload: dict[str, Any]) -> AcceptanceScenarioSpec:
     return AcceptanceScenarioSpec(
         id=_require_str(payload, "id"),
@@ -130,6 +140,7 @@ def _acceptance_scenario_from_dict(payload: dict[str, Any]) -> AcceptanceScenari
         time_scale_factor=float(payload.get("time_scale_factor", 1.0)),
         total_duration_s=float(payload.get("total_duration_s", 0.0)),
         monitored_signal_ids=tuple(str(item) for item in _tuple_or_empty(payload.get("monitored_signal_ids"))),
+        steady_signals=tuple(_steady_signal_from_dict(item) for item in payload.get("steady_signals", [])),
         transitions=tuple(_timed_transition_from_dict(item) for item in payload.get("transitions", [])),
         completion_condition=_require_str(payload, "completion_condition"),
     )
@@ -211,7 +222,36 @@ def intake_template_payload() -> dict[str, Any]:
             }
         ],
         "logic_nodes": [],
-        "acceptance_scenarios": [],
+        "acceptance_scenarios": [
+            {
+                "id": "scenario_id",
+                "label": "Scenario Label",
+                "description": "Engineer-described process to replay.",
+                "time_scale_factor": 1.0,
+                "total_duration_s": 5.0,
+                "monitored_signal_ids": ["signal_id"],
+                "steady_signals": [
+                    {
+                        "signal_id": "signal_id",
+                        "value": 0.0,
+                        "unit": "custom-unit",
+                        "note": "Baseline value before timed transitions start.",
+                    }
+                ],
+                "transitions": [
+                    {
+                        "signal_id": "signal_id",
+                        "start_s": 0.0,
+                        "end_s": 5.0,
+                        "start_value": 0.0,
+                        "end_value": 50.0,
+                        "unit": "custom-unit",
+                        "note": "Example ramp from intake docs.",
+                    }
+                ],
+                "completion_condition": "signal_id == 50",
+            }
+        ],
         "fault_modes": [],
         "knowledge_capture": {
             "incident_fields": ["system_id", "scenario_id", "fault_mode_id", "observed_symptoms", "evidence_links"],
@@ -271,17 +311,33 @@ def _component_blockers(components: tuple[ComponentSpec, ...]) -> list[str]:
 def _scenario_blockers(
     scenarios: tuple[AcceptanceScenarioSpec, ...],
     component_ids: set[str],
+    logic_source_ids: set[str],
+    derived_component_ids: set[str],
 ) -> list[str]:
     blockers: list[str] = []
     for scenario in scenarios:
         if not scenario.transitions:
             blockers.append(f"scenario {scenario.id} has no transitions.")
+        covered_signal_ids = {signal.signal_id for signal in scenario.steady_signals}
+        covered_signal_ids.update(transition.signal_id for transition in scenario.transitions)
         for signal_id in scenario.monitored_signal_ids:
             if signal_id not in component_ids:
                 blockers.append(f"scenario {scenario.id} references unknown monitored signal {signal_id}.")
+            elif signal_id not in covered_signal_ids and signal_id not in derived_component_ids:
+                blockers.append(
+                    f"scenario {scenario.id} does not define a baseline or transition for monitored signal {signal_id}."
+                )
+        for steady_signal in scenario.steady_signals:
+            if steady_signal.signal_id not in component_ids:
+                blockers.append(f"scenario {scenario.id} steady signal references unknown signal {steady_signal.signal_id}.")
         for transition in scenario.transitions:
             if transition.signal_id not in component_ids:
                 blockers.append(f"scenario {scenario.id} transition references unknown signal {transition.signal_id}.")
+        for source_id in logic_source_ids:
+            if source_id not in covered_signal_ids and source_id not in derived_component_ids:
+                blockers.append(
+                    f"scenario {scenario.id} does not define a baseline or transition for logic source {source_id}."
+                )
     return blockers
 
 
@@ -357,6 +413,16 @@ def intake_packet_to_workbench_spec(packet: ControlSystemIntakePacket) -> Contro
 def assess_intake_packet(packet: ControlSystemIntakePacket) -> dict[str, Any]:
     required_questions = default_workbench_clarification_questions()
     component_ids = {component.id for component in packet.components}
+    logic_source_ids = {
+        condition.source_component_id
+        for logic_node in packet.logic_nodes
+        for condition in logic_node.conditions
+    }
+    derived_component_ids = {
+        component_id
+        for logic_node in packet.logic_nodes
+        for component_id in logic_node.downstream_component_ids
+    }
     blockers: list[str] = []
     if not packet.source_documents:
         blockers.append("at least one source document is required.")
@@ -377,7 +443,7 @@ def assess_intake_packet(packet: ControlSystemIntakePacket) -> dict[str, Any]:
 
     blockers.extend(_component_blockers(packet.components))
     blockers.extend(_logic_blockers(packet.logic_nodes, component_ids))
-    blockers.extend(_scenario_blockers(packet.acceptance_scenarios, component_ids))
+    blockers.extend(_scenario_blockers(packet.acceptance_scenarios, component_ids, logic_source_ids, derived_component_ids))
     blockers.extend(_fault_blockers(packet.fault_modes, component_ids))
 
     unanswered = _unanswered_clarifications(packet.clarification_answers, required_questions)
