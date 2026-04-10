@@ -1,6 +1,8 @@
 import argparse
 import os
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from tools.gsd_notion_sync import (
@@ -16,12 +18,16 @@ from tools.gsd_notion_sync import (
     upsert_freeze_packet_snapshot_section,
     retire_legacy_review_artifacts,
     fetch_review_snapshot,
+    fetch_review_snapshot_from_pages,
     build_superseded_gap_fix_plan,
     clip,
     write_notion_outcome,
     resolve_superseded_failure_gaps,
+    render_repo_coordination_plan_markdown,
     summarize_results,
+    sync_repo_documents,
     handle_run,
+    upsert_managed_markdown_section,
 )
 
 
@@ -385,6 +391,122 @@ class GsdNotionSyncTests(unittest.TestCase):
         self.assertIn("GitHub GSD automation 24238846145", joined)
         self.assertIn("当前无需手动触发 Opus 4.6。", joined)
 
+    def test_render_repo_coordination_plan_markdown_reflects_live_baseline(self):
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="P6 正在执行",
+            latest_verified_plan="P6-04 用可自动同步状态页旁路旧 archived status 页面",
+            latest_success_run="GitHub GSD automation 24239357493",
+            latest_failed_run="GitHub GSD automation 24238577807",
+            latest_passing_qa="GitHub GSD automation 24239357493 QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+            latest_success_run_notes="Dashboard/status/freeze links now converge on the auto-synced status page.",
+            latest_passing_qa_summary="175 tests OK, 10 demo smoke scenarios pass, 8/8 checks pass.",
+        )
+        config = {
+            "root_page_url": "https://www.notion.so/control-tower",
+            "pages": {
+                "status": "status-id",
+                "opus_brief": "brief-id",
+                "freeze_packet": "freeze-id",
+            },
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            },
+        }
+        brief = build_current_review_brief(snapshot, config)
+
+        text = render_repo_coordination_plan_markdown(brief, snapshot, config)
+
+        self.assertIn("P6 Reconcile Control Tower And Freeze Demo Packet", text)
+        self.assertIn("P6-04 用可自动同步状态页旁路旧 archived status 页面", text)
+        self.assertIn("GitHub GSD automation 24239357493", text)
+        self.assertIn("当前无需手动触发 Opus 4.6", text)
+
+    def test_upsert_managed_markdown_section_replaces_existing_block(self):
+        existing = (
+            "# Coordination Plan\n\n"
+            "<!-- AUTO-SYNCED COORDINATION PLAN SNAPSHOT START -->\n"
+            "old\n"
+            "<!-- AUTO-SYNCED COORDINATION PLAN SNAPSHOT END -->\n\n"
+            "## 历史记录\n"
+            "legacy\n"
+        )
+
+        updated = upsert_managed_markdown_section(
+            existing,
+            "AUTO-SYNCED COORDINATION PLAN SNAPSHOT",
+            "## 当前自动同步快照\n\n- new",
+        )
+
+        self.assertIn("## 当前自动同步快照", updated)
+        self.assertIn("- new", updated)
+        self.assertIn("## 历史记录", updated)
+        self.assertNotIn("\nold\n", updated)
+
+    def test_sync_repo_documents_updates_active_docs_with_managed_sections(self):
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="P6 正在执行",
+            latest_verified_plan="P6-05 同步 repo 侧交接文档快照",
+            latest_success_run="GitHub GSD automation 24240000000",
+            latest_failed_run=None,
+            latest_passing_qa="GitHub GSD automation 24240000000 QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+            latest_success_run_notes="Repo-side docs now share the same live snapshot.",
+            latest_passing_qa_summary="175 tests OK, 10 demo smoke scenarios pass, 8/8 checks pass.",
+        )
+        config = {
+            "root_page_url": "https://www.notion.so/control-tower",
+            "pages": {
+                "status": "status-id",
+                "opus_brief": "brief-id",
+                "freeze_packet": "freeze-id",
+            },
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            },
+        }
+        brief = build_current_review_brief(snapshot, config)
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            root = os.path.join(tempdir, "repo")
+            os.makedirs(os.path.join(root, "docs", "coordination"), exist_ok=True)
+            os.makedirs(os.path.join(root, "docs", "freeze"), exist_ok=True)
+            for relative_path, title in (
+                ("docs/coordination/plan.md", "# Coordination Plan\n\nlegacy\n"),
+                ("docs/coordination/dev_handoff.md", "# Dev Handoff\n\nlegacy\n"),
+                ("docs/coordination/qa_report.md", "# QA Report\n\nlegacy\n"),
+                ("docs/freeze/2026-04-10-freeze-demo-packet.md", "# Freeze Packet\n\nlegacy\n"),
+            ):
+                with open(os.path.join(root, relative_path), "w", encoding="utf-8") as handle:
+                    handle.write(title)
+
+            synced = sync_repo_documents(Path(root), brief, snapshot, config)
+
+            self.assertEqual(4, len(synced))
+            with open(os.path.join(root, "docs", "coordination", "plan.md"), encoding="utf-8") as handle:
+                plan_text = handle.read()
+            self.assertIn("AUTO-SYNCED COORDINATION PLAN SNAPSHOT START", plan_text)
+            self.assertIn("P6-05 同步 repo 侧交接文档快照", plan_text)
+            self.assertIn("legacy", plan_text)
+
     def test_fetch_review_snapshot_prefers_github_runs_and_matching_qa(self):
         class FakeClient:
             def query_database(self, database_id, *, filter_payload=None, sorts=None, page_size=10):
@@ -457,6 +579,72 @@ class GsdNotionSyncTests(unittest.TestCase):
         self.assertEqual("GitHub GSD automation 24153107164", snapshot.latest_success_run)
         self.assertEqual("GitHub GSD automation 24153107164 QA", snapshot.latest_passing_qa)
         self.assertEqual("GitHub GSD automation 24148804383", snapshot.latest_failed_run)
+
+    def test_fetch_review_snapshot_from_pages_uses_active_page_surfaces(self):
+        class FakeClient:
+            def list_block_children(self, page_id):
+                pages = {
+                    "dashboard-id": [
+                        {
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {"rich_text": [{"plain_text": "- 当前阶段：P6 Reconcile Control Tower And Freeze Demo Packet"}]},
+                        },
+                        {
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {"rich_text": [{"plain_text": "- 当前已验证 Plan：P6-04 用可自动同步状态页旁路旧 archived status 页面"}]},
+                        },
+                        {
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {"rich_text": [{"plain_text": "- 最近成功执行证据：GitHub GSD automation 24239357493"}]},
+                        },
+                        {
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {"rich_text": [{"plain_text": "- 当前 Gate：OPUS-4.6 周期审查 Gate（Approved）"}]},
+                        },
+                        {
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {"rich_text": [{"plain_text": "- Open Gap 数量：0"}]},
+                        },
+                    ],
+                    "brief-id": [
+                        {
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {"rich_text": [{"plain_text": "- 最近失败历史证据：GitHub GSD automation 24238577807"}]},
+                        }
+                    ],
+                    "freeze-id": [
+                        {
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {"rich_text": [{"plain_text": "- 当前 QA 摘要：175 tests OK, 10 demo smoke scenarios pass, 8/8 checks pass."}]},
+                        },
+                        {
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {"rich_text": [{"plain_text": "- 当前运行摘要：Active links now land on the auto-synced status page."}]},
+                        },
+                    ],
+                    "status-id": [],
+                }
+                return pages[page_id]
+
+        snapshot = fetch_review_snapshot_from_pages(
+            FakeClient(),  # type: ignore[arg-type]
+            {
+                "pages": {
+                    "dashboard": "dashboard-id",
+                    "opus_brief": "brief-id",
+                    "freeze_packet": "freeze-id",
+                    "status": "status-id",
+                },
+                "default_plan": "fallback-plan",
+            },
+        )
+
+        self.assertEqual("P6 Reconcile Control Tower And Freeze Demo Packet", snapshot.active_phase)
+        self.assertEqual("P6-04 用可自动同步状态页旁路旧 archived status 页面", snapshot.latest_verified_plan)
+        self.assertEqual("GitHub GSD automation 24239357493", snapshot.latest_success_run)
+        self.assertEqual("GitHub GSD automation 24238577807", snapshot.latest_failed_run)
+        self.assertEqual("Approved", snapshot.gate_status)
+        self.assertEqual((), snapshot.open_gap_titles)
 
     def test_write_notion_outcome_uses_exact_github_run_url_for_artifacts(self):
         class FakeClient:

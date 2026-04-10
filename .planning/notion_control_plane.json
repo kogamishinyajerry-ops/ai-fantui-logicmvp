@@ -25,7 +25,7 @@
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P6-04 用可自动同步状态页旁路旧 archived status 页面",
+  "default_plan": "P6-05 同步 repo 侧交接文档快照",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {

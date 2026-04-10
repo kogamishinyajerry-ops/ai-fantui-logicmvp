@@ -1,5 +1,30 @@
 # AI FANTUI LogicMVP Freeze / Demo Packet
 
+<!-- AUTO-SYNCED REPO FREEZE PACKET SNAPSHOT START -->
+## 当前自动同步冻结摘要
+
+- 当前阶段：`P6 Reconcile Control Tower And Freeze Demo Packet`
+- 当前已验证 Plan：`P6-04 用可自动同步状态页旁路旧 archived status 页面`
+- 最近成功执行证据：`GitHub GSD automation 24239357493`
+- 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
+- 当前 Opus 状态：`当前无需 Opus 审查`
+- Open Gap 数量：`0`
+- 当前 QA 摘要：`Stable demo baseline remains 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
+- 当前运行摘要：`Active control-plane links now land on the new auto-synced status page, while dashboard and freeze packet remain repo-managed snapshots.`
+- 当前冻结包的职责是对齐 repo / GitHub / Notion 三个证据面，而不是继续加产品表面。
+
+## 当前冻结入口
+
+- [01 当前状态（自动同步）](https://www.notion.so/33ec6894-2bed-8169-bb65-feb161fdae6d)
+- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33cc6894-2bed-819a-811c-f19885ee595a)
+- [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)
+- [GitHub Actions](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
+
+## 历史正文说明
+
+- 下方正文保留为冻结说明，不再单独维护顶部状态摘要。
+<!-- AUTO-SYNCED REPO FREEZE PACKET SNAPSHOT END -->
+
 日期：2026-04-10  
 适用范围：`P5 Demo Polish And Edge-Case Hardening` 收口后的当前稳定基线
 

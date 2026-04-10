@@ -1,5 +1,38 @@
 # Coordination Plan
 
+<!-- AUTO-SYNCED COORDINATION PLAN SNAPSHOT START -->
+## 当前自动同步快照
+
+- 当前阶段：`P6 Reconcile Control Tower And Freeze Demo Packet`
+- 当前已验证 Plan：`P6-04 用可自动同步状态页旁路旧 archived status 页面`
+- 最近成功执行证据：`GitHub GSD automation 24239357493`
+- 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
+- 当前 Opus 状态：`当前无需 Opus 审查`
+- 当前 QA 摘要：`Stable demo baseline remains 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
+- 当前结论：当前最高优先级是继续收口控制塔与 freeze/demo packet 的残余漂移，不是再加 demo 功能。
+- 当前唯一人工动作：继续自动开发；当前无需手动触发 Opus 4.6。
+
+## 当前关键边界
+
+- `controller.py` 仍然是唯一控制真值。
+- 不改 `SimulationRunner` 或现有 HTTP / CLI 契约。
+- simplified plant 仍然只是演示反馈模型，不是假装完整物理模型。
+- Opus 4.6 的主观审查仍然只使用 Notion + GitHub 证据面。
+
+## 当前证据入口
+
+- [Notion 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
+- [01 当前状态（自动同步）](https://www.notion.so/33ec6894-2bed-8169-bb65-feb161fdae6d)
+- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33cc6894-2bed-819a-811c-f19885ee595a)
+- [10 Freeze Demo Packet](https://www.notion.so/33ec68942bed8151a0a8ff9a36aa8816)
+- [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)
+- [GitHub Actions](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
+
+## 历史记录说明
+
+- 下方旧轮次记录保留作为历史快照，不再代表当前真值。
+<!-- AUTO-SYNCED COORDINATION PLAN SNAPSHOT END -->
+
 ## 当前阶段
 
 Round 92 已完成：direct VDT control + flatter logic board + lower-priority result panels

@@ -23,6 +23,16 @@ DEFAULT_CONFIG_PATH = Path(".planning/notion_control_plane.json")
 TEXT_LIMIT = 1800
 DASHBOARD_SYNC_MARKER = "AUTO-SYNCED DASHBOARD SNAPSHOT"
 FREEZE_PACKET_SYNC_MARKER = "AUTO-SYNCED FREEZE PACKET SNAPSHOT"
+REPO_COORDINATION_PLAN_MARKER = "AUTO-SYNCED COORDINATION PLAN SNAPSHOT"
+REPO_DEV_HANDOFF_MARKER = "AUTO-SYNCED DEV HANDOFF SNAPSHOT"
+REPO_QA_REPORT_MARKER = "AUTO-SYNCED QA REPORT SNAPSHOT"
+REPO_FREEZE_PACKET_MARKER = "AUTO-SYNCED REPO FREEZE PACKET SNAPSHOT"
+DEFAULT_REPO_DOCS = {
+    "coordination_plan": Path("docs/coordination/plan.md"),
+    "dev_handoff": Path("docs/coordination/dev_handoff.md"),
+    "qa_report": Path("docs/coordination/qa_report.md"),
+    "freeze_packet": Path("docs/freeze/2026-04-10-freeze-demo-packet.md"),
+}
 DEFAULT_DATABASES = {
     "roadmap": "33cc6894-2bed-810a-a2ea-e4f095b44afa",
     "tasks": "33cc6894-2bed-81ea-bb1b-ef1bc904f407",
@@ -117,6 +127,12 @@ class CurrentReviewBrief:
     out_of_scope: tuple[str, ...]
     writeback_steps: tuple[str, ...]
     copy_prompt: str
+
+
+@dataclass(frozen=True)
+class RepoDocSyncResult:
+    path: str
+    marker: str
 
 
 class NotionClient:
@@ -315,6 +331,10 @@ def clip(text: str, limit: int = TEXT_LIMIT) -> str:
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def markdown_link(label: str, url: str) -> str:
+    return f"[{label}]({url})"
 
 
 def block_plain_text(block: dict[str, Any]) -> str:
@@ -676,6 +696,99 @@ def fetch_review_snapshot(client: NotionClient, config: dict[str, Any]) -> Revie
         stale_gap_titles=stale_gap_titles,
         latest_success_run_notes=row_text(success_run_row, "Notes") or None,
         latest_passing_qa_summary=row_text(passing_qa_row, "Summary") or None,
+    )
+
+
+def page_text_lines(client: NotionClient, page_id_value: str) -> list[str]:
+    return [text.strip() for block in client.list_block_children(page_id_value) if (text := block_plain_text(block).strip())]
+
+
+def page_prefixed_value(lines: list[str], prefix: str) -> str | None:
+    normalized_prefixes = {prefix, prefix.lstrip("- ").lstrip("0123456789. ")}
+    for line in lines:
+        normalized_line = line.lstrip("- ").lstrip("0123456789. ")
+        for candidate in normalized_prefixes:
+            if normalized_line.startswith(candidate):
+                return normalized_line[len(candidate) :].strip()
+    return None
+
+
+def parse_gate_line(text: str | None) -> tuple[str, str]:
+    if not text:
+        return "OPUS-4.6 周期审查 Gate", "Standby"
+    if "（" in text and text.endswith("）"):
+        gate_name, status = text.rsplit("（", 1)
+        return gate_name.strip(), status[:-1].strip()
+    if "(" in text and text.endswith(")"):
+        gate_name, status = text.rsplit("(", 1)
+        return gate_name.strip(), status[:-1].strip()
+    return text.strip(), "Standby"
+
+
+def parse_open_gap_titles(open_gap_text: str | None) -> tuple[str, ...]:
+    if not open_gap_text:
+        return ()
+    digits = "".join(char for char in open_gap_text if char.isdigit())
+    if digits == "" or int(digits) <= 0:
+        return ()
+    return tuple("Open gap requires follow-up" for _ in range(int(digits)))
+
+
+def fetch_review_snapshot_from_pages(client: NotionClient, config: dict[str, Any]) -> ReviewSnapshot:
+    dashboard_lines = page_text_lines(client, page_id(config, "dashboard"))
+    brief_lines = page_text_lines(client, page_id(config, "opus_brief"))
+    freeze_lines = page_text_lines(client, page_id(config, "freeze_packet"))
+    status_lines = page_text_lines(client, page_id(config, "status"))
+
+    active_phase = (
+        page_prefixed_value(dashboard_lines, "- 当前阶段：")
+        or page_prefixed_value(status_lines, "- 活动 phase：")
+        or "未识别活动 phase"
+    )
+    latest_verified_plan = (
+        page_prefixed_value(dashboard_lines, "- 当前已验证 Plan：")
+        or page_prefixed_value(status_lines, "- 当前已验证 plan：")
+        or config["default_plan"]
+    )
+    latest_success_run = (
+        page_prefixed_value(dashboard_lines, "- 最近成功执行证据：")
+        or page_prefixed_value(status_lines, "- 最近成功执行证据：")
+    )
+    latest_failed_run = page_prefixed_value(brief_lines, "- 最近失败历史证据：")
+    latest_passing_qa_summary = (
+        page_prefixed_value(freeze_lines, "- 当前 QA 摘要：")
+        or page_prefixed_value(status_lines, "- QA 摘要：")
+    )
+    latest_success_run_notes = (
+        page_prefixed_value(freeze_lines, "- 当前运行摘要：")
+        or page_prefixed_value(status_lines, "- 运行摘要：")
+    )
+    gate_name, gate_status = parse_gate_line(
+        page_prefixed_value(dashboard_lines, "- 当前 Gate：")
+        or page_prefixed_value(status_lines, "- 当前 Gate：")
+    )
+    open_gap_titles = parse_open_gap_titles(
+        page_prefixed_value(dashboard_lines, "- Open Gap 数量：")
+        or page_prefixed_value(freeze_lines, "- Open Gap 数量：")
+    )
+
+    return ReviewSnapshot(
+        active_phase=active_phase,
+        active_phase_goal="",
+        active_phase_summary="Derived from active control-plane pages because database access is unavailable.",
+        latest_verified_plan=latest_verified_plan,
+        latest_success_run=latest_success_run,
+        latest_failed_run=latest_failed_run,
+        latest_passing_qa=None,
+        gate_page_id=None,
+        gate_name=gate_name,
+        gate_status=gate_status,
+        ready_task_id=None,
+        ready_task=None,
+        open_gap_titles=open_gap_titles,
+        stale_gap_titles=(),
+        latest_success_run_notes=latest_success_run_notes,
+        latest_passing_qa_summary=latest_passing_qa_summary,
     )
 
 
@@ -1044,6 +1157,229 @@ def render_status_page_blocks(
     return blocks
 
 
+def render_repo_coordination_plan_markdown(
+    brief: CurrentReviewBrief,
+    snapshot: ReviewSnapshot,
+    config: dict[str, Any],
+) -> str:
+    current_action = (
+        "继续自动开发；当前无需手动触发 Opus 4.6。"
+        if not brief.review_required
+        else "按 09C 当前审查简报手动触发 Opus 4.6。"
+    )
+    status_url = f"https://www.notion.so/{page_id(config, 'status')}"
+    brief_url = f"https://www.notion.so/{page_id(config, 'opus_brief')}"
+    freeze_url = f"https://www.notion.so/{page_id(config, 'freeze_packet')}"
+    lines = [
+        "## 当前自动同步快照",
+        "",
+        f"- 当前阶段：`{snapshot.active_phase}`",
+        f"- 当前已验证 Plan：`{snapshot.latest_verified_plan}`",
+        f"- 最近成功执行证据：`{snapshot.latest_success_run or '暂无'}`",
+        f"- 当前 Gate：`{snapshot.gate_name} ({snapshot.gate_status})`",
+        f"- 当前 Opus 状态：`{brief.intervention_kind}`",
+    ]
+    if snapshot.latest_passing_qa_summary:
+        lines.append(f"- 当前 QA 摘要：`{snapshot.latest_passing_qa_summary}`")
+    lines.extend(
+        [
+            "- 当前结论：当前最高优先级是继续收口控制塔与 freeze/demo packet 的残余漂移，不是再加 demo 功能。",
+            f"- 当前唯一人工动作：{current_action}",
+            "",
+            "## 当前关键边界",
+            "",
+            "- `controller.py` 仍然是唯一控制真值。",
+            "- 不改 `SimulationRunner` 或现有 HTTP / CLI 契约。",
+            "- simplified plant 仍然只是演示反馈模型，不是假装完整物理模型。",
+            "- Opus 4.6 的主观审查仍然只使用 Notion + GitHub 证据面。",
+            "",
+            "## 当前证据入口",
+            "",
+            f"- {markdown_link('Notion 控制塔', config.get('root_page_url', 'https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec'))}",
+            f"- {markdown_link('01 当前状态（自动同步）', status_url)}",
+            f"- {markdown_link('09C 当前 Opus 4.6 审查简报', brief_url)}",
+            f"- {markdown_link('10 Freeze Demo Packet', freeze_url)}",
+            f"- {markdown_link('GitHub Repo', config_url(config, 'github_repo'))}",
+            f"- {markdown_link('GitHub Actions', config_url(config, 'github_actions'))}",
+            "",
+            "## 历史记录说明",
+            "",
+            "- 下方旧轮次记录保留作为历史快照，不再代表当前真值。",
+        ]
+    )
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def render_repo_dev_handoff_markdown(
+    brief: CurrentReviewBrief,
+    snapshot: ReviewSnapshot,
+    config: dict[str, Any],
+) -> str:
+    status_url = f"https://www.notion.so/{page_id(config, 'status')}"
+    brief_url = f"https://www.notion.so/{page_id(config, 'opus_brief')}"
+    freeze_url = f"https://www.notion.so/{page_id(config, 'freeze_packet')}"
+    lines = [
+        "## 当前自动同步交接基线",
+        "",
+        f"- 活动 phase：`{snapshot.active_phase}`",
+        f"- 当前已验证 Plan：`{snapshot.latest_verified_plan}`",
+        f"- 最近成功执行证据：`{snapshot.latest_success_run or '暂无'}`",
+    ]
+    if snapshot.latest_passing_qa_summary:
+        lines.append(f"- 当前 QA 摘要：`{snapshot.latest_passing_qa_summary}`")
+    if snapshot.latest_success_run_notes:
+        lines.append(f"- 当前运行摘要：`{snapshot.latest_success_run_notes}`")
+    lines.extend(
+        [
+            "- 当前 demo 基线已经稳定，P6 的任务是把控制塔、freeze packet 和 repo-side handoff 资料统一到同一份 GitHub-backed 真值。",
+            "- 当前不继续扩大 P7 的实现面；P7 groundwork 继续保留，但执行顺序仍以 P6 收口优先。",
+            "",
+            "## 恢复工作时先看",
+            "",
+            f"1. {markdown_link('AI FANTUI LogicMVP 控制塔', config.get('root_page_url', 'https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec'))}",
+            f"2. {markdown_link('01 当前状态（自动同步）', status_url)}",
+            f"3. {markdown_link('09C 当前 Opus 4.6 审查简报', brief_url)}",
+            f"4. {markdown_link('10 Freeze Demo Packet', freeze_url)}",
+            f"5. {markdown_link('GitHub Actions / GSD Automation Loop', config_url(config, 'github_actions'))}",
+            "",
+            "## 当前交接结论",
+            "",
+            f"- Opus 状态：`{brief.intervention_kind}`",
+            "- 当前交接重点是保持 control-plane truth 收口，不是扩新功能。",
+            "- 下方旧 Round 记录保留为历史上下文，不再当成当前执行指令。",
+        ]
+    )
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def render_repo_qa_report_markdown(
+    brief: CurrentReviewBrief,
+    snapshot: ReviewSnapshot,
+    config: dict[str, Any],
+) -> str:
+    lines = [
+        "## 当前自动同步 QA 基线",
+        "",
+        "- 结论：PASS；当前稳定基线由 GitHub-backed validation evidence 支撑。",
+        f"- 当前阶段：`{snapshot.active_phase}`",
+        f"- 当前已验证 Plan：`{snapshot.latest_verified_plan}`",
+        f"- 最近成功执行证据：`{snapshot.latest_success_run or '暂无'}`",
+        f"- 当前 Gate：`{snapshot.gate_name} ({snapshot.gate_status})`",
+        f"- 当前 Opus 状态：`{brief.intervention_kind}`",
+        f"- Open Gap 数量：`{len(snapshot.open_gap_titles)}`",
+    ]
+    if snapshot.latest_passing_qa_summary:
+        lines.append(f"- 当前 QA 摘要：`{snapshot.latest_passing_qa_summary}`")
+    if snapshot.latest_success_run_notes:
+        lines.append(f"- 当前运行摘要：`{snapshot.latest_success_run_notes}`")
+    lines.extend(
+        [
+            "- `manual browser QA` 不再是当前审批规则；相关历史记录只保留为 presenter guidance / 历史上下文。",
+            "",
+            "## 当前证据入口",
+            "",
+            f"- {markdown_link('GitHub Repo', config_url(config, 'github_repo'))}",
+            f"- {markdown_link('GitHub Actions', config_url(config, 'github_actions'))}",
+            f"- {markdown_link('Notion 控制塔', config.get('root_page_url', 'https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec'))}",
+            "",
+            "## 历史 QA 记录说明",
+            "",
+            "- 下方按 Round 保存的 QA 记录保留不删，但它们不是当前冻结基线。",
+        ]
+    )
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def render_repo_freeze_packet_markdown(
+    brief: CurrentReviewBrief,
+    snapshot: ReviewSnapshot,
+    config: dict[str, Any],
+) -> str:
+    status_url = f"https://www.notion.so/{page_id(config, 'status')}"
+    brief_url = f"https://www.notion.so/{page_id(config, 'opus_brief')}"
+    lines = [
+        "## 当前自动同步冻结摘要",
+        "",
+        f"- 当前阶段：`{snapshot.active_phase}`",
+        f"- 当前已验证 Plan：`{snapshot.latest_verified_plan}`",
+        f"- 最近成功执行证据：`{snapshot.latest_success_run or '暂无'}`",
+        f"- 当前 Gate：`{snapshot.gate_name} ({snapshot.gate_status})`",
+        f"- 当前 Opus 状态：`{brief.intervention_kind}`",
+        f"- Open Gap 数量：`{len(snapshot.open_gap_titles)}`",
+    ]
+    if snapshot.latest_passing_qa_summary:
+        lines.append(f"- 当前 QA 摘要：`{snapshot.latest_passing_qa_summary}`")
+    if snapshot.latest_success_run_notes:
+        lines.append(f"- 当前运行摘要：`{snapshot.latest_success_run_notes}`")
+    lines.extend(
+        [
+            "- 当前冻结包的职责是对齐 repo / GitHub / Notion 三个证据面，而不是继续加产品表面。",
+            "",
+            "## 当前冻结入口",
+            "",
+            f"- {markdown_link('01 当前状态（自动同步）', status_url)}",
+            f"- {markdown_link('09C 当前 Opus 4.6 审查简报', brief_url)}",
+            f"- {markdown_link('GitHub Repo', config_url(config, 'github_repo'))}",
+            f"- {markdown_link('GitHub Actions', config_url(config, 'github_actions'))}",
+            "",
+            "## 历史正文说明",
+            "",
+            "- 下方正文保留为冻结说明，不再单独维护顶部状态摘要。",
+        ]
+    )
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def managed_markdown_block(marker: str, body: str) -> str:
+    return f"<!-- {marker} START -->\n{body.rstrip()}\n<!-- {marker} END -->\n"
+
+
+def upsert_managed_markdown_section(existing: str, marker: str, body: str) -> str:
+    start_tag = f"<!-- {marker} START -->"
+    end_tag = f"<!-- {marker} END -->"
+    managed = managed_markdown_block(marker, body)
+    if start_tag in existing and end_tag in existing:
+        before, remainder = existing.split(start_tag, 1)
+        _, after = remainder.split(end_tag, 1)
+        replacement = before.rstrip() + "\n\n" + managed
+        if after.strip():
+            replacement += "\n" + after.lstrip("\n")
+        return replacement
+    lines = existing.splitlines()
+    if lines and lines[0].startswith("# "):
+        head = "\n".join(lines[:1]).rstrip()
+        tail = "\n".join(lines[1:]).lstrip("\n")
+        replacement = head + "\n\n" + managed
+        if tail:
+            replacement += "\n" + tail
+        return replacement
+    return managed + ("\n" + existing.lstrip("\n") if existing.strip() else "")
+
+
+def sync_repo_documents(
+    cwd: Path,
+    brief: CurrentReviewBrief,
+    snapshot: ReviewSnapshot,
+    config: dict[str, Any],
+) -> list[RepoDocSyncResult]:
+    renderers = {
+        "coordination_plan": (REPO_COORDINATION_PLAN_MARKER, render_repo_coordination_plan_markdown),
+        "dev_handoff": (REPO_DEV_HANDOFF_MARKER, render_repo_dev_handoff_markdown),
+        "qa_report": (REPO_QA_REPORT_MARKER, render_repo_qa_report_markdown),
+        "freeze_packet": (REPO_FREEZE_PACKET_MARKER, render_repo_freeze_packet_markdown),
+    }
+    synced: list[RepoDocSyncResult] = []
+    for key, relative_path in DEFAULT_REPO_DOCS.items():
+        marker, renderer = renderers[key]
+        path = cwd / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        existing = path.read_text(encoding="utf-8") if path.exists() else f"# {relative_path.stem}\n"
+        updated = upsert_managed_markdown_section(existing, marker, renderer(brief, snapshot, config))
+        path.write_text(updated, encoding="utf-8")
+        synced.append(RepoDocSyncResult(path=str(path), marker=marker))
+    return synced
+
+
 def upsert_managed_page_section(
     client: NotionClient,
     page_id_value: str,
@@ -1369,6 +1705,22 @@ def build_parser() -> argparse.ArgumentParser:
         default="text",
         help="Output format.",
     )
+
+    repo_docs_parser = subparsers.add_parser(
+        "sync-repo-docs",
+        help="Render the active repo-side coordination docs from the current Notion/GitHub-backed snapshot.",
+    )
+    repo_docs_parser.add_argument(
+        "--cwd",
+        default=".",
+        help="Repo root whose coordination docs should be updated.",
+    )
+    repo_docs_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
     return parser
 
 
@@ -1400,6 +1752,18 @@ def output_review_result(format_name: str, payload: dict[str, Any]) -> None:
     print(f"Stale gaps: {payload['stale_gap_count']}")
     print(f"Gate status: {payload['gate_status']}")
     print(f"Why now: {payload['why_now']}")
+
+
+def output_repo_doc_sync_result(format_name: str, payload: dict[str, Any]) -> None:
+    if format_name == "json":
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        return
+    print(f"Repo doc sync phase: {payload['active_phase']}")
+    print(f"Latest verified plan: {payload['latest_verified_plan']}")
+    print(f"Current Opus state: {payload['intervention_kind']}")
+    print("Updated files:")
+    for item in payload["files"]:
+        print(f"- {item['path']}")
 
 
 def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
@@ -1487,6 +1851,30 @@ def handle_prepare_opus_review(args: argparse.Namespace, config: dict[str, Any])
     return 0
 
 
+def handle_sync_repo_docs(args: argparse.Namespace, config: dict[str, Any]) -> int:
+    token = os.environ.get("NOTION_API_KEY")
+    if not token:
+        raise SystemExit("NOTION_API_KEY is required for sync-repo-docs.")
+    client = NotionClient(token)
+    try:
+        snapshot = fetch_review_snapshot(client, config)
+    except RuntimeError as exc:
+        if "Could not find database" not in str(exc):
+            raise
+        snapshot = fetch_review_snapshot_from_pages(client, config)
+    brief = build_current_review_brief(snapshot, config)
+    synced = sync_repo_documents(Path(args.cwd).resolve(), brief, snapshot, config)
+    payload = {
+        "active_phase": snapshot.active_phase,
+        "latest_verified_plan": snapshot.latest_verified_plan,
+        "latest_success_run": snapshot.latest_success_run,
+        "intervention_kind": brief.intervention_kind,
+        "files": [{"path": item.path, "marker": item.marker} for item in synced],
+    }
+    output_repo_doc_sync_result(args.format, payload)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -1495,6 +1883,8 @@ def main(argv: list[str] | None = None) -> int:
         return handle_run(args, config)
     if args.command_name == "prepare-opus-review":
         return handle_prepare_opus_review(args, config)
+    if args.command_name == "sync-repo-docs":
+        return handle_sync_repo_docs(args, config)
     parser.error(f"Unsupported command: {args.command_name}")
     return 2
 
