@@ -683,12 +683,13 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertEqual(payload["mode"], "timeline_monitor")
         self.assertEqual(payload["time_start_s"], 0.0)
-        self.assertEqual(payload["time_end_s"], 70.0)
-        self.assertEqual(payload["active_end_s"], 44.0)
-        self.assertIn("VDT 按现有 demo 反馈语义绘制为 0%-100%", payload["model_note"])
-        self.assertEqual(payload["timeline_summary"]["ra_hits_six_ft_at_s"], 10.0)
-        self.assertEqual(payload["timeline_summary"]["tra_reaches_lock_at_s"], 24.0)
-        self.assertEqual(payload["timeline_summary"]["vdt_reaches_100_percent_at_s"], 44.0)
+        self.assertEqual(payload["time_end_s"], 7.0)
+        self.assertEqual(payload["active_end_s"], 4.4)
+        self.assertEqual(payload["compression_ratio"], 10.0)
+        self.assertIn("整段时间已压缩为原来的 1/10", payload["model_note"])
+        self.assertEqual(payload["timeline_summary"]["ra_hits_six_ft_at_s"], 1.0)
+        self.assertEqual(payload["timeline_summary"]["tra_reaches_lock_at_s"], 2.4)
+        self.assertEqual(payload["timeline_summary"]["vdt_reaches_100_percent_at_s"], 4.4)
         self.assertIn("VDT90", {event["label"] for event in payload["events"]})
         self.assertEqual(
             [track["id"] for track in payload["series"]],
@@ -727,24 +728,24 @@ class DemoIntentLayerTests(unittest.TestCase):
         samples = monitor_track_samples(payload)
 
         self.assertAlmostEqual(samples["ra"][0.0], 7.0)
-        self.assertAlmostEqual(samples["ra"][10.0], 6.0)
-        self.assertAlmostEqual(samples["ra"][44.0], 2.6)
-        self.assertAlmostEqual(samples["ra"][70.0], 0.0)
+        self.assertAlmostEqual(samples["ra"][1.0], 6.0)
+        self.assertAlmostEqual(samples["ra"][4.4], 2.6)
+        self.assertAlmostEqual(samples["ra"][7.0], 0.0)
 
         self.assertAlmostEqual(samples["tra"][0.0], 0.0)
-        self.assertAlmostEqual(samples["tra"][10.0], 0.0)
-        self.assertAlmostEqual(samples["tra"][24.0], -14.0)
-        self.assertAlmostEqual(samples["tra"][70.0], -14.0)
+        self.assertAlmostEqual(samples["tra"][1.0], 0.0)
+        self.assertAlmostEqual(samples["tra"][2.4], -14.0)
+        self.assertAlmostEqual(samples["tra"][7.0], -14.0)
 
-        self.assertAlmostEqual(samples["vdt"][24.0], 0.0)
-        self.assertAlmostEqual(samples["vdt"][42.0], 90.0)
-        self.assertAlmostEqual(samples["vdt"][44.0], 100.0)
-        self.assertAlmostEqual(samples["vdt"][70.0], 100.0)
+        self.assertAlmostEqual(samples["vdt"][2.4], 0.0)
+        self.assertAlmostEqual(samples["vdt"][4.2], 90.0)
+        self.assertAlmostEqual(samples["vdt"][4.4], 100.0)
+        self.assertAlmostEqual(samples["vdt"][7.0], 100.0)
 
-        self.assertEqual(samples["logic4"][24.0], 0.0)
-        self.assertEqual(samples["logic4"][42.0], 1.0)
-        self.assertEqual(samples["thr_lock"][42.0], 1.0)
-        self.assertEqual(samples["thr_lock"][70.0], 1.0)
+        self.assertEqual(samples["logic4"][2.4], 0.0)
+        self.assertEqual(samples["logic4"][4.2], 1.0)
+        self.assertEqual(samples["thr_lock"][4.2], 1.0)
+        self.assertEqual(samples["thr_lock"][7.0], 1.0)
 
     def test_demo_server_api_rejects_invalid_extended_lever_snapshot_input(self):
         server, thread = start_demo_server()
@@ -1586,7 +1587,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             "aria-label=\"中文演示展示面\"",
             "class=\"showcase-intro\"",
             "演示流",
-            "拉杆 -> HUD -> 逻辑主板 -> 当前结论",
+            "拉杆 -> HUD -> 逻辑主板 -> 时间监控",
             "class=\"showcase-grid\"",
             "class=\"panel lever-panel\"",
             "id=\"lever-tra\"",
@@ -1676,6 +1677,8 @@ class DemoIntentLayerTests(unittest.TestCase):
             "border-color: rgba(40, 244, 255, 0.36)",
             ".chain-node.is-blocked",
             ".chain-node.is-inactive",
+            ".chain-inspector",
+            ".chain-inspector > summary",
             ".output-card",
             ".showcase-grid .highlight-explanation",
             ".raw-card .debug-inspector",
@@ -1739,30 +1742,35 @@ class DemoIntentLayerTests(unittest.TestCase):
         script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
 
         for fragment in (
-            "class=\"panel monitor-panel\"",
+            "class=\"panel monitor-panel monitor-panel-inline\"",
             "id=\"monitor-panel-title\"",
             "状态 vs 时间",
-            "RA -> TRA -> VDT",
+            "右上角可以切换到某个特定对象",
             "id=\"monitor-refresh-button\"",
+            "id=\"monitor-series-select\"",
             "id=\"monitor-status\"",
             "id=\"monitor-summary\"",
             "id=\"monitor-events\"",
-            "id=\"monitor-tracks\"",
+            "id=\"monitor-selection-note\"",
+            "id=\"monitor-chart\"",
+            "全部对象（归一化）",
         ):
             self.assertIn(fragment, html)
 
         for fragment in (
             ".monitor-panel",
+            ".monitor-panel-inline",
             ".monitor-panel-header",
+            ".monitor-panel-controls",
+            ".monitor-select-wrap",
             ".monitor-refresh-button",
             ".monitor-summary",
             ".monitor-summary-chip",
             ".monitor-events",
             ".monitor-event-card",
-            ".monitor-tracks",
-            ".monitor-track",
-            ".monitor-track-meta",
-            ".monitor-track-chart",
+            ".monitor-chart-shell",
+            ".monitor-selection-note",
+            ".monitor-chart",
             ".monitor-grid-line",
             ".monitor-event-line",
             ".monitor-series-line",
@@ -1772,15 +1780,18 @@ class DemoIntentLayerTests(unittest.TestCase):
             self.assertIn(fragment, css)
 
         for fragment in (
-            "const monitorXAxisTicks = [0, 10, 20, 30, 40, 50, 60, 70];",
+            "const monitorDefaultSeriesId = \"all\";",
             "function renderMonitorTimeline(payload)",
             "function renderMonitorSummary(payload)",
             "function renderMonitorEvents(payload)",
-            "function buildMonitorTrackRow(track, payload)",
+            "function buildMonitorXAxisTicks(timeStart, timeEnd)",
+            "function populateMonitorSeriesSelect(payload)",
+            "function renderMonitorChart(payload)",
             "function renderMonitorTimelineError(message)",
             "async function loadMonitorTimeline()",
             "fetch(\"/api/monitor-timeline\"",
             "monitorRefreshButton?.addEventListener(\"click\"",
+            "monitorSeriesSelect?.addEventListener(\"change\"",
             "loadMonitorTimeline();",
         ):
             self.assertIn(fragment, script)
@@ -2328,12 +2339,16 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn("id=\"highlight-payload-fields\"", html)
         self.assertIn("id=\"highlight-node-list\"", html)
         self.assertIn("id=\"highlight-explanation-list\"", html)
+        self.assertIn("id=\"chain-inspector\"", html)
+        self.assertIn("详细解释 / 当前结论", html)
         self.assertIn("高亮来自答案里的命中节点 / 目标逻辑", html)
         self.assertIn("不是完整因果证明", html)
 
         self.assertIn(".highlight-explanation", css)
         self.assertIn(".highlight-explanation h3", css)
         self.assertIn(".highlight-explanation li", css)
+        self.assertIn(".chain-inspector", css)
+        self.assertIn(".chain-inspector-body", css)
 
         self.assertIn("function highlightedNodesForPayload(payload)", script)
         self.assertIn("function renderHighlightExplanation(payload)", script)

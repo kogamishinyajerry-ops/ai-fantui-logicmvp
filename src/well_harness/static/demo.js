@@ -15,7 +15,9 @@ const sectionLabels = {
 };
 
 const monitorSvgNamespace = "http://www.w3.org/2000/svg";
-const monitorXAxisTicks = [0, 10, 20, 30, 40, 50, 60, 70];
+const monitorDefaultSeriesId = "all";
+let latestMonitorPayload = null;
+let selectedMonitorSeriesId = monitorDefaultSeriesId;
 
 const nodeAliases = {
   "logic4->thr_lock": ["logic4", "thr_lock"],
@@ -168,6 +170,19 @@ function createMonitorSvgElement(tagName, attributes = {}) {
   return element;
 }
 
+function buildMonitorXAxisTicks(timeStart, timeEnd) {
+  const span = Math.max(0, timeEnd - timeStart);
+  const tickStep = span <= 8 ? 1 : Math.max(1, Math.ceil(span / 7));
+  const ticks = [];
+  for (let tick = timeStart; tick <= timeEnd + 1e-6; tick += tickStep) {
+    ticks.push(Number(tick.toFixed(1)));
+  }
+  if (!ticks.length || ticks[ticks.length - 1] !== Number(timeEnd.toFixed(1))) {
+    ticks.push(Number(timeEnd.toFixed(1)));
+  }
+  return ticks;
+}
+
 function monitorScaleX(timeValue, timeStart, timeEnd, left, width) {
   const safeSpan = Math.max(1, timeEnd - timeStart);
   return left + ((timeValue - timeStart) / safeSpan) * width;
@@ -178,13 +193,35 @@ function monitorScaleY(value, valueMin, valueMax, top, height) {
   return top + (1 - ((value - valueMin) / safeSpan)) * height;
 }
 
+function normalizedMonitorValue(track, value) {
+  const displayMin = Number(track.display_min);
+  const displayMax = Number(track.display_max);
+  const safeSpan = Math.max(1e-6, displayMax - displayMin);
+  return (Number(value) - displayMin) / safeSpan;
+}
+
+function monitorTrackOptions(payload) {
+  const series = Array.isArray(payload.series) ? payload.series : [];
+  return [
+    {id: monitorDefaultSeriesId, label: "全部对象（归一化）"},
+    ...series.map((track) => ({id: track.id, label: `${track.label}（${track.unit}）`})),
+  ];
+}
+
+function selectedMonitorTrack(payload) {
+  const series = Array.isArray(payload.series) ? payload.series : [];
+  return series.find((track) => track.id === selectedMonitorSeriesId) || null;
+}
+
 function renderMonitorSummary(payload) {
   const summary = payload.timeline_summary || {};
+  const compressionRatio = Number(payload.compression_ratio || 10);
   const chips = [
-    `主动监测段 0s -> ${Number(payload.active_end_s || 0).toFixed(0)}s`,
-    `保持段 ${Number(payload.active_end_s || 0).toFixed(0)}s -> ${Number(payload.time_end_s || 0).toFixed(0)}s`,
-    `L4 / THR_LOCK 首次满足 @ ${Number(summary.l4_ready_at_s || summary.vdt_reaches_90_percent_at_s || 0).toFixed(1)}s`,
-    "VDT 按 0%-100% 反馈量绘制",
+    `时间轴压缩 x${compressionRatio.toFixed(0)}`,
+    `RA=6.0ft @ ${Number(summary.ra_hits_six_ft_at_s || 0).toFixed(1)}s`,
+    `TRA=-14° @ ${Number(summary.tra_reaches_lock_at_s || 0).toFixed(1)}s`,
+    `VDT90 / L4 ready @ ${Number(summary.l4_ready_at_s || summary.vdt_reaches_90_percent_at_s || 0).toFixed(1)}s`,
+    `监测结束 @ ${Number(payload.active_end_s || 0).toFixed(1)}s`,
   ];
   const container = document.getElementById("monitor-summary");
   container.replaceChildren(...chips.map((label) => {
@@ -199,8 +236,8 @@ function renderMonitorEvents(payload) {
   const container = document.getElementById("monitor-events");
   const events = Array.isArray(payload.events) ? payload.events : [];
   container.replaceChildren(...events.map((event) => {
-    const card = document.createElement("article");
-    card.className = "monitor-event-card";
+    const chip = document.createElement("article");
+    chip.className = "monitor-event-card";
 
     const time = document.createElement("span");
     time.className = "monitor-event-time";
@@ -209,44 +246,63 @@ function renderMonitorEvents(payload) {
     const label = document.createElement("strong");
     label.textContent = event.label || "关键时刻";
 
-    const detail = document.createElement("span");
-    detail.textContent = event.detail || "-";
-
-    card.append(time, label, detail);
-    return card;
+    chip.append(time, label);
+    return chip;
   }));
 }
 
-function buildMonitorTrackRow(track, payload) {
-  const article = document.createElement("article");
-  article.className = "monitor-track";
+function renderMonitorSelectionNote(payload, track) {
+  const container = document.getElementById("monitor-selection-note");
+  if (!track) {
+    container.textContent = "当前显示：全部对象（归一化）。右上角可切到某个具体对象查看真实量程。";
+    return;
+  }
+  const lastSample = Array.isArray(track.samples) && track.samples.length
+    ? Number(track.samples[track.samples.length - 1][1])
+    : null;
+  container.textContent = (
+    `当前显示：${track.label} | 真实量程 `
+    + `${formatMonitorValue(Number(track.display_min), track.unit)} -> ${formatMonitorValue(Number(track.display_max), track.unit)}`
+    + ` | 末值 ${formatMonitorValue(lastSample, track.unit)}`
+  );
+}
 
-  const meta = document.createElement("div");
-  meta.className = "monitor-track-meta";
-  meta.innerHTML = `
-    <div class="monitor-track-title">
-      <strong>${track.label}</strong>
-      <span class="monitor-track-unit">${track.unit}</span>
-    </div>
-    <div class="monitor-track-range">量程：${formatMonitorValue(Number(track.display_min), track.unit)} -> ${formatMonitorValue(Number(track.display_max), track.unit)}</div>
-    <div class="monitor-track-note">末值：${formatMonitorValue(Number(track.samples?.[track.samples.length - 1]?.[1]), track.unit)}</div>
-  `;
-
-  const chart = document.createElement("div");
-  chart.className = "monitor-track-chart";
-  const svg = createMonitorSvgElement("svg", {
-    viewBox: "0 0 960 78",
-    role: "img",
-    "aria-label": `${track.label} 状态随时间变化图`,
+function populateMonitorSeriesSelect(payload) {
+  const select = document.getElementById("monitor-series-select");
+  const options = monitorTrackOptions(payload);
+  const optionElements = options.map((option) => {
+    const element = document.createElement("option");
+    element.value = option.id;
+    element.textContent = option.label;
+    return element;
   });
-  const padding = {top: 10, right: 10, bottom: 18, left: 16};
+  select.replaceChildren(...optionElements);
+  const selectableIds = new Set(options.map((option) => option.id));
+  if (!selectableIds.has(selectedMonitorSeriesId)) {
+    selectedMonitorSeriesId = monitorDefaultSeriesId;
+  }
+  select.value = selectedMonitorSeriesId;
+}
+
+function buildMonitorChartSvg(payload, track) {
+  const svg = createMonitorSvgElement("svg", {
+    viewBox: "0 0 960 240",
+    role: "img",
+    "aria-label": track
+      ? `${track.label} 状态随时间变化图`
+      : "全部对象归一化状态随时间变化图",
+  });
+  const padding = {top: 18, right: 18, bottom: 28, left: 58};
   const chartWidth = 960 - padding.left - padding.right;
-  const chartHeight = 78 - padding.top - padding.bottom;
+  const chartHeight = 240 - padding.top - padding.bottom;
   const timeStart = Number(payload.time_start_s || 0);
   const timeEnd = Number(payload.time_end_s || 0);
-  const valueMin = Number(track.display_min);
-  const valueMax = Number(track.display_max);
-  const samples = Array.isArray(track.samples) ? track.samples : [];
+  const xTicks = buildMonitorXAxisTicks(timeStart, timeEnd);
+  const tracks = track
+    ? [track]
+    : (Array.isArray(payload.series) ? payload.series : []);
+  const valueMin = track ? Number(track.display_min) : 0.0;
+  const valueMax = track ? Number(track.display_max) : 1.0;
 
   [0, 0.25, 0.5, 0.75, 1].forEach((fraction) => {
     const y = padding.top + chartHeight * fraction;
@@ -258,10 +314,8 @@ function buildMonitorTrackRow(track, payload) {
       class: "monitor-grid-line",
     }));
   });
-  monitorXAxisTicks.forEach((tick) => {
-    if (tick < timeStart || tick > timeEnd) {
-      return;
-    }
+
+  xTicks.forEach((tick) => {
     const x = monitorScaleX(tick, timeStart, timeEnd, padding.left, chartWidth);
     svg.appendChild(createMonitorSvgElement("line", {
       x1: x,
@@ -272,11 +326,11 @@ function buildMonitorTrackRow(track, payload) {
     }));
     const label = createMonitorSvgElement("text", {
       x,
-      y: padding.top + chartHeight + 14,
+      y: padding.top + chartHeight + 17,
       "text-anchor": tick === timeStart ? "start" : tick === timeEnd ? "end" : "middle",
       class: "monitor-axis-label",
     });
-    label.textContent = `${tick}s`;
+    label.textContent = `${tick.toFixed(tick % 1 === 0 ? 0 : 1)}s`;
     svg.appendChild(label);
   });
 
@@ -303,65 +357,88 @@ function buildMonitorTrackRow(track, payload) {
     class: "monitor-axis-line",
   }));
 
-  const minLabel = createMonitorSvgElement("text", {
-    x: padding.left + 4,
-    y: padding.top + chartHeight - 4,
-    class: "monitor-value-label",
+  const yLabels = track
+    ? [
+      {value: valueMax, text: formatMonitorValue(valueMax, track.unit), className: "monitor-value-label is-strong"},
+      {value: (valueMax + valueMin) / 2, text: formatMonitorValue((valueMax + valueMin) / 2, track.unit), className: "monitor-value-label"},
+      {value: valueMin, text: formatMonitorValue(valueMin, track.unit), className: "monitor-value-label"},
+    ]
+    : [
+      {value: 1.0, text: "100% 归一化", className: "monitor-value-label is-strong"},
+      {value: 0.5, text: "50% 归一化", className: "monitor-value-label"},
+      {value: 0.0, text: "0% 归一化", className: "monitor-value-label"},
+    ];
+  yLabels.forEach(({value, text, className}) => {
+    const label = createMonitorSvgElement("text", {
+      x: padding.left - 8,
+      y: monitorScaleY(value, valueMin, valueMax, padding.top, chartHeight) + 4,
+      "text-anchor": "end",
+      class: className,
+    });
+    label.textContent = text;
+    svg.appendChild(label);
   });
-  minLabel.textContent = formatMonitorValue(valueMin, track.unit);
-  svg.appendChild(minLabel);
 
-  const maxLabel = createMonitorSvgElement("text", {
-    x: padding.left + 4,
-    y: padding.top + 11,
-    class: "monitor-value-label is-strong",
-  });
-  maxLabel.textContent = formatMonitorValue(valueMax, track.unit);
-  svg.appendChild(maxLabel);
-
-  const pointString = samples.map(([timeValue, value]) => {
-    const x = monitorScaleX(Number(timeValue), timeStart, timeEnd, padding.left, chartWidth);
-    const y = monitorScaleY(Number(value), valueMin, valueMax, padding.top, chartHeight);
-    return `${x},${y}`;
-  }).join(" ");
-  svg.appendChild(createMonitorSvgElement("polyline", {
-    points: pointString,
-    class: "monitor-series-line",
-    stroke: track.color || "#28f4ff",
-  }));
-
-  const lastSample = samples[samples.length - 1];
-  if (lastSample) {
-    svg.appendChild(createMonitorSvgElement("circle", {
-      cx: monitorScaleX(Number(lastSample[0]), timeStart, timeEnd, padding.left, chartWidth),
-      cy: monitorScaleY(Number(lastSample[1]), valueMin, valueMax, padding.top, chartHeight),
-      r: 3.4,
-      fill: track.color || "#28f4ff",
-      class: "monitor-series-endpoint",
+  tracks.forEach((seriesTrack) => {
+    const samples = Array.isArray(seriesTrack.samples) ? seriesTrack.samples : [];
+    const pointString = samples.map(([timeValue, value]) => {
+      const x = monitorScaleX(Number(timeValue), timeStart, timeEnd, padding.left, chartWidth);
+      const plottedValue = track
+        ? Number(value)
+        : normalizedMonitorValue(seriesTrack, Number(value));
+      const y = monitorScaleY(plottedValue, valueMin, valueMax, padding.top, chartHeight);
+      return `${x},${y}`;
+    }).join(" ");
+    svg.appendChild(createMonitorSvgElement("polyline", {
+      points: pointString,
+      class: "monitor-series-line",
+      stroke: seriesTrack.color || "#28f4ff",
+      "data-series-id": seriesTrack.id,
     }));
-  }
 
-  chart.appendChild(svg);
-  article.append(meta, chart);
-  return article;
+    const lastSample = samples[samples.length - 1];
+    if (lastSample) {
+      const plottedValue = track
+        ? Number(lastSample[1])
+        : normalizedMonitorValue(seriesTrack, Number(lastSample[1]));
+      svg.appendChild(createMonitorSvgElement("circle", {
+        cx: monitorScaleX(Number(lastSample[0]), timeStart, timeEnd, padding.left, chartWidth),
+        cy: monitorScaleY(plottedValue, valueMin, valueMax, padding.top, chartHeight),
+        r: track ? 4 : 3,
+        fill: seriesTrack.color || "#28f4ff",
+        class: "monitor-series-endpoint",
+      }));
+    }
+  });
+
+  return svg;
+}
+
+function renderMonitorChart(payload) {
+  const container = document.getElementById("monitor-chart");
+  const track = selectedMonitorTrack(payload);
+  renderMonitorSelectionNote(payload, track);
+  container.replaceChildren(buildMonitorChartSvg(payload, track));
 }
 
 function renderMonitorTimeline(payload) {
+  latestMonitorPayload = payload;
   renderMonitorSummary(payload);
   renderMonitorEvents(payload);
-  const container = document.getElementById("monitor-tracks");
-  const series = Array.isArray(payload.series) ? payload.series : [];
-  container.replaceChildren(...series.map((track) => buildMonitorTrackRow(track, payload)));
+  populateMonitorSeriesSelect(payload);
+  renderMonitorChart(payload);
   document.getElementById("monitor-status").textContent = payload.model_note || "监控时间线已更新。";
   document.getElementById("monitor-status").classList.remove("is-error");
 }
 
 function renderMonitorTimelineError(message) {
+  latestMonitorPayload = null;
   document.getElementById("monitor-status").textContent = message;
   document.getElementById("monitor-status").classList.add("is-error");
   document.getElementById("monitor-summary").replaceChildren();
   document.getElementById("monitor-events").replaceChildren();
-  document.getElementById("monitor-tracks").replaceChildren();
+  document.getElementById("monitor-chart").replaceChildren();
+  document.getElementById("monitor-selection-note").textContent = "监控时间线不可用。";
 }
 
 function clampLeverTraToUnlockedBand(rawValue) {
@@ -1018,6 +1095,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const promptInput = document.getElementById("demo-prompt");
   const leverInput = document.getElementById("lever-tra");
   const monitorRefreshButton = document.getElementById("monitor-refresh-button");
+  const monitorSeriesSelect = document.getElementById("monitor-series-select");
   const conditionInputs = Array.from(
     document.querySelectorAll(
       ".condition-panel input, .condition-panel select, .lever-live-grid input, .lever-live-grid select",
@@ -1128,6 +1206,12 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("monitor-status").textContent = "监控时间线刷新中...";
     document.getElementById("monitor-status").classList.remove("is-error");
     loadMonitorTimeline();
+  });
+  monitorSeriesSelect?.addEventListener("change", (event) => {
+    selectedMonitorSeriesId = event.currentTarget.value || monitorDefaultSeriesId;
+    if (latestMonitorPayload) {
+      renderMonitorChart(latestMonitorPayload);
+    }
   });
 
   syncSelectedPrompt(promptInput.value);

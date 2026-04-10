@@ -27,14 +27,15 @@ CONTENT_TYPES = {
 TRA_L4_LOCK_DEG = -14.0
 MONITOR_TIMELINE_PATH = "/api/monitor-timeline"
 MONITOR_RA_START_FT = 7.0
-MONITOR_RA_RATE_FT_PER_S = 0.1
-MONITOR_TRA_START_S = 10.0
-MONITOR_TRA_RATE_DEG_PER_S = 1.0
+MONITOR_RA_RATE_FT_PER_S = 1.0
+MONITOR_TRA_START_S = 1.0
+MONITOR_TRA_RATE_DEG_PER_S = 10.0
 MONITOR_TRA_LOCK_DEG = -14.0
-MONITOR_VDT_START_S = 24.0
-MONITOR_VDT_RATE_PERCENT_PER_S = 5.0
-MONITOR_ACTIVE_END_S = 44.0
-MONITOR_TIMELINE_END_S = 70.0
+MONITOR_VDT_START_S = 2.4
+MONITOR_VDT_RATE_PERCENT_PER_S = 50.0
+MONITOR_ACTIVE_END_S = 4.4
+MONITOR_TIMELINE_END_S = 7.0
+MONITOR_TIMELINE_COMPRESSION_RATIO = 10.0
 MONITOR_ENGINE_RUNNING = True
 MONITOR_AIRCRAFT_ON_GROUND = True
 MONITOR_REVERSER_INHIBITED = False
@@ -655,17 +656,17 @@ def monitor_timeline_payload() -> dict:
             "detail": "RA 从 7.0 ft 起步；TRA=0°；VDT=0%。",
         },
         {
-            "time_s": 10.0,
+            "time_s": 1.0,
             "label": "RA=6.0 ft",
-            "detail": "TRA 从 0° 开始以 1°/s 推向 -14°。",
+            "detail": "TRA 从 0° 开始以 10°/s 推向 -14°。",
         },
         {
-            "time_s": 24.0,
+            "time_s": 2.4,
             "label": "TRA=-14°",
-            "detail": "碰到 L4 条件限位；VDT 开始以 5%/s 从 0% 变化。",
+            "detail": "碰到 L4 条件限位；VDT 开始以 50%/s 从 0% 变化。",
         },
         {
-            "time_s": 42.0,
+            "time_s": 4.2,
             "label": "VDT90",
             "detail": "VDT 达到 90%，L4 / THR_LOCK 首次满足。",
         },
@@ -687,17 +688,19 @@ def monitor_timeline_payload() -> dict:
         "time_start_s": 0.0,
         "time_end_s": MONITOR_TIMELINE_END_S,
         "active_end_s": MONITOR_ACTIVE_END_S,
+        "compression_ratio": MONITOR_TIMELINE_COMPRESSION_RATIO,
         "step_s": config.step_s,
         "model_note": (
             "这条监控图按用户定义的 RA -> TRA -> VDT 受控时间线生成；"
-            "VDT 按现有 demo 反馈语义绘制为 0%-100% 监测量，控制逻辑仍由 DeployController 评估。"
+            "整段时间已压缩为原来的 1/10；VDT 按现有 demo 反馈语义绘制为 0%-100% 监测量，"
+            "控制逻辑仍由 DeployController 评估。"
         ),
         "timeline_summary": {
             "ra_start_ft": MONITOR_RA_START_FT,
-            "ra_hits_six_ft_at_s": 10.0,
+            "ra_hits_six_ft_at_s": 1.0,
             "tra_lock_deg": MONITOR_TRA_LOCK_DEG,
-            "tra_reaches_lock_at_s": 24.0,
-            "vdt_reaches_90_percent_at_s": 42.0,
+            "tra_reaches_lock_at_s": 2.4,
+            "vdt_reaches_90_percent_at_s": 4.2,
             "vdt_reaches_100_percent_at_s": MONITOR_ACTIVE_END_S,
             "ra_reaches_zero_ft_at_s": MONITOR_TIMELINE_END_S,
             "l4_ready_at_s": l4_ready_time,

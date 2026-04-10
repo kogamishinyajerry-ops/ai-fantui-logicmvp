@@ -113,7 +113,7 @@
       <section class="showcase-surface" aria-label="中文演示展示面">
         <div class="showcase-intro">
           <p class="showcase-kicker">演示流</p>
-          <p>拉杆 -> HUD -> 逻辑主板 -> 当前结论；问答诊断收在次要抽屉里。</p>
+          <p>拉杆 -> HUD -> 逻辑主板 -> 时间监控；详细解释和当前结论默认收起，问答诊断继续放在次要抽屉。</p>
         </div>
         <div class="showcase-grid">
           <section class="panel lever-panel" aria-labelledby="lever-title">
@@ -350,38 +350,69 @@
                 <span class="chain-node sub-node command-node final-node" data-node="thr_lock" title="THR_LOCK / throttle_lock_release_cmd">THR_LOCK</span>
               </div>
             </div>
-            <aside id="highlight-explanation" class="highlight-explanation" aria-live="polite">
-              <h3><span class="presenter-callout">[高亮]</span> 为什么高亮</h3>
-              <p id="highlight-payload-fields">等待演示答案。</p>
-              <p id="highlight-node-list">高亮节点：-</p>
-              <ul id="highlight-explanation-list">
-                <li>高亮来自答案里的命中节点 / 目标逻辑。</li>
-                <li>高亮只表示答案关联，不是完整因果证明或物理根因证明。</li>
-              </ul>
-            </aside>
-            <section id="lever-result" class="lever-result chain-conclusion" aria-live="polite">
-              <h3>当前结论</h3>
-              <p class="lever-result-note">读法固定为 Headline -> Blocker -> Next step；三段都来自同一份 lever snapshot。</p>
-              <p id="lever-result-mode" class="lever-result-mode">当前结论来源：等待 lever snapshot。</p>
-              <div class="lever-result-grid">
-                <section class="result-rail result-rail-headline" aria-label="当前结论 headline">
-                  <p class="result-rail-kicker">1. Headline</p>
-                  <p id="lever-headline">拉杆快照读取中。</p>
-                </section>
-                <section class="result-rail result-rail-blocker" aria-label="当前 blocker">
-                  <p class="result-rail-kicker">2. Blocker</p>
-                  <p id="lever-blocker">-</p>
-                </section>
-                <section class="result-rail result-rail-next-step" aria-label="下一步">
-                  <p class="result-rail-kicker">3. Next step</p>
-                  <p id="lever-next-step">-</p>
+            <section class="panel monitor-panel monitor-panel-inline" aria-labelledby="monitor-panel-title">
+              <div class="monitor-panel-header">
+                <div>
+                  <h3 id="monitor-panel-title"><span class="presenter-callout">[监控]</span> 状态 vs 时间</h3>
+                  <p class="monitor-panel-note">
+                    同一张图里查看整条监测时间线；右上角可以切换到某个特定对象，不再把很多小图堆满页面。
+                  </p>
+                </div>
+                <div class="monitor-panel-controls">
+                  <label class="monitor-select-wrap" for="monitor-series-select">
+                    <span>对象</span>
+                    <select id="monitor-series-select" aria-label="选择监控对象">
+                      <option value="all">全部对象（归一化）</option>
+                    </select>
+                  </label>
+                  <button type="button" id="monitor-refresh-button" class="monitor-refresh-button">刷新监控图</button>
+                </div>
+              </div>
+              <p id="monitor-status" class="monitor-status" role="status" aria-live="polite">监控时间线读取中...</p>
+              <div id="monitor-summary" class="monitor-summary" aria-label="监控总结"></div>
+              <div id="monitor-events" class="monitor-events" aria-label="监控关键时刻"></div>
+              <div class="monitor-chart-shell">
+                <p id="monitor-selection-note" class="monitor-selection-note">当前显示：全部对象（归一化）。</p>
+                <div id="monitor-chart" class="monitor-chart" aria-live="polite"></div>
+              </div>
+            </section>
+            <details id="chain-inspector" class="chain-inspector">
+              <summary><span class="presenter-callout">[展开]</span> 详细解释 / 当前结论</summary>
+              <div class="chain-inspector-body">
+                <aside id="highlight-explanation" class="highlight-explanation" aria-live="polite">
+                  <h3><span class="presenter-callout">[高亮]</span> 为什么高亮</h3>
+                  <p id="highlight-payload-fields">等待演示答案。</p>
+                  <p id="highlight-node-list">高亮节点：-</p>
+                  <ul id="highlight-explanation-list">
+                    <li>高亮来自答案里的命中节点 / 目标逻辑。</li>
+                    <li>高亮只表示答案关联，不是完整因果证明或物理根因证明。</li>
+                  </ul>
+                </aside>
+                <section id="lever-result" class="lever-result chain-conclusion" aria-live="polite">
+                  <h3>当前结论</h3>
+                  <p class="lever-result-note">读法固定为 Headline -> Blocker -> Next step；三段都来自同一份 lever snapshot。</p>
+                  <p id="lever-result-mode" class="lever-result-mode">当前结论来源：等待 lever snapshot。</p>
+                  <div class="lever-result-grid">
+                    <section class="result-rail result-rail-headline" aria-label="当前结论 headline">
+                      <p class="result-rail-kicker">1. Headline</p>
+                      <p id="lever-headline">拉杆快照读取中。</p>
+                    </section>
+                    <section class="result-rail result-rail-blocker" aria-label="当前 blocker">
+                      <p class="result-rail-kicker">2. Blocker</p>
+                      <p id="lever-blocker">-</p>
+                    </section>
+                    <section class="result-rail result-rail-next-step" aria-label="下一步">
+                      <p class="result-rail-kicker">3. Next step</p>
+                      <p id="lever-next-step">-</p>
+                    </section>
+                  </div>
+                  <details id="lever-evidence-details" class="lever-evidence-details">
+                    <summary>证据 / 风险（默认折叠）</summary>
+                    <ul id="lever-evidence-list"></ul>
+                  </details>
                 </section>
               </div>
-              <details id="lever-evidence-details" class="lever-evidence-details">
-                <summary>证据 / 风险（默认折叠）</summary>
-                <ul id="lever-evidence-list"></ul>
-              </details>
-            </section>
+            </details>
           </section>
 
           <section class="result-grid" aria-label="演示答案">
@@ -441,21 +472,6 @@
             </article>
           </section>
         </div>
-        <section class="panel monitor-panel" aria-labelledby="monitor-panel-title">
-          <div class="monitor-panel-header">
-            <div>
-              <h2 id="monitor-panel-title"><span class="presenter-callout">[监控]</span> 状态 vs 时间</h2>
-              <p class="monitor-panel-note">
-                基于你定义的 `RA -> TRA -> VDT` 监测逻辑，由后端直接生成整条时间线；不是前端手搓假数据。
-              </p>
-            </div>
-            <button type="button" id="monitor-refresh-button" class="monitor-refresh-button">刷新监控图</button>
-          </div>
-          <p id="monitor-status" class="monitor-status" role="status" aria-live="polite">监控时间线读取中...</p>
-          <div id="monitor-summary" class="monitor-summary" aria-label="监控总结"></div>
-          <div id="monitor-events" class="monitor-events" aria-label="监控关键时刻"></div>
-          <div id="monitor-tracks" class="monitor-tracks" aria-live="polite"></div>
-        </section>
       </section>
     </main>
     <script src="/demo.js"></script>
