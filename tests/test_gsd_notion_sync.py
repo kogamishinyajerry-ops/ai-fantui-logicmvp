@@ -1,5 +1,7 @@
+import argparse
 import os
 import unittest
+from unittest.mock import patch
 
 from tools.gsd_notion_sync import (
     CommandResult,
@@ -8,7 +10,9 @@ from tools.gsd_notion_sync import (
     build_gate_update_properties,
     build_current_review_brief,
     render_dashboard_blocks,
+    render_freeze_packet_blocks,
     upsert_dashboard_snapshot_section,
+    upsert_freeze_packet_snapshot_section,
     retire_legacy_review_artifacts,
     fetch_review_snapshot,
     build_superseded_gap_fix_plan,
@@ -16,6 +20,7 @@ from tools.gsd_notion_sync import (
     write_notion_outcome,
     resolve_superseded_failure_gaps,
     summarize_results,
+    handle_run,
 )
 
 
@@ -242,6 +247,8 @@ class GsdNotionSyncTests(unittest.TestCase):
             ready_task=None,
             open_gap_titles=(),
             stale_gap_titles=(),
+            latest_success_run_notes="175 tests OK; 10 demo smoke scenarios pass.",
+            latest_passing_qa_summary="PASS. 8 validation commands all green.",
         )
         config = {
             "pages": {
@@ -285,6 +292,51 @@ class GsdNotionSyncTests(unittest.TestCase):
         self.assertIn("P6-01 同步控制塔真值与 freeze packet 基线", joined)
         self.assertIn("当前无需 Opus 审查", joined)
         self.assertIn("继续自动开发；当前无需手动触发 Opus 4.6。", joined)
+
+    def test_render_freeze_packet_blocks_reflects_live_baseline(self):
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="P6 正在执行",
+            latest_verified_plan="P6-02 控制塔首页快照自动同步",
+            latest_success_run="GitHub GSD automation 24237800855",
+            latest_failed_run=None,
+            latest_passing_qa="GitHub GSD automation 24237800855 QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+            latest_success_run_notes="175 tests OK; 10 demo smoke scenarios pass.",
+            latest_passing_qa_summary="PASS. 8 validation commands all green.",
+        )
+        config = {
+            "pages": {
+                "status": "status-id",
+                "constitution": "constitution-id",
+                "opus_brief": "opus-brief-id",
+            },
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            },
+        }
+        brief = build_current_review_brief(snapshot, config)
+
+        blocks = render_freeze_packet_blocks(brief, snapshot, config)
+        text_fragments = []
+        for block in blocks:
+            for value in block.values():
+                if isinstance(value, dict) and "rich_text" in value:
+                    text_fragments.extend(item["text"]["content"] for item in value["rich_text"])
+
+        joined = "\n".join(text_fragments)
+        self.assertIn("P6 Reconcile Control Tower And Freeze Demo Packet", joined)
+        self.assertIn("P6-02 控制塔首页快照自动同步", joined)
+        self.assertIn("175 tests OK; 10 demo smoke scenarios pass.", joined)
+        self.assertIn("PASS. 8 validation commands all green.", joined)
 
     def test_fetch_review_snapshot_prefers_github_runs_and_matching_qa(self):
         class FakeClient:
@@ -433,6 +485,52 @@ class GsdNotionSyncTests(unittest.TestCase):
             "https://github.com/owner/repo/actions/runs/12345",
             run_call[3]["Artifacts"]["rich_text"][0]["text"]["content"],
         )
+
+    def test_handle_run_degrades_successful_ci_when_notion_writeback_fails(self):
+        args = argparse.Namespace(
+            cwd=".",
+            plan_id="P6-03 Freeze Demo Packet 自动快照同步",
+            title="GitHub GSD automation 24239999999",
+            command=["python3 tools/run_gsd_validation_suite.py --format json"],
+            dry_run=False,
+            opus_gate=False,
+            format="json",
+        )
+        config = {
+            "default_plan": "P6-03 Freeze Demo Packet 自动快照同步",
+        }
+        results = [
+            CommandResult(
+                command="python3 tools/run_gsd_validation_suite.py --format json",
+                returncode=0,
+                stdout="PASS",
+                stderr="",
+                started_at="2026-04-10T00:00:00+00:00",
+                ended_at="2026-04-10T00:00:05+00:00",
+            )
+        ]
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            with (
+                patch("tools.gsd_notion_sync.run_commands", return_value=results),
+                patch(
+                    "tools.gsd_notion_sync.write_notion_outcome",
+                    side_effect=RuntimeError("Notion API request failed: HTTP 404 /v1/databases/test/query"),
+                ),
+                patch("tools.gsd_notion_sync.output_run_result") as output_mock,
+            ):
+                exit_code = handle_run(args, config)
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(0, exit_code)
+        payload = output_mock.call_args.args[1]
+        self.assertEqual("failed", payload["notion"])
+        self.assertIn("HTTP 404", payload["notion_error"])
+        self.assertEqual("Succeeded", payload["status"])
 
     def test_build_superseded_gap_fix_plan_marks_duplicates(self):
         self.assertEqual(
@@ -708,6 +806,67 @@ class GsdNotionSyncTests(unittest.TestCase):
                 (
                     "PATCH",
                     "/v1/blocks/dashboard-page/children",
+                    {"children": blocks, "position": {"type": "start"}},
+                ),
+            ],
+            client.calls,
+        )
+
+    def test_upsert_freeze_packet_snapshot_section_replaces_previous_managed_snapshot_only(self):
+        class FakeClient(NotionClient):
+            def __init__(self):
+                super().__init__("test-token")
+                self.calls = []
+
+            def list_block_children(self, block_id):
+                return [
+                    {
+                        "id": "managed-callout",
+                        "type": "callout",
+                        "archived": False,
+                        "in_trash": False,
+                        "callout": {"rich_text": [{"plain_text": "AUTO-SYNCED FREEZE PACKET SNAPSHOT — old"}]},
+                    },
+                    {
+                        "id": "managed-heading",
+                        "type": "heading_2",
+                        "archived": False,
+                        "in_trash": False,
+                        "heading_2": {"rich_text": [{"plain_text": "当前冻结基线（自动同步）"}]},
+                    },
+                    {
+                        "id": "managed-divider",
+                        "type": "divider",
+                        "archived": False,
+                        "in_trash": False,
+                        "divider": {},
+                    },
+                    {
+                        "id": "historical-block",
+                        "type": "paragraph",
+                        "archived": False,
+                        "in_trash": False,
+                        "paragraph": {"rich_text": [{"plain_text": "legacy content"}]},
+                    },
+                ]
+
+            def request(self, method, path, payload=None):
+                self.calls.append((method, path, payload))
+                return {}
+
+        client = FakeClient()
+        blocks = [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}}]
+
+        upsert_freeze_packet_snapshot_section(client, "freeze-packet-page", blocks)
+
+        self.assertEqual(
+            [
+                ("DELETE", "/v1/blocks/managed-callout", None),
+                ("DELETE", "/v1/blocks/managed-heading", None),
+                ("DELETE", "/v1/blocks/managed-divider", None),
+                (
+                    "PATCH",
+                    "/v1/blocks/freeze-packet-page/children",
                     {"children": blocks, "position": {"type": "start"}},
                 ),
             ],

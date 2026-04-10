@@ -22,6 +22,7 @@ NOTION_VERSION = "2022-06-28"
 DEFAULT_CONFIG_PATH = Path(".planning/notion_control_plane.json")
 TEXT_LIMIT = 1800
 DASHBOARD_SYNC_MARKER = "AUTO-SYNCED DASHBOARD SNAPSHOT"
+FREEZE_PACKET_SYNC_MARKER = "AUTO-SYNCED FREEZE PACKET SNAPSHOT"
 DEFAULT_DATABASES = {
     "roadmap": "33cc6894-2bed-810a-a2ea-e4f095b44afa",
     "tasks": "33cc6894-2bed-81ea-bb1b-ef1bc904f407",
@@ -99,6 +100,8 @@ class ReviewSnapshot:
     ready_task: str | None
     open_gap_titles: tuple[str, ...]
     stale_gap_titles: tuple[str, ...]
+    latest_success_run_notes: str | None = None
+    latest_passing_qa_summary: str | None = None
 
 
 @dataclass(frozen=True)
@@ -671,6 +674,8 @@ def fetch_review_snapshot(client: NotionClient, config: dict[str, Any]) -> Revie
         ready_task=row_text(ready_task_row, "Task") or None,
         open_gap_titles=open_gap_titles,
         stale_gap_titles=stale_gap_titles,
+        latest_success_run_notes=row_text(success_run_row, "Notes") or None,
+        latest_passing_qa_summary=row_text(passing_qa_row, "Summary") or None,
     )
 
 
@@ -938,16 +943,58 @@ def render_dashboard_blocks(brief: CurrentReviewBrief, snapshot: ReviewSnapshot,
     return blocks
 
 
-def upsert_dashboard_snapshot_section(
+def render_freeze_packet_blocks(
+    brief: CurrentReviewBrief,
+    snapshot: ReviewSnapshot,
+    config: dict[str, Any],
+) -> list[dict[str, Any]]:
+    current_opus_state = (
+        "当前无需 Opus 审查"
+        if not brief.review_required
+        else f"需要 Opus 4.6 介入：{brief.intervention_kind}"
+    )
+    blocks: list[dict[str, Any]] = [
+        callout_block(
+            f"{FREEZE_PACKET_SYNC_MARKER} — 这个顶部冻结摘要由 repo-side sync 自动刷新；下方旧文字若尚未同步，应以这里为准。",
+            "🧊",
+        ),
+        heading_block("当前冻结基线（自动同步）"),
+        bullet_block(f"当前阶段：{snapshot.active_phase}"),
+        bullet_block(f"当前已验证 Plan：{snapshot.latest_verified_plan}"),
+        bullet_block(f"最近成功执行证据：{snapshot.latest_success_run or '暂无'}"),
+        bullet_block(f"当前 Gate：{snapshot.gate_name}（{snapshot.gate_status}）"),
+        bullet_block(f"当前 Opus 状态：{current_opus_state}"),
+        bullet_block(f"Open Gap 数量：{len(snapshot.open_gap_titles)}"),
+    ]
+    if snapshot.latest_passing_qa_summary:
+        blocks.append(bullet_block(f"当前 QA 摘要：{snapshot.latest_passing_qa_summary}"))
+    if snapshot.latest_success_run_notes:
+        blocks.append(bullet_block(f"当前运行摘要：{snapshot.latest_success_run_notes}"))
+    blocks.extend(
+        [
+            page_link_block(page_id(config, "status")),
+            page_link_block(page_id(config, "constitution")),
+            page_link_block(page_id(config, "opus_brief")),
+            paragraph_parts_block([notion_text("GitHub Repo / ai-fantui-logicmvp", config_url(config, "github_repo"))]),
+            paragraph_parts_block([notion_text("GitHub Actions / GSD Automation Loop", config_url(config, "github_actions"))]),
+            divider_block(),
+        ]
+    )
+    return blocks
+
+
+def upsert_managed_page_section(
     client: NotionClient,
-    dashboard_page_id: str,
+    page_id_value: str,
     blocks: list[dict[str, Any]],
+    *,
+    marker: str,
 ) -> None:
-    children = client.list_block_children(dashboard_page_id)
+    children = client.list_block_children(page_id_value)
     start_index = None
     end_index = None
     for index, block in enumerate(children):
-        if block.get("type") == "callout" and block_plain_text(block).startswith(DASHBOARD_SYNC_MARKER):
+        if block.get("type") == "callout" and block_plain_text(block).startswith(marker):
             start_index = index
             end_index = index + 1
             while end_index < len(children) and children[end_index].get("type") != "divider":
@@ -962,9 +1009,25 @@ def upsert_dashboard_snapshot_section(
             client.request("DELETE", f"/v1/blocks/{block['id']}")
     client.request(
         "PATCH",
-        f"/v1/blocks/{dashboard_page_id}/children",
+        f"/v1/blocks/{page_id_value}/children",
         {"children": blocks, "position": {"type": "start"}},
     )
+
+
+def upsert_dashboard_snapshot_section(
+    client: NotionClient,
+    dashboard_page_id: str,
+    blocks: list[dict[str, Any]],
+) -> None:
+    upsert_managed_page_section(client, dashboard_page_id, blocks, marker=DASHBOARD_SYNC_MARKER)
+
+
+def upsert_freeze_packet_snapshot_section(
+    client: NotionClient,
+    freeze_packet_page_id: str,
+    blocks: list[dict[str, Any]],
+) -> None:
+    upsert_managed_page_section(client, freeze_packet_page_id, blocks, marker=FREEZE_PACKET_SYNC_MARKER)
 
 
 def build_gate_update_properties(brief: CurrentReviewBrief, *, activate_gate: bool) -> dict[str, Any]:
@@ -1020,6 +1083,13 @@ def write_current_opus_review_brief(
     dashboard_page_id = page_id(config, "dashboard")
     client.update_page_properties(dashboard_page_id, {"title": title_value("AI FANTUI LogicMVP 控制塔")})
     upsert_dashboard_snapshot_section(client, dashboard_page_id, render_dashboard_blocks(brief, effective_snapshot, config))
+    freeze_packet_page_id = page_id(config, "freeze_packet")
+    client.update_page_properties(freeze_packet_page_id, {"title": title_value("10 Freeze Demo Packet")})
+    upsert_freeze_packet_snapshot_section(
+        client,
+        freeze_packet_page_id,
+        render_freeze_packet_blocks(brief, effective_snapshot, config),
+    )
 
     if snapshot.gate_page_id:
         client.update_page_properties(
@@ -1250,6 +1320,8 @@ def output_run_result(format_name: str, payload: dict[str, Any]) -> None:
         print("Notion writeback: skipped")
     elif payload.get("notion") == "written":
         print("Notion writeback: written")
+    elif payload.get("notion") == "failed":
+        print(f"Notion writeback: failed ({payload.get('notion_error', 'unknown error')})")
     if payload.get("opus_review_brief"):
         print(f"Current Opus brief: {payload['opus_review_brief']['intervention_kind']}")
 
@@ -1284,20 +1356,25 @@ def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
 
     token = os.environ.get("NOTION_API_KEY")
     if not args.dry_run and token:
-        written = write_notion_outcome(
-            NotionClient(token),
-            config,
-            title=title,
-            plan_id=plan_id,
-            commands=args.command,
-            results=results,
-            summary=summary,
-            opus_gate=args.opus_gate,
-        )
-        payload["notion"] = "written"
-        payload["notion_pages"] = written
-        if "opus_review_brief" in written:
-            payload["opus_review_brief"] = written["opus_review_brief"]
+        try:
+            written = write_notion_outcome(
+                NotionClient(token),
+                config,
+                title=title,
+                plan_id=plan_id,
+                commands=args.command,
+                results=results,
+                summary=summary,
+                opus_gate=args.opus_gate,
+            )
+        except Exception as exc:
+            payload["notion"] = "failed"
+            payload["notion_error"] = str(exc)
+        else:
+            payload["notion"] = "written"
+            payload["notion_pages"] = written
+            if "opus_review_brief" in written:
+                payload["opus_review_brief"] = written["opus_review_brief"]
     output_run_result(args.format, payload)
     return 0 if summary.succeeded else 1
 
