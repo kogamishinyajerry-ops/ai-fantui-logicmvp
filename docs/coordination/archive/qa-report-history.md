@@ -1,0 +1,3085 @@
+# QA Report History
+
+这个归档文件保留了 active QA report 里旧 Round 的历史正文。当前真值请先看 ../qa_report.md 顶部的自动同步快照。
+
+
+## Round 92 完成：direct VDT control + flatter logic board + lower-priority result panels
+
+- 结论：PASS；当前 cockpit 主视图已经改成“左侧直观 VDT 控件 + 中央放大的逻辑主板 + 下沉结果区”。
+- 指挥侧复核结果
+  - 左侧控件不再只暴露内部词 `deploy_position_percent`，而是以 `VDT 模式 / VDT 反馈` 直观呈现。
+  - `feedback_mode=manual_feedback_override + deploy_position_percent=50`
+    - `deploy_90_percent_vdt == false`
+    - `vdt90 inactive`
+    - `logic4 blocked on deploy_90_percent_vdt`
+  - `feedback_mode=manual_feedback_override + deploy_position_percent=95`
+    - `deploy_90_percent_vdt == true`
+    - `vdt90 active`
+    - 其它条件满足时 `logic4 active`、`THR_LOCK active`
+  - `deploy_position_percent=95 + engine_running=false`
+    - `logic4` 仍 blocked on `engine_running`
+  - 主板语义已扁平化：
+    - 平级流程节点：`SW1 / TLS115 / TLS解锁 / SW2 / 540V / EEC / PLS / PDU / VDT90 / THR_LOCK`
+    - `L1 / L2 / L3 / L4` 只作为贴边逻辑注释显示，不再与实体节点同类并列
+  - `当前结论` 保留在主板附近。
+  - `结果摘要 / 推理结果 / 原始 JSON 调试` 下沉到底部次要区域。
+  - `诊断问答` 继续冻结并弱化为 `诊断问答（冻结 / 后续开发）`。
+  - `tests.test_demo`: 69 tests OK。
+  - 全量回归：129 tests OK。
+  - `well_harness demo --format json 'logic4 和 throttle lock 有什么关系'` 保持 `logic4_thr_lock_bridge / logic4->thr_lock / logic4`。
+  - `run nominal-deploy --format json` 仍可观察到 `logic4_active=True` 与 `throttle_electronic_lock_release_cmd=True`。
+
+## Round 91 完成：VDT feedback control + logic board semantics fix
+
+- 结论：PASS；当前 cockpit 已补齐 `VDT90 -> L4 -> THR_LOCK` 的受控演示路径。
+- 指挥侧复核结果
+  - `POST /api/lever-snapshot` 旧请求 `{tra_deg}` 仍兼容。
+  - 新增 `feedback_mode` 与 `deploy_position_percent`：
+    - `manual_feedback_override + deploy_position_percent=50`
+      - `deploy_90_percent_vdt == false`
+      - `vdt90 inactive`
+      - `logic4 blocked on deploy_90_percent_vdt`
+    - `manual_feedback_override + deploy_position_percent=95`
+      - `deploy_90_percent_vdt == true`
+      - `vdt90 active`
+      - 其它条件满足时 `logic4 active`、`THR_LOCK active`
+    - `manual_feedback_override + deploy_position_percent=95 + engine_running=false`
+      - `logic4 blocked on engine_running`
+  - `L1 / L2 / L3 / L4` 已从实体 box node 中拆出，改为独立逻辑标签；实体 / 命令 / feedback 节点继续保留 chip / box 视觉。
+  - `诊断问答` 已弱化为 `诊断问答（后续开发）` 次要抽屉。
+  - `feedback / plant` 文案继续明确是 simplified first-cut diagnostic override，不是新的控制真值，也不是完整实时物理仿真。
+  - `tests.test_demo`: 69 tests OK。
+  - 全量回归：129 tests OK。
+  - `well_harness demo --format json 'logic4 和 throttle lock 有什么关系'` 仍返回 `logic4_thr_lock_bridge / logic4->thr_lock / logic4`。
+  - `run nominal-deploy --format json` 仍可观察到 `logic4_active=True` 和 `throttle_electronic_lock_release_cmd=True`。
+
+## Round 92 指挥侧重定向：VDT 直观控制 + 主板语义继续修正
+
+- 结论：Round 91 虽然通过，但还不满足用户对演示表达的要求，因此不冻结。
+- 用户反馈的三个有效问题
+  - 左侧现在虽然能通过 `deploy_position_percent` 推动 `VDT90`，但用户要的是更直观的 `VDT` 控件；这不是需求文档硬限制，而是当前 simplified plant 呈现方式不够贴近用户心智。
+  - `L1 / L2 / L3 / L4` 即使改成了 `logic-badge`，仍然插在主流程结构里；用户要求它们只做节点旁的逻辑注释，而不是流程节点本体。
+  - `结果摘要 / 推理结果` 当前应下沉，把空间让给逻辑主板；`当前结论` 可留在主板附近。
+- 新一轮要求
+  - 左侧控件要更直接表达 `VDT`
+  - 主板只保留平级流程节点
+  - `L1 / L2 / L3 / L4` 只做附着注释 / 勾叉
+  - `结果摘要 / 推理结果` 下沉
+  - `诊断问答` 继续冻结
+
+## Round 91 指挥侧重定向：撤回 freeze，转入 VDT / logic board 修正
+
+- 结论：当前版本虽然保持 `128 tests OK`，但“建议冻结”的判断已撤回。
+- 原因
+  - 左侧条件面板没有可调 `VDT / deploy feedback`，用户无法主动把 `VDT90` 推到 `true`，因此 `L4 / THR_LOCK` 无法在 UI 中完成完整链路演示。
+  - 逻辑主板里 `L1 / L2 / L3 / L4` 与 `TLS115 / 540V / EEC / PLS / PDU / THR_LOCK` 这些实体节点当前以同类 box 节点并列展示，语义混淆，容易误导。
+  - `诊断问答` 当前对主演示路径已经是干扰项，应先冻结 / 弱化。
+- 指挥侧要求
+  - 新一轮优先补 `VDT / deploy_position_percent` 的可调能力。
+  - 必须让用户在 cockpit 左侧主动把 `deploy feedback` 推到 `>= 90%`，从而演示 `VDT90 -> L4 -> THR_LOCK`。
+  - 必须重画逻辑主板，让 `L1 / L2 / L3 / L4` 和实体 / 命令 / 反馈节点视觉上明确区分。
+  - `诊断问答` 暂时冻结，不再作为当前主任务。
+
+## Round 89 指挥侧复核：first-screen density polish
+
+- 结论：PASS；本轮是低风险首屏密度微调，没有引入语义变化。
+- 开发会话回报
+  - 改动文件：
+    - `src/well_harness/static/demo.html`
+    - `src/well_harness/static/demo.css`
+    - `tests/test_demo.py`
+  - hero、演示路径条、lever console、条件面板、HUD、反馈区和当前结论的纵向 padding / gap / 字号都收紧一档。
+  - 新增针对常见桌面演示窗口的 media rule：
+    - `@media (min-width: 1101px) and (max-height: 1120px)`
+  - 左侧说明文案压短，减少无效文字挤占首屏。
+  - `反馈 / 诊断（simplified plant）`、`诊断问答`、`原始 JSON 调试`、`证据 / 风险` 的层级和默认折叠状态不变。
+- 指挥侧复核结果
+  - `tests.test_demo`: 67 tests OK。
+  - 全量回归：127 tests OK。
+  - 本轮未修改 endpoint、controller、runner 或交互语义。
+  - 在 `1440x1100` 左右首屏里，条件面板比之前多露出一截：
+    - 完整看到“条件面板”标题
+    - RA 控件
+    - 发动机运行 / 飞机在地面 / 反推抑制
+    - EEC enable
+    - N1K 控件
+    - `N1K limit` 的上半段
+  - 首屏仍保持 cockpit 控制台感，没有退回普通表单页。
+  - `反馈 / 诊断（simplified plant）`、`诊断问答`、`原始 JSON 调试`、`证据 / 风险` 的默认层级不回归。
+- 当前建议
+  - 当前版本已经没有必须立刻处理的 UI 展示阻塞。
+  - 如果继续打磨，最值得做的是两个极小 polish：
+    - 左列 HUD 的字重和层次
+    - 条件 toggle 的 cockpit 开关感
+  - 不建议再加新功能。
+
+## Round 88 指挥侧复核：browser hand-check for multi-parameter cockpit
+
+- 结论：PASS with transparent boundary；当前 UI 继续保持 **multi-parameter cockpit demo candidate**。
+- 开发会话回报
+  - 本轮未修改任何仓库文件。
+  - Browser: Google Chrome。
+  - Port: `8770`。
+  - 视口：`1440x1100` 的 Chrome 渲染首屏，以及同端口 live endpoint smoke。
+  - `8767` 上是旧 server，不是当前代码；本轮单独使用 `8770` 检查当前实现，结束后已关闭。
+  - 完成了当前代码版本的真实 Chrome 首屏视觉检查。
+  - 但没有完成“所有参数组合都在浏览器里手动切换一遍”的纯人工交互验证；原因是开发会话不能物理使用用户鼠标 / 触控板，因此没有把 smoke 或自动化尝试伪装成人工交互验证。
+- 指挥侧复核结果
+  - 当前代码版本首屏已经包含：
+    - `反推拉杆`
+    - `条件面板`
+    - `逻辑主板`
+    - `结果摘要 / 推理结果 / 当前结论`
+  - 条件面板没有把页面退回成大表单页；在 `1440x1100` 首屏中属于“开始可见、不是全部完整露出”状态。
+  - live `/api/lever-snapshot` 核对通过：
+    - `TRA=0 / -2 / -7 / -14`
+    - `radio_altitude_ft = 6.0`
+    - `engine_running = false`
+    - `aircraft_on_ground = false`
+    - `reverser_inhibited = true`
+    - `eec_enable = false`
+    - `n1k >= max_n1k_deploy_limit`
+  - blocker 文案均符合预期：
+    - `RA=6ft` -> `L1: radio_altitude_ft`
+    - `engine_running=false` -> `L2: engine_running`
+    - `aircraft_on_ground=false` -> `L2: aircraft_on_ground`
+    - `reverser_inhibited=true` -> `L1: reverser_inhibited`
+    - `eec_enable=false` -> `L2: eec_enable`
+    - `n1k>=limit` -> `L3: n1k`
+  - `eec_enable=false` 的表现准确，没有误导成 `logic3` 也一定关闭。
+  - `反馈 / 诊断（simplified plant）` 仍明确是简化 feedback。
+  - `evidence / risks` 和 `原始 JSON 调试` 仍默认折叠。
+  - `诊断问答` 仍是次要入口。
+  - `tests.test_demo`: 66 tests OK。
+  - 全量回归：126 tests OK。
+- 当前建议
+  - 当前版本已经没有必须立刻处理的 UI 展示阻塞。
+  - 如果继续开发，最值得做的是首屏垂直密度轻量微调，让条件面板在 `1440x1100` 这类常见演示窗口里多露出一截。
+  - 不建议再加新功能。
+
+## Round 87 指挥侧复核：multi-parameter cockpit controls
+
+- 结论：PASS；cockpit 已从“只拉 TRA”扩展为“TRA + 条件面板”的受控演示面。
+- 指挥侧复核点
+  - `/api/lever-snapshot` 旧请求 `{tra_deg}` 仍兼容。
+  - `/api/lever-snapshot` 现支持 `radio_altitude_ft`、`engine_running`、`aircraft_on_ground`、`reverser_inhibited`、`eec_enable`、`n1k`、`max_n1k_deploy_limit`。
+  - 后端继续复用 `HarnessConfig`、`LatchedThrottleSwitches`、`SimplifiedDeployPlant`、`DeployController.evaluate_with_explain(...)` 与 `DeployController.explain(...)`。
+  - JS 只收集条件面板值并渲染后端返回的 HUD / nodes / summary / failed_conditions；未在前端硬编码 controller 条件。
+  - `SW1 / SW2` 仍由 `TRA + LatchedThrottleSwitches` 推导。
+  - `TLS / PLS / VDT / deploy position` 位于折叠的 `反馈 / 诊断（simplified plant）` 区，未冒充完整实时物理模型。
+  - `controller.py`、`SimulationRunner`、`well_harness demo`、`POST /api/demo`、`well_harness run` 保持不变。
+  - 未新增 schema / validator、runtime dependency、Node / Vite / Next、LLM、browser E2E 或第二套 payload。
+- 指挥侧执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... lever_snapshot_payload(...) for default / RA / engine / ground / inhibited / EEC / N1K cases ... PY`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool`
+- 指挥侧复核结果
+  - `tests.test_demo`: 66 tests OK。
+  - 全量回归：126 tests OK。
+  - 默认 `{tra_deg: -7}` 请求仍兼容，`logic3` 继续 blocked on `tra_deg`。
+  - `radio_altitude_ft = 6.0`：`logic1` blocked on `radio_altitude_ft`。
+  - `engine_running = false`：`logic2 / logic3 / logic4` blocked on `engine_running`。
+  - `aircraft_on_ground = false`：`logic2 / logic3 / logic4` blocked on `aircraft_on_ground`。
+  - `reverser_inhibited = true`：`logic1 / logic2 / logic3` blocked on `reverser_inhibited`。
+  - `eec_enable = false`：`logic2` blocked on `eec_enable`，但 `logic3` 仍可 active；这符合当前 confirmed controller truth，不是 bug。
+  - `n1k >= max_n1k_deploy_limit`：`logic3` blocked on `n1k`。
+  - `demo_intent` 仍为 `logic4_thr_lock_bridge`。
+  - `nominal-deploy` 仍到达 `logic4` 且 `throttle_electronic_lock_release_cmd` 仍触发。
+- 当前建议
+  - 下一轮只做真实浏览器多参数 hand-check。
+  - 重点确认条件面板是否仍有 cockpit 感，而不是退回表单页。
+  - 特别检查 `eec_enable=false` 的 UI 说明，避免用户误以为 `logic3` 也必然关闭。
+
+## Round 86 指挥侧复核：manual exact TRA drag spot-check
+
+- 结论：PASS with explicit boundary；没有完成严格意义上的人工四点拖动，但没有伪装验证，边界记录清楚。
+- 开发会话回报
+  - 本轮未修改任何仓库文件，也未修改 `docs/coordination/plan.md`。
+  - 本轮要求不要依赖 Apple Events / System Events / 自动坐标注入；开发会话无法物理使用用户鼠标或触控板，因此没有声称完成 manual drag QA。
+  - 独立 server 使用 `PYTHONPATH=src python3 -m well_harness.demo_server --host 127.0.0.1 --port 8767 --open`。
+  - 默认端口上已有旧 server，且旧 server 没有 `/api/lever-snapshot`；本轮使用 `127.0.0.1:8767` 做 live endpoint 验证。
+  - 8767 server 已停止。
+- live `/api/lever-snapshot` 四点状态
+  - `TRA=0`：SW1/SW2 inactive；logic1/logic3/logic4 blocked；THR_LOCK inactive；提示进入 SW1 window。
+  - `TRA=-2`：SW1、logic1、TLS115、TLS unlocked active；SW2 inactive。
+  - `TRA=-7`：SW1/SW2、logic2、540V active；logic3 blocked on `tra_deg`。
+  - `TRA=-14`：logic3、EEC、PLS、PDU active；VDT90 inactive；logic4 / THR_LOCK blocked on `deploy_90_percent_vdt`。
+- 指挥侧复核结果
+  - `logic4 / THR_LOCK` 对 VDT90 / simplified plant feedback 的依赖仍体现在 blocker 文案中，没有误导成完整实时物理仿真。
+  - evidence / risks 与 `原始 JSON 调试` 仍默认折叠。
+  - `诊断问答` 仍是次要入口。
+  - 现有 `demo`、`run`、`/api/demo`、`/api/lever-snapshot` 行为保持不变。
+  - `tests.test_demo`: 64 tests OK。
+  - 全量回归：124 tests OK。
+- 当前建议
+  - 当前 UI 继续保持 interactive cockpit demo candidate。
+  - 如果用户或现场操作者能物理操作浏览器，可再手动拖一次 `TRA=0/-2/-7/-14` 做最终手感确认。
+  - 下一轮开发方向已切到 Round 87 multi-parameter cockpit controls：增加 RA、发动机/地面、反推抑制、EEC enable、N1K / limit 等条件面板。
+
+## Round 85 指挥侧复核：interactive lever cockpit browser drag QA
+
+- 结论：PASS with boundary；当前 UI 继续保持 interactive cockpit demo candidate，但四个精确 TRA 点的真实拖动仍需人工 spot-check。
+- 开发会话回报
+  - 本轮未修改任何仓库文件，也未修改 `docs/coordination/plan.md`。
+  - Browser: Google Chrome，独立 `--app` 窗口 + 临时 profile 尝试。
+  - Server: `127.0.0.1:8767`。
+  - 桌面视口约 `1728x1117` points / `3456x2234` Retina screenshot。
+  - 临时截图在 `/tmp/well-harness-r85-shots/`，未进入仓库，不是截图资产或 E2E automation。
+  - 真实 Chrome 窗口确认首屏是 cockpit：拉杆、HUD、逻辑主板、当前结论都在第一屏；`诊断问答` 是次要入口。
+  - 浏览器里一次实际输入让 TRA 从 `-14.0°` 变成 `-13.9°`，说明 range 控件事件链路能触发。
+  - 因本机 Chrome 多窗口 / profile 弹窗 / macOS GUI 注入坐标干扰，未声称完成 `TRA=0/-2/-7/-14` 四个精确点的真实拖动 QA。
+  - 四个 TRA 点已通过同一 live server 的 `/api/lever-snapshot` 验证。
+- 指挥侧执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... lever_snapshot_payload(0/-2/-7/-14) ... PY`
+- 指挥侧复核结果
+  - `tests.test_demo`: 64 tests OK。
+  - 全量回归：124 tests OK。
+  - `TRA=0`：SW1/SW2 inactive；logic1/logic3/logic4 blocked；THR_LOCK inactive；blocker 是 SW1。
+  - `TRA=-2`：SW1 active；SW2 inactive；logic1 active；logic3/logic4 blocked；THR_LOCK inactive。
+  - `TRA=-7`：SW1/SW2 active；logic1/logic2 active；logic3 blocked on `tra_deg`；THR_LOCK inactive。
+  - `TRA=-14`：logic3 active；VDT90 inactive；logic4 / THR_LOCK blocked on `deploy_90_percent_vdt`。
+  - `logic4 / THR_LOCK` 仍解释为依赖 VDT90 / simplified plant feedback。
+  - evidence / risks 与 `原始 JSON 调试` 仍默认折叠。
+  - 现有 `well_harness demo`、`well_harness demo --format json`、`well_harness run`、`POST /api/demo` 和 `POST /api/lever-snapshot` 行为保持不变。
+- 当前建议
+  - 下一轮只做人工鼠标 / 触控板四点拖动 spot-check。
+  - 不要使用 Apple Events / System Events / 自动坐标注入冒充完整浏览器拖动验证。
+  - 如果人工 spot-check 通过，不要修改代码；如果只是轻微可读性问题，先记录，不要急着改。
+
+## Round 84 指挥侧复核：interactive thrust reverser lever cockpit demo
+
+- 结论：PASS；本轮已从问答式文字 UI 转为交互式反推拉杆 cockpit demo。
+- 指挥侧复核点
+  - `POST /api/lever-snapshot` 已存在，并使用 canonical pullback scrubber。
+  - Endpoint 复用 `HarnessConfig`、`LatchedThrottleSwitches`、`SimplifiedDeployPlant`、`DeployController.evaluate_with_explain(...)` 与 `DeployController.explain(...)`。
+  - 静态 UI 包含 `反推拉杆` range 控件、HUD、`逻辑主板`、`当前结论`、三态节点样式和 `诊断问答` 次要抽屉。
+  - JS 调用 `/api/lever-snapshot` 并渲染后端返回的 HUD / node states / summary；未在 JS 中硬编码 controller 条件。
+  - evidence / risks 与 `原始 JSON 调试` 默认折叠。
+  - `POST /api/demo`、`well_harness demo`、`well_harness demo --format json`、`well_harness run` 行为保持不变。
+  - 未修改 `controller.py`、`SimulationRunner`、`scenarios.py` 或 `docs/coordination/plan.md`。
+  - 未新增 schema / validator、runtime dependency、Node / Vite / Next、LLM、browser E2E、截图资产或第二套 DemoAnswer payload。
+- 指挥侧执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_controller`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... lever_snapshot_payload(0/-2/-7/-14) ... PY`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --format json | python3 -m json.tool`
+- 指挥侧复核结果
+  - `tests.test_controller`: 14 tests OK。
+  - `tests.test_demo`: 64 tests OK。
+  - 全量回归：124 tests OK。
+  - `TRA=0`：SW1/SW2 inactive；logic1/logic3/logic4 blocked；THR_LOCK inactive。
+  - `TRA=-2`：SW1、logic1、TLS115 active；SW2 inactive。
+  - `TRA=-7`：SW1/SW2、logic1、logic2 active；logic3 blocked on `tra_deg`。
+  - `TRA=-14`：logic3 active；VDT90 inactive；logic4 / THR_LOCK blocked on `deploy_90_percent_vdt`。
+  - demo JSON smoke 通过，intent 仍为 `logic4_thr_lock_bridge`，target_logic 仍为 `logic4`。
+  - `nominal-deploy` 仍到达 `logic4` 且 `throttle_electronic_lock_release_cmd` 仍触发。
+  - `retract-reset` tail row 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 当前建议
+  - 下一轮只做真实浏览器拖动拉杆 hand-check。
+  - 重点确认 cockpit 首屏、三态高亮、窄屏阅读路径，以及 THR_LOCK 对 VDT90 / simplified plant feedback 的解释是否直观且不误导。
+  - 不要继续加 raw JSON 小功能、schema / validator、E2E 或新的控制真值。
+
+## Round 84：interactive thrust reverser lever cockpit demo
+
+- 结论：PASS；UI 主路径已改为交互式反推拉杆 cockpit demo，旧 demo / run / `/api/demo` 行为未破坏。
+- UI 变化
+  - 首屏不再以问答文字解释为主，而是显示 `反推拉杆`、HUD、`逻辑主板`、`当前结论`。
+  - range 控件覆盖 `0°` 到 `-32°`，标注 SW1 / SW2 / logic3 / logic4 travel 阈值。
+  - HUD 显示 TRA、SW1/SW2、radio altitude、engine running、aircraft on ground、reverser inhibited、EEC enable、N1K / limit、TLS / PLS unlock、deploy position、VDT90。
+  - 逻辑主板节点支持 `active / blocked / inactive` 三态 class。
+  - evidence / risks 与 raw JSON 默认折叠；raw JSON 仍是 `原始 JSON 调试` inspector。
+  - 原有问答 prompt 保留在 `诊断问答` 抽屉中，作为次要入口。
+- Endpoint
+  - 新增 `POST /api/lever-snapshot`。
+  - Endpoint 使用 canonical pullback scrubber，并明确返回 `mode=canonical_pullback_scrubber` 与模型边界说明。
+  - Endpoint 复用 `HarnessConfig`、`LatchedThrottleSwitches`、`SimplifiedDeployPlant`、`DeployController.evaluate_with_explain(...)`、`DeployController.explain(...)`。
+  - JS 只渲染后端返回的快照，不硬编码 controller 条件。
+- 快照覆盖
+  - `TRA=0`：链路待命，SW1/SW2 inactive，THR_LOCK inactive。
+  - `TRA=-2`：SW1 / L1 / TLS115 active。
+  - `TRA=-7`：SW1 / SW2 / L2 / 540V active，logic3 blocked。
+  - `TRA=-14`：logic3 / EEC / PLS / PDU active，VDT90 inactive，logic4 / THR_LOCK blocked on `deploy_90_percent_vdt`。
+- 未改内容
+  - 未修改 `controller.py`、`SimulationRunner`、`scenarios.py`、`docs/coordination/plan.md`。
+  - 未改变 `well_harness demo` text / JSON 输出语义。
+  - 未改变 `POST /api/demo` payload 或 `DemoAnswer` shape。
+  - 未改变 `well_harness run` CLI 行为。
+  - 未新增 schema / validator、runtime dependency、Node / Vite / Next、LLM、browser E2E 或第二套 DemoAnswer payload。
+- 当前验证
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_controller`：14 tests OK。
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`：64 tests OK。
+- 当前建议
+  - 下一步应做真实浏览器拖动拉杆手检，重点看首屏是否像 cockpit、三态高亮是否清晰，以及 THR_LOCK 对 VDT90 / plant feedback 的解释是否不误导。
+
+## Round 82 指挥侧复核：plant simplification notes and boundary scenario coverage
+
+- 结论：PASS；plant 简化假设标注与边界覆盖通过复核。
+- 指挥侧复核点
+  - `README.md` Modeling Notes 已标注 PLS unlock 后才推动位移与 `reverser_not_deployed_eec = deploy_position_percent <= 0.0` 两个 first-cut plant simplification。
+  - `src/well_harness/plant.py` 已在对应实现附近添加简短注释，且没有把它们写成完整物理真值。
+  - `tests/test_controller.py` 新增轻量边界测试，不新增 built-in scenario，不扩大 CLI 表面积。
+  - `controller.py` 未修改，logic1-4 判定语义保持不变。
+- 指挥侧执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py src/well_harness/plant.py src/well_harness/controller.py src/well_harness/runner.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_controller`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 指挥侧复核结果
+  - `tests.test_controller`: 14 tests OK。
+  - `tests.test_demo`: 62 tests OK。
+  - 全量回归：122 tests OK。
+  - demo JSON smoke 通过。
+  - `run nominal-deploy --format json` 和 `run retract-reset --format json` smoke 通过。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4` 且 `throttle_electronic_lock_release_cmd` 仍触发，`retract-reset` tail row 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+  - UI/API payload、demo text / JSON 输出、`run` CLI 保持不变。
+  - 未新增 schema / validator / runtime dependency / Node / Vite / Next / LLM / E2E。
+- 当前建议
+  - 停止常规开发迭代。
+  - 如后续还需扩 plant 边界覆盖，只补小型局部测试，例如 TLS 未解锁时 `logic3` 不满足、VDT 90% 前后相邻 trace-row 行为。
+
+## Round 82：plant simplification notes and boundary scenario coverage
+
+- 结论：PASS；plant 简化假设已显式标注，新增边界测试通过，controller 真值逻辑未修改。
+- 文档 / 注释
+  - `README.md` Modeling Notes 已说明 first-cut plant 的 deploy-position movement 被简化为在所有 PLS unlock indications 为 true 后才开始，并明确这不是 controller `logic3` gate。
+  - `README.md` Modeling Notes 已说明 `reverser_not_deployed_eec = deploy_position_percent <= 0.0` 是 placeholder sensor / feedback simplification，不是已确认真实 EEC signal model。
+  - `src/well_harness/plant.py` 在 `reverser_not_deployed_eec` 与 `all(pls_unlocked_ls)` 位移门控附近增加了简短注释，均明确是 first-cut plant simplification。
+- 新增边界覆盖
+  - `RA = 6ft`：`logic1` 不满足，`tls_115vac_cmd` 不触发。
+  - `TRA` 未到 `-11.74°`：`logic3` 不满足，`eec_deploy_cmd / pls_power_cmd / pdu_motor_cmd` 不触发。
+  - `N1K` 未满足：`logic3` 及其 command fan-out 不触发。
+  - `deploy_90_percent_vdt` 未到达：`logic4` 与 throttle lock release 不触发。
+  - `SW1/SW2` latch hold / reset 语义由 switch model 测试保护。
+  - PLS unlock 前 plant 位移不增长、位移大于 0 后 `reverser_not_deployed_eec` 为 false 两个 simplified plant behavior 由局部 plant 测试保护。
+- 未改内容
+  - 未修改 `controller.py`、`SimulationRunner`、`scenarios.py`、`well_harness.cli run`。
+  - 未改变 `well_harness demo` text / JSON 输出语义。
+  - 未改变 `POST /api/demo` payload 或 `DemoAnswer` shape。
+  - 未新增第二套 payload、UI-side inference、schema / validator、runtime dependency、Node / Vite / Next、LLM 或 browser E2E。
+  - 未修改 `docs/coordination/plan.md`。
+- 验证命令 / 结果
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/plant.py src/well_harness/controller.py src/well_harness/runner.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_controller`：14 tests OK。
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`：62 tests OK。
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`：122 tests OK。
+  - demo JSON smoke：`logic4 和 throttle lock 有什么关系` 通过。
+  - `run nominal-deploy --format json` smoke 通过，`logic4_any=True` 且 throttle lock release 仍触发。
+  - `run retract-reset --format json` smoke 通过，tail row 清掉 `sw1 / sw2 / logic1 / logic2 / logic3 / logic4`。
+- 当前建议
+  - controller truth 继续冻结。
+  - 后续如果要继续增强 plant 边界覆盖，应保持小型测试粒度，并持续标注 simplified plant 不是完整真实物理模型。
+
+## 控制真值复核记录：plant 假设风险与边界覆盖建议
+
+- 结论：核心 controller 真值逻辑未发现硬性偏离；下一步应处理 simplified plant 假设标注与边界覆盖。
+- 复核点
+  - `src/well_harness/controller.py`：`logic1` 保留 `RA < 6ft / SW1 / 非抑制 / 未展开`。
+  - `src/well_harness/controller.py`：`logic2` 使用 `发动机运行 / 在地面 / 非抑制 / SW2 / EEC使能`。
+  - `src/well_harness/controller.py`：`logic3` 没有把 `PLS解锁` 当控制门控条件，且同时输出 `eec_deploy_cmd / pls_power_cmd / pdu_motor_cmd`。
+  - `src/well_harness/controller.py`：`logic4` 使用 `deploy_90_percent_vdt`、`-32° < TRA < 0°`、在地面、发动机运行。
+  - `src/well_harness/switches.py`：`SW1/SW2` 使用区间触发和继续后拉保持语义。
+  - `src/well_harness/plant.py`：位移增长被 simplified plant 门控在 `all(pls_unlocked_ls)` 之后。
+  - `src/well_harness/plant.py`：`reverser_not_deployed_eec` 当前简化为 `deploy_position_percent <= 0.0`。
+  - `src/well_harness/scenarios.py`：当前 built-in scenarios 仍主要是 `nominal-deploy` 与 `retract-reset`。
+- 风险判断
+  - plant 的 PLS unlock 后位移门控是物理反馈简化，不是 controller 里 `logic3` 的控制门控。
+  - EEC 未展开信号等价于位移为 0 是 first-cut plant simplification，不是已确认真实 EEC 信号模型。
+  - 边界场景覆盖仍偏少，建议下一轮补 RA=6ft、TRA 未到 -11.74、N1K 不满足、90% 未到达、SW1/SW2 latch reset 等测试。
+- 当前建议
+  - 不要改 `controller.py` 真值逻辑。
+  - 只补 plant 假设文档 / 注释和轻量边界测试。
+
+## Round 81 指挥侧复核：中文 presenter rehearsal / demo freeze candidate
+
+- 结论：PASS；当前中文 UI 继续保持 demo candidate，可用于现场演示。
+- 开发会话回报
+  - Round 81 未修改代码、文档或 `docs/coordination/plan.md`。
+  - 桌面 Chrome 临时 profile 约 1440x1000 已完成中文 presenter rehearsal。
+  - 窄屏 Chrome 临时 profile 约 430x1200 已检查，并用临时 430px 渲染截图补充单列路径检查。
+  - 临时截图仅位于 `/tmp/well-harness-r81-shots/`，未进入仓库，不是截图资产或 E2E automation。
+  - 第二 prompt 浏览器内自动点击受本机坐标 / 权限限制，未声称完成；已通过同一 `POST /api/demo` / CLI JSON 路径验证 `diagnose_problem` payload。
+- 指挥侧执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 指挥侧复核结果
+  - `tests.test_demo`: 62 tests OK。
+  - 全量回归：115 tests OK。
+  - demo JSON smoke 通过。
+  - `run nominal-deploy --format json` smoke 通过。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4` 且 `throttle_lock_release_cmd` 仍触发，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+  - UI/API 仍通过 `POST /api/demo` 复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - 默认 demo text / JSON 输出、`run` CLI、既有 harness JSON 输出、控制逻辑和仿真行为保持不变。
+  - 未新增 schema / validator / runtime dependency / Node / Vite / Next / LLM / E2E。
+- 当前建议
+  - 停止常规开发迭代。
+  - 现场使用时直接按 `反推逻辑演示舱` -> `逻辑主板` -> `为什么高亮` -> `推理结果` -> `原始 JSON 调试` 的路径演示。
+  - 除非现场彩排发现明确阻塞，否则不要继续添加微功能。
+
+## Round 80 指挥侧复核：中文 demo candidate
+
+- 结论：PASS；当前中文 UI 可作为 demo candidate，下一轮只建议中文现场 presenter rehearsal，不建议继续新增功能。
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - 主视觉残留的内部英文提示已中文化为“答案里的命中节点 / 目标逻辑”“答案关联：意图 / 命中节点 / 目标逻辑”等文案。
+  - `反推逻辑演示舱`、提问区、逻辑主板、为什么高亮、推理结果、原始 JSON 调试均保持中文展示。
+  - 游戏化逻辑主板仍保留发光芯片节点、能量箭头与 active glow。
+  - `L4 / THR_LOCK` 与 `L3 / EEC / PLS / PDU` 继续可区分。
+  - `原始 JSON 调试` 仍为折叠 debug inspector，不抢主视觉。
+  - 未修改 controller / runner / scenario / `well_harness.cli run`。
+  - 未改变 `well_harness demo` text / JSON 输出语义。
+  - 未改变 `POST /api/demo` payload。
+  - 未新增 schema / validator / runtime dependency / Node / Vite / Next / LLM / E2E。
+  - `tests.test_demo`: 62 tests OK。
+  - 全量回归：115 tests OK。
+  - demo JSON smoke 通过。
+  - `run nominal-deploy --format json` smoke 通过。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4` 且 `throttle_lock_release_cmd` 仍触发，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 下一步建议
+  - 只做中文 presenter rehearsal / demo dry run。
+  - 如果彩排没有发现展示阻塞，不要再改代码。
+
+## Round 80：中文 demo 视觉 QA / 游戏化逻辑主板微调
+
+- 结论：PASS；当前中文 UI 可作为 demo candidate。
+- 浏览器检查
+  - 启动：`PYTHONPATH=src python3 -m well_harness.demo_server --host 127.0.0.1 --port 8766`
+  - 桌面真实 Chrome 临时 profile：`http://127.0.0.1:8766/?round80=desktop-after-copy-fix`，约 1440x1000。
+  - 窄屏真实 Chrome 窗口顶部检查：约 430px 宽。
+  - 补充 Chrome 430px 渲染截图检查单列阅读路径；临时截图位于 `/tmp/well-harness-r80-shots/`，未进入仓库，不是截图资产或 E2E。
+- 视觉 QA 结果
+  - 第一屏能清楚看出 `反推逻辑演示舱`。
+  - 提问区、四个核心 prompt、逻辑主板、结果摘要、推理结果主干清楚可见。
+  - `logic4 和 throttle lock 有什么关系` 默认渲染后，`L4 / THR_LOCK` 高亮醒目但不刺眼。
+  - `L3 / EEC / PLS / PDU` 能看出是同组子节点。
+  - 逻辑主板整体保持游戏化 / 电路主板观感，不像普通表格。
+  - `原始 JSON 调试` 保持折叠，不抢主视觉。
+  - 窄屏保持提问区 -> 逻辑主板 -> 推理结果的单列阅读路径。
+- 小修正
+  - 将主视觉残留的 `DemoAnswer matched_node / target_logic` 等内部英文提示改为“答案里的命中节点 / 目标逻辑”等中文文案。
+  - 未改变 DOM id、payload 字段、API shape、UI-side inference 或控制真值。
+- 第二 prompt 验证
+  - 浏览器内自动切换 `为什么 throttle lock 没释放` 未声称完成：本机 Chrome 禁用 Apple Events JavaScript，`System Events` 点击会卡住 / 被拒绝。
+  - 已通过同一 server 的真实 `POST /api/demo` 验证 `diagnose_problem` payload，包含 `evidence / possible_causes / risks`。
+- 未改内容
+  - 未修改 `docs/coordination/plan.md`。
+  - 未修改 controller / runner / scenario / `well_harness.cli run`。
+  - 未改变 `well_harness demo` text / JSON 输出语义。
+  - 未改变 `POST /api/demo` payload。
+  - 未新增 schema / validator / runtime dependency / Node / Vite / Next / LLM / E2E。
+- 验证结果
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool`
+  - `tests.test_demo`: 62 tests OK。
+  - 全量回归：115 tests OK。
+  - 行为断言通过：`nominal_logic4_any True`，`nominal_thr_release_any True`，`retract_clear True`。
+
+## Round 79 指挥侧复核：中文 demo 展示面优化
+
+- 结论：PASS；中文 demo 展示面优化通过复核，下一轮应做真实浏览器中文现场视觉 QA。
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - 页面主标题为 `反推逻辑演示舱`。
+  - 提问区 / 运行演示 / 逻辑主板 / 为什么高亮 / 推理结果 / 结果摘要 / 原始 JSON 调试均已中文化。
+  - 四个核心 prompt 保持不变。
+  - 逻辑主板使用深色网格、发光芯片节点、LED 点、能量箭头和 active glow。
+  - `L4 / THR_LOCK` 与 `L3 / EEC / PLS / PDU` 继续可区分。
+  - 结构化答案区使用中文结果卡片，但底层 `DemoAnswer` 字段、DOM id 和 payload shape 未改变。
+  - raw JSON 继续折叠为 `原始 JSON 调试`，保留但不抢主视觉。
+  - 未修改 controller / runner / scenario / `well_harness.cli run`。
+  - 未改变 `well_harness demo` text / JSON 输出语义。
+  - 未改变 `POST /api/demo` payload。
+  - 未新增 schema / validator / runtime dependency / Node / Vite / Next / LLM / E2E。
+  - `tests.test_demo`: 62 tests OK。
+  - 全量回归：115 tests OK。
+  - demo JSON smoke 通过。
+  - `run nominal-deploy --format json` smoke 通过。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4` 且 `throttle_lock_release_cmd` 仍触发，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 剩余风险
+  - 本轮仍未做真实浏览器中文现场视觉 QA；下一轮应重点检查中文信息密度和游戏化逻辑主板观感。
+
+## Round 79：中文 demo 展示面优化
+
+- 结论：PASS；本轮按用户反馈暂停 freeze rehearsal，将 UI 改成中文现场 demo 展示面。
+- 已完成
+  - 页面主标题改为 `反推逻辑演示舱`，副标题 / 边界提示改为短中文。
+  - `Ask the controlled demo` / `Fixed control chain` / `Structured output` / `Raw JSON debug inspector` 等页面框架文案改为中文。
+  - 四个核心 prompt 保留：
+    - `logic4 和 throttle lock 有什么关系`
+    - `为什么 throttle lock 没释放`
+    - `触发 logic3 会发生什么`
+    - `把 logic3 的 TRA 阈值改成 -8 会发生什么`
+  - `control chain` 视觉升级为游戏化 / 主板式 `逻辑主板`，使用发光芯片节点、能量链路箭头和更清楚的 active glow。
+  - `logic4 / THR_LOCK` 与 `logic3 / EEC / PLS / PDU` 继续可区分。
+  - structured answer 区域改为中文结果卡片；字段名中文展示，但底层 `DemoAnswer` payload 未改变。
+  - raw JSON 保留为折叠 `原始 JSON 调试` inspector，不抢主视觉。
+- 未改内容
+  - 未修改 `docs/coordination/plan.md`。
+  - 未修改 controller / runner / scenario / `well_harness.cli run`。
+  - 未改变 `well_harness demo` text / JSON 输出语义。
+  - 未改变 `POST /api/demo` payload。
+  - 未新增 schema / validator / runtime dependency / Node / Vite / Next / LLM / E2E。
+- 当前验证
+  - `tests.test_demo`: 62 tests OK。
+  - 全量回归：115 tests OK。
+  - demo JSON smoke 通过：
+    - `logic4 和 throttle lock 有什么关系`
+    - `为什么 throttle lock 没释放`
+  - `run nominal-deploy --format json` smoke 通过。
+  - 行为断言通过：`nominal_logic4_any True`，`nominal_thr_release_any True`，`retract_clear True`。
+
+## Round 78 指挥侧复核：freeze candidate confirmation
+
+- 结论：PASS；当前 UI 可作为 freeze candidate，下一轮只建议 presenter rehearsal，不建议继续新增功能。
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - `tests.test_demo`: 62 tests OK。
+  - 全量回归：115 tests OK。
+  - demo JSON smoke 通过。
+  - `run nominal-deploy --format json` smoke 通过。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4` 且 `throttle_lock_release_cmd` 仍触发，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+  - Round 78 干净窗口 visual QA 已记录为 PASS，当前未发现必须处理的 UI 展示面阻塞。
+  - 本次指挥侧未新增产品代码改动。
+- 下一步建议
+  - 停止继续添加 UI 小功能。
+  - 只做人工 presenter rehearsal / demo dry run。
+  - 若彩排没有发现阻塞，不要再改代码。
+
+## Round 78：clean-window visual QA and freeze candidate
+
+- 结论：PASS，当前 UI 可作为 freeze candidate；本轮未修改 UI 代码。
+- 执行命令 / 检查
+  - `PYTHONPATH=src python3 -m well_harness.demo_server --host 127.0.0.1 --port 8766`
+  - Safari 新窗口打开 `http://127.0.0.1:8766/?round78=safari-clean-desktop`
+  - 临时 Chrome profile 窄屏窗口打开 `http://127.0.0.1:8766/?round78=openna-narrow`
+  - Headless Chrome 临时 profile 截图检查：1440x1000 与 430x1200
+  - `curl -sS -X POST http://127.0.0.1:8766/api/demo -H 'Content-Type: application/json' -d '{"prompt":"为什么 throttle lock 没释放"}' | python3 -m json.tool`
+- 视觉 QA 结果
+  - 桌面 Safari 新窗口中，第一屏明确呈现 `Deploy-chain reasoning cockpit`，像可展示 demo surface，不像内部调试页。
+  - prompt 输入区、四个核心示例 prompt、fixed control chain、highlight explanation、structured answer 主干清楚可见。
+  - 默认 `logic4 和 throttle lock 有什么关系` answer 可见，`logic4 / THR_LOCK` 高亮与 highlight explanation / structured answer 的关系清楚。
+  - raw JSON 仍是折叠 `Raw JSON debug inspector`，保留但不抢主视觉。
+  - 窄屏 430px 检查中，页面按 hero / route strip / prompt panel 起步，并继续按 prompt -> chain -> answer 单列路径阅读；未发现横向撑宽导致无法阅读的阻塞。
+  - 第二个 prompt `为什么 throttle lock 没释放` 因本机浏览器禁用 Apple Events JavaScript 且 `System Events` click 被拒绝，未声称完成浏览器点击；已通过真实 `POST /api/demo` 路径验证 `diagnose_problem` payload，包含 `possible_causes` / `evidence` / `risks`。
+- 未改内容
+  - 未修改 `docs/coordination/plan.md`。
+  - 未修改 UI 静态文件、`demo_server.py`、`demo.py`、`cli.py`、controller / runner / scenario。
+  - 未新增 runtime dependency、schema、validator、raw JSON copy affordance、second answer payload、UI-side inference 或新的 control truth。
+- 剩余风险
+  - 本轮是人工 visual QA / freeze 判断，不是浏览器 E2E automation。
+  - 临时截图仅用于本轮检查并保存在 `/tmp/well-harness-r78-shots/`，没有新增仓库截图资产。
+- 验证结果
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool`
+  - 行为断言通过：`nominal_logic4_any True`，`nominal_throttle_lock_release_any True`，`retract_clear True`。
+  - `tests.test_demo`: 62 tests OK。
+  - 全量回归：115 tests OK。
+  - demo JSON smoke 与 `run nominal-deploy --format json` smoke 通过。
+
+## Round 77 指挥侧复核：showcase finishing / browser hand-check follow-up
+
+- 结论：PASS，按当前工作区真实状态复核通过；当前全量回归为 `115 tests OK`。
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_showcase_surface_layout tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_mobile_answer_guide_spacing tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_compact_answer_guide_layout tests.test_demo.DemoIntentLayerTests.test_demo_server_main_open_affordance_uses_helper_and_continues_serving`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - 当前 UI 保留 `Deploy-chain reasoning cockpit` / `showcase-surface` / `showcase-grid`。
+  - prompt、fixed control chain、highlight explanation、structured answer 主干保持在 demo-ready showcase surface 中。
+  - raw JSON 仍为折叠 `debug-inspector`，保留但不抢主视觉。
+  - 未改 `demo_server.py`、`demo.py`、`cli.py`、controller / runner / scenario。
+  - 未新增 runtime dependency、schema、validator、raw JSON copy affordance、second answer payload、UI-side inference 或新的 control truth。
+  - 定向 UI 回归测试：4 tests OK。
+  - `tests.test_demo`: 62 tests OK。
+  - 全量测试结果：115 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4` 且 `throttle_lock_release_cmd` 仍触发，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 剩余风险
+  - 当前验收仍不等同于浏览器 E2E；下一轮应做干净浏览器窗口 visual QA，并把当前 UI 作为 freeze candidate 收口。
+
+## Round 77 showcase finishing continuation
+
+- 结论：PASS，阶段性验证通过；最终全量验证见本轮最终回报。
+- 执行命令
+  - `git diff -- src/well_harness/static/demo.html src/well_harness/static/demo.css src/well_harness/static/demo.js tests/test_demo.py README.md docs/coordination/dev_handoff.md docs/coordination/qa_report.md`
+  - `PYTHONPATH=src python3 -m well_harness.demo_server --open`
+  - `PYTHONPATH=src python3 -m well_harness.demo_server --host 127.0.0.1 --port 8766 --open`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_showcase_surface_layout tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_presenter_route_strip tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_mobile_answer_guide_spacing`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+- 结果
+  - 当前目录不是 Git 仓库，`git diff -- ...` 返回 `Not a git repository`；本轮未做 git 回滚或覆盖。
+  - 默认 `--open` 命令因本机 `127.0.0.1:8000` 已被 Python 进程占用而无法启动；使用 `--host 127.0.0.1 --port 8766 --open` 完成 server 检查路径。
+  - 保留 Gemini 的深色 technical cockpit 风格，并继续完成 demo-ready showcase surface。
+  - hero 文案收敛为 `well-harness deterministic demo cockpit` / `Deploy-chain reasoning cockpit`。
+  - `.showcase-grid` 改为真实三栏 grid-template-areas：prompt / chain / answer，不再依赖注释 token。
+  - control chain panel 加强为 cockpit 主视觉，active highlight 使用柔和 green glow，logic4 / THR_LOCK 与 logic3 command 子节点继续可区分。
+  - structured answer section card 更像结果面板，保留 intent / matched_node / target_logic / evidence / outcome / possible_causes / required_changes / risks。
+  - raw JSON 仍保留为同一份 `DemoAnswer` payload 的折叠 debug inspector，并降低视觉权重。
+  - 未改 `demo_server.py`、`demo.py`、`cli.py`、controller / runner / scenario。
+  - 未新增 runtime dependency、schema、validator、Node / Vite / Next、second answer payload、UI-side inference 或新的 control truth。
+  - 定向 showcase / route / mobile UI 测试：3 tests OK。
+  - `tests.test_demo`: 62 tests OK。
+- 发现的问题
+  - 旧静态测试仍绑定 Round 76 的浅色三列 token 和 answer guide 半径；已更新为当前 cockpit layout 合约。
+- 剩余风险
+  - 本轮仍是本地 UI showcase finishing，不是浏览器 E2E 自动化证明。
+
+## Round 77
+
+- 结论：PASS，带边界说明：真实浏览器桌面首屏 hand-check 已完成；窄屏真实窗口检查受本机 Chrome 窗口状态影响，未作为完整浏览器窄屏验证结论。
+- 执行命令
+  - `PYTHONPATH=src python3 -m well_harness.demo_server --host 127.0.0.1 --port 8765`
+  - 使用已有 Google Chrome profile 打开 `http://127.0.0.1:8765/?round77=existing-profile-after-prompt-compact`
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_showcase_surface_layout tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_mobile_answer_guide_spacing tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_compact_answer_guide_layout tests.test_demo.DemoIntentLayerTests.test_demo_server_main_open_affordance_uses_helper_and_continues_serving`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - 真实 Chrome 桌面窗口中，首屏保持 demo-ready showcase surface。
+  - `logic4 和 throttle lock 有什么关系` 场景下，四个核心示例 prompt、prompt 输入、fixed control chain、structured answer 主干同屏可见。
+  - `logic4 / THR_LOCK` 末端高亮节点已通过 showcase chain compact spacing 更稳定地进入桌面首屏。
+  - highlight explanation 与 structured answer 的关系保持清楚。
+  - raw JSON 仍为折叠 `debug-inspector`，保留但不抢主视觉。
+  - 窄屏方向修复了 grouped example 在移动规则下的撑宽风险：长 prompt button 允许断行，`max-width: 780px` 下 grouped examples 单列并恢复 `width: auto`。
+  - 未改 `demo_server.py`、`demo.py`、`cli.py`、controller / runner / scenario。
+  - 未新增 runtime dependency、schema、validator、raw JSON copy affordance、second answer payload、UI-side inference 或新的 control truth。
+  - 定向 showcase / UI 回归测试：4 tests OK。
+  - `tests.test_demo`: 62 tests OK。
+  - 全量测试结果：115 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4` 且 `throttle_lock_release_cmd` 仍触发，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 桌面首屏首次检查发现 `logic4 / THR_LOCK` 末端高亮节点靠近首屏下缘，prompt 输入也不够稳；已用小范围 CSS compact spacing 修复。
+  - Chrome headless `430x1200` 窄屏截图在本机多次 timeout / garbled capture；AppleScript 调窗时选中另一个 arXiv Chrome 窗口。因此未将窄屏真实浏览器路径作为完整 hand-check 结论。
+- 可复现步骤
+  - 运行 `PYTHONPATH=src python3 -m well_harness.demo_server --open` 或手动打开本地 URL。
+  - 运行 / 选择 `logic4 和 throttle lock 有什么关系`，首屏应看到 prompt 示例、prompt 输入、fixed chain 中 `logic4 / THR_LOCK` 高亮、structured answer 主干，raw JSON 只在 debug inspector 中。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `115 tests OK`。
+- 剩余风险
+  - 窄屏仍主要由 CSS/media-rule 静态测试保护，不是浏览器 E2E 自动化证明。
+  - 本轮是展示面 HTML/CSS polish，不是新的 reasoning、schema、payload 或控制真值。
+
+## Round 76
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_showcase_surface_layout tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_flow_polish_controls tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_mobile_answer_guide_spacing tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_compact_answer_guide_layout`
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m well_harness.demo_server --help`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - UI 新增 demo-ready `showcase-surface`。
+  - 首屏新增 `showcase-mission` 和 `Demo flow` 文案，说明 prompt -> chain highlight -> structured answer 的演示路径。
+  - prompt panel、fixed control chain、structured answer 主干在桌面端组合成更清楚的 showcase layout。
+  - 窄屏下 showcase layout 回到 prompt -> chain -> answer 单列。
+  - raw JSON debug 保留，但从默认展开 panel 降级为折叠 `debug-inspector`，不再抢主视觉。
+  - route strip、presenter callout labels、highlight explanation、compact answer guide、Audience legend、Answer sections summary、mobile spacing 继续保留。
+  - 未改 `demo_server.py`、`demo.py`、`cli.py`、controller / runner / scenario。
+  - 未新增 runtime dependency、schema、validator、second answer payload、UI-side inference 或新的 control truth。
+  - README 已补充一句 showcase surface 说明。
+  - `tests.test_demo`: 62 tests OK。
+  - 全量测试结果：115 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4` 且 `throttle_lock_release_cmd` 仍触发，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现产品阻塞问题。
+- 可复现步骤
+  - 运行 `PYTHONPATH=src python3 -m well_harness.demo_server --open`，打开首屏应看到 showcase surface：prompt、fixed chain、structured answer 主干与折叠 raw JSON inspector。
+  - 运行 `logic4 和 throttle lock 有什么关系`，应能看到 chain highlight / highlight explanation / structured answer 的关联。
+  - 运行 `为什么 throttle lock 没释放`，应能看到 `possible_causes` / `evidence` / `risks`。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `115 tests OK`。
+- 剩余风险
+  - showcase surface 是静态 HTML / CSS 展示面优化，不是浏览器 E2E 自动化证明。
+  - raw JSON inspector 仍是同一份 `DemoAnswer` debug 视图，不是第二套 answer payload 或新的 control truth。
+
+## Round 75
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_server_open_browser_helper_reports_failures tests.test_demo.DemoIntentLayerTests.test_demo_server_help_documents_optional_open_affordance tests.test_demo.DemoIntentLayerTests.test_demo_server_main_open_affordance_uses_helper_and_continues_serving tests.test_demo.DemoIntentLayerTests.test_demo_ui_handcheck_script_outputs_manual_checklist tests.test_demo.DemoIntentLayerTests.test_demo_ui_handcheck_script_outputs_presenter_walkthrough tests.test_demo.DemoIntentLayerTests.test_demo_presenter_talk_track_includes_readiness_run_card`
+  - `python3 -m py_compile tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m well_harness.demo_server --help`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - `src/well_harness/demo_server.py` 新增可选 `--open` 参数。
+  - 默认 `PYTHONPATH=src python3 -m well_harness.demo_server` 行为保持不变。
+  - `PYTHONPATH=src python3 -m well_harness.demo_server --open` 会使用 Python 标准库 `webbrowser.open(...)` 尝试打开本地 UI URL。
+  - `--open` 仍打印本地 URL，仍进入 `serve_forever()`。
+  - `open_browser(...)` 在 opener 返回 false 或抛异常时打印 `Could not open browser automatically... Open <url> manually.`，并返回 `False`。
+  - `--open` 失败不阻止 server 继续启动；测试通过 fake server 验证 `serve_forever()` 与 `server_close()` 仍被调用。
+  - `--help` 能看到 `--open` 文案，且文案说明它使用标准库 `webbrowser.open`，只是 launch convenience，不是 browser E2E automation。
+  - 未引入 Playwright / Selenium / Node / 新依赖。
+  - 未新增浏览器驱动、自动点击、自动断言或 readiness detector。
+  - `POST /api/demo` 仍直接复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tools/demo_ui_handcheck.py`、`docs/demo_presenter_talk_track.md`、README 已补充 `--open` 说明。
+  - Round 74 mobile answer guide spacing 保持不回归。
+  - Round 73 compact answer guide 保持不回归。
+  - Round 72 audience answer-field legend 保持不回归。
+  - Round 71 screenshot-free presenter route strip 保持不回归。
+  - `tests.test_demo`: 61 tests OK。
+  - 全量测试结果：114 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 新增 help 测试首次运行时被 argparse 自动换行影响，已改为分别断言 `standard-library`、`webbrowser.open`、`not browser E2E` 和 `automation`，并重跑通过。该问题不是产品行为失败。
+- 可复现步骤
+  - 运行 `PYTHONPATH=src python3 -m well_harness.demo_server --help`，应看到 `--open`。
+  - 运行 `PYTHONPATH=src python3 -m well_harness.demo_server --open`，server 会尝试用标准库打开本地 URL；如果失败会提示手动打开并继续 serve。
+  - 运行 `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`，应看到 `--open` 只是 launch convenience 的说明。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `114 tests OK`。
+- 剩余风险
+  - `--open` 是本地启动便利，不是浏览器 E2E 自动化证明、截图工具、自动 readiness detector 或新的 control truth。
+
+## Round 74
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_mobile_answer_guide_spacing tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_compact_answer_guide_layout tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_audience_answer_field_legend tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_keyboard_navigation`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`
+  - `python3 -m py_compile tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - compact `answer-guide` 增加移动端 / 窄屏 spacing polish。
+  - `@media (max-width: 780px)` 下优化了 `answer-guide` padding / gap / margin。
+  - `answer-guide-intro` 在窄屏下纵向排布，并提高说明文字行距。
+  - `answer-guide-grid` 在窄屏下继续保持单列布局，并调整 legend 与 summary 间距。
+  - `answer-field-legend` 与 `answer-section-summary` 在窄屏下使用更紧凑 padding / radius。
+  - `summary-chip` 在窄屏下增加触控高度、padding、行距并允许换行。
+  - `button.summary-chip` 在窄屏下左对齐，便于扫读。
+  - `@media (max-width: 520px)` 下 summary chips 单列铺满宽度。
+  - 原有 `answer-guide`、`answer-guide-grid`、`answer-field-legend`、`answer-section-summary`、`answer-section-summary-items`、`answer-section-keyboard-hint` 结构和 id 保持不变。
+  - 未改 `demo.js`，未新增 JS 状态。
+  - `Answer sections` chip click/focus 与方向键导航保持不回归。
+  - 空 section 与 UI/API error unavailable 状态保持不回归。
+  - legend 仍是 reading aid，不新增 schema、新 payload 或新的 control truth。
+  - `docs/demo_presenter_talk_track.md` 更新移动端 compact answer guide 走查说明。
+  - `tools/demo_ui_handcheck.py --walkthrough` 新增窄屏 top-to-bottom compact answer guide 提醒。
+  - README 新增一句窄屏 touch-friendly spacing 说明。
+  - Round 73 compact answer guide 保持不回归。
+  - Round 72 audience answer-field legend 保持不回归。
+  - Round 71 screenshot-free presenter route strip 保持不回归。
+  - Round 70 readiness run card 保持不回归。
+  - Round 69 presenter callout labels 保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 58 tests OK。
+  - 全量测试结果：111 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 在窄屏下打开本地 UI，查看 `Structured output` 的 compact `answer-guide`。
+  - 确认 `Audience answer-field legend` 与 `Answer sections` summary 单列堆叠且 chips 具备更清楚触控间距。
+  - 运行 `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`，应看到窄屏 compact answer guide 提醒。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `111 tests OK`。
+- 剩余风险
+  - 本轮是 CSS / 文案级移动端 spacing polish，不是浏览器 E2E 自动化证明。
+  - 后续不要把该 guide 扩成新 schema、第二套 answer payload 或 UI-side control-truth inference。
+
+## Round 73
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_compact_answer_guide_layout tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_audience_answer_field_legend tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_keyboard_navigation tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_presenter_route_strip`
+  - `python3 -m py_compile tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - UI 新增 compact answer guide layout。
+  - `Audience answer-field legend` 与 `Answer sections` summary 被组合在同一个 `answer-guide` 区域。
+  - 桌面端 `answer-guide-grid` 使用两列布局，让 legend 与 section counts 更紧凑关联。
+  - 移动端保持单列布局。
+  - 原有 `answer-field-legend`、`answer-section-summary`、`answer-section-summary-items`、`answer-section-keyboard-hint` id 保持不变。
+  - `Answer sections` chip click/focus 与方向键导航保持不回归。
+  - 空 section 与 UI/API error unavailable 状态保持不回归。
+  - legend 仍明确是 reading aid，不新增 schema、新 payload 或新的 control truth。
+  - `docs/demo_presenter_talk_track.md` 更新 compact answer guide 与同一份 `DemoAnswer` payload 的说明。
+  - `tools/demo_ui_handcheck.py --walkthrough` 新增 compact answer guide 提醒。
+  - README 新增一句 compact answer guide 说明。
+  - Round 72 audience answer-field legend 保持不回归。
+  - Round 71 screenshot-free presenter route strip 保持不回归。
+  - Round 70 readiness run card 保持不回归。
+  - Round 69 presenter callout labels 保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 57 tests OK。
+  - 全量测试结果：110 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 新增测试首次运行时引用了不存在的 `README_PATH` 测试常量；已改为 `(PROJECT_ROOT / "README.md")` 并重跑通过。该问题不是产品行为失败。
+- 可复现步骤
+  - 打开本地 UI，在 `Structured output` 区域查看 `Answer guide`。
+  - 确认 `Audience answer-field legend` 与 `Answer sections` summary 同处 compact answer guide 中。
+  - 运行 `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`，应看到 compact answer guide 提醒。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `110 tests OK`。
+- 剩余风险
+  - compact answer guide 是静态视觉布局 polish，不是浏览器 E2E 证明。
+  - 后续不要把该 guide 扩成新 schema、第二套 answer payload 或 UI-side control-truth inference。
+
+## Round 72
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_audience_answer_field_legend tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_presenter_route_strip tests.test_demo.DemoIntentLayerTests.test_demo_presenter_talk_track_includes_readiness_run_card tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_keyboard_navigation`
+  - `python3 -m py_compile tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - UI 新增 `Audience answer-field legend`。
+  - legend 覆盖 `intent`、`matched_node`、`target_logic`、`evidence`、`outcome`、`possible_causes`、`required_changes`、`risks`、`raw JSON`。
+  - legend 明确 `intent` 是 controlled demo intent，不是 open-ended LLM intent recognition。
+  - legend 明确 `possible_causes` / `risks` 不是 complete root-cause proof。
+  - legend 明确 `required_changes` 是 dry-run / proposal guidance，不直接修改 `controller.py`。
+  - legend 明确 raw JSON 是同一份 `DemoAnswer` payload 的 machine-readable debug view，不是 second answer。
+  - legend 明确它是 reading aid，不改变 UI/API payload，不创建 schema，也不新增 control-truth source。
+  - `docs/demo_presenter_talk_track.md` 新增字段说明 legend 的指引。
+  - `tools/demo_ui_handcheck.py --walkthrough` 新增字段说明 legend 的提醒。
+  - 默认 hand-check 清单语义保持不变。
+  - Round 71 screenshot-free presenter route strip 保持不回归。
+  - Round 70 readiness run card 保持不回归。
+  - Round 69 presenter callout labels 保持不回归。
+  - Round 64 summary chip keyboard navigation 保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 56 tests OK。
+  - 全量测试结果：109 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 打开本地 UI，在 `Structured output` 区域展开 `Audience answer-field legend`。
+  - 运行 `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`，应看到 field legend 提示。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `109 tests OK`。
+- 剩余风险
+  - legend 是观众阅读辅助，不是正式 JSON Schema、fixture contract 或新的 answer payload。
+  - legend 没有维护第二套 control truth；后续不要把它扩成 UI-side inference 或 schema 工具链。
+
+## Round 71
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_presenter_route_strip tests.test_demo.DemoIntentLayerTests.test_demo_presenter_talk_track_includes_readiness_run_card tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_presenter_callout_labels tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_keyboard_navigation`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`
+  - `python3 -m py_compile tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - UI 新增 screenshot-free presenter route strip / visual guide。
+  - route strip 覆盖 `[Input]`、`[Chain]`、`[Highlight]`、`[Structured answer]`、`[Raw JSON]` 五个区域。
+  - route strip 按 `choose prompt -> inspect highlight -> explain association -> scan sections -> verify payload` 引导演示者走查。
+  - route strip 明确它是 manual walkthrough guide，不是 browser E2E automation，不是 screenshot annotation tool，也不是 control-truth source。
+  - route strip 仅为静态视觉提示，不改变 UI/API payload，不维护第二套 answer payload 或 control truth。
+  - `docs/demo_presenter_talk_track.md` 更新 route strip 与 talk track / run card 的对应关系。
+  - `tools/demo_ui_handcheck.py --walkthrough` 新增 route strip 引用。
+  - 默认 hand-check 清单、Round 66 observations、Round 67 walkthrough、Round 68 talk track、Round 70 readiness run card 保持不回归。
+  - Round 70 readiness run card 保持不回归。
+  - Round 69 presenter callout labels 保持不回归。
+  - Round 64 summary chip keyboard navigation 保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 55 tests OK。
+  - 全量测试结果：108 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮独立行为断言首次运行时沿用了旧调用写法，触发 `SimulationRunner.run()` 参数错误；已按当前 `SimulationRunner().run(scenario.name, list(scenario.frames))` 签名重跑并通过。该问题不是产品行为失败。
+- 可复现步骤
+  - 打开本地 UI，应在 hero 后看到 screenshot-free presenter route strip。
+  - 运行 `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`，应看到 route strip 引用。
+  - 打开 `docs/demo_presenter_talk_track.md`，应看到 route strip 如何对应 talk track / readiness run card。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `108 tests OK`。
+- 剩余风险
+  - route strip 是人工演示视觉提示，不是浏览器 E2E 自动化证明。
+  - route strip 没有维护第二套 answer payload 或 control truth；后续不要把它扩成截图标注工具、自动 readiness detector 或 presenter mode 状态机。
+
+## Round 70
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_presenter_talk_track_includes_readiness_run_card tests.test_demo.DemoIntentLayerTests.test_demo_presenter_talk_track_covers_core_flow tests.test_demo.DemoIntentLayerTests.test_demo_ui_handcheck_script_outputs_presenter_walkthrough`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_presenter_callout_labels tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_keyboard_navigation tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_jump_focus tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_summary`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - `docs/demo_presenter_talk_track.md` 新增 `Presenter Readiness Run Card`。
+  - run card 明确它是人工演示前检查，不是 browser E2E automation，不是 automatic readiness detector，也不是新的 answer payload / control truth。
+  - run card 覆盖 UI 启动命令、本地 URL、bridge prompt `logic4 和 throttle lock 有什么关系`。
+  - run card 覆盖 `[Input]`、`[Chain]`、`[Highlight]`、`[Structured answer]`、`[Raw JSON]` 页面 callout labels。
+  - run card 覆盖 control chain 高亮、highlight explanation、structured answer、`Answer sections` summary、raw JSON debug。
+  - run card 明确 loading / empty prompt / API error / network error 是 UI 状态，不是 control-logic conclusion。
+  - run card 明确 demo 边界：deterministic controlled demo layer、built-in scenario、simplified first-cut plant、not a full LLM、not a complete physical model。
+  - `tools/demo_ui_handcheck.py --walkthrough` 新增 readiness run card 引用。
+  - 默认 hand-check 清单、Round 66 observations、Round 67 walkthrough、Round 68 talk track 引用、Round 69 callout label 引用保持不回归。
+  - Round 69 presenter callout labels 保持不回归。
+  - Round 68 talk track 测试保持不回归。
+  - Round 64 summary chip keyboard navigation 保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 54 tests OK。
+  - 全量测试结果：107 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 打开 `docs/demo_presenter_talk_track.md`，查看 `Presenter Readiness Run Card`。
+  - 运行 `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`，应看到 readiness run card 引用。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `107 tests OK`。
+- 剩余风险
+  - readiness run card 是人工演示前检查，不是浏览器 E2E 自动化证明。
+  - run card 没有维护第二套 answer payload 或 control truth；后续不要把它扩成自动 readiness detector。
+
+## Round 69
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_presenter_callout_labels tests.test_demo.DemoIntentLayerTests.test_demo_presenter_talk_track_covers_core_flow tests.test_demo.DemoIntentLayerTests.test_demo_ui_handcheck_script_outputs_presenter_walkthrough`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_keyboard_navigation tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_jump_focus tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_summary tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_highlight_explanation tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_presenter_callout_labels`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - UI 关键区域新增轻量 presenter callout labels：
+    - `[Input]`
+    - `[Chain]`
+    - `[Highlight]`
+    - `[Structured answer]`
+    - `[Raw JSON]`
+  - labels 与 `docs/demo_presenter_talk_track.md` 的 callout 词对齐。
+  - `docs/demo_presenter_talk_track.md` 新增页面 callout labels 对应说明。
+  - `tools/demo_ui_handcheck.py --walkthrough` 新增跟随页面 callout labels 的提示。
+  - 默认 hand-check 清单和 Round 66 guided observations 保持不回归。
+  - Round 68 talk track 测试保持不回归。
+  - Round 64 summary chip keyboard navigation 保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 53 tests OK。
+  - 全量测试结果：106 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 打开本地 UI，应在 prompt、chain、highlight explanation、structured output、raw JSON 区域看到 callout labels。
+  - 运行 `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`，应看到跟随页面 callout labels 的提示。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `106 tests OK`。
+- 剩余风险
+  - presenter callout labels 是人工演示辅助，不是浏览器 E2E 自动化证明。
+  - labels 没有维护第二套 answer payload 或 control truth；后续不要把它扩成 presenter mode 状态机。
+
+## Round 68
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m py_compile tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_presenter_talk_track_covers_core_flow tests.test_demo.DemoIntentLayerTests.test_demo_ui_handcheck_script_outputs_presenter_walkthrough tests.test_demo.DemoIntentLayerTests.test_demo_ui_handcheck_script_outputs_manual_checklist`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_keyboard_navigation tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_jump_focus tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_summary tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_highlight_explanation`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - 新增 `docs/demo_presenter_talk_track.md` 一页式 presenter talk track。
+  - talk track 覆盖 bridge / diagnose / trigger / proposal 四类核心 prompt。
+  - 每个 prompt 都包含一句 `[Say]` 台词和 `[Point]` UI 指向区域。
+  - talk track 明确提到 `control chain`、`highlight explanation`、`structured answer`、`raw JSON`。
+  - proposal prompt 明确是 dry-run proposal，不直接修改 `controller.py`。
+  - talk track 明确 demo 边界：deterministic controlled layer、built-in scenario、simplified first-cut plant、not an open-ended LLM、not a complete physical model。
+  - talk track 明确 loading / empty prompt / API error / network error 是 UI 状态，不是 control-logic conclusion。
+  - `tools/demo_ui_handcheck.py --walkthrough` 结尾新增 talk track 路径引用。
+  - 默认 `tools/demo_ui_handcheck.py` 完整清单和 Round 67 walkthrough 保持不回归。
+  - Round 66 helper observations 保持不回归。
+  - Round 64 summary chip keyboard navigation 保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 52 tests OK。
+  - 全量测试结果：105 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 打开 `docs/demo_presenter_talk_track.md`。
+  - 运行 `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`，应看到 talk track 路径引用。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `105 tests OK`。
+- 剩余风险
+  - talk track 是人工演示话术，不是浏览器 E2E 自动化证明。
+  - talk track 没有维护第二套 answer payload 或 control truth；后续不要把它扩成测试平台。
+
+## Round 67
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m py_compile tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --help`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_ui_handcheck_script_outputs_presenter_walkthrough tests.test_demo.DemoIntentLayerTests.test_demo_ui_handcheck_script_outputs_manual_checklist tests.test_demo.DemoIntentLayerTests.test_demo_ui_handcheck_script_help_documents_manual_scope`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_keyboard_navigation tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_jump_focus tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_summary tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_highlight_explanation`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - `tools/demo_ui_handcheck.py --walkthrough` 输出 concise presenter walkthrough。
+  - 默认 `tools/demo_ui_handcheck.py` 仍输出 Round 66 完整清单和逐 prompt expected observations。
+  - walkthrough 覆盖 bridge / diagnose / trigger / proposal 四类核心 prompt。
+  - walkthrough 使用 `[Input]`、`[Chain]`、`[Structured answer]`、`[Raw JSON]`、`[Safety]`、`[Boundary]` callout。
+  - bridge prompt 指向 `logic4 / THR_LOCK` 高亮、highlight explanation、raw JSON。
+  - diagnose prompt 指向 `possible_causes / evidence / risks`。
+  - trigger prompt 指向 `logic3` 与 `EEC / PLS / PDU` command 子节点高亮。
+  - proposal prompt 指向 dry-run proposal、`required_changes / risks`，并明确不直接修改 `controller.py`。
+  - walkthrough 明确它是 manual presenter walkthrough，不是 browser E2E automation，也不是新的 answer payload / control truth。
+  - walkthrough 明确边界：deterministic controlled demo layer、built-in scenario、simplified first-cut plant、not a full LLM、not a complete physical model。
+  - Round 66 helper observations 保持不回归。
+  - Round 64 summary chip keyboard navigation 保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 51 tests OK。
+  - 全量测试结果：104 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 运行 `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --walkthrough`。
+  - 按 walkthrough 的 4 类 prompt 和 callout 做现场演示走查。
+  - 如需完整清单，运行 `PYTHONPATH=src python3 tools/demo_ui_handcheck.py`。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `104 tests OK`。
+- 剩余风险
+  - walkthrough 是人工演示辅助，不是浏览器 E2E 自动化证明。
+  - walkthrough 没有维护第二套 answer payload 或 control truth；后续不要把它扩成测试平台。
+
+## Round 66
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m py_compile tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --help`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_ui_handcheck_script_outputs_manual_checklist tests.test_demo.DemoIntentLayerTests.test_demo_ui_handcheck_script_help_documents_manual_scope`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_summary tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_jump_focus tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_keyboard_navigation tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_highlight_explanation tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_prompt_guidance_and_keyboard_affordance tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_flow_polish_controls`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系'`
+  - `python3 -m json.tool /tmp/well_harness_round66_demo_bridge.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json`
+  - `python3 -m json.tool /tmp/well_harness_round66_nominal.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `python3 -m json.tool /tmp/well_harness_round66_diagnose_logic4.json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - `tools/demo_ui_handcheck.py` 继续作为轻量 manual browser hand-check helper。
+  - helper 默认输出现在包含逐 prompt 的 `expected observations`。
+  - bridge prompt `logic4 和 throttle lock 有什么关系` 覆盖 `intent: logic4_thr_lock_bridge`、`logic4 / THR_LOCK bridge association`、`evidence / outcome`、raw JSON 中 `matched_node=logic4->thr_lock`。
+  - diagnose prompt `为什么 throttle lock 没释放` 覆盖 `intent: diagnose_problem`、`THR_LOCK / throttle_lock_release_cmd association`、`possible_causes / evidence / risks`、raw JSON debug。
+  - trigger prompt `触发 logic3 会发生什么` 覆盖 `intent: trigger_node`、`logic3 plus EEC / PLS / PDU command subnodes`、`evidence / outcome`、raw JSON 中 `matched_node=logic3` 与 `target_logic=logic3`。
+  - proposal prompt `把 logic3 的 TRA 阈值改成 -8 会发生什么` 覆盖 `intent: propose_logic_change`、dry-run / proposal、`required_changes / risks`，并明确 `does not directly modify controller.py`。
+  - helper notes 明确 expected observations 是 manual review hints，不是新的 answer payload 或 control truth。
+  - helper 仍明确它不是 browser E2E automation，默认不启动 server、不驱动浏览器。
+  - Round 65 helper 的启动命令、URL、核心 prompt、UI checkpoint 和边界提示保持不回归。
+  - Round 64 summary chip keyboard navigation 保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 50 tests OK。
+  - 全量测试结果：103 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 运行 `PYTHONPATH=src python3 tools/demo_ui_handcheck.py`。
+  - 对四类核心 prompt 逐条检查 helper 输出的 expected observations。
+  - 另开终端运行 `PYTHONPATH=src python3 -m well_harness.demo_server` 并按 helper 清单手测 UI。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `103 tests OK`。
+- 剩余风险
+  - guided observations 是人工验收提示，不是浏览器 E2E 自动化证明。
+  - helper 没有维护第二套 answer payload 或 control truth；后续不要把它扩成测试平台。
+
+## Round 65
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m py_compile tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 tools/demo_ui_handcheck.py --help`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_ui_handcheck_script_outputs_manual_checklist tests.test_demo.DemoIntentLayerTests.test_demo_ui_handcheck_script_help_documents_manual_scope`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_summary tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_jump_focus tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_keyboard_navigation tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_highlight_explanation tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_prompt_guidance_and_keyboard_affordance tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_flow_polish_controls`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --tail 5`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py tools/demo_ui_handcheck.py`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - 新增 `tools/demo_ui_handcheck.py` 作为轻量 browser hand-check helper。
+  - helper 默认只打印人工手测清单，不启动长期 server，不驱动浏览器。
+  - helper 输出本地 UI 启动命令：`PYTHONPATH=src python3 -m well_harness.demo_server`。
+  - helper 输出默认 URL：`http://127.0.0.1:8000/`。
+  - helper 覆盖四类核心 prompt：bridge、diagnose、trigger、proposal。
+  - helper 覆盖 selected prompt、loading / ready、control chain highlight、highlight explanation、`Answer sections` summary、summary chip click / focus、summary chip arrow-key navigation、raw JSON debug collapse / expand、empty prompt error。
+  - helper 明确边界：deterministic controlled demo layer、built-in `nominal-deploy` / `retract-reset` scenarios、simplified first-cut plant、not a full natural-language AI system、not a complete physical model。
+  - helper 明确它是 manual browser hand-check helper，不是 browser E2E automation；默认不启动 server，也不驱动浏览器。
+  - 可选 `--open` 只用标准库 `webbrowser.open(...)` 打开 URL，仍不启动 server。
+  - Round 64 summary chip keyboard navigation 保持不回归。
+  - Round 63 summary chip click / focus 保持不回归。
+  - Round 62 answer section count summary 保持不回归。
+  - Round 61 highlight explanation 保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 50 tests OK。
+  - 全量测试结果：103 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 运行 `PYTHONPATH=src python3 tools/demo_ui_handcheck.py`。
+  - 按输出提示另开终端运行 `PYTHONPATH=src python3 -m well_harness.demo_server`。
+  - 打开 `http://127.0.0.1:8000/`。
+  - 依次验证 bridge / diagnose / trigger / proposal 四类 prompt。
+  - 检查 selected prompt、loading / ready、链路高亮、highlight explanation、`Answer sections` summary、summary chip click / focus、summary chip arrow-key navigation、raw JSON collapse / expand、empty prompt error。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `103 tests OK`。
+- 剩余风险
+  - helper 是人工验收辅助，不是浏览器 E2E 自动化证明。
+  - 当前 UI 仍无浏览器 E2E；如继续增强，优先补手测流程或截图标注，不要回到 schema / validator 工具链。
+
+## Round 64
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_summary tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_jump_focus tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_keyboard_navigation`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_summary tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_jump_focus tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_keyboard_navigation tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_highlight_explanation tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_prompt_guidance_and_keyboard_affordance tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_flow_polish_controls`
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系' >/tmp/well_harness_round64_demo_bridge.txt`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool >/tmp/well_harness_round64_demo_bridge.json`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '触发 logic3 会发生什么' | python3 -m json.tool >/tmp/well_harness_round64_demo_logic3.json`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool >/tmp/well_harness_round64_demo_diagnose.json`
+  - `PYTHONPATH=src python3 -m well_harness.demo_server --help >/tmp/well_harness_round64_demo_server_help.txt`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool >/tmp/well_harness_round64_nominal.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool >/tmp/well_harness_round64_diagnose_logic4.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --tail 5 >/tmp/well_harness_round64_events.txt`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8 >/tmp/well_harness_round64_retract_events.txt`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - `Answer sections` summary 附近新增 `Use arrow keys to move between section chips.` 提示。
+  - 动态生成的 `button.summary-chip` 新增 `aria-describedby="answer-section-keyboard-hint"`。
+  - 当焦点在 summary chip 上时：
+    - `ArrowRight` / `ArrowDown` 聚焦下一个 chip。
+    - `ArrowLeft` / `ArrowUp` 聚焦上一个 chip。
+    - `Home` 聚焦第一个 chip。
+    - `End` 聚焦最后一个 chip。
+  - `Enter` / `Space` 不在 keydown handler 中处理，继续使用原生 button click 行为触发 Round 63 的 section focus。
+  - keydown handler 只绑定在 summary chip 上，不影响 textarea 的普通输入、换行或 prompt 区 `Cmd/Ctrl+Enter` 提交。
+  - API / UI error 时 summary 仍显示 unavailable 状态，不保留可导航旧 chip。
+  - Round 63 summary chip click / focus 保持不回归。
+  - Round 62 answer section count summary 保持不回归。
+  - Round 61 highlight explanation 保持不回归。
+  - Round 60 prompt 分组、Cmd/Ctrl+Enter、compact help copy 保持不回归。
+  - Round 59 selected prompt、mobile rail、raw JSON 折叠保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 48 tests OK。
+  - 全量测试结果：101 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 运行 `PYTHONPATH=src python3 -m well_harness.demo_server`。
+  - 输入 `logic4 和 throttle lock 有什么关系`，应看到 `Answer sections` summary chip 和 arrow-key 提示。
+  - 聚焦任意 summary chip 后，用方向键 / `Home` / `End` 移动 chip 焦点。
+  - 按 `Enter` / `Space` 应继续使用原生 button 行为跳转到对应 answer section。
+  - 在 textarea 中普通方向键 / Enter 不应被 summary key handler 影响。
+  - 触发空 prompt / API error 时，summary 应显示 unavailable 状态而不是旧的可导航 chip。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `101 tests OK`。
+- 剩余风险
+  - 当前 UI 仍无浏览器 E2E；summary keyboard navigation 通过静态测试保护。
+  - 键盘导航是 UI 可用性 polish，不是新的推理逻辑或因果证明。
+
+## Round 63
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_summary tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_highlight_explanation tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_prompt_guidance_and_keyboard_affordance tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_flow_polish_controls`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_summary tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_jump_focus`
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系' >/tmp/well_harness_round63_demo_bridge.txt`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool >/tmp/well_harness_round63_demo_bridge.json`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '触发 logic3 会发生什么' | python3 -m json.tool >/tmp/well_harness_round63_demo_logic3.json`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool >/tmp/well_harness_round63_demo_diagnose.json`
+  - `PYTHONPATH=src python3 -m well_harness.demo_server --help >/tmp/well_harness_round63_demo_server_help.txt`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool >/tmp/well_harness_round63_nominal.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool >/tmp/well_harness_round63_diagnose_logic4.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --tail 5 >/tmp/well_harness_round63_events.txt`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8 >/tmp/well_harness_round63_retract_events.txt`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - `Answer sections` summary chip 现在是原生 `button.summary-chip`。
+  - summary chip 覆盖 `evidence`、`outcome`、`possible_causes`、`required_changes`、`risks`。
+  - 每个 chip 设置 `aria-controls="answer-section-<sectionName>"`。
+  - 每个 structured output section 设置稳定 `id="answer-section-<sectionName>"` 和 `tabindex="-1"`。
+  - 点击 chip 会通过 `focusAnswerSection(sectionName)` 聚焦并滚动到对应 section。
+  - 空 section 仍显示 `empty for this answer`，且同样保留可跳转 / focus 行为。
+  - API / UI error 时 summary 继续显示 unavailable 状态，不保留上一条 answer 的可跳转 chip。
+  - Round 62 answer section count summary 保持不回归。
+  - Round 61 highlight explanation 保持不回归。
+  - Round 60 prompt 分组、Cmd/Ctrl+Enter、compact help copy 保持不回归。
+  - Round 59 selected prompt、mobile rail、raw JSON 折叠保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 47 tests OK。
+  - 全量测试结果：100 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 运行 `PYTHONPATH=src python3 -m well_harness.demo_server`。
+  - 输入 `logic4 和 throttle lock 有什么关系`，应看到 `Answer sections` summary chip。
+  - 点击 `evidence` / `outcome` / `possible_causes` / `required_changes` / `risks` chip，应 focus / scroll 到对应 structured output section。
+  - 输入 `为什么 throttle lock 没释放`，空 section 应继续显示 `empty for this answer`，且仍可 focus。
+  - 触发空 prompt / API error 时，summary 应显示 unavailable 状态而不是旧的可跳转 chip。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `100 tests OK`。
+- 剩余风险
+  - 当前 UI 仍无浏览器 E2E；summary jump / focus 行为通过静态测试保护。
+  - summary jump / focus 是 UI 可用性 polish，不是新的推理逻辑或因果证明。
+
+## Round 62
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_answer_section_summary tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_highlight_explanation tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_prompt_guidance_and_keyboard_affordance tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_flow_polish_controls`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool >/tmp/well_harness_round62_demo_bridge.json`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '触发 logic3 会发生什么' | python3 -m json.tool >/tmp/well_harness_round62_demo_logic3.json`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool >/tmp/well_harness_round62_demo_diagnose.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool >/tmp/well_harness_round62_nominal.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool >/tmp/well_harness_round62_diagnose_logic4.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --tail 5 >/tmp/well_harness_round62_events.txt`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8 >/tmp/well_harness_round62_retract_events.txt`
+  - `PYTHONPATH=src python3 -m well_harness.demo_server --help`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - `Structured output` 上方新增 `Answer sections` summary。
+  - summary 基于现有 `DemoAnswer` arrays 生成 item count：
+    - `evidence`
+    - `outcome`
+    - `possible_causes`
+    - `required_changes`
+    - `risks`
+  - 非空 section 显示 `N item(s)`。
+  - 空 section 显示 `0 items — empty for this answer`。
+  - API / UI error 时 summary 显示 `Section summary unavailable for UI/API errors.`，不会保留上一条 answer 的旧计数。
+  - structured section 自身的空数组文案也改为 `empty for this answer`，不改变 demo JSON payload。
+  - raw JSON debug 仍照常显示 payload / error。
+  - Round 61 highlight explanation 保持不回归。
+  - Round 60 prompt 分组、Cmd/Ctrl+Enter、compact help copy 保持不回归。
+  - Round 59 selected prompt、mobile rail、raw JSON 折叠保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 46 tests OK。
+  - 全量测试结果：99 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 运行 `PYTHONPATH=src python3 -m well_harness.demo_server`。
+  - 输入 `logic4 和 throttle lock 有什么关系`，应看到 `Answer sections` summary、结构化解释、相关链路高亮和 raw JSON debug。
+  - 输入 `为什么 throttle lock 没释放`，应看到 cause / evidence / risks，并且空数组 section 显示清晰 empty 状态。
+  - 触发空 prompt / API error 时，summary 应显示 unavailable 状态而不是旧计数。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `99 tests OK`。
+- 剩余风险
+  - 当前 UI 仍无浏览器 E2E；answer section summary 通过静态测试保护。
+  - summary 是扫读辅助，只反映现有 `DemoAnswer` arrays 的数量，不是新的推理或因果证明。
+
+## Round 61
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_highlight_explanation tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_prompt_guidance_and_keyboard_affordance tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_flow_polish_controls tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_polish_and_highlight_refinements`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool >/tmp/well_harness_round61_demo_bridge.json`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '触发 logic3 会发生什么' | python3 -m json.tool >/tmp/well_harness_round61_demo_logic3.json`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool >/tmp/well_harness_round61_demo_diagnose.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool >/tmp/well_harness_round61_nominal.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool >/tmp/well_harness_round61_diagnose_logic4.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --tail 5`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 -m well_harness.demo_server --help`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - 控制链路图下新增 `Why these nodes are highlighted` 说明区。
+  - 每次正常 demo API payload 渲染后，说明区会显示：
+    - `intent`
+    - `matched_node`
+    - `target_logic`
+    - 当前高亮 node label 列表
+  - 视觉高亮和说明文字共用 `highlightedNodesForPayload(payload)` 与已有 UI alias mapping。
+  - `logic4 和 throttle lock 有什么关系` 会说明 logic4 是 upstream gate、THR_LOCK 是 downstream release command。
+  - `触发 logic3 会发生什么` 会说明 logic3 answer 同时关联 EEC / PLS / PDU command 子节点。
+  - throttle-lock release 相关 answer 会说明 release command association，并提示继续读 evidence / risks。
+  - 文案明确高亮只是 answer association，不是完整因果证明或真实物理根因证明。
+  - Round 60 prompt 分组、Cmd/Ctrl+Enter、compact help copy 保持不回归。
+  - Round 59 selected prompt、mobile rail、raw JSON 折叠保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 45 tests OK。
+  - 全量测试结果：98 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 运行 `PYTHONPATH=src python3 -m well_harness.demo_server`。
+  - 输入 `logic4 和 throttle lock 有什么关系`，应看到 logic4 / THR_LOCK 高亮及 bridge highlight 说明。
+  - 输入 `触发 logic3 会发生什么`，应看到 logic3 / EEC / PLS / PDU 高亮及 command 子节点说明。
+  - 输入 `为什么 throttle lock 没释放`，应继续看到 cause / evidence / risks、raw JSON 和相关链路高亮说明。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `98 tests OK`。
+- 剩余风险
+  - 当前 UI 仍无浏览器 E2E；highlight explanation 通过静态测试保护。
+  - 高亮解释仍只是 answer association，不是完整因果证明；后续继续 UI 小步 polish 时要维持这个边界。
+
+## Round 60
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_prompt_guidance_and_keyboard_affordance tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_flow_polish_controls tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_polish_and_highlight_refinements`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool >/tmp/well_harness_round60_demo_bridge.json`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool >/tmp/well_harness_round60_demo_diagnose.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool >/tmp/well_harness_round60_nominal.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool >/tmp/well_harness_round60_diagnose_logic4.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --tail 5`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 -m well_harness.demo_server --help`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - 示例 prompt 现在按演示用途轻量分组：
+    - Chain relationship
+    - Diagnosis
+    - Trigger
+    - Proposal
+  - 示例按钮新增 `data-category` / `data-intent`，只用于 UI 展示和静态测试，不改变 demo API payload。
+  - textarea 显示 `Press Cmd/Ctrl+Enter to run; plain Enter adds a newline.`。
+  - `Cmd+Enter` / `Ctrl+Enter` 通过现有 `form.requestSubmit()` 路径提交。
+  - 普通 Enter 没有被拦截，textarea 仍可换行。
+  - 新增 compact help `<details>`，说明当前是 deterministic controlled demo layer，不是开放式 LLM，也不是完整物理模型。
+  - Round 59 selected prompt、raw JSON 折叠、mobile step rail、logic4 / THR_LOCK 和 command 子节点高亮保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 44 tests OK。
+  - 全量测试结果：97 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 运行 `PYTHONPATH=src python3 -m well_harness.demo_server`。
+  - 打开本地 URL，应看到按 Chain relationship / Diagnosis / Trigger / Proposal 分组的示例 prompt。
+  - 在 textarea 中按 `Cmd+Enter` / `Ctrl+Enter` 应提交当前 prompt；普通 Enter 应保留换行。
+  - 展开 `What this controlled demo understands` 应看到受控 demo 边界说明。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `97 tests OK`。
+- 剩余风险
+  - 当前 UI 仍无浏览器 E2E；prompt grouping / keyboard affordance / help copy 通过静态测试保护。
+  - 后续如果继续增强 UI，优先做小范围 answer-to-chain 高亮解释或 keyboard/help polish，不要回到 validator / schema 工具链惯性。
+
+## Round 59
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_polish_and_highlight_refinements tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_flow_polish_controls tests.test_demo.DemoIntentLayerTests.test_demo_server_api_returns_demo_json_payload tests.test_demo.DemoIntentLayerTests.test_demo_server_api_missing_prompt_returns_readable_error_json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool >/tmp/well_harness_round59_demo_bridge.json`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool >/tmp/well_harness_round59_demo_diagnose.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool >/tmp/well_harness_round59_nominal.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool >/tmp/well_harness_round59_diagnose_logic4.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --tail 5`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m well_harness.demo_server --help`
+- 结果
+  - 示例 prompt 按钮新增 selected / active 状态：
+    - 初始示例带 `is-selected` 与 `aria-pressed="true"`。
+    - JS 新增 `syncSelectedPrompt(prompt)`，点击示例或手动编辑 textarea 后同步 selected 状态。
+    - 输入不匹配任何示例时显示 `Selected example: custom prompt`。
+  - 移动端控制链路展示优化：
+    - 链路容器新增 `mobile-step-rail`。
+    - 窄屏下使用横向可滚动 step rail，包含 `overflow-x: auto` 和 `scroll-snap-type: x proximity`。
+    - 复合节点 group 在移动端保留独立宽度，避免子节点挤压。
+  - raw JSON debug 面板改为原生可折叠结构：
+    - `<details id="raw-json-details" open>`
+    - `<summary>Raw JSON debug</summary>`
+    - `#raw-json` 内容仍随每次 payload / error 更新。
+  - `logic4` / `THR_LOCK` 与 `logic3` command 子节点高亮映射保持不回归。
+  - UI/API 仍复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - `tests.test_demo`: 43 tests OK。
+  - 全量测试结果：96 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 运行 `PYTHONPATH=src python3 -m well_harness.demo_server`。
+  - 打开本地 URL，点击任意示例 prompt，应看到 selected 状态变化。
+  - 手动编辑 prompt 使其不匹配示例，应看到 `Selected example: custom prompt`。
+  - 在窄屏下链路应以横向 rail 形式滚动。
+  - raw JSON debug 可以用 summary 折叠 / 展开。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `96 tests OK`。
+- 剩余风险
+  - 当前 UI 仍无浏览器 E2E；selected / mobile / collapse 通过静态测试保护。
+  - 后续如果继续增强 UI，优先做小范围 demo usability，不要回到 validator / schema 工具链惯性。
+
+## Round 58
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_server_api_returns_demo_json_payload tests.test_demo.DemoIntentLayerTests.test_demo_server_api_missing_prompt_returns_readable_error_json tests.test_demo.DemoIntentLayerTests.test_demo_server_serves_static_shell tests.test_demo.DemoIntentLayerTests.test_demo_static_html_contains_key_ui_elements tests.test_demo.DemoIntentLayerTests.test_demo_static_assets_include_polish_and_highlight_refinements`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool >/tmp/well_harness_round58_demo_bridge.json`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool >/tmp/well_harness_round58_demo_diagnose.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool >/tmp/well_harness_round58_nominal.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool >/tmp/well_harness_round58_diagnose_logic4.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --tail 5`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+  - `PYTHONPATH=src python3 -m well_harness.demo_server --help`
+- 结果
+  - UI 新增明确 loading 状态：
+    - 提交后显示 `Thinking deterministically...`。
+    - loading 期间禁用提交按钮和示例 prompt 按钮，避免重复请求。
+  - UI 新增 empty prompt 状态：
+    - 空 prompt 不调用 API。
+    - 页面显示 `请输入一个受控 demo prompt。`。
+    - raw JSON debug 展示 `missing_prompt`。
+  - UI 新增 API / network error 渲染：
+    - 结构化区域显示 error section。
+    - raw JSON debug 保留错误 payload。
+  - 控制链路高亮细化：
+    - `logic4` 与 `THR_LOCK` 拆成独立高亮子节点。
+    - `tls115`、`etrac_540v`、`eec_deploy`、`pls_power`、`pdu_motor`、`thr_lock` 有独立 `data-node` / alias mapping。
+    - `logic3` 会同时高亮 `logic3` 与 `EEC` / `PLS` / `PDU` 子节点。
+    - 高亮文案仍说明这只是 answer association，不是完整因果证明。
+  - `POST /api/demo` 仍直接复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`。
+  - 新增 missing prompt API smoke 和静态 UI polish / 高亮映射测试。
+  - `tests.test_demo`: 42 tests OK。
+  - 全量测试结果：95 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 与既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 运行 `PYTHONPATH=src python3 -m well_harness.demo_server`。
+  - 打开本地 URL，清空 prompt 后提交，应看到 `请输入一个受控 demo prompt。`。
+  - 输入 `logic4 和 throttle lock 有什么关系`，应看到 `logic4` 与 `THR_LOCK` 分别高亮。
+  - 输入 `触发 logic3 会发生什么`，应看到 `logic3` 及 `EEC` / `PLS` / `PDU` 子节点高亮。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `95 tests OK`。
+- 剩余风险
+  - 当前 UI smoke 是静态 / API 层测试，不是浏览器 E2E。
+  - 后续如果继续增强 UI，优先做小范围视觉和演示 flow polish，不要回到 validator / schema 工具链惯性。
+
+## Round 57
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_server_api_returns_demo_json_payload tests.test_demo.DemoIntentLayerTests.test_demo_server_serves_static_shell tests.test_demo.DemoIntentLayerTests.test_demo_static_html_contains_key_ui_elements`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool >/tmp/well_harness_round57_nominal.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool >/tmp/well_harness_round57_diagnose_logic4.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --tail 5`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view explain --logic logic4 --time 4.9`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 -m well_harness.demo_server --help`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - 新增 `src/well_harness/demo_server.py`，使用 Python 标准库本地 HTTP server。
+  - 启动命令为 `PYTHONPATH=src python3 -m well_harness.demo_server`。
+  - `POST /api/demo` 直接复用 `answer_demo_prompt(...)` 与 `demo_answer_to_payload(...)`，返回现有 `DemoAnswer` JSON payload。
+  - 新增静态 UI：
+    - `src/well_harness/static/demo.html`
+    - `src/well_harness/static/demo.css`
+    - `src/well_harness/static/demo.js`
+  - UI 第一屏包含输入框、四个示例 prompt、固定控制链路图、结构化结果区、raw JSON debug 面板和边界提示。
+  - 控制链路图根据 `matched_node` / `target_logic` 做简单高亮。
+  - 页面明确说明这是 deterministic controlled demo layer，基于内置 scenario 和 simplified first-cut plant，不是完整自然语言 AI 产品或完整物理模型。
+  - 新增 server/API smoke、静态 shell smoke、静态 HTML 关键 UI 文案 / 元素测试。
+  - `tests.test_demo`: 40 tests OK。
+  - 全量测试结果：93 tests OK。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 和既有 harness JSON 输出保持不变。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 运行 `PYTHONPATH=src python3 -m well_harness.demo_server`，打开打印的本地 URL。
+  - 输入 `logic4 和 throttle lock 有什么关系`，应看到 bridge summary、控制链路高亮和 raw JSON debug。
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `93 tests OK`。
+- 剩余风险
+  - UI 仍是最小本地 shell，不是完整前端产品。
+  - 后续如果继续增强，优先补 demo 交互 polish，而不是回到 schema / validator 工具链惯性。
+
+## Round 57 Planning Pivot
+
+- 结论：PIVOT TO UI DEMO
+- 执行命令
+  - `sed -n '1,220p' docs/coordination/plan.md`
+  - `sed -n '1,220p' docs/coordination/dev_handoff.md`
+  - `sed -n '1,220p' README.md`
+  - `sed -n '1,260p' src/well_harness/demo.py`
+  - `sed -n '1,260p' src/well_harness/cli.py`
+  - `sed -n '1,260p' tests/test_demo.py`
+  - `rg --files -g 'package.json' -g '*.tsx' -g '*.jsx' -g '*.html' -g '*.css' -g '*.js' .`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - Round 56 已在工作区完成；`tools/validate_demo_answer_schema.py --format json` 已存在并通过前序复核。
+  - 当前全量测试结果：90 tests OK。
+  - 当前已有 `well_harness demo "..."` 与 `well_harness demo --format json "..."`。
+  - 当前还没有可展示 UI：未发现 `package.json` / Vite / Next / tsx / jsx，也没有静态 HTML / CSS / JS UI 入口。
+  - 已将 `docs/coordination/plan.md` 从 Round 56 validator JSON output 改为 Round 57 UI demo shell。
+  - 已在 `docs/coordination/dev_handoff.md` 顶部写入 Round 57 开发任务包。
+- 发现的问题
+  - 不是代码缺陷，而是方向风险：继续扩 validator / schema / fixture 工具链会让项目继续“更会验证自己”，但用户仍然看不到可操作 demo。
+- 可复现步骤
+  - 运行 `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`，应得到 `90 tests OK`。
+- 剩余风险
+  - Round 57 必须保持最小 UI shell，不要滑向完整前端工程化、开放式 LLM、通用 report 平台或新的 schema 工具链。
+  - UI 文案必须继续说明 deterministic controlled demo layer 与 simplified first-cut plant 的边界。
+
+## Round 56
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m py_compile tools/validate_demo_answer_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_demo_answer_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_demo_answer_schema.py --format json`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_demo_answer_schema.py --format json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_answer_schema_standalone_script_smoke tests.test_demo.DemoIntentLayerTests.test_demo_answer_schema_standalone_script_forced_skip tests.test_demo.DemoIntentLayerTests.test_demo_answer_schema_standalone_script_json_pass_output tests.test_demo.DemoIntentLayerTests.test_demo_answer_schema_standalone_script_json_forced_skip_output tests.test_demo.DemoIntentLayerTests.test_optional_jsonschema_validates_demo_json_payloads_when_installed`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 tools/validate_demo_answer_schema.py --format json | python3 -m json.tool`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_demo_answer_schema.py --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - `tools/validate_demo_answer_schema.py` 新增 `--format json`。
+  - 默认不带参数时仍输出 Round 55 的人类可读文本摘要。
+  - JSON 顶层包含 `status`、`schema_path`、`asset_path`、`results`。
+  - 默认成功路径输出 `status=pass`，并列出三条真实 demo JSON payload 的验证结果。
+  - `results[]` 包含 `prompt`、`intent`、`validation_status`、`error_count`、`errors`。
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1` 能稳定覆盖 optional dependency `SKIP` JSON 分支，输出 `status=skip`、`results=[]`、`reason`。
+  - 现有脚本级文本 smoke tests 继续通过。
+  - Round 54 optional unittest validator 继续通过。
+  - 默认 demo text 输出保持不变。
+  - `well_harness demo --format json` 输出语义保持不变。
+  - `run` CLI 和既有 harness JSON 输出保持不变。
+  - `tests.test_demo`: 37 tests OK。
+  - 全量测试结果：90 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - `tools/validate_demo_answer_schema.py --format json` 目前没有自己的轻量 fixture contract。
+  - 如果外部集成方长期消费该 validator report，可下一轮单独补 fixture；不要扩成完整 schema 工具链、通用 report 平台、开放式 LLM 或大 UI。
+
+## Round 55
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m py_compile tools/validate_demo_answer_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_demo_answer_schema.py`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_demo_answer_schema.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_answer_schema_standalone_script_smoke tests.test_demo.DemoIntentLayerTests.test_demo_answer_schema_standalone_script_forced_skip tests.test_demo.DemoIntentLayerTests.test_optional_jsonschema_validates_demo_json_payloads_when_installed`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - 新增 `tools/validate_demo_answer_schema.py`，作为 `docs/json_schema/demo_answer_v1.schema.json` 的非 unittest optional validator 入口。
+  - 入口读取 `tests/fixtures/demo_json_output_asset_v1.json`，复用真实 `well_harness demo --format json` payload，而不是手写第二套 JSON payload。
+  - 安装 `jsonschema` 时，真实校验三条 demo JSON payload：
+    - `logic4 和 throttle lock 有什么关系`
+    - `为什么 logic4 还没满足`
+    - `为什么 throttle lock 没释放`
+  - 覆盖 `logic4_thr_lock_bridge`、`blocked_state`、`diagnose_problem` 三类 demo JSON。
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1` 能稳定覆盖缺少 optional dependency 的 `SKIP` 分支，入口返回 0。
+  - Round 54 optional unittest validator 继续通过。
+  - Round 53 schema / asset 基础一致性测试继续通过。
+  - Round 52 demo JSON asset-driven 测试继续通过。
+  - 默认 demo text 输出保持不变。
+  - demo JSON 输出语义保持不变。
+  - `run` CLI 和既有 harness JSON 输出保持不变。
+  - 指挥侧二次复核同样通过默认入口、强制 `SKIP` 入口、脚本级 smoke tests、demo text / JSON smoke、`run` JSON smoke、全量回归和行为断言。
+  - `tests.test_demo`: 35 tests OK。
+  - 全量测试结果：88 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`、`logic4`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - `tools/validate_demo_answer_schema.py` 目前是人类可读极薄入口，没有自己的机器可读输出模式。
+  - 如果外部集成方需要消费该 validator 自身结果，可下一轮单独补小型 `--format json`；不要扩成完整 schema 工具链、通用 report 平台、开放式 LLM 或大 UI。
+
+## Round 54
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_optional_jsonschema_validates_demo_json_payloads_when_installed`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo.DemoIntentLayerTests.test_demo_json_output_schema_document_matches_fixture_contract`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool >/tmp/well_harness_round54_nominal.json`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - 新增 demo JSON schema optional validator unittest。
+  - 当前环境安装了 `jsonschema`，该测试实际用 `Draft202012Validator.check_schema(...)` 校验 `docs/json_schema/demo_answer_v1.schema.json`，并验证 `tests/fixtures/demo_json_output_asset_v1.json` 中三条 prompt 的真实 `well_harness demo --format json` payload。
+  - 覆盖 `logic4_thr_lock_bridge`、`blocked_state`、`diagnose_problem` 三类 demo JSON。
+  - 缺少 `jsonschema` 时会明确 skip，不影响普通命令。
+  - demo schema / asset 基础一致性测试继续通过。
+  - demo JSON fixture asset-driven 测试继续通过。
+  - 默认 demo text 输出保持不变。
+  - `run` CLI 和既有 harness JSON 输出保持不变。
+  - 指挥侧二次复核同样通过上述 optional validator、demo JSON smoke、默认 demo text smoke、`run` JSON smoke、全量回归和行为断言。
+  - 全量测试结果：86 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2` 及相关逻辑。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - demo JSON schema optional validator 目前只有 unittest 入口，没有非 unittest 独立验证脚本。
+
+## Round 53
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool docs/json_schema/demo_answer_v1.schema.json`
+  - `python3 -m json.tool tests/fixtures/demo_json_output_asset_v1.json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json > /tmp/well_harness_round53_nominal.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json > /tmp/well_harness_round53_logic4_diagnose.json`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - 新增 `docs/json_schema/demo_answer_v1.schema.json`，作为 `well_harness demo --format json` 输出的正式 JSON Schema 文档。
+  - schema 使用 Draft 2020-12。
+  - schema 覆盖当前 `DemoAnswer` JSON payload 的固定字段：
+    - `intent`
+    - `matched_node`
+    - `target_logic`
+    - `evidence`
+    - `outcome`
+    - `possible_causes`
+    - `required_changes`
+    - `risks`
+  - `matched_node` / `target_logic` 为 `string | null`，其他文本集合字段为 string array。
+  - 未新增 `status` 等当前 demo JSON 没有的字段。
+  - `tests/test_demo.py` 新增 `load_demo_json_output_schema()` 和 schema / asset 基础一致性测试。
+  - schema / asset 测试用标准库读取 `docs/json_schema/demo_answer_v1.schema.json` 与 `tests/fixtures/demo_json_output_asset_v1.json`，校验 schema 合法 JSON、`properties` / `required` 覆盖 fixture 的 `required_top_level_fields`，array 字段覆盖 fixture 的 `required_array_fields`，intent enum 覆盖 fixture 用到的 intents。
+  - Round 50 的 `demo_answer_asset_v1.json` asset-driven 测试继续通过。
+  - Round 52 的 `demo_json_output_asset_v1.json` asset-driven 测试继续通过。
+  - 默认 demo text 输出、demo JSON 输出语义、`run` CLI 和既有 harness JSON 输出保持不变。
+  - 全量测试结果：85 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - demo JSON schema 目前只有标准库合法性与 fixture 基础一致性测试。
+  - 若外部自动化长期依赖 demo JSON，可下一轮补 optional `jsonschema` 真实 payload validator；不要扩成新的 schema 工具链、开放式 LLM 或大 UI。
+
+## Round 52
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool tests/fixtures/demo_json_output_asset_v1.json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 throttle lock 没释放'`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json > /tmp/well_harness_round52_nominal.json`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - 新增 `tests/fixtures/demo_json_output_asset_v1.json` 轻量 fixture contract。
+  - fixture 文件名不匹配 `*_contract_v1.json`，不会被现有 validation contract glob 误读。
+  - fixture 覆盖三条关键 demo JSON prompt：
+    - `logic4 和 throttle lock 有什么关系`
+    - `为什么 logic4 还没满足`
+    - `为什么 throttle lock 没释放`
+  - fixture 覆盖 JSON answer 类型：
+    - `logic4_thr_lock_bridge`
+    - `blocked_state`
+    - `diagnose_problem`
+  - `tests/test_demo.py` 新增 `load_demo_json_output_asset()` 和 asset-driven 测试。
+  - asset-driven 测试通过真实 `main(["demo", "--format", "json", prompt])` 路径生成 payload，并用 `json.loads(...)` 校验顶层字段、数组字段类型和稳定片段；未手写第二套 JSON payload。
+  - Round 50 的 `demo_answer_asset_v1.json` asset-driven 测试继续通过。
+  - Round 51 的 demo JSON 专项测试继续通过。
+  - 默认 `well_harness demo "..."` 人类可读输出保持不变。
+  - `run` 子命令的 timeline / diagnose JSON smoke 通过，现有 harness JSON 输出形状未回归。
+  - 全量测试结果：84 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2`、`logic1`、`logic2`、`logic3`。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - demo JSON fixture 是轻量回归契约，不是正式 JSON Schema。
+  - 若外部自动化长期依赖 demo JSON，可下一轮单独补小型 schema 文档；不要扩成开放式 LLM、大 UI、通用 report 平台或 schema 工具链。
+
+## Round 51
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json 'logic4 和 throttle lock 有什么关系' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo --format json '为什么 logic4 还没满足' | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool >/tmp/well_harness_round51_nominal.json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool >/tmp/well_harness_round51_logic4_diagnose.json`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - `well_harness demo` 已支持 `--format json`。
+  - 默认 `well_harness demo "..."` 人类可读输出保持不变，仍包含 `intent:`、`evidence:` 等文本结构。
+  - 新增 `demo_answer_to_payload(...)`，JSON 输出直接来自现有 `DemoAnswer` 字段，未维护第二套 answer payload。
+  - JSON 顶层字段稳定为：
+    - `intent`
+    - `matched_node`
+    - `target_logic`
+    - `evidence`
+    - `outcome`
+    - `possible_causes`
+    - `required_changes`
+    - `risks`
+  - `evidence`、`outcome`、`possible_causes`、`required_changes`、`risks` 均保持数组。
+  - `logic4 和 throttle lock 有什么关系` 与 `为什么 logic4 还没满足` 的 demo JSON 输出均可被 `json.tool` 解析。
+  - Round 50 的 `demo_answer_asset_v1.json` asset-driven 测试继续通过。
+  - `run` 子命令的 timeline / diagnose JSON smoke 通过，现有 harness JSON 输出形状未回归。
+  - 全量测试结果：83 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2` 及相关逻辑。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - demo JSON 输出目前是小型机器可读模式，没有正式 JSON Schema。
+  - 若外部自动化长期依赖 demo JSON，可下一轮单独补轻量 fixture contract；不要顺手扩成开放式 LLM、大 UI 或正式 schema 工程。
+
+## Round 50
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool tests/fixtures/demo_answer_asset_v1.json >/tmp/demo_answer_asset_v1.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 logic4 还没满足'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 throttle lock 没释放'`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - 新增 `tests/fixtures/demo_answer_asset_v1.json` 轻量 fixture contract。
+  - fixture 文件名不匹配 `*_contract_v1.json`，不会被现有 validation contract glob 误读。
+  - fixture 覆盖 7 条关键 prompt，包含：
+    - `trigger_node`
+    - `blocked_state`
+    - `diagnose_problem`
+    - `logic4_thr_lock_bridge`
+    - `propose_logic_change`
+  - `tests/test_demo.py` 新增 `load_demo_answer_asset()` 和 asset-driven 测试。
+  - asset-driven 测试对每条 prompt 调用现有 `answer_demo_prompt(...)`，并校验 `DemoAnswer` 字段与 required fragments；未手写第二套 answer payload。
+  - 旧专项 demo tests 继续保留并通过。
+  - `README.md` 已说明该 fixture 是 demo answer 轻量回归契约，不是正式 JSON Schema。
+  - 默认 `run` CLI、timeline/events/explain/diagnose 与 JSON 输出保持可用。
+  - 全量测试结果：81 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2` 及相关逻辑。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - demo fixture 是轻量回归契约，不是正式 JSON Schema。
+  - demo 输出仍面向人类可读文本；如果外部自动化要直接消费 demo layer，下一轮可单独补小型 `--format json` demo 输出，但不应扩成开放式 LLM 或大 UI。
+
+## Round 49
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 throttle lock 有什么关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 logic4 还没满足，throttle lock 也没释放'`
+  - `PYTHONPATH=src python3 -m well_harness demo 'logic4 和 THR_LOCK 的关系'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 logic4 还没满足'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 throttle lock 没释放'`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - 新增受控 `logic4_thr_lock_bridge` intent。
+  - `logic4 和 throttle lock 有什么关系`、`logic4 和 THR_LOCK 的关系`、`为什么 logic4 还没满足，throttle lock 也没释放` 均能稳定映射到 `logic4_thr_lock_bridge`。
+  - matcher 位于 `blocked_state` / `diagnose_problem` 之前，联合问题没有被旧单一路径误吸收。
+  - bridge answer 继续使用固定 `DemoAnswer` 结构。
+  - evidence 稳定覆盖：
+    - `logic4` 是上游 logic gate
+    - `throttle_lock_release_cmd / THR_LOCK` 是下游末端释放命令
+    - `logic4 explain@4.9s failed_conditions: deploy_90_percent_vdt`
+    - `events@5.0s: deploy_90_percent_vdt False->True; logic4_active False->True; throttle_lock_release_cmd False->True`
+  - 输出明确说明：
+    - blocked-state 解释 checkpoint gate 为什么未满足
+    - diagnose_problem 解释下游 release 为什么在该窗口尚未发生
+    - bridge summary 只是桥接现有 evidence，不是完整异常诊断
+  - 旧 `为什么 logic4 还没满足`、`为什么 THR_LOCK 还没释放`、`为什么 throttle lock 没释放` 路径保持兼容。
+  - 默认 `run` CLI、timeline/events/explain/diagnose 与 JSON 输出保持可用。
+  - 全量测试结果：80 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2` 及相关逻辑。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - bridge summary 目前只覆盖 `logic4 <-> THR_LOCK`，不是通用 graph explainer。
+  - demo 关键短句输出现在主要靠散落在 tests 中的断言保护；下一轮可补轻量 fixture contract，避免关键 answer 字段和 evidence 片段漂移，但不应扩成正式 schema 工程或开放式 LLM。
+
+## Round 48
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view explain --logic logic4 --time 4.9`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 logic4 还没满足'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 throttle lock 没释放'`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - `blocked_state` intent 已扩展到 `logic4`。
+  - `为什么 logic4 还没满足` 会选取 `5.0s` 首次触发前一拍 `4.9s` 作为 checkpoint，并输出 checkpoint row 的 `DeployController.explain(logic4)` 条件表。
+  - `logic4` blocked-state 当前稳定覆盖：
+    - `deploy_90_percent_vdt`
+    - `tra_deg`
+    - `aircraft_on_ground`
+    - `engine_running`
+  - 输出同时包含：
+    - `logic4 explain@4.9s failed_conditions: deploy_90_percent_vdt。`
+    - `events@5.0s: deploy_90_percent_vdt False->True; logic4_active False->True; throttle_lock_release_cmd False->True`
+  - 旧 `为什么 THR_LOCK 还没释放` 仍保持 `blocked_state` 路径。
+  - 旧 `为什么 throttle lock 没释放` 仍保持 `diagnose_problem` 路径，没有被新规则误吸收。
+  - blocked-state comparison 继续只复用 `events()`、`logic_transition_diagnostics()`、checkpoint row 上已有的 `controller_explain` 和 trace row fields；未引入第二套控制真值。
+  - 默认 `run` CLI、timeline/events/explain/diagnose 与 JSON 输出保持可用。
+  - 全量测试结果：78 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2` 及相关逻辑。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - `logic4` blocked-state 已解释 gate 为什么在 checkpoint 尚未满足，但与现有 `throttle lock diagnose` 的桥接仍主要靠用户自己读两条回答。
+  - 下一轮更值当的是补一个受控、deterministic 的 `logic4 <-> THR_LOCK` bridge summary，把 gate 与 downstream release 的关系讲清楚，但仍不扩成开放式诊断器。
+
+## Round 46
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 SW1 还没触发'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 SW2 还没触发'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 TLS115 还没触发'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 TLS unlocked 还没触发'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 540V 还没触发'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 VDT90 还没触发'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 THR_LOCK 还没释放'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 throttle lock 没释放'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --tail 5`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view explain --logic logic1 --time 0.4`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view explain --logic logic2 --time 1.1`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+- 结果
+  - `blocked_state` intent 已扩展到最前段 gating 节点。
+  - `为什么 SW1 还没触发` 会选取 `0.5s` 首次触发前一拍 `0.4s` 作为 checkpoint，并输出 `tra_deg`、`sw1`、`logic1_active` 以及 `logic1 explain@0.4s failed_conditions: radio_altitude_ft, sw1`。
+  - `为什么 SW2 还没触发` 会选取 `1.2s` 首次触发前一拍 `1.1s` 作为 checkpoint，并输出 `tra_deg`、`sw2`、`logic2_active` 以及 `logic2 explain@1.1s failed_conditions: sw2`。
+  - `为什么 TLS115 还没触发` 会选取 `0.5s` 首次触发前一拍 `0.4s` 作为 checkpoint，并输出 `logic1`、`tls_115vac_cmd` 以及 `logic1 explain@0.4s failed_conditions: radio_altitude_ft, sw1`。
+  - 旧 `TLS unlocked / 540V / VDT90 / THR_LOCK` blocked-state 和旧 `为什么 throttle lock 没释放` 诊断路径均保持兼容。
+  - blocked-state comparison 继续复用 `events()`、`logic_transition_diagnostics()`、trace row fields 和 row 上已有的 `controller_explain`；未引入第二套控制真值。
+  - 旧 `run` CLI、timeline/events/explain/diagnose 和 JSON 输出保持可用。
+  - 全量测试结果：74 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2` 及相关逻辑。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - blocked-state comparison 仍是 `nominal-deploy` 的受控 evidence 对比，不是完整异常仿真或真实物理根因证明。
+  - 当前主要非 logic gate 已基本覆盖；下一轮可把同样的 deterministic comparison 扩到 `logic1 / logic2 / logic3` 这类 logic-centric “为什么还没满足”问题，但仍应保持受控 catalog 边界。
+
+## Round 45
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 TLS unlocked 还没触发'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 540V 还没触发'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 VDT90 还没触发'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 THR_LOCK 还没释放'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 throttle lock 没释放'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --tail 5`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view explain --logic logic2 --time 1.1`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - `blocked_state` intent 已从链路末端扩展到更早 gating 节点。
+  - `为什么 TLS unlocked 还没触发` 会选取 `0.8s` 首次触发前一拍 `0.7s` 作为 checkpoint，并输出 `logic1`、`tls_115vac_cmd`、`plant_state.tls_powered_s`、`tls_unlocked_ls` 的 blocked-state evidence。
+  - `为什么 540V 还没触发` 会选取 `1.2s` 首次触发前一拍 `1.1s` 作为 checkpoint，并输出 `sw2`、`logic2_active`、`etrac_540vdc_cmd` 的 blocked-state evidence，以及 `logic2 explain@1.1s failed_conditions: sw2`。
+  - 旧 `为什么 VDT90 还没触发`、`为什么 THR_LOCK 还没释放` 和 `为什么 throttle lock 没释放` 都保持兼容。
+  - blocked-state comparison 继续复用 `events()`、`logic_transition_diagnostics()`、trace row fields 和 row 上已有的 `controller_explain`；未引入第二套控制真值。
+  - 旧 `run` CLI、timeline/events/explain/diagnose 和 JSON 输出保持可用。
+  - 全量测试结果：71 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2` 及相关逻辑。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - blocked-state comparison 仍是 `nominal-deploy` 的受控 evidence 对比，不是完整异常仿真或真实物理根因证明。
+  - 当前已覆盖 `TLS unlocked / 540V / VDT90 / THR_LOCK`；下一轮可以把同样的 comparison 扩到更前段 `SW1 / SW2 / TLS115`，但仍应保持 deterministic 和受控 catalog 边界。
+
+## Round 44
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 VDT90 还没触发'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 THR_LOCK 还没释放'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 throttle lock 没释放'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --tail 5`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view explain --logic logic4 --time 4.9`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - demo layer 已新增受控 `blocked_state` / pre-trigger comparison。
+  - `为什么 VDT90 还没触发` 会选取 `5.0s` 首次触发前一拍 `4.9s` 作为 checkpoint，并输出 `pdu_motor_cmd`、`deploy_position_percent`、`deploy_90_percent_vdt` 的 blocked-state evidence。
+  - `为什么 THR_LOCK 还没释放` 会选取 `5.0s` 首次触发前一拍 `4.9s` 作为 checkpoint，并输出 `deploy_90_percent_vdt`、`logic4_active`、`throttle_lock_release_cmd` 以及 `logic4 explain@4.9s failed_conditions: deploy_90_percent_vdt`。
+  - 旧 `为什么 throttle lock 没释放` 继续保持 `diagnose_problem` 路径，没有被新 intent 误吸收。
+  - blocked-state comparison 继续复用 `events()`、`logic_transition_diagnostics()`、trace row fields 和 row 上已有的 `controller_explain`；未引入第二套控制真值。
+  - 旧 `run` CLI、timeline/events/explain/diagnose 和 JSON 输出保持可用。
+  - 全量测试结果：69 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2` 及相关逻辑。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - blocked-state comparison 仍是 `nominal-deploy` 的受控 evidence 对比，不是完整异常仿真或真实物理根因证明。
+  - 当前只覆盖 `VDT90` / `THR_LOCK` 两个较晚节点；下一轮可以把同样的 comparison 扩到更早链路节点，例如 `TLS unlocked` 或 `540V`，但仍应保持 deterministic 和受控 catalog 边界。
+
+## Round 43
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 SW1 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 SW2 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 TLS115 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 540V 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 EEC deploy 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 PLS power 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 TLS unlocked 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 THR_LOCK 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --tail 5`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - `_upstream_statuses()` 已扩展到剩余关键 command / switch catalog 节点。
+  - `SW1` status table 覆盖 `tra_deg`、`sw1`、`logic1_active`。
+  - `SW2` status table 覆盖 `tra_deg`、`sw2`、`logic2_active`。
+  - `TLS115` status table 覆盖 `logic1_active`、`tls_115vac_cmd`。
+  - `540V` status table 覆盖 `logic2_active`、`etrac_540vdc_cmd`。
+  - `EEC deploy` status table 覆盖 `logic3_active`、`eec_deploy_cmd`。
+  - `PLS power` status table 覆盖 `logic3_active`、`pls_power_cmd`。
+  - status table 继续复用 `events()`、`logic_transition_diagnostics()` 和 trace row fields；未引入第二套控制真值。
+  - `SW1` / `SW2` 输出保留 interval-triggered latch 边界，没有宣称硬件唯一触点。
+  - 旧 `run` CLI、timeline/events/explain/diagnose 和 JSON 输出保持可用。
+  - 全量测试结果：66 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2` 及相关逻辑。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - status table 是内置 `nominal-deploy` evidence 摘要，不是完整故障根因证明。
+  - 下一轮可以增加受控 blocked-state / pre-trigger comparison，让 demo 对“还没触发/还没释放”的问题展示当前上游 evidence 与缺口，但仍不扩成开放式诊断系统或完整 plant re-simulation。
+
+## Round 42
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 TLS unlocked 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 PDU motor 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 VDT90 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 THR_LOCK 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --tail 5`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - 新增 `UpstreamEvidenceStatus`，并通过 `DemoAnswer.evidence` 输出 `upstream_status_table`。
+  - `TLS unlocked` status table 覆盖 `logic1`、`tls_115vac_cmd`、`plant_state.tls_powered_s`、`tls_unlocked_ls`。
+  - `PDU motor` status table 覆盖 `logic3_active`、`pdu_motor_cmd`。
+  - `VDT90` status table 覆盖 `pdu_motor_cmd`、`deploy_position_percent`、`deploy_90_percent_vdt`。
+  - `THR_LOCK` status table 覆盖 `logic4_active`、`deploy_90_percent_vdt`、`throttle_lock_release_cmd`。
+  - status table 复用 `events()`、`logic_transition_diagnostics()` 和 trace row fields；未引入第二套控制真值。
+  - 旧 `run` CLI 与 diagnose JSON 保持可用。
+  - 全量测试结果：65 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2` 及相关逻辑。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - status table 是内置 `nominal-deploy` evidence 摘要，不是完整故障根因证明。
+  - 当前 status table 覆盖 Round 42 指定节点；下一轮可扩展到 `TLS115`、`540V`、`EEC deploy`、`PLS power`、`SW1`、`SW2` 等剩余 command / switch 节点。
+
+## Round 41
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 TLS unlocked 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 PDU motor 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 VDT90 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 THR_LOCK 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 540V 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 EEC deploy 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - `DemoNode` 已新增 `blocker_hints`，并和 `NODE_CATALOG` 同源。
+  - 非 logic 节点的 `possible_causes` 已优先使用 node-specific upstream dependency / blocker hints。
+  - `TLS unlocked` 输出指向 `TLS115` / `logic1`、`events()`、`plant_state.tls_powered_s`、`DeployController.explain(logic1)`。
+  - `PDU motor` / `EEC deploy` 输出指向 `logic3`、`logic_transition_diagnostics(logic3)`、`DeployController.explain(logic3)`。
+  - `VDT90` 输出指向 `PDU motor` / `pdu_motor_cmd`、`deploy_position_percent`、`events()` / timeline / diagnose context。
+  - `THR_LOCK` 输出指向 `logic4` / `deploy_90_percent_vdt`、`logic_transition_diagnostics(logic4)`、`DeployController.explain(logic4)`。
+  - 旧 `run` CLI 与 diagnose JSON 保持可用。
+  - 全量测试结果：64 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2` 及相关逻辑。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - blocker hints 不是完整故障根因证明，只是受控 catalog dependency hints。
+  - 下一轮可以把 hints 推进成小型 upstream evidence status table，展示当前内置 scenario 中相关 evidence 是否 observed / satisfied。
+
+## Round 40
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 SW1 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 TLS unlocked 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 VDT90 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 THR_LOCK 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json | python3 -m json.tool`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --tail 8`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - demo layer 已新增受控 `DemoNode` / `NODE_CATALOG`。
+  - catalog 覆盖 `sw1`、`logic1`、`tls115`、`tls_unlocked`、`sw2`、`logic2`、`etrac_540v`、`logic3`、`eec_deploy`、`pls_power`、`pdu_motor`、`vdt90`、`logic4`、`thr_lock`。
+  - `trigger_node` 已从 catalog 匹配 alias；logic 节点优先用 `logic_transition_diagnostics()`，非 logic field 节点用 `events()` 找首次真实 field change。
+  - 代表性 demo 命令 `SW1`、`TLS unlocked`、`VDT90`、`THR_LOCK` 均能输出固定 `DemoAnswer` 结构、类别、触发时间、事件窗口和边界风险。
+  - 旧 `run` CLI、diagnose JSON 和 retract/reset event 视图保持可用。
+  - 全量测试结果：63 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2` 及相关逻辑。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 非 logic 节点现在能展示触发 evidence 和上下游提示，但部分 blocker 仍是较通用的 catalog 文案。
+  - 下一轮可以补更具体的 upstream blocker / dependency mapping，让 demo trigger answer 更像可控推理面板。
+
+## Round 39
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m well_harness demo '触发 logic3 会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness demo '为什么 throttle lock 没释放'`
+  - `PYTHONPATH=src python3 -m well_harness demo '如果把 logic3 的 TRA 阈值从 -11.74 改成 -8，会发生什么'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --tail 3`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --tail 5`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view explain --logic logic3 --time 1.8`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - 新增 `well_harness demo` 入口可运行。
+  - `trigger_node` 覆盖 `logic3` / `logic4`，能引用 `nominal-deploy` 中约 `1.9s` / `5.0s` 的链路证据。
+  - `diagnose_problem` 能把 “throttle lock 没释放” 映射到 `logic4` / `deploy_90_percent_vdt` blocker。
+  - `propose_logic_change` 能输出 `logic3` TRA 阈值改为 `-8` 的 explain-level dry-run impact report，且不修改 `controller.py` 或默认 `HarnessConfig`。
+  - 旧 `run` CLI、`events`、`explain`、`diagnose`、`--format json` 入口保持可用。
+  - 全量测试结果：58 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2` 及相关逻辑。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - demo layer 当前仍是少量受控短句匹配，不是开放式自然语言 AI 系统。
+  - dry-run threshold proposal 是 explain-level impact report，不是完整 plant re-simulation。
+  - 当前 trigger_node 只覆盖 `logic3` / `logic4`；下一轮应扩成受控 node catalog，覆盖更多控制链节点。
+
+## Round 38
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m py_compile tools/validate_validation_schema_checker_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_validation_schema_checker_report_schema.py`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_validation_schema_checker_report_schema.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_schema_checker_report_schema_standalone_script_smoke tests.test_cli.CliDebugOutputTests.test_validation_schema_checker_report_schema_standalone_script_forced_skip tests.test_cli.CliDebugOutputTests.test_optional_jsonschema_validates_validation_schema_checker_report_payloads_when_installed`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 结果
+  - 非 unittest 入口 `tools/validate_validation_schema_checker_report_schema.py` 可运行。
+  - 当前环境安装了 `jsonschema`，默认入口实际校验 `PASS` / `SKIP` / `FAIL` 三类真实 payload 并通过。
+  - 强制 `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1` 时，入口输出 optional dependency `SKIP` 提示并以 0 退出。
+  - 全量测试结果：53 tests OK。
+  - 行为断言通过：`nominal-deploy` 仍到达 `logic4`，`retract-reset` 仍清掉 `sw1`、`sw2` 及相关逻辑。
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - validation / schema / optional validator 工具链已经足够细，继续扩展会稀释最终 demo 目标。
+  - 下一轮应可控转向 demo-facing controlled reasoning layer，而不是继续增加 schema validator 入口或契约资产。
+
+## Round 37
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool docs/json_schema/validation_schema_checker_report_v1.schema.json >/tmp/validation_schema_checker_report_v1_round37.pretty.json && python3 -m json.tool tests/fixtures/validation_schema_checker_report_asset_v1.json >/tmp/validation_schema_checker_report_asset_v1_round37.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_optional_jsonschema_validates_validation_schema_checker_report_payloads_when_installed`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_schema_checker_report_schema_document_matches_asset tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_json_pass_output tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_json_skip_output tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_json_fail_output tests.test_cli.CliDebugOutputTests.test_optional_jsonschema_validates_validation_schema_checker_report_payloads_when_installed`
+  - `PYTHONPATH=src python3 tools/validate_validation_schema_runner_report_schema.py && PYTHONPATH=src python3 tools/validate_validation_schema_runner_report_schema.py --format json >/tmp/validation_schema_checker_round37.json && python3 -m json.tool /tmp/validation_schema_checker_round37.json >/tmp/validation_schema_checker_round37.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - `docs/json_schema/validation_schema_checker_report_v1.schema.json` 已通过 optional `jsonschema` validator 真实校验当前 `PASS` / `SKIP` / `FAIL` payload。
+  - 当前该 optional validator 仍只通过 unittest 暴露；如果外部集成方不想跑测试模块，下一轮可补一个极薄非 unittest 入口。
+
+## Round 36
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool docs/json_schema/validation_schema_checker_report_v1.schema.json >/tmp/validation_schema_checker_report_v1_round36.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_schema_checker_report_schema_document_matches_asset`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_json_pass_output tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_json_skip_output tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_json_fail_output`
+  - `PYTHONPATH=src python3 tools/validate_validation_schema_runner_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_validation_schema_runner_report_schema.py --format json >/tmp/validation_schema_checker_report_round36.json && python3 -m json.tool /tmp/validation_schema_checker_report_round36.json >/tmp/validation_schema_checker_report_round36.pretty.json`
+  - `PYTHONPATH=src python3 - <<'PY' ... Draft202012Validator.check_schema(...) ... PY`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - `tools/validate_validation_schema_runner_report_schema.py --format json` 输出已有正式 JSON Schema 文档，并且 schema / asset 基础一致性受测试保护。
+  - 当前该 schema 还没有 optional `jsonschema` validator 真实校验 `PASS` / `SKIP` / `FAIL` payload；如果外部工具长期消费它，下一轮可补这一层。
+
+## Round 35
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool tests/fixtures/validation_schema_checker_report_asset_v1.json >/tmp/validation_schema_checker_report_asset_v1_round35.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_json_pass_output tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_json_skip_output tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_json_fail_output`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_smoke tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_forced_skip`
+  - `WELL_HARNESS_FORCE_SCHEMA_PATH=tests/fixtures/_missing_validation_schema_checker_schema_for_asset.json PYTHONPATH=src python3 tools/validate_validation_schema_runner_report_schema.py --format json >/tmp/validation_schema_checker_report_round35_fail.json; exit_code=$?; python3 -m json.tool /tmp/validation_schema_checker_report_round35_fail.json >/tmp/validation_schema_checker_report_round35_fail.pretty.json; echo exit_code=$exit_code`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - `tools/validate_validation_schema_runner_report_schema.py --format json` 的轻量 fixture 契约资产已覆盖 `PASS` / `SKIP` / `FAIL` 三类顶层状态。
+  - 当前该入口 JSON 输出仍没有正式 JSON Schema 文档；如果外部工具长期消费它，下一轮可补 schema 文档和 asset 基础一致性测试。
+
+## Round 34
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool tests/fixtures/validation_schema_checker_report_asset_v1.json >/tmp/validation_schema_checker_report_asset_v1_round34.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_json_pass_output tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_json_skip_output`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_smoke tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_forced_skip tests.test_cli.CliDebugOutputTests.test_optional_jsonschema_validates_validation_schema_runner_report_payloads_when_installed`
+  - `PYTHONPATH=src python3 tools/validate_validation_schema_runner_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_validation_schema_runner_report_schema.py --format json >/tmp/validation_schema_checker_report_round34.json && python3 -m json.tool /tmp/validation_schema_checker_report_round34.json >/tmp/validation_schema_checker_report_round34.pretty.json`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_validation_schema_runner_report_schema.py --format json >/tmp/validation_schema_checker_report_round34_skip.json && python3 -m json.tool /tmp/validation_schema_checker_report_round34_skip.json >/tmp/validation_schema_checker_report_round34_skip.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - `tools/validate_validation_schema_runner_report_schema.py --format json` 已有轻量 fixture 契约资产，覆盖默认 `PASS` 和强制 optional dependency `SKIP` 输出。
+  - 当前该入口自身的可控 `FAIL` JSON 输出还没有契约场景；如果外部工具要消费失败路径，下一轮可补一个小型 `FAIL` 契约场景。
+
+## Round 33
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m py_compile tools/validate_validation_schema_runner_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_validation_schema_runner_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_validation_schema_runner_report_schema.py --format json >/tmp/validation_schema_runner_schema_round33.json && python3 -m json.tool /tmp/validation_schema_runner_schema_round33.json >/tmp/validation_schema_runner_schema_round33.pretty.json`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_validation_schema_runner_report_schema.py --format json >/tmp/validation_schema_runner_schema_round33_skip.json && python3 -m json.tool /tmp/validation_schema_runner_schema_round33_skip.json >/tmp/validation_schema_runner_schema_round33_skip.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_smoke tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_forced_skip tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_json_pass_output tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_json_skip_output tests.test_cli.CliDebugOutputTests.test_optional_jsonschema_validates_validation_schema_runner_report_payloads_when_installed`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - `tools/validate_validation_schema_runner_report_schema.py --format json` 已能表达默认成功路径和强制 `SKIP` 路径，且默认文本输出未回归。
+  - 该新入口 JSON 输出目前只有黑盒测试，还没有自己的轻量契约资产；如果外部工具长期消费它，下一轮可补一份 fixture 契约，而不是继续扩工具功能。
+
+## Round 32
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m py_compile tools/validate_validation_schema_runner_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_validation_schema_runner_report_schema.py`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_validation_schema_runner_report_schema.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_smoke tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_standalone_script_forced_skip tests.test_cli.CliDebugOutputTests.test_optional_jsonschema_validates_validation_schema_runner_report_payloads_when_installed`
+  - `PYTHONPATH=src python3 tools/validate_validation_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_validation_report_schema.py --format json >/tmp/validation_report_schema_runner_round32.json && python3 -m json.tool /tmp/validation_report_schema_runner_round32.json >/tmp/validation_report_schema_runner_round32.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 独立入口 `tools/validate_validation_schema_runner_report_schema.py` 已能通过非 unittest 命令真实校验 `PASS` / `SKIP` / `FAIL` payload，缺少 `jsonschema` 时也能明确 skip 并成功退出。
+  - 当前该新入口保持纯文本极薄形态；如果外部工具要消费它自己的执行结果，下一轮可补一个很小的 `--format json` 模式。
+
+## Round 31
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_optional_jsonschema_validates_validation_schema_runner_report_payloads_when_installed`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_document_matches_asset tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_json_pass_output tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_json_skip_output tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_json_fail_output`
+  - `PYTHONPATH=src python3 tools/validate_validation_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_validation_report_schema.py --format json`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 独立入口 JSON schema 已通过 optional `jsonschema` validator 真实校验 `PASS` / `SKIP` / `FAIL` payload。
+  - 当前该可选校验仍只通过 unittest 暴露；如果外部集成方不希望跑测试模块，下一轮可补一个极薄的非 unittest 入口。
+
+## Round 30
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool docs/json_schema/validation_schema_runner_report_v1.schema.json >/tmp/validation_schema_runner_report_v1.schema.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_schema_runner_report_schema_document_matches_asset tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_json_pass_output tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_json_skip_output tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_json_fail_output`
+  - `PYTHONPATH=src python3 tools/validate_validation_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_validation_report_schema.py --format json`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 独立入口 JSON 输出现在同时拥有轻量契约资产和正式 JSON Schema 文档，且 schema / asset 基础一致性受测试保护。
+  - 当前还没有用 optional `jsonschema` validator 真实校验该独立入口的 `PASS` / `SKIP` / `FAIL` payload；如果外部工具长期消费它，下一轮可补这一层。
+
+## Round 29
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool tests/fixtures/validation_schema_runner_report_asset_v1.json >/tmp/validation_schema_runner_report_asset_v1.pretty.json`
+  - `WELL_HARNESS_FORCE_SCHEMA_PATH='tests/fixtures/_missing_validation_schema_runner_schema_for_asset.json' PYTHONPATH=src python3 tools/validate_validation_report_schema.py --format json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_json_fail_output tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_json_pass_output tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_json_skip_output`
+  - `PYTHONPATH=src python3 tools/validate_validation_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_validation_report_schema.py --format json`
+  - `python3 -m py_compile tools/validate_validation_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 独立入口 JSON 输出的 `PASS` / `SKIP` / `FAIL` 已全部进入轻量契约资产与自动化校验。
+  - 当前该独立入口 JSON 输出仍没有正式 JSON Schema 文档；如果外部工具长期消费它，下一轮可补一份结构说明和 asset 基础一致性测试。
+
+## Round 28
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool tests/fixtures/validation_schema_runner_report_asset_v1.json >/tmp/validation_schema_runner_report_asset_v1.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_json_pass_output tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_json_skip_output`
+  - `PYTHONPATH=src python3 tools/validate_validation_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_validation_report_schema.py --format json`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_validation_report_schema.py --format json`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 独立入口 JSON 输出已有轻量契约资产，且 `PASS` / 强制 `SKIP` 输出受 asset 驱动测试保护。
+  - 当前独立入口 JSON 的 `FAIL` 输出还没有契约场景；如果外部工具要消费该独立入口自身的失败结果，下一轮可补一个可控 `FAIL` JSON 契约场景。
+
+## Round 27
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m py_compile tools/validate_validation_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_validation_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_validation_report_schema.py --format json`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_validation_report_schema.py --format json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_json_pass_output tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_json_skip_output tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_smoke tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_forced_skip`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - `tools/validate_validation_report_schema.py --format json` 已能表达默认成功路径和强制 `SKIP` 路径，默认文本输出未回归。
+  - 新 JSON 输出目前只有黑盒断言，还没有独立 fixture 契约资产；如果外部工具长期消费它，下一轮更适合补轻量契约资产，而不是立刻扩成正式 schema 工程。
+
+## Round 26
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool tests/fixtures/validation_report_asset_v1.json >/tmp/validation_report_asset_v1.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_json_outputs_match_contract_asset tests.test_cli.CliDebugOutputTests.test_validation_report_schema_document_matches_asset tests.test_cli.CliDebugOutputTests.test_optional_jsonschema_validates_validation_report_payloads_when_installed tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_smoke`
+  - `PYTHONPATH=src python3 tools/validate_validation_report_schema.py`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_validation_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - validation report 的 `PASS` / `SKIP` / `FAIL cli_exit` / `FAIL schema_unavailable` / `FAIL schema_validation` 已全部进入 asset / schema / optional validator / 独立脚本验证链路。
+  - 当前 `tools/validate_validation_report_schema.py` 仍只有人类可读文本输出；如果外部集成方要消费该独立入口自身的结果，下一轮可补一个很小的 `--format json` 模式。
+
+## Round 25
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m py_compile tools/validate_validation_report_schema.py`
+  - `PYTHONPATH=src python3 tools/validate_validation_report_schema.py`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_validation_report_schema.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_smoke tests.test_cli.CliDebugOutputTests.test_validation_report_schema_standalone_script_forced_skip tests.test_cli.CliDebugOutputTests.test_optional_jsonschema_validates_validation_report_payloads_when_installed`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - validation report schema 现在已有 unittest 和独立脚本两个可选 validator 入口，且独立脚本覆盖 `PASS` / `SKIP` / `FAIL cli_exit`。
+  - 当前 validation report asset / schema / 独立入口还没有覆盖 `schema_unavailable` 与 `schema_validation` 两类 report payload；如果外部工具长期消费失败摘要，这会是下一轮最值得补的稳定性层。
+
+## Round 24
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_optional_jsonschema_validates_validation_report_payloads_when_installed`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_report_schema_document_matches_asset`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py --format json`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - validation report JSON 现在同时拥有 fixture 契约、正式 schema 文档，以及可选的离线 validator unittest 入口，结构契约层已经比较完整。
+  - 当前 optional validator 仍只通过 unittest 暴露；如果外部集成方不习惯跑测试模块，下一步更有价值的是补一个很小的独立入口，而不是继续扩展 schema 范围。
+
+## Round 23
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool docs/json_schema/validation_report_v1.schema.json >/tmp/validation_report_v1.schema.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_report_schema_document_matches_asset`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_json_outputs_match_contract_asset`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py --format json`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - validation report JSON 现在同时拥有 fixture 契约和正式 schema 文档，结构说明层已经补齐。
+  - 当前 schema 文档仍只做了“文档合法 JSON + 与 asset 基础一致”的校验，还没有接上可选离线 validator 验证；如果外部工具长期消费 report JSON，这会是下一层最有价值的补强。
+
+## Round 22
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_json_outputs_match_contract_asset`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_json_pass_output`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_json_skip_output`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_json_fail_output`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py --format json`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_debug_json_schema.py --format json`
+  - `WELL_HARNESS_FORCE_CONTRACT_PATH='/Users/Zhuanz/20260407 YJX AI FANTUI LogicMVP/tests/fixtures/_validation_fail_cli_contract.json' PYTHONPATH=src python3 tools/validate_debug_json_schema.py --format json`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - validation 脚本 JSON 输出现在已有独立 fixture 契约，且 `PASS` / `SKIP` / `FAIL cli_exit` 已受自动化保护。
+  - 当前仍没有正式 JSON Schema 文档来说明 validation report JSON 的结构；如果外部工具长期消费它，这会是下一轮最值得补的一层。
+
+## Round 21
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_json_pass_output`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_json_skip_output`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_json_fail_output`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py --format json`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_debug_json_schema.py --format json`
+  - `WELL_HARNESS_FORCE_CONTRACT_PATH='/Users/Zhuanz/20260407 YJX AI FANTUI LogicMVP/tests/fixtures/_validation_fail_cli_contract.json' PYTHONPATH=src python3 tools/validate_debug_json_schema.py --format json`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - validation 脚本的 `--format json` 已有 `PASS` / `SKIP` / `FAIL` 黑盒保护，且默认文本输出未回归。
+  - 当前 JSON 机器可读输出还没有像 harness JSON view 那样拥有单独的 schema / fixture 契约资产；如果外部工具长期依赖它，这仍是最值得补的一层。
+
+## Round 20
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_unclassified_cli_failure`
+  - `WELL_HARNESS_FORCE_CONTRACT_PATH='/Users/Zhuanz/20260407 YJX AI FANTUI LogicMVP/tests/fixtures/_validation_fail_unclassified_contract.json' PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - `cli_error.unclassified` 现在已有独立黑盒保护，validation 脚本的专用 token 和兜底 token 都受自动化保护。
+  - 当前 validation 脚本仍主要输出人类可读文本；如果外部工具想稳定消费整体校验结果，下一步更有价值的是增加机器可读输出，而不是继续扩 token 数量。
+
+## Round 19
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_invalid_logic_choice`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_invalid_scenario_choice`
+  - `WELL_HARNESS_FORCE_CONTRACT_PATH='/Users/Zhuanz/20260407 YJX AI FANTUI LogicMVP/tests/fixtures/_validation_fail_invalid_logic_contract.json' PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `WELL_HARNESS_FORCE_CONTRACT_PATH='/Users/Zhuanz/20260407 YJX AI FANTUI LogicMVP/tests/fixtures/_validation_fail_invalid_scenario_contract.json' PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 新增 `cli_error.invalid_logic_choice` 和 `cli_error.invalid_scenario_choice` 后，当前高价值 parser 失败已经有更细粒度 token。
+  - 其他未显式映射的 CLI parser 失败仍回退到 `cli_error.unclassified`；这个兜底路径虽然存在，但还没有单独黑盒 smoke test 保护。
+
+## Round 18
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_cli_failure`
+  - `WELL_HARNESS_FORCE_CONTRACT_PATH='/Users/Zhuanz/20260407 YJX AI FANTUI LogicMVP/tests/fixtures/_validation_fail_cli_contract.json' PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_skip`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_fail`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_schema_validation_failure`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - `FAIL CLI` 主摘要和默认输出噪音问题已经收敛，当前强制 CLI 失败路径只输出一行稳定脚本摘要。
+  - `detail:` 虽已标准化为 token，但目前只覆盖 `cli_error.missing_logic_for_explain`；其他 CLI 失败仍统一回退到 `cli_error.unclassified`，若外部工具需要更细粒度自动处理，这仍是主要剩余风险。
+
+## Round 17
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_skip`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_fail`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_cli_failure`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_schema_validation_failure`
+  - `WELL_HARNESS_FORCE_CONTRACT_PATH='/Users/Zhuanz/20260407 YJX AI FANTUI LogicMVP/tests/fixtures/_validation_fail_cli_contract.json' PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - `FAIL CLI` 路径的输出已经收敛为单行脚本摘要，不再泄露 argparse `usage:` / `well_harness: error:` 噪音。
+  - 当前 `detail:` 仍是自由文本，尚未收紧成更稳定的错误码或受控枚举；如果后续外部工具要严格消费失败摘要，这仍是最主要剩余风险。
+
+## Round 16
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_skip`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_fail`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_cli_failure`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_schema_validation_failure`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `WELL_HARNESS_FORCE_SCHEMA_PATH='/Users/Zhuanz/20260407 YJX AI FANTUI LogicMVP/tests/fixtures/_missing_debug_schema_for_smoke_test.json' PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `WELL_HARNESS_FORCE_CONTRACT_PATH='/Users/Zhuanz/20260407 YJX AI FANTUI LogicMVP/tests/fixtures/_validation_fail_cli_contract.json' PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `WELL_HARNESS_FORCE_SCHEMA_PATH='/Users/Zhuanz/20260407 YJX AI FANTUI LogicMVP/tests/fixtures/_validation_mismatch_schema.json' WELL_HARNESS_FORCE_CONTRACT_PATH='/Users/Zhuanz/20260407 YJX AI FANTUI LogicMVP/tests/fixtures/timeline_contract_v1.json' PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 脚本入口的 `PASS` / `SKIP` / `FAIL schema path` / `FAIL CLI` / `FAIL schema validation` 现已全部有独立 smoke test 保护。
+  - `FAIL CLI` 路径当前仍会伴随 argparse 的 `usage:` / `error:` 原始输出；如果后续希望脚本失败输出更稳定、更适合外部消费，仍需收紧 stdout/stderr 契约。
+
+## Round 15
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_skip`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_fail`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `WELL_HARNESS_FORCE_SCHEMA_PATH='/Users/Zhuanz/20260407 YJX AI FANTUI LogicMVP/tests/fixtures/_missing_debug_schema_for_smoke_test.json' PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 当前已稳定覆盖 `PASS` / `SKIP` / `FAIL schema: unable to use ...` 三类脚本入口路径，但 `FAIL <view>: CLI exited with status ...` 和 `FAIL <view>: schema validation errors` 这两类失败摘要还没有独立 smoke test。
+  - 一旦将来这两类失败摘要文案或退出路径回归，当前仍主要依赖人工制造异常场景后手动验证。
+
+## Round 14
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke_forced_skip`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `WELL_HARNESS_FORCE_JSONSCHEMA_MISSING=1 PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 当前已稳定覆盖脚本入口的 `PASS` / `SKIP` 两条路径，但还没有单独保护真正 `FAIL` 路径，例如 schema 损坏、fixture 漂移或 CLI 失败时的失败摘要是否清晰可用。
+  - `FAIL` 路径一旦将来回归，当前仍主要依赖人工制造异常场景后手动运行脚本才能发现。
+
+## Round 13
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_validation_script_smoke`
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 当前 smoke test 在本环境里实际覆盖了 `PASS` 分支，但 `SKIP` 分支仍依赖未来“未安装 `jsonschema`”的真实环境触发，自动化覆盖还不够可控。
+  - 脚本级保护目前聚焦入口、退出码和高层 stdout 语义，不额外校验每个 view 的逐项摘要文案。
+
+## Round 12
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 tools/validate_debug_json_schema.py`
+  - `python3 -m py_compile tools/validate_debug_json_schema.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_optional_jsonschema_validates_contract_payloads_when_installed`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 当前独立脚本 `tools/validate_debug_json_schema.py` 已可直接执行并通过，但脚本本身还没有独立 smoke test；目前主要依赖手动执行和 optional unittest 间接保护。
+  - 缺少 `jsonschema` 时脚本按设计打印 `SKIP` 并成功退出，这是预期边界，但还没有自动化覆盖脚本级 `SKIP` / `PASS` 输出语义。
+
+## Round 11
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool docs/json_schema/well_harness_debug_v1.schema.json >/tmp/well_harness_debug_v1.schema.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_optional_jsonschema_validates_contract_payloads_when_installed`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 当前环境已安装 `jsonschema`，可选 validation 定向测试实际执行并通过；若其他环境未安装，应按测试设计明确 skip。
+  - 目前只有 unittest 入口，尚无独立 `tools/validate_debug_json_schema.py` 包装脚本；外部集成方如果不习惯跑测试模块，使用门槛仍略高。
+
+## Round 10
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool docs/json_schema/well_harness_debug_v1.schema.json >/tmp/well_harness_debug_v1.schema.pretty.json`
+  - `python3 -m json.tool tests/fixtures/diagnose_contract_v1.json >/tmp/diagnose_contract_v1.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_json_schema_context_field_sets_match_contract_and_runtime_fields`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 当前仍未执行完整 JSON Schema validator；测试是标准库结构一致性校验。
+  - `context_changes` 字段集合已契约化，但并不保证每个字段在每条 diagnosis 中都会出现，实际输出仍只包含相邻 trace row 窗口里发生变化的字段。
+
+## Round 9
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool docs/json_schema/well_harness_debug_v1.schema.json >/tmp/well_harness_debug_v1.schema.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest tests.test_cli.CliDebugOutputTests.test_json_schema_nested_defs_match_contract_representative_fields`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - `diagnose.context_changes[].field_name` 目前仍是自由字符串；外部集成方若稳定消费 context 字段，最好把受支持字段集合纳入 schema / fixture 契约。
+  - Schema 仍只描述稳定字段名和基础 JSON 类型，没有穷尽每个物理量范围、阈值语义或控制逻辑证明。
+
+## Round 8
+
+- 结论：PASS
+- 执行命令
+  - `python3 -m json.tool docs/json_schema/well_harness_debug_v1.schema.json >/tmp/well_harness_debug_v1.schema.pretty.json`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - JSON Schema 目前主要覆盖顶层 payload 和关键字段；部分 trace row 内部 dataclass 字段仍是较宽泛的 object 定义。
+  - 当前未引入外部 JSON Schema validator，测试只做标准库 JSON 合法性与 fixture 基础一致性检查。
+
+## Round 7
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `python3 -m json.tool tests/fixtures/timeline_contract_v1.json >/tmp/timeline_contract_v1.pretty.json`
+  - `python3 -m json.tool tests/fixtures/events_contract_v1.json >/tmp/events_contract_v1.pretty.json`
+  - `python3 -m json.tool tests/fixtures/explain_contract_v1.json >/tmp/explain_contract_v1.pretty.json`
+  - `python3 -m json.tool tests/fixtures/diagnose_contract_v1.json >/tmp/diagnose_contract_v1.pretty.json`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 当前 contract 体系仍是项目内自定义 fixture 格式，还没有通用 JSON Schema 文档资产。
+
+## Round 6
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic3 --format json | python3 -c '...'`
+  - `python3 -m json.tool tests/fixtures/diagnose_contract_v1.json >/tmp/diagnose_contract_v1.pretty.json`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 当前只有 `diagnose` view 有独立契约资产；`timeline`、`events`、`explain` 仍主要依赖 README 和直接测试断言保护。
+
+## Round 5
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json | python3 -c '...'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --format json | python3 -c '...'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view explain --logic logic3 --time 1.8 --format json | python3 -c '...'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic3 --format json | python3 -c '...'`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - schema 契约目前已经写入 README 和单测，但还没有独立 golden fixture 或 JSON Schema 文件。
+
+## Round 4
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic3 --full`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic4 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view diagnose --full`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - diagnose JSON 目前未显式携带 schema version 或导出契约。
+  - JSON 输出已经适合机器读取，但后续做回归 diff 时仍缺少明确版本标识。
+
+## Round 3
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --full`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view diagnose --logic logic3 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view diagnose --full`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - diagnosis JSON 目前未显式携带 schema version 或导出契约。
+  - 诊断目前聚焦 logic 条件 pass 状态变化；同一翻转窗口里的 command / sensor / plant timer 变化仍需回看 timeline。
+
+## Round 2
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view explain --logic logic3 --time 1.8`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view explain --logic logic4 --time 5.0 --format json`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --full`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --full`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 结构化 JSON trace 目前未显式携带 schema version。
+  - explain 与 events 仍是两个分离视图，定位翻转前后条件差异时需要人工二次查询。
+  - 当前 explain schema 尚无显式版本号或导出契约。
+
+## Round 1
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --view events --full`
+  - `PYTHONPATH=src python3 -m well_harness run nominal-deploy --format json`
+  - `PYTHONPATH=src python3 -m well_harness run retract-reset --view events --full`
+  - `PYTHONPATH=src python3 - <<'PY' ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - 本轮未发现需要复现的问题。
+- 剩余风险
+  - 事件视图当前聚焦关键布尔状态翻转，不包含数值阈值穿越摘要。
+  - 结构化 JSON trace 目前未显式携带 schema version。
+  - “为什么这一拍不成立”的解释仍需结合结构化字段人工判断，暂无逐条件解释文案。
+
+## Round 87
+
+- 结论：PASS
+- 执行命令
+  - `PYTHONPATH=src python3 -m py_compile src/well_harness/demo_server.py src/well_harness/demo.py src/well_harness/cli.py`
+  - `PYTHONPATH=src python3 -m unittest tests.test_demo`
+  - `PYTHONPATH=src python3 -m unittest discover -s tests -p 'test_*.py'`
+  - `PYTHONPATH=src python3 - <<'PY' ... /api/lever-snapshot old/new payload smoke ... PY`
+- 发现的问题
+  - 本轮未发现阻塞验收的问题。
+- 可复现步骤
+  - `POST /api/lever-snapshot` 仅传 `{"tra_deg": -7.0}` 仍可工作。
+  - `POST /api/lever-snapshot` 传 `{"tra_deg": -14.0, "radio_altitude_ft": 6.0, ...}` 时，blocker 会切到 `radio_altitude_ft`。
+- 剩余风险
+  - 该 cockpit 仍是 controlled demo snapshot，不是完整实时飞控 / 物理仿真。
+  - 条件面板故意不暴露 `SW1 / SW2` 手工开关，避免绕过现有 switch model。

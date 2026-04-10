@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-10 - P5 was accepted for closeout via Opus review, P6 became the active reconciliation phase, and the early P7 foundation work was explicitly deferred behind P6.
+Last activity: 2026-04-10 - P6 continued by slimming the active repo-side handoff packet, moving stale round prose into archive files, and keeping the current GitHub-backed snapshot as the only active truth at the top of those docs.
 
 ## Current Position
 
@@ -40,6 +40,7 @@ Last activity: 2026-04-10 - P5 was accepted for closeout via Opus review, P6 bec
 - `P6-03 Freeze Demo Packet 自动快照同步` is now implemented locally: the freeze packet page gets the same kind of repo-managed top snapshot as the dashboard, so the stable evidence summary can keep following the live GitHub-backed baseline instead of drifting behind the latest verified plan, and successful CI runs no longer fail outright just because Notion writeback hits a temporary sharing 404.
 - `P6-04 用可自动同步状态页旁路旧 archived status 页面` is now implemented locally: a new MCP-owned status page can be fully rewritten by repo-side sync, so dashboard / 09C / freeze packet links no longer have to point at the stale archived-ancestor status page.
 - `P6-05 同步 repo 侧交接文档快照` is now implemented locally: `docs/coordination/plan.md`, `docs/coordination/dev_handoff.md`, `docs/coordination/qa_report.md`, and the repo freeze packet now expose managed current-baseline sections generated from the live control-plane snapshot while preserving older round notes below as history.
+- `P6-06 将历史 repo 交接正文移出活跃文档` is now implemented locally: the active repo-side coordination docs and freeze packet keep only the managed current snapshot plus a short usage/archive stub, while the old Round-based long prose now lives in dedicated archive files so stale wording stops crowding live handoff surfaces.
 - A new requirement set now exists for strict engineer-facing acceptance playback, fault injection and diagnosis, knowledge capture, and future-system generalization; this is large enough to require a new phase instead of being folded into demo freeze work.
 - `P7-01` has an initial local foundation: `src/well_harness/system_spec.py` now defines a reusable control-system workbench spec and captures the current thrust-reverser chain as the first reference system, including acceptance-scenario, fault-mode, and clarification-question scaffolding.
 - `P7-02` is already implemented on `main`: `src/well_harness/document_intake.py` defines a mixed-document intake packet, readiness assessment, and CLI export surface so future systems can arrive as PDF/markdown-heavy packets with explicit system-defined signal semantics.
@@ -58,6 +59,7 @@ Close the P5 -> P6 control-plane gap without adding product surface, while keepi
 - Keep the first-screen cockpit flow, presenter run card, lever presets, chain state legend, current conclusion rails, result-source note, stale-state guardrails, talk track, and structured answer area aligned around the same live-demo route.
 - Maintain the boundary between controller truth and simplified plant feedback in demo copy and UI affordances.
 - Keep a readable freeze/archive packet in the repo and Notion so the current baseline can be resumed, reviewed, or handed off quickly after a pause.
+- Keep active repo-side handoff docs intentionally slim, with older round prose moved into explicit archive files instead of lingering inline below the current snapshot.
 - Preserve the seeded P7 foundation work, but do not deepen the spec-driven workbench arc until P6 closes and the control plane is back in sync.
 
 ## Blockers/Concerns
