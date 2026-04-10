@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-10 - P6 continued by teaching the Notion sync loop to fall back to active-page snapshot promotion when shared database writeback fails, so successful control-plane runs no longer leave dashboard/status/freeze surfaces stuck on an older plan.
+Last activity: 2026-04-10 - P6 finished cleaning the last active-surface readability drift by collapsing successful run summaries into compact human-readable snapshots, fully refreshing the dashboard, and teaching the sync loop to survive archived active-page targets instead of aborting.
 
 ## Current Position
 
@@ -42,6 +42,7 @@ Last activity: 2026-04-10 - P6 continued by teaching the Notion sync loop to fal
 - `P6-05 同步 repo 侧交接文档快照` is now implemented locally: `docs/coordination/plan.md`, `docs/coordination/dev_handoff.md`, `docs/coordination/qa_report.md`, and the repo freeze packet now expose managed current-baseline sections generated from the live control-plane snapshot while preserving older round notes below as history.
 - `P6-06 将历史 repo 交接正文移出活跃文档` is now implemented locally: the active repo-side coordination docs and freeze packet keep only the managed current snapshot plus a short usage/archive stub, while the old Round-based long prose now lives in dedicated archive files so stale wording stops crowding live handoff surfaces.
 - `P6-07 数据库写回失败时仍推进活动页快照` is now implemented locally: if a successful run cannot finish the shared database writeback, the sync loop now falls back to the active pages, promotes the current plan/run onto dashboard/status/09C/freeze surfaces, and keeps `prepare-opus-review` usable under the same partial-token 404 condition.
+- `P6-08 清理活动页重复正文与臃肿运行摘要` is now implemented locally: repo-side handoff docs now show compact evidence summaries instead of raw validation JSON, the dashboard refresh path rewrites the current snapshot cleanly, and `prepare-opus-review` no longer aborts just because the status / 09C / freeze target pages drifted into archived block states under the local integration.
 - A new requirement set now exists for strict engineer-facing acceptance playback, fault injection and diagnosis, knowledge capture, and future-system generalization; this is large enough to require a new phase instead of being folded into demo freeze work.
 - `P7-01` has an initial local foundation: `src/well_harness/system_spec.py` now defines a reusable control-system workbench spec and captures the current thrust-reverser chain as the first reference system, including acceptance-scenario, fault-mode, and clarification-question scaffolding.
 - `P7-02` is already implemented on `main`: `src/well_harness/document_intake.py` defines a mixed-document intake packet, readiness assessment, and CLI export surface so future systems can arrive as PDF/markdown-heavy packets with explicit system-defined signal semantics.

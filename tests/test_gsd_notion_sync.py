@@ -25,6 +25,11 @@ from tools.gsd_notion_sync import (
     write_notion_outcome,
     resolve_superseded_failure_gaps,
     render_repo_coordination_plan_markdown,
+    derive_compact_success_summary,
+    derive_compact_success_summary_from_text,
+    build_fallback_run_snapshot,
+    ensure_live_active_pages,
+    fetch_review_snapshot_from_repo_docs,
     summarize_results,
     sync_repo_documents,
     handle_run,
@@ -73,6 +78,82 @@ class GsdNotionSyncTests(unittest.TestCase):
         self.assertEqual(summary.qa_result, "FAIL")
         self.assertEqual(summary.first_failed_command, "python -m unittest")
         self.assertIn("stderr:", summary.output_digest)
+
+    def test_derive_compact_success_summary_from_validation_results(self):
+        results = [
+            CommandResult(
+                command="python3 -m unittest discover -s tests -p test_*.py",
+                returncode=0,
+                stdout="",
+                stderr="Ran 187 tests in 21.157s\n\nOK",
+                started_at="2026-04-10T00:00:00+00:00",
+                ended_at="2026-04-10T00:00:05+00:00",
+            ),
+            CommandResult(
+                command="python3 tools/demo_path_smoke.py --format json",
+                returncode=0,
+                stdout='{"completed_scenarios": 10, "failed_scenario": null, "scenario_count": 10}',
+                stderr="",
+                started_at="2026-04-10T00:00:05+00:00",
+                ended_at="2026-04-10T00:00:10+00:00",
+            ),
+        ]
+
+        summary = derive_compact_success_summary(results)
+
+        self.assertEqual("187 tests OK, 10 demo smoke scenarios pass, and 2/2 shared validation checks pass.", summary)
+
+    def test_derive_compact_success_summary_from_text(self):
+        text = """
+Ran 189 tests in 20.897s
+{
+  "command_count": 8,
+  "completed_scenarios": 10
+}
+"""
+
+        summary = derive_compact_success_summary_from_text(text)
+
+        self.assertEqual("189 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.", summary)
+
+    def test_ensure_live_active_pages_recreates_archived_targets_and_persists_config(self):
+        config = {
+            "pages": {
+                "dashboard": "dashboard-page",
+                "status": "archived-status",
+                "opus_brief": "live-brief",
+                "freeze_packet": "archived-freeze",
+            }
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "notion_control_plane.json"
+            config_path.write_text("{}", encoding="utf-8")
+
+            client = unittest.mock.Mock()
+            client.get_page.side_effect = [
+                {"archived": False, "in_trash": False},
+                {"archived": True, "in_trash": True},
+                {"archived": False, "in_trash": False},
+                {"archived": False, "in_trash": False},
+                {"archived": True, "in_trash": True},
+                {"archived": False, "in_trash": False},
+            ]
+            client.create_child_page.side_effect = ["new-status", "new-freeze"]
+
+            replacements = ensure_live_active_pages(client, config, config_path=config_path)
+
+            self.assertEqual(
+                {
+                    "status": {"old_id": "archived-status", "new_id": "new-status"},
+                    "freeze_packet": {"old_id": "archived-freeze", "new_id": "new-freeze"},
+                },
+                replacements,
+            )
+            self.assertEqual("new-status", config["pages"]["status"])
+            self.assertEqual("new-freeze", config["pages"]["freeze_packet"])
+            persisted = config_path.read_text(encoding="utf-8")
+            self.assertIn("new-status", persisted)
+            self.assertIn("new-freeze", persisted)
 
     def test_clip_preserves_short_text_and_truncates_long_text(self):
         self.assertEqual("short", clip("short", limit=10))
@@ -856,6 +937,67 @@ class GsdNotionSyncTests(unittest.TestCase):
         self.assertEqual("P6-03 Freeze Demo Packet 自动快照同步", fallback_snapshot.latest_verified_plan)
         self.assertEqual("GitHub GSD automation 24239999999", fallback_snapshot.latest_success_run)
 
+    def test_build_fallback_run_snapshot_uses_compact_success_summary(self):
+        results = [
+            CommandResult(
+                command="python3 -m unittest discover -s tests -p test_*.py",
+                returncode=0,
+                stdout="",
+                stderr="Ran 187 tests in 21.157s\n\nOK",
+                started_at="2026-04-10T00:00:00+00:00",
+                ended_at="2026-04-10T00:00:05+00:00",
+            ),
+            CommandResult(
+                command="python3 tools/demo_path_smoke.py --format json",
+                returncode=0,
+                stdout='{"completed_scenarios": 10, "failed_scenario": null, "scenario_count": 10}',
+                stderr="",
+                started_at="2026-04-10T00:00:05+00:00",
+                ended_at="2026-04-10T00:00:10+00:00",
+            ),
+        ]
+        summary = summarize_results(results)
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="P6 正在执行",
+            latest_verified_plan="P6-06 将历史 repo 交接正文移出活跃文档",
+            latest_success_run="GitHub GSD automation 24240811595",
+            latest_failed_run="GitHub GSD automation 24238577807",
+            latest_passing_qa="GitHub GSD automation 24240811595 QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+            latest_success_run_notes="old notes",
+            latest_passing_qa_summary="old qa",
+        )
+
+        with patch("tools.gsd_notion_sync.fetch_review_snapshot_from_pages", return_value=snapshot):
+            fallback = build_fallback_run_snapshot(
+                None,
+                {},
+                cwd=Path("."),
+                plan_id="P6-07 数据库写回失败时仍推进活动页快照",
+                title="GitHub GSD automation 24241080590",
+                results=results,
+                summary=summary,
+            )
+
+        self.assertEqual("P6-07 数据库写回失败时仍推进活动页快照", fallback.latest_verified_plan)
+        self.assertEqual("GitHub GSD automation 24241080590", fallback.latest_success_run)
+        self.assertEqual(
+            "187 tests OK, 10 demo smoke scenarios pass, and 2/2 shared validation checks pass.",
+            fallback.latest_success_run_notes,
+        )
+        self.assertEqual(
+            "PASS. 187 tests OK, 10 demo smoke scenarios pass, and 2/2 shared validation checks pass.",
+            fallback.latest_passing_qa_summary,
+        )
+
     def test_handle_prepare_opus_review_falls_back_to_active_pages_when_db_unshared(self):
         args = argparse.Namespace(activate_gate=False, dry_run=True, format="json")
         config = {
@@ -902,6 +1044,38 @@ class GsdNotionSyncTests(unittest.TestCase):
         payload = output_mock.call_args.args[1]
         self.assertEqual("当前无需 Opus 审查", payload["intervention_kind"])
         self.assertEqual("Approved", payload["gate_status"])
+
+    def test_fetch_review_snapshot_from_repo_docs_uses_freeze_packet_seed(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cwd = Path(temp_dir)
+            freeze_path = cwd / "docs/freeze/2026-04-10-freeze-demo-packet.md"
+            freeze_path.parent.mkdir(parents=True, exist_ok=True)
+            freeze_path.write_text(
+                "# Freeze Packet\n\n"
+                "- 当前阶段：`P6 Reconcile Control Tower And Freeze Demo Packet`\n"
+                "- 当前已验证 Plan：`P6-07 数据库写回失败时仍推进活动页快照`\n"
+                "- 最近成功执行证据：`GitHub GSD automation 24241382132`\n"
+                "- 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`\n"
+                "- 当前 Opus 状态：`当前无需 Opus 审查`\n"
+                "- Open Gap 数量：`0`\n"
+                "Ran 189 tests in 20.897s\n"
+                "{\"command_count\": 8, \"completed_scenarios\": 10}\n",
+                encoding="utf-8",
+            )
+
+            snapshot = fetch_review_snapshot_from_repo_docs(
+                cwd,
+                {"default_plan": "P6-07 数据库写回失败时仍推进活动页快照"},
+            )
+
+        self.assertEqual("P6 Reconcile Control Tower And Freeze Demo Packet", snapshot.active_phase)
+        self.assertEqual("P6-07 数据库写回失败时仍推进活动页快照", snapshot.latest_verified_plan)
+        self.assertEqual("GitHub GSD automation 24241382132", snapshot.latest_success_run)
+        self.assertEqual("Approved", snapshot.gate_status)
+        self.assertEqual(
+            "189 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.",
+            snapshot.latest_success_run_notes,
+        )
 
     def test_build_superseded_gap_fix_plan_marks_duplicates(self):
         self.assertEqual(

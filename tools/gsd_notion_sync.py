@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import urllib.error
 import urllib.request
@@ -53,6 +54,11 @@ DEFAULT_PAGES = {
     "opus_protocol": "33cc6894-2bed-8117-b8f5-eda203f3be18",
     "opus_brief": "33cc6894-2bed-819a-811c-f19885ee595a",
     "freeze_packet": "33ec6894-2bed-8151-a0a8-ff9a36aa8816",
+}
+ACTIVE_SYNC_PAGE_TITLES = {
+    "status": "01 当前状态（自动同步）",
+    "opus_brief": "09C 当前 Opus 4.6 审查简报",
+    "freeze_packet": "10 Freeze Demo Packet",
 }
 DEFAULT_URLS = {
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
@@ -211,6 +217,17 @@ class NotionClient:
     def get_page(self, page_id: str) -> dict[str, Any]:
         return self.request("GET", f"/v1/pages/{page_id}")
 
+    def create_child_page(self, parent_page_id: str, title: str) -> str:
+        page = self.request(
+            "POST",
+            "/v1/pages",
+            {
+                "parent": {"page_id": parent_page_id},
+                "properties": {"title": title_value(title)},
+            },
+        )
+        return page["id"]
+
     def archive_page(self, page_id: str) -> None:
         self.request("PATCH", f"/v1/pages/{page_id}", {"archived": True})
 
@@ -353,6 +370,10 @@ def notion_page_url(page_or_database_id: str) -> str:
     return f"https://www.notion.so/{page_or_database_id.replace('-', '')}"
 
 
+def page_link_paragraph_block(config: dict[str, Any], key: str, label: str) -> dict[str, Any]:
+    return paragraph_parts_block([notion_text(label, notion_page_url(page_id(config, key)))])
+
+
 def block_plain_text(block: dict[str, Any]) -> str:
     block_type = block.get("type")
     if not block_type:
@@ -393,6 +414,10 @@ def load_control_plane_config(config_path: Path) -> dict[str, Any]:
     return config
 
 
+def save_control_plane_config(config_path: Path, config: dict[str, Any]) -> None:
+    config_path.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
 def database_id(config: dict[str, Any], key: str) -> str:
     env_name = DATABASE_ENV.get(key)
     if env_name and os.environ.get(env_name):
@@ -415,6 +440,68 @@ def page_id(config: dict[str, Any], key: str) -> str:
 
 def config_url(config: dict[str, Any], key: str) -> str:
     return config["urls"][key]
+
+
+def is_missing_page_error(message: str) -> bool:
+    lowered = message.lower()
+    return (
+        "could not find page" in lowered
+        or "could not find block" in lowered
+        or ("/v1/pages/" in lowered and "http 404" in lowered)
+        or ("/v1/blocks/" in lowered and "http 404" in lowered)
+    )
+
+
+def is_archived_page_write_error(message: str) -> bool:
+    return "can't edit block that is archived" in message.lower()
+
+
+def ensure_live_active_pages(
+    client: NotionClient,
+    config: dict[str, Any],
+    *,
+    config_path: Path,
+) -> dict[str, dict[str, str]]:
+    replacements: dict[str, dict[str, str]] = {}
+    pages = config.get("pages", {})
+    if "dashboard" not in pages:
+        return replacements
+    dashboard = client.get_page(page_id(config, "dashboard"))
+    if dashboard.get("archived") or dashboard.get("in_trash"):
+        raise RuntimeError("Dashboard page is archived; cannot create replacement active pages.")
+
+    for key, title in ACTIVE_SYNC_PAGE_TITLES.items():
+        if key not in pages:
+            continue
+        current_id = page_id(config, key)
+        try:
+            page = client.get_page(current_id)
+        except RuntimeError as exc:
+            if not is_missing_page_error(str(exc)):
+                raise
+            page = {"archived": True, "in_trash": True}
+        if not page.get("archived") and not page.get("in_trash"):
+            continue
+        replacement_id = client.create_child_page(page_id(config, "dashboard"), title)
+        replacement_page = client.get_page(replacement_id)
+        if replacement_page.get("archived") or replacement_page.get("in_trash"):
+            continue
+        config["pages"][key] = replacement_id
+        replacements[key] = {"old_id": current_id, "new_id": replacement_id}
+
+    if replacements:
+        save_control_plane_config(config_path, config)
+    return replacements
+
+
+def page_is_writable(client: NotionClient, config: dict[str, Any], key: str) -> bool:
+    try:
+        page = client.get_page(page_id(config, key))
+    except RuntimeError as exc:
+        if is_missing_page_error(str(exc)):
+            return False
+        raise
+    return not page.get("archived") and not page.get("in_trash")
 
 
 def run_commands(commands: list[str], cwd: Path) -> list[CommandResult]:
@@ -469,6 +556,68 @@ def summarize_results(results: list[CommandResult]) -> RunSummary:
         command_count=len(results),
         output_digest=clip("\n\n".join(digest_parts)),
     )
+
+
+def derive_compact_success_summary(results: list[CommandResult]) -> str | None:
+    tests_ok: int | None = None
+    demo_smoke_count: int | None = None
+
+    for result in results:
+        if "unittest discover" in result.command:
+            match = re.search(r"Ran\s+(\d+)\s+tests", result.stderr)
+            if match:
+                tests_ok = int(match.group(1))
+        if "demo_path_smoke.py" in result.command and result.stdout.strip():
+            try:
+                payload = json.loads(result.stdout)
+            except json.JSONDecodeError:
+                continue
+            completed = payload.get("completed_scenarios")
+            if isinstance(completed, int):
+                demo_smoke_count = completed
+
+    fragments: list[str] = []
+    if tests_ok is not None:
+        fragments.append(f"{tests_ok} tests OK")
+    if demo_smoke_count is not None:
+        fragments.append(f"{demo_smoke_count} demo smoke scenarios pass")
+    fragments.append(f"{len(results)}/{len(results)} shared validation checks pass")
+    if len(fragments) == 1:
+        return fragments[0] + "."
+    if len(fragments) == 2:
+        return f"{fragments[0]} and {fragments[1]}."
+    return ", ".join(fragments[:-1]) + f", and {fragments[-1]}."
+
+
+def derive_compact_success_summary_from_text(text: str) -> str | None:
+    tests_ok: int | None = None
+    demo_smoke_count: int | None = None
+    shared_check_count: int | None = None
+
+    tests_match = re.search(r"Ran\s+(\d+)\s+tests", text)
+    if tests_match:
+        tests_ok = int(tests_match.group(1))
+    smoke_match = re.search(r'"completed_scenarios"\s*:\s*(\d+)', text)
+    if smoke_match:
+        demo_smoke_count = int(smoke_match.group(1))
+    checks_match = re.search(r'"command_count"\s*:\s*(\d+)', text)
+    if checks_match:
+        shared_check_count = int(checks_match.group(1))
+
+    fragments: list[str] = []
+    if tests_ok is not None:
+        fragments.append(f"{tests_ok} tests OK")
+    if demo_smoke_count is not None:
+        fragments.append(f"{demo_smoke_count} demo smoke scenarios pass")
+    if shared_check_count is not None:
+        fragments.append(f"{shared_check_count}/{shared_check_count} shared validation checks pass")
+    if not fragments:
+        return None
+    if len(fragments) == 1:
+        return fragments[0] + "."
+    if len(fragments) == 2:
+        return f"{fragments[0]} and {fragments[1]}."
+    return ", ".join(fragments[:-1]) + f", and {fragments[-1]}."
 
 
 def command_list_text(commands: list[str]) -> str:
@@ -738,6 +887,13 @@ def page_prefixed_value(lines: list[str], prefix: str) -> str | None:
     return None
 
 
+def markdown_prefixed_code_value(text: str, prefix: str) -> str | None:
+    match = re.search(rf"(?m)^{re.escape(prefix)}`([^`\n]+)`", text)
+    if match:
+        return match.group(1).strip()
+    return None
+
+
 def parse_gate_line(text: str | None) -> tuple[str, str]:
     if not text:
         return "OPUS-4.6 周期审查 Gate", "Standby"
@@ -757,6 +913,44 @@ def parse_open_gap_titles(open_gap_text: str | None) -> tuple[str, ...]:
     if digits == "" or int(digits) <= 0:
         return ()
     return tuple("Open gap requires follow-up" for _ in range(int(digits)))
+
+
+def fetch_review_snapshot_from_repo_docs(cwd: Path, config: dict[str, Any]) -> ReviewSnapshot:
+    freeze_path = cwd / DEFAULT_REPO_DOCS["freeze_packet"]
+    if not freeze_path.exists():
+        raise RuntimeError(f"Repo freeze packet missing: {freeze_path}")
+    text = freeze_path.read_text(encoding="utf-8")
+
+    active_phase = markdown_prefixed_code_value(text, "- 当前阶段：") or "未识别活动 phase"
+    latest_verified_plan = markdown_prefixed_code_value(text, "- 当前已验证 Plan：") or config["default_plan"]
+    latest_success_run = markdown_prefixed_code_value(text, "- 最近成功执行证据：")
+    gate_name, gate_status = parse_gate_line(markdown_prefixed_code_value(text, "- 当前 Gate："))
+    open_gap_titles = parse_open_gap_titles(markdown_prefixed_code_value(text, "- Open Gap 数量："))
+    opus_state = markdown_prefixed_code_value(text, "- 当前 Opus 状态：") or "当前无需 Opus 审查"
+    compact_summary = derive_compact_success_summary_from_text(text)
+
+    ready_task = None
+    if "无需" not in opus_state:
+        ready_task = "打开 09C 当前 Opus 4.6 审查简报，并按其中当前请求手动触发 Opus 4.6。"
+
+    return ReviewSnapshot(
+        active_phase=active_phase,
+        active_phase_goal="",
+        active_phase_summary="Recovered from repo-side freeze packet because shared Notion databases/pages were unavailable.",
+        latest_verified_plan=latest_verified_plan,
+        latest_success_run=latest_success_run,
+        latest_failed_run=None,
+        latest_passing_qa=(f"{latest_success_run} QA" if latest_success_run else None),
+        gate_page_id=None,
+        gate_name=gate_name,
+        gate_status=gate_status,
+        ready_task_id=None,
+        ready_task=ready_task,
+        open_gap_titles=open_gap_titles,
+        stale_gap_titles=(),
+        latest_success_run_notes=compact_summary,
+        latest_passing_qa_summary=(f"PASS. {compact_summary}" if compact_summary else None),
+    )
 
 
 def fetch_review_snapshot_from_pages(client: NotionClient, config: dict[str, Any]) -> ReviewSnapshot:
@@ -821,11 +1015,19 @@ def build_fallback_run_snapshot(
     client: NotionClient,
     config: dict[str, Any],
     *,
+    cwd: Path,
     plan_id: str,
     title: str,
+    results: list[CommandResult],
     summary: RunSummary,
 ) -> ReviewSnapshot:
-    snapshot = fetch_review_snapshot_from_pages(client, config)
+    try:
+        snapshot = fetch_review_snapshot_from_pages(client, config)
+    except RuntimeError as exc:
+        if not is_missing_page_error(str(exc)):
+            raise
+        snapshot = fetch_review_snapshot_from_repo_docs(cwd, config)
+    compact_success = derive_compact_success_summary(results) if summary.succeeded else None
     if summary.succeeded:
         return ReviewSnapshot(
             active_phase=snapshot.active_phase,
@@ -842,8 +1044,8 @@ def build_fallback_run_snapshot(
             ready_task=snapshot.ready_task,
             open_gap_titles=snapshot.open_gap_titles,
             stale_gap_titles=snapshot.stale_gap_titles,
-            latest_success_run_notes=summary.output_digest,
-            latest_passing_qa_summary=f"{summary.qa_result}. {summary.output_digest}",
+            latest_success_run_notes=compact_success or summary.output_digest,
+            latest_passing_qa_summary=(f"{summary.qa_result}. {compact_success}" if compact_success else summary.output_digest),
         )
     return ReviewSnapshot(
         active_phase=snapshot.active_phase,
@@ -1058,10 +1260,10 @@ def render_current_review_brief_blocks(brief: CurrentReviewBrief, snapshot: Revi
         [
             divider_block(),
             heading_block("先打开这些证据面"),
-            page_link_block(page_id(config, "constitution")),
-            page_link_block(page_id(config, "status")),
-            page_link_block(page_id(config, "control_plane")),
-            page_link_block(page_id(config, "opus_protocol")),
+            page_link_paragraph_block(config, "constitution", "00 项目宪法"),
+            page_link_paragraph_block(config, "status", "01 当前状态（自动同步）"),
+            page_link_paragraph_block(config, "control_plane", "09 GSD 自动化控制平面"),
+            page_link_paragraph_block(config, "opus_protocol", "09A Opus 4.6 手动审查协议"),
             database_link_paragraph_block(config, "plans"),
             database_link_paragraph_block(config, "runs"),
             database_link_paragraph_block(config, "qa"),
@@ -1096,7 +1298,13 @@ def render_current_review_brief_blocks(brief: CurrentReviewBrief, snapshot: Revi
     return blocks
 
 
-def render_dashboard_blocks(brief: CurrentReviewBrief, snapshot: ReviewSnapshot, config: dict[str, Any]) -> list[dict[str, Any]]:
+def render_dashboard_blocks(
+    brief: CurrentReviewBrief,
+    snapshot: ReviewSnapshot,
+    config: dict[str, Any],
+    *,
+    unavailable_page_keys: tuple[str, ...] = (),
+) -> list[dict[str, Any]]:
     current_action = (
         "继续自动开发；当前无需手动触发 Opus 4.6。"
         if not brief.review_required
@@ -1121,11 +1329,32 @@ def render_dashboard_blocks(brief: CurrentReviewBrief, snapshot: ReviewSnapshot,
         bullet_block(f"当前 Opus 状态：{current_opus_state}"),
         bullet_block(f"当前唯一人工动作：{current_action}"),
         bullet_block(f"Open Gap 数量：{len(snapshot.open_gap_titles)}"),
-        page_link_block(page_id(config, "status")),
-        page_link_block(page_id(config, "opus_brief")),
-        page_link_block(page_id(config, "freeze_packet")),
-        divider_block(),
     ]
+    if unavailable_page_keys:
+        names = {
+            "status": "01 当前状态（自动同步）",
+            "opus_brief": "09C 当前 Opus 4.6 审查简报",
+            "freeze_packet": "10 Freeze Demo Packet",
+        }
+        blocks.append(
+            bullet_block(
+                "当前受 Notion archived page 限制暂不可直写："
+                + "、".join(names[key] for key in unavailable_page_keys if key in names)
+                + "。当前请以本 dashboard、repo docs 与 GitHub 证据为准。"
+            )
+        )
+    for key, label in (
+        ("status", "01 当前状态（自动同步）"),
+        ("opus_brief", "09C 当前 Opus 4.6 审查简报"),
+        ("freeze_packet", "10 Freeze Demo Packet"),
+    ):
+        if key in unavailable_page_keys:
+            continue
+        blocks.append(page_link_paragraph_block(config, key, label))
+    if config.get("urls", {}).get("github_repo"):
+        blocks.append(paragraph_parts_block([notion_text("GitHub Repo / ai-fantui-logicmvp", config_url(config, "github_repo"))]))
+    if config.get("urls", {}).get("github_actions"):
+        blocks.append(paragraph_parts_block([notion_text("GitHub Actions / GSD Automation Loop", config_url(config, "github_actions"))]))
     return blocks
 
 
@@ -1158,12 +1387,11 @@ def render_freeze_packet_blocks(
         blocks.append(bullet_block(f"当前运行摘要：{snapshot.latest_success_run_notes}"))
     blocks.extend(
         [
-            page_link_block(page_id(config, "status")),
-            page_link_block(page_id(config, "constitution")),
-            page_link_block(page_id(config, "opus_brief")),
+            page_link_paragraph_block(config, "status", "01 当前状态（自动同步）"),
+            page_link_paragraph_block(config, "constitution", "00 项目宪法"),
+            page_link_paragraph_block(config, "opus_brief", "09C 当前 Opus 4.6 审查简报"),
             paragraph_parts_block([notion_text("GitHub Repo / ai-fantui-logicmvp", config_url(config, "github_repo"))]),
             paragraph_parts_block([notion_text("GitHub Actions / GSD Automation Loop", config_url(config, "github_actions"))]),
-            divider_block(),
         ]
     )
     return blocks
@@ -1219,10 +1447,10 @@ def render_status_page_blocks(
             bullet_block(current_action),
             bullet_block("在 P6 收口前，不继续扩大 P7 的实现面。"),
             divider_block(),
-            page_link_block(page_id(config, "dashboard")),
-            page_link_block(page_id(config, "freeze_packet")),
-            page_link_block(page_id(config, "opus_brief")),
-            page_link_block(page_id(config, "constitution")),
+            page_link_paragraph_block(config, "dashboard", "AI FANTUI LogicMVP 控制塔"),
+            page_link_paragraph_block(config, "freeze_packet", "10 Freeze Demo Packet"),
+            page_link_paragraph_block(config, "opus_brief", "09C 当前 Opus 4.6 审查简报"),
+            page_link_paragraph_block(config, "constitution", "00 项目宪法"),
             paragraph_parts_block([notion_text("GitHub Repo / ai-fantui-logicmvp", config_url(config, "github_repo"))]),
             paragraph_parts_block([notion_text("GitHub Actions / GSD Automation Loop", config_url(config, "github_actions"))]),
         ]
@@ -1562,21 +1790,52 @@ def write_current_opus_review_brief_from_snapshot(
         else snapshot
     )
     brief = build_current_review_brief(effective_snapshot, config, force_review=activate_gate)
-    brief_page_id = page_id(config, "opus_brief")
-    client.update_page_properties(brief_page_id, {"title": title_value(brief.page_title)})
-    client.replace_page_body(brief_page_id, render_current_review_brief_blocks(brief, effective_snapshot, config))
+    unavailable_page_keys: list[str] = []
+    if not page_is_writable(client, config, "opus_brief"):
+        unavailable_page_keys.append("opus_brief")
+        brief_page_id = None
+    else:
+        brief_page_id = page_id(config, "opus_brief")
+        try:
+            client.update_page_properties(brief_page_id, {"title": title_value(brief.page_title)})
+            client.replace_page_body(brief_page_id, render_current_review_brief_blocks(brief, effective_snapshot, config))
+        except RuntimeError as exc:
+            if not (is_missing_page_error(str(exc)) or is_archived_page_write_error(str(exc))):
+                raise
+            unavailable_page_keys.append("opus_brief")
+            brief_page_id = None
     dashboard_page_id = page_id(config, "dashboard")
     client.update_page_properties(dashboard_page_id, {"title": title_value("AI FANTUI LogicMVP 控制塔")})
-    upsert_dashboard_snapshot_section(client, dashboard_page_id, render_dashboard_blocks(brief, effective_snapshot, config))
-    status_page_id = page_id(config, "status")
-    client.update_page_properties(status_page_id, {"title": title_value("01 当前状态（自动同步）")})
-    client.replace_page_body(status_page_id, render_status_page_blocks(brief, effective_snapshot, config))
-    freeze_packet_page_id = page_id(config, "freeze_packet")
-    client.update_page_properties(freeze_packet_page_id, {"title": title_value("10 Freeze Demo Packet")})
-    upsert_freeze_packet_snapshot_section(
-        client,
-        freeze_packet_page_id,
-        render_freeze_packet_blocks(brief, effective_snapshot, config),
+    if not page_is_writable(client, config, "status"):
+        unavailable_page_keys.append("status")
+    if not page_is_writable(client, config, "freeze_packet"):
+        unavailable_page_keys.append("freeze_packet")
+    if "status" not in unavailable_page_keys:
+        status_page_id = page_id(config, "status")
+        try:
+            client.update_page_properties(status_page_id, {"title": title_value("01 当前状态（自动同步）")})
+            client.replace_page_body(status_page_id, render_status_page_blocks(brief, effective_snapshot, config))
+        except RuntimeError as exc:
+            if not (is_missing_page_error(str(exc)) or is_archived_page_write_error(str(exc))):
+                raise
+            unavailable_page_keys.append("status")
+    if "freeze_packet" not in unavailable_page_keys:
+        freeze_packet_page_id = page_id(config, "freeze_packet")
+        try:
+            client.update_page_properties(freeze_packet_page_id, {"title": title_value("10 Freeze Demo Packet")})
+            client.replace_page_body(freeze_packet_page_id, render_freeze_packet_blocks(brief, effective_snapshot, config))
+        except RuntimeError as exc:
+            if not (is_missing_page_error(str(exc)) or is_archived_page_write_error(str(exc))):
+                raise
+            unavailable_page_keys.append("freeze_packet")
+    client.replace_page_body(
+        dashboard_page_id,
+        render_dashboard_blocks(
+            brief,
+            effective_snapshot,
+            config,
+            unavailable_page_keys=tuple(unavailable_page_keys),
+        ),
     )
 
     if snapshot.gate_page_id:
@@ -1612,6 +1871,7 @@ def write_current_opus_review_brief_from_snapshot(
         "latest_failed_run": snapshot.latest_failed_run,
         "why_now": brief.why_now,
         "retired_legacy_artifact_ids": retired_artifact_ids,
+        "skipped_page_keys": unavailable_page_keys,
     }
 
 
@@ -1629,6 +1889,7 @@ def write_notion_outcome(
     started_at = results[0].started_at if results else utc_now()
     ended_at = results[-1].ended_at if results else utc_now()
     written: dict[str, Any] = {}
+    compact_success_summary = derive_compact_success_summary(results) if summary.succeeded else None
 
     artifact_url = ""
     if os.environ.get("GITHUB_SERVER_URL") and os.environ.get("GITHUB_REPOSITORY") and os.environ.get("GITHUB_RUN_ID"):
@@ -1665,7 +1926,7 @@ def write_notion_outcome(
             "Started At": date_value(started_at),
             "Ended At": date_value(ended_at),
             "Artifacts": rich_text_value(artifact_url),
-            "Notes": rich_text_value(summary.output_digest),
+            "Notes": rich_text_value(compact_success_summary or summary.output_digest),
         },
     )
     written["qa"] = client.upsert_page(
@@ -1677,7 +1938,7 @@ def write_notion_outcome(
             "Commands": rich_text_value(command_list_text(commands)),
             "Result": select_value(summary.qa_result),
             "Date": date_value(ended_at),
-            "Summary": rich_text_value(summary.output_digest),
+            "Summary": rich_text_value(f"{summary.qa_result}. {compact_success_summary}" if compact_success_summary else summary.output_digest),
             "Blocking Issues": rich_text_value(summary.first_failed_command or ""),
         },
     )
@@ -1858,6 +2119,7 @@ def output_repo_doc_sync_result(format_name: str, payload: dict[str, Any]) -> No
 
 def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
     cwd = Path(args.cwd).resolve()
+    config_path = Path(getattr(args, "config", DEFAULT_CONFIG_PATH))
     plan_id = args.plan_id or config["default_plan"]
     title = args.title or f"{plan_id} automation {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     results = run_commands(args.command, cwd)
@@ -1876,6 +2138,7 @@ def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
     if not args.dry_run and token:
         try:
             client = NotionClient(token)
+            ensure_live_active_pages(client, config, config_path=config_path)
             written = write_notion_outcome(
                 client,
                 config,
@@ -1894,8 +2157,10 @@ def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
                     fallback_snapshot = build_fallback_run_snapshot(
                         client,
                         config,
+                        cwd=cwd,
                         plan_id=plan_id,
                         title=title,
+                        results=results,
                         summary=summary,
                     )
                     payload["opus_review_brief"] = write_current_opus_review_brief_from_snapshot(
@@ -1923,13 +2188,19 @@ def handle_prepare_opus_review(args: argparse.Namespace, config: dict[str, Any])
     token = os.environ.get("NOTION_API_KEY")
     if not token:
         raise SystemExit("NOTION_API_KEY is required for prepare-opus-review.")
+    config_path = Path(getattr(args, "config", DEFAULT_CONFIG_PATH))
     client = NotionClient(token)
     try:
         snapshot = fetch_review_snapshot(client, config)
     except RuntimeError as exc:
         if not is_missing_database_error(str(exc)):
             raise
-        snapshot = fetch_review_snapshot_from_pages(client, config)
+        try:
+            snapshot = fetch_review_snapshot_from_pages(client, config)
+        except RuntimeError as page_exc:
+            if not is_missing_page_error(str(page_exc)):
+                raise
+            snapshot = fetch_review_snapshot_from_repo_docs(Path.cwd().resolve(), config)
     effective_snapshot = (
         snapshot
         if not args.activate_gate
@@ -1963,6 +2234,9 @@ def handle_prepare_opus_review(args: argparse.Namespace, config: dict[str, Any])
         "latest_failed_run": snapshot.latest_failed_run,
     }
     if not args.dry_run:
+        replacements = ensure_live_active_pages(client, config, config_path=config_path)
+        if replacements:
+            payload["replaced_pages"] = replacements
         payload["notion"] = write_current_opus_review_brief_from_snapshot(
             client,
             config,
@@ -1983,7 +2257,12 @@ def handle_sync_repo_docs(args: argparse.Namespace, config: dict[str, Any]) -> i
     except RuntimeError as exc:
         if not is_missing_database_error(str(exc)):
             raise
-        snapshot = fetch_review_snapshot_from_pages(client, config)
+        try:
+            snapshot = fetch_review_snapshot_from_pages(client, config)
+        except RuntimeError as page_exc:
+            if not is_missing_page_error(str(page_exc)):
+                raise
+            snapshot = fetch_review_snapshot_from_repo_docs(Path(args.cwd).resolve(), config)
     brief = build_current_review_brief(snapshot, config)
     synced = sync_repo_documents(Path(args.cwd).resolve(), brief, snapshot, config)
     payload = {

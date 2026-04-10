@@ -15,17 +15,17 @@
   "pages": {
     "dashboard": "33cc68942bed8136b5c9f9ba5b4b44ec",
     "constitution": "33cc6894-2bed-8148-b2c5-ec68c440f5ef",
-    "status": "33ec6894-2bed-8169-bb65-feb161fdae6d",
+    "status": "33ec6894-2bed-81d3-88ce-d362ea91a757",
     "control_plane": "33cc6894-2bed-810d-875e-e4e0e464ee31",
     "opus_protocol": "33cc6894-2bed-8117-b8f5-eda203f3be18",
-    "opus_brief": "33cc6894-2bed-819a-811c-f19885ee595a",
-    "freeze_packet": "33ec68942bed8151a0a8ff9a36aa8816"
+    "opus_brief": "33ec6894-2bed-81d6-bae6-e2eccccda5da",
+    "freeze_packet": "33ec6894-2bed-810f-ac3d-c01b0c08ad14"
   },
   "urls": {
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P6-07 数据库写回失败时仍推进活动页快照",
+  "default_plan": "P6-08 清理活动页重复正文与臃肿运行摘要",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {
