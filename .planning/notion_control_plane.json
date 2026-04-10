@@ -25,7 +25,7 @@
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P7-03 编译 intake scenario 到 monitor-vs-time playback trace",
+  "default_plan": "P7-04 注入 fault mode 并生成链路诊断报告",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {

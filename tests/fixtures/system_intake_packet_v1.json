@@ -114,7 +114,7 @@
       "target_component_id": "hyd_pressure",
       "fault_kind": "bias_low",
       "symptom": "Command enable is on but the actuator never extends.",
-      "reasoning_scope_component_ids": ["cmd_enable", "hyd_pressure", "actuator_extend"],
+      "reasoning_scope_component_ids": ["cmd_enable", "hyd_pressure", "logic_enable_pressure", "actuator_extend"],
       "expected_diagnostic_sections": ["symptoms", "upstream_checks", "logic_blockers", "repair_hint"],
       "optimization_prompt": "Consider redundant pressure plausibility checks or threshold hysteresis to improve reliability."
     }

@@ -11,6 +11,10 @@ from well_harness.document_intake import (
     load_intake_packet,
     render_intake_assessment_text,
 )
+from well_harness.fault_diagnosis import (
+    build_fault_diagnosis_report_from_intake_packet,
+    render_fault_diagnosis_text,
+)
 from well_harness.runner import SimulationRunner
 from well_harness.scenarios import BUILT_IN_SCENARIOS
 from well_harness.scenario_playback import build_playback_report_from_intake_packet, render_playback_report_text
@@ -113,6 +117,22 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("text", "json"),
         default="text",
         help="Render the playback report as text or JSON.",
+    )
+    diagnosis_parser = subparsers.add_parser("diagnose-fault", help="Inject a fault mode and generate a chain diagnosis report")
+    diagnosis_parser.add_argument("packet_path", help="Path to a JSON intake packet.")
+    diagnosis_parser.add_argument("--scenario", required=True, help="Scenario id inside the intake packet to replay.")
+    diagnosis_parser.add_argument("--fault-mode", required=True, help="Fault mode id inside the intake packet to inject.")
+    diagnosis_parser.add_argument(
+        "--sample-period",
+        type=float,
+        default=0.5,
+        help="Sampling interval in seconds for the generated diagnostic playback traces.",
+    )
+    diagnosis_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Render the diagnosis report as text or JSON.",
     )
     return parser
 
@@ -377,6 +397,26 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(playback_report.to_dict(), ensure_ascii=False, indent=2, sort_keys=True))
         else:
             print(render_playback_report_text(playback_report))
+        return 0
+    if args.command == "diagnose-fault":
+        packet = load_intake_packet(args.packet_path)
+        report = assess_intake_packet(packet)
+        if not report["ready_for_spec_build"]:
+            if args.format == "json":
+                print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+            else:
+                print(render_intake_assessment_text(report))
+            return 1
+        diagnosis_report = build_fault_diagnosis_report_from_intake_packet(
+            packet,
+            scenario_id=args.scenario,
+            fault_mode_id=args.fault_mode,
+            sample_period_s=args.sample_period,
+        )
+        if args.format == "json":
+            print(json.dumps(diagnosis_report.to_dict(), ensure_ascii=False, indent=2, sort_keys=True))
+        else:
+            print(render_fault_diagnosis_text(diagnosis_report))
         return 0
     parser.error("unsupported command")
     return 2

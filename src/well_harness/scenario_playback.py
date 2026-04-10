@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Any
+from typing import Any, Callable
 
 from well_harness.document_intake import ControlSystemIntakePacket, intake_packet_to_workbench_spec
 from well_harness.system_spec import (
@@ -189,6 +189,7 @@ def build_scenario_playback_report(
     *,
     scenario_id: str,
     sample_period_s: float = 0.5,
+    component_value_overrides: dict[str, Callable[[float, float, ComponentSpec], float]] | None = None,
 ) -> ScenarioPlaybackReport:
     if sample_period_s <= 0:
         raise ValueError("sample_period_s must be greater than 0.")
@@ -222,9 +223,10 @@ def build_scenario_playback_report(
     events: list[PlaybackEvent] = []
     previous_logic_states: dict[str, bool] = {}
     previous_component_values: dict[str, float] = {}
+    value_overrides = component_value_overrides or {}
 
     for time_s in _sample_times(scenario.total_duration_s, sample_period_s):
-        component_values = {
+        base_component_values = {
             component_id: _signal_value_at_time(
                 component,
                 time_s,
@@ -233,14 +235,17 @@ def build_scenario_playback_report(
             )
             for component_id, component in components.items()
         }
+        component_values = dict(base_component_values)
+        for component_id, override in value_overrides.items():
+            if component_id in component_values:
+                component_values[component_id] = override(time_s, component_values[component_id], components[component_id])
         logic_states: dict[str, bool] = {}
         for _ in range(len(logic_nodes) + 1):
-            changed = False
             next_logic_states = {
                 logic_id: _logic_active(logic_node, component_values)
                 for logic_id, logic_node in logic_nodes.items()
             }
-            updated_values = dict(component_values)
+            next_values = dict(base_component_values)
             for component_id in downstream_component_ids:
                 component = components[component_id]
                 component_active = any(
@@ -248,14 +253,14 @@ def build_scenario_playback_report(
                     for logic_node in spec.logic_nodes
                     if component_id in logic_node.downstream_component_ids
                 )
-                next_value = _active_output_value(component, component_active)
-                if updated_values.get(component_id) != next_value:
-                    updated_values[component_id] = next_value
-                    changed = True
-            if next_logic_states == logic_states and not changed:
+                next_values[component_id] = _active_output_value(component, component_active)
+            for component_id, override in value_overrides.items():
+                if component_id in next_values:
+                    next_values[component_id] = override(time_s, next_values[component_id], components[component_id])
+            if next_logic_states == logic_states and next_values == component_values:
                 break
             logic_states = next_logic_states
-            component_values = updated_values
+            component_values = next_values
 
         for component_id in scenario.monitored_signal_ids:
             component = components[component_id]

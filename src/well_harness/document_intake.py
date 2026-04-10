@@ -360,14 +360,15 @@ def _logic_blockers(
 def _fault_blockers(
     fault_modes: tuple[FaultModeSpec, ...],
     component_ids: set[str],
+    logic_ids: set[str],
 ) -> list[str]:
     blockers: list[str] = []
     for fault_mode in fault_modes:
         if fault_mode.target_component_id not in component_ids:
             blockers.append(f"fault mode {fault_mode.id} targets unknown component {fault_mode.target_component_id}.")
         for component_id in fault_mode.reasoning_scope_component_ids:
-            if component_id not in component_ids:
-                blockers.append(f"fault mode {fault_mode.id} references unknown scope component {component_id}.")
+            if component_id not in component_ids and component_id not in logic_ids:
+                blockers.append(f"fault mode {fault_mode.id} references unknown scope item {component_id}.")
     return blockers
 
 
@@ -413,6 +414,7 @@ def intake_packet_to_workbench_spec(packet: ControlSystemIntakePacket) -> Contro
 def assess_intake_packet(packet: ControlSystemIntakePacket) -> dict[str, Any]:
     required_questions = default_workbench_clarification_questions()
     component_ids = {component.id for component in packet.components}
+    logic_ids = {logic_node.id for logic_node in packet.logic_nodes}
     logic_source_ids = {
         condition.source_component_id
         for logic_node in packet.logic_nodes
@@ -444,7 +446,7 @@ def assess_intake_packet(packet: ControlSystemIntakePacket) -> dict[str, Any]:
     blockers.extend(_component_blockers(packet.components))
     blockers.extend(_logic_blockers(packet.logic_nodes, component_ids))
     blockers.extend(_scenario_blockers(packet.acceptance_scenarios, component_ids, logic_source_ids, derived_component_ids))
-    blockers.extend(_fault_blockers(packet.fault_modes, component_ids))
+    blockers.extend(_fault_blockers(packet.fault_modes, component_ids, logic_ids))
 
     unanswered = _unanswered_clarifications(packet.clarification_answers, required_questions)
     ready = not blockers and not unanswered

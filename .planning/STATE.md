@@ -22,7 +22,8 @@ Last activity: 2026-04-10 - P6 now treats the dashboard as the canonical live co
 - P4 is now closed as Approved after all six presenter-ready plans (`P4-01` through `P4-06`) verified successfully and GitHub run `24170575224` passed.
 - P5 is now closed as Approved after the Opus 4.6 phase-closeout review accepted the GitHub-backed P5 evidence chain through `P5-10`.
 - P6 remains the active control-plane reconciliation phase in Notion, but the repo-side baseline is now stable enough to resume targeted P7 workbench slices without reopening manual review.
-- `P7-01` and `P7-02` are already landed on `main` as early foundation work for the future spec-driven workbench, and `P7-03` is now the next active repo-side implementation slice.
+- `P7-01`, `P7-02`, and `P7-03` are now landed on `main` as the spec foundation, mixed-doc intake layer, and first playback compiler for the future workbench.
+- `P7-04` is now the next active repo-side implementation slice: inject fault modes into those playback traces and emit deterministic diagnosis artifacts.
 - `P5-01 GitHub 可验证 demo smoke suite` is now implemented locally: `tools/demo_path_smoke.py` covers bridge prompt, extreme clamp, mode-switch reset, and expected invalid-input behavior through the HTTP demo surface.
 - The shared validation suite now includes 8 checks, with `demo_path_smoke` added as the new GitHub-verifiable presenter-demo confidence layer.
 - `P5-02 最新交互胜出 demo 请求仲裁` is now implemented locally: the browser shell ignores stale prompt or lever responses once a newer interaction has started, so rapid edits no longer let an older response repaint the shared result surface.
