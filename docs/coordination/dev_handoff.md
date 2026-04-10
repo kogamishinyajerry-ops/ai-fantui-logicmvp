@@ -12,10 +12,8 @@
 ## 恢复工作时先看
 
 1. [AI FANTUI LogicMVP 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
-2. [01 当前状态（自动同步）](https://www.notion.so/33ec6894-2bed-81d3-88ce-d362ea91a757)
-3. [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33ec6894-2bed-81d6-bae6-e2eccccda5da)
-4. [10 Freeze Demo Packet](https://www.notion.so/33ec6894-2bed-810f-ac3d-c01b0c08ad14)
-5. [GitHub Actions / GSD Automation Loop](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
+2. 单独的 status / 09C / freeze 页面当前受 Notion archived page 限制；先以控制塔 dashboard 为准。
+3. [GitHub Actions / GSD Automation Loop](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 
 ## 当前交接结论
 

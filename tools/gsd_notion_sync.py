@@ -504,6 +504,14 @@ def page_is_writable(client: NotionClient, config: dict[str, Any], key: str) -> 
     return not page.get("archived") and not page.get("in_trash")
 
 
+def active_page_unavailable_keys(client: NotionClient, config: dict[str, Any]) -> tuple[str, ...]:
+    return tuple(
+        key
+        for key in ("status", "opus_brief", "freeze_packet")
+        if key in config.get("pages", {}) and not page_is_writable(client, config, key)
+    )
+
+
 def run_commands(commands: list[str], cwd: Path) -> list[CommandResult]:
     results: list[CommandResult] = []
     env = dict(os.environ)
@@ -1462,6 +1470,8 @@ def render_repo_coordination_plan_markdown(
     brief: CurrentReviewBrief,
     snapshot: ReviewSnapshot,
     config: dict[str, Any],
+    *,
+    unavailable_page_keys: tuple[str, ...] = (),
 ) -> str:
     current_action = (
         "继续自动开发；当前无需手动触发 Opus 4.6。"
@@ -1497,9 +1507,20 @@ def render_repo_coordination_plan_markdown(
             "## 当前证据入口",
             "",
             f"- {markdown_link('Notion 控制塔', config.get('root_page_url', 'https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec'))}",
-            f"- {markdown_link('01 当前状态（自动同步）', status_url)}",
-            f"- {markdown_link('09C 当前 Opus 4.6 审查简报', brief_url)}",
-            f"- {markdown_link('10 Freeze Demo Packet', freeze_url)}",
+        ]
+    )
+    if unavailable_page_keys:
+        lines.append("- 单独的 status / 09C / freeze 页面当前受 Notion archived page 限制；请优先使用控制塔 dashboard 和 GitHub 证据面。")
+    else:
+        lines.extend(
+            [
+                f"- {markdown_link('01 当前状态（自动同步）', status_url)}",
+                f"- {markdown_link('09C 当前 Opus 4.6 审查简报', brief_url)}",
+                f"- {markdown_link('10 Freeze Demo Packet', freeze_url)}",
+            ]
+        )
+    lines.extend(
+        [
             f"- {markdown_link('GitHub Repo', config_url(config, 'github_repo'))}",
             f"- {markdown_link('GitHub Actions', config_url(config, 'github_actions'))}",
             "",
@@ -1515,6 +1536,8 @@ def render_repo_dev_handoff_markdown(
     brief: CurrentReviewBrief,
     snapshot: ReviewSnapshot,
     config: dict[str, Any],
+    *,
+    unavailable_page_keys: tuple[str, ...] = (),
 ) -> str:
     status_url = f"https://www.notion.so/{page_id(config, 'status')}"
     brief_url = f"https://www.notion.so/{page_id(config, 'opus_brief')}"
@@ -1538,10 +1561,26 @@ def render_repo_dev_handoff_markdown(
             "## 恢复工作时先看",
             "",
             f"1. {markdown_link('AI FANTUI LogicMVP 控制塔', config.get('root_page_url', 'https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec'))}",
-            f"2. {markdown_link('01 当前状态（自动同步）', status_url)}",
-            f"3. {markdown_link('09C 当前 Opus 4.6 审查简报', brief_url)}",
-            f"4. {markdown_link('10 Freeze Demo Packet', freeze_url)}",
-            f"5. {markdown_link('GitHub Actions / GSD Automation Loop', config_url(config, 'github_actions'))}",
+        ]
+    )
+    if unavailable_page_keys:
+        lines.extend(
+            [
+                "2. 单独的 status / 09C / freeze 页面当前受 Notion archived page 限制；先以控制塔 dashboard 为准。",
+                f"3. {markdown_link('GitHub Actions / GSD Automation Loop', config_url(config, 'github_actions'))}",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                f"2. {markdown_link('01 当前状态（自动同步）', status_url)}",
+                f"3. {markdown_link('09C 当前 Opus 4.6 审查简报', brief_url)}",
+                f"4. {markdown_link('10 Freeze Demo Packet', freeze_url)}",
+                f"5. {markdown_link('GitHub Actions / GSD Automation Loop', config_url(config, 'github_actions'))}",
+            ]
+        )
+    lines.extend(
+        [
             "",
             "## 当前交接结论",
             "",
@@ -1557,6 +1596,8 @@ def render_repo_qa_report_markdown(
     brief: CurrentReviewBrief,
     snapshot: ReviewSnapshot,
     config: dict[str, Any],
+    *,
+    unavailable_page_keys: tuple[str, ...] = (),
 ) -> str:
     lines = [
         "## 当前自动同步 QA 基线",
@@ -1595,6 +1636,8 @@ def render_repo_freeze_packet_markdown(
     brief: CurrentReviewBrief,
     snapshot: ReviewSnapshot,
     config: dict[str, Any],
+    *,
+    unavailable_page_keys: tuple[str, ...] = (),
 ) -> str:
     status_url = f"https://www.notion.so/{page_id(config, 'status')}"
     brief_url = f"https://www.notion.so/{page_id(config, 'opus_brief')}"
@@ -1618,8 +1661,19 @@ def render_repo_freeze_packet_markdown(
             "",
             "## 当前冻结入口",
             "",
-            f"- {markdown_link('01 当前状态（自动同步）', status_url)}",
-            f"- {markdown_link('09C 当前 Opus 4.6 审查简报', brief_url)}",
+        ]
+    )
+    if unavailable_page_keys:
+        lines.append("- 单独的 status / 09C 页面当前受 Notion archived page 限制；请优先使用控制塔 dashboard 和 GitHub 证据。")
+    else:
+        lines.extend(
+            [
+                f"- {markdown_link('01 当前状态（自动同步）', status_url)}",
+                f"- {markdown_link('09C 当前 Opus 4.6 审查简报', brief_url)}",
+            ]
+        )
+    lines.extend(
+        [
             f"- {markdown_link('GitHub Repo', config_url(config, 'github_repo'))}",
             f"- {markdown_link('GitHub Actions', config_url(config, 'github_actions'))}",
             "",
@@ -1662,6 +1716,8 @@ def sync_repo_documents(
     brief: CurrentReviewBrief,
     snapshot: ReviewSnapshot,
     config: dict[str, Any],
+    *,
+    unavailable_page_keys: tuple[str, ...] = (),
 ) -> list[RepoDocSyncResult]:
     renderers = {
         "coordination_plan": (REPO_COORDINATION_PLAN_MARKER, render_repo_coordination_plan_markdown),
@@ -1675,7 +1731,11 @@ def sync_repo_documents(
         path = cwd / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
         existing = path.read_text(encoding="utf-8") if path.exists() else f"# {relative_path.stem}\n"
-        updated = upsert_managed_markdown_section(existing, marker, renderer(brief, snapshot, config))
+        updated = upsert_managed_markdown_section(
+            existing,
+            marker,
+            renderer(brief, snapshot, config, unavailable_page_keys=unavailable_page_keys),
+        )
         path.write_text(updated, encoding="utf-8")
         synced.append(RepoDocSyncResult(path=str(path), marker=marker))
     return synced
@@ -2264,7 +2324,14 @@ def handle_sync_repo_docs(args: argparse.Namespace, config: dict[str, Any]) -> i
                 raise
             snapshot = fetch_review_snapshot_from_repo_docs(Path(args.cwd).resolve(), config)
     brief = build_current_review_brief(snapshot, config)
-    synced = sync_repo_documents(Path(args.cwd).resolve(), brief, snapshot, config)
+    unavailable_page_keys = active_page_unavailable_keys(client, config)
+    synced = sync_repo_documents(
+        Path(args.cwd).resolve(),
+        brief,
+        snapshot,
+        config,
+        unavailable_page_keys=unavailable_page_keys,
+    )
     payload = {
         "active_phase": snapshot.active_phase,
         "latest_verified_plan": snapshot.latest_verified_plan,
