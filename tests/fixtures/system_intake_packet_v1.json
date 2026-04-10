@@ -1,0 +1,138 @@
+{
+  "system_id": "custom_reverse_control_v1",
+  "title": "Custom Reverse Control Intake",
+  "objective": "Normalize mixed engineer documents into a reusable control-system spec for playback and diagnosis.",
+  "source_of_truth": "engineer mixed docs packet",
+  "source_documents": [
+    {
+      "id": "doc-pdf-logic",
+      "kind": "pdf",
+      "title": "Logic Chain PDF",
+      "location": "docs/logic-chain.pdf",
+      "role": "logic_spec",
+      "notes": "Primary source for logic node definitions."
+    },
+    {
+      "id": "doc-md-ab",
+      "kind": "markdown",
+      "title": "A/B Timeline Notes",
+      "location": "docs/ab-timeline.md",
+      "role": "acceptance_evidence",
+      "notes": "Timeline summary extracted from engineering notes."
+    }
+  ],
+  "components": [
+    {
+      "id": "cmd_enable",
+      "label": "CMD_ENABLE",
+      "kind": "switch",
+      "state_shape": "binary",
+      "unit": "state",
+      "description": "Command enable switch.",
+      "allowed_states": ["0", "1"],
+      "monitor_priority": "required"
+    },
+    {
+      "id": "hyd_pressure",
+      "label": "HYD_PRESSURE",
+      "kind": "sensor",
+      "state_shape": "analog",
+      "unit": "psi",
+      "description": "Hydraulic pressure for this specific system.",
+      "allowed_range": [0.0, 5000.0],
+      "monitor_priority": "required"
+    },
+    {
+      "id": "actuator_extend",
+      "label": "ACTUATOR_EXTEND",
+      "kind": "command",
+      "state_shape": "binary",
+      "unit": "state",
+      "description": "Actuator extend command.",
+      "allowed_states": ["0", "1"],
+      "monitor_priority": "required"
+    }
+  ],
+  "logic_nodes": [
+    {
+      "id": "logic_enable_pressure",
+      "label": "L_ENABLE_PRESSURE",
+      "description": "Enable and hydraulic pressure jointly release the actuator command.",
+      "conditions": [
+        {
+          "name": "cmd_enable",
+          "source_component_id": "cmd_enable",
+          "comparison": "==",
+          "threshold_value": true,
+          "note": "Enable switch must be on."
+        },
+        {
+          "name": "hyd_pressure",
+          "source_component_id": "hyd_pressure",
+          "comparison": ">=",
+          "threshold_value": 2800.0,
+          "note": "Pressure must be at or above the deployment threshold."
+        }
+      ],
+      "downstream_component_ids": ["actuator_extend"],
+      "evidence_priority": "high"
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "id": "ab_pressure_ramp",
+      "label": "A/B Pressure Ramp",
+      "description": "Pressure ramps while command enable is latched on.",
+      "time_scale_factor": 1.0,
+      "total_duration_s": 12.0,
+      "monitored_signal_ids": ["cmd_enable", "hyd_pressure", "actuator_extend"],
+      "transitions": [
+        {
+          "signal_id": "hyd_pressure",
+          "start_s": 0.0,
+          "end_s": 8.0,
+          "start_value": 0.0,
+          "end_value": 3200.0,
+          "unit": "psi",
+          "note": "Pressure build-up from the A/B notes."
+        }
+      ],
+      "completion_condition": "actuator_extend == 1"
+    }
+  ],
+  "fault_modes": [
+    {
+      "id": "pressure_sensor_bias_low",
+      "target_component_id": "hyd_pressure",
+      "fault_kind": "bias_low",
+      "symptom": "Command enable is on but the actuator never extends.",
+      "reasoning_scope_component_ids": ["cmd_enable", "hyd_pressure", "actuator_extend"],
+      "expected_diagnostic_sections": ["symptoms", "upstream_checks", "logic_blockers", "repair_hint"],
+      "optimization_prompt": "Consider redundant pressure plausibility checks or threshold hysteresis to improve reliability."
+    }
+  ],
+  "knowledge_capture": {
+    "incident_fields": ["system_id", "scenario_id", "fault_mode_id", "observed_symptoms", "evidence_links"],
+    "resolution_fields": ["confirmed_root_cause", "repair_action", "validation_after_fix", "residual_risk"],
+    "optimization_fields": ["suggested_logic_change", "reliability_gain_hypothesis", "redundancy_reduction_or_guardrail_note"]
+  },
+  "clarification_answers": [
+    {
+      "question_id": "source_documents",
+      "answer": "Mixed docs/PDF"
+    },
+    {
+      "question_id": "component_state_domains",
+      "answer": "Each signal uses system-defined semantics, units, and allowed values."
+    },
+    {
+      "question_id": "timeline_rules",
+      "answer": "The process is rate-driven with explicit ramps and holds from engineering evidence."
+    },
+    {
+      "question_id": "fault_taxonomy",
+      "answer": "Start with bias, stuck, open-circuit, and delayed-response faults."
+    }
+  ],
+  "tags": ["mixed-doc-intake", "custom-signal-semantics", "ab-test"]
+}

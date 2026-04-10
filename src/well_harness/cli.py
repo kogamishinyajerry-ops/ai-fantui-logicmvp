@@ -5,8 +5,15 @@ import json
 from dataclasses import asdict
 
 from well_harness.demo import answer_demo_prompt, demo_answer_to_payload, render_demo_answer
+from well_harness.document_intake import (
+    assess_intake_packet,
+    intake_template_payload,
+    load_intake_packet,
+    render_intake_assessment_text,
+)
 from well_harness.runner import SimulationRunner
 from well_harness.scenarios import BUILT_IN_SCENARIOS
+from well_harness.system_spec import current_reference_workbench_spec, workbench_spec_to_dict
 
 LOGIC_CHOICES = ("logic1", "logic2", "logic3", "logic4")
 JSON_SCHEMA_VERSION = "1.0"
@@ -64,6 +71,32 @@ def build_parser() -> argparse.ArgumentParser:
         "prompt",
         nargs="+",
         help="Controlled demo prompt, e.g. '触发 logic3 会发生什么'",
+    )
+
+    spec_parser = subparsers.add_parser("spec", help="Export the current reference control-system spec")
+    spec_parser.add_argument(
+        "--format",
+        choices=("json",),
+        default="json",
+        help="Export the reference spec as JSON",
+    )
+
+    intake_parser = subparsers.add_parser("intake", help="Assess a mixed-doc/PDF intake packet for a new control system")
+    intake_parser.add_argument(
+        "packet_path",
+        nargs="?",
+        help="Path to a JSON intake packet. Omit when using --template.",
+    )
+    intake_parser.add_argument(
+        "--template",
+        action="store_true",
+        help="Print a starter JSON packet template instead of assessing a file.",
+    )
+    intake_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Render the intake report as text or JSON.",
     )
     return parser
 
@@ -293,6 +326,22 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(demo_answer_to_payload(answer), ensure_ascii=False, indent=2, sort_keys=True))
         else:
             print(render_demo_answer(answer))
+        return 0
+    if args.command == "spec":
+        print(json.dumps(workbench_spec_to_dict(current_reference_workbench_spec()), ensure_ascii=False, indent=2, sort_keys=True))
+        return 0
+    if args.command == "intake":
+        if args.template:
+            print(json.dumps(intake_template_payload(), ensure_ascii=False, indent=2, sort_keys=True))
+            return 0
+        if not args.packet_path:
+            parser.error("packet_path is required unless --template is set")
+        packet = load_intake_packet(args.packet_path)
+        report = assess_intake_packet(packet)
+        if args.format == "json":
+            print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
+        else:
+            print(render_intake_assessment_text(report))
         return 0
     parser.error("unsupported command")
     return 2

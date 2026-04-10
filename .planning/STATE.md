@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-10 - new product requirements expanded the project toward a spec-driven control-analysis workbench, and a first reusable control-system spec foundation was added locally alongside P7 planning.
+Last activity: 2026-04-10 - P7 moved into active execution with a reusable control-system spec plus a mixed-document intake layer for PDF-heavy future systems.
 
 ## Current Position
 
@@ -37,6 +37,7 @@ Last activity: 2026-04-10 - new product requirements expanded the project toward
 - `P6 Reconcile Control Tower And Freeze Demo Packet` is now drafted locally as the next planned phase, pending the current P5 Opus adjudication.
 - A new requirement set now exists for strict engineer-facing acceptance playback, fault injection and diagnosis, knowledge capture, and future-system generalization; this is large enough to require a new phase instead of being folded into demo freeze work.
 - `P7-01` has an initial local foundation: `src/well_harness/system_spec.py` now defines a reusable control-system workbench spec and captures the current thrust-reverser chain as the first reference system, including acceptance-scenario, fault-mode, and clarification-question scaffolding.
+- `P7-02` is now implemented locally: `src/well_harness/document_intake.py` defines a mixed-document intake packet, readiness assessment, and CLI export surface so future systems can arrive as PDF/markdown-heavy packets with explicit system-defined signal semantics.
 
 ## Active Objective
 
@@ -56,6 +57,7 @@ Keep the existing demo loop operational while preparing the jump from a single-s
 - Keep a readable freeze/archive packet in the repo so the current baseline can be resumed or explained quickly after a pause.
 - Define a canonical control-system spec that future acceptance playback, fault injection, and knowledge capture can all share.
 - Force ambiguity to surface as explicit onboarding questions whenever a new system spec is incomplete.
+- Normalize mixed source packets before simulation or diagnosis starts, so future PDF-heavy system onboarding does not bypass signal semantics or clarification gates.
 
 ## Blockers/Concerns
 

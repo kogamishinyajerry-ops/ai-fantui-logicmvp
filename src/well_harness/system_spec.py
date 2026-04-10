@@ -109,6 +109,35 @@ def workbench_spec_to_dict(spec: ControlSystemWorkbenchSpec) -> dict[str, Any]:
     return spec.to_dict()
 
 
+def default_workbench_clarification_questions() -> tuple[ClarificationItemSpec, ...]:
+    return (
+        ClarificationItemSpec(
+            id="source_documents",
+            prompt="新系统的输入文档具体是什么格式：结构化表格、Markdown/Notion、PDF，还是混合来源？",
+            rationale="决定是否先做文档适配器，还是先要求工程师整理为统一 spec。",
+            required_for="严格验收与快速泛化",
+        ),
+        ClarificationItemSpec(
+            id="component_state_domains",
+            prompt="每个组件究竟是二值开关、固定电平、离散状态，还是连续模拟量？单位和合法范围分别是什么？",
+            rationale="避免把不同信号形态混成一套错误的监控曲线。",
+            required_for="监控曲线仿真与故障注入",
+        ),
+        ClarificationItemSpec(
+            id="timeline_rules",
+            prompt="工程师给出的运行过程是事件驱动、速率驱动，还是带延时/滞后的状态机？哪些节点允许保持/饱和？",
+            rationale="决定如何把 A/B 过程文档转成严格可回放的时间线。",
+            required_for="严格验收仿真",
+        ),
+        ClarificationItemSpec(
+            id="fault_taxonomy",
+            prompt="新系统需要支持哪些故障注入类型：卡滞、短路、断路、虚警、延迟、阈值漂移，还是其他类型？",
+            rationale="决定诊断树、推理文档模板和优化建议的范围。",
+            required_for="故障分析与知识积累",
+        ),
+    )
+
+
 def current_reference_workbench_spec(config: HarnessConfig | None = None) -> ControlSystemWorkbenchSpec:
     active_config = config or HarnessConfig()
     components = (
@@ -333,33 +362,6 @@ def current_reference_workbench_spec(config: HarnessConfig | None = None) -> Con
         ),
     )
 
-    onboarding_questions = (
-        ClarificationItemSpec(
-            id="source_documents",
-            prompt="新系统的输入文档具体是什么格式：结构化表格、Markdown/Notion、PDF，还是混合来源？",
-            rationale="决定是否先做文档适配器，还是先要求工程师整理为统一 spec。",
-            required_for="严格验收与快速泛化",
-        ),
-        ClarificationItemSpec(
-            id="component_state_domains",
-            prompt="每个组件究竟是二值开关、固定电平、离散状态，还是连续模拟量？单位和合法范围分别是什么？",
-            rationale="避免把不同信号形态混成一套错误的监控曲线。",
-            required_for="监控曲线仿真与故障注入",
-        ),
-        ClarificationItemSpec(
-            id="timeline_rules",
-            prompt="工程师给出的运行过程是事件驱动、速率驱动，还是带延时/滞后的状态机？哪些节点允许保持/饱和？",
-            rationale="决定如何把 A/B 过程文档转成严格可回放的时间线。",
-            required_for="严格验收仿真",
-        ),
-        ClarificationItemSpec(
-            id="fault_taxonomy",
-            prompt="新系统需要支持哪些故障注入类型：卡滞、短路、断路、虚警、延迟、阈值漂移，还是其他类型？",
-            rationale="决定诊断树、推理文档模板和优化建议的范围。",
-            required_for="故障分析与知识积累",
-        ),
-    )
-
     knowledge_capture = KnowledgeCaptureSpec(
         incident_fields=(
             "system_id",
@@ -393,7 +395,7 @@ def current_reference_workbench_spec(config: HarnessConfig | None = None) -> Con
         logic_nodes=logic_nodes,
         acceptance_scenarios=acceptance_scenarios,
         fault_modes=fault_modes,
-        onboarding_questions=onboarding_questions,
+        onboarding_questions=default_workbench_clarification_questions(),
         knowledge_capture=knowledge_capture,
         tags=("reference-system", "strict-acceptance", "fault-injection", "generalization-ready"),
     )

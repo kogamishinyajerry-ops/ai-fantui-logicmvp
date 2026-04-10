@@ -99,7 +99,7 @@ Exit Criteria:
 
 ## Phase P7: Build A Spec-Driven Control Analysis Workbench
 
-Status: Planned
+Status: Active
 
 Goal: Add a reusable control-system specification layer that can drive strict scenario playback, fault injection, diagnosis, and knowledge capture without being locked to the current thrust-reverser chain alone.
 
