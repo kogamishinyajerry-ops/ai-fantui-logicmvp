@@ -1019,6 +1019,56 @@ def fetch_review_snapshot_from_pages(client: NotionClient, config: dict[str, Any
     )
 
 
+def fetch_review_snapshot_from_dashboard_page(client: NotionClient, config: dict[str, Any]) -> ReviewSnapshot:
+    dashboard_lines = page_text_lines(client, page_id(config, "dashboard"))
+    active_phase = page_prefixed_value(dashboard_lines, "- 当前阶段：") or "未识别活动 phase"
+    latest_verified_plan = page_prefixed_value(dashboard_lines, "- 当前已验证 Plan：") or config["default_plan"]
+    latest_success_run = page_prefixed_value(dashboard_lines, "- 最近成功执行证据：")
+    gate_name, gate_status = parse_gate_line(page_prefixed_value(dashboard_lines, "- 当前 Gate："))
+    open_gap_titles = parse_open_gap_titles(page_prefixed_value(dashboard_lines, "- Open Gap 数量："))
+
+    return ReviewSnapshot(
+        active_phase=active_phase,
+        active_phase_goal="",
+        active_phase_summary="Derived from the live dashboard page because separate active subpages are unavailable.",
+        latest_verified_plan=latest_verified_plan,
+        latest_success_run=latest_success_run,
+        latest_failed_run=None,
+        latest_passing_qa=None,
+        gate_page_id=None,
+        gate_name=gate_name,
+        gate_status=gate_status,
+        ready_task_id=None,
+        ready_task=None,
+        open_gap_titles=open_gap_titles,
+        stale_gap_titles=(),
+    )
+
+
+def github_run_number(text: str | None) -> int:
+    if not text:
+        return -1
+    match = re.search(r"GitHub GSD automation (\d+)", text)
+    return int(match.group(1)) if match else -1
+
+
+def should_prefer_page_snapshot(
+    primary_snapshot: ReviewSnapshot,
+    page_snapshot: ReviewSnapshot,
+    config: dict[str, Any],
+) -> bool:
+    page_run = github_run_number(page_snapshot.latest_success_run)
+    primary_run = github_run_number(primary_snapshot.latest_success_run)
+    if page_run > primary_run:
+        return True
+    default_plan = config.get("default_plan")
+    return bool(
+        default_plan
+        and page_snapshot.latest_verified_plan == default_plan
+        and primary_snapshot.latest_verified_plan != default_plan
+    )
+
+
 def build_fallback_run_snapshot(
     client: NotionClient,
     config: dict[str, Any],
@@ -2317,17 +2367,33 @@ def handle_sync_repo_docs(args: argparse.Namespace, config: dict[str, Any]) -> i
     if not token:
         raise SystemExit("NOTION_API_KEY is required for sync-repo-docs.")
     client = NotionClient(token)
+    snapshot: ReviewSnapshot | None = None
     try:
         snapshot = fetch_review_snapshot(client, config)
     except RuntimeError as exc:
         if not is_missing_database_error(str(exc)):
             raise
-        try:
-            snapshot = fetch_review_snapshot_from_pages(client, config)
-        except RuntimeError as page_exc:
-            if not is_missing_page_error(str(page_exc)):
-                raise
+        snapshot = None
+        for fetcher in (fetch_review_snapshot_from_pages, fetch_review_snapshot_from_dashboard_page):
+            try:
+                snapshot = fetcher(client, config)
+                break
+            except RuntimeError as page_exc:
+                if not is_missing_page_error(str(page_exc)):
+                    raise
+        if snapshot is None:
             snapshot = fetch_review_snapshot_from_repo_docs(Path(args.cwd).resolve(), config)
+    else:
+        page_snapshot = None
+        for fetcher in (fetch_review_snapshot_from_pages, fetch_review_snapshot_from_dashboard_page):
+            try:
+                page_snapshot = fetcher(client, config)
+                break
+            except RuntimeError as page_exc:
+                if not is_missing_page_error(str(page_exc)):
+                    raise
+        if page_snapshot and should_prefer_page_snapshot(snapshot, page_snapshot, config):
+            snapshot = page_snapshot
     brief = build_current_review_brief(snapshot, config)
     unavailable_page_keys = active_page_unavailable_keys(client, config)
     synced = sync_repo_documents(

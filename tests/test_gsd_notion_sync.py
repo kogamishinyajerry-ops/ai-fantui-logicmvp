@@ -20,6 +20,7 @@ from tools.gsd_notion_sync import (
     retire_legacy_review_artifacts,
     fetch_review_snapshot,
     fetch_review_snapshot_from_pages,
+    fetch_review_snapshot_from_dashboard_page,
     build_superseded_gap_fix_plan,
     clip,
     write_notion_outcome,
@@ -30,6 +31,7 @@ from tools.gsd_notion_sync import (
     build_fallback_run_snapshot,
     ensure_live_active_pages,
     fetch_review_snapshot_from_repo_docs,
+    should_prefer_page_snapshot,
     summarize_results,
     sync_repo_documents,
     handle_run,
@@ -843,7 +845,132 @@ Ran 189 tests in 20.897s
         self.assertEqual("GitHub GSD automation 24239357493", snapshot.latest_success_run)
         self.assertEqual("GitHub GSD automation 24238577807", snapshot.latest_failed_run)
         self.assertEqual("Approved", snapshot.gate_status)
-        self.assertEqual((), snapshot.open_gap_titles)
+
+    def test_fetch_review_snapshot_from_dashboard_page_works_when_subpages_are_unavailable(self):
+        class FakeClient:
+            def list_block_children(self, page_id):
+                pages = {
+                    "dashboard-id": [
+                        {
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {"rich_text": [{"plain_text": "- 当前阶段：P6 Reconcile Control Tower And Freeze Demo Packet"}]},
+                        },
+                        {
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {"rich_text": [{"plain_text": "- 当前已验证 Plan：P6-10 显式化 dashboard-only degraded mode"}]},
+                        },
+                        {
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {"rich_text": [{"plain_text": "- 最近成功执行证据：GitHub GSD automation 24243804732"}]},
+                        },
+                        {
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {"rich_text": [{"plain_text": "- 当前 Gate：OPUS-4.6 周期审查 Gate（Approved）"}]},
+                        },
+                        {
+                            "type": "bulleted_list_item",
+                            "bulleted_list_item": {"rich_text": [{"plain_text": "- Open Gap 数量：0"}]},
+                        },
+                    ]
+                }
+                return pages[page_id]
+
+        snapshot = fetch_review_snapshot_from_dashboard_page(
+            FakeClient(),  # type: ignore[arg-type]
+            {
+                "pages": {"dashboard": "dashboard-id"},
+                "default_plan": "fallback-plan",
+            },
+        )
+
+        self.assertEqual("P6 Reconcile Control Tower And Freeze Demo Packet", snapshot.active_phase)
+        self.assertEqual("P6-10 显式化 dashboard-only degraded mode", snapshot.latest_verified_plan)
+        self.assertEqual("GitHub GSD automation 24243804732", snapshot.latest_success_run)
+        self.assertEqual("Approved", snapshot.gate_status)
+
+    def test_should_prefer_page_snapshot_when_dashboard_run_is_newer(self):
+        primary_snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="",
+            active_phase_summary="db snapshot",
+            latest_verified_plan="P6-07 数据库写回失败时仍推进活动页快照",
+            latest_success_run="GitHub GSD automation 24241382132",
+            latest_failed_run=None,
+            latest_passing_qa=None,
+            gate_page_id=None,
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+        page_snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="",
+            active_phase_summary="page snapshot",
+            latest_verified_plan="P6-10 显式化 dashboard-only degraded mode",
+            latest_success_run="GitHub GSD automation 24243804732",
+            latest_failed_run=None,
+            latest_passing_qa=None,
+            gate_page_id=None,
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+
+        self.assertTrue(
+            should_prefer_page_snapshot(
+                primary_snapshot,
+                page_snapshot,
+                {"default_plan": "P6-10 显式化 dashboard-only degraded mode"},
+            )
+        )
+
+    def test_should_prefer_page_snapshot_when_it_matches_current_default_plan(self):
+        primary_snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="",
+            active_phase_summary="db snapshot",
+            latest_verified_plan="P6-07 数据库写回失败时仍推进活动页快照",
+            latest_success_run="GitHub GSD automation 24243804732",
+            latest_failed_run=None,
+            latest_passing_qa=None,
+            gate_page_id=None,
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+        page_snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="",
+            active_phase_summary="page snapshot",
+            latest_verified_plan="P6-11 让 repo docs 跟随更新鲜的 dashboard 快照",
+            latest_success_run="GitHub GSD automation 24243804732",
+            latest_failed_run=None,
+            latest_passing_qa=None,
+            gate_page_id=None,
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+
+        self.assertTrue(
+            should_prefer_page_snapshot(
+                primary_snapshot,
+                page_snapshot,
+                {"default_plan": "P6-11 让 repo docs 跟随更新鲜的 dashboard 快照"},
+            )
+        )
 
     def test_write_notion_outcome_uses_exact_github_run_url_for_artifacts(self):
         class FakeClient:

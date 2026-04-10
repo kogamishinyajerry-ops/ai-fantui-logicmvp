@@ -4,8 +4,8 @@
 ## 当前自动同步交接基线
 
 - 活动 phase：`P6 Reconcile Control Tower And Freeze Demo Packet`
-- 当前已验证 Plan：`P6-07 数据库写回失败时仍推进活动页快照`
-- 最近成功执行证据：`GitHub GSD automation 24241382132`
+- 当前已验证 Plan：`P6-10 显式化 dashboard-only degraded mode`
+- 最近成功执行证据：`GitHub GSD automation 24243804732`
 - 当前 demo 基线已经稳定，P6 的任务是把控制塔、freeze packet 和 repo-side handoff 资料统一到同一份 GitHub-backed 真值。
 - 当前不继续扩大 P7 的实现面；P7 groundwork 继续保留，但执行顺序仍以 P6 收口优先。
 

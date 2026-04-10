@@ -25,7 +25,7 @@
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P6-10 显式化 dashboard-only degraded mode",
+  "default_plan": "P6-11 让 repo docs 跟随更新鲜的 dashboard 快照",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {

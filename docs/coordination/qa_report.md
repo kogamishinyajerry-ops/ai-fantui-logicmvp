@@ -5,8 +5,8 @@
 
 - 结论：PASS；当前稳定基线由 GitHub-backed validation evidence 支撑。
 - 当前阶段：`P6 Reconcile Control Tower And Freeze Demo Packet`
-- 当前已验证 Plan：`P6-07 数据库写回失败时仍推进活动页快照`
-- 最近成功执行证据：`GitHub GSD automation 24241382132`
+- 当前已验证 Plan：`P6-10 显式化 dashboard-only degraded mode`
+- 最近成功执行证据：`GitHub GSD automation 24243804732`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
