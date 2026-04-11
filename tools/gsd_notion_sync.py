@@ -87,6 +87,8 @@ DATABASE_LINK_LABELS = {
     "gaps": "05A UAT Gap 数据库",
     "assets": "06 证据与资产数据库",
 }
+PHASE_HEADER_RE = re.compile(r"^## Phase P(\d+):\s+(.+)$")
+PLAN_TITLE_RE = re.compile(r"^#\s*(P\d+-\d+)\s+Plan\s*-\s*(.+)$")
 
 
 @dataclass(frozen=True)
@@ -446,6 +448,53 @@ def load_control_plane_config(config_path: Path) -> dict[str, Any]:
 
 def save_control_plane_config(config_path: Path, config: dict[str, Any]) -> None:
     config_path.write_text(json.dumps(config, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def active_phase_number_from_roadmap(cwd: Path) -> int | None:
+    roadmap_path = cwd / ".planning" / "ROADMAP.md"
+    if not roadmap_path.exists():
+        return None
+    current_phase_number: int | None = None
+    for raw_line in roadmap_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        match = PHASE_HEADER_RE.match(line)
+        if match:
+            current_phase_number = int(match.group(1))
+            continue
+        if current_phase_number is not None and line == "Status: Active":
+            return current_phase_number
+    return None
+
+
+def active_phase_directory(cwd: Path, phase_number: int) -> Path | None:
+    phases_root = cwd / ".planning" / "phases"
+    if not phases_root.exists():
+        return None
+    prefix = f"{phase_number:02d}-"
+    candidates = sorted(path for path in phases_root.iterdir() if path.is_dir() and path.name.startswith(prefix))
+    return candidates[0] if candidates else None
+
+
+def local_phase_default_plan(cwd: Path) -> str | None:
+    active_phase_number = active_phase_number_from_roadmap(cwd)
+    if active_phase_number is None:
+        return None
+    phase_dir = active_phase_directory(cwd, active_phase_number)
+    if phase_dir is None:
+        return None
+    plan_files = sorted(phase_dir.glob("*-PLAN.md"))
+    if not plan_files:
+        return None
+    title_line = plan_files[-1].read_text(encoding="utf-8").splitlines()[0].strip()
+    match = PLAN_TITLE_RE.match(title_line)
+    if match:
+        return f"{match.group(1)} {match.group(2).strip()}"
+    return None
+
+
+def effective_default_plan(config: dict[str, Any], *, cwd: Path | None = None) -> str:
+    repo_cwd = cwd or Path.cwd()
+    return local_phase_default_plan(repo_cwd) or config.get("default_plan", "P1-01 建立自动执行 / QA 回写闭环")
 
 
 def database_id(config: dict[str, Any], key: str) -> str:
@@ -2512,6 +2561,7 @@ def output_repo_doc_sync_result(format_name: str, payload: dict[str, Any]) -> No
 def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
     cwd = Path(args.cwd).resolve()
     config_path = Path(getattr(args, "config", DEFAULT_CONFIG_PATH))
+    config["default_plan"] = effective_default_plan(config, cwd=cwd)
     plan_id = args.plan_id or config["default_plan"]
     title = args.title or f"{plan_id} automation {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
     results = run_commands(args.command, cwd)
@@ -2726,7 +2776,14 @@ def handle_sync_repo_docs(args: argparse.Namespace, config: dict[str, Any]) -> i
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    config = load_control_plane_config(Path(args.config))
+    config_path = Path(args.config).resolve()
+    config = load_control_plane_config(config_path)
+    resolved_default_plan = effective_default_plan(config, cwd=config_path.parent.parent)
+    if config.get("default_plan") != resolved_default_plan:
+        config["default_plan"] = resolved_default_plan
+        save_control_plane_config(config_path, config)
+    else:
+        config["default_plan"] = resolved_default_plan
     if args.command_name == "run":
         return handle_run(args, config)
     if args.command_name == "prepare-opus-review":

@@ -30,6 +30,7 @@ from tools.gsd_notion_sync import (
     derive_compact_success_summary_from_text,
     build_fallback_run_snapshot,
     ensure_live_active_pages,
+    effective_default_plan,
     fetch_review_snapshot_from_repo_docs,
     prune_stale_active_sync_page_blocks,
     page_matches_rendered_blocks,
@@ -224,6 +225,51 @@ Ran 189 tests in 20.897s
         clipped = clip("x" * 30, limit=20)
         self.assertLessEqual(len(clipped), 20)
         self.assertIn("truncated", clipped)
+
+    def test_effective_default_plan_prefers_latest_local_plan_from_active_phase(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            planning_dir = root / ".planning"
+            phase_dir = planning_dir / "phases" / "06-reconcile-control-tower-and-freeze-demo-packet"
+            phase_dir.mkdir(parents=True)
+            (planning_dir / "ROADMAP.md").write_text(
+                "\n".join(
+                    [
+                        "# Roadmap",
+                        "",
+                        "## Phase P5: Done Phase",
+                        "",
+                        "Status: Done",
+                        "",
+                        "## Phase P6: Reconcile Control Tower And Freeze Demo Packet",
+                        "",
+                        "Status: Active",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (phase_dir / "06-11-PLAN.md").write_text(
+                "# P6-11 Plan - Let Repo Docs Follow The Fresher Dashboard Snapshot\n",
+                encoding="utf-8",
+            )
+            (phase_dir / "06-12-PLAN.md").write_text(
+                "# P6-12 Plan - De-duplicate Dashboard Active Surface Links\n",
+                encoding="utf-8",
+            )
+
+            plan = effective_default_plan({"default_plan": "fallback-plan"}, cwd=root)
+
+            self.assertEqual("P6-12 De-duplicate Dashboard Active Surface Links", plan)
+
+    def test_effective_default_plan_falls_back_to_config_when_no_active_phase_plan_exists(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / ".planning").mkdir(parents=True)
+            (root / ".planning" / "ROADMAP.md").write_text("# Roadmap\n", encoding="utf-8")
+
+            plan = effective_default_plan({"default_plan": "fallback-plan"}, cwd=root)
+
+            self.assertEqual("fallback-plan", plan)
 
     def test_build_current_review_brief_targets_stale_gap_adjudication(self):
         snapshot = ReviewSnapshot(

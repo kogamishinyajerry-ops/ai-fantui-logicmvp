@@ -12,9 +12,9 @@
 ## 恢复工作时先看
 
 1. [AI FANTUI LogicMVP 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
-2. [01 当前状态（自动同步）](https://www.notion.so/33fc6894-2bed-81b4-851c-e29c7eb8847d)
-3. [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33fc6894-2bed-819c-a863-e6404937775a)
-4. [10 Freeze Demo Packet](https://www.notion.so/33fc6894-2bed-8133-a8d0-c0873aba72fc)
+2. [01 当前状态（自动同步）](https://www.notion.so/33fc6894-2bed-8114-ba32-e47e2844920c)
+3. [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33fc6894-2bed-8134-81b6-ff9fea0812ed)
+4. [10 Freeze Demo Packet](https://www.notion.so/33fc6894-2bed-81e6-983d-cbb3ed02c07a)
 5. [GitHub Actions / GSD Automation Loop](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 
 ## 当前交接结论

@@ -15,17 +15,17 @@
   "pages": {
     "dashboard": "33cc68942bed8136b5c9f9ba5b4b44ec",
     "constitution": "33cc6894-2bed-8148-b2c5-ec68c440f5ef",
-    "status": "33fc6894-2bed-81b4-851c-e29c7eb8847d",
+    "status": "33fc6894-2bed-8114-ba32-e47e2844920c",
     "control_plane": "33cc6894-2bed-810d-875e-e4e0e464ee31",
     "opus_protocol": "33cc6894-2bed-8117-b8f5-eda203f3be18",
-    "opus_brief": "33fc6894-2bed-819c-a863-e6404937775a",
-    "freeze_packet": "33fc6894-2bed-8133-a8d0-c0873aba72fc"
+    "opus_brief": "33fc6894-2bed-8134-81b6-ff9fea0812ed",
+    "freeze_packet": "33fc6894-2bed-81e6-983d-cbb3ed02c07a"
   },
   "urls": {
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P7-05 捕获 fault resolution knowledge artifact",
+  "default_plan": "P6-12 De-duplicate Dashboard Active Surface Links",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {

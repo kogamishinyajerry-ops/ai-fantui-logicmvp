@@ -13,8 +13,8 @@
 
 ## 当前冻结入口
 
-- [01 当前状态（自动同步）](https://www.notion.so/33fc6894-2bed-81b4-851c-e29c7eb8847d)
-- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33fc6894-2bed-819c-a863-e6404937775a)
+- [01 当前状态（自动同步）](https://www.notion.so/33fc6894-2bed-8114-ba32-e47e2844920c)
+- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33fc6894-2bed-8134-81b6-ff9fea0812ed)
 - [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)
 - [GitHub Actions](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 
