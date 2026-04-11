@@ -15,11 +15,11 @@
   "pages": {
     "dashboard": "33cc68942bed8136b5c9f9ba5b4b44ec",
     "constitution": "33cc6894-2bed-8148-b2c5-ec68c440f5ef",
-    "status": "33ec6894-2bed-8149-83fc-d2f2a1f415b3",
+    "status": "33fc6894-2bed-811f-954a-f4537fa1f6e9",
     "control_plane": "33cc6894-2bed-810d-875e-e4e0e464ee31",
     "opus_protocol": "33cc6894-2bed-8117-b8f5-eda203f3be18",
-    "opus_brief": "33ec6894-2bed-81da-bf4c-d3968ca36497",
-    "freeze_packet": "33ec6894-2bed-81f2-95b4-e58456fe37de"
+    "opus_brief": "33fc6894-2bed-8189-9956-ee13f82b8bee",
+    "freeze_packet": "33fc6894-2bed-8144-8e01-f77e550e0d10"
   },
   "urls": {
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",

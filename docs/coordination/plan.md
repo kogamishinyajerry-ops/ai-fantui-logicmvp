@@ -22,9 +22,9 @@
 ## 当前证据入口
 
 - [Notion 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
-- [01 当前状态（自动同步）](https://www.notion.so/33ec6894-2bed-8121-a97f-f5da87c3f030)
-- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33ec6894-2bed-81d6-b11d-fcee3e3ea9ea)
-- [10 Freeze Demo Packet](https://www.notion.so/33ec6894-2bed-8122-9a56-dbf20c2fdf86)
+- [01 当前状态（自动同步）](https://www.notion.so/33fc6894-2bed-811f-954a-f4537fa1f6e9)
+- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33fc6894-2bed-8189-9956-ee13f82b8bee)
+- [10 Freeze Demo Packet](https://www.notion.so/33fc6894-2bed-8144-8e01-f77e550e0d10)
 - [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)
 - [GitHub Actions](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 
