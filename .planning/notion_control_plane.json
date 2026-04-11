@@ -15,17 +15,17 @@
   "pages": {
     "dashboard": "33cc68942bed8136b5c9f9ba5b4b44ec",
     "constitution": "33cc6894-2bed-8148-b2c5-ec68c440f5ef",
-    "status": "33fc6894-2bed-8188-8a58-e267b710cdf3",
+    "status": "33fc6894-2bed-81fb-8dab-fbe7b7b8793a",
     "control_plane": "33cc6894-2bed-810d-875e-e4e0e464ee31",
     "opus_protocol": "33cc6894-2bed-8117-b8f5-eda203f3be18",
-    "opus_brief": "33fc6894-2bed-8154-b7b8-febcf2713a70",
-    "freeze_packet": "33fc6894-2bed-8124-8dd4-dddc5599851f"
+    "opus_brief": "33fc6894-2bed-81a9-a136-ed5d7862b636",
+    "freeze_packet": "33fc6894-2bed-810e-990c-d5e4547d4e66"
   },
   "urls": {
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P6-14 Add Timeout Fallback To Run Writeback",
+  "default_plan": "P6-16 Bound Prepare-Opus-Review Timeouts",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {

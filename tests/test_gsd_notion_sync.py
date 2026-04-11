@@ -1647,6 +1647,101 @@ Ran 189 tests in 20.897s
         payload = output_mock.call_args.args[1]
         self.assertEqual("P7-05 Knowledge artifact baseline", payload["latest_success_run"])
 
+    def test_handle_prepare_opus_review_falls_back_to_repo_docs_on_timeout(self):
+        args = argparse.Namespace(activate_gate=False, dry_run=True, format="json")
+        config = {
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            }
+        }
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="Recovered from repo docs",
+            latest_verified_plan="P6-15 Preserve The Stronger Validation Baseline",
+            latest_success_run="P6-15 validation baseline preservation",
+            latest_failed_run=None,
+            latest_passing_qa="P6-15 validation baseline preservation QA",
+            gate_page_id=None,
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            with (
+                patch(
+                    "tools.gsd_notion_sync.fetch_review_snapshot",
+                    side_effect=NotionWritebackTimeout("Notion writeback exceeded 18s deadline."),
+                ),
+                patch("tools.gsd_notion_sync.fetch_review_snapshot_from_repo_docs", return_value=snapshot) as repo_mock,
+                patch("tools.gsd_notion_sync.output_review_result") as output_mock,
+            ):
+                exit_code = handle_prepare_opus_review(args, config)
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(0, exit_code)
+        repo_mock.assert_called_once()
+        payload = output_mock.call_args.args[1]
+        self.assertEqual("P6-15 validation baseline preservation", payload["latest_success_run"])
+        self.assertEqual("Approved", payload["gate_status"])
+
+    def test_handle_prepare_opus_review_write_timeout_returns_timeout_fallback_payload(self):
+        args = argparse.Namespace(activate_gate=False, dry_run=False, format="json", config=str(Path(".planning/notion_control_plane.json")))
+        config = {
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            }
+        }
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="P6 正在执行",
+            latest_verified_plan="P6-15 Preserve The Stronger Validation Baseline",
+            latest_success_run="P6-15 validation baseline preservation",
+            latest_failed_run=None,
+            latest_passing_qa="P6-15 validation baseline preservation QA",
+            gate_page_id=None,
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            with (
+                patch("tools.gsd_notion_sync.fetch_review_snapshot", return_value=snapshot),
+                patch(
+                    "tools.gsd_notion_sync.ensure_live_active_pages",
+                    side_effect=NotionWritebackTimeout("Notion writeback exceeded 18s deadline."),
+                ),
+                patch("tools.gsd_notion_sync.write_current_opus_review_brief_from_snapshot") as write_mock,
+                patch("tools.gsd_notion_sync.output_review_result") as output_mock,
+            ):
+                exit_code = handle_prepare_opus_review(args, config)
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(0, exit_code)
+        write_mock.assert_not_called()
+        payload = output_mock.call_args.args[1]
+        self.assertTrue(payload["notion"]["timeout_fallback"])
+        self.assertEqual("P6 Reconcile Control Tower And Freeze Demo Packet / P6-15 Preserve The Stronger Validation Baseline", payload["review_target"])
+
     def test_fetch_review_snapshot_from_repo_docs_uses_freeze_packet_seed(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             cwd = Path(temp_dir)

@@ -158,9 +158,14 @@ class NotionWritebackTimeout(RuntimeError):
     pass
 
 
+def notion_http_timeout_s() -> float:
+    return float(os.environ.get("NOTION_HTTP_TIMEOUT_S", "12"))
+
+
 class NotionClient:
-    def __init__(self, token: str):
+    def __init__(self, token: str, *, timeout: float | None = None):
         self.token = token
+        self.timeout = timeout or notion_http_timeout_s()
         self._connection: http.client.HTTPSConnection | None = None
 
     def close(self) -> None:
@@ -173,7 +178,7 @@ class NotionClient:
 
     def _get_connection(self) -> http.client.HTTPSConnection:
         if self._connection is None:
-            self._connection = http.client.HTTPSConnection("api.notion.com", timeout=30)
+            self._connection = http.client.HTTPSConnection("api.notion.com", timeout=self.timeout)
         return self._connection
 
     def request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -2891,8 +2896,12 @@ def handle_prepare_opus_review(args: argparse.Namespace, config: dict[str, Any])
     config_path = Path(getattr(args, "config", DEFAULT_CONFIG_PATH))
     cwd = Path.cwd().resolve()
     client = NotionClient(token)
+    prepare_timeout_s = float(os.environ.get("NOTION_PREPARE_TIMEOUT_S", "18"))
     try:
-        snapshot = fetch_review_snapshot(client, config)
+        with notion_writeback_deadline(prepare_timeout_s):
+            snapshot = fetch_review_snapshot(client, config)
+    except NotionWritebackTimeout:
+        snapshot = fetch_review_snapshot_from_repo_docs(cwd, config)
     except RuntimeError as exc:
         if not (is_missing_database_error(str(exc)) or is_rate_limited_error(str(exc))):
             raise
@@ -2947,16 +2956,27 @@ def handle_prepare_opus_review(args: argparse.Namespace, config: dict[str, Any])
         "latest_failed_run": snapshot.latest_failed_run,
     }
     if not args.dry_run:
-        replacements = ensure_live_active_pages(client, config, config_path=config_path)
-        if replacements:
-            payload["replaced_pages"] = replacements
-        payload["notion"] = write_current_opus_review_brief_from_snapshot(
-            client,
-            config,
-            snapshot=effective_snapshot,
-            activate_gate=args.activate_gate,
-            config_path=config_path,
-        )
+        try:
+            with notion_writeback_deadline(prepare_timeout_s):
+                replacements = ensure_live_active_pages(client, config, config_path=config_path)
+                if replacements:
+                    payload["replaced_pages"] = replacements
+                payload["notion"] = write_current_opus_review_brief_from_snapshot(
+                    client,
+                    config,
+                    snapshot=effective_snapshot,
+                    activate_gate=args.activate_gate,
+                    config_path=config_path,
+                )
+        except NotionWritebackTimeout as exc:
+            payload["notion"] = {
+                "timeout_fallback": True,
+                "message": str(exc),
+                "review_required": brief.review_required,
+                "intervention_kind": brief.intervention_kind,
+                "review_target": brief.review_target,
+                "gate_status": effective_snapshot.gate_status,
+            }
     output_review_result(args.format, payload)
     return 0
 

@@ -5,8 +5,8 @@
 
 - 结论：PASS；当前稳定基线由 GitHub-backed validation evidence 支撑。
 - 当前阶段：`P6 Reconcile Control Tower And Freeze Demo Packet`
-- 当前已验证 Plan：`P6-14 Add Timeout Fallback To Run Writeback`
-- 最近成功执行证据：`P6-14 run writeback fallback baseline`
+- 当前已验证 Plan：`P6-15 Preserve The Stronger Validation Baseline`
+- 最近成功执行证据：`P6-15 validation baseline preservation`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
