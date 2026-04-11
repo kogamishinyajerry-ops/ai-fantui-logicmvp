@@ -37,6 +37,7 @@ from tools.gsd_notion_sync import (
     prune_stale_active_sync_page_blocks,
     page_matches_rendered_blocks,
     should_prefer_page_snapshot,
+    should_preserve_prior_success_summary,
     summarize_results,
     sync_repo_documents,
     build_local_run_snapshot,
@@ -123,6 +124,28 @@ Ran 189 tests in 20.897s
         summary = derive_compact_success_summary_from_text(text)
 
         self.assertEqual("189 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.", summary)
+
+    def test_derive_compact_success_summary_from_human_readable_text(self):
+        text = "PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass."
+
+        summary = derive_compact_success_summary_from_text(text)
+
+        self.assertEqual("175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.", summary)
+
+    def test_should_preserve_prior_success_summary_when_current_run_is_narrower(self):
+        self.assertTrue(
+            should_preserve_prior_success_summary(
+                "PASS. 1/1 shared validation checks pass.",
+                "PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.",
+            )
+        )
+
+        self.assertFalse(
+            should_preserve_prior_success_summary(
+                "PASS. 176 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.",
+                "PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.",
+            )
+        )
 
     def test_ensure_live_active_pages_recreates_archived_targets_and_persists_config(self):
         config = {
@@ -1420,6 +1443,52 @@ Ran 189 tests in 20.897s
         self.assertEqual("P6-14 Add Timeout Fallback To Run Writeback", snapshot.latest_verified_plan)
         self.assertEqual("P6-14 run writeback fallback baseline", snapshot.latest_success_run)
 
+    def test_build_local_run_snapshot_preserves_stronger_prior_validation_summary(self):
+        results = [
+            CommandResult(
+                command="PYTHONPATH=src python3 -m pytest -q tests/test_gsd_notion_sync.py",
+                returncode=0,
+                stdout="PASS",
+                stderr="",
+                started_at="2026-04-11T00:00:00+00:00",
+                ended_at="2026-04-11T00:00:05+00:00",
+            )
+        ]
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            root = Path(tempdir)
+            freeze_path = root / "docs" / "freeze"
+            freeze_path.mkdir(parents=True)
+            (freeze_path / "2026-04-10-freeze-demo-packet.md").write_text(
+                "\n".join(
+                    [
+                        "# Freeze Packet",
+                        "",
+                        "- 当前阶段：`P6 Reconcile Control Tower And Freeze Demo Packet`",
+                        "- 当前已验证 Plan：`P6-13 Make Default Plan Follow The Active Phase`",
+                        "- 最近成功执行证据：`GitHub GSD automation 24250000000`",
+                        "- 当前 Gate：`OPUS-4.6 周期审查 Gate（Approved）`",
+                        "- 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            snapshot = build_local_run_snapshot(
+                {"default_plan": "fallback-plan", "default_review_gate": "OPUS-4.6 周期审查 Gate"},
+                cwd=root,
+                plan_id="P6-15 Preserve Stronger Validation Baseline",
+                title="P6-15 validation baseline preservation",
+                results=results,
+                summary=summarize_results(results),
+            )
+
+        self.assertEqual(
+            "PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.",
+            snapshot.latest_passing_qa_summary,
+        )
+        self.assertIn("Carried forward the stronger shared validation baseline", snapshot.latest_success_run_notes)
+
     def test_build_fallback_run_snapshot_uses_compact_success_summary(self):
         results = [
             CommandResult(
@@ -1562,6 +1631,10 @@ Ran 189 tests in 20.897s
                     side_effect=RuntimeError("Notion API request failed: HTTP 429 /v1/databases/test/query: rate_limited"),
                 ),
                 patch("tools.gsd_notion_sync.fetch_review_snapshot_from_pages", return_value=snapshot) as fallback_mock,
+                patch(
+                    "tools.gsd_notion_sync.fetch_review_snapshot_from_repo_docs",
+                    side_effect=RuntimeError("Repo freeze packet missing"),
+                ),
                 patch("tools.gsd_notion_sync.output_review_result") as output_mock,
             ):
                 exit_code = handle_prepare_opus_review(args, config)

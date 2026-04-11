@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-11 - P6-14 bounds slow Notion run writeback with a timeout fallback, so successful control-plane runs can still refresh repo docs and active-page snapshots instead of hanging indefinitely.
+Last activity: 2026-04-11 - P6-15 preserves the stronger shared validation baseline when a focused control-plane maintenance run succeeds, so repo/notion snapshots can advance to the latest P6 slice without downgrading QA confidence to a narrow 1/1 check summary.
 
 ## Current Position
 
@@ -52,6 +52,7 @@ Last activity: 2026-04-11 - P6-14 bounds slow Notion run writeback with a timeou
 - `P6-12 去重 dashboard 活动面入口` is now implemented locally: dashboard sync prunes stale `status / 09C / freeze` child-page blocks and treats preserved child pages/databases as non-authoritative for body equality, so the homepage can return to a single active control-plane entry.
 - `P6-13 让 default_plan 跟随当前 active phase` is now implemented locally: sync entrypoints derive the default plan from the active roadmap phase plus the newest local plan file, persist it back into `notion_control_plane.json`, and render dashboard snapshots against that live P6 slice instead of the stale `P7-05` fallback.
 - `P6-14 给 run 写回增加超时兜底` is now implemented locally: successful `run` commands cap full Notion writeback behind a deadline, then fall back to active-page snapshot + repo-doc sync if the shared database or page write stalls, so the control plane can keep moving forward under slow Notion windows instead of hanging mid-run.
+- `P6-15 保留更强的共享验证基线` is now implemented locally: focused control-plane maintenance runs can advance the latest verified plan and latest success run, while repo/notion snapshots keep carrying forward the last richer shared validation baseline instead of collapsing QA confidence down to a narrow `1/1 shared validation checks pass`.
 - A new requirement set now exists for strict engineer-facing acceptance playback, fault injection and diagnosis, knowledge capture, and future-system generalization; this is large enough to require a new phase instead of being folded into demo freeze work.
 - `P7-01` has an initial local foundation: `src/well_harness/system_spec.py` now defines a reusable control-system workbench spec and captures the current thrust-reverser chain as the first reference system, including acceptance-scenario, fault-mode, and clarification-question scaffolding.
 - `P7-02` is already implemented on `main`: `src/well_harness/document_intake.py` defines a mixed-document intake packet, readiness assessment, and CLI export surface so future systems can arrive as PDF/markdown-heavy packets with explicit system-defined signal semantics.

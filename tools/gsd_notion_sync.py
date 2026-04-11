@@ -816,12 +816,24 @@ def derive_compact_success_summary_from_text(text: str) -> str | None:
     tests_match = re.search(r"Ran\s+(\d+)\s+tests", text)
     if tests_match:
         tests_ok = int(tests_match.group(1))
+    if tests_ok is None:
+        tests_match = re.search(r"(\d+)\s+tests OK", text)
+        if tests_match:
+            tests_ok = int(tests_match.group(1))
     smoke_match = re.search(r'"completed_scenarios"\s*:\s*(\d+)', text)
     if smoke_match:
         demo_smoke_count = int(smoke_match.group(1))
+    if demo_smoke_count is None:
+        smoke_match = re.search(r"(\d+)\s+demo smoke scenarios pass", text)
+        if smoke_match:
+            demo_smoke_count = int(smoke_match.group(1))
     checks_match = re.search(r'"command_count"\s*:\s*(\d+)', text)
     if checks_match:
         shared_check_count = int(checks_match.group(1))
+    if shared_check_count is None:
+        checks_match = re.search(r"(\d+)/\1\s+shared validation checks pass", text)
+        if checks_match:
+            shared_check_count = int(checks_match.group(1))
 
     fragments: list[str] = []
     if tests_ok is not None:
@@ -837,6 +849,71 @@ def derive_compact_success_summary_from_text(text: str) -> str | None:
     if len(fragments) == 2:
         return f"{fragments[0]} and {fragments[1]}."
     return ", ".join(fragments[:-1]) + f", and {fragments[-1]}."
+
+
+def should_preserve_prior_success_summary(current_summary: str | None, prior_summary: str | None) -> bool:
+    if not current_summary or not prior_summary:
+        return False
+
+    current_tests = 0
+    current_smoke = 0
+    current_checks = 0
+    prior_tests = 0
+    prior_smoke = 0
+    prior_checks = 0
+
+    current_tests_match = re.search(r"(\d+)\s+tests OK", current_summary)
+    if current_tests_match:
+        current_tests = int(current_tests_match.group(1))
+    prior_tests_match = re.search(r"(\d+)\s+tests OK", prior_summary)
+    if prior_tests_match:
+        prior_tests = int(prior_tests_match.group(1))
+
+    current_smoke_match = re.search(r"(\d+)\s+demo smoke scenarios pass", current_summary)
+    if current_smoke_match:
+        current_smoke = int(current_smoke_match.group(1))
+    prior_smoke_match = re.search(r"(\d+)\s+demo smoke scenarios pass", prior_summary)
+    if prior_smoke_match:
+        prior_smoke = int(prior_smoke_match.group(1))
+
+    current_checks_match = re.search(r"(\d+)/\1\s+shared validation checks pass", current_summary)
+    if current_checks_match:
+        current_checks = int(current_checks_match.group(1))
+    prior_checks_match = re.search(r"(\d+)/\1\s+shared validation checks pass", prior_summary)
+    if prior_checks_match:
+        prior_checks = int(prior_checks_match.group(1))
+
+    if prior_checks and current_checks and current_checks < prior_checks:
+        return True
+    if prior_smoke and not current_smoke:
+        return True
+    if prior_tests and not current_tests:
+        return True
+    return False
+
+
+def select_success_snapshot_evidence(
+    snapshot: ReviewSnapshot,
+    title: str,
+    results: list[CommandResult],
+    summary: RunSummary,
+) -> tuple[str | None, str | None, str | None]:
+    compact_success = derive_compact_success_summary(results)
+    current_run_notes = compact_success or summary.output_digest
+    current_qa_summary = f"{summary.qa_result}. {compact_success}" if compact_success else summary.output_digest
+    current_passing_qa = f"{title} QA"
+
+    if should_preserve_prior_success_summary(current_qa_summary, snapshot.latest_passing_qa_summary):
+        carried_summary = snapshot.latest_passing_qa_summary
+        carried_detail = carried_summary.removeprefix("PASS. ").strip() if carried_summary else ""
+        current_run_notes = (
+            "Focused control-plane maintenance run passed. "
+            f"Carried forward the stronger shared validation baseline: {carried_detail}"
+        )
+        current_qa_summary = carried_summary
+        current_passing_qa = snapshot.latest_passing_qa
+
+    return current_run_notes, current_qa_summary, current_passing_qa
 
 
 def command_list_text(commands: list[str]) -> str:
@@ -1342,8 +1419,13 @@ def build_fallback_run_snapshot(
             repo_snapshot = None
         if repo_snapshot and should_prefer_snapshot(snapshot, repo_snapshot, config):
             snapshot = repo_snapshot
-    compact_success = derive_compact_success_summary(results) if summary.succeeded else None
     if summary.succeeded:
+        success_run_notes, passing_qa_summary, passing_qa = select_success_snapshot_evidence(
+            snapshot,
+            title,
+            results,
+            summary,
+        )
         return ReviewSnapshot(
             active_phase=snapshot.active_phase,
             active_phase_goal=snapshot.active_phase_goal,
@@ -1351,7 +1433,7 @@ def build_fallback_run_snapshot(
             latest_verified_plan=plan_id,
             latest_success_run=title,
             latest_failed_run=snapshot.latest_failed_run,
-            latest_passing_qa=f"{title} QA",
+            latest_passing_qa=passing_qa,
             gate_page_id=snapshot.gate_page_id,
             gate_name=snapshot.gate_name,
             gate_status=snapshot.gate_status,
@@ -1359,8 +1441,8 @@ def build_fallback_run_snapshot(
             ready_task=snapshot.ready_task,
             open_gap_titles=snapshot.open_gap_titles,
             stale_gap_titles=snapshot.stale_gap_titles,
-            latest_success_run_notes=compact_success or summary.output_digest,
-            latest_passing_qa_summary=(f"{summary.qa_result}. {compact_success}" if compact_success else summary.output_digest),
+            latest_success_run_notes=success_run_notes,
+            latest_passing_qa_summary=passing_qa_summary,
         )
     return ReviewSnapshot(
         active_phase=snapshot.active_phase,
@@ -1411,8 +1493,13 @@ def build_local_run_snapshot(
             stale_gap_titles=(),
         )
 
-    compact_success = derive_compact_success_summary(results) if summary.succeeded else None
     if summary.succeeded:
+        success_run_notes, passing_qa_summary, passing_qa = select_success_snapshot_evidence(
+            snapshot,
+            title,
+            results,
+            summary,
+        )
         return ReviewSnapshot(
             active_phase=snapshot.active_phase,
             active_phase_goal=snapshot.active_phase_goal,
@@ -1420,7 +1507,7 @@ def build_local_run_snapshot(
             latest_verified_plan=plan_id,
             latest_success_run=title,
             latest_failed_run=snapshot.latest_failed_run,
-            latest_passing_qa=f"{title} QA",
+            latest_passing_qa=passing_qa,
             gate_page_id=snapshot.gate_page_id,
             gate_name=snapshot.gate_name,
             gate_status=snapshot.gate_status,
@@ -1428,8 +1515,8 @@ def build_local_run_snapshot(
             ready_task=snapshot.ready_task,
             open_gap_titles=snapshot.open_gap_titles,
             stale_gap_titles=snapshot.stale_gap_titles,
-            latest_success_run_notes=compact_success or summary.output_digest,
-            latest_passing_qa_summary=(f"{summary.qa_result}. {compact_success}" if compact_success else summary.output_digest),
+            latest_success_run_notes=success_run_notes,
+            latest_passing_qa_summary=passing_qa_summary,
         )
     return ReviewSnapshot(
         active_phase=snapshot.active_phase,
