@@ -7,10 +7,12 @@ locally and in GitHub Actions without adding runtime dependencies.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import http.client
 import json
 import os
 import re
+import signal
 import subprocess
 import ssl
 from dataclasses import dataclass
@@ -150,6 +152,10 @@ class CurrentReviewBrief:
 class RepoDocSyncResult:
     path: str
     marker: str
+
+
+class NotionWritebackTimeout(RuntimeError):
+    pass
 
 
 class NotionClient:
@@ -466,6 +472,22 @@ def active_phase_number_from_roadmap(cwd: Path) -> int | None:
     return None
 
 
+def active_phase_label_from_roadmap(cwd: Path) -> str | None:
+    roadmap_path = cwd / ".planning" / "ROADMAP.md"
+    if not roadmap_path.exists():
+        return None
+    current_phase_label: str | None = None
+    for raw_line in roadmap_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        match = PHASE_HEADER_RE.match(line)
+        if match:
+            current_phase_label = f"P{match.group(1)} {match.group(2).strip()}"
+            continue
+        if current_phase_label is not None and line == "Status: Active":
+            return current_phase_label
+    return None
+
+
 def active_phase_directory(cwd: Path, phase_number: int) -> Path | None:
     phases_root = cwd / ".planning" / "phases"
     if not phases_root.exists():
@@ -655,6 +677,25 @@ def active_page_unavailable_keys(client: NotionClient, config: dict[str, Any]) -
         for key in ("status", "opus_brief", "freeze_packet")
         if key in config.get("pages", {}) and not page_is_writable(client, config, key)
     )
+
+
+@contextlib.contextmanager
+def notion_writeback_deadline(seconds: float | None):
+    if not seconds or seconds <= 0 or not hasattr(signal, "SIGALRM") or not hasattr(signal, "setitimer"):
+        yield
+        return
+
+    def _raise_timeout(_signum, _frame):
+        raise NotionWritebackTimeout(f"Notion writeback exceeded {seconds:g}s deadline.")
+
+    previous_handler = signal.getsignal(signal.SIGALRM)
+    signal.signal(signal.SIGALRM, _raise_timeout)
+    signal.setitimer(signal.ITIMER_REAL, seconds)
+    try:
+        yield
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
 
 
 def prune_stale_active_sync_page_blocks(client: NotionClient, config: dict[str, Any]) -> list[str]:
@@ -1301,6 +1342,75 @@ def build_fallback_run_snapshot(
             repo_snapshot = None
         if repo_snapshot and should_prefer_snapshot(snapshot, repo_snapshot, config):
             snapshot = repo_snapshot
+    compact_success = derive_compact_success_summary(results) if summary.succeeded else None
+    if summary.succeeded:
+        return ReviewSnapshot(
+            active_phase=snapshot.active_phase,
+            active_phase_goal=snapshot.active_phase_goal,
+            active_phase_summary=snapshot.active_phase_summary,
+            latest_verified_plan=plan_id,
+            latest_success_run=title,
+            latest_failed_run=snapshot.latest_failed_run,
+            latest_passing_qa=f"{title} QA",
+            gate_page_id=snapshot.gate_page_id,
+            gate_name=snapshot.gate_name,
+            gate_status=snapshot.gate_status,
+            ready_task_id=snapshot.ready_task_id,
+            ready_task=snapshot.ready_task,
+            open_gap_titles=snapshot.open_gap_titles,
+            stale_gap_titles=snapshot.stale_gap_titles,
+            latest_success_run_notes=compact_success or summary.output_digest,
+            latest_passing_qa_summary=(f"{summary.qa_result}. {compact_success}" if compact_success else summary.output_digest),
+        )
+    return ReviewSnapshot(
+        active_phase=snapshot.active_phase,
+        active_phase_goal=snapshot.active_phase_goal,
+        active_phase_summary=snapshot.active_phase_summary,
+        latest_verified_plan=snapshot.latest_verified_plan,
+        latest_success_run=snapshot.latest_success_run,
+        latest_failed_run=title,
+        latest_passing_qa=snapshot.latest_passing_qa,
+        gate_page_id=snapshot.gate_page_id,
+        gate_name=snapshot.gate_name,
+        gate_status=snapshot.gate_status,
+        ready_task_id=snapshot.ready_task_id,
+        ready_task=snapshot.ready_task,
+        open_gap_titles=snapshot.open_gap_titles,
+        stale_gap_titles=snapshot.stale_gap_titles,
+        latest_success_run_notes=snapshot.latest_success_run_notes,
+        latest_passing_qa_summary=snapshot.latest_passing_qa_summary,
+    )
+
+
+def build_local_run_snapshot(
+    config: dict[str, Any],
+    *,
+    cwd: Path,
+    plan_id: str,
+    title: str,
+    results: list[CommandResult],
+    summary: RunSummary,
+) -> ReviewSnapshot:
+    try:
+        snapshot = fetch_review_snapshot_from_repo_docs(cwd, config)
+    except RuntimeError:
+        snapshot = ReviewSnapshot(
+            active_phase=active_phase_label_from_roadmap(cwd) or "未识别活动 phase",
+            active_phase_goal="",
+            active_phase_summary="Recovered locally because Notion writeback timed out before any durable shared write completed.",
+            latest_verified_plan=config.get("default_plan", plan_id),
+            latest_success_run=None,
+            latest_failed_run=None,
+            latest_passing_qa=None,
+            gate_page_id=None,
+            gate_name=config.get("default_review_gate", "OPUS-4.6 周期审查 Gate"),
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+
     compact_success = derive_compact_success_summary(results) if summary.succeeded else None
     if summary.succeeded:
         return ReviewSnapshot(
@@ -2558,12 +2668,29 @@ def output_repo_doc_sync_result(format_name: str, payload: dict[str, Any]) -> No
         print(f"- {item['path']}")
 
 
+def sync_repo_docs_from_snapshot(
+    cwd: Path,
+    snapshot: ReviewSnapshot,
+    config: dict[str, Any],
+    *,
+    unavailable_page_keys: tuple[str, ...] = (),
+) -> list[RepoDocSyncResult]:
+    return sync_repo_documents(
+        cwd,
+        build_current_review_brief(snapshot, config),
+        snapshot,
+        config,
+        unavailable_page_keys=unavailable_page_keys,
+    )
+
+
 def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
     cwd = Path(args.cwd).resolve()
     config_path = Path(getattr(args, "config", DEFAULT_CONFIG_PATH))
     config["default_plan"] = effective_default_plan(config, cwd=cwd)
     plan_id = args.plan_id or config["default_plan"]
     title = args.title or f"{plan_id} automation {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+    writeback_timeout_s = float(os.environ.get("NOTION_WRITEBACK_TIMEOUT_S", "25"))
     results = run_commands(args.command, cwd)
     summary = summarize_results(results)
     payload: dict[str, Any] = {
@@ -2580,24 +2707,68 @@ def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
     if not args.dry_run and token:
         try:
             client = NotionClient(token)
-            ensure_live_active_pages(client, config, config_path=config_path)
-            written = write_notion_outcome(
-                client,
-                config,
-                title=title,
-                plan_id=plan_id,
-                commands=args.command,
-                results=results,
-                summary=summary,
-                opus_gate=args.opus_gate,
-                config_path=config_path,
-            )
+            with notion_writeback_deadline(writeback_timeout_s):
+                ensure_live_active_pages(client, config, config_path=config_path)
+                written = write_notion_outcome(
+                    client,
+                    config,
+                    title=title,
+                    plan_id=plan_id,
+                    commands=args.command,
+                    results=results,
+                    summary=summary,
+                    opus_gate=args.opus_gate,
+                    config_path=config_path,
+                )
         except Exception as exc:
             payload["notion"] = "failed"
             payload["notion_error"] = str(exc)
             if summary.succeeded:
                 try:
-                    fallback_snapshot = build_fallback_run_snapshot(
+                    if isinstance(exc, NotionWritebackTimeout):
+                        fallback_snapshot = build_local_run_snapshot(
+                            config,
+                            cwd=cwd,
+                            plan_id=plan_id,
+                            title=title,
+                            results=results,
+                            summary=summary,
+                        )
+                        payload["notion_fallback"] = "skipped_after_timeout"
+                    else:
+                        fallback_snapshot = build_fallback_run_snapshot(
+                            client,
+                            config,
+                            cwd=cwd,
+                            plan_id=plan_id,
+                            title=title,
+                            results=results,
+                            summary=summary,
+                        )
+                        payload["opus_review_brief"] = write_current_opus_review_brief_from_snapshot(
+                            client,
+                            config,
+                            snapshot=fallback_snapshot,
+                            activate_gate=False,
+                            config_path=config_path,
+                        )
+                        payload["notion_fallback"] = "written"
+                    repo_docs = sync_repo_docs_from_snapshot(cwd, fallback_snapshot, config)
+                except Exception as fallback_exc:
+                    payload["notion_fallback"] = "failed"
+                    payload["notion_fallback_error"] = str(fallback_exc)
+                else:
+                    payload["notion"] = "partial"
+                    payload["repo_doc_sync"] = "written"
+                    payload["repo_docs"] = [{"path": item.path, "marker": item.marker} for item in repo_docs]
+        else:
+            payload["notion"] = "written"
+            payload["notion_pages"] = written
+            if "opus_review_brief" in written:
+                payload["opus_review_brief"] = written["opus_review_brief"]
+            if summary.succeeded:
+                try:
+                    repo_snapshot = build_fallback_run_snapshot(
                         client,
                         config,
                         cwd=cwd,
@@ -2606,24 +2777,22 @@ def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
                         results=results,
                         summary=summary,
                     )
-                    payload["opus_review_brief"] = write_current_opus_review_brief_from_snapshot(
-                        client,
+                    try:
+                        unavailable_page_keys = active_page_unavailable_keys(client, config)
+                    except RuntimeError:
+                        unavailable_page_keys = ()
+                    repo_docs = sync_repo_docs_from_snapshot(
+                        cwd,
+                        repo_snapshot,
                         config,
-                        snapshot=fallback_snapshot,
-                        activate_gate=False,
-                        config_path=config_path,
+                        unavailable_page_keys=unavailable_page_keys,
                     )
-                except Exception as fallback_exc:
-                    payload["notion_fallback"] = "failed"
-                    payload["notion_fallback_error"] = str(fallback_exc)
+                except Exception as repo_exc:
+                    payload["repo_doc_sync"] = "failed"
+                    payload["repo_doc_sync_error"] = str(repo_exc)
                 else:
-                    payload["notion"] = "partial"
-                    payload["notion_fallback"] = "written"
-        else:
-            payload["notion"] = "written"
-            payload["notion_pages"] = written
-            if "opus_review_brief" in written:
-                payload["opus_review_brief"] = written["opus_review_brief"]
+                    payload["repo_doc_sync"] = "written"
+                    payload["repo_docs"] = [{"path": item.path, "marker": item.marker} for item in repo_docs]
     output_run_result(args.format, payload)
     return 0 if summary.succeeded else 1
 

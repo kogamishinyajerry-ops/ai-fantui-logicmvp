@@ -8,6 +8,7 @@ from unittest.mock import patch
 from tools.gsd_notion_sync import (
     CommandResult,
     NotionClient,
+    NotionWritebackTimeout,
     ReviewSnapshot,
     build_gate_update_properties,
     build_current_review_brief,
@@ -32,11 +33,13 @@ from tools.gsd_notion_sync import (
     ensure_live_active_pages,
     effective_default_plan,
     fetch_review_snapshot_from_repo_docs,
+    sync_repo_docs_from_snapshot,
     prune_stale_active_sync_page_blocks,
     page_matches_rendered_blocks,
     should_prefer_page_snapshot,
     summarize_results,
     sync_repo_documents,
+    build_local_run_snapshot,
     handle_run,
     handle_prepare_opus_review,
     upsert_managed_markdown_section,
@@ -1218,6 +1221,10 @@ Ran 189 tests in 20.897s
                     "tools.gsd_notion_sync.write_current_opus_review_brief_from_snapshot",
                     return_value={"intervention_kind": "当前无需 Opus 审查", "review_target": "P6 / P6-06"},
                 ) as fallback_mock,
+                patch(
+                    "tools.gsd_notion_sync.sync_repo_docs_from_snapshot",
+                    return_value=[],
+                ) as repo_sync_mock,
                 patch("tools.gsd_notion_sync.output_run_result") as output_mock,
             ):
                 exit_code = handle_run(args, config)
@@ -1229,11 +1236,189 @@ Ran 189 tests in 20.897s
         payload = output_mock.call_args.args[1]
         self.assertEqual("partial", payload["notion"])
         self.assertEqual("written", payload["notion_fallback"])
+        self.assertEqual("written", payload["repo_doc_sync"])
         self.assertIn("HTTP 404", payload["notion_error"])
         self.assertEqual("Succeeded", payload["status"])
         fallback_snapshot = fallback_mock.call_args.kwargs["snapshot"]
         self.assertEqual("P6-03 Freeze Demo Packet 自动快照同步", fallback_snapshot.latest_verified_plan)
         self.assertEqual("GitHub GSD automation 24239999999", fallback_snapshot.latest_success_run)
+        self.assertEqual(fallback_snapshot, repo_sync_mock.call_args.args[1])
+
+    def test_handle_run_success_syncs_repo_docs_from_success_snapshot(self):
+        args = argparse.Namespace(
+            cwd=".",
+            plan_id="P6-14 为 run 写回链增加超时 fallback",
+            title="GitHub GSD automation 24250000000",
+            command=["PYTHONPATH=src python3 -m pytest -q tests/test_gsd_notion_sync.py"],
+            dry_run=False,
+            opus_gate=False,
+            format="json",
+            config=str(Path(".planning/notion_control_plane.json")),
+        )
+        config = {"default_plan": "fallback-plan"}
+        results = [
+            CommandResult(
+                command=args.command[0],
+                returncode=0,
+                stdout="PASS",
+                stderr="",
+                started_at="2026-04-11T00:00:00+00:00",
+                ended_at="2026-04-11T00:00:05+00:00",
+            )
+        ]
+        success_snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="P6 正在执行",
+            latest_verified_plan="P6-14 为 run 写回链增加超时 fallback",
+            latest_success_run="GitHub GSD automation 24250000000",
+            latest_failed_run=None,
+            latest_passing_qa="GitHub GSD automation 24250000000 QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            with (
+                patch("tools.gsd_notion_sync.run_commands", return_value=results),
+                patch("tools.gsd_notion_sync.ensure_live_active_pages"),
+                patch("tools.gsd_notion_sync.write_notion_outcome", return_value={"opus_review_brief": {"intervention_kind": "当前无需 Opus 审查"}}),
+                patch("tools.gsd_notion_sync.build_fallback_run_snapshot", return_value=success_snapshot),
+                patch("tools.gsd_notion_sync.active_page_unavailable_keys", return_value=()),
+                patch("tools.gsd_notion_sync.sync_repo_docs_from_snapshot", return_value=[]) as repo_sync_mock,
+                patch("tools.gsd_notion_sync.output_run_result") as output_mock,
+            ):
+                exit_code = handle_run(args, config)
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(0, exit_code)
+        payload = output_mock.call_args.args[1]
+        self.assertEqual("written", payload["notion"])
+        self.assertEqual("written", payload["repo_doc_sync"])
+        self.assertEqual(success_snapshot, repo_sync_mock.call_args.args[1])
+
+    def test_handle_run_timeout_skips_followup_notion_calls_and_still_syncs_repo_docs(self):
+        args = argparse.Namespace(
+            cwd=".",
+            plan_id="P6-14 Add Timeout Fallback To Run Writeback",
+            title="P6-14 run writeback fallback baseline",
+            command=["PYTHONPATH=src python3 -m pytest -q tests/test_gsd_notion_sync.py"],
+            dry_run=False,
+            opus_gate=False,
+            format="json",
+            config=str(Path(".planning/notion_control_plane.json")),
+        )
+        config = {"default_plan": "fallback-plan"}
+        results = [
+            CommandResult(
+                command=args.command[0],
+                returncode=0,
+                stdout="PASS",
+                stderr="",
+                started_at="2026-04-11T00:00:00+00:00",
+                ended_at="2026-04-11T00:00:05+00:00",
+            )
+        ]
+        timeout_snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="Recovered locally after timeout.",
+            latest_verified_plan="P6-14 Add Timeout Fallback To Run Writeback",
+            latest_success_run="P6-14 run writeback fallback baseline",
+            latest_failed_run=None,
+            latest_passing_qa="P6-14 run writeback fallback baseline QA",
+            gate_page_id=None,
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            with (
+                patch("tools.gsd_notion_sync.run_commands", return_value=results),
+                patch("tools.gsd_notion_sync.ensure_live_active_pages"),
+                patch(
+                    "tools.gsd_notion_sync.write_notion_outcome",
+                    side_effect=NotionWritebackTimeout("Notion writeback exceeded 12s deadline."),
+                ),
+                patch("tools.gsd_notion_sync.build_local_run_snapshot", return_value=timeout_snapshot) as local_snapshot_mock,
+                patch("tools.gsd_notion_sync.build_fallback_run_snapshot") as network_fallback_mock,
+                patch("tools.gsd_notion_sync.write_current_opus_review_brief_from_snapshot") as brief_mock,
+                patch("tools.gsd_notion_sync.sync_repo_docs_from_snapshot", return_value=[]) as repo_sync_mock,
+                patch("tools.gsd_notion_sync.output_run_result") as output_mock,
+            ):
+                exit_code = handle_run(args, config)
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(0, exit_code)
+        payload = output_mock.call_args.args[1]
+        self.assertEqual("partial", payload["notion"])
+        self.assertEqual("skipped_after_timeout", payload["notion_fallback"])
+        self.assertEqual("written", payload["repo_doc_sync"])
+        self.assertIn("12s deadline", payload["notion_error"])
+        local_snapshot_mock.assert_called_once()
+        self.assertEqual(timeout_snapshot, repo_sync_mock.call_args.args[1])
+        network_fallback_mock.assert_not_called()
+        brief_mock.assert_not_called()
+
+    def test_build_local_run_snapshot_uses_repo_docs_without_notion_client(self):
+        results = [
+            CommandResult(
+                command="python3 -m unittest discover -s tests -p test_*.py",
+                returncode=0,
+                stdout="",
+                stderr="Ran 187 tests in 21.157s\n\nOK",
+                started_at="2026-04-10T00:00:00+00:00",
+                ended_at="2026-04-10T00:00:05+00:00",
+            )
+        ]
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            root = Path(tempdir)
+            freeze_path = root / "docs" / "freeze"
+            freeze_path.mkdir(parents=True)
+            (freeze_path / "2026-04-10-freeze-demo-packet.md").write_text(
+                "\n".join(
+                    [
+                        "# Freeze Packet",
+                        "",
+                        "- 当前阶段：`P6 Reconcile Control Tower And Freeze Demo Packet`",
+                        "- 当前已验证 Plan：`P6-13 Make Default Plan Follow The Active Phase`",
+                        "- 最近成功执行证据：`GitHub GSD automation 24250000000`",
+                        "- 当前 Gate：`OPUS-4.6 周期审查 Gate（Approved）`",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            snapshot = build_local_run_snapshot(
+                {"default_plan": "fallback-plan", "default_review_gate": "OPUS-4.6 周期审查 Gate"},
+                cwd=root,
+                plan_id="P6-14 Add Timeout Fallback To Run Writeback",
+                title="P6-14 run writeback fallback baseline",
+                results=results,
+                summary=summarize_results(results),
+            )
+
+        self.assertEqual("P6 Reconcile Control Tower And Freeze Demo Packet", snapshot.active_phase)
+        self.assertEqual("P6-14 Add Timeout Fallback To Run Writeback", snapshot.latest_verified_plan)
+        self.assertEqual("P6-14 run writeback fallback baseline", snapshot.latest_success_run)
 
     def test_build_fallback_run_snapshot_uses_compact_success_summary(self):
         results = [
