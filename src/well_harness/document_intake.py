@@ -482,6 +482,100 @@ def assess_intake_packet(packet: ControlSystemIntakePacket) -> dict[str, Any]:
     }
 
 
+def build_clarification_brief(packet: ControlSystemIntakePacket) -> dict[str, Any]:
+    report = assess_intake_packet(packet)
+    answered_map = {
+        answer.question_id: {
+            "answer": answer.answer.strip(),
+            "status": answer.status,
+        }
+        for answer in packet.clarification_answers
+        if answer.answer.strip()
+    }
+    follow_up_items = []
+    open_question_ids: list[str] = []
+    for question in default_workbench_clarification_questions():
+        answer_payload = answered_map.get(question.id)
+        status = "answered" if answer_payload and answer_payload["status"] == "answered" else "needs_answer"
+        if status != "answered":
+            open_question_ids.append(question.id)
+        follow_up_items.append(
+            {
+                "id": question.id,
+                "status": status,
+                "prompt": question.prompt,
+                "rationale": question.rationale,
+                "required_for": question.required_for,
+                "answer": answer_payload["answer"] if answer_payload else "",
+            }
+        )
+
+    if report["ready_for_spec_build"]:
+        gate_status = "ready"
+        gating_statement = (
+            "Clarification gate is clear. The intake packet can now advance into spec build, playback, diagnosis, and "
+            "knowledge capture."
+        )
+    elif open_question_ids and report["blocking_reasons"]:
+        gate_status = "blocked_by_schema_and_clarifications"
+        gating_statement = (
+            f"Spec build is blocked by {len(report['blocking_reasons'])} structural issue(s) and "
+            f"{len(open_question_ids)} unanswered clarification(s)."
+        )
+    elif open_question_ids:
+        gate_status = "blocked_by_clarifications"
+        gating_statement = (
+            f"Spec build is blocked until {len(open_question_ids)} clarification question(s) are answered."
+        )
+    else:
+        gate_status = "blocked_by_schema"
+        gating_statement = (
+            f"Clarifications are complete, but {len(report['blocking_reasons'])} structural issue(s) still block spec build."
+        )
+
+    next_actions = [
+        f"Answer clarification {item['id']}: {item['prompt']}"
+        for item in follow_up_items
+        if item["status"] != "answered"
+    ]
+    if report["blocking_reasons"]:
+        next_actions.extend(f"Fix schema blocker: {reason}" for reason in report["blocking_reasons"])
+    if not next_actions:
+        next_actions.append("Proceed to spec build, playback, fault diagnosis, or knowledge capture.")
+
+    return {
+        "system_id": packet.system_id,
+        "title": packet.title,
+        "objective": packet.objective,
+        "gate_status": gate_status,
+        "ready_for_spec_build": report["ready_for_spec_build"],
+        "gating_statement": gating_statement,
+        "open_question_count": len(open_question_ids),
+        "blocking_reason_count": len(report["blocking_reasons"]),
+        "source_documents": [
+            {
+                "id": document.id,
+                "kind": document.kind,
+                "title": document.title,
+                "role": document.role,
+                "location": document.location,
+            }
+            for document in packet.source_documents
+        ],
+        "follow_up_items": follow_up_items,
+        "blocking_reasons": report["blocking_reasons"],
+        "next_actions": next_actions,
+        "unlocks_after_completion": [
+            "spec_build",
+            "scenario_playback",
+            "fault_diagnosis",
+            "knowledge_capture",
+        ]
+        if report["ready_for_spec_build"]
+        else ["spec_build"],
+    }
+
+
 def render_intake_assessment_text(report: dict[str, Any]) -> str:
     lines = [
         f"system: {report['system_id']} - {report['title']}",
@@ -515,4 +609,40 @@ def render_intake_assessment_text(report: dict[str, Any]) -> str:
             f"  - {item['id']}: {item['prompt']}"
             for item in report["unanswered_clarifications"]
         )
+    return "\n".join(lines)
+
+
+def render_clarification_brief_text(brief: dict[str, Any]) -> str:
+    lines = [
+        f"system: {brief['system_id']} - {brief['title']}",
+        f"objective: {brief['objective']}",
+        f"gate_status: {brief['gate_status']}",
+        f"ready_for_spec_build: {'yes' if brief['ready_for_spec_build'] else 'no'}",
+        f"gating_statement: {brief['gating_statement']}",
+        (
+            f"open_questions={brief['open_question_count']} "
+            f"blocking_reasons={brief['blocking_reason_count']}"
+        ),
+    ]
+    if brief["source_documents"]:
+        lines.append("source_documents:")
+        lines.extend(
+            f"  - {item['id']} [{item['kind']}] role={item['role']} title={item['title']} location={item['location']}"
+            for item in brief["source_documents"]
+        )
+    lines.append("follow_up_items:")
+    lines.extend(
+        (
+            f"  - {item['id']} [{item['status']}] {item['prompt']}"
+            + (f" | answer={item['answer']}" if item["answer"] else "")
+            + f" | required_for={item['required_for']}"
+        )
+        for item in brief["follow_up_items"]
+    )
+    if brief["blocking_reasons"]:
+        lines.append("blocking_reasons:")
+        lines.extend(f"  - {reason}" for reason in brief["blocking_reasons"])
+    lines.append("next_actions:")
+    lines.extend(f"  - {item}" for item in brief["next_actions"])
+    lines.append(f"unlocks_after_completion: {', '.join(brief['unlocks_after_completion'])}")
     return "\n".join(lines)

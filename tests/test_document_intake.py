@@ -7,6 +7,7 @@ from pathlib import Path
 from well_harness.cli import main
 from well_harness.document_intake import (
     assess_intake_packet,
+    build_clarification_brief,
     intake_packet_from_dict,
     intake_template_payload,
     load_intake_packet,
@@ -40,6 +41,10 @@ class MixedDocumentIntakeTests(unittest.TestCase):
         self.assertEqual(report["unanswered_clarifications"], [])
         self.assertIn("generated_workbench_spec", report)
         self.assertEqual(report["generated_workbench_spec"]["system_id"], "custom_reverse_control_v1")
+        brief = build_clarification_brief(packet)
+        self.assertEqual("ready", brief["gate_status"])
+        self.assertEqual([], [item for item in brief["follow_up_items"] if item["status"] != "answered"])
+        self.assertIn("scenario_playback", brief["unlocks_after_completion"])
 
     def test_assess_intake_packet_surfaces_missing_clarifications_as_blocking_follow_up(self):
         payload = intake_template_payload()
@@ -121,6 +126,14 @@ class MixedDocumentIntakeTests(unittest.TestCase):
         self.assertIsNone(report["generated_workbench_spec"])
         self.assertGreaterEqual(len(report["unanswered_clarifications"]), 1)
         self.assertIn("component_state_domains", {item["id"] for item in report["unanswered_clarifications"]})
+        brief = build_clarification_brief(packet)
+        self.assertEqual("blocked_by_clarifications", brief["gate_status"])
+        self.assertEqual(3, brief["open_question_count"])
+        self.assertIn("spec build is blocked", brief["gating_statement"].lower())
+        self.assertIn(
+            "Answer clarification component_state_domains",
+            " ".join(brief["next_actions"]),
+        )
 
     def test_cli_can_render_intake_template_and_json_assessment(self):
         buffer = io.StringIO()
@@ -141,6 +154,16 @@ class MixedDocumentIntakeTests(unittest.TestCase):
         self.assertTrue(report["ready_for_spec_build"])
         self.assertTrue(report["includes_pdf_sources"])
         self.assertEqual(report["custom_signal_semantics"][1]["unit"], "psi")
+
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            exit_code = main(["intake", str(SYSTEM_INTAKE_PACKET_PATH), "--follow-up", "--format", "json"])
+        follow_up = json.loads(buffer.getvalue())
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual("ready", follow_up["gate_status"])
+        self.assertEqual(0, follow_up["open_question_count"])
+        self.assertIn("knowledge_capture", follow_up["unlocks_after_completion"])
 
     def test_cli_can_export_reference_spec_json(self):
         buffer = io.StringIO()

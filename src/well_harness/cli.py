@@ -7,8 +7,10 @@ from dataclasses import asdict
 from well_harness.demo import answer_demo_prompt, demo_answer_to_payload, render_demo_answer
 from well_harness.document_intake import (
     assess_intake_packet,
+    build_clarification_brief,
     intake_template_payload,
     load_intake_packet,
+    render_clarification_brief_text,
     render_intake_assessment_text,
 )
 from well_harness.fault_diagnosis import (
@@ -103,6 +105,11 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("text", "json"),
         default="text",
         help="Render the intake report as text or JSON.",
+    )
+    intake_parser.add_argument(
+        "--follow-up",
+        action="store_true",
+        help="Render an engineer-facing clarification brief instead of the basic intake assessment.",
     )
     playback_parser = subparsers.add_parser("playback", help="Compile an intake packet scenario into monitor-vs-time playback data")
     playback_parser.add_argument("packet_path", help="Path to a JSON intake packet.")
@@ -413,11 +420,11 @@ def main(argv: list[str] | None = None) -> int:
         if not args.packet_path:
             parser.error("packet_path is required unless --template is set")
         packet = load_intake_packet(args.packet_path)
-        report = assess_intake_packet(packet)
+        report = build_clarification_brief(packet) if args.follow_up else assess_intake_packet(packet)
         if args.format == "json":
             print(json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True))
         else:
-            print(render_intake_assessment_text(report))
+            print(render_clarification_brief_text(report) if args.follow_up else render_intake_assessment_text(report))
         return 0
     if args.command == "playback":
         packet = load_intake_packet(args.packet_path)

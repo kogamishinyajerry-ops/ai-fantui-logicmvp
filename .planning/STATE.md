@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-10 - P6 now treats the dashboard as the canonical live control-plane surface under partial Notion health, while repo-side handoff docs explicitly downgrade dead status/09C/freeze links instead of pretending those archived targets are still usable.
+Last activity: 2026-04-11 - P7-06 turns intake ambiguity into an engineer-facing clarification brief, so new-system onboarding now emits exact follow-up questions and unlock targets instead of stopping at a vague `not ready`.
 
 ## Current Position
 
@@ -24,7 +24,8 @@ Last activity: 2026-04-10 - P6 now treats the dashboard as the canonical live co
 - P6 remains the active control-plane reconciliation phase in Notion, but the repo-side baseline is now stable enough to resume targeted P7 workbench slices without reopening manual review.
 - `P7-01`, `P7-02`, and `P7-03` are now landed on `main` as the spec foundation, mixed-doc intake layer, and first playback compiler for the future workbench.
 - `P7-04` is now landed on `main`: declared fault modes can be injected into playback traces to produce deterministic diagnosis artifacts with affected signals, blocked logic nodes, and optimization hints.
-- `P7-05` is now the next repo-side implementation slice: capture diagnosis + repair outcomes as reusable knowledge artifacts with explicit optimization guidance.
+- `P7-05` is now landed on `main`: diagnosis + repair outcomes can be captured as reusable knowledge artifacts with explicit optimization guidance.
+- `P7-06` is now landed locally: intake packets can emit a dedicated clarification follow-up brief that tells engineers exactly which unanswered questions still block spec build and what unlocks after those answers arrive.
 - `P5-01 GitHub 可验证 demo smoke suite` is now implemented locally: `tools/demo_path_smoke.py` covers bridge prompt, extreme clamp, mode-switch reset, and expected invalid-input behavior through the HTTP demo surface.
 - The shared validation suite now includes 8 checks, with `demo_path_smoke` added as the new GitHub-verifiable presenter-demo confidence layer.
 - `P5-02 最新交互胜出 demo 请求仲裁` is now implemented locally: the browser shell ignores stale prompt or lever responses once a newer interaction has started, so rapid edits no longer let an older response repaint the shared result surface.
@@ -51,7 +52,8 @@ Last activity: 2026-04-10 - P6 now treats the dashboard as the canonical live co
 - A new requirement set now exists for strict engineer-facing acceptance playback, fault injection and diagnosis, knowledge capture, and future-system generalization; this is large enough to require a new phase instead of being folded into demo freeze work.
 - `P7-01` has an initial local foundation: `src/well_harness/system_spec.py` now defines a reusable control-system workbench spec and captures the current thrust-reverser chain as the first reference system, including acceptance-scenario, fault-mode, and clarification-question scaffolding.
 - `P7-02` is already implemented on `main`: `src/well_harness/document_intake.py` defines a mixed-document intake packet, readiness assessment, and CLI export surface so future systems can arrive as PDF/markdown-heavy packets with explicit system-defined signal semantics.
-- `P7-03 编译 intake scenario 到 monitor-vs-time playback trace` is now in progress locally: the next strict workbench slice turns a ready intake packet into sampled signal/logic playback data without involving the cockpit UI.
+- `P7-03` through `P7-06` now form a contiguous repo-side workbench chain: ready packets can progress from intake -> playback -> fault diagnosis -> knowledge capture, while incomplete packets can now stop at a structured clarification brief instead of drifting into guesswork.
+- `P7-06` extends that onboarding path so incomplete packets no longer fail silently; the CLI can now export an explicit engineer follow-up brief from the same intake evidence packet.
 - Those two P7 slices are treated as seeded groundwork, not as authority to bypass the newly approved P6 reconciliation pass.
 
 ## Active Objective
