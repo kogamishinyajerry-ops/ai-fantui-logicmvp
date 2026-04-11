@@ -8,7 +8,6 @@
 - 最近成功执行证据：`P7-05 Knowledge artifact baseline`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
-- 当前 QA 摘要：`PASS. 1/1 shared validation checks pass.`
 - 当前结论：当前最高优先级是继续收口控制塔与 freeze/demo packet 的残余漂移，不是再加 demo 功能。
 - 当前唯一人工动作：继续自动开发；当前无需手动触发 Opus 4.6。
 
@@ -22,9 +21,9 @@
 ## 当前证据入口
 
 - [Notion 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
-- [01 当前状态（自动同步）](https://www.notion.so/33fc6894-2bed-811f-954a-f4537fa1f6e9)
-- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33fc6894-2bed-8189-9956-ee13f82b8bee)
-- [10 Freeze Demo Packet](https://www.notion.so/33fc6894-2bed-8144-8e01-f77e550e0d10)
+- [01 当前状态（自动同步）](https://www.notion.so/33fc6894-2bed-81b4-851c-e29c7eb8847d)
+- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33fc6894-2bed-819c-a863-e6404937775a)
+- [10 Freeze Demo Packet](https://www.notion.so/33fc6894-2bed-8133-a8d0-c0873aba72fc)
 - [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)
 - [GitHub Actions](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 

@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-11 - P7-06 turns intake ambiguity into an engineer-facing clarification brief, so new-system onboarding now emits exact follow-up questions and unlock targets instead of stopping at a vague `not ready`.
+Last activity: 2026-04-11 - P6-12 de-duplicates dashboard active-surface links, so the control-tower homepage no longer keeps stacking stale status / 09C / freeze child pages after replacement cycles.
 
 ## Current Position
 
@@ -49,6 +49,7 @@ Last activity: 2026-04-11 - P7-06 turns intake ambiguity into an engineer-facing
 - `P6-09 让 repo 入口感知 archived Notion 活跃页` is now implemented locally: repo-side coordination/freeze docs stop advertising dead Notion subpage links when the local integration sees those pages as archived, and instead explicitly route users through the dashboard plus GitHub evidence plane.
 - `P6-10 显式化 dashboard-only degraded mode` is now implemented locally: the Notion health validator and dashboard snapshot treat archived `status / 09C / freeze` pages plus the database surface as an explicit dashboard-only degraded mode instead of reporting a false full-health pass.
 - `P6-11 让 repo docs 跟随更新鲜的 dashboard 快照` is now implemented locally: repo-side handoff/freeze docs prefer the fresher dashboard page snapshot when local database queries lag behind the live GitHub-backed dashboard state, so repo docs can keep up with the current P6 baseline.
+- `P6-12 去重 dashboard 活动面入口` is now implemented locally: dashboard sync prunes stale `status / 09C / freeze` child-page blocks and treats preserved child pages/databases as non-authoritative for body equality, so the homepage can return to a single active control-plane entry.
 - A new requirement set now exists for strict engineer-facing acceptance playback, fault injection and diagnosis, knowledge capture, and future-system generalization; this is large enough to require a new phase instead of being folded into demo freeze work.
 - `P7-01` has an initial local foundation: `src/well_harness/system_spec.py` now defines a reusable control-system workbench spec and captures the current thrust-reverser chain as the first reference system, including acceptance-scenario, fault-mode, and clarification-question scaffolding.
 - `P7-02` is already implemented on `main`: `src/well_harness/document_intake.py` defines a mixed-document intake packet, readiness assessment, and CLI export surface so future systems can arrive as PDF/markdown-heavy packets with explicit system-defined signal semantics.

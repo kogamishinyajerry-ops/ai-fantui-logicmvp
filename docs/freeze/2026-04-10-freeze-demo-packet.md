@@ -9,14 +9,12 @@
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
-- 当前 QA 摘要：`PASS. 1/1 shared validation checks pass.`
-- 当前运行摘要：`1/1 shared validation checks pass.`
 - 当前冻结包的职责是对齐 repo / GitHub / Notion 三个证据面，而不是继续加产品表面。
 
 ## 当前冻结入口
 
-- [01 当前状态（自动同步）](https://www.notion.so/33fc6894-2bed-811f-954a-f4537fa1f6e9)
-- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33fc6894-2bed-8189-9956-ee13f82b8bee)
+- [01 当前状态（自动同步）](https://www.notion.so/33fc6894-2bed-81b4-851c-e29c7eb8847d)
+- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33fc6894-2bed-819c-a863-e6404937775a)
 - [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)
 - [GitHub Actions](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 

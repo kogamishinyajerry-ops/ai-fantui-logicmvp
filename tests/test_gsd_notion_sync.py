@@ -31,6 +31,8 @@ from tools.gsd_notion_sync import (
     build_fallback_run_snapshot,
     ensure_live_active_pages,
     fetch_review_snapshot_from_repo_docs,
+    prune_stale_active_sync_page_blocks,
+    page_matches_rendered_blocks,
     should_prefer_page_snapshot,
     summarize_results,
     sync_repo_documents,
@@ -156,6 +158,66 @@ Ran 189 tests in 20.897s
             persisted = config_path.read_text(encoding="utf-8")
             self.assertIn("new-status", persisted)
             self.assertIn("new-freeze", persisted)
+
+    def test_prune_stale_active_sync_page_blocks_removes_only_old_active_surface_children(self):
+        config = {
+            "pages": {
+                "dashboard": "dashboard-page",
+                "status": "current-status",
+                "opus_brief": "current-brief",
+                "freeze_packet": "current-freeze",
+            }
+        }
+        client = unittest.mock.Mock()
+        client.list_block_children.return_value = [
+            {"id": "current-status", "type": "child_page", "child_page": {"title": "01 当前状态（自动同步）"}},
+            {"id": "stale-status", "type": "child_page", "child_page": {"title": "01 当前状态（自动同步）"}},
+            {"id": "stale-brief", "type": "child_page", "child_page": {"title": "09C 当前 Opus 4.6 审查简报"}},
+            {"id": "other-page", "type": "child_page", "child_page": {"title": "别的页面"}},
+        ]
+
+        deleted = prune_stale_active_sync_page_blocks(client, config)
+
+        self.assertEqual(["stale-status", "stale-brief"], deleted)
+        delete_calls = [call.args[1] for call in client.request.call_args_list]
+        self.assertEqual(
+            ["/v1/blocks/stale-status", "/v1/blocks/stale-brief"],
+            delete_calls,
+        )
+
+    def test_page_matches_rendered_blocks_ignores_preserved_child_page_blocks(self):
+        client = unittest.mock.Mock()
+        client.list_block_children.return_value = [
+            {
+                "id": "callout-1",
+                "type": "callout",
+                "callout": {"rich_text": [{"plain_text": "AUTO-SYNCED DASHBOARD SNAPSHOT"}]},
+            },
+            {
+                "id": "bullet-1",
+                "type": "bulleted_list_item",
+                "bulleted_list_item": {"rich_text": [{"plain_text": "当前阶段：P6"}]},
+            },
+            {
+                "id": "child-status",
+                "type": "child_page",
+                "child_page": {"title": "01 当前状态（自动同步）"},
+            },
+        ]
+        rendered_blocks = [
+            {
+                "object": "block",
+                "type": "callout",
+                "callout": {"rich_text": [{"text": {"content": "AUTO-SYNCED DASHBOARD SNAPSHOT"}}]},
+            },
+            {
+                "object": "block",
+                "type": "bulleted_list_item",
+                "bulleted_list_item": {"rich_text": [{"text": {"content": "当前阶段：P6"}}]},
+            },
+        ]
+
+        self.assertTrue(page_matches_rendered_blocks(client, "dashboard-page", rendered_blocks))
 
     def test_clip_preserves_short_text_and_truncates_long_text(self):
         self.assertEqual("short", clip("short", limit=10))

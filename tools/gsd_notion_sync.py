@@ -60,6 +60,7 @@ ACTIVE_SYNC_PAGE_TITLES = {
     "opus_brief": "09C 当前 Opus 4.6 审查简报",
     "freeze_packet": "10 Freeze Demo Packet",
 }
+PRESERVED_CHILD_BLOCK_TYPES = {"child_page", "child_database"}
 DEFAULT_URLS = {
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions",
@@ -268,11 +269,10 @@ class NotionClient:
     def replace_page_body(self, page_id: str, blocks: list[dict[str, Any]]) -> None:
         # Preserve embedded child pages/databases on hub pages such as the root
         # dashboard; we only rebuild the writable narrative blocks around them.
-        preserved_block_types = {"child_page", "child_database"}
         for block in self.list_block_children(page_id):
             if block.get("archived") or block.get("in_trash"):
                 continue
-            if block.get("type") in preserved_block_types:
+            if block.get("type") in PRESERVED_CHILD_BLOCK_TYPES:
                 continue
             delete_block_if_present(self, block["id"])
         if blocks:
@@ -410,7 +410,11 @@ def block_plain_text(block: dict[str, Any]) -> str:
     rich = payload.get("rich_text", [])
     if not isinstance(rich, list):
         return ""
-    return "".join(item.get("plain_text", "") for item in rich)
+    return "".join(
+        item.get("plain_text") or item.get("text", {}).get("content", "")
+        for item in rich
+        if isinstance(item, dict)
+    )
 
 
 def load_control_plane_config(config_path: Path) -> dict[str, Any]:
@@ -602,6 +606,31 @@ def active_page_unavailable_keys(client: NotionClient, config: dict[str, Any]) -
         for key in ("status", "opus_brief", "freeze_packet")
         if key in config.get("pages", {}) and not page_is_writable(client, config, key)
     )
+
+
+def prune_stale_active_sync_page_blocks(client: NotionClient, config: dict[str, Any]) -> list[str]:
+    if "dashboard" not in config.get("pages", {}):
+        return []
+    current_page_ids = {
+        page_id(config, key)
+        for key in ACTIVE_SYNC_PAGE_TITLES
+        if key in config.get("pages", {})
+    }
+    active_titles = set(ACTIVE_SYNC_PAGE_TITLES.values())
+    deleted_block_ids: list[str] = []
+    for block in client.list_block_children(page_id(config, "dashboard")):
+        if block.get("archived") or block.get("in_trash"):
+            continue
+        if block.get("type") != "child_page":
+            continue
+        child_page = block.get("child_page") or {}
+        if child_page.get("title") not in active_titles:
+            continue
+        if block["id"] in current_page_ids:
+            continue
+        delete_block_if_present(client, block["id"])
+        deleted_block_ids.append(block["id"])
+    return deleted_block_ids
 
 
 def run_commands(commands: list[str], cwd: Path) -> list[CommandResult]:
@@ -974,7 +1003,11 @@ def fetch_review_snapshot(client: NotionClient, config: dict[str, Any]) -> Revie
 
 
 def page_text_lines(client: NotionClient, page_id_value: str) -> list[str]:
-    return [text.strip() for block in client.list_block_children(page_id_value) if (text := block_plain_text(block).strip())]
+    return [
+        text.strip()
+        for block in client.list_block_children(page_id_value)
+        if block.get("type") not in PRESERVED_CHILD_BLOCK_TYPES and (text := block_plain_text(block).strip())
+    ]
 
 
 def rendered_block_text_lines(blocks: list[dict[str, Any]]) -> list[str]:
@@ -2183,6 +2216,7 @@ def write_current_opus_review_brief_from_snapshot(
         config,
         unavailable_page_keys=tuple(unavailable_page_keys),
     )
+    prune_stale_active_sync_page_blocks(client, config)
     if not page_matches_rendered_blocks(client, dashboard_page_id, dashboard_blocks):
         client.replace_page_body(
             dashboard_page_id,
