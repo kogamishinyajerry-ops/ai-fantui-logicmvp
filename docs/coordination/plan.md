@@ -4,10 +4,11 @@
 ## 当前自动同步快照
 
 - 当前阶段：`P6 Reconcile Control Tower And Freeze Demo Packet`
-- 当前已验证 Plan：`P6-10 显式化 dashboard-only degraded mode`
-- 最近成功执行证据：`GitHub GSD automation 24243804732`
+- 当前已验证 Plan：`P7-05 捕获 fault resolution knowledge artifact`
+- 最近成功执行证据：`P7-05 Knowledge artifact baseline`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
+- 当前 QA 摘要：`PASS. 1/1 shared validation checks pass.`
 - 当前结论：当前最高优先级是继续收口控制塔与 freeze/demo packet 的残余漂移，不是再加 demo 功能。
 - 当前唯一人工动作：继续自动开发；当前无需手动触发 Opus 4.6。
 
@@ -21,7 +22,9 @@
 ## 当前证据入口
 
 - [Notion 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
-- 单独的 status / 09C / freeze 页面当前受 Notion archived page 限制；请优先使用控制塔 dashboard 和 GitHub 证据面。
+- [01 当前状态（自动同步）](https://www.notion.so/33ec6894-2bed-8121-a97f-f5da87c3f030)
+- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33ec6894-2bed-81d6-b11d-fcee3e3ea9ea)
+- [10 Freeze Demo Packet](https://www.notion.so/33ec6894-2bed-8122-9a56-dbf20c2fdf86)
 - [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)
 - [GitHub Actions](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 

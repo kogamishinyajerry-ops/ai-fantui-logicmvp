@@ -4,16 +4,19 @@
 ## 当前自动同步冻结摘要
 
 - 当前阶段：`P6 Reconcile Control Tower And Freeze Demo Packet`
-- 当前已验证 Plan：`P6-10 显式化 dashboard-only degraded mode`
-- 最近成功执行证据：`GitHub GSD automation 24243804732`
+- 当前已验证 Plan：`P7-05 捕获 fault resolution knowledge artifact`
+- 最近成功执行证据：`P7-05 Knowledge artifact baseline`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
+- 当前 QA 摘要：`PASS. 1/1 shared validation checks pass.`
+- 当前运行摘要：`1/1 shared validation checks pass.`
 - 当前冻结包的职责是对齐 repo / GitHub / Notion 三个证据面，而不是继续加产品表面。
 
 ## 当前冻结入口
 
-- 单独的 status / 09C 页面当前受 Notion archived page 限制；请优先使用控制塔 dashboard 和 GitHub 证据。
+- [01 当前状态（自动同步）](https://www.notion.so/33ec6894-2bed-8121-a97f-f5da87c3f030)
+- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33ec6894-2bed-81d6-b11d-fcee3e3ea9ea)
 - [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)
 - [GitHub Actions](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 

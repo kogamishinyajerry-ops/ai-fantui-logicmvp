@@ -7,12 +7,12 @@ locally and in GitHub Actions without adding runtime dependencies.
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import os
 import re
 import subprocess
-import urllib.error
-import urllib.request
+import ssl
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -152,25 +152,46 @@ class RepoDocSyncResult:
 class NotionClient:
     def __init__(self, token: str):
         self.token = token
+        self._connection: http.client.HTTPSConnection | None = None
+
+    def close(self) -> None:
+        if not self._connection:
+            return
+        try:
+            self._connection.close()
+        finally:
+            self._connection = None
+
+    def _get_connection(self) -> http.client.HTTPSConnection:
+        if self._connection is None:
+            self._connection = http.client.HTTPSConnection("api.notion.com", timeout=30)
+        return self._connection
 
     def request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         body = None if payload is None else json.dumps(payload, ensure_ascii=False).encode("utf-8")
-        request = urllib.request.Request(
-            "https://api.notion.com" + path,
-            data=body,
-            method=method,
-            headers={
-                "Authorization": f"Bearer {self.token}",
-                "Notion-Version": NOTION_VERSION,
-                "Content-Type": "application/json",
-            },
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=30) as response:
-                return json.load(response)
-        except urllib.error.HTTPError as error:
-            detail = error.read().decode("utf-8", "replace")
-            raise RuntimeError(f"Notion API request failed: HTTP {error.code} {path}: {detail}") from error
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Notion-Version": NOTION_VERSION,
+            "Content-Type": "application/json",
+            "Connection": "keep-alive",
+        }
+        for attempt in range(2):
+            connection = self._get_connection()
+            try:
+                connection.request(method, path, body=body, headers=headers)
+                response = connection.getresponse()
+                raw = response.read()
+                text = raw.decode("utf-8", "replace")
+                if 200 <= response.status < 300:
+                    if not text.strip():
+                        return {}
+                    return json.loads(text)
+                raise RuntimeError(f"Notion API request failed: HTTP {response.status} {path}: {text}")
+            except (http.client.HTTPException, OSError, ssl.SSLError) as error:
+                self.close()
+                if attempt == 0:
+                    continue
+                raise RuntimeError(f"Notion API request failed: network error {path}: {error}") from error
 
     def query_database(
         self,
@@ -245,10 +266,15 @@ class NotionClient:
             cursor = data.get("next_cursor")
 
     def replace_page_body(self, page_id: str, blocks: list[dict[str, Any]]) -> None:
+        # Preserve embedded child pages/databases on hub pages such as the root
+        # dashboard; we only rebuild the writable narrative blocks around them.
+        preserved_block_types = {"child_page", "child_database"}
         for block in self.list_block_children(page_id):
             if block.get("archived") or block.get("in_trash"):
                 continue
-            self.request("DELETE", f"/v1/blocks/{block['id']}")
+            if block.get("type") in preserved_block_types:
+                continue
+            delete_block_if_present(self, block["id"])
         if blocks:
             self.request(
                 "PATCH",
@@ -442,6 +468,10 @@ def config_url(config: dict[str, Any], key: str) -> str:
     return config["urls"][key]
 
 
+def repo_blob_url(config: dict[str, Any], repo_relative_path: str) -> str:
+    return f"{config_url(config, 'github_repo')}/blob/main/{repo_relative_path}"
+
+
 def is_missing_page_error(message: str) -> bool:
     lowered = message.lower()
     return (
@@ -454,6 +484,29 @@ def is_missing_page_error(message: str) -> bool:
 
 def is_archived_page_write_error(message: str) -> bool:
     return "can't edit block that is archived" in message.lower()
+
+
+def is_rate_limited_error(message: str) -> bool:
+    lowered = message.lower()
+    return "http 429" in lowered or "rate_limited" in lowered or "rate limited" in lowered
+
+
+def delete_block_if_present(client: NotionClient, block_id: str) -> None:
+    try:
+        client.request("DELETE", f"/v1/blocks/{block_id}")
+    except RuntimeError as exc:
+        if is_missing_page_error(str(exc)) or is_archived_page_write_error(str(exc)):
+            return
+        raise
+
+
+def archive_page_if_present(client: NotionClient, page_id_value: str) -> None:
+    try:
+        client.archive_page(page_id_value)
+    except RuntimeError as exc:
+        if is_missing_page_error(str(exc)) or is_archived_page_write_error(str(exc)):
+            return
+        raise
 
 
 def ensure_live_active_pages(
@@ -492,6 +545,45 @@ def ensure_live_active_pages(
     if replacements:
         save_control_plane_config(config_path, config)
     return replacements
+
+
+def replace_active_sync_page(
+    client: NotionClient,
+    config: dict[str, Any],
+    *,
+    key: str,
+    title: str,
+    blocks: list[dict[str, Any]],
+    config_path: Path | None = None,
+) -> str:
+    previous_id = config.get("pages", {}).get(key)
+    if previous_id:
+        try:
+            if page_matches_rendered_blocks(client, previous_id, blocks):
+                return previous_id
+        except RuntimeError as exc:
+            if not is_missing_page_error(str(exc)):
+                raise
+    new_id = client.create_child_page(page_id(config, "dashboard"), title)
+    if blocks:
+        client.request(
+            "PATCH",
+            f"/v1/blocks/{new_id}/children",
+            {"children": blocks, "position": {"type": "start"}},
+        )
+    config["pages"][key] = new_id
+    if config_path is not None:
+        save_control_plane_config(config_path, config)
+    if previous_id and previous_id != new_id:
+        try:
+            page = client.get_page(previous_id)
+        except RuntimeError as exc:
+            if not is_missing_page_error(str(exc)):
+                raise
+        else:
+            if not page.get("archived") and not page.get("in_trash"):
+                archive_page_if_present(client, previous_id)
+    return new_id
 
 
 def page_is_writable(client: NotionClient, config: dict[str, Any], key: str) -> bool:
@@ -885,6 +977,14 @@ def page_text_lines(client: NotionClient, page_id_value: str) -> list[str]:
     return [text.strip() for block in client.list_block_children(page_id_value) if (text := block_plain_text(block).strip())]
 
 
+def rendered_block_text_lines(blocks: list[dict[str, Any]]) -> list[str]:
+    return [text.strip() for block in blocks if (text := block_plain_text(block).strip())]
+
+
+def page_matches_rendered_blocks(client: NotionClient, page_id_value: str, blocks: list[dict[str, Any]]) -> bool:
+    return page_text_lines(client, page_id_value) == rendered_block_text_lines(blocks)
+
+
 def page_prefixed_value(lines: list[str], prefix: str) -> str | None:
     normalized_prefixes = {prefix, prefix.lstrip("- ").lstrip("0123456789. ")}
     for line in lines:
@@ -1052,21 +1152,48 @@ def github_run_number(text: str | None) -> int:
     return int(match.group(1)) if match else -1
 
 
+def snapshot_quality(snapshot: ReviewSnapshot) -> int:
+    score = 0
+    if snapshot.active_phase and snapshot.active_phase != "未识别活动 phase":
+        score += 2
+    if snapshot.latest_verified_plan:
+        score += 1
+    if snapshot.latest_success_run:
+        score += 3
+    if snapshot.gate_status and snapshot.gate_status != "Standby":
+        score += 1
+    if snapshot.latest_passing_qa_summary:
+        score += 1
+    if snapshot.latest_success_run_notes:
+        score += 1
+    return score
+
+
+def should_prefer_snapshot(
+    primary_snapshot: ReviewSnapshot,
+    candidate_snapshot: ReviewSnapshot,
+    config: dict[str, Any],
+) -> bool:
+    candidate_run = github_run_number(candidate_snapshot.latest_success_run)
+    primary_run = github_run_number(primary_snapshot.latest_success_run)
+    if candidate_run > primary_run:
+        return True
+    default_plan = config.get("default_plan")
+    if (
+        default_plan
+        and candidate_snapshot.latest_verified_plan == default_plan
+        and primary_snapshot.latest_verified_plan != default_plan
+    ):
+        return True
+    return snapshot_quality(candidate_snapshot) > snapshot_quality(primary_snapshot)
+
+
 def should_prefer_page_snapshot(
     primary_snapshot: ReviewSnapshot,
     page_snapshot: ReviewSnapshot,
     config: dict[str, Any],
 ) -> bool:
-    page_run = github_run_number(page_snapshot.latest_success_run)
-    primary_run = github_run_number(primary_snapshot.latest_success_run)
-    if page_run > primary_run:
-        return True
-    default_plan = config.get("default_plan")
-    return bool(
-        default_plan
-        and page_snapshot.latest_verified_plan == default_plan
-        and primary_snapshot.latest_verified_plan != default_plan
-    )
+    return should_prefer_snapshot(primary_snapshot, page_snapshot, config)
 
 
 def build_fallback_run_snapshot(
@@ -1085,6 +1212,13 @@ def build_fallback_run_snapshot(
         if not is_missing_page_error(str(exc)):
             raise
         snapshot = fetch_review_snapshot_from_repo_docs(cwd, config)
+    else:
+        try:
+            repo_snapshot = fetch_review_snapshot_from_repo_docs(cwd, config)
+        except RuntimeError:
+            repo_snapshot = None
+        if repo_snapshot and should_prefer_snapshot(snapshot, repo_snapshot, config):
+            snapshot = repo_snapshot
     compact_success = derive_compact_success_summary(results) if summary.succeeded else None
     if summary.succeeded:
         return ReviewSnapshot(
@@ -1418,6 +1552,76 @@ def render_dashboard_blocks(
         blocks.append(paragraph_parts_block([notion_text("GitHub Repo / ai-fantui-logicmvp", config_url(config, "github_repo"))]))
     if config.get("urls", {}).get("github_actions"):
         blocks.append(paragraph_parts_block([notion_text("GitHub Actions / GSD Automation Loop", config_url(config, "github_actions"))]))
+    evidence_blocks: list[dict[str, Any]] = []
+    available_databases = config.get("databases", {})
+    evidence_keys = tuple(key for key in ("plans", "runs", "qa", "gates", "gaps", "assets") if key in available_databases)
+    if evidence_keys:
+        evidence_blocks = [divider_block(), heading_block("实时证据入口")]
+        evidence_blocks.extend(database_link_paragraph_block(config, key) for key in evidence_keys)
+    blocks.extend(
+        [
+            divider_block(),
+            heading_block("文档定位"),
+            bullet_block("这是 AI FANTUI LogicMVP 的 live control plane，而不只是一个临时状态页。"),
+            bullet_block("首页负责统一当前真值、历史脉络、证据入口、人工 gate 边界和冻结入口。"),
+            bullet_block("Notion 承担流程控制面、审计面和追溯面；代码真值始终保留在 GitHub / repo。"),
+            bullet_block("当某些独立子页或数据库因权限 / archived 状态不可写时，dashboard 仍然是当前可依赖的第一入口。"),
+            divider_block(),
+            heading_block("设计原则"),
+            bullet_block("GitHub / repo 是代码与实现真值，不在 Notion 存源码副本。"),
+            bullet_block("GitHub Actions 与共享验证套件是自动执行证据面，不把本地终端输出当成主证据。"),
+            bullet_block("Opus 4.6 只承担主观 gate / phase closeout 审查，不替代自动化验证。"),
+            bullet_block("09C 只输出当下需要的介入请求；没有 review need 时，默认动作就是继续自动开发。"),
+            divider_block(),
+            heading_block("五层架构"),
+            bullet_block("第 1 层 Control Plane：dashboard、Review Gate、Gap、状态页和冻结包。"),
+            bullet_block("第 2 层 Execution Plane：本地执行器 + GitHub Actions + 共享 validation suite。"),
+            bullet_block("第 3 层 Review Plane：09C 当前审查简报 + 手动触发的 Opus 4.6。"),
+            bullet_block("第 4 层 Code Truth Plane：repo、测试、fixtures、控制逻辑与 workbench 代码。"),
+            bullet_block("第 5 层 Artifact Plane：freeze packet、diagnosis artifact、knowledge artifact 与 repo archive。"),
+            divider_block(),
+            heading_block("真相源与职责边界"),
+            bullet_block("控制逻辑、诊断逻辑和回归保护以 repo 为准；Notion 不复制这类代码真值。"),
+            bullet_block("Notion 记录 phase / plan / gate / gap / 审查结论 / 证据入口，并负责把历史脉络组织成可审计视图。"),
+            bullet_block("repo 文档是 handoff / archive 视图；真正审查时仍应回到 Notion 页面与 GitHub 证据面。"),
+            bullet_block("Opus 4.6 审查请求必须只依赖 Notion 页面和 GitHub 仓库，不得引用本地终端文件。"),
+            *evidence_blocks,
+            divider_block(),
+            heading_block("历史总览（自动同步）"),
+            bullet_block("P0：建立 AI FANTUI LogicMVP 控制塔，把 GitHub / repo 作为代码真值，把 Notion 作为控制面。"),
+            bullet_block("P1：打通本地 / GitHub Actions / Notion 的执行、QA 与 Gap 回写闭环。"),
+            bullet_block("P2：把 Opus 4.6 审查协议收成 Notion + GitHub-only 的证据边界。"),
+            bullet_block("P3：压低控制面漂移，让 09C、Review Gate、legacy artifact retirement 与 GitHub 证据保持同步。"),
+            bullet_block("P4：把 cockpit demo 收成 presenter-ready，统一首屏叙事、truth boundary 和解释面。"),
+            bullet_block("P5：完成 edge-case hardening、L4 / TRA / VDT 语义修复，以及受控状态 timeline 监控。"),
+            bullet_block("P6：修复控制塔与 freeze packet 的历史漂移，让 dashboard 成为 degraded mode 下的 live truth。"),
+            bullet_block("P7：开始把项目扩成 spec-driven control analysis workbench，支持 intake、playback、fault diagnosis 和 knowledge capture。"),
+            divider_block(),
+            heading_block("P7 Workbench 历史"),
+            bullet_block("P7-01：建立 reusable control-system spec foundation。"),
+            bullet_block("P7-02：建立 mixed-doc / PDF intake packet 与 readiness assessment。"),
+            bullet_block("P7-03：把 intake scenario 编译成 monitor-vs-time playback trace。"),
+            bullet_block("P7-04：把 fault mode 注入 playback 并生成链路诊断报告。"),
+            bullet_block("P7-05：把 diagnosis + repair outcome 收成 reusable knowledge artifact。"),
+            divider_block(),
+            heading_block("标准闭环"),
+            number_block("按 roadmap / default plan 选择当前实现切片，在 repo 中完成代码、测试和验证命令。"),
+            number_block("把执行结果回写到 Run / QA / Gap / Gate，并同步 dashboard、09C 与 freeze packet。"),
+            number_block("如果没有 open gap 且 Gate 不在 Awaiting Opus 4.6，则继续自动开发，不额外触发主观审查。"),
+            number_block("只有在 phase 收口、阻塞 gap、显式 gate 等场景下，才通过 09C 手动触发 Opus 4.6。"),
+            number_block("通过后的结论要回写 Review Gate / Gap / repo handoff，让历史链路保持可追溯。"),
+        ]
+    )
+    if config.get("urls", {}).get("github_repo"):
+        blocks.extend(
+            [
+                divider_block(),
+                heading_block("历史资料入口"),
+                paragraph_parts_block([notion_text("开发历史回顾（repo archive）", repo_blob_url(config, "docs/freeze/2026-04-09-development-history-review.md"))]),
+                paragraph_parts_block([notion_text("冻结基线包（repo archive）", repo_blob_url(config, "docs/freeze/2026-04-10-freeze-demo-packet.md"))]),
+                paragraph_parts_block([notion_text("P7 Phase Plans（repo archive）", repo_blob_url(config, ".planning/phases/07-build-a-spec-driven-control-analysis-workbench/"))]),
+            ]
+        )
     return blocks
 
 
@@ -1819,7 +2023,7 @@ def upsert_managed_page_section(
         for block in children[start_index:end_index]:
             if block.get("archived") or block.get("in_trash"):
                 continue
-            client.request("DELETE", f"/v1/blocks/{block['id']}")
+            delete_block_if_present(client, block["id"])
     client.request(
         "PATCH",
         f"/v1/blocks/{page_id_value}/children",
@@ -1867,6 +2071,7 @@ def write_current_opus_review_brief(
     config: dict[str, Any],
     *,
     activate_gate: bool,
+    config_path: Path | None = None,
 ) -> dict[str, Any]:
     snapshot = fetch_review_snapshot(client, config)
     return write_current_opus_review_brief_from_snapshot(
@@ -1874,6 +2079,7 @@ def write_current_opus_review_brief(
         config,
         snapshot=snapshot,
         activate_gate=activate_gate,
+        config_path=config_path,
     )
 
 
@@ -1883,6 +2089,7 @@ def write_current_opus_review_brief_from_snapshot(
     *,
     snapshot: ReviewSnapshot,
     activate_gate: bool,
+    config_path: Path | None = None,
 ) -> dict[str, Any]:
     effective_snapshot = (
         ReviewSnapshot(
@@ -1906,7 +2113,16 @@ def write_current_opus_review_brief_from_snapshot(
     )
     brief = build_current_review_brief(effective_snapshot, config, force_review=activate_gate)
     unavailable_page_keys: list[str] = []
-    if not page_is_writable(client, config, "opus_brief"):
+    if config_path is not None and "opus_brief" in config.get("pages", {}):
+        brief_page_id = replace_active_sync_page(
+            client,
+            config,
+            key="opus_brief",
+            title=brief.page_title,
+            blocks=render_current_review_brief_blocks(brief, effective_snapshot, config),
+            config_path=config_path,
+        )
+    elif not page_is_writable(client, config, "opus_brief"):
         unavailable_page_keys.append("opus_brief")
         brief_page_id = None
     else:
@@ -1921,11 +2137,20 @@ def write_current_opus_review_brief_from_snapshot(
             brief_page_id = None
     dashboard_page_id = page_id(config, "dashboard")
     client.update_page_properties(dashboard_page_id, {"title": title_value("AI FANTUI LogicMVP 控制塔")})
-    if not page_is_writable(client, config, "status"):
+    if config_path is None and not page_is_writable(client, config, "status"):
         unavailable_page_keys.append("status")
-    if not page_is_writable(client, config, "freeze_packet"):
+    if config_path is None and not page_is_writable(client, config, "freeze_packet"):
         unavailable_page_keys.append("freeze_packet")
-    if "status" not in unavailable_page_keys:
+    if config_path is not None and "status" in config.get("pages", {}):
+        replace_active_sync_page(
+            client,
+            config,
+            key="status",
+            title="01 当前状态（自动同步）",
+            blocks=render_status_page_blocks(brief, effective_snapshot, config),
+            config_path=config_path,
+        )
+    elif "status" not in unavailable_page_keys:
         status_page_id = page_id(config, "status")
         try:
             client.update_page_properties(status_page_id, {"title": title_value("01 当前状态（自动同步）")})
@@ -1934,7 +2159,16 @@ def write_current_opus_review_brief_from_snapshot(
             if not (is_missing_page_error(str(exc)) or is_archived_page_write_error(str(exc))):
                 raise
             unavailable_page_keys.append("status")
-    if "freeze_packet" not in unavailable_page_keys:
+    if config_path is not None and "freeze_packet" in config.get("pages", {}):
+        replace_active_sync_page(
+            client,
+            config,
+            key="freeze_packet",
+            title="10 Freeze Demo Packet",
+            blocks=render_freeze_packet_blocks(brief, effective_snapshot, config),
+            config_path=config_path,
+        )
+    elif "freeze_packet" not in unavailable_page_keys:
         freeze_packet_page_id = page_id(config, "freeze_packet")
         try:
             client.update_page_properties(freeze_packet_page_id, {"title": title_value("10 Freeze Demo Packet")})
@@ -1943,15 +2177,17 @@ def write_current_opus_review_brief_from_snapshot(
             if not (is_missing_page_error(str(exc)) or is_archived_page_write_error(str(exc))):
                 raise
             unavailable_page_keys.append("freeze_packet")
-    client.replace_page_body(
-        dashboard_page_id,
-        render_dashboard_blocks(
-            brief,
-            effective_snapshot,
-            config,
-            unavailable_page_keys=tuple(unavailable_page_keys),
-        ),
+    dashboard_blocks = render_dashboard_blocks(
+        brief,
+        effective_snapshot,
+        config,
+        unavailable_page_keys=tuple(unavailable_page_keys),
     )
+    if not page_matches_rendered_blocks(client, dashboard_page_id, dashboard_blocks):
+        client.replace_page_body(
+            dashboard_page_id,
+            dashboard_blocks,
+        )
 
     if snapshot.gate_page_id:
         client.update_page_properties(
@@ -2000,6 +2236,7 @@ def write_notion_outcome(
     results: list[CommandResult],
     summary: RunSummary,
     opus_gate: bool,
+    config_path: Path | None = None,
 ) -> dict[str, Any]:
     started_at = results[0].started_at if results else utc_now()
     ended_at = results[-1].ended_at if results else utc_now()
@@ -2086,6 +2323,7 @@ def write_notion_outcome(
                 client,
                 config,
                 activate_gate=False,
+                config_path=config_path,
             )
 
     if opus_gate:
@@ -2104,7 +2342,12 @@ def write_notion_outcome(
             },
         )
         written["gate"] = gate_page_id
-        written["opus_review_brief"] = write_current_opus_review_brief(client, config, activate_gate=True)
+        written["opus_review_brief"] = write_current_opus_review_brief(
+            client,
+            config,
+            activate_gate=True,
+            config_path=config_path,
+        )
 
     return written
 
@@ -2263,6 +2506,7 @@ def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
                 results=results,
                 summary=summary,
                 opus_gate=args.opus_gate,
+                config_path=config_path,
             )
         except Exception as exc:
             payload["notion"] = "failed"
@@ -2283,6 +2527,7 @@ def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
                         config,
                         snapshot=fallback_snapshot,
                         activate_gate=False,
+                        config_path=config_path,
                     )
                 except Exception as fallback_exc:
                     payload["notion_fallback"] = "failed"
@@ -2304,18 +2549,31 @@ def handle_prepare_opus_review(args: argparse.Namespace, config: dict[str, Any])
     if not token:
         raise SystemExit("NOTION_API_KEY is required for prepare-opus-review.")
     config_path = Path(getattr(args, "config", DEFAULT_CONFIG_PATH))
+    cwd = Path.cwd().resolve()
     client = NotionClient(token)
     try:
         snapshot = fetch_review_snapshot(client, config)
     except RuntimeError as exc:
-        if not is_missing_database_error(str(exc)):
+        if not (is_missing_database_error(str(exc)) or is_rate_limited_error(str(exc))):
             raise
+        page_snapshot = None
         try:
-            snapshot = fetch_review_snapshot_from_pages(client, config)
+            page_snapshot = fetch_review_snapshot_from_pages(client, config)
         except RuntimeError as page_exc:
-            if not is_missing_page_error(str(page_exc)):
+            if not (is_missing_page_error(str(page_exc)) or is_rate_limited_error(str(page_exc))):
                 raise
-            snapshot = fetch_review_snapshot_from_repo_docs(Path.cwd().resolve(), config)
+        try:
+            repo_snapshot = fetch_review_snapshot_from_repo_docs(cwd, config)
+        except RuntimeError:
+            repo_snapshot = None
+        if page_snapshot and repo_snapshot:
+            snapshot = repo_snapshot if should_prefer_snapshot(page_snapshot, repo_snapshot, config) else page_snapshot
+        elif page_snapshot:
+            snapshot = page_snapshot
+        elif repo_snapshot:
+            snapshot = repo_snapshot
+        else:
+            raise RuntimeError("Unable to derive a review snapshot from pages or repo docs.")
     effective_snapshot = (
         snapshot
         if not args.activate_gate
@@ -2357,6 +2615,7 @@ def handle_prepare_opus_review(args: argparse.Namespace, config: dict[str, Any])
             config,
             snapshot=effective_snapshot,
             activate_gate=args.activate_gate,
+            config_path=config_path,
         )
     output_review_result(args.format, payload)
     return 0
@@ -2367,22 +2626,33 @@ def handle_sync_repo_docs(args: argparse.Namespace, config: dict[str, Any]) -> i
     if not token:
         raise SystemExit("NOTION_API_KEY is required for sync-repo-docs.")
     client = NotionClient(token)
+    cwd = Path(args.cwd).resolve()
     snapshot: ReviewSnapshot | None = None
     try:
         snapshot = fetch_review_snapshot(client, config)
     except RuntimeError as exc:
-        if not is_missing_database_error(str(exc)):
+        if not (is_missing_database_error(str(exc)) or is_rate_limited_error(str(exc))):
             raise
-        snapshot = None
+        page_snapshot = None
         for fetcher in (fetch_review_snapshot_from_pages, fetch_review_snapshot_from_dashboard_page):
             try:
-                snapshot = fetcher(client, config)
+                page_snapshot = fetcher(client, config)
                 break
             except RuntimeError as page_exc:
-                if not is_missing_page_error(str(page_exc)):
+                if not (is_missing_page_error(str(page_exc)) or is_rate_limited_error(str(page_exc))):
                     raise
-        if snapshot is None:
-            snapshot = fetch_review_snapshot_from_repo_docs(Path(args.cwd).resolve(), config)
+        try:
+            repo_snapshot = fetch_review_snapshot_from_repo_docs(cwd, config)
+        except RuntimeError:
+            repo_snapshot = None
+        if page_snapshot and repo_snapshot:
+            snapshot = repo_snapshot if should_prefer_snapshot(page_snapshot, repo_snapshot, config) else page_snapshot
+        elif page_snapshot:
+            snapshot = page_snapshot
+        elif repo_snapshot:
+            snapshot = repo_snapshot
+        else:
+            raise RuntimeError("Unable to derive a repo-doc snapshot from pages or repo docs.")
     else:
         page_snapshot = None
         for fetcher in (fetch_review_snapshot_from_pages, fetch_review_snapshot_from_dashboard_page):
@@ -2390,14 +2660,19 @@ def handle_sync_repo_docs(args: argparse.Namespace, config: dict[str, Any]) -> i
                 page_snapshot = fetcher(client, config)
                 break
             except RuntimeError as page_exc:
-                if not is_missing_page_error(str(page_exc)):
+                if not (is_missing_page_error(str(page_exc)) or is_rate_limited_error(str(page_exc))):
                     raise
         if page_snapshot and should_prefer_page_snapshot(snapshot, page_snapshot, config):
             snapshot = page_snapshot
     brief = build_current_review_brief(snapshot, config)
-    unavailable_page_keys = active_page_unavailable_keys(client, config)
+    try:
+        unavailable_page_keys = active_page_unavailable_keys(client, config)
+    except RuntimeError as exc:
+        if not is_rate_limited_error(str(exc)):
+            raise
+        unavailable_page_keys = ()
     synced = sync_repo_documents(
-        Path(args.cwd).resolve(),
+        cwd,
         brief,
         snapshot,
         config,

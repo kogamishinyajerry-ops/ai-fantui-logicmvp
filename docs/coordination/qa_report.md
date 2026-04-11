@@ -5,11 +5,13 @@
 
 - 结论：PASS；当前稳定基线由 GitHub-backed validation evidence 支撑。
 - 当前阶段：`P6 Reconcile Control Tower And Freeze Demo Packet`
-- 当前已验证 Plan：`P6-10 显式化 dashboard-only degraded mode`
-- 最近成功执行证据：`GitHub GSD automation 24243804732`
+- 当前已验证 Plan：`P7-05 捕获 fault resolution knowledge artifact`
+- 最近成功执行证据：`P7-05 Knowledge artifact baseline`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
+- 当前 QA 摘要：`PASS. 1/1 shared validation checks pass.`
+- 当前运行摘要：`1/1 shared validation checks pass.`
 - `manual browser QA` 不再是当前审批规则；相关历史记录只保留为 presenter guidance / 历史上下文。
 
 ## 当前证据入口

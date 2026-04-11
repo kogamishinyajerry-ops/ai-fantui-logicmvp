@@ -4,16 +4,20 @@
 ## 当前自动同步交接基线
 
 - 活动 phase：`P6 Reconcile Control Tower And Freeze Demo Packet`
-- 当前已验证 Plan：`P6-10 显式化 dashboard-only degraded mode`
-- 最近成功执行证据：`GitHub GSD automation 24243804732`
+- 当前已验证 Plan：`P7-05 捕获 fault resolution knowledge artifact`
+- 最近成功执行证据：`P7-05 Knowledge artifact baseline`
+- 当前 QA 摘要：`PASS. 1/1 shared validation checks pass.`
+- 当前运行摘要：`1/1 shared validation checks pass.`
 - 当前 demo 基线已经稳定，P6 的任务是把控制塔、freeze packet 和 repo-side handoff 资料统一到同一份 GitHub-backed 真值。
 - 当前不继续扩大 P7 的实现面；P7 groundwork 继续保留，但执行顺序仍以 P6 收口优先。
 
 ## 恢复工作时先看
 
 1. [AI FANTUI LogicMVP 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
-2. 单独的 status / 09C / freeze 页面当前受 Notion archived page 限制；先以控制塔 dashboard 为准。
-3. [GitHub Actions / GSD Automation Loop](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
+2. [01 当前状态（自动同步）](https://www.notion.so/33ec6894-2bed-8121-a97f-f5da87c3f030)
+3. [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33ec6894-2bed-81d6-b11d-fcee3e3ea9ea)
+4. [10 Freeze Demo Packet](https://www.notion.so/33ec6894-2bed-8122-9a56-dbf20c2fdf86)
+5. [GitHub Actions / GSD Automation Loop](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 
 ## 当前交接结论
 

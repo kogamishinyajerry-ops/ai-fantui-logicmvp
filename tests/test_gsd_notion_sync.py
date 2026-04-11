@@ -384,6 +384,12 @@ Ran 189 tests in 20.897s
         self.assertIn("P6-01 同步控制塔真值与 freeze packet 基线", joined)
         self.assertIn("当前无需 Opus 审查", joined)
         self.assertIn("继续自动开发；当前无需手动触发 Opus 4.6。", joined)
+        self.assertIn("文档定位", joined)
+        self.assertIn("五层架构", joined)
+        self.assertIn("实时证据入口", joined)
+        self.assertIn("历史总览（自动同步）", joined)
+        self.assertIn("标准闭环", joined)
+        self.assertIn("P7-05：把 diagnosis + repair outcome 收成 reusable knowledge artifact。", joined)
 
     def test_render_dashboard_blocks_switches_to_dashboard_only_mode_when_active_subpages_are_unavailable(self):
         snapshot = ReviewSnapshot(
@@ -431,8 +437,6 @@ Ran 189 tests in 20.897s
             unavailable_page_keys=("status", "opus_brief", "freeze_packet"),
         )
 
-        paragraph_blocks = [block for block in blocks if block.get("type") == "paragraph"]
-        self.assertEqual(2, len(paragraph_blocks))
         joined = "\n".join(
             item["text"]["content"]
             for block in blocks
@@ -442,6 +446,7 @@ Ran 189 tests in 20.897s
         )
         self.assertIn("dashboard-only degraded mode", joined)
         self.assertIn("当前受 Notion archived page 限制暂不可直写", joined)
+        self.assertIn("历史总览（自动同步）", joined)
 
     def test_render_current_review_brief_blocks_use_database_urls_for_database_refs(self):
         snapshot = ReviewSnapshot(
@@ -1230,6 +1235,52 @@ Ran 189 tests in 20.897s
         self.assertEqual("当前无需 Opus 审查", payload["intervention_kind"])
         self.assertEqual("Approved", payload["gate_status"])
 
+    def test_handle_prepare_opus_review_falls_back_when_db_is_rate_limited(self):
+        args = argparse.Namespace(activate_gate=False, dry_run=True, format="json")
+        config = {
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            }
+        }
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="P6 正在执行",
+            latest_verified_plan="P7-05 捕获 fault resolution knowledge artifact",
+            latest_success_run="P7-05 Knowledge artifact baseline",
+            latest_failed_run=None,
+            latest_passing_qa="P7-05 Knowledge artifact baseline QA",
+            gate_page_id=None,
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            with (
+                patch(
+                    "tools.gsd_notion_sync.fetch_review_snapshot",
+                    side_effect=RuntimeError("Notion API request failed: HTTP 429 /v1/databases/test/query: rate_limited"),
+                ),
+                patch("tools.gsd_notion_sync.fetch_review_snapshot_from_pages", return_value=snapshot) as fallback_mock,
+                patch("tools.gsd_notion_sync.output_review_result") as output_mock,
+            ):
+                exit_code = handle_prepare_opus_review(args, config)
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(0, exit_code)
+        self.assertEqual(1, fallback_mock.call_count)
+        payload = output_mock.call_args.args[1]
+        self.assertEqual("P7-05 Knowledge artifact baseline", payload["latest_success_run"])
+
     def test_fetch_review_snapshot_from_repo_docs_uses_freeze_packet_seed(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             cwd = Path(temp_dir)
@@ -1467,6 +1518,87 @@ Ran 189 tests in 20.897s
         self.assertEqual(
             [
                 ("DELETE", "/v1/blocks/active-block", None),
+                (
+                    "PATCH",
+                    "/v1/blocks/page-123/children",
+                    {
+                        "children": [
+                            {"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}},
+                        ],
+                        "position": {"type": "start"},
+                    },
+                ),
+            ],
+            client.calls,
+        )
+
+    def test_replace_page_body_preserves_child_pages_and_child_databases(self):
+        class FakeClient(NotionClient):
+            def __init__(self):
+                super().__init__("test-token")
+                self.calls = []
+
+            def list_block_children(self, block_id):
+                return [
+                    {"id": "narrative-block", "type": "paragraph", "archived": False, "in_trash": False},
+                    {"id": "child-page-block", "type": "child_page", "archived": False, "in_trash": False},
+                    {"id": "child-db-block", "type": "child_database", "archived": False, "in_trash": False},
+                ]
+
+            def request(self, method, path, payload=None):
+                self.calls.append((method, path, payload))
+                return {}
+
+        client = FakeClient()
+
+        client.replace_page_body("page-123", [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}}])
+
+        self.assertEqual(
+            [
+                ("DELETE", "/v1/blocks/narrative-block", None),
+                (
+                    "PATCH",
+                    "/v1/blocks/page-123/children",
+                    {
+                        "children": [
+                            {"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}},
+                        ],
+                        "position": {"type": "start"},
+                    },
+                ),
+            ],
+            client.calls,
+        )
+
+    def test_replace_page_body_ignores_archived_delete_errors_from_notion(self):
+        class FakeClient(NotionClient):
+            def __init__(self):
+                super().__init__("test-token")
+                self.calls = []
+
+            def list_block_children(self, block_id):
+                return [
+                    {"id": "ghost-archived-block", "type": "paragraph", "archived": False, "in_trash": False},
+                    {"id": "live-block", "type": "paragraph", "archived": False, "in_trash": False},
+                ]
+
+            def request(self, method, path, payload=None):
+                self.calls.append((method, path, payload))
+                if method == "DELETE" and path == "/v1/blocks/ghost-archived-block":
+                    raise RuntimeError(
+                        'Notion API request failed: HTTP 400 /v1/blocks/ghost-archived-block: '
+                        '{"message":"Can\'t edit block that is archived."}'
+                    )
+                return {}
+
+        client = FakeClient()
+
+        client.replace_page_body("page-123", [{"object": "block", "type": "paragraph", "paragraph": {"rich_text": []}}])
+
+        self.assertEqual(
+            [
+                ("DELETE", "/v1/blocks/ghost-archived-block", None),
+                ("DELETE", "/v1/blocks/live-block", None),
                 (
                     "PATCH",
                     "/v1/blocks/page-123/children",
