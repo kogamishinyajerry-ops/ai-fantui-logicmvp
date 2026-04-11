@@ -36,6 +36,13 @@ DEFAULT_REPO_DOCS = {
     "qa_report": Path("docs/coordination/qa_report.md"),
     "freeze_packet": Path("docs/freeze/2026-04-10-freeze-demo-packet.md"),
 }
+REPO_QA_HISTORY_DOCS = (
+    Path("docs/freeze/2026-04-10-freeze-demo-packet.md"),
+    Path("docs/freeze/archive/2026-04-10-freeze-demo-packet-history.md"),
+    Path("docs/freeze/2026-04-09-freeze-snapshot.md"),
+    Path("docs/coordination/qa_report.md"),
+    Path("docs/coordination/archive/qa-report-history.md"),
+)
 DEFAULT_DATABASES = {
     "roadmap": "33cc6894-2bed-810a-a2ea-e4f095b44afa",
     "tasks": "33cc6894-2bed-81ea-bb1b-ef1bc904f407",
@@ -832,12 +839,20 @@ def derive_compact_success_summary_from_text(text: str) -> str | None:
         smoke_match = re.search(r"(\d+)\s+demo smoke scenarios pass", text)
         if smoke_match:
             demo_smoke_count = int(smoke_match.group(1))
+    if demo_smoke_count is None:
+        smoke_match = re.search(r"(\d+)\s+scenarios pass", text)
+        if smoke_match:
+            demo_smoke_count = int(smoke_match.group(1))
     checks_match = re.search(r'"command_count"\s*:\s*(\d+)', text)
     if checks_match:
         shared_check_count = int(checks_match.group(1))
     if shared_check_count is None:
         checks_match = re.search(r"(\d+)/\1\s+shared validation checks pass", text)
         if checks_match:
+            shared_check_count = int(checks_match.group(1))
+    if shared_check_count is None:
+        checks_match = re.search(r"(\d+)\s*/\s*(\d+)\s+pass", text)
+        if checks_match and checks_match.group(1) == checks_match.group(2):
             shared_check_count = int(checks_match.group(1))
 
     fragments: list[str] = []
@@ -856,45 +871,60 @@ def derive_compact_success_summary_from_text(text: str) -> str | None:
     return ", ".join(fragments[:-1]) + f", and {fragments[-1]}."
 
 
+def success_summary_metrics(summary: str | None) -> tuple[int, int, int]:
+    if not summary:
+        return (0, 0, 0)
+    tests_ok = 0
+    demo_smoke_count = 0
+    shared_check_count = 0
+
+    tests_match = re.search(r"(\d+)\s+tests OK", summary)
+    if tests_match:
+        tests_ok = int(tests_match.group(1))
+    smoke_match = re.search(r"(\d+)\s+demo smoke scenarios pass", summary)
+    if smoke_match:
+        demo_smoke_count = int(smoke_match.group(1))
+    else:
+        smoke_match = re.search(r"(\d+)\s+scenarios pass", summary)
+        if smoke_match:
+            demo_smoke_count = int(smoke_match.group(1))
+    checks_match = re.search(r"(\d+)/\1\s+shared validation checks pass", summary)
+    if checks_match:
+        shared_check_count = int(checks_match.group(1))
+    else:
+        checks_match = re.search(r"(\d+)\s*/\s*(\d+)\s+pass", summary)
+        if checks_match and checks_match.group(1) == checks_match.group(2):
+            shared_check_count = int(checks_match.group(1))
+    return tests_ok, demo_smoke_count, shared_check_count
+
+
+def stronger_success_summary(*summaries: str | None) -> str | None:
+    best_summary: str | None = None
+    best_metrics = (0, 0, 0)
+    for summary in summaries:
+        metrics = success_summary_metrics(summary)
+        if metrics > best_metrics:
+            best_summary = summary
+            best_metrics = metrics
+    return best_summary
+
+
+def strongest_repo_success_summary(cwd: Path, *seed_summaries: str | None) -> str | None:
+    best_summary = stronger_success_summary(*seed_summaries)
+    for relative_path in REPO_QA_HISTORY_DOCS:
+        path = cwd / relative_path
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
+        candidate = derive_compact_success_summary_from_text(text)
+        best_summary = stronger_success_summary(best_summary, candidate)
+    return best_summary
+
+
 def should_preserve_prior_success_summary(current_summary: str | None, prior_summary: str | None) -> bool:
     if not current_summary or not prior_summary:
         return False
-
-    current_tests = 0
-    current_smoke = 0
-    current_checks = 0
-    prior_tests = 0
-    prior_smoke = 0
-    prior_checks = 0
-
-    current_tests_match = re.search(r"(\d+)\s+tests OK", current_summary)
-    if current_tests_match:
-        current_tests = int(current_tests_match.group(1))
-    prior_tests_match = re.search(r"(\d+)\s+tests OK", prior_summary)
-    if prior_tests_match:
-        prior_tests = int(prior_tests_match.group(1))
-
-    current_smoke_match = re.search(r"(\d+)\s+demo smoke scenarios pass", current_summary)
-    if current_smoke_match:
-        current_smoke = int(current_smoke_match.group(1))
-    prior_smoke_match = re.search(r"(\d+)\s+demo smoke scenarios pass", prior_summary)
-    if prior_smoke_match:
-        prior_smoke = int(prior_smoke_match.group(1))
-
-    current_checks_match = re.search(r"(\d+)/\1\s+shared validation checks pass", current_summary)
-    if current_checks_match:
-        current_checks = int(current_checks_match.group(1))
-    prior_checks_match = re.search(r"(\d+)/\1\s+shared validation checks pass", prior_summary)
-    if prior_checks_match:
-        prior_checks = int(prior_checks_match.group(1))
-
-    if prior_checks and current_checks and current_checks < prior_checks:
-        return True
-    if prior_smoke and not current_smoke:
-        return True
-    if prior_tests and not current_tests:
-        return True
-    return False
+    return success_summary_metrics(prior_summary) > success_summary_metrics(current_summary)
 
 
 def select_success_snapshot_evidence(
@@ -1241,6 +1271,16 @@ def fetch_review_snapshot_from_repo_docs(cwd: Path, config: dict[str, Any]) -> R
     open_gap_titles = parse_open_gap_titles(markdown_prefixed_code_value(text, "- Open Gap 数量："))
     opus_state = markdown_prefixed_code_value(text, "- 当前 Opus 状态：") or "当前无需 Opus 审查"
     compact_summary = derive_compact_success_summary_from_text(text)
+    strongest_summary = strongest_repo_success_summary(cwd, compact_summary)
+    current_run_notes = markdown_prefixed_code_value(text, "- 当前运行摘要：")
+    if strongest_summary and compact_summary and success_summary_metrics(strongest_summary) > success_summary_metrics(compact_summary):
+        latest_success_run_notes = (
+            "Focused control-plane maintenance run passed. "
+            f"Stronger shared validation baseline remains {strongest_summary}"
+        )
+    else:
+        latest_success_run_notes = current_run_notes or strongest_summary
+    latest_passing_qa_summary = f"PASS. {strongest_summary}" if strongest_summary else None
 
     ready_task = None
     if "无需" not in opus_state:
@@ -1261,8 +1301,8 @@ def fetch_review_snapshot_from_repo_docs(cwd: Path, config: dict[str, Any]) -> R
         ready_task=ready_task,
         open_gap_titles=open_gap_titles,
         stale_gap_titles=(),
-        latest_success_run_notes=compact_summary,
-        latest_passing_qa_summary=(f"PASS. {compact_summary}" if compact_summary else None),
+        latest_success_run_notes=latest_success_run_notes,
+        latest_passing_qa_summary=latest_passing_qa_summary,
     )
 
 
@@ -1389,6 +1429,8 @@ def should_prefer_snapshot(
         and candidate_snapshot.latest_verified_plan == default_plan
         and primary_snapshot.latest_verified_plan != default_plan
     ):
+        return True
+    if candidate_run == primary_run and success_summary_metrics(candidate_snapshot.latest_passing_qa_summary) > success_summary_metrics(primary_snapshot.latest_passing_qa_summary):
         return True
     return snapshot_quality(candidate_snapshot) > snapshot_quality(primary_snapshot)
 

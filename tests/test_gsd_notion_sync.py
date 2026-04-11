@@ -29,6 +29,9 @@ from tools.gsd_notion_sync import (
     render_repo_coordination_plan_markdown,
     derive_compact_success_summary,
     derive_compact_success_summary_from_text,
+    strongest_repo_success_summary,
+    stronger_success_summary,
+    success_summary_metrics,
     build_fallback_run_snapshot,
     ensure_live_active_pages,
     effective_default_plan,
@@ -132,6 +135,28 @@ Ran 189 tests in 20.897s
 
         self.assertEqual("175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.", summary)
 
+    def test_derive_compact_success_summary_from_archive_style_text(self):
+        text = "\n".join(
+            [
+                "## 当前稳定证据",
+                "- 单元测试：`175 tests OK`",
+                "- demo smoke：`10 scenarios pass`",
+                "- 共享验证检查：`8 / 8 pass`",
+            ]
+        )
+
+        summary = derive_compact_success_summary_from_text(text)
+
+        self.assertEqual("175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.", summary)
+
+    def test_success_summary_metrics_and_stronger_summary(self):
+        stronger = "175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass."
+        weaker = "1/1 shared validation checks pass."
+
+        self.assertEqual((175, 10, 8), success_summary_metrics(stronger))
+        self.assertEqual((0, 0, 1), success_summary_metrics(weaker))
+        self.assertEqual(stronger, stronger_success_summary(weaker, stronger))
+
     def test_should_preserve_prior_success_summary_when_current_run_is_narrower(self):
         self.assertTrue(
             should_preserve_prior_success_summary(
@@ -146,6 +171,33 @@ Ran 189 tests in 20.897s
                 "PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.",
             )
         )
+
+    def test_strongest_repo_success_summary_prefers_archive_baseline(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            freeze_path = root / "docs" / "freeze"
+            freeze_path.mkdir(parents=True)
+            (freeze_path / "2026-04-10-freeze-demo-packet.md").write_text(
+                "- 当前 QA 摘要：`PASS. 1/1 shared validation checks pass.`\n",
+                encoding="utf-8",
+            )
+            archive_path = freeze_path / "archive"
+            archive_path.mkdir(parents=True)
+            (archive_path / "2026-04-10-freeze-demo-packet-history.md").write_text(
+                "\n".join(
+                    [
+                        "## 当前稳定证据",
+                        "- 单元测试：`175 tests OK`",
+                        "- demo smoke：`10 scenarios pass`",
+                        "- 共享验证检查：`8 / 8 pass`",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            summary = strongest_repo_success_summary(root, "1/1 shared validation checks pass.")
+
+        self.assertEqual("175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.", summary)
 
     def test_ensure_live_active_pages_recreates_archived_targets_and_persists_config(self):
         config = {
@@ -1773,6 +1825,49 @@ Ran 189 tests in 20.897s
             "189 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.",
             snapshot.latest_success_run_notes,
         )
+
+    def test_fetch_review_snapshot_from_repo_docs_lifts_stronger_archive_summary(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            cwd = Path(temp_dir)
+            freeze_path = cwd / "docs/freeze/2026-04-10-freeze-demo-packet.md"
+            freeze_path.parent.mkdir(parents=True, exist_ok=True)
+            freeze_path.write_text(
+                "# Freeze Packet\n\n"
+                "- 当前阶段：`P6 Reconcile Control Tower And Freeze Demo Packet`\n"
+                "- 当前已验证 Plan：`P6-15 Preserve The Stronger Validation Baseline`\n"
+                "- 最近成功执行证据：`P6-15 validation baseline preservation`\n"
+                "- 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`\n"
+                "- 当前 Opus 状态：`当前无需 Opus 审查`\n"
+                "- Open Gap 数量：`0`\n"
+                "- 当前 QA 摘要：`PASS. 1/1 shared validation checks pass.`\n"
+                "- 当前运行摘要：`1/1 shared validation checks pass.`\n",
+                encoding="utf-8",
+            )
+            archive_path = cwd / "docs/freeze/archive/2026-04-10-freeze-demo-packet-history.md"
+            archive_path.parent.mkdir(parents=True, exist_ok=True)
+            archive_path.write_text(
+                "\n".join(
+                    [
+                        "# Freeze Demo Packet History",
+                        "## 当前稳定证据",
+                        "- 单元测试：`175 tests OK`",
+                        "- demo smoke：`10 scenarios pass`",
+                        "- 共享验证检查：`8 / 8 pass`",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            snapshot = fetch_review_snapshot_from_repo_docs(
+                cwd,
+                {"default_plan": "P6-15 Preserve The Stronger Validation Baseline"},
+            )
+
+        self.assertEqual(
+            "PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.",
+            snapshot.latest_passing_qa_summary,
+        )
+        self.assertIn("Stronger shared validation baseline remains", snapshot.latest_success_run_notes)
 
     def test_build_superseded_gap_fix_plan_marks_duplicates(self):
         self.assertEqual(

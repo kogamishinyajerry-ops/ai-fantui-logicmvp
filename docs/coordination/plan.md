@@ -4,11 +4,11 @@
 ## 当前自动同步快照
 
 - 当前阶段：`P6 Reconcile Control Tower And Freeze Demo Packet`
-- 当前已验证 Plan：`P6-15 Preserve The Stronger Validation Baseline`
-- 最近成功执行证据：`P6-15 validation baseline preservation`
+- 当前已验证 Plan：`P6-17 Lift The Stronger QA Baseline Back To The Homepage`
+- 最近成功执行证据：`P6-17 stronger QA baseline restore`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
-- 当前 QA 摘要：`PASS. 1/1 shared validation checks pass.`
+- 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
 - 当前结论：当前最高优先级是继续收口控制塔与 freeze/demo packet 的残余漂移，不是再加 demo 功能。
 - 当前唯一人工动作：继续自动开发；当前无需手动触发 Opus 4.6。
 
@@ -22,9 +22,9 @@
 ## 当前证据入口
 
 - [Notion 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
-- [01 当前状态（自动同步）](https://www.notion.so/33fc6894-2bed-81fb-8dab-fbe7b7b8793a)
-- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33fc6894-2bed-81a9-a136-ed5d7862b636)
-- [10 Freeze Demo Packet](https://www.notion.so/33fc6894-2bed-810e-990c-d5e4547d4e66)
+- [01 当前状态（自动同步）](https://www.notion.so/33fc6894-2bed-814f-b62a-e30a490f0041)
+- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33fc6894-2bed-81fd-b82d-e44b9988d1a4)
+- [10 Freeze Demo Packet](https://www.notion.so/33fc6894-2bed-8182-81cf-ec90266f7596)
 - [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)
 - [GitHub Actions](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 

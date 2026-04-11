@@ -5,13 +5,13 @@
 
 - 结论：PASS；当前稳定基线由 GitHub-backed validation evidence 支撑。
 - 当前阶段：`P6 Reconcile Control Tower And Freeze Demo Packet`
-- 当前已验证 Plan：`P6-15 Preserve The Stronger Validation Baseline`
-- 最近成功执行证据：`P6-15 validation baseline preservation`
+- 当前已验证 Plan：`P6-17 Lift The Stronger QA Baseline Back To The Homepage`
+- 最近成功执行证据：`P6-17 stronger QA baseline restore`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
-- 当前 QA 摘要：`PASS. 1/1 shared validation checks pass.`
-- 当前运行摘要：`1/1 shared validation checks pass.`
+- 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
+- 当前运行摘要：`Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
 - `manual browser QA` 不再是当前审批规则；相关历史记录只保留为 presenter guidance / 历史上下文。
 
 ## 当前证据入口
