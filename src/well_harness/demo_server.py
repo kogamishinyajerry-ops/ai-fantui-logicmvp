@@ -11,12 +11,23 @@ from urllib.parse import unquote, urlparse
 
 from well_harness.demo import answer_demo_prompt, demo_answer_to_payload
 from well_harness.controller import DeployController
+from well_harness.document_intake import (
+    apply_safe_schema_repairs,
+    assess_intake_packet,
+    build_clarification_brief,
+    intake_packet_from_dict,
+    intake_packet_to_dict,
+    intake_template_payload,
+)
 from well_harness.models import HarnessConfig, PilotInputs, ResolvedInputs
 from well_harness.plant import PlantState, SimplifiedDeployPlant
 from well_harness.switches import LatchedThrottleSwitches, SwitchState
+from well_harness.workbench_bundle import archive_workbench_bundle, build_workbench_bundle
 
 
 STATIC_DIR = Path(__file__).with_name("static")
+REFERENCE_PACKET_DIR = Path(__file__).with_name("reference_packets")
+REFERENCE_PACKET_PATH = REFERENCE_PACKET_DIR / "custom_reverse_control_v1.json"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
 CONTENT_TYPES = {
@@ -26,6 +37,9 @@ CONTENT_TYPES = {
 }
 TRA_L4_LOCK_DEG = -14.0
 MONITOR_TIMELINE_PATH = "/api/monitor-timeline"
+WORKBENCH_BOOTSTRAP_PATH = "/api/workbench/bootstrap"
+WORKBENCH_BUNDLE_PATH = "/api/workbench/bundle"
+WORKBENCH_REPAIR_PATH = "/api/workbench/repair"
 MONITOR_RA_START_FT = 7.0
 MONITOR_RA_RATE_FT_PER_S = 1.0
 MONITOR_TRA_START_S = 1.0
@@ -73,13 +87,16 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if parsed.path == MONITOR_TIMELINE_PATH:
             self._send_json(200, monitor_timeline_payload())
             return
+        if parsed.path == WORKBENCH_BOOTSTRAP_PATH:
+            self._send_json(200, workbench_bootstrap_payload())
+            return
 
         if parsed.path in ("", "/", "/demo.html"):
             self._serve_static("demo.html")
             return
 
         relative_path = unquote(parsed.path.lstrip("/"))
-        if relative_path in {"demo.css", "demo.js"}:
+        if relative_path and Path(relative_path).suffix in CONTENT_TYPES:
             self._serve_static(relative_path)
             return
 
@@ -87,7 +104,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
-        if parsed.path not in {"/api/demo", "/api/lever-snapshot"}:
+        if parsed.path not in {"/api/demo", "/api/lever-snapshot", WORKBENCH_BUNDLE_PATH, WORKBENCH_REPAIR_PATH}:
             self._send_json(404, {"error": "not_found"})
             return
 
@@ -114,6 +131,20 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                 return
 
             self._send_json(200, lever_snapshot_payload(**lever_inputs))
+            return
+        if parsed.path == WORKBENCH_BUNDLE_PATH:
+            response_payload, error_payload = build_workbench_bundle_response(request_payload)
+            if error_payload is not None:
+                self._send_json(400, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+        if parsed.path == WORKBENCH_REPAIR_PATH:
+            response_payload, error_payload = build_workbench_safe_repair_response(request_payload)
+            if error_payload is not None:
+                self._send_json(400, error_payload)
+                return
+            self._send_json(200, response_payload)
             return
 
         prompt = str(request_payload.get("prompt", "")).strip()
@@ -240,6 +271,235 @@ def parse_lever_snapshot_request(request_payload: dict) -> tuple[dict | None, di
         return None, error_payload
     lever_inputs["deploy_position_percent"] = deploy_position_percent
     return lever_inputs, None
+
+
+def default_workbench_archive_root() -> Path:
+    return (Path.cwd() / "artifacts" / "workbench-bundles").resolve()
+
+
+def reference_workbench_packet_payload() -> dict:
+    return json.loads(REFERENCE_PACKET_PATH.read_text(encoding="utf-8"))
+
+
+def workbench_bootstrap_payload() -> dict:
+    return {
+        "template_packet": intake_template_payload(),
+        "reference_packet": reference_workbench_packet_payload(),
+        "default_archive_root": str(default_workbench_archive_root()),
+    }
+
+
+def _optional_request_str(payload: dict, field_name: str) -> tuple[str | None, dict | None]:
+    raw_value = payload.get(field_name)
+    if raw_value is None:
+        return None, None
+    if not isinstance(raw_value, str):
+        return None, {
+            "error": "invalid_workbench_request",
+            "field": field_name,
+            "message": f"{field_name} must be a string when provided.",
+        }
+    normalized = raw_value.strip()
+    return (normalized or None), None
+
+
+def _optional_request_string_list(payload: dict, field_name: str) -> tuple[tuple[str, ...] | None, dict | None]:
+    raw_value = payload.get(field_name)
+    if raw_value is None:
+        return None, None
+    if not isinstance(raw_value, list) or any(not isinstance(item, str) for item in raw_value):
+        return None, {
+            "error": "invalid_workbench_request",
+            "field": field_name,
+            "message": f"{field_name} must be a list of strings when provided.",
+        }
+    return tuple(item.strip() for item in raw_value if item.strip()), None
+
+
+def _optional_request_float(payload: dict, field_name: str, *, default: float) -> tuple[float, dict | None]:
+    raw_value = payload.get(field_name, default)
+    if isinstance(raw_value, bool):
+        return default, {
+            "error": "invalid_workbench_request",
+            "field": field_name,
+            "message": f"{field_name} must be numeric.",
+        }
+    try:
+        value = float(raw_value)
+    except (TypeError, ValueError):
+        return default, {
+            "error": "invalid_workbench_request",
+            "field": field_name,
+            "message": f"{field_name} must be numeric.",
+        }
+    if value <= 0:
+        return default, {
+            "error": "invalid_workbench_request",
+            "field": field_name,
+            "message": f"{field_name} must be greater than zero.",
+        }
+    return value, None
+
+
+def _optional_request_object(payload: dict, field_name: str) -> tuple[dict | None, dict | None]:
+    raw_value = payload.get(field_name)
+    if raw_value is None:
+        return None, None
+    if not isinstance(raw_value, dict):
+        return None, {
+            "error": "invalid_workbench_request",
+            "field": field_name,
+            "message": f"{field_name} must be a JSON object when provided.",
+        }
+    return raw_value, None
+
+
+def build_workbench_bundle_response(request_payload: dict) -> tuple[dict | None, dict | None]:
+    packet_payload = request_payload.get("packet_payload")
+    if not isinstance(packet_payload, dict):
+        return None, {
+            "error": "invalid_workbench_request",
+            "field": "packet_payload",
+            "message": "packet_payload must be a JSON object.",
+        }
+    try:
+        packet = intake_packet_from_dict(packet_payload)
+    except ValueError as exc:
+        return None, {
+            "error": "invalid_workbench_packet",
+            "field": "packet_payload",
+            "message": str(exc),
+        }
+
+    scenario_id, error_payload = _optional_request_str(request_payload, "scenario_id")
+    if error_payload is not None:
+        return None, error_payload
+    fault_mode_id, error_payload = _optional_request_str(request_payload, "fault_mode_id")
+    if error_payload is not None:
+        return None, error_payload
+    observed_symptoms, error_payload = _optional_request_str(request_payload, "observed_symptoms")
+    if error_payload is not None:
+        return None, error_payload
+    evidence_links, error_payload = _optional_request_string_list(request_payload, "evidence_links")
+    if error_payload is not None:
+        return None, error_payload
+    confirmed_root_cause, error_payload = _optional_request_str(request_payload, "confirmed_root_cause")
+    if error_payload is not None:
+        return None, error_payload
+    repair_action, error_payload = _optional_request_str(request_payload, "repair_action")
+    if error_payload is not None:
+        return None, error_payload
+    validation_after_fix, error_payload = _optional_request_str(request_payload, "validation_after_fix")
+    if error_payload is not None:
+        return None, error_payload
+    residual_risk, error_payload = _optional_request_str(request_payload, "residual_risk")
+    if error_payload is not None:
+        return None, error_payload
+    suggested_logic_change, error_payload = _optional_request_str(request_payload, "suggested_logic_change")
+    if error_payload is not None:
+        return None, error_payload
+    reliability_gain_hypothesis, error_payload = _optional_request_str(
+        request_payload,
+        "reliability_gain_hypothesis",
+    )
+    if error_payload is not None:
+        return None, error_payload
+    guardrail_note, error_payload = _optional_request_str(request_payload, "guardrail_note")
+    if error_payload is not None:
+        return None, error_payload
+    sample_period_s, error_payload = _optional_request_float(
+        request_payload,
+        "sample_period_s",
+        default=0.5,
+    )
+    if error_payload is not None:
+        return None, error_payload
+    workspace_handoff, error_payload = _optional_request_object(request_payload, "workspace_handoff")
+    if error_payload is not None:
+        return None, error_payload
+    workspace_snapshot, error_payload = _optional_request_object(request_payload, "workspace_snapshot")
+    if error_payload is not None:
+        return None, error_payload
+    if workspace_handoff is None and workspace_snapshot is not None:
+        derived_handoff = workspace_snapshot.get("handoff")
+        if isinstance(derived_handoff, dict):
+            workspace_handoff = derived_handoff
+
+    archive_bundle = bool(request_payload.get("archive_bundle", False))
+    try:
+        bundle = build_workbench_bundle(
+            packet,
+            scenario_id=scenario_id,
+            fault_mode_id=fault_mode_id,
+            observed_symptoms=observed_symptoms,
+            evidence_links=evidence_links or (),
+            confirmed_root_cause=confirmed_root_cause,
+            repair_action=repair_action,
+            validation_after_fix=validation_after_fix,
+            residual_risk=residual_risk,
+            suggested_logic_change=suggested_logic_change,
+            reliability_gain_hypothesis=reliability_gain_hypothesis,
+            redundancy_reduction_or_guardrail_note=guardrail_note,
+            sample_period_s=sample_period_s,
+        )
+    except ValueError as exc:
+        return None, {
+            "error": "invalid_workbench_selection",
+            "message": str(exc),
+        }
+
+    archive = None
+    if archive_bundle:
+        archive = archive_workbench_bundle(
+            bundle,
+            default_workbench_archive_root(),
+            workspace_handoff=workspace_handoff,
+            workspace_snapshot=workspace_snapshot,
+        )
+    return {
+        "bundle": bundle.to_dict(),
+        "archive": archive.to_dict() if archive is not None else None,
+        "archive_bundle": archive_bundle,
+        "default_archive_root": str(default_workbench_archive_root()),
+    }, None
+
+
+def build_workbench_safe_repair_response(request_payload: dict) -> tuple[dict | None, dict | None]:
+    packet_payload = request_payload.get("packet_payload")
+    if not isinstance(packet_payload, dict):
+        return None, {
+            "error": "invalid_workbench_request",
+            "field": "packet_payload",
+            "message": "packet_payload must be a JSON object.",
+        }
+    if not request_payload.get("apply_all_safe", False):
+        return None, {
+            "error": "invalid_workbench_request",
+            "field": "apply_all_safe",
+            "message": "apply_all_safe must be true for safe schema repair requests.",
+        }
+    try:
+        packet = intake_packet_from_dict(packet_payload)
+    except ValueError as exc:
+        return None, {
+            "error": "invalid_workbench_packet",
+            "field": "packet_payload",
+            "message": str(exc),
+        }
+
+    repaired_packet, applied_suggestion_ids = apply_safe_schema_repairs(packet)
+    if not applied_suggestion_ids:
+        return None, {
+            "error": "no_safe_schema_repairs",
+            "message": "No safe schema repair suggestions are currently available for this packet.",
+        }
+
+    return {
+        "packet_payload": intake_packet_to_dict(repaired_packet),
+        "applied_suggestion_ids": list(applied_suggestion_ids),
+        "intake_assessment": assess_intake_packet(repaired_packet),
+        "clarification_brief": build_clarification_brief(repaired_packet),
+    }, None
 
 
 def _canonical_pullback_sequence(tra_deg: float, config: HarnessConfig) -> list[float]:

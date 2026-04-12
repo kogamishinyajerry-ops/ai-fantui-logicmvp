@@ -1,0 +1,805 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Well Harness Workbench Bundle 验收台</title>
+    <link rel="stylesheet" href="/demo.css">
+    <link rel="stylesheet" href="/workbench.css">
+  </head>
+  <body>
+    <main class="shell workbench-shell">
+      <section class="hero" aria-labelledby="workbench-page-title">
+        <div>
+          <p class="eyebrow">well-harness workbench acceptance</p>
+          <h1 id="workbench-page-title">Workbench Bundle 验收台</h1>
+          <p class="boundary">
+            这是 P7 workbench 的验收页面：只复用 intake / clarification / playback / diagnosis / knowledge / archive 既有链路，
+            不改 `controller.py` 真值，也不新增第二套隐藏规则引擎。
+          </p>
+          <p class="showcase-mission">
+            贴 intake packet JSON，生成 engineer-facing bundle，并可选落地 archive package。
+          </p>
+        </div>
+        <div class="chain-summary" aria-label="workbench bundle flow">
+          Intake -> Clarification -> Playback -> Diagnosis -> Knowledge -> Archive
+        </div>
+      </section>
+
+      <section class="panel workbench-nav-panel" aria-label="页面入口">
+        <a class="workbench-nav-link" href="/demo.html">返回反推逻辑演示舱</a>
+        <span class="workbench-nav-divider" aria-hidden="true"></span>
+        <span class="workbench-nav-note">当前页用于验收 P7 workbench bundle / archive，不替代 demo 舱。</span>
+      </section>
+
+      <section class="panel workbench-acceptance-panel" aria-labelledby="workbench-acceptance-title">
+        <div>
+          <p class="eyebrow">acceptance flow</p>
+          <h2 id="workbench-acceptance-title">建议你这样验收</h2>
+        </div>
+        <ol class="workbench-acceptance-list">
+          <li>先点“载入参考样例”，直接跑一遍 ready bundle + archive happy path。</li>
+          <li>确认右侧出现 `full_workbench_bundle`、已选 scenario / fault mode，以及 archive package 路径。</li>
+          <li>检查 playback / diagnosis / knowledge / optimization 四块结果都能直接阅读，而不是只看 raw JSON。</li>
+          <li>再点“载入空白模板”，验证 blocked clarification bundle 仍能生成并可选归档。</li>
+        </ol>
+      </section>
+
+      <nav class="presenter-route-strip workbench-route-strip" aria-label="workbench 可视化验收路径">
+        <p class="route-strip-title">验收路径</p>
+        <ol>
+          <li><span class="route-step">1</span><span class="presenter-callout">[样例]</span> 载入样例</li>
+          <li><span class="route-step">2</span><span class="presenter-callout">[生成]</span> 跑 Bundle</li>
+          <li><span class="route-step">3</span><span class="presenter-callout">[总览]</span> 看结论</li>
+          <li><span class="route-step">4</span><span class="presenter-callout">[步骤]</span> 看卡点</li>
+          <li><span class="route-step">5</span><span class="presenter-callout">[归档]</span> 看是否留档</li>
+          <li><span class="route-step">6</span><span class="presenter-callout">[调试]</span> 必要时再看 JSON</li>
+        </ol>
+        <p class="route-strip-note">默认走可视化验收，不要求先读代码或原始 JSON。</p>
+      </nav>
+
+      <section class="panel presenter-run-card workbench-preset-run-card" aria-labelledby="workbench-preset-run-card-title">
+        <div class="presenter-run-card-header">
+          <div>
+            <h2 id="workbench-preset-run-card-title"><span class="presenter-callout">[验收]</span> 一键预设验收卡</h2>
+            <p class="presenter-run-card-note">
+              直接点按钮就会自动载入样例并生成结果；这是默认验收入口，不要求先碰 JSON。
+            </p>
+          </div>
+          <p class="presenter-run-card-boundary">
+            预设只是在复用现有 intake / bundle / archive 真实链路，不新增第二套规则。
+          </p>
+        </div>
+        <div class="presenter-run-card-grid" aria-label="workbench 一键预设验收卡">
+          <article class="run-card-step">
+            <p class="run-card-kicker">Preset 1</p>
+            <h3>通过并留档</h3>
+            <p>参考样例直接跑完整 happy path，并生成 archive。</p>
+            <button
+              type="button"
+              class="run-card-trigger workbench-preset-trigger"
+              data-workbench-preset="ready_archived"
+            >一键通过验收</button>
+          </article>
+          <article class="run-card-step">
+            <p class="run-card-kicker">Preset 2</p>
+            <h3>阻塞演示</h3>
+            <p>空白模板会主动停在 clarification gate，适合看“卡在哪”。</p>
+            <button
+              type="button"
+              class="run-card-trigger workbench-preset-trigger"
+              data-workbench-preset="blocked_follow_up"
+            >一键看阻塞态</button>
+          </article>
+          <article class="run-card-step">
+            <p class="run-card-kicker">Preset 3</p>
+            <h3>快速通过</h3>
+            <p>参考样例直接跑 ready bundle，但不落 archive，适合快速扫结果。</p>
+            <button
+              type="button"
+              class="run-card-trigger workbench-preset-trigger"
+              data-workbench-preset="ready_preview"
+            >一键快速预览</button>
+          </article>
+          <article class="run-card-step">
+            <p class="run-card-kicker">Preset 4</p>
+            <h3>留档复跑</h3>
+            <p>同一秒重复点也不会崩，系统会自动生成新 archive 目录。</p>
+            <button
+              type="button"
+              class="run-card-trigger workbench-preset-trigger"
+              data-workbench-preset="archive_retry"
+            >一键留档复跑</button>
+          </article>
+        </div>
+        <ul class="presenter-run-card-rails">
+          <li>默认先看“可视化验收面板”，不是先看 Raw JSON。</li>
+          <li>连续点多个预设时，以最后一次点击结果为准。</li>
+          <li>只有需要排查时，才展开开发调试抽屉。</li>
+        </ul>
+      </section>
+
+      <div class="workbench-layout">
+        <section class="panel workbench-input-panel" aria-labelledby="workbench-input-title">
+          <div class="workbench-section-heading">
+            <div>
+              <p class="eyebrow">input</p>
+              <h2 id="workbench-input-title">Intake Packet 与归档选项</h2>
+            </div>
+            <p class="workbench-section-note">默认归档目录：<code id="default-archive-root">加载中...</code></p>
+          </div>
+
+          <div class="workbench-toolbar" aria-label="样例与导入">
+            <button type="button" id="load-reference-packet" class="workbench-toolbar-button is-primary">载入参考样例</button>
+            <button type="button" id="load-template-packet" class="workbench-toolbar-button">载入空白模板</button>
+            <label class="workbench-file-picker">
+              <span>导入本地 JSON</span>
+              <input id="workbench-file-input" type="file" accept=".json,application/json">
+            </label>
+            <button type="button" id="export-workbench-workspace" class="workbench-toolbar-button">导出当前工作区</button>
+            <label class="workbench-file-picker">
+              <span>导入工作区快照</span>
+              <input id="workbench-workspace-file-input" type="file" accept=".json,application/json">
+            </label>
+          </div>
+          <p id="workbench-packet-source-status" class="workbench-packet-source-status" aria-live="polite">当前样例：等待载入。</p>
+
+          <section class="workbench-handoff-board" aria-labelledby="workbench-handoff-title">
+            <div class="workbench-visual-header">
+              <div>
+                <p class="eyebrow">handoff snapshot</p>
+                <h3 id="workbench-handoff-title">工作区交接摘要</h3>
+              </div>
+              <span id="workbench-handoff-badge" class="workbench-visual-badge" data-state="idle">等待载入</span>
+            </div>
+            <p id="workbench-handoff-summary" class="workbench-visual-summary">
+              这里会把当前 packet、最近结果、archive 状态和工作区规模压成一张交接摘要卡；补一段备注后，导出的工作区快照也会带上它。
+            </p>
+            <div class="workbench-summary-grid" aria-label="workspace handoff summary">
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">当前系统</span>
+                <strong id="workbench-handoff-system">等待载入</strong>
+                <p id="workbench-handoff-system-detail" class="workbench-summary-note">先载入 packet 后，这里会显示系统 ID 和当前版本来源。</p>
+              </article>
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">Packet 覆盖</span>
+                <strong id="workbench-handoff-packet">等待载入</strong>
+                <p id="workbench-handoff-packet-detail" class="workbench-summary-note">这里会显示当前 packet 的文档、逻辑、场景和回答规模。</p>
+              </article>
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">当前结果</span>
+                <strong id="workbench-handoff-result">等待第一次结果</strong>
+                <p id="workbench-handoff-result-detail" class="workbench-summary-note">跑过 bundle 后，这里会直接说清楚现在是通过、阻塞还是失败。</p>
+              </article>
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">Archive 状态</span>
+                <strong id="workbench-handoff-archive">未生成</strong>
+                <p id="workbench-handoff-archive-detail" class="workbench-summary-note">如果当前结果已经归档，这里会告诉你目录位置。</p>
+              </article>
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">工作区规模</span>
+                <strong id="workbench-handoff-workspace">0 个 packet 版本 / 0 个结果</strong>
+                <p id="workbench-handoff-workspace-detail" class="workbench-summary-note">packet 历史、结果历史和当前视图模式都会在这里汇总。</p>
+              </article>
+            </div>
+            <label class="workbench-field workbench-handoff-note-field" for="workbench-handoff-note">
+              <span>交接备注</span>
+              <textarea id="workbench-handoff-note" placeholder="例如：当前在阻塞态，等补齐 hydraulic interlock 文档后再重跑 ready + archive。"></textarea>
+              <small>这段备注会跟随浏览器恢复、工作区导出和工作区导入一起走，方便跨浏览器或跨人交接。</small>
+            </label>
+            <div class="workbench-handoff-actions">
+              <button type="button" id="copy-workbench-handoff-brief" class="workbench-history-return-button">复制交接摘要</button>
+              <p class="workbench-section-note">复制内容会带上当前 packet、当前结果、archive 状态、工作区规模和交接备注。</p>
+            </div>
+          </section>
+
+          <section class="workbench-history-board workbench-packet-history-board" aria-labelledby="workbench-packet-history-title">
+            <div class="workbench-visual-header">
+              <div>
+                <p class="eyebrow">packet revisions</p>
+                <h3 id="workbench-packet-history-title">Packet 版本历史</h3>
+              </div>
+              <span class="workbench-history-note">reference/template 导入、浏览器写回、safe autofix 和运行前手动改 JSON 都会记到这里；点卡片即可恢复旧版本。</span>
+            </div>
+            <div class="workbench-history-view-bar" aria-live="polite">
+              <strong id="workbench-packet-history-status">当前 Packet：等待第一次载入</strong>
+              <button type="button" id="workbench-packet-history-return-latest" class="workbench-history-return-button" disabled>回到最新 Packet</button>
+            </div>
+            <div class="workbench-packet-draft-bar" aria-live="polite">
+              <div>
+                <strong id="workbench-packet-draft-status">当前草稿：等待第一次载入</strong>
+                <p id="workbench-packet-draft-note" class="workbench-packet-draft-note">
+                  直接改 JSON 但还没运行时，也可以先保存一版 Packet 草稿；切换样例、恢复旧版本或应用浏览器写回前，系统也会自动尝试收纳有效草稿，刷新页面后还会继续恢复当前 packet 工作区。
+                </p>
+              </div>
+              <button type="button" id="workbench-save-packet-draft" class="workbench-history-return-button" disabled>保存当前 Packet 草稿</button>
+            </div>
+            <div id="workbench-packet-history-compare-bar" class="workbench-history-compare-bar" hidden>
+              <p id="workbench-packet-history-compare-summary" class="workbench-history-compare-summary">当前没有 packet 版本差异需要比较。</p>
+              <div class="workbench-history-compare-grid" aria-label="历史 Packet 与最新 Packet 差异">
+                <article class="workbench-history-compare-card">
+                  <span class="workbench-history-compare-label">系统差异</span>
+                  <strong id="workbench-packet-history-compare-system">-</strong>
+                  <p id="workbench-packet-history-compare-system-detail">-</p>
+                </article>
+                <article class="workbench-history-compare-card">
+                  <span class="workbench-history-compare-label">文档差异</span>
+                  <strong id="workbench-packet-history-compare-docs">-</strong>
+                  <p id="workbench-packet-history-compare-docs-detail">-</p>
+                </article>
+                <article class="workbench-history-compare-card">
+                  <span class="workbench-history-compare-label">逻辑差异</span>
+                  <strong id="workbench-packet-history-compare-logic">-</strong>
+                  <p id="workbench-packet-history-compare-logic-detail">-</p>
+                </article>
+                <article class="workbench-history-compare-card">
+                  <span class="workbench-history-compare-label">场景 / 故障差异</span>
+                  <strong id="workbench-packet-history-compare-scenarios">-</strong>
+                  <p id="workbench-packet-history-compare-scenarios-detail">-</p>
+                </article>
+                <article class="workbench-history-compare-card">
+                  <span class="workbench-history-compare-label">回答差异</span>
+                  <strong id="workbench-packet-history-compare-answers">-</strong>
+                  <p id="workbench-packet-history-compare-answers-detail">-</p>
+                </article>
+              </div>
+            </div>
+            <div id="workbench-packet-history-cards" class="workbench-history-grid">
+              <article class="workbench-history-card is-empty">
+                <strong>暂无版本</strong>
+                <p>先载入 reference/template、本地 JSON，或在页面里写回一次 packet。</p>
+              </article>
+            </div>
+          </section>
+
+          <details class="workbench-details workbench-dev-details">
+            <summary>查看或编辑 Intake Packet JSON（开发调试，一般不用看）</summary>
+            <label class="workbench-field workbench-field-stack" for="workbench-packet-json">
+              <span>Intake Packet JSON</span>
+              <textarea id="workbench-packet-json" spellcheck="false" aria-describedby="workbench-packet-note"></textarea>
+              <small id="workbench-packet-note">可以直接贴 JSON，或载入 reference/template 样例再修改。</small>
+            </label>
+          </details>
+
+          <div class="workbench-form-grid">
+            <label class="workbench-field" for="workbench-scenario-id">
+              <span>Scenario ID</span>
+              <input id="workbench-scenario-id" type="text" placeholder="留空时自动选择唯一 scenario">
+            </label>
+            <label class="workbench-field" for="workbench-fault-mode-id">
+              <span>Fault Mode ID</span>
+              <input id="workbench-fault-mode-id" type="text" placeholder="留空时自动选择唯一 fault mode">
+            </label>
+            <label class="workbench-field" for="workbench-sample-period">
+              <span>Sample Period (s)</span>
+              <input id="workbench-sample-period" type="number" min="0.1" step="0.1" value="0.5">
+            </label>
+            <label class="workbench-field workbench-checkbox-field" for="workbench-archive-toggle">
+              <input id="workbench-archive-toggle" type="checkbox" checked>
+              <span>同时生成 archive package</span>
+            </label>
+          </div>
+
+          <details class="workbench-details">
+            <summary>Resolution / Knowledge 字段（高级输入，可选）</summary>
+            <div class="workbench-form-grid workbench-form-grid-wide">
+              <label class="workbench-field" for="workbench-observed-symptoms">
+                <span>Observed Symptoms</span>
+                <textarea id="workbench-observed-symptoms" rows="3" placeholder="留空时使用 fault mode symptom"></textarea>
+              </label>
+              <label class="workbench-field" for="workbench-evidence-links">
+                <span>Evidence Links</span>
+                <textarea id="workbench-evidence-links" rows="3" placeholder="每行一个 URL"></textarea>
+              </label>
+              <label class="workbench-field" for="workbench-root-cause">
+                <span>Confirmed Root Cause</span>
+                <textarea id="workbench-root-cause" rows="3"></textarea>
+              </label>
+              <label class="workbench-field" for="workbench-repair-action">
+                <span>Repair Action</span>
+                <textarea id="workbench-repair-action" rows="3"></textarea>
+              </label>
+              <label class="workbench-field" for="workbench-validation-after-fix">
+                <span>Validation After Fix</span>
+                <textarea id="workbench-validation-after-fix" rows="3"></textarea>
+              </label>
+              <label class="workbench-field" for="workbench-residual-risk">
+                <span>Residual Risk</span>
+                <textarea id="workbench-residual-risk" rows="3"></textarea>
+              </label>
+              <label class="workbench-field" for="workbench-logic-change">
+                <span>Suggested Logic Change</span>
+                <textarea id="workbench-logic-change" rows="3" placeholder="留空时使用默认 optimization suggestion"></textarea>
+              </label>
+              <label class="workbench-field" for="workbench-reliability-gain">
+                <span>Reliability Gain Hypothesis</span>
+                <textarea id="workbench-reliability-gain" rows="3" placeholder="留空时自动生成 reliability hypothesis"></textarea>
+              </label>
+              <label class="workbench-field" for="workbench-guardrail-note">
+                <span>Guardrail Note</span>
+                <textarea id="workbench-guardrail-note" rows="3" placeholder="留空时自动生成 guardrail note"></textarea>
+              </label>
+            </div>
+          </details>
+
+          <div class="workbench-action-row">
+            <button type="button" id="run-workbench-bundle" class="workbench-run-button">生成 Bundle</button>
+            <p id="workbench-request-status" class="workbench-request-status" role="status" aria-live="polite">等待生成。</p>
+          </div>
+        </section>
+
+        <section class="panel workbench-output-panel" aria-labelledby="workbench-output-title">
+          <div class="workbench-section-heading">
+            <div>
+              <p class="eyebrow">output</p>
+              <h2 id="workbench-output-title">Bundle 结果与 Archive 产物</h2>
+            </div>
+            <p id="workbench-result-mode" class="workbench-section-note">当前来源：等待 `POST /api/workbench/bundle`。</p>
+          </div>
+
+          <section class="workbench-visual-board" aria-labelledby="workbench-visual-title">
+            <div class="workbench-visual-header">
+              <div>
+                <p class="eyebrow">visual acceptance</p>
+                <h3 id="workbench-visual-title">一眼看懂的验收面板</h3>
+              </div>
+              <span id="workbench-visual-badge" class="workbench-visual-badge" data-state="idle">等待生成</span>
+            </div>
+            <p id="workbench-visual-summary" class="workbench-visual-summary">
+              先载入参考样例，再点“生成 Bundle”。这块会直接告诉你现在是通过、阻塞，还是已经归档。
+            </p>
+            <div class="workbench-history-view-bar" aria-live="polite">
+              <strong id="workbench-history-view-status">当前查看：等待第一次结果</strong>
+              <button type="button" id="workbench-history-return-latest" class="workbench-history-return-button" disabled>回到最新结果</button>
+            </div>
+            <div id="workbench-history-compare-bar" class="workbench-history-compare-bar" hidden>
+              <p id="workbench-history-compare-summary" class="workbench-history-compare-summary">当前没有历史回看差异。</p>
+              <div class="workbench-history-compare-grid" aria-label="历史回看与最新结果差异">
+                <article class="workbench-history-compare-card">
+                  <span class="workbench-history-compare-label">结论差异</span>
+                  <strong id="workbench-history-compare-verdict">-</strong>
+                  <p id="workbench-history-compare-verdict-detail">-</p>
+                </article>
+                <article class="workbench-history-compare-card">
+                  <span class="workbench-history-compare-label">Scenario 差异</span>
+                  <strong id="workbench-history-compare-scenario">-</strong>
+                  <p id="workbench-history-compare-scenario-detail">-</p>
+                </article>
+                <article class="workbench-history-compare-card">
+                  <span class="workbench-history-compare-label">Fault Mode 差异</span>
+                  <strong id="workbench-history-compare-fault">-</strong>
+                  <p id="workbench-history-compare-fault-detail">-</p>
+                </article>
+                <article class="workbench-history-compare-card">
+                  <span class="workbench-history-compare-label">Archive 差异</span>
+                  <strong id="workbench-history-compare-archive">-</strong>
+                  <p id="workbench-history-compare-archive-detail">-</p>
+                </article>
+              </div>
+            </div>
+
+            <div id="workbench-history-detail-board" class="workbench-history-detail-board" hidden>
+              <div class="workbench-visual-header">
+                <div>
+                  <p class="eyebrow">side by side</p>
+                  <h3>回看结果与最新结果并排对照</h3>
+                </div>
+                <span class="workbench-history-note">左边是回看结果，右边是当前最新结果，不需要自己回忆刚才看了什么。</span>
+              </div>
+              <div class="workbench-history-detail-grid">
+                <article class="workbench-history-detail-card" aria-labelledby="workbench-history-detail-replay-title">
+                  <div class="workbench-history-detail-card-header">
+                    <div>
+                      <p class="workbench-history-detail-kicker">回看结果</p>
+                      <h4 id="workbench-history-detail-replay-title">等待选择历史卡</h4>
+                    </div>
+                    <span class="workbench-history-detail-chip">Replay</span>
+                  </div>
+                  <div id="workbench-history-detail-replay" class="workbench-history-detail-body"></div>
+                </article>
+                <article class="workbench-history-detail-card" aria-labelledby="workbench-history-detail-latest-title">
+                  <div class="workbench-history-detail-card-header">
+                    <div>
+                      <p class="workbench-history-detail-kicker">最新结果</p>
+                      <h4 id="workbench-history-detail-latest-title">等待最新结果</h4>
+                    </div>
+                    <span class="workbench-history-detail-chip">Latest</span>
+                  </div>
+                  <div id="workbench-history-detail-latest" class="workbench-history-detail-body"></div>
+                </article>
+              </div>
+            </div>
+
+            <div class="workbench-spotlight-grid" aria-label="验收聚焦卡片">
+              <article class="workbench-spotlight-card">
+                <span class="workbench-spotlight-label">当前结论</span>
+                <strong id="workbench-spotlight-verdict">等待生成</strong>
+                <p id="workbench-spotlight-verdict-detail">尚未产生可验收结果。</p>
+              </article>
+              <article class="workbench-spotlight-card">
+                <span class="workbench-spotlight-label">当前卡点</span>
+                <strong id="workbench-spotlight-blocker">等待运行</strong>
+                <p id="workbench-spotlight-blocker-detail">运行后这里会告诉你卡在 intake / clarification / diagnosis 的哪一段。</p>
+              </article>
+              <article class="workbench-spotlight-card">
+                <span class="workbench-spotlight-label">知识沉淀</span>
+                <strong id="workbench-spotlight-knowledge">等待生成</strong>
+                <p id="workbench-spotlight-knowledge-detail">如果 bundle 已 ready，这里会告诉你 diagnosis / knowledge 是否已经形成。</p>
+              </article>
+              <article class="workbench-spotlight-card">
+                <span class="workbench-spotlight-label">归档状态</span>
+                <strong id="workbench-spotlight-archive">等待生成</strong>
+                <p id="workbench-spotlight-archive-detail">勾选 archive 后，这里会直接显示是否已经落档。</p>
+              </article>
+            </div>
+
+            <ol class="workbench-stage-strip" aria-label="bundle 步骤状态带">
+              <li id="workbench-stage-intake" class="workbench-stage" data-state="idle">
+                <span class="workbench-stage-step">1</span>
+                <div>
+                  <strong>Intake</strong>
+                  <p id="workbench-stage-intake-note">等待 packet。</p>
+                </div>
+              </li>
+              <li id="workbench-stage-clarification" class="workbench-stage" data-state="idle">
+                <span class="workbench-stage-step">2</span>
+                <div>
+                  <strong>Clarification</strong>
+                  <p id="workbench-stage-clarification-note">等待生成。</p>
+                </div>
+              </li>
+              <li id="workbench-stage-playback" class="workbench-stage" data-state="idle">
+                <span class="workbench-stage-step">3</span>
+                <div>
+                  <strong>Playback</strong>
+                  <p id="workbench-stage-playback-note">等待生成。</p>
+                </div>
+              </li>
+              <li id="workbench-stage-diagnosis" class="workbench-stage" data-state="idle">
+                <span class="workbench-stage-step">4</span>
+                <div>
+                  <strong>Diagnosis</strong>
+                  <p id="workbench-stage-diagnosis-note">等待生成。</p>
+                </div>
+              </li>
+              <li id="workbench-stage-knowledge" class="workbench-stage" data-state="idle">
+                <span class="workbench-stage-step">5</span>
+                <div>
+                  <strong>Knowledge</strong>
+                  <p id="workbench-stage-knowledge-note">等待生成。</p>
+                </div>
+              </li>
+              <li id="workbench-stage-archive" class="workbench-stage" data-state="idle">
+                <span class="workbench-stage-step">6</span>
+                <div>
+                  <strong>Archive</strong>
+                  <p id="workbench-stage-archive-note">等待生成。</p>
+                </div>
+              </li>
+            </ol>
+          </section>
+
+          <section class="workbench-history-board" aria-labelledby="workbench-history-title">
+            <div class="workbench-visual-header">
+              <div>
+                <p class="eyebrow">recent runs</p>
+                <h3 id="workbench-history-title">最近验收结果</h3>
+              </div>
+              <span class="workbench-history-note">连续点几个预设时，这里会保留最近几次结果；点一张卡即可把那次结果重新放回主看板。</span>
+            </div>
+            <div id="workbench-history-cards" class="workbench-history-grid">
+              <article class="workbench-history-card is-empty">
+                <strong>暂无结果</strong>
+                <p>先点一个一键预设或手动生成一次 bundle。</p>
+              </article>
+            </div>
+          </section>
+
+          <div class="workbench-summary-grid" aria-label="bundle summary">
+            <article class="workbench-summary-card">
+              <span class="workbench-summary-label">Bundle Kind</span>
+              <strong id="bundle-kind">-</strong>
+            </article>
+            <article class="workbench-summary-card">
+              <span class="workbench-summary-label">Ready</span>
+              <strong id="bundle-ready-state">-</strong>
+            </article>
+            <article class="workbench-summary-card">
+              <span class="workbench-summary-label">Scenario</span>
+              <strong id="bundle-scenario-id">-</strong>
+            </article>
+            <article class="workbench-summary-card">
+              <span class="workbench-summary-label">Fault Mode</span>
+              <strong id="bundle-fault-mode-id">-</strong>
+            </article>
+          </div>
+
+          <section class="workbench-onboarding-board" aria-labelledby="workbench-onboarding-title">
+            <div class="workbench-visual-header">
+              <div>
+                <p class="eyebrow">second-system onboarding</p>
+                <h3 id="workbench-onboarding-title">第二套系统接入准备度</h3>
+              </div>
+              <span id="workbench-onboarding-badge" class="workbench-visual-badge" data-state="idle">等待生成</span>
+            </div>
+            <p id="workbench-onboarding-summary" class="workbench-visual-summary">
+              这里会直接告诉你：这份 packet 现在够不够支撑第二套控制逻辑进入 spec build。
+            </p>
+            <div class="workbench-onboarding-grid" aria-label="第二套系统接入准备度卡片">
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">来源文档</span>
+                <strong id="workbench-onboarding-docs">-</strong>
+                <p id="workbench-onboarding-docs-detail" class="workbench-onboarding-note">等待生成。</p>
+              </article>
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">组件定义</span>
+                <strong id="workbench-onboarding-components">-</strong>
+                <p id="workbench-onboarding-components-detail" class="workbench-onboarding-note">等待生成。</p>
+              </article>
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">逻辑节点</span>
+                <strong id="workbench-onboarding-logic">-</strong>
+                <p id="workbench-onboarding-logic-detail" class="workbench-onboarding-note">等待生成。</p>
+              </article>
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">验收场景</span>
+                <strong id="workbench-onboarding-scenarios">-</strong>
+                <p id="workbench-onboarding-scenarios-detail" class="workbench-onboarding-note">等待生成。</p>
+              </article>
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">故障模式</span>
+                <strong id="workbench-onboarding-faults">-</strong>
+                <p id="workbench-onboarding-faults-detail" class="workbench-onboarding-note">等待生成。</p>
+              </article>
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">澄清进度</span>
+                <strong id="workbench-onboarding-clarifications">-</strong>
+                <p id="workbench-onboarding-clarifications-detail" class="workbench-onboarding-note">等待生成。</p>
+              </article>
+            </div>
+            <div class="workbench-onboarding-footer">
+              <div>
+                <span class="workbench-summary-label">补齐后可解锁</span>
+                <strong id="workbench-onboarding-unlocks">-</strong>
+              </div>
+              <div>
+                <span class="workbench-summary-label">当前缺口</span>
+                <strong id="workbench-onboarding-gaps">-</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="workbench-fingerprint-board" aria-labelledby="workbench-fingerprint-title">
+            <div class="workbench-visual-header">
+              <div>
+                <p class="eyebrow">system fingerprint</p>
+                <h3 id="workbench-fingerprint-title">第二套系统画像</h3>
+              </div>
+              <span id="workbench-fingerprint-badge" class="workbench-visual-badge" data-state="idle">等待生成</span>
+            </div>
+            <p id="workbench-fingerprint-summary" class="workbench-visual-summary">
+              这里不只告诉你“能不能接”，还会直接把这套系统的文档来源、控制目标、工程真值和关键信号摊开给你看。
+            </p>
+            <div class="workbench-fingerprint-meta" aria-label="第二套系统画像总览">
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">系统 ID</span>
+                <strong id="workbench-fingerprint-system-id">-</strong>
+              </article>
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">控制目标</span>
+                <strong id="workbench-fingerprint-objective">-</strong>
+              </article>
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">来源模式</span>
+                <strong id="workbench-fingerprint-source-mode">-</strong>
+              </article>
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">工程真值</span>
+                <strong id="workbench-fingerprint-source-truth">-</strong>
+              </article>
+            </div>
+            <div class="workbench-fingerprint-panels">
+              <article class="workbench-fingerprint-panel" aria-labelledby="workbench-fingerprint-doc-title">
+                <div class="workbench-fingerprint-panel-header">
+                  <div>
+                    <p class="eyebrow">source coverage</p>
+                    <h4 id="workbench-fingerprint-doc-title">来源文档覆盖</h4>
+                  </div>
+                  <span id="workbench-fingerprint-doc-count" class="workbench-fingerprint-count">0 份文档</span>
+                </div>
+                <div id="workbench-fingerprint-doc-list" class="workbench-fingerprint-list"></div>
+              </article>
+              <article class="workbench-fingerprint-panel" aria-labelledby="workbench-fingerprint-signal-title">
+                <div class="workbench-fingerprint-panel-header">
+                  <div>
+                    <p class="eyebrow">signal semantics</p>
+                    <h4 id="workbench-fingerprint-signal-title">关键信号语义</h4>
+                  </div>
+                  <span id="workbench-fingerprint-signal-count" class="workbench-fingerprint-count">0 个信号</span>
+                </div>
+                <div id="workbench-fingerprint-signal-list" class="workbench-fingerprint-list"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="workbench-actions-board" aria-labelledby="workbench-actions-title">
+            <div class="workbench-visual-header">
+              <div>
+                <p class="eyebrow">onboarding actions</p>
+                <h3 id="workbench-actions-title">第二套系统接入动作板</h3>
+              </div>
+              <span id="workbench-actions-badge" class="workbench-visual-badge" data-state="idle">等待生成</span>
+            </div>
+            <p id="workbench-actions-summary" class="workbench-visual-summary">
+              这里会把“先补什么、再做什么、补齐后能解锁什么”直接拆成动作卡，而不是只留一段长文本。
+            </p>
+            <div class="workbench-actions-grid" aria-label="第二套系统接入动作板">
+              <article class="workbench-actions-panel" aria-labelledby="workbench-actions-follow-up-title">
+                <div class="workbench-actions-panel-header">
+                  <div>
+                    <p class="eyebrow">clarifications</p>
+                    <h4 id="workbench-actions-follow-up-title">先回答的澄清项</h4>
+                  </div>
+                  <span id="workbench-actions-follow-up-count" class="workbench-fingerprint-count">0 项</span>
+                </div>
+                <div id="workbench-actions-follow-up-list" class="workbench-actions-list"></div>
+              </article>
+              <article class="workbench-actions-panel" aria-labelledby="workbench-actions-schema-title">
+                <div class="workbench-actions-panel-header">
+                  <div>
+                    <p class="eyebrow">schema blockers</p>
+                    <h4 id="workbench-actions-schema-title">再补结构问题</h4>
+                  </div>
+                  <span id="workbench-actions-schema-count" class="workbench-fingerprint-count">0 项</span>
+                </div>
+                <div id="workbench-actions-schema-list" class="workbench-actions-list"></div>
+              </article>
+              <article class="workbench-actions-panel" aria-labelledby="workbench-actions-unlock-title">
+                <div class="workbench-actions-panel-header">
+                  <div>
+                    <p class="eyebrow">unlocks</p>
+                    <h4 id="workbench-actions-unlock-title">补齐后可解锁</h4>
+                  </div>
+                  <span id="workbench-actions-unlock-count" class="workbench-fingerprint-count">0 项</span>
+                </div>
+                <div id="workbench-actions-unlock-list" class="workbench-actions-list"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="workbench-schema-workspace" aria-labelledby="workbench-schema-workspace-title">
+            <div class="workbench-visual-header">
+              <div>
+                <p class="eyebrow">schema repair workspace</p>
+                <h3 id="workbench-schema-workspace-title">Schema 安全修复工作台</h3>
+              </div>
+              <span id="workbench-schema-workspace-badge" class="workbench-visual-badge" data-state="idle">等待生成</span>
+            </div>
+            <p id="workbench-schema-workspace-summary" class="workbench-visual-summary">
+              这里会把 schema blocker 里的安全 autofix 项单独挑出来；只要后端明确声明可安全补齐，你就能一键修复并重跑。
+            </p>
+            <div id="workbench-schema-workspace-list" class="workbench-schema-workspace-list">
+              <article class="workbench-schema-card is-empty">
+                <strong>等待生成</strong>
+                <p>当 blocked bundle 包含 repair suggestion 时，这里会显示哪些 blocker 可以安全 autofix，哪些仍需手工处理。</p>
+              </article>
+            </div>
+            <div class="workbench-schema-workspace-footer">
+              <p id="workbench-schema-workspace-note" class="workbench-schema-workspace-note">
+                只有后端标记为 safe autofix 的 schema patch 才会开放一键修复。
+              </p>
+              <div class="workbench-schema-workspace-actions">
+                <button type="button" id="workbench-apply-schema-repairs" class="workbench-toolbar-button is-primary" disabled>应用全部安全修复并重跑</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="workbench-clarification-workspace" aria-labelledby="workbench-clarification-workspace-title">
+            <div class="workbench-visual-header">
+              <div>
+                <p class="eyebrow">clarification workspace</p>
+                <h3 id="workbench-clarification-workspace-title">Clarification 回填工作台</h3>
+              </div>
+              <span id="workbench-clarification-workspace-badge" class="workbench-visual-badge" data-state="idle">等待生成</span>
+            </div>
+            <p id="workbench-clarification-workspace-summary" class="workbench-visual-summary">
+              这里会把需要补的 clarification 直接变成可填写表单，方便你把答案写回当前 packet，再决定是否马上重跑。
+            </p>
+            <div id="workbench-clarification-workspace-list" class="workbench-clarification-workspace-list">
+              <article class="workbench-clarification-card is-empty">
+                <strong>等待生成</strong>
+                <p>当 bundle 停在 clarification gate 时，这里会出现可直接填写的答案卡。</p>
+              </article>
+            </div>
+            <div class="workbench-clarification-workspace-footer">
+              <p id="workbench-clarification-workspace-note" class="workbench-clarification-workspace-note">
+                先运行一次 blocked bundle，这里才会知道哪些问题还没回答。
+              </p>
+              <div class="workbench-clarification-workspace-actions">
+                <button type="button" id="workbench-apply-clarifications" class="workbench-toolbar-button" disabled>写回当前 Packet</button>
+                <button type="button" id="workbench-apply-and-rerun" class="workbench-toolbar-button is-primary" disabled>写回并重跑</button>
+              </div>
+            </div>
+          </section>
+
+          <div class="workbench-output-grid">
+            <section class="workbench-output-card" aria-labelledby="workbench-next-actions-title">
+              <h3 id="workbench-next-actions-title">Next Actions</h3>
+              <ul id="bundle-next-actions" class="workbench-bullet-list">
+                <li>等待生成。</li>
+              </ul>
+            </section>
+            <section class="workbench-output-card" aria-labelledby="workbench-clarification-title">
+              <h3 id="workbench-clarification-title">Clarification Gate</h3>
+              <dl class="workbench-data-list">
+                <div><dt>Gate Status</dt><dd id="clarification-gate-status">-</dd></div>
+                <div><dt>Gating Statement</dt><dd id="clarification-gating-statement">-</dd></div>
+                <div><dt>Blocking Reasons</dt><dd id="bundle-blocking-reasons">-</dd></div>
+              </dl>
+            </section>
+          </div>
+
+          <div class="workbench-output-grid">
+            <section class="workbench-output-card" aria-labelledby="workbench-playback-title">
+              <h3 id="workbench-playback-title">Playback Snapshot</h3>
+              <dl class="workbench-data-list">
+                <div><dt>Scenario Label</dt><dd id="playback-scenario-label">-</dd></div>
+                <div><dt>Completion Reached</dt><dd id="playback-completion">-</dd></div>
+                <div><dt>Sampled Signals</dt><dd id="playback-sampled-signals">-</dd></div>
+                <div><dt>Sampled Logic Nodes</dt><dd id="playback-sampled-logic">-</dd></div>
+              </dl>
+            </section>
+            <section class="workbench-output-card" aria-labelledby="workbench-diagnosis-title">
+              <h3 id="workbench-diagnosis-title">Diagnosis Snapshot</h3>
+              <dl class="workbench-data-list">
+                <div><dt>Fault Mode</dt><dd id="diagnosis-fault-mode">-</dd></div>
+                <div><dt>Target Component</dt><dd id="diagnosis-target-component">-</dd></div>
+                <div><dt>Suspected Root Cause</dt><dd id="diagnosis-root-cause">-</dd></div>
+                <div><dt>Blocked Logic Nodes</dt><dd id="diagnosis-blocked-logic">-</dd></div>
+              </dl>
+            </section>
+          </div>
+
+          <div class="workbench-output-grid">
+            <section class="workbench-output-card" aria-labelledby="workbench-knowledge-title">
+              <h3 id="workbench-knowledge-title">Knowledge Artifact</h3>
+              <dl class="workbench-data-list">
+                <div><dt>Status</dt><dd id="knowledge-status">-</dd></div>
+                <div><dt>Diagnosis Summary</dt><dd id="knowledge-diagnosis-summary">-</dd></div>
+                <div><dt>Confirmed Root Cause</dt><dd id="knowledge-confirmed-root-cause">-</dd></div>
+                <div><dt>Repair Action</dt><dd id="knowledge-repair-action">-</dd></div>
+                <div><dt>Validation After Fix</dt><dd id="knowledge-validation-after-fix">-</dd></div>
+                <div><dt>Residual Risk</dt><dd id="knowledge-residual-risk">-</dd></div>
+              </dl>
+            </section>
+            <section class="workbench-output-card" aria-labelledby="workbench-optimization-title">
+              <h3 id="workbench-optimization-title">Optimization Record</h3>
+              <dl class="workbench-data-list">
+                <div><dt>Suggested Logic Change</dt><dd id="optimization-logic-change">-</dd></div>
+                <div><dt>Reliability Gain Hypothesis</dt><dd id="optimization-reliability-gain">-</dd></div>
+                <div><dt>Guardrail Note</dt><dd id="optimization-guardrail-note">-</dd></div>
+              </dl>
+            </section>
+          </div>
+
+          <section class="workbench-output-card workbench-archive-card" aria-labelledby="workbench-archive-title">
+            <h3 id="workbench-archive-title">Archive Package</h3>
+            <p id="archive-status">未生成 archive package。</p>
+            <ul id="archive-files" class="workbench-bullet-list">
+              <li>勾选“同时生成 archive package”后，成功运行会显示文件列表。</li>
+            </ul>
+          </section>
+
+          <details class="workbench-details workbench-dev-details">
+            <summary>开发调试 / Raw JSON（一般不用看）</summary>
+            <pre id="bundle-json-output" class="workbench-json-output">{
+  "message": "等待生成 workbench bundle..."
+}</pre>
+          </details>
+        </section>
+      </div>
+    </main>
+
+    <script src="/workbench.js"></script>
+  </body>
+</html>

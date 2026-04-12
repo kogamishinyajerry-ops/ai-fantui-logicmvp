@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
@@ -52,6 +52,9 @@ class ControlSystemIntakePacket:
     knowledge_capture: KnowledgeCaptureSpec
     clarification_answers: tuple[ClarificationAnswer, ...] = ()
     tags: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
 
 
 def _tuple_or_empty(value: Any) -> tuple[Any, ...]:
@@ -298,6 +301,462 @@ def intake_packet_from_dict(payload: dict[str, Any]) -> ControlSystemIntakePacke
     )
 
 
+def intake_packet_to_dict(packet: ControlSystemIntakePacket) -> dict[str, Any]:
+    return packet.to_dict()
+
+
+def _unique_stub_id(existing_ids: set[str], base_id: str) -> str:
+    if base_id not in existing_ids:
+        return base_id
+    index = 2
+    while f"{base_id}_{index}" in existing_ids:
+        index += 1
+    return f"{base_id}_{index}"
+
+
+def _first_component_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    components = payload.get("components", [])
+    if isinstance(components, list) and components:
+        return components[0]
+    return intake_template_payload()["components"][0]
+
+
+def _default_component_stub() -> dict[str, Any]:
+    return dict(intake_template_payload()["components"][0])
+
+
+def _default_source_document_stub() -> dict[str, Any]:
+    return dict(intake_template_payload()["source_documents"][0])
+
+
+def _default_logic_node_stub(payload: dict[str, Any]) -> dict[str, Any]:
+    component = _first_component_payload(payload)
+    component_id = str(component.get("id", "signal_id"))
+    existing_ids = {
+        str(item.get("id", "")).strip()
+        for item in payload.get("logic_nodes", [])
+        if isinstance(item, dict)
+    }
+    logic_id = _unique_stub_id(existing_ids, f"logic_{component_id}")
+    return {
+        "id": logic_id,
+        "label": logic_id.upper(),
+        "description": "Auto-filled logic stub. Replace the threshold and downstream mapping with the real engineer logic.",
+        "conditions": [
+            {
+                "name": component_id,
+                "source_component_id": component_id,
+                "comparison": ">=",
+                "threshold_value": 1.0,
+                "note": "Auto-filled threshold stub. Replace with the real triggering condition.",
+            }
+        ],
+        "downstream_component_ids": [component_id],
+        "evidence_priority": "high",
+    }
+
+
+def _default_acceptance_scenario_stub(payload: dict[str, Any]) -> dict[str, Any]:
+    component = _first_component_payload(payload)
+    component_id = str(component.get("id", "signal_id"))
+    unit = str(component.get("unit", "custom-unit"))
+    existing_ids = {
+        str(item.get("id", "")).strip()
+        for item in payload.get("acceptance_scenarios", [])
+        if isinstance(item, dict)
+    }
+    scenario_id = _unique_stub_id(existing_ids, f"{component_id}_scenario")
+    return {
+        "id": scenario_id,
+        "label": scenario_id.replace("_", " ").title(),
+        "description": "Auto-filled acceptance scenario stub. Replace the timeline with the real engineer process.",
+        "time_scale_factor": 1.0,
+        "total_duration_s": 5.0,
+        "monitored_signal_ids": [component_id],
+        "steady_signals": [
+            {
+                "signal_id": component_id,
+                "value": 0.0,
+                "unit": unit,
+                "note": "Auto-filled baseline stub.",
+            }
+        ],
+        "transitions": [
+            {
+                "signal_id": component_id,
+                "start_s": 0.0,
+                "end_s": 5.0,
+                "start_value": 0.0,
+                "end_value": 1.0,
+                "unit": unit,
+                "note": "Auto-filled transition stub. Replace with the real trajectory.",
+            }
+        ],
+        "completion_condition": f"{component_id} >= 1.0",
+    }
+
+
+def _default_fault_mode_stub(payload: dict[str, Any]) -> dict[str, Any]:
+    component = _first_component_payload(payload)
+    component_id = str(component.get("id", "signal_id"))
+    existing_ids = {
+        str(item.get("id", "")).strip()
+        for item in payload.get("fault_modes", [])
+        if isinstance(item, dict)
+    }
+    fault_id = _unique_stub_id(existing_ids, f"{component_id}_fault")
+    return {
+        "id": fault_id,
+        "target_component_id": component_id,
+        "fault_kind": "stuck_low",
+        "symptom": f"{component_id} never reaches the expected threshold.",
+        "reasoning_scope_component_ids": [component_id],
+        "expected_diagnostic_sections": ["symptoms", "repair_hint"],
+        "optimization_prompt": "Describe what extra guardrail or redundancy should be added after this fault is understood.",
+    }
+
+
+def _default_scenario_transition_stub(packet: ControlSystemIntakePacket, scenario_id: str) -> dict[str, Any] | None:
+    scenarios = {scenario.id: scenario for scenario in packet.acceptance_scenarios}
+    scenario = scenarios.get(scenario_id)
+    if scenario is None:
+        return None
+    component_map = {component.id: component for component in packet.components}
+    candidate_signal_id = scenario.monitored_signal_ids[0] if scenario.monitored_signal_ids else (
+        packet.components[0].id if packet.components else None
+    )
+    if candidate_signal_id is None:
+        return None
+    component = component_map.get(candidate_signal_id)
+    if component is None or component.state_shape == "discrete":
+        return None
+    return {
+        "signal_id": component.id,
+        "start_s": 0.0,
+        "end_s": max(scenario.total_duration_s, 1.0),
+        "start_value": 0.0,
+        "end_value": 1.0,
+        "unit": component.unit,
+        "note": "Auto-filled transition stub. Replace with the real monitored timeline.",
+    }
+
+
+def build_schema_repair_suggestions(
+    packet: ControlSystemIntakePacket,
+    *,
+    blocking_reasons: list[str],
+) -> list[dict[str, Any]]:
+    suggestions: list[dict[str, Any]] = []
+    covered_reasons: set[str] = set()
+
+    def add_suggestion(
+        suggestion_id: str,
+        title: str,
+        detail: str,
+        target_path: str,
+        blocking_reason: str,
+        *,
+        autofix_available: bool,
+        autofix_label: str | None = None,
+        expected_effect: str | None = None,
+    ) -> None:
+        suggestions.append(
+            {
+                "id": suggestion_id,
+                "title": title,
+                "detail": detail,
+                "target_path": target_path,
+                "blocking_reason": blocking_reason,
+                "autofix_available": autofix_available,
+                "autofix_label": autofix_label,
+                "expected_effect": expected_effect or "Repair this blocker and rerun the intake flow.",
+            }
+        )
+        covered_reasons.add(blocking_reason)
+
+    if not packet.source_documents:
+        add_suggestion(
+            "add_source_document_stub",
+            "补一个 source document 占位",
+            "当前 packet 没有任何来源文档，系统无法确认工程真值来自哪里。",
+            "source_documents",
+            "at least one source document is required.",
+            autofix_available=True,
+            autofix_label="插入文档占位",
+            expected_effect="至少补上一个可编辑的 source document 占位，后续再替换成真实文档引用。",
+        )
+
+    if not packet.components:
+        add_suggestion(
+            "add_component_stub",
+            "补一个 component 占位",
+            "当前 packet 没有任何组件定义，后续 logic / scenario / fault 都无法落到具体信号上。",
+            "components",
+            "at least one component definition is required.",
+            autofix_available=True,
+            autofix_label="插入组件占位",
+            expected_effect="先补一个可编辑 component stub，让 packet 具备最基本的信号骨架。",
+        )
+
+    for component in packet.components:
+        if component.state_shape == "analog" and component.allowed_range is None:
+            reason = f"component {component.id} is analog but missing allowed_range."
+            add_suggestion(
+                f"set_allowed_range:{component.id}",
+                f"补全 {component.id} 的 allowed_range",
+                f"{component.id} 是模拟量，但当前还没有合法范围；至少需要一个临时 range 才能安全回放和注入故障。",
+                f"components[{component.id}].allowed_range",
+                reason,
+                autofix_available=True,
+                autofix_label="填入默认范围",
+                expected_effect="先补一个 0..100 的默认范围占位，后续再替换成真实工程范围。",
+            )
+        if component.state_shape == "binary" and not component.allowed_states:
+            reason = f"component {component.id} is binary but missing allowed_states."
+            add_suggestion(
+                f"set_allowed_states:{component.id}",
+                f"补全 {component.id} 的 allowed_states",
+                f"{component.id} 是二值量，但当前还没有合法状态集合。",
+                f"components[{component.id}].allowed_states",
+                reason,
+                autofix_available=True,
+                autofix_label="填入 0/1 状态",
+                expected_effect="先补一个常见的 0/1 状态占位，后续再替换成真实工程状态定义。",
+            )
+        if component.state_shape == "discrete" and not component.allowed_states:
+            reason = f"component {component.id} is discrete but missing allowed_states."
+            add_suggestion(
+                f"set_allowed_states:{component.id}",
+                f"补全 {component.id} 的 allowed_states",
+                f"{component.id} 是离散态，但当前还没有状态枚举。",
+                f"components[{component.id}].allowed_states",
+                reason,
+                autofix_available=True,
+                autofix_label="填入状态占位",
+                expected_effect="先补一个最小离散状态集合占位，后续再替换成真实工程枚举。",
+            )
+
+    if not packet.logic_nodes:
+        add_suggestion(
+            "add_logic_node_stub",
+            "补一条 logic node 骨架",
+            "当前 packet 没有 logic node，系统还不知道控制门控是怎么被触发的。",
+            "logic_nodes",
+            "at least one logic node definition is required.",
+            autofix_available=True,
+            autofix_label="插入 logic stub",
+            expected_effect="先补一条可编辑 logic node stub，后续再替换成真实 logic chain。",
+        )
+
+    if not packet.acceptance_scenarios:
+        add_suggestion(
+            "add_acceptance_scenario_stub",
+            "补一个 acceptance scenario 占位",
+            "当前 packet 没有任何验收场景，系统无法生成严格回放时间线。",
+            "acceptance_scenarios",
+            "at least one acceptance scenario is required.",
+            autofix_available=True,
+            autofix_label="插入 scenario stub",
+            expected_effect="先补一个可编辑 scenario stub，后续再替换成真实 engineer process。",
+        )
+    else:
+        for scenario in packet.acceptance_scenarios:
+            if not scenario.transitions and _default_scenario_transition_stub(packet, scenario.id) is not None:
+                reason = f"scenario {scenario.id} has no transitions."
+                add_suggestion(
+                    f"add_scenario_transition_stub:{scenario.id}",
+                    f"给 {scenario.id} 补一个 transition 占位",
+                    f"{scenario.id} 目前没有任何 transition；系统至少需要一个时间线骨架才能继续回放。",
+                    f"acceptance_scenarios[{scenario.id}].transitions",
+                    reason,
+                    autofix_available=True,
+                    autofix_label="插入 transition stub",
+                    expected_effect="先补一条可编辑 transition stub，后续再替换成真实工程时间线。",
+                )
+
+    if not packet.fault_modes:
+        add_suggestion(
+            "add_fault_mode_stub",
+            "补一个 fault mode 占位",
+            "当前 packet 没有故障模式，系统还无法进入 fault diagnosis / knowledge capture。",
+            "fault_modes",
+            "at least one fault mode is required.",
+            autofix_available=True,
+            autofix_label="插入 fault stub",
+            expected_effect="先补一个可编辑 fault mode stub，后续再替换成真实 fault taxonomy。",
+        )
+
+    if not packet.knowledge_capture.incident_fields:
+        add_suggestion(
+            "fill_knowledge_capture_incident_fields",
+            "补 incident_fields 默认骨架",
+            "knowledge_capture.incident_fields 为空，当前无法稳定记录 incident 事实。",
+            "knowledge_capture.incident_fields",
+            "knowledge_capture.incident_fields must not be empty.",
+            autofix_available=True,
+            autofix_label="填入默认 incident fields",
+        )
+    if not packet.knowledge_capture.resolution_fields:
+        add_suggestion(
+            "fill_knowledge_capture_resolution_fields",
+            "补 resolution_fields 默认骨架",
+            "knowledge_capture.resolution_fields 为空，当前无法记录修复结果。",
+            "knowledge_capture.resolution_fields",
+            "knowledge_capture.resolution_fields must not be empty.",
+            autofix_available=True,
+            autofix_label="填入默认 resolution fields",
+        )
+    if not packet.knowledge_capture.optimization_fields:
+        add_suggestion(
+            "fill_knowledge_capture_optimization_fields",
+            "补 optimization_fields 默认骨架",
+            "knowledge_capture.optimization_fields 为空，当前无法沉淀 guardrail / reliability 建议。",
+            "knowledge_capture.optimization_fields",
+            "knowledge_capture.optimization_fields must not be empty.",
+            autofix_available=True,
+            autofix_label="填入默认 optimization fields",
+        )
+
+    manual_counter = 1
+    for reason in blocking_reasons:
+        if reason in covered_reasons:
+            continue
+        suggestions.append(
+            {
+                "id": f"manual_schema_fix_{manual_counter}",
+                "title": f"手工修复 blocker {manual_counter}",
+                "detail": reason,
+                "target_path": "packet JSON",
+                "blocking_reason": reason,
+                "autofix_available": False,
+                "autofix_label": None,
+                "expected_effect": "这个 blocker 还需要工程师手工调整 packet JSON 或文档语义后再重跑。",
+            }
+        )
+        manual_counter += 1
+
+    return suggestions
+
+
+def _apply_schema_repair_suggestion_to_payload(payload: dict[str, Any], suggestion_id: str) -> dict[str, Any]:
+    next_payload = json.loads(json.dumps(payload, ensure_ascii=False))
+    template_defaults = intake_template_payload()
+
+    if suggestion_id == "add_source_document_stub":
+        source_documents = next_payload.setdefault("source_documents", [])
+        if not source_documents:
+            source_documents.append(_default_source_document_stub())
+        return next_payload
+
+    if suggestion_id == "add_component_stub":
+        components = next_payload.setdefault("components", [])
+        if not components:
+            components.append(_default_component_stub())
+        return next_payload
+
+    if suggestion_id == "add_logic_node_stub":
+        logic_nodes = next_payload.setdefault("logic_nodes", [])
+        if not logic_nodes:
+            logic_nodes.append(_default_logic_node_stub(next_payload))
+        return next_payload
+
+    if suggestion_id == "add_acceptance_scenario_stub":
+        scenarios = next_payload.setdefault("acceptance_scenarios", [])
+        if not scenarios:
+            scenarios.append(_default_acceptance_scenario_stub(next_payload))
+        return next_payload
+
+    if suggestion_id == "add_fault_mode_stub":
+        fault_modes = next_payload.setdefault("fault_modes", [])
+        if not fault_modes:
+            fault_modes.append(_default_fault_mode_stub(next_payload))
+        return next_payload
+
+    if suggestion_id.startswith("set_allowed_range:"):
+        component_id = suggestion_id.split(":", 1)[1]
+        for component in next_payload.get("components", []):
+            if component.get("id") == component_id and component.get("allowed_range") is None:
+                component["allowed_range"] = [0.0, 100.0]
+                break
+        return next_payload
+
+    if suggestion_id.startswith("set_allowed_states:"):
+        component_id = suggestion_id.split(":", 1)[1]
+        for component in next_payload.get("components", []):
+            if component.get("id") != component_id or component.get("allowed_states"):
+                continue
+            component["allowed_states"] = ["0", "1"] if component.get("state_shape") == "binary" else ["state_a", "state_b"]
+            break
+        return next_payload
+
+    if suggestion_id.startswith("add_scenario_transition_stub:"):
+        scenario_id = suggestion_id.split(":", 1)[1]
+        current_packet = intake_packet_from_dict(next_payload)
+        transition_stub = _default_scenario_transition_stub(current_packet, scenario_id)
+        if transition_stub is None:
+            return next_payload
+        for scenario in next_payload.get("acceptance_scenarios", []):
+            if scenario.get("id") == scenario_id and not scenario.get("transitions"):
+                scenario["transitions"] = [transition_stub]
+                if not scenario.get("steady_signals"):
+                    scenario["steady_signals"] = [
+                        {
+                            "signal_id": transition_stub["signal_id"],
+                            "value": transition_stub["start_value"],
+                            "unit": transition_stub["unit"],
+                            "note": "Auto-filled baseline stub.",
+                        }
+                    ]
+                break
+        return next_payload
+
+    if suggestion_id == "fill_knowledge_capture_incident_fields":
+        next_payload.setdefault("knowledge_capture", {})
+        if not next_payload["knowledge_capture"].get("incident_fields"):
+            next_payload["knowledge_capture"]["incident_fields"] = list(template_defaults["knowledge_capture"]["incident_fields"])
+        return next_payload
+
+    if suggestion_id == "fill_knowledge_capture_resolution_fields":
+        next_payload.setdefault("knowledge_capture", {})
+        if not next_payload["knowledge_capture"].get("resolution_fields"):
+            next_payload["knowledge_capture"]["resolution_fields"] = list(template_defaults["knowledge_capture"]["resolution_fields"])
+        return next_payload
+
+    if suggestion_id == "fill_knowledge_capture_optimization_fields":
+        next_payload.setdefault("knowledge_capture", {})
+        if not next_payload["knowledge_capture"].get("optimization_fields"):
+            next_payload["knowledge_capture"]["optimization_fields"] = list(
+                template_defaults["knowledge_capture"]["optimization_fields"]
+            )
+        return next_payload
+
+    raise ValueError(f"unknown or unsupported schema repair suggestion: {suggestion_id}")
+
+
+def apply_safe_schema_repairs(packet: ControlSystemIntakePacket) -> tuple[ControlSystemIntakePacket, tuple[str, ...]]:
+    payload = intake_packet_to_dict(packet)
+    applied_suggestion_ids: list[str] = []
+
+    while True:
+        current_packet = intake_packet_from_dict(payload)
+        report = assess_intake_packet(current_packet)
+        safe_suggestions = [
+            item
+            for item in report["repair_suggestions"]
+            if item["autofix_available"] and item["id"] not in applied_suggestion_ids
+        ]
+        if not safe_suggestions:
+            break
+        suggestion_id = safe_suggestions[0]["id"]
+        previous_payload = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+        payload = _apply_schema_repair_suggestion_to_payload(payload, suggestion_id)
+        applied_suggestion_ids.append(suggestion_id)
+        if json.dumps(payload, ensure_ascii=False, sort_keys=True) == previous_payload:
+            break
+
+    return intake_packet_from_dict(payload), tuple(applied_suggestion_ids)
+
+
 def _component_blockers(components: tuple[ComponentSpec, ...]) -> list[str]:
     blockers: list[str] = []
     for component in components:
@@ -452,6 +911,7 @@ def assess_intake_packet(packet: ControlSystemIntakePacket) -> dict[str, Any]:
     ready = not blockers and not unanswered
     generated_spec = workbench_spec_to_dict(intake_packet_to_workbench_spec(packet)) if ready else None
     source_document_kinds = sorted({document.kind for document in packet.source_documents})
+    repair_suggestions = build_schema_repair_suggestions(packet, blocking_reasons=blockers)
 
     return {
         "system_id": packet.system_id,
@@ -477,6 +937,7 @@ def assess_intake_packet(packet: ControlSystemIntakePacket) -> dict[str, Any]:
         ],
         "unanswered_clarifications": unanswered,
         "blocking_reasons": blockers,
+        "repair_suggestions": repair_suggestions,
         "ready_for_spec_build": ready,
         "generated_workbench_spec": generated_spec,
     }
@@ -603,6 +1064,14 @@ def render_intake_assessment_text(report: dict[str, Any]) -> str:
     if report["blocking_reasons"]:
         lines.append("blocking reasons:")
         lines.extend(f"  - {reason}" for reason in report["blocking_reasons"])
+    if report["repair_suggestions"]:
+        lines.append("repair suggestions:")
+        lines.extend(
+            "  - "
+            + ("[safe] " if item["autofix_available"] else "[manual] ")
+            + f"{item['title']} -> {item['target_path']}"
+            for item in report["repair_suggestions"]
+        )
     if report["unanswered_clarifications"]:
         lines.append("clarifications still required:")
         lines.extend(

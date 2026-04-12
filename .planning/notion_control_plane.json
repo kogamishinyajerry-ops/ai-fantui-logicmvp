@@ -15,17 +15,17 @@
   "pages": {
     "dashboard": "33cc68942bed8136b5c9f9ba5b4b44ec",
     "constitution": "33cc6894-2bed-8148-b2c5-ec68c440f5ef",
-    "status": "33fc6894-2bed-814f-b62a-e30a490f0041",
+    "status": "33fc6894-2bed-81a1-90ab-fa23e1ddc744",
     "control_plane": "33cc6894-2bed-810d-875e-e4e0e464ee31",
     "opus_protocol": "33cc6894-2bed-8117-b8f5-eda203f3be18",
-    "opus_brief": "33fc6894-2bed-81fd-b82d-e44b9988d1a4",
-    "freeze_packet": "33fc6894-2bed-8182-81cf-ec90266f7596"
+    "opus_brief": "33fc6894-2bed-81c5-a7d8-faa7a57a294e",
+    "freeze_packet": "33fc6894-2bed-8108-8456-ea95d62e605d"
   },
   "urls": {
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P6-17 Lift The Stronger QA Baseline Back To The Homepage",
+  "default_plan": "P7-44 Expose Manifest File Map In CLI JSON",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {

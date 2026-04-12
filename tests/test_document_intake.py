@@ -6,6 +6,7 @@ from pathlib import Path
 
 from well_harness.cli import main
 from well_harness.document_intake import (
+    apply_safe_schema_repairs,
     assess_intake_packet,
     build_clarification_brief,
     intake_packet_from_dict,
@@ -164,6 +165,33 @@ class MixedDocumentIntakeTests(unittest.TestCase):
         self.assertEqual("ready", follow_up["gate_status"])
         self.assertEqual(0, follow_up["open_question_count"])
         self.assertIn("knowledge_capture", follow_up["unlocks_after_completion"])
+
+    def test_assess_intake_packet_includes_safe_schema_repair_suggestions_for_template_gaps(self):
+        packet = intake_packet_from_dict(intake_template_payload())
+
+        report = assess_intake_packet(packet)
+
+        self.assertFalse(report["ready_for_spec_build"])
+        suggestion_ids = {item["id"] for item in report["repair_suggestions"]}
+        self.assertIn("add_logic_node_stub", suggestion_ids)
+        self.assertIn("add_fault_mode_stub", suggestion_ids)
+        self.assertTrue(
+            any(item["autofix_available"] for item in report["repair_suggestions"])
+        )
+
+    def test_apply_safe_schema_repairs_converts_template_to_clarification_only_block(self):
+        packet = intake_packet_from_dict(intake_template_payload())
+
+        repaired_packet, applied_suggestion_ids = apply_safe_schema_repairs(packet)
+        report = assess_intake_packet(repaired_packet)
+        brief = build_clarification_brief(repaired_packet)
+
+        self.assertIn("add_logic_node_stub", applied_suggestion_ids)
+        self.assertIn("add_fault_mode_stub", applied_suggestion_ids)
+        self.assertEqual([], report["blocking_reasons"])
+        self.assertFalse(report["ready_for_spec_build"])
+        self.assertEqual("blocked_by_clarifications", brief["gate_status"])
+        self.assertEqual(2, brief["open_question_count"])
 
     def test_cli_can_export_reference_spec_json(self):
         buffer = io.StringIO()

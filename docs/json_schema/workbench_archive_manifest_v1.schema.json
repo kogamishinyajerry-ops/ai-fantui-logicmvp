@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/workbench_archive_manifest_v1.schema.json",
+  "title": "well_harness.workbench_archive_manifest v1 JSON payload",
+  "description": "Machine-readable structure reference for workbench archive_manifest.json files.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "version",
+    "created_at_utc",
+    "archive_dir",
+    "bundle",
+    "files",
+    "restore_targets"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/workbench_archive_manifest_v1.schema.json"
+    },
+    "kind": {
+      "const": "well-harness-workbench-archive-manifest"
+    },
+    "version": {
+      "const": 1
+    },
+    "created_at_utc": {
+      "type": "string",
+      "minLength": 1
+    },
+    "archive_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "bundle": {
+      "$ref": "#/$defs/bundleSummary"
+    },
+    "files": {
+      "$ref": "#/$defs/archiveFiles"
+    },
+    "restore_targets": {
+      "$ref": "#/$defs/restoreTargets"
+    },
+    "self_check": {
+      "$ref": "#/$defs/selfCheck"
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nullableString": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "bundleSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bundle_kind",
+        "system_id",
+        "system_title",
+        "ready_for_spec_build",
+        "selected_scenario_id",
+        "selected_fault_mode_id",
+        "next_actions"
+      ],
+      "properties": {
+        "bundle_kind": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "system_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "system_title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "ready_for_spec_build": {
+          "type": "boolean"
+        },
+        "selected_scenario_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "selected_fault_mode_id": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "next_actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        }
+      }
+    },
+    "archiveFiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bundle_json",
+        "summary_markdown",
+        "intake_assessment_json",
+        "clarification_brief_json",
+        "playback_report_json",
+        "fault_diagnosis_report_json",
+        "knowledge_artifact_json",
+        "workspace_handoff_json",
+        "workspace_snapshot_json"
+      ],
+      "properties": {
+        "bundle_json": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "summary_markdown": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "intake_assessment_json": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "clarification_brief_json": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "playback_report_json": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "fault_diagnosis_report_json": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "knowledge_artifact_json": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "workspace_handoff_json": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "workspace_snapshot_json": {
+          "$ref": "#/$defs/nullableString"
+        }
+      }
+    },
+    "restoreTargets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "browser_workspace_snapshot",
+        "browser_handoff_summary",
+        "archive_summary_markdown"
+      ],
+      "properties": {
+        "browser_workspace_snapshot": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "browser_handoff_summary": {
+          "$ref": "#/$defs/nullableString"
+        },
+        "archive_summary_markdown": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "selfCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "working_directory"
+      ],
+      "properties": {
+        "command": {
+          "const": "python3 -m well_harness.cli archive-manifest ."
+        },
+        "working_directory": {
+          "const": "archive_dir"
+        }
+      }
+    }
+  }
+}

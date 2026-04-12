@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-11 - P6-17 restores the stronger shared QA baseline to homepage and handoff text by lifting it from repo archives when a newer maintenance run is narrower than the last full validation chain.
+Last activity: 2026-04-12 - P7-44 exposes the full archive manifest file map through CLI JSON output for future restore/sync automation.
 
 ## Current Position
 
@@ -21,7 +21,7 @@ Last activity: 2026-04-11 - P6-17 restores the stronger shared QA baseline to ho
 - GitHub run `24168293031` proved the same retirement logic works from CI, and 09C now points at `P3-07 自动退场旧审查对象` with `当前无需 Opus 审查`.
 - P4 is now closed as Approved after all six presenter-ready plans (`P4-01` through `P4-06`) verified successfully and GitHub run `24170575224` passed.
 - P5 is now closed as Approved after the Opus 4.6 phase-closeout review accepted the GitHub-backed P5 evidence chain through `P5-10`.
-- P6 remains the active control-plane reconciliation phase in Notion, but the repo-side baseline is now stable enough to resume targeted P7 workbench slices without reopening manual review.
+- P6 is now closed as the active control-plane reconciliation phase; the repo-side baseline and Notion control tower are stable enough to make P7 the active workbench phase.
 - `P7-01`, `P7-02`, and `P7-03` are now landed on `main` as the spec foundation, mixed-doc intake layer, and first playback compiler for the future workbench.
 - `P7-04` is now landed on `main`: declared fault modes can be injected into playback traces to produce deterministic diagnosis artifacts with affected signals, blocked logic nodes, and optimization hints.
 - `P7-05` is now landed on `main`: diagnosis + repair outcomes can be captured as reusable knowledge artifacts with explicit optimization guidance.
@@ -55,29 +55,102 @@ Last activity: 2026-04-11 - P6-17 restores the stronger shared QA baseline to ho
 - `P6-15 保留更强的共享验证基线` is now implemented locally: focused control-plane maintenance runs can advance the latest verified plan and latest success run, while repo/notion snapshots keep carrying forward the last richer shared validation baseline instead of collapsing QA confidence down to a narrow `1/1 shared validation checks pass`.
 - `P6-16 给 prepare-opus-review 增加有界超时` is now implemented locally: Notion HTTP requests and prepare-opus-review refreshes now have bounded timeouts plus repo-doc fallback, so slow windows no longer require an external kill just to regain control of the automation loop.
 - `P6-17 从归档提升更强 QA 基线` is now implemented locally: repo-side snapshot recovery now mines freeze/QA archives for the strongest shared validation baseline and prefers it over weaker maintenance-only summaries when rendering homepage, freeze packet, and handoff text.
+- `P6-18 同步活跃页面链接目标漂移` is now implemented locally: active sync pages compare rich-text link targets in addition to visible labels, the fallback active-page defaults now point at the current status / 09C / freeze pages, and the repo-side Notion bootstrap guide now clearly marks old `Round 92` / `129 tests OK` examples as historical setup notes instead of current truth.
+- `P6-19 中和 Notion 引导文档中的历史初始化样例` is now implemented locally: the remaining concrete `Round 92` / `129 tests OK` / old validation-title examples inside the bootstrap guide are replaced with neutral templates and “fill with current truth” language, so the document no longer reads like an active status source even deep in the body.
+- `P6-20 稳定活跃同步页面 URL` is now implemented locally: writable active sync pages are refreshed in place instead of being replaced on every snapshot change, while missing or archived pages still fall back to creating fresh replacements under the dashboard.
+- `P6-21 显式化数据库降级证据模式` is now implemented locally: `ReviewSnapshot` now carries an explicit evidence mode / note, and dashboard / status / freeze / 09C / repo docs all spell out when shared Notion databases are unavailable and the current truth is being recovered from active pages or repo docs.
 - A new requirement set now exists for strict engineer-facing acceptance playback, fault injection and diagnosis, knowledge capture, and future-system generalization; this is large enough to require a new phase instead of being folded into demo freeze work.
 - `P7-01` has an initial local foundation: `src/well_harness/system_spec.py` now defines a reusable control-system workbench spec and captures the current thrust-reverser chain as the first reference system, including acceptance-scenario, fault-mode, and clarification-question scaffolding.
 - `P7-02` is already implemented on `main`: `src/well_harness/document_intake.py` defines a mixed-document intake packet, readiness assessment, and CLI export surface so future systems can arrive as PDF/markdown-heavy packets with explicit system-defined signal semantics.
 - `P7-03` through `P7-06` now form a contiguous repo-side workbench chain: ready packets can progress from intake -> playback -> fault diagnosis -> knowledge capture, while incomplete packets can now stop at a structured clarification brief instead of drifting into guesswork.
 - `P7-06` extends that onboarding path so incomplete packets no longer fail silently; the CLI can now export an explicit engineer follow-up brief from the same intake evidence packet.
-- Those two P7 slices are treated as seeded groundwork, not as authority to bypass the newly approved P6 reconciliation pass.
+- `P7-07` now bundles that chain into a single engineer-facing artifact, so a ready packet no longer requires separate CLI hops to reconstruct onboarding, playback, diagnosis, and knowledge state.
+- `P7-08` now archives that bundle into a timestamped package with `bundle.json`, `README.md`, and component JSON artifacts, so engineers can hand off or revisit a full workbench run without reconstructing it from terminal output.
+- `P7-09` is now implemented locally: `well_harness.demo_server` serves `/workbench.html`, `/api/workbench/bootstrap`, and `/api/workbench/bundle`, letting users load a reference or template intake packet, generate ready-or-blocked workbench bundles, and optionally emit archive packages from a browser acceptance surface.
+- `P7-10` is now implemented locally: the browser workbench exposes the knowledge-capture optimization fields and renders playback, diagnosis, knowledge, and optimization summaries as structured cards, so engineers can validate the full bundle workflow without reading raw JSON.
+- `P7-11` is now implemented locally: the browser workbench now leads with a visual acceptance board, collapses raw JSON into explicit dev-only drawers, surfaces packet source / stage state / pass-or-block verdicts in one glance, and safely de-duplicates same-second archive directory collisions instead of crashing repeated archive runs.
+- `P7-12` is now implemented locally: the browser workbench exposes one-click acceptance presets for ready, blocked, quick-preview, and archive-retry flows, and the frontend now treats the last clicked preset as the winning result so rapid multi-clicks do not repaint stale output.
+- `P7-13` is now implemented locally: the browser workbench keeps a recent acceptance history board for pass / block / archive / failure outcomes, so users can compare consecutive preset runs without losing the previous visible result context.
+- `P7-14` is now implemented locally: recent acceptance history cards can restore their earlier result back into the main visual board, so users can revisit pass, block, and failure snapshots without rerunning the workflow.
+- `P7-15` is now implemented locally: the browser workbench now shows whether the main board is displaying the latest result or a replayed historical result, and users can jump back to the latest run with one click.
+- `P7-16` is now implemented locally: when users replay a historical result, the browser workbench now shows a direct latest-vs-replay comparison strip for verdict, scenario, fault mode, and archive state.
+- `P7-17` is now implemented locally: when users replay a historical result, the browser workbench now shows a side-by-side acceptance comparison board for replay vs latest verdict, blocker, scenario, fault mode, knowledge, and archive state.
+- `P7-18` is now implemented locally: the browser workbench now includes a visual second-system onboarding readiness board that surfaces source-document coverage, component/logic/scenario/fault counts, clarification progress, unlocks, and current gaps for a new control-logic packet.
+- `P7-19` is now implemented locally: the browser workbench now includes a visual second-system fingerprint board that shows document coverage, control objective, source-of-truth note, and concrete signal semantics before or after bundle generation.
+- `P7-20` is now implemented locally: the browser workbench now includes a visual onboarding action board that turns clarification items, schema blockers, and unlocks into explicit next-step cards instead of leaving them buried in text lists.
+- `P7-21` is now implemented locally: the browser workbench now includes a clarification refill workspace that turns pending follow-up items into editable answer cards, writes them back into `clarification_answers`, and can rerun the bundle flow from the same acceptance surface.
+- `P7-22` is now implemented locally: intake assessment now emits structured schema repair suggestions, the demo server can apply safe backend-approved packet repairs, and the browser workbench can apply those safe schema fixes and rerun from the same page.
+- `P7-23` is now implemented locally: the browser workbench now keeps a visible packet revision history for sample loads, local imports, safe schema repairs, clarification writes, and pre-run manual JSON edits, and it can restore an older packet revision back into the current input surface.
+- `P7-24` is now implemented locally: when the browser workbench is showing a historical packet revision, it now compares that version against the latest packet revision across system id, document coverage, logic/component shape, scenario/fault coverage, and clarification answers.
+- `P7-25` is now implemented locally: the browser workbench now shows packet draft save state, lets engineers manually save the current packet draft, and auto-saves valid unsaved drafts before sample switches, packet restores, local imports, or browser-side writebacks overwrite the editor payload.
+- `P7-26` is now implemented locally: the browser workbench now persists the current packet workspace in browser storage, restores packet history and related inputs after refresh, and keeps invalid JSON recoverable without promoting it into a valid saved revision.
+- `P7-27` is now implemented locally: the browser workbench now persists recent acceptance result history and replay/latest view state across refresh, and restored browser histories continue with non-colliding IDs when new result or packet history entries are created.
+- `P7-28` is now implemented locally: the browser workbench can now export and import full browser workspace snapshots, reusing the same restore path as browser persistence so packet context, result history, and replay/latest state move together across browsers.
+- `P7-29` is now implemented locally: `tools/gsd_notion_sync.py` now publishes explicit development architecture and anti-drift execution rules into the auto-synced dashboard/status/repo handoff surfaces, including the requirement that a slice is only complete after live `run` writeback and `prepare-opus-review` re-check succeed.
+- `P7-30` is now implemented locally: the browser workbench now renders a workspace handoff summary board, persists a handoff note with the rest of the workspace, and exports that handoff snapshot metadata together with packet/result history so cross-browser handoff is no longer raw JSON only.
+- `P7-31` is now implemented locally: the browser workbench can now copy a text handoff brief built from the live handoff board, including packet coverage, current result, archive state, workspace scale, and the current handoff note.
+- `P7-32` is now implemented locally: browser requests now send `workspace_handoff` metadata with bundle runs, archive packages can persist that context as `workspace_handoff.json`, archive README files include a browser handoff section, and the UI now surfaces that extra handoff artifact in the archive file list.
+- `P7-33` is now implemented locally: browser requests can now send the full `workspace_snapshot`, archive packages can persist it as `workspace_snapshot.json`, and the archive file list now exposes that recoverable browser-state artifact beside the handoff summary.
+- `P7-34` is now implemented locally: archive packages now include `archive_manifest.json`, README files point at that manifest as the single machine-readable file map, and the browser/API surfaces expose the manifest path alongside the other archive artifacts.
+- `P7-35` is now implemented locally: backend helpers can validate and load `archive_manifest.json`, so later restore, sync, and audit tooling can reject malformed or incomplete workbench archives before trusting their file maps.
+- `P7-36` is now implemented locally: the CLI can validate `archive_manifest.json` files in text or JSON mode, returning stable success/failure exit codes for generated archives and missing required files.
+- `P7-37` is now implemented locally: the archive manifest CLI accepts an archive directory directly and includes restore targets in text output, making human handoff less dependent on raw JSON inspection.
+- `P7-38` is now implemented locally: generated archive README files now include a directory-relative manifest self-check command, so archive consumers can validate the package without discovering the CLI from repo history.
+- `P7-39` is now implemented locally: archive manifests now include optional self-check metadata, validator coverage checks malformed self-check objects, and CLI JSON/text output surfaces the same validation command.
+- `P7-40` is now implemented locally: regression coverage executes the advertised README self-check command from inside a generated archive directory and verifies the CLI reports `archive_manifest: OK`.
+- `P7-41` is now implemented locally: `docs/json_schema/workbench_archive_manifest_v1.schema.json` documents the manifest contract and optional jsonschema coverage validates generated archive manifests against it.
+- `P7-42` is now implemented locally: generated `archive_manifest.json` files carry a `$schema` reference, the validator flags wrong schema IDs when present, and CLI output exposes the schema reference.
+- `P7-43` is now implemented locally: generated archive README files show the same archive manifest schema reference as the manifest `$schema`, keeping human handoff aligned with the machine-readable contract.
+- `P7-44` is now implemented locally: `archive-manifest --format json` includes the manifest `files` map, so automation can consume archive artifact paths directly from validated CLI output.
+- Notion sync is now healthy again: archived shared databases are automatically restored when possible, default writeback budgets now cover real Notion slow windows, and both `run` and `prepare-opus-review` succeed again under default settings.
 
 ## Active Objective
 
-Close the P5 -> P6 control-plane gap without adding product surface, while keeping the already-seeded P7 groundwork intact:
+Advance the spec-driven control-analysis workbench from separate primitives into a reusable engineer-facing workflow, while keeping the stabilized demo / freeze / control-plane baseline intact:
 
-- Write Execution Run records to Notion.
-- Write QA records to Notion.
-- Create UAT Gap records on failure.
-- Route subjective human review through Opus 4.6 Review Gate only.
-- Ensure Opus 4.6 review briefs cite Notion pages and the GitHub repo only.
-- Update the active status surface, roadmap pages, and the freeze/demo packet so they reflect the approved P5 evidence baseline instead of stale `129 tests OK` / manual-browser-QA guidance.
-- Keep the first-screen cockpit flow, presenter run card, lever presets, chain state legend, current conclusion rails, result-source note, stale-state guardrails, talk track, and structured answer area aligned around the same live-demo route.
-- Maintain the boundary between controller truth and simplified plant feedback in demo copy and UI affordances.
-- Keep a readable freeze/archive packet in the repo and Notion so the current baseline can be resumed, reviewed, or handed off quickly after a pause.
-- Keep active repo-side handoff docs intentionally slim, with older round prose moved into explicit archive files instead of lingering inline below the current snapshot.
-- Keep the active Notion surfaces self-healing even when the local integration cannot reach every shared database; successful P6 control-plane runs should still advance dashboard/status/09C/freeze to the newest GitHub-backed plan.
-- Preserve the seeded P7 foundation work, but do not deepen the spec-driven workbench arc until P6 closes and the control plane is back in sync.
+- Keep `controller.py` as the confirmed control truth and avoid introducing a second hidden rule engine.
+- Keep the stable cockpit demo, freeze packet, and Notion control plane available as the reference baseline while P7 expands.
+- Turn intake assessment, clarification gating, playback, fault diagnosis, and knowledge capture into a continuous workflow that engineers can run and hand off without manual stitching.
+- Preserve the “ask before guessing” onboarding boundary so incomplete packets stop at explicit clarification work instead of drifting into inferred specs.
+- Keep workbench artifacts machine-readable and ready for later repo / Notion sync, archive, and review.
+- Use the new bundle-archive package as the default handoff shape instead of forcing engineers to preserve raw terminal output.
+- Expose the workbench flow through a lightweight browser acceptance surface so ready and blocked packets can be validated without requiring terminal-only workflows.
+- Keep the browser acceptance surface aligned with the full bundle contract, including diagnosis and optimization details, so UI validation does not lag behind the backend workbench schema.
+- Keep acceptance flows visually scannable for non-technical validation, and treat raw JSON / code-shaped surfaces as optional debug affordances rather than the primary walkthrough.
+- Prefer one-click acceptance presets over form-first workflows whenever a common pass/block/archive path can be safely precomposed from existing backend truth.
+- Keep consecutive acceptance runs visible in the browser so users can compare “通过 / 阻塞 / 留档 / 失败” outcomes without mentally reconstructing what the previous click did.
+- Let users reopen a previous visual acceptance result directly from the browser history strip, instead of forcing a rerun just to get the old state back onto the main board.
+- Make replay mode explicit in the UI, so a restored historical result is never mistaken for the current latest run.
+- When a historical result is replayed, show its key differences from the latest result directly in the browser instead of making users compare two cards by memory.
+- When a historical result is replayed, keep the latest result visible beside it in a side-by-side acceptance board so users can compare replay vs latest without reconstructing context from memory.
+- Make second-system onboarding readiness visible in the browser so users can quickly judge whether a new control-logic packet is complete enough to enter spec build, playback, and diagnosis.
+- Make the second-system packet's identity visible in the browser before users read bundle detail, so they can confirm document sources, control intent, and signal semantics at a glance.
+- Make the second-system packet's next steps visible in the browser, so blocked onboarding runs tell users exactly what to answer, what to repair, and what will unlock next.
+- Let blocked onboarding runs be answerable inside the browser workbench itself, so engineers can write clarification answers back into the packet and immediately retry the same workflow.
+- Let blocked onboarding runs apply safe backend-approved schema repairs inside the browser workbench too, so common structural gaps can be patched and rerun without falling back to raw JSON editing first.
+- Make browser-side packet edits recoverable too, so engineers can restore an earlier intake packet version before rerunning the workflow instead of reconstructing old inputs by memory.
+- Make restored packet versions easier to judge too, so engineers can see their high-level differences from the latest packet without manually diffing raw JSON.
+- Make in-browser packet drafts safer to iterate too, so a later sample switch or browser-side writeback does not erase valid unsaved packet work before the engineer chooses to rerun.
+- Keep the browser packet workspace alive across refresh too, so packet history and in-progress onboarding edits survive ordinary page reloads instead of forcing engineers to reconstruct their state.
+- Keep the browser result context alive across refresh too, so replay/latest acceptance history survives together with the packet workspace instead of forcing engineers to rerun just to get visual context back.
+- Make the browser workspace portable too, so engineers can hand off or migrate their packet/result context across browsers with an explicit snapshot file instead of depending on one machine's storage.
+- Make portable workspace handoff self-describing too, so exported snapshots carry a concise current-state summary and a human-written handoff note instead of forcing the next engineer to infer context from raw JSON.
+- Make browser-side handoff immediately shareable too, so engineers can copy the current handoff brief into chat/docs without retyping what the snapshot already knows.
+- Make archive artifacts handoff-aware too, so once a bundle is archived the README and file set still preserve the browser-side packet/result/archive/note context that existed at archive time.
+- Make archive artifacts fully recoverable too, so a saved archive can preserve the full browser workspace snapshot instead of only a summarized handoff slice.
+- Make archive artifacts self-indexing too, so one manifest can tell later restore, sync, or audit tooling exactly which files exist and which ones matter for browser recovery.
+- Make archive manifests verifiable too, so later restore, sync, or audit tooling can validate a saved file map before consuming it.
+- Make archive manifest validation runnable from the CLI too, so engineers and automation can inspect archive health without writing custom Python.
+- Make archive manifest CLI handoff smoother too, so engineers can validate a whole archive directory and see restore targets without opening raw JSON.
+- Make archive README files self-checking too, so the archive package itself tells consumers how to validate the manifest before restore or audit.
+- Make archive self-checks machine-readable too, so automation can discover the validation command from `archive_manifest.json` instead of parsing README prose.
+- Make archive self-check documentation executable too, so the generated README command is proven from the archive directory.
+- Make archive manifest contracts portable too, so generic JSON Schema tooling can validate archive manifests without importing Python helpers.
+- Make archive manifests self-describing too, so schema-aware tooling can discover the manifest contract directly from `$schema`.
+- Make archive README files schema-aware too, so human handoff sees the same manifest contract reference as automation.
+- Make archive CLI output restore-ready too, so future automation can read the full file map from validated JSON output without reopening the manifest.
+- Keep the Notion control plane's architecture and execution rules auto-synced too, so any fresh Codex session resumes from the latest anti-drift contract instead of stale local assumptions.
+- Continue routing subjective review through Opus 4.6 only, with Notion + GitHub as the evidence boundary.
 
 ## Blockers/Concerns
 
@@ -85,12 +158,10 @@ Close the P5 -> P6 control-plane gap without adding product surface, while keepi
 - GitHub credentials live in `~/.zshrc`, so non-interactive shells may need explicit sourcing or env injection.
 - Opus 4.6 review packets must never rely on local terminal file paths.
 - Historical browser hand-check notes in archived coordination docs are not part of the active review contract.
-- The local `NOTION_API_KEY` integration can write directly to some key pages, but it still lacks access to parts of the shared control-plane database surface; repo-side full-database refresh paths should keep treating that token scope as a deployment dependency, not a guaranteed capability.
-- `P5-09` is verified locally, and the control-plane default plan now points to it so the next GitHub/Notion writeback can move the current Opus review target onto the corrected startup semantics instead of the threshold-pinned `P5-08` snapshot alone.
-- `01 当前状态` has been brought onto the P6 baseline, but the wider control tower still contains some historical summary blocks; P6 should keep trimming residual stale wording before reopening deeper P7 execution.
-- The dashboard and freeze packet can now be refreshed from repo-side sync, but `01 当前状态` is still blocked on page-block access for the local integration; treat that as an explicit control-plane dependency until the integration is shared more broadly or a MCP-backed fallback owns that page.
+- Shared Notion database access is healthy again after restoring archived databases, but slow Notion windows still exist; writeback paths now use a 60s default budget plus bounded fallback rather than assuming fast responses.
+- `tools/gsd_notion_sync.py prepare-opus-review` and `run` are now stable under default settings, but long-tail Notion slowness remains an operational characteristic rather than something to ignore in future control-plane changes.
 - The original `01 当前状态` page still exists and remains blocked by archived-ancestor constraints, but the active control-plane `status` pointer now targets a new auto-synced replacement page, so user-visible links no longer need to land on the stale page.
-- Repo-side coordination doc sync now falls back to active Notion pages when the local token cannot query the shared plan/run databases, so repo handoff docs can still refresh even under partial integration scope.
+- Repo-side coordination doc sync still keeps fallback recovery paths, but the primary expectation is now live shared-database writeback rather than permanent degraded mode.
 
 ## Accumulated Context
 

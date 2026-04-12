@@ -15,7 +15,7 @@ import re
 import signal
 import subprocess
 import ssl
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -24,6 +24,7 @@ from typing import Any
 NOTION_VERSION = "2022-06-28"
 DEFAULT_CONFIG_PATH = Path(".planning/notion_control_plane.json")
 TEXT_LIMIT = 1800
+DEFAULT_NOTION_WRITEBACK_TIMEOUT_S = "60"
 DASHBOARD_SYNC_MARKER = "AUTO-SYNCED DASHBOARD SNAPSHOT"
 FREEZE_PACKET_SYNC_MARKER = "AUTO-SYNCED FREEZE PACKET SNAPSHOT"
 REPO_COORDINATION_PLAN_MARKER = "AUTO-SYNCED COORDINATION PLAN SNAPSHOT"
@@ -58,11 +59,11 @@ DEFAULT_DATABASES = {
 DEFAULT_PAGES = {
     "dashboard": "33cc6894-2bed-8136-b5c9-f9ba5b4b44ec",
     "constitution": "33cc6894-2bed-8148-b2c5-ec68c440f5ef",
-    "status": "33cc6894-2bed-8105-ae6a-d880cb399b73",
+    "status": "33fc6894-2bed-814f-b62a-e30a490f0041",
     "control_plane": "33cc6894-2bed-810d-875e-e4e0e464ee31",
     "opus_protocol": "33cc6894-2bed-8117-b8f5-eda203f3be18",
-    "opus_brief": "33cc6894-2bed-819a-811c-f19885ee595a",
-    "freeze_packet": "33ec6894-2bed-8151-a0a8-ff9a36aa8816",
+    "opus_brief": "33fc6894-2bed-81fd-b82d-e44b9988d1a4",
+    "freeze_packet": "33fc6894-2bed-8182-81cf-ec90266f7596",
 }
 ACTIVE_SYNC_PAGE_TITLES = {
     "status": "01 当前状态（自动同步）",
@@ -138,6 +139,8 @@ class ReviewSnapshot:
     stale_gap_titles: tuple[str, ...]
     latest_success_run_notes: str | None = None
     latest_passing_qa_summary: str | None = None
+    evidence_mode: str = "database_live"
+    evidence_note: str | None = None
 
 
 @dataclass(frozen=True)
@@ -289,11 +292,16 @@ class NotionClient:
     def replace_page_body(self, page_id: str, blocks: list[dict[str, Any]]) -> None:
         # Preserve embedded child pages/databases on hub pages such as the root
         # dashboard; we only rebuild the writable narrative blocks around them.
-        for block in self.list_block_children(page_id):
-            if block.get("archived") or block.get("in_trash"):
-                continue
-            if block.get("type") in PRESERVED_CHILD_BLOCK_TYPES:
-                continue
+        existing_blocks = [
+            block
+            for block in self.list_block_children(page_id)
+            if not block.get("archived")
+            and not block.get("in_trash")
+            and block.get("type") not in PRESERVED_CHILD_BLOCK_TYPES
+        ]
+        if update_page_body_blocks_in_place(self, existing_blocks, blocks):
+            return
+        for block in existing_blocks:
             delete_block_if_present(self, block["id"])
         if blocks:
             self.request(
@@ -435,6 +443,113 @@ def block_plain_text(block: dict[str, Any]) -> str:
         for item in rich
         if isinstance(item, dict)
     )
+
+
+def rich_text_item_link(item: dict[str, Any]) -> str | None:
+    href = item.get("href")
+    if href:
+        return href
+    text = item.get("text")
+    if not isinstance(text, dict):
+        return None
+    link = text.get("link")
+    if not isinstance(link, dict):
+        return None
+    return link.get("url")
+
+
+def block_render_signature(block: dict[str, Any]) -> tuple[str, tuple[tuple[str, str | None], ...]] | None:
+    block_type = block.get("type")
+    if not block_type:
+        return None
+    payload = block.get(block_type, {})
+    if not isinstance(payload, dict):
+        return None
+    rich = payload.get("rich_text", [])
+    if not isinstance(rich, list):
+        return None
+    signature = tuple(
+        (
+            item.get("plain_text") or item.get("text", {}).get("content", ""),
+            rich_text_item_link(item),
+        )
+        for item in rich
+        if isinstance(item, dict)
+    )
+    return (block_type, signature)
+
+
+def block_patch_payload(block: dict[str, Any]) -> dict[str, Any] | None:
+    block_type = block.get("type")
+    if block_type in {"paragraph", "heading_2", "bulleted_list_item", "numbered_list_item"}:
+        payload = block.get(block_type)
+        if isinstance(payload, dict):
+            return {block_type: {"rich_text": payload.get("rich_text", [])}}
+        return None
+    if block_type == "callout":
+        payload = block.get("callout")
+        if not isinstance(payload, dict):
+            return None
+        callout_payload: dict[str, Any] = {"rich_text": payload.get("rich_text", [])}
+        if "icon" in payload:
+            callout_payload["icon"] = payload["icon"]
+        return {"callout": callout_payload}
+    if block_type == "divider":
+        return {"divider": {}}
+    return None
+
+
+def block_patch_signature(block: dict[str, Any]) -> tuple[str, tuple[Any, ...]] | None:
+    block_type = block.get("type")
+    if not block_type:
+        return None
+    if block_type in {"paragraph", "heading_2", "bulleted_list_item", "numbered_list_item"}:
+        payload = block.get(block_type)
+        if not isinstance(payload, dict):
+            return None
+        return (block_type, block_render_signature(block))
+    if block_type == "callout":
+        payload = block.get("callout", {})
+        if not isinstance(payload, dict):
+            return None
+        icon = payload.get("icon")
+        icon_signature: tuple[str, str] | None = None
+        if isinstance(icon, dict):
+            if icon.get("type") == "emoji" and icon.get("emoji"):
+                icon_signature = ("emoji", icon["emoji"])
+            elif icon.get("type") == "external":
+                external = icon.get("external") or {}
+                if external.get("url"):
+                    icon_signature = ("external", external["url"])
+        return (block_type, block_render_signature(block), icon_signature)
+    if block_type == "divider":
+        return (block_type, ())
+    return None
+
+
+def update_page_body_blocks_in_place(
+    client: NotionClient,
+    existing_blocks: list[dict[str, Any]],
+    new_blocks: list[dict[str, Any]],
+) -> bool:
+    if len(existing_blocks) != len(new_blocks):
+        return False
+    existing_types = [block.get("type") for block in existing_blocks]
+    new_types = [block.get("type") for block in new_blocks]
+    if existing_types != new_types:
+        return False
+    patch_payloads = [block_patch_payload(block) for block in new_blocks]
+    if any(payload is None for payload in patch_payloads):
+        return False
+    existing_signatures = [block_patch_signature(block) for block in existing_blocks]
+    new_signatures = [block_patch_signature(block) for block in new_blocks]
+    if any(signature is None for signature in existing_signatures + new_signatures):
+        return False
+    for existing_block, signature, payload in zip(existing_blocks, new_signatures, patch_payloads):
+        if block_patch_signature(existing_block) == signature:
+            continue
+        client.request("PATCH", f"/v1/blocks/{existing_block['id']}", payload)
+    return True
 
 
 def load_control_plane_config(config_path: Path) -> dict[str, Any]:
@@ -634,6 +749,31 @@ def ensure_live_active_pages(
     return replacements
 
 
+def ensure_live_databases(
+    client: NotionClient,
+    config: dict[str, Any],
+) -> dict[str, str]:
+    restored: dict[str, str] = {}
+    for key, database_id_value in config.get("databases", {}).items():
+        try:
+            block = client.request("GET", f"/v1/blocks/{database_id_value}")
+        except RuntimeError as exc:
+            if is_missing_database_error(str(exc)) or is_missing_page_error(str(exc)):
+                continue
+            raise
+        if not block.get("archived") and not block.get("in_trash"):
+            continue
+        restored_block = client.request(
+            "PATCH",
+            f"/v1/blocks/{database_id_value}",
+            {"archived": False},
+        )
+        if restored_block.get("archived") or restored_block.get("in_trash"):
+            continue
+        restored[key] = database_id_value
+    return restored
+
+
 def replace_active_sync_page(
     client: NotionClient,
     config: dict[str, Any],
@@ -646,8 +786,21 @@ def replace_active_sync_page(
     previous_id = config.get("pages", {}).get(key)
     if previous_id:
         try:
-            if page_matches_rendered_blocks(client, previous_id, blocks):
-                return previous_id
+            page = client.get_page(previous_id)
+            if not page.get("archived") and not page.get("in_trash"):
+                if page_matches_rendered_blocks(client, previous_id, blocks):
+                    return previous_id
+                try:
+                    rewrite_active_sync_page_body(
+                        client,
+                        previous_id,
+                        title=title,
+                        blocks=blocks,
+                    )
+                except NotionWritebackTimeout:
+                    pass
+                else:
+                    return previous_id
         except RuntimeError as exc:
             if not is_missing_page_error(str(exc)):
                 raise
@@ -689,6 +842,17 @@ def active_page_unavailable_keys(client: NotionClient, config: dict[str, Any]) -
         for key in ("status", "opus_brief", "freeze_packet")
         if key in config.get("pages", {}) and not page_is_writable(client, config, key)
     )
+
+
+def rewrite_active_sync_page_body(
+    client: NotionClient,
+    page_id_value: str,
+    *,
+    title: str,
+    blocks: list[dict[str, Any]],
+) -> None:
+    client.update_page_properties(page_id_value, {"title": title_value(title)})
+    client.replace_page_body(page_id_value, blocks)
 
 
 @contextlib.contextmanager
@@ -792,6 +956,7 @@ def summarize_results(results: list[CommandResult]) -> RunSummary:
 def derive_compact_success_summary(results: list[CommandResult]) -> str | None:
     tests_ok: int | None = None
     demo_smoke_count: int | None = None
+    shared_check_count: int | None = None
 
     for result in results:
         if "unittest discover" in result.command:
@@ -806,13 +971,41 @@ def derive_compact_success_summary(results: list[CommandResult]) -> str | None:
             completed = payload.get("completed_scenarios")
             if isinstance(completed, int):
                 demo_smoke_count = completed
+        if "run_gsd_validation_suite.py" in result.command and result.stdout.strip():
+            try:
+                payload = json.loads(result.stdout)
+            except json.JSONDecodeError:
+                continue
+            command_count = payload.get("command_count")
+            if isinstance(command_count, int) and command_count > 0:
+                shared_check_count = command_count
+            for entry in payload.get("results", []):
+                if not isinstance(entry, dict):
+                    continue
+                name = entry.get("name")
+                command = entry.get("command", "")
+                stdout = entry.get("stdout", "")
+                stderr = entry.get("stderr", "")
+                if name == "unit_tests" or "unittest discover" in command:
+                    match = re.search(r"Ran\s+(\d+)\s+tests", stderr)
+                    if match:
+                        tests_ok = int(match.group(1))
+                if name == "demo_path_smoke" or "demo_path_smoke.py" in command:
+                    try:
+                        smoke_payload = json.loads(stdout)
+                    except json.JSONDecodeError:
+                        continue
+                    completed = smoke_payload.get("completed_scenarios")
+                    if isinstance(completed, int):
+                        demo_smoke_count = completed
 
     fragments: list[str] = []
     if tests_ok is not None:
         fragments.append(f"{tests_ok} tests OK")
     if demo_smoke_count is not None:
         fragments.append(f"{demo_smoke_count} demo smoke scenarios pass")
-    fragments.append(f"{len(results)}/{len(results)} shared validation checks pass")
+    check_count = shared_check_count or len(results)
+    fragments.append(f"{check_count}/{check_count} shared validation checks pass")
     if len(fragments) == 1:
         return fragments[0] + "."
     if len(fragments) == 2:
@@ -835,6 +1028,10 @@ def derive_compact_success_summary_from_text(text: str) -> str | None:
     smoke_match = re.search(r'"completed_scenarios"\s*:\s*(\d+)', text)
     if smoke_match:
         demo_smoke_count = int(smoke_match.group(1))
+    if demo_smoke_count is None:
+        smoke_match = re.search(r'\\"completed_scenarios\\"\s*:\s*(\d+)', text)
+        if smoke_match:
+            demo_smoke_count = int(smoke_match.group(1))
     if demo_smoke_count is None:
         smoke_match = re.search(r"(\d+)\s+demo smoke scenarios pass", text)
         if smoke_match:
@@ -907,6 +1104,22 @@ def stronger_success_summary(*summaries: str | None) -> str | None:
             best_summary = summary
             best_metrics = metrics
     return best_summary
+
+
+def compact_notion_run_notes(text: str | None) -> str | None:
+    if not text:
+        return None
+    compact = derive_compact_success_summary_from_text(text)
+    return compact or text
+
+
+def compact_notion_qa_summary(text: str | None) -> str | None:
+    if not text:
+        return None
+    compact = derive_compact_success_summary_from_text(text)
+    if compact:
+        return f"PASS. {compact}"
+    return text
 
 
 def strongest_repo_success_summary(cwd: Path, *seed_summaries: str | None) -> str | None:
@@ -1199,8 +1412,10 @@ def fetch_review_snapshot(client: NotionClient, config: dict[str, Any]) -> Revie
         ready_task=row_text(ready_task_row, "Task") or None,
         open_gap_titles=open_gap_titles,
         stale_gap_titles=stale_gap_titles,
-        latest_success_run_notes=row_text(success_run_row, "Notes") or None,
-        latest_passing_qa_summary=row_text(passing_qa_row, "Summary") or None,
+        latest_success_run_notes=compact_notion_run_notes(row_text(success_run_row, "Notes")),
+        latest_passing_qa_summary=compact_notion_qa_summary(row_text(passing_qa_row, "Summary")),
+        evidence_mode="database_live",
+        evidence_note="共享 Notion 数据库可达；phase / run / QA / gate 取自实时数据库记录。",
     )
 
 
@@ -1216,8 +1431,20 @@ def rendered_block_text_lines(blocks: list[dict[str, Any]]) -> list[str]:
     return [text.strip() for block in blocks if (text := block_plain_text(block).strip())]
 
 
+def page_render_signatures(client: NotionClient, page_id_value: str) -> list[tuple[str, tuple[tuple[str, str | None], ...]]]:
+    return [
+        signature
+        for block in client.list_block_children(page_id_value)
+        if block.get("type") not in PRESERVED_CHILD_BLOCK_TYPES and (signature := block_render_signature(block)) is not None
+    ]
+
+
+def rendered_block_signatures(blocks: list[dict[str, Any]]) -> list[tuple[str, tuple[tuple[str, str | None], ...]]]:
+    return [signature for block in blocks if (signature := block_render_signature(block)) is not None]
+
+
 def page_matches_rendered_blocks(client: NotionClient, page_id_value: str, blocks: list[dict[str, Any]]) -> bool:
-    return page_text_lines(client, page_id_value) == rendered_block_text_lines(blocks)
+    return page_render_signatures(client, page_id_value) == rendered_block_signatures(blocks)
 
 
 def page_prefixed_value(lines: list[str], prefix: str) -> str | None:
@@ -1303,6 +1530,8 @@ def fetch_review_snapshot_from_repo_docs(cwd: Path, config: dict[str, Any]) -> R
         stale_gap_titles=(),
         latest_success_run_notes=latest_success_run_notes,
         latest_passing_qa_summary=latest_passing_qa_summary,
+        evidence_mode="repo_docs_fallback",
+        evidence_note="共享 Notion 数据库与活跃控制面页面当前不可达；当前快照由 repo freeze packet 与 handoff docs 恢复。",
     )
 
 
@@ -1361,6 +1590,8 @@ def fetch_review_snapshot_from_pages(client: NotionClient, config: dict[str, Any
         stale_gap_titles=(),
         latest_success_run_notes=latest_success_run_notes,
         latest_passing_qa_summary=latest_passing_qa_summary,
+        evidence_mode="active_pages_fallback",
+        evidence_note="共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。",
     )
 
 
@@ -1387,6 +1618,8 @@ def fetch_review_snapshot_from_dashboard_page(client: NotionClient, config: dict
         ready_task=None,
         open_gap_titles=open_gap_titles,
         stale_gap_titles=(),
+        evidence_mode="dashboard_fallback",
+        evidence_note="共享数据库与独立活跃子页当前不可达；dashboard 仍是当前 live truth。",
     )
 
 
@@ -1414,6 +1647,114 @@ def snapshot_quality(snapshot: ReviewSnapshot) -> int:
     return score
 
 
+def snapshot_evidence_mode_label(snapshot: ReviewSnapshot) -> str:
+    labels = {
+        "database_live": "shared-database live mode",
+        "active_pages_fallback": "active-page degraded mode",
+        "dashboard_fallback": "dashboard-only degraded mode",
+        "repo_docs_fallback": "repo-doc fallback mode",
+        "local_timeout_fallback": "local timeout fallback mode",
+    }
+    return labels.get(snapshot.evidence_mode, snapshot.evidence_mode.replace("_", "-"))
+
+
+def snapshot_evidence_mode_detail(snapshot: ReviewSnapshot) -> str:
+    if snapshot.evidence_note:
+        return snapshot.evidence_note
+    defaults = {
+        "database_live": "共享 Notion 数据库可达；phase / run / QA / gate 取自实时数据库记录。",
+        "active_pages_fallback": "共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。",
+        "dashboard_fallback": "共享数据库与独立活跃子页当前不可达；dashboard 仍是当前 live truth。",
+        "repo_docs_fallback": "共享数据库 / 活跃页面当前不可达；当前快照由 repo freeze packet 与 handoff docs 恢复。",
+        "local_timeout_fallback": "Notion 写回在超时保护下未完成；当前快照由本地 repo 文档或 roadmap 恢复。",
+    }
+    return defaults.get(snapshot.evidence_mode, "当前快照来自非默认证据恢复路径。")
+
+
+def snapshot_evidence_line(snapshot: ReviewSnapshot) -> str:
+    return f"当前证据模式：{snapshot_evidence_mode_label(snapshot)}（{snapshot_evidence_mode_detail(snapshot)}）"
+
+
+def snapshot_phase_number(snapshot: ReviewSnapshot) -> int | None:
+    match = re.match(r"P(\d+)\b", snapshot.active_phase)
+    if match:
+        return int(match.group(1))
+    match = re.match(r"P(\d+)-", snapshot.latest_verified_plan)
+    if match:
+        return int(match.group(1))
+    return None
+
+
+def snapshot_is_workbench_phase(snapshot: ReviewSnapshot) -> bool:
+    phase_number = snapshot_phase_number(snapshot)
+    return phase_number is not None and phase_number >= 7
+
+
+def development_guardrail_texts(snapshot: ReviewSnapshot) -> tuple[str, ...]:
+    workbench_phase = snapshot_is_workbench_phase(snapshot)
+    phase_specific_rule = (
+        "P7 workbench 继续把 intake / playback / diagnosis / knowledge / follow-up 收成 engineer-facing workflow，不引入第二套隐藏规则引擎。"
+        if workbench_phase
+        else "非 P7 收口阶段优先保持控制塔 / freeze / repo handoff 与 GitHub 证据对齐，不为了看起来忙而扩新表面。"
+    )
+    return (
+        "GitHub / repo 是实现真值；Notion 是控制面；`controller.py` 仍然是唯一控制真值。",
+        "一个切片只有在代码修改、目标验证命令、`gsd_notion_sync.py run` 写回，以及 `prepare-opus-review` 复核全部完成后，才算真正完成。",
+        "共享数据库或独立子页不可达时，可以暂时依赖 repo-side synced snapshot 继续恢复上下文，但在 live writeback 回补前，不把控制面视为“已同步到最新”。",
+        "任何 Notion 写回降级、部分失败或超时都应被当成 control-plane gap / blocker 处理，不能静默跳过后继续宣称已完成同步。",
+        "Opus 4.6 只在显式 gate / blocker / subjective review need 时介入；没有 review need 时默认动作就是继续自动开发。",
+        phase_specific_rule,
+    )
+
+
+def compact_development_guardrail_texts(snapshot: ReviewSnapshot) -> tuple[str, ...]:
+    return (
+        "GitHub / repo 是实现真值；Notion 是控制面；`controller.py` 仍然是唯一控制真值。",
+        "一个切片只有在代码 / 验证、`gsd_notion_sync.py run` 写回，以及 `prepare-opus-review` 复核完成后，才算收口。",
+        "Notion 写回降级必须视为 control-plane gap；没有 review need 时默认继续自动开发。",
+    )
+
+
+def development_guardrail_blocks(snapshot: ReviewSnapshot) -> list[dict[str, Any]]:
+    return [heading_block("当前开发架构与执行规则"), *[bullet_block(text) for text in development_guardrail_texts(snapshot)]]
+
+
+def development_guardrail_markdown_lines(snapshot: ReviewSnapshot) -> list[str]:
+    lines = ["## 当前开发架构与执行规则", ""]
+    lines.extend(f"- {text}" for text in development_guardrail_texts(snapshot))
+    lines.append("")
+    return lines
+
+
+def align_snapshot_with_local_phase(
+    snapshot: ReviewSnapshot,
+    *,
+    cwd: Path,
+) -> ReviewSnapshot:
+    local_phase_label = active_phase_label_from_roadmap(cwd)
+    local_phase_number = active_phase_number_from_roadmap(cwd)
+    if local_phase_label is None or local_phase_number is None:
+        return snapshot
+    current_phase_number = snapshot_phase_number(snapshot)
+    if current_phase_number is not None and current_phase_number >= local_phase_number:
+        return snapshot
+    evidence_note = snapshot.evidence_note or snapshot_evidence_mode_detail(snapshot)
+    correction_note = f"当前 active phase 已按本地 roadmap 纠偏为 `{local_phase_label}`。"
+    if correction_note not in evidence_note:
+        evidence_note = f"{evidence_note} {correction_note}".strip()
+    active_phase_summary = snapshot.active_phase_summary or ""
+    if "repo roadmap" not in active_phase_summary:
+        active_phase_summary = (
+            f"{active_phase_summary} Repo roadmap active phase override applied."
+        ).strip()
+    return replace(
+        snapshot,
+        active_phase=local_phase_label,
+        active_phase_summary=active_phase_summary,
+        evidence_note=evidence_note,
+    )
+
+
 def should_prefer_snapshot(
     primary_snapshot: ReviewSnapshot,
     candidate_snapshot: ReviewSnapshot,
@@ -1430,6 +1771,10 @@ def should_prefer_snapshot(
         and primary_snapshot.latest_verified_plan != default_plan
     ):
         return True
+    candidate_phase = snapshot_phase_number(candidate_snapshot)
+    primary_phase = snapshot_phase_number(primary_snapshot)
+    if candidate_phase is not None and primary_phase is not None and candidate_phase != primary_phase:
+        return candidate_phase > primary_phase
     if candidate_run == primary_run and success_summary_metrics(candidate_snapshot.latest_passing_qa_summary) > success_summary_metrics(primary_snapshot.latest_passing_qa_summary):
         return True
     return snapshot_quality(candidate_snapshot) > snapshot_quality(primary_snapshot)
@@ -1466,6 +1811,7 @@ def build_fallback_run_snapshot(
             repo_snapshot = None
         if repo_snapshot and should_prefer_snapshot(snapshot, repo_snapshot, config):
             snapshot = repo_snapshot
+    snapshot = align_snapshot_with_local_phase(snapshot, cwd=cwd)
     if summary.succeeded:
         success_run_notes, passing_qa_summary, passing_qa = select_success_snapshot_evidence(
             snapshot,
@@ -1473,41 +1819,18 @@ def build_fallback_run_snapshot(
             results,
             summary,
         )
-        return ReviewSnapshot(
-            active_phase=snapshot.active_phase,
-            active_phase_goal=snapshot.active_phase_goal,
-            active_phase_summary=snapshot.active_phase_summary,
+        return replace(
+            snapshot,
             latest_verified_plan=plan_id,
             latest_success_run=title,
             latest_failed_run=snapshot.latest_failed_run,
             latest_passing_qa=passing_qa,
-            gate_page_id=snapshot.gate_page_id,
-            gate_name=snapshot.gate_name,
-            gate_status=snapshot.gate_status,
-            ready_task_id=snapshot.ready_task_id,
-            ready_task=snapshot.ready_task,
-            open_gap_titles=snapshot.open_gap_titles,
-            stale_gap_titles=snapshot.stale_gap_titles,
             latest_success_run_notes=success_run_notes,
             latest_passing_qa_summary=passing_qa_summary,
         )
-    return ReviewSnapshot(
-        active_phase=snapshot.active_phase,
-        active_phase_goal=snapshot.active_phase_goal,
-        active_phase_summary=snapshot.active_phase_summary,
-        latest_verified_plan=snapshot.latest_verified_plan,
-        latest_success_run=snapshot.latest_success_run,
+    return replace(
+        snapshot,
         latest_failed_run=title,
-        latest_passing_qa=snapshot.latest_passing_qa,
-        gate_page_id=snapshot.gate_page_id,
-        gate_name=snapshot.gate_name,
-        gate_status=snapshot.gate_status,
-        ready_task_id=snapshot.ready_task_id,
-        ready_task=snapshot.ready_task,
-        open_gap_titles=snapshot.open_gap_titles,
-        stale_gap_titles=snapshot.stale_gap_titles,
-        latest_success_run_notes=snapshot.latest_success_run_notes,
-        latest_passing_qa_summary=snapshot.latest_passing_qa_summary,
     )
 
 
@@ -1538,7 +1861,10 @@ def build_local_run_snapshot(
             ready_task=None,
             open_gap_titles=(),
             stale_gap_titles=(),
+            evidence_mode="local_timeout_fallback",
+            evidence_note="Notion 写回在超时保护下未完成；当前快照由本地 repo 文档或 roadmap 恢复。",
         )
+    snapshot = align_snapshot_with_local_phase(snapshot, cwd=cwd)
 
     if summary.succeeded:
         success_run_notes, passing_qa_summary, passing_qa = select_success_snapshot_evidence(
@@ -1547,41 +1873,18 @@ def build_local_run_snapshot(
             results,
             summary,
         )
-        return ReviewSnapshot(
-            active_phase=snapshot.active_phase,
-            active_phase_goal=snapshot.active_phase_goal,
-            active_phase_summary=snapshot.active_phase_summary,
+        return replace(
+            snapshot,
             latest_verified_plan=plan_id,
             latest_success_run=title,
             latest_failed_run=snapshot.latest_failed_run,
             latest_passing_qa=passing_qa,
-            gate_page_id=snapshot.gate_page_id,
-            gate_name=snapshot.gate_name,
-            gate_status=snapshot.gate_status,
-            ready_task_id=snapshot.ready_task_id,
-            ready_task=snapshot.ready_task,
-            open_gap_titles=snapshot.open_gap_titles,
-            stale_gap_titles=snapshot.stale_gap_titles,
             latest_success_run_notes=success_run_notes,
             latest_passing_qa_summary=passing_qa_summary,
         )
-    return ReviewSnapshot(
-        active_phase=snapshot.active_phase,
-        active_phase_goal=snapshot.active_phase_goal,
-        active_phase_summary=snapshot.active_phase_summary,
-        latest_verified_plan=snapshot.latest_verified_plan,
-        latest_success_run=snapshot.latest_success_run,
+    return replace(
+        snapshot,
         latest_failed_run=title,
-        latest_passing_qa=snapshot.latest_passing_qa,
-        gate_page_id=snapshot.gate_page_id,
-        gate_name=snapshot.gate_name,
-        gate_status=snapshot.gate_status,
-        ready_task_id=snapshot.ready_task_id,
-        ready_task=snapshot.ready_task,
-        open_gap_titles=snapshot.open_gap_titles,
-        stale_gap_titles=snapshot.stale_gap_titles,
-        latest_success_run_notes=snapshot.latest_success_run_notes,
-        latest_passing_qa_summary=snapshot.latest_passing_qa_summary,
     )
 
 
@@ -1600,6 +1903,7 @@ def build_current_review_brief(
     facts = [
         f"活动 phase：{snapshot.active_phase}",
         f"当前已验证 plan：{snapshot.latest_verified_plan}",
+        snapshot_evidence_line(snapshot),
     ]
     if snapshot.latest_success_run:
         facts.append(f"最近成功执行证据：{snapshot.latest_success_run}")
@@ -1847,7 +2151,14 @@ def render_dashboard_blocks(
         bullet_block(f"当前 Opus 状态：{current_opus_state}"),
         bullet_block(f"当前唯一人工动作：{current_action}"),
         bullet_block(f"Open Gap 数量：{len(snapshot.open_gap_titles)}"),
+        bullet_block(snapshot_evidence_line(snapshot)),
     ]
+    blocks.extend(
+        [
+            heading_block("当前开发规则"),
+            *[bullet_block(text) for text in compact_development_guardrail_texts(snapshot)],
+        ]
+    )
     if unavailable_page_keys:
         blocks.append(
             bullet_block(
@@ -1911,6 +2222,8 @@ def render_dashboard_blocks(
             bullet_block("Notion 记录 phase / plan / gate / gap / 审查结论 / 证据入口，并负责把历史脉络组织成可审计视图。"),
             bullet_block("repo 文档是 handoff / archive 视图；真正审查时仍应回到 Notion 页面与 GitHub 证据面。"),
             bullet_block("Opus 4.6 审查请求必须只依赖 Notion 页面和 GitHub 仓库，不得引用本地终端文件。"),
+            divider_block(),
+            *development_guardrail_blocks(snapshot),
             *evidence_blocks,
             divider_block(),
             heading_block("历史总览（自动同步）"),
@@ -1929,12 +2242,15 @@ def render_dashboard_blocks(
             bullet_block("P7-03：把 intake scenario 编译成 monitor-vs-time playback trace。"),
             bullet_block("P7-04：把 fault mode 注入 playback 并生成链路诊断报告。"),
             bullet_block("P7-05：把 diagnosis + repair outcome 收成 reusable knowledge artifact。"),
+            bullet_block("P7-06：让未完成的新系统 intake packet 输出 engineer-facing clarification follow-up brief。"),
+            bullet_block("P7-07：把 intake / playback / diagnosis / knowledge / follow-up 收成统一 engineer-facing bundle。"),
             divider_block(),
             heading_block("标准闭环"),
             number_block("按 roadmap / default plan 选择当前实现切片，在 repo 中完成代码、测试和验证命令。"),
-            number_block("把执行结果回写到 Run / QA / Gap / Gate，并同步 dashboard、09C 与 freeze packet。"),
-            number_block("如果没有 open gap 且 Gate 不在 Awaiting Opus 4.6，则继续自动开发，不额外触发主观审查。"),
+            number_block("切片完成后立即执行 `gsd_notion_sync.py run`，把 Run / QA / Gap / Gate 与 dashboard、09C、freeze packet 同步回控制面。"),
+            number_block("再执行 `prepare-opus-review` 复核当前 Gate / review need；如果没有 open gap 且 Gate 不在 Awaiting Opus 4.6，则继续自动开发。"),
             number_block("只有在 phase 收口、阻塞 gap、显式 gate 等场景下，才通过 09C 手动触发 Opus 4.6。"),
+            number_block("任何 Notion 写回降级、部分失败或超时都要先作为 control-plane gap / blocker 处理，不能跳过后直接宣称完成。"),
             number_block("通过后的结论要回写 Review Gate / Gap / repo handoff，让历史链路保持可追溯。"),
         ]
     )
@@ -1948,6 +2264,54 @@ def render_dashboard_blocks(
                 paragraph_parts_block([notion_text("P7 Phase Plans（repo archive）", repo_blob_url(config, ".planning/phases/07-build-a-spec-driven-control-analysis-workbench/"))]),
             ]
         )
+    return blocks
+
+
+def render_dashboard_snapshot_blocks(
+    brief: CurrentReviewBrief,
+    snapshot: ReviewSnapshot,
+    config: dict[str, Any],
+    *,
+    unavailable_page_keys: tuple[str, ...] = (),
+) -> list[dict[str, Any]]:
+    current_action = (
+        "继续自动开发；当前无需手动触发 Opus 4.6。"
+        if not brief.review_required
+        else "打开 09C 当前 Opus 4.6 审查简报，并按其中当前请求手动触发 Opus 4.6。"
+    )
+    current_opus_state = (
+        "当前无需 Opus 审查"
+        if not brief.review_required
+        else f"需要 Opus 4.6 介入：{brief.intervention_kind}"
+    )
+    blocks: list[dict[str, Any]] = [
+        callout_block(
+            f"{DASHBOARD_SYNC_MARKER} — 这个顶部快照由 repo-side sync 自动刷新；下方旧摘要若尚未同步，应以这里为准。",
+            "🧭",
+        ),
+        heading_block("当前快照（自动同步）"),
+        bullet_block(f"当前阶段：{snapshot.active_phase}"),
+        bullet_block(f"当前已验证 Plan：{snapshot.latest_verified_plan}"),
+        bullet_block(f"最近成功执行证据：{snapshot.latest_success_run or '暂无'}"),
+        bullet_block(f"当前 Gate：{snapshot.gate_name}（{snapshot.gate_status}）"),
+        bullet_block(f"当前 Opus 状态：{current_opus_state}"),
+        bullet_block(f"当前唯一人工动作：{current_action}"),
+        bullet_block(f"Open Gap 数量：{len(snapshot.open_gap_titles)}"),
+        bullet_block(snapshot_evidence_line(snapshot)),
+    ]
+    if unavailable_page_keys:
+        blocks.append(
+            bullet_block(
+                "当前控制面模式：dashboard-only degraded mode（dashboard 仍为 live truth，独立 status / 09C / freeze 子页当前不可直写）。"
+            )
+        )
+    blocks.extend(
+        [
+            paragraph_parts_block([notion_text("GitHub Repo / ai-fantui-logicmvp", config_url(config, "github_repo"))]),
+            paragraph_parts_block([notion_text("GitHub Actions / GSD Automation Loop", config_url(config, "github_actions"))]),
+            divider_block(),
+        ]
+    )
     return blocks
 
 
@@ -1973,6 +2337,7 @@ def render_freeze_packet_blocks(
         bullet_block(f"当前 Gate：{snapshot.gate_name}（{snapshot.gate_status}）"),
         bullet_block(f"当前 Opus 状态：{current_opus_state}"),
         bullet_block(f"Open Gap 数量：{len(snapshot.open_gap_titles)}"),
+        bullet_block(snapshot_evidence_line(snapshot)),
     ]
     if snapshot.latest_passing_qa_summary:
         blocks.append(bullet_block(f"当前 QA 摘要：{snapshot.latest_passing_qa_summary}"))
@@ -1995,6 +2360,7 @@ def render_status_page_blocks(
     snapshot: ReviewSnapshot,
     config: dict[str, Any],
 ) -> list[dict[str, Any]]:
+    workbench_phase = snapshot_is_workbench_phase(snapshot)
     current_opus_state = (
         "当前无需 Opus 审查"
         if not brief.review_required
@@ -2018,7 +2384,12 @@ def render_status_page_blocks(
         bullet_block("当前 demo 基线已经由 GitHub-backed evidence 验证，可作为稳定的 freeze / demo packet 基线。"),
         bullet_block("dashboard 与 freeze packet 顶部快照已经进入 repo-side 自动同步路径。"),
         bullet_block(f"当前 Opus 状态：{current_opus_state}"),
-        bullet_block("P7 的 spec-driven workbench foundation 已在 repo 中提前播种，但正式自动执行顺序暂时仍以 P6 为先。"),
+        bullet_block(snapshot_evidence_line(snapshot)),
+        bullet_block(
+            "P7 已成为当前主线，正在把 intake / playback / diagnosis / knowledge / follow-up 收成统一 engineer-facing workflow。"
+            if workbench_phase
+            else "P7 的 spec-driven workbench foundation 已在 repo 中提前播种，但正式自动执行顺序暂时仍以 P6 为先。"
+        ),
         heading_block("当前回归"),
         bullet_block(f"最近成功执行证据：{snapshot.latest_success_run or '暂无'}"),
     ]
@@ -2028,6 +2399,7 @@ def render_status_page_blocks(
         blocks.append(bullet_block(f"运行摘要：{snapshot.latest_success_run_notes}"))
     blocks.extend(
         [
+            *development_guardrail_blocks(snapshot),
             heading_block("当前关键边界"),
             bullet_block("不改 controller.py confirmed truth。"),
             bullet_block("不改 SimulationRunner。"),
@@ -2035,10 +2407,22 @@ def render_status_page_blocks(
             bullet_block("不把 simplified plant 表述成完整实时物理模型。"),
             bullet_block("Opus 4.6 只使用 Notion + GitHub 证据面。"),
             heading_block("当前下一步"),
-            bullet_block("继续收口剩余 stale wording，让 control tower summary surfaces 不再依赖手工维护。"),
-            bullet_block("继续把历史 manual-browser-QA 表述降级成 presenter guidance，而不是当前审批规则。"),
+            bullet_block(
+                "继续把 intake / playback / diagnosis / knowledge / follow-up 收成可复用的 engineer-facing bundle 与 handoff 工作流。"
+                if workbench_phase
+                else "继续收口剩余 stale wording，让 control tower summary surfaces 不再依赖手工维护。"
+            ),
+            bullet_block(
+                "保持 controller truth、demo API 契约与 freeze baseline 稳定，不把 P7 扩成第二套隐藏规则引擎。"
+                if workbench_phase
+                else "继续把历史 manual-browser-QA 表述降级成 presenter guidance，而不是当前审批规则。"
+            ),
             bullet_block(current_action),
-            bullet_block("在 P6 收口前，不继续扩大 P7 的实现面。"),
+            bullet_block(
+                "必要时把新的 workbench artifact 同步回 repo / Notion 控制面，保持 engineer handoff 与审计链路可追溯。"
+                if workbench_phase
+                else "在 P6 收口前，不继续扩大 P7 的实现面。"
+            ),
             divider_block(),
             page_link_paragraph_block(config, "dashboard", "AI FANTUI LogicMVP 控制塔"),
             page_link_paragraph_block(config, "freeze_packet", "10 Freeze Demo Packet"),
@@ -2058,6 +2442,7 @@ def render_repo_coordination_plan_markdown(
     *,
     unavailable_page_keys: tuple[str, ...] = (),
 ) -> str:
+    workbench_phase = snapshot_is_workbench_phase(snapshot)
     current_action = (
         "继续自动开发；当前无需手动触发 Opus 4.6。"
         if not brief.review_required
@@ -2074,14 +2459,21 @@ def render_repo_coordination_plan_markdown(
         f"- 最近成功执行证据：`{snapshot.latest_success_run or '暂无'}`",
         f"- 当前 Gate：`{snapshot.gate_name} ({snapshot.gate_status})`",
         f"- 当前 Opus 状态：`{brief.intervention_kind}`",
+        f"- 当前证据模式：`{snapshot_evidence_mode_label(snapshot)}`",
     ]
+    lines.append(f"- 证据模式说明：{snapshot_evidence_mode_detail(snapshot)}")
     if snapshot.latest_passing_qa_summary:
         lines.append(f"- 当前 QA 摘要：`{snapshot.latest_passing_qa_summary}`")
     lines.extend(
         [
-            "- 当前结论：当前最高优先级是继续收口控制塔与 freeze/demo packet 的残余漂移，不是再加 demo 功能。",
+            (
+                "- 当前结论：当前最高优先级是把 spec-driven workbench 收成统一 engineer-facing workflow，而不是继续做 P6 控制面清理或新增 demo 表面。"
+                if workbench_phase
+                else "- 当前结论：当前最高优先级是继续收口控制塔与 freeze/demo packet 的残余漂移，不是再加 demo 功能。"
+            ),
             f"- 当前唯一人工动作：{current_action}",
             "",
+            *development_guardrail_markdown_lines(snapshot),
             "## 当前关键边界",
             "",
             "- `controller.py` 仍然是唯一控制真值。",
@@ -2124,6 +2516,7 @@ def render_repo_dev_handoff_markdown(
     *,
     unavailable_page_keys: tuple[str, ...] = (),
 ) -> str:
+    workbench_phase = snapshot_is_workbench_phase(snapshot)
     status_url = f"https://www.notion.so/{page_id(config, 'status')}"
     brief_url = f"https://www.notion.so/{page_id(config, 'opus_brief')}"
     freeze_url = f"https://www.notion.so/{page_id(config, 'freeze_packet')}"
@@ -2134,15 +2527,30 @@ def render_repo_dev_handoff_markdown(
         f"- 当前已验证 Plan：`{snapshot.latest_verified_plan}`",
         f"- 最近成功执行证据：`{snapshot.latest_success_run or '暂无'}`",
     ]
+    lines.extend(
+        [
+            f"- 当前证据模式：`{snapshot_evidence_mode_label(snapshot)}`",
+            f"- 证据模式说明：{snapshot_evidence_mode_detail(snapshot)}",
+        ]
+    )
     if snapshot.latest_passing_qa_summary:
         lines.append(f"- 当前 QA 摘要：`{snapshot.latest_passing_qa_summary}`")
     if snapshot.latest_success_run_notes:
         lines.append(f"- 当前运行摘要：`{snapshot.latest_success_run_notes}`")
     lines.extend(
         [
-            "- 当前 demo 基线已经稳定，P6 的任务是把控制塔、freeze packet 和 repo-side handoff 资料统一到同一份 GitHub-backed 真值。",
-            "- 当前不继续扩大 P7 的实现面；P7 groundwork 继续保留，但执行顺序仍以 P6 收口优先。",
+            (
+                "- 当前 demo / freeze 基线已经稳定；当前主线已切到 P7 spec-driven workbench。"
+                if workbench_phase
+                else "- 当前 demo 基线已经稳定，P6 的任务是把控制塔、freeze packet 和 repo-side handoff 资料统一到同一份 GitHub-backed 真值。"
+            ),
+            (
+                "- 当前优先级是让 engineer-facing onboarding / playback / diagnosis / knowledge 工具形成连续工作流，而不是继续扩 demo 表面。"
+                if workbench_phase
+                else "- 当前不继续扩大 P7 的实现面；P7 groundwork 继续保留，但执行顺序仍以 P6 收口优先。"
+            ),
             "",
+            *development_guardrail_markdown_lines(snapshot),
             "## 恢复工作时先看",
             "",
             f"1. {markdown_link('AI FANTUI LogicMVP 控制塔', config.get('root_page_url', 'https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec'))}",
@@ -2170,7 +2578,11 @@ def render_repo_dev_handoff_markdown(
             "## 当前交接结论",
             "",
             f"- Opus 状态：`{brief.intervention_kind}`",
-            "- 当前交接重点是保持 control-plane truth 收口，不是扩新功能。",
+            (
+                "- 当前交接重点是保持 workbench bundle / playback / diagnosis / knowledge 链路可复用，不是回到零散单命令操作。"
+                if workbench_phase
+                else "- 当前交接重点是保持 control-plane truth 收口，不是扩新功能。"
+            ),
             "- 下方旧 Round 记录保留为历史上下文，不再当成当前执行指令。",
         ]
     )
@@ -2194,13 +2606,20 @@ def render_repo_qa_report_markdown(
         f"- 当前 Gate：`{snapshot.gate_name} ({snapshot.gate_status})`",
         f"- 当前 Opus 状态：`{brief.intervention_kind}`",
         f"- Open Gap 数量：`{len(snapshot.open_gap_titles)}`",
+        f"- 当前证据模式：`{snapshot_evidence_mode_label(snapshot)}`",
     ]
+    lines.append(f"- 证据模式说明：{snapshot_evidence_mode_detail(snapshot)}")
     if snapshot.latest_passing_qa_summary:
         lines.append(f"- 当前 QA 摘要：`{snapshot.latest_passing_qa_summary}`")
     if snapshot.latest_success_run_notes:
         lines.append(f"- 当前运行摘要：`{snapshot.latest_success_run_notes}`")
     lines.extend(
         [
+            "",
+            "## 当前执行规则",
+            "",
+            *[f"- {text}" for text in development_guardrail_texts(snapshot)[:5]],
+            "",
             "- `manual browser QA` 不再是当前审批规则；相关历史记录只保留为 presenter guidance / 历史上下文。",
             "",
             "## 当前证据入口",
@@ -2224,6 +2643,7 @@ def render_repo_freeze_packet_markdown(
     *,
     unavailable_page_keys: tuple[str, ...] = (),
 ) -> str:
+    workbench_phase = snapshot_is_workbench_phase(snapshot)
     status_url = f"https://www.notion.so/{page_id(config, 'status')}"
     brief_url = f"https://www.notion.so/{page_id(config, 'opus_brief')}"
     lines = [
@@ -2235,14 +2655,20 @@ def render_repo_freeze_packet_markdown(
         f"- 当前 Gate：`{snapshot.gate_name} ({snapshot.gate_status})`",
         f"- 当前 Opus 状态：`{brief.intervention_kind}`",
         f"- Open Gap 数量：`{len(snapshot.open_gap_titles)}`",
+        f"- 当前证据模式：`{snapshot_evidence_mode_label(snapshot)}`",
     ]
+    lines.append(f"- 证据模式说明：{snapshot_evidence_mode_detail(snapshot)}")
     if snapshot.latest_passing_qa_summary:
         lines.append(f"- 当前 QA 摘要：`{snapshot.latest_passing_qa_summary}`")
     if snapshot.latest_success_run_notes:
         lines.append(f"- 当前运行摘要：`{snapshot.latest_success_run_notes}`")
     lines.extend(
         [
-            "- 当前冻结包的职责是对齐 repo / GitHub / Notion 三个证据面，而不是继续加产品表面。",
+            (
+                "- 当前冻结包继续作为稳定 demo/reference baseline；当前工程主线已转向 P7 workbench 扩展。"
+                if workbench_phase
+                else "- 当前冻结包的职责是对齐 repo / GitHub / Notion 三个证据面，而不是继续加产品表面。"
+            ),
             "",
             "## 当前冻结入口",
             "",
@@ -2334,6 +2760,8 @@ def upsert_managed_page_section(
     marker: str,
 ) -> None:
     children = client.list_block_children(page_id_value)
+    if not isinstance(children, list):
+        children = []
     start_index = None
     end_index = None
     for index, block in enumerate(children):
@@ -2398,14 +2826,18 @@ def write_current_opus_review_brief(
     *,
     activate_gate: bool,
     config_path: Path | None = None,
+    cwd: Path | None = None,
 ) -> dict[str, Any]:
     snapshot = fetch_review_snapshot(client, config)
+    if cwd is not None:
+        snapshot = align_snapshot_with_local_phase(snapshot, cwd=cwd)
     return write_current_opus_review_brief_from_snapshot(
         client,
         config,
         snapshot=snapshot,
         activate_gate=activate_gate,
         config_path=config_path,
+        cwd=cwd,
     )
 
 
@@ -2416,30 +2848,19 @@ def write_current_opus_review_brief_from_snapshot(
     snapshot: ReviewSnapshot,
     activate_gate: bool,
     config_path: Path | None = None,
+    cwd: Path | None = None,
 ) -> dict[str, Any]:
+    base_snapshot = align_snapshot_with_local_phase(snapshot, cwd=cwd) if cwd is not None else snapshot
     effective_snapshot = (
-        ReviewSnapshot(
-            active_phase=snapshot.active_phase,
-            active_phase_goal=snapshot.active_phase_goal,
-            active_phase_summary=snapshot.active_phase_summary,
-            latest_verified_plan=snapshot.latest_verified_plan,
-            latest_success_run=snapshot.latest_success_run,
-            latest_failed_run=snapshot.latest_failed_run,
-            latest_passing_qa=snapshot.latest_passing_qa,
-            gate_page_id=snapshot.gate_page_id,
-            gate_name=snapshot.gate_name,
-            gate_status="Awaiting Opus 4.6",
-            ready_task_id=snapshot.ready_task_id,
-            ready_task=snapshot.ready_task,
-            open_gap_titles=snapshot.open_gap_titles,
-            stale_gap_titles=snapshot.stale_gap_titles,
-        )
+        replace(base_snapshot, gate_status="Awaiting Opus 4.6")
         if activate_gate
-        else snapshot
+        else base_snapshot
     )
     brief = build_current_review_brief(effective_snapshot, config, force_review=activate_gate)
     unavailable_page_keys: list[str] = []
+    replaced_sync_page_keys: set[str] = set()
     if config_path is not None and "opus_brief" in config.get("pages", {}):
+        previous_id = config.get("pages", {}).get("opus_brief")
         brief_page_id = replace_active_sync_page(
             client,
             config,
@@ -2448,6 +2869,8 @@ def write_current_opus_review_brief_from_snapshot(
             blocks=render_current_review_brief_blocks(brief, effective_snapshot, config),
             config_path=config_path,
         )
+        if brief_page_id != previous_id:
+            replaced_sync_page_keys.add("opus_brief")
     elif not page_is_writable(client, config, "opus_brief"):
         unavailable_page_keys.append("opus_brief")
         brief_page_id = None
@@ -2468,7 +2891,8 @@ def write_current_opus_review_brief_from_snapshot(
     if config_path is None and not page_is_writable(client, config, "freeze_packet"):
         unavailable_page_keys.append("freeze_packet")
     if config_path is not None and "status" in config.get("pages", {}):
-        replace_active_sync_page(
+        previous_id = config.get("pages", {}).get("status")
+        status_page_id = replace_active_sync_page(
             client,
             config,
             key="status",
@@ -2476,6 +2900,8 @@ def write_current_opus_review_brief_from_snapshot(
             blocks=render_status_page_blocks(brief, effective_snapshot, config),
             config_path=config_path,
         )
+        if status_page_id != previous_id:
+            replaced_sync_page_keys.add("status")
     elif "status" not in unavailable_page_keys:
         status_page_id = page_id(config, "status")
         try:
@@ -2486,7 +2912,8 @@ def write_current_opus_review_brief_from_snapshot(
                 raise
             unavailable_page_keys.append("status")
     if config_path is not None and "freeze_packet" in config.get("pages", {}):
-        replace_active_sync_page(
+        previous_id = config.get("pages", {}).get("freeze_packet")
+        freeze_packet_page_id = replace_active_sync_page(
             client,
             config,
             key="freeze_packet",
@@ -2494,6 +2921,8 @@ def write_current_opus_review_brief_from_snapshot(
             blocks=render_freeze_packet_blocks(brief, effective_snapshot, config),
             config_path=config_path,
         )
+        if freeze_packet_page_id != previous_id:
+            replaced_sync_page_keys.add("freeze_packet")
     elif "freeze_packet" not in unavailable_page_keys:
         freeze_packet_page_id = page_id(config, "freeze_packet")
         try:
@@ -2503,27 +2932,45 @@ def write_current_opus_review_brief_from_snapshot(
             if not (is_missing_page_error(str(exc)) or is_archived_page_write_error(str(exc))):
                 raise
             unavailable_page_keys.append("freeze_packet")
-    dashboard_blocks = render_dashboard_blocks(
-        brief,
-        effective_snapshot,
-        config,
-        unavailable_page_keys=tuple(unavailable_page_keys),
-    )
-    prune_stale_active_sync_page_blocks(client, config)
-    if not page_matches_rendered_blocks(client, dashboard_page_id, dashboard_blocks):
-        client.replace_page_body(
-            dashboard_page_id,
-            dashboard_blocks,
+    if config_path is not None and replaced_sync_page_keys:
+        rewrite_active_sync_page_body(
+            client,
+            page_id(config, "opus_brief"),
+            title=brief.page_title,
+            blocks=render_current_review_brief_blocks(brief, effective_snapshot, config),
         )
+        rewrite_active_sync_page_body(
+            client,
+            page_id(config, "status"),
+            title="01 当前状态（自动同步）",
+            blocks=render_status_page_blocks(brief, effective_snapshot, config),
+        )
+        rewrite_active_sync_page_body(
+            client,
+            page_id(config, "freeze_packet"),
+            title="10 Freeze Demo Packet",
+            blocks=render_freeze_packet_blocks(brief, effective_snapshot, config),
+        )
+    prune_stale_active_sync_page_blocks(client, config)
+    upsert_dashboard_snapshot_section(
+        client,
+        dashboard_page_id,
+        render_dashboard_snapshot_blocks(
+            brief,
+            effective_snapshot,
+            config,
+            unavailable_page_keys=tuple(unavailable_page_keys),
+        ),
+    )
 
     if snapshot.gate_page_id:
         client.update_page_properties(
-            snapshot.gate_page_id,
+        base_snapshot.gate_page_id,
             build_gate_update_properties(brief, activate_gate=activate_gate),
         )
-    if snapshot.ready_task_id:
+    if base_snapshot.ready_task_id:
         client.update_page_properties(
-            snapshot.ready_task_id,
+            base_snapshot.ready_task_id,
             {
                 "Acceptance": rich_text_value("基于 09C 当前 Opus 4.6 审查简报，在 Notion AI 中触发当前所需介入，而不是使用固定模板。"),
                 "Next Step": rich_text_value("打开 09C 当前 Opus 4.6 审查简报，按其中的当前介入请求执行。"),
@@ -2532,7 +2979,7 @@ def write_current_opus_review_brief_from_snapshot(
     retired_artifact_ids = retire_legacy_review_artifacts(
         client,
         config,
-        snapshot=snapshot,
+        snapshot=base_snapshot,
         brief=brief,
     )
 
@@ -2542,11 +2989,11 @@ def write_current_opus_review_brief_from_snapshot(
         "review_required": brief.review_required,
         "intervention_kind": brief.intervention_kind,
         "review_target": brief.review_target,
-        "gate_status": "Awaiting Opus 4.6" if activate_gate else snapshot.gate_status,
-        "open_gap_count": len(snapshot.open_gap_titles),
-        "stale_gap_count": len(snapshot.stale_gap_titles),
-        "latest_success_run": snapshot.latest_success_run,
-        "latest_failed_run": snapshot.latest_failed_run,
+        "gate_status": "Awaiting Opus 4.6" if activate_gate else base_snapshot.gate_status,
+        "open_gap_count": len(base_snapshot.open_gap_titles),
+        "stale_gap_count": len(base_snapshot.stale_gap_titles),
+        "latest_success_run": base_snapshot.latest_success_run,
+        "latest_failed_run": base_snapshot.latest_failed_run,
         "why_now": brief.why_now,
         "retired_legacy_artifact_ids": retired_artifact_ids,
         "skipped_page_keys": unavailable_page_keys,
@@ -2564,6 +3011,7 @@ def write_notion_outcome(
     summary: RunSummary,
     opus_gate: bool,
     config_path: Path | None = None,
+    cwd: Path | None = None,
 ) -> dict[str, Any]:
     started_at = results[0].started_at if results else utc_now()
     ended_at = results[-1].ended_at if results else utc_now()
@@ -2651,6 +3099,7 @@ def write_notion_outcome(
                 config,
                 activate_gate=False,
                 config_path=config_path,
+                cwd=cwd,
             )
 
     if opus_gate:
@@ -2674,6 +3123,7 @@ def write_notion_outcome(
             config,
             activate_gate=True,
             config_path=config_path,
+            cwd=cwd,
         )
 
     return written
@@ -2809,6 +3259,7 @@ def sync_repo_docs_from_snapshot(
     *,
     unavailable_page_keys: tuple[str, ...] = (),
 ) -> list[RepoDocSyncResult]:
+    snapshot = align_snapshot_with_local_phase(snapshot, cwd=cwd)
     return sync_repo_documents(
         cwd,
         build_current_review_brief(snapshot, config),
@@ -2824,7 +3275,7 @@ def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
     config["default_plan"] = effective_default_plan(config, cwd=cwd)
     plan_id = args.plan_id or config["default_plan"]
     title = args.title or f"{plan_id} automation {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-    writeback_timeout_s = float(os.environ.get("NOTION_WRITEBACK_TIMEOUT_S", "25"))
+    writeback_timeout_s = float(os.environ.get("NOTION_WRITEBACK_TIMEOUT_S", DEFAULT_NOTION_WRITEBACK_TIMEOUT_S))
     results = run_commands(args.command, cwd)
     summary = summarize_results(results)
     payload: dict[str, Any] = {
@@ -2842,6 +3293,9 @@ def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
         try:
             client = NotionClient(token)
             with notion_writeback_deadline(writeback_timeout_s):
+                restored_databases = ensure_live_databases(client, config)
+                if restored_databases:
+                    payload["restored_databases"] = restored_databases
                 ensure_live_active_pages(client, config, config_path=config_path)
                 written = write_notion_outcome(
                     client,
@@ -2853,6 +3307,7 @@ def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
                     summary=summary,
                     opus_gate=args.opus_gate,
                     config_path=config_path,
+                    cwd=cwd,
                 )
         except Exception as exc:
             payload["notion"] = "failed"
@@ -2885,6 +3340,7 @@ def handle_run(args: argparse.Namespace, config: dict[str, Any]) -> int:
                             snapshot=fallback_snapshot,
                             activate_gate=False,
                             config_path=config_path,
+                            cwd=cwd,
                         )
                         payload["notion_fallback"] = "written"
                     repo_docs = sync_repo_docs_from_snapshot(cwd, fallback_snapshot, config)
@@ -2938,9 +3394,15 @@ def handle_prepare_opus_review(args: argparse.Namespace, config: dict[str, Any])
     config_path = Path(getattr(args, "config", DEFAULT_CONFIG_PATH))
     cwd = Path.cwd().resolve()
     client = NotionClient(token)
-    prepare_timeout_s = float(os.environ.get("NOTION_PREPARE_TIMEOUT_S", "18"))
+    prepare_timeout_s = float(
+        os.environ.get(
+            "NOTION_PREPARE_TIMEOUT_S",
+            os.environ.get("NOTION_WRITEBACK_TIMEOUT_S", DEFAULT_NOTION_WRITEBACK_TIMEOUT_S),
+        )
+    )
     try:
         with notion_writeback_deadline(prepare_timeout_s):
+            restored_databases = ensure_live_databases(client, config)
             snapshot = fetch_review_snapshot(client, config)
     except NotionWritebackTimeout:
         snapshot = fetch_review_snapshot_from_repo_docs(cwd, config)
@@ -2965,25 +3427,11 @@ def handle_prepare_opus_review(args: argparse.Namespace, config: dict[str, Any])
             snapshot = repo_snapshot
         else:
             raise RuntimeError("Unable to derive a review snapshot from pages or repo docs.")
+    snapshot = align_snapshot_with_local_phase(snapshot, cwd=cwd)
     effective_snapshot = (
         snapshot
         if not args.activate_gate
-        else ReviewSnapshot(
-            active_phase=snapshot.active_phase,
-            active_phase_goal=snapshot.active_phase_goal,
-            active_phase_summary=snapshot.active_phase_summary,
-            latest_verified_plan=snapshot.latest_verified_plan,
-            latest_success_run=snapshot.latest_success_run,
-            latest_failed_run=snapshot.latest_failed_run,
-            latest_passing_qa=snapshot.latest_passing_qa,
-            gate_page_id=snapshot.gate_page_id,
-            gate_name=snapshot.gate_name,
-            gate_status="Awaiting Opus 4.6",
-            ready_task_id=snapshot.ready_task_id,
-            ready_task=snapshot.ready_task,
-            open_gap_titles=snapshot.open_gap_titles,
-            stale_gap_titles=snapshot.stale_gap_titles,
-        )
+        else replace(snapshot, gate_status="Awaiting Opus 4.6")
     )
     brief = build_current_review_brief(effective_snapshot, config, force_review=args.activate_gate)
     payload: dict[str, Any] = {
@@ -2997,9 +3445,14 @@ def handle_prepare_opus_review(args: argparse.Namespace, config: dict[str, Any])
         "latest_success_run": snapshot.latest_success_run,
         "latest_failed_run": snapshot.latest_failed_run,
     }
+    if 'restored_databases' in locals() and restored_databases:
+        payload["restored_databases"] = restored_databases
     if not args.dry_run:
         try:
             with notion_writeback_deadline(prepare_timeout_s):
+                restored_databases = ensure_live_databases(client, config)
+                if restored_databases:
+                    payload["restored_databases"] = restored_databases
                 replacements = ensure_live_active_pages(client, config, config_path=config_path)
                 if replacements:
                     payload["replaced_pages"] = replacements
@@ -3009,6 +3462,7 @@ def handle_prepare_opus_review(args: argparse.Namespace, config: dict[str, Any])
                     snapshot=effective_snapshot,
                     activate_gate=args.activate_gate,
                     config_path=config_path,
+                    cwd=cwd,
                 )
         except NotionWritebackTimeout as exc:
             payload["notion"] = {
@@ -3031,6 +3485,7 @@ def handle_sync_repo_docs(args: argparse.Namespace, config: dict[str, Any]) -> i
     cwd = Path(args.cwd).resolve()
     snapshot: ReviewSnapshot | None = None
     try:
+        restored_databases = ensure_live_databases(client, config)
         snapshot = fetch_review_snapshot(client, config)
     except RuntimeError as exc:
         if not (is_missing_database_error(str(exc)) or is_rate_limited_error(str(exc))):
@@ -3066,6 +3521,7 @@ def handle_sync_repo_docs(args: argparse.Namespace, config: dict[str, Any]) -> i
                     raise
         if page_snapshot and should_prefer_page_snapshot(snapshot, page_snapshot, config):
             snapshot = page_snapshot
+    snapshot = align_snapshot_with_local_phase(snapshot, cwd=cwd)
     brief = build_current_review_brief(snapshot, config)
     try:
         unavailable_page_keys = active_page_unavailable_keys(client, config)
@@ -3087,6 +3543,8 @@ def handle_sync_repo_docs(args: argparse.Namespace, config: dict[str, Any]) -> i
         "intervention_kind": brief.intervention_kind,
         "files": [{"path": item.path, "marker": item.marker} for item in synced],
     }
+    if 'restored_databases' in locals() and restored_databases:
+        payload["restored_databases"] = restored_databases
     output_repo_doc_sync_result(args.format, payload)
     return 0
 

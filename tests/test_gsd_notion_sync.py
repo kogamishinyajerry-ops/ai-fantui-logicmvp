@@ -27,6 +27,7 @@ from tools.gsd_notion_sync import (
     write_notion_outcome,
     resolve_superseded_failure_gaps,
     render_repo_coordination_plan_markdown,
+    render_repo_dev_handoff_markdown,
     derive_compact_success_summary,
     derive_compact_success_summary_from_text,
     strongest_repo_success_summary,
@@ -34,12 +35,15 @@ from tools.gsd_notion_sync import (
     success_summary_metrics,
     build_fallback_run_snapshot,
     ensure_live_active_pages,
+    ensure_live_databases,
     effective_default_plan,
     fetch_review_snapshot_from_repo_docs,
     sync_repo_docs_from_snapshot,
     prune_stale_active_sync_page_blocks,
     page_matches_rendered_blocks,
+    align_snapshot_with_local_phase,
     should_prefer_page_snapshot,
+    should_prefer_snapshot,
     should_preserve_prior_success_summary,
     summarize_results,
     sync_repo_documents,
@@ -47,6 +51,7 @@ from tools.gsd_notion_sync import (
     handle_run,
     handle_prepare_opus_review,
     upsert_managed_markdown_section,
+    write_current_opus_review_brief_from_snapshot,
 )
 
 
@@ -114,6 +119,40 @@ class GsdNotionSyncTests(unittest.TestCase):
         summary = derive_compact_success_summary(results)
 
         self.assertEqual("187 tests OK, 10 demo smoke scenarios pass, and 2/2 shared validation checks pass.", summary)
+
+    def test_derive_compact_success_summary_from_validation_suite_command(self):
+        results = [
+            CommandResult(
+                command="python3 tools/run_gsd_validation_suite.py --format json",
+                returncode=0,
+                stdout="""
+{
+  "command_count": 8,
+  "results": [
+    {
+      "name": "unit_tests",
+      "command": "python3 -m unittest discover -s tests -p test_*.py",
+      "stderr": "Ran 175 tests in 20.000s\\n\\nOK",
+      "stdout": ""
+    },
+    {
+      "name": "demo_path_smoke",
+      "command": "python3 tools/demo_path_smoke.py --format json",
+      "stderr": "",
+      "stdout": "{\\"completed_scenarios\\": 10, \\"failed_scenario\\": null, \\"scenario_count\\": 10}"
+    }
+  ]
+}
+""".strip(),
+                stderr="",
+                started_at="2026-04-10T00:00:00+00:00",
+                ended_at="2026-04-10T00:00:05+00:00",
+            )
+        ]
+
+        summary = derive_compact_success_summary(results)
+
+        self.assertEqual("175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.", summary)
 
     def test_derive_compact_success_summary_from_text(self):
         text = """
@@ -238,6 +277,32 @@ Ran 189 tests in 20.897s
             self.assertIn("new-status", persisted)
             self.assertIn("new-freeze", persisted)
 
+    def test_ensure_live_databases_unarchives_archived_database_blocks(self):
+        config = {
+            "databases": {
+                "plans": "plans-db",
+                "runs": "runs-db",
+            }
+        }
+        client = unittest.mock.Mock()
+        client.request.side_effect = [
+            {"archived": True, "in_trash": True},
+            {"archived": False, "in_trash": False},
+            {"archived": False, "in_trash": False},
+        ]
+
+        restored = ensure_live_databases(client, config)
+
+        self.assertEqual({"plans": "plans-db"}, restored)
+        self.assertEqual(
+            [
+                unittest.mock.call("GET", "/v1/blocks/plans-db"),
+                unittest.mock.call("PATCH", "/v1/blocks/plans-db", {"archived": False}),
+                unittest.mock.call("GET", "/v1/blocks/runs-db"),
+            ],
+            client.request.call_args_list,
+        )
+
     def test_prune_stale_active_sync_page_blocks_removes_only_old_active_surface_children(self):
         config = {
             "pages": {
@@ -297,6 +362,228 @@ Ran 189 tests in 20.897s
         ]
 
         self.assertTrue(page_matches_rendered_blocks(client, "dashboard-page", rendered_blocks))
+
+    def test_page_matches_rendered_blocks_detects_link_target_changes(self):
+        client = unittest.mock.Mock()
+        client.list_block_children.return_value = [
+            {
+                "id": "freeze-link",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [
+                        {
+                            "plain_text": "10 Freeze Demo Packet",
+                            "href": "https://www.notion.so/old-freeze",
+                        }
+                    ]
+                },
+            }
+        ]
+        rendered_blocks = [
+            {
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [
+                        {
+                            "text": {
+                                "content": "10 Freeze Demo Packet",
+                                "link": {"url": "https://www.notion.so/new-freeze"},
+                            }
+                        }
+                    ]
+                },
+            }
+        ]
+
+        self.assertFalse(page_matches_rendered_blocks(client, "status-page", rendered_blocks))
+
+    def test_write_current_opus_review_brief_second_pass_rewrites_cross_links_after_replacements(self):
+        config = {
+            "root_page_url": "https://www.notion.so/root",
+            "pages": {
+                "dashboard": "dashboard-page",
+                "constitution": "constitution-page",
+                "status": "old-status",
+                "opus_brief": "old-brief",
+                "freeze_packet": "old-freeze",
+                "control_plane": "control-plane-page",
+                "opus_protocol": "opus-protocol-page",
+            },
+            "databases": {
+                "plans": "plans-db",
+                "runs": "runs-db",
+                "qa": "qa-db",
+                "gates": "gates-db",
+                "gaps": "gaps-db",
+                "assets": "assets-db",
+            },
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            },
+            "default_plan": "P6-18 Refresh Active Sync Surfaces When Link Targets Move",
+            "default_review_gate": "OPUS-4.6 周期审查 Gate",
+        }
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="Close stale control-plane drift.",
+            active_phase_summary="P6 is active.",
+            latest_verified_plan="P6-18 Refresh Active Sync Surfaces When Link Targets Move",
+            latest_success_run="P6-18 active sync link target refresh",
+            latest_failed_run=None,
+            latest_passing_qa="P6-18 active sync link target refresh QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+            latest_success_run_notes="Focused control-plane maintenance run passed.",
+            latest_passing_qa_summary="PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.",
+        )
+        client = unittest.mock.Mock()
+        replacement_ids = {
+            "opus_brief": "new-brief",
+            "status": "new-status",
+            "freeze_packet": "new-freeze",
+        }
+
+        def fake_replace_active_sync_page(_client, live_config, *, key, title, blocks, config_path=None):
+            live_config["pages"][key] = replacement_ids[key]
+            return replacement_ids[key]
+
+        with (
+            patch("tools.gsd_notion_sync.replace_active_sync_page", side_effect=fake_replace_active_sync_page),
+            patch("tools.gsd_notion_sync.prune_stale_active_sync_page_blocks"),
+            patch("tools.gsd_notion_sync.page_matches_rendered_blocks", return_value=True),
+        ):
+            write_current_opus_review_brief_from_snapshot(
+                client,
+                config,
+                snapshot=snapshot,
+                activate_gate=False,
+                config_path=Path("/tmp/notion_control_plane.json"),
+            )
+
+        rewritten_page_ids = [call.args[0] for call in client.replace_page_body.call_args_list]
+        self.assertIn("new-brief", rewritten_page_ids)
+        self.assertIn("new-status", rewritten_page_ids)
+        self.assertIn("new-freeze", rewritten_page_ids)
+
+    def test_replace_active_sync_page_updates_existing_writable_page_in_place(self):
+        from tools.gsd_notion_sync import replace_active_sync_page
+
+        config = {
+            "pages": {
+                "dashboard": "dashboard-page",
+                "status": "live-status",
+            }
+        }
+        client = unittest.mock.Mock()
+        client.get_page.return_value = {"archived": False, "in_trash": False}
+        blocks = [
+            {
+                "object": "block",
+                "type": "bulleted_list_item",
+                "bulleted_list_item": {"rich_text": [{"text": {"content": "当前阶段：P6"}}]},
+            }
+        ]
+
+        with patch("tools.gsd_notion_sync.page_matches_rendered_blocks", return_value=False):
+            page_id_value = replace_active_sync_page(
+                client,
+                config,
+                key="status",
+                title="01 当前状态（自动同步）",
+                blocks=blocks,
+            )
+
+        self.assertEqual("live-status", page_id_value)
+        client.create_child_page.assert_not_called()
+        client.update_page_properties.assert_called_once()
+        client.replace_page_body.assert_called_once_with("live-status", blocks)
+        self.assertEqual("live-status", config["pages"]["status"])
+
+    def test_replace_active_sync_page_creates_new_page_when_existing_page_archived(self):
+        from tools.gsd_notion_sync import replace_active_sync_page
+
+        config = {
+            "pages": {
+                "dashboard": "dashboard-page",
+                "status": "archived-status",
+            }
+        }
+        client = unittest.mock.Mock()
+        client.get_page.side_effect = [
+            {"archived": True, "in_trash": True},
+            {"archived": True, "in_trash": True},
+        ]
+        client.create_child_page.return_value = "new-status"
+        blocks = [
+            {
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {"rich_text": [{"text": {"content": "new body"}}]},
+            }
+        ]
+
+        page_id_value = replace_active_sync_page(
+            client,
+            config,
+            key="status",
+            title="01 当前状态（自动同步）",
+            blocks=blocks,
+        )
+
+        self.assertEqual("new-status", page_id_value)
+        client.create_child_page.assert_called_once_with("dashboard-page", "01 当前状态（自动同步）")
+        self.assertEqual("new-status", config["pages"]["status"])
+
+    def test_replace_active_sync_page_falls_back_to_new_page_when_in_place_rewrite_times_out(self):
+        from tools.gsd_notion_sync import replace_active_sync_page
+
+        config = {
+            "pages": {
+                "dashboard": "dashboard-page",
+                "status": "live-status",
+            }
+        }
+        client = unittest.mock.Mock()
+        client.get_page.side_effect = [
+            {"archived": False, "in_trash": False},
+            {"archived": False, "in_trash": False},
+        ]
+        client.create_child_page.return_value = "replacement-status"
+        client.request.return_value = {}
+        blocks = [
+            {
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {"rich_text": [{"text": {"content": "replacement body"}}]},
+            }
+        ]
+
+        with (
+            patch("tools.gsd_notion_sync.page_matches_rendered_blocks", return_value=False),
+            patch(
+                "tools.gsd_notion_sync.rewrite_active_sync_page_body",
+                side_effect=NotionWritebackTimeout("Notion writeback exceeded 90s deadline."),
+            ),
+        ):
+            page_id_value = replace_active_sync_page(
+                client,
+                config,
+                key="status",
+                title="01 当前状态（自动同步）",
+                blocks=blocks,
+            )
+
+        self.assertEqual("replacement-status", page_id_value)
+        client.create_child_page.assert_called_once_with("dashboard-page", "01 当前状态（自动同步）")
+        client.archive_page.assert_called_once_with("live-status")
+        self.assertEqual("replacement-status", config["pages"]["status"])
 
     def test_clip_preserves_short_text_and_truncates_long_text(self):
         self.assertEqual("short", clip("short", limit=10))
@@ -572,6 +859,9 @@ Ran 189 tests in 20.897s
         self.assertIn("继续自动开发；当前无需手动触发 Opus 4.6。", joined)
         self.assertIn("文档定位", joined)
         self.assertIn("五层架构", joined)
+        self.assertIn("当前开发架构与执行规则", joined)
+        self.assertIn("`gsd_notion_sync.py run` 写回", joined)
+        self.assertIn("control-plane gap / blocker", joined)
         self.assertIn("实时证据入口", joined)
         self.assertIn("历史总览（自动同步）", joined)
         self.assertIn("标准闭环", joined)
@@ -593,6 +883,8 @@ Ran 189 tests in 20.897s
             ready_task=None,
             open_gap_titles=(),
             stale_gap_titles=(),
+            evidence_mode="dashboard_fallback",
+            evidence_note="共享数据库与独立活跃子页当前不可达；dashboard 仍是当前 live truth。",
         )
         config = {
             "pages": {
@@ -631,6 +923,7 @@ Ran 189 tests in 20.897s
             for item in payload["rich_text"]
         )
         self.assertIn("dashboard-only degraded mode", joined)
+        self.assertIn("当前证据模式：dashboard-only degraded mode", joined)
         self.assertIn("当前受 Notion archived page 限制暂不可直写", joined)
         self.assertIn("历史总览（自动同步）", joined)
 
@@ -691,6 +984,60 @@ Ran 189 tests in 20.897s
                     paragraph_texts.append(text["link"]["url"])
         self.assertIn("https://www.notion.so/gapsdbpageid", paragraph_texts)
         self.assertNotIn("https://www.notion.so/gapsdatasourceid", paragraph_texts)
+
+    def test_render_current_review_brief_blocks_include_evidence_mode_fact(self):
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="P6 正在执行",
+            latest_verified_plan="P6-21 显式化数据库降级证据模式",
+            latest_success_run="GitHub GSD automation 24250000000",
+            latest_failed_run=None,
+            latest_passing_qa="GitHub GSD automation 24250000000 QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+            evidence_mode="active_pages_fallback",
+            evidence_note="共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。",
+        )
+        config = {
+            "pages": {
+                "constitution": "constitution-page-id",
+                "status": "status-page-id",
+                "control_plane": "control-plane-page-id",
+                "opus_protocol": "opus-protocol-page-id",
+            },
+            "databases": {
+                "plans": "plans-db-page-id",
+                "runs": "runs-db-page-id",
+                "qa": "qa-db-page-id",
+                "gates": "gates-db-page-id",
+                "gaps": "gaps-db-page-id",
+                "assets": "assets-db-page-id",
+            },
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            },
+        }
+
+        brief = build_current_review_brief(snapshot, config)
+        blocks = render_current_review_brief_blocks(brief, snapshot, config)
+
+        joined = "\n".join(
+            item["text"]["content"]
+            for block in blocks
+            for payload in block.values()
+            if isinstance(payload, dict) and "rich_text" in payload
+            for item in payload["rich_text"]
+        )
+
+        self.assertIn("当前证据模式：active-page degraded mode", joined)
+        self.assertIn("共享 Notion 数据库当前不可达", joined)
 
     def test_render_freeze_packet_blocks_reflects_live_baseline(self):
         snapshot = ReviewSnapshot(
@@ -782,6 +1129,50 @@ Ran 189 tests in 20.897s
         self.assertIn("P6-04 用可自动同步状态页旁路旧 archived status 页面", joined)
         self.assertIn("GitHub GSD automation 24238846145", joined)
         self.assertIn("当前无需手动触发 Opus 4.6。", joined)
+        self.assertIn("当前开发架构与执行规则", joined)
+        self.assertIn("prepare-opus-review", joined)
+
+    def test_render_status_page_blocks_switch_to_workbench_guidance_for_p7(self):
+        snapshot = ReviewSnapshot(
+            active_phase="P7 Build A Spec-Driven Control Analysis Workbench",
+            active_phase_goal="把 workbench primitive 收成连续工程流",
+            active_phase_summary="P7 正在执行",
+            latest_verified_plan="P7-07 Bundle The Workbench Chain Into A Single Engineer Artifact",
+            latest_success_run="P7-07 workbench bundle baseline",
+            latest_failed_run=None,
+            latest_passing_qa="P7-07 workbench bundle baseline QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+        config = {
+            "pages": {
+                "dashboard": "dashboard-id",
+                "freeze_packet": "freeze-id",
+                "opus_brief": "brief-id",
+                "constitution": "constitution-id",
+            },
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            },
+        }
+
+        joined = "\n".join(
+            item["text"]["content"]
+            for block in render_status_page_blocks(build_current_review_brief(snapshot, config), snapshot, config)
+            for value in block.values()
+            if isinstance(value, dict) and "rich_text" in value
+            for item in value["rich_text"]
+        )
+
+        self.assertIn("统一 engineer-facing workflow", joined)
+        self.assertIn("必要时把新的 workbench artifact 同步回 repo / Notion 控制面", joined)
+        self.assertNotIn("在 P6 收口前，不继续扩大 P7 的实现面。", joined)
 
     def test_render_repo_coordination_plan_markdown_reflects_live_baseline(self):
         snapshot = ReviewSnapshot(
@@ -822,6 +1213,117 @@ Ran 189 tests in 20.897s
         self.assertIn("P6-04 用可自动同步状态页旁路旧 archived status 页面", text)
         self.assertIn("GitHub GSD automation 24239357493", text)
         self.assertIn("当前无需手动触发 Opus 4.6", text)
+        self.assertIn("当前证据模式：`shared-database live mode`", text)
+        self.assertIn("## 当前开发架构与执行规则", text)
+        self.assertIn("`prepare-opus-review`", text)
+
+    def test_render_repo_coordination_plan_markdown_includes_fallback_evidence_note(self):
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="P6 正在执行",
+            latest_verified_plan="P6-21 显式化数据库降级证据模式",
+            latest_success_run="GitHub GSD automation 24250000000",
+            latest_failed_run=None,
+            latest_passing_qa="GitHub GSD automation 24250000000 QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+            evidence_mode="active_pages_fallback",
+            evidence_note="共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。",
+        )
+        config = {
+            "root_page_url": "https://www.notion.so/control-tower",
+            "pages": {
+                "status": "status-id",
+                "opus_brief": "brief-id",
+                "freeze_packet": "freeze-id",
+            },
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            },
+        }
+
+        text = render_repo_coordination_plan_markdown(build_current_review_brief(snapshot, config), snapshot, config)
+
+        self.assertIn("当前证据模式：`active-page degraded mode`", text)
+        self.assertIn("共享 Notion 数据库当前不可达", text)
+
+    def test_render_repo_coordination_plan_markdown_switches_to_workbench_focus_for_p7(self):
+        snapshot = ReviewSnapshot(
+            active_phase="P7 Build A Spec-Driven Control Analysis Workbench",
+            active_phase_goal="把 workbench primitive 收成连续工程流",
+            active_phase_summary="P7 正在执行",
+            latest_verified_plan="P7-07 Bundle The Workbench Chain Into A Single Engineer Artifact",
+            latest_success_run="P7-07 workbench bundle baseline",
+            latest_failed_run=None,
+            latest_passing_qa="P7-07 workbench bundle baseline QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+        config = {
+            "root_page_url": "https://www.notion.so/control-tower",
+            "pages": {
+                "status": "status-id",
+                "opus_brief": "brief-id",
+                "freeze_packet": "freeze-id",
+            },
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            },
+        }
+
+        text = render_repo_coordination_plan_markdown(build_current_review_brief(snapshot, config), snapshot, config)
+
+        self.assertIn("spec-driven workbench 收成统一 engineer-facing workflow", text)
+        self.assertNotIn("继续收口控制塔与 freeze/demo packet 的残余漂移", text)
+
+    def test_render_repo_dev_handoff_markdown_includes_guardrails(self):
+        snapshot = ReviewSnapshot(
+            active_phase="P7 Build A Spec-Driven Control Analysis Workbench",
+            active_phase_goal="把 workbench primitive 收成连续工程流",
+            active_phase_summary="P7 正在执行",
+            latest_verified_plan="P7-29 Harden Notion Control-Plane Development Rules",
+            latest_success_run="P7-29 notion control-plane rules sync",
+            latest_failed_run=None,
+            latest_passing_qa="P7-29 notion control-plane rules sync QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+        config = {
+            "root_page_url": "https://www.notion.so/control-tower",
+            "pages": {
+                "status": "status-id",
+                "opus_brief": "brief-id",
+                "freeze_packet": "freeze-id",
+            },
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            },
+        }
+
+        text = render_repo_dev_handoff_markdown(build_current_review_brief(snapshot, config), snapshot, config)
+
+        self.assertIn("## 当前开发架构与执行规则", text)
+        self.assertIn("`gsd_notion_sync.py run` 写回", text)
+        self.assertIn("Notion 写回降级、部分失败或超时都应被当成 control-plane gap / blocker", text)
 
     def test_upsert_managed_markdown_section_replaces_existing_block(self):
         existing = (
@@ -897,6 +1399,7 @@ Ran 189 tests in 20.897s
                 plan_text = handle.read()
             self.assertIn("AUTO-SYNCED COORDINATION PLAN SNAPSHOT START", plan_text)
             self.assertIn("P6-05 同步 repo 侧交接文档快照", plan_text)
+            self.assertIn("当前开发架构与执行规则", plan_text)
             self.assertIn("legacy", plan_text)
 
     def test_fetch_review_snapshot_prefers_github_runs_and_matching_qa(self):
@@ -972,6 +1475,140 @@ Ran 189 tests in 20.897s
         self.assertEqual("GitHub GSD automation 24153107164 QA", snapshot.latest_passing_qa)
         self.assertEqual("GitHub GSD automation 24148804383", snapshot.latest_failed_run)
 
+    def test_fetch_review_snapshot_compacts_verbose_validation_suite_summaries(self):
+        long_validation_summary = "\n".join(
+            [
+                "$ python3 tools/run_gsd_validation_suite.py --format json",
+                "",
+                "exit=0",
+                "",
+                "stdout:",
+                "{",
+                '  "command_count": 8,',
+                '  "results": [',
+                "    {",
+                '      "name": "unit_tests",',
+                '      "command": "python3 -m unittest discover -s tests -p test_*.py",',
+                '      "stderr": "Ran 175 tests in 23.695s\\n\\nOK",',
+                '      "stdout": ""',
+                "    },",
+                "    {",
+                '      "name": "demo_path_smoke",',
+                '      "command": "python3 tools/demo_path_smoke.py --format json",',
+                '      "stderr": "",',
+                '      "stdout": "{\\"completed_scenarios\\": 10, \\"failed_scenario\\": null, \\"scenario_count\\": 10}"',
+                "    }",
+                "  ]",
+                "}",
+            ]
+        )
+
+        class FakeClient:
+            def query_database(self, database_id, *, filter_payload=None, sorts=None, page_size=10):
+                if database_id == "roadmap-db":
+                    return [
+                        {
+                            "id": "phase-id",
+                            "properties": {
+                                "Round": {"type": "title", "title": [{"plain_text": "P7 Build A Spec-Driven Control Analysis Workbench"}]},
+                                "Goal": {"type": "rich_text", "rich_text": [{"plain_text": "Make workbench sync reliable."}]},
+                                "Summary": {"type": "rich_text", "rich_text": [{"plain_text": "P7 is active."}]},
+                            },
+                        }
+                    ]
+                if database_id == "plans-db":
+                    return [
+                        {
+                            "id": "plan-id",
+                            "properties": {
+                                "Plan": {
+                                    "type": "title",
+                                    "title": [{"plain_text": "P7-16 Show Latest-Vs-Replay Differences In The Browser Workbench"}],
+                                }
+                            },
+                        }
+                    ]
+                if database_id == "runs-db":
+                    if filter_payload == {
+                        "and": [
+                            {"property": "Status", "select": {"equals": "Succeeded"}},
+                            {"property": "Executor", "select": {"equals": "GitHub Action"}},
+                        ]
+                    }:
+                        return [
+                            {
+                                "id": "run-id",
+                                "properties": {
+                                    "Run": {"type": "title", "title": [{"plain_text": "GitHub GSD automation 24237800855"}]},
+                                    "Notes": {"type": "rich_text", "rich_text": [{"plain_text": long_validation_summary}]},
+                                },
+                            }
+                        ]
+                    if filter_payload == {
+                        "and": [
+                            {"property": "Status", "select": {"equals": "Failed"}},
+                            {"property": "Executor", "select": {"equals": "GitHub Action"}},
+                        ]
+                    }:
+                        return []
+                    if filter_payload == {"property": "Status", "select": {"equals": "Succeeded"}}:
+                        return []
+                    if filter_payload == {"property": "Status", "select": {"equals": "Failed"}}:
+                        return []
+                if database_id == "qa-db":
+                    if filter_payload == {"property": "Run", "title": {"equals": "GitHub GSD automation 24237800855 QA"}}:
+                        return [
+                            {
+                                "id": "qa-id",
+                                "properties": {
+                                    "Run": {"type": "title", "title": [{"plain_text": "GitHub GSD automation 24237800855 QA"}]},
+                                    "Summary": {"type": "rich_text", "rich_text": [{"plain_text": long_validation_summary}]},
+                                },
+                            }
+                        ]
+                    return []
+                if database_id == "gates-db":
+                    return [
+                        {
+                            "id": "gate-id",
+                            "properties": {
+                                "Gate": {"type": "title", "title": [{"plain_text": "OPUS-4.6 周期审查 Gate"}]},
+                                "Status": {"type": "select", "select": {"name": "Approved"}},
+                            },
+                        }
+                    ]
+                if database_id == "tasks-db":
+                    return []
+                if database_id == "gaps-db":
+                    return []
+                return []
+
+        snapshot = fetch_review_snapshot(
+            FakeClient(),
+            {
+                "databases": {
+                    "roadmap": "roadmap-db",
+                    "plans": "plans-db",
+                    "runs": "runs-db",
+                    "qa": "qa-db",
+                    "gates": "gates-db",
+                    "tasks": "tasks-db",
+                    "gaps": "gaps-db",
+                },
+                "default_plan": "fallback-plan",
+                "default_review_gate": "OPUS-4.6 周期审查 Gate",
+            },
+        )
+
+        self.assertEqual(
+            "175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.",
+            snapshot.latest_success_run_notes,
+        )
+        self.assertEqual(
+            "PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.",
+            snapshot.latest_passing_qa_summary,
+        )
+
     def test_fetch_review_snapshot_from_pages_uses_active_page_surfaces(self):
         class FakeClient:
             def list_block_children(self, page_id):
@@ -1034,8 +1671,180 @@ Ran 189 tests in 20.897s
         self.assertEqual("P6 Reconcile Control Tower And Freeze Demo Packet", snapshot.active_phase)
         self.assertEqual("P6-04 用可自动同步状态页旁路旧 archived status 页面", snapshot.latest_verified_plan)
         self.assertEqual("GitHub GSD automation 24239357493", snapshot.latest_success_run)
-        self.assertEqual("GitHub GSD automation 24238577807", snapshot.latest_failed_run)
-        self.assertEqual("Approved", snapshot.gate_status)
+
+    def test_align_snapshot_with_local_phase_overrides_stale_database_live_phase(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            planning_dir = root / ".planning"
+            planning_dir.mkdir(parents=True)
+            (planning_dir / "ROADMAP.md").write_text(
+                "\n".join(
+                    [
+                        "## Phase P6: Reconcile Control Tower And Freeze Demo Packet",
+                        "",
+                        "Status: Done",
+                        "",
+                        "## Phase P7: Build A Spec-Driven Control Analysis Workbench",
+                        "",
+                        "Status: Active",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            snapshot = ReviewSnapshot(
+                active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+                active_phase_goal="Close stale control-plane drift.",
+                active_phase_summary="Shared database is reachable but its active phase row is stale.",
+                latest_verified_plan="P7-16 Show Latest-Vs-Replay Differences In The Browser Workbench",
+                latest_success_run="GitHub GSD automation 24237800855",
+                latest_failed_run=None,
+                latest_passing_qa="GitHub GSD automation 24237800855 QA",
+                gate_page_id="gate-id",
+                gate_name="OPUS-4.6 周期审查 Gate",
+                gate_status="Approved",
+                ready_task_id=None,
+                ready_task=None,
+                open_gap_titles=(),
+                stale_gap_titles=(),
+                evidence_mode="database_live",
+                evidence_note="共享 Notion 数据库可达；phase / run / QA / gate 取自实时数据库记录。",
+            )
+
+            aligned = align_snapshot_with_local_phase(snapshot, cwd=root)
+
+        self.assertEqual("P7 Build A Spec-Driven Control Analysis Workbench", aligned.active_phase)
+        self.assertIn("本地 roadmap 纠偏", aligned.evidence_note)
+        self.assertIsNone(aligned.latest_failed_run)
+        self.assertEqual("Approved", aligned.gate_status)
+        self.assertEqual("database_live", aligned.evidence_mode)
+
+    def test_write_current_opus_review_brief_from_snapshot_aligns_review_target_with_local_phase(self):
+        config = {
+            "root_page_url": "https://www.notion.so/root",
+            "pages": {
+                "dashboard": "dashboard-page",
+                "constitution": "constitution-page",
+                "status": "status-page",
+                "opus_brief": "brief-page",
+                "freeze_packet": "freeze-page",
+                "control_plane": "control-plane-page",
+                "opus_protocol": "opus-protocol-page",
+            },
+            "databases": {
+                "plans": "plans-db",
+                "runs": "runs-db",
+                "qa": "qa-db",
+                "gates": "gates-db",
+                "gaps": "gaps-db",
+                "assets": "assets-db",
+            },
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            },
+            "default_plan": "P7-17 Add A Side-By-Side Replay Comparison Board To The Browser Workbench",
+            "default_review_gate": "OPUS-4.6 周期审查 Gate",
+        }
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="Close stale control-plane drift.",
+            active_phase_summary="Database row is stale.",
+            latest_verified_plan="P7-17 Add A Side-By-Side Replay Comparison Board To The Browser Workbench",
+            latest_success_run="P7-17 side-by-side replay comparison board",
+            latest_failed_run=None,
+            latest_passing_qa="P7-17 side-by-side replay comparison board QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+            evidence_mode="database_live",
+            evidence_note="共享 Notion 数据库可达；phase / run / QA / gate 取自实时数据库记录。",
+        )
+        client = unittest.mock.Mock()
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            planning_dir = root / ".planning"
+            planning_dir.mkdir(parents=True)
+            (planning_dir / "ROADMAP.md").write_text(
+                "\n".join(
+                    [
+                        "## Phase P6: Reconcile Control Tower And Freeze Demo Packet",
+                        "",
+                        "Status: Done",
+                        "",
+                        "## Phase P7: Build A Spec-Driven Control Analysis Workbench",
+                        "",
+                        "Status: Active",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with (
+                patch("tools.gsd_notion_sync.replace_active_sync_page", side_effect=lambda _client, live_config, *, key, title, blocks, config_path=None: live_config["pages"][key]),
+                patch("tools.gsd_notion_sync.prune_stale_active_sync_page_blocks"),
+            ):
+                payload = write_current_opus_review_brief_from_snapshot(
+                    client,
+                    config,
+                    snapshot=snapshot,
+                    activate_gate=False,
+                    config_path=Path("/tmp/notion_control_plane.json"),
+                    cwd=root,
+                )
+
+        self.assertEqual(
+            "P7 Build A Spec-Driven Control Analysis Workbench / P7-17 Add A Side-By-Side Replay Comparison Board To The Browser Workbench",
+            payload["review_target"],
+        )
+
+    def test_should_prefer_snapshot_prefers_higher_phase_when_other_evidence_is_similar(self):
+        primary = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="",
+            active_phase_summary="P6 snapshot",
+            latest_verified_plan="P7-07 Bundle The Workbench Chain Into A Single Engineer Artifact",
+            latest_success_run="P7-07 workbench bundle timeout fallback hardening",
+            latest_failed_run=None,
+            latest_passing_qa=None,
+            gate_page_id=None,
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+            evidence_mode="active_pages_fallback",
+        )
+        candidate = ReviewSnapshot(
+            active_phase="P7 Build A Spec-Driven Control Analysis Workbench",
+            active_phase_goal="",
+            active_phase_summary="P7 snapshot",
+            latest_verified_plan="P7-07 Bundle The Workbench Chain Into A Single Engineer Artifact",
+            latest_success_run="P7-07 workbench bundle timeout fallback hardening",
+            latest_failed_run=None,
+            latest_passing_qa=None,
+            gate_page_id=None,
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+            evidence_mode="repo_docs_fallback",
+        )
+
+        self.assertTrue(
+            should_prefer_snapshot(
+                primary,
+                candidate,
+                {"default_plan": "P7-07 Bundle The Workbench Chain Into A Single Engineer Artifact"},
+            )
+        )
 
     def test_fetch_review_snapshot_from_dashboard_page_works_when_subpages_are_unavailable(self):
         class FakeClient:
@@ -1078,6 +1887,7 @@ Ran 189 tests in 20.897s
         self.assertEqual("P6-10 显式化 dashboard-only degraded mode", snapshot.latest_verified_plan)
         self.assertEqual("GitHub GSD automation 24243804732", snapshot.latest_success_run)
         self.assertEqual("Approved", snapshot.gate_status)
+        self.assertEqual("dashboard_fallback", snapshot.evidence_mode)
 
     def test_should_prefer_page_snapshot_when_dashboard_run_is_newer(self):
         primary_snapshot = ReviewSnapshot(
@@ -1381,6 +2191,68 @@ Ran 189 tests in 20.897s
         self.assertEqual("written", payload["repo_doc_sync"])
         self.assertEqual(success_snapshot, repo_sync_mock.call_args.args[1])
 
+    def test_handle_run_restores_archived_databases_before_writeback(self):
+        args = argparse.Namespace(
+            cwd=".",
+            plan_id="P7-16 Show Latest-Vs-Replay Differences In The Browser Workbench",
+            title="P7-16 database restore verification",
+            command=["PYTHONPATH=src python3 -m pytest -q tests/test_gsd_notion_sync.py"],
+            dry_run=False,
+            opus_gate=False,
+            format="json",
+            config=str(Path(".planning/notion_control_plane.json")),
+        )
+        config = {"default_plan": "fallback-plan"}
+        results = [
+            CommandResult(
+                command=args.command[0],
+                returncode=0,
+                stdout="PASS",
+                stderr="",
+                started_at="2026-04-11T00:00:00+00:00",
+                ended_at="2026-04-11T00:00:05+00:00",
+            )
+        ]
+        success_snapshot = ReviewSnapshot(
+            active_phase="P7 Build A Spec-Driven Control Analysis Workbench",
+            active_phase_goal="Make workbench acceptance trustworthy.",
+            active_phase_summary="P7 正在执行",
+            latest_verified_plan="P7-16 Show Latest-Vs-Replay Differences In The Browser Workbench",
+            latest_success_run="P7-16 database restore verification",
+            latest_failed_run=None,
+            latest_passing_qa="P7-16 database restore verification QA",
+            gate_page_id="gate-page-id",
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            with (
+                patch("tools.gsd_notion_sync.run_commands", return_value=results),
+                patch("tools.gsd_notion_sync.ensure_live_databases", return_value={"plans": "plans-db"}) as restore_mock,
+                patch("tools.gsd_notion_sync.ensure_live_active_pages"),
+                patch("tools.gsd_notion_sync.write_notion_outcome", return_value={}),
+                patch("tools.gsd_notion_sync.build_fallback_run_snapshot", return_value=success_snapshot),
+                patch("tools.gsd_notion_sync.active_page_unavailable_keys", return_value=()),
+                patch("tools.gsd_notion_sync.sync_repo_docs_from_snapshot", return_value=[]),
+                patch("tools.gsd_notion_sync.output_run_result") as output_mock,
+            ):
+                exit_code = handle_run(args, config)
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(0, exit_code)
+        restore_mock.assert_called_once()
+        payload = output_mock.call_args.args[1]
+        self.assertEqual({"plans": "plans-db"}, payload["restored_databases"])
+
     def test_handle_run_timeout_skips_followup_notion_calls_and_still_syncs_repo_docs(self):
         args = argparse.Namespace(
             cwd=".",
@@ -1649,6 +2521,49 @@ Ran 189 tests in 20.897s
         self.assertEqual("当前无需 Opus 审查", payload["intervention_kind"])
         self.assertEqual("Approved", payload["gate_status"])
 
+    def test_handle_prepare_opus_review_reports_restored_databases(self):
+        args = argparse.Namespace(activate_gate=False, dry_run=True, format="json")
+        config = {
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            }
+        }
+        snapshot = ReviewSnapshot(
+            active_phase="P7 Build A Spec-Driven Control Analysis Workbench",
+            active_phase_goal="Keep workbench truth aligned.",
+            active_phase_summary="P7 正在执行",
+            latest_verified_plan="P7-16 Show Latest-Vs-Replay Differences In The Browser Workbench",
+            latest_success_run="P7-16 latest-vs-replay workbench differences",
+            latest_failed_run=None,
+            latest_passing_qa="P7-16 latest-vs-replay workbench differences QA",
+            gate_page_id=None,
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+        )
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            with (
+                patch("tools.gsd_notion_sync.ensure_live_databases", return_value={"plans": "plans-db"}) as restore_mock,
+                patch("tools.gsd_notion_sync.fetch_review_snapshot", return_value=snapshot),
+                patch("tools.gsd_notion_sync.output_review_result") as output_mock,
+            ):
+                exit_code = handle_prepare_opus_review(args, config)
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(0, exit_code)
+        restore_mock.assert_called_once()
+        payload = output_mock.call_args.args[1]
+        self.assertEqual({"plans": "plans-db"}, payload["restored_databases"])
+
     def test_handle_prepare_opus_review_falls_back_when_db_is_rate_limited(self):
         args = argparse.Namespace(activate_gate=False, dry_run=True, format="json")
         config = {
@@ -1698,6 +2613,76 @@ Ran 189 tests in 20.897s
         self.assertEqual(1, fallback_mock.call_count)
         payload = output_mock.call_args.args[1]
         self.assertEqual("P7-05 Knowledge artifact baseline", payload["latest_success_run"])
+
+    def test_handle_prepare_opus_review_aligns_degraded_phase_with_local_roadmap(self):
+        args = argparse.Namespace(activate_gate=False, dry_run=True, format="json")
+        config = {
+            "urls": {
+                "github_repo": "https://github.com/example/repo",
+                "github_actions": "https://github.com/example/repo/actions",
+            },
+            "default_plan": "P7-07 Bundle The Workbench Chain Into A Single Engineer Artifact",
+        }
+        snapshot = ReviewSnapshot(
+            active_phase="P6 Reconcile Control Tower And Freeze Demo Packet",
+            active_phase_goal="对齐控制塔真值与冻结包",
+            active_phase_summary="P6 正在执行",
+            latest_verified_plan="P7-07 Bundle The Workbench Chain Into A Single Engineer Artifact",
+            latest_success_run="P7-07 workbench bundle timeout fallback hardening",
+            latest_failed_run=None,
+            latest_passing_qa="P7-07 workbench bundle timeout fallback hardening QA",
+            gate_page_id=None,
+            gate_name="OPUS-4.6 周期审查 Gate",
+            gate_status="Approved",
+            ready_task_id=None,
+            ready_task=None,
+            open_gap_titles=(),
+            stale_gap_titles=(),
+            evidence_mode="active_pages_fallback",
+        )
+
+        old_env = dict(os.environ)
+        old_cwd = Path.cwd()
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            with tempfile.TemporaryDirectory() as temp_dir:
+                cwd = Path(temp_dir)
+                planning_dir = cwd / ".planning"
+                planning_dir.mkdir(parents=True, exist_ok=True)
+                (planning_dir / "ROADMAP.md").write_text(
+                    "\n".join(
+                        [
+                            "## Phase P6: Reconcile Control Tower And Freeze Demo Packet",
+                            "Status: Done",
+                            "",
+                            "## Phase P7: Build A Spec-Driven Control Analysis Workbench",
+                            "Status: Active",
+                        ]
+                    ),
+                    encoding="utf-8",
+                )
+                os.chdir(cwd)
+                with (
+                    patch(
+                        "tools.gsd_notion_sync.fetch_review_snapshot",
+                        side_effect=RuntimeError("Notion API request failed: HTTP 404 /v1/databases/test/query"),
+                    ),
+                    patch("tools.gsd_notion_sync.fetch_review_snapshot_from_pages", return_value=snapshot) as fallback_mock,
+                    patch("tools.gsd_notion_sync.output_review_result") as output_mock,
+                ):
+                    exit_code = handle_prepare_opus_review(args, config)
+        finally:
+            os.chdir(old_cwd)
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(0, exit_code)
+        self.assertEqual(1, fallback_mock.call_count)
+        payload = output_mock.call_args.args[1]
+        self.assertEqual(
+            "P7 Build A Spec-Driven Control Analysis Workbench / P7-07 Bundle The Workbench Chain Into A Single Engineer Artifact",
+            payload["review_target"],
+        )
 
     def test_handle_prepare_opus_review_falls_back_to_repo_docs_on_timeout(self):
         args = argparse.Namespace(activate_gate=False, dry_run=True, format="json")
@@ -1792,7 +2777,10 @@ Ran 189 tests in 20.897s
         write_mock.assert_not_called()
         payload = output_mock.call_args.args[1]
         self.assertTrue(payload["notion"]["timeout_fallback"])
-        self.assertEqual("P6 Reconcile Control Tower And Freeze Demo Packet / P6-15 Preserve The Stronger Validation Baseline", payload["review_target"])
+        self.assertEqual(
+            "P7 Build A Spec-Driven Control Analysis Workbench / P6-15 Preserve The Stronger Validation Baseline",
+            payload["review_target"],
+        )
 
     def test_fetch_review_snapshot_from_repo_docs_uses_freeze_packet_seed(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2165,6 +3153,67 @@ Ran 189 tests in 20.897s
                         "position": {"type": "start"},
                     },
                 ),
+            ],
+            client.calls,
+        )
+
+    def test_replace_page_body_patches_supported_blocks_in_place_when_structure_matches(self):
+        class FakeClient(NotionClient):
+            def __init__(self):
+                super().__init__("test-token")
+                self.calls = []
+
+            def list_block_children(self, block_id):
+                return [
+                    {
+                        "id": "phase-block",
+                        "type": "bulleted_list_item",
+                        "archived": False,
+                        "in_trash": False,
+                        "bulleted_list_item": {"rich_text": [{"plain_text": "当前阶段：P6"}]},
+                    },
+                    {
+                        "id": "plan-block",
+                        "type": "bulleted_list_item",
+                        "archived": False,
+                        "in_trash": False,
+                        "bulleted_list_item": {"rich_text": [{"plain_text": "当前已验证 Plan：P6-16"}]},
+                    },
+                ]
+
+            def request(self, method, path, payload=None):
+                self.calls.append((method, path, payload))
+                return {}
+
+        client = FakeClient()
+
+        client.replace_page_body(
+            "page-123",
+            [
+                {
+                    "object": "block",
+                    "type": "bulleted_list_item",
+                    "bulleted_list_item": {"rich_text": [{"text": {"content": "当前阶段：P7"}}]},
+                },
+                {
+                    "object": "block",
+                    "type": "bulleted_list_item",
+                    "bulleted_list_item": {"rich_text": [{"text": {"content": "当前已验证 Plan：P6-16"}}]},
+                },
+            ],
+        )
+
+        self.assertEqual(
+            [
+                (
+                    "PATCH",
+                    "/v1/blocks/phase-block",
+                    {
+                        "bulleted_list_item": {
+                            "rich_text": [{"text": {"content": "当前阶段：P7"}}],
+                        }
+                    },
+                )
             ],
             client.calls,
         )

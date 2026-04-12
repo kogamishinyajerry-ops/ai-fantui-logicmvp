@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import threading
 import unittest
 from contextlib import redirect_stdout
@@ -785,6 +786,334 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn("id=\"demo-prompt\"", html)
         self.assertIn("logic4 和 throttle lock 有什么关系", html)
         self.assertIn("原始 JSON 调试", html)
+
+    def test_demo_server_serves_workbench_acceptance_shell(self):
+        server, thread = start_demo_server()
+        try:
+            connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+            connection.request("GET", "/workbench.html")
+            response = connection.getresponse()
+            html = response.read().decode("utf-8")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+        self.assertEqual(response.status, 200)
+        self.assertIn("<title>Well Harness Workbench Bundle 验收台</title>", html)
+        self.assertIn("一键预设验收卡", html)
+        self.assertIn("data-workbench-preset=\"ready_archived\"", html)
+        self.assertIn("data-workbench-preset=\"blocked_follow_up\"", html)
+        self.assertIn("一键通过验收", html)
+        self.assertIn("连续点多个预设时，以最后一次点击结果为准。", html)
+        self.assertIn("一眼看懂的验收面板", html)
+        self.assertIn("第二套系统接入准备度", html)
+        self.assertIn("id=\"workbench-onboarding-badge\"", html)
+        self.assertIn("id=\"workbench-onboarding-docs\"", html)
+        self.assertIn("id=\"workbench-onboarding-clarifications\"", html)
+        self.assertIn("id=\"workbench-onboarding-unlocks\"", html)
+        self.assertIn("第二套系统画像", html)
+        self.assertIn("id=\"workbench-fingerprint-badge\"", html)
+        self.assertIn("id=\"workbench-fingerprint-system-id\"", html)
+        self.assertIn("id=\"workbench-fingerprint-doc-list\"", html)
+        self.assertIn("id=\"workbench-fingerprint-signal-list\"", html)
+        self.assertIn("第二套系统接入动作板", html)
+        self.assertIn("id=\"workbench-actions-badge\"", html)
+        self.assertIn("id=\"workbench-actions-follow-up-list\"", html)
+        self.assertIn("id=\"workbench-actions-schema-list\"", html)
+        self.assertIn("id=\"workbench-actions-unlock-list\"", html)
+        self.assertIn("Schema 安全修复工作台", html)
+        self.assertIn("id=\"workbench-schema-workspace-badge\"", html)
+        self.assertIn("id=\"workbench-schema-workspace-list\"", html)
+        self.assertIn("id=\"workbench-apply-schema-repairs\"", html)
+        self.assertIn("Clarification 回填工作台", html)
+        self.assertIn("id=\"workbench-clarification-workspace-badge\"", html)
+        self.assertIn("id=\"workbench-clarification-workspace-list\"", html)
+        self.assertIn("id=\"workbench-apply-clarifications\"", html)
+        self.assertIn("id=\"workbench-apply-and-rerun\"", html)
+        self.assertIn("id=\"workbench-history-view-status\"", html)
+        self.assertIn("回到最新结果", html)
+        self.assertIn("id=\"workbench-history-compare-bar\"", html)
+        self.assertIn("历史回看与最新结果差异", html)
+        self.assertIn("id=\"workbench-history-detail-board\"", html)
+        self.assertIn("回看结果与最新结果并排对照", html)
+        self.assertIn("id=\"workbench-history-detail-replay\"", html)
+        self.assertIn("id=\"workbench-history-detail-latest\"", html)
+        self.assertIn("最近验收结果", html)
+        self.assertIn("id=\"workbench-history-cards\"", html)
+        self.assertIn("点一张卡即可把那次结果重新放回主看板。", html)
+        self.assertIn("id=\"workbench-visual-badge\"", html)
+        self.assertIn("id=\"workbench-stage-clarification\"", html)
+        self.assertIn("id=\"workbench-packet-source-status\"", html)
+        self.assertIn("Packet 版本历史", html)
+        self.assertIn("id=\"workbench-packet-history-status\"", html)
+        self.assertIn("id=\"workbench-packet-history-return-latest\"", html)
+        self.assertIn("id=\"workbench-packet-draft-status\"", html)
+        self.assertIn("id=\"workbench-packet-draft-note\"", html)
+        self.assertIn("id=\"workbench-save-packet-draft\"", html)
+        self.assertIn("刷新页面后还会继续恢复当前 packet 工作区", html)
+        self.assertIn("id=\"workbench-packet-history-compare-bar\"", html)
+        self.assertIn("历史 Packet 与最新 Packet 差异", html)
+        self.assertIn("id=\"workbench-packet-history-cards\"", html)
+        self.assertIn("id=\"workbench-packet-json\"", html)
+        self.assertIn("id=\"workbench-logic-change\"", html)
+        self.assertIn("开发调试 / Raw JSON（一般不用看）", html)
+        self.assertIn("id=\"run-workbench-bundle\"", html)
+        self.assertIn("Optimization Record", html)
+        self.assertIn("载入参考样例", html)
+        self.assertIn("id=\"export-workbench-workspace\"", html)
+        self.assertIn("id=\"workbench-workspace-file-input\"", html)
+        self.assertIn("导入工作区快照", html)
+        self.assertIn("工作区交接摘要", html)
+        self.assertIn("id=\"workbench-handoff-badge\"", html)
+        self.assertIn("id=\"workbench-handoff-system\"", html)
+        self.assertIn("id=\"workbench-handoff-workspace\"", html)
+        self.assertIn("id=\"workbench-handoff-note\"", html)
+        self.assertIn("id=\"copy-workbench-handoff-brief\"", html)
+        self.assertIn("复制交接摘要", html)
+        self.assertIn("导出的工作区快照也会带上它", html)
+
+    def test_workbench_static_assets_include_history_replay_hooks(self):
+        script = (DEMO_UI_STATIC_DIR / "workbench.js").read_text(encoding="utf-8")
+        stylesheet = (DEMO_UI_STATIC_DIR / "workbench.css").read_text(encoding="utf-8")
+
+        self.assertIn("restoreWorkbenchHistoryEntry", script)
+        self.assertIn("restoreLatestWorkbenchHistory", script)
+        self.assertIn("当前查看：历史回看", script)
+        self.assertIn("renderWorkbenchHistoryCompareBar", script)
+        self.assertIn("renderWorkbenchHistoryDetailBoard", script)
+        self.assertIn("detailedWorkbenchHistoryEntry", script)
+        self.assertIn("renderWorkbenchPacketRevisionHistory", script)
+        self.assertIn("restoreWorkbenchPacketRevisionEntry", script)
+        self.assertIn("renderWorkbenchPacketRevisionCompareBar", script)
+        self.assertIn("renderWorkbenchPacketDraftState", script)
+        self.assertIn("saveCurrentWorkbenchPacketDraft", script)
+        self.assertIn("自动保存草稿 /", script)
+        self.assertIn("workbenchPacketWorkspaceStorageKey", script)
+        self.assertIn("restoreWorkbenchPacketWorkspaceFromBrowser", script)
+        self.assertIn("restoreWorkbenchPacketWorkspaceSnapshot", script)
+        self.assertIn("persistWorkbenchPacketWorkspace", script)
+        self.assertIn("normalizeWorkbenchRunHistory", script)
+        self.assertIn("nextWorkbenchSequenceFromIds", script)
+        self.assertIn("downloadWorkbenchWorkspaceSnapshot", script)
+        self.assertIn("importWorkbenchWorkspaceSnapshot", script)
+        self.assertIn("buildWorkbenchHandoffSnapshot", script)
+        self.assertIn("renderWorkbenchHandoffBoard", script)
+        self.assertIn("workbenchHandoffBriefText", script)
+        self.assertIn("copyWorkbenchHandoffBrief", script)
+        self.assertIn("当前工作区交接摘要已复制。", script)
+        self.assertIn("workspace_handoff: buildWorkbenchHandoffSnapshot()", script)
+        self.assertIn("workspace_snapshot: collectWorkbenchPacketWorkspaceState()", script)
+        self.assertIn("archive.manifest_json_path", script)
+        self.assertIn("archive.workspace_handoff_json_path", script)
+        self.assertIn("archive.workspace_snapshot_json_path", script)
+        self.assertIn("当前工作区已经具备可交接的 packet、结果和 archive 状态", script)
+        self.assertIn("当前工作区已经明确告诉你卡在哪", script)
+        self.assertIn("当前只有 packet 和交接备注，还没有结果历史", script)
+        self.assertIn("workspaceSnapshotDownloadName", script)
+        self.assertIn("当前工作区快照已导出。", script)
+        self.assertIn("已导入工作区快照和结果历史。", script)
+        self.assertIn("当前 Packet：历史版本", script)
+        self.assertIn("点此恢复这个 Packet 版本", script)
+        self.assertIn("它和最新 packet 在输入骨架上差在哪里", script)
+        self.assertIn("当前草稿：有未保存改动", script)
+        self.assertIn("当前草稿：JSON 待修正", script)
+        self.assertIn("尚未建立版本基线", script)
+        self.assertIn("已从浏览器恢复上次 packet 工作区", script)
+        self.assertIn("已从浏览器恢复上次 packet 工作区和结果历史", script)
+        self.assertIn("当前 Packet 草稿已保存到版本历史。", script)
+        self.assertIn("renderOnboardingReadinessFromPayload", script)
+        self.assertIn("renderSystemFingerprintFromPacketPayload", script)
+        self.assertIn("renderSystemFingerprintFromPayload", script)
+        self.assertIn("renderOnboardingActionsFromPayload", script)
+        self.assertIn("renderSchemaRepairWorkspaceFromPayload", script)
+        self.assertIn("runWorkbenchSchemaSafeRepair", script)
+        self.assertIn("workbenchRepairPath", script)
+        self.assertIn("安全 schema 修复已经写回当前 packet", script)
+        self.assertIn("renderClarificationWorkspaceFromPayload", script)
+        self.assertIn("applyClarificationWorkspace", script)
+        self.assertIn("workbench-clarification-workspace", script)
+        self.assertIn("workbench-apply-and-rerun", script)
+        self.assertIn("只复用 bundle 真实返回的 follow_up_items", script)
+        self.assertIn("\"workbench-handoff-note\"", script)
+        self.assertIn("version: 2", script)
+        self.assertIn("handoff: buildWorkbenchHandoffSnapshot()", script)
+        self.assertIn("workbench-onboarding-badge", script)
+        self.assertIn("可接第二套系统", script)
+        self.assertIn("文档来源、控制目标和关键信号", script)
+        self.assertIn("这套系统还没 ready，但动作板已经把先补什么、再补什么、补完解锁什么拆开了。", script)
+        self.assertIn("你正在回看", script)
+        self.assertIn("当前来源：最近验收结果回看。", script)
+        self.assertIn("点此回看这次结果", script)
+        self.assertIn(".workbench-history-action", stylesheet)
+        self.assertIn(".workbench-history-view-bar", stylesheet)
+        self.assertIn(".workbench-packet-draft-bar", stylesheet)
+        self.assertIn(".workbench-packet-draft-note", stylesheet)
+        self.assertIn(".workbench-history-return-button", stylesheet)
+        self.assertIn(".workbench-packet-history-board", stylesheet)
+        self.assertIn(".workbench-history-compare-bar", stylesheet)
+        self.assertIn(".workbench-history-compare-grid", stylesheet)
+        self.assertIn(".workbench-history-detail-board", stylesheet)
+        self.assertIn(".workbench-history-detail-grid", stylesheet)
+        self.assertIn(".workbench-history-detail-value[data-diff=\"changed\"]", stylesheet)
+        self.assertIn(".workbench-onboarding-board", stylesheet)
+        self.assertIn(".workbench-onboarding-grid", stylesheet)
+        self.assertIn(".workbench-onboarding-footer", stylesheet)
+        self.assertIn(".workbench-fingerprint-board", stylesheet)
+        self.assertIn(".workbench-fingerprint-meta", stylesheet)
+        self.assertIn(".workbench-fingerprint-panel", stylesheet)
+        self.assertIn(".workbench-fingerprint-chip", stylesheet)
+        self.assertIn(".workbench-actions-board", stylesheet)
+        self.assertIn(".workbench-actions-grid", stylesheet)
+        self.assertIn(".workbench-actions-panel", stylesheet)
+        self.assertIn(".workbench-actions-item", stylesheet)
+        self.assertIn(".workbench-schema-workspace", stylesheet)
+        self.assertIn(".workbench-schema-workspace-list", stylesheet)
+        self.assertIn(".workbench-schema-card", stylesheet)
+        self.assertIn(".workbench-schema-workspace-actions", stylesheet)
+        self.assertIn(".workbench-clarification-workspace", stylesheet)
+        self.assertIn(".workbench-clarification-workspace-list", stylesheet)
+        self.assertIn(".workbench-clarification-card", stylesheet)
+        self.assertIn(".workbench-clarification-workspace-actions", stylesheet)
+        self.assertIn(".workbench-history-card[data-selected=\"true\"]", stylesheet)
+
+    def test_demo_server_api_returns_workbench_bootstrap_payload(self):
+        server, thread = start_demo_server()
+        try:
+            connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+            connection.request("GET", "/api/workbench/bootstrap")
+            response = connection.getresponse()
+            payload = json.loads(response.read().decode("utf-8"))
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+        self.assertEqual(response.status, 200)
+        self.assertEqual("new_control_system_id", payload["template_packet"]["system_id"])
+        self.assertEqual("custom_reverse_control_v1", payload["reference_packet"]["system_id"])
+        self.assertIn("artifacts/workbench-bundles", payload["default_archive_root"])
+
+    def test_demo_server_api_returns_workbench_bundle_and_archive_payload(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive_root = Path(temp_dir).resolve()
+            with mock.patch.object(demo_server, "default_workbench_archive_root", return_value=archive_root):
+                server, thread = start_demo_server()
+                try:
+                    connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+                    request_body = json.dumps(
+                        {
+                            "packet_payload": demo_server.reference_workbench_packet_payload(),
+                            "archive_bundle": True,
+                            "workspace_handoff": {
+                                "badgeText": "可交接",
+                                "system": "custom_reverse_control_v1",
+                                "packet": "2 docs / 4 logic / 1 faults",
+                                "result": "通过 / ab_pressure_ramp",
+                                "archive": "已留档",
+                                "workspace": "3 个 packet 版本 / 2 个结果",
+                                "note": "Ready archive for next engineer handoff.",
+                            },
+                            "workspace_snapshot": {
+                                "kind": "well-harness-workbench-browser-workspace",
+                                "version": 2,
+                                "packetRevisionHistory": [{"id": "workbench-packet-revision-1", "title": "载入参考样例"}],
+                                "runHistory": [{"id": "workbench-history-1", "title": "一键通过验收"}],
+                                "handoff": {
+                                    "badgeText": "可交接",
+                                    "note": "Ready archive for next engineer handoff.",
+                                },
+                            },
+                            "confirmed_root_cause": "Pressure sensor bias was confirmed during troubleshooting.",
+                            "repair_action": "Recalibrated the sensor path.",
+                            "validation_after_fix": "Acceptance replay completed after the repair.",
+                            "residual_risk": "Watch for future sensor drift.",
+                            "suggested_logic_change": "Add a pressure plausibility cross-check before enabling the deploy chain.",
+                            "reliability_gain_hypothesis": "A clearer plausibility guard should fail earlier and reduce ambiguity around sensor drift.",
+                            "guardrail_note": "Emit a guardrail event when the pressure ramp diverges from the unlock chain expectation.",
+                        }
+                    ).encode("utf-8")
+                    connection.request(
+                        "POST",
+                        "/api/workbench/bundle",
+                        body=request_body,
+                        headers={"Content-Type": "application/json"},
+                    )
+                    response = connection.getresponse()
+                    payload = json.loads(response.read().decode("utf-8"))
+                finally:
+                    server.shutdown()
+                    server.server_close()
+                    thread.join(timeout=2)
+
+                self.assertEqual(response.status, 200)
+                self.assertEqual("full_workbench_bundle", payload["bundle"]["bundle_kind"])
+                self.assertTrue(payload["bundle"]["ready_for_spec_build"])
+                self.assertEqual("ab_pressure_ramp", payload["bundle"]["selected_scenario_id"])
+                self.assertEqual("pressure_sensor_bias_low", payload["bundle"]["selected_fault_mode_id"])
+                self.assertEqual(
+                    "Add a pressure plausibility cross-check before enabling the deploy chain.",
+                    payload["bundle"]["knowledge_artifact"]["optimization_record"]["suggested_logic_change"],
+                )
+                self.assertEqual(
+                    "A clearer plausibility guard should fail earlier and reduce ambiguity around sensor drift.",
+                    payload["bundle"]["knowledge_artifact"]["optimization_record"]["reliability_gain_hypothesis"],
+                )
+                self.assertEqual(
+                    "Emit a guardrail event when the pressure ramp diverges from the unlock chain expectation.",
+                    payload["bundle"]["knowledge_artifact"]["optimization_record"][
+                        "redundancy_reduction_or_guardrail_note"
+                    ],
+                )
+                self.assertIsNotNone(payload["archive"])
+                self.assertTrue(Path(payload["archive"]["archive_dir"]).exists())
+                self.assertTrue(Path(payload["archive"]["manifest_json_path"]).exists())
+                self.assertTrue(Path(payload["archive"]["summary_markdown_path"]).exists())
+                self.assertTrue(Path(payload["archive"]["workspace_handoff_json_path"]).exists())
+                self.assertTrue(Path(payload["archive"]["workspace_snapshot_json_path"]).exists())
+                manifest_payload = json.loads(Path(payload["archive"]["manifest_json_path"]).read_text(encoding="utf-8"))
+                handoff_payload = json.loads(Path(payload["archive"]["workspace_handoff_json_path"]).read_text(encoding="utf-8"))
+                snapshot_payload = json.loads(Path(payload["archive"]["workspace_snapshot_json_path"]).read_text(encoding="utf-8"))
+                self.assertEqual("well-harness-workbench-archive-manifest", manifest_payload["kind"])
+                self.assertEqual(payload["archive"]["workspace_snapshot_json_path"], manifest_payload["files"]["workspace_snapshot_json"])
+                self.assertEqual("可交接", handoff_payload["badgeText"])
+                self.assertEqual(2, snapshot_payload["version"])
+                self.assertIn(
+                    "Ready archive for next engineer handoff.",
+                    Path(payload["archive"]["summary_markdown_path"]).read_text(encoding="utf-8"),
+                )
+                self.assertEqual(str(archive_root), payload["default_archive_root"])
+
+    def test_demo_server_api_can_apply_safe_schema_repairs_for_workbench_packet(self):
+        server, thread = start_demo_server()
+        try:
+            connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+            request_body = json.dumps(
+                {
+                    "packet_payload": demo_server.workbench_bootstrap_payload()["template_packet"],
+                    "apply_all_safe": True,
+                }
+            ).encode("utf-8")
+            connection.request(
+                "POST",
+                "/api/workbench/repair",
+                body=request_body,
+                headers={"Content-Type": "application/json"},
+            )
+            response = connection.getresponse()
+            payload = json.loads(response.read().decode("utf-8"))
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+        self.assertEqual(response.status, 200)
+        self.assertIn("add_logic_node_stub", payload["applied_suggestion_ids"])
+        self.assertIn("add_fault_mode_stub", payload["applied_suggestion_ids"])
+        self.assertEqual(1, len(payload["packet_payload"]["logic_nodes"]))
+        self.assertEqual(1, len(payload["packet_payload"]["fault_modes"]))
+        self.assertEqual([], payload["intake_assessment"]["blocking_reasons"])
+        self.assertEqual("blocked_by_clarifications", payload["clarification_brief"]["gate_status"])
 
     def test_demo_server_open_browser_helper_reports_failures(self):
         url = demo_server.demo_url("127.0.0.1", 8000)

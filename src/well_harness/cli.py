@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 from dataclasses import asdict
+from pathlib import Path
 
 from well_harness.demo import answer_demo_prompt, demo_answer_to_payload, render_demo_answer
 from well_harness.document_intake import (
@@ -22,6 +23,12 @@ from well_harness.runner import SimulationRunner
 from well_harness.scenarios import BUILT_IN_SCENARIOS
 from well_harness.scenario_playback import build_playback_report_from_intake_packet, render_playback_report_text
 from well_harness.system_spec import current_reference_workbench_spec, workbench_spec_to_dict
+from well_harness.workbench_bundle import (
+    archive_workbench_bundle,
+    build_workbench_bundle,
+    render_workbench_bundle_text,
+    validate_workbench_archive_manifest,
+)
 
 LOGIC_CHOICES = ("logic1", "logic2", "logic3", "logic4")
 JSON_SCHEMA_VERSION = "1.0"
@@ -180,6 +187,74 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("text", "json"),
         default="text",
         help="Render the knowledge artifact as text or JSON.",
+    )
+    bundle_parser = subparsers.add_parser(
+        "bundle",
+        help="Compile intake assessment, clarification, playback, diagnosis, and knowledge into one engineer-facing bundle",
+    )
+    bundle_parser.add_argument("packet_path", help="Path to a JSON intake packet.")
+    bundle_parser.add_argument(
+        "--scenario",
+        help="Scenario id inside the intake packet. Defaults to the only scenario when exactly one exists.",
+    )
+    bundle_parser.add_argument(
+        "--fault-mode",
+        help="Fault mode id inside the intake packet. Defaults to the only fault mode when exactly one exists.",
+    )
+    bundle_parser.add_argument("--observed-symptoms", help="Observed symptoms summary. Defaults to the fault-mode symptom.")
+    bundle_parser.add_argument(
+        "--evidence-link",
+        action="append",
+        default=[],
+        help="Repeat to attach evidence links for the bundle incident record.",
+    )
+    bundle_parser.add_argument("--confirmed-root-cause", help="Confirmed root cause after troubleshooting.")
+    bundle_parser.add_argument("--repair-action", help="Repair action taken by the engineer.")
+    bundle_parser.add_argument("--validation-after-fix", help="How the fix was validated.")
+    bundle_parser.add_argument("--residual-risk", help="Residual risk after the fix.")
+    bundle_parser.add_argument("--suggested-logic-change", help="Optional override for the suggested logic change field.")
+    bundle_parser.add_argument(
+        "--reliability-gain-hypothesis",
+        help="Optional override for the reliability gain hypothesis field.",
+    )
+    bundle_parser.add_argument(
+        "--guardrail-note",
+        help="Optional override for the redundancy/guardrail note field.",
+    )
+    bundle_parser.add_argument(
+        "--sample-period",
+        type=float,
+        default=0.5,
+        help="Sampling interval in seconds for playback and diagnosis inside the bundle.",
+    )
+    bundle_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Render the bundle as text or JSON.",
+    )
+    bundle_parser.add_argument(
+        "--archive-dir",
+        help="Optional root directory under which the bundle should be archived as JSON + Markdown artifacts.",
+    )
+    manifest_parser = subparsers.add_parser(
+        "archive-manifest",
+        help="Validate and summarize a workbench archive_manifest.json file",
+    )
+    manifest_parser.add_argument(
+        "manifest_path",
+        help="Path to archive_manifest.json or to the archive directory that contains it.",
+    )
+    manifest_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Render the validation result as text or JSON.",
+    )
+    manifest_parser.add_argument(
+        "--skip-file-check",
+        action="store_true",
+        help="Validate manifest shape without requiring referenced archive files to exist.",
     )
     return parser
 
@@ -375,6 +450,93 @@ def select_trace_row(rows, time_s: float | None):
     return min(rows, key=lambda row: abs(row.time_s - time_s))
 
 
+def archive_manifest_validation_payload(
+    manifest_path: str,
+    *,
+    require_existing_files: bool = True,
+) -> dict:
+    input_path = Path(manifest_path).expanduser()
+    path = input_path / "archive_manifest.json" if input_path.is_dir() else input_path
+    payload = {
+        "input_path": str(input_path),
+        "manifest_path": str(path),
+        "valid": False,
+        "issues": [],
+    }
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        payload["issues"] = [f"could not read archive manifest: {exc}"]
+        return payload
+    except json.JSONDecodeError as exc:
+        payload["issues"] = [f"archive manifest is not valid JSON: {exc.msg}"]
+        return payload
+
+    issues = validate_workbench_archive_manifest(
+        manifest,
+        require_existing_files=require_existing_files,
+    )
+    payload["valid"] = not issues
+    payload["issues"] = list(issues)
+    if not isinstance(manifest, dict):
+        return payload
+
+    files = manifest.get("files") if isinstance(manifest.get("files"), dict) else {}
+    bundle = manifest.get("bundle") if isinstance(manifest.get("bundle"), dict) else {}
+    payload.update(
+        {
+            "kind": manifest.get("kind"),
+            "version": manifest.get("version"),
+            "schema": manifest.get("$schema"),
+            "archive_dir": manifest.get("archive_dir"),
+            "bundle": {
+                "bundle_kind": bundle.get("bundle_kind"),
+                "system_id": bundle.get("system_id"),
+                "system_title": bundle.get("system_title"),
+                "ready_for_spec_build": bundle.get("ready_for_spec_build"),
+            },
+            "files": files,
+            "file_count": len([file_path for file_path in files.values() if file_path is not None]),
+            "restore_targets": manifest.get("restore_targets") if isinstance(manifest.get("restore_targets"), dict) else {},
+            "self_check": manifest.get("self_check") if isinstance(manifest.get("self_check"), dict) else {},
+        }
+    )
+    return payload
+
+
+def render_archive_manifest_validation_text(payload: dict) -> str:
+    status = "OK" if payload["valid"] else "INVALID"
+    lines = [
+        f"archive_manifest: {status}",
+        f"path: {payload['manifest_path']}",
+    ]
+    if payload.get("kind") is not None:
+        lines.append(f"kind: {payload['kind']}")
+    if payload.get("version") is not None:
+        lines.append(f"version: {payload['version']}")
+    if payload.get("schema") is not None:
+        lines.append(f"schema: {payload['schema']}")
+    if payload.get("archive_dir") is not None:
+        lines.append(f"archive_dir: {payload['archive_dir']}")
+    bundle = payload.get("bundle")
+    if isinstance(bundle, dict) and bundle:
+        lines.append(f"bundle: {bundle.get('system_id')} / {bundle.get('bundle_kind')}")
+    if payload.get("file_count") is not None:
+        lines.append(f"file_count: {payload['file_count']}")
+    restore_targets = payload.get("restore_targets")
+    if isinstance(restore_targets, dict) and restore_targets:
+        lines.append("restore_targets:")
+        for target_name, target_path in sorted(restore_targets.items()):
+            lines.append(f"- {target_name}: {target_path or '(none)'}")
+    self_check = payload.get("self_check")
+    if isinstance(self_check, dict) and self_check.get("command"):
+        lines.append(f"self_check: {self_check['command']}")
+    if payload["issues"]:
+        lines.append("issues:")
+        lines.extend(f"- {issue}" for issue in payload["issues"])
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -494,6 +656,57 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(render_knowledge_artifact_text(artifact))
         return 0
+    if args.command == "bundle":
+        packet = load_intake_packet(args.packet_path)
+        try:
+            bundle = build_workbench_bundle(
+                packet,
+                scenario_id=args.scenario,
+                fault_mode_id=args.fault_mode,
+                observed_symptoms=args.observed_symptoms,
+                evidence_links=tuple(args.evidence_link),
+                confirmed_root_cause=args.confirmed_root_cause,
+                repair_action=args.repair_action,
+                validation_after_fix=args.validation_after_fix,
+                residual_risk=args.residual_risk,
+                suggested_logic_change=args.suggested_logic_change,
+                reliability_gain_hypothesis=args.reliability_gain_hypothesis,
+                redundancy_reduction_or_guardrail_note=args.guardrail_note,
+                sample_period_s=args.sample_period,
+            )
+        except ValueError as exc:
+            parser.error(str(exc))
+        archive = None
+        if args.archive_dir:
+            archive = archive_workbench_bundle(bundle, args.archive_dir)
+        if args.format == "json":
+            payload = bundle.to_dict()
+            if archive is not None:
+                payload["archive"] = archive.to_dict()
+            print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+        else:
+            text = render_workbench_bundle_text(bundle)
+            if archive is not None:
+                text = "\n".join(
+                    [
+                        text,
+                        f"archive_dir: {archive.archive_dir}",
+                        f"archive_bundle_json: {archive.bundle_json_path}",
+                        f"archive_summary_markdown: {archive.summary_markdown_path}",
+                    ]
+                )
+            print(text)
+        return 0 if bundle.ready_for_spec_build else 1
+    if args.command == "archive-manifest":
+        payload = archive_manifest_validation_payload(
+            args.manifest_path,
+            require_existing_files=not args.skip_file_check,
+        )
+        if args.format == "json":
+            print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
+        else:
+            print(render_archive_manifest_validation_text(payload))
+        return 0 if payload["valid"] else 1
     parser.error("unsupported command")
     return 2
 

@@ -3,26 +3,37 @@
 <!-- AUTO-SYNCED DEV HANDOFF SNAPSHOT START -->
 ## 当前自动同步交接基线
 
-- 活动 phase：`P6 Reconcile Control Tower And Freeze Demo Packet`
-- 当前已验证 Plan：`P6-17 Lift The Stronger QA Baseline Back To The Homepage`
-- 最近成功执行证据：`P6-17 stronger QA baseline restore`
+- 活动 phase：`P7 Build A Spec-Driven Control Analysis Workbench`
+- 当前已验证 Plan：`P7-44 Expose Manifest File Map In CLI JSON`
+- 最近成功执行证据：`P7-44 expose manifest file map in CLI JSON`
+- 当前证据模式：`active-page degraded mode`
+- 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
 - 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
 - 当前运行摘要：`Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
-- 当前 demo 基线已经稳定，P6 的任务是把控制塔、freeze packet 和 repo-side handoff 资料统一到同一份 GitHub-backed 真值。
-- 当前不继续扩大 P7 的实现面；P7 groundwork 继续保留，但执行顺序仍以 P6 收口优先。
+- 当前 demo / freeze 基线已经稳定；当前主线已切到 P7 spec-driven workbench。
+- 当前优先级是让 engineer-facing onboarding / playback / diagnosis / knowledge 工具形成连续工作流，而不是继续扩 demo 表面。
+
+## 当前开发架构与执行规则
+
+- GitHub / repo 是实现真值；Notion 是控制面；`controller.py` 仍然是唯一控制真值。
+- 一个切片只有在代码修改、目标验证命令、`gsd_notion_sync.py run` 写回，以及 `prepare-opus-review` 复核全部完成后，才算真正完成。
+- 共享数据库或独立子页不可达时，可以暂时依赖 repo-side synced snapshot 继续恢复上下文，但在 live writeback 回补前，不把控制面视为“已同步到最新”。
+- 任何 Notion 写回降级、部分失败或超时都应被当成 control-plane gap / blocker 处理，不能静默跳过后继续宣称已完成同步。
+- Opus 4.6 只在显式 gate / blocker / subjective review need 时介入；没有 review need 时默认动作就是继续自动开发。
+- P7 workbench 继续把 intake / playback / diagnosis / knowledge / follow-up 收成 engineer-facing workflow，不引入第二套隐藏规则引擎。
 
 ## 恢复工作时先看
 
 1. [AI FANTUI LogicMVP 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
-2. [01 当前状态（自动同步）](https://www.notion.so/33fc6894-2bed-814f-b62a-e30a490f0041)
-3. [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33fc6894-2bed-81fd-b82d-e44b9988d1a4)
-4. [10 Freeze Demo Packet](https://www.notion.so/33fc6894-2bed-8182-81cf-ec90266f7596)
+2. [01 当前状态（自动同步）](https://www.notion.so/33fc6894-2bed-81a1-90ab-fa23e1ddc744)
+3. [09C 当前 Opus 4.6 审查简报](https://www.notion.so/33fc6894-2bed-81c5-a7d8-faa7a57a294e)
+4. [10 Freeze Demo Packet](https://www.notion.so/33fc6894-2bed-8108-8456-ea95d62e605d)
 5. [GitHub Actions / GSD Automation Loop](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 
 ## 当前交接结论
 
 - Opus 状态：`当前无需 Opus 审查`
-- 当前交接重点是保持 control-plane truth 收口，不是扩新功能。
+- 当前交接重点是保持 workbench bundle / playback / diagnosis / knowledge 链路可复用，不是回到零散单命令操作。
 - 下方旧 Round 记录保留为历史上下文，不再当成当前执行指令。
 <!-- AUTO-SYNCED DEV HANDOFF SNAPSHOT END -->
 

@@ -86,7 +86,7 @@ Exit Criteria:
 
 ## Phase P6: Reconcile Control Tower And Freeze Demo Packet
 
-Status: Active
+Status: Done
 
 Goal: Turn the now-stable P5 demo evidence into a consistent freeze-ready control-tower story, so Notion status pages, repo docs, and final presenter handoff materials all match the latest GitHub-backed truth without adding new product surface.
 
@@ -100,7 +100,7 @@ Exit Criteria:
 
 ## Phase P7: Build A Spec-Driven Control Analysis Workbench
 
-Status: Planned
+Status: Active
 
 Goal: Add a reusable control-system specification layer that can drive strict scenario playback, fault injection, diagnosis, and knowledge capture without being locked to the current thrust-reverser chain alone.
 

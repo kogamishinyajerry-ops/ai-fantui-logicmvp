@@ -1,5 +1,9 @@
 # AI FANTUI LogicMVP Notion 管理中枢方案
 
+> 状态说明：这份文档是项目早期的 Notion 控制塔设计/迁移方案，保留用来解释结构思路与初始化方式，不代表当前 live truth。
+> 当前真值请优先看 Notion 控制塔首页、`01 当前状态（自动同步）`、`09C 当前 Opus 4.6 审查简报`，以及 repo 里的 `docs/coordination/*.md` 自动同步快照。
+> 文中像 `Round 92`、`129 tests OK` 之类的示例属于当时的初始化样例或历史上下文，不应再被当成当前基线。
+
 ## 目标
 
 把 Notion 变成这个项目的长期上下文中枢，让新的 AI 会话不再依赖你手工复制一大段提示词。
@@ -166,7 +170,7 @@
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
-| Session | Title | 例如 `2026-04-08 Round 92 review` |
+| Session | Title | 例如 `2026-04-08 当前基线收口` |
 | Status | Select | Open / Closed / Handed Off |
 | Goal | Text | 本次目标 |
 | Summary | Text | 本次完成了什么 |
@@ -215,7 +219,7 @@
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
-| Run | Title | 例如 `Round 92 full regression` |
+| Run | Title | 例如 `当前基线 full regression` |
 | Result | Select | PASS / FAIL / PARTIAL / SKIP |
 | Scope | Multi-select | Unit / CLI / Demo / Manual / Schema / Regression |
 | Commands | Text | 执行命令 |
@@ -344,21 +348,21 @@
 5. 不建议做什么
 6. 最近更新
 
-基于当前仓库，建议初始化为：
+如果你要按这份结构初始化一个新的控制塔，请把下面内容当成“填写模板”，并替换成初始化当日的真实状态：
 
 #### 当前轮次
 
-- `Round 92 已完成`
+- `当前活动 phase / 最近完成切片`
 
 #### 当前结论
 
-- 当前版本已经接近 cockpit demo candidate
-- 当前不建议盲目继续加功能
-- 下一步优先是现场手动 QA / 演示验证，而不是功能扩展
+- `当前稳定基线已经到什么程度`
+- `当前最不该做的扩大动作是什么`
+- `下一步最优先的收口或验证动作是什么`
 
 #### 当前回归
 
-- `129 tests OK`
+- `最新共享验证摘要`
 
 #### 当前关键边界
 
@@ -379,7 +383,7 @@
 
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
-| Round | Title | 例如 `Round 92` |
+| Round | Title | 例如 `Phase P6` 或 `当前基线` |
 | Status | Select | Planned / Active / Done / Frozen |
 | Goal | Text | 本轮目标 |
 | Exit Criteria | Text | 完成条件 |
@@ -558,7 +562,7 @@ Notion 中对应：
 
 迁入内容：
 
-- 当前轮次：Round 92
+- 当前轮次 / phase：以迁入当日真实状态为准
 - 当前判断
 - 当前结论
 - 后续原则
@@ -584,8 +588,8 @@ Notion 中对应：
 迁入方式：
 
 - 只先创建 1 到 3 条关键验证记录：
-  - `Round 92 full regression`
-  - `Round 92 command / demo consistency`
+  - `当前基线 full regression`
+  - `当前自动同步快照一致性`
   - `Current known boundaries`
 
 ### 从仓库迁入 `06 证据与资产数据库`
@@ -610,9 +614,9 @@ Notion 中对应：
 
 - 项目：`AI FANTUI LogicMVP`
 - 代码仓：`well_harness`
-- 当前阶段：`Round 92 已完成`
-- 当前状态：`可作为 cockpit demo candidate，优先做现场 QA，不建议盲目扩功能`
-- 当前回归：`129 tests OK`
+- 当前阶段：`<填写初始化当日的真实 phase / round>`
+- 当前状态：`<填写当前最重要的结论>`
+- 当前回归：`<填写当前共享验证摘要>`
 
 ### 第一条决策
 
