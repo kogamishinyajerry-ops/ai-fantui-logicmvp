@@ -15,6 +15,7 @@ import re
 import signal
 import subprocess
 import ssl
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
@@ -860,6 +861,23 @@ def archive_page_if_present(client: NotionClient, page_id_value: str) -> None:
         raise
 
 
+def _check_page_live(
+    client: NotionClient,
+    key: str,
+    current_id: str,
+) -> tuple[str, str, bool] | None:
+    """Check if a page is live. Returns (key, id, needs_replacement) or None if page is live."""
+    try:
+        page = client.get_page(current_id)
+    except RuntimeError as exc:
+        if not is_missing_page_error(str(exc)):
+            raise
+        page = {"archived": True, "in_trash": True}
+    if not page.get("archived") and not page.get("in_trash"):
+        return None  # Page is live, no action needed
+    return (key, current_id, True)
+
+
 def ensure_live_active_pages(
     client: NotionClient,
     config: dict[str, Any],
@@ -874,52 +892,82 @@ def ensure_live_active_pages(
     if dashboard.get("archived") or dashboard.get("in_trash"):
         raise RuntimeError("Dashboard page is archived; cannot create replacement active pages.")
 
+    # Phase 1: parallel GET for all pages to check live status
+    pages_to_check: list[tuple[str, str, str]] = []  # (key, title, current_id)
     for key, title in ACTIVE_SYNC_PAGE_TITLES.items():
         if key not in pages:
             continue
-        current_id = page_id(config, key)
-        try:
-            page = client.get_page(current_id)
-        except RuntimeError as exc:
-            if not is_missing_page_error(str(exc)):
-                raise
-            page = {"archived": True, "in_trash": True}
-        if not page.get("archived") and not page.get("in_trash"):
-            continue
-        replacement_id = client.create_child_page(page_id(config, "dashboard"), title)
-        replacement_page = client.get_page(replacement_id)
-        if replacement_page.get("archived") or replacement_page.get("in_trash"):
-            continue
-        config["pages"][key] = replacement_id
-        replacements[key] = {"old_id": current_id, "new_id": replacement_id}
+        pages_to_check.append((key, title, page_id(config, key)))
+
+    if pages_to_check:
+        needs_replacement: list[tuple[str, str, str]] = []
+        with ThreadPoolExecutor(max_workers=min(len(pages_to_check), 8)) as executor:
+            futures = {
+                executor.submit(_check_page_live, client, key, current_id): (key, title)
+                for key, title, current_id in pages_to_check
+            }
+            for future in as_completed(futures):
+                result = future.result()
+                if result is not None:
+                    key, current_id, _ = result
+                    title = futures[future][1]
+                    needs_replacement.append((key, title, current_id))
+
+        # Phase 2: sequential replacement for pages that need it (rare, config writes)
+        for key, title, current_id in needs_replacement:
+            replacement_id = client.create_child_page(page_id(config, "dashboard"), title)
+            replacement_page = client.get_page(replacement_id)
+            if replacement_page.get("archived") or replacement_page.get("in_trash"):
+                continue
+            config["pages"][key] = replacement_id
+            replacements[key] = {"old_id": current_id, "new_id": replacement_id}
 
     if replacements:
         save_control_plane_config(config_path, config)
     return replacements
 
 
+def _ensure_live_single_database(
+    client: NotionClient,
+    key: str,
+    database_id_value: str,
+) -> tuple[str, str] | None:
+    """Check and restore a single database. Returns (key, id) if restored, None otherwise."""
+    try:
+        block = client.request("GET", f"/v1/blocks/{database_id_value}")
+    except RuntimeError as exc:
+        if is_missing_database_error(str(exc)) or is_missing_page_error(str(exc)):
+            return None
+        raise
+    if not block.get("archived") and not block.get("in_trash"):
+        return None
+    restored_block = client.request(
+        "PATCH",
+        f"/v1/blocks/{database_id_value}",
+        {"archived": False},
+    )
+    if restored_block.get("archived") or restored_block.get("in_trash"):
+        return None
+    return (key, database_id_value)
+
+
 def ensure_live_databases(
     client: NotionClient,
     config: dict[str, Any],
 ) -> dict[str, str]:
+    databases = config.get("databases", {})
+    if not databases:
+        return {}
     restored: dict[str, str] = {}
-    for key, database_id_value in config.get("databases", {}).items():
-        try:
-            block = client.request("GET", f"/v1/blocks/{database_id_value}")
-        except RuntimeError as exc:
-            if is_missing_database_error(str(exc)) or is_missing_page_error(str(exc)):
-                continue
-            raise
-        if not block.get("archived") and not block.get("in_trash"):
-            continue
-        restored_block = client.request(
-            "PATCH",
-            f"/v1/blocks/{database_id_value}",
-            {"archived": False},
-        )
-        if restored_block.get("archived") or restored_block.get("in_trash"):
-            continue
-        restored[key] = database_id_value
+    with ThreadPoolExecutor(max_workers=min(len(databases), 8)) as executor:
+        futures = {
+            executor.submit(_ensure_live_single_database, client, key, db_id): key
+            for key, db_id in databases.items()
+        }
+        for future in as_completed(futures):
+            result = future.result()
+            if result is not None:
+                restored[result[0]] = result[1]
     return restored
 
 
@@ -3228,48 +3276,64 @@ def write_notion_outcome(
     elif os.environ.get("GITHUB_SERVER_URL"):
         artifact_url = os.environ["GITHUB_SERVER_URL"]
 
-    written["plan"] = client.upsert_page(
-        database_id(config, "plans"),
-        TITLE_PROPS["plans"],
-        plan_id,
-        {
-            "Status": select_value("Verified" if summary.succeeded else "Blocked"),
-            "Autonomous": checkbox_value(True),
-            "Summary": rich_text_value(
-                f"{summary.status}. Commands: {summary.command_count}. First failure: {summary.first_failed_command or 'none'}"
-            ),
-            "Next Command": rich_text_value(
-                "Continue automatic loop" if summary.succeeded else "Create fix plan from UAT Gap"
-            ),
-        },
-    )
-    written["run"] = client.upsert_page(
-        database_id(config, "runs"),
-        TITLE_PROPS["runs"],
-        title,
-        {
-            "Plan ID": rich_text_value(plan_id),
-            "Status": select_value(summary.status),
-            "Executor": select_value("GitHub Action" if os.environ.get("GITHUB_ACTIONS") else "Codex"),
-            "Started At": date_value(started_at),
-            "Ended At": date_value(ended_at),
-            "Artifacts": rich_text_value(artifact_url),
-            "Notes": rich_text_value(compact_success_summary or summary.output_digest),
-        },
-    )
-    written["qa"] = client.upsert_page(
-        database_id(config, "qa"),
-        TITLE_PROPS["qa"],
-        f"{title} QA",
-        {
-            "Scope": multi_select_value(["Automation", "GSD"]),
-            "Commands": rich_text_value(command_list_text(commands)),
-            "Result": select_value(summary.qa_result),
-            "Date": date_value(ended_at),
-            "Summary": rich_text_value(f"{summary.qa_result}. {compact_success_summary}" if compact_success_summary else summary.output_digest),
-            "Blocking Issues": rich_text_value(summary.first_failed_command or ""),
-        },
-    )
+    # Parallel upsert for the three core records (plan, run, qa) — each is independent
+    def _upsert_plan() -> tuple[str, str]:
+        return ("plan", client.upsert_page(
+            database_id(config, "plans"),
+            TITLE_PROPS["plans"],
+            plan_id,
+            {
+                "Status": select_value("Verified" if summary.succeeded else "Blocked"),
+                "Autonomous": checkbox_value(True),
+                "Summary": rich_text_value(
+                    f"{summary.status}. Commands: {summary.command_count}. First failure: {summary.first_failed_command or 'none'}"
+                ),
+                "Next Command": rich_text_value(
+                    "Continue automatic loop" if summary.succeeded else "Create fix plan from UAT Gap"
+                ),
+            },
+        ))
+
+    def _upsert_run() -> tuple[str, str]:
+        return ("run", client.upsert_page(
+            database_id(config, "runs"),
+            TITLE_PROPS["runs"],
+            title,
+            {
+                "Plan ID": rich_text_value(plan_id),
+                "Status": select_value(summary.status),
+                "Executor": select_value("GitHub Action" if os.environ.get("GITHUB_ACTIONS") else "Codex"),
+                "Started At": date_value(started_at),
+                "Ended At": date_value(ended_at),
+                "Artifacts": rich_text_value(artifact_url),
+                "Notes": rich_text_value(compact_success_summary or summary.output_digest),
+            },
+        ))
+
+    def _upsert_qa() -> tuple[str, str]:
+        return ("qa", client.upsert_page(
+            database_id(config, "qa"),
+            TITLE_PROPS["qa"],
+            f"{title} QA",
+            {
+                "Scope": multi_select_value(["Automation", "GSD"]),
+                "Commands": rich_text_value(command_list_text(commands)),
+                "Result": select_value(summary.qa_result),
+                "Date": date_value(ended_at),
+                "Summary": rich_text_value(f"{summary.qa_result}. {compact_success_summary}" if compact_success_summary else summary.output_digest),
+                "Blocking Issues": rich_text_value(summary.first_failed_command or ""),
+            },
+        ))
+
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = [
+            executor.submit(_upsert_plan),
+            executor.submit(_upsert_run),
+            executor.submit(_upsert_qa),
+        ]
+        for future in as_completed(futures):
+            key, page_id = future.result()
+            written[key] = page_id
 
     if not summary.succeeded:
         written["gap"] = client.upsert_page(
