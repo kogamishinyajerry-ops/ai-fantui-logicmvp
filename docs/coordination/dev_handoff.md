@@ -3,13 +3,13 @@
 <!-- AUTO-SYNCED DEV HANDOFF SNAPSHOT START -->
 ## 当前自动同步交接基线
 
-- 活动 phase：`P11`
-- 当前已验证 Plan：`P11 CLOSURE — Opus 4.6 Phase收口 Approved`
-- 最近成功执行证据：`Opus 4.6 GSD automation P11-closure`
-- 当前证据模式：`repo-doc fallback mode`
-- 证据模式说明：共享 Notion 数据库与活跃控制面页面当前不可达；当前快照由 repo freeze packet 与 handoff docs 恢复。
-- 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
-- 当前运行摘要：`Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
+- 活动 phase：`P12`
+- 当前已验证 Plan：`P12-01 Third-System Onboarding Validation (Bleed-Air Valve Control)`
+- 最近成功执行证据：`GitHub GSD automation P12-01`
+- 当前证据模式：`active-page degraded mode`
+- 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
+- 当前 QA 摘要：`PASS. 23/23 shared validation checks pass.`
+- 当前运行摘要：`23/23 shared validation checks pass.`
 - 当前 demo / freeze 基线已经稳定；当前主线已切到 P7 spec-driven workbench。
 - 当前优先级是让 engineer-facing onboarding / playback / diagnosis / knowledge 工具形成连续工作流，而不是继续扩 demo 表面。
 
@@ -35,7 +35,7 @@
 
 ## 当前交接结论
 
-- Opus 状态：`当前无需 Opus 审查`
+- Opus 状态：`Phase 收口与下一步优先级审查`
 - 当前交接重点是保持 workbench bundle / playback / diagnosis / knowledge 链路可复用，不是回到零散单命令操作。
 - 下方旧 Round 记录保留为历史上下文，不再当成当前执行指令。
 <!-- AUTO-SYNCED DEV HANDOFF SNAPSHOT END -->

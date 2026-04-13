@@ -3,16 +3,16 @@
 <!-- AUTO-SYNCED COORDINATION PLAN SNAPSHOT START -->
 ## 当前自动同步快照
 
-- 当前阶段：`P11`
-- 当前已验证 Plan：`P11 CLOSURE — Opus 4.6 Phase收口 Approved`
-- 最近成功执行证据：`Opus 4.6 GSD automation P11-closure`
-- 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
-- 当前 Opus 状态：`当前无需 Opus 审查`
-- 当前证据模式：`repo-doc fallback mode`
-- 证据模式说明：共享 Notion 数据库与活跃控制面页面当前不可达；当前快照由 repo freeze packet 与 handoff docs 恢复。
-- 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
+- 当前阶段：`P12`
+- 当前已验证 Plan：`P12-01 Third-System Onboarding Validation (Bleed-Air Valve Control)`
+- 最近成功执行证据：`GitHub GSD automation P12-01`
+- 当前 Gate：`OPUS-4.6 周期审查 Gate (Awaiting Opus 4.6)`
+- 当前 Opus 状态：`Phase 收口与下一步优先级审查`
+- 当前证据模式：`active-page degraded mode`
+- 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
+- 当前 QA 摘要：`PASS. 23/23 shared validation checks pass.`
 - 当前结论：当前最高优先级是把 spec-driven workbench 收成统一 engineer-facing workflow，而不是继续做 P6 控制面清理或新增 demo 表面。
-- 当前唯一人工动作：继续自动开发；当前无需手动触发 Opus 4.6。
+- 当前唯一人工动作：按 09C 当前审查简报手动触发 Opus 4.6。
 
 ## 当前开发架构与执行规则
 
