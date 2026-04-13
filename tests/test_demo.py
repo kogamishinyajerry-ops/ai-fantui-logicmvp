@@ -2142,7 +2142,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             "minmax(500px, 1.08fr) minmax(560px, 1.2fr)",
             "grid-template-areas:",
             "\"prompt chain\"",
-            "\"answer answer\"",
+            "\"result chain\"",
             ".showcase-grid .lever-panel",
             ".showcase-grid .chain-panel",
             ".showcase-grid .result-grid",
@@ -2173,7 +2173,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             "width: auto",
             "\"prompt\"",
             "\"chain\"",
-            "\"answer\"",
+            "\"result\"",
         ):
             self.assertIn(fragment, css)
 
