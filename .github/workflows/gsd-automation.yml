@@ -12,8 +12,53 @@ on:
       - main
 
 jobs:
-  gsd-automation:
+  # Stage 1: Run regression tests
+  regression:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      PYTHONPATH: src
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Run regression tests
+        run: python3 -m pytest tests/test_gsd_notion_sync.py -q --tb=no
+
+  # Stage 2: Run full GSD validation suite
+  validation:
+    runs-on: ubuntu-latest
+    needs: regression
+    permissions:
+      contents: read
+    env:
+      PYTHONPATH: src
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install jsonschema
+        shell: bash
+        run: python3 -m pip install --disable-pip-version-check jsonschema
+
+      - name: Run GSD validation suite
+        run: python3 tools/run_gsd_validation_suite.py --format json
+
+  # Stage 3: Sync repo docs to Notion (non-blocking)
+  notion-sync:
+    runs-on: ubuntu-latest
+    needs: validation
     permissions:
       contents: read
     env:
@@ -29,19 +74,17 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install optional validation dependency
-        shell: bash
-        run: python3 -m pip install --disable-pip-version-check jsonschema
-
-      - name: Run GSD automation and sync to Notion
-        shell: bash
+      - name: Sync repo docs to Notion
         run: |
-          OPUS_FLAG=""
-          if [[ "${{ github.event.inputs.opus_gate }}" == "true" ]]; then
-            OPUS_FLAG="--opus-gate"
-          fi
+          python3 tools/gsd_notion_sync.py sync-repo-docs --format json --cwd .
+        continue-on-error: true
 
-          python3 tools/gsd_notion_sync.py run \
-            --title "GitHub GSD automation $GITHUB_RUN_ID" \
-            --command "python3 tools/run_gsd_validation_suite.py --format json" \
-            $OPUS_FLAG
+      - name: Prepare Opus review brief
+        if: always()
+        run: |
+          OPUS_CMD="--dry-run"
+          if [[ "${{ github.event.inputs.opus_gate }}" == "true" ]]; then
+            OPUS_CMD="--activate-gate"
+          fi
+          python3 tools/gsd_notion_sync.py prepare-opus-review $OPUS_CMD --format json
+        continue-on-error: true
