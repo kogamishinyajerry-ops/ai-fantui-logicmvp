@@ -16,6 +16,7 @@
               <option value="thrust-reverser">Thrust Reverser (反推)</option>
               <option value="landing-gear">Landing Gear (起落架)</option>
               <option value="bleed-air">Bleed Air Valve (引气)</option>
+              <option value="efds">Emergency Flare Deployment (干扰弹)</option>
             </select>
           </label>
           <h1 id="page-title">反推逻辑演示舱</h1>
@@ -691,6 +692,168 @@
                 <text x="340" y="170" class="section-label">状态</text>
               </svg>
             </div>
+
+            <div id="chain-topology-efds" class="chain-topology" style="display:none" aria-label="干扰弹控制系统信号流">
+              <svg class="chain-svg" viewBox="0 0 900 520" role="img" aria-label="干扰弹部署控制链路信号流图">
+                <defs>
+                  <marker id="arrow-efds-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#28f4ff"/>
+                  </marker>
+                  <marker id="arrow-efds-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#53ff92"/>
+                  </marker>
+                  <marker id="arrow-efds-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#ffb037"/>
+                  </marker>
+                  <marker id="arrow-efds-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#ff4f6a"/>
+                  </marker>
+                  <marker id="arrow-efds-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                    <path d="M0,0 L0,6 L8,3 z" fill="#4a5568"/>
+                  </marker>
+                </defs>
+
+                <text x="450" y="18" class="system-title-label" text-anchor="middle">Emergency Flare Deployment System — 红外干扰弹部署控制</text>
+
+                <!-- ===== LN-01: Threat Classification ===== -->
+                <!-- MLS Sensor -->
+                <rect x="30" y="50" width="120" height="44" rx="6" class="chain-node-svg sensor-node-svg" data-node="sensor.threat.mls"/>
+                <text x="90" y="66" class="chain-node-label" text-anchor="middle">MLS 传感器</text>
+                <text x="90" y="82" class="chain-node-value" text-anchor="middle" data-value-for="sensor.threat.mls">—</text>
+
+                <!-- LN-01 Gate -->
+                <svg x="220" y="44" width="60" height="56">
+                  <polygon points="0,0 60,28 0,56" class="logic-gate-svg gate-threat" data-node="ln.01"/>
+                </svg>
+                <text x="250" y="30" class="chain-node-label" text-anchor="middle" data-node-label="ln.01">LN-01</text>
+                <text x="250" y="76" class="logic-gate-label" text-anchor="middle">OR</text>
+                <text x="250" y="105" class="chain-node-sublabel" text-anchor="middle">威胁分类</text>
+
+                <!-- ===== LN-02: Altitude Floor ===== -->
+                <!-- Radar Alt -->
+                <rect x="30" y="160" width="110" height="36" rx="6" class="chain-node-svg input-node-svg" data-node="sensor.alt.radar"/>
+                <text x="85" y="175" class="chain-node-label" text-anchor="middle">雷达高度</text>
+                <text x="85" y="191" class="chain-node-value" text-anchor="middle" data-value-for="sensor.alt.radar">—</text>
+                <text x="85" y="204" class="chain-node-sublabel" text-anchor="middle">ft AGL</text>
+
+                <!-- Pilot Alt Override -->
+                <rect x="30" y="210" width="110" height="36" rx="6" class="chain-node-svg input-node-svg" data-node="pilot.altitude_override"/>
+                <text x="85" y="225" class="chain-node-label" text-anchor="middle">高度底限选择</text>
+                <text x="85" y="241" class="chain-node-value" text-anchor="middle" data-value-for="pilot.altitude_override">—</text>
+
+                <!-- LN-02 Gate -->
+                <svg x="220" y="195" width="60" height="56">
+                  <polygon points="0,0 60,28 0,56" class="logic-gate-svg gate-altitude" data-node="ln.02"/>
+                </svg>
+                <text x="250" y="182" class="chain-node-label" text-anchor="middle" data-node-label="ln.02">LN-02</text>
+                <text x="250" y="227" class="logic-gate-label" text-anchor="middle">AND</text>
+                <text x="250" y="262" class="chain-node-sublabel" text-anchor="middle">高度检查</text>
+
+                <!-- ===== LN-03: Temperature Gate ===== -->
+                <!-- Temp Sensor -->
+                <rect x="30" y="310" width="110" height="36" rx="6" class="chain-node-svg input-node-svg" data-node="sensor.temp.external"/>
+                <text x="85" y="325" class="chain-node-label" text-anchor="middle">外部温度</text>
+                <text x="85" y="341" class="chain-node-value" text-anchor="middle" data-value-for="sensor.temp.external">—</text>
+                <text x="85" y="354" class="chain-node-sublabel" text-anchor="middle">°C</text>
+
+                <!-- LN-03 Gate -->
+                <svg x="220" y="295" width="60" height="56">
+                  <polygon points="0,0 60,28 0,56" class="logic-gate-svg gate-temp" data-node="ln.03"/>
+                </svg>
+                <text x="250" y="282" class="chain-node-label" text-anchor="middle" data-node-label="ln.03">LN-03</text>
+                <text x="250" y="327" class="logic-gate-label" text-anchor="middle">AND</text>
+                <text x="250" y="362" class="chain-node-sublabel" text-anchor="middle">温度检查</text>
+
+                <!-- ===== LN-04: Firing Authorization AND ===== -->
+                <!-- Arm Relay -->
+                <rect x="380" y="50" width="100" height="36" rx="6" class="chain-node-svg logic-gate-node-svg" data-node="logic.armed_relay"/>
+                <text x="430" y="65" class="chain-node-label" text-anchor="middle">Arm Relay</text>
+                <text x="430" y="81" class="chain-node-value" text-anchor="middle" data-value-for="logic.armed_relay">—</text>
+
+                <!-- Crosslink Validator -->
+                <rect x="380" y="100" width="100" height="36" rx="6" class="chain-node-svg logic-gate-node-svg" data-node="logic.crosslink_validator"/>
+                <text x="430" y="115" class="chain-node-label" text-anchor="middle">Crosslink</text>
+                <text x="430" y="131" class="chain-node-value" text-anchor="middle" data-value-for="logic.crosslink_validator">—</text>
+
+                <!-- Firing Channel -->
+                <rect x="380" y="150" width="100" height="36" rx="6" class="chain-node-svg logic-gate-node-svg" data-node="logic.firing_channel"/>
+                <text x="430" y="165" class="chain-node-label" text-anchor="middle">Firing Ch.</text>
+                <text x="430" y="181" class="chain-node-value" text-anchor="middle" data-value-for="logic.firing_channel">—</text>
+
+                <!-- LN-04 Gate -->
+                <svg x="560" y="80" width="60" height="70">
+                  <polygon points="0,0 60,35 0,70" class="logic-gate-svg gate-authorize" data-node="ln.04"/>
+                </svg>
+                <text x="590" y="66" class="chain-node-label" text-anchor="middle" data-node-label="ln.04">LN-04</text>
+                <text x="590" y="119" class="logic-gate-label" text-anchor="middle">AND</text>
+                <text x="590" y="162" class="chain-node-sublabel" text-anchor="middle">授权AND</text>
+
+                <!-- ===== Flare Array Actuator ===== -->
+                <rect x="710" y="100" width="110" height="40" rx="6" class="chain-node-svg actuator-node-svg" data-node="actuator.flare_array"/>
+                <text x="765" y="116" class="chain-node-label" text-anchor="middle">Flare Array</text>
+                <text x="765" y="132" class="chain-node-value" text-anchor="middle" data-value-for="actuator.flare_array">—</text>
+
+                <!-- Deploy Indicator -->
+                <rect x="740" y="155" width="60" height="24" rx="4" class="chain-node-svg deploy-indicator" data-node="flare.deploy_now"/>
+                <text x="770" y="170" class="chain-node-label" text-anchor="middle" data-value-for="flare.deploy_now">—</text>
+
+                <!-- Pilot Controls (right side) -->
+                <rect x="710" y="220" width="110" height="32" rx="6" class="chain-node-svg pilot-node-svg" data-node="pilot.arm_switch"/>
+                <text x="765" y="234" class="chain-node-label" text-anchor="middle">Arm Switch</text>
+                <text x="765" y="248" class="chain-node-value" text-anchor="middle" data-value-for="pilot.arm_switch">—</text>
+
+                <rect x="710" y="265" width="110" height="32" rx="6" class="chain-node-svg pilot-node-svg" data-node="pilot.manual_dispense"/>
+                <text x="765" y="279" class="chain-node-label" text-anchor="middle">Manual Disp.</text>
+                <text x="765" y="293" class="chain-node-value" text-anchor="middle" data-value-for="pilot.manual_dispense">—</text>
+
+                <!-- ===== CONNECTION LINES ===== -->
+                <!-- MLS → LN-01 -->
+                <line x1="150" y1="72" x2="220" y2="72" class="conn-line conn-threat" marker-end="url(#arrow-efds-cyan)"/>
+                <text x="185" y="65" class="threshold-annotation">THREAT_DETECTED / MISSLE_INBOUND</text>
+
+                <!-- Radar Alt → LN-02 -->
+                <line x1="140" y1="178" x2="220" y2="223" class="conn-line conn-input" marker-end="url(#arrow-efds-cyan)"/>
+                <!-- Alt Override → LN-02 -->
+                <line x1="140" y1="228" x2="220" y2="223" class="conn-line conn-input" marker-end="url(#arrow-efds-cyan)"/>
+
+                <!-- Temp → LN-03 -->
+                <line x1="140" y1="328" x2="220" y2="323" class="conn-line conn-input" marker-end="url(#arrow-efds-cyan)"/>
+
+                <!-- Arm Relay → LN-04 (direct to AND gate, right side) -->
+                <line x1="480" y1="68" x2="560" y2="100" class="conn-line conn-input" marker-end="url(#arrow-efds-cyan)"/>
+                <!-- Crosslink → LN-04 (direct to AND gate, right side) -->
+                <line x1="480" y1="118" x2="560" y2="115" class="conn-line conn-input" marker-end="url(#arrow-efds-cyan)"/>
+                <!-- Firing Channel → LN-04 (direct to AND gate, right side) -->
+                <line x1="480" y1="168" x2="560" y2="130" class="conn-line conn-input" marker-end="url(#arrow-efds-cyan)"/>
+
+                <!-- LN-04 → Flare Array -->
+                <line x1="620" y1="115" x2="710" y2="120" class="conn-line conn-fire" marker-end="url(#arrow-efds-green)"/>
+
+                <!-- Flare Array → Deploy indicator -->
+                <line x1="765" y1="140" x2="770" y2="155" class="conn-line" marker-end="url(#arrow-efds-gray)"/>
+
+                <!-- Pilot Controls → show as info -->
+                <line x1="765" y1="252" x2="765" y2="265" class="conn-line conn-pilot" stroke-dasharray="4,3"/>
+
+                <!-- ===== THRESHOLD LABELS ===== -->
+                <text x="165" y="155" class="threshold-annotation">≥ 底限高度</text>
+                <text x="165" y="300" class="threshold-annotation">> -20°C</text>
+                <text x="320" y="100" class="threshold-annotation">CLOSED</text>
+                <text x="320" y="130" class="threshold-annotation">TRUE</text>
+                <text x="320" y="175" class="threshold-annotation">COUNTING</text>
+
+                <!-- ===== SECTION LABELS ===== -->
+                <text x="90" y="38" class="section-label">传感器</text>
+                <text x="250" y="38" class="section-label">LN-01</text>
+                <text x="250" y="188" class="section-label">LN-02</text>
+                <text x="250" y="288" class="section-label">LN-03</text>
+                <text x="430" y="38" class="section-label">逻辑门</text>
+                <text x="590" y="58" class="section-label">LN-04</text>
+                <text x="765" y="88" class="section-label">执行器</text>
+                <text x="765" y="208" class="section-label">飞行员</text>
+              </svg>
+            </div>
+
             <section class="panel monitor-panel monitor-panel-inline" aria-labelledby="monitor-panel-title">
               <div class="monitor-panel-header">
                 <div>

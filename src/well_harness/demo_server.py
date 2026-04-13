@@ -13,6 +13,7 @@ from well_harness.demo import answer_demo_prompt, demo_answer_to_payload
 from well_harness.controller_adapter import build_reference_controller_adapter
 from well_harness.adapters.landing_gear_adapter import build_landing_gear_controller_adapter
 from well_harness.adapters.bleed_air_adapter import build_bleed_air_controller_adapter
+from well_harness.adapters.efds_adapter import build_efds_controller_adapter
 from well_harness.document_intake import (
     apply_safe_schema_repairs,
     assess_intake_packet,
@@ -1355,6 +1356,7 @@ SYSTEM_REGISTRY = {
     "thrust-reverser": build_reference_controller_adapter,
     "landing-gear": build_landing_gear_controller_adapter,
     "bleed-air": build_bleed_air_controller_adapter,
+    "efds": build_efds_controller_adapter,
 }
 SYSTEM_SNAPSHOT_PATH = "/api/system-snapshot"
 
@@ -1393,6 +1395,22 @@ def _default_snapshot_for_system(system_id: str) -> dict:
             "inlet_pressure": 0.0,
             "outlet_pressure": 0.0,
             "control_unit_ready": True,
+        }
+    elif system_id == "efds":
+        return {
+            "sensor.alt.radar": 5000.0,
+            "sensor.alt.baro": 5200.0,
+            "sensor.temp.external": 15.0,
+            "sensor.threat.mls": "IDLE",
+            "sensor.g.load": 1.0,
+            "logic.armed_relay": "OPEN",
+            "logic.firing_channel": "READY",
+            "logic.crosslink_validator": "FALSE",
+            "pilot.arm_switch": "SAFE",
+            "pilot.manual_dispense": "RELEASED",
+            "pilot.altitude_override": "AUTO",
+            "actuator.flare_array": 24.0,
+            "actuator.limiter_valve": "REGULATED",
         }
     return {}
 
