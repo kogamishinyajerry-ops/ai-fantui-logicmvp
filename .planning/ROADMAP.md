@@ -157,7 +157,7 @@ Exit Criteria:
 
 ## Phase P11: Product Readiness & Third-Party Onboarding Guide
 
-Status: Active
+Status: Done
 
 Goal: Transform the proven two-system pipeline into a product that external engineers can successfully use to onboard a new control system — without requiring project insider knowledge.
 

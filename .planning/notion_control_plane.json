@@ -19,13 +19,13 @@
     "control_plane": "33cc6894-2bed-810d-875e-e4e0e464ee31",
     "opus_protocol": "33cc6894-2bed-8117-b8f5-eda203f3be18",
     "opus_brief": "341c6894-2bed-8186-bac0-c1ef4853b8ac",
-    "freeze_packet": "33fc6894-2bed-8108-8456-ea95d62e605d"
+    "freeze_packet": "341c6894-2bed-8104-9ab1-f133d6da80f4"
   },
   "urls": {
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P11-01 Product Onboarding Guide — Create New-System Template & Dry-Run Script",
+  "default_plan": "Milestone Hold — P0→P11 Complete, Awaiting Product Direction Decision",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {
