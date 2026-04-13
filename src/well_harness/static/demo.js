@@ -100,16 +100,22 @@ function applySystemNodeStates(nodes, componentValues) {
     el.classList.add(`is-${state}`);
     el.dataset.state = state;
 
-    // For SVG value text: if componentValues has this, use it; otherwise infer from state
-    const valueEl = el.parentElement?.querySelector(`.chain-node-value[data-value-for="${nodeId}"]`) || el.querySelector(`[data-value-for="${nodeId}"]`);
+    // For SVG value text: find the value element inside this node group
+    // Use data-value-for on the valueEl as the lookup key into nodeValueMap
+    // (data-value-for stores the backend signal ID, which may differ from data-node)
+    const valueEl = el.parentElement?.querySelector(".chain-node-value") || el.querySelector(".chain-node-value");
     if (valueEl) {
-      const cv = nodeValueMap.get(nodeId);
+      const signalKey = valueEl.dataset.valueFor;  // backend signal ID (e.g. "deploy_90_percent_vdt")
+      const cv = signalKey !== undefined ? nodeValueMap.get(signalKey) : undefined;
       if (cv !== undefined) {
         valueEl.textContent = formatSignalValue(cv);
       } else if (state === "active") {
         valueEl.textContent = "ON";
       } else if (state === "blocked") {
         valueEl.textContent = "WAIT";
+      } else {
+        // Inactive node with no known value: show OFF so the label actually changes
+        valueEl.textContent = "OFF";
       }
     }
   });
@@ -118,7 +124,7 @@ function applySystemNodeStates(nodes, componentValues) {
   if (componentValues) {
     Object.entries(componentValues).forEach(([signalId, value]) => {
       document.querySelectorAll(`.chain-topology:not([style*='display: none']) [data-value-for="${signalId}"]`).forEach((el) => {
-        if (el.textContent === "—" || el.textContent === "ON" || el.textContent === "WAIT") {
+        if (el.textContent === "—" || el.textContent === "ON" || el.textContent === "WAIT" || el.textContent === "OFF") {
           el.textContent = formatSignalValue(value);
         }
       });

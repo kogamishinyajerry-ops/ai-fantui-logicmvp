@@ -136,6 +136,8 @@ class ReferenceDeployControllerAdapter:
                 "n1k": inputs.n1k,
                 "tra_deg": inputs.tra_deg,
                 "reverser_inhibited": inputs.reverser_inhibited,
+                # Plant feedback (drives VDT90 / L4 condition)
+                "deploy_90_percent_vdt": inputs.deploy_90_percent_vdt,
                 # Output commands
                 "tls_115vac_cmd": outputs.tls_115vac_cmd,
                 "etrac_540vdc_cmd": outputs.etrac_540vdc_cmd,
