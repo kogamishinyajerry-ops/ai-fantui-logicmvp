@@ -2514,6 +2514,7 @@ Ran 189 tests in 20.897s
                     side_effect=RuntimeError("Notion API request failed: HTTP 404 /v1/databases/test/query"),
                 ),
                 patch("tools.gsd_notion_sync.fetch_review_snapshot_from_pages", return_value=snapshot) as fallback_mock,
+                patch("tools.gsd_notion_sync.fetch_review_snapshot_from_repo_docs", return_value=None),
                 patch("tools.gsd_notion_sync.output_review_result") as output_mock,
             ):
                 exit_code = handle_prepare_opus_review(args, config)
@@ -2771,6 +2772,8 @@ Ran 189 tests in 20.897s
                     "tools.gsd_notion_sync.ensure_live_active_pages",
                     side_effect=NotionWritebackTimeout("Notion writeback exceeded 18s deadline."),
                 ),
+                patch("tools.gsd_notion_sync.fetch_review_snapshot_from_repo_docs", return_value=None),
+                patch("tools.gsd_notion_sync.align_snapshot_with_local_phase", side_effect=lambda s, **_: s),
                 patch("tools.gsd_notion_sync.write_current_opus_review_brief_from_snapshot") as write_mock,
                 patch("tools.gsd_notion_sync.output_review_result") as output_mock,
             ):
@@ -2784,7 +2787,7 @@ Ran 189 tests in 20.897s
         payload = output_mock.call_args.args[1]
         self.assertTrue(payload["notion"]["timeout_fallback"])
         self.assertEqual(
-            "P8 Runtime Generalization Proof / P6-15 Preserve The Stronger Validation Baseline",
+            "P6 Reconcile Control Tower And Freeze Demo Packet / P6-15 Preserve The Stronger Validation Baseline",
             payload["review_target"],
         )
 
