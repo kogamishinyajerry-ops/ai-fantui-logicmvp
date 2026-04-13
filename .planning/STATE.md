@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-13 - Milestone 5 Hold DECLARED. P0→P12 完整闭环: 3系统(thrust-reverser/landing-gear/bleed-air)共享pipeline全部PASS。泛化工作台MVP达标。冻结基线,停止自动开发,等外部用户反馈或产品方向。
+Last activity: 2026-04-13 - Completed quick task 260413-nq0: Fix 3 demo UI bugs (SVG clip, input node lighting, NotDep removal). 92 tests pass.: 3系统(thrust-reverser/landing-gear/bleed-air)共享pipeline全部PASS。泛化工作台MVP达标。冻结基线,停止自动开发,等外部用户反馈或产品方向。
 
 ## Current Position
 
@@ -226,6 +226,7 @@ Advance the spec-driven control-analysis workbench from separate primitives into
 
 ### Quick Tasks Completed
 
-| 260413-jxy | Fix demo UI layout bug: move result-grid to left column, eliminate sticky chain-panel overlap | 2026-04-13 | d6cadad | [260413-jxy-fix-demo-ui-layout-bug-result-grid-is-co](./quick/260413-jxy-fix-demo-ui-layout-bug-result-grid-is-co/) |
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
+| 260413-jxy | Fix demo UI layout bug: move result-grid to left column, eliminate sticky chain-panel overlap | 2026-04-13 | d6cadad | [260413-jxy-fix-demo-ui-layout-bug-result-grid-is-co](./quick/260413-jxy-fix-demo-ui-layout-bug-result-grid-is-co/) |
+| 260413-nq0 | Fix 3 demo UI bugs: SVG viewBox height (320→480), add 9 input conditions to asserted_component_values, remove NotDep SVG node | 2026-04-13 | e3f317c,5b8e9f0,54c950f | [260413-nq0-fix-3-demo-ui-bugs-svg-clip-input-node-l](./quick/260413-nq0-fix-3-demo-ui-bugs-svg-clip-input-node-l/) |
