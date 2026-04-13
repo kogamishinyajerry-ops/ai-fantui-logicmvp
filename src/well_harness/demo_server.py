@@ -109,6 +109,9 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             system_id = parsed.query.split("system_id=")[1].split("&")[0] if "system_id=" in parsed.query else "thrust-reverser"
             self._send_json(200, system_snapshot_payload(system_id))
             return
+        if parsed.path == WORKBENCH_RECENT_ARCHIVES_PATH:
+            self._send_json(200, workbench_recent_archives_payload())
+            return
 
         if parsed.path in ("", "/", "/demo.html"):
             self._serve_static("demo.html")
