@@ -159,6 +159,21 @@ Exit Criteria:
 
 Status: Done
 
+## Milestone 4 Hold — Declared 2026-04-13
+
+Status: Active (Hold)
+
+Goal: Freeze the P0→P11 baseline. No active development phases. Regression fixes only. Await product direction decision or external user feedback.
+
+Exit Criteria:
+
+- `docs/freeze/MILESTONE4-HOLD.md` exists and documents the hold declaration.
+- `.planning/constitution.md` updated with Milestone Hold section.
+- All phase code frozen — no new feature development.
+- 23 shared validation commands continue to pass (regression protection only).
+- Roadmap DB shows P11=Done, Milestone 4 Hold=Active.
+
+
 Goal: Transform the proven two-system pipeline into a product that external engineers can successfully use to onboard a new control system — without requiring project insider knowledge.
 
 Exit Criteria:
