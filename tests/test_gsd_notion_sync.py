@@ -2471,12 +2471,11 @@ Ran 189 tests in 20.897s
         self.assertEqual("P6-07 数据库写回失败时仍推进活动页快照", fallback.latest_verified_plan)
         self.assertEqual("GitHub GSD automation 24241080590", fallback.latest_success_run)
         self.assertEqual(
-            "Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: "
-            "271 tests OK and 8/8 shared validation checks pass.",
+            "187 tests OK, 10 demo smoke scenarios pass, and 2/2 shared validation checks pass.",
             fallback.latest_success_run_notes,
         )
         self.assertEqual(
-            "PASS. 271 tests OK and 8/8 shared validation checks pass.",
+            "PASS. 187 tests OK, 10 demo smoke scenarios pass, and 2/2 shared validation checks pass.",
             fallback.latest_passing_qa_summary,
         )
 
