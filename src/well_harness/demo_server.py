@@ -30,6 +30,13 @@ from well_harness.workbench_bundle import (
     load_workbench_archive_manifest,
     load_workbench_archive_restore_payload,
 )
+from well_harness.ai_doc_analyzer import (
+    P14SessionStore,
+    analyze_document,
+    evaluate_clarification,
+    generate_prompt_document,
+    _build_questions_from_ambiguities,
+)
 
 
 STATIC_DIR = Path(__file__).with_name("static")
@@ -69,6 +76,11 @@ MONITOR_ENGINE_RUNNING = True
 MONITOR_AIRCRAFT_ON_GROUND = True
 MONITOR_REVERSER_INHIBITED = False
 MONITOR_EEC_ENABLE = True
+
+# P14 AI Document Analyzer routes
+P14_ANALYZE_PATH = "/api/p14/analyze-document"
+P14_CLARIFY_PATH = "/api/p14/clarify"
+P14_GENERATE_PATH = "/api/p14/generate-prompt"
 MONITOR_N1K = 35.0
 MONITOR_MAX_N1K_DEPLOY_LIMIT = 60.0
 LEVER_NUMERIC_INPUTS = {
@@ -117,6 +129,10 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._serve_static("demo.html")
             return
 
+        if parsed.path == "/ai-doc-analyzer.html":
+            self._serve_static("ai-doc-analyzer.html")
+            return
+
         relative_path = unquote(parsed.path.lstrip("/"))
         if relative_path and Path(relative_path).suffix in CONTENT_TYPES:
             self._serve_static(relative_path)
@@ -132,6 +148,9 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             WORKBENCH_BUNDLE_PATH,
             WORKBENCH_REPAIR_PATH,
             WORKBENCH_ARCHIVE_RESTORE_PATH,
+            P14_ANALYZE_PATH,
+            P14_CLARIFY_PATH,
+            P14_GENERATE_PATH,
         }:
             self._send_json(404, {"error": "not_found"})
             return
@@ -182,6 +201,29 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, response_payload)
             return
 
+        # P14 AI Document Analyzer handlers
+        if parsed.path == P14_ANALYZE_PATH:
+            response_payload, error_payload = _handle_p14_analyze(request_payload)
+            if error_payload is not None:
+                self._send_json(400, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+        if parsed.path == P14_CLARIFY_PATH:
+            response_payload, error_payload = _handle_p14_clarify(request_payload)
+            if error_payload is not None:
+                self._send_json(400, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+        if parsed.path == P14_GENERATE_PATH:
+            response_payload, error_payload = _handle_p14_generate(request_payload)
+            if error_payload is not None:
+                self._send_json(400, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+
         prompt = str(request_payload.get("prompt", "")).strip()
         if not prompt:
             self._send_json(400, {"error": "missing_prompt"})
@@ -211,6 +253,115 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
+
+
+# ---------------------------------------------------------------------------
+# P14 AI Document Analyzer handlers
+# ---------------------------------------------------------------------------
+
+# Module-level session store singleton (created lazily via P14SessionStore())
+_p14_session_store: P14SessionStore | None = None
+
+
+def _get_p14_store() -> P14SessionStore:
+    global _p14_session_store
+    if _p14_session_store is None:
+        _p14_session_store = P14SessionStore()
+    return _p14_session_store
+
+
+# Max document size: 500 KB
+_MAX_DOCUMENT_BYTES = 500 * 1024
+
+
+def _handle_p14_analyze(request_payload: dict) -> tuple[dict | None, dict | None]:
+    """Handle POST /api/p14/analyze-document."""
+    session_id = request_payload.get("session_id")
+    if not isinstance(session_id, str) or not session_id.strip():
+        return None, {"error": "missing_session_id", "message": "session_id is required and must be a non-empty string."}
+
+    document_text = request_payload.get("document_text")
+    if not isinstance(document_text, str):
+        return None, {"error": "missing_document_text", "message": "document_text is required."}
+    if not document_text.strip():
+        return None, {"error": "empty_document", "message": "document_text must not be empty."}
+    if len(document_text.encode("utf-8")) > _MAX_DOCUMENT_BYTES:
+        return None, {"error": "document_too_large", "message": f"document_text exceeds maximum size of {_MAX_DOCUMENT_BYTES} bytes (500KB)."}
+
+    document_name = request_payload.get("document_name", "untitled")
+    if not isinstance(document_name, str) or len(document_name) > 255:
+        return None, {"error": "invalid_document_name", "message": "document_name must be a string of at most 255 characters."}
+
+    store = _get_p14_store()
+    session = store.create(session_id.strip(), document_text, document_name.strip() or "untitled")
+    ambiguities = analyze_document(document_text)
+    session.ambiguities = ambiguities
+    session.questions = _build_questions_from_ambiguities(ambiguities)
+    store.update(session)
+
+    # Return first question alongside ambiguities so UI can start the loop immediately
+    first_q = session.next_question()
+    return {
+        "session_id": session_id,
+        "ambiguities": [a.to_dict() for a in ambiguities],
+        "total_count": len(ambiguities),
+        "first_question": first_q.to_dict() if first_q else None,
+        "progress": session.progress(),
+        "is_complete": False,
+    }, None
+
+
+def _handle_p14_clarify(request_payload: dict) -> tuple[dict | None, dict | None]:
+    """Handle POST /api/p14/clarify."""
+    session_id = request_payload.get("session_id")
+    if not isinstance(session_id, str) or not session_id.strip():
+        return None, {"error": "missing_session_id", "message": "session_id is required."}
+
+    answer = request_payload.get("answer")
+    if not isinstance(answer, str) or not answer.strip():
+        return None, {"error": "empty_answer", "message": "answer must be a non-empty string."}
+
+    store = _get_p14_store()
+    session = store.get(session_id.strip())
+    if session is None:
+        return None, {"error": "session_not_found", "message": f"Session '{session_id}' not found."}
+
+    result = evaluate_clarification(session, answer.strip())
+    store.update(session)
+
+    return {
+        "session_id": session_id,
+        "next_question": result.next_question.to_dict() if result.next_question else None,
+        "progress": result.progress,
+        "is_complete": result.is_complete,
+    }, None
+
+
+def _handle_p14_generate(request_payload: dict) -> tuple[dict | None, dict | None]:
+    """Handle POST /api/p14/generate-prompt."""
+    session_id = request_payload.get("session_id")
+    if not isinstance(session_id, str) or not session_id.strip():
+        return None, {"error": "missing_session_id", "message": "session_id is required."}
+
+    store = _get_p14_store()
+    session = store.get(session_id.strip())
+    if session is None:
+        return None, {"error": "session_not_found", "message": f"Session '{session_id}' not found."}
+
+    if not session.is_complete:
+        return None, {"error": "session_incomplete", "message": "Cannot generate prompt until all clarification questions are answered."}
+
+    if session.generated_prompt is None:
+        prompt_doc = generate_prompt_document(session)
+        session.generated_prompt = prompt_doc
+        store.update(session)
+
+    word_count = len(session.generated_prompt.split())
+    return {
+        "session_id": session_id,
+        "prompt_document": session.generated_prompt,
+        "word_count": word_count,
+    }, None
 
 
 def _clamp_tra(tra_deg: float, config: HarnessConfig) -> float:
@@ -810,12 +961,18 @@ def _simulate_lever_state(
     assert snapshot is not None
 
     if feedback_mode == "manual_feedback_override":
+        # Respect causal chain: deploy_position_percent feedback is only valid when L3
+        # (pdu_motor_cmd) is active. In manual override mode the user drives the physical
+        # lever, but the VDT90 sensor still only reads real travel — which only exists if
+        # the PDU motor was actually commanded by L3 (physical因果链: L3 → pdu_motor_cmd →
+        # deploy_position_percent ≥ 90% → VDT90 → L4).
+        deploy_position = deploy_position_percent if outputs.pdu_motor_cmd else 0.0
         manual_plant_state = PlantState(
             tls_powered_s=snapshot["plant_state"].tls_powered_s,
             pls_powered_s=snapshot["plant_state"].pls_powered_s,
             tls_unlocked_ls=snapshot["plant_state"].tls_unlocked_ls,
             pls_unlocked_ls=snapshot["plant_state"].pls_unlocked_ls,
-            deploy_position_percent=deploy_position_percent,
+            deploy_position_percent=deploy_position,
         )
         sensors = manual_plant_state.sensors(config)
         pilot_inputs = snapshot["pilot_inputs"]
@@ -1333,7 +1490,15 @@ def lever_snapshot_payload(
             "THR_LOCK",
             "active"
             if outputs.throttle_electronic_lock_release_cmd
-            else ("blocked" if (outputs.logic3_active or sensors.deploy_90_percent_vdt) else "inactive"),
+            else (
+                "blocked"
+                if explain.logic4.failed_conditions
+                else "inactive"
+            ),
+            # Use explain.logic4.failed_conditions to determine "blocked" vs "inactive".
+            # This correctly handles the causal chain: when L4 is blocked (has unmet
+            # conditions like tra_deg), THR_LOCK is "blocked" (waiting on L4).
+            # When L4 has no failed conditions but is simply not active, THR_LOCK is "inactive".
             "DeployController outputs",
             logic4_blockers if not outputs.throttle_electronic_lock_release_cmd else [],
         ),
