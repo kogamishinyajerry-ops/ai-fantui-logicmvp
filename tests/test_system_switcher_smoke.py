@@ -56,6 +56,8 @@ def run_smoke() -> tuple[int, dict[str, Any], list[str]]:
         return 1, report, ["FAIL: playwright is not installed"]
 
     console_errors: list[str] = []
+    js_exceptions: list[str] = []
+    failed_requests: list[str] = []
 
     report = {
         "status": "pass",
@@ -64,6 +66,8 @@ def run_smoke() -> tuple[int, dict[str, Any], list[str]]:
         "failed_scenario": None,
         "scenarios": [],
         "console_errors": [],
+        "js_exceptions": [],
+        "failed_requests": [],
     }
     text_lines: list[str] = []
 
@@ -89,7 +93,23 @@ def run_smoke() -> tuple[int, dict[str, Any], list[str]]:
             # Capture console errors (Error level only)
             page.on(
                 "console",
-                lambda msg: console_errors.append(msg.text) if msg.type == "error" else None,
+                lambda msg: (
+                    console_errors.append(msg.text)
+                    if msg.type == "error"
+                    else None
+                ),
+            )
+            # Capture uncaught JS exceptions (pageerror) — DOM-rendered failures missed by console.error
+            page.on(
+                "pageerror",
+                lambda exc: js_exceptions.append(str(exc)),
+            )
+            # Capture failed network requests — monitor timeline / API failures missed by console
+            page.on(
+                "requestfailed",
+                lambda req: failed_requests.append(
+                    f"{req.method} {req.url}: {req.failure.error_text if req.failure else 'unknown'}"
+                ),
             )
 
             # --- Scenario 1: Page loads ---
@@ -107,6 +127,8 @@ def run_smoke() -> tuple[int, dict[str, Any], list[str]]:
                 report["status"] = "fail"
                 report["failed_scenario"] = "page_loads"
                 report["console_errors"] = list(console_errors)
+                report["js_exceptions"] = list(js_exceptions)
+                report["failed_requests"] = list(failed_requests)
                 return 1, report, text_lines
 
             # --- Scenario 2: System selector exists ---
@@ -120,6 +142,8 @@ def run_smoke() -> tuple[int, dict[str, Any], list[str]]:
                 report["status"] = "fail"
                 report["failed_scenario"] = "system_selector_exists"
                 report["console_errors"] = list(console_errors)
+                report["js_exceptions"] = list(js_exceptions)
+                report["failed_requests"] = list(failed_requests)
                 return 1, report, text_lines
 
             # --- Scenario 3: System selector has exactly 3 options with correct values ---
@@ -146,6 +170,8 @@ def run_smoke() -> tuple[int, dict[str, Any], list[str]]:
                 report["status"] = "fail"
                 report["failed_scenario"] = "system_selector_options"
                 report["console_errors"] = list(console_errors)
+                report["js_exceptions"] = list(js_exceptions)
+                report["failed_requests"] = list(failed_requests)
                 return 1, report, text_lines
 
             # --- Scenario 4: Switch to landing-gear ---
@@ -173,6 +199,8 @@ def run_smoke() -> tuple[int, dict[str, Any], list[str]]:
                 report["status"] = "fail"
                 report["failed_scenario"] = "switch_to_landing_gear"
                 report["console_errors"] = list(console_errors)
+                report["js_exceptions"] = list(js_exceptions)
+                report["failed_requests"] = list(failed_requests)
                 return 1, report, text_lines
 
             # --- Scenario 5: Switch to bleed-air ---
@@ -200,6 +228,8 @@ def run_smoke() -> tuple[int, dict[str, Any], list[str]]:
                 report["status"] = "fail"
                 report["failed_scenario"] = "switch_to_bleed_air"
                 report["console_errors"] = list(console_errors)
+                report["js_exceptions"] = list(js_exceptions)
+                report["failed_requests"] = list(failed_requests)
                 return 1, report, text_lines
 
             # --- Scenario 6: Switch back to thrust-reverser ---
@@ -227,6 +257,8 @@ def run_smoke() -> tuple[int, dict[str, Any], list[str]]:
                 report["status"] = "fail"
                 report["failed_scenario"] = "switch_back_to_thrust_reverser"
                 report["console_errors"] = list(console_errors)
+                report["js_exceptions"] = list(js_exceptions)
+                report["failed_requests"] = list(failed_requests)
                 return 1, report, text_lines
 
             # --- Scenario 7: Monitor panel visible ---
@@ -240,6 +272,8 @@ def run_smoke() -> tuple[int, dict[str, Any], list[str]]:
                 report["status"] = "fail"
                 report["failed_scenario"] = "monitor_panel_visible"
                 report["console_errors"] = list(console_errors)
+                report["js_exceptions"] = list(js_exceptions)
+                report["failed_requests"] = list(failed_requests)
                 return 1, report, text_lines
 
             # --- Scenario 8: Monitor checkboxes rendered ---
@@ -265,17 +299,32 @@ def run_smoke() -> tuple[int, dict[str, Any], list[str]]:
                 report["status"] = "fail"
                 report["failed_scenario"] = "monitor_checkboxes_rendered"
                 report["console_errors"] = list(console_errors)
+                report["js_exceptions"] = list(js_exceptions)
+                report["failed_requests"] = list(failed_requests)
                 return 1, report, text_lines
 
-            # --- Scenario 9: No console errors ---
+            # --- Scenario 9: No browser errors (console + pageerror + failed requests) ---
             report["console_errors"] = list(console_errors)
-            if not console_errors:
-                ok = _record(_pass("no_console_errors", "no browser console errors detected"))
+            report["js_exceptions"] = list(js_exceptions)
+            report["failed_requests"] = list(failed_requests)
+
+            all_errors = (
+                [f"console.error: {e}" for e in console_errors]
+                + [f"pageerror: {e}" for e in js_exceptions]
+                + [f"requestfailed: {e}" for e in failed_requests]
+            )
+            if not all_errors:
+                ok = _record(
+                    _pass(
+                        "no_browser_errors",
+                        "no console errors, pageerrors, or failed requests detected",
+                    )
+                )
             else:
                 ok = _record(
                     _fail(
-                        "no_console_errors",
-                        f"{len(console_errors)} console error(s): {console_errors[:3]}",
+                        "no_browser_errors",
+                        f"{len(all_errors)} error(s): {all_errors[:3]}",
                     )
                 )
 
@@ -284,13 +333,15 @@ def run_smoke() -> tuple[int, dict[str, Any], list[str]]:
 
             if not ok:
                 report["status"] = "fail"
-                report["failed_scenario"] = "no_console_errors"
+                report["failed_scenario"] = "no_browser_errors"
                 return 1, report, text_lines
 
     except Exception as exc:
         report["status"] = "fail"
         report["error"] = str(exc)
         report["console_errors"] = list(console_errors)
+        report["js_exceptions"] = list(js_exceptions)
+        report["failed_requests"] = list(failed_requests)
         text_lines.append(f"FAIL: unexpected error: {exc}")
         return 1, report, text_lines
 

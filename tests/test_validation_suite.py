@@ -31,6 +31,7 @@ class ValidationSuiteTests(unittest.TestCase):
                 "unit_tests",
                 "debug_json_schema",
                 "demo_path_smoke",
+                "system_switcher_smoke",
                 "demo_answer_schema",
                 "second_system_smoke",
                 "second_system_smoke_schema",
