@@ -169,11 +169,27 @@ Milestone 4 Hold 已取消（P12 启动）。保留作为历史记录。
 
 Status: Done
 
-## Milestone 5 Hold — Declared 2026-04-13
+## Phase P13: Route B — Browser Workbench Multi-System Integration
 
-Status: Active (Hold)
+Status: Active
 
-Goal: P0→P12 完整闭环。三个控制系统（thrust-reverser / landing-gear / bleed-air valve）共享同一 pipeline 并全部通过 v1 schema validation。已达到"可泛化工作台 MVP"达标线。冻结代码基线，停止自动开发。
+Goal: 将 Demo UI 从单一 thrust-reverser 系统扩展为支持在浏览器中切换查看三个控制系统（thrust-reverser / landing-gear / bleed-air valve）的逻辑链路、状态和推理结果。
+
+Exit Criteria:
+
+- Demo UI 顶部或侧边提供系统切换器，可切换三个已 onboard 的控制系统。
+- 切换系统后，逻辑面板（chain-panel）显示对应系统的条件逻辑节点和状态。
+- 切换系统后，问答推理结果区域显示对应系统的 answer payload。
+- 三个系统的 adapter 均通过已有的 v1 schema 验证链路（已在 P8/P10/P12 验证）。
+- Demo server 启动时默认加载 thrust-reverser，其他系统按需加载。
+- 所有 23 shared validation commands 继续通过（无回归）。
+- Roadmap DB shows P13=Active.
+
+## Milestone 5 Hold — Lifted 2026-04-13
+
+Status: Lifted
+
+Goal: P0→P12 完整闭环。三个控制系统（thrust-reverser / landing-gear / bleed-air valve）共享同一 pipeline 并全部通过 v1 schema validation。已达到"可泛化工作台 MVP"达标线。Route B 开发启动，Hold 解除。
 
 Exit Criteria:
 
