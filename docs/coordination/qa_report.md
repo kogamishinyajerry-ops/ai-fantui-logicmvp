@@ -4,16 +4,16 @@
 ## 当前自动同步 QA 基线
 
 - 结论：PASS；当前稳定基线由 GitHub-backed validation evidence 支撑。
-- 当前阶段：`P9`
-- 当前已验证 Plan：`P8-06 Add A Two-System Adapter-Backed Runtime Comparison Report`
-- 最近成功执行证据：`GitHub GSD automation 24301964639`
+- 当前阶段：`P10`
+- 当前已验证 Plan：`P9 CLOSURE — Opus 4.6 Phase收口 Approved`
+- 最近成功执行证据：`Opus 4.6 GSD automation P9-closure`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
-- 当前 Opus 状态：`失败阻塞分流审查`
-- Open Gap 数量：`1`
-- 当前证据模式：`shared-database live mode`
-- 证据模式说明：共享 Notion 数据库可达；phase / run / QA / gate 取自实时数据库记录。
-- 当前 QA 摘要：`PASS. 271 tests OK and 8/8 shared validation checks pass.`
-- 当前运行摘要：`271 tests OK and 8/8 shared validation checks pass.`
+- 当前 Opus 状态：`当前无需 Opus 审查`
+- Open Gap 数量：`0`
+- 当前证据模式：`active-page degraded mode`
+- 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
+- 当前 QA 摘要：`PASS. 23/23 shared validation checks pass.`
+- 当前运行摘要：`23/23 shared validation checks pass.`
 
 ## 当前执行规则
 

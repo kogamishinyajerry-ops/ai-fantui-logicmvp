@@ -140,3 +140,17 @@ Exit Criteria:
 - Failed Notion sync stage does not fail the overall pipeline (writeback is non-blocking).
 - Roadmap DB shows P6=Done, P7=Done, P8=Done, P9=Done (no manual edits needed).
 - All resolvable manual touchpoints are eliminated; irreducible human-only steps are explicitly documented with degraded-mode handling.
+
+## Phase P10: Second-System Runtime Pipeline End-to-End
+
+Status: Active
+
+Goal: Prove the generalized contract layer can host a second real control-system truth adapter through the complete intake → playback → diagnosis → knowledge pipeline, with both systems producing deterministic truth evaluations and a side-by-side comparison report.
+
+Exit Criteria:
+
+- Landing-gear adapter → intake → playback trace → diagnosis → knowledge artifact full chain runs end-to-end, each stage output passes its v1 schema validation.
+- Side-by-side comparison report shows both thrust-reverser and landing-gear runtime outputs.
+- All 23 shared validation commands continue to pass (no regression).
+- `/glm-execute` compliance: every plan involving >50 LOC has a `[MODEL-CALL]` audit record.
+- Roadmap DB shows P9=Done, P10=Active.
