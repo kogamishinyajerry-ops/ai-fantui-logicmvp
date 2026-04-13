@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-13 - Completed quick task 260413-nq0: Fix 3 demo UI bugs (SVG clip, input node lighting, NotDep removal). 92 tests pass.: 3系统(thrust-reverser/landing-gear/bleed-air)共享pipeline全部PASS。泛化工作台MVP达标。冻结基线,停止自动开发,等外部用户反馈或产品方向。
+Last activity: 2026-04-13 - Completed tech debt: P12 onboarding gaps (README improvements, commit 22d3267) and Notion writeback optimization (parallel API calls, commit 333fa24). All 3 MILESTONE6-HOLD tech debts resolved.
 
 ## Current Position
 
@@ -230,3 +230,6 @@ Advance the spec-driven control-analysis workbench from separate primitives into
 |---|-------------|------|--------|-----------|
 | 260413-jxy | Fix demo UI layout bug: move result-grid to left column, eliminate sticky chain-panel overlap | 2026-04-13 | d6cadad | [260413-jxy-fix-demo-ui-layout-bug-result-grid-is-co](./quick/260413-jxy-fix-demo-ui-layout-bug-result-grid-is-co/) |
 | 260413-nq0 | Fix 3 demo UI bugs: SVG viewBox height (320→480), add 9 input conditions to asserted_component_values, remove NotDep SVG node | 2026-04-13 | e3f317c,5b8e9f0,54c950f | [260413-nq0-fix-3-demo-ui-bugs-svg-clip-input-node-l](./quick/260413-nq0-fix-3-demo-ui-bugs-svg-clip-input-node-l/) |
+| 260413-p9i | Add headless Playwright smoke test for system switcher: 9 scenarios (page load, 3 options, topology switching, monitor panel/checkboxes, no console errors); wired into validation suite | 2026-04-13 | e2acdd6 | [260413-p9i-add-headless-playwright-smoke-test-for-s](./quick/260413-p9i-add-headless-playwright-smoke-test-for-s/) |
+| 260413-pjo | Fix 4 P12 onboarding/schema gaps: README now clearly states 3 templates + 1 reference, added Quick Checklist for component kinds/fault_kind, added GenericControllerTruthAdapter protocol reference; Gap 2 (_snapshot_str) already present in template | 2026-04-13 | 22d3267 | — |
+| 260413-qkz | Perf optimization for Notion writeback: parallelize ensure_live_databases (N→1 rounds), ensure_live_active_pages (N GETs in parallel), and write_notion_outcome upserts (plan/run/qa in parallel) — cuts writeback latency up to 3x; uses stdlib concurrent.futures only | 2026-04-13 | 333fa24 | — |
