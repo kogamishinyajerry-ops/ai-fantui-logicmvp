@@ -143,7 +143,7 @@ Exit Criteria:
 
 ## Phase P10: Second-System Runtime Pipeline End-to-End
 
-Status: Active
+Status: Done
 
 Goal: Prove the generalized contract layer can host a second real control-system truth adapter through the complete intake → playback → diagnosis → knowledge pipeline, with both systems producing deterministic truth evaluations and a side-by-side comparison report.
 
@@ -153,4 +153,20 @@ Exit Criteria:
 - Side-by-side comparison report shows both thrust-reverser and landing-gear runtime outputs.
 - All 23 shared validation commands continue to pass (no regression).
 - `/glm-execute` compliance: every plan involving >50 LOC has a `[MODEL-CALL]` audit record.
-- Roadmap DB shows P9=Done, P10=Active.
+- Roadmap DB shows P9=Done, P10=Done.
+
+## Phase P11: Product Readiness & Third-Party Onboarding Guide
+
+Status: Active
+
+Goal: Transform the proven two-system pipeline into a product that external engineers can successfully use to onboard a new control system — without requiring project insider knowledge.
+
+Exit Criteria:
+
+- A standalone onboarding guide in `docs/onboarding/` describes how to create a new system spec file → adapter → intake packet → run the full pipeline.
+- A minimal template in `templates/new_system/` provides empty spec / adapter / intake packet skeletons.
+- A dry-run script allows users to verify their new system spec can pass through the pipeline.
+- Onboarding guide is reviewable by non-project-owners (or GLM-5.1 via `/glm-execute`) for understandability.
+- All 23 shared validation commands continue to pass (no regression).
+- Roadmap DB shows P10=Done, P11=Active.
+
