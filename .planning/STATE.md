@@ -1,10 +1,10 @@
 # State
 
-Last activity: 2026-04-12 - P7-44 exposes the full archive manifest file map through CLI JSON output for future restore/sync automation.
+Last activity: 2026-04-13 - P8 APPROVED via Opus 4.6 review (CFDJerry proxy). P6/P7/P8 added to Roadmap DB as Done. P9 initiated: Automation Hardening & Evidence Pipeline Maturity.
 
 ## Current Position
 
-- Round 92 is complete, and the current approved P5 baseline is GitHub-backed `run_gsd_validation_suite.py` evidence with 175 tests, 10 demo smoke scenarios, and 8 shared validation checks.
+- Round 92 is complete, and the current active regression baseline is the GitHub-backed `run_gsd_validation_suite.py` evidence chain carried forward by the latest verified plans, with the shared suite now expanded to 23 commands.
 - Notion control tower is live at https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec.
 - GitHub repo is live at https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp.
 - P1 is closed as Approved in the Review Gate after GitHub-backed Opus adjudication.
@@ -22,6 +22,17 @@ Last activity: 2026-04-12 - P7-44 exposes the full archive manifest file map thr
 - P4 is now closed as Approved after all six presenter-ready plans (`P4-01` through `P4-06`) verified successfully and GitHub run `24170575224` passed.
 - P5 is now closed as Approved after the Opus 4.6 phase-closeout review accepted the GitHub-backed P5 evidence chain through `P5-10`.
 - P6 is now closed as the active control-plane reconciliation phase; the repo-side baseline and Notion control tower are stable enough to make P7 the active workbench phase.
+- P7 is now manually closed after `P7-70`, with the contract/schema convergence accepted as the completed phase outcome and the gate still at `Approved / 0 open gaps`.
+- `P8-01 Implement Minimal Landing-Gear Controller Adapter` is now implemented locally, written back to Notion, and accepted by the default gate, so the first real non-reference truth adapter is part of the active evidence chain.
+- `P8-02 Add Adapter-Backed Landing-Gear Playback Proof` is now implemented locally and written back to Notion: adapters can publish a spec payload straight into the playback contract, and discrete-state landing-gear playback now stays aligned with adapter truth at sampled checkpoints.
+- `P8-03 Add Adapter-Backed Landing-Gear Diagnosis Proof` is now implemented locally: the landing-gear adapter now drives the fault-diagnosis contract directly, and the `hydraulic_pressure_bias_low` proof yields the expected baseline-vs-fault divergence plus blocked logic chain.
+- `P8-04 Add Adapter-Backed Landing-Gear Knowledge Proof` is now implemented locally: the landing-gear adapter now drives the knowledge-artifact contract directly, and the resolved artifact preserves the full diagnosis chain plus evidence links.
+- `P8-05 Connect Second-System Smoke To The Adapter-Backed Runtime Proof` is now implemented locally: the default `second-system-smoke` CLI/report now follows the landing-gear adapter-backed runtime chain, the schema validator still protects the legacy intake-packet smoke path, and the auto-synced control-plane rule text now matches the latest controller/runner/adapter/FlyByWire guide.
+- `P8-06 Add A Two-System Adapter-Backed Runtime Comparison Report` is now implemented locally: the repo can compare the reference thrust-reverser adapter and landing-gear adapter through one machine-readable runtime proof artifact, and the reference workbench spec/playback parser now carry the extra steady-signal / comparison semantics needed to keep that report honest.
+- P8 is now CLOSED as Approved via Opus 4.6 review (CFDJerry proxy, 2026-04-13): 6/6 plans pass, 23/23 shared validation, 0 open gaps. P6, P7, P8 all registered as Done in Roadmap DB.
+- P9 is now the active phase: Automation Hardening & Evidence Pipeline Maturity. Opus recommended this direction because Roadmap DB had P7/P8 gaps (noted during review), confirming that control-plane automation still has debt. P9 aims to fully close the manual intervention loop.
+- The current shared validation baseline is the 23-command suite.
+- The Codex project guide is now synced into repo memory through `AGENTS.md` plus refreshed `.planning` summaries, so future sessions inherit the controller-truth, adapter-boundary, FlyByWire-reference, and staged-testing rules directly from the workspace.
 - `P7-01`, `P7-02`, and `P7-03` are now landed on `main` as the spec foundation, mixed-doc intake layer, and first playback compiler for the future workbench.
 - `P7-04` is now landed on `main`: declared fault modes can be injected into playback traces to produce deterministic diagnosis artifacts with affected signals, blocked logic nodes, and optimization hints.
 - `P7-05` is now landed on `main`: diagnosis + repair outcomes can be captured as reusable knowledge artifacts with explicit optimization guidance.
@@ -102,14 +113,49 @@ Last activity: 2026-04-12 - P7-44 exposes the full archive manifest file map thr
 - `P7-42` is now implemented locally: generated `archive_manifest.json` files carry a `$schema` reference, the validator flags wrong schema IDs when present, and CLI output exposes the schema reference.
 - `P7-43` is now implemented locally: generated archive README files show the same archive manifest schema reference as the manifest `$schema`, keeping human handoff aligned with the machine-readable contract.
 - `P7-44` is now implemented locally: `archive-manifest --format json` includes the manifest `files` map, so automation can consume archive artifact paths directly from validated CLI output.
+- `P7-45` is now implemented locally: new archive manifests store `archive_dir` and file references as archive-relative paths, and the loader/validator now resolve those paths from the manifest location so moved archives still validate.
+- `P7-46` is now implemented locally: archive helpers can resolve the manifest file map into absolute artifact paths, load archived workspace handoff/snapshot JSON directly from the manifest, and expose the resolved file map through CLI JSON for restore automation.
+- `P7-47` is now implemented locally: `well_harness.demo_server` exposes `/api/workbench/archive-restore`, returning archived bundle metadata plus restored workspace handoff/snapshot payloads from a moved `archive_manifest.json`.
+- `P7-48` is now implemented locally: the browser workbench now lets users paste an `archive_manifest.json` path or archive directory, call the restore API, and reopen archive-backed packet/result context without leaving the acceptance surface.
+- `P7-49` is now implemented locally: workbench bootstrap now lists recent archive packages from the default archive root, and the browser workbench renders one-click restore cards so archive recovery no longer starts with a manual filesystem path hunt.
+- `P7-50` is now implemented locally: the demo server now exposes a dedicated recent-archives refresh API, and the browser workbench can refresh the recent archive board in place instead of reloading the entire page to see new archive packages.
+- `P7-51` is now implemented locally: `system_spec` now emits a formal `$schema` / `kind` / `version` contract plus JSON-safe arrays, `docs/json_schema/control_system_spec_v1.schema.json` documents the reusable control-system spec shape, and intake / CLI exports now prove generated specs match that schema-aware payload boundary.
+- `P7-52` is now implemented locally: a new `controller_adapter` module wraps `DeployController` behind explicit truth metadata and an injectable adapter interface, `SimulationRunner` now accepts adapter injection, and the live demo/runtime paths now route through that boundary instead of importing `controller.py` directly.
+- `P7-53` is now implemented locally: a new `fault_taxonomy` module publishes the supported fault-kind contract and schema payload, intake parsing now rejects unknown `fault_kind` values, diagnosis reuses the same taxonomy guard, and the control-system spec schema now constrains `fault_kind` to the published taxonomy.
+- `P7-54` is now implemented locally: a new `second_system_smoke` module and CLI command turn the custom reverse-control packet into one reusable smoke-proof report, demonstrating that intake, clarification, playback, diagnosis, and knowledge all complete through a single second-system entrypoint.
+- `P7-55` is now implemented locally: `tools/run_gsd_validation_suite.py` now runs the second-system smoke proof as a ninth shared validation check, the suite test expectations now include that new check, and the repo-wide shared suite proves the custom packet alongside the existing demo/schema/control-plane checks.
+- `P7-56` is now implemented locally: deterministic playback reports now emit `$schema` / `kind` / `version`, `docs/json_schema/playback_trace_v1.schema.json` documents the reusable trace payload, and regression coverage proves the second-system playback output matches that contract.
+- `P7-57` is now implemented locally: `tools/validate_playback_trace_schema.py` validates both fixture and repo reference playback payloads against the published trace schema, and `tools/run_gsd_validation_suite.py` now runs that check as the tenth shared validation command.
+- `P7-58` is now implemented locally: fault diagnosis reports now emit `$schema` / `kind` / `version`, `docs/json_schema/fault_diagnosis_v1.schema.json` documents the reusable diagnosis payload, and regression coverage proves generated diagnosis artifacts validate against that formal contract.
+- `P7-59` is now implemented locally: `tools/validate_fault_diagnosis_schema.py` validates both fixture and repo reference diagnosis payloads against the published diagnosis schema, and `tools/run_gsd_validation_suite.py` now runs that check as the eleventh shared validation command.
+- `P7-60` is now implemented locally: knowledge artifacts now emit `$schema` / `kind` / `version`, `docs/json_schema/knowledge_artifact_v1.schema.json` documents the reusable artifact payload, and regression coverage proves generated knowledge artifacts validate against that formal contract.
+- `P7-61` is now implemented locally: `tools/validate_knowledge_artifact_schema.py` validates both fixture and repo reference knowledge artifacts against the published artifact schema, and `tools/run_gsd_validation_suite.py` now runs that check as the twelfth shared validation command.
+- `P7-62` is now implemented locally: workbench bundles now emit `$schema` / `kind` / `version`, `docs/json_schema/workbench_bundle_v1.schema.json` documents the combined bundle payload, and regression coverage proves ready and blocked bundles validate against that formal wrapper.
+- `P7-63` is now implemented locally: `tools/validate_workbench_bundle_schema.py` validates ready fixture, ready reference, and blocked template workbench bundles against the published bundle schema, and `tools/run_gsd_validation_suite.py` now runs that check as the thirteenth shared validation command.
+- `P7-64` is now implemented locally: `tools/validate_control_system_spec_schema.py` validates the CLI reference spec plus fixture/reference intake-generated specs against the published root spec schema, and `tools/run_gsd_validation_suite.py` now runs that check before downstream schema checks.
+- `P7-65` is now implemented locally: `tools/validate_fault_taxonomy_schema.py` validates the published taxonomy payload and proves the root control-system spec schema's `faultKindValue.enum` stays aligned with `SUPPORTED_FAULT_KINDS`, and `tools/run_gsd_validation_suite.py` now runs that check before the root spec schema check.
+- `P7-66` is now implemented locally: `ControllerTruthMetadata` now emits a schema-aware adapter metadata payload, `docs/json_schema/controller_truth_adapter_metadata_v1.schema.json` documents the adapter identity/source-of-truth boundary, and focused coverage proves the reference adapter metadata validates without changing `controller.py`.
+- `P7-67` is now implemented locally: `tools/validate_controller_truth_adapter_metadata_schema.py` validates reference adapter metadata against its published schema, proves the reference spec source-of-truth remains aligned, and `tools/run_gsd_validation_suite.py` now runs that check as part of the shared validation suite.
+- `P7-68` is now implemented locally: `tools/validate_workbench_archive_manifest_schema.py` generates ready and blocked workbench archives, validates their manifests through both the internal validator and the published manifest schema, and `tools/run_gsd_validation_suite.py` now runs that check after workbench-bundle schema validation.
+- `P7-69` is now implemented locally: second-system smoke reports now emit `$schema` / `kind` / `version`, `docs/json_schema/second_system_smoke_v1.schema.json` documents the generalization proof payload, and regression coverage proves the CLI JSON matches that formal contract.
+- `P7-70` is now implemented locally: `tools/validate_second_system_smoke_schema.py` validates the default second-system smoke CLI proof against the published smoke schema, and `tools/run_gsd_validation_suite.py` now runs that check immediately after the default smoke command.
 - Notion sync is now healthy again: archived shared databases are automatically restored when possible, default writeback budgets now cover real Notion slow windows, and both `run` and `prepare-opus-review` succeed again under default settings.
 
 ## Active Objective
 
 Advance the spec-driven control-analysis workbench from separate primitives into a reusable engineer-facing workflow, while keeping the stabilized demo / freeze / control-plane baseline intact:
 
+- Treat P7 as the completed contract/schema layer and use P8 to prove runtime generalization rather than adding more shell-only polish.
+- Prove adapter-only truth admission with a minimal non-thrust-reverser system, starting from a landing-gear extension controller adapter that leaves `controller.py` untouched.
+- Keep the user-approved constitution boundary explicit: new system truth may arrive only through published adapter interfaces, and any bypass/hardcoded alternate truth path is out of bounds.
 - Keep `controller.py` as the confirmed control truth and avoid introducing a second hidden rule engine.
 - Keep the stable cockpit demo, freeze packet, and Notion control plane available as the reference baseline while P7 expands.
+- Pivot the current P7 thread from workbench-shell polish toward the Opus-requested architecture-convergence work: formal spec schema, adapter-ready boundaries, and evidence that a second system can plug into the same contract later.
+- Make the control-system spec itself an explicit machine-readable contract, so intake output, CLI export, playback input, and future adapter layers all share one schema-aware payload instead of a reference-system-shaped implicit structure.
+- Make controller truth injectable without changing the reference logic itself, so future system-specific truth sources can plug into the same runner/demo/workbench edges instead of forking those paths around `DeployController`.
+- Make fault semantics explicit too, so `fault_kind` values across intake/spec/diagnosis refer to one reusable taxonomy instead of silently diverging by file, fixture, or engineer memory.
+- Prove a second system can traverse the same engineer-facing workflow end to end, so “generalization-ready” stops being just an architectural claim and becomes a repeatable smoke check.
+- Keep that second-system proof in the shared regression loop too, so future work cannot silently break generalization while only the reference system continues to pass.
 - Turn intake assessment, clarification gating, playback, fault diagnosis, and knowledge capture into a continuous workflow that engineers can run and hand off without manual stitching.
 - Preserve the “ask before guessing” onboarding boundary so incomplete packets stop at explicit clarification work instead of drifting into inferred specs.
 - Keep workbench artifacts machine-readable and ready for later repo / Notion sync, archive, and review.
@@ -149,6 +195,12 @@ Advance the spec-driven control-analysis workbench from separate primitives into
 - Make archive manifests self-describing too, so schema-aware tooling can discover the manifest contract directly from `$schema`.
 - Make archive README files schema-aware too, so human handoff sees the same manifest contract reference as automation.
 - Make archive CLI output restore-ready too, so future automation can read the full file map from validated JSON output without reopening the manifest.
+- Make archive manifests location-portable too, so archive validation and restore still work after the saved archive directory moves.
+- Make moved archives immediately restorable too, so automation can resolve archive-relative file paths and recover the saved browser workspace metadata without rebuilding archive context by hand.
+- Make archive restore available through the workbench API too, so later browser or automation flows can reopen a saved archive package through one stable server entrypoint instead of stitching loaders together client-side.
+- Make archive restore usable from the browser workbench too, so engineers can reopen a saved archive package inside the same acceptance surface instead of dropping to manual API calls or Python helpers.
+- Make recent archive recovery discoverable too, so engineers can reopen the last few archive packages directly from the workbench without first copying local paths out of the filesystem.
+- Make recent archive recovery live-refreshable too, so new externally created archive packages appear in the workbench without forcing a whole-page reset that might disturb current packet/result context.
 - Keep the Notion control plane's architecture and execution rules auto-synced too, so any fresh Codex session resumes from the latest anti-drift contract instead of stale local assumptions.
 - Continue routing subjective review through Opus 4.6 only, with Notion + GitHub as the evidence boundary.
 

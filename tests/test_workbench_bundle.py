@@ -11,12 +11,23 @@ from unittest import mock
 
 from well_harness.cli import main
 from well_harness.document_intake import intake_packet_from_dict, intake_template_payload, load_intake_packet
+from well_harness.fault_diagnosis import FAULT_DIAGNOSIS_KIND
+from well_harness.knowledge_capture import KNOWLEDGE_ARTIFACT_KIND
+from well_harness.scenario_playback import PLAYBACK_TRACE_KIND
 from well_harness.workbench_bundle import (
+    WORKBENCH_BUNDLE_KIND,
+    WORKBENCH_BUNDLE_SCHEMA_ID,
+    WORKBENCH_BUNDLE_VERSION,
     archive_workbench_bundle,
     build_workbench_bundle,
+    load_workbench_archive_bundle_payload,
     load_workbench_archive_manifest,
+    load_workbench_archive_restore_payload,
+    load_workbench_archive_workspace_handoff,
+    load_workbench_archive_workspace_snapshot,
     render_workbench_bundle_markdown,
     render_workbench_bundle_text,
+    resolve_workbench_archive_manifest_files,
     validate_workbench_archive_manifest,
 )
 
@@ -24,6 +35,7 @@ from well_harness.workbench_bundle import (
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 PROJECT_ROOT = Path(__file__).parents[1]
 ARCHIVE_MANIFEST_SCHEMA_PATH = PROJECT_ROOT / "docs" / "json_schema" / "workbench_archive_manifest_v1.schema.json"
+WORKBENCH_BUNDLE_SCHEMA_PATH = PROJECT_ROOT / "docs" / "json_schema" / "workbench_bundle_v1.schema.json"
 SYSTEM_INTAKE_PACKET_PATH = FIXTURES_DIR / "system_intake_packet_v1.json"
 
 
@@ -43,6 +55,10 @@ def run_text_cli(args: list[str]) -> tuple[int, str]:
 
 def load_archive_manifest_schema() -> dict:
     return json.loads(ARCHIVE_MANIFEST_SCHEMA_PATH.read_text(encoding="utf-8"))
+
+
+def load_workbench_bundle_schema() -> dict:
+    return json.loads(WORKBENCH_BUNDLE_SCHEMA_PATH.read_text(encoding="utf-8"))
 
 
 class WorkbenchBundleTests(unittest.TestCase):
@@ -81,6 +97,75 @@ class WorkbenchBundleTests(unittest.TestCase):
         self.assertIsNotNone(bundle.knowledge_artifact)
         self.assertEqual("resolved", bundle.knowledge_artifact.status)
         self.assertIn("capture or archive the bundle artifact", " ".join(bundle.next_actions).lower())
+
+    def test_workbench_bundle_serializes_to_schema_aware_payload(self):
+        bundle = build_workbench_bundle(
+            load_intake_packet(SYSTEM_INTAKE_PACKET_PATH),
+            confirmed_root_cause="Pressure sensor bias was confirmed during troubleshooting.",
+            repair_action="Recalibrated the sensor path.",
+            validation_after_fix="Acceptance replay completed after the repair.",
+            residual_risk="Watch for future sensor drift.",
+        )
+
+        payload = bundle.to_dict()
+        encoded = json.dumps(payload, ensure_ascii=False)
+
+        self.assertEqual(WORKBENCH_BUNDLE_SCHEMA_ID, payload["$schema"])
+        self.assertEqual(WORKBENCH_BUNDLE_KIND, payload["kind"])
+        self.assertEqual(WORKBENCH_BUNDLE_VERSION, payload["version"])
+        self.assertEqual("full_workbench_bundle", payload["bundle_kind"])
+        self.assertEqual(PLAYBACK_TRACE_KIND, payload["playback_report"]["kind"])
+        self.assertEqual(FAULT_DIAGNOSIS_KIND, payload["fault_diagnosis_report"]["kind"])
+        self.assertEqual(KNOWLEDGE_ARTIFACT_KIND, payload["knowledge_artifact"]["kind"])
+        self.assertIn("pressure_sensor_bias_low", encoded)
+
+    def test_blocked_workbench_bundle_serializes_to_schema_aware_payload(self):
+        bundle = build_workbench_bundle(intake_packet_from_dict(intake_template_payload()))
+
+        payload = bundle.to_dict()
+
+        self.assertEqual(WORKBENCH_BUNDLE_SCHEMA_ID, payload["$schema"])
+        self.assertEqual(WORKBENCH_BUNDLE_KIND, payload["kind"])
+        self.assertEqual(WORKBENCH_BUNDLE_VERSION, payload["version"])
+        self.assertEqual("clarification_follow_up", payload["bundle_kind"])
+        self.assertFalse(payload["ready_for_spec_build"])
+        self.assertIsNone(payload["playback_report"])
+        self.assertIsNone(payload["fault_diagnosis_report"])
+        self.assertIsNone(payload["knowledge_artifact"])
+
+    def test_workbench_bundle_schema_documents_generated_payload_shape(self):
+        schema = load_workbench_bundle_schema()
+
+        self.assertEqual("https://json-schema.org/draft/2020-12/schema", schema["$schema"])
+        self.assertEqual(WORKBENCH_BUNDLE_SCHEMA_ID, schema["$id"])
+        self.assertEqual(WORKBENCH_BUNDLE_KIND, schema["properties"]["kind"]["const"])
+        self.assertEqual(WORKBENCH_BUNDLE_VERSION, schema["properties"]["version"]["const"])
+        self.assertEqual(WORKBENCH_BUNDLE_SCHEMA_ID, schema["properties"]["$schema"]["const"])
+        self.assertEqual(PLAYBACK_TRACE_KIND, schema["$defs"]["playbackTraceEnvelope"]["properties"]["kind"]["const"])
+
+    def test_optional_jsonschema_validates_generated_workbench_bundles_when_installed(self):
+        try:
+            from jsonschema import Draft202012Validator
+        except ImportError:
+            self.skipTest("optional dependency jsonschema is not installed")
+
+        schema = load_workbench_bundle_schema()
+        Draft202012Validator.check_schema(schema)
+        validator = Draft202012Validator(schema)
+        ready_payload = build_workbench_bundle(
+            load_intake_packet(SYSTEM_INTAKE_PACKET_PATH),
+            confirmed_root_cause="Pressure sensor bias was confirmed during troubleshooting.",
+            repair_action="Recalibrated the sensor path.",
+            validation_after_fix="Acceptance replay completed after the repair.",
+            residual_risk="Watch for future sensor drift.",
+        ).to_dict()
+        blocked_payload = build_workbench_bundle(intake_packet_from_dict(intake_template_payload())).to_dict()
+        errors = sorted(
+            [*validator.iter_errors(ready_payload), *validator.iter_errors(blocked_payload)],
+            key=lambda error: tuple(error.absolute_path),
+        )
+
+        self.assertEqual([], errors, "\n".join(error.message for error in errors[:10]))
 
     def test_render_workbench_bundle_text_summarizes_blocked_and_ready_states(self):
         blocked_bundle = build_workbench_bundle(intake_packet_from_dict(intake_template_payload()))
@@ -130,13 +215,16 @@ class WorkbenchBundleTests(unittest.TestCase):
                 "https://well-harness.local/json_schema/workbench_archive_manifest_v1.schema.json",
                 saved_manifest["$schema"],
             )
+            self.assertEqual(".", saved_manifest["archive_dir"])
+            self.assertEqual("bundle.json", saved_manifest["files"]["bundle_json"])
+            self.assertEqual("README.md", saved_manifest["files"]["summary_markdown"])
             self.assertEqual("full_workbench_bundle", saved_manifest["bundle"]["bundle_kind"])
             self.assertEqual(
                 "python3 -m well_harness.cli archive-manifest .",
                 saved_manifest["self_check"]["command"],
             )
             self.assertEqual("archive_dir", saved_manifest["self_check"]["working_directory"])
-            self.assertEqual((), validate_workbench_archive_manifest(saved_manifest))
+            self.assertEqual((), validate_workbench_archive_manifest(saved_manifest, manifest_path=archive.manifest_json_path))
             loaded_manifest = load_workbench_archive_manifest(archive.manifest_json_path)
             self.assertEqual(saved_manifest, loaded_manifest)
             saved_summary = Path(archive.summary_markdown_path).read_text(encoding="utf-8")
@@ -159,7 +247,7 @@ class WorkbenchBundleTests(unittest.TestCase):
             manifest = load_workbench_archive_manifest(archive.manifest_json_path)
             Path(archive.bundle_json_path).unlink()
 
-            issues = validate_workbench_archive_manifest(manifest)
+            issues = validate_workbench_archive_manifest(manifest, manifest_path=archive.manifest_json_path)
 
         self.assertIn("files.bundle_json does not point to an existing file", " ".join(issues))
 
@@ -226,7 +314,7 @@ class WorkbenchBundleTests(unittest.TestCase):
                 "working_directory": "repository_root",
             }
 
-            issues = validate_workbench_archive_manifest(manifest)
+            issues = validate_workbench_archive_manifest(manifest, manifest_path=archive.manifest_json_path)
 
         self.assertIn("$schema must be", " ".join(issues))
         self.assertIn("self_check.command must be a non-empty string", " ".join(issues))
@@ -288,8 +376,6 @@ class WorkbenchBundleTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp_dir:
             archive = archive_workbench_bundle(bundle, temp_dir)
-            bundle_json_path = archive.bundle_json_path
-            summary_markdown_path = archive.summary_markdown_path
 
             exit_code, payload = run_json_cli(
                 [
@@ -308,10 +394,13 @@ class WorkbenchBundleTests(unittest.TestCase):
             payload["schema"],
         )
         self.assertEqual("well-harness-workbench-archive-manifest", payload["kind"])
+        self.assertEqual(".", payload["archive_dir"])
         self.assertEqual("custom_reverse_control_v1", payload["bundle"]["system_id"])
         self.assertEqual("python3 -m well_harness.cli archive-manifest .", payload["self_check"]["command"])
-        self.assertEqual(bundle_json_path, payload["files"]["bundle_json"])
-        self.assertEqual(summary_markdown_path, payload["files"]["summary_markdown"])
+        self.assertEqual("bundle.json", payload["files"]["bundle_json"])
+        self.assertEqual("README.md", payload["files"]["summary_markdown"])
+        self.assertEqual(str(Path(archive.bundle_json_path)), payload["resolved_files"]["bundle_json"])
+        self.assertEqual(str(Path(archive.summary_markdown_path)), payload["resolved_files"]["summary_markdown"])
         self.assertGreaterEqual(payload["file_count"], 5)
 
     def test_cli_archive_manifest_accepts_archive_directory_and_prints_restore_targets(self):
@@ -360,10 +449,13 @@ class WorkbenchBundleTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp_dir:
             archive = archive_workbench_bundle(bundle, temp_dir)
+            archive_dir = Path(archive.archive_dir)
+            moved_archive_dir = Path(temp_dir) / "moved-archive"
+            archive_dir.rename(moved_archive_dir)
 
             result = subprocess.run(
                 [sys.executable, "-m", "well_harness.cli", "archive-manifest", "."],
-                cwd=archive.archive_dir,
+                cwd=moved_archive_dir,
                 env=env,
                 capture_output=True,
                 text=True,
@@ -433,7 +525,7 @@ class WorkbenchBundleTests(unittest.TestCase):
             self.assertIn("## Browser Workspace Handoff", saved_summary)
             self.assertIn("Archive this ready result", saved_summary)
             saved_manifest = json.loads(Path(archive.manifest_json_path).read_text(encoding="utf-8"))
-            self.assertEqual(str(Path(archive.workspace_handoff_json_path)), saved_manifest["files"]["workspace_handoff_json"])
+            self.assertEqual("workspace_handoff.json", saved_manifest["files"]["workspace_handoff_json"])
 
     def test_archive_workbench_bundle_can_capture_browser_workspace_snapshot(self):
         bundle = build_workbench_bundle(
@@ -463,7 +555,151 @@ class WorkbenchBundleTests(unittest.TestCase):
             self.assertEqual(2, saved_snapshot["version"])
             self.assertEqual("可交接", saved_snapshot["handoff"]["badgeText"])
             saved_manifest = json.loads(Path(archive.manifest_json_path).read_text(encoding="utf-8"))
-            self.assertEqual(str(Path(archive.workspace_snapshot_json_path)), saved_manifest["files"]["workspace_snapshot_json"])
+            self.assertEqual("workspace_snapshot.json", saved_manifest["files"]["workspace_snapshot_json"])
+
+    def test_archive_manifest_remains_valid_after_archive_directory_is_moved(self):
+        bundle = build_workbench_bundle(
+            load_intake_packet(SYSTEM_INTAKE_PACKET_PATH),
+            confirmed_root_cause="Pressure sensor bias was confirmed during troubleshooting.",
+            repair_action="Recalibrated the sensor path.",
+            validation_after_fix="Acceptance replay completed after the repair.",
+            residual_risk="Watch for future sensor drift.",
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive = archive_workbench_bundle(bundle, temp_dir)
+            archive_dir = Path(archive.archive_dir)
+            moved_archive_dir = Path(temp_dir) / "portable-archive"
+            archive_dir.rename(moved_archive_dir)
+            moved_manifest_path = moved_archive_dir / "archive_manifest.json"
+
+            manifest = load_workbench_archive_manifest(moved_manifest_path)
+
+        self.assertEqual(".", manifest["archive_dir"])
+        self.assertEqual("bundle.json", manifest["files"]["bundle_json"])
+
+    def test_archive_manifest_resolves_files_and_workspace_metadata_after_move(self):
+        bundle = build_workbench_bundle(
+            load_intake_packet(SYSTEM_INTAKE_PACKET_PATH),
+            confirmed_root_cause="Pressure sensor bias was confirmed during troubleshooting.",
+            repair_action="Recalibrated the sensor path.",
+            validation_after_fix="Acceptance replay completed after the repair.",
+            residual_risk="Watch for future sensor drift.",
+        )
+        handoff = {
+            "badgeText": "可交接",
+            "system": "custom_reverse_control_v1",
+            "packet": "2 docs / 4 logic / 1 faults",
+            "result": "通过 / ab_pressure_ramp",
+            "archive": "已留档",
+            "workspace": "3 个 packet 版本 / 2 个结果",
+            "note": "Portable archive handoff note.",
+        }
+        workspace_snapshot = {
+            "kind": "well-harness-workbench-browser-workspace",
+            "version": 2,
+            "packetRevisionHistory": [{"id": "workbench-packet-revision-1", "title": "载入参考样例"}],
+            "runHistory": [{"id": "workbench-history-1", "title": "一键通过验收"}],
+            "handoff": {
+                "badgeText": "可交接",
+                "note": "Portable archive handoff note.",
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive = archive_workbench_bundle(
+                bundle,
+                temp_dir,
+                workspace_handoff=handoff,
+                workspace_snapshot=workspace_snapshot,
+            )
+            archive_dir = Path(archive.archive_dir)
+            moved_archive_dir = Path(temp_dir) / "portable-archive"
+            archive_dir.rename(moved_archive_dir)
+            moved_manifest_path = moved_archive_dir / "archive_manifest.json"
+
+            manifest = load_workbench_archive_manifest(moved_manifest_path)
+            resolved_files = resolve_workbench_archive_manifest_files(manifest, manifest_path=moved_manifest_path)
+            restored_handoff = load_workbench_archive_workspace_handoff(moved_manifest_path)
+            restored_snapshot = load_workbench_archive_workspace_snapshot(moved_manifest_path)
+
+        self.assertEqual(str((moved_archive_dir / "bundle.json").resolve()), resolved_files["bundle_json"])
+        self.assertEqual(
+            str((moved_archive_dir / "workspace_handoff.json").resolve()),
+            resolved_files["workspace_handoff_json"],
+        )
+        self.assertEqual("Portable archive handoff note.", restored_handoff["note"])
+        self.assertEqual(2, restored_snapshot["version"])
+
+    def test_load_workbench_archive_restore_payload_reopens_moved_archive(self):
+        bundle = build_workbench_bundle(
+            load_intake_packet(SYSTEM_INTAKE_PACKET_PATH),
+            confirmed_root_cause="Pressure sensor bias was confirmed during troubleshooting.",
+            repair_action="Recalibrated the sensor path.",
+            validation_after_fix="Acceptance replay completed after the repair.",
+            residual_risk="Watch for future sensor drift.",
+        )
+        handoff = {
+            "badgeText": "可交接",
+            "system": "custom_reverse_control_v1",
+            "packet": "2 docs / 4 logic / 1 faults",
+            "result": "通过 / ab_pressure_ramp",
+            "archive": "已留档",
+            "workspace": "3 个 packet 版本 / 2 个结果",
+            "note": "Portable archive handoff note.",
+        }
+        workspace_snapshot = {
+            "kind": "well-harness-workbench-browser-workspace",
+            "version": 2,
+            "packetRevisionHistory": [{"id": "workbench-packet-revision-1", "title": "载入参考样例"}],
+            "runHistory": [{"id": "workbench-history-1", "title": "一键通过验收"}],
+            "handoff": {
+                "badgeText": "可交接",
+                "note": "Portable archive handoff note.",
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive = archive_workbench_bundle(
+                bundle,
+                temp_dir,
+                workspace_handoff=handoff,
+                workspace_snapshot=workspace_snapshot,
+            )
+            archive_dir = Path(archive.archive_dir)
+            moved_archive_dir = Path(temp_dir) / "portable-archive"
+            archive_dir.rename(moved_archive_dir)
+            moved_manifest_path = moved_archive_dir / "archive_manifest.json"
+
+            restore_payload = load_workbench_archive_restore_payload(moved_archive_dir)
+
+        self.assertEqual(str(moved_manifest_path.resolve()), restore_payload["manifest_path"])
+        self.assertEqual(str(moved_archive_dir.resolve()), restore_payload["archive_dir"])
+        self.assertEqual("well-harness-workbench-archive-manifest", restore_payload["manifest"]["kind"])
+        self.assertEqual("full_workbench_bundle", restore_payload["bundle"]["bundle_kind"])
+        self.assertEqual(
+            str((moved_archive_dir / "bundle.json").resolve()),
+            restore_payload["resolved_files"]["bundle_json"],
+        )
+        self.assertEqual("Portable archive handoff note.", restore_payload["workspace_handoff"]["note"])
+        self.assertEqual(2, restore_payload["workspace_snapshot"]["version"])
+
+    def test_load_workbench_archive_bundle_payload_returns_bundle_json_object(self):
+        bundle = build_workbench_bundle(
+            load_intake_packet(SYSTEM_INTAKE_PACKET_PATH),
+            confirmed_root_cause="Pressure sensor bias was confirmed during troubleshooting.",
+            repair_action="Recalibrated the sensor path.",
+            validation_after_fix="Acceptance replay completed after the repair.",
+            residual_risk="Watch for future sensor drift.",
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive = archive_workbench_bundle(bundle, temp_dir)
+
+            bundle_payload = load_workbench_archive_bundle_payload(archive.manifest_json_path)
+
+        self.assertEqual("full_workbench_bundle", bundle_payload["bundle_kind"])
+        self.assertTrue(bundle_payload["ready_for_spec_build"])
 
     def test_archive_workbench_bundle_avoids_name_collisions_within_same_second(self):
         bundle = build_workbench_bundle(

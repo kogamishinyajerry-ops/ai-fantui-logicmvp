@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from well_harness.controller import DeployController
+from well_harness.controller_adapter import ControllerTruthAdapter, build_reference_controller_adapter
 from well_harness.models import (
     HarnessConfig,
     PilotFrame,
@@ -14,9 +14,13 @@ from well_harness.switches import LatchedThrottleSwitches, SwitchState
 
 
 class SimulationRunner:
-    def __init__(self, config: HarnessConfig | None = None) -> None:
+    def __init__(
+        self,
+        config: HarnessConfig | None = None,
+        controller_adapter: ControllerTruthAdapter | None = None,
+    ) -> None:
         self.config = config or HarnessConfig()
-        self.controller = DeployController(self.config)
+        self.controller_adapter = controller_adapter or build_reference_controller_adapter(self.config)
         self.switches = LatchedThrottleSwitches(self.config)
         self.plant = SimplifiedDeployPlant(self.config)
 
@@ -59,7 +63,7 @@ class SimulationRunner:
                     reverser_fully_deployed_eec=sensors.reverser_fully_deployed_eec,
                     deploy_90_percent_vdt=sensors.deploy_90_percent_vdt,
                 )
-                outputs, explain = self.controller.evaluate_with_explain(inputs)
+                outputs, explain = self.controller_adapter.evaluate_with_explain(inputs)
                 rows.append(
                     TraceRow(
                         time_s=round(time_s, 3),

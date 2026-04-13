@@ -22,6 +22,9 @@ from well_harness.scenario_playback import (
     build_playback_report_from_intake_packet,
 )
 
+WORKBENCH_BUNDLE_KIND = "well-harness-workbench-bundle"
+WORKBENCH_BUNDLE_VERSION = 1
+WORKBENCH_BUNDLE_SCHEMA_ID = "https://well-harness.local/json_schema/workbench_bundle_v1.schema.json"
 ARCHIVE_MANIFEST_KIND = "well-harness-workbench-archive-manifest"
 ARCHIVE_MANIFEST_VERSION = 1
 ARCHIVE_MANIFEST_SCHEMA_ID = "https://well-harness.local/json_schema/workbench_archive_manifest_v1.schema.json"
@@ -60,7 +63,7 @@ class WorkbenchBundle:
     next_actions: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        return workbench_bundle_to_dict(self)
 
 
 @dataclass(frozen=True)
@@ -95,6 +98,36 @@ def _json_text(payload: Any) -> str:
     return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
 
 
+def _json_safe_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: _json_safe_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe_value(item) for item in value]
+    return value
+
+
+def workbench_bundle_to_dict(bundle: WorkbenchBundle) -> dict[str, Any]:
+    return {
+        "$schema": WORKBENCH_BUNDLE_SCHEMA_ID,
+        "kind": WORKBENCH_BUNDLE_KIND,
+        "version": WORKBENCH_BUNDLE_VERSION,
+        "system_id": bundle.system_id,
+        "system_title": bundle.system_title,
+        "bundle_kind": bundle.bundle_kind,
+        "ready_for_spec_build": bundle.ready_for_spec_build,
+        "selected_scenario_id": bundle.selected_scenario_id,
+        "selected_fault_mode_id": bundle.selected_fault_mode_id,
+        "intake_assessment": _json_safe_value(bundle.intake_assessment),
+        "clarification_brief": _json_safe_value(bundle.clarification_brief),
+        "playback_report": bundle.playback_report.to_dict() if bundle.playback_report is not None else None,
+        "fault_diagnosis_report": (
+            bundle.fault_diagnosis_report.to_dict() if bundle.fault_diagnosis_report is not None else None
+        ),
+        "knowledge_artifact": bundle.knowledge_artifact.to_dict() if bundle.knowledge_artifact is not None else None,
+        "next_actions": list(bundle.next_actions),
+    }
+
+
 def _create_unique_archive_dir(archive_root_path: Path, archive_name: str) -> Path:
     for index in range(1, 10_001):
         candidate_name = archive_name if index == 1 else f"{archive_name}-{index}"
@@ -116,6 +149,36 @@ def _path_is_under(path: Path, root: Path) -> bool:
         return path.resolve().is_relative_to(root.resolve())
     except OSError:
         return False
+
+
+def _resolve_manifest_archive_dir_path(
+    archive_dir_value: str,
+    *,
+    manifest_path: Path | None,
+) -> Path | None:
+    archive_dir_path = Path(archive_dir_value).expanduser()
+    if archive_dir_path.is_absolute():
+        return archive_dir_path
+    if manifest_path is None:
+        return None
+    return (manifest_path.parent / archive_dir_path).resolve()
+
+
+def _resolve_manifest_file_path(
+    file_value: str,
+    *,
+    archive_dir_path: Path | None,
+) -> Path:
+    file_path = Path(file_value).expanduser()
+    if file_path.is_absolute() or archive_dir_path is None:
+        return file_path
+    return (archive_dir_path / file_path).resolve()
+
+
+def _manifest_relative_path(path: Path | None, *, archive_dir: Path) -> str | None:
+    if path is None:
+        return None
+    return path.relative_to(archive_dir).as_posix()
 
 
 def _resolve_selected_id(
@@ -140,11 +203,13 @@ def _resolve_selected_id(
 def validate_workbench_archive_manifest(
     manifest: dict[str, Any],
     *,
+    manifest_path: str | Path | None = None,
     require_existing_files: bool = True,
 ) -> tuple[str, ...]:
     issues: list[str] = []
     if not isinstance(manifest, dict):
         return ("archive manifest root must be a JSON object.",)
+    resolved_manifest_path = Path(manifest_path).expanduser().resolve() if manifest_path is not None else None
 
     if manifest.get("kind") != ARCHIVE_MANIFEST_KIND:
         issues.append(f"kind must be {ARCHIVE_MANIFEST_KIND!r}.")
@@ -161,8 +226,13 @@ def validate_workbench_archive_manifest(
     if not _non_empty_string(archive_dir_value):
         issues.append("archive_dir must be a non-empty string.")
     else:
-        archive_dir_path = Path(archive_dir_value).expanduser()
-        if require_existing_files and not archive_dir_path.is_dir():
+        archive_dir_path = _resolve_manifest_archive_dir_path(
+            str(archive_dir_value),
+            manifest_path=resolved_manifest_path,
+        )
+        if archive_dir_path is None:
+            issues.append("archive_dir relative paths require manifest_path during validation.")
+        elif require_existing_files and not archive_dir_path.is_dir():
             issues.append(f"archive_dir does not point to an existing directory: {archive_dir_value}")
 
     bundle = manifest.get("bundle")
@@ -201,7 +271,10 @@ def validate_workbench_archive_manifest(
             if not _non_empty_string(file_value):
                 issues.append(f"files.{file_key} must be a non-empty string or null.")
                 continue
-            file_path = Path(file_value).expanduser()
+            file_path = _resolve_manifest_file_path(
+                str(file_value),
+                archive_dir_path=archive_dir_path,
+            )
             if archive_dir_path is not None and not _path_is_under(file_path, archive_dir_path):
                 issues.append(f"files.{file_key} must point inside archive_dir.")
             if require_existing_files and not file_path.is_file():
@@ -238,15 +311,168 @@ def load_workbench_archive_manifest(
     *,
     require_existing_files: bool = True,
 ) -> dict[str, Any]:
-    path = Path(manifest_path).expanduser()
+    path = Path(manifest_path).expanduser().resolve()
     manifest = json.loads(path.read_text(encoding="utf-8"))
     issues = validate_workbench_archive_manifest(
         manifest,
+        manifest_path=path,
         require_existing_files=require_existing_files,
     )
     if issues:
         raise ValueError(f"invalid workbench archive manifest: {'; '.join(issues)}")
     return manifest
+
+
+def resolve_workbench_archive_manifest_files(
+    manifest: dict[str, Any],
+    *,
+    manifest_path: str | Path,
+) -> dict[str, str | None]:
+    resolved_manifest_path = Path(manifest_path).expanduser().resolve()
+    archive_dir_value = manifest.get("archive_dir")
+    if not _non_empty_string(archive_dir_value):
+        raise ValueError("archive manifest archive_dir must be a non-empty string.")
+    archive_dir_path = _resolve_manifest_archive_dir_path(
+        str(archive_dir_value),
+        manifest_path=resolved_manifest_path,
+    )
+    if archive_dir_path is None:
+        raise ValueError("archive manifest archive_dir could not be resolved.")
+    files = manifest.get("files")
+    if not isinstance(files, dict):
+        raise ValueError("archive manifest files must be a JSON object.")
+    return {
+        file_key: (
+            str(
+                _resolve_manifest_file_path(
+                    str(file_value),
+                    archive_dir_path=archive_dir_path,
+                ).resolve()
+            )
+            if file_value is not None
+            else None
+        )
+        for file_key, file_value in files.items()
+    }
+
+
+def _load_workbench_archive_json_artifact(
+    manifest_path: str | Path,
+    *,
+    file_key: str,
+    require_existing_files: bool = True,
+) -> dict[str, Any]:
+    manifest = load_workbench_archive_manifest(
+        manifest_path,
+        require_existing_files=require_existing_files,
+    )
+    resolved_files = resolve_workbench_archive_manifest_files(
+        manifest,
+        manifest_path=manifest_path,
+    )
+    artifact_path = resolved_files.get(file_key)
+    if artifact_path is None:
+        raise ValueError(f"archive manifest does not include {file_key}.")
+    artifact_payload = json.loads(Path(artifact_path).read_text(encoding="utf-8"))
+    if not isinstance(artifact_payload, dict):
+        raise ValueError(f"archive artifact {file_key} must contain a JSON object.")
+    return artifact_payload
+
+
+def load_workbench_archive_bundle_payload(
+    manifest_path: str | Path,
+    *,
+    require_existing_files: bool = True,
+) -> dict[str, Any]:
+    return _load_workbench_archive_json_artifact(
+        manifest_path,
+        file_key="bundle_json",
+        require_existing_files=require_existing_files,
+    )
+
+
+def load_workbench_archive_workspace_snapshot(
+    manifest_path: str | Path,
+    *,
+    require_existing_files: bool = True,
+) -> dict[str, Any]:
+    return _load_workbench_archive_json_artifact(
+        manifest_path,
+        file_key="workspace_snapshot_json",
+        require_existing_files=require_existing_files,
+    )
+
+
+def load_workbench_archive_workspace_handoff(
+    manifest_path: str | Path,
+    *,
+    require_existing_files: bool = True,
+) -> dict[str, Any]:
+    return _load_workbench_archive_json_artifact(
+        manifest_path,
+        file_key="workspace_handoff_json",
+        require_existing_files=require_existing_files,
+    )
+
+
+def load_workbench_archive_restore_payload(
+    manifest_path: str | Path,
+    *,
+    require_existing_files: bool = True,
+) -> dict[str, Any]:
+    input_path = Path(manifest_path).expanduser()
+    resolved_manifest_path = (
+        input_path / "archive_manifest.json"
+        if input_path.is_dir()
+        else input_path
+    ).resolve()
+    manifest = load_workbench_archive_manifest(
+        resolved_manifest_path,
+        require_existing_files=require_existing_files,
+    )
+    resolved_files = resolve_workbench_archive_manifest_files(
+        manifest,
+        manifest_path=resolved_manifest_path,
+    )
+    archive_dir_value = manifest.get("archive_dir")
+    if not _non_empty_string(archive_dir_value):
+        raise ValueError("archive manifest archive_dir must be a non-empty string.")
+    archive_dir_path = _resolve_manifest_archive_dir_path(
+        str(archive_dir_value),
+        manifest_path=resolved_manifest_path,
+    )
+    if archive_dir_path is None:
+        raise ValueError("archive manifest archive_dir could not be resolved.")
+
+    files = manifest.get("files")
+    if not isinstance(files, dict):
+        raise ValueError("archive manifest files must be a JSON object.")
+
+    workspace_handoff = None
+    if files.get("workspace_handoff_json") is not None:
+        workspace_handoff = load_workbench_archive_workspace_handoff(
+            resolved_manifest_path,
+            require_existing_files=require_existing_files,
+        )
+    workspace_snapshot = None
+    if files.get("workspace_snapshot_json") is not None:
+        workspace_snapshot = load_workbench_archive_workspace_snapshot(
+            resolved_manifest_path,
+            require_existing_files=require_existing_files,
+        )
+
+    return {
+        "manifest_path": str(resolved_manifest_path),
+        "archive_dir": str(archive_dir_path),
+        "manifest": manifest,
+        "resolved_files": resolved_files,
+        "bundle": load_workbench_archive_bundle_payload(
+            resolved_manifest_path,
+            require_existing_files=require_existing_files,
+        ),
+        "workspace_handoff": workspace_handoff,
+        "workspace_snapshot": workspace_snapshot,
+    }
 
 
 def build_workbench_bundle(
@@ -512,22 +738,22 @@ def build_workbench_archive_manifest(
     workspace_snapshot_json_path: Path | None = None,
 ) -> dict[str, Any]:
     files = {
-        "bundle_json": str(bundle_json_path),
-        "summary_markdown": str(summary_markdown_path),
-        "intake_assessment_json": str(intake_assessment_json_path),
-        "clarification_brief_json": str(clarification_brief_json_path) if clarification_brief_json_path else None,
-        "playback_report_json": str(playback_report_json_path) if playback_report_json_path else None,
-        "fault_diagnosis_report_json": str(fault_diagnosis_report_json_path) if fault_diagnosis_report_json_path else None,
-        "knowledge_artifact_json": str(knowledge_artifact_json_path) if knowledge_artifact_json_path else None,
-        "workspace_handoff_json": str(workspace_handoff_json_path) if workspace_handoff_json_path else None,
-        "workspace_snapshot_json": str(workspace_snapshot_json_path) if workspace_snapshot_json_path else None,
+        "bundle_json": _manifest_relative_path(bundle_json_path, archive_dir=archive_dir),
+        "summary_markdown": _manifest_relative_path(summary_markdown_path, archive_dir=archive_dir),
+        "intake_assessment_json": _manifest_relative_path(intake_assessment_json_path, archive_dir=archive_dir),
+        "clarification_brief_json": _manifest_relative_path(clarification_brief_json_path, archive_dir=archive_dir),
+        "playback_report_json": _manifest_relative_path(playback_report_json_path, archive_dir=archive_dir),
+        "fault_diagnosis_report_json": _manifest_relative_path(fault_diagnosis_report_json_path, archive_dir=archive_dir),
+        "knowledge_artifact_json": _manifest_relative_path(knowledge_artifact_json_path, archive_dir=archive_dir),
+        "workspace_handoff_json": _manifest_relative_path(workspace_handoff_json_path, archive_dir=archive_dir),
+        "workspace_snapshot_json": _manifest_relative_path(workspace_snapshot_json_path, archive_dir=archive_dir),
     }
     return {
         "$schema": ARCHIVE_MANIFEST_SCHEMA_ID,
         "kind": ARCHIVE_MANIFEST_KIND,
         "version": ARCHIVE_MANIFEST_VERSION,
         "created_at_utc": created_at_utc,
-        "archive_dir": str(archive_dir),
+        "archive_dir": ".",
         "bundle": {
             "bundle_kind": bundle.bundle_kind,
             "system_id": bundle.system_id,

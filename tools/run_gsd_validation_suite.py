@@ -47,6 +47,66 @@ def build_default_commands(python_executable: str | None = None) -> tuple[Valida
             (python, "tools/validate_demo_answer_schema.py", "--format", "json"),
         ),
         ValidationCommand(
+            "second_system_smoke",
+            (python, "-m", "well_harness.cli", "second-system-smoke", "--format", "json"),
+        ),
+        ValidationCommand(
+            "second_system_smoke_schema",
+            (python, "tools/validate_second_system_smoke_schema.py", "--format", "json"),
+        ),
+        ValidationCommand(
+            "fault_taxonomy_schema",
+            (python, "tools/validate_fault_taxonomy_schema.py", "--format", "json"),
+        ),
+        ValidationCommand(
+            "control_system_spec_schema",
+            (python, "tools/validate_control_system_spec_schema.py", "--format", "json"),
+        ),
+        ValidationCommand(
+            "controller_truth_adapter_metadata_schema",
+            (python, "tools/validate_controller_truth_adapter_metadata_schema.py", "--format", "json"),
+        ),
+        ValidationCommand(
+            "landing_gear_adapter",
+            (python, "tools/validate_landing_gear_adapter.py", "--format", "json"),
+        ),
+        ValidationCommand(
+            "landing_gear_playback",
+            (python, "tools/validate_landing_gear_playback.py", "--format", "json"),
+        ),
+        ValidationCommand(
+            "landing_gear_diagnosis",
+            (python, "tools/validate_landing_gear_diagnosis.py", "--format", "json"),
+        ),
+        ValidationCommand(
+            "landing_gear_knowledge",
+            (python, "tools/validate_landing_gear_knowledge.py", "--format", "json"),
+        ),
+        ValidationCommand(
+            "two_system_runtime_comparison",
+            (python, "tools/validate_two_system_runtime_comparison.py", "--format", "json"),
+        ),
+        ValidationCommand(
+            "playback_trace_schema",
+            (python, "tools/validate_playback_trace_schema.py", "--format", "json"),
+        ),
+        ValidationCommand(
+            "fault_diagnosis_schema",
+            (python, "tools/validate_fault_diagnosis_schema.py", "--format", "json"),
+        ),
+        ValidationCommand(
+            "knowledge_artifact_schema",
+            (python, "tools/validate_knowledge_artifact_schema.py", "--format", "json"),
+        ),
+        ValidationCommand(
+            "workbench_bundle_schema",
+            (python, "tools/validate_workbench_bundle_schema.py", "--format", "json"),
+        ),
+        ValidationCommand(
+            "workbench_archive_manifest_schema",
+            (python, "tools/validate_workbench_archive_manifest_schema.py", "--format", "json"),
+        ),
+        ValidationCommand(
             "validation_report_schema",
             (python, "tools/validate_validation_report_schema.py", "--format", "json"),
         ),

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass
 from typing import Any, Callable
 
+from well_harness.controller_adapter import GenericControllerTruthAdapter
 from well_harness.document_intake import ControlSystemIntakePacket, intake_packet_to_workbench_spec
 from well_harness.system_spec import (
     AcceptanceScenarioSpec,
@@ -12,7 +14,12 @@ from well_harness.system_spec import (
     LogicNodeSpec,
     SteadySignalSpec,
     TimedTransitionSpec,
+    workbench_spec_from_dict,
 )
+
+PLAYBACK_TRACE_KIND = "well-harness-playback-trace"
+PLAYBACK_TRACE_VERSION = 1
+PLAYBACK_TRACE_SCHEMA_ID = "https://well-harness.local/json_schema/playback_trace_v1.schema.json"
 
 
 @dataclass(frozen=True)
@@ -56,21 +63,46 @@ class ScenarioPlaybackReport:
     events: tuple[PlaybackEvent, ...]
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        return playback_report_to_dict(self)
 
 
-def _coerce_numeric(value: Any) -> float:
+def _json_safe_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: _json_safe_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe_value(item) for item in value]
+    return value
+
+
+def playback_report_to_dict(report: ScenarioPlaybackReport) -> dict[str, Any]:
+    payload = _json_safe_value(asdict(report))
+    return {
+        "$schema": PLAYBACK_TRACE_SCHEMA_ID,
+        "kind": PLAYBACK_TRACE_KIND,
+        "version": PLAYBACK_TRACE_VERSION,
+        **payload,
+    }
+
+
+def _coerce_component_value(component: ComponentSpec | None, value: Any) -> float:
     if isinstance(value, bool):
         return 1.0 if value else 0.0
     if isinstance(value, (int, float)):
         return float(value)
     if isinstance(value, str):
-        lowered = value.strip().lower()
+        stripped = value.strip()
+        lowered = stripped.lower()
         if lowered in {"1", "true", "on"}:
             return 1.0
         if lowered in {"0", "false", "off"}:
             return 0.0
-        return float(value)
+        if component is not None and stripped in component.allowed_states:
+            return float(component.allowed_states.index(stripped))
+        if stripped.endswith("%"):
+            percent_value = stripped[:-1].strip()
+            if percent_value:
+                return float(percent_value)
+        return float(stripped)
     raise ValueError(f"unsupported signal value: {value!r}")
 
 
@@ -83,7 +115,7 @@ def _component_default_value(component: ComponentSpec) -> float:
     if component.allowed_states:
         if "0" in component.allowed_states:
             return 0.0
-        return _coerce_numeric(component.allowed_states[0])
+        return _coerce_component_value(component, component.allowed_states[0])
     return 0.0
 
 
@@ -105,48 +137,73 @@ def _signal_value_at_time(
     steady_signals: dict[str, SteadySignalSpec],
     transitions: dict[str, tuple[TimedTransitionSpec, ...]],
 ) -> float:
-    baseline = _coerce_numeric(steady_signals[component.id].value) if component.id in steady_signals else _component_default_value(component)
+    baseline = (
+        _coerce_component_value(component, steady_signals[component.id].value)
+        if component.id in steady_signals
+        else _component_default_value(component)
+    )
     active_value = baseline
     for transition in transitions.get(component.id, ()):
         if time_s < transition.start_s:
             return active_value
         if transition.start_s == transition.end_s:
-            active_value = _coerce_numeric(transition.end_value)
+            active_value = _coerce_component_value(component, transition.end_value)
             continue
         if transition.start_s <= time_s <= transition.end_s:
             progress = (time_s - transition.start_s) / (transition.end_s - transition.start_s)
-            return _coerce_numeric(transition.start_value) + (
-                (_coerce_numeric(transition.end_value) - _coerce_numeric(transition.start_value)) * progress
+            return _coerce_component_value(component, transition.start_value) + (
+                (
+                    _coerce_component_value(component, transition.end_value)
+                    - _coerce_component_value(component, transition.start_value)
+                )
+                * progress
             )
-        active_value = _coerce_numeric(transition.end_value)
+        active_value = _coerce_component_value(component, transition.end_value)
     return active_value
 
 
-def _evaluate_condition(condition: LogicConditionSpec, signal_values: dict[str, float]) -> bool:
+def _evaluate_condition(
+    condition: LogicConditionSpec,
+    signal_values: dict[str, float],
+    components: dict[str, ComponentSpec],
+) -> bool:
     current_value = signal_values.get(condition.source_component_id, 0.0)
     threshold_value = condition.threshold_value
-    if condition.comparison == "==":
-        return current_value == _coerce_numeric(threshold_value)
-    if condition.comparison == "!=":
-        return current_value != _coerce_numeric(threshold_value)
-    if condition.comparison == ">=":
-        return current_value >= _coerce_numeric(threshold_value)
-    if condition.comparison == "<=":
-        return current_value <= _coerce_numeric(threshold_value)
-    if condition.comparison == ">":
-        return current_value > _coerce_numeric(threshold_value)
-    if condition.comparison == "<":
-        return current_value < _coerce_numeric(threshold_value)
+    source_component = components.get(condition.source_component_id)
+
+    def resolve_threshold(value: Any) -> float:
+        if isinstance(value, str) and value in signal_values and value in components:
+            return signal_values[value]
+        return _coerce_component_value(source_component, value)
+
     if condition.comparison == "between_exclusive":
         lower, upper = threshold_value
-        return current_value > _coerce_numeric(lower) and current_value < _coerce_numeric(upper)
+        return current_value > resolve_threshold(lower) and current_value < resolve_threshold(upper)
+
+    resolved_threshold_value = resolve_threshold(threshold_value)
+    if condition.comparison == "==":
+        return current_value == resolved_threshold_value
+    if condition.comparison == "!=":
+        return current_value != resolved_threshold_value
+    if condition.comparison == ">=":
+        return current_value >= resolved_threshold_value
+    if condition.comparison == "<=":
+        return current_value <= resolved_threshold_value
+    if condition.comparison == ">":
+        return current_value > resolved_threshold_value
+    if condition.comparison == "<":
+        return current_value < resolved_threshold_value
     if condition.comparison == "after_unlock":
-        return current_value >= _coerce_numeric(threshold_value)
+        return current_value >= resolved_threshold_value
     return False
 
 
-def _logic_active(logic_node: LogicNodeSpec, signal_values: dict[str, float]) -> bool:
-    return all(_evaluate_condition(condition, signal_values) for condition in logic_node.conditions)
+def _logic_active(
+    logic_node: LogicNodeSpec,
+    signal_values: dict[str, float],
+    components: dict[str, ComponentSpec],
+) -> bool:
+    return all(_evaluate_condition(condition, signal_values, components) for condition in logic_node.conditions)
 
 
 def _active_output_value(component: ComponentSpec, active: bool) -> float:
@@ -154,10 +211,10 @@ def _active_output_value(component: ComponentSpec, active: bool) -> float:
         if active:
             if "1" in component.allowed_states:
                 return 1.0
-            return _coerce_numeric(component.allowed_states[-1])
+            return _coerce_component_value(component, component.allowed_states[-1])
         if "0" in component.allowed_states:
             return 0.0
-        return _coerce_numeric(component.allowed_states[0])
+        return _coerce_component_value(component, component.allowed_states[0])
     if component.allowed_range is not None:
         lower, upper = component.allowed_range
         if active:
@@ -175,6 +232,44 @@ def _sample_times(total_duration_s: float, sample_period_s: float) -> tuple[floa
     if samples[-1] != final_value:
         samples.append(final_value)
     return tuple(samples)
+
+
+_COMPLETION_CLAUSE_PATTERN = re.compile(r"^(?P<component>[A-Za-z0-9_.-]+)\s*(?P<operator>==|!=|>=|<=|>|<)\s*(?P<value>.+)$")
+
+
+def _completion_condition_reached(
+    completion_condition: str,
+    component_values: dict[str, float],
+    components: dict[str, ComponentSpec],
+) -> bool:
+    clauses = [clause.strip() for clause in completion_condition.split(" and ") if clause.strip()]
+    if not clauses:
+        return False
+
+    for clause in clauses:
+        match = _COMPLETION_CLAUSE_PATTERN.match(clause)
+        if match is None:
+            return False
+        component_id = match.group("component")
+        operator = match.group("operator")
+        value_text = match.group("value").strip()
+        if component_id not in component_values:
+            return False
+        current_value = component_values[component_id]
+        threshold_value = _coerce_component_value(components.get(component_id), value_text)
+        if operator == "==" and current_value != threshold_value:
+            return False
+        if operator == "!=" and current_value == threshold_value:
+            return False
+        if operator == ">=" and current_value < threshold_value:
+            return False
+        if operator == "<=" and current_value > threshold_value:
+            return False
+        if operator == ">" and current_value <= threshold_value:
+            return False
+        if operator == "<" and current_value >= threshold_value:
+            return False
+    return True
 
 
 def _scenario_by_id(spec: ControlSystemWorkbenchSpec, scenario_id: str) -> AcceptanceScenarioSpec:
@@ -242,7 +337,7 @@ def build_scenario_playback_report(
         logic_states: dict[str, bool] = {}
         for _ in range(len(logic_nodes) + 1):
             next_logic_states = {
-                logic_id: _logic_active(logic_node, component_values)
+                logic_id: _logic_active(logic_node, component_values, components)
                 for logic_id, logic_node in logic_nodes.items()
             }
             next_values = dict(base_component_values)
@@ -331,12 +426,11 @@ def build_scenario_playback_report(
         )
         for logic_id, logic_node in logic_nodes.items()
     )
-    completion_reached = False
-    if "==" in scenario.completion_condition:
-        component_id, value_text = scenario.completion_condition.split("==", 1)
-        completion_signal_id = component_id.strip()
-        if completion_signal_id in previous_component_values:
-            completion_reached = previous_component_values[completion_signal_id] == _coerce_numeric(value_text.strip())
+    completion_reached = _completion_condition_reached(
+        scenario.completion_condition,
+        previous_component_values,
+        components,
+    )
 
     return ScenarioPlaybackReport(
         system_id=spec.system_id,
@@ -363,6 +457,19 @@ def build_playback_report_from_intake_packet(
 ) -> ScenarioPlaybackReport:
     return build_scenario_playback_report(
         intake_packet_to_workbench_spec(packet),
+        scenario_id=scenario_id,
+        sample_period_s=sample_period_s,
+    )
+
+
+def build_playback_report_from_truth_adapter(
+    adapter: GenericControllerTruthAdapter,
+    *,
+    scenario_id: str,
+    sample_period_s: float = 0.5,
+) -> ScenarioPlaybackReport:
+    return build_scenario_playback_report(
+        workbench_spec_from_dict(adapter.load_spec()),
         scenario_id=scenario_id,
         sample_period_s=sample_period_s,
     )

@@ -41,6 +41,12 @@ class MixedDocumentIntakeTests(unittest.TestCase):
         self.assertEqual(report["blocking_reasons"], [])
         self.assertEqual(report["unanswered_clarifications"], [])
         self.assertIn("generated_workbench_spec", report)
+        self.assertEqual(
+            "https://well-harness.local/json_schema/control_system_spec_v1.schema.json",
+            report["generated_workbench_spec"]["$schema"],
+        )
+        self.assertEqual("well-harness-control-system-spec", report["generated_workbench_spec"]["kind"])
+        self.assertEqual(1, report["generated_workbench_spec"]["version"])
         self.assertEqual(report["generated_workbench_spec"]["system_id"], "custom_reverse_control_v1")
         brief = build_clarification_brief(packet)
         self.assertEqual("ready", brief["gate_status"])
@@ -193,6 +199,23 @@ class MixedDocumentIntakeTests(unittest.TestCase):
         self.assertEqual("blocked_by_clarifications", brief["gate_status"])
         self.assertEqual(2, brief["open_question_count"])
 
+    def test_intake_packet_rejects_unknown_fault_kind(self):
+        payload = intake_template_payload()
+        payload["fault_modes"] = [
+            {
+                "id": "fault_x",
+                "target_component_id": "signal_id",
+                "fault_kind": "mystery_fault",
+                "symptom": "Unknown failure semantics.",
+                "reasoning_scope_component_ids": ["signal_id"],
+                "expected_diagnostic_sections": ["symptoms"],
+                "optimization_prompt": "Clarify the supported taxonomy first.",
+            }
+        ]
+
+        with self.assertRaisesRegex(ValueError, "fault_kind must be one of"):
+            intake_packet_from_dict(payload)
+
     def test_cli_can_export_reference_spec_json(self):
         buffer = io.StringIO()
         with redirect_stdout(buffer):
@@ -200,6 +223,12 @@ class MixedDocumentIntakeTests(unittest.TestCase):
         payload = json.loads(buffer.getvalue())
 
         self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            payload["$schema"],
+            "https://well-harness.local/json_schema/control_system_spec_v1.schema.json",
+        )
+        self.assertEqual(payload["kind"], "well-harness-control-system-spec")
+        self.assertEqual(payload["version"], 1)
         self.assertEqual(payload["system_id"], "reference_thrust_reverser_deploy")
         self.assertEqual(payload["source_of_truth"], "src/well_harness/controller.py")
 

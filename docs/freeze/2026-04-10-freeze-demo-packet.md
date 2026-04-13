@@ -3,17 +3,17 @@
 <!-- AUTO-SYNCED REPO FREEZE PACKET SNAPSHOT START -->
 ## 当前自动同步冻结摘要
 
-- 当前阶段：`P7 Build A Spec-Driven Control Analysis Workbench`
-- 当前已验证 Plan：`P7-44 Expose Manifest File Map In CLI JSON`
-- 最近成功执行证据：`P7-44 expose manifest file map in CLI JSON`
+- 当前阶段：`P8 Runtime Generalization Proof`
+- 当前已验证 Plan：`P8-06 Add A Two-System Adapter-Backed Runtime Comparison Report`
+- 最近成功执行证据：`P8-06 two-system adapter-backed runtime comparison proof`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
 - 当前证据模式：`active-page degraded mode`
 - 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
-- 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
-- 当前运行摘要：`Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
-- 当前冻结包继续作为稳定 demo/reference baseline；当前工程主线已转向 P7 workbench 扩展。
+- 当前 QA 摘要：`PASS. 271 tests OK and 8/8 shared validation checks pass.`
+- 当前运行摘要：`Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: 271 tests OK and 8/8 shared validation checks pass.`
+- 当前冻结包继续作为稳定 demo/reference baseline；当前工程主线已转向 P8 runtime generalization proof。
 
 ## 当前冻结入口
 

@@ -3,9 +3,20 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any, Callable
 
+from well_harness.controller_adapter import GenericControllerTruthAdapter
 from well_harness.document_intake import ControlSystemIntakePacket, intake_packet_to_workbench_spec
-from well_harness.scenario_playback import PlaybackSeries, ScenarioPlaybackReport, build_scenario_playback_report
-from well_harness.system_spec import ComponentSpec, ControlSystemWorkbenchSpec, FaultModeSpec
+from well_harness.fault_taxonomy import validate_fault_kind
+from well_harness.scenario_playback import (
+    PlaybackSeries,
+    ScenarioPlaybackReport,
+    build_scenario_playback_report,
+    playback_report_to_dict,
+)
+from well_harness.system_spec import ComponentSpec, ControlSystemWorkbenchSpec, FaultModeSpec, workbench_spec_from_dict
+
+FAULT_DIAGNOSIS_KIND = "well-harness-fault-diagnosis"
+FAULT_DIAGNOSIS_VERSION = 1
+FAULT_DIAGNOSIS_SCHEMA_ID = "https://well-harness.local/json_schema/fault_diagnosis_v1.schema.json"
 
 
 @dataclass(frozen=True)
@@ -43,7 +54,54 @@ class FaultDiagnosisReport:
     fault_report: ScenarioPlaybackReport
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        return fault_diagnosis_report_to_dict(self)
+def fault_diagnosis_report_to_dict(report: FaultDiagnosisReport) -> dict[str, Any]:
+    payload = {
+        "system_id": report.system_id,
+        "system_title": report.system_title,
+        "scenario_id": report.scenario_id,
+        "scenario_label": report.scenario_label,
+        "fault_mode_id": report.fault_mode_id,
+        "fault_kind": report.fault_kind,
+        "target_component_id": report.target_component_id,
+        "symptom": report.symptom,
+        "baseline_completion_reached": report.baseline_completion_reached,
+        "fault_completion_reached": report.fault_completion_reached,
+        "affected_signal_ids": list(report.affected_signal_ids),
+        "blocked_logic_node_ids": list(report.blocked_logic_node_ids),
+        "suspected_root_cause": report.suspected_root_cause,
+        "reasoning_steps": list(report.reasoning_steps),
+        "expected_sections": list(report.expected_sections),
+        "scope_observations": [asdict(item) for item in report.scope_observations],
+        "optimization_suggestion": report.optimization_suggestion,
+        "assumptions": list(report.assumptions),
+        "baseline_report": playback_report_to_dict(report.baseline_report),
+        "fault_report": playback_report_to_dict(report.fault_report),
+    }
+    return {
+        "$schema": FAULT_DIAGNOSIS_SCHEMA_ID,
+        "kind": FAULT_DIAGNOSIS_KIND,
+        "version": FAULT_DIAGNOSIS_VERSION,
+        **payload,
+    }
+
+
+def _coerce_component_state(component: ComponentSpec, value: Any) -> float:
+    if isinstance(value, bool):
+        return 1.0 if value else 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        stripped = value.strip()
+        lowered = stripped.lower()
+        if lowered in {"1", "true", "on"}:
+            return 1.0
+        if lowered in {"0", "false", "off"}:
+            return 0.0
+        if stripped in component.allowed_states:
+            return float(component.allowed_states.index(stripped))
+        return float(stripped)
+    raise ValueError(f"unsupported component state value: {value!r}")
 
 
 def _inactive_value(component: ComponentSpec) -> float:
@@ -55,7 +113,7 @@ def _inactive_value(component: ComponentSpec) -> float:
     if component.allowed_states:
         if "0" in component.allowed_states:
             return 0.0
-        return float(component.allowed_states[0])
+        return _coerce_component_state(component, component.allowed_states[0])
     return 0.0
 
 
@@ -66,7 +124,7 @@ def _active_value(component: ComponentSpec) -> float:
     if component.allowed_states:
         if "1" in component.allowed_states:
             return 1.0
-        return float(component.allowed_states[-1])
+        return _coerce_component_state(component, component.allowed_states[-1])
     return 1.0
 
 
@@ -85,12 +143,13 @@ def _fault_override(
     component: ComponentSpec,
     fault_mode: FaultModeSpec,
 ) -> tuple[Callable[[float, float, ComponentSpec], float], str]:
+    fault_kind = validate_fault_kind(fault_mode.fault_kind)
     span = None
     if component.allowed_range is not None:
         lower, upper = component.allowed_range
         span = float(upper) - float(lower)
 
-    if fault_mode.fault_kind == "bias_low":
+    if fault_kind == "bias_low":
         if span is not None and span > 0:
             shift = max(span * 0.25, 1.0)
             return (
@@ -101,7 +160,7 @@ def _fault_override(
             lambda _time_s, _baseline_value, active_component: _inactive_value(active_component),
             f"{fault_mode.target_component_id} falls back to its inactive value because no analog span is defined for bias_low.",
         )
-    if fault_mode.fault_kind == "bias_high":
+    if fault_kind == "bias_high":
         if span is not None and span > 0:
             shift = max(span * 0.25, 1.0)
             return (
@@ -112,17 +171,17 @@ def _fault_override(
             lambda _time_s, _baseline_value, active_component: _active_value(active_component),
             f"{fault_mode.target_component_id} falls back to its active value because no analog span is defined for bias_high.",
         )
-    if fault_mode.fault_kind in {"stuck_low", "open_circuit", "command_path_failure"}:
+    if fault_kind in {"stuck_low", "open_circuit", "command_path_failure"}:
         return (
             lambda _time_s, _baseline_value, active_component: _inactive_value(active_component),
-            f"{fault_mode.target_component_id} is forced to its inactive value for {fault_mode.fault_kind}.",
+            f"{fault_mode.target_component_id} is forced to its inactive value for {fault_kind}.",
         )
-    if fault_mode.fault_kind in {"stuck_high", "short_to_power"}:
+    if fault_kind in {"stuck_high", "short_to_power"}:
         return (
             lambda _time_s, _baseline_value, active_component: _active_value(active_component),
-            f"{fault_mode.target_component_id} is forced to its active value for {fault_mode.fault_kind}.",
+            f"{fault_mode.target_component_id} is forced to its active value for {fault_kind}.",
         )
-    if fault_mode.fault_kind == "latched_no_unlock":
+    if fault_kind == "latched_no_unlock":
         if span is not None and span > 0:
             margin = max(span * 0.01, 1.0)
             return (
@@ -137,7 +196,7 @@ def _fault_override(
             f"{fault_mode.target_component_id} falls back to its inactive value because no analog unlock span is defined.",
         )
     raise ValueError(
-        f"fault kind {fault_mode.fault_kind!r} is not yet supported; clarify the injection semantics before replaying diagnostics."
+        f"fault kind {fault_kind!r} is not yet supported; clarify the injection semantics before replaying diagnostics."
     )
 
 
@@ -274,6 +333,21 @@ def build_fault_diagnosis_report_from_intake_packet(
 ) -> FaultDiagnosisReport:
     return build_fault_diagnosis_report(
         intake_packet_to_workbench_spec(packet),
+        scenario_id=scenario_id,
+        fault_mode_id=fault_mode_id,
+        sample_period_s=sample_period_s,
+    )
+
+
+def build_fault_diagnosis_report_from_truth_adapter(
+    adapter: GenericControllerTruthAdapter,
+    *,
+    scenario_id: str,
+    fault_mode_id: str,
+    sample_period_s: float = 0.5,
+) -> FaultDiagnosisReport:
+    return build_fault_diagnosis_report(
+        workbench_spec_from_dict(adapter.load_spec()),
         scenario_id=scenario_id,
         fault_mode_id=fault_mode_id,
         sample_period_s=sample_period_s,

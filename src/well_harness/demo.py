@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass, replace
 from typing import Iterable
 
-from well_harness.controller import DeployController
+from well_harness.controller_adapter import build_reference_controller_adapter
 from well_harness.models import FieldChange, HarnessConfig, LogicTransitionDiagnosis, SimulationResult
 from well_harness.runner import SimulationRunner
 from well_harness.scenarios import nominal_deploy_scenario
@@ -1548,9 +1548,9 @@ def _first_logic3_time_with_threshold(
     config: HarnessConfig,
 ) -> float | None:
     proposed_config = replace(config, logic3_tra_deg_threshold=proposed_threshold)
-    controller = DeployController(proposed_config)
+    controller_adapter = build_reference_controller_adapter(proposed_config)
     for row in result.rows:
-        if controller.explain(row.resolved_inputs).logic3.active:
+        if controller_adapter.explain(row.resolved_inputs).logic3.active:
             return row.time_s
     return None
 

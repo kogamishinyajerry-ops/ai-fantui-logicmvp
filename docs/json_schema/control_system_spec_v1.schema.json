@@ -1,0 +1,441 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/control_system_spec_v1.schema.json",
+  "title": "well_harness.control_system_spec v1 JSON payload",
+  "description": "System-agnostic machine-readable schema for control-system workbench specs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "version",
+    "system_id",
+    "title",
+    "objective",
+    "source_of_truth",
+    "components",
+    "logic_nodes",
+    "acceptance_scenarios",
+    "fault_modes",
+    "onboarding_questions",
+    "knowledge_capture",
+    "tags"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/control_system_spec_v1.schema.json"
+    },
+    "kind": {
+      "const": "well-harness-control-system-spec"
+    },
+    "version": {
+      "const": 1
+    },
+    "system_id": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "title": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "objective": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "source_of_truth": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/componentSpec"
+      }
+    },
+    "logic_nodes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/logicNodeSpec"
+      }
+    },
+    "acceptance_scenarios": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/acceptanceScenarioSpec"
+      }
+    },
+    "fault_modes": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/faultModeSpec"
+      }
+    },
+    "onboarding_questions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/clarificationItemSpec"
+      }
+    },
+    "knowledge_capture": {
+      "$ref": "#/$defs/knowledgeCaptureSpec"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "scalarValue": {
+      "type": [
+        "string",
+        "number",
+        "boolean"
+      ]
+    },
+    "thresholdValue": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/scalarValue"
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/scalarValue"
+          }
+        }
+      ]
+    },
+    "faultKindValue": {
+      "type": "string",
+      "enum": [
+        "bias_low",
+        "bias_high",
+        "stuck_low",
+        "stuck_high",
+        "open_circuit",
+        "short_to_power",
+        "latched_no_unlock",
+        "command_path_failure"
+      ]
+    },
+    "componentSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "kind",
+        "state_shape",
+        "unit",
+        "description",
+        "allowed_range",
+        "allowed_states",
+        "monitor_priority"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "kind": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "state_shape": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "unit": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "description": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "allowed_range": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number"
+              }
+            }
+          ]
+        },
+        "allowed_states": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "monitor_priority": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "logicConditionSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "source_component_id",
+        "comparison",
+        "threshold_value",
+        "note"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_component_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "comparison": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "threshold_value": {
+          "$ref": "#/$defs/thresholdValue"
+        },
+        "note": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "logicNodeSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "description",
+        "conditions",
+        "downstream_component_ids",
+        "evidence_priority"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "description": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/logicConditionSpec"
+          }
+        },
+        "downstream_component_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "evidence_priority": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "timedTransitionSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "signal_id",
+        "start_s",
+        "end_s",
+        "start_value",
+        "end_value",
+        "unit",
+        "note"
+      ],
+      "properties": {
+        "signal_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "start_s": {
+          "type": "number"
+        },
+        "end_s": {
+          "type": "number"
+        },
+        "start_value": {
+          "type": "number"
+        },
+        "end_value": {
+          "type": "number"
+        },
+        "unit": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "note": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "steadySignalSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "signal_id",
+        "value",
+        "unit",
+        "note"
+      ],
+      "properties": {
+        "signal_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "value": {
+          "$ref": "#/$defs/scalarValue"
+        },
+        "unit": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "note": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "acceptanceScenarioSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "description",
+        "time_scale_factor",
+        "total_duration_s",
+        "monitored_signal_ids",
+        "transitions",
+        "completion_condition",
+        "steady_signals"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "description": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "time_scale_factor": {
+          "type": "number"
+        },
+        "total_duration_s": {
+          "type": "number"
+        },
+        "monitored_signal_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "transitions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/timedTransitionSpec"
+          }
+        },
+        "completion_condition": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "steady_signals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/steadySignalSpec"
+          }
+        }
+      }
+    },
+    "faultModeSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "target_component_id",
+        "fault_kind",
+        "symptom",
+        "reasoning_scope_component_ids",
+        "expected_diagnostic_sections",
+        "optimization_prompt"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "target_component_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "fault_kind": {
+          "$ref": "#/$defs/faultKindValue"
+        },
+        "symptom": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "reasoning_scope_component_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "expected_diagnostic_sections": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "optimization_prompt": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "clarificationItemSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "prompt",
+        "rationale",
+        "required_for"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "prompt": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "rationale": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "required_for": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "knowledgeCaptureSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "incident_fields",
+        "resolution_fields",
+        "optimization_fields"
+      ],
+      "properties": {
+        "incident_fields": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "resolution_fields": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "optimization_fields": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    }
+  }
+}

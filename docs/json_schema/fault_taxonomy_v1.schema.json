@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/fault_taxonomy_v1.schema.json",
+  "title": "well_harness fault taxonomy v1",
+  "description": "Published reusable taxonomy for supported control-system fault kinds.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "version",
+    "fault_kinds"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/fault_taxonomy_v1.schema.json"
+    },
+    "kind": {
+      "const": "well-harness-fault-taxonomy"
+    },
+    "version": {
+      "const": 1
+    },
+    "fault_kinds": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/faultKindEntry"
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "faultKindEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fault_kind",
+        "category",
+        "label",
+        "description",
+        "default_effect"
+      ],
+      "properties": {
+        "fault_kind": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "category": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "description": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "default_effect": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  }
+}

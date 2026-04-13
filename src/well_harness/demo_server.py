@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from well_harness.demo import answer_demo_prompt, demo_answer_to_payload
-from well_harness.controller import DeployController
+from well_harness.controller_adapter import build_reference_controller_adapter
 from well_harness.document_intake import (
     apply_safe_schema_repairs,
     assess_intake_packet,
@@ -22,7 +22,12 @@ from well_harness.document_intake import (
 from well_harness.models import HarnessConfig, PilotInputs, ResolvedInputs
 from well_harness.plant import PlantState, SimplifiedDeployPlant
 from well_harness.switches import LatchedThrottleSwitches, SwitchState
-from well_harness.workbench_bundle import archive_workbench_bundle, build_workbench_bundle
+from well_harness.workbench_bundle import (
+    archive_workbench_bundle,
+    build_workbench_bundle,
+    load_workbench_archive_manifest,
+    load_workbench_archive_restore_payload,
+)
 
 
 STATIC_DIR = Path(__file__).with_name("static")
@@ -40,6 +45,8 @@ MONITOR_TIMELINE_PATH = "/api/monitor-timeline"
 WORKBENCH_BOOTSTRAP_PATH = "/api/workbench/bootstrap"
 WORKBENCH_BUNDLE_PATH = "/api/workbench/bundle"
 WORKBENCH_REPAIR_PATH = "/api/workbench/repair"
+WORKBENCH_ARCHIVE_RESTORE_PATH = "/api/workbench/archive-restore"
+WORKBENCH_RECENT_ARCHIVES_PATH = "/api/workbench/recent-archives"
 MONITOR_RA_START_FT = 7.0
 MONITOR_RA_RATE_FT_PER_S = 1.0
 MONITOR_TRA_START_S = 1.0
@@ -90,6 +97,9 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if parsed.path == WORKBENCH_BOOTSTRAP_PATH:
             self._send_json(200, workbench_bootstrap_payload())
             return
+        if parsed.path == WORKBENCH_RECENT_ARCHIVES_PATH:
+            self._send_json(200, workbench_recent_archives_payload())
+            return
 
         if parsed.path in ("", "/", "/demo.html"):
             self._serve_static("demo.html")
@@ -104,7 +114,13 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
-        if parsed.path not in {"/api/demo", "/api/lever-snapshot", WORKBENCH_BUNDLE_PATH, WORKBENCH_REPAIR_PATH}:
+        if parsed.path not in {
+            "/api/demo",
+            "/api/lever-snapshot",
+            WORKBENCH_BUNDLE_PATH,
+            WORKBENCH_REPAIR_PATH,
+            WORKBENCH_ARCHIVE_RESTORE_PATH,
+        }:
             self._send_json(404, {"error": "not_found"})
             return
 
@@ -141,6 +157,13 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == WORKBENCH_REPAIR_PATH:
             response_payload, error_payload = build_workbench_safe_repair_response(request_payload)
+            if error_payload is not None:
+                self._send_json(400, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+        if parsed.path == WORKBENCH_ARCHIVE_RESTORE_PATH:
+            response_payload, error_payload = build_workbench_archive_restore_response(request_payload)
             if error_payload is not None:
                 self._send_json(400, error_payload)
                 return
@@ -281,11 +304,64 @@ def reference_workbench_packet_payload() -> dict:
     return json.loads(REFERENCE_PACKET_PATH.read_text(encoding="utf-8"))
 
 
+def recent_workbench_archive_summaries(*, limit: int = 6) -> list[dict]:
+    archive_root = default_workbench_archive_root()
+    if not archive_root.is_dir():
+        return []
+
+    summaries: list[dict] = []
+    for archive_dir in archive_root.iterdir():
+        if not archive_dir.is_dir():
+            continue
+        manifest_path = archive_dir / "archive_manifest.json"
+        if not manifest_path.is_file():
+            continue
+        try:
+            manifest = load_workbench_archive_manifest(manifest_path)
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+
+        bundle = manifest.get("bundle") if isinstance(manifest.get("bundle"), dict) else {}
+        files = manifest.get("files") if isinstance(manifest.get("files"), dict) else {}
+        summaries.append(
+            {
+                "archive_dir": str(archive_dir.resolve()),
+                "manifest_path": str(manifest_path.resolve()),
+                "created_at_utc": manifest.get("created_at_utc"),
+                "system_id": bundle.get("system_id"),
+                "system_title": bundle.get("system_title"),
+                "bundle_kind": bundle.get("bundle_kind"),
+                "ready_for_spec_build": bundle.get("ready_for_spec_build"),
+                "selected_scenario_id": bundle.get("selected_scenario_id"),
+                "selected_fault_mode_id": bundle.get("selected_fault_mode_id"),
+                "has_workspace_handoff": files.get("workspace_handoff_json") is not None,
+                "has_workspace_snapshot": files.get("workspace_snapshot_json") is not None,
+            }
+        )
+
+    summaries.sort(
+        key=lambda item: (
+            str(item.get("created_at_utc") or ""),
+            str(item.get("archive_dir") or ""),
+        ),
+        reverse=True,
+    )
+    return summaries[:limit]
+
+
 def workbench_bootstrap_payload() -> dict:
     return {
         "template_packet": intake_template_payload(),
         "reference_packet": reference_workbench_packet_payload(),
         "default_archive_root": str(default_workbench_archive_root()),
+        "recent_archives": recent_workbench_archive_summaries(),
+    }
+
+
+def workbench_recent_archives_payload() -> dict:
+    return {
+        "default_archive_root": str(default_workbench_archive_root()),
+        "recent_archives": recent_workbench_archive_summaries(),
     }
 
 
@@ -502,6 +578,36 @@ def build_workbench_safe_repair_response(request_payload: dict) -> tuple[dict | 
     }, None
 
 
+def build_workbench_archive_restore_response(request_payload: dict) -> tuple[dict | None, dict | None]:
+    manifest_path, error_payload = _optional_request_str(request_payload, "manifest_path")
+    if error_payload is not None:
+        return None, error_payload
+    if manifest_path is None:
+        return None, {
+            "error": "invalid_workbench_request",
+            "field": "manifest_path",
+            "message": "manifest_path must be a non-empty string.",
+        }
+
+    try:
+        restore_payload = load_workbench_archive_restore_payload(manifest_path)
+    except FileNotFoundError as exc:
+        return None, {
+            "error": "workbench_archive_not_found",
+            "field": "manifest_path",
+            "message": str(exc),
+        }
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        return None, {
+            "error": "invalid_workbench_archive",
+            "field": "manifest_path",
+            "message": str(exc),
+        }
+
+    restore_payload["default_archive_root"] = str(default_workbench_archive_root())
+    return restore_payload, None
+
+
 def _canonical_pullback_sequence(tra_deg: float, config: HarnessConfig) -> list[float]:
     """Return a tiny canonical pullback path for the interactive UI scrubber."""
     target = _clamp_tra(tra_deg, config)
@@ -640,7 +746,7 @@ def _simulate_lever_state(
     feedback_mode: str,
     deploy_position_percent: float,
 ) -> dict:
-    controller = DeployController(config)
+    controller_adapter = build_reference_controller_adapter(config)
     switches = LatchedThrottleSwitches(config)
     plant = SimplifiedDeployPlant(config)
     switch_state = SwitchState(previous_tra_deg=0.0)
@@ -677,7 +783,7 @@ def _simulate_lever_state(
             reverser_fully_deployed_eec=sensors.reverser_fully_deployed_eec,
             deploy_90_percent_vdt=sensors.deploy_90_percent_vdt,
         )
-        outputs, explain = controller.evaluate_with_explain(resolved_inputs)
+        outputs, explain = controller_adapter.evaluate_with_explain(resolved_inputs)
         snapshot = {
             "time_s": round(tick * config.step_s, 3),
             "plant_state": plant_state,
@@ -718,8 +824,8 @@ def _simulate_lever_state(
             reverser_fully_deployed_eec=sensors.reverser_fully_deployed_eec,
             deploy_90_percent_vdt=sensors.deploy_90_percent_vdt,
         )
-        controller = DeployController(config)
-        outputs, explain = controller.evaluate_with_explain(inputs)
+        controller_adapter = build_reference_controller_adapter(config)
+        outputs, explain = controller_adapter.evaluate_with_explain(inputs)
         snapshot.update(
             {
                 "plant_state": manual_plant_state,
@@ -821,7 +927,7 @@ def _monitor_transition_time(rows: list[dict], field_name: str, target_value) ->
 
 
 def _monitor_rows(config: HarnessConfig) -> list[dict]:
-    controller = DeployController(config)
+    controller_adapter = build_reference_controller_adapter(config)
     switches = LatchedThrottleSwitches(config)
     switch_state = SwitchState(previous_tra_deg=0.0)
     tls_powered_s = 0.0
@@ -855,7 +961,7 @@ def _monitor_rows(config: HarnessConfig) -> list[dict]:
             reverser_fully_deployed_eec=vdt_percent >= 100.0,
             deploy_90_percent_vdt=vdt_percent >= config.deploy_90_threshold_percent,
         )
-        outputs, explain = controller.evaluate_with_explain(inputs)
+        outputs, explain = controller_adapter.evaluate_with_explain(inputs)
 
         rows.append(
             {

@@ -1,12 +1,15 @@
 const workbenchBootstrapPath = "/api/workbench/bootstrap";
 const workbenchBundlePath = "/api/workbench/bundle";
 const workbenchRepairPath = "/api/workbench/repair";
+const workbenchArchiveRestorePath = "/api/workbench/archive-restore";
+const workbenchRecentArchivesPath = "/api/workbench/recent-archives";
 const workbenchPacketWorkspaceStorageKey = "well-harness-workbench-packet-workspace-v1";
 const workbenchPersistedFieldIds = [
   "workbench-scenario-id",
   "workbench-fault-mode-id",
   "workbench-sample-period",
   "workbench-archive-toggle",
+  "workbench-archive-manifest-path",
   "workbench-handoff-note",
   "workbench-observed-symptoms",
   "workbench-evidence-links",
@@ -32,6 +35,7 @@ const defaultReferenceResolution = {
 let bootstrapPayload = null;
 let latestWorkbenchRequestId = 0;
 let currentWorkbenchRunLabel = "手动生成";
+let workbenchRecentArchives = [];
 let workbenchRunHistory = [];
 let selectedWorkbenchHistoryId = "";
 let workbenchHistorySequence = 0;
@@ -116,6 +120,182 @@ function shortPath(path) {
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function normalizeRecentWorkbenchArchiveEntries(entries) {
+  if (!Array.isArray(entries)) {
+    return [];
+  }
+  return entries
+    .filter((entry) => entry && typeof entry === "object")
+    .map((entry) => ({
+      archive_dir: typeof entry.archive_dir === "string" ? entry.archive_dir : "",
+      manifest_path: typeof entry.manifest_path === "string" ? entry.manifest_path : "",
+      created_at_utc: typeof entry.created_at_utc === "string" ? entry.created_at_utc : "",
+      system_id: typeof entry.system_id === "string" ? entry.system_id : "unknown_system",
+      system_title: typeof entry.system_title === "string" ? entry.system_title : "",
+      bundle_kind: typeof entry.bundle_kind === "string" ? entry.bundle_kind : "",
+      ready_for_spec_build: Boolean(entry.ready_for_spec_build),
+      selected_scenario_id: typeof entry.selected_scenario_id === "string" ? entry.selected_scenario_id : "",
+      selected_fault_mode_id: typeof entry.selected_fault_mode_id === "string" ? entry.selected_fault_mode_id : "",
+      has_workspace_handoff: Boolean(entry.has_workspace_handoff),
+      has_workspace_snapshot: Boolean(entry.has_workspace_snapshot),
+    }))
+    .filter((entry) => entry.manifest_path || entry.archive_dir);
+}
+
+function summarizeRecentWorkbenchArchive(entry) {
+  const state = entry.ready_for_spec_build ? "ready" : "blocked";
+  const scenario = entry.selected_scenario_id || "未选 scenario";
+  const faultMode = entry.selected_fault_mode_id || "未选 fault mode";
+  const workspace = entry.has_workspace_snapshot
+    ? "带工作区快照"
+    : (entry.has_workspace_handoff ? "仅带交接摘要" : "仅带 bundle");
+  return {
+    badge: state === "ready" ? "可恢复 / ready" : "可恢复 / blocked",
+    summary: `${scenario} / ${faultMode}`,
+    detail: `${workspace} / ${shortPath(entry.archive_dir || entry.manifest_path)}`,
+  };
+}
+
+function buildRecentWorkbenchArchiveEntryFromBundlePayload(payload) {
+  const archive = payload && payload.archive ? payload.archive : null;
+  const bundle = payload && payload.bundle ? payload.bundle : {};
+  if (!archive) {
+    return null;
+  }
+  return {
+    archive_dir: archive.archive_dir || "",
+    manifest_path: archive.manifest_json_path || "",
+    created_at_utc: archive.created_at_utc || "",
+    system_id: bundle.system_id || "unknown_system",
+    system_title: bundle.system_title || "",
+    bundle_kind: bundle.bundle_kind || "",
+    ready_for_spec_build: Boolean(bundle.ready_for_spec_build),
+    selected_scenario_id: bundle.selected_scenario_id || "",
+    selected_fault_mode_id: bundle.selected_fault_mode_id || "",
+    has_workspace_handoff: Boolean(archive.workspace_handoff_json_path),
+    has_workspace_snapshot: Boolean(archive.workspace_snapshot_json_path),
+  };
+}
+
+function buildRecentWorkbenchArchiveEntryFromRestorePayload(payload) {
+  const bundle = payload && payload.bundle ? payload.bundle : {};
+  const manifest = payload && payload.manifest ? payload.manifest : {};
+  const files = manifest && typeof manifest.files === "object" ? manifest.files : {};
+  return {
+    archive_dir: payload.archive_dir || "",
+    manifest_path: payload.manifest_path || "",
+    created_at_utc: typeof manifest.created_at_utc === "string" ? manifest.created_at_utc : "",
+    system_id: bundle.system_id || "unknown_system",
+    system_title: bundle.system_title || "",
+    bundle_kind: bundle.bundle_kind || "",
+    ready_for_spec_build: Boolean(bundle.ready_for_spec_build),
+    selected_scenario_id: bundle.selected_scenario_id || "",
+    selected_fault_mode_id: bundle.selected_fault_mode_id || "",
+    has_workspace_handoff: Boolean(files.workspace_handoff_json),
+    has_workspace_snapshot: Boolean(files.workspace_snapshot_json),
+  };
+}
+
+function upsertRecentWorkbenchArchiveEntry(entry) {
+  if (!entry || (!entry.manifest_path && !entry.archive_dir)) {
+    return;
+  }
+  const dedupeKey = entry.manifest_path || entry.archive_dir;
+  workbenchRecentArchives = [
+    entry,
+    ...workbenchRecentArchives.filter((item) => (item.manifest_path || item.archive_dir) !== dedupeKey),
+  ].slice(0, 6);
+  renderRecentWorkbenchArchives();
+}
+
+function renderRecentWorkbenchArchives() {
+  const container = workbenchElement("workbench-recent-archives-list");
+  const summaryElement = workbenchElement("workbench-recent-archives-summary");
+  if (!workbenchRecentArchives.length) {
+    summaryElement.textContent = "这里会列出最近成功生成的 archive；你可以直接点“恢复这个 Archive”，不用再自己查本地路径。";
+    container.replaceChildren((() => {
+      const card = document.createElement("article");
+      card.className = "workbench-history-card is-empty";
+      const title = document.createElement("strong");
+      title.textContent = "暂无最近 Archive";
+      const detail = document.createElement("p");
+      detail.textContent = "等你先生成一份 archive，或把已有 archive 放到默认目录后，这里就会出现可恢复列表。";
+      card.append(title, detail);
+      return card;
+    })());
+    return;
+  }
+
+  summaryElement.textContent = "这些 archive 都来自默认 archive root；点卡片就会自动把它恢复回当前 workbench。";
+  container.replaceChildren(...workbenchRecentArchives.map((entry) => {
+    const card = document.createElement("article");
+    card.className = "workbench-history-card";
+
+    const meta = document.createElement("div");
+    meta.className = "workbench-history-meta";
+
+    const systemChip = document.createElement("span");
+    systemChip.className = "workbench-history-chip";
+    systemChip.textContent = entry.system_id || "unknown_system";
+
+    const stateChip = document.createElement("span");
+    stateChip.className = "workbench-history-chip";
+    stateChip.dataset.state = entry.ready_for_spec_build ? "ready" : "blocked";
+    stateChip.textContent = entry.ready_for_spec_build ? "ready" : "blocked";
+
+    const workspaceChip = document.createElement("span");
+    workspaceChip.className = "workbench-history-chip";
+    workspaceChip.textContent = entry.has_workspace_snapshot
+      ? "workspace"
+      : (entry.has_workspace_handoff ? "handoff" : "bundle");
+
+    meta.append(systemChip, stateChip, workspaceChip);
+
+    const title = document.createElement("strong");
+    title.textContent = entry.system_title
+      ? `${entry.system_id} - ${entry.system_title}`
+      : entry.system_id;
+
+    const summary = summarizeRecentWorkbenchArchive(entry);
+    const summaryText = document.createElement("p");
+    summaryText.textContent = `${summary.badge} / ${summary.summary}`;
+
+    const detail = document.createElement("p");
+    detail.textContent = `${summary.detail} / ${entry.created_at_utc || "时间未知"}`;
+
+    const action = document.createElement("button");
+    action.type = "button";
+    action.className = "workbench-history-return-button workbench-recent-archive-action";
+    action.textContent = "恢复这个 Archive";
+    action.addEventListener("click", () => {
+      workbenchElement("workbench-archive-manifest-path").value = entry.archive_dir || entry.manifest_path;
+      void restoreWorkbenchArchiveFromManifest();
+    });
+
+    card.append(meta, title, summaryText, detail, action);
+    return card;
+  }));
+}
+
+async function refreshRecentWorkbenchArchives() {
+  setRequestStatus("正在刷新最近 archive 列表...", "neutral");
+  try {
+    const response = await fetch(workbenchRecentArchivesPath, {method: "GET"});
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload.error || "recent archives request failed");
+    }
+    workbenchRecentArchives = normalizeRecentWorkbenchArchiveEntries(payload.recent_archives);
+    renderRecentWorkbenchArchives();
+    if (payload.default_archive_root) {
+      workbenchElement("default-archive-root").textContent = payload.default_archive_root;
+    }
+    setRequestStatus("最近 archive 列表已刷新。", "success");
+  } catch (error) {
+    setRequestStatus(`刷新最近 archive 列表失败：${String(error.message || error)}`, "error");
+  }
 }
 
 function workbenchBrowserStorage() {
@@ -1751,6 +1931,83 @@ async function importWorkbenchWorkspaceSnapshot(file) {
   }
 }
 
+function archivePayloadFromRestoreResponse(payload) {
+  const resolvedFiles = payload && typeof payload.resolved_files === "object" ? payload.resolved_files : {};
+  return {
+    archive_dir: payload.archive_dir || "",
+    manifest_json_path: payload.manifest_path || "",
+    bundle_json_path: resolvedFiles.bundle_json || null,
+    summary_markdown_path: resolvedFiles.summary_markdown || null,
+    intake_assessment_json_path: resolvedFiles.intake_assessment_json || null,
+    clarification_brief_json_path: resolvedFiles.clarification_brief_json || null,
+    playback_report_json_path: resolvedFiles.playback_report_json || null,
+    fault_diagnosis_report_json_path: resolvedFiles.fault_diagnosis_report_json || null,
+    knowledge_artifact_json_path: resolvedFiles.knowledge_artifact_json || null,
+    workspace_handoff_json_path: resolvedFiles.workspace_handoff_json || null,
+    workspace_snapshot_json_path: resolvedFiles.workspace_snapshot_json || null,
+  };
+}
+
+async function restoreWorkbenchArchiveFromManifest() {
+  const requestId = beginWorkbenchRequest();
+  const manifestPath = workbenchElement("workbench-archive-manifest-path").value.trim();
+  if (!manifestPath) {
+    setRequestStatus("请先填写 archive_manifest.json 或 archive 目录路径。", "warning");
+    return;
+  }
+
+  setActiveWorkbenchPreset("");
+  setRequestStatus("正在从 archive 恢复工作区...", "neutral");
+  try {
+    const response = await fetch(workbenchArchiveRestorePath, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({manifest_path: manifestPath}),
+    });
+    const payload = await response.json();
+    if (!isLatestWorkbenchRequest(requestId)) {
+      return;
+    }
+    if (!response.ok) {
+      throw new Error(payload.message || payload.error || "workbench archive restore request failed");
+    }
+
+    workbenchElement("workbench-archive-manifest-path").value = payload.archive_dir || payload.manifest_path || manifestPath;
+    upsertRecentWorkbenchArchiveEntry(buildRecentWorkbenchArchiveEntryFromRestorePayload(payload));
+    const sourceMode = `当前来源：Archive 恢复 / ${shortPath(payload.manifest_path)}。`;
+    if (payload.workspace_snapshot && restoreWorkbenchPacketWorkspaceSnapshot(payload.workspace_snapshot, {
+      sourceStatusMessage: `已从 archive 恢复工作区 / ${shortPath(payload.manifest_path)}。`,
+      sourceStatusMessageWithHistory: `已从 archive 恢复工作区和结果历史 / ${shortPath(payload.manifest_path)}。`,
+      packetSourceFallback: `当前样例：已从 archive 恢复工作区 / ${shortPath(payload.manifest_path)}。`,
+      preparationMessage: "已从 archive 恢复工作区；如需确认当前输入，可以先看 packet 历史、结果历史和交接摘要。",
+      fingerprintSummary: "已从 archive 恢复工作区。你可以继续编辑、重跑 bundle，或直接沿用归档里的历史结果继续交接。",
+      successMessage: "已从 archive 恢复工作区。",
+    })) {
+      setResultMode(sourceMode);
+      return;
+    }
+
+    renderBundleResponse(
+      {
+        bundle: payload.bundle,
+        archive: archivePayloadFromRestoreResponse(payload),
+      },
+      {
+        sourceMode,
+        requestStatusMessage: payload.workspace_snapshot
+          ? "已从 archive 恢复 bundle，但工作区快照不完整；当前只恢复了结果摘要。"
+          : "已从 archive 恢复 bundle 结果。",
+        requestStatusTone: payload.workspace_snapshot ? "warning" : "success",
+      },
+    );
+  } catch (error) {
+    if (!isLatestWorkbenchRequest(requestId)) {
+      return;
+    }
+    setRequestStatus(`从 archive 恢复工作区失败：${String(error.message || error)}`, "error");
+  }
+}
+
 function maybeCaptureCurrentPacketRevision({
   title,
   summary,
@@ -2710,6 +2967,9 @@ function renderBundleResponse(payload, {
   if (pushHistory) {
     pushWorkbenchRunHistory(buildWorkbenchHistoryEntryFromPayload(payload));
   }
+  if (payload.archive) {
+    upsertRecentWorkbenchArchiveEntry(buildRecentWorkbenchArchiveEntryFromBundlePayload(payload));
+  }
   renderArchiveSummary(payload.archive);
   workbenchElement("bundle-json-output").textContent = prettyJson(payload);
   setResultMode(sourceMode);
@@ -2758,6 +3018,8 @@ async function loadBootstrapPayload() {
     throw new Error(payload.error || "bootstrap request failed");
   }
   bootstrapPayload = payload;
+  workbenchRecentArchives = normalizeRecentWorkbenchArchiveEntries(payload.recent_archives);
+  renderRecentWorkbenchArchives();
   workbenchElement("default-archive-root").textContent = payload.default_archive_root || "(unknown)";
   if (restoreWorkbenchPacketWorkspaceFromBrowser()) {
     return;
@@ -2893,6 +3155,14 @@ function installToolbarHandlers() {
 
   workbenchElement("export-workbench-workspace").addEventListener("click", () => {
     downloadWorkbenchWorkspaceSnapshot();
+  });
+
+  workbenchElement("restore-workbench-archive").addEventListener("click", () => {
+    void restoreWorkbenchArchiveFromManifest();
+  });
+
+  workbenchElement("refresh-workbench-recent-archives").addEventListener("click", () => {
+    void refreshRecentWorkbenchArchives();
   });
 
   workbenchElement("copy-workbench-handoff-brief").addEventListener("click", () => {

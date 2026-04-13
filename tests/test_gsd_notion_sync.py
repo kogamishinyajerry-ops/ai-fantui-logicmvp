@@ -860,6 +860,8 @@ Ran 189 tests in 20.897s
         self.assertIn("文档定位", joined)
         self.assertIn("五层架构", joined)
         self.assertIn("当前开发架构与执行规则", joined)
+        self.assertIn("`runner.py` / `SimulationRunner`", joined)
+        self.assertIn("FlyByWire / A320", joined)
         self.assertIn("`gsd_notion_sync.py run` 写回", joined)
         self.assertIn("control-plane gap / blocker", joined)
         self.assertIn("实时证据入口", joined)
@@ -1130,6 +1132,7 @@ Ran 189 tests in 20.897s
         self.assertIn("GitHub GSD automation 24238846145", joined)
         self.assertIn("当前无需手动触发 Opus 4.6。", joined)
         self.assertIn("当前开发架构与执行规则", joined)
+        self.assertIn("adapter interface", joined)
         self.assertIn("prepare-opus-review", joined)
 
     def test_render_status_page_blocks_switch_to_workbench_guidance_for_p7(self):
@@ -1215,6 +1218,7 @@ Ran 189 tests in 20.897s
         self.assertIn("当前无需手动触发 Opus 4.6", text)
         self.assertIn("当前证据模式：`shared-database live mode`", text)
         self.assertIn("## 当前开发架构与执行规则", text)
+        self.assertIn("FlyByWire / A320", text)
         self.assertIn("`prepare-opus-review`", text)
 
     def test_render_repo_coordination_plan_markdown_includes_fallback_evidence_note(self):
@@ -1323,6 +1327,7 @@ Ran 189 tests in 20.897s
 
         self.assertIn("## 当前开发架构与执行规则", text)
         self.assertIn("`gsd_notion_sync.py run` 写回", text)
+        self.assertIn("adapter interface", text)
         self.assertIn("Notion 写回降级、部分失败或超时都应被当成 control-plane gap / blocker", text)
 
     def test_upsert_managed_markdown_section_replaces_existing_block(self):
@@ -2413,7 +2418,7 @@ Ran 189 tests in 20.897s
         )
         self.assertIn("Carried forward the stronger shared validation baseline", snapshot.latest_success_run_notes)
 
-    def test_build_fallback_run_snapshot_uses_compact_success_summary(self):
+    def test_build_fallback_run_snapshot_carries_forward_stronger_success_summary(self):
         results = [
             CommandResult(
                 command="python3 -m unittest discover -s tests -p test_*.py",
@@ -2466,11 +2471,12 @@ Ran 189 tests in 20.897s
         self.assertEqual("P6-07 数据库写回失败时仍推进活动页快照", fallback.latest_verified_plan)
         self.assertEqual("GitHub GSD automation 24241080590", fallback.latest_success_run)
         self.assertEqual(
-            "187 tests OK, 10 demo smoke scenarios pass, and 2/2 shared validation checks pass.",
+            "Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: "
+            "271 tests OK and 8/8 shared validation checks pass.",
             fallback.latest_success_run_notes,
         )
         self.assertEqual(
-            "PASS. 187 tests OK, 10 demo smoke scenarios pass, and 2/2 shared validation checks pass.",
+            "PASS. 271 tests OK and 8/8 shared validation checks pass.",
             fallback.latest_passing_qa_summary,
         )
 
@@ -2778,7 +2784,7 @@ Ran 189 tests in 20.897s
         payload = output_mock.call_args.args[1]
         self.assertTrue(payload["notion"]["timeout_fallback"])
         self.assertEqual(
-            "P7 Build A Spec-Driven Control Analysis Workbench / P6-15 Preserve The Stronger Validation Baseline",
+            "P8 Runtime Generalization Proof / P6-15 Preserve The Stronger Validation Baseline",
             payload["review_target"],
         )
 

@@ -1,0 +1,176 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/workbench_bundle_v1.schema.json",
+  "title": "well_harness.workbench_bundle v1 JSON payload",
+  "description": "Schema-aware wrapper for engineer-facing workbench bundles that stitch intake, clarification, playback, diagnosis, and knowledge artifacts into one handoff payload.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "version",
+    "system_id",
+    "system_title",
+    "bundle_kind",
+    "ready_for_spec_build",
+    "selected_scenario_id",
+    "selected_fault_mode_id",
+    "intake_assessment",
+    "clarification_brief",
+    "playback_report",
+    "fault_diagnosis_report",
+    "knowledge_artifact",
+    "next_actions"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/workbench_bundle_v1.schema.json"
+    },
+    "kind": {
+      "const": "well-harness-workbench-bundle"
+    },
+    "version": {
+      "const": 1
+    },
+    "system_id": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "system_title": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "bundle_kind": {
+      "type": "string",
+      "enum": [
+        "clarification_follow_up",
+        "full_workbench_bundle"
+      ]
+    },
+    "ready_for_spec_build": {
+      "type": "boolean"
+    },
+    "selected_scenario_id": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "selected_fault_mode_id": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "intake_assessment": {
+      "type": "object"
+    },
+    "clarification_brief": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object"
+        }
+      ]
+    },
+    "playback_report": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/playbackTraceEnvelope"
+        }
+      ]
+    },
+    "fault_diagnosis_report": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/faultDiagnosisEnvelope"
+        }
+      ]
+    },
+    "knowledge_artifact": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/knowledgeArtifactEnvelope"
+        }
+      ]
+    },
+    "next_actions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "playbackTraceEnvelope": {
+      "type": "object",
+      "required": [
+        "$schema",
+        "kind",
+        "version"
+      ],
+      "properties": {
+        "$schema": {
+          "const": "https://well-harness.local/json_schema/playback_trace_v1.schema.json"
+        },
+        "kind": {
+          "const": "well-harness-playback-trace"
+        },
+        "version": {
+          "const": 1
+        }
+      }
+    },
+    "faultDiagnosisEnvelope": {
+      "type": "object",
+      "required": [
+        "$schema",
+        "kind",
+        "version"
+      ],
+      "properties": {
+        "$schema": {
+          "const": "https://well-harness.local/json_schema/fault_diagnosis_v1.schema.json"
+        },
+        "kind": {
+          "const": "well-harness-fault-diagnosis"
+        },
+        "version": {
+          "const": 1
+        }
+      }
+    },
+    "knowledgeArtifactEnvelope": {
+      "type": "object",
+      "required": [
+        "$schema",
+        "kind",
+        "version"
+      ],
+      "properties": {
+        "$schema": {
+          "const": "https://well-harness.local/json_schema/knowledge_artifact_v1.schema.json"
+        },
+        "kind": {
+          "const": "well-harness-knowledge-artifact"
+        },
+        "version": {
+          "const": 1
+        }
+      }
+    }
+  }
+}

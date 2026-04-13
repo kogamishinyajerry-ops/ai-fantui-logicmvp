@@ -100,7 +100,7 @@ Exit Criteria:
 
 ## Phase P7: Build A Spec-Driven Control Analysis Workbench
 
-Status: Active
+Status: Done
 
 Goal: Add a reusable control-system specification layer that can drive strict scenario playback, fault injection, diagnosis, and knowledge capture without being locked to the current thrust-reverser chain alone.
 
@@ -111,3 +111,32 @@ Exit Criteria:
 - The system has a documented path from engineer-supplied process docs to monitor-vs-time traces, even if document adapters are phased in incrementally.
 - A fault-analysis workflow is defined that produces reproducible reasoning artifacts, records confirmed fixes, and emits post-repair optimization suggestions.
 - The onboarding path for a new control system explicitly blocks on unanswered ambiguity, instead of silently guessing at missing details.
+
+## Phase P8: Runtime Generalization Proof
+
+Status: Done
+
+Goal: Prove the generalized contract layer can host a second real control-system truth adapter without changing `controller.py` or bypassing the adapter boundary.
+
+Exit Criteria:
+
+- P7 is explicitly treated as the completed contract/schema layer, and the runtime proof work starts from that validated baseline.
+- At least one non-thrust-reverser control-system adapter publishes valid metadata and a valid control-system spec through the adapter boundary alone.
+- A minimal second system can produce deterministic truth evaluations from adapter inputs without introducing a hidden hardcoded rule path outside the adapter interface.
+- The constitution/state surfaces explicitly allow new system truth only through adapters and forbid bypassing adapters with new hardcoded truth paths.
+- Runtime validation proves the second-system adapter can be exercised safely while the reference thrust-reverser truth remains untouched.
+
+## Phase P9: Automation Hardening & Evidence Pipeline Maturity
+
+Status: Active
+
+Goal: Close the remaining manual intervention gaps in the GSD automation loop so that a plan lands on main and the Notion control plane updates automatically — with no human-initiated Notion or GitHub operations required in the happy path.
+
+Exit Criteria:
+
+- GSD automation loop completes a full cycle (plan → validate → Notion update → CI) without manual intervention.
+- Roadmap DB Phase lifecycle (register new phase, close completed phase) is automated into the GSD loop.
+- CI/CD pipeline includes three distinct stages: regression → validation → Notion sync.
+- Failed Notion sync stage does not fail the overall pipeline (writeback is non-blocking).
+- Roadmap DB shows P6=Done, P7=Done, P8=Done, P9=Active (no manual edits needed).
+- All resolvable manual touchpoints are eliminated; irreducible human-only steps are explicitly documented with degraded-mode handling.

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/controller_truth_adapter_metadata_v1.schema.json",
+  "title": "well_harness.controller_truth_adapter_metadata v1 JSON payload",
+  "description": "Published metadata contract for controller truth adapters. This documents adapter identity and source-of-truth boundaries without introducing a second control truth.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "version",
+    "adapter_id",
+    "system_id",
+    "truth_kind",
+    "source_of_truth",
+    "description"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/controller_truth_adapter_metadata_v1.schema.json"
+    },
+    "kind": {
+      "const": "well-harness-controller-truth-adapter-metadata"
+    },
+    "version": {
+      "const": 1
+    },
+    "adapter_id": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "system_id": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "truth_kind": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "source_of_truth": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "description": {
+      "$ref": "#/$defs/nonEmptyString"
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

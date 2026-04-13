@@ -17,6 +17,7 @@ from well_harness.cli import main
 from well_harness.demo import NODE_CATALOG, answer_demo_prompt
 from well_harness.demo_server import DemoRequestHandler
 from well_harness.models import HarnessConfig
+from well_harness.workbench_bundle import archive_workbench_bundle, build_workbench_bundle
 
 
 PROJECT_ROOT = Path(__file__).parents[1]
@@ -864,6 +865,13 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn("id=\"export-workbench-workspace\"", html)
         self.assertIn("id=\"workbench-workspace-file-input\"", html)
         self.assertIn("导入工作区快照", html)
+        self.assertIn("id=\"workbench-archive-manifest-path\"", html)
+        self.assertIn("id=\"restore-workbench-archive\"", html)
+        self.assertIn("从 Archive 恢复工作区", html)
+        self.assertIn("最近可恢复的 Archive", html)
+        self.assertIn("id=\"workbench-recent-archives-list\"", html)
+        self.assertIn("id=\"refresh-workbench-recent-archives\"", html)
+        self.assertIn("恢复这个 Archive", html)
         self.assertIn("工作区交接摘要", html)
         self.assertIn("id=\"workbench-handoff-badge\"", html)
         self.assertIn("id=\"workbench-handoff-system\"", html)
@@ -904,6 +912,16 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn("当前工作区交接摘要已复制。", script)
         self.assertIn("workspace_handoff: buildWorkbenchHandoffSnapshot()", script)
         self.assertIn("workspace_snapshot: collectWorkbenchPacketWorkspaceState()", script)
+        self.assertIn("workbenchArchiveRestorePath", script)
+        self.assertIn("normalizeRecentWorkbenchArchiveEntries", script)
+        self.assertIn("renderRecentWorkbenchArchives", script)
+        self.assertIn("workbenchRecentArchivesPath", script)
+        self.assertIn("refreshRecentWorkbenchArchives", script)
+        self.assertIn("upsertRecentWorkbenchArchiveEntry", script)
+        self.assertIn("buildRecentWorkbenchArchiveEntryFromBundlePayload", script)
+        self.assertIn("buildRecentWorkbenchArchiveEntryFromRestorePayload", script)
+        self.assertIn("archivePayloadFromRestoreResponse", script)
+        self.assertIn("restoreWorkbenchArchiveFromManifest", script)
         self.assertIn("archive.manifest_json_path", script)
         self.assertIn("archive.workspace_handoff_json_path", script)
         self.assertIn("archive.workspace_snapshot_json_path", script)
@@ -913,6 +931,10 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn("workspaceSnapshotDownloadName", script)
         self.assertIn("当前工作区快照已导出。", script)
         self.assertIn("已导入工作区快照和结果历史。", script)
+        self.assertIn("已从 archive 恢复工作区和结果历史", script)
+        self.assertIn("请先填写 archive_manifest.json 或 archive 目录路径。", script)
+        self.assertIn("这些 archive 都来自默认 archive root；点卡片就会自动把它恢复回当前 workbench。", script)
+        self.assertIn("最近 archive 列表已刷新。", script)
         self.assertIn("当前 Packet：历史版本", script)
         self.assertIn("点此恢复这个 Packet 版本", script)
         self.assertIn("它和最新 packet 在输入骨架上差在哪里", script)
@@ -949,6 +971,10 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn(".workbench-history-view-bar", stylesheet)
         self.assertIn(".workbench-packet-draft-bar", stylesheet)
         self.assertIn(".workbench-packet-draft-note", stylesheet)
+        self.assertIn(".workbench-archive-restore-row", stylesheet)
+        self.assertIn(".workbench-recent-archives-board", stylesheet)
+        self.assertIn(".workbench-recent-archives-header-actions", stylesheet)
+        self.assertIn(".workbench-recent-archive-action", stylesheet)
         self.assertIn(".workbench-history-return-button", stylesheet)
         self.assertIn(".workbench-packet-history-board", stylesheet)
         self.assertIn(".workbench-history-compare-bar", stylesheet)
@@ -993,6 +1019,61 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertEqual("new_control_system_id", payload["template_packet"]["system_id"])
         self.assertEqual("custom_reverse_control_v1", payload["reference_packet"]["system_id"])
         self.assertIn("artifacts/workbench-bundles", payload["default_archive_root"])
+        self.assertIn("recent_archives", payload)
+        self.assertIsInstance(payload["recent_archives"], list)
+
+    def test_demo_server_bootstrap_lists_recent_workbench_archives(self):
+        bundle = build_workbench_bundle(
+            demo_server.intake_packet_from_dict(demo_server.reference_workbench_packet_payload()),
+            confirmed_root_cause="Pressure sensor bias was confirmed during troubleshooting.",
+            repair_action="Recalibrated the sensor path.",
+            validation_after_fix="Acceptance replay completed after the repair.",
+            residual_risk="Watch for future sensor drift.",
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive_root = Path(temp_dir).resolve()
+            with mock.patch.object(demo_server, "default_workbench_archive_root", return_value=archive_root):
+                archive = archive_workbench_bundle(bundle, archive_root)
+
+                payload = demo_server.workbench_bootstrap_payload()
+
+        self.assertEqual(str(archive_root), payload["default_archive_root"])
+        self.assertEqual(1, len(payload["recent_archives"]))
+        recent_archive = payload["recent_archives"][0]
+        self.assertEqual(str(Path(archive.archive_dir).resolve()), recent_archive["archive_dir"])
+        self.assertEqual(str(Path(archive.manifest_json_path).resolve()), recent_archive["manifest_path"])
+        self.assertEqual("custom_reverse_control_v1", recent_archive["system_id"])
+        self.assertTrue(recent_archive["ready_for_spec_build"])
+
+    def test_demo_server_recent_archives_api_lists_recent_workbench_archives(self):
+        bundle = build_workbench_bundle(
+            demo_server.intake_packet_from_dict(demo_server.reference_workbench_packet_payload()),
+            confirmed_root_cause="Pressure sensor bias was confirmed during troubleshooting.",
+            repair_action="Recalibrated the sensor path.",
+            validation_after_fix="Acceptance replay completed after the repair.",
+            residual_risk="Watch for future sensor drift.",
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive_root = Path(temp_dir).resolve()
+            with mock.patch.object(demo_server, "default_workbench_archive_root", return_value=archive_root):
+                archive_workbench_bundle(bundle, archive_root)
+                server, thread = start_demo_server()
+                try:
+                    connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+                    connection.request("GET", "/api/workbench/recent-archives")
+                    response = connection.getresponse()
+                    payload = json.loads(response.read().decode("utf-8"))
+                finally:
+                    server.shutdown()
+                    server.server_close()
+                    thread.join(timeout=2)
+
+        self.assertEqual(response.status, 200)
+        self.assertEqual(str(archive_root), payload["default_archive_root"])
+        self.assertEqual(1, len(payload["recent_archives"]))
+        self.assertEqual("custom_reverse_control_v1", payload["recent_archives"][0]["system_id"])
 
     def test_demo_server_api_returns_workbench_bundle_and_archive_payload(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1075,7 +1156,8 @@ class DemoIntentLayerTests(unittest.TestCase):
                 handoff_payload = json.loads(Path(payload["archive"]["workspace_handoff_json_path"]).read_text(encoding="utf-8"))
                 snapshot_payload = json.loads(Path(payload["archive"]["workspace_snapshot_json_path"]).read_text(encoding="utf-8"))
                 self.assertEqual("well-harness-workbench-archive-manifest", manifest_payload["kind"])
-                self.assertEqual(payload["archive"]["workspace_snapshot_json_path"], manifest_payload["files"]["workspace_snapshot_json"])
+                self.assertEqual(".", manifest_payload["archive_dir"])
+                self.assertEqual("workspace_snapshot.json", manifest_payload["files"]["workspace_snapshot_json"])
                 self.assertEqual("可交接", handoff_payload["badgeText"])
                 self.assertEqual(2, snapshot_payload["version"])
                 self.assertIn(
@@ -1083,6 +1165,76 @@ class DemoIntentLayerTests(unittest.TestCase):
                     Path(payload["archive"]["summary_markdown_path"]).read_text(encoding="utf-8"),
                 )
                 self.assertEqual(str(archive_root), payload["default_archive_root"])
+
+    def test_demo_server_api_can_restore_workbench_archive_payload(self):
+        bundle = build_workbench_bundle(
+            demo_server.intake_packet_from_dict(demo_server.reference_workbench_packet_payload()),
+            confirmed_root_cause="Pressure sensor bias was confirmed during troubleshooting.",
+            repair_action="Recalibrated the sensor path.",
+            validation_after_fix="Acceptance replay completed after the repair.",
+            residual_risk="Watch for future sensor drift.",
+        )
+        handoff = {
+            "badgeText": "可交接",
+            "system": "custom_reverse_control_v1",
+            "packet": "2 docs / 4 logic / 1 faults",
+            "result": "通过 / ab_pressure_ramp",
+            "archive": "已留档",
+            "workspace": "3 个 packet 版本 / 2 个结果",
+            "note": "Ready archive for next engineer handoff.",
+        }
+        workspace_snapshot = {
+            "kind": "well-harness-workbench-browser-workspace",
+            "version": 2,
+            "packetRevisionHistory": [{"id": "workbench-packet-revision-1", "title": "载入参考样例"}],
+            "runHistory": [{"id": "workbench-history-1", "title": "一键通过验收"}],
+            "handoff": {
+                "badgeText": "可交接",
+                "note": "Ready archive for next engineer handoff.",
+            },
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive = archive_workbench_bundle(
+                bundle,
+                temp_dir,
+                workspace_handoff=handoff,
+                workspace_snapshot=workspace_snapshot,
+            )
+            archive_dir = Path(archive.archive_dir)
+            moved_archive_dir = Path(temp_dir) / "portable-archive"
+            archive_dir.rename(moved_archive_dir)
+            moved_manifest_path = moved_archive_dir / "archive_manifest.json"
+
+            server, thread = start_demo_server()
+            try:
+                connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+                request_body = json.dumps({"manifest_path": str(moved_archive_dir)}).encode("utf-8")
+                connection.request(
+                    "POST",
+                    "/api/workbench/archive-restore",
+                    body=request_body,
+                    headers={"Content-Type": "application/json"},
+                )
+                response = connection.getresponse()
+                payload = json.loads(response.read().decode("utf-8"))
+            finally:
+                server.shutdown()
+                server.server_close()
+                thread.join(timeout=2)
+
+        self.assertEqual(response.status, 200)
+        self.assertEqual(str(moved_manifest_path.resolve()), payload["manifest_path"])
+        self.assertEqual(str(moved_archive_dir.resolve()), payload["archive_dir"])
+        self.assertEqual("well-harness-workbench-archive-manifest", payload["manifest"]["kind"])
+        self.assertEqual("full_workbench_bundle", payload["bundle"]["bundle_kind"])
+        self.assertEqual(
+            str((moved_archive_dir / "workspace_snapshot.json").resolve()),
+            payload["resolved_files"]["workspace_snapshot_json"],
+        )
+        self.assertEqual("Ready archive for next engineer handoff.", payload["workspace_handoff"]["note"])
+        self.assertEqual(2, payload["workspace_snapshot"]["version"])
+        self.assertIn("artifacts/workbench-bundles", payload["default_archive_root"])
 
     def test_demo_server_api_can_apply_safe_schema_repairs_for_workbench_packet(self):
         server, thread = start_demo_server()

@@ -142,6 +142,39 @@
               <input id="workbench-workspace-file-input" type="file" accept=".json,application/json">
             </label>
           </div>
+          <div class="workbench-archive-restore-row">
+            <label class="workbench-field" for="workbench-archive-manifest-path">
+              <span>从 archive 恢复工作区</span>
+              <input
+                id="workbench-archive-manifest-path"
+                type="text"
+                placeholder="粘贴 archive_manifest.json 或 archive 目录路径"
+              >
+              <small>页面会通过本地 restore API，把 archive 里的 packet、结果历史和交接状态恢复回当前工作区。</small>
+            </label>
+            <button type="button" id="restore-workbench-archive" class="workbench-toolbar-button">从 Archive 恢复工作区</button>
+          </div>
+          <section class="workbench-recent-archives-board" aria-labelledby="workbench-recent-archives-title">
+            <div class="workbench-visual-header">
+              <div>
+                <p class="eyebrow">recent archives</p>
+                <h3 id="workbench-recent-archives-title">最近可恢复的 Archive</h3>
+              </div>
+              <div class="workbench-recent-archives-header-actions">
+                <span class="workbench-history-note">默认从当前 archive root 扫描，点卡片就会自动恢复。</span>
+                <button type="button" id="refresh-workbench-recent-archives" class="workbench-history-return-button">刷新列表</button>
+              </div>
+            </div>
+            <p id="workbench-recent-archives-summary" class="workbench-visual-summary">
+              这里会列出最近成功生成的 archive；你可以直接点“恢复这个 Archive”，不用再自己查本地路径。
+            </p>
+            <div id="workbench-recent-archives-list" class="workbench-history-grid">
+              <article class="workbench-history-card is-empty">
+                <strong>暂无最近 Archive</strong>
+                <p>等你先生成一份 archive，或把已有 archive 放到默认目录后，这里就会出现可恢复列表。</p>
+              </article>
+            </div>
+          </section>
           <p id="workbench-packet-source-status" class="workbench-packet-source-status" aria-live="polite">当前样例：等待载入。</p>
 
           <section class="workbench-handoff-board" aria-labelledby="workbench-handoff-title">

@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/second_system_smoke_v1.schema.json",
+  "title": "well_harness.second_system_smoke v1 JSON payload",
+  "description": "Machine-readable report proving a non-reference second-system path can traverse either the adapter-backed runtime proof chain or the legacy intake-packet bundle chain.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "version",
+    "proof_mode",
+    "adapter_id",
+    "system_id",
+    "system_title",
+    "packet_path",
+    "source_of_truth",
+    "spec_schema_id",
+    "bundle_kind",
+    "ready_for_spec_build",
+    "selected_scenario_id",
+    "selected_fault_mode_id",
+    "playback_completion_reached",
+    "fault_completion_reached",
+    "knowledge_status",
+    "smoke_passed",
+    "evidence_steps",
+    "next_actions",
+    "summary"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/second_system_smoke_v1.schema.json"
+    },
+    "kind": {
+      "const": "well-harness-second-system-smoke"
+    },
+    "version": {
+      "const": 1
+    },
+    "proof_mode": {
+      "type": "string",
+      "enum": [
+        "truth_adapter",
+        "intake_packet"
+      ]
+    },
+    "adapter_id": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "system_id": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "system_title": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "packet_path": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "source_of_truth": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "spec_schema_id": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "bundle_kind": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "ready_for_spec_build": {
+      "type": "boolean"
+    },
+    "selected_scenario_id": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "selected_fault_mode_id": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "playback_completion_reached": {
+      "type": "boolean"
+    },
+    "fault_completion_reached": {
+      "type": "boolean"
+    },
+    "knowledge_status": {
+      "$ref": "#/$defs/nullableString"
+    },
+    "smoke_passed": {
+      "type": "boolean"
+    },
+    "evidence_steps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "next_actions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "summary": {
+      "$ref": "#/$defs/nonEmptyString"
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nullableString": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  }
+}

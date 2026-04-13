@@ -5,6 +5,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from well_harness.fault_taxonomy import validate_fault_kind
 from well_harness.system_spec import (
     AcceptanceScenarioSpec,
     ClarificationItemSpec,
@@ -153,7 +154,7 @@ def _fault_mode_from_dict(payload: dict[str, Any]) -> FaultModeSpec:
     return FaultModeSpec(
         id=_require_str(payload, "id"),
         target_component_id=_require_str(payload, "target_component_id"),
-        fault_kind=_require_str(payload, "fault_kind"),
+        fault_kind=validate_fault_kind(_require_str(payload, "fault_kind")),
         symptom=_require_str(payload, "symptom"),
         reasoning_scope_component_ids=tuple(str(item) for item in _tuple_or_empty(payload.get("reasoning_scope_component_ids"))),
         expected_diagnostic_sections=tuple(str(item) for item in _tuple_or_empty(payload.get("expected_diagnostic_sections"))),

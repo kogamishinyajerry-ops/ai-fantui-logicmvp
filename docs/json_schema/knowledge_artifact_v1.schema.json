@@ -1,0 +1,467 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/knowledge_artifact_v1.schema.json",
+  "title": "well_harness.knowledge_artifact v1 JSON payload",
+  "description": "System-agnostic machine-readable schema for knowledge artifacts built from deterministic fault diagnosis and repair evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "version",
+    "system_id",
+    "system_title",
+    "scenario_id",
+    "scenario_label",
+    "fault_mode_id",
+    "status",
+    "generated_at_utc",
+    "diagnosis_summary",
+    "incident_record",
+    "resolution_record",
+    "optimization_record",
+    "diagnosis_report"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/knowledge_artifact_v1.schema.json"
+    },
+    "kind": {
+      "const": "well-harness-knowledge-artifact"
+    },
+    "version": {
+      "const": 1
+    },
+    "system_id": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "system_title": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "scenario_id": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "scenario_label": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "fault_mode_id": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "status": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "generated_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "diagnosis_summary": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "incident_record": {
+      "$ref": "#/$defs/incidentRecord"
+    },
+    "resolution_record": {
+      "$ref": "#/$defs/resolutionRecord"
+    },
+    "optimization_record": {
+      "$ref": "#/$defs/optimizationRecord"
+    },
+    "diagnosis_report": {
+      "$ref": "#/$defs/faultDiagnosis"
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "numberOrNull": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "incidentRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "system_id",
+        "scenario_id",
+        "fault_mode_id",
+        "observed_symptoms",
+        "evidence_links"
+      ],
+      "properties": {
+        "system_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "scenario_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "fault_mode_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "observed_symptoms": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "evidence_links": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "resolutionRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "confirmed_root_cause",
+        "repair_action",
+        "validation_after_fix",
+        "residual_risk"
+      ],
+      "properties": {
+        "confirmed_root_cause": {
+          "type": "string"
+        },
+        "repair_action": {
+          "type": "string"
+        },
+        "validation_after_fix": {
+          "type": "string"
+        },
+        "residual_risk": {
+          "type": "string"
+        }
+      }
+    },
+    "optimizationRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "suggested_logic_change",
+        "reliability_gain_hypothesis",
+        "redundancy_reduction_or_guardrail_note"
+      ],
+      "properties": {
+        "suggested_logic_change": {
+          "type": "string"
+        },
+        "reliability_gain_hypothesis": {
+          "type": "string"
+        },
+        "redundancy_reduction_or_guardrail_note": {
+          "type": "string"
+        }
+      }
+    },
+    "scopeObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "kind",
+        "baseline_end",
+        "fault_end",
+        "status",
+        "note"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "kind": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "baseline_end": {
+          "$ref": "#/$defs/numberOrNull"
+        },
+        "fault_end": {
+          "$ref": "#/$defs/numberOrNull"
+        },
+        "status": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "note": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "playbackPoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "time_s",
+        "value"
+      ],
+      "properties": {
+        "time_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "value": {
+          "type": "number"
+        }
+      }
+    },
+    "playbackSeries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "kind",
+        "unit",
+        "source",
+        "points"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "kind": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "unit": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "points": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/playbackPoint"
+          }
+        }
+      }
+    },
+    "playbackEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "time_s",
+        "kind",
+        "label",
+        "details"
+      ],
+      "properties": {
+        "time_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "kind": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "details": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "playbackTrace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "$schema",
+        "kind",
+        "version",
+        "system_id",
+        "system_title",
+        "scenario_id",
+        "scenario_label",
+        "sample_period_s",
+        "total_duration_s",
+        "time_scale_factor",
+        "completion_condition",
+        "completion_reached",
+        "assumptions",
+        "signal_series",
+        "logic_series",
+        "events"
+      ],
+      "properties": {
+        "$schema": {
+          "const": "https://well-harness.local/json_schema/playback_trace_v1.schema.json"
+        },
+        "kind": {
+          "const": "well-harness-playback-trace"
+        },
+        "version": {
+          "const": 1
+        },
+        "system_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "system_title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "scenario_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "scenario_label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "sample_period_s": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "total_duration_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "time_scale_factor": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "completion_condition": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "completion_reached": {
+          "type": "boolean"
+        },
+        "assumptions": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "signal_series": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/playbackSeries"
+          }
+        },
+        "logic_series": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/playbackSeries"
+          }
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/playbackEvent"
+          }
+        }
+      }
+    },
+    "faultDiagnosis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "$schema",
+        "kind",
+        "version",
+        "system_id",
+        "system_title",
+        "scenario_id",
+        "scenario_label",
+        "fault_mode_id",
+        "fault_kind",
+        "target_component_id",
+        "symptom",
+        "baseline_completion_reached",
+        "fault_completion_reached",
+        "affected_signal_ids",
+        "blocked_logic_node_ids",
+        "suspected_root_cause",
+        "reasoning_steps",
+        "expected_sections",
+        "scope_observations",
+        "optimization_suggestion",
+        "assumptions",
+        "baseline_report",
+        "fault_report"
+      ],
+      "properties": {
+        "$schema": {
+          "const": "https://well-harness.local/json_schema/fault_diagnosis_v1.schema.json"
+        },
+        "kind": {
+          "const": "well-harness-fault-diagnosis"
+        },
+        "version": {
+          "const": 1
+        },
+        "system_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "system_title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "scenario_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "scenario_label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "fault_mode_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "fault_kind": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "target_component_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "symptom": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "baseline_completion_reached": {
+          "type": "boolean"
+        },
+        "fault_completion_reached": {
+          "type": "boolean"
+        },
+        "affected_signal_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "blocked_logic_node_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "suspected_root_cause": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "reasoning_steps": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "expected_sections": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "scope_observations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/scopeObservation"
+          }
+        },
+        "optimization_suggestion": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "assumptions": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "baseline_report": {
+          "$ref": "#/$defs/playbackTrace"
+        },
+        "fault_report": {
+          "$ref": "#/$defs/playbackTrace"
+        }
+      }
+    }
+  }
+}

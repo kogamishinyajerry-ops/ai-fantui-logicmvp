@@ -3,7 +3,13 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from well_harness.controller_adapter import REFERENCE_DEPLOY_CONTROLLER_METADATA
 from well_harness.models import HarnessConfig
+
+
+CONTROL_SYSTEM_SPEC_KIND = "well-harness-control-system-spec"
+CONTROL_SYSTEM_SPEC_VERSION = 1
+CONTROL_SYSTEM_SPEC_SCHEMA_ID = "https://well-harness.local/json_schema/control_system_spec_v1.schema.json"
 
 
 @dataclass(frozen=True)
@@ -114,8 +120,125 @@ class ControlSystemWorkbenchSpec:
         return asdict(self)
 
 
+def _json_safe_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: _json_safe_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe_value(item) for item in value]
+    return value
+
+
 def workbench_spec_to_dict(spec: ControlSystemWorkbenchSpec) -> dict[str, Any]:
-    return spec.to_dict()
+    payload = _json_safe_value(spec.to_dict())
+    return {
+        "$schema": CONTROL_SYSTEM_SPEC_SCHEMA_ID,
+        "kind": CONTROL_SYSTEM_SPEC_KIND,
+        "version": CONTROL_SYSTEM_SPEC_VERSION,
+        **payload,
+    }
+
+
+def workbench_spec_from_dict(payload: dict[str, Any]) -> ControlSystemWorkbenchSpec:
+    return ControlSystemWorkbenchSpec(
+        system_id=payload["system_id"],
+        title=payload["title"],
+        objective=payload["objective"],
+        source_of_truth=payload["source_of_truth"],
+        components=tuple(
+            ComponentSpec(
+                id=item["id"],
+                label=item["label"],
+                kind=item["kind"],
+                state_shape=item["state_shape"],
+                unit=item["unit"],
+                description=item["description"],
+                allowed_range=tuple(item["allowed_range"]) if item["allowed_range"] is not None else None,
+                allowed_states=tuple(item.get("allowed_states", ())),
+                monitor_priority=item.get("monitor_priority", "optional"),
+            )
+            for item in payload["components"]
+        ),
+        logic_nodes=tuple(
+            LogicNodeSpec(
+                id=item["id"],
+                label=item["label"],
+                description=item["description"],
+                conditions=tuple(
+                    LogicConditionSpec(
+                        name=condition["name"],
+                        source_component_id=condition["source_component_id"],
+                        comparison=condition["comparison"],
+                        threshold_value=condition["threshold_value"],
+                        note=condition["note"],
+                    )
+                    for condition in item["conditions"]
+                ),
+                downstream_component_ids=tuple(item.get("downstream_component_ids", ())),
+                evidence_priority=item.get("evidence_priority", "high"),
+            )
+            for item in payload["logic_nodes"]
+        ),
+        acceptance_scenarios=tuple(
+            AcceptanceScenarioSpec(
+                id=item["id"],
+                label=item["label"],
+                description=item["description"],
+                time_scale_factor=item["time_scale_factor"],
+                total_duration_s=item["total_duration_s"],
+                monitored_signal_ids=tuple(item["monitored_signal_ids"]),
+                transitions=tuple(
+                    TimedTransitionSpec(
+                        signal_id=transition["signal_id"],
+                        start_s=transition["start_s"],
+                        end_s=transition["end_s"],
+                        start_value=transition["start_value"],
+                        end_value=transition["end_value"],
+                        unit=transition["unit"],
+                        note=transition["note"],
+                    )
+                    for transition in item["transitions"]
+                ),
+                completion_condition=item["completion_condition"],
+                steady_signals=tuple(
+                    SteadySignalSpec(
+                        signal_id=signal["signal_id"],
+                        value=signal["value"],
+                        unit=signal["unit"],
+                        note=signal["note"],
+                    )
+                    for signal in item.get("steady_signals", ())
+                ),
+            )
+            for item in payload["acceptance_scenarios"]
+        ),
+        fault_modes=tuple(
+            FaultModeSpec(
+                id=item["id"],
+                target_component_id=item["target_component_id"],
+                fault_kind=item["fault_kind"],
+                symptom=item["symptom"],
+                reasoning_scope_component_ids=tuple(item["reasoning_scope_component_ids"]),
+                expected_diagnostic_sections=tuple(item["expected_diagnostic_sections"]),
+                optimization_prompt=item["optimization_prompt"],
+            )
+            for item in payload["fault_modes"]
+        ),
+        onboarding_questions=tuple(
+            ClarificationItemSpec(
+                id=item["id"],
+                prompt=item["prompt"],
+                rationale=item["rationale"],
+                required_for=item["required_for"],
+            )
+            for item in payload["onboarding_questions"]
+        ),
+        knowledge_capture=KnowledgeCaptureSpec(
+            incident_fields=tuple(payload["knowledge_capture"]["incident_fields"]),
+            resolution_fields=tuple(payload["knowledge_capture"]["resolution_fields"]),
+            optimization_fields=tuple(payload["knowledge_capture"]["optimization_fields"]),
+        ),
+        tags=tuple(payload.get("tags", ())),
+    )
 
 
 def default_workbench_clarification_questions() -> tuple[ClarificationItemSpec, ...]:
@@ -189,6 +312,66 @@ def current_reference_workbench_spec(config: HarnessConfig | None = None) -> Con
             description="TRA 进入 SW2 窗口时闭合。",
             allowed_states=("0", "1"),
             monitor_priority="required",
+        ),
+        ComponentSpec(
+            id="engine_running",
+            label="Engine Running",
+            kind="state",
+            state_shape="binary",
+            unit="state",
+            description="发动机运行状态；L2/L4 依赖该值为真。",
+            allowed_states=("0", "1"),
+            monitor_priority="optional",
+        ),
+        ComponentSpec(
+            id="aircraft_on_ground",
+            label="On Ground",
+            kind="state",
+            state_shape="binary",
+            unit="state",
+            description="飞机是否在地面；L2/L4 依赖该值为真。",
+            allowed_states=("0", "1"),
+            monitor_priority="optional",
+        ),
+        ComponentSpec(
+            id="reverser_inhibited",
+            label="Reverser Inhibited",
+            kind="state",
+            state_shape="binary",
+            unit="state",
+            description="反推抑制状态；L1/L2 依赖该值为假。",
+            allowed_states=("0", "1"),
+            monitor_priority="optional",
+        ),
+        ComponentSpec(
+            id="eec_enable",
+            label="EEC Enable",
+            kind="state",
+            state_shape="binary",
+            unit="state",
+            description="EEC 允许位；L2 依赖该值为真。",
+            allowed_states=("0", "1"),
+            monitor_priority="optional",
+        ),
+        ComponentSpec(
+            id="n1k",
+            label="N1K",
+            kind="sensor",
+            state_shape="analog",
+            unit="percent",
+            description="N1K 输入；L3 依赖该值低于限制。",
+            allowed_range=(0.0, 110.0),
+            monitor_priority="optional",
+        ),
+        ComponentSpec(
+            id="max_n1k_deploy_limit",
+            label="Max N1K Deploy Limit",
+            kind="parameter",
+            state_shape="analog",
+            unit="percent",
+            description="允许 deploy 的 N1K 限制。",
+            allowed_range=(0.0, 110.0),
+            monitor_priority="optional",
         ),
         ComponentSpec(
             id="tls_voltage_v",
@@ -335,9 +518,19 @@ def current_reference_workbench_spec(config: HarnessConfig | None = None) -> Con
             transitions=(
                 TimedTransitionSpec("radio_altitude_ft", 0.0, 7.0, 7.0, 0.0, "ft", "RA 线性下降到 0ft 后保持"),
                 TimedTransitionSpec("tra_deg", 1.0, 2.4, 0.0, -14.0, "deg", "RA 降到 6ft 后，TRA 以压缩后的速率推到 -14°"),
+                TimedTransitionSpec("sw1", 1.2, 1.4, 0.0, 1.0, "state", "TRA 进入 SW1 窗口后，SW1 置位。"),
+                TimedTransitionSpec("sw2", 1.8, 2.0, 0.0, 1.0, "state", "TRA 继续深入 reverse 区后，SW2 置位。"),
                 TimedTransitionSpec("deploy_feedback_percent", 2.4, 4.4, 0.0, 100.0, "%", "TRA 到达 -14° 后，VDT 相关反馈开始爬升到 100%"),
             ),
             completion_condition="deploy_feedback_percent == 100% and thr_lock == 1",
+            steady_signals=(
+                SteadySignalSpec("engine_running", 1, "state", "参考场景固定假设发动机处于运行状态。"),
+                SteadySignalSpec("aircraft_on_ground", 1, "state", "参考场景固定假设飞机已经在地面。"),
+                SteadySignalSpec("reverser_inhibited", 0, "state", "参考场景中反推不被抑制。"),
+                SteadySignalSpec("eec_enable", 1, "state", "参考场景固定假设 EEC enable 为真。"),
+                SteadySignalSpec("n1k", 35.0, "percent", "参考场景中 N1K 保持在 deploy 限值以下。"),
+                SteadySignalSpec("max_n1k_deploy_limit", 60.0, "percent", "参考场景中 deploy 限值固定为 60。"),
+            ),
         ),
     )
 
@@ -399,7 +592,7 @@ def current_reference_workbench_spec(config: HarnessConfig | None = None) -> Con
             "Use the current deterministic deploy chain as the first reference system for future "
             "strict acceptance playback, fault injection, diagnosis, and cross-system generalization."
         ),
-        source_of_truth="src/well_harness/controller.py",
+        source_of_truth=REFERENCE_DEPLOY_CONTROLLER_METADATA.source_of_truth,
         components=components,
         logic_nodes=logic_nodes,
         acceptance_scenarios=acceptance_scenarios,

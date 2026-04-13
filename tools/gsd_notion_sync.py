@@ -1690,15 +1690,27 @@ def snapshot_is_workbench_phase(snapshot: ReviewSnapshot) -> bool:
     return phase_number is not None and phase_number >= 7
 
 
+def snapshot_is_runtime_generalization_phase(snapshot: ReviewSnapshot) -> bool:
+    return snapshot_phase_number(snapshot) == 8
+
+
 def development_guardrail_texts(snapshot: ReviewSnapshot) -> tuple[str, ...]:
+    runtime_generalization_phase = snapshot_is_runtime_generalization_phase(snapshot)
     workbench_phase = snapshot_is_workbench_phase(snapshot)
     phase_specific_rule = (
-        "P7 workbench 继续把 intake / playback / diagnosis / knowledge / follow-up 收成 engineer-facing workflow，不引入第二套隐藏规则引擎。"
-        if workbench_phase
-        else "非 P7 收口阶段优先保持控制塔 / freeze / repo handoff 与 GitHub 证据对齐，不为了看起来忙而扩新表面。"
+        "P8 先把 adapter -> playback -> diagnosis -> knowledge 的 runtime proof 主链收口，再决定是否继续做 comparison / bundle-level proof。"
+        if runtime_generalization_phase
+        else (
+            "P7 workbench 继续把 intake / playback / diagnosis / knowledge / follow-up 收成 engineer-facing workflow，不引入第二套隐藏规则引擎。"
+            if workbench_phase
+            else "非 P7/P8 收口阶段优先保持控制塔 / freeze / repo handoff 与 GitHub 证据对齐，不为了看起来忙而扩新表面。"
+        )
     )
     return (
-        "GitHub / repo 是实现真值；Notion 是控制面；`controller.py` 仍然是唯一控制真值。",
+        "GitHub / repo 是实现真值；Notion 是控制面；`controller.py` 仍然是 reference thrust-reverser 的唯一控制真值。",
+        "`runner.py` / `SimulationRunner` 继续承担运行时编排职责；不要把 orchestration 重新塞回 controller truth、UI 或持久化层。",
+        "新系统 truth 只能通过显式 adapter interface 接入；禁止绕过 adapter 新增 hardcoded truth path。",
+        "FlyByWire / A320 资料只作为知识参考和设计启发，不直接复制成项目代码真值。",
         "一个切片只有在代码修改、目标验证命令、`gsd_notion_sync.py run` 写回，以及 `prepare-opus-review` 复核全部完成后，才算真正完成。",
         "共享数据库或独立子页不可达时，可以暂时依赖 repo-side synced snapshot 继续恢复上下文，但在 live writeback 回补前，不把控制面视为“已同步到最新”。",
         "任何 Notion 写回降级、部分失败或超时都应被当成 control-plane gap / blocker 处理，不能静默跳过后继续宣称已完成同步。",
@@ -1709,7 +1721,8 @@ def development_guardrail_texts(snapshot: ReviewSnapshot) -> tuple[str, ...]:
 
 def compact_development_guardrail_texts(snapshot: ReviewSnapshot) -> tuple[str, ...]:
     return (
-        "GitHub / repo 是实现真值；Notion 是控制面；`controller.py` 仍然是唯一控制真值。",
+        "GitHub / repo 是实现真值；Notion 是控制面；`controller.py` 仍然是 reference thrust-reverser 的唯一控制真值。",
+        "新系统 truth 只能通过 adapter interface 接入；禁止绕过 adapter 新增 hardcoded truth path。",
         "一个切片只有在代码 / 验证、`gsd_notion_sync.py run` 写回，以及 `prepare-opus-review` 复核完成后，才算收口。",
         "Notion 写回降级必须视为 control-plane gap；没有 review need 时默认继续自动开发。",
     )
@@ -2361,6 +2374,7 @@ def render_status_page_blocks(
     config: dict[str, Any],
 ) -> list[dict[str, Any]]:
     workbench_phase = snapshot_is_workbench_phase(snapshot)
+    runtime_generalization_phase = snapshot_is_runtime_generalization_phase(snapshot)
     current_opus_state = (
         "当前无需 Opus 审查"
         if not brief.review_required
@@ -2386,9 +2400,13 @@ def render_status_page_blocks(
         bullet_block(f"当前 Opus 状态：{current_opus_state}"),
         bullet_block(snapshot_evidence_line(snapshot)),
         bullet_block(
-            "P7 已成为当前主线，正在把 intake / playback / diagnosis / knowledge / follow-up 收成统一 engineer-facing workflow。"
-            if workbench_phase
-            else "P7 的 spec-driven workbench foundation 已在 repo 中提前播种，但正式自动执行顺序暂时仍以 P6 为先。"
+            "P8 已成为当前主线，正在把 adapter-backed second-system runtime proof 接到 playback / diagnosis / knowledge 主链。"
+            if runtime_generalization_phase
+            else (
+                "P7 已成为当前主线，正在把 intake / playback / diagnosis / knowledge / follow-up 收成统一 engineer-facing workflow。"
+                if workbench_phase
+                else "P7 的 spec-driven workbench foundation 已在 repo 中提前播种，但正式自动执行顺序暂时仍以 P6 为先。"
+            )
         ),
         heading_block("当前回归"),
         bullet_block(f"最近成功执行证据：{snapshot.latest_success_run or '暂无'}"),
@@ -2401,27 +2419,40 @@ def render_status_page_blocks(
         [
             *development_guardrail_blocks(snapshot),
             heading_block("当前关键边界"),
-            bullet_block("不改 controller.py confirmed truth。"),
-            bullet_block("不改 SimulationRunner。"),
-            bullet_block("不新增另一套控制真值。"),
+            bullet_block("`controller.py` 仍然是 reference thrust-reverser 的 confirmed truth。"),
+            bullet_block("`runner.py` / SimulationRunner 继续承担运行时编排，不把 orchestration 挪进 controller truth。"),
+            bullet_block("新系统 truth 只能通过 adapter interface 接入，禁止绕过 adapter 新增 hardcoded truth。"),
             bullet_block("不把 simplified plant 表述成完整实时物理模型。"),
+            bullet_block("FlyByWire / A320 资料只作为参考知识库，不作为代码复制源。"),
             bullet_block("Opus 4.6 只使用 Notion + GitHub 证据面。"),
             heading_block("当前下一步"),
             bullet_block(
-                "继续把 intake / playback / diagnosis / knowledge / follow-up 收成可复用的 engineer-facing bundle 与 handoff 工作流。"
-                if workbench_phase
-                else "继续收口剩余 stale wording，让 control tower summary surfaces 不再依赖手工维护。"
+                "继续把 adapter-backed runtime proof 接到 second-system smoke / comparison / bundle-level surface，证明第二系统主链已经真正跑通。"
+                if runtime_generalization_phase
+                else (
+                    "继续把 intake / playback / diagnosis / knowledge / follow-up 收成可复用的 engineer-facing bundle 与 handoff 工作流。"
+                    if workbench_phase
+                    else "继续收口剩余 stale wording，让 control tower summary surfaces 不再依赖手工维护。"
+                )
             ),
             bullet_block(
-                "保持 controller truth、demo API 契约与 freeze baseline 稳定，不把 P7 扩成第二套隐藏规则引擎。"
-                if workbench_phase
-                else "继续把历史 manual-browser-QA 表述降级成 presenter guidance，而不是当前审批规则。"
+                "保持 controller truth、runner orchestration 与当前回归基线稳定；任何新系统 proof 都只能通过 adapter boundary 进入。"
+                if runtime_generalization_phase
+                else (
+                    "保持 controller truth、demo API 契约与 freeze baseline 稳定，不把 P7 扩成第二套隐藏规则引擎。"
+                    if workbench_phase
+                    else "继续把历史 manual-browser-QA 表述降级成 presenter guidance，而不是当前审批规则。"
+                )
             ),
             bullet_block(current_action),
             bullet_block(
-                "必要时把新的 workbench artifact 同步回 repo / Notion 控制面，保持 engineer handoff 与审计链路可追溯。"
-                if workbench_phase
-                else "在 P6 收口前，不继续扩大 P7 的实现面。"
+                "必要时把新的 runtime proof artifact 同步回 repo / Notion 控制面，保持 engineer handoff 与审计链路可追溯。"
+                if runtime_generalization_phase
+                else (
+                    "必要时把新的 workbench artifact 同步回 repo / Notion 控制面，保持 engineer handoff 与审计链路可追溯。"
+                    if workbench_phase
+                    else "在 P6 收口前，不继续扩大 P7 的实现面。"
+                )
             ),
             divider_block(),
             page_link_paragraph_block(config, "dashboard", "AI FANTUI LogicMVP 控制塔"),
@@ -2443,6 +2474,7 @@ def render_repo_coordination_plan_markdown(
     unavailable_page_keys: tuple[str, ...] = (),
 ) -> str:
     workbench_phase = snapshot_is_workbench_phase(snapshot)
+    runtime_generalization_phase = snapshot_is_runtime_generalization_phase(snapshot)
     current_action = (
         "继续自动开发；当前无需手动触发 Opus 4.6。"
         if not brief.review_required
@@ -2467,18 +2499,24 @@ def render_repo_coordination_plan_markdown(
     lines.extend(
         [
             (
-                "- 当前结论：当前最高优先级是把 spec-driven workbench 收成统一 engineer-facing workflow，而不是继续做 P6 控制面清理或新增 demo 表面。"
-                if workbench_phase
-                else "- 当前结论：当前最高优先级是继续收口控制塔与 freeze/demo packet 的残余漂移，不是再加 demo 功能。"
+                "- 当前结论：当前最高优先级是把 adapter-backed second-system runtime proof 接到主 smoke/validation 链，而不是回退成只做 contract 或 UI 表层。"
+                if runtime_generalization_phase
+                else (
+                    "- 当前结论：当前最高优先级是把 spec-driven workbench 收成统一 engineer-facing workflow，而不是继续做 P6 控制面清理或新增 demo 表面。"
+                    if workbench_phase
+                    else "- 当前结论：当前最高优先级是继续收口控制塔与 freeze/demo packet 的残余漂移，不是再加 demo 功能。"
+                )
             ),
             f"- 当前唯一人工动作：{current_action}",
             "",
             *development_guardrail_markdown_lines(snapshot),
             "## 当前关键边界",
             "",
-            "- `controller.py` 仍然是唯一控制真值。",
-            "- 不改 `SimulationRunner` 或现有 HTTP / CLI 契约。",
+            "- `controller.py` 仍然是 reference thrust-reverser 的唯一控制真值。",
+            "- `runner.py` / `SimulationRunner` 继续承担运行时编排，不把 orchestration 回塞进 controller truth / UI / persistence。",
+            "- 新系统 truth 只能通过 adapter interface 接入；禁止绕过 adapter 新增 hardcoded truth path。",
             "- simplified plant 仍然只是演示反馈模型，不是假装完整物理模型。",
+            "- FlyByWire / A320 资料只作为参考知识库，不作为代码复制源。",
             "- Opus 4.6 的主观审查仍然只使用 Notion + GitHub 证据面。",
             "",
             "## 当前证据入口",
@@ -2517,6 +2555,7 @@ def render_repo_dev_handoff_markdown(
     unavailable_page_keys: tuple[str, ...] = (),
 ) -> str:
     workbench_phase = snapshot_is_workbench_phase(snapshot)
+    runtime_generalization_phase = snapshot_is_runtime_generalization_phase(snapshot)
     status_url = f"https://www.notion.so/{page_id(config, 'status')}"
     brief_url = f"https://www.notion.so/{page_id(config, 'opus_brief')}"
     freeze_url = f"https://www.notion.so/{page_id(config, 'freeze_packet')}"
@@ -2540,14 +2579,22 @@ def render_repo_dev_handoff_markdown(
     lines.extend(
         [
             (
-                "- 当前 demo / freeze 基线已经稳定；当前主线已切到 P7 spec-driven workbench。"
-                if workbench_phase
-                else "- 当前 demo 基线已经稳定，P6 的任务是把控制塔、freeze packet 和 repo-side handoff 资料统一到同一份 GitHub-backed 真值。"
+                "- 当前 demo / freeze 基线已经稳定；当前主线已切到 P8 runtime generalization proof。"
+                if runtime_generalization_phase
+                else (
+                    "- 当前 demo / freeze 基线已经稳定；当前主线已切到 P7 spec-driven workbench。"
+                    if workbench_phase
+                    else "- 当前 demo 基线已经稳定，P6 的任务是把控制塔、freeze packet 和 repo-side handoff 资料统一到同一份 GitHub-backed 真值。"
+                )
             ),
             (
-                "- 当前优先级是让 engineer-facing onboarding / playback / diagnosis / knowledge 工具形成连续工作流，而不是继续扩 demo 表面。"
-                if workbench_phase
-                else "- 当前不继续扩大 P7 的实现面；P7 groundwork 继续保留，但执行顺序仍以 P6 收口优先。"
+                "- 当前优先级是把 adapter-backed second-system proof 接到 smoke / comparison / bundle-level surface，而不是继续扩 demo 表面。"
+                if runtime_generalization_phase
+                else (
+                    "- 当前优先级是让 engineer-facing onboarding / playback / diagnosis / knowledge 工具形成连续工作流，而不是继续扩 demo 表面。"
+                    if workbench_phase
+                    else "- 当前不继续扩大 P7 的实现面；P7 groundwork 继续保留，但执行顺序仍以 P6 收口优先。"
+                )
             ),
             "",
             *development_guardrail_markdown_lines(snapshot),
@@ -2644,6 +2691,7 @@ def render_repo_freeze_packet_markdown(
     unavailable_page_keys: tuple[str, ...] = (),
 ) -> str:
     workbench_phase = snapshot_is_workbench_phase(snapshot)
+    runtime_generalization_phase = snapshot_is_runtime_generalization_phase(snapshot)
     status_url = f"https://www.notion.so/{page_id(config, 'status')}"
     brief_url = f"https://www.notion.so/{page_id(config, 'opus_brief')}"
     lines = [
@@ -2665,9 +2713,13 @@ def render_repo_freeze_packet_markdown(
     lines.extend(
         [
             (
-                "- 当前冻结包继续作为稳定 demo/reference baseline；当前工程主线已转向 P7 workbench 扩展。"
-                if workbench_phase
-                else "- 当前冻结包的职责是对齐 repo / GitHub / Notion 三个证据面，而不是继续加产品表面。"
+                "- 当前冻结包继续作为稳定 demo/reference baseline；当前工程主线已转向 P8 runtime generalization proof。"
+                if runtime_generalization_phase
+                else (
+                    "- 当前冻结包继续作为稳定 demo/reference baseline；当前工程主线已转向 P7 workbench 扩展。"
+                    if workbench_phase
+                    else "- 当前冻结包的职责是对齐 repo / GitHub / Notion 三个证据面，而不是继续加产品表面。"
+                )
             ),
             "",
             "## 当前冻结入口",

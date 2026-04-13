@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/two_system_runtime_comparison_v1.schema.json",
+  "title": "well_harness.two_system_runtime_comparison v1 JSON payload",
+  "description": "Machine-readable comparison proving that both the reference thrust-reverser adapter and the landing-gear adapter can traverse the runtime-generalization contract chain.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "version",
+    "primary_system",
+    "comparison_system",
+    "shared_contracts",
+    "both_support_adapter_truth",
+    "both_reach_playback_completion",
+    "both_block_fault_path",
+    "both_emit_resolved_knowledge",
+    "summary"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/two_system_runtime_comparison_v1.schema.json"
+    },
+    "kind": {
+      "const": "well-harness-two-system-runtime-comparison"
+    },
+    "version": {
+      "const": 1
+    },
+    "primary_system": {
+      "$ref": "#/$defs/systemRuntimeProofSnapshot"
+    },
+    "comparison_system": {
+      "$ref": "#/$defs/systemRuntimeProofSnapshot"
+    },
+    "shared_contracts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      },
+      "minItems": 1
+    },
+    "both_support_adapter_truth": {
+      "type": "boolean"
+    },
+    "both_reach_playback_completion": {
+      "type": "boolean"
+    },
+    "both_block_fault_path": {
+      "type": "boolean"
+    },
+    "both_emit_resolved_knowledge": {
+      "type": "boolean"
+    },
+    "summary": {
+      "$ref": "#/$defs/nonEmptyString"
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "systemRuntimeProofSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adapter_id",
+        "system_id",
+        "system_title",
+        "source_of_truth",
+        "scenario_id",
+        "fault_mode_id",
+        "component_count",
+        "logic_node_count",
+        "playback_completion_reached",
+        "fault_completion_reached",
+        "knowledge_status",
+        "blocked_logic_node_count"
+      ],
+      "properties": {
+        "adapter_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "system_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "system_title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_of_truth": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "scenario_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "fault_mode_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "component_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "logic_node_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "playback_completion_reached": {
+          "type": "boolean"
+        },
+        "fault_completion_reached": {
+          "type": "boolean"
+        },
+        "knowledge_status": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "blocked_logic_node_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

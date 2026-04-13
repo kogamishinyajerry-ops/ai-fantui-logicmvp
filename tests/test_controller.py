@@ -1,7 +1,15 @@
 import unittest
 
+from well_harness.controller_adapter import ControllerTruthMetadata
 from well_harness.controller import DeployController
-from well_harness.models import ControllerOutputs, HarnessConfig, ResolvedInputs
+from well_harness.models import (
+    ControllerExplain,
+    ControllerOutputs,
+    HarnessConfig,
+    LogicConditionExplain,
+    LogicExplain,
+    ResolvedInputs,
+)
 from well_harness.plant import PlantState, SimplifiedDeployPlant
 from well_harness.runner import SimulationRunner
 from well_harness.scenarios import nominal_deploy_scenario, retract_reset_scenario
@@ -45,6 +53,62 @@ def make_outputs(**overrides):
     )
     base.update(overrides)
     return ControllerOutputs(**base)
+
+
+def make_logic_explain(logic_name: str, *, active: bool = False) -> LogicExplain:
+    return LogicExplain(
+        logic_name=logic_name,
+        active=active,
+        conditions=(
+            LogicConditionExplain(
+                name=f"{logic_name}_stub_condition",
+                current_value=False,
+                comparison="==",
+                threshold_value=True,
+                passed=active,
+            ),
+        ),
+    )
+
+
+class StaticFalseControllerAdapter:
+    metadata = ControllerTruthMetadata(
+        adapter_id="test-static-false-adapter",
+        system_id="test_system",
+        truth_kind="test-double",
+        source_of_truth="tests/test_controller.py",
+        description="Forces all controller outputs inactive to prove SimulationRunner can use injected adapters.",
+    )
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def explain(self, inputs):  # noqa: ARG002 - protocol compatibility
+        return ControllerExplain(
+            logic1=make_logic_explain("logic1"),
+            logic2=make_logic_explain("logic2"),
+            logic3=make_logic_explain("logic3"),
+            logic4=make_logic_explain("logic4"),
+        )
+
+    def evaluate(self, inputs):
+        outputs, _explain = self.evaluate_with_explain(inputs)
+        return outputs
+
+    def evaluate_with_explain(self, inputs):
+        self.calls += 1
+        return make_outputs(
+            logic1_active=False,
+            logic2_active=False,
+            logic3_active=False,
+            logic4_active=False,
+            tls_115vac_cmd=False,
+            etrac_540vdc_cmd=False,
+            eec_deploy_cmd=False,
+            pls_power_cmd=False,
+            pdu_motor_cmd=False,
+            throttle_electronic_lock_release_cmd=False,
+        ), self.explain(inputs)
 
 
 class DeployControllerTests(unittest.TestCase):
@@ -232,6 +296,19 @@ class RunnerTests(unittest.TestCase):
 
         pls_timer_change = context_changes[("plant_state", "pls_powered_s")]
         self.assertGreater(pls_timer_change.after_value, pls_timer_change.before_value)
+
+    def test_runner_accepts_injected_controller_adapter(self):
+        scenario = nominal_deploy_scenario()
+        adapter = StaticFalseControllerAdapter()
+
+        result = SimulationRunner(controller_adapter=adapter).run(scenario.name, list(scenario.frames))
+
+        self.assertGreater(adapter.calls, 0)
+        self.assertTrue(result.rows)
+        self.assertFalse(any(row.logic1_active for row in result.rows))
+        self.assertFalse(any(row.logic2_active for row in result.rows))
+        self.assertFalse(any(row.logic3_active for row in result.rows))
+        self.assertFalse(any(row.logic4_active for row in result.rows))
 
 
 if __name__ == "__main__":

@@ -68,6 +68,44 @@
   margin-bottom: 1rem;
 }
 
+.workbench-archive-restore-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.workbench-archive-restore-row .workbench-field {
+  flex: 1 1 auto;
+}
+
+.workbench-archive-restore-row .workbench-toolbar-button {
+  white-space: nowrap;
+}
+
+.workbench-recent-archives-board {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(143, 214, 233, 0.16);
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(8, 19, 31, 0.94), rgba(7, 15, 25, 0.9)),
+    radial-gradient(circle at 84% 18%, rgba(143, 214, 233, 0.12), transparent 18rem);
+}
+
+.workbench-recent-archives-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.workbench-recent-archive-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.35rem;
+}
+
 .workbench-toolbar-button,
 .workbench-run-button,
 .workbench-file-picker {
@@ -1262,9 +1300,11 @@
   .workbench-nav-panel,
   .workbench-acceptance-panel,
   .workbench-section-heading,
+  .workbench-archive-restore-row,
   .workbench-action-row,
   .workbench-handoff-actions,
   .workbench-visual-header,
+  .workbench-recent-archives-header-actions,
   .workbench-history-view-bar,
   .workbench-packet-draft-bar {
     flex-direction: column;

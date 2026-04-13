@@ -22,10 +22,19 @@ from well_harness.knowledge_capture import build_knowledge_artifact, render_know
 from well_harness.runner import SimulationRunner
 from well_harness.scenarios import BUILT_IN_SCENARIOS
 from well_harness.scenario_playback import build_playback_report_from_intake_packet, render_playback_report_text
+from well_harness.second_system_smoke import (
+    build_second_system_smoke_report,
+    render_second_system_smoke_text,
+)
 from well_harness.system_spec import current_reference_workbench_spec, workbench_spec_to_dict
+from well_harness.two_system_runtime_comparison import (
+    build_two_system_runtime_comparison_report,
+    render_two_system_runtime_comparison_text,
+)
 from well_harness.workbench_bundle import (
     archive_workbench_bundle,
     build_workbench_bundle,
+    resolve_workbench_archive_manifest_files,
     render_workbench_bundle_text,
     validate_workbench_archive_manifest,
 )
@@ -256,6 +265,59 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Validate manifest shape without requiring referenced archive files to exist.",
     )
+    second_system_smoke_parser = subparsers.add_parser(
+        "second-system-smoke",
+        help="Run the reusable second-system smoke proof against the default adapter-backed runtime path or an explicit intake packet",
+    )
+    second_system_smoke_parser.add_argument(
+        "--proof-mode",
+        choices=("truth-adapter", "intake-packet"),
+        help="Choose whether the smoke proof should run the default adapter-backed runtime path or the legacy intake-packet bundle path.",
+    )
+    second_system_smoke_parser.add_argument(
+        "--adapter-id",
+        help="Optional truth-adapter id. Defaults to the landing-gear adapter when proof-mode is truth-adapter.",
+    )
+    second_system_smoke_parser.add_argument(
+        "--packet-path",
+        help="Optional path to a JSON intake packet. When provided without --proof-mode, the smoke proof switches to intake-packet mode.",
+    )
+    second_system_smoke_parser.add_argument(
+        "--scenario",
+        help="Optional scenario id override. Defaults to the only scenario when exactly one exists.",
+    )
+    second_system_smoke_parser.add_argument(
+        "--fault-mode",
+        help="Optional fault mode id override. Defaults to the only fault mode when exactly one exists.",
+    )
+    second_system_smoke_parser.add_argument(
+        "--sample-period",
+        type=float,
+        default=0.5,
+        help="Sampling interval in seconds for playback and diagnosis inside the smoke bundle.",
+    )
+    second_system_smoke_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Render the second-system smoke report as text or JSON.",
+    )
+    two_system_runtime_comparison_parser = subparsers.add_parser(
+        "two-system-runtime-comparison",
+        help="Compare the adapter-backed runtime proof chain across the reference thrust-reverser and landing-gear systems.",
+    )
+    two_system_runtime_comparison_parser.add_argument(
+        "--sample-period",
+        type=float,
+        default=0.5,
+        help="Sampling interval in seconds for playback and diagnosis inside the comparison proof.",
+    )
+    two_system_runtime_comparison_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Render the two-system runtime comparison report as text or JSON.",
+    )
     return parser
 
 
@@ -474,12 +536,20 @@ def archive_manifest_validation_payload(
 
     issues = validate_workbench_archive_manifest(
         manifest,
+        manifest_path=path,
         require_existing_files=require_existing_files,
     )
     payload["valid"] = not issues
     payload["issues"] = list(issues)
     if not isinstance(manifest, dict):
         return payload
+    try:
+        resolved_files = resolve_workbench_archive_manifest_files(
+            manifest,
+            manifest_path=path,
+        )
+    except ValueError:
+        resolved_files = {}
 
     files = manifest.get("files") if isinstance(manifest.get("files"), dict) else {}
     bundle = manifest.get("bundle") if isinstance(manifest.get("bundle"), dict) else {}
@@ -496,6 +566,7 @@ def archive_manifest_validation_payload(
                 "ready_for_spec_build": bundle.get("ready_for_spec_build"),
             },
             "files": files,
+            "resolved_files": resolved_files,
             "file_count": len([file_path for file_path in files.values() if file_path is not None]),
             "restore_targets": manifest.get("restore_targets") if isinstance(manifest.get("restore_targets"), dict) else {},
             "self_check": manifest.get("self_check") if isinstance(manifest.get("self_check"), dict) else {},
@@ -707,6 +778,27 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(render_archive_manifest_validation_text(payload))
         return 0 if payload["valid"] else 1
+    if args.command == "second-system-smoke":
+        report = build_second_system_smoke_report(
+            packet_path=args.packet_path,
+            scenario_id=args.scenario,
+            fault_mode_id=args.fault_mode,
+            sample_period_s=args.sample_period,
+            proof_mode=args.proof_mode,
+            adapter_id=args.adapter_id,
+        )
+        if args.format == "json":
+            print(json.dumps(report.to_dict(), ensure_ascii=False, indent=2, sort_keys=True))
+        else:
+            print(render_second_system_smoke_text(report))
+        return 0 if report.smoke_passed else 1
+    if args.command == "two-system-runtime-comparison":
+        report = build_two_system_runtime_comparison_report(sample_period_s=args.sample_period)
+        if args.format == "json":
+            print(json.dumps(report.to_dict(), ensure_ascii=False, indent=2, sort_keys=True))
+        else:
+            print(render_two_system_runtime_comparison_text(report))
+        return 0 if report.both_reach_playback_completion and report.both_block_fault_path else 1
     parser.error("unsupported command")
     return 2
 
