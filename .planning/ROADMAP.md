@@ -2,7 +2,7 @@
 
 ## Current Milestone
 
-Milestone 8 — Active。P15: Pipeline Integration — connecting P14 AI Document Analyzer output to P7/P8 spec-driven intake pipeline for end-to-end document-to-diagnosis workflow。
+Milestone 8 — Complete (2026-04-14)。P15: Pipeline Integration — P14 → P7/P8 pipeline打通，document-to-diagnosis端到端完成。所有 P0-P15 phases 完成。
 
 ## Phase P0: Control Tower And GSD Control Plane
 
@@ -235,19 +235,19 @@ Exit Criteria:
 - All 23 shared validation commands continue to pass
 - Roadmap DB shows P14=Done
 
-## Milestone 8 — Active 2026-04-14
+## Milestone 8 — Complete (2026-04-14)
 
-Status: Active
+Status: Closed
 
 Goal: Complete P15 — Pipeline Integration。Connect P14 AI Document Analyzer output to P7/P8 spec-driven intake pipeline for end-to-end "document to diagnosis" workflow.
 
 Exit Criteria:
 
-- P15 = Done
+- P15 = Done (2026-04-14)
 - P14 output converts to valid control_system_spec_v1 intake packet
 - Intake packet enters P7/P8 pipeline without manual editing
 - Browser UI provides "Analyze → Clarify → Generate → Run Pipeline → View Diagnosis" one-click flow
-- All 326 existing tests continue to pass
+- All 345 existing tests continue to pass
 - All 23 shared validation commands continue to pass
 - Roadmap DB shows P15=Done
 
@@ -301,7 +301,7 @@ Plans:
 
 ## Phase P15: Pipeline Integration — P14 AI Document Analyzer output connects to P7/P8 spec-driven intake pipeline, enabling end-to-end document-to-diagnosis workflow
 
-Status: Not planned
+Status: Done (2026-04-14)
 
 Goal: Connect the P14 AI Document Analyzer's generated prompt document output to the P7/P8 control-system spec intake pipeline, creating a seamless "document to diagnosis" workflow where engineers upload a spec document and receive a complete diagnosis report without manually editing JSON.
 
@@ -311,10 +311,10 @@ Exit Criteria:
 - The converted intake packet can enter the P7/P8 pipeline (intake → playback → diagnosis → knowledge) without manual editing
 - Browser UI provides "Analyze → Clarify → Generate → Run Pipeline → View Diagnosis" one-click flow
 - The AI-generated spec conversion passes v1 schema validation
-- All 326 existing tests continue to pass (no regression)
+- All 345 existing tests continue to pass (no regression)
 - All 23 shared validation commands continue to pass
 
-**Plans:** 0 plans
+**Plans:** 1 plan(s)
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase P15 to break down)
+- [x] P15-01-SUMMARY.md // Pipeline Integration full pipeline (4 tasks: ai_doc_analyzer converter + routes + UI + tests + regression) ✓
