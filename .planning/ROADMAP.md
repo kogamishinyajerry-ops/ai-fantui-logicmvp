@@ -188,7 +188,7 @@ Exit Criteria:
 **Plans:** 1 plan(s)
 
 Plans:
-- [ ] P13-01-PLAN.md // Add system-switcher + /api/system-snapshot + data-driven chain-panel + truth-evaluation answer per system
+- [x] P13-01-PLAN.md // Add system-switcher + /api/system-snapshot + data-driven chain-panel + truth-evaluation answer per system (committed: 211ab2e, 07e015d, 2f818a6, cfc4aec, a28d4dc)
 
 ## Milestone 5 Hold — Lifted 2026-04-13
 
