@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI Document Analyzer — P14</title>
+    <link rel="stylesheet" href="/demo.css">
+    <link rel="stylesheet" href="/ai-doc-analyzer.css">
+  </head>
+  <body>
+    <main class="shell ai-doc-shell">
+
+      <!-- Nav strip -->
+      <nav class="ai-doc-nav-strip" aria-label="页面入口">
+        <a href="/demo.html">反推逻辑演示舱</a>
+        <span class="nav-sep" aria-hidden="true">|</span>
+        <a href="/workbench.html">Workbench 验收台</a>
+        <span class="nav-sep" aria-hidden="true">|</span>
+        <span style="color: rgba(200,240,255,0.4)">AI Document Analyzer</span>
+      </nav>
+
+      <!-- Hero -->
+      <section class="hero" aria-labelledby="ai-doc-title">
+        <div>
+          <p class="eyebrow">P14 · AI Document Analyzer</p>
+          <h1 id="ai-doc-title">AI Document Analyzer</h1>
+          <p class="boundary">
+            导入控制逻辑规格文档，AI 自动检测歧义条款，启动深度确认对话，最终生成结构化的 Claude Code prompt 文档。
+          </p>
+          <p class="showcase-mission">
+            没有设计基础的用户也能在 5 分钟内完成专业 KT 板设计 — 本工具专注于控制逻辑规格澄清。
+          </p>
+        </div>
+        <div class="chain-summary" aria-label="分析链路">
+          导入文档 → AI 歧义检测 → 确认对话 → Claude Code Prompt 生成
+        </div>
+      </section>
+
+      <!-- Two-column layout -->
+      <div class="ai-doc-layout">
+
+        <!-- ===== LEFT COLUMN: Upload + Preview ===== -->
+        <div class="ai-doc-left-col">
+
+          <!-- File Upload -->
+          <div class="ai-doc-section-heading">步骤 1 · 导入文档</div>
+          <div
+            class="ai-doc-drop-zone"
+            id="ai-doc-drop-zone"
+            role="button"
+            tabindex="0"
+            aria-label="将文件拖到此处或点击选择"
+          >
+            <input
+              type="file"
+              id="ai-doc-file-input"
+              accept=".md,.txt,.docx,.pdf"
+              aria-label="选择文件"
+            >
+            <div class="ai-doc-drop-zone-label">
+              <strong>将文件拖到此处，或点击选择</strong>
+              支持 .md / .txt / .docx / .pdf（最大 10MB）
+            </div>
+            <div class="ai-doc-file-meta" id="ai-doc-file-meta"></div>
+          </div>
+
+          <!-- Document Preview -->
+          <div class="ai-doc-section-heading" style="margin-top: 1.25rem;">文档预览</div>
+          <div class="ai-doc-preview-label">
+            <span id="ai-doc-char-count">0 字符</span>
+            <span id="ai-doc-word-count">0 词</span>
+          </div>
+          <textarea
+            class="ai-doc-preview-textarea"
+            id="ai-doc-preview"
+            readonly
+            placeholder="上传文档后，预览将显示在此处..."
+            aria-label="文档预览"
+          ></textarea>
+
+          <!-- Analyze button -->
+          <button
+            type="button"
+            class="ai-doc-analyze-btn"
+            id="ai-doc-analyze-btn"
+            disabled
+            aria-label="开始 AI 分析"
+          >
+            开始 AI 分析
+          </button>
+
+          <!-- Error display -->
+          <div class="ai-doc-error" id="ai-doc-upload-error" style="display:none;" role="alert"></div>
+
+          <!-- Ambiguity Cards (right below analyze button, inside left col) -->
+          <div class="ai-doc-section-heading" style="margin-top: 1.5rem;">检测到的歧义</div>
+          <div id="ai-doc-ambiguity-list" aria-live="polite">
+            <p style="color: rgba(200,240,255,0.35); font-size: 0.82rem;">
+              上传文档并点击"开始 AI 分析"后，检测结果将显示在此处。
+            </p>
+          </div>
+
+        </div><!-- /ai-doc-left-col -->
+
+        <!-- ===== RIGHT COLUMN: Clarification + Prompt ===== -->
+        <div class="ai-doc-right-col">
+
+          <!-- Clarification Dialog -->
+          <div class="ai-doc-section-heading">步骤 2 · 确认对话</div>
+          <div id="ai-doc-clarification-area" aria-live="polite">
+            <div style="color: rgba(200,240,255,0.35); font-size: 0.82rem; padding: 1rem 0;">
+              完成 AI 分析后，确认问题将逐一显示在这里。
+            </div>
+          </div>
+
+          <!-- Sufficiency message (hidden until complete) -->
+          <div
+            class="ai-doc-sufficient-msg"
+            id="ai-doc-sufficient-msg"
+            style="display:none;"
+            role="status"
+          >
+            信息充分，可以生成 Prompt 文档
+          </div>
+
+          <!-- Prompt Document -->
+          <div class="ai-doc-section-heading" style="margin-top: 1.5rem;">步骤 3 · Prompt 文档</div>
+          <div class="ai-doc-prompt-meta">
+            <span id="ai-doc-prompt-word-count">—</span>
+            <span id="ai-doc-prompt-status">等待生成</span>
+          </div>
+          <textarea
+            class="ai-doc-prompt-preview"
+            id="ai-doc-prompt-preview"
+            readonly
+            placeholder="完成确认对话后，Claude Code Prompt 文档将显示在此处..."
+            aria-label="Prompt 文档预览"
+          ></textarea>
+          <button
+            type="button"
+            class="ai-doc-download-btn"
+            id="ai-doc-download-btn"
+            disabled
+            aria-label="下载 Prompt 文档"
+          >
+            下载 Prompt 文档
+          </button>
+
+          <!-- Generate error -->
+          <div class="ai-doc-error" id="ai-doc-generate-error" style="display:none;" role="alert"></div>
+
+        </div><!-- /ai-doc-right-col -->
+
+      </div><!-- /ai-doc-layout -->
+
+      <!-- Status bar -->
+      <div class="ai-doc-status-bar" aria-label="状态信息">
+        <span id="ai-doc-session-display">Session: —</span>
+        <span class="mock-badge" id="ai-doc-mock-badge" style="display:none;">MOCK MODE</span>
+        <span id="ai-doc-api-error-hint" style="display:none; color: rgba(255,82,82,0.7);">
+          API Key 未配置，当前为 MOCK 模式
+        </span>
+      </div>
+
+    </main>
+
+    <script src="/ai-doc-analyzer.js"></script>
+  </body>
+</html>
