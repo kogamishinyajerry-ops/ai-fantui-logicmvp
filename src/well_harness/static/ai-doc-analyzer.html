@@ -32,7 +32,7 @@
           </p>
         </div>
         <div class="chain-summary" aria-label="分析链路">
-          导入文档 → AI 歧义检测 → 确认对话 → Claude Code Prompt 生成
+          导入文档 → AI 歧义检测 → 确认对话 → Claude Code Prompt 生成 → 运行 Pipeline
         </div>
       </section>
 
@@ -145,6 +145,22 @@
           >
             下载 Prompt 文档
           </button>
+
+          <!-- P15: Run Pipeline -->
+          <div class="ai-doc-section-heading" style="margin-top: 1.5rem;">步骤 4 · 运行 Pipeline</div>
+          <div class="ai-doc-pipeline-meta">
+            <span id="ai-doc-pipeline-status">等待 Prompt 生成</span>
+          </div>
+          <button
+            type="button"
+            class="ai-doc-pipeline-btn"
+            id="ai-doc-pipeline-btn"
+            disabled
+            aria-label="运行 Pipeline"
+          >
+            运行 Pipeline
+          </button>
+          <div id="ai-doc-pipeline-result" class="ai-doc-pipeline-result" style="display:none;" aria-live="polite"></div>
 
           <!-- Generate error -->
           <div class="ai-doc-error" id="ai-doc-generate-error" style="display:none;" role="alert"></div>

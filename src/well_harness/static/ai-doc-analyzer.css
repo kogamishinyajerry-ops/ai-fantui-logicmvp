@@ -408,3 +408,68 @@
   color: rgba(40, 244, 255, 0.6);
   margin-bottom: 0.75rem;
 }
+
+/* P15: Pipeline section */
+.ai-doc-pipeline-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  color: rgba(200, 240, 255, 0.45);
+  margin-bottom: 0.6rem;
+}
+
+.ai-doc-pipeline-btn {
+  padding: 0.55rem 1.25rem;
+  border-radius: 999px;
+  border: 1px solid rgba(79, 184, 255, 0.4);
+  background: rgba(79, 184, 255, 0.08);
+  color: #c8fff1;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.ai-doc-pipeline-btn:hover:not(:disabled) {
+  background: rgba(79, 184, 255, 0.18);
+  border-color: rgba(79, 184, 255, 0.6);
+}
+
+.ai-doc-pipeline-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ai-doc-pipeline-result {
+  margin-top: 1rem;
+}
+
+.ai-doc-pipeline-result-card {
+  background: rgba(79, 184, 255, 0.06);
+  border: 1px solid rgba(79, 184, 255, 0.2);
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  font-size: 0.85rem;
+}
+
+.ai-doc-pipeline-result-title {
+  font-weight: 700;
+  color: #c8fff1;
+  margin-bottom: 0.8rem;
+  font-size: 0.92rem;
+}
+
+.ai-doc-pipeline-result-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+  color: rgba(200, 240, 255, 0.75);
+  line-height: 1.4;
+}
+
+.ai-doc-pipeline-result-row .label {
+  color: rgba(200, 240, 255, 0.5);
+  min-width: 140px;
+  flex-shrink: 0;
+}

@@ -17,6 +17,9 @@ let _documentText = null;
 /** @type {string|null} Current document name */
 let _documentName = null;
 
+/** @type {Object|null} Current intake packet (P15) */
+let _intakePacket = null;
+
 // ---------------------------------------------------------------------------
 // API helpers
 // ---------------------------------------------------------------------------
@@ -85,6 +88,46 @@ async function p14Generate(sessionId) {
   return data;
 }
 
+/**
+ * POST /api/p15/convert-to-intake
+ * @param {string} sessionId
+ * @param {string} [systemId]
+ * @returns {Promise<Object>} JSON response
+ */
+async function p15Convert(sessionId, systemId) {
+  const response = await fetch("/api/p15/convert-to-intake", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      session_id: sessionId,
+      system_id: systemId || "generated-system",
+    }),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) {
+    throw new Error(data.message || data.error || "p15 convert failed");
+  }
+  return data;
+}
+
+/**
+ * POST /api/p15/run-pipeline
+ * @param {Object} intakePacket
+ * @returns {Promise<Object>} JSON response
+ */
+async function p15RunPipeline(intakePacket) {
+  const response = await fetch("/api/p15/run-pipeline", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ intake_packet: intakePacket }),
+  });
+  const data = await response.json();
+  if (!response.ok || data.error) {
+    throw new Error(data.message || data.error || "p15 pipeline failed");
+  }
+  return data;
+}
+
 // ---------------------------------------------------------------------------
 // DOM element references
 // ---------------------------------------------------------------------------
@@ -108,6 +151,9 @@ const _promptStatus = document.getElementById("ai-doc-prompt-status");
 const _downloadBtn = document.getElementById("ai-doc-download-btn");
 const _generateError = document.getElementById("ai-doc-generate-error");
 const _sessionDisplay = document.getElementById("ai-doc-session-display");
+const _pipelineBtn = document.getElementById("ai-doc-pipeline-btn");
+const _pipelineResultArea = document.getElementById("ai-doc-pipeline-result");
+const _pipelineStatus = document.getElementById("ai-doc-pipeline-status");
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -434,11 +480,80 @@ async function _triggerGenerate() {
     _promptWordCount.textContent = (result.word_count || 0).toLocaleString() + " words";
     _promptStatus.textContent = "Generated";
     _downloadBtn.disabled = false;
+
+    // Auto-fetch the intake packet (P15) after prompt generation
+    var convertResult;
+    try {
+      convertResult = await p15Convert(_sessionId);
+      _intakePacket = convertResult.intake_packet || null;
+    } catch (e) {
+      console.warn("P15 convert failed (non-fatal):", e.message);
+      _intakePacket = null;
+    }
+
+    if (_intakePacket && _pipelineBtn) {
+      _pipelineBtn.disabled = false;
+      _pipelineStatus.textContent = "Ready to run pipeline";
+    }
   } catch (err) {
     _generateError.textContent = "Generation failed: " + err.message;
     _generateError.style.display = "block";
     _promptStatus.textContent = "Generation failed";
   }
+}
+
+// ---------------------------------------------------------------------------
+// P15 Run Pipeline
+// ---------------------------------------------------------------------------
+
+if (_pipelineBtn) {
+  _pipelineBtn.addEventListener("click", async function () {
+    if (!_intakePacket) {
+      alert("Intake packet not available. Please generate the prompt document first.");
+      return;
+    }
+
+    _pipelineBtn.disabled = true;
+    _pipelineStatus.textContent = "Running pipeline...";
+
+    try {
+      var result = await p15RunPipeline(_intakePacket);
+
+      var bundle = result.bundle || {};
+      var snapshot = result.system_snapshot || {};
+      var assessment = result.assessment || {};
+
+      var html =
+        '<div class="ai-doc-pipeline-result-card">' +
+        '  <div class="ai-doc-pipeline-result-title">Pipeline 执行结果</div>' +
+        '  <div class="ai-doc-pipeline-result-row"><span class="label">System ID:</span> ' + _escHtml(snapshot.system_id || "—") + '</div>' +
+        '  <div class="ai-doc-pipeline-result-row"><span class="label">Title:</span> ' + _escHtml(snapshot.title || "—") + '</div>' +
+        '  <div class="ai-doc-pipeline-result-row"><span class="label">Bundle Kind:</span> ' + _escHtml(bundle.bundle_kind || "—") + '</div>' +
+        '  <div class="ai-doc-pipeline-result-row"><span class="label">Components:</span> ' + (snapshot.component_count || 0) + '</div>' +
+        '  <div class="ai-doc-pipeline-result-row"><span class="label">Logic Nodes:</span> ' + (snapshot.logic_node_count || 0) + '</div>' +
+        '  <div class="ai-doc-pipeline-result-row"><span class="label">Scenarios:</span> ' + (snapshot.acceptance_scenario_count || 0) + '</div>' +
+        '  <div class="ai-doc-pipeline-result-row"><span class="label">Fault Modes:</span> ' + (snapshot.fault_mode_count || 0) + '</div>' +
+        '  <div class="ai-doc-pipeline-result-row"><span class="label">Ready for Spec Build:</span> ' +
+        (snapshot.ready_for_spec_build ? '<span style="color:#53ff92">Yes</span>' : '<span style="color:#ffcc53">No</span>') + '</div>';
+
+      if (bundle.scenario_count !== undefined) {
+        html += '<div class="ai-doc-pipeline-result-row"><span class="label">Playback Scenarios:</span> ' + bundle.scenario_count + '</div>';
+      }
+
+      html += "</div>";
+
+      _pipelineResultArea.innerHTML = html;
+      _pipelineResultArea.style.display = "block";
+      _pipelineStatus.textContent = "Pipeline completed";
+      _pipelineBtn.disabled = false;
+    } catch (err) {
+      _pipelineResultArea.innerHTML =
+        '<div class="ai-doc-error" style="display:block;">Pipeline failed: ' + _escHtml(err.message) + '</div>';
+      _pipelineResultArea.style.display = "block";
+      _pipelineStatus.textContent = "Pipeline failed";
+      _pipelineBtn.disabled = false;
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
