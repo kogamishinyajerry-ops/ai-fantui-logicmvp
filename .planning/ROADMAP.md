@@ -2,7 +2,7 @@
 
 ## Current Milestone
 
-Milestone 8 — Complete (2026-04-14)。P15: Pipeline Integration — P14 → P7/P8 pipeline打通，document-to-diagnosis端到端完成。所有 P0-P15 phases 完成。
+**Project Freeze — All P0-P15 Complete (2026-04-14)**。Milestone 8 Closed。Opus 4.6 Final Adjudication: Project reached MVP达标线，建议冻结，等待外部用户反馈或新方向决策。GSD automation 保持运行保护回归。
 
 ## Phase P0: Control Tower And GSD Control Plane
 
@@ -318,3 +318,26 @@ Exit Criteria:
 
 Plans:
 - [x] P15-01-SUMMARY.md // Pipeline Integration full pipeline (4 tasks: ai_doc_analyzer converter + routes + UI + tests + regression) ✓
+
+## Project Freeze — Opus 4.6 Final Adjudication (2026-04-14)
+
+**Status: Active — No active development phases**
+
+**Opus 4.6 裁决：** P0→P15 全部完成。项目已达到"可泛化动力控制电路系统工作台 MVP"达标线。建议进入 Project Freeze。
+
+**冻结内容：**
+- 代码基线冻结，不继续自动开发
+- GSD automation 保持运行（23-command validation suite 在每次 push 时保护回归）
+
+**解冻条件（人工决策）：**
+- 外部工程师实际使用后提供反馈
+- 产品方向决策需要新功能
+- 新的领域需求（超出控制电路分析的范围）
+
+**继承的改进项（冻结期间可选择性处理）：**
+| 优先级 | 改进项 |
+|--------|--------|
+| P1（投产前） | 服务端文件上传大小限制 |
+| P2 | Content-type 白名单 |
+| P2 | Pre-existing notion sync failure 修复或归档 |
+| P3 | 确认循环跳过选项 |
