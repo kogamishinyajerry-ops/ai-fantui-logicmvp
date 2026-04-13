@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-13 - Completed tech debt: P12 onboarding gaps (README improvements, commit 22d3267) and Notion writeback optimization (parallel API calls, commit 333fa24). All 3 MILESTONE6-HOLD tech debts resolved.
+Last activity: 2026-04-13 - Fixed thread-safety bug in NotionClient (per-request connections, commit 061a503); activated Opus 4.6 gate for next roadmap direction. All 3 MILESTONE6-HOLD tech debts resolved.
 
 ## Current Position
 
