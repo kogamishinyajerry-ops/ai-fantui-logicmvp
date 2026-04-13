@@ -5,8 +5,8 @@
 
 - 结论：PASS；当前稳定基线由 GitHub-backed validation evidence 支撑。
 - 当前阶段：`P10`
-- 当前已验证 Plan：`P9 CLOSURE — Opus 4.6 Phase收口 Approved`
-- 最近成功执行证据：`Opus 4.6 GSD automation P9-closure`
+- 当前已验证 Plan：`P10-01 Landing-Gear Full Pipeline End-to-End (Intake → Playback → Diagnosis → Knowledge)`
+- 最近成功执行证据：`GitHub GSD automation P10-01`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`

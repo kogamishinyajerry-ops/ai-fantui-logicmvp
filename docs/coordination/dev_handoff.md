@@ -4,8 +4,8 @@
 ## 当前自动同步交接基线
 
 - 活动 phase：`P10`
-- 当前已验证 Plan：`P9 CLOSURE — Opus 4.6 Phase收口 Approved`
-- 最近成功执行证据：`Opus 4.6 GSD automation P9-closure`
+- 当前已验证 Plan：`P10-01 Landing-Gear Full Pipeline End-to-End (Intake → Playback → Diagnosis → Knowledge)`
+- 最近成功执行证据：`GitHub GSD automation P10-01`
 - 当前证据模式：`active-page degraded mode`
 - 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
 - 当前 QA 摘要：`PASS. 23/23 shared validation checks pass.`
