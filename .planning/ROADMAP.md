@@ -159,19 +159,26 @@ Exit Criteria:
 
 Status: Done
 
-## Milestone 4 Hold — Declared 2026-04-13
+## Milestone 4 Hold — Superseded by P12
 
-Status: Active (Hold)
+Status: Deprecated
 
-Goal: Freeze the P0→P11 baseline. No active development phases. Regression fixes only. Await product direction decision or external user feedback.
+Milestone 4 Hold 已取消（P12 启动）。保留作为历史记录。
+
+## Phase P12: Third-System Onboarding Validation
+
+Status: Active
+
+Goal: Validate the P11 onboarding tools (guide + templates + dry-run script) by actually onboarding a third control system through the full pipeline — proving the tools work for non-project-owners.
 
 Exit Criteria:
 
-- `docs/freeze/MILESTONE4-HOLD.md` exists and documents the hold declaration.
-- `.planning/constitution.md` updated with Milestone Hold section.
-- All phase code frozen — no new feature development.
-- 23 shared validation commands continue to pass (regression protection only).
-- Roadmap DB shows P11=Done, Milestone 4 Hold=Active.
+- A third control system (not thrust-reverser, not landing-gear) successfully passes through the full intake → playback → diagnosis → knowledge pipeline using `templates/new_system/` and `docs/onboarding/`.
+- Each stage output passes its v1 schema validation.
+- `tools/onboard_new_system_dry_run.py` exits 0 for the third system.
+- Onboarding process documented as a case study in `docs/onboarding/`.
+- All 23 shared validation commands continue to pass (no regression).
+- Roadmap DB shows P11=Done, P12=Active.
 
 
 Goal: Transform the proven two-system pipeline into a product that external engineers can successfully use to onboard a new control system — without requiring project insider knowledge.

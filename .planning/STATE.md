@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-13 - Milestone 4 Hold declared. P0→P11 fully closed, baseline frozen. No active development. Regression fixes only. Awaiting product direction decision.
+Last activity: 2026-04-13 - P12 started: Third-System Onboarding Validation. Milestone 4 Hold deprecated. Validating P11 onboarding tools with a real third system (bleed-air valve control).
 
 ## Current Position
 
