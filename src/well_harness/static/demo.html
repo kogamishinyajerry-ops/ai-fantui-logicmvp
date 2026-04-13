@@ -272,6 +272,154 @@
             <p id="lever-status" class="lever-status" role="status" aria-live="polite">等待拉杆快照。</p>
           </section>
 
+          <!-- ===== Landing Gear Input Panel ===== -->
+          <section id="landing-gear-inputs" class="panel system-input-panel" style="display:none" aria-labelledby="lg-inputs-title">
+            <h2 id="lg-inputs-title"><span class="presenter-callout">[输入]</span> 起落架控制</h2>
+            <p class="system-input-note">调节以下输入信号，观察逻辑链路的推理结论变化。</p>
+            <div class="system-input-grid">
+              <label class="system-input-select" for="lg-gear-handle">
+                <span>Gear Handle</span>
+                <select id="lg-gear-handle" name="gear_handle_position" aria-label="Gear Handle Position">
+                  <option value="UP" selected>UP</option>
+                  <option value="DOWN">DOWN</option>
+                </select>
+              </label>
+              <label class="system-input-range" for="lg-hyd-pressure">
+                <span>Hyd Pressure <output for="lg-hyd-pressure" id="lg-hyd-pressure-value">0 psi</output></span>
+                <input id="lg-hyd-pressure" name="hydraulic_pressure_psi" type="range" min="0" max="3000" step="10" value="0">
+                <small>Extension requires &ge; 1500 psi</small>
+              </label>
+              <label class="system-input-range" for="lg-gear-position">
+                <span>Gear Position <output for="lg-gear-position" id="lg-gear-position-value">0%</output></span>
+                <input id="lg-gear-position" name="gear_position_percent" type="range" min="0" max="100" step="1" value="0">
+                <small>Downlock engages at 100%</small>
+              </label>
+              <label class="system-input-toggle" for="lg-uplock-released">
+                <span>Uplock Released</span>
+                <input id="lg-uplock-released" name="uplock_released" type="checkbox" value="1">
+              </label>
+              <label class="system-input-toggle" for="lg-downlock-engaged">
+                <span>Downlock Engaged</span>
+                <input id="lg-downlock-engaged" name="downlock_engaged" type="checkbox" value="1">
+              </label>
+            </div>
+            <div class="system-input-actions">
+              <button type="button" class="btn-primary system-snapshot-btn" data-system="landing-gear">应用快照</button>
+            </div>
+          </section>
+
+          <!-- ===== Bleed Air Input Panel ===== -->
+          <section id="bleed-air-inputs" class="panel system-input-panel" style="display:none" aria-labelledby="ba-inputs-title">
+            <h2 id="ba-inputs-title"><span class="presenter-callout">[输入]</span> 引气活门控制</h2>
+            <p class="system-input-note">调节以下输入信号，观察逻辑链路的推理结论变化。</p>
+            <div class="system-input-grid">
+              <label class="system-input-select" for="ba-valve-position">
+                <span>Valve Position</span>
+                <select id="ba-valve-position" name="valve_position" aria-label="Valve Position">
+                  <option value="CLOSED" selected>CLOSED</option>
+                  <option value="OPEN">OPEN</option>
+                </select>
+              </label>
+              <label class="system-input-range" for="ba-inlet-pressure">
+                <span>Inlet Pressure <output for="ba-inlet-pressure" id="ba-inlet-pressure-value">0.0 psi</output></span>
+                <input id="ba-inlet-pressure" name="inlet_pressure" type="range" min="0" max="100" step="1" value="0">
+                <small>Open threshold: 35 psi | Close: &lt; 32 psi (hysteresis)</small>
+              </label>
+              <label class="system-input-range" for="ba-outlet-pressure">
+                <span>Outlet Pressure <output for="ba-outlet-pressure" id="ba-outlet-pressure-value">0.0 psi</output></span>
+                <input id="ba-outlet-pressure" name="outlet_pressure" type="range" min="0" max="100" step="1" value="0">
+              </label>
+              <label class="system-input-toggle" for="ba-control-unit-ready">
+                <span>Control Unit Ready</span>
+                <input id="ba-control-unit-ready" name="control_unit_ready" type="checkbox" value="1">
+              </label>
+            </div>
+            <div class="system-input-actions">
+              <button type="button" class="btn-primary system-snapshot-btn" data-system="bleed-air">应用快照</button>
+            </div>
+          </section>
+
+          <!-- ===== EFDS Input Panel ===== -->
+          <section id="efds-inputs" class="panel system-input-panel" style="display:none" aria-labelledby="efds-inputs-title">
+            <h2 id="efds-inputs-title"><span class="presenter-callout">[输入]</span> 干扰弹部署控制</h2>
+            <p class="system-input-note">调节以下输入信号，观察逻辑链路的推理结论变化。</p>
+            <div class="system-input-grid">
+              <label class="system-input-select" for="efds-threat-mls">
+                <span>MLS Threat State</span>
+                <select id="efds-threat-mls" name="sensor.threat.mls" aria-label="MLS Threat State">
+                  <option value="IDLE" selected>IDLE</option>
+                  <option value="THREAT_DETECTED">THREAT_DETECTED</option>
+                  <option value="MISSLE_INBOUND">MISSLE_INBOUND</option>
+                </select>
+              </label>
+              <label class="system-input-range" for="efds-alt-radar">
+                <span>Radar Altitude <output for="efds-alt-radar" id="efds-alt-radar-value">5000 ft</output></span>
+                <input id="efds-alt-radar" name="sensor.alt.radar" type="range" min="0" max="50000" step="100" value="5000">
+                <small>LN-02 floor (AUTO mode): uses baro alt</small>
+              </label>
+              <label class="system-input-range" for="efds-alt-baro">
+                <span>Baro Altitude <output for="efds-alt-baro" id="efds-alt-baro-value">5200 ft</output></span>
+                <input id="efds-alt-baro" name="sensor.alt.baro" type="range" min="0" max="50000" step="100" value="5200">
+                <small>Used as effective altitude in AUTO override mode</small>
+              </label>
+              <label class="system-input-range" for="efds-temp-ext">
+                <span>External Temp <output for="efds-temp-ext" id="efds-temp-ext-value">15°C</output></span>
+                <input id="efds-temp-ext" name="sensor.temp.external" type="range" min="-50" max="60" step="1" value="15">
+                <small>LN-03 gate: must be &gt; -20°C</small>
+              </label>
+              <label class="system-input-select" for="efds-arm-switch">
+                <span>Pilot Arm Switch</span>
+                <select id="efds-arm-switch" name="pilot.arm_switch" aria-label="Pilot Arm Switch">
+                  <option value="SAFE" selected>SAFE</option>
+                  <option value="ARM">ARM</option>
+                  <option value="AUTO">AUTO</option>
+                </select>
+              </label>
+              <label class="system-input-select" for="efds-alt-override">
+                <span>Altitude Override</span>
+                <select id="efds-alt-override" name="pilot.altitude_override" aria-label="Altitude Override Mode">
+                  <option value="AUTO" selected>AUTO</option>
+                  <option value="1000FT">1000FT</option>
+                  <option value="2000FT">2000FT</option>
+                  <option value="5000FT">5000FT</option>
+                  <option value="NONE">NONE</option>
+                </select>
+              </label>
+              <label class="system-input-select" for="efds-manual-dispense">
+                <span>Manual Dispense</span>
+                <select id="efds-manual-dispense" name="pilot.manual_dispense" aria-label="Manual Dispense">
+                  <option value="RELEASED" selected>RELEASED</option>
+                  <option value="CONFIRMED">CONFIRMED</option>
+                </select>
+              </label>
+              <label class="system-input-select" for="efds-armed-relay">
+                <span>Armed Relay</span>
+                <select id="efds-armed-relay" name="logic.armed_relay" aria-label="Armed Relay State">
+                  <option value="OPEN" selected>OPEN</option>
+                  <option value="CLOSED">CLOSED</option>
+                </select>
+              </label>
+              <label class="system-input-select" for="efds-crosslink">
+                <span>Crosslink Validator</span>
+                <select id="efds-crosslink" name="logic.crosslink_validator" aria-label="Crosslink Validator">
+                  <option value="FALSE" selected>FALSE</option>
+                  <option value="TRUE">TRUE</option>
+                </select>
+              </label>
+              <label class="system-input-select" for="efds-firing-channel">
+                <span>Firing Channel</span>
+                <select id="efds-firing-channel" name="logic.firing_channel" aria-label="Firing Channel State">
+                  <option value="READY" selected>READY</option>
+                  <option value="COUNTING">COUNTING</option>
+                  <option value="EXPIRED">EXPIRED</option>
+                </select>
+              </label>
+            </div>
+            <div class="system-input-actions">
+              <button type="button" class="btn-primary system-snapshot-btn" data-system="efds">应用快照</button>
+            </div>
+          </section>
+
           <details class="panel qa-drawer" aria-labelledby="qa-drawer-title">
             <summary id="qa-drawer-title"><span class="presenter-callout">[问答]</span> 诊断问答（冻结 / 后续开发）</summary>
             <p class="qa-drawer-note">当前主舞台先聚焦拉杆、条件面板、逻辑主板和当前结论；问答入口暂时冻结为次要诊断抽屉。</p>

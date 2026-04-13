@@ -19,6 +19,8 @@ const sectionLabels = {
 // ---------------------------------------------------------------------------
 /** Current active system_id, default thrust-reverser */
 let _currentSystemId = "thrust-reverser";
+/** Cached nodes from the last /api/system-snapshot call — used to re-apply truth evaluation on lever-snapshot updates. */
+let _systemSnapshotNodes = [];
 
 /**
  * Fetch /api/system-snapshot for the given systemId, then update the UI.
@@ -43,7 +45,8 @@ async function handleSystemSwitch(systemId) {
     if (topologyEl) topologyEl.style.display = "";
 
     // Apply node states from truth evaluation to visible topology
-    applySystemNodeStates(data.nodes, data.truth_evaluation?.asserted_component_values);
+    _systemSnapshotNodes = data.nodes || [];
+    applySystemNodeStates(_systemSnapshotNodes, data.truth_evaluation?.asserted_component_values);
 
     // Render truth evaluation answer card
     renderTruthEvaluation(data.truth_evaluation);
@@ -57,9 +60,88 @@ async function handleSystemSwitch(systemId) {
     if (conditionPanel) {
       conditionPanel.style.display = systemId === "thrust-reverser" ? "" : "none";
     }
+
+    // Show/hide the correct system input panel
+    // lever-panel is for thrust-reverser only
+    document.querySelectorAll(".system-input-panel").forEach((el) => { el.style.display = "none"; });
+    const lgPanel = document.getElementById("landing-gear-inputs");
+    const baPanel = document.getElementById("bleed-air-inputs");
+    const efdsPanel = document.getElementById("efds-inputs");
+    if (lgPanel) lgPanel.style.display = systemId === "landing-gear" ? "" : "none";
+    if (baPanel) baPanel.style.display = systemId === "bleed-air" ? "" : "none";
+    if (efdsPanel) efdsPanel.style.display = systemId === "efds" ? "" : "none";
   } catch (err) {
     console.error("handleSystemSwitch failed:", err);
   }
+}
+
+/**
+ * Collect form values from a system-specific input panel into a snapshot dict.
+ */
+function collectSystemSnapshotPayload(systemId) {
+  const snapshot = {};
+  let panel;
+  if (systemId === "landing-gear") {
+    panel = document.getElementById("landing-gear-inputs");
+    if (!panel) return snapshot;
+    snapshot.gear_handle_position = panel.querySelector("[name=gear_handle_position]")?.value || "UP";
+    snapshot.hydraulic_pressure_psi = parseFloat(panel.querySelector("[name=hydraulic_pressure_psi]")?.value) || 0;
+    snapshot.gear_position_percent = parseFloat(panel.querySelector("[name=gear_position_percent]")?.value) || 0;
+    snapshot.uplock_released = panel.querySelector("[name=uplock_released]")?.checked || false;
+    snapshot.downlock_engaged = panel.querySelector("[name=downlock_engaged]")?.checked || false;
+  } else if (systemId === "bleed-air") {
+    panel = document.getElementById("bleed-air-inputs");
+    if (!panel) return snapshot;
+    snapshot.valve_position = panel.querySelector("[name=valve_position]")?.value || "CLOSED";
+    snapshot.inlet_pressure = parseFloat(panel.querySelector("[name=inlet_pressure]")?.value) || 0;
+    snapshot.outlet_pressure = parseFloat(panel.querySelector("[name=outlet_pressure]")?.value) || 0;
+    snapshot.control_unit_ready = panel.querySelector("[name=control_unit_ready]")?.checked || false;
+  } else if (systemId === "efds") {
+    panel = document.getElementById("efds-inputs");
+    if (!panel) return snapshot;
+    snapshot["sensor.threat.mls"] = panel.querySelector("[name=sensor.threat.mls]")?.value || "IDLE";
+    snapshot["sensor.alt.radar"] = parseFloat(panel.querySelector("[name=sensor.alt.radar]")?.value) || 0;
+    snapshot["sensor.alt.baro"] = parseFloat(panel.querySelector("[name=sensor.alt.baro]")?.value) || 0;
+    snapshot["sensor.temp.external"] = parseFloat(panel.querySelector("[name=sensor.temp.external]")?.value) || 15;
+    snapshot["pilot.arm_switch"] = panel.querySelector("[name=pilot.arm_switch]")?.value || "SAFE";
+    snapshot["pilot.altitude_override"] = panel.querySelector("[name=pilot.altitude_override]")?.value || "AUTO";
+    snapshot["pilot.manual_dispense"] = panel.querySelector("[name=pilot.manual_dispense]")?.value || "RELEASED";
+    snapshot["logic.armed_relay"] = panel.querySelector("[name=logic.armed_relay]")?.value || "OPEN";
+    snapshot["logic.crosslink_validator"] = panel.querySelector("[name=logic.crosslink_validator]")?.value || "FALSE";
+    snapshot["logic.firing_channel"] = panel.querySelector("[name=logic.firing_channel]")?.value || "READY";
+    // Required by efds_adapter.evaluate() but not user-editable; preserve defaults
+    snapshot["actuator.flare_array"] = 24.0;
+    snapshot["sensor.g.load"] = 1.0;
+  }
+  return snapshot;
+}
+
+/**
+ * POST a user-modified snapshot to /api/system-snapshot and re-render UI.
+ */
+async function runSystemSnapshot(systemId) {
+  const snapshot = collectSystemSnapshotPayload(systemId);
+  let response;
+  try {
+    response = await fetch("/api/system-snapshot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ system_id: systemId, snapshot }),
+    });
+  } catch (err) {
+    console.error("runSystemSnapshot network error:", err);
+    return;
+  }
+  const payload = await response.json().catch(() => ({ error: "invalid_json" }));
+  if (!response.ok) {
+    console.error("runSystemSnapshot error:", payload);
+    return;
+  }
+  // Re-apply node states from the updated truth evaluation
+  _systemSnapshotNodes = payload.nodes || [];
+  applySystemNodeStates(_systemSnapshotNodes, payload.truth_evaluation?.asserted_component_values);
+  // Re-render truth evaluation card
+  renderTruthEvaluation(payload.truth_evaluation);
 }
 
 /**
@@ -73,7 +155,7 @@ function applySystemNodeStates(nodes, componentValues) {
     stateMap.set(node.id, node.state || "inactive");
   });
 
-  // Build a map from node id -> suggested display value (from componentValues or node state)
+  // Build a map from signal id -> value (from componentValues)
   const nodeValueMap = new Map();
   if (componentValues) {
     Object.entries(componentValues).forEach(([signalId, value]) => {
@@ -100,13 +182,12 @@ function applySystemNodeStates(nodes, componentValues) {
     el.classList.add(`is-${state}`);
     el.dataset.state = state;
 
-    // For SVG value text: find the value element inside this node group
-    // Use data-value-for on the valueEl as the lookup key into nodeValueMap
-    // (data-value-for stores the backend signal ID, which may differ from data-node)
-    const valueEl = el.parentElement?.querySelector(".chain-node-value") || el.querySelector(".chain-node-value");
+    // Update the sibling <text data-value-for="..."> value display.
+    // Directly query by data-value-for to avoid parent traversal ambiguity in SVG.
+    // signalKey (e.g. "sw1", "radio_altitude_ft") is the backend signal ID used as the map key.
+    const valueEl = el.parentElement?.querySelector(`[data-value-for="${nodeId}"]`) || el.querySelector(`[data-value-for="${nodeId}"]`);
     if (valueEl) {
-      const signalKey = valueEl.dataset.valueFor;  // backend signal ID (e.g. "deploy_90_percent_vdt")
-      const cv = signalKey !== undefined ? nodeValueMap.get(signalKey) : undefined;
+      const cv = nodeValueMap.get(nodeId);
       if (cv !== undefined) {
         valueEl.textContent = formatSignalValue(cv);
       } else if (state === "active") {
@@ -114,22 +195,10 @@ function applySystemNodeStates(nodes, componentValues) {
       } else if (state === "blocked") {
         valueEl.textContent = "WAIT";
       } else {
-        // Inactive node with no known value: show OFF so the label actually changes
         valueEl.textContent = "OFF";
       }
     }
   });
-
-  // Populate remaining SVG text values from asserted_component_values
-  if (componentValues) {
-    Object.entries(componentValues).forEach(([signalId, value]) => {
-      document.querySelectorAll(`.chain-topology:not([style*='display: none']) [data-value-for="${signalId}"]`).forEach((el) => {
-        if (el.textContent === "—" || el.textContent === "ON" || el.textContent === "WAIT" || el.textContent === "OFF") {
-          el.textContent = formatSignalValue(value);
-        }
-      });
-    });
-  }
 }
 
 /** Format a signal value for display in SVG text. */
@@ -1052,6 +1121,41 @@ function renderLeverSnapshot(payload) {
       : hud.deploy_position_percent ?? 0,
     );
 
+  // Update chain topology with fresh truth evaluation from lever-snapshot.
+  // active_logic_node_ids drives logic-gate node active/inactive state.
+  // asserted_component_values drives input/condition node values (sw1, RA, VDT, etc.).
+  const activeLogicNodeIds = [
+    outputs.logic1_active && "logic1",
+    outputs.logic2_active && "logic2",
+    outputs.logic3_active && "logic3",
+    outputs.logic4_active && "logic4",
+  ].filter(Boolean);
+  const truthEvaluation = {
+    active_logic_node_ids: activeLogicNodeIds,
+    asserted_component_values: {
+      sw1: hud.sw1,
+      sw2: hud.sw2,
+      radio_altitude_ft: hud.radio_altitude_ft,
+      engine_running: hud.engine_running,
+      aircraft_on_ground: hud.aircraft_on_ground,
+      reverser_inhibited: hud.reverser_inhibited,
+      eec_enable: hud.eec_enable,
+      n1k: hud.n1k,
+      tra_deg: hud.tra_deg,
+      tls_unlocked_ls: hud.tls_unlocked_ls,
+      all_pls_unlocked_ls: hud.all_pls_unlocked_ls,
+      deploy_90_percent_vdt: hud.deploy_90_percent_vdt,
+      deploy_position_percent: hud.deploy_position_percent,
+      tls_115vac_cmd: outputs.tls_115vac_cmd,
+      etrac_540vdc_cmd: outputs.etrac_540vdc_cmd,
+      eec_deploy_cmd: outputs.eec_deploy_cmd,
+      pls_power_cmd: outputs.pls_power_cmd,
+      pdu_motor_cmd: outputs.pdu_motor_cmd,
+      throttle_electronic_lock_release_cmd: outputs.throttle_electronic_lock_release_cmd,
+    },
+  };
+  applySystemNodeStates(_systemSnapshotNodes || [], truthEvaluation);
+
   renderTraLockState(payload);
   document.getElementById("condition-feedback-mode").value = feedbackMode;
   document.getElementById("condition-deploy-position").disabled = feedbackMode !== "manual_feedback_override";
@@ -1336,6 +1440,55 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     // Bootstrap with default system
     handleSystemSwitch(systemSelector.value);
+  }
+
+  // System-specific input panel: wire up "Apply Snapshot" buttons and live readouts
+  document.querySelectorAll(".system-snapshot-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const systemId = btn.dataset.system;
+      if (systemId) runSystemSnapshot(systemId);
+    });
+  });
+
+  // Landing Gear: live readouts for range inputs
+  const lgHydInput = document.getElementById("lg-hyd-pressure");
+  const lgHydOutput = document.getElementById("lg-hyd-pressure-value");
+  if (lgHydInput && lgHydOutput) {
+    lgHydInput.addEventListener("input", () => { lgHydOutput.textContent = lgHydInput.value + " psi"; });
+  }
+  const lgPosInput = document.getElementById("lg-gear-position");
+  const lgPosOutput = document.getElementById("lg-gear-position-value");
+  if (lgPosInput && lgPosOutput) {
+    lgPosInput.addEventListener("input", () => { lgPosOutput.textContent = lgPosInput.value + "%"; });
+  }
+
+  // Bleed Air: live readouts
+  const baInletInput = document.getElementById("ba-inlet-pressure");
+  const baInletOutput = document.getElementById("ba-inlet-pressure-value");
+  if (baInletInput && baInletOutput) {
+    baInletInput.addEventListener("input", () => { baInletOutput.textContent = parseFloat(baInletInput.value).toFixed(1) + " psi"; });
+  }
+  const baOutletInput = document.getElementById("ba-outlet-pressure");
+  const baOutletOutput = document.getElementById("ba-outlet-pressure-value");
+  if (baOutletInput && baOutletOutput) {
+    baOutletInput.addEventListener("input", () => { baOutletOutput.textContent = parseFloat(baOutletInput.value).toFixed(1) + " psi"; });
+  }
+
+  // EFDS: live readouts
+  const efdsRadarInput = document.getElementById("efds-alt-radar");
+  const efdsRadarOutput = document.getElementById("efds-alt-radar-value");
+  if (efdsRadarInput && efdsRadarOutput) {
+    efdsRadarInput.addEventListener("input", () => { efdsRadarOutput.textContent = efdsRadarInput.value + " ft"; });
+  }
+  const efdsBaroInput = document.getElementById("efds-alt-baro");
+  const efdsBaroOutput = document.getElementById("efds-alt-baro-value");
+  if (efdsBaroInput && efdsBaroOutput) {
+    efdsBaroInput.addEventListener("input", () => { efdsBaroOutput.textContent = efdsBaroInput.value + " ft"; });
+  }
+  const efdsTempInput = document.getElementById("efds-temp-ext");
+  const efdsTempOutput = document.getElementById("efds-temp-ext-value");
+  if (efdsTempInput && efdsTempOutput) {
+    efdsTempInput.addEventListener("input", () => { efdsTempOutput.textContent = efdsTempInput.value + "°C"; });
   }
 
   const form = document.getElementById("demo-form");

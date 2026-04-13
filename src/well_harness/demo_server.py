@@ -52,12 +52,8 @@ CONTENT_TYPES = {
     ".css": "text/css; charset=utf-8",
     ".js": "application/javascript; charset=utf-8",
 }
-SYSTEM_REGISTRY = {
-    "thrust-reverser": build_reference_controller_adapter,
-    "landing-gear": build_landing_gear_controller_adapter,
-    "bleed-air": build_bleed_air_controller_adapter,
-}
 SYSTEM_SNAPSHOT_PATH = "/api/system-snapshot"
+SYSTEM_SNAPSHOT_POST_PATH = "/api/system-snapshot"
 TRA_L4_LOCK_DEG = -14.0
 MONITOR_TIMELINE_PATH = "/api/monitor-timeline"
 WORKBENCH_BOOTSTRAP_PATH = "/api/workbench/bootstrap"
@@ -151,6 +147,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if parsed.path not in {
             "/api/demo",
             "/api/lever-snapshot",
+            SYSTEM_SNAPSHOT_POST_PATH,
             WORKBENCH_BUNDLE_PATH,
             WORKBENCH_REPAIR_PATH,
             WORKBENCH_ARCHIVE_RESTORE_PATH,
@@ -186,6 +183,21 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                 return
 
             self._send_json(200, lever_snapshot_payload(**lever_inputs))
+            return
+        if parsed.path == SYSTEM_SNAPSHOT_POST_PATH:
+            system_id = request_payload.get("system_id")
+            snapshot = request_payload.get("snapshot")
+            if not system_id:
+                self._send_json(400, {"error": "missing system_id"})
+                return
+            if not isinstance(snapshot, dict):
+                self._send_json(400, {"error": "snapshot must be a dict"})
+                return
+            result = system_snapshot_post_payload(system_id, snapshot)
+            if result.get("error"):
+                self._send_json(404, result)
+                return
+            self._send_json(200, result)
             return
         if parsed.path == WORKBENCH_BUNDLE_PATH:
             response_payload, error_payload = build_workbench_bundle_response(request_payload)
@@ -1515,6 +1527,25 @@ def system_snapshot_payload(system_id: str) -> dict:
         "nodes": nodes,
         "truth_evaluation": truth_eval.to_dict(),
         "default_snapshot": default_snapshot,
+    }
+
+
+def system_snapshot_post_payload(system_id: str, snapshot: dict) -> dict:
+    """Evaluate a user-modified snapshot for a given system. Used by non-thrust systems."""
+    builder = SYSTEM_REGISTRY.get(system_id)
+    if builder is None:
+        return {"error": "unknown_system", "system_id": system_id}
+    adapter = builder()
+    spec = adapter.load_spec()
+    truth_eval = adapter.evaluate_snapshot(snapshot)
+    nodes = _spec_to_nodes(spec, truth_eval)
+    return {
+        "system_id": system_id,
+        "title": spec.get("title", system_id),
+        "spec": spec,
+        "nodes": nodes,
+        "truth_evaluation": truth_eval.to_dict(),
+        "snapshot": snapshot,
     }
 
 

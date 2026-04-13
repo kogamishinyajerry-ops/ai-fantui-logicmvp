@@ -431,6 +431,116 @@ a { color: var(--accent-cyan); }
 .lever-panel > .feedback-panel { grid-area: feedback; }
 .lever-panel > .lever-status { grid-area: status; }
 
+/* System Input Panels — shared for landing-gear, bleed-air, EFDS */
+.system-input-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255, 176, 55, 0.14), transparent 18rem),
+    linear-gradient(180deg, rgba(19, 27, 39, 0.98), rgba(5, 9, 18, 0.98));
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 176, 55, 0.15);
+}
+
+.system-input-note {
+  color: var(--text-muted, #8a9bb5);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.system-input-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.system-input-select,
+.system-input-range,
+.system-input-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+}
+
+.system-input-select select,
+.system-input-range input[type="range"] {
+  width: 100%;
+}
+
+.system-input-range input[type="range"] {
+  accent-color: #ffb037;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 176, 55, 0.2);
+  cursor: pointer;
+}
+
+.system-input-toggle {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.system-input-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #ffb037;
+  cursor: pointer;
+}
+
+.system-input-select select {
+  background: rgba(5, 9, 18, 0.9);
+  color: #e8dcc8;
+  border: 1px solid rgba(255, 176, 55, 0.3);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.system-input-select select:focus {
+  outline: 2px solid #ffb037;
+  outline-offset: 2px;
+}
+
+.system-input-range small {
+  color: #5a6a80;
+  font-size: 0.72rem;
+}
+
+.system-input-actions {
+  display: flex;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.system-input-actions .btn-primary {
+  background: linear-gradient(135deg, #ffb037, #ff8c00);
+  color: #0a0e18;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 20px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s;
+  letter-spacing: 0.02em;
+}
+
+.system-input-actions .btn-primary:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.system-input-actions .btn-primary:active {
+  transform: translateY(0);
+  opacity: 1;
+}
+
 .lever-note {
   color: var(--text-muted);
   font-size: 0.76rem;
