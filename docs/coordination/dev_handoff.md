@@ -3,9 +3,9 @@
 <!-- AUTO-SYNCED DEV HANDOFF SNAPSHOT START -->
 ## 当前自动同步交接基线
 
-- 活动 phase：`P10`
-- 当前已验证 Plan：`P10-01 Landing-Gear Full Pipeline End-to-End (Intake → Playback → Diagnosis → Knowledge)`
-- 最近成功执行证据：`GitHub GSD automation P10-01`
+- 活动 phase：`P11`
+- 当前已验证 Plan：`P11-01 Product Onboarding Guide — Create New-System Template & Dry-Run Script`
+- 最近成功执行证据：`GitHub GSD automation P11-01`
 - 当前证据模式：`active-page degraded mode`
 - 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
 - 当前 QA 摘要：`PASS. 23/23 shared validation checks pass.`
@@ -28,7 +28,7 @@
 ## 恢复工作时先看
 
 1. [AI FANTUI LogicMVP 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
-2. [01 当前状态（自动同步）](https://www.notion.so/341c6894-2bed-8133-a5d3-d848090a7414)
+2. [01 当前状态（自动同步）](https://www.notion.so/341c6894-2bed-810d-b7e6-e5d264bcfe61)
 3. [09C 当前 Opus 4.6 审查简报](https://www.notion.so/341c6894-2bed-8186-bac0-c1ef4853b8ac)
 4. [10 Freeze Demo Packet](https://www.notion.so/33fc6894-2bed-8108-8456-ea95d62e605d)
 5. [GitHub Actions / GSD Automation Loop](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)

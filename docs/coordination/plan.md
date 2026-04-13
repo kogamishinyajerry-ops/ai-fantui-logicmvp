@@ -3,9 +3,9 @@
 <!-- AUTO-SYNCED COORDINATION PLAN SNAPSHOT START -->
 ## 当前自动同步快照
 
-- 当前阶段：`P10`
-- 当前已验证 Plan：`P10-01 Landing-Gear Full Pipeline End-to-End (Intake → Playback → Diagnosis → Knowledge)`
-- 最近成功执行证据：`GitHub GSD automation P10-01`
+- 当前阶段：`P11`
+- 当前已验证 Plan：`P11-01 Product Onboarding Guide — Create New-System Template & Dry-Run Script`
+- 最近成功执行证据：`GitHub GSD automation P11-01`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - 当前证据模式：`active-page degraded mode`
@@ -38,7 +38,7 @@
 ## 当前证据入口
 
 - [Notion 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
-- [01 当前状态（自动同步）](https://www.notion.so/341c6894-2bed-8133-a5d3-d848090a7414)
+- [01 当前状态（自动同步）](https://www.notion.so/341c6894-2bed-810d-b7e6-e5d264bcfe61)
 - [09C 当前 Opus 4.6 审查简报](https://www.notion.so/341c6894-2bed-8186-bac0-c1ef4853b8ac)
 - [10 Freeze Demo Packet](https://www.notion.so/33fc6894-2bed-8108-8456-ea95d62e605d)
 - [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)

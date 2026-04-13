@@ -1,0 +1,147 @@
+{
+  "$schema": "https://well-harness.local/json_schema/control_system_spec_v1.schema.json",
+  "kind": "well-harness-control-system-spec",
+  "version": 1,
+  "system_id": "YOUR_SYSTEM_ID",
+  "title": "Your System Title",
+  "objective": "Describe what this system must control or protect in one sentence.",
+
+  "source_of_truth": "path/to/your/source-document.pdf or description of source",
+
+  "components": [
+    {
+      "id": "YOUR_COMPONENT_ID_1",
+      "label": "Human-Readable Label",
+      "kind": "sensor",
+      "state_shape": "analog",
+      "unit": "unit-name",
+      "description": "Describe this signal's purpose in the system.",
+      "allowed_range": [0.0, 100.0],
+      "allowed_states": [],
+      "monitor_priority": "required"
+    },
+    {
+      "id": "YOUR_COMPONENT_ID_2",
+      "label": "Another Label",
+      "kind": "command",
+      "state_shape": "binary",
+      "unit": "state",
+      "description": "Describe this command's purpose.",
+      "allowed_range": null,
+      "allowed_states": ["0", "1"],
+      "monitor_priority": "required"
+    }
+  ],
+
+  "logic_nodes": [
+    {
+      "id": "YOUR_LOGIC_NODE_ID",
+      "label": "LN1",
+      "description": "Describe the logic gate: what conditions must be met and what it drives.",
+      "conditions": [
+        {
+          "name": "condition_name",
+          "source_component_id": "YOUR_COMPONENT_ID_1",
+          "comparison": ">=",
+          "threshold_value": 1.0,
+          "note": "Describe what this condition means."
+        }
+      ],
+      "downstream_component_ids": ["YOUR_COMPONENT_ID_2"],
+      "evidence_priority": "high"
+    }
+  ],
+
+  "acceptance_scenarios": [
+    {
+      "id": "YOUR_SCENARIO_ID",
+      "label": "Your Scenario Label",
+      "description": "Describe the engineer-supplied process this scenario verifies.",
+      "time_scale_factor": 1.0,
+      "total_duration_s": 5.0,
+      "monitored_signal_ids": ["YOUR_COMPONENT_ID_1"],
+      "transitions": [
+        {
+          "signal_id": "YOUR_COMPONENT_ID_1",
+          "start_s": 0.0,
+          "end_s": 5.0,
+          "start_value": 0.0,
+          "end_value": 100.0,
+          "unit": "unit-name",
+          "note": "Describe the expected trajectory."
+        }
+      ],
+      "completion_condition": "YOUR_COMPONENT_ID_1 >= 100.0",
+      "steady_signals": [
+        {
+          "signal_id": "YOUR_COMPONENT_ID_1",
+          "value": 0.0,
+          "unit": "unit-name",
+          "note": "Baseline value before the transition starts."
+        }
+      ]
+    }
+  ],
+
+  "fault_modes": [
+    {
+      "id": "YOUR_FAULT_MODE_ID",
+      "target_component_id": "YOUR_COMPONENT_ID_1",
+      "fault_kind": "stuck_low",
+      "symptom": "Describe what the operator or maintenance crew would observe.",
+      "reasoning_scope_component_ids": ["YOUR_COMPONENT_ID_1", "YOUR_COMPONENT_ID_2"],
+      "expected_diagnostic_sections": ["symptoms", "repair_hint"],
+      "optimization_prompt": "Describe what guardrail or redundancy should be added after this fault is understood."
+    }
+  ],
+
+  "onboarding_questions": [
+    {
+      "id": "source_documents",
+      "prompt": "What is the format of the input documents: structured table, Markdown/Notion, PDF, or mixed?",
+      "rationale": "Determines whether to build a document adapter first or require engineers to整理为 unified spec.",
+      "required_for": "Strict acceptance and fast generalization"
+    },
+    {
+      "id": "component_state_domains",
+      "prompt": "Is each component a binary switch, fixed level, discrete state, or continuous analog? What are the units and legal ranges?",
+      "rationale": "Prevents mixing different signal shapes into one incorrect monitoring curve.",
+      "required_for": "Monitoring curve simulation and fault injection"
+    },
+    {
+      "id": "timeline_rules",
+      "prompt": "Is the engineer-supplied process event-driven, rate-driven, or a state machine with delays/hysteresis? Which nodes allow hold/saturation?",
+      "rationale": "Determines how to convert A/B process docs into strictly replayable timelines.",
+      "required_for": "Strict acceptance simulation"
+    },
+    {
+      "id": "fault_taxonomy",
+      "prompt": "What fault injection types does the new system need to support: stuck, short, open, false-alarm, delay, threshold drift, or other?",
+      "rationale": "Determines the scope of diagnostic trees, reasoning document templates, and optimization suggestions.",
+      "required_for": "Fault analysis and knowledge accumulation"
+    }
+  ],
+
+  "knowledge_capture": {
+    "incident_fields": [
+      "system_id",
+      "scenario_id",
+      "fault_mode_id",
+      "observed_symptoms",
+      "evidence_links"
+    ],
+    "resolution_fields": [
+      "confirmed_root_cause",
+      "repair_action",
+      "validation_after_fix",
+      "residual_risk"
+    ],
+    "optimization_fields": [
+      "suggested_logic_change",
+      "reliability_gain_hypothesis",
+      "redundancy_reduction_or_guardrail_note"
+    ]
+  },
+
+  "tags": ["custom-system", "onboarding-template"]
+}
