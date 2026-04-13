@@ -3,13 +3,13 @@
 <!-- AUTO-SYNCED DEV HANDOFF SNAPSHOT START -->
 ## 当前自动同步交接基线
 
-- 活动 phase：`P12`
-- 当前已验证 Plan：`P12-01 Third-System Onboarding Validation (Bleed-Air Valve Control)`
-- 最近成功执行证据：`GitHub GSD automation P12-01`
+- 活动 phase：`P13 Route B — Browser Workbench Multi-System Integration`
+- 当前已验证 Plan：`Milestone 5 Hold — P0→P12 Complete, 3-System Pipeline Validated, Awaiting External User Feedback`
+- 最近成功执行证据：`P13-01 validation`
 - 当前证据模式：`active-page degraded mode`
 - 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
 - 当前 QA 摘要：`PASS. 23/23 shared validation checks pass.`
-- 当前运行摘要：`23/23 shared validation checks pass.`
+- 当前运行摘要：`Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: 23/23 shared validation checks pass.`
 - 当前 demo / freeze 基线已经稳定；当前主线已切到 P7 spec-driven workbench。
 - 当前优先级是让 engineer-facing onboarding / playback / diagnosis / knowledge 工具形成连续工作流，而不是继续扩 demo 表面。
 

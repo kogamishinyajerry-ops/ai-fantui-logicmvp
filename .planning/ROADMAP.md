@@ -171,8 +171,9 @@ Status: Done
 
 ## Phase P13: Route B — Browser Workbench Multi-System Integration
 
-Status: Active
+Status: Done
 
+Opus 4.6 Adjudication: Approved (2026-04-13)
 Goal: 将 Demo UI 从单一 thrust-reverser 系统扩展为支持在浏览器中切换查看三个控制系统（thrust-reverser / landing-gear / bleed-air valve）的逻辑链路、状态和推理结果。
 
 Exit Criteria:
@@ -183,12 +184,27 @@ Exit Criteria:
 - 三个系统的 adapter 均通过已有的 v1 schema 验证链路（已在 P8/P10/P12 验证）。
 - Demo server 启动时默认加载 thrust-reverser，其他系统按需加载。
 - 所有 23 shared validation commands 继续通过（无回归）。
-- Roadmap DB shows P13=Active.
+- Roadmap DB shows P13=Done.
 
 **Plans:** 1 plan(s)
 
 Plans:
-- [x] P13-01-PLAN.md // Add system-switcher + /api/system-snapshot + data-driven chain-panel + truth-evaluation answer per system (committed: 211ab2e, 07e015d, 2f818a6, cfc4aec, a28d4dc)
+- [x] P13-01-PLAN.md // Add system-switcher + /api/system-snapshot + data-driven chain-panel + truth-evaluation answer per system (committed: 211ab2e, 07e015d, 2f818a6, cfc4aec, a28d4dc, 182d5e4)
+
+## Milestone 6 Hold — Active 2026-04-13
+
+Status: Active (Hold)
+
+Goal: P0→P13 全栈闭环完成。后端 pipeline + 8 个 v1 schema + 3-stage CI/CD + product onboarding + browser workbench multi-system UI = 可泛化工作台 MVP 达标。Opus 4.6 建议进入 Hold，等待外部工程师 UAT 或下一阶段优先级决策。
+
+Exit Criteria:
+
+- P13 = Done，0 open UAT gap。
+- 所有 phase 代码冻结 — 不引入新的功能开发。
+- 所有 92 tests 继续通过（回归保护）。
+- 23 shared validation commands 继续通过。
+- Roadmap DB shows P13=Done, Milestone 6 Hold=Active.
+- Opus 4.6 裁决存档于 `docs/freeze/MILESTONE6-HOLD.md`。
 
 ## Milestone 5 Hold — Lifted 2026-04-13
 
