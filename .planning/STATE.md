@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-13 - Fixed thread-safety bug in NotionClient (per-request connections, commit 061a503); activated Opus 4.6 gate for next roadmap direction. All 3 MILESTONE6-HOLD tech debts resolved.
+Last activity: 2026-04-13 - Fixed 2 UI bugs: (1) OFF/ON labels not switching — added deploy_90_percent_vdt to asserted_component_values + fixed value lookup by data-value-for + OFF fallback; (2) L4 causal chain clarified in spec (L3→PDU→VDT90→L4). Smoke 9/9 pass.
 
 ## Current Position
 
