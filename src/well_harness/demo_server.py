@@ -271,7 +271,7 @@ def _get_p14_store() -> P14SessionStore:
 
 
 # Max document size: 500 KB
-_MAX_DOCUMENT_BYTES = 500 * 1024
+_MAX_DOCUMENT_BYTES = 10 * 1024 * 1024  # 10 MB, aligned with JS client-side validation
 
 
 def _handle_p14_analyze(request_payload: dict) -> tuple[dict | None, dict | None]:
@@ -286,7 +286,7 @@ def _handle_p14_analyze(request_payload: dict) -> tuple[dict | None, dict | None
     if not document_text.strip():
         return None, {"error": "empty_document", "message": "document_text must not be empty."}
     if len(document_text.encode("utf-8")) > _MAX_DOCUMENT_BYTES:
-        return None, {"error": "document_too_large", "message": f"document_text exceeds maximum size of {_MAX_DOCUMENT_BYTES} bytes (500KB)."}
+        return None, {"error": "document_too_large", "message": f"document_text exceeds maximum size of {_MAX_DOCUMENT_BYTES} bytes (10MB)."}
 
     document_name = request_payload.get("document_name", "untitled")
     if not isinstance(document_name, str) or len(document_name) > 255:
@@ -294,9 +294,18 @@ def _handle_p14_analyze(request_payload: dict) -> tuple[dict | None, dict | None
 
     store = _get_p14_store()
     session = store.create(session_id.strip(), document_text, document_name.strip() or "untitled")
-    ambiguities = analyze_document(document_text)
+    ambiguities_or_error = analyze_document(document_text)
+    if isinstance(ambiguities_or_error, dict):
+        return None, {
+            "error": ambiguities_or_error.get("error", "analysis_failed"),
+            "message": ambiguities_or_error.get("message", str(ambiguities_or_error)),
+        }
+    ambiguities = ambiguities_or_error
     session.ambiguities = ambiguities
     session.questions = _build_questions_from_ambiguities(ambiguities)
+    # If no ambiguities were detected, mark session complete immediately
+    if not session.questions:
+        session.is_complete = True
     store.update(session)
 
     # Return first question alongside ambiguities so UI can start the loop immediately
@@ -307,7 +316,7 @@ def _handle_p14_analyze(request_payload: dict) -> tuple[dict | None, dict | None
         "total_count": len(ambiguities),
         "first_question": first_q.to_dict() if first_q else None,
         "progress": session.progress(),
-        "is_complete": False,
+        "is_complete": session.is_complete,
     }, None
 
 
@@ -353,6 +362,9 @@ def _handle_p14_generate(request_payload: dict) -> tuple[dict | None, dict | Non
 
     if session.generated_prompt is None:
         prompt_doc = generate_prompt_document(session)
+        # generate_prompt_document returns str | dict; dict = error
+        if isinstance(prompt_doc, dict):
+            return None, {"error": prompt_doc.get("error", "generation_failed"), "message": prompt_doc.get("message", str(prompt_doc))}
         session.generated_prompt = prompt_doc
         store.update(session)
 

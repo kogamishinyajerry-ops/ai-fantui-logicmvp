@@ -297,8 +297,8 @@ def _build_questions_from_ambiguities(ambiguities: list[Ambiguity]) -> list[Ques
     return questions
 
 
-def analyze_document(text: str) -> list[Ambiguity]:
-    """Analyze a document for ambiguities. Returns list of Ambiguity objects."""
+def analyze_document(text: str) -> list[Ambiguity] | dict:
+    """Analyze a document for ambiguities. Returns list[Ambiguity] or error dict."""
     if _is_mock_mode():
         return [Ambiguity.from_dict(a) for a in MOCK_AMBIGUITIES]
 
@@ -307,13 +307,17 @@ def analyze_document(text: str) -> list[Ambiguity]:
     ]
     response_text = _call_anthropic(messages, _ANTHROPIC_SYSTEM_PROMPT)
 
+    # _call_anthropic returns {"error": ...} dict on failure
+    if isinstance(response_text, dict) and "error" in response_text:
+        return response_text
+
     try:
         data = json.loads(response_text)
         if isinstance(data, dict) and "ambiguities" in data:
             data = data["ambiguities"]
         return [Ambiguity.from_dict(item) for item in data]
-    except (json.JSONDecodeError, KeyError, TypeError):
-        return []
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+        return {"error": "analysis_failed", "message": str(exc)}
 
 
 def evaluate_clarification(session: P14SessionState, answer: str) -> ClarificationResult:
@@ -355,7 +359,7 @@ def evaluate_clarification(session: P14SessionState, answer: str) -> Clarificati
     )
 
 
-def generate_prompt_document(session: P14SessionState) -> str:
+def generate_prompt_document(session: P14SessionState) -> str | dict:
     """Generate a structured Claude Code prompt document from resolved ambiguities."""
     if _is_mock_mode():
         return MOCK_PROMPT_DOCUMENT
@@ -391,7 +395,11 @@ Generate a markdown document with these sections:
 
 Respond ONLY with the markdown document, no JSON, no explanation."""
 
-    return _call_anthropic(messages, system)
+    response = _call_anthropic(messages, system)
+    # _call_anthropic returns {"error": ...} dict on failure
+    if isinstance(response, dict) and "error" in response:
+        return response
+    return response
 
 
 # ---------------------------------------------------------------------------
@@ -419,13 +427,14 @@ def _call_anthropic(messages: list[dict], system: str) -> str:
     except ImportError:
         return json.dumps({"error": "anthropic_sdk_not_installed"})
 
-    client = anthropic.Anthropic(api_key=api_key)
-
-    response = client.messages.create(
-        model="claude-opus-4-6-20251120",
-        max_tokens=4096,
-        system=system,
-        messages=messages,
-    )
-
-    return response.content[0].text
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-opus-4-6-20251120",
+            max_tokens=4096,
+            system=system,
+            messages=messages,
+        )
+        return response.content[0].text
+    except Exception as exc:  # noqa: BLE001 — AnthropicSDK raises various subclasses
+        return {"error": "anthropic_api_error", "message": str(exc)}
