@@ -321,14 +321,14 @@ a { color: var(--accent-cyan); }
   grid-template-columns: minmax(500px, 1.08fr) minmax(560px, 1.2fr);
   grid-template-areas:
     "prompt chain"
-    "answer answer";
+    "result chain";
   gap: 18px;
   align-items: start;
 }
 
 .showcase-grid .lever-panel { grid-area: prompt; }
 .showcase-grid .chain-panel { grid-area: chain; }
-.showcase-grid .result-grid { grid-area: answer; }
+.showcase-grid .result-grid { grid-area: result; }
 .showcase-grid .qa-drawer {
   grid-column: 1 / -1;
   order: 5;
@@ -1206,6 +1206,7 @@ button:disabled {
   align-self: start;
   max-height: calc(100vh - 20px);
   overflow: auto;
+  margin-bottom: 40px;
 }
 
 .chain-state-legend {
@@ -2062,7 +2063,7 @@ button.summary-chip,
     grid-template-areas:
       "prompt"
       "chain"
-      "answer";
+      "result";
   }
 
   .lever-panel {
@@ -2192,7 +2193,7 @@ button.summary-chip,
     grid-template-areas:
       "prompt"
       "chain"
-      "answer";
+      "result";
   }
 
   .logic-stage,
