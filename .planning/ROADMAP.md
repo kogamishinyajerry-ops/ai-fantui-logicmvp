@@ -2,7 +2,7 @@
 
 ## Current Milestone
 
-Milestone 7 — Active。Complete P14: AI Document Analyzer — adding AI-powered spec ambiguity detection and clarification loops to the workbench, generating Claude Code prompt documents from resolved logic circuit specifications.
+Milestone 7 — Complete (2026-04-13)。P14: AI Document Analyzer — AI-powered spec ambiguity detection, clarification loops, Claude Code prompt generation。All exit criteria met, 326 tests pass。
 
 ## Phase P0: Control Tower And GSD Control Plane
 
@@ -193,7 +193,7 @@ Plans:
 
 ## Phase P14: AI Document Analyzer — Import logic circuit docs → AI ambiguity detection → Deep confirmation loop → Claude Code prompt generation
 
-Status: Active
+Status: Done (2026-04-13)
 
 Goal: Build a browser UI where engineers can import control-system logic circuit documents (PDF/markdown/text), triggering an AI-powered analysis pipeline that detects ambiguous spec descriptions, runs a deep interactive confirmation dialogue loop to resolve ambiguities, and ultimately generates a structured Claude Code prompt document ready for new module development. Complements the existing `document_intake.py` pipeline by adding AI-driven ambiguity detection and clarification loops.
 
@@ -207,7 +207,7 @@ Exit Criteria:
 - Prompt document can be previewed and exported/downloaded as markdown
 - All existing 92 tests continue to pass (no regression)
 - All 23 shared validation commands continue to pass
-- Roadmap DB shows P14=Active
+- Roadmap DB shows P14=Done
 
 ## Milestone 6 Hold — Lifted 2026-04-13
 
@@ -230,7 +230,7 @@ Goal: Complete P14 — AI Document Analyzer。Build a browser UI where engineers
 
 Exit Criteria:
 
-- P14 = Done
+- P14 = Done (2026-04-13)
 - All 92 tests continue to pass
 - All 23 shared validation commands continue to pass
 - Roadmap DB shows P14=Done
@@ -281,4 +281,4 @@ Exit Criteria:
 **Plans:** 1 plan(s)
 
 Plans:
-- [x] P14-01-PLAN.md // AI Document Analyzer full pipeline (7 tasks: ai module + routes + UI + nav links + tests + regression)
+- [x] P14-01-PLAN.md // AI Document Analyzer full pipeline (7 tasks: ai module + routes + UI + nav links + tests + regression) ✓
