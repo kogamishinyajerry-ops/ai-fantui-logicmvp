@@ -167,7 +167,21 @@ Milestone 4 Hold 已取消（P12 启动）。保留作为历史记录。
 
 ## Phase P12: Third-System Onboarding Validation
 
-Status: Active
+Status: Done
+
+## Milestone 5 Hold — Declared 2026-04-13
+
+Status: Active (Hold)
+
+Goal: P0→P12 完整闭环。三个控制系统（thrust-reverser / landing-gear / bleed-air valve）共享同一 pipeline 并全部通过 v1 schema validation。已达到"可泛化工作台 MVP"达标线。冻结代码基线，停止自动开发。
+
+Exit Criteria:
+
+- `docs/freeze/MILESTONE5-HOLD.md` exists and documents the final hold declaration.
+- All phase code frozen — no new feature development.
+- 23 shared validation commands continue to pass (regression protection only).
+- 3-system pipeline proof documented: `docs/onboarding/THIRD_SYSTEM_CASE_STUDY.md`.
+- Roadmap DB shows P12=Done, Milestone 5 Hold=Active.
 
 Goal: Validate the P11 onboarding tools (guide + templates + dry-run script) by actually onboarding a third control system through the full pipeline — proving the tools work for non-project-owners.
 

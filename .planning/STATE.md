@@ -1,6 +1,6 @@
 # State
 
-Last activity: 2026-04-13 - P12 started: Third-System Onboarding Validation. Milestone 4 Hold deprecated. Validating P11 onboarding tools with a real third system (bleed-air valve control).
+Last activity: 2026-04-13 - Milestone 5 Hold DECLARED. P0→P12 完整闭环: 3系统(thrust-reverser/landing-gear/bleed-air)共享pipeline全部PASS。泛化工作台MVP达标。冻结基线,停止自动开发,等外部用户反馈或产品方向。
 
 ## Current Position
 

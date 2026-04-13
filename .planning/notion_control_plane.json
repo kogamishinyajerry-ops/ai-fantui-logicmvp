@@ -25,7 +25,7 @@
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "P12-01 Third-System Onboarding Validation (Bleed-Air Valve Control)",
+  "default_plan": "Milestone 5 Hold — P0→P12 Complete, 3-System Pipeline Validated, Awaiting External User Feedback",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {
