@@ -43,6 +43,10 @@ def build_default_commands(python_executable: str | None = None) -> tuple[Valida
             (python, "tools/demo_path_smoke.py", "--format", "json"),
         ),
         ValidationCommand(
+            "system_switcher_smoke",
+            (python, "tests/test_system_switcher_smoke.py", "--format", "json"),
+        ),
+        ValidationCommand(
             "demo_answer_schema",
             (python, "tools/validate_demo_answer_schema.py", "--format", "json"),
         ),
