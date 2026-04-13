@@ -11,6 +11,13 @@
       <section class="hero" aria-labelledby="page-title">
         <div>
           <p class="eyebrow">well-harness 确定性演示</p>
+          <label class="system-selector-wrap">
+            <select id="system-selector" aria-label="选择控制子系统">
+              <option value="thrust-reverser">Thrust Reverser (反推)</option>
+              <option value="landing-gear">Landing Gear (起落架)</option>
+              <option value="bleed-air">Bleed Air Valve (引气)</option>
+            </select>
+          </label>
           <h1 id="page-title">反推逻辑演示舱</h1>
           <p class="boundary">
             这是确定性演示层，基于内置 nominal-deploy / retract-reset 和简化 plant；
