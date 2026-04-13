@@ -2000,6 +2000,45 @@ button.summary-chip,
   flex-wrap: wrap;
 }
 
+.monitor-series-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+}
+
+.monitor-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  color: rgba(40, 244, 255, 0.7);
+  white-space: nowrap;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(40, 244, 255, 0.18);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.monitor-checkbox-label:hover {
+  border-color: rgba(40, 244, 255, 0.4);
+  color: rgba(40, 244, 255, 0.95);
+}
+
+.monitor-series-checkbox {
+  accent-color: var(--accent-cyan);
+  width: 12px;
+  height: 12px;
+  cursor: pointer;
+}
+
+.monitor-checkbox-label:has(.monitor-series-checkbox:checked) {
+  background: rgba(40, 244, 255, 0.12);
+  border-color: rgba(40, 244, 255, 0.5);
+  color: var(--accent-cyan);
+}
+
 .monitor-select-wrap {
   display: inline-flex;
   align-items: center;
@@ -2355,13 +2394,7 @@ button.summary-chip,
     justify-content: flex-start;
   }
 
-  .monitor-select-wrap {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .monitor-select-wrap select {
-    min-width: 0;
+  .monitor-series-checkboxes {
     width: 100%;
   }
 

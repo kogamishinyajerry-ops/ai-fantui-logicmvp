@@ -2226,15 +2226,13 @@ class DemoIntentLayerTests(unittest.TestCase):
             "class=\"panel monitor-panel monitor-panel-inline\"",
             "id=\"monitor-panel-title\"",
             "状态 vs 时间",
-            "右上角可以切换到某个特定对象",
             "id=\"monitor-refresh-button\"",
-            "id=\"monitor-series-select\"",
+            "id=\"monitor-series-checkboxes\"",
             "id=\"monitor-status\"",
             "id=\"monitor-summary\"",
             "id=\"monitor-events\"",
             "id=\"monitor-selection-note\"",
             "id=\"monitor-chart\"",
-            "全部对象（归一化）",
         ):
             self.assertIn(fragment, html)
 
@@ -2266,13 +2264,12 @@ class DemoIntentLayerTests(unittest.TestCase):
             "function renderMonitorSummary(payload)",
             "function renderMonitorEvents(payload)",
             "function buildMonitorXAxisTicks(timeStart, timeEnd)",
-            "function populateMonitorSeriesSelect(payload)",
+            "function populateMonitorSeriesCheckboxes(payload)",
             "function renderMonitorChart(payload)",
             "function renderMonitorTimelineError(message)",
             "async function loadMonitorTimeline()",
             "fetch(\"/api/monitor-timeline\"",
             "monitorRefreshButton?.addEventListener(\"click\"",
-            "monitorSeriesSelect?.addEventListener(\"change\"",
             "loadMonitorTimeline();",
         ):
             self.assertIn(fragment, script)
