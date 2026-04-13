@@ -126,6 +126,17 @@ class ReferenceDeployControllerAdapter:
             system_id=self.metadata.system_id,
             active_logic_node_ids=active_logic_node_ids,
             asserted_component_values={
+                # Input conditions (raw signals from snapshot)
+                "sw1": inputs.sw1,
+                "sw2": inputs.sw2,
+                "radio_altitude_ft": inputs.radio_altitude_ft,
+                "engine_running": inputs.engine_running,
+                "aircraft_on_ground": inputs.aircraft_on_ground,
+                "eec_enable": inputs.eec_enable,
+                "n1k": inputs.n1k,
+                "tra_deg": inputs.tra_deg,
+                "reverser_inhibited": inputs.reverser_inhibited,
+                # Output commands
                 "tls_115vac_cmd": outputs.tls_115vac_cmd,
                 "etrac_540vdc_cmd": outputs.etrac_540vdc_cmd,
                 "eec_deploy_cmd": outputs.eec_deploy_cmd,
