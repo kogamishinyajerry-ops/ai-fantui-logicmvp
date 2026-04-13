@@ -128,7 +128,7 @@ Exit Criteria:
 
 ## Phase P9: Automation Hardening & Evidence Pipeline Maturity
 
-Status: Active
+Status: Done
 
 Goal: Close the remaining manual intervention gaps in the GSD automation loop so that a plan lands on main and the Notion control plane updates automatically — with no human-initiated Notion or GitHub operations required in the happy path.
 
@@ -138,5 +138,5 @@ Exit Criteria:
 - Roadmap DB Phase lifecycle (register new phase, close completed phase) is automated into the GSD loop.
 - CI/CD pipeline includes three distinct stages: regression → validation → Notion sync.
 - Failed Notion sync stage does not fail the overall pipeline (writeback is non-blocking).
-- Roadmap DB shows P6=Done, P7=Done, P8=Done, P9=Active (no manual edits needed).
+- Roadmap DB shows P6=Done, P7=Done, P8=Done, P9=Done (no manual edits needed).
 - All resolvable manual touchpoints are eliminated; irreducible human-only steps are explicitly documented with degraded-mode handling.
