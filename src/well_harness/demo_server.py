@@ -33,8 +33,10 @@ from well_harness.workbench_bundle import (
 from well_harness.ai_doc_analyzer import (
     P14SessionStore,
     analyze_document,
+    convert_markdown_to_intake,
     evaluate_clarification,
     generate_prompt_document,
+    run_pipeline_from_intake,
     _build_questions_from_ambiguities,
 )
 
@@ -81,6 +83,9 @@ MONITOR_EEC_ENABLE = True
 P14_ANALYZE_PATH = "/api/p14/analyze-document"
 P14_CLARIFY_PATH = "/api/p14/clarify"
 P14_GENERATE_PATH = "/api/p14/generate-prompt"
+# P15 Pipeline Integration routes
+P15_CONVERT_PATH = "/api/p15/convert-to-intake"
+P15_RUN_PIPELINE_PATH = "/api/p15/run-pipeline"
 MONITOR_N1K = 35.0
 MONITOR_MAX_N1K_DEPLOY_LIMIT = 60.0
 LEVER_NUMERIC_INPUTS = {
@@ -151,6 +156,8 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             P14_ANALYZE_PATH,
             P14_CLARIFY_PATH,
             P14_GENERATE_PATH,
+            P15_CONVERT_PATH,
+            P15_RUN_PIPELINE_PATH,
         }:
             self._send_json(404, {"error": "not_found"})
             return
@@ -218,6 +225,22 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == P14_GENERATE_PATH:
             response_payload, error_payload = _handle_p14_generate(request_payload)
+            if error_payload is not None:
+                self._send_json(400, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+
+        # P15 Pipeline Integration handlers
+        if parsed.path == P15_CONVERT_PATH:
+            response_payload, error_payload = _handle_p15_convert(request_payload)
+            if error_payload is not None:
+                self._send_json(400, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+        if parsed.path == P15_RUN_PIPELINE_PATH:
+            response_payload, error_payload = _handle_p15_run_pipeline(request_payload)
             if error_payload is not None:
                 self._send_json(400, error_payload)
                 return
@@ -374,6 +397,74 @@ def _handle_p14_generate(request_payload: dict) -> tuple[dict | None, dict | Non
         "prompt_document": session.generated_prompt,
         "word_count": word_count,
     }, None
+
+
+# ---------------------------------------------------------------------------
+# P15 Pipeline Integration handlers
+# ---------------------------------------------------------------------------
+
+
+def _handle_p15_convert(request_payload: dict) -> tuple[dict | None, dict | None]:
+    """Handle POST /api/p15/convert-to-intake.
+
+    Input:  {session_id: str, system_id?: str}
+    Output: {intake_packet: dict, validation: {valid: bool, errors: list}}
+    """
+    session_id = request_payload.get("session_id")
+    if not isinstance(session_id, str) or not session_id.strip():
+        return None, {"error": "missing_session_id", "message": "session_id is required and must be a non-empty string."}
+
+    system_id = request_payload.get("system_id", "generated-system")
+
+    store = _get_p14_store()
+    session = store.get(session_id.strip())
+    if session is None:
+        return None, {"error": "session_not_found", "message": f"Session '{session_id}' not found."}
+
+    prompt_doc = session.generated_prompt
+    if prompt_doc is None:
+        # Try to generate it on demand
+        if not session.is_complete:
+            return None, {"error": "session_incomplete", "message": "Cannot convert: session clarification not complete."}
+        result = generate_prompt_document(session)
+        if isinstance(result, dict):
+            return None, {"error": result.get("error", "generation_failed"), "message": result.get("message", str(result))}
+        prompt_doc = result
+        session.generated_prompt = prompt_doc
+        store.update(session)
+
+    intake_dict = convert_markdown_to_intake(prompt_doc, system_id)
+    if isinstance(intake_dict, dict) and "error" in intake_dict:
+        return None, {"error": intake_dict.get("error", "conversion_failed"), "message": intake_dict.get("message", str(intake_dict))}
+
+    # Basic validation
+    errors: list[str] = []
+    required_fields = ["system_id", "title", "objective", "components", "logic_nodes"]
+    for field in required_fields:
+        if field not in intake_dict or not intake_dict[field]:
+            errors.append(f"Missing required field: {field}")
+
+    return {
+        "intake_packet": intake_dict,
+        "validation": {"valid": len(errors) == 0, "errors": errors},
+    }, None
+
+
+def _handle_p15_run_pipeline(request_payload: dict) -> tuple[dict | None, dict | None]:
+    """Handle POST /api/p15/run-pipeline.
+
+    Input:  {intake_packet: dict}
+    Output: {assessment, bundle, system_snapshot}
+    """
+    intake_packet = request_payload.get("intake_packet")
+    if not isinstance(intake_packet, dict):
+        return None, {"error": "missing_intake_packet", "message": "intake_packet is required and must be a dict."}
+
+    result = run_pipeline_from_intake(intake_packet)
+    if isinstance(result, dict) and "error" in result:
+        return None, {"error": result.get("error", "pipeline_failed"), "message": result.get("message", str(result))}
+
+    return result, None
 
 
 def _clamp_tra(tra_deg: float, config: HarnessConfig) -> float:
