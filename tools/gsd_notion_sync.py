@@ -99,6 +99,7 @@ DATABASE_LINK_LABELS = {
 }
 PHASE_HEADER_RE = re.compile(r"^## Phase P(\d+):\s+(.+)$")
 PLAN_TITLE_RE = re.compile(r"^#\s*(P\d+-\d+)\s+Plan\s*-\s*(.+)$")
+PHASE_STATUS_RE = re.compile(r"^Status:\s+(Active|Done|Deprecated)$", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -309,6 +310,154 @@ class NotionClient:
                 f"/v1/blocks/{page_id}/children",
                 {"children": blocks, "position": {"type": "start"}},
             )
+
+
+# ---------------------------------------------------------------------------
+# Phase-lifecycle helpers: sync ROADMAP.md phases <-> Roadmap DB
+# ---------------------------------------------------------------------------
+
+
+def get_roadmap_db_id(config: dict[str, Any]) -> str:
+    """Return the Roadmap database ID from the control-plane config."""
+    return config.get("databases", {}).get("roadmap", "")
+
+
+def register_phase_if_missing(
+    client: NotionClient,
+    config: dict[str, Any],
+    phase_id: str,
+    phase_name: str,
+    goal: str,
+    status: str = "Active",
+) -> bool:
+    """Upsert a Phase entry in the Roadmap DB. Returns True if a new entry was created."""
+    roadmap_db = get_roadmap_db_id(config)
+    if not roadmap_db:
+        return False
+    rows = client.query_database(roadmap_db, page_size=100)
+    # Index existing rows by Round title (match by prefix)
+    existing: dict[str, tuple[str, str]] = {}
+    for row in rows:
+        props = row.get("properties", {})
+        round_names = [t.get("plain_text", "") for t in props.get("Round", {}).get("title", [])]
+        current_status = (props.get("Status", {}).get("select") or {}).get("name", "")
+        for rn in round_names:
+            existing[rn] = (row["id"], current_status)
+    # Already registered?
+    if phase_id in existing:
+        return False
+    client.request(
+        "POST",
+        "/v1/pages",
+        {
+            "parent": {"database_id": roadmap_db},
+            "properties": {
+                "Round": title_value(phase_id),
+                "Status": select_value(status),
+                "Goal": rich_text_value(goal[:500]),
+            },
+        },
+    )
+    return True
+
+
+def close_phase_in_roadmap(
+    client: NotionClient,
+    config: dict[str, Any],
+    phase_id: str,
+) -> bool:
+    """Find a phase by ID prefix in the Roadmap DB and update its Status to Done. Returns True if updated."""
+    roadmap_db = get_roadmap_db_id(config)
+    if not roadmap_db:
+        return False
+    rows = client.query_database(roadmap_db, page_size=100)
+    for row in rows:
+        props = row.get("properties", {})
+        round_names = [t.get("plain_text", "") for t in props.get("Round", {}).get("title", [])]
+        current_status = (props.get("Status", {}).get("select") or {}).get("name", "")
+        for rn in round_names:
+            if rn.startswith(phase_id) and current_status not in ("Done", "Deprecated"):
+                client.update_page_properties(row["id"], {"Status": select_value("Done")})
+                return True
+    return False
+
+
+def sync_roadmap_phases(
+    config: dict[str, Any],
+    roadmap_path: Path | None = None,
+) -> dict[str, Any]:
+    """Main entry point: read ROADMAP.md, sync Active/Done phases to Notion Roadmap DB.
+
+    Returns a summary dict with keys: registered (list), closed (list), errors (list).
+    """
+    if not os.environ.get("NOTION_API_KEY"):
+        return {"registered": [], "closed": [], "errors": ["NOTION_API_KEY not set"]}
+
+    roadmap_path = roadmap_path or Path(".planning/ROADMAP.md")
+    if not roadmap_path.exists():
+        return {"registered": [], "closed": [], "errors": [f"{roadmap_path} not found"]}
+
+    token = os.environ["NOTION_API_KEY"]
+    client = NotionClient(token)
+    result: dict[str, Any] = {"registered": [], "closed": [], "errors": []}
+
+    try:
+        md_text = roadmap_path.read_text(encoding="utf-8")
+        lines = md_text.splitlines()
+
+        # Parse phases: find "## Phase P{n}:" blocks and their Status line
+        phases: list[dict[str, str]] = []
+        i = 0
+        while i < len(lines):
+            m = PHASE_HEADER_RE.match(lines[i])
+            if m:
+                phase_num = m.group(1)
+                phase_id = f"P{phase_num}"
+                phase_name = m.group(2).strip()
+                goal = ""
+                status = "Active"  # default if no Status line found
+                # Scan subsequent lines for Status and Goal
+                j = i + 1
+                while j < len(lines) and not lines[j].startswith("## Phase "):
+                    sm = PHASE_STATUS_RE.match(lines[j])
+                    if sm:
+                        status = sm.group(1)
+                    if lines[j].startswith("Goal:"):
+                        goal = lines[j][5:].strip()
+                    j += 1
+                phases.append({"id": phase_id, "name": phase_name, "goal": goal, "status": status})
+                i = j
+            else:
+                i += 1
+
+        for phase in phases:
+            phase_id = phase["id"]
+            phase_name = phase["name"]
+            goal = phase["goal"]
+            status = phase["status"]
+
+            if status == "Active":
+                try:
+                    created = register_phase_if_missing(client, config, phase_id, phase_name, goal, status)
+                    if created:
+                        result["registered"].append(phase_id)
+                    else:
+                        result.setdefault("already_registered", []).append(phase_id)
+                except Exception as exc:  # pragma: no cover - network errors
+                    result["errors"].append(f"register {phase_id}: {exc}")
+
+            elif status == "Done":
+                try:
+                    closed = close_phase_in_roadmap(client, config, phase_id)
+                    if closed:
+                        result["closed"].append(phase_id)
+                except Exception as exc:  # pragma: no cover - network errors
+                    result["errors"].append(f"close {phase_id}: {exc}")
+
+    finally:
+        client.close()
+
+    return result
 
 
 def notion_text(text: str, url: str | None = None) -> dict[str, Any]:
@@ -3181,6 +3330,28 @@ def write_notion_outcome(
     return written
 
 
+def handle_sync_roadmap(args: argparse.Namespace, config: dict[str, Any]) -> int:
+    """Standalone handler for the sync-roadmap CLI subcommand."""
+    if not os.environ.get("NOTION_API_KEY"):
+        raise SystemExit("NOTION_API_KEY is required for sync-roadmap.")
+    cwd = Path(args.cwd).resolve()
+    roadmap_path = (cwd / ".planning/ROADMAP.md").resolve()
+    result = sync_roadmap_phases(config, roadmap_path=roadmap_path)
+    if args.format == "json":
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        if result.get("registered"):
+            print(f"Registered: {', '.join(result['registered'])}")
+        if result.get("already_registered"):
+            print(f"Already registered: {', '.join(result['already_registered'])}")
+        if result.get("closed"):
+            print(f"Closed: {', '.join(result['closed'])}")
+        if result.get("errors"):
+            for err in result["errors"]:
+                print(f"ERROR: {err}", file=__import__("sys").stderr)
+    return 0 if not result.get("errors") else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run GSD commands and sync status to Notion.")
     parser.add_argument(
@@ -3252,6 +3423,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Repo root whose coordination docs should be updated.",
     )
     repo_docs_parser.add_argument(
+        "--format",
+        choices=("text", "json"),
+        default="text",
+        help="Output format.",
+    )
+
+    roadmap_parser = subparsers.add_parser(
+        "sync-roadmap",
+        help="Sync ROADMAP.md phase lifecycle to the Notion Roadmap DB (register Active phases, close Done phases).",
+    )
+    roadmap_parser.add_argument(
+        "--cwd",
+        default=".",
+        help="Repo root (used to resolve .planning/ROADMAP.md).",
+    )
+    roadmap_parser.add_argument(
         "--format",
         choices=("text", "json"),
         default="text",
@@ -3597,6 +3784,12 @@ def handle_sync_repo_docs(args: argparse.Namespace, config: dict[str, Any]) -> i
     }
     if 'restored_databases' in locals() and restored_databases:
         payload["restored_databases"] = restored_databases
+    # Auto-sync ROADMAP.md phases to Notion Roadmap DB (non-blocking)
+    try:
+        roadmap_sync = sync_roadmap_phases(config)
+        payload["roadmap_sync"] = roadmap_sync
+    except Exception as exc:
+        payload["roadmap_sync"] = {"registered": [], "closed": [], "errors": [str(exc)]}
     output_repo_doc_sync_result(args.format, payload)
     return 0
 
@@ -3618,6 +3811,8 @@ def main(argv: list[str] | None = None) -> int:
         return handle_prepare_opus_review(args, config)
     if args.command_name == "sync-repo-docs":
         return handle_sync_repo_docs(args, config)
+    if args.command_name == "sync-roadmap":
+        return handle_sync_roadmap(args, config)
     parser.error(f"Unsupported command: {args.command_name}")
     return 2
 
