@@ -430,26 +430,35 @@ def _get_anthropic_api_key() -> str:
     return _ANTHROPIC_API_KEY
 
 
-def _call_anthropic(messages: list[dict], system: str) -> str:
-    """Call Anthropic Messages API. Returns error dict string if key is missing."""
+def _call_anthropic(messages: list[dict], system: str) -> str | dict:
+    """Call Anthropic Messages API. Returns error dict on failure, text str on success."""
     api_key = _get_anthropic_api_key()
     if not api_key:
-        return json.dumps({"error": "anthropic_api_key_missing"})
+        return {"error": "anthropic_api_key_missing"}
 
     try:
         import anthropic
+        from anthropic.types import TextBlock
     except ImportError:
-        return json.dumps({"error": "anthropic_sdk_not_installed"})
+        return {"error": "anthropic_sdk_not_installed"}
 
     try:
-        client = anthropic.Anthropic(api_key=api_key)
+        base_url = os.environ.get("ANTHROPIC_BASE_URL")
+        client_kwargs = {"api_key": api_key}
+        if base_url:
+            client_kwargs["base_url"] = base_url
+        client = anthropic.Anthropic(**client_kwargs)
         response = client.messages.create(
-            model="claude-opus-4-6-20251120",
-            max_tokens=4096,
+            model="MiniMax-2.7",
+            max_tokens=8192,
             system=system,
             messages=messages,
+            thinking={"type": "disabled"},
         )
-        return response.content[0].text
+        text_blocks = [block for block in response.content if isinstance(block, TextBlock)]
+        if not text_blocks:
+            return {"error": "no_text_in_response"}
+        return "".join(block.text for block in text_blocks)
     except Exception as exc:  # noqa: BLE001 — AnthropicSDK raises various subclasses
         return {"error": "anthropic_api_error", "message": str(exc)}
 
@@ -613,7 +622,119 @@ def convert_markdown_to_intake(markdown_text: str, system_id: str = "generated-s
         return response
 
     try:
-        return json.loads(response)
+        result = json.loads(response)
+        # Ensure required schema fields that AI might omit
+        if not result.get("source_of_truth"):
+            result["source_of_truth"] = "P14 AI Document Analyzer — " + system_id
+
+        # Normalize component fields
+        for comp in result.get("components", []):
+            if not isinstance(comp, dict):
+                continue
+            # 1. Rename allowed_range -> allowed_states when state_shape == "enum"
+            if comp.get("state_shape") == "enum" and comp.get("allowed_range") and not comp.get("allowed_states"):
+                comp["allowed_states"] = comp["allowed_range"]
+                comp["allowed_range"] = None
+            # 2. Clear allowed_range if it has >2 items or non-numeric items
+            allowed_range = comp.get("allowed_range")
+            if allowed_range is not None:
+                if isinstance(allowed_range, list):
+                    if len(allowed_range) > 2:
+                        comp["allowed_range"] = None
+                    else:
+                        non_numeric = any(not isinstance(v, (int, float)) for v in allowed_range)
+                        if non_numeric:
+                            comp["allowed_range"] = None
+                else:
+                    comp["allowed_range"] = None
+            # 3. Ensure unit is always a non-empty string
+            if not comp.get("unit"):
+                comp["unit"] = "N/A"
+
+        # Normalize fault_kind values to schema-valid enum values
+        valid_fault_kinds = {"bias_low", "bias_high", "stuck_low", "stuck_high",
+                              "open_circuit", "short_to_power", "latched_no_unlock", "command_path_failure"}
+        # Mapping of common AI-generated names to schema values
+        fault_kind_aliases = {
+            "hardware_failure": "open_circuit",
+            "sensor_false_positive": "bias_high",
+            "logic_race_condition": "latched_no_unlock",
+            "stuck_open": "open_circuit",
+            "sensor_misread": "bias_high",
+        }
+        for fm in result.get("fault_modes", []):
+            if not isinstance(fm, dict):
+                continue
+            fk = str(fm.get("fault_kind") or "")
+            if fk and fk not in valid_fault_kinds:
+                fm["fault_kind"] = fault_kind_aliases.get(fk, "command_path_failure")
+
+        # Normalize note fields in logic node conditions
+        for ln in result.get("logic_nodes", []):
+            if not isinstance(ln, dict):
+                continue
+            for cond in ln.get("conditions", []):
+                if not cond.get("note"):
+                    cond["note"] = "N/A"
+                # Normalize threshold_value to numeric (AI may pass enum states like "IDLE")
+                tv = cond.get("threshold_value")
+                if tv is not None and not isinstance(tv, (int, float)):
+                    cond["threshold_value"] = None
+
+        # Normalize acceptance scenario numeric fields that AI may fill with enum strings
+        for scenario in result.get("acceptance_scenarios", []):
+            for trans in scenario.get("transitions", []):
+                if not isinstance(trans, dict):
+                    continue
+                if not trans.get("note"):
+                    trans["note"] = "N/A"
+                if not trans.get("unit"):
+                    trans["unit"] = "N/A"
+                for fld in ("start_value", "end_value"):
+                    v = trans.get(fld)
+                    if v is not None and not isinstance(v, (int, float)):
+                        trans[fld] = 0.0
+            for sig in scenario.get("steady_signals", []):
+                if not isinstance(sig, dict):
+                    continue
+                if not sig.get("note"):
+                    sig["note"] = "N/A"
+                if not sig.get("unit"):
+                    sig["unit"] = "N/A"
+                v = sig.get("value")
+                if v is not None and not isinstance(v, (int, float)):
+                    sig["value"] = 0.0
+
+        # Normalize source_documents: must be list of dicts with all SourceDocumentRef required fields
+        src_docs = result.get("source_documents", [])
+        normalized_docs = []
+        for i, doc in enumerate(src_docs):
+            n = i + 1
+            if isinstance(doc, dict):
+                # Avoid turning None/null into literal "None" string
+                def _norm_field(val, fallback):
+                    if val is None or val == "":
+                        return fallback
+                    return str(val)
+                normalized_docs.append({
+                    "id": _norm_field(doc.get("id"), f"source-{n}"),
+                    "title": _norm_field(doc.get("title"), f"Source {n}"),
+                    "kind": _norm_field(doc.get("kind"), "markdown"),
+                    "location": _norm_field(doc.get("location"), f"session-{n}"),
+                    "role": _norm_field(doc.get("role"), "primary"),
+                    "notes": str(doc.get("notes") or ""),
+                })
+            elif isinstance(doc, str):
+                normalized_docs.append({
+                    "id": f"source-{n}",
+                    "title": doc or f"Source {n}",
+                    "kind": "markdown",
+                    "location": f"session-{n}",
+                    "role": "primary",
+                    "notes": "",
+                })
+        result["source_documents"] = normalized_docs
+        return result
     except json.JSONDecodeError as exc:
         return {"error": "json_decode_failed", "message": str(exc)}
 
