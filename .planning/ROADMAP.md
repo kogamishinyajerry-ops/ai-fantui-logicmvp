@@ -185,6 +185,11 @@ Exit Criteria:
 - 所有 23 shared validation commands 继续通过（无回归）。
 - Roadmap DB shows P13=Active.
 
+**Plans:** 1 plan(s)
+
+Plans:
+- [ ] P13-01-PLAN.md // Add system-switcher + /api/system-snapshot + data-driven chain-panel + truth-evaluation answer per system
+
 ## Milestone 5 Hold — Lifted 2026-04-13
 
 Status: Lifted
