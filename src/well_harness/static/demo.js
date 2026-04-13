@@ -84,7 +84,18 @@ function applySystemNodeStates(nodes, componentValues) {
   // Apply states to all nodes in the visible topology
   document.querySelectorAll(".chain-topology:not([style*='display: none']) [data-node]").forEach((el) => {
     const nodeId = el.dataset.node;
-    const state = stateMap.get(nodeId) || "inactive";
+    // Determine effective state: override backend state with actual component value when available
+    let state = stateMap.get(nodeId) || "inactive";
+    if (componentValues && nodeValueMap.has(nodeId)) {
+      // Input/condition nodes: derive state from actual signal value, not just logic-gate activation
+      const cv = nodeValueMap.get(nodeId);
+      if (typeof cv === "boolean") {
+        state = cv ? "active" : "inactive";
+      } else if (typeof cv === "number" && Number.isFinite(cv)) {
+        // Numeric conditions (RA, N1K, TRA): non-zero = active
+        state = cv !== 0 ? "active" : "inactive";
+      }
+    }
     el.classList.remove("is-active", "is-blocked", "is-inactive");
     el.classList.add(`is-${state}`);
     el.dataset.state = state;
