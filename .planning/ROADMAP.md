@@ -2,7 +2,7 @@
 
 ## Current Milestone
 
-Keep AI FANTUI LogicMVP stable as a GSD-managed, Notion-synced control loop while expanding it from a deterministic cockpit demo into a spec-driven control-analysis workbench with strict acceptance, fault injection, and reusable onboarding patterns.
+Milestone 7 — Active。Complete P14: AI Document Analyzer — adding AI-powered spec ambiguity detection and clarification loops to the workbench, generating Claude Code prompt documents from resolved logic circuit specifications.
 
 ## Phase P0: Control Tower And GSD Control Plane
 
@@ -191,20 +191,49 @@ Exit Criteria:
 Plans:
 - [x] P13-01-PLAN.md // Add system-switcher + /api/system-snapshot + data-driven chain-panel + truth-evaluation answer per system (committed: 211ab2e, 07e015d, 2f818a6, cfc4aec, a28d4dc, 182d5e4)
 
-## Milestone 6 Hold — Active 2026-04-13
+## Phase P14: AI Document Analyzer — Import logic circuit docs → AI ambiguity detection → Deep confirmation loop → Claude Code prompt generation
 
-Status: Active (Hold)
+Status: Active
 
-Goal: P0→P13 全栈闭环完成。后端 pipeline + 8 个 v1 schema + 3-stage CI/CD + product onboarding + browser workbench multi-system UI = 可泛化工作台 MVP 达标。Opus 4.6 建议进入 Hold，等待外部工程师 UAT 或下一阶段优先级决策。
+Goal: Build a browser UI where engineers can import control-system logic circuit documents (PDF/markdown/text), triggering an AI-powered analysis pipeline that detects ambiguous spec descriptions, runs a deep interactive confirmation dialogue loop to resolve ambiguities, and ultimately generates a structured Claude Code prompt document ready for new module development. Complements the existing `document_intake.py` pipeline by adding AI-driven ambiguity detection and clarification loops.
 
 Exit Criteria:
 
+- Engineer uploads a control-system spec document via browser UI (drag-drop or file picker)
+- AI analyzes the document and surfaces specific ambiguous/unclear spec sections with confidence scores
+- Interactive confirmation loop lets engineer clarify each ambiguity one at a time
+- Loop terminates when AI determines information is sufficient and logically closed (no more blockers)
+- A structured prompt document is generated containing: system overview, logic node specifications, condition rules, edge cases, and implementation guidance
+- Prompt document can be previewed and exported/downloaded as markdown
+- All existing 92 tests continue to pass (no regression)
+- All 23 shared validation commands continue to pass
+- Roadmap DB shows P14=Active
+
+## Milestone 6 Hold — Lifted 2026-04-13
+
+Status: Lifted
+
+Goal: P0→P13 全栈闭环完成。后端 pipeline + 8 个 v1 schema + 3-stage CI/CD + product onboarding + browser workbench multi-system UI = 可泛化工作台 MVP 达标。Milestone 6 Hold 于 2026-04-13 解除，P14 启动。
+
+Exit Criteria (superseded by P14 development):
+
 - P13 = Done，0 open UAT gap。
-- 所有 phase 代码冻结 — 不引入新的功能开发。
 - 所有 92 tests 继续通过（回归保护）。
 - 23 shared validation commands 继续通过。
-- Roadmap DB shows P13=Done, Milestone 6 Hold=Active.
-- Opus 4.6 裁决存档于 `docs/freeze/MILESTONE6-HOLD.md`。
+- Roadmap DB shows P13=Done.
+
+## Milestone 7 — Active 2026-04-13
+
+Status: Active
+
+Goal: Complete P14 — AI Document Analyzer。Build a browser UI where engineers import logic circuit spec documents (PDF/markdown/text), triggering an AI analysis pipeline that detects spec ambiguities, runs deep confirmation loops to resolve them, and generates a structured Claude Code prompt document for new module development.
+
+Exit Criteria:
+
+- P14 = Done
+- All 92 tests continue to pass
+- All 23 shared validation commands continue to pass
+- Roadmap DB shows P14=Done
 
 ## Milestone 5 Hold — Lifted 2026-04-13
 
@@ -243,3 +272,13 @@ Exit Criteria:
 - All 23 shared validation commands continue to pass (no regression).
 - Roadmap DB shows P10=Done, P11=Active.
 
+
+### Phase 1: P14: AI Document Analyzer - Import logic circuit docs → AI ambiguity detection → Deep confirmation loop → Claude Code prompt generation
+
+**Goal:** Build a browser UI where engineers can import control-system logic circuit documents, trigger an AI-powered analysis pipeline that detects ambiguous spec descriptions, runs deep confirmation loops, and generates Claude Code prompt documents.
+**Requirements**: P14-01
+**Depends on:** Phase 0
+**Plans:** 1 plan(s)
+
+Plans:
+- [ ] P14-01-PLAN.md // AI Document Analyzer full pipeline (7 tasks: ai module + routes + UI + nav links + tests + regression)
