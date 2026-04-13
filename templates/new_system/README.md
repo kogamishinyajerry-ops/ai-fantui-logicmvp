@@ -6,18 +6,22 @@ This directory contains template files for rapidly scaffolding a new control-sys
 
 ## Overview
 
-When onboarding a new control system, you need three core files:
+When onboarding a new control system, you need **3 template files + 1 reference file**:
 
-| Template File | Purpose |
-|---------------|---------|
-| `<system_id>_adapter.py` | Python adapter implementing `GenericControllerTruthAdapter` |
-| `<system_id>_intake_packet.py` | Builder function that produces a `ControlSystemIntakePacket` |
+| Role | File | Purpose |
+|------|------|---------|
+| Template | `src/well_harness/adapters/your_system_adapter.py` | Python adapter implementing `GenericControllerTruthAdapter` |
+| Template | `src/well_harness/adapters/your_system_intake_packet.py` | Builder function that produces a `ControlSystemIntakePacket` |
+| Template | `templates/new_system/NEW_SYSTEM_SPEC.json` | JSON spec skeleton (for reference only — fill the Python adapter spec builder instead) |
+| **Reference** | `src/well_harness/adapters/landing_gear_adapter.py` | Complete working implementation — study this to understand the full pattern |
 
-Both template files live in `src/well_harness/adapters/` in the project.
+**The 4th file is a reference, not a template.** Copy-paste from the templates; study landing_gear_adapter.py for the full working pattern.
 
 ---
 
 ## File Inventory and Descriptions
+
+The actual files to create are in `src/well_harness/adapters/`:
 
 ### `{{system_id}}_adapter.py` Template
 
@@ -58,6 +62,40 @@ This template generates the intake-packet builder file. It contains:
 | `{{SYSTEM_UPPER}}` | SCREAMING_SNAKE_CASE | `HYDRAULIC_BRAKE_SYSTEM` |
 | `{{systemTitle}}` | Title Case | `Hydraulic Brake System` |
 | `{{objective}}` | Natural language | `Release the brake and drive extension once the handle is selected and pressure is healthy.` |
+
+---
+
+## Filling In the Template — Quick Checklist
+
+Before filling the adapter template, collect these values from your engineering docs:
+
+**Component kinds** (from `ComponentSpec.kind` field):
+- `sensor` — a measured signal (e.g., pressure, position, altitude)
+- `command` — an output command to an actuator (e.g., valve_cmd, motor_cmd)
+- `pilot_input` — a pilot-operated control (e.g., handle position, throttle)
+
+**`fault_kind` values** (from `fault_taxonomy.py → SUPPORTED_FAULT_KINDS`):
+- `stuck_low` — signal frozen at low end
+- `stuck_high` — signal frozen at high end
+- `misread_high` — sensor reads higher than actual
+- `misread_low` — sensor reads lower than actual
+- `intermittent` — signal drops out intermittently
+- `noise` — signal has excessive random noise
+- See `src/well_harness/fault_taxonomy.py` for the full enum
+
+**Snapshot signal types** in `evaluate_snapshot()`:
+- Boolean signals (True/False or 0/1) → use `_snapshot_bool()`
+- Numeric signals (float/int) → use `_snapshot_float()`
+- Discrete string signals ("OPEN"/"CLOSED", "IDLE"/"ACTIVE") → use `_snapshot_str()`
+- The template adapter already includes all three helpers at lines 57–79
+
+**`GenericControllerTruthAdapter` protocol** — defined in `src/well_harness/controller_adapter.py`:
+```python
+class GenericControllerTruthAdapter(Protocol):
+    metadata: ControllerTruthMetadata
+    def load_spec(self) -> dict[str, Any]: ...
+    def evaluate_snapshot(self, snapshot: Mapping[str, Any]) -> GenericTruthEvaluation: ...
+```
 
 ---
 
@@ -157,8 +195,10 @@ def build_landing_gear_intake_packet() -> ControlSystemIntakePacket:
 
 ## Important Constraints
 
-- Signal IDs in `snapshot` keys passed to `evaluate_snapshot()` must match exactly the `id` fields in your `ComponentSpec` definitions (case-sensitive).
-- Threshold values in `LogicConditionSpec.threshold_value` must be of the correct type: string for discrete/binary comparisons, numeric for analog comparisons.
-- Every `LogicNodeSpec.downstream_component_ids` entry must reference a component with `kind="command"`.
-- `acceptance_scenarios[].monitored_signal_ids` must be a subset of all component IDs.
-- `fault_modes[].target_component_id` must reference an existing component.
+- **Signal IDs** in `snapshot` keys passed to `evaluate_snapshot()` must match exactly the `id` fields in your `ComponentSpec` definitions (case-sensitive).
+- **Threshold values** in `LogicConditionSpec.threshold_value` must be of the correct type: string for discrete/binary comparisons, numeric for analog comparisons.
+- **`kind` values** for `ComponentSpec` must be one of: `sensor`, `command`, `pilot_input` (not free-form strings).
+- **`fault_kind` values** for `FaultModeSpec` must be from `SUPPORTED_FAULT_KINDS` in `fault_taxonomy.py` (e.g., `stuck_low`, `misread_high`) — arbitrary strings will fail schema validation.
+- **Every `LogicNodeSpec.downstream_component_ids`** entry must reference a component with `kind="command"`.
+- **`acceptance_scenarios[].monitored_signal_ids`** must be a subset of all component IDs.
+- **`fault_modes[].target_component_id`** must reference an existing component.
