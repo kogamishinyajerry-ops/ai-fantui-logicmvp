@@ -8,6 +8,20 @@ import uuid
 from dataclasses import dataclass, field
 from typing import ClassVar
 
+from well_harness.document_intake import (
+    assess_intake_packet,
+    intake_packet_from_dict,
+)
+from well_harness.system_spec import (
+    AcceptanceScenarioSpec,
+    ComponentSpec,
+    FaultModeSpec,
+    KnowledgeCaptureSpec,
+    LogicConditionSpec,
+    LogicNodeSpec,
+)
+from well_harness.workbench_bundle import build_workbench_bundle as _build_workbench_bundle
+
 # ---------------------------------------------------------------------------
 # MOCK fixture — returned verbatim when P14_AI_MOCK=1
 # ---------------------------------------------------------------------------
@@ -438,3 +452,205 @@ def _call_anthropic(messages: list[dict], system: str) -> str:
         return response.content[0].text
     except Exception as exc:  # noqa: BLE001 — AnthropicSDK raises various subclasses
         return {"error": "anthropic_api_error", "message": str(exc)}
+
+
+# ---------------------------------------------------------------------------
+# P15 — Pipeline Integration
+# ---------------------------------------------------------------------------
+
+_MOCK_INTAKE_PACKET = {
+    "system_id": "vdt90-deploy-system",
+    "title": "VDT90 Deploy-90 Logic with L3 Activation",
+    "objective": "Implement VDT90-based deploy-90 logic with L3 activation gating",
+    "source_of_truth": "P14 AI Document Analyzer generated spec",
+    "source_documents": [
+        {
+            "id": "src-1",
+            "kind": "markdown",
+            "title": "Claude Code Prompt",
+            "location": "session",
+            "role": "primary",
+            "notes": "",
+        }
+    ],
+    "components": [
+        {
+            "id": "vdt90_sensor",
+            "label": "VDT90 Sensor",
+            "kind": "sensor",
+            "state_shape": "percentage",
+            "unit": "%",
+            "description": "Deploy position sensor",
+            "allowed_range": [0, 100],
+            "allowed_states": (),
+            "monitor_priority": "required",
+        },
+        {
+            "id": "l3_gate",
+            "label": "L3 Gate",
+            "kind": "logic_gate",
+            "state_shape": "boolean",
+            "unit": "",
+            "description": "L3 activation gate",
+            "allowed_range": None,
+            "allowed_states": ("0", "1"),
+            "monitor_priority": "required",
+        },
+        {
+            "id": "reverser_inhibited",
+            "label": "Reverser Inhibited",
+            "kind": "pilot_input",
+            "state_shape": "boolean",
+            "unit": "",
+            "description": "Reverser inhibit signal",
+            "allowed_range": None,
+            "allowed_states": ("0", "1"),
+            "monitor_priority": "optional",
+        },
+    ],
+    "logic_nodes": [
+        {
+            "id": "l3_activation",
+            "label": "L3 Activation",
+            "description": "L3 activates when VDT90 >= 90% and not inhibited",
+            "conditions": [
+                {
+                    "name": "vdt90_threshold",
+                    "source_component_id": "vdt90_sensor",
+                    "comparison": ">=",
+                    "threshold_value": 90,
+                    "note": "VDT90 must be at or above 90%",
+                },
+                {
+                    "name": "not_inhibited",
+                    "source_component_id": "reverser_inhibited",
+                    "comparison": "==",
+                    "threshold_value": False,
+                    "note": "Reverser must not be inhibited",
+                },
+            ],
+            "downstream_component_ids": ["l3_gate"],
+            "evidence_priority": "high",
+        }
+    ],
+    "acceptance_scenarios": [
+        {
+            "id": "nominal_deploy",
+            "label": "Nominal Deploy",
+            "description": "VDT90 >= 90%, reverser not inhibited -> L3 active",
+            "time_scale_factor": 1.0,
+            "total_duration_s": 5.0,
+            "monitored_signal_ids": ["vdt90_sensor", "l3_gate"],
+            "steady_signals": [
+                {"signal_id": "reverser_inhibited", "value": False, "unit": "state", "note": "Reverser not inhibited"}
+            ],
+            "transitions": [
+                {
+                    "signal_id": "vdt90_sensor",
+                    "start_s": 0.0,
+                    "end_s": 3.0,
+                    "start_value": 0.0,
+                    "end_value": 95.0,
+                    "unit": "%",
+                    "note": "VDT90 rises to 95%",
+                }
+            ],
+            "completion_condition": "l3_gate == True",
+        }
+    ],
+    "fault_modes": [
+        {
+            "id": "vdt90_signal_loss",
+            "target_component_id": "vdt90_sensor",
+            "fault_kind": "signal_loss",
+            "symptom": "VDT90 sensor signal is lost",
+            "reasoning_scope_component_ids": ["vdt90_sensor", "l3_activation"],
+            "expected_diagnostic_sections": ("symptoms", "repair_hint"),
+            "optimization_prompt": "L3 remains in last known state when VDT90 signal is lost.",
+        }
+    ],
+    "knowledge_capture": {
+        "incident_fields": ["system_id", "scenario_id", "fault_mode_id", "observed_symptoms", "evidence_links"],
+        "resolution_fields": ["confirmed_root_cause", "repair_action", "validation_after_fix", "residual_risk"],
+        "optimization_fields": ["suggested_logic_change", "reliability_gain_hypothesis", "redundancy_reduction_or_guardrail_note"],
+    },
+}
+
+
+def _is_mock_p15() -> bool:
+    return os.environ.get("P15_AI_MOCK", "0") == "1"
+
+
+def convert_markdown_to_intake(markdown_text: str, system_id: str = "generated-system") -> dict:
+    """Convert a P14 markdown prompt document into an intake packet dict.
+
+    If P15_AI_MOCK=1, returns a mock intake packet with the given system_id.
+    Otherwise calls the Anthropic API to extract structured data from the markdown.
+    """
+    if _is_mock_p15():
+        packet = dict(_MOCK_INTAKE_PACKET)
+        packet["system_id"] = system_id
+        return packet
+
+    system_prompt = (
+        "You are a control-systems engineer extracting structured data from a markdown specification.\n"
+        "Extract and return a single JSON object (no markdown, no explanation) with these fields:\n"
+        "- system_id: a slug derived from the title\n"
+        "- title: the system title\n"
+        "- objective: a 1-sentence objective\n"
+        "- source_documents: list of source document references\n"
+        "- components: list of components with id, label, kind, state_shape, unit, description, allowed_range\n"
+        "- logic_nodes: list of logic nodes with id, label, description, conditions (name, source_component_id, comparison, threshold_value, note), downstream_component_ids\n"
+        "- acceptance_scenarios: list with id, label, description, time_scale_factor, total_duration_s, monitored_signal_ids, steady_signals, transitions (signal_id, start_s, end_s, start_value, end_value, unit, note), completion_condition\n"
+        "- fault_modes: list with id, target_component_id, fault_kind, symptom, reasoning_scope_component_ids, expected_diagnostic_sections, optimization_prompt\n"
+        "- knowledge_capture: object with incident_fields, resolution_fields, optimization_fields\n"
+        "Use default values for any missing information."
+    )
+
+    messages = [{"role": "user", "content": f"Extract structured data from this markdown:\n\n{markdown_text}"}]
+    response = _call_anthropic(messages, system_prompt)
+    if isinstance(response, dict) and "error" in response:
+        return response
+
+    try:
+        return json.loads(response)
+    except json.JSONDecodeError as exc:
+        return {"error": "json_decode_failed", "message": str(exc)}
+
+
+def run_pipeline_from_intake(intake_packet: dict) -> dict:
+    """Run the full P7/P8 intake pipeline: validate -> assess -> build bundle.
+
+    Returns combined result with assessment, bundle summary, and system_snapshot.
+    """
+    try:
+        packet = intake_packet_from_dict(intake_packet)
+    except (ValueError, KeyError, TypeError) as exc:
+        return {"error": "intake_validation_failed", "message": str(exc)}
+
+    assessment = assess_intake_packet(packet)
+
+    bundle = _build_workbench_bundle(packet)
+
+    system_snapshot = {
+        "system_id": packet.system_id,
+        "title": packet.title,
+        "component_count": len(packet.components),
+        "logic_node_count": len(packet.logic_nodes),
+        "acceptance_scenario_count": len(packet.acceptance_scenarios),
+        "fault_mode_count": len(packet.fault_modes),
+        "ready_for_spec_build": assessment.get("ready_for_spec_build", False),
+    }
+
+    return {
+        "assessment": assessment,
+        "bundle": {
+            "system_id": bundle.system_id,
+            "system_title": bundle.system_title,
+            "bundle_kind": bundle.bundle_kind,
+            "ready_for_spec_build": bundle.ready_for_spec_build,
+            "scenario_count": len(bundle.playback_report.scenarios) if bundle.playback_report else 0,
+            "fault_mode_count": len(bundle.diagnosis_report.fault_modes) if bundle.diagnosis_report else 0,
+        } if bundle else None,
+        "system_snapshot": system_snapshot,
+    }
