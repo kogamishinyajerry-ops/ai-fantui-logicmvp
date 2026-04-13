@@ -226,5 +226,6 @@ Advance the spec-driven control-analysis workbench from separate primitives into
 
 ### Quick Tasks Completed
 
+| 260413-jxy | Fix demo UI layout bug: move result-grid to left column, eliminate sticky chain-panel overlap | 2026-04-13 | d6cadad | [260413-jxy-fix-demo-ui-layout-bug-result-grid-is-co](./quick/260413-jxy-fix-demo-ui-layout-bug-result-grid-is-co/) |
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
