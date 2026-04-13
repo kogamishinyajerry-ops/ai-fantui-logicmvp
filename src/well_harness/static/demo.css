@@ -1540,6 +1540,131 @@ button:disabled {
   border-color: rgba(40, 244, 255, 0.3);
 }
 
+/* P13: Multi-system chain topology layouts */
+.chain-topology {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px;
+  background:
+    linear-gradient(90deg, rgba(40, 244, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(40, 244, 255, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 50% 50%, rgba(61, 126, 255, 0.11), transparent 18rem),
+    #050a12;
+  background-size: 28px 28px, 28px 28px, auto, auto;
+  border: 1px solid rgba(40, 244, 255, 0.18);
+  border-radius: 18px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+}
+
+.chain-system-description {
+  width: 100%;
+  max-width: 680px;
+  padding: 10px 14px;
+  background: rgba(61, 126, 255, 0.08);
+  border: 1px solid rgba(61, 126, 255, 0.22);
+  border-radius: 10px;
+  color: var(--text-main);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  text-align: center;
+}
+.chain-system-description p { margin: 0; }
+.chain-system-description strong { color: var(--accent-cyan); }
+
+.chain-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.chain-row-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: rgba(40, 244, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  min-width: 52px;
+  text-align: right;
+}
+
+.chain-parallel-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.chain-parallel-separator {
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  color: rgba(255, 176, 55, 0.5);
+  padding: 0 4px;
+}
+
+.chain-row-parallel {
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.chain-merge-left,
+.chain-merge-right {
+  display: flex;
+  align-items: center;
+}
+
+.chain-row-branching {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.chain-branch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.chain-branch-separator {
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  color: rgba(255, 176, 55, 0.5);
+  align-self: center;
+}
+
+.logic-stage-branch {
+  min-width: 140px;
+}
+
+.chain-branch-labels {
+  display: flex;
+  gap: 80px;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.branch-label-open { color: var(--accent-green); opacity: 0.7; }
+.branch-label-close { color: var(--accent-orange); opacity: 0.7; }
+
+.chain-node.input-node {
+  border-style: dashed;
+  border-color: rgba(141, 124, 255, 0.35);
+  color: var(--chip-purple);
+}
+
 .chain-arrow {
   color: rgba(40, 244, 255, 0.78);
   font-family: var(--font-mono);

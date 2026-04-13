@@ -1138,16 +1138,85 @@ def _default_snapshot_for_system(system_id: str) -> dict:
 
 
 def _spec_to_nodes(spec: dict, truth_evaluation: Any = None) -> list[dict]:
-    """Build a nodes array from spec.components + spec.logic_nodes."""
+    """Build a nodes array from spec.components + spec.logic_nodes.
+
+    Nodes are ordered to reflect the control flow: input conditions first,
+    then parallel logic gates, then merge gates, then final outputs.
+    This ordering is derived from the spec's logic_node downstream relationships.
+    """
     active_ids: set[str] = set()
     if truth_evaluation is not None:
         active_ids = set(truth_evaluation.active_logic_node_ids)
+
+    # Separate components into inputs vs intermediate/output components
+    components = spec.get("components", [])
+    logic_nodes = spec.get("logic_nodes", [])
+
+    # Identify which components are upstream inputs (no logic_node depends on them as downstream)
+    downstream_ids: set[str] = set()
+    for ln in logic_nodes:
+        for cid in ln.get("downstream_component_ids", []):
+            downstream_ids.add(cid)
+
+    # Components that appear as downstream of logic nodes → intermediate/output nodes
+    # Components that don't → upstream input nodes
+    upstream_input_ids: set[str] = set()
+    intermediate_output_ids: set[str] = set()
+    for comp in components:
+        cid = comp["id"]
+        if cid in downstream_ids:
+            intermediate_output_ids.add(cid)
+        else:
+            upstream_input_ids.add(cid)
+
+    # Build ordered node list:
+    # 1. Upstream input components (sensors/pilot inputs)
+    # 2. Logic nodes in dependency order
+    # 3. Intermediate/output components (commands/power)
     nodes: list[dict] = []
-    for comp in spec.get("components", []):
-        nodes.append(_node(comp["id"], comp["label"], "inactive", "spec.components"))
-    for ln in spec.get("logic_nodes", []):
+
+    # Sort logic nodes by dependency: nodes whose downstream_component_ids feed into other logic nodes come first
+    # For thrust-reverser: L1 and L2 are parallel (no cross-dependency), L3 depends on both, L4 depends on L3
+    # Build a dependency graph to determine order
+    node_ids = {ln["id"] for ln in logic_nodes}
+    resolved: list[dict] = []
+    remaining = list(logic_nodes)
+    while remaining:
+        made_progress = False
+        for i, ln in enumerate(remaining):
+            deps_met = True
+            for cid in ln.get("downstream_component_ids", []):
+                # Check if this component feeds into any remaining logic node
+                for remaining_ln in remaining[i + 1:]:
+                    if cid in remaining_ln.get("downstream_component_ids", []):
+                        deps_met = False
+                        break
+                if not deps_met:
+                    break
+            if deps_met:
+                resolved.append(remaining.pop(i))
+                made_progress = True
+                break
+        if not made_progress:
+            # Fallback: append remaining in order
+            resolved.extend(remaining)
+            break
+
+    # Layer 1: upstream input components
+    for comp in components:
+        if comp["id"] in upstream_input_ids:
+            nodes.append(_node(comp["id"], comp["label"], "inactive", "spec.components"))
+
+    # Layer 2: logic nodes in dependency order
+    for ln in resolved:
         state = "active" if ln["id"] in active_ids else "inactive"
         nodes.append(_node(ln["id"], ln["label"], state, "spec.logic_nodes"))
+
+    # Layer 3: intermediate/output components (commands/power)
+    for comp in components:
+        if comp["id"] in intermediate_output_ids:
+            nodes.append(_node(comp["id"], comp["label"], "inactive", "spec.components"))
+
     return nodes
 
 

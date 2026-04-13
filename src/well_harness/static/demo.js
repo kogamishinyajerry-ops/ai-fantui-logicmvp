@@ -21,7 +21,9 @@ const sectionLabels = {
 let _currentSystemId = "thrust-reverser";
 
 /**
- * Fetch /api/system-snapshot for the given systemId, then re-render the UI.
+ * Fetch /api/system-snapshot for the given systemId, then update the UI.
+ * For thrust-reverser: use the existing HTML-defined parallel topology (don't rebuild from flat nodes)
+ * For other systems: show the corresponding topology and apply node states
  */
 async function handleSystemSwitch(systemId) {
   _currentSystemId = systemId;
@@ -32,11 +34,24 @@ async function handleSystemSwitch(systemId) {
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
-    renderChainMap(data.nodes);
+
+    // Show the correct topology, hide others
+    document.querySelectorAll(".chain-topology").forEach((el) => {
+      el.style.display = "none";
+    });
+    const topologyEl = document.getElementById(`chain-topology-${systemId}`);
+    if (topologyEl) topologyEl.style.display = "";
+
+    // Apply node states from truth evaluation to visible topology
+    applySystemNodeStates(data.nodes);
+
+    // Render truth evaluation answer card
     renderTruthEvaluation(data.truth_evaluation);
-    // Update hero title to show the system title
+
+    // Update hero title
     const titleEl = document.getElementById("page-title");
     if (titleEl) titleEl.textContent = data.title || systemId;
+
     // Show/hide condition panel based on system
     const conditionPanel = document.querySelector(".condition-panel");
     if (conditionPanel) {
@@ -45,6 +60,27 @@ async function handleSystemSwitch(systemId) {
   } catch (err) {
     console.error("handleSystemSwitch failed:", err);
   }
+}
+
+/**
+ * Apply node states (active/inactive) to the currently visible chain-topology.
+ * Uses data-node attributes on elements to match against node ids.
+ */
+function applySystemNodeStates(nodes) {
+  // Build a map from node id -> state
+  const stateMap = new Map();
+  nodes.forEach((node) => {
+    stateMap.set(node.id, node.state || "inactive");
+  });
+
+  // Apply states to all nodes in the visible topology
+  document.querySelectorAll(".chain-topology:not([style*='display: none']) [data-node]").forEach((el) => {
+    const nodeId = el.dataset.node;
+    const state = stateMap.get(nodeId) || "inactive";
+    el.classList.remove("is-active", "is-blocked", "is-inactive");
+    el.classList.add(`is-${state}`);
+    el.dataset.state = state;
+  });
 }
 
 /** Clear all dynamic UI state (chain nodes, HUD values, result areas). */
@@ -71,27 +107,13 @@ function resetUIState() {
 }
 
 /**
- * Render the chain-map dynamically from a nodes array.
- * Clears existing children of .chain-map and builds new ones.
+ * Apply node states to the currently visible chain-topology.
+ * Called by existing thrust-reverser lever-snapshot path.
  */
 function renderChainMap(nodes) {
-  const chainMap = document.querySelector(".chain-map");
-  if (!chainMap) return;
-  chainMap.innerHTML = "";
-  nodes.forEach((node, i) => {
-    const div = document.createElement("div");
-    div.className = `chain-node${node.state === "active" ? " is-active" : node.state === "blocked" ? " is-blocked" : " is-inactive"}`;
-    div.dataset.node = node.id;
-    div.textContent = node.label;
-    chainMap.appendChild(div);
-    // Add arrow between nodes (not after last)
-    if (i < nodes.length - 1) {
-      const arrow = document.createElement("div");
-      arrow.className = "chain-arrow";
-      arrow.textContent = "➜";
-      chainMap.appendChild(arrow);
-    }
-  });
+  // For thrust-reverser: use the HTML-defined topology with parallel/merge structure
+  // Just apply states to visible nodes, don't rebuild
+  applySystemNodeStates(nodes);
 }
 
 /**

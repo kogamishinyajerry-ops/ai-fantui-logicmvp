@@ -322,39 +322,148 @@
                 <p class="truth-rail plant">Simplified plant feedback：TLS unlock / PLS unlock / VDT90 / 位移只用于演示反馈，不是完整物理模型。</p>
               </div>
             </section>
-            <div class="chain-map mobile-step-rail" aria-label="固定控制链路主板">
-              <div class="chain-node" data-node="sw1" title="SW1">SW1</div>
-              <div class="chain-arrow">➜</div>
-              <div class="logic-stage" aria-label="L1 注释 + TLS115">
-                <span class="logic-note" data-node="logic1" title="logic1: RA < 6ft + SW1 + reverser_inhibited false + reverser_not_deployed_eec true">L1</span>
-                <span class="chain-node sub-node command-node" data-node="tls115" title="tls_115vac_cmd">TLS115</span>
-              </div>
-              <div class="chain-arrow">➜</div>
-              <div class="chain-node sensor-node" data-node="tls_unlocked" title="TLS unlocked">TLS 解锁</div>
-              <div class="chain-arrow">➜</div>
-              <div class="chain-node" data-node="sw2" title="SW2">SW2</div>
-              <div class="chain-arrow">➜</div>
-              <div class="logic-stage" aria-label="L2 注释 + 540V">
-                <span class="logic-note" data-node="logic2" title="logic2: engine_running + aircraft_on_ground + reverser_inhibited false + SW2 + eec_enable">L2</span>
-                <span class="chain-node sub-node command-node" data-node="etrac_540v" title="etrac_540vdc_cmd">540V</span>
-              </div>
-              <div class="chain-arrow">➜</div>
-              <div class="logic-stage logic-stage-wide" aria-label="L3 注释 + EEC / PLS / PDU">
-                <span class="logic-note" data-node="logic3" title="logic3: TLS unlocked + N1K < limit + TRA <= -11.74°">L3</span>
-                <span class="logic-stage-hint">TLS / N1K / TRA</span>
-                <div class="logic-stage-track command-row">
-                  <span class="chain-node sub-node command-node" data-node="eec_deploy" title="eec_deploy_cmd">EEC</span>
-                  <span class="chain-node sub-node command-node" data-node="pls_power" title="pls_power_cmd">PLS</span>
-                  <span class="chain-node sub-node command-node" data-node="pdu_motor" title="pdu_motor_cmd">PDU</span>
+            <div id="chain-topology-thrust-reverser" class="chain-topology mobile-step-rail" aria-label="反推控制系统链路">
+              <!-- Phase 1: L1 parallel to L2 -->
+              <div class="chain-row">
+                <div class="chain-row-label">条件层</div>
+                <div class="chain-parallel-group">
+                  <div class="chain-node input-node" data-node="radio_altitude_ft" title="无线电高度">RA</div>
+                  <div class="chain-node input-node" data-node="sw1" title="Switch 1">SW1</div>
+                  <div class="chain-node input-node" data-node="reverser_inhibited" title="Reverser Inhibited">Inhibit</div>
+                  <div class="chain-node input-node" data-node="reverser_not_deployed_eec" title="Reverser not deployed (EEC)">Not Deployed</div>
+                </div>
+                <div class="chain-parallel-separator">|</div>
+                <div class="chain-parallel-group">
+                  <div class="chain-node input-node" data-node="engine_running" title="Engine Running">ENG</div>
+                  <div class="chain-node input-node" data-node="aircraft_on_ground" title="Aircraft on Ground">GND</div>
+                  <div class="chain-node input-node" data-node="sw2" title="Switch 2">SW2</div>
+                  <div class="chain-node input-node" data-node="eec_enable" title="EEC Enable">EEC En</div>
                 </div>
               </div>
-              <div class="chain-arrow">➜</div>
-              <div class="chain-node sensor-node" data-node="vdt90" title="VDT90">VDT90</div>
-              <div class="chain-arrow">➜</div>
-              <div class="logic-stage" aria-label="L4 注释 + THR_LOCK">
-                <span class="logic-note" data-node="logic4" title="logic4: VDT90 + reverse travel + engine_running + aircraft_on_ground">L4</span>
-                <span class="logic-stage-hint">VDT90 / travel / ENG / GND</span>
-                <span class="chain-node sub-node command-node final-node" data-node="thr_lock" title="THR_LOCK / throttle_lock_release_cmd">THR_LOCK</span>
+              <div class="chain-arrow">▼ 并行分支</div>
+              <!-- L1 and L2 in parallel -->
+              <div class="chain-row chain-row-parallel">
+                <div class="chain-merge-left">
+                  <div class="logic-stage" aria-label="L1 条件">
+                    <span class="logic-note" data-node="logic1" title="L1: RA &lt; 6ft + SW1 + not inhibited + not deployed">L1</span>
+                    <div class="logic-stage-hint">RA&lt;6ft · SW1 · ~Inhibit · ~Deployed</div>
+                    <span class="chain-node sub-node command-node" data-node="tls115" title="tls_115vac_cmd">TLS115</span>
+                  </div>
+                </div>
+                <div class="chain-merge-right">
+                  <div class="logic-stage" aria-label="L2 条件">
+                    <span class="logic-note" data-node="logic2" title="L2: ENG + GND + ~Inhibit + SW2 + EEC En">L2</span>
+                    <div class="logic-stage-hint">ENG · GND · ~Inhibit · SW2 · EEC En</div>
+                    <span class="chain-node sub-node command-node" data-node="etrac_540v" title="etrac_540vdc_cmd">540V</span>
+                  </div>
+                </div>
+              </div>
+              <div class="chain-arrow">▼ 汇合</div>
+              <!-- Phase 2: L3 (needs L1 output TLS + L2 output ETRAC) -->
+              <div class="chain-row">
+                <div class="chain-row-label">L3 条件</div>
+                <div class="logic-stage logic-stage-wide" aria-label="L3: TLS解锁 + N1K + TRA">
+                  <span class="logic-note" data-node="logic3" title="L3: TLS unlocked + N1K &lt; limit + TRA &lt;= -11.74°">L3</span>
+                  <span class="logic-stage-hint">TLS解锁 · N1K&lt;Limit · TRA≤-11.74°</span>
+                  <div class="logic-stage-track command-row">
+                    <span class="chain-node sub-node command-node" data-node="eec_deploy" title="eec_deploy_cmd">EEC</span>
+                    <span class="chain-node sub-node command-node" data-node="pls_power" title="pls_power_cmd">PLS</span>
+                    <span class="chain-node sub-node command-node" data-node="pdu_motor" title="pdu_motor_cmd">PDU</span>
+                  </div>
+                </div>
+              </div>
+              <div class="chain-arrow">▼</div>
+              <!-- VDT90 feedback -->
+              <div class="chain-row">
+                <div class="chain-node sensor-node" data-node="vdt90" title="VDT90">VDT90</div>
+                <div class="chain-node sensor-node" data-node="tra_deg" title="TRA position">TRA</div>
+                <div class="chain-node sensor-node" data-node="engine_running" title="Engine Running">ENG</div>
+                <div class="chain-node sensor-node" data-node="aircraft_on_ground" title="Aircraft on Ground">GND</div>
+              </div>
+              <div class="chain-arrow">▼</div>
+              <!-- L4 -->
+              <div class="chain-row">
+                <div class="logic-stage" aria-label="L4 条件">
+                  <span class="logic-note" data-node="logic4" title="L4: VDT90 + reverse travel + ENG + GND">L4</span>
+                  <div class="logic-stage-hint">VDT90 · TRA在有效区 · ENG · GND</div>
+                  <span class="chain-node sub-node command-node final-node" data-node="thr_lock" title="THR_LOCK / throttle_lock_release_cmd">THR_LOCK</span>
+                </div>
+              </div>
+            </div>
+
+            <div id="chain-topology-landing-gear" class="chain-topology" style="display:none" aria-label="起落架控制系统链路">
+              <div class="chain-system-description">
+                <p><strong>起落架放下控制</strong>：手柄 DOWN + 液压正常 → LG-L1（选择阀）→ 锁闩释放 → LG-L2（伸展作动）</p>
+              </div>
+              <div class="chain-row">
+                <div class="chain-row-label">输入条件</div>
+                <div class="chain-parallel-group">
+                  <div class="chain-node input-node" data-node="gear_handle_position" title="Gear Handle position">手柄</div>
+                  <div class="chain-node input-node" data-node="hydraulic_pressure_psi" title="Hydraulic pressure (psi)">液压 psi</div>
+                </div>
+              </div>
+              <div class="chain-arrow">▼ 两级串联</div>
+              <div class="chain-row">
+                <div class="logic-stage" aria-label="LG-L1: 手柄 DOWN + 液压 >= 2200psi">
+                  <span class="logic-note" data-node="lg_l1_handle_and_pressure" title="LG-L1: handle DOWN AND pressure &gt;= 2200 psi">LG-L1</span>
+                  <div class="logic-stage-hint">手柄=DOWN · 液压≥2200psi</div>
+                  <span class="chain-node sub-node command-node" data-node="selector_valve_cmd" title="Selector valve command">选择阀命令</span>
+                </div>
+              </div>
+              <div class="chain-arrow">▼</div>
+              <div class="chain-row">
+                <div class="chain-node input-node" data-node="uplock_released" title="Uplock released sensor">锁闩释放</div>
+              </div>
+              <div class="chain-arrow">▼</div>
+              <div class="chain-row">
+                <div class="logic-stage" aria-label="LG-L2: 选择阀命令 AND 锁闩已释放">
+                  <span class="logic-note" data-node="lg_l2_extend_after_uplock_release" title="LG-L2: selector_valve_cmd AND uplock_released">LG-L2</span>
+                  <div class="logic-stage-hint">选择阀命令=1 · 锁闩已释放</div>
+                  <span class="chain-node sub-node command-node final-node" data-node="extend_actuator_cmd" title="Extend actuator command">伸展作动命令</span>
+                </div>
+              </div>
+              <div class="chain-arrow">▼</div>
+              <div class="chain-row">
+                <div class="chain-node sensor-node" data-node="gear_position_percent" title="Gear extension position %">位置%</div>
+                <div class="chain-node sensor-node" data-node="downlock_engaged" title="Downlock engaged">锁闩锁定</div>
+              </div>
+            </div>
+
+            <div id="chain-topology-bleed-air" class="chain-topology" style="display:none" aria-label="引气控制系统链路">
+              <div class="chain-system-description">
+                <p><strong>引气活门控制</strong>：入口压力 &gt;= 35psi + 控制单元就绪 → LN-Open；入口压力 &lt; 32psi 或 &gt;= 65psi → LN-Close（互斥）</p>
+              </div>
+              <div class="chain-row">
+                <div class="chain-row-label">入口压力</div>
+                <div class="chain-node input-node" data-node="inlet_pressure" title="Inlet pressure (psi)">入口压力 psi</div>
+                <div class="chain-node input-node" data-node="control_unit_ready" title="Control unit ready">控制单元就绪</div>
+              </div>
+              <div class="chain-arrow">▼ 分支决策</div>
+              <div class="chain-row chain-row-branching">
+                <div class="chain-branch chain-branch-open" aria-label="LN-Open 分支">
+                  <div class="logic-stage logic-stage-branch" aria-label="LN-Open 条件">
+                    <span class="logic-note" data-node="valve_open_logic" title="LN-Open: inlet_pressure &gt;= 35psi AND control_unit_ready == 1 AND inlet_pressure &lt; 65psi">LN-Open</span>
+                    <div class="logic-stage-hint">压力≥35psi · 控制单元就绪 · 不过压</div>
+                    <span class="chain-node sub-node command-node" data-node="valve_cmd_open" title="Valve open command">活门打开</span>
+                  </div>
+                </div>
+                <div class="chain-branch-separator">|</div>
+                <div class="chain-branch chain-branch-close" aria-label="LN-Close 分支">
+                  <div class="logic-stage logic-stage-branch" aria-label="LN-Close 条件">
+                    <span class="logic-note" data-node="valve_close_logic" title="LN-Close: inlet_pressure &lt; 32psi OR inlet_pressure &gt;= 65psi">LN-Close</span>
+                    <div class="logic-stage-hint">压力&lt;32psi 或 ≥65psi</div>
+                    <span class="chain-node sub-node command-node" data-node="valve_cmd_close" title="Valve close command">活门关闭</span>
+                  </div>
+                </div>
+              </div>
+              <div class="chain-branch-labels">
+                <span class="branch-label-open">打开条件</span>
+                <span class="branch-label-close">关闭条件</span>
+              </div>
+              <div class="chain-arrow">▼ 互斥</div>
+              <div class="chain-row">
+                <div class="chain-node sensor-node" data-node="valve_position" title="Valve position">活门位置</div>
+                <div class="chain-node sensor-node" data-node="outlet_pressure" title="Outlet pressure (psi)">出口压力 psi</div>
               </div>
             </div>
             <section class="panel monitor-panel monitor-panel-inline" aria-labelledby="monitor-panel-title">
