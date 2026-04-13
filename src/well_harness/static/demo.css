@@ -2383,6 +2383,158 @@ button.summary-chip,
   }
 }
 
+/* ===== P13: SVG chain topology styles ===== */
+.chain-svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: visible;
+}
+
+/* Input condition nodes */
+.chain-node-svg {
+  fill: rgba(15, 28, 42, 0.96);
+  stroke: rgba(141, 124, 255, 0.4);
+  stroke-width: 1.5;
+  rx: 6;
+  transition: fill 0.3s, stroke 0.3s, filter 0.3s;
+}
+
+.input-node-svg {
+  stroke: rgba(141, 124, 255, 0.4);
+  stroke-dasharray: 4 2;
+}
+
+/* Command / output nodes */
+.command-node-svg {
+  stroke: rgba(255, 176, 55, 0.35);
+}
+
+.final-node-svg {
+  stroke: rgba(83, 255, 146, 0.5);
+}
+
+/* Sensor / feedback nodes */
+.sensor-node-svg {
+  stroke: rgba(40, 244, 255, 0.35);
+}
+
+/* Node active state */
+.is-active + .chain-node-svg,
+.is-active.chain-node-svg {
+  fill: rgba(83, 255, 146, 0.18);
+  stroke: var(--accent-green);
+  filter: drop-shadow(0 0 8px rgba(83, 255, 146, 0.4));
+}
+
+/* Node blocked state */
+.is-blocked.chain-node-svg {
+  fill: rgba(255, 176, 55, 0.14);
+  stroke: var(--accent-orange);
+  filter: drop-shadow(0 0 6px rgba(255, 176, 55, 0.3));
+}
+
+/* Node inactive state */
+.is-inactive.chain-node-svg {
+  opacity: 0.55;
+  filter: saturate(0.6);
+}
+
+/* SVG text labels */
+.chain-node-label {
+  fill: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.chain-node-value {
+  fill: var(--accent-cyan);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  pointer-events: none;
+}
+
+/* Logic gate AND polygon */
+.logic-gate-svg {
+  fill: rgba(5, 10, 18, 0.85);
+  stroke: rgba(79, 184, 255, 0.55);
+  stroke-width: 1.5;
+  transition: fill 0.3s, stroke 0.3s, filter 0.3s;
+}
+
+.is-active.logic-gate-svg {
+  fill: rgba(83, 255, 146, 0.12);
+  stroke: var(--accent-green);
+  filter: drop-shadow(0 0 6px rgba(83, 255, 146, 0.4));
+}
+
+.is-blocked.logic-gate-svg {
+  fill: rgba(255, 176, 55, 0.1);
+  stroke: var(--accent-orange);
+  filter: drop-shadow(0 0 5px rgba(255, 176, 55, 0.3));
+}
+
+.is-inactive.logic-gate-svg {
+  opacity: 0.5;
+  filter: saturate(0.5);
+}
+
+.logic-gate-label {
+  fill: rgba(79, 184, 255, 0.7);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  pointer-events: none;
+}
+
+/* Connection lines */
+.conn-line {
+  stroke: rgba(79, 184, 255, 0.35);
+  stroke-width: 1.2;
+  fill: none;
+  transition: stroke 0.3s;
+}
+
+.conn-input { stroke: rgba(141, 124, 255, 0.3); }
+.conn-logic { stroke: rgba(40, 244, 255, 0.5); }
+.conn-merge { stroke: rgba(40, 244, 255, 0.35); stroke-dasharray: 4 3; }
+.conn-final { stroke: rgba(83, 255, 146, 0.6); }
+.conn-internal { stroke: rgba(74, 85, 104, 0.5); stroke-dasharray: 3 3; }
+
+/* Section labels in SVG */
+.section-label {
+  fill: rgba(40, 244, 255, 0.45);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* System title in SVG */
+.system-title-label {
+  fill: rgba(40, 244, 255, 0.6);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Threshold annotation in SVG */
+.threshold-annotation {
+  fill: rgba(255, 176, 55, 0.6);
+  font-family: var(--font-mono);
+  font-size: 8px;
+}
+
+/* Branch labels (open/close) */
+.branch-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ===== End P13 SVG styles ===== */
+
 @media (max-width: 520px) {
   .presenter-run-card-rails {
     flex-direction: column;

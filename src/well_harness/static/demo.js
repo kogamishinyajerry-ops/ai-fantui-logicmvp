@@ -43,7 +43,7 @@ async function handleSystemSwitch(systemId) {
     if (topologyEl) topologyEl.style.display = "";
 
     // Apply node states from truth evaluation to visible topology
-    applySystemNodeStates(data.nodes);
+    applySystemNodeStates(data.nodes, data.truth_evaluation?.asserted_component_values);
 
     // Render truth evaluation answer card
     renderTruthEvaluation(data.truth_evaluation);
@@ -66,12 +66,20 @@ async function handleSystemSwitch(systemId) {
  * Apply node states (active/inactive) to the currently visible chain-topology.
  * Uses data-node attributes on elements to match against node ids.
  */
-function applySystemNodeStates(nodes) {
+function applySystemNodeStates(nodes, componentValues) {
   // Build a map from node id -> state
   const stateMap = new Map();
   nodes.forEach((node) => {
     stateMap.set(node.id, node.state || "inactive");
   });
+
+  // Build a map from node id -> suggested display value (from componentValues or node state)
+  const nodeValueMap = new Map();
+  if (componentValues) {
+    Object.entries(componentValues).forEach(([signalId, value]) => {
+      nodeValueMap.set(signalId, value);
+    });
+  }
 
   // Apply states to all nodes in the visible topology
   document.querySelectorAll(".chain-topology:not([style*='display: none']) [data-node]").forEach((el) => {
@@ -80,7 +88,45 @@ function applySystemNodeStates(nodes) {
     el.classList.remove("is-active", "is-blocked", "is-inactive");
     el.classList.add(`is-${state}`);
     el.dataset.state = state;
+
+    // For SVG value text: if componentValues has this, use it; otherwise infer from state
+    const valueEl = el.parentElement?.querySelector(`.chain-node-value[data-value-for="${nodeId}"]`) || el.querySelector(`[data-value-for="${nodeId}"]`);
+    if (valueEl) {
+      const cv = nodeValueMap.get(nodeId);
+      if (cv !== undefined) {
+        valueEl.textContent = formatSignalValue(cv);
+      } else if (state === "active") {
+        valueEl.textContent = "ON";
+      } else if (state === "blocked") {
+        valueEl.textContent = "WAIT";
+      }
+    }
   });
+
+  // Populate remaining SVG text values from asserted_component_values
+  if (componentValues) {
+    Object.entries(componentValues).forEach(([signalId, value]) => {
+      document.querySelectorAll(`.chain-topology:not([style*='display: none']) [data-value-for="${signalId}"]`).forEach((el) => {
+        if (el.textContent === "—" || el.textContent === "ON" || el.textContent === "WAIT") {
+          el.textContent = formatSignalValue(value);
+        }
+      });
+    });
+  }
+}
+
+/** Format a signal value for display in SVG text. */
+function formatSignalValue(value) {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "boolean") return value ? "ON" : "OFF";
+  if (typeof value === "number") {
+    if (Number.isFinite(value)) {
+      // Round to 1 decimal for display
+      return value % 1 === 0 ? String(value) : value.toFixed(1);
+    }
+    return "—";
+  }
+  return String(value);
 }
 
 /** Clear all dynamic UI state (chain nodes, HUD values, result areas). */
