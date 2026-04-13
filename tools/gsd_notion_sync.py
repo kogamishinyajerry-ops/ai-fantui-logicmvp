@@ -181,17 +181,11 @@ class NotionClient:
         self._connection: http.client.HTTPSConnection | None = None
 
     def close(self) -> None:
-        if not self._connection:
-            return
-        try:
-            self._connection.close()
-        finally:
-            self._connection = None
+        # Connection is per-request now; nothing to pool-close.
+        pass
 
-    def _get_connection(self) -> http.client.HTTPSConnection:
-        if self._connection is None:
-            self._connection = http.client.HTTPSConnection("api.notion.com", timeout=self.timeout)
-        return self._connection
+    def _new_connection(self) -> http.client.HTTPSConnection:
+        return http.client.HTTPSConnection("api.notion.com", timeout=self.timeout)
 
     def request(self, method: str, path: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         body = None if payload is None else json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -199,25 +193,29 @@ class NotionClient:
             "Authorization": f"Bearer {self.token}",
             "Notion-Version": NOTION_VERSION,
             "Content-Type": "application/json",
-            "Connection": "keep-alive",
         }
         for attempt in range(2):
-            connection = self._get_connection()
+            connection = self._new_connection()
             try:
                 connection.request(method, path, body=body, headers=headers)
                 response = connection.getresponse()
                 raw = response.read()
                 text = raw.decode("utf-8", "replace")
+                connection.close()
                 if 200 <= response.status < 300:
                     if not text.strip():
                         return {}
                     return json.loads(text)
                 raise RuntimeError(f"Notion API request failed: HTTP {response.status} {path}: {text}")
             except (http.client.HTTPException, OSError, ssl.SSLError) as error:
-                self.close()
+                with contextlib.suppress(Exception):
+                    connection.close()
                 if attempt == 0:
                     continue
                 raise RuntimeError(f"Notion API request failed: network error {path}: {error}") from error
+            finally:
+                with contextlib.suppress(Exception):
+                    connection.close()
 
     def query_database(
         self,
