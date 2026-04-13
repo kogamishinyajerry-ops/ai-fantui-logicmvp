@@ -14,6 +14,121 @@ const sectionLabels = {
   risks: "风险",
 };
 
+// ---------------------------------------------------------------------------
+// Multi-system switcher support (P13)
+// ---------------------------------------------------------------------------
+/** Current active system_id, default thrust-reverser */
+let _currentSystemId = "thrust-reverser";
+
+/**
+ * Fetch /api/system-snapshot for the given systemId, then re-render the UI.
+ */
+async function handleSystemSwitch(systemId) {
+  _currentSystemId = systemId;
+  resetUIState();
+  try {
+    const url = `/api/system-snapshot?system_id=${encodeURIComponent(systemId)}`;
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    renderChainMap(data.nodes);
+    renderTruthEvaluation(data.truth_evaluation);
+    // Update hero title to show the system title
+    const titleEl = document.getElementById("page-title");
+    if (titleEl) titleEl.textContent = data.title || systemId;
+    // Show/hide condition panel based on system
+    const conditionPanel = document.querySelector(".condition-panel");
+    if (conditionPanel) {
+      conditionPanel.style.display = systemId === "thrust-reverser" ? "" : "none";
+    }
+  } catch (err) {
+    console.error("handleSystemSwitch failed:", err);
+  }
+}
+
+/** Clear all dynamic UI state (chain nodes, HUD values, result areas). */
+function resetUIState() {
+  // Clear chain-node active/inactive states
+  document.querySelectorAll(".chain-node, .logic-note").forEach((el) => {
+    el.classList.remove("is-active", "is-blocked", "is-inactive");
+  });
+  // Reset HUD values to "-"
+  document.querySelectorAll(".hud-grid dd").forEach((el) => {
+    el.textContent = "-";
+  });
+  // Clear result areas
+  const structuredOutput = document.getElementById("structured-output");
+  if (structuredOutput) structuredOutput.innerHTML = "";
+  const leverResult = document.querySelector(".lever-result");
+  if (leverResult) {
+    leverResult.querySelectorAll("p[id]").forEach((p) => {
+      if (p.id.startsWith("lever-")) p.textContent = "-";
+    });
+  }
+  const truthEvalCard = document.getElementById("truth-eval-card");
+  if (truthEvalCard) truthEvalCard.remove();
+}
+
+/**
+ * Render the chain-map dynamically from a nodes array.
+ * Clears existing children of .chain-map and builds new ones.
+ */
+function renderChainMap(nodes) {
+  const chainMap = document.querySelector(".chain-map");
+  if (!chainMap) return;
+  chainMap.innerHTML = "";
+  nodes.forEach((node, i) => {
+    const div = document.createElement("div");
+    div.className = `chain-node${node.state === "active" ? " is-active" : node.state === "blocked" ? " is-blocked" : " is-inactive"}`;
+    div.dataset.node = node.id;
+    div.textContent = node.label;
+    chainMap.appendChild(div);
+    // Add arrow between nodes (not after last)
+    if (i < nodes.length - 1) {
+      const arrow = document.createElement("div");
+      arrow.className = "chain-arrow";
+      arrow.textContent = "➜";
+      chainMap.appendChild(arrow);
+    }
+  });
+}
+
+/**
+ * Render GenericTruthEvaluation as a read-only answer card for the current system.
+ * For non-thrust-reverser systems this replaces the QA drawer content.
+ */
+function renderTruthEvaluation(evaluation) {
+  if (!evaluation) return;
+  // For thrust-reverser, only render truth-eval if no full lever result is present
+  // For other systems, always render as the primary answer
+  const resultGrid = document.querySelector(".result-grid");
+  if (!resultGrid) return;
+
+  // Remove any existing truth-eval card
+  const existing = document.getElementById("truth-eval-card");
+  if (existing) existing.remove();
+
+  const card = document.createElement("article");
+  card.id = "truth-eval-card";
+  card.className = "panel truth-eval-card";
+  card.innerHTML = `
+    <h2><span class="presenter-callout">[推理]</span> ${evaluation.system_id}</h2>
+    <p class="truth-eval-summary">${evaluation.summary || "-"}</p>
+    ${evaluation.blocked_reasons && evaluation.blocked_reasons.length > 0 ? `
+      <dl class="truth-eval-blocked">
+        <dt>阻塞原因</dt>
+        ${evaluation.blocked_reasons.map((r) => `<dd>${r}</dd>`).join("")}
+      </dl>
+    ` : ""}
+    <dl class="truth-eval-active">
+      <dt>活跃逻辑节点</dt>
+      <dd>${evaluation.active_logic_node_ids ? evaluation.active_logic_node_ids.join(", ") : "-"}</dd>
+    </dl>
+  `;
+  resultGrid.insertBefore(card, resultGrid.firstChild);
+}
+
 const monitorSvgNamespace = "http://www.w3.org/2000/svg";
 const monitorDefaultSeriesId = "all";
 let latestMonitorPayload = null;
@@ -1091,6 +1206,16 @@ function setBusy(isBusy) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  // P13 system switcher
+  const systemSelector = document.getElementById("system-selector");
+  if (systemSelector) {
+    systemSelector.addEventListener("change", () => {
+      handleSystemSwitch(systemSelector.value);
+    });
+    // Bootstrap with default system
+    handleSystemSwitch(systemSelector.value);
+  }
+
   const form = document.getElementById("demo-form");
   const promptInput = document.getElementById("demo-prompt");
   const leverInput = document.getElementById("lever-tra");
