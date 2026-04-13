@@ -11,6 +11,8 @@ from urllib.parse import unquote, urlparse
 
 from well_harness.demo import answer_demo_prompt, demo_answer_to_payload
 from well_harness.controller_adapter import build_reference_controller_adapter
+from well_harness.adapters.landing_gear_adapter import build_landing_gear_controller_adapter
+from well_harness.adapters.bleed_air_adapter import build_bleed_air_controller_adapter
 from well_harness.document_intake import (
     apply_safe_schema_repairs,
     assess_intake_packet,
@@ -40,6 +42,12 @@ CONTENT_TYPES = {
     ".css": "text/css; charset=utf-8",
     ".js": "application/javascript; charset=utf-8",
 }
+SYSTEM_REGISTRY = {
+    "thrust-reverser": build_reference_controller_adapter,
+    "landing-gear": build_landing_gear_controller_adapter,
+    "bleed-air": build_bleed_air_controller_adapter,
+}
+SYSTEM_SNAPSHOT_PATH = "/api/system-snapshot"
 TRA_L4_LOCK_DEG = -14.0
 MONITOR_TIMELINE_PATH = "/api/monitor-timeline"
 WORKBENCH_BOOTSTRAP_PATH = "/api/workbench/bootstrap"
@@ -97,8 +105,9 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if parsed.path == WORKBENCH_BOOTSTRAP_PATH:
             self._send_json(200, workbench_bootstrap_payload())
             return
-        if parsed.path == WORKBENCH_RECENT_ARCHIVES_PATH:
-            self._send_json(200, workbench_recent_archives_payload())
+        if parsed.path == SYSTEM_SNAPSHOT_PATH:
+            system_id = parsed.query.split("system_id=")[1].split("&")[0] if "system_id=" in parsed.query else "thrust-reverser"
+            self._send_json(200, system_snapshot_payload(system_id))
             return
 
         if parsed.path in ("", "/", "/demo.html"):
@@ -1073,6 +1082,89 @@ def monitor_timeline_payload() -> dict:
         },
         "events": events,
         "series": series,
+}
+
+
+# ---------------------------------------------------------------------------
+# Multi-system snapshot support (P13)
+# ---------------------------------------------------------------------------
+SYSTEM_REGISTRY = {
+    "thrust-reverser": build_reference_controller_adapter,
+    "landing-gear": build_landing_gear_controller_adapter,
+    "bleed-air": build_bleed_air_controller_adapter,
+}
+SYSTEM_SNAPSHOT_PATH = "/api/system-snapshot"
+
+
+def _default_snapshot_for_system(system_id: str) -> dict:
+    """Return a minimal/default snapshot for each registered system."""
+    if system_id == "thrust-reverser":
+        return {
+            "radio_altitude_ft": 5.0,
+            "tra_deg": 0.0,
+            "sw1": False,
+            "sw2": False,
+            "engine_running": True,
+            "aircraft_on_ground": True,
+            "reverser_inhibited": False,
+            "eec_enable": True,
+            "n1k": 35.0,
+            "max_n1k_deploy_limit": 60.0,
+            "tls_unlocked_ls": False,
+            "all_pls_unlocked_ls": False,
+            "reverser_not_deployed_eec": True,
+            "reverser_fully_deployed_eec": False,
+            "deploy_90_percent_vdt": False,
+        }
+    elif system_id == "landing-gear":
+        return {
+            "gear_handle_position": "UP",
+            "hydraulic_pressure_psi": 0.0,
+            "uplock_released": False,
+            "gear_position_percent": 0.0,
+            "downlock_engaged": False,
+        }
+    elif system_id == "bleed-air":
+        return {
+            "valve_position": "CLOSED",
+            "inlet_pressure": 0.0,
+            "outlet_pressure": 0.0,
+            "control_unit_ready": True,
+        }
+    return {}
+
+
+def _spec_to_nodes(spec: dict, truth_evaluation: Any = None) -> list[dict]:
+    """Build a nodes array from spec.components + spec.logic_nodes."""
+    active_ids: set[str] = set()
+    if truth_evaluation is not None:
+        active_ids = set(truth_evaluation.active_logic_node_ids)
+    nodes: list[dict] = []
+    for comp in spec.get("components", []):
+        nodes.append(_node(comp["id"], comp["label"], "inactive", "spec.components"))
+    for ln in spec.get("logic_nodes", []):
+        state = "active" if ln["id"] in active_ids else "inactive"
+        nodes.append(_node(ln["id"], ln["label"], state, "spec.logic_nodes"))
+    return nodes
+
+
+def system_snapshot_payload(system_id: str) -> dict:
+    """Build the payload for GET /api/system-snapshot."""
+    builder = SYSTEM_REGISTRY.get(system_id)
+    if builder is None:
+        return {"error": "unknown_system", "system_id": system_id}
+    adapter = builder()
+    spec = adapter.load_spec()
+    default_snapshot = _default_snapshot_for_system(system_id)
+    truth_eval = adapter.evaluate_snapshot(default_snapshot)
+    nodes = _spec_to_nodes(spec, truth_eval)
+    return {
+        "system_id": system_id,
+        "title": spec.get("title", system_id),
+        "spec": spec,
+        "nodes": nodes,
+        "truth_evaluation": truth_eval.to_dict(),
+        "default_snapshot": default_snapshot,
     }
 
 
