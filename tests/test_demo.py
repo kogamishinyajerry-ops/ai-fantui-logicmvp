@@ -346,7 +346,9 @@ class DemoIntentLayerTests(unittest.TestCase):
 
     def test_demo_server_api_returns_lever_snapshot_payload_for_key_tra_values(self):
         expected_states = {
-            0: {"sw1": "inactive", "logic1": "blocked", "logic3": "blocked", "thr_lock": "inactive"},
+            # At TRA=0, L1 is blocked (sw1 not engaged), which cascades to L4 blocked.
+            # thr_lock is "blocked" (not "inactive") because L4 has unmet conditions.
+            0: {"sw1": "inactive", "logic1": "blocked", "logic3": "blocked", "thr_lock": "blocked"},
             -2: {"sw1": "active", "logic1": "active", "tls115": "active", "sw2": "inactive"},
             -7: {
                 "sw1": "active",
@@ -480,6 +482,10 @@ class DemoIntentLayerTests(unittest.TestCase):
             thread.join(timeout=2)
 
     def test_demo_server_api_accepts_manual_feedback_override_for_vdt90_and_logic4(self):
+        # With the causal-chain fix, deploy_position_percent override only drives VDT90
+        # when L3 (pdu_motor_cmd) is active. L3 requires SW1+SW2 engaged and TRA at
+        # threshold (-14°). These test cases provide full L3-enabling parameters so the
+        # causal chain can be properly verified.
         cases = [
             {
                 "name": "manual_override_below_vdt_threshold",
@@ -487,6 +493,8 @@ class DemoIntentLayerTests(unittest.TestCase):
                     "tra_deg": -14.0,
                     "feedback_mode": "manual_feedback_override",
                     "deploy_position_percent": 50.0,
+                    "sw1": True,
+                    "sw2": True,
                 },
                 "expected_mode": "manual_feedback_override",
                 "expected_vdt90": False,
@@ -500,6 +508,8 @@ class DemoIntentLayerTests(unittest.TestCase):
                     "tra_deg": -14.0,
                     "feedback_mode": "manual_feedback_override",
                     "deploy_position_percent": 95.0,
+                    "sw1": True,
+                    "sw2": True,
                 },
                 "expected_mode": "manual_feedback_override",
                 "expected_vdt90": True,
@@ -509,17 +519,39 @@ class DemoIntentLayerTests(unittest.TestCase):
             },
             {
                 "name": "manual_override_still_blocks_logic4_on_engine",
+                # With causal chain fix, engine_off makes L3 inactive so VDT90 stays False
+                # (engine_running is NOT in manual override — it's a pilot input, not plant state)
                 "request": {
                     "tra_deg": -14.0,
                     "feedback_mode": "manual_feedback_override",
                     "deploy_position_percent": 95.0,
+                    "sw1": True,
+                    "sw2": True,
                     "engine_running": False,
                 },
                 "expected_mode": "manual_feedback_override",
-                "expected_vdt90": True,
+                "expected_vdt90": False,  # L3 inactive due to engine_running=False
                 "expected_logic4_active": False,
                 "expected_thr_lock_state": "blocked",
-                "expected_logic4_failed": "engine_running",
+                "expected_logic4_failed": "deploy_90_percent_vdt",
+            },
+            {
+                # NEW: verify VDT90 is blocked when L3 is inactive (causal chain fix)
+                # sw1=False alone doesn't block L3 (sw1 is not an L3 condition), so use
+                # a TRA value that won't satisfy L3's tra_deg condition
+                "name": "manual_override_blocks_vdt90_when_l3_inactive",
+                "request": {
+                    "tra_deg": 0.0,  # TRA not at threshold → L3 tra_deg condition fails
+                    "feedback_mode": "manual_feedback_override",
+                    "deploy_position_percent": 95.0,
+                    "sw1": False,
+                    "sw2": True,
+                },
+                "expected_mode": "manual_feedback_override",
+                "expected_vdt90": False,  # VDT90 blocked because L3 inactive (TRA not at threshold)
+                "expected_logic4_active": False,
+                "expected_thr_lock_state": "blocked",
+                "expected_logic4_failed": "deploy_90_percent_vdt",
             },
         ]
 

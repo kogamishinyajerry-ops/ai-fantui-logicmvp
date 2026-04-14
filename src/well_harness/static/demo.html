@@ -276,6 +276,48 @@
           <section id="landing-gear-inputs" class="panel system-input-panel" style="display:none" aria-labelledby="lg-inputs-title">
             <h2 id="lg-inputs-title"><span class="presenter-callout">[输入]</span> 起落架控制</h2>
             <p class="system-input-note">调节以下输入信号，观察逻辑链路的推理结论变化。</p>
+            <details class="control-manual">
+              <summary><span class="presenter-callout">[手册]</span> 起落架控制手册</summary>
+              <div class="control-manual-body">
+                <p class="control-manual-note">
+                  本面板对应 `landing_gear_adapter.py` 的放下真值。控制链分为两级：先验证手柄和液压，再验证机械 uplock 释放，最后用位置与 downlock 回读确认完成。
+                </p>
+                <div class="control-manual-grid">
+                  <section class="control-manual-card">
+                    <h3>控制目标</h3>
+                    <p>在手柄选择 DOWN 且液压满足门限时，打开 selector valve；uplock 释放后，驱动 extend actuator；位置达到完成门限且 downlock 结合后，判定放下完成。</p>
+                  </section>
+                  <section class="control-manual-card">
+                    <h3>关键判据</h3>
+                    <ul>
+                      <li>`gear_handle_position = DOWN`</li>
+                      <li>`hydraulic_pressure_psi >= 2200`</li>
+                      <li>`uplock_released = 1`</li>
+                      <li>`gear_position_percent >= 99`</li>
+                      <li>`downlock_engaged = 1`</li>
+                    </ul>
+                  </section>
+                  <section class="control-manual-card">
+                    <h3>读图顺序</h3>
+                    <ol>
+                      <li>先看手柄是否为 DOWN。</li>
+                      <li>再看液压是否越过 2200 psi。</li>
+                      <li>若选择阀已发令但作动器未伸展，优先检查 uplock。</li>
+                      <li>伸展后仍未完成，查看位置百分比与 downlock 回读。</li>
+                    </ol>
+                  </section>
+                  <section class="control-manual-card">
+                    <h3>常见阻塞</h3>
+                    <ul>
+                      <li>手柄未置于 DOWN。</li>
+                      <li>液压低于 2200 psi，L1 不通过。</li>
+                      <li>uplock 仍未释放，L2 被阻塞。</li>
+                      <li>位置已接近完成但 downlock 未结合，说明机械锁定尚未闭合。</li>
+                    </ul>
+                  </section>
+                </div>
+              </div>
+            </details>
             <div class="system-input-grid">
               <label class="system-input-select" for="lg-gear-handle">
                 <span>Gear Handle</span>
@@ -287,12 +329,12 @@
               <label class="system-input-range" for="lg-hyd-pressure">
                 <span>Hyd Pressure <output for="lg-hyd-pressure" id="lg-hyd-pressure-value">0 psi</output></span>
                 <input id="lg-hyd-pressure" name="hydraulic_pressure_psi" type="range" min="0" max="3000" step="10" value="0">
-                <small>Extension requires &ge; 1500 psi</small>
+                <small>Extension requires &ge; 2200 psi</small>
               </label>
               <label class="system-input-range" for="lg-gear-position">
                 <span>Gear Position <output for="lg-gear-position" id="lg-gear-position-value">0%</output></span>
                 <input id="lg-gear-position" name="gear_position_percent" type="range" min="0" max="100" step="1" value="0">
-                <small>Downlock engages at 100%</small>
+                <small>Completion monitor trips at &ge; 99% with downlock feedback</small>
               </label>
               <label class="system-input-toggle" for="lg-uplock-released">
                 <span>Uplock Released</span>
@@ -312,6 +354,48 @@
           <section id="bleed-air-inputs" class="panel system-input-panel" style="display:none" aria-labelledby="ba-inputs-title">
             <h2 id="ba-inputs-title"><span class="presenter-callout">[输入]</span> 引气活门控制</h2>
             <p class="system-input-note">调节以下输入信号，观察逻辑链路的推理结论变化。</p>
+            <details class="control-manual">
+              <summary><span class="presenter-callout">[手册]</span> 引气活门控制手册</summary>
+              <div class="control-manual-body">
+                <p class="control-manual-note">
+                  当前真值采用开阈值 35 psi、关闭迟滞地板 32 psi、过压门限 65 psi。控制单元只有在 Ready 状态下才允许开放命令；低压或过压优先导致关闭。
+                </p>
+                <div class="control-manual-grid">
+                  <section class="control-manual-card">
+                    <h3>控制目标</h3>
+                    <p>保持可用引气但避免抖振和过压。入口压力健康时允许开阀；压力跌破迟滞地板或进入过压区间时，命令保持关闭。</p>
+                  </section>
+                  <section class="control-manual-card">
+                    <h3>关键判据</h3>
+                    <ul>
+                      <li>`pressure_healthy := inlet_pressure >= 35`</li>
+                      <li>`pressure_too_low := inlet_pressure < 32`</li>
+                      <li>`overpressure := inlet_pressure >= 65`</li>
+                      <li>`valve_cmd := pressure_healthy AND control_unit_ready AND NOT overpressure`</li>
+                      <li>完成回读：`valve_position = OPEN` 且 `outlet_pressure >= 35`</li>
+                    </ul>
+                  </section>
+                  <section class="control-manual-card">
+                    <h3>读图顺序</h3>
+                    <ol>
+                      <li>先看入口压力区间是否处于 35 到 65 psi 之间。</li>
+                      <li>再确认 `control_unit_ready` 为真。</li>
+                      <li>若命令允许但阀位仍 CLOSED，优先看 `valve_position` 回读。</li>
+                      <li>阀位已 OPEN 时，再看 `outlet_pressure` 是否建立到健康区间。</li>
+                    </ol>
+                  </section>
+                  <section class="control-manual-card">
+                    <h3>常见阻塞</h3>
+                    <ul>
+                      <li>控制单元未 Ready，命令固定保持关闭。</li>
+                      <li>入口压力低于 32 psi，迟滞关闭路径优先。</li>
+                      <li>入口压力达到 65 psi 或以上，进入过压关闭路径。</li>
+                      <li>阀已指令打开但出口压力未建立，说明执行器或下游压降仍需排查。</li>
+                    </ul>
+                  </section>
+                </div>
+              </div>
+            </details>
             <div class="system-input-grid">
               <label class="system-input-select" for="ba-valve-position">
                 <span>Valve Position</span>
@@ -343,6 +427,36 @@
           <section id="efds-inputs" class="panel system-input-panel" style="display:none" aria-labelledby="efds-inputs-title">
             <h2 id="efds-inputs-title"><span class="presenter-callout">[输入]</span> 干扰弹部署控制</h2>
             <p class="system-input-note">调节以下输入信号，观察逻辑链路的推理结论变化。</p>
+            <details class="control-manual restricted-manual">
+              <summary><span class="presenter-callout">[手册]</span> EFDS 安全边界说明</summary>
+              <div class="control-manual-body">
+                <p class="control-manual-note">
+                  该子系统涉及受限的防务/反制释放逻辑。本界面只保留快照监视与演示说明，不新增更细的释放操作手册、触发流程或实施指导。
+                </p>
+                <div class="control-manual-grid">
+                  <section class="control-manual-card">
+                    <h3>本面板用途</h3>
+                    <p>用于查看 threat、altitude、temperature、channel 等信号在演示快照中的状态映射，以及它们在 UI 中的显示方式。</p>
+                  </section>
+                  <section class="control-manual-card">
+                    <h3>允许的阅读方式</h3>
+                    <ul>
+                      <li>把各字段当作监测量与状态量读取。</li>
+                      <li>把高度、温度、通道状态当作演示输入，而不是操作指令。</li>
+                      <li>把本页内容视为 UI 受控展示，不视为运行手册。</li>
+                    </ul>
+                  </section>
+                  <section class="control-manual-card">
+                    <h3>不在本页展开</h3>
+                    <ul>
+                      <li>更细的释放授权链。</li>
+                      <li>战术使用条件。</li>
+                      <li>可执行的部署步骤或调参建议。</li>
+                    </ul>
+                  </section>
+                </div>
+              </div>
+            </details>
             <div class="system-input-grid">
               <label class="system-input-select" for="efds-threat-mls">
                 <span>MLS Threat State</span>
@@ -736,6 +850,152 @@
                 <text x="340" y="218" class="section-label">命令</text>
                 <text x="340" y="298" class="section-label">输出</text>
               </svg>
+              <details class="fbd-diagram">
+                <summary><span class="presenter-callout">[FBD]</span> IEC 61131-3 FBD / 起落架放下控制</summary>
+                <div class="fbd-diagram-body">
+                  <p class="fbd-description">
+                    起落架放下真值由两级 AND 与两个阈值判据组成：先用 MUX 把手柄状态译码为布尔量，再用液压门限和 uplock 释放条件驱动命令链；完成判据单独由位置与 downlock 回读确认。
+                  </p>
+                  <div class="fbd-expression-grid">
+                    <p class="fbd-expression">HANDLE_DOWN := MUX(sel=gear_handle_position, DOWN-&gt;1, UP-&gt;0)</p>
+                    <p class="fbd-expression">SELECTOR_VALVE_CMD := HANDLE_DOWN AND (hydraulic_pressure_psi &gt;= 2200)</p>
+                    <p class="fbd-expression">EXTEND_ACTUATOR_CMD := SELECTOR_VALVE_CMD AND uplock_released</p>
+                    <p class="fbd-expression">COMPLETION := EXTEND_ACTUATOR_CMD AND (gear_position_percent &gt;= 99) AND downlock_engaged</p>
+                  </div>
+                  <svg class="chain-svg fbd-svg" viewBox="0 0 1180 430" role="img" aria-label="起落架 IEC 61131-3 功能块图">
+                    <defs>
+                      <marker id="fbd-lg-arrow-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="#28f4ff"/>
+                      </marker>
+                      <marker id="fbd-lg-arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="#53ff92"/>
+                      </marker>
+                      <marker id="fbd-lg-arrow-amber" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="#ffb037"/>
+                      </marker>
+                    </defs>
+
+                    <text x="590" y="22" class="system-title-label" text-anchor="middle">IEC 61131-3 FBD — 起落架放下控制</text>
+
+                    <g transform="translate(40 64)">
+                      <rect width="150" height="58" rx="10" class="chain-node-svg input-node-svg fbd-io-block" data-node="gear_handle_position"/>
+                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Gear Handle</text>
+                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="gear_handle_position">—</text>
+                      <text x="75" y="53" class="fbd-text-meta" text-anchor="middle">UP / DOWN</text>
+                    </g>
+                    <g transform="translate(40 152)">
+                      <rect width="150" height="58" rx="10" class="chain-node-svg input-node-svg fbd-io-block" data-node="hydraulic_pressure_psi"/>
+                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Hyd Pressure</text>
+                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="hydraulic_pressure_psi">—</text>
+                      <text x="75" y="53" class="fbd-text-meta" text-anchor="middle">psi</text>
+                    </g>
+                    <g transform="translate(40 240)">
+                      <rect width="150" height="58" rx="10" class="chain-node-svg input-node-svg fbd-io-block" data-node="uplock_released"/>
+                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Uplock Released</text>
+                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="uplock_released">—</text>
+                      <text x="75" y="53" class="fbd-text-meta" text-anchor="middle">bool</text>
+                    </g>
+                    <g transform="translate(40 328)">
+                      <rect width="150" height="58" rx="10" class="chain-node-svg sensor-node-svg fbd-io-block" data-node="gear_position_percent"/>
+                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Gear Position</text>
+                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="gear_position_percent">—</text>
+                      <text x="75" y="53" class="fbd-text-meta" text-anchor="middle">percent</text>
+                    </g>
+                    <g transform="translate(930 328)">
+                      <rect width="170" height="58" rx="10" class="chain-node-svg sensor-node-svg fbd-io-block" data-node="downlock_engaged"/>
+                      <text x="85" y="22" class="fbd-text-title" text-anchor="middle">Downlock Engaged</text>
+                      <text x="85" y="40" class="chain-node-value" text-anchor="middle" data-value-for="downlock_engaged">—</text>
+                      <text x="85" y="53" class="fbd-text-meta" text-anchor="middle">final latch feedback</text>
+                    </g>
+
+                    <g transform="translate(250 56)">
+                      <rect width="140" height="82" rx="10" class="fbd-block"/>
+                      <text x="70" y="24" class="fbd-text-title" text-anchor="middle">MUX</text>
+                      <text x="70" y="45" class="fbd-text-meta" text-anchor="middle">SEL = gear_handle_position</text>
+                      <text x="70" y="61" class="fbd-text-meta" text-anchor="middle">DOWN -&gt; 1 | UP -&gt; 0</text>
+                    </g>
+                    <g transform="translate(250 150)">
+                      <rect width="140" height="82" rx="10" class="fbd-block fbd-block--amber"/>
+                      <text x="70" y="24" class="fbd-text-title" text-anchor="middle">GE</text>
+                      <text x="70" y="45" class="fbd-text-meta" text-anchor="middle">hydraulic_pressure_psi</text>
+                      <text x="70" y="61" class="fbd-text-meta" text-anchor="middle">&gt;= 2200 psi</text>
+                    </g>
+                    <g transform="translate(450 112)">
+                      <rect width="150" height="92" rx="10" class="logic-gate-svg fbd-block" data-node="lg_l1_handle_and_pressure"/>
+                      <text x="75" y="26" class="fbd-text-title" text-anchor="middle">AND</text>
+                      <text x="75" y="49" class="fbd-text-meta" text-anchor="middle">LG-L1</text>
+                      <text x="75" y="66" class="fbd-text-meta" text-anchor="middle">handle_down</text>
+                      <text x="75" y="80" class="fbd-text-meta" text-anchor="middle">AND pressure_ok</text>
+                    </g>
+                    <g transform="translate(660 128)">
+                      <rect width="150" height="58" rx="10" class="chain-node-svg command-node-svg fbd-io-block" data-node="selector_valve_cmd"/>
+                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Selector Valve Cmd</text>
+                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="selector_valve_cmd">—</text>
+                      <text x="75" y="53" class="fbd-text-meta" text-anchor="middle">hydraulic enable</text>
+                    </g>
+                    <g transform="translate(660 224)">
+                      <rect width="150" height="92" rx="10" class="logic-gate-svg fbd-block" data-node="lg_l2_extend_after_uplock_release"/>
+                      <text x="75" y="26" class="fbd-text-title" text-anchor="middle">AND</text>
+                      <text x="75" y="49" class="fbd-text-meta" text-anchor="middle">LG-L2</text>
+                      <text x="75" y="66" class="fbd-text-meta" text-anchor="middle">selector_valve_cmd</text>
+                      <text x="75" y="80" class="fbd-text-meta" text-anchor="middle">AND uplock_released</text>
+                    </g>
+                    <g transform="translate(870 240)">
+                      <rect width="160" height="58" rx="10" class="chain-node-svg command-node-svg final-node-svg fbd-io-block" data-node="extend_actuator_cmd"/>
+                      <text x="80" y="22" class="fbd-text-title" text-anchor="middle">Extend Actuator Cmd</text>
+                      <text x="80" y="40" class="chain-node-value" text-anchor="middle" data-value-for="extend_actuator_cmd">—</text>
+                      <text x="80" y="53" class="fbd-text-meta" text-anchor="middle">extension drive</text>
+                    </g>
+                    <g transform="translate(450 312)">
+                      <rect width="150" height="82" rx="10" class="fbd-block fbd-block--amber"/>
+                      <text x="75" y="24" class="fbd-text-title" text-anchor="middle">GE</text>
+                      <text x="75" y="45" class="fbd-text-meta" text-anchor="middle">gear_position_percent</text>
+                      <text x="75" y="61" class="fbd-text-meta" text-anchor="middle">&gt;= 99%</text>
+                    </g>
+                    <g transform="translate(660 332)">
+                      <rect width="200" height="76" rx="10" class="fbd-block fbd-block--green"/>
+                      <text x="100" y="24" class="fbd-text-title" text-anchor="middle">AND</text>
+                      <text x="100" y="45" class="fbd-text-meta" text-anchor="middle">completion monitor</text>
+                      <text x="100" y="61" class="fbd-text-meta" text-anchor="middle">extend_cmd AND pos_ge_99 AND downlock</text>
+                    </g>
+
+                    <line x1="190" y1="93" x2="250" y2="97" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-lg-arrow-cyan)"/>
+                    <text x="214" y="86" class="fbd-wire-label">handle state</text>
+                    <line x1="190" y1="181" x2="250" y2="191" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-lg-arrow-cyan)"/>
+                    <text x="214" y="171" class="fbd-wire-label">pressure</text>
+                    <line x1="390" y1="97" x2="450" y2="140" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-lg-arrow-cyan)"/>
+                    <text x="406" y="103" class="fbd-wire-label">handle_down_bool</text>
+                    <line x1="390" y1="191" x2="450" y2="176" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-lg-arrow-amber)"/>
+                    <text x="406" y="198" class="fbd-wire-label fbd-wire-label--amber">pressure_ok</text>
+                    <line x1="600" y1="158" x2="660" y2="157" class="fbd-wire fbd-wire--green" marker-end="url(#fbd-lg-arrow-green)"/>
+                    <text x="619" y="149" class="fbd-wire-label fbd-wire-label--green">selector_valve_cmd</text>
+                    <line x1="810" y1="157" x2="810" y2="270" class="fbd-wire fbd-wire--gray"/>
+                    <line x1="810" y1="270" x2="660" y2="270" class="fbd-wire fbd-wire--gray" marker-end="url(#fbd-lg-arrow-cyan)"/>
+                    <text x="700" y="263" class="fbd-wire-label">cmd feedback</text>
+                    <line x1="190" y1="269" x2="660" y2="270" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-lg-arrow-cyan)"/>
+                    <text x="356" y="260" class="fbd-wire-label">uplock_released</text>
+                    <line x1="810" y1="270" x2="870" y2="269" class="fbd-wire fbd-wire--green" marker-end="url(#fbd-lg-arrow-green)"/>
+                    <text x="829" y="260" class="fbd-wire-label fbd-wire-label--green">extend_actuator_cmd</text>
+                    <line x1="190" y1="357" x2="450" y2="353" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-lg-arrow-cyan)"/>
+                    <text x="305" y="346" class="fbd-wire-label">position</text>
+                    <line x1="600" y1="353" x2="660" y2="353" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-lg-arrow-amber)"/>
+                    <text x="614" y="344" class="fbd-wire-label fbd-wire-label--amber">position_complete</text>
+                    <line x1="950" y1="298" x2="950" y2="332" class="fbd-wire fbd-wire--green" marker-end="url(#fbd-lg-arrow-green)"/>
+                    <text x="962" y="319" class="fbd-wire-label fbd-wire-label--green">extend_cmd</text>
+                    <line x1="930" y1="357" x2="860" y2="370" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-lg-arrow-cyan)"/>
+                    <text x="864" y="348" class="fbd-wire-label">downlock</text>
+
+                    <text x="80" y="46" class="section-label">inputs</text>
+                    <text x="320" y="46" class="section-label">decode / thresholds</text>
+                    <text x="525" y="92" class="section-label">logic stage 1</text>
+                    <text x="735" y="108" class="section-label">command</text>
+                    <text x="735" y="220" class="section-label">logic stage 2</text>
+                    <text x="530" y="302" class="section-label">completion threshold</text>
+                    <text x="760" y="322" class="section-label">done monitor</text>
+                  </svg>
+                  <p class="fbd-caption">颜色约定：青色为布尔/数据线，绿色为已使能命令路径，琥珀色为门限与比较结果。</p>
+                </div>
+              </details>
             </div>
 
             <div id="chain-topology-bleed-air" class="chain-topology" style="display:none" aria-label="引气控制系统信号流">
@@ -839,6 +1099,166 @@
                 <text x="340" y="28" class="section-label">命令</text>
                 <text x="340" y="170" class="section-label">状态</text>
               </svg>
+              <details class="fbd-diagram">
+                <summary><span class="presenter-callout">[FBD]</span> IEC 61131-3 FBD / 引气活门控制</summary>
+                <div class="fbd-diagram-body">
+                  <p class="fbd-description">
+                    引气真值带迟滞与过压保护。GE/GT 比较器先判断健康区间、低压区间和过压区间；OR 产生关闭优先级，MUX 再在关闭请求与开放使能之间选择最终 `valve_cmd`。
+                  </p>
+                  <div class="fbd-expression-grid">
+                    <p class="fbd-expression">PRESSURE_HEALTHY := inlet_pressure &gt;= 35</p>
+                    <p class="fbd-expression">LOW_PRESSURE := 32 &gt; inlet_pressure</p>
+                    <p class="fbd-expression">CLOSE_REQ := LOW_PRESSURE OR (inlet_pressure &gt;= 65)</p>
+                    <p class="fbd-expression">VALVE_CMD := MUX(sel=CLOSE_REQ, D0=(PRESSURE_HEALTHY AND control_unit_ready), D1=0)</p>
+                  </div>
+                  <svg class="chain-svg fbd-svg" viewBox="0 0 1240 430" role="img" aria-label="引气系统 IEC 61131-3 功能块图">
+                    <defs>
+                      <marker id="fbd-ba-arrow-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="#28f4ff"/>
+                      </marker>
+                      <marker id="fbd-ba-arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="#53ff92"/>
+                      </marker>
+                      <marker id="fbd-ba-arrow-amber" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="#ffb037"/>
+                      </marker>
+                    </defs>
+
+                    <text x="620" y="22" class="system-title-label" text-anchor="middle">IEC 61131-3 FBD — 引气活门控制</text>
+
+                    <g transform="translate(40 72)">
+                      <rect width="160" height="58" rx="10" class="chain-node-svg input-node-svg fbd-io-block" data-node="inlet_pressure"/>
+                      <text x="80" y="22" class="fbd-text-title" text-anchor="middle">Inlet Pressure</text>
+                      <text x="80" y="40" class="chain-node-value" text-anchor="middle" data-value-for="inlet_pressure">—</text>
+                      <text x="80" y="53" class="fbd-text-meta" text-anchor="middle">psi</text>
+                    </g>
+                    <g transform="translate(40 160)">
+                      <rect width="160" height="58" rx="10" class="chain-node-svg input-node-svg fbd-io-block" data-node="control_unit_ready"/>
+                      <text x="80" y="22" class="fbd-text-title" text-anchor="middle">Control Unit Ready</text>
+                      <text x="80" y="40" class="chain-node-value" text-anchor="middle" data-value-for="control_unit_ready">—</text>
+                      <text x="80" y="53" class="fbd-text-meta" text-anchor="middle">bool</text>
+                    </g>
+                    <g transform="translate(40 274)">
+                      <rect width="160" height="58" rx="10" class="chain-node-svg sensor-node-svg fbd-io-block" data-node="valve_position"/>
+                      <text x="80" y="22" class="fbd-text-title" text-anchor="middle">Valve Position</text>
+                      <text x="80" y="40" class="chain-node-value" text-anchor="middle" data-value-for="valve_position">—</text>
+                      <text x="80" y="53" class="fbd-text-meta" text-anchor="middle">OPEN / CLOSED</text>
+                    </g>
+                    <g transform="translate(40 346)">
+                      <rect width="160" height="58" rx="10" class="chain-node-svg sensor-node-svg fbd-io-block" data-node="outlet_pressure"/>
+                      <text x="80" y="22" class="fbd-text-title" text-anchor="middle">Outlet Pressure</text>
+                      <text x="80" y="40" class="chain-node-value" text-anchor="middle" data-value-for="outlet_pressure">—</text>
+                      <text x="80" y="53" class="fbd-text-meta" text-anchor="middle">psi</text>
+                    </g>
+
+                    <g transform="translate(260 52)">
+                      <rect width="140" height="82" rx="10" class="fbd-block fbd-block--amber"/>
+                      <text x="70" y="24" class="fbd-text-title" text-anchor="middle">GE</text>
+                      <text x="70" y="45" class="fbd-text-meta" text-anchor="middle">inlet_pressure</text>
+                      <text x="70" y="61" class="fbd-text-meta" text-anchor="middle">&gt;= 35 psi</text>
+                    </g>
+                    <g transform="translate(260 150)">
+                      <rect width="140" height="82" rx="10" class="fbd-block fbd-block--amber"/>
+                      <text x="70" y="24" class="fbd-text-title" text-anchor="middle">GT</text>
+                      <text x="70" y="45" class="fbd-text-meta" text-anchor="middle">32 psi &gt; P</text>
+                      <text x="70" y="61" class="fbd-text-meta" text-anchor="middle">low-pressure detect</text>
+                    </g>
+                    <g transform="translate(260 248)">
+                      <rect width="140" height="82" rx="10" class="fbd-block fbd-block--amber"/>
+                      <text x="70" y="24" class="fbd-text-title" text-anchor="middle">GE</text>
+                      <text x="70" y="45" class="fbd-text-meta" text-anchor="middle">inlet_pressure</text>
+                      <text x="70" y="61" class="fbd-text-meta" text-anchor="middle">&gt;= 65 psi</text>
+                    </g>
+
+                    <g transform="translate(460 84)">
+                      <rect width="170" height="86" rx="10" class="logic-gate-svg fbd-block" data-node="valve_open_logic"/>
+                      <text x="85" y="24" class="fbd-text-title" text-anchor="middle">AND</text>
+                      <text x="85" y="44" class="fbd-text-meta" text-anchor="middle">open_enable</text>
+                      <text x="85" y="60" class="fbd-text-meta" text-anchor="middle">pressure_healthy</text>
+                      <text x="85" y="74" class="fbd-text-meta" text-anchor="middle">AND control_unit_ready</text>
+                    </g>
+                    <g transform="translate(460 216)">
+                      <rect width="170" height="86" rx="10" class="logic-gate-svg fbd-block" data-node="valve_close_logic"/>
+                      <text x="85" y="24" class="fbd-text-title" text-anchor="middle">OR</text>
+                      <text x="85" y="44" class="fbd-text-meta" text-anchor="middle">close_req</text>
+                      <text x="85" y="60" class="fbd-text-meta" text-anchor="middle">low_pressure</text>
+                      <text x="85" y="74" class="fbd-text-meta" text-anchor="middle">OR overpressure</text>
+                    </g>
+                    <g transform="translate(690 136)">
+                      <rect width="170" height="104" rx="10" class="fbd-block"/>
+                      <text x="85" y="24" class="fbd-text-title" text-anchor="middle">MUX</text>
+                      <text x="85" y="46" class="fbd-text-meta" text-anchor="middle">SEL = close_req</text>
+                      <text x="85" y="64" class="fbd-text-meta" text-anchor="middle">D0 = open_enable</text>
+                      <text x="85" y="80" class="fbd-text-meta" text-anchor="middle">D1 = 0 (force close)</text>
+                    </g>
+                    <g transform="translate(920 160)">
+                      <rect width="150" height="58" rx="10" class="chain-node-svg command-node-svg fbd-io-block" data-node="valve_cmd"/>
+                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Valve Cmd</text>
+                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="valve_cmd">—</text>
+                      <text x="75" y="53" class="fbd-text-meta" text-anchor="middle">1=open / 0=close</text>
+                    </g>
+
+                    <g transform="translate(460 332)">
+                      <rect width="170" height="76" rx="10" class="fbd-block"/>
+                      <text x="85" y="24" class="fbd-text-title" text-anchor="middle">MUX</text>
+                      <text x="85" y="46" class="fbd-text-meta" text-anchor="middle">SEL = valve_position</text>
+                      <text x="85" y="62" class="fbd-text-meta" text-anchor="middle">OPEN -&gt; 1 | CLOSED -&gt; 0</text>
+                    </g>
+                    <g transform="translate(690 320)">
+                      <rect width="170" height="82" rx="10" class="fbd-block fbd-block--amber"/>
+                      <text x="85" y="24" class="fbd-text-title" text-anchor="middle">GE</text>
+                      <text x="85" y="45" class="fbd-text-meta" text-anchor="middle">outlet_pressure</text>
+                      <text x="85" y="61" class="fbd-text-meta" text-anchor="middle">&gt;= 35 psi</text>
+                    </g>
+                    <g transform="translate(920 308)">
+                      <rect width="190" height="92" rx="10" class="fbd-block fbd-block--green"/>
+                      <text x="95" y="24" class="fbd-text-title" text-anchor="middle">AND</text>
+                      <text x="95" y="46" class="fbd-text-meta" text-anchor="middle">pressurization complete</text>
+                      <text x="95" y="63" class="fbd-text-meta" text-anchor="middle">valve_open_bool</text>
+                      <text x="95" y="79" class="fbd-text-meta" text-anchor="middle">AND outlet_pressure_ok</text>
+                    </g>
+
+                    <line x1="200" y1="101" x2="260" y2="93" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-ba-arrow-cyan)"/>
+                    <text x="216" y="88" class="fbd-wire-label">pressure</text>
+                    <line x1="200" y1="101" x2="260" y2="191" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-ba-arrow-cyan)"/>
+                    <text x="205" y="145" class="fbd-wire-label">pressure</text>
+                    <line x1="200" y1="101" x2="260" y2="289" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-ba-arrow-cyan)"/>
+                    <text x="207" y="250" class="fbd-wire-label">pressure</text>
+                    <line x1="200" y1="189" x2="460" y2="127" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-ba-arrow-cyan)"/>
+                    <text x="302" y="128" class="fbd-wire-label">control_unit_ready</text>
+                    <line x1="400" y1="93" x2="460" y2="120" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-ba-arrow-amber)"/>
+                    <text x="409" y="85" class="fbd-wire-label fbd-wire-label--amber">pressure_healthy</text>
+                    <line x1="400" y1="191" x2="460" y2="250" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-ba-arrow-amber)"/>
+                    <text x="409" y="205" class="fbd-wire-label fbd-wire-label--amber">low_pressure</text>
+                    <line x1="400" y1="289" x2="460" y2="268" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-ba-arrow-amber)"/>
+                    <text x="405" y="301" class="fbd-wire-label fbd-wire-label--amber">overpressure</text>
+                    <line x1="630" y1="127" x2="690" y2="171" class="fbd-wire fbd-wire--green" marker-end="url(#fbd-ba-arrow-green)"/>
+                    <text x="644" y="135" class="fbd-wire-label fbd-wire-label--green">open_enable</text>
+                    <line x1="630" y1="259" x2="690" y2="205" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-ba-arrow-amber)"/>
+                    <text x="648" y="248" class="fbd-wire-label fbd-wire-label--amber">close_req</text>
+                    <line x1="860" y1="188" x2="920" y2="189" class="fbd-wire fbd-wire--green" marker-end="url(#fbd-ba-arrow-green)"/>
+                    <text x="873" y="179" class="fbd-wire-label fbd-wire-label--green">valve_cmd</text>
+
+                    <line x1="200" y1="303" x2="460" y2="370" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-ba-arrow-cyan)"/>
+                    <text x="305" y="320" class="fbd-wire-label">valve_position</text>
+                    <line x1="200" y1="375" x2="690" y2="361" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-ba-arrow-cyan)"/>
+                    <text x="432" y="351" class="fbd-wire-label">outlet_pressure</text>
+                    <line x1="630" y1="370" x2="920" y2="344" class="fbd-wire fbd-wire--green" marker-end="url(#fbd-ba-arrow-green)"/>
+                    <text x="755" y="350" class="fbd-wire-label fbd-wire-label--green">valve_open_bool</text>
+                    <line x1="860" y1="361" x2="920" y2="370" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-ba-arrow-amber)"/>
+                    <text x="867" y="352" class="fbd-wire-label fbd-wire-label--amber">outlet_ok</text>
+
+                    <text x="94" y="52" class="section-label">inputs</text>
+                    <text x="330" y="40" class="section-label">comparators</text>
+                    <text x="545" y="72" class="section-label">open / close logic</text>
+                    <text x="775" y="126" class="section-label">command select</text>
+                    <text x="998" y="148" class="section-label">command output</text>
+                    <text x="540" y="320" class="section-label">feedback decode</text>
+                    <text x="776" y="308" class="section-label">completion threshold</text>
+                  </svg>
+                  <p class="fbd-caption">关闭路径优先级高于开放路径，因此 MUX 的 `SEL=close_req` 始终先裁决低压/过压状态。</p>
+                </div>
+              </details>
             </div>
 
             <div id="chain-topology-efds" class="chain-topology" style="display:none" aria-label="干扰弹控制系统信号流">
@@ -1000,6 +1420,70 @@
                 <text x="765" y="88" class="section-label">执行器</text>
                 <text x="765" y="208" class="section-label">飞行员</text>
               </svg>
+              <details class="fbd-diagram restricted-manual">
+                <summary><span class="presenter-callout">[边界]</span> EFDS 非操作性监测示意</summary>
+                <div class="fbd-diagram-body">
+                  <p class="fbd-description">
+                    这里不新增更细的释放授权 FBD 或部署手册。仅保留一个非操作性的监测示意图，说明 threat / altitude / temperature / channel 信号如何被整理成 UI 快照与安全提示。
+                  </p>
+                  <svg class="chain-svg fbd-svg" viewBox="0 0 980 250" role="img" aria-label="EFDS 非操作性监测功能块图">
+                    <defs>
+                      <marker id="fbd-efds-arrow-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="#28f4ff"/>
+                      </marker>
+                      <marker id="fbd-efds-arrow-amber" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                        <path d="M0,0 L0,6 L8,3 z" fill="#ffb037"/>
+                      </marker>
+                    </defs>
+                    <text x="490" y="22" class="system-title-label" text-anchor="middle">EFDS 监测边界图 — 仅用于 UI 安全展示</text>
+                    <g transform="translate(30 68)">
+                      <rect width="150" height="52" rx="10" class="chain-node-svg sensor-node-svg fbd-io-block" data-node="sensor.threat.mls"/>
+                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Threat Telemetry</text>
+                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="sensor.threat.mls">—</text>
+                    </g>
+                    <g transform="translate(30 138)">
+                      <rect width="150" height="52" rx="10" class="chain-node-svg sensor-node-svg fbd-io-block" data-node="sensor.alt.radar"/>
+                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Altitude Telemetry</text>
+                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="sensor.alt.radar">—</text>
+                    </g>
+                    <g transform="translate(220 84)">
+                      <rect width="150" height="84" rx="10" class="fbd-block"/>
+                      <text x="75" y="24" class="fbd-text-title" text-anchor="middle">MUX</text>
+                      <text x="75" y="45" class="fbd-text-meta" text-anchor="middle">display source select</text>
+                      <text x="75" y="62" class="fbd-text-meta" text-anchor="middle">telemetry -&gt; snapshot</text>
+                    </g>
+                    <g transform="translate(430 54)">
+                      <rect width="150" height="84" rx="10" class="fbd-block fbd-block--amber"/>
+                      <text x="75" y="24" class="fbd-text-title" text-anchor="middle">OR</text>
+                      <text x="75" y="45" class="fbd-text-meta" text-anchor="middle">attention summary</text>
+                      <text x="75" y="62" class="fbd-text-meta" text-anchor="middle">threat / temp / channel flags</text>
+                    </g>
+                    <g transform="translate(430 150)">
+                      <rect width="150" height="64" rx="10" class="fbd-block"/>
+                      <text x="75" y="24" class="fbd-text-title" text-anchor="middle">AND</text>
+                      <text x="75" y="45" class="fbd-text-meta" text-anchor="middle">snapshot valid + panel active</text>
+                    </g>
+                    <g transform="translate(650 102)">
+                      <rect width="170" height="64" rx="10" class="fbd-block fbd-block--amber"/>
+                      <text x="85" y="24" class="fbd-text-title" text-anchor="middle">UI Safety Boundary</text>
+                      <text x="85" y="45" class="fbd-text-meta" text-anchor="middle">monitor-only, no release detail</text>
+                    </g>
+                    <g transform="translate(860 102)">
+                      <rect width="90" height="64" rx="10" class="chain-node-svg sensor-node-svg fbd-io-block"/>
+                      <text x="45" y="24" class="fbd-text-title" text-anchor="middle">UI Status</text>
+                      <text x="45" y="45" class="fbd-text-meta" text-anchor="middle">safe demo</text>
+                    </g>
+                    <line x1="180" y1="94" x2="220" y2="112" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-efds-arrow-cyan)"/>
+                    <line x1="180" y1="164" x2="220" y2="140" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-efds-arrow-cyan)"/>
+                    <line x1="370" y1="126" x2="430" y2="96" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-efds-arrow-cyan)"/>
+                    <line x1="370" y1="126" x2="430" y2="182" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-efds-arrow-cyan)"/>
+                    <line x1="580" y1="96" x2="650" y2="126" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-efds-arrow-amber)"/>
+                    <line x1="580" y1="182" x2="650" y2="142" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-efds-arrow-cyan)"/>
+                    <line x1="820" y1="134" x2="860" y2="134" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-efds-arrow-amber)"/>
+                  </svg>
+                  <p class="fbd-caption">如果后续需要继续完善 EFDS 页面，可仅限于监测、审计和安全说明层面的 UI 改进。</p>
+                </div>
+              </details>
             </div>
 
             <section class="panel monitor-panel monitor-panel-inline" aria-labelledby="monitor-panel-title">

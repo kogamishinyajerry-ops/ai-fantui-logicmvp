@@ -1690,6 +1690,198 @@ button:disabled {
 .chain-system-description p { margin: 0; }
 .chain-system-description strong { color: var(--accent-cyan); }
 
+.fbd-diagram,
+.control-manual {
+  width: 100%;
+  border: 1px solid rgba(61, 126, 255, 0.18);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(10, 18, 28, 0.96), rgba(5, 10, 18, 0.92));
+  overflow: hidden;
+}
+
+.fbd-diagram summary,
+.control-manual summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 12px 14px;
+  color: #d7e9ff;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  border-bottom: 1px solid rgba(61, 126, 255, 0.12);
+  background: linear-gradient(180deg, rgba(14, 24, 38, 0.98), rgba(7, 13, 23, 0.92));
+}
+
+.fbd-diagram summary::-webkit-details-marker,
+.control-manual summary::-webkit-details-marker {
+  display: none;
+}
+
+.fbd-diagram[open] summary,
+.control-manual[open] summary {
+  color: var(--accent-cyan);
+}
+
+.fbd-diagram-body,
+.control-manual-body {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.fbd-description,
+.control-manual-note {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.fbd-expression-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.fbd-expression {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 176, 55, 0.2);
+  background: rgba(255, 176, 55, 0.08);
+  color: #ffe1a8;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.fbd-svg {
+  display: block;
+  width: 100%;
+  min-width: 860px;
+}
+
+.fbd-caption {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.fbd-io-block {
+  fill: rgba(11, 22, 36, 0.96);
+}
+
+.fbd-block {
+  fill: rgba(5, 12, 21, 0.92);
+  stroke: rgba(40, 244, 255, 0.52);
+  stroke-width: 1.6;
+}
+
+.fbd-block--amber {
+  stroke: rgba(255, 176, 55, 0.58);
+}
+
+.fbd-block--green {
+  stroke: rgba(83, 255, 146, 0.6);
+}
+
+.fbd-text-title {
+  fill: #f7fbff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fbd-text-meta {
+  fill: rgba(140, 160, 180, 0.88);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.fbd-wire {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fbd-wire--cyan {
+  stroke: rgba(40, 244, 255, 0.82);
+}
+
+.fbd-wire--green {
+  stroke: rgba(83, 255, 146, 0.84);
+}
+
+.fbd-wire--amber {
+  stroke: rgba(255, 176, 55, 0.82);
+}
+
+.fbd-wire--gray {
+  stroke: rgba(140, 160, 180, 0.45);
+  stroke-dasharray: 5 4;
+}
+
+.fbd-wire-label {
+  fill: rgba(40, 244, 255, 0.86);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.fbd-wire-label--green {
+  fill: rgba(83, 255, 146, 0.86);
+}
+
+.fbd-wire-label--amber {
+  fill: rgba(255, 176, 55, 0.86);
+}
+
+.control-manual-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.control-manual-card {
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(61, 126, 255, 0.16);
+  background: rgba(8, 15, 28, 0.86);
+}
+
+.control-manual-card h3 {
+  margin: 0 0 8px;
+  color: var(--accent-cyan);
+  font-size: 0.78rem;
+}
+
+.control-manual-card p,
+.control-manual-card li {
+  color: var(--text-main);
+  font-size: 0.76rem;
+  line-height: 1.6;
+}
+
+.control-manual-card ul,
+.control-manual-card ol {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.restricted-manual {
+  border-color: rgba(255, 176, 55, 0.18);
+}
+
+.restricted-manual summary {
+  color: #ffe1a8;
+  border-bottom-color: rgba(255, 176, 55, 0.14);
+  background: linear-gradient(180deg, rgba(28, 21, 9, 0.98), rgba(14, 11, 7, 0.92));
+}
+
+.restricted-manual[open] summary {
+  color: var(--accent-orange);
+}
+
 .chain-row {
   display: flex;
   align-items: center;
@@ -2518,6 +2710,10 @@ button.summary-chip,
     padding: 10px;
     border-radius: 14px;
   }
+
+  .fbd-svg {
+    min-width: 720px;
+  }
   .showcase-grid {
     grid-template-areas:
       "prompt"
@@ -2698,4 +2894,61 @@ button.summary-chip,
   }
 
   .answer-guide { width: 100%; }
+
+/* ===== FBD IEC 61131-3 Function Block Diagram Styles ===== */
+
+.fbd-details {
+  margin-top: 8px;
+  border: 1px solid rgba(40, 244, 255, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.fbd-details > summary {
+  padding: 8px 14px;
+  background: #0a1020;
+  color: #28f4ff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(40, 244, 255, 0.1);
+}
+
+.fbd-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fbd-details > summary::before {
+  content: "▶";
+  font-size: 0.7rem;
+  transition: transform 0.2s;
+  color: #28f4ff;
+}
+
+.fbd-details[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.fbd-details > summary:hover {
+  background: #101925;
+  color: #53ff92;
+}
+
+.fbd-container {
+  background: #050914;
+  padding: 8px 4px 4px;
+  overflow-x: auto;
+}
+
+.fbd-svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  background: #050914;
+}
 }
