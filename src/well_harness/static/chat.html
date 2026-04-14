@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI FANTUI Logic — Chat</title>
+  <link rel="stylesheet" href="/demo.css">
+  <link rel="stylesheet" href="/chat.css">
+</head>
+<body>
+
+  <!-- Top nav strip -->
+  <header class="chat-nav">
+    <span class="chat-nav-title">AI FANTUI Logic</span>
+    <div class="chat-nav-actions">
+      <a href="/demo.html" class="chat-nav-link">专家视图</a>
+      <button type="button" class="chat-sidebar-toggle" id="sidebar-toggle" aria-label="切换侧边栏">
+        ☰
+      </button>
+    </div>
+  </header>
+
+  <!-- Main layout: content + sidebar -->
+  <div class="chat-layout">
+
+    <!-- ===== MAIN CONTENT AREA ===== -->
+    <main class="chat-main" id="chat-main">
+
+      <!-- Logic chain SVG — always visible, updates based on chat context -->
+      <div class="chat-logic-panel" id="logic-panel">
+        <div class="chat-logic-header">
+          <h2>控制链路状态</h2>
+          <div class="chat-system-selector">
+            <label for="chat-system-select">系统:</label>
+            <select id="chat-system-select">
+              <option value="thrust-reverser">Thrust Reverser (反推)</option>
+              <option value="landing-gear">Landing Gear (起落架)</option>
+              <option value="bleed-air">Bleed Air Valve (引气)</option>
+              <option value="efds">Emergency Flare (干扰弹)</option>
+            </select>
+          </div>
+        </div>
+        <div class="chat-logic-diagram" id="logic-diagram">
+          <!-- SVG chain diagram placeholder — will be filled by JS based on system -->
+          <p class="chat-diagram-placeholder">选择一个系统，链路状态将显示在这里</p>
+        </div>
+      </div>
+
+      <!-- Chat messages area -->
+      <div class="chat-messages" id="chat-messages" aria-live="polite">
+        <!-- Initial welcome message -->
+        <article class="chat-message chat-message-ai">
+          <div class="chat-message-avatar">🤖</div>
+          <div class="chat-message-content">
+            <p>欢迎使用 AI FANTUI Logic。<br>
+            你可以：<br>
+            · 上传控制逻辑规格文档（Markdown 或 TXT）<br>
+            · 问我"如果 TRA 拉到 -20° 会发生什么"<br>
+            · 问"为什么 throttle lock 没释放"<br>
+            · 运行 Guided Demo 带你走一遍</p>
+          </div>
+        </article>
+      </div>
+
+      <!-- Input area -->
+      <div class="chat-input-area">
+        <div class="chat-input-row">
+          <label for="chat-file-upload" class="chat-file-btn" title="上传文档">📎</label>
+          <input type="file" id="chat-file-upload" accept=".md,.txt,.pdf" style="display:none" aria-label="上传控制逻辑文档">
+          <div class="chat-input-wrapper">
+            <textarea
+              id="chat-input"
+              placeholder="输入你的问题，或描述你想分析的控制逻辑..."
+              rows="1"
+              aria-label="对话输入"
+            ></textarea>
+            <button type="button" class="chat-send-btn" id="chat-send-btn" aria-label="发送">▶</button>
+          </div>
+        </div>
+        <p class="chat-input-hint">按 Enter 发送，Shift+Enter 换行。支持上传 .md / .txt 文档。</p>
+      </div>
+
+    </main>
+
+    <!-- ===== COLLAPSIBLE SIDEBAR (expert tools) ===== -->
+    <aside class="chat-sidebar collapsed" id="chat-sidebar" aria-label="专家工具">
+      <div class="chat-sidebar-header">
+        <h3>专家工具</h3>
+        <button type="button" class="chat-sidebar-close" id="sidebar-close" aria-label="关闭侧边栏">✕</button>
+      </div>
+
+      <div class="chat-sidebar-section">
+        <h4>Guided Demo</h4>
+        <button type="button" class="chat-sidebar-btn" id="chat-guided-demo-btn">
+          ▶ Guided Demo — 带我走一遍
+        </button>
+      </div>
+
+      <div class="chat-sidebar-section">
+        <h4>系统</h4>
+        <p class="chat-sidebar-note">当前系统: <span id="sidebar-current-system">Thrust Reverser</span></p>
+      </div>
+
+      <div class="chat-sidebar-section">
+        <h4>快捷操作</h4>
+        <div class="chat-shortcut-grid">
+          <button type="button" class="chat-shortcut-btn" data-prompt="如果 TLS 失效会怎样？">TLS失效?</button>
+          <button type="button" class="chat-shortcut-btn" data-prompt="解释 L3 到 VDT90 的链路">L3→VDT90</button>
+          <button type="button" class="chat-shortcut-btn" data-prompt="为什么 throttle lock 没释放">THR_LOCK?</button>
+          <button type="button" class="chat-shortcut-btn" data-prompt="把 logic3 的阈值改成 -8 会发生什么">阈值修改</button>
+        </div>
+      </div>
+
+      <div class="chat-sidebar-section">
+        <h4>Expert Mode</h4>
+        <a href="/demo.html" class="chat-sidebar-link">→ 完整 Demo 面板</a><br>
+        <a href="/workbench.html" class="chat-sidebar-link">→ Workbench 验收台</a><br>
+        <a href="/ai-doc-analyzer.html" class="chat-sidebar-link">→ AI Document Analyzer</a>
+      </div>
+    </aside>
+
+  </div><!-- /chat-layout -->
+
+  <!-- Hidden bootstrap: load demo.css shared styles -->
+  <!-- All existing demo.css classes are available (panel, btn-primary, etc.) -->
+
+  <script src="/chat.js"></script>
+</body>
+</html>
