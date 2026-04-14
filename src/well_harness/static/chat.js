@@ -6,6 +6,7 @@
   var chatInput = document.getElementById('chat-input');
   var sendBtn = document.getElementById('chat-send-btn');
   var inputDock = document.querySelector('.input-dock');
+  var inputDockMain = document.querySelector('.input-dock-main');
   var chatLoadingStatus = document.getElementById('chat-loading-status');
   var fileUpload = document.getElementById('chat-file-upload');
   var drawer = document.getElementById('chat-drawer');
@@ -27,6 +28,7 @@
   var DEFAULT_SEND_TEXT = '发送';
   var LOADING_SEND_TEXT = 'AI 思考中...';
   var lastTruthPayloadBySystem = {};
+  var nodeRefHighlightTimer = null;
 
   var SYSTEM_LABELS = {
     'thrust-reverser': '反推系统',
@@ -58,12 +60,166 @@
     deploy_90_percent_vdt: 'vdt90',
   };
 
+  var NODE_REFERENCE_ALIASES = {
+    radio_altitude_ft: 'radio_altitude_ft',
+    ra: 'radio_altitude_ft',
+    sw1: 'sw1',
+    reverser_inhibited: 'reverser_inhibited',
+    engine_running: 'engine_running',
+    eng: 'engine_running',
+    aircraft_on_ground: 'aircraft_on_ground',
+    gnd: 'aircraft_on_ground',
+    sw2: 'sw2',
+    eec_enable: 'eec_enable',
+    n1k: 'n1k',
+    tra: 'tra_deg',
+    tra_deg: 'tra_deg',
+    logic1: 'logic1',
+    l1: 'logic1',
+    tls: 'tls115',
+    tls115: 'tls115',
+    logic2: 'logic2',
+    l2: 'logic2',
+    etrac_540v: 'etrac_540v',
+    '540v': 'etrac_540v',
+    logic3: 'logic3',
+    l3: 'logic3',
+    eec: 'eec_deploy',
+    eec_deploy: 'eec_deploy',
+    pls: 'pls_power',
+    pls_power: 'pls_power',
+    pdu: 'pdu_motor',
+    pdu_motor: 'pdu_motor',
+    vdt90: 'vdt90',
+    logic4: 'logic4',
+    l4: 'logic4',
+    thr_lock: 'thr_lock',
+    thrlock: 'thr_lock',
+  };
+
+  var CONNECTION_DEFINITIONS = [
+    { from: 'radio_altitude_ft', to: 'logic1', kind: 'conn-input' },
+    { from: 'sw1', to: 'logic1', kind: 'conn-input' },
+    { from: 'reverser_inhibited', to: 'logic1', kind: 'conn-input' },
+    { from: 'logic1', to: 'tls115', kind: 'conn-logic' },
+    { from: 'tls115', to: 'logic3', kind: 'conn-merge' },
+    { from: 'engine_running', to: 'logic2', kind: 'conn-input' },
+    { from: 'aircraft_on_ground', to: 'logic2', kind: 'conn-input' },
+    { from: 'sw2', to: 'logic2', kind: 'conn-input' },
+    { from: 'eec_enable', to: 'logic2', kind: 'conn-input' },
+    { from: 'logic2', to: 'etrac_540v', kind: 'conn-logic' },
+    { from: 'etrac_540v', to: 'logic3', kind: 'conn-merge' },
+    { from: 'n1k', to: 'logic3', kind: 'conn-input' },
+    { from: 'tra_deg', to: 'logic3', kind: 'conn-input' },
+    { from: 'logic3', to: 'eec_deploy', kind: 'conn-logic' },
+    { from: 'logic3', to: 'pls_power', kind: 'conn-logic' },
+    { from: 'logic3', to: 'pdu_motor', kind: 'conn-logic' },
+    { from: 'eec_deploy', to: 'vdt90', kind: 'conn-logic' },
+    { from: 'vdt90', to: 'logic4', kind: 'conn-logic' },
+    { from: 'logic4', to: 'thr_lock', kind: 'conn-final' },
+  ];
+
+  var nodeRefPattern = null;
+
   function escHtml(str) {
     return String(str)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  function escapeRegex(str) {
+    return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function normalizeNodeKey(nodeId) {
+    return String(nodeId || '')
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
+  }
+
+  function normalizeNodeId(nodeId) {
+    var normalizedKey = normalizeNodeKey(nodeId);
+    return NODE_REFERENCE_ALIASES[normalizedKey] || null;
+  }
+
+  function normalizeNodeList(nodeIds) {
+    var normalized = [];
+    var i;
+    var nodeId;
+
+    for (i = 0; i < (nodeIds || []).length; i += 1) {
+      nodeId = normalizeNodeId(nodeIds[i]);
+      if (nodeId) {
+        normalized.push(nodeId);
+      }
+    }
+
+    return dedupe(normalized);
+  }
+
+  function getNodeReferencePattern() {
+    var aliasKeys;
+
+    if (nodeRefPattern) {
+      return nodeRefPattern;
+    }
+
+    aliasKeys = Object.keys(NODE_REFERENCE_ALIASES).sort(function(a, b) {
+      return b.length - a.length;
+    });
+    nodeRefPattern = new RegExp(
+      '(^|[^A-Za-z0-9_])(' + aliasKeys.map(escapeRegex).join('|') + ')(?=$|[^A-Za-z0-9_])',
+      'gi'
+    );
+    return nodeRefPattern;
+  }
+
+  function renderMessageMarkup(text, role) {
+    var rendered = escHtml(text);
+
+    if (role === 'assistant') {
+      rendered = rendered.replace(getNodeReferencePattern(), function(match, prefix, token) {
+        var nodeId = normalizeNodeId(token);
+
+        if (!nodeId) {
+          return match;
+        }
+
+        return (
+          prefix +
+          '<span class="node-ref" data-ref="' + nodeId + '" tabindex="0">' + token + '</span>'
+        );
+      });
+    }
+
+    return rendered.replace(/\n/g, '<br>');
+  }
+
+  function getMessageRoleMeta(role) {
+    if (role === 'user') {
+      return {
+        avatar: '👤',
+        roleClass: 'user',
+        legacyClass: 'chat-message-user',
+      };
+    }
+
+    if (role === 'system') {
+      return {
+        avatar: '◆',
+        roleClass: 'system',
+        legacyClass: 'chat-message-system',
+      };
+    }
+
+    return {
+      avatar: '🤖',
+      roleClass: 'assistant',
+      legacyClass: 'chat-message-ai',
+    };
   }
 
   function dedupe(list) {
@@ -134,28 +290,37 @@
       return;
     }
 
-    var avatar = role === 'ai' ? '🤖' : '👤';
+    var roleMeta = getMessageRoleMeta(role);
     var highlightedNodes = [];
     var suggestionNodes = [];
     var msg = document.createElement('article');
+    var avatarEl = document.createElement('div');
+    var contentEl = document.createElement('div');
+    var bodyEl = document.createElement('p');
 
     if (Array.isArray(highlight)) {
-      highlightedNodes = highlight;
+      highlightedNodes = normalizeNodeList(highlight);
     } else if (highlight) {
-      highlightedNodes = Array.isArray(highlight.highlightedNodes) ? highlight.highlightedNodes : [];
-      suggestionNodes = Array.isArray(highlight.suggestionNodes) ? highlight.suggestionNodes : [];
+      highlightedNodes = normalizeNodeList(highlight.highlightedNodes);
+      suggestionNodes = normalizeNodeList(highlight.suggestionNodes);
     }
 
-    msg.className = 'chat-message chat-message-' + (role === 'ai' ? 'ai' : 'user');
+    msg.className = 'chat-message ' + roleMeta.legacyClass + ' ' + roleMeta.roleClass;
     if (highlightedNodes.length > 0) {
       msg.setAttribute('data-highlighted', highlightedNodes.join(','));
     }
     if (suggestionNodes.length > 0) {
       msg.setAttribute('data-suggested', suggestionNodes.join(','));
     }
-    msg.innerHTML =
-      '<div class="chat-message-avatar">' + avatar + '</div>' +
-      '<div class="chat-message-content"><p>' + escHtml(text).replace(/\n/g, '<br>') + '</p></div>';
+
+    avatarEl.className = 'chat-message-avatar';
+    avatarEl.textContent = roleMeta.avatar;
+    contentEl.className = 'chat-message-content';
+    bodyEl.setAttribute('data-raw-text', text);
+    bodyEl.innerHTML = renderMessageMarkup(text, roleMeta.roleClass);
+    contentEl.appendChild(bodyEl);
+    msg.appendChild(avatarEl);
+    msg.appendChild(contentEl);
     chatMessages.appendChild(msg);
     chatMessages.scrollTop = chatMessages.scrollHeight;
   }
@@ -171,6 +336,8 @@
     sendBtn.textContent = loading ? LOADING_SEND_TEXT : DEFAULT_SEND_TEXT;
     sendBtn.classList.toggle('is-loading', loading);
     sendBtn.setAttribute('aria-busy', loading ? 'true' : 'false');
+    sendBtn.setAttribute('aria-label', loading ? LOADING_SEND_TEXT : DEFAULT_SEND_TEXT);
+    sendBtn.title = loading ? LOADING_SEND_TEXT : DEFAULT_SEND_TEXT;
 
     if (inputDock) {
       inputDock.classList.toggle('is-loading', loading);
@@ -433,6 +600,7 @@
     var i;
 
     clearAiHighlights();
+    clearNodeReferenceHighlights();
     nodes = document.querySelectorAll('.canvas-wrapper [data-node]');
     values = document.querySelectorAll('.canvas-wrapper [data-value-for]');
 
@@ -445,12 +613,15 @@
     for (i = 0; i < values.length; i += 1) {
       values[i].textContent = '—';
     }
+
+    updateConnectionStates();
   }
 
   function setNodeState(nodeId, state) {
     var els;
     var i;
 
+    nodeId = normalizeNodeId(nodeId) || nodeId;
     els = document.querySelectorAll('.canvas-wrapper [data-node="' + nodeId + '"]');
     for (i = 0; i < els.length; i += 1) {
       els[i].classList.remove('is-active', 'is-blocked', 'is-inactive');
@@ -460,6 +631,7 @@
   }
 
   function setNodeValue(nodeId, value) {
+    nodeId = normalizeNodeId(nodeId) || nodeId;
     var valueKey = NODE_VALUE_KEYS[nodeId] || nodeId;
     var els = document.querySelectorAll('.canvas-wrapper [data-value-for="' + valueKey + '"]');
     var i;
@@ -479,8 +651,8 @@
   }
 
   function applyAiHighlights(highlightedNodes, suggestionNodes) {
-    var discussed = dedupe(Array.isArray(highlightedNodes) ? highlightedNodes : []);
-    var suggested = dedupe(Array.isArray(suggestionNodes) ? suggestionNodes : []);
+    var discussed = normalizeNodeList(highlightedNodes);
+    var suggested = normalizeNodeList(suggestionNodes);
     var i;
     var els;
     var j;
@@ -499,6 +671,41 @@
       for (j = 0; j < els.length; j += 1) {
         els[j].classList.add('ai-suggested');
       }
+    }
+  }
+
+  function clearNodeReferenceHighlights() {
+    var highlightedEls = document.querySelectorAll('.canvas-wrapper .node-ref-target');
+    var i;
+
+    if (nodeRefHighlightTimer) {
+      window.clearTimeout(nodeRefHighlightTimer);
+      nodeRefHighlightTimer = null;
+    }
+
+    for (i = 0; i < highlightedEls.length; i += 1) {
+      highlightedEls[i].classList.remove('node-ref-target');
+    }
+  }
+
+  function highlightNodeReference(nodeId) {
+    var normalizedNodeId = normalizeNodeId(nodeId);
+    var els;
+    var i;
+
+    if (!normalizedNodeId) {
+      return;
+    }
+
+    clearNodeReferenceHighlights();
+    els = document.querySelectorAll('.canvas-wrapper [data-node="' + normalizedNodeId + '"]');
+
+    for (i = 0; i < els.length; i += 1) {
+      els[i].classList.add('node-ref-target');
+    }
+
+    if (els.length > 0) {
+      nodeRefHighlightTimer = window.setTimeout(clearNodeReferenceHighlights, 1800);
     }
   }
 
@@ -627,13 +834,15 @@
 
     if (truthEvaluation && Array.isArray(truthEvaluation.active_logic_node_ids)) {
       for (i = 0; i < truthEvaluation.active_logic_node_ids.length; i += 1) {
-        activeLogicNodeIds[truthEvaluation.active_logic_node_ids[i]] = true;
+        nodeId = normalizeNodeId(truthEvaluation.active_logic_node_ids[i]) || truthEvaluation.active_logic_node_ids[i];
+        activeLogicNodeIds[nodeId] = true;
       }
     }
 
     for (i = 0; i < logicNodes.length; i += 1) {
       if (logicNodes[i] && logicNodes[i].id) {
-        logicNodeIds[logicNodes[i].id] = true;
+        nodeId = normalizeNodeId(logicNodes[i].id) || logicNodes[i].id;
+        logicNodeIds[nodeId] = true;
       }
     }
 
@@ -641,7 +850,7 @@
       if (!nodes[i] || !nodes[i].id) {
         continue;
       }
-      nodeId = nodes[i].id;
+      nodeId = normalizeNodeId(nodes[i].id) || nodes[i].id;
       state = nodes[i].state || 'inactive';
       if (activeLogicNodeIds[nodeId]) {
         state = 'active';
@@ -689,6 +898,8 @@
         setNodeValue(nodeId, value);
       }
     }
+
+    updateConnectionStates();
   }
 
   function applySnapshotToCanvas(data, payload) {
@@ -696,6 +907,7 @@
     var componentValues = mergePayloadSignals(extracted.componentValues, payload);
     var blockedInputNodes = {};
     var activeLogicMap = {};
+    var failedByNodeId = {};
     var nodeIds = [
       'radio_altitude_ft',
       'sw1',
@@ -719,6 +931,7 @@
       'thr_lock',
     ];
     var logicId;
+    var normalizedLogicId;
     var conds;
     var i;
     var j;
@@ -730,14 +943,17 @@
     resetCanvasState();
 
     for (i = 0; i < extracted.activeIds.length; i += 1) {
-      activeLogicMap[extracted.activeIds[i]] = true;
+      nodeId = normalizeNodeId(extracted.activeIds[i]) || extracted.activeIds[i];
+      activeLogicMap[nodeId] = true;
     }
 
     for (logicId in extracted.failed) {
       if (!Object.prototype.hasOwnProperty.call(extracted.failed, logicId)) {
         continue;
       }
+      normalizedLogicId = normalizeNodeId(logicId) || logicId;
       conds = extracted.failed[logicId] || [];
+      failedByNodeId[normalizedLogicId] = conds.slice();
       for (j = 0; j < conds.length; j += 1) {
         nodeId = FAILED_CONDITION_NODE_MAP[conds[j]];
         if (nodeId) {
@@ -751,7 +967,7 @@
       if (/^logic\d+$/.test(nodeId)) {
         if (activeLogicMap[nodeId]) {
           setNodeState(nodeId, 'active');
-        } else if (extracted.failed[nodeId] && extracted.failed[nodeId].length > 0) {
+        } else if (failedByNodeId[nodeId] && failedByNodeId[nodeId].length > 0) {
           setNodeState(nodeId, 'blocked');
         } else {
           setNodeState(nodeId, 'inactive');
@@ -764,7 +980,7 @@
       // Non-logic-gate nodes: check extracted.failed (from nodes array) for blocked
       // state, since deriveComponentState can't render 'blocked' for intermediate
       // output nodes that aren't in componentValues (value=undefined).
-      if (extracted.failed[nodeId] && extracted.failed[nodeId].length > 0) {
+      if (failedByNodeId[nodeId] && failedByNodeId[nodeId].length > 0) {
         setNodeState(nodeId, 'blocked');
       } else {
         state = deriveComponentState(value, !!blockedInputNodes[nodeId]);
@@ -773,6 +989,92 @@
           setNodeValue(nodeId, value);
         }
       }
+    }
+
+    updateConnectionStates();
+  }
+
+  function bootstrapConnectionMetadata() {
+    var lines = document.querySelectorAll('.canvas-wrapper .conn-line');
+    var i;
+    var def;
+
+    for (i = 0; i < lines.length; i += 1) {
+      def = CONNECTION_DEFINITIONS[i];
+      if (!def) {
+        continue;
+      }
+
+      lines[i].setAttribute('data-conn-from', def.from);
+      lines[i].setAttribute('data-conn-to', def.to);
+      if (def.kind && !lines[i].classList.contains(def.kind)) {
+        lines[i].classList.add(def.kind);
+      }
+    }
+  }
+
+  function getRenderedNodeState(nodeId) {
+    var normalizedNodeId = normalizeNodeId(nodeId) || nodeId;
+    var el = document.querySelector('.canvas-wrapper [data-node="' + normalizedNodeId + '"]');
+
+    if (!el) {
+      return 'inactive';
+    }
+
+    return el.getAttribute('data-state') || 'inactive';
+  }
+
+  function deriveConnectionState(fromState, toState) {
+    if (fromState === 'blocked' || toState === 'blocked') {
+      return 'blocked';
+    }
+    if (fromState === 'active' && toState === 'active') {
+      return 'active';
+    }
+    return 'inactive';
+  }
+
+  function updateConnectionStates() {
+    var lines = document.querySelectorAll('.canvas-wrapper .conn-line[data-conn-from][data-conn-to]');
+    var i;
+    var fromState;
+    var toState;
+    var state;
+
+    for (i = 0; i < lines.length; i += 1) {
+      fromState = getRenderedNodeState(lines[i].getAttribute('data-conn-from'));
+      toState = getRenderedNodeState(lines[i].getAttribute('data-conn-to'));
+      state = deriveConnectionState(fromState, toState);
+      lines[i].classList.remove('is-active', 'is-blocked', 'is-inactive');
+      lines[i].classList.add('is-' + state);
+    }
+  }
+
+  function hydrateExistingMessages() {
+    var messages = document.querySelectorAll('.chat-message');
+    var i;
+    var roleMeta;
+    var bodyEl;
+    var rawText;
+
+    for (i = 0; i < messages.length; i += 1) {
+      if (messages[i].classList.contains('chat-message-user')) {
+        roleMeta = getMessageRoleMeta('user');
+      } else if (messages[i].classList.contains('chat-message-system')) {
+        roleMeta = getMessageRoleMeta('system');
+      } else {
+        roleMeta = getMessageRoleMeta('ai');
+      }
+
+      messages[i].classList.add(roleMeta.roleClass, roleMeta.legacyClass);
+      bodyEl = messages[i].querySelector('.chat-message-content p');
+      if (!bodyEl) {
+        continue;
+      }
+
+      rawText = bodyEl.getAttribute('data-raw-text') || bodyEl.textContent || '';
+      bodyEl.setAttribute('data-raw-text', rawText);
+      bodyEl.innerHTML = renderMessageMarkup(rawText, roleMeta.roleClass);
     }
   }
 
@@ -815,6 +1117,19 @@
   if (drawerScrim) {
     drawerScrim.hidden = false;
   }
+
+  if (inputDockMain) {
+    inputDockMain.classList.add('chat-input-area');
+  }
+
+  if (sendBtn) {
+    sendBtn.classList.add('chat-send-btn');
+    sendBtn.setAttribute('aria-label', DEFAULT_SEND_TEXT);
+    sendBtn.title = DEFAULT_SEND_TEXT;
+  }
+
+  bootstrapConnectionMetadata();
+  hydrateExistingMessages();
 
   if (drawerFab) {
     drawerFab.addEventListener('click', toggleDrawer);
@@ -903,6 +1218,31 @@
       };
       reader.readAsText(file);
       fileUpload.value = '';
+    });
+  }
+
+  if (chatMessages) {
+    chatMessages.addEventListener('click', function(e) {
+      var target = e.target.closest('.node-ref');
+
+      if (!target) {
+        return;
+      }
+
+      highlightNodeReference(target.getAttribute('data-ref'));
+    });
+
+    chatMessages.addEventListener('keydown', function(e) {
+      var target = e.target;
+
+      if (!target || !target.classList || !target.classList.contains('node-ref')) {
+        return;
+      }
+
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        highlightNodeReference(target.getAttribute('data-ref'));
+      }
     });
   }
 

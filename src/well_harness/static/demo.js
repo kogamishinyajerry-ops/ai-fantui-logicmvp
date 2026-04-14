@@ -21,6 +21,29 @@ const sectionLabels = {
 let _currentSystemId = "thrust-reverser";
 /** Cached nodes from the last /api/system-snapshot call — used to re-apply truth evaluation on lever-snapshot updates. */
 let _systemSnapshotNodes = [];
+const NODE_STATE_CLASSES = ["is-active", "is-blocked", "is-inactive"];
+const NODE_VALUE_KEYS = {
+  tls115: "tls_115vac_cmd",
+  etrac_540v: "etrac_540vdc_cmd",
+  eec_deploy: "eec_deploy_cmd",
+  pls_power: "pls_power_cmd",
+  pdu_motor: "pdu_motor_cmd",
+  vdt90: "deploy_90_percent_vdt",
+  thr_lock: "throttle_electronic_lock_release_cmd",
+};
+const FAILED_CONDITION_NODE_MAP = {
+  radio_altitude_ft: "radio_altitude_ft",
+  sw1: "sw1",
+  reverser_inhibited: "reverser_inhibited",
+  engine_running: "engine_running",
+  aircraft_on_ground: "aircraft_on_ground",
+  sw2: "sw2",
+  eec_enable: "eec_enable",
+  tls_unlocked_ls: "tls115",
+  n1k: "n1k",
+  tra_deg: "tra_deg",
+  deploy_90_percent_vdt: "vdt90",
+};
 
 /**
  * Fetch /api/system-snapshot for the given systemId, then update the UI.
@@ -46,7 +69,7 @@ async function handleSystemSwitch(systemId) {
 
     // Apply node states from truth evaluation to visible topology
     _systemSnapshotNodes = data.nodes || [];
-    applySystemNodeStates(_systemSnapshotNodes, data.truth_evaluation?.asserted_component_values);
+    renderChainMap(_systemSnapshotNodes, data.truth_evaluation?.asserted_component_values);
     // Update system-specific status banner
     updateSystemStatusBanner(systemId, data.truth_evaluation);
 
@@ -145,7 +168,7 @@ async function runSystemSnapshot(systemId) {
   }
   // Re-apply node states from the updated truth evaluation
   _systemSnapshotNodes = payload.nodes || [];
-  applySystemNodeStates(_systemSnapshotNodes, payload.truth_evaluation?.asserted_component_values);
+  renderChainMap(_systemSnapshotNodes, payload.truth_evaluation?.asserted_component_values);
   // Update system-specific status banner
   updateSystemStatusBanner(systemId, payload.truth_evaluation);
   // Re-render truth evaluation card
@@ -186,12 +209,83 @@ function updateSystemStatusBanner(systemId, truthEvaluation) {
  * Apply node states (active/inactive) to the currently visible chain-topology.
  * Uses data-node attributes on elements to match against node ids.
  */
+function resetStateClasses(element) {
+  element.classList.remove(...NODE_STATE_CLASSES);
+}
+
+function setStateClasses(element, state) {
+  resetStateClasses(element);
+  element.classList.add(`is-${state}`);
+}
+
+function setNodeVisualState(element, state) {
+  const targets = [
+    element,
+    ...Array.from(element.querySelectorAll(".chain-node-svg, .logic-gate-svg, .node-status-dot")),
+  ];
+  targets.forEach((target) => setStateClasses(target, state));
+  element.dataset.state = state;
+}
+
+function clearNodeVisualState(element) {
+  const targets = [
+    element,
+    ...Array.from(element.querySelectorAll(".chain-node-svg, .logic-gate-svg, .node-status-dot")),
+  ];
+  targets.forEach((target) => resetStateClasses(target));
+  delete element.dataset.state;
+}
+
+function setConnectionVisualState(element, state) {
+  setStateClasses(element, state);
+  element.dataset.state = state;
+}
+
+function connectionBlockersByNode(nodes) {
+  const blockedBy = new Map();
+  nodes.forEach((node) => {
+    blockedBy.set(node.id, new Set(node.blocked_by || []));
+  });
+  return blockedBy;
+}
+
+function blockedConditionNodeIds(blockedByNode) {
+  const blockedIds = new Set();
+  blockedByNode.forEach((conditions) => {
+    conditions.forEach((conditionId) => {
+      const mappedNodeId = FAILED_CONDITION_NODE_MAP[conditionId];
+      if (mappedNodeId) {
+        blockedIds.add(mappedNodeId);
+      }
+    });
+  });
+  return blockedIds;
+}
+
+function resolveComponentState(value, fallbackState, isBlocked) {
+  if (isBlocked) {
+    return "blocked";
+  }
+  if (typeof value === "boolean") {
+    return value ? "active" : "inactive";
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value !== 0 ? "active" : "inactive";
+  }
+  if (value === null || value === undefined || value === "") {
+    return fallbackState;
+  }
+  return "active";
+}
+
 function applySystemNodeStates(nodes, componentValues) {
   // Build a map from node id -> state
   const stateMap = new Map();
   nodes.forEach((node) => {
     stateMap.set(node.id, node.state || "inactive");
   });
+  const blockedByNode = connectionBlockersByNode(nodes);
+  const blockedConditionNodes = blockedConditionNodeIds(blockedByNode);
 
   // Build a map from signal id -> value (from componentValues)
   const nodeValueMap = new Map();
@@ -202,32 +296,28 @@ function applySystemNodeStates(nodes, componentValues) {
   }
 
   // Apply states to all nodes in the visible topology
+  const resolvedStates = new Map();
   document.querySelectorAll(".chain-topology:not([style*='display: none']) [data-node]").forEach((el) => {
     const nodeId = el.dataset.node;
+    const valueKey = NODE_VALUE_KEYS[nodeId] || nodeId;
+    const topology = el.closest(".chain-topology");
     // Determine effective state: override backend state with actual component value when available
     let state = stateMap.get(nodeId) || "inactive";
-    if (componentValues && nodeValueMap.has(nodeId)) {
-      // Input/condition nodes: derive state from actual signal value, not just logic-gate activation
-      const cv = nodeValueMap.get(nodeId);
-      if (typeof cv === "boolean") {
-        state = cv ? "active" : "inactive";
-      } else if (typeof cv === "number" && Number.isFinite(cv)) {
-        // Numeric conditions (RA, N1K, TRA): non-zero = active
-        state = cv !== 0 ? "active" : "inactive";
-      }
+    const componentValue = nodeValueMap.has(valueKey)
+      ? nodeValueMap.get(valueKey)
+      : nodeValueMap.get(nodeId);
+    if (componentValues && (nodeValueMap.has(valueKey) || nodeValueMap.has(nodeId))) {
+      state = resolveComponentState(componentValue, state, blockedConditionNodes.has(nodeId));
+    } else if (blockedConditionNodes.has(nodeId)) {
+      state = "blocked";
     }
-    el.classList.remove("is-active", "is-blocked", "is-inactive");
-    el.classList.add(`is-${state}`);
-    el.dataset.state = state;
+    setNodeVisualState(el, state);
+    resolvedStates.set(nodeId, state);
 
-    // Update the sibling <text data-value-for="..."> value display.
-    // Directly query by data-value-for to avoid parent traversal ambiguity in SVG.
-    // signalKey (e.g. "sw1", "radio_altitude_ft") is the backend signal ID used as the map key.
-    const valueEl = el.parentElement?.querySelector(`[data-value-for="${nodeId}"]`) || el.querySelector(`[data-value-for="${nodeId}"]`);
-    if (valueEl) {
-      const cv = nodeValueMap.get(nodeId);
-      if (cv !== undefined) {
-        valueEl.textContent = formatSignalValue(cv);
+    const valueEls = topology?.querySelectorAll(`[data-value-for="${valueKey}"]`) || [];
+    valueEls.forEach((valueEl) => {
+      if (componentValue !== undefined) {
+        valueEl.textContent = formatSignalValue(componentValue);
       } else if (state === "active") {
         valueEl.textContent = "ON";
       } else if (state === "blocked") {
@@ -235,7 +325,31 @@ function applySystemNodeStates(nodes, componentValues) {
       } else {
         valueEl.textContent = "OFF";
       }
+    });
+  });
+
+  return { blockedByNode, resolvedStates };
+}
+
+function updateVisibleConnectionStates(resolvedStates, blockedByNode) {
+  document.querySelectorAll(".chain-topology:not([style*='display: none']) .conn-line[data-conn-from]").forEach((line) => {
+    const fromId = line.dataset.connFrom;
+    const toId = line.dataset.connTo;
+    const blockerKey = line.dataset.connBlocker;
+    const fromState = resolvedStates.get(fromId) || "inactive";
+    const toState = resolvedStates.get(toId) || "inactive";
+    const blockedReasons = blockedByNode.get(toId) || new Set();
+    let state = "inactive";
+
+    if (blockerKey && toState === "blocked" && blockedReasons.has(blockerKey)) {
+      state = "blocked";
+    } else if (!blockerKey && (line.classList.contains("conn-final") || /^logic/.test(fromId)) && (fromState === "blocked" || toState === "blocked")) {
+      state = "blocked";
+    } else if (fromState === "active" || toState === "active") {
+      state = "active";
     }
+
+    setConnectionVisualState(line, state);
   });
 }
 
@@ -255,9 +369,13 @@ function formatSignalValue(value) {
 
 /** Clear all dynamic UI state (chain nodes, HUD values, result areas). */
 function resetUIState() {
-  // Clear chain-node active/inactive states
-  document.querySelectorAll(".chain-node, .logic-note").forEach((el) => {
-    el.classList.remove("is-active", "is-blocked", "is-inactive");
+  // Clear SVG chain node and connection states
+  document.querySelectorAll(".chain-topology [data-node]").forEach((el) => {
+    clearNodeVisualState(el);
+  });
+  document.querySelectorAll(".chain-topology .conn-line").forEach((el) => {
+    resetStateClasses(el);
+    delete el.dataset.state;
   });
   // Reset SVG chain topology text values to "—" (prevents stale display on system switch)
   document.querySelectorAll(".chain-topology [data-value-for]").forEach((el) => {
@@ -284,10 +402,11 @@ function resetUIState() {
  * Apply node states to the currently visible chain-topology.
  * Called by existing thrust-reverser lever-snapshot path.
  */
-function renderChainMap(nodes) {
+function renderChainMap(nodes, componentValues) {
   // For thrust-reverser: use the HTML-defined topology with parallel/merge structure
   // Just apply states to visible nodes, don't rebuild
-  applySystemNodeStates(nodes);
+  const { blockedByNode, resolvedStates } = applySystemNodeStates(nodes || [], componentValues);
+  updateVisibleConnectionStates(resolvedStates, blockedByNode);
 }
 
 /**
@@ -986,14 +1105,16 @@ function highlightedNodesForPayload(payload) {
 function highlightChain(payload) {
   const highlighted = new Set(highlightedNodesForPayload(payload));
   document.querySelectorAll("[data-node]").forEach((node) => {
-    node.classList.remove("is-blocked", "is-inactive");
-    node.classList.toggle("is-active", highlighted.has(node.dataset.node));
+    clearNodeVisualState(node);
+    if (highlighted.has(node.dataset.node)) {
+      setNodeVisualState(node, "active");
+    }
   });
 }
 
 function clearHighlight() {
   document.querySelectorAll("[data-node]").forEach((node) => {
-    node.classList.remove("is-active", "is-blocked", "is-inactive");
+    clearNodeVisualState(node);
   });
 }
 
@@ -1002,9 +1123,7 @@ function applyLeverNodeStates(nodes) {
   document.querySelectorAll("[data-node]").forEach((element) => {
     const node = states.get(element.dataset.node);
     const state = node ? node.state : "inactive";
-    element.classList.remove("is-active", "is-blocked", "is-inactive");
-    element.classList.add(`is-${state}`);
-    element.dataset.state = state;
+    setNodeVisualState(element, state);
     if (node) {
       const blockers = node.blocked_by && node.blocked_by.length
         ? ` | blocked_by=${node.blocked_by.join(",")}`
@@ -1255,7 +1374,7 @@ function renderLeverSnapshot(payload) {
       throttle_electronic_lock_release_cmd: outputs.throttle_electronic_lock_release_cmd,
     },
   };
-  applySystemNodeStates(_systemSnapshotNodes || [], truthEvaluation);
+  renderChainMap(_systemSnapshotNodes || [], truthEvaluation.asserted_component_values);
 
   renderTraLockState(payload);
   document.getElementById("condition-feedback-mode").value = feedbackMode;
