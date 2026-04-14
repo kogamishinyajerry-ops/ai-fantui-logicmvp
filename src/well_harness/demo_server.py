@@ -85,6 +85,8 @@ P14_GENERATE_PATH = "/api/p14/generate-prompt"
 # P15 Pipeline Integration routes
 P15_CONVERT_PATH = "/api/p15/convert-to-intake"
 P15_RUN_PIPELINE_PATH = "/api/p15/run-pipeline"
+# Chat AI explain route (MiniMax LLM integration)
+CHAT_EXPLAIN_PATH = "/api/chat/explain"
 MONITOR_N1K = 35.0
 MONITOR_MAX_N1K_DEPLOY_LIMIT = 60.0
 LEVER_NUMERIC_INPUTS = {
@@ -168,6 +170,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             P14_GENERATE_PATH,
             P15_CONVERT_PATH,
             P15_RUN_PIPELINE_PATH,
+            CHAT_EXPLAIN_PATH,
         }:
             self._send_json(404, {"error": "not_found"})
             return
@@ -261,6 +264,15 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, response_payload)
             return
 
+        # Chat AI explain handler (MiniMax LLM)
+        if parsed.path == CHAT_EXPLAIN_PATH:
+            response_payload, error_payload = _handle_chat_explain(request_payload)
+            if error_payload is not None:
+                self._send_json(400, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+
         # P15 Pipeline Integration handlers
         if parsed.path == P15_CONVERT_PATH:
             response_payload, error_payload = _handle_p15_convert(request_payload)
@@ -326,6 +338,162 @@ def _get_p14_store() -> P14SessionStore:
 
 # Server-side DoS guard for direct API callers; the browser client still enforces 10 MB.
 _MAX_DOCUMENT_BYTES = 50 * 1024 * 1024  # 50 MB server-side DoS guard (JS client already limits to 10MB)
+
+
+_MINIMAX_API_KEY: str | None = None
+
+
+def _get_minimax_api_key() -> str:
+    global _MINIMAX_API_KEY
+    if _MINIMAX_API_KEY is None:
+        key_path = Path.home() / ".minimax_key"
+        if key_path.exists():
+            _MINIMAX_API_KEY = key_path.read_text().strip()
+        else:
+            _MINIMAX_API_KEY = ""
+    return _MINIMAX_API_KEY
+
+
+def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | None]:
+    """Handle POST /api/chat/explain — use MiniMax LLM to generate a contextual explanation.
+
+    Input:  {
+        "question": str,          # user's natural language question
+        "system_id": str,         # e.g. "thrust-reverser"
+        "prompt": str,           # original user text
+        "tra_deg": float,
+        "radio_altitude_ft": float,
+        "engine_running": bool,
+        "aircraft_on_ground": bool,
+        "reverser_inhibited": bool,
+        "eec_enable": bool,
+        "n1k": float,
+        "feedback_mode": str,
+        "lever_snapshot": dict | None,   # optional pre-fetched lever-snapshot data
+    }
+
+    Output: {"explanation": str}   # LLM-generated Chinese explanation
+    """
+    question = request_payload.get("question", "")
+    system_id = request_payload.get("system_id", "thrust-reverser")
+    snapshot = request_payload.get("lever_snapshot") or {}
+
+    if not question:
+        return None, {"error": "missing_question", "message": "question field is required."}
+
+    api_key = _get_minimax_api_key()
+    if not api_key:
+        return None, {"error": "minimax_api_key_missing", "message": "MiniMax API key not found. Add to ~/.minimax_key."}
+
+    # Build a concise context summary from the snapshot data
+    nodes = snapshot.get("nodes", [])
+    logic = snapshot.get("logic", {})
+    outputs = snapshot.get("outputs", {})
+
+    # Build node state summary
+    node_lines = []
+    for node in nodes:
+        state_label = {"active": "亮(激活)", "inactive": "暗(未激活)", "blocked": "红(阻塞)"}.get(
+            node.get("state", ""), node.get("state", "?")
+        )
+        node_lines.append(f"  {node.get('id', '?')}: {state_label}")
+    node_summary = "\n".join(node_lines) if node_lines else "  (无节点数据)"
+
+    # Build logic gate summary
+    logic_lines = []
+    for gate_id in ("logic1", "logic2", "logic3", "logic4"):
+        info = logic.get(gate_id, {})
+        active = info.get("active", False)
+        failed = info.get("failed_conditions", [])
+        status = f"激活" if active else (f"阻塞: {', '.join(failed)}" if failed else "未激活")
+        logic_lines.append(f"  {gate_id}: {status}")
+    logic_summary = "\n".join(logic_lines)
+
+    # Build output summary
+    output_lines = [
+        f"  THR_LOCK: {'已释放' if outputs.get('throttle_electronic_lock_release_cmd') else '未释放'}",
+        f"  VDT90: {'触发' if outputs.get('deploy_90_percent_vdt') else '未触发'}",
+    ]
+    output_summary = "\n".join(output_lines)
+
+    system_labels = {
+        "thrust-reverser": "Thrust Reverser（反推力系统）",
+        "landing-gear": "Landing Gear（起落架）",
+        "bleed-air": "Bleed Air Valve（引气系统）",
+        "efds": "EFDS（干扰弹系统）",
+    }
+    system_label = system_labels.get(system_id, system_id)
+
+    # Build system prompt for MiniMax
+    system_prompt = f"""你是一个航空控制逻辑专家助手。用户正在使用一个确定性控制逻辑推理引擎来诊断 {system_label} 的状态。
+
+当前链路快照数据：
+=== 节点状态 ===
+{node_summary}
+
+=== 逻辑门状态 ===
+{logic_summary}
+
+=== 输出指令状态 ===
+{output_summary}
+
+你的回复要求：
+1. 基于以上真实数据，用中文（夹杂必要英文技术术语）解释当前链路状态
+2. 重点回答用户的问题："{question}"
+3. 如果某个逻辑门被阻塞，分析原因并说明下游影响
+4. 如果链路完整激活，解释激活路径
+5. 保持专业但易懂，适合航空工程师阅读
+6. 回复控制在 200-400 字以内
+7. 不要编造数据，所有分析必须基于上面的链路快照"""
+
+    user_prompt = f"用户问题：{question}"
+
+    try:
+        import urllib.request
+        url = "https://api.minimax.chat/v1/text/chatcompletion_v2"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": "minimax-m2.7-highspeed",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": 0.3,
+            "max_tokens": 600,
+            "stream": False,
+        }
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+
+        # MiniMax API response structure: choices[0].message.content
+        choices = result.get("choices", [])
+        if choices:
+            explanation = choices[0].get("message", {}).get("content", "")
+        else:
+            explanation = result.get("choices", [{}])[0].get("text", "")
+
+        if not explanation:
+            # Fallback: try alternative response field
+            explanation = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+            if not explanation:
+                return None, {"error": "minimax_empty_response", "message": "MiniMax returned empty explanation."}
+
+        return {"explanation": explanation.strip()}, None
+
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")[:200]
+        return None, {"error": "minimax_http_error", "message": f"HTTP {e.code}: {body}"}
+    except Exception as exc:
+        return None, {"error": "minimax_error", "message": str(exc)}
 
 
 def _handle_p14_analyze(request_payload: dict) -> tuple[dict | None, dict | None]:

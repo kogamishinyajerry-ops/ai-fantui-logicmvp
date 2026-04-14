@@ -924,11 +924,49 @@
           });
         })
         .then(function(data) {
+          // Step 1: SVG canvas + Truth Eval update synchronously (< 100ms)
           applySnapshotToCanvas(data, payload);
           renderTruthEvalFromSnapshot(data, payload);
-          addMessage('ai', formatLeverSnapshotAnswer(data, payload));
-          setInputLoading(false);
-          chatInput.focus();
+
+          // Step 2: Call MiniMax LLM for contextual explanation (1-2s)
+          var explainPayload = {
+            question: text,
+            system_id: systemId,
+            prompt: text,
+            tra_deg: payload.tra_deg,
+            radio_altitude_ft: payload.radio_altitude_ft,
+            engine_running: payload.engine_running,
+            aircraft_on_ground: payload.aircraft_on_ground,
+            reverser_inhibited: payload.reverser_inhibited,
+            eec_enable: payload.eec_enable,
+            n1k: payload.n1k,
+            feedback_mode: payload.feedback_mode,
+            lever_snapshot: data,
+          };
+          fetch('/api/chat/explain', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(explainPayload),
+          })
+            .then(function(r) {
+              return r.json().then(function(expData) {
+                if (!r.ok) {
+                  throw new Error((expData && (expData.message || expData.error)) || 'explain_failed');
+                }
+                return expData;
+              });
+            })
+            .then(function(expData) {
+              addMessage('ai', expData.explanation || formatLeverSnapshotAnswer(data, payload));
+              setInputLoading(false);
+              chatInput.focus();
+            })
+            .catch(function(err) {
+              // Fallback to template if MiniMax API fails
+              addMessage('ai', formatLeverSnapshotAnswer(data, payload));
+              setInputLoading(false);
+              chatInput.focus();
+            });
         })
         .catch(function(err) {
           setTruthBadge('danger', 'ERROR');
