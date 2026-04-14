@@ -262,3 +262,4 @@ Advance the spec-driven control-analysis workbench from separate primitives into
 | 260415-p16 | P16 AI Canvas Sync — Opus 4.6 A+架构（真值引擎先行+AI标注后到）：truth engine驱动canvas(<100ms) + MiniMax解释+highlighted_nodes叠加层；430 tests无回归 | 2026-04-15 | 8be797d | — |
 | 260415-strat | 联邦架构战略规划（Opus 4.6）：联邦模型裁定为正确方向，整合≠合并；三级整合门槛；cross_domain_links.json（含schema）；federation-model.md；当前代码无需改动 | 2026-04-15 | 9a9edd1 | — |
 | 260416-schema | 冻结期可执行项：control_system_spec_v1 新增 external_dependencies 字段（含externalDependencySpec）；430 tests无回归 | 2026-04-16 | abef4e9 | — |
+| 260415-hud  | 冻结期Aerospace Dark HUD UI升级（Opus 4.6批准）：6优先级CSS改造（CSS变量重塑+SVG精密仪表节点+连接线状态+终端风格抽屉+微交互+Truth Eval Bar HUD化）；9845c83，430 tests无回归 | 2026-04-15 | 9845c83 | — |
