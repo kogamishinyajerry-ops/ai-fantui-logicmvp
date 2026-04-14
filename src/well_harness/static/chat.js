@@ -549,10 +549,17 @@
 
       valueKey = NODE_VALUE_KEYS[nodeId] || nodeId;
       value = componentValues[valueKey];
-      state = deriveComponentState(value, !!blockedInputNodes[nodeId]);
-      setNodeState(nodeId, state);
-      if (value !== undefined) {
-        setNodeValue(nodeId, value);
+      // Non-logic-gate nodes: check extracted.failed (from nodes array) for blocked
+      // state, since deriveComponentState can't render 'blocked' for intermediate
+      // output nodes that aren't in componentValues (value=undefined).
+      if (extracted.failed[nodeId] && extracted.failed[nodeId].length > 0) {
+        setNodeState(nodeId, 'blocked');
+      } else {
+        state = deriveComponentState(value, !!blockedInputNodes[nodeId]);
+        setNodeState(nodeId, state);
+        if (value !== undefined) {
+          setNodeValue(nodeId, value);
+        }
       }
     }
   }
