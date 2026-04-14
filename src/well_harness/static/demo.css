@@ -124,6 +124,100 @@ a { color: var(--accent-cyan); }
   font-family: var(--font-mono);
 }
 
+/* ── Rich truth evaluation card ─────────────────────────────────────── */
+.eval-section-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 10px 0 4px;
+}
+
+.eval-logic-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 4px 0 8px;
+}
+
+.eval-node-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  border: 1px solid transparent;
+}
+
+.chip-active {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #34d399;
+}
+
+.chip-blocked {
+  background: rgba(245, 158, 11, 0.15);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fbbf24;
+}
+
+.chip-inactive {
+  background: rgba(107, 114, 128, 0.1);
+  border-color: rgba(107, 114, 128, 0.3);
+  color: #9ca3af;
+}
+
+.eval-signal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  margin: 4px 0;
+}
+
+.sig-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sig-row:last-child {
+  border-bottom: none;
+}
+
+.sig-name {
+  font-family: var(--font-mono);
+  color: var(--text-main);
+  padding: 3px 8px 3px 0;
+}
+
+.sig-value {
+  font-family: var(--font-mono);
+  color: var(--accent-cyan);
+  padding: 3px 0;
+  text-align: right;
+}
+
+.sig-active { color: #34d399; }
+.sig-inactive { color: #9ca3af; }
+.sig-neutral { color: #fbbf24; }
+
+.eval-blocked-reasons {
+  margin: 4px 0;
+  padding: 6px 10px;
+  background: rgba(239, 68, 68, 0.1);
+  border-left: 3px solid rgba(239, 68, 68, 0.5);
+  border-radius: 0 4px 4px 0;
+  font-size: 0.72rem;
+  color: #fca5a5;
+}
+
+.eval-blocked-reasons.no-block {
+  background: rgba(16, 185, 129, 0.08);
+  border-left-color: rgba(16, 185, 129, 0.5);
+  color: #6ee7b7;
+}
+
 #system-selector {
   background: rgba(10, 17, 28, 0.98);
   border: 1px solid rgba(61, 126, 255, 0.3);

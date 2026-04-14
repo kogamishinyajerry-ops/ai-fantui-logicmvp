@@ -51,7 +51,7 @@ async function handleSystemSwitch(systemId) {
     updateSystemStatusBanner(systemId, data.truth_evaluation);
 
     // Render truth evaluation answer card
-    renderTruthEvaluation(data.truth_evaluation);
+    renderTruthEvaluation(data.truth_evaluation, data.nodes);
 
     // Update hero title
     const titleEl = document.getElementById("page-title");
@@ -149,7 +149,7 @@ async function runSystemSnapshot(systemId) {
   // Update system-specific status banner
   updateSystemStatusBanner(systemId, payload.truth_evaluation);
   // Re-render truth evaluation card
-  renderTruthEvaluation(payload.truth_evaluation);
+  renderTruthEvaluation(payload.truth_evaluation, payload.nodes);
 }
 
 /** Update the per-system status banner based on truth evaluation result. */
@@ -292,12 +292,13 @@ function renderChainMap(nodes) {
 
 /**
  * Render GenericTruthEvaluation as a read-only answer card for the current system.
+ * Shows: completion badge + summary + logic gate chips + full signal table.
  * For non-thrust-reverser systems this replaces the QA drawer content.
+ * @param {Object} evaluation  - truth_evaluation object from API
+ * @param {Array}  nodes      - nodes array from API (for blocked/active state)
  */
-function renderTruthEvaluation(evaluation) {
+function renderTruthEvaluation(evaluation, nodes) {
   if (!evaluation) return;
-  // For thrust-reverser, only render truth-eval if no full lever result is present
-  // For other systems, always render as the primary answer
   const resultGrid = document.querySelector(".result-grid");
   if (!resultGrid) return;
 
@@ -306,6 +307,59 @@ function renderTruthEvaluation(evaluation) {
   if (existing) existing.remove();
 
   const isComplete = evaluation.completion_reached === true;
+  // Build sets of active/blocked logic node IDs from the nodes array
+  const activeLogicNodeIds = new Set(
+    (nodes || []).filter((n) => n.state === "active").map((n) => n.id)
+  );
+  const blockedLogicNodeIds = new Set(
+    (nodes || []).filter((n) => n.state === "blocked").map((n) => n.id)
+  );
+  // Include explicitly flagged active nodes from evaluation too
+  (evaluation.active_logic_node_ids || []).forEach((id) => activeLogicNodeIds.add(id));
+
+  // Logic gate chips: show all unique logic gate IDs with their state
+  const allLogicGateIds = new Set([
+    ...activeLogicNodeIds,
+    ...blockedLogicNodeIds,
+  ]);
+  const logicChipsHtml = allLogicGateIds.size > 0
+    ? [...allLogicGateIds].map((id) => {
+        const isActive = activeLogicNodeIds.has(id);
+        const isBlocked = blockedLogicNodeIds.has(id);
+        const cls = isActive ? "chip-active" : isBlocked ? "chip-blocked" : "chip-inactive";
+        const dot = isActive ? "●" : isBlocked ? "◐" : "○";
+        return `<span class="eval-node-chip ${cls}">${dot} ${id}</span>`;
+      }).join("")
+    : `<span class="eval-node-chip chip-inactive">— 无逻辑门数据</span>`;
+
+  // Signal table: each signal with its current value and a status dot
+  const signalRowsHtml = Object.entries(evaluation.asserted_component_values || {}).map(
+    ([signalId, value]) => {
+      const isBool = typeof value === "boolean";
+      const isOn = isBool ? value === true : (typeof value === "number" ? value !== 0 : false);
+      const isOff = value === false || value === 0 || value === "OFF" || value === "CLOSED" || value === "IDLE" || value === "SAFE" || value === "RELEASED" || (value === "OPEN" && typeof value === "string");
+      const chipCls = isOn ? "sig-active" : isOff ? "sig-inactive" : "sig-neutral";
+      const dot = isOn ? "●" : isOff ? "○" : "◐";
+      let displayVal = isBool ? (value ? "ON" : "OFF") : String(value);
+      if (typeof value === "number" && Number.isFinite(value)) {
+        displayVal = value % 1 === 0 ? String(value) : value.toFixed(1);
+      }
+      return `<div class="sig-row">
+        <span class="sig-name">${signalId}</span>
+        <span class="sig-value ${chipCls}">${dot} ${displayVal}</span>
+      </div>`;
+    }
+  ).join("");
+
+  const blockedReasonsHtml = (evaluation.blocked_reasons || []).length > 0
+    ? `<div class="eval-blocked-reasons">
+        <span class="eval-blocked-label">🔴 阻塞原因</span>
+        <ul>${evaluation.blocked_reasons.map((r) => `<li>${r}</li>`).join("")}</ul>
+      </div>`
+    : `<div class="eval-blocked-reasons no-block">
+        <span class="eval-blocked-label">✅ 无阻塞</span>
+      </div>`;
+
   const badgeHtml = `<div class="truth-eval-completion-badge badge-${isComplete ? "done" : "pending"}">
     ${isComplete ? "✅ 完成 (COMPLETION)" : "⏳ 进行中 (IN PROGRESS)"}
   </div>`;
@@ -317,16 +371,15 @@ function renderTruthEvaluation(evaluation) {
     <h2><span class="presenter-callout">[推理]</span> ${evaluation.system_id}</h2>
     ${badgeHtml}
     <p class="truth-eval-summary">${evaluation.summary || "-"}</p>
-    ${evaluation.blocked_reasons && evaluation.blocked_reasons.length > 0 ? `
-      <dl class="truth-eval-blocked">
-        <dt>阻塞原因</dt>
-        ${evaluation.blocked_reasons.map((r) => `<dd>${r}</dd>`).join("")}
-      </dl>
-    ` : ""}
-    <dl class="truth-eval-active">
-      <dt>活跃逻辑节点</dt>
-      <dd>${evaluation.active_logic_node_ids ? evaluation.active_logic_node_ids.join(", ") : "-"}</dd>
-    </dl>
+    ${blockedReasonsHtml}
+    <div class="eval-logic-chips">
+      <span class="eval-section-label">逻辑门状态</span>
+      <div class="eval-chips-row">${logicChipsHtml}</div>
+    </div>
+    <div class="eval-signal-table">
+      <span class="eval-section-label">信号状态</span>
+      ${signalRowsHtml}
+    </div>
   `;
   resultGrid.insertBefore(card, resultGrid.firstChild);
 }
