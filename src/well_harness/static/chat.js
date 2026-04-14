@@ -5,6 +5,8 @@
   var chatMessages = document.getElementById('chat-messages');
   var chatInput = document.getElementById('chat-input');
   var sendBtn = document.getElementById('chat-send-btn');
+  var inputDock = document.querySelector('.input-dock');
+  var chatLoadingStatus = document.getElementById('chat-loading-status');
   var fileUpload = document.getElementById('chat-file-upload');
   var drawer = document.getElementById('chat-drawer');
   var drawerFab = document.getElementById('drawer-fab');
@@ -20,12 +22,15 @@
   var truthEvalActive = document.getElementById('truth-eval-active');
   var truthEvalBlockers = document.getElementById('truth-eval-blockers');
   var logicDiagram = document.getElementById('logic-diagram');
+  var DEFAULT_INPUT_PLACEHOLDER = '输入你的控制逻辑问题...';
+  var DEFAULT_SEND_TEXT = '发送';
+  var LOADING_SEND_TEXT = 'AI 思考中...';
 
   var SYSTEM_LABELS = {
-    'thrust-reverser': 'Thrust Reverser (反推)',
-    'landing-gear': 'Landing Gear (起落架)',
-    'bleed-air': 'Bleed Air Valve (引气)',
-    efds: 'Emergency Flare (干扰弹)',
+    'thrust-reverser': '反推系统',
+    'landing-gear': '起落架系统',
+    'bleed-air': '引气阀系统',
+    efds: '干扰弹系统',
   };
 
   var NODE_VALUE_KEYS = {
@@ -97,7 +102,27 @@
 
     chatInput.disabled = loading;
     sendBtn.disabled = loading;
-    sendBtn.textContent = loading ? '...' : 'Send';
+    chatInput.placeholder = loading ? LOADING_SEND_TEXT : DEFAULT_INPUT_PLACEHOLDER;
+    sendBtn.textContent = loading ? LOADING_SEND_TEXT : DEFAULT_SEND_TEXT;
+    sendBtn.classList.toggle('is-loading', loading);
+    sendBtn.setAttribute('aria-busy', loading ? 'true' : 'false');
+
+    if (inputDock) {
+      inputDock.classList.toggle('is-loading', loading);
+    }
+    if (chatLoadingStatus) {
+      chatLoadingStatus.textContent = loading ? LOADING_SEND_TEXT : '就绪';
+      chatLoadingStatus.classList.toggle('is-loading', loading);
+    }
+  }
+
+  function setFabTooltip(text) {
+    if (!drawerFab) {
+      return;
+    }
+
+    drawerFab.title = text;
+    drawerFab.setAttribute('data-tooltip-text', text);
   }
 
   function openDrawer() {
@@ -107,7 +132,9 @@
     }
     if (drawerFab) {
       drawerFab.setAttribute('aria-expanded', 'true');
+      drawerFab.setAttribute('aria-label', '收起对话抽屉');
     }
+    setFabTooltip('收起对话');
   }
 
   function closeDrawer() {
@@ -117,7 +144,9 @@
     }
     if (drawerFab) {
       drawerFab.setAttribute('aria-expanded', 'false');
+      drawerFab.setAttribute('aria-label', '打开对话抽屉');
     }
+    setFabTooltip('展开对话');
   }
 
   function toggleDrawer() {
@@ -165,7 +194,7 @@
       return '—';
     }
     if (typeof value === 'boolean') {
-      return value ? 'ON' : 'OFF';
+      return value ? '开' : '关';
     }
     if (typeof value === 'number') {
       if (!isFinite(value)) {
@@ -415,24 +444,24 @@
 
     if (truthEvalStatus) {
       if (extracted.completionReached) {
-        truthEvalStatus.textContent = 'Completion reached';
+        truthEvalStatus.textContent = '链路完成';
       } else if ((extracted.blockedReasons || []).length > 0 || Object.keys(extracted.failed).length > 0) {
-        truthEvalStatus.textContent = 'Gate blocked';
+        truthEvalStatus.textContent = '链路阻塞';
       } else if (activeIds.length > 0) {
-        truthEvalStatus.textContent = 'Chain active';
+        truthEvalStatus.textContent = '链路激活';
       } else {
-        truthEvalStatus.textContent = 'Awaiting snapshot';
+        truthEvalStatus.textContent = '等待快照';
       }
     }
 
     if (extracted.completionReached) {
-      setTruthBadge('success', 'DONE');
+      setTruthBadge('success', '完成');
     } else if ((extracted.blockedReasons || []).length > 0 || Object.keys(extracted.failed).length > 0) {
-      setTruthBadge('danger', 'BLOCKED');
+      setTruthBadge('danger', '阻塞');
     } else if (activeIds.length > 0) {
-      setTruthBadge('live', 'LIVE');
+      setTruthBadge('live', '激活');
     } else {
-      setTruthBadge('idle', 'IDLE');
+      setTruthBadge('idle', '空闲');
     }
 
     if (truthEvalSummary) {
@@ -441,9 +470,9 @@
       } else if (payload) {
         truthEvalSummary.textContent =
           'TRA=' + payload.tra_deg + '° / RA=' + payload.radio_altitude_ft +
-          'ft / feedback=' + payload.feedback_mode + '.';
+          'ft / 反馈模式=' + payload.feedback_mode + '。';
       } else {
-        truthEvalSummary.textContent = '等待新的 snapshot。';
+        truthEvalSummary.textContent = '等待新的快照。';
       }
     }
 
@@ -465,18 +494,18 @@
     var answer = formatDemoAnswer(data);
 
     if (truthEvalStatus) {
-      truthEvalStatus.textContent = (SYSTEM_LABELS[currentSystem] || currentSystem) + ' routed';
+      truthEvalStatus.textContent = (SYSTEM_LABELS[currentSystem] || currentSystem) + ' 已路由';
     }
-    setTruthBadge('live', 'ROUTED');
+    setTruthBadge('live', '已路由');
 
     if (truthEvalSummary) {
       truthEvalSummary.textContent =
-        'Phase A 画布继续显示参考反推 topology；当前 prompt 已按 system_id 路由。' +
+        '当前画布继续显示参考反推链路；本次问题已按所选系统路由。' +
         answer;
     }
 
-    renderChipList(truthEvalActive, [currentSystem], 'is-active');
-    renderChipList(truthEvalBlockers, ['reference-canvas only'], 'is-muted');
+    renderChipList(truthEvalActive, [SYSTEM_LABELS[currentSystem] || currentSystem], 'is-active');
+    renderChipList(truthEvalBlockers, ['仅显示参考画布'], 'is-muted');
   }
 
   function applySnapshotToCanvas(data, payload) {
@@ -571,22 +600,22 @@
       sidebarCurrentSystem.textContent = label;
     }
     if (systemShellStatus) {
-      systemShellStatus.textContent = currentSystem;
+      systemShellStatus.textContent = label;
     }
   }
 
   function resetTruthEvalBar() {
     if (truthEvalStatus) {
-      truthEvalStatus.textContent = 'Awaiting snapshot';
+      truthEvalStatus.textContent = '等待快照';
     }
-    setTruthBadge('idle', 'IDLE');
+    setTruthBadge('idle', '空闲');
     if (truthEvalSummary) {
       if (currentSystem === 'thrust-reverser') {
         truthEvalSummary.textContent =
-          '选择系统并发送问题，返回的 truth evaluation 会在这里汇总为 active / blocked / completion 三个信号面。';
+          '选择系统并发送问题，返回的真值评估会在这里汇总为激活、阻塞、完成三个信号面。';
       } else {
         truthEvalSummary.textContent =
-          'Phase A 画布保持 reference thrust topology；当前 system_id 会继续路由到对应 adapter。';
+          '当前画布保持参考反推链路；问题会继续按所选系统路由到对应适配器。';
       }
     }
     if (truthEvalActive) {
@@ -631,7 +660,7 @@
   if (guidedDemoBtn) {
     guidedDemoBtn.addEventListener('click', function() {
       openDrawer();
-      addMessage('ai', '▶ 启动 Guided Demo，正在切换到 Thrust Reverser 系统...');
+      addMessage('ai', '▶ 启动引导演示，正在切换到反推系统...');
 
       currentSystem = 'thrust-reverser';
       if (systemSelect) {
@@ -684,7 +713,7 @@
       reader.onload = function(ev) {
         var text = (ev.target && ev.target.result) || '';
         addMessage('user', '📎 ' + file.name + ' (' + Math.round(String(text).length / 1024) + 'KB)');
-        addMessage('ai', '已收到文档，正在分析...\n（Phase A 先完成 Canvas Shell，文档深分析仍走现有后端能力。）');
+        addMessage('ai', '已收到文档，正在分析...\n（当前阶段只做界面增强，文档深分析仍走现有后端能力。）');
       };
       reader.readAsText(file);
       fileUpload.value = '';
@@ -945,7 +974,7 @@
       payload.feedback_mode = 'auto_scrubber';
       useLeverSnapshot = true;
     } else if (lowerText.includes('guided') || lowerText.includes('demo') || lowerText.includes('带我走')) {
-      addMessage('ai', '▶ 点击抽屉里的 "Guided Demo"，我会带你一步一步看完整的反推链路激活过程。');
+      addMessage('ai', '▶ 点击抽屉里的“引导演示”，我会带你一步一步看完整的反推链路激活过程。');
       setInputLoading(false);
       chatInput.focus();
       return;
@@ -1025,9 +1054,9 @@
             });
         })
         .catch(function(err) {
-          setTruthBadge('danger', 'ERROR');
+          setTruthBadge('danger', '错误');
           if (truthEvalStatus) {
-            truthEvalStatus.textContent = 'Request failed';
+            truthEvalStatus.textContent = '请求失败';
           }
           if (truthEvalSummary) {
             truthEvalSummary.textContent = '⚠️ 请求失败: ' + err.message;
@@ -1102,9 +1131,9 @@
             });
         })
         .catch(function(err) {
-          setTruthBadge('danger', 'ERROR');
+          setTruthBadge('danger', '错误');
           if (truthEvalStatus) {
-            truthEvalStatus.textContent = 'Request failed';
+            truthEvalStatus.textContent = '请求失败';
           }
           if (truthEvalSummary) {
             truthEvalSummary.textContent = '⚠️ 请求失败: ' + err.message;
@@ -1134,9 +1163,9 @@
           chatInput.focus();
         })
         .catch(function(err) {
-          setTruthBadge('danger', 'ERROR');
+          setTruthBadge('danger', '错误');
           if (truthEvalStatus) {
-            truthEvalStatus.textContent = 'Request failed';
+            truthEvalStatus.textContent = '请求失败';
           }
           if (truthEvalSummary) {
             truthEvalSummary.textContent = '⚠️ 请求失败: ' + err.message;
@@ -1169,9 +1198,10 @@
   resetCanvasState();
   resetTruthEvalBar();
   syncSystemChrome();
+  setFabTooltip('展开对话');
 
   if (logicDiagram && currentSystem === 'thrust-reverser') {
-    setTruthBadge('idle', 'IDLE');
+    setTruthBadge('idle', '空闲');
   }
 
   if (chatInput) {

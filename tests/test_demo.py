@@ -816,7 +816,7 @@ class DemoIntentLayerTests(unittest.TestCase):
 
         self.assertEqual(response.status, 200)
         # Phase 3: root URL now serves chat.html (new default entry point)
-        self.assertIn("<title>AI FANTUI Logic — Chat</title>", html)
+        self.assertIn("<title>AI FANTUI Logic — 对话控制台</title>", html)
         self.assertIn("id=\"chat-input\"", html)
         self.assertIn("id=\"chat-messages\"", html)
 
