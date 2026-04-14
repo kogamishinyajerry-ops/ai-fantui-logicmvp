@@ -76,6 +76,12 @@
     "knowledge_capture": {
       "$ref": "#/$defs/knowledgeCaptureSpec"
     },
+    "external_dependencies": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/externalDependencySpec"
+      }
+    },
     "tags": {
       "type": "array",
       "items": {
@@ -434,6 +440,49 @@
         },
         "optimization_fields": {
           "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "externalDependencySpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "external_signal_id",
+        "link_type",
+        "engineering_basis",
+        "notes"
+      ],
+      "properties": {
+        "external_signal_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "link_type": {
+          "type": "string",
+          "enum": [
+            "enables",
+            "blocks",
+            "modifies",
+            "monitors"
+          ]
+        },
+        "engineering_basis": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "document_type",
+            "reference"
+          ],
+          "properties": {
+            "document_type": {
+              "$ref": "#/$defs/nonEmptyString"
+            },
+            "reference": {
+              "$ref": "#/$defs/nonEmptyString"
+            }
+          }
+        },
+        "notes": {
+          "$ref": "#/$defs/nonEmptyString"
         }
       }
     }
