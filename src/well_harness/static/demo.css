@@ -2987,4 +2987,143 @@ button.summary-chip,
   color: #28f4ff;
   letter-spacing: 0.02em;
 }
+
+/* ===== Per-system status banner ===== */
+.system-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-family: var(--font-mono, monospace);
+  margin-bottom: 4px;
+  transition: background 0.3s, border-color 0.3s, color 0.3s;
+}
+
+.system-status-banner.banner-idle {
+  background: rgba(74, 85, 104, 0.2);
+  border: 1px solid rgba(74, 85, 104, 0.4);
+  color: var(--text-muted, #8a9bb5);
+}
+
+.system-status-banner.banner-active {
+  background: rgba(40, 244, 255, 0.08);
+  border: 1px solid rgba(40, 244, 255, 0.3);
+  color: #28f4ff;
+}
+
+.system-status-banner.banner-blocked {
+  background: rgba(255, 176, 55, 0.08);
+  border: 1px solid rgba(255, 176, 55, 0.3);
+  color: #ffb037;
+}
+
+.system-status-banner.banner-complete {
+  background: rgba(83, 255, 146, 0.08);
+  border: 1px solid rgba(83, 255, 146, 0.3);
+  color: #53ff92;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-idle   { background: #4a5568; }
+.dot-active { background: #28f4ff; box-shadow: 0 0 6px #28f4ff; }
+.dot-blocked { background: #ffb037; box-shadow: 0 0 6px #ffb037; }
+.dot-complete { background: #53ff92; box-shadow: 0 0 6px #53ff92; }
+
+.status-label { font-weight: 600; letter-spacing: 0.03em; }
+
+/* ===== Input group section headers ===== */
+.input-group-header {
+  font-size: 0.72rem;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-muted, #8a9bb5);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 0 0;
+  border-top: 1px solid rgba(40, 244, 255, 0.1);
+  margin-top: 4px;
+}
+
+.input-group-header .presenter-callout {
+  color: var(--accent-cyan, #28f4ff);
+  background: rgba(40, 244, 255, 0.07);
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-right: 6px;
+  font-size: 0.7rem;
+}
+
+/* ===== Grouped input grids ===== */
+.efds-input-grid,
+.lg-input-grid,
+.ba-input-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Sub-grid for grouped labels within each group */
+.efds-input-grid > label,
+.lg-input-grid > label,
+.ba-input-grid > label {
+  /* already handled by system-input-* classes */
+}
+
+/* ===== Per-system chain topology state legend ===== */
+.chain-topology-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  background: rgba(5, 9, 20, 0.6);
+  border: 1px solid rgba(40, 244, 255, 0.12);
+  border-radius: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+  font-size: 0.72rem;
+}
+
+.chain-topology-legend .state-chip {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.chain-topology-legend .state-chip.is-active {
+  color: #53ff92;
+  background: rgba(83, 255, 146, 0.1);
+  border: 1px solid rgba(83, 255, 146, 0.3);
+}
+
+.chain-topology-legend .state-chip.is-blocked {
+  color: #ffb037;
+  background: rgba(255, 176, 55, 0.1);
+  border: 1px solid rgba(255, 176, 55, 0.3);
+}
+
+.chain-topology-legend .state-chip.is-inactive {
+  color: #8a9bb5;
+  background: rgba(138, 155, 181, 0.08);
+  border: 1px solid rgba(138, 155, 181, 0.2);
+}
+
+.legend-sep {
+  color: rgba(40, 244, 255, 0.25);
+  font-size: 0.8rem;
+}
+
+.legend-note {
+  color: var(--text-muted, #8a9bb5);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
 }

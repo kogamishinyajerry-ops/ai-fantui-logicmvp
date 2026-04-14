@@ -318,7 +318,14 @@
                 </div>
               </div>
             </details>
-            <div class="system-input-grid">
+            <!-- System status banner -->
+            <div id="landing-gear-status-banner" class="system-status-banner" role="status" aria-live="polite">
+              <span class="status-dot dot-idle"></span>
+              <span class="status-label">等待快照</span>
+            </div>
+            <div class="system-input-grid lg-input-grid">
+              <!-- ===== LG-L1: Handle + Hydraulic ===== -->
+              <div class="input-group-header"><span class="presenter-callout">[LG-L1]</span> 手柄 + 液压预检</div>
               <label class="system-input-select" for="lg-gear-handle">
                 <span>Gear Handle</span>
                 <select id="lg-gear-handle" name="gear_handle_position" aria-label="Gear Handle Position">
@@ -329,16 +336,20 @@
               <label class="system-input-range" for="lg-hyd-pressure">
                 <span>Hyd Pressure <output for="lg-hyd-pressure" id="lg-hyd-pressure-value">0 psi</output></span>
                 <input id="lg-hyd-pressure" name="hydraulic_pressure_psi" type="range" min="0" max="3000" step="10" value="0">
-                <small>Extension requires &ge; 2200 psi</small>
+                <small>LG-L1：液压 ≥ 2200 psi</small>
               </label>
-              <label class="system-input-range" for="lg-gear-position">
-                <span>Gear Position <output for="lg-gear-position" id="lg-gear-position-value">0%</output></span>
-                <input id="lg-gear-position" name="gear_position_percent" type="range" min="0" max="100" step="1" value="0">
-                <small>Completion monitor trips at &ge; 99% with downlock feedback</small>
-              </label>
+              <!-- ===== LG-L2: Uplock Release ===== -->
+              <div class="input-group-header"><span class="presenter-callout">[LG-L2]</span> 锁闩释放</div>
               <label class="system-input-toggle" for="lg-uplock-released">
                 <span>Uplock Released</span>
                 <input id="lg-uplock-released" name="uplock_released" type="checkbox" value="1">
+              </label>
+              <!-- ===== Completion Feedback ===== -->
+              <div class="input-group-header"><span class="presenter-callout">[完成]</span> 放下确认</div>
+              <label class="system-input-range" for="lg-gear-position">
+                <span>Gear Position <output for="lg-gear-position" id="lg-gear-position-value">0%</output></span>
+                <input id="lg-gear-position" name="gear_position_percent" type="range" min="0" max="100" step="1" value="0">
+                <small>位置 ≥ 99% 且 downlock = 1</small>
               </label>
               <label class="system-input-toggle" for="lg-downlock-engaged">
                 <span>Downlock Engaged</span>
@@ -396,26 +407,36 @@
                 </div>
               </div>
             </details>
-            <div class="system-input-grid">
+            <!-- System status banner -->
+            <div id="bleed-air-status-banner" class="system-status-banner" role="status" aria-live="polite">
+              <span class="status-dot dot-idle"></span>
+              <span class="status-label">等待快照</span>
+            </div>
+            <div class="system-input-grid ba-input-grid">
+              <!-- ===== Input Conditions ===== -->
+              <div class="input-group-header"><span class="presenter-callout">[压力]</span> 入口条件</div>
+              <label class="system-input-range" for="ba-inlet-pressure">
+                <span>Inlet Pressure <output for="ba-inlet-pressure" id="ba-inlet-pressure-value">0.0 psi</output></span>
+                <input id="ba-inlet-pressure" name="inlet_pressure" type="range" min="0" max="100" step="1" value="0">
+                <small>LN-Open: ≥35psi | LN-Close: &lt;32psi | 过压: ≥65psi</small>
+              </label>
+              <label class="system-input-range" for="ba-outlet-pressure">
+                <span>Outlet Pressure <output for="ba-outlet-pressure" id="ba-outlet-pressure-value">0.0 psi</output></span>
+                <input id="ba-outlet-pressure" name="outlet_pressure" type="range" min="0" max="100" step="1" value="0">
+                <small>完成条件：出口压力 ≥ 35 psi</small>
+              </label>
+              <!-- ===== Valve + Control ===== -->
+              <div class="input-group-header"><span class="presenter-callout">[控制]</span> 阀门与控制单元</div>
+              <label class="system-input-toggle" for="ba-control-unit-ready">
+                <span>Control Unit Ready</span>
+                <input id="ba-control-unit-ready" name="control_unit_ready" type="checkbox" value="1">
+              </label>
               <label class="system-input-select" for="ba-valve-position">
                 <span>Valve Position</span>
                 <select id="ba-valve-position" name="valve_position" aria-label="Valve Position">
                   <option value="CLOSED" selected>CLOSED</option>
                   <option value="OPEN">OPEN</option>
                 </select>
-              </label>
-              <label class="system-input-range" for="ba-inlet-pressure">
-                <span>Inlet Pressure <output for="ba-inlet-pressure" id="ba-inlet-pressure-value">0.0 psi</output></span>
-                <input id="ba-inlet-pressure" name="inlet_pressure" type="range" min="0" max="100" step="1" value="0">
-                <small>Open threshold: 35 psi | Close: &lt; 32 psi (hysteresis)</small>
-              </label>
-              <label class="system-input-range" for="ba-outlet-pressure">
-                <span>Outlet Pressure <output for="ba-outlet-pressure" id="ba-outlet-pressure-value">0.0 psi</output></span>
-                <input id="ba-outlet-pressure" name="outlet_pressure" type="range" min="0" max="100" step="1" value="0">
-              </label>
-              <label class="system-input-toggle" for="ba-control-unit-ready">
-                <span>Control Unit Ready</span>
-                <input id="ba-control-unit-ready" name="control_unit_ready" type="checkbox" value="1">
               </label>
             </div>
             <div class="system-input-actions">
@@ -457,7 +478,14 @@
                 </div>
               </div>
             </details>
-            <div class="system-input-grid">
+            <!-- System status banner -->
+            <div id="efds-status-banner" class="system-status-banner" role="status" aria-live="polite">
+              <span class="status-dot dot-idle"></span>
+              <span class="status-label">等待快照</span>
+            </div>
+            <div class="system-input-grid efds-input-grid">
+              <!-- ===== LN-01: Threat ===== -->
+              <div class="input-group-header"><span class="presenter-callout">[LN-01]</span> 威胁分类</div>
               <label class="system-input-select" for="efds-threat-mls">
                 <span>MLS Threat State</span>
                 <select id="efds-threat-mls" name="sensor.threat.mls" aria-label="MLS Threat State">
@@ -466,29 +494,8 @@
                   <option value="MISSLE_INBOUND">MISSLE_INBOUND</option>
                 </select>
               </label>
-              <label class="system-input-range" for="efds-alt-radar">
-                <span>Radar Altitude <output for="efds-alt-radar" id="efds-alt-radar-value">5000 ft</output></span>
-                <input id="efds-alt-radar" name="sensor.alt.radar" type="range" min="0" max="50000" step="100" value="5000">
-                <small>LN-02 floor (AUTO mode): uses baro alt</small>
-              </label>
-              <label class="system-input-range" for="efds-alt-baro">
-                <span>Baro Altitude <output for="efds-alt-baro" id="efds-alt-baro-value">5200 ft</output></span>
-                <input id="efds-alt-baro" name="sensor.alt.baro" type="range" min="0" max="50000" step="100" value="5200">
-                <small>Used as effective altitude in AUTO override mode</small>
-              </label>
-              <label class="system-input-range" for="efds-temp-ext">
-                <span>External Temp <output for="efds-temp-ext" id="efds-temp-ext-value">15°C</output></span>
-                <input id="efds-temp-ext" name="sensor.temp.external" type="range" min="-50" max="60" step="1" value="15">
-                <small>LN-03 gate: must be &gt; -20°C</small>
-              </label>
-              <label class="system-input-select" for="efds-arm-switch">
-                <span>Pilot Arm Switch</span>
-                <select id="efds-arm-switch" name="pilot.arm_switch" aria-label="Pilot Arm Switch">
-                  <option value="SAFE" selected>SAFE</option>
-                  <option value="ARM">ARM</option>
-                  <option value="AUTO">AUTO</option>
-                </select>
-              </label>
+              <!-- ===== LN-02: Altitude ===== -->
+              <div class="input-group-header"><span class="presenter-callout">[LN-02]</span> 高度门限</div>
               <label class="system-input-select" for="efds-alt-override">
                 <span>Altitude Override</span>
                 <select id="efds-alt-override" name="pilot.altitude_override" aria-label="Altitude Override Mode">
@@ -499,13 +506,25 @@
                   <option value="NONE">NONE</option>
                 </select>
               </label>
-              <label class="system-input-select" for="efds-manual-dispense">
-                <span>Manual Dispense</span>
-                <select id="efds-manual-dispense" name="pilot.manual_dispense" aria-label="Manual Dispense">
-                  <option value="RELEASED" selected>RELEASED</option>
-                  <option value="CONFIRMED">CONFIRMED</option>
-                </select>
+              <label class="system-input-range" for="efds-alt-radar">
+                <span>Radar Altitude <output for="efds-alt-radar" id="efds-alt-radar-value">5000 ft</output></span>
+                <input id="efds-alt-radar" name="sensor.alt.radar" type="range" min="0" max="50000" step="100" value="5000">
+                <small>LN-02：雷达高度 ≥ 底限</small>
               </label>
+              <label class="system-input-range" for="efds-alt-baro">
+                <span>Baro Altitude <output for="efds-alt-baro" id="efds-alt-baro-value">5200 ft</output></span>
+                <input id="efds-alt-baro" name="sensor.alt.baro" type="range" min="0" max="50000" step="100" value="5200">
+                <small>AUTO 模式下作为有效高度</small>
+              </label>
+              <!-- ===== LN-03: Temperature ===== -->
+              <div class="input-group-header"><span class="presenter-callout">[LN-03]</span> 环境温度</div>
+              <label class="system-input-range" for="efds-temp-ext">
+                <span>External Temp <output for="efds-temp-ext" id="efds-temp-ext-value">15°C</output></span>
+                <input id="efds-temp-ext" name="sensor.temp.external" type="range" min="-50" max="60" step="1" value="15">
+                <small>LN-03 gate：必须 &gt; -20°C</small>
+              </label>
+              <!-- ===== LN-04: Firing Channel ===== -->
+              <div class="input-group-header"><span class="presenter-callout">[LN-04]</span> 发射授权</div>
               <label class="system-input-select" for="efds-armed-relay">
                 <span>Armed Relay</span>
                 <select id="efds-armed-relay" name="logic.armed_relay" aria-label="Armed Relay State">
@@ -526,6 +545,23 @@
                   <option value="READY" selected>READY</option>
                   <option value="COUNTING">COUNTING</option>
                   <option value="EXPIRED">EXPIRED</option>
+                </select>
+              </label>
+              <!-- ===== Pilot Controls ===== -->
+              <div class="input-group-header"><span class="presenter-callout">[飞行员]</span> 人工控制</div>
+              <label class="system-input-select" for="efds-arm-switch">
+                <span>Pilot Arm Switch</span>
+                <select id="efds-arm-switch" name="pilot.arm_switch" aria-label="Pilot Arm Switch">
+                  <option value="SAFE" selected>SAFE</option>
+                  <option value="ARM">ARM</option>
+                  <option value="AUTO">AUTO</option>
+                </select>
+              </label>
+              <label class="system-input-select" for="efds-manual-dispense">
+                <span>Manual Dispense</span>
+                <select id="efds-manual-dispense" name="pilot.manual_dispense" aria-label="Manual Dispense">
+                  <option value="RELEASED" selected>RELEASED</option>
+                  <option value="CONFIRMED">CONFIRMED</option>
                 </select>
               </label>
             </div>
@@ -850,6 +886,14 @@
                 <text x="340" y="218" class="section-label">命令</text>
                 <text x="340" y="298" class="section-label">输出</text>
               </svg>
+              <!-- Per-system state legend for non-thrust topology -->
+              <div class="chain-topology-legend">
+                <span class="state-chip is-active">● Active</span>
+                <span class="state-chip is-blocked">● Blocked</span>
+                <span class="state-chip is-inactive">● Inactive</span>
+                <span class="legend-sep">|</span>
+                <span class="legend-note">颜色来自快照 truth evaluation</span>
+              </div>
               <div class="fbd-expand-notice">
                 <span class="presenter-callout">🔬</span>
                 科研级 IEC 61131-3 FBD 电路图（上方已展开）
@@ -1103,6 +1147,14 @@
                 <text x="340" y="28" class="section-label">命令</text>
                 <text x="340" y="170" class="section-label">状态</text>
               </svg>
+              <!-- Per-system state legend -->
+              <div class="chain-topology-legend">
+                <span class="state-chip is-active">● Active</span>
+                <span class="state-chip is-blocked">● Blocked</span>
+                <span class="state-chip is-inactive">● Inactive</span>
+                <span class="legend-sep">|</span>
+                <span class="legend-note">颜色来自快照 truth evaluation</span>
+              </div>
               <div class="fbd-expand-notice">
                 <span class="presenter-callout">🔬</span>
                 科研级 IEC 61131-3 FBD 电路图（上方已展开）
@@ -1428,6 +1480,14 @@
                 <text x="765" y="88" class="section-label">执行器</text>
                 <text x="765" y="208" class="section-label">飞行员</text>
               </svg>
+              <!-- Per-system state legend -->
+              <div class="chain-topology-legend">
+                <span class="state-chip is-active">● Active</span>
+                <span class="state-chip is-blocked">● Blocked</span>
+                <span class="state-chip is-inactive">● Inactive</span>
+                <span class="legend-sep">|</span>
+                <span class="legend-note">颜色来自快照 truth evaluation</span>
+              </div>
               <div class="fbd-expand-notice">
                 <span class="presenter-callout">🔬</span>
                 科研级 IEC 61131-3 FBD 电路图（上方已展开）

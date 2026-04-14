@@ -47,6 +47,8 @@ async function handleSystemSwitch(systemId) {
     // Apply node states from truth evaluation to visible topology
     _systemSnapshotNodes = data.nodes || [];
     applySystemNodeStates(_systemSnapshotNodes, data.truth_evaluation?.asserted_component_values);
+    // Update system-specific status banner
+    updateSystemStatusBanner(systemId, data.truth_evaluation);
 
     // Render truth evaluation answer card
     renderTruthEvaluation(data.truth_evaluation);
@@ -144,8 +146,40 @@ async function runSystemSnapshot(systemId) {
   // Re-apply node states from the updated truth evaluation
   _systemSnapshotNodes = payload.nodes || [];
   applySystemNodeStates(_systemSnapshotNodes, payload.truth_evaluation?.asserted_component_values);
+  // Update system-specific status banner
+  updateSystemStatusBanner(systemId, payload.truth_evaluation);
   // Re-render truth evaluation card
   renderTruthEvaluation(payload.truth_evaluation);
+}
+
+/** Update the per-system status banner based on truth evaluation result. */
+function updateSystemStatusBanner(systemId, truthEvaluation) {
+  const bannerId = `${systemId}-status-banner`;
+  const banner = document.getElementById(bannerId);
+  if (!banner) return;
+  const dot = banner.querySelector(".status-dot");
+  const label = banner.querySelector(".status-label");
+  const isComplete = truthEvaluation?.completion_reached === true;
+  // Count blocked vs active nodes
+  const blockedCount = (truthEvaluation?.blocked_logic_nodes || []).length;
+  const isBlocked = blockedCount > 0 && !isComplete;
+
+  banner.className = "system-status-banner";
+  dot.className = "status-dot";
+
+  if (isComplete) {
+    banner.classList.add("banner-complete");
+    dot.classList.add("dot-complete");
+    label.textContent = "✅ 完成 — COMPLETION REACHED";
+  } else if (isBlocked) {
+    banner.classList.add("banner-blocked");
+    dot.classList.add("dot-blocked");
+    label.textContent = `⏳ 进行中 — ${blockedCount} 个逻辑门等待条件`;
+  } else {
+    banner.classList.add("banner-active");
+    dot.classList.add("dot-active");
+    label.textContent = "⚡ 实时快照已更新";
+  }
 }
 
 /**
@@ -225,6 +259,10 @@ function resetUIState() {
   document.querySelectorAll(".chain-node, .logic-note").forEach((el) => {
     el.classList.remove("is-active", "is-blocked", "is-inactive");
   });
+  // Reset SVG chain topology text values to "—" (prevents stale display on system switch)
+  document.querySelectorAll(".chain-topology [data-value-for]").forEach((el) => {
+    el.textContent = "—";
+  });
   // Reset HUD values to "-"
   document.querySelectorAll(".hud-grid dd").forEach((el) => {
     el.textContent = "-";
@@ -267,11 +305,17 @@ function renderTruthEvaluation(evaluation) {
   const existing = document.getElementById("truth-eval-card");
   if (existing) existing.remove();
 
+  const isComplete = evaluation.completion_reached === true;
+  const badgeHtml = `<div class="truth-eval-completion-badge badge-${isComplete ? "done" : "pending"}">
+    ${isComplete ? "✅ 完成 (COMPLETION)" : "⏳ 进行中 (IN PROGRESS)"}
+  </div>`;
+
   const card = document.createElement("article");
   card.id = "truth-eval-card";
   card.className = "panel truth-eval-card";
   card.innerHTML = `
     <h2><span class="presenter-callout">[推理]</span> ${evaluation.system_id}</h2>
+    ${badgeHtml}
     <p class="truth-eval-summary">${evaluation.summary || "-"}</p>
     ${evaluation.blocked_reasons && evaluation.blocked_reasons.length > 0 ? `
       <dl class="truth-eval-blocked">
@@ -1454,46 +1498,97 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Landing Gear: live readouts for range inputs
+  // Landing Gear: live readouts + real-time snapshot update
   const lgHydInput = document.getElementById("lg-hyd-pressure");
   const lgHydOutput = document.getElementById("lg-hyd-pressure-value");
   if (lgHydInput && lgHydOutput) {
-    lgHydInput.addEventListener("input", () => { lgHydOutput.textContent = lgHydInput.value + " psi"; });
+    lgHydInput.addEventListener("input", () => {
+      lgHydOutput.textContent = lgHydInput.value + " psi";
+      runSystemSnapshot("landing-gear");
+    });
   }
   const lgPosInput = document.getElementById("lg-gear-position");
   const lgPosOutput = document.getElementById("lg-gear-position-value");
   if (lgPosInput && lgPosOutput) {
-    lgPosInput.addEventListener("input", () => { lgPosOutput.textContent = lgPosInput.value + "%"; });
+    lgPosInput.addEventListener("input", () => {
+      lgPosOutput.textContent = lgPosInput.value + "%";
+      runSystemSnapshot("landing-gear");
+    });
+  }
+  const lgUplockInput = document.getElementById("lg-uplock-released");
+  if (lgUplockInput) {
+    lgUplockInput.addEventListener("change", () => { runSystemSnapshot("landing-gear"); });
+  }
+  const lgDownlockInput = document.getElementById("lg-downlock-engaged");
+  if (lgDownlockInput) {
+    lgDownlockInput.addEventListener("change", () => { runSystemSnapshot("landing-gear"); });
+  }
+  const lgHandleInput = document.getElementById("lg-gear-handle");
+  if (lgHandleInput) {
+    lgHandleInput.addEventListener("change", () => { runSystemSnapshot("landing-gear"); });
   }
 
-  // Bleed Air: live readouts
+  // Bleed Air: live readouts + real-time snapshot update
   const baInletInput = document.getElementById("ba-inlet-pressure");
   const baInletOutput = document.getElementById("ba-inlet-pressure-value");
   if (baInletInput && baInletOutput) {
-    baInletInput.addEventListener("input", () => { baInletOutput.textContent = parseFloat(baInletInput.value).toFixed(1) + " psi"; });
+    baInletInput.addEventListener("input", () => {
+      baInletOutput.textContent = parseFloat(baInletInput.value).toFixed(1) + " psi";
+      runSystemSnapshot("bleed-air");
+    });
   }
   const baOutletInput = document.getElementById("ba-outlet-pressure");
   const baOutletOutput = document.getElementById("ba-outlet-pressure-value");
   if (baOutletInput && baOutletOutput) {
-    baOutletInput.addEventListener("input", () => { baOutletOutput.textContent = parseFloat(baOutletInput.value).toFixed(1) + " psi"; });
+    baOutletInput.addEventListener("input", () => {
+      baOutletOutput.textContent = parseFloat(baOutletInput.value).toFixed(1) + " psi";
+      runSystemSnapshot("bleed-air");
+    });
+  }
+  const baReadyInput = document.getElementById("ba-control-unit-ready");
+  if (baReadyInput) {
+    baReadyInput.addEventListener("change", () => { runSystemSnapshot("bleed-air"); });
+  }
+  const baValveInput = document.getElementById("ba-valve-position");
+  if (baValveInput) {
+    baValveInput.addEventListener("change", () => { runSystemSnapshot("bleed-air"); });
   }
 
-  // EFDS: live readouts
+  // EFDS: live readouts + real-time snapshot update
   const efdsRadarInput = document.getElementById("efds-alt-radar");
   const efdsRadarOutput = document.getElementById("efds-alt-radar-value");
   if (efdsRadarInput && efdsRadarOutput) {
-    efdsRadarInput.addEventListener("input", () => { efdsRadarOutput.textContent = efdsRadarInput.value + " ft"; });
+    efdsRadarInput.addEventListener("input", () => {
+      efdsRadarOutput.textContent = efdsRadarInput.value + " ft";
+      runSystemSnapshot("efds");
+    });
   }
   const efdsBaroInput = document.getElementById("efds-alt-baro");
   const efdsBaroOutput = document.getElementById("efds-alt-baro-value");
   if (efdsBaroInput && efdsBaroOutput) {
-    efdsBaroInput.addEventListener("input", () => { efdsBaroOutput.textContent = efdsBaroInput.value + " ft"; });
+    efdsBaroInput.addEventListener("input", () => {
+      efdsBaroOutput.textContent = efdsBaroInput.value + " ft";
+      runSystemSnapshot("efds");
+    });
   }
   const efdsTempInput = document.getElementById("efds-temp-ext");
   const efdsTempOutput = document.getElementById("efds-temp-ext-value");
   if (efdsTempInput && efdsTempOutput) {
-    efdsTempInput.addEventListener("input", () => { efdsTempOutput.textContent = efdsTempInput.value + "°C"; });
+    efdsTempInput.addEventListener("input", () => {
+      efdsTempOutput.textContent = efdsTempInput.value + "°C";
+      runSystemSnapshot("efds");
+    });
   }
+  // EFDS: all selects trigger real-time update
+  const efdsSelects = [
+    "efds-threat-mls", "efds-arm-switch", "efds-alt-override",
+    "efds-manual-dispense", "efds-armed-relay",
+    "efds-crosslink", "efds-firing-channel",
+  ];
+  efdsSelects.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("change", () => { runSystemSnapshot("efds"); });
+  });
 
   const form = document.getElementById("demo-form");
   const promptInput = document.getElementById("demo-prompt");
