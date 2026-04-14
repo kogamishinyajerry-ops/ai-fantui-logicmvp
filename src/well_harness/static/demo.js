@@ -1532,6 +1532,129 @@ function setBusy(isBusy) {
   button.textContent = isBusy ? "确定性推理中..." : "运行演示";
 }
 
+/** Fill EFDS inputs with a known-complete scenario and trigger inference. */
+function runEfdsDemo() {
+  const setSelect = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) { el.value = val; }
+  };
+  const setRange = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.value = val;
+      const out = document.getElementById(id + "-value");
+      if (out) {
+        if (id === "efds-alt-radar" || id === "efds-alt-baro") out.textContent = val + " ft";
+        else if (id === "efds-temp-ext") out.textContent = val + "°C";
+      }
+    }
+  };
+  setSelect("efds-threat-mls", "MISSLE_INBOUND");
+  setSelect("efds-alt-override", "2000FT");
+  setRange("efds-alt-radar", 3500);
+  setRange("efds-alt-baro", 3600);
+  setRange("efds-temp-ext", 25);
+  setSelect("efds-armed-relay", "CLOSED");
+  setSelect("efds-crosslink", "TRUE");
+  setSelect("efds-firing-channel", "COUNTING");
+  setSelect("efds-arm-switch", "ARM");
+  setSelect("efds-manual-dispense", "CONFIRMED");
+  runSystemSnapshot("efds");
+}
+
+/** Reset all EFDS inputs to their default values. */
+function resetEfdsInputs() {
+  const defaults = {
+    "efds-threat-mls": "IDLE",
+    "efds-alt-override": "AUTO",
+    "efds-alt-radar": 5000,
+    "efds-alt-baro": 5200,
+    "efds-temp-ext": 15,
+    "efds-armed-relay": "OPEN",
+    "efds-crosslink": "FALSE",
+    "efds-firing-channel": "READY",
+    "efds-arm-switch": "SAFE",
+    "efds-manual-dispense": "RELEASED",
+  };
+  Object.entries(defaults).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === "SELECT" || el.tagName === "INPUT") el.value = val;
+    const out = document.getElementById(id + "-value");
+    if (out) {
+      if (id === "efds-alt-radar" || id === "efds-alt-baro") out.textContent = val + " ft";
+      else if (id === "efds-temp-ext") out.textContent = val + "°C";
+    }
+  });
+  runSystemSnapshot("efds");
+}
+
+/** Fill Landing Gear inputs with a known-complete scenario. */
+function runLgDemo() {
+  const setSelect = (id, val) => { const e = document.getElementById(id); if (e) e.value = val; };
+  const setCheckbox = (id, checked) => { const e = document.getElementById(id); if (e) e.checked = checked; };
+  const setRange = (id, val, outId, unit) => {
+    const e = document.getElementById(id); const o = document.getElementById(outId);
+    if (e) e.value = val;
+    if (o) o.textContent = val + unit;
+  };
+  setSelect("lg-gear-handle", "DOWN");
+  setRange("lg-hyd-pressure", 2400, "lg-hyd-pressure-value", " psi");
+  setCheckbox("lg-uplock-released", true);
+  setRange("lg-gear-position", 100, "lg-gear-position-value", "%");
+  setCheckbox("lg-downlock-engaged", true);
+  runSystemSnapshot("landing-gear");
+}
+
+/** Reset Landing Gear inputs to defaults. */
+function resetLgInputs() {
+  const setSelect = (id, val) => { const e = document.getElementById(id); if (e) e.value = val; };
+  const setCheckbox = (id, checked) => { const e = document.getElementById(id); if (e) e.checked = checked; };
+  const setRange = (id, val, outId, unit) => {
+    const e = document.getElementById(id); const o = document.getElementById(outId);
+    if (e) e.value = val;
+    if (o) o.textContent = val + unit;
+  };
+  setSelect("lg-gear-handle", "UP");
+  setRange("lg-hyd-pressure", 0, "lg-hyd-pressure-value", " psi");
+  setCheckbox("lg-uplock-released", false);
+  setRange("lg-gear-position", 0, "lg-gear-position-value", "%");
+  setCheckbox("lg-downlock-engaged", false);
+  runSystemSnapshot("landing-gear");
+}
+
+/** Fill Bleed Air inputs with a known-complete scenario. */
+function runBaDemo() {
+  const setCheckbox = (id, checked) => { const e = document.getElementById(id); if (e) e.checked = checked; };
+  const setSelect = (id, val) => { const e = document.getElementById(id); if (e) e.value = val; };
+  const setRange = (id, val, outId, unit) => {
+    const e = document.getElementById(id); const o = document.getElementById(outId);
+    if (e) e.value = val;
+    if (o) o.textContent = val.toFixed(1) + unit;
+  };
+  setRange("ba-inlet-pressure", 50, "ba-inlet-pressure-value", " psi");
+  setRange("ba-outlet-pressure", 48, "ba-outlet-pressure-value", " psi");
+  setCheckbox("ba-control-unit-ready", true);
+  setSelect("ba-valve-position", "OPEN");
+  runSystemSnapshot("bleed-air");
+}
+
+/** Reset Bleed Air inputs to defaults. */
+function resetBaInputs() {
+  const setCheckbox = (id, checked) => { const e = document.getElementById(id); if (e) e.checked = checked; };
+  const setSelect = (id, val) => { const e = document.getElementById(id); if (e) e.value = val; };
+  const setRange = (id, val, outId, unit) => {
+    const e = document.getElementById(id); const o = document.getElementById(outId);
+    if (e) e.value = val;
+    if (o) o.textContent = val.toFixed(1) + unit;
+  };
+  setRange("ba-inlet-pressure", 0, "ba-inlet-pressure-value", " psi");
+  setRange("ba-outlet-pressure", 0, "ba-outlet-pressure-value", " psi");
+  setCheckbox("ba-control-unit-ready", false);
+  setSelect("ba-valve-position", "CLOSED");
+  runSystemSnapshot("bleed-air");
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   // P13 system switcher
   const systemSelector = document.getElementById("system-selector");
@@ -1550,6 +1673,24 @@ document.addEventListener("DOMContentLoaded", () => {
       if (systemId) runSystemSnapshot(systemId);
     });
   });
+
+  // EFDS demo scenario and reset buttons
+  const efdsDemoBtn = document.getElementById("efds-demo-btn");
+  if (efdsDemoBtn) efdsDemoBtn.addEventListener("click", runEfdsDemo);
+  const efdsResetBtn = document.getElementById("efds-reset-btn");
+  if (efdsResetBtn) efdsResetBtn.addEventListener("click", resetEfdsInputs);
+
+  // Landing Gear demo/reset buttons
+  const lgDemoBtn = document.getElementById("lg-demo-btn");
+  if (lgDemoBtn) lgDemoBtn.addEventListener("click", runLgDemo);
+  const lgResetBtn = document.getElementById("lg-reset-btn");
+  if (lgResetBtn) lgResetBtn.addEventListener("click", resetLgInputs);
+
+  // Bleed Air demo/reset buttons
+  const baDemoBtn = document.getElementById("ba-demo-btn");
+  if (baDemoBtn) baDemoBtn.addEventListener("click", runBaDemo);
+  const baResetBtn = document.getElementById("ba-reset-btn");
+  if (baResetBtn) baResetBtn.addEventListener("click", resetBaInputs);
 
   // Landing Gear: live readouts + real-time snapshot update
   const lgHydInput = document.getElementById("lg-hyd-pressure");

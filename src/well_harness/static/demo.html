@@ -336,7 +336,7 @@
               <label class="system-input-range" for="lg-hyd-pressure">
                 <span>Hyd Pressure <output for="lg-hyd-pressure" id="lg-hyd-pressure-value">0 psi</output></span>
                 <input id="lg-hyd-pressure" name="hydraulic_pressure_psi" type="range" min="0" max="3000" step="10" value="0">
-                <small>LG-L1：液压 ≥ 2200 psi</small>
+                <small class="threshold-hint">LG-L1：液压 ≥ 2200 psi</small>
               </label>
               <!-- ===== LG-L2: Uplock Release ===== -->
               <div class="input-group-header"><span class="presenter-callout">[LG-L2]</span> 锁闩释放</div>
@@ -349,7 +349,7 @@
               <label class="system-input-range" for="lg-gear-position">
                 <span>Gear Position <output for="lg-gear-position" id="lg-gear-position-value">0%</output></span>
                 <input id="lg-gear-position" name="gear_position_percent" type="range" min="0" max="100" step="1" value="0">
-                <small>位置 ≥ 99% 且 downlock = 1</small>
+                <small class="threshold-hint">完成：位置 ≥ 99% 且 downlock = 1</small>
               </label>
               <label class="system-input-toggle" for="lg-downlock-engaged">
                 <span>Downlock Engaged</span>
@@ -357,7 +357,9 @@
               </label>
             </div>
             <div class="system-input-actions">
-              <button type="button" class="btn-primary system-snapshot-btn" data-system="landing-gear">应用快照</button>
+              <button type="button" class="btn-primary system-snapshot-btn" data-system="landing-gear">触发推理 →</button>
+              <button type="button" class="btn-demo" id="lg-demo-btn" title="自动填入完整触发组合并运行推理">演示场景 →</button>
+              <button type="button" class="btn-reset" id="lg-reset-btn" title="恢复为默认值">重置</button>
             </div>
           </section>
 
@@ -418,12 +420,12 @@
               <label class="system-input-range" for="ba-inlet-pressure">
                 <span>Inlet Pressure <output for="ba-inlet-pressure" id="ba-inlet-pressure-value">0.0 psi</output></span>
                 <input id="ba-inlet-pressure" name="inlet_pressure" type="range" min="0" max="100" step="1" value="0">
-                <small>LN-Open: ≥35psi | LN-Close: &lt;32psi | 过压: ≥65psi</small>
+                <small class="threshold-hint">≥35psi 开阀 | &lt;32psi 关阀 | ≥65psi 过压关闭</small>
               </label>
               <label class="system-input-range" for="ba-outlet-pressure">
                 <span>Outlet Pressure <output for="ba-outlet-pressure" id="ba-outlet-pressure-value">0.0 psi</output></span>
                 <input id="ba-outlet-pressure" name="outlet_pressure" type="range" min="0" max="100" step="1" value="0">
-                <small>完成条件：出口压力 ≥ 35 psi</small>
+                <small class="threshold-hint">完成条件：出口压力 ≥ 35 psi</small>
               </label>
               <!-- ===== Valve + Control ===== -->
               <div class="input-group-header"><span class="presenter-callout">[控制]</span> 阀门与控制单元</div>
@@ -440,7 +442,9 @@
               </label>
             </div>
             <div class="system-input-actions">
-              <button type="button" class="btn-primary system-snapshot-btn" data-system="bleed-air">应用快照</button>
+              <button type="button" class="btn-primary system-snapshot-btn" data-system="bleed-air">触发推理 →</button>
+              <button type="button" class="btn-demo" id="ba-demo-btn" title="自动填入完整触发组合并运行推理">演示场景 →</button>
+              <button type="button" class="btn-reset" id="ba-reset-btn" title="恢复为默认值">重置</button>
             </div>
           </section>
 
@@ -493,6 +497,7 @@
                   <option value="THREAT_DETECTED">THREAT_DETECTED</option>
                   <option value="MISSLE_INBOUND">MISSLE_INBOUND</option>
                 </select>
+                <small class="threshold-hint">→ 设为 <b>MISSLE_INBOUND</b> 触发 LN-01</small>
               </label>
               <!-- ===== LN-02: Altitude ===== -->
               <div class="input-group-header"><span class="presenter-callout">[LN-02]</span> 高度门限</div>
@@ -505,6 +510,7 @@
                   <option value="5000FT">5000FT</option>
                   <option value="NONE">NONE</option>
                 </select>
+                <small class="threshold-hint">⚠️ 设为 1000FT/2000FT/5000FT 之一！<b>AUTO</b> 会阻止 LN-02</small>
               </label>
               <label class="system-input-range" for="efds-alt-radar">
                 <span>Radar Altitude <output for="efds-alt-radar" id="efds-alt-radar-value">5000 ft</output></span>
@@ -531,6 +537,7 @@
                   <option value="OPEN" selected>OPEN</option>
                   <option value="CLOSED">CLOSED</option>
                 </select>
+                <small class="threshold-hint">→ 设为 <b>CLOSED</b> 才能授权 LN-04</small>
               </label>
               <label class="system-input-select" for="efds-crosslink">
                 <span>Crosslink Validator</span>
@@ -538,6 +545,7 @@
                   <option value="FALSE" selected>FALSE</option>
                   <option value="TRUE">TRUE</option>
                 </select>
+                <small class="threshold-hint">→ 设为 <b>TRUE</b> 才能授权 LN-04</small>
               </label>
               <label class="system-input-select" for="efds-firing-channel">
                 <span>Firing Channel</span>
@@ -546,6 +554,7 @@
                   <option value="COUNTING">COUNTING</option>
                   <option value="EXPIRED">EXPIRED</option>
                 </select>
+                <small class="threshold-hint">→ 设为 <b>COUNTING</b> 才能触发 LN-04</small>
               </label>
               <!-- ===== Pilot Controls ===== -->
               <div class="input-group-header"><span class="presenter-callout">[飞行员]</span> 人工控制</div>
@@ -556,6 +565,7 @@
                   <option value="ARM">ARM</option>
                   <option value="AUTO">AUTO</option>
                 </select>
+                <small class="threshold-hint">→ 设为 <b>ARM</b> 或 <b>AUTO</b> 激活授权</small>
               </label>
               <label class="system-input-select" for="efds-manual-dispense">
                 <span>Manual Dispense</span>
@@ -566,7 +576,9 @@
               </label>
             </div>
             <div class="system-input-actions">
-              <button type="button" class="btn-primary system-snapshot-btn" data-system="efds">应用快照</button>
+              <button type="button" class="btn-primary system-snapshot-btn" data-system="efds">触发推理 →</button>
+              <button type="button" class="btn-demo" id="efds-demo-btn" title="自动填入完整触发组合并运行推理">演示场景 →</button>
+              <button type="button" class="btn-reset" id="efds-reset-btn" title="恢复 EFDS 所有输入为默认值">重置</button>
             </div>
           </section>
 
