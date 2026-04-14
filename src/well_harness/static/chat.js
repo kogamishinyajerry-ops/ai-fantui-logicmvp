@@ -228,6 +228,20 @@
       }
     }
 
+    // Also read from nodes array for per-component active/blocked states
+    // API returns {nodes: [{id, state, blocked_by}]} where state is 'active'|'inactive'|'blocked'
+    if (data && data.nodes && Array.isArray(data.nodes)) {
+      for (i = 0; i < data.nodes.length; i += 1) {
+        var node = data.nodes[i];
+        if (node.state === 'active') {
+          activeIds.push(node.id);
+        } else if (node.state === 'blocked' && node.blocked_by && node.blocked_by.length > 0) {
+          // Mark which logic gate this blocks
+          failed[node.id] = node.blocked_by.slice();
+        }
+      }
+    }
+
     if (data && data.logic) {
       entries = ['logic1', 'logic2', 'logic3', 'logic4'];
       for (i = 0; i < entries.length; i += 1) {
