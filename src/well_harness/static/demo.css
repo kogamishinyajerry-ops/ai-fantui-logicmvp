@@ -103,27 +103,6 @@ a { color: var(--accent-cyan); }
   margin: 8px 0;
 }
 
-.truth-eval-blocked,
-.truth-eval-active {
-  display: grid;
-  grid-template-columns: 100px 1fr;
-  gap: 8px;
-  margin: 8px 0;
-  font-size: 0.78rem;
-}
-
-.truth-eval-blocked dt,
-.truth-eval-active dt {
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-}
-
-.truth-eval-blocked dd,
-.truth-eval-active dd {
-  color: var(--accent-cyan);
-  font-family: var(--font-mono);
-}
-
 /* ── Rich truth evaluation card ─────────────────────────────────────── */
 .eval-section-label {
   font-size: 0.65rem;

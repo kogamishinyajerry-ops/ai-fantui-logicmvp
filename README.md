@@ -1,5 +1,11 @@
 # Well Harness
 
+## Project Status: Frozen (2026-04-14)
+
+All P0-P15 phases are complete and approved by Opus 4.6. This project is in maintenance mode — no new feature development. Only regression protection and critical security hardening are active.
+
+See [ROADMAP.md](.planning/ROADMAP.md) for the full phase history and Milestone 8 closure record.
+
 `well-harness` is a lightweight simulation harness for the thrust reverser deploy logic we have confirmed in the discussion.
 
 The first cut focuses on deploy-only behavior:

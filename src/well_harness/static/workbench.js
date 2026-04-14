@@ -3089,12 +3089,12 @@ async function runWorkbenchBundle() {
   }
 }
 
-function installToolbarHandlers() {
+function installPacketSourceHandlers() {
   workbenchElement("load-reference-packet").addEventListener("click", () => {
     if (!applyReferencePacketSelection({
       archiveBundle: workbenchElement("workbench-archive-toggle").checked,
-      sourceStatus: "当前样例：参考样例。适合直接点“生成 Bundle”做可视化 happy path 验收。",
-      preparationMessage: "参考样例已经装载完毕，点击“生成 Bundle”即可进入可视化验收。",
+      sourceStatus: "当前样例：参考样例。适合直接点 '生成 Bundle' 做可视化 happy path 验收。",
+      preparationMessage: "参考样例已经装载完毕，点击 '生成 Bundle' 即可进入可视化验收。",
     })) {
       return;
     }
@@ -3122,15 +3122,17 @@ function installToolbarHandlers() {
     if (!file) {
       return;
     }
+
     const text = await file.text();
-    maybeAutoSnapshotCurrentPacketDraft(`导入本地 JSON / ${file.name}`);
+    maybeAutoSnapshotCurrentPacketDraft("导入本地 JSON / " + file.name);
     workbenchElement("workbench-packet-json").value = text;
-    setPacketSourceStatus(`当前样例：本地文件 ${file.name}。如果不是在调试，可以直接点“生成 Bundle”看可视化结果。`);
+    setPacketSourceStatus("当前样例：本地文件 " + file.name + "。如果不是在调试，可以直接点 '生成 Bundle' 看可视化结果。");
     renderPreparationBoard("本地 JSON 已装载，运行后会把当前 packet 的通过/阻塞结果显示在上方看板。");
+
     try {
       const packetPayload = JSON.parse(text);
       pushWorkbenchPacketRevision(buildWorkbenchPacketRevisionEntry(packetPayload, {
-        title: `导入本地 JSON / ${file.name}`,
+        title: "导入本地 JSON / " + file.name,
         summary: "本地 packet 已导入输入区。",
       }));
       renderSystemFingerprintFromPacketPayload(packetPayload, {
@@ -3142,17 +3144,20 @@ function installToolbarHandlers() {
       renderSystemFingerprint({
         badgeState: "blocked",
         badgeText: "画像未识别",
-        summary: `本地 JSON 还没解析成功，所以系统画像暂时无法展开：${String(error.message || error)}`,
+        summary: "本地 JSON 还没解析成功，所以系统画像暂时无法展开：" + String(error.message || error),
         documentFallback: "先修正 JSON，再显示来源文档。",
         signalFallback: "先修正 JSON，再显示关键信号。",
       });
     }
-    setCurrentWorkbenchRunLabel(`手动生成 / ${file.name}`);
+
+    setCurrentWorkbenchRunLabel("手动生成 / " + file.name);
     setActiveWorkbenchPreset("");
-    setRequestStatus(`已载入本地文件：${file.name}`, "success");
+    setRequestStatus("已载入本地文件：" + file.name, "success");
     input.value = "";
   });
+}
 
+function installWorkspaceSnapshotHandlers() {
   workbenchElement("export-workbench-workspace").addEventListener("click", () => {
     downloadWorkbenchWorkspaceSnapshot();
   });
@@ -3175,16 +3180,28 @@ function installToolbarHandlers() {
     if (!file) {
       return;
     }
+
     await importWorkbenchWorkspaceSnapshot(file);
     input.value = "";
   });
+}
 
+function installExecutionHandlers() {
   workbenchElement("run-workbench-bundle").addEventListener("click", () => {
     setCurrentWorkbenchRunLabel("手动生成");
     setActiveWorkbenchPreset("");
     void runWorkbenchBundle();
   });
 
+  document.querySelectorAll(".workbench-preset-trigger").forEach((button) => {
+    button.addEventListener("click", () => {
+      setCurrentWorkbenchRunLabel(button.textContent.trim());
+      runWorkbenchPreset(button.dataset.workbenchPreset || "");
+    });
+  });
+}
+
+function installPersistenceHandlers() {
   workbenchElement("workbench-packet-json").addEventListener("input", () => {
     renderWorkbenchPacketDraftState();
     persistWorkbenchPacketWorkspace();
@@ -3197,14 +3214,9 @@ function installToolbarHandlers() {
       persistWorkbenchPacketWorkspace();
     });
   });
+}
 
-  document.querySelectorAll(".workbench-preset-trigger").forEach((button) => {
-    button.addEventListener("click", () => {
-      setCurrentWorkbenchRunLabel(button.textContent.trim());
-      runWorkbenchPreset(button.dataset.workbenchPreset || "");
-    });
-  });
-
+function installRecoveryAndRepairHandlers() {
   workbenchElement("workbench-history-return-latest").addEventListener("click", () => {
     restoreLatestWorkbenchHistory();
   });
@@ -3222,12 +3234,20 @@ function installToolbarHandlers() {
   });
 
   workbenchElement("workbench-apply-clarifications").addEventListener("click", () => {
-    void applyClarificationWorkspace({rerun: false});
+    void applyClarificationWorkspace({ rerun: false });
   });
 
   workbenchElement("workbench-apply-and-rerun").addEventListener("click", () => {
-    void applyClarificationWorkspace({rerun: true});
+    void applyClarificationWorkspace({ rerun: true });
   });
+}
+
+function installToolbarHandlers() {
+  installPacketSourceHandlers();
+  installWorkspaceSnapshotHandlers();
+  installExecutionHandlers();
+  installPersistenceHandlers();
+  installRecoveryAndRepairHandlers();
 }
 
 window.addEventListener("DOMContentLoaded", () => {

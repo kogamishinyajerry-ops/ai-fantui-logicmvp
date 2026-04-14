@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import uuid
 from dataclasses import dataclass, field
 from typing import ClassVar
@@ -183,6 +184,7 @@ class P14SessionState:
     session_id: str
     document_text: str
     document_name: str
+    created_at: float = field(default_factory=time.time)
     ambiguities: list[Ambiguity] = field(default_factory=list)
     questions: list[Question] = field(default_factory=list)  # ordered list of Qs to ask
     answered_question_ids: list[str] = field(default_factory=list)  # answered question ids
@@ -238,6 +240,11 @@ class P14SessionStore:
 
     def create(self, session_id: str, document_text: str, document_name: str) -> P14SessionState:
         with self._sessions_lock:
+            # SECURITY: prevent unbounded memory growth
+            if len(self._sessions) >= 50:
+                oldest = min(self._sessions.items(), key=lambda x: x[1].created_at)
+                del self._sessions[oldest[0]]
+
             session = P14SessionState(
                 session_id=session_id,
                 document_text=document_text,

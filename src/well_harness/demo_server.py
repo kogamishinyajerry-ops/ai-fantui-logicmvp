@@ -168,6 +168,11 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"error": "invalid_content_length"})
             return
 
+        # Guard: reject oversized payloads before reading
+        if content_length and content_length > _MAX_DOCUMENT_BYTES:
+            self._send_json(413, {"error": "payload_too_large", "message": f"Request body exceeds maximum of {_MAX_DOCUMENT_BYTES} bytes."})
+            return
+
         try:
             body = self.rfile.read(content_length).decode("utf-8") if content_length else "{}"
             request_payload = json.loads(body)
@@ -309,8 +314,8 @@ def _get_p14_store() -> P14SessionStore:
     return _p14_session_store
 
 
-# Max document size: 500 KB
-_MAX_DOCUMENT_BYTES = 10 * 1024 * 1024  # 10 MB, aligned with JS client-side validation
+# Server-side DoS guard for direct API callers; the browser client still enforces 10 MB.
+_MAX_DOCUMENT_BYTES = 50 * 1024 * 1024  # 50 MB server-side DoS guard (JS client already limits to 10MB)
 
 
 def _handle_p14_analyze(request_payload: dict) -> tuple[dict | None, dict | None]:
@@ -325,7 +330,10 @@ def _handle_p14_analyze(request_payload: dict) -> tuple[dict | None, dict | None
     if not document_text.strip():
         return None, {"error": "empty_document", "message": "document_text must not be empty."}
     if len(document_text.encode("utf-8")) > _MAX_DOCUMENT_BYTES:
-        return None, {"error": "document_too_large", "message": f"document_text exceeds maximum size of {_MAX_DOCUMENT_BYTES} bytes (10MB)."}
+        return None, {
+            "error": "document_too_large",
+            "message": f"document_text exceeds maximum size of {_MAX_DOCUMENT_BYTES} bytes (50MB server-side limit).",
+        }
 
     document_name = request_payload.get("document_name", "untitled")
     if not isinstance(document_name, str) or len(document_name) > 255:
@@ -870,6 +878,11 @@ def build_workbench_archive_restore_response(request_payload: dict) -> tuple[dic
             "field": "manifest_path",
             "message": "manifest_path must be a non-empty string.",
         }
+
+    # SECURITY: reject path traversal attempts in relative paths
+    if not Path(manifest_path).is_absolute():
+        if ".." in str(manifest_path):
+            return None, {"error": "invalid_manifest_path", "message": "Relative manifest_path with traversal is not allowed."}
 
     try:
         restore_payload = load_workbench_archive_restore_payload(manifest_path)
