@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/demo.css">
     <link rel="stylesheet" href="/workbench.css">
   </head>
-  <body>
+  <body data-view="beginner">
     <main class="shell workbench-shell">
       <section class="hero" aria-labelledby="workbench-page-title">
         <div>
@@ -121,8 +121,41 @@
         </ul>
       </section>
 
+      <div
+        class="view-mode-toggle-bar"
+        style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:rgba(79,184,255,0.08);border:1px solid rgba(79,184,255,0.2);border-radius:8px;margin-bottom:16px"
+      >
+        <span
+          class="view-mode-label"
+          style="font-size:0.8rem;color:#8ca0b4;white-space:nowrap"
+        >视图模式:</span>
+        <button
+          type="button"
+          class="view-mode-btn is-active"
+          data-view="beginner"
+          id="view-btn-beginner"
+          style="background:rgba(40,244,255,0.15);border:1px solid rgba(40,244,255,0.4);color:#28f4ff;padding:4px 12px;border-radius:6px;font-size:0.8rem;cursor:pointer"
+        >
+          初级视图
+        </button>
+        <button
+          type="button"
+          class="view-mode-btn"
+          data-view="expert"
+          id="view-btn-expert"
+          style="background:transparent;border:1px solid rgba(79,184,255,0.25);color:#8ca0b4;padding:4px 12px;border-radius:6px;font-size:0.8rem;cursor:pointer"
+        >
+          专家视图
+        </button>
+        <span
+          class="view-mode-hint"
+          style="font-size:0.72rem;color:#5a7080;margin-left:4px"
+          id="view-mode-hint"
+        >— 专家工具默认折叠，适合先看结论</span>
+      </div>
+
       <div class="workbench-layout">
-        <section class="panel workbench-input-panel" aria-labelledby="workbench-input-title">
+        <section class="panel workbench-input-panel" view="beginner" aria-labelledby="workbench-input-title">
           <div class="workbench-section-heading">
             <div>
               <p class="eyebrow">input</p>
@@ -702,7 +735,7 @@
             </div>
           </section>
 
-          <section class="workbench-schema-workspace" aria-labelledby="workbench-schema-workspace-title">
+          <section class="workbench-schema-workspace" view="beginner" aria-labelledby="workbench-schema-workspace-title">
             <div class="workbench-visual-header">
               <div>
                 <p class="eyebrow">schema repair workspace</p>
@@ -729,7 +762,7 @@
             </div>
           </section>
 
-          <section class="workbench-clarification-workspace" aria-labelledby="workbench-clarification-workspace-title">
+          <section class="workbench-clarification-workspace" view="beginner" aria-labelledby="workbench-clarification-workspace-title">
             <div class="workbench-visual-header">
               <div>
                 <p class="eyebrow">clarification workspace</p>

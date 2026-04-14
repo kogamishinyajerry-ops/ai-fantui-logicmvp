@@ -3250,7 +3250,34 @@ function installToolbarHandlers() {
   installRecoveryAndRepairHandlers();
 }
 
+function installViewModeHandlers() {
+  function setViewMode(mode) {
+    document.body.dataset.view = mode;
+    workbenchElement("view-btn-beginner").classList.toggle("is-active", mode === "beginner");
+    workbenchElement("view-btn-expert").classList.toggle("is-active", mode === "expert");
+    workbenchElement("view-mode-hint").textContent = mode === "beginner"
+      ? "— 专家工具默认折叠，适合先看结论"
+      : "— 显示所有工具：JSON 编辑器 / schema repair / clarification";
+  }
+
+  const beginnerBtn = workbenchElement("view-btn-beginner");
+  const expertBtn = workbenchElement("view-btn-expert");
+  if (!beginnerBtn || !expertBtn) {
+    return;
+  }
+
+  beginnerBtn.addEventListener("click", () => {
+    setViewMode("beginner");
+  });
+  expertBtn.addEventListener("click", () => {
+    setViewMode("expert");
+  });
+
+  setViewMode("beginner");
+}
+
 window.addEventListener("DOMContentLoaded", () => {
+  installViewModeHandlers();
   installToolbarHandlers();
   void loadBootstrapPayload();
 });

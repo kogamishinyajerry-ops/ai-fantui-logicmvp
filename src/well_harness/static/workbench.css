@@ -1345,3 +1345,36 @@
     text-align: left;
   }
 }
+
+/* ── Beginner / Expert View Toggle ── */
+.view-mode-btn {
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  font-family: inherit;
+}
+
+.view-mode-btn.is-active {
+  background: rgba(40,244,255,0.15) !important;
+  border-color: rgba(40,244,255,0.5) !important;
+  color: #28f4ff !important;
+}
+
+.view-mode-btn:hover:not(.is-active) {
+  border-color: rgba(79,184,255,0.5) !important;
+  color: #c8e8ff !important;
+}
+
+/* Expert-only sections hidden in beginner mode */
+[view="beginner"] {
+  transition: opacity 0.3s, max-height 0.35s ease;
+  overflow: hidden;
+}
+
+/* In beginner mode, collapse expert sections */
+body[data-view="beginner"] [view="beginner"] {
+  display: none;
+}
+
+/* Expert mode shows everything */
+body[data-view="expert"] [view="beginner"] {
+  display: block;
+}
