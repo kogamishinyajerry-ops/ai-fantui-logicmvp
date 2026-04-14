@@ -335,9 +335,9 @@ Plans:
 - 新的领域需求（超出控制电路分析的范围）
 
 **继承的改进项（冻结期间可选择性处理）：**
-| 优先级 | 改进项 |
-|--------|--------|
-| P1（投产前） | 服务端文件上传大小限制 |
-| P2 | Content-type 白名单 |
-| P2 | Pre-existing notion sync failure 修复或归档 |
-| P3 | 确认循环跳过选项 |
+| 优先级 | 改进项 | 状态 |
+|--------|--------|------|
+| P1（投产前） | 服务端文件上传大小限制 | ✅ 已完成：50MB→10MB (19fea92) |
+| P2 | Content-type 白名单 | ✅ 已完成：仅允许application/json/text/plain (19fea92) |
+| P2 | Pre-existing notion sync failure 修复或归档 | ✅ 已归档：degraded modes已在P6/P9硬化，无未处理失败 |
+| P3 | 确认循环跳过选项 | ✅ 已完成：Skip→跳过，UI汉化 (19fea92) |
