@@ -4,126 +4,289 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AI FANTUI Logic — Chat</title>
-  <link rel="stylesheet" href="/demo.css">
   <link rel="stylesheet" href="/chat.css">
 </head>
 <body>
-
-  <!-- Top nav strip -->
-  <header class="chat-nav">
-    <span class="chat-nav-title">AI FANTUI Logic</span>
-    <div class="chat-nav-actions">
-      <a href="/demo.html" class="chat-nav-link">专家视图</a>
-      <button type="button" class="chat-sidebar-toggle" id="sidebar-toggle" aria-label="切换侧边栏">
-        ☰
-      </button>
-    </div>
-  </header>
-
-  <!-- Main layout: content + sidebar -->
-  <div class="chat-layout">
-
-    <!-- ===== MAIN CONTENT AREA ===== -->
-    <main class="chat-main" id="chat-main">
-
-      <!-- Logic chain SVG — always visible, updates based on chat context -->
-      <div class="chat-logic-panel" id="logic-panel">
-        <div class="chat-logic-header">
-          <h2>控制链路状态</h2>
-          <div class="chat-system-selector">
-            <label for="chat-system-select">系统:</label>
-            <select id="chat-system-select">
-              <option value="thrust-reverser">Thrust Reverser (反推)</option>
-              <option value="landing-gear">Landing Gear (起落架)</option>
-              <option value="bleed-air">Bleed Air Valve (引气)</option>
-              <option value="efds">Emergency Flare (干扰弹)</option>
-            </select>
-          </div>
-        </div>
-        <div class="chat-logic-diagram" id="logic-diagram">
-          <!-- SVG chain diagram placeholder — will be filled by JS based on system -->
-          <p class="chat-diagram-placeholder">选择一个系统，链路状态将显示在这里</p>
-        </div>
+  <div class="chat-app">
+    <header class="topbar">
+      <div class="topbar-brand">
+        <span class="topbar-kicker">AI FANTUI Logic</span>
+        <strong>Canvas Shell</strong>
       </div>
 
-      <!-- Chat messages area -->
+      <div class="topbar-controls">
+        <label class="system-switch" for="chat-system-select">
+          <span>System</span>
+          <select id="chat-system-select" aria-label="切换系统">
+            <option value="thrust-reverser">Thrust Reverser (反推)</option>
+            <option value="landing-gear">Landing Gear (起落架)</option>
+            <option value="bleed-air">Bleed Air Valve (引气)</option>
+            <option value="efds">Emergency Flare (干扰弹)</option>
+          </select>
+        </label>
+
+        <nav class="expert-tools" aria-label="专家工具">
+          <a href="/demo.html">Expert Demo</a>
+          <a href="/workbench.html">Workbench</a>
+          <a href="/ai-doc-analyzer.html">Doc Analyzer</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="stage-shell">
+      <section class="canvas-wrapper" id="logic-diagram" aria-label="控制链路画布">
+        <div class="canvas-header">
+          <div>
+            <p class="canvas-eyebrow">Reference Truth Canvas</p>
+            <h1>Thrust Reverser Control Chain</h1>
+          </div>
+
+          <div class="canvas-meta">
+            <span class="canvas-chip" id="system-shell-status">thrust-reverser</span>
+            <span class="canvas-chip accent">controller truth linked</span>
+          </div>
+        </div>
+
+        <div class="canvas-stage">
+          <div id="chain-topology-thrust-reverser" class="chain-topology canvas-map" aria-label="反推控制系统信号流">
+            <svg class="chain-svg" viewBox="0 0 900 480" role="img" aria-label="反推控制链路信号流图">
+              <defs>
+                <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L8,3 z" fill="#53ff92"/>
+                </marker>
+                <marker id="arrow-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L8,3 z" fill="#28f4ff"/>
+                </marker>
+                <marker id="arrow-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L8,3 z" fill="#4a5568"/>
+                </marker>
+                <symbol id="and-gate" viewBox="0 0 40 30">
+                  <polygon points="0,0 25,15 0,30" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                </symbol>
+              </defs>
+
+              <rect x="10" y="18" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="radio_altitude_ft"/>
+              <text x="46" y="28" class="chain-node-label" text-anchor="middle" data-tooltip="Radio Altitude，无线电高度，ft 为单位">RA</text>
+              <text x="46" y="42" class="chain-node-value" text-anchor="middle" data-value-for="radio_altitude_ft">—</text>
+
+              <rect x="10" y="58" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="sw1"/>
+              <text x="46" y="68" class="chain-node-label" text-anchor="middle" data-tooltip="Switch 1，-14° TRA 时闭合，上游使能">SW1</text>
+              <text x="46" y="82" class="chain-node-value" text-anchor="middle" data-value-for="sw1">—</text>
+
+              <rect x="10" y="98" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="reverser_inhibited"/>
+              <text x="46" y="108" class="chain-node-label" text-anchor="middle" data-tooltip="Reverser Inhibited，安全抑制信号">Inhibit</text>
+              <text x="46" y="122" class="chain-node-value" text-anchor="middle" data-value-for="reverser_inhibited">—</text>
+
+              <rect x="10" y="198" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="engine_running"/>
+              <text x="46" y="208" class="chain-node-label" text-anchor="middle" data-tooltip="Engine Running，发动机运行状态">ENG</text>
+              <text x="46" y="222" class="chain-node-value" text-anchor="middle" data-value-for="engine_running">—</text>
+
+              <rect x="10" y="238" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="aircraft_on_ground"/>
+              <text x="46" y="248" class="chain-node-label" text-anchor="middle" data-tooltip="Aircraft on Ground，地面感应信号">GND</text>
+              <text x="46" y="262" class="chain-node-value" text-anchor="middle" data-value-for="aircraft_on_ground">—</text>
+
+              <rect x="10" y="278" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="sw2"/>
+              <text x="46" y="288" class="chain-node-label" text-anchor="middle" data-tooltip="Switch 2，L1 解锁后闭合">SW2</text>
+              <text x="46" y="302" class="chain-node-value" text-anchor="middle" data-value-for="sw2">—</text>
+
+              <rect x="10" y="318" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="eec_enable"/>
+              <text x="46" y="328" class="chain-node-label" text-anchor="middle" data-tooltip="Electronic Engine Controller Enable，发动机控制使能">EEC En</text>
+              <text x="46" y="342" class="chain-node-value" text-anchor="middle" data-value-for="eec_enable">—</text>
+
+              <rect x="10" y="368" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="n1k"/>
+              <text x="46" y="378" class="chain-node-label" text-anchor="middle" data-tooltip="N1 Core Speed，风扇/核心机转速，百分比">N1K</text>
+              <text x="46" y="392" class="chain-node-value" text-anchor="middle" data-value-for="n1k">—</text>
+
+              <rect x="10" y="408" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="tra_deg"/>
+              <text x="46" y="418" class="chain-node-label" text-anchor="middle" data-tooltip="Thrust Reverser Actuation angle，反推作动角度，负值=拉出">TRA</text>
+              <text x="46" y="432" class="chain-node-value" text-anchor="middle" data-value-for="tra_deg">—</text>
+
+              <svg x="110" y="55" width="40" height="30">
+                <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic1"/>
+              </svg>
+              <text x="130" y="75" class="logic-gate-label" text-anchor="middle">AND</text>
+              <text x="130" y="42" class="chain-node-label" text-anchor="middle" data-node-label="logic1" data-tooltip="Logic Node 1，解锁链路入口">L1</text>
+
+              <rect x="165" y="55" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="tls115"/>
+              <text x="201" y="65" class="chain-node-label" text-anchor="middle" data-tooltip="Thrust Reverser Latch System，液压解锁阀">TLS</text>
+              <text x="201" y="79" class="chain-node-value" text-anchor="middle" data-value-for="tls_115vac_cmd">—</text>
+
+              <svg x="110" y="235" width="40" height="30">
+                <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic2"/>
+              </svg>
+              <text x="130" y="255" class="logic-gate-label" text-anchor="middle">AND</text>
+              <text x="130" y="222" class="chain-node-label" text-anchor="middle" data-node-label="logic2" data-tooltip="Logic Node 2，540V 电源母线使能">L2</text>
+
+              <rect x="165" y="235" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="etrac_540v"/>
+              <text x="201" y="245" class="chain-node-label" text-anchor="middle" data-tooltip="540V 电源母线，旋翼/风扇驱动">540V</text>
+              <text x="201" y="259" class="chain-node-value" text-anchor="middle" data-value-for="etrac_540vdc_cmd">—</text>
+
+              <svg x="355" y="145" width="40" height="30">
+                <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic3"/>
+              </svg>
+              <text x="375" y="165" class="logic-gate-label" text-anchor="middle">AND</text>
+              <text x="375" y="132" class="chain-node-label" text-anchor="middle" data-node-label="logic3" data-tooltip="Logic Node 3，EEC+PLS+PDU 三路扇出">L3</text>
+
+              <rect x="410" y="105" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="eec_deploy"/>
+              <text x="446" y="115" class="chain-node-label" text-anchor="middle" data-tooltip="Electronic Engine Controller，发动机控制电脑">EEC</text>
+              <text x="446" y="129" class="chain-node-value" text-anchor="middle" data-value-for="eec_deploy_cmd">—</text>
+
+              <rect x="410" y="145" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="pls_power"/>
+              <text x="446" y="155" class="chain-node-label" text-anchor="middle" data-tooltip="Pressure Limit Switch，压力限制开关">PLS</text>
+              <text x="446" y="169" class="chain-node-value" text-anchor="middle" data-value-for="pls_power_cmd">—</text>
+
+              <rect x="410" y="185" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="pdu_motor"/>
+              <text x="446" y="195" class="chain-node-label" text-anchor="middle" data-tooltip="Power Drive Unit，电机驱动单元">PDU</text>
+              <text x="446" y="209" class="chain-node-value" text-anchor="middle" data-value-for="pdu_motor_cmd">—</text>
+
+              <rect x="500" y="120" width="72" height="30" rx="6" class="chain-node-svg sensor-node-svg" data-node="vdt90"/>
+              <text x="536" y="130" class="chain-node-label" text-anchor="middle" data-tooltip="Variable Displacement Table，展开位置 ≥90% 时激活">VDT90</text>
+              <text x="536" y="144" class="chain-node-value" text-anchor="middle" data-value-for="deploy_90_percent_vdt">—</text>
+
+              <svg x="595" y="145" width="40" height="30">
+                <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic4"/>
+              </svg>
+              <text x="615" y="165" class="logic-gate-label" text-anchor="middle">AND</text>
+              <text x="615" y="132" class="chain-node-label" text-anchor="middle" data-node-label="logic4" data-tooltip="Logic Node 4，THR_LOCK 释放命令">L4</text>
+
+              <rect x="650" y="145" width="100" height="30" rx="6" class="chain-node-svg command-node-svg final-node-svg" data-node="thr_lock"/>
+              <text x="700" y="155" class="chain-node-label" text-anchor="middle" data-tooltip="Thrust Lock，反推锁释放机构">THR_LOCK</text>
+              <text x="700" y="169" class="chain-node-value" text-anchor="middle" data-value-for="throttle_electronic_lock_release_cmd">—</text>
+
+              <line x1="82" y1="33" x2="110" y2="70" class="conn-line conn-input"/>
+              <line x1="82" y1="73" x2="110" y2="70" class="conn-line conn-input"/>
+              <line x1="82" y1="113" x2="110" y2="70" class="conn-line conn-input"/>
+              <line x1="150" y1="70" x2="165" y2="70" class="conn-line conn-logic" marker-end="url(#arrow-cyan)"/>
+              <line x1="237" y1="70" x2="355" y2="160" class="conn-line conn-merge" marker-end="url(#arrow-cyan)"/>
+
+              <line x1="82" y1="213" x2="110" y2="250" class="conn-line conn-input"/>
+              <line x1="82" y1="253" x2="110" y2="250" class="conn-line conn-input"/>
+              <line x1="82" y1="293" x2="110" y2="250" class="conn-line conn-input"/>
+              <line x1="82" y1="333" x2="110" y2="250" class="conn-line conn-input"/>
+              <line x1="150" y1="250" x2="165" y2="250" class="conn-line conn-logic" marker-end="url(#arrow-cyan)"/>
+              <line x1="237" y1="250" x2="355" y2="160" class="conn-line conn-merge" marker-end="url(#arrow-cyan)"/>
+
+              <line x1="82" y1="393" x2="355" y2="160" class="conn-line conn-input" marker-end="url(#arrow-gray)"/>
+              <line x1="82" y1="423" x2="355" y2="160" class="conn-line conn-input" marker-end="url(#arrow-gray)"/>
+
+              <line x1="395" y1="160" x2="410" y2="120" class="conn-line conn-logic" marker-end="url(#arrow-cyan)"/>
+              <line x1="395" y1="160" x2="410" y2="160" class="conn-line conn-logic" marker-end="url(#arrow-cyan)"/>
+              <line x1="395" y1="160" x2="410" y2="200" class="conn-line conn-logic" marker-end="url(#arrow-cyan)"/>
+
+              <line x1="482" y1="135" x2="500" y2="135" class="conn-line" marker-end="url(#arrow-gray)"/>
+
+              <line x1="572" y1="135" x2="595" y2="160" class="conn-line" marker-end="url(#arrow-cyan)"/>
+
+              <line x1="635" y1="160" x2="650" y2="160" class="conn-line conn-final" marker-end="url(#arrow-green)"/>
+
+              <text x="46" y="12" class="section-label">输入条件</text>
+              <text x="130" y="105" class="section-label" data-tooltip="Logic Node 1，解锁链路入口">L1</text>
+              <text x="130" y="285" class="section-label" data-tooltip="Logic Node 2，540V 电源母线使能">L2</text>
+              <text x="375" y="105" class="section-label" data-tooltip="Logic Node 3，EEC+PLS+PDU 三路扇出">L3</text>
+              <text x="615" y="105" class="section-label" data-tooltip="Logic Node 4，THR_LOCK 释放命令">L4</text>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <section class="truth-eval-bar" id="truth-eval-bar" aria-label="Truth Eval 条">
+        <div class="truth-eval-primary">
+          <span class="truth-eval-kicker">Truth Eval</span>
+          <div class="truth-eval-headline-row">
+            <strong id="truth-eval-status">Awaiting snapshot</strong>
+            <span class="truth-eval-badge is-idle" id="truth-eval-badge">IDLE</span>
+          </div>
+          <p class="truth-eval-summary" id="truth-eval-summary">
+            选择系统并发送问题，返回的 truth evaluation 会在这里汇总为 active / blocked / completion 三个信号面。
+          </p>
+        </div>
+
+        <div class="truth-eval-secondary">
+          <div class="truth-eval-group">
+            <span class="truth-eval-group-label">Active chain</span>
+            <div class="truth-chip-row" id="truth-eval-active">
+              <span class="truth-chip is-muted">—</span>
+            </div>
+          </div>
+
+          <div class="truth-eval-group">
+            <span class="truth-eval-group-label">Blocked reasons</span>
+            <div class="truth-chip-row" id="truth-eval-blockers">
+              <span class="truth-chip is-muted">—</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="input-dock" aria-label="底部输入栏">
+        <div class="input-dock-main">
+          <label for="chat-file-upload" class="dock-icon-btn" title="上传文档">📎</label>
+          <input type="file" id="chat-file-upload" accept=".md,.txt,.pdf" hidden aria-label="上传控制逻辑文档">
+
+          <textarea
+            id="chat-input"
+            rows="1"
+            placeholder="输入你的问题，或描述你想分析的控制逻辑..."
+            aria-label="对话输入"
+          ></textarea>
+
+          <button type="button" class="send-btn" id="chat-send-btn" aria-label="发送">Send</button>
+        </div>
+
+        <div class="input-dock-meta">
+          <p>Enter 发送，Shift+Enter 换行。Phase A 只重构 Canvas Shell，不改后端契约。</p>
+          <span class="input-dock-note" id="sidebar-current-system">Thrust Reverser (反推)</span>
+        </div>
+      </section>
+    </main>
+
+    <div class="drawer-scrim" id="drawer-scrim" hidden></div>
+
+    <button
+      type="button"
+      class="fab-btn"
+      id="drawer-fab"
+      aria-controls="chat-drawer"
+      aria-expanded="false"
+      aria-label="打开对话抽屉"
+    >
+      💬
+    </button>
+
+    <aside class="chat-drawer" id="chat-drawer" aria-label="对话抽屉" aria-hidden="true">
+      <div class="chat-drawer-header">
+        <div>
+          <p class="chat-drawer-kicker">Conversation</p>
+          <h2>Control Copilot</h2>
+        </div>
+        <button type="button" class="drawer-close-btn" id="drawer-close" aria-label="关闭对话抽屉">✕</button>
+      </div>
+
+      <div class="chat-drawer-toolbar">
+        <button type="button" class="drawer-tool-btn" id="chat-guided-demo-btn">Guided Demo</button>
+        <a href="/demo.html" class="drawer-tool-link">Expert Demo</a>
+        <a href="/workbench.html" class="drawer-tool-link">Workbench</a>
+      </div>
+
+      <div class="chat-shortcut-strip" aria-label="快捷提问">
+        <button type="button" class="chat-shortcut-btn" data-prompt="如果 TLS 失效会怎样？">TLS 失效</button>
+        <button type="button" class="chat-shortcut-btn" data-prompt="解释 L3 到 VDT90 的链路">L3→VDT90</button>
+        <button type="button" class="chat-shortcut-btn" data-prompt="为什么 throttle lock 没释放">THR_LOCK</button>
+        <button type="button" class="chat-shortcut-btn" data-prompt="把 logic3 的阈值改成 -8 会发生什么">阈值修改</button>
+      </div>
+
       <div class="chat-messages" id="chat-messages" aria-live="polite">
-        <!-- Initial welcome message -->
         <article class="chat-message chat-message-ai">
           <div class="chat-message-avatar">🤖</div>
           <div class="chat-message-content">
-            <p>欢迎使用 AI FANTUI Logic。<br>
-            你可以：<br>
-            · 上传控制逻辑规格文档（Markdown 或 TXT）<br>
-            · 问我"如果 TRA 拉到 -20° 会发生什么"<br>
-            · 问"为什么 throttle lock 没释放"<br>
-            · 运行 Guided Demo 带你走一遍</p>
+            <p>Phase A Canvas Shell 已接管主屏。你可以直接问 TRA / RA / VDT90 / THR_LOCK，返回结果会同步点亮画布和 Truth Eval 条。</p>
           </div>
         </article>
       </div>
 
-      <!-- Input area -->
-      <div class="chat-input-area">
-        <div class="chat-input-row">
-          <label for="chat-file-upload" class="chat-file-btn" title="上传文档">📎</label>
-          <input type="file" id="chat-file-upload" accept=".md,.txt,.pdf" style="display:none" aria-label="上传控制逻辑文档">
-          <div class="chat-input-wrapper">
-            <textarea
-              id="chat-input"
-              placeholder="输入你的问题，或描述你想分析的控制逻辑..."
-              rows="1"
-              aria-label="对话输入"
-            ></textarea>
-            <button type="button" class="chat-send-btn" id="chat-send-btn" aria-label="发送">▶</button>
-          </div>
-        </div>
-        <p class="chat-input-hint">按 Enter 发送，Shift+Enter 换行。支持上传 .md / .txt 文档。</p>
-      </div>
-
-    </main>
-
-    <!-- ===== COLLAPSIBLE SIDEBAR (expert tools) ===== -->
-    <aside class="chat-sidebar collapsed" id="chat-sidebar" aria-label="专家工具">
-      <div class="chat-sidebar-header">
-        <h3>专家工具</h3>
-        <button type="button" class="chat-sidebar-close" id="sidebar-close" aria-label="关闭侧边栏">✕</button>
-      </div>
-
-      <div class="chat-sidebar-section">
-        <h4>Guided Demo</h4>
-        <button type="button" class="chat-sidebar-btn" id="chat-guided-demo-btn">
-          ▶ Guided Demo — 带我走一遍
-        </button>
-      </div>
-
-      <div class="chat-sidebar-section">
-        <h4>系统</h4>
-        <p class="chat-sidebar-note">当前系统: <span id="sidebar-current-system">Thrust Reverser</span></p>
-      </div>
-
-      <div class="chat-sidebar-section">
-        <h4>快捷操作</h4>
-        <div class="chat-shortcut-grid">
-          <button type="button" class="chat-shortcut-btn" data-prompt="如果 TLS 失效会怎样？">TLS失效?</button>
-          <button type="button" class="chat-shortcut-btn" data-prompt="解释 L3 到 VDT90 的链路">L3→VDT90</button>
-          <button type="button" class="chat-shortcut-btn" data-prompt="为什么 throttle lock 没释放">THR_LOCK?</button>
-          <button type="button" class="chat-shortcut-btn" data-prompt="把 logic3 的阈值改成 -8 会发生什么">阈值修改</button>
-        </div>
-      </div>
-
-      <div class="chat-sidebar-section">
-        <h4>Expert Mode</h4>
-        <a href="/demo.html" class="chat-sidebar-link">→ 完整 Demo 面板</a><br>
-        <a href="/workbench.html" class="chat-sidebar-link">→ Workbench 验收台</a><br>
-        <a href="/ai-doc-analyzer.html" class="chat-sidebar-link">→ AI Document Analyzer</a>
-      </div>
+      <p class="chat-drawer-footnote">抽屉只承载对话和快捷操作；主画布、Truth Eval 条、底部输入栏持续常驻。</p>
+      <script src="/chat.js"></script>
     </aside>
-
-  </div><!-- /chat-layout -->
-
-  <!-- Hidden bootstrap: load demo.css shared styles -->
-  <!-- All existing demo.css classes are available (panel, btn-primary, etc.) -->
-
-  <script src="/chat.js"></script>
+  </div>
 </body>
 </html>
