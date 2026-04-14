@@ -1562,6 +1562,62 @@ function runEfdsDemo() {
   runSystemSnapshot("efds");
 }
 
+function runGuidedDemo() {
+  var btn = document.getElementById("guided-demo-btn");
+  if (!btn || btn.disabled) return;
+  btn.disabled = true;
+
+  var hintBar = document.getElementById("guided-hint-bar");
+
+  function showHint(text) {
+    hintBar.textContent = text;
+    hintBar.classList.add("visible");
+  }
+  function hideHint() {
+    hintBar.classList.remove("visible");
+  }
+
+  // Step 1: Switch to thrust-reverser
+  var selector = document.getElementById("system-selector");
+  if (selector.value !== "thrust-reverser") {
+    selector.value = "thrust-reverser";
+    handleSystemSwitch();
+  }
+
+  // Step 2: After 2s, set TRA to -14 and altitude to 0
+  setTimeout(function() {
+    var traInput = document.getElementById("lever-tra");
+    if (traInput) {
+      traInput.value = -14;
+      traInput.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    showHint("TRA 拉到了 -14° 门槛，SW1 即将 latch...");
+
+    // Step 3: After 0.8s, set altitude to 0
+    setTimeout(function() {
+      var raInput = document.getElementById("condition-radio-altitude");
+      if (raInput) {
+        raInput.value = 0;
+        raInput.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      showHint("RA=0ft（off ground），altitude gate=false，logic1 不被 altitude 阻止。SW1 latch 中...");
+
+      // Step 4: After 0.5s, trigger reasoning
+      setTimeout(function() {
+        showHint("触发推理，查看完整链路状态...");
+        var snapBtn = document.querySelector(".system-snapshot-btn[data-system=\"thrust-reverser\"]");
+        if (snapBtn) snapBtn.click();
+
+        // Step 5: After reasoning returns, show coaching hint
+        setTimeout(function() {
+          showHint("💡 现在把 RA 改大（如 10ft），看看 altitude gate 如何阻止 logic1");
+          btn.disabled = false;
+        }, 1500);
+      }, 500);
+    }, 800);
+  }, 2000);
+}
+
 /** Reset all EFDS inputs to their default values. */
 function resetEfdsInputs() {
   const defaults = {
@@ -1679,6 +1735,10 @@ document.addEventListener("DOMContentLoaded", () => {
   if (efdsDemoBtn) efdsDemoBtn.addEventListener("click", runEfdsDemo);
   const efdsResetBtn = document.getElementById("efds-reset-btn");
   if (efdsResetBtn) efdsResetBtn.addEventListener("click", resetEfdsInputs);
+
+  // Guided Demo button
+  var guidedBtn = document.getElementById("guided-demo-btn");
+  if (guidedBtn) guidedBtn.addEventListener("click", runGuidedDemo);
 
   // Landing Gear demo/reset buttons
   const lgDemoBtn = document.getElementById("lg-demo-btn");

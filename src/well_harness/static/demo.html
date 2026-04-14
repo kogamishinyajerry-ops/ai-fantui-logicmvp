@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/demo.css">
   </head>
   <body>
+    <div id="guided-hint-bar" class="guided-hint-bar" aria-live="polite" style="display:none"></div>
     <main class="shell">
       <section class="hero" aria-labelledby="page-title">
         <div>
@@ -27,6 +28,9 @@
           <p class="showcase-mission">
             拖动反推拉杆，实时看 SW / logic / plant feedback 如何点亮。
           </p>
+          <button type="button" class="btn-primary" id="guided-demo-btn" style="margin-top:12px">
+            ▶ Guided Demo — 带我走一遍
+          </button>
         </div>
         <div class="chain-summary" aria-label="固定控制链路">
           SW1 -> L1/TLS115 -> TLS 解锁 -> SW2 -> L2/540V -> L3/EEC+PLS+PDU -> VDT90 -> L4/THR_LOCK

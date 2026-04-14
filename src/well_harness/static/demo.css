@@ -3273,3 +3273,26 @@ button.summary-chip,
   font-size: 0.68rem;
   letter-spacing: 0.03em;
 }
+
+.guided-hint-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #f59e0b;
+  color: #000;
+  text-align: center;
+  padding: 12px 20px;
+  font-size: 0.9rem;
+  z-index: 1000;
+  font-weight: 500;
+  font-family: inherit;
+}
+.guided-hint-bar.visible {
+  display: block;
+  animation: slideInUp 0.35s ease-out;
+}
+@keyframes slideInUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
