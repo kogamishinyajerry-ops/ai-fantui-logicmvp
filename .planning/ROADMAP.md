@@ -2,7 +2,7 @@
 
 ## Current Milestone
 
-**Project Freeze — All P0-P15 Complete (2026-04-14)**。Milestone 8 Closed。Opus 4.6 Final Adjudication: Project reached MVP达标线，建议冻结，等待外部用户反馈或新方向决策。GSD automation 保持运行保护回归。
+**Project Freeze — All P0-P15 Complete (2026-04-15)**。Milestone 8 Closed。Opus 4.6 Final Adjudication: Project reached MVP达标线，建议冻结。P16 AI Canvas Sync 已完成（真值引擎先行+AI标注后到）。GSD automation 保持运行保护回归。
 
 ## Phase P0: Control Tower And GSD Control Plane
 
@@ -341,3 +341,22 @@ Plans:
 | P2 | Content-type 白名单 | ✅ 已完成：仅允许application/json/text/plain (19fea92) |
 | P2 | Pre-existing notion sync failure 修复或归档 | ✅ 已归档：degraded modes已在P6/P9硬化，无未处理失败 |
 | P3 | 确认循环跳过选项 | ✅ 已完成：Skip→跳过，UI汉化 (19fea92) |
+
+## Phase P16: AI Canvas Sync（Opus 4.6 架构裁决 — 方向A+）
+
+Status: Done (2026-04-15)
+
+Opus 4.6 裁决：方向A+（真值引擎先行 + AI标注后到）。拒绝方向B（AI控制Canvas，违反项目宪法）。
+
+架构原则：**Truth engine是决定者，AI是解释者，Canvas只听truth engine的，AI只在Canvas旁加注释。**
+
+**目标**：让AI对话和SVG Canvas实现双向同步——Canvas状态基于truth engine，AI解释基于truth结果，AI讨论的节点在Canvas上有蓝色视觉标记。
+
+**Exit Criteria**：
+- `/api/chat/explain` 返回 `highlighted_nodes` + `suggestion_nodes` + `confidence`
+- 所有4个系统都可通过 `/api/system-snapshot` 获取节点状态快照
+- Canvas上节点有两层视觉状态：truth层（active/blocked/inactive）+ AI讨论层（.ai-discussed）
+- MiniMax context中包含truth engine的node_states（消除AI和Canvas的脱节）
+- 430 tests继续通过（无回归）
+
+**Plans:** 1 plan(s) — Codex GPT-5.4 执行
