@@ -2863,7 +2863,10 @@ button.summary-chip,
 .is-active.chain-node-svg {
   fill: rgba(83, 255, 146, 0.18);
   stroke: var(--accent-green);
-  filter: drop-shadow(0 0 8px rgba(83, 255, 146, 0.4));
+  stroke-width: 2;
+  filter:
+    drop-shadow(0 0 6px rgba(83, 255, 146, 0.58))
+    drop-shadow(0 0 14px rgba(83, 255, 146, 0.28));
 }
 
 /* Node blocked state */
@@ -2896,9 +2899,10 @@ button.summary-chip,
 
 /* Logic gate AND polygon */
 .logic-gate-svg {
-  fill: rgba(5, 10, 18, 0.85);
-  stroke: rgba(79, 184, 255, 0.55);
-  stroke-width: 1.5;
+  fill: rgba(12, 20, 30, 0.96);
+  stroke: rgba(125, 214, 255, 0.9);
+  stroke-width: 2.2;
+  filter: drop-shadow(0 0 4px rgba(125, 214, 255, 0.2));
   transition: fill 0.3s, stroke 0.3s, filter 0.3s;
 }
 
