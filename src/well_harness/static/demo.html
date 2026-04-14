@@ -33,7 +33,14 @@
           </button>
         </div>
         <div class="chain-summary" aria-label="固定控制链路">
-          SW1 -> L1/TLS115 -> TLS 解锁 -> SW2 -> L2/540V -> L3/EEC+PLS+PDU -> VDT90 -> L4/THR_LOCK
+          <span data-tooltip="Switch 1，上游使能信号，-14° TRA 时闭合">SW1</span> ->
+          <span data-tooltip="Logic Node 1，解锁链路入口">L1</span>/<span data-tooltip="Thrust Reverser Latch System，115PSI 液压锁">TLS115</span> ->
+          <span data-tooltip="Thrust Reverser Latch System，液压解锁阀">TLS</span> 解锁 ->
+          <span data-tooltip="Switch 2，L1 解锁后闭合">SW2</span> ->
+          <span data-tooltip="Logic Node 2，540V 电源母线使能">L2</span>/<span data-tooltip="540V 电源母线，旋翼/风扇驱动">540V</span> ->
+          <span data-tooltip="Logic Node 3，EEC+PLS+PDU 三路扇出">L3</span>/<span data-tooltip="Electronic Engine Controller，发动机控制电脑">EEC</span>+<span data-tooltip="Pressure Limit Switch，压力限制开关">PLS</span>+<span data-tooltip="Power Drive Unit，电机驱动单元">PDU</span> ->
+          <span data-tooltip="Variable Displacement Table，展开位置 ≥90% 时激活">VDT90</span> ->
+          <span data-tooltip="Logic Node 4，THR_LOCK 释放命令">L4</span>/<span data-tooltip="Thrust Lock，反推锁释放机构">THR_LOCK</span>
         </div>
       </section>
 
@@ -142,7 +149,7 @@
               <div class="lever-deck-grid">
                 <div class="lever-track-stack">
                   <div class="lever-readout">
-                    <span>TRA</span>
+                    <span data-tooltip="Thrust Reverser Actuation angle，反推作动角度，负值=拉出">TRA</span>
                     <output id="lever-tra-value" for="lever-tra">0.0°</output>
                   </div>
                   <label class="lever-track" for="lever-tra">
@@ -151,10 +158,10 @@
                     <span class="lever-track-label">右侧前推 0°</span>
                   </label>
                   <div class="lever-thresholds" id="lever-threshold-note" aria-label="拉杆阈值标尺">
-                    <span>SW1 -1.4° ~ -6.2°</span>
-                    <span>SW2 -5.0° ~ -9.8°</span>
-                    <span>L3 ≤ -11.74°</span>
-                    <span>L4 条件限值 -14°</span>
+                    <span data-tooltip="Switch 1，上游使能信号，-14° TRA 时闭合">SW1 -1.4° ~ -6.2°</span>
+                    <span data-tooltip="Switch 2，L1 解锁后闭合">SW2 -5.0° ~ -9.8°</span>
+                    <span data-tooltip="Logic Node 3，TRA 低于该阈值后满足展开扇出条件">L3 ≤ -11.74°</span>
+                    <span data-tooltip="Logic Node 4，达到该门槛后允许释放 THR_LOCK">L4 条件限值 -14°</span>
                   </div>
                   <div class="lever-range-rail" id="lever-range-note" aria-label="TRA 条件量程">
                     <span id="lever-conditional-range" class="range-chip is-conditional is-locked">条件深拉区 -32° ~ -14°（关闭）</span>
@@ -172,7 +179,7 @@
                   </div>
                   <div class="lever-live-grid" aria-label="高频演示控件">
                     <label class="live-control live-control-mode" for="condition-feedback-mode">
-                      <span>VDT 模式</span>
+                      <span data-tooltip="Variable Displacement Table，位移反馈模式切换">VDT 模式</span>
                       <select id="condition-feedback-mode" name="feedback_mode" aria-describedby="condition-feedback-note">
                         <option value="auto_scrubber">自动反馈</option>
                         <option value="manual_feedback_override" selected>手动 override</option>
@@ -180,7 +187,7 @@
                       <small id="condition-feedback-note">manual override 只改 simplified plant diagnostic override / feedback。</small>
                     </label>
                     <label class="live-control live-control-vdt" for="condition-deploy-position">
-                      <span>VDT 反馈 <output id="condition-deploy-position-value" for="condition-deploy-position">0%</output></span>
+                      <span data-tooltip="Variable Displacement Table，展开位移反馈百分比">VDT 反馈 <output id="condition-deploy-position-value" for="condition-deploy-position">0%</output></span>
                       <input id="condition-deploy-position" name="deploy_position_percent" type="range" min="0" max="100" step="1" value="0" aria-describedby="condition-deploy-note">
                       <small id="condition-deploy-note">>=90% 点亮 VDT90，推动 L4 / THR_LOCK 演示。</small>
                     </label>
@@ -222,17 +229,17 @@
               </div>
               <div class="condition-grid">
                 <label class="condition-range condition-span-1" for="condition-ra">
-                  <span>RA <output id="condition-ra-value" for="condition-ra">5.0 ft</output></span>
+                  <span data-tooltip="Radio Altitude，无线电高度，ft 为单位">RA <output id="condition-ra-value" for="condition-ra">5.0 ft</output></span>
                   <input id="condition-ra" name="radio_altitude_ft" type="range" min="0" max="20" step="0.1" value="5" aria-describedby="condition-ra-note">
                   <small id="condition-ra-note">L1 需要 RA &lt; 6ft</small>
                 </label>
                 <label class="condition-range condition-span-1" for="condition-n1k">
-                  <span>N1K <output id="condition-n1k-value" for="condition-n1k">35.0</output></span>
+                  <span data-tooltip="N1 Core Speed，风扇/核心机转速，百分比">N1K <output id="condition-n1k-value" for="condition-n1k">35.0</output></span>
                   <input id="condition-n1k" name="n1k" type="range" min="0" max="120" step="0.5" value="35" aria-describedby="condition-n1k-note">
                   <small id="condition-n1k-note">L3 需要 N1K &lt; limit</small>
                 </label>
                 <label class="condition-number condition-span-1" for="condition-n1k-limit">
-                  <span>N1K limit</span>
+                  <span data-tooltip="N1 Core Speed limit，L3 允许展开的最大转速阈值">N1K limit</span>
                   <input id="condition-n1k-limit" name="max_n1k_deploy_limit" type="number" min="0.1" max="120" step="0.5" value="60">
                 </label>
               </div>
@@ -251,25 +258,25 @@
                 </label>
                 <label class="condition-toggle condition-span-1">
                   <input id="condition-eec-enable" name="eec_enable" type="checkbox" checked>
-                  <span>EEC enable</span>
+                  <span data-tooltip="Electronic Engine Controller Enable，发动机控制使能">EEC enable</span>
                 </label>
               </div>
               <p class="condition-note">TLS / PLS / VDT / 位移仍然只是 simplified plant feedback，不是完整实时物理模型。</p>
             </section>
             <dl class="hud-grid" aria-label="拉杆状态 HUD">
-              <div><dt>TRA deg</dt><dd id="hud-tra">-</dd></div>
-              <div><dt>SW1 / SW2</dt><dd id="hud-switches">-</dd></div>
+              <div><dt data-tooltip="Thrust Reverser Actuation angle，deg 为单位">TRA deg</dt><dd id="hud-tra">-</dd></div>
+              <div><dt><span data-tooltip="Switch 1，上游使能信号，-14° TRA 时闭合">SW1</span> / <span data-tooltip="Switch 2，L1 解锁后闭合">SW2</span></dt><dd id="hud-switches">-</dd></div>
               <div><dt>无线电高度</dt><dd id="hud-ra">-</dd></div>
               <div><dt>发动机 / 地面</dt><dd id="hud-engine-ground">-</dd></div>
               <div><dt>反推抑制</dt><dd id="hud-inhibited">-</dd></div>
-              <div><dt>EEC enable</dt><dd id="hud-eec-enable">-</dd></div>
-              <div><dt>N1K / limit</dt><dd id="hud-n1k">-</dd></div>
+              <div><dt data-tooltip="Electronic Engine Controller Enable，发动机控制使能">EEC enable</dt><dd id="hud-eec-enable">-</dd></div>
+              <div><dt data-tooltip="N1 Core Speed，与 L3 转速限制阈值并列显示">N1K / limit</dt><dd id="hud-n1k">-</dd></div>
             </dl>
             <details class="feedback-panel" id="lever-feedback-details">
               <summary>反馈 / 诊断（simplified plant）</summary>
               <dl class="feedback-grid" aria-label="反馈与诊断">
-                <div><dt>TLS / PLS 解锁</dt><dd id="hud-locks">-</dd></div>
-                <div><dt>位移 / VDT90</dt><dd id="hud-position">-</dd></div>
+                <div><dt><span data-tooltip="Thrust Reverser Latch System，液压解锁阀">TLS</span> / <span data-tooltip="Pressure Limit Switch，压力限制开关">PLS</span> 解锁</dt><dd id="hud-locks">-</dd></div>
+                <div><dt>位移 / <span data-tooltip="Variable Displacement Table，展开位置 ≥90% 时激活">VDT90</span></dt><dd id="hud-position">-</dd></div>
               </dl>
               <p>这些是 first-cut feedback / diagnostic 假设，不是完整实时物理模型。</p>
             </details>
@@ -495,7 +502,7 @@
               <!-- ===== LN-01: Threat ===== -->
               <div class="input-group-header"><span class="presenter-callout">[LN-01]</span> 威胁分类</div>
               <label class="system-input-select" for="efds-threat-mls">
-                <span>MLS Threat State</span>
+                <span data-tooltip="Missile Launch Sensor，导弹来袭威胁传感器状态">MLS Threat State</span>
                 <select id="efds-threat-mls" name="sensor.threat.mls" aria-label="MLS Threat State">
                   <option value="IDLE" selected>IDLE</option>
                   <option value="THREAT_DETECTED">THREAT_DETECTED</option>
@@ -666,41 +673,41 @@
                 <!-- ===== ROW 1: Input Conditions ===== -->
                 <!-- L1 branch inputs -->
                 <rect x="10" y="18" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="radio_altitude_ft"/>
-                <text x="46" y="28" class="chain-node-label" text-anchor="middle">RA</text>
+                <text x="46" y="28" class="chain-node-label" text-anchor="middle" data-tooltip="Radio Altitude，无线电高度，ft 为单位">RA</text>
                 <text x="46" y="42" class="chain-node-value" text-anchor="middle" data-value-for="radio_altitude_ft">—</text>
 
                 <rect x="10" y="58" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="sw1"/>
-                <text x="46" y="68" class="chain-node-label" text-anchor="middle">SW1</text>
+                <text x="46" y="68" class="chain-node-label" text-anchor="middle" data-tooltip="Switch 1，-14° TRA 时闭合，上游使能">SW1</text>
                 <text x="46" y="82" class="chain-node-value" text-anchor="middle" data-value-for="sw1">—</text>
 
                 <rect x="10" y="98" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="reverser_inhibited"/>
-                <text x="46" y="108" class="chain-node-label" text-anchor="middle">Inhibit</text>
+                <text x="46" y="108" class="chain-node-label" text-anchor="middle" data-tooltip="Reverser Inhibited，安全抑制信号">Inhibit</text>
                 <text x="46" y="122" class="chain-node-value" text-anchor="middle" data-value-for="reverser_inhibited">—</text>
 
                 <!-- L2 branch inputs -->
                 <rect x="10" y="198" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="engine_running"/>
-                <text x="46" y="208" class="chain-node-label" text-anchor="middle">ENG</text>
+                <text x="46" y="208" class="chain-node-label" text-anchor="middle" data-tooltip="Engine Running，发动机运行状态">ENG</text>
                 <text x="46" y="222" class="chain-node-value" text-anchor="middle" data-value-for="engine_running">—</text>
 
                 <rect x="10" y="238" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="aircraft_on_ground"/>
-                <text x="46" y="248" class="chain-node-label" text-anchor="middle">GND</text>
+                <text x="46" y="248" class="chain-node-label" text-anchor="middle" data-tooltip="Aircraft on Ground，地面感应信号">GND</text>
                 <text x="46" y="262" class="chain-node-value" text-anchor="middle" data-value-for="aircraft_on_ground">—</text>
 
                 <rect x="10" y="278" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="sw2"/>
-                <text x="46" y="288" class="chain-node-label" text-anchor="middle">SW2</text>
+                <text x="46" y="288" class="chain-node-label" text-anchor="middle" data-tooltip="Switch 2，L1 解锁后闭合">SW2</text>
                 <text x="46" y="302" class="chain-node-value" text-anchor="middle" data-value-for="sw2">—</text>
 
                 <rect x="10" y="318" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="eec_enable"/>
-                <text x="46" y="328" class="chain-node-label" text-anchor="middle">EEC En</text>
+                <text x="46" y="328" class="chain-node-label" text-anchor="middle" data-tooltip="Electronic Engine Controller Enable，发动机控制使能">EEC En</text>
                 <text x="46" y="342" class="chain-node-value" text-anchor="middle" data-value-for="eec_enable">—</text>
 
                 <!-- L3/L4 inputs -->
                 <rect x="10" y="368" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="n1k"/>
-                <text x="46" y="378" class="chain-node-label" text-anchor="middle">N1K</text>
+                <text x="46" y="378" class="chain-node-label" text-anchor="middle" data-tooltip="N1 Core Speed，风扇/核心机转速，百分比">N1K</text>
                 <text x="46" y="392" class="chain-node-value" text-anchor="middle" data-value-for="n1k">—</text>
 
                 <rect x="10" y="408" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="tra_deg"/>
-                <text x="46" y="418" class="chain-node-label" text-anchor="middle">TRA</text>
+                <text x="46" y="418" class="chain-node-label" text-anchor="middle" data-tooltip="Thrust Reverser Actuation angle，反推作动角度，负值=拉出">TRA</text>
                 <text x="46" y="432" class="chain-node-value" text-anchor="middle" data-value-for="tra_deg">—</text>
 
                 <!-- ===== ROW 2: L1 and L2 AND gates ===== -->
@@ -709,11 +716,11 @@
                   <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic1"/>
                 </svg>
                 <text x="130" y="75" class="logic-gate-label" text-anchor="middle">AND</text>
-                <text x="130" y="42" class="chain-node-label" text-anchor="middle" data-node-label="logic1">L1</text>
+                <text x="130" y="42" class="chain-node-label" text-anchor="middle" data-node-label="logic1" data-tooltip="Logic Node 1，解锁链路入口">L1</text>
 
                 <!-- L1 output: TLS -->
                 <rect x="165" y="55" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="tls115"/>
-                <text x="201" y="65" class="chain-node-label" text-anchor="middle">TLS</text>
+                <text x="201" y="65" class="chain-node-label" text-anchor="middle" data-tooltip="Thrust Reverser Latch System，液压解锁阀">TLS</text>
                 <text x="201" y="79" class="chain-node-value" text-anchor="middle" data-value-for="tls_115vac_cmd">—</text>
 
                 <!-- L2 AND gate -->
@@ -721,11 +728,11 @@
                   <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic2"/>
                 </svg>
                 <text x="130" y="255" class="logic-gate-label" text-anchor="middle">AND</text>
-                <text x="130" y="222" class="chain-node-label" text-anchor="middle" data-node-label="logic2">L2</text>
+                <text x="130" y="222" class="chain-node-label" text-anchor="middle" data-node-label="logic2" data-tooltip="Logic Node 2，540V 电源母线使能">L2</text>
 
                 <!-- L2 output: ETRAC -->
                 <rect x="165" y="235" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="etrac_540v"/>
-                <text x="201" y="245" class="chain-node-label" text-anchor="middle">540V</text>
+                <text x="201" y="245" class="chain-node-label" text-anchor="middle" data-tooltip="540V 电源母线，旋翼/风扇驱动">540V</text>
                 <text x="201" y="259" class="chain-node-value" text-anchor="middle" data-value-for="etrac_540vdc_cmd">—</text>
 
                 <!-- ===== ROW 3: L3 AND gate ===== -->
@@ -734,24 +741,24 @@
                   <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic3"/>
                 </svg>
                 <text x="375" y="165" class="logic-gate-label" text-anchor="middle">AND</text>
-                <text x="375" y="132" class="chain-node-label" text-anchor="middle" data-node-label="logic3">L3</text>
+                <text x="375" y="132" class="chain-node-label" text-anchor="middle" data-node-label="logic3" data-tooltip="Logic Node 3，EEC+PLS+PDU 三路扇出">L3</text>
 
                 <!-- L3 outputs: EEC / PLS / PDU -->
                 <rect x="410" y="105" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="eec_deploy"/>
-                <text x="446" y="115" class="chain-node-label" text-anchor="middle">EEC</text>
+                <text x="446" y="115" class="chain-node-label" text-anchor="middle" data-tooltip="Electronic Engine Controller，发动机控制电脑">EEC</text>
                 <text x="446" y="129" class="chain-node-value" text-anchor="middle" data-value-for="eec_deploy_cmd">—</text>
 
                 <rect x="410" y="145" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="pls_power"/>
-                <text x="446" y="155" class="chain-node-label" text-anchor="middle">PLS</text>
+                <text x="446" y="155" class="chain-node-label" text-anchor="middle" data-tooltip="Pressure Limit Switch，压力限制开关">PLS</text>
                 <text x="446" y="169" class="chain-node-value" text-anchor="middle" data-value-for="pls_power_cmd">—</text>
 
                 <rect x="410" y="185" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="pdu_motor"/>
-                <text x="446" y="195" class="chain-node-label" text-anchor="middle">PDU</text>
+                <text x="446" y="195" class="chain-node-label" text-anchor="middle" data-tooltip="Power Drive Unit，电机驱动单元">PDU</text>
                 <text x="446" y="209" class="chain-node-value" text-anchor="middle" data-value-for="pdu_motor_cmd">—</text>
 
                 <!-- ===== ROW 4: VDT90 feedback ===== -->
                 <rect x="500" y="120" width="72" height="30" rx="6" class="chain-node-svg sensor-node-svg" data-node="vdt90"/>
-                <text x="536" y="130" class="chain-node-label" text-anchor="middle">VDT90</text>
+                <text x="536" y="130" class="chain-node-label" text-anchor="middle" data-tooltip="Variable Displacement Table，展开位置 ≥90% 时激活">VDT90</text>
                 <text x="536" y="144" class="chain-node-value" text-anchor="middle" data-value-for="deploy_90_percent_vdt">—</text>
 
                 <!-- ===== ROW 5: L4 AND gate ===== -->
@@ -759,11 +766,11 @@
                   <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic4"/>
                 </svg>
                 <text x="615" y="165" class="logic-gate-label" text-anchor="middle">AND</text>
-                <text x="615" y="132" class="chain-node-label" text-anchor="middle" data-node-label="logic4">L4</text>
+                <text x="615" y="132" class="chain-node-label" text-anchor="middle" data-node-label="logic4" data-tooltip="Logic Node 4，THR_LOCK 释放命令">L4</text>
 
                 <!-- THR_LOCK output -->
                 <rect x="650" y="145" width="100" height="30" rx="6" class="chain-node-svg command-node-svg final-node-svg" data-node="thr_lock"/>
-                <text x="700" y="155" class="chain-node-label" text-anchor="middle">THR_LOCK</text>
+                <text x="700" y="155" class="chain-node-label" text-anchor="middle" data-tooltip="Thrust Lock，反推锁释放机构">THR_LOCK</text>
                 <text x="700" y="169" class="chain-node-value" text-anchor="middle" data-value-for="throttle_electronic_lock_release_cmd">—</text>
 
                 <!-- ===== CONNECTION LINES ===== -->
@@ -807,10 +814,10 @@
 
                 <!-- Section labels -->
                 <text x="46" y="12" class="section-label">输入条件</text>
-                <text x="130" y="105" class="section-label">L1</text>
-                <text x="130" y="285" class="section-label">L2</text>
-                <text x="375" y="105" class="section-label">L3</text>
-                <text x="615" y="105" class="section-label">L4</text>
+                <text x="130" y="105" class="section-label" data-tooltip="Logic Node 1，解锁链路入口">L1</text>
+                <text x="130" y="285" class="section-label" data-tooltip="Logic Node 2，540V 电源母线使能">L2</text>
+                <text x="375" y="105" class="section-label" data-tooltip="Logic Node 3，EEC+PLS+PDU 三路扇出">L3</text>
+                <text x="615" y="105" class="section-label" data-tooltip="Logic Node 4，THR_LOCK 释放命令">L4</text>
               </svg>
             </div>
 
@@ -1362,7 +1369,7 @@
                 <!-- ===== LN-01: Threat Classification ===== -->
                 <!-- MLS Sensor -->
                 <rect x="30" y="50" width="120" height="44" rx="6" class="chain-node-svg sensor-node-svg" data-node="sensor.threat.mls"/>
-                <text x="90" y="66" class="chain-node-label" text-anchor="middle">MLS 传感器</text>
+                <text x="90" y="66" class="chain-node-label" text-anchor="middle" data-tooltip="Missile Launch Sensor，导弹来袭威胁传感器">MLS 传感器</text>
                 <text x="90" y="82" class="chain-node-value" text-anchor="middle" data-value-for="sensor.threat.mls">—</text>
 
                 <!-- LN-01 Gate -->

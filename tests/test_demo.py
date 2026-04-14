@@ -2752,7 +2752,8 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn("反推逻辑演示舱", html)
         self.assertIn("确定性演示层", html)
         self.assertIn("简化 plant", html)
-        self.assertIn("SW1 -> L1/TLS115 -> TLS 解锁", html)
+        self.assertIn("data-tooltip", html)  # acronym tooltip system
+        self.assertIn("固定控制链路", html)  # chain-summary aria-label preserved
         self.assertIn("data-node=\"logic4\"", html)
         self.assertIn("data-node=\"vdt90\"", html)
         self.assertIn("data-prompt=\"为什么 throttle lock 没释放\"", html)

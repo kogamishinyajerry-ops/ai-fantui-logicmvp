@@ -3296,3 +3296,39 @@ button.summary-chip,
   from { transform: translateY(100%); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+/* ── Acronym Tooltip System ── */
+[data-tooltip] {
+  position: relative;
+  cursor: help;
+  border-bottom: 1px dashed rgba(255,176,55,0.5);
+}
+[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a2535;
+  color: #e3edf7;
+  border: 1px solid rgba(79,184,255,0.35);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  white-space: nowrap;
+  z-index: 200;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+[data-tooltip]:hover::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(79,184,255,0.35);
+  z-index: 201;
+  pointer-events: none;
+}
