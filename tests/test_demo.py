@@ -815,10 +815,10 @@ class DemoIntentLayerTests(unittest.TestCase):
             thread.join(timeout=2)
 
         self.assertEqual(response.status, 200)
-        self.assertIn("<title>Well Harness 反推逻辑演示舱</title>", html)
-        self.assertIn("id=\"demo-prompt\"", html)
-        self.assertIn("logic4 和 throttle lock 有什么关系", html)
-        self.assertIn("原始 JSON 调试", html)
+        # Phase 3: root URL now serves chat.html (new default entry point)
+        self.assertIn("<title>AI FANTUI Logic — Chat</title>", html)
+        self.assertIn("id=\"chat-input\"", html)
+        self.assertIn("id=\"chat-messages\"", html)
 
     def test_demo_server_serves_workbench_acceptance_shell(self):
         server, thread = start_demo_server()
@@ -1301,7 +1301,7 @@ class DemoIntentLayerTests(unittest.TestCase):
 
     def test_demo_server_open_browser_helper_reports_failures(self):
         url = demo_server.demo_url("127.0.0.1", 8000)
-        self.assertEqual(url, "http://127.0.0.1:8000/")
+        self.assertEqual(url, "http://127.0.0.1:8000/chat.html")
 
         opener = mock.Mock(return_value=True)
         self.assertTrue(demo_server.open_browser(url, opener=opener))
@@ -1311,7 +1311,7 @@ class DemoIntentLayerTests(unittest.TestCase):
         with redirect_stdout(buffer):
             self.assertFalse(demo_server.open_browser(url, opener=mock.Mock(return_value=False)))
         self.assertIn("Could not open browser automatically.", buffer.getvalue())
-        self.assertIn("Open http://127.0.0.1:8000/ manually.", buffer.getvalue())
+        self.assertIn("Open http://127.0.0.1:8000/chat.html manually.", buffer.getvalue())
 
         buffer = io.StringIO()
         with redirect_stdout(buffer):
@@ -1319,7 +1319,7 @@ class DemoIntentLayerTests(unittest.TestCase):
                 demo_server.open_browser(url, opener=mock.Mock(side_effect=RuntimeError("blocked")))
             )
         self.assertIn("Could not open browser automatically: blocked.", buffer.getvalue())
-        self.assertIn("Open http://127.0.0.1:8000/ manually.", buffer.getvalue())
+        self.assertIn("Open http://127.0.0.1:8000/chat.html manually.", buffer.getvalue())
 
     def test_demo_server_help_documents_optional_open_affordance(self):
         result = subprocess.run(
@@ -1372,8 +1372,8 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIs(created_servers[0].handler_class, DemoRequestHandler)
         self.assertTrue(created_servers[0].serve_forever_called)
         self.assertTrue(created_servers[0].server_close_called)
-        open_browser.assert_called_once_with("http://127.0.0.1:8765/")
-        self.assertIn("Serving well-harness demo UI at http://127.0.0.1:8765/", buffer.getvalue())
+        open_browser.assert_called_once_with("http://127.0.0.1:8765/chat.html")
+        self.assertIn("Serving well-harness demo UI at http://127.0.0.1:8765/chat.html", buffer.getvalue())
 
         with mock.patch.object(demo_server, "ThreadingHTTPServer", side_effect=fake_server):
             with mock.patch.object(demo_server, "open_browser") as open_browser:

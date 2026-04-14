@@ -129,11 +129,21 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, workbench_recent_archives_payload())
             return
 
-        if parsed.path in ("", "/", "/demo.html"):
+        # Phase 3: chat.html is the new default entry point
+        if parsed.path in ("", "/"):
+            self._serve_static("chat.html")
+            return
+
+        # Backward-compat aliases (expert sub-path)
+        if parsed.path in ("/demo.html", "/expert/demo.html"):
             self._serve_static("demo.html")
             return
 
-        if parsed.path == "/ai-doc-analyzer.html":
+        if parsed.path in ("/workbench.html", "/expert/workbench.html"):
+            self._serve_static("workbench.html")
+            return
+
+        if parsed.path in ("/ai-doc-analyzer.html", "/expert/ai-doc-analyzer.html"):
             self._serve_static("ai-doc-analyzer.html")
             return
 
@@ -1784,7 +1794,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def demo_url(host: str, port: int) -> str:
-    return f"http://{host}:{port}/"
+    return f"http://{host}:{port}/chat.html"
 
 
 def open_browser(url: str, opener=webbrowser.open) -> bool:
