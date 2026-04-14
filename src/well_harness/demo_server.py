@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+from functools import lru_cache
 import json
+from typing import Any
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -279,7 +281,8 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         self._send_bytes(200, target_path.read_bytes(), content_type)
 
     def _send_json(self, status_code: int, payload: dict):
-        response = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True).encode("utf-8")
+        # Compact JSON: no indentation (machine-to-machine API, not human-readable)
+        response = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self._send_bytes(status_code, response, "application/json; charset=utf-8")
 
     def _send_bytes(self, status_code: int, body: bytes, content_type: str):
@@ -1370,6 +1373,15 @@ SYSTEM_REGISTRY = {
     "bleed-air": build_bleed_air_controller_adapter,
     "efds": build_efds_controller_adapter,
 }
+
+# Cache built (stateless) adapters — avoid per-request instantiation overhead.
+@lru_cache(maxsize=4)
+def _cached_adapter(system_id: str) -> Any:
+    builder = SYSTEM_REGISTRY.get(system_id)
+    if builder is None:
+        return None
+    return builder()
+
 SYSTEM_SNAPSHOT_PATH = "/api/system-snapshot"
 
 
@@ -1512,10 +1524,9 @@ def _spec_to_nodes(spec: dict, truth_evaluation: Any = None) -> list[dict]:
 
 def system_snapshot_payload(system_id: str) -> dict:
     """Build the payload for GET /api/system-snapshot."""
-    builder = SYSTEM_REGISTRY.get(system_id)
-    if builder is None:
+    adapter = _cached_adapter(system_id)
+    if adapter is None:
         return {"error": "unknown_system", "system_id": system_id}
-    adapter = builder()
     spec = adapter.load_spec()
     default_snapshot = _default_snapshot_for_system(system_id)
     truth_eval = adapter.evaluate_snapshot(default_snapshot)
@@ -1532,10 +1543,9 @@ def system_snapshot_payload(system_id: str) -> dict:
 
 def system_snapshot_post_payload(system_id: str, snapshot: dict) -> dict:
     """Evaluate a user-modified snapshot for a given system. Used by non-thrust systems."""
-    builder = SYSTEM_REGISTRY.get(system_id)
-    if builder is None:
+    adapter = _cached_adapter(system_id)
+    if adapter is None:
         return {"error": "unknown_system", "system_id": system_id}
-    adapter = builder()
     spec = adapter.load_spec()
     truth_eval = adapter.evaluate_snapshot(snapshot)
     nodes = _spec_to_nodes(spec, truth_eval)

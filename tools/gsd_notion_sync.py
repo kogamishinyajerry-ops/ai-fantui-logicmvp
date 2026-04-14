@@ -899,17 +899,13 @@ def ensure_live_active_pages(
 
     if pages_to_check:
         needs_replacement: list[tuple[str, str, str]] = []
-        with ThreadPoolExecutor(max_workers=min(len(pages_to_check), 8)) as executor:
-            futures = {
-                executor.submit(_check_page_live, client, key, current_id): (key, title)
-                for key, title, current_id in pages_to_check
-            }
-            for future in as_completed(futures):
-                result = future.result()
-                if result is not None:
-                    key, current_id, _ = result
-                    title = futures[future][1]
-                    needs_replacement.append((key, title, current_id))
+        # Sequential check: preserves deterministic ordering so Phase 2
+        # assignments match the needs_replacement list order.
+        # (Archived pages are rare; parallelism here adds no meaningful benefit.)
+        for key, title, current_id in pages_to_check:
+            result = _check_page_live(client, key, current_id)
+            if result is not None:
+                needs_replacement.append((key, title, current_id))
 
         # Phase 2: sequential replacement for pages that need it (rare, config writes)
         for key, title, current_id in needs_replacement:

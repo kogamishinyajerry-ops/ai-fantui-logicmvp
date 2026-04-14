@@ -252,14 +252,19 @@ Ran 189 tests in 20.897s
             config_path.write_text("{}", encoding="utf-8")
 
             client = unittest.mock.Mock()
-            client.get_page.side_effect = [
-                {"archived": False, "in_trash": False},
-                {"archived": True, "in_trash": True},
-                {"archived": False, "in_trash": False},
-                {"archived": False, "in_trash": False},
-                {"archived": True, "in_trash": True},
-                {"archived": False, "in_trash": False},
-            ]
+            # Deterministic callable keyed by page_id instead of positional list,
+            # so completion order from parallel Phase 1 cannot mis-align results.
+            _page_responses = {
+                "dashboard-page":    {"archived": False, "in_trash": False},
+                "archived-status":  {"archived": True,  "in_trash": True},
+                "live-brief":        {"archived": False, "in_trash": False},
+                "archived-freeze":   {"archived": True,  "in_trash": True},
+                "new-status":         {"archived": False, "in_trash": False},
+                "new-freeze":        {"archived": False, "in_trash": False},
+            }
+            client.get_page.side_effect = lambda pid: _page_responses.get(
+                pid, {"archived": True, "in_trash": True}
+            )
             client.create_child_page.side_effect = ["new-status", "new-freeze"]
 
             replacements = ensure_live_active_pages(client, config, config_path=config_path)
