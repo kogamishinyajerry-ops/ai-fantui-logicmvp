@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Cross Domain Links Registry",
+  "description": "人工确认的跨域信号依赖关联登记表。整合不是合并——每条关联必须基于工程文档或人类工程师的显式声明。AI 不能自动创建跨域关联。",
+  "version": "1.0",
+  "created": "2026-04-15",
+  "registry": [],
+  "_principle": "跨域关联 = 信号级依赖 + 人工确认。不满足条件的'看起来相关'不是整合，是猜测。",
+  "_three_levels": {
+    "Level0_coexistence": "两个系统都托管在同一底座上，自动生效，无需注册",
+    "Level1_signal_dependency": "域A节点输出是域B节点的输入条件，需人类工程师提供工程依据（spec/线路图/ATA章节号）",
+    "Level2_joint_reasoning": "多域状态组合导致域外系统级结论，需人类工程师+Opus 4.6架构审查"
+  },
+  "_prohibited": [
+    "AI自动推断两个域有关联",
+    "因'看起来相关'而合并两个adapter",
+    "在域A的adapter内硬编码域B的节点名",
+    "AI的跨域解释被写入truth evaluation"
+  ],
+  "_link_entry_schema": {
+    "type": "object",
+    "required": ["id", "source_system", "source_node", "target_system", "target_node", "level", "approved_by", "approved_date", "engineering_basis"],
+    "properties": {
+      "id": {
+        "type": "string",
+        "description": "唯一标识符，格式：cdl-{source_system}-{target_system}-{seq}"
+      },
+      "source_system": {
+        "type": "string",
+        "description": "源系统ID，如 thrust-reverser / landing-gear / bleed-air / efds"
+      },
+      "source_node": {
+        "type": "string",
+        "description": "源系统中的节点ID，该节点的状态影响目标系统"
+      },
+      "target_system": {
+        "type": "string",
+        "description": "目标系统ID"
+      },
+      "target_node": {
+        "type": "string",
+        "description": "目标系统中的节点ID，受到源节点状态影响"
+      },
+      "link_type": {
+        "type": "string",
+        "enum": ["enables", "blocks", "modifies", "monitors"],
+        "description": "关联类型：enables(使能)/blocks(阻塞)/modifies(修改)/monitors(监控)"
+      },
+      "level": {
+        "type": "integer",
+        "enum": [1, 2],
+        "description": "整合层级：1=信号关联，2=联合推理"
+      },
+      "engineering_basis": {
+        "type": "object",
+        "required": ["document_type", "reference"],
+        "properties": {
+          "document_type": {
+            "type": "string",
+            "enum": ["wiring_diagram", "ata_manual", "oem_spec", "engineering_judgment"],
+            "description": "工程依据类型"
+          },
+          "reference": {
+            "type": "string",
+            "description": "具体文档引用，如 ATA章节号、线路图页码、OEM spec段号"
+          },
+          "notes": {
+            "type": "string",
+            "description": "补充说明"
+          }
+        }
+      },
+      "approved_by": {
+        "type": "string",
+        "description": "确认此关联的人类工程师姓名或ID"
+      },
+      "approved_date": {
+        "type": "string",
+        "format": "date",
+        "description": "确认日期，ISO 8601格式"
+      },
+      "status": {
+        "type": "string",
+        "enum": ["active", "needs_review", "revoked"],
+        "default": "active",
+        "description": "关联状态：active(生效中)/needs_review(需重新确认)/revoked(已撤销)"
+      },
+      "revoked_date": {
+        "type": "string",
+        "format": "date",
+        "description": "撤销日期（仅当status=revoked时填写）"
+      },
+      "revoked_reason": {
+        "type": "string",
+        "description": "撤销原因（仅当status=revoked时填写）"
+      }
+    }
+  },
+  "_cycle_detection": "系统必须检测 source→target→...→source 的循环。若检测到循环，注册请求必须被拒绝。",
+  "_annotation_requirement": "当AI响应跨域查询时：若关联在registry中active→基于truth结果解释；若关联不在registry中→必须标注'⚠️ 未经真值引擎验证'"
+}
