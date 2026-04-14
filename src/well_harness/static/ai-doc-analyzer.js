@@ -373,7 +373,7 @@ function _renderClarificationArea(firstQuestion, progress) {
   var isOptional = firstQuestion.is_optional;
 
   var skipBtnHtml = isOptional ?
-    '<button type="button" class="ai-doc-skip-btn" id="ai-doc-skip-btn">Skip</button>' :
+    '<button type="button" class="ai-doc-skip-btn" id="ai-doc-skip-btn">跳过</button>' :
     "";
 
   var html =
@@ -381,10 +381,10 @@ function _renderClarificationArea(firstQuestion, progress) {
     '  <div class="ai-doc-progress-label">Question ' + (answered + 1) + " / " + total + "</div>" +
     '  <div class="ai-doc-question-text">' + _escHtml(firstQuestion.question) + "</div>" +
     '  <input type="text" class="ai-doc-answer-input" id="ai-doc-answer-input" ' +
-    '     placeholder="Enter your answer and press Enter or click Submit" ' +
-    '     aria-label="Answer input" autocomplete="off">' +
+    '     placeholder="输入你的回答，按回车或点击提交" ' +
+    '     aria-label="回答输入" autocomplete="off">' +
     '  <div class="ai-doc-submit-row">' +
-    '    <button type="button" class="ai-doc-submit-btn" id="ai-doc-submit-btn">Submit Answer</button>' +
+    '    <button type="button" class="ai-doc-submit-btn" id="ai-doc-submit-btn">提交回答</button>' +
     skipBtnHtml +
     "  </div>" +
     "</div>";

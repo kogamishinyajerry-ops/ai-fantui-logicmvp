@@ -186,6 +186,13 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(413, {"error": "payload_too_large", "message": f"Request body exceeds maximum of {_MAX_DOCUMENT_BYTES} bytes."})
             return
 
+        # Guard: enforce Content-Type whitelist (defense-in-depth; browser enforces this too)
+        content_type = self.headers.get("Content-Type", "").split(";")[0].strip()
+        allowed_types = {"application/json", "text/plain", "application/x-www-form-urlencoded"}
+        if content_type and content_type not in allowed_types:
+            self._send_json(415, {"error": "unsupported_media_type", "message": f"Content-Type '{content_type}' is not supported. Use application/json or text/plain."})
+            return
+
         try:
             body = self.rfile.read(content_length).decode("utf-8") if content_length else "{}"
             request_payload = json.loads(body)
@@ -336,8 +343,8 @@ def _get_p14_store() -> P14SessionStore:
     return _p14_session_store
 
 
-# Server-side DoS guard for direct API callers; the browser client still enforces 10 MB.
-_MAX_DOCUMENT_BYTES = 50 * 1024 * 1024  # 50 MB server-side DoS guard (JS client already limits to 10MB)
+# Server-side DoS guard: 10 MB, aligned with browser client limit.
+_MAX_DOCUMENT_BYTES = 10 * 1024 * 1024  # 10 MB production limit
 
 
 _MINIMAX_API_KEY: str | None = None
@@ -526,7 +533,7 @@ def _handle_p14_analyze(request_payload: dict) -> tuple[dict | None, dict | None
     if len(document_text.encode("utf-8")) > _MAX_DOCUMENT_BYTES:
         return None, {
             "error": "document_too_large",
-            "message": f"document_text exceeds maximum size of {_MAX_DOCUMENT_BYTES} bytes (50MB server-side limit).",
+            "message": f"document_text exceeds maximum size of {_MAX_DOCUMENT_BYTES} bytes (10MB server-side limit).",
         }
 
     document_name = request_payload.get("document_name", "untitled")
