@@ -390,6 +390,12 @@ a { color: var(--accent-cyan); }
   margin-top: 2px;
 }
 
+/* System input panels share the prompt grid area, toggled by JS */
+.showcase-grid .system-input-panel {
+  grid-area: prompt;
+  display: flex; /* override: keep flex from .system-input-panel base */
+}
+
 .panel {
   background: linear-gradient(180deg, rgba(16, 25, 37, 0.98), rgba(9, 15, 25, 0.98));
   border: 1px solid var(--panel-border);

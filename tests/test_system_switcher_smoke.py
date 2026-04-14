@@ -11,7 +11,7 @@ DEMO_URL = "http://localhost:7891/"
 
 OUTPUT_FORMATS = {"text", "json"}
 
-SYSTEMS = ("thrust-reverser", "landing-gear", "bleed-air")
+SYSTEMS = ("thrust-reverser", "landing-gear", "bleed-air", "efds")
 
 
 def parse_output_format(argv: list[str]) -> str:
@@ -61,7 +61,7 @@ def run_smoke() -> tuple[int, dict[str, Any], list[str]]:
 
     report = {
         "status": "pass",
-        "scenario_count": 9,
+        "scenario_count": 12,
         "completed_scenarios": 0,
         "failed_scenario": None,
         "scenarios": [],
@@ -146,23 +146,23 @@ def run_smoke() -> tuple[int, dict[str, Any], list[str]]:
                 report["failed_requests"] = list(failed_requests)
                 return 1, report, text_lines
 
-            # --- Scenario 3: System selector has exactly 3 options with correct values ---
+            # --- Scenario 3: System selector has exactly 4 options with correct values ---
             options = page.locator("#system-selector option")
             option_count = options.count()
             option_values = [options.nth(i).get_attribute("value") for i in range(option_count)]
             expected_values = list(SYSTEMS)
-            if option_count == 3 and option_values == expected_values:
+            if option_count == len(SYSTEMS) and option_values == expected_values:
                 ok = _record(
                     _pass(
                         "system_selector_options",
-                        f"3 options found with values {option_values}",
+                        f"{option_count} options found with values {option_values}",
                     )
                 )
             else:
                 ok = _record(
                     _fail(
                         "system_selector_options",
-                        f"expected 3 options {expected_values} but got {option_count}: {option_values}",
+                        f"expected {len(SYSTEMS)} options {expected_values} but got {option_count}: {option_values}",
                     )
                 )
 
@@ -327,6 +327,94 @@ def run_smoke() -> tuple[int, dict[str, Any], list[str]]:
                         f"{len(all_errors)} error(s): {all_errors[:3]}",
                     )
                 )
+
+            # --- Scenario 10: Switch to efds ---
+            page.select_option("#system-selector", "efds")
+            page.wait_for_timeout(400)
+            efds_visible = _topology_visible(page, "efds")
+            efds_tr_hidden = _topology_hidden(page, "thrust-reverser")
+            efds_lg_hidden = _topology_hidden(page, "landing-gear")
+            efds_ba_hidden = _topology_hidden(page, "bleed-air")
+            if efds_visible and efds_tr_hidden and efds_lg_hidden and efds_ba_hidden:
+                ok = _record(
+                    _pass(
+                        "switch_to_efds",
+                        "#chain-topology-efds visible; others hidden",
+                    )
+                )
+            else:
+                ok = _record(
+                    _fail(
+                        "switch_to_efds",
+                        f"efds visible={efds_visible}, thrust-reverser hidden={efds_tr_hidden}, landing-gear hidden={efds_lg_hidden}, bleed-air hidden={efds_ba_hidden}",
+                    )
+                )
+
+            if not ok:
+                report["status"] = "fail"
+                report["failed_scenario"] = "switch_to_efds"
+                report["console_errors"] = list(console_errors)
+                report["js_exceptions"] = list(js_exceptions)
+                report["failed_requests"] = list(failed_requests)
+                return 1, report, text_lines
+
+            # --- Scenario 11: Lever panel hidden for non-thrust systems ---
+            # When non-thrust system is selected, .lever-panel should be hidden
+            # and the corresponding .system-input-panel should be visible
+            page.select_option("#system-selector", "landing-gear")
+            page.wait_for_timeout(400)
+            lever_hidden = not page.locator(".lever-panel").is_visible(timeout=2000)
+            lg_panel_visible = page.locator("#landing-gear-inputs").is_visible(timeout=2000)
+            if lever_hidden and lg_panel_visible:
+                ok = _record(
+                    _pass(
+                        "landing_gear_input_panel_visible",
+                        ".lever-panel hidden; #landing-gear-inputs visible",
+                    )
+                )
+            else:
+                ok = _record(
+                    _fail(
+                        "landing_gear_input_panel_visible",
+                        f"lever-panel hidden={lever_hidden}, #landing-gear-inputs visible={lg_panel_visible}",
+                    )
+                )
+
+            if not ok:
+                report["status"] = "fail"
+                report["failed_scenario"] = "landing_gear_input_panel_visible"
+                report["console_errors"] = list(console_errors)
+                report["js_exceptions"] = list(js_exceptions)
+                report["failed_requests"] = list(failed_requests)
+                return 1, report, text_lines
+
+            # --- Scenario 12: EFDS input panel visible when efds selected ---
+            page.select_option("#system-selector", "efds")
+            page.wait_for_timeout(400)
+            efds_panel_visible = page.locator("#efds-inputs").is_visible(timeout=2000)
+            efds_lever_hidden2 = not page.locator(".lever-panel").is_visible(timeout=2000)
+            if efds_panel_visible and efds_lever_hidden2:
+                ok = _record(
+                    _pass(
+                        "efds_input_panel_visible",
+                        "#efds-inputs visible; .lever-panel hidden",
+                    )
+                )
+            else:
+                ok = _record(
+                    _fail(
+                        "efds_input_panel_visible",
+                        f"#efds-inputs visible={efds_panel_visible}, lever-panel hidden={efds_lever_hidden2}",
+                    )
+                )
+
+            if not ok:
+                report["status"] = "fail"
+                report["failed_scenario"] = "efds_input_panel_visible"
+                report["console_errors"] = list(console_errors)
+                report["js_exceptions"] = list(js_exceptions)
+                report["failed_requests"] = list(failed_requests)
+                return 1, report, text_lines
 
             context.close()
             browser.close()

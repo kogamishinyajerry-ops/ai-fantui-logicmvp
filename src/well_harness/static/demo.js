@@ -61,8 +61,12 @@ async function handleSystemSwitch(systemId) {
       conditionPanel.style.display = systemId === "thrust-reverser" ? "" : "none";
     }
 
-    // Show/hide the correct system input panel
-    // lever-panel is for thrust-reverser only
+    // Show/hide lever-panel vs system-input-panel
+    // lever-panel is for thrust-reverser only; others use system-input-panel
+    const leverPanel = document.querySelector(".lever-panel");
+    if (leverPanel) {
+      leverPanel.style.display = systemId === "thrust-reverser" ? "" : "none";
+    }
     document.querySelectorAll(".system-input-panel").forEach((el) => { el.style.display = "none"; });
     const lgPanel = document.getElementById("landing-gear-inputs");
     const baPanel = document.getElementById("bleed-air-inputs");
