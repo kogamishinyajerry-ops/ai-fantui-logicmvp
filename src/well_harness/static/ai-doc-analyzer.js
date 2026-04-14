@@ -522,6 +522,8 @@ if (_pipelineBtn) {
       var bundle = result.bundle || {};
       var snapshot = result.system_snapshot || {};
       var assessment = result.assessment || {};
+      const _intakeJson = JSON.stringify(_intakePacket, null, 2);
+      const _workbenchUrl = "/workbench.html?intake=" + encodeURIComponent(_intakeJson);
 
       var html =
         '<div class="ai-doc-pipeline-result-card">' +
@@ -539,6 +541,13 @@ if (_pipelineBtn) {
       if (bundle.scenario_count !== undefined) {
         html += '<div class="ai-doc-pipeline-result-row"><span class="label">Playback Scenarios:</span> ' + bundle.scenario_count + '</div>';
       }
+
+      html +=
+        '  <div class="ai-doc-pipeline-result-actions">' +
+        '    <a href="' + _workbenchUrl + '" target="_blank" rel="noopener noreferrer" class="ai-doc-pipeline-action-btn" style="display:inline-block;margin-top:8px;padding:6px 14px;background:rgba(40,244,255,0.12);border:1px solid rgba(40,244,255,0.4);color:#28f4ff;border-radius:6px;text-decoration:none;font-size:0.82rem">' +
+        "      ↗ 在 Workbench 中查看诊断" +
+        "    </a>" +
+        "  </div>";
 
       html += "</div>";
 

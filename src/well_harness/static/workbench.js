@@ -3010,6 +3010,47 @@ function collectWorkbenchRequestPayload() {
   };
 }
 
+function checkUrlIntakeParam() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const intakeRaw = params.get("intake");
+    let intakePacket;
+    let textarea;
+    if (!intakeRaw) {
+      return false;
+    }
+    try {
+      intakePacket = JSON.parse(intakeRaw);
+    } catch (parseError) {
+      intakePacket = JSON.parse(decodeURIComponent(intakeRaw));
+    }
+    if (!intakePacket || typeof intakePacket !== "object") {
+      return false;
+    }
+    setPacketEditor(intakePacket);
+    textarea = workbenchElement("workbench-packet-json");
+    if (textarea) {
+      textarea.scrollTop = textarea.scrollHeight;
+    }
+    pushWorkbenchPacketRevision(buildWorkbenchPacketRevisionEntry(intakePacket, {
+      title: "Pipeline 结果预载入",
+      summary: "通过 URL intake 参数载入的 packet。",
+    }));
+    renderPreparationBoard("Pipeline 结果已经装载，系统会自动生成 bundle 并显示诊断结果。");
+    renderSystemFingerprintFromPacketPayload(intakePacket, {
+      badgeState: "idle",
+      badgeText: "画像已载入",
+      summary: "Pipeline 结果已经带入当前 workbench，系统会直接继续生成 bundle。",
+    });
+    setPacketSourceStatus("当前样例：来自 AI Document Analyzer 的 Pipeline 结果。页面会自动生成 Bundle。");
+    setCurrentWorkbenchRunLabel("Pipeline 结果导入");
+    setActiveWorkbenchPreset("");
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
 async function loadBootstrapPayload() {
   setRequestStatus("正在加载 bootstrap 样例...", "neutral");
   const response = await fetch(workbenchBootstrapPath, {method: "GET"});
@@ -3279,5 +3320,13 @@ function installViewModeHandlers() {
 window.addEventListener("DOMContentLoaded", () => {
   installViewModeHandlers();
   installToolbarHandlers();
+  if (checkUrlIntakeParam()) {
+    const bundleBtn = workbenchElement("run-workbench-bundle") || workbenchElement("workbench-bundle-btn");
+    if (bundleBtn) {
+      setRequestStatus("正在从 Pipeline 结果生成 Bundle...", "neutral");
+      bundleBtn.click();
+    }
+    return;
+  }
   void loadBootstrapPayload();
 });
