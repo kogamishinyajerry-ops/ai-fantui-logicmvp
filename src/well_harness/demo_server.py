@@ -377,6 +377,7 @@ def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | Non
     question = request_payload.get("question", "")
     system_id = request_payload.get("system_id", "thrust-reverser")
     snapshot = request_payload.get("lever_snapshot") or {}
+    demo_answer = request_payload.get("demo_answer") or {}
 
     if not question:
         return None, {"error": "missing_question", "message": "question field is required."}
@@ -415,6 +416,21 @@ def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | Non
         f"  VDT90: {'触发' if outputs.get('deploy_90_percent_vdt') else '未触发'}",
     ]
     output_summary = "\n".join(output_lines)
+
+    # Phase C: When demo_answer is provided (non-thrust-reverser systems),
+    # build context from the demo answer instead of lever-snapshot
+    if demo_answer and not nodes:
+        matched = demo_answer.get("matched_node", "")
+        intent = demo_answer.get("intent", "")
+        target_logic = demo_answer.get("target_logic", "")
+        evidence = demo_answer.get("evidence", [])
+        demo_text = demo_answer.get("answer", "") or demo_answer.get("reasoning", "")
+        node_summary = f"  匹配节点: {matched}" if matched else "  (通用问题)"
+        logic_summary = f"  目标逻辑: {target_logic}" if target_logic else ""
+        evidence_str = "\n  ".join(f"- {e}" for e in evidence) if evidence else "  无"
+        output_summary = f"""  推理结果: {demo_text[:200]}
+  证据链:
+  {evidence_str}""" if demo_text else "  (无推理结果)"
 
     system_labels = {
         "thrust-reverser": "Thrust Reverser（反推力系统）",

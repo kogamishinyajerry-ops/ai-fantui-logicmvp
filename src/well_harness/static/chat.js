@@ -767,6 +767,72 @@
     return answer.substring(0, 800);
   }
 
+  // ── Phase C: General question handler ──────────────────────────────────────
+  // Routes open-ended / explanatory questions to MiniMax AI without requiring
+  // a lever-snapshot API call. Updates the chat drawer but not the SVG canvas.
+  function handleGeneralQuestion(qText, qSystemId, qPayload) {
+    var explainPayload = {
+      question: qText,
+      system_id: qSystemId,
+      prompt: qText,
+      tra_deg: qPayload.tra_deg,
+      radio_altitude_ft: qPayload.radio_altitude_ft,
+      engine_running: qPayload.engine_running,
+      aircraft_on_ground: qPayload.aircraft_on_ground,
+      reverser_inhibited: qPayload.reverser_inhibited,
+      eec_enable: qPayload.eec_enable,
+      n1k: qPayload.n1k,
+      feedback_mode: qPayload.feedback_mode,
+      lever_snapshot: null,  // no condition change, just explaining current system
+    };
+    fetch('/api/chat/explain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(explainPayload),
+    })
+      .then(function(r) {
+        return r.json().then(function(data) {
+          if (!r.ok) {
+            throw new Error((data && (data.error || data.message)) || 'explain_failed');
+          }
+          return data;
+        });
+      })
+      .then(function(data) {
+        addMessage('ai', data.explanation || '抱歉，AI 解释暂时不可用。');
+        setInputLoading(false);
+        chatInput.focus();
+      })
+      .catch(function(err) {
+        addMessage('ai', '⚠️ AI 解释请求失败: ' + err.message + '。请尝试换一种问法。');
+        setInputLoading(false);
+        chatInput.focus();
+      });
+  }
+
+  // ── Phase C: Enhanced intent router ─────────────────────────────────────────
+  // Detects non-condition "why / what / how" questions and routes them to
+  // handleGeneralQuestion() so they don't incorrectly trigger lever-snapshot.
+  function isGeneralQuestion(qText, qLower) {
+    // "为什么会失效" / "TLS是什么" / "怎么工作" / "哪些条件" etc.
+    var generalPatterns = [
+      '为什么', '怎么', '是什么', '哪些', '介绍一下', '解释一下',
+      '说明一下', '告诉我', '帮我', '如何', '怎样', '什么意思',
+      '有什么用', '工作原理', '系统介绍', '科普',
+    ];
+    var i;
+    for (i = 0; i < generalPatterns.length; i += 1) {
+      if (qLower.includes(generalPatterns[i])) {
+        return true;
+      }
+    }
+    // Standalone "?" in a short message is usually a general question
+    if (qText.trim().length < 60 && qText.includes('?')) {
+      return true;
+    }
+    return false;
+  }
+
   function handleSend() {
     var text;
     var lowerText;
@@ -810,6 +876,12 @@
     };
 
     useLeverSnapshot = false;
+
+    // Phase C: Intercept general/explanatory questions before keyword routing
+    if (isGeneralQuestion(text, lowerText)) {
+      handleGeneralQuestion(text, systemId, payload);
+      return;
+    }
 
     if (lowerText.includes('tls') || lowerText.includes('失效') || lowerText.includes('failure')) {
       payload.tra_deg = -14.0;
@@ -862,7 +934,7 @@
       payload.tra_deg = -14.0;
       payload.reverser_inhibited = true;
       useLeverSnapshot = true;
-    } else if (lowerText.includes('l3') || lowerText.includes('eec') || lowerText.includes('pls') || lowerText.includes('pdu')) {
+    } else if (lowerText.includes('l3') || lowerText.includes('eec') || lowerText.includes('pls') || lowerText.includes('pdu') || lowerText.includes('pms') || lowerText.includes('hydraulic') || lowerText.includes('bleed') || lowerText.includes('eec失效') || lowerText.includes('pdu故障') || lowerText.includes('pls失效') || lowerText.includes('发动机控制')) {
       payload.tra_deg = -14.0;
       payload.radio_altitude_ft = 5.0;
       payload.feedback_mode = 'auto_scrubber';
@@ -877,7 +949,18 @@
       setInputLoading(false);
       chatInput.focus();
       return;
+    // Phase C: Non-thrust-reverser systems → use /api/demo + /api/chat/explain
+    // /api/demo gives structured demo answer; /api/chat/explain gives AI explanation
     } else if (systemId !== 'thrust-reverser') {
+      // Use default conditions for the current system
+      payload.tra_deg = -14.0;
+      payload.radio_altitude_ft = 5.0;
+      payload.feedback_mode = 'auto_scrubber';
+      payload.engine_running = true;
+      payload.aircraft_on_ground = true;
+      payload.reverser_inhibited = false;
+      payload.eec_enable = true;
+      payload.n1k = 35.0;
       fetch('/api/demo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -886,17 +969,60 @@
         .then(function(r) {
           return r.json().then(function(data) {
             if (!r.ok) {
-              throw new Error((data && (data.message || data.error)) || 'request_failed');
+              throw new Error((data && (data.error || data.message)) || 'request_failed');
             }
             return data;
           });
         })
         .then(function(data) {
-          resetCanvasState();
+          // Update truth eval bar with demo data
           renderTruthEvalFromDemo(data);
-          addMessage('ai', formatDemoAnswer(data));
-          setInputLoading(false);
-          chatInput.focus();
+          // Call MiniMax AI with demo answer as context
+          var explainPayload = {
+            question: text,
+            system_id: systemId,
+            prompt: text,
+            tra_deg: payload.tra_deg,
+            radio_altitude_ft: payload.radio_altitude_ft,
+            engine_running: payload.engine_running,
+            aircraft_on_ground: payload.aircraft_on_ground,
+            reverser_inhibited: payload.reverser_inhibited,
+            eec_enable: payload.eec_enable,
+            n1k: payload.n1k,
+            feedback_mode: payload.feedback_mode,
+            lever_snapshot: null,
+            demo_answer: {
+              matched_node: data.matched_node || '',
+              intent: data.intent || '',
+              target_logic: data.target_logic || '',
+              evidence: data.evidence || [],
+              answer: data.answer || data.reasoning || '',
+            },
+          };
+          fetch('/api/chat/explain', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(explainPayload),
+          })
+            .then(function(r2) {
+              return r2.json().then(function(expData) {
+                if (!r2.ok) {
+                  throw new Error((expData && (expData.error || expData.message)) || 'explain_failed');
+                }
+                return expData;
+              });
+            })
+            .then(function(expData) {
+              addMessage('ai', expData.explanation || formatDemoAnswer(data));
+              setInputLoading(false);
+              chatInput.focus();
+            })
+            .catch(function(err) {
+              // Fallback: show template answer if MiniMax fails
+              addMessage('ai', formatDemoAnswer(data));
+              setInputLoading(false);
+              chatInput.focus();
+            });
         })
         .catch(function(err) {
           setTruthBadge('danger', 'ERROR');
