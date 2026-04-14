@@ -1740,6 +1740,31 @@ document.addEventListener("DOMContentLoaded", () => {
   var guidedBtn = document.getElementById("guided-demo-btn");
   if (guidedBtn) guidedBtn.addEventListener("click", runGuidedDemo);
 
+  // Beginner / Expert view toggle
+  var demoBeginnerBtn = document.getElementById("view-btn-beginner");
+  var demoExpertBtn = document.getElementById("view-btn-expert");
+  function demoSetViewMode(mode) {
+    document.body.dataset.view = mode;
+    if (demoBeginnerBtn) demoBeginnerBtn.classList.toggle("is-active", mode === "beginner");
+    if (demoExpertBtn) demoExpertBtn.classList.toggle("is-active", mode === "expert");
+    var hint = document.getElementById("view-mode-hint");
+    if (hint) {
+      hint.textContent = mode === "beginner"
+        ? "— 默认只看反推逻辑，适合快速演示"
+        : "— 显示所有系统和原始 JSON";
+    }
+    if (mode === "beginner") {
+      var selector = document.getElementById("system-selector");
+      if (selector && selector.value !== "thrust-reverser") {
+        selector.value = "thrust-reverser";
+        handleSystemSwitch(selector.value);
+      }
+    }
+  }
+  if (demoBeginnerBtn) demoBeginnerBtn.addEventListener("click", function() { demoSetViewMode("beginner"); });
+  if (demoExpertBtn) demoExpertBtn.addEventListener("click", function() { demoSetViewMode("expert"); });
+  if (demoBeginnerBtn) demoSetViewMode("beginner");
+
   // Landing Gear demo/reset buttons
   const lgDemoBtn = document.getElementById("lg-demo-btn");
   if (lgDemoBtn) lgDemoBtn.addEventListener("click", runLgDemo);

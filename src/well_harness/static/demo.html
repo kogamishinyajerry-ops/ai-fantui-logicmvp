@@ -6,7 +6,7 @@
     <title>Well Harness 反推逻辑演示舱</title>
     <link rel="stylesheet" href="/demo.css">
   </head>
-  <body>
+  <body data-view="beginner">
     <div id="guided-hint-bar" class="guided-hint-bar" aria-live="polite" style="display:none"></div>
     <main class="shell">
       <section class="hero" aria-labelledby="page-title">
@@ -136,6 +136,16 @@
         </ul>
       </section>
 
+      <div class="view-mode-toggle-bar" style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:rgba(79,184,255,0.08);border:1px solid rgba(79,184,255,0.2);border-radius:8px;margin-bottom:16px">
+        <span class="view-mode-label" style="font-size:0.8rem;color:#8ca0b4;white-space:nowrap">视图模式:</span>
+        <button type="button" class="view-mode-btn is-active" data-view="beginner" id="view-btn-beginner" style="background:rgba(40,244,255,0.15);border:1px solid rgba(40,244,255,0.4);color:#28f4ff;padding:4px 12px;border-radius:6px;font-size:0.8rem;cursor:pointer">
+          初级视图
+        </button>
+        <button type="button" class="view-mode-btn" data-view="expert" id="view-btn-expert" style="background:transparent;border:1px solid rgba(79,184,255,0.25);color:#8ca0b4;padding:4px 12px;border-radius:6px;font-size:0.8rem;cursor:pointer">
+          专家视图
+        </button>
+        <span style="font-size:0.72rem;color:#5a7080;margin-left:4px" id="view-mode-hint">— 默认只看反推逻辑，适合快速演示</span>
+      </div>
       <section class="showcase-surface" aria-label="中文演示展示面">
         <div class="showcase-intro">
           <p class="showcase-kicker">演示流</p>
@@ -284,7 +294,7 @@
           </section>
 
           <!-- ===== Landing Gear Input Panel ===== -->
-          <section id="landing-gear-inputs" class="panel system-input-panel" style="display:none" aria-labelledby="lg-inputs-title">
+          <section id="landing-gear-inputs" view="beginner" class="panel system-input-panel" style="display:none" aria-labelledby="lg-inputs-title">
             <h2 id="lg-inputs-title"><span class="presenter-callout">[输入]</span> 起落架控制</h2>
             <p class="system-input-note">调节以下输入信号，观察逻辑链路的推理结论变化。</p>
             <details class="control-manual">
@@ -375,7 +385,7 @@
           </section>
 
           <!-- ===== Bleed Air Input Panel ===== -->
-          <section id="bleed-air-inputs" class="panel system-input-panel" style="display:none" aria-labelledby="ba-inputs-title">
+          <section id="bleed-air-inputs" view="beginner" class="panel system-input-panel" style="display:none" aria-labelledby="ba-inputs-title">
             <h2 id="ba-inputs-title"><span class="presenter-callout">[输入]</span> 引气活门控制</h2>
             <p class="system-input-note">调节以下输入信号，观察逻辑链路的推理结论变化。</p>
             <details class="control-manual">
@@ -460,7 +470,7 @@
           </section>
 
           <!-- ===== EFDS Input Panel ===== -->
-          <section id="efds-inputs" class="panel system-input-panel" style="display:none" aria-labelledby="efds-inputs-title">
+          <section id="efds-inputs" view="beginner" class="panel system-input-panel" style="display:none" aria-labelledby="efds-inputs-title">
             <h2 id="efds-inputs-title"><span class="presenter-callout">[输入]</span> 干扰弹部署控制</h2>
             <p class="system-input-note">调节以下输入信号，观察逻辑链路的推理结论变化。</p>
             <details class="control-manual restricted-manual">
@@ -1691,7 +1701,7 @@
             </article>
 
             <article class="panel raw-card">
-              <details id="raw-json-details" class="debug-inspector">
+              <details id="raw-json-details" view="beginner" class="debug-inspector">
                 <summary><span class="presenter-callout">[调试]</span> 原始 JSON 调试</summary>
                 <pre id="raw-json">{}</pre>
               </details>

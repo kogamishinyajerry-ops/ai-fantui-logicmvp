@@ -2141,7 +2141,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             "id=\"hud-tra\"",
             "id=\"lever-result\"",
             "class=\"panel qa-drawer\"",
-            "<details id=\"raw-json-details\" class=\"debug-inspector\">",
+            "id=\"raw-json-details\"",  # view="beginner" added for beginner/expert toggle
             "原始 JSON 调试",
         ):
             self.assertIn(fragment, html)
@@ -2447,7 +2447,7 @@ class DemoIntentLayerTests(unittest.TestCase):
 
         self.assertIn("min=\"-32\"", html)
 
-        self.assertIn("<details id=\"raw-json-details\" class=\"debug-inspector\">", html)
+        self.assertIn("id=\"raw-json-details\"", html)  # view="beginner" added for beginner/expert toggle
         self.assertNotIn("id=\"raw-json-details\" class=\"debug-inspector\" open", html)
         self.assertNotIn("class=\"chain-node sub-node logic-node\"", html)
 
@@ -2793,7 +2793,7 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn("class=\"is-selected\" aria-pressed=\"true\"", html)
         self.assertIn("aria-pressed=\"false\"", html)
         self.assertIn("mobile-step-rail", html)
-        self.assertIn("<details id=\"raw-json-details\" class=\"debug-inspector\">", html)
+        self.assertIn("id=\"raw-json-details\"", html)  # view="beginner" added for beginner/expert toggle
         self.assertIn("<summary><span class=\"presenter-callout\">[调试]</span> 原始 JSON 调试</summary>", html)
         self.assertIn(".examples button.is-selected", css)
         self.assertIn(".raw-card summary", css)
