@@ -22,9 +22,11 @@
   var truthEvalActive = document.getElementById('truth-eval-active');
   var truthEvalBlockers = document.getElementById('truth-eval-blockers');
   var logicDiagram = document.getElementById('logic-diagram');
+  var canvasTitle = logicDiagram ? logicDiagram.querySelector('h1') : null;
   var DEFAULT_INPUT_PLACEHOLDER = '输入你的控制逻辑问题...';
   var DEFAULT_SEND_TEXT = '发送';
   var LOADING_SEND_TEXT = 'AI 思考中...';
+  var lastTruthPayloadBySystem = {};
 
   var SYSTEM_LABELS = {
     'thrust-reverser': '反推系统',
@@ -80,14 +82,77 @@
     return out;
   }
 
-  function addMessage(role, text) {
+  function copyObject(obj) {
+    var copy = {};
+    var key;
+
+    if (!obj) {
+      return copy;
+    }
+
+    for (key in obj) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+        copy[key] = obj[key];
+      }
+    }
+
+    return copy;
+  }
+
+  function requestJson(url, options) {
+    return fetch(url, options).then(function(r) {
+      return r.json().catch(function() {
+        return {};
+      }).then(function(data) {
+        if (!r.ok) {
+          throw new Error((data && (data.message || data.error)) || 'request_failed');
+        }
+        return data;
+      });
+    });
+  }
+
+  function finishChatRequest() {
+    setInputLoading(false);
+    if (chatInput) {
+      chatInput.focus();
+    }
+  }
+
+  function renderRequestFailure(err) {
+    setTruthBadge('danger', '错误');
+    if (truthEvalStatus) {
+      truthEvalStatus.textContent = '请求失败';
+    }
+    if (truthEvalSummary) {
+      truthEvalSummary.textContent = '⚠️ 请求失败: ' + err.message;
+    }
+  }
+
+  function addMessage(role, text, highlight) {
     if (!chatMessages) {
       return;
     }
 
     var avatar = role === 'ai' ? '🤖' : '👤';
+    var highlightedNodes = [];
+    var suggestionNodes = [];
     var msg = document.createElement('article');
+
+    if (Array.isArray(highlight)) {
+      highlightedNodes = highlight;
+    } else if (highlight) {
+      highlightedNodes = Array.isArray(highlight.highlightedNodes) ? highlight.highlightedNodes : [];
+      suggestionNodes = Array.isArray(highlight.suggestionNodes) ? highlight.suggestionNodes : [];
+    }
+
     msg.className = 'chat-message chat-message-' + (role === 'ai' ? 'ai' : 'user');
+    if (highlightedNodes.length > 0) {
+      msg.setAttribute('data-highlighted', highlightedNodes.join(','));
+    }
+    if (suggestionNodes.length > 0) {
+      msg.setAttribute('data-suggested', suggestionNodes.join(','));
+    }
     msg.innerHTML =
       '<div class="chat-message-avatar">' + avatar + '</div>' +
       '<div class="chat-message-content"><p>' + escHtml(text).replace(/\n/g, '<br>') + '</p></div>';
@@ -367,6 +432,7 @@
     var values;
     var i;
 
+    clearAiHighlights();
     nodes = document.querySelectorAll('.canvas-wrapper [data-node]');
     values = document.querySelectorAll('.canvas-wrapper [data-value-for]');
 
@@ -400,6 +466,39 @@
 
     for (i = 0; i < els.length; i += 1) {
       els[i].textContent = formatSignalValue(value);
+    }
+  }
+
+  function clearAiHighlights() {
+    var highlightedEls = document.querySelectorAll('.canvas-wrapper .ai-discussed, .canvas-wrapper .ai-suggested');
+    var i;
+
+    for (i = 0; i < highlightedEls.length; i += 1) {
+      highlightedEls[i].classList.remove('ai-discussed', 'ai-suggested');
+    }
+  }
+
+  function applyAiHighlights(highlightedNodes, suggestionNodes) {
+    var discussed = dedupe(Array.isArray(highlightedNodes) ? highlightedNodes : []);
+    var suggested = dedupe(Array.isArray(suggestionNodes) ? suggestionNodes : []);
+    var i;
+    var els;
+    var j;
+
+    clearAiHighlights();
+
+    for (i = 0; i < discussed.length; i += 1) {
+      els = document.querySelectorAll('.canvas-wrapper [data-node="' + discussed[i] + '"]');
+      for (j = 0; j < els.length; j += 1) {
+        els[j].classList.add('ai-discussed');
+      }
+    }
+
+    for (i = 0; i < suggested.length; i += 1) {
+      els = document.querySelectorAll('.canvas-wrapper [data-node="' + suggested[i] + '"]');
+      for (j = 0; j < els.length; j += 1) {
+        els[j].classList.add('ai-suggested');
+      }
     }
   }
 
@@ -508,6 +607,90 @@
     renderChipList(truthEvalBlockers, ['仅显示参考画布'], 'is-muted');
   }
 
+  function extractNodeStates(snapshotData) {
+    var nodeStates = {};
+    var truthEvaluation = snapshotData && snapshotData.truth_evaluation ? snapshotData.truth_evaluation : null;
+    var activeLogicNodeIds = {};
+    var logicNodeIds = {};
+    var nodes = snapshotData && Array.isArray(snapshotData.nodes) ? snapshotData.nodes : [];
+    var logicNodes = snapshotData && snapshotData.spec && Array.isArray(snapshotData.spec.logic_nodes)
+      ? snapshotData.spec.logic_nodes
+      : [];
+    var hasBlockedReasons = !!(
+      truthEvaluation &&
+      Array.isArray(truthEvaluation.blocked_reasons) &&
+      truthEvaluation.blocked_reasons.length > 0
+    );
+    var i;
+    var nodeId;
+    var state;
+
+    if (truthEvaluation && Array.isArray(truthEvaluation.active_logic_node_ids)) {
+      for (i = 0; i < truthEvaluation.active_logic_node_ids.length; i += 1) {
+        activeLogicNodeIds[truthEvaluation.active_logic_node_ids[i]] = true;
+      }
+    }
+
+    for (i = 0; i < logicNodes.length; i += 1) {
+      if (logicNodes[i] && logicNodes[i].id) {
+        logicNodeIds[logicNodes[i].id] = true;
+      }
+    }
+
+    for (i = 0; i < nodes.length; i += 1) {
+      if (!nodes[i] || !nodes[i].id) {
+        continue;
+      }
+      nodeId = nodes[i].id;
+      state = nodes[i].state || 'inactive';
+      if (activeLogicNodeIds[nodeId]) {
+        state = 'active';
+      } else if (logicNodeIds[nodeId] && state !== 'blocked' && hasBlockedReasons) {
+        state = 'blocked';
+      }
+      nodeStates[nodeId] = state;
+    }
+
+    for (nodeId in activeLogicNodeIds) {
+      if (Object.prototype.hasOwnProperty.call(activeLogicNodeIds, nodeId) && !nodeStates[nodeId]) {
+        nodeStates[nodeId] = 'active';
+      }
+    }
+
+    return nodeStates;
+  }
+
+  function applySystemSnapshotToCanvas(snapshotData) {
+    var truthEvaluation = snapshotData && snapshotData.truth_evaluation ? snapshotData.truth_evaluation : null;
+    var componentValues = truthEvaluation && truthEvaluation.asserted_component_values
+      ? truthEvaluation.asserted_component_values
+      : {};
+    var nodeStates = extractNodeStates(snapshotData);
+    var nodes = document.querySelectorAll('.canvas-wrapper [data-node]');
+    var i;
+    var nodeId;
+    var valueKey;
+    var value;
+
+    resetCanvasState();
+
+    for (i = 0; i < nodes.length; i += 1) {
+      nodeId = nodes[i].getAttribute('data-node');
+      if (!nodeId) {
+        continue;
+      }
+      setNodeState(nodeId, nodeStates[nodeId] || 'inactive');
+      valueKey = NODE_VALUE_KEYS[nodeId] || nodeId;
+      value = componentValues[valueKey];
+      if (value === undefined) {
+        value = componentValues[nodeId];
+      }
+      if (value !== undefined) {
+        setNodeValue(nodeId, value);
+      }
+    }
+  }
+
   function applySnapshotToCanvas(data, payload) {
     var extracted = extractEvaluation(data);
     var componentValues = mergePayloadSignals(extracted.componentValues, payload);
@@ -601,6 +784,9 @@
     }
     if (systemShellStatus) {
       systemShellStatus.textContent = label;
+    }
+    if (canvasTitle) {
+      canvasTitle.textContent = label + '链路';
     }
   }
 
@@ -796,46 +982,129 @@
     return answer.substring(0, 800);
   }
 
-  // ── Phase C: General question handler ──────────────────────────────────────
-  // Routes open-ended / explanatory questions to MiniMax AI without requiring
-  // a lever-snapshot API call. Updates the chat drawer but not the SVG canvas.
-  function handleGeneralQuestion(qText, qSystemId, qPayload) {
+  function formatSystemSnapshotAnswer(data, systemId) {
+    var extracted;
+    var lines;
+
+    if (!data) {
+      return '⚠️ 未收到有效系统快照。';
+    }
+
+    extracted = extractEvaluation(data);
+    lines = [];
+    lines.push('📊 ' + (SYSTEM_LABELS[systemId] || systemId) + ' 状态分析:');
+
+    if (extracted.activeIds.length > 0) {
+      lines.push('');
+      lines.push('✅ 已激活: ' + extracted.activeIds.join(', '));
+    }
+
+    if (extracted.blockedReasons && extracted.blockedReasons.length > 0) {
+      lines.push('');
+      lines.push('❌ 阻塞原因:');
+      lines.push('  ' + extracted.blockedReasons.join('\n  '));
+    }
+
+    if (extracted.summary) {
+      lines.push('');
+      lines.push('摘要: ' + extracted.summary);
+    }
+
+    return lines.join('\n');
+  }
+
+  function buildExplainPayload(question, systemId, payload, extraFields) {
     var explainPayload = {
-      question: qText,
-      system_id: qSystemId,
-      prompt: qText,
-      tra_deg: qPayload.tra_deg,
-      radio_altitude_ft: qPayload.radio_altitude_ft,
-      engine_running: qPayload.engine_running,
-      aircraft_on_ground: qPayload.aircraft_on_ground,
-      reverser_inhibited: qPayload.reverser_inhibited,
-      eec_enable: qPayload.eec_enable,
-      n1k: qPayload.n1k,
-      feedback_mode: qPayload.feedback_mode,
-      lever_snapshot: null,  // no condition change, just explaining current system
+      question: question,
+      system_id: systemId,
+      prompt: question,
+      tra_deg: payload.tra_deg,
+      radio_altitude_ft: payload.radio_altitude_ft,
+      engine_running: payload.engine_running,
+      aircraft_on_ground: payload.aircraft_on_ground,
+      reverser_inhibited: payload.reverser_inhibited,
+      eec_enable: payload.eec_enable,
+      n1k: payload.n1k,
+      feedback_mode: payload.feedback_mode,
+      lever_snapshot: null,
+      node_states: {},
     };
-    fetch('/api/chat/explain', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(explainPayload),
-    })
-      .then(function(r) {
-        return r.json().then(function(data) {
-          if (!r.ok) {
-            throw new Error((data && (data.error || data.message)) || 'explain_failed');
-          }
-          return data;
+    var key;
+
+    if (!extraFields) {
+      return explainPayload;
+    }
+
+    for (key in extraFields) {
+      if (Object.prototype.hasOwnProperty.call(extraFields, key)) {
+        explainPayload[key] = extraFields[key];
+      }
+    }
+
+    return explainPayload;
+  }
+
+  // ── Phase P16: General question handler ────────────────────────────────────
+  // Truth engine first: fetch a live snapshot, update canvas immediately, then
+  // call AI explain with node_states so the blue discussion ring stays advisory.
+  function handleGeneralQuestion(qText, qSystemId, qPayload) {
+    var truthPayload = qSystemId === 'thrust-reverser'
+      ? copyObject(lastTruthPayloadBySystem[qSystemId] || qPayload)
+      : copyObject(qPayload);
+    var truthRequest = qSystemId === 'thrust-reverser'
+      ? requestJson('/api/lever-snapshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(truthPayload),
+        })
+      : requestJson('/api/system-snapshot?system_id=' + encodeURIComponent(qSystemId));
+    var fallbackFormatter = qSystemId === 'thrust-reverser'
+      ? function(data) { return formatLeverSnapshotAnswer(data, truthPayload); }
+      : function(data) { return formatSystemSnapshotAnswer(data, qSystemId); };
+
+    truthRequest
+      .then(function(snapshotData) {
+        var nodeStates = extractNodeStates(snapshotData);
+        var explainPayload;
+
+        if (qSystemId === 'thrust-reverser') {
+          lastTruthPayloadBySystem[qSystemId] = copyObject(truthPayload);
+          applySnapshotToCanvas(snapshotData, truthPayload);
+          renderTruthEvalFromSnapshot(snapshotData, truthPayload);
+        } else {
+          applySystemSnapshotToCanvas(snapshotData);
+          renderTruthEvalFromSnapshot(snapshotData, null);
+        }
+
+        explainPayload = buildExplainPayload(qText, qSystemId, truthPayload, {
+          lever_snapshot: snapshotData,
+          node_states: nodeStates,
+        });
+
+        return requestJson('/api/chat/explain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(explainPayload),
+        }).then(function(aiData) {
+          var highlightedNodes = Array.isArray(aiData.highlighted_nodes) ? aiData.highlighted_nodes : [];
+          var suggestionNodes = Array.isArray(aiData.suggestion_nodes) ? aiData.suggestion_nodes : [];
+
+          applyAiHighlights(highlightedNodes, suggestionNodes);
+          addMessage('ai', aiData.explanation || fallbackFormatter(snapshotData), {
+            highlightedNodes: highlightedNodes,
+            suggestionNodes: suggestionNodes,
+          });
+          finishChatRequest();
+        }, function(err) {
+          addMessage('ai', fallbackFormatter(snapshotData));
+          finishChatRequest();
+          return null;
         });
       })
-      .then(function(data) {
-        addMessage('ai', data.explanation || '抱歉，AI 解释暂时不可用。');
-        setInputLoading(false);
-        chatInput.focus();
-      })
       .catch(function(err) {
-        addMessage('ai', '⚠️ AI 解释请求失败: ' + err.message + '。请尝试换一种问法。');
-        setInputLoading(false);
-        chatInput.focus();
+        renderRequestFailure(err);
+        addMessage('ai', '⚠️ 真值快照请求失败: ' + err.message + '。请稍后重试。');
+        finishChatRequest();
       });
   }
 
@@ -885,6 +1154,7 @@
     chatInput.value = '';
     chatInput.style.height = 'auto';
     setInputLoading(true);
+    clearAiHighlights();
 
     lowerText = text.toLowerCase();
     systemId = currentSystem;
@@ -908,6 +1178,11 @@
 
     // Phase C: Intercept general/explanatory questions before keyword routing
     if (isGeneralQuestion(text, lowerText)) {
+      handleGeneralQuestion(text, systemId, payload);
+      return;
+    }
+
+    if (systemId !== 'thrust-reverser') {
       handleGeneralQuestion(text, systemId, payload);
       return;
     }
@@ -975,96 +1250,7 @@
       useLeverSnapshot = true;
     } else if (lowerText.includes('guided') || lowerText.includes('demo') || lowerText.includes('带我走')) {
       addMessage('ai', '▶ 点击抽屉里的“引导演示”，我会带你一步一步看完整的反推链路激活过程。');
-      setInputLoading(false);
-      chatInput.focus();
-      return;
-    // Phase C: Non-thrust-reverser systems → use /api/demo + /api/chat/explain
-    // /api/demo gives structured demo answer; /api/chat/explain gives AI explanation
-    } else if (systemId !== 'thrust-reverser') {
-      // Use default conditions for the current system
-      payload.tra_deg = -14.0;
-      payload.radio_altitude_ft = 5.0;
-      payload.feedback_mode = 'auto_scrubber';
-      payload.engine_running = true;
-      payload.aircraft_on_ground = true;
-      payload.reverser_inhibited = false;
-      payload.eec_enable = true;
-      payload.n1k = 35.0;
-      fetch('/api/demo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-        .then(function(r) {
-          return r.json().then(function(data) {
-            if (!r.ok) {
-              throw new Error((data && (data.error || data.message)) || 'request_failed');
-            }
-            return data;
-          });
-        })
-        .then(function(data) {
-          // Update truth eval bar with demo data
-          renderTruthEvalFromDemo(data);
-          // Call MiniMax AI with demo answer as context
-          var explainPayload = {
-            question: text,
-            system_id: systemId,
-            prompt: text,
-            tra_deg: payload.tra_deg,
-            radio_altitude_ft: payload.radio_altitude_ft,
-            engine_running: payload.engine_running,
-            aircraft_on_ground: payload.aircraft_on_ground,
-            reverser_inhibited: payload.reverser_inhibited,
-            eec_enable: payload.eec_enable,
-            n1k: payload.n1k,
-            feedback_mode: payload.feedback_mode,
-            lever_snapshot: null,
-            demo_answer: {
-              matched_node: data.matched_node || '',
-              intent: data.intent || '',
-              target_logic: data.target_logic || '',
-              evidence: data.evidence || [],
-              answer: data.answer || data.reasoning || '',
-            },
-          };
-          fetch('/api/chat/explain', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(explainPayload),
-          })
-            .then(function(r2) {
-              return r2.json().then(function(expData) {
-                if (!r2.ok) {
-                  throw new Error((expData && (expData.error || expData.message)) || 'explain_failed');
-                }
-                return expData;
-              });
-            })
-            .then(function(expData) {
-              addMessage('ai', expData.explanation || formatDemoAnswer(data));
-              setInputLoading(false);
-              chatInput.focus();
-            })
-            .catch(function(err) {
-              // Fallback: show template answer if MiniMax fails
-              addMessage('ai', formatDemoAnswer(data));
-              setInputLoading(false);
-              chatInput.focus();
-            });
-        })
-        .catch(function(err) {
-          setTruthBadge('danger', '错误');
-          if (truthEvalStatus) {
-            truthEvalStatus.textContent = '请求失败';
-          }
-          if (truthEvalSummary) {
-            truthEvalSummary.textContent = '⚠️ 请求失败: ' + err.message;
-          }
-          addMessage('ai', '⚠️ 请求失败: ' + err.message);
-          setInputLoading(false);
-          chatInput.focus();
-        });
+      finishChatRequest();
       return;
     } else {
       payload.tra_deg = -14.0;
@@ -1072,107 +1258,70 @@
     }
 
     if (useLeverSnapshot) {
-      fetch('/api/lever-snapshot', {
+      requestJson('/api/lever-snapshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-        .then(function(r) {
-          return r.json().then(function(data) {
-            if (!r.ok) {
-              throw new Error((data && (data.message || data.error)) || 'request_failed');
-            }
-            return data;
-          });
-        })
         .then(function(data) {
+          var nodeStates;
+          var explainPayload;
+          var fallbackText;
+
+          lastTruthPayloadBySystem[systemId] = copyObject(payload);
           // Step 1: SVG canvas + Truth Eval update synchronously (< 100ms)
           applySnapshotToCanvas(data, payload);
           renderTruthEvalFromSnapshot(data, payload);
+          nodeStates = extractNodeStates(data);
+          fallbackText = formatLeverSnapshotAnswer(data, payload);
 
           // Step 2: Call MiniMax LLM for contextual explanation (1-2s)
-          var explainPayload = {
-            question: text,
-            system_id: systemId,
-            prompt: text,
-            tra_deg: payload.tra_deg,
-            radio_altitude_ft: payload.radio_altitude_ft,
-            engine_running: payload.engine_running,
-            aircraft_on_ground: payload.aircraft_on_ground,
-            reverser_inhibited: payload.reverser_inhibited,
-            eec_enable: payload.eec_enable,
-            n1k: payload.n1k,
-            feedback_mode: payload.feedback_mode,
+          explainPayload = buildExplainPayload(text, systemId, payload, {
             lever_snapshot: data,
-          };
-          fetch('/api/chat/explain', {
+            node_states: nodeStates,
+          });
+          requestJson('/api/chat/explain', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(explainPayload),
           })
-            .then(function(r) {
-              return r.json().then(function(expData) {
-                if (!r.ok) {
-                  throw new Error((expData && (expData.message || expData.error)) || 'explain_failed');
-                }
-                return expData;
-              });
-            })
             .then(function(expData) {
-              addMessage('ai', expData.explanation || formatLeverSnapshotAnswer(data, payload));
-              setInputLoading(false);
-              chatInput.focus();
+              var highlightedNodes = Array.isArray(expData.highlighted_nodes) ? expData.highlighted_nodes : [];
+              var suggestionNodes = Array.isArray(expData.suggestion_nodes) ? expData.suggestion_nodes : [];
+
+              applyAiHighlights(highlightedNodes, suggestionNodes);
+              addMessage('ai', expData.explanation || fallbackText, {
+                highlightedNodes: highlightedNodes,
+                suggestionNodes: suggestionNodes,
+              });
+              finishChatRequest();
             })
             .catch(function(err) {
               // Fallback to template if MiniMax API fails
-              addMessage('ai', formatLeverSnapshotAnswer(data, payload));
-              setInputLoading(false);
-              chatInput.focus();
+              addMessage('ai', fallbackText);
+              finishChatRequest();
             });
         })
         .catch(function(err) {
-          setTruthBadge('danger', '错误');
-          if (truthEvalStatus) {
-            truthEvalStatus.textContent = '请求失败';
-          }
-          if (truthEvalSummary) {
-            truthEvalSummary.textContent = '⚠️ 请求失败: ' + err.message;
-          }
+          renderRequestFailure(err);
           addMessage('ai', '⚠️ 请求失败: ' + err.message);
-          setInputLoading(false);
-          chatInput.focus();
+          finishChatRequest();
         });
     } else {
-      fetch('/api/demo', {
+      requestJson('/api/demo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       })
-        .then(function(r) {
-          return r.json().then(function(data) {
-            if (!r.ok) {
-              throw new Error((data && (data.message || data.error)) || 'request_failed');
-            }
-            return data;
-          });
-        })
         .then(function(data) {
           renderTruthEvalFromDemo(data);
           addMessage('ai', formatDemoAnswer(data));
-          setInputLoading(false);
-          chatInput.focus();
+          finishChatRequest();
         })
         .catch(function(err) {
-          setTruthBadge('danger', '错误');
-          if (truthEvalStatus) {
-            truthEvalStatus.textContent = '请求失败';
-          }
-          if (truthEvalSummary) {
-            truthEvalSummary.textContent = '⚠️ 请求失败: ' + err.message;
-          }
+          renderRequestFailure(err);
           addMessage('ai', '⚠️ 请求失败: ' + err.message);
-          setInputLoading(false);
-          chatInput.focus();
+          finishChatRequest();
         });
     }
   }

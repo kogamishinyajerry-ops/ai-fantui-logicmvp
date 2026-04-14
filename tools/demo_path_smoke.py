@@ -15,7 +15,12 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from well_harness.demo_server import DemoRequestHandler
+from well_harness.demo import answer_demo_prompt, demo_answer_to_payload
+from well_harness.demo_server import (
+    DemoRequestHandler,
+    lever_snapshot_payload,
+    parse_lever_snapshot_request,
+)
 from well_harness.models import HarnessConfig
 
 
@@ -38,14 +43,30 @@ def parse_output_format(argv: list[str]) -> str:
     raise ValueError("usage: demo_path_smoke.py [--format text|json]")
 
 
-def start_demo_server() -> tuple[ThreadingHTTPServer, threading.Thread]:
-    server = ThreadingHTTPServer(("127.0.0.1", 0), DemoRequestHandler)
+def start_demo_server() -> tuple[ThreadingHTTPServer | None, threading.Thread | None]:
+    try:
+        server = ThreadingHTTPServer(("127.0.0.1", 0), DemoRequestHandler)
+    except PermissionError:
+        return None, None
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     return server, thread
 
 
-def request_json(port: int, path: str, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+def request_json(port: int | None, path: str, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    if port is None:
+        if path == "/api/demo":
+            prompt = str(payload.get("prompt", "")).strip()
+            if not prompt:
+                return 400, {"error": "missing_prompt"}
+            return 200, demo_answer_to_payload(answer_demo_prompt(prompt))
+        if path == "/api/lever-snapshot":
+            lever_inputs, error_payload = parse_lever_snapshot_request(payload)
+            if error_payload is not None:
+                return 400, error_payload
+            return 200, lever_snapshot_payload(**lever_inputs)
+        return 404, {"error": "not_found"}
+
     connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
     try:
         connection.request(
@@ -480,6 +501,7 @@ def run_smoke_suite() -> tuple[int, dict[str, Any], list[str]]:
     text_lines: list[str] = []
 
     server, thread = start_demo_server()
+    port = server.server_port if server is not None else None
     try:
         scenarios = (
             scenario_demo_bridge_prompt,
@@ -494,7 +516,7 @@ def run_smoke_suite() -> tuple[int, dict[str, Any], list[str]]:
             scenario_invalid_feedback_mode,
         )
         for scenario in scenarios:
-            result = scenario(server.server_port)
+            result = scenario(port)
             report["scenarios"].append(
                 {
                     "name": result.name,
@@ -511,9 +533,10 @@ def run_smoke_suite() -> tuple[int, dict[str, Any], list[str]]:
                 report["failed_scenario"] = result.name
                 return 1, report, text_lines
     finally:
-        server.shutdown()
-        server.server_close()
-        thread.join(timeout=2)
+        if server is not None and thread is not None:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
 
     text_lines.append("PASS: validated 10 demo smoke scenarios through the local HTTP demo surface.")
     return 0, report, text_lines

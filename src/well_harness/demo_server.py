@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from functools import lru_cache
 import json
+import re
 from typing import Any
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -377,17 +378,26 @@ def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | Non
         "n1k": float,
         "feedback_mode": str,
         "lever_snapshot": dict | None,   # optional pre-fetched lever-snapshot data
+        "node_states": dict[str, str],   # optional truth-engine node state map
     }
 
-    Output: {"explanation": str}   # LLM-generated Chinese explanation
+    Output: {
+        "explanation": str,
+        "highlighted_nodes": list[str],
+        "suggestion_nodes": list[str],
+        "confidence": float,
+    }
     """
     question = request_payload.get("question", "")
     system_id = request_payload.get("system_id", "thrust-reverser")
     snapshot = request_payload.get("lever_snapshot") or {}
     demo_answer = request_payload.get("demo_answer") or {}
+    node_states = request_payload.get("node_states", {})
 
     if not question:
         return None, {"error": "missing_question", "message": "question field is required."}
+    if not isinstance(node_states, dict):
+        node_states = {}
 
     api_key = _get_minimax_api_key()
     if not api_key:
@@ -424,6 +434,21 @@ def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | Non
     ]
     output_summary = "\n".join(output_lines)
 
+    if not node_states and nodes:
+        for node in nodes:
+            node_id = node.get("id")
+            node_state = node.get("state")
+            if isinstance(node_id, str) and isinstance(node_state, str):
+                node_states[node_id] = node_state
+
+    node_state_lines: list[str] = []
+    for node_id, node_state in node_states.items():
+        state_label = {"active": "active(已激活)", "inactive": "inactive(未激活)", "blocked": "blocked(阻塞)"}.get(
+            str(node_state), str(node_state)
+        )
+        node_state_lines.append(f"  {node_id}: {state_label}")
+    node_states_summary = "\n".join(node_state_lines) if node_state_lines else "  (未提供 node_states)"
+
     # Phase C: When demo_answer is provided (non-thrust-reverser systems),
     # build context from the demo answer instead of lever-snapshot
     if demo_answer and not nodes:
@@ -448,9 +473,28 @@ def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | Non
     system_label = system_labels.get(system_id, system_id)
 
     # Build system prompt for MiniMax
-    system_prompt = f"""你是一个航空控制逻辑专家助手。用户正在使用一个确定性控制逻辑推理引擎来诊断 {system_label} 的状态。
+    system_prompt = f"""你是控制逻辑分析助手。用户正在使用一个确定性控制逻辑推理引擎来诊断 {system_label} 的状态。
 
-当前链路快照数据：
+你会收到：
+1. 用户的问题
+2. 真值引擎返回的节点状态（node_states）—— 这是100%准确的
+3. 当前系统的逻辑链路定义和补充上下文
+
+你的任务：
+- 用中文解释节点状态变化的原因和影响
+- 在 highlighted_nodes 中列出你讨论到的所有节点ID（如 L1, TLS, VDT90, THR_LOCK）
+- 在 suggestion_nodes 中列出你建议用户进一步检查的节点ID
+- 在 confidence 中评估你对自己回答的信心（0.0-1.0）
+
+你绝对不能：
+- 自己推断节点应该是 active 还是 blocked
+- 与 node_states 中的真值结果矛盾
+- 编造不在当前系统中的节点ID
+
+当前 node_states（真值）：
+{node_states_summary}
+
+当前链路补充上下文：
 === 节点状态 ===
 {node_summary}
 
@@ -466,8 +510,11 @@ def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | Non
 3. 如果某个逻辑门被阻塞，分析原因并说明下游影响
 4. 如果链路完整激活，解释激活路径
 5. 保持专业但易懂，适合航空工程师阅读
-6. 回复控制在 200-400 字以内
-7. 不要编造数据，所有分析必须基于上面的链路快照"""
+6. explanation 控制在 200-400 字以内
+7. 只返回 JSON，不要加 markdown 代码块
+
+请用以下 JSON 格式回复：
+{{"explanation": "你的中文解释", "highlighted_nodes": ["节点ID1", "节点ID2"], "suggestion_nodes": ["建议检查的ID"], "confidence": 0.95}}"""
 
     user_prompt = f"用户问题：{question}"
 
@@ -500,17 +547,48 @@ def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | Non
         # MiniMax API response structure: choices[0].message.content
         choices = result.get("choices", [])
         if choices:
-            explanation = choices[0].get("message", {}).get("content", "")
+            raw_content = choices[0].get("message", {}).get("content", "")
         else:
-            explanation = result.get("choices", [{}])[0].get("text", "")
+            raw_content = result.get("choices", [{}])[0].get("text", "")
 
-        if not explanation:
+        if not raw_content:
             # Fallback: try alternative response field
-            explanation = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-            if not explanation:
+            raw_content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+            if not raw_content:
                 return None, {"error": "minimax_empty_response", "message": "MiniMax returned empty explanation."}
 
-        return {"explanation": explanation.strip()}, None
+        try:
+            json_str = re.sub(r"^```json\s*", "", raw_content.strip())
+            json_str = re.sub(r"^```\s*", "", json_str)
+            json_str = re.sub(r"\s*```$", "", json_str)
+            parsed = json.loads(json_str)
+            if not isinstance(parsed, dict):
+                raise ValueError("MiniMax response was not a JSON object.")
+            explanation = parsed.get("explanation", raw_content)
+            highlighted_nodes = parsed.get("highlighted_nodes", [])
+            suggestion_nodes = parsed.get("suggestion_nodes", [])
+            confidence_raw = parsed.get("confidence", 0.5)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            explanation = raw_content
+            highlighted_nodes = []
+            suggestion_nodes = []
+            confidence_raw = 0.5
+
+        if not isinstance(highlighted_nodes, list):
+            highlighted_nodes = []
+        if not isinstance(suggestion_nodes, list):
+            suggestion_nodes = []
+        try:
+            confidence = max(0.0, min(1.0, float(confidence_raw)))
+        except (TypeError, ValueError):
+            confidence = 0.5
+
+        return {
+            "explanation": str(explanation).strip(),
+            "highlighted_nodes": [str(node_id).strip() for node_id in highlighted_nodes if str(node_id).strip()],
+            "suggestion_nodes": [str(node_id).strip() for node_id in suggestion_nodes if str(node_id).strip()],
+            "confidence": confidence,
+        }, None
 
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")[:200]

@@ -838,6 +838,103 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn("data-workbench-preset=\"ready_archived\"", html)
         self.assertIn("data-workbench-preset=\"blocked_follow_up\"", html)
         self.assertIn("一键通过验收", html)
+
+    def test_chat_explain_parses_structured_minimax_json_and_includes_node_states(self):
+        captured_payload = {}
+
+        class FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def read(self):
+                return json.dumps(
+                    {
+                        "choices": [
+                            {
+                                "message": {
+                                    "content": (
+                                        "```json\n"
+                                        "{\"explanation\": \"L1 已激活，但 THR_LOCK 仍受 VDT90 阻塞。\", "
+                                        "\"highlighted_nodes\": [\"L1\", \"THR_LOCK\"], "
+                                        "\"suggestion_nodes\": [\"VDT90\"], "
+                                        "\"confidence\": 0.95}\n"
+                                        "```"
+                                    )
+                                }
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                ).encode("utf-8")
+
+        def fake_urlopen(request, timeout=30):
+            del timeout
+            captured_payload["body"] = json.loads(request.data.decode("utf-8"))
+            return FakeResponse()
+
+        with mock.patch.object(demo_server, "_get_minimax_api_key", return_value="test-key"):
+            with mock.patch("urllib.request.urlopen", side_effect=fake_urlopen):
+                response_payload, error_payload = demo_server._handle_chat_explain(
+                    {
+                        "question": "为什么 THR_LOCK 没释放？",
+                        "system_id": "thrust-reverser",
+                        "node_states": {"L1": "active", "THR_LOCK": "blocked"},
+                        "lever_snapshot": {
+                            "nodes": [
+                                {"id": "L1", "state": "active"},
+                                {"id": "THR_LOCK", "state": "blocked"},
+                            ]
+                        },
+                    }
+                )
+
+        self.assertIsNone(error_payload)
+        self.assertEqual(response_payload["explanation"], "L1 已激活，但 THR_LOCK 仍受 VDT90 阻塞。")
+        self.assertEqual(response_payload["highlighted_nodes"], ["L1", "THR_LOCK"])
+        self.assertEqual(response_payload["suggestion_nodes"], ["VDT90"])
+        self.assertEqual(response_payload["confidence"], 0.95)
+
+        minimax_payload = captured_payload["body"]
+        self.assertEqual(minimax_payload["model"], "minimax-m2.7-highspeed")
+        self.assertIn("当前 node_states（真值）", minimax_payload["messages"][0]["content"])
+        self.assertIn("L1: active(已激活)", minimax_payload["messages"][0]["content"])
+        self.assertIn("THR_LOCK: blocked(阻塞)", minimax_payload["messages"][0]["content"])
+
+    def test_chat_static_assets_include_truth_first_ai_overlay_flow(self):
+        script = (DEMO_UI_STATIC_DIR / "chat.js").read_text(encoding="utf-8")
+        css = (DEMO_UI_STATIC_DIR / "chat.css").read_text(encoding="utf-8")
+
+        for fragment in (
+            "function extractNodeStates(snapshotData)",
+            "function applySystemSnapshotToCanvas(snapshotData)",
+            "function applyAiHighlights(highlightedNodes, suggestionNodes)",
+            "function clearAiHighlights()",
+            "requestJson('/api/system-snapshot?system_id=' + encodeURIComponent(qSystemId))",
+            "node_states: nodeStates",
+            "data-highlighted",
+            "highlighted_nodes",
+            "suggestion_nodes",
+            "lastTruthPayloadBySystem",
+        ):
+            self.assertIn(fragment, script)
+
+        for fragment in (
+            ".chain-node-svg.ai-discussed",
+            ".logic-gate-svg.ai-discussed",
+            ".chain-node-svg.ai-suggested",
+            ".logic-gate-svg.ai-suggested",
+            ".chat-message[data-highlighted] .chat-message-content",
+            "@keyframes aiDiscussedPulse",
+            "@keyframes aiSuggestedPulse",
+        ):
+            self.assertIn(fragment, css)
+
+    def test_workbench_static_shell_contains_key_acceptance_sections(self):
+        html = (DEMO_UI_STATIC_DIR / "workbench.html").read_text(encoding="utf-8")
+
         self.assertIn("连续点多个预设时，以最后一次点击结果为准。", html)
         self.assertIn("一眼看懂的验收面板", html)
         self.assertIn("第二套系统接入准备度", html)
