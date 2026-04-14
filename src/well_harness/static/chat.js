@@ -155,6 +155,91 @@
     });
   }
 
+  /* ── Response formatters ── */
+  function formatLeverSnapshotAnswer(data, payload) {
+    if (!data) {
+      return '⚠️ 未收到有效响应，请检查输入参数。';
+    }
+
+    var ev = data.truth_evaluation || null;
+    var activeIds = [];
+    var failed = {};
+
+    if (ev) {
+      activeIds = ev.active_logic_node_ids || [];
+      failed = ev.failed_conditions || {};
+    } else if (data.logic) {
+      ['logic1', 'logic2', 'logic3', 'logic4'].forEach(function(nodeId) {
+        var logicNode = data.logic[nodeId];
+        if (!logicNode) {
+          return;
+        }
+
+        if (logicNode.active) {
+          activeIds.push(nodeId);
+        }
+
+        if (logicNode.failed_conditions && logicNode.failed_conditions.length > 0) {
+          failed[nodeId] = logicNode.failed_conditions;
+        }
+      });
+    } else {
+      return '⚠️ 未收到有效响应，请检查输入参数。';
+    }
+
+    var lines = [];
+    lines.push('📊 链路状态分析:');
+    lines.push('');
+    lines.push('TRA=' + payload.tra_deg + '°  RA=' + payload.radio_altitude_ft + 'ft');
+
+    if (activeIds.length > 0) {
+      lines.push('');
+      lines.push('✅ 已激活: ' + activeIds.join(', '));
+    }
+
+    if (failed && Object.keys(failed).length > 0) {
+      lines.push('');
+      lines.push('❌ 未通过条件:');
+      for (var nodeId in failed) {
+        if (!Object.prototype.hasOwnProperty.call(failed, nodeId)) {
+          continue;
+        }
+        var conds = failed[nodeId] || [];
+        if (conds.length > 0) {
+          lines.push('  ' + nodeId + ': ' + conds.join(', '));
+        }
+      }
+    }
+
+    if (data.summary) {
+      lines.push('');
+      lines.push('摘要: ' + data.summary);
+    }
+
+    lines.push('');
+    lines.push('详细链路:');
+    lines.push('  SW1 → L1 → SW2 → L2(540V) → L3(EEC+PLS+PDU) → VDT90 → L4/THR_LOCK');
+    lines.push('');
+    lines.push('💡 尝试修改上方参数（如把RA改大到10ft）观察链路变化。');
+
+    return lines.join('\n');
+  }
+
+  function formatDemoAnswer(data) {
+    if (!data) {
+      return '⚠️ 未收到有效响应。';
+    }
+    if (data.error) {
+      return '⚠️ 请求失败: ' + (data.message || data.error);
+    }
+
+    var answer = data.answer || data.reasoning || JSON.stringify(data).substring(0, 300);
+    if (typeof answer !== 'string') {
+      answer = String(answer);
+    }
+    return answer.substring(0, 800);
+  }
+
   // ── Send message ──
   function handleSend() {
     if (!chatInput) {
@@ -171,36 +256,170 @@
     chatInput.style.height = 'auto';
     setInputLoading(true);
 
-    // Simple intent detection
+    // ── Real API integration ──
+    // Detect intent and call the appropriate API
     var lowerText = text.toLowerCase();
-    var response = '';
+    var systemId = currentSystem;
+
+    var payload = {
+      prompt: text,
+      system_id: systemId,
+      tra_deg: 0.0,
+      radio_altitude_ft: 5.0,
+      engine_running: true,
+      aircraft_on_ground: true,
+      reverser_inhibited: false,
+      eec_enable: true,
+      n1k: 35.0,
+      max_n1k_deploy_limit: 60.0,
+      feedback_mode: 'auto_scrubber',
+      deploy_position_percent: 0.0,
+    };
+
+    var useLeverSnapshot = false;
 
     if (lowerText.includes('tls') || lowerText.includes('失效') || lowerText.includes('failure')) {
-      response = 'TLS（Thrust Reverser Latch System，115PSI 液压锁）在以下条件下失效：\n· 液压压力 < 115PSI\n· Reverser Inhibited = True\n· TRA 未达到 -14° 门槛\n\n失效后 SW1 断开，链路卡在 L1，后续 SW2/L3/VDT90 均不激活。';
-    } else if (lowerText.includes('vdt') || lowerText.includes('90')) {
-      response = 'VDT90（Variable Displacement Table）激活条件：\n· L3 必须已激活（SW1 + SW2 + EEC + PLS + PDU 全部到位）\n· deploy_position >= 90%\n\nVDT90 激活后驱动 L4（THR_LOCK），最终释放反推锁。manual_feedback_override 模式可绕过 SW1 直接驱动 VDT90。';
+      payload.tra_deg = -14.0;
+      payload.radio_altitude_ft = 5.0;
+      payload.feedback_mode = 'auto_scrubber';
+      useLeverSnapshot = true;
+    } else if (lowerText.includes('vdt') || (lowerText.includes('90') && lowerText.includes('%'))) {
+      payload.tra_deg = -14.0;
+      payload.radio_altitude_ft = 5.0;
+      payload.engine_running = true;
+      payload.aircraft_on_ground = true;
+      payload.reverser_inhibited = false;
+      payload.eec_enable = true;
+      payload.n1k = 35.0;
+      payload.feedback_mode = 'auto_scrubber';
+      useLeverSnapshot = true;
     } else if (lowerText.includes('throttle') || lowerText.includes('lock') || lowerText.includes('thr_lock')) {
-      response = 'Throttle Lock（THR_LOCK）释放链路：\nL4 → THR_LOCK cmd → 解锁反推装置\n\n常见阻塞原因：\n1. SW1 未闭合（TRA < -14°）\n2. SW2 未闭合（L1 未解锁）\n3. L3 未激活（EEC/PLS/PDU 任一未就绪）\n4. VDT90 < 90%（manual override 可绕过）\n5. Reverser Inhibited = True';
-    } else if (lowerText.includes('tra') || lowerText.includes('阈值') || lowerText.includes('threshold')) {
-      response = 'TRA（Thrust Reverser Actuation）关键阈值：\n· -14°：SW1 闭合门槛（精确值，-13.9° 不够）\n· -20°：最深作动位置\n\nTRA 拉到 -14° 后：SW1 latch → L1 → TLS 解锁 → SW2 → L2(540V) → L3(EEC+PLS+PDU) → VDT90 → L4/THR_LOCK';
-    } else if (lowerText.includes('l3') || lowerText.includes('eec') || lowerText.includes('pls') || lowerText.includes('pdu')) {
-      response = 'L3（Logic Node 3）是扇出节点，同时激活三个下游命令：\n· EEC：Electronic Engine Controller，发动机控制电脑\n· PLS：Pressure Limit Switch，压力限制开关\n· PDU：Power Drive Unit，电机驱动单元\n\n三路全部就绪后，VDT90 才能被激活。';
+      payload.tra_deg = -14.0;
+      payload.radio_altitude_ft = 5.0;
+      payload.feedback_mode = 'auto_scrubber';
+      useLeverSnapshot = true;
+    } else if (lowerText.includes('tra') && (lowerText.includes('拉') || lowerText.includes('-14') || lowerText.includes('-20') || lowerText.includes('阈值'))) {
+      var traMatch = text.match(/(-?\d+)[°]?/);
+      if (traMatch) {
+        payload.tra_deg = parseFloat(traMatch[1]);
+      } else {
+        payload.tra_deg = -14.0;
+      }
+      useLeverSnapshot = true;
     } else if (lowerText.includes('altitude') || lowerText.includes('ra ') || lowerText.includes('radio')) {
-      response = 'Altitude Gate 逻辑：\naltitude_gate = aircraft_on_ground OR radio_altitude_ft >= 7.0\n\n当 altitude_gate = True 时，altitude 条件会阻止 logic1 激活。\n\n关键：on_ground=True 且 altitude=0ft → altitude_gate=True → altitude 不阻止（因为已经在地面）。\non_ground=False 且 altitude=0ft → altitude_gate=False → altitude 不阻止（in-air 但低于 7ft）。';
+      var raMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:ft|英尺)/);
+      if (raMatch) {
+        payload.radio_altitude_ft = parseFloat(raMatch[1]);
+      } else if (lowerText.includes('0') || lowerText.includes('零')) {
+        payload.radio_altitude_ft = 0.0;
+      } else {
+        payload.radio_altitude_ft = 5.0;
+      }
+      payload.tra_deg = -14.0;
+      useLeverSnapshot = true;
+    } else if (lowerText.includes('manual') || lowerText.includes('override')) {
+      payload.tra_deg = -14.0;
+      payload.feedback_mode = 'manual_feedback_override';
+      payload.deploy_position_percent = 95.0;
+      useLeverSnapshot = true;
+    } else if (lowerText.includes('inhibit')) {
+      payload.tra_deg = -14.0;
+      payload.reverser_inhibited = true;
+      useLeverSnapshot = true;
+    } else if (lowerText.includes('l3') || lowerText.includes('eec') || lowerText.includes('pls') || lowerText.includes('pdu')) {
+      payload.tra_deg = -14.0;
+      payload.radio_altitude_ft = 5.0;
+      payload.feedback_mode = 'auto_scrubber';
+      useLeverSnapshot = true;
+    } else if (lowerText.includes('n1') || lowerText.includes('转速') || lowerText.includes('engine')) {
+      payload.tra_deg = -14.0;
+      payload.radio_altitude_ft = 5.0;
+      payload.feedback_mode = 'auto_scrubber';
+      useLeverSnapshot = true;
     } else if (lowerText.includes('guided') || lowerText.includes('demo') || lowerText.includes('带我走')) {
-      response = '▶ 点击左侧"Guided Demo — 带我走一遍"，我会带你一步一步看完整的反推链路激活过程。';
+      addMessage('ai', '▶ 点击左侧"Guided Demo — 带我走一遍"，我会带你一步一步看完整的反推链路激活过程。');
+      setInputLoading(false);
+      chatInput.focus();
+      return;
+    } else if (systemId !== 'thrust-reverser') {
+      fetch('/api/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+        .then(function(r) {
+          return r.json().then(function(data) {
+            if (!r.ok) {
+              throw new Error((data && (data.message || data.error)) || 'request_failed');
+            }
+            return data;
+          });
+        })
+        .then(function(data) {
+          addMessage('ai', formatDemoAnswer(data));
+          setInputLoading(false);
+          chatInput.focus();
+        })
+        .catch(function(err) {
+          addMessage('ai', '⚠️ 请求失败: ' + err.message);
+          setInputLoading(false);
+          chatInput.focus();
+        });
+      return;
     } else {
-      response = '我理解了。\n\n当前支持的分析类型：\n· 链路解释（TLS/VDT90/THR_LOCK/L3/EEC/PLS/PDU）\n· 阈值分析（TRA/Altitude/N1K）\n· 故障诊断（失效条件/阻塞原因）\n· Guided Demo（左侧按钮）\n\nPhase 2 将支持上传文档后自动分析规格。';
+      payload.tra_deg = -14.0;
+      useLeverSnapshot = true;
     }
 
-    // Simulate AI thinking delay
-    setTimeout(function() {
-      addMessage('ai', response);
-      setInputLoading(false);
-      if (chatInput) {
-        chatInput.focus();
-      }
-    }, 400 + Math.random() * 300);
+    if (useLeverSnapshot) {
+      fetch('/api/lever-snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+        .then(function(r) {
+          return r.json().then(function(data) {
+            if (!r.ok) {
+              throw new Error((data && (data.message || data.error)) || 'request_failed');
+            }
+            return data;
+          });
+        })
+        .then(function(data) {
+          addMessage('ai', formatLeverSnapshotAnswer(data, payload));
+          setInputLoading(false);
+          chatInput.focus();
+        })
+        .catch(function(err) {
+          addMessage('ai', '⚠️ 请求失败: ' + err.message);
+          setInputLoading(false);
+          chatInput.focus();
+        });
+    } else {
+      fetch('/api/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+        .then(function(r) {
+          return r.json().then(function(data) {
+            if (!r.ok) {
+              throw new Error((data && (data.message || data.error)) || 'request_failed');
+            }
+            return data;
+          });
+        })
+        .then(function(data) {
+          addMessage('ai', formatDemoAnswer(data));
+          setInputLoading(false);
+          chatInput.focus();
+        })
+        .catch(function(err) {
+          addMessage('ai', '⚠️ 请求失败: ' + err.message);
+          setInputLoading(false);
+          chatInput.focus();
+        });
+    }
   }
 
   if (sendBtn) {
