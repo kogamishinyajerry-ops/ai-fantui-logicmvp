@@ -2895,6 +2895,27 @@ button.summary-chip,
 
   .answer-guide { width: 100%; }
 
+/* Truth evaluation completion badge */
+.truth-eval-completion-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  letter-spacing: 0.02em;
+}
+.truth-eval-completion-badge.badge-done {
+  background: rgba(83, 255, 146, 0.15);
+  color: #53ff92;
+  border: 1px solid rgba(83, 255, 146, 0.4);
+}
+.truth-eval-completion-badge.badge-pending {
+  background: rgba(255, 176, 55, 0.15);
+  color: #ffb037;
+  border: 1px solid rgba(255, 176, 55, 0.4);
+}
+
 /* ===== FBD IEC 61131-3 Function Block Diagram Styles ===== */
 
 .fbd-details {
@@ -2950,5 +2971,20 @@ button.summary-chip,
   max-width: 100%;
   height: auto;
   background: #050914;
+}
+
+/* FBD visibility notice banner */
+.fbd-expand-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  background: rgba(40, 244, 255, 0.07);
+  border: 1px solid rgba(40, 244, 255, 0.25);
+  border-radius: 6px;
+  margin-bottom: 4px;
+  font-size: 0.82rem;
+  color: #28f4ff;
+  letter-spacing: 0.02em;
 }
 }
