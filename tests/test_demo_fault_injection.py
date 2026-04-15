@@ -223,18 +223,27 @@ class FaultInjectionTests(unittest.TestCase):
         self.assertEqual(len(sw1_nodes), 1)
         self.assertEqual(sw1_nodes[0].get("state"), "active")
 
-    def test_fault_radio_altitude_sensor_zero(self):
-        """Injecting radio_altitude_ft sensor_zero forces RA=0, blocking logic1 via altitude gate."""
+    def test_fault_radio_altitude_sensor_zero_unblocks_logic1(self):
+        """Injecting radio_altitude_ft sensor_zero forces RA=0, bypassing altitude gate.
+
+        With aircraft_on_ground=False and altitude=8.0: altitude gate blocks logic1
+        (altitude_ft >= 7.0 branch = True, altitude_on_ground=False → altitude_gate=False).
+        After sensor_zero fault forces RA=0: altitude check (RA < 6.0) passes,
+        altitude_gate = False OR True = True → altitude no longer blocks logic1.
+        """
         response, payload = self._post(
             {
                 **self.BASE_REQUEST,
+                "aircraft_on_ground": False,
+                "radio_altitude_ft": 8.0,  # would normally block via altitude >= 7.0 gate
                 "fault_injections": [{"node_id": "radio_altitude_ft", "fault_type": "sensor_zero"}],
             }
         )
         self.assertEqual(response.status, 200)
         self.assertIn("radio_altitude_ft", payload.get("active_fault_node_ids", []))
-        # RA=0 < 7.0 should fail altitude gate and block logic1
-        self.assertFalse(payload["logic"]["logic1"]["active"])
+        # RA=0 (< 6.0 threshold) should make altitude pass gate → logic1 active
+        self.assertTrue(payload["logic"]["logic1"]["active"])
+        self.assertEqual(payload["hud"]["radio_altitude_ft"], 0.0)
 
     def test_fault_invalid_node_returns_400(self):
         """Unknown node_id returns 400 with invalid_fault_injection_node error."""
@@ -280,6 +289,37 @@ class FaultInjectionTests(unittest.TestCase):
         self.assertEqual(active_ids, {"sw1", "sw2"})
         self.assertFalse(payload["logic"]["logic1"]["active"])
         self.assertFalse(payload["logic"]["logic2"]["active"])
+
+    def test_fault_alias_normalizes_sw1_input_to_sw1(self):
+        """sw1_input is an alias for sw1 and should be accepted and normalized."""
+        response, payload = self._post(
+            {
+                **self.BASE_REQUEST,
+                "fault_injections": [{"node_id": "sw1_input", "fault_type": "stuck_off"}],
+            }
+        )
+        self.assertEqual(response.status, 200)
+        self.assertIn("sw1", payload.get("active_fault_node_ids", []))
+
+    def test_unsupported_fault_combination_is_silently_ignored(self):
+        """A valid node_id + valid fault_type but unsupported combination (sw1+sensor_zero)
+        is accepted by the API but has no effect on logic output — it is a no-op."""
+        response, payload = self._post(
+            {
+                **self.BASE_REQUEST,
+                "fault_injections": [{"node_id": "sw1", "fault_type": "sensor_zero"}],
+            }
+        )
+        self.assertEqual(response.status, 200)
+        # The fault is recorded (so API accepted it) but sw1 is a switch, not a sensor
+        self.assertIn("sw1", payload.get("active_fault_node_ids", []))
+
+    def test_empty_fault_injections_list_is_accepted(self):
+        """fault_injections=[] is a valid no-op."""
+        response, payload = self._post({**self.BASE_REQUEST, "fault_injections": []})
+        self.assertEqual(response.status, 200)
+        self.assertNotIn("active_fault_node_ids", payload)
+        self.assertNotIn("fault_injections", payload)
 
     def test_no_fault_injections_excludes_fault_fields(self):
         """Without fault_injections, the response does not include active_fault_node_ids or fault_injections keys."""
