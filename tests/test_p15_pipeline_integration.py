@@ -316,6 +316,61 @@ def test_p15_convert_returns_intake_packet_for_valid_session(sample_session):
     assert result["validation"]["errors"] == []
 
 
+def test_p15_convert_reports_schema_validation_errors(sample_session, monkeypatch):
+    """_handle_p15_convert surfaces intake_packet_from_dict validation failures."""
+    from well_harness import demo_server
+
+    invalid_intake = {
+        "system_id": "schema-invalid-system",
+        "title": "Schema Invalid System",
+        "objective": "Exercise schema validation in the convert handler.",
+        "source_of_truth": "test fixture",
+        "source_documents": [],
+        "components": [
+            {
+                "id": "sensor_a",
+                "label": "Sensor A",
+                "kind": "sensor",
+                "state_shape": "analog",
+                "unit": "percent",
+                "description": "Sensor with an invalid range shape.",
+                "allowed_range": [0, 50, 100],
+            }
+        ],
+        "logic_nodes": [
+            {
+                "id": "logic_a",
+                "label": "Logic A",
+                "description": "Top-level required field present for basic validation.",
+                "conditions": [],
+                "downstream_component_ids": [],
+            }
+        ],
+        "acceptance_scenarios": [],
+        "fault_modes": [],
+        "knowledge_capture": {
+            "incident_fields": [],
+            "resolution_fields": [],
+            "optimization_fields": [],
+        },
+        "clarification_answers": [],
+        "tags": [],
+    }
+
+    monkeypatch.setattr(
+        demo_server,
+        "convert_markdown_to_intake",
+        lambda prompt_doc, system_id: invalid_intake,
+    )
+
+    result, error = demo_server._handle_p15_convert({"session_id": sample_session.session_id})
+
+    assert error is None
+    assert result is not None
+    assert result["validation"]["valid"] is False
+    assert any("component.allowed_range" in item for item in result["validation"]["errors"])
+
+
 def test_p15_run_pipeline_rejects_missing_intake_packet():
     """_handle_p15_run_pipeline returns error when intake_packet is missing."""
     from well_harness.demo_server import _handle_p15_run_pipeline
