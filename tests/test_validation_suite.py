@@ -31,7 +31,7 @@ class ValidationSuiteTests(unittest.TestCase):
                 "unit_tests",
                 "debug_json_schema",
                 "demo_path_smoke",
-                "system_switcher_smoke",
+                # system_switcher_smoke: Playwright E2E test — requires localhost:7891 server, run in E2E CI only
                 "demo_answer_schema",
                 "second_system_smoke",
                 "second_system_smoke_schema",
