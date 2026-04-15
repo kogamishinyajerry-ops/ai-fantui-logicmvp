@@ -587,51 +587,50 @@ body.drawer-open .stage-shell {
 
 .conn-line {
   fill: none;
-  stroke: rgba(148, 163, 184, 0.28);
-  stroke-width: 1;
+  stroke: rgba(148, 163, 184, 0.65);
+  stroke-width: 2;
   stroke-dasharray: none;
-  opacity: 0.72;
-  transition: stroke 0.28s ease, opacity 0.28s ease, filter 0.28s ease;
+  opacity: 1;
+  transition: stroke 0.28s ease, filter 0.28s ease;
 }
 
 .conn-input {
-  stroke: rgba(148, 163, 184, 0.34);
-  stroke-width: 1;
+  stroke: rgba(148, 163, 184, 0.65);
+  stroke-width: 2;
 }
 
 .conn-logic {
-  stroke: rgba(74, 144, 217, 0.55);
-  stroke-width: 1.2;
+  stroke: rgba(74, 144, 217, 0.85);
+  stroke-width: 2.2;
 }
 
 .conn-merge {
-  stroke: rgba(74, 144, 217, 0.4);
-  stroke-width: 1.2;
-  stroke-dasharray: 4, 3;
+  stroke: rgba(74, 144, 217, 0.85);
+  stroke-width: 2.2;
 }
 
 .conn-final {
   stroke: var(--status-active);
-  stroke-width: 1.4;
+  stroke-width: 2.5;
 }
 
 .conn-line.is-active {
   stroke: var(--accent);
-  stroke-width: 1.4;
-  filter: drop-shadow(0 0 4px rgba(74, 144, 217, 0.5));
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 5px rgba(74, 144, 217, 0.6));
   opacity: 1;
 }
 
 .conn-line.is-blocked {
-  stroke: rgba(224, 82, 82, 0.5);
-  stroke-width: 1;
-  opacity: 0.7;
+  stroke: rgba(224, 82, 82, 0.75);
+  stroke-width: 2;
+  opacity: 1;
 }
 
 .conn-line.is-inactive {
-  stroke: rgba(148, 163, 184, 0.18);
-  stroke-width: 0.8;
-  opacity: 0.35;
+  stroke: rgba(148, 163, 184, 0.35);
+  stroke-width: 1.5;
+  opacity: 0.7;
 }
 
 .section-label {
