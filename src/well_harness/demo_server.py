@@ -1336,7 +1336,24 @@ def _handle_p15_convert(request_payload: dict) -> tuple[dict | None, dict | None
     try:
         intake_packet_from_dict(intake_dict)
     except (ValueError, KeyError, TypeError) as exc:
-        errors.append(f"Intake packet validation failed: {exc}")
+        # Try to extract a field path from common error message patterns.
+        msg = str(exc)
+        field_path = ""
+        # ValueError: "foo must be a non-empty string." → field: "foo"
+        # ValueError: "component.bar must be a 2-item list" → field: "components[*].bar"
+        # KeyError: 'foo' → field: "foo"
+        if isinstance(exc, ValueError):
+            import re
+            m = re.match(r"^(\S+(?:\.\S+)*)\s+must", msg)
+            if m:
+                raw = m.group(1)
+                field_path = raw.replace("component.", "components[*].").replace("logic_condition.", "logic_nodes[*].conditions[*].")
+        elif isinstance(exc, KeyError):
+            field_path = str(exc).strip("'\"")
+        if field_path:
+            errors.append(f"[{field_path}] {msg}")
+        else:
+            errors.append(f"Intake packet validation failed: {msg}")
 
     # Basic validation
     required_fields = ["system_id", "title", "objective", "components", "logic_nodes"]

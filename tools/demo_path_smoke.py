@@ -50,6 +50,9 @@ def start_demo_server() -> tuple[ThreadingHTTPServer | None, threading.Thread | 
         return None, None
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
+    # Give the server socket a moment to become accepting — avoids connection
+    # refused races on slow CI runners.
+    import time; time.sleep(0.05)
     return server, thread
 
 
