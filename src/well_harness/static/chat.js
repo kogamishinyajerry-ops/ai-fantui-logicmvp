@@ -133,6 +133,15 @@
     deploy_90_percent_vdt: 'vdt90',
   };
 
+  // Maps each logic gate to the command node(s) it directly drives.
+  // Used to derive intermediate command-node visual state from gate activation state.
+  var GATE_TO_COMMAND_MAP = {
+    logic1: 'tls115',
+    logic2: 'etrac_540v',
+    logic3: ['eec_deploy', 'pls_power', 'pdu_motor'],
+    logic4: 'thr_lock',
+  };
+
   var NODE_REFERENCE_ALIASES = {
     radio_altitude_ft: 'radio_altitude_ft',
     ra: 'radio_altitude_ft',
@@ -1322,6 +1331,10 @@ function _applySuggestedOverrides(overrides) {
       }
     }
 
+    // Track command nodes that received an explicit state from the backend
+    // (appeared in the nodes array, e.g. fault-injected or has a declared state).
+    // These must NOT be overwritten by derivation — their explicit state takes precedence.
+    var explicitlySetCommandNodes = {};
     for (i = 0; i < nodeIds.length; i += 1) {
       nodeId = nodeIds[i];
       if (/^logic\d+$/.test(nodeId)) {
@@ -1342,11 +1355,46 @@ function _applySuggestedOverrides(overrides) {
       // output nodes that aren't in componentValues (value=undefined).
       if (failedByNodeId[nodeId] && failedByNodeId[nodeId].length > 0) {
         setNodeState(nodeId, 'blocked');
+        explicitlySetCommandNodes[nodeId] = true;
       } else {
         state = deriveComponentState(value, !!blockedInputNodes[nodeId]);
         setNodeState(nodeId, state);
+        // Mark as explicitly set so derivation skips it — preserves sensor-fault
+        // inactive states (e.g. tls115 with sensor_zero: state='inactive' from backend).
+        explicitlySetCommandNodes[nodeId] = true;
         if (value !== undefined) {
           setNodeValue(nodeId, value);
+        }
+      }
+    }
+
+    // Derive intermediate command-node states from their upstream logic-gate states.
+    // Command nodes (tls115, etrac_540v, etc.) are not in truth_evaluation directly;
+    // they activate when and only when their driving logic gate is active.
+    // Skip nodes that already have an explicit state from the backend (e.g. fault injections).
+    var gateId;
+    var drivenCmds;
+    var cmdState;
+    for (gateId in GATE_TO_COMMAND_MAP) {
+      if (!Object.prototype.hasOwnProperty.call(GATE_TO_COMMAND_MAP, gateId)) {
+        continue;
+      }
+      drivenCmds = GATE_TO_COMMAND_MAP[gateId];
+      if (!Array.isArray(drivenCmds)) {
+        drivenCmds = [drivenCmds];
+      }
+      if (activeLogicMap[gateId]) {
+        cmdState = 'active';
+      } else if (failedByNodeId[gateId] && failedByNodeId[gateId].length > 0) {
+        cmdState = 'blocked';
+      } else {
+        cmdState = 'inactive';
+      }
+      for (j = 0; j < drivenCmds.length; j += 1) {
+        // Only derive if the node does NOT already have an explicit state from the backend.
+        // This preserves fault-injected states (blocked/inactive) set in the loop above.
+        if (!explicitlySetCommandNodes[drivenCmds[j]]) {
+          setNodeState(drivenCmds[j], cmdState);
         }
       }
     }
