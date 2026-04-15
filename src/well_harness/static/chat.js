@@ -550,6 +550,7 @@ function _applySuggestedOverrides(overrides) {
     var trajectorySteps = operateResult.trajectory_steps || [];
     var gatePlan = operateResult.gate_plan || {};
     var confidence = operateResult.confidence || 0.5;
+    var autoApply = operateResult.auto_apply === true;
     var suggestionChip;
 
     addMessage('ai', explanation);
@@ -557,24 +558,28 @@ function _applySuggestedOverrides(overrides) {
     if (actionType === 'suggest_parameter_override' && Object.keys(overrides).length > 0) {
       suggestionChip = document.createElement('button');
       suggestionChip.className = 'suggestion-chip';
-      suggestionChip.innerHTML = '<span>⚡ 一键应用建议参数</span>';
+      suggestionChip.innerHTML = '<span>⚡ 一键应用</span>';
       suggestionChip.title = '参数: ' + JSON.stringify(overrides);
       suggestionChip.addEventListener('click', function() {
         suggestionChip.disabled = true;
         suggestionChip.querySelector('span').textContent = '⏳ 应用中...';
         _applySuggestedOverrides(overrides).then(function() {
-          addMessage('ai', '✅ 已应用建议参数，逻辑面板已更新。');
+          addMessage('ai', '✅ 已应用：' + Object.keys(overrides).join(', '));
           suggestionChip.remove();
         }).catch(function(err) {
           suggestionChip.disabled = false;
-          suggestionChip.querySelector('span').textContent = '⚡ 重试应用';
-          addMessage('ai', '⚠️ 应用参数失败: ' + err.message);
+          suggestionChip.querySelector('span').textContent = '⚡ 重试';
+          addMessage('ai', '⚠️ 应用失败: ' + err.message);
         });
       });
       if (chatMessages) {
         chatMessages.appendChild(suggestionChip);
         scrollChatToBottom();
         suggestionChip.focus();
+      }
+      // auto_apply: apply immediately without requiring a click
+      if (autoApply) {
+        suggestionChip.click();
       }
     } else if (actionType === 'manual_steps' && trajectorySteps.length > 0) {
       suggestionChip = document.createElement('button');
@@ -584,7 +589,7 @@ function _applySuggestedOverrides(overrides) {
         suggestionChip.disabled = true;
         suggestionChip.querySelector('span').textContent = '✓ 已展开';
         var stepsText = trajectorySteps.map(function(step, i) {
-          return (i + 1) + '. ' + (step.description || step);
+          return (i + 1) + '. ' + (typeof step === 'object' ? (step.description || JSON.stringify(step)) : step);
         }).join('\n');
         addMessage('ai', '📋 操作步骤：\n' + stepsText);
       });
