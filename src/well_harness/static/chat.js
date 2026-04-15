@@ -589,13 +589,6 @@ function _applySuggestedOverrides(overrides) {
     } else if (actionType === 'cannot_operate') {
       // Already shown explanation; no chip needed
     }
-    setTruthBadge('danger', '错误');
-    if (truthEvalStatus) {
-      truthEvalStatus.textContent = '请求失败';
-    }
-    if (truthEvalSummary) {
-      truthEvalSummary.textContent = '⚠️ 请求失败: ' + err.message;
-    }
   }
 
   function addMessage(role, text, highlight) {
@@ -671,42 +664,6 @@ function _applySuggestedOverrides(overrides) {
   function scrollChatToBottom() {
     if (chatMessages) {
       chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-  }
-
-  function finishChatRequest() {
-    setInputLoading(false);
-    if (chatInput) {
-      chatInput.focus();
-    }
-  }
-
-  function scrollChatToBottom() {
-    if (chatMessages) {
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-  }
-
-  function setInputLoading(loading) {
-    if (!chatInput || !sendBtn) {
-      return;
-    }
-
-    chatInput.disabled = loading;
-    sendBtn.disabled = loading;
-    chatInput.placeholder = loading ? LOADING_SEND_TEXT : DEFAULT_INPUT_PLACEHOLDER;
-    sendBtn.textContent = loading ? LOADING_SEND_TEXT : DEFAULT_SEND_TEXT;
-    sendBtn.classList.toggle('is-loading', loading);
-    sendBtn.setAttribute('aria-busy', loading ? 'true' : 'false');
-    sendBtn.setAttribute('aria-label', loading ? LOADING_SEND_TEXT : DEFAULT_SEND_TEXT);
-    sendBtn.title = loading ? LOADING_SEND_TEXT : DEFAULT_SEND_TEXT;
-
-    if (inputDock) {
-      inputDock.classList.toggle('is-loading', loading);
-    }
-    if (chatLoadingStatus) {
-      chatLoadingStatus.textContent = loading ? LOADING_SEND_TEXT : '就绪';
-      chatLoadingStatus.classList.toggle('is-loading', loading);
     }
   }
 
