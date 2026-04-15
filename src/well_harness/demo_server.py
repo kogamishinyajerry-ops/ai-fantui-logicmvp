@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 from functools import lru_cache
 import json
 import re
@@ -106,6 +107,33 @@ LEVER_FEEDBACK_MODES = {
     "auto_scrubber",
     "manual_feedback_override",
 }
+LEVER_SNAPSHOT_FAULT_NODE_ALIASES = {
+    "sw1_input": "sw1",
+    "sw2_input": "sw2",
+}
+LEVER_SNAPSHOT_FAULT_NODES = {
+    "sw1",
+    "sw2",
+    "radio_altitude_ft",
+    "n1k",
+    "tls115",
+    "logic1",
+    "logic2",
+    "logic3",
+    "logic4",
+    "thr_lock",
+    "vdt90",
+    "sw1_input",
+    "sw2_input",
+}
+LEVER_SNAPSHOT_FAULT_TYPES = {
+    "stuck_off",
+    "stuck_on",
+    "sensor_zero",
+    "logic_stuck_false",
+    "cmd_blocked",
+}
+FAULT_INJECTION_REASON = "fault_injection"
 
 
 class DemoRequestHandler(BaseHTTPRequestHandler):
@@ -210,7 +238,14 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                 self._send_json(400, error_payload)
                 return
 
-            self._send_json(200, lever_snapshot_payload(**lever_inputs))
+            fault_injections = lever_inputs.pop("_fault_injections", None)
+            self._send_json(
+                200,
+                lever_snapshot_payload(
+                    **lever_inputs,
+                    fault_injections=fault_injections,
+                ),
+            )
             return
         if parsed.path == SYSTEM_SNAPSHOT_POST_PATH:
             system_id = request_payload.get("system_id")
@@ -832,6 +867,236 @@ def _parse_feedback_mode(request_payload: dict) -> tuple[str | None, dict | None
     return normalized, None
 
 
+def _normalize_fault_injection_node_id(node_id: str) -> str:
+    normalized = str(node_id or "").strip()
+    return LEVER_SNAPSHOT_FAULT_NODE_ALIASES.get(normalized, normalized)
+
+
+def _fault_injection_map(fault_injections: list[dict] | None) -> dict[str, str]:
+    fault_map: dict[str, str] = {}
+    for fault in fault_injections or []:
+        node_id = _normalize_fault_injection_node_id(fault.get("node_id", ""))
+        fault_type = str(fault.get("fault_type", "")).strip()
+        if node_id and fault_type:
+            fault_map[node_id] = fault_type
+    return fault_map
+
+
+def _append_unique(values: list[str], value: str) -> None:
+    if value not in values:
+        values.append(value)
+
+
+def _apply_switch_fault_injections(
+    switch_state: SwitchState,
+    fault_map: dict[str, str],
+) -> SwitchState:
+    sw1 = switch_state.sw1
+    if fault_map.get("sw1") == "stuck_off":
+        sw1 = False
+    elif fault_map.get("sw1") == "stuck_on":
+        sw1 = True
+
+    sw2 = switch_state.sw2
+    if fault_map.get("sw2") == "stuck_off":
+        sw2 = False
+    elif fault_map.get("sw2") == "stuck_on":
+        sw2 = True
+
+    if sw1 == switch_state.sw1 and sw2 == switch_state.sw2:
+        return switch_state
+
+    return SwitchState(
+        previous_tra_deg=switch_state.previous_tra_deg,
+        sw1=sw1,
+        sw2=sw2,
+    )
+
+
+def _apply_sensor_fault_injections(sensors, fault_map: dict[str, str]):
+    sensor_updates = {}
+
+    if fault_map.get("tls115") == "sensor_zero":
+        sensor_updates["tls_unlocked_ls"] = False
+
+    if fault_map.get("vdt90") == "cmd_blocked":
+        sensor_updates["deploy_90_percent_vdt"] = False
+
+    if not sensor_updates:
+        return sensors
+
+    return replace(sensors, **sensor_updates)
+
+
+def _apply_output_fault_injections(outputs, fault_map: dict[str, str]):
+    output_updates = {}
+
+    if fault_map.get("tls115") == "sensor_zero":
+        output_updates["tls_115vac_cmd"] = False
+
+    if fault_map.get("logic1") == "logic_stuck_false":
+        output_updates["logic1_active"] = False
+        output_updates["tls_115vac_cmd"] = False
+
+    if fault_map.get("logic2") == "logic_stuck_false":
+        output_updates["logic2_active"] = False
+        output_updates["etrac_540vdc_cmd"] = False
+
+    if fault_map.get("logic3") == "logic_stuck_false":
+        output_updates["logic3_active"] = False
+        output_updates["eec_deploy_cmd"] = False
+        output_updates["pls_power_cmd"] = False
+        output_updates["pdu_motor_cmd"] = False
+
+    if fault_map.get("logic4") == "logic_stuck_false":
+        output_updates["logic4_active"] = False
+        output_updates["throttle_electronic_lock_release_cmd"] = False
+
+    if fault_map.get("thr_lock") == "cmd_blocked":
+        output_updates["throttle_electronic_lock_release_cmd"] = False
+
+    if not output_updates:
+        return outputs
+
+    return replace(outputs, **output_updates)
+
+
+def _fault_reason(fault_type: str) -> str:
+    return f"{FAULT_INJECTION_REASON}:{fault_type}"
+
+
+def _set_faulted_node_state(
+    node_payload: dict | None,
+    *,
+    state: str,
+    reason: str | None = None,
+) -> None:
+    if node_payload is None:
+        return
+    node_payload["state"] = state
+    if state == "blocked":
+        blocked_by = list(node_payload.get("blocked_by") or [])
+        if reason:
+            _append_unique(blocked_by, reason)
+        node_payload["blocked_by"] = blocked_by
+        return
+    node_payload["blocked_by"] = []
+
+
+def _apply_fault_injections_to_snapshot_payload(
+    result: dict,
+    fault_injections: list[dict] | None,
+) -> dict:
+    fault_map = _fault_injection_map(fault_injections)
+    if not fault_map:
+        return result
+
+    nodes_by_id = {
+        node["id"]: node
+        for node in result.get("nodes", [])
+        if isinstance(node, dict) and "id" in node
+    }
+    input_payload = result.get("input")
+    hud_payload = result.get("hud")
+    outputs_payload = result.get("outputs")
+    logic_payload = result.get("logic")
+
+    for node_id, fault_type in fault_map.items():
+        reason = _fault_reason(fault_type)
+
+        if node_id == "sw1":
+            active = fault_type == "stuck_on"
+            if isinstance(hud_payload, dict):
+                hud_payload["sw1"] = active
+            _set_faulted_node_state(
+                nodes_by_id.get("sw1"),
+                state="active" if active else "inactive",
+            )
+            continue
+
+        if node_id == "sw2":
+            active = fault_type == "stuck_on"
+            if isinstance(hud_payload, dict):
+                hud_payload["sw2"] = active
+            _set_faulted_node_state(
+                nodes_by_id.get("sw2"),
+                state="active" if active else "inactive",
+            )
+            continue
+
+        if node_id == "radio_altitude_ft" and fault_type == "sensor_zero":
+            if isinstance(input_payload, dict):
+                input_payload["radio_altitude_ft"] = 0.0
+            if isinstance(hud_payload, dict):
+                hud_payload["radio_altitude_ft"] = 0.0
+            _set_faulted_node_state(nodes_by_id.get("radio_altitude_ft"), state="inactive")
+            continue
+
+        if node_id == "n1k" and fault_type == "sensor_zero":
+            if isinstance(input_payload, dict):
+                input_payload["n1k"] = 0.0
+            if isinstance(hud_payload, dict):
+                hud_payload["n1k"] = 0.0
+            _set_faulted_node_state(nodes_by_id.get("n1k"), state="inactive")
+            continue
+
+        if node_id == "tls115" and fault_type == "sensor_zero":
+            if isinstance(outputs_payload, dict):
+                outputs_payload["tls_115vac_cmd"] = False
+            _set_faulted_node_state(nodes_by_id.get("tls115"), state="inactive")
+            continue
+
+        if node_id in {"logic1", "logic2", "logic3", "logic4"} and fault_type == "logic_stuck_false":
+            logic_entry = logic_payload.get(node_id) if isinstance(logic_payload, dict) else None
+            if isinstance(logic_entry, dict):
+                logic_entry["active"] = False
+                failed_conditions = list(logic_entry.get("failed_conditions") or [])
+                _append_unique(failed_conditions, reason)
+                logic_entry["failed_conditions"] = failed_conditions
+
+            if isinstance(outputs_payload, dict):
+                outputs_payload[f"{node_id}_active"] = False
+
+            _set_faulted_node_state(nodes_by_id.get(node_id), state="blocked", reason=reason)
+
+            if node_id == "logic1":
+                if isinstance(outputs_payload, dict):
+                    outputs_payload["tls_115vac_cmd"] = False
+                _set_faulted_node_state(nodes_by_id.get("tls115"), state="inactive")
+            elif node_id == "logic2":
+                if isinstance(outputs_payload, dict):
+                    outputs_payload["etrac_540vdc_cmd"] = False
+                _set_faulted_node_state(nodes_by_id.get("etrac_540v"), state="inactive")
+            elif node_id == "logic3":
+                if isinstance(outputs_payload, dict):
+                    outputs_payload["eec_deploy_cmd"] = False
+                    outputs_payload["pls_power_cmd"] = False
+                    outputs_payload["pdu_motor_cmd"] = False
+                _set_faulted_node_state(nodes_by_id.get("eec_deploy"), state="inactive")
+                _set_faulted_node_state(nodes_by_id.get("pls_power"), state="inactive")
+                _set_faulted_node_state(nodes_by_id.get("pdu_motor"), state="inactive")
+            elif node_id == "logic4":
+                if isinstance(outputs_payload, dict):
+                    outputs_payload["throttle_electronic_lock_release_cmd"] = False
+                _set_faulted_node_state(nodes_by_id.get("thr_lock"), state="blocked", reason=reason)
+            continue
+
+        if node_id == "thr_lock" and fault_type == "cmd_blocked":
+            if isinstance(outputs_payload, dict):
+                outputs_payload["throttle_electronic_lock_release_cmd"] = False
+            _set_faulted_node_state(nodes_by_id.get("thr_lock"), state="blocked", reason=reason)
+            continue
+
+        if node_id == "vdt90" and fault_type == "cmd_blocked":
+            if isinstance(hud_payload, dict):
+                hud_payload["deploy_90_percent_vdt"] = False
+            _set_faulted_node_state(nodes_by_id.get("vdt90"), state="blocked", reason=reason)
+
+    result["active_fault_node_ids"] = list(fault_map.keys())
+    result["fault_injections"] = fault_injections or []
+    return result
+
+
 def parse_lever_snapshot_request(request_payload: dict) -> tuple[dict | None, dict | None]:
     lever_inputs = {}
     for field_name, options in LEVER_NUMERIC_INPUTS.items():
@@ -862,6 +1127,41 @@ def parse_lever_snapshot_request(request_payload: dict) -> tuple[dict | None, di
     if error_payload is not None:
         return None, error_payload
     lever_inputs["deploy_position_percent"] = deploy_position_percent
+
+    fault_injections = request_payload.get("fault_injections")
+    if fault_injections is not None:
+        if not isinstance(fault_injections, list):
+            return None, {
+                "error": "invalid_fault_injections",
+                "message": "fault_injections must be a list",
+            }
+        normalized_faults = []
+        for fault in fault_injections:
+            if not isinstance(fault, dict):
+                return None, {
+                    "error": "invalid_fault_injections",
+                    "message": "each fault_injection must be an object",
+                }
+            node_id = str(fault.get("node_id", "")).strip()
+            fault_type = str(fault.get("fault_type", "")).strip()
+            if node_id not in LEVER_SNAPSHOT_FAULT_NODES:
+                return None, {
+                    "error": "invalid_fault_injection_node",
+                    "message": f"Unknown node_id: {node_id}",
+                }
+            if fault_type not in LEVER_SNAPSHOT_FAULT_TYPES:
+                return None, {
+                    "error": "invalid_fault_type",
+                    "message": f"Unknown fault_type: {fault_type}",
+                }
+            normalized_faults.append(
+                {
+                    "node_id": _normalize_fault_injection_node_id(node_id),
+                    "fault_type": fault_type,
+                }
+            )
+        if normalized_faults:
+            lever_inputs["_fault_injections"] = normalized_faults
     return lever_inputs, None
 
 
@@ -1319,25 +1619,33 @@ def _simulate_lever_state(
     max_n1k_deploy_limit: float,
     feedback_mode: str,
     deploy_position_percent: float,
+    fault_injections: list[dict] | None = None,
 ) -> dict:
     controller_adapter = build_reference_controller_adapter(config)
     switches = LatchedThrottleSwitches(config)
     plant = SimplifiedDeployPlant(config)
     switch_state = SwitchState(previous_tra_deg=0.0)
     plant_state = PlantState()
+    fault_map = _fault_injection_map(fault_injections)
 
     snapshot = None
     for tick, current_tra in enumerate(_canonical_pullback_sequence(target_tra, config)):
         switch_state = switches.update(switch_state, current_tra)
+        switch_state = _apply_switch_fault_injections(switch_state, fault_map)
         sensors = plant_state.sensors(config)
+        sensors = _apply_sensor_fault_injections(sensors, fault_map)
         pilot_inputs = PilotInputs(
-            radio_altitude_ft=radio_altitude_ft,
+            radio_altitude_ft=(
+                0.0
+                if fault_map.get("radio_altitude_ft") == "sensor_zero"
+                else radio_altitude_ft
+            ),
             tra_deg=current_tra,
             engine_running=engine_running,
             aircraft_on_ground=aircraft_on_ground,
             reverser_inhibited=reverser_inhibited,
             eec_enable=eec_enable,
-            n1k=n1k,
+            n1k=0.0 if fault_map.get("n1k") == "sensor_zero" else n1k,
             max_n1k_deploy_limit=max_n1k_deploy_limit,
         )
         resolved_inputs = ResolvedInputs(
@@ -1358,6 +1666,7 @@ def _simulate_lever_state(
             deploy_90_percent_vdt=sensors.deploy_90_percent_vdt,
         )
         outputs, explain = controller_adapter.evaluate_with_explain(resolved_inputs)
+        outputs = _apply_output_fault_injections(outputs, fault_map)
         snapshot = {
             "time_s": round(tick * config.step_s, 3),
             "plant_state": plant_state,
@@ -1386,6 +1695,7 @@ def _simulate_lever_state(
             deploy_position_percent=deploy_position,
         )
         sensors = manual_plant_state.sensors(config)
+        sensors = _apply_sensor_fault_injections(sensors, fault_map)
         pilot_inputs = snapshot["pilot_inputs"]
         inputs = ResolvedInputs(
             radio_altitude_ft=pilot_inputs.radio_altitude_ft,
@@ -1406,6 +1716,7 @@ def _simulate_lever_state(
         )
         controller_adapter = build_reference_controller_adapter(config)
         outputs, explain = controller_adapter.evaluate_with_explain(inputs)
+        outputs = _apply_output_fault_injections(outputs, fault_map)
         snapshot.update(
             {
                 "plant_state": manual_plant_state,
@@ -1862,6 +2173,7 @@ def lever_snapshot_payload(
     max_n1k_deploy_limit: float = 60.0,
     feedback_mode: str = "auto_scrubber",
     deploy_position_percent: float = 0.0,
+    fault_injections: list[dict] | None = None,
 ) -> dict:
     config = HarnessConfig()
     requested_tra = _clamp_tra(tra_deg, config)
@@ -1878,6 +2190,7 @@ def lever_snapshot_payload(
         max_n1k_deploy_limit=max_n1k_deploy_limit,
         feedback_mode=feedback_mode,
         deploy_position_percent=deploy_position_percent,
+        fault_injections=fault_injections,
     )
     lock_probe = _simulate_lever_state(
         lock_deg,
@@ -1891,6 +2204,7 @@ def lever_snapshot_payload(
         max_n1k_deploy_limit=max_n1k_deploy_limit,
         feedback_mode=feedback_mode,
         deploy_position_percent=deploy_position_percent,
+        fault_injections=fault_injections,
     )
     boundary_unlock_ready = lock_probe["outputs"].logic4_active
     effective_tra = (
@@ -1964,7 +2278,7 @@ def lever_snapshot_payload(
         else "manual feedback override：用 simplified plant feedback / diagnostic override 推动 VDT / deploy feedback；不是新的控制真值，也不是完整实时物理仿真。"
     )
 
-    return {
+    result = {
         "mode": (
             "canonical_pullback_scrubber"
             if feedback_mode == "auto_scrubber"
@@ -2045,6 +2359,7 @@ def lever_snapshot_payload(
             "THR_LOCK release must not be read as complete physical root-cause proof.",
         ],
     }
+    return _apply_fault_injections_to_snapshot_payload(result, fault_injections)
 
 
 def build_parser() -> argparse.ArgumentParser:

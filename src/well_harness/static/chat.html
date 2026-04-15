@@ -195,6 +195,18 @@
               <text x="615" y="105" class="section-label" data-tooltip="逻辑节点 4，THR_LOCK 释放命令">L4</text>
             </svg>
           </div>
+
+          <button
+            type="button"
+            id="node-fault-btn"
+            class="node-fault-btn"
+            aria-label="注入节点故障"
+            title="注入节点故障"
+            hidden
+          >
+            ⚡
+          </button>
+          <div id="node-fault-menu" class="node-fault-menu" role="menu" hidden></div>
         </div>
       </section>
 
@@ -227,19 +239,43 @@
         </div>
       </section>
 
+      <div id="chat-fault-bar" class="fault-bar" hidden aria-label="故障注入栏">
+        <span class="fault-bar-label">故障注入</span>
+        <div id="chat-fault-pills"></div>
+        <button id="chat-fault-presets">快捷预设</button>
+        <button id="chat-fault-clear">清除全部</button>
+        <div id="chat-fault-presets-menu" class="fault-presets-menu" role="menu" hidden></div>
+      </div>
+
       <section class="input-dock" aria-label="底部输入栏">
         <div class="input-dock-main">
-          <label for="chat-file-upload" class="dock-icon-btn" title="上传文档">📎</label>
-          <input type="file" id="chat-file-upload" accept=".md,.txt,.pdf" hidden aria-label="上传控制逻辑文档">
+          <div class="input-dock-tools">
+            <label for="chat-file-upload" class="dock-icon-btn" title="上传文档">📎</label>
+            <input type="file" id="chat-file-upload" accept=".md,.txt,.pdf" hidden aria-label="上传控制逻辑文档">
 
-          <textarea
-            id="chat-input"
-            rows="1"
-            placeholder="输入你的控制逻辑问题..."
-            aria-label="对话输入"
-          ></textarea>
+            <button
+              type="button"
+              class="dock-icon-btn fault-dock-toggle"
+              id="chat-fault-toggle"
+              aria-controls="chat-fault-bar"
+              aria-expanded="false"
+              aria-label="展开故障注入栏"
+              title="展开故障注入栏"
+            >
+              ⚡
+            </button>
+          </div>
 
-          <button type="button" class="send-btn" id="chat-send-btn" aria-label="发送">发送</button>
+          <div class="input-dock-editor">
+            <textarea
+              id="chat-input"
+              rows="1"
+              placeholder="输入你的控制逻辑问题..."
+              aria-label="对话输入"
+            ></textarea>
+
+            <button type="button" class="send-btn" id="chat-send-btn" aria-label="发送">发送</button>
+          </div>
         </div>
 
         <div class="input-dock-meta">
