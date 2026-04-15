@@ -32,7 +32,7 @@ def build_default_commands(python_executable: str | None = None) -> tuple[Valida
     return (
         ValidationCommand(
             "unit_tests",
-            (python, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"),
+            (python, "-m", "pytest", "tests/", "-q", "--tb=no"),
         ),
         ValidationCommand(
             "debug_json_schema",
