@@ -555,40 +555,57 @@ function _applySuggestedOverrides(overrides) {
     addMessage('ai', explanation);
 
     if (actionType === 'suggest_parameter_override' && Object.keys(overrides).length > 0) {
-      suggestionChip = document.createElement('div');
+      suggestionChip = document.createElement('button');
       suggestionChip.className = 'suggestion-chip';
       suggestionChip.innerHTML = '<span>⚡ 一键应用建议参数</span>';
       suggestionChip.title = '参数: ' + JSON.stringify(overrides);
       suggestionChip.addEventListener('click', function() {
+        suggestionChip.disabled = true;
+        suggestionChip.querySelector('span').textContent = '⏳ 应用中...';
         _applySuggestedOverrides(overrides).then(function() {
           addMessage('ai', '✅ 已应用建议参数，逻辑面板已更新。');
+          suggestionChip.remove();
         }).catch(function(err) {
+          suggestionChip.disabled = false;
+          suggestionChip.querySelector('span').textContent = '⚡ 重试应用';
           addMessage('ai', '⚠️ 应用参数失败: ' + err.message);
         });
-        suggestionChip.style.display = 'none';
       });
       if (chatMessages) {
         chatMessages.appendChild(suggestionChip);
         scrollChatToBottom();
+        suggestionChip.focus();
       }
     } else if (actionType === 'manual_steps' && trajectorySteps.length > 0) {
-      suggestionChip = document.createElement('div');
+      suggestionChip = document.createElement('button');
       suggestionChip.className = 'suggestion-chip';
       suggestionChip.innerHTML = '<span>📋 查看操作步骤</span>';
       suggestionChip.addEventListener('click', function() {
+        suggestionChip.disabled = true;
+        suggestionChip.querySelector('span').textContent = '✓ 已展开';
         var stepsText = trajectorySteps.map(function(step, i) {
           return (i + 1) + '. ' + (step.description || step);
         }).join('\n');
         addMessage('ai', '📋 操作步骤：\n' + stepsText);
-        suggestionChip.style.display = 'none';
       });
       if (chatMessages) {
         chatMessages.appendChild(suggestionChip);
         scrollChatToBottom();
       }
-    } else if (actionType === 'cannot_operate') {
-      // Already shown explanation; no chip needed
+    } else if (Object.keys(gatePlan).length > 0) {
+      // Display gate_plan returned for "满足L1-L4" type requests
+      var gatePlanLines = [];
+      var gateId;
+      for (gateId in gatePlan) {
+        if (Object.prototype.hasOwnProperty.call(gatePlan, gateId)) {
+          gatePlanLines.push(gateId + ': ' + (typeof gatePlan[gateId] === 'object' ? JSON.stringify(gatePlan[gateId]) : gatePlan[gateId]));
+        }
+      }
+      if (gatePlanLines.length > 0) {
+        addMessage('ai', '🔓 逻辑门依赖项：\n' + gatePlanLines.join('\n'));
+      }
     }
+    // else: cannot_operate — explanation already shown above; no chip needed
   }
 
   function addMessage(role, text, highlight) {
@@ -2404,14 +2421,17 @@ function _applySuggestedOverrides(overrides) {
 function hasOperateIntent(qText, qLower) {
     // Patterns indicating user wants to change/regulate/adjust parameters
     var operatePatterns = [
-      '调节', '调整', '设置', '把', '让', '使',
-      '达到', '到', '触发', '激活',
-      '满足', '实现',
+      // Compound action verbs
+      '调节', '调整', '设置', '达到', '触发', '激活', '满足', '实现',
+      // Technical parameter keywords (minimum 3 chars to avoid short noise)
       'vd', 'vdt', 'tra', 'altitude', 'radio',
       'deploy', 'position', 'override', 'manual',
-      'inhibit', '引擎', '发动机', '地面', '空中',
+      'inhibit', '引擎',
+      // Specific logic gate targets
       '满足l1', '满足l2', '满足l3', '满足l4',
       'l1满足', 'l2满足', 'l3满足', 'l4满足',
+      // Compound with target words (these require a target, won't match standalone nouns)
+      '把tra', '把vdt', '把vd', '让tra', '拉倒', '推到',
     ];
     var i;
     for (i = 0; i < operatePatterns.length; i += 1) {
