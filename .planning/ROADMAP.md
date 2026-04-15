@@ -341,6 +341,7 @@ Plans:
 | P2 | Content-type 白名单 | ✅ 已完成：仅允许application/json/text/plain (19fea92) |
 | P2 | Pre-existing notion sync failure 修复或归档 | ✅ 已归档：degraded modes已在P6/P9硬化，无未处理失败 |
 | P3 | 确认循环跳过选项 | ✅ 已完成：Skip→跳过，UI汉化 (19fea92) |
+| P4（回归保护） | system_switcher_smoke URL修复 | ✅ 已完成：DEMO_URL 从 `/` 改为 `/demo.html`，匹配 Phase 3 路由真相（`/`→chat.html, `/demo.html`→专家演示舱），430 tests 无回归 (c97d95d) |
 
 ## Phase P16: AI Canvas Sync（Opus 4.6 架构裁决 — 方向A+）
 
