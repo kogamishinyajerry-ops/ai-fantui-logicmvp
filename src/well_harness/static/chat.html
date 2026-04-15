@@ -53,10 +53,15 @@
           <div class="canvas-meta">
             <span class="canvas-chip" id="system-shell-status">反推系统</span>
             <span class="canvas-chip accent">控制真值已连接</span>
+            <div class="canvas-zoom-controls" aria-label="画布缩放控制">
+              <button type="button" class="canvas-zoom-btn" id="canvas-zoom-reset" title="重置缩放" aria-label="重置缩放">↺</button>
+              <span class="canvas-zoom-level" id="canvas-zoom-level" aria-live="polite">100%</span>
+            </div>
           </div>
         </div>
 
         <div class="canvas-stage">
+          <div class="zoom-container" id="zoom-container">
           <div id="chain-topology-thrust-reverser" class="chain-topology canvas-map" aria-label="反推控制系统信号流">
             <svg class="chain-svg" viewBox="0 0 900 480" role="img" aria-label="反推控制链路信号流图">
               <defs>
@@ -207,6 +212,31 @@
             ⚡
           </button>
           <div id="node-fault-menu" class="node-fault-menu" role="menu" hidden></div>
+          </div><!-- /.zoom-container -->
+
+          <aside class="node-detail-panel" id="node-detail-panel" hidden aria-label="节点详情">
+            <div class="ndp-header">
+              <div class="ndp-title-row">
+                <h2 class="ndp-node-id" id="ndp-node-id">—</h2>
+                <span class="ndp-state-badge" id="ndp-state-badge">—</span>
+              </div>
+              <button type="button" class="ndp-close" id="ndp-close" aria-label="关闭详情">✕</button>
+            </div>
+            <div class="ndp-body" id="ndp-body">
+              <section class="ndp-section">
+                <h3 class="ndp-section-title">说明</h3>
+                <p class="ndp-description" id="ndp-description">—</p>
+              </section>
+              <section class="ndp-section" id="ndp-conditions-section">
+                <h3 class="ndp-section-title">当前条件</h3>
+                <ul class="ndp-conditions" id="ndp-conditions"></ul>
+              </section>
+              <section class="ndp-section" id="ndp-fault-section" hidden>
+                <h3 class="ndp-section-title">故障状态</h3>
+                <div class="ndp-fault-info" id="ndp-fault-info"></div>
+              </section>
+            </div>
+          </aside>
         </div>
       </section>
 

@@ -46,6 +46,21 @@
   var currentFaultMenuNodeId = null;
   var faultUiBusy = false;
 
+  /* ── Zoom & Pan State ── */
+  var currentZoom = 1.0;
+  var panX = 0;
+  var panY = 0;
+  var isPanning = false;
+  var wasPanning = false;
+  var panStartX = 0;
+  var panStartY = 0;
+  var zoomContainer = null;
+  var zoomLevelEl = null;
+
+  /* ── Node Detail Panel State ── */
+  var lastTruthSnapshot = null;  // last lever-snapshot data for node conditions
+  var currentDetailNodeId = null;
+
   var SYSTEM_LABELS = {
     'thrust-reverser': '反推系统',
     'landing-gear': '起落架系统',
@@ -520,9 +535,11 @@
       body: JSON.stringify(requestPayload),
     }).then(function(data) {
       lastTruthPayloadBySystem['thrust-reverser'] = copyObject(requestPayload);
+      lastTruthSnapshot = data;
       applySnapshotToCanvas(data, requestPayload);
       renderTruthEvalFromSnapshot(data, requestPayload);
       updateChainWithFaults();
+      refreshDetailPanel();
 
       return {
         snapshotData: data,
@@ -1926,6 +1943,243 @@ function _applySuggestedOverrides(overrides) {
     }
   }
 
+  /* ── Zoom & Pan Functions ── */
+  function clampPan(x, y, zoom) {
+    if (!zoomContainer) return { x: 0, y: 0 };
+    var rect = zoomContainer.getBoundingClientRect();
+    var scaledW = rect.width * zoom;
+    var scaledH = rect.height * zoom;
+    var maxX = Math.max(0, (scaledW - rect.width) / 2);
+    var maxY = Math.max(0, (scaledH - rect.height) / 2);
+    return {
+      x: Math.max(-maxX, Math.min(maxX, x)),
+      y: Math.max(-maxY, Math.min(maxY, y)),
+    };
+  }
+
+  function applyZoomTransform() {
+    if (!zoomContainer) return;
+    var clamped = clampPan(panX, panY, currentZoom);
+    panX = clamped.x;
+    panY = clamped.y;
+    zoomContainer.style.transform = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + currentZoom + ')';
+    if (zoomLevelEl) {
+      zoomLevelEl.textContent = Math.round(currentZoom * 100) + '%';
+    }
+  }
+
+  function resetZoom() {
+    currentZoom = 1.0;
+    panX = 0;
+    panY = 0;
+    applyZoomTransform();
+  }
+
+  function onWheelZoom(e) {
+    e.preventDefault();
+    var delta = e.deltaY || e.detail || 0;
+    var zoomFactor = delta > 0 ? 0.92 : 1.08;
+    var newZoom = Math.min(2.0, Math.max(0.5, currentZoom * zoomFactor));
+    if (newZoom !== currentZoom) {
+      var rect = zoomContainer.getBoundingClientRect();
+      var mouseX = e.clientX - rect.left - rect.width / 2;
+      var mouseY = e.clientY - rect.top - rect.height / 2;
+      var scaleDiff = newZoom - currentZoom;
+      panX -= (mouseX - panX) * (scaleDiff / currentZoom);
+      panY -= (mouseY - panY) * (scaleDiff / currentZoom);
+      currentZoom = newZoom;
+      applyZoomTransform();
+    }
+  }
+
+  function onPanStart(e) {
+    if (e.button !== 0) return;
+    isPanning = true;
+    wasPanning = false;
+    panStartX = e.clientX - panX;
+    panStartY = e.clientY - panY;
+    e.preventDefault();
+  }
+
+  function onPanMove(e) {
+    if (!isPanning) return;
+    var dx = e.clientX - panStartX;
+    var dy = e.clientY - panStartY;
+    if (Math.sqrt(dx * dx + dy * dy) > 5) {
+      wasPanning = true;
+    }
+    panX = e.clientX - panStartX;
+    panY = e.clientY - panStartY;
+    applyZoomTransform();
+  }
+
+  function onPanEnd() {
+    isPanning = false;
+    // wasPanning stays true until next click is processed
+  }
+
+  /* ── Node Detail Panel Functions ── */
+  function showDetailPanel(nodeId) {
+    var panel = document.getElementById('node-detail-panel');
+    var stage = document.querySelector('.canvas-stage');
+    if (!panel || !stage) return;
+    if (currentFaultMenuNodeId) return;
+    currentDetailNodeId = nodeId;
+    stage.classList.add('panel-open');
+    panel.hidden = false;
+    renderDetailPanelContent(nodeId);
+  }
+
+  function hideDetailPanel() {
+    var panel = document.getElementById('node-detail-panel');
+    var stage = document.querySelector('.canvas-stage');
+    if (!panel || !stage) return;
+    stage.classList.remove('panel-open');
+    panel.hidden = true;
+    currentDetailNodeId = null;
+  }
+
+  function renderDetailPanelContent(nodeId) {
+    var idEl = document.getElementById('ndp-node-id');
+    var badgeEl = document.getElementById('ndp-state-badge');
+    var descEl = document.getElementById('ndp-description');
+    var conditionsEl = document.getElementById('ndp-conditions');
+    var faultSection = document.getElementById('ndp-fault-section');
+    var faultInfo = document.getElementById('ndp-fault-info');
+
+    if (!idEl) return;
+
+    idEl.textContent = nodeId || '—';
+
+    var nodeState = 'inactive';
+    var nodeDesc = '节点描述不可用';
+    var conditions = [];
+    var activeFault = null;
+
+    if (lastTruthSnapshot) {
+      var snapshot = lastTruthSnapshot;
+      var nodes = snapshot.nodes || [];
+      nodes.forEach(function(n) {
+        if (n.id === nodeId) {
+          nodeState = n.state || 'inactive';
+          nodeDesc = n.description || n.tooltip || n.label || nodeDesc;
+        }
+      });
+      var logic = snapshot.logic || {};
+      Object.keys(logic).forEach(function(logicId) {
+        var logicNode = logic[logicId];
+        if (logicNode.node_id === nodeId || logicId === nodeId) {
+          if (logicNode.failed_conditions) {
+            logicNode.failed_conditions.forEach(function(cond) {
+              conditions.push({ name: cond, passed: false, value: null });
+            });
+          }
+          if (logicNode.passed_conditions) {
+            logicNode.passed_conditions.forEach(function(cond) {
+              conditions.push({ name: cond, passed: true, value: null });
+            });
+          }
+        }
+      });
+      var activeFaultsList = snapshot.active_fault_node_ids || [];
+      activeFaultsList.forEach(function(fid) {
+        if (fid === nodeId) activeFault = fid;
+      });
+    }
+
+    badgeEl.className = 'ndp-state-badge';
+    if (nodeState === 'active') {
+      badgeEl.classList.add('is-active');
+      badgeEl.textContent = '激活';
+    } else if (nodeState === 'blocked') {
+      badgeEl.classList.add('is-blocked');
+      badgeEl.textContent = '阻塞';
+    } else {
+      badgeEl.classList.add('is-inactive');
+      badgeEl.textContent = '未激活';
+    }
+
+    if (descEl) descEl.textContent = nodeDesc;
+
+    if (conditionsEl) {
+      conditionsEl.innerHTML = '';
+      if (conditions.length === 0) {
+        conditionsEl.innerHTML = '<li class="ndp-condition-item"><span class="ndp-condition-name" style="color:var(--text-dim)">无可用条件</span></li>';
+      } else {
+        conditions.forEach(function(c) {
+          var li = document.createElement('li');
+          li.className = 'ndp-condition-item';
+          li.innerHTML =
+            '<span class="ndp-condition-name">' + escHtml(c.name) + '</span>' +
+            '<span class="' + (c.passed ? 'ndp-condition-pass' : 'ndp-condition-fail') + '"></span>';
+          conditionsEl.appendChild(li);
+        });
+      }
+    }
+
+    if (faultSection && faultInfo) {
+      if (activeFault) {
+        faultSection.hidden = false;
+        faultInfo.innerHTML = '<span>⚡</span> ' + escHtml(activeFault);
+      } else {
+        faultSection.hidden = true;
+      }
+    }
+  }
+
+  function refreshDetailPanel() {
+    if (currentDetailNodeId) {
+      renderDetailPanelContent(currentDetailNodeId);
+    }
+  }
+
+  function initZoomAndPanel() {
+    zoomContainer = document.getElementById('zoom-container');
+    zoomLevelEl = document.getElementById('canvas-zoom-level');
+    var resetBtn = document.getElementById('canvas-zoom-reset');
+    var stage = document.querySelector('.canvas-stage');
+    var panel = document.getElementById('node-detail-panel');
+    var ndpClose = document.getElementById('ndp-close');
+
+    if (zoomContainer) {
+      zoomContainer.addEventListener('wheel', onWheelZoom, { passive: false });
+      zoomContainer.addEventListener('mousedown', onPanStart);
+    }
+    if (resetBtn) {
+      resetBtn.addEventListener('click', resetZoom);
+    }
+    if (stage) {
+      stage.addEventListener('mousemove', onPanMove);
+      stage.addEventListener('mouseup', onPanEnd);
+      stage.addEventListener('mouseleave', onPanEnd);
+      stage.addEventListener('click', function(e) {
+        if (wasPanning) { wasPanning = false; return; }
+        var nodeEl = e.target.closest('[data-node]');
+        if (nodeEl && !currentFaultMenuNodeId) {
+          var nodeId = nodeEl.getAttribute('data-node');
+          if (currentDetailNodeId === nodeId) {
+            hideDetailPanel();
+          } else {
+            showDetailPanel(nodeId);
+          }
+        }
+      });
+    }
+    if (ndpClose) {
+      ndpClose.addEventListener('click', hideDetailPanel);
+    }
+    if (panel) {
+      panel.addEventListener('click', function(e) {
+        if (e.target === panel) hideDetailPanel();
+      });
+    }
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && currentDetailNodeId) {
+        hideDetailPanel();
+      }
+    });
+  }
+
   if (drawerScrim) {
     drawerScrim.hidden = false;
   }
@@ -2002,6 +2256,7 @@ function _applySuggestedOverrides(overrides) {
       currentSystem = systemSelect.value;
       hideNodeFaultMenu();
       hideNodeFaultButton(true);
+      hideDetailPanel();
       syncSystemChrome();
       resetCanvasState();
       resetTruthEvalBar();
@@ -2682,6 +2937,7 @@ function isGeneralQuestion(qText, qLower) {
   renderFaultBar();
   updateChainWithFaults();
   setFabTooltip('展开对话');
+  initZoomAndPanel();
 
   if (logicDiagram && currentSystem === 'thrust-reverser') {
     setTruthBadge('idle', '空闲');
