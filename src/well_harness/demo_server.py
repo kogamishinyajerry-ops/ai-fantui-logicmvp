@@ -603,8 +603,7 @@ def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | Non
                 return None, {"error": "minimax_empty_response", "message": "MiniMax returned empty explanation."}
 
         try:
-            json_str = re.sub(r"^```json\s*", "", raw_content.strip())
-            json_str = re.sub(r"^```\s*", "", json_str)
+            json_str = re.sub(r"^```(?:json)?\s*", "", raw_content.strip())
             json_str = re.sub(r"\s*```$", "", json_str)
             parsed = json.loads(json_str)
             if not isinstance(parsed, dict):
@@ -776,7 +775,7 @@ plant 输出参数（不可直接设置，只能通过操控输入间接影响�
                 {"role": "user", "content": user_prompt},
             ],
             "temperature": 0.3,
-            "max_tokens": 800,
+            "max_tokens": 1500,
             "stream": False,
         }
         req = urllib.request.Request(
@@ -798,8 +797,7 @@ plant 输出参数（不可直接设置，只能通过操控输入间接影响�
             return None, {"error": "minimax_empty_response", "message": "MiniMax returned empty operate response."}
 
         try:
-            json_str = re.sub(r"^```json\s*", "", raw_content.strip())
-            json_str = re.sub(r"^```\s*", "", json_str)
+            json_str = re.sub(r"^```(?:json)?\s*", "", raw_content.strip())
             json_str = re.sub(r"\s*```$", "", json_str)
             parsed = json.loads(json_str)
             if not isinstance(parsed, dict):
