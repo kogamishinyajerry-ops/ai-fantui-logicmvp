@@ -5,20 +5,20 @@
 
 - 当前阶段：`未识别活动 phase`
 - 当前已验证 Plan：`P15-01`
-- 最近成功执行证据：`P15 Pipeline Integration Tests`
+- 最近成功执行证据：`GitHub GSD automation 24322974860`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
-- 当前证据模式：`active-page degraded mode`
-- 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
+- 当前证据模式：`shared-database live mode`
+- 证据模式说明：共享 Notion 数据库可达；phase / run / QA / gate 取自实时数据库记录。
 - 当前 QA 摘要：`PASS. 23/23 shared validation checks pass.`
-- 当前运行摘要：`Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: 23/23 shared validation checks pass.`
+- 当前运行摘要：`23/23 shared validation checks pass.`
 - 当前冻结包继续作为稳定 demo/reference baseline；当前工程主线已转向 P7 workbench 扩展。
 
 ## 当前冻结入口
 
 - [01 当前状态（自动同步）](https://www.notion.so/341c6894-2bed-810d-b7e6-e5d264bcfe61)
-- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/341c6894-2bed-81f2-8096-ec2499e72128)
+- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/342c6894-2bed-81d6-8137-ea138302f4dd)
 - [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)
 - [GitHub Actions](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 
@@ -26,6 +26,14 @@
 
 - 下方正文保留为冻结说明，不再单独维护顶部状态摘要。
 <!-- AUTO-SYNCED REPO FREEZE PACKET SNAPSHOT END -->
+
+## 冻结期完成改进项（2026-04-15）
+
+| 改进项 | 提交 | 说明 |
+|--------|------|------|
+| **P16 AI Canvas Sync** | `9845c83` | Opus 4.6 A+ 架构（truth engine 先行 + AI 标注后到）：truth engine 驱动 canvas (<100ms)，MiniMax 解释，节点叠加高亮层 `.ai-discussed`；430 tests 无回归 |
+| **Aerospace Dark HUD UI 升级** | `9845c83` | 6 优先级 CSS 改造：CSS 变量重塑 + SVG 精密仪表节点 + 连接线状态 + 终端风格抽屉 + 微交互 + Truth Eval Bar HUD 化；430 tests 无回归 |
+| **external_dependencies schema** | `abef4e9` | `control_system_spec_v1` 新增 `external_dependencies` 字段（含 `externalDependencySpec`），联邦架构宪法级文档就绪 |
 
 ## 当前用途
 
