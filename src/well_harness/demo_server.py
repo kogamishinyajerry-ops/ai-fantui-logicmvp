@@ -87,8 +87,9 @@ P14_GENERATE_PATH = "/api/p14/generate-prompt"
 # P15 Pipeline Integration routes
 P15_CONVERT_PATH = "/api/p15/convert-to-intake"
 P15_RUN_PIPELINE_PATH = "/api/p15/run-pipeline"
-# Chat AI explain route (MiniMax LLM integration)
+# Chat AI explain + operate routes (MiniMax LLM integration)
 CHAT_EXPLAIN_PATH = "/api/chat/explain"
+CHAT_OPERATE_PATH = "/api/chat/operate"
 MONITOR_N1K = 35.0
 MONITOR_MAX_N1K_DEPLOY_LIMIT = 60.0
 LEVER_NUMERIC_INPUTS = {
@@ -310,6 +311,14 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         # Chat AI explain handler (MiniMax LLM)
         if parsed.path == CHAT_EXPLAIN_PATH:
             response_payload, error_payload = _handle_chat_explain(request_payload)
+            if error_payload is not None:
+                self._send_json(400, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+
+        if parsed.path == CHAT_OPERATE_PATH:
+            response_payload, error_payload = _handle_chat_operate(request_payload)
             if error_payload is not None:
                 self._send_json(400, error_payload)
                 return
@@ -623,6 +632,224 @@ def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | Non
             "highlighted_nodes": [str(node_id).strip() for node_id in highlighted_nodes if str(node_id).strip()],
             "suggestion_nodes": [str(node_id).strip() for node_id in suggestion_nodes if str(node_id).strip()],
             "confidence": confidence,
+        }, None
+
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")[:200]
+        return None, {"error": "minimax_http_error", "message": f"HTTP {e.code}: {body}"}
+    except Exception as exc:
+        return None, {"error": "minimax_error", "message": str(exc)}
+
+
+def _handle_chat_operate(request_payload: dict) -> tuple[dict | None, dict | None]:
+    """Handle POST /api/chat/operate — use MiniMax LLM to suggest lever parameter overrides.
+
+    Input:  {
+        "question": str,          # user's natural language question (e.g. "把VDT调节到90%")
+        "system_id": str,         # e.g. "thrust-reverser"
+        "current_snapshot": dict | None,   # optional lever-snapshot result for context
+    }
+
+    Output: {
+        "action_type": str,           # "suggest_parameter_override" | "manual_steps" | "cannot_operate"
+        "parameter_overrides": dict,  # fields to override in lever payload
+        "trajectory_steps": list,     # optional multi-step sequence
+        "reasoning": str,             # why this action was chosen
+        "confidence": float,
+        "gate_plan": dict,            # optional: per-gate dependency map for "满足L1-L4" requests
+        "ai_explanation": str,        # human-readable explanation
+    }
+    """
+    question = request_payload.get("question", "")
+    system_id = request_payload.get("system_id", "thrust-reverser")
+    snapshot = request_payload.get("current_snapshot") or {}
+
+    if not question:
+        return None, {"error": "missing_question", "message": "question field is required."}
+
+    api_key = _get_minimax_api_key()
+    if not api_key:
+        return None, {"error": "minimax_api_key_missing", "message": "MiniMax API key not found. Add to ~/.minimax_key."}
+
+    # Build context from current snapshot
+    logic = snapshot.get("logic", {})
+    outputs = snapshot.get("outputs", {})
+    nodes = snapshot.get("nodes", [])
+
+    logic_lines = []
+    for gate_id in ("logic1", "logic2", "logic3", "logic4"):
+        info = logic.get(gate_id, {})
+        active = info.get("active", False)
+        failed = info.get("failed_conditions", [])
+        status = f"激活" if active else (f"阻塞: {', '.join(failed)}" if failed else "未激活")
+        logic_lines.append(f"  {gate_id}: {status}")
+    logic_summary = "\n".join(logic_lines)
+
+    output_lines = [
+        f"  THR_LOCK: {'已释放' if outputs.get('throttle_electronic_lock_release_cmd') else '未释放'}",
+        f"  VDT90: {'触发' if outputs.get('deploy_90_percent_vdt') else '未触发'}",
+    ]
+    output_summary = "\n".join(output_lines)
+
+    system_labels = {
+        "thrust-reverser": "Thrust Reverser（反推力系统）",
+        "landing-gear": "Landing Gear（起落架）",
+        "bleed-air": "Bleed Air Valve（引气系统）",
+        "efds": "EFDS（干扰弹系统）",
+    }
+    system_label = system_labels.get(system_id, system_id)
+
+    # Controllable vs plant-output parameter definitions
+    controllable_params = [
+        "tra_deg (-32~0°): TRA位置角度，-14°为反推激活阈值",
+        "radio_altitude_ft (0~20ft): 无线电高度",
+        "engine_running (bool): 发动机是否运行",
+        "aircraft_on_ground (bool): 飞机是否在地面",
+        "reverser_inhibited (bool): 反推是否被抑制",
+        "eec_enable (bool): EEC是否使能",
+        "n1k (0~120%): 低压轴转速百分比",
+        "feedback_mode: 'auto_scrubber'|'manual_feedback_override'",
+        "deploy_position_percent (0~100%): 手动模式下的目标部署位置",
+    ]
+    plant_output_params = [
+        "VDT90: 由 deploy_position_percent + 时间积分决定，是plant计算输出，不可直接设置",
+        "THR_LOCK: 由 logic4 激活状态决定，是plant计算输出",
+        "TLS115V: 由 logic1 激活状态决定，是plant计算输出",
+    ]
+
+    system_prompt = f"""你是控制逻辑操作助手。用户正在使用 {system_label} 仿真推理引擎。
+
+你会收到：
+1. 用户的问题（可能要求调节某个参数到目标值，或要求"满足某逻辑条件"）
+2. 当前逻辑门和输出状态
+
+你的任务：
+- 分析用户请求，判断是否可以通过调整可控参数来实现
+- 如果可以，在 parameter_overrides 中给出建议的参数值
+- 在 action_type 中指明操作类型
+- 在 reasoning 中解释你的推理过程
+- 在 confidence 中评估置信度（0.0-1.0）
+
+可操控的参数（可直接设置）：
+{chr(10).join(f"- {p}" for p in controllable_params)}
+
+plant 输出参数（不可直接设置，只能通过操控输入间接影响）：
+{chr(10).join(f"- {p}" for p in plant_output_params)}
+
+逻辑门状态：
+{logic_summary}
+
+输出状态：
+{output_summary}
+
+操作规则：
+1. 如果用户说"VDT达到90%" → 建议 feedback_mode=manual_feedback_override + deploy_position_percent=90
+2. 如果用户说"把TRA拉到-14°" → 建议 tra_deg=-14.0
+3. 如果用户说"满足L1条件" → 分析L1依赖项（SW1=ON / altitude<6ft / reverser_not_deployed），返回 manual_steps
+4. 如果用户说"满足L1-L4" → 返回每个gate的依赖项（gate_plan）
+5. 如果用户要求直接设置plant输出（VDT90/THR_LOCK/TLS115V）→ action_type=cannot_operate，说明这些是plant输出
+
+请用以下 JSON 格式回复（不要加 markdown 代码块）：
+{{
+  "action_type": "suggest_parameter_override | manual_steps | cannot_operate",
+  "parameter_overrides": {{"字段名": 值}},
+  "trajectory_steps": [],
+  "reasoning": "推理说明",
+  "confidence": 0.95,
+  "gate_plan": {{}},
+  "ai_explanation": "面向用户的解释文字"
+}}"""
+
+    user_prompt = f"用户问题：{question}\n\n当前逻辑门状态：\n{logic_summary}\n\n当前输出状态：\n{output_summary}"
+
+    try:
+        import urllib.request
+        url = "https://api.minimax.chat/v1/text/chatcompletion_v2"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": "minimax-m2.7-highspeed",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": 0.3,
+            "max_tokens": 800,
+            "stream": False,
+        }
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+
+        choices = result.get("choices", [])
+        if choices:
+            raw_content = choices[0].get("message", {}).get("content", "")
+        else:
+            raw_content = result.get("choices", [{}])[0].get("text", "")
+
+        if not raw_content:
+            return None, {"error": "minimax_empty_response", "message": "MiniMax returned empty operate response."}
+
+        try:
+            json_str = re.sub(r"^```json\s*", "", raw_content.strip())
+            json_str = re.sub(r"^```\s*", "", json_str)
+            json_str = re.sub(r"\s*```$", "", json_str)
+            parsed = json.loads(json_str)
+            if not isinstance(parsed, dict):
+                raise ValueError("MiniMax response was not a JSON object.")
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return {
+                "action_type": "cannot_operate",
+                "parameter_overrides": {},
+                "trajectory_steps": [],
+                "reasoning": "AI响应解析失败",
+                "confidence": 0.0,
+                "gate_plan": {},
+                "ai_explanation": f"抱歉，AI响应解析失败。请手动调节参数。原始响应：{raw_content[:200]}",
+            }, None
+
+        action_type = str(parsed.get("action_type", "cannot_operate"))
+        parameter_overrides = parsed.get("parameter_overrides", {})
+        trajectory_steps = parsed.get("trajectory_steps", [])
+        reasoning = str(parsed.get("reasoning", ""))
+        confidence_raw = parsed.get("confidence", 0.5)
+        gate_plan = parsed.get("gate_plan", {})
+        ai_explanation = str(parsed.get("ai_explanation", reasoning))
+
+        # Validate parameter_overrides — only allow known safe fields
+        allowed_override_fields = {
+            "tra_deg", "radio_altitude_ft", "engine_running", "aircraft_on_ground",
+            "reverser_inhibited", "eec_enable", "n1k", "feedback_mode", "deploy_position_percent",
+        }
+        if isinstance(parameter_overrides, dict):
+            cleaned = {}
+            for k, v in parameter_overrides.items():
+                if k in allowed_override_fields:
+                    cleaned[k] = v
+            parameter_overrides = cleaned
+        else:
+            parameter_overrides = {}
+
+        try:
+            confidence = max(0.0, min(1.0, float(confidence_raw)))
+        except (TypeError, ValueError):
+            confidence = 0.5
+
+        return {
+            "action_type": action_type,
+            "parameter_overrides": parameter_overrides,
+            "trajectory_steps": trajectory_steps if isinstance(trajectory_steps, list) else [],
+            "reasoning": reasoning,
+            "confidence": confidence,
+            "gate_plan": gate_plan if isinstance(gate_plan, dict) else {},
+            "ai_explanation": ai_explanation,
         }, None
 
     except urllib.error.HTTPError as e:

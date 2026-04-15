@@ -532,14 +532,63 @@
     });
   }
 
-  function finishChatRequest() {
-    setInputLoading(false);
-    if (chatInput) {
-      chatInput.focus();
+function _applySuggestedOverrides(overrides) {
+    var payload = buildDefaultLeverPayload('', currentSystem);
+    var key;
+    for (key in overrides) {
+      if (Object.prototype.hasOwnProperty.call(overrides, key)) {
+        payload[key] = overrides[key];
+      }
     }
+    return _sendLeverSnapshot(payload);
   }
 
-  function renderRequestFailure(err) {
+  function handleOperateResponse(operateResult) {
+    var actionType = operateResult.action_type || 'cannot_operate';
+    var explanation = operateResult.ai_explanation || operateResult.reasoning || '';
+    var overrides = operateResult.parameter_overrides || {};
+    var trajectorySteps = operateResult.trajectory_steps || [];
+    var gatePlan = operateResult.gate_plan || {};
+    var confidence = operateResult.confidence || 0.5;
+    var suggestionChip;
+
+    addMessage('ai', explanation);
+
+    if (actionType === 'suggest_parameter_override' && Object.keys(overrides).length > 0) {
+      suggestionChip = document.createElement('div');
+      suggestionChip.className = 'suggestion-chip';
+      suggestionChip.innerHTML = '<span>⚡ 一键应用建议参数</span>';
+      suggestionChip.title = '参数: ' + JSON.stringify(overrides);
+      suggestionChip.addEventListener('click', function() {
+        _applySuggestedOverrides(overrides).then(function() {
+          addMessage('ai', '✅ 已应用建议参数，逻辑面板已更新。');
+        }).catch(function(err) {
+          addMessage('ai', '⚠️ 应用参数失败: ' + err.message);
+        });
+        suggestionChip.style.display = 'none';
+      });
+      if (chatMessages) {
+        chatMessages.appendChild(suggestionChip);
+        scrollChatToBottom();
+      }
+    } else if (actionType === 'manual_steps' && trajectorySteps.length > 0) {
+      suggestionChip = document.createElement('div');
+      suggestionChip.className = 'suggestion-chip';
+      suggestionChip.innerHTML = '<span>📋 查看操作步骤</span>';
+      suggestionChip.addEventListener('click', function() {
+        var stepsText = trajectorySteps.map(function(step, i) {
+          return (i + 1) + '. ' + (step.description || step);
+        }).join('\n');
+        addMessage('ai', '📋 操作步骤：\n' + stepsText);
+        suggestionChip.style.display = 'none';
+      });
+      if (chatMessages) {
+        chatMessages.appendChild(suggestionChip);
+        scrollChatToBottom();
+      }
+    } else if (actionType === 'cannot_operate') {
+      // Already shown explanation; no chip needed
+    }
     setTruthBadge('danger', '错误');
     if (truthEvalStatus) {
       truthEvalStatus.textContent = '请求失败';
@@ -587,6 +636,55 @@
     msg.appendChild(contentEl);
     chatMessages.appendChild(msg);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function setInputLoading(loading) {
+    if (!chatInput || !sendBtn) {
+      return;
+    }
+
+    chatInput.disabled = loading;
+    sendBtn.disabled = loading;
+    chatInput.placeholder = loading ? LOADING_SEND_TEXT : DEFAULT_INPUT_PLACEHOLDER;
+    sendBtn.textContent = loading ? LOADING_SEND_TEXT : DEFAULT_SEND_TEXT;
+    sendBtn.classList.toggle('is-loading', loading);
+    sendBtn.setAttribute('aria-busy', loading ? 'true' : 'false');
+    sendBtn.setAttribute('aria-label', loading ? LOADING_SEND_TEXT : DEFAULT_SEND_TEXT);
+    sendBtn.title = loading ? LOADING_SEND_TEXT : DEFAULT_SEND_TEXT;
+
+    if (inputDock) {
+      inputDock.classList.toggle('is-loading', loading);
+    }
+    if (chatLoadingStatus) {
+      chatLoadingStatus.textContent = loading ? LOADING_SEND_TEXT : '就绪';
+      chatLoadingStatus.classList.toggle('is-loading', loading);
+    }
+  }
+
+  function finishChatRequest() {
+    setInputLoading(false);
+    if (chatInput) {
+      chatInput.focus();
+    }
+  }
+
+  function scrollChatToBottom() {
+    if (chatMessages) {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+  }
+
+  function finishChatRequest() {
+    setInputLoading(false);
+    if (chatInput) {
+      chatInput.focus();
+    }
+  }
+
+  function scrollChatToBottom() {
+    if (chatMessages) {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
   }
 
   function setInputLoading(loading) {
@@ -2346,7 +2444,52 @@
   // ── Phase C: Enhanced intent router ─────────────────────────────────────────
   // Detects non-condition "why / what / how" questions and routes them to
   // handleGeneralQuestion() so they don't incorrectly trigger lever-snapshot.
-  function isGeneralQuestion(qText, qLower) {
+function hasOperateIntent(qText, qLower) {
+    // Patterns indicating user wants to change/regulate/adjust parameters
+    var operatePatterns = [
+      '调节', '调整', '设置', '把', '让', '使',
+      '达到', '到', '触发', '激活',
+      '满足', '实现',
+      'vd', 'vdt', 'tra', 'altitude', 'radio',
+      'deploy', 'position', 'override', 'manual',
+      'inhibit', '引擎', '发动机', '地面', '空中',
+      '满足l1', '满足l2', '满足l3', '满足l4',
+      'l1满足', 'l2满足', 'l3满足', 'l4满足',
+    ];
+    var i;
+    for (i = 0; i < operatePatterns.length; i += 1) {
+      if (qLower.includes(operatePatterns[i])) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function handleOperateIntent(text, systemId) {
+    var operatePayload = {
+      question: text,
+      system_id: systemId,
+      current_snapshot: lastTruthPayloadBySystem[systemId] || null,
+    };
+    setInputLoading(true);
+    clearAiHighlights();
+    openDrawer();
+    requestJson('/api/chat/operate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(operatePayload),
+    })
+      .then(function(operateResult) {
+        handleOperateResponse(operateResult);
+        finishChatRequest();
+      })
+      .catch(function(err) {
+        addMessage('ai', '⚠️ 操作请求失败: ' + err.message);
+        finishChatRequest();
+      });
+  }
+
+function isGeneralQuestion(qText, qLower) {
     // "为什么会失效" / "TLS是什么" / "怎么工作" / "哪些条件" etc.
     var generalPatterns = [
       '为什么', '怎么', '是什么', '哪些', '介绍一下', '解释一下',
@@ -2401,6 +2544,12 @@
     // Phase C: Intercept general/explanatory questions before keyword routing
     if (isGeneralQuestion(text, lowerText)) {
       handleGeneralQuestion(text, systemId, payload);
+      return;
+    }
+
+    // Detect operate intent: user wants to change/adjust/regulate lever parameters
+    if (hasOperateIntent(text, lowerText)) {
+      handleOperateIntent(text, systemId);
       return;
     }
 
