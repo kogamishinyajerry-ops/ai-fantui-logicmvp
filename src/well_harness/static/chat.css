@@ -2208,3 +2208,50 @@ body.drawer-open .chat-drawer {
 .suggestion-chip span {
   pointer-events: none;
 }
+
+/* Deep reasoning collapsible — P17-gen */
+.deep-reasoning-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 2px 0;
+  padding: 5px 14px;
+  background: transparent;
+  border: 1px solid rgba(74, 144, 217, 0.3);
+  border-radius: 16px;
+  color: rgba(74, 144, 217, 0.7);
+  font-size: 12px;
+  font-family: var(--font-sans, inherit);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.deep-reasoning-toggle:hover {
+  background: rgba(74, 144, 217, 0.1);
+  border-color: rgba(74, 144, 217, 0.5);
+  color: rgba(74, 144, 217, 0.9);
+}
+
+.deep-reasoning-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg-base, #08090a), 0 0 0 4px rgba(74, 144, 217, 0.5);
+}
+
+.deep-reasoning-toggle span {
+  pointer-events: none;
+}
+
+.deep-reasoning-content {
+  margin: 4px 0 8px 0;
+  padding: 10px 14px;
+  background: rgba(74, 144, 217, 0.06);
+  border-left: 2px solid rgba(74, 144, 217, 0.3);
+  border-radius: 0 6px 6px 0;
+  color: rgba(200, 210, 230, 0.75);
+  font-size: 12px;
+  line-height: 1.6;
+  font-family: var(--font-mono, monospace);
+  white-space: pre-wrap;
+  max-width: 100%;
+  overflow-x: auto;
+}

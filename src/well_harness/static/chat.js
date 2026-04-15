@@ -2491,14 +2491,83 @@ function isGeneralQuestion(qText, qLower) {
     return false;
   }
 
+  // ── P17-gen: Deep reasoning response handler ─────────────────────────────────
+  // response_type: 'refusal' | 'operation_suggestion' | 'analysis' | 'explanation'
+  function handleReasonResponse(reasonData, responseType) {
+    var highlightedNodes = Array.isArray(reasonData.highlighted_nodes) ? reasonData.highlighted_nodes : [];
+    var suggestionNodes = Array.isArray(reasonData.suggestion_nodes) ? reasonData.suggestion_nodes : [];
+    var deepReasoning = reasonData.deep_reasoning || '';
+    var explanation = reasonData.explanation || '';
+
+    if (responseType === 'refusal') {
+      applyAiHighlights(highlightedNodes, suggestionNodes);
+      // Show explanation first if present (backend may include useful context even in refusal)
+      if (explanation) {
+        addMessage('ai', explanation + '\n\n⚠️ ' + (reasonData.refusal_reason || '这个问题超出本工具的分析范围。') + '\n\n建议：尝试询问与反推系统控制逻辑直接相关的问题，例如某个链路节点为什么激活/被阻塞、参数阈值含义、故障诊断等。');
+      } else {
+        addMessage('ai', '⚠️ ' + (reasonData.refusal_reason || '这个问题超出本工具的分析范围。') + '\n\n建议：尝试询问与反推系统控制逻辑直接相关的问题，例如某个链路节点为什么激活/被阻塞、参数阈值含义、故障诊断等。');
+      }
+      return;
+    }
+
+    if (responseType === 'operation_suggestion') {
+      // Apply node highlights before showing operate response
+      applyAiHighlights(highlightedNodes, suggestionNodes);
+      handleOperateResponse({
+        action_type: 'suggest_parameter_override',
+        ai_explanation: explanation,
+        parameter_overrides: reasonData.parameter_overrides || {},
+        auto_apply: reasonData.auto_apply === true,
+        confidence: reasonData.confidence || 0.5,
+      });
+      if (deepReasoning) {
+        appendDeepReasoning(deepReasoning);
+      }
+      return;
+    }
+
+    // analysis | explanation — show explanation with highlights + optional deep reasoning
+    applyAiHighlights(highlightedNodes, suggestionNodes);
+    addMessage('ai', explanation, {
+      highlightedNodes: highlightedNodes,
+      suggestionNodes: suggestionNodes,
+    });
+    if (deepReasoning) {
+      appendDeepReasoning(deepReasoning);
+    }
+  }
+
+  // Append collapsible deep reasoning section below the last AI message
+  function appendDeepReasoning(reasoningText) {
+    var toggleBtn = document.createElement('button');
+    toggleBtn.className = 'deep-reasoning-toggle';
+    toggleBtn.setAttribute('aria-expanded', 'false');
+    toggleBtn.innerHTML = '🔍 <span>展开推理过程</span>';
+
+    var content = document.createElement('div');
+    content.className = 'deep-reasoning-content';
+    content.style.display = 'none';
+    content.textContent = reasoningText;
+
+    toggleBtn.addEventListener('click', function() {
+      var expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+      toggleBtn.setAttribute('aria-expanded', String(!expanded));
+      toggleBtn.querySelector('span').textContent = expanded ? '展开推理过程' : '收起推理过程';
+      content.style.display = expanded ? 'none' : 'block';
+    });
+
+    if (chatMessages) {
+      chatMessages.appendChild(toggleBtn);
+      chatMessages.appendChild(content);
+      scrollChatToBottom();
+    }
+  }
+
   function handleSend() {
     var text;
     var lowerText;
     var systemId;
     var payload;
-    var useLeverSnapshot;
-    var traMatch;
-    var raMatch;
 
     if (!chatInput) {
       return;
@@ -2521,8 +2590,6 @@ function isGeneralQuestion(qText, qLower) {
 
     payload = buildDefaultLeverPayload(text, systemId);
 
-    useLeverSnapshot = false;
-
     // Phase C: Intercept general/explanatory questions before keyword routing
     if (isGeneralQuestion(text, lowerText)) {
       handleGeneralQuestion(text, systemId, payload);
@@ -2540,135 +2607,50 @@ function isGeneralQuestion(qText, qLower) {
       return;
     }
 
-    if (lowerText.includes('tls') || lowerText.includes('失效') || lowerText.includes('failure')) {
-      payload.tra_deg = -14.0;
-      payload.radio_altitude_ft = 5.0;
-      payload.feedback_mode = 'auto_scrubber';
-      useLeverSnapshot = true;
-    } else if (lowerText.includes('vdt') || (lowerText.includes('90') && lowerText.includes('%'))) {
-      payload.tra_deg = -14.0;
-      payload.radio_altitude_ft = 5.0;
-      payload.engine_running = true;
-      payload.aircraft_on_ground = true;
-      payload.reverser_inhibited = false;
-      payload.eec_enable = true;
-      payload.n1k = 35.0;
-      payload.feedback_mode = 'auto_scrubber';
-      useLeverSnapshot = true;
-    } else if (lowerText.includes('throttle') || lowerText.includes('lock') || lowerText.includes('thr_lock')) {
-      payload.tra_deg = -14.0;
-      payload.radio_altitude_ft = 5.0;
-      payload.feedback_mode = 'auto_scrubber';
-      useLeverSnapshot = true;
-    } else if (
-      lowerText.includes('tra') &&
-      (lowerText.includes('拉') || lowerText.includes('-14') || lowerText.includes('-20') || lowerText.includes('阈值'))
-    ) {
-      traMatch = text.match(/(-?\d+)[°]?/);
-      if (traMatch) {
-        payload.tra_deg = parseFloat(traMatch[1]);
-      } else {
-        payload.tra_deg = -14.0;
-      }
-      useLeverSnapshot = true;
-    } else if (lowerText.includes('altitude') || lowerText.includes('ra ') || lowerText.includes('radio')) {
-      raMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:ft|英尺)/);
-      if (raMatch) {
-        payload.radio_altitude_ft = parseFloat(raMatch[1]);
-      } else if (lowerText.includes('0') || lowerText.includes('零')) {
-        payload.radio_altitude_ft = 0.0;
-      } else {
-        payload.radio_altitude_ft = 5.0;
-      }
-      payload.tra_deg = -14.0;
-      useLeverSnapshot = true;
-    } else if (lowerText.includes('manual') || lowerText.includes('override')) {
-      payload.tra_deg = -14.0;
-      payload.feedback_mode = 'manual_feedback_override';
-      payload.deploy_position_percent = 95.0;
-      useLeverSnapshot = true;
-    } else if (lowerText.includes('inhibit')) {
-      payload.tra_deg = -14.0;
-      payload.reverser_inhibited = true;
-      useLeverSnapshot = true;
-    } else if (lowerText.includes('l3') || lowerText.includes('eec') || lowerText.includes('pls') || lowerText.includes('pdu') || lowerText.includes('pms') || lowerText.includes('hydraulic') || lowerText.includes('bleed') || lowerText.includes('eec失效') || lowerText.includes('pdu故障') || lowerText.includes('pls失效') || lowerText.includes('发动机控制')) {
-      payload.tra_deg = -14.0;
-      payload.radio_altitude_ft = 5.0;
-      payload.feedback_mode = 'auto_scrubber';
-      useLeverSnapshot = true;
-    } else if (lowerText.includes('n1') || lowerText.includes('转速') || lowerText.includes('engine')) {
-      payload.tra_deg = -14.0;
-      payload.radio_altitude_ft = 5.0;
-      payload.feedback_mode = 'auto_scrubber';
-      useLeverSnapshot = true;
-    } else if (lowerText.includes('guided') || lowerText.includes('demo') || lowerText.includes('带我走')) {
-      addMessage('ai', '▶ 点击抽屉里的“引导演示”，我会带你一步一步看完整的反推链路激活过程。');
+    // Guided/demo shortcut — short-circuit without AI reasoning
+    if (lowerText.includes('guided') || lowerText.includes('demo') || lowerText.includes('带我走')) {
+      addMessage('ai', '▶ 点击抽屉里的”引导演示”，我会带你一步一步看完整的反推链路激活过程。');
       finishChatRequest();
       return;
-    } else {
-      payload.tra_deg = -14.0;
-      useLeverSnapshot = true;
     }
 
-    if (useLeverSnapshot) {
-      _sendLeverSnapshot(payload)
-        .then(function(result) {
-          var data = result.snapshotData;
-          var requestPayload = result.requestPayload;
-          var nodeStates = result.nodeStates;
-          var explainPayload;
-          var fallbackText = result.fallbackText;
+    // All other thrust-reverser input → unified deep AI reasoning
+    // Use cached truth payload so canvas state is preserved; fall back to defaults if no cache
+    var cachedPayload = lastTruthPayloadBySystem['thrust-reverser'] || payload;
 
-          // Step 2: Call MiniMax LLM for contextual explanation (1-2s)
-          explainPayload = buildExplainPayload(text, systemId, requestPayload, {
-            lever_snapshot: data,
-            node_states: nodeStates,
-            fault_injections: serializeActiveFaults(),
-          });
-          requestJson('/api/chat/explain', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(explainPayload),
+    requestJson('/api/lever-snapshot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildFaultAwareLeverPayload(cachedPayload)),
+    })
+      .then(function(snapshotData) {
+        var reasonPayload = {
+          question: text,
+          system_id: systemId,
+          current_snapshot: snapshotData,
+          fault_injections: serializeActiveFaults(),
+        };
+
+        requestJson('/api/chat/reason', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(reasonPayload),
+        })
+          .then(function(reasonData) {
+            handleReasonResponse(reasonData, reasonData.response_type);
+            finishChatRequest();
           })
-            .then(function(expData) {
-              var highlightedNodes = Array.isArray(expData.highlighted_nodes) ? expData.highlighted_nodes : [];
-              var suggestionNodes = Array.isArray(expData.suggestion_nodes) ? expData.suggestion_nodes : [];
-
-              applyAiHighlights(highlightedNodes, suggestionNodes);
-              addMessage('ai', expData.explanation || fallbackText, {
-                highlightedNodes: highlightedNodes,
-                suggestionNodes: suggestionNodes,
-              });
-              finishChatRequest();
-            })
-            .catch(function(err) {
-              // Fallback to template if MiniMax API fails
-              addMessage('ai', fallbackText);
-              finishChatRequest();
-            });
-        })
-        .catch(function(err) {
-          renderRequestFailure(err);
-          addMessage('ai', '⚠️ 请求失败: ' + err.message);
-          finishChatRequest();
-        });
-    } else {
-      requestJson('/api/demo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+          .catch(function(err) {
+            applyAiHighlights([], []);
+            addMessage('ai', formatLeverSnapshotAnswer(snapshotData, cachedPayload));
+            finishChatRequest();
+          });
       })
-        .then(function(data) {
-          renderTruthEvalFromDemo(data);
-          addMessage('ai', formatDemoAnswer(data));
-          finishChatRequest();
-        })
-        .catch(function(err) {
-          renderRequestFailure(err);
-          addMessage('ai', '⚠️ 请求失败: ' + err.message);
-          finishChatRequest();
-        });
-    }
+      .catch(function(err) {
+        renderRequestFailure(err);
+        addMessage('ai', '⚠️ 请求失败: ' + err.message);
+        finishChatRequest();
+      });
   }
 
   if (sendBtn) {

@@ -90,6 +90,7 @@ P15_RUN_PIPELINE_PATH = "/api/p15/run-pipeline"
 # Chat AI explain + operate routes (MiniMax LLM integration)
 CHAT_EXPLAIN_PATH = "/api/chat/explain"
 CHAT_OPERATE_PATH = "/api/chat/operate"
+CHAT_REASON_PATH = "/api/chat/reason"
 MONITOR_N1K = 35.0
 MONITOR_MAX_N1K_DEPLOY_LIMIT = 60.0
 LEVER_NUMERIC_INPUTS = {
@@ -202,6 +203,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             P15_RUN_PIPELINE_PATH,
             CHAT_EXPLAIN_PATH,
             CHAT_OPERATE_PATH,
+            CHAT_REASON_PATH,
         }:
             self._send_json(404, {"error": "not_found"})
             return
@@ -320,6 +322,14 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
         if parsed.path == CHAT_OPERATE_PATH:
             response_payload, error_payload = _handle_chat_operate(request_payload)
+            if error_payload is not None:
+                self._send_json(400, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+
+        if parsed.path == CHAT_REASON_PATH:
+            response_payload, error_payload = _handle_chat_reason(request_payload)
             if error_payload is not None:
                 self._send_json(400, error_payload)
                 return
@@ -876,6 +886,296 @@ plant 输出参数（不可直接设置，只能通过操控输入间接影响�
     except urllib.error.HTTPError as e:
         return None, {"error": "minimax_http_error", "message": f"MiniMax API returned HTTP {e.code}."}
     except Exception as exc:
+        return None, {"error": "minimax_error", "message": "MiniMax API request failed."}
+
+
+def _handle_chat_reason(request_payload: dict) -> tuple[dict | None, dict | None]:
+    """Handle POST /api/chat/reason — unified deep reasoning endpoint.
+
+    Receives a live truth snapshot and lets the AI reason deeply about any
+    control-logic question, including causal、反事实、system-level, and diagnostic.
+    Quickly refuses off-topic or under-informed questions.
+    """
+    question = request_payload.get("question", "")
+    system_id = request_payload.get("system_id", "thrust-reverser")
+    snapshot = request_payload.get("current_snapshot") or {}
+
+    if not question:
+        return None, {"error": "missing_question", "message": "question field is required."}
+
+    api_key = _get_minimax_api_key()
+    if not api_key:
+        return None, {"error": "minimax_api_key_missing", "message": "MiniMax API key not found. Add to ~/.minimax_key."}
+
+    nodes = snapshot.get("nodes", [])
+    logic = snapshot.get("logic", {})
+    outputs = snapshot.get("outputs", {})
+    hud = snapshot.get("hud", {})
+    spec = snapshot.get("spec", {})
+
+    # Build node state summary
+    node_lines = []
+    for node in nodes:
+        state_label = {"active": "亮(激活)", "inactive": "暗(未激活)", "blocked": "红(阻塞)"}.get(
+            node.get("state", ""), node.get("state", "?")
+        )
+        node_lines.append(f"  {node.get('id', '?')}: {state_label}")
+    node_summary = "\n".join(node_lines) if node_lines else "  (无节点数据)"
+
+    # Build logic gate summary (brief)
+    logic_lines = []
+    for gate_id in ("logic1", "logic2", "logic3", "logic4"):
+        info = logic.get(gate_id, {})
+        active = info.get("active", False)
+        failed = info.get("failed_conditions", [])
+        status = f"激活" if active else (f"阻塞: {', '.join(failed)}" if failed else "未激活")
+        logic_lines.append(f"  {gate_id}: {status}")
+    logic_summary = "\n".join(logic_lines)
+
+    # Build full logic condition definitions (for deep reasoning)
+    logic_def_lines = []
+    for gate_id in ("logic1", "logic2", "logic3", "logic4"):
+        info = logic.get(gate_id, {})
+        active = info.get("active", False)
+        logic_def_lines.append(f"【{gate_id}】{'[激活]' if active else '[未激活]'}")
+        conditions = info.get("conditions", [])
+        if conditions:
+            for c in conditions:
+                status = "✓通过" if c.get("passed") else "✗未过"
+                thresh = c.get("threshold_value")
+                comp = c.get("comparison", "")
+                cur = c.get("current_value")
+                thresh_str = f" {comp} {thresh}" if thresh is not None else ""
+                logic_def_lines.append(f"  - {c.get('name','?')}: 当前值={cur}{thresh_str} [{status}]")
+        else:
+            # No conditions means gate was skipped / locked out
+            logic_def_lines.append(f"  (无条件记录，gate被跳过)")
+        failed = info.get("failed_conditions", [])
+        if failed:
+            logic_def_lines.append(f"  阻塞原因: {', '.join(failed)}")
+    logic_definitions = "\n".join(logic_def_lines)
+
+    # Build output summary
+    output_lines = [
+        f"  THR_LOCK: {'已释放' if outputs.get('throttle_electronic_lock_release_cmd') else '未释放'}",
+        f"  VDT90: {'触发' if outputs.get('deploy_90_percent_vdt') else '未触发'}",
+        f"  TLS115V: {'有电' if outputs.get('tls_115vac_cmd') else '断电'}",
+        f"  ETRAC540V: {'触发' if outputs.get('etrac_540vdc_cmd') else '未触发'}",
+        f"  EEC_DEPLOY: {'激活' if outputs.get('eec_deploy_cmd') else '未激活'}",
+        f"  PLS_POWER: {'激活' if outputs.get('pls_power_cmd') else '未激活'}",
+        f"  PDU_MOTOR: {'激活' if outputs.get('pdu_motor_cmd') else '未激活'}",
+    ]
+    output_summary = "\n".join(output_lines)
+
+    # Build spec summary (链路定义)
+    spec_summary = ""
+    if spec:
+        spec_lines = spec.get("description_lines", [])
+        if spec_lines:
+            spec_summary = "\n".join(f"  {l}" for l in spec_lines[:30])
+        else:
+            spec_summary = f"  {spec.get('title', system_id)}"
+
+    # Node → state map for quick reference
+    node_state_lines = []
+    for node in nodes:
+        nid = node.get("id", "?")
+        state = node.get("state", "?")
+        node_state_lines.append(f"  {nid}: {state}")
+    node_states_summary = "\n".join(node_state_lines) if node_state_lines else "  (无)"
+
+    system_labels = {
+        "thrust-reverser": "Thrust Reverser（反推力系统）",
+        "landing-gear": "Landing Gear（起落架）",
+        "bleed-air": "Bleed Air Valve（引气系统）",
+        "efds": "EFDS（干扰弹系统）",
+    }
+    system_label = system_labels.get(system_id, system_id)
+
+    system_prompt = f"""你是 {system_label} 的控制逻辑深度推理助手。
+
+## 你拥有的真实数据（来自 truth engine，100%准确）
+=== 节点状态 ===
+{node_states_summary}
+
+=== 逻辑门状态 ===
+{logic_summary}
+
+=== 逻辑门完整条件 ===
+{logic_definitions}
+
+=== 指令输出 ===
+{output_summary}
+
+=== 链路定义（spec）===
+{spec_summary if spec_summary else '  (无 spec 数据)'}
+
+## 你的核心能力（按优先级使用）
+
+1. **因果推理**：基于上述真实数据，解释为什么某个 gate 激活/阻塞
+2. **反事实推理**：分析"如果X则Y"的逻辑后果（基于 threshold 和 comparison）
+3. **系统原理**：基于 spec 数据解释系统架构、节点关系、激活路径
+4. **故障诊断**：结合 failed_conditions 和 conditions 的通过状态定位根因
+5. **操作建议**：当用户要求操作时，给出 suggest_parameter_override
+
+## 你的回答边界
+
+严格拒绝以下问题：
+- 与控制逻辑完全无关：天气、地理、政治、航空事故原因（非本系统故障）
+- 完全无法回答的问题：没有任何数据可以支撑推理
+- 格式：「拒绝原因：XXXX」→ confidence = 0.0，refusal = true
+
+你不可以：
+- 编造节点状态或 threshold
+- 声称某个 gate 激活但 failed_conditions 不为空
+- 超出 {system_label} 的系统范围
+
+## 回答格式要求
+
+请直接返回以下 JSON（不要 markdown 代码块，不要额外文字）：
+{{
+  "response_type": "analysis" | "explanation" | "refusal" | "operation_suggestion",
+  "explanation": "面向工程师的核心回答（100-300字）",
+  "highlighted_nodes": ["节点ID1", ...],
+  "suggestion_nodes": ["建议检查的节点ID", ...],
+  "confidence": 0.0-1.0,
+  "refusal": false,
+  "refusal_reason": "",
+  "parameter_overrides": {{}},
+  "auto_apply": false,
+  "deep_reasoning": "你的完整推理链，向工程师展示分析过程"
+}}
+
+response_type 判定：
+- 讨论节点状态、why/how/what → analysis 或 explanation
+- 要求操作/调节/满足条件 → operation_suggestion
+- 超出边界 → refusal
+
+confidence 指导：
+- 有充足数据支撑 → 0.7-1.0
+- 数据有限但可推理 → 0.4-0.7
+- 数据严重不足 → < 0.4 + refusal=true"""
+
+    user_prompt = f"用户问题：{question}"
+
+    try:
+        import urllib.request
+        url = "https://api.minimax.chat/v1/text/chatcompletion_v2"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": "minimax-m2.7-highspeed",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+            "temperature": 0.3,
+            "max_tokens": 1200,
+            "stream": False,
+        }
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read().decode("utf-8"))
+
+        choices = result.get("choices", [])
+        if choices:
+            raw_content = choices[0].get("message", {}).get("content", "")
+        else:
+            raw_content = result.get("choices", [{}])[0].get("text", "")
+
+        if not raw_content:
+            return None, {"error": "minimax_empty_response", "message": "MiniMax returned empty reason response."}
+
+        try:
+            json_str = re.sub(r"^```(?:json)?\s*", "", raw_content.strip())
+            json_str = re.sub(r"\s*```$", "", json_str)
+            parsed = json.loads(json_str)
+            if not isinstance(parsed, dict):
+                raise ValueError("Not a JSON object.")
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return {
+                "response_type": "refusal",
+                "explanation": "抱歉，AI 响应格式异常，请重试。",
+                "highlighted_nodes": [],
+                "suggestion_nodes": [],
+                "confidence": 0.0,
+                "refusal": True,
+                "refusal_reason": "AI响应格式异常",
+                "parameter_overrides": {},
+                "auto_apply": False,
+                "deep_reasoning": "",
+            }, None
+
+        VALID_RESPONSE_TYPES = {"analysis", "explanation", "refusal", "operation_suggestion"}
+        raw_rt = str(parsed.get("response_type", "analysis"))
+        response_type = raw_rt if raw_rt in VALID_RESPONSE_TYPES else "analysis"
+
+        explanation = str(parsed.get("explanation", ""))
+        highlighted = parsed.get("highlighted_nodes", [])
+        suggestions = parsed.get("suggestion_nodes", [])
+        confidence_raw = parsed.get("confidence", 0.5)
+        refusal = bool(parsed.get("refusal", False))
+        refusal_reason = str(parsed.get("refusal_reason", ""))
+        parameter_overrides = parsed.get("parameter_overrides", {})
+        auto_apply = bool(parsed.get("auto_apply", False))
+        deep_reasoning = str(parsed.get("deep_reasoning", ""))
+
+        # Validate parameter_overrides
+        allowed_override_fields = {
+            "tra_deg", "radio_altitude_ft", "engine_running", "aircraft_on_ground",
+            "reverser_inhibited", "eec_enable", "n1k", "feedback_mode", "deploy_position_percent",
+        }
+        allowed_feedback_modes = {"auto_scrubber", "manual_feedback_override"}
+        if isinstance(parameter_overrides, dict):
+            cleaned = {}
+            for k, v in parameter_overrides.items():
+                if k not in allowed_override_fields:
+                    continue
+                if k in ("engine_running", "aircraft_on_ground", "reverser_inhibited", "eec_enable"):
+                    if isinstance(v, bool):
+                        cleaned[k] = v
+                    elif isinstance(v, str):
+                        cleaned[k] = v.lower() in ("true", "1", "yes", "on")
+                elif k in ("tra_deg", "radio_altitude_ft", "n1k", "deploy_position_percent"):
+                    try:
+                        cleaned[k] = float(v)
+                    except (TypeError, ValueError):
+                        pass
+                elif k == "feedback_mode":
+                    if isinstance(v, str) and v in allowed_feedback_modes:
+                        cleaned[k] = v
+            parameter_overrides = cleaned
+        else:
+            parameter_overrides = {}
+
+        try:
+            confidence = max(0.0, min(1.0, float(confidence_raw)))
+        except (TypeError, ValueError):
+            confidence = 0.5
+
+        return {
+            "response_type": response_type,
+            "explanation": explanation,
+            "highlighted_nodes": highlighted if isinstance(highlighted, list) else [],
+            "suggestion_nodes": suggestions if isinstance(suggestions, list) else [],
+            "confidence": confidence,
+            "refusal": refusal,
+            "refusal_reason": refusal_reason,
+            "parameter_overrides": parameter_overrides,
+            "auto_apply": auto_apply,
+            "deep_reasoning": deep_reasoning,
+        }, None
+
+    except urllib.error.HTTPError as e:
+        return None, {"error": "minimax_http_error", "message": f"MiniMax API returned HTTP {e.code}."}
+    except Exception:
         return None, {"error": "minimax_error", "message": "MiniMax API request failed."}
 
 
