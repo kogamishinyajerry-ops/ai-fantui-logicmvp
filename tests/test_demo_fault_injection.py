@@ -176,3 +176,115 @@ class FaultInjectionTests(unittest.TestCase):
 
         self.assertEqual(response.status, 200)
         self.assertIn("reverser_inhibited", payload["logic"]["logic1"]["failed_conditions"])
+
+    # ---- P17-03 Fault Injection API Tests ----
+
+    def test_fault_sw1_stuck_off_overrides_switch(self):
+        """Injecting sw1 stuck_off forces sw1=False even when sw1=True in the input."""
+        response, payload = self._post(
+            {
+                **self.BASE_REQUEST,
+                "sw1": True,  # normal input would activate logic1
+                "fault_injections": [{"node_id": "sw1", "fault_type": "stuck_off"}],
+            }
+        )
+        self.assertEqual(response.status, 200)
+        self.assertEqual(payload.get("active_fault_node_ids"), ["sw1"])
+        self.assertEqual(payload.get("fault_injections"), [{"node_id": "sw1", "fault_type": "stuck_off"}])
+        # sw1 stuck_off should block logic1
+        self.assertFalse(payload["logic"]["logic1"]["active"])
+
+    def test_fault_sw2_stuck_off_overrides_switch(self):
+        """Injecting sw2 stuck_off forces sw2=False even when sw2=True in the input."""
+        response, payload = self._post(
+            {
+                **self.BASE_REQUEST,
+                "sw2": True,  # normal input would activate logic2
+                "fault_injections": [{"node_id": "sw2", "fault_type": "stuck_off"}],
+            }
+        )
+        self.assertEqual(response.status, 200)
+        self.assertIn("sw2", payload.get("active_fault_node_ids", []))
+        self.assertFalse(payload["logic"]["logic2"]["active"])
+
+    def test_fault_sw1_stuck_on_is_recorded_and_forces_switch(self):
+        """Injecting sw1 stuck_on records it in active_fault_node_ids and forces sw1 node state=active."""
+        response, payload = self._post(
+            {
+                **self.BASE_REQUEST,
+                "sw1": False,  # would normally keep logic1 inactive
+                "fault_injections": [{"node_id": "sw1", "fault_type": "stuck_on"}],
+            }
+        )
+        self.assertEqual(response.status, 200)
+        self.assertIn("sw1", payload.get("active_fault_node_ids", []))
+        # The sw1 node should show as active in the canvas despite sw1=False input
+        sw1_nodes = [n for n in payload.get("nodes", []) if n.get("id") == "sw1"]
+        self.assertEqual(len(sw1_nodes), 1)
+        self.assertEqual(sw1_nodes[0].get("state"), "active")
+
+    def test_fault_radio_altitude_sensor_zero(self):
+        """Injecting radio_altitude_ft sensor_zero forces RA=0, blocking logic1 via altitude gate."""
+        response, payload = self._post(
+            {
+                **self.BASE_REQUEST,
+                "fault_injections": [{"node_id": "radio_altitude_ft", "fault_type": "sensor_zero"}],
+            }
+        )
+        self.assertEqual(response.status, 200)
+        self.assertIn("radio_altitude_ft", payload.get("active_fault_node_ids", []))
+        # RA=0 < 7.0 should fail altitude gate and block logic1
+        self.assertFalse(payload["logic"]["logic1"]["active"])
+
+    def test_fault_invalid_node_returns_400(self):
+        """Unknown node_id returns 400 with invalid_fault_injection_node error."""
+        response, payload = self._post(
+            {
+                **self.BASE_REQUEST,
+                "fault_injections": [{"node_id": "not_a_real_node", "fault_type": "stuck_off"}],
+            }
+        )
+        self.assertEqual(response.status, 400)
+        self.assertEqual(payload.get("error"), "invalid_fault_injection_node")
+
+    def test_fault_invalid_type_returns_400(self):
+        """Unknown fault_type returns 400 with invalid_fault_type error."""
+        response, payload = self._post(
+            {
+                **self.BASE_REQUEST,
+                "fault_injections": [{"node_id": "sw1", "fault_type": "not_a_fault_type"}],
+            }
+        )
+        self.assertEqual(response.status, 400)
+        self.assertEqual(payload.get("error"), "invalid_fault_type")
+
+    def test_fault_non_list_returns_400(self):
+        """fault_injections must be a list; non-list returns 400."""
+        for bad_value in [123, "stuck_off", {"node_id": "sw1"}]:
+            response, payload = self._post({**self.BASE_REQUEST, "fault_injections": bad_value})
+            self.assertEqual(response.status, 400, msg=f"fault_injections={bad_value!r} should be rejected")
+
+    def test_multiple_faults_injected(self):
+        """Multiple faults can be injected simultaneously."""
+        response, payload = self._post(
+            {
+                **self.BASE_REQUEST,
+                "fault_injections": [
+                    {"node_id": "sw1", "fault_type": "stuck_off"},
+                    {"node_id": "sw2", "fault_type": "stuck_off"},
+                ],
+            }
+        )
+        self.assertEqual(response.status, 200)
+        active_ids = set(payload.get("active_fault_node_ids", []))
+        self.assertEqual(active_ids, {"sw1", "sw2"})
+        self.assertFalse(payload["logic"]["logic1"]["active"])
+        self.assertFalse(payload["logic"]["logic2"]["active"])
+
+    def test_no_fault_injections_excludes_fault_fields(self):
+        """Without fault_injections, the response does not include active_fault_node_ids or fault_injections keys."""
+        response, payload = self._post(self.BASE_REQUEST)
+        self.assertEqual(response.status, 200)
+        # No faults → these keys are absent from the response (not returned as empty)
+        self.assertNotIn("active_fault_node_ids", payload)
+        self.assertNotIn("fault_injections", payload)
