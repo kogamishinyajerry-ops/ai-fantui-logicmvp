@@ -38,6 +38,7 @@
   var LOADING_SEND_TEXT = 'AI 思考中...';
   var FAULT_REEVAL_TEXT = '故障重评估中...';
   var lastTruthPayloadBySystem = {};
+  var _chatRequestSeq = 0;
   var nodeRefHighlightTimer = null;
   var activeFaults = new Map();
   var isFaultBarExpanded = false;
@@ -2617,6 +2618,7 @@ function isGeneralQuestion(qText, qLower) {
     // All other thrust-reverser input → unified deep AI reasoning
     // Use cached truth payload so canvas state is preserved; fall back to defaults if no cache
     var cachedPayload = lastTruthPayloadBySystem['thrust-reverser'] || payload;
+    var reqSeq = ++_chatRequestSeq;
 
     requestJson('/api/lever-snapshot', {
       method: 'POST',
@@ -2624,6 +2626,7 @@ function isGeneralQuestion(qText, qLower) {
       body: JSON.stringify(buildFaultAwareLeverPayload(cachedPayload)),
     })
       .then(function(snapshotData) {
+        if (reqSeq !== _chatRequestSeq) { finishChatRequest(); return; }
         var reasonPayload = {
           question: text,
           system_id: systemId,
@@ -2637,10 +2640,12 @@ function isGeneralQuestion(qText, qLower) {
           body: JSON.stringify(reasonPayload),
         })
           .then(function(reasonData) {
+            if (reqSeq !== _chatRequestSeq) { finishChatRequest(); return; }
             handleReasonResponse(reasonData, reasonData.response_type);
             finishChatRequest();
           })
           .catch(function(err) {
+            if (reqSeq !== _chatRequestSeq) { finishChatRequest(); return; }
             applyAiHighlights([], []);
             addMessage('ai', formatLeverSnapshotAnswer(snapshotData, cachedPayload));
             finishChatRequest();
