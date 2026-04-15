@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -299,6 +300,10 @@ For each ambiguity, provide:
 2. A clear description of what is ambiguous
 3. A confidence score (0.0–1.0) indicating how confident you are this is truly ambiguous
 4. A suggested clarification question
+
+IMPORTANT — Confidence triage:
+- confidence_score >= 0.6: include in output (requires engineer clarification)
+- confidence_score < 0.6: this is likely safe to infer — do NOT include in output
 
 Return your analysis as a JSON array of objects with keys: id, text_excerpt, description, confidence_score, suggested_clarification.
 Respond ONLY with the JSON array, no markdown, no explanation."""
@@ -663,18 +668,31 @@ def convert_markdown_to_intake(markdown_text: str, system_id: str = "generated-s
                               "open_circuit", "short_to_power", "latched_no_unlock", "command_path_failure"}
         # Mapping of common AI-generated names to schema values
         fault_kind_aliases = {
+            # existing
             "hardware_failure": "open_circuit",
             "sensor_false_positive": "bias_high",
             "logic_race_condition": "latched_no_unlock",
             "stuck_open": "open_circuit",
             "sensor_misread": "bias_high",
+            # expanded coverage for P1-4
+            "sensor_stuck": "stuck_low",
+            "sensor_freeze": "stuck_low",
+            "signal_freeze": "stuck_low",
+            "loss_of_signal": "open_circuit",
+            "no_response": "open_circuit",
+            "signal_loss": "open_circuit",
+            "spike": "bias_high",
+            "stuck": "stuck_low",
+            "open_circuit_fault": "open_circuit",
+            "short_to_power_fault": "short_to_power",
+            "latched": "latched_no_unlock",
         }
         for fm in result.get("fault_modes", []):
             if not isinstance(fm, dict):
                 continue
             fk = str(fm.get("fault_kind") or "")
             if fk and fk not in valid_fault_kinds:
-                fm["fault_kind"] = fault_kind_aliases.get(fk, "command_path_failure")
+                fm["fault_kind"] = fault_kind_aliases.get(fk, "open_circuit")
 
         # Normalize note fields in logic node conditions
         for ln in result.get("logic_nodes", []):
@@ -683,10 +701,18 @@ def convert_markdown_to_intake(markdown_text: str, system_id: str = "generated-s
             for cond in ln.get("conditions", []):
                 if not cond.get("note"):
                     cond["note"] = "N/A"
-                # Normalize threshold_value to numeric (AI may pass enum states like "IDLE")
+                # Normalize threshold_value to numeric (AI may pass "IDLE" or "60%")
                 tv = cond.get("threshold_value")
                 if tv is not None and not isinstance(tv, (int, float)):
-                    cond["threshold_value"] = None
+                    # Try stripping a unit suffix like "%" or "V" etc.
+                    if isinstance(tv, str):
+                        m = re.match(r"^([+-]?\d+(?:\.\d+)?)", tv.strip())
+                        if m:
+                            cond["threshold_value"] = float(m.group(1))
+                        else:
+                            cond["threshold_value"] = None
+                    else:
+                        cond["threshold_value"] = None
 
         # Normalize acceptance scenario numeric fields that AI may fill with enum strings
         for scenario in result.get("acceptance_scenarios", []):
@@ -746,17 +772,65 @@ def convert_markdown_to_intake(markdown_text: str, system_id: str = "generated-s
         return {"error": "json_decode_failed", "message": str(exc)}
 
 
-def run_pipeline_from_intake(intake_packet: dict) -> dict:
+def _inject_clarification_answers(
+    intake_packet: dict,
+    clarification_history: list[tuple[str, str]],
+) -> dict:
+    """Deterministically convert clarification_history → clarification_answers.
+
+    Pure data transformation — no AI involvement.  Ensures assess_intake_packet's
+    _unanswered_clarifications() check receives real answers instead of an empty tuple.
+    """
+    if not clarification_history:
+        return intake_packet
+
+    answers = [
+        {
+            "question_id": f"clarify-{i}",
+            "answer": answer,
+            "status": "answered",
+        }
+        for i, (question, answer) in enumerate(clarification_history)
+    ]
+    intake_packet["clarification_answers"] = answers
+    return intake_packet
+
+
+def run_pipeline_from_intake(
+    intake_packet: dict,
+    session_clarification_history: list[tuple[str, str]] | None = None,
+) -> dict:
     """Run the full P7/P8 intake pipeline: validate -> assess -> build bundle.
 
     Returns combined result with assessment, bundle summary, and system_snapshot.
+
+    If blockers are present in the assessment, bundle building is skipped and
+    status='blocked' is returned — per Opus P0-2 ruling.
     """
     try:
         packet = intake_packet_from_dict(intake_packet)
     except (ValueError, KeyError, TypeError) as exc:
         return {"error": "intake_validation_failed", "message": str(exc)}
 
+    # Inject clarification answers deterministically (Opus P0-1 fix)
+    if session_clarification_history:
+        intake_packet_copy = dict(intake_packet)
+        _inject_clarification_answers(intake_packet_copy, session_clarification_history)
+        # Re-parse after injection so dataclass sees the new field
+        try:
+            packet = intake_packet_from_dict(intake_packet_copy)
+        except (ValueError, KeyError, TypeError) as exc:
+            return {"error": "intake_validation_failed", "message": str(exc)}
+
     assessment = assess_intake_packet(packet)
+
+    # Opus P0-2 ruling: blockers → return error, do not build bundle
+    if assessment.get("blockers"):
+        return {
+            "status": "blocked",
+            "blockers": assessment["blockers"],
+            "message": "存在阻塞问题，无法构建诊断 bundle。请先解决以下问题。",
+        }
 
     bundle = _build_workbench_bundle(packet)
 

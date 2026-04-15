@@ -1348,14 +1348,22 @@ def _handle_p15_convert(request_payload: dict) -> tuple[dict | None, dict | None
 def _handle_p15_run_pipeline(request_payload: dict) -> tuple[dict | None, dict | None]:
     """Handle POST /api/p15/run-pipeline.
 
-    Input:  {intake_packet: dict}
-    Output: {assessment, bundle, system_snapshot}
+    Input:  {intake_packet: dict, session_id?: str}
+    Output: {status, assessment, bundle, system_snapshot} or {status: blocked, blockers, message}
     """
     intake_packet = request_payload.get("intake_packet")
     if not isinstance(intake_packet, dict):
         return None, {"error": "missing_intake_packet", "message": "intake_packet is required and must be a dict."}
 
-    result = run_pipeline_from_intake(intake_packet)
+    session_id = request_payload.get("session_id")
+    clarification_history: list[tuple[str, str]] | None = None
+    if isinstance(session_id, str) and session_id.strip():
+        store = _get_p14_store()
+        session = store.get(session_id.strip())
+        if session is not None:
+            clarification_history = session.clarification_history
+
+    result = run_pipeline_from_intake(intake_packet, session_clarification_history=clarification_history)
     if isinstance(result, dict) and "error" in result:
         return None, {"error": result.get("error", "pipeline_failed"), "message": result.get("message", str(result))}
 

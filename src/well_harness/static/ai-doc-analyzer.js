@@ -115,11 +115,15 @@ async function p15Convert(sessionId, systemId) {
  * @param {Object} intakePacket
  * @returns {Promise<Object>} JSON response
  */
-async function p15RunPipeline(intakePacket) {
+async function p15RunPipeline(intakePacket, sessionId) {
+  const body = { intake_packet: intakePacket };
+  if (sessionId) {
+    body.session_id = sessionId;
+  }
   const response = await fetch("/api/p15/run-pipeline", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ intake_packet: intakePacket }),
+    body: JSON.stringify(body),
   });
   const data = await response.json();
   if (!response.ok || data.error) {
@@ -517,7 +521,23 @@ if (_pipelineBtn) {
     _pipelineStatus.textContent = "Running pipeline...";
 
     try {
-      var result = await p15RunPipeline(_intakePacket);
+var result = await p15RunPipeline(_intakePacket, _sessionId);
+
+      // Handle blocked status (Opus P0-2 ruling)
+      if (result.status === "blocked") {
+        var blockerList = (result.blockers || []).map(function(b) {
+          return "<li>" + _escHtml(b) + "</li>";
+        }).join("");
+        _pipelineResultArea.innerHTML =
+          '<div class="ai-doc-pipeline-result-card" style="border-color:rgba(255,82,82,0.5);">' +
+          '  <div class="ai-doc-pipeline-result-title" style="color:#ff5252">Pipeline 阻塞 — 无法生成诊断</div>' +
+          '  <p style="color:rgba(200,240,255,0.7);margin:0.5rem 0;">' + _escHtml(result.message || "") + "</p>" +
+          '  <ul style="color:rgba(255,150,150,0.9);padding-left:1.2rem;margin:0.5rem 0;">' +
+        blockerList +
+        "</ul></div>";
+        _pipelineStatus.textContent = "Blocked";
+        return;
+      }
 
       var bundle = result.bundle || {};
       var snapshot = result.system_snapshot || {};
