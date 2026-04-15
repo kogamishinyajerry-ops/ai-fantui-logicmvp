@@ -1332,8 +1332,13 @@ def _handle_p15_convert(request_payload: dict) -> tuple[dict | None, dict | None
     if isinstance(intake_dict, dict) and "error" in intake_dict:
         return None, {"error": intake_dict.get("error", "conversion_failed"), "message": intake_dict.get("message", str(intake_dict))}
 
-    # Basic validation
     errors: list[str] = []
+    try:
+        intake_packet_from_dict(intake_dict)
+    except (ValueError, KeyError, TypeError) as exc:
+        errors.append(f"Intake packet validation failed: {exc}")
+
+    # Basic validation
     required_fields = ["system_id", "title", "objective", "components", "logic_nodes"]
     for field in required_fields:
         if field not in intake_dict or not intake_dict[field]:
