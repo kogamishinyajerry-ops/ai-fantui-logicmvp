@@ -4,11 +4,11 @@
 ## 当前自动同步冻结摘要
 
 - 当前阶段：`未识别活动 phase`
-- 当前已验证 Plan：`P15-01`
+- 当前已验证 Plan：`P14-01`
 - 最近成功执行证据：`GitHub GSD automation 24322974860`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
-- 当前 Opus 状态：`当前无需 Opus 审查`
-- Open Gap 数量：`0`
+- 当前 Opus 状态：`失败阻塞分流审查`
+- Open Gap 数量：`1`
 - 当前证据模式：`shared-database live mode`
 - 证据模式说明：共享 Notion 数据库可达；phase / run / QA / gate 取自实时数据库记录。
 - 当前 QA 摘要：`PASS. 23/23 shared validation checks pass.`
@@ -18,7 +18,7 @@
 ## 当前冻结入口
 
 - [01 当前状态（自动同步）](https://www.notion.so/341c6894-2bed-810d-b7e6-e5d264bcfe61)
-- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/342c6894-2bed-81d6-8137-ea138302f4dd)
+- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/343c6894-2bed-81ed-b7dc-cd7e2355bf72)
 - [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)
 - [GitHub Actions](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 

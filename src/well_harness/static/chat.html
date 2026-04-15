@@ -171,14 +171,18 @@
               <line x1="82" y1="73" x2="110" y2="70" class="conn-line conn-input"/>
               <line x1="82" y1="113" x2="110" y2="70" class="conn-line conn-input"/>
               <line x1="150" y1="70" x2="165" y2="70" class="conn-line conn-logic" marker-end="url(#arrow-cyan)"/>
-              <polyline points="237,70 237,160 355,160" class="conn-line conn-merge" marker-end="url(#arrow-cyan)"/>
+              <g class="conn-simplified-group" data-tooltip="简化路径：实际信号经过 tls_unlocked_ls 液压解锁反馈进入 L3">
+                <polyline points="237,70 237,160 355,160" class="conn-line conn-merge conn-simplified" marker-end="url(#arrow-cyan)"/>
+              </g>
 
               <line x1="82" y1="213" x2="110" y2="250" class="conn-line conn-input"/>
               <line x1="82" y1="253" x2="110" y2="250" class="conn-line conn-input"/>
               <line x1="82" y1="293" x2="110" y2="250" class="conn-line conn-input"/>
               <line x1="82" y1="333" x2="110" y2="250" class="conn-line conn-input"/>
               <line x1="150" y1="250" x2="165" y2="250" class="conn-line conn-logic" marker-end="url(#arrow-cyan)"/>
-              <polyline points="237,250 237,160 355,160" class="conn-line conn-merge" marker-end="url(#arrow-cyan)"/>
+              <g class="conn-simplified-group" data-tooltip="简化路径：实际信号经过电机驱动+位移反馈间接影响 L3">
+                <polyline points="237,250 237,160 355,160" class="conn-line conn-merge conn-simplified" marker-end="url(#arrow-cyan)"/>
+              </g>
 
               <polyline points="82,393 82,160 355,160" class="conn-line conn-input" marker-end="url(#arrow-gray)"/>
               <polyline points="82,423 82,160 355,160" class="conn-line conn-input" marker-end="url(#arrow-gray)"/>
@@ -198,6 +202,15 @@
               <text x="130" y="285" class="section-label" data-tooltip="逻辑节点 2，540V 电源母线使能">L2</text>
               <text x="375" y="105" class="section-label" data-tooltip="逻辑节点 3，EEC + PLS + PDU 三路扇出">L3</text>
               <text x="615" y="105" class="section-label" data-tooltip="逻辑节点 4，THR_LOCK 释放命令">L4</text>
+
+              <!-- Topology disclaimer: this canvas shows a functional-causality
+                   simplification; plant feedback nodes (tls_unlocked_ls, motor
+                   displacement feedback) are omitted for readability. -->
+              <g class="topology-disclaimer" transform="translate(10, 468)">
+                <text x="0" y="0" class="topology-disclaimer-text" fill="rgba(148,163,184,0.45)" font-size="9" font-family="monospace">
+                  ℹ 简化拓扑 · 显示功能因果链 · 省略 plant feedback 节点
+                </text>
+              </g>
             </svg>
           </div>
 

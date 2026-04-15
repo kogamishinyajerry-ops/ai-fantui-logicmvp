@@ -633,6 +633,26 @@ body.drawer-open .stage-shell {
   opacity: 0.7;
 }
 
+/* Dashed "simplified path" lines — used for TLS/ETRAC→L3 where the
+   actual signal passes through plant feedback nodes (tls_unlocked_ls /
+   motor feedback) not shown in this simplified functional-causality view. */
+.conn-simplified {
+  stroke-dasharray: 6 3;
+  opacity: 0.75;
+}
+
+.conn-simplified-group {
+  cursor: help;
+}
+
+.conn-simplified-group .conn-simplified {
+  pointer-events: none;
+}
+
+.topology-disclaimer {
+  pointer-events: none;
+}
+
 .section-label {
   fill: rgba(40, 244, 255, 0.48);
   font-family: var(--font-mono);
