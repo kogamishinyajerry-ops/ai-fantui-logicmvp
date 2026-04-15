@@ -1,4 +1,4 @@
-"""Headless Playwright smoke test for the system switcher UI at http://localhost:7891/."""
+"""Headless Playwright smoke test for the system switcher UI at http://localhost:7891/demo.html."""
 
 from __future__ import annotations
 
@@ -7,7 +7,8 @@ import sys
 from typing import Any
 
 
-DEMO_URL = "http://localhost:7891/"
+# Root now serves chat.html; the legacy expert demo UI with #system-selector lives on /demo.html.
+DEMO_URL = "http://localhost:7891/demo.html"
 
 OUTPUT_FORMATS = {"text", "json"}
 
