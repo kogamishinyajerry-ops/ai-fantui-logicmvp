@@ -1072,7 +1072,7 @@ confidence 指导：
                 {"role": "user", "content": user_prompt},
             ],
             "temperature": 0.3,
-            "max_tokens": 1200,
+            "max_tokens": 1500,
             "stream": False,
         }
         req = urllib.request.Request(
@@ -1099,18 +1099,22 @@ confidence 指导：
             parsed = json.loads(json_str)
             if not isinstance(parsed, dict):
                 raise ValueError("Not a JSON object.")
-        except (json.JSONDecodeError, TypeError, ValueError):
-            return {
-                "response_type": "refusal",
-                "explanation": "抱歉，AI 响应格式异常，请重试。",
-                "highlighted_nodes": [],
-                "suggestion_nodes": [],
-                "confidence": 0.0,
-                "refusal": True,
-                "refusal_reason": "AI响应格式异常",
-                "parameter_overrides": {},
-                "auto_apply": False,
-                "deep_reasoning": "",
+        except (json.JSONDecodeError, TypeError, ValueError) as exc:
+            # Distinguish truncation from other parse failures
+            truncation_markers = ("...", "继续", "continue", "{\"_", "partial")
+            is_truncated = (
+                len(raw_content.strip()) >= 1150 or
+                any(raw_content.strip().endswith(m) for m in truncation_markers) or
+                raw_content.strip().count('{') > raw_content.strip().count('}')
+            )
+            if is_truncated:
+                return None, {
+                    "error": "minimax_response_truncated",
+                    "message": "MiniMax response was truncated. Try again or simplify the question.",
+                }
+            return None, {
+                "error": "minimax_json_parse_error",
+                "message": f"AI响应格式异常（非JSON）：{exc}",
             }, None
 
         VALID_RESPONSE_TYPES = {"analysis", "explanation", "refusal", "operation_suggestion"}
@@ -1121,16 +1125,21 @@ confidence 指导：
         highlighted = parsed.get("highlighted_nodes", [])
         suggestions = parsed.get("suggestion_nodes", [])
         confidence_raw = parsed.get("confidence", 0.5)
-        refusal = bool(parsed.get("refusal", False))
+        # Safe bool parsing: only explicit Python/JSON True booleans count as true.
+        # This prevents "false" (string) or 0 from becoming True.
+        refusal_raw = parsed.get("refusal", False)
+        refusal = isinstance(refusal_raw, bool) and refusal_raw is True
         refusal_reason = str(parsed.get("refusal_reason", ""))
         parameter_overrides = parsed.get("parameter_overrides", {})
-        auto_apply = bool(parsed.get("auto_apply", False))
+        auto_apply_raw = parsed.get("auto_apply", False)
+        auto_apply = isinstance(auto_apply_raw, bool) and auto_apply_raw is True
         deep_reasoning = str(parsed.get("deep_reasoning", ""))
 
         # Validate parameter_overrides
         allowed_override_fields = {
             "tra_deg", "radio_altitude_ft", "engine_running", "aircraft_on_ground",
             "reverser_inhibited", "eec_enable", "n1k", "feedback_mode", "deploy_position_percent",
+            "max_n1k_deploy_limit",
         }
         allowed_feedback_modes = {"auto_scrubber", "manual_feedback_override"}
         if isinstance(parameter_overrides, dict):
