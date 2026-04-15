@@ -5,11 +5,11 @@
 
 - 活动 phase：`未识别活动 phase`
 - 当前已验证 Plan：`P15-01`
-- 最近成功执行证据：`P15 Pipeline Integration Tests`
-- 当前证据模式：`active-page degraded mode`
-- 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
+- 最近成功执行证据：`GitHub GSD automation 24322974860`
+- 当前证据模式：`shared-database live mode`
+- 证据模式说明：共享 Notion 数据库可达；phase / run / QA / gate 取自实时数据库记录。
 - 当前 QA 摘要：`PASS. 23/23 shared validation checks pass.`
-- 当前运行摘要：`Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: 23/23 shared validation checks pass.`
+- 当前运行摘要：`23/23 shared validation checks pass.`
 - 当前 demo / freeze 基线已经稳定；当前主线已切到 P7 spec-driven workbench。
 - 当前优先级是让 engineer-facing onboarding / playback / diagnosis / knowledge 工具形成连续工作流，而不是继续扩 demo 表面。
 
@@ -29,7 +29,7 @@
 
 1. [AI FANTUI LogicMVP 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
 2. [01 当前状态（自动同步）](https://www.notion.so/341c6894-2bed-810d-b7e6-e5d264bcfe61)
-3. [09C 当前 Opus 4.6 审查简报](https://www.notion.so/341c6894-2bed-81f2-8096-ec2499e72128)
+3. [09C 当前 Opus 4.6 审查简报](https://www.notion.so/342c6894-2bed-81d6-8137-ea138302f4dd)
 4. [10 Freeze Demo Packet](https://www.notion.so/341c6894-2bed-8104-9ab1-f133d6da80f4)
 5. [GitHub Actions / GSD Automation Loop](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 

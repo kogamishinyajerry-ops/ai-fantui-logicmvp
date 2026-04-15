@@ -1,4 +1,4 @@
-# AI FANTUI LogicMVP Freeze / Demo Packet
+# AI FANTUI Control Logic Workbench MVP — Freeze / Demo Packet
 
 <!-- AUTO-SYNCED REPO FREEZE PACKET SNAPSHOT START -->
 ## 当前自动同步冻结摘要

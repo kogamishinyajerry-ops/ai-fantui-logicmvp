@@ -263,3 +263,4 @@ Advance the spec-driven control-analysis workbench from separate primitives into
 | 260415-strat | 联邦架构战略规划（Opus 4.6）：联邦模型裁定为正确方向，整合≠合并；三级整合门槛；cross_domain_links.json（含schema）；federation-model.md；当前代码无需改动 | 2026-04-15 | 9a9edd1 | — |
 | 260415-hud  | 冻结期Aerospace Dark HUD UI升级（Opus 4.6批准）：6优先级CSS改造（CSS变量重塑+SVG精密仪表节点+连接线状态+终端风格抽屉+微交互+Truth Eval Bar HUD化）；9845c83，430 tests无回归 | 2026-04-15 | 9845c83 | — |
 | 260416-ctrl | 冻结期控制面整理：P6-02 stale plan（控制塔首页快照自动同步）→ Done；同步 Notion roadmap P16→Done；更新 freeze demo packet 冻结期完成改进项表；c97d95d smoke test URL修复（/ → /demo.html）；430 tests无回归 | 2026-04-16 | c97d95d,0288d14 | — |
+| 260416-gov | 治理整改 Notion 控制塔（2026-04-15 Opus 4.6 裁决）：项目重命名AI FANTUI Control Logic Workbench MVP；Milestone 9—Project Freeze；新建项目宪法v2；新建 Freeze Ruling裁决书；重写首页/状态页/09C；补写 P14/P15/P16/P14-01/P15-01 正文；替换旧宪法/09G旧入口 | 2026-04-16 | — | — |
