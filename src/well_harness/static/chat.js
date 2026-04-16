@@ -2173,6 +2173,103 @@ function _applySuggestedOverrides(overrides) {
         faultSection.hidden = true;
       }
     }
+
+    // ── Parameter Adjustment Section ─────────────────────────────────
+    var adjustSection = document.getElementById('ndp-adjust-section');
+    var adjustParamRow = document.getElementById('ndp-adjust-param-row');
+    if (adjustSection && adjustParamRow) {
+      // Node IDs that map to an adjustable lever parameter
+      var ADJUSTABLE_NODES = {
+        radio_altitude_ft: { type: 'float', label: '无线电高度', unit: 'ft',
+          min: 0, max: 50, step: 1, key: 'radio_altitude_ft' },
+        sw1:                 { type: 'float', label: 'SW1 开关', unit: null,
+          min: 0, max: 1, step: 1, key: 'radio_altitude_ft' },
+        engine_running:     { type: 'bool', label: '发动机运转', unit: null, key: 'engine_running' },
+        aircraft_on_ground: { type: 'bool', label: '飞机在地面', unit: null, key: 'aircraft_on_ground' },
+        reverser_inhibited: { type: 'bool', label: '反推抑制', unit: null, key: 'reverser_inhibited' },
+        eec_enable:         { type: 'bool', label: 'EEC 使能', unit: null, key: 'eec_enable' },
+        sw2:                 { type: 'float', label: 'SW2 开关', unit: null,
+          min: 0, max: 1, step: 1, key: 'radio_altitude_ft' },
+        n1k:                { type: 'float', label: 'N1 转速', unit: '%',
+          min: 0, max: 100, step: 1, key: 'n1k' },
+        tra_deg:            { type: 'float', label: 'TRA 角度', unit: '°',
+          min: -14, max: 0, step: 0.1, key: 'tra_deg' },
+        deploy_90_percent_vdt: { type: 'float', label: 'VDT 部署位置', unit: '%',
+          min: 0, max: 100, step: 1, key: 'deploy_position_percent' },
+      };
+
+      var cfg = ADJUSTABLE_NODES[nodeId];
+      if (cfg) {
+        adjustSection.hidden = false;
+        adjustParamRow.innerHTML = '';
+
+        var currentVal = null;
+        if (lastTruthSnapshot) {
+          var comp = lastTruthSnapshot.componentValues || {};
+          // Try direct key then NODE_VALUE_KEYS alias
+          var valueKey = cfg.key;
+          // For boolean-ish switches, look for 0/1 numeric values
+          if (cfg.type === 'bool' && comp[valueKey] === undefined) {
+            // SW1/SW2 are treated as float 0/1 in the snapshot
+            var floatVal = parseFloat(comp[valueKey]);
+            if (!isNaN(floatVal)) currentVal = floatVal > 0.5;
+          } else if (cfg.type === 'float') {
+            currentVal = parseFloat(comp[valueKey]);
+          } else {
+            currentVal = comp[valueKey];
+          }
+        }
+
+        if (cfg.type === 'bool') {
+          // Toggle switch row
+          var isOn = currentVal === true || currentVal === 1 || currentVal === '1' || currentVal === true;
+          var toggleId = 'ndp-toggle-' + nodeId;
+          var row = document.createElement('div');
+          row.className = 'ndp-param-toggle';
+          row.innerHTML =
+            '<span class="ndp-param-label">' + escHtml(cfg.label) + '</span>' +
+            '<div class="ndp-toggle-switch" id="' + toggleId + '" data-param="' + cfg.key + '">' +
+              '<input type="checkbox" class="ndp-toggle-input" ' + (isOn ? 'checked' : '') + '>' +
+              '<span class="ndp-toggle-track"><span class="ndp-toggle-thumb"></span></span>' +
+            '</div>';
+          adjustParamRow.appendChild(row);
+        } else {
+          // Slider row
+          if (isNaN(currentVal)) currentVal = cfg.min;
+          var sliderId = 'ndp-slider-' + nodeId;
+          var displayVal = (cfg.step < 1) ? currentVal.toFixed(1) : currentVal;
+          var row = document.createElement('div');
+          row.className = 'ndp-param-slider';
+          row.innerHTML =
+            '<div class="ndp-slider-header">' +
+              '<span class="ndp-param-label">' + escHtml(cfg.label) + '</span>' +
+              '<span class="ndp-param-value" id="' + sliderId + '-val">' + displayVal + (cfg.unit ? cfg.unit : '') + '</span>' +
+            '</div>' +
+            '<input type="range" class="ndp-range" id="' + sliderId + '" ' +
+              'data-param="' + cfg.key + '" ' +
+              'min="' + cfg.min + '" max="' + cfg.max + '" step="' + cfg.step + '" ' +
+              'value="' + currentVal + '">' +
+            '<div class="ndp-range-labels">' +
+              '<span>' + cfg.min + (cfg.unit ? cfg.unit : '') + '</span>' +
+              '<span>' + cfg.max + (cfg.unit ? cfg.unit : '') + '</span>' +
+            '</div>';
+          adjustParamRow.appendChild(row);
+          // Live value update on range input
+          var rangeEl = row.querySelector('input[type="range"]');
+          var valEl = row.querySelector('.ndp-param-value');
+          if (rangeEl && valEl) {
+            rangeEl.addEventListener('input', function() {
+              var v = parseFloat(this.value);
+              var shown = (cfg.step < 1) ? v.toFixed(1) : v;
+              valEl.textContent = shown + (cfg.unit ? cfg.unit : '');
+            });
+          }
+        }
+      } else {
+        adjustSection.hidden = true;
+        adjustParamRow.innerHTML = '';
+      }
+    }
   }
 
   function refreshDetailPanel() {
@@ -2226,6 +2323,48 @@ function _applySuggestedOverrides(overrides) {
         hideDetailPanel();
       }
     });
+
+    // ── Parameter Adjustment Buttons ─────────────────────────────────
+    var applyBtn = document.getElementById('ndp-apply-btn');
+    var cancelBtn = document.getElementById('ndp-cancel-btn');
+
+    if (applyBtn) {
+      applyBtn.addEventListener('click', function() {
+        var overrides = {};
+        // Collect all slider values
+        document.querySelectorAll('input[type="range"].ndp-range').forEach(function(slider) {
+          var param = slider.getAttribute('data-param');
+          if (param) overrides[param] = parseFloat(slider.value);
+        });
+        // Collect all toggle states
+        document.querySelectorAll('.ndp-toggle-switch .ndp-toggle-input').forEach(function(toggle) {
+          var param = toggle.closest('.ndp-toggle-switch').getAttribute('data-param');
+          if (param) overrides[param] = toggle.checked;
+        });
+
+        if (Object.keys(overrides).length === 0) {
+          addMessage('ai', '⚠️ 未检测到任何参数变化');
+          return;
+        }
+
+        applyBtn.disabled = true;
+        applyBtn.textContent = '应用...';
+        _applySuggestedOverrides(overrides).then(function() {
+          addMessage('ai', '✅ 已应用参数：' + Object.keys(overrides).join(', '));
+          applyBtn.disabled = false;
+          applyBtn.textContent = '应用';
+          hideDetailPanel();
+        }).catch(function(err) {
+          addMessage('ai', '⚠️ 应用失败：' + (err.message || String(err)));
+          applyBtn.disabled = false;
+          applyBtn.textContent = '应用';
+        });
+      });
+    }
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', hideDetailPanel);
+    }
   }
 
   if (drawerScrim) {
