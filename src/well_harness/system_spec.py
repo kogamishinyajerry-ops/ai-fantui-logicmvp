@@ -454,7 +454,7 @@ def current_reference_workbench_spec(config: HarnessConfig | None = None) -> Con
                 LogicConditionSpec("radio_altitude_ft", "radio_altitude_ft", "<", active_config.logic1_ra_ft_threshold, "RA 需要低于阈值"),
                 LogicConditionSpec("sw1", "sw1", "==", True, "SW1 必须闭合"),
                 LogicConditionSpec("reverser_inhibited", "reverser_inhibited", "==", False, "反推不能被抑制"),
-                LogicConditionSpec("reverser_not_deployed_eec", "deploy_position_percent", "==", 0.0, "EEC 视角下应仍处于未展开"),
+                LogicConditionSpec("reverser_not_deployed_eec", "reverser_not_deployed_eec", "==", True, "EEC 视角下应仍处于未展开"),
             ),
             downstream_component_ids=("tls_voltage_v",),
         ),
@@ -476,10 +476,13 @@ def current_reference_workbench_spec(config: HarnessConfig | None = None) -> Con
             label="L3",
             description="TLS 解锁、N1K、TRA 阈值共同驱动 EEC / PLS / PDU。",
             conditions=(
+                LogicConditionSpec("engine_running", "engine_running", "==", True, "发动机必须运行"),
+                LogicConditionSpec("aircraft_on_ground", "aircraft_on_ground", "==", True, "飞机必须在地面"),
+                LogicConditionSpec("reverser_inhibited", "reverser_inhibited", "==", False, "反推不能被抑制"),
                 # tls_unlocked_ls is a processed boolean: True when tls_voltage_v >= 115V
-                # Use the raw sensor comparison directly so generator produces correct logic
-                LogicConditionSpec("tls_unlocked_ls", "tls_voltage_v", ">=", 115.0, "TLS 已通电并经过解锁延迟"),
-                LogicConditionSpec("n1k", "n1k", "<", 60.0, "N1K 必须低于限制"),
+                # Use the processed signal directly so generator produces correct logic
+                LogicConditionSpec("tls_unlocked_ls", "tls_unlocked_ls", "==", True, "TLS 已通电并经过解锁延迟"),
+                LogicConditionSpec("n1k", "n1k", "<", "max_n1k_deploy_limit", "N1K 必须低于 limit"),
                 LogicConditionSpec("tra_deg", "tra_deg", "<=", active_config.logic3_tra_deg_threshold, "TRA 必须进入 L3 阈值内"),
             ),
             downstream_component_ids=("eec_cmd", "pls_cmd", "pdu_cmd"),
@@ -489,7 +492,7 @@ def current_reference_workbench_spec(config: HarnessConfig | None = None) -> Con
             label="L4",
             description="VDT90、反推 travel、发动机和地面条件共同驱动 THR_LOCK。注意：VDT90 由 L3 扇出的 PDU motor 驱动位移反馈产生，L4 实际上间接依赖 L3 的成立（物理因果链：L3 → pdu_motor_cmd → deploy_position_percent ≥ 90% → VDT90 → L4）。",
             conditions=(
-                LogicConditionSpec("deploy_90_percent_vdt", "deploy_position_percent", ">=", active_config.deploy_90_threshold_percent, "反馈位移需要达到 90%（由 L3 驱动 PDU 产生）"),
+                LogicConditionSpec("deploy_90_percent_vdt", "deploy_position_percent", ">=", active_config.deploy_90_threshold_percent, "VDT 反馈位移已达到 90%（由 L3 驱动 PDU 产生）"),
                 LogicConditionSpec("tra_deg", "tra_deg", "between_exclusive", (active_config.reverse_travel_min_deg, active_config.reverse_travel_max_deg), "TRA 必须处于有效反推 travel 内"),
                 LogicConditionSpec("aircraft_on_ground", "aircraft_on_ground", "==", True, "飞机必须在地面"),
                 LogicConditionSpec("engine_running", "engine_running", "==", True, "发动机必须运行"),

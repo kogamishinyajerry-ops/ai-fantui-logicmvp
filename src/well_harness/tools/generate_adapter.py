@@ -345,7 +345,13 @@ def _generate_evaluate_snapshot(spec: dict, system_id: str) -> tuple[list[str], 
 
             eval_lines.append(f"        try:")
             eval_lines.append(f"            lv_{cond_name} = self._resolve_param({json.dumps(src_id)}, snap)")
-            eval_lines.append(f"            threshold_{cond_name} = self._resolve_param({_py_literal(threshold_val)}, snap)")
+            # Threshold: if it's a string component ID, resolve it; otherwise use as Python literal
+            if isinstance(threshold_val, str) and threshold_val in comp_value_lookup:
+                eval_lines.append(f"            threshold_{cond_name} = self._resolve_param({json.dumps(threshold_val)}, snap)")
+            elif comp == "between_exclusive" and isinstance(threshold_val, (list, tuple)):
+                eval_lines.append(f"            threshold_{cond_name} = {threshold_val!r}")
+            else:
+                eval_lines.append(f"            threshold_{cond_name} = {_py_literal(threshold_val)}")
 
             py_comp = comp_map.get(comp, comp)
             if comp == "after_unlock":
@@ -353,9 +359,12 @@ def _generate_evaluate_snapshot(spec: dict, system_id: str) -> tuple[list[str], 
             elif comp == "between_exclusive":
                 eval_lines.append(f"            cond_{cond_name}_passed = self._eval_between_exclusive(lv_{cond_name}, threshold_{cond_name}, snap)")
             else:
-                eval_lines.append(f"            lv = lv_{cond_name}")
-                eval_lines.append(f"            threshold = threshold_{cond_name}")
-                eval_lines.append(f"            cond_{cond_name}_passed = bool({py_comp})")
+                eval_lines.append(f"            try:")
+                eval_lines.append(f"                lv = lv_{cond_name}")
+                eval_lines.append(f"                threshold = threshold_{cond_name}")
+                eval_lines.append(f"                cond_{cond_name}_passed = bool({py_comp})")
+                eval_lines.append(f"            except (TypeError, KeyError, AttributeError):")
+                eval_lines.append(f"                cond_{cond_name}_passed = False")
 
             eval_lines.append(f"        except KeyError:")
             eval_lines.append(f"            cond_{cond_name}_passed = False")
@@ -402,23 +411,49 @@ def _generate_evaluate_snapshot(spec: dict, system_id: str) -> tuple[list[str], 
 
     eval_lines.append("")
 
-    # Determine completion (final output node active)
-    final_output_ids = set()
+    # Determine completion (last-tier logic nodes are active)
+    # A node is "last-tier" when its downstream outputs are NOT themselves
+    # downstream of any OTHER node.  Only the terminal output (e.g. thr_lock)
+    # survives this filter: all other nodes' outputs feed the plant which
+    # produces signals used by downstream logic; thr_lock is the sole
+    # terminal command that nothing else consumes.
+    #
+    # We detect this by checking whether each node's downstream set overlaps
+    # with OTHER nodes' downstream sets (not itself).  If no overlap, it's
+    # the terminal node.
+    other_downstream: list[set[str]] = []
     for ln in logic_nodes:
-        for downstream in ln.get("downstream_component_ids", []):
-            final_output_ids.add(downstream)
+        other_downstream.append(set(ln.get("downstream_component_ids", [])))
+    last_tier_ids: list[str] = []
+    for i, ln in enumerate(logic_nodes):
+        my_down = set(ln.get("downstream_component_ids", []))
+        if not my_down:
+            continue
+        is_last = True
+        for j, other_ds in enumerate(other_downstream):
+            if i == j:
+                continue
+            if my_down & other_ds:
+                is_last = False
+                break
+        if is_last:
+            last_tier_ids.append(ln["id"])
 
-    # completion_reached = last-tier logic nodes are all active
-    last_tier_ids = []
-    for ln in logic_nodes:
-        ln_id = ln["id"]
-        downstream = set(ln.get("downstream_component_ids", []))
-        if not (downstream & final_output_ids):
-            last_tier_ids.append(ln_id)
+    # Filter to terminal nodes: only the one whose downstream includes
+    # the final command (thr_lock).  All other nodes' outputs feed the
+    # plant and are intermediate, not terminal.
+    terminal_ln_ids: list[str] = []
+    for lid in last_tier_ids:
+        ln = next((n for n in logic_nodes if n["id"] == lid), None)
+        if ln and "thr_lock" in ln.get("downstream_component_ids", []):
+            terminal_ln_ids.append(lid)
+    if not terminal_ln_ids:
+        terminal_ln_ids = last_tier_ids[-1:] if last_tier_ids else []
 
-    if last_tier_ids:
-        completion_parts = " or ".join(f"(ln_{ln_id}_passed)" for ln_id in last_tier_ids)
-        eval_lines.append(f"        completion_reached = bool({completion_parts})")
+    # completion_reached: derived from the terminal logic node being active.
+    if terminal_ln_ids:
+        passed_checks = " or ".join(f"(ln_{lid}_passed)" for lid in terminal_ln_ids)
+        eval_lines.append(f"        completion_reached = bool({passed_checks})")
     else:
         eval_lines.append("        completion_reached = False")
 
