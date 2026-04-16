@@ -2598,11 +2598,11 @@ body.drawer-open .chat-drawer {
 .ndp-section {}
 
 .ndp-section-title {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-dim, #4a5060);
+  color: var(--text-dim, #8b9bb4);
   margin: 0 0 8px 0;
 }
 
@@ -2731,28 +2731,28 @@ input[type="range"].ndp-range {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 4px;
+  height: 6px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 2px;
+  border-radius: 3px;
   outline: none;
   cursor: pointer;
 }
 input[type="range"].ndp-range::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   background: var(--accent, #67e8f9);
   cursor: pointer;
-  box-shadow: 0 0 6px rgba(77, 200, 255, 0.5);
+  box-shadow: 0 0 8px rgba(77, 200, 255, 0.6);
   transition: transform 0.12s ease;
 }
 input[type="range"].ndp-range::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+  transform: scale(1.15);
 }
 input[type="range"].ndp-range::-webkit-slider-thumb:active {
-  transform: scale(1.05);
+  transform: scale(1.0);
 }
 .ndp-slider-range-labels {
   display: flex;
@@ -2823,7 +2823,8 @@ input[type="range"].ndp-range::-webkit-slider-thumb:active {
 }
 .ndp-apply-btn {
   flex: 1;
-  padding: 8px 12px;
+  padding: 10px 16px;
+  min-height: 40px;
   border-radius: 8px;
   border: 1px solid rgba(77, 200, 255, 0.45);
   background: rgba(77, 200, 255, 0.15);
@@ -2849,7 +2850,8 @@ input[type="range"].ndp-range::-webkit-slider-thumb:active {
   transform: none;
 }
 .ndp-cancel-btn {
-  padding: 8px 12px;
+  padding: 10px 16px;
+  min-height: 40px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: transparent;
