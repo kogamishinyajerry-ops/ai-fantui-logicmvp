@@ -65,14 +65,13 @@
           <div id="chain-topology-thrust-reverser" class="chain-topology canvas-map" aria-label="反推控制系统信号流">
             <svg class="chain-svg" viewBox="0 0 900 480" role="img" aria-label="反推控制链路信号流图">
               <defs>
+                <!-- 统一箭头 marker — 专业工业面板风格，浅蓝色主调 -->
+                <marker id="arrow-professional" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                  <path d="M0,0 L0,6 L8,3 z" fill="#4dc8ff"/>
+                </marker>
+                <!-- 保留 arrow-green 用于 final 高亮链 -->
                 <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
                   <path d="M0,0 L0,6 L8,3 z" fill="#53ff92"/>
-                </marker>
-                <marker id="arrow-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                  <path d="M0,0 L0,6 L8,3 z" fill="#28f4ff"/>
-                </marker>
-                <marker id="arrow-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                  <path d="M0,0 L0,6 L8,3 z" fill="#4a5568"/>
                 </marker>
                 <symbol id="and-gate" viewBox="0 0 40 30">
                   <polygon points="0,0 25,15 0,30" fill="none" stroke="currentColor" stroke-width="1.5"/>
@@ -251,38 +250,39 @@
                 <text x="746" y="147" class="node-type-tag">FIN</text>
               </g>
 
+              <!-- 所有连接线统一使用浅蓝色 professional marker，去掉 conn-input 脉冲动画以保持工业面板简洁感 -->
               <line x1="82" y1="33" x2="110" y2="70" class="conn-line conn-input"/>
               <line x1="82" y1="73" x2="110" y2="70" class="conn-line conn-input"/>
               <line x1="82" y1="113" x2="110" y2="70" class="conn-line conn-input"/>
-              <line x1="150" y1="70" x2="165" y2="70" class="conn-line conn-logic" marker-end="url(#arrow-cyan)"/>
-              <!-- TLS→L3 simplified: route via y=148 to avoid overlapping with ETRAC path -->
+              <line x1="150" y1="70" x2="165" y2="70" class="conn-line conn-logic" marker-end="url(#arrow-professional)"/>
+              <!-- TLS→L3 simplified: route via y=148 -->
               <g class="conn-simplified-group" data-tooltip="简化路径：实际信号经过 tls_unlocked_ls 液压解锁反馈进入 L3">
-                <polyline points="237,70 264,70 264,148 355,148" class="conn-line conn-merge conn-simplified" marker-end="url(#arrow-cyan)"/>
+                <polyline points="237,70 264,70 264,148 355,148" class="conn-line conn-merge conn-simplified" marker-end="url(#arrow-professional)"/>
               </g>
 
               <line x1="82" y1="213" x2="110" y2="250" class="conn-line conn-input"/>
               <line x1="82" y1="253" x2="110" y2="250" class="conn-line conn-input"/>
               <line x1="82" y1="293" x2="110" y2="250" class="conn-line conn-input"/>
               <line x1="82" y1="333" x2="110" y2="250" class="conn-line conn-input"/>
-              <line x1="150" y1="250" x2="165" y2="250" class="conn-line conn-logic" marker-end="url(#arrow-cyan)"/>
-              <!-- ETRAC→L3 simplified: route via y=172 to avoid overlapping with TLS path -->
+              <line x1="150" y1="250" x2="165" y2="250" class="conn-line conn-logic" marker-end="url(#arrow-professional)"/>
+              <!-- ETRAC→L3 simplified: route via y=172 -->
               <g class="conn-simplified-group" data-tooltip="简化路径：实际信号经过电机驱动+位移反馈间接影响 L3">
-                <polyline points="237,250 282,250 282,172 355,172" class="conn-line conn-merge conn-simplified" marker-end="url(#arrow-cyan)"/>
+                <polyline points="237,250 282,250 282,172 355,172" class="conn-line conn-merge conn-simplified" marker-end="url(#arrow-professional)"/>
               </g>
 
               <!-- TRA→L3: separate lane via y=154 -->
-              <polyline points="82,423 102,423 102,154 355,154" class="conn-line conn-input" marker-end="url(#arrow-cyan)"/>
-              <!-- N1K→L3: separate lane via y=166 (N1K center at y=383, node bottom at y=398) -->
-              <polyline points="82,383 122,383 122,166 355,166" class="conn-line conn-input" marker-end="url(#arrow-cyan)"/>
+              <polyline points="82,423 102,423 102,154 355,154" class="conn-line conn-input" marker-end="url(#arrow-professional)"/>
+              <!-- N1K→L3: separate lane via y=166 -->
+              <polyline points="82,383 122,383 122,166 355,166" class="conn-line conn-input" marker-end="url(#arrow-professional)"/>
 
-              <line x1="395" y1="160" x2="410" y2="120" class="conn-line conn-logic" marker-end="url(#arrow-cyan)"/>
-              <line x1="395" y1="160" x2="410" y2="160" class="conn-line conn-logic" marker-end="url(#arrow-cyan)"/>
-              <line x1="395" y1="160" x2="410" y2="200" class="conn-line conn-logic" marker-end="url(#arrow-cyan)"/>
+              <line x1="395" y1="160" x2="410" y2="120" class="conn-line conn-logic" marker-end="url(#arrow-professional)"/>
+              <line x1="395" y1="160" x2="410" y2="160" class="conn-line conn-logic" marker-end="url(#arrow-professional)"/>
+              <line x1="395" y1="160" x2="410" y2="200" class="conn-line conn-logic" marker-end="url(#arrow-professional)"/>
 
               <!-- VDT90 now aligned with L4/THR_LOCK axis at y=160: horizontal connections -->
-              <line x1="482" y1="160" x2="500" y2="160" class="conn-line conn-logic" marker-end="url(#arrow-cyan)"/>
+              <line x1="482" y1="160" x2="500" y2="160" class="conn-line conn-logic" marker-end="url(#arrow-professional)"/>
 
-              <line x1="572" y1="160" x2="595" y2="160" class="conn-line conn-logic" marker-end="url(#arrow-cyan)"/>
+              <line x1="572" y1="160" x2="595" y2="160" class="conn-line conn-logic" marker-end="url(#arrow-professional)"/>
 
               <line x1="635" y1="160" x2="650" y2="160" class="conn-line conn-final" marker-end="url(#arrow-green)"/>
 
@@ -337,6 +337,17 @@
               <section class="ndp-section" id="ndp-fault-section" hidden>
                 <h3 class="ndp-section-title">故障状态</h3>
                 <div class="ndp-fault-info" id="ndp-fault-info"></div>
+              </section>
+              <!-- 参数调节面板：点击 input/sensor 类型节点时显示 -->
+              <section class="ndp-section" id="ndp-adjust-section" hidden>
+                <h3 class="ndp-section-title">参数调节</h3>
+                <div class="ndp-adjust-param-row" id="ndp-adjust-param-row">
+                  <!-- 动态生成：slider 或 toggle -->
+                </div>
+                <div class="ndp-adjust-actions">
+                  <button type="button" class="ndp-apply-btn" id="ndp-apply-btn">应用</button>
+                  <button type="button" class="ndp-cancel-btn" id="ndp-cancel-btn">取消</button>
+                </div>
               </section>
             </div>
           </aside>

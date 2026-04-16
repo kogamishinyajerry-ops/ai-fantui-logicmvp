@@ -648,38 +648,31 @@ body.drawer-open .stage-shell {
   pointer-events: none;
 }
 
+/* ── 专业级连接线：统一浅蓝色，参考工业控制面板风格 ───────────────── */
+/* P5 改进2: 统一颜色 #4dc8ff / 1.5px 线宽 / 实线 / 无脉冲动画 */
 .conn-line {
   fill: none;
-  stroke: rgba(182, 196, 210, 0.78);
-  stroke-width: 2.2;
+  stroke: #4dc8ff;
+  stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-dasharray: none;
-  opacity: 1;
-  transition: stroke 0.28s ease, filter 0.28s ease;
+  opacity: 0.85;
+  transition: stroke 0.28s ease, filter 0.28s ease, opacity 0.28s ease;
 }
 
-.conn-input {
-  stroke: rgba(182, 196, 210, 0.78);
-  stroke-width: 2.2;
-  stroke-dasharray: 10 14;
-}
-
-.conn-logic {
-  stroke: rgba(103, 232, 249, 0.92);
-  stroke-width: 2.4;
-  stroke-dasharray: 10 14;
-}
-
+.conn-input,
+.conn-logic,
 .conn-merge {
-  stroke: rgba(103, 232, 249, 0.92);
-  stroke-width: 2.4;
+  stroke: #4dc8ff;
+  stroke-width: 1.5;
+  stroke-dasharray: none;
 }
 
 .conn-final {
-  stroke: var(--status-active);
-  stroke-width: 2.5;
-  stroke-dasharray: 10 14;
+  stroke: #53ff92;
+  stroke-width: 1.8;
+  stroke-dasharray: none;
 }
 
 .conn-line.is-active {
@@ -750,34 +743,9 @@ body.drawer-open .stage-shell {
   pointer-events: none;
 }
 
-/* ── P4A: 实线连接线信号流脉冲动画 ─────────────────────────────── */
-/* 每个 conn-line 有一个"亮点"沿路径移动，模拟数据从源节点流向目标节点 */
-.conn-input {
-  animation: conn-pulse-input 3.2s linear infinite;
-}
-.conn-logic {
-  animation: conn-pulse-logic 3.8s linear infinite;
-}
-.conn-final {
-  animation: conn-pulse-final 4.4s linear infinite;
-}
-
-@keyframes conn-pulse-input {
-  0%   { stroke-dashoffset: 26; opacity: 0.7; }
-  50%  { opacity: 1; }
-  100% { stroke-dashoffset: 0; opacity: 0.7; }
-}
-
-@keyframes conn-pulse-logic {
-  0%   { stroke-dashoffset: 26; opacity: 0.7; }
-  50%  { opacity: 1; }
-  100% { stroke-dashoffset: 0; opacity: 0.7; }
-}
-
-@keyframes conn-pulse-final {
-  0%   { stroke-dashoffset: 26; opacity: 0.7; }
-  50%  { opacity: 1; }
-  100% { stroke-dashoffset: 0; opacity: 0.7; }
+/* P5 改进2: conn-simplified 保持虚线，但去掉动画以减少视觉噪音 */
+.conn-simplified {
+  animation: none;
 }
 
 .topology-disclaimer {
@@ -2705,6 +2673,191 @@ body.drawer-open .chat-drawer {
   font-size: 12px;
   color: rgba(224, 82, 82, 0.9);
   font-family: var(--font-mono, monospace);
+}
+
+/* ── P5/P6: 参数调节面板 ──────────────────────────────────────── */
+#ndp-adjust-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 12px;
+  margin-top: 4px;
+}
+
+.ndp-adjust-param-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+/* Numeric slider control */
+.ndp-param-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ndp-param-slider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ndp-param-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #93a8b8);
+  font-family: var(--font-mono, monospace);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.ndp-param-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent, #67e8f9);
+  font-family: var(--font-mono, monospace);
+  min-width: 44px;
+  text-align: right;
+}
+.ndp-slider-track {
+  position: relative;
+  height: 20px;
+  display: flex;
+  align-items: center;
+}
+input[type="range"].ndp-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"].ndp-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent, #67e8f9);
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(77, 200, 255, 0.5);
+  transition: transform 0.12s ease;
+}
+input[type="range"].ndp-range::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+input[type="range"].ndp-range::-webkit-slider-thumb:active {
+  transform: scale(1.05);
+}
+.ndp-slider-range-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--text-dim, #4a5568);
+  font-family: var(--font-mono, monospace);
+  margin-top: 2px;
+}
+
+/* Boolean toggle switch */
+.ndp-param-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+.ndp-toggle-label {
+  font-size: 12px;
+  color: var(--text-main, #e6eef6);
+  font-family: var(--font-mono, monospace);
+}
+.ndp-toggle-switch {
+  position: relative;
+  width: 38px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.ndp-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+.ndp-toggle-track {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.ndp-toggle-switch input:checked + .ndp-toggle-track {
+  background: rgba(77, 200, 255, 0.6);
+}
+.ndp-toggle-track::before {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  left: 3px;
+  top: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+}
+.ndp-toggle-switch input:checked + .ndp-toggle-track::before {
+  transform: translateX(18px);
+}
+
+/* Apply / Cancel buttons */
+.ndp-adjust-actions {
+  display: flex;
+  gap: 8px;
+}
+.ndp-apply-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(77, 200, 255, 0.45);
+  background: rgba(77, 200, 255, 0.15);
+  color: #4dc8ff;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono, monospace);
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.1s ease;
+  letter-spacing: 0.04em;
+}
+.ndp-apply-btn:hover {
+  background: rgba(77, 200, 255, 0.25);
+  border-color: rgba(77, 200, 255, 0.7);
+  transform: translateY(-1px);
+}
+.ndp-apply-btn:active {
+  transform: translateY(0);
+}
+.ndp-apply-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+.ndp-cancel-btn {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: var(--text-dim, #4a5568);
+  font-size: 12px;
+  font-family: var(--font-mono, monospace);
+  cursor: pointer;
+  transition: border-color 0.18s ease, color 0.18s ease;
+  letter-spacing: 0.04em;
+}
+.ndp-cancel-btn:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-muted, #93a8b8);
 }
 
 /* Mobile bottom sheet */
