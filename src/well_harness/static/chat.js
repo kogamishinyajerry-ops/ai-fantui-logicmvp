@@ -1377,6 +1377,19 @@ function _applySuggestedOverrides(overrides) {
       activeLogicMap[nodeId] = true;
     }
 
+    // Build authoritative value map from data.nodes[] (backend-reported values).
+    // componentValues from truth_evaluation.asserted_component_values does NOT include
+    // intermediate command nodes (tls115, etrac_540v, vdt90), so we must read their
+    // values directly from data.nodes[i].value.
+    var nodeValueMap = {};
+    if (data && data.nodes && Array.isArray(data.nodes)) {
+      for (i = 0; i < data.nodes.length; i += 1) {
+        if (data.nodes[i].value !== undefined) {
+          nodeValueMap[data.nodes[i].id] = data.nodes[i].value;
+        }
+      }
+    }
+
     for (logicId in extracted.failed) {
       if (!Object.prototype.hasOwnProperty.call(extracted.failed, logicId)) {
         continue;
@@ -1423,7 +1436,9 @@ function _applySuggestedOverrides(overrides) {
       }
 
       valueKey = NODE_VALUE_KEYS[nodeId] || nodeId;
-      value = componentValues[valueKey];
+      // Prefer authoritative node value from data.nodes[] (tls115, etrac_540v, vdt90, etc.).
+      // Fall back to componentValues for input nodes (tra_deg, radio_altitude_ft, etc.).
+      value = nodeValueMap[nodeId] !== undefined ? nodeValueMap[nodeId] : componentValues[valueKey];
       // Non-logic-gate nodes: check extracted.failed (from nodes array) for blocked
       // state, since deriveComponentState can't render 'blocked' for intermediate
       // output nodes that aren't in componentValues (value=undefined).
@@ -1712,8 +1727,11 @@ function _applySuggestedOverrides(overrides) {
   function handleNodeHover(nodeId, event) {
     var normalizedNodeId = normalizeNodeId(nodeId);
     var anchor;
+    var detailPanel = document.getElementById('node-detail-panel');
 
-    if (!isFaultUiEnabled() || !normalizedNodeId || getFaultTypeOptionsForNode(normalizedNodeId).length === 0) {
+    // When the detail panel is open, fault injection is handled inside it (not as floating button).
+    if (!isFaultUiEnabled() || !normalizedNodeId || getFaultTypeOptionsForNode(normalizedNodeId).length === 0 ||
+        (detailPanel && !detailPanel.hidden)) {
       hideNodeFaultButton(true);
       return;
     }
@@ -2255,10 +2273,35 @@ function _applySuggestedOverrides(overrides) {
       }
     }
 
+    // ── Fault Injection Section (always shown for faultable nodes) ───────
+    // Moved from floating button into detail panel per UX request.
     if (faultSection && faultInfo) {
-      if (activeFault) {
+      var faultOpts = getFaultTypeOptionsForNode(nodeId);
+      if (faultOpts.length > 0 || activeFault) {
         faultSection.hidden = false;
-        faultInfo.innerHTML = '<span>⚡</span> ' + escHtml(activeFault);
+        // faultInfo div is repurposed as an inline fault-control area
+        faultInfo.innerHTML = '';
+        if (activeFault) {
+          // Show active fault + remove button
+          faultInfo.innerHTML =
+            '<div class="ndp-fault-active">' +
+              '<span class="ndp-fault-badge">' + escHtml(activeFault) + '</span>' +
+              '<span class="ndp-fault-active-label">' + escHtml(getFaultNodeLabel(nodeId)) + '</span>' +
+              '<button type="button" class="ndp-fault-remove-btn" data-remove-fault="' + escHtml(nodeId) + '" title="移除故障">✕</button>' +
+            '</div>';
+        }
+        // Always show inject buttons for faultable nodes (compact row)
+        faultOpts.forEach(function(faultType) {
+          var def = FAULT_TYPES[faultType];
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'ndp-fault-inject-btn' + (activeFault === faultType ? ' is-active-fault' : '');
+          btn.setAttribute('data-node-fault-type', faultType);
+          btn.setAttribute('data-node-id', nodeId);
+          btn.title = def.label;
+          btn.textContent = def.icon + ' ' + def.label;
+          faultInfo.appendChild(btn);
+        });
       } else {
         faultSection.hidden = true;
       }
@@ -2693,26 +2736,29 @@ function _applySuggestedOverrides(overrides) {
     });
   }
 
-  if (nodeFaultMenu) {
-    nodeFaultMenu.addEventListener('click', function(e) {
-      var removeTarget = e.target.closest('[data-remove-fault]');
-      var injectTarget = e.target.closest('[data-node-fault-type]');
+  // nodeFaultMenu uses event delegation from the document listener below.
+  // Fault injection/removal clicks bubble from nodeFaultMenu → document, where
+  // the document handler catches them via closest() — no direct listener needed.
+  // (Detail panel fault buttons also use the same document handler.)
 
-      if (removeTarget) {
-        removeFault(removeTarget.getAttribute('data-remove-fault'));
-        return;
-      }
+  // Document-level delegation for all fault injection/remove buttons:
+  // - Inside floating nodeFaultMenu (bubble up)
+  // - Inside detail panel ndp-fault-info section
+  document.addEventListener('click', function(e) {
+    var removeTarget = e.target.closest('[data-remove-fault]');
+    var injectTarget = e.target.closest('[data-node-fault-type]');
 
-      if (!injectTarget) {
-        return;
-      }
-
+    if (removeTarget) {
+      removeFault(removeTarget.getAttribute('data-remove-fault'));
+      return;
+    }
+    if (injectTarget) {
       injectFault(
         injectTarget.getAttribute('data-node-id'),
         injectTarget.getAttribute('data-node-fault-type')
       );
-    });
-  }
+    }
+  });
 
   if (canvasStage) {
     canvasStage.addEventListener('mousemove', function(e) {
