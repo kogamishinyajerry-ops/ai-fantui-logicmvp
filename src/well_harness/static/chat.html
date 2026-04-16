@@ -89,6 +89,18 @@
               <!-- Grid background: placed first so all nodes/lines render on top -->
               <rect x="0" y="0" width="900" height="480" class="topology-grid" fill="url(#grid-major)"/>
 
+              <!-- P4D: 逻辑链路分区背景叠加层（半透明，无交互） -->
+              <g class="zone-backgrounds" aria-hidden="true" pointer-events="none">
+                <!-- 输入区：x:0-90 -->
+                <rect x="0" y="0" width="90" height="480" class="zone-bg zone-input"/>
+                <!-- L1/L2 解锁链路区：x:90-270 -->
+                <rect x="90" y="0" width="180" height="480" class="zone-bg zone-unlock"/>
+                <!-- L3 扇出区：x:270-500 -->
+                <rect x="270" y="0" width="230" height="480" class="zone-bg zone-fanout"/>
+                <!-- L4+THR 输出区：x:500-750 -->
+                <rect x="500" y="0" width="250" height="480" class="zone-bg zone-output"/>
+              </g>
+
               <!-- ══════════════════════════════════════════════════════════ -->
               <!-- INPUT NODES (P3A: wrapped in node-group) -->
               <!-- ══════════════════════════════════════════════════════════ -->
@@ -158,10 +170,9 @@
               <!-- ══════════════════════════════════════════════════════════ -->
               <!-- LOGIC GATES + COMMAND/SENSOR/FINAL NODES (P3A grouped, P3B: L3 uses #and-gate) -->
               <!-- ══════════════════════════════════════════════════════════ -->
+              <!-- P4C: L1/L2/L4 — all now use #and-gate symbol (DRY, consistent with L3) -->
               <g class="node-group" data-node="logic1" data-node-type="logic">
-                <svg x="110" y="55" width="40" height="30">
-                  <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic1"/>
-                </svg>
+                <use href="#and-gate" x="110" y="55" width="40" height="30" class="chain-node-svg logic-node-svg" data-node="logic1"/>
                 <text x="130" y="75" class="logic-gate-label" text-anchor="middle">与</text>
                 <text x="130" y="42" class="chain-node-label" text-anchor="middle" data-node-label="logic1" data-tooltip="逻辑节点 1，解锁链路入口">L1</text>
                 <text x="148" y="57" class="node-type-tag">LOG</text>
@@ -174,10 +185,9 @@
                 <text x="233" y="57" class="node-type-tag">CMD</text>
               </g>
 
+              <!-- P4C: L1/L2/L4 — all now use #and-gate symbol (DRY, consistent with L3) -->
               <g class="node-group" data-node="logic2" data-node-type="logic">
-                <svg x="110" y="235" width="40" height="30">
-                  <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic2"/>
-                </svg>
+                <use href="#and-gate" x="110" y="235" width="40" height="30" class="chain-node-svg logic-node-svg" data-node="logic2"/>
                 <text x="130" y="255" class="logic-gate-label" text-anchor="middle">与</text>
                 <text x="130" y="222" class="chain-node-label" text-anchor="middle" data-node-label="logic2" data-tooltip="逻辑节点 2，540V 电源母线使能">L2</text>
                 <text x="148" y="237" class="node-type-tag">LOG</text>
@@ -226,10 +236,9 @@
                 <text x="568" y="147" class="node-type-tag">SNS</text>
               </g>
 
+              <!-- P4C: L1/L2/L4 — all now use #and-gate symbol (DRY, consistent with L3) -->
               <g class="node-group" data-node="logic4" data-node-type="logic">
-                <svg x="595" y="145" width="40" height="30">
-                  <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic4"/>
-                </svg>
+                <use href="#and-gate" x="595" y="145" width="40" height="30" class="chain-node-svg logic-node-svg" data-node="logic4"/>
                 <text x="615" y="165" class="logic-gate-label" text-anchor="middle">与</text>
                 <text x="615" y="132" class="chain-node-label" text-anchor="middle" data-node-label="logic4" data-tooltip="逻辑节点 4，THR_LOCK 释放命令">L4</text>
                 <text x="633" y="147" class="node-type-tag">LOG</text>

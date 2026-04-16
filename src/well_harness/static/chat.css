@@ -468,8 +468,9 @@ body.drawer-open .stage-shell {
   fill: var(--accent);
 }
 
-.chain-node-group.is-active .chain-node-svg,
-.logic-gate-group.is-active .logic-gate-svg,
+/* P4B: Unified .node-group state selectors — extends existing .chain-node-group/.logic-gate-group rules */
+.node-group.is-active .chain-node-svg,
+.node-group.is-active .logic-node-svg,
 .is-active.chain-node-svg,
 .is-active.logic-gate-svg {
   fill: rgba(34, 197, 94, 0.16);
@@ -480,8 +481,8 @@ body.drawer-open .stage-shell {
   animation: node-pulse 2.2s ease-in-out infinite;
 }
 
-.chain-node-group.is-blocked .chain-node-svg,
-.logic-gate-group.is-blocked .logic-gate-svg,
+.node-group.is-blocked .chain-node-svg,
+.node-group.is-blocked .logic-node-svg,
 .is-blocked.chain-node-svg,
 .is-blocked.logic-gate-svg {
   fill: rgba(224, 82, 82, 0.12);
@@ -490,8 +491,8 @@ body.drawer-open .stage-shell {
   animation: node-pulse-blocked 1.8s ease-in-out infinite;
 }
 
-.chain-node-group.is-inactive .chain-node-svg,
-.logic-gate-group.is-inactive .logic-gate-svg,
+.node-group.is-inactive .chain-node-svg,
+.node-group.is-inactive .logic-node-svg,
 .is-inactive.chain-node-svg,
 .is-inactive.logic-gate-svg {
   opacity: 0.56;
@@ -511,6 +512,15 @@ body.drawer-open .stage-shell {
 .node-group:hover .logic-gate-svg {
   stroke: rgba(103, 232, 249, 0.72);
   filter: drop-shadow(0 0 5px rgba(103, 232, 249, 0.38));
+}
+
+/* P5A: 输入节点浮动动画 — 模拟"等待输入"的活跃待机状态 */
+@keyframes node-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-2.5px); }
+}
+.node-group[data-node-type="input"]:not(.is-active):not(.is-blocked) .chain-node-svg {
+  animation: node-float 3.4s ease-in-out infinite;
 }
 
 /* ── P3C: node-type-tag — type badge top-right of each node ── */
@@ -652,11 +662,13 @@ body.drawer-open .stage-shell {
 .conn-input {
   stroke: rgba(182, 196, 210, 0.78);
   stroke-width: 2.2;
+  stroke-dasharray: 10 14;
 }
 
 .conn-logic {
   stroke: rgba(103, 232, 249, 0.92);
   stroke-width: 2.4;
+  stroke-dasharray: 10 14;
 }
 
 .conn-merge {
@@ -667,6 +679,7 @@ body.drawer-open .stage-shell {
 .conn-final {
   stroke: var(--status-active);
   stroke-width: 2.5;
+  stroke-dasharray: 10 14;
 }
 
 .conn-line.is-active {
@@ -686,6 +699,15 @@ body.drawer-open .stage-shell {
   stroke: rgba(148, 163, 184, 0.35);
   stroke-width: 1.5;
   opacity: 0.7;
+  animation: none;
+}
+
+.conn-line.is-blocked {
+  animation: none;
+}
+
+.conn-line.is-active {
+  animation: none; /* solid glow instead of pulse for active lines */
 }
 
 /* Dashed "simplified path" lines — used for TLS/ETRAC→L3 where the
@@ -703,12 +725,59 @@ body.drawer-open .stage-shell {
   to   { stroke-dashoffset: 0;  }
 }
 
+/* P4D: 逻辑链路分区背景 — 分区着色增加空间层次感 */
+.zone-bg {
+  pointer-events: none;
+}
+.zone-input {
+  fill: rgba(103, 232, 249, 0.025);
+}
+.zone-unlock {
+  fill: rgba(103, 232, 249, 0.015);
+}
+.zone-fanout {
+  fill: rgba(74, 144, 217, 0.025);
+}
+.zone-output {
+  fill: rgba(34, 197, 94, 0.025);
+}
+
 .conn-simplified-group {
   cursor: help;
 }
 
 .conn-simplified-group .conn-simplified {
   pointer-events: none;
+}
+
+/* ── P4A: 实线连接线信号流脉冲动画 ─────────────────────────────── */
+/* 每个 conn-line 有一个"亮点"沿路径移动，模拟数据从源节点流向目标节点 */
+.conn-input {
+  animation: conn-pulse-input 3.2s linear infinite;
+}
+.conn-logic {
+  animation: conn-pulse-logic 3.8s linear infinite;
+}
+.conn-final {
+  animation: conn-pulse-final 4.4s linear infinite;
+}
+
+@keyframes conn-pulse-input {
+  0%   { stroke-dashoffset: 26; opacity: 0.7; }
+  50%  { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0.7; }
+}
+
+@keyframes conn-pulse-logic {
+  0%   { stroke-dashoffset: 26; opacity: 0.7; }
+  50%  { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0.7; }
+}
+
+@keyframes conn-pulse-final {
+  0%   { stroke-dashoffset: 26; opacity: 0.7; }
+  50%  { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0.7; }
 }
 
 .topology-disclaimer {
@@ -1741,10 +1810,17 @@ body.drawer-open .chat-drawer {
   animation: aiDiscussedPulse 0.9s ease-in-out 2;
 }
 
+/* P5D: chat-drawer-footnote glass morphism */
 .chat-drawer-footnote {
   margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--text-dim);
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   line-height: 1.55;
 }
 
@@ -1806,18 +1882,20 @@ body.drawer-open .chat-drawer {
   position: absolute;
   bottom: calc(100% + 10px);
   left: 50%;
-  transform: translateX(-50%) translateY(4px);
-  max-width: min(28rem, 70vw);
+  transform: translateX(-50%) translateY(4px) scale(0.94);
+  max-width: min(20rem, 70vw);
   padding: 7px 10px;
   border: 1px solid rgba(74, 144, 217, 0.35);
   border-radius: 8px;
-  background: rgba(12, 15, 19, 0.96);
+  background: rgba(16, 19, 24, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: #e4ebf4;
   font-size: 0.74rem;
   line-height: 1.45;
   white-space: normal;
   z-index: 200;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.42);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(74, 144, 217, 0.08);
 }
 
 [data-tooltip]::before,
@@ -1840,7 +1918,7 @@ body.drawer-open .chat-drawer {
 .chain-svg > svg:hover + .logic-gate-label + .chain-node-label[data-tooltip]::before,
 .chain-svg > svg:hover + .logic-gate-label + .chain-node-label[data-tooltip]::after {
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translateX(-50%) translateY(0) scale(1);
 }
 
 @keyframes node-pulse {
@@ -2371,11 +2449,18 @@ body.drawer-open .chat-drawer {
   touch-action: none;
 }
 
+/* P5C: canvas-zoom-controls glass morphism + icon-only buttons */
 .canvas-zoom-controls {
   display: flex;
   align-items: center;
   gap: 4px;
   margin-left: auto;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .canvas-zoom-btn {
@@ -2388,11 +2473,20 @@ body.drawer-open .chat-drawer {
   border: 1px solid rgba(74, 144, 217, 0.35);
   border-radius: 6px;
   color: rgba(74, 144, 217, 0.85);
-  font-size: 14px;
+  font-size: 0;  /* P5C: icon-only — text hidden, use ::before for symbol */
   cursor: pointer;
-  transition: background 0.18s, border-color 0.18s;
+  transition: background 0.18s, border-color 0.18s, transform 0.12s;
   padding: 0;
   line-height: 1;
+}
+.canvas-zoom-btn:hover {
+  background: rgba(74, 144, 217, 0.22);
+  border-color: rgba(74, 144, 217, 0.6);
+  color: rgba(74, 144, 217, 1);
+  transform: scale(1.08);
+}
+.canvas-zoom-btn:active {
+  transform: scale(0.95);
 }
 
 .canvas-zoom-btn:hover {
