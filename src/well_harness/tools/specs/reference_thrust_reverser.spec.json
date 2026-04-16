@@ -1,0 +1,630 @@
+{
+  "$schema": "https://well-harness.local/json_schema/control_system_spec_v1.schema.json",
+  "kind": "well-harness-control-system-spec",
+  "version": 1,
+  "system_id": "reference_thrust_reverser_deploy",
+  "title": "Reference Thrust Reverser Control Workbench Spec",
+  "objective": "Use the current deterministic deploy chain as the first reference system for future strict acceptance playback, fault injection, diagnosis, and cross-system generalization.",
+  "source_of_truth": "src/well_harness/controller.py",
+  "components": [
+    {
+      "id": "radio_altitude_ft",
+      "label": "RA",
+      "kind": "sensor",
+      "state_shape": "analog",
+      "unit": "ft",
+      "description": "无线电高度输入；L1 依赖该值小于阈值。",
+      "allowed_range": [
+        0.0,
+        20.0
+      ],
+      "allowed_states": [],
+      "monitor_priority": "required"
+    },
+    {
+      "id": "tra_deg",
+      "label": "TRA",
+      "kind": "pilot_input",
+      "state_shape": "analog",
+      "unit": "deg",
+      "description": "反推拉杆角度；当前系统在 -32° 到 0° 之间工作。",
+      "allowed_range": [
+        -32.0,
+        0.0
+      ],
+      "allowed_states": [],
+      "monitor_priority": "required"
+    },
+    {
+      "id": "sw1",
+      "label": "SW1",
+      "kind": "switch",
+      "state_shape": "binary",
+      "unit": "state",
+      "description": "TRA 进入 SW1 窗口时闭合。",
+      "allowed_range": null,
+      "allowed_states": [
+        "0",
+        "1"
+      ],
+      "monitor_priority": "required"
+    },
+    {
+      "id": "sw2",
+      "label": "SW2",
+      "kind": "switch",
+      "state_shape": "binary",
+      "unit": "state",
+      "description": "TRA 进入 SW2 窗口时闭合。",
+      "allowed_range": null,
+      "allowed_states": [
+        "0",
+        "1"
+      ],
+      "monitor_priority": "required"
+    },
+    {
+      "id": "engine_running",
+      "label": "Engine Running",
+      "kind": "state",
+      "state_shape": "binary",
+      "unit": "state",
+      "description": "发动机运行状态；L2/L4 依赖该值为真。",
+      "allowed_range": null,
+      "allowed_states": [
+        "0",
+        "1"
+      ],
+      "monitor_priority": "optional"
+    },
+    {
+      "id": "aircraft_on_ground",
+      "label": "On Ground",
+      "kind": "state",
+      "state_shape": "binary",
+      "unit": "state",
+      "description": "飞机是否在地面；L2/L4 依赖该值为真。",
+      "allowed_range": null,
+      "allowed_states": [
+        "0",
+        "1"
+      ],
+      "monitor_priority": "optional"
+    },
+    {
+      "id": "reverser_inhibited",
+      "label": "Reverser Inhibited",
+      "kind": "state",
+      "state_shape": "binary",
+      "unit": "state",
+      "description": "反推抑制状态；L1/L2 依赖该值为假。",
+      "allowed_range": null,
+      "allowed_states": [
+        "0",
+        "1"
+      ],
+      "monitor_priority": "optional"
+    },
+    {
+      "id": "eec_enable",
+      "label": "EEC Enable",
+      "kind": "state",
+      "state_shape": "binary",
+      "unit": "state",
+      "description": "EEC 允许位；L2 依赖该值为真。",
+      "allowed_range": null,
+      "allowed_states": [
+        "0",
+        "1"
+      ],
+      "monitor_priority": "optional"
+    },
+    {
+      "id": "n1k",
+      "label": "N1K",
+      "kind": "sensor",
+      "state_shape": "analog",
+      "unit": "percent",
+      "description": "N1K 输入；L3 依赖该值低于限制。",
+      "allowed_range": [
+        0.0,
+        110.0
+      ],
+      "allowed_states": [],
+      "monitor_priority": "optional"
+    },
+    {
+      "id": "max_n1k_deploy_limit",
+      "label": "Max N1K Deploy Limit",
+      "kind": "parameter",
+      "state_shape": "analog",
+      "unit": "percent",
+      "description": "允许 deploy 的 N1K 限制。",
+      "allowed_range": [
+        0.0,
+        110.0
+      ],
+      "allowed_states": [],
+      "monitor_priority": "optional"
+    },
+    {
+      "id": "tls_voltage_v",
+      "label": "TLS",
+      "kind": "power",
+      "state_shape": "analog",
+      "unit": "V",
+      "description": "TLS 组件断开时为 0V，接通后为 115V。",
+      "allowed_range": [
+        0.0,
+        115.0
+      ],
+      "allowed_states": [],
+      "monitor_priority": "required"
+    },
+    {
+      "id": "etrac_voltage_v",
+      "label": "ETRAC",
+      "kind": "power",
+      "state_shape": "analog",
+      "unit": "V",
+      "description": "ETRAC 组件断开时为 0V，接通后为 540V。",
+      "allowed_range": [
+        0.0,
+        540.0
+      ],
+      "allowed_states": [],
+      "monitor_priority": "required"
+    },
+    {
+      "id": "eec_cmd",
+      "label": "EEC",
+      "kind": "command",
+      "state_shape": "binary",
+      "unit": "state",
+      "description": "EEC 指令节点，只有 0/1 状态。",
+      "allowed_range": null,
+      "allowed_states": [
+        "0",
+        "1"
+      ],
+      "monitor_priority": "required"
+    },
+    {
+      "id": "pls_cmd",
+      "label": "PLS",
+      "kind": "command",
+      "state_shape": "binary",
+      "unit": "state",
+      "description": "PLS 指令节点，只有 0/1 状态。",
+      "allowed_range": null,
+      "allowed_states": [
+        "0",
+        "1"
+      ],
+      "monitor_priority": "required"
+    },
+    {
+      "id": "pdu_cmd",
+      "label": "PDU",
+      "kind": "command",
+      "state_shape": "binary",
+      "unit": "state",
+      "description": "PDU 驱动命令，当前逻辑由 L3 扇出。",
+      "allowed_range": null,
+      "allowed_states": [
+        "0",
+        "1"
+      ],
+      "monitor_priority": "optional"
+    },
+    {
+      "id": "deploy_position_percent",
+      "label": "Deploy Feedback",
+      "kind": "feedback",
+      "state_shape": "analog",
+      "unit": "%",
+      "description": "当前参考系统中的 simplified plant 位移反馈，用于产生 VDT90/L4 条件。",
+      "allowed_range": [
+        0.0,
+        100.0
+      ],
+      "allowed_states": [],
+      "monitor_priority": "required"
+    },
+    {
+      "id": "thr_lock",
+      "label": "THR_LOCK",
+      "kind": "command",
+      "state_shape": "binary",
+      "unit": "state",
+      "description": "电子油门锁释放命令，只有 0/1 状态。",
+      "allowed_range": null,
+      "allowed_states": [
+        "0",
+        "1"
+      ],
+      "monitor_priority": "required"
+    }
+  ],
+  "logic_nodes": [
+    {
+      "id": "logic1",
+      "label": "L1",
+      "description": "RA + SW1 + inhibit/eec 边界共同驱动 TLS。",
+      "conditions": [
+        {
+          "name": "radio_altitude_ft",
+          "source_component_id": "radio_altitude_ft",
+          "comparison": "<",
+          "threshold_value": 6.0,
+          "note": "RA 需要低于阈值"
+        },
+        {
+          "name": "sw1",
+          "source_component_id": "sw1",
+          "comparison": "==",
+          "threshold_value": true,
+          "note": "SW1 必须闭合"
+        },
+        {
+          "name": "reverser_inhibited",
+          "source_component_id": "reverser_inhibited",
+          "comparison": "==",
+          "threshold_value": false,
+          "note": "反推不能被抑制"
+        },
+        {
+          "name": "reverser_not_deployed_eec",
+          "source_component_id": "deploy_position_percent",
+          "comparison": "==",
+          "threshold_value": 0.0,
+          "note": "EEC 视角下应仍处于未展开"
+        }
+      ],
+      "downstream_component_ids": [
+        "tls_voltage_v"
+      ],
+      "evidence_priority": "high"
+    },
+    {
+      "id": "logic2",
+      "label": "L2",
+      "description": "发动机/地面/SW2/EEC 边界共同驱动 ETRAC。",
+      "conditions": [
+        {
+          "name": "engine_running",
+          "source_component_id": "engine_running",
+          "comparison": "==",
+          "threshold_value": true,
+          "note": "发动机必须运行"
+        },
+        {
+          "name": "aircraft_on_ground",
+          "source_component_id": "aircraft_on_ground",
+          "comparison": "==",
+          "threshold_value": true,
+          "note": "飞机必须在地面"
+        },
+        {
+          "name": "reverser_inhibited",
+          "source_component_id": "reverser_inhibited",
+          "comparison": "==",
+          "threshold_value": false,
+          "note": "反推不能被抑制"
+        },
+        {
+          "name": "sw2",
+          "source_component_id": "sw2",
+          "comparison": "==",
+          "threshold_value": true,
+          "note": "SW2 必须闭合"
+        },
+        {
+          "name": "eec_enable",
+          "source_component_id": "eec_enable",
+          "comparison": "==",
+          "threshold_value": true,
+          "note": "EEC enable 必须为真"
+        }
+      ],
+      "downstream_component_ids": [
+        "etrac_voltage_v"
+      ],
+      "evidence_priority": "high"
+    },
+    {
+      "id": "logic3",
+      "label": "L3",
+      "description": "TLS 解锁、N1K、TRA 阈值共同驱动 EEC / PLS / PDU。",
+      "conditions": [
+        {
+          "name": "tls_unlocked_ls",
+          "source_component_id": "tls_voltage_v",
+          "comparison": ">=",
+          "threshold_value": 115.0,
+          "note": "TLS 已通电并经过解锁延迟"
+        },
+        {
+          "name": "n1k",
+          "source_component_id": "n1k",
+          "comparison": "<",
+          "threshold_value": 60.0,
+          "note": "N1K 必须低于限制"
+        },
+        {
+          "name": "tra_deg",
+          "source_component_id": "tra_deg",
+          "comparison": "<=",
+          "threshold_value": -11.74,
+          "note": "TRA 必须进入 L3 阈值内"
+        }
+      ],
+      "downstream_component_ids": [
+        "eec_cmd",
+        "pls_cmd",
+        "pdu_cmd"
+      ],
+      "evidence_priority": "high"
+    },
+    {
+      "id": "logic4",
+      "label": "L4",
+      "description": "VDT90、反推 travel、发动机和地面条件共同驱动 THR_LOCK。注意：VDT90 由 L3 扇出的 PDU motor 驱动位移反馈产生，L4 实际上间接依赖 L3 的成立（物理因果链：L3 → pdu_motor_cmd → deploy_position_percent ≥ 90% → VDT90 → L4）。",
+      "conditions": [
+        {
+          "name": "deploy_90_percent_vdt",
+          "source_component_id": "deploy_position_percent",
+          "comparison": ">=",
+          "threshold_value": 90.0,
+          "note": "反馈位移需要达到 90%（由 L3 驱动 PDU 产生）"
+        },
+        {
+          "name": "tra_deg",
+          "source_component_id": "tra_deg",
+          "comparison": "between_exclusive",
+          "threshold_value": [
+            -32.0,
+            0.0
+          ],
+          "note": "TRA 必须处于有效反推 travel 内"
+        },
+        {
+          "name": "aircraft_on_ground",
+          "source_component_id": "aircraft_on_ground",
+          "comparison": "==",
+          "threshold_value": true,
+          "note": "飞机必须在地面"
+        },
+        {
+          "name": "engine_running",
+          "source_component_id": "engine_running",
+          "comparison": "==",
+          "threshold_value": true,
+          "note": "发动机必须运行"
+        }
+      ],
+      "downstream_component_ids": [
+        "thr_lock"
+      ],
+      "evidence_priority": "high"
+    }
+  ],
+  "acceptance_scenarios": [
+    {
+      "id": "compressed_ra_tra_vdt_monitor",
+      "label": "压缩版 RA -> TRA -> VDT 监控流程",
+      "description": "将原始监控过程压缩到 1/10，作为严格验收的第一条参考场景。",
+      "time_scale_factor": 0.1,
+      "total_duration_s": 7.0,
+      "monitored_signal_ids": [
+        "radio_altitude_ft",
+        "tra_deg",
+        "sw1",
+        "sw2",
+        "tls_voltage_v",
+        "etrac_voltage_v",
+        "eec_cmd",
+        "pls_cmd",
+        "deploy_position_percent",
+        "thr_lock"
+      ],
+      "transitions": [
+        {
+          "signal_id": "radio_altitude_ft",
+          "start_s": 0.0,
+          "end_s": 7.0,
+          "start_value": 7.0,
+          "end_value": 0.0,
+          "unit": "ft",
+          "note": "RA 线性下降到 0ft 后保持"
+        },
+        {
+          "signal_id": "tra_deg",
+          "start_s": 1.0,
+          "end_s": 2.4,
+          "start_value": 0.0,
+          "end_value": -14.0,
+          "unit": "deg",
+          "note": "RA 降到 6ft 后，TRA 以压缩后的速率推到 -14°"
+        },
+        {
+          "signal_id": "sw1",
+          "start_s": 1.2,
+          "end_s": 1.4,
+          "start_value": 0.0,
+          "end_value": 1.0,
+          "unit": "state",
+          "note": "TRA 进入 SW1 窗口后，SW1 置位。"
+        },
+        {
+          "signal_id": "sw2",
+          "start_s": 1.8,
+          "end_s": 2.0,
+          "start_value": 0.0,
+          "end_value": 1.0,
+          "unit": "state",
+          "note": "TRA 继续深入 reverse 区后，SW2 置位。"
+        },
+        {
+          "signal_id": "deploy_position_percent",
+          "start_s": 2.4,
+          "end_s": 4.4,
+          "start_value": 0.0,
+          "end_value": 100.0,
+          "unit": "%",
+          "note": "TRA 到达 -14° 后，VDT 相关反馈开始爬升到 100%"
+        }
+      ],
+      "completion_condition": "deploy_position_percent == 100% and thr_lock == 1",
+      "steady_signals": [
+        {
+          "signal_id": "engine_running",
+          "value": 1,
+          "unit": "state",
+          "note": "参考场景固定假设发动机处于运行状态。"
+        },
+        {
+          "signal_id": "aircraft_on_ground",
+          "value": 1,
+          "unit": "state",
+          "note": "参考场景固定假设飞机已经在地面。"
+        },
+        {
+          "signal_id": "reverser_inhibited",
+          "value": 0,
+          "unit": "state",
+          "note": "参考场景中反推不被抑制。"
+        },
+        {
+          "signal_id": "eec_enable",
+          "value": 1,
+          "unit": "state",
+          "note": "参考场景固定假设 EEC enable 为真。"
+        },
+        {
+          "signal_id": "n1k",
+          "value": 35.0,
+          "unit": "percent",
+          "note": "参考场景中 N1K 保持在 deploy 限值以下。"
+        },
+        {
+          "signal_id": "max_n1k_deploy_limit",
+          "value": 60.0,
+          "unit": "percent",
+          "note": "参考场景中 deploy 限值固定为 60。"
+        }
+      ]
+    }
+  ],
+  "fault_modes": [
+    {
+      "id": "sw1_stuck_open",
+      "target_component_id": "sw1",
+      "fault_kind": "stuck_low",
+      "symptom": "RA 已低于阈值但 TLS 始终不通电。",
+      "reasoning_scope_component_ids": [
+        "radio_altitude_ft",
+        "sw1",
+        "logic1",
+        "tls_voltage_v"
+      ],
+      "expected_diagnostic_sections": [
+        "symptoms",
+        "upstream_checks",
+        "logic_blockers",
+        "repair_hint"
+      ],
+      "optimization_prompt": "如果 SW1 失效频繁，可评估是否增加独立的 travel cross-check 或更明确的锁位自检。"
+    },
+    {
+      "id": "tls_never_unlocks",
+      "target_component_id": "tls_voltage_v",
+      "fault_kind": "latched_no_unlock",
+      "symptom": "TLS 已通电但 L3 长时间不满足，EEC/PLS/PDU 不扇出。",
+      "reasoning_scope_component_ids": [
+        "logic1",
+        "tls_voltage_v",
+        "logic3",
+        "eec_cmd",
+        "pls_cmd"
+      ],
+      "expected_diagnostic_sections": [
+        "symptoms",
+        "power_path",
+        "unlock_assumptions",
+        "repair_hint"
+      ],
+      "optimization_prompt": "可评估增加 TLS 解锁状态确认或超时降级提示，降低下游诊断歧义。"
+    },
+    {
+      "id": "thr_lock_never_releases",
+      "target_component_id": "thr_lock",
+      "fault_kind": "command_path_failure",
+      "symptom": "TRA 和反馈位移都已满足，但 THR_LOCK 仍未释放。",
+      "reasoning_scope_component_ids": [
+        "deploy_position_percent",
+        "logic4",
+        "thr_lock"
+      ],
+      "expected_diagnostic_sections": [
+        "symptoms",
+        "boundary_checks",
+        "downstream_command_path",
+        "repair_hint"
+      ],
+      "optimization_prompt": "可评估将 L4 条件和 THR_LOCK 执行链分开观测，提升容错和可诊断性。"
+    }
+  ],
+  "onboarding_questions": [
+    {
+      "id": "source_documents",
+      "prompt": "新系统的输入文档具体是什么格式：结构化表格、Markdown/Notion、PDF，还是混合来源？",
+      "rationale": "决定是否先做文档适配器，还是先要求工程师整理为统一 spec。",
+      "required_for": "严格验收与快速泛化"
+    },
+    {
+      "id": "component_state_domains",
+      "prompt": "每个组件究竟是二值开关、固定电平、离散状态，还是连续模拟量？单位和合法范围分别是什么？",
+      "rationale": "避免把不同信号形态混成一套错误的监控曲线。",
+      "required_for": "监控曲线仿真与故障注入"
+    },
+    {
+      "id": "timeline_rules",
+      "prompt": "工程师给出的运行过程是事件驱动、速率驱动，还是带延时/滞后的状态机？哪些节点允许保持/饱和？",
+      "rationale": "决定如何把 A/B 过程文档转成严格可回放的时间线。",
+      "required_for": "严格验收仿真"
+    },
+    {
+      "id": "fault_taxonomy",
+      "prompt": "新系统需要支持哪些故障注入类型：卡滞、短路、断路、虚警、延迟、阈值漂移，还是其他类型？",
+      "rationale": "决定诊断树、推理文档模板和优化建议的范围。",
+      "required_for": "故障分析与知识积累"
+    }
+  ],
+  "knowledge_capture": {
+    "incident_fields": [
+      "system_id",
+      "scenario_id",
+      "fault_mode_id",
+      "observed_symptoms",
+      "evidence_links"
+    ],
+    "resolution_fields": [
+      "confirmed_root_cause",
+      "repair_action",
+      "validation_after_fix",
+      "residual_risk"
+    ],
+    "optimization_fields": [
+      "suggested_logic_change",
+      "reliability_gain_hypothesis",
+      "redundancy_reduction_or_guardrail_note"
+    ]
+  },
+  "tags": [
+    "reference-system",
+    "strict-acceptance",
+    "fault-injection",
+    "generalization-ready"
+  ]
+}

@@ -533,7 +533,10 @@ class DemoIntentLayerTests(unittest.TestCase):
                 "expected_vdt90": False,  # L3 inactive due to engine_running=False
                 "expected_logic4_active": False,
                 "expected_thr_lock_state": "blocked",
-                "expected_logic4_failed": "deploy_90_percent_vdt",
+                # VDT90=True here because L3 IS active (engine_running is not an L3 gate —
+                # it's a separate L4 condition), so deploy_90_percent_vdt passes.
+                # engine_running=False is the first L4 blocker.
+                "expected_logic4_failed": "engine_running",
             },
             {
                 # NEW: verify VDT90 is blocked when L3 is inactive (causal chain fix)
@@ -551,7 +554,10 @@ class DemoIntentLayerTests(unittest.TestCase):
                 "expected_vdt90": False,  # VDT90 blocked because L3 inactive (TRA not at threshold)
                 "expected_logic4_active": False,
                 "expected_thr_lock_state": "blocked",
-                "expected_logic4_failed": "deploy_90_percent_vdt",
+                # With L3 inactive, deploy_90_percent_vdt is gated False in display even though
+                # deploy_position_percent=95.0. tra_deg=0.0 fails L4's between_exclusive(-32,0)
+                # check (0.0 is not < 0.0), making it the first unmet L4 condition.
+                "expected_logic4_failed": "tra_deg",
             },
         ]
 

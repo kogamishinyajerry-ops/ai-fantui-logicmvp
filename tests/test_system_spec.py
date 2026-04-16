@@ -50,7 +50,7 @@ class ControlSystemWorkbenchSpecTests(unittest.TestCase):
 
         self.assertIn("logic4", logic_nodes)
         self.assertEqual(logic_nodes["logic4"].downstream_component_ids, ("thr_lock",))
-        self.assertIn("deploy_feedback_percent", {condition.source_component_id for condition in logic_nodes["logic4"].conditions})
+        self.assertIn("deploy_position_percent", {condition.source_component_id for condition in logic_nodes["logic4"].conditions})
 
         baseline = scenarios["compressed_ra_tra_vdt_monitor"]
         self.assertEqual(baseline.time_scale_factor, 0.1)

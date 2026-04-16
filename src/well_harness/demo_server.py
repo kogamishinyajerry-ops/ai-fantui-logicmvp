@@ -2856,7 +2856,7 @@ def lever_snapshot_payload(
         _node("eec_deploy", "EEC", "active" if outputs.eec_deploy_cmd else "inactive", "DeployController outputs"),
         _node("pls_power", "PLS", "active" if outputs.pls_power_cmd else "inactive", "DeployController outputs"),
         _node("pdu_motor", "PDU", "active" if outputs.pdu_motor_cmd else "inactive", "DeployController outputs"),
-        _node("vdt90", "VDT90", "active" if sensors.deploy_90_percent_vdt else "inactive", "SimplifiedDeployPlant sensors"),
+        _node("vdt90", "VDT90", "active" if sensors.deploy_90_percent_vdt and outputs.logic3_active else "inactive", "SimplifiedDeployPlant sensors + L3 causal gate"),
         _node("logic4", "L4", _logic_node_state(outputs.logic4_active), "DeployController.explain(logic4)", logic4_blockers),
         _node(
             "thr_lock",
@@ -2921,7 +2921,11 @@ def lever_snapshot_payload(
             "pls_unlocked_ls": sensors.pls_unlocked_ls,
             "all_pls_unlocked_ls": sensors.all_pls_unlocked,
             "deploy_position_percent": sensors.deploy_position_percent,
-            "deploy_90_percent_vdt": sensors.deploy_90_percent_vdt,
+            # In manual override mode: gate VDT90 display on L3 being active.
+            # The user can force deploy_position_percent>=90 manually, but that
+            # doesn't mean the causal chain is satisfied — VDT90 requires L3
+            # (EEC deploy command) to be active first.
+            "deploy_90_percent_vdt": sensors.deploy_90_percent_vdt and outputs.logic3_active if feedback_mode == "manual_feedback_override" else sensors.deploy_90_percent_vdt,
             "feedback_mode": feedback_mode,
         },
         "outputs": {
