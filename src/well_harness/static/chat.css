@@ -427,6 +427,19 @@ body.drawer-open .stage-shell {
     transform 0.18s ease;
 }
 
+/* P3B: <use href="#and-gate"> for L3 — explicit fill/stroke so symbol renders correctly */
+.logic-node-svg {
+  fill: none;
+  stroke: rgba(40, 244, 255, 0.68);
+  stroke-width: 2.1;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  transition:
+    stroke 0.28s ease,
+    filter 0.28s ease,
+    opacity 0.28s ease;
+}
+
 .chain-node-group:hover .chain-node-svg,
 .logic-gate-group:hover .logic-gate-svg,
 .chain-svg .chain-node-svg:hover,
@@ -483,6 +496,36 @@ body.drawer-open .stage-shell {
 .is-inactive.logic-gate-svg {
   opacity: 0.56;
   filter: saturate(0.55);
+}
+
+/* ── P3A: node-group hover highlight ────────────────────────── */
+.node-group {
+  cursor: pointer;
+  transition: opacity 0.18s ease;
+}
+.node-group:hover .chain-node-svg {
+  stroke: rgba(103, 232, 249, 0.55);
+  stroke-width: 2.2;
+  filter: drop-shadow(0 0 5px rgba(103, 232, 249, 0.28));
+}
+.node-group:hover .logic-gate-svg {
+  stroke: rgba(103, 232, 249, 0.72);
+  filter: drop-shadow(0 0 5px rgba(103, 232, 249, 0.38));
+}
+
+/* ── P3C: node-type-tag — type badge top-right of each node ── */
+.node-type-tag {
+  font-family: var(--font-mono);
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  fill: rgba(103, 232, 249, 0.6);
+  paint-order: stroke fill;
+  stroke: rgba(4, 8, 12, 0.85);
+  stroke-width: 1.5px;
+  stroke-linejoin: round;
+  pointer-events: none;
+  dominant-baseline: auto;
 }
 
 .chain-node-group.ai-discussed .chain-node-svg,
@@ -651,6 +694,13 @@ body.drawer-open .stage-shell {
 .conn-simplified {
   stroke-dasharray: 8 5;
   opacity: 0.92;
+  /* P3D: flowing dash animation — gives simplified paths a "data stream" feel */
+  animation: dash-flow 2.4s linear infinite;
+}
+
+@keyframes dash-flow {
+  from { stroke-dashoffset: 26; }
+  to   { stroke-dashoffset: 0;  }
 }
 
 .conn-simplified-group {

@@ -89,93 +89,158 @@
               <!-- Grid background: placed first so all nodes/lines render on top -->
               <rect x="0" y="0" width="900" height="480" class="topology-grid" fill="url(#grid-major)"/>
 
-              <rect x="10" y="18" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="radio_altitude_ft"/>
-              <text x="46" y="28" class="chain-node-label" text-anchor="middle" data-tooltip="无线电高度（Radio Altitude），单位 ft">RA</text>
-              <text x="46" y="42" class="chain-node-value" text-anchor="middle" data-value-for="radio_altitude_ft">—</text>
+              <!-- ══════════════════════════════════════════════════════════ -->
+              <!-- INPUT NODES (P3A: wrapped in node-group) -->
+              <!-- ══════════════════════════════════════════════════════════ -->
+              <g class="node-group" data-node="radio_altitude_ft" data-node-type="input">
+                <rect x="10" y="18" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="radio_altitude_ft"/>
+                <text x="46" y="28" class="chain-node-label" text-anchor="middle" data-tooltip="无线电高度（Radio Altitude），单位 ft">RA</text>
+                <text x="46" y="42" class="chain-node-value" text-anchor="middle" data-value-for="radio_altitude_ft">—</text>
+                <text x="78" y="20" class="node-type-tag">IN</text>
+              </g>
 
-              <rect x="10" y="58" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="sw1"/>
-              <text x="46" y="68" class="chain-node-label" text-anchor="middle" data-tooltip="开关 1（Switch 1），TRA 到 -14° 时闭合，提供上游使能">SW1</text>
-              <text x="46" y="82" class="chain-node-value" text-anchor="middle" data-value-for="sw1">—</text>
+              <g class="node-group" data-node="sw1" data-node-type="input">
+                <rect x="10" y="58" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="sw1"/>
+                <text x="46" y="68" class="chain-node-label" text-anchor="middle" data-tooltip="开关 1（Switch 1），TRA 到 -14° 时闭合，提供上游使能">SW1</text>
+                <text x="46" y="82" class="chain-node-value" text-anchor="middle" data-value-for="sw1">—</text>
+                <text x="78" y="60" class="node-type-tag">IN</text>
+              </g>
 
-              <rect x="10" y="98" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="reverser_inhibited"/>
-              <text x="46" y="108" class="chain-node-label" text-anchor="middle" data-tooltip="反推抑制（Reverser Inhibited），安全抑制信号">抑制</text>
-              <text x="46" y="122" class="chain-node-value" text-anchor="middle" data-value-for="reverser_inhibited">—</text>
+              <g class="node-group" data-node="reverser_inhibited" data-node-type="input">
+                <rect x="10" y="98" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="reverser_inhibited"/>
+                <text x="46" y="108" class="chain-node-label" text-anchor="middle" data-tooltip="反推抑制（Reverser Inhibited），安全抑制信号">抑制</text>
+                <text x="46" y="122" class="chain-node-value" text-anchor="middle" data-value-for="reverser_inhibited">—</text>
+                <text x="78" y="100" class="node-type-tag">IN</text>
+              </g>
 
-              <rect x="10" y="198" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="engine_running"/>
-              <text x="46" y="208" class="chain-node-label" text-anchor="middle" data-tooltip="发动机运行（Engine Running）状态">ENG</text>
-              <text x="46" y="222" class="chain-node-value" text-anchor="middle" data-value-for="engine_running">—</text>
+              <g class="node-group" data-node="engine_running" data-node-type="input">
+                <rect x="10" y="198" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="engine_running"/>
+                <text x="46" y="208" class="chain-node-label" text-anchor="middle" data-tooltip="发动机运行（Engine Running）状态">ENG</text>
+                <text x="46" y="222" class="chain-node-value" text-anchor="middle" data-value-for="engine_running">—</text>
+                <text x="78" y="200" class="node-type-tag">IN</text>
+              </g>
 
-              <rect x="10" y="238" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="aircraft_on_ground"/>
-              <text x="46" y="248" class="chain-node-label" text-anchor="middle" data-tooltip="地面感应（Aircraft on Ground）信号">GND</text>
-              <text x="46" y="262" class="chain-node-value" text-anchor="middle" data-value-for="aircraft_on_ground">—</text>
+              <g class="node-group" data-node="aircraft_on_ground" data-node-type="input">
+                <rect x="10" y="238" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="aircraft_on_ground"/>
+                <text x="46" y="248" class="chain-node-label" text-anchor="middle" data-tooltip="地面感应（Aircraft on Ground）信号">GND</text>
+                <text x="46" y="262" class="chain-node-value" text-anchor="middle" data-value-for="aircraft_on_ground">—</text>
+                <text x="78" y="240" class="node-type-tag">IN</text>
+              </g>
 
-              <rect x="10" y="278" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="sw2"/>
-              <text x="46" y="288" class="chain-node-label" text-anchor="middle" data-tooltip="开关 2（Switch 2），L1 解锁后闭合">SW2</text>
-              <text x="46" y="302" class="chain-node-value" text-anchor="middle" data-value-for="sw2">—</text>
+              <g class="node-group" data-node="sw2" data-node-type="input">
+                <rect x="10" y="278" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="sw2"/>
+                <text x="46" y="288" class="chain-node-label" text-anchor="middle" data-tooltip="开关 2（Switch 2），L1 解锁后闭合">SW2</text>
+                <text x="46" y="302" class="chain-node-value" text-anchor="middle" data-value-for="sw2">—</text>
+                <text x="78" y="280" class="node-type-tag">IN</text>
+              </g>
 
-              <rect x="10" y="318" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="eec_enable"/>
-              <text x="46" y="328" class="chain-node-label" text-anchor="middle" data-tooltip="发动机电子控制使能（Electronic Engine Controller Enable）">EEC En</text>
-              <text x="46" y="342" class="chain-node-value" text-anchor="middle" data-value-for="eec_enable">—</text>
+              <g class="node-group" data-node="eec_enable" data-node-type="input">
+                <rect x="10" y="318" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="eec_enable"/>
+                <text x="46" y="328" class="chain-node-label" text-anchor="middle" data-tooltip="发动机电子控制使能（Electronic Engine Controller Enable）">EEC En</text>
+                <text x="46" y="342" class="chain-node-value" text-anchor="middle" data-value-for="eec_enable">—</text>
+                <text x="78" y="320" class="node-type-tag">IN</text>
+              </g>
 
-              <rect x="10" y="368" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="n1k"/>
-              <text x="46" y="378" class="chain-node-label" text-anchor="middle" data-tooltip="N1 核心转速（N1 Core Speed），百分比">N1K</text>
-              <text x="46" y="392" class="chain-node-value" text-anchor="middle" data-value-for="n1k">—</text>
+              <g class="node-group" data-node="n1k" data-node-type="input">
+                <rect x="10" y="368" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="n1k"/>
+                <text x="46" y="378" class="chain-node-label" text-anchor="middle" data-tooltip="N1 核心转速（N1 Core Speed），百分比">N1K</text>
+                <text x="46" y="392" class="chain-node-value" text-anchor="middle" data-value-for="n1k">—</text>
+                <text x="78" y="370" class="node-type-tag">IN</text>
+              </g>
 
-              <rect x="10" y="408" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="tra_deg"/>
-              <text x="46" y="418" class="chain-node-label" text-anchor="middle" data-tooltip="反推作动角度（Thrust Reverser Actuation Angle），负值表示拉出">TRA</text>
-              <text x="46" y="432" class="chain-node-value" text-anchor="middle" data-value-for="tra_deg">—</text>
+              <g class="node-group" data-node="tra_deg" data-node-type="input">
+                <rect x="10" y="408" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="tra_deg"/>
+                <text x="46" y="418" class="chain-node-label" text-anchor="middle" data-tooltip="反推作动角度（Thrust Reverser Actuation Angle），负值表示拉出">TRA</text>
+                <text x="46" y="432" class="chain-node-value" text-anchor="middle" data-value-for="tra_deg">—</text>
+                <text x="78" y="410" class="node-type-tag">IN</text>
+              </g>
 
-              <svg x="110" y="55" width="40" height="30">
-                <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic1"/>
-              </svg>
-              <text x="130" y="75" class="logic-gate-label" text-anchor="middle">与</text>
-              <text x="130" y="42" class="chain-node-label" text-anchor="middle" data-node-label="logic1" data-tooltip="逻辑节点 1，解锁链路入口">L1</text>
+              <!-- ══════════════════════════════════════════════════════════ -->
+              <!-- LOGIC GATES + COMMAND/SENSOR/FINAL NODES (P3A grouped, P3B: L3 uses #and-gate) -->
+              <!-- ══════════════════════════════════════════════════════════ -->
+              <g class="node-group" data-node="logic1" data-node-type="logic">
+                <svg x="110" y="55" width="40" height="30">
+                  <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic1"/>
+                </svg>
+                <text x="130" y="75" class="logic-gate-label" text-anchor="middle">与</text>
+                <text x="130" y="42" class="chain-node-label" text-anchor="middle" data-node-label="logic1" data-tooltip="逻辑节点 1，解锁链路入口">L1</text>
+                <text x="148" y="57" class="node-type-tag">LOG</text>
+              </g>
 
-              <rect x="165" y="55" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="tls115"/>
-              <text x="201" y="65" class="chain-node-label" text-anchor="middle" data-tooltip="反推锁止系统（Thrust Reverser Latch System），液压解锁阀">TLS</text>
-              <text x="201" y="79" class="chain-node-value" text-anchor="middle" data-value-for="tls_115vac_cmd">—</text>
+              <g class="node-group" data-node="tls115" data-node-type="command">
+                <rect x="165" y="55" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="tls115"/>
+                <text x="201" y="65" class="chain-node-label" text-anchor="middle" data-tooltip="反推锁止系统（Thrust Reverser Latch System），液压解锁阀">TLS</text>
+                <text x="201" y="79" class="chain-node-value" text-anchor="middle" data-value-for="tls_115vac_cmd">—</text>
+                <text x="233" y="57" class="node-type-tag">CMD</text>
+              </g>
 
-              <svg x="110" y="235" width="40" height="30">
-                <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic2"/>
-              </svg>
-              <text x="130" y="255" class="logic-gate-label" text-anchor="middle">与</text>
-              <text x="130" y="222" class="chain-node-label" text-anchor="middle" data-node-label="logic2" data-tooltip="逻辑节点 2，540V 电源母线使能">L2</text>
+              <g class="node-group" data-node="logic2" data-node-type="logic">
+                <svg x="110" y="235" width="40" height="30">
+                  <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic2"/>
+                </svg>
+                <text x="130" y="255" class="logic-gate-label" text-anchor="middle">与</text>
+                <text x="130" y="222" class="chain-node-label" text-anchor="middle" data-node-label="logic2" data-tooltip="逻辑节点 2，540V 电源母线使能">L2</text>
+                <text x="148" y="237" class="node-type-tag">LOG</text>
+              </g>
 
-              <rect x="165" y="235" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="etrac_540v"/>
-              <text x="201" y="245" class="chain-node-label" text-anchor="middle" data-tooltip="ETRAC（电源轨控制），540V 电源母线，旋翼/风扇驱动">ETRAC</text>
-              <text x="201" y="259" class="chain-node-value" text-anchor="middle" data-value-for="etrac_540vdc_cmd">—</text>
+              <g class="node-group" data-node="etrac_540v" data-node-type="command">
+                <rect x="165" y="235" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="etrac_540v"/>
+                <text x="201" y="245" class="chain-node-label" text-anchor="middle" data-tooltip="ETRAC（电源轨控制），540V 电源母线，旋翼/风扇驱动">ETRAC</text>
+                <text x="201" y="259" class="chain-node-value" text-anchor="middle" data-value-for="etrac_540vdc_cmd">—</text>
+                <text x="233" y="237" class="node-type-tag">CMD</text>
+              </g>
 
-              <svg x="355" y="145" width="40" height="30">
-                <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic3"/>
-              </svg>
-              <text x="375" y="165" class="logic-gate-label" text-anchor="middle">与</text>
-              <text x="375" y="132" class="chain-node-label" text-anchor="middle" data-node-label="logic3" data-tooltip="逻辑节点 3，EEC + PLS + PDU 三路扇出">L3</text>
+              <!-- L3: P3B — uses #and-gate symbol (was polygon), P3A grouped -->
+              <g class="node-group" data-node="logic3" data-node-type="logic">
+                <use href="#and-gate" x="355" y="145" width="40" height="30" class="chain-node-svg logic-node-svg" data-node="logic3"/>
+                <text x="375" y="165" class="logic-gate-label" text-anchor="middle">与</text>
+                <text x="375" y="132" class="chain-node-label" text-anchor="middle" data-node-label="logic3" data-tooltip="逻辑节点 3，EEC + PLS + PDU 三路扇出">L3</text>
+                <text x="393" y="147" class="node-type-tag">LOG</text>
+              </g>
 
-              <rect x="410" y="105" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="eec_deploy"/>
-              <text x="446" y="115" class="chain-node-label" text-anchor="middle" data-tooltip="发动机电子控制器（Electronic Engine Controller）">EEC</text>
-              <text x="446" y="129" class="chain-node-value" text-anchor="middle" data-value-for="eec_deploy_cmd">—</text>
+              <g class="node-group" data-node="eec_deploy" data-node-type="command">
+                <rect x="410" y="105" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="eec_deploy"/>
+                <text x="446" y="115" class="chain-node-label" text-anchor="middle" data-tooltip="发动机电子控制器（Electronic Engine Controller）">EEC</text>
+                <text x="446" y="129" class="chain-node-value" text-anchor="middle" data-value-for="eec_deploy_cmd">—</text>
+                <text x="478" y="107" class="node-type-tag">CMD</text>
+              </g>
 
-              <rect x="410" y="145" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="pls_power"/>
-              <text x="446" y="155" class="chain-node-label" text-anchor="middle" data-tooltip="压力限制开关（Pressure Limit Switch）">PLS</text>
-              <text x="446" y="169" class="chain-node-value" text-anchor="middle" data-value-for="pls_power_cmd">—</text>
+              <g class="node-group" data-node="pls_power" data-node-type="command">
+                <rect x="410" y="145" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="pls_power"/>
+                <text x="446" y="155" class="chain-node-label" text-anchor="middle" data-tooltip="压力限制开关（Pressure Limit Switch）">PLS</text>
+                <text x="446" y="169" class="chain-node-value" text-anchor="middle" data-value-for="pls_power_cmd">—</text>
+                <text x="478" y="147" class="node-type-tag">CMD</text>
+              </g>
 
-              <rect x="410" y="185" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="pdu_motor"/>
-              <text x="446" y="195" class="chain-node-label" text-anchor="middle" data-tooltip="动力驱动单元（Power Drive Unit）">PDU</text>
-              <text x="446" y="209" class="chain-node-value" text-anchor="middle" data-value-for="pdu_motor_cmd">—</text>
+              <g class="node-group" data-node="pdu_motor" data-node-type="command">
+                <rect x="410" y="185" width="72" height="30" rx="6" class="chain-node-svg command-node-svg" data-node="pdu_motor"/>
+                <text x="446" y="195" class="chain-node-label" text-anchor="middle" data-tooltip="动力驱动单元（Power Drive Unit）">PDU</text>
+                <text x="446" y="209" class="chain-node-value" text-anchor="middle" data-value-for="pdu_motor_cmd">—</text>
+                <text x="478" y="187" class="node-type-tag">CMD</text>
+              </g>
 
-              <rect x="500" y="145" width="72" height="30" rx="6" class="chain-node-svg sensor-node-svg" data-node="vdt90"/>
-              <text x="536" y="155" class="chain-node-label" text-anchor="middle" data-tooltip="位移阈值表（Variable Displacement Table），展开位置达到 90% 以上时激活">VDT90</text>
-              <text x="536" y="169" class="chain-node-value" text-anchor="middle" data-value-for="deploy_90_percent_vdt">—</text>
+              <g class="node-group" data-node="vdt90" data-node-type="sensor">
+                <rect x="500" y="145" width="72" height="30" rx="6" class="chain-node-svg sensor-node-svg" data-node="vdt90"/>
+                <text x="536" y="155" class="chain-node-label" text-anchor="middle" data-tooltip="位移阈值表（Variable Displacement Table），展开位置达到 90% 以上时激活">VDT90</text>
+                <text x="536" y="169" class="chain-node-value" text-anchor="middle" data-value-for="deploy_90_percent_vdt">—</text>
+                <text x="568" y="147" class="node-type-tag">SNS</text>
+              </g>
 
-              <svg x="595" y="145" width="40" height="30">
-                <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic4"/>
-              </svg>
-              <text x="615" y="165" class="logic-gate-label" text-anchor="middle">与</text>
-              <text x="615" y="132" class="chain-node-label" text-anchor="middle" data-node-label="logic4" data-tooltip="逻辑节点 4，THR_LOCK 释放命令">L4</text>
+              <g class="node-group" data-node="logic4" data-node-type="logic">
+                <svg x="595" y="145" width="40" height="30">
+                  <polygon points="0,0 40,15 0,30" class="logic-gate-svg" data-node="logic4"/>
+                </svg>
+                <text x="615" y="165" class="logic-gate-label" text-anchor="middle">与</text>
+                <text x="615" y="132" class="chain-node-label" text-anchor="middle" data-node-label="logic4" data-tooltip="逻辑节点 4，THR_LOCK 释放命令">L4</text>
+                <text x="633" y="147" class="node-type-tag">LOG</text>
+              </g>
 
-              <rect x="650" y="145" width="100" height="30" rx="6" class="chain-node-svg command-node-svg final-node-svg" data-node="thr_lock"/>
-              <text x="700" y="155" class="chain-node-label" text-anchor="middle" data-tooltip="反推锁（Thrust Lock）释放机构">THR_LOCK</text>
-              <text x="700" y="169" class="chain-node-value" text-anchor="middle" data-value-for="throttle_electronic_lock_release_cmd">—</text>
+              <g class="node-group" data-node="thr_lock" data-node-type="final">
+                <rect x="650" y="145" width="100" height="30" rx="6" class="chain-node-svg command-node-svg final-node-svg" data-node="thr_lock"/>
+                <text x="700" y="155" class="chain-node-label" text-anchor="middle" data-tooltip="反推锁（Thrust Lock）释放机构">THR_LOCK</text>
+                <text x="700" y="169" class="chain-node-value" text-anchor="middle" data-value-for="throttle_electronic_lock_release_cmd">—</text>
+                <text x="746" y="147" class="node-type-tag">FIN</text>
+              </g>
 
               <line x1="82" y1="33" x2="110" y2="70" class="conn-line conn-input"/>
               <line x1="82" y1="73" x2="110" y2="70" class="conn-line conn-input"/>
