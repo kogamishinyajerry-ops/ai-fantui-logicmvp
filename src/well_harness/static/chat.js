@@ -349,7 +349,7 @@
       eec_enable: true,
       n1k: 35.0,
       max_n1k_deploy_limit: 60.0,
-      feedback_mode: 'auto_scrubber',
+      feedback_mode: 'manual_feedback_override',
       deploy_position_percent: 0.0,
     };
   }
@@ -2255,7 +2255,7 @@ function _applySuggestedOverrides(overrides) {
 
         if (cfg.type === 'bool') {
           // Toggle switch row
-          var isOn = currentVal === true || currentVal === 1 || currentVal === '1' || currentVal === true;
+          var isOn = !!(currentVal === true || currentVal === 1 || currentVal === '1');
           var toggleId = 'ndp-toggle-' + nodeId;
           var row = document.createElement('div');
           row.className = 'ndp-param-toggle';
@@ -2266,6 +2266,17 @@ function _applySuggestedOverrides(overrides) {
               '<span class="ndp-toggle-track"><span class="ndp-toggle-thumb"></span></span>' +
             '</div>';
           adjustParamRow.appendChild(row);
+          // Immediately toggle the hidden checkbox when the track is clicked (CSS-only
+          // toggle relies on :checked which doesn't update until the browser processes
+          // the click on the hidden input — JS toggle ensures the input state is current
+          // and the visual state reflects it immediately.
+          var toggleTrack = row.querySelector('.ndp-toggle-track');
+          if (toggleTrack) {
+            toggleTrack.addEventListener('click', function() {
+              var cb = row.querySelector('.ndp-toggle-input');
+              if (cb) cb.checked = !cb.checked;
+            });
+          }
         } else {
           // Slider row
           if (isNaN(currentVal)) currentVal = cfg.min;
@@ -2335,7 +2346,7 @@ function _applySuggestedOverrides(overrides) {
     var comp = mergePayloadSignals(extracted.componentValues, payload);
 
     // feedback_mode: top-level string in payload
-    var fbMode = payload.feedback_mode || 'auto_scrubber';
+    var fbMode = payload.feedback_mode || 'manual_feedback_override';
     var fbSelect = document.getElementById('cgc-feedback-mode');
     if (fbSelect) {
       fbSelect.value = fbMode;
