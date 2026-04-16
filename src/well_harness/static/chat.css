@@ -334,9 +334,10 @@ body.drawer-open .stage-shell {
 .canvas-stage {
   position: relative;
   min-height: 0;
-  overflow: hidden;
+  /* overflow hidden removed: panel-open flex-row needs panel to grow beyond stage height
+     so ndp-body scroll container can work. Canvas content clips via .zoom-container below. */
   display: flex;
-  align-items: center;
+  align-items: stretch;  /* was center — restore stretch so ndp-body gets a bounded height */
   justify-content: center;
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 18px;
@@ -2417,6 +2418,96 @@ body.drawer-open .chat-drawer {
   touch-action: none;
 }
 
+/* Canvas global controls — always-visible floating widget on the canvas */
+.canvas-global-controls {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border: 1px solid rgba(103, 232, 249, 0.25);
+  border-radius: 999px;
+  background: rgba(10, 12, 14, 0.88);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
+}
+
+.canvas-global-controls-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim, #8b9bb4);
+  margin-right: 2px;
+}
+
+.canvas-global-controls select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(103, 232, 249, 0.2);
+  border-radius: 6px;
+  color: var(--text-main, #e6eef6);
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  padding: 3px 22px 3px 8px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' fill='none'%3E%3Cpath d='M1 1l3 3 3-3' stroke='%2393a8b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+}
+.canvas-global-controls select:focus {
+  border-color: rgba(103, 232, 249, 0.5);
+}
+
+.canvas-global-controls .cgc-n1k-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.canvas-global-controls .cgc-n1k-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  color: var(--text-muted, #93a8b8);
+}
+
+.canvas-global-controls .cgc-n1k-value {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent, #67e8f9);
+  min-width: 38px;
+}
+
+.canvas-global-controls input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 80px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+.canvas-global-controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent, #67e8f9);
+  cursor: pointer;
+  box-shadow: 0 0 5px rgba(77, 200, 255, 0.5);
+}
+
 /* P5C: canvas-zoom-controls glass morphism + icon-only buttons */
 .canvas-zoom-controls {
   display: flex;
@@ -2490,7 +2581,8 @@ body.drawer-open .chat-drawer {
 .node-detail-panel {
   width: 0;
   min-width: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   border-left: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(10, 12, 14, 0.96);
   display: flex;
@@ -2589,10 +2681,13 @@ body.drawer-open .chat-drawer {
 .ndp-body {
   flex: 1;
   overflow-y: auto;
+  max-height: calc(100vh - var(--topbar-height) - 60px);
   padding: 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* Ensure bottom padding clears fixed-action buttons */
+  padding-bottom: 80px;
 }
 
 .ndp-section {}
@@ -2824,6 +2919,52 @@ input[type="range"].ndp-range::-webkit-slider-thumb:active {
   margin-bottom: 12px;
   padding-bottom: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Collapsible header for global params section */
+.ndp-global-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  margin-bottom: 8px;
+}
+.ndp-global-header:hover .ndp-global-header-title {
+  color: var(--text-main, #d4d7de);
+}
+.ndp-global-header-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted, #8891a0);
+  font-family: var(--font-mono, monospace);
+  transition: color 0.15s;
+}
+.ndp-global-header-arrow {
+  font-size: 10px;
+  color: var(--text-muted, #8891a0);
+  transition: transform 0.2s ease;
+  line-height: 1;
+}
+.ndp-global-header.is-collapsed .ndp-global-header-arrow {
+  transform: rotate(-90deg);
+}
+.ndp-global-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+  max-height: 200px;
+  opacity: 1;
+}
+.ndp-global-body.is-collapsed {
+  max-height: 0;
+  opacity: 0;
 }
 
 .ndp-global-label {
