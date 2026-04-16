@@ -1335,9 +1335,6 @@ function _applySuggestedOverrides(overrides) {
   function applySnapshotToCanvas(data, payload) {
     var extracted = extractEvaluation(data);
     var componentValues = mergePayloadSignals(extracted.componentValues, payload);
-    var blockedInputNodes = {};
-    var activeLogicMap = {};
-    var failedByNodeId = {};
     var nodeIds = [
       'radio_altitude_ft',
       'sw1',
@@ -1360,27 +1357,26 @@ function _applySuggestedOverrides(overrides) {
       'logic4',
       'thr_lock',
     ];
-    var logicId;
-    var normalizedLogicId;
-    var conds;
     var i;
-    var j;
     var nodeId;
     var valueKey;
     var value;
-    var state;
 
     resetCanvasState();
 
-    for (i = 0; i < extracted.activeIds.length; i += 1) {
-      nodeId = normalizeNodeId(extracted.activeIds[i]) || extracted.activeIds[i];
-      activeLogicMap[nodeId] = true;
+    // Build authoritative state map directly from backend's data.nodes[].
+    // The backend returns {id, state: 'active'|'inactive'|'blocked'} for all 14 nodes.
+    // This is the ground truth — use it instead of deriving from truth_evaluation which
+    // has empty active_logic_node_ids for lever-snapshot.
+    var nodeStateMap = {};
+    if (data && data.nodes && Array.isArray(data.nodes)) {
+      for (i = 0; i < data.nodes.length; i += 1) {
+        nodeStateMap[data.nodes[i].id] = data.nodes[i].state || 'inactive';
+      }
     }
 
     // Build authoritative value map from data.nodes[] (backend-reported values).
-    // componentValues from truth_evaluation.asserted_component_values does NOT include
-    // intermediate command nodes (tls115, etrac_540v, vdt90), so we must read their
-    // values directly from data.nodes[i].value.
+    // Used for setNodeValue() display of numeric sensor/command values.
     var nodeValueMap = {};
     if (data && data.nodes && Array.isArray(data.nodes)) {
       for (i = 0; i < data.nodes.length; i += 1) {
@@ -1390,100 +1386,24 @@ function _applySuggestedOverrides(overrides) {
       }
     }
 
-    for (logicId in extracted.failed) {
-      if (!Object.prototype.hasOwnProperty.call(extracted.failed, logicId)) {
-        continue;
-      }
-      normalizedLogicId = normalizeNodeId(logicId) || logicId;
-      conds = extracted.failed[logicId] || [];
-      failedByNodeId[normalizedLogicId] = conds.slice();
-      for (j = 0; j < conds.length; j += 1) {
-        nodeId = FAILED_CONDITION_NODE_MAP[conds[j]];
-        if (nodeId) {
-          blockedInputNodes[nodeId] = true;
-        }
-      }
-    }
-
-    // Track command nodes that received an explicit state from the backend
-    // (appeared in the nodes array, e.g. fault-injected or has a declared state).
-    // These must NOT be overwritten by derivation — their explicit state takes precedence.
-    var explicitlySetCommandNodes = {};
+    // ── Authoritative state application ─────────────────────────────────────
+    // The backend's data.nodes[] array is the single source of truth for ALL
+    // node states (active / inactive / blocked). Apply them directly — no
+    // derivation, no deriveComponentState(), no GATE_TO_COMMAND_MAP inference.
+    // This fixes the critical bug where intermediate nodes (tls115, etrac_540v,
+    // vdt90, thr_lock) always appeared inactive because their .value was
+    // undefined → deriveComponentState(undefined) returned 'inactive'.
     for (i = 0; i < nodeIds.length; i += 1) {
       nodeId = nodeIds[i];
-      if (/^logic\d+$/.test(nodeId)) {
-        if (activeLogicMap[nodeId]) {
-          setNodeState(nodeId, 'active');
-        } else if (failedByNodeId[nodeId] && failedByNodeId[nodeId].length > 0) {
-          setNodeState(nodeId, 'blocked');
-        } else {
-          setNodeState(nodeId, 'inactive');
-        }
-        continue;
-      }
-
-      // Handle sw1/sw2 nodes: check activeLogicMap before falling through to componentValues
-      if (nodeId === 'sw1' || nodeId === 'sw2') {
-        if (activeLogicMap[nodeId]) {
-          setNodeState(nodeId, 'active');
-        } else if (failedByNodeId[nodeId] && failedByNodeId[nodeId].length > 0) {
-          setNodeState(nodeId, 'blocked');
-        } else {
-          setNodeState(nodeId, 'inactive');
-        }
-        explicitlySetCommandNodes[nodeId] = true;
-        continue;
-      }
-
-      valueKey = NODE_VALUE_KEYS[nodeId] || nodeId;
-      // Prefer authoritative node value from data.nodes[] (tls115, etrac_540v, vdt90, etc.).
-      // Fall back to componentValues for input nodes (tra_deg, radio_altitude_ft, etc.).
-      value = nodeValueMap[nodeId] !== undefined ? nodeValueMap[nodeId] : componentValues[valueKey];
-      // Non-logic-gate nodes: check extracted.failed (from nodes array) for blocked
-      // state, since deriveComponentState can't render 'blocked' for intermediate
-      // output nodes that aren't in componentValues (value=undefined).
-      if (failedByNodeId[nodeId] && failedByNodeId[nodeId].length > 0) {
-        setNodeState(nodeId, 'blocked');
-        explicitlySetCommandNodes[nodeId] = true;
-      } else {
-        state = deriveComponentState(value, !!blockedInputNodes[nodeId]);
-        setNodeState(nodeId, state);
-        // Mark as explicitly set so derivation skips it — preserves sensor-fault
-        // inactive states (e.g. tls115 with sensor_zero: state='inactive' from backend).
-        explicitlySetCommandNodes[nodeId] = true;
+      // Apply authoritative state from backend's data.nodes[].
+      setNodeState(nodeId, nodeStateMap[nodeId] || 'inactive');
+      // For input/sensor nodes that carry numeric values, propagate display value.
+      // Skip logic gate nodes and intermediate output nodes (no numeric display).
+      if (!/^logic\d+$/.test(nodeId) && nodeId !== 'tls115' && nodeId !== 'etrac_540v' && nodeId !== 'thr_lock') {
+        valueKey = NODE_VALUE_KEYS[nodeId] || nodeId;
+        value = nodeValueMap[nodeId] !== undefined ? nodeValueMap[nodeId] : componentValues[valueKey];
         if (value !== undefined) {
           setNodeValue(nodeId, value);
-        }
-      }
-    }
-
-    // Derive intermediate command-node states from their upstream logic-gate states.
-    // Command nodes (tls115, etrac_540v, etc.) are not in truth_evaluation directly;
-    // they activate when and only when their driving logic gate is active.
-    // Skip nodes that already have an explicit state from the backend (e.g. fault injections).
-    var gateId;
-    var drivenCmds;
-    var cmdState;
-    for (gateId in GATE_TO_COMMAND_MAP) {
-      if (!Object.prototype.hasOwnProperty.call(GATE_TO_COMMAND_MAP, gateId)) {
-        continue;
-      }
-      drivenCmds = GATE_TO_COMMAND_MAP[gateId];
-      if (!Array.isArray(drivenCmds)) {
-        drivenCmds = [drivenCmds];
-      }
-      if (activeLogicMap[gateId]) {
-        cmdState = 'active';
-      } else if (failedByNodeId[gateId] && failedByNodeId[gateId].length > 0) {
-        cmdState = 'blocked';
-      } else {
-        cmdState = 'inactive';
-      }
-      for (j = 0; j < drivenCmds.length; j += 1) {
-        // Only derive if the node does NOT already have an explicit state from the backend.
-        // This preserves fault-injected states (blocked/inactive) set in the loop above.
-        if (!explicitlySetCommandNodes[drivenCmds[j]]) {
-          setNodeState(drivenCmds[j], cmdState);
         }
       }
     }
