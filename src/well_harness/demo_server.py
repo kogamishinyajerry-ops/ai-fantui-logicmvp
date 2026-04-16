@@ -2827,11 +2827,29 @@ def lever_snapshot_payload(
     logic3_blockers = [condition.name for condition in explain.logic3.failed_conditions]
 
     nodes = [
+        # ── Input sensor / signal nodes ──────────────────────────────────────
+        # These are the ground-level signals; their "active" state is
+        # computed to match the condition thresholds used by the logic gates.
+        _node("radio_altitude_ft", "RA", "active" if inputs.radio_altitude_ft < 6.0 else "inactive",
+              "Input sensors: altitude < 6 ft threshold"),
+        _node("reverser_inhibited", "REV_INH",
+              "inactive" if not inputs.reverser_inhibited else "active",
+              "Input signals: true = inhibit active (blocked)"),
+        _node("engine_running", "ENG",
+              "active" if inputs.engine_running else "inactive",
+              "Input signals"),
+        _node("aircraft_on_ground", "GND",
+              "active" if inputs.aircraft_on_ground else "inactive",
+              "Input signals"),
+        _node("eec_enable", "EEC_EN",
+              "active" if inputs.eec_enable else "inactive",
+              "Input signals"),
         _node("sw1", "SW1", "active" if inputs.sw1 else "inactive", "LatchedThrottleSwitches"),
+        _node("sw2", "SW2", "active" if inputs.sw2 else "inactive", "LatchedThrottleSwitches"),
+        # ── Intermediate / output nodes ────────────────────────────────────────
         _node("logic1", "L1", _logic_node_state(outputs.logic1_active), "DeployController.explain(logic1)", [condition.name for condition in explain.logic1.failed_conditions]),
         _node("tls115", "TLS115", "active" if outputs.tls_115vac_cmd or sensors.tls_unlocked_ls else "inactive", "DeployController outputs"),
         _node("tls_unlocked", "TLS 解锁", "active" if sensors.tls_unlocked_ls else "inactive", "SimplifiedDeployPlant sensors"),
-        _node("sw2", "SW2", "active" if inputs.sw2 else "inactive", "LatchedThrottleSwitches"),
         _node("logic2", "L2", _logic_node_state(outputs.logic2_active), "DeployController.explain(logic2)", [condition.name for condition in explain.logic2.failed_conditions]),
         _node("etrac_540v", "540V", "active" if outputs.etrac_540vdc_cmd else "inactive", "DeployController outputs"),
         _node("logic3", "L3", _logic_node_state(outputs.logic3_active), "DeployController.explain(logic3)", logic3_blockers),

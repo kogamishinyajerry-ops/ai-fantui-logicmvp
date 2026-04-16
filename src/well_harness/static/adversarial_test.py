@@ -66,11 +66,11 @@ def run():
         if not check(f"{node_id}={actual} (expected {exp_state})", actual == exp_state):
             failures += 1
 
-    if len(nm) != 14:
-        print(f"  FAIL  node count={len(nm)} (expected 14)")
+    if len(nm) != 19:
+        print(f"  FAIL  node count={len(nm)} (expected 19)")
         failures += 1
     else:
-        print(f"  PASS  node count=14")
+        print(f"  PASS  node count=19")
 
     # ── Test 2: Idempotency ──────────────────────────────────────────────────
     print("\n[Test 2] Idempotency: same payload x5 produces identical output")
@@ -212,8 +212,8 @@ def run():
         snap_i = api("/api/lever-snapshot", p)
         nm_i = node_map(snap_i)
 
-        if len(nm_i) != 14:
-            print(f"  FAIL  iter{i}: node count={len(nm_i)} (expected 14)")
+        if len(nm_i) != 19:
+            print(f"  FAIL  iter{i}: node count={len(nm_i)} (expected 19)")
             iter_failures += 1
         for node_id, data in nm_i.items():
             if data["state"] not in ("active", "inactive", "blocked"):
@@ -255,10 +255,10 @@ def run():
     if not all_nodes_have_state:
         print(f"  FAIL  Some nodes lack .state field in backend response")
         failures += 1
-    elif not check("all 14 nodes have authoritative .state", all_nodes_have_state):
+    elif not check("all 19 nodes have authoritative .state", all_nodes_have_state):
         failures += 1
     else:
-        print(f"  PASS  all 14 nodes have authoritative .state in backend")
+        print(f"  PASS  all 19 nodes have authoritative .state in backend")
         print(f"  intermediate node states: {intermediate_states}")
 
     # ── Test 8: Full causal chain ──────────────────────────────────────────
