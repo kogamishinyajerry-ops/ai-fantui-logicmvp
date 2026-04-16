@@ -116,7 +116,7 @@
     eec_deploy: 'eec_deploy_cmd',
     pls_power: 'pls_power_cmd',
     pdu_motor: 'pdu_motor_cmd',
-    vdt90: 'deploy_90_percent_vdt',
+    vdt90: 'deploy_position_percent',
     thr_lock: 'throttle_electronic_lock_release_cmd',
   };
 
@@ -1399,7 +1399,14 @@ function _applySuggestedOverrides(overrides) {
       setNodeState(nodeId, nodeStateMap[nodeId] || 'inactive');
       // For input/sensor nodes that carry numeric values, propagate display value.
       // Skip logic gate nodes and intermediate output nodes (no numeric display).
-      if (!/^logic\d+$/.test(nodeId) && nodeId !== 'tls115' && nodeId !== 'etrac_540v' && nodeId !== 'thr_lock') {
+      // Special case: vdt90's deploy_position_percent lives in lastTruthPayloadBySystem
+      // (not in truth_evaluation.asserted_component_values which is empty for lever-snapshot).
+      if (nodeId === 'vdt90') {
+        var vdtPayload = lastTruthPayloadBySystem[currentSystem];
+        if (vdtPayload && vdtPayload.deploy_position_percent !== undefined) {
+          setNodeValue(nodeId, vdtPayload.deploy_position_percent);
+        }
+      } else if (!/^logic\d+$/.test(nodeId) && nodeId !== 'tls115' && nodeId !== 'etrac_540v' && nodeId !== 'thr_lock') {
         valueKey = NODE_VALUE_KEYS[nodeId] || nodeId;
         value = nodeValueMap[nodeId] !== undefined ? nodeValueMap[nodeId] : componentValues[valueKey];
         if (value !== undefined) {
@@ -2253,20 +2260,18 @@ function _applySuggestedOverrides(overrides) {
         adjustParamRow.innerHTML = '';
 
         var currentVal = null;
-        // Also support nodes that exist before any snapshot is loaded
-        var defaultPayload = buildDefaultLeverPayload('', currentSystem);
-        if (lastTruthSnapshot) {
-          // Use mergePayloadSignals (same logic as applySnapshotToCanvas) so we read
-          // from the request payload's current values rather than a non-existent
-          // truth_evaluation.asserted_component_values field.
+        // For deploy_position_percent (VDT): read directly from lastTruthPayloadBySystem
+        // since truth_evaluation.asserted_component_values is empty for lever-snapshot.
+        // buildCanonicalLeverPayloadFromSnapshot stores the correct value from hud.
+        var payload = lastTruthPayloadBySystem[currentSystem] || {};
+        if (payload[cfg.key] !== undefined) {
+          currentVal = parseFloat(payload[cfg.key]);
+        } else if (lastTruthSnapshot) {
+          // Fallback to mergePayloadSignals for other float/bool params
           var extracted = extractEvaluation(lastTruthSnapshot);
-          var payload = lastTruthPayloadBySystem[currentSystem] || {};
           var comp = mergePayloadSignals(extracted.componentValues, payload);
-          // Try direct key then NODE_VALUE_KEYS alias
           var valueKey = cfg.key;
-          // For boolean-ish switches, look for 0/1 numeric values
           if (cfg.type === 'bool' && comp[valueKey] === undefined) {
-            // SW1/SW2 are treated as float 0/1 in the snapshot
             var floatVal = parseFloat(comp[valueKey]);
             if (!isNaN(floatVal)) currentVal = floatVal > 0.5;
           } else if (cfg.type === 'float') {
@@ -2274,14 +2279,9 @@ function _applySuggestedOverrides(overrides) {
           } else {
             currentVal = comp[valueKey];
           }
-        } else {
-          // Before first snapshot: read defaults from buildDefaultLeverPayload
-          if (cfg.type === 'float') {
-            currentVal = parseFloat(defaultPayload[cfg.key]);
-            if (isNaN(currentVal)) currentVal = cfg.min;
-          } else if (cfg.type === 'bool') {
-            currentVal = !!defaultPayload[cfg.key];
-          }
+        }
+        if (currentVal === null || currentVal === undefined || isNaN(currentVal)) {
+          currentVal = cfg.type === 'float' ? cfg.min : 0;
         }
 
         if (cfg.type === 'bool') {
