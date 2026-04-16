@@ -2192,7 +2192,7 @@ function _applySuggestedOverrides(overrides) {
           min: 0, max: 120, step: 1, key: 'n1k' },
         tra_deg:            { type: 'float', label: 'TRA 角度', unit: '°',
           min: -14, max: 0, step: 0.1, key: 'tra_deg' },
-        deploy_90_percent_vdt: { type: 'float', label: 'VDT 部署位置', unit: '%',
+        vdt90:               { type: 'float', label: 'VDT 部署位置', unit: '%',
           min: 0, max: 100, step: 1, key: 'deploy_position_percent' },
       };
 
@@ -2203,7 +2203,12 @@ function _applySuggestedOverrides(overrides) {
 
         var currentVal = null;
         if (lastTruthSnapshot) {
-          var comp = lastTruthSnapshot.componentValues || {};
+          // Use mergePayloadSignals (same logic as applySnapshotToCanvas) so we read
+          // from the request payload's current values rather than a non-existent
+          // truth_evaluation.asserted_component_values field.
+          var extracted = extractEvaluation(lastTruthSnapshot);
+          var payload = lastTruthPayloadBySystem[currentSystem] || {};
+          var comp = mergePayloadSignals(extracted.componentValues, payload);
           // Try direct key then NODE_VALUE_KEYS alias
           var valueKey = cfg.key;
           // For boolean-ish switches, look for 0/1 numeric values
