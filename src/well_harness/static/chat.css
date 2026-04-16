@@ -2716,6 +2716,11 @@ body.drawer-open .chat-drawer {
   min-width: 44px;
   text-align: right;
 }
+.ndp-param-hint {
+  font-size: 10px;
+  color: var(--text-dim, #8b9bb4);
+  margin-top: 2px;
+}
 .ndp-slider-track {
   position: relative;
   height: 20px;
@@ -2879,4 +2884,3 @@ input[type="range"].ndp-range::-webkit-slider-thumb:active {
     border-radius: 0 0 20px 20px;
   }
 }
-

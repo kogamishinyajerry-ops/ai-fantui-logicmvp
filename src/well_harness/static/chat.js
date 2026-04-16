@@ -560,14 +560,16 @@
   }
 
 function _applySuggestedOverrides(overrides) {
-    var payload = buildDefaultLeverPayload('', currentSystem);
+    var basePayload = lastTruthPayloadBySystem[currentSystem]
+        ? copyObject(lastTruthPayloadBySystem[currentSystem])
+        : buildDefaultLeverPayload('', currentSystem);
     var key;
     for (key in overrides) {
       if (Object.prototype.hasOwnProperty.call(overrides, key)) {
-        payload[key] = overrides[key];
+        basePayload[key] = overrides[key];
       }
     }
-    return _sendLeverSnapshot(payload);
+    return _sendLeverSnapshot(basePayload);
   }
 
   function handleOperateResponse(operateResult) {
@@ -2182,16 +2184,12 @@ function _applySuggestedOverrides(overrides) {
       var ADJUSTABLE_NODES = {
         radio_altitude_ft: { type: 'float', label: '无线电高度', unit: 'ft',
           min: 0, max: 50, step: 1, key: 'radio_altitude_ft' },
-        sw1:                 { type: 'float', label: 'SW1 开关', unit: null,
-          min: 0, max: 1, step: 1, key: 'radio_altitude_ft' },
         engine_running:     { type: 'bool', label: '发动机运转', unit: null, key: 'engine_running' },
         aircraft_on_ground: { type: 'bool', label: '飞机在地面', unit: null, key: 'aircraft_on_ground' },
         reverser_inhibited: { type: 'bool', label: '反推抑制', unit: null, key: 'reverser_inhibited' },
         eec_enable:         { type: 'bool', label: 'EEC 使能', unit: null, key: 'eec_enable' },
-        sw2:                 { type: 'float', label: 'SW2 开关', unit: null,
-          min: 0, max: 1, step: 1, key: 'radio_altitude_ft' },
         n1k:                { type: 'float', label: 'N1 转速', unit: '%',
-          min: 0, max: 100, step: 1, key: 'n1k' },
+          min: 0, max: 120, step: 1, key: 'n1k' },
         tra_deg:            { type: 'float', label: 'TRA 角度', unit: '°',
           min: -14, max: 0, step: 0.1, key: 'tra_deg' },
         deploy_90_percent_vdt: { type: 'float', label: 'VDT 部署位置', unit: '%',
@@ -2238,11 +2236,17 @@ function _applySuggestedOverrides(overrides) {
           if (isNaN(currentVal)) currentVal = cfg.min;
           var sliderId = 'ndp-slider-' + nodeId;
           var displayVal = (cfg.step < 1) ? currentVal.toFixed(1) : currentVal;
+          var hintHtml = cfg.key === 'deploy_position_percent'
+            ? '<span class="ndp-param-hint">auto_scrubber 由 plant 物理仿真驱动；manual_feedback_override 可快速推到 90%</span>'
+            : '';
           var row = document.createElement('div');
           row.className = 'ndp-param-slider';
           row.innerHTML =
             '<div class="ndp-slider-header">' +
-              '<span class="ndp-param-label">' + escHtml(cfg.label) + '</span>' +
+              '<div>' +
+                '<span class="ndp-param-label">' + escHtml(cfg.label) + '</span>' +
+                hintHtml +
+              '</div>' +
               '<span class="ndp-param-value" id="' + sliderId + '-val">' + displayVal + (cfg.unit ? cfg.unit : '') + '</span>' +
             '</div>' +
             '<input type="range" class="ndp-range" id="' + sliderId + '" ' +
