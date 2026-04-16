@@ -2735,6 +2735,13 @@ body.drawer-open .chat-drawer {
   flex: 1;
 }
 
+.ndp-condition-meta {
+  color: var(--text-dim, #555a6a);
+  font-size: 11px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
 .ndp-condition-value {
   color: var(--text-main, #d4d7de);
   text-align: right;

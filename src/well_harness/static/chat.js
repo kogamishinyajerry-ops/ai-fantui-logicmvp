@@ -131,6 +131,10 @@
     n1k: 'n1k',
     tra_deg: 'tra_deg',
     deploy_90_percent_vdt: 'vdt90',
+    // Truth-only condition aliases (from controller.py ground truth)
+    tls_unlocked: 'tls_unlocked',
+    tls_unlocked_ls: 'tls_unlocked',
+    reverser_not_deployed_eec: 'reverser_not_deployed_eec',
   };
 
   // Maps each logic gate to the command node(s) it directly drives.
@@ -177,6 +181,10 @@
     l4: 'logic4',
     thr_lock: 'thr_lock',
     thrlock: 'thr_lock',
+    // Truth-only nodes
+    tls_unlocked: 'tls_unlocked',
+    tls_unlocked_ls: 'tls_unlocked',
+    reverser_not_deployed_eec: 'reverser_not_deployed_eec',
   };
 
   var CONNECTION_DEFINITIONS = [
@@ -351,6 +359,28 @@
       max_n1k_deploy_limit: 60.0,
       feedback_mode: 'manual_feedback_override',
       deploy_position_percent: 0.0,
+    };
+  }
+
+  // Build canonical payload from backend snapshot's input+hud sections (not the request payload).
+  // This ensures sw1/sw2/effective_tra values match what the backend actually computed,
+  // not what the frontend guessed or requested.
+  function buildCanonicalLeverPayloadFromSnapshot(data, fallback) {
+    var input = (data && data.input) || {};
+    var hud = (data && data.hud) || {};
+    return {
+      prompt: (fallback && fallback.prompt) || '',
+      system_id: (fallback && fallback.system_id) || 'thrust-reverser',
+      tra_deg: input.tra_deg !== undefined ? input.tra_deg : fallback.tra_deg,
+      radio_altitude_ft: input.radio_altitude_ft !== undefined ? input.radio_altitude_ft : fallback.radio_altitude_ft,
+      engine_running: input.engine_running !== undefined ? input.engine_running : fallback.engine_running,
+      aircraft_on_ground: input.aircraft_on_ground !== undefined ? input.aircraft_on_ground : fallback.aircraft_on_ground,
+      reverser_inhibited: input.reverser_inhibited !== undefined ? input.reverser_inhibited : fallback.reverser_inhibited,
+      eec_enable: input.eec_enable !== undefined ? input.eec_enable : fallback.eec_enable,
+      n1k: input.n1k !== undefined ? input.n1k : fallback.n1k,
+      max_n1k_deploy_limit: input.max_n1k_deploy_limit !== undefined ? input.max_n1k_deploy_limit : fallback.max_n1k_deploy_limit,
+      feedback_mode: input.feedback_mode || fallback.feedback_mode,
+      deploy_position_percent: hud.deploy_position_percent !== undefined ? hud.deploy_position_percent : fallback.deploy_position_percent,
     };
   }
 
@@ -543,7 +573,8 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestPayload),
     }).then(function(data) {
-      lastTruthPayloadBySystem['thrust-reverser'] = copyObject(requestPayload);
+      var canonicalPayload = buildCanonicalLeverPayloadFromSnapshot(data, requestPayload);
+      lastTruthPayloadBySystem['thrust-reverser'] = copyObject(canonicalPayload);
       lastTruthSnapshot = data;
       applySnapshotToCanvas(data, requestPayload);
       renderTruthEvalFromSnapshot(data, requestPayload);
@@ -569,6 +600,21 @@ function _applySuggestedOverrides(overrides) {
         basePayload[key] = overrides[key];
       }
     }
+
+    // Enforce tra_lock: if L4 is not satisfied, clamp TRA to allowed_reverse_min_deg
+    // before sending to backend. This mirrors backend logic at demo_server.py:2796.
+    if (
+      typeof basePayload.tra_deg === 'number' &&
+      lastTruthSnapshot &&
+      lastTruthSnapshot.tra_lock &&
+      lastTruthSnapshot.tra_lock.locked
+    ) {
+      basePayload.tra_deg = Math.max(
+        basePayload.tra_deg,
+        lastTruthSnapshot.tra_lock.allowed_reverse_min_deg
+      );
+    }
+
     return _sendLeverSnapshot(basePayload);
   }
 
@@ -913,7 +959,9 @@ function _applySuggestedOverrides(overrides) {
       completionReached: !!(ev && ev.completion_reached),
       summary:
         (ev && ev.summary) ||
-        (data && typeof data.summary === 'string' ? data.summary : ''),
+        (data && data.summary && typeof data.summary === 'object'
+          ? [data.summary.headline, data.summary.blocker, data.summary.next_step].filter(Boolean).join(' ')
+          : (data && typeof data.summary === 'string' ? data.summary : '')),
     };
   }
 
@@ -952,14 +1000,18 @@ function _applySuggestedOverrides(overrides) {
       }
     }
 
-    if (merged.sw1 === undefined && typeof payload.tra_deg === 'number') {
-      merged.sw1 = payload.tra_deg <= -1.4;
+    // Read authoritative sw1/sw2 from hud (backend-computed sensor values),
+    // not from guessing via tra_deg threshold.
+    if (merged.sw1 === undefined) {
+      merged.sw1 = (payload.hud && payload.hud.sw1 !== undefined) ? payload.hud.sw1 : merged.sw1;
     }
-    if (merged.sw2 === undefined && typeof merged.sw1 === 'boolean') {
-      merged.sw2 = merged.sw1;
+    if (merged.sw2 === undefined) {
+      merged.sw2 = (payload.hud && payload.hud.sw2 !== undefined) ? payload.hud.sw2 : merged.sw2;
     }
-    if (merged.deploy_90_percent_vdt === undefined && typeof payload.deploy_position_percent === 'number') {
-      merged.deploy_90_percent_vdt = payload.deploy_position_percent >= 90.0;
+    if (merged.deploy_90_percent_vdt === undefined) {
+      merged.deploy_90_percent_vdt = (payload.hud && payload.hud.deploy_90_percent_vdt !== undefined)
+        ? payload.hud.deploy_90_percent_vdt
+        : (typeof payload.deploy_position_percent === 'number' ? payload.deploy_position_percent >= 90.0 : merged.deploy_90_percent_vdt);
     }
     // Bug fix: deploy_position_percent lives in hud, not in truth_evaluation.componentValues.
     // Without this, the VDT slider always resets to min (0) after Apply because
@@ -2139,15 +2191,25 @@ function _applySuggestedOverrides(overrides) {
       Object.keys(logic).forEach(function(logicId) {
         var logicNode = logic[logicId];
         if (logicNode.node_id === nodeId || logicId === nodeId) {
-          if (logicNode.failed_conditions) {
-            logicNode.failed_conditions.forEach(function(cond) {
-              conditions.push({ name: cond, passed: false, value: null });
+          // Use logic.conditions array (backend returns {name, passed, current_value, comparison, threshold_value})
+          // This replaces the non-existent failed_conditions/passed_conditions fields
+          if (logicNode.conditions && logicNode.conditions.length) {
+            logicNode.conditions.forEach(function(cond) {
+              conditions.push({
+                name: cond.name,
+                passed: !!cond.passed,
+                current_value: cond.current_value,
+                comparison: cond.comparison,
+                threshold_value: cond.threshold_value,
+              });
             });
-          }
-          if (logicNode.passed_conditions) {
-            logicNode.passed_conditions.forEach(function(cond) {
-              conditions.push({ name: cond, passed: true, value: null });
-            });
+          } else {
+            // Fallback: legacy failed_conditions field (array of strings)
+            if (logicNode.failed_conditions && logicNode.failed_conditions.length) {
+              logicNode.failed_conditions.forEach(function(cond) {
+                conditions.push({ name: cond, passed: false, value: null });
+              });
+            }
           }
         }
       });
@@ -2179,8 +2241,14 @@ function _applySuggestedOverrides(overrides) {
         conditions.forEach(function(c) {
           var li = document.createElement('li');
           li.className = 'ndp-condition-item';
+          // Show condition name + comparison logic (current_value comparison threshold_value)
+          var meta = '';
+          if (c.current_value !== undefined && c.comparison !== undefined && c.threshold_value !== undefined) {
+            meta = escHtml(String(c.current_value) + ' ' + c.comparison + ' ' + String(c.threshold_value));
+          }
           li.innerHTML =
             '<span class="ndp-condition-name">' + escHtml(c.name) + '</span>' +
+            (meta ? '<span class="ndp-condition-meta">' + meta + '</span>' : '') +
             '<span class="' + (c.passed ? 'ndp-condition-pass' : 'ndp-condition-fail') + '"></span>';
           conditionsEl.appendChild(li);
         });

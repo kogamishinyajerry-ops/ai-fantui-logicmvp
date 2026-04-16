@@ -2828,7 +2828,7 @@ def lever_snapshot_payload(
 
     nodes = [
         _node("sw1", "SW1", "active" if inputs.sw1 else "inactive", "LatchedThrottleSwitches"),
-        _node("logic1", "L1", _logic_node_state(outputs.logic1_active, logic1_completed), "DeployController.explain(logic1)", [condition.name for condition in explain.logic1.failed_conditions]),
+        _node("logic1", "L1", _logic_node_state(outputs.logic1_active), "DeployController.explain(logic1)", [condition.name for condition in explain.logic1.failed_conditions]),
         _node("tls115", "TLS115", "active" if outputs.tls_115vac_cmd or sensors.tls_unlocked_ls else "inactive", "DeployController outputs"),
         _node("tls_unlocked", "TLS 解锁", "active" if sensors.tls_unlocked_ls else "inactive", "SimplifiedDeployPlant sensors"),
         _node("sw2", "SW2", "active" if inputs.sw2 else "inactive", "LatchedThrottleSwitches"),
