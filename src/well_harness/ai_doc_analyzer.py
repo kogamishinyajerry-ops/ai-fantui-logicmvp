@@ -24,6 +24,16 @@ from well_harness.system_spec import (
 )
 from well_harness.workbench_bundle import build_workbench_bundle as _build_workbench_bundle
 
+
+def _safe_bool(val: object) -> bool:
+    """Safely convert a value to bool, handling AI-generated "false" strings."""
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return val.lower() not in ("false", "0", "no", "")
+    return bool(val)
+
+
 # ---------------------------------------------------------------------------
 # MOCK fixture — returned verbatim when P14_AI_MOCK=1
 # ---------------------------------------------------------------------------
@@ -157,7 +167,7 @@ class Question:
             id=str(data["id"]),
             ambiguity_id=str(data["ambiguity_id"]),
             question=str(data["question"]),
-            is_optional=bool(data.get("is_optional", False)),
+            is_optional=_safe_bool(data.get("is_optional", False)),
         )
 
 
