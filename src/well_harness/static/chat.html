@@ -53,6 +53,22 @@
           <div class="canvas-meta">
             <span class="canvas-chip" id="system-shell-status">反推系统</span>
             <span class="canvas-chip accent">控制真值已连接</span>
+            <!-- Canvas global controls: always visible, outside node detail panel -->
+            <div class="canvas-global-controls" id="canvas-global-controls" aria-label="全局参数控制">
+              <span class="canvas-global-controls-label">全局</span>
+              <label for="cgc-feedback-mode" style="display:none">反馈模式</label>
+              <select id="cgc-feedback-mode" data-param="feedback_mode" aria-label="反馈模式">
+                <option value="auto_scrubber">auto_scrubber</option>
+                <option value="manual_feedback_override">manual_feedback_override</option>
+              </select>
+              <div class="cgc-n1k-row">
+                <label for="cgc-n1k-limit" class="cgc-n1k-label">N1K限</label>
+                <input type="range" id="cgc-n1k-limit" class="cgc-n1k-range"
+                  data-param="max_n1k_deploy_limit"
+                  min="0.1" max="120" step="0.1" value="60.0" aria-label="最大 N1 部署限制">
+                <span class="cgc-n1k-value" id="cgc-n1k-limit-val">60.0%</span>
+              </div>
+            </div>
             <div class="canvas-zoom-controls" aria-label="画布缩放控制（滚轮缩放，范围 50%–200%）">
               <button type="button" class="canvas-zoom-btn" id="canvas-zoom-reset" title="重置缩放至 100%（滚轮缩放范围 50%–200%）" aria-label="重置缩放至 100%">↺</button>
               <span class="canvas-zoom-level" id="canvas-zoom-level" aria-live="polite">100%</span>
@@ -341,31 +357,6 @@
               <!-- 参数调节面板：点击 input/sensor 类型节点时显示 -->
               <section class="ndp-section" id="ndp-adjust-section" hidden>
                 <h3 class="ndp-section-title">参数调节</h3>
-                <!-- 全局参数：始终可见，不依赖节点选择 -->
-                <div class="ndp-global-params" id="ndp-global-params">
-                  <div class="ndp-global-row">
-                    <label class="ndp-global-label" for="ndp-feedback-mode">反馈模式</label>
-                    <select class="ndp-mode-select" id="ndp-feedback-mode" data-param="feedback_mode">
-                      <option value="auto_scrubber">auto_scrubber — 自动摩擦驱动</option>
-                      <option value="manual_feedback_override">manual_feedback_override — 手动反馈覆盖</option>
-                    </select>
-                  </div>
-                  <div class="ndp-param-slider" id="ndp-global-n1k-limit-row">
-                    <div class="ndp-slider-header">
-                      <div>
-                        <span class="ndp-param-label">最大 N1 部署限制</span>
-                      </div>
-                      <span class="ndp-param-value" id="ndp-global-n1k-limit-val">60.0%</span>
-                    </div>
-                    <input type="range" class="ndp-range" id="ndp-global-n1k-limit"
-                      data-param="max_n1k_deploy_limit"
-                      min="0.1" max="120" step="0.1" value="60.0">
-                    <div class="ndp-range-labels">
-                      <span>0.1%</span>
-                      <span>120%</span>
-                    </div>
-                  </div>
-                </div>
                 <div class="ndp-adjust-param-row" id="ndp-adjust-param-row">
                   <!-- 动态生成：slider 或 toggle -->
                 </div>

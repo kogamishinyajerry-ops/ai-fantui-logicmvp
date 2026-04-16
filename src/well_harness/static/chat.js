@@ -953,13 +953,19 @@ function _applySuggestedOverrides(overrides) {
     }
 
     if (merged.sw1 === undefined && typeof payload.tra_deg === 'number') {
-      merged.sw1 = payload.tra_deg <= -14.0;
+      merged.sw1 = payload.tra_deg <= -1.4;
     }
     if (merged.sw2 === undefined && typeof merged.sw1 === 'boolean') {
       merged.sw2 = merged.sw1;
     }
     if (merged.deploy_90_percent_vdt === undefined && typeof payload.deploy_position_percent === 'number') {
       merged.deploy_90_percent_vdt = payload.deploy_position_percent >= 90.0;
+    }
+    // Bug fix: deploy_position_percent lives in hud, not in truth_evaluation.componentValues.
+    // Without this, the VDT slider always resets to min (0) after Apply because
+    // truth_evaluation.asserted_component_values is never populated by the backend.
+    if (merged.deploy_position_percent === undefined && payload.hud && typeof payload.hud.deploy_position_percent === 'number') {
+      merged.deploy_position_percent = payload.hud.deploy_position_percent;
     }
 
     return merged;
@@ -1348,6 +1354,19 @@ function _applySuggestedOverrides(overrides) {
         } else {
           setNodeState(nodeId, 'inactive');
         }
+        continue;
+      }
+
+      // Handle sw1/sw2 nodes: check activeLogicMap before falling through to componentValues
+      if (nodeId === 'sw1' || nodeId === 'sw2') {
+        if (activeLogicMap[nodeId]) {
+          setNodeState(nodeId, 'active');
+        } else if (failedByNodeId[nodeId] && failedByNodeId[nodeId].length > 0) {
+          setNodeState(nodeId, 'blocked');
+        } else {
+          setNodeState(nodeId, 'inactive');
+        }
+        explicitlySetCommandNodes[nodeId] = true;
         continue;
       }
 
@@ -2079,7 +2098,6 @@ function _applySuggestedOverrides(overrides) {
     stage.classList.add('panel-open');
     panel.hidden = false;
     renderDetailPanelContent(nodeId);
-    initGlobalParams();
   }
 
   function hideDetailPanel() {
@@ -2204,6 +2222,8 @@ function _applySuggestedOverrides(overrides) {
         adjustParamRow.innerHTML = '';
 
         var currentVal = null;
+        // Also support nodes that exist before any snapshot is loaded
+        var defaultPayload = buildDefaultLeverPayload('', currentSystem);
         if (lastTruthSnapshot) {
           // Use mergePayloadSignals (same logic as applySnapshotToCanvas) so we read
           // from the request payload's current values rather than a non-existent
@@ -2222,6 +2242,14 @@ function _applySuggestedOverrides(overrides) {
             currentVal = parseFloat(comp[valueKey]);
           } else {
             currentVal = comp[valueKey];
+          }
+        } else {
+          // Before first snapshot: read defaults from buildDefaultLeverPayload
+          if (cfg.type === 'float') {
+            currentVal = parseFloat(defaultPayload[cfg.key]);
+            if (isNaN(currentVal)) currentVal = cfg.min;
+          } else if (cfg.type === 'bool') {
+            currentVal = !!defaultPayload[cfg.key];
           }
         }
 
@@ -2243,9 +2271,20 @@ function _applySuggestedOverrides(overrides) {
           if (isNaN(currentVal)) currentVal = cfg.min;
           var sliderId = 'ndp-slider-' + nodeId;
           var displayVal = (cfg.step < 1) ? currentVal.toFixed(1) : currentVal;
+          var effectiveMin = cfg.min;
+          var lockHint = '';
+          // For TRA slider: respect backend tra_lock constraint (allowed_reverse_min_deg).
+          // When locked, TRA cannot go below allowed_reverse_min_deg until L4 activates.
+          if (nodeId === 'tra_deg' && lastTruthSnapshot && lastTruthSnapshot.tra_lock) {
+            var traLock = lastTruthSnapshot.tra_lock;
+            if (traLock.locked) {
+              effectiveMin = traLock.allowed_reverse_min_deg;
+              lockHint = '<span class="ndp-param-hint" style="color:var(--warning)">🔒 L4 未满足，TRA 最低只能到 ' + effectiveMin.toFixed(1) + '°；需先满足 L4 条件</span>';
+            }
+          }
           var hintHtml = cfg.key === 'deploy_position_percent'
             ? '<span class="ndp-param-hint">auto_scrubber 由 plant 物理仿真驱动；manual_feedback_override 可快速推到 90%</span>'
-            : '';
+            : (lockHint || '');
           var row = document.createElement('div');
           row.className = 'ndp-param-slider';
           row.innerHTML =
@@ -2258,10 +2297,10 @@ function _applySuggestedOverrides(overrides) {
             '</div>' +
             '<input type="range" class="ndp-range" id="' + sliderId + '" ' +
               'data-param="' + cfg.key + '" ' +
-              'min="' + cfg.min + '" max="' + cfg.max + '" step="' + cfg.step + '" ' +
+              'min="' + effectiveMin + '" max="' + cfg.max + '" step="' + cfg.step + '" ' +
               'value="' + currentVal + '">' +
             '<div class="ndp-range-labels">' +
-              '<span>' + cfg.min + (cfg.unit ? cfg.unit : '') + '</span>' +
+              '<span>' + effectiveMin + (cfg.unit ? cfg.unit : '') + '</span>' +
               '<span>' + cfg.max + (cfg.unit ? cfg.unit : '') + '</span>' +
             '</div>';
           adjustParamRow.appendChild(row);
@@ -2286,19 +2325,18 @@ function _applySuggestedOverrides(overrides) {
   function refreshDetailPanel() {
     if (currentDetailNodeId) {
       renderDetailPanelContent(currentDetailNodeId);
-      initGlobalParams();
     }
   }
 
-  // ── Global (always-visible) parameter controls ────────────────────────────
-  function initGlobalParams() {
+  // ── Canvas Global Controls (always-visible floating widget) ─────────────
+  function initCanvasGlobalControls() {
     var payload = lastTruthPayloadBySystem[currentSystem] || {};
     var extracted = lastTruthSnapshot ? extractEvaluation(lastTruthSnapshot) : { componentValues: {} };
     var comp = mergePayloadSignals(extracted.componentValues, payload);
 
     // feedback_mode: top-level string in payload
     var fbMode = payload.feedback_mode || 'auto_scrubber';
-    var fbSelect = document.getElementById('ndp-feedback-mode');
+    var fbSelect = document.getElementById('cgc-feedback-mode');
     if (fbSelect) {
       fbSelect.value = fbMode;
     }
@@ -2309,8 +2347,8 @@ function _applySuggestedOverrides(overrides) {
       : (payload.max_n1k_deploy_limit !== undefined ? parseFloat(payload.max_n1k_deploy_limit) : 60.0);
     if (isNaN(n1kLimit)) n1kLimit = 60.0;
 
-    var n1kSlider = document.getElementById('ndp-global-n1k-limit');
-    var n1kVal = document.getElementById('ndp-global-n1k-limit-val');
+    var n1kSlider = document.getElementById('cgc-n1k-limit');
+    var n1kVal = document.getElementById('cgc-n1k-limit-val');
     if (n1kSlider) {
       n1kSlider.value = n1kLimit;
     }
@@ -2318,13 +2356,11 @@ function _applySuggestedOverrides(overrides) {
       n1kVal.textContent = n1kLimit.toFixed(1) + '%';
     }
 
-    // Live value update for the global N1K limit slider
-    var globalN1kSlider = document.getElementById('ndp-global-n1k-limit');
-    var globalN1kVal = document.getElementById('ndp-global-n1k-limit-val');
-    if (globalN1kSlider && globalN1kVal) {
-      globalN1kSlider.oninput = function() {
+    // Live value update for the N1K limit slider
+    if (n1kSlider && n1kVal) {
+      n1kSlider.oninput = function() {
         var v = parseFloat(this.value);
-        globalN1kVal.textContent = v.toFixed(1) + '%';
+        n1kVal.textContent = v.toFixed(1) + '%';
       };
     }
   }
@@ -2364,6 +2400,10 @@ function _applySuggestedOverrides(overrides) {
     if (ndpClose) {
       ndpClose.addEventListener('click', hideDetailPanel);
     }
+
+    // ── Canvas Global Controls init (always-visible floating widget) ────
+    initCanvasGlobalControls();
+
     if (panel) {
       panel.addEventListener('click', function(e) {
         if (e.target === panel) hideDetailPanel();
@@ -2392,11 +2432,17 @@ function _applySuggestedOverrides(overrides) {
           var param = toggle.closest('.ndp-toggle-switch').getAttribute('data-param');
           if (param) overrides[param] = toggle.checked;
         });
-        // Collect feedback_mode dropdown
-        document.querySelectorAll('select.ndp-mode-select').forEach(function(select) {
-          var param = select.getAttribute('data-param');
-          if (param) overrides[param] = select.value;
-        });
+        // feedback_mode and max_n1k_deploy_limit are now in canvas-global-controls
+        var fbSelect = document.getElementById('cgc-feedback-mode');
+        if (fbSelect) {
+          var param = fbSelect.getAttribute('data-param');
+          if (param) overrides[param] = fbSelect.value;
+        }
+        var n1kSlider = document.getElementById('cgc-n1k-limit');
+        if (n1kSlider) {
+          var param = n1kSlider.getAttribute('data-param');
+          if (param) overrides[param] = parseFloat(n1kSlider.value);
+        }
 
         if (Object.keys(overrides).length === 0) {
           addMessage('ai', '⚠️ 未检测到任何参数变化');

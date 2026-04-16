@@ -2270,12 +2270,10 @@ def _simulate_lever_state(
     assert snapshot is not None
 
     if feedback_mode == "manual_feedback_override":
-        # Respect causal chain: deploy_position_percent feedback is only valid when L3
-        # (pdu_motor_cmd) is active. In manual override mode the user drives the physical
-        # lever, but the VDT90 sensor still only reads real travel — which only exists if
-        # the PDU motor was actually commanded by L3 (physical因果链: L3 → pdu_motor_cmd →
-        # deploy_position_percent ≥ 90% → VDT90 → L4).
-        deploy_position = deploy_position_percent if outputs.pdu_motor_cmd else 0.0
+        # In manual override mode the user directly drives the physical lever position.
+        # deploy_position_percent is the target position set by the user — no longer
+        # gated by pdu_motor_cmd, allowing VDT to be forced independently.
+        deploy_position = deploy_position_percent
         manual_plant_state = PlantState(
             tls_powered_s=snapshot["plant_state"].tls_powered_s,
             pls_powered_s=snapshot["plant_state"].pls_powered_s,
