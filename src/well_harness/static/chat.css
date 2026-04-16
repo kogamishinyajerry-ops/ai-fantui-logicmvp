@@ -2,21 +2,21 @@
   --bg-base: #08090a;
   --bg-surface: #0f1114;
   --bg-elevated: #161920;
-  --accent: #4a90d9;
-  --success: #2dd4a0;
+  --accent: #67e8f9;
+  --success: #71f6b3;
   --danger: #e05252;
-  --warning: #d4a32d;
-  --text-main: #d4d7de;
+  --warning: #ffbd59;
+  --text-main: #e6eef6;
   --text-primary: var(--text-main);
-  --text-muted: #8891a0;
-  --text-dim: #4a5060;
+  --text-muted: #93a8b8;
+  --text-dim: #4a5568;
   --text-secondary: var(--text-muted);
-  --status-active: #2dd4a0;
+  --status-active: #71f6b3;
   --status-blocked: #e05252;
   --status-inactive: #3a3f4a;
   --border-soft: rgba(255, 255, 255, 0.06);
-  --border-strong: rgba(74, 144, 217, 0.4);
-  --surface-glow: rgba(74, 144, 217, 0.12);
+  --border-strong: rgba(103, 232, 249, 0.34);
+  --surface-glow: rgba(103, 232, 249, 0.12);
   --shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.65);
   --shadow-md: 0 16px 40px rgba(0, 0, 0, 0.45);
   --drawer-width: min(35vw, 540px);
@@ -82,7 +82,7 @@ body {
   background:
     radial-gradient(circle at 18% 0%, rgba(40, 244, 255, 0.16), transparent 30rem),
     radial-gradient(circle at 100% 12%, rgba(34, 197, 94, 0.1), transparent 28rem),
-    radial-gradient(circle at 72% 100%, rgba(239, 68, 68, 0.08), transparent 26rem),
+    radial-gradient(circle at 72% 100%, rgba(239, 68, 68, 0.056), transparent 26rem),
     linear-gradient(180deg, #0f1013 0%, var(--bg-base) 34%, #070708 100%);
 }
 
@@ -346,15 +346,9 @@ body.drawer-open .stage-shell {
 }
 
 .canvas-stage::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-  background-size: 36px 36px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.6), transparent 100%);
+  /* Hidden: grid moved into SVG <defs><pattern> so it scales with zoom.
+     Re-enable here only if you want a double-grid effect. */
+  display: none;
 }
 
 .canvas-map {
@@ -689,7 +683,7 @@ body.drawer-open .stage-shell {
 }
 
 .section-label {
-  fill: rgba(103, 232, 249, 0.6);
+  fill: rgba(103, 232, 249, 0.85);
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.08em;
@@ -698,6 +692,10 @@ body.drawer-open .stage-shell {
   stroke: rgba(4, 8, 12, 0.9);
   stroke-width: 1.5px;
   stroke-linejoin: round;
+}
+
+.topology-grid {
+  pointer-events: none;
 }
 
 .truth-eval-bar {

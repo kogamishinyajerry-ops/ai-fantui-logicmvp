@@ -77,7 +77,17 @@
                 <symbol id="and-gate" viewBox="0 0 40 30">
                   <polygon points="0,0 25,15 0,30" fill="none" stroke="currentColor" stroke-width="1.5"/>
                 </symbol>
+                <!-- SVG-native grid: scales with zoom so reference lines stay aligned to nodes -->
+                <pattern id="grid-minor" width="36" height="36" patternUnits="userSpaceOnUse">
+                  <path d="M36 0H0V36" fill="none" stroke="rgba(148,163,184,0.05)" stroke-width="1"/>
+                </pattern>
+                <pattern id="grid-major" width="108" height="108" patternUnits="userSpaceOnUse">
+                  <rect width="108" height="108" fill="url(#grid-minor)"/>
+                  <path d="M108 0H0V108" fill="none" stroke="rgba(103,232,249,0.08)" stroke-width="1"/>
+                </pattern>
               </defs>
+              <!-- Grid background: placed first so all nodes/lines render on top -->
+              <rect x="0" y="0" width="900" height="480" class="topology-grid" fill="url(#grid-major)"/>
 
               <rect x="10" y="18" width="72" height="30" rx="6" class="chain-node-svg input-node-svg" data-node="radio_altitude_ft"/>
               <text x="46" y="28" class="chain-node-label" text-anchor="middle" data-tooltip="无线电高度（Radio Altitude），单位 ft">RA</text>
