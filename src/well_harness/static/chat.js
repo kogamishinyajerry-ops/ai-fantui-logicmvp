@@ -931,6 +931,7 @@ function _applySuggestedOverrides(overrides) {
       'sw1',
       'sw2',
       'deploy_90_percent_vdt',
+      'max_n1k_deploy_limit',
     ];
     var i;
 
@@ -2078,6 +2079,7 @@ function _applySuggestedOverrides(overrides) {
     stage.classList.add('panel-open');
     panel.hidden = false;
     renderDetailPanelContent(nodeId);
+    initGlobalParams();
   }
 
   function hideDetailPanel() {
@@ -2183,7 +2185,7 @@ function _applySuggestedOverrides(overrides) {
       // Node IDs that map to an adjustable lever parameter
       var ADJUSTABLE_NODES = {
         radio_altitude_ft: { type: 'float', label: '无线电高度', unit: 'ft',
-          min: 0, max: 50, step: 1, key: 'radio_altitude_ft' },
+          min: 0, max: 20, step: 1, key: 'radio_altitude_ft' },
         engine_running:     { type: 'bool', label: '发动机运转', unit: null, key: 'engine_running' },
         aircraft_on_ground: { type: 'bool', label: '飞机在地面', unit: null, key: 'aircraft_on_ground' },
         reverser_inhibited: { type: 'bool', label: '反推抑制', unit: null, key: 'reverser_inhibited' },
@@ -2191,14 +2193,14 @@ function _applySuggestedOverrides(overrides) {
         n1k:                { type: 'float', label: 'N1 转速', unit: '%',
           min: 0, max: 120, step: 1, key: 'n1k' },
         tra_deg:            { type: 'float', label: 'TRA 角度', unit: '°',
-          min: -14, max: 0, step: 0.1, key: 'tra_deg' },
+          min: -32, max: 0, step: 0.1, key: 'tra_deg' },
         vdt90:               { type: 'float', label: 'VDT 部署位置', unit: '%',
           min: 0, max: 100, step: 1, key: 'deploy_position_percent' },
       };
 
       var cfg = ADJUSTABLE_NODES[nodeId];
+      adjustSection.hidden = false;
       if (cfg) {
-        adjustSection.hidden = false;
         adjustParamRow.innerHTML = '';
 
         var currentVal = null;
@@ -2275,7 +2277,7 @@ function _applySuggestedOverrides(overrides) {
           }
         }
       } else {
-        adjustSection.hidden = true;
+        // No node-specific param — but keep section visible for global params
         adjustParamRow.innerHTML = '';
       }
     }
@@ -2284,6 +2286,46 @@ function _applySuggestedOverrides(overrides) {
   function refreshDetailPanel() {
     if (currentDetailNodeId) {
       renderDetailPanelContent(currentDetailNodeId);
+      initGlobalParams();
+    }
+  }
+
+  // ── Global (always-visible) parameter controls ────────────────────────────
+  function initGlobalParams() {
+    var payload = lastTruthPayloadBySystem[currentSystem] || {};
+    var extracted = lastTruthSnapshot ? extractEvaluation(lastTruthSnapshot) : { componentValues: {} };
+    var comp = mergePayloadSignals(extracted.componentValues, payload);
+
+    // feedback_mode: top-level string in payload
+    var fbMode = payload.feedback_mode || 'auto_scrubber';
+    var fbSelect = document.getElementById('ndp-feedback-mode');
+    if (fbSelect) {
+      fbSelect.value = fbMode;
+    }
+
+    // max_n1k_deploy_limit: fallback to payload root
+    var n1kLimit = (comp.max_n1k_deploy_limit !== undefined)
+      ? parseFloat(comp.max_n1k_deploy_limit)
+      : (payload.max_n1k_deploy_limit !== undefined ? parseFloat(payload.max_n1k_deploy_limit) : 60.0);
+    if (isNaN(n1kLimit)) n1kLimit = 60.0;
+
+    var n1kSlider = document.getElementById('ndp-global-n1k-limit');
+    var n1kVal = document.getElementById('ndp-global-n1k-limit-val');
+    if (n1kSlider) {
+      n1kSlider.value = n1kLimit;
+    }
+    if (n1kVal) {
+      n1kVal.textContent = n1kLimit.toFixed(1) + '%';
+    }
+
+    // Live value update for the global N1K limit slider
+    var globalN1kSlider = document.getElementById('ndp-global-n1k-limit');
+    var globalN1kVal = document.getElementById('ndp-global-n1k-limit-val');
+    if (globalN1kSlider && globalN1kVal) {
+      globalN1kSlider.oninput = function() {
+        var v = parseFloat(this.value);
+        globalN1kVal.textContent = v.toFixed(1) + '%';
+      };
     }
   }
 
@@ -2349,6 +2391,11 @@ function _applySuggestedOverrides(overrides) {
         document.querySelectorAll('.ndp-toggle-switch .ndp-toggle-input').forEach(function(toggle) {
           var param = toggle.closest('.ndp-toggle-switch').getAttribute('data-param');
           if (param) overrides[param] = toggle.checked;
+        });
+        // Collect feedback_mode dropdown
+        document.querySelectorAll('select.ndp-mode-select').forEach(function(select) {
+          var param = select.getAttribute('data-param');
+          if (param) overrides[param] = select.value;
         });
 
         if (Object.keys(overrides).length === 0) {
