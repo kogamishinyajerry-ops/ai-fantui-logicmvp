@@ -1877,13 +1877,13 @@ function clearAiHighlights() {
       stage.addEventListener('click', function(e) {
         if (wasPanning) { wasPanning = false; return; }
         var nodeEl = e.target.closest('[data-node]');
-    // fault UI removed
-          var nodeId = nodeEl.getAttribute('data-node');
-          if (currentDetailNodeId === nodeId) {
-            hideDetailPanel();
-          } else {
-            showDetailPanel(nodeId);
-          }
+        if (!nodeEl) return;
+        // fault UI removed
+        var nodeId = nodeEl.getAttribute('data-node');
+        if (currentDetailNodeId === nodeId) {
+          hideDetailPanel();
+        } else {
+          showDetailPanel(nodeId);
         }
       });
     }
