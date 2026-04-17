@@ -2548,6 +2548,79 @@ function isGeneralQuestion(qText, qLower) {
     }
   }
 
+  // ── P19.12: Analysis → chat message helpers ───────────────────────────────
+
+  function renderDiagnosisChatMessage(data) {
+    var lines = [];
+    lines.push('目标结果: ' + data.outcome);
+    lines.push('满足组合数: ' + data.total_combos_found + ' / ' + data.grid_resolution + '-step grid');
+    lines.push('时间戳: ' + data.timestamp);
+    if (data.results && data.results.length > 0) {
+      lines.push('');
+      lines.push('前 ' + Math.min(3, data.results.length) + ' 个示例组合:');
+      data.results.slice(0, 3).forEach(function(r, i) {
+        lines.push(
+          '  [' + (i + 1) + '] RA=' + r.radio_altitude_ft.toFixed(1) +
+          'ft  TRA=' + r.tra_deg.toFixed(2) + '\u00b0' +
+          '  SW1=' + r.sw1_closed +
+          '  SW2=' + r.sw2_closed +
+          '  VDT=' + r.vdt_percent.toFixed(0) + '%'
+        );
+      });
+    }
+    return lines.join('\n');
+  }
+
+  function renderMonteCarloChatMessage(data) {
+    var rate = (data.success_rate * 100).toFixed(1);
+    var lines = [];
+    lines.push('仿真次数: ' + data.n_trials + (data.seed !== null ? '  seed=' + data.seed : '  (random)'));
+    lines.push('成功率: ' + rate + '%');
+    lines.push('MTBF: ' + data.mtbf_cycles.toFixed(1) + ' cycles');
+    lines.push('');
+    lines.push('故障模式:');
+    lines.push('  SW1 missed: ' + (data.failure_modes.sw1_missed || 0));
+    lines.push('  SW2 missed: ' + (data.failure_modes.sw2_missed || 0));
+    lines.push('  TRA stall: ' + (data.failure_modes.tra_stall || 0));
+    lines.push('  RA sensor: ' + (data.failure_modes.ra_sensor_failure || 0));
+    lines.push('');
+    lines.push('平均开关窗口通过次数:');
+    lines.push('  SW1: ' + data.sw1_window_crossings_mean.toFixed(2));
+    lines.push('  SW2: ' + data.sw2_window_crossings_mean.toFixed(2));
+    return lines.join('\n');
+  }
+
+  function postAnalysisToChat(type, header, bodyText) {
+    var messagesDiv = document.getElementById('chat-messages');
+    if (!messagesDiv) return;
+
+    var article = document.createElement('article');
+    article.className = 'chat-message chat-message-ai chat-message-analysis';
+
+    var avatar = document.createElement('div');
+    avatar.className = 'chat-message-avatar';
+    avatar.textContent = type === 'diagnosis' ? '\ud83d\udd2b' : '\ud83c\udfb2';
+
+    var content = document.createElement('div');
+    content.className = 'chat-message-content';
+
+    var hdr = document.createElement('div');
+    hdr.className = 'msg-analysis-header ' + type;
+    hdr.textContent = header;
+
+    var body = document.createElement('p');
+    body.className = 'msg-analysis-body';
+    body.textContent = bodyText;
+
+    content.appendChild(hdr);
+    content.appendChild(body);
+    article.appendChild(avatar);
+    article.appendChild(content);
+    messagesDiv.appendChild(article);
+
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
   function runDiagnosis() {
     var outcome = document.getElementById('diag-outcome-select').value;
     var maxResults = parseInt(document.getElementById('diag-max-results').value, 10) || 20;
@@ -2566,23 +2639,9 @@ function isGeneralQuestion(qText, qLower) {
           resultDiv.textContent = '错误: ' + data.error;
           return;
         }
-        var lines = [
-          '目标结果: ' + data.outcome,
-          '满足组合数: ' + data.total_combos_found + ' / ' + data.grid_resolution + '-step grid',
-          '时间戳: ' + data.timestamp,
-          '',
-          '前 3 个示例组合:',
-        ];
-        data.results.slice(0, 3).forEach(function(r, i) {
-          lines.push(
-            '  [' + (i + 1) + '] RA=' + r.radio_altitude_ft.toFixed(1) +
-            'ft  TRA=' + r.tra_deg.toFixed(2) + '\u00b0' +
-            '  SW1=' + r.sw1_closed +
-            '  SW2=' + r.sw2_closed +
-            '  VDT=' + r.vdt_percent.toFixed(0) + '%'
-          );
-        });
-        resultDiv.textContent = lines.join('\n');
+        var text = renderDiagnosisChatMessage(data);
+        resultDiv.textContent = text;
+        postAnalysisToChat('diagnosis', '\u269b\ufe0f 逆向诊断分析', text);
       })
       .catch(function(err) {
         resultDiv.textContent = '请求失败: ' + err.message;
@@ -2611,23 +2670,9 @@ function isGeneralQuestion(qText, qLower) {
           resultDiv.textContent = '错误: ' + data.error;
           return;
         }
-        var rate = (data.success_rate * 100).toFixed(1);
-        var lines = [
-          '仿真次数: ' + data.n_trials + (data.seed !== null ? '  seed=' + data.seed : '  (random)'),
-          '成功率: ' + rate + '%',
-          'MTBF: ' + data.mtbf_cycles.toFixed(1) + ' cycles',
-          '',
-          '故障模式:',
-          '  SW1 missed: ' + (data.failure_modes.sw1_missed || 0),
-          '  SW2 missed: ' + (data.failure_modes.sw2_missed || 0),
-          '  TRA stall: ' + (data.failure_modes.tra_stall || 0),
-          '  RA sensor: ' + (data.failure_modes.ra_sensor_failure || 0),
-          '',
-          '平均开关窗口通过次数:',
-          '  SW1: ' + data.sw1_window_crossings_mean.toFixed(2),
-          '  SW2: ' + data.sw2_window_crossings_mean.toFixed(2),
-        ];
-        resultDiv.textContent = lines.join('\n');
+        var text = renderMonteCarloChatMessage(data);
+        resultDiv.textContent = text;
+        postAnalysisToChat('monte-carlo', '\ud83c\udfb2 可靠性仿真', text);
       })
       .catch(function(err) {
         resultDiv.textContent = '请求失败: ' + err.message;
