@@ -6,7 +6,7 @@ status: Milestone complete
 last_updated: "2026-04-17T12:00:00.000Z"
 last_activity: 2026-04-17
 progress:
-  total_phases: 22
+  total_phases: 23
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -79,6 +79,10 @@ P19.3 Executed: Reverse diagnosis engine
 - Added "🔍 敏感性分析" button + #sensitivity-panel with 20-call sweep (5 RA × 4 outcomes)
 - Added openSensitivityPanel() + runSensitivitySweep() + renderSensitivityTableText() to chat.js
 - Results posted to chat history as amber-styled AI message
+- All 619 tests continue to pass (no regression)
+- P19.14 Executed: Multi-System Analysis Selector
+- Added analysis-system-select dropdown to each of 4 panel headers (thrust-reverser/landing-gear/bleed-air)
+- Added getSelectedAnalysisSystem() helper + pass system_id in all API calls
 - All 619 tests continue to pass (no regression)
 - All P0-P18.5 phases complete. Opus 4.6 final adjudication: Approved, Project Freeze.
 - Regression baseline: 561 tests, 24-command suite. GSD automation continues to protect regression.
