@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Milestone complete
-last_updated: "2026-04-16T08:00:00.000Z"
-last_activity: 2026-04-16
+last_updated: "2026-04-17T12:00:00.000Z"
+last_activity: 2026-04-17
 progress:
   total_phases: 18
   completed_phases: 0
@@ -18,9 +18,15 @@ Last activity: 2026-04-17
 
 ## Current Position
 
-**Project Freeze — All P0-P18.5 Complete (2026-04-17)**
+**Partial Unfreeze — P19 Active (2026-04-17)**
 
-Phase: P18.6 — Archive Integrity Checksums (PR ready)
+Phase: P19 — Hardware YAML Schema + Simulation Parameters
+
+P19.1 Executed: hardware YAML schema + loader for thrust-reverser parameters
+- 4 files created: hardware_schema_v1.schema.json, thrust_reverser_hardware_v1.yaml, hardware_schema.py, test_hardware_schema.py
+- 17 new tests (all passing)
+- Regression: 578 passed (561 original + 17 new), 1 skipped
+- controller.py unchanged, freeze-compliant
 - All P0-P18.5 phases complete. Opus 4.6 final adjudication: Approved, Project Freeze.
 - Regression baseline: 561 tests, 24-command suite. GSD automation continues to protect regression.
 - P18.5 merged (canvas interaction fix): fault injection UI removed, hover scale disabled, hit-box pointer-events fixed.
