@@ -22,114 +22,13 @@
   var truthEvalSummary = document.getElementById('truth-eval-summary');
   var truthEvalActive = document.getElementById('truth-eval-active');
   var truthEvalBlockers = document.getElementById('truth-eval-blockers');
-  var faultBar = document.getElementById('chat-fault-bar');
-  var faultPills = document.getElementById('chat-fault-pills');
-  var faultPresetsBtn = document.getElementById('chat-fault-presets');
-  var faultClearBtn = document.getElementById('chat-fault-clear');
-  var faultToggleBtn = document.getElementById('chat-fault-toggle');
-  var faultPresetsMenu = document.getElementById('chat-fault-presets-menu');
-  var logicDiagram = document.getElementById('logic-diagram');
-  var canvasStage = document.querySelector('.canvas-stage');
-  var nodeFaultBtn = document.getElementById('node-fault-btn');
-  var nodeFaultMenu = document.getElementById('node-fault-menu');
   var canvasTitle = logicDiagram ? logicDiagram.querySelector('h1') : null;
   var DEFAULT_INPUT_PLACEHOLDER = '输入你的控制逻辑问题...';
   var DEFAULT_SEND_TEXT = '发送';
   var LOADING_SEND_TEXT = 'AI 思考中...';
-  var FAULT_REEVAL_TEXT = '故障重评估中...';
   var lastTruthPayloadBySystem = {};
   var _chatRequestSeq = 0;
   var nodeRefHighlightTimer = null;
-  var activeFaults = new Map();
-  var isFaultBarExpanded = false;
-  var hoveredFaultNodeId = null;
-  var currentFaultMenuNodeId = null;
-  var faultUiBusy = false;
-
-  /* ── Zoom & Pan State ── */
-  var currentZoom = 1.0;
-  var panX = 0;
-  var panY = 0;
-  var isPanning = false;
-  var wasPanning = false;
-  var panStartX = 0;
-  var panStartY = 0;
-  var zoomContainer = null;
-  var zoomLevelEl = null;
-
-  /* ── Node Detail Panel State ── */
-  var lastTruthSnapshot = null;  // last lever-snapshot data for node conditions
-  var currentDetailNodeId = null;
-
-  var SYSTEM_LABELS = {
-    'thrust-reverser': '反推系统',
-    'landing-gear': '起落架系统',
-    'bleed-air': '引气阀系统',
-    efds: '干扰弹系统',
-  };
-
-  var FAULT_TYPES = {
-    stuck_off: { label: '卡关(OFF)', icon: '⚡', nodes: ['sw1', 'sw2'] },
-    stuck_on: { label: '卡开(ON)', icon: '⚡', nodes: ['sw1', 'sw2'] },
-    sensor_zero: { label: '传感器失效', icon: '⚡', nodes: ['tls115', 'radio_altitude_ft'] },
-    logic_stuck_false: { label: '逻辑卡死', icon: '⚡', nodes: ['logic1', 'logic2', 'logic3', 'logic4'] },
-    cmd_blocked: { label: '命令阻塞', icon: '⚡', nodes: ['thr_lock', 'vdt90'] },
-  };
-
-  var FAULT_PRESETS = [
-    {
-      id: 'sw2-stuck-off',
-      label: 'SW2 卡关',
-      faults: [{ nodeId: 'sw2', faultType: 'stuck_off' }],
-    },
-    {
-      id: 'tls-sensor-zero',
-      label: 'TLS 失效',
-      faults: [{ nodeId: 'tls115', faultType: 'sensor_zero' }],
-    },
-    {
-      id: 'full-chain-break',
-      label: '全链路断裂',
-      faults: [
-        { nodeId: 'sw1', faultType: 'stuck_off' },
-        { nodeId: 'sw2', faultType: 'stuck_off' },
-      ],
-    },
-  ];
-
-  var FAULT_NODE_LABELS = {
-    radio_altitude_ft: 'RA',
-    sw1: 'SW1',
-    sw2: 'SW2',
-    tls115: 'TLS',
-    logic1: 'L1',
-    logic2: 'L2',
-    logic3: 'L3',
-    logic4: 'L4',
-    vdt90: 'VDT90',
-    thr_lock: 'THR_LOCK',
-  };
-
-  var NODE_VALUE_KEYS = {
-    tls115: 'tls_115vac_cmd',
-    etrac_540v: 'etrac_540vdc_cmd',
-    eec_deploy: 'eec_deploy_cmd',
-    pls_power: 'pls_power_cmd',
-    pdu_motor: 'pdu_motor_cmd',
-    vdt90: 'deploy_position_percent',
-    thr_lock: 'throttle_electronic_lock_release_cmd',
-  };
-
-  var FAILED_CONDITION_NODE_MAP = {
-    radio_altitude_ft: 'radio_altitude_ft',
-    sw1: 'sw1',
-    reverser_inhibited: 'reverser_inhibited',
-    engine_running: 'engine_running',
-    aircraft_on_ground: 'aircraft_on_ground',
-    sw2: 'sw2',
-    eec_enable: 'eec_enable',
-    n1k: 'n1k',
-    tra_deg: 'tra_deg',
     deploy_90_percent_vdt: 'vdt90',
     // Truth-only condition aliases (from controller.py ground truth)
     tls_unlocked: 'tls_unlocked',
@@ -384,173 +283,16 @@
     };
   }
 
-  function isFaultUiEnabled() {
-    return currentSystem === 'thrust-reverser';
-  }
 
   function getCurrentTopologyElement() {
     return document.getElementById('chain-topology-' + currentSystem);
   }
 
-  function getFaultTypeOptionsForNode(nodeId) {
-    var normalizedNodeId = normalizeNodeId(nodeId);
-    var options = [];
-    var faultType;
-    var def;
 
-    if (!normalizedNodeId) {
-      return options;
-    }
 
-    for (faultType in FAULT_TYPES) {
-      if (!Object.prototype.hasOwnProperty.call(FAULT_TYPES, faultType)) {
-        continue;
-      }
-      def = FAULT_TYPES[faultType];
-      if (def.nodes.indexOf(normalizedNodeId) !== -1) {
-        options.push(faultType);
-      }
-    }
 
-    return options;
-  }
 
-  function getFaultNodeLabel(nodeId) {
-    var normalizedNodeId = normalizeNodeId(nodeId);
 
-    if (!normalizedNodeId) {
-      return String(nodeId || '');
-    }
-
-    return FAULT_NODE_LABELS[normalizedNodeId] || normalizedNodeId.toUpperCase();
-  }
-
-  function getFaultDisplayLabel(nodeId, faultType) {
-    var faultDef = FAULT_TYPES[faultType];
-    return getFaultNodeLabel(nodeId) + ' · ' + (faultDef ? faultDef.label : faultType);
-  }
-
-  function serializeActiveFaults() {
-    var serialized = [];
-
-    activeFaults.forEach(function(faultType, nodeId) {
-      var faultDef = FAULT_TYPES[faultType];
-
-      if (!faultDef) {
-        return;
-      }
-
-      serialized.push({
-        node_id: nodeId,
-        fault_type: faultType,
-        label: faultDef.label,
-        icon: faultDef.icon,
-      });
-    });
-
-    serialized.sort(function(a, b) {
-      return String(a.node_id).localeCompare(String(b.node_id));
-    });
-    return serialized;
-  }
-
-  function buildFaultAwareLeverPayload(payload) {
-    var nextPayload = copyObject(payload || buildDefaultLeverPayload('', 'thrust-reverser'));
-    var serializedFaults = serializeActiveFaults();
-    var nodeFaultMap = {};
-    var i;
-
-    delete nextPayload.fault_injections;
-    delete nextPayload.node_fault_map;
-    delete nextPayload.sw1;
-    delete nextPayload.sw2;
-    delete nextPayload.tls115;
-    delete nextPayload.logic1;
-    delete nextPayload.logic2;
-    delete nextPayload.logic3;
-    delete nextPayload.logic4;
-    delete nextPayload.vdt90;
-    delete nextPayload.thr_lock;
-
-    if (serializedFaults.length === 0) {
-      return nextPayload;
-    }
-
-    for (i = 0; i < serializedFaults.length; i += 1) {
-      nodeFaultMap[serializedFaults[i].node_id] = serializedFaults[i].fault_type;
-    }
-
-    nextPayload.fault_injections = serializedFaults;
-    nextPayload.node_fault_map = nodeFaultMap;
-
-    if (nodeFaultMap.sw1 === 'stuck_off') {
-      nextPayload.sw1 = false;
-    } else if (nodeFaultMap.sw1 === 'stuck_on') {
-      nextPayload.sw1 = true;
-    }
-
-    if (nodeFaultMap.sw2 === 'stuck_off') {
-      nextPayload.sw2 = false;
-    } else if (nodeFaultMap.sw2 === 'stuck_on') {
-      nextPayload.sw2 = true;
-    }
-
-    if (nodeFaultMap.radio_altitude_ft === 'sensor_zero') {
-      nextPayload.radio_altitude_ft = 0.0;
-    }
-
-    if (nodeFaultMap.tls115 === 'sensor_zero') {
-      nextPayload.tls115 = 0.0;
-    }
-
-    if (nodeFaultMap.logic1 === 'logic_stuck_false') {
-      nextPayload.logic1 = false;
-    }
-    if (nodeFaultMap.logic2 === 'logic_stuck_false') {
-      nextPayload.logic2 = false;
-    }
-    if (nodeFaultMap.logic3 === 'logic_stuck_false') {
-      nextPayload.logic3 = false;
-    }
-    if (nodeFaultMap.logic4 === 'logic_stuck_false') {
-      nextPayload.logic4 = false;
-    }
-
-    if (nodeFaultMap.vdt90 === 'cmd_blocked') {
-      nextPayload.vdt90 = false;
-    }
-    if (nodeFaultMap.thr_lock === 'cmd_blocked') {
-      nextPayload.thr_lock = false;
-    }
-
-    return nextPayload;
-  }
-
-  function setFaultUiBusy(loading) {
-    faultUiBusy = !!loading;
-
-    if (faultPresetsBtn) {
-      faultPresetsBtn.disabled = loading;
-    }
-    if (faultClearBtn) {
-      faultClearBtn.disabled = loading || activeFaults.size === 0;
-    }
-    if (faultToggleBtn) {
-      faultToggleBtn.disabled = loading || !isFaultUiEnabled();
-    }
-    if (nodeFaultBtn) {
-      nodeFaultBtn.disabled = loading;
-    }
-
-    if (!sendBtn || sendBtn.disabled) {
-      return;
-    }
-
-    if (chatLoadingStatus) {
-      chatLoadingStatus.textContent = loading ? FAULT_REEVAL_TEXT : '就绪';
-      chatLoadingStatus.classList.toggle('is-loading', loading);
-    }
-  }
 
   function requestJson(url, options) {
     return fetch(url, options).then(function(r) {
@@ -566,7 +308,7 @@
   }
 
   function _sendLeverSnapshot(payload) {
-    var requestPayload = buildFaultAwareLeverPayload(payload);
+    var requestPayload = payload;
 
     return requestJson('/api/lever-snapshot', {
       method: 'POST',
@@ -578,7 +320,7 @@
       lastTruthSnapshot = data;
       applySnapshotToCanvas(data, requestPayload);
       renderTruthEvalFromSnapshot(data, requestPayload);
-      updateChainWithFaults();
+    // fault UI removed
       refreshDetailPanel();
 
       return {
@@ -1557,394 +1299,22 @@ function _applySuggestedOverrides(overrides) {
     menuEl.style.top = nextTop + 'px';
   }
 
-  function hideNodeFaultButton(force) {
-    if (!nodeFaultBtn) {
-      return;
-    }
-
-    if (!force && currentFaultMenuNodeId) {
-      return;
-    }
-
-    hoveredFaultNodeId = null;
-    nodeFaultBtn.hidden = true;
-    nodeFaultBtn.removeAttribute('data-node-id');
-    nodeFaultBtn.classList.remove('is-active');
-  }
-
-  function hideNodeFaultMenu() {
-    currentFaultMenuNodeId = null;
-    if (!nodeFaultMenu) {
-      return;
-    }
-
-    nodeFaultMenu.hidden = true;
-    nodeFaultMenu.innerHTML = '';
-    nodeFaultMenu.removeAttribute('data-node-id');
-  }
-
-  function renderNodeFaultMenu(nodeId) {
-    var normalizedNodeId = normalizeNodeId(nodeId);
-    var options = getFaultTypeOptionsForNode(normalizedNodeId);
-    var selectedFaultType = activeFaults.get(normalizedNodeId);
-    var html = [];
-    var i;
-    var faultType;
-    var faultDef;
-
-    if (!nodeFaultMenu || !normalizedNodeId || options.length === 0) {
-      return;
-    }
-
-    if (selectedFaultType) {
-      html.push(
-        '<button type="button" data-remove-fault="' + normalizedNodeId + '">' +
-        '移除 ' + escHtml(getFaultNodeLabel(normalizedNodeId)) + ' 故障' +
-        '</button>'
-      );
-    }
-
-    for (i = 0; i < options.length; i += 1) {
-      faultType = options[i];
-      faultDef = FAULT_TYPES[faultType];
-      html.push(
-        '<button type="button" ' +
-        'data-node-fault-type="' + faultType + '" ' +
-        'data-node-id="' + normalizedNodeId + '" ' +
-        'class="' + (selectedFaultType === faultType ? 'is-selected' : '') + '">' +
-        escHtml(faultDef.icon + ' ' + faultDef.label) +
-        '</button>'
-      );
-    }
-
-    nodeFaultMenu.innerHTML = html.join('');
-    nodeFaultMenu.setAttribute('data-node-id', normalizedNodeId);
-  }
-
-  function showNodeFaultMenu(nodeId) {
-    var normalizedNodeId = normalizeNodeId(nodeId);
-    var anchor = resolveNodeAnchor(normalizedNodeId);
-
-    if (!nodeFaultMenu || !normalizedNodeId || !anchor) {
-      return;
-    }
-
-    renderNodeFaultMenu(normalizedNodeId);
-    currentFaultMenuNodeId = normalizedNodeId;
-    nodeFaultMenu.hidden = false;
-    positionFloatingMenu(nodeFaultMenu, anchor);
-  }
-
-  function toggleNodeFaultMenu(nodeId) {
-    var normalizedNodeId = normalizeNodeId(nodeId);
-
-    if (!normalizedNodeId) {
-      return;
-    }
-
-    if (currentFaultMenuNodeId === normalizedNodeId && nodeFaultMenu && !nodeFaultMenu.hidden) {
-      hideNodeFaultMenu();
-      hideNodeFaultButton(true);
-      return;
-    }
-
-    showNodeFaultMenu(normalizedNodeId);
-  }
-
-  function handleNodeHover(nodeId, event) {
-    var normalizedNodeId = normalizeNodeId(nodeId);
-    var anchor;
-    var detailPanel = document.getElementById('node-detail-panel');
-
-    // When the detail panel is open, fault injection is handled inside it (not as floating button).
-    if (!isFaultUiEnabled() || !normalizedNodeId || getFaultTypeOptionsForNode(normalizedNodeId).length === 0 ||
-        (detailPanel && !detailPanel.hidden)) {
-      hideNodeFaultButton(true);
-      return;
-    }
-
-    anchor = resolveNodeAnchor(normalizedNodeId, event && event.target);
-    if (!anchor || !nodeFaultBtn) {
-      return;
-    }
-
-    hoveredFaultNodeId = normalizedNodeId;
-    nodeFaultBtn.hidden = false;
-    nodeFaultBtn.setAttribute('data-node-id', normalizedNodeId);
-    nodeFaultBtn.classList.toggle('is-active', activeFaults.has(normalizedNodeId));
-    positionFloatingButton(nodeFaultBtn, anchor);
-  }
-
-  function updateChainWithFaults() {
-    var nodes = document.querySelectorAll('.canvas-wrapper [data-node]');
-    var i;
-
-    for (i = 0; i < nodes.length; i += 1) {
-      nodes[i].classList.remove('is-faulted');
-      nodes[i].removeAttribute('data-fault-type');
-    }
-
-    if (!isFaultUiEnabled()) {
-      if (nodeFaultBtn) {
-        nodeFaultBtn.classList.remove('is-active');
-      }
-      return;
-    }
-
-    activeFaults.forEach(function(faultType, nodeId) {
-      var els = document.querySelectorAll('.canvas-wrapper [data-node="' + nodeId + '"]');
-      var j;
-
-      for (j = 0; j < els.length; j += 1) {
-        els[j].classList.add('is-faulted');
-        els[j].setAttribute('data-fault-type', faultType);
-      }
-    });
-
-    if (nodeFaultBtn && nodeFaultBtn.getAttribute('data-node-id')) {
-      nodeFaultBtn.classList.toggle(
-        'is-active',
-        activeFaults.has(nodeFaultBtn.getAttribute('data-node-id'))
-      );
-    }
-  }
-
-  function faultBarShouldBeVisible() {
-    return isFaultUiEnabled() && (isFaultBarExpanded || activeFaults.size > 0);
-  }
-
-  function renderFaultPresetsMenu() {
-    var html = [];
-    var i;
-    var preset;
-
-    if (!faultPresetsMenu) {
-      return;
-    }
-
-    for (i = 0; i < FAULT_PRESETS.length; i += 1) {
-      preset = FAULT_PRESETS[i];
-      html.push(
-        '<button type="button" data-fault-preset="' + preset.id + '">' +
-        escHtml(preset.label) +
-        '</button>'
-      );
-    }
-
-    faultPresetsMenu.innerHTML = html.join('');
-  }
-
-  function toggleFaultBar(forceExpanded) {
-    if (!isFaultUiEnabled()) {
-      isFaultBarExpanded = false;
-      renderFaultBar();
-      return;
-    }
-
-    if (typeof forceExpanded === 'boolean') {
-      isFaultBarExpanded = forceExpanded;
-    } else {
-      isFaultBarExpanded = !isFaultBarExpanded;
-    }
-
-    renderFaultBar();
-  }
-
-  function renderFaultBar() {
-    var serializedFaults = serializeActiveFaults();
-    var html = [];
-    var i;
-    var faultItem;
-    var isVisible = faultBarShouldBeVisible();
-
-    if (faultBar) {
-      faultBar.hidden = !isVisible;
-    }
-
-    if (faultToggleBtn) {
-      faultToggleBtn.setAttribute('aria-expanded', isVisible ? 'true' : 'false');
-      faultToggleBtn.classList.toggle('has-active-faults', serializedFaults.length > 0);
-      faultToggleBtn.title = isVisible ? '收起故障注入栏' : '展开故障注入栏';
-      faultToggleBtn.setAttribute('aria-label', isVisible ? '收起故障注入栏' : '展开故障注入栏');
-      faultToggleBtn.disabled = faultUiBusy || !isFaultUiEnabled();
-    }
-
-    if (faultPills) {
-      if (serializedFaults.length === 0) {
-        faultPills.innerHTML = '<span class="truth-chip is-muted">未注入故障</span>';
-      } else {
-        for (i = 0; i < serializedFaults.length; i += 1) {
-          faultItem = serializedFaults[i];
-          html.push(
-            '<div class="fault-pill">' +
-            '<span class="fault-pill-label">' +
-            escHtml(getFaultDisplayLabel(faultItem.node_id, faultItem.fault_type)) +
-            '</span>' +
-            '<button type="button" ' +
-            'data-remove-fault="' + faultItem.node_id + '" ' +
-            'aria-label="移除 ' + escHtml(getFaultDisplayLabel(faultItem.node_id, faultItem.fault_type)) + '"' +
-            '>×</button>' +
-            '</div>'
-          );
-        }
-        faultPills.innerHTML = html.join('');
-      }
-    }
-
-    if (faultClearBtn) {
-      faultClearBtn.disabled = faultUiBusy || serializedFaults.length === 0;
-    }
-
-    if (!isVisible && faultPresetsMenu) {
-      faultPresetsMenu.hidden = true;
-      if (faultPresetsBtn) {
-        faultPresetsBtn.setAttribute('aria-expanded', 'false');
-      }
-    }
-  }
-
-  function applyFaultPreset(presetId) {
-    var i;
-    var j;
-    var preset;
-
-    for (i = 0; i < FAULT_PRESETS.length; i += 1) {
-      if (FAULT_PRESETS[i].id === presetId) {
-        preset = FAULT_PRESETS[i];
-        break;
-      }
-    }
-
-    if (!preset) {
-      return;
-    }
-
-    for (j = 0; j < preset.faults.length; j += 1) {
-      activeFaults.set(preset.faults[j].nodeId, preset.faults[j].faultType);
-    }
-
-    renderFaultBar();
-    updateChainWithFaults();
-    faultPresetsMenu.hidden = true;
-    if (faultPresetsBtn) {
-      faultPresetsBtn.setAttribute('aria-expanded', 'false');
-    }
-    triggerFaultReevaluation();
-  }
-
-  function triggerFaultReevaluation() {
-    var basePayload;
-
-    if (!isFaultUiEnabled()) {
-      return Promise.resolve(null);
-    }
-
-    basePayload = copyObject(
-      lastTruthPayloadBySystem['thrust-reverser'] || buildDefaultLeverPayload('故障重评估', 'thrust-reverser')
-    );
-    basePayload.prompt = '故障重评估';
-    basePayload.system_id = 'thrust-reverser';
-
-    setFaultUiBusy(true);
-    return _sendLeverSnapshot(basePayload)
-      .then(function(result) {
-        setFaultUiBusy(false);
-        renderFaultBar();
-        return result;
-      })
-      .catch(function(err) {
-        setFaultUiBusy(false);
-        renderRequestFailure(err);
-        return null;
-      });
-  }
-
-  function injectFault(nodeId) {
-    var normalizedNodeId = normalizeNodeId(nodeId);
-    var faultType = arguments.length > 1 ? arguments[1] : null;
-    var options = getFaultTypeOptionsForNode(normalizedNodeId);
-
-    if (!normalizedNodeId || options.length === 0) {
-      return;
-    }
-
-    if (!faultType) {
-      if (options.length === 1) {
-        faultType = options[0];
-      } else {
-        showNodeFaultMenu(normalizedNodeId);
-        return;
-      }
-    }
-
-    if (options.indexOf(faultType) === -1) {
-      return;
-    }
-
-    activeFaults.set(normalizedNodeId, faultType);
-    hideNodeFaultMenu();
-    renderFaultBar();
-    updateChainWithFaults();
-    triggerFaultReevaluation();
-  }
-
-  function removeFault(nodeId) {
-    var normalizedNodeId = normalizeNodeId(nodeId);
-
-    if (!normalizedNodeId || !activeFaults.has(normalizedNodeId)) {
-      return;
-    }
-
-    activeFaults.delete(normalizedNodeId);
-    if (currentFaultMenuNodeId === normalizedNodeId) {
-      hideNodeFaultMenu();
-    }
-    renderFaultBar();
-    updateChainWithFaults();
-    triggerFaultReevaluation();
-  }
-
-  function clearAllFaults() {
-    if (activeFaults.size === 0) {
-      return;
-    }
-
-    activeFaults.clear();
-    hideNodeFaultMenu();
-    renderFaultBar();
-    updateChainWithFaults();
-    triggerFaultReevaluation();
-  }
-
-  function findFaultTargetFromEvent(target) {
-    var targetEl;
-    var nodeId;
-
-    if (!target || !target.closest || !isFaultUiEnabled()) {
-      return null;
-    }
-
-    targetEl = target.closest('[data-node], [data-node-label]');
-    if (!targetEl || (nodeFaultBtn && nodeFaultBtn.contains(targetEl)) || (nodeFaultMenu && nodeFaultMenu.contains(targetEl))) {
-      return null;
-    }
-
-    if (targetEl.hasAttribute('data-node')) {
-      nodeId = targetEl.getAttribute('data-node');
-    } else {
-      nodeId = targetEl.getAttribute('data-node-label');
-    }
-
-    nodeId = normalizeNodeId(nodeId);
-    if (!nodeId || getFaultTypeOptionsForNode(nodeId).length === 0) {
-      return null;
-    }
-
-    return {
-      nodeId: nodeId,
-      element: resolveNodeAnchor(nodeId, target),
-    };
-  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   function hydrateExistingMessages() {
     var messages = document.querySelectorAll('.chat-message');
@@ -2090,7 +1460,7 @@ function _applySuggestedOverrides(overrides) {
     var panel = document.getElementById('node-detail-panel');
     var stage = document.querySelector('.canvas-stage');
     if (!panel || !stage) return;
-    if (currentFaultMenuNodeId) return;
+    // fault UI removed
     currentDetailNodeId = nodeId;
     stage.classList.add('panel-open');
     panel.hidden = false;
@@ -2111,8 +1481,6 @@ function _applySuggestedOverrides(overrides) {
     var badgeEl = document.getElementById('ndp-state-badge');
     var descEl = document.getElementById('ndp-description');
     var conditionsEl = document.getElementById('ndp-conditions');
-    var faultSection = document.getElementById('ndp-fault-section');
-    var faultInfo = document.getElementById('ndp-fault-info');
 
     if (!idEl) return;
 
@@ -2121,7 +1489,6 @@ function _applySuggestedOverrides(overrides) {
     var nodeState = 'inactive';
     var nodeDesc = '节点描述不可用';
     var conditions = [];
-    var activeFault = null;
 
     if (lastTruthSnapshot) {
       var snapshot = lastTruthSnapshot;
@@ -2157,10 +1524,6 @@ function _applySuggestedOverrides(overrides) {
             }
           }
         }
-      });
-      var activeFaultsList = snapshot.active_fault_node_ids || [];
-      activeFaultsList.forEach(function(fid) {
-        if (fid === nodeId) activeFault = fid;
       });
     }
 
@@ -2200,39 +1563,6 @@ function _applySuggestedOverrides(overrides) {
       }
     }
 
-    // ── Fault Injection Section (always shown for faultable nodes) ───────
-    // Moved from floating button into detail panel per UX request.
-    if (faultSection && faultInfo) {
-      var faultOpts = getFaultTypeOptionsForNode(nodeId);
-      if (faultOpts.length > 0 || activeFault) {
-        faultSection.hidden = false;
-        // faultInfo div is repurposed as an inline fault-control area
-        faultInfo.innerHTML = '';
-        if (activeFault) {
-          // Show active fault + remove button
-          faultInfo.innerHTML =
-            '<div class="ndp-fault-active">' +
-              '<span class="ndp-fault-badge">' + escHtml(activeFault) + '</span>' +
-              '<span class="ndp-fault-active-label">' + escHtml(getFaultNodeLabel(nodeId)) + '</span>' +
-              '<button type="button" class="ndp-fault-remove-btn" data-remove-fault="' + escHtml(nodeId) + '" title="移除故障">✕</button>' +
-            '</div>';
-        }
-        // Always show inject buttons for faultable nodes (compact row)
-        faultOpts.forEach(function(faultType) {
-          var def = FAULT_TYPES[faultType];
-          var btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'ndp-fault-inject-btn' + (activeFault === faultType ? ' is-active-fault' : '');
-          btn.setAttribute('data-node-fault-type', faultType);
-          btn.setAttribute('data-node-id', nodeId);
-          btn.title = def.label;
-          btn.textContent = def.icon + ' ' + def.label;
-          faultInfo.appendChild(btn);
-        });
-      } else {
-        faultSection.hidden = true;
-      }
-    }
 
     // ── Parameter Adjustment Section ─────────────────────────────────
     var adjustSection = document.getElementById('ndp-adjust-section');
@@ -2429,7 +1759,7 @@ function _applySuggestedOverrides(overrides) {
       stage.addEventListener('click', function(e) {
         if (wasPanning) { wasPanning = false; return; }
         var nodeEl = e.target.closest('[data-node]');
-        if (nodeEl && !currentFaultMenuNodeId) {
+    // fault UI removed
           var nodeId = nodeEl.getAttribute('data-node');
           if (currentDetailNodeId === nodeId) {
             hideDetailPanel();
@@ -2527,8 +1857,8 @@ function _applySuggestedOverrides(overrides) {
 
   bootstrapConnectionMetadata();
   hydrateExistingMessages();
-  renderFaultPresetsMenu();
-  renderFaultBar();
+    // fault UI removed
+    // fault UI removed
 
   if (drawerFab) {
     drawerFab.addEventListener('click', toggleDrawer);
@@ -2547,172 +1877,25 @@ function _applySuggestedOverrides(overrides) {
       closeDrawer();
     }
 
-    if (e.key === 'Escape') {
-      hideNodeFaultMenu();
-      if (faultPresetsMenu) {
-        faultPresetsMenu.hidden = true;
-      }
-      if (faultPresetsBtn) {
-        faultPresetsBtn.setAttribute('aria-expanded', 'false');
-      }
-    }
   });
 
-  document.addEventListener('click', function(e) {
-    if (
-      faultPresetsMenu &&
-      !faultPresetsMenu.hidden &&
-      !faultPresetsMenu.contains(e.target) &&
-      (!faultPresetsBtn || !faultPresetsBtn.contains(e.target))
-    ) {
-      faultPresetsMenu.hidden = true;
-      if (faultPresetsBtn) {
-        faultPresetsBtn.setAttribute('aria-expanded', 'false');
-      }
-    }
-
-    if (
-      nodeFaultMenu &&
-      !nodeFaultMenu.hidden &&
-      !nodeFaultMenu.contains(e.target) &&
-      (!nodeFaultBtn || !nodeFaultBtn.contains(e.target))
-    ) {
-      hideNodeFaultMenu();
-      hideNodeFaultButton(true);
-    }
-  });
 
   if (systemSelect) {
     systemSelect.addEventListener('change', function() {
       currentSystem = systemSelect.value;
-      hideNodeFaultMenu();
-      hideNodeFaultButton(true);
+    // fault UI removed
       hideDetailPanel();
       syncSystemChrome();
       resetCanvasState();
       resetTruthEvalBar();
-      renderFaultBar();
-      updateChainWithFaults();
+    // fault UI removed
+    // fault UI removed
     });
   }
 
-  if (faultToggleBtn) {
-    faultToggleBtn.addEventListener('click', function() {
-      toggleFaultBar();
-    });
-  }
 
-  if (faultPresetsBtn) {
-    faultPresetsBtn.addEventListener('click', function(e) {
-      if (!faultPresetsMenu) {
-        return;
-      }
 
-      e.preventDefault();
-      faultPresetsMenu.hidden = !faultPresetsMenu.hidden;
-      faultPresetsBtn.setAttribute('aria-expanded', faultPresetsMenu.hidden ? 'false' : 'true');
-    });
-  }
 
-  if (faultClearBtn) {
-    faultClearBtn.addEventListener('click', function() {
-      clearAllFaults();
-    });
-  }
-
-  if (faultPills) {
-    faultPills.addEventListener('click', function(e) {
-      var target = e.target.closest('[data-remove-fault]');
-
-      if (!target) {
-        return;
-      }
-
-      removeFault(target.getAttribute('data-remove-fault'));
-    });
-  }
-
-  if (faultPresetsMenu) {
-    faultPresetsMenu.addEventListener('click', function(e) {
-      var target = e.target.closest('[data-fault-preset]');
-
-      if (!target) {
-        return;
-      }
-
-      applyFaultPreset(target.getAttribute('data-fault-preset'));
-    });
-  }
-
-  if (nodeFaultBtn) {
-    nodeFaultBtn.addEventListener('click', function(e) {
-      var nodeId = nodeFaultBtn.getAttribute('data-node-id');
-
-      e.preventDefault();
-      if (!nodeId) {
-        return;
-      }
-      toggleNodeFaultMenu(nodeId);
-    });
-  }
-
-  // nodeFaultMenu uses event delegation from the document listener below.
-  // Fault injection/removal clicks bubble from nodeFaultMenu → document, where
-  // the document handler catches them via closest() — no direct listener needed.
-  // (Detail panel fault buttons also use the same document handler.)
-
-  // Document-level delegation for all fault injection/remove buttons:
-  // - Inside floating nodeFaultMenu (bubble up)
-  // - Inside detail panel ndp-fault-info section
-  document.addEventListener('click', function(e) {
-    var removeTarget = e.target.closest('[data-remove-fault]');
-    var injectTarget = e.target.closest('[data-node-fault-type]');
-
-    if (removeTarget) {
-      removeFault(removeTarget.getAttribute('data-remove-fault'));
-      return;
-    }
-    if (injectTarget) {
-      injectFault(
-        injectTarget.getAttribute('data-node-id'),
-        injectTarget.getAttribute('data-node-fault-type')
-      );
-    }
-  });
-
-  if (canvasStage) {
-    canvasStage.addEventListener('mousemove', function(e) {
-      var faultTarget;
-
-      if (
-        (nodeFaultBtn && nodeFaultBtn.contains(e.target)) ||
-        (nodeFaultMenu && nodeFaultMenu.contains(e.target))
-      ) {
-        return;
-      }
-
-      faultTarget = findFaultTargetFromEvent(e.target);
-      if (!faultTarget || !faultTarget.element) {
-        if (!currentFaultMenuNodeId) {
-          hideNodeFaultButton(true);
-        }
-        return;
-      }
-
-      handleNodeHover(faultTarget.nodeId, e);
-    });
-
-    canvasStage.addEventListener('mouseleave', function(e) {
-      if (
-        (nodeFaultBtn && nodeFaultBtn.contains(e.relatedTarget)) ||
-        (nodeFaultMenu && nodeFaultMenu.contains(e.relatedTarget))
-      ) {
-        return;
-      }
-      hideNodeFaultMenu();
-      hideNodeFaultButton(true);
-    });
-  }
 
   if (guidedDemoBtn) {
     guidedDemoBtn.addEventListener('click', function() {
@@ -2726,32 +1909,7 @@ function _applySuggestedOverrides(overrides) {
       syncSystemChrome();
       resetCanvasState();
       resetTruthEvalBar();
-      renderFaultBar();
-      updateChainWithFaults();
 
-      setTimeout(function() {
-        addMessage('ai', '步骤 1：设置 TRA = -14°（达到反推门槛）');
-      }, 1400);
-
-      setTimeout(function() {
-        addMessage('ai', '步骤 2：设置 RA = 0ft（off-ground，altitude gate = false）');
-      }, 2800);
-
-      setTimeout(function() {
-        addMessage('ai', '✅ SW1 已 latch，接下来可以观察 logic1 到 logic4 如何逐段亮起。');
-      }, 4300);
-    });
-  }
-
-  Array.prototype.forEach.call(document.querySelectorAll('.chat-shortcut-btn'), function(btn) {
-    btn.addEventListener('click', function() {
-      var prompt = btn.getAttribute('data-prompt');
-      if (!prompt || !chatInput) {
-        return;
-      }
-      chatInput.value = prompt;
-      chatInput.focus();
-      chatInput.style.height = 'auto';
       chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
       openDrawer();
     });
@@ -2776,39 +1934,6 @@ function _applySuggestedOverrides(overrides) {
       };
       reader.readAsText(file);
       fileUpload.value = '';
-    });
-  }
-
-  if (chatMessages) {
-    chatMessages.addEventListener('click', function(e) {
-      var target = e.target.closest('.node-ref');
-
-      if (!target) {
-        return;
-      }
-
-      highlightNodeReference(target.getAttribute('data-ref'));
-    });
-
-    chatMessages.addEventListener('keydown', function(e) {
-      var target = e.target;
-
-      if (!target || !target.classList || !target.classList.contains('node-ref')) {
-        return;
-      }
-
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        highlightNodeReference(target.getAttribute('data-ref'));
-      }
-    });
-  }
-
-  /* ── Response formatters ── */
-  function formatLeverSnapshotAnswer(data, payload) {
-    var extracted;
-    var activeIds;
-    var failed;
     var lines;
     var nodeId;
     var conds;
@@ -2980,7 +2105,7 @@ function _applySuggestedOverrides(overrides) {
         explainPayload = buildExplainPayload(qText, qSystemId, requestPayload, {
           lever_snapshot: snapshotData,
           node_states: nodeStates,
-          fault_injections: serializeActiveFaults(),
+          fault_injections: [],
         });
 
         return requestJson('/api/chat/explain', {
@@ -3212,7 +2337,7 @@ function isGeneralQuestion(qText, qLower) {
     requestJson('/api/lever-snapshot', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(buildFaultAwareLeverPayload(cachedPayload)),
+      body: JSON.stringify(cachedPayload),
     })
       .then(function(snapshotData) {
         if (reqSeq !== _chatRequestSeq) { finishChatRequest(); return; }
@@ -3220,7 +2345,7 @@ function isGeneralQuestion(qText, qLower) {
           question: text,
           system_id: systemId,
           current_snapshot: snapshotData,
-          fault_injections: serializeActiveFaults(),
+          fault_injections: [],
         };
 
         requestJson('/api/chat/reason', {
@@ -3268,8 +2393,8 @@ function isGeneralQuestion(qText, qLower) {
   resetCanvasState();
   resetTruthEvalBar();
   syncSystemChrome();
-  renderFaultBar();
-  updateChainWithFaults();
+    // fault UI removed
+    // fault UI removed
   setFabTooltip('展开对话');
   initZoomAndPanel();
 
