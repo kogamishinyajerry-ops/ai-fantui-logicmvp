@@ -2357,8 +2357,9 @@ body.drawer-open .chat-drawer {
   flex-direction: column;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  z-index: 10;
+  z-index: 30;
   flex-shrink: 0;
+  pointer-events: auto;
 }
 
 .canvas-stage.panel-open .node-detail-panel {
@@ -2456,6 +2457,7 @@ body.drawer-open .chat-drawer {
   gap: 8px;
   /* Ensure bottom padding clears fixed-action buttons */
   padding-bottom: 80px;
+  pointer-events: auto;
 }
 
 .ndp-section {}
@@ -2828,6 +2830,7 @@ input[type="range"].ndp-range::-webkit-slider-thumb:active {
 .ndp-adjust-actions {
   display: flex;
   gap: 8px;
+  pointer-events: auto;
 }
 .ndp-apply-btn {
   flex: 1;
@@ -2843,6 +2846,7 @@ input[type="range"].ndp-range::-webkit-slider-thumb:active {
   cursor: pointer;
   transition: background 0.18s ease, border-color 0.18s ease, transform 0.1s ease;
   letter-spacing: 0.04em;
+  pointer-events: auto;
 }
 .ndp-apply-btn:hover {
   background: rgba(77, 200, 255, 0.25);
@@ -2869,6 +2873,7 @@ input[type="range"].ndp-range::-webkit-slider-thumb:active {
   cursor: pointer;
   transition: border-color 0.18s ease, color 0.18s ease;
   letter-spacing: 0.04em;
+  pointer-events: auto;
 }
 .ndp-cancel-btn:hover {
   border-color: rgba(255, 255, 255, 0.2);

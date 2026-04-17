@@ -1828,6 +1828,55 @@ function clearAiHighlights() {
     }
   }
 
+  function collectDetailPanelOverrides() {
+    var overrides = {};
+    var sliders = document.querySelectorAll('input[type="range"].ndp-range');
+    var toggles = document.querySelectorAll('.ndp-toggle-switch .ndp-toggle-input');
+    var slider;
+    var toggle;
+    var toggleWrapper;
+    var param;
+    var i;
+    var fbSelect;
+    var n1kSlider;
+
+    for (i = 0; i < sliders.length; i += 1) {
+      slider = sliders[i];
+      param = slider.getAttribute('data-param');
+      if (param) {
+        overrides[param] = parseFloat(slider.value);
+      }
+    }
+
+    for (i = 0; i < toggles.length; i += 1) {
+      toggle = toggles[i];
+      toggleWrapper = toggle.closest ? toggle.closest('.ndp-toggle-switch') : null;
+      param = toggleWrapper ? toggleWrapper.getAttribute('data-param') : null;
+      if (param) {
+        overrides[param] = toggle.checked;
+      }
+    }
+
+    // feedback_mode and max_n1k_deploy_limit are now in canvas-global-controls
+    fbSelect = document.getElementById('cgc-feedback-mode');
+    if (fbSelect) {
+      param = fbSelect.getAttribute('data-param');
+      if (param) {
+        overrides[param] = fbSelect.value;
+      }
+    }
+
+    n1kSlider = document.getElementById('cgc-n1k-limit');
+    if (n1kSlider) {
+      param = n1kSlider.getAttribute('data-param');
+      if (param) {
+        overrides[param] = parseFloat(n1kSlider.value);
+      }
+    }
+
+    return overrides;
+  }
+
   // ── Canvas Global Controls (always-visible floating widget) ─────────────
   function initCanvasGlobalControls() {
     var payload = lastTruthPayloadBySystem[currentSystem] || {};
@@ -1889,8 +1938,12 @@ function clearAiHighlights() {
       stage.addEventListener('mouseup', onPanEnd);
       stage.addEventListener('mouseleave', onPanEnd);
       stage.addEventListener('click', function(e) {
+        var eventTarget = e.target;
+        if (panel && eventTarget && panel.contains(eventTarget)) {
+          return;
+        }
         if (wasPanning) { wasPanning = false; return; }
-        var nodeEl = e.target.closest('[data-node]');
+        var nodeEl = eventTarget && eventTarget.closest ? eventTarget.closest('[data-node]') : null;
         if (!nodeEl) return;
         // fault UI removed
         var nodeId = nodeEl.getAttribute('data-node');
@@ -1910,6 +1963,7 @@ function clearAiHighlights() {
 
     if (panel) {
       panel.addEventListener('click', function(e) {
+        e.stopPropagation();
         if (e.target === panel) hideDetailPanel();
       });
     }
@@ -1924,28 +1978,18 @@ function clearAiHighlights() {
     var cancelBtn = document.getElementById('ndp-cancel-btn');
 
     if (applyBtn) {
-      applyBtn.addEventListener('click', function() {
-        var overrides = {};
-        // Collect all slider values
-        document.querySelectorAll('input[type="range"].ndp-range').forEach(function(slider) {
-          var param = slider.getAttribute('data-param');
-          if (param) overrides[param] = parseFloat(slider.value);
-        });
-        // Collect all toggle states
-        document.querySelectorAll('.ndp-toggle-switch .ndp-toggle-input').forEach(function(toggle) {
-          var param = toggle.closest('.ndp-toggle-switch').getAttribute('data-param');
-          if (param) overrides[param] = toggle.checked;
-        });
-        // feedback_mode and max_n1k_deploy_limit are now in canvas-global-controls
-        var fbSelect = document.getElementById('cgc-feedback-mode');
-        if (fbSelect) {
-          var param = fbSelect.getAttribute('data-param');
-          if (param) overrides[param] = fbSelect.value;
+      applyBtn.addEventListener('click', function(e) {
+        var overrides;
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
         }
-        var n1kSlider = document.getElementById('cgc-n1k-limit');
-        if (n1kSlider) {
-          var param = n1kSlider.getAttribute('data-param');
-          if (param) overrides[param] = parseFloat(n1kSlider.value);
+
+        try {
+          overrides = collectDetailPanelOverrides();
+        } catch (err) {
+          addMessage('ai', '⚠️ 参数收集失败：' + (err.message || String(err)));
+          return;
         }
 
         if (Object.keys(overrides).length === 0) {
@@ -1955,7 +1999,9 @@ function clearAiHighlights() {
 
         applyBtn.disabled = true;
         applyBtn.textContent = '应用...';
-        _applySuggestedOverrides(overrides).then(function() {
+        Promise.resolve().then(function() {
+          return _applySuggestedOverrides(overrides);
+        }).then(function() {
           addMessage('ai', '✅ 已应用参数：' + Object.keys(overrides).join(', '));
           applyBtn.disabled = false;
           applyBtn.textContent = '应用';
@@ -1969,7 +2015,13 @@ function clearAiHighlights() {
     }
 
     if (cancelBtn) {
-      cancelBtn.addEventListener('click', hideDetailPanel);
+      cancelBtn.addEventListener('click', function(e) {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        hideDetailPanel();
+      });
     }
   }
 
