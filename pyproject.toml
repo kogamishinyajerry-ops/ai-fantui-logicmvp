@@ -14,3 +14,10 @@ requires-python = ">=3.9"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+# Default CI lane excludes e2e; opt-in with: pytest -m e2e (or pytest -m "e2e or not e2e")
+addopts = "-m 'not e2e'"
+markers = [
+    "e2e: opt-in end-to-end tests that boot demo_server on :8799 (run with -m e2e)",
+]

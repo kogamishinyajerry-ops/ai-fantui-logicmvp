@@ -1,0 +1,39 @@
+{
+  "_meta": {
+    "captured_at_utc": "2026-04-18",
+    "purpose": "Anchor for P20.0 wow-scenario e2e assertions. Fields below are the observed response shapes from a running demo_server on :8799. Any drift should either (a) fail existing e2e tests, or (b) drive an update to this file + asserting tests in the same commit.",
+    "captured_from_commit": "c0f7a0d"
+  },
+  "lever_snapshot": {
+    "path": "/api/lever-snapshot",
+    "status": 200,
+    "top_keys": ["evidence", "hud", "input", "logic", "mode", "model_note", "nodes", "outputs", "plant_state", "risks", "summary", "time_s", "tra_lock"],
+    "logic_keys": ["logic1", "logic2", "logic3", "logic4"],
+    "node_count": 19,
+    "node_shape": {"id": "str", "label": "str", "state": "str", "source": "str", "blocked_by": "list"}
+  },
+  "monte_carlo_run": {
+    "path": "/api/monte-carlo/run",
+    "status": 200,
+    "top_keys": ["failure_modes", "mean_cycles_to_failure", "mtbf_cycles", "n_failures", "n_trials", "seed", "success_rate", "sw1_window_crossings_mean", "sw2_window_crossings_mean"],
+    "failure_mode_keys": ["ra_sensor_failure", "sw1_missed", "sw2_missed", "tra_stall"],
+    "timing_10k_observed_ms": 198,
+    "n_trials_clamp_domain": [1, 10000],
+    "notes": "No 'critical_components' top-3 field exists; use failure_modes dict for component-level attribution."
+  },
+  "diagnosis_run": {
+    "path": "/api/diagnosis/run",
+    "status": 200,
+    "top_keys": ["grid_resolution", "outcome", "results", "timestamp", "total_combos_found"],
+    "valid_outcomes": ["logic3_active", "logic1_active", "thr_lock_active", "deploy_confirmed", "tls_unlocked", "pls_unlocked"],
+    "result_item_keys": ["radio_altitude_ft", "tra_deg", "sw1_closed", "sw2_closed", "tls_unlocked", "pls_unlocked"],
+    "notes": "No 'top_causes' / 'probability' / 'suggested_action' fields. 'results' is a list of ParameterSnapshot dicts satisfying the target outcome."
+  },
+  "chat_reason": {
+    "path": "/api/chat/reason",
+    "required_fields": ["question"],
+    "error_shape": {"error": "str", "message": "str"},
+    "llm_failure_status_code": 400,
+    "notes": "MiniMax URL hardcoded (api.minimax.chat). No env hook for mock. Tests force the 'minimax_api_key_missing' path by running a second demo_server subprocess with HOME=<empty tmp>."
+  }
+}

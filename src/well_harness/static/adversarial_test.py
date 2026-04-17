@@ -6,10 +6,11 @@ then checks the frontend's applySnapshotToCanvas behavior.
 """
 import http.client
 import json
+import os
 import time
 import sys
 
-PORT = 8766
+PORT = int(os.environ.get("WELL_HARNESS_PORT", "8766"))
 
 def api(path, payload):
     conn = http.client.HTTPConnection("127.0.0.1", PORT, timeout=10)
