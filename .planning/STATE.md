@@ -6,7 +6,7 @@ status: Milestone complete
 last_updated: "2026-04-17T12:00:00.000Z"
 last_activity: 2026-04-17
 progress:
-  total_phases: 18
+  total_phases: 19
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -62,6 +62,11 @@ P19.3 Executed: Reverse diagnosis engine
 - P19 API suite complete: diagnosis + Monte Carlo endpoints + schema discovery; 604 tests pass
 - P19.9 Executed: API endpoint tests for P19.6/P19.7/P19.8
 - 15 new tests covering all 3 endpoints (diagnosis/monte-carlo/hardware-schema); 619 total passed
+- P19.10 Executed: Analysis Tools Panel — Frontend Integration
+- Added "📊 分析工具" button to chat-drawer-toolbar; inline diagnosis + Monte Carlo panels after shortcut-strip
+- Added openDiagnosisPanel(), openMonteCarloPanel(), runDiagnosis(), runMonteCarlo() to chat.js
+- Added .analysis-panel, .analysis-run-btn, .analysis-result CSS to chat.css
+- All 619 tests continue to pass (no regression)
 - All P0-P18.5 phases complete. Opus 4.6 final adjudication: Approved, Project Freeze.
 - Regression baseline: 561 tests, 24-command suite. GSD automation continues to protect regression.
 - P18.5 merged (canvas interaction fix): fault injection UI removed, hover scale disabled, hit-box pointer-events fixed.
