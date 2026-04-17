@@ -106,6 +106,12 @@ _SYSTEM_YAML_MAP = {
     "bleed-air": "bleed_air_hardware_v1.yaml",
 }
 
+# Systems whose YAML format is loadable by load_thrust_reverser_hardware.
+# Landing-gear and bleed-air YAMLs use a different schema and cannot be loaded
+# by the thrust-reverser-specific engine; they are served via the generic loader
+# in _handle_hardware_schema only.
+_SUPPORTED_FOR_ANALYSIS = frozenset({"thrust-reverser"})
+
 MONITOR_N1K = 35.0
 MONITOR_MAX_N1K_DEPLOY_LIMIT = 60.0
 LEVER_NUMERIC_INPUTS = {
@@ -373,13 +379,17 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             max_results = min(int(request_payload.get("max_results", 1000)), 1000)
             max_results = max(max_results, 0)
             system_id = str(request_payload.get("system_id", "thrust-reverser")).strip()
+            if system_id not in _SUPPORTED_FOR_ANALYSIS:
+                self._send_json(400, {
+                    "error": f"system_id {system_id!r} is not supported for diagnosis. "
+                             f"Currently supported: {sorted(_SUPPORTED_FOR_ANALYSIS)}"
+                })
+                return
             yaml_path = self._hardware_yaml_path(system_id)
             try:
                 engine = ReverseDiagnosisEngine(yaml_path)
                 report = engine.diagnose_and_report(outcome, max_results=max_results)
                 self._send_json(200, report)
-            except FileNotFoundError as exc:
-                self._send_json(400, {"error": str(exc)})
             except Exception as exc:
                 self._send_json(500, {"error": str(exc)})
             return
@@ -404,13 +414,17 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                     return
 
             system_id = str(request_payload.get("system_id", "thrust-reverser")).strip()
+            if system_id not in _SUPPORTED_FOR_ANALYSIS:
+                self._send_json(400, {
+                    "error": f"system_id {system_id!r} is not supported for Monte Carlo. "
+                             f"Currently supported: {sorted(_SUPPORTED_FOR_ANALYSIS)}"
+                })
+                return
             yaml_path = self._hardware_yaml_path(system_id)
             try:
                 engine = MonteCarloEngine(yaml_path)
                 result = engine.run(n_trials, seed=seed)
                 self._send_json(200, _reliability_result_to_dict(result))
-            except FileNotFoundError as exc:
-                self._send_json(400, {"error": str(exc)})
             except Exception as exc:
                 self._send_json(500, {"error": str(exc)})
             return
@@ -458,16 +472,27 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
     def _handle_hardware_schema(self, system_id: str = "thrust-reverser") -> None:
         """Return the full hardware YAML as a JSON dict (P19.8)."""
-        yaml_path = self._hardware_yaml_path(system_id)
         try:
-            from well_harness.hardware_schema import (
-                _hardware_to_dict,
-                load_thrust_reverser_hardware,
-            )
+            yaml_path = self._hardware_yaml_path(system_id)
+            if system_id == "thrust-reverser":
+                from well_harness.hardware_schema import (
+                    _hardware_to_dict,
+                    load_thrust_reverser_hardware,
+                )
 
-            hw = load_thrust_reverser_hardware(yaml_path)
-            result = _hardware_to_dict(hw)
-            result["system_id"] = system_id
+                hw = load_thrust_reverser_hardware(yaml_path)
+                result = _hardware_to_dict(hw)
+                result["system_id"] = system_id
+            else:
+                # Generic YAML loader for non-thrust-reverser systems
+                import yaml
+
+                with open(yaml_path, encoding="utf-8") as f:
+                    result = yaml.safe_load(f)
+                if not isinstance(result, dict):
+                    raise ValueError(f"YAML root must be a dict, got {type(result).__name__}")
+                result["system_id"] = system_id
+
             self._send_json(200, result)
         except FileNotFoundError as exc:
             self._send_json(400, {"error": str(exc)})

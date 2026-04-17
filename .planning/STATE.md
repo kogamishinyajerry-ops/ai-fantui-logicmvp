@@ -97,6 +97,12 @@ P19.3 Executed: Reverse diagnosis engine
 - chat.js: showPanelError() + clearPanelError() helpers; all 4 run functions disable button during fetch
 - .analysis-panel-error CSS (red tinted) + .analysis-run-btn:disabled styling added
 - All 619 tests continue to pass (no regression)
+- P19.17 Executed: Analysis API Multi-System + Error Coverage Tests
+- Added tests/test_p19_api_multisystem.py: 15 tests covering system_id routing for all 3 endpoints
+- _handle_hardware_schema: moved _hardware_yaml_path() inside try block so FileNotFoundError returns 400
+- _SUPPORTED_FOR_ANALYSIS = frozenset({"thrust-reverser"}) guard added to diagnosis/Monte Carlo handlers
+- Generic yaml.safe_load() loader for non-thrust-reverser in _handle_hardware_schema
+- All 634 tests pass (619 baseline + 15 new, 0 regressions)
 - All P0-P18.5 phases complete. Opus 4.6 final adjudication: Approved, Project Freeze.
 - Regression baseline: 561 tests, 24-command suite. GSD automation continues to protect regression.
 - P18.5 merged (canvas interaction fix): fault injection UI removed, hover scale disabled, hit-box pointer-events fixed.
