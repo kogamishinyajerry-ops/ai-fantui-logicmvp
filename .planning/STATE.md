@@ -42,6 +42,11 @@ P19.3 Executed: Reverse diagnosis engine
 - 16 new tests (all passing)
 - Regression: 604 passed (588 + 16 new), 1 skipped
 - Freeze-compliant: pure logic enumeration, no LLM, no truth engine changes
+- P19.4 Executed: AI causal chain canvas SVG connectors
+- SVG dashed blue lines with arrowheads connect sequentially discussed nodes on Canvas
+- getCausalChainLayer() creates persistent SVG overlay; drawCausalChainConnectors() draws connectors
+- Connectors drawn on applyAiHighlights(), cleared on clearAiHighlights() (including system switch)
+- Regression: 604 passed, 1 skipped (no regression)
 - All P0-P18.5 phases complete. Opus 4.6 final adjudication: Approved, Project Freeze.
 - Regression baseline: 561 tests, 24-command suite. GSD automation continues to protect regression.
 - P18.5 merged (canvas interaction fix): fault injection UI removed, hover scale disabled, hit-box pointer-events fixed.
