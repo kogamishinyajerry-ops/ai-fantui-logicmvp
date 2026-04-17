@@ -1,0 +1,197 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/hardware_schema_v1.schema.json",
+  "title": "well_harness.thrust_reverser_hardware v1",
+  "description": "JSON Schema for thrust-reverser hardware parameter YAML files. Validates that hardware parameter files conform to the expected structure and value ranges.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "kind",
+    "version",
+    "system_id",
+    "parameters"
+  ],
+  "properties": {
+    "kind": {
+      "type": "string",
+      "const": "thrust-reverser-hardware"
+    },
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "system_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sensor",
+        "actuator",
+        "logic_thresholds",
+        "timing",
+        "physical_limits"
+      ],
+      "properties": {
+        "sensor": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "radio_altitude_ft": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["unit", "typical_range_ft", "accuracy_ft"],
+              "properties": {
+                "unit": {
+                  "type": "string",
+                  "const": "ft"
+                },
+                "typical_range_ft": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "accuracy_ft": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        },
+        "actuator": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tra", "vd"],
+          "properties": {
+            "tra": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "unit",
+                "min_deg",
+                "max_deg",
+                "nominal_deployment_rate_percent_per_s"
+              ],
+              "properties": {
+                "unit": {
+                  "type": "string",
+                  "const": "deg"
+                },
+                "min_deg": {
+                  "type": "number"
+                },
+                "max_deg": {
+                  "type": "number"
+                },
+                "nominal_deployment_rate_percent_per_s": {
+                  "type": "number",
+                  "minimum": 0
+                }
+              }
+            },
+            "vd": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["unit", "full_deploy_percent"],
+              "properties": {
+                "unit": {
+                  "type": "string",
+                  "const": "percent"
+                },
+                "full_deploy_percent": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            }
+          }
+        },
+        "logic_thresholds": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "logic1_ra_ft_threshold",
+            "logic3_tra_deg_threshold",
+            "deploy_90_threshold_percent"
+          ],
+          "properties": {
+            "logic1_ra_ft_threshold": {
+              "type": "number",
+              "minimum": 0
+            },
+            "logic3_tra_deg_threshold": {
+              "type": "number"
+            },
+            "deploy_90_threshold_percent": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "timing": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tls_unlock_delay_s", "pls_unlock_delay_s"],
+          "properties": {
+            "tls_unlock_delay_s": {
+              "type": "number",
+              "minimum": 0
+            },
+            "pls_unlock_delay_s": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "physical_limits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reverse_travel_min_deg",
+            "reverse_travel_max_deg",
+            "sw1_window",
+            "sw2_window"
+          ],
+          "properties": {
+            "reverse_travel_min_deg": {
+              "type": "number"
+            },
+            "reverse_travel_max_deg": {
+              "type": "number"
+            },
+            "sw1_window": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["near_zero_deg", "deep_reverse_deg"],
+              "properties": {
+                "near_zero_deg": {
+                  "type": "number"
+                },
+                "deep_reverse_deg": {
+                  "type": "number"
+                }
+              }
+            },
+            "sw2_window": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["near_zero_deg", "deep_reverse_deg"],
+              "properties": {
+                "near_zero_deg": {
+                  "type": "number"
+                },
+                "deep_reverse_deg": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
