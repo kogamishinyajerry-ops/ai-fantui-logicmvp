@@ -93,6 +93,8 @@ P15_RUN_PIPELINE_PATH = "/api/p15/run-pipeline"
 CHAT_EXPLAIN_PATH = "/api/chat/explain"
 CHAT_OPERATE_PATH = "/api/chat/operate"
 CHAT_REASON_PATH = "/api/chat/reason"
+# Reverse diagnosis API (P19.6)
+DIAGNOSIS_RUN_PATH = "/api/diagnosis/run"
 MONITOR_N1K = 35.0
 MONITOR_MAX_N1K_DEPLOY_LIMIT = 60.0
 LEVER_NUMERIC_INPUTS = {
@@ -206,6 +208,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             CHAT_EXPLAIN_PATH,
             CHAT_OPERATE_PATH,
             CHAT_REASON_PATH,
+            DIAGNOSIS_RUN_PATH,
         }:
             self._send_json(404, {"error": "not_found"})
             return
@@ -338,6 +341,27 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, response_payload)
             return
 
+        # P19.6: Reverse diagnosis run (uses already-parsed request_payload)
+        if parsed.path == DIAGNOSIS_RUN_PATH:
+            from well_harness.reverse_diagnosis import VALID_OUTCOMES, ReverseDiagnosisEngine
+            outcome = str(request_payload.get("outcome", "")).strip()
+            if outcome not in VALID_OUTCOMES:
+                self._send_json(400, {
+                    "error": f"Invalid outcome: {outcome!r}. "
+                             f"Valid: {sorted(VALID_OUTCOMES)}"
+                })
+                return
+            max_results = min(int(request_payload.get("max_results", 1000)), 1000)
+            max_results = max(max_results, 0)
+            yaml_path = self._hardware_yaml_path()
+            try:
+                engine = ReverseDiagnosisEngine(yaml_path)
+                report = engine.diagnose_and_report(outcome, max_results=max_results)
+                self._send_json(200, report)
+            except Exception as exc:
+                self._send_json(500, {"error": str(exc)})
+            return
+
         # P15 Pipeline Integration handlers
         if parsed.path == P15_CONVERT_PATH:
             response_payload, error_payload = _handle_p15_convert(request_payload)
@@ -361,6 +385,16 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
         answer = answer_demo_prompt(prompt)
         self._send_json(200, demo_answer_to_payload(answer))
+
+    # ── P19.6: Reverse diagnosis endpoint ─────────────────────────────────────
+
+    def _hardware_yaml_path(self) -> str:
+        """Return the path to the thrust-reverser hardware YAML config."""
+        import pathlib as _pathlib
+        import well_harness as _wh
+        pkg_root = _pathlib.Path(_wh.__file__).parent
+        repo_root = pkg_root.parent.parent
+        return str(repo_root / "config" / "hardware" / "thrust_reverser_hardware_v1.yaml")
 
     def _serve_static(self, relative_path: str):
         static_root = STATIC_DIR.resolve()
