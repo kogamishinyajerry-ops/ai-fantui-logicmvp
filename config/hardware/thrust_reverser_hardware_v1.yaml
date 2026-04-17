@@ -1,0 +1,66 @@
+# Thrust-Reverser Hardware Parameter Reference
+# ============================================
+# Version:    1
+# System:     thrust-reverser
+# Source:     HarnessConfig defaults (src/well_harness/models.py)
+# Purpose:    Read-only reference data for simulation/analysis features
+# Freeze rule: Do NOT modify controller.py even if these values differ from simulator needs
+#
+# Value sources (models.py lines 22-43):
+#   SW1 window near_zero_deg = -1.4, deep_reverse_deg = -6.2
+#   SW2 window near_zero_deg = -5.0, deep_reverse_deg = -9.8
+#   logic1_ra_ft_threshold = 6.0
+#   logic3_tra_deg_threshold = -11.74
+#   reverse_travel_min_deg = -32.0
+#   reverse_travel_max_deg = 0.0
+#   deploy_90_threshold_percent = 90.0
+#   tls_unlock_delay_s = 0.3
+#   pls_unlock_delay_s = 0.2
+#   deploy_rate_percent_per_s = 30.0
+
+kind: thrust-reverser-hardware
+version: 1
+system_id: thrust-reverser
+
+parameters:
+  sensor:
+    radio_altitude_ft:
+      unit: ft
+      typical_range_ft: 1000.0
+      accuracy_ft: 0.5
+
+  actuator:
+    tra:
+      unit: deg
+      min_deg: -32.0
+      max_deg: 0.0
+      nominal_deployment_rate_percent_per_s: 30.0
+    vd:
+      unit: percent
+      full_deploy_percent: 100.0
+
+  logic_thresholds:
+    # RA must be below 6ft for L1 (logic1) to activate
+    logic1_ra_ft_threshold: 6.0
+    # TRA must be <= -11.74deg for L3 (logic3) to activate
+    logic3_tra_deg_threshold: -11.74
+    # VDT must reach 90% for deploy confirmation
+    deploy_90_threshold_percent: 90.0
+
+  timing:
+    # Thrust Lock Solenoid unlock delay
+    tls_unlock_delay_s: 0.3
+    # Power Lock Solenoid unlock delay
+    pls_unlock_delay_s: 0.2
+
+  physical_limits:
+    reverse_travel_min_deg: -32.0
+    reverse_travel_max_deg: 0.0
+    # SW1 closes as TRA approaches -1.4deg from stowed, re-opens below -6.2deg
+    sw1_window:
+      near_zero_deg: -1.4
+      deep_reverse_deg: -6.2
+    # SW2 closes as TRA passes -5.0deg, re-opens below -9.8deg
+    sw2_window:
+      near_zero_deg: -5.0
+      deep_reverse_deg: -9.8
