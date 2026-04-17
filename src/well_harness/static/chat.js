@@ -22,19 +22,22 @@
   var truthEvalSummary = document.getElementById('truth-eval-summary');
   var truthEvalActive = document.getElementById('truth-eval-active');
   var truthEvalBlockers = document.getElementById('truth-eval-blockers');
-  var canvasTitle = logicDiagram ? logicDiagram.querySelector('h1') : null;
   var DEFAULT_INPUT_PLACEHOLDER = '输入你的控制逻辑问题...';
   var DEFAULT_SEND_TEXT = '发送';
   var LOADING_SEND_TEXT = 'AI 思考中...';
   var lastTruthPayloadBySystem = {};
   var _chatRequestSeq = 0;
   var nodeRefHighlightTimer = null;
-    deploy_90_percent_vdt: 'vdt90',
-    // Truth-only condition aliases (from controller.py ground truth)
-    tls_unlocked: 'tls_unlocked',
-    tls_unlocked_ls: 'tls_unlocked',
-    reverser_not_deployed_eec: 'reverser_not_deployed_eec',
-  };
+  var logicDiagram = document.getElementById('logic-diagram');
+  var canvasStage = document.querySelector('.canvas-stage');
+  var canvasTitle = logicDiagram ? logicDiagram.querySelector('h1') : null;
+
+  var currentZoom = 1.0;
+  var panX = 0; var panY = 0;
+  var isPanning = false; var wasPanning = false;
+  var panStartX = 0; var panStartY = 0;
+  var zoomContainer = null; var zoomLevelEl = null;
+  var lastTruthSnapshot = null; var currentDetailNodeId = null;
 
   // Maps each logic gate to the command node(s) it directly drives.
   // Used to derive intermediate command-node visual state from gate activation state.
@@ -1862,6 +1865,7 @@ function clearAiHighlights() {
     var stage = document.querySelector('.canvas-stage');
     var panel = document.getElementById('node-detail-panel');
     var ndpClose = document.getElementById('ndp-close');
+    if (!stage) return;
 
     if (zoomContainer) {
       zoomContainer.addEventListener('wheel', onWheelZoom, { passive: false });
@@ -1872,6 +1876,7 @@ function clearAiHighlights() {
     if (resetBtn) {
       resetBtn.addEventListener('click', resetZoom);
     }
+
     if (stage) {
       stage.addEventListener('mousemove', onPanMove);
       stage.addEventListener('mouseup', onPanEnd);
@@ -2033,7 +2038,7 @@ function clearAiHighlights() {
       chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
       openDrawer();
     });
-  });
+  }
 
   if (fileUpload) {
     fileUpload.addEventListener('change', function(e) {
@@ -2054,6 +2059,14 @@ function clearAiHighlights() {
       };
       reader.readAsText(file);
       fileUpload.value = '';
+    });
+  }
+
+  /* ── Response formatters ── */
+  function formatLeverSnapshotAnswer(data, payload) {
+    var extracted;
+    var activeIds;
+    var failed;
     var lines;
     var nodeId;
     var conds;
