@@ -231,3 +231,30 @@ class TestHardwareSchema:
         assert "sw1_window" in pl
         assert "near_zero_deg" in pl["sw1_window"]
         assert "deep_reverse_deg" in pl["sw1_window"]
+
+
+# ─── POST /api/sensitivity-sweep ─────────────────────────────────────────────
+
+
+class TestSensitivitySweep:
+    """test_sensitivity_sweep — regression guard for the chat sensitivity panel."""
+
+    def test_returns_200_with_default_grid(self, server) -> None:
+        status, data = server.request("POST", "/api/sensitivity-sweep", body={})
+        assert status == 200
+        assert data["system_id"] == "thrust-reverser"
+        assert data["scan_count"] == 25
+        assert data["radio_altitude_ft_values"] == [2.0, 5.0, 10.0, 20.0, 40.0]
+        assert data["tra_deg_values"] == [-28.0, -20.0, -15.0, -11.0, -6.0]
+        assert "matrix_counts" in data
+        assert "outcome_totals" in data
+        assert data["matrix_counts"]["2"]["-28"] >= 0
+
+    def test_rejects_unsupported_system(self, server) -> None:
+        status, data = server.request(
+            "POST",
+            "/api/sensitivity-sweep",
+            body={"system_id": "landing-gear"},
+        )
+        assert status == 400
+        assert data["error"] == "unsupported_system"

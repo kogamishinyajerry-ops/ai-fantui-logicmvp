@@ -57,6 +57,10 @@ CONTENT_TYPES = {
     ".html": "text/html; charset=utf-8",
     ".css": "text/css; charset=utf-8",
     ".js": "application/javascript; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".svg": "image/svg+xml; charset=utf-8",
+    ".ico": "image/x-icon",
+    ".png": "image/png",
 }
 SYSTEM_SNAPSHOT_PATH = "/api/system-snapshot"
 SYSTEM_SNAPSHOT_POST_PATH = "/api/system-snapshot"
@@ -99,6 +103,32 @@ DIAGNOSIS_RUN_PATH = "/api/diagnosis/run"
 MONTE_CARLO_RUN_PATH = "/api/monte-carlo/run"
 # Hardware schema discovery (P19.8)
 HARDWARE_SCHEMA_PATH = "/api/hardware/schema"
+SENSITIVITY_SWEEP_PATH = "/api/sensitivity-sweep"
+
+STATIC_ROUTE_ALIASES = {
+    "/favicon.ico": "favicon.svg",
+    "/apple-touch-icon.png": "apple-touch-icon.svg",
+}
+
+SENSITIVITY_SWEEP_DEFAULT_RA_VALUES = (2.0, 5.0, 10.0, 20.0, 40.0)
+SENSITIVITY_SWEEP_DEFAULT_TRA_VALUES = (-28.0, -20.0, -15.0, -11.0, -6.0)
+SENSITIVITY_SWEEP_DEFAULT_OUTCOMES = (
+    "logic1_active",
+    "logic3_active",
+    "thr_lock_active",
+    "deploy_confirmed",
+)
+SENSITIVITY_SWEEP_ALLOWED_OUTCOMES = frozenset(
+    {
+        "logic1_active",
+        "logic2_active",
+        "logic3_active",
+        "thr_lock_active",
+        "deploy_confirmed",
+        "tls_unlocked",
+        "pls_unlocked",
+    }
+)
 
 _SYSTEM_YAML_MAP = {
     "thrust-reverser": "thrust_reverser_hardware_v1.yaml",
@@ -169,6 +199,9 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urlparse(self.path)
+        if parsed.path in STATIC_ROUTE_ALIASES:
+            self._serve_static(STATIC_ROUTE_ALIASES[parsed.path])
+            return
         if parsed.path == MONITOR_TIMELINE_PATH:
             self._send_json(200, monitor_timeline_payload())
             return
@@ -234,6 +267,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             DIAGNOSIS_RUN_PATH,
             MONTE_CARLO_RUN_PATH,
             HARDWARE_SCHEMA_PATH,
+            SENSITIVITY_SWEEP_PATH,
         }:
             self._send_json(404, {"error": "not_found"})
             return
@@ -439,6 +473,14 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == P15_RUN_PIPELINE_PATH:
             response_payload, error_payload = _handle_p15_run_pipeline(request_payload)
+            if error_payload is not None:
+                self._send_json(400, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+
+        if parsed.path == SENSITIVITY_SWEEP_PATH:
+            response_payload, error_payload = build_sensitivity_sweep_payload(request_payload)
             if error_payload is not None:
                 self._send_json(400, error_payload)
                 return
@@ -2053,6 +2095,168 @@ def workbench_recent_archives_payload() -> dict:
         "default_archive_root": str(default_workbench_archive_root()),
         "recent_archives": recent_workbench_archive_summaries(),
     }
+
+
+def _optional_request_float_list(
+    payload: dict,
+    field_name: str,
+    *,
+    default: tuple[float, ...],
+) -> tuple[tuple[float, ...], dict | None]:
+    raw_value = payload.get(field_name)
+    if raw_value is None:
+        return default, None
+    if not isinstance(raw_value, list) or not raw_value:
+        return default, {
+            "error": "invalid_sensitivity_sweep_request",
+            "field": field_name,
+            "message": f"{field_name} must be a non-empty list of finite numbers.",
+        }
+
+    normalized: list[float] = []
+    for item in raw_value:
+        if isinstance(item, bool):
+            return default, {
+                "error": "invalid_sensitivity_sweep_request",
+                "field": field_name,
+                "message": f"{field_name} must be numeric.",
+            }
+        try:
+            value = float(item)
+        except (TypeError, ValueError):
+            return default, {
+                "error": "invalid_sensitivity_sweep_request",
+                "field": field_name,
+                "message": f"{field_name} must be numeric.",
+            }
+        if not math.isfinite(value):
+            return default, {
+                "error": "invalid_numeric_value",
+                "field": field_name,
+                "message": f"{field_name} must contain only finite numbers.",
+            }
+        normalized.append(value)
+    return tuple(normalized), None
+
+
+def _stable_numeric_key(value: float) -> str:
+    numeric = float(value)
+    if numeric.is_integer():
+        return str(int(numeric))
+    return format(numeric, "g")
+
+
+def _sensitivity_outcome_matches(snapshot: dict, outcome: str) -> bool:
+    outputs = snapshot.get("outputs") if isinstance(snapshot.get("outputs"), dict) else {}
+    hud = snapshot.get("hud") if isinstance(snapshot.get("hud"), dict) else {}
+    if outcome == "logic1_active":
+        return bool(outputs.get("logic1_active"))
+    if outcome == "logic2_active":
+        return bool(outputs.get("logic2_active"))
+    if outcome == "logic3_active":
+        return bool(outputs.get("logic3_active"))
+    if outcome == "thr_lock_active":
+        return bool(outputs.get("throttle_electronic_lock_release_cmd"))
+    if outcome == "deploy_confirmed":
+        return bool(hud.get("deploy_90_percent_vdt"))
+    if outcome == "tls_unlocked":
+        return bool(hud.get("tls_unlocked_ls"))
+    if outcome == "pls_unlocked":
+        return bool(hud.get("pls_unlocked_ls"))
+    raise ValueError(f"Unsupported outcome: {outcome}")
+
+
+def build_sensitivity_sweep_payload(request_payload: dict) -> tuple[dict | None, dict | None]:
+    system_id = str(request_payload.get("system_id", "thrust-reverser")).strip() or "thrust-reverser"
+    if system_id != "thrust-reverser":
+        return None, {
+            "error": "unsupported_system",
+            "message": "sensitivity sweep currently supports only 'thrust-reverser'.",
+        }
+
+    radio_altitude_ft_values, error_payload = _optional_request_float_list(
+        request_payload,
+        "radio_altitude_ft_values",
+        default=SENSITIVITY_SWEEP_DEFAULT_RA_VALUES,
+    )
+    if error_payload is not None:
+        return None, error_payload
+
+    tra_deg_values, error_payload = _optional_request_float_list(
+        request_payload,
+        "tra_deg_values",
+        default=SENSITIVITY_SWEEP_DEFAULT_TRA_VALUES,
+    )
+    if error_payload is not None:
+        return None, error_payload
+
+    outcomes, error_payload = _optional_request_string_list(request_payload, "outcomes")
+    if error_payload is not None:
+        error_payload["error"] = "invalid_sensitivity_sweep_request"
+        return None, error_payload
+    requested_outcomes = outcomes or SENSITIVITY_SWEEP_DEFAULT_OUTCOMES
+    invalid_outcomes = [
+        outcome
+        for outcome in requested_outcomes
+        if outcome not in SENSITIVITY_SWEEP_ALLOWED_OUTCOMES
+    ]
+    if invalid_outcomes:
+        return None, {
+            "error": "invalid_sensitivity_outcome",
+            "message": (
+                f"Unsupported outcomes: {invalid_outcomes}. "
+                f"Valid: {sorted(SENSITIVITY_SWEEP_ALLOWED_OUTCOMES)}"
+            ),
+        }
+
+    matrix_counts: dict[str, dict[str, int]] = {}
+    grid: dict[str, dict[str, dict[str, bool]]] = {}
+    outcome_totals = {outcome: 0 for outcome in requested_outcomes}
+
+    for radio_altitude_ft in radio_altitude_ft_values:
+        ra_key = _stable_numeric_key(radio_altitude_ft)
+        matrix_counts[ra_key] = {}
+        grid[ra_key] = {}
+        for tra_deg in tra_deg_values:
+            tra_key = _stable_numeric_key(tra_deg)
+            snapshot = lever_snapshot_payload(
+                tra_deg=tra_deg,
+                radio_altitude_ft=radio_altitude_ft,
+                feedback_mode="manual_feedback_override",
+                deploy_position_percent=100.0,
+            )
+            matched_outcomes = {
+                outcome: _sensitivity_outcome_matches(snapshot, outcome)
+                for outcome in requested_outcomes
+            }
+            matrix_counts[ra_key][tra_key] = sum(
+                1 for is_matched in matched_outcomes.values() if is_matched
+            )
+            grid[ra_key][tra_key] = matched_outcomes
+            for outcome, is_matched in matched_outcomes.items():
+                if is_matched:
+                    outcome_totals[outcome] += 1
+
+    return {
+        "system_id": system_id,
+        "radio_altitude_ft_values": list(radio_altitude_ft_values),
+        "tra_deg_values": list(tra_deg_values),
+        "outcomes": list(requested_outcomes),
+        "matrix_counts": matrix_counts,
+        "outcome_totals": outcome_totals,
+        "grid": grid,
+        "scan_count": len(radio_altitude_ft_values) * len(tra_deg_values),
+        "fixed_inputs": {
+            "engine_running": True,
+            "aircraft_on_ground": True,
+            "reverser_inhibited": False,
+            "eec_enable": True,
+            "n1k": MONITOR_N1K,
+            "max_n1k_deploy_limit": MONITOR_MAX_N1K_DEPLOY_LIMIT,
+            "feedback_mode": "manual_feedback_override",
+            "deploy_position_percent": 100.0,
+        },
+    }, None
 
 
 def _optional_request_str(payload: dict, field_name: str) -> tuple[str | None, dict | None]:

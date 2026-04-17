@@ -845,6 +845,29 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn("data-workbench-preset=\"blocked_follow_up\"", html)
         self.assertIn("一键通过验收", html)
 
+    def test_demo_server_serves_browser_icon_and_manifest_assets(self):
+        server, thread = start_demo_server()
+        try:
+            expectations = {
+                "/favicon.ico": "image/svg+xml",
+                "/apple-touch-icon.png": "image/svg+xml",
+                "/manifest.json": "application/json",
+            }
+            for path, expected_content_type in expectations.items():
+                with self.subTest(path=path):
+                    connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+                    connection.request("GET", path)
+                    response = connection.getresponse()
+                    body = response.read()
+                    connection.close()
+                    self.assertEqual(response.status, 200)
+                    self.assertIn(expected_content_type, response.getheader("Content-Type", ""))
+                    self.assertTrue(body)
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
     def test_chat_explain_parses_structured_minimax_json_and_includes_node_states(self):
         captured_payload = {}
 
@@ -937,6 +960,27 @@ class DemoIntentLayerTests(unittest.TestCase):
             "@keyframes aiSuggestedPulse",
         ):
             self.assertIn(fragment, css)
+
+    def test_chat_static_assets_include_icon_links_and_live_global_controls(self):
+        html = (DEMO_UI_STATIC_DIR / "chat.html").read_text(encoding="utf-8")
+        script = (DEMO_UI_STATIC_DIR / "chat.js").read_text(encoding="utf-8")
+
+        for fragment in (
+            'rel="icon" href="/favicon.svg"',
+            'rel="apple-touch-icon" href="/apple-touch-icon.svg"',
+            'rel="manifest" href="/manifest.json"',
+        ):
+            self.assertIn(fragment, html)
+
+        for fragment in (
+            "function renderRequestFailure(err)",
+            "function applyCanvasGlobalControls()",
+            "function bindCanvasGlobalControls()",
+            "fbSelect.addEventListener('change', function() {",
+            "n1kSlider.addEventListener('change', function() {",
+            "return currentSystem === 'thrust-reverser';",
+        ):
+            self.assertIn(fragment, script)
 
     def test_workbench_static_shell_contains_key_acceptance_sections(self):
         html = (DEMO_UI_STATIC_DIR / "workbench.html").read_text(encoding="utf-8")

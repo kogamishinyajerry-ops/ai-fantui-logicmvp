@@ -38,6 +38,8 @@
   var panStartX = 0; var panStartY = 0;
   var zoomContainer = null; var zoomLevelEl = null;
   var lastTruthSnapshot = null; var currentDetailNodeId = null;
+  var canvasGlobalControlsBound = false;
+  var canvasGlobalControlsBusy = false;
 
   var SYSTEM_LABELS = {
     'thrust-reverser': '反推系统',
@@ -330,6 +332,7 @@
       lastTruthSnapshot = data;
       applySnapshotToCanvas(data, requestPayload);
       renderTruthEvalFromSnapshot(data, requestPayload);
+      initCanvasGlobalControls();
     // fault UI removed
       refreshDetailPanel();
 
@@ -507,6 +510,22 @@ function _applySuggestedOverrides(overrides) {
     setInputLoading(false);
     if (chatInput) {
       chatInput.focus();
+    }
+  }
+
+  function renderRequestFailure(err) {
+    var message = err && err.message ? err.message : String(err || 'request_failed');
+
+    if (truthEvalStatus) {
+      truthEvalStatus.textContent = '请求失败';
+    }
+    setTruthBadge('danger', '错误');
+    if (truthEvalSummary) {
+      truthEvalSummary.textContent = '请求失败：' + message;
+    }
+    if (chatLoadingStatus) {
+      chatLoadingStatus.textContent = '请求失败';
+      chatLoadingStatus.classList.remove('is-loading');
     }
   }
 
@@ -1695,7 +1714,23 @@ function clearAiHighlights() {
     // ── Parameter Adjustment Section ─────────────────────────────────
     var adjustSection = document.getElementById('ndp-adjust-section');
     var adjustParamRow = document.getElementById('ndp-adjust-param-row');
+    var applyBtn = document.getElementById('ndp-apply-btn');
     if (adjustSection && adjustParamRow) {
+      if (applyBtn) {
+        applyBtn.disabled = false;
+        applyBtn.title = '应用当前参数';
+      }
+
+      if (!canvasAdjustmentsSupported()) {
+        adjustSection.hidden = false;
+        adjustParamRow.innerHTML = '<p class="ndp-param-hint">当前画布参数调节仅支持反推系统参考链路。</p>';
+        if (applyBtn) {
+          applyBtn.disabled = true;
+          applyBtn.title = '当前系统不支持该参数调节面板';
+        }
+        return;
+      }
+
       // Node IDs that map to an adjustable lever parameter
       var ADJUSTABLE_NODES = {
         radio_altitude_ft: { type: 'float', label: '无线电高度', unit: 'ft',
@@ -1723,23 +1758,25 @@ function clearAiHighlights() {
         // buildCanonicalLeverPayloadFromSnapshot stores the correct value from hud.
         var payload = lastTruthPayloadBySystem[currentSystem] || {};
         if (payload[cfg.key] !== undefined) {
-          currentVal = parseFloat(payload[cfg.key]);
+          currentVal = cfg.type === 'bool' ? payload[cfg.key] : parseFloat(payload[cfg.key]);
         } else if (lastTruthSnapshot) {
           // Fallback to mergePayloadSignals for other float/bool params
           var extracted = extractEvaluation(lastTruthSnapshot);
           var comp = mergePayloadSignals(extracted.componentValues, payload);
           var valueKey = cfg.key;
-          if (cfg.type === 'bool' && comp[valueKey] === undefined) {
-            var floatVal = parseFloat(comp[valueKey]);
-            if (!isNaN(floatVal)) currentVal = floatVal > 0.5;
+          if (cfg.type === 'bool') {
+            currentVal = comp[valueKey];
           } else if (cfg.type === 'float') {
             currentVal = parseFloat(comp[valueKey]);
           } else {
             currentVal = comp[valueKey];
           }
         }
-        if (currentVal === null || currentVal === undefined || isNaN(currentVal)) {
-          currentVal = cfg.type === 'float' ? cfg.min : 0;
+        if (cfg.type === 'bool' && (currentVal === null || currentVal === undefined)) {
+          currentVal = false;
+        }
+        if (cfg.type === 'float' && (currentVal === null || currentVal === undefined || isNaN(currentVal))) {
+          currentVal = cfg.min;
         }
 
         if (cfg.type === 'bool') {
@@ -1877,6 +1914,92 @@ function clearAiHighlights() {
     return overrides;
   }
 
+  function canvasAdjustmentsSupported() {
+    return currentSystem === 'thrust-reverser';
+  }
+
+  function collectCanvasGlobalOverrides() {
+    var overrides = {};
+    var fbSelect = document.getElementById('cgc-feedback-mode');
+    var n1kSlider = document.getElementById('cgc-n1k-limit');
+    var param;
+
+    if (fbSelect) {
+      param = fbSelect.getAttribute('data-param');
+      if (param) {
+        overrides[param] = fbSelect.value;
+      }
+    }
+
+    if (n1kSlider) {
+      param = n1kSlider.getAttribute('data-param');
+      if (param) {
+        overrides[param] = parseFloat(n1kSlider.value);
+      }
+    }
+
+    return overrides;
+  }
+
+  function setCanvasGlobalControlsDisabled(disabled) {
+    var fbSelect = document.getElementById('cgc-feedback-mode');
+    var n1kSlider = document.getElementById('cgc-n1k-limit');
+
+    if (fbSelect) {
+      fbSelect.disabled = disabled;
+      fbSelect.title = disabled ? '当前画布参数调节仅支持反推系统' : '切换反馈模式';
+    }
+    if (n1kSlider) {
+      n1kSlider.disabled = disabled;
+      n1kSlider.title = disabled ? '当前画布参数调节仅支持反推系统' : '调整最大 N1 部署限制';
+    }
+  }
+
+  function applyCanvasGlobalControls() {
+    if (!canvasAdjustmentsSupported() || canvasGlobalControlsBusy) {
+      setCanvasGlobalControlsDisabled(!canvasAdjustmentsSupported() || canvasGlobalControlsBusy);
+      return Promise.resolve(null);
+    }
+
+    canvasGlobalControlsBusy = true;
+    setCanvasGlobalControlsDisabled(true);
+    return _applySuggestedOverrides(collectCanvasGlobalOverrides())
+      .catch(function(err) {
+        renderRequestFailure(err);
+        return null;
+      })
+      .finally(function() {
+        canvasGlobalControlsBusy = false;
+        setCanvasGlobalControlsDisabled(!canvasAdjustmentsSupported());
+      });
+  }
+
+  function bindCanvasGlobalControls() {
+    var fbSelect;
+    var n1kSlider;
+
+    if (canvasGlobalControlsBound) {
+      return;
+    }
+
+    fbSelect = document.getElementById('cgc-feedback-mode');
+    n1kSlider = document.getElementById('cgc-n1k-limit');
+
+    if (fbSelect) {
+      fbSelect.addEventListener('change', function() {
+        applyCanvasGlobalControls();
+      });
+    }
+
+    if (n1kSlider) {
+      n1kSlider.addEventListener('change', function() {
+        applyCanvasGlobalControls();
+      });
+    }
+
+    canvasGlobalControlsBound = true;
+  }
+
   // ── Canvas Global Controls (always-visible floating widget) ─────────────
   function initCanvasGlobalControls() {
     var payload = lastTruthPayloadBySystem[currentSystem] || {};
@@ -1912,6 +2035,9 @@ function clearAiHighlights() {
         n1kVal.textContent = v.toFixed(1) + '%';
       };
     }
+
+    bindCanvasGlobalControls();
+    setCanvasGlobalControlsDisabled(!canvasAdjustmentsSupported() || canvasGlobalControlsBusy);
   }
 
   function initZoomAndPanel() {
@@ -2072,6 +2198,7 @@ function clearAiHighlights() {
       syncSystemChrome();
       resetCanvasState();
       resetTruthEvalBar();
+      initCanvasGlobalControls();
     // fault UI removed
     // fault UI removed
     });
@@ -2093,6 +2220,7 @@ function clearAiHighlights() {
       syncSystemChrome();
       resetCanvasState();
       resetTruthEvalBar();
+      initCanvasGlobalControls();
 
       chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
       openDrawer();
@@ -2939,7 +3067,20 @@ function isGeneralQuestion(qText, qLower) {
     }
   }
 
-  function renderSensitivityTableText(sweepData, raValues, traValues, outcomes) {
+  function renderSensitivityTableText(sweepResponse) {
+    var sweepData = sweepResponse && sweepResponse.matrix_counts ? sweepResponse.matrix_counts : {};
+    var raValues = sweepResponse && Array.isArray(sweepResponse.radio_altitude_ft_values)
+      ? sweepResponse.radio_altitude_ft_values
+      : [];
+    var traValues = sweepResponse && Array.isArray(sweepResponse.tra_deg_values)
+      ? sweepResponse.tra_deg_values
+      : [];
+    var outcomes = sweepResponse && Array.isArray(sweepResponse.outcomes)
+      ? sweepResponse.outcomes
+      : [];
+    var outcomeTotals = sweepResponse && sweepResponse.outcome_totals
+      ? sweepResponse.outcome_totals
+      : {};
     var lines = [];
     // Header
     var raHeader = 'RA\\TRA    ';
@@ -2951,12 +3092,11 @@ function isGeneralQuestion(qText, qLower) {
     raValues.forEach(function(ra) {
       var rowLabel = (ra > 0 ? '+' : '') + ra + 'ft  ';
       var cells = traValues.map(function(tra) {
-        var count = 0;
-        outcomes.forEach(function(outcome) {
-          if (sweepData[outcome] && sweepData[outcome][ra] !== undefined) {
-            count += sweepData[outcome][ra];
-          }
-        });
+        var raKey = String(ra);
+        var traKey = String(tra);
+        var count = sweepData[raKey] && sweepData[raKey][traKey] !== undefined
+          ? sweepData[raKey][traKey]
+          : 0;
         return count > 0 ? '+' + count : '-';
       });
       lines.push(rowLabel + cells.join('      '));
@@ -2965,12 +3105,7 @@ function isGeneralQuestion(qText, qLower) {
     lines.push('');
     lines.push('Outcome totals:');
     outcomes.forEach(function(outcome) {
-      var total = 0;
-      raValues.forEach(function(ra) {
-        if (sweepData[outcome] && sweepData[outcome][ra] !== undefined) {
-          total += sweepData[outcome][ra];
-        }
-      });
+      var total = outcomeTotals[outcome] || 0;
       lines.push('  ' + outcome + ': ' + total + ' combos');
     });
     return lines.join('\n');
@@ -2982,79 +3117,40 @@ function isGeneralQuestion(qText, qLower) {
     var originalText = runBtn.textContent;
     clearPanelError('sensitivity-panel');
     resultDiv.hidden = false;
-    resultDiv.textContent = '\u6b63\u5728\u626b\u63cf... 0/20';
+    resultDiv.textContent = '\u6b63\u5728\u626b\u63cf...';
     runBtn.disabled = true;
     runBtn.textContent = '\u626b\u63cf\u4e2d...';
     var systemId = getSelectedAnalysisSystem('sensitivity-system-select');
 
-    var raValues = [2, 5, 10, 20, 40];
-    var traValues = [-28, -20, -15, -11, -6];
-    var outcomes = ['logic1_active', 'logic3_active', 'thr_lock_active', 'deploy_confirmed'];
-
-    // sweepData[outcome][ra] = total count across all TRA
-    var sweepData = {};
-    outcomes.forEach(function(o) {
-      sweepData[o] = {};
-      raValues.forEach(function(ra) {
-        sweepData[o][ra] = 0;
-      });
-    });
-
-    var totalCalls = raValues.length * outcomes.length;
-    var callCount = 0;
-
-    function doNext(raIdx, outcomeIdx) {
-      if (raIdx >= raValues.length) {
-        var text = renderSensitivityTableText(sweepData, raValues, traValues, outcomes);
+    fetch('/api/sensitivity-sweep', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system_id: systemId }),
+    })
+      .then(function(r) {
+        if (!r.ok) {
+          return r.json().then(function(errData) {
+            throw new Error('\u9519\u8bef ' + r.status + ': ' + (errData.error || r.statusText));
+          }).catch(function() {
+            throw new Error('\u9519\u8bef ' + r.status);
+          });
+        }
+        return r.json();
+      })
+      .then(function(data) {
+        var text = renderSensitivityTableText(data);
         resultDiv.textContent = text;
-        var header = '\ud83d\udd0d \u6545\u969c\u6027\u5206\u6790 [' + systemId + '] \u2014 RA\u00d7TRA\u00d7Outcome (' + totalCalls + '\u6b21\u626b\u63cf)';
+        var header = '\ud83d\udd0d \u6545\u969c\u6027\u5206\u6790 [' + systemId + '] \u2014 RA\u00d7TRA\u00d7Outcome (' + data.scan_count + '\u6b21\u626b\u63cf)';
         postAnalysisToChat('sensitivity', header, text);
+      })
+      .catch(function(err) {
+        showPanelError('sensitivity-panel', err.message);
+        resultDiv.textContent = '';
+      })
+      .finally(function() {
         runBtn.disabled = false;
         runBtn.textContent = originalText;
-        return;
-      }
-
-      var ra = raValues[raIdx];
-      var outcome = outcomes[outcomeIdx];
-
-      fetch('/api/diagnosis/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ outcome: outcome, max_results: 1, system_id: systemId }),
-      })
-        .then(function(r) {
-          if (!r.ok) {
-            return r.json().then(function(errData) {
-              throw new Error('\u9519\u8bef ' + r.status + ': ' + (errData.error || r.statusText));
-            }).catch(function() {
-              throw new Error('\u9519\u8bef ' + r.status);
-            });
-          }
-          return r.json();
-        })
-        .then(function(data) {
-          callCount++;
-          resultDiv.textContent = '\u6b63\u5728\u626b\u63cf... ' + callCount + '/' + totalCalls;
-          if (!data.error && data.total_combos_found !== undefined) {
-            sweepData[outcome][ra] = data.total_combos_found;
-          }
-          var nextOutcomeIdx = outcomeIdx + 1;
-          var nextRaIdx = raIdx;
-          if (nextOutcomeIdx >= outcomes.length) {
-            nextOutcomeIdx = 0;
-            nextRaIdx = raIdx + 1;
-          }
-          doNext(nextRaIdx, nextOutcomeIdx);
-        })
-        .catch(function(err) {
-          showPanelError('sensitivity-panel', err.message);
-          resultDiv.textContent = '';
-          runBtn.disabled = false;
-          runBtn.textContent = originalText;
-        });
-    }
-
-    doNext(0, 0);
+      });
   }
 
   // Wire hardware schema button
