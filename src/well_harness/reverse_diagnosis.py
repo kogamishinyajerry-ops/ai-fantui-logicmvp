@@ -175,8 +175,52 @@ class ReverseDiagnosisEngine:
 
         return results
 
+    def diagnose_and_report(
+        self,
+        outcome: str,
+        *,
+        max_results: int = MAX_COMBINATIONS,
+    ) -> dict:
+        """
+        Convenience wrapper: run diagnose() and return a serializable report dict.
+
+        Returns:
+            {
+                "outcome": outcome,
+                "total_combos_found": len(results),
+                "grid_resolution": _GRID_RESOLUTION,
+                "timestamp": "<ISO-8601>",
+                "results": [list of ParameterSnapshot dicts],
+            }
+        """
+        from datetime import datetime, timezone
+
+        results = self.diagnose(outcome, max_results=max_results)
+        return {
+            "outcome": outcome,
+            "total_combos_found": len(results),
+            "grid_resolution": _GRID_RESOLUTION,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "results": [_parameter_snapshot_to_dict(r) for r in results],
+        }
+
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
+
+
+def _parameter_snapshot_to_dict(snapshot: ParameterSnapshot) -> dict:
+    """Convert a ParameterSnapshot to a plain dict for JSON serialization."""
+    return {
+        "radio_altitude_ft": snapshot.radio_altitude_ft,
+        "tra_deg": snapshot.tra_deg,
+        "sw1_closed": snapshot.sw1_closed,
+        "sw2_closed": snapshot.sw2_closed,
+        "tls_unlocked": snapshot.tls_unlocked,
+        "pls_unlocked": snapshot.pls_unlocked,
+        "vdt_percent": snapshot.vdt_percent,
+        "n1k": snapshot.n1k,
+        "reverser_inhibited": snapshot.reverser_inhibited,
+    }
 
 
 def _linspace(start: float, stop: float, num: int) -> list[float]:
