@@ -164,6 +164,16 @@ class TestCanvasInteractionArtifacts(unittest.TestCase):
                     f"{selector} should have pointer-events: none, not auto",
                 )
 
+    def test_zoom_container_pan_end_handlers_are_registered(self):
+        """zoomContainer must terminate panning on its own mouseup/mouseleave.
+
+        Without these listeners, releasing the mouse over zoomContainer can leave
+        wasPanning stuck true and block all later clicks on the canvas.
+        """
+        js = self._read("chat.js")
+        self.assertIn("zoomContainer.addEventListener('mouseup', onPanEnd);", js)
+        self.assertIn("zoomContainer.addEventListener('mouseleave', onPanEnd);", js)
+
 
 if __name__ == "__main__":
     unittest.main()

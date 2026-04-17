@@ -1866,6 +1866,8 @@ function clearAiHighlights() {
     if (zoomContainer) {
       zoomContainer.addEventListener('wheel', onWheelZoom, { passive: false });
       zoomContainer.addEventListener('mousedown', onPanStart);
+      zoomContainer.addEventListener('mouseup', onPanEnd);
+      zoomContainer.addEventListener('mouseleave', onPanEnd);
     }
     if (resetBtn) {
       resetBtn.addEventListener('click', resetZoom);
