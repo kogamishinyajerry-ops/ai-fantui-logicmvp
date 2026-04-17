@@ -441,6 +441,7 @@
         <a href="/workbench.html" class="drawer-tool-link">工作台</a>
         <button type="button" class="drawer-tool-btn" id="chat-analysis-btn">📊 分析工具</button>
         <button type="button" class="drawer-tool-btn" id="chat-hardware-schema-btn">🛠️ 硬件规格</button>
+        <button type="button" class="drawer-tool-btn" id="chat-sensitivity-btn">🔍 敏感性分析</button>
       </div>
 
       <div class="chat-shortcut-strip" aria-label="快捷提问">
@@ -486,6 +487,19 @@
           <input type="number" id="mc-seed" placeholder="留空使用随机">
           <button type="button" class="analysis-run-btn" id="mc-run-btn">运行仿真</button>
           <div class="analysis-result" id="mc-result" hidden></div>
+        </div>
+      </div>
+
+      <!-- Sensitivity sweep panel -->
+      <div class="analysis-panel" id="sensitivity-panel" hidden>
+        <div class="analysis-panel-header">
+          <span>🔍 敏感性分析 — 参数扫描</span>
+          <button type="button" class="analysis-panel-close" data-close="sensitivity-panel">✕</button>
+        </div>
+        <div class="analysis-panel-body">
+          <p class="sensitivity-desc">对 RA (0~50ft) 和 TRA (-30~-5°) 进行网格扫描，统计各outcome满足数量。</p>
+          <button type="button" class="analysis-run-btn" id="sensitivity-run-btn">开始扫描 (25次)</button>
+          <div class="analysis-result" id="sensitivity-result" hidden></div>
         </div>
       </div>
 

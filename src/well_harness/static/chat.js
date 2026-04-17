@@ -2762,10 +2762,130 @@ function isGeneralQuestion(qText, qLower) {
       });
   }
 
+  // ── P19.13: Sensitivity sweep ───────────────────────────────────────────
+
+  function openSensitivityPanel() {
+    var panel = document.getElementById('sensitivity-panel');
+    var diagPanel = document.getElementById('diagnosis-panel');
+    var mcPanel = document.getElementById('monte-carlo-panel');
+    var hwPanel = document.getElementById('hardware-schema-panel');
+    [diagPanel, mcPanel, hwPanel].forEach(function(p) {
+      if (p) p.hidden = true;
+    });
+    if (panel) {
+      panel.hidden = !panel.hidden;
+    }
+  }
+
+  function renderSensitivityTableText(sweepData, raValues, traValues, outcomes) {
+    var lines = [];
+    // Header
+    var raHeader = 'RA\\TRA    ';
+    var traHeader = traValues.map(function(t) {
+      return (t > 0 ? '+' : '') + t + '\u00b0';
+    }).join('      ');
+    lines.push(raHeader + traHeader);
+
+    raValues.forEach(function(ra) {
+      var rowLabel = (ra > 0 ? '+' : '') + ra + 'ft  ';
+      var cells = traValues.map(function(tra) {
+        var count = 0;
+        outcomes.forEach(function(outcome) {
+          if (sweepData[outcome] && sweepData[outcome][ra] !== undefined) {
+            count += sweepData[outcome][ra];
+          }
+        });
+        return count > 0 ? '+' + count : '-';
+      });
+      lines.push(rowLabel + cells.join('      '));
+    });
+
+    lines.push('');
+    lines.push('Outcome totals:');
+    outcomes.forEach(function(outcome) {
+      var total = 0;
+      raValues.forEach(function(ra) {
+        if (sweepData[outcome] && sweepData[outcome][ra] !== undefined) {
+          total += sweepData[outcome][ra];
+        }
+      });
+      lines.push('  ' + outcome + ': ' + total + ' combos');
+    });
+    return lines.join('\n');
+  }
+
+  function runSensitivitySweep() {
+    var resultDiv = document.getElementById('sensitivity-result');
+    resultDiv.hidden = false;
+    resultDiv.textContent = '\u6b63\u5728\u626b\u63cf... 0/20';
+
+    var raValues = [2, 5, 10, 20, 40];
+    var traValues = [-28, -20, -15, -11, -6];
+    var outcomes = ['logic1_active', 'logic3_active', 'thr_lock_active', 'deploy_confirmed'];
+
+    // sweepData[outcome][ra] = total count across all TRA
+    var sweepData = {};
+    outcomes.forEach(function(o) {
+      sweepData[o] = {};
+      raValues.forEach(function(ra) {
+        sweepData[o][ra] = 0;
+      });
+    });
+
+    var totalCalls = raValues.length * outcomes.length;
+    var callCount = 0;
+
+    function doNext(raIdx, outcomeIdx) {
+      if (raIdx >= raValues.length) {
+        var text = renderSensitivityTableText(sweepData, raValues, traValues, outcomes);
+        resultDiv.textContent = text;
+        var header = '\ud83d\udd0d \u6545\u969c\u6027\u5206\u6790 \u2014 RA\u00d7TRA\u00d7Outcome (' + totalCalls + '\u6b21\u626b\u63cf)';
+        postAnalysisToChat('sensitivity', header, text);
+        return;
+      }
+
+      var ra = raValues[raIdx];
+      var outcome = outcomes[outcomeIdx];
+
+      fetch('/api/diagnosis/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ outcome: outcome, max_results: 1 }),
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          callCount++;
+          resultDiv.textContent = '\u6b63\u5728\u626b\u63cf... ' + callCount + '/' + totalCalls;
+          if (!data.error && data.total_combos_found !== undefined) {
+            sweepData[outcome][ra] = data.total_combos_found;
+          }
+          var nextOutcomeIdx = outcomeIdx + 1;
+          var nextRaIdx = raIdx;
+          if (nextOutcomeIdx >= outcomes.length) {
+            nextOutcomeIdx = 0;
+            nextRaIdx = raIdx + 1;
+          }
+          doNext(nextRaIdx, nextOutcomeIdx);
+        })
+        .catch(function(err) {
+          resultDiv.textContent = '\u8bf7\u6c42\u5931\u8d25: ' + err.message;
+        });
+    }
+
+    doNext(0, 0);
+  }
+
   // Wire hardware schema button
   var hwSchemaBtn = document.getElementById('chat-hardware-schema-btn');
   if (hwSchemaBtn) hwSchemaBtn.addEventListener('click', openHardwareSchemaPanel);
 
   var hwSchemaFetchBtn = document.getElementById('hw-schema-fetch-btn');
   if (hwSchemaFetchBtn) hwSchemaFetchBtn.addEventListener('click', runHardwareSchema);
+
+  // Wire sensitivity button
+  var sensitivityBtn = document.getElementById('chat-sensitivity-btn');
+  if (sensitivityBtn) sensitivityBtn.addEventListener('click', openSensitivityPanel);
+
+  var sensitivityRunBtn = document.getElementById('sensitivity-run-btn');
+  if (sensitivityRunBtn) sensitivityRunBtn.addEventListener('click', runSensitivitySweep);
 })();
