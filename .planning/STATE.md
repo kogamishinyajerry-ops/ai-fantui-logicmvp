@@ -103,6 +103,11 @@ P19.3 Executed: Reverse diagnosis engine
 - _SUPPORTED_FOR_ANALYSIS = frozenset({"thrust-reverser"}) guard added to diagnosis/Monte Carlo handlers
 - Generic yaml.safe_load() loader for non-thrust-reverser in _handle_hardware_schema
 - All 634 tests pass (619 baseline + 15 new, 0 regressions)
+- P19.18 Executed: Presentation Deck + 3 哇场景 Scripts
+- Created docs/presentations/pitch-ready-demo.md (Notion-ready presentation deck)
+- Created docs/presentations/demo-talking-points.md (演示提示卡)
+- 3哇瞬间: 因果链高亮 / Monte Carlo可靠性 / 反向诊断
+- All 634 tests pass (no regression)
 - All P0-P18.5 phases complete. Opus 4.6 final adjudication: Approved, Project Freeze.
 - Regression baseline: 561 tests, 24-command suite. GSD automation continues to protect regression.
 - P18.5 merged (canvas interaction fix): fault injection UI removed, hover scale disabled, hit-box pointer-events fixed.
