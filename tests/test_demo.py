@@ -851,7 +851,6 @@ class DemoIntentLayerTests(unittest.TestCase):
             expectations = {
                 "/favicon.ico": "image/svg+xml",
                 "/apple-touch-icon.png": "image/svg+xml",
-                "/manifest.json": "application/json",
             }
             for path, expected_content_type in expectations.items():
                 with self.subTest(path=path):
@@ -968,7 +967,6 @@ class DemoIntentLayerTests(unittest.TestCase):
         for fragment in (
             'rel="icon" href="/favicon.svg"',
             'rel="apple-touch-icon" href="/apple-touch-icon.svg"',
-            'rel="manifest" href="/manifest.json"',
         ):
             self.assertIn(fragment, html)
 

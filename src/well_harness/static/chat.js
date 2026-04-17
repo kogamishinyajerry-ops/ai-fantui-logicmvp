@@ -47,6 +47,30 @@
     'bleed-air': '引气阀系统',
     efds: '干扰弹系统',
   };
+  var NODE_STATE_CLASSES = ['is-active', 'is-blocked', 'is-inactive'];
+  var NODE_VALUE_KEYS = {
+    tls115: 'tls_115vac_cmd',
+    etrac_540v: 'etrac_540vdc_cmd',
+    eec_deploy: 'eec_deploy_cmd',
+    pls_power: 'pls_power_cmd',
+    pdu_motor: 'pdu_motor_cmd',
+    vdt90: 'deploy_90_percent_vdt',
+    thr_lock: 'throttle_electronic_lock_release_cmd',
+  };
+  var FAILED_CONDITION_NODE_MAP = {
+    radio_altitude_ft: 'radio_altitude_ft',
+    sw1: 'sw1',
+    reverser_inhibited: 'reverser_inhibited',
+    engine_running: 'engine_running',
+    aircraft_on_ground: 'aircraft_on_ground',
+    sw2: 'sw2',
+    eec_enable: 'eec_enable',
+    tls_unlocked_ls: 'tls115',
+    n1k: 'n1k',
+    tra_deg: 'tra_deg',
+    deploy_90_percent_vdt: 'vdt90',
+  };
+  var referenceTopologyNodes = [];
 
   // Maps each logic gate to the command node(s) it directly drives.
   // Used to derive intermediate command-node visual state from gate activation state.
@@ -298,6 +322,18 @@
 
   function getCurrentTopologyElement() {
     return document.getElementById('chain-topology-' + currentSystem);
+  }
+
+  function showCurrentTopology() {
+    var currentTopology = getCurrentTopologyElement();
+
+    document.querySelectorAll('.chain-topology').forEach(function(el) {
+      el.style.display = 'none';
+    });
+
+    if (currentTopology) {
+      currentTopology.style.display = '';
+    }
   }
 
 
@@ -609,17 +645,13 @@ function _applySuggestedOverrides(overrides) {
   }
 
   function formatSignalValue(value) {
-    if (value === null || value === undefined) {
-      return '—';
-    }
-    if (typeof value === 'boolean') {
-      return value ? '开' : '关';
-    }
+    if (value === null || value === undefined) return '—';
+    if (typeof value === 'boolean') return value ? 'ON' : 'OFF';
     if (typeof value === 'number') {
-      if (!isFinite(value)) {
-        return '—';
+      if (isFinite(value)) {
+        return value % 1 === 0 ? String(value) : value.toFixed(1);
       }
-      return value % 1 === 0 ? String(value) : value.toFixed(1);
+      return '—';
     }
     return String(value);
   }
@@ -649,6 +681,98 @@ function _applySuggestedOverrides(overrides) {
       logicId: logicId,
       conditionId: conditionId,
     };
+  }
+
+  function resetStateClasses(element) {
+    element.classList.remove.apply(element.classList, NODE_STATE_CLASSES);
+  }
+
+  function setStateClasses(element, state) {
+    resetStateClasses(element);
+    element.classList.add('is-' + state);
+  }
+
+  function setNodeVisualState(element, state) {
+    var targets = [element].concat(
+      Array.prototype.slice.call(
+        element.querySelectorAll('.chain-node-svg, .logic-gate-svg, .node-status-dot')
+      )
+    );
+    var i;
+
+    for (i = 0; i < targets.length; i += 1) {
+      setStateClasses(targets[i], state);
+    }
+    element.setAttribute('data-state', state);
+  }
+
+  function clearNodeVisualState(element) {
+    var targets = [element].concat(
+      Array.prototype.slice.call(
+        element.querySelectorAll('.chain-node-svg, .logic-gate-svg, .node-status-dot')
+      )
+    );
+    var i;
+
+    for (i = 0; i < targets.length; i += 1) {
+      resetStateClasses(targets[i]);
+    }
+    element.removeAttribute('data-state');
+  }
+
+  function setConnectionVisualState(element, state) {
+    setStateClasses(element, state);
+    element.setAttribute('data-state', state);
+  }
+
+  function connectionBlockersByNode(nodes) {
+    var blockedBy = {};
+    var i;
+
+    for (i = 0; i < (nodes || []).length; i += 1) {
+      blockedBy[nodes[i].id] = (nodes[i].blocked_by || []).slice();
+    }
+
+    return blockedBy;
+  }
+
+  function blockedConditionNodeIds(blockedByNode) {
+    var blockedIds = {};
+    var nodeId;
+    var conditions;
+    var i;
+    var mappedNodeId;
+
+    for (nodeId in blockedByNode) {
+      if (!Object.prototype.hasOwnProperty.call(blockedByNode, nodeId)) {
+        continue;
+      }
+      conditions = blockedByNode[nodeId] || [];
+      for (i = 0; i < conditions.length; i += 1) {
+        mappedNodeId = FAILED_CONDITION_NODE_MAP[conditions[i]];
+        if (mappedNodeId) {
+          blockedIds[mappedNodeId] = true;
+        }
+      }
+    }
+
+    return blockedIds;
+  }
+
+  function resolveComponentState(value, fallbackState, isBlocked) {
+    if (isBlocked) {
+      return 'blocked';
+    }
+    if (typeof value === 'boolean') {
+      return value ? 'active' : 'inactive';
+    }
+    if (typeof value === 'number' && isFinite(value)) {
+      return value !== 0 ? 'active' : 'inactive';
+    }
+    if (value === null || value === undefined || value === '') {
+      return fallbackState;
+    }
+    return 'active';
   }
 
   function extractEvaluation(data) {
@@ -795,51 +919,191 @@ function _applySuggestedOverrides(overrides) {
   }
 
   function resetCanvasState() {
-    var nodes;
-    var values;
-    var i;
-
     clearAiHighlights();
     clearNodeReferenceHighlights();
-    nodes = document.querySelectorAll('.canvas-wrapper [data-node]');
-    values = document.querySelectorAll('.canvas-wrapper [data-value-for]');
 
-    for (i = 0; i < nodes.length; i += 1) {
-      nodes[i].classList.remove('is-active', 'is-blocked', 'is-inactive', 'is-faulted');
-      nodes[i].classList.add('is-inactive');
-      nodes[i].setAttribute('data-state', 'inactive');
-      nodes[i].removeAttribute('data-fault-type');
-    }
-
-    for (i = 0; i < values.length; i += 1) {
-      values[i].textContent = '—';
-    }
-
-    updateConnectionStates();
+    document.querySelectorAll('.chain-topology [data-node]').forEach(function(el) {
+      clearNodeVisualState(el);
+      el.removeAttribute('data-fault-type');
+    });
+    document.querySelectorAll('.chain-topology .conn-line').forEach(function(el) {
+      resetStateClasses(el);
+      el.removeAttribute('data-state');
+    });
+    document.querySelectorAll('.chain-topology [data-value-for]').forEach(function(el) {
+      el.textContent = '—';
+    });
   }
 
   function setNodeState(nodeId, state) {
+    var topology = getCurrentTopologyElement();
     var els;
     var i;
 
+    if (!topology) {
+      return;
+    }
+
     nodeId = normalizeNodeId(nodeId) || nodeId;
-    els = document.querySelectorAll('.canvas-wrapper [data-node="' + nodeId + '"]');
+    els = topology.querySelectorAll('[data-node="' + nodeId + '"]');
     for (i = 0; i < els.length; i += 1) {
-      els[i].classList.remove('is-active', 'is-blocked', 'is-inactive');
-      els[i].classList.add('is-' + state);
-      els[i].setAttribute('data-state', state);
+      setNodeVisualState(els[i], state);
     }
   }
 
   function setNodeValue(nodeId, value) {
+    var topology = getCurrentTopologyElement();
     nodeId = normalizeNodeId(nodeId) || nodeId;
     var valueKey = NODE_VALUE_KEYS[nodeId] || nodeId;
-    var els = document.querySelectorAll('.canvas-wrapper [data-value-for="' + valueKey + '"]');
+    var els = topology ? topology.querySelectorAll('[data-value-for="' + valueKey + '"]') : [];
     var i;
 
     for (i = 0; i < els.length; i += 1) {
       els[i].textContent = formatSignalValue(value);
     }
+  }
+
+  function applySystemNodeStates(nodes, componentValues) {
+    var topology = getCurrentTopologyElement();
+    var stateMap = {};
+    var blockedByNode = connectionBlockersByNode(nodes || []);
+    var blockedConditionNodes = blockedConditionNodeIds(blockedByNode);
+    var nodeValueMap = {};
+    var resolvedStates = {};
+    var elements;
+    var i;
+    var nodeId;
+    var state;
+    var valueKey;
+    var componentValue;
+    var valueEls;
+    var j;
+
+    for (i = 0; i < (nodes || []).length; i += 1) {
+      stateMap[nodes[i].id] = nodes[i].state || 'inactive';
+    }
+
+    if (componentValues) {
+      for (nodeId in componentValues) {
+        if (Object.prototype.hasOwnProperty.call(componentValues, nodeId)) {
+          nodeValueMap[nodeId] = componentValues[nodeId];
+        }
+      }
+    }
+
+    if (!topology) {
+      return {
+        blockedByNode: blockedByNode,
+        resolvedStates: resolvedStates,
+      };
+    }
+
+    elements = topology.querySelectorAll('[data-node]');
+    for (i = 0; i < elements.length; i += 1) {
+      nodeId = elements[i].getAttribute('data-node');
+      valueKey = NODE_VALUE_KEYS[nodeId] || nodeId;
+      state = stateMap[nodeId] || 'inactive';
+      componentValue = nodeValueMap.hasOwnProperty(valueKey)
+        ? nodeValueMap[valueKey]
+        : nodeValueMap[nodeId];
+
+      if (componentValues && (nodeValueMap.hasOwnProperty(valueKey) || nodeValueMap.hasOwnProperty(nodeId))) {
+        state = resolveComponentState(componentValue, state, !!blockedConditionNodes[nodeId]);
+      } else if (blockedConditionNodes[nodeId]) {
+        state = 'blocked';
+      }
+
+      setNodeVisualState(elements[i], state);
+      resolvedStates[nodeId] = state;
+
+      valueEls = topology.querySelectorAll('[data-value-for="' + valueKey + '"]');
+      for (j = 0; j < valueEls.length; j += 1) {
+        if (componentValue !== undefined) {
+          valueEls[j].textContent = formatSignalValue(componentValue);
+        } else if (state === 'active') {
+          valueEls[j].textContent = 'ON';
+        } else if (state === 'blocked') {
+          valueEls[j].textContent = 'WAIT';
+        } else {
+          valueEls[j].textContent = 'OFF';
+        }
+      }
+    }
+
+    return {
+      blockedByNode: blockedByNode,
+      resolvedStates: resolvedStates,
+    };
+  }
+
+  function updateVisibleConnectionStates(resolvedStates, blockedByNode) {
+    var topology = getCurrentTopologyElement();
+    var lines;
+    var i;
+    var fromId;
+    var toId;
+    var blockerKey;
+    var fromState;
+    var toState;
+    var blockedReasons;
+    var state;
+
+    if (!topology) {
+      return;
+    }
+
+    lines = topology.querySelectorAll('.conn-line[data-conn-from]');
+    for (i = 0; i < lines.length; i += 1) {
+      fromId = lines[i].getAttribute('data-conn-from');
+      toId = lines[i].getAttribute('data-conn-to');
+      blockerKey = lines[i].getAttribute('data-conn-blocker');
+      fromState = resolvedStates[fromId] || 'inactive';
+      toState = resolvedStates[toId] || 'inactive';
+      blockedReasons = blockedByNode[toId] || [];
+      state = 'inactive';
+
+      if (blockerKey && toState === 'blocked' && blockedReasons.indexOf(blockerKey) !== -1) {
+        state = 'blocked';
+      } else if (!blockerKey && (lines[i].classList.contains('conn-final') || /^logic/.test(fromId)) && (fromState === 'blocked' || toState === 'blocked')) {
+        state = 'blocked';
+      } else if (fromState === 'active' || toState === 'active') {
+        state = 'active';
+      }
+
+      setConnectionVisualState(lines[i], state);
+    }
+  }
+
+  function renderChainMap(nodes, componentValues) {
+    var rendered = applySystemNodeStates(nodes || [], componentValues);
+    updateVisibleConnectionStates(rendered.resolvedStates, rendered.blockedByNode);
+  }
+
+  function buildLeverSnapshotComponentValues(data, payload) {
+    var hud = data && data.hud ? data.hud : {};
+    var outputs = data && data.outputs ? data.outputs : {};
+    return {
+      sw1: hud.sw1,
+      sw2: hud.sw2,
+      radio_altitude_ft: hud.radio_altitude_ft,
+      engine_running: hud.engine_running,
+      aircraft_on_ground: hud.aircraft_on_ground,
+      reverser_inhibited: hud.reverser_inhibited,
+      eec_enable: hud.eec_enable,
+      n1k: hud.n1k,
+      tra_deg: hud.tra_deg,
+      tls_unlocked_ls: hud.tls_unlocked_ls,
+      all_pls_unlocked_ls: hud.all_pls_unlocked_ls,
+      deploy_90_percent_vdt: hud.deploy_90_percent_vdt,
+      deploy_position_percent: hud.deploy_position_percent,
+      tls_115vac_cmd: outputs.tls_115vac_cmd,
+      etrac_540vdc_cmd: outputs.etrac_540vdc_cmd,
+      eec_deploy_cmd: outputs.eec_deploy_cmd,
+      pls_power_cmd: outputs.pls_power_cmd,
+      pdu_motor_cmd: outputs.pdu_motor_cmd,
+      throttle_electronic_lock_release_cmd: outputs.throttle_electronic_lock_release_cmd,
+      max_n1k_deploy_limit: payload ? payload.max_n1k_deploy_limit : undefined,
+    };
   }
 
 // ── P19.4: Causal chain connector layer ────────────────────────────────────
@@ -1189,126 +1453,56 @@ function clearAiHighlights() {
   }
 
   function applySystemSnapshotToCanvas(snapshotData) {
-    var truthEvaluation = snapshotData && snapshotData.truth_evaluation ? snapshotData.truth_evaluation : null;
-    var componentValues = truthEvaluation && truthEvaluation.asserted_component_values
-      ? truthEvaluation.asserted_component_values
-      : {};
-    var nodeStates = extractNodeStates(snapshotData);
-    var nodes = document.querySelectorAll('.canvas-wrapper [data-node]');
-    var i;
-    var nodeId;
-    var valueKey;
-    var value;
+    var truthEvaluation;
 
-    resetCanvasState();
-
-    for (i = 0; i < nodes.length; i += 1) {
-      nodeId = nodes[i].getAttribute('data-node');
-      if (!nodeId) {
-        continue;
-      }
-      setNodeState(nodeId, nodeStates[nodeId] || 'inactive');
-      valueKey = NODE_VALUE_KEYS[nodeId] || nodeId;
-      value = componentValues[valueKey];
-      if (value === undefined) {
-        value = componentValues[nodeId];
-      }
-      if (value !== undefined) {
-        setNodeValue(nodeId, value);
-      }
+    if (snapshotData && Array.isArray(snapshotData.nodes) && snapshotData.nodes.length) {
+      referenceTopologyNodes = snapshotData.nodes.slice();
     }
 
-    updateConnectionStates();
+    lastTruthSnapshot = snapshotData || lastTruthSnapshot;
+    showCurrentTopology();
+    truthEvaluation = snapshotData && snapshotData.truth_evaluation ? snapshotData.truth_evaluation : null;
+    renderChainMap(
+      referenceTopologyNodes,
+      truthEvaluation && truthEvaluation.asserted_component_values
+        ? truthEvaluation.asserted_component_values
+        : {}
+    );
   }
 
   function applySnapshotToCanvas(data, payload) {
-    var extracted = extractEvaluation(data);
-    var componentValues = mergePayloadSignals(extracted.componentValues, payload);
-    var nodeIds = [
-      'radio_altitude_ft',
-      'sw1',
-      'reverser_inhibited',
-      'engine_running',
-      'aircraft_on_ground',
-      'sw2',
-      'eec_enable',
-      'n1k',
-      'tra_deg',
-      'logic1',
-      'tls115',
-      'logic2',
-      'etrac_540v',
-      'logic3',
-      'eec_deploy',
-      'pls_power',
-      'pdu_motor',
-      'vdt90',
-      'logic4',
-      'thr_lock',
-    ];
-    var i;
-    var nodeId;
-    var valueKey;
-    var value;
+    var nodes = data && Array.isArray(data.nodes) && data.nodes.length
+      ? data.nodes
+      : referenceTopologyNodes;
 
-    resetCanvasState();
-
-    // Build authoritative state map directly from backend's data.nodes[].
-    // The backend returns {id, state: 'active'|'inactive'|'blocked'} for all 14 nodes.
-    // This is the ground truth — use it instead of deriving from truth_evaluation which
-    // has empty active_logic_node_ids for lever-snapshot.
-    var nodeStateMap = {};
-    if (data && data.nodes && Array.isArray(data.nodes)) {
-      for (i = 0; i < data.nodes.length; i += 1) {
-        nodeStateMap[data.nodes[i].id] = data.nodes[i].state || 'inactive';
-      }
+    if (data && Array.isArray(data.nodes) && data.nodes.length) {
+      referenceTopologyNodes = data.nodes.slice();
     }
 
-    // Build authoritative value map from data.nodes[] (backend-reported values).
-    // Used for setNodeValue() display of numeric sensor/command values.
-    var nodeValueMap = {};
-    if (data && data.nodes && Array.isArray(data.nodes)) {
-      for (i = 0; i < data.nodes.length; i += 1) {
-        if (data.nodes[i].value !== undefined) {
-          nodeValueMap[data.nodes[i].id] = data.nodes[i].value;
-        }
-      }
-    }
+    showCurrentTopology();
+    renderChainMap(nodes || [], buildLeverSnapshotComponentValues(data, payload));
+  }
 
-    // ── Authoritative state application ─────────────────────────────────────
-    // The backend's data.nodes[] array is the single source of truth for ALL
-    // node states (active / inactive / blocked). Apply them directly — no
-    // derivation, no deriveComponentState(), no GATE_TO_COMMAND_MAP inference.
-    // This fixes the critical bug where intermediate nodes (tls115, etrac_540v,
-    // vdt90, thr_lock) always appeared inactive because their .value was
-    // undefined → deriveComponentState(undefined) returned 'inactive'.
-    for (i = 0; i < nodeIds.length; i += 1) {
-      nodeId = nodeIds[i];
-      // Apply authoritative state from backend's data.nodes[].
-      setNodeState(nodeId, nodeStateMap[nodeId] || 'inactive');
-      // For input/sensor nodes that carry numeric values, propagate display value.
-      // Skip logic gate nodes and intermediate output nodes (no numeric display).
-      // Special case: vdt90's deploy_position_percent lives in lastTruthPayloadBySystem
-      // (not in truth_evaluation.asserted_component_values which is empty for lever-snapshot).
-      if (nodeId === 'vdt90') {
-        var vdtPayload = lastTruthPayloadBySystem[currentSystem];
-        if (vdtPayload && vdtPayload.deploy_position_percent !== undefined) {
-          setNodeValue(nodeId, vdtPayload.deploy_position_percent);
+  function loadReferenceCanvasSnapshot() {
+    showCurrentTopology();
+    return requestJson('/api/system-snapshot?system_id=' + encodeURIComponent(currentSystem))
+      .then(function(snapshotData) {
+        if (snapshotData && Array.isArray(snapshotData.nodes) && snapshotData.nodes.length) {
+          referenceTopologyNodes = snapshotData.nodes.slice();
         }
-      } else if (!/^logic\d+$/.test(nodeId) && nodeId !== 'tls115' && nodeId !== 'etrac_540v' && nodeId !== 'thr_lock') {
-        valueKey = NODE_VALUE_KEYS[nodeId] || nodeId;
-        value = nodeValueMap[nodeId] !== undefined ? nodeValueMap[nodeId] : componentValues[valueKey];
-        if (value !== undefined) {
-          setNodeValue(nodeId, value);
-        }
-      }
-    }
-
-    updateConnectionStates();
+        lastTruthSnapshot = snapshotData;
+        applySystemSnapshotToCanvas(snapshotData);
+        renderTruthEvalFromSnapshot(snapshotData, null);
+        return snapshotData;
+      })
+      .catch(function(err) {
+        renderRequestFailure(err);
+        return null;
+      });
   }
 
   function bootstrapConnectionMetadata() {
-    var lines = document.querySelectorAll('.canvas-wrapper .conn-line');
+    var lines = document.querySelectorAll('#chain-topology-thrust-reverser .conn-line');
     var i;
     var def;
 
@@ -1318,8 +1512,12 @@ function clearAiHighlights() {
         continue;
       }
 
-      lines[i].setAttribute('data-conn-from', def.from);
-      lines[i].setAttribute('data-conn-to', def.to);
+      if (!lines[i].hasAttribute('data-conn-from')) {
+        lines[i].setAttribute('data-conn-from', def.from);
+      }
+      if (!lines[i].hasAttribute('data-conn-to')) {
+        lines[i].setAttribute('data-conn-to', def.to);
+      }
       if (def.kind && !lines[i].classList.contains(def.kind)) {
         lines[i].classList.add(def.kind);
       }
@@ -1328,7 +1526,8 @@ function clearAiHighlights() {
 
   function getRenderedNodeState(nodeId) {
     var normalizedNodeId = normalizeNodeId(nodeId) || nodeId;
-    var el = document.querySelector('.canvas-wrapper [data-node="' + normalizedNodeId + '"]');
+    var topology = getCurrentTopologyElement();
+    var el = topology ? topology.querySelector('[data-node="' + normalizedNodeId + '"]') : null;
 
     if (!el) {
       return 'inactive';
@@ -1348,7 +1547,8 @@ function clearAiHighlights() {
   }
 
   function updateConnectionStates() {
-    var lines = document.querySelectorAll('.canvas-wrapper .conn-line[data-conn-from][data-conn-to]');
+    var topology = getCurrentTopologyElement();
+    var lines = topology ? topology.querySelectorAll('.conn-line[data-conn-from][data-conn-to]') : [];
     var i;
     var fromState;
     var toState;
@@ -1511,13 +1711,8 @@ function clearAiHighlights() {
     }
     setTruthBadge('idle', '空闲');
     if (truthEvalSummary) {
-      if (currentSystem === 'thrust-reverser') {
-        truthEvalSummary.textContent =
-          '选择系统并发送问题，返回的真值评估会在这里汇总为激活、阻塞、完成三个信号面。';
-      } else {
-        truthEvalSummary.textContent =
-          '当前画布保持参考反推链路；问题会继续按所选系统路由到对应适配器。';
-      }
+      truthEvalSummary.textContent =
+        '选择系统并发送问题，返回的真值评估会在这里汇总为激活、阻塞、完成三个信号面。';
     }
     if (truthEvalActive) {
       truthEvalActive.innerHTML = '<span class="truth-chip is-muted">—</span>';
@@ -2065,14 +2260,19 @@ function clearAiHighlights() {
       stage.addEventListener('mouseleave', onPanEnd);
       stage.addEventListener('click', function(e) {
         var eventTarget = e.target;
+        var nodeTarget;
+        var nodeId;
+
         if (panel && eventTarget && panel.contains(eventTarget)) {
           return;
         }
         if (wasPanning) { wasPanning = false; return; }
-        var nodeEl = eventTarget && eventTarget.closest ? eventTarget.closest('[data-node]') : null;
-        if (!nodeEl) return;
-        // fault UI removed
-        var nodeId = nodeEl.getAttribute('data-node');
+        nodeTarget = eventTarget && eventTarget.closest
+          ? eventTarget.closest('[data-node], [data-node-label]')
+          : null;
+        if (!nodeTarget) return;
+        nodeId = nodeTarget.getAttribute('data-node') || nodeTarget.getAttribute('data-node-label');
+        if (!nodeId) return;
         if (currentDetailNodeId === nodeId) {
           hideDetailPanel();
         } else {
@@ -2099,54 +2299,57 @@ function clearAiHighlights() {
       }
     });
 
-    // ── Parameter Adjustment Buttons ─────────────────────────────────
-    var applyBtn = document.getElementById('ndp-apply-btn');
-    var cancelBtn = document.getElementById('ndp-cancel-btn');
+    // ── Parameter Adjustment Buttons (event delegation) ────────────────
+    // Buttons are created by renderDetailPanelContent() on first node click,
+    // so we delegate from the adjust section which always exists in the HTML.
+    var adjSection = document.getElementById('ndp-adjust-section');
+    if (adjSection) {
+      adjSection.addEventListener('click', function(e) {
+        var target = e.target;
+        var applyBtn = document.getElementById('ndp-apply-btn');
+        var cancelBtn = document.getElementById('ndp-cancel-btn');
 
-    if (applyBtn) {
-      applyBtn.addEventListener('click', function(e) {
-        var overrides;
-        if (e) {
+        // Cancel button — close panel
+        if (cancelBtn && target === cancelBtn) {
           e.preventDefault();
           e.stopPropagation();
-        }
-
-        try {
-          overrides = collectDetailPanelOverrides();
-        } catch (err) {
-          addMessage('ai', '⚠️ 参数收集失败：' + (err.message || String(err)));
-          return;
-        }
-
-        if (Object.keys(overrides).length === 0) {
-          addMessage('ai', '⚠️ 未检测到任何参数变化');
-          return;
-        }
-
-        applyBtn.disabled = true;
-        applyBtn.textContent = '应用...';
-        Promise.resolve().then(function() {
-          return _applySuggestedOverrides(overrides);
-        }).then(function() {
-          addMessage('ai', '✅ 已应用参数：' + Object.keys(overrides).join(', '));
-          applyBtn.disabled = false;
-          applyBtn.textContent = '应用';
           hideDetailPanel();
-        }).catch(function(err) {
-          addMessage('ai', '⚠️ 应用失败：' + (err.message || String(err)));
-          applyBtn.disabled = false;
-          applyBtn.textContent = '应用';
-        });
-      });
-    }
+          return;
+        }
 
-    if (cancelBtn) {
-      cancelBtn.addEventListener('click', function(e) {
-        if (e) {
+        // Apply button — collect overrides and submit
+        if (applyBtn && target === applyBtn) {
           e.preventDefault();
           e.stopPropagation();
+
+          var overrides;
+          try {
+            overrides = collectDetailPanelOverrides();
+          } catch (err) {
+            addMessage('ai', '⚠️ 参数收集失败：' + (err.message || String(err)));
+            return;
+          }
+
+          if (Object.keys(overrides).length === 0) {
+            addMessage('ai', '⚠️ 未检测到任何参数变化');
+            return;
+          }
+
+          applyBtn.disabled = true;
+          applyBtn.textContent = '应用...';
+          Promise.resolve().then(function() {
+            return _applySuggestedOverrides(overrides);
+          }).then(function() {
+            addMessage('ai', '✅ 已应用参数：' + Object.keys(overrides).join(', '));
+            applyBtn.disabled = false;
+            applyBtn.textContent = '应用';
+            hideDetailPanel();
+          }).catch(function(err) {
+            addMessage('ai', '⚠️ 应用失败：' + (err.message || String(err)));
+            applyBtn.disabled = false;
+            applyBtn.textContent = '应用';
+          });
         }
-        hideDetailPanel();
       });
     }
   }
@@ -2193,14 +2396,14 @@ function clearAiHighlights() {
   if (systemSelect) {
     systemSelect.addEventListener('change', function() {
       currentSystem = systemSelect.value;
-    // fault UI removed
       hideDetailPanel();
+      lastTruthSnapshot = null;
+      referenceTopologyNodes = [];
       syncSystemChrome();
       resetCanvasState();
       resetTruthEvalBar();
       initCanvasGlobalControls();
-    // fault UI removed
-    // fault UI removed
+      loadReferenceCanvasSnapshot();
     });
   }
 
@@ -2217,10 +2420,13 @@ function clearAiHighlights() {
       if (systemSelect) {
         systemSelect.value = 'thrust-reverser';
       }
+      lastTruthSnapshot = null;
+      referenceTopologyNodes = [];
       syncSystemChrome();
       resetCanvasState();
       resetTruthEvalBar();
       initCanvasGlobalControls();
+      loadReferenceCanvasSnapshot();
 
       chatInput.style.height = Math.min(chatInput.scrollHeight, 150) + 'px';
       openDrawer();
@@ -2717,6 +2923,7 @@ function isGeneralQuestion(qText, qLower) {
     // fault UI removed
   setFabTooltip('展开对话');
   initZoomAndPanel();
+  loadReferenceCanvasSnapshot();
 
   if (logicDiagram && currentSystem === 'thrust-reverser') {
     setTruthBadge('idle', '空闲');
