@@ -455,6 +455,11 @@
       <div class="analysis-panel" id="diagnosis-panel" hidden>
         <div class="analysis-panel-header">
           <span>📊 逆向诊断分析</span>
+          <select class="analysis-system-select" id="diag-system-select">
+            <option value="thrust-reverser">Thrust Reverser</option>
+            <option value="landing-gear">Landing Gear</option>
+            <option value="bleed-air">Bleed Air</option>
+          </select>
           <button type="button" class="analysis-panel-close" data-close="diagnosis-panel">✕</button>
         </div>
         <div class="analysis-panel-body">
@@ -478,6 +483,11 @@
       <div class="analysis-panel" id="monte-carlo-panel" hidden>
         <div class="analysis-panel-header">
           <span>🎲 可靠性仿真</span>
+          <select class="analysis-system-select" id="mc-system-select">
+            <option value="thrust-reverser">Thrust Reverser</option>
+            <option value="landing-gear">Landing Gear</option>
+            <option value="bleed-air">Bleed Air</option>
+          </select>
           <button type="button" class="analysis-panel-close" data-close="monte-carlo-panel">✕</button>
         </div>
         <div class="analysis-panel-body">
@@ -493,7 +503,12 @@
       <!-- Sensitivity sweep panel -->
       <div class="analysis-panel" id="sensitivity-panel" hidden>
         <div class="analysis-panel-header">
-          <span>🔍 敏感性分析 — 参数扫描</span>
+          <span>🔍 敏感性分析</span>
+          <select class="analysis-system-select" id="sensitivity-system-select">
+            <option value="thrust-reverser">Thrust Reverser</option>
+            <option value="landing-gear">Landing Gear</option>
+            <option value="bleed-air">Bleed Air</option>
+          </select>
           <button type="button" class="analysis-panel-close" data-close="sensitivity-panel">✕</button>
         </div>
         <div class="analysis-panel-body">
@@ -506,7 +521,12 @@
       <!-- Hardware schema panel -->
       <div class="hardware-schema-panel" id="hardware-schema-panel" hidden>
         <div class="analysis-panel-header">
-          <span>🛠️ 硬件规格 — Thrust Reverser</span>
+          <span>🛠️ 硬件规格</span>
+          <select class="analysis-system-select" id="hw-schema-system-select">
+            <option value="thrust-reverser">Thrust Reverser</option>
+            <option value="landing-gear">Landing Gear</option>
+            <option value="bleed-air">Bleed Air</option>
+          </select>
           <button type="button" class="analysis-panel-close" data-close="hardware-schema-panel">✕</button>
         </div>
         <div class="analysis-panel-body">

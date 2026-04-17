@@ -2548,6 +2548,13 @@ function isGeneralQuestion(qText, qLower) {
     }
   }
 
+  // ── P19.14: Multi-system analysis helper ─────────────────────────────────
+
+  function getSelectedAnalysisSystem(selectId) {
+    var sel = document.getElementById(selectId);
+    return sel ? sel.value : 'thrust-reverser';
+  }
+
   // ── P19.12: Analysis → chat message helpers ───────────────────────────────
 
   function renderDiagnosisChatMessage(data) {
@@ -2622,41 +2629,43 @@ function isGeneralQuestion(qText, qLower) {
   }
 
   function runDiagnosis() {
+    var systemId = getSelectedAnalysisSystem('diag-system-select');
     var outcome = document.getElementById('diag-outcome-select').value;
     var maxResults = parseInt(document.getElementById('diag-max-results').value, 10) || 20;
     var resultDiv = document.getElementById('diag-result');
     resultDiv.hidden = false;
-    resultDiv.textContent = '正在运行诊断...';
+    resultDiv.textContent = '\u6b63\u5728\u8fd0\u884c\u8bca\u65ad...';
 
     fetch('/api/diagnosis/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ outcome: outcome, max_results: maxResults }),
+      body: JSON.stringify({ outcome: outcome, max_results: maxResults, system_id: systemId }),
     })
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.error) {
-          resultDiv.textContent = '错误: ' + data.error;
+          resultDiv.textContent = '\u9519\u8bef: ' + data.error;
           return;
         }
         var text = renderDiagnosisChatMessage(data);
         resultDiv.textContent = text;
-        postAnalysisToChat('diagnosis', '\u269b\ufe0f 逆向诊断分析', text);
+        postAnalysisToChat('diagnosis', '\u269b\ufe0f \u9006\u5411\u8bca\u65ad\u5206\u6790 [' + systemId + ']', text);
       })
       .catch(function(err) {
-        resultDiv.textContent = '请求失败: ' + err.message;
+        resultDiv.textContent = '\u8bf7\u6c42\u5931\u8d25: ' + err.message;
       });
   }
 
   function runMonteCarlo() {
+    var systemId = getSelectedAnalysisSystem('mc-system-select');
     var nTrials = parseInt(document.getElementById('mc-n-trials').value, 10) || 100;
     var seedEl = document.getElementById('mc-seed');
     var seed = seedEl.value.trim() ? parseInt(seedEl.value, 10) : null;
     var resultDiv = document.getElementById('mc-result');
     resultDiv.hidden = false;
-    resultDiv.textContent = '正在运行仿真...';
+    resultDiv.textContent = '\u6b63\u5728\u8fd0\u884c\u4eff\u771f...';
 
-    var body = { n_trials: nTrials };
+    var body = { n_trials: nTrials, system_id: systemId };
     if (seed !== null) body.seed = seed;
 
     fetch('/api/monte-carlo/run', {
@@ -2667,15 +2676,15 @@ function isGeneralQuestion(qText, qLower) {
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.error) {
-          resultDiv.textContent = '错误: ' + data.error;
+          resultDiv.textContent = '\u9519\u8bef: ' + data.error;
           return;
         }
         var text = renderMonteCarloChatMessage(data);
         resultDiv.textContent = text;
-        postAnalysisToChat('monte-carlo', '\ud83c\udfb2 可靠性仿真', text);
+        postAnalysisToChat('monte-carlo', '\ud83c\udfb2 \u53ef\u9760\u6027\u4eff\u771f [' + systemId + ']', text);
       })
       .catch(function(err) {
-        resultDiv.textContent = '请求失败: ' + err.message;
+        resultDiv.textContent = '\u8bf7\u6c42\u5931\u8d25: ' + err.message;
       });
   }
 
@@ -2716,11 +2725,12 @@ function isGeneralQuestion(qText, qLower) {
   }
 
   function runHardwareSchema() {
+    var systemId = getSelectedAnalysisSystem('hw-schema-system-select');
     var resultDiv = document.getElementById('hw-schema-result');
     resultDiv.hidden = false;
-    resultDiv.textContent = '正在加载硬件规格...';
+    resultDiv.textContent = '\u6b63\u5728\u52a0\u8f7d\u786c\u4ef6\u89c4\u683c...';
 
-    fetch('/api/hardware/schema')
+    fetch('/api/hardware/schema?system_id=' + encodeURIComponent(systemId))
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.error) {
@@ -2818,6 +2828,7 @@ function isGeneralQuestion(qText, qLower) {
     var resultDiv = document.getElementById('sensitivity-result');
     resultDiv.hidden = false;
     resultDiv.textContent = '\u6b63\u5728\u626b\u63cf... 0/20';
+    var systemId = getSelectedAnalysisSystem('sensitivity-system-select');
 
     var raValues = [2, 5, 10, 20, 40];
     var traValues = [-28, -20, -15, -11, -6];
@@ -2839,7 +2850,7 @@ function isGeneralQuestion(qText, qLower) {
       if (raIdx >= raValues.length) {
         var text = renderSensitivityTableText(sweepData, raValues, traValues, outcomes);
         resultDiv.textContent = text;
-        var header = '\ud83d\udd0d \u6545\u969c\u6027\u5206\u6790 \u2014 RA\u00d7TRA\u00d7Outcome (' + totalCalls + '\u6b21\u626b\u63cf)';
+        var header = '\ud83d\udd0d \u6545\u969c\u6027\u5206\u6790 [' + systemId + '] \u2014 RA\u00d7TRA\u00d7Outcome (' + totalCalls + '\u6b21\u626b\u63cf)';
         postAnalysisToChat('sensitivity', header, text);
         return;
       }
@@ -2850,7 +2861,7 @@ function isGeneralQuestion(qText, qLower) {
       fetch('/api/diagnosis/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ outcome: outcome, max_results: 1 }),
+        body: JSON.stringify({ outcome: outcome, max_results: 1, system_id: systemId }),
       })
         .then(function(r) { return r.json(); })
         .then(function(data) {
