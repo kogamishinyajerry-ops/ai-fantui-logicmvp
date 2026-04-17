@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Milestone complete
-last_updated: "2026-04-17T13:30:00.000Z"
+last_updated: "2026-04-17T14:00:00.000Z"
 last_activity: 2026-04-17
 progress:
   total_phases: 23
-  completed_phases: 15
+  completed_phases: 16
   total_plans: 0
   completed_plans: 0
 ---
@@ -90,6 +90,12 @@ P19.3 Executed: Reverse diagnosis engine
 - Updated DIAGNOSIS_RUN_PATH and MONTE_CARLO_RUN_PATH handlers to read system_id from payload
 - Updated do_GET HARDWARE_SCHEMA_PATH to parse system_id from query string
 - Updated _handle_hardware_schema() to return system_id in response
+- All 619 tests continue to pass (no regression)
+- P19.16 Executed: Analysis API Robustness + UI Error Handling
+- _hardware_yaml_path() raises FileNotFoundError on unknown system_id (no silent 500)
+- DIAGNOSIS_RUN_PATH, MONTE_CARLO_RUN_PATH, _handle_hardware_schema catch FileNotFoundError → HTTP 400
+- chat.js: showPanelError() + clearPanelError() helpers; all 4 run functions disable button during fetch
+- .analysis-panel-error CSS (red tinted) + .analysis-run-btn:disabled styling added
 - All 619 tests continue to pass (no regression)
 - All P0-P18.5 phases complete. Opus 4.6 final adjudication: Approved, Project Freeze.
 - Regression baseline: 561 tests, 24-command suite. GSD automation continues to protect regression.
