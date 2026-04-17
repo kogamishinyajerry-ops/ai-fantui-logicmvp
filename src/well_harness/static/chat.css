@@ -334,8 +334,7 @@ body.drawer-open .stage-shell {
 .canvas-stage {
   position: relative;
   min-height: 0;
-  /* Let the stage fill available grid space; zoom-container clips to prevent SVG overflow in normal view. */
-  overflow: auto;
+  overflow: hidden;
   display: flex;
   align-items: stretch;
   justify-content: center;
@@ -376,7 +375,7 @@ body.drawer-open .stage-shell {
   border: 1px solid rgba(40, 244, 255, 0.18);
   border-radius: 18px;
   margin-bottom: 14px;
-  overflow-x: auto;
+  overflow: visible;
 }
 
 .chain-svg {
@@ -2161,11 +2160,33 @@ body.drawer-open .chat-drawer {
 /* ── Canvas Zoom ── */
 .zoom-container {
   position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: none;
+  cursor: grab;
+  scrollbar-gutter: stable both-edges;
+}
+
+.zoom-container.is-panning {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.zoom-surface {
+  position: relative;
   width: 100%;
   min-height: 100%;
-  height: auto;
+  margin: 0 auto;
   overflow: visible;
-  touch-action: none;
+}
+
+.zoom-surface > .chain-topology:last-child {
+  margin-bottom: 0;
 }
 
 /* Canvas global controls — always-visible floating widget on the canvas */

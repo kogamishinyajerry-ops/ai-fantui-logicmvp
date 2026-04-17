@@ -36,10 +36,13 @@
   var panX = 0; var panY = 0;
   var isPanning = false; var wasPanning = false;
   var panStartX = 0; var panStartY = 0;
-  var zoomContainer = null; var zoomLevelEl = null;
+  var panStartScrollLeft = 0; var panStartScrollTop = 0;
+  var zoomContainer = null; var zoomSurface = null; var zoomLevelEl = null;
   var lastTruthSnapshot = null; var currentDetailNodeId = null;
   var canvasGlobalControlsBound = false;
   var canvasGlobalControlsBusy = false;
+  var lastAiDiscussedNodes = [];
+  var lastAiSuggestedNodes = [];
 
   var SYSTEM_LABELS = {
     'thrust-reverser': '反推系统',
@@ -334,6 +337,10 @@
     if (currentTopology) {
       currentTopology.style.display = '';
     }
+
+    window.requestAnimationFrame(function() {
+      applyZoomTransform();
+    });
   }
 
 
@@ -1223,6 +1230,8 @@ function clearCausalChainConnectors() {
 }
 
 function clearAiHighlights() {
+    lastAiDiscussedNodes = [];
+    lastAiSuggestedNodes = [];
     var highlightedEls = document.querySelectorAll('.canvas-wrapper .ai-discussed, .canvas-wrapper .ai-suggested');
     var i;
 
@@ -1239,7 +1248,11 @@ function clearAiHighlights() {
     var els;
     var j;
 
+    lastAiDiscussedNodes = discussed.slice();
+    lastAiSuggestedNodes = suggested.slice();
     clearAiHighlights();
+    lastAiDiscussedNodes = discussed.slice();
+    lastAiSuggestedNodes = suggested.slice();
 
     for (i = 0; i < discussed.length; i += 1) {
       els = document.querySelectorAll('.canvas-wrapper [data-node="' + discussed[i] + '"]');
@@ -1723,28 +1736,39 @@ function clearAiHighlights() {
   }
 
   /* ── Zoom & Pan Functions ── */
-  function clampPan(x, y, zoom) {
+  function clampPan(x, y) {
     if (!zoomContainer) return { x: 0, y: 0 };
-    var rect = zoomContainer.getBoundingClientRect();
-    var scaledW = rect.width * zoom;
-    var scaledH = rect.height * zoom;
-    var maxX = Math.max(0, (scaledW - rect.width) / 2);
-    var maxY = Math.max(0, (scaledH - rect.height) / 2);
+    var maxX = Math.max(0, zoomContainer.scrollWidth - zoomContainer.clientWidth);
+    var maxY = Math.max(0, zoomContainer.scrollHeight - zoomContainer.clientHeight);
     return {
-      x: Math.max(-maxX, Math.min(maxX, x)),
-      y: Math.max(-maxY, Math.min(maxY, y)),
+      x: Math.max(0, Math.min(maxX, x)),
+      y: Math.max(0, Math.min(maxY, y)),
     };
   }
 
+  function syncCanvasOverlays() {
+    if (lastAiDiscussedNodes.length > 1) {
+      drawCausalChainConnectors(lastAiDiscussedNodes);
+    }
+  }
+
   function applyZoomTransform() {
-    if (!zoomContainer) return;
-    var clamped = clampPan(panX, panY, currentZoom);
+    if (!zoomContainer || !zoomSurface) return;
+    var viewportWidth = zoomContainer.clientWidth || zoomContainer.getBoundingClientRect().width || 0;
+
+    if (viewportWidth > 0) {
+      zoomSurface.style.width = (viewportWidth * currentZoom) + 'px';
+    }
+
+    var clamped = clampPan(panX, panY);
     panX = clamped.x;
     panY = clamped.y;
-    zoomContainer.style.transform = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + currentZoom + ')';
+    zoomContainer.scrollLeft = panX;
+    zoomContainer.scrollTop = panY;
     if (zoomLevelEl) {
       zoomLevelEl.textContent = Math.round(currentZoom * 100) + '%';
     }
+    syncCanvasOverlays();
   }
 
   function resetZoom() {
@@ -1755,46 +1779,79 @@ function clearAiHighlights() {
   }
 
   function onWheelZoom(e) {
+    if (!zoomContainer || !zoomSurface) return;
     e.preventDefault();
     var delta = e.deltaY || e.detail || 0;
     var zoomFactor = delta > 0 ? 0.92 : 1.08;
     var newZoom = Math.min(2.0, Math.max(0.5, currentZoom * zoomFactor));
     if (newZoom !== currentZoom) {
       var rect = zoomContainer.getBoundingClientRect();
-      var mouseX = e.clientX - rect.left - rect.width / 2;
-      var mouseY = e.clientY - rect.top - rect.height / 2;
-      var scaleDiff = newZoom - currentZoom;
-      panX -= (mouseX - panX) * (scaleDiff / currentZoom);
-      panY -= (mouseY - panY) * (scaleDiff / currentZoom);
+      var mouseX = e.clientX - rect.left;
+      var mouseY = e.clientY - rect.top;
+      var contentX = zoomContainer.scrollLeft + mouseX;
+      var contentY = zoomContainer.scrollTop + mouseY;
+      var scale = newZoom / currentZoom;
       currentZoom = newZoom;
+      panX = contentX * scale - mouseX;
+      panY = contentY * scale - mouseY;
       applyZoomTransform();
     }
   }
 
+  function shouldIgnorePanTarget(target) {
+    if (!target || !target.closest) {
+      return false;
+    }
+    return !!target.closest(
+      '.canvas-global-controls, .canvas-zoom-controls, .node-detail-panel, button, input, select, textarea, label, a'
+    );
+  }
+
   function onPanStart(e) {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || !zoomContainer || shouldIgnorePanTarget(e.target)) return;
     isPanning = true;
     wasPanning = false;
-    panStartX = e.clientX - panX;
-    panStartY = e.clientY - panY;
+    panStartX = e.clientX;
+    panStartY = e.clientY;
+    panStartScrollLeft = zoomContainer.scrollLeft;
+    panStartScrollTop = zoomContainer.scrollTop;
+    zoomContainer.classList.add('is-panning');
     e.preventDefault();
   }
 
   function onPanMove(e) {
-    if (!isPanning) return;
+    if (!isPanning || !zoomContainer) return;
     var dx = e.clientX - panStartX;
     var dy = e.clientY - panStartY;
     if (Math.sqrt(dx * dx + dy * dy) > 5) {
       wasPanning = true;
     }
-    panX = e.clientX - panStartX;
-    panY = e.clientY - panStartY;
-    applyZoomTransform();
+    panX = panStartScrollLeft - dx;
+    panY = panStartScrollTop - dy;
+    var clamped = clampPan(panX, panY);
+    panX = clamped.x;
+    panY = clamped.y;
+    zoomContainer.scrollLeft = panX;
+    zoomContainer.scrollTop = panY;
+    e.preventDefault();
   }
 
-  function onPanEnd() {
+  function onPanEnd(e) {
+    if (e && e.type === 'mouseleave' && e.buttons === 1) {
+      return;
+    }
     isPanning = false;
+    if (zoomContainer) {
+      zoomContainer.classList.remove('is-panning');
+    }
     // wasPanning stays true until next click is processed
+  }
+
+  function onZoomViewportScroll() {
+    if (!zoomContainer) return;
+    panX = zoomContainer.scrollLeft;
+    panY = zoomContainer.scrollTop;
+    syncCanvasOverlays();
   }
 
   /* ── Node Detail Panel Functions ── */
@@ -1806,6 +1863,9 @@ function clearAiHighlights() {
     currentDetailNodeId = nodeId;
     stage.classList.add('panel-open');
     panel.hidden = false;
+    window.requestAnimationFrame(function() {
+      applyZoomTransform();
+    });
     renderDetailPanelContent(nodeId);
   }
 
@@ -1816,6 +1876,9 @@ function clearAiHighlights() {
     stage.classList.remove('panel-open');
     panel.hidden = true;
     currentDetailNodeId = null;
+    window.requestAnimationFrame(function() {
+      applyZoomTransform();
+    });
   }
 
   function renderDetailPanelContent(nodeId) {
@@ -2237,6 +2300,7 @@ function clearAiHighlights() {
 
   function initZoomAndPanel() {
     zoomContainer = document.getElementById('zoom-container');
+    zoomSurface = document.getElementById('zoom-surface');
     zoomLevelEl = document.getElementById('canvas-zoom-level');
     var resetBtn = document.getElementById('canvas-zoom-reset');
     var stage = document.querySelector('.canvas-stage');
@@ -2249,15 +2313,13 @@ function clearAiHighlights() {
       zoomContainer.addEventListener('mousedown', onPanStart);
       zoomContainer.addEventListener('mouseup', onPanEnd);
       zoomContainer.addEventListener('mouseleave', onPanEnd);
+      zoomContainer.addEventListener('scroll', onZoomViewportScroll, { passive: true });
     }
     if (resetBtn) {
       resetBtn.addEventListener('click', resetZoom);
     }
 
     if (stage) {
-      stage.addEventListener('mousemove', onPanMove);
-      stage.addEventListener('mouseup', onPanEnd);
-      stage.addEventListener('mouseleave', onPanEnd);
       stage.addEventListener('click', function(e) {
         var eventTarget = e.target;
         var nodeTarget;
@@ -2280,6 +2342,11 @@ function clearAiHighlights() {
         }
       });
     }
+    window.addEventListener('mousemove', onPanMove);
+    window.addEventListener('mouseup', onPanEnd);
+    window.addEventListener('resize', function() {
+      applyZoomTransform();
+    });
     if (ndpClose) {
       ndpClose.addEventListener('click', hideDetailPanel);
     }
@@ -2923,6 +2990,7 @@ function isGeneralQuestion(qText, qLower) {
     // fault UI removed
   setFabTooltip('展开对话');
   initZoomAndPanel();
+  applyZoomTransform();
   loadReferenceCanvasSnapshot();
 
   if (logicDiagram && currentSystem === 'thrust-reverser') {
