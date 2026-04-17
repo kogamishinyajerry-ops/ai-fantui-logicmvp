@@ -14,17 +14,17 @@ progress:
 
 # State
 
-Last activity: 2026-04-14
+Last activity: 2026-04-17
 
 ## Current Position
 
-**Project Freeze — All P0-P15 Complete (2026-04-14)**
+**Project Freeze — All P0-P18.5 Complete (2026-04-17)**
 
-Phase: P15 — Pipeline Integration (Done)
-Plan: P15-01 Complete
-
-- All P0-P15 phases complete. Opus 4.6 final adjudication: Approved, Project Freeze.
-- Regression baseline: 345 tests, 23-command suite. GSD automation continues to protect regression.
+Phase: P18.6 — Archive Integrity Checksums (PR ready)
+- All P0-P18.5 phases complete. Opus 4.6 final adjudication: Approved, Project Freeze.
+- Regression baseline: 561 tests, 24-command suite. GSD automation continues to protect regression.
+- P18.5 merged (canvas interaction fix): fault injection UI removed, hover scale disabled, hit-box pointer-events fixed.
+- P18.6 PR open: SHA256 integrity checksums for workbench archives (561 tests, 24 validation commands pass).
 - 解冻条件：外部用户反馈 / 新产品方向决策 / 新领域需求。
 
 - Notion control tower is live at https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec.
