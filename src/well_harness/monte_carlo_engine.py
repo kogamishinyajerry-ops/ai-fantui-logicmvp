@@ -39,6 +39,24 @@ class ReliabilityResult:
     sw2_window_crossings_mean: float  # mean SW2 crossings per trial
 
 
+# ─── Serialization ─────────────────────────────────────────────────────────────
+
+
+def _reliability_result_to_dict(result: ReliabilityResult) -> dict:
+    """Convert a ReliabilityResult to a plain dict for JSON serialization."""
+    return {
+        "n_trials": result.n_trials,
+        "n_failures": result.n_failures,
+        "success_rate": result.success_rate,
+        "mean_cycles_to_failure": result.mean_cycles_to_failure,
+        "mtbf_cycles": result.mtbf_cycles,
+        "seed": result.seed,
+        "failure_modes": result.failure_modes,
+        "sw1_window_crossings_mean": result.sw1_window_crossings_mean,
+        "sw2_window_crossings_mean": result.sw2_window_crossings_mean,
+    }
+
+
 # ─── Engine ───────────────────────────────────────────────────────────────────
 
 
