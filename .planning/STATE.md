@@ -60,6 +60,8 @@ P19.3 Executed: Reverse diagnosis engine
 - P19.8 Executed: GET /api/hardware/schema discovery endpoint
 - Added _hardware_to_dict() serializer to hardware_schema.py (recursive dataclasses.asdict); returns full YAML as JSON
 - P19 API suite complete: diagnosis + Monte Carlo endpoints + schema discovery; 604 tests pass
+- P19.9 Executed: API endpoint tests for P19.6/P19.7/P19.8
+- 15 new tests covering all 3 endpoints (diagnosis/monte-carlo/hardware-schema); 619 total passed
 - All P0-P18.5 phases complete. Opus 4.6 final adjudication: Approved, Project Freeze.
 - Regression baseline: 561 tests, 24-command suite. GSD automation continues to protect regression.
 - P18.5 merged (canvas interaction fix): fault injection UI removed, hover scale disabled, hit-box pointer-events fixed.
