@@ -813,13 +813,130 @@ function _applySuggestedOverrides(overrides) {
     }
   }
 
-  function clearAiHighlights() {
+// ── P19.4: Causal chain connector layer ────────────────────────────────────
+
+// Create or retrieve the causal chain SVG overlay layer inside .canvas-wrapper
+function getCausalChainLayer() {
+  var wrapper = document.querySelector('.canvas-wrapper');
+  if (!wrapper) return null;
+  var existing = document.getElementById('causal-chain-layer');
+  if (existing) return existing;
+
+  var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('id', 'causal-chain-layer');
+  svg.setAttribute('class', 'causal-chain-layer');
+  svg.style.cssText = (
+    'position:absolute;top:0;left:0;width:100%;height:100%;' +
+    'pointer-events:none;z-index:20;overflow:visible;'
+  );
+
+  // Arrowhead marker definition
+  var defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  var marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+  marker.setAttribute('id', 'causal-arrow');
+  marker.setAttribute('markerWidth', '8');
+  marker.setAttribute('markerHeight', '6');
+  marker.setAttribute('refX', '8');
+  marker.setAttribute('refY', '3');
+  marker.setAttribute('orient', 'auto');
+  var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', 'M0,0 L0,6 L8,3 z');
+  path.setAttribute('fill', '#5ba8ff');
+  marker.appendChild(path);
+  defs.appendChild(marker);
+  svg.appendChild(defs);
+
+  wrapper.appendChild(svg);
+  return svg;
+}
+
+// Draw dashed causal chain connectors between highlighted nodes in sequence order.
+function drawCausalChainConnectors(highlightedNodes) {
+  var svg = getCausalChainLayer();
+  if (!svg) return;
+
+  // Remove existing connector lines
+  var existingLines = svg.querySelectorAll('.causal-connector');
+  existingLines.forEach(function(l) { l.remove(); });
+
+  if (!Array.isArray(highlightedNodes) || highlightedNodes.length < 2) return;
+
+  // Get bounding boxes of discussed nodes in order
+  var nodeIds = highlightedNodes;
+  var boxes = [];
+  var i;
+  for (i = 0; i < nodeIds.length; i++) {
+    var els = document.querySelectorAll(
+      '.canvas-wrapper [data-node="' + nodeIds[i] + '"]'
+    );
+    if (els.length === 0) continue;
+    var firstEl = els[0];
+    var rect = firstEl.getBoundingClientRect();
+    var wrapperRect = (
+      document.querySelector('.canvas-wrapper') || document.body
+    ).getBoundingClientRect();
+    boxes.push({
+      id: nodeIds[i],
+      x: rect.left + rect.width / 2 - wrapperRect.left,
+      y: rect.top + rect.height / 2 - wrapperRect.top,
+    });
+  }
+
+  // Draw connector from each node to the next
+  var j;
+  for (j = 0; j < boxes.length - 1; j++) {
+    var from = boxes[j];
+    var to = boxes[j + 1];
+
+    var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('class', 'causal-connector');
+    line.setAttribute('x1', String(from.x));
+    line.setAttribute('y1', String(from.y));
+    line.setAttribute('x2', String(to.x));
+    line.setAttribute('y2', String(to.y));
+    line.setAttribute('stroke', '#5ba8ff');
+    line.setAttribute('stroke-width', '2');
+    line.setAttribute('stroke-dasharray', '5,3');
+    line.setAttribute('marker-end', 'url(#causal-arrow)');
+    line.setAttribute('opacity', '0.75');
+    svg.appendChild(line);
+
+    // Step label showing causal step number
+    if (j < boxes.length - 2) {
+      var midX = (from.x + to.x) / 2;
+      var midY = (from.y + to.y) / 2 - 8;
+      var label = document.createElementNS(
+        'http://www.w3.org/2000/svg', 'text'
+      );
+      label.setAttribute('class', 'causal-connector-label');
+      label.setAttribute('x', String(midX));
+      label.setAttribute('y', String(midY));
+      label.setAttribute('text-anchor', 'middle');
+      label.setAttribute('fill', '#5ba8ff');
+      label.setAttribute('font-size', '10');
+      label.setAttribute('font-family', 'monospace');
+      label.textContent = String(j + 1);
+      svg.appendChild(label);
+    }
+  }
+}
+
+// Remove all causal chain connectors
+function clearCausalChainConnectors() {
+  var svg = document.getElementById('causal-chain-layer');
+  if (!svg) return;
+  var connectors = svg.querySelectorAll('.causal-connector, .causal-connector-label');
+  connectors.forEach(function(el) { el.remove(); });
+}
+
+function clearAiHighlights() {
     var highlightedEls = document.querySelectorAll('.canvas-wrapper .ai-discussed, .canvas-wrapper .ai-suggested');
     var i;
 
     for (i = 0; i < highlightedEls.length; i += 1) {
       highlightedEls[i].classList.remove('ai-discussed', 'ai-suggested');
     }
+    clearCausalChainConnectors();
   }
 
   function applyAiHighlights(highlightedNodes, suggestionNodes) {
@@ -844,6 +961,7 @@ function _applySuggestedOverrides(overrides) {
         els[j].classList.add('ai-suggested');
       }
     }
+    drawCausalChainConnectors(discussed);
   }
 
   function clearNodeReferenceHighlights() {

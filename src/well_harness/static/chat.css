@@ -2894,3 +2894,30 @@ input[type="range"].ndp-range::-webkit-slider-thumb:active {
     border-radius: 0 0 20px 20px;
   }
 }
+
+/* P19.4: Causal chain connector SVG layer */
+.causal-chain-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 20;
+  overflow: visible;
+}
+
+.causal-connector {
+  stroke: #5ba8ff;
+  stroke-width: 2;
+  stroke-dasharray: 5, 3;
+  opacity: 0.75;
+}
+
+.causal-connector-label {
+  fill: #5ba8ff;
+  font-size: 10px;
+  font-family: monospace;
+  text-anchor: middle;
+  opacity: 0.85;
+}
