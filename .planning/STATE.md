@@ -27,6 +27,13 @@ P19.1 Executed: hardware YAML schema + loader for thrust-reverser parameters
 - 17 new tests (all passing)
 - Regression: 578 passed (561 original + 17 new), 1 skipped
 - controller.py unchanged, freeze-compliant
+
+P19.2 Executed: Monte Carlo reliability simulation engine
+- MonteCarloEngine reads P19.1 YAML, simulates N deployment trials with numpy.random
+- Deterministic with fixed seed; outputs ReliabilityResult (success_rate, MTBF, failure modes)
+- 10 new tests (all passing)
+- Regression: 588 passed (578 + 10 new), 1 skipped
+- Freeze-compliant: no LLM for probability, no truth engine changes
 - All P0-P18.5 phases complete. Opus 4.6 final adjudication: Approved, Project Freeze.
 - Regression baseline: 561 tests, 24-command suite. GSD automation continues to protect regression.
 - P18.5 merged (canvas interaction fix): fault injection UI removed, hover scale disabled, hit-box pointer-events fixed.
