@@ -1,0 +1,46 @@
+# P19.15: Bleed Air Valve Hardware Parameters
+kind: "hardware_schema"
+version: "1.0"
+system_id: "bleed-air"
+
+sensor:
+  duct_pressure_psi:
+    min: 0.0
+    max: 300.0
+    unit: "psi"
+  valve_position_percent:
+    min: 0.0
+    max: 100.0
+    unit: "percent"
+  temperature_c:
+    min: -50.0
+    max: 300.0
+    unit: "celsius"
+  isolation_valve:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+
+logic_thresholds:
+  bau_open_pressure_threshold: 200.0
+  bau_close_pressure_threshold: 180.0
+  bau_overheat_temp_threshold: 250.0
+  bau_safe_temp_threshold: 200.0
+
+physical_limits:
+  bau_max_valve_time_s: 4.0
+  bau_valve_travel_deg: 90.0
+  bau_min_pressure_psi: 10.0
+  bau_max_pressure_psi: 280.0
+
+timing:
+  bau_open_time_s: 3.0
+  bau_close_time_s: 2.5
+  bau_overheat_cooldown_s: 30.0
+  bau_isolation_delay_s: 0.5
+
+valid_outcomes:
+  - "bau_open"
+  - "bau_closed"
+  - "bau_isolated"
+  - "bau_overheat"

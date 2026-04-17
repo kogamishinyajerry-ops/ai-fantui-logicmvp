@@ -12,7 +12,7 @@ from typing import Any
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from well_harness.demo import answer_demo_prompt, demo_answer_to_payload
 from well_harness.controller_adapter import build_reference_controller_adapter
@@ -99,6 +99,13 @@ DIAGNOSIS_RUN_PATH = "/api/diagnosis/run"
 MONTE_CARLO_RUN_PATH = "/api/monte-carlo/run"
 # Hardware schema discovery (P19.8)
 HARDWARE_SCHEMA_PATH = "/api/hardware/schema"
+
+_SYSTEM_YAML_MAP = {
+    "thrust-reverser": "thrust_reverser_hardware_v1.yaml",
+    "landing-gear": "landing_gear_hardware_v1.yaml",
+    "bleed-air": "bleed_air_hardware_v1.yaml",
+}
+
 MONITOR_N1K = 35.0
 MONITOR_MAX_N1K_DEPLOY_LIMIT = 60.0
 LEVER_NUMERIC_INPUTS = {
@@ -195,7 +202,8 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
         # P19.8: Hardware schema discovery
         if parsed.path == HARDWARE_SCHEMA_PATH:
-            self._handle_hardware_schema()
+            system_id = parse_qs(parsed.query).get("system_id", ["thrust-reverser"])[0]
+            self._handle_hardware_schema(system_id=system_id)
             return
 
         self._send_json(404, {"error": "not_found"})
@@ -364,7 +372,8 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                 return
             max_results = min(int(request_payload.get("max_results", 1000)), 1000)
             max_results = max(max_results, 0)
-            yaml_path = self._hardware_yaml_path()
+            system_id = str(request_payload.get("system_id", "thrust-reverser")).strip()
+            yaml_path = self._hardware_yaml_path(system_id)
             try:
                 engine = ReverseDiagnosisEngine(yaml_path)
                 report = engine.diagnose_and_report(outcome, max_results=max_results)
@@ -392,7 +401,8 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                     self._send_json(400, {"error": "seed must be an integer"})
                     return
 
-            yaml_path = self._hardware_yaml_path()
+            system_id = str(request_payload.get("system_id", "thrust-reverser")).strip()
+            yaml_path = self._hardware_yaml_path(system_id)
             try:
                 engine = MonteCarloEngine(yaml_path)
                 result = engine.run(n_trials, seed=seed)
@@ -427,19 +437,20 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
     # ── P19.6: Reverse diagnosis endpoint ─────────────────────────────────────
 
-    def _hardware_yaml_path(self) -> str:
-        """Return the path to the thrust-reverser hardware YAML config."""
+    def _hardware_yaml_path(self, system_id: str = "thrust-reverser") -> str:
+        """Return the path to the hardware YAML config for the given system_id."""
         import pathlib as _pathlib
         import well_harness as _wh
         pkg_root = _pathlib.Path(_wh.__file__).parent
         repo_root = pkg_root.parent.parent
-        return str(repo_root / "config" / "hardware" / "thrust_reverser_hardware_v1.yaml")
+        filename = _SYSTEM_YAML_MAP.get(system_id, "thrust_reverser_hardware_v1.yaml")
+        return str(repo_root / "config" / "hardware" / filename)
 
     # ── P19.8: Hardware schema endpoint ───────────────────────────────────────
 
-    def _handle_hardware_schema(self) -> None:
+    def _handle_hardware_schema(self, system_id: str = "thrust-reverser") -> None:
         """Return the full hardware YAML as a JSON dict (P19.8)."""
-        yaml_path = self._hardware_yaml_path()
+        yaml_path = self._hardware_yaml_path(system_id)
         try:
             from well_harness.hardware_schema import (
                 _hardware_to_dict,
@@ -447,7 +458,9 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             )
 
             hw = load_thrust_reverser_hardware(yaml_path)
-            self._send_json(200, _hardware_to_dict(hw))
+            result = _hardware_to_dict(hw)
+            result["system_id"] = system_id
+            self._send_json(200, result)
         except Exception as exc:
             self._send_json(500, {"error": str(exc)})
 
