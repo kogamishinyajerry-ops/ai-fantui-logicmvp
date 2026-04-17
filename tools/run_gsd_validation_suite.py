@@ -35,6 +35,10 @@ def build_default_commands(python_executable: str | None = None) -> tuple[Valida
             (python, "-m", "pytest", "tests/", "-q", "--tb=no"),
         ),
         ValidationCommand(
+            "generator_adapter_parity",
+            (python, "tools/validate_generator_adapter.py", "--format", "json"),
+        ),
+        ValidationCommand(
             "debug_json_schema",
             (python, "tools/validate_debug_json_schema.py", "--format", "json"),
         ),

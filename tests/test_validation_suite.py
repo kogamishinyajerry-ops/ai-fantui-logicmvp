@@ -29,6 +29,7 @@ class ValidationSuiteTests(unittest.TestCase):
         self.assertEqual(
             [
                 "unit_tests",
+                "generator_adapter_parity",
                 "debug_json_schema",
                 "demo_path_smoke",
                 # system_switcher_smoke: Playwright E2E test — requires localhost:7891 server, run in E2E CI only
