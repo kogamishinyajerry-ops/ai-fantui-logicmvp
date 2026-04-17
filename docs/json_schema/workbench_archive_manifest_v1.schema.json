@@ -41,6 +41,10 @@
     "restore_targets": {
       "$ref": "#/$defs/restoreTargets"
     },
+    "integrity": {
+      "description": "Optional SHA256 checksums of archived files for integrity verification. Maps file key to hex-encoded SHA256 digest.",
+      "$ref": "#/$defs/integrity"
+    },
     "self_check": {
       "$ref": "#/$defs/selfCheck"
     }
@@ -177,6 +181,14 @@
         "working_directory": {
           "const": "archive_dir"
         }
+      }
+    },
+    "integrity": {
+      "description": "SHA256 checksums of archived files (algorithm: sha256). Maps file key to 64-char hex digest.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-fA-F0-9]{64}$"
       }
     }
   }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import asdict, dataclass
@@ -33,6 +34,11 @@ ARCHIVE_MANIFEST_SELF_CHECK_COMMAND = "python3 -m well_harness.cli archive-manif
 
 class SandboxEscapeError(ValueError):
     """Raised when an archive path escapes the sandbox boundary."""
+    pass
+
+
+class ChecksumMismatchError(ValueError):
+    """Raised when an archived file's SHA256 does not match the manifest integrity value."""
     pass
 ARCHIVE_MANIFEST_FILE_KEYS = (
     "bundle_json",
@@ -101,6 +107,10 @@ def _slugify(value: str) -> str:
 
 def _json_text(payload: Any) -> str:
     return json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+
+
+def _compute_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _json_safe_value(value: Any) -> Any:
@@ -322,6 +332,36 @@ def validate_workbench_archive_manifest(
                 issues.append("self_check.command must be a non-empty string when self_check is present.")
             if self_check.get("working_directory") != "archive_dir":
                 issues.append("self_check.working_directory must be 'archive_dir' when self_check is present.")
+
+    # Integrity verification: check SHA256 of archived files when integrity field is present
+    integrity = manifest.get("integrity")
+    if integrity is not None:
+        if not isinstance(integrity, dict):
+            issues.append("integrity must be a JSON object when present.")
+        else:
+            for file_key, expected_hash in integrity.items():
+                if not isinstance(expected_hash, str) or len(expected_hash) != 64:
+                    issues.append(
+                        f"integrity.{file_key} must be a 64-character SHA256 hex string."
+                    )
+                    continue
+                if file_key not in ARCHIVE_MANIFEST_FILE_KEYS:
+                    issues.append(f"integrity.{file_key} is not a valid archive file key.")
+                    continue
+                if archive_dir_path is None:
+                    continue
+                file_value = files.get(file_key) if isinstance(files, dict) else None
+                if file_value is None:
+                    continue
+                file_path = _resolve_manifest_file_path(str(file_value), archive_dir_path=archive_dir_path)
+                if require_existing_files and file_path.is_file():
+                    actual_hash = _compute_sha256(file_path)
+                    if actual_hash != expected_hash:
+                        issues.append(
+                            f"integrity.{file_key}: checksum mismatch "
+                            f"(expected {expected_hash[:16]}..., got {actual_hash[:16]}...). "
+                            f"File may be corrupted."
+                        )
 
     return tuple(issues)
 
@@ -756,6 +796,7 @@ def build_workbench_archive_manifest(
     knowledge_artifact_json_path: Path | None = None,
     workspace_handoff_json_path: Path | None = None,
     workspace_snapshot_json_path: Path | None = None,
+    integrity: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     files = {
         "bundle_json": _manifest_relative_path(bundle_json_path, archive_dir=archive_dir),
@@ -768,7 +809,7 @@ def build_workbench_archive_manifest(
         "workspace_handoff_json": _manifest_relative_path(workspace_handoff_json_path, archive_dir=archive_dir),
         "workspace_snapshot_json": _manifest_relative_path(workspace_snapshot_json_path, archive_dir=archive_dir),
     }
-    return {
+    manifest = {
         "$schema": ARCHIVE_MANIFEST_SCHEMA_ID,
         "kind": ARCHIVE_MANIFEST_KIND,
         "version": ARCHIVE_MANIFEST_VERSION,
@@ -794,6 +835,9 @@ def build_workbench_archive_manifest(
             "working_directory": "archive_dir",
         },
     }
+    if integrity:
+        manifest["integrity"] = integrity
+    return manifest
 
 
 def archive_workbench_bundle(
@@ -874,6 +918,27 @@ def archive_workbench_bundle(
         workspace_snapshot_json_path.write_text(_json_text(workspace_snapshot), encoding="utf-8")
         workspace_snapshot_path_value = str(workspace_snapshot_json_path)
 
+    # Compute SHA256 checksums for all written files for integrity verification
+    integrity: dict[str, str] = {}
+    for path_value, rel_key in [
+        (str(bundle_json_path), "bundle_json"),
+        (str(summary_markdown_path), "summary_markdown"),
+        (str(intake_assessment_json_path), "intake_assessment_json"),
+    ]:
+        integrity[rel_key] = _compute_sha256(Path(path_value))
+    if clarification_path_value:
+        integrity["clarification_brief_json"] = _compute_sha256(Path(clarification_path_value))
+    if playback_path_value:
+        integrity["playback_report_json"] = _compute_sha256(Path(playback_path_value))
+    if diagnosis_path_value:
+        integrity["fault_diagnosis_report_json"] = _compute_sha256(Path(diagnosis_path_value))
+    if knowledge_path_value:
+        integrity["knowledge_artifact_json"] = _compute_sha256(Path(knowledge_path_value))
+    if workspace_handoff_path_value:
+        integrity["workspace_handoff_json"] = _compute_sha256(Path(workspace_handoff_path_value))
+    if workspace_snapshot_path_value:
+        integrity["workspace_snapshot_json"] = _compute_sha256(Path(workspace_snapshot_path_value))
+
     manifest_json_path.write_text(
         _json_text(
             build_workbench_archive_manifest(
@@ -889,6 +954,7 @@ def archive_workbench_bundle(
                 knowledge_artifact_json_path=Path(knowledge_path_value) if knowledge_path_value else None,
                 workspace_handoff_json_path=Path(workspace_handoff_path_value) if workspace_handoff_path_value else None,
                 workspace_snapshot_json_path=Path(workspace_snapshot_path_value) if workspace_snapshot_path_value else None,
+                integrity=integrity,
             )
         ),
         encoding="utf-8",

@@ -553,6 +553,7 @@ def archive_manifest_validation_payload(
 
     files = manifest.get("files") if isinstance(manifest.get("files"), dict) else {}
     bundle = manifest.get("bundle") if isinstance(manifest.get("bundle"), dict) else {}
+    integrity = manifest.get("integrity") if isinstance(manifest.get("integrity"), dict) else None
     payload.update(
         {
             "kind": manifest.get("kind"),
@@ -570,6 +571,7 @@ def archive_manifest_validation_payload(
             "file_count": len([file_path for file_path in files.values() if file_path is not None]),
             "restore_targets": manifest.get("restore_targets") if isinstance(manifest.get("restore_targets"), dict) else {},
             "self_check": manifest.get("self_check") if isinstance(manifest.get("self_check"), dict) else {},
+            "integrity": integrity,
         }
     )
     return payload
@@ -602,6 +604,11 @@ def render_archive_manifest_validation_text(payload: dict) -> str:
     self_check = payload.get("self_check")
     if isinstance(self_check, dict) and self_check.get("command"):
         lines.append(f"self_check: {self_check['command']}")
+    integrity = payload.get("integrity")
+    if isinstance(integrity, dict) and integrity:
+        lines.append(f"integrity: {len(integrity)} file(s) guarded")
+    elif integrity is not None:
+        lines.append("integrity: present (empty)")
     if payload["issues"]:
         lines.append("issues:")
         lines.extend(f"- {issue}" for issue in payload["issues"])
