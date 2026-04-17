@@ -2660,4 +2660,67 @@ function isGeneralQuestion(qText, qLower) {
       if (panel) panel.hidden = true;
     });
   });
+
+  // ── P19.11: Hardware schema browser ───────────────────────────────────────
+
+  function openHardwareSchemaPanel() {
+    var panel = document.getElementById('hardware-schema-panel');
+    if (panel) {
+      panel.hidden = !panel.hidden;
+    }
+  }
+
+  function runHardwareSchema() {
+    var resultDiv = document.getElementById('hw-schema-result');
+    resultDiv.hidden = false;
+    resultDiv.textContent = '正在加载硬件规格...';
+
+    fetch('/api/hardware/schema')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) {
+          resultDiv.textContent = '错误: ' + data.error;
+          return;
+        }
+        var lines = [
+          'kind: ' + data.kind,
+          'version: ' + data.version,
+          'system_id: ' + data.system_id,
+          '',
+          '━━━ Sensor Ranges ━━━',
+          '  radio_altitude_ft:  ' + data.sensor.radio_altitude_ft.min + ' ~ ' + data.sensor.radio_altitude_ft.max + ' ft',
+          '  tra_deg:             ' + data.sensor.tra_deg.min + ' ~ ' + data.sensor.tra_deg.max + ' deg',
+          '  vdt_percent:         ' + data.sensor.vdt_percent.min + ' ~ ' + data.sensor.vdt_percent.max + ' %',
+          '  sw1_position_deg:    ' + data.sensor.sw1_position_deg.min + ' ~ ' + data.sensor.sw1_position_deg.max + ' deg',
+          '  sw2_position_deg:    ' + data.sensor.sw2_position_deg.min + ' ~ ' + data.sensor.sw2_position_deg.max + ' deg',
+          '',
+          '━━━ Logic Thresholds ━━━',
+          '  logic1_ra_ft_threshold:      ' + data.logic_thresholds.logic1_ra_ft_threshold + ' ft',
+          '  logic3_tra_deg_threshold:   ' + data.logic_thresholds.logic3_tra_deg_threshold + ' deg',
+          '  deploy_90_threshold_percent:' + data.logic_thresholds.deploy_90_threshold_percent + ' %',
+          '',
+          '━━━ Physical Limits ━━━',
+          '  SW1 window: ' + data.physical_limits.sw1_window.near_zero_deg + ' ~ ' + data.physical_limits.sw1_window.deep_reverse_deg + ' deg',
+          '  SW2 window: ' + data.physical_limits.sw2_window.near_zero_deg + ' ~ ' + data.physical_limits.sw2_window.deep_reverse_deg + ' deg',
+          '  SW1 max TRA: ' + data.physical_limits.sw1_max_tra_deg + ' deg',
+          '  SW2 max TRA: ' + data.physical_limits.sw2_max_tra_deg + ' deg',
+          '',
+          '━━━ Timing ━━━',
+          '  pls_unlock_min_s: ' + data.timing.pls_unlock_min_s + ' s',
+          '  vdt_deploy_s:     ' + data.timing.vdt_deploy_s + ' s',
+          '  thr_lock_min_s:   ' + data.timing.thr_lock_min_s + ' s',
+        ];
+        resultDiv.textContent = lines.join('\n');
+      })
+      .catch(function(err) {
+        resultDiv.textContent = '请求失败: ' + err.message;
+      });
+  }
+
+  // Wire hardware schema button
+  var hwSchemaBtn = document.getElementById('chat-hardware-schema-btn');
+  if (hwSchemaBtn) hwSchemaBtn.addEventListener('click', openHardwareSchemaPanel);
+
+  var hwSchemaFetchBtn = document.getElementById('hw-schema-fetch-btn');
+  if (hwSchemaFetchBtn) hwSchemaFetchBtn.addEventListener('click', runHardwareSchema);
 })();
