@@ -6,7 +6,7 @@ status: Milestone complete
 last_updated: "2026-04-17T12:00:00.000Z"
 last_activity: 2026-04-17
 progress:
-  total_phases: 20
+  total_phases: 21
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -70,6 +70,10 @@ P19.3 Executed: Reverse diagnosis engine
 - P19.11 Executed: Hardware Schema Browser Panel
 - Added "🛠️ 硬件规格" button to chat-drawer-toolbar; inline #hardware-schema-panel with "加载规格" fetch button
 - Added openHardwareSchemaPanel() + runHardwareSchema() to chat.js; fetches /api/hardware/schema and renders sensor ranges/logic thresholds/physical limits/timing
+- All 619 tests continue to pass (no regression)
+- P19.12 Executed: Analysis Results → Chat History
+- runDiagnosis() + runMonteCarlo() now post styled results to chat-messages area via postAnalysisToChat()
+- Results appear as AI messages with .chat-message-analysis styling (purple/green per type)
 - All 619 tests continue to pass (no regression)
 - All P0-P18.5 phases complete. Opus 4.6 final adjudication: Approved, Project Freeze.
 - Regression baseline: 561 tests, 24-command suite. GSD automation continues to protect regression.
