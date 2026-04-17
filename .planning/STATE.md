@@ -34,6 +34,14 @@ P19.2 Executed: Monte Carlo reliability simulation engine
 - 10 new tests (all passing)
 - Regression: 588 passed (578 + 10 new), 1 skipped
 - Freeze-compliant: no LLM for probability, no truth engine changes
+
+P19.3 Executed: Reverse diagnosis engine
+- ReverseDiagnosisEngine enumerates parameter combos satisfying target outcome
+- Supports logic1_active, logic3_active, thr_lock_active, deploy_confirmed, tls/pls_unlocked
+- Bounded enumeration (max 1000, 20-step grid captures switch windows)
+- 16 new tests (all passing)
+- Regression: 604 passed (588 + 16 new), 1 skipped
+- Freeze-compliant: pure logic enumeration, no LLM, no truth engine changes
 - All P0-P18.5 phases complete. Opus 4.6 final adjudication: Approved, Project Freeze.
 - Regression baseline: 561 tests, 24-command suite. GSD automation continues to protect regression.
 - P18.5 merged (canvas interaction fix): fault injection UI removed, hover scale disabled, hit-box pointer-events fixed.
