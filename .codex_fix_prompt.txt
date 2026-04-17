@@ -1,0 +1,51 @@
+针对 /Users/Zhuanz/20260407 YJX AI FANTUI LogicMVP/src/well_harness/static/chat.js，执行以下修复任务。
+
+## Bug 1：移除 SW1/SW2 错误可调节点（高优先级）
+
+当前 ADJUSTABLE_NODES 包含 sw1 和 sw2，但这两个不是 backend 的 allowed_override_fields（被静默丢弃），且 key='radio_altitude_ft' 会把布尔值覆盖到 altitude 字段上。sw1/sw2 是由 tra_deg 推算的内部信号。
+
+修复：从 ADJUSTABLE_NODES 中完全移除 sw1 和 sw2 条目。
+
+## Bug 2：修复 _applySuggestedOverrides 的 payload 构建（高优先级）
+
+当前从 buildDefaultLeverPayload（默认值）构建，应该从 lastTruthPayloadBySystem[currentSystem] 复制作为基础。
+
+修复后的代码：
+```javascript
+function _applySuggestedOverrides(overrides) {
+    var basePayload = lastTruthPayloadBySystem[currentSystem]
+        ? copyObject(lastTruthPayloadBySystem[currentSystem])
+        : buildDefaultLeverPayload('', currentSystem);
+    var key;
+    for (key in overrides) {
+      if (Object.prototype.hasOwnProperty.call(overrides, key)) {
+        basePayload[key] = overrides[key];
+      }
+    }
+    return _sendLeverSnapshot(basePayload);
+}
+```
+
+## Bug 3：确认 n1k range 正确
+
+n1k 配置：min=0, max=120, step=1 — 与 backend LEVER_NUMERIC_INPUTS 一致即可。
+
+## Bug 4：为 deploy_position_percent 添加提示文字
+
+在 ndp-param-slider 模板中，deploy_position_percent 的 slider-header 区域添加灰色小字提示：
+'<span class="ndp-param-hint">auto_scrubber 由 plant 物理仿真驱动；manual_feedback_override 可快速推到 90%</span>'
+
+在 chat.css 中添加：
+```css
+.ndp-param-hint {
+    font-size: 10px;
+    color: var(--text-dim, #8b9bb4);
+    margin-top: 2px;
+}
+```
+
+## 输出要求
+
+1. 给出修改后的 ADJUSTABLE_NODES 对象（删除 sw1/sw2）
+2. 给出修改后的 _applySuggestedOverrides 函数完整代码
+3. 给出添加 hint 区域的精确 HTML 模板代码片段和 CSS 样式

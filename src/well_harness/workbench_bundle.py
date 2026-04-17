@@ -170,7 +170,7 @@ def _resolve_manifest_archive_dir_path(
         except ValueError:
             # Path escapes sandbox — raise specific error so demo_server can return sandbox_violation
             raise SandboxEscapeError(
-                f"archive_dir '{archive_dir_value}' escapes archive sandbox."
+                "archive_dir is outside the allowed sandbox root."
             )
         return archive_dir_path
     if manifest_path is None:

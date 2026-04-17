@@ -1,0 +1,41 @@
+# Codex Review: P14/P15 P0 Fix — Opus Ruling Implementation
+
+## 改动概述
+
+修复了两个 P0 问题（Opus 4.6 架构裁决）：
+
+### P0-1: clarification_answers 断链（方案C后置patch）
+
+**文件1: ai_doc_analyzer.py**
+
+新增 `_inject_clarification_answers()` 函数：
+- 输入: `intake_packet: dict`, `clarification_history: list[tuple[str, str]]`
+- 纯数据转换，零AI依赖
+- 将 `(question, answer)` 元组列表 → `ClarificationAnswer` 列表，写入 `intake_packet["clarification_answers"]`
+- `run_pipeline_from_intake()` 新增可选参数 `session_clarification_history`
+- 调用 assess 之前注入，然后 re-parse dataclass 以使 assess 看到新字段
+- assess 后如发现 blockers → 返回 `{"status": "blocked", "blockers": [...], "message": "..."}`，不构建 bundle
+
+**文件2: demo_server.py**
+
+`_handle_p15_run_pipeline()` 修改：
+- 新增接收可选 `session_id` 参数
+- 若 session_id 存在，从 P14SessionStore 读取 session.clarification_history
+- 传给 `run_pipeline_from_intake(session_clarification_history=...)`
+
+**文件3: ai-doc-analyzer.js**
+
+- `p15RunPipeline(intakePacket)` → `p15RunPipeline(intakePacket, sessionId)`
+- pipeline btn handler 传 `_sessionId`
+- 结果处理增加 `status === "blocked"` 分支：显示红色错误卡片 + blocker 列表
+
+## 请审查
+
+1. `_inject_clarification_answers` 的数据转换逻辑是否正确（tuple → ClarificationAnswer dict）
+2. re-parse intake_packet_from_dict 是否必要（inject后必须重新解析才能让assess看到新字段）
+3. blockers 检查在 re-parse 之后是否正确
+4. frontend blocked UI 处理是否有 XSS 风险（blocker 内容通过 _escHtml 转义）
+5. session_id 可选（向后兼容）：没有 session_id 时走原来逻辑，是否正确
+6. 总改动量：约 50 行（ai_doc_analyzer.py 45行 + demo_server.py 15行 + ai-doc-analyzer.js 8行）
+
+仅审查，不修改。

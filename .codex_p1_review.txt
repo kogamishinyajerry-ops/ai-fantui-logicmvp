@@ -1,0 +1,48 @@
+# Codex 审查：P14/P15 P1 修复方案
+
+目标文件：ai_doc_analyzer.py
+
+需要你审查的 P1 问题：
+
+## P1-3: threshold_value "60%" → None
+ai_doc_analyzer.py:687-689:
+```
+tv = cond.get("threshold_value")
+if tv is not None and not isinstance(tv, (int, float)):
+    cond["threshold_value"] = None
+```
+问题："60%" 被直接设为 None，丢失有效数字 60
+方案：先 strip '%' 再 coerce 数字
+代码量：约3行
+风险：低
+
+## P1-4: fault_kind_aliases 覆盖不足
+ai_doc_analyzer.py:665-677:
+现有映射只有5个：hardware_failure/sensor_false_positive/logic_race_condition/stuck_open/sensor_misread
+缺少常见变体：sensor_stuck/loss_of_signal/no_response/signal_freeze/spike/freeze
+fallback 是 command_path_failure（语义错误）
+方案：扩充 alias 映射表，fallback 改为 open_circuit（更通用）
+代码量：约8行
+风险：低
+
+## P1-5: apply_safe_schema_repairs 后不重新 assess
+ai_doc_analyzer.py:run_pipeline_from_intake() 流程：
+assess → repairs → build（中间没有 re-assess）
+方案：在 repairs 后重新 assess
+代码量：约5行
+风险：中（需要确认修复不引入新 blocker）
+
+## P1-6: P14 prompt 不区分"需澄清"vs"可推断"
+ai_doc_analyzer.py:295-304:
+prompt 没有 confidence_score triage 指令
+方案：在 prompt 中增加 "confidence < 0.6 → 可安全推断，不输出到歧义列表"
+代码量：约2行（只需改 prompt 字符串）
+风险：低
+
+请按以下格式回答每个P1：
+- 方案是否正确？
+- 建议改动多少行？
+- 风险等级（低/中/高）
+- 是否有你没发现的边界问题？
+
+仅审查，不修改。

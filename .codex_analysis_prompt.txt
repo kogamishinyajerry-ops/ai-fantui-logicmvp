@@ -1,0 +1,58 @@
+# Codex 深度分析：P14/P15 逻辑链路文档理解与转化能力
+
+## 分析目标
+
+对以下两个核心文件进行深度分析，评估"逻辑链路文档理解、转化"能力的完整性和质量：
+
+1. `ai_doc_analyzer.py` — P14 歧义检测 + P15 markdown→intake 转化
+2. `document_intake.py` — intake packet schema + assess + repair pipeline
+
+## 分析维度
+
+请按以下维度逐一分析，并给出具体问题定位和根因：
+
+### 1. P14 歧义检测质量
+- `analyze_document()` 的 prompt 设计是否能有效识别 spec 文档中的歧义？
+- 歧义分类（缺失、矛盾、模糊、不完整）是否覆盖了真实场景？
+- 是否能区分"需要工程师澄清"和"可安全推断"两类？
+
+### 2. P15 markdown→intake 转化完整性
+- `convert_markdown_to_intake()` 的 prompt 是否正确指导 AI 生成完整 intake packet？
+- fault_kind normalization 是否覆盖了所有 alias？（已知8种 + aliases）
+- threshold_value numeric coercion 是否能处理 "60%" → 60.0 这类边界？
+- acceptance_scenario 的 numeric 字段验证是否完整？
+- source_document normalization 是否正确处理了引用格式？
+
+### 3. clarification loop UX
+- 当前是否有前端 clarification 交互？（分析 ai-doc-analyzer.html）
+- clarification 结果是否正确写回 intake packet？
+- 多轮clarification场景是否正确处理？
+
+### 4. 端点集成
+- `run_pipeline_from_intake()` 是否正确连接 P7/P8 intake pipeline？
+- demo_server.py 中是否有对应 API 端点？
+- intake packet 失败时是否有清晰的错误信息返回给前端？
+
+### 5. 错误处理和边缘情况
+- intake_packet_from_dict 的 validation 是否有遗漏？
+- assess_intake_packet 的 blocker 检测是否完整？
+- apply_safe_schema_repairs 的修复建议是否会产生二次错误？
+
+### 6. Mock 模式完整性
+- P14_AI_MOCK 和 P15_AI_MOCK 的 mock 数据是否足够真实？
+- mock 模式能否覆盖所有关键分支？
+
+### 7. 与 demo_server 的集成
+- API 端点是否存在？路径是什么？
+- 请求/响应格式是否匹配？
+- 错误处理是否正确？
+
+## 输出格式
+
+对每个维度：
+1. **现状评估**：代码做到了什么
+2. **具体问题**：定位到文件:行号，描述问题
+3. **根因分析**：为什么这个问题存在
+4. **修复优先级**：P0/P1/P2（P0=影响核心功能）
+
+最后给出**综合评估**和**优化建议**。
