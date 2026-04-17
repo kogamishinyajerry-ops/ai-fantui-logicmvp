@@ -3065,6 +3065,13 @@ input[type="range"].ndp-range::-webkit-slider-thumb:active {
   background: #34d399;
 }
 
+.msg-analysis-header.sensitivity {
+  color: #fbbf24;
+}
+.msg-analysis-header.sensitivity::before {
+  background: #fbbf24;
+}
+
 .msg-analysis-body {
   color: #e2e8f0;
   font-family: 'Fira Code', 'Courier New', monospace;
@@ -3072,4 +3079,42 @@ input[type="range"].ndp-range::-webkit-slider-thumb:active {
   line-height: 1.6;
   white-space: pre-wrap;
   margin: 0;
+}
+
+/* P19.13: Sensitivity sweep */
+.sensitivity-desc {
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+  margin: 0 0 6px;
+}
+
+.sensitivity-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 10px;
+  color: #e2e8f0;
+  margin-top: 6px;
+}
+
+.sensitivity-table th,
+.sensitivity-table td {
+  padding: 3px 6px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.sensitivity-table th {
+  background: rgba(91,168,255,0.12);
+  color: #5ba8ff;
+  font-weight: 600;
+}
+
+.sensitivity-table td.has-results {
+  background: rgba(52,211,153,0.15);
+  color: #34d399;
+}
+
+.sensitivity-table td.no-results {
+  color: rgba(255,255,255,0.25);
 }
