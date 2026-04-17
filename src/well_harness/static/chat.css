@@ -2994,6 +2994,22 @@ input[type="range"].ndp-range::-webkit-slider-thumb:active {
   text-align: center;
 }
 
+.analysis-run-btn:disabled {
+  background: #3a5a8a;
+  color: #9bb5d6;
+  cursor: not-allowed;
+}
+
+.analysis-panel-error {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 4px;
+  color: #fca5a5;
+  font-size: 12px;
+  padding: 8px 12px;
+  margin-top: 8px;
+}
+
 .analysis-run-btn:hover {
   background: #7dbfff;
 }

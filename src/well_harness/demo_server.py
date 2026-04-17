@@ -378,6 +378,8 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                 engine = ReverseDiagnosisEngine(yaml_path)
                 report = engine.diagnose_and_report(outcome, max_results=max_results)
                 self._send_json(200, report)
+            except FileNotFoundError as exc:
+                self._send_json(400, {"error": str(exc)})
             except Exception as exc:
                 self._send_json(500, {"error": str(exc)})
             return
@@ -407,6 +409,8 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                 engine = MonteCarloEngine(yaml_path)
                 result = engine.run(n_trials, seed=seed)
                 self._send_json(200, _reliability_result_to_dict(result))
+            except FileNotFoundError as exc:
+                self._send_json(400, {"error": str(exc)})
             except Exception as exc:
                 self._send_json(500, {"error": str(exc)})
             return
@@ -443,7 +447,11 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         import well_harness as _wh
         pkg_root = _pathlib.Path(_wh.__file__).parent
         repo_root = pkg_root.parent.parent
-        filename = _SYSTEM_YAML_MAP.get(system_id, "thrust_reverser_hardware_v1.yaml")
+        filename = _SYSTEM_YAML_MAP.get(system_id)
+        if filename is None:
+            raise FileNotFoundError(
+                f"Unknown system_id: {system_id!r}. Valid: {sorted(_SYSTEM_YAML_MAP)}"
+            )
         return str(repo_root / "config" / "hardware" / filename)
 
     # ── P19.8: Hardware schema endpoint ───────────────────────────────────────
@@ -461,6 +469,8 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             result = _hardware_to_dict(hw)
             result["system_id"] = system_id
             self._send_json(200, result)
+        except FileNotFoundError as exc:
+            self._send_json(400, {"error": str(exc)})
         except Exception as exc:
             self._send_json(500, {"error": str(exc)})
 

@@ -2628,23 +2628,56 @@ function isGeneralQuestion(qText, qLower) {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
 
+  function showPanelError(panelId, message) {
+    var panel = document.getElementById(panelId);
+    if (!panel) return;
+    var existing = panel.querySelector('.analysis-panel-error');
+    if (existing) existing.remove();
+    var errEl = document.createElement('div');
+    errEl.className = 'analysis-panel-error';
+    errEl.textContent = message;
+    panel.querySelector('.analysis-panel-body').appendChild(errEl);
+  }
+
+  function clearPanelError(panelId) {
+    var panel = document.getElementById(panelId);
+    if (!panel) return;
+    var existing = panel.querySelector('.analysis-panel-error');
+    if (existing) existing.remove();
+  }
+
   function runDiagnosis() {
     var systemId = getSelectedAnalysisSystem('diag-system-select');
     var outcome = document.getElementById('diag-outcome-select').value;
     var maxResults = parseInt(document.getElementById('diag-max-results').value, 10) || 20;
     var resultDiv = document.getElementById('diag-result');
+    var runBtn = document.getElementById('diag-run-btn');
+    var originalText = runBtn.textContent;
+    clearPanelError('diagnosis-panel');
     resultDiv.hidden = false;
     resultDiv.textContent = '\u6b63\u5728\u8fd0\u884c\u8bca\u65ad...';
+    runBtn.disabled = true;
+    runBtn.textContent = '\u8fd0\u884c\u4e2d...';
 
     fetch('/api/diagnosis/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ outcome: outcome, max_results: maxResults, system_id: systemId }),
     })
-      .then(function(r) { return r.json(); })
+      .then(function(r) {
+        if (!r.ok) {
+          return r.json().then(function(errData) {
+            throw new Error('\u9519\u8bef ' + r.status + ': ' + (errData.error || r.statusText));
+          }).catch(function() {
+            throw new Error('\u9519\u8bef ' + r.status);
+          });
+        }
+        return r.json();
+      })
       .then(function(data) {
         if (data.error) {
-          resultDiv.textContent = '\u9519\u8bef: ' + data.error;
+          showPanelError('diagnosis-panel', data.error);
+          resultDiv.textContent = '';
           return;
         }
         var text = renderDiagnosisChatMessage(data);
@@ -2652,7 +2685,12 @@ function isGeneralQuestion(qText, qLower) {
         postAnalysisToChat('diagnosis', '\u269b\ufe0f \u9006\u5411\u8bca\u65ad\u5206\u6790 [' + systemId + ']', text);
       })
       .catch(function(err) {
-        resultDiv.textContent = '\u8bf7\u6c42\u5931\u8d25: ' + err.message;
+        showPanelError('diagnosis-panel', err.message);
+        resultDiv.textContent = '';
+      })
+      .finally(function() {
+        runBtn.disabled = false;
+        runBtn.textContent = originalText;
       });
   }
 
@@ -2662,8 +2700,13 @@ function isGeneralQuestion(qText, qLower) {
     var seedEl = document.getElementById('mc-seed');
     var seed = seedEl.value.trim() ? parseInt(seedEl.value, 10) : null;
     var resultDiv = document.getElementById('mc-result');
+    var runBtn = document.getElementById('mc-run-btn');
+    var originalText = runBtn.textContent;
+    clearPanelError('monte-carlo-panel');
     resultDiv.hidden = false;
     resultDiv.textContent = '\u6b63\u5728\u8fd0\u884c\u4eff\u771f...';
+    runBtn.disabled = true;
+    runBtn.textContent = '\u8fd0\u884c\u4e2d...';
 
     var body = { n_trials: nTrials, system_id: systemId };
     if (seed !== null) body.seed = seed;
@@ -2673,10 +2716,20 @@ function isGeneralQuestion(qText, qLower) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-      .then(function(r) { return r.json(); })
+      .then(function(r) {
+        if (!r.ok) {
+          return r.json().then(function(errData) {
+            throw new Error('\u9519\u8bef ' + r.status + ': ' + (errData.error || r.statusText));
+          }).catch(function() {
+            throw new Error('\u9519\u8bef ' + r.status);
+          });
+        }
+        return r.json();
+      })
       .then(function(data) {
         if (data.error) {
-          resultDiv.textContent = '\u9519\u8bef: ' + data.error;
+          showPanelError('monte-carlo-panel', data.error);
+          resultDiv.textContent = '';
           return;
         }
         var text = renderMonteCarloChatMessage(data);
@@ -2684,7 +2737,12 @@ function isGeneralQuestion(qText, qLower) {
         postAnalysisToChat('monte-carlo', '\ud83c\udfb2 \u53ef\u9760\u6027\u4eff\u771f [' + systemId + ']', text);
       })
       .catch(function(err) {
-        resultDiv.textContent = '\u8bf7\u6c42\u5931\u8d25: ' + err.message;
+        showPanelError('monte-carlo-panel', err.message);
+        resultDiv.textContent = '';
+      })
+      .finally(function() {
+        runBtn.disabled = false;
+        runBtn.textContent = originalText;
       });
   }
 
@@ -2727,14 +2785,29 @@ function isGeneralQuestion(qText, qLower) {
   function runHardwareSchema() {
     var systemId = getSelectedAnalysisSystem('hw-schema-system-select');
     var resultDiv = document.getElementById('hw-schema-result');
+    var runBtn = document.getElementById('hw-schema-fetch-btn');
+    var originalText = runBtn.textContent;
+    clearPanelError('hardware-schema-panel');
     resultDiv.hidden = false;
     resultDiv.textContent = '\u6b63\u5728\u52a0\u8f7d\u786c\u4ef6\u89c4\u683c...';
+    runBtn.disabled = true;
+    runBtn.textContent = '\u52a0\u8f7d\u4e2d...';
 
     fetch('/api/hardware/schema?system_id=' + encodeURIComponent(systemId))
-      .then(function(r) { return r.json(); })
+      .then(function(r) {
+        if (!r.ok) {
+          return r.json().then(function(errData) {
+            throw new Error('\u9519\u8bef ' + r.status + ': ' + (errData.error || r.statusText));
+          }).catch(function() {
+            throw new Error('\u9519\u8bef ' + r.status);
+          });
+        }
+        return r.json();
+      })
       .then(function(data) {
         if (data.error) {
-          resultDiv.textContent = '错误: ' + data.error;
+          showPanelError('hardware-schema-panel', data.error);
+          resultDiv.textContent = '';
           return;
         }
         var lines = [
@@ -2742,25 +2815,25 @@ function isGeneralQuestion(qText, qLower) {
           'version: ' + data.version,
           'system_id: ' + data.system_id,
           '',
-          '━━━ Sensor Ranges ━━━',
+          '\u2503\u2503\u2503 Sensor Ranges \u2503\u2503\u2503',
           '  radio_altitude_ft:  ' + data.sensor.radio_altitude_ft.min + ' ~ ' + data.sensor.radio_altitude_ft.max + ' ft',
           '  tra_deg:             ' + data.sensor.tra_deg.min + ' ~ ' + data.sensor.tra_deg.max + ' deg',
           '  vdt_percent:         ' + data.sensor.vdt_percent.min + ' ~ ' + data.sensor.vdt_percent.max + ' %',
           '  sw1_position_deg:    ' + data.sensor.sw1_position_deg.min + ' ~ ' + data.sensor.sw1_position_deg.max + ' deg',
           '  sw2_position_deg:    ' + data.sensor.sw2_position_deg.min + ' ~ ' + data.sensor.sw2_position_deg.max + ' deg',
           '',
-          '━━━ Logic Thresholds ━━━',
+          '\u2503\u2503\u2503 Logic Thresholds \u2503\u2503\u2503',
           '  logic1_ra_ft_threshold:      ' + data.logic_thresholds.logic1_ra_ft_threshold + ' ft',
           '  logic3_tra_deg_threshold:   ' + data.logic_thresholds.logic3_tra_deg_threshold + ' deg',
           '  deploy_90_threshold_percent:' + data.logic_thresholds.deploy_90_threshold_percent + ' %',
           '',
-          '━━━ Physical Limits ━━━',
+          '\u2503\u2503\u2503 Physical Limits \u2503\u2503\u2503',
           '  SW1 window: ' + data.physical_limits.sw1_window.near_zero_deg + ' ~ ' + data.physical_limits.sw1_window.deep_reverse_deg + ' deg',
           '  SW2 window: ' + data.physical_limits.sw2_window.near_zero_deg + ' ~ ' + data.physical_limits.sw2_window.deep_reverse_deg + ' deg',
           '  SW1 max TRA: ' + data.physical_limits.sw1_max_tra_deg + ' deg',
           '  SW2 max TRA: ' + data.physical_limits.sw2_max_tra_deg + ' deg',
           '',
-          '━━━ Timing ━━━',
+          '\u2503\u2503\u2503 Timing \u2503\u2503\u2503',
           '  pls_unlock_min_s: ' + data.timing.pls_unlock_min_s + ' s',
           '  vdt_deploy_s:     ' + data.timing.vdt_deploy_s + ' s',
           '  thr_lock_min_s:   ' + data.timing.thr_lock_min_s + ' s',
@@ -2768,7 +2841,12 @@ function isGeneralQuestion(qText, qLower) {
         resultDiv.textContent = lines.join('\n');
       })
       .catch(function(err) {
-        resultDiv.textContent = '请求失败: ' + err.message;
+        showPanelError('hardware-schema-panel', err.message);
+        resultDiv.textContent = '';
+      })
+      .finally(function() {
+        runBtn.disabled = false;
+        runBtn.textContent = originalText;
       });
   }
 
@@ -2826,8 +2904,13 @@ function isGeneralQuestion(qText, qLower) {
 
   function runSensitivitySweep() {
     var resultDiv = document.getElementById('sensitivity-result');
+    var runBtn = document.getElementById('sensitivity-run-btn');
+    var originalText = runBtn.textContent;
+    clearPanelError('sensitivity-panel');
     resultDiv.hidden = false;
     resultDiv.textContent = '\u6b63\u5728\u626b\u63cf... 0/20';
+    runBtn.disabled = true;
+    runBtn.textContent = '\u626b\u63cf\u4e2d...';
     var systemId = getSelectedAnalysisSystem('sensitivity-system-select');
 
     var raValues = [2, 5, 10, 20, 40];
@@ -2852,6 +2935,8 @@ function isGeneralQuestion(qText, qLower) {
         resultDiv.textContent = text;
         var header = '\ud83d\udd0d \u6545\u969c\u6027\u5206\u6790 [' + systemId + '] \u2014 RA\u00d7TRA\u00d7Outcome (' + totalCalls + '\u6b21\u626b\u63cf)';
         postAnalysisToChat('sensitivity', header, text);
+        runBtn.disabled = false;
+        runBtn.textContent = originalText;
         return;
       }
 
@@ -2863,7 +2948,16 @@ function isGeneralQuestion(qText, qLower) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ outcome: outcome, max_results: 1, system_id: systemId }),
       })
-        .then(function(r) { return r.json(); })
+        .then(function(r) {
+          if (!r.ok) {
+            return r.json().then(function(errData) {
+              throw new Error('\u9519\u8bef ' + r.status + ': ' + (errData.error || r.statusText));
+            }).catch(function() {
+              throw new Error('\u9519\u8bef ' + r.status);
+            });
+          }
+          return r.json();
+        })
         .then(function(data) {
           callCount++;
           resultDiv.textContent = '\u6b63\u5728\u626b\u63cf... ' + callCount + '/' + totalCalls;
@@ -2879,7 +2973,10 @@ function isGeneralQuestion(qText, qLower) {
           doNext(nextRaIdx, nextOutcomeIdx);
         })
         .catch(function(err) {
-          resultDiv.textContent = '\u8bf7\u6c42\u5931\u8d25: ' + err.message;
+          showPanelError('sensitivity-panel', err.message);
+          resultDiv.textContent = '';
+          runBtn.disabled = false;
+          runBtn.textContent = originalText;
         });
     }
 
