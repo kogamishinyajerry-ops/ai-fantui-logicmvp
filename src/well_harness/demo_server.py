@@ -97,6 +97,8 @@ CHAT_REASON_PATH = "/api/chat/reason"
 DIAGNOSIS_RUN_PATH = "/api/diagnosis/run"
 # Monte Carlo reliability API (P19.7)
 MONTE_CARLO_RUN_PATH = "/api/monte-carlo/run"
+# Hardware schema discovery (P19.8)
+HARDWARE_SCHEMA_PATH = "/api/hardware/schema"
 MONITOR_N1K = 35.0
 MONITOR_MAX_N1K_DEPLOY_LIMIT = 60.0
 LEVER_NUMERIC_INPUTS = {
@@ -191,6 +193,11 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._serve_static(relative_path)
             return
 
+        # P19.8: Hardware schema discovery
+        if parsed.path == HARDWARE_SCHEMA_PATH:
+            self._handle_hardware_schema()
+            return
+
         self._send_json(404, {"error": "not_found"})
 
     def do_POST(self):
@@ -212,6 +219,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             CHAT_REASON_PATH,
             DIAGNOSIS_RUN_PATH,
             MONTE_CARLO_RUN_PATH,
+            HARDWARE_SCHEMA_PATH,
         }:
             self._send_json(404, {"error": "not_found"})
             return
@@ -426,6 +434,22 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         pkg_root = _pathlib.Path(_wh.__file__).parent
         repo_root = pkg_root.parent.parent
         return str(repo_root / "config" / "hardware" / "thrust_reverser_hardware_v1.yaml")
+
+    # ── P19.8: Hardware schema endpoint ───────────────────────────────────────
+
+    def _handle_hardware_schema(self) -> None:
+        """Return the full hardware YAML as a JSON dict (P19.8)."""
+        yaml_path = self._hardware_yaml_path()
+        try:
+            from well_harness.hardware_schema import (
+                _hardware_to_dict,
+                load_thrust_reverser_hardware,
+            )
+
+            hw = load_thrust_reverser_hardware(yaml_path)
+            self._send_json(200, _hardware_to_dict(hw))
+        except Exception as exc:
+            self._send_json(500, {"error": str(exc)})
 
     def _serve_static(self, relative_path: str):
         static_root = STATIC_DIR.resolve()

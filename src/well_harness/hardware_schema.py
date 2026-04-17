@@ -102,6 +102,26 @@ class ThrustReverserHardware:
     physical_limits: PhysicalLimits
 
 
+# ─── Serialization ─────────────────────────────────────────────────────────────
+
+
+def _hardware_to_dict(hw: ThrustReverserHardware) -> dict:
+    """Convert a ThrustReverserHardware (and nested frozen dataclasses) to a plain dict."""
+    import dataclasses
+
+    def _to_dict(obj):
+        if dataclasses.is_dataclass(obj):
+            result = {}
+            for k, v in dataclasses.asdict(obj).items():
+                result[k] = _to_dict(v)
+            return result
+        if isinstance(obj, list):
+            return [_to_dict(item) for item in obj]
+        return obj
+
+    return _to_dict(hw)
+
+
 # ─── Schema resolution ────────────────────────────────────────────────────────
 
 _SCHEMA_RESOURCE = "docs/json_schema/hardware_schema_v1.schema.json"
