@@ -650,6 +650,78 @@ def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | Non
         return None, {"error": "minimax_error", "message": "MiniMax API request failed."}
 
 
+def _validate_chat_payload(payload: dict) -> tuple[dict | None, dict | None]:
+    """Shared input validation for /api/chat/reason and /api/chat/operate.
+
+    Pure function: takes a request dict, returns (validated, error). No I/O,
+    no global state, no side effects. The validation rules are byte-for-byte
+    the Round 2 chat/reason rules so the two endpoints expose an identical
+    attack surface.
+
+    Returns exactly one of:
+      * ({"question": str, "system_id": str, "snapshot": dict, "nodes": list}, None)
+      * (None, {"error": <code>, "message": <human-readable>})
+
+    Error codes (preserved verbatim from Round 2 — DO NOT rename, downstream
+    consumers / log-based alerts / front-end toast handlers depend on these
+    exact strings):
+      invalid_question_type, missing_question, question_too_long,
+      invalid_system_id, invalid_current_snapshot, snapshot_nodes_too_large
+    """
+    MAX_QUESTION_CHARS = 8000
+    MAX_SNAPSHOT_NODES = 200
+    ALLOWED_SYSTEM_IDS = {"thrust-reverser", "landing-gear", "bleed-air", "efds"}
+
+    raw_question = payload.get("question", "")
+    if not isinstance(raw_question, str):
+        return None, {
+            "error": "invalid_question_type",
+            "message": "question must be a string.",
+        }
+    question = raw_question.strip()
+    if not question:
+        return None, {"error": "missing_question", "message": "question field is required."}
+    if len(question) > MAX_QUESTION_CHARS:
+        return None, {
+            "error": "question_too_long",
+            "message": f"question exceeds maximum of {MAX_QUESTION_CHARS} characters.",
+        }
+
+    raw_system_id = payload.get("system_id", "thrust-reverser")
+    if not isinstance(raw_system_id, str) or raw_system_id not in ALLOWED_SYSTEM_IDS:
+        return None, {
+            "error": "invalid_system_id",
+            "message": f"system_id must be one of {sorted(ALLOWED_SYSTEM_IDS)}.",
+        }
+    system_id = raw_system_id
+
+    raw_snapshot = payload.get("current_snapshot")
+    if raw_snapshot is None:
+        snapshot = {}
+    elif isinstance(raw_snapshot, dict):
+        snapshot = raw_snapshot
+    else:
+        return None, {
+            "error": "invalid_current_snapshot",
+            "message": "current_snapshot must be a JSON object or null.",
+        }
+
+    raw_nodes = snapshot.get("nodes", [])
+    if isinstance(raw_nodes, list) and len(raw_nodes) > MAX_SNAPSHOT_NODES:
+        return None, {
+            "error": "snapshot_nodes_too_large",
+            "message": f"current_snapshot.nodes exceeds maximum of {MAX_SNAPSHOT_NODES} entries.",
+        }
+    nodes = raw_nodes if isinstance(raw_nodes, list) else []
+
+    return {
+        "question": question,
+        "system_id": system_id,
+        "snapshot": snapshot,
+        "nodes": nodes,
+    }, None
+
+
 def _handle_chat_operate(request_payload: dict) -> tuple[dict | None, dict | None]:
     """Handle POST /api/chat/operate — use MiniMax LLM to suggest lever parameter overrides.
 
@@ -669,12 +741,19 @@ def _handle_chat_operate(request_payload: dict) -> tuple[dict | None, dict | Non
         "ai_explanation": str,        # human-readable explanation
     }
     """
-    question = request_payload.get("question", "")
-    system_id = request_payload.get("system_id", "thrust-reverser")
-    snapshot = request_payload.get("current_snapshot") or {}
-
-    if not question:
-        return None, {"error": "missing_question", "message": "question field is required."}
+    # ── Input validation (security Round 3 — mirrors chat/reason) ────────
+    # Closes Round 2 BACKLOG C-sibling (HIGH, SECURITY-PENDING). Uses the
+    # exact same _validate_chat_payload helper as /api/chat/reason so both
+    # endpoints expose an identical attack surface. Operate-specific
+    # validation (allowed_override_fields whitelist, feedback_mode enum,
+    # auto_apply bool coercion) is preserved verbatim downstream.
+    validated, error = _validate_chat_payload(request_payload)
+    if error is not None:
+        return None, error
+    question = validated["question"]
+    system_id = validated["system_id"]
+    snapshot = validated["snapshot"]
+    nodes = validated["nodes"]
 
     api_key = _get_minimax_api_key()
     if not api_key:
@@ -683,7 +762,6 @@ def _handle_chat_operate(request_payload: dict) -> tuple[dict | None, dict | Non
     # Build context from current snapshot
     logic = snapshot.get("logic", {})
     outputs = snapshot.get("outputs", {})
-    nodes = snapshot.get("nodes", [])
 
     logic_lines = []
     for gate_id in ("logic1", "logic2", "logic3", "logic4"):
@@ -898,18 +976,22 @@ def _handle_chat_reason(request_payload: dict) -> tuple[dict | None, dict | None
     control-logic question, including causal、反事实、system-level, and diagnostic.
     Quickly refuses off-topic or under-informed questions.
     """
-    question = request_payload.get("question", "")
-    system_id = request_payload.get("system_id", "thrust-reverser")
-    snapshot = request_payload.get("current_snapshot") or {}
-
-    if not question:
-        return None, {"error": "missing_question", "message": "question field is required."}
+    # ── Input validation (security Round 2 / refactored Round 3) ─────────
+    # Round 3 extracted the inline block to module-level _validate_chat_payload
+    # so /api/chat/operate can apply the EXACT same rules. Behavior is
+    # byte-for-byte equivalent to the Round 2 inline implementation: same 6
+    # error codes, same messages, same structured 4xx envelopes.
+    validated, error = _validate_chat_payload(request_payload)
+    if error is not None:
+        return None, error
+    question = validated["question"]
+    system_id = validated["system_id"]
+    snapshot = validated["snapshot"]
+    nodes = validated["nodes"]
 
     api_key = _get_minimax_api_key()
     if not api_key:
         return None, {"error": "minimax_api_key_missing", "message": "MiniMax API key not found. Add to ~/.minimax_key."}
-
-    nodes = snapshot.get("nodes", [])
     logic = snapshot.get("logic", {})
     outputs = snapshot.get("outputs", {})
     hud = snapshot.get("hud", {})
