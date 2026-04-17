@@ -47,6 +47,10 @@ P19.3 Executed: Reverse diagnosis engine
 - getCausalChainLayer() creates persistent SVG overlay; drawCausalChainConnectors() draws connectors
 - Connectors drawn on applyAiHighlights(), cleared on clearAiHighlights() (including system switch)
 - Regression: 604 passed, 1 skipped (no regression)
+- P19.5 Executed: diagnosis report serialization layer
+- Added _parameter_snapshot_to_dict() helper + diagnose_and_report() method
+- Returns ISO-8601 timestamped dict: outcome, total_combos_found, grid_resolution, results[]
+- Existing diagnose() behavior unchanged; 604 tests pass
 - All P0-P18.5 phases complete. Opus 4.6 final adjudication: Approved, Project Freeze.
 - Regression baseline: 561 tests, 24-command suite. GSD automation continues to protect regression.
 - P18.5 merged (canvas interaction fix): fault injection UI removed, hover scale disabled, hit-box pointer-events fixed.
