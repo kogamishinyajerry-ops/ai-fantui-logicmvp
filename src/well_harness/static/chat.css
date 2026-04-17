@@ -2921,3 +2921,91 @@ input[type="range"].ndp-range::-webkit-slider-thumb:active {
   text-anchor: middle;
   opacity: 0.85;
 }
+
+/* P19.10: Analysis tools panel */
+.chat-drawer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.analysis-panel {
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 10px 12px;
+}
+
+.analysis-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5ba8ff;
+  margin-bottom: 8px;
+}
+
+.analysis-panel-close {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+}
+
+.analysis-panel-close:hover {
+  color: rgba(255,255,255,0.8);
+}
+
+.analysis-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.analysis-panel-body label {
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+}
+
+.analysis-panel-body select,
+.analysis-panel-body input[type="number"] {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-size: 12px;
+  padding: 5px 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.analysis-run-btn {
+  background: #5ba8ff;
+  border: none;
+  border-radius: 6px;
+  color: #0a0f1e;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  text-align: center;
+}
+
+.analysis-run-btn:hover {
+  background: #7dbfff;
+}
+
+.analysis-result {
+  background: rgba(91,168,255,0.08);
+  border: 1px solid rgba(91,168,255,0.2);
+  border-radius: 6px;
+  color: #e2e8f0;
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 8px;
+  white-space: pre-wrap;
+}

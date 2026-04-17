@@ -439,6 +439,7 @@
         <button type="button" class="drawer-tool-btn" id="chat-guided-demo-btn">引导演示</button>
         <a href="/demo.html" class="drawer-tool-link">专家演示</a>
         <a href="/workbench.html" class="drawer-tool-link">工作台</a>
+        <button type="button" class="drawer-tool-btn" id="chat-analysis-btn">📊 分析工具</button>
       </div>
 
       <div class="chat-shortcut-strip" aria-label="快捷提问">
@@ -446,6 +447,45 @@
         <button type="button" class="chat-shortcut-btn" data-prompt="解释 L3 到 VDT90 的链路">L3→VDT90</button>
         <button type="button" class="chat-shortcut-btn" data-prompt="为什么反推锁没有释放">THR_LOCK</button>
         <button type="button" class="chat-shortcut-btn" data-prompt="把 logic3 的阈值改成 -8 会发生什么">阈值修改</button>
+      </div>
+
+      <!-- Diagnosis panel -->
+      <div class="analysis-panel" id="diagnosis-panel" hidden>
+        <div class="analysis-panel-header">
+          <span>📊 逆向诊断分析</span>
+          <button type="button" class="analysis-panel-close" data-close="diagnosis-panel">✕</button>
+        </div>
+        <div class="analysis-panel-body">
+          <label for="diag-outcome-select">目标结果:</label>
+          <select id="diag-outcome-select">
+            <option value="logic1_active">logic1_active — RA&lt;6ft + SW1 closed</option>
+            <option value="logic3_active">logic3_active — TRA≤-11.74 + SW2 closed</option>
+            <option value="thr_lock_active">thr_lock_active — PLS unlocked</option>
+            <option value="deploy_confirmed">deploy_confirmed — VDT≥90%</option>
+            <option value="tls_unlocked">tls_unlocked</option>
+            <option value="pls_unlocked">pls_unlocked</option>
+          </select>
+          <label for="diag-max-results">最大结果数:</label>
+          <input type="number" id="diag-max-results" value="20" min="1" max="1000">
+          <button type="button" class="analysis-run-btn" id="diag-run-btn">运行诊断</button>
+          <div class="analysis-result" id="diag-result" hidden></div>
+        </div>
+      </div>
+
+      <!-- Monte Carlo panel -->
+      <div class="analysis-panel" id="monte-carlo-panel" hidden>
+        <div class="analysis-panel-header">
+          <span>🎲 可靠性仿真</span>
+          <button type="button" class="analysis-panel-close" data-close="monte-carlo-panel">✕</button>
+        </div>
+        <div class="analysis-panel-body">
+          <label for="mc-n-trials">仿真次数:</label>
+          <input type="number" id="mc-n-trials" value="100" min="1" max="10000">
+          <label for="mc-seed">随机种子 (可选):</label>
+          <input type="number" id="mc-seed" placeholder="留空使用随机">
+          <button type="button" class="analysis-run-btn" id="mc-run-btn">运行仿真</button>
+          <div class="analysis-result" id="mc-result" hidden></div>
+        </div>
       </div>
 
       <div class="chat-messages" id="chat-messages" aria-live="polite">

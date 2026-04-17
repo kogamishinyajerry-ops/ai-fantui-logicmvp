@@ -2523,4 +2523,141 @@ function isGeneralQuestion(qText, qLower) {
   if (chatInput) {
     chatInput.focus();
   }
+
+  // ── P19.10: Analysis tools panel ─────────────────────────────────────────
+
+  function openDiagnosisPanel() {
+    var panel = document.getElementById('diagnosis-panel');
+    var mcPanel = document.getElementById('monte-carlo-panel');
+    if (panel) {
+      panel.hidden = !panel.hidden;
+    }
+    if (mcPanel) {
+      mcPanel.hidden = true;
+    }
+  }
+
+  function openMonteCarloPanel() {
+    var panel = document.getElementById('monte-carlo-panel');
+    var diagPanel = document.getElementById('diagnosis-panel');
+    if (panel) {
+      panel.hidden = !panel.hidden;
+    }
+    if (diagPanel) {
+      diagPanel.hidden = true;
+    }
+  }
+
+  function runDiagnosis() {
+    var outcome = document.getElementById('diag-outcome-select').value;
+    var maxResults = parseInt(document.getElementById('diag-max-results').value, 10) || 20;
+    var resultDiv = document.getElementById('diag-result');
+    resultDiv.hidden = false;
+    resultDiv.textContent = '正在运行诊断...';
+
+    fetch('/api/diagnosis/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ outcome: outcome, max_results: maxResults }),
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) {
+          resultDiv.textContent = '错误: ' + data.error;
+          return;
+        }
+        var lines = [
+          '目标结果: ' + data.outcome,
+          '满足组合数: ' + data.total_combos_found + ' / ' + data.grid_resolution + '-step grid',
+          '时间戳: ' + data.timestamp,
+          '',
+          '前 3 个示例组合:',
+        ];
+        data.results.slice(0, 3).forEach(function(r, i) {
+          lines.push(
+            '  [' + (i + 1) + '] RA=' + r.radio_altitude_ft.toFixed(1) +
+            'ft  TRA=' + r.tra_deg.toFixed(2) + '\u00b0' +
+            '  SW1=' + r.sw1_closed +
+            '  SW2=' + r.sw2_closed +
+            '  VDT=' + r.vdt_percent.toFixed(0) + '%'
+          );
+        });
+        resultDiv.textContent = lines.join('\n');
+      })
+      .catch(function(err) {
+        resultDiv.textContent = '请求失败: ' + err.message;
+      });
+  }
+
+  function runMonteCarlo() {
+    var nTrials = parseInt(document.getElementById('mc-n-trials').value, 10) || 100;
+    var seedEl = document.getElementById('mc-seed');
+    var seed = seedEl.value.trim() ? parseInt(seedEl.value, 10) : null;
+    var resultDiv = document.getElementById('mc-result');
+    resultDiv.hidden = false;
+    resultDiv.textContent = '正在运行仿真...';
+
+    var body = { n_trials: nTrials };
+    if (seed !== null) body.seed = seed;
+
+    fetch('/api/monte-carlo/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) {
+          resultDiv.textContent = '错误: ' + data.error;
+          return;
+        }
+        var rate = (data.success_rate * 100).toFixed(1);
+        var lines = [
+          '仿真次数: ' + data.n_trials + (data.seed !== null ? '  seed=' + data.seed : '  (random)'),
+          '成功率: ' + rate + '%',
+          'MTBF: ' + data.mtbf_cycles.toFixed(1) + ' cycles',
+          '',
+          '故障模式:',
+          '  SW1 missed: ' + (data.failure_modes.sw1_missed || 0),
+          '  SW2 missed: ' + (data.failure_modes.sw2_missed || 0),
+          '  TRA stall: ' + (data.failure_modes.tra_stall || 0),
+          '  RA sensor: ' + (data.failure_modes.ra_sensor_failure || 0),
+          '',
+          '平均开关窗口通过次数:',
+          '  SW1: ' + data.sw1_window_crossings_mean.toFixed(2),
+          '  SW2: ' + data.sw2_window_crossings_mean.toFixed(2),
+        ];
+        resultDiv.textContent = lines.join('\n');
+      })
+      .catch(function(err) {
+        resultDiv.textContent = '请求失败: ' + err.message;
+      });
+  }
+
+  // Wire analysis panel buttons
+  var analysisBtn = document.getElementById('chat-analysis-btn');
+  if (analysisBtn) analysisBtn.addEventListener('click', function() {
+    var diagPanel = document.getElementById('diagnosis-panel');
+    var mcPanel = document.getElementById('monte-carlo-panel');
+    if (diagPanel && diagPanel.hidden && mcPanel && mcPanel.hidden) {
+      diagPanel.hidden = false;
+    } else if (diagPanel) {
+      diagPanel.hidden = !diagPanel.hidden;
+    }
+  });
+
+  var diagRunBtn = document.getElementById('diag-run-btn');
+  if (diagRunBtn) diagRunBtn.addEventListener('click', runDiagnosis);
+
+  var mcRunBtn = document.getElementById('mc-run-btn');
+  if (mcRunBtn) mcRunBtn.addEventListener('click', runMonteCarlo);
+
+  // Wire close buttons
+  document.querySelectorAll('.analysis-panel-close').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var panelId = btn.getAttribute('data-close');
+      var panel = document.getElementById(panelId);
+      if (panel) panel.hidden = true;
+    });
+  });
 })();
