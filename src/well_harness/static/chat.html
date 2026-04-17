@@ -440,6 +440,7 @@
         <a href="/demo.html" class="drawer-tool-link">专家演示</a>
         <a href="/workbench.html" class="drawer-tool-link">工作台</a>
         <button type="button" class="drawer-tool-btn" id="chat-analysis-btn">📊 分析工具</button>
+        <button type="button" class="drawer-tool-btn" id="chat-hardware-schema-btn">🛠️ 硬件规格</button>
       </div>
 
       <div class="chat-shortcut-strip" aria-label="快捷提问">
@@ -485,6 +486,18 @@
           <input type="number" id="mc-seed" placeholder="留空使用随机">
           <button type="button" class="analysis-run-btn" id="mc-run-btn">运行仿真</button>
           <div class="analysis-result" id="mc-result" hidden></div>
+        </div>
+      </div>
+
+      <!-- Hardware schema panel -->
+      <div class="hardware-schema-panel" id="hardware-schema-panel" hidden>
+        <div class="analysis-panel-header">
+          <span>🛠️ 硬件规格 — Thrust Reverser</span>
+          <button type="button" class="analysis-panel-close" data-close="hardware-schema-panel">✕</button>
+        </div>
+        <div class="analysis-panel-body">
+          <button type="button" class="analysis-run-btn" id="hw-schema-fetch-btn">加载规格</button>
+          <div class="analysis-result" id="hw-schema-result" hidden></div>
         </div>
       </div>
 
