@@ -30,6 +30,7 @@ from well_harness.models import HarnessConfig, PilotInputs, ResolvedInputs
 from well_harness.plant import PlantState, SimplifiedDeployPlant
 from well_harness.switches import LatchedThrottleSwitches, SwitchState
 from well_harness.workbench_bundle import (
+    SandboxEscapeError,
     archive_workbench_bundle,
     build_workbench_bundle,
     load_workbench_archive_manifest,
@@ -2142,6 +2143,8 @@ def build_workbench_archive_restore_response(request_payload: dict) -> tuple[dic
             "field": "manifest_path",
             "message": str(exc),
         }
+    except SandboxEscapeError as exc:
+        return None, {"error": "sandbox_violation", "message": str(exc)}
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         return None, {
             "error": "invalid_workbench_archive",

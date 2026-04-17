@@ -29,6 +29,11 @@ ARCHIVE_MANIFEST_KIND = "well-harness-workbench-archive-manifest"
 ARCHIVE_MANIFEST_VERSION = 1
 ARCHIVE_MANIFEST_SCHEMA_ID = "https://well-harness.local/json_schema/workbench_archive_manifest_v1.schema.json"
 ARCHIVE_MANIFEST_SELF_CHECK_COMMAND = "python3 -m well_harness.cli archive-manifest ."
+
+
+class SandboxEscapeError(ValueError):
+    """Raised when an archive path escapes the sandbox boundary."""
+    pass
 ARCHIVE_MANIFEST_FILE_KEYS = (
     "bundle_json",
     "summary_markdown",
@@ -158,6 +163,15 @@ def _resolve_manifest_archive_dir_path(
 ) -> Path | None:
     archive_dir_path = Path(archive_dir_value).expanduser()
     if archive_dir_path.is_absolute():
+        # SECURITY: validate absolute archive_dir stays within the archive sandbox
+        safe_root = (Path.cwd() / "artifacts" / "workbench-bundles").resolve()
+        try:
+            archive_dir_path.resolve().relative_to(safe_root)
+        except ValueError:
+            # Path escapes sandbox — raise specific error so demo_server can return sandbox_violation
+            raise SandboxEscapeError(
+                f"archive_dir '{archive_dir_value}' escapes archive sandbox."
+            )
         return archive_dir_path
     if manifest_path is None:
         return None
@@ -226,10 +240,16 @@ def validate_workbench_archive_manifest(
     if not _non_empty_string(archive_dir_value):
         issues.append("archive_dir must be a non-empty string.")
     else:
-        archive_dir_path = _resolve_manifest_archive_dir_path(
-            str(archive_dir_value),
-            manifest_path=resolved_manifest_path,
-        )
+        try:
+            archive_dir_path = _resolve_manifest_archive_dir_path(
+                str(archive_dir_value),
+                manifest_path=resolved_manifest_path,
+            )
+        except SandboxEscapeError as exc:
+            # Re-raise as SandboxEscapeError with formatted message so demo_server
+            # can return sandbox_violation, but the message still contains "invalid"
+            # so existing tests that check for ValueError with "invalid" pass.
+            raise SandboxEscapeError(f"invalid workbench archive manifest: {exc}") from exc
         if archive_dir_path is None:
             issues.append("archive_dir relative paths require manifest_path during validation.")
         elif require_existing_files and not archive_dir_path.is_dir():
