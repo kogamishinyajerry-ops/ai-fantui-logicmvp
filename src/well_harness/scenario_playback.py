@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import re
 from dataclasses import asdict, dataclass
 from typing import Any, Callable
@@ -226,6 +227,8 @@ def _active_output_value(component: ComponentSpec, active: bool) -> float:
 
 
 def _sample_times(total_duration_s: float, sample_period_s: float) -> tuple[float, ...]:
+    if not math.isfinite(sample_period_s) or sample_period_s <= 0:
+        raise ValueError(f"sample_period_s must be a finite positive number, got {sample_period_s}")
     step_count = max(int(round(total_duration_s / sample_period_s)), 1)
     samples = [round(index * sample_period_s, 6) for index in range(step_count + 1)]
     final_value = round(total_duration_s, 6)

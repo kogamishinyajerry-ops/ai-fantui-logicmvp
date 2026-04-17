@@ -6,6 +6,7 @@ import argparse
 from dataclasses import replace
 from functools import lru_cache
 import json
+import math
 import re
 from typing import Any
 import webbrowser
@@ -222,9 +223,9 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
         # Guard: enforce Content-Type whitelist (defense-in-depth; browser enforces this too)
         content_type = self.headers.get("Content-Type", "").split(";")[0].strip()
-        allowed_types = {"application/json", "text/plain", "application/x-www-form-urlencoded"}
+        allowed_types = {"application/json"}
         if content_type and content_type not in allowed_types:
-            self._send_json(415, {"error": "unsupported_media_type", "message": f"Content-Type '{content_type}' is not supported. Use application/json or text/plain."})
+            self._send_json(415, {"error": "unsupported_media_type", "message": f"Content-Type '{content_type}' is not supported. Use application/json."})
             return
 
         try:
@@ -1947,6 +1948,12 @@ def _optional_request_float(payload: dict, field_name: str, *, default: float) -
             "error": "invalid_workbench_request",
             "field": field_name,
             "message": f"{field_name} must be numeric.",
+        }
+    if not math.isfinite(value):
+        return default, {
+            "error": "invalid_numeric_value",
+            "field": field_name,
+            "message": f"{field_name} must be a finite number.",
         }
     if value <= 0:
         return default, {
