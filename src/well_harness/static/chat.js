@@ -39,6 +39,13 @@
   var zoomContainer = null; var zoomLevelEl = null;
   var lastTruthSnapshot = null; var currentDetailNodeId = null;
 
+  var SYSTEM_LABELS = {
+    'thrust-reverser': '反推系统',
+    'landing-gear': '起落架系统',
+    'bleed-air': '引气阀系统',
+    efds: '干扰弹系统',
+  };
+
   // Maps each logic gate to the command node(s) it directly drives.
   // Used to derive intermediate command-node visual state from gate activation state.
   var GATE_TO_COMMAND_MAP = {
