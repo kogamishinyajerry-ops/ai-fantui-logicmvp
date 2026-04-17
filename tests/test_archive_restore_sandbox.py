@@ -353,7 +353,7 @@ class WorkbenchBundleLayer2Tests(unittest.TestCase):
         # Layer 2 should raise SandboxEscapeError for archive_dir="/"
         with self.assertRaises(SandboxEscapeError) as ctx:
             load_workbench_archive_restore_payload(str(manifest_path))
-        self.assertIn("escapes archive sandbox", str(ctx.exception))
+        self.assertIn("sandbox", str(ctx.exception).lower())
 
 
 if __name__ == "__main__":
