@@ -95,6 +95,8 @@ CHAT_OPERATE_PATH = "/api/chat/operate"
 CHAT_REASON_PATH = "/api/chat/reason"
 # Reverse diagnosis API (P19.6)
 DIAGNOSIS_RUN_PATH = "/api/diagnosis/run"
+# Monte Carlo reliability API (P19.7)
+MONTE_CARLO_RUN_PATH = "/api/monte-carlo/run"
 MONITOR_N1K = 35.0
 MONITOR_MAX_N1K_DEPLOY_LIMIT = 60.0
 LEVER_NUMERIC_INPUTS = {
@@ -209,6 +211,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             CHAT_OPERATE_PATH,
             CHAT_REASON_PATH,
             DIAGNOSIS_RUN_PATH,
+            MONTE_CARLO_RUN_PATH,
         }:
             self._send_json(404, {"error": "not_found"})
             return
@@ -358,6 +361,34 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                 engine = ReverseDiagnosisEngine(yaml_path)
                 report = engine.diagnose_and_report(outcome, max_results=max_results)
                 self._send_json(200, report)
+            except Exception as exc:
+                self._send_json(500, {"error": str(exc)})
+            return
+
+        # P19.7: Monte Carlo reliability simulation
+        if parsed.path == MONTE_CARLO_RUN_PATH:
+            from well_harness.monte_carlo_engine import MonteCarloEngine, _reliability_result_to_dict
+            n_trials_raw = request_payload.get("n_trials", 100)
+            try:
+                n_trials = int(n_trials_raw)
+            except (TypeError, ValueError):
+                self._send_json(400, {"error": "n_trials must be an integer"})
+                return
+            n_trials = max(1, min(n_trials, 10000))
+
+            seed = None
+            if "seed" in request_payload:
+                try:
+                    seed = int(request_payload["seed"])
+                except (TypeError, ValueError):
+                    self._send_json(400, {"error": "seed must be an integer"})
+                    return
+
+            yaml_path = self._hardware_yaml_path()
+            try:
+                engine = MonteCarloEngine(yaml_path)
+                result = engine.run(n_trials, seed=seed)
+                self._send_json(200, _reliability_result_to_dict(result))
             except Exception as exc:
                 self._send_json(500, {"error": str(exc)})
             return
