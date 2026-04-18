@@ -1,0 +1,136 @@
+{
+  "timestamp_utc": "20260418T074215Z",
+  "sections": [
+    {
+      "backend": "minimax",
+      "model": "",
+      "wow": [
+        {
+          "name": "wow_a_beat_deep",
+          "path": "/api/lever-snapshot",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 1.5,
+          "error_code": null
+        },
+        {
+          "name": "wow_a_beat_early",
+          "path": "/api/lever-snapshot",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 1.4,
+          "error_code": null
+        },
+        {
+          "name": "wow_b_monte_carlo_1k",
+          "path": "/api/monte-carlo/run",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 183.8,
+          "error_code": null
+        },
+        {
+          "name": "wow_c_reverse_diagnose",
+          "path": "/api/diagnosis/run",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 20.7,
+          "error_code": null
+        }
+      ],
+      "chat": [
+        {
+          "name": "chat_explain",
+          "path": "/api/chat/explain",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 12865.2,
+          "error_code": null
+        },
+        {
+          "name": "chat_operate",
+          "path": "/api/chat/operate",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 7583.3,
+          "error_code": null
+        },
+        {
+          "name": "chat_reason",
+          "path": "/api/chat/reason",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 16144.0,
+          "error_code": null
+        }
+      ],
+      "ready": true
+    },
+    {
+      "backend": "ollama",
+      "model": "qwen2.5:7b-instruct",
+      "wow": [
+        {
+          "name": "wow_a_beat_deep",
+          "path": "/api/lever-snapshot",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 1.5,
+          "error_code": null
+        },
+        {
+          "name": "wow_a_beat_early",
+          "path": "/api/lever-snapshot",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 1.3,
+          "error_code": null
+        },
+        {
+          "name": "wow_b_monte_carlo_1k",
+          "path": "/api/monte-carlo/run",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 140.5,
+          "error_code": null
+        },
+        {
+          "name": "wow_c_reverse_diagnose",
+          "path": "/api/diagnosis/run",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 10.7,
+          "error_code": null
+        }
+      ],
+      "chat": [
+        {
+          "name": "chat_explain",
+          "path": "/api/chat/explain",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 5241.2,
+          "error_code": null
+        },
+        {
+          "name": "chat_operate",
+          "path": "/api/chat/operate",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 4090.6,
+          "error_code": null
+        },
+        {
+          "name": "chat_reason",
+          "path": "/api/chat/reason",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 5202.6,
+          "error_code": null
+        }
+      ],
+      "ready": true
+    }
+  ],
+  "verdict": "PASS"
+}
