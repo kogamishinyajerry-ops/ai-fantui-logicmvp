@@ -549,6 +549,26 @@ Non-goals：修改 controller.py / 19-node / LLM adapter / prompts / wow 脚本 
 
 **Plans:** P25-00 Tier 1 + P25-01…04 — Executor self-sign 全程（v4.0 Extended Autonomy Mode，窗口内 #1 新 Phase 收口）
 
+## Phase P26: 立项物料引用有效性自动验证 — pitch_script / faq / preflight / runbook 的证据路径可证伪化
+
+Status: Done (2026-04-18) · self-signed under v4.0 Extended Autonomy Mode
+
+**Goal:** 让 9 份立项物料（pitch_script / faq / preflight_checklist / disaster_runbook / local_model_poc / wow_a/b/c 场景卡 / integrated-timing-findings）里每一条代码路径 / artefact / 配置文件引用都进 pytest default lane 机器验证，避免 refactor 静默打断 evidence 链。
+
+**Sub-phases delivered:**
+- P26-01 — `tests/test_pitch_citations.py`（PITCH_DOCS × 9 文件 × CITATION_RE 正则提取 + placeholder skip 双层护栏 + ≥50 citation 回归下限）
+- P26-02 — 首轮真跑 GREEN：100% citation 在 repo 内可解析，无 audit doc 需要
+- P26-03 — closure + GATE-P26-CLOSURE self-signed (v4.0 七点自审)
+
+**关键数据：** 4 个测试进 default lane（pytest 658 → 662）；citation 提取器一次通过真跑验证；零 broken 引用。
+
+**Exit Criteria:**
+- 主 pytest 662/1skip 零回归 · e2e 49/49 · adversarial 8/8
+- citation verifier 进 default lane（非 opt-in）
+- GATE-P26-CLOSURE self-signed under v4.0 + 控制塔 DECISION + Notion 02B
+
+**Plans:** P26-00 Tier 1 + P26-01…03 — Executor self-sign 全程（v4.0 Extended Autonomy Mode，窗口内 #2 新 Phase 收口）
+
 ## 联邦架构战略（Opus 4.6 裁决 2026-04-15）
 
 **结论**：联邦模式是正确的方向，整合≠合并。
