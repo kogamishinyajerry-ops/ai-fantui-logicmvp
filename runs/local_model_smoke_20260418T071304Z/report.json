@@ -1,0 +1,58 @@
+{
+  "timestamp_utc": "20260418T071304Z",
+  "backend": "ollama",
+  "model": "qwen2.5:32b",
+  "cases": [
+    {
+      "name": "chat_explain_l3_gate",
+      "path": "/api/chat/explain",
+      "status": 400,
+      "ok": false,
+      "elapsed_ms": 30008.3,
+      "body_keys": [
+        "error",
+        "message"
+      ],
+      "error_code": "ollama_error"
+    },
+    {
+      "name": "chat_operate_vdt_adjust",
+      "path": "/api/chat/operate",
+      "status": 200,
+      "ok": true,
+      "elapsed_ms": 17739.0,
+      "body_keys": [
+        "action_type",
+        "ai_explanation",
+        "auto_apply",
+        "confidence",
+        "gate_plan",
+        "parameter_overrides",
+        "reasoning",
+        "trajectory_steps"
+      ],
+      "error_code": null
+    },
+    {
+      "name": "chat_reason_thr_lock",
+      "path": "/api/chat/reason",
+      "status": 200,
+      "ok": true,
+      "elapsed_ms": 24900.6,
+      "body_keys": [
+        "auto_apply",
+        "confidence",
+        "deep_reasoning",
+        "explanation",
+        "highlighted_nodes",
+        "parameter_overrides",
+        "refusal",
+        "refusal_reason",
+        "response_type",
+        "suggestion_nodes"
+      ],
+      "error_code": null
+    }
+  ],
+  "verdict": "FAIL"
+}
