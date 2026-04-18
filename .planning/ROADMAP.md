@@ -526,6 +526,29 @@ Non-goals：修改 controller.py / 19-node 真值引擎 / LLM adapter / AI promp
 
 **注：** P24 期间确认 v3.0 已完全移除 Codex，原 Plan 草稿中"每 sub-phase Codex 审查"条款已在首次 Notion 验证后修正。未来 Phase 撰写必须先 GET Notion 11 模型分工页验证规则版本，不依赖 Executor 记忆。
 
+## Phase P25: 立项汇报段落级时序彩排 — pitch_script.md 硬时间表的可证伪化
+
+Status: Done (2026-04-18) · self-signed under v4.0 Extended Autonomy Mode
+
+Goal: 把 P22 冻结的 pitch_script.md 7 段硬时间表升格为可机器验证的契约——给每段分配保守 backend 时间预算（人讲时间不占），自动跑对应 API（lever-snapshot/monte-carlo/diagnosis/chat），双后端各 N=2 真跑，聚合 budget vs 实测 vs 裕度。
+
+Non-goals：修改 controller.py / 19-node / LLM adapter / prompts / wow 脚本 / pitch_script.md 本身 / 前端 UI。
+
+**Sub-phases:**
+- P25-01 — `scripts/integrated_timing_rehearsal.py`（段落→API map + 双后端 spawn + degraded 响应检测 + 报告生成）
+- P25-02 — 双后端 N=2 真跑，artefact 入库 `runs/integrated_timing_minimax_20260418T132007Z/` + `runs/integrated_timing_ollama_20260418T132057Z/`
+- P25-03 — `docs/demo/integrated-timing-findings.md` — 逐段 budget/实测/裕度 + 关键发现
+- P25-04 — closure + GATE-P25-CLOSURE self-signed (v4.0 七点自审)
+
+**关键发现：** MiniMax cloud 2/2 runs **超 wow_a 段 15s budget（实测 18.4s / 29.0s）**；Ollama 7B local 2/2 runs **达标（实测 8.9s / 10.1s，裕度 5+s）**。这攻击了 pitch_script.md 段 4 "本地是 fallback" 的隐含措辞——数据表明**本地其实更快**。给 Kogami 三个选项（改后端主次 / 维持现状靠临场 buffer / 预生成缓存）；P25 不自行改 P22 冻结基线。
+
+**Exit Criteria:**
+- 主 pytest 658/1skip 零回归 · e2e 49/49 · adversarial 8/8
+- 双后端真跑 artefact 入库 + findings 落盘
+- GATE-P25-CLOSURE self-signed under v4.0 + 控制塔 DECISION + Notion 02B
+
+**Plans:** P25-00 Tier 1 + P25-01…04 — Executor self-sign 全程（v4.0 Extended Autonomy Mode，窗口内 #1 新 Phase 收口）
+
 ## 联邦架构战略（Opus 4.6 裁决 2026-04-15）
 
 **结论**：联邦模式是正确的方向，整合≠合并。

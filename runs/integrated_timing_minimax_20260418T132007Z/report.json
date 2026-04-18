@@ -1,0 +1,174 @@
+{
+  "backend": "minimax",
+  "model": "",
+  "port": 8799,
+  "boot_ms": 206.9,
+  "ready": true,
+  "sections": [
+    {
+      "id": 0,
+      "name": "Opening",
+      "duration_s": 90,
+      "budget_api_ms": 0,
+      "cases": [],
+      "actual_api_ms": 0,
+      "degraded_case_count": 0,
+      "verdict": "no_api",
+      "margin_ms": 0
+    },
+    {
+      "id": 1,
+      "name": "wow_a 因果链",
+      "duration_s": 240,
+      "budget_api_ms": 15000,
+      "cases": [
+        {
+          "name": "snapshot_init",
+          "path": "/api/lever-snapshot",
+          "timing_bucket": "wow",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 1.1,
+          "degraded_code": null
+        },
+        {
+          "name": "snapshot_beat_early",
+          "path": "/api/lever-snapshot",
+          "timing_bucket": "wow",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 1.5,
+          "degraded_code": null
+        },
+        {
+          "name": "snapshot_beat_deep",
+          "path": "/api/lever-snapshot",
+          "timing_bucket": "wow",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 1.4,
+          "degraded_code": null
+        },
+        {
+          "name": "chat_explain_L1",
+          "path": "/api/chat/explain",
+          "timing_bucket": "chat",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 11663.1,
+          "degraded_code": null
+        },
+        {
+          "name": "chat_explain_L3",
+          "path": "/api/chat/explain",
+          "timing_bucket": "chat",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 17298.8,
+          "degraded_code": null
+        }
+      ],
+      "actual_api_ms": 28965.9,
+      "degraded_case_count": 0,
+      "margin_ms": -13965.9,
+      "verdict": "over_budget"
+    },
+    {
+      "id": 2,
+      "name": "wow_b 蒙特卡洛",
+      "duration_s": 180,
+      "budget_api_ms": 3000,
+      "cases": [
+        {
+          "name": "mc_1k",
+          "path": "/api/monte-carlo/run",
+          "timing_bucket": "wow",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 173.1,
+          "degraded_code": null
+        },
+        {
+          "name": "mc_10k",
+          "path": "/api/monte-carlo/run",
+          "timing_bucket": "wow",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 21.7,
+          "degraded_code": null
+        }
+      ],
+      "actual_api_ms": 194.8,
+      "degraded_case_count": 0,
+      "margin_ms": 2805.2,
+      "verdict": "within_budget"
+    },
+    {
+      "id": 3,
+      "name": "wow_c 反诊断",
+      "duration_s": 150,
+      "budget_api_ms": 1000,
+      "cases": [
+        {
+          "name": "diag_thr_lock",
+          "path": "/api/diagnosis/run",
+          "timing_bucket": "wow",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 10.3,
+          "degraded_code": null
+        }
+      ],
+      "actual_api_ms": 10.3,
+      "degraded_case_count": 0,
+      "margin_ms": 989.7,
+      "verdict": "within_budget"
+    },
+    {
+      "id": 4,
+      "name": "Fallback (backend switch)",
+      "duration_s": 180,
+      "budget_api_ms": 20000,
+      "cases": [
+        {
+          "name": "fallback_explain",
+          "path": "/api/chat/explain",
+          "timing_bucket": "chat",
+          "status": 200,
+          "ok": true,
+          "elapsed_ms": 7896.9,
+          "degraded_code": null
+        }
+      ],
+      "actual_api_ms": 7896.9,
+      "degraded_case_count": 0,
+      "margin_ms": 12103.1,
+      "verdict": "within_budget"
+    },
+    {
+      "id": 5,
+      "name": "R1–R5 总结",
+      "duration_s": 150,
+      "budget_api_ms": 0,
+      "cases": [],
+      "actual_api_ms": 0,
+      "degraded_case_count": 0,
+      "verdict": "no_api",
+      "margin_ms": 0
+    },
+    {
+      "id": 6,
+      "name": "闭场",
+      "duration_s": 90,
+      "budget_api_ms": 0,
+      "cases": [],
+      "actual_api_ms": 0,
+      "degraded_case_count": 0,
+      "verdict": "no_api",
+      "margin_ms": 0
+    }
+  ],
+  "overall_verdict": "YELLOW",
+  "over_budget_count": 1,
+  "degraded_section_count": 0
+}
