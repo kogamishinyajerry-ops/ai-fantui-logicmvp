@@ -589,6 +589,27 @@ Status: Done (2026-04-18) · self-signed under v4.0 Extended Autonomy Mode · **
 
 **Plans:** P27-00 Tier 1 + P27-01…03 — Executor self-sign 全程（v4.0 Extended Autonomy Mode，窗口内 #3 新 Phase 收口——达深度验收建议阈值，Executor 收口后主动暂停等 Kogami 过目）
 
+## Phase P28: FAQ Evidence Cross-Check — 结构化符号证据交叉验证
+
+Status: Done (2026-04-18) · self-signed under v4.0 Extended Autonomy Mode (Kogami 已显式续签越过 ≥3 阈值)
+
+**Goal:** 把 P26 的 "路径存在" 守护升级为 "符号存在" 守护。FAQ 里形如 "_BACKENDS dict / VALID_ACTION_TYPES whitelist / LLMClient Protocol" 的结构性 claim，refactor 重命名会让 pitch 当天甲方问答链瞬间崩。P28 hand-curate 12 个 load-bearing claim 进 pytest default lane。
+
+**Sub-phases delivered:**
+- P28-01 — `tests/test_pitch_symbols.py`（12 claim 映射表 + 4 测试：meta-check + symbol resolve + anthropic-absent + registry hygiene）
+- P28-02 — 首轮真跑 12/12 PASS；意外发现 3 处文档 cite 不存在的 `requirements.txt` → `docs/demo/pitch-citations-audit.md` 归档
+- P28-03 — closure + ROADMAP + GATE-P28-CLOSURE self-sign (v4.0 七点自审)
+
+**关键产出：** 12 个符号级 claim 当前与代码一致；发现 3 处 citation drift (faq.md L126, onboarding/README.md L53, co-development/security-review-template.md L30) 都把 `pyproject.toml` 误 cite 成 `requirements.txt`。pitch 日风险评级低（Q9 实质 claim 正确），但建议 Kogami 批示一行字符串替换 hotfix。
+
+**Exit Criteria:**
+- 主 pytest 666/1skip 零回归（662→666，P28 新增 4 测试）· e2e 49/49 · adversarial 8/8
+- 符号验证器进 default lane
+- audit doc 落盘但不自改 pitch 物料（non-goal 守）
+- GATE-P28-CLOSURE self-signed under v4.0
+
+**Plans:** P28-00 Tier 1 + P28-01…03 — Executor self-sign 全程（v4.0 Extended Autonomy Mode，窗口内 #4 新 Phase 收口）
+
 ## 联邦架构战略（Opus 4.6 裁决 2026-04-15）
 
 **结论**：联邦模式是正确的方向，整合≠合并。
