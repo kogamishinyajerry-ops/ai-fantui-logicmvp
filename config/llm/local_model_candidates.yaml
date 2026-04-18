@@ -1,0 +1,65 @@
+# P21 local model PoC — candidate 国产开源 instruct models.
+#
+# Consumed by:
+#   - scripts/local_model_smoke.py (P21-03) — picks default_candidate for real-run
+#   - docs/demo/local_model_poc.md         — generates install table
+#
+# Selection criteria (立项汇报 演示机 Mac M-series 32GB RAM):
+#   - instruct-tuned (chat template compatible with our system/user/assistant)
+#   - Chinese + English bilingual, JSON-output capable
+#   - RAM footprint ≤ 24GB @ 4-bit quant (leaves ~8GB for demo server + UI)
+#   - pullable from ollama.com/library without GPU requirement
+#
+# Baseline backend: MiniMax cloud (LLM_BACKEND=minimax).  Local candidates are
+# fallbacks for disaster_runbook.md scenario 1 (cloud API outage).
+
+default_candidate: qwen2.5-7b
+
+candidates:
+  - name: qwen2.5-7b
+    model_id: qwen2.5:7b-instruct
+    size_gb: 4.7
+    ram_gb: 8
+    pull_cmd: "ollama pull qwen2.5:7b-instruct"
+    notes: >
+      Alibaba Qwen2.5 7B instruct — strongest Chinese instruction
+      following in ≤8GB class. Default演示 fallback.
+
+  - name: qwen2.5-14b
+    model_id: qwen2.5:14b-instruct
+    size_gb: 8.9
+    ram_gb: 16
+    pull_cmd: "ollama pull qwen2.5:14b-instruct"
+    notes: >
+      Higher-quality演示 option when 32GB RAM available and latency
+      budget允许 (~2× first-token延迟 vs 7B).
+
+  - name: glm4-9b
+    model_id: glm4:9b-chat
+    size_gb: 5.5
+    ram_gb: 12
+    pull_cmd: "ollama pull glm4:9b-chat"
+    notes: >
+      Zhipu GLM-4 9B chat — another strong Chinese instruct candidate.
+      Cross-check against Qwen2.5 for JSON-output robustness.
+
+  - name: deepseek-v2-lite
+    model_id: deepseek-v2.5-lite:16b
+    size_gb: 9.5
+    ram_gb: 20
+    pull_cmd: "ollama pull deepseek-v2.5-lite:16b"
+    notes: >
+      DeepSeek V2.5 Lite — stretch candidate, higher RAM. Evaluate if
+      Qwen/GLM both underperform on operate JSON schema.
+
+# Ollama runtime notes:
+#   - API endpoint:    http://localhost:11434/api/chat (OllamaClient default)
+#   - Env override:    OLLAMA_URL, OLLAMA_MODEL
+#   - Backend switch:  LLM_BACKEND=ollama python -m well_harness.demo_server
+#   - First-token latency (M-series, 7B 4-bit): 150–400ms
+#   - Total latency for wow_a/wow_b/wow_c prompts: typically 2–6s
+#
+# Disaster-runbook scenario 1 (cloud outage) mapping:
+#   export LLM_BACKEND=ollama
+#   export OLLAMA_MODEL=qwen2.5:7b-instruct
+#   pkill -f demo_server && python -m well_harness.demo_server &
