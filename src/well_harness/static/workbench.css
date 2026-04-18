@@ -117,12 +117,57 @@
   color: #eff8ff;
   padding: 0.75rem 1rem;
   font: inherit;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.workbench-toolbar-button:hover,
+.workbench-run-button:hover,
+.workbench-file-picker:hover {
+  border-color: rgba(122, 224, 210, 0.55);
+  background: rgba(15, 32, 45, 0.88);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.workbench-toolbar-button:active,
+.workbench-run-button:active,
+.workbench-file-picker:active {
+  transform: translateY(0);
+}
+
+.workbench-toolbar-button:focus-visible,
+.workbench-run-button:focus-visible,
+.workbench-file-picker:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px rgba(40, 244, 255, 0.45),
+    0 0 0 4px rgba(40, 244, 255, 0.14);
+}
+
+.workbench-toolbar-button[disabled],
+.workbench-run-button[disabled],
+.workbench-file-picker[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .workbench-toolbar-button.is-primary,
 .workbench-run-button {
   background: linear-gradient(135deg, rgba(24, 153, 132, 0.95), rgba(26, 94, 119, 0.95));
   border-color: rgba(145, 255, 230, 0.35);
+}
+
+.workbench-toolbar-button.is-primary:hover,
+.workbench-run-button:hover {
+  background: linear-gradient(135deg, rgba(30, 180, 155, 0.98), rgba(34, 112, 140, 0.98));
 }
 
 .workbench-file-picker {
@@ -165,11 +210,30 @@
   color: #edf8ff;
   padding: 0.85rem 1rem;
   font: inherit;
+  transition:
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    background var(--duration-fast) var(--ease-standard);
   resize: vertical;
 }
 
 .workbench-field textarea {
   min-height: 7rem;
+}
+
+.workbench-field input:focus,
+.workbench-field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px rgba(40, 244, 255, 0.38),
+    0 0 0 4px rgba(40, 244, 255, 0.12);
+  background: rgba(10, 22, 34, 0.92);
+}
+
+.workbench-field input:hover:not(:focus),
+.workbench-field textarea:hover:not(:focus) {
+  border-color: rgba(143, 214, 233, 0.38);
 }
 
 .workbench-field-stack textarea {
