@@ -59,9 +59,25 @@ python3 -m well_harness.demo_server &
 
 ---
 
-## 3. 真实运行数据（2026-04-18，Mac M-series，qwen2.5:32b）
+## 3. 真实运行数据（2026-04-18，Mac M-series）
 
-来源：`runs/local_model_smoke_20260418T071304Z/report.json`
+### 3.1 Qwen2.5-7B-Instruct（演示默认 · `default_candidate`）
+
+来源：`runs/local_model_smoke_20260418T072226Z/report.json` · **VERDICT = PASS**
+
+| Endpoint               | Status | Latency  | Verdict |
+| ---------------------- | ------ | -------- | ------- |
+| `/api/chat/explain`    | 200    |  4786 ms | PASS    |
+| `/api/chat/operate`    | 200    |  4233 ms | PASS    |
+| `/api/chat/reason`     | 200    |  5441 ms | PASS    |
+
+**结论：** 3/3 端点在 7B 上全绿，总延迟 4.2–5.4s，稳定在 adapter 30s 阈值内。
+JSON schema（`action_type` / `highlighted_nodes` / `parameter_overrides`）全部正确返回。
+**这就是演示当天 disaster fallback 的真实性能基线。**
+
+### 3.2 Qwen2.5-32B（重量级参考）
+
+来源：`runs/local_model_smoke_20260418T071304Z/report.json` · VERDICT = FAIL
 
 | Endpoint               | Status | Latency  | Verdict |
 | ---------------------- | ------ | -------- | ------- |
@@ -69,13 +85,11 @@ python3 -m well_harness.demo_server &
 | `/api/chat/operate`    | 200    | 17739 ms | PASS    |
 | `/api/chat/reason`     | 200    | 24901 ms | PASS    |
 
-**结论：** 2/3 端点在 32B 上真实跑通；单次 explain 在 32B 上触发默认 30s 超时，
-属于重量级模型 + 默认 timeout 的预期边界。**推荐演示默认 `qwen2.5:7b-instruct`**
-（首响 0.2–0.5s，整体 2–6s，稳定在 adapter 30s 阈值内）。
+**结论：** 32B 可真跑但首响延迟接近/触顶 adapter 默认 30s 超时，不适合演示默认。
+仅作为"更强质量 / 更慢延迟"的 trade-off 参考。
 
-> 注：7B real-run 数据将在 Ollama pull 完成后补采并 PATCH 本表。MiniMax 主路径
-> 的稳定基线见 `runs/dress_rehearsal_20260418T063146Z/`（wow_a 4ms / wow_b 279ms
-> / wow_c 72ms — LLM 不在这些数字的关键路径上，Ollama 切换不影响三 wow 数字）。
+> MiniMax 主路径的稳定基线见 `runs/dress_rehearsal_20260418T063146Z/`（wow_a 4ms /
+> wow_b 279ms / wow_c 72ms — LLM 不在这些数字的关键路径上，Ollama 切换不影响三 wow 数字）。
 
 ---
 
