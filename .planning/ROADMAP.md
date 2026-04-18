@@ -502,6 +502,30 @@ Non-goals：新 wow / 承诺具体上线日期 / 修改真值引擎。
 
 **Plans:** P23-00 Tier 1 + P23-01…04 — Executor 独立执行；Gate 待独立复核
 
+## Phase P24: 立项后视觉硬化 — Canvas UI / AI Drawer / Demo Visuals
+
+Status: Executor 初审完成（2026-04-18）· GATE-P24-CLOSURE 待 Kogami 触发 Notion AI Opus 4.7 独立 Gate 复核（v3.1）
+
+Goal: 把三个前端 surface（demo.html / chat.html / workbench.html）的视觉层统一到工业级水准，在不改变任何行为的前提下抽出共享 design tokens、补齐 hover/focus/empty states。
+
+Non-goals：修改 controller.py / 19-node 真值引擎 / LLM adapter / AI prompts / 新 wow 场景 / 重构 state management / 引入新框架。
+
+**Sub-phases:**
+- P24-01 — `design-tokens.css`（79 行共享色板/字体/运动/阴影 tokens）+ demo.css / chat.css / workbench.css / ai-doc-analyzer.css 通过 `@import` 接入；surface-local override 保留各 surface 非 canonical 差异（零视觉回归）
+- P24-02 — chat drawer polish：消息卡片 border-radius 统一到 10px，transition 改用 motion tokens，新增 `:empty::before` 空态 "等待提问…" chip
+- P24-03 — workbench chrome polish：toolbar/run/file-picker 按钮补齐 hover/active/focus-visible/[disabled] 状态；form inputs 补焦点环；workbench.html 无 SVG canvas（SVG 节点在 demo.html，归 P24-04 管）
+- P24-04 — demo visuals polish：`.presenter-callout` 可读性升级（背景 0.10→0.14 / 边框 0.30→0.42 / 字距 + nowrap），`.presenter-run-card` 加 `--shadow-md` 深度分离。保守 scope 确保 P22 话术 keyword 零偏离
+
+**Exit Criteria:**
+- 主 pytest 658/1skip 零回归（四次 sub-phase 全部命中）
+- Opt-in e2e 49/49 + adversarial 8/8 零回归（四次 sub-phase 全部命中）
+- P22 话术 keyword（"提问区"/"逻辑主板"/"为什么高亮"/"推理结果"/"原始 JSON 调试"/"反推逻辑演示舱"）经 test_demo.py 自动检查保持
+- Executor 初审完成，GATE-P24-CLOSURE 建为 Status=Awaiting Opus 4.6（schema 承载，语义 = Awaiting 独立 Gate）+ Notion 02B Execution Run + 控制塔 DECISION 块
+
+**Plans:** P24-00 Tier 1 + P24-01…04 — Executor 独立执行（v3.0 rule 31）；Gate 待独立复核
+
+**注：** P24 期间确认 v3.0 已完全移除 Codex，原 Plan 草稿中"每 sub-phase Codex 审查"条款已在首次 Notion 验证后修正。未来 Phase 撰写必须先 GET Notion 11 模型分工页验证规则版本，不依赖 Executor 记忆。
+
 ## 联邦架构战略（Opus 4.6 裁决 2026-04-15）
 
 **结论**：联邦模式是正确的方向，整合≠合并。
