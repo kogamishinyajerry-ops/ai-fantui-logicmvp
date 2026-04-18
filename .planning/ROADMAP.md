@@ -384,6 +384,103 @@ Goal: 在 chat.html 工作台中加入可交互的故障注入 UI，让工程师
 
 **Plans:** P17-01 + P17-02 Codex GPT-5.4 执行，P17-03 MiniMax-2.7 实现
 
+## Phase P18: Demo Cleanup & Archive Integrity
+
+Status: Done (2026-04-16)
+
+Goal: 清理 P17 残留 UI 噪声，为立项演示冻结可校验的工作台归档。
+
+**Sub-phases:**
+- P18.5 — 移除 fault injection UI（上游决策：故障注入退回实验室，不在立项演示暴露）、修正 Canvas 点击精度 (#1)
+- P18.6 — 为工作台归档新增 SHA256 完整性校验（为审计方提供一键复核基线）
+
+**Exit Criteria:**
+- chat.html 不再出现 ⚡ fault bar / preset / 节点 fault 按钮；Canvas 点击命中率回到像素级
+- 工作台 tar + SHA256 校验文件成对产出；校验脚本可独立重放
+- 主 pytest 零回归
+
+## Phase P19: Hardware Partial Unfreeze — Monte Carlo + Reverse Diagnosis + Pitch Deck
+
+Status: Done (2026-04-17)
+
+Goal: 把硬件描述层从"只冻结"部分解冻为"可驱动 Wow 场景"——保留 controller.py 真值边界不动，新增 YAML 参数层 + 两条独立数值通道 + 立项演示物料。
+
+架构约束：controller.py 零改动；新增层都放在 truth engine 外围，通过确定性枚举/模拟产出数据，AI 仅负责叙述。
+
+**Sub-phases (18 plans, P19.1 → P19.18):**
+- P19.1 — hardware YAML schema + loader（thrust-reverser 参数集）
+- P19.2 — Monte Carlo reliability simulation engine（wow_b 数值通道，纯计算）
+- P19.3 — reverse diagnosis engine（wow_c 枚举参数组合达成目标结论）
+- P19.4 → P19.17 — 支撑 API、前端按钮、端到端测试、回归硬化、演示打磨（中间 plans 合并提交；详细 plan 文档见 `.planning/phases/P19-hardware-partial-unfreeze/P19-XX-PLAN.md`）
+- P19.18 — 立项演讲稿 + 三哇场景脚本（`docs/presentations/pitch-ready-demo.md` + `demo-talking-points.md`）
+
+**Exit Criteria:**
+- 三哇 API 齐备：`/api/lever-snapshot`（因果链）/`/api/monte-carlo/run`（蒙特卡洛）/`/api/diagnosis/run`（反诊断）
+- 634+ pytest 全绿（无 controller.py 回归）
+- 立项演讲稿和提示卡在仓库内可直接复制到 Notion
+
+**Plans:** 18 plans — MiniMax-2.7 主导，关键前端 diff 走 Codex GPT-5.4
+
+## Phase P20: Wow E2E Coverage + Demo Resilience + Dress Rehearsal
+
+Status: Done (2026-04-18, 含 P20.2 子 Phase)
+
+Goal: 把三哇从"能跑"升级为"抗操作失误 + 可自动彩排"。
+
+**Sub-phases:**
+- P20.0-A/B/C/D — e2e 套件覆盖三哇 Canvas/抽屉 DOM 断言、按键级演示脚本、P17 unfreeze 申请草稿
+- P20.1-E — demo resilience（降级徽标、错误降级叙述、对抗测试硬化）
+- P20.2 — dress rehearsal 自动化（`scripts/dress_rehearsal.py`）+ 7 场景灾难手册（`docs/demo/disaster_runbook.md`）+ 彩排基线冻结 + 离线 tarball
+
+**Exit Criteria:**
+- e2e lane 49/49 全绿；主 pytest 零回归
+- Dress rehearsal 脚本一键产出 wow_a/b/c timeline + 报告
+- `docs/freeze/2026-04-18-rehearsal-baseline.md` 含 SHA256 基线；`docs/demo/disaster_runbook.md` 7 场景 × 4 字段
+
+**Plans:** P20.0-A…D + P20.1-E + P20.2 — MiniMax-2.7 执行，e2e 断言与灾难手册 Codex 审查
+
+## Phase P21: Local Model PoC — 国产模型本地降级
+
+Status: Done (2026-04-18)
+
+Goal: 把 AI 叙述层从"绑定 MiniMax 云 API"解耦为"云/本地双后端可切换"，为甲方合规（数据不出境）和灾难降级（断网）提供工程级答案。
+
+架构约束：只动 adapter 边界，不动 controller.py / API 契约 / 前端 UI；错误码做等价前缀映射让降级徽标零改动。
+
+**Sub-phases:**
+- P21-01 — 抽取 `LLMClient` Protocol + MiniMax/Ollama 适配器 + `get_llm_client()` 工厂；19 个单元测试锁定契约
+- P21-02 — `config/llm/local_model_candidates.yaml`（Qwen2.5-7B/14B、GLM4-9B、DeepSeek-V2-Lite）+ pull_cmd + 硬件预算注释
+- P21-03 — `scripts/local_model_smoke.py` + 首次真跑（Qwen2.5-7B 3/3 PASS / 4.2–5.4s，报告在 `runs/local_model_smoke_20260418T072226Z/`）
+- P21-04 — `docs/demo/local_model_poc.md`（架构图 + 切换命令 + R1–R5 自审）+ PATCH `disaster_runbook.md` 场景 1 指向本地 fallback
+
+**Exit Criteria:**
+- 主 pytest 658 pass / 1 合法 skip；e2e 49/49；对抗 8/8（全无回归）
+- `LLM_BACKEND=ollama OLLAMA_MODEL=qwen2.5:7b-instruct` 一行切换成立，`/api/chat/{explain,operate,reason}` 三端点在本地模型下真跑通过
+- 灾难手册场景 1 首选 fallback 已改为本地模型
+
+**Plans:** P21-00 Tier 1 + P21-01…04 — 自签 GATE-P21-CLOSURE（v3.2 Executor=Gate）
+
+## Phase P22: Demo Rehearsal 物料冻结
+
+Status: Done (2026-04-18)
+
+Goal: 把立项汇报日所有需要的"非代码制品"一次性冻结——双后端真跑证据、≤20min 话术稿、15 题 FAQ、16 项预检 checklist。
+
+Non-goals（严格禁止）：新 wow / 改 truth engine / 调 AI prompt / 做 PPT 美化。
+
+**Sub-phases:**
+- P22-01 — `scripts/demo_rehearsal_dual_backend.py` + 双后端真跑（MiniMax + Ollama 7B）14/14 PASS，报告在 `runs/demo_rehearsal_dual_backend_20260418T074215Z/`
+- P22-02 — `docs/demo/pitch_script.md`（≤20min hard-time 表 × 7 段 × 证据路径绑定 × 诚实性护栏）
+- P22-03 — `docs/demo/faq.md`（15 题 × 证据文件 × R-原则锚点 × 关键词跳转表）
+- P22-04 — `docs/demo/preflight_checklist.md`（T-60 → T-0 16 项 + 应急一页纸 + 一键预检脚本）
+
+**Exit Criteria:**
+- 三轨验证绿：主 pytest 658/1skip、e2e 49/49、对抗 8/8
+- 双后端真跑 artefact 落盘；所有汇报物料彼此交叉引用（话术 ↔ FAQ ↔ 预检 ↔ 灾难手册）
+- 立项当天可按 pitch_script 时间表直接开讲
+
+**Plans:** P22-00 Tier 1 + P22-01…04 — 自签 GATE-P22-CLOSURE（v3.2 Executor=Gate，7/7 合规 checklist 自审留痕）
+
 ## 联邦架构战略（Opus 4.6 裁决 2026-04-15）
 
 **结论**：联邦模式是正确的方向，整合≠合并。
