@@ -1,0 +1,104 @@
+{
+  "scenario": "wow_c_reverse_diagnose",
+  "total_ms": 71.51475199999992,
+  "passed": 7,
+  "failed": 0,
+  "steps": [
+    {
+      "name": "outcome=deploy_confirmed",
+      "endpoint": "/api/diagnosis/run",
+      "status": 200,
+      "elapsed_ms": 5.521499999999957,
+      "budget_ms": 1000,
+      "ok": true,
+      "notes": "",
+      "response_summary": {
+        "total_combos_found": 5,
+        "result_count": 5,
+        "grid_resolution": 20
+      }
+    },
+    {
+      "name": "outcome=logic3_active",
+      "endpoint": "/api/diagnosis/run",
+      "status": 200,
+      "elapsed_ms": 46.50054199999998,
+      "budget_ms": 1000,
+      "ok": true,
+      "notes": "",
+      "response_summary": {
+        "total_combos_found": 0,
+        "result_count": 0,
+        "grid_resolution": 20
+      }
+    },
+    {
+      "name": "outcome=logic1_active",
+      "endpoint": "/api/diagnosis/run",
+      "status": 200,
+      "elapsed_ms": 6.191916999999991,
+      "budget_ms": 1000,
+      "ok": true,
+      "notes": "",
+      "response_summary": {
+        "total_combos_found": 5,
+        "result_count": 5,
+        "grid_resolution": 20
+      }
+    },
+    {
+      "name": "outcome=thr_lock_active",
+      "endpoint": "/api/diagnosis/run",
+      "status": 200,
+      "elapsed_ms": 4.188708000000041,
+      "budget_ms": 1000,
+      "ok": true,
+      "notes": "",
+      "response_summary": {
+        "total_combos_found": 5,
+        "result_count": 5,
+        "grid_resolution": 20
+      }
+    },
+    {
+      "name": "outcome=tls_unlocked",
+      "endpoint": "/api/diagnosis/run",
+      "status": 200,
+      "elapsed_ms": 4.210833999999997,
+      "budget_ms": 1000,
+      "ok": true,
+      "notes": "",
+      "response_summary": {
+        "total_combos_found": 5,
+        "result_count": 5,
+        "grid_resolution": 20
+      }
+    },
+    {
+      "name": "outcome=pls_unlocked",
+      "endpoint": "/api/diagnosis/run",
+      "status": 200,
+      "elapsed_ms": 4.354917000000014,
+      "budget_ms": 1000,
+      "ok": true,
+      "notes": "",
+      "response_summary": {
+        "total_combos_found": 5,
+        "result_count": 5,
+        "grid_resolution": 20
+      }
+    },
+    {
+      "name": "invalid_outcome_graceful_400",
+      "endpoint": "/api/diagnosis/run",
+      "status": 400,
+      "elapsed_ms": 0.5463339999999262,
+      "budget_ms": 1000,
+      "ok": true,
+      "notes": "",
+      "response_summary": {
+        "error": "Invalid outcome: 'banana_outcome'. Valid: ['deploy_confirmed', 'logic1_active', 'logic3_active', 'pls_unlocked', 'thr_lock_active', 'tls_unlocked']"
+      }
+    }
+  ]
+}

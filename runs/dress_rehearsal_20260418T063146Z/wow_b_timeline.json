@@ -1,0 +1,68 @@
+{
+  "scenario": "wow_b_monte_carlo",
+  "total_ms": 279.0159160000002,
+  "passed": 3,
+  "failed": 0,
+  "steps": [
+    {
+      "name": "1k_baseline",
+      "endpoint": "/api/monte-carlo/run",
+      "status": 200,
+      "elapsed_ms": 190.60550000000003,
+      "budget_ms": 1000,
+      "ok": true,
+      "notes": "",
+      "response_summary": {
+        "n_trials": 1000,
+        "success_rate": 0.046,
+        "failure_modes": [
+          "sw1_missed",
+          "sw2_missed",
+          "tra_stall",
+          "ra_sensor_failure"
+        ],
+        "seed": 42
+      }
+    },
+    {
+      "name": "10k_highlight",
+      "endpoint": "/api/monte-carlo/run",
+      "status": 200,
+      "elapsed_ms": 48.21241600000003,
+      "budget_ms": 5000,
+      "ok": true,
+      "notes": "",
+      "response_summary": {
+        "n_trials": 10000,
+        "success_rate": 0.0433,
+        "failure_modes": [
+          "sw1_missed",
+          "sw2_missed",
+          "tra_stall",
+          "ra_sensor_failure"
+        ],
+        "seed": 42
+      }
+    },
+    {
+      "name": "10k_replay",
+      "endpoint": "/api/monte-carlo/run",
+      "status": 200,
+      "elapsed_ms": 40.198000000000064,
+      "budget_ms": 5000,
+      "ok": true,
+      "notes": "",
+      "response_summary": {
+        "n_trials": 10000,
+        "success_rate": 0.0433,
+        "failure_modes": [
+          "sw1_missed",
+          "sw2_missed",
+          "tra_stall",
+          "ra_sensor_failure"
+        ],
+        "seed": 42
+      }
+    }
+  ]
+}

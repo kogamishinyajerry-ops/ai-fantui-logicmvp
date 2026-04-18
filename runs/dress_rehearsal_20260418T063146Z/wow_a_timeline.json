@@ -1,0 +1,56 @@
+{
+  "scenario": "wow_a_causal_chain",
+  "total_ms": 4.345666999999997,
+  "passed": 3,
+  "failed": 0,
+  "steps": [
+    {
+      "name": "BEAT_EARLY",
+      "endpoint": "/api/lever-snapshot",
+      "status": 200,
+      "elapsed_ms": 1.4558330000000175,
+      "budget_ms": 500,
+      "ok": true,
+      "notes": "",
+      "response_summary": {
+        "node_count": 19,
+        "logic_active": [
+          "logic1",
+          "logic2"
+        ],
+        "has_evidence": true
+      }
+    },
+    {
+      "name": "BEAT_DEEP",
+      "endpoint": "/api/lever-snapshot",
+      "status": 200,
+      "elapsed_ms": 1.5723750000000147,
+      "budget_ms": 500,
+      "ok": true,
+      "notes": "",
+      "response_summary": {
+        "node_count": 19,
+        "logic_active": [
+          "logic2",
+          "logic3"
+        ],
+        "has_evidence": true
+      }
+    },
+    {
+      "name": "BEAT_BLOCKED",
+      "endpoint": "/api/lever-snapshot",
+      "status": 200,
+      "elapsed_ms": 1.3174589999999653,
+      "budget_ms": 500,
+      "ok": true,
+      "notes": "",
+      "response_summary": {
+        "node_count": 19,
+        "logic_active": [],
+        "has_evidence": true
+      }
+    }
+  ]
+}
