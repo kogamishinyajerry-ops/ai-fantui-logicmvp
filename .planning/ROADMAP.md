@@ -481,6 +481,27 @@ Non-goals（严格禁止）：新 wow / 改 truth engine / 调 AI prompt / 做 P
 
 **Plans:** P22-00 Tier 1 + P22-01…04 — 自签 GATE-P22-CLOSURE（v3.2 Executor=Gate，7/7 合规 checklist 自审留痕）
 
+## Phase P23: Co-development Kit — 立项通过后首批对接物料
+
+Status: Done (2026-04-18)
+
+Goal: 把立项通过那一刻甲方需要的四份"对接文档"提前冻结在仓库里。纯文档 Phase，controller.py / LLM adapter / API 契约零改动。
+
+Non-goals：新 wow / 承诺具体上线日期 / 修改真值引擎。
+
+**Sub-phases:**
+- P23-01 — `docs/co-development/api-contract.md`（三哇 + chat 六端点 schema + 版本策略 + 错误码前缀规则）
+- P23-02 — `docs/co-development/security-review-template.md`（甲方 PR 审查 10 项 × R 锚点 × PASS/FAIL 信号）
+- P23-03 — `docs/co-development/sla-draft.md`（Demo / Staging / Production 三级 profile × 可用性/响应/数据/AI 供应链）
+- P23-04 — `docs/co-development/roadmap-2026H2.md`（P23 → P27 路线图，含 P24 PoC / P25 硬化 / P26 首批 validation / P27 季度审计）
+
+**Exit Criteria:**
+- 四份文档全部落 `docs/co-development/`，每份带"给谁看 / 回答什么 / 何时变动"头部
+- 主 pytest 658/1skip 零回归（纯文档应自动成立）
+- 自签 GATE-P23-CLOSURE（v3.2 Executor=Gate，7/7 合规 checklist）+ Notion sync
+
+**Plans:** P23-00 Tier 1 + P23-01…04 — Executor=Gate 独立执行
+
 ## 联邦架构战略（Opus 4.6 裁决 2026-04-15）
 
 **结论**：联邦模式是正确的方向，整合≠合并。
