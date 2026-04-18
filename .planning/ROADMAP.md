@@ -629,6 +629,25 @@ Status: Done (2026-04-18) · self-signed under v4.0 Extended Autonomy Mode (Koga
 
 **Plans:** P29-00 Tier 1 + P29-01…03 — Executor self-sign 全程（v4.0 Extended Autonomy Mode，窗口内 #5 新 Phase 收口 — 深度验收建议阈值已持续续签）
 
+## Phase P30: Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2
+
+**Goal:** P29 scorecard 首轮 overall YELLOW 的根因是 MiniMax wow_a 超 budget（findings §1.1/§5.1 已充分记录的物理现实），但 findings §5.1 明确推荐"pitch 日用 Ollama 主路径"。scorecard 把两个 backend 并列独立判定导致 Kogami T-0 看到 YELLOW 会误以为"系统坏了"，而实际上只要选 Ollama 就 GREEN。P30 改 scorecard 聚合语义：把 ollama + minimax 两行合并为一行 `Integrated Timing (best-of-2 backends)`，取更 green 的作 verdict，detail 显式注明 losing backend 的 verdict + 引用 findings §5.1。
+
+**Sub-phases:**
+- P30-01 — `scripts/pitch_readiness.py` 加 `_merge_best_of_integrated_timing` 聚合逻辑（GREEN > YELLOW > RED > UNKNOWN 偏序；winner 取 age，detail 保留 losing backend 真相）
+- P30-02 — 重跑 scorecard 验证 overall YELLOW→GREEN；更新 `docs/demo/pre-pitch-readiness-report.md` 首轮样例为 best-of-2 视图
+- P30-03 — closure + ROADMAP + GATE-P30-CLOSURE self-sign (v4.0 七点自审)
+
+**关键产出：** scorecard 从 6 行减至 5 行；overall YELLOW→GREEN（反映 pitch 日 Ollama 主路径的实际业务方针）；MiniMax YELLOW 真相**不被抹去**——在 detail 列显式保留 + findings §5.1 引用。Non-goals 全守：`integrated_timing_rehearsal.py` budget 常量零触碰 / findings doc 零触碰 / pitch 物料零触碰。
+
+**Exit Criteria:**
+- best-of-2 聚合正确：Ollama GREEN + MiniMax YELLOW → 合并行 GREEN，且 MiniMax YELLOW 可追溯
+- overall verdict YELLOW → GREEN（但两者都坏时取**更差**的，避免乐观偏置）
+- 样例 doc 更新 · pytest 666/1skip 零回归 · e2e 49/49 · adversarial 8/8
+- GATE-P30-CLOSURE self-signed under v4.0
+
+**Plans:** P30-00 Tier 1 + P30-01…03 — Executor self-sign 全程（v4.0 Extended Autonomy Mode，窗口内 #6 新 Phase 收口）
+
 ## 联邦架构战略（Opus 4.6 裁决 2026-04-15）
 
 **结论**：联邦模式是正确的方向，整合≠合并。

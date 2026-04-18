@@ -214,25 +214,79 @@ DRILL_READERS = {
 }
 
 
+VERDICT_RANK = {"GREEN": 0, "YELLOW": 1, "RED": 2, "UNKNOWN": 1}
+
+# Prefixes to merge into a single "best-of-2 backends" row.
+# pitch 日只会选一个 backend（findings §5.1 推荐 Ollama 主路径），所以 overall
+# 判定应取二者更 green 的那个，而不是把两个并列独立判定。
+INTEGRATED_TIMING_MERGE = (
+    "integrated_timing_ollama_",
+    "integrated_timing_minimax_",
+)
+
+
+def _merge_best_of_integrated_timing(rows: list[dict]) -> list[dict]:
+    """Collapse ollama + minimax integrated_timing rows into one best-of-2 row.
+
+    - verdict: the greener of the two (GREEN > YELLOW > RED > UNKNOWN)
+    - age: age of the winner
+    - detail: lists both verdicts with a pointer to findings §5.1
+    - label: "Integrated Timing (best-of-2 backends)"
+    - If only one of the two exists (edge case), leave original rows alone.
+    """
+    by_prefix: dict[str, dict] = {}
+    for r in rows:
+        pfx = r.get("_prefix")
+        if pfx in INTEGRATED_TIMING_MERGE:
+            by_prefix[pfx] = r
+    if len(by_prefix) != len(INTEGRATED_TIMING_MERGE):
+        return rows
+    ollama = by_prefix["integrated_timing_ollama_"]
+    minimax = by_prefix["integrated_timing_minimax_"]
+    ol_rank = VERDICT_RANK.get(ollama["verdict"], 1)
+    mm_rank = VERDICT_RANK.get(minimax["verdict"], 1)
+    winner, loser = (ollama, minimax) if ol_rank <= mm_rank else (minimax, ollama)
+    merged_verdict = winner["verdict"]
+    detail = (
+        f"winner={winner['label'].split('·')[-1].strip()} {winner['verdict']} "
+        f"· other={loser['label'].split('·')[-1].strip()} {loser['verdict']} "
+        f"— pitch 日用 Ollama 主路径（findings §5.1）"
+    )
+    merged_row = {
+        "label": "Integrated Timing (best-of-2 backends)",
+        "run": winner["run"],
+        "verdict": merged_verdict,
+        "detail": detail,
+        "age_h": winner["age_h"],
+        "_prefix": "__merged_integrated_timing__",
+    }
+    out = [r for r in rows if r.get("_prefix") not in INTEGRATED_TIMING_MERGE]
+    # Insert merged row at the position of the first integrated_timing row
+    insert_at = next(
+        (i for i, r in enumerate(rows)
+         if r.get("_prefix") in INTEGRATED_TIMING_MERGE),
+        len(out),
+    )
+    out.insert(insert_at, merged_row)
+    return out
+
+
 def collect_readiness(stale_hours: float) -> tuple[list[dict], int]:
     rows: list[dict] = []
-    worst = 0  # 0=GREEN, 1=YELLOW, 2=RED
-    verdict_rank = {"GREEN": 0, "YELLOW": 1, "RED": 2, "UNKNOWN": 1}
     for prefix, label in DRILL_PREFIXES:
         run_dir = _latest_run_dir(prefix)
         if run_dir is None:
             rows.append({
                 "label": label, "run": None, "verdict": "RED",
                 "detail": "no artefact in runs/", "age_h": None,
+                "_prefix": prefix,
             })
-            worst = max(worst, 2)
             continue
         age = _age_hours(run_dir)
         reader = DRILL_READERS.get(prefix)
         raw = reader(run_dir) if reader else {"verdict": "UNKNOWN",
                                               "detail": "no reader"}
         verdict = raw.get("verdict", "UNKNOWN")
-        # Age-based yellow override
         if age is not None and age > stale_hours and verdict == "GREEN":
             verdict = "YELLOW"
             raw["detail"] = (raw.get("detail") or "") + \
@@ -240,8 +294,15 @@ def collect_readiness(stale_hours: float) -> tuple[list[dict], int]:
         rows.append({
             "label": label, "run": run_dir.name, "verdict": verdict,
             "detail": raw.get("detail"), "age_h": age,
+            "_prefix": prefix,
         })
-        worst = max(worst, verdict_rank.get(verdict, 1))
+    # Collapse ollama + minimax integrated_timing rows into best-of-2
+    rows = _merge_best_of_integrated_timing(rows)
+    # Compute overall worst after merge
+    worst = max(
+        (VERDICT_RANK.get(r["verdict"], 1) for r in rows),
+        default=0,
+    )
     return rows, worst
 
 
