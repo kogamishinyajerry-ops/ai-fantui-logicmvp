@@ -1443,6 +1443,29 @@ body.drawer-open .chat-drawer {
   background: rgba(148, 163, 184, 0.28);
 }
 
+/* P24-02: empty state — surfaces when no messages rendered yet.
+ * Pure CSS; no JS/HTML class dependency. */
+.chat-messages:empty {
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-messages:empty::before {
+  content: "等待提问…";
+  display: inline-flex;
+  padding: 14px 22px;
+  border-radius: 999px;
+  border: 1px dashed rgba(103, 232, 249, 0.22);
+  background: rgba(103, 232, 249, 0.04);
+  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  animation:
+    messageSlideIn var(--duration-slow) var(--ease-emphasized) 120ms forwards;
+}
+
 .chat-message {
   position: relative;
   display: flex;
@@ -1450,16 +1473,17 @@ body.drawer-open .chat-drawer {
   max-width: 100%;
   margin-bottom: 10px;
   padding: 10px 14px 10px 18px;
-  border-radius: 8px;
+  border-radius: 10px;
   border-left: 3px solid transparent;
   background: rgba(22, 25, 32, 0.85);
   backdrop-filter: blur(8px);
-  animation: messageSlideIn 0.22s cubic-bezier(0.2, 0, 0, 1) both;
+  -webkit-backdrop-filter: blur(8px);
+  animation: messageSlideIn var(--duration-normal) var(--ease-emphasized) both;
   transition:
-    background 0.2s ease,
-    border-left-color 0.2s ease,
-    box-shadow 0.2s ease,
-    transform 0.2s ease;
+    background var(--duration-fast) var(--ease-standard),
+    border-left-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
 }
 
 .chat-message:last-child {
@@ -1565,11 +1589,11 @@ body.drawer-open .chat-drawer {
   font-size: 0.8em;
   cursor: pointer;
   transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.15s ease;
+    background var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
 }
 
 .chat-message .node-ref:hover {
