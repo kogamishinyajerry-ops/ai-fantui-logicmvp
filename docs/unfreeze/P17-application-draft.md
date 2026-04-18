@@ -1,10 +1,10 @@
 # P17 解冻申请书（草案）
 
-**版本**：v0.1 (draft)
+**版本**：v0.1
 **日期**：2026-04-18
 **撰写人**：Claude Code Opus 4.7 (20x Max) — Executor 身份，Tier 1 亲笔
 **审批人**：Notion AI Opus 4.7（独立会话 Gate 裁决）
-**状态**：Draft — 申请进入 Phase 1 评审
+**状态**：**Ready for Review**（GATE-P20-CLOSURE Approved 2026-04-18 后升档）
 
 ---
 
