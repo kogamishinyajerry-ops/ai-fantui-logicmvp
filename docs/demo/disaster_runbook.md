@@ -19,13 +19,20 @@
 > "这里触发的是 R2 降级路径——AI 叙述层不可用时，真值引擎的 19 节点与 4 逻辑门依然给出结论。大家现在看到的因果链完全来自 logic1–logic4 门控，不是 LLM 生成的。"
 
 **恢复动作（< 60s）**
-1. `export MINIMAX_API_KEY=$BACKUP_MINIMAX_KEY`（备份 key 已在 `.env.backup`）
-2. `pkill -f well_harness.demo_server && python3 -m well_harness.demo_server &`
-3. 浏览器硬刷（Cmd-Shift-R），重新触发一次 wow_a 轻触打底
+1. **首选：切到本地 Ollama fallback（P21 PoC 已搭好）**
+   ```bash
+   export LLM_BACKEND=ollama
+   export OLLAMA_MODEL=qwen2.5:7b-instruct   # 候选见 config/llm/local_model_candidates.yaml
+   pkill -f well_harness.demo_server && python3 -m well_harness.demo_server &
+   ```
+   浏览器硬刷后，聊天抽屉恢复工作；首响延迟上升到 3–6s（本地 7B），但链路不中断。
+2. 备选：`export MINIMAX_API_KEY=$BACKUP_MINIMAX_KEY`（备份 key 在 `.env.backup`）后重启 demo_server。
+3. 浏览器硬刷（Cmd-Shift-R），重新触发一次 wow_a 轻触打底。
 
 **最坏兜底**
 - 跳过 LLM 叙述段，直接讲真值引擎对照：展示 `/api/lever-snapshot` 原始 JSON（浏览器 DevTools → Network）。
 - 强调"AI 只解释、不决策"的 R2 原则恰好在此刻被证明。
+- P21 切换细节见 `docs/demo/local_model_poc.md`。
 
 ---
 
