@@ -19,6 +19,7 @@ from well_harness.controller_adapter import build_reference_controller_adapter
 from well_harness.adapters.landing_gear_adapter import build_landing_gear_controller_adapter
 from well_harness.adapters.bleed_air_adapter import build_bleed_air_controller_adapter
 from well_harness.adapters.efds_adapter import build_efds_controller_adapter
+from well_harness.llm_client import LLMClientError, get_llm_client
 from well_harness.document_intake import (
     apply_safe_schema_repairs,
     assess_intake_packet,
@@ -635,10 +636,6 @@ def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | Non
     if not isinstance(node_states, dict):
         node_states = {}
 
-    api_key = _get_minimax_api_key()
-    if not api_key:
-        return None, {"error": "minimax_api_key_missing", "message": "MiniMax API key not found. Add to ~/.minimax_key."}
-
     # Build a concise context summary from the snapshot data
     nodes = snapshot.get("nodes", [])
     logic = snapshot.get("logic", {})
@@ -755,82 +752,51 @@ def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | Non
     user_prompt = f"用户问题：{question}"
 
     try:
-        import urllib.request
-        url = "https://api.minimax.chat/v1/text/chatcompletion_v2"
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "model": "minimax-m2.7-highspeed",
-            "messages": [
+        raw_content = get_llm_client().chat(
+            [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "temperature": 0.3,
-            "max_tokens": 600,
-            "stream": False,
-        }
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-            headers=headers,
-            method="POST",
+            temperature=0.3,
+            max_tokens=600,
+            timeout=30.0,
         )
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            result = json.loads(resp.read().decode("utf-8"))
+    except LLMClientError as exc:
+        return None, {"error": exc.code, "message": exc.message}
 
-        # MiniMax API response structure: choices[0].message.content
-        choices = result.get("choices", [])
-        if choices:
-            raw_content = choices[0].get("message", {}).get("content", "")
-        else:
-            raw_content = result.get("choices", [{}])[0].get("text", "")
+    try:
+        json_str = re.sub(r"^```(?:json)?\s*", "", raw_content.strip())
+        json_str = re.sub(r"\s*```$", "", json_str)
+        parsed = json.loads(json_str)
+        if not isinstance(parsed, dict):
+            raise ValueError("LLM response was not a JSON object.")
+        explanation = parsed.get("explanation", raw_content)
+        highlighted_nodes = parsed.get("highlighted_nodes", [])
+        suggestion_nodes = parsed.get("suggestion_nodes", [])
+        confidence_raw = parsed.get("confidence", 0.5)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        explanation = raw_content
+        highlighted_nodes = []
+        suggestion_nodes = []
+        confidence_raw = 0.5
 
-        if not raw_content:
-            # Fallback: try alternative response field
-            raw_content = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-            if not raw_content:
-                return None, {"error": "minimax_empty_response", "message": "MiniMax returned empty explanation."}
+    if not isinstance(highlighted_nodes, list):
+        highlighted_nodes = []
+    if not isinstance(suggestion_nodes, list):
+        suggestion_nodes = []
+    try:
+        confidence = max(0.0, min(1.0, float(confidence_raw)))
+    except (TypeError, ValueError):
+        confidence = 0.5
+    if not math.isfinite(confidence):
+        confidence = 0.5
 
-        try:
-            json_str = re.sub(r"^```(?:json)?\s*", "", raw_content.strip())
-            json_str = re.sub(r"\s*```$", "", json_str)
-            parsed = json.loads(json_str)
-            if not isinstance(parsed, dict):
-                raise ValueError("MiniMax response was not a JSON object.")
-            explanation = parsed.get("explanation", raw_content)
-            highlighted_nodes = parsed.get("highlighted_nodes", [])
-            suggestion_nodes = parsed.get("suggestion_nodes", [])
-            confidence_raw = parsed.get("confidence", 0.5)
-        except (json.JSONDecodeError, TypeError, ValueError):
-            explanation = raw_content
-            highlighted_nodes = []
-            suggestion_nodes = []
-            confidence_raw = 0.5
-
-        if not isinstance(highlighted_nodes, list):
-            highlighted_nodes = []
-        if not isinstance(suggestion_nodes, list):
-            suggestion_nodes = []
-        try:
-            confidence = max(0.0, min(1.0, float(confidence_raw)))
-        except (TypeError, ValueError):
-            confidence = 0.5
-        if not math.isfinite(confidence):
-            confidence = 0.5
-
-        return {
-            "explanation": str(explanation).strip(),
-            "highlighted_nodes": [str(node_id).strip() for node_id in highlighted_nodes if str(node_id).strip()],
-            "suggestion_nodes": [str(node_id).strip() for node_id in suggestion_nodes if str(node_id).strip()],
-            "confidence": confidence,
-        }, None
-
-    except urllib.error.HTTPError as e:
-        return None, {"error": "minimax_http_error", "message": f"MiniMax API returned HTTP {e.code}."}
-    except Exception as exc:
-        return None, {"error": "minimax_error", "message": "MiniMax API request failed."}
+    return {
+        "explanation": str(explanation).strip(),
+        "highlighted_nodes": [str(node_id).strip() for node_id in highlighted_nodes if str(node_id).strip()],
+        "suggestion_nodes": [str(node_id).strip() for node_id in suggestion_nodes if str(node_id).strip()],
+        "confidence": confidence,
+    }, None
 
 
 def _validate_chat_payload(payload: dict) -> tuple[dict | None, dict | None]:
@@ -938,10 +904,6 @@ def _handle_chat_operate(request_payload: dict) -> tuple[dict | None, dict | Non
     snapshot = validated["snapshot"]
     nodes = validated["nodes"]
 
-    api_key = _get_minimax_api_key()
-    if not api_key:
-        return None, {"error": "minimax_api_key_missing", "message": "MiniMax API key not found. Add to ~/.minimax_key."}
-
     # Build context from current snapshot
     logic = snapshot.get("logic", {})
     outputs = snapshot.get("outputs", {})
@@ -1035,127 +997,96 @@ plant 输出参数（不可直接设置，只能通过操控输入间接影响�
     user_prompt = f"用户问题：{question}\n\n当前逻辑门状态：\n{logic_summary}\n\n当前输出状态：\n{output_summary}"
 
     try:
-        import urllib.request
-        url = "https://api.minimax.chat/v1/text/chatcompletion_v2"
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "model": "minimax-m2.7-highspeed",
-            "messages": [
+        raw_content = get_llm_client().chat(
+            [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "temperature": 0.3,
-            "max_tokens": 1500,
-            "stream": False,
-        }
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-            headers=headers,
-            method="POST",
+            temperature=0.3,
+            max_tokens=1500,
+            timeout=30.0,
         )
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            result = json.loads(resp.read().decode("utf-8"))
+    except LLMClientError as exc:
+        return None, {"error": exc.code, "message": exc.message}
 
-        choices = result.get("choices", [])
-        if choices:
-            raw_content = choices[0].get("message", {}).get("content", "")
-        else:
-            raw_content = result.get("choices", [{}])[0].get("text", "")
-
-        if not raw_content:
-            return None, {"error": "minimax_empty_response", "message": "MiniMax returned empty operate response."}
-
-        try:
-            json_str = re.sub(r"^```(?:json)?\s*", "", raw_content.strip())
-            json_str = re.sub(r"\s*```$", "", json_str)
-            parsed = json.loads(json_str)
-            if not isinstance(parsed, dict):
-                raise ValueError("MiniMax response was not a JSON object.")
-        except (json.JSONDecodeError, TypeError, ValueError):
-            return {
-                "action_type": "cannot_operate",
-                "parameter_overrides": {},
-                "auto_apply": False,
-                "trajectory_steps": [],
-                "reasoning": "AI响应解析失败",
-                "confidence": 0.0,
-                "gate_plan": {},
-                "ai_explanation": f"抱歉，AI响应解析失败。请手动调节参数。原始响应：{raw_content[:200]}",
-            }, None
-
-        VALID_ACTION_TYPES = {"suggest_parameter_override", "manual_steps", "cannot_operate"}
-
-        raw_action_type = str(parsed.get("action_type", "cannot_operate"))
-        action_type = raw_action_type if raw_action_type in VALID_ACTION_TYPES else "cannot_operate"
-        parameter_overrides = parsed.get("parameter_overrides", {})
-        trajectory_steps = parsed.get("trajectory_steps", [])
-        reasoning = str(parsed.get("reasoning", ""))
-        confidence_raw = parsed.get("confidence", 0.5)
-        gate_plan = parsed.get("gate_plan", {})
-        auto_apply_raw = parsed.get("auto_apply", False)
-        auto_apply = isinstance(auto_apply_raw, bool) and auto_apply_raw is True
-        ai_explanation = str(parsed.get("ai_explanation", reasoning))
-
-        # Validate parameter_overrides — only allow known safe fields + sanitize value types
-        allowed_override_fields = {
-            "tra_deg", "radio_altitude_ft", "engine_running", "aircraft_on_ground",
-            "reverser_inhibited", "eec_enable", "n1k", "feedback_mode", "deploy_position_percent",
-            "max_n1k_deploy_limit",
-        }
-        allowed_feedback_modes = {"auto_scrubber", "manual_feedback_override"}
-        if isinstance(parameter_overrides, dict):
-            cleaned = {}
-            for k, v in parameter_overrides.items():
-                if k not in allowed_override_fields:
-                    continue
-                # Type-sanitize each field
-                if k in ("engine_running", "aircraft_on_ground", "reverser_inhibited", "eec_enable"):
-                    if isinstance(v, bool):
-                        cleaned[k] = v
-                    elif isinstance(v, str):
-                        cleaned[k] = v.lower() in ("true", "1", "yes", "on")
-                elif k in ("tra_deg", "radio_altitude_ft", "n1k", "deploy_position_percent", "max_n1k_deploy_limit"):
-                    try:
-                        float_val = float(v)
-                        # Guard: NaN/Inf from json.loads("nan") propagate through float() silently
-                        if math.isfinite(float_val):
-                            cleaned[k] = float_val
-                    except (TypeError, ValueError):
-                        pass  # skip malformed values
-                elif k == "feedback_mode":
-                    if isinstance(v, str) and v in allowed_feedback_modes:
-                        cleaned[k] = v
-            parameter_overrides = cleaned
-        else:
-            parameter_overrides = {}
-
-        try:
-            confidence = max(0.0, min(1.0, float(confidence_raw)))
-        except (TypeError, ValueError):
-            confidence = 0.5
-        # Guard: NaN/Inf from json.loads("nan") propagates through min/max silently
-        if not math.isfinite(confidence):
-            confidence = 0.5
-
+    try:
+        json_str = re.sub(r"^```(?:json)?\s*", "", raw_content.strip())
+        json_str = re.sub(r"\s*```$", "", json_str)
+        parsed = json.loads(json_str)
+        if not isinstance(parsed, dict):
+            raise ValueError("LLM response was not a JSON object.")
+    except (json.JSONDecodeError, TypeError, ValueError):
         return {
-            "action_type": action_type,
-            "parameter_overrides": parameter_overrides,
-            "auto_apply": auto_apply,
-            "trajectory_steps": trajectory_steps if isinstance(trajectory_steps, list) else [],
-            "reasoning": reasoning,
-            "confidence": confidence,
-            "gate_plan": gate_plan if isinstance(gate_plan, dict) else {},
-            "ai_explanation": ai_explanation,
+            "action_type": "cannot_operate",
+            "parameter_overrides": {},
+            "auto_apply": False,
+            "trajectory_steps": [],
+            "reasoning": "AI响应解析失败",
+            "confidence": 0.0,
+            "gate_plan": {},
+            "ai_explanation": f"抱歉，AI响应解析失败。请手动调节参数。原始响应：{raw_content[:200]}",
         }, None
 
-    except urllib.error.HTTPError as e:
-        return None, {"error": "minimax_http_error", "message": f"MiniMax API returned HTTP {e.code}."}
-    except Exception as exc:
-        return None, {"error": "minimax_error", "message": "MiniMax API request failed."}
+    VALID_ACTION_TYPES = {"suggest_parameter_override", "manual_steps", "cannot_operate"}
+
+    raw_action_type = str(parsed.get("action_type", "cannot_operate"))
+    action_type = raw_action_type if raw_action_type in VALID_ACTION_TYPES else "cannot_operate"
+    parameter_overrides = parsed.get("parameter_overrides", {})
+    trajectory_steps = parsed.get("trajectory_steps", [])
+    reasoning = str(parsed.get("reasoning", ""))
+    confidence_raw = parsed.get("confidence", 0.5)
+    gate_plan = parsed.get("gate_plan", {})
+    auto_apply_raw = parsed.get("auto_apply", False)
+    auto_apply = isinstance(auto_apply_raw, bool) and auto_apply_raw is True
+    ai_explanation = str(parsed.get("ai_explanation", reasoning))
+
+    allowed_override_fields = {
+        "tra_deg", "radio_altitude_ft", "engine_running", "aircraft_on_ground",
+        "reverser_inhibited", "eec_enable", "n1k", "feedback_mode", "deploy_position_percent",
+        "max_n1k_deploy_limit",
+    }
+    allowed_feedback_modes = {"auto_scrubber", "manual_feedback_override"}
+    if isinstance(parameter_overrides, dict):
+        cleaned = {}
+        for k, v in parameter_overrides.items():
+            if k not in allowed_override_fields:
+                continue
+            if k in ("engine_running", "aircraft_on_ground", "reverser_inhibited", "eec_enable"):
+                if isinstance(v, bool):
+                    cleaned[k] = v
+                elif isinstance(v, str):
+                    cleaned[k] = v.lower() in ("true", "1", "yes", "on")
+            elif k in ("tra_deg", "radio_altitude_ft", "n1k", "deploy_position_percent", "max_n1k_deploy_limit"):
+                try:
+                    float_val = float(v)
+                    if math.isfinite(float_val):
+                        cleaned[k] = float_val
+                except (TypeError, ValueError):
+                    pass
+            elif k == "feedback_mode":
+                if isinstance(v, str) and v in allowed_feedback_modes:
+                    cleaned[k] = v
+        parameter_overrides = cleaned
+    else:
+        parameter_overrides = {}
+
+    try:
+        confidence = max(0.0, min(1.0, float(confidence_raw)))
+    except (TypeError, ValueError):
+        confidence = 0.5
+    if not math.isfinite(confidence):
+        confidence = 0.5
+
+    return {
+        "action_type": action_type,
+        "parameter_overrides": parameter_overrides,
+        "auto_apply": auto_apply,
+        "trajectory_steps": trajectory_steps if isinstance(trajectory_steps, list) else [],
+        "reasoning": reasoning,
+        "confidence": confidence,
+        "gate_plan": gate_plan if isinstance(gate_plan, dict) else {},
+        "ai_explanation": ai_explanation,
+    }, None
 
 
 def _handle_chat_reason(request_payload: dict) -> tuple[dict | None, dict | None]:
@@ -1178,9 +1109,6 @@ def _handle_chat_reason(request_payload: dict) -> tuple[dict | None, dict | None
     snapshot = validated["snapshot"]
     nodes = validated["nodes"]
 
-    api_key = _get_minimax_api_key()
-    if not api_key:
-        return None, {"error": "minimax_api_key_missing", "message": "MiniMax API key not found. Add to ~/.minimax_key."}
     logic = snapshot.get("logic", {})
     outputs = snapshot.get("outputs", {})
     hud = snapshot.get("hud", {})
@@ -1332,137 +1260,106 @@ confidence 指导：
     user_prompt = f"用户问题：{question}"
 
     try:
-        import urllib.request
-        url = "https://api.minimax.chat/v1/text/chatcompletion_v2"
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "model": "minimax-m2.7-highspeed",
-            "messages": [
+        raw_content = get_llm_client().chat(
+            [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "temperature": 0.3,
-            "max_tokens": 1500,
-            "stream": False,
-        }
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-            headers=headers,
-            method="POST",
+            temperature=0.3,
+            max_tokens=1500,
+            timeout=30.0,
         )
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            result = json.loads(resp.read().decode("utf-8"))
+    except LLMClientError as exc:
+        return None, {"error": exc.code, "message": exc.message}
 
-        choices = result.get("choices", [])
-        if choices:
-            raw_content = choices[0].get("message", {}).get("content", "")
-        else:
-            raw_content = result.get("choices", [{}])[0].get("text", "")
-
-        if not raw_content:
-            return None, {"error": "minimax_empty_response", "message": "MiniMax returned empty reason response."}
-
-        try:
-            json_str = re.sub(r"^```(?:json)?\s*", "", raw_content.strip())
-            json_str = re.sub(r"\s*```$", "", json_str)
-            parsed = json.loads(json_str)
-            if not isinstance(parsed, dict):
-                raise ValueError("Not a JSON object.")
-        except (json.JSONDecodeError, TypeError, ValueError) as exc:
-            # Distinguish truncation from other parse failures
-            truncation_markers = ("...", "继续", "continue", "{\"_", "partial")
-            is_truncated = (
-                len(raw_content.strip()) >= 1150 or
-                any(raw_content.strip().endswith(m) for m in truncation_markers) or
-                raw_content.strip().count('{') > raw_content.strip().count('}')
-            )
-            if is_truncated:
-                return None, {
-                    "error": "minimax_response_truncated",
-                    "message": "MiniMax response was truncated. Try again or simplify the question.",
-                }
+    try:
+        json_str = re.sub(r"^```(?:json)?\s*", "", raw_content.strip())
+        json_str = re.sub(r"\s*```$", "", json_str)
+        parsed = json.loads(json_str)
+        if not isinstance(parsed, dict):
+            raise ValueError("Not a JSON object.")
+    except (json.JSONDecodeError, TypeError, ValueError) as exc:
+        truncation_markers = ("...", "继续", "continue", "{\"_", "partial")
+        is_truncated = (
+            len(raw_content.strip()) >= 1150 or
+            any(raw_content.strip().endswith(m) for m in truncation_markers) or
+            raw_content.strip().count('{') > raw_content.strip().count('}')
+        )
+        if is_truncated:
             return None, {
-                "error": "minimax_json_parse_error",
-                "message": f"AI响应格式异常（非JSON）：{exc}",
-            }, None
-
-        VALID_RESPONSE_TYPES = {"analysis", "explanation", "refusal", "operation_suggestion"}
-        raw_rt = str(parsed.get("response_type", "analysis"))
-        response_type = raw_rt if raw_rt in VALID_RESPONSE_TYPES else "analysis"
-
-        explanation = str(parsed.get("explanation", ""))
-        highlighted = parsed.get("highlighted_nodes", [])
-        suggestions = parsed.get("suggestion_nodes", [])
-        confidence_raw = parsed.get("confidence", 0.5)
-        # Safe bool parsing: only explicit Python/JSON True booleans count as true.
-        # This prevents "false" (string) or 0 from becoming True.
-        refusal_raw = parsed.get("refusal", False)
-        refusal = isinstance(refusal_raw, bool) and refusal_raw is True
-        refusal_reason = str(parsed.get("refusal_reason", ""))
-        parameter_overrides = parsed.get("parameter_overrides", {})
-        auto_apply_raw = parsed.get("auto_apply", False)
-        auto_apply = isinstance(auto_apply_raw, bool) and auto_apply_raw is True
-        deep_reasoning = str(parsed.get("deep_reasoning", ""))
-
-        # Validate parameter_overrides
-        allowed_override_fields = {
-            "tra_deg", "radio_altitude_ft", "engine_running", "aircraft_on_ground",
-            "reverser_inhibited", "eec_enable", "n1k", "feedback_mode", "deploy_position_percent",
-            "max_n1k_deploy_limit",
+                "error": "minimax_response_truncated",
+                "message": "LLM response was truncated. Try again or simplify the question.",
+            }
+        return None, {
+            "error": "minimax_json_parse_error",
+            "message": f"AI响应格式异常（非JSON）：{exc}",
         }
-        allowed_feedback_modes = {"auto_scrubber", "manual_feedback_override"}
-        if isinstance(parameter_overrides, dict):
-            cleaned = {}
-            for k, v in parameter_overrides.items():
-                if k not in allowed_override_fields:
-                    continue
-                if k in ("engine_running", "aircraft_on_ground", "reverser_inhibited", "eec_enable"):
-                    if isinstance(v, bool):
-                        cleaned[k] = v
-                    elif isinstance(v, str):
-                        cleaned[k] = v.lower() in ("true", "1", "yes", "on")
-                elif k in ("tra_deg", "radio_altitude_ft", "n1k", "deploy_position_percent", "max_n1k_deploy_limit"):
-                    try:
-                        cleaned[k] = float(v)
-                    except (TypeError, ValueError):
-                        pass
-                elif k == "feedback_mode":
-                    if isinstance(v, str) and v in allowed_feedback_modes:
-                        cleaned[k] = v
-            parameter_overrides = cleaned
-        else:
-            parameter_overrides = {}
 
-        try:
-            confidence_raw_val = float(confidence_raw)
-            if not math.isfinite(confidence_raw_val):
-                confidence = 0.5
-            else:
-                confidence = max(0.0, min(1.0, confidence_raw_val))
-        except (TypeError, ValueError):
+    VALID_RESPONSE_TYPES = {"analysis", "explanation", "refusal", "operation_suggestion"}
+    raw_rt = str(parsed.get("response_type", "analysis"))
+    response_type = raw_rt if raw_rt in VALID_RESPONSE_TYPES else "analysis"
+
+    explanation = str(parsed.get("explanation", ""))
+    highlighted = parsed.get("highlighted_nodes", [])
+    suggestions = parsed.get("suggestion_nodes", [])
+    confidence_raw = parsed.get("confidence", 0.5)
+    refusal_raw = parsed.get("refusal", False)
+    refusal = isinstance(refusal_raw, bool) and refusal_raw is True
+    refusal_reason = str(parsed.get("refusal_reason", ""))
+    parameter_overrides = parsed.get("parameter_overrides", {})
+    auto_apply_raw = parsed.get("auto_apply", False)
+    auto_apply = isinstance(auto_apply_raw, bool) and auto_apply_raw is True
+    deep_reasoning = str(parsed.get("deep_reasoning", ""))
+
+    allowed_override_fields = {
+        "tra_deg", "radio_altitude_ft", "engine_running", "aircraft_on_ground",
+        "reverser_inhibited", "eec_enable", "n1k", "feedback_mode", "deploy_position_percent",
+        "max_n1k_deploy_limit",
+    }
+    allowed_feedback_modes = {"auto_scrubber", "manual_feedback_override"}
+    if isinstance(parameter_overrides, dict):
+        cleaned = {}
+        for k, v in parameter_overrides.items():
+            if k not in allowed_override_fields:
+                continue
+            if k in ("engine_running", "aircraft_on_ground", "reverser_inhibited", "eec_enable"):
+                if isinstance(v, bool):
+                    cleaned[k] = v
+                elif isinstance(v, str):
+                    cleaned[k] = v.lower() in ("true", "1", "yes", "on")
+            elif k in ("tra_deg", "radio_altitude_ft", "n1k", "deploy_position_percent", "max_n1k_deploy_limit"):
+                try:
+                    cleaned[k] = float(v)
+                except (TypeError, ValueError):
+                    pass
+            elif k == "feedback_mode":
+                if isinstance(v, str) and v in allowed_feedback_modes:
+                    cleaned[k] = v
+        parameter_overrides = cleaned
+    else:
+        parameter_overrides = {}
+
+    try:
+        confidence_raw_val = float(confidence_raw)
+        if not math.isfinite(confidence_raw_val):
             confidence = 0.5
+        else:
+            confidence = max(0.0, min(1.0, confidence_raw_val))
+    except (TypeError, ValueError):
+        confidence = 0.5
 
-        return {
-            "response_type": response_type,
-            "explanation": explanation,
-            "highlighted_nodes": highlighted if isinstance(highlighted, list) else [],
-            "suggestion_nodes": suggestions if isinstance(suggestions, list) else [],
-            "confidence": confidence,
-            "refusal": refusal,
-            "refusal_reason": refusal_reason,
-            "parameter_overrides": parameter_overrides,
-            "auto_apply": auto_apply,
-            "deep_reasoning": deep_reasoning,
-        }, None
-
-    except urllib.error.HTTPError as e:
-        return None, {"error": "minimax_http_error", "message": f"MiniMax API returned HTTP {e.code}."}
-    except Exception:
-        return None, {"error": "minimax_error", "message": "MiniMax API request failed."}
+    return {
+        "response_type": response_type,
+        "explanation": explanation,
+        "highlighted_nodes": highlighted if isinstance(highlighted, list) else [],
+        "suggestion_nodes": suggestions if isinstance(suggestions, list) else [],
+        "confidence": confidence,
+        "refusal": refusal,
+        "refusal_reason": refusal_reason,
+        "parameter_overrides": parameter_overrides,
+        "auto_apply": auto_apply,
+        "deep_reasoning": deep_reasoning,
+    }, None
 
 
 def _handle_p14_analyze(request_payload: dict) -> tuple[dict | None, dict | None]:

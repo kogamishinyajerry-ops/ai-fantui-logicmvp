@@ -903,7 +903,12 @@ class DemoIntentLayerTests(unittest.TestCase):
             captured_payload["body"] = json.loads(request.data.decode("utf-8"))
             return FakeResponse()
 
-        with mock.patch.object(demo_server, "_get_minimax_api_key", return_value="test-key"):
+        from well_harness import llm_client as lc
+
+        def _fixed_key(self):
+            return "test-key"
+
+        with mock.patch.object(lc.MiniMaxClient, "api_key", property(_fixed_key)):
             with mock.patch("urllib.request.urlopen", side_effect=fake_urlopen):
                 response_payload, error_payload = demo_server._handle_chat_explain(
                     {

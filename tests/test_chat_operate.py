@@ -215,8 +215,12 @@ class TestChatOperateEndpoint(unittest.TestCase):
 
     def test_missing_api_key_returns_error(self):
         """Missing MiniMax API key → graceful error response."""
-        import well_harness.demo_server as ds
-        with unittest.mock.patch.object(ds, "_get_minimax_api_key", return_value=""):
+        from well_harness import llm_client as lc
+
+        def _no_key(self):
+            return ""
+
+        with unittest.mock.patch.object(lc.MiniMaxClient, "api_key", property(_no_key)):
             status, body = request_json(self.port, "/api/chat/operate", {
                 "question": "把VDT调节到90",
                 "system_id": "thrust-reverser",
