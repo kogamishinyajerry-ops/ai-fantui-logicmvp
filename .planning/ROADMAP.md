@@ -610,6 +610,25 @@ Status: Done (2026-04-18) · self-signed under v4.0 Extended Autonomy Mode (Koga
 
 **Plans:** P28-00 Tier 1 + P28-01…03 — Executor self-sign 全程（v4.0 Extended Autonomy Mode，窗口内 #4 新 Phase 收口）
 
+## Phase P29: Pre-Pitch Readiness Scorecard — 6 维度 drill artefact 聚合成 T-0 一眼 GREEN/YELLOW/RED
+
+**Goal:** P25/P27/P28 加了三层机器化守护，加上既有的 dress_rehearsal / local_model_smoke / demo_rehearsal，pitch 前 Kogami 要看状态得去 7 个地方捞 artefact。P29 写一个聚合脚本，读 `runs/` 下每类最新 artefact，渲染成一张 markdown 表格，退出码 0/1/2 映射 GREEN/YELLOW/RED。**只聚合不重跑**——各 drill 自己跑几十秒到几分钟，T-0 前 Kogami 没时间全跑。
+
+**Sub-phases:**
+- P29-01 — `scripts/pitch_readiness.py`（6 drill reader + age 校验 + markdown 渲染 + 退出码 0/1/2）
+- P29-02 — `docs/demo/pre-pitch-readiness-report.md` 首轮样例归档（Kogami 下次跑可以 diff 比对）
+- P29-03 — closure + ROADMAP + GATE-P29-CLOSURE self-sign (v4.0 七点自审)
+
+**关键产出：** 首轮真跑 overall YELLOW（MiniMax wow_a 因果链段超 budget，P25 findings §1.1 已记录的真实状态，非 regression）；其余 5 维度 GREEN。样例归档供 Kogami 日后 diff 用；scorecard 底部明示 pytest / adversarial / UI / network 四项**不在本 scorecard 覆盖范围**，避免误判。
+
+**Exit Criteria:**
+- 主 pytest 666/1skip 零回归 · e2e 49/49 · adversarial 8/8 · 聚合脚本无副作用（纯读 runs/）
+- 脚本默认 `--stale-hours 24` 超期 GREEN 降 YELLOW
+- RED 只用于 "no artefact at all"（有 artefact 但 fail 归 YELLOW 提醒 investigate，不是 RED）
+- GATE-P29-CLOSURE self-signed under v4.0
+
+**Plans:** P29-00 Tier 1 + P29-01…03 — Executor self-sign 全程（v4.0 Extended Autonomy Mode，窗口内 #5 新 Phase 收口 — 深度验收建议阈值已持续续签）
+
 ## 联邦架构战略（Opus 4.6 裁决 2026-04-15）
 
 **结论**：联邦模式是正确的方向，整合≠合并。
