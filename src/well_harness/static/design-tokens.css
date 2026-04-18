@@ -1,0 +1,72 @@
+/* design-tokens.css — P24-01 canonical visual source
+ *
+ * Single source of truth for color / typography / motion / elevation across
+ * demo.html, chat.html, workbench.html, ai-doc-analyzer.html.
+ *
+ * Loaded via @import from demo.css / chat.css / workbench.css.
+ * Surface-specific overrides live in each surface's own :root block AFTER
+ * this file — their values win by cascade order.
+ *
+ * Do NOT introduce surface-specific values here. If a token only applies to
+ * one surface (e.g. --drawer-width), keep it in that surface's file.
+ */
+
+:root {
+  /* ── Base surfaces ──────────────────────────────────────────────── */
+  --bg-base: #050914;
+  --bg-surface: #0f1114;
+  --bg-elevated: #161920;
+  --panel-bg: #101925;
+  --panel-bg-hover: #172637;
+  --panel-border: rgba(79, 184, 255, 0.22);
+
+  /* ── Text ramp ──────────────────────────────────────────────────── */
+  --text-main: #e6eef6;
+  --text-muted: #93a8b8;
+  --text-dim: #4a5568;
+  --text-primary: var(--text-main);
+  --text-secondary: var(--text-muted);
+
+  /* ── Accent ramp ────────────────────────────────────────────────── */
+  --accent: #67e8f9;
+  --accent-cyan: #28f4ff;
+  --accent-blue: #3d7eff;
+  --accent-orange: #ffb037;
+  --accent-red: #ff5252;
+  --accent-green: #53ff92;
+  --accent-dark: #cc5500;
+  --chip-purple: #8d7cff;
+
+  /* ── Status semantic ────────────────────────────────────────────── */
+  --status-active: #71f6b3;
+  --status-blocked: #e05252;
+  --status-inactive: #3a3f4a;
+  --success: #71f6b3;
+  --danger: #e05252;
+  --warning: #ffbd59;
+
+  /* ── Borders ────────────────────────────────────────────────────── */
+  --border-soft: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(103, 232, 249, 0.34);
+  --surface-glow: rgba(103, 232, 249, 0.12);
+
+  /* ── Elevation (shadow scale) ───────────────────────────────────── */
+  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 16px 40px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.65);
+
+  /* ── Typography ─────────────────────────────────────────────────── */
+  --font-sans:
+    "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-mono:
+    "JetBrains Mono", "Fira Code", "Cascadia Mono", "Source Code Pro", monospace;
+
+  /* ── Motion ─────────────────────────────────────────────────────── */
+  --duration-fast: 120ms;
+  --duration-normal: 250ms;
+  --duration-slow: 420ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --transition-base: var(--duration-normal) var(--ease-standard);
+  --drawer-transition: var(--duration-normal) var(--ease-standard);
+}

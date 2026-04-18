@@ -1,3 +1,5 @@
+@import url("/design-tokens.css");
+
 .workbench-shell {
   padding-bottom: 4rem;
 }

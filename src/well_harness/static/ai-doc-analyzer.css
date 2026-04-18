@@ -1,5 +1,7 @@
 /* ai-doc-analyzer.css — P14 AI Document Analyzer page styles */
 
+@import url("/design-tokens.css");
+
 .ai-doc-shell {
   padding-bottom: 4rem;
 }

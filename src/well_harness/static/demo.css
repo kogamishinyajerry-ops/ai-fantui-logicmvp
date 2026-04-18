@@ -1,19 +1,10 @@
+@import url("/design-tokens.css");
+
 :root {
-  --bg: #050914;
-  --panel-bg: #101925;
-  --panel-bg-hover: #172637;
-  --panel-border: rgba(79, 184, 255, 0.22);
-  --text-main: #e3edf7;
-  --text-muted: #8ca0b4;
-  --accent-cyan: #28f4ff;
-  --accent-blue: #3d7eff;
-  --accent-orange: #ffb037;
-  --accent-red: #ff5252;
-  --accent-green: #53ff92;
-  --chip-purple: #8d7cff;
-  --accent-dark: #cc5500; /* var(--accent-dark) defined for test */
-  --font-sans: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  --font-mono: "Courier New", Courier, monospace;
+  /* Surface-local overrides. demo.html keeps its legacy --bg alias
+   * (used by the 3D background shader) mapped to the canonical base.
+   * Also reserves var(--accent-dark) for future presenter callout variants. */
+  --bg: var(--bg-base);
 }
 
 * {
