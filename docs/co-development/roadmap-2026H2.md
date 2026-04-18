@@ -129,7 +129,7 @@
 
 - **变更：** 本路线图 Phase 数量或顺序变更，需双方项目经理 + 架构师三方同意
 - **季度复盘：** 每个 Phase 闭合后做 1 次复盘，决定是否调整下一 Phase 的 exit criteria
-- **治理折叠：** 我方执行层保持 v3.2 Executor=Gate 自签模式；甲方 PR 评审走 `security-review-template.md`
+- **治理：** 我方执行层按 v3.0 双 Opus + v3.1 停机白名单运作——Claude Code Opus 4.7 为 Executor，Phase 合并 Gate 由 Notion AI Opus 4.7 独立签署；甲方 PR 评审走 `security-review-template.md`
 
 ---
 

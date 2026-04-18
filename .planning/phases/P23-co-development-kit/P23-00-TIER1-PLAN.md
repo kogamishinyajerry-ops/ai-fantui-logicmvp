@@ -4,7 +4,7 @@ plan: P23-00-TIER1
 title: 立项通过后 Co-development Kit — 接口/安全/SLA/路线图冻结
 status: planned
 created: 2026-04-18
-owner: Executor=Gate (Claude Code Opus 4.7, v3.2 治理折叠)
+owner: Claude Code Opus 4.7 (Executor); Gate by Notion AI Opus 4.7 (v3.0 + v3.1)
 preconditions: 立项汇报通过（由 Kogami 确认）
 non-goals:
   - 修改 controller.py 真值引擎
@@ -37,14 +37,14 @@ non-goals:
 | P23-02 | `docs/co-development/security-review-template.md` | 甲方安全工程团队评审每次 PR 时用的 10 项 checklist（R1–R5 锚点 + adversarial 8 项对应 + 数据边界 + supply chain） |
 | P23-03 | `docs/co-development/sla-draft.md` | 可用性分级（演示 / 预生产 / 生产）、响应窗口、数据留存政策、AI 模型供应链（MiniMax / Ollama / 甲方自备）3 个 profile |
 | P23-04 | `docs/co-development/roadmap-2026H2.md` | P23–P27 路线图：P23 kit / P24 甲方子系统接入 PoC / P25 生产前硬化 / P26 首批产线 validation / P27 审计包 |
-| P23-05 | closure Gate + Notion sync | 自签 GATE-P23-CLOSURE（v3.2 Executor=Gate，7/7 合规 checklist） |
+| P23-05 | closure Gate + Notion sync | Executor 初审 + 04A GATE-P23-CLOSURE 建为 Awaiting Opus 4.6 · 等 Kogami 触发 Notion AI Opus 4.7 独立 Gate（v3.1） |
 
 ## Exit Criteria
 
 - 四份文档全部落 `docs/co-development/`，每份带清晰的"**这份文档给谁看 / 回答什么问题 / 什么情况下会变动**"头部
 - 主 pytest / e2e / adversarial 零回归（这是纯文档 Phase，回归应该天然成立）
 - ROADMAP.md 有 P23 条目（本 Phase 完成时追加）
-- Notion 02B Execution Run + 04A GATE-P23-CLOSURE self-signed + 控制塔 DECISION 块
+- Notion 02B Execution Run + 04A GATE-P23-CLOSURE 建为 Awaiting Opus 4.6 + 控制塔 DECISION 块（待 Kogami 触发独立 Gate 复核）
 
 ## 合规 checklist（在 closure Gate 自审）
 
@@ -58,8 +58,8 @@ non-goals:
 
 ## Estimated cost
 
-1–1.5 工作日。全部 Opus 4.7 Executor=Gate 独立完成；无需 Codex 审查（纯文档 + 无前端 diff）。
+1–1.5 工作日。Claude Code Opus 4.7 Executor 独立执行；Phase 合并 Gate 待 Kogami 触发 Notion AI Opus 4.7 独立复核（纯文档 + 无前端 diff，无需 Codex 审查）。
 
-## Scope Gate（self-signed v3.2）
+## Scope 初审（Executor pre-review，非 Gate 批准）
 
-本 Plan 已在创建时完成 7/7 合规自审。Non-goals 显式，Exit Criteria 可证伪。Executor=Gate 授权执行 P23-01 → P23-05。
+本 Plan 已在创建时完成 Executor 自审：Non-goals 显式，Exit Criteria 可证伪，R1–R5 + 三轨零回归 + Non-goals 对照 7/7 合规。按 v3.0 双 Opus + v3.1 停机白名单，Executor 基于初审可自主推进 P23-01 → P23-04；Phase 收口（P23-05）不得自签，须经 Kogami 触发 Notion AI Opus 4.7 独立 Gate 复核。

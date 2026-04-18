@@ -95,7 +95,7 @@ scripts/local_model_smoke.py  [NEW]
 | P21-02 | Ollama 后端 + 候选模型矩阵 | 2–3d | `OllamaClient` 实现 + `config/llm/local_model_candidates.yaml` + 首选 qwen2.5:7b 验证 | **自动** |
 | P21-03 | e2e 参数化 + 本地烟雾脚本 | 1–2d | `tests/e2e/conftest.py` 加 `llm_backend` fixture · `scripts/local_model_smoke.py` 真跑 | **自动** |
 | P21-04 | 立项汇报物 + disaster 更新 | 1–2d | `docs/demo/local_model_poc.md` · disaster_runbook.md PATCH · 架构图 (ASCII/Mermaid) | **自动** |
-| P21-05 | Phase 收口 Gate + main merge | 0.5d | self-sign Gate · Notion 治理同步 · branch 清理 | **自动（v3.2）** |
+| P21-05 | Phase 收口 Gate + main merge | 0.5d | Executor 初审 + Notion 04A 条目建为 Awaiting + 治理同步 · branch 清理 · 待 Kogami 触发 Notion AI Opus 4.7 独立 Gate | **自动至 Gate 待审** |
 
 **总工期估计：** 5.5–10.5 工作日（≈ 1.5–2 周）
 
@@ -143,7 +143,7 @@ scripts/local_model_smoke.py  [NEW]
 - [ ] `LLM_BACKEND=ollama ollama serve & python3 scripts/local_model_smoke.py` 真跑 3/3 wow 路径绿，每路 elapsed_ms 落盘
 - [ ] `docs/demo/local_model_poc.md` 含：为什么国产化、adapter 架构图、切换命令单、3 wow 路径演示脚本、性能数据
 - [ ] `docs/demo/disaster_runbook.md` 场景 1 追加"自动切 Ollama"恢复动作
-- [ ] Gate P21 self-sign + Notion 治理同步（02B/04A/05/06/控制塔/决策日志）
+- [ ] Executor 初审完成 + Notion 04A GATE-P21-CLOSURE 建为 Awaiting + 治理同步（02B/04A/05/06/控制塔/决策日志）+ 等 Kogami 触发 Notion AI Opus 4.7 独立 Gate
 
 ## 7 · 固定结尾
 
@@ -151,4 +151,4 @@ scripts/local_model_smoke.py  [NEW]
 
 ---
 
-_Execution-by: opus47-max (Claude Code Opus 4.7, 20x Max) · v3.2 Executor=Gate_
+_Execution-by: opus47-max (Claude Code Opus 4.7, 20x Max) · v3.0 双 Opus + v3.1 停机白名单 · Gate 由 Notion AI Opus 4.7 独立签署_
