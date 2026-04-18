@@ -1,0 +1,71 @@
+{
+  "phase": "P27",
+  "generated_at": "2026-04-18T13:45:50.889612+00:00",
+  "port": 8797,
+  "budget_green_ms": 8000,
+  "budget_yellow_ms": 12000,
+  "minimax_to_ollama": {
+    "runs": [
+      {
+        "from": "minimax",
+        "to": "ollama",
+        "t_kill_ms": 1.2873330000000016,
+        "t_spawn_to_ready_ms": 106.82329199999998,
+        "t_total_ms": 108.11062499999998,
+        "verdict": "GREEN",
+        "error": null,
+        "cycle": 1
+      },
+      {
+        "from": "minimax",
+        "to": "ollama",
+        "t_kill_ms": 1.303500000000013,
+        "t_spawn_to_ready_ms": 102.66924999999993,
+        "t_total_ms": 103.97274999999995,
+        "verdict": "GREEN",
+        "error": null,
+        "cycle": 2
+      }
+    ],
+    "aggregate": {
+      "n_clean": 2,
+      "n_total": 2,
+      "min_ms": 103.97274999999995,
+      "p50_ms": 108.11062499999998,
+      "max_ms": 108.11062499999998,
+      "overall_verdict": "GREEN"
+    }
+  },
+  "ollama_to_minimax": {
+    "runs": [
+      {
+        "from": "ollama",
+        "to": "minimax",
+        "t_kill_ms": 1.2992089999999124,
+        "t_spawn_to_ready_ms": 102.00504200000005,
+        "t_total_ms": 103.30425099999997,
+        "verdict": "GREEN",
+        "error": null,
+        "cycle": 1
+      },
+      {
+        "from": "ollama",
+        "to": "minimax",
+        "t_kill_ms": 1.2869159999997493,
+        "t_spawn_to_ready_ms": 106.16700000000012,
+        "t_total_ms": 107.45391599999986,
+        "verdict": "GREEN",
+        "error": null,
+        "cycle": 2
+      }
+    ],
+    "aggregate": {
+      "n_clean": 2,
+      "n_total": 2,
+      "min_ms": 103.30425099999997,
+      "p50_ms": 107.45391599999986,
+      "max_ms": 107.45391599999986,
+      "overall_verdict": "GREEN"
+    }
+  }
+}

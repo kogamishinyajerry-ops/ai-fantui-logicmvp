@@ -569,6 +569,26 @@ Status: Done (2026-04-18) · self-signed under v4.0 Extended Autonomy Mode
 
 **Plans:** P26-00 Tier 1 + P26-01…03 — Executor self-sign 全程（v4.0 Extended Autonomy Mode，窗口内 #2 新 Phase 收口）
 
+## Phase P27: Backend Switch Drill — 真实 pkill+spawn+wait_ready 切换延迟的可证伪化
+
+Status: Done (2026-04-18) · self-signed under v4.0 Extended Autonomy Mode · **触达 v4.0 ≥3 Phase 深度验收建议阈值**
+
+**Goal:** 闭合 P25 findings §1.3 留下的悬案——真实机械切换延迟从未被测，"5–8s" 是直觉估计不是数据。P27 测实、写 findings、不改 disaster_runbook。
+
+**Sub-phases delivered:**
+- P27-01 — `scripts/backend_switch_drill.py`（独立端口 8797 + spawn/kill 计时 + atexit 僵尸清理 + prereq 预检 + 预算分档 GREEN/YELLOW/ALERT）
+- P27-02 — 双方向 × N=2 真跑 artefact 入库 `runs/backend_switch_drill_20260418T134550Z/`
+- P27-03 — `docs/demo/backend-switch-drill-findings.md` + closure + GATE self-sign (v4.0 七点自审)
+
+**关键数据：** MiniMax→Ollama p50=**108ms**；Ollama→MiniMax p50=**107ms**。P25 "5–8s" 直觉估计偏保守约 50–75 倍。**但有诚实边界：** 本 drill 只测 HTTP+truth-engine 层机械切换，不覆盖首次 post-switch LLM 调用（adapter 初始化 + Ollama 冷模型加载 5–10s）。P25 段 4 预算 20s 早已覆盖了真冷启代价。
+
+**Exit Criteria:**
+- 主 pytest 662/1skip 零回归 · e2e 49/49 · adversarial 8/8
+- 双方向 N=2 真跑 artefact + findings 落盘
+- GATE-P27-CLOSURE self-signed under v4.0 + **主动贴深度验收建议到控制塔**（≥3 Phase 阈值触达）
+
+**Plans:** P27-00 Tier 1 + P27-01…03 — Executor self-sign 全程（v4.0 Extended Autonomy Mode，窗口内 #3 新 Phase 收口——达深度验收建议阈值，Executor 收口后主动暂停等 Kogami 过目）
+
 ## 联邦架构战略（Opus 4.6 裁决 2026-04-15）
 
 **结论**：联邦模式是正确的方向，整合≠合并。
