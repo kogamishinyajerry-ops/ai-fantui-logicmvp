@@ -36,7 +36,7 @@ non-goals:
 | P23-01 | `docs/co-development/api-contract.md` | 冻结当前三哇 API（lever-snapshot / monte-carlo/run / diagnosis/run）+ chat 三端点的请求/响应 schema；加版本策略（v1 不破坏，新 field 只追加） |
 | P23-02 | `docs/co-development/security-review-template.md` | 甲方安全工程团队评审每次 PR 时用的 10 项 checklist（R1–R5 锚点 + adversarial 8 项对应 + 数据边界 + supply chain） |
 | P23-03 | `docs/co-development/sla-draft.md` | 可用性分级（演示 / 预生产 / 生产）、响应窗口、数据留存政策、AI 模型供应链（MiniMax / Ollama / 甲方自备）3 个 profile |
-| P23-04 | `docs/co-development/roadmap-2026H2.md` | P23–P27 路线图：P23 kit / P24 甲方子系统接入 PoC / P25 生产前硬化 / P26 首批产线 validation / P27 审计包 |
+| P23-04 | `docs/co-development/roadmap-2026H2.md` | H2-23–H2-27 对外路线图：H2-23 kit / H2-24 甲方子系统接入 PoC / H2-25 生产前硬化 / H2-26 首批产线 validation / H2-27 审计包（原 P23–P27 编号于 2026-04-20 经 P32 W5 去重为 H2- 前缀；本内部 plan 的 P23 编号归属内部命名空间不动） |
 | P23-05 | closure Gate + Notion sync | Executor 初审 + 04A GATE-P23-CLOSURE 建为 Awaiting Opus 4.6 · 等 Kogami 触发 Notion AI Opus 4.7 独立 Gate（v3.1） |
 
 ## Exit Criteria

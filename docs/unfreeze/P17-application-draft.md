@@ -1,10 +1,23 @@
+> **Status: Superseded by P19 Hardware Partial Unfreeze (2026-04-20)**
+>
+> 本申请书（v0.1, Ready for Review, 2026-04-18）的目标管线「PDF → adapter → ≥1 新系统 panel」**被 P19 Hardware Partial Unfreeze 事实上超越**：P19 在 controller.py 零改动前提下交付了硬件 YAML schema + Monte Carlo + 反诊断 + 立项演讲稿（2026-04-17 Done，18 个 sub-phases P19.1→P19.18，`.planning/phases/P19-hardware-partial-unfreeze/`，634+ tests 零回归）。
+>
+> 本申请**不重走 Gate**；文件保留作为 P17 slot 方向裁决的历史证据。P17 slot 最终由 Fault Injection 占用（2026-04-15 Done），与本申请书的 PDF 解析路径无关。
+>
+> 若未来需要重启"PDF → adapter → panel"作为独立能力（而非硬件 demo 层），应作为**新 Phase（如 P33 候选）独立立项**，不复用本申请书。
+>
+> **定性签字：** Kogami 2026-04-20 AskUserQuestion 答复（选项"Superseded by P19"） + Claude App Opus 4.7 (Solo Executor) · v5.2 solo-signed · 2026-04-20
+> **Phase Gate reference:** `GATE-P32-PLAN: Approved` (Kogami, 2026-04-20) · 执行动作 W4
+>
+> ---
+
 # P17 解冻申请书（草案）
 
 **版本**：v0.1
 **日期**：2026-04-18
 **撰写人**：Claude Code Opus 4.7 (20x Max) — Executor 身份，Tier 1 亲笔
 **审批人**：Notion AI Opus 4.7（独立会话 Gate 裁决）
-**状态**：**Ready for Review**（GATE-P20-CLOSURE Approved 2026-04-18 后升档）
+**状态**：~~**Ready for Review**（GATE-P20-CLOSURE Approved 2026-04-18 后升档）~~ **Superseded by P19 (2026-04-20)** — 详见本文件顶部 Status 标头
 
 ---
 
