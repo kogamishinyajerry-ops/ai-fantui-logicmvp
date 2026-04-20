@@ -1,0 +1,68 @@
+# Machine-readable SoT for adapter truth-level registry.
+# =======================================================================
+# This file is the AUTHORITATIVE source consumed by
+# tests/test_metadata_registry_consistency.py to verify three-way alignment:
+#   runtime ControllerTruthMetadata instances ↔ this yaml ↔ adapter_truth_levels.md
+#
+# The markdown (adapter_truth_levels.md) is a human-readable VIEW; this yaml
+# is the SoT. On any level/status change, edit this yaml FIRST, then manually
+# sync the markdown table in the SAME commit. The consistency test will fail
+# if the three layers drift, so silent skew cannot land on main.
+#
+# Phase origin: P42 (truth_level schema + SoT alignment, 2026-04-20)
+# Authority: Kogami (v5.2 Solo Mode project owner)
+# Gate: GATE-P42-PLAN (v2) Approved 2026-04-20 (Q1-Q5 per Executor recommendations)
+# Verified-by: codex-gpt54-xhigh (adversarial review incorporated 2026-04-20)
+#
+# Scope of fields (Q4=A): only the 4 core governance columns plus the two
+# identity anchors used by the bidirectional consistency test. Upstream
+# source, authority, upgrade_path, and notes remain in the markdown table
+# because they are human-authored audit prose, not machine-consumed values.
+#
+# Entry schema:
+#   system_id        (str, matches markdown table "system_id" column)
+#   adapter_id       (str, matches runtime metadata.adapter_id)
+#   metadata_const   (str, Python identifier of the module-level instance)
+#   metadata_module  (str, dotted module path; test importlib.import_module()s it)
+#   truth_level      (enum: demonstrative | certified | placeholder)
+#   status           (enum: In use | Frozen | Upgrade pending | Upgrade in progress)
+
+version: 1
+updated: 2026-04-20
+phase: P42
+
+entries:
+  - system_id: thrust-reverser
+    adapter_id: reference-deploy-controller
+    metadata_const: REFERENCE_DEPLOY_CONTROLLER_METADATA
+    metadata_module: well_harness.controller_adapter
+    truth_level: certified
+    status: In use
+
+  - system_id: bleed-air-valve
+    adapter_id: bleed-air-valve-controller-adapter
+    metadata_const: BLEED_AIR_CONTROLLER_METADATA
+    metadata_module: well_harness.adapters.bleed_air_adapter
+    truth_level: demonstrative
+    status: Frozen
+
+  - system_id: emergency_flare_deployment_system
+    adapter_id: efds-controller-adapter
+    metadata_const: EFDS_CONTROLLER_METADATA
+    metadata_module: well_harness.adapters.efds_adapter
+    truth_level: demonstrative
+    status: Frozen
+
+  - system_id: minimal_landing_gear_extension
+    adapter_id: landing-gear-controller-adapter
+    metadata_const: LANDING_GEAR_CONTROLLER_METADATA
+    metadata_module: well_harness.adapters.landing_gear_adapter
+    truth_level: demonstrative
+    status: Frozen
+
+  - system_id: c919-etras
+    adapter_id: c919-etras-controller-adapter
+    metadata_const: C919_ETRAS_CONTROLLER_METADATA
+    metadata_module: well_harness.adapters.c919_etras_adapter
+    truth_level: certified
+    status: In use

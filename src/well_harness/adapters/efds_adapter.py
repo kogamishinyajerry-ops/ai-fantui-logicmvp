@@ -40,6 +40,8 @@ EFDS_CONTROLLER_METADATA = ControllerTruthMetadata(
     truth_kind="python-generic-truth-adapter",
     source_of_truth=EFDS_SOURCE_OF_TRUTH,
     description="Emergency Flare Deployment System — infrared countermeasure flare deployment controller adapter.",
+    truth_level="demonstrative",  # P42: FROZEN · aligned with docs/provenance/adapter_truth_levels.yaml
+    status="Frozen",
 )
 
 

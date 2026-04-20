@@ -1017,3 +1017,55 @@ Status: Executed & Green · Awaiting `GATE-P41-CLOSURE: Approved`
 **P41 教训：** P36β 起草时未穷举 `ControlSystemWorkbenchSpec` 工厂函数 · 导致 "no workbench spec" 口径 5 Phase 连锁 drift。未来 Phase 起草前应加 **"spec factory grep"** 前置步骤。
 
 **Next phase:** P42 · truth_level 进 ControllerTruthMetadata schema + runtime API（Kogami "连续 3 Phase" 指令第 2 位）
+
+## Phase P42: truth_level + status into ControllerTruthMetadata schema + machine SoT + generator fix (path ①)
+
+Status: Executed & Green · Awaiting `GATE-P42-CLOSURE: Approved`
+
+**Goal:** Mirror the P35α 2-dimensional registry (truth_level + status) into the runtime `ControllerTruthMetadata` dataclass + JSON schema, close the three-way drift (runtime / docs markdown / tests) via a machine-readable yaml SoT, and fix the `generate_adapter.py` shadow-class hole that would let future auto-generated adapters bypass governance entirely.
+
+**Adversarial history (P42 唯一 v1→v2 迭代的 Phase):**
+- `GATE-P42-PLAN (v1)` Approved 2026-04-20 (Q1=A / Q2=C / Q3=B) — 落地前 Executor 按 adapter-boundary 硬性规则调 Codex GPT-5.4 xhigh adversarial review。
+- Codex 返 **需修正 · 信号强** · 3 条 structural counter 命中真伤：
+  · A · `**asdict(metadata)` 在 payload · v1 extend 抹 provenance 语义边界
+  · B · `demonstrative/In use` 默认 + `generate_adapter.py:74-79` shadow class 使新 adapter 静默滑过
+  · C · runtime hardcode + markdown + test hardcode 三源无机器闭合 · CI 可假绿
+- Executor 核验 Codex 2 条事实断言均真实 · 停工 + 3 路径升级 Kogami。
+- Kogami 选 **路径①**（修 plan 后重走 GATE-P42-PLAN）。
+- `GATE-P42-PLAN (v2)` Approved 2026-04-20 (Q1-Q5 per Executor 建议 A/D/B/A/A · Q2 推翻为 None sentinel)。
+
+**Sub-phases & commits (branch `codex/p42-truth-level-schema`, base `main a05bb6d`):**
+- P42-00 v1 (`42acdef`): Plan v1 (230 行 · 4 counter · Q1-Q3)
+- P42-00 v2 (`eaa409a`): Plan v2 (post-Codex · 431 行 · 7 counter · Q1-Q5 · verified-by codex-gpt54-xhigh)
+- P42-01 (`0a13bc2`): W1 dataclass truth_level/status=None sentinel + to_dict 剥 None + JSON schema extend
+- P42-02 (`bc33c95`): W2 5 metadata instantiations 显式填值
+- P42-03 (`c174734`): W3 generate_adapter.py 删 shadow class + 模板默认 demonstrative/Upgrade pending
+- P42-04 (`30cf3be`): W4 `docs/provenance/adapter_truth_levels.yaml` machine SoT + markdown "Machine-readable SoT" 注脚（表格 5 行零改）
+- P42-05 (`3ad64e6`): W5 tests (17 schema+serializer+generator + 12 bidir = 29 new tests)
+- P42-06 closure drafted
+
+**三轨（vs P41 head a05bb6d）：**
+- default pytest: **796 passed** / 1 skipped / 49 deselected in 90.60s (+29 vs P41 767 baseline · 17 schema+serializer+generator + 12 bidir)
+- opt-in e2e: **49 passed** / 797 deselected in 2.99s (identical)
+- adversarial wrapper: **1 passed** (8/8 inside identical)
+
+**代码侧 invariants（字节级）：** controller.py / models.py / system_spec.py / 5 adapter evaluate/explain/evaluate_snapshot/load_spec / 所有 YAML parameter 文件 / JSON schema `$id` 与 version const / registry markdown 5 行 table · 全部不变。
+
+**Codex counter 消化策略：** Counters C5/C6/C7 在 plan v2 `verified-by: codex-gpt54-xhigh`，**Executor 用自己语言重写 · 不直接复制 Codex 文字**（遵 v5.2 §0 Codex 调度规则）。v2 缓解落点：
+- A → `to_dict` 剥 None · pre-P42 payload 字节等价 · schema description 规定语义
+- B → Q2 改 D (None sentinel) · 删 shadow · 模板强制 Upgrade pending
+- C → yaml SoT + dynamic importlib discover + bidir test（runtime ↔ yaml ↔ markdown table）
+
+**Registry 2 维状态（P42 落后 · 与 P35α 不变 · 现 machine-enforced）：**
+
+| system_id | truth_level | status | 与 runtime 绑定 |
+|-----------|-------------|--------|-----------------|
+| `thrust-reverser` | certified | In use | `controller_adapter.REFERENCE_DEPLOY_CONTROLLER_METADATA` |
+| `bleed-air-valve` | demonstrative | Frozen | `adapters.bleed_air_adapter.BLEED_AIR_CONTROLLER_METADATA` |
+| `emergency_flare_deployment_system` | demonstrative | Frozen | `adapters.efds_adapter.EFDS_CONTROLLER_METADATA` |
+| `minimal_landing_gear_extension` | demonstrative | Frozen | `adapters.landing_gear_adapter.LANDING_GEAR_CONTROLLER_METADATA` |
+| `c919-etras` | certified | In use | `adapters.c919_etras_adapter.C919_ETRAS_CONTROLLER_METADATA` |
+
+P42 把三层一致性从 "人工保" 转为 "CI 保"：yaml SoT 被改动但 markdown 忘同步 → 测试红；新 adapter 生成但没登记 yaml → 测试红；registry 某行 level/status 改但 runtime metadata 忘改 → 测试红。
+
+**Next phase:** 按 R4 等 Kogami 明示 —— 候选 P43 adapter freeze/upgrade 模板化（Kogami 2026-04-20 已预定）· P44 runtime API surface · P45 全量 yaml-ify registry · 或其他。**Codex 对抗性 review 已在治理流程中，未来 adapter boundary 变更 Phase 必先调 Codex。**

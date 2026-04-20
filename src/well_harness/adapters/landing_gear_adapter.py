@@ -46,6 +46,8 @@ LANDING_GEAR_CONTROLLER_METADATA = ControllerTruthMetadata(
     truth_kind="python-generic-truth-adapter",
     source_of_truth=LANDING_GEAR_SOURCE_OF_TRUTH,
     description="Minimal landing-gear extension truth adapter used to prove adapter-only runtime generalization.",
+    truth_level="demonstrative",  # P42: FROZEN · aligned with docs/provenance/adapter_truth_levels.yaml
+    status="Frozen",
 )
 
 

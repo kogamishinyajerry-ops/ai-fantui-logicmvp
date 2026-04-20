@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: P41 scope C 执行完成 · D1=A Lean discovery 澄清 · awaiting GATE-P41-CLOSURE
+status: P42 v2 executed & green · path ① post-Codex remediation · awaiting GATE-P42-CLOSURE
 last_updated: "2026-04-20T00:00:00.000Z"
 last_activity: 2026-04-20
 progress:
-  total_phases: 40
-  completed_phases: 39
+  total_phases: 42
+  completed_phases: 41
   total_plans: 0
   completed_plans: 0
 ---
@@ -17,6 +17,62 @@ progress:
 Last activity: 2026-04-20
 
 ## Current Position
+
+**P42 v2 executed & green — awaiting `GATE-P42-CLOSURE: Approved` (2026-04-20)**
+
+Phase: P42 — truth_level + status schema + machine SoT + generator fix (path ① post-Codex)
+
+- Branch `codex/p42-truth-level-schema` 8 commits on top of `main a05bb6d`:
+  · `42acdef` feat(P42-00): plan v1 (230 行 · 4 counter · Q1-Q3)
+  · `eaa409a` docs(P42-00-codex): plan v2 (post-Codex · 431 行 · 7 counter · Q1-Q5 · verified-by codex-gpt54-xhigh)
+  · `0a13bc2` feat(P42-01): dataclass truth_level/status=None + to_dict 剥 None + JSON schema extend
+  · `bc33c95` feat(P42-02): fill 5 metadata instantiations (REF/BLEED/EFDS/LG/C919)
+  · `c174734` feat(P42-03): generate_adapter.py 删 shadow class + 模板 demonstrative/Upgrade pending
+  · `30cf3be` feat(P42-04): adapter_truth_levels.yaml machine SoT + markdown 注脚
+  · `3ad64e6` test(P42-05): 29 new tests (schema+serializer+generator + bidir consistency)
+  · closure (本 commit) · ROADMAP + STATE + Notion DECISION
+- Three-lane regression (vs P41 head a05bb6d):
+  · default: **796 passed** / 1 skipped / 49 deselected in 90.60s (+29 vs P41 767 · 17 schema+serializer+generator + 12 bidir)
+  · e2e: **49 passed** (identical · 含 adversarial wrapper)
+  · adversarial wrapper: **1 passed** (8/8 inside identical)
+- Gates (Kogami 2026-04-20 · 今日累计 **15 个** · 多一层 P42 v1→v2 仲裁):
+  · P31-GATE · GATE-P32-CLOSURE · GATE-P34-CLOSURE · GATE-P35-PLAN/CLOSURE · GATE-P36β-PLAN/CLOSURE · GATE-P37-PLAN/CLOSURE · GATE-P38-PLAN/CLOSURE · GATE-P40-PLAN/CLOSURE · GATE-P41-PLAN 隐式/CLOSURE · **GATE-P42-PLAN (v1) · 路径① 仲裁 · GATE-P42-PLAN (v2)** ✅
+  · `GATE-P42-CLOSURE: Pending`
+
+### Codex adversarial review (P42 唯一调用点)
+
+P42 是唯一一个在 v1 plan 通过 Gate 后因 Codex 对抗性审查返 **需修正 · 信号强** 而被 Kogami 选"路径①"重走 GATE-PLAN 的 Phase。
+
+- Codex GPT-5.4 xhigh · `/codex-gpt54` · 82,646 tokens · 3 structural counters A/B/C
+- Counter A · `**asdict(metadata)` 真实序列化路径抹 provenance 语义边界
+- Counter B · 业务语义默认 + `generate_adapter.py:74-79` shadow class 使新 adapter 静默滑过
+- Counter C · runtime hardcode + markdown + test hardcode 三源无机器闭合 · CI 可假绿
+- Executor 核验两条事实断言均真实 · 停工 + 3 路径升级 Kogami
+- Kogami 选 ① · v2 plan 7 counters (C1-C4 + C5/C6/C7 verified-by codex-gpt54-xhigh) · Executor 用自己语言重写，不直接复制
+
+### Registry 2 维状态（P42 落后 · 现 machine-enforced via bidir test）
+
+| system_id | truth_level | status | 与 runtime 绑定 |
+|-----------|-------------|--------|-----------------|
+| `thrust-reverser` | certified | In use | `controller_adapter.REFERENCE_DEPLOY_CONTROLLER_METADATA` |
+| `bleed-air-valve` | demonstrative | Frozen | `adapters.bleed_air_adapter.BLEED_AIR_CONTROLLER_METADATA` |
+| `emergency_flare_deployment_system` | demonstrative | Frozen | `adapters.efds_adapter.EFDS_CONTROLLER_METADATA` |
+| `minimal_landing_gear_extension` | demonstrative | Frozen | `adapters.landing_gear_adapter.LANDING_GEAR_CONTROLLER_METADATA` |
+| `c919-etras` | certified | In use | `adapters.c919_etras_adapter.C919_ETRAS_CONTROLLER_METADATA` |
+
+P42 把三层（runtime / yaml / markdown）一致性从 "人工保" 转为 "CI 保"：yaml SoT 被改但 markdown 忘同步 → 测试红；新 adapter 生成但没登记 yaml → 测试红；registry 某行 level/status 改但 runtime metadata 忘改 → 测试红。
+
+### Next after P42-CLOSURE
+
+按 R4 等 Kogami 明示 —— 候选：
+1. P43 adapter freeze/upgrade 模板化（Kogami 2026-04-20 已预定）
+2. P44 runtime API surface（暴露 truth_level 到 demo_server · P42 Q3=B 推后项）
+3. P45 全量 yaml-ify registry（absorb upstream_source/authority/notes · P42 Q4=A 未做部分）
+4. 其他 · R4 不自选
+
+---
+
+## Archive — prior position (P40 pre-close, before P41/P42)
 
 **P40 drafted & green — awaiting `GATE-P40-CLOSURE: Approved` (2026-04-20)**
 

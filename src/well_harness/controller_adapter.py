@@ -21,18 +21,34 @@ class ControllerTruthMetadata:
     truth_kind: str
     source_of_truth: str
     description: str
+    # P42 (2026-04-20) governance fields · None sentinel = pre-P42/unclassified.
+    # Production adapters MUST set both explicitly (enforced by
+    # tests/test_metadata_registry_consistency.py). Dataclass defaults exist
+    # only for forward-compat loader paths and test fixtures.
+    truth_level: str | None = None
+    status: str | None = None
 
     def to_dict(self) -> dict:
         return controller_truth_metadata_to_dict(self)
 
 
+_GOVERNANCE_FIELDS = ("truth_level", "status")
+
+
 def controller_truth_metadata_to_dict(metadata: ControllerTruthMetadata) -> dict:
-    return {
+    payload = {
         "$schema": CONTROLLER_TRUTH_ADAPTER_METADATA_SCHEMA_ID,
         "kind": CONTROLLER_TRUTH_ADAPTER_METADATA_KIND,
         "version": CONTROLLER_TRUTH_ADAPTER_METADATA_VERSION,
         **asdict(metadata),
     }
+    # P42: drop None-valued governance fields so v1 payload shape is byte-
+    # identical to pre-P42 when governance unset. 字段缺失 = pre-P42/unclassified;
+    # downstream consumers MUST NOT treat missing field as "already governed".
+    for field in _GOVERNANCE_FIELDS:
+        if payload.get(field) is None:
+            payload.pop(field, None)
+    return payload
 
 
 @dataclass(frozen=True)
@@ -88,6 +104,8 @@ REFERENCE_DEPLOY_CONTROLLER_METADATA = ControllerTruthMetadata(
     truth_kind="python-controller-adapter",
     source_of_truth="src/well_harness/controller.py",
     description="Wraps DeployController as the current reference system truth adapter.",
+    truth_level="certified",  # P42: aligned with docs/provenance/adapter_truth_levels.yaml row "thrust-reverser"
+    status="In use",
 )
 
 
