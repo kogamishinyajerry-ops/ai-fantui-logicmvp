@@ -32,6 +32,18 @@ P36β 建立 traceability matrix 时将这 6 处标记为 Appendix A Open Assump
 
 本 supplement **不改** `controller.py` / `models.py` / YAML 任何 value ——它只是**给既有稳定实现加一层可读的 spec 皮肤**。
 
+### 1.4 P41 Discovery 注（2026-04-20）
+
+P41 起草时发现一个 P36β 时期未被识别到的事实：
+
+**`src/well_harness/system_spec.py::current_reference_workbench_spec()` 早已提供完整 thrust-reverser workbench spec**（含 ComponentSpec / LogicNodeSpec / AcceptanceScenarioSpec · 被 6 处引用：`cli.py` / `controller_adapter.py::ReferenceDeployControllerAdapter.load_spec()` / `tests/test_system_spec.py` / 等）。
+
+这意味着 P36β 决定的 "D1=A Lean (no workbench spec per D1=A)" 口径的**真实语义**是：
+- **不是** "thrust-reverser 无 workbench spec"
+- **而是** "`thrust_reverser_intake_packet.py` 层面选择不 populate business fields · 因为 intake packet 是后加的 bridge"
+
+P41 scope C（Kogami 2026-04-20 "Go C"）：仅做**纯文档澄清** + **最简 intake regression test**。不改 `current_reference_workbench_spec()`、不改 `thrust_reverser_intake_packet.py` business fields、不 rename existing spec（破 6 处 callers 稳定性）。
+
 ### 1.3 适用与不适用场景
 
 **适用：**
@@ -240,15 +252,16 @@ Kogami 2026-04-20 接纳上述 authority 定义 + 升级路径。
 
 ---
 
-## §8 · 与原 docx 和 code 的 3 方关系
+## §8 · 与原 docx / code / workbench spec 的 4 方关系 (P41 updated 2026-04-20)
 
-### 8.1 三方角色
+### 8.1 四方角色
 
 | 角色 | 文件 | Authority 级别 | 变更门槛 |
 |------|------|---------------|---------|
 | **真值基准** | `src/well_harness/controller.py` + `models.py` | 代码真值 · 唯一 ground truth | 改动需新 Phase + 三轨回归 |
 | **历史 snapshot** | `uploads/20260409-thrust-reverser-control-logic.docx` | Kogami 内部来源 · 截面式 | 冻结 · 不改动 |
 | **反向补完** | `docs/thrust_reverser/requirements_supplement.md`（本文档）| Kogami 内部自签 · 对 code 的 snapshot 式 spec 皮肤 | 跟 code 同步修订（code 改了此文档也改）|
+| **Workbench spec (P41 discovered)** | `src/well_harness/system_spec.py::current_reference_workbench_spec()`（约 280 行）| 派生于 controller.py + HarnessConfig · ComponentSpec/LogicNodeSpec/AcceptanceScenarioSpec | 跟 code 同步 · 6 处 callers 依赖稳定 |
 
 ### 8.2 冲突消解规则
 

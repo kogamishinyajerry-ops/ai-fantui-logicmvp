@@ -996,3 +996,24 @@ Status: Executed & Green · Awaiting `GATE-P40-CLOSURE: Approved` (Kogami)
 | P40 | CI-level SHA enforcement | Pending closure | - |
 
 **证迹补完第二轮全套**（α/β/γ/δ/ε）完成 · 5 真值链路全部有 truth-level 登记 · 2 certified 链路 Appendix A 全部 resolved · CI 层自动防 tamper。
+
+## Phase P41: thrust-reverser intake packet clarification (scope C · D1=A Lean discovery)
+
+Status: Executed & Green · Awaiting `GATE-P41-CLOSURE: Approved`
+
+**Goal:** P41 起草时发现 `src/well_harness/system_spec.py:273::current_reference_workbench_spec()` 早已提供完整 thrust-reverser workbench spec（6 处 callers）。D1=A Lean 真实语义 = `thrust_reverser_intake_packet.py` intake layer 选择空 tuple，非 "无 spec"。Kogami 2026-04-20 "Go C" 选最简路径：仅 docs 澄清 + 最简 regression test。
+
+**Sub-phases & commits (branch `codex/p41-thrust-reverser-intake-clarification`, base `main 8989268`):**
+- P41-00 (`4c957fe`): Plan (136 行 · scope pivot discovery 时间线 · 3 counter)
+- P41-01 (`cbbddcc`): supplement §1.4 Discovery 注 + §8 升级 3 方→4 方关系 + registry row 1 notes 精准化
+- P41-02 (`4d94b4d`): `tests/test_thrust_reverser_intake_packet.py` 2 tests 防 D1=A Lean 回归
+- P41-05 closure drafted
+
+**三轨（vs P40 head 8989268）：**
+- default pytest: **767 passed** (+2 P41-02 · P40 baseline 765) · e2e 49 identical · adversarial 1 identical
+
+**代码侧 invariants（字节级）：** controller.py / models.py / current_reference_workbench_spec / thrust_reverser_intake_packet.py business fields / 其他 4 adapter / 既有 765 tests 断言 · 全部不变。
+
+**P41 教训：** P36β 起草时未穷举 `ControlSystemWorkbenchSpec` 工厂函数 · 导致 "no workbench spec" 口径 5 Phase 连锁 drift。未来 Phase 起草前应加 **"spec factory grep"** 前置步骤。
+
+**Next phase:** P42 · truth_level 进 ControllerTruthMetadata schema + runtime API（Kogami "连续 3 Phase" 指令第 2 位）
