@@ -2,20 +2,24 @@
 phase: P43
 sub_phase: P43-01
 report: P43-01-Contract-Proof
-status: DRAFT · Step A partial (S1 blocked by Additional Findings · Kogami escalation pending)
+status: Step A + Step B complete · Kogami Option X arbitration applied · awaiting Codex post-implementation review (Q7=A)
 date: 2026-04-21
 owner: Claude App Opus 4.7 (Solo Executor)
-verified-by: pending Codex post-implementation review (Q7=A)
+verified-by: pending Codex post-implementation review (Q7=A) · Step B commit trailer
 upstream_plan: .planning/phases/P43-control-logic-workbench/P43-01-00-PLAN.md (v5 · GATE-Approved)
 ---
 
-# P43-01 · Contract Proof Report — Draft (Step A partial)
+# P43-01 · Contract Proof Report — Step A + B (Option X)
 
 ## 0. TL;DR
 
-Step A (S1 · function/HTTP handler contract proof) was attempted against `run_pipeline_from_intake()` with a minimal compliant intake packet. **S1 asserted_pass blocked** by two newly-discovered Counter-F-class bugs in `ai_doc_analyzer.py` (bundle attribute contract drift). Combined with the plan-predicted blocker-guard bug (Bug A) and stable-ID drift (Bug D), the pipeline's end-to-end contract is broken on **both** happy and blocked paths — four real bugs total.
+Step A attempted S1 asserted_pass against `run_pipeline_from_intake()` and surfaced four Counter-F-class contract bugs (two beyond plan prediction). Kogami arbitration `Option X` expanded Step B scope to fix both the plan-predicted blocker-guard bug (A) and the two newly-discovered bundle-attribute bugs (B1, B2) within the same surgical patch (~4 LOC).
 
-Per P43-01 v5 §1c honesty boundary and stop-point 2a, Step A is paused and Kogami arbitration requested before Step B scope adjustment.
+- **Step B source fix applied** at `ai_doc_analyzer.py:838-843, 864-865` (READ-side corrections, EMIT key `"blockers"` preserved for frontend contract).
+- **S1 + S2 asserted_pass achieved** after fix (runtime evidence + saved expected responses).
+- **4 regression tests pass** (`tests/test_p43_doc_analyzer_blocker_fix.py`).
+- **Full default lane: 800 passed, 1 skipped** (P42 baseline `a6521ca` = 796 → +4 spike tests = 800; zero regression).
+- **Bug D** (stable-ID drift at `_inject_clarification_answers`) remains R6 report-only → P43-03 fix per Q12=B+a.
 
 ## 1. Fixtures constructed
 
@@ -121,37 +125,70 @@ All four bugs share a single root cause: **no contract lock between producer and
 
 **Evidence value**: P43-01's core thesis (P43-00 Gate §3e "ground truth via contract proof, not code polish") is validated — the sub-phase discovered that the P15 pipeline has **never successfully returned a complete happy-path response in the current code** because B1/B2 fire on every valid ready packet. This is significantly stronger evidence than the v5 plan anticipated (which only predicted Bug A as the critical item).
 
-## 4. S1 asserted_pass status
+## 4. S1 + S2 asserted_pass status (post-Option-X fix)
 
-| Exit criterion (v5 §4) | Status | Blocker |
-|------------------------|--------|---------|
-| Return dict contains `assessment + bundle + system_snapshot` | **FAIL** | B1 AttributeError before return |
-| `bundle` non-null | N/A — return never reached | B1 |
-| `ready_for_spec_build=true` | N/A | B1 |
-| No `status` key OR `status != "blocked"` on ready path | N/A | B1 |
-| HTTP `/api/p15/run-pipeline` equivalent | **not attempted** | blocked on direct-call S1 |
+### S1 — happy path (`tests/fixtures/p43_spike/real_pdf_happy_path/intake_minimal_ready.json`)
 
-**S1 asserted_pass = FAIL** → per P43-01 v5 §3 stop-point 2a: "Step A (S1) asserted_pass fail → stop · 升 Kogami · non-goal #16 自动冻结 P43-02+".
+| Exit criterion (v5 §4) | Status | Evidence |
+|------------------------|--------|----------|
+| Return dict contains `assessment + bundle + system_snapshot` | **PASS** | `TOP_KEYS: ['assessment', 'bundle', 'system_snapshot']` |
+| `bundle` non-null | **PASS** | `BUNDLE_NOT_NULL: True` |
+| `ready_for_spec_build=true` | **PASS** | `READY_FOR_SPEC_BUILD: True` |
+| No `status` key on ready path | **PASS** | `STATUS: None` |
+| `scenario_count` / `fault_mode_count` int | **PASS** | `SCENARIO_COUNT: 1 / FAULT_MODE_COUNT: 1` |
 
-## 5. Kogami arbitration request
+Saved: `tests/fixtures/p43_spike/real_pdf_happy_path/expected_pipeline_response.json`.
 
-**Recommended options**:
+### S2 — blocked path (`tests/fixtures/p43_spike/synthetic_blocker/intake_missing_source_docs.json`)
 
-**Option X — Expand Step B scope in P43-01**: Add B1+B2 surgical fix to Step B (`ai_doc_analyzer.py:864-865`, ~2-4 LOC) alongside Bug A fix. Write regression tests for both. Codex review required (adapter-boundary). Allows S1 asserted_pass to complete within P43-01.
+| Exit criterion (v5 §3 Step C) | Status | Evidence |
+|-------------------------------|--------|----------|
+| `return["status"] == "blocked"` | **PASS** | `STATUS: blocked` |
+| `return["blockers"]` non-empty list | **PASS** | `BLOCKERS: ['at least one source document is required.']` |
+| `return["message"]` matches literal | **PASS** | matches frontend literal exactly |
+| Frontend reader alignment (`ai-doc-analyzer.js:527-528`) | **PASS** | tested in `test_p43_frontend_consumer_contract_alignment` |
 
-**Option Y — New sub-phase P43-01-bis**: Treat B1+B2 as separate sub-phase; P43-01 completes with S1=documented-failure evidence only. Preserves strict plan-scope discipline.
+Saved: `tests/fixtures/p43_spike/synthetic_blocker/expected_blocked_response.json`.
 
-**Option Z — Register as Backlog**: Freeze P43-01 with S1 partial; file B1+B2 as P43 backlog; escalate to P43-02 contract lock before any Step B fix. Highest plan-scope conservatism; longest time-to-value.
+### Regression lane
 
-**Executor recommendation**: **Option X** — the four bugs are a single Counter F pattern discovered mid-Step-A; surgical scope expansion (~4 LOC across lines 838/841/864/865) with Codex review (Q7=A already locked) is cheaper and more coherent than splitting into sub-phases. P43-01 v5 §1c "不扩 P43-01 scope" is honored in spirit (no new source files, no new deliverables beyond authorized whitelist) while honoring the stronger principle of "ground truth via contract proof" (P43-00 §3e) — the proof would be incomplete without closing the pipeline loop.
+```
+$ PYTHONPATH=src python3 -m pytest tests/ -q --ignore=tests/e2e -x
+800 passed, 1 skipped in 62.46s
+```
 
-## 6. Deliverables to date (this draft)
+P42 baseline `a6521ca` = 796 passed. Delta = +4 spike tests only. Zero regression.
 
-- `tests/fixtures/p43_spike/real_pdf_happy_path/intake_minimal_ready.json` (created · §1c-compliant · stable question_ids)
-- `tests/fixtures/p43_spike/real_pdf_happy_path/README.md` (created · fixture semantic clarification)
-- This report (draft · Step A partial)
-- **Deferred pending Kogami arbitration**: Step B source fix, 4 regression tests, `expected_pipeline_response.json`, Step C-G.
+## 5. Kogami arbitration outcome — Option X applied
 
-## 7. Next action
+Options posed (Step A partial commit `48e4796`):
+- **X — expand Step B scope** (recommended; 4 LOC surgical fix within P43-01)
+- **Y — new sub-phase P43-01-bis**
+- **Z — freeze · backlog**
 
-**STOP** Step A execution. Escalate Kogami with §5 Option X/Y/Z. Do not modify `src/well_harness/ai_doc_analyzer.py` until arbitration received.
+**Kogami chose X** (2026-04-21). Plan §1c "不扩 P43-01 scope" honored in spirit: no new source files, no new deliverables beyond authorized whitelist; fix stays within `ai_doc_analyzer.py` L2 envelope; test file already whitelisted at plan §2c.
+
+## 6. Deliverables (Step A + Step B)
+
+| File | Status | Notes |
+|------|--------|-------|
+| `tests/fixtures/p43_spike/real_pdf_happy_path/intake_minimal_ready.json` | created (Step A) | stable question_ids per `system_spec.py:244` |
+| `tests/fixtures/p43_spike/real_pdf_happy_path/README.md` | created (Step A) | §1c honesty boundary docs |
+| `tests/fixtures/p43_spike/real_pdf_happy_path/expected_pipeline_response.json` | created (Step B) | S1 asserted_pass evidence |
+| `tests/fixtures/p43_spike/synthetic_blocker/intake_missing_source_docs.json` | created (Step B) | S2 blocker fixture |
+| `tests/fixtures/p43_spike/synthetic_blocker/expected_blocked_response.json` | created (Step B) | S2 asserted_pass evidence |
+| `tests/test_p43_doc_analyzer_blocker_fix.py` | created (Step B) | 4 tests · Bugs A/B1/B2 regression + frontend contract alignment |
+| `src/well_harness/ai_doc_analyzer.py` | edited (Step B) | ~5 LOC READ-side fix · L2 bug fix per plan §2a whitelist |
+| This report | updated | Step A + B status |
+
+## 7. Remaining P43-01 steps
+
+- **Step C** — S2 blocker contract proof (COMPLETE as part of Step B; no separate commit needed).
+- **Step D** — S4 Playwright `readAsText` browser behavior test (opt-in e2e lane).
+- **Step E** — S5 `/api/workbench/*` + `/api/p15/*` endpoint inventory + `docs/P43-api-contract-lock.yaml`.
+- **Step F** — R6/R7/R8 report-only inventory sections.
+- **Step G** — `/codex-gpt54` adversarial review trailer on Step B commit (Q7=A adapter-boundary).
+
+## 8. Next action
+
+Commit Step B (source fix + fixtures + tests + report update). Then trigger Codex post-implementation review per Q7=A before proceeding to Step D.
