@@ -51,6 +51,42 @@ Well Harness 项目目前有 5 条真值链路（4 个 `adapters/*_adapter.py` +
 
 ---
 
+## Machine-readable SoT (P42, 2026-04-20)
+
+The table above is the **human-readable view**; the authoritative machine
+source of truth for the four core governance columns is:
+
+👉 [`adapter_truth_levels.yaml`](adapter_truth_levels.yaml) — *canonical
+SoT consumed by runtime tests.*
+
+### Update protocol (drift guard)
+
+On **any** level/status change or row add/remove:
+
+1. Edit `adapter_truth_levels.yaml` **first**.
+2. Sync this markdown table **in the same commit** (row-for-row mirror of
+   the yaml entries on `system_id`, `truth_level`, `status`).
+3. Update the runtime `ControllerTruthMetadata` instantiation if a level
+   flipped (e.g. `demonstrative → certified`).
+
+`tests/test_metadata_registry_consistency.py` (P42-05) enforces
+bidirectional alignment across three layers:
+
+- **runtime** → every `ControllerTruthMetadata` module-level instance
+  discovered via `importlib` on the modules listed in the yaml entries
+- **yaml** → every entry has a matching runtime instance (no ghost rows)
+- **markdown** → every yaml entry's `system_id` appears in the table above
+  (no silent row drop)
+
+Silent skew therefore cannot land on `main`; a divergent commit fails CI.
+
+Fields exclusive to markdown (`upstream_source`, `authority`,
+`frozen_as_of`, `upgrade_path`, `notes`) are human-authored audit prose
+and are deliberately NOT mirrored into the yaml (P42 Q4=A keeps yaml
+lean; full yaml-ification is a candidate for a later Phase if needed).
+
+---
+
 ## Level 升级流程
 
 从 `demonstrative` → `certified` 的升级必须经过以下步骤（参考 P34 模板）：
