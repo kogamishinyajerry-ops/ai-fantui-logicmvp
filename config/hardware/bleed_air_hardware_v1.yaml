@@ -1,3 +1,10 @@
+# FROZEN (2026-04-20) — demonstrative hardware parameters, no authoritative upstream spec
+# =========================================================================
+# Status: frozen per Kogami 2026-04-20 directive. These parameters were built
+# for capability demonstration, NOT from an authoritative requirement source.
+# MUST NOT be cited as truth in certification, testing, external docs, or
+# customer-facing material. See docs/provenance/adapter_truth_levels.md.
+# =========================================================================
 # P19.15: Bleed Air Valve Hardware Parameters
 kind: "hardware_schema"
 version: "1.0"

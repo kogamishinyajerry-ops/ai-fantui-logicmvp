@@ -7,6 +7,12 @@ through the playback / diagnosis / knowledge capture pipeline stages.
 Usage:
     from well_harness.adapters.bleed_air_intake_packet import build_bleed_air_intake_packet
     packet = build_bleed_air_intake_packet()
+
+FROZEN (2026-04-20) — demonstrative intake packet, no authoritative upstream spec.
+
+This packet's SourceDocumentRef points to the adapter file itself (self-reference)
+because no authoritative upstream document exists. Do not cite this packet as
+audit truth. See docs/provenance/adapter_truth_levels.md.
 """
 from __future__ import annotations
 
