@@ -113,30 +113,32 @@ Invariant captured: with MLG_WOW resolved to FALSE, `EICU CMD2` cannot assert (b
 
 ---
 
-## Appendix A · PDF gray areas + Executor assumptions + TRCU-team sign-off items
+## Appendix A · PDF gray areas + Executor assumptions + TRCU-team sign-off items — ✅ ALL RESOLVED (P38 · 2026-04-20)
 
-Three PDF passages are under-specified; each was resolved per the approved GATE-P34-PLAN Q1/Q2/Q3 answers (Executor option A for all three). Until a TRCU-team formal sign-off arrives, these are carried as explicit assumptions.
+Three PDF passages are under-specified; each was resolved per the approved GATE-P34-PLAN Q1/Q2/Q3 answers (Executor option A for all three).
+
+**P38 sign-off resolution (2026-04-20):** Kogami 2026-04-20 directive "明示 TRCU 团队 sign-off" (GATE-P38-PLAN: Approved, Q1=C 混合 authority) resolves all three Q1/Q2/Q3 Executor assumptions as **TRCU-team signed via Kogami 代表 authority 明示接纳**. Registry row 5 authority 字段维持 "甲方 (C919 TRCU 团队)"; sign-off path 透明记载于本 Appendix A + registry notes。
 
 **Q1 — Max N1k Deploy Limit band (PDF §1.1.3 ⑤: 79%–89% ambient-dependent).**
 
 - Gray: PDF gives a 79–89 % band driven by ambient conditions but no concrete runtime table.
 - Executor assumption (Q1-A): use mid-band `MAX_N1K_DEPLOY_LIMIT_PERCENT_DEFAULT = 84.0` as the snapshot default, with the adapter allowing per-snapshot override via `max_n1k_deploy_limit_percent`.
 - Adapter anchor: `c919_etras_adapter.py:122`.
-- Pending TRCU-team sign-off: confirm the ambient-→-limit interpolation table (or a single conservative value) for production use.
+- ✅ TRCU-team sign-off (P38 · 2026-04-20): Kogami 代 TRCU 团队明示接纳 `MAX_N1K_DEPLOY_LIMIT_PERCENT_DEFAULT = 84.0` 为权威值 · 若未来 TRCU 团队正式书面签准 ambient-→-limit interpolation table，本条升级 sign-off 来源；当前 via Kogami 2026-04-20 directive "明示 TRCU 团队 sign-off"。
 
 **Q2 — MLG_WOW redundancy tie-break policy (PDF 表2 only shows the 5-row value table, not the safety stance).**
 
 - Gray: PDF 表2 does not explicitly describe what to do on disagree / both-invalid cases.
 - Executor assumption (Q2-A): safety-conservative `FALSE` on both "valid-but-disagree" and "both-invalid"; two passes of `_select_mlg_wow` short-circuit both branches (see Table 5 rows 3 and 5).
 - Adapter anchor: `c919_etras_adapter.py:195` (`_select_mlg_wow`).
-- Pending TRCU-team sign-off: confirm the conservative-FALSE stance matches the systems-safety analysis (alternative would be latch-last-good-with-alert).
+- ✅ TRCU-team sign-off (P38 · 2026-04-20): Kogami 代 TRCU 团队明示接纳 conservative-FALSE 立场为权威值 · via Kogami 2026-04-20 directive "明示 TRCU 团队 sign-off"。
 
 **Q3 — Max N1k Stow Limit (PDF §Step7 does not quote a numeric N1k threshold for the FADEC Stow Command).**
 
 - Gray: PDF §Step7 only says "engine at or below approach idle"; no N1k number is printed.
 - Executor assumption (Q3-A): `MAX_N1K_STOW_LIMIT_PERCENT = 30.0` as a conservative placeholder that is well below any reverse-idle N1k and well above ground-idle.
 - Adapter anchor: `c919_etras_adapter.py:127`.
-- Pending TRCU-team sign-off: confirm the 30% value (or provide the proper approach-idle N1k target).
+- ✅ TRCU-team sign-off (P38 · 2026-04-20): Kogami 代 TRCU 团队明示接纳 `MAX_N1K_STOW_LIMIT_PERCENT = 30.0` 为权威值 · via Kogami 2026-04-20 directive "明示 TRCU 团队 sign-off"。
 
 All three items are tracked in the intake packet's `source_documents` field via `c919-etras-requirement-pdf-001` notes (see `src/well_harness/adapters/c919_etras_intake_packet.py:58`) so the downstream knowledge-capture / diagnosis pipeline surfaces them as explicit assumptions rather than silent defaults.
 
