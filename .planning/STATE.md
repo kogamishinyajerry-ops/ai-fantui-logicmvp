@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Provenance backfill Phase 2 complete (α/β/γ/δ/ε) + CI-level SHA enforcement drafted · awaiting GATE-P40-CLOSURE
+status: P41 scope C 执行完成 · D1=A Lean discovery 澄清 · awaiting GATE-P41-CLOSURE
 last_updated: "2026-04-20T00:00:00.000Z"
 last_activity: 2026-04-20
 progress:
-  total_phases: 39
-  completed_phases: 38
+  total_phases: 40
+  completed_phases: 39
   total_plans: 0
   completed_plans: 0
 ---
