@@ -877,3 +877,58 @@ Status: Executed & Green · Awaiting `GATE-P37-CLOSURE: Approved` (Kogami)
 **Plans:** P37-00 Tier 1（4 counterargument · Q1-Q2 仲裁）+ P37-01 supplement + P37-02 4 anchor 联动 + P37-03 三轨零 delta + P37-05 closure drafted 等签。
 
 **Next phase (按 P0-P4 优先级队列)：** 留给 Kogami 明示 —— 候选 P38 P34 PDF 回填 · P39 c919 Appendix A 3 项 sign-off · P40 CI SHA enforcement · 或其他 · R4 不自选。
+
+## Phase P38: c919-etras 证迹完整闭环（PDF 入库 + TRCU sign-off 落地）
+
+Status: Executed & Green · Awaiting `GATE-P38-CLOSURE: Approved` (Kogami)
+
+**Goal:** 按 Kogami 2026-04-20 三条并发指令 (PDF 路径 + "明示 TRCU 团队 sign-off" + "继续推进")，合并原 P38 (PDF 回填) + P39 (c919 Appendix A 3 项 sign-off) 为一个 Phase，按 P37 对称模式完成 c919-etras 证迹闭环。**零代码 · 零阈值 · 零 YAML value · 零 test 改动。**
+
+**Sub-phases & commits (branch `codex/p38-c919-etras-provenance-closure`, base `main db03294`):**
+- P38-00 (`402db31`): Tier 1 plan (295 行 · 4 counter · Q1/Q2)
+- P38-01 (`528aa0d`): `uploads/20260417-C919反推控制逻辑需求文档.pdf` 入库（989 KB · SHA `dbe3f76b…276133a5` · 匹配 P34 记录）
+- P38-02 (`8c7fd70`): 4 anchor 联动（YAML head SHA 固化 · matrix Appendix A 3 项 resolved · registry row 5 更新 · intake notes 扩展）
+- P38-05 closure drafted（本段 + STATE + closure doc + Notion DECISION Pending）
+
+**Q1/Q2 Kogami 2026-04-20 仲裁（GATE-P38-PLAN: Approved）：**
+- Q1 = C · authority 字段维持 "甲方 (TRCU 团队)" · notes 透明记载 Kogami 代 TRCU 明示
+- Q2 = A · YAML head 加 SHA256 固化字段（第 4 位置 SHA 副本）
+
+**三轨回归（vs P37 head db03294）：**
+- default pytest: **762 passed** / 1 skipped / 49 deselected in 98.93s（identical · 零 delta）
+- opt-in e2e: **49 passed** / 763 deselected in 2.60s (identical)
+- adversarial wrapper: **1 passed** in 0.26s (8/8 inside identical)
+
+**c919 Appendix A 3 项全部 resolved：**
+- A.Q1 Max N1k Deploy Limit 84.0% → Kogami 代 TRCU 明示接纳
+- A.Q2 MLG_WOW conservative-FALSE → Kogami 代 TRCU 明示接纳
+- A.Q3 Max N1k Stow Limit 30.0% → Kogami 代 TRCU 明示接纳
+
+**PDF 入库事实：**
+- Path: `uploads/20260417-C919反推控制逻辑需求文档.pdf`
+- SHA256 `dbe3f76b…276133a5` · 完全匹配 P34 cowork 记录
+- 5 位置 SHA 副本（intake notes / YAML head 新加 / matrix / registry notes / closure 引用）
+
+**与 P37 thrust-reverser 对称：** 两条 certified 链路今日证迹全部整齐闭环（thrust-reverser 6 项 supplement resolved · c919-etras 3 项 TRCU sign-off resolved）。
+
+**关键不变量（字节级确认）：**
+- `src/well_harness/adapters/c919_etras_adapter.py` (1444 LOC) 字节级不变
+- `config/hardware/c919_etras_hardware_v1.yaml` `parameters:` 段字节级不变（仅头部 +9 行 SHA/Size/Authority/Phase 字段扩展）
+- `tests/test_c919_etras_adapter.py` (712 LOC · 63 tests) 字节级不变
+- thrust-reverser / bleed_air / efds / landing_gear 任何文件不变
+
+**Exit Criteria (all met):**
+- PDF 入库 uploads/ · SHA 匹配 ✅
+- YAML head SHA 固化 ✅
+- Matrix Appendix A 3 项 resolved ✅
+- Registry row 5 notes + authority 字段更新（其他 4 行字节级不变）✅
+- Intake PDF SourceDocumentRef notes 扩展 ✅
+- 三轨零 delta ✅
+- ROADMAP + STATE 更新 ✅
+- Closure doc 起草 · 等 `GATE-P38-CLOSURE: Approved`
+
+**证迹合规：** v5.2 R1 R2 R3 R4 R5 全部 self-verified 合规（详见 P38-05-CLOSURE.md §v5.2 checklist）。
+
+**Plans:** P38-00 Tier 1 + P38-01..04 顺序执行全绿 + P38-05 closure drafted 等签。
+
+**Next phase:** 按 P0-P4 优先级 · Kogami 明示 —— 候选 P40 CI SHA enforcement · P41 workbench spec · P42 runtime truth_level API · 其他 · R4 不自选。

@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Provenance backfill Phase 2 (γ) executed & awaiting GATE-P37-CLOSURE
+status: Provenance backfill Phase 2 (δ) executed & awaiting GATE-P38-CLOSURE · 2 certified chains fully closed
 last_updated: "2026-04-20T00:00:00.000Z"
 last_activity: 2026-04-20
 progress:
-  total_phases: 37
-  completed_phases: 36
+  total_phases: 38
+  completed_phases: 37
   total_plans: 0
   completed_plans: 0
 ---
@@ -18,41 +18,52 @@ Last activity: 2026-04-20
 
 ## Current Position
 
-**P37 drafted & green — awaiting `GATE-P37-CLOSURE: Approved` (2026-04-20)**
+**P38 drafted & green — awaiting `GATE-P38-CLOSURE: Approved` (2026-04-20)**
 
-Phase: P37 — thrust-reverser 反向需求增补 (code-to-spec backfill · 证迹补完第二轮 γ 段)
+Phase: P38 — c919-etras 证迹完整闭环（PDF 入库 + TRCU sign-off 落地 · 证迹补完第二轮 δ 段）
 
-- Branch `codex/p37-thrust-reverser-requirements-supplement` 3 commits on top of `main 96bacaf`:
-  · `ce5adfc` feat(P37-00): plan (319 lines, Tier 1, 4 counter C1-C4, Q1-Q2 已预签)
-  · `0ba643c` feat(P37-01): docs/thrust_reverser/requirements_supplement.md 297 行（8 段 · A.1-A.6 全覆盖）
-  · `2bc1eeb` docs(P37-02): 4 anchor 联动（matrix Appendix A 6 项 ⚠️→✅ + intake 加 4th SourceDocumentRef + YAML 头 supplement block + registry row 1 notes）
-- Three-lane regression (vs P36β head 96bacaf):
-  · default: **762 passed** / 1 skipped / 49 deselected in 91.27s (identical · 零 delta)
+- Branch `codex/p38-c919-etras-provenance-closure` 3 commits on top of `main db03294`:
+  · `402db31` feat(P38-00): plan (295 行 · Tier 1 · 4 counter · Q1/Q2)
+  · `528aa0d` feat(P38-01): uploads/20260417-C919反推控制逻辑需求文档.pdf 入库（989 KB · SHA 匹配 P34 记录）
+  · `8c7fd70` docs(P38-02): 4 anchor 联动（YAML head SHA 固化 · matrix Appendix A 3 项 ⚠️→✅ · registry row 5 · intake notes）
+- Three-lane regression (vs P37 head db03294):
+  · default: **762 passed** / 1 skipped / 49 deselected in 98.93s (identical · 零 delta)
   · e2e: **49 passed** (identical)
   · adversarial wrapper: **1 passed** (8/8 inside identical)
-- Gates (Kogami 2026-04-20):
-  · `P31-GATE` ✅ · `GATE-P32-CLOSURE` ✅ · `GATE-P34-CLOSURE` ✅ · `GATE-P35-CLOSURE` ✅ · `GATE-P36β-CLOSURE` ✅ · `GATE-P37-PLAN: Approved` ✅ (Q1=A Markdown · Q2=A A.6 一并解决)
-  · `GATE-P37-CLOSURE: Pending` — awaiting Kogami explicit signature
+- Gates (Kogami 2026-04-20, 今日累计 10 个):
+  · P31-GATE · GATE-P32-CLOSURE · GATE-P34-CLOSURE · GATE-P35-PLAN/CLOSURE · GATE-P36β-PLAN/CLOSURE · GATE-P37-PLAN/CLOSURE · GATE-P38-PLAN（Q1=C · Q2=A）✅
+  · `GATE-P38-CLOSURE: Pending`
 
-### Registry 5 rows（see `docs/provenance/adapter_truth_levels.md`）· P37 升级 row 1 authority 定位
+### Registry 5 rows · P38 升级 row 5 (c919-etras) authority
 
 | system_id | truth_level | status | authority |
 |-----------|-------------|--------|-----------|
-| `thrust-reverser` | certified | In use | **Kogami 内部自签**（P37 明示非外部权威）|
+| `thrust-reverser` | certified | In use | Kogami 内部自签（P37 明示非外部权威·Appendix A 6/6 resolved）|
 | `bleed-air-valve` | demonstrative | Frozen | 无 |
 | `emergency_flare_deployment_system` | demonstrative | Frozen | 无 |
 | `minimal_landing_gear_extension` | demonstrative | Frozen | 无 |
-| `c919-etras` | certified | In use | 甲方 (C919 TRCU 团队, 3 项 sign-off TODO) |
+| `c919-etras` | certified | In use | **甲方 (C919 TRCU 团队) · Q1/Q2/Q3 sign-off 由 Kogami 2026-04-20 代 TRCU 明示接纳 (P38)** |
 
-**Appendix A resolution:** thrust-reverser 6 项全部 resolved via P37 supplement（§2-§7 覆盖 A.1-A.6）· c919-etras 3 项 TRCU sign-off TODO 仍 pending（留给后续 P39 候选）
+**Appendix A resolution:** 
+- thrust-reverser 6/6 全部 resolved via P37 supplement（§2-§7）
+- c919-etras 3/3 全部 resolved via P38 Kogami 代 TRCU 明示接纳
+- **2 条 certified 链路证迹全部整齐闭环** 🎯
 
-### Next after P37-CLOSURE
+### PDF/docx 入库事实（完整 provenance trail）
 
-按 P0-P4 优先级队列（Kogami 2026-04-20 "按优先级顺序，逐步深度修复"）：
-1. Executor non-FF merge `codex/p37-thrust-reverser-requirements-supplement` → main (Option M, SHAs preserved)
+- `uploads/20260409-thrust-reverser-control-logic.docx`（P36β · SHA `6e457fe3…276133a5`）
+- `uploads/20260417-C919反推控制逻辑需求文档.pdf`（P38 · SHA `dbe3f76b…276133a5`）
+- 两份源文档均**物理在 git 仓库**，不再 aspirational
+
+### Next after P38-CLOSURE
+
+按 P0-P4 优先级队列：
+1. Executor non-FF merge P38 → main (Option M, SHAs preserved)
 2. Push origin main
-3. Notion flip P37 DECISION Pending → Approved
-4. Kogami 明示下一 P0/P1 方向（候选：P38 P34 PDF 回填 · P39 c919 Appendix A 3 项 sign-off · P40 CI SHA enforcement · 其他 · R4 不自选）
+3. Notion flip P38 DECISION Pending → Approved
+4. Kogami 明示下一方向（候选：P40 CI SHA enforcement · P41 thrust-reverser workbench spec · P42 truth_level runtime API · 其他 · R4 不自选）
+
+**推荐候选 P40** — 基础设施 Phase · 不需 Kogami 外部材料 · 可独立完成 · 防 tamper 闭环。
 
 ### 上一阶段归档（P30 Closed 2026-04-19）
 
