@@ -1018,9 +1018,82 @@ Status: Executed & Green · Awaiting `GATE-P41-CLOSURE: Approved`
 
 **Next phase:** P42 · truth_level 进 ControllerTruthMetadata schema + runtime API（Kogami "连续 3 Phase" 指令第 2 位）
 
+## Phase P43: Control Logic Workbench end-to-end milestone
+
+Status: **Plan v7 GATE-P43-PLAN Approved** (Kogami 2026-04-20) · awaiting P43-01 Contract Proof Spike plan draft
+
+**Goal:** Build a complete Control Logic Workbench enabling: 需求文档导入 → 解析+询问+确认闭环 → frozen spec → 控制逻辑面板渐进生成+连线 → 面板调试+标注修改 → 迭代优化 → 用户 Final Approval → archive. End-to-end user journey 10 steps.
+
+**Path ① governance arc (extends P42 precedent · 6 Codex rounds):**
+
+| Round | v | Codex verdict | Action |
+|-------|---|---------------|--------|
+| r1 | v1 (`81adf39`) | 需阻止（6 counters A-F · incl. 真 bug `blockers`/`blocking_reasons`）| Kogami 路径① → v2 |
+| r2 | v2 (`aa8e03a`) | 需修正·信号强（4 cuts: state.yaml phantom · P43-01 hard-freeze · draft_design_state authority · §3d touched-forbidden）| path ① → v3 |
+| r3 | v3 (`14131c4`) | 需修正·信号强（cuts #1/#2 closed） | path ① → v4 |
+| r4 | v4 (`cf85723`) | 需修正·信号强（3 surgical · "不建议 R4 撤回") | path ① → v5 |
+| r5 | v5 (`292a555`) | 需修正·信号强（3 precise · "值得 v6 最后一次") | **Kogami R4 Option A** → v6 |
+| r6 | v6 (`6e46784`) | 需修正·信号强（3 residuals · "不建议 v7") | **Kogami R4 Option B + strengthen directive** → v7 |
+| — | v7 (`a14dae8`) | **Kogami GATE-P43-PLAN Approved** | Q answers locked per Executor recs |
+
+**Kogami R4 arbitrations (×3):**
+- r5→v6: Option A (surgical 3-fix · Kogami-approved one more path ① cycle)
+- r6→v7: Option B + strengthen-before-Gate directive (KL-1/2/3 promoted from accepted residuals into §3e mechanical)
+- v7: Gate Approved · Q lock · next P43-01 spike
+
+**Plan v7 structure:**
+- §1 user journey 10 steps (Final Approved → demonstrative/Upgrade pending · 非 certified)
+- §3a P43-01 Contract Proof Spike must land first (asserted happy path + failure path + contract lock · non-negotiable freeze if fails)
+- §3c workflow automaton contract (17 state / 10+ event / transition table / error taxonomy / idempotency · non-goal state.yaml)
+- §3d Source Code Whitelist 12 files with L1/L2/L3 ladder + Doc Deliverables Whitelist 6 files + Test Whitelist 7 files + Tooling+CI Whitelist 4 files + Blacklist
+- §3e draft_design_state authority contract R1-R6 mechanical verification (CI/test patterns in default lane + opt-in e2e)
+- §5 C1-C15 self-audit (C7-C15 verified-by codex-gpt54-xhigh)
+- §7 sequencing: 4 gates (Q1=D batching)
+- §8 18-item Exit Criteria
+- §8a Codex r6 KL-1/2/3 closure governance record
+
+**KL-1/2/3 mechanical closure (Kogami strengthen directive · v7):**
+
+| KL | Attack point | v7 §3e mechanical guard |
+|----|-------------|-----------------------|
+| KL-1 · R1 helper scan | `demo_server.py` `build_*_response()` helpers not in handler body scan | `test_r1_helper_payload_builders_no_draft` + `test_r1_handler_call_closure` · AST call-graph closure within demo_server.py |
+| KL-2 · R3 property mutation | `frozenSpec.foo = ...` / alias-mutate bypass | `assignFrozenSpec` MUST call `deepFreeze(newSpec)` recursive `Object.freeze()` · `test_r3_deepfreeze_enforced` static + `test_r3_runtime_mutation_blocked` opt-in |
+| KL-3 · R5 validator behavior | Default lane only checks function exists + failure codes literal | Each fixture case MUST specify `required_substrings_in_validator_source` · Python assertIn static proof of 4 conflict logic paths + P43-09 Exit **MANDATORY** one-time Node parity run |
+
+**Q answers locked (Kogami 2026-04-20):**
+- Q1 = D (4 gates: P43-01 + 3 batches)
+- Q2 = A (workbench.js vanilla JS)
+- Q4 = A (user alias + comment approval)
+- Q7 = A (P43 milestone-wide Codex per touchpoint)
+- Q8 = B (spike lean + primitive API contract table + contract lock)
+- Q10 = B (workflow automaton .md + machine-readable yaml)
+- Q12 = B + a (server-side pypdf+python-docx, no OCR, dual-SHA manifest)
+- Deleted fake Qs (retained as governance record): Q3/Q5/Q6/Q9/Q11/Q13
+
+**Sub-phase batching (Q1=D · 4 gates total):**
+1. P43-01 Contract Proof Spike (independent gate · ~1 day · must land before P43-02+)
+2. P43-02..P43-04 基础线 (合 1 gate · workflow + orchestrator + doc pipeline + Freeze)
+3. P43-05..P43-07 preview 层 (合 1 gate · panel gen + wiring + debug · §3e authority contract 落地)
+4. P43-08..P43-10 收尾 (合 1 gate · iteration + Final Approval demonstrative + archive)
+
+**Commit trail (branch `codex/p43-control-logic-workbench` merged to main `99211bd`):**
+- `81adf39` feat(P43-00): plan v1 · Codex r1 需阻止
+- `aa8e03a` docs(P43-00): plan v2 path ① · Codex r2 需修正
+- `14131c4` docs(P43-00): plan v3 · Codex r3 需修正
+- `cf85723` docs(P43-00): plan v4 · Codex r4 需修正
+- `292a555` docs(P43-00): plan v5 · Codex r5 需修正 · Kogami Option A
+- `6e46784` docs(P43-00): plan v6 · Codex r6 需修正 · Kogami Option B
+- `506c870` docs(P43-00): plan v6 frozen + §8a Appendix A (initial Option B accept-residual)
+- `a14dae8` docs(P43-00): plan v7 · Kogami strengthen directive · KL-1/2/3 closed · GATE-P43-PLAN Approved
+- `99211bd` Merge to main (non-FF · SHAs preserved)
+
+**Next phase:** P43-01 Contract Proof Spike · Executor draft `P43-01-00-PLAN.md` (8 scope items · must include real pdf end-to-end + blocker bug fix + primitive contract lock) · submit independent GATE-P43-01-PLAN. If spike asserted_pass fails → P43-02+ auto-frozen (non-goal #16 hard rule).
+
+---
+
 ## Phase P42: truth_level + status into ControllerTruthMetadata schema + machine SoT + generator fix (path ①)
 
-Status: Executed & Green · Awaiting `GATE-P42-CLOSURE: Approved`
+Status: CLOSED (merged to main `a6521ca` 2026-04-20)
 
 **Goal:** Mirror the P35α 2-dimensional registry (truth_level + status) into the runtime `ControllerTruthMetadata` dataclass + JSON schema, close the three-way drift (runtime / docs markdown / tests) via a machine-readable yaml SoT, and fix the `generate_adapter.py` shadow-class hole that would let future auto-generated adapters bypass governance entirely.
 

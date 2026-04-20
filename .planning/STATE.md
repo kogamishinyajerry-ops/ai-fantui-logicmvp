@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: P42 v2 executed & green · path ① post-Codex remediation · awaiting GATE-P42-CLOSURE
+status: P42 CLOSED · P43 plan v7 GATE-P43-PLAN Approved · P43-01 Contract Proof Spike next
 last_updated: "2026-04-20T00:00:00.000Z"
 last_activity: 2026-04-20
 progress:
-  total_phases: 42
-  completed_phases: 41
-  total_plans: 0
+  total_phases: 43
+  completed_phases: 42
+  total_plans: 1
   completed_plans: 0
 ---
 
@@ -17,6 +17,41 @@ progress:
 Last activity: 2026-04-20
 
 ## Current Position
+
+**P43 milestone plan v7 GATE-Approved (Kogami 2026-04-20) · P43-01 Contract Proof Spike next**
+
+Phase: P43 — Control Logic Workbench end-to-end milestone
+
+- Branch `codex/p43-control-logic-workbench` merged to `main` via non-FF (`99211bd`)
+- 7 plan revisions v1→v7 · 6 Codex adversarial rounds · 3 Kogami R4 arbitrations
+- v7 closes all Codex r6 residuals (KL-1/2/3) via Kogami strengthen-before-Gate directive
+- §3d 12+ file whitelist with L1/L2/L3 ladder · §3e 6 authority contract rules (R1-R6) mechanically verifiable in default lane
+- Q answers locked: Q1=D (4 gates) · Q2=A (vanilla JS) · Q4=A (alias approval) · Q7=A (Codex per touchpoint) · Q8=B (spike + contract lock) · Q10=B (md+yaml) · Q12=B+a (server-side pypdf+docx, no OCR)
+
+### Codex adversarial review (P43 · 6 rounds · path ① governance arc)
+
+P43 path ① governance pattern extends P42 precedent. 6 rounds of adversarial review refined plan from v1 needing-block through surgical closure:
+
+| r | v | verdict | action |
+|---|---|---------|--------|
+| 1 | v1 | 需阻止（6 counters A-F） | Kogami path ① → v2 |
+| 2 | v2 | 需修正·信号强（4 cuts） | path ① → v3 |
+| 3 | v3 | 需修正·信号强 | path ① → v4 |
+| 4 | v4 | 需修正·信号强（3 surgical） | path ① → v5 |
+| 5 | v5 | 需修正·信号强（3 precise · "值得 v6 最后一次") | Kogami Option A → v6 |
+| 6 | v6 | 需修正·信号强（3 residuals · "不建议 v7") | Kogami Option B + strengthen directive → **v7 Gate Approved** |
+
+### Next after GATE-P43-PLAN (v7) Approved
+
+按 Q1=D gate batching strategy：
+1. Draft `P43-01-00-PLAN.md` (Contract Proof Spike · 8 scope items · ~1 day · ~200 LOC fix + docs + asserted-pass harness)
+2. Submit independent GATE-P43-01-PLAN
+3. After GATE-P43-01-PLAN Approved → execute P43-01 · produce `docs/P43-contract-proof-report.md` + `docs/P43-api-contract-lock.yaml`
+4. Kogami re-review post-spike → determine whether P43-02..10 scope holds or v8 needed
+
+---
+
+## Archive — prior position (P42 CLOSED 2026-04-20)
 
 **P42 v2 executed & green — awaiting `GATE-P42-CLOSURE: Approved` (2026-04-20)**
 
