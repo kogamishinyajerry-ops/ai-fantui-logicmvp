@@ -350,6 +350,40 @@ All 9 exit criteria asserted_pass. Evidence anchored to commits, files, and test
 | 6 | **S5 asserted_pass** · `docs/P43-api-contract-lock.yaml` covers `/api/workbench/*` + `/api/p15/*` with success/blocked/error branches | **PASS (post-scrub)** | `docs/P43-api-contract-lock.yaml` (commit `7fd243d` · expanded in Step G scrub) · 7 endpoints · YAML parses cleanly · response-200 success variants + handler-specific 400s + structured-optional-field family on `/api/workbench/bundle` (15 field-level entries covering the `_optional_request_str/_float/_object/_string_list` validator surface) + 6 global guards documented. |
 | 7 | **R6/R7/R8 report** · 3 inventory conclusions + fix checklist | **PASS** | §10 (S4) + §11 (S5) + §12 (R6/R7/R8) · each registered with code anchors and fix ownership (P43-03 for R6 Bug D · post-P43 workbench-generalization for R7 · future dataclass promotion for R8 handoff shape). |
 | 8 | **Three-lane regression** vs P42 baseline `a6521ca` | **PASS** | Default pytest **800 passed, 1 skipped** (P42 baseline 796 + 4 spike default tests) · E2E **50 passed** (P42 baseline 49 + 1 Playwright readAsText e2e · includes `test_resilience_adversarial_truth_engine_still_passes` adversarial wrapper at `tests/e2e/test_demo_resilience.py:132`) · zero regression across both lanes · re-run 2026-04-21. |
-| 9 | **Report complete + 2 Codex adversarial rounds** (Step B + Step G) | **Step B PASS · Step G round 1 `需修正·信号弱` → scrub 1 → round 2 `需修正·信号强` → scrub 2 applied in this revision · round 3 pending** | Step B review complete (`可过-Gate` · §9 trailer · commit `8d76cf5`). Step G round 1 (commit `4d40aee`): `需修正·信号弱` — 3 fixes (S5 YAML enumeration, S4 wording, closure governance) applied in commit `6729768`. Step G round 2 (commit `6729768`): `需修正·信号强` — 7 further drift items (bundle/archive-restore additional 400 branches, repair `apply_all_safe` truthiness, stale error-branch counts in both reports, §10 "same behavior for .pdf and .docx" overreach, detailed report frontmatter stale). All 7 items fixed in this scrub commit. Codex round 3 to be re-invoked; Gate endorsement conditional on `可过-Gate` verdict. |
+| 9 | **Report complete + 2 Codex adversarial rounds** (Step B + Step G) | **PASS · Codex Step G round 4 `可过-Gate` on commit `9a51183`** | Step B `可过-Gate` (trailer §9 · commit `8d76cf5`). Step G arc (4 Codex rounds over 4 scrub commits): r1 (4d40aee) 需修正·信号弱 → scrub 1 (6729768) closing 3 fixes → r2 (6729768) 需修正·信号强 → scrub 2 (e86a8cc) closing 7 drift items → r3 (e86a8cc) 需修正·信号弱 → scrub 3 (9a51183) closing 1 trigger-text drift → **r4 (9a51183) 可过-Gate** with endorsement quoted at §14. All other round-1/2/3 fixes held across scrubs. |
 
 **Non-goal #16 self-audit** (from P43-00 plan — "不以 '列出断裂' 为通过条件"): PASS. P43-01 did not merely list broken paths — it (a) fixed three critical Counter-F bugs (A/B1/B2) with surgical source edits and regression tests, (b) produced asserted_pass evidence on both happy and blocked paths, (c) provided a canonical API contract lock YAML for downstream phases, and (d) confirmed (not assumed) the readAsText pipeline is broken via headless-browser evidence.
+
+## 14. Codex Step G review trailer · rounds 1–4 (2026-04-21)
+
+Step G required Codex review per plan Q7=A (milestone-wide adapter-boundary rule). Four rounds were completed with progressive signal downgrade:
+
+| Round | Commit reviewed | Verdict | Required fixes |
+|-------|-----------------|---------|----------------|
+| r1 | `4d40aee` | 需修正·信号弱 | (i) S5 YAML undersized enumeration on `/api/workbench/bundle`; (ii) S4 wording overreach beyond pdf-only test evidence; (iii) closure governance inversion (detailed-report-as-authoritative vs plan §2b-whitelisted summary). |
+| r2 | `6729768` | 需修正·信号强 | 7 further drift items: (1) bundle `sample_period_s ≤ 0` branch missing; (2) archive-restore non-string manifest_path distinct branch missing; (3) repair `apply_all_safe` is truthiness not strict bool; (4) §13 count stale (19 vs actual 36+6); (5) §11 table counts stale; (6) §10 "same behavior for .pdf and .docx" overreach; (7) detailed report frontmatter stale. |
+| r3 | `e86a8cc` | 需修正·信号弱 | Single finding: `/api/workbench/repair` error_branches trigger text at yaml:213-216 still said `apply_all_safe != true`; schema at yaml:193-201 correct (truthiness) but trigger text lagged. |
+| r4 | `9a51183` | **可过-Gate** | No blocking findings. |
+
+**Codex Step G round 4 verdict (`9a51183`)**, verbatim:
+
+> No blocking findings.
+>
+> Verdict: `可过-Gate`.
+>
+> 1. `docs/P43-api-contract-lock.yaml:216` now matches the actual guard in `src/well_harness/demo_server.py:2662`: `request_payload.get("apply_all_safe", False)` rejects missing or falsy values, and truthy non-bool values do pass.
+> 2. The YAML is still valid; parsed with `python3`/PyYAML, and the request schema note at `docs/P43-api-contract-lock.yaml:193` is internally consistent with the repaired error-branch text at line 216. Both now describe truthiness-based behavior rather than strict `== true`.
+> 3. No new drift was introduced by `9a51183`. `git show` confirms this commit only changes `docs/P43-api-contract-lock.yaml`, and `git diff --check` is clean.
+>
+> `GATE-P43-01-CLOSURE: Commit 9a51183 closes the Step G contract-lock gap; /api/workbench/repair now truthfully documents apply_all_safe as a truthiness guard, the YAML remains valid and internally consistent, and no new drift was introduced.`
+
+**Optional polish flagged by round 4** (explicitly non-blocking):
+- `src/well_harness/demo_server.py:2666` error message still says `"apply_all_safe must be true"` even though the runtime guard is truthiness-based. Either soften to "must be truthy" or harden the handler to strict boolean in a later slice. **Candidate for P43-02 or a standalone cleanup slice — not in P43-01 scope.**
+
+## 15. GATE-P43-01-CLOSURE submission
+
+**Status**: Ready for Kogami review.
+
+**Executor signoff** (Solo Executor v5.2 + v5.3 addendum): Steps A through G executed per plan. Kogami Option X arbitration applied at Step B. Codex rounds complete: Step B `可过-Gate`, Step G r1–r4 culminating in `可过-Gate` on `9a51183`. All 9 Exit Criteria PASS (§13). Non-goal #16 self-audit PASS. Three-lane regression green. Plan-whitelisted deliverables present (`docs/P43-contract-proof-report.md`, `docs/P43-api-contract-lock.yaml`). Bug D deferred to P43-03 per Q12=B+a. R7 deferred to post-P43 workbench-generalization. R8 inventory-only. One optional polish (`demo_server.py:2666` error message) surfaces as future-slice candidate.
+
+**Kogami arbitration request**: Approve GATE-P43-01-CLOSURE and authorize P43-02 (workflow / orchestrator / panel) kickoff, or specify additional fixes required.
