@@ -1,0 +1,324 @@
+# P34: C919 E-TRAS (Electric Thrust Reverser Actuation System) Hardware Parameters
+# ==================================================================================
+# Version:       1.0
+# System:        c919-etras
+# Source:        20260417 C919反推控制逻辑需求文档.pdf (10 pages)
+# Phase:         P34 (手工接入第 5 条真实航空链路)
+# Kogami:        GATE-P34-PLAN Approved 2026-04-20, Q1/Q2/Q3 → Executor recommendations
+# Freeze rule:   Do NOT modify thrust_reverser_hardware_v1.yaml — this file is a
+#                new sibling, not a replacement. The simplified thrust-reverser
+#                baseline remains intact for legacy demos and adversarial tests.
+#
+# PDF traceability (每个字段都指向 PDF 某段)：
+#   表 1 (p.1)        → physical_limits.component_counts
+#   §1.1.1 图 2 (p.5) → logic_thresholds.eicu_cmd2_*  + timing.confirmation_0_5_s
+#   §1.1.2 图 3 (p.7) → logic_thresholds.eicu_cmd3_*
+#   §1.1.2 图 4 (p.8) → logic_thresholds.tr_command3_enable_* + timing.tr_stowed_locked_confirm_s
+#   §1.1.3 图 5 (p.9) → logic_thresholds.fadec_deploy_cmd1_* + timing.lock_confirmation_400ms_s
+#   Step 1~10 (p.2-4) → timing.deploy_* / timing.stow_* / timing.idle_to_max_s
+#   表 2 (p.5)        → 硬件层无对应；选择逻辑在 adapter 实现
+#   §1.1.3 ⑤          → logic_thresholds.max_n1k_deploy_limit_*
+#   §1.1.3 ④          → timing.tr_wow_true_persist_s / tr_wow_false_persist_s
+
+kind: "hardware_schema"
+version: "1.0"
+system_id: "c919-etras"
+
+sensor:
+  # --- 飞机系统输入 (A/C) ---
+  mlg_wow:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "Selected main landing gear weight-on-wheels (after LGCU1/LGCU2 redundancy selection per PDF 表2)."
+  tr_inhibited:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "Electrical TR inhibition signal from A/C bus (PDF §1.1.1 ②)."
+  lgcu1_mlg_wow_value:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "Raw MLG_WOW value from LGCU1 before redundancy selection."
+  lgcu1_mlg_wow_valid:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "Validity flag for LGCU1_MLG_WOW (PDF 表2 columns 1)."
+  lgcu2_mlg_wow_value:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "Raw MLG_WOW value from LGCU2 before redundancy selection."
+  lgcu2_mlg_wow_valid:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "Validity flag for LGCU2_MLG_WOW (PDF 表2 columns 2)."
+
+  # --- 油门台输入 ---
+  tra_deg:
+    min: -32.0
+    max: 10.0
+    unit: "deg"
+    note: "Throttle Resolver Angle. Positive=forward thrust, negative=reverse. PDF: TRA>-1.4° = FWD idle, TRA<-11.74° = reverse idle, TRA=0° = stow position."
+  atltla:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "Microswitch 1 through 115VAC 1-phase relay signal (PDF §Step2: 闭合 when TRA ∈ [-1.4°, -6.2°])."
+  apwtla:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "Microswitch 2 signal (PDF §Step2: 闭合 when TRA ∈ [-5°, -9.8°])."
+
+  # --- TR 装置传感器 ---
+  tr_position_percent:
+    min: 0.0
+    max: 100.0
+    unit: "percent"
+    note: "Actuator VDT measured TR deployment position. 0=stowed, 100=fully deployed. TR_Deployed = (position >= 80%)."
+  vdt_sensor_valid:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "VDT position sensor validity flag."
+  tls_ls_a_unlocked:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "Tertiary Lock System sensor A — true when unlocked."
+  tls_ls_a_valid:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  tls_ls_b_unlocked:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "Tertiary Lock System sensor B — true when unlocked."
+  tls_ls_b_valid:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  left_pylon_ls_a_unlocked:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  left_pylon_ls_a_valid:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  left_pylon_ls_b_unlocked:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  left_pylon_ls_b_valid:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  right_pylon_ls_a_unlocked:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  right_pylon_ls_a_valid:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  right_pylon_ls_b_unlocked:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  right_pylon_ls_b_valid:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  pls_ls_a_locked:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "Primary Lock System sensor A — true when locked (PLS is locked when reverser stowed)."
+  pls_ls_b_locked:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  e_tras_over_temp_fault:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "TRCU over-temperature fault word — triggers TR_Emergency_Stop (PDF §1.1.2 图4 ④)."
+  trcu_power_on:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "Whether 115VAC 3-phase is currently powering TRCU input."
+
+  # --- FADEC / EICU 输出 (read by adapter when adapter is asked to state-probe) ---
+  eicu_cmd2:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  eicu_cmd3:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  tr_command3_enable:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  fadec_deploy_command:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  fadec_stow_command:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  tr_wow:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "FADEC-derived WOW with 2.25s-TRUE / 120ms-FALSE persistence (PDF §1.1.3 ④)."
+
+  # --- 模式 / 工况 ---
+  engine_running:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "Engine at or above idle (PDF §1.1.2 ①)."
+  fadec_maintenance_mode:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  tr_maintenance_command_from_ac:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  trcu_in_menu_mode:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+  n1k_percent:
+    min: 0.0
+    max: 110.0
+    unit: "percent"
+    note: "Corrected fan speed (%). Max N1k Deploy Limit ≈ 79%-89% depending on ambient temp/press."
+
+  # --- 持续时间过滤器状态 (snapshot 调用方维护) ---
+  comm2_timer_s:
+    min: 0.0
+    max: 300.0
+    unit: "second"
+    note: "EICU internal Comm2 timer. Initialized 0 on EICU powerup; reset to 0 on ATLTLA 0->1; accumulates while ATLTLA=TRUE (PDF §1.1.1 ③)."
+  tr_position_deployed_confirm_s:
+    min: 0.0
+    max: 60.0
+    unit: "second"
+    note: "Duration TR_Position has continuously been >= 80% (required ≥ 0.5s per PDF §1.1.1 figure)."
+  tr_stowed_locked_confirm_s:
+    min: 0.0
+    max: 60.0
+    unit: "second"
+    note: "Duration all stow/lock conditions continuously satisfied (required ≥ 1.0s per PDF §1.1.2 图4 ①)."
+  lock_unlock_confirm_s:
+    min: 0.0
+    max: 60.0
+    unit: "second"
+    note: "Duration lock-unlock fallback path (≥1/2 sensors valid+unlocked) continuously satisfied (required ≥ 0.4s per PDF §1.1.3 ③)."
+  prev_eicu_cmd3:
+    min: 0.0
+    max: 1.0
+    unit: "bool"
+    note: "Previous EICU_CMD3 latch value — required because CMD3 is an S-R flipflop (PDF §1.1.2 图3)."
+
+logic_thresholds:
+  # PDF §Step2: SW1 window [-1.4°, -6.2°]
+  sw1_window_near_zero_deg: -1.4
+  sw1_window_deep_reverse_deg: -6.2
+  # PDF §Step2: SW2 window [-5°, -9.8°]
+  sw2_window_near_zero_deg: -5.0
+  sw2_window_deep_reverse_deg: -9.8
+  # PDF §1.1.1 ④ / §Step4: TR_Deployed 判定阈值
+  tr_deployed_position_percent: 80.0
+  # PDF §1.1.2 图4 ②: TRA above or at FWD Idle
+  tra_fwd_idle_threshold_deg: -1.4
+  # PDF §1.1.3 ⑥: TRA < -11.74deg for Deploy Command
+  tra_reverse_idle_threshold_deg: -11.74
+  # PDF §1.1.3 ⑤: Max N1k Deploy Limit 79%-89% 区间
+  max_n1k_deploy_limit_percent_min: 79.0
+  max_n1k_deploy_limit_percent_max: 89.0
+  # PDF §Step7: Max N1k Stow Limit — 数值未明确，Q3-A 取 30% placeholder
+  # (Kogami GATE-P34-PLAN Approved; 此值为工程常识 assumption，traceability matrix 明示)
+  max_n1k_stow_limit_percent: 30.0
+  # PDF §Step2: 反推慢车位 TRA = -11.74deg (同 tra_reverse_idle_threshold_deg)
+  tra_reverse_idle_position_deg: -11.74
+  # PDF §Step6: TRA=0 = 反推收起位
+  tra_stow_position_deg: 0.0
+
+physical_limits:
+  # PDF 表1 数量：单发部件计数
+  actuator_count: 4                    # 机械作动筒×4
+  pylon_lock_count: 2                  # 吊挂锁×2
+  tls_count: 1                         # 第三锁系统×1
+  pls_count: 1                         # PLS×1 (图1 上锁机构)
+  pmdu_count: 1                        # PMDU×1
+  trcu_count: 1                        # TRCU×1
+  flexible_coupling_count: 4           # 柔性连杆×4
+  cable_quick_disconnect_count: 1
+  tr_contactor_count: 1                # 反推控制接触器×1
+  tls_relay_count: 1                   # 第三锁控制继电器×1
+  manual_inhibit_cb_count: 1           # 手动抑制断路器×1
+  # EICU 模块数 (PDF 表1 注: 单个 EICU 两独立模块控双发)
+  eicu_count: 1
+  eicu_modules_per_unit: 2
+  # 电源
+  trcu_supply_voltage_vac: 115.0       # 三相电到 TRCU
+  lock_supply_voltage_vac: 115.0       # 单相电到 TLS+吊挂锁
+  supply_frequency_hz: 400.0           # 航空标准 115VAC 400Hz
+  # 反推行程
+  tr_position_min_percent: 0.0
+  tr_position_max_percent: 100.0
+
+timing:
+  # PDF §Step3: 展开时间 2~3s (环境相关)
+  deploy_time_min_s: 2.0
+  deploy_time_max_s: 3.0
+  # PDF §Step5: 反推慢车至反推最大 ~5s
+  idle_to_max_thrust_s: 5.0
+  # PDF §Step6: 转速下降 ~7.5s
+  engine_rpm_ramp_down_s: 7.5
+  # PDF §Step8: 收起 ~3s
+  stow_time_s: 3.0
+  # PDF §Step9: 最大反推至完全收起 ~11s
+  max_to_fully_stowed_total_s: 11.0
+  # PDF §Step10: FADEC 确认反推已收起 1s
+  fadec_confirm_stowed_s: 1.0
+  # PDF §1.1.1 ④ (图2): Confirmation time 0.5s for TR Position is Deployed
+  confirmation_0_5_s: 0.5
+  # PDF §1.1.1 ③: Comm2 timer limit
+  comm2_timer_limit_s: 30.0
+  # PDF §1.1.2 图4 ①: TR Stowed & Locked 1s Persistence time
+  tr_stowed_locked_confirm_s: 1.0
+  # PDF §1.1.3 ③: 400ms 确认 for lock-unlock fallback path
+  lock_confirmation_400ms_s: 0.4
+  # PDF §1.1.3 ④: TR_WOW persistence asymmetric
+  tr_wow_true_persist_s: 2.25
+  tr_wow_false_persist_s: 0.12
+
+valid_outcomes:
+  - "eicu_cmd2_on"
+  - "eicu_cmd2_off"
+  - "eicu_cmd3_on"
+  - "eicu_cmd3_off"
+  - "tr_command3_enable_on"
+  - "tr_command3_enable_off"
+  - "fadec_deploy_command_on"
+  - "fadec_deploy_command_off"
+  - "fadec_stow_command_on"
+  - "fadec_stow_command_off"
+  - "tr_deployed"
+  - "tr_stowed_locked"
+  - "tr_emergency_stop"
+  - "tr_inhibited_blocked"

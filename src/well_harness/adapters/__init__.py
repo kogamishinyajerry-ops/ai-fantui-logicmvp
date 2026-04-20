@@ -8,6 +8,11 @@ from well_harness.adapters.efds_adapter import (
     EFDSControllerAdapter,
     build_efds_controller_adapter,
 )
+from well_harness.adapters.c919_etras_adapter import (
+    C919_ETRAS_CONTROLLER_METADATA,
+    C919ETRASControllerAdapter,
+    build_c919_etras_controller_adapter,
+)
 
 __all__ = [
     "LANDING_GEAR_CONTROLLER_METADATA",
@@ -16,4 +21,7 @@ __all__ = [
     "EFDS_CONTROLLER_METADATA",
     "EFDSControllerAdapter",
     "build_efds_controller_adapter",
+    "C919_ETRAS_CONTROLLER_METADATA",
+    "C919ETRASControllerAdapter",
+    "build_c919_etras_controller_adapter",
 ]
