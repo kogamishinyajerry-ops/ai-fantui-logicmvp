@@ -1,9 +1,9 @@
 ---
 phase: P43
 plan: P43-00
-plan_revision: v6 (post-Codex-round-5 · path ① surgical · 3-fix final · Kogami-approved cycle)
-title: Control Logic Workbench end-to-end milestone — v6 · delete validator Python port + fix R2/R6 contradiction + fix FastAPI→BaseHTTPRequestHandler
-status: re-drafted · Awaiting GATE-P43-PLAN (v6) (Kogami · 最后一轮)
+plan_revision: v6 (frozen · 3 residuals accepted as §8a Appendix A known limitations · Kogami Option B arbitration)
+title: Control Logic Workbench end-to-end milestone — v6 (frozen) · 3 cuts applied + 3 residuals documented
+status: frozen · READY for GATE-P43-PLAN (v6) review (Kogami)
 date: 2026-04-20
 owner: Claude App Opus 4.7 (Solo Executor) · v5.2 solo-signed + v5.3 addendum
 verified-by: codex-gpt54-xhigh (r1 需阻止 · r2/r3/r4/r5 需修正·信号强 · r5 明示 "值得 v6 最后一次 · 只修 3 刀" · Kogami 批 option A · v6 3 surgical fixes applied)
@@ -17,6 +17,8 @@ preconditions:
   - v4 (`cf85723`) → Codex r4 需修正·信号强（3 surgical residual）· 明示 "不建议 R4 撤回"
   - v5 (`292a555`) → Codex r5 需修正·信号强（3 精准残留：Python-port fork 未授权 · R2/R6 自撞 · FastAPI category error）· r5 明示 "值得 v6 最后一次 · 只修 3 刀 · 之后不再 path ①"
   - Kogami 2026-04-20 · v5 后 R4 仲裁 **Option A**（v6 最后 surgical · 3 刀）· 批准继续 path ① 一次
+  - v6 (`6e46784`) → Codex r6 需修正·信号强（3 残留：R1 helper 扫描深度 · R3 原位 mutation · R5 默认 lane 不验行为）· r6 明示 "不建议 v7 · Option B/C"
+  - Kogami 2026-04-20 · v6 后 R4 仲裁 **Option B**：freeze v6 · 3 残留作 §8a Appendix A known limitations 显式接受 · 进 GATE-P43-PLAN (v6) 审 · 由 P43-01 Contract Proof Spike 实跑 evidence 再评
   - v5.3 addendum 生效 · adapter-boundary 硬性规则 Codex review 必调
 non-goals:
   - 本 P43-00 v3 不写任何 src 代码
@@ -39,9 +41,30 @@ non-goals:
   - **`draft_design_state` authority contract 6 条规则（R1-R6）须可机械验证**（Codex r3 · cut #3 mechanize）· 每条规则有具体 CI / 静态扫 / 单元测试 pattern · P43-02 Exit Criteria 硬性要求 test 实装
 ---
 
-# P43 · Control Logic Workbench milestone (v6) — final surgical 3-fix (Kogami Option A)
+# P43 · Control Logic Workbench milestone (v6 · frozen · Option B)
 
-## 0. TL;DR · v5 → v6 差异（Codex r5 verdict · Kogami Option A · 3 surgical · 最后一次 path ①）
+## 0. TL;DR · v6 frozen state（Kogami Option B arbitration · 2026-04-20）
+
+v6 作为 P43 milestone plan 的终版冻结。path ① 已走完 6 轮 · Codex r1-r6 全程参与 · v6 实装了 r1-r5 全部 counters + cuts + surgical fixes · Codex r6 余 3 条结构性残留 · 其性质为 **"plan 层无法完全机械化 · 需实跑 evidence"** · Kogami R4 仲裁 Option B：
+
+- **v6 冻结** · 3 残留作 §8a Appendix A known limitations 显式接受
+- **进入 GATE-P43-PLAN (v6) 审** · 此文提交 Kogami 仲裁 Q1/Q2/Q4/Q7/Q8/Q10/Q12
+- **若 Gate Approved** → 立即启动 P43-01 Contract Proof Spike · 实跑 KL-1/2/3 residual
+- **若 P43-01 揭示残留真 exploit** → P43-02 plan v2 强化 · 非 P43-00 plan v7
+- **Path ① 硬停于 v6** · 不再自动 iterate · 实跑证据胜过 plan 层反复 remediation
+
+**6 轮 remediation 累计产物（保留 · 作 v6 基础）：**
+
+| Round | v | Codex verdict | 处理 |
+|-------|---|---------------|------|
+| r1 | v1 | 需阻止（6 counters A-F） | path ① → v2 (Kogami 明示) |
+| r2 | v2 | 需修正·信号强（4 cuts） | path ① → v3 (Executor 自启动 per v5.3) |
+| r3 | v3 | 需修正·信号强（cuts #1/#2 closed） | path ① → v4 |
+| r4 | v4 | 需修正·信号强（3 surgical · r4 "不建议 R4 撤回") | path ① → v5 |
+| r5 | v5 | 需修正·信号强（3 precise · r5 "值得 v6 最后一次") | Kogami Option A → v6 |
+| r6 | v6 | 需修正·信号强（3 residual · r6 "不建议 v7") | **Kogami Option B → freeze + Appendix A** |
+
+## 0a. TL;DR · v5 → v6 差异（Codex r5 verdict · Kogami Option A · 3 surgical · 最后一次 path ①）
 
 Codex r5 判 v5 "需修正·信号强" · 3 精准残留 · 明示 "值得 v6 最后一次"。Kogami 2026-04-20 R4 仲裁选 Option A：v6 只修 3 刀 · 之后硬停 path ①。
 
@@ -247,6 +270,7 @@ v3 规则"未列入 touched-files 则 violation"与 §3a/§8 要求新建多份 
 | `tests/test_p43_archive_backward_compat.py` | P43-02 | 既有 archive restore 回归 |
 | `tests/test_p43_api_contract_lock.py` | P43-02 | `/api/workbench/*` endpoint shape 回归 |
 | `tests/test_p43_multi_tab_lock.py` | P43-02 | C13 cross-tab lock 场景 |
+| `tests/fixtures/p43_validator_cases.json` **(v6 显式 · Codex r6 whitelist 自撞修正)** | P43-02 | §3e R5 fixture-only validator I/O（describes expected output · 不复制规则） |
 
 其他 tests/ 文件新建需 Executor 判是否合理 · 超出列表须加 §3d 更新。
 
@@ -495,6 +519,36 @@ P43-08..P43-10 iteration + approval + archive（合 1 gate · reiterate loop + F
 
 ---
 
+## 8a. Appendix A · Known Limitations Accepted at GATE-P43-PLAN (v6)
+
+**治理依据**：Codex round 6 review returned "需修正·信号强" with 3 residuals that cannot be mechanized at plan layer alone · Kogami R4 Option B arbitration (2026-04-20) accepts these residuals explicitly at Gate · residuals to be re-evaluated when P43-01 Contract Proof Spike produces real runtime evidence.
+
+**Plan-layer path ① exhausted**：6 rounds (r1→r6) · Codex r6 明示 "不建议 v7 · 建议 Option B 或 C" · Kogami 选 B · freeze v6 at this state.
+
+**KL-1 · R1 backend scan depth limited to handler method bodies**
+- **Limitation**：`test_r1_backend_no_draft_state_emission` scans `do_POST` / `do_GET` method bodies only · `demo_server.py` 大量经 `build_*_response()` helper 构造 payload 再 `_send_json` 发出（见 `demo_server.py:215,343,571` 等）· helper 层不在当前规则扫描范围
+- **Risk**：理论上后端 helper 仍可 emit field 含 `draft_design_state` · 当前规则扫不到
+- **Mitigation at P43-01**：Contract Proof Spike 的 API 契约 lock 阶段 · dump 所有 `/api/workbench/*` endpoint 实际响应 shape · 在 `docs/P43-api-contract-lock.yaml` 记录 · 若任何响应含 `draft`/`design_state` field → P43-01 报告 flag · P43-02 plan 扩 R1 规则至 helper 层
+- **Acceptance rationale**：实跑 contract lock 比静态规则更 ground-truth · helper 层泛化扫描无仓基建支撑（当前 lane 无 Python AST-to-payload 追踪）
+
+**KL-2 · R3 frozen spec protection limited to rebinding patterns**
+- **Limitation**：`test_r3_controlled_writer_only` 禁 `frozenSpec =` 裸赋值 + `.merge()` / `.assign()` / `Object.assign(frozenSpec, ...)` pattern · 未禁原位 property mutation（`frozenSpec.foo = ...` / `frozenSpec.components[i].wiring = ...`）· 未禁 alias-后-mutation（`const s = frozenSpec; s.foo = ...`）· controlled accessor `assignFrozenSpec()` 只管 rebinding 不管 property write
+- **Risk**：理论上 preview code 仍可通过 property mutation 绕过"唯一回写通道"
+- **Mitigation at P43-02**：实装 `frozenSpec` 为 **`Object.freeze()` 深度冻结对象** · JavaScript 引擎在 strict mode 直接 throw · 加 `test_r3_frozenspec_is_deep_frozen` 检查 · 同时 `test_r3_reiterate_state_transition` (already in plan) 作 second-line 行为验证（即使 mutation 发生 · workflow state 未从 `FROZEN` → `APPROVING` 变化）
+- **Acceptance rationale**：`Object.freeze()` 是 runtime 硬阻拦 · 比静态 grep 更强 · 但属实装细节 · v6 plan 未写入 Verification 列（避免 scope creep）· P43-02 实装时 MUST 采纳
+
+**KL-3 · R5 validator behavior not verified in default lane**
+- **Limitation**：`test_r5_validator_exists` + `test_r5_validator_fixture_shape` 只验函数存在 / 失败码字面量在源 / fixture JSON schema 合法 · 实跑 `validateDraftAgainstFrozen` 对 4 conflict fixture 产出预期失败码归 opt-in e2e lane · 默认 lane 不跑
+- **Risk**：Gate 可在 validator 行为未证明时过 · 理论上 `workbench.js` 留空壳函数 + 返回固定 `{ok: true}` 也可通过默认 lane
+- **Mitigation at P43-02**：实装时 `workbench.js` validator 必带 inline self-check（`validateDraftAgainstFrozen` 内部第一行 assert 4 fixture case 已 import 并 console.log pass/fail）· 或使 Node harness 虽 opt-in 但在 P43-09 Final Approval sub-phase 的 Exit Criteria 中硬性要求至少跑过一次且 commit 证据 trailer · `tests/fixtures/p43_validator_cases.json` 与 `workbench.js` validator 行为 **P43-02 Exit Criteria 第 12 项 "R1-R6 全落地可验证"** 实装时必须延伸覆盖
+- **Acceptance rationale**：默认 lane 不强依赖 Node / Playwright 是仓库原则（见 `pyproject.toml` 注释 "Default CI lane excludes e2e"）· 强改此原则 scope 过大 · 接受在 opt-in 机制保留 validator 行为验证
+
+---
+
+**Residual re-evaluation gate**：P43-01 Contract Proof Spike land 后 · Kogami 审 `docs/P43-contract-proof-report.md` 时必须重评 KL-1/2/3 是否仍需 mitigate · 若 spike 揭示残留真 exploit · 走 P43-02 plan v2 强化。
+
+---
+
 ## 9. v5.2 + v5.3 compliance（v6）
 
 继承 v4 + 更新：
@@ -532,15 +586,15 @@ P43-08..P43-10 iteration + approval + archive（合 1 gate · reiterate loop + F
 
 **本 plan v5 不执行任何代码。三个停点：**
 
-**停点 1**：v6 commit + branch push 后 · Executor 调 Codex round-6 re-review
-**停点 2**：Codex 返 "可过 Gate" → 提交 Kogami 审 GATE-P43-PLAN (v6) · 否则 **硬停 path ①** · 即刻升 Kogami 选 B 或 C · 不再自动 iterate v7
+**~~停点 1~~** (已 passed)：v6 Codex r6 re-review 完成 · verdict 需修正·信号强 · 3 residual identified
+**~~停点 2~~** (已 passed via Kogami Option B)：Kogami R4 仲裁 Option B · freeze v6 · 3 residual 入 §8a Appendix A known limitations
 **停点 2.5（v3 引入 · 保留 · 硬规则）**：P43-01 Exit Criteria 未 asserted pass · P43-02+ 自动冻结 · 不可绕过
-**停点 3**：Kogami 签 `GATE-P43-PLAN (v6): Approved` + Q1/Q2/Q4/Q7/Q8/Q10/Q12 仲裁 · 才启动 P43-01-00-PLAN.md 起草
+**停点 3（current · 当前停点）**：Kogami 签 `GATE-P43-PLAN (v6): Approved` + Q1/Q2/Q4/Q7/Q8/Q10/Q12 仲裁 · 才启动 P43-01-00-PLAN.md 起草 · **§8a KL-1/2/3 作为 Gate 接受条件** · 若 P43-01 spike 揭示残留真 exploit → P43-02 plan v2 强化（不是 P43-00 v7）
 
 ---
 
 **Signed:** Claude App Opus 4.7 (Solo Executor) · v5.2 solo-signed + v5.3 addendum · 2026-04-20
-**Revision:** v6 (post-Codex-round-5 · Kogami Option A · path ① final surgical · 3-fix · hard stop after v6)
-**Awaiting:** Codex round-6 re-review + `GATE-P43-PLAN (v6): Approved` (Kogami) + 7 Q 仲裁
-**Verified-by:** codex-gpt54-xhigh (r1 6 counters · r2 4 cuts · r3 cuts #1/#2 closed · r4 3 surgical · r5 3 precise residuals · r5 明示 "值得 v6 最后一次 只修 3 刀")
-**R4-arbitration:** Kogami 2026-04-20 · Option A（v6 最后 surgical）· v6 失败硬停 path ①
+**Revision:** v6 frozen (post-Codex-round-6 · Kogami Option B arbitration · 3 residuals accepted as §8a known limitations)
+**Awaiting:** `GATE-P43-PLAN (v6): Approved` (Kogami) + 7 Q 仲裁
+**Verified-by:** codex-gpt54-xhigh (r1-r6 · 6 rounds · r6 明示 "不建议 v7 · Option B/C")
+**R4-arbitration (×2):** Kogami 2026-04-20 · r5→v6 Option A（surgical 3-fix）· r6→frozen Option B（accept 3 residuals · §8a Appendix A）
