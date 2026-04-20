@@ -814,3 +814,66 @@ Status: Executed & Green · Awaiting `GATE-P36β-CLOSURE: Approved` (Kogami)
 **Plans:** P36β-00 Tier 1（5 counterargument · Q1-Q5 仲裁）+ P36β-01…04 顺序 commit + P36β 三轨零 delta + P36β-05 closure drafted 等签。
 
 **Next phase:** 留给 Kogami 明示（候选：P37 thrust-reverser workbench spec · 或 P38 CI-level provenance hash enforcement · 或其他方向）— R4 不自选。
+
+## Phase P37: thrust-reverser 反向需求增补（code-to-spec backfill · 证迹补完第二轮 γ 段）
+
+Status: Executed & Green · Awaiting `GATE-P37-CLOSURE: Approved` (Kogami)
+
+**Goal:** 按 Kogami 2026-04-20 "按优先级顺序，逐步深度修复" + thrust-reverser 特殊指令 "以 controller.py 为准，更新补充需求文档，然后存档"，P37 生成反向权威 spec supplement（markdown），把 P36β 遗留的 Appendix A 6 项 open assumption 全部 resolved 到 Kogami 内部自签的 supplement 各 § 段。controller.py + models.py 继续为真值基准；原 docx 保留作 2026-04-09 历史 snapshot。
+
+**Sub-phases & commits (branch `codex/p37-thrust-reverser-requirements-supplement`, base `main 96bacaf`):**
+- P37-00 (`ce5adfc`): Tier 1 plan (319 行 · 4 counterargument · Q1-Q2 已预签)
+- P37-01 (`0ba643c`): `docs/thrust_reverser/requirements_supplement.md` 297 行（8 段 · 覆盖 A.1-A.6）
+- P37-02 (`2bc1eeb`): 4 anchor 联动更新（matrix Appendix A 6 项 ⚠️→✅ + intake 加第 4 SourceDocumentRef + YAML 头 supplement block + registry row 1 notes 升级）
+- P37-05 closure drafted (本段 + STATE + closure doc + Notion DECISION Pending)
+
+**Q1-Q2 Kogami 2026-04-20 仲裁（GATE-P37-PLAN: Approved）：**
+- Q1 = A · supplement 格式 Markdown
+- Q2 = A · A.6 docx authority 一并解决（supplement §7 明示 Kogami 内部自签 · 非外部权威）
+
+**三轨回归（vs P36β head 96bacaf）：**
+- default pytest: **762 passed** / 1 skipped / 49 deselected in 91.27s（identical · 零 delta）
+- opt-in e2e: **49 passed** / 763 deselected in 2.72s (identical)
+- adversarial wrapper: **1 passed** in 0.26s (8/8 inside identical)
+
+**Appendix A 6 项全部 resolved：**
+- A.1 SW2 ±5.0°/-9.8° → supplement §2 · mirroring SW1 pattern
+- A.2 Deploy 90% VDT → supplement §3 · 行业默认
+- A.3 TLS/PLS 延迟 0.3/0.2s → supplement §4 · simulation baseline
+- A.4 Deploy rate 30%/s → supplement §5 · simplified-plant baseline
+- A.5 故障模式 → supplement §6 · 维持 docx §58 "不考虑" + 未来挂钩
+- A.6 docx authority → supplement §7 · Kogami 内部自签 · 非外部权威 · 升级路径明示
+
+**Authority 定位明示（supplement §7）：**
+- Supplement authority = Kogami 内部自签（非甲方 / 非监管 / 非行业标准）
+- Well Harness scope = 项目内部控制逻辑验证平台（非取证交付）
+- 若未来需外部 certification-grade authority 需新 Phase 升级 · §7.3 列升级路径
+
+**Registry row 1 升级（P36β → P37）：**
+- upstream_source: 加 supplement 路径
+- authority: "Kogami 自裁（docx 签准方待明）" → "Kogami 内部自签（明示非外部权威）"
+- notes: "6 Appendix A open assumptions pending" → "Appendix A 6 项全部 resolved via P37 supplement"
+
+**关键不变量（字节级确认）：**
+- `src/well_harness/controller.py` 字节级不变（DeployController class）
+- `src/well_harness/models.py` 字节级不变（HarnessConfig dataclass）
+- `config/hardware/thrust_reverser_hardware_v1.yaml` `parameters:` 段字节级不变（仅头注释扩展）
+- 既有测试断言字节级不变
+- 原 docx `uploads/20260409-...` 冻结不动
+- 其他 4 adapter（bleed/efds/lg/c919）所有文件不变
+
+**Exit Criteria (all met):**
+- `docs/thrust_reverser/requirements_supplement.md` 297 行 · 8 段 · A.1-A.6 全覆盖 ✅
+- `docs/thrust_reverser/traceability_matrix.md` Appendix A 6 项 ⚠️→✅ + 表 5 引用更新 ✅
+- `src/well_harness/adapters/thrust_reverser_intake_packet.py` 4 SourceDocumentRef · D1=A 精益保留 ✅
+- `config/hardware/thrust_reverser_hardware_v1.yaml` 头部 supplement block + `parameters:` 字节级不变 ✅
+- `docs/provenance/adapter_truth_levels.md` row 1 升级 · 其他 4 行不变 ✅
+- 三轨全绿零 delta ✅
+- ROADMAP + STATE 更新（本段）✅
+- Closure doc 起草 · 等 `GATE-P37-CLOSURE: Approved`
+
+**证迹合规：** v5.2 R1 R2 R3 R4 R5 全部 self-verified 合规（详见 P37-05-CLOSURE.md §v5.2 checklist）。
+
+**Plans:** P37-00 Tier 1（4 counterargument · Q1-Q2 仲裁）+ P37-01 supplement + P37-02 4 anchor 联动 + P37-03 三轨零 delta + P37-05 closure drafted 等签。
+
+**Next phase (按 P0-P4 优先级队列)：** 留给 Kogami 明示 —— 候选 P38 P34 PDF 回填 · P39 c919 Appendix A 3 项 sign-off · P40 CI SHA enforcement · 或其他 · R4 不自选。

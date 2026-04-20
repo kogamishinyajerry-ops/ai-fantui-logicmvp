@@ -136,82 +136,69 @@ docx §5 段 26-40 列 15 项监测信号，全部是前述 §3/§4 信号的重
 | 1 | `logic1_ra_ft_threshold` | `6.0` ft | §45 "飞机离地小于 6 ft" | 6 ft | ✅ 完全匹配 | 直接 trace |
 | 2 | SW1 `near_zero_deg` | `-1.4°` | §45 "油门台角度 [-1.4°, -6.2°]" | -1.4° | ✅ 完全匹配 | 直接 trace |
 | 3 | SW1 `deep_reverse_deg` | `-6.2°` | §45（同句）| -6.2° | ✅ 完全匹配 | 直接 trace |
-| 4 | SW2 `near_zero_deg` | `-5.0°` | —（§9 提 SW2 但未给角度）| — | ⚠️ docx 无 | **Executor 假设 · 镜像 SW1 pattern · Appendix A.1** |
-| 5 | SW2 `deep_reverse_deg` | `-9.8°` | — | — | ⚠️ docx 无 | 同上 |
+| 4 | SW2 `near_zero_deg` | `-5.0°` | —（§9 提 SW2 但未给角度）| — | ✅ supplement §2 | **P37 supplement §2 · Kogami 内部自签 · Appendix A.1 resolved** |
+| 5 | SW2 `deep_reverse_deg` | `-9.8°` | — | — | ✅ supplement §2 | 同上 |
 | 6 | `logic3_tra_deg_threshold` | `-11.74°` | §51 "油门杆解析角度 ≤ -11.74°" | -11.74° | ✅ 完全匹配 | 直接 trace |
 | 7 | `reverse_travel_min_deg` | `-32.0°` | §53 "反推行程 -32° < TRA < 0°" | -32° | ✅ 完全匹配 | 直接 trace |
 | 8 | `reverse_travel_max_deg` | `0.0°` | §53（同句）| 0° | ✅ 完全匹配 | 直接 trace |
-| 9 | `deploy_90_threshold_percent` | `90.0%` | §53 "反推完全展开" 提及但无百分比 | — | ⚠️ docx 无 | **Kogami 待仲裁 · 行业默认 "VDT > 90% 完全展开"（Q2=B）· Appendix A.2** |
-| 10 | `tls_unlock_delay_s` | `0.3 s` | —（docx 提 TLS 解锁但无延迟）| — | ⚠️ docx 无 | **Kogami 待仲裁 · Appendix A.3** |
-| 11 | `pls_unlock_delay_s` | `0.2 s` | — | — | ⚠️ docx 无 | 同上 |
-| 12 | `deploy_rate_percent_per_s` | `30.0 %/s` | —（docx 无作动速率）| — | ⚠️ docx 无 | **Kogami 待仲裁 · Appendix A.4** |
+| 9 | `deploy_90_threshold_percent` | `90.0%` | §53 "反推完全展开" 提及但无百分比 | — | ✅ supplement §3 | **P37 supplement §3 · 行业默认 · Appendix A.2 resolved** |
+| 10 | `tls_unlock_delay_s` | `0.3 s` | —（docx 提 TLS 解锁但无延迟）| — | ✅ supplement §4 | **P37 supplement §4 · simulation baseline · Appendix A.3 resolved** |
+| 11 | `pls_unlock_delay_s` | `0.2 s` | — | — | ✅ supplement §4 | 同上 |
+| 12 | `deploy_rate_percent_per_s` | `30.0 %/s` | —（docx 无作动速率）| — | ✅ supplement §5 | **P37 supplement §5 · simplified-plant baseline · Appendix A.4 resolved** |
 | 13 | `max_n1k_deploy_limit` | per-snapshot runtime input | §51 "发动机 N1k 小于最大 N1k 展开限制" | 未印具体值 | ✅ docx 结构匹配（per-snapshot 符合"最大 N1k 展开限制"的开放语义）| 直接 trace（无硬编码常数需比对）|
 
-**统计：** 13 常数中 7 项 1:1 trace（+1 项 per-snapshot 结构匹配），2 项 Executor 假设，4 项 Kogami 待仲裁。
+**统计（P36β）：** 13 常数中 7 项 1:1 trace（+1 项 per-snapshot 结构匹配），2 项 Executor 假设，4 项 Kogami 待仲裁。
+
+**统计（P37 更新）：** 13 常数中 7 项 1:1 docx trace（+1 项 per-snapshot 结构匹配），6 项已 resolved 到 `docs/thrust_reverser/requirements_supplement.md` §2-§5（反向补完 · Kogami 内部自签）。⚠️ 标记全部变 ✅。
 
 ---
 
-## Appendix A · Open Assumptions Registry（6 项 · 待 authority sign-off）
+## Appendix A · Open Assumptions Registry（6 项 · P37 supplemented 2026-04-20）
 
-### A.1 · SW2 触发角度（镜像 SW1 pattern）
+**状态更新（P37 · 2026-04-20）：** Kogami 2026-04-20 directive "以 controller.py 为准，更新补充需求文档" 已执行。6 项 Open Assumption 全部 resolved 到 `docs/thrust_reverser/requirements_supplement.md` 对应 § 段。Supplement authority = Kogami 内部自签（非外部权威 · 见 supplement §7）。
+
+### A.1 · SW2 触发角度（镜像 SW1 pattern）— ✅ P37 SUPPLEMENTED
 
 - **常数：** `SW2 near_zero_deg = -5.0°` · `SW2 deep_reverse_deg = -9.8°`
-- **docx 覆盖：** §9 提及 SW2 开关信号（0/1），未给具体触发角度
-- **Executor 假设：** SW2 与 SW1 采用相似的 near_zero / deep_reverse 两段触发模式（Q1=A recommendation, Kogami 2026-04-20 delegated approved）
-- **风险：** SW2 实际触发角度与 SW1 可能无对应关系；code 值（-5.0°/-9.8°）可能是项目前期估算
-- **Sign-off TODO：** 需 TRCU 团队 / 甲方 / Kogami 给出实际 SW2 触发窗口，或确认 `-5.0°/-9.8°` 为 Kogami 认可的 working assumption
-- **升级路径：** 若实际值与 code 不同，升级需：
-  1. 决定是否修 `models.py::HarnessConfig`（若修，本 P36β Plan 的 non-goal 被破，需要新 Phase）
-  2. 或者保留 code 值 + 在本 A.1 登记 "Kogami 接受 code 值为最终值"
+- **Resolution (P37 · 2026-04-20):** `docs/thrust_reverser/requirements_supplement.md` §2 提供反向权威 · Kogami 内部自签接纳
+- **Supplement 工程依据摘要：** SW2 [-5.0°, -9.8°] 与 SW1 [-1.4°, -6.2°] 形成两级渐进式 latching（早期解锁 → 深度反推确认）
+- **External upgrade path：** 若未来 TRCU 团队 / 甲方 / 监管实测值与 code 不符，需新 Phase 升级；P37 立场作过渡期 authority
 
-### A.2 · Deploy 90% VDT 阈值来源
+### A.2 · Deploy 90% VDT 阈值来源 — ✅ P37 SUPPLEMENTED
 
 - **常数：** `deploy_90_threshold_percent = 90.0%`
-- **docx 覆盖：** §53 "反推完全展开信号" 提及 "完全展开" 概念但未印百分比阈值
-- **Executor 建议（Q2=B）：** 行业默认 "VDT > 90% 视为完全展开"——这是反推系统工程实践常识
-- **风险：** 若实际规范是 85% / 95% / 其他，此假设错误
-- **Sign-off TODO：** Kogami 明示具体来源（甲方工程手册？行业标准？Kogami 自裁？），本条沉淀为 Kogami 接纳
-- **升级路径：** 若实际值非 90%，需开新 Phase 修 code
+- **Resolution (P37 · 2026-04-20):** `docs/thrust_reverser/requirements_supplement.md` §3 明示 "90.0% 行业默认 VDT>90% 视为完全展开" · Kogami 内部自签
+- **External upgrade path：** 若甲方/监管有更严阈值（如 95%），需新 Phase 升级 code + supplement
 
-### A.3 · TLS/PLS 解锁延迟（0.3s / 0.2s）
+### A.3 · TLS/PLS 解锁延迟（0.3s / 0.2s）— ✅ P37 SUPPLEMENTED
 
 - **常数：** `tls_unlock_delay_s = 0.3` · `pls_unlock_delay_s = 0.2`
-- **docx 覆盖：** §3-§4 提 TLS/PLS 为传感器/供电信号，无任何解锁时序延迟描述
-- **Executor 建议（Q3=A）：** Kogami 自裁 · 当前登记为"code 值待 sign-off"
-- **风险：** 延迟值影响 simulated plant 的 timing behavior；错误值会影响 adversarial test 和 demo 体验
-- **Sign-off TODO：** Kogami 明示延迟来源（机电时序测试报告？Kogami 自裁 placeholder？），本条沉淀为 Kogami 接纳
-- **升级路径：** 若实际值不同，改 `models.py::HarnessConfig` 对应字段需新 Phase
+- **Resolution (P37 · 2026-04-20):** `docs/thrust_reverser/requirements_supplement.md` §4 明示 "simulation baseline · 非厂家实测" · Kogami 内部自签
+- **External upgrade path：** 接入实机电时序测试报告后 · 新 Phase 升级 · simulation baseline superseded
 
-### A.4 · Deploy Rate（30%/s）
+### A.4 · Deploy Rate（30%/s）— ✅ P37 SUPPLEMENTED
 
 - **常数：** `deploy_rate_percent_per_s = 30.0`
-- **docx 覆盖：** docx 无作动速率描述
-- **Executor 建议（Q4=A）：** Kogami 自裁 · 当前登记为"code 值待 sign-off"
-- **风险：** 同 A.3
-- **Sign-off TODO：** Kogami 明示来源；本条沉淀为 Kogami 接纳
-- **升级路径：** 同 A.3
+- **Resolution (P37 · 2026-04-20):** `docs/thrust_reverser/requirements_supplement.md` §5 明示 "simplified-plant baseline" · Kogami 内部自签
+- **External upgrade path：** 同 A.3
 
-### A.5 · 故障模式（不建模）
+### A.5 · 故障模式（不建模）— ✅ P37 MAINTAINED
 
 - **docx §58 原文：** "故障注入目前暂时不考虑，很复杂。"
-- **处置：** P36β 严格按 docx 维持现状 · 不建 FaultModeSpec · 不加 fault injection 测试
-- **Sign-off TODO：** 未来 Kogami / 甲方补充故障模式规范时重开 Phase
-- **升级路径：** 建议先补 docx v2 的故障章节，再在 code 建 FaultModeSpec
+- **Resolution (P37 · 2026-04-20):** `docs/thrust_reverser/requirements_supplement.md` §6 维持 docx 立场 + 附 "未来扩展挂钩" 说明（fault model Phase 开展建议见 supplement §6.4）
+- **External upgrade path：** supplement §6.4 列 fault model Phase 开展建议
 
-### A.6 · docx 本身的 authority
+### A.6 · docx 本身的 authority — ✅ P37 RESOLVED
 
-- **docx 元数据：**
-  - 文件名：`控制逻辑(1).docx`（原名有 `(1)` 后缀，可能是 Downloads 自动重命名）
-  - 无作者署名（docx metadata 未检）
-  - 无版本号 / 日期戳 / 签准方标注
-  - 结构：未使用 Word Heading styles（手工排版），存在 57 自由段 + 2 表 + 1 EMF 图
-- **Executor 记录（Q5=A）：** `authority = Kogami 自裁`（具体签准方未明）
-- **风险：** 若未来审计问 "此 docx 经谁签准？"，当前无法出示明确签准链
-- **Sign-off TODO：**
-  1. Kogami 明示 docx 的来源（内部编写？甲方提供？转抄自文件？）
-  2. Kogami 明示 docx 的版本状态（最终版？草稿？）
-  3. 若为甲方提供，请求原件（含署名页/修订记录）
-- **升级路径：** docx v2 带完整元数据后，更新本条 + intake packet notes + registry authority 字段
+- **docx 元数据（P36β 已登记，P37 维持）：**
+  - 文件名：`控制逻辑(1).docx`
+  - SHA256: `6e457fe3c66e456d418f657975b7692453b30350b38fe91d0989e345276133a5`
+  - 无作者 / 版本 / 签准方标注
+- **Resolution (P37 · 2026-04-20):** `docs/thrust_reverser/requirements_supplement.md` §7 明示：
+  - 原 docx authority = Kogami 内部来源 / 历史 snapshot
+  - Supplement authority = Kogami 内部自签 · 非外部权威
+  - **不冒充** 甲方 / 监管 / 行业标准
+- **External upgrade path：** supplement §7.3 列 certification 升级路径（引入 TRCU 团队 / 适航局等外部签准方）
 
 ---
 
