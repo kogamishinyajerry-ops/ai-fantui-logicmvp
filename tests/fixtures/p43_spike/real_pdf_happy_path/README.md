@@ -12,7 +12,7 @@ Not equivalent to: "pdf binary consumed", "full user flow pipeline proof", or "f
 ## Files
 
 - `intake_minimal_ready.json` — minimal compliant intake packet referencing real C919 ETRAS pdf via metadata; uses stable clarification question_ids (`source_documents`, `component_state_domains`, `timeline_rules`, `fault_taxonomy`) per `default_workbench_clarification_questions()` at `src/well_harness/system_spec.py:244`.
-- `expected_pipeline_response.json` — **pending** per current Step A execution (bundle contract bugs block happy path; see `.planning/phases/P43-control-logic-workbench/reports/p43-01-contract-proof/CONTRACT-PROOF-REPORT.md` §2 Additional Findings).
+- `expected_pipeline_response.json` — asserted_pass evidence of S1 happy path (post-Step-B · Kogami Option X applied; Bugs A/B1/B2 fixed at `ai_doc_analyzer.py:840,843,866,867`). See `.planning/phases/P43-control-logic-workbench/reports/p43-01-contract-proof/CONTRACT-PROOF-REPORT.md` §4 for exit-criterion evidence.
 
 ## Clarification answer stable IDs
 

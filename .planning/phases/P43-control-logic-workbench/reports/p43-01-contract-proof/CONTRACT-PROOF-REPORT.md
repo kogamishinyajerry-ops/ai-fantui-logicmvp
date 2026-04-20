@@ -98,7 +98,7 @@ GUARD_TRIGGERED: False             # ← critical: blocked packets fall through
 **Anchors**:
 - Write side: `src/well_harness/ai_doc_analyzer.py:799` writes `question_id: f"clarify-{i}"` (index-based)
 - Read side: `src/well_harness/document_intake.py:839-843` `_unanswered_clarifications` uses stable `answer.question_id` lookup
-- Authoritative stable IDs: `src/well_harness/system_spec.py:244` `default_workbench_clarification_questions()` — lists `source_documents`, `component_state_domains`, `acceptance_signals`, `fault_taxonomy` (etc.)
+- Authoritative stable IDs: `src/well_harness/system_spec.py:244` `default_workbench_clarification_questions()` — lists `source_documents`, `component_state_domains`, `timeline_rules`, `fault_taxonomy` (note: plan prose at P43-01-00-PLAN.md:117,282 uses stale `acceptance_signals` literal — real ID in code is `timeline_rules` at system_spec.py:259; report corrected per Codex Step B review).
 
 **Reproduction** (happy packet with `clarification_answers=[]` + 4-item `session_clarification_history`):
 ```
@@ -191,4 +191,20 @@ Options posed (Step A partial commit `48e4796`):
 
 ## 8. Next action
 
-Commit Step B (source fix + fixtures + tests + report update). Then trigger Codex post-implementation review per Q7=A before proceeding to Step D.
+Step B complete (commit `5d2d3ec`) · Codex post-implementation review complete → verdict `可过-Gate` (Approved · no required changes · 3 optional doc polish items applied in follow-up scrub). Proceed to Step D (Playwright `readAsText` opt-in e2e test) · then Step E (API contract lock YAML) · then Steps F/G per plan.
+
+## 9. Codex Step B review trailer (2026-04-21)
+
+- Invocation: `codex exec` (xhigh) against commit `5d2d3ec`.
+- Verdict: **可过-Gate** (Approved · no required code changes).
+- Confirmations (9 review questions):
+  1. Bug A fix contract-correct — READ `blocking_reasons` / EMIT `blockers` aligned with frontend reader at `ai-doc-analyzer.js:527-528`; no remaining stale reader repo-wide.
+  2. Bug B1 fix (`1 if bundle.playback_report else 0`) contract-correct — `ScenarioPlaybackReport` at `scenario_playback.py:51-64` is singular; `WorkbenchBundle.playback_report` at `workbench_bundle.py:71` is single optional.
+  3. Bug B2 fix contract-correct — same pattern; `FaultDiagnosisReport` at `fault_diagnosis.py:34-54` is singular.
+  4. Tests 1/2 fail cleanly on bug reintroduction; Tests 3/4 are grep-based (shallow but acceptable) — logged as test-hardening candidate for later phase.
+  5. Repo-wide grep confirms no other `.scenarios` / `.fault_modes` drift elsewhere (other callsites use `signal_series`, `fault_mode_id` etc.).
+  6. Test 4 is a shallow literal-presence audit — logged.
+  7. No source/test scope breach; report file path drift (`.planning/.../reports/` vs plan whitelist `docs/P43-contract-proof-report.md`) noted as governance-path drift only, not L2 code-scope creep.
+  8. Fixtures schema-compliant; §1c honesty boundary honored (no SHA binding).
+  9. No new Counter-F-class runtime bug surfaced; only doc drift (stale `acceptance_signals` literal + stale Step-B next-action wording) — both fixed in this follow-up scrub.
+- Optional doc polish applied post-verdict (no code changes; no Codex re-review required): (i) report §2 Finding D stable-ID list corrected (`acceptance_signals` → `timeline_rules`); (ii) §8 next-action updated; (iii) README.md post-Step-B status updated.
