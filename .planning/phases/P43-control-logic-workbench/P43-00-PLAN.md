@@ -1,357 +1,412 @@
 ---
 phase: P43
 plan: P43-00
-title: Control Logic Workbench end-to-end milestone — design document + sub-phase decomposition
-status: drafted · Awaiting GATE-P43-PLAN (Kogami)
+plan_revision: v2 (post-Codex remediation · path ①)
+title: Control Logic Workbench end-to-end milestone — v2 · extend-not-rebuild + Contract Proof Spike first
+status: re-drafted · Awaiting GATE-P43-PLAN (v2) (Kogami)
 date: 2026-04-20
 owner: Claude App Opus 4.7 (Solo Executor) · v5.2 solo-signed + v5.3 addendum
-scope_tier: Tier 1 · milestone-level (not a single Phase)
+verified-by: codex-gpt54-xhigh (2026-04-20 · 6 structural counters A-F integrated, 需阻止 verdict addressed via path ①)
+scope_tier: Tier 1 · milestone-level
 preconditions:
   - GATE-P42-CLOSURE Approved (Kogami 2026-04-20) → main at `a6521ca`
-  - Kogami 2026-04-20 R4 指令：完整控制逻辑生成工作台 · 需求文档导入 → 解析 → Q&A 闭环 → 冻结 → 面板逐步生成 → 连线 → 调试 → 标注修改 → 迭代 → 用户批准 → 归档
+  - Kogami 2026-04-20 R4 指令：完整控制逻辑生成工作台
+  - v1 plan (`81adf39`) 被 Codex 判 **需阻止**（6 structural counters · 2 条含既有 code 真 bug 作证）
+  - Kogami 2026-04-20 路径① 明示选择：修 plan v2 + 插入 Contract Proof Spike
   - v5.3 addendum 生效 · adapter-boundary 硬性规则 Codex review 必调
 non-goals:
-  - 本 Phase **不写任何 src 代码**。P43-00 是 milestone 设计文档 · 实施分拆到 P43.1-P43.9 子 Phase · 每个子 Phase 独立 Gate
-  - 不修改已锁定的 M1 产出：controller.py / models.py / 5 adapter evaluate/explain 方法 / YAML parameters / registry markdown 5 rows table / JSON schema v1 $id
-  - 不新建第二套 truth engine（继承 P16 宪法原则：AI 不控制 Canvas · Canvas 状态来自 truth engine）
-  - 不替代 P7 workbench · 本 milestone 是 P7 的上游 UX 层（P7 在"已有 spec"场景下继续有效 · P43 覆盖"spec 尚未存在"的从 0 到 1 场景）
-  - 不引入新的 adapter Protocol · 生成的 adapter 走现有 GenericControllerTruthAdapter 协议
-  - 不 bump JSON schema version · 任何扩展走 v5.3 C5 缓解策略（additive + to_dict 剥 None）
+  - 本 P43-00 v2 不写任何 src 代码
+  - 不修改已锁定 M1 产出：controller.py / models.py / 5 adapter evaluate/explain 方法 / YAML parameters / registry markdown 5 rows table / JSON schema v1 $id
+  - **不并行建第二套 orchestrator**（Codex Counter B 消化）· P43 是 extend existing (`cli.py bundle` / `workbench_bundle.py` / `workbench.js` localStorage / `archive_workbench_bundle`) · 不是 rebuild
+  - 不建第二套 truth engine
+  - **不在 P43-05 (progressive panel gen) / P43-08 (annotation+iteration) 建 shadow truth engine**（Codex Counter C 消化）· preview 只展示候选 diff · 不作 runtime 语义源
+  - 不替代 P7 workbench
+  - 不引入新的 adapter Protocol
+  - 不 bump JSON schema version
+  - **"Final Approved" 不等于 truth_level=certified**（Codex Counter D 消化）· Final Approved → `demonstrative/Upgrade pending` · certified 升级走独立 Phase（沿用 P36β/P38 authoritative-doc + SHA + matrix + independent-Gate 协议）
+  - 不扩 P43 范围到 "certified upgrade pipeline" · 那是独立 future Phase
 ---
 
-# P43 · Control Logic Workbench — 端到端 milestone 设计文档
+# P43 · Control Logic Workbench milestone (v2) — extend-not-rebuild + Contract Proof Spike
 
-## 0. TL;DR
+## 0. TL;DR · v1 → v2 差异
 
-Kogami 2026-04-20 R4 指令：构建一个用户可见的端到端工作台，从**一份用户扔进来的需求文档**到**一个被用户最终批准并归档的控制逻辑面板**，覆盖 9 个阶段：
+| 维度 | v1 plan（已废） | v2 plan（本文） |
+|------|---------------|----------------|
+| Primitives 库存 | 按 LOC 计 · 假设 API 对得上 | 承认 "伪库存" · **先跑 P43-01 Contract Proof Spike** 产出真实契约报告 · 再决定 P43-02+ scope |
+| Orchestrator 建设策略 | 并行建新 `workbench/orchestrator.py` + 新 CLI + 新 state.yaml | **Extend existing** · 复用 `cli.py bundle` + `workbench_bundle.py` + `workbench.js` localStorage · P43 加连接不造新 |
+| 治理 Final Approved 语义 | §1 用户旅程 / P43.8 明写 certified · Q6 又推 demonstrative · 自相矛盾 | **唯一治理线**：Final Approved → `demonstrative + Upgrade pending` · certified 独立 future Phase · 删所有 P43 内 certified 升级路径 |
+| Progressive preview 身份 | 模糊 · 隐式充当 runtime 语义源 | 明确定位 **draft_design_state** · 非 truth · 非 runtime · 非 certifiable · 只展示候选 diff |
+| Workflow 契约 | 只选存储格式 | P43-02 前先输出 **workflow automaton contract**（state enum · event · transition table · error taxonomy · recovery rules） |
+| Sub-phase 分解 | P43.1-P43.9 = 9 sub · 扁平 | P43-01 Spike（先行）→ Kogami 重审 → P43-02..P43-10（10 sub）· P43-01 结果可推翻 P43-02+ 设计 |
+| Self-audit counters | C1-C6 | C1-C12（6 原 + 6 新 verified-by codex-gpt54-xhigh）· 加 primitive integration proof / workflow automaton correctness / existing workbench migration / gate fatigue / doc extraction 物理能力 / governance line coherence |
+| Exit 样板 demo | 新 "cabin pressurization" 等 domain | P43-01 产出后 Kogami 选（P43-01 可能揭示新 domain 不必要 · 仅 extend 即够）|
+| Kogami Gate 次数 | ~18 gate (9 plan + 9 closure) · 高 fatigue 风险 | **Gate batching 选项在 Q1 下**：Q1=D（推荐）· P43-01 + P43-02 + P43-03 作为"基础线" 合 1 gate · P43-04..10 按 pair 合 gate · ~8-10 gate 总 |
+| 规模 | ~4000 LOC 共 9 sub | Unknown · **P43-01 产出后重估**（可能 ~2500-3500 因 extend 复用） |
+| Codex verdict on v1 | 需阻止 | v2 consumes all 6 counters via path ① · 需 Codex re-review（在 v2 commit 后 · Kogami 签 v2 Gate 前） |
+
+**v2 核心观念**：**"先跑再建"**。v1 的致命缺陷是 Executor 读了几行 code 就自信 primitive 能串 · Codex 用 2 条真 bug 打碎。v2 先做 Contract Proof Spike · 让事实说话。
+
+---
+
+## 1. Milestone vision · user journey（v2 · 治理统一）
+
+### 核心原则（Codex Counter D 消化）
+
+**Final Approved ≠ certified**。无论用户多信任自己产出 · P43 pipeline 只能落 `demonstrative + Upgrade pending`。certified 升级是独立的、严格的、需要：
+- 上游权威文档（authoritative doc · 非自述）· uploads/ 入库 · SHA 固化
+- Traceability matrix（P34/P38 模式）
+- Appendix A 所有 open question resolved
+- 独立 Phase + Kogami GATE-Pxx-CLOSURE: Approved
+
+**P43 milestone 产出的所有 adapter 天然是 demonstrative**（与 bleed-air / efds / landing-gear 三个 P35α 历史遗产同级）。用户若需 certified · 走 P36β-style upgrade Phase（不在 P43 scope）。
+
+### 用户旅程闭环（10 step · 治理对齐）
+
+| Step | 用户动作 | 系统产出 | 用户决策 | 治理 level |
+|------|---------|---------|---------|----------|
+| 1 · Import | 扔 pdf/docx/md/image | intake + SHA 固化 | 确认识别 | — |
+| 2a · Parse | 系统跑 `ai_doc_analyzer` | 候选 spec + ambiguity list | — | — |
+| 2b · Q&A | 系统提问 | 答案持久化 | 填答/跳过 | — |
+| 2c · Freeze | 用户"Freeze Approved" | frozen spec + Appendix A | 用户签 | draft-frozen |
+| 3 · Panel gen | 系统生成 adapter 预览 | draft adapter + 面板 | 旁观 | draft-preview |
+| 4 · Wiring | 连线编辑 | 更新 spec | 手动加/删 | draft-preview |
+| 5 · Debug | 灌 snapshot | evaluation 结果 | 观察 | draft-preview |
+| 6 · Annotate | 标注 | annotations.yaml | — | draft-preview |
+| 7 · Iterate | regenerate | 新版 draft adapter | 再改/满意 | draft-preview |
+| 8 · Final Approval | 用户签 "Final Approved" | adapter landing + registry row + `demonstrative + Upgrade pending` | 签名 | **demonstrative/Upgrade pending** |
+| 9 · Archive | 归档 | `archive/workbench/{system_id}/` + closure | 归档只读 | — |
+
+### 三个非功能性目标（v2 保留）
+
+- **T1 可追溯** · T2 可中断 · T3 可审计
+
+---
+
+## 2. Primitives 库存 · 真实性警告（Codex Counter A/B/F 消化）
+
+### 2a · v1 库存是 "伪库存"（自认）
+
+v1 §2 按 LOC 计算既有 primitives · 未核 API · Codex 指出至少 2 条**既有真 bug** + **大量 inventory 盲点**：
+
+| Codex 指出 | 验证 |
+|----------|------|
+| `ai_doc_analyzer.py:838` 读 `assessment.get("blockers")` · `document_intake.py:940` 产 `"blocking_reasons": blockers` | ✅ 实证 · `run_pipeline_from_intake()` 永远找不到 blocker |
+| PDF/docx 没有真实抽取 · `ai-doc-analyzer.js:191` 只是 `readAsText()` | ✅（需 P43-01 进一步核） |
+| analyzer 产 `q-*` / `clarify-*` · intake gate 要固定 ID `source_documents` / `component_state_domains` · 不对接 | ✅（需 P43-01 核映射） |
+| 既有 `cli.py bundle` + `workbench_bundle.py` + `archive_workbench_bundle` + `workbench.js` localStorage 工作区 v1 plan 完全未 inventory | ✅ 实证 · 见 §2c |
+| `generate_adapter.py:255,448` 有 domain hardcode（`max_n1k_deploy_limit` 默认值 / `thr_lock` terminal） | 需 P43-01 核 |
+
+### 2b · P43 不再声明完整 inventory · 改为 P43-01 产出"真实契约报告"
+
+**v2 决策**：P43-00 不再给 §2 primitives 表打勾。所有 inventory + API 契约核验推迟到 P43-01 Contract Proof Spike 产出。P43-02 及后续子 Phase 的 plan 必须引用 P43-01 产出的契约报告 · 不能 re-invent 或 LOC-counted assumption。
+
+### 2c · 既有 workbench 工作（P43 必须 extend · 不 rebuild）
+
+Codex Counter B 指出 · v1 无视如下既有 orchestration 层：
+
+| 既有组件 | 位置 | 职责 | P43 extend 策略 |
+|---------|------|------|--------------|
+| `cli.py bundle` subcommand | `src/well_harness/cli.py:200` | 已有 intake packet → bundle 打包 pipeline | P43-02 在此基础加 orchestrator `new` / `continue` / `status` subcommands · 不另建 CLI |
+| `workbench_bundle.py` | `src/well_harness/workbench_bundle.py` | build / archive / restore / manifest validate | P43-02 的 state machine 用这个做 canonical storage · 不另建 state.yaml |
+| `workbench.js` localStorage 工作区 | `src/well_harness/static/workbench.js:4,6` + `workbench.html:183` | 浏览器端 workspace · archive-toggle · handoff-note · archive restore | P43-03 的 UI 扩展这个 · 不另写前端 shell |
+| `archive_workbench_bundle` + `resolve_workbench_archive_manifest_files` | `workbench_bundle.py` | manifest + restore | P43-10 archive 用这个 · 不另建 archive 目录结构 |
+| Appendix A 模式（P34-P42） | `docs/{system}/traceability_matrix.md` | open question 登记 · Kogami sign-off | P43-04 Freeze 产出 Appendix A 用同模板 |
+
+P43-01 必须 inventory 这些 + 发现所有 delta · 才能写 P43-02 plan。
+
+---
+
+## 3. Execution strategy · v2 重分解
+
+### 3a · 关键新增：P43-01 Contract Proof Spike（先行 · must-land-before-anything）
+
+**不是 9 sub-phase 的一部分**。P43-01 是 P43 能继续存在的前提条件 · 不 land · P43-02+ 全部 on-hold。
+
+**P43-01 scope：**
+
+1. **跑真实 happy path**：选一份真实 pdf 或 docx（例如已有 `uploads/20260409-thrust-reverser-control-logic.docx` 或 `uploads/20260417-C919反推控制逻辑需求文档.pdf`）· 从 browser 扔进 `workbench.js` · 跟到 `ai_doc_analyzer` · 跟到 `document_intake.assess_intake_packet` · 跟到 `cli.py bundle` / `workbench_bundle` · 跟到 archive · 记录每一步实际断裂点
+2. **跑真实 failure path**：故意扔一份"应有 blocker" 的 intake · 验 `ai_doc_analyzer.py:838 assessment.get("blockers")` 路径是否工作（预计：不工作 · 因 key mismatch）
+3. **修 `blockers`/`blocking_reasons` 真 bug**：改 `ai_doc_analyzer.py:838` 读 `blocking_reasons` · 加 regression test 防再回归
+4. **PDF/docx 抽取能力核**：`ai-doc-analyzer.js:191 readAsText()` vs 实际 .docx binary · 是否 silently 失败 / 乱码 / 还是根本没跑进 parse · P43-01 要 demo 一个真实 pdf 看结果
+5. **analyzer ID ↔ intake clarification ID 契约核**：`ai_doc_analyzer` 产 `q-*` · `intake` 要 `source_documents` / `component_state_domains` · 现状是否 wire · 如何 wire
+6. **generator hardcode 暴露**：`generate_adapter.py:255,448` 对任意非 thrust_reverser-style spec 产出是否合法 · 产报告
+7. **workbench.js 工作区 schema inventory**：`localStorage key` 名 · archive manifest 结构 · handoff-note 结构 · 用真实代码 dump
+
+**P43-01 产出：** `docs/P43-contract-proof-report.md`（~300-500 行 · 真实断裂清单 + 修复计划 + primitive API 契约表）+ `ai_doc_analyzer.py` 真 bug 修 + regression test。
+
+**P43-01 规模：** ~1 day · ~200 LOC 修 + ~500 行 docs · 1 Codex review（adapter boundary · `ai_doc_analyzer` 写操作）。
+
+**P43-01 Exit Criteria：**
+- 真实 happy path 端到端跑通（或清晰列出所有断裂）
+- 真实 failure path 端到端验证（blocker 能被识别）
+- P43 contract proof report 完整
+- P43 Kogami 基于此报告决定 P43-02+ scope（可能 dramatic 改动原 v2 估算）
+
+### 3b · P43-02..P43-10（P43-01 landed 后 Kogami 重审才定）
+
+**v2 保留 tentative 分解 · 等 P43-01 实际结果可能大改**。Tentative list：
+
+- **P43-02** · Orchestrator extend · 在 `cli.py bundle` + `workbench_bundle.py` 基础加 state machine + `workbench.js` 跨 step state 透明化
+- **P43-03** · Document pipeline · 修 PDF/docx 真实抽取 · 修 clarification contract
+- **P43-04** · Freeze gate + Appendix A 生成
+- **P43-05** · Progressive panel preview（**draft_design_state** 身份 · 非 runtime 非 certifiable · 只展示候选 diff · Codex Counter C 消化）
+- **P43-06** · Wiring editor + graph validator（cycle / terminal uniqueness / fan-out 约束）
+- **P43-07** · Debug harness
+- **P43-08** · Annotation + iteration loop（同 P43-05 · draft-preview · 不作 runtime）
+- **P43-09** · Final Approval → **demonstrative + Upgrade pending**（不是 certified · Codex Counter D 消化）
+- **P43-10** · Archive · 复用 `archive_workbench_bundle` · 不新建目录结构
+
+**Tentative 规模：** ~2500-3500 LOC（v1 的 ~4000 LOC 下降 · 因 extend existing）· P43-01 可能推翻。
+
+### 3c · Workflow automaton 契约（Codex Counter E 消化）
+
+P43-02 plan 的前置条件：**P43-02-00-PLAN.md 必包 workflow automaton 章节**，含：
+
+- **State enum**：`INIT / INTAKED / PARSING / AWAITING_ANSWERS / FREEZING / FROZEN / GENERATING / PANEL_READY / WIRING / DEBUGGING / ANNOTATING / ITERATING / APPROVING / APPROVED / ARCHIVING / ARCHIVED / ERROR`
+- **Event list**：`import_doc / answer_question / confirm_freeze / start_gen / wire_change / submit_snapshot / annotate / reiterate / final_approve / archive` · 每个 event 的 legal pre-state + 产生的 post-state
+- **Transition table**：N×M 矩阵 · N states × M events · 标 legal / illegal / conditional
+- **Error taxonomy**：`pdf_extract_failure` · `ambiguity_unresolved` · `regen_failure` · `iteration_overflow` · `schema_drift` · `partial_write` · `external_state_delete` · 每个 error 的 recovery action
+- **Idempotency rules**：哪些 event 幂等（可重放）· 哪些非幂等（需 deduplication token）
+- **Partial write recovery**：state.yaml 写到一半 crash · 下一次启动如何识别 + 恢复
+- **Cross-phase integration test ownership**：谁写 · 谁跑 · coverage 阈值 · 什么触发 regression
+
+### 3d · Existing workbench migration 契约（Codex Counter B 消化）
+
+P43-02 plan 的前置条件：**P43-02-00-PLAN.md 必包 migration 章节**：
+
+- 既有 `workbench.js` localStorage v2 schema → P43 state schema 映射
+- 既有 `archive_workbench_bundle` manifest → P43 archive manifest 映射
+- 兼容性验收：既有 archive 必须无损 restore 到 P43 flow
+- 废弃 vs 并存决策：哪些既有能力被 P43 替代（必须 deprecate）· 哪些并存（必须 migration path）
+
+---
+
+## 4. Non-goals · v2 扩展
+
+继承 v1 全部 + 新增（v2 · Codex 消化）：
+
+10. **不并行建第二套 orchestrator**（Counter B） · P43 所有 subcommands / UI / state 必须 extend existing `cli.py bundle` + `workbench_bundle` + `workbench.js` · 不另建命名空间
+11. **不在 P43-05 / P43-08 建 shadow truth engine**（Counter C） · progressive preview 标记为 `draft_design_state` · 非 truth · 非 runtime · 非 certifiable · 冲突时 frozen spec 为 authoritative
+12. **Final Approved ≠ certified**（Counter D） · P43 所有 pipeline 只落 `demonstrative + Upgrade pending` · certified 升级走独立 future Phase · §1 用户旅程 + §3b P43-09 + Q6 全部对齐到此唯一治理线
+13. **不跳过 workflow automaton 契约**（Counter E） · P43-02 plan 起草前 `workflow automaton contract` 必须先落地 · 不是随 "各 sub-phase 自己加" 糊过
+14. **不声明 primitives 库存**（Counter A） · P43-02+ 所有 sub-phase plan 必须引用 P43-01 产出的契约报告 · 不能再 "LOC counted assumption"
+
+---
+
+## 5. Tier 1 对抗性自审 · v2（C1-C12 · 6 原保留 + 6 新 verified-by codex-gpt54-xhigh）
+
+### 原 6 条（v1 保留 · 均被 v2 缓解或加强）
+
+**C1 · scope 太大** · 缓解：P43-01 先行 · 分解可能显著变小 · Kogami 每 sub-phase 退场机会保留
+
+**C2 · primitives API assumptions may not hold** · **v2 从"部分承认"升级到"完全承认"** · P43-01 就是专门解决此 counter · 见 §3a
+
+**C3 · UI quality vs time** · 缓解：继承 `workbench.js` 技术栈 · 不引入新框架
+
+**C4 · iteration loop 可能死循环** · 缓解：用户主权 · 第 5 次 advisory · 加 iteration_count 上限 10（防 state 爆炸）
+
+**C5 · archive 命名冲突** · 缓解：**archive 复用 `archive_workbench_bundle` 既有机制**（Counter B 副产）· `archive/workbench/{system_id}/` 不新建
+
+**C6 · plan 本身没调 Codex** · **已消化**：2026-04-20 调 Codex · 返 "需阻止" · 所有 6 counter 在 v2 消化（C7-C12）
+
+### 新 6 条（v2 · verified-by codex-gpt54-xhigh · 整合 Codex Counter A-F）
+
+**C7 (= Codex Counter A) · §2 primitives 是伪库存**
+
+**攻击（Codex 原话简化）：** `document_intake.py` / `ai_doc_analyzer.py` 记成"现成"但：SourceDocumentRef 只是元数据壳 · 后端只吃 `document_text` 字符串 · 前端 `.docx/.pdf` 只 readAsText() · `blockers` vs `blocking_reasons` 真 bug · PDF 抽取 / OCR / canonical text / SHA-to-text 绑定全无。
+
+**v2 缓解：**
+1. P43-01 Contract Proof Spike **先行 · 必须 land** 前无 P43-02+ 开工 · 见 §3a
+2. §2 v2 明示 "伪库存警告" · 不再 LOC-counted assumption
+3. P43-01 修 `ai_doc_analyzer.py:838` `blockers` → `blocking_reasons` 真 bug · 加 regression test
+4. P43-01 产 `docs/P43-contract-proof-report.md` · 所有后续 sub-phase 引用此 · 不能 re-invent 假设
+
+**C8 (= Codex Counter B) · 在并行造第二套 orchestrator**
+
+**攻击（Codex 原话简化）：** 仓库已有 `bundle/archive/restore` CLI + `workbench.js` localStorage workspace + archive manifest + handoff snapshot · P43 却另建 state.yaml + 新 CLI + 新页面 · 结果三套 workspace 真相分叉。
+
+**v2 缓解：**
+1. non-goal #10 硬禁止并行第二套 orchestrator · 见 §4
+2. §2c 既有工作 inventory 表 · P43-02 必须 extend 这些不 rebuild
+3. §3d P43-02 plan 前置要求 migration contract · 既有 `workbench.js` + `archive_workbench_bundle` schema 必须映射到 P43 flow
+4. 兼容性验收：既有 archive 必须无损 restore 到 P43 flow（P43-02 Exit Criteria）
+
+**C9 (= Codex Counter C) · P43-05 + P43-08 实质在建 shadow truth engine**
+
+**攻击（Codex 原话简化）：** `progressive panel generation + pause/rollback` + `annotation → merge back → regenerate` = 在 frozen spec 之外建可变中间语义层 · `generate_adapter.py:255,448` 已有 domain hardcode · preview truth / frozen spec / generated adapter 三套可分叉 · plan 没定 authoritative。
+
+**v2 缓解：**
+1. non-goal #11 明确 `draft_design_state` 身份 · 非 truth / 非 runtime / 非 certifiable · 冲突时 frozen spec authoritative
+2. P43-05 preview 只展示"候选变更 diff" · 不作 runtime 语义来源
+3. P43-06 wiring editor 前置：graph validator 先落地（cycle / terminal uniqueness / fan-out 约束 · P43-06 Exit Criteria）
+4. P43-08 annotation → regen 之前必须 validator 通过 · 否则 annotation 被拒 + 用户可视反馈
+
+**C10 (= Codex Counter D) · P43-09 认证路径与 P42 governance 正面冲突**
+
+**攻击（Codex 原话简化）：** P43.8 原文 "Final Approved → certified/In use" · Q6 又推默认 demonstrative · 两条互斥治理线 · 且违反既有 registry 升级协议（authoritative doc + SHA + matrix + 独立 gated phase）。
+
+**v2 缓解：**
+1. non-goal #12 唯一治理线：Final Approved → `demonstrative + Upgrade pending` · certified 升级走独立 future Phase
+2. §1 用户旅程 + §3b P43-09 + Q6 全部对齐到此
+3. 删除所有 P43 sub-phase 内"certified"升级路径 · 即使用户签 Final Approved 也不升 · 明示
+4. 独立 certified Phase 模板沿用 P36β/P38 · 不在 P43 scope
+
+**C11 (= Codex Counter E) · §3 workflow correctness 缺失**
+
+**攻击（Codex 原话简化）：** plan 承诺"可中断 / 可恢复 / 多轮可追溯" · 实际 P43.1 只是选存储格式 · 没 workflow automaton / state enum / transition table / idempotency / partial-write 恢复 / regen 失败回滚 / schema 变更后 resume / iteration overflow 策略 · wiring 改 downstream_component_ids 但 blocker 只查引用存在不查 cycle / terminal / fan-out。
+
+**v2 缓解：**
+1. §3c workflow automaton 契约 scope 明示 · P43-02 plan 前置必要条件
+2. §3c 列 17 个 state + 10+ event + error taxonomy + idempotency rules + partial write recovery
+3. §3c 要求 cross-phase integration test ownership 明示
+4. P43-06 wiring graph validator 单列 scope（cycle / terminal uniqueness / fan-out）· 非"UI 前端交互"而已
+5. iteration_count 上限 10 · 防 state 爆炸（C4 副产）
+
+**C12 (= Codex Counter F) · §5 自审盲点**
+
+**攻击（Codex 原话简化）：** C1-C6 盯 scope / UI polish / 死循环 / archive 命名 / 要不要调 Codex · 但遗漏 primitive integration proof / state machine correctness / existing workbench migration / gate fatigue · 且存在真实既有 code bug（`blockers`/`blocking_reasons`）。
+
+**v2 缓解：**
+1. 本节 §5 扩 6 新 counter（C7-C12）· 覆盖 primitive integration / state machine / existing workbench / governance / self-audit 诚实度
+2. P43-01 is a real-link-report spike · 不再 "审叙事"
+3. Gate fatigue 通过 Q1=D（Gate batching · 推荐）· 见 Q1
+4. Primitive integration 通过 P43-01 Contract Proof Spike 证明 · 非 assumption
+
+---
+
+## 6. Open Questions · Kogami 签 GATE-P43-PLAN (v2) 时仲裁
+
+### Q1 · Gate 策略（**v2 新增 option D · 推荐**）
+- A · P43-00 v2 approve 后 · P43-01 + 每个 P43-02..10 各独立 gate（18 gate · high fatigue）
+- B · P43-00 v2 approve = 全部绑定（0 退场机会 · 不选）
+- C · 混合：P43-01 独立 · P43-02..04 合 · P43-05..07 合 · P43-08..10 合（5 gate · medium）
+- **D · v2 推荐**：P43-01 独立 gate · P43-02..04 合 1 gate（基础线）· P43-05..07 合 1 gate（preview/wiring/debug）· P43-08..10 合 1 gate（iteration/approval/archive）· 共 **4 gates**（最低 fatigue · 每阶段有清晰退场点）
+- **Executor 建议：D**
+
+### Q2 · UI 技术栈（v1 同）
+- A · 沿用 `workbench.js` vanilla JS 风格（推荐）
+- B · 引入 Alpine.js/HTMX
+- C · React/Vue（坚决不选）
+- **Executor 建议：A**
+
+### Q3 · state machine 持久化格式（v2 升级）
+- A · 独立 yaml per workspace（v1 推荐）
+- **B · 扩展 `workbench.js` localStorage workspace v2 schema**（v2 推荐 · 复用既有 + 加 P43 新字段）
+- C · sqlite
+- **Executor 建议：B**（与 non-goal #10 一致）
+
+### Q4 · approval 签名（v1 同）
+- **A · 用户 alias + 注释**（推荐）
+- B · OAuth
+- **Executor 建议：A**
+
+### Q5 · archive 粒度（v2 升级）
+- A · 独立 `archive/workbench/{system_id}/` 新建
+- **B · 复用 `archive_workbench_bundle` + 扩 manifest schema**（v2 推荐 · 与 non-goal #10 一致）
+- **Executor 建议：B**
+
+### Q6 · Final Approved truth_level（v2 唯一治理线）
+- **A · 只能落 `demonstrative + Upgrade pending`**（v2 唯一合法 · Codex Counter D 消化）
+- ~~B · Final Approved → certified~~（v2 禁止）
+- **Executor 建议：A**（唯一选项 · 此 Q 保留只为明示记录）
+
+### Q7 · adapter-boundary Codex 硬性规则（v1 同）
+- **A · P43 milestone 整体标记 · 每触点必调 Codex**（推荐）
+- **Executor 建议：A**
+
+### Q8 (v2 新) · P43-01 内容范围
+- A · 只跑 happy + failure path + 修已知 bug（最 lean）
+- **B · 额外产 primitive API 契约表（Executor 推荐）**（推荐 · 后续 sub-phase plan 必需）
+- C · 加全套 performance benchmark（超 P43-01 scope）
+- **Executor 建议：B**
+
+### Q9 (v2 新) · P43-01 failed 怎么办
+- A · Kogami 关 P43 milestone · 重新 R4 决策
+- **B · Executor 基于 P43-01 报告输出 P43-00 v3**（推荐 · 若 spike 揭示既有工作不足 / primitive 破碎度超预期 · plan 可能 dramatic 改）
+- C · 继续按 v2 分解（不基于实证 · 强行执行 · 不推荐）
+- **Executor 建议：B**（反映"先跑再建"哲学）
+
+### Q10 (v2 新) · workflow automaton 契约格式
+- A · 纯 markdown 在 P43-02-00-PLAN.md §
+- **B · 独立 `docs/P43-workflow-automaton-contract.md` + machine-readable yaml schema**（推荐 · 支持 runtime state validation）
+- **Executor 建议：B**
+
+---
+
+## 7. Execution sequencing · v2
 
 ```
-[1] 文档导入 → [2] 解析/询问/确认/冻结 → [3] 面板逐步生成
-→ [4] 连线 → [5] 面板调试 → [6] 标注修改 → [7] 迭代优化
-→ [8] 用户最终批准 → [9] 归档
+P43-00 v2 plan commit + Codex re-review + Kogami GATE-P43-PLAN (v2) Approved
+         ↓
+P43-01 Contract Proof Spike (独立 gate · ~1 day · 先行 · must land)
+         ↓
+[P43-01 报告审查：Kogami 决定 P43-00 v2 保留 / 改 v3 / 撤回 P43]
+         ↓ (若 v2 保留)
+P43-02..P43-04 基础线（合 1 gate · workflow + orchestrator extend + Q&A + Freeze）
+         ↓
+P43-05..P43-07 preview 层（合 1 gate · progressive panel + wiring + debug）
+         ↓
+P43-08..P43-10 iteration + approval + archive（合 1 gate · 收尾）
 ```
 
-**关键洞察：** 项目已积累大量原子能力（`document_intake.py` 1118 LOC · `ai_doc_analyzer.py` 868 LOC · `generate_adapter.py` · `demo_server.py` 3677 LOC · `adapter_truth_levels.yaml` · Appendix A Q&A 模式 · `.planning/phases/Pxx/` archive 协议）· 但**没有统一的用户可见 orchestration 层**。
+**总 gates：4**（P43-01 + 3 批次）· 若 Q1=D Kogami 批
 
-**P43 milestone 的唯一新增**：把已有 primitives 串成一条用户可走完的闭环 pipeline · 填补缺失的 3 类连接（用户交互 UI / 状态持久化 / 阶段间 handoff）· 不重写任何现有 primitive。
-
-**P43-00（本文）scope：** milestone 设计文档 + sub-phase 分解 + Tier 1 adversarial + Open Questions Q1-Q7。**不写 src 代码**。落地实施等 `GATE-P43-PLAN: Approved` 后分拆到 P43.1-P43.9。
+**总 duration：** P43-01 ~1 day · 基础线 ~3-5 day · preview 层 ~3-5 day · 收尾 ~2-3 day · **~10-14 day**（与 v1 同量级但 Gate fatigue 降）
 
 ---
 
-## 1. Milestone vision · user journey
+## 8. Milestone-level Exit Criteria（v2 更严）
 
-### 用户视角闭环（单次完整使用）
-
-| Step | 用户动作 | 系统产出 | 用户决策 |
-|------|---------|---------|---------|
-| 1 · Import | 用户把需求文档扔到 workbench（PDF / docx / md / image）| `uploads/` + SHA 固化 + `intake_packet` 结构体 | 确认文档识别正确 |
-| 2a · Parse | 系统用 `ai_doc_analyzer` 解析文档 | 初版 `ControlSystemWorkbenchSpec` 候选 + ambiguity list | — |
-| 2b · Q&A | 系统向用户提问（每 ambiguity 一问）| 用户答案持久化到 `clarification_answers.yaml` | 用户填答 / 跳过 |
-| 2c · Freeze | 用户确认 spec 定稿 | spec 固化 + traceability matrix Appendix A 生成 | 用户签 "Freeze Approved" |
-| 3 · Panel gen | 系统调 `generate_adapter.py` 逐步生成 adapter + 面板 | adapter.py + demo_server 注册的面板页 | 用户旁观（逐 logic_node 生成） |
-| 4 · Wiring | 系统根据 `downstream_component_ids` 自动连线 | SVG 连线 + 拓扑图 | 用户可手动加/删 |
-| 5 · Debug | 用户跑 snapshot 灌入面板 | `GenericTruthEvaluation` 结果 + 可视化 | 用户观察是否符合预期 |
-| 6 · Annotate | 用户在面板上标注问题（哪个 logic 错了 / 哪个阈值不对）| 标注持久化到 `annotations.yaml` | — |
-| 7 · Iterate | 系统根据标注 regenerate adapter · 循环 4-6 | 新版 adapter · 标注 carry forward | 用户决定 "再改 / 满意" |
-| 8 · Approval | 用户签 "Final Approved" | adapter 锁定 + registry row 添加 · truth_level 升 certified | 用户签名（类 Kogami Gate）|
-| 9 · Archive | 系统归档整个工作流 | `.planning/phases/Pxx-{system_id}/` 目录 + closure doc + Notion DECISION | 归档只读 |
-
-### 三个非功能性目标
-
-- **T1 · 可追溯**：每一步的输入输出 + 用户决策都有持久化证迹（沿用 P34-P42 的 traceability matrix + Appendix A 模式）
-- **T2 · 可中断**：用户随时关闭、隔天回来、从上次位置继续（state machine 持久化）
-- **T3 · 可审计**：最终 archived 工作流是一套 self-describing artifact，无需看代码就知道这个 adapter 怎么来的
+继承 v1 10 条 + 新增：
+11. `ai_doc_analyzer.py` `blockers`/`blocking_reasons` bug 已修 + regression test land（P43-01 产出）
+12. `docs/P43-contract-proof-report.md` 存在 · Kogami 审过
+13. `docs/P43-workflow-automaton-contract.md` + machine-readable yaml 存在（Q10=B）
+14. 既有 `archive_workbench_bundle` manifest 能无损 restore 到 P43 flow（C8 兼容性验收）
+15. P43 产出的 adapter 全部落 `demonstrative + Upgrade pending`（C10 唯一治理线）
+16. 无并行"第二套 orchestrator"代码存在（C8 non-goal 守）
+17. `generate_adapter.py` 的 domain hardcode（若 P43-01 揭示）已处理或登记为 known limitation（C9）
 
 ---
 
-## 2. 既有 primitives 库存 (NOT TO BE REWRITTEN)
+## 9. v5.2 + v5.3 compliance（v2 · 扩）
 
-### 已存在的原子能力
-
-| Primitive | LOC | 当前职责 | 覆盖 Step |
-|-----------|-----|---------|----------|
-| `document_intake.py` | 1118 | SourceDocumentRef + intake_packet 结构 + assess_intake_packet | 1, 2a |
-| `ai_doc_analyzer.py` | 868 | ambiguity detection + clarification loop + prompt gen | 2a, 2b |
-| `knowledge_capture.py` | 254 | knowledge artifact 捕获 | 2c |
-| `system_spec.py` | - | ControlSystemWorkbenchSpec + 所有 spec dataclass | 2c, 3 |
-| `generate_adapter.py` | 671 (P42 post-fix) | spec JSON → adapter 源码（含 P42 governance defaults）| 3 |
-| `controller_adapter.py` | - | ControllerTruthMetadata (P42 extended) + GenericTruthEvaluation | 3, 5 |
-| `demo_server.py` | 3677 | 面板 UI server + API 路由 | 3, 5 |
-| `adapter_truth_levels.yaml` | - | machine SoT registry (P42)| 8 |
-| `sha_registry.yaml` | - | uploads/ SHA 固化 (P40)| 1, 9 |
-| `.planning/phases/Pxx/` | - | closure doc + Gate 签字 archive | 9 |
-| `docs/provenance/` | - | traceability matrix 模式 (P34-P42 成熟) | 2c, 8, 9 |
-| `workbench_bundle.py` | - | bundle 聚合 | 3, 9 |
-
-### 缺失的连接（P43 要补的）
-
-| Gap | 描述 | 建议 sub-phase |
-|-----|-----|---------------|
-| **G1** · 统一 orchestrator CLI/API | 目前 primitive 散在不同 module · 没有一条命令跑完 1→9 | P43.1 |
-| **G2** · 用户交互 UI（Q&A 面板）| `ai_doc_analyzer` 已生成 clarification prompts · 但没有 demo_server 对应 Q&A 页 | P43.2 |
-| **G3** · state persistence 跨 session | 用户中断后从哪里接续 · 目前无 state machine 文件 | P43.1 + 所有 |
-| **G4** · Freeze gate 用户签名机制 | intake 层 freeze 目前是手动改 code / YAML · 无用户可视签 | P43.3 |
-| **G5** · Progressive panel generation UI | 已有 adapter 一次性生成 · 但"逐步"生成+预览能力缺失 | P43.4 |
-| **G6** · wiring editor UI | 自动连线已在 demo_server 有 · 但手动加/删连接 UI 缺失 | P43.5 |
-| **G7** · annotation persistence + carry-forward | 用户标注当前无持久层 · regenerate 后丢失 | P43.6 + P43.7 |
-| **G8** · Final Approval signature + archive | 用户 "Approved" 签名 → registry 升 certified + 目录归档 无自动 pipeline | P43.8 + P43.9 |
-
-**观察**：**P43 不是 build from scratch · 是 integration + UX layer**。规模估算 ~2500-3500 LOC 新增，主要在 demo_server UI (`.js/.html/.css`) + 1 orchestrator CLI + state machine + 2-3 个中间 yaml schema。
+继承 v1 + 新增：
+- **R3 Tier 1 adversarial · 12 counters C1-C12 · 其中 C7-C12 verified-by codex-gpt54-xhigh**（v1 的 6 counter 升 12）
+- **v5.3 addendum hard rule · Codex re-review 协议 v2**：P43-00 v2 commit 后 · Kogami 签 Gate 前 · Executor **再次调 Codex** 审 v2 · 消化 "v2 是否真解决了 v1 的 6 counter" 问题 · 第二轮 Codex 输出入 `09C 外部审查简报` + verified-by trailer
 
 ---
 
-## 3. Sub-phase decomposition · P43.1 - P43.9
+## 10. Codex re-review plan (v2 · pre-Gate)
 
-每个子 Phase 独立 Tier 1 plan + Gate · 本节仅列 scope / 依赖 / 规模预估。
-
-### P43.1 · Orchestrator CLI + state machine（基础设施）
-**Scope**：单一入口 `workbench new <doc>` → 创建 workspace 目录 + state.yaml · `workbench continue <id>` → 从 state 恢复 · `workbench status <id>` → 列当前 step。
-**产出**：`src/well_harness/workbench/orchestrator.py`（~300 LOC）+ `workbench_state_v1.schema.json` + CLI integration。
-**依赖**：既有 primitives 全部引用 · 不改 primitive。
-**估算**：~400 LOC · 1 day · 1 Codex review。
-
-### P43.2 · Document import + Q&A UI 闭环
-**Scope**：demo_server 加 `/workbench/:id/intake` 页面（上传 doc · 触发 `document_intake.assess_intake_packet`）+ `/workbench/:id/qa` 页面（渲染 `ai_doc_analyzer` clarification prompts · 收集 user answers · 持久化）· 答案反馈 `ai_doc_analyzer` 重评。
-**产出**：demo_server 2 新页 · 1 新 API 路由组 · `clarification_answers_v1.schema.json`。
-**依赖**：P43.1 orchestrator 状态机 · `ai_doc_analyzer.py` 不改。
-**估算**：~600 LOC（前端 400 + 后端 200）· 1-2 days · 1 Codex review。
-
-### P43.3 · Freeze gate + Appendix A 生成
-**Scope**：用户在 UI 签 "Freeze Approved" · 系统把 spec 锁定到 `workspace_frozen.yaml` · 自动生成 `traceability_matrix.md`（沿用 P34-P42 模式）· Appendix A 未决假设列表基于 ambiguity 剩余项。
-**产出**：`src/well_harness/workbench/freeze.py`（~200 LOC）+ Appendix A 模板生成器。
-**依赖**：P43.2 Q&A · `knowledge_capture.py` · `docs/provenance/` 模式。
-**估算**：~300 LOC · 1 day · 1 Codex review。
-
-### P43.4 · Progressive panel generation UI
-**Scope**：不是一次性生成全 adapter · 而是 logic_node 逐个生成并在 UI 预览 · 用户可在每步暂停 / 回退。`generate_adapter.py` 提供 incremental mode（新加参数 · 不破 v2 既有接口）。
-**产出**：demo_server 面板预览页 + generator incremental mode。
-**依赖**：P43.3 frozen spec · `generate_adapter.py`（P42 扩展）。
-**估算**：~500 LOC · 2 days · **1 Codex review** (adapter boundary · 硬性规则触发 · generator 接口扩展)。
-
-### P43.5 · Wiring editor UI
-**Scope**：demo_server 拓扑图节点连线可手动加/删 · 改变 persists 到 `spec.logic_nodes[*].downstream_component_ids` · 改后重跑 generator。
-**产出**：demo_server 拓扑图交互 JS + API /wire。
-**依赖**：P43.4 panel · controller Protocol 不变。
-**估算**：~400 LOC · 1-2 days · 1 Codex review（UI 交互模式变更 · v5.3 硬性场景）。
-
-### P43.6 · Debug harness UI
-**Scope**：用户灌入 snapshot JSON · 系统跑 `adapter.evaluate_snapshot(...)` · UI 可视化 `GenericTruthEvaluation`（active nodes + blocked reasons）。沿用 adversarial_test.py 证据面模式。
-**产出**：demo_server debug 页 + snapshot 模板库。
-**依赖**：P43.4 panel · adapter 已生成。
-**估算**：~500 LOC · 1-2 days · 不触 adapter boundary · 可不调 Codex（但建议调）。
-
-### P43.7 · Annotation persistence + iterative regen
-**Scope**：用户在面板点击 "logic2 阈值错 · 应该是 -12 不是 -11.74" → 持久化到 `annotations.yaml` · 系统把 annotation 合并回 spec · 触发 regenerate 循环。多轮迭代 state 可追溯。
-**产出**：`annotations_v1.schema.json` + iteration loop logic + annotation UI。
-**依赖**：P43.4/P43.5/P43.6 · 状态机跨 iteration。
-**估算**：~600 LOC · 2 days · 1 Codex review（iteration state machine · 复杂度高）。
-
-### P43.8 · Final Approval + truth_level 升 certified
-**Scope**：用户签 "Final Approved" → workspace spec 锁定为新 system · 生成 `CONTROLLER_METADATA` + 添加到 `adapter_truth_levels.yaml`（truth_level=certified · status=In use）· 同步 markdown registry · 生成 adapter code 进 `src/well_harness/adapters/` · 三轨跑。
-**产出**：approval pipeline + registry update 自动化 + adapter landing 脚本。
-**依赖**：P43.7 · `adapter_truth_levels.yaml` + `test_metadata_registry_consistency.py`（P42 bidir guard 自动覆盖新行）。
-**估算**：~400 LOC · 1 day · **1 Codex review**（直接改 registry + adapter 文件 · adapter boundary 硬性规则）。
-
-### P43.9 · Archive + closure
-**Scope**：生成 `.planning/phases/Pxx-{system_id}/` 目录 · workspace 全过程（docs 输入 + Q&A 答案 + annotations 历史 + 生成的 adapter / test · Gate 签字链）打包归档。生成 Notion DECISION 块（类 P34-P42 格式）。
-**产出**：archive pipeline · Notion sync · closure doc 模板。
-**依赖**：P43.8 · Notion MCP · `.planning/phases/Pxx/` 协议。
-**估算**：~300 LOC · 1 day · 可不调 Codex（纯 docs/meta）。
-
-### 总规模估算
-- LOC：~4000 across 9 sub-phases
-- Duration：~10-15 dev days
-- Codex review 次数：7（P43.1/2/3/4/5/7/8 硬性 + P43.6 建议）
-- 新 JSON schema：3（workbench_state / clarification_answers / annotations）
-- 新 yaml registry：1（workspace_frozen · per-workspace not global）
-- demo_server 新页：~6（intake / qa / freeze / panel / wire / debug / approval + annotation overlay）
-- 新 test：~80-100（按每 sub-phase 8-15 test 估）
-
----
-
-## 4. Cross-cutting non-goals（milestone-wide）
-
-P43 milestone **不做**以下任何一条（防 scope creep）：
-
-1. **不写 LLM agent** · `ai_doc_analyzer` 已有 prompt 生成 · 用户答案驱动 · 不引入 autonomous LLM reasoning loop
-2. **不建第二套 truth engine** · 所有推理仍走 `GenericControllerTruthAdapter.evaluate_snapshot`
-3. **不改 P7 workbench UX** · P7 是"已有 spec"场景入口 · P43 是"从 0 生成 spec"场景入口 · 两者并存
-4. **不做权限/多用户** · 单用户单机（可扩 · 但 P43 不做）
-5. **不上云 / 不上多租户** · 本地 demo_server 运行模式继承
-6. **不建实时协作** · annotation 是单用户顺序操作
-7. **不改 M1 任何锁定 invariants**（见 frontmatter）
-8. **不改 JSON schema v1 $id 或 version const** · 所有 schema 扩展走 P42 v5.3 C5 策略
-9. **不建 registry 自动升级 yaml → markdown 的双向同步** · 手动同步模式（P42 现状）保持
-
----
-
-## 5. Tier 1 对抗性自审（Executor 自审 · Codex review 尚未调 · 在 Gate 前调）
-
-### C1 · "P43 scope 太大 · 9 个 sub-phase · 10-15 天 · 超过 P31-P42 全套时长"
-**承认。** 缓解：
-1. P43-00 **只是 design 文档 + 分解**。实施 Gate 分拆到每个 sub-phase · Kogami 可在任意 sub-phase 后暂停 / 重新评估
-2. 规模估算基于 P34-P42 真实节奏（每 Phase ~400-600 LOC · ~1 day）· P43.1-P43.9 沿用同节奏
-3. 每个 sub-phase 独立 GATE-P43.x-PLAN · Kogami 有全 9 次退场机会
-4. 若中间某 sub-phase 揭示原 plan 重大错判 · 走 P42-style v1→v2 path ①
-5. Accepted risk · milestone 本身是大的 · 但分解后每段可控
-
-### C2 · "既有 primitives 未必能无缝拼接 · document_intake/ai_doc_analyzer 是 P14 时代遗产 · API 与 P43 需要的可能不匹配"
-**部分承认。** 缓解：
-1. P43-00 的 **§2 primitives 库存表是初步扫描**。每个 sub-phase 开工前 plan 阶段 (P43.x-00) 需对所依赖的 primitive 做真实 API 核验（不走 shadow assumption）
-2. 发现 API 不匹配 → sub-phase plan 加 "adapter layer" 包一层不改 primitive
-3. 若 primitive 根本缺能力 → 开新 sub-phase 扩 primitive（走 Phase-级 Gate · 不擅自改 M1 锁定层）
-4. P41 narrative drift 教训：起草前 grep `ControlSystemWorkbenchSpec` / `AmbiguityAssessment` 等关键类 · 穷举 callers · 在 P43.x-00 plan 登记
-5. Accepted risk · 对 primitive 的真实假设由每个 sub-phase 自验 · P43-00 是乐观估算
-
-### C3 · "用户可见 UI 质量 vs 时间 trade-off 没规定 · demo_server 已有 UI 技术债"
-**承认。** 缓解：
-1. 明确 **非目标**：不做 "production-grade polish"。UI 质量目标 = "用户能闭环走完 9 步" 不等于 "pixel-perfect"
-2. demo_server 已有的 UI pattern 复用 · 不引入新 UI 框架（React/Vue/etc.）· 继承 vanilla JS / template string 风格
-3. 每个 sub-phase 的 Exit Criteria 包含 "UI 可用性测试：用户能在 <N> 分钟完成该 step"
-4. 若 UI 时间超预算 50% → sub-phase 暂停 · 升级 Kogami · 决定是否降质量
-5. Accepted risk · milestone 不追求 UI 完美 · 追求闭环可走
-
-### C4 · "iteration loop（P43.7）可能成为死循环 · 用户总在改 · 永远到不了 Final Approved"
-**承认。** 缓解：
-1. 明确 iteration **终止条件**：用户签 "Final Approved" · 没有 iteration 上限
-2. 加 advisory：iteration 第 5 次时系统提示 "是否需要重新做 freeze 阶段 · 或者这个 system 适合 demonstrative 不升 certified"
-3. P43.7 的 annotations state 必须包含 iteration_count · 持久化 · 可恢复
-4. Non-goal 明示：系统不自动决定 "够了"。用户主权保留
-5. Accepted risk · 死循环是用户产品决策 · 非系统 bug
-
-### C5 · "Archive（P43.9）可能与 M1 已建立的 .planning/phases/Pxx/ 协议冲突"
-**承认。** 缓解：
-1. P43.9 archive 目录命名用 `Pxx-workbench-{system_id}` 模式 · 避开 Phase 数字序列冲突（不占 P44/P45/…）
-2. archive 目录作为"生成物档案" · 不是 governance Phase · 不 append 到 ROADMAP.md "Phase P42 / P43 / ..." 序列
-3. 区分：P43 milestone 是**开发** phase · archive 目录是**生成物** archive · 两种语义
-4. Notion DECISION 块类比 P34-P42 但 tag 用 "workbench-generated"（不占 Gate 序列）
-5. P43.9 plan 需要详细设计目录命名空间规则 · 独立 Open Question
-
-### C6 · "这个 plan 本身没调 Codex · 违反 v5.3 adapter-boundary 硬性规则 · milestone 设计涉及 adapter gen/metadata 多处"
-**承认。这是本 plan 自审识别的最大 gap。** 缓解：
-1. **本 P43-00 plan 提交后 · Kogami 签 GATE-P43-PLAN 之前 · Executor 必调 Codex adversarial review**（与 P42 v5.3 协议一致）
-2. 虽然 P43-00 不写代码 · 但它规定了 9 个 sub-phase 的 adapter boundary 边界 · 是 super-adapter-boundary 决策
-3. 若 Codex 返 "需修正·信号强" · 走 P42-style path ①（plan v2）
-4. 若 Codex 返 "通过" · Kogami 签 P43-00 Approved 后进 P43.1
-5. Codex prompt 已准备：重点检视 §2 primitives 库存的真实性 / §3 sub-phase 分解的边界完整性 / §4 non-goals 的 scope 控制力 / §5 C1-C5 覆盖度
-
----
-
-## 6. Open Questions · Kogami 签 GATE-P43-PLAN 时仲裁
-
-### Q1 · milestone 整体 vs 分拆 Gate
-- **A · 本 P43-00 一次性通过后 · P43.1-P43.9 sub-phase Gate 仍各自走**（推荐 · 灵活性 + 失败退场机会最多）
-- B · P43-00 approved = 全 9 sub-phase 绑定通过 · 不单独 Gate
-- C · 混合：P43.1-P43.3（基础 + Q&A + Freeze）一次 Gate 绑定 · P43.4-P43.9 分别 Gate
-- **Executor 建议：A**
-
-### Q2 · UI 技术栈
-- **A · 沿用 demo_server 现 vanilla JS + template string 风格**（推荐 · 无框架引入成本 · 继承既有技术债但可控）
-- B · 引入轻量框架（Alpine.js / HTMX）提升交互流畅度
-- C · 全量重构到 React/Vue（**坚决不选** · 超 P43 scope）
-- **Executor 建议：A**
-
-### Q3 · state machine 持久化格式
-- **A · yaml 文件 per workspace**（`workspaces/{id}/state.yaml`）· 与既有 `adapter_truth_levels.yaml` / `sha_registry.yaml` 风格一致（推荐）
-- B · sqlite DB（更适合未来多用户）
-- C · JSON + schema validation（严格但笨重）
-- **Executor 建议：A**（**B** 留未来 milestone 扩展）
-
-### Q4 · approval 签名机制
-- **A · 用户在 UI 输入自己的 alias + 注释**（类 Git commit · 推荐）
-- B · OAuth 集成（超 scope）
-- C · Kogami 固定签名（单用户假设）
-- **Executor 建议：A**（**C** 作为单机默认 · A 作为未来可扩）
-
-### Q5 · archive 归档粒度
-- **A · 全 workflow 归档到 `archive/workbench/{system_id}/` 单目录**（所有 iteration 历史 · annotations · Q&A 答案 · 生成物）（推荐）
-- B · 只归档 final approved spec + adapter · 丢弃中间 iteration
-- C · 归档到 `.planning/phases/` 与 governance Phase 混合（不推荐 · 命名冲突）
-- **Executor 建议：A**
-
-### Q6 · P43.8 登记到 registry 时 truth_level
-- **A · 默认 demonstrative · 用户显式升 certified 须走 Phase upgrade（类 P36β 模板）**（推荐 · 保守 · 不 inflation）
-- B · Final Approved 即自动 certified
-- C · 用户选
-- **Executor 建议：A**（与 P42 Q5=A `generate_adapter` 模板默认 demonstrative/Upgrade pending 哲学一致）
-
-### Q7 · P43 milestone 是否挂 v5.3 adapter-boundary 硬性规则？
-- **A · P43 milestone 整体标记为"多次触发硬性规则" · 每个 adapter-boundary 触点 sub-phase 必调 Codex**（推荐 · 已在 §3 标）
-- B · milestone 级一次性 Codex review 覆盖全 9 sub-phase（省 token 但 scope 难 · 不推荐）
-- **Executor 建议：A**
-
----
-
-## 7. Execution sequencing
-
-一旦 `GATE-P43-PLAN: Approved` 签出：
-
-1. **P43.1 开工**（orchestrator + state machine · 基础设施 · 所有后续依赖）
-2. **P43.2 + P43.3 串行**（intake/Q&A UI · 然后 Freeze gate）
-3. **P43.4 + P43.5 + P43.6 可并行**（panel gen · wiring · debug · 各自独立 UI）·但建议串行避免 UI 冲突
-4. **P43.7 pause-point**：P43.6 landed 后 Kogami 做 "milestone 中期 check" · 判断是否继续 P43.7-P43.9 或暂停评估
-5. **P43.7 + P43.8 + P43.9 串行**（iteration 依赖 annotation · approval 依赖 iteration · archive 依赖 approval）
-
-**整体 timeline 预期：** ~2-3 周（考虑每 sub-phase plan 期 · Codex review · Kogami Gate 等待）
-
----
-
-## 8. Milestone-level Exit Criteria
-
-P43 全 9 sub-phase landed 后，满足以下**全部** 才算 milestone 完成：
-
-1. 新用户可通过 `workbench new <doc>` 单一命令启动全流程
-2. 闭环 demo：选一个非 5 现有链路的新 domain（例如 "cabin pressurization" / "anti-skid braking" / 任选一个 Kogami 指定的 demo domain）· 跑完 1→9 · 产出 certified 新 adapter · 三轨绿
-3. 闭环 demo 的 archive 目录自包含 · 陌生工程师 30 分钟内能看懂这个 adapter 怎么来的
-4. 既有 5 adapter 的 runtime behavior 字节级不变（M1 invariants 守住）
-5. default lane test 数（当前 796）+ new tests (est 80-100) ~875-900 · 无 regression
-6. e2e lane + adversarial wrapper 继续全绿
-7. 每 sub-phase 各自 DECISION block 已入控制塔 Notion
-8. Notion `02B Execution Run` 数据库包含 9 新 runs（P43.1-P43.9 各一）
-9. 05 QA / 06 Evidence 数据库同步更新
-10. Milestone closure doc `.planning/milestones/M2-control-logic-workbench-CLOSURE.md` 签字
-
----
-
-## 9. v5.2 + v5.3 compliance
-
-- **R1** 不可逆 main HEAD · 每 sub-phase 独立 feature branch + Option M 非 FF merge · 每 Phase Gate 前不 push main
-- **R2** 不自签 · GATE-P43-PLAN + GATE-P43.1-PLAN + ... + GATE-P43.9-CLOSURE 全部 Kogami 显式
-- **R3** Tier 1 adversarial · 6 counters C1-C6 本 plan 就地缓解 · Codex review C5/C6/C7... 后续加
-- **R4** 不自选 · 本 R4 方向 Kogami 明示（2026-04-20 "完整控制逻辑生成工作台"）· sub-phase 开工顺序按 §7 建议 · Kogami 可重排
-- **R5** 证迹先行 · 本 plan 先于 code · 不先建 primitive / 后补 plan
-- **v5.3 addendum hard rule** · adapter-boundary 硬性场景 7 次（§3 标注）· 每次必调 Codex · 结果批判性消化不直接复制 · verified-by trailer
-
----
-
-## 10. Codex adversarial review plan (pre-Gate)
-
-按 v5.3 addendum 协议 · **本 P43-00 plan 提交后 · Kogami 签 GATE-P43-PLAN 之前 · Executor 调 Codex**：
+按 v5.3 addendum 协议 · **v2 commit 后 · Kogami 签 GATE-P43-PLAN (v2) 前 · Executor 再次调 Codex**：
 
 **Prompt 摘要：**
-> 你是 Codex GPT-5.4 xhigh · 以 adversarial reviewer 身份评审 Well Harness P43 milestone plan (Control Logic Workbench 端到端)。重点审查以下 4 维度 · 给 ≥3 最强反驳 + 缓解建议：
-> (1) §2 primitives 库存是否真实可用（假设 document_intake/ai_doc_analyzer 当前 API 与 P43 需求对得上是否过于乐观？）
-> (2) §3 sub-phase 分解是否 complete（有无遗漏的 boundary · 如 state persistence 模式 / 错误恢复 / Kogami interrupt / 测试策略）
-> (3) §4 non-goals 是否 scope creep 防御充分（"不建第二套 truth engine" 等硬边界是否可执行）
-> (4) §5 C1-C5 Executor 自审是否覆盖 milestone 真实风险 · 有无遗漏结构性 bug 窗口
+> 你是 Codex GPT-5.4 xhigh · 第二轮评审 Well Harness P43 milestone plan v2。v1 你返 "需阻止"（6 structural counters A-F）· Kogami 选路径① · Executor 重写 v2。请审 v2 是否真正消化 6 个 counter：
+> (1) Counter A（伪库存）→ C7 + P43-01 Contract Proof Spike 是否足够？
+> (2) Counter B（二代 orchestrator）→ C8 + non-goal #10 + §2c 既有工作 inventory + §3d migration 契约是否足够？
+> (3) Counter C（shadow truth engine）→ C9 + non-goal #11 + draft_design_state 定位是否足够？
+> (4) Counter D（治理冲突）→ C10 + non-goal #12 + §1 + P43-09 + Q6 统一到 demonstrative 是否足够？
+> (5) Counter E（workflow correctness）→ C11 + §3c workflow automaton 契约 scope 是否足够？
+> (6) Counter F（self-audit 盲点）→ C12 + 6 新 counter 是否足够？
+> 若还有结构性遗漏 · 给 ≤3 条最强反驳 + 缓解建议。
+> 若 v2 覆盖充分 · 明示 "v2 可过 Gate" 并列 minor tweaks（若有）。
 
-**Codex 消化流程：** 同 P42 协议（C1-C7 新增 · verified-by trailer · 不直接复制文字）。
-
-**若 Codex 返"需修正·信号强"：** 走 path ① · v2 plan · 再次提交。Executor 不自签 Gate。
+**Codex 输出处理：** 批判性消化 · 如再 "需阻止" · 走 v3 · 如 "可过 Gate" · 提交 Kogami 最终审。
 
 ---
 
 ## 11. 停点
 
-**本 plan v1 不执行任何代码。两个停点：**
+**本 plan v2 不执行任何代码。三个停点：**
 
-**停点 1（等 Codex review）：** 提交此 plan v1 + branch push 后 · Executor 调 Codex adversarial review · 消化回 plan v1/v2 · 再提 Kogami 审。
-
-**停点 2（等 Kogami Gate）：** Kogami 签 `GATE-P43-PLAN: Approved` + Q1-Q7 仲裁 · 才启动 P43.1 的 P43.1-00-PLAN.md 起草。
+**停点 1**：v2 commit + branch push 后 · Executor 调 Codex re-review（v5.3 addendum 要求）
+**停点 2**：Codex 返 "可过 Gate" 或 v3 · Executor 提交 Kogami 审 GATE-P43-PLAN (v2)
+**停点 3**：Kogami 签 `GATE-P43-PLAN (v2): Approved` + Q1-Q10 仲裁 · 才启动 P43-01 的 P43-01-00-PLAN.md 起草
 
 ---
 
 **Signed:** Claude App Opus 4.7 (Solo Executor) · v5.2 solo-signed + v5.3 addendum · 2026-04-20
-**Awaiting:** Codex adversarial review (self-initiated per v5.3) + `GATE-P43-PLAN: Approved` (Kogami) + Q1-Q7 仲裁
-**Scope:** milestone-level design doc · no src code · 9 sub-phase decomposition · 4 cross-cutting non-goals · 6 self-audit counters
+**Revision:** v2 (post-Codex · path ① · 6 structural counters A-F integrated as C7-C12)
+**Awaiting:** Codex re-review (self-initiated per v5.3) + `GATE-P43-PLAN (v2): Approved` (Kogami) + Q1-Q10 仲裁
+**Verified-by:** codex-gpt54-xhigh (first-round adversarial review 2026-04-20 · verdict 需阻止 · 6 structural counters A-F integrated)
