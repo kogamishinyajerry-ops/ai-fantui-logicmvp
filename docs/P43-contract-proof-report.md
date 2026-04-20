@@ -47,7 +47,7 @@ Full evidence table with commit anchors and runtime dumps is in `canonical_detai
 | 3 | S3a asserted_pass · Bug A READ fix + 4 default-lane tests + Codex Step B `可过-Gate` | **PASS** |
 | 4 | S3b asserted_pass · frontend consumer grep alignment | **PASS** |
 | 5 | S4 report · `readAsText` broken confirmed via Playwright evidence | **PASS (broken confirmed)** |
-| 6 | S5 asserted_pass · `docs/P43-api-contract-lock.yaml` · 7 endpoints · 19 error branches | **PASS** |
+| 6 | S5 asserted_pass · `docs/P43-api-contract-lock.yaml` · 7 endpoints · 36 endpoint error-branch entries + 6 global guards | **PASS (post-round-2 scrub)** |
 | 7 | R6/R7/R8 inventory · 3 conclusions + fix checklist | **PASS** |
 | 8 | Three-lane regression vs P42 baseline `a6521ca` | **PASS · default 800 passed, 1 skipped · e2e 50 passed · zero regression** |
 | 9 | 2 Codex adversarial rounds (Step B + Step G) | **Step B PASS · Step G scrub round complete — verdict pending re-review on `e-scrub` commit** |
@@ -61,7 +61,8 @@ Full evidence table with commit anchors and runtime dumps is in `canonical_detai
 | `8d76cf5` | Codex Step B review trailer + 3 optional doc polish items |
 | `7fd243d` | Steps D/E/F — Playwright readAsText proof + API contract lock + R6/R7/R8 inventory |
 | `4d40aee` | Step G — report finalize + exit-criteria mechanical verification |
-| (this commit) | Step G scrub — Codex Step G round 1 `需修正·信号弱` → S5 YAML expanded + S4 wording narrowed + closure governance cleanup |
+| `6729768` | Step G scrub 1 — Codex round 1 `需修正·信号弱` → S5 YAML expanded + S4 wording narrowed + closure governance cleanup |
+| (this commit) | Step G scrub 2 — Codex round 2 `需修正·信号强` → 7 further drift items closed (additional `/api/workbench/bundle` 400 for `sample_period_s ≤ 0`; `/api/workbench/archive-restore` non-string `manifest_path` branch; `/api/workbench/repair` `apply_all_safe` truthiness-not-bool documented; error-branch counts corrected in both reports; §10 "same behavior for .pdf and .docx" sentence narrowed; detailed report frontmatter updated). |
 
 ## P43-02+ scope recommendations (evidence-based)
 

@@ -1,15 +1,16 @@
 ---
 phase: P43
 sub_phase: P43-01
-report: P43-01-Contract-Proof
-status: Step A + Step B complete · Kogami Option X arbitration applied · awaiting Codex post-implementation review (Q7=A)
+report: P43-01-Contract-Proof (supporting artifact for the plan §2b-whitelisted summary at `docs/P43-contract-proof-report.md`)
+status: Steps A–G complete · Kogami Option X applied at Step B · Codex Step B `可过-Gate` · Codex Step G round 1 `需修正·信号弱` → scrub → round 2 `需修正·信号强` → scrub round 2 applied in this revision · round 3 pending re-review
 date: 2026-04-21
 owner: Claude App Opus 4.7 (Solo Executor)
-verified-by: pending Codex post-implementation review (Q7=A) · Step B commit trailer
+verified-by: Codex Step B `可过-Gate` (trailer §9) · Codex Step G pending round 3 re-review on scrub commit
 upstream_plan: .planning/phases/P43-control-logic-workbench/P43-01-00-PLAN.md (v5 · GATE-Approved)
+authoritative_summary: docs/P43-contract-proof-report.md
 ---
 
-# P43-01 · Contract Proof Report — Step A + B (Option X)
+# P43-01 · Contract Proof Report — Full arc (Step A → Step G scrub round 2)
 
 ## 0. TL;DR
 
@@ -228,7 +229,7 @@ upload_error_present: False
 - pdf header literal `%PDF-1.7` carried verbatim into `_documentText` (`static/ai-doc-analyzer.js:214`) and displayed in `_previewTextarea` — this is the UTF-8 lossy decode of the raw pdf byte stream.
 - `FileReader.readAsText` did NOT dispatch `onerror` (upload-error element is empty).
 - Analyze button stayed ENABLED, meaning the analyzer pipeline is willing to submit this 962k-character garbage string to the LLM.
-- `reader.readAsText(file)` at `static/ai-doc-analyzer.js:224` has no content-type guard — same behavior for `.pdf` and `.docx`.
+- `reader.readAsText(file)` at `static/ai-doc-analyzer.js:224` has no content-type guard; the absence of the guard is empirically confirmed for `.pdf` (docx is predicted-broken by the same mechanism but not exercised in this spike — see §10 Conclusion below).
 
 **Conclusion**: Browser-side `readAsText` cannot process pdf binaries (empirically verified here). Based on the same UTF-8-lossy-decode mechanism, docx behavior is predicted-broken (zip-archive header `PK\x03\x04` would be decoded as mojibake) but was **not** exercised in this spike — the plan §2c whitelist authorized one e2e test file with one test function, and the pdf case is the ground truth. The analyzer currently has three correlated gaps that together constitute the broken path — (i) no file-content guard, (ii) silent garbage-in success, (iii) unconditional enable of the downstream LLM submit. Registered as **R6a blocker for P43-03** (Q12=B+a server-side pypdf / python-docx extraction path); P43-03 should verify docx behavior before writing the server-side extractor.
 
@@ -242,9 +243,9 @@ upload_error_present: False
 |--------|------|---------|-------------------|
 | GET  | `/api/workbench/bootstrap`        | `demo_server.py:217` | 200 |
 | GET  | `/api/workbench/recent-archives`  | `demo_server.py:224` | 200 |
-| POST | `/api/workbench/bundle`           | `demo_server.py:343` | 200 · 3 × 400 |
-| POST | `/api/workbench/repair`           | `demo_server.py:350` | 200 · 4 × 400 |
-| POST | `/api/workbench/archive-restore`  | `demo_server.py:357` | 200 · 5 × 400 |
+| POST | `/api/workbench/bundle`           | `demo_server.py:343` | 200 · 19 × 400 (3 handler-specific + 15 structured-optional-field family + 1 `sample_period_s ≤ 0`) |
+| POST | `/api/workbench/repair`           | `demo_server.py:350` | 200 · 4 × 400 (includes `apply_all_safe` truthiness note — handler accepts any truthy value) |
+| POST | `/api/workbench/archive-restore`  | `demo_server.py:357` | 200 · 6 × 400 (includes wrong-type `manifest_path` branch distinct from missing/empty) |
 | POST | `/api/p15/convert-to-intake`      | `demo_server.py:484` | 200 · 5 × 400 |
 | POST | `/api/p15/run-pipeline`           | `demo_server.py:491` | 200 ready · 200 blocked · 2 × 400 |
 
@@ -349,6 +350,6 @@ All 9 exit criteria asserted_pass. Evidence anchored to commits, files, and test
 | 6 | **S5 asserted_pass** · `docs/P43-api-contract-lock.yaml` covers `/api/workbench/*` + `/api/p15/*` with success/blocked/error branches | **PASS (post-scrub)** | `docs/P43-api-contract-lock.yaml` (commit `7fd243d` · expanded in Step G scrub) · 7 endpoints · YAML parses cleanly · response-200 success variants + handler-specific 400s + structured-optional-field family on `/api/workbench/bundle` (15 field-level entries covering the `_optional_request_str/_float/_object/_string_list` validator surface) + 6 global guards documented. |
 | 7 | **R6/R7/R8 report** · 3 inventory conclusions + fix checklist | **PASS** | §10 (S4) + §11 (S5) + §12 (R6/R7/R8) · each registered with code anchors and fix ownership (P43-03 for R6 Bug D · post-P43 workbench-generalization for R7 · future dataclass promotion for R8 handoff shape). |
 | 8 | **Three-lane regression** vs P42 baseline `a6521ca` | **PASS** | Default pytest **800 passed, 1 skipped** (P42 baseline 796 + 4 spike default tests) · E2E **50 passed** (P42 baseline 49 + 1 Playwright readAsText e2e · includes `test_resilience_adversarial_truth_engine_still_passes` adversarial wrapper at `tests/e2e/test_demo_resilience.py:132`) · zero regression across both lanes · re-run 2026-04-21. |
-| 9 | **Report complete + 2 Codex adversarial rounds** (Step B + Step G) | **Step B PASS · Step G round 1 `需修正·信号弱` → scrub round applied in this commit · round 2 pending** | Step B review complete (`可过-Gate` · §9 trailer · commit `8d76cf5`). Step G round 1 on commit `4d40aee` returned `需修正·信号弱` with 3 required fixes: (i) S5 YAML undersized enumeration of `/api/workbench/bundle` structured field-validation errors, (ii) S4 "pdf/docx" wording overreach beyond the pdf-only test evidence, (iii) closure governance — detailed report positioned as authoritative vs plan §2b-whitelisted `docs/` summary. All three fixes applied in this scrub commit. Codex round 2 to be re-invoked. |
+| 9 | **Report complete + 2 Codex adversarial rounds** (Step B + Step G) | **Step B PASS · Step G round 1 `需修正·信号弱` → scrub 1 → round 2 `需修正·信号强` → scrub 2 applied in this revision · round 3 pending** | Step B review complete (`可过-Gate` · §9 trailer · commit `8d76cf5`). Step G round 1 (commit `4d40aee`): `需修正·信号弱` — 3 fixes (S5 YAML enumeration, S4 wording, closure governance) applied in commit `6729768`. Step G round 2 (commit `6729768`): `需修正·信号强` — 7 further drift items (bundle/archive-restore additional 400 branches, repair `apply_all_safe` truthiness, stale error-branch counts in both reports, §10 "same behavior for .pdf and .docx" overreach, detailed report frontmatter stale). All 7 items fixed in this scrub commit. Codex round 3 to be re-invoked; Gate endorsement conditional on `可过-Gate` verdict. |
 
 **Non-goal #16 self-audit** (from P43-00 plan — "不以 '列出断裂' 为通过条件"): PASS. P43-01 did not merely list broken paths — it (a) fixed three critical Counter-F bugs (A/B1/B2) with surgical source edits and regression tests, (b) produced asserted_pass evidence on both happy and blocked paths, (c) provided a canonical API contract lock YAML for downstream phases, and (d) confirmed (not assumed) the readAsText pipeline is broken via headless-browser evidence.

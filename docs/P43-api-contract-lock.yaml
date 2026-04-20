@@ -177,6 +177,10 @@ endpoints:
         error: invalid_workbench_request
         field: workspace_snapshot
         trigger: workspace_snapshot provided and not a JSON object
+      - status: 400
+        error: invalid_workbench_request
+        field: sample_period_s
+        trigger: sample_period_s provided as finite number but <= 0 (`_optional_request_float` emits "must be greater than zero")
 
   /api/workbench/repair:
     method: POST
@@ -186,7 +190,15 @@ endpoints:
       content_type: application/json
       body:
         packet_payload: {type: object, required: true}
-        apply_all_safe: {type: boolean, required: true, must_be: true}
+        apply_all_safe:
+          type: any
+          required: true
+          # Handler at demo_server.py:2662 tests truthiness (not strict bool):
+          # any JavaScript-truthy value (`true`, `"yes"`, `1`, non-empty strings)
+          # passes the guard. Documented as 'any' because the contract is
+          # truthiness, not type; strict-bool enforcement is a potential future
+          # hardening (not in P43-01 scope).
+          truthiness_note: "accepts any truthy value per handler; falsy values → 400 invalid_workbench_request"
     response_200:
       shape:
         packet_payload: object               # repaired intake packet dict
@@ -229,7 +241,11 @@ endpoints:
       - status: 400
         error: invalid_workbench_request
         field: manifest_path
-        trigger: manifest_path missing or empty
+        trigger: manifest_path provided and not a string (emitted by `_optional_request_str`)
+      - status: 400
+        error: invalid_workbench_request
+        field: manifest_path
+        trigger: manifest_path missing or empty (handler guard at demo_server.py:2696-2702)
       - status: 400
         error: invalid_manifest_path
         trigger: relative path contains '..'
