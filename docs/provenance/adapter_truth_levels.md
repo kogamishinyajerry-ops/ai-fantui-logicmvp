@@ -47,7 +47,7 @@ Well Harness 项目目前有 5 条真值链路（4 个 `adapters/*_adapter.py` +
 | `bleed-air-valve` | `demonstrative` | `Frozen` | `none` | 无 | 2026-04-20 | 未来 Kogami 提供上游需求文档后开新 Phase | bleed_air_adapter.py 602 LOC · 自述 "Simplified" · Q2=B 扫描识别为 4 个常数无来源 |
 | `emergency_flare_deployment_system` | `demonstrative` | `Frozen` | `none` | 无 | 2026-04-20 | 同上 | efds_adapter.py 498 LOC · 无 intake / 无 yaml / 无 matrix · Q2=B 扫描识别为 adapter 自足 |
 | `minimal_landing_gear_extension` | `demonstrative` | `Frozen` | `none` | 无 | 2026-04-20 | 同上 | landing_gear_adapter.py 362 LOC · 611 LOC tests 但基于自证 · Q2=B 扫描识别为常数无来源 |
-| `c919-etras` | `certified` | `In use` | `uploads/20260417-C919反推控制逻辑需求文档.pdf`（10 页 · SHA256 `dbe3f76b…31da5`）| 甲方 (C919 TRCU 团队) | — | 已 certified · 3 TRCU sign-off TODO 在 `docs/c919_etras/traceability_matrix.md` Appendix A 登记 | P34 完成 · 1444 LOC adapter · 712 LOC tests · 153 行 matrix |
+| `c919-etras` | `certified` | `In use` | `uploads/20260417-C919反推控制逻辑需求文档.pdf`（10 页 · SHA256 `dbe3f76b…31da5` · 1,013,541 bytes · P38 物理入库 2026-04-20）| 甲方 (C919 TRCU 团队) · **Q1/Q2/Q3 sign-off 由 Kogami 2026-04-20 代 TRCU 明示接纳 (P38)** | — | 已 certified · **Appendix A Q1/Q2/Q3 全部 resolved** · 详见 `docs/c919_etras/traceability_matrix.md` Appendix A · 若未来需 TRCU 团队正式书面签准，独立 Phase 升级 sign-off 来源 | P34 完成 · 1444 LOC adapter · 712 LOC tests · 153 行 matrix · P38 (2026-04-20) PDF 物理入库 uploads/ + YAML 头 SHA 固化 + Appendix A sign-off resolved |
 
 ---
 

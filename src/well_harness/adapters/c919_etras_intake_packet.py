@@ -63,11 +63,16 @@ def build_c919_etras_intake_packet() -> ControlSystemIntakePacket:
             role="requirement_reference",
             notes=(
                 "Authoritative 甲方 requirement PDF (10 pages). "
+                "SHA256 dbe3f76b8ab0682e7ea41ab36a970ad4897c4bfc5461a60a8f0831d485631da5 "
+                "· 1,013,541 bytes. "
                 "表1 component inventory, Figure 1 schematic, Figures 2-5 for "
                 "EICU CMD2 / CMD3 / TR_Command3_Enable / FADEC Deploy Command, "
                 "表2 MLG_WOW redundancy selection, Step 1-10 landing timeline. "
                 "P34-04 traceability matrix maps each adapter symbol back to "
-                "this PDF's section/figure."
+                "this PDF's section/figure. "
+                "P38 (2026-04-20) 落地: PDF 物理入库 uploads/; Q1/Q2/Q3 TRCU sign-off "
+                "由 Kogami 2026-04-20 明示接纳 (代表 TRCU 团队 authority); "
+                "Appendix A 全部 resolved."
             ),
         ),
         SourceDocumentRef(

@@ -2,9 +2,14 @@
 # ==================================================================================
 # Version:       1.0
 # System:        c919-etras
-# Source:        20260417 C919反推控制逻辑需求文档.pdf (10 pages)
-# Phase:         P34 (手工接入第 5 条真实航空链路)
+# Source:        uploads/20260417-C919反推控制逻辑需求文档.pdf (10 pages · P38 物理入库 2026-04-20)
+# SHA256:        dbe3f76b8ab0682e7ea41ab36a970ad4897c4bfc5461a60a8f0831d485631da5
+# Size:          1,013,541 bytes (989 KB)
+# Authority:     甲方 (C919 TRCU 团队) · Appendix A Q1/Q2/Q3 sign-off resolved
+#                (P38 · Kogami 2026-04-20 代 TRCU 明示接纳)
+# Phase:         P34 (手工接入第 5 条真实航空链路) + P38 (PDF 入库 + TRCU sign-off 落地)
 # Kogami:        GATE-P34-PLAN Approved 2026-04-20, Q1/Q2/Q3 → Executor recommendations
+#                GATE-P38-PLAN Approved 2026-04-20, Q1=C 混合 authority · Q2=A SHA 固化
 # Freeze rule:   Do NOT modify thrust_reverser_hardware_v1.yaml — this file is a
 #                new sibling, not a replacement. The simplified thrust-reverser
 #                baseline remains intact for legacy demos and adversarial tests.
