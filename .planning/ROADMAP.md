@@ -670,3 +670,40 @@ Status: Done (2026-04-18) · self-signed under v4.0 Extended Autonomy Mode (Koga
 - `docs/json_schema/control_system_spec_v1.schema.json` 新增 `external_dependencies` 字段（含 `externalDependencySpec`）
 
 **解冻条件**（不变）：外部用户反馈 / 产品方向决策 / 新领域需求
+
+## Phase P34: C919 E-TRAS adapter 接入 — 第 5 个真值适配器
+
+Status: DECISION drafted · GATE-P34-CLOSURE Pending (Kogami)
+
+**Goal:** 按 Kogami 2026-04-20 二次方向指令 + `GATE-P34-PLAN: Approved`（Q1-A/Q2-A/Q3-A），将 20260417 C919 反推控制逻辑需求 PDF（10 页 / 1013 KB / SHA256 `dbe3f76b…31da5`）逐页落成第 5 条真实 adapter 链路。严格对齐每一个信号 / 逻辑门 / 时间参数 / Step，未引入任何 adapter 模板脚手架抽象（保留到 ≥6 条真实链路后再谈）。P33 adapter-scaffolding 与 P33 federation-level1 均被本 Phase supersede。
+
+**交付物：**
+- Hardware YAML：`config/hardware/c919_etras_hardware_v1.yaml`（325 行，5 段：sensor / logic_thresholds / physical_limits / timing / valid_outcomes）
+- Adapter：`src/well_harness/adapters/c919_etras_adapter.py`（1444 行，17 组件 / 5 逻辑节点 / 4 acceptance / 5 fault mode）
+- Intake packet：`src/well_harness/adapters/c919_etras_intake_packet.py`（100 行）+ `__init__.py` 注册 +6
+- Tests：`tests/test_c919_etras_adapter.py`（712 行，63 tests，13 测试类）
+- Traceability：`docs/c919_etras/traceability_matrix.md`（153 行，5 表 + Appendix A）
+- Plan：`.planning/phases/P34-c919-etras-adapter/P34-00-PLAN.md`
+- Closure：`.planning/phases/P34-c919-etras-adapter/P34-05-CLOSURE.md`
+
+**三轨回归（vs P32 head dd915e1）：**
+- default pytest 747 passed / 1 skipped / 49 deselected（+63 新增，零既有回归）
+- opt-in e2e 49 passed（identical）
+- adversarial 8/8（identical）
+
+**Q1/Q2/Q3 Kogami 仲裁：**
+- Q1-A · Max N1k Deploy Limit = 84.0%（mid-band of PDF §1.1.3 ⑤ 79-89%），支持 per-snapshot override
+- Q2-A · MLG_WOW 冗余 disagree / both-invalid → conservative FALSE（两种边界都视为 in-flight）
+- Q3-A · Max N1k Stow Limit = 30.0%（PDF §Step7 未印，保守占位）
+
+三处仲裁均在 traceability matrix Appendix A 登记 TRCU sign-off TODO。
+
+**Exit Criteria:**
+- DECISION drafted（本 ROADMAP 行 + Notion 控制塔页 `33cc68942bed8136b5c9f9ba5b4b44ec` append block）✅
+- Commit 分支 `codex/p34-c919-etras` @ `19282ba` pushed to origin · 不 FF 到 main 直至 Gate 批
+- GATE-P34-CLOSURE 由 Kogami 显式签字（v5.2 R2 红线：Executor 不自签）
+- 签字后：FF merge 到 origin/main · Notion DECISION "Pending" → "Approved (Kogami YYYY-MM-DD)"
+
+**证迹合规：** v5.2 R1 R2 R3 R4 R5 全部 self-verified 合规（详见 closure §v5.2 checklist）。
+
+**Plans:** P34-00 Tier 1（5 条 counterargument + Q1-A/Q2-A/Q3-A 已裁）+ P34-01…04 顺序执行全绿 + P34-05 closure drafted 等签。
