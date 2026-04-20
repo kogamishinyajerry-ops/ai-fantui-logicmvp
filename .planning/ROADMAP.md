@@ -932,3 +932,67 @@ Status: Executed & Green · Awaiting `GATE-P38-CLOSURE: Approved` (Kogami)
 **Plans:** P38-00 Tier 1 + P38-01..04 顺序执行全绿 + P38-05 closure drafted 等签。
 
 **Next phase:** 按 P0-P4 优先级 · Kogami 明示 —— 候选 P40 CI SHA enforcement · P41 workbench spec · P42 runtime truth_level API · 其他 · R4 不自选。
+
+## Phase P40: CI-level SHA enforcement — 自动校验 uploads/ provenance hash
+
+Status: Executed & Green · Awaiting `GATE-P40-CLOSURE: Approved` (Kogami)
+
+**Goal:** 按 Kogami 2026-04-20 "继续推进" + 选 P40 作下一方向 + "Q1-Q3 由你推荐决定" 授权 + `GATE-P40-PLAN: Approved`，建立自动 SHA 校验基础设施，闭合 P34/P36β/P37/P38 counterargument 反复提到的 "SHA 副本靠人工维护 · CI 无校验 · tamper 未必发现" 风险（C2/C3 类）。
+
+**Sub-phases & commits (branch `codex/p40-ci-sha-enforcement`, base `main 74a459a`):**
+- P40-00 (`9a589bb`): Tier 1 plan (379 行 · 4 counter C1-C4 · Q1-Q3 Executor 预签)
+- P40-01 (`ee72271`): `docs/provenance/sha_registry.yaml` SoT · 2 files 初始条目 (46 行)
+- P40-02 (`12f7b94`): `scripts/verify_provenance_hashes.py` (195 行 · stream-hash · --strict 模式 · exit 1 on drift)
+- P40-03 (`bf60eb8`): `tests/test_provenance_sha_integrity.py` (96 行 · 3 tests · default lane)
+- P40-05 closure drafted (本段 + STATE + closure doc + Notion DECISION Pending)
+
+**Q1-Q3 Executor 预签 · Kogami 2026-04-20 授权：**
+- Q1 = A · pytest default lane 集成（最简 · 与既有 762 test 体系一致）
+- Q2 = A · YAML registry 格式（与 hardware config 格式一致）
+- Q3 = A · 硬失败 exit 1（SHA mismatch 是 hard signal）
+
+**三轨回归（vs P38 head 74a459a）：**
+- default pytest: **765 passed** / 1 skipped / 49 deselected in 89.05s（P38 baseline 762 + 3 new P40-03 = 765 · 设计预期）
+- opt-in e2e: **49 passed** (identical)
+- adversarial wrapper: **1 passed** (8/8 inside identical)
+
+**Registry 初始 2 条目：**
+- `uploads/20260409-thrust-reverser-control-logic.docx` · SHA `6e457fe3…276133a5` · 230,930 bytes · P36β · Kogami 内部自签
+- `uploads/20260417-C919反推控制逻辑需求文档.pdf` · SHA `dbe3f76b…276133a5` · 1,013,541 bytes · P38 · 甲方 (TRCU) 代明示
+
+**Update protocol** (registry 头注释)：新增/替换/删除 uploads/* 必须同 Phase commit 更新 registry，不能静默覆写。
+
+**关键不变量（字节级确认）：**
+- 5 个真值链路 adapter / controller.py / models.py 字节级不变
+- 既有 762 tests 断言字节级不变（+3 tests 是 P40 新增，不改旧 tests）
+- `uploads/*` 任何文件内容不变
+- 散布 SHA 文字 (matrix / supplement / registry notes / intake notes / YAML head) 不变（本 Phase 仅校验，不改源头）
+
+**Exit Criteria (all met):**
+- `docs/provenance/sha_registry.yaml` 46 行 · version 1 · 2 files ✅
+- `scripts/verify_provenance_hashes.py` 195 行 · default + --strict 模式本地 exit 0 ✅
+- `tests/test_provenance_sha_integrity.py` 96 行 · 3 tests 本地通过 ✅
+- 三轨: default 765 (+3) / e2e 49 identical / adversarial 1 identical ✅
+- ROADMAP + STATE 更新（本段）✅
+- Closure doc 起草 · 等 `GATE-P40-CLOSURE: Approved`
+
+**证迹合规：** v5.2 R1 R2 R3 R4 R5 全部 self-verified 合规（详见 P40-05-CLOSURE.md §v5.2 checklist）。
+
+**Plans:** P40-00 Tier 1（4 counter · Q1-Q3 Executor 预签 Kogami 授权）+ P40-01..03 顺序 commit + P40-04 三轨 +3 设计预期 + P40-05 closure drafted 等签。
+
+**Next phase:** 按 P1-P4 优先级 · Kogami 明示 —— 候选 P41 thrust-reverser workbench spec · P42 runtime truth_level API · P43 freeze/upgrade template · 或其他 · R4 不自选。**P0 队列全部 resolved**。
+
+## 2026-04-20 全天 Phase 链总结
+
+| Phase | 性质 | Gate | main commit |
+|-------|------|------|-------------|
+| P31 | re-land explain-runtime visibility + prewarm | ✅ | `25f64fe` |
+| P32 | provenance backfill (v4.0 audit + Milestone 9 Lifted) | ✅ | `e6f9fe6` |
+| P34 | C919 E-TRAS adapter (第 5 条真值链路) | ✅ | `c88e4f0` (merge) |
+| P35α | Adapter truth-level registry + 3 demonstrative freeze banner | ✅ | `aabc548` (merge) |
+| P36β | thrust-reverser docx 真实化 (demonstrative → certified 升级) | ✅ | `96bacaf` (merge) |
+| P37 | thrust-reverser 反向需求增补 (code-to-spec backfill) | ✅ | `db03294` (merge) |
+| P38 | c919-etras 证迹完整闭环 (PDF 入库 + TRCU sign-off) | ✅ | `74a459a` (merge) |
+| P40 | CI-level SHA enforcement | Pending closure | - |
+
+**证迹补完第二轮全套**（α/β/γ/δ/ε）完成 · 5 真值链路全部有 truth-level 登记 · 2 certified 链路 Appendix A 全部 resolved · CI 层自动防 tamper。
