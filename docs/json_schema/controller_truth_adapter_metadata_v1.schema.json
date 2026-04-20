@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://well-harness.local/json_schema/controller_truth_adapter_metadata_v1.schema.json",
   "title": "well_harness.controller_truth_adapter_metadata v1 JSON payload",
-  "description": "Published metadata contract for controller truth adapters. This documents adapter identity and source-of-truth boundaries without introducing a second control truth.",
+  "description": "Published metadata contract for controller truth adapters. This documents adapter identity and source-of-truth boundaries without introducing a second control truth. P42 (2026-04-20) extended additively in v1 with two optional governance fields (truth_level, status). Per the serializer in well_harness.controller_adapter, governance fields that are None at the dataclass layer are dropped from the payload. Therefore: field missing in a payload means pre-P42/unclassified and MUST NOT be treated by downstream consumers as 'already governed'. See each field's own description for the resulting semantic.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -39,6 +39,16 @@
     },
     "description": {
       "$ref": "#/$defs/nonEmptyString"
+    },
+    "truth_level": {
+      "type": "string",
+      "enum": ["demonstrative", "certified", "placeholder"],
+      "description": "P42 (2026-04-20) extension. Adapter truth classification aligned with docs/provenance/adapter_truth_levels.md. Field missing in payload = pre-P42/unclassified; consumers MUST NOT treat missing as 'already governed'."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["In use", "Frozen", "Upgrade pending", "Upgrade in progress"],
+      "description": "P42 (2026-04-20) extension. Adapter lifecycle status aligned with docs/provenance/adapter_truth_levels.md. Field missing in payload = pre-P42/unclassified; consumers MUST NOT treat missing as 'active governance link'."
     }
   },
   "$defs": {
