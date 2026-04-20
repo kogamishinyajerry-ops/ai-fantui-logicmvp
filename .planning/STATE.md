@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Provenance backfill Phase 2 (β) executed & awaiting GATE-P36β-CLOSURE
+status: Provenance backfill Phase 2 (γ) executed & awaiting GATE-P37-CLOSURE
 last_updated: "2026-04-20T00:00:00.000Z"
 last_activity: 2026-04-20
 progress:
-  total_phases: 36
-  completed_phases: 35
+  total_phases: 37
+  completed_phases: 36
   total_plans: 0
   completed_plans: 0
 ---
@@ -18,41 +18,41 @@ Last activity: 2026-04-20
 
 ## Current Position
 
-**P36β drafted & green — awaiting `GATE-P36β-CLOSURE: Approved` (2026-04-20)**
+**P37 drafted & green — awaiting `GATE-P37-CLOSURE: Approved` (2026-04-20)**
 
-Phase: P36β — thrust-reverser docx 真实化 (demonstrative → certified 升级, 证迹补完第二轮 β 段)
+Phase: P37 — thrust-reverser 反向需求增补 (code-to-spec backfill · 证迹补完第二轮 γ 段)
 
-- Branch `codex/p36-thrust-reverser-docx-backfill` 5 commits on top of `main aabc548`:
-  · `a078b6c` feat(P36β-00): plan doc (383 lines, Tier 1, 5 counterarguments, Q1-Q5)
-  · `b43ac2e` feat(P36β-01): docx 入库 `uploads/20260409-thrust-reverser-control-logic.docx` (SHA256 `6e457fe3…276133a5`)
-  · `bcdf91b` feat(P36β-02): thrust_reverser_intake_packet.py 120 行精益版（3 SourceDocumentRef · D1=A no workbench spec）
-  · `0be39c6` docs(P36β-03): hardware YAML 头 24 行 docx § 引用（parameters 字节级不变）
-  · `8198e1c` docs(P36β-04): traceability matrix 241 行（5 表 + Appendix A 6 open assumptions）
-- Three-lane regression (vs P35 head aabc548):
-  · default: **762 passed** / 1 skipped / 49 deselected in 95.66s (identical · 零 delta)
+- Branch `codex/p37-thrust-reverser-requirements-supplement` 3 commits on top of `main 96bacaf`:
+  · `ce5adfc` feat(P37-00): plan (319 lines, Tier 1, 4 counter C1-C4, Q1-Q2 已预签)
+  · `0ba643c` feat(P37-01): docs/thrust_reverser/requirements_supplement.md 297 行（8 段 · A.1-A.6 全覆盖）
+  · `2bc1eeb` docs(P37-02): 4 anchor 联动（matrix Appendix A 6 项 ⚠️→✅ + intake 加 4th SourceDocumentRef + YAML 头 supplement block + registry row 1 notes）
+- Three-lane regression (vs P36β head 96bacaf):
+  · default: **762 passed** / 1 skipped / 49 deselected in 91.27s (identical · 零 delta)
   · e2e: **49 passed** (identical)
   · adversarial wrapper: **1 passed** (8/8 inside identical)
 - Gates (Kogami 2026-04-20):
-  · `P31-GATE` ✅ · `GATE-P32-CLOSURE` ✅ · `GATE-P34-CLOSURE` ✅ · `GATE-P35-CLOSURE` ✅ · `GATE-P36β-PLAN: Approved` ✅ (Q1-Q5 全部由 Executor 推荐决定 Kogami 批)
-  · `GATE-P36β-CLOSURE: Pending` — awaiting Kogami explicit signature
+  · `P31-GATE` ✅ · `GATE-P32-CLOSURE` ✅ · `GATE-P34-CLOSURE` ✅ · `GATE-P35-CLOSURE` ✅ · `GATE-P36β-CLOSURE` ✅ · `GATE-P37-PLAN: Approved` ✅ (Q1=A Markdown · Q2=A A.6 一并解决)
+  · `GATE-P37-CLOSURE: Pending` — awaiting Kogami explicit signature
 
-### Registry 5 rows（see `docs/provenance/adapter_truth_levels.md`）· P36β 升级 row 1
+### Registry 5 rows（see `docs/provenance/adapter_truth_levels.md`）· P37 升级 row 1 authority 定位
 
-| system_id | truth_level | status |
-|-----------|-------------|--------|
-| `thrust-reverser` | **certified** | **In use** (P36β 2026-04-20 upgrade) |
-| `bleed-air-valve` | demonstrative | Frozen |
-| `emergency_flare_deployment_system` | demonstrative | Frozen |
-| `minimal_landing_gear_extension` | demonstrative | Frozen |
-| `c919-etras` | certified | In use |
+| system_id | truth_level | status | authority |
+|-----------|-------------|--------|-----------|
+| `thrust-reverser` | certified | In use | **Kogami 内部自签**（P37 明示非外部权威）|
+| `bleed-air-valve` | demonstrative | Frozen | 无 |
+| `emergency_flare_deployment_system` | demonstrative | Frozen | 无 |
+| `minimal_landing_gear_extension` | demonstrative | Frozen | 无 |
+| `c919-etras` | certified | In use | 甲方 (C919 TRCU 团队, 3 项 sign-off TODO) |
 
-**Open assumptions (待 sign-off):** Appendix A 6 项（SW2 / deploy_90% / TLS delay / PLS delay / deploy rate / docx authority）—— 详见 `docs/thrust_reverser/traceability_matrix.md`
+**Appendix A resolution:** thrust-reverser 6 项全部 resolved via P37 supplement（§2-§7 覆盖 A.1-A.6）· c919-etras 3 项 TRCU sign-off TODO 仍 pending（留给后续 P39 候选）
 
-### Next after P36β-CLOSURE
-1. Executor non-FF merge `codex/p36-thrust-reverser-docx-backfill` → main (Option M, SHAs preserved)
+### Next after P37-CLOSURE
+
+按 P0-P4 优先级队列（Kogami 2026-04-20 "按优先级顺序，逐步深度修复"）：
+1. Executor non-FF merge `codex/p37-thrust-reverser-requirements-supplement` → main (Option M, SHAs preserved)
 2. Push origin main
-3. Notion flip P36β DECISION Pending → Approved
-4. Kogami 明示下一方向（候选：P37 thrust-reverser workbench spec · P38 CI SHA 校验 · 或其他 · R4 不自选）
+3. Notion flip P37 DECISION Pending → Approved
+4. Kogami 明示下一 P0/P1 方向（候选：P38 P34 PDF 回填 · P39 c919 Appendix A 3 项 sign-off · P40 CI SHA enforcement · 其他 · R4 不自选）
 
 ### 上一阶段归档（P30 Closed 2026-04-19）
 
