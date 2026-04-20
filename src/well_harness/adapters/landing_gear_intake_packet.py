@@ -1,3 +1,14 @@
+"""
+Minimal Landing Gear Extension — Intake Packet Builder
+
+Bridges the adapter path to the intake path for the landing-gear system.
+
+FROZEN (2026-04-20) — demonstrative intake packet, no authoritative upstream spec.
+
+This packet's SourceDocumentRef points to the adapter file itself (self-reference)
+because no authoritative upstream document exists. Do not cite this packet as
+audit truth. See docs/provenance/adapter_truth_levels.md.
+"""
 from __future__ import annotations
 
 from well_harness.adapters.landing_gear_adapter import build_landing_gear_workbench_spec

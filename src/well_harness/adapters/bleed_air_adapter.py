@@ -4,6 +4,17 @@ Bleed Air Valve Controller Adapter
 A simplified environmental control system adapter for aircraft bleed-air valve control.
 Bleed air is extracted from the engine compressor and used for cabin pressurization,
 wing anti-icing, and engine start.
+
+FROZEN (2026-04-20) — demonstrative adapter, no authoritative upstream spec.
+
+Status: frozen per Kogami 2026-04-20 directive. This adapter was built for
+capability demonstration (runtime adapter generalization proof), NOT from an
+authoritative requirement document. Its thresholds, logic nodes, timing
+constants, and test assertions are illustrative and MUST NOT be cited as
+truth in certification, testing, external documentation, or customer-facing
+material.
+
+See docs/provenance/adapter_truth_levels.md for the registry and upgrade path.
 """
 from __future__ import annotations
 

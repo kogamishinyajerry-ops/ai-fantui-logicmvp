@@ -1,3 +1,20 @@
+"""
+Minimal Landing Gear Extension Controller Adapter
+
+Minimal landing-gear extension truth adapter used to prove adapter-only
+runtime generalization (P8 Runtime Generalization Proof).
+
+FROZEN (2026-04-20) — demonstrative adapter, no authoritative upstream spec.
+
+Status: frozen per Kogami 2026-04-20 directive. This adapter was built for
+capability demonstration (runtime adapter generalization proof), NOT from an
+authoritative requirement document. Its thresholds, logic nodes, timing
+constants, and test assertions are illustrative and MUST NOT be cited as
+truth in certification, testing, external documentation, or customer-facing
+material.
+
+See docs/provenance/adapter_truth_levels.md for the registry and upgrade path.
+"""
 from __future__ import annotations
 
 from typing import Any, Mapping
