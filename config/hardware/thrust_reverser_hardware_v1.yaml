@@ -29,18 +29,27 @@
 #   logic1_ra_ft_threshold = 6.0         → docx §45 "飞机离地小于 6ft"
 #   SW1 near_zero_deg = -1.4             → docx §45 "油门台角度 [-1.4°, -6.2°]"
 #   SW1 deep_reverse_deg = -6.2          → docx §45 (same sentence)
-#   SW2 near_zero_deg = -5.0             → docx NO · Executor assumed mirroring SW1 (Appendix A.1)
-#   SW2 deep_reverse_deg = -9.8          → docx NO · Executor assumed mirroring SW1 (Appendix A.1)
+#   SW2 near_zero_deg = -5.0             → docx NO · supplement §2 (P37 · Appendix A.1 resolved)
+#   SW2 deep_reverse_deg = -9.8          → docx NO · supplement §2 (P37 · Appendix A.1 resolved)
 #   logic3_tra_deg_threshold = -11.74    → docx §51 "油门杆解析角度 ≤ -11.74°"
 #   reverse_travel_min_deg = -32.0       → docx §53 "反推行程 -32° < TRA < 0°"
 #   reverse_travel_max_deg = 0.0         → docx §53 (same sentence)
-#   deploy_90_threshold_percent = 90.0   → docx NO · Kogami 待仲裁 (Appendix A.2, 行业默认 "VDT > 90%")
-#   tls_unlock_delay_s = 0.3             → docx NO · Kogami 待仲裁 (Appendix A.3)
-#   pls_unlock_delay_s = 0.2             → docx NO · Kogami 待仲裁 (Appendix A.3)
-#   deploy_rate_percent_per_s = 30.0     → docx NO · Kogami 待仲裁 (Appendix A.4)
+#   deploy_90_threshold_percent = 90.0   → docx NO · supplement §3 (P37 · Appendix A.2 resolved · 行业默认)
+#   tls_unlock_delay_s = 0.3             → docx NO · supplement §4 (P37 · Appendix A.3 resolved · simulation baseline)
+#   pls_unlock_delay_s = 0.2             → docx NO · supplement §4 (P37 · Appendix A.3 resolved · simulation baseline)
+#   deploy_rate_percent_per_s = 30.0     → docx NO · supplement §5 (P37 · Appendix A.4 resolved · simplified-plant baseline)
 #
-# Fault modes:  docx §58 明示 "故障注入目前暂时不考虑，很复杂。" · P36β 维持此现状
+# Fault modes:  docx §58 明示 "故障注入目前暂时不考虑，很复杂。" · P36β/P37 维持此立场 (supplement §6)
 # Registry:     docs/provenance/adapter_truth_levels.md row 1 (certified · In use)
+#
+# supplement provenance (P37 · 2026-04-20 · Kogami 内部自签 · GATE-P37-PLAN: Approved):
+# =======================================================================
+# Source:     docs/thrust_reverser/requirements_supplement.md (markdown, reverse-backfill)
+# Authority:  Kogami 内部自签 · 非外部权威 (非甲方 / 非监管 / 非行业标准) · 见 supplement §7
+# Purpose:    Reverse-engineered spec for 5 constants + 1 authority clause
+#             not covered by original docx 20260409 (historical snapshot).
+# Coverage:   §2 SW2 angles · §3 Deploy 90% VDT · §4 TLS/PLS delays · §5 Deploy rate
+#             §6 Fault modes stance · §7 Authority definition · §8 3-way relationship
 
 kind: thrust-reverser-hardware
 version: 1

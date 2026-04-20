@@ -97,12 +97,27 @@ def build_thrust_reverser_intake_packet() -> ControlSystemIntakePacket:
             location="config/hardware/thrust_reverser_hardware_v1.yaml",
             role="hardware_spec",
             notes=(
-                "13 threshold constants cross-verified with docx (see traceability matrix "
-                "table 5). 7 constants 1:1 with docx (radio<6ft / SW1 ±1.4°/-6.2° / "
-                "TRA≤-11.74° / travel -32°/0°). 2 constants Executor assumed (SW2 "
-                "±5.0°/-9.8° mirroring SW1 pattern; Appendix A.1). 4 constants Kogami "
-                "待仲裁 (deploy_90 90.0 / tls_delay 0.3 / pls_delay 0.2 / deploy_rate "
-                "30.0; Appendix A.2-A.4). YAML values themselves unchanged in P36β."
+                "13 threshold constants. 7 constants 1:1 with docx (radio<6ft / "
+                "SW1 ±1.4°/-6.2° / TRA≤-11.74° / travel -32°/0°). 6 constants "
+                "supplemented by P37 via docs/thrust_reverser/requirements_supplement.md "
+                "§2-§5 (SW2 / deploy_90 / TLS/PLS delays / deploy rate). YAML values "
+                "themselves unchanged."
+            ),
+        ),
+        SourceDocumentRef(
+            id="thrust-reverser-supplement-001",
+            kind="markdown",
+            title="Thrust Reverser Requirements Supplement (P37 · reverse-backfill)",
+            location="docs/thrust_reverser/requirements_supplement.md",
+            role="requirement_supplement",
+            notes=(
+                "Reverse-engineered spec supplement covering 5 constants + 1 authority "
+                "clause that original docx did not cover. Kogami 内部自签 authority "
+                "(P37 · 2026-04-20 · GATE-P37-PLAN Approved, Q1=A markdown, "
+                "Q2=A A.6 resolved). Companion to uploads/20260409-thrust-reverser-"
+                "control-logic.docx (historical snapshot, frozen). Does NOT claim "
+                "external authority (not 甲方 / not 监管 / not industry standard). "
+                "See supplement §7 for applicability scope and §7.3 for upgrade path."
             ),
         ),
     )
