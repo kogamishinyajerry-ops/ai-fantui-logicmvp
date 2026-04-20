@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Provenance backfill Phase 2 (α) awaiting GATE-P35-CLOSURE
+status: Provenance backfill Phase 2 (β) executed & awaiting GATE-P36β-CLOSURE
 last_updated: "2026-04-20T00:00:00.000Z"
 last_activity: 2026-04-20
 progress:
-  total_phases: 35
-  completed_phases: 34
+  total_phases: 36
+  completed_phases: 35
   total_plans: 0
   completed_plans: 0
 ---
@@ -18,38 +18,41 @@ Last activity: 2026-04-20
 
 ## Current Position
 
-**P35 drafted & green — awaiting `GATE-P35-CLOSURE: Approved` (2026-04-20)**
+**P36β drafted & green — awaiting `GATE-P36β-CLOSURE: Approved` (2026-04-20)**
 
-Phase: P35 — Adapter Truth-Level Registry + Demonstrative Adapters Freeze Banner (证迹补完第二轮 α 段)
+Phase: P36β — thrust-reverser docx 真实化 (demonstrative → certified 升级, 证迹补完第二轮 β 段)
 
-- Branch `codex/p35-adapter-truth-level-registry` 4 commits on top of `main c88e4f0`:
-  · `c886e14` feat(P35-00): plan doc (315 lines, Tier 1, 5 counterarguments)
-  · `5a7e7b1` docs(P35-01): adapter truth-level registry (5 rows)
-  · `6cc0d31` docs(P35-02): freeze banner on 3 demonstrative adapters (7 files)
-  · `e0f8a8a` test(P35-03): adapter freeze banner regression guard (15 parametrized cases)
-- Three-lane regression (vs P34 baseline 747/49/8-of-8):
-  · default: **762 passed** (747 + 15 P35-03, 零既有回归)
+- Branch `codex/p36-thrust-reverser-docx-backfill` 5 commits on top of `main aabc548`:
+  · `a078b6c` feat(P36β-00): plan doc (383 lines, Tier 1, 5 counterarguments, Q1-Q5)
+  · `b43ac2e` feat(P36β-01): docx 入库 `uploads/20260409-thrust-reverser-control-logic.docx` (SHA256 `6e457fe3…276133a5`)
+  · `bcdf91b` feat(P36β-02): thrust_reverser_intake_packet.py 120 行精益版（3 SourceDocumentRef · D1=A no workbench spec）
+  · `0be39c6` docs(P36β-03): hardware YAML 头 24 行 docx § 引用（parameters 字节级不变）
+  · `8198e1c` docs(P36β-04): traceability matrix 241 行（5 表 + Appendix A 6 open assumptions）
+- Three-lane regression (vs P35 head aabc548):
+  · default: **762 passed** / 1 skipped / 49 deselected in 95.66s (identical · 零 delta)
   · e2e: **49 passed** (identical)
   · adversarial wrapper: **1 passed** (8/8 inside identical)
 - Gates (Kogami 2026-04-20):
-  · `P31-GATE: Approved` ✅ · `GATE-P32-CLOSURE: Approved` ✅ · `GATE-P34-CLOSURE: Approved` ✅ · `GATE-P35-PLAN: Approved` ✅ (含 Q1=C / Q2=A / Q3=B / Q4=A / Q5=A 仲裁)
-  · `GATE-P35-CLOSURE: Pending` — awaiting Kogami explicit signature
+  · `P31-GATE` ✅ · `GATE-P32-CLOSURE` ✅ · `GATE-P34-CLOSURE` ✅ · `GATE-P35-CLOSURE` ✅ · `GATE-P36β-PLAN: Approved` ✅ (Q1-Q5 全部由 Executor 推荐决定 Kogami 批)
+  · `GATE-P36β-CLOSURE: Pending` — awaiting Kogami explicit signature
 
-### Registry 5 rows（see `docs/provenance/adapter_truth_levels.md`）
+### Registry 5 rows（see `docs/provenance/adapter_truth_levels.md`）· P36β 升级 row 1
 
 | system_id | truth_level | status |
 |-----------|-------------|--------|
-| `thrust-reverser` | demonstrative | Upgrade pending (P36β) |
+| `thrust-reverser` | **certified** | **In use** (P36β 2026-04-20 upgrade) |
 | `bleed-air-valve` | demonstrative | Frozen |
 | `emergency_flare_deployment_system` | demonstrative | Frozen |
 | `minimal_landing_gear_extension` | demonstrative | Frozen |
 | `c919-etras` | certified | In use |
 
-### Next after P35-CLOSURE
-1. Executor non-FF merge `codex/p35-adapter-truth-level-registry` → main (Option M, SHAs preserved)
+**Open assumptions (待 sign-off):** Appendix A 6 项（SW2 / deploy_90% / TLS delay / PLS delay / deploy rate / docx authority）—— 详见 `docs/thrust_reverser/traceability_matrix.md`
+
+### Next after P36β-CLOSURE
+1. Executor non-FF merge `codex/p36-thrust-reverser-docx-backfill` → main (Option M, SHAs preserved)
 2. Push origin main
-3. Notion flip P35 DECISION Pending → Approved
-4. Kogami 决定 P36β (thrust_reverser docx 真实化) 是否推进
+3. Notion flip P36β DECISION Pending → Approved
+4. Kogami 明示下一方向（候选：P37 thrust-reverser workbench spec · P38 CI SHA 校验 · 或其他 · R4 不自选）
 
 ### 上一阶段归档（P30 Closed 2026-04-19）
 

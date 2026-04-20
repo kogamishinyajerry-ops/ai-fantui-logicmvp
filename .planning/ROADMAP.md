@@ -759,3 +759,58 @@ Status: Executed & Green · Awaiting `GATE-P35-CLOSURE: Approved` (Kogami)
 **Plans:** P35-00 Tier 1（5 counterargument · Q1-Q5 Kogami 仲裁）+ P35-01…03 顺序 commit 全绿 + P35-04 三轨 zero regression + P35-05 closure drafted 等签。
 
 **Next phase:** P36β (thrust_reverser docx 真实化) — 等 Kogami 在 P35 closeout 后明示推进。
+
+## Phase P36β: thrust-reverser docx 真实化 — demonstrative → certified 升级（证迹补完第二轮 β 段）
+
+Status: Executed & Green · Awaiting `GATE-P36β-CLOSURE: Approved` (Kogami)
+
+**Goal:** 按 Kogami 2026-04-20 "Go P36β" 指令 + D1=A 精益 / D2=C 混合 / D3=Kogami 自裁 / D4=只登记 + Q1-Q5 全部由 Executor 推荐决定 + `GATE-P36β-PLAN: Approved`，把 `Downloads/控制逻辑(1).docx` 入库为 `uploads/20260409-thrust-reverser-control-logic.docx` 建立 thrust_reverser 的追溯链路，升级 P35 registry row 1 从 `demonstrative + Upgrade pending` → `certified + In use`。零代码行为改动，零阈值/YAML value 改动，零既有测试断言改动。
+
+**Sub-phases & commits (branch `codex/p36-thrust-reverser-docx-backfill`, base `main aabc548`):**
+- P36β-00 (`a078b6c`): Tier 1 plan (383 行 · 5 counterargument · Q1-Q5 Open Questions)
+- P36β-01 (`b43ac2e`): docx 入库 `uploads/20260409-thrust-reverser-control-logic.docx` (SHA256 `6e457fe3…276133a5` · 230,930 bytes · 57 段 · 2 表 · 1 EMF 图)
+- P36β-02 (`bcdf91b`): `src/well_harness/adapters/thrust_reverser_intake_packet.py` 120 行精益版（3 SourceDocumentRef · no workbench spec per D1=A）
+- P36β-03 (`0be39c6`): `config/hardware/thrust_reverser_hardware_v1.yaml` 头 24 行 docx § 引用块（parameters 字节级不变）
+- P36β-04 (`8198e1c`): `docs/thrust_reverser/traceability_matrix.md` 241 行（5 表 + Appendix A 6 open assumptions）
+- P36β-05 closure drafted (registry row 1 in-place 升级 + 本段 + STATE + closure doc + Notion DECISION Pending)
+
+**Q1-Q5 Executor 推荐 · Kogami 2026-04-20 全部批：**
+- Q1=A · SW2 ±5.0/-9.8° Executor 假设镜像 SW1 → Appendix A.1
+- Q2=B · Deploy 90% VDT 行业默认 → Appendix A.2（Kogami 后补实际来源）
+- Q3=A · TLS/PLS 解锁延迟 0.3/0.2s Kogami 待仲裁 → Appendix A.3
+- Q4=A · Deploy rate 30%/s Kogami 待仲裁 → Appendix A.4
+- Q5=A · docx authority = Kogami 自裁（具体签准方 Appendix A.6 待 sign-off）
+
+**三轨回归（vs P35 head aabc548）：**
+- default pytest: **762 passed** / 1 skipped / 49 deselected in 95.66s （identical，零 delta —— 符合 P36β 无测试改动的设计）
+- opt-in e2e: **49 passed** / 763 deselected in 2.89s (identical)
+- adversarial wrapper: **1 passed** in 0.27s (8/8 inside identical)
+
+**关键不变量（自审确认）：**
+- `src/well_harness/controller.py` 字节级不变
+- `src/well_harness/models.py` 字节级不变
+- `config/hardware/thrust_reverser_hardware_v1.yaml` 的 `parameters:` 段字节级不变（仅头注释 +24 行）
+- 既有测试断言字节级不变
+
+**Exit Criteria (all met):**
+- `uploads/20260409-thrust-reverser-control-logic.docx` 入库 · SHA256 记录 ≥ 5 位置（commit msg / intake notes / YAML head / matrix / registry notes）✅
+- `src/well_harness/adapters/thrust_reverser_intake_packet.py` 120 行精益版 ✅
+- `config/hardware/thrust_reverser_hardware_v1.yaml` 头 +24 行 docx § 引用 ✅
+- `docs/thrust_reverser/traceability_matrix.md` 241 行（5 表 + Appendix A 6 项）✅
+- `docs/provenance/adapter_truth_levels.md` row 1 升级 `demonstrative`→`certified` ✅
+- 三轨全绿零 delta ✅
+- ROADMAP / STATE 更新（本段）✅
+- Closure doc 起草 · 等 `GATE-P36β-CLOSURE: Approved`
+
+**证迹合规：** v5.2 R1 R2 R3 R4 R5 全部 self-verified 合规（详见 P36β-05-CLOSURE.md §v5.2 checklist）。
+
+**Registry row 1 升级：** 
+
+```
+(P35α 版 2026-04-20) thrust-reverser | demonstrative | Upgrade pending | Downloads/控制逻辑(1).docx（拟入库）| ...
+(P36β 升级 2026-04-20) thrust-reverser | certified | In use | uploads/20260409-thrust-reverser-control-logic.docx | Kogami 自裁（Appendix A.6 待 sign-off）| ...
+```
+
+**Plans:** P36β-00 Tier 1（5 counterargument · Q1-Q5 仲裁）+ P36β-01…04 顺序 commit + P36β 三轨零 delta + P36β-05 closure drafted 等签。
+
+**Next phase:** 留给 Kogami 明示（候选：P37 thrust-reverser workbench spec · 或 P38 CI-level provenance hash enforcement · 或其他方向）— R4 不自选。

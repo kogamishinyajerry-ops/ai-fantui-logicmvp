@@ -17,6 +17,30 @@
 #   tls_unlock_delay_s = 0.3
 #   pls_unlock_delay_s = 0.2
 #   deploy_rate_percent_per_s = 30.0
+#
+# docx provenance (P36β · 2026-04-20 · Kogami GATE-P36β-PLAN: Approved):
+# =======================================================================
+# Source:     uploads/20260409-thrust-reverser-control-logic.docx
+# SHA256:     6e457fe3c66e456d418f657975b7692453b30350b38fe91d0989e345276133a5
+# Size:       230,930 bytes · Paragraphs: 57 · Tables: 2 · Media: 1 (word/media/image1.emf)
+# Authority:  Kogami 自裁 (Q5=A · docx 具体签准方待 Appendix A.6 明示)
+#
+# Threshold → docx § map (see docs/thrust_reverser/traceability_matrix.md table 5 for full trace):
+#   logic1_ra_ft_threshold = 6.0         → docx §45 "飞机离地小于 6ft"
+#   SW1 near_zero_deg = -1.4             → docx §45 "油门台角度 [-1.4°, -6.2°]"
+#   SW1 deep_reverse_deg = -6.2          → docx §45 (same sentence)
+#   SW2 near_zero_deg = -5.0             → docx NO · Executor assumed mirroring SW1 (Appendix A.1)
+#   SW2 deep_reverse_deg = -9.8          → docx NO · Executor assumed mirroring SW1 (Appendix A.1)
+#   logic3_tra_deg_threshold = -11.74    → docx §51 "油门杆解析角度 ≤ -11.74°"
+#   reverse_travel_min_deg = -32.0       → docx §53 "反推行程 -32° < TRA < 0°"
+#   reverse_travel_max_deg = 0.0         → docx §53 (same sentence)
+#   deploy_90_threshold_percent = 90.0   → docx NO · Kogami 待仲裁 (Appendix A.2, 行业默认 "VDT > 90%")
+#   tls_unlock_delay_s = 0.3             → docx NO · Kogami 待仲裁 (Appendix A.3)
+#   pls_unlock_delay_s = 0.2             → docx NO · Kogami 待仲裁 (Appendix A.3)
+#   deploy_rate_percent_per_s = 30.0     → docx NO · Kogami 待仲裁 (Appendix A.4)
+#
+# Fault modes:  docx §58 明示 "故障注入目前暂时不考虑，很复杂。" · P36β 维持此现状
+# Registry:     docs/provenance/adapter_truth_levels.md row 1 (certified · In use)
 
 kind: thrust-reverser-hardware
 version: 1
