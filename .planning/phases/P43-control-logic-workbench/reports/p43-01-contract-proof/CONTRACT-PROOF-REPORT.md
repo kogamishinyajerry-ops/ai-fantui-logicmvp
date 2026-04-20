@@ -208,3 +208,129 @@ Step B complete (commit `5d2d3ec`) · Codex post-implementation review complete 
   8. Fixtures schema-compliant; §1c honesty boundary honored (no SHA binding).
   9. No new Counter-F-class runtime bug surfaced; only doc drift (stale `acceptance_signals` literal + stale Step-B next-action wording) — both fixed in this follow-up scrub.
 - Optional doc polish applied post-verdict (no code changes; no Codex re-review required): (i) report §2 Finding D stable-ID list corrected (`acceptance_signals` → `timeline_rules`); (ii) §8 next-action updated; (iii) README.md post-Step-B status updated.
+
+## 10. Step D · S4 Playwright `readAsText` browser behavior evidence
+
+**Test**: `tests/test_p43_readAsText_browser_behavior.py` · opt-in e2e lane (`pytest -m e2e`).
+
+**Setup**: Chromium (Playwright 1.58.0 · headless) loads `http://127.0.0.1:8797/ai-doc-analyzer.html`; real pdf `uploads/20260417-C919反推控制逻辑需求文档.pdf` (1,013,541 bytes) uploaded via `page.locator("#ai-doc-file-input").set_input_files(...)`; waits until `#ai-doc-preview.value.length > 0`; captures preview value + analyze-btn state + upload-error text.
+
+**S4 evidence dump** (from 2026-04-21 test run):
+
+```
+preview_starts_with: '%PDF-1.7'
+preview_length:      962835
+analyze_btn_disabled: False
+upload_error_present: False
+```
+
+**Interpretation**:
+- pdf header literal `%PDF-1.7` carried verbatim into `_documentText` (`static/ai-doc-analyzer.js:214`) and displayed in `_previewTextarea` — this is the UTF-8 lossy decode of the raw pdf byte stream.
+- `FileReader.readAsText` did NOT dispatch `onerror` (upload-error element is empty).
+- Analyze button stayed ENABLED, meaning the analyzer pipeline is willing to submit this 962k-character garbage string to the LLM.
+- `reader.readAsText(file)` at `static/ai-doc-analyzer.js:224` has no content-type guard — same behavior for `.pdf` and `.docx`.
+
+**Conclusion**: Browser-side `readAsText` cannot process pdf/docx binaries. The analyzer currently has three correlated gaps that together constitute the broken path — (i) no file-content guard, (ii) silent garbage-in success, (iii) unconditional enable of the downstream LLM submit. Registered as **R6a blocker for P43-03** (Q12=B+a server-side pypdf / python-docx extraction path).
+
+## 11. Step E · S5 API contract lock deliverable
+
+**File**: `docs/P43-api-contract-lock.yaml` (12,351 bytes · YAML v1 parseable).
+
+**Coverage** (7 endpoints):
+
+| Method | Path | Handler | Response branches |
+|--------|------|---------|-------------------|
+| GET  | `/api/workbench/bootstrap`        | `demo_server.py:217` | 200 |
+| GET  | `/api/workbench/recent-archives`  | `demo_server.py:224` | 200 |
+| POST | `/api/workbench/bundle`           | `demo_server.py:343` | 200 · 3 × 400 |
+| POST | `/api/workbench/repair`           | `demo_server.py:350` | 200 · 4 × 400 |
+| POST | `/api/workbench/archive-restore`  | `demo_server.py:357` | 200 · 5 × 400 |
+| POST | `/api/p15/convert-to-intake`      | `demo_server.py:484` | 200 · 5 × 400 |
+| POST | `/api/p15/run-pipeline`           | `demo_server.py:491` | 200 ready · 200 blocked · 2 × 400 |
+
+**Global guards** (applied at `demo_server.py:291-311` before POST dispatch): 413 `payload_too_large`, 415 `unsupported_media_type`, 400 `invalid_content_length` / `invalid_json` / `invalid_json_object`, 404 `not_found`.
+
+**Noteworthy semantic blocks embedded**:
+- `/api/p15/run-pipeline` → `response_200_ready` and `response_200_blocked` documented separately with emitted key `blockers` (Bug A EMIT contract) and `scenario_count`/`fault_mode_count` ∈ {0,1} shapes (Bug B1/B2 fix contract).
+- `session_id_semantics` block for `/api/p15/run-pipeline` records **Bug D** deferral: when `session_id` maps to an existing P14 session, `_inject_clarification_answers` writes `clarify-{i}` at `ai_doc_analyzer.py:799` and the stable-ID consumer at `document_intake.py:839-843` discards the answers silently. Fix owner: P43-03 (Q12=B+a).
+
+## 12. Step F · R6 / R7 / R8 report-only inventory
+
+### R6 — analyzer ID ↔ intake clarification ID contract (Counter F, second layer)
+
+**Registered as Bug D** at §2 Finding D (details + reproduction there). Summary anchors:
+
+| Layer | Code anchor | Behavior |
+|-------|-------------|----------|
+| Producer (session-injection write side) | `src/well_harness/ai_doc_analyzer.py:799` | Writes `question_id: f"clarify-{i}"` (index-based) in `_inject_clarification_answers()` @ `:785-806`. |
+| Authoritative stable IDs | `src/well_harness/system_spec.py:244` `default_workbench_clarification_questions()` — at `:259` the id is `timeline_rules`; full set used in fixtures: `source_documents`, `component_state_domains`, `timeline_rules`, `fault_taxonomy`. |
+| Consumer (read side) | `src/well_harness/document_intake.py:839-843` | `_unanswered_clarifications` keys by stable `answer.question_id`, so `clarify-{i}` never matches any required question and all session-injected answers are silently dropped. |
+
+**Runtime evidence** (captured in §2 Finding D): happy packet with `clarification_answers=[]` + 4-item `session_clarification_history` → all 4 clarifications remain unanswered; `ready_for_spec_build=False`.
+
+**Fix ownership**: P43-03 (per plan Q12=B+a · server-side pypdf + stable-ID contract). NOT in P43-01 scope.
+
+### R7 — `generate_adapter.py` hardcoded runtime params
+
+**Anchor 1** · `src/well_harness/tools/generate_adapter.py:255-257`
+
+```python
+_KNOWN_RUNTIME_PARAMS: dict[str, float] = {
+    "max_n1k_deploy_limit": 60.0,  # demo_server default
+}
+```
+
+- Hardcoded singleton mapping from string-threshold refs (that appear in logic node `threshold_value` fields but are not actual component IDs) to canonical numeric defaults.
+- Current set = 1 entry. Only `max_n1k_deploy_limit` is honored; any other runtime-param spec string would resolve to `None`, silently falling through to whatever default the adapter assigns later.
+
+**Anchor 2** · `src/well_harness/tools/generate_adapter.py:442-451`
+
+```python
+terminal_ln_ids: list[str] = []
+for lid in last_tier_ids:
+    ln = next((n for n in logic_nodes if n["id"] == lid), None)
+    if ln and "thr_lock" in ln.get("downstream_component_ids", []):
+        terminal_ln_ids.append(lid)
+if not terminal_ln_ids:
+    terminal_ln_ids = last_tier_ids[-1:] if last_tier_ids else []
+```
+
+- Hardcoded string literal `thr_lock` as the terminal-component marker.
+- For any system that does NOT have a `thr_lock`-named terminal component, the block falls through to "last logic node in topological order" heuristic — not guaranteed to match intended terminal.
+
+**Impact on non-thrust-reverser systems** (e.g. C919 ETRAS variants with different terminal naming, or a generic hydraulic actuator system with `actuator_extend` as the terminal): logic-tier termination detection degrades to a heuristic; generated adapter's `completion_reached` expression can bind to the wrong logic node silently.
+
+**Status**: known limitation · not in P43-01 scope · fix candidate for post-P43 workbench-generalization phase (use `packet.acceptance_scenarios[*].completion_condition` AST parse to derive the terminal programmatically).
+
+### R8 — Frontend + workbench_bundle schema inventory
+
+**Frontend `workbench.js` persistence contract**:
+
+| Field | Anchor | Value |
+|-------|--------|-------|
+| localStorage key (sole writer) | `src/well_harness/static/workbench.js:6` | `"well-harness-workbench-packet-workspace-v1"` |
+| Storage op entry point | `src/well_harness/static/workbench.js:301-307` | `workbenchBrowserStorage()` returns `window.localStorage` or null on failure. |
+| Write site | `src/well_harness/static/workbench.js:557` | `storage.setItem(workbenchPacketWorkspaceStorageKey, ...)` |
+| Read site | `src/well_harness/static/workbench.js:583` | `storage.getItem(workbenchPacketWorkspaceStorageKey)` |
+
+Schema drift risk: single localStorage key with no versioning guard beyond the `-v1` suffix; any future shape change requires a key migration path.
+
+**`workbench_bundle.py` serialization contract** (workbench bundle → dict):
+
+- Kind: `"well-harness-workbench-bundle"` @ `src/well_harness/workbench_bundle.py:26`
+- Version: `1` @ `:27`
+- Schema ID: `"https://well-harness.local/json_schema/workbench_bundle_v1.schema.json"` @ `:28`
+- Top-level keys emitted by `workbench_bundle_to_dict` @ `:124-143`: `$schema`, `kind`, `version`, `system_id`, `system_title`, `bundle_kind`, `ready_for_spec_build`, `selected_scenario_id`, `selected_fault_mode_id`, `intake_assessment`, `clarification_brief`, `playback_report` (nullable), `fault_diagnosis_report` (nullable), `knowledge_artifact` (nullable), `next_actions`.
+
+**Archive manifest contract**:
+
+- Kind: `"well-harness-workbench-archive-manifest"` @ `:29`
+- Schema ID: `"https://well-harness.local/json_schema/workbench_archive_manifest_v1.schema.json"` @ `:31`
+- Self-check command: `"python3 -m well_harness.cli archive-manifest ."` @ `:32`
+- File key set @ `:43-53` (9 keys): `bundle_json`, `summary_markdown`, `intake_assessment_json`, `clarification_brief_json`, `playback_report_json`, `fault_diagnosis_report_json`, `knowledge_artifact_json`, `workspace_handoff_json`, `workspace_snapshot_json`.
+- Required subset @ `:54-58`: `bundle_json`, `summary_markdown`, `intake_assessment_json`.
+- Validator: `validate_workbench_archive_manifest` @ `:227` checks `kind`, `version`, `$schema`, required-file-keys, checksums.
+
+**Workspace handoff consumer shape** (informational; derived from usage at `workbench_bundle.py:755-763`): `{badgeText, system, packet, result}` — all stringly-typed runtime dict; no dataclass guard. Fix candidate: promote to typed dataclass in a future phase.
+
+**Status**: All three inventories report-only. No code changes attempted in P43-01.

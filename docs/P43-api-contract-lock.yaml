@@ -1,0 +1,312 @@
+# P43-01 · API Contract Lock (S5)
+#
+# Authoritative shape of Workbench + P15 endpoints served by
+# src/well_harness/demo_server.py at commit 5d2d3ec (after Step B fix).
+#
+# Scope (per P43-01-00-PLAN.md §2b):
+#   /api/workbench/bootstrap        (GET)
+#   /api/workbench/recent-archives  (GET)
+#   /api/workbench/bundle           (POST)
+#   /api/workbench/repair           (POST)
+#   /api/workbench/archive-restore  (POST)
+#   /api/p15/convert-to-intake      (POST)
+#   /api/p15/run-pipeline           (POST)
+#
+# Conventions:
+#   - All POST endpoints require Content-Type: application/json and share the
+#     global guards at demo_server.py:291-311 (413 payload_too_large,
+#     415 unsupported_media_type, 400 invalid_json / invalid_json_object).
+#   - Field marked "required: true" is validated at handler entry; failure
+#     returns status 400 with the listed error branch shape.
+#   - "Optional" params default as stated; invalid-type values trigger a
+#     structured 400 branch (see error_branches).
+#   - Response shape samples are truncated; the canonical shape is the
+#     referenced builder function in demo_server.py.
+
+version: 1
+source_commit: 5d2d3ec
+generated_at_utc: 2026-04-21
+notes:
+  - >-
+    Bug A fix applied: run_pipeline_from_intake now reads "blocking_reasons"
+    (producer key at document_intake.py:940) and emits "blockers" (frontend
+    contract at static/ai-doc-analyzer.js:527-528).
+  - >-
+    Bug B1/B2 fix applied: bundle.scenario_count / bundle.fault_mode_count
+    are {0,1} integers (not list lengths) reflecting
+    ScenarioPlaybackReport / FaultDiagnosisReport singular-report semantics.
+  - >-
+    Bug D deferred: _inject_clarification_answers writes clarify-{i} instead
+    of stable question_id (/api/p15/run-pipeline session_id branch silently
+    discards session_clarification_history). P43-03 fix per Q12=B+a.
+
+endpoints:
+
+  /api/workbench/bootstrap:
+    method: GET
+    handler: demo_server.py:217
+    builder: workbench_bootstrap_payload  # demo_server.py:2292
+    request:
+      content_type: none
+      body: none
+    response_200:
+      shape:
+        template_packet: object      # intake_template_payload()
+        reference_packet: object     # reference_workbench_packet_payload()
+        default_archive_root: string # absolute path
+        recent_archives: array       # list of archive summaries
+        explain_runtime: object      # mock/live mode flags
+
+  /api/workbench/recent-archives:
+    method: GET
+    handler: demo_server.py:224
+    builder: workbench_recent_archives_payload  # demo_server.py:2302
+    request:
+      content_type: none
+      body: none
+    response_200:
+      shape:
+        default_archive_root: string
+        recent_archives: array
+
+  /api/workbench/bundle:
+    method: POST
+    handler: demo_server.py:343
+    builder: build_workbench_bundle_response  # demo_server.py:2542
+    request:
+      content_type: application/json
+      body:
+        packet_payload: {type: object, required: true}  # ControlSystemIntakePacket dict
+        scenario_id: {type: string, required: false}
+        fault_mode_id: {type: string, required: false}
+        observed_symptoms: {type: string, required: false}
+        evidence_links: {type: 'array[string]', required: false}
+        confirmed_root_cause: {type: string, required: false}
+        repair_action: {type: string, required: false}
+        validation_after_fix: {type: string, required: false}
+        residual_risk: {type: string, required: false}
+        suggested_logic_change: {type: string, required: false}
+        reliability_gain_hypothesis: {type: string, required: false}
+        guardrail_note: {type: string, required: false}
+        sample_period_s: {type: number, required: false, default: 0.5}
+        workspace_handoff: {type: object, required: false}
+        workspace_snapshot: {type: object, required: false}
+        archive_bundle: {type: boolean, required: false, default: false}
+    response_200:
+      shape:
+        bundle: object              # WorkbenchBundle.to_dict()
+        archive: object_or_null     # WorkbenchBundleArchive.to_dict() when archive_bundle=true
+        archive_bundle: boolean
+        default_archive_root: string
+        explain_runtime: object
+    error_branches:
+      - status: 400
+        error: invalid_workbench_request
+        field: packet_payload
+        trigger: packet_payload not a dict
+      - status: 400
+        error: invalid_workbench_packet
+        field: packet_payload
+        trigger: intake_packet_from_dict raises ValueError
+      - status: 400
+        error: invalid_workbench_selection
+        trigger: build_workbench_bundle raises ValueError
+
+  /api/workbench/repair:
+    method: POST
+    handler: demo_server.py:350
+    builder: build_workbench_safe_repair_response  # demo_server.py:2654
+    request:
+      content_type: application/json
+      body:
+        packet_payload: {type: object, required: true}
+        apply_all_safe: {type: boolean, required: true, must_be: true}
+    response_200:
+      shape:
+        packet_payload: object               # repaired intake packet dict
+        applied_suggestion_ids: 'array[string]'
+        intake_assessment: object            # assess_intake_packet(repaired_packet)
+        clarification_brief: object
+    error_branches:
+      - status: 400
+        error: invalid_workbench_request
+        field: packet_payload
+        trigger: packet_payload not a dict
+      - status: 400
+        error: invalid_workbench_request
+        field: apply_all_safe
+        trigger: apply_all_safe != true
+      - status: 400
+        error: invalid_workbench_packet
+        field: packet_payload
+        trigger: intake_packet_from_dict raises ValueError
+      - status: 400
+        error: no_safe_schema_repairs
+        trigger: no safe repairs available for packet
+
+  /api/workbench/archive-restore:
+    method: POST
+    handler: demo_server.py:357
+    builder: build_workbench_archive_restore_response  # demo_server.py:2692
+    request:
+      content_type: application/json
+      body:
+        manifest_path: {type: string, required: true, non_empty: true}
+    response_200:
+      shape:
+        # Whatever load_workbench_archive_restore_payload returns, plus:
+        default_archive_root: string
+    error_branches:
+      - status: 400
+        error: invalid_workbench_request
+        field: manifest_path
+        trigger: manifest_path missing or empty
+      - status: 400
+        error: invalid_manifest_path
+        trigger: relative path contains '..'
+      - status: 400
+        error: workbench_archive_not_found
+        field: manifest_path
+        trigger: FileNotFoundError
+      - status: 400
+        error: sandbox_violation
+        trigger: SandboxEscapeError
+      - status: 400
+        error: invalid_workbench_archive
+        field: manifest_path
+        trigger: OSError | json.JSONDecodeError | ValueError
+
+  /api/p15/convert-to-intake:
+    method: POST
+    handler: demo_server.py:484
+    builder: _handle_p15_convert  # demo_server.py:1679
+    request:
+      content_type: application/json
+      body:
+        session_id: {type: string, required: true, non_empty: true}
+        system_id: {type: string, required: false, default: "generated-system"}
+    response_200:
+      shape:
+        intake_packet: object        # convert_markdown_to_intake result
+        validation:
+          valid: boolean
+          errors: 'array[string]'      # field-path-prefixed strings on failure
+    error_branches:
+      - status: 400
+        error: missing_session_id
+        trigger: session_id missing or empty
+      - status: 400
+        error: session_not_found
+        trigger: _get_p14_store().get(session_id) is None
+      - status: 400
+        error: session_incomplete
+        trigger: session.is_complete is false and no generated_prompt
+      - status: 400
+        error: generation_failed
+        trigger: generate_prompt_document returns error dict
+      - status: 400
+        error: conversion_failed
+        trigger: convert_markdown_to_intake returns error dict
+
+  /api/p15/run-pipeline:
+    method: POST
+    handler: demo_server.py:491
+    builder: _handle_p15_run_pipeline  # demo_server.py:1747
+    underlying_fn: ai_doc_analyzer.run_pipeline_from_intake  # ai_doc_analyzer.py:809
+    request:
+      content_type: application/json
+      body:
+        intake_packet: {type: object, required: true}
+        session_id: {type: string, required: false, non_empty: false}
+    response_200_ready:
+      # Ready branch: packet is schema-compliant + no blockers + no unanswered clarifications.
+      # Evidence fixture: tests/fixtures/p43_spike/real_pdf_happy_path/expected_pipeline_response.json
+      shape:
+        assessment:
+          system_id: string
+          title: string
+          objective: string
+          source_document_count: integer
+          source_document_kinds: 'array[string]'
+          includes_pdf_sources: boolean
+          mixed_source_packet: boolean
+          component_count: integer
+          logic_node_count: integer
+          acceptance_scenario_count: integer
+          fault_mode_count: integer
+          custom_signal_semantics: array[object]
+          unanswered_clarifications: array[object]
+          blocking_reasons: 'array[string]'       # EMPTY on ready path
+          repair_suggestions: array
+          ready_for_spec_build: true
+          generated_workbench_spec: object
+        bundle:
+          system_id: string
+          system_title: string
+          bundle_kind: "well-harness-workbench-bundle"
+          ready_for_spec_build: true
+          scenario_count: integer  # 0 or 1 (singular ScenarioPlaybackReport)
+          fault_mode_count: integer  # 0 or 1 (singular FaultDiagnosisReport)
+        system_snapshot:
+          system_id: string
+          title: string
+          component_count: integer
+          logic_node_count: integer
+          acceptance_scenario_count: integer
+          fault_mode_count: integer
+          ready_for_spec_build: true
+    response_200_blocked:
+      # Blocker guard fires when assessment.blocking_reasons is non-empty.
+      # Evidence fixture: tests/fixtures/p43_spike/synthetic_blocker/expected_blocked_response.json
+      shape:
+        status: "blocked"
+        blockers: 'array[string]'       # non-empty; EMIT key preserved for frontend contract
+        message: "存在阻塞问题，无法构建诊断 bundle。请先解决以下问题。"
+    error_branches:
+      - status: 400
+        error: missing_intake_packet
+        trigger: intake_packet missing or not a dict
+      - status: 400
+        error: intake_validation_failed
+        trigger: intake_packet_from_dict raises ValueError|KeyError|TypeError
+
+    session_id_semantics:
+      summary: |
+        When session_id is provided AND maps to an existing P14 session,
+        run_pipeline_from_intake receives session.clarification_history
+        and invokes _inject_clarification_answers.
+      known_bug_D:
+        anchor: src/well_harness/ai_doc_analyzer.py:799
+        description: |
+          _inject_clarification_answers writes question_id=f"clarify-{i}"
+          (index-based) instead of the stable question_ids from
+          default_workbench_clarification_questions() at system_spec.py:244.
+          Consumer _unanswered_clarifications at document_intake.py:839-843
+          looks up by stable question_id, so all session-injected answers
+          are silently discarded.
+        impact: |
+          For session-path callers, ready_for_spec_build stays False even
+          when clarifications were answered in P14. Blocked path still
+          works correctly because it does not depend on answer matching.
+        deferred_to: P43-03 (Q12=B+a · server-side pypdf + stable-ID contract)
+
+global_error_branches:
+  # Applied by demo_server.py:291-311 before routing to any POST handler.
+  - status: 413
+    error: payload_too_large
+    trigger: content_length > _MAX_DOCUMENT_BYTES
+  - status: 415
+    error: unsupported_media_type
+    trigger: Content-Type != application/json
+  - status: 400
+    error: invalid_content_length
+    trigger: malformed Content-Length header
+  - status: 400
+    error: invalid_json
+    trigger: body not valid JSON
+  - status: 400
+    error: invalid_json_object
+    trigger: body JSON is not a top-level object
+  - status: 404
+    error: not_found
+    trigger: path not in allowed POST set
