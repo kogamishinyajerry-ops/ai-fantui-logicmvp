@@ -721,3 +721,41 @@ Status: DECISION drafted · GATE-P34-CLOSURE Pending (Kogami)
 **证迹合规：** v5.2 R1 R2 R3 R4 R5 全部 self-verified 合规（详见 closure §v5.2 checklist）。
 
 **Plans:** P34-00 Tier 1（5 条 counterargument + Q1-A/Q2-A/Q3-A 已裁）+ P34-01…04 顺序执行全绿 + P34-05 closure drafted 等签。
+
+## Phase P35: Adapter Truth-Level Registry + Demonstrative Adapters Freeze Banner (证迹补完第二轮 α 段)
+
+Status: Executed & Green · Awaiting `GATE-P35-CLOSURE: Approved` (Kogami)
+
+**Goal:** 按 Kogami 2026-04-20 方向 D · 证迹补完第二轮 + 披露「bleed_air / efds / landing_gear 3 adapter 是我之前尝试随便生成的逻辑面板，没有需求文档，当作没来源冻结搁置即可」，P35α 做纯文档层证迹固化：truth-level 登记表 + 3 adapter 的 7 文件 FROZEN banner + 防回归测试。零代码行为改动，零阈值改动，零既有测试断言改动。
+
+**Sub-phases & commits (branch `codex/p35-adapter-truth-level-registry`, base `main c88e4f0`):**
+- P35-00 (`c886e14`): Tier 1 plan (315 行 · 5 counterargument C1-C5 · Q1-Q5 Open Questions)
+- P35-01 (`5a7e7b1`): `docs/provenance/adapter_truth_levels.md` 新增（5 行 · schema C 本质+状态分离）
+- P35-02 (`6cc0d31`): 7 文件 FROZEN banner 落地（3 adapter + 2 intake + 2 yaml）
+- P35-03 (`e0f8a8a`): `tests/test_adapter_freeze_banner.py` 15 parametrized cases
+
+**Q1-Q5 Kogami 2026-04-20 仲裁：**
+- Q1 = C · truth_level enum (`demonstrative/certified/placeholder`) + 独立 `status` 字段（本质状态分离）
+- Q2 = A · banner 在 module docstring + YAML head comment
+- Q3 = B · efds 不补 stub intake/yaml（冻结即不新增）
+- Q4 = A · thrust_reverser 登记为 `demonstrative + Upgrade pending`（P36β 升级）
+- Q5 = A · 接受 banner 文字逐字稿
+
+**三轨回归（vs P34 head c88e4f0）：**
+- default pytest: **762 passed** / 1 skipped / 49 deselected（P34 baseline 747 + P35-03 新增 15 = 762 · 零既有回归）
+- opt-in e2e: **49 passed**（identical to P34 baseline）
+- adversarial wrapper: **1 passed**（8/8 inside identical）
+
+**Exit Criteria (all met):**
+- `docs/provenance/adapter_truth_levels.md` 含 5 行 + schema 说明 ✅
+- 7 文件 banner 落地，文字与 Q5=A 草案字节级一致 ✅
+- `tests/test_adapter_freeze_banner.py` 15 passed ✅
+- 三轨全绿，零既有回归 ✅
+- ROADMAP / STATE 更新（本段）✅
+- Closure doc 起草（`.planning/phases/P35-adapter-truth-level-registry/P35-05-CLOSURE.md`）✅
+
+**证迹合规：** v5.2 R1 R2 R3 R4 R5 全部 self-verified 合规（详见 P35-05-CLOSURE.md §v5.2 checklist）。
+
+**Plans:** P35-00 Tier 1（5 counterargument · Q1-Q5 Kogami 仲裁）+ P35-01…03 顺序 commit 全绿 + P35-04 三轨 zero regression + P35-05 closure drafted 等签。
+
+**Next phase:** P36β (thrust_reverser docx 真实化) — 等 Kogami 在 P35 closeout 后明示推进。

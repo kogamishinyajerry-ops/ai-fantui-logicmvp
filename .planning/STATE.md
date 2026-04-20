@@ -2,32 +2,58 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Milestone complete
-last_updated: "2026-04-19T00:00:00.000Z"
-last_activity: 2026-04-19
+status: Provenance backfill Phase 2 (α) awaiting GATE-P35-CLOSURE
+last_updated: "2026-04-20T00:00:00.000Z"
+last_activity: 2026-04-20
 progress:
-  total_phases: 31
-  completed_phases: 31
+  total_phases: 35
+  completed_phases: 34
   total_plans: 0
   completed_plans: 0
 ---
 
 # State
 
-Last activity: 2026-04-19
+Last activity: 2026-04-20
 
 ## Current Position
 
-**Control Tower Truth Aligned — P30 Closed (2026-04-19)**
+**P35 drafted & green — awaiting `GATE-P35-CLOSURE: Approved` (2026-04-20)**
 
-Phase: P30 — Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2
+Phase: P35 — Adapter Truth-Level Registry + Demonstrative Adapters Freeze Banner (证迹补完第二轮 α 段)
 
-- ROADMAP / Notion / repo-side coordination docs 已统一对齐到 P30；`01 当前状态`、`09C`、`Freeze Packet`、dashboard 顶部 snapshot 已刷新。
-- 最新已验证 Plan：`P30-00-TIER1 Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2 维度`
-- 最新成功执行证据：`P30 control-plane truth alignment + readiness verification`
-- 当前 Gate 结论：`当前无需 Opus 审查`；Open Gap = `0`
-- P21–P30 的 `QA / Asset / Decision / Gate` 证据链已在 Notion 控制面补齐，closure 欠账已清零。
-- 下方保留的是 `2026-04-17` 生成的 P19 历史执行快照，仅作归档上下文，不再代表当前执行位置。
+- Branch `codex/p35-adapter-truth-level-registry` 4 commits on top of `main c88e4f0`:
+  · `c886e14` feat(P35-00): plan doc (315 lines, Tier 1, 5 counterarguments)
+  · `5a7e7b1` docs(P35-01): adapter truth-level registry (5 rows)
+  · `6cc0d31` docs(P35-02): freeze banner on 3 demonstrative adapters (7 files)
+  · `e0f8a8a` test(P35-03): adapter freeze banner regression guard (15 parametrized cases)
+- Three-lane regression (vs P34 baseline 747/49/8-of-8):
+  · default: **762 passed** (747 + 15 P35-03, 零既有回归)
+  · e2e: **49 passed** (identical)
+  · adversarial wrapper: **1 passed** (8/8 inside identical)
+- Gates (Kogami 2026-04-20):
+  · `P31-GATE: Approved` ✅ · `GATE-P32-CLOSURE: Approved` ✅ · `GATE-P34-CLOSURE: Approved` ✅ · `GATE-P35-PLAN: Approved` ✅ (含 Q1=C / Q2=A / Q3=B / Q4=A / Q5=A 仲裁)
+  · `GATE-P35-CLOSURE: Pending` — awaiting Kogami explicit signature
+
+### Registry 5 rows（see `docs/provenance/adapter_truth_levels.md`）
+
+| system_id | truth_level | status |
+|-----------|-------------|--------|
+| `thrust-reverser` | demonstrative | Upgrade pending (P36β) |
+| `bleed-air-valve` | demonstrative | Frozen |
+| `emergency_flare_deployment_system` | demonstrative | Frozen |
+| `minimal_landing_gear_extension` | demonstrative | Frozen |
+| `c919-etras` | certified | In use |
+
+### Next after P35-CLOSURE
+1. Executor non-FF merge `codex/p35-adapter-truth-level-registry` → main (Option M, SHAs preserved)
+2. Push origin main
+3. Notion flip P35 DECISION Pending → Approved
+4. Kogami 决定 P36β (thrust_reverser docx 真实化) 是否推进
+
+### 上一阶段归档（P30 Closed 2026-04-19）
+
+之前的 `Control Tower Truth Aligned — P30 Closed` 位置信息在本次更新前覆盖 P30；P31/P32/P34 在 2026-04-20 已 landed 到 origin/main。历史 Phase 状态靠 `.planning/ROADMAP.md` + `docs/provenance/adapter_truth_levels.md` + Notion 控制塔页追溯。
 
 ### Historical P19 Snapshot (Archived 2026-04-17)
 
