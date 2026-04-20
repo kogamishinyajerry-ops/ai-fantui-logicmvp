@@ -1,9 +1,9 @@
 ---
 phase: P43
 plan: P43-00
-plan_revision: v6 (frozen · 3 residuals accepted as §8a Appendix A known limitations · Kogami Option B arbitration)
-title: Control Logic Workbench end-to-end milestone — v6 (frozen) · 3 cuts applied + 3 residuals documented
-status: frozen · READY for GATE-P43-PLAN (v6) review (Kogami)
+plan_revision: v7 (Kogami strengthen-before-Gate directive · KL-1/2/3 closed into §3e mechanical · Gate Approved)
+title: Control Logic Workbench end-to-end milestone — v7 · 3 strengthenings applied · GATE-P43-PLAN Approved
+status: APPROVED · GATE-P43-PLAN (v7): Approved (Kogami 2026-04-20) · Q1/Q2/Q4/Q7/Q8/Q10/Q12 locked per Executor recommendations
 date: 2026-04-20
 owner: Claude App Opus 4.7 (Solo Executor) · v5.2 solo-signed + v5.3 addendum
 verified-by: codex-gpt54-xhigh (r1 需阻止 · r2/r3/r4/r5 需修正·信号强 · r5 明示 "值得 v6 最后一次 · 只修 3 刀" · Kogami 批 option A · v6 3 surgical fixes applied)
@@ -17,8 +17,9 @@ preconditions:
   - v4 (`cf85723`) → Codex r4 需修正·信号强（3 surgical residual）· 明示 "不建议 R4 撤回"
   - v5 (`292a555`) → Codex r5 需修正·信号强（3 精准残留：Python-port fork 未授权 · R2/R6 自撞 · FastAPI category error）· r5 明示 "值得 v6 最后一次 · 只修 3 刀 · 之后不再 path ①"
   - Kogami 2026-04-20 · v5 后 R4 仲裁 **Option A**（v6 最后 surgical · 3 刀）· 批准继续 path ① 一次
-  - v6 (`6e46784`) → Codex r6 需修正·信号强（3 残留：R1 helper 扫描深度 · R3 原位 mutation · R5 默认 lane 不验行为）· r6 明示 "不建议 v7 · Option B/C"
-  - Kogami 2026-04-20 · v6 后 R4 仲裁 **Option B**：freeze v6 · 3 残留作 §8a Appendix A known limitations 显式接受 · 进 GATE-P43-PLAN (v6) 审 · 由 P43-01 Contract Proof Spike 实跑 evidence 再评
+  - v6 (`6e46784`) → Codex r6 需修正·信号强（3 残留 KL-1/2/3）· r6 明示 "不建议 v7 · Option B/C"
+  - Kogami 2026-04-20 · v6 后 R4 仲裁 **Option B + strengthen-before-Gate directive**：freeze v6 plan core + strengthen KL-1/2/3 into §3e mechanical before Gate 正式批准
+  - v7 (this revision) → Kogami directive 执行 · KL-1/2/3 closed into §3e R1/R3/R5 · GATE-P43-PLAN (v7) Approved + Q answers locked per Executor recommendations (Q1=D, Q2=A, Q4=A, Q7=A, Q8=B, Q10=B, Q12=B+a)
   - v5.3 addendum 生效 · adapter-boundary 硬性规则 Codex review 必调
 non-goals:
   - 本 P43-00 v3 不写任何 src 代码
@@ -41,17 +42,48 @@ non-goals:
   - **`draft_design_state` authority contract 6 条规则（R1-R6）须可机械验证**（Codex r3 · cut #3 mechanize）· 每条规则有具体 CI / 静态扫 / 单元测试 pattern · P43-02 Exit Criteria 硬性要求 test 实装
 ---
 
-# P43 · Control Logic Workbench milestone (v6 · frozen · Option B)
+# P43 · Control Logic Workbench milestone (v7 · Gate Approved)
 
-## 0. TL;DR · v6 frozen state（Kogami Option B arbitration · 2026-04-20）
+## 0. TL;DR · v7 · Kogami Gate Approved + strengthen directive executed（2026-04-20）
 
-v6 作为 P43 milestone plan 的终版冻结。path ① 已走完 6 轮 · Codex r1-r6 全程参与 · v6 实装了 r1-r5 全部 counters + cuts + surgical fixes · Codex r6 余 3 条结构性残留 · 其性质为 **"plan 层无法完全机械化 · 需实跑 evidence"** · Kogami R4 仲裁 Option B：
+Kogami R4 仲裁序列：
+1. v5 后 Option A（surgical 3-fix → v6）
+2. v6 后 Codex r6 余 3 残留 · Kogami 初 Option B（freeze + accept）· 追加 directive **"strengthen before Gate"**
+3. v7 执行 directive · KL-1/2/3 升级为 §3e mechanical verification（非 accepted residual）
+4. **GATE-P43-PLAN (v7): Approved** by Kogami · Q answers locked · 进入 P43-01 起草
 
-- **v6 冻结** · 3 残留作 §8a Appendix A known limitations 显式接受
-- **进入 GATE-P43-PLAN (v6) 审** · 此文提交 Kogami 仲裁 Q1/Q2/Q4/Q7/Q8/Q10/Q12
-- **若 Gate Approved** → 立即启动 P43-01 Contract Proof Spike · 实跑 KL-1/2/3 residual
-- **若 P43-01 揭示残留真 exploit** → P43-02 plan v2 强化 · 非 P43-00 plan v7
-- **Path ① 硬停于 v6** · 不再自动 iterate · 实跑证据胜过 plan 层反复 remediation
+**Q answers locked（Kogami 2026-04-20 · per Executor recommendations）：**
+
+| Q | 答 | 内容 |
+|---|---|------|
+| Q1 | D | 4 gates（P43-01 独立 + 3 批次合并）|
+| Q2 | A | 沿用 `workbench.js` vanilla JS |
+| Q4 | A | 用户 alias + 注释 approval 签名 |
+| Q7 | A | P43 milestone 整体标记 · 每触点必调 Codex |
+| Q8 | B | P43-01 lean + primitive API 契约表 + contract lock |
+| Q10 | B | `docs/P43-workflow-automaton-contract.md` + machine-readable yaml |
+| Q12 | B + a | 服务端 pypdf+python-docx · 不允许 OCR · canonical text SHA 与 binary SHA 分开入 manifest |
+
+**KL-1/2/3 v7 closure（见 §3e R1/R3/R5 + §8a 治理记录）：**
+
+| KL | v7 §3e mechanical | Status |
+|----|-------------------|--------|
+| KL-1 · R1 helper 扫描 | `test_r1_helper_payload_builders_no_draft` + `test_r1_handler_call_closure` | CLOSED |
+| KL-2 · R3 原位 mutation | `test_r3_deepfreeze_enforced` · `assignFrozenSpec` 强制 `deepFreeze` | CLOSED |
+| KL-3 · R5 validator 行为 | `test_r5_validator_fixture_required_substrings` + P43-09 Exit MANDATORY Node parity | CLOSED |
+
+**v7 不再走 Codex re-review**：Codex r6 已明示 "path ① 耗尽 · 不建议 v7" · Kogami R4 authoritative override · 符合 v5.2 Solo Executor 原则（Kogami final arbiter · Codex 是 advisor）。
+
+**6 轮 Codex 治理弧（保留 · 作进程证据）：**
+
+| Round | v | Codex verdict | 处理 |
+|-------|---|---------------|------|
+| r1 | v1 | 需阻止（6 counters A-F） | path ① → v2 (Kogami 明示) |
+| r2 | v2 | 需修正·信号强（4 cuts） | path ① → v3 |
+| r3 | v3 | 需修正·信号强 | path ① → v4 |
+| r4 | v4 | 需修正·信号强（3 surgical） | path ① → v5 |
+| r5 | v5 | 需修正·信号强（3 precise） | Kogami Option A → v6 |
+| r6 | v6 | 需修正·信号强（3 residuals） | Kogami Option B + strengthen → **v7 Gate Approved** |
 
 **6 轮 remediation 累计产物（保留 · 作 v6 基础）：**
 
@@ -327,11 +359,11 @@ v4 §3e Exit Criteria 依赖 `tools/check_authority_contract.py` 和 CI/pre-comm
 
 | 规则 | 机械约束 | Verification（默认 lane · Python pytest + source grep） |
 |-----|---------|------------------------------|
-| R1 · 写权限白名单 | 只有 UI Step 3/4/6 UI handler 写 `draftDesignState` key · 后端 Python 代码 forbidden 产生 `draft_design_state` 可写字段或在 response body 中发回客户端作为 writable state | **`test_r1_backend_no_draft_state_emission`** — Python string-grep lane（与 `tests/test_demo.py` assertIn 模式一致）· 对 `src/well_harness/**/*.py` 文件全文 grep · assert 无 `draftDesignState` / `draft_design_state` substring（除 P43-01 contract-proof-report 文本引用）· 对 `demo_server.py`（**`BaseHTTPRequestHandler`**-based 非 FastAPI · Codex r5 修正）· Python AST scan 所有 `do_POST` / `do_GET` method body · assert 无 response body JSON literal 含 key 名 `draft` / `design_state` / `draftState` |
+| R1 · 写权限白名单 | 只有 UI Step 3/4/6 UI handler 写 `draftDesignState` key · 后端 Python 代码 forbidden 产生 `draft_design_state` 可写字段或在 response body 中发回客户端作为 writable state | **`test_r1_backend_no_draft_state_emission`** — Python string-grep lane（与 `tests/test_demo.py` assertIn 模式一致）· 对 `src/well_harness/**/*.py` 文件全文 grep · assert 无 `draftDesignState` / `draft_design_state` substring（除 P43-01 contract-proof-report 文本引用）· 对 `demo_server.py`（**`BaseHTTPRequestHandler`**-based 非 FastAPI · Codex r5 修正）· Python AST scan 所有 `do_POST` / `do_GET` method body · assert 无 response body JSON literal 含 key 名 `draft` / `design_state` / `draftState`。**`test_r1_helper_payload_builders_no_draft`**（**Kogami strengthen directive · 原 KL-1 closure**）— AST scan `demo_server.py` 识别所有 `def build_*_response(...)` / `def *_payload(...)` / `def build_workbench_*(...)` helper 函数（regex: `^def (build_\w+_response\|\w+_payload\|build_workbench_\w+)\b`）· 对每个 helper 的返回字典/JSON literal 做字段名扫 · assert 无 key 含 `draft` / `design_state` / `draftState`。**`test_r1_handler_call_closure`** — 从 `do_POST` / `do_GET` method body 出发做 AST call-graph 传递闭包（仅限 `demo_server.py` 本文件内 · 不跨 module · 限制 scope 避免 over-engineering）· 识别所有被调用的 helper 函数 · assert 每个 helper 都在 test_r1_helper_payload_builders_no_draft 的扫描范围内（闭包完整性检查）|
 | R2 · 读权限白名单 | Step 8 Final Approval UI handler 不**读** draft（getItem / 解析 / 传入 generator）· 只读 frozen spec · 允许 R6 的 **删除**操作（removeItem）| **`test_r2_final_approval_no_draft_read`** — 读 `src/well_harness/static/workbench.js` 源字节 · 定位 Final Approval handler 代码块（以约定注释标记 `// P43: final-approval-handler-begin` … `// P43: final-approval-handler-end` 为界 · P43-02 实装时 insert 这对标记）· assert 该块内**无以下 read pattern**：`localStorage.getItem(...draftDesignState...)` / `JSON.parse(...draftDesignState...)` / 任何传 draft 值给 adapter/generator 的调用 · `frozenSpec` substring 计数 ≥ 1。**`removeItem` 调用不在此规则禁止范围**（见 R6 专条 · Codex r5 自撞修正） |
-| R3 · **回写 frozen spec 禁止** | 无任何自动回写路径 · 唯一路径：reiterate event → 回 Freeze step · 实装规则：`workbench.js` 中 `frozenSpec` 必须通过 **受控访问器** `assignFrozenSpec(newSpec, {origin})` 修改 · 且 `origin` ∈ `{'freeze-event', 'archive-restore'}`；无其他写路径允许 | **`test_r3_controlled_writer_only`** — string-grep `workbench.js`（与 `tests/test_demo.py` lane 一致）· assert ① `function assignFrozenSpec` 或 `assignFrozenSpec =` 声明存在 · ② 全文无 `frozenSpec =` 裸赋值（除 `assignFrozenSpec` 实装内部）· ③ 全文无以下 pattern：`frozenSpec.merge(` / `frozenSpec.assign(` / `Object.assign(frozenSpec` / `{...frozenSpec, ...draftDesignState}` / `{...frozenSpec, ...draft}`。**`test_r3_no_draft_origin`** — grep `workbench.js` · 对所有 `assignFrozenSpec(` 调用点 · assert 第二参数 origin 字面量 ∈ `{'freeze-event', 'archive-restore'}`（AST alias 分析不在默认 lane · 改用受控访问器消除 alias 绕过风险 · Codex r5 修正）。**`test_r3_reiterate_state_transition`** — 构造 fixture 调 workflow automaton contract 的 Python 仲裁器（P43-02 落地）· trigger reiterate event · assert post-state ∈ {`PARSING`, `AWAITING_ANSWERS`} · 非 `FROZEN` |
+| R3 · **回写 frozen spec 禁止** | 无任何自动回写路径 · 唯一路径：reiterate event → 回 Freeze step · 实装规则：`workbench.js` 中 `frozenSpec` 必须通过 **受控访问器** `assignFrozenSpec(newSpec, {origin})` 修改 · `origin` ∈ `{'freeze-event', 'archive-restore'}`；**并且 `assignFrozenSpec` 内部必须对 newSpec 调 `deepFreeze()` 递归 `Object.freeze()` 封印**（**Kogami strengthen directive · 原 KL-2 closure**）· 防原位 property mutation / alias-mutate 绕过 | **`test_r3_controlled_writer_only`** — string-grep `workbench.js`（与 `tests/test_demo.py` lane 一致）· assert ① `function assignFrozenSpec` 或 `assignFrozenSpec =` 声明存在 · ② 全文无 `frozenSpec =` 裸赋值（除 `assignFrozenSpec` 实装内部）· ③ 全文无以下 pattern：`frozenSpec.merge(` / `frozenSpec.assign(` / `Object.assign(frozenSpec` / `{...frozenSpec, ...draftDesignState}` / `{...frozenSpec, ...draft}`。**`test_r3_no_draft_origin`** — grep `workbench.js` · 对所有 `assignFrozenSpec(` 调用点 · assert 第二参数 origin 字面量 ∈ `{'freeze-event', 'archive-restore'}`。**`test_r3_deepfreeze_enforced`**（**Kogami strengthen · 原 KL-2 closure**）— grep `workbench.js` · assert ① `function deepFreeze` 或 `const deepFreeze =` 声明存在 · ② `assignFrozenSpec` 实装内部含 `deepFreeze(newSpec)` 或 `Object.freeze(...recursive...)` 调用 · ③ `workbench.js` 初始化时 `frozenSpec` 首次 assign 必经 `assignFrozenSpec` 路径。**`test_r3_runtime_mutation_blocked`**（opt-in e2e lane）— Node load `workbench.js` · 对 deep-frozen `frozenSpec` 尝试 `frozenSpec.foo = 'x'` 与 `frozenSpec.components[0].wiring = ...` · assert strict mode throw TypeError（`Cannot assign to read only property`）· 默认 lane 不强依赖此 · 源级 deepFreeze 存在即视为 KL-2 mechanically closed。**`test_r3_reiterate_state_transition`** — 构造 fixture 调 workflow automaton contract 的 Python 仲裁器（P43-02 落地）· trigger reiterate event · assert post-state ∈ {`PARSING`, `AWAITING_ANSWERS`} · 非 `FROZEN` |
 | R4 · generator 消费规则 | `generate_adapter.py` 只读 frozen spec · 不读 draft | **`test_r4_generator_source_grep`** — 对 `src/well_harness/tools/generate_adapter.py` + 其 import 链 Python 文件做 AST 扫 · assert 无 `draftDesignState` / `draft_design_state` 任何引用。**`test_r4_generator_output_invariance`** — 准备 frozen spec fixture + 无关 draft fixture · 调 generator · assert 输出 hash 仅依赖 frozen spec（mutation draft fixture 不改输出） |
-| R5 · 冲突自动拒绝 | validator **唯一实装位置**：`src/well_harness/static/workbench.js::validateDraftAgainstFrozen(draft, frozen)`（**Codex r5 修正 · 删除 v5 Python port 分叉**：ES module fork 或 `_draft_validator_contract.py` Python port 即使 contract-identical 亦为第二份 truth · 鼓励把真规则藏后端 · v6 彻底禁止 · 不在任何 whitelist）· 返回：`{ok: bool, conflicts: [{type, draft_ref, frozen_ref, message}]}` · 失败码：`DRAFT_REFERENCES_DELETED_COMPONENT` / `DRAFT_CYCLE` / `DRAFT_TERMINAL_UNIQUENESS_VIOLATION` / `DRAFT_FAN_OUT_EXCEEDED` | **`test_r5_validator_exists`**（默认 lane）— string-grep `workbench.js` · assert `function validateDraftAgainstFrozen` / `validateDraftAgainstFrozen =` / `validateDraftAgainstFrozen:` 声明 pattern 至少 1 处 · 且 4 失败码字符串均在源中出现。**`test_r5_validator_fixture_shape`**（默认 lane · Python only · 不调 Node）— Python 侧准备 `tests/fixtures/p43_validator_cases.json`（Test Whitelist 下 `tests/fixtures/*` 允许）· 4 fixture case 覆盖 4 失败码 · assert JSON schema 合法 + 每条 `expected_conflict_code` 在 4 失败码集合内。**`test_r5_validator_node_parity`**（opt-in e2e lane · 非默认 · 只作交付前机械 parity）— 若 Node 可用 · 跑 `node -e` load `workbench.js` · 对 fixture 4 case 跑 · assert 返预期失败码。默认 lane 不依赖此 · **单一 truth 在 `workbench.js` · fixture 只描述预期 I/O 不复制规则** |
+| R5 · 冲突自动拒绝 | validator **唯一实装位置**：`src/well_harness/static/workbench.js::validateDraftAgainstFrozen(draft, frozen)`（**Codex r5 修正 · 删除 v5 Python port 分叉**：ES module fork 或 `_draft_validator_contract.py` Python port 即使 contract-identical 亦为第二份 truth · 鼓励把真规则藏后端 · v6 彻底禁止 · 不在任何 whitelist）· 返回：`{ok: bool, conflicts: [{type, draft_ref, frozen_ref, message}]}` · 失败码：`DRAFT_REFERENCES_DELETED_COMPONENT` / `DRAFT_CYCLE` / `DRAFT_TERMINAL_UNIQUENESS_VIOLATION` / `DRAFT_FAN_OUT_EXCEEDED` | **`test_r5_validator_exists`**（默认 lane）— string-grep `workbench.js` · assert `function validateDraftAgainstFrozen` / `validateDraftAgainstFrozen =` / `validateDraftAgainstFrozen:` 声明 pattern 至少 1 处 · 且 4 失败码字符串均在源中出现。**`test_r5_validator_fixture_required_substrings`**（**Kogami strengthen directive · 原 KL-3 closure**）— `tests/fixtures/p43_validator_cases.json` 每个 fixture case 必包字段 `required_substrings_in_validator_source: string[]`（如 cycle case：`["DRAFT_CYCLE", "visited", "cycle"]`；deleted-component case：`["DRAFT_REFERENCES_DELETED_COMPONENT", "components.find", "undefined"]` 等 · 描述该 conflict type 的 validator 逻辑路径必有的 substring 证据）· Python test 对每个 case 的 required_substrings 在 `workbench.js` validator 函数体（由 convention 标记 `// P43: validate-draft-begin` … `// P43: validate-draft-end` 界定）内做 assertIn · 静态证明 4 conflict logic paths 均实装。**`test_r5_validator_node_parity_mandatory`**（**Kogami strengthen · P43-09 Final Approval sub-phase Exit Criteria · MANDATORY one-time run**）— P43-09 closure 前必须至少一次跑 Node parity（`node -e` load workbench.js · 对 4 fixture case 跑 · assert 返预期失败码）· 证据入 P43-09 commit trailer · 不跑则 P43-09 不 closure。默认 lane 不阻塞（若 Node 不可用 · 跳过并记 skip reason）· 但 P43-09 Exit Criteria 实装时 **必须** 保证至少一次执行 · **单一 truth 在 `workbench.js` · fixture required_substrings 静态证实装 · Node parity 一次性 behavior 证实** |
 | R6 · Lifecycle boundary | Final Approval → `draft_design_state` key 立即删 · archive 不含 draft · **R2/R6 管辖边界**（Codex r5 自撞修正）：R2 管"read"（getItem / JSON.parse / 传递 value）· R6 管"delete"（removeItem）· 同一 handler 块内 R6 要求出现 `localStorage.removeItem(...draftDesignState...)` · R2 要求不出现 read pattern · 二者不冲突 | **`test_r6_final_approval_handler_removes_draft`** — 读 `workbench.js` Final Approval handler 块 · regex `localStorage\.removeItem\([^)]*draftDesignState[^)]*\)` 计数 ≥ 1 · 该 regex 与 R2 的 read 模式（`getItem` / `JSON.parse`）在词法级别互斥 · 不会同假。**`test_r6_archive_excludes_draft`** — Python 侧跑完整 `archive_workbench_bundle` flow fixture · inspect 生成的 manifest + bundle bytes · assert 无 `draftDesignState` / `draft_design_state` substring |
 
 **Observability 要求（v5 · 默认 lane 可验证）：**
@@ -519,33 +551,26 @@ P43-08..P43-10 iteration + approval + archive（合 1 gate · reiterate loop + F
 
 ---
 
-## 8a. Appendix A · Known Limitations Accepted at GATE-P43-PLAN (v6)
+## 8a. Appendix A · Codex r6 Residuals · 治理记录（v7 · Kogami strengthen-before-Gate directive closure）
 
-**治理依据**：Codex round 6 review returned "需修正·信号强" with 3 residuals that cannot be mechanized at plan layer alone · Kogami R4 Option B arbitration (2026-04-20) accepts these residuals explicitly at Gate · residuals to be re-evaluated when P43-01 Contract Proof Spike produces real runtime evidence.
+**治理依据**：Codex round 6 review returned "需修正·信号强" with 3 residuals (KL-1/2/3). Kogami R4 仲裁 Option B 初期定为 "freeze + accept residual"，但追加 directive **"require strengthen before Gate"**。v7 将 KL-1/2/3 提升为 §3e mechanical Verification column · 不再作 accepted residual · 本 §8a 作治理历史记录保留。
 
-**Plan-layer path ① exhausted**：6 rounds (r1→r6) · Codex r6 明示 "不建议 v7 · 建议 Option B 或 C" · Kogami 选 B · freeze v6 at this state.
+**v7 closure 状态：**
 
-**KL-1 · R1 backend scan depth limited to handler method bodies**
-- **Limitation**：`test_r1_backend_no_draft_state_emission` scans `do_POST` / `do_GET` method bodies only · `demo_server.py` 大量经 `build_*_response()` helper 构造 payload 再 `_send_json` 发出（见 `demo_server.py:215,343,571` 等）· helper 层不在当前规则扫描范围
-- **Risk**：理论上后端 helper 仍可 emit field 含 `draft_design_state` · 当前规则扫不到
-- **Mitigation at P43-01**：Contract Proof Spike 的 API 契约 lock 阶段 · dump 所有 `/api/workbench/*` endpoint 实际响应 shape · 在 `docs/P43-api-contract-lock.yaml` 记录 · 若任何响应含 `draft`/`design_state` field → P43-01 报告 flag · P43-02 plan 扩 R1 规则至 helper 层
-- **Acceptance rationale**：实跑 contract lock 比静态规则更 ground-truth · helper 层泛化扫描无仓基建支撑（当前 lane 无 Python AST-to-payload 追踪）
+| KL | Codex r6 原攻击点 | v7 §3e strengthen | Status |
+|----|-----------------|-------------------|--------|
+| KL-1 · R1 helper 扫描深度 | `demo_server.py` helper `build_*_response()` 不在 `do_GET/do_POST` body scan 范围 | §3e R1 新增 `test_r1_helper_payload_builders_no_draft` + `test_r1_handler_call_closure` · AST 识别 helper 函数 + 闭包完整性检查 | **CLOSED · mechanical** |
+| KL-2 · R3 原位 mutation | `frozenSpec.foo = ...` / 嵌套改写 / alias-后-mutate 绕过受控访问器 | §3e R3 新增 `test_r3_deepfreeze_enforced` · 强制 `assignFrozenSpec` 内部调 `deepFreeze(newSpec)` 递归 `Object.freeze()` · 静态 grep 守 + opt-in runtime throw 守 | **CLOSED · mechanical** |
+| KL-3 · R5 默认 lane 不验行为 | 只验函数存在 / 失败码字面量 / fixture schema 合法 · validator 可为空壳 | §3e R5 新增 `test_r5_validator_fixture_required_substrings` · 每 fixture case 带 `required_substrings_in_validator_source` 静态证 4 conflict logic paths 实装 + `test_r5_validator_node_parity_mandatory` 升为 P43-09 Exit Criteria **MANDATORY one-time** 实跑证据 | **CLOSED · mechanical** |
 
-**KL-2 · R3 frozen spec protection limited to rebinding patterns**
-- **Limitation**：`test_r3_controlled_writer_only` 禁 `frozenSpec =` 裸赋值 + `.merge()` / `.assign()` / `Object.assign(frozenSpec, ...)` pattern · 未禁原位 property mutation（`frozenSpec.foo = ...` / `frozenSpec.components[i].wiring = ...`）· 未禁 alias-后-mutation（`const s = frozenSpec; s.foo = ...`）· controlled accessor `assignFrozenSpec()` 只管 rebinding 不管 property write
-- **Risk**：理论上 preview code 仍可通过 property mutation 绕过"唯一回写通道"
-- **Mitigation at P43-02**：实装 `frozenSpec` 为 **`Object.freeze()` 深度冻结对象** · JavaScript 引擎在 strict mode 直接 throw · 加 `test_r3_frozenspec_is_deep_frozen` 检查 · 同时 `test_r3_reiterate_state_transition` (already in plan) 作 second-line 行为验证（即使 mutation 发生 · workflow state 未从 `FROZEN` → `APPROVING` 变化）
-- **Acceptance rationale**：`Object.freeze()` 是 runtime 硬阻拦 · 比静态 grep 更强 · 但属实装细节 · v6 plan 未写入 Verification 列（避免 scope creep）· P43-02 实装时 MUST 采纳
+**v7 治理立场：**
+- Codex r6 明示 "不建议 v7" · 理由 "plan 层手段已尽"
+- Kogami R4 权威 override · directive "strengthen before Gate"
+- Executor 执行 directive · 把 3 KL 实装为 §3e R1/R3/R5 mechanical verification
+- **v7 不再走 Codex re-review**（Codex r6 已明示 path ① 耗尽 · Kogami 已 arbitrate 执行路径）
+- Gate 直接由 Kogami 批 · 策略：Kogami-authoritative · 非 Codex-validated · 符合 v5.2 Solo Executor + v5.3 addendum 的 Kogami-final-arbiter 原则
 
-**KL-3 · R5 validator behavior not verified in default lane**
-- **Limitation**：`test_r5_validator_exists` + `test_r5_validator_fixture_shape` 只验函数存在 / 失败码字面量在源 / fixture JSON schema 合法 · 实跑 `validateDraftAgainstFrozen` 对 4 conflict fixture 产出预期失败码归 opt-in e2e lane · 默认 lane 不跑
-- **Risk**：Gate 可在 validator 行为未证明时过 · 理论上 `workbench.js` 留空壳函数 + 返回固定 `{ok: true}` 也可通过默认 lane
-- **Mitigation at P43-02**：实装时 `workbench.js` validator 必带 inline self-check（`validateDraftAgainstFrozen` 内部第一行 assert 4 fixture case 已 import 并 console.log pass/fail）· 或使 Node harness 虽 opt-in 但在 P43-09 Final Approval sub-phase 的 Exit Criteria 中硬性要求至少跑过一次且 commit 证据 trailer · `tests/fixtures/p43_validator_cases.json` 与 `workbench.js` validator 行为 **P43-02 Exit Criteria 第 12 项 "R1-R6 全落地可验证"** 实装时必须延伸覆盖
-- **Acceptance rationale**：默认 lane 不强依赖 Node / Playwright 是仓库原则（见 `pyproject.toml` 注释 "Default CI lane excludes e2e"）· 强改此原则 scope 过大 · 接受在 opt-in 机制保留 validator 行为验证
-
----
-
-**Residual re-evaluation gate**：P43-01 Contract Proof Spike land 后 · Kogami 审 `docs/P43-contract-proof-report.md` 时必须重评 KL-1/2/3 是否仍需 mitigate · 若 spike 揭示残留真 exploit · 走 P43-02 plan v2 强化。
+**Runtime re-evaluation gate（保留）：** P43-01 Contract Proof Spike land 后 · Kogami 审 `docs/P43-contract-proof-report.md` 时仍 MUST 核 KL-1/2/3 的 mechanical guard 是否真 reject 出假 exploit · 若 spike 揭示 guard 被绕过真 exploit · P43-02 plan 必修。
 
 ---
 
@@ -586,15 +611,18 @@ P43-08..P43-10 iteration + approval + archive（合 1 gate · reiterate loop + F
 
 **本 plan v5 不执行任何代码。三个停点：**
 
-**~~停点 1~~** (已 passed)：v6 Codex r6 re-review 完成 · verdict 需修正·信号强 · 3 residual identified
-**~~停点 2~~** (已 passed via Kogami Option B)：Kogami R4 仲裁 Option B · freeze v6 · 3 residual 入 §8a Appendix A known limitations
+**~~停点 1~~** (已 passed)：v6 Codex r6 re-review 完成
+**~~停点 2~~** (已 passed · Kogami Option B + strengthen directive)：v7 KL-1/2/3 升级入 §3e mechanical
 **停点 2.5（v3 引入 · 保留 · 硬规则）**：P43-01 Exit Criteria 未 asserted pass · P43-02+ 自动冻结 · 不可绕过
-**停点 3（current · 当前停点）**：Kogami 签 `GATE-P43-PLAN (v6): Approved` + Q1/Q2/Q4/Q7/Q8/Q10/Q12 仲裁 · 才启动 P43-01-00-PLAN.md 起草 · **§8a KL-1/2/3 作为 Gate 接受条件** · 若 P43-01 spike 揭示残留真 exploit → P43-02 plan v2 强化（不是 P43-00 v7）
+**~~停点 3~~** (已 passed 2026-04-20)：Kogami 签 `GATE-P43-PLAN (v7): Approved` + Q1/Q2/Q4/Q7/Q8/Q10/Q12 per Executor recommendations 全部 lock
+
+**Next action**：起草 `P43-01-00-PLAN.md`（Contract Proof Spike · 8 scope items · ~1 day · ~200 LOC fix + ~500 行 docs + asserted-pass test harness · Codex review 必调）· 由 Executor 独立起草 · 提交独立 GATE-P43-01-PLAN。
 
 ---
 
 **Signed:** Claude App Opus 4.7 (Solo Executor) · v5.2 solo-signed + v5.3 addendum · 2026-04-20
-**Revision:** v6 frozen (post-Codex-round-6 · Kogami Option B arbitration · 3 residuals accepted as §8a known limitations)
-**Awaiting:** `GATE-P43-PLAN (v6): Approved` (Kogami) + 7 Q 仲裁
-**Verified-by:** codex-gpt54-xhigh (r1-r6 · 6 rounds · r6 明示 "不建议 v7 · Option B/C")
-**R4-arbitration (×2):** Kogami 2026-04-20 · r5→v6 Option A（surgical 3-fix）· r6→frozen Option B（accept 3 residuals · §8a Appendix A）
+**Revision:** v7 Gate-Approved (Kogami strengthen-before-Gate directive executed · KL-1/2/3 closed)
+**Gate status:** GATE-P43-PLAN (v7): Approved by Kogami · 2026-04-20
+**Verified-by:** codex-gpt54-xhigh (r1-r6 · 6 rounds · v1-v6 iteration evidence)
+**R4-arbitration (×3):** Kogami 2026-04-20 · r5→v6 Option A · r6→v7 Option B + strengthen directive · v7→Gate Approved
+**Q lock:** Q1=D · Q2=A · Q4=A · Q7=A · Q8=B · Q10=B · Q12=B+a（deleted Q3/Q5/Q6/Q9/Q11/Q13 · 治理记录保留）
