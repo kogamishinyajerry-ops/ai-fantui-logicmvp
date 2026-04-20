@@ -1020,19 +1020,49 @@ Status: Executed & Green · Awaiting `GATE-P41-CLOSURE: Approved`
 
 ## Phase P43: Control Logic Workbench end-to-end milestone
 
-Status: **Plan v7 GATE-P43-PLAN Approved** (Kogami 2026-04-20) · **P43-01 plan v5 GATE-Approved** (Kogami Option B · 2026-04-21) · Step A execution next
+Status: **Plan v7 GATE-P43-PLAN Approved** (Kogami 2026-04-20) · **P43-01 Contract Proof Spike CLOSED** · **GATE-P43-01-CLOSURE Approved** (Kogami 2026-04-21) · **P43-02 kickoff authorized**
 
-### P43-01 Sub-phase: Contract Proof Spike (plan v5 frozen · GATE-Approved)
+### P43-01 Sub-phase: Contract Proof Spike (CLOSED)
+
+**Gate approval**: GATE-P43-01-CLOSURE Approved by Kogami on 2026-04-21 on the basis of Codex Step G r4 `可过-Gate` verdict (commit `9a51183`). Plan §3 Step G item 4 authorizes P43-02 kickoff.
+
+**Deliverable snapshot**:
+- `src/well_harness/ai_doc_analyzer.py:840,843,866,867` — Bugs A/B1/B2 surgical fix (~5 LOC READ-side · Kogami Option X expansion at Step B)
+- `tests/test_p43_doc_analyzer_blocker_fix.py` — 4 default-lane regression tests
+- `tests/test_p43_readAsText_browser_behavior.py` — 1 opt-in e2e Playwright test
+- `tests/fixtures/p43_spike/{real_pdf_happy_path, synthetic_blocker}/*` — 5 fixtures + 2 expected-response dumps + README
+- `docs/P43-contract-proof-report.md` — plan-whitelisted gate summary
+- `docs/P43-api-contract-lock.yaml` — 7 endpoints · 36 endpoint error branches + 6 global guards
+- `.planning/phases/P43-control-logic-workbench/reports/p43-01-contract-proof/CONTRACT-PROOF-REPORT.md` — supporting detailed artifact
+
+**Execution arc** (9 commits):
+`48e4796` (Step A partial + Kogami escalation · 2 new Counter-F bugs B1/B2 beyond plan) → `5d2d3ec` (Step B Kogami Option X · Bugs A/B1/B2 fix + 4 regression tests) → `8d76cf5` (Codex Step B `可过-Gate` trailer) → `7fd243d` (Steps D/E/F · Playwright + API contract-lock + R6/R7/R8 inventory) → `4d40aee` (Step G finalize · executive summary + exit-criteria mechanical verification) → `6729768` (scrub r1 · 3 fixes) → `e86a8cc` (scrub r2 · 7 drift items) → `9a51183` (scrub r3 · 1 trigger-text fix) → `e579a16` (Step G closure · r4 trailer + Kogami submission).
+
+**Counter F closure** (4 bugs · unified root cause — no internal contract lock between producer and consumer within `run_pipeline_from_intake()`'s own data path):
+| Bug | Anchor | Fix |
+|-----|--------|-----|
+| A | `ai_doc_analyzer.py:840` · blocker guard READ/EMIT key mismatch | Step B surgical fix |
+| B1 | `ai_doc_analyzer.py:866` · `bundle.playback_report.scenarios` (no attr) | Step B surgical fix |
+| B2 | `ai_doc_analyzer.py:867` · `bundle.fault_diagnosis_report.fault_modes` (no attr) | Step B surgical fix |
+| D | `ai_doc_analyzer.py:799` · `clarify-{i}` vs stable question_id | **Deferred to P43-03** per Q12=B+a |
+
+**Three-lane regression** (re-run 2026-04-21): default 800 passed · e2e 50 passed · zero regression vs P42 baseline `a6521ca`.
+
+**Codex Step G review arc** (4 rounds): r1 `需修正·信号弱` (3 fixes) → r2 `需修正·信号强` (7 drift items surfaced via deeper probing) → r3 `需修正·信号弱` (1 residual trigger text) → **r4 `可过-Gate`** on `9a51183` with endorsement: *"GATE-P43-01-CLOSURE: Commit 9a51183 closes the Step G contract-lock gap; /api/workbench/repair now truthfully documents apply_all_safe as a truthiness guard, the YAML remains valid and internally consistent, and no new drift was introduced."*
+
+**Non-blocking residual polish** (logged for future slice · Codex r4 explicit): `src/well_harness/demo_server.py:2666` error message says "apply_all_safe must be true" but runtime guard is truthiness-based. Fix candidate for P43-02 or standalone cleanup.
+
+### P43-01 plan phase (historical · plan v5 frozen)
 
 - Branch `codex/p43-01-contract-proof-spike` merged to `main` (`45322e5`)
-- 5 plan revisions v1→v5 · 5 Codex adversarial rounds
-- Codex path ① arc: r1 需阻止 (9-point audit · 4 fixes) → r2 需修正·信号强 (5 fixes) → r3 需修正·信号弱 ("不是大修") → r4 需修正·信号弱 ("一轮极小 scrub") → r5 not-可过-Gate ("治理叙事结构在炸 · 建议 Option B/C")
+- 5 plan revisions v1→v5 · 5 Codex adversarial rounds (pre-execution)
+- Codex plan-phase arc: r1 需阻止 (9-point audit · 4 fixes) → r2 需修正·信号强 (5 fixes) → r3 需修正·信号弱 ("不是大修") → r4 需修正·信号弱 ("一轮极小 scrub") → r5 not-可过-Gate ("治理叙事结构在炸 · 建议 Option B/C")
 - Kogami R4 Option B (2026-04-21): freeze v5 · 3 governance-label residuals (GL-1/2/3) accepted as §7a Appendix A · Gate Approved
 - Q lock: Q1=A+B+D · Q2=A · Q3=B · Q4=A · Q5=B
-- Scope: 5 must-land (S1 function/HTTP contract proof · S2 failure path · S3 blockers bug · S4 Playwright readAsText · S5 API contract lock) + 3 report-only (R6 clarify-{i} drift · R7 hardcode · R8 schema inventory)
+- Scope: 5 must-land (S1-S5) + 3 report-only (R6-R8) — all closed per execution arc above
 - Governance lesson: Codex r5 root-cause "多源 label drift · single source of truth 缺失" · filed for future GSD plan template improvement
 
-**Next**: Step A execution per Q1=A+B+D
+**Next**: P43-02 (workflow / orchestrator / panel) kickoff — consume `docs/P43-api-contract-lock.yaml` as authoritative endpoint contract.
 
 **Goal:** Build a complete Control Logic Workbench enabling: 需求文档导入 → 解析+询问+确认闭环 → frozen spec → 控制逻辑面板渐进生成+连线 → 面板调试+标注修改 → 迭代优化 → 用户 Final Approval → archive. End-to-end user journey 10 steps.
 

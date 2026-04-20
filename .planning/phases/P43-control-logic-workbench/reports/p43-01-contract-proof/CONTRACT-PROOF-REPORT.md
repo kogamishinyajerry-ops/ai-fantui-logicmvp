@@ -2,7 +2,7 @@
 phase: P43
 sub_phase: P43-01
 report: P43-01-Contract-Proof (supporting artifact for the plan §2b-whitelisted summary at `docs/P43-contract-proof-report.md`)
-status: Steps A–G complete · Kogami Option X applied at Step B · Codex Step B `可过-Gate` · Codex Step G round 1 `需修正·信号弱` → scrub → round 2 `需修正·信号强` → scrub round 2 applied in this revision · round 3 pending re-review
+status: CLOSED · GATE-P43-01-CLOSURE Approved by Kogami 2026-04-21 · Codex Step G r4 `可过-Gate` on 9a51183 · P43-02 kickoff authorized
 date: 2026-04-21
 owner: Claude App Opus 4.7 (Solo Executor)
 verified-by: Codex Step B `可过-Gate` (trailer §9) · Codex Step G pending round 3 re-review on scrub commit
@@ -380,9 +380,9 @@ Step G required Codex review per plan Q7=A (milestone-wide adapter-boundary rule
 **Optional polish flagged by round 4** (explicitly non-blocking):
 - `src/well_harness/demo_server.py:2666` error message still says `"apply_all_safe must be true"` even though the runtime guard is truthiness-based. Either soften to "must be truthy" or harden the handler to strict boolean in a later slice. **Candidate for P43-02 or a standalone cleanup slice — not in P43-01 scope.**
 
-## 15. GATE-P43-01-CLOSURE submission
+## 15. GATE-P43-01-CLOSURE — Approved
 
-**Status**: Ready for Kogami review.
+**Status**: **Approved by Kogami on 2026-04-21** on the basis of Codex Step G r4 `可过-Gate` verdict (commit `9a51183`). P43-02 (workflow / orchestrator / panel) kickoff authorized per plan §3 Step G item 4.
 
 **Executor signoff** (Solo Executor v5.2 + v5.3 addendum): Steps A through G executed per plan. Kogami Option X arbitration applied at Step B. Codex rounds complete: Step B `可过-Gate`, Step G r1–r4 culminating in `可过-Gate` on `9a51183`. All 9 Exit Criteria PASS (§13). Non-goal #16 self-audit PASS. Three-lane regression green. Plan-whitelisted deliverables present (`docs/P43-contract-proof-report.md`, `docs/P43-api-contract-lock.yaml`). Bug D deferred to P43-03 per Q12=B+a. R7 deferred to post-P43 workbench-generalization. R8 inventory-only. One optional polish (`demo_server.py:2666` error message) surfaces as future-slice candidate.
 
