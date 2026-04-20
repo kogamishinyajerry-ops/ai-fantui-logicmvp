@@ -43,7 +43,7 @@ Well Harness 项目目前有 5 条真值链路（4 个 `adapters/*_adapter.py` +
 
 | system_id | truth_level | status | upstream_source | authority | frozen_as_of | upgrade_path | notes |
 |-----------|-------------|--------|-----------------|-----------|--------------|--------------|-------|
-| `thrust-reverser` | `demonstrative` | `Upgrade pending` | `Downloads/控制逻辑(1).docx`（拟 P36β 入库 `uploads/`） | Kogami 自裁（docx 出处待 Kogami 明示）| — | P36β · 从 docx 抽需求、建 intake packet + traceability matrix；成功后本行升 `certified` + `status: In use` | controller.py 内 182 LOC · models.py 含 13 个 HarnessConfig 常数 · Q2=B 扫描识别为"代码即权威"|
+| `thrust-reverser` | `certified` | `In use` | `uploads/20260409-thrust-reverser-control-logic.docx`（SHA256 `6e457fe3…276133a5` · 57 段 · 2 表 · 1 EMF 图）| Kogami 自裁（docx 具体签准方待 Appendix A.6 明示）| — | 已 certified · `docs/thrust_reverser/traceability_matrix.md` · **truth lives in controller.py + yaml (no workbench spec per D1=A)** · 6 Appendix A open assumptions pending sign-off | P36β (2026-04-20) 完成：intake packet 120 行精益版（3 SourceDocumentRef）+ YAML 头 24 行 docx § 引用 + matrix 241 行（5 表 + Appendix A 6 open assumptions）· controller.py / models.py / YAML values 字节级不变 |
 | `bleed-air-valve` | `demonstrative` | `Frozen` | `none` | 无 | 2026-04-20 | 未来 Kogami 提供上游需求文档后开新 Phase | bleed_air_adapter.py 602 LOC · 自述 "Simplified" · Q2=B 扫描识别为 4 个常数无来源 |
 | `emergency_flare_deployment_system` | `demonstrative` | `Frozen` | `none` | 无 | 2026-04-20 | 同上 | efds_adapter.py 498 LOC · 无 intake / 无 yaml / 无 matrix · Q2=B 扫描识别为 adapter 自足 |
 | `minimal_landing_gear_extension` | `demonstrative` | `Frozen` | `none` | 无 | 2026-04-20 | 同上 | landing_gear_adapter.py 362 LOC · 611 LOC tests 但基于自证 · Q2=B 扫描识别为常数无来源 |
