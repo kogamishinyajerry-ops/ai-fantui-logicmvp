@@ -213,7 +213,7 @@ endpoints:
       - status: 400
         error: invalid_workbench_request
         field: apply_all_safe
-        trigger: apply_all_safe != true
+        trigger: apply_all_safe missing or falsy (handler uses `request_payload.get("apply_all_safe", False)` + truthy check at demo_server.py:2662-2667; truthy non-bool values such as `"yes"` / `1` / non-empty strings pass the guard)
       - status: 400
         error: invalid_workbench_packet
         field: packet_payload
