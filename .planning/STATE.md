@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Provenance backfill Phase 2 (δ) executed & awaiting GATE-P38-CLOSURE · 2 certified chains fully closed
+status: Provenance backfill Phase 2 complete (α/β/γ/δ/ε) + CI-level SHA enforcement drafted · awaiting GATE-P40-CLOSURE
 last_updated: "2026-04-20T00:00:00.000Z"
 last_activity: 2026-04-20
 progress:
-  total_phases: 38
-  completed_phases: 37
+  total_phases: 39
+  completed_phases: 38
   total_plans: 0
   completed_plans: 0
 ---
@@ -18,52 +18,54 @@ Last activity: 2026-04-20
 
 ## Current Position
 
-**P38 drafted & green — awaiting `GATE-P38-CLOSURE: Approved` (2026-04-20)**
+**P40 drafted & green — awaiting `GATE-P40-CLOSURE: Approved` (2026-04-20)**
 
-Phase: P38 — c919-etras 证迹完整闭环（PDF 入库 + TRCU sign-off 落地 · 证迹补完第二轮 δ 段）
+Phase: P40 — CI-level SHA enforcement（证迹补完第二轮 ε 段 · 基础设施）
 
-- Branch `codex/p38-c919-etras-provenance-closure` 3 commits on top of `main db03294`:
-  · `402db31` feat(P38-00): plan (295 行 · Tier 1 · 4 counter · Q1/Q2)
-  · `528aa0d` feat(P38-01): uploads/20260417-C919反推控制逻辑需求文档.pdf 入库（989 KB · SHA 匹配 P34 记录）
-  · `8c7fd70` docs(P38-02): 4 anchor 联动（YAML head SHA 固化 · matrix Appendix A 3 项 ⚠️→✅ · registry row 5 · intake notes）
-- Three-lane regression (vs P37 head db03294):
-  · default: **762 passed** / 1 skipped / 49 deselected in 98.93s (identical · 零 delta)
+- Branch `codex/p40-ci-sha-enforcement` 4 commits on top of `main 74a459a`:
+  · `9a589bb` feat(P40-00): plan (379 行 · Tier 1 · 4 counter · Q1-Q3 Executor 预签)
+  · `ee72271` feat(P40-01): docs/provenance/sha_registry.yaml (46 行 · SoT · 2 files)
+  · `12f7b94` feat(P40-02): scripts/verify_provenance_hashes.py (195 行 · stream-hash · exit 1 on drift)
+  · `bf60eb8` test(P40-03): tests/test_provenance_sha_integrity.py (96 行 · 3 tests · default lane)
+- Three-lane regression (vs P38 head 74a459a):
+  · default: **765 passed** / 1 skipped / 49 deselected in 89.05s (+3 vs P38 · 设计预期)
   · e2e: **49 passed** (identical)
   · adversarial wrapper: **1 passed** (8/8 inside identical)
-- Gates (Kogami 2026-04-20, 今日累计 10 个):
-  · P31-GATE · GATE-P32-CLOSURE · GATE-P34-CLOSURE · GATE-P35-PLAN/CLOSURE · GATE-P36β-PLAN/CLOSURE · GATE-P37-PLAN/CLOSURE · GATE-P38-PLAN（Q1=C · Q2=A）✅
-  · `GATE-P38-CLOSURE: Pending`
+- Gates (Kogami 2026-04-20, 今日累计 11 个):
+  · P31-GATE · GATE-P32-CLOSURE · GATE-P34-CLOSURE · GATE-P35-PLAN/CLOSURE · GATE-P36β-PLAN/CLOSURE · GATE-P37-PLAN/CLOSURE · GATE-P38-PLAN/CLOSURE · GATE-P40-PLAN (Q1-Q3 Executor 预签 Kogami 授权) ✅
+  · `GATE-P40-CLOSURE: Pending`
 
-### Registry 5 rows · P38 升级 row 5 (c919-etras) authority
+### Registry 5 rows (status after P38)
 
 | system_id | truth_level | status | authority |
 |-----------|-------------|--------|-----------|
-| `thrust-reverser` | certified | In use | Kogami 内部自签（P37 明示非外部权威·Appendix A 6/6 resolved）|
+| `thrust-reverser` | certified | In use | Kogami 内部自签（Appendix A 6/6 ✅ · P37）|
 | `bleed-air-valve` | demonstrative | Frozen | 无 |
 | `emergency_flare_deployment_system` | demonstrative | Frozen | 无 |
 | `minimal_landing_gear_extension` | demonstrative | Frozen | 无 |
-| `c919-etras` | certified | In use | **甲方 (C919 TRCU 团队) · Q1/Q2/Q3 sign-off 由 Kogami 2026-04-20 代 TRCU 明示接纳 (P38)** |
+| `c919-etras` | certified | In use | 甲方 (TRCU) · Kogami 代明示 (Appendix A 3/3 ✅ · P38) |
 
-**Appendix A resolution:** 
-- thrust-reverser 6/6 全部 resolved via P37 supplement（§2-§7）
-- c919-etras 3/3 全部 resolved via P38 Kogami 代 TRCU 明示接纳
-- **2 条 certified 链路证迹全部整齐闭环** 🎯
+### Provenance SHA Registry (P40 · SoT)
 
-### PDF/docx 入库事实（完整 provenance trail）
+`docs/provenance/sha_registry.yaml` registers 2 uploads/* files:
+- `uploads/20260409-thrust-reverser-control-logic.docx` · SHA `6e457fe3…276133a5` · 230,930 bytes
+- `uploads/20260417-C919反推控制逻辑需求文档.pdf` · SHA `dbe3f76b…276133a5` · 1,013,541 bytes
 
-- `uploads/20260409-thrust-reverser-control-logic.docx`（P36β · SHA `6e457fe3…276133a5`）
-- `uploads/20260417-C919反推控制逻辑需求文档.pdf`（P38 · SHA `dbe3f76b…276133a5`）
-- 两份源文档均**物理在 git 仓库**，不再 aspirational
+Enforced by `scripts/verify_provenance_hashes.py` via `tests/test_provenance_sha_integrity.py` in default lane. Any drift → CI 立即红。
 
-### Next after P38-CLOSURE
+### Next after P40-CLOSURE
 
-按 P0-P4 优先级队列：
-1. Executor non-FF merge P38 → main (Option M, SHAs preserved)
+按 P1-P4 优先级队列（P0 全部 resolved 于今日 7 Phase 链）：
+1. Executor non-FF merge P40 → main (Option M, SHAs preserved)
 2. Push origin main
-3. Notion flip P38 DECISION Pending → Approved
-4. Kogami 明示下一方向（候选：P40 CI SHA enforcement · P41 thrust-reverser workbench spec · P42 truth_level runtime API · 其他 · R4 不自选）
+3. Notion flip P40 DECISION Pending → Approved
+4. Kogami 明示下一方向（候选：P41 thrust-reverser workbench spec · P42 truth_level runtime API · P43 freeze/upgrade template · 其他 · R4 不自选）
 
-**推荐候选 P40** — 基础设施 Phase · 不需 Kogami 外部材料 · 可独立完成 · 防 tamper 闭环。
+### 2026-04-20 全天 Phase 链（8 Phase · 7 已 landed · 1 等 closure sign）
+
+- P31 re-land · P32 provenance backfill · P34 C919 E-TRAS · P35α truth-level registry · P36β thrust-reverser docx 真实化 · P37 thrust-reverser 反向增补 · P38 c919 证迹闭环 · P40 CI SHA enforcement
+
+**证迹补完第二轮全套 (α→β→γ→δ→ε) 完成** · 5 真值链路全部整齐 · 2 certified 链路 Appendix A 全 resolved · CI 层自动防 tamper。
 
 ### 上一阶段归档（P30 Closed 2026-04-19）
 

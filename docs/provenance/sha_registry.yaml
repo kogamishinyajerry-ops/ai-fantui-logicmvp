@@ -1,0 +1,46 @@
+# SHA Registry for uploads/ provenance
+# =======================================================================
+# Single source of truth for SHA256 of every uploads/ file.
+#
+# Enforced by scripts/verify_provenance_hashes.py via pytest default lane
+# (tests/test_provenance_sha_integrity.py). Any SHA drift in uploads/ or
+# any new file added to uploads/ without a corresponding entry here will
+# fail CI immediately.
+#
+# Phase origin: P40 (CI-level SHA enforcement, 2026-04-20)
+# Authority: Kogami (v5.2 Solo Mode project owner)
+#
+# Update protocol:
+#   1. When landing a new file into uploads/, compute shasum -a 256 and add
+#      an entry below (same Phase that lands the file, same commit).
+#   2. When replacing an existing file, update SHA + size + bump `updated`
+#      at top and mark the reason in a new Phase (never silently overwrite).
+#   3. references field is informational (which docs/code cite this file).
+
+version: 1
+updated: 2026-04-20
+phase: P40
+
+files:
+  - path: uploads/20260409-thrust-reverser-control-logic.docx
+    sha256: 6e457fe3c66e456d418f657975b7692453b30350b38fe91d0989e345276133a5
+    size: 230930
+    phase_landed: P36β
+    authority: Kogami 内部自签（见 docs/thrust_reverser/requirements_supplement.md §7）
+    references:
+      - config/hardware/thrust_reverser_hardware_v1.yaml
+      - docs/thrust_reverser/traceability_matrix.md
+      - docs/thrust_reverser/requirements_supplement.md
+      - docs/provenance/adapter_truth_levels.md
+      - src/well_harness/adapters/thrust_reverser_intake_packet.py
+
+  - path: uploads/20260417-C919反推控制逻辑需求文档.pdf
+    sha256: dbe3f76b8ab0682e7ea41ab36a970ad4897c4bfc5461a60a8f0831d485631da5
+    size: 1013541
+    phase_landed: P38 (entry via P34; physical via P38)
+    authority: 甲方 (C919 TRCU 团队) · Kogami 2026-04-20 代 TRCU 明示 sign-off (P38)
+    references:
+      - config/hardware/c919_etras_hardware_v1.yaml
+      - docs/c919_etras/traceability_matrix.md
+      - docs/provenance/adapter_truth_levels.md
+      - src/well_harness/adapters/c919_etras_intake_packet.py
