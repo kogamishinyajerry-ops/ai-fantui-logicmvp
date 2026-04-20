@@ -1,0 +1,247 @@
+{
+  "assessment": {
+    "acceptance_scenario_count": 1,
+    "blocking_reasons": [],
+    "component_count": 3,
+    "custom_signal_semantics": [
+      {
+        "id": "cmd_enable",
+        "kind": "switch",
+        "label": "CMD_ENABLE",
+        "state_shape": "binary",
+        "unit": "state"
+      },
+      {
+        "id": "hyd_pressure",
+        "kind": "sensor",
+        "label": "HYD_PRESSURE",
+        "state_shape": "analog",
+        "unit": "psi"
+      },
+      {
+        "id": "actuator_extend",
+        "kind": "command",
+        "label": "ACTUATOR_EXTEND",
+        "state_shape": "binary",
+        "unit": "state"
+      }
+    ],
+    "fault_mode_count": 1,
+    "generated_workbench_spec": {
+      "$schema": "https://well-harness.local/json_schema/control_system_spec_v1.schema.json",
+      "acceptance_scenarios": [
+        {
+          "completion_condition": "actuator_extend == 1",
+          "description": "Pressure ramps while command enable is latched on.",
+          "id": "pressure_ramp_ready",
+          "label": "Pressure Ramp Ready",
+          "monitored_signal_ids": [
+            "cmd_enable",
+            "hyd_pressure",
+            "actuator_extend"
+          ],
+          "steady_signals": [
+            {
+              "note": "Command enable already latched on.",
+              "signal_id": "cmd_enable",
+              "unit": "state",
+              "value": 1
+            }
+          ],
+          "time_scale_factor": 1.0,
+          "total_duration_s": 12.0,
+          "transitions": [
+            {
+              "end_s": 8.0,
+              "end_value": 3200.0,
+              "note": "Pressure build-up.",
+              "signal_id": "hyd_pressure",
+              "start_s": 0.0,
+              "start_value": 0.0,
+              "unit": "psi"
+            }
+          ]
+        }
+      ],
+      "components": [
+        {
+          "allowed_range": null,
+          "allowed_states": [
+            "0",
+            "1"
+          ],
+          "description": "Command enable switch.",
+          "id": "cmd_enable",
+          "kind": "switch",
+          "label": "CMD_ENABLE",
+          "monitor_priority": "required",
+          "state_shape": "binary",
+          "unit": "state"
+        },
+        {
+          "allowed_range": [
+            0.0,
+            5000.0
+          ],
+          "allowed_states": [],
+          "description": "Hydraulic pressure sensor.",
+          "id": "hyd_pressure",
+          "kind": "sensor",
+          "label": "HYD_PRESSURE",
+          "monitor_priority": "required",
+          "state_shape": "analog",
+          "unit": "psi"
+        },
+        {
+          "allowed_range": null,
+          "allowed_states": [
+            "0",
+            "1"
+          ],
+          "description": "Actuator extend command output.",
+          "id": "actuator_extend",
+          "kind": "command",
+          "label": "ACTUATOR_EXTEND",
+          "monitor_priority": "required",
+          "state_shape": "binary",
+          "unit": "state"
+        }
+      ],
+      "fault_modes": [
+        {
+          "expected_diagnostic_sections": [
+            "symptoms",
+            "upstream_checks",
+            "logic_blockers",
+            "repair_hint"
+          ],
+          "fault_kind": "bias_low",
+          "id": "pressure_sensor_bias_low",
+          "optimization_prompt": "Consider redundant pressure plausibility checks or threshold hysteresis.",
+          "reasoning_scope_component_ids": [
+            "cmd_enable",
+            "hyd_pressure",
+            "logic_enable_pressure",
+            "actuator_extend"
+          ],
+          "symptom": "Command enable is on but the actuator never extends.",
+          "target_component_id": "hyd_pressure"
+        }
+      ],
+      "kind": "well-harness-control-system-spec",
+      "knowledge_capture": {
+        "incident_fields": [
+          "system_id",
+          "scenario_id",
+          "fault_mode_id",
+          "observed_symptoms",
+          "evidence_links"
+        ],
+        "optimization_fields": [
+          "suggested_logic_change",
+          "reliability_gain_hypothesis",
+          "redundancy_reduction_or_guardrail_note"
+        ],
+        "resolution_fields": [
+          "confirmed_root_cause",
+          "repair_action",
+          "validation_after_fix",
+          "residual_risk"
+        ]
+      },
+      "logic_nodes": [
+        {
+          "conditions": [
+            {
+              "comparison": "==",
+              "name": "cmd_enable",
+              "note": "Enable switch must be on.",
+              "source_component_id": "cmd_enable",
+              "threshold_value": true
+            },
+            {
+              "comparison": ">=",
+              "name": "hyd_pressure",
+              "note": "Pressure must be at or above the deployment threshold.",
+              "source_component_id": "hyd_pressure",
+              "threshold_value": 2800.0
+            }
+          ],
+          "description": "Enable and hydraulic pressure jointly release the actuator command.",
+          "downstream_component_ids": [
+            "actuator_extend"
+          ],
+          "evidence_priority": "high",
+          "id": "logic_enable_pressure",
+          "label": "L_ENABLE_PRESSURE"
+        }
+      ],
+      "objective": "Minimal compliant intake packet for P43-01 Step A S1 — proves run_pipeline_from_intake() + /api/p15/run-pipeline HTTP handler return ready-path contract shape. Pdf metadata via source_documents.location (no SHA binding, no binary consumption) per P43-01 v5 §1c honesty boundary.",
+      "onboarding_questions": [
+        {
+          "id": "source_documents",
+          "prompt": "新系统的输入文档具体是什么格式：结构化表格、Markdown/Notion、PDF，还是混合来源？",
+          "rationale": "决定是否先做文档适配器，还是先要求工程师整理为统一 spec。",
+          "required_for": "严格验收与快速泛化"
+        },
+        {
+          "id": "component_state_domains",
+          "prompt": "每个组件究竟是二值开关、固定电平、离散状态，还是连续模拟量？单位和合法范围分别是什么？",
+          "rationale": "避免把不同信号形态混成一套错误的监控曲线。",
+          "required_for": "监控曲线仿真与故障注入"
+        },
+        {
+          "id": "timeline_rules",
+          "prompt": "工程师给出的运行过程是事件驱动、速率驱动，还是带延时/滞后的状态机？哪些节点允许保持/饱和？",
+          "rationale": "决定如何把 A/B 过程文档转成严格可回放的时间线。",
+          "required_for": "严格验收仿真"
+        },
+        {
+          "id": "fault_taxonomy",
+          "prompt": "新系统需要支持哪些故障注入类型：卡滞、短路、断路、虚警、延迟、阈值漂移，还是其他类型？",
+          "rationale": "决定诊断树、推理文档模板和优化建议的范围。",
+          "required_for": "故障分析与知识积累"
+        }
+      ],
+      "source_of_truth": "P43-01 contract-proof spike fixture · real pdf metadata reference only",
+      "system_id": "p43_01_s1_function_contract_proof",
+      "tags": [
+        "p43-01-spike",
+        "function-contract-proof",
+        "real-pdf-metadata"
+      ],
+      "title": "P43-01 S1 Function/HTTP Handler Contract Proof",
+      "version": 1
+    },
+    "includes_pdf_sources": true,
+    "logic_node_count": 1,
+    "mixed_source_packet": false,
+    "objective": "Minimal compliant intake packet for P43-01 Step A S1 — proves run_pipeline_from_intake() + /api/p15/run-pipeline HTTP handler return ready-path contract shape. Pdf metadata via source_documents.location (no SHA binding, no binary consumption) per P43-01 v5 §1c honesty boundary.",
+    "ready_for_spec_build": true,
+    "repair_suggestions": [],
+    "source_document_count": 1,
+    "source_document_kinds": [
+      "pdf"
+    ],
+    "system_id": "p43_01_s1_function_contract_proof",
+    "title": "P43-01 S1 Function/HTTP Handler Contract Proof",
+    "unanswered_clarifications": []
+  },
+  "bundle": {
+    "bundle_kind": "full_workbench_bundle",
+    "fault_mode_count": 1,
+    "ready_for_spec_build": true,
+    "scenario_count": 1,
+    "system_id": "p43_01_s1_function_contract_proof",
+    "system_title": "P43-01 S1 Function/HTTP Handler Contract Proof"
+  },
+  "system_snapshot": {
+    "acceptance_scenario_count": 1,
+    "component_count": 3,
+    "fault_mode_count": 1,
+    "logic_node_count": 1,
+    "ready_for_spec_build": true,
+    "system_id": "p43_01_s1_function_contract_proof",
+    "title": "P43-01 S1 Function/HTTP Handler Contract Proof"
+  }
+}

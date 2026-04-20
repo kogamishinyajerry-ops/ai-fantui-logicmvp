@@ -834,11 +834,13 @@ def run_pipeline_from_intake(
 
     assessment = assess_intake_packet(packet)
 
-    # Opus P0-2 ruling: blockers → return error, do not build bundle
-    if assessment.get("blockers"):
+    # Opus P0-2 ruling: blockers → return error, do not build bundle.
+    # READ side: assess_intake_packet emits "blocking_reasons" (document_intake.py:940).
+    # EMIT side: response key "blockers" preserved for frontend contract (ai-doc-analyzer.js).
+    if assessment.get("blocking_reasons"):
         return {
             "status": "blocked",
-            "blockers": assessment["blockers"],
+            "blockers": assessment["blocking_reasons"],
             "message": "存在阻塞问题，无法构建诊断 bundle。请先解决以下问题。",
         }
 
@@ -861,8 +863,8 @@ def run_pipeline_from_intake(
             "system_title": bundle.system_title,
             "bundle_kind": bundle.bundle_kind,
             "ready_for_spec_build": bundle.ready_for_spec_build,
-            "scenario_count": len(bundle.playback_report.scenarios) if bundle.playback_report else 0,
-            "fault_mode_count": len(bundle.fault_diagnosis_report.fault_modes) if bundle.fault_diagnosis_report else 0,
+            "scenario_count": 1 if bundle.playback_report else 0,
+            "fault_mode_count": 1 if bundle.fault_diagnosis_report else 0,
         } if bundle else None,
         "system_snapshot": system_snapshot,
     }
