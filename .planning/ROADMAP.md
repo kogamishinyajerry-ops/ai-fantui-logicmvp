@@ -1020,7 +1020,19 @@ Status: Executed & Green · Awaiting `GATE-P41-CLOSURE: Approved`
 
 ## Phase P43: Control Logic Workbench end-to-end milestone
 
-Status: **Plan v7 GATE-P43-PLAN Approved** (Kogami 2026-04-20) · awaiting P43-01 Contract Proof Spike plan draft
+Status: **Plan v7 GATE-P43-PLAN Approved** (Kogami 2026-04-20) · **P43-01 plan v5 GATE-Approved** (Kogami Option B · 2026-04-21) · Step A execution next
+
+### P43-01 Sub-phase: Contract Proof Spike (plan v5 frozen · GATE-Approved)
+
+- Branch `codex/p43-01-contract-proof-spike` merged to `main` (`45322e5`)
+- 5 plan revisions v1→v5 · 5 Codex adversarial rounds
+- Codex path ① arc: r1 需阻止 (9-point audit · 4 fixes) → r2 需修正·信号强 (5 fixes) → r3 需修正·信号弱 ("不是大修") → r4 需修正·信号弱 ("一轮极小 scrub") → r5 not-可过-Gate ("治理叙事结构在炸 · 建议 Option B/C")
+- Kogami R4 Option B (2026-04-21): freeze v5 · 3 governance-label residuals (GL-1/2/3) accepted as §7a Appendix A · Gate Approved
+- Q lock: Q1=A+B+D · Q2=A · Q3=B · Q4=A · Q5=B
+- Scope: 5 must-land (S1 function/HTTP contract proof · S2 failure path · S3 blockers bug · S4 Playwright readAsText · S5 API contract lock) + 3 report-only (R6 clarify-{i} drift · R7 hardcode · R8 schema inventory)
+- Governance lesson: Codex r5 root-cause "多源 label drift · single source of truth 缺失" · filed for future GSD plan template improvement
+
+**Next**: Step A execution per Q1=A+B+D
 
 **Goal:** Build a complete Control Logic Workbench enabling: 需求文档导入 → 解析+询问+确认闭环 → frozen spec → 控制逻辑面板渐进生成+连线 → 面板调试+标注修改 → 迭代优化 → 用户 Final Approval → archive. End-to-end user journey 10 steps.
 

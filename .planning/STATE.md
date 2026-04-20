@@ -2,21 +2,60 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: P42 CLOSED · P43 plan v7 GATE-P43-PLAN Approved · P43-01 Contract Proof Spike next
-last_updated: "2026-04-20T00:00:00.000Z"
-last_activity: 2026-04-20
+status: P43-01 plan v5 GATE-Approved (Kogami Option B) · Step A function/HTTP handler contract proof execution next
+last_updated: "2026-04-21T00:00:00.000Z"
+last_activity: 2026-04-21
 progress:
   total_phases: 43
   completed_phases: 42
-  total_plans: 1
+  total_plans: 2
   completed_plans: 0
 ---
 
 # State
 
-Last activity: 2026-04-20
+Last activity: 2026-04-21
 
 ## Current Position
+
+**P43-01 Contract Proof Spike plan v5 GATE-Approved (Kogami Option B · 2026-04-21) · Step A execution next**
+
+Phase: P43-01 — Contract Proof Spike (sub-phase of P43 · must-land-before P43-02+ per parent non-goal #16)
+
+- Branch `codex/p43-01-contract-proof-spike` merged to `main` via non-FF (`45322e5`)
+- 5 plan revisions v1→v5 · 5 Codex adversarial rounds
+- Codex r5 root-cause: "治理元数据 multi-source label drift · scrub 循环无终 · 治理叙事结构问题 · 非实质结构问题"
+- Kogami R4 Option B: freeze v5 · 3 governance-label residuals (GL-1/2/3) accepted as §7a Appendix A
+- Q lock: Q1=A+B+D (Python direct + HTTP POST parallel + D honest scope) · Q2=A (post-Step-B Codex immediate) · Q3=B (md+yaml contract-lock) · Q4=A (Playwright) · Q5=B (critical/warning/nit classification)
+
+### P43-01 Scope (parent P43-00 v7 §3a · 8 items)
+
+Must-land (5 asserted_pass):
+- S1: run_pipeline_from_intake function/HTTP handler contract proof (Python直调 + HTTP POST)
+- S2: real failure path blocked contract (status=blocked, blockers [...], message)
+- S3: ai_doc_analyzer.py:838,841 blockers/blocking_reasons bug fix (+ 4 regression tests)
+- S4: Playwright readAsText browser behavior proof (predicted broken)
+- S5: /api/workbench/* + /api/p15/* contract lock yaml
+
+Report-only (3 inventory):
+- R6: analyzer ID ↔ intake clarification ID drift (含 clarify-{i} 2nd Counter F bug · P43-03 mandatory fix)
+- R7: generate_adapter.py:255,448 hardcode exposure
+- R8: workbench.js + workbench_bundle.py schema inventory
+
+### Next: Step A execution
+
+Per P43-01 v5 §3 · Step A:
+1. Read run_pipeline_from_intake full contract
+2. Construct intake_packet dict (minimal compliant · pdf metadata via source_documents.location · no SHA binding)
+3. Python直调 + HTTP POST both paths · assert return shape
+4. Save fixture to tests/fixtures/p43_spike/real_pdf_happy_path/*
+5. Commit: feat(P43-01): function/HTTP handler contract proof harness + fixtures (S1)
+
+If S1 asserted_pass fails → non-goal #16 auto-freeze P43-02+, escalate Kogami.
+
+---
+
+## Archive — prior position (P43 plan Gate Approved 2026-04-20)
 
 **P43 milestone plan v7 GATE-Approved (Kogami 2026-04-20) · P43-01 Contract Proof Spike next**
 
