@@ -334,3 +334,21 @@ Schema drift risk: single localStorage key with no versioning guard beyond the `
 **Workspace handoff consumer shape** (informational; derived from usage at `workbench_bundle.py:755-763`): `{badgeText, system, packet, result}` — all stringly-typed runtime dict; no dataclass guard. Fix candidate: promote to typed dataclass in a future phase.
 
 **Status**: All three inventories report-only. No code changes attempted in P43-01.
+
+## 13. Exit Criteria mechanical verification (Plan §4 · 9 conditions)
+
+All 9 exit criteria asserted_pass. Evidence anchored to commits, files, and test runs.
+
+| # | Criterion | Status | Evidence anchor |
+|---|-----------|--------|-----------------|
+| 1 | **S1 asserted_pass** · happy-path `run_pipeline_from_intake` contract proof | **PASS** | `tests/fixtures/p43_spike/real_pdf_happy_path/{intake_minimal_ready.json, expected_pipeline_response.json, README.md}` · committed `48e4796` (fixture) + `5d2d3ec` (expected response after fix) · default lane green. |
+| 2 | **S2 asserted_pass** · blocked-path `status=blocked` contract | **PASS** | `tests/fixtures/p43_spike/synthetic_blocker/{intake_missing_source_docs.json, expected_blocked_response.json}` · committed `5d2d3ec` · default lane green. |
+| 3 | **S3a asserted_pass** · `ai_doc_analyzer.py:838+841` READ side `blocking_reasons` · EMIT `blockers` preserved · 4 tests default lane · Codex "可过" | **PASS** | Source fix at `src/well_harness/ai_doc_analyzer.py:840,843` (commit `5d2d3ec`); 4 tests in `tests/test_p43_doc_analyzer_blocker_fix.py` all pass default lane; Codex Step B review `可过-Gate` (trailer at §9 · commit `8d76cf5`). |
+| 4 | **S3b asserted_pass** · frontend consumer audit · alignment grep | **PASS** | `test_p43_frontend_consumer_contract_alignment` in `tests/test_p43_doc_analyzer_blocker_fix.py:133` greps `static/ai-doc-analyzer.js:527-528` for both `result.status === "blocked"` and `result.blockers`; passes. |
+| 5 | **S4 report** · Playwright `readAsText` conclusion | **PASS — broken confirmed** | `tests/test_p43_readAsText_browser_behavior.py` (commit `7fd243d`) · e2e lane green · evidence dump in §10: `preview_starts_with='%PDF-1.7'`, `preview_length=962835`, `analyze_btn_disabled=False`, `upload_error_present=False`. P43-03 fix confirmed necessary. |
+| 6 | **S5 asserted_pass** · `docs/P43-api-contract-lock.yaml` covers `/api/workbench/*` + `/api/p15/*` with success/blocked/error branches | **PASS** | `docs/P43-api-contract-lock.yaml` (commit `7fd243d`) · 7 endpoints · YAML parses cleanly · 19 error branches + 2 response-200 success variants + 6 global guards documented. |
+| 7 | **R6/R7/R8 report** · 3 inventory conclusions + fix checklist | **PASS** | §10 (S4) + §11 (S5) + §12 (R6/R7/R8) · each registered with code anchors and fix ownership (P43-03 for R6 Bug D · post-P43 workbench-generalization for R7 · future dataclass promotion for R8 handoff shape). |
+| 8 | **Three-lane regression** vs P42 baseline `a6521ca` | **PASS** | Default pytest **800 passed, 1 skipped** (P42 baseline 796 + 4 spike default tests) · E2E **50 passed** (P42 baseline 49 + 1 Playwright readAsText e2e · includes `test_resilience_adversarial_truth_engine_still_passes` adversarial wrapper at `tests/e2e/test_demo_resilience.py:132`) · zero regression across both lanes · re-run 2026-04-21. |
+| 9 | **Report complete + 2 Codex adversarial rounds** (Step B + Step G) | **PENDING Step G Codex** | Step B review complete (`可过-Gate` · §9 trailer · commit `8d76cf5`). Step G Codex review to be invoked on commit `7fd243d` + the Step G report finalize commit. |
+
+**Non-goal #16 self-audit** (from P43-00 plan — "不以 '列出断裂' 为通过条件"): PASS. P43-01 did not merely list broken paths — it (a) fixed three critical Counter-F bugs (A/B1/B2) with surgical source edits and regression tests, (b) produced asserted_pass evidence on both happy and blocked paths, (c) provided a canonical API contract lock YAML for downstream phases, and (d) confirmed (not assumed) the readAsText pipeline is broken via headless-browser evidence.
