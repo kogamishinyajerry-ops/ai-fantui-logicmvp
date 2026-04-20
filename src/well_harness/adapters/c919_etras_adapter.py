@@ -151,6 +151,8 @@ C919_ETRAS_CONTROLLER_METADATA = ControllerTruthMetadata(
     truth_kind="python-generic-truth-adapter",
     source_of_truth=C919_ETRAS_SOURCE_OF_TRUTH,
     description=C919_ETRAS_DESCRIPTION,
+    truth_level="certified",  # P42: aligned with docs/provenance/adapter_truth_levels.yaml row "c919-etras" (P38 物理入库 · Appendix A resolved)
+    status="In use",
 )
 
 

@@ -104,6 +104,8 @@ REFERENCE_DEPLOY_CONTROLLER_METADATA = ControllerTruthMetadata(
     truth_kind="python-controller-adapter",
     source_of_truth="src/well_harness/controller.py",
     description="Wraps DeployController as the current reference system truth adapter.",
+    truth_level="certified",  # P42: aligned with docs/provenance/adapter_truth_levels.yaml row "thrust-reverser"
+    status="In use",
 )
 
 

@@ -63,6 +63,8 @@ BLEED_AIR_CONTROLLER_METADATA = ControllerTruthMetadata(
     truth_kind="python-generic-truth-adapter",
     source_of_truth=BLEED_AIR_SOURCE_OF_TRUTH,
     description=BLEED_AIR_DESCRIPTION,
+    truth_level="demonstrative",  # P42: FROZEN · aligned with docs/provenance/adapter_truth_levels.yaml
+    status="Frozen",
 )
 
 
