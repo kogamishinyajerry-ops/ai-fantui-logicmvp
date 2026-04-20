@@ -1,20 +1,21 @@
 ---
 phase: P43
 plan: P43-00
-plan_revision: v4 (post-Codex-round-3 · path ① continuous remediation)
-title: Control Logic Workbench end-to-end milestone — v4 · mechanize authority contract + close whitelist gaps
-status: re-drafted · Awaiting GATE-P43-PLAN (v4) (Kogami)
+plan_revision: v5 (post-Codex-round-4 · path ① surgical · 3-fix minimal patch)
+title: Control Logic Workbench end-to-end milestone — v5 · fix whitelist CI-landing + key consistency + test-lane alignment
+status: re-drafted · Awaiting GATE-P43-PLAN (v5) (Kogami)
 date: 2026-04-20
 owner: Claude App Opus 4.7 (Solo Executor) · v5.2 solo-signed + v5.3 addendum
-verified-by: codex-gpt54-xhigh (r1 需阻止 · r2 需修正·信号强 · r3 需修正·信号强 · cuts #1/#2 closed · cuts #3/#4 residual mechanized in v4)
+verified-by: codex-gpt54-xhigh (r1 需阻止 · r2/r3/r4 需修正·信号强 · r4 明示 "不建议 R4 撤回" · r4 3 surgical fixes applied in v5)
 scope_tier: Tier 1 · milestone-level
 preconditions:
   - GATE-P42-CLOSURE Approved (Kogami 2026-04-20) → main at `a6521ca`
   - Kogami 2026-04-20 R4 指令：完整控制逻辑生成工作台
   - v1 (`81adf39`) → Codex r1 需阻止（6 counters A-F）
   - v2 (`aa8e03a`) → Codex r2 需修正·信号强（4 cuts：state.yaml 幻影 / P43-01 hard-freeze / draft_design_state authority / §3d touched+forbidden files）
-  - v3 (`14131c4`) → Codex r3 需修正·信号强（cuts #1/#2 实修；cuts #3/#4 仍 paper-over：Q11 重开 authority · §3d 自撞 + 漏文件 + hardcode 开关留出口）
-  - Kogami 2026-04-20 路径① 明示选择（×1 显式 + Executor 自启动 remediation iterations per v5.3 addendum）
+  - v3 (`14131c4`) → Codex r3 需修正·信号强（cuts #1/#2 实修；cuts #3/#4 仍 paper-over）
+  - v4 (`cf85723`) → Codex r4 需修正·信号强（cuts #3/#4 大幅机械化；3 surgical residual：whitelist CI 落点 / key 不一致 / test-lane mismatch）· r4 明示 "不建议 R4 撤回 · 走 v5 · 只修这 3 处"
+  - Kogami 2026-04-20 路径① 明示选择（×1 显式 · Executor 自启动 r2/r3/r4 remediation iterations per v5.3 addendum · r4 建议走 v5 surgical）
   - v5.3 addendum 生效 · adapter-boundary 硬性规则 Codex review 必调
 non-goals:
   - 本 P43-00 v3 不写任何 src 代码
@@ -37,9 +38,21 @@ non-goals:
   - **`draft_design_state` authority contract 6 条规则（R1-R6）须可机械验证**（Codex r3 · cut #3 mechanize）· 每条规则有具体 CI / 静态扫 / 单元测试 pattern · P43-02 Exit Criteria 硬性要求 test 实装
 ---
 
-# P43 · Control Logic Workbench milestone (v4) — mechanize authority + close whitelist gaps
+# P43 · Control Logic Workbench milestone (v5) — surgical 3-fix patch on v4
 
-## 0. TL;DR · v3 → v4 差异
+## 0. TL;DR · v4 → v5 差异（Codex r4 verdict · 3 surgical fixes · 不扩写）
+
+Codex r4 判 v4 "需修正·信号强" · 明示 "不建议 R4 撤回 · 走 v5 · 只修这 3 处 · 不要再扩写"：
+
+| Codex r4 残留 | v5 fix |
+|--------------|--------|
+| Fix #1 · §3d whitelist 未覆盖 v4 自己依赖的 `tools/check_authority_contract.py` / `.github/workflows/*` / `.pre-commit-config.yaml` / `workbench.debug.js` · 自相违例 | §3d 新增 "Tooling + CI Whitelist" 子段 · 4 条显式授权 |
+| Fix #2 · §3e key 不一致（定义 `wellHarnessWorkbench.v1.draftDesignState.{system_id}` · 测试写 `'draftDesignState'`）| §3e 身份定义段统一 · 阐明规范 key 与 grep token 区分 · 修正测试描述 |
+| Fix #3 · R1-R3 验证与默认 lane（Python pytest + string-grep on JS source）脱节 · 用 Playwright/window-spy 不现实 | §3e R1-R6 全部改写为与 `tests/test_demo.py` 相同 lane 的 **string-grep / AST / Python fixture 验证** · R5 validator 走 "Python port + contract-identical" 模式 · 浏览器 runtime 测归 opt-in e2e |
+
+**v5 纯 surgical · 不改 §1/§2/§3a-d（cuts #1/#2/#4 所有结构） · 不改 §4 non-goals · 不改 §5 counters · 不改 §6 open questions（Q1/Q2/Q4/Q7/Q8/Q10/Q12 保留）· 不改 §7/§8 sequencing.** 只改 §3d Tooling Whitelist + §3e 身份定义 + §3e 6 条规则 Verification 列。
+
+## 0a. TL;DR · v3 → v4 差异（保留）
 
 Codex round-3 判 v3 "需修正·信号强"。v3 把 cut #1 / cut #2 关闭 · 但 cut #3 / cut #4 仍 paper-over。v4 是 path ① 连续 remediation · 把 Codex r3 指出的 7 个具体缺口机械化：
 
@@ -224,6 +237,17 @@ v3 规则"未列入 touched-files 则 violation"与 §3a/§8 要求新建多份 
 
 其他 tests/ 文件新建需 Executor 判是否合理 · 超出列表须加 §3d 更新。
 
+#### Tooling + CI Whitelist（v5 新增 · Codex r4 fix #1 · 关闭"whitelist 不覆盖 CI 落点"缺口）
+
+v4 §3e Exit Criteria 依赖 `tools/check_authority_contract.py` 和 CI/pre-commit 落点 · 但未授权新建 · Codex r4 flag。v5 显式授权：
+
+| 新建/扩展 | 落点 | 用途 |
+|----------|------|------|
+| `tools/check_authority_contract.py` | new file | §3e R1-R6 静态扫执行器 · 默认 lane Python 脚本 · 被 `tests/test_p43_authority_contract_r1_r6.py` 调用 |
+| `.github/workflows/p43-authority-contract.yml` | new file | CI job 跑 `check_authority_contract.py` + P43 test whitelist 中的 authority 相关 tests |
+| `.pre-commit-config.yaml` | new file（若仓库无）· 或 L1 extend（若已有） | `tools/check_authority_contract.py` 作为 pre-commit hook · 防止违 R1-R6 的 commit 进 repo |
+| `src/well_harness/static/workbench.debug.js` | new file | §3e observability logDraftWrite 日志面板 · 分离 debug code 不污染 production workbench.js |
+
 #### JSON Schema Whitelist（允许扩展的 docs/json_schema/*.schema.json）
 
 | 允许修改（L2 backward-compat only） |
@@ -250,27 +274,33 @@ v3 规则"未列入 touched-files 则 violation"与 §3a/§8 要求新建多份 
 - 既有 `/api/workbench/*` endpoint 回归 100% pass（contract lock 对比）
 - 既有 `docs/json_schema/*_v1.schema.json` validator suite 100% pass（所有既有 archive 依然 validate）
 
-### 3e · `draft_design_state` authority contract · 机械约束（Codex r2 cut #3 · r3 mechanized in v4）
+### 3e · `draft_design_state` authority contract · 机械约束（Codex r2 cut #3 · v4 加 Verification · v5 fix key consistency + test-lane alignment）
 
-**身份定义：** `draft_design_state` 是 P43-05/P43-06/P43-08 的临时预览状态 · 存于 `workbench.js` localStorage · key = `wellHarnessWorkbench.v1.draftDesignState.{system_id}`。
+**身份定义（v5 统一 key · Codex r4 fix #2）：**
 
-**v3 → v4 变化：** 每条规则加 **Verification** 列 · 给出具体 CI / 静态扫 / 单元测试 pattern · R1-R5 必须由 `tests/test_p43_authority_contract_r1_r6.py` 机械验证（P43-02 Exit Criteria 硬性）。v3 "Kogami 可否决" 语义删 · authority chain 固化为 non-goal（见 non-goals 最后三条）· Q11 已删。
+- localStorage key（规范形式）：`wellHarnessWorkbench.v1.draftDesignState.{system_id}`
+- 仓库 grep pattern（字面量，用于静态扫）：`draftDesignState`（命名空间前缀之后的唯一可识别 token）
+- 所有测试 assert 使用完整 key 形式 · 文档中出现 `'draftDesignState'` 时必须理解为字面 token 的 grep 匹配，而非 localStorage 访问键；v4 不一致已修正
 
-**6 条机械规则（v4 加 Verification）：**
+**v4 → v5 变化（Codex r4 fix #3 · test-lane alignment）：**
 
-| 规则 | 机械约束 | Verification（机械验证 pattern） |
+仓库默认测试车道是 **Python `pytest` + `jsonschema` + 对 JS 源文件做 string-grep / AST-level assert**（见 `pyproject.toml` + `tests/test_demo.py` pattern）· 不包含 Playwright / window-scope-spy / 浏览器 runtime 测试。v4 的 R2/R5/R6 用"mock window scope · spy localStorage 调用计数"与默认 lane 不一致 · v5 改为与现有测试基座一致：**对 `workbench.js` / `workbench.debug.js` 源文件做 string-grep · AST-level assert · Python 端生成 localStorage 预期状态 fixture · assert fixture shape**。Playwright/浏览器 runtime 测试若需要 · 归 opt-in e2e lane · 非 P43-02 Exit Criteria 硬性。
+
+**6 条机械规则（v5 · 默认 lane 对齐）：**
+
+| 规则 | 机械约束 | Verification（默认 lane · Python pytest + source grep） |
 |-----|---------|------------------------------|
-| R1 · 写权限白名单 | 只有 UI Step 3/4/6 写 `draftDesignState` · 后端 forbidden 写 | **静态扫**：grep `src/well_harness/*.py` 无 `draftDesignState` 字面量 writer；`demo_server.py` 所有 handler 函数 AST 扫无写 localStorage/draft 对象。**单元测试**：`test_r1_backend_no_draft_write` — fake intake + run all server endpoints · assert `draft_design_state` key 未被 server 侧 side-effect 写入 |
-| R2 · 读权限白名单 | Step 8 Final Approval 不读 draft · 只读 frozen spec | **静态扫**：`workbench.js` 的 Final Approval handler 代码块内 grep 无 `draftDesignState` 读取。**单元测试**：`test_r2_final_approval_reads_frozen_only` — mock window scope · trigger Final Approval · assert `localStorage.getItem('draftDesignState')` 未被调用（spy 计数 = 0）· `frozen_spec` 被读取 |
-| R3 · **回写 frozen spec 禁止** | 无任何自动回写路径 · 唯一路径：reiterate → Freeze | **静态扫**：`workbench.js` 全文 grep 无 `frozenSpec = draftDesignState` / `frozenSpec.merge(draft)` / `frozenSpec.assign(draft)` pattern。**单元测试**：`test_r3_no_draft_writeback` — 写 draft 数据 · trigger wire_change/annotate/iterate events · assert frozen spec SHA 未变。**Integration test**：`test_r3_reiterate_must_rewalk_freeze` — 用户点 reiterate · assert workflow state 回到 `PARSING` 或 `AWAITING_ANSWERS` · 非直接到 `FROZEN` |
-| R4 · generator 消费规则 | `generate_adapter.py` 只读 frozen spec · 不读 draft | **静态扫**：`src/well_harness/tools/generate_adapter.py` AST 扫无 `draftDesignState` / `draft_design_state` 任何引用。**单元测试**：`test_r4_generator_reads_frozen_only` — 喂 generator 一份 frozen spec + 一份 draft · assert generator 输出 hash 只依赖 frozen spec · draft mutation 不影响输出 |
-| R5 · 冲突自动拒绝 | validator 位置：`src/well_harness/static/workbench.js` `validateDraftAgainstFrozen()` 函数 · 输入：`{draft, frozen}` · 输出：`{ok: bool, conflicts: [{type, draft_ref, frozen_ref, message}]}` · 失败码：`DRAFT_REFERENCES_DELETED_COMPONENT` / `DRAFT_CYCLE` / `DRAFT_TERMINAL_UNIQUENESS_VIOLATION` / `DRAFT_FAN_OUT_EXCEEDED` | **单元测试**：`test_r5_validator_conflict_detection` — 构造 4 种冲突场景 · assert 每种都返对应失败码 + 冲突 ref 正确。**UI 测试**：`test_r5_ui_shows_conflict_on_reiterate` — trigger reiterate with conflicting draft · assert UI 渲染 validation-error panel with 冲突清单 |
-| R6 · Lifecycle boundary | Final Approval → `draft_design_state` key 立即删 · archive 不含 draft | **单元测试**：`test_r6_final_approval_deletes_draft` — trigger Final Approval · assert `localStorage.getItem('draftDesignState')` 返 null。**Integration test**：`test_r6_archive_excludes_draft` — 完整流程 · inspect `archive_workbench_bundle` manifest 与 bundle · assert 无 `draftDesignState` key 或 reference |
+| R1 · 写权限白名单 | 只有 UI Step 3/4/6 UI handler 写 `draftDesignState` key · 后端 Python 代码 forbidden 产生 `draft_design_state` 可写字段或在 response body 中发回客户端作为 writable state | **`test_r1_backend_no_draft_state_emission`** — 对 `src/well_harness/**/*.py` 做 regex 扫 · assert 无 `draftDesignState` / `draft_design_state` 字面量写入语义（除 P43-01 contract-proof-report 引用）· `demo_server.py` AST 遍历所有 FastAPI handler 返回值类型 · assert 无 field 命名含 `draft` 或 `design_state` writable payload |
+| R2 · 读权限白名单 | Step 8 Final Approval UI handler 不读 draft · 只读 frozen spec | **`test_r2_final_approval_grep`** — 读 `src/well_harness/static/workbench.js` 源字节 · 定位 Final Approval handler 代码块（以约定注释标记 `// P43: final-approval-handler-begin` … `// P43: final-approval-handler-end` 为界 · P43-02 实装时需 insert 这对标记）· assert 该块内 `draftDesignState` substring 计数 = 0 · `frozenSpec` substring 计数 ≥ 1 |
+| R3 · **回写 frozen spec 禁止** | 无任何自动回写路径 · 唯一路径：reiterate event → 回 Freeze step | **`test_r3_no_writeback_patterns`** — 读 `workbench.js` 全文 · assert 无以下 substring：`frozenSpec = draftDesignState` / `frozenSpec=draftDesignState` / `frozenSpec.merge(` / `frozenSpec.assign(` / `Object.assign(frozenSpec` / `{...frozenSpec, ...draftDesignState}` · **helper/alias 防绕过**：`tools/check_authority_contract.py` 并额外做 AST 解析 · 识别变量 alias 链追溯到 `frozenSpec` 的写 side · assert 无。**`test_r3_reiterate_state_transition`** — 构造 fixture 调 workflow automaton contract 的 Python 仲裁器（P43-02 落地）· trigger reiterate event · assert post-state ∈ {`PARSING`, `AWAITING_ANSWERS`} · 非 `FROZEN` |
+| R4 · generator 消费规则 | `generate_adapter.py` 只读 frozen spec · 不读 draft | **`test_r4_generator_source_grep`** — 对 `src/well_harness/tools/generate_adapter.py` + 其 import 链 Python 文件做 AST 扫 · assert 无 `draftDesignState` / `draft_design_state` 任何引用。**`test_r4_generator_output_invariance`** — 准备 frozen spec fixture + 无关 draft fixture · 调 generator · assert 输出 hash 仅依赖 frozen spec（mutation draft fixture 不改输出） |
+| R5 · 冲突自动拒绝 | validator 函数：`src/well_harness/static/workbench.js::validateDraftAgainstFrozen(draft, frozen)` · 返回：`{ok: bool, conflicts: [{type, draft_ref, frozen_ref, message}]}` · 失败码：`DRAFT_REFERENCES_DELETED_COMPONENT` / `DRAFT_CYCLE` / `DRAFT_TERMINAL_UNIQUENESS_VIOLATION` / `DRAFT_FAN_OUT_EXCEEDED` | **`test_r5_validator_exists`** — grep `workbench.js` · assert `function validateDraftAgainstFrozen` 或 `validateDraftAgainstFrozen:` / `validateDraftAgainstFrozen =` 声明存在 · 且 4 个失败码字符串均在源中出现。**`test_r5_validator_contract_via_extracted_module`** — P43-02 把 validator 实装为可独立 Node/浏览器 import 的 ES module + Python harness 通过 `subprocess` 调 `node -e` 跑 · 或 Pythonports validator pure-function 到 `src/well_harness/_draft_validator_contract.py`（等价实装 · 两边必须 contract-identical）· assert 4 冲突 fixture 返对应失败码。（**默认 lane 选 Python port** · 浏览器版走 e2e lane） |
+| R6 · Lifecycle boundary | Final Approval → `draft_design_state` key 立即删 · archive 不含 draft | **`test_r6_final_approval_handler_grep`** — 读 `workbench.js` Final Approval handler 块 · assert 含 `localStorage.removeItem(` 调用 key 含 `draftDesignState` namespace。**`test_r6_archive_excludes_draft`** — Python 侧跑完整 `archive_workbench_bundle` flow fixture · inspect 生成的 manifest + bundle bytes · assert 无 `draftDesignState` / `draft_design_state` substring |
 
-**Observability 要求（mechanized）：**
+**Observability 要求（v5 · 默认 lane 可验证）：**
 
-- `draft_design_state` 每次写入必须调 `logDraftWrite(writer_step, timestamp, diff_summary)` · 集中到 `workbench.debug.js` 日志面板 · **Verification**: `test_observability_logs_every_draft_write`
-- UI 显示 "draft vs frozen" diff badge · DOM selector `#draft-frozen-diff-badge` 存在 · CSS class 显示当前状态 · **Verification**: `test_draft_frozen_badge_renders`
+- `draft_design_state` 每次写入调 `logDraftWrite(writer_step, timestamp, diff_summary)` · 实装在 `src/well_harness/static/workbench.debug.js`（Tooling Whitelist 授权新建）· **`test_observability_logdraftwrite_defined`**: grep `workbench.debug.js` · assert `function logDraftWrite` 存在
+- UI diff badge · DOM `#draft-frozen-diff-badge` · **`test_draft_frozen_badge_html_exists`**: grep `workbench.html` · assert `id="draft-frozen-diff-badge"` 字面量存在
 
 **Authority chain（non-negotiable · v4 升为 non-goal · Q11 已删）：**
 
@@ -404,10 +434,10 @@ v2 的 C1-C12 全保留（不复述 · 见 v2 §5）。以下是 v3 新增：
 
 ---
 
-## 7. Execution sequencing · v4
+## 7. Execution sequencing · v5
 
 ```
-P43-00 v4 plan commit + Codex round-4 re-review + Kogami GATE-P43-PLAN (v4) Approved + Q1/Q2/Q4/Q7/Q8/Q10/Q12 仲裁（Q11/Q13 已删为 non-goal · Q3/Q5/Q6/Q9 继续删）
+P43-00 v5 plan commit + Codex round-5 re-review + Kogami GATE-P43-PLAN (v5) Approved + Q1/Q2/Q4/Q7/Q8/Q10/Q12 仲裁
          ↓
 P43-01 Contract Proof Spike (独立 gate · ~1 day · 先行 · must land)
          ↓
@@ -452,47 +482,47 @@ P43-08..P43-10 iteration + approval + archive（合 1 gate · reiterate loop + F
 
 ---
 
-## 9. v5.2 + v5.3 compliance（v4）
+## 9. v5.2 + v5.3 compliance（v5）
 
-继承 v3 + 更新：
+继承 v4 + 更新：
 - **R3 Tier 1 adversarial · 15 counters C1-C15 · C7-C15 verified-by codex-gpt54-xhigh**
-- **v5.3 addendum hard rule · Codex re-review 协议 v4**：
+- **v5.3 addendum hard rule · Codex re-review 协议 v5**：
   - round 1 (v1 → v2) · verdict 需阻止 · 6 counters A-F
   - round 2 (v2 → v3) · verdict 需修正·信号强 · 4 必补 cut
   - round 3 (v3 → v4) · verdict 需修正·信号强 · cuts #1/#2 closed · cuts #3/#4 residual
-  - **round 4 (v4 pending)**：v4 commit 后 · Kogami 签 Gate 前 · Executor **再次调 Codex** 审 v4 是否真正机械化 cuts #3/#4 residual
-- Codex 三轮输出均入 `09C 外部审查简报` · verified-by trailer 随每版 commit
+  - round 4 (v4 → v5) · verdict 需修正·信号强 · 3 surgical fixes（whitelist CI / key consistency / test-lane alignment）· 明示 "不建议 R4 撤回"
+  - **round 5 (v5 pending)**：v5 commit 后 · Kogami 签 Gate 前 · Executor **再次调 Codex** 审 v5 是否真正闭环 Codex r4 3 residuals
+- Codex 四轮输出均入 `09C 外部审查简报` · verified-by trailer 随每版 commit
 
 ---
 
-## 10. Codex re-review plan (v4 · round 4 · pre-Gate)
+## 10. Codex re-review plan (v5 · round 5 · pre-Gate)
 
 **Prompt 摘要：**
-> 你是 Codex GPT-5.4 xhigh · 第四轮评审 Well Harness P43 milestone plan v4。round 3 verdict 需修正·信号强 · cuts #1/#2 closed · cuts #3/#4 residual。v4 声称把 cuts #3/#4 mechanized：
-> (A) Q11 删了（authority chain 升为 non-goal · 不再作 open question）· cut #3 authority contract 是否真机械闭环？
-> (B) Q13 删了（demo_server.py 边界升为 non-goal + §3d L1/L2/L3 阶梯）· 是否真机械？
-> (C) §3d whitelist 补了 workbench.css / ai-doc-analyzer.js / docs/P43-*.md（Doc Deliverables Whitelist）/ tests/*.py（Test Whitelist）/ json_schema 规则 · 是否还漏？
-> (D) §3d "暴露 domain hardcode 开关" 删了 · 改为 non-goal + blacklist 禁止新增 hardcode · 既有登记 known limitation · 是否真收口？
-> (E) §3e R1-R6 每条加 Verification 列（静态扫 / 单元测试 / integration test 具体 pattern）· 是否真 CI-enforceable？还是仍是 prose 包装？
-> (F) §5 tick-box 自夸删了 · 改诚实声明 C13-C15 只是新 blind spot · 是否可接受？
-> 若 v4 覆盖充分 · 明示 "v4 可过 Gate"。若还有结构性残留 · 给 ≤3 条最强反驳 + 建议走 v5 或 R4 撤回。
+> 你是 Codex GPT-5.4 xhigh · 第五轮评审 Well Harness P43 milestone plan v5。round 4 verdict 需修正·信号强 · 3 surgical fixes 要求 · 明示 "不建议 R4 撤回 · 只修这 3 处 · 不要再扩写"：
+> (1) §3d 新增 Tooling + CI Whitelist（`tools/check_authority_contract.py` · `.github/workflows/p43-authority-contract.yml` · `.pre-commit-config.yaml` · `workbench.debug.js`）· 是否覆盖 Codex r4 指出的全部自依赖文件？v5 有没有再引入新的"未授权依赖"？
+> (2) §3e 身份定义段把 `wellHarnessWorkbench.v1.draftDesignState.{system_id}` 与 grep token `draftDesignState` 语义分开 · 测试描述统一 · key 不一致是否闭环？
+> (3) §3e R1-R6 全部改写为默认 lane（Python pytest + string-grep on JS source + AST scan + Python fixture）· R5 validator 走 "Python port contract-identical" · 浏览器 runtime 测归 opt-in e2e · 是否真与 `tests/test_demo.py` / `pyproject.toml` 既有 lane 一致？
+> (4) v5 承诺"不扩写" · 实际有无 scope creep？
+> (5) 有无 round-5 新结构性盲点？
+> 若 v5 闭环 · 明示 "v5 可过 Gate"。若仍"需修正" · 给 ≤3 条最强反驳 + 建议走 v6 或 R4 撤回。
 
-**Codex 输出处理：** 批判性消化 · 若 "可过 Gate" 交 Kogami 审 · 若还"需修正·信号强" 走 v5（path ① 继续 · 但须评估 diminishing returns）· 若"需阻止" 考虑 R4 撤回 P43。
+**Codex 输出处理：** 若 "可过 Gate" 交 Kogami 审 · 若还"需修正·信号强" → 停止 path ① 自动 iteration · 升级给 Kogami 做 R4 决策（diminishing returns 评估）· 若"需阻止" → 升级 R4 撤回评估。
 
 ---
 
 ## 11. 停点
 
-**本 plan v4 不执行任何代码。三个停点：**
+**本 plan v5 不执行任何代码。三个停点：**
 
-**停点 1**：v4 commit + branch push 后 · Executor 调 Codex round-4 re-review（v5.3 addendum 要求）
-**停点 2**：Codex 返 "可过 Gate" → 提交 Kogami 审 GATE-P43-PLAN (v4) · 否则继续 path ① 或升级 R4 决策给 Kogami
-**停点 2.5（v3 引入 · v4 保留 · 硬规则）**：P43-01 Exit Criteria 未 asserted pass · P43-02+ 自动冻结 · 不可绕过
-**停点 3**：Kogami 签 `GATE-P43-PLAN (v4): Approved` + Q1/Q2/Q4/Q7/Q8/Q10/Q12 仲裁 · 才启动 P43-01-00-PLAN.md 起草
+**停点 1**：v5 commit + branch push 后 · Executor 调 Codex round-5 re-review
+**停点 2**：Codex 返 "可过 Gate" → 提交 Kogami 审 GATE-P43-PLAN (v5) · 否则 **停止 path ① 自动 iteration** · 升级 Kogami 做 R4 决策（path ①/撤回/v6 让 Kogami 选）
+**停点 2.5（v3 引入 · 保留 · 硬规则）**：P43-01 Exit Criteria 未 asserted pass · P43-02+ 自动冻结 · 不可绕过
+**停点 3**：Kogami 签 `GATE-P43-PLAN (v5): Approved` + Q1/Q2/Q4/Q7/Q8/Q10/Q12 仲裁 · 才启动 P43-01-00-PLAN.md 起草
 
 ---
 
 **Signed:** Claude App Opus 4.7 (Solo Executor) · v5.2 solo-signed + v5.3 addendum · 2026-04-20
-**Revision:** v4 (post-Codex-round-3 · path ① continuous · cuts #1/#2 closed · cuts #3/#4 mechanized)
-**Awaiting:** Codex round-4 re-review + `GATE-P43-PLAN (v4): Approved` (Kogami) + 7 Q 仲裁
-**Verified-by:** codex-gpt54-xhigh (r1 · 6 counters A-F · r2 · 4 cuts · r3 · cuts #1/#2 closed + #3/#4 residual identified)
+**Revision:** v5 (post-Codex-round-4 · path ① surgical · 3-fix · no scope creep)
+**Awaiting:** Codex round-5 re-review + `GATE-P43-PLAN (v5): Approved` (Kogami) + 7 Q 仲裁
+**Verified-by:** codex-gpt54-xhigh (r1 6 counters · r2 4 cuts · r3 cuts #1/#2 closed · r4 3 surgical fixes identified · r4 明示 "不建议 R4 撤回")
