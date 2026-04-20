@@ -22,8 +22,8 @@ P43-01 is a **contract-proof spike** with a single thesis: prove the P15 pipelin
 1. `run_pipeline_from_intake()` accepts a §1c-compliant intake packet (pdf via `source_documents.location` metadata only, no SHA binding) and returns the `assessment + bundle + system_snapshot` happy-path shape.
 2. The blocker guard fires correctly on missing source documents, returning the `{status: "blocked", blockers: [...], message}` frontend contract.
 3. The `ai-doc-analyzer.js` frontend reads `result.status === "blocked"` and `result.blockers` verbatim — alignment with the backend EMIT key is pinned by a grep-level regression test.
-4. **`FileReader.readAsText` is broken for pdf/docx binaries** — the browser silently produces `%PDF-1.7`-prefixed garbage and the analyze button stays enabled.
-5. The full `/api/workbench/*` + `/api/p15/*` surface (7 endpoints) has a locked-down YAML contract with all success, blocked, and error branches.
+4. **`FileReader.readAsText` is broken for pdf binaries** — the browser silently produces `%PDF-1.7`-prefixed garbage and the analyze button stays enabled. (Scope note: only pdf was exercised by the Playwright test per plan §2c whitelist; docx behavior is predicted-broken by the same mechanism but not verified in this spike.)
+5. The full `/api/workbench/*` + `/api/p15/*` surface (7 endpoints) has a locked-down YAML contract covering all documented happy paths, the blocked path, handler-specific 400 branches, and the shared structured-optional-field validation family on `/api/workbench/bundle`.
 
 **What we fixed** (Step B · Kogami Option X expansion · 4 LOC surgical · 1 Codex review round): three critical Counter-F contract bugs in `src/well_harness/ai_doc_analyzer.py` that had silently broken the pipeline in production:
 - **Bug A** · blocker guard READ side was testing `assessment.get("blockers")` while `assess_intake_packet` emits `"blocking_reasons"` — the guard silently bypassed blocked packets, which fell through to bundle building.
@@ -50,7 +50,7 @@ Full evidence table with commit anchors and runtime dumps is in `canonical_detai
 | 6 | S5 asserted_pass · `docs/P43-api-contract-lock.yaml` · 7 endpoints · 19 error branches | **PASS** |
 | 7 | R6/R7/R8 inventory · 3 conclusions + fix checklist | **PASS** |
 | 8 | Three-lane regression vs P42 baseline `a6521ca` | **PASS · default 800 passed, 1 skipped · e2e 50 passed · zero regression** |
-| 9 | 2 Codex adversarial rounds (Step B + Step G) | **Step B PASS · Step G pending this commit** |
+| 9 | 2 Codex adversarial rounds (Step B + Step G) | **Step B PASS · Step G scrub round complete — verdict pending re-review on `e-scrub` commit** |
 
 ## Commit trail
 
@@ -60,7 +60,8 @@ Full evidence table with commit anchors and runtime dumps is in `canonical_detai
 | `5d2d3ec` | Step B — Bugs A/B1/B2 surgical fix + 4 regression tests (Kogami Option X) |
 | `8d76cf5` | Codex Step B review trailer + 3 optional doc polish items |
 | `7fd243d` | Steps D/E/F — Playwright readAsText proof + API contract lock + R6/R7/R8 inventory |
-| (pending) | Step G — report finalize + final Codex review + Gate submission |
+| `4d40aee` | Step G — report finalize + exit-criteria mechanical verification |
+| (this commit) | Step G scrub — Codex Step G round 1 `需修正·信号弱` → S5 YAML expanded + S4 wording narrowed + closure governance cleanup |
 
 ## P43-02+ scope recommendations (evidence-based)
 
@@ -69,8 +70,10 @@ Full evidence table with commit anchors and runtime dumps is in `canonical_detai
 - **Post-P43 workbench-generalization**: revisit R7 (generate_adapter hardcode) by deriving terminal components from `packet.acceptance_scenarios[*].completion_condition` AST parsing, and promote the workspace_handoff dict to a typed dataclass (R8).
 - **Test hardening (non-blocking · Codex Step B optional polish)**: replace grep-based regression tests 3/4 with AST-level or recorded-fixture-shape checks to harden against refactor-induced drift.
 
-## Pointer to detailed report
+## Governance: this file is the plan-whitelisted canonical artifact
 
-The canonical artifact with all runtime evidence, code anchors, Additional Findings, Codex review trailer, and Kogami arbitration record is at: **`.planning/phases/P43-control-logic-workbench/reports/p43-01-contract-proof/CONTRACT-PROOF-REPORT.md`**.
+**This file (`docs/P43-contract-proof-report.md`) is the plan §2b-whitelisted gate artifact and the authoritative record for GATE-P43-01-CLOSURE.** It is the source of truth for the closure decision.
 
-This file (`docs/P43-contract-proof-report.md`) exists to honor the plan §2b whitelist; the detailed report is the authoritative source when the two disagree.
+The more detailed report at `.planning/phases/P43-control-logic-workbench/reports/p43-01-contract-proof/CONTRACT-PROOF-REPORT.md` is a **supporting artifact**: it preserves the full arc of arbitration (Step A partial escalation → Kogami Option X → Codex Step B trailer → Codex Step G trailer) plus every runtime evidence anchor. When the two files disagree, this `docs/` summary is authoritative for exit-criteria verdicts; the supporting artifact is authoritative only for historical process detail not present here.
+
+This inversion (relative to the pre-scrub wording) is applied in response to Codex Step G round 1 governance finding #3.

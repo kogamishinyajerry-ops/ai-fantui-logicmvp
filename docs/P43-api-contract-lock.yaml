@@ -111,6 +111,72 @@ endpoints:
       - status: 400
         error: invalid_workbench_selection
         trigger: build_workbench_bundle raises ValueError
+      # --- Structured field-validation family (shared optional-param helpers) ---
+      # Emitted by _optional_request_str / _optional_request_object /
+      # _optional_request_string_list / _optional_request_float whenever
+      # an optional parameter has the wrong JSON type. Pattern = status 400
+      # with {error: invalid_workbench_request, field: <param>, message: ...}.
+      # Enumerated here per field for completeness:
+      - status: 400
+        error: invalid_workbench_request
+        field: scenario_id
+        trigger: scenario_id provided and not a string
+      - status: 400
+        error: invalid_workbench_request
+        field: fault_mode_id
+        trigger: fault_mode_id provided and not a string
+      - status: 400
+        error: invalid_workbench_request
+        field: observed_symptoms
+        trigger: observed_symptoms provided and not a string
+      - status: 400
+        error: invalid_workbench_request
+        field: evidence_links
+        trigger: evidence_links provided and not a list of strings
+      - status: 400
+        error: invalid_workbench_request
+        field: confirmed_root_cause
+        trigger: confirmed_root_cause provided and not a string
+      - status: 400
+        error: invalid_workbench_request
+        field: repair_action
+        trigger: repair_action provided and not a string
+      - status: 400
+        error: invalid_workbench_request
+        field: validation_after_fix
+        trigger: validation_after_fix provided and not a string
+      - status: 400
+        error: invalid_workbench_request
+        field: residual_risk
+        trigger: residual_risk provided and not a string
+      - status: 400
+        error: invalid_workbench_request
+        field: suggested_logic_change
+        trigger: suggested_logic_change provided and not a string
+      - status: 400
+        error: invalid_workbench_request
+        field: reliability_gain_hypothesis
+        trigger: reliability_gain_hypothesis provided and not a string
+      - status: 400
+        error: invalid_workbench_request
+        field: guardrail_note
+        trigger: guardrail_note provided and not a string
+      - status: 400
+        error: invalid_workbench_request
+        field: sample_period_s
+        trigger: sample_period_s provided and not a number
+      - status: 400
+        error: invalid_numeric_value
+        field: sample_period_s
+        trigger: sample_period_s is a non-finite float (inf, -inf, nan)
+      - status: 400
+        error: invalid_workbench_request
+        field: workspace_handoff
+        trigger: workspace_handoff provided and not a JSON object
+      - status: 400
+        error: invalid_workbench_request
+        field: workspace_snapshot
+        trigger: workspace_snapshot provided and not a JSON object
 
   /api/workbench/repair:
     method: POST
@@ -143,6 +209,9 @@ endpoints:
       - status: 400
         error: no_safe_schema_repairs
         trigger: no safe repairs available for packet
+      # repair handler does not accept optional string/object/numeric
+      # params beyond apply_all_safe, so no structured field-validation
+      # family applies here.
 
   /api/workbench/archive-restore:
     method: POST
