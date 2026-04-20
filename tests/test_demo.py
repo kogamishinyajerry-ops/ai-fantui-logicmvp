@@ -868,6 +868,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             thread.join(timeout=2)
 
     def test_chat_explain_parses_structured_minimax_json_and_includes_node_states(self):
+        demo_server._clear_chat_explain_cache()
         captured_payload = {}
 
         class FakeResponse:
@@ -936,6 +937,168 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn("L1: active(已激活)", minimax_payload["messages"][0]["content"])
         self.assertIn("THR_LOCK: blocked(阻塞)", minimax_payload["messages"][0]["content"])
 
+    def test_chat_explain_cache_reuses_identical_truth_context_with_transparent_source(self):
+        demo_server._clear_chat_explain_cache()
+
+        class FakeClient:
+            def __init__(self):
+                self.calls = 0
+
+            def chat(self, messages, **kwargs):
+                del messages, kwargs
+                self.calls += 1
+                return json.dumps(
+                    {
+                        "explanation": "THR_LOCK 没释放，因为 VDT90 还未满足。",
+                        "highlighted_nodes": ["THR_LOCK", "VDT90"],
+                        "suggestion_nodes": ["logic4"],
+                        "confidence": 0.91,
+                    },
+                    ensure_ascii=False,
+                )
+
+        fake_client = FakeClient()
+        payload = {
+            "question": "为什么 THR_LOCK 没释放？",
+            "system_id": "thrust-reverser",
+            "node_states": {"THR_LOCK": "blocked", "VDT90": "inactive"},
+            "lever_snapshot": {
+                "nodes": [
+                    {"id": "THR_LOCK", "state": "blocked"},
+                    {"id": "VDT90", "state": "inactive"},
+                ],
+                "logic": {"logic4": {"active": False, "failed_conditions": ["VDT90"]}},
+                "outputs": {"throttle_electronic_lock_release_cmd": False, "deploy_90_percent_vdt": False},
+            },
+        }
+
+        with mock.patch.object(demo_server, "get_llm_client", return_value=fake_client):
+            with mock.patch.dict(
+                os.environ,
+                {"LLM_BACKEND": "ollama", "OLLAMA_MODEL": "qwen2.5:7b-instruct"},
+                clear=False,
+            ):
+                live_payload, live_error = demo_server._handle_chat_explain(payload)
+                cached_payload, cached_error = demo_server._handle_chat_explain(payload)
+
+        self.assertIsNone(live_error)
+        self.assertIsNone(cached_error)
+        self.assertEqual(fake_client.calls, 1)
+        self.assertEqual(live_payload["response_source"], "live_llm")
+        self.assertEqual(cached_payload["response_source"], "cached_llm")
+        self.assertEqual(live_payload["cache_key"], cached_payload["cache_key"])
+        self.assertEqual(cached_payload["llm_backend"], "ollama")
+        self.assertEqual(cached_payload["llm_model"], "qwen2.5:7b-instruct")
+        self.assertEqual(cached_payload["highlighted_nodes"], ["THR_LOCK", "VDT90"])
+
+    def test_chat_explain_prewarm_reports_hits_and_misses(self):
+        demo_server._clear_chat_explain_cache()
+
+        class FakeClient:
+            def __init__(self):
+                self.calls = 0
+
+            def chat(self, messages, **kwargs):
+                self.calls += 1
+                return json.dumps(
+                    {
+                        "explanation": f"response-{self.calls}",
+                        "highlighted_nodes": ["L1"],
+                        "suggestion_nodes": ["logic1"],
+                        "confidence": 0.88,
+                    },
+                    ensure_ascii=False,
+                )
+
+        fake_client = FakeClient()
+        repeated_payload = {
+            "question": "L1门为什么active",
+            "system_id": "thrust-reverser",
+            "node_states": {"L1": "active"},
+            "lever_snapshot": {
+                "nodes": [{"id": "L1", "state": "active"}],
+                "logic": {"logic1": {"active": True, "failed_conditions": []}},
+                "outputs": {"throttle_electronic_lock_release_cmd": False, "deploy_90_percent_vdt": False},
+            },
+        }
+        distinct_payload = {
+            "question": "L3门为什么blocked",
+            "system_id": "thrust-reverser",
+            "node_states": {"L3": "blocked"},
+            "lever_snapshot": {
+                "nodes": [{"id": "L3", "state": "blocked"}],
+                "logic": {"logic3": {"active": False, "failed_conditions": ["TRA"]}},
+                "outputs": {"throttle_electronic_lock_release_cmd": False, "deploy_90_percent_vdt": False},
+            },
+        }
+
+        with mock.patch.object(demo_server, "get_llm_client", return_value=fake_client):
+            with mock.patch.dict(
+                os.environ,
+                {"LLM_BACKEND": "ollama", "OLLAMA_MODEL": "qwen2.5:7b-instruct"},
+                clear=False,
+            ):
+                response_payload, error_payload = demo_server._handle_chat_explain_prewarm(
+                    {"requests": [repeated_payload, repeated_payload, distinct_payload]}
+                )
+
+        self.assertIsNone(error_payload)
+        self.assertEqual(fake_client.calls, 2)
+        self.assertEqual(response_payload["requested_count"], 3)
+        self.assertEqual(response_payload["warmed_count"], 3)
+        self.assertEqual(response_payload["cache_hits"], 1)
+        self.assertEqual(response_payload["cache_misses"], 2)
+        self.assertEqual(response_payload["errors"], [])
+        self.assertEqual(
+            [item["response_source"] for item in response_payload["results"]],
+            ["live_llm", "cached_llm", "live_llm"],
+        )
+
+    def test_chat_explain_without_truth_context_stays_live_and_out_of_cache(self):
+        demo_server._clear_chat_explain_cache()
+
+        class FakeClient:
+            def __init__(self):
+                self.calls = 0
+
+            def chat(self, messages, **kwargs):
+                del messages, kwargs
+                self.calls += 1
+                return json.dumps(
+                    {
+                        "explanation": f"live-{self.calls}",
+                        "highlighted_nodes": [],
+                        "suggestion_nodes": [],
+                        "confidence": 0.5,
+                    },
+                    ensure_ascii=False,
+                )
+
+        fake_client = FakeClient()
+        payload = {
+            "question": "L3门为什么active",
+            "system_id": "thrust-reverser",
+        }
+
+        with mock.patch.object(demo_server, "get_llm_client", return_value=fake_client):
+            with mock.patch.dict(
+                os.environ,
+                {"LLM_BACKEND": "ollama", "OLLAMA_MODEL": "qwen2.5:7b-instruct"},
+                clear=False,
+            ):
+                first_payload, first_error = demo_server._handle_chat_explain(payload)
+                second_payload, second_error = demo_server._handle_chat_explain(payload)
+
+        self.assertIsNone(first_error)
+        self.assertIsNone(second_error)
+        self.assertEqual(fake_client.calls, 2)
+        self.assertEqual(first_payload["response_source"], "live_llm")
+        self.assertEqual(second_payload["response_source"], "live_llm")
+        self.assertEqual(first_payload["cache_key"], "")
+        self.assertEqual(second_payload["cache_key"], "")
+        self.assertEqual(first_payload["cached_at"], "")
+        self.assertEqual(second_payload["cached_at"], "")
+
     def test_chat_static_assets_include_truth_first_ai_overlay_flow(self):
         script = (DEMO_UI_STATIC_DIR / "chat.js").read_text(encoding="utf-8")
         css = (DEMO_UI_STATIC_DIR / "chat.css").read_text(encoding="utf-8")
@@ -951,8 +1114,12 @@ class DemoIntentLayerTests(unittest.TestCase):
             "highlighted_nodes",
             "suggestion_nodes",
             "lastTruthPayloadBySystem",
+            "function formatExplainResponseFootnote(aiData)",
+            "response_source",
+            "chat-message-footnote",
         ):
             self.assertIn(fragment, script)
+        self.assertIn(".chat-message-footnote", css)
 
         for fragment in (
             ".chain-node-svg.ai-discussed",
@@ -962,6 +1129,39 @@ class DemoIntentLayerTests(unittest.TestCase):
             ".chat-message[data-highlighted] .chat-message-content",
             "@keyframes aiDiscussedPulse",
             "@keyframes aiSuggestedPulse",
+        ):
+            self.assertIn(fragment, css)
+
+    def test_chat_static_assets_include_persistent_explain_status_panel(self):
+        html = (DEMO_UI_STATIC_DIR / "chat.html").read_text(encoding="utf-8")
+        script = (DEMO_UI_STATIC_DIR / "chat.js").read_text(encoding="utf-8")
+        css = (DEMO_UI_STATIC_DIR / "chat.css").read_text(encoding="utf-8")
+
+        for fragment in (
+            'id="explain-status-panel"',
+            'id="explain-status-source"',
+            'id="explain-status-backend"',
+            'id="explain-status-cache"',
+            'id="explain-status-updated"',
+            'Explain 状态',
+        ):
+            self.assertIn(fragment, html)
+
+        for fragment in (
+            "var lastExplainStatusBySystem = {};",
+            "function renderExplainStatusPanel()",
+            "function syncExplainStatus(systemId, aiData)",
+            "function markExplainStatusFailure(systemId, err)",
+            "syncExplainStatus(qSystemId, aiData);",
+            "markExplainStatusFailure(qSystemId, err);",
+        ):
+            self.assertIn(fragment, script)
+
+        for fragment in (
+            ".explain-status-panel",
+            ".explain-status-pill.is-live",
+            ".explain-status-pill.is-cached",
+            ".explain-status-note",
         ):
             self.assertIn(fragment, css)
 
@@ -1185,6 +1385,41 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn(".workbench-clarification-workspace-actions", stylesheet)
         self.assertIn(".workbench-history-card[data-selected=\"true\"]", stylesheet)
 
+    def test_workbench_static_assets_include_explain_runtime_board(self):
+        html = (DEMO_UI_STATIC_DIR / "workbench.html").read_text(encoding="utf-8")
+        script = (DEMO_UI_STATIC_DIR / "workbench.js").read_text(encoding="utf-8")
+        stylesheet = (DEMO_UI_STATIC_DIR / "workbench.css").read_text(encoding="utf-8")
+
+        for fragment in (
+            'id="workbench-explain-runtime-title"',
+            'id="workbench-explain-runtime-badge"',
+            'id="workbench-explain-runtime-summary"',
+            'id="workbench-explain-runtime-backend"',
+            'id="workbench-explain-runtime-source"',
+            'id="workbench-explain-runtime-cache"',
+            'id="workbench-explain-runtime-boundary"',
+            "Explain 运行态",
+        ):
+            self.assertIn(fragment, html)
+
+        for fragment in (
+            "function readExplainRuntimePayload(payload)",
+            "function explainRuntimeBadgeText(runtime)",
+            "function renderExplainRuntime(payload)",
+            "verified_cache_hits",
+            "expected_count",
+            "boundary_note",
+            "requested_backend",
+            "renderExplainRuntime(payload);",
+        ):
+            self.assertIn(fragment, script)
+
+        for fragment in (
+            ".workbench-explain-runtime-board",
+            ".workbench-explain-runtime-board .workbench-visual-badge[data-state=\"live\"]",
+        ):
+            self.assertIn(fragment, stylesheet)
+
     def test_demo_server_api_returns_workbench_bootstrap_payload(self):
         server, thread = start_demo_server()
         try:
@@ -1203,6 +1438,9 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn("artifacts/workbench-bundles", payload["default_archive_root"])
         self.assertIn("recent_archives", payload)
         self.assertIsInstance(payload["recent_archives"], list)
+        self.assertIn("explain_runtime", payload)
+        self.assertIn("llm_backend", payload["explain_runtime"])
+        self.assertIn("response_source", payload["explain_runtime"])
 
     def test_demo_server_bootstrap_lists_recent_workbench_archives(self):
         bundle = build_workbench_bundle(
@@ -1227,6 +1465,57 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertEqual(str(Path(archive.manifest_json_path).resolve()), recent_archive["manifest_path"])
         self.assertEqual("custom_reverse_control_v1", recent_archive["system_id"])
         self.assertTrue(recent_archive["ready_for_spec_build"])
+
+    def test_workbench_bootstrap_explain_runtime_uses_latest_pitch_prewarm_report(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runs_dir = Path(temp_dir)
+            latest_dir = runs_dir / "pitch_prewarm_20260419T020304Z"
+            latest_dir.mkdir()
+            (latest_dir / "report.json").write_text(
+                json.dumps(
+                    {
+                        "generated_at": "2026-04-19T02:03:10Z",
+                        "verdict": "GREEN",
+                        "summary": {
+                            "verified_cache_hits": 2,
+                            "expected_count": 2,
+                            "requested_backend": "ollama",
+                            "requested_model": "qwen2.5:7b-instruct",
+                            "llm_backend": "ollama",
+                            "llm_model": "qwen2.5:7b-instruct",
+                            "backend_match": True,
+                        },
+                        "rounds": [
+                            {"name": "warm", "results": []},
+                            {
+                                "name": "verify",
+                                "results": [
+                                    {
+                                        "response_source": "cached_llm",
+                                        "cached_at": "2026-04-19T02:02:59Z",
+                                    }
+                                ],
+                            },
+                        ],
+                    },
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(demo_server, "RUNS_DIR", runs_dir):
+                payload = demo_server.workbench_bootstrap_payload()
+
+        explain_runtime = payload["explain_runtime"]
+        self.assertEqual("ready", explain_runtime["status"])
+        self.assertEqual("pitch_prewarm", explain_runtime["status_source"])
+        self.assertEqual("ollama", explain_runtime["llm_backend"])
+        self.assertEqual("qwen2.5:7b-instruct", explain_runtime["llm_model"])
+        self.assertEqual("cached_llm", explain_runtime["response_source"])
+        self.assertEqual("2026-04-19T02:02:59Z", explain_runtime["cached_at"])
+        self.assertEqual(2, explain_runtime["verified_cache_hits"])
+        self.assertEqual(2, explain_runtime["expected_count"])
+        self.assertIn("最近预热验证缓存命中 2/2", explain_runtime["detail"])
 
     def test_demo_server_recent_archives_api_lists_recent_workbench_archives(self):
         bundle = build_workbench_bundle(
@@ -1329,6 +1618,8 @@ class DemoIntentLayerTests(unittest.TestCase):
                     ],
                 )
                 self.assertIsNotNone(payload["archive"])
+                self.assertIn("explain_runtime", payload)
+                self.assertIn("llm_backend", payload["explain_runtime"])
                 self.assertTrue(Path(payload["archive"]["archive_dir"]).exists())
                 self.assertTrue(Path(payload["archive"]["manifest_json_path"]).exists())
                 self.assertTrue(Path(payload["archive"]["summary_markdown_path"]).exists())

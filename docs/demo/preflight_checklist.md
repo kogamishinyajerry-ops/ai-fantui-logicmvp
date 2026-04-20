@@ -46,12 +46,13 @@
 
 ---
 
-## T-20 · 双后端真跑（2 项）
+## T-20 · 双后端真跑（3 项）
 
 | # | 项目 | 一键命令 | Pass 信号 | Fail 处置 |
 | -- | ---- | -------- | --------- | --------- |
 | 14 | 双后端 rehearsal | `python3 scripts/demo_rehearsal_dual_backend.py 2>&1 | tail -3` | `verdict=PASS` | Ollama 重启 / 按 disaster_runbook 场景 1 |
 | 15 | Dress rehearsal（wow 轨）| `python3 scripts/dress_rehearsal.py 2>&1 | tail -3` | `13/13 pass` | 查 controller.py 回归 |
+| 16 | Pitch prewarm（explain 缓存）| `python3 scripts/pitch_prewarm.py 2>&1 | tail -3` | `verdict=GREEN` 且 `cache_hits=2/2` | 检查 backend 是否启动 / 看 runs/pitch_prewarm_*/report.json |
 
 ---
 
@@ -59,13 +60,13 @@
 
 | # | 项目 | 一键命令 / 动作 | Pass 信号 |
 | -- | ---- | --------------- | --------- |
-| 16 | demo_server 可访问 + Canvas 渲染 | 启 `python3 -m well_harness.demo_server --port 8799 &` → 浏览器开 `http://127.0.0.1:8799/` → 硬刷 Cmd-Shift-R | 19 节点可见 + 聊天抽屉可展开 |
+| 17 | demo_server 可访问 + Canvas 渲染 | 启 `python3 -m well_harness.demo_server --port 8799 &` → 浏览器开 `http://127.0.0.1:8799/` → 硬刷 Cmd-Shift-R | 19 节点可见 + 聊天抽屉可展开 |
 
 ---
 
 ## T-0 · 签发
 
-- [ ] 所有 16 项 Pass
+- [ ] 所有 17 项 Pass
 - [ ] 演讲者已读 `docs/demo/pitch_script.md` 时间表（20 分钟硬分配）
 - [ ] 演讲者已扫 `docs/demo/faq.md` 关键词跳转表
 - [ ] `docs/demo/disaster_runbook.md` 7 场景纸面放在桌角
@@ -77,7 +78,7 @@
 
 ## 一键预检脚本（可选加速）
 
-如果想一次跑完 #8–#15 自动化项：
+如果想一次跑完 #8–#16 自动化项：
 
 ```bash
 cd ~/20260407*LogicMVP
@@ -91,9 +92,12 @@ python3 scripts/demo_rehearsal_dual_backend.py --skip-minimax-if-no-key --skip-o
 
 # Dress rehearsal
 python3 scripts/dress_rehearsal.py 2>&1 | tail -3
+
+# Pitch prewarm (explain 缓存)
+python3 scripts/pitch_prewarm.py 2>&1 | tail -3
 ```
 
-**三行绿 + verdict=PASS + 13/13 = 全部 pass。** 看到任何红即按 disaster_runbook 处置。
+**四行绿 + verdict=PASS + 13/13 + verdict=GREEN + cache_hits=2/2 = 全部 pass。** 看到任何红即按 disaster_runbook 处置。
 
 ---
 
@@ -107,6 +111,7 @@ python3 scripts/dress_rehearsal.py 2>&1 | tail -3
 │       OLLAMA_MODEL=qwen2.5:7b-instruct           │
 │       pkill -f demo_server                       │
 │       python3 -m well_harness.demo_server &      │
+│       python3 scripts/pitch_prewarm.py           │
 │       Cmd-Shift-R                                │
 │                                                  │
 │  2. Ollama 也挂？                                 │

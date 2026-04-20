@@ -3,24 +3,33 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: Milestone complete
-last_updated: "2026-04-17T14:00:00.000Z"
-last_activity: 2026-04-17
+last_updated: "2026-04-19T00:00:00.000Z"
+last_activity: 2026-04-19
 progress:
-  total_phases: 23
-  completed_phases: 16
+  total_phases: 31
+  completed_phases: 31
   total_plans: 0
   completed_plans: 0
 ---
 
 # State
 
-Last activity: 2026-04-17
+Last activity: 2026-04-19
 
 ## Current Position
 
-**Partial Unfreeze — P19 Active (2026-04-17)**
+**Control Tower Truth Aligned — P30 Closed (2026-04-19)**
 
-Phase: P19 — Hardware YAML Schema + Simulation Parameters
+Phase: P30 — Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2
+
+- ROADMAP / Notion / repo-side coordination docs 已统一对齐到 P30；`01 当前状态`、`09C`、`Freeze Packet`、dashboard 顶部 snapshot 已刷新。
+- 最新已验证 Plan：`P30-00-TIER1 Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2 维度`
+- 最新成功执行证据：`P30 control-plane truth alignment + readiness verification`
+- 当前 Gate 结论：`当前无需 Opus 审查`；Open Gap = `0`
+- P21–P30 的 `QA / Asset / Decision / Gate` 证据链已在 Notion 控制面补齐，closure 欠账已清零。
+- 下方保留的是 `2026-04-17` 生成的 P19 历史执行快照，仅作归档上下文，不再代表当前执行位置。
+
+### Historical P19 Snapshot (Archived 2026-04-17)
 
 P19.1 Executed: hardware YAML schema + loader for thrust-reverser parameters
 - 4 files created: hardware_schema_v1.schema.json, thrust_reverser_hardware_v1.yaml, hardware_schema.py, test_hardware_schema.py

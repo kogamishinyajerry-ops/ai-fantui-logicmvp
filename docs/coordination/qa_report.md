@@ -4,16 +4,16 @@
 ## 当前自动同步 QA 基线
 
 - 结论：PASS；当前稳定基线由 GitHub-backed validation evidence 支撑。
-- 当前阶段：`未识别活动 phase`
-- 当前已验证 Plan：`P17-NLC-A`
-- 最近成功执行证据：`P17-NLC-A A-04+A-05 complete`
+- 当前阶段：`P30 Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2`
+- 当前已验证 Plan：`P30-00-TIER1 Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2 维度`
+- 最近成功执行证据：`P30 explain runtime + prewarm visibility sync`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
-- 当前 Opus 状态：`失败阻塞分流审查`
-- Open Gap 数量：`1`
-- 当前证据模式：`active-page degraded mode`
-- 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
-- 当前 QA 摘要：`PASS. 23/23 shared validation checks pass.`
-- 当前运行摘要：`Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: 23/23 shared validation checks pass.`
+- 当前 Opus 状态：`当前无需 Opus 审查`
+- Open Gap 数量：`0`
+- 当前证据模式：`repo-doc fallback mode`
+- 证据模式说明：共享 Notion 数据库与活跃控制面页面当前不可达；当前快照由 repo freeze packet 与 handoff docs 恢复。
+- 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
+- 当前运行摘要：`Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
 
 ## 当前执行规则
 

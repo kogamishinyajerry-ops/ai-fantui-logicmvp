@@ -71,6 +71,10 @@ class MiniMaxClient:
         self._model = model or os.environ.get("MINIMAX_MODEL") or self.DEFAULT_MODEL
 
     @property
+    def model(self) -> str:
+        return self._model
+
+    @property
     def api_key(self) -> str:
         if self._api_key is None:
             key_path = Path.home() / ".minimax_key"
@@ -157,6 +161,10 @@ class OllamaClient:
         self._url = base_url or os.environ.get("OLLAMA_URL", self.DEFAULT_URL)
         self._model = model or os.environ.get("OLLAMA_MODEL", self.DEFAULT_MODEL)
 
+    @property
+    def model(self) -> str:
+        return self._model
+
     def chat(
         self,
         messages: list[dict],
@@ -214,8 +222,7 @@ def supported_backends() -> Iterable[str]:
     return tuple(_BACKENDS.keys())
 
 
-def get_llm_client(backend: str | None = None) -> LLMClient:
-    """Factory: select backend via arg or ``LLM_BACKEND`` env (default minimax)."""
+def _resolve_backend_choice(backend: str | None = None) -> tuple[str, type]:
     chosen = (backend or os.environ.get("LLM_BACKEND") or "minimax").lower()
     cls = _BACKENDS.get(chosen)
     if cls is None:
@@ -223,4 +230,21 @@ def get_llm_client(backend: str | None = None) -> LLMClient:
             "llm_backend_unknown",
             f"Unknown LLM_BACKEND={chosen!r}. Supported: {', '.join(_BACKENDS)}.",
         )
+    return chosen, cls
+
+
+def get_llm_backend_metadata(backend: str | None = None) -> dict[str, str]:
+    """Return the selected backend + model without performing any network I/O."""
+    chosen, cls = _resolve_backend_choice(backend)
+    client = cls()
+    model = getattr(client, "model", "")
+    return {
+        "backend": chosen,
+        "model": str(model),
+    }
+
+
+def get_llm_client(backend: str | None = None) -> LLMClient:
+    """Factory: select backend via arg or ``LLM_BACKEND`` env (default minimax)."""
+    _, cls = _resolve_backend_choice(backend)
     return cls()

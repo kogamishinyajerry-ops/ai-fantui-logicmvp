@@ -8,6 +8,18 @@ version = "0.1.0"
 description = "Simulation harness for thrust reverser deploy control logic"
 readme = "README.md"
 requires-python = ">=3.9"
+# Runtime stays stdlib-only — demo_server.py imports no third-party packages.
+# Third-party deps land in [project.optional-dependencies] groups below so
+# they can be installed explicitly for test/tooling lanes.
+
+[project.optional-dependencies]
+# Install with: pip install -e '.[dev]'
+# Covers the pytest default lane + the schema-validation scripts under tools/.
+dev = [
+    "pytest>=9.0",
+    "pytest-subtests>=0.14",
+    "jsonschema>=4.17",
+]
 
 [tool.setuptools.package-dir]
 "" = "src"

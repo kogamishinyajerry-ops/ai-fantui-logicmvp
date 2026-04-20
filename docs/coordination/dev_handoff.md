@@ -3,13 +3,13 @@
 <!-- AUTO-SYNCED DEV HANDOFF SNAPSHOT START -->
 ## 当前自动同步交接基线
 
-- 活动 phase：`未识别活动 phase`
-- 当前已验证 Plan：`P17-NLC-A`
-- 最近成功执行证据：`P17-NLC-A A-04+A-05 complete`
-- 当前证据模式：`active-page degraded mode`
-- 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
-- 当前 QA 摘要：`PASS. 23/23 shared validation checks pass.`
-- 当前运行摘要：`Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: 23/23 shared validation checks pass.`
+- 活动 phase：`P30 Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2`
+- 当前已验证 Plan：`P30-00-TIER1 Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2 维度`
+- 最近成功执行证据：`P30 explain runtime + prewarm visibility sync`
+- 当前证据模式：`repo-doc fallback mode`
+- 证据模式说明：共享 Notion 数据库与活跃控制面页面当前不可达；当前快照由 repo freeze packet 与 handoff docs 恢复。
+- 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
+- 当前运行摘要：`Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
 - 当前 demo / freeze 基线已经稳定；当前主线已切到 P7 spec-driven workbench。
 - 当前优先级是让 engineer-facing onboarding / playback / diagnosis / knowledge 工具形成连续工作流，而不是继续扩 demo 表面。
 
@@ -28,14 +28,14 @@
 ## 恢复工作时先看
 
 1. [AI FANTUI LogicMVP 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
-2. [01 当前状态（自动同步）](https://www.notion.so/341c6894-2bed-810d-b7e6-e5d264bcfe61)
-3. [09C 当前 Opus 4.6 审查简报](https://www.notion.so/345c6894-2bed-8130-a674-db25b358a298)
+2. [01 当前状态（自动同步）](https://www.notion.so/346c6894-2bed-81cf-afd0-d060768d56d7)
+3. [09C 当前 Opus 4.6 审查简报](https://www.notion.so/346c6894-2bed-81cb-9a11-fb66c1d2e723)
 4. [10 Freeze Demo Packet](https://www.notion.so/341c6894-2bed-8104-9ab1-f133d6da80f4)
 5. [GitHub Actions / GSD Automation Loop](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 
 ## 当前交接结论
 
-- Opus 状态：`失败阻塞分流审查`
+- Opus 状态：`当前无需 Opus 审查`
 - 当前交接重点是保持 workbench bundle / playback / diagnosis / knowledge 链路可复用，不是回到零散单命令操作。
 - 下方旧 Round 记录保留为历史上下文，不再当成当前执行指令。
 <!-- AUTO-SYNCED DEV HANDOFF SNAPSHOT END -->

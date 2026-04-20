@@ -1,5 +1,7 @@
 # Demo Talking Points — AI FANTUI LogicMVP
 
+> Historical P19 talking-points draft. Superseded by `docs/demo/pitch_script.md` and related P22 demo materials. Keep only for archive/reference.
+
 **用途**: 汇报人在演示过程中的提示卡
 **版本**: P19 Sprint Final (2026-04-17)
 

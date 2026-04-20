@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import argparse
+from collections import OrderedDict
+import copy
 from dataclasses import replace
+from datetime import datetime, timezone
 from functools import lru_cache
+import hashlib
 import json
 import math
 import re
+from threading import Lock
 from typing import Any
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -19,7 +24,7 @@ from well_harness.controller_adapter import build_reference_controller_adapter
 from well_harness.adapters.landing_gear_adapter import build_landing_gear_controller_adapter
 from well_harness.adapters.bleed_air_adapter import build_bleed_air_controller_adapter
 from well_harness.adapters.efds_adapter import build_efds_controller_adapter
-from well_harness.llm_client import LLMClientError, get_llm_client
+from well_harness.llm_client import LLMClientError, get_llm_backend_metadata, get_llm_client
 from well_harness.document_intake import (
     apply_safe_schema_repairs,
     assess_intake_packet,
@@ -52,6 +57,8 @@ from well_harness.ai_doc_analyzer import (
 STATIC_DIR = Path(__file__).with_name("static")
 REFERENCE_PACKET_DIR = Path(__file__).with_name("reference_packets")
 REFERENCE_PACKET_PATH = REFERENCE_PACKET_DIR / "custom_reverse_control_v1.json"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+RUNS_DIR = REPO_ROOT / "runs"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
 CONTENT_TYPES = {
@@ -96,6 +103,7 @@ P15_CONVERT_PATH = "/api/p15/convert-to-intake"
 P15_RUN_PIPELINE_PATH = "/api/p15/run-pipeline"
 # Chat AI explain + operate routes (MiniMax LLM integration)
 CHAT_EXPLAIN_PATH = "/api/chat/explain"
+CHAT_EXPLAIN_PREWARM_PATH = "/api/chat/explain-prewarm"
 CHAT_OPERATE_PATH = "/api/chat/operate"
 CHAT_REASON_PATH = "/api/chat/reason"
 # Reverse diagnosis API (P19.6)
@@ -263,6 +271,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             P15_CONVERT_PATH,
             P15_RUN_PIPELINE_PATH,
             CHAT_EXPLAIN_PATH,
+            CHAT_EXPLAIN_PREWARM_PATH,
             CHAT_OPERATE_PATH,
             CHAT_REASON_PATH,
             DIAGNOSIS_RUN_PATH,
@@ -379,6 +388,13 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         # Chat AI explain handler (MiniMax LLM)
         if parsed.path == CHAT_EXPLAIN_PATH:
             response_payload, error_payload = _handle_chat_explain(request_payload)
+            if error_payload is not None:
+                self._send_json(400, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+        if parsed.path == CHAT_EXPLAIN_PREWARM_PATH:
+            response_payload, error_payload = _handle_chat_explain_prewarm(request_payload)
             if error_payload is not None:
                 self._send_json(400, error_payload)
                 return
@@ -586,6 +602,10 @@ _MAX_DOCUMENT_BYTES = 10 * 1024 * 1024  # 10 MB production limit
 
 
 _MINIMAX_API_KEY: str | None = None
+CHAT_EXPLAIN_CACHE_MAX_ENTRIES = 48
+CHAT_EXPLAIN_PREWARM_MAX_REQUESTS = 12
+_chat_explain_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
+_chat_explain_cache_lock = Lock()
 
 
 def _get_minimax_api_key() -> str:
@@ -597,6 +617,87 @@ def _get_minimax_api_key() -> str:
         else:
             _MINIMAX_API_KEY = ""
     return _MINIMAX_API_KEY
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _canonical_json(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
+
+
+def _normalize_explain_question(question: str) -> str:
+    return re.sub(r"\s+", " ", str(question).strip()).lower()
+
+
+def _build_chat_explain_cache_key(
+    *,
+    question: str,
+    system_id: str,
+    snapshot: dict[str, Any],
+    demo_answer: dict[str, Any],
+    node_states: dict[str, Any],
+    backend_meta: dict[str, str],
+) -> str:
+    key_payload = {
+        "backend": backend_meta.get("backend", ""),
+        "model": backend_meta.get("model", ""),
+        "system_id": system_id,
+        "question": _normalize_explain_question(question),
+        "truth_context": {
+            "node_states": node_states,
+            "snapshot_nodes": snapshot.get("nodes", []),
+            "snapshot_logic": snapshot.get("logic", {}),
+            "snapshot_outputs": snapshot.get("outputs", {}),
+            "demo_answer": demo_answer,
+        },
+    }
+    return hashlib.sha256(_canonical_json(key_payload).encode("utf-8")).hexdigest()[:24]
+
+
+def _clear_chat_explain_cache() -> None:
+    with _chat_explain_cache_lock:
+        _chat_explain_cache.clear()
+
+
+def _get_cached_chat_explain_payload(cache_key: str) -> dict[str, Any] | None:
+    with _chat_explain_cache_lock:
+        cached_payload = _chat_explain_cache.get(cache_key)
+        if cached_payload is None:
+            return None
+        _chat_explain_cache.move_to_end(cache_key)
+        return copy.deepcopy(cached_payload)
+
+
+def _store_cached_chat_explain_payload(cache_key: str, payload: dict[str, Any]) -> None:
+    with _chat_explain_cache_lock:
+        _chat_explain_cache[cache_key] = copy.deepcopy(payload)
+        _chat_explain_cache.move_to_end(cache_key)
+        while len(_chat_explain_cache) > CHAT_EXPLAIN_CACHE_MAX_ENTRIES:
+            _chat_explain_cache.popitem(last=False)
+
+
+def _materialize_chat_explain_response(payload: dict[str, Any], response_source: str) -> dict[str, Any]:
+    response_payload = copy.deepcopy(payload)
+    response_payload["response_source"] = response_source
+    return response_payload
+
+
+def _sanitize_chat_explain_node_list(values: Any) -> list[str]:
+    if not isinstance(values, list):
+        return []
+    return [str(node_id).strip() for node_id in values if str(node_id).strip()]
+
+
+def _chat_explain_has_truth_context(
+    snapshot: dict[str, Any], demo_answer: dict[str, Any], node_states: dict[str, Any]
+) -> bool:
+    if node_states:
+        return True
+    if demo_answer:
+        return True
+    return any(bool(snapshot.get(field_name)) for field_name in ("nodes", "logic", "outputs"))
 
 
 def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | None]:
@@ -704,6 +805,28 @@ def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | Non
         "efds": "EFDS（干扰弹系统）",
     }
     system_label = system_labels.get(system_id, system_id)
+    try:
+        backend_meta = get_llm_backend_metadata()
+    except LLMClientError as exc:
+        return None, {"error": exc.code, "message": exc.message}
+    cache_key = ""
+    cache_enabled = _chat_explain_has_truth_context(
+        snapshot,
+        demo_answer if isinstance(demo_answer, dict) else {},
+        node_states,
+    )
+    if cache_enabled:
+        cache_key = _build_chat_explain_cache_key(
+            question=question,
+            system_id=system_id,
+            snapshot=snapshot,
+            demo_answer=demo_answer if isinstance(demo_answer, dict) else {},
+            node_states=node_states,
+            backend_meta=backend_meta,
+        )
+        cached_payload = _get_cached_chat_explain_payload(cache_key)
+        if cached_payload is not None:
+            return _materialize_chat_explain_response(cached_payload, "cached_llm"), None
 
     # Build system prompt for MiniMax
     system_prompt = f"""你是控制逻辑分析助手。用户正在使用一个确定性控制逻辑推理引擎来诊断 {system_label} 的状态。
@@ -791,11 +914,92 @@ def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | Non
     if not math.isfinite(confidence):
         confidence = 0.5
 
-    return {
+    cache_created_at = _utc_now_iso() if cache_enabled else ""
+    response_payload = {
         "explanation": str(explanation).strip(),
-        "highlighted_nodes": [str(node_id).strip() for node_id in highlighted_nodes if str(node_id).strip()],
-        "suggestion_nodes": [str(node_id).strip() for node_id in suggestion_nodes if str(node_id).strip()],
+        "highlighted_nodes": _sanitize_chat_explain_node_list(highlighted_nodes),
+        "suggestion_nodes": _sanitize_chat_explain_node_list(suggestion_nodes),
         "confidence": confidence,
+        "cache_key": cache_key,
+        "cached_at": cache_created_at,
+        "llm_backend": backend_meta.get("backend", ""),
+        "llm_model": backend_meta.get("model", ""),
+    }
+    if cache_enabled:
+        _store_cached_chat_explain_payload(cache_key, response_payload)
+    return _materialize_chat_explain_response(response_payload, "live_llm"), None
+
+
+def _handle_chat_explain_prewarm(request_payload: dict) -> tuple[dict | None, dict | None]:
+    requests = request_payload.get("requests")
+    if not isinstance(requests, list) or not requests:
+        return None, {
+            "error": "missing_requests",
+            "message": "requests must be a non-empty list of chat/explain payloads.",
+        }
+    if len(requests) > CHAT_EXPLAIN_PREWARM_MAX_REQUESTS:
+        return None, {
+            "error": "too_many_requests",
+            "message": f"requests exceeds maximum of {CHAT_EXPLAIN_PREWARM_MAX_REQUESTS} items.",
+        }
+
+    results: list[dict[str, Any]] = []
+    errors: list[dict[str, Any]] = []
+    cache_hits = 0
+    cache_misses = 0
+
+    for index, raw_request in enumerate(requests):
+        if not isinstance(raw_request, dict):
+            errors.append(
+                {
+                    "index": index,
+                    "error": "invalid_request",
+                    "message": "each requests item must be a JSON object.",
+                }
+            )
+            continue
+        snapshot = raw_request.get("lever_snapshot") or {}
+        demo_answer = raw_request.get("demo_answer") or {}
+        node_states = raw_request.get("node_states") if isinstance(raw_request.get("node_states"), dict) else {}
+        if not _chat_explain_has_truth_context(snapshot, demo_answer, node_states):
+            errors.append(
+                {
+                    "index": index,
+                    "error": "missing_truth_context",
+                    "message": "prewarm requests must include node_states, lever_snapshot, or demo_answer context.",
+                }
+            )
+            continue
+        response_payload, error_payload = _handle_chat_explain(raw_request)
+        if error_payload is not None:
+            errors.append({"index": index, **error_payload})
+            continue
+        assert response_payload is not None
+        response_source = str(response_payload.get("response_source", "live_llm"))
+        if response_source == "cached_llm":
+            cache_hits += 1
+        else:
+            cache_misses += 1
+        results.append(
+            {
+                "index": index,
+                "question": str(raw_request.get("question", "")),
+                "system_id": str(raw_request.get("system_id", "thrust-reverser")),
+                "response_source": response_source,
+                "cache_key": str(response_payload.get("cache_key", "")),
+                "cached_at": str(response_payload.get("cached_at", "")),
+                "llm_backend": str(response_payload.get("llm_backend", "")),
+                "llm_model": str(response_payload.get("llm_model", "")),
+            }
+        )
+
+    return {
+        "requested_count": len(requests),
+        "warmed_count": len(results),
+        "cache_hits": cache_hits,
+        "cache_misses": cache_misses,
+        "results": results,
+        "errors": errors,
     }, None
 
 
@@ -1933,6 +2137,113 @@ def reference_workbench_packet_payload() -> dict:
     return json.loads(REFERENCE_PACKET_PATH.read_text(encoding="utf-8"))
 
 
+def _latest_run_dir(prefix: str, runs_dir: Path | None = None) -> Path | None:
+    root = runs_dir or RUNS_DIR
+    if not root.exists():
+        return None
+    candidates = sorted(
+        (path for path in root.iterdir() if path.is_dir() and path.name.startswith(prefix)),
+        key=lambda path: path.name,
+        reverse=True,
+    )
+    return candidates[0] if candidates else None
+
+
+def _parse_run_timestamp(dirname: str) -> str:
+    match = re.search(r"(\d{8}T\d{6}Z)$", dirname)
+    return match.group(1) if match else ""
+
+
+def build_explain_runtime_payload() -> dict[str, Any]:
+    try:
+        backend_meta = get_llm_backend_metadata()
+    except LLMClientError as exc:
+        backend_meta = {
+            "backend": "",
+            "model": "",
+            "detail": exc.message,
+        }
+
+    payload: dict[str, Any] = {
+        "status": "idle",
+        "status_source": "runtime_config",
+        "llm_backend": str(backend_meta.get("backend", "") or ""),
+        "llm_model": str(backend_meta.get("model", "") or ""),
+        "response_source": "unknown",
+        "cached_at": "",
+        "observed_at_utc": "",
+        "verified_cache_hits": 0,
+        "expected_count": 0,
+        "backend_match": None,
+        "requested_backend": "",
+        "requested_model": "",
+        "detail": str(backend_meta.get("detail", "") or "尚未观察到 pitch explain 预热结果。"),
+        "boundary_note": "这是 explain runtime / pitch 运维状态，不是新的控制真值。",
+    }
+
+    latest_dir = _latest_run_dir("pitch_prewarm_")
+    if latest_dir is None:
+        return payload
+
+    report_path = latest_dir / "report.json"
+    if not report_path.is_file():
+        return payload
+
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        payload["status"] = "warning"
+        payload["status_source"] = "pitch_prewarm"
+        payload["detail"] = f"无法读取 {report_path.name}。"
+        payload["observed_at_utc"] = _parse_run_timestamp(latest_dir.name)
+        return payload
+
+    summary = report.get("summary") if isinstance(report.get("summary"), dict) else {}
+    rounds = report.get("rounds") if isinstance(report.get("rounds"), list) else []
+    verify_round = rounds[-1] if rounds else {}
+    results = verify_round.get("results") if isinstance(verify_round, dict) and isinstance(verify_round.get("results"), list) else []
+    first_result = next((item for item in results if isinstance(item, dict)), {})
+    verdict = str(report.get("verdict") or summary.get("verdict") or "").upper()
+    hits = int(summary.get("verified_cache_hits", 0) or 0)
+    expected = int(summary.get("expected_count", 0) or 0)
+    actual_backend = str(summary.get("llm_backend") or payload["llm_backend"] or "")
+    actual_model = str(summary.get("llm_model") or payload["llm_model"] or "")
+    requested_backend = str(summary.get("requested_backend") or "")
+    requested_model = str(summary.get("requested_model") or "")
+    backend_match = summary.get("backend_match")
+    cached_at = str(first_result.get("cached_at", "") or "")
+    response_source = str(first_result.get("response_source", "") or "")
+    observed_at = str(report.get("generated_at") or _parse_run_timestamp(latest_dir.name) or "")
+
+    payload.update(
+        {
+            "status": "ready" if verdict in ("GREEN", "PASS") else "warning",
+            "status_source": "pitch_prewarm",
+            "llm_backend": actual_backend,
+            "llm_model": actual_model,
+            "response_source": response_source or ("cached_llm" if hits > 0 else "unknown"),
+            "cached_at": cached_at,
+            "observed_at_utc": observed_at,
+            "verified_cache_hits": hits,
+            "expected_count": expected,
+            "backend_match": backend_match,
+            "requested_backend": requested_backend,
+            "requested_model": requested_model,
+        }
+    )
+
+    if backend_match is False:
+        payload["detail"] = (
+            f"请求 {requested_backend or 'unknown'} / {requested_model or 'auto'}，"
+            f"但最近预热实际命中 {actual_backend or 'unknown'} / {actual_model or 'unknown'}。"
+        )
+    elif expected > 0:
+        payload["detail"] = f"最近预热验证缓存命中 {hits}/{expected}。"
+    else:
+        payload["detail"] = "最近 pitch prewarm 未产生命中统计。"
+    return payload
+
+
 def recent_workbench_archive_summaries(*, limit: int = 6) -> list[dict]:
     archive_root = default_workbench_archive_root()
     if not archive_root.is_dir():
@@ -1984,6 +2295,7 @@ def workbench_bootstrap_payload() -> dict:
         "reference_packet": reference_workbench_packet_payload(),
         "default_archive_root": str(default_workbench_archive_root()),
         "recent_archives": recent_workbench_archive_summaries(),
+        "explain_runtime": build_explain_runtime_payload(),
     }
 
 
@@ -2335,6 +2647,7 @@ def build_workbench_bundle_response(request_payload: dict) -> tuple[dict | None,
         "archive": archive.to_dict() if archive is not None else None,
         "archive_bundle": archive_bundle,
         "default_archive_root": str(default_workbench_archive_root()),
+        "explain_runtime": build_explain_runtime_payload(),
     }, None
 
 

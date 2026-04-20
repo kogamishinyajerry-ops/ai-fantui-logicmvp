@@ -3,16 +3,16 @@
 <!-- AUTO-SYNCED COORDINATION PLAN SNAPSHOT START -->
 ## 当前自动同步快照
 
-- 当前阶段：`未识别活动 phase`
-- 当前已验证 Plan：`P17-NLC-A`
-- 最近成功执行证据：`P17-NLC-A A-04+A-05 complete`
+- 当前阶段：`P30 Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2`
+- 当前已验证 Plan：`P30-00-TIER1 Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2 维度`
+- 最近成功执行证据：`P30 explain runtime + prewarm visibility sync`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
-- 当前 Opus 状态：`失败阻塞分流审查`
-- 当前证据模式：`active-page degraded mode`
-- 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
-- 当前 QA 摘要：`PASS. 23/23 shared validation checks pass.`
+- 当前 Opus 状态：`当前无需 Opus 审查`
+- 当前证据模式：`repo-doc fallback mode`
+- 证据模式说明：共享 Notion 数据库与活跃控制面页面当前不可达；当前快照由 repo freeze packet 与 handoff docs 恢复。
+- 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
 - 当前结论：当前最高优先级是把 spec-driven workbench 收成统一 engineer-facing workflow，而不是继续做 P6 控制面清理或新增 demo 表面。
-- 当前唯一人工动作：按 09C 当前审查简报手动触发 Opus 4.6。
+- 当前唯一人工动作：继续自动开发；当前无需手动触发 Opus 4.6。
 
 ## 当前开发架构与执行规则
 
@@ -38,8 +38,8 @@
 ## 当前证据入口
 
 - [Notion 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
-- [01 当前状态（自动同步）](https://www.notion.so/341c6894-2bed-810d-b7e6-e5d264bcfe61)
-- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/345c6894-2bed-8130-a674-db25b358a298)
+- [01 当前状态（自动同步）](https://www.notion.so/346c6894-2bed-81cf-afd0-d060768d56d7)
+- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/346c6894-2bed-81cb-9a11-fb66c1d2e723)
 - [10 Freeze Demo Packet](https://www.notion.so/341c6894-2bed-8104-9ab1-f133d6da80f4)
 - [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)
 - [GitHub Actions](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)

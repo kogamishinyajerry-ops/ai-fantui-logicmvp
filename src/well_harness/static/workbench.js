@@ -2391,6 +2391,7 @@ function renderFailureResponse(message, {
     error: "workbench_bundle_failed",
     message: normalizedMessage,
   });
+  renderExplainRuntime({});
   renderFailureBoard(normalizedMessage);
   if (pushHistory) {
     pushWorkbenchRunHistory(buildWorkbenchHistoryEntryFromFailure(normalizedMessage));
@@ -2664,6 +2665,162 @@ function renderBulletList(containerId, items, fallbackText) {
       return li;
     }),
   );
+}
+
+function readExplainRuntimePayload(payload) {
+  const runtime = payload
+    && typeof payload === "object"
+    && payload.explain_runtime
+    && typeof payload.explain_runtime === "object"
+    && !Array.isArray(payload.explain_runtime)
+    ? payload.explain_runtime
+    : null;
+  if (!runtime) {
+    return {
+      reported: false,
+      status: "",
+      statusSource: "",
+      backend: "",
+      model: "",
+      source: "",
+      cachedAt: "",
+      observedAt: "",
+      cacheHits: null,
+      expectedCount: null,
+      backendMatch: null,
+      requestedBackend: "",
+      requestedModel: "",
+      detail: "",
+      boundaryNote: "",
+    };
+  }
+  const toTrimmedString = (value) => (typeof value === "string" ? value.trim() : "");
+  const toNonNegativeInt = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? Math.floor(parsed) : null;
+  };
+  return {
+    reported: true,
+    status: toTrimmedString(runtime.status),
+    statusSource: toTrimmedString(runtime.status_source),
+    backend: toTrimmedString(runtime.llm_backend),
+    model: toTrimmedString(runtime.llm_model),
+    source: toTrimmedString(runtime.response_source || runtime.last_response_source),
+    cachedAt: toTrimmedString(runtime.cached_at),
+    observedAt: toTrimmedString(runtime.observed_at_utc),
+    cacheHits: toNonNegativeInt(runtime.verified_cache_hits ?? runtime.cache_hits),
+    expectedCount: toNonNegativeInt(runtime.expected_count),
+    backendMatch: runtime.backend_match === true ? true : (runtime.backend_match === false ? false : null),
+    requestedBackend: toTrimmedString(runtime.requested_backend),
+    requestedModel: toTrimmedString(runtime.requested_model),
+    detail: toTrimmedString(runtime.detail),
+    boundaryNote: toTrimmedString(runtime.boundary_note),
+  };
+}
+
+function explainRuntimeSourceLabel(source) {
+  if (source === "cached_llm") return "缓存命中";
+  if (source === "live_llm") return "实时 LLM";
+  if (source === "error") return "运行错误";
+  return "未观察";
+}
+
+function explainRuntimeBadgeState(runtime) {
+  if (!runtime.reported) return "idle";
+  if (runtime.backendMatch === false || runtime.status === "warning") return "blocked";
+  if (runtime.source === "cached_llm") return "ready";
+  if (runtime.source === "error") return "blocked";
+  if (runtime.source === "live_llm") return "live";
+  return "idle";
+}
+
+function explainRuntimeBadgeText(runtime) {
+  if (!runtime.reported) return "未报告";
+  if (runtime.backendMatch === false) return "后端不一致";
+  if (runtime.status === "ready" && runtime.source === "cached_llm") return "缓存已验证";
+  if (runtime.source === "live_llm") return "实时 explain";
+  if (runtime.status === "warning") return "需要关注";
+  return "待命";
+}
+
+function renderExplainRuntime(payload) {
+  const badge = workbenchElement("workbench-explain-runtime-badge");
+  const summary = workbenchElement("workbench-explain-runtime-summary");
+  const backendStrong = workbenchElement("workbench-explain-runtime-backend");
+  const backendDetail = workbenchElement("workbench-explain-runtime-backend-detail");
+  const sourceStrong = workbenchElement("workbench-explain-runtime-source");
+  const sourceDetail = workbenchElement("workbench-explain-runtime-source-detail");
+  const cacheStrong = workbenchElement("workbench-explain-runtime-cache");
+  const cacheDetail = workbenchElement("workbench-explain-runtime-cache-detail");
+  const boundaryStrong = workbenchElement("workbench-explain-runtime-boundary");
+  if (!badge || !summary || !backendStrong || !sourceStrong || !cacheStrong || !boundaryStrong) {
+    return;
+  }
+
+  const runtime = readExplainRuntimePayload(payload);
+  badge.dataset.state = explainRuntimeBadgeState(runtime);
+  badge.textContent = explainRuntimeBadgeText(runtime);
+  if (!runtime.reported) {
+    summary.textContent = "当前 workbench 响应还没带 explain runtime 观察值，所以这里只保留占位。";
+  } else if (runtime.observedAt) {
+    summary.textContent = `${runtime.detail || "已收到 explain runtime 观察值。"} 最近观测时间：${runtime.observedAt}。`;
+  } else {
+    summary.textContent = runtime.detail || "已收到 explain runtime 观察值。";
+  }
+
+  if (runtime.backend || runtime.model) {
+    const backendText = runtime.backend || "(未知 backend)";
+    const modelText = runtime.model || "(未知 model)";
+    backendStrong.textContent = `${backendText} · ${modelText}`;
+    if (runtime.backendMatch === false) {
+      const requestedBackendText = runtime.requestedBackend || "(未声明 backend)";
+      const requestedModelText = runtime.requestedModel || "(auto)";
+      backendDetail.textContent = `最近 pitch_prewarm 请求的是 ${requestedBackendText} · ${requestedModelText}，但当前观察到的运行后端不是这套，需要先纠正 demo_server。`;
+    } else if (runtime.observedAt) {
+      backendDetail.textContent = `这是最近一次 explain runtime 观测到的后端组合。观测时间：${runtime.observedAt}。`;
+    } else {
+      backendDetail.textContent = "这是当前 demo_server 暴露出来的 explain 后端组合；它只是操作者运行观察值，不改变任何控制真值。";
+    }
+  } else {
+    backendStrong.textContent = "未报告";
+    backendDetail.textContent = "后端暂未在 bootstrap / bundle 响应中提供 explain_runtime.llm_backend / llm_model，前端保留占位。";
+  }
+
+  sourceStrong.textContent = explainRuntimeSourceLabel(runtime.source);
+  if (runtime.backendMatch === false) {
+    sourceDetail.textContent = "虽然最近预热流程有结果，但它对应的 backend / model 和当前期望不一致，所以这里会明确提醒，不把它误当成安全可用的缓存状态。";
+  } else if (runtime.source === "cached_llm") {
+    sourceDetail.textContent = "最近一次 explain 命中了预热缓存，说明 prewarm 生效；重启 demo_server 后需重新预热。";
+  } else if (runtime.source === "live_llm") {
+    sourceDetail.textContent = "最近一次 explain 走了实时 LLM（缓存未命中或未启用），请关注首次响应时延。";
+  } else if (runtime.source === "error") {
+    sourceDetail.textContent = "最近一次 explain 报错，详情请看 dev 抽屉 raw payload 或 server 日志。";
+  } else {
+    sourceDetail.textContent = "本轮还没观察到 explain 调用；一旦用户在 chat / demo 舱发起一次 explain，这里就会亮起。";
+  }
+
+  if (runtime.cachedAt) {
+    const hitsPart = runtime.cacheHits !== null ? ` · 验证命中 ${runtime.cacheHits}` : "";
+    const expectedPart = runtime.expectedCount !== null ? `/${runtime.expectedCount}` : "";
+    cacheStrong.textContent = runtime.cachedAt;
+    cacheDetail.textContent = `cached_at 上报为 ${runtime.cachedAt}${hitsPart}${expectedPart}。explain 缓存只在 demo_server 进程内有效，重启或换 backend 都会清空，需要重新预热。`;
+  } else if (runtime.cacheHits !== null || runtime.expectedCount !== null) {
+    const parts = [];
+    if (runtime.cacheHits !== null && runtime.expectedCount !== null) {
+      parts.push(`验证命中 ${runtime.cacheHits}/${runtime.expectedCount}`);
+    } else if (runtime.cacheHits !== null) {
+      parts.push(`验证命中 ${runtime.cacheHits}`);
+    } else if (runtime.expectedCount !== null) {
+      parts.push(`预期 ${runtime.expectedCount}`);
+    }
+    cacheStrong.textContent = parts.join(" / ") || "待命";
+    cacheDetail.textContent = "尚未看到 cached_at 时间戳，但最近 pitch_prewarm 已经回传了命中统计；仍可用来判断缓存是否在服务。";
+  } else {
+    cacheStrong.textContent = "待命";
+    cacheDetail.textContent = "尚未看到 cached_at。若刚刚跑过 prewarm，请核对 demo_server 输出；否则这里会保持“待命”直到首次 explain 观察上报。";
+  }
+
+  boundaryStrong.textContent = runtime.boundaryNote || "runtime status only";
 }
 
 function renderArchiveSummary(archive) {
@@ -2971,6 +3128,7 @@ function renderBundleResponse(payload, {
     upsertRecentWorkbenchArchiveEntry(buildRecentWorkbenchArchiveEntryFromBundlePayload(payload));
   }
   renderArchiveSummary(payload.archive);
+  renderExplainRuntime(payload);
   workbenchElement("bundle-json-output").textContent = prettyJson(payload);
   setResultMode(sourceMode);
   setRequestStatus(
@@ -3059,6 +3217,7 @@ async function loadBootstrapPayload() {
     throw new Error(payload.error || "bootstrap request failed");
   }
   bootstrapPayload = payload;
+  renderExplainRuntime(payload);
   workbenchRecentArchives = normalizeRecentWorkbenchArchiveEntries(payload.recent_archives);
   renderRecentWorkbenchArchives();
   workbenchElement("default-archive-root").textContent = payload.default_archive_root || "(unknown)";

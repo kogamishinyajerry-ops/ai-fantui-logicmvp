@@ -22,10 +22,15 @@
   var truthEvalSummary = document.getElementById('truth-eval-summary');
   var truthEvalActive = document.getElementById('truth-eval-active');
   var truthEvalBlockers = document.getElementById('truth-eval-blockers');
+  var explainStatusSource = document.getElementById('explain-status-source');
+  var explainStatusBackend = document.getElementById('explain-status-backend');
+  var explainStatusCache = document.getElementById('explain-status-cache');
+  var explainStatusUpdated = document.getElementById('explain-status-updated');
   var DEFAULT_INPUT_PLACEHOLDER = '输入你的控制逻辑问题...';
   var DEFAULT_SEND_TEXT = '发送';
   var LOADING_SEND_TEXT = 'AI 思考中...';
   var lastTruthPayloadBySystem = {};
+  var lastExplainStatusBySystem = {};
   var _chatRequestSeq = 0;
   var nodeRefHighlightTimer = null;
   var logicDiagram = document.getElementById('logic-diagram');
@@ -494,16 +499,21 @@ function _applySuggestedOverrides(overrides) {
     var roleMeta = getMessageRoleMeta(role);
     var highlightedNodes = [];
     var suggestionNodes = [];
+    var footnoteText = '';
     var msg = document.createElement('article');
     var avatarEl = document.createElement('div');
     var contentEl = document.createElement('div');
     var bodyEl = document.createElement('p');
+    var footnoteEl;
 
     if (Array.isArray(highlight)) {
       highlightedNodes = normalizeNodeList(highlight);
     } else if (highlight) {
       highlightedNodes = normalizeNodeList(highlight.highlightedNodes);
       suggestionNodes = normalizeNodeList(highlight.suggestionNodes);
+      if (typeof highlight.footnote === 'string') {
+        footnoteText = highlight.footnote.trim();
+      }
     }
 
     msg.className = 'chat-message ' + roleMeta.legacyClass + ' ' + roleMeta.roleClass;
@@ -520,6 +530,12 @@ function _applySuggestedOverrides(overrides) {
     bodyEl.setAttribute('data-raw-text', text);
     bodyEl.innerHTML = renderMessageMarkup(text, roleMeta.roleClass);
     contentEl.appendChild(bodyEl);
+    if (footnoteText) {
+      footnoteEl = document.createElement('div');
+      footnoteEl.className = 'chat-message-footnote';
+      footnoteEl.textContent = footnoteText;
+      contentEl.appendChild(footnoteEl);
+    }
     msg.appendChild(avatarEl);
     msg.appendChild(contentEl);
     chatMessages.appendChild(msg);
@@ -627,6 +643,171 @@ function _applySuggestedOverrides(overrides) {
     truthEvalBadge.className = 'truth-eval-badge';
     truthEvalBadge.classList.add('is-' + mode);
     truthEvalBadge.textContent = text;
+  }
+
+  function formatExplainTimestamp(rawValue) {
+    var date;
+
+    if (!rawValue) {
+      return '';
+    }
+
+    date = new Date(rawValue);
+    if (isNaN(date.getTime())) {
+      return String(rawValue);
+    }
+
+    return date.toLocaleString('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  function shortenExplainStatusValue(value, maxLength) {
+    var text = String(value || '');
+
+    if (!text || text.length <= maxLength) {
+      return text;
+    }
+
+    return text.slice(0, Math.max(0, maxLength - 1)) + '…';
+  }
+
+  function setExplainStatusPill(element, text, mode, title) {
+    if (!element) {
+      return;
+    }
+
+    element.className = 'explain-status-pill';
+    if (mode) {
+      element.classList.add('is-' + mode);
+    }
+    element.textContent = text;
+    if (title) {
+      element.title = title;
+    } else {
+      element.removeAttribute('title');
+    }
+  }
+
+  function renderExplainStatusPanel() {
+    var state = lastExplainStatusBySystem[currentSystem];
+    var backendParts;
+    var backendTitle;
+    var cacheLabel;
+    var cacheMode;
+    var cacheTitle;
+    var noteText;
+
+    if (!state) {
+      setExplainStatusPill(explainStatusSource, '解释：待命', 'idle');
+      setExplainStatusPill(explainStatusBackend, '后端：—', 'muted');
+      setExplainStatusPill(explainStatusCache, '缓存：未观察', 'muted');
+      if (explainStatusUpdated) {
+        explainStatusUpdated.textContent =
+          '发送 explain 问题后，这里会显示实时 LLM、预热缓存和 backend/model。';
+      }
+      return;
+    }
+
+    if (state.error) {
+      setExplainStatusPill(explainStatusSource, '解释：失败', 'error', state.error);
+    } else if (state.source === 'cached_llm') {
+      setExplainStatusPill(explainStatusSource, '解释：缓存命中', 'cached');
+    } else if (state.source === 'live_llm') {
+      setExplainStatusPill(explainStatusSource, '解释：实时生成', 'live');
+    } else {
+      setExplainStatusPill(explainStatusSource, '解释：已更新', 'info');
+    }
+
+    backendParts = [];
+    if (state.backend) {
+      backendParts.push(state.backend);
+    }
+    if (state.model) {
+      backendParts.push(state.model);
+    }
+    backendTitle = backendParts.join(' / ');
+    setExplainStatusPill(
+      explainStatusBackend,
+      backendTitle ? '后端：' + shortenExplainStatusValue(backendTitle, 32) : '后端：未报告',
+      backendTitle ? 'info' : 'muted',
+      backendTitle || ''
+    );
+
+    cacheLabel = '缓存：未启用';
+    cacheMode = 'muted';
+    cacheTitle = '';
+    if (state.source === 'cached_llm') {
+      cacheLabel = '缓存：命中';
+      cacheMode = 'cached';
+      if (state.cacheKey) {
+        cacheLabel += ' · ' + shortenExplainStatusValue(state.cacheKey, 12);
+        cacheTitle = state.cacheKey;
+      }
+    } else if (state.cacheKey) {
+      cacheLabel = '缓存：已写入 · ' + shortenExplainStatusValue(state.cacheKey, 12);
+      cacheMode = 'live';
+      cacheTitle = state.cacheKey;
+    } else if (state.error) {
+      cacheLabel = '缓存：未更新';
+    }
+    setExplainStatusPill(explainStatusCache, cacheLabel, cacheMode, cacheTitle);
+
+    noteText = '发送 explain 问题后，这里会显示实时 LLM、预热缓存和 backend/model。';
+    if (state.error) {
+      noteText = '最近错误：' + formatExplainTimestamp(state.updatedAt || '') + ' · ' + state.error;
+    } else if (state.source === 'cached_llm' && state.cachedAt) {
+      noteText = '预热缓存建立于 ' + formatExplainTimestamp(state.cachedAt) + '，本次直接命中。';
+    } else if (state.cacheKey && state.cachedAt) {
+      noteText = '本次为实时 LLM，缓存已写入于 ' + formatExplainTimestamp(state.cachedAt) + '。';
+    } else if (state.updatedAt) {
+      noteText = '最近 explain 更新：' + formatExplainTimestamp(state.updatedAt) + '。';
+    }
+
+    if (explainStatusUpdated) {
+      explainStatusUpdated.textContent = noteText;
+    }
+  }
+
+  function syncExplainStatus(systemId, aiData) {
+    var statusSystemId = systemId || currentSystem;
+
+    lastExplainStatusBySystem[statusSystemId] = {
+      source: aiData && typeof aiData.response_source === 'string' ? aiData.response_source : '',
+      backend: aiData && typeof aiData.llm_backend === 'string' ? aiData.llm_backend : '',
+      model: aiData && typeof aiData.llm_model === 'string' ? aiData.llm_model : '',
+      cacheKey: aiData && typeof aiData.cache_key === 'string' ? aiData.cache_key : '',
+      cachedAt: aiData && typeof aiData.cached_at === 'string' ? aiData.cached_at : '',
+      updatedAt: new Date().toISOString(),
+      error: '',
+    };
+
+    if (statusSystemId === currentSystem) {
+      renderExplainStatusPanel();
+    }
+  }
+
+  function markExplainStatusFailure(systemId, err) {
+    var statusSystemId = systemId || currentSystem;
+    var previous = lastExplainStatusBySystem[statusSystemId] || {};
+    var errorMessage = err && err.message ? err.message : String(err || 'request_failed');
+
+    lastExplainStatusBySystem[statusSystemId] = {
+      source: '',
+      backend: previous.backend || '',
+      model: previous.model || '',
+      cacheKey: '',
+      cachedAt: '',
+      updatedAt: new Date().toISOString(),
+      error: errorMessage,
+    };
+
+    if (statusSystemId === currentSystem) {
+      renderExplainStatusPanel();
+    }
   }
 
   function renderChipList(container, items, className) {
@@ -2469,6 +2650,7 @@ function clearAiHighlights() {
       syncSystemChrome();
       resetCanvasState();
       resetTruthEvalBar();
+      renderExplainStatusPanel();
       initCanvasGlobalControls();
       loadReferenceCanvasSnapshot();
     });
@@ -2492,6 +2674,7 @@ function clearAiHighlights() {
       syncSystemChrome();
       resetCanvasState();
       resetTruthEvalBar();
+      renderExplainStatusPanel();
       initCanvasGlobalControls();
       loadReferenceCanvasSnapshot();
 
@@ -2660,6 +2843,24 @@ function clearAiHighlights() {
     return explainPayload;
   }
 
+  function formatExplainResponseFootnote(aiData) {
+    var source = aiData && typeof aiData.response_source === 'string' ? aiData.response_source : '';
+    var backend = aiData && typeof aiData.llm_backend === 'string' ? aiData.llm_backend : '';
+    var model = aiData && typeof aiData.llm_model === 'string' ? aiData.llm_model : '';
+    var sourceLabel = '';
+    var backendLabel = '';
+
+    if (source === 'cached_llm') {
+      sourceLabel = '解释来源：预热缓存';
+    } else if (source === 'live_llm') {
+      sourceLabel = '解释来源：实时 LLM';
+    }
+    if (backend) {
+      backendLabel = ' · ' + backend + (model ? ' / ' + model : '');
+    }
+    return sourceLabel || backendLabel ? sourceLabel + backendLabel : '';
+  }
+
   // ── Phase P16: General question handler ────────────────────────────────────
   // Truth engine first: fetch a live snapshot, update canvas immediately, then
   // call AI explain with node_states so the blue discussion ring stays advisory.
@@ -2710,12 +2911,15 @@ function clearAiHighlights() {
           var suggestionNodes = Array.isArray(aiData.suggestion_nodes) ? aiData.suggestion_nodes : [];
 
           applyAiHighlights(highlightedNodes, suggestionNodes);
+          syncExplainStatus(qSystemId, aiData);
           addMessage('ai', aiData.explanation || fallbackText, {
             highlightedNodes: highlightedNodes,
             suggestionNodes: suggestionNodes,
+            footnote: formatExplainResponseFootnote(aiData),
           });
           finishChatRequest();
         }, function(err) {
+          markExplainStatusFailure(qSystemId, err);
           addMessage('ai', fallbackText);
           finishChatRequest();
           return null;
@@ -2986,6 +3190,7 @@ function isGeneralQuestion(qText, qLower) {
   resetCanvasState();
   resetTruthEvalBar();
   syncSystemChrome();
+  renderExplainStatusPanel();
     // fault UI removed
     // fault UI removed
   setFabTooltip('展开对话');

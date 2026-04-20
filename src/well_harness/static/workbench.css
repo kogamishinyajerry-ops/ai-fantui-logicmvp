@@ -1444,3 +1444,21 @@ body[data-view="beginner"] [view="beginner"] {
 body[data-view="expert"] [view="beginner"] {
   display: block;
 }
+
+/* Explain runtime observation board — operator-facing runtime status only,
+   does not introduce new control truth. Reuses .workbench-visual-board +
+   .workbench-summary-card idioms with a subtle cyan accent so operators can
+   distinguish it from the primary verdict/acceptance board. */
+.workbench-explain-runtime-board {
+  margin-top: 1rem;
+  border-color: rgba(79, 184, 255, 0.22);
+  background:
+    linear-gradient(135deg, rgba(12, 24, 40, 0.96), rgba(6, 14, 24, 0.94)),
+    radial-gradient(circle at 88% 18%, rgba(79, 184, 255, 0.12), transparent 18rem);
+}
+
+.workbench-explain-runtime-board .workbench-visual-badge[data-state="live"] {
+  color: #d6efff;
+  border-color: rgba(79, 184, 255, 0.3);
+  background: rgba(61, 126, 255, 0.14);
+}

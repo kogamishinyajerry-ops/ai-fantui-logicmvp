@@ -37,6 +37,7 @@ RUNS_DIR = REPO_ROOT / "runs"
 # (prefix, label) pairs — most recent matching dir wins
 DRILL_PREFIXES = [
     ("dress_rehearsal_", "Dress Rehearsal (wow_a/b/c)"),
+    ("pitch_prewarm_", "Pitch Explain Prewarm"),
     ("integrated_timing_minimax_", "Integrated Timing · MiniMax"),
     ("integrated_timing_ollama_", "Integrated Timing · Ollama"),
     ("backend_switch_drill_", "Backend Switch Drill"),
@@ -204,8 +205,48 @@ def _read_dual_backend(dir_path: Path) -> dict:
     return out
 
 
+def _read_pitch_prewarm(dir_path: Path) -> dict:
+    """Read pitch_explain_prewarm_<ts>/report.json."""
+    report = dir_path / "report.json"
+    out = {"verdict": "UNKNOWN", "detail": None}
+    if not report.exists():
+        return out
+    try:
+        data = json.loads(report.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return out
+    summary = data.get("summary", {}) if isinstance(data, dict) else {}
+    verdict_raw = (data.get("verdict") or summary.get("verdict") or "UNKNOWN").upper()
+    if verdict_raw in ("GREEN", "PASS"):
+        out["verdict"] = "GREEN"
+    elif verdict_raw in ("YELLOW",):
+        out["verdict"] = "YELLOW"
+    else:
+        out["verdict"] = "RED"
+    hits = summary.get("verified_cache_hits", 0)
+    expected = summary.get("expected_count", 0)
+    backend = summary.get("llm_backend") or data.get("backend", "?")
+    model = summary.get("llm_model") or data.get("model", "?")
+    detail = (
+        f"cache verified {hits}/{expected}"
+        f" · backend={backend}"
+        + (f" / {model}" if model else "")
+    )
+    if summary.get("backend_match") is False:
+        requested_backend = summary.get("requested_backend") or data.get("backend", "?")
+        requested_model = summary.get("requested_model") or data.get("model", "")
+        detail += (
+            f" · requested={requested_backend}"
+            + (f" / {requested_model}" if requested_model else "")
+            + " (mismatch)"
+        )
+    out["detail"] = detail
+    return out
+
+
 DRILL_READERS = {
     "dress_rehearsal_": _read_dress_rehearsal,
+    "pitch_prewarm_": _read_pitch_prewarm,
     "integrated_timing_minimax_": _read_integrated_timing,
     "integrated_timing_ollama_": _read_integrated_timing,
     "backend_switch_drill_": _read_backend_switch,
@@ -348,7 +389,7 @@ def render_scorecard(rows: list[dict], stale_hours: float,
         "- browser-level UI / Canvas rendering (manual eyeball)",
         "- network conditions at venue (manual check)",
         "",
-        "See `docs/demo/preflight_checklist.md` for the complete 16-item T-0 list.",
+        "See `docs/demo/preflight_checklist.md` for the complete 17-item T-0 list.",
     ])
     return "\n".join(lines) + "\n"
 

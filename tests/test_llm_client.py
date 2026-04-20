@@ -165,6 +165,29 @@ class TestGetLLMClientFactory(unittest.TestCase):
         self.assertIsInstance(lc.get_llm_client("OLLAMA"), lc.OllamaClient)
         self.assertIsInstance(lc.get_llm_client("MiniMax"), lc.MiniMaxClient)
 
+    def test_get_llm_backend_metadata_uses_selected_backend_and_model(self):
+        with unittest.mock.patch.dict("os.environ", {
+            "LLM_BACKEND": "ollama",
+            "OLLAMA_MODEL": "qwen2.5:14b-instruct",
+        }, clear=False):
+            metadata = lc.get_llm_backend_metadata()
+        self.assertEqual(
+            metadata,
+            {
+                "backend": "ollama",
+                "model": "qwen2.5:14b-instruct",
+            },
+        )
+
+    def test_get_llm_backend_metadata_respects_explicit_backend(self):
+        with unittest.mock.patch.dict("os.environ", {
+            "LLM_BACKEND": "ollama",
+            "MINIMAX_MODEL": "minimax-m2.7-highspeed",
+        }, clear=False):
+            metadata = lc.get_llm_backend_metadata("minimax")
+        self.assertEqual(metadata["backend"], "minimax")
+        self.assertEqual(metadata["model"], "minimax-m2.7-highspeed")
+
 
 if __name__ == "__main__":
     unittest.main()

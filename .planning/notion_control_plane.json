@@ -15,17 +15,17 @@
   "pages": {
     "dashboard": "33cc68942bed8136b5c9f9ba5b4b44ec",
     "constitution": "33cc6894-2bed-8148-b2c5-ec68c440f5ef",
-    "status": "341c6894-2bed-810d-b7e6-e5d264bcfe61",
+    "status": "346c6894-2bed-81cf-afd0-d060768d56d7",
     "control_plane": "33cc6894-2bed-810d-875e-e4e0e464ee31",
     "opus_protocol": "33cc6894-2bed-8117-b8f5-eda203f3be18",
-    "opus_brief": "345c6894-2bed-8130-a674-db25b358a298",
+    "opus_brief": "346c6894-2bed-81cb-9a11-fb66c1d2e723",
     "freeze_packet": "341c6894-2bed-8104-9ab1-f133d6da80f4"
   },
   "urls": {
     "github_repo": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp",
     "github_actions": "https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions"
   },
-  "default_plan": "Milestone 9 — Project Freeze (2026-04-15)：P0→P16 全部完成，430 tests / 23 validation commands / 0 open gap；冻结维护期，等待外部用户验证",
+  "default_plan": "P30-00-TIER1 Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2 维度",
   "default_review_gate": "OPUS-4.6 周期审查 Gate",
   "legacy_review_artifacts": [
     {

@@ -56,6 +56,17 @@
           <div class="canvas-meta">
             <span class="canvas-chip" id="system-shell-status">反推系统</span>
             <span class="canvas-chip accent">控制真值已连接</span>
+            <div class="explain-status-panel" id="explain-status-panel" aria-live="polite" aria-label="Explain 运行状态">
+              <span class="explain-status-title">Explain 状态</span>
+              <div class="explain-status-row">
+                <span class="explain-status-pill is-idle" id="explain-status-source">解释：待命</span>
+                <span class="explain-status-pill is-muted" id="explain-status-backend">后端：—</span>
+                <span class="explain-status-pill is-muted" id="explain-status-cache">缓存：未观察</span>
+              </div>
+              <p class="explain-status-note" id="explain-status-updated">
+                发送 explain 问题后，这里会显示实时 LLM、预热缓存和 backend/model。
+              </p>
+            </div>
             <!-- Canvas global controls: always visible, outside node detail panel -->
             <div class="canvas-global-controls" id="canvas-global-controls" aria-label="全局参数控制">
               <span class="canvas-global-controls-label">全局</span>

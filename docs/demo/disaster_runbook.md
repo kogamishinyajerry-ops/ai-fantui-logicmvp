@@ -24,8 +24,9 @@
    export LLM_BACKEND=ollama
    export OLLAMA_MODEL=qwen2.5:7b-instruct   # 候选见 config/llm/local_model_candidates.yaml
    pkill -f well_harness.demo_server && python3 -m well_harness.demo_server &
+   python3 scripts/pitch_prewarm.py
    ```
-   浏览器硬刷后，聊天抽屉恢复工作；首响延迟上升到 3–6s（本地 7B），但链路不中断。
+   浏览器硬刷后，聊天抽屉恢复工作；再跑一次 pitch prewarm，wow_a 的两个 canonical explain 问题会恢复为透明缓存命中。
 2. 备选：`export MINIMAX_API_KEY=$BACKUP_MINIMAX_KEY`（备份 key 在 `.env.backup`）后重启 demo_server。
 3. 浏览器硬刷（Cmd-Shift-R），重新触发一次 wow_a 轻触打底。
 

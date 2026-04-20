@@ -641,6 +641,46 @@ Ran 189 tests in 20.897s
 
             self.assertEqual("fallback-plan", plan)
 
+    def test_effective_default_plan_uses_latest_done_phase_when_no_active_phase_exists(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            planning_dir = root / ".planning"
+            phase_dir = planning_dir / "phases" / "P30-scorecard-semantics"
+            phase_dir.mkdir(parents=True)
+            (planning_dir / "ROADMAP.md").write_text(
+                "\n".join(
+                    [
+                        "# Roadmap",
+                        "",
+                        "## Phase P29: Pre-Pitch Readiness Scorecard",
+                        "",
+                        "Status: Done (2026-04-18) · self-signed under v4.0 Extended Autonomy Mode",
+                        "",
+                        "## Phase P30: Scorecard Semantic Alignment",
+                        "",
+                        "Status: Done (2026-04-18) · self-signed under v4.0 Extended Autonomy Mode",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            (phase_dir / "P30-00-TIER1-PLAN.md").write_text(
+                "\n".join(
+                    [
+                        "---",
+                        "phase: P30",
+                        "plan: P30-00-TIER1",
+                        "title: Scorecard Semantic Alignment",
+                        "---",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            plan = effective_default_plan({"default_plan": "fallback-plan"}, cwd=root)
+
+            self.assertEqual("P30-00-TIER1 Scorecard Semantic Alignment", plan)
+
     def test_build_current_review_brief_targets_stale_gap_adjudication(self):
         snapshot = ReviewSnapshot(
             active_phase="P1 建立 Notion + GitHub 的 Opus 审查闭环",
@@ -1485,6 +1525,87 @@ Ran 189 tests in 20.897s
         self.assertEqual("GitHub GSD automation 24153107164 QA", snapshot.latest_passing_qa)
         self.assertEqual("GitHub GSD automation 24148804383", snapshot.latest_failed_run)
 
+    def test_fetch_review_snapshot_prefers_fresher_local_run_when_newer_than_github(self):
+        class FakeClient:
+            def query_database(self, database_id, *, filter_payload=None, sorts=None, page_size=10):
+                if database_id == "roadmap-db":
+                    return [
+                        {"id": "phase-id", "properties": {"Round": {"type": "title", "title": [{"plain_text": "P30 Scorecard 语义对齐"}]}}},
+                    ]
+                if database_id == "plans-db":
+                    return [
+                        {"id": "plan-id", "properties": {"Plan": {"type": "title", "title": [{"plain_text": "P30-00 Scorecard Semantic Alignment"}]}}},
+                    ]
+                if database_id == "runs-db":
+                    if filter_payload == {
+                        "and": [
+                            {"property": "Status", "select": {"equals": "Succeeded"}},
+                            {"property": "Executor", "select": {"equals": "GitHub Action"}},
+                        ]
+                    }:
+                        return [
+                            {
+                                "id": "run-github-success",
+                                "last_edited_time": "2026-04-18T09:00:00+00:00",
+                                "properties": {"Run": {"type": "title", "title": [{"plain_text": "GitHub GSD automation 24153107164"}]}},
+                            },
+                        ]
+                    if filter_payload == {
+                        "and": [
+                            {"property": "Status", "select": {"equals": "Failed"}},
+                            {"property": "Executor", "select": {"equals": "GitHub Action"}},
+                        ]
+                    }:
+                        return []
+                    if filter_payload == {"property": "Status", "select": {"equals": "Succeeded"}}:
+                        return [
+                            {
+                                "id": "run-local-success",
+                                "last_edited_time": "2026-04-19T09:00:00+00:00",
+                                "properties": {"Run": {"type": "title", "title": [{"plain_text": "P30-00 automation 2026-04-19 09:00:00"}]}},
+                            },
+                        ]
+                    if filter_payload == {"property": "Status", "select": {"equals": "Failed"}}:
+                        return []
+                if database_id == "qa-db":
+                    if filter_payload == {"property": "Run", "title": {"equals": "P30-00 automation 2026-04-19 09:00:00 QA"}}:
+                        return [
+                            {
+                                "id": "qa-local",
+                                "properties": {"Run": {"type": "title", "title": [{"plain_text": "P30-00 automation 2026-04-19 09:00:00 QA"}]}},
+                            },
+                        ]
+                    return []
+                if database_id == "gates-db":
+                    return [
+                        {"id": "gate-id", "properties": {"Gate": {"type": "title", "title": [{"plain_text": "OPUS-4.6 周期审查 Gate"}]}, "Status": {"type": "select", "select": {"name": "Approved"}}}},
+                    ]
+                if database_id == "tasks-db":
+                    return []
+                if database_id == "gaps-db":
+                    return []
+                return []
+
+        snapshot = fetch_review_snapshot(
+            FakeClient(),
+            {
+                "databases": {
+                    "roadmap": "roadmap-db",
+                    "plans": "plans-db",
+                    "runs": "runs-db",
+                    "qa": "qa-db",
+                    "gates": "gates-db",
+                    "tasks": "tasks-db",
+                    "gaps": "gaps-db",
+                },
+                "default_plan": "fallback-plan",
+                "default_review_gate": "OPUS-4.6 周期审查 Gate",
+            },
+        )
+
+        self.assertEqual("P30-00 automation 2026-04-19 09:00:00", snapshot.latest_success_run)
+        self.assertEqual("P30-00 automation 2026-04-19 09:00:00 QA", snapshot.latest_passing_qa)
+
     def test_fetch_review_snapshot_compacts_verbose_validation_suite_summaries(self):
         long_validation_summary = "\n".join(
             [
@@ -1727,6 +1848,49 @@ Ran 189 tests in 20.897s
         self.assertIsNone(aligned.latest_failed_run)
         self.assertEqual("Approved", aligned.gate_status)
         self.assertEqual("database_live", aligned.evidence_mode)
+
+    def test_align_snapshot_with_local_phase_fills_missing_phase_from_latest_verified_plan(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            planning_dir = root / ".planning"
+            planning_dir.mkdir(parents=True)
+            (planning_dir / "ROADMAP.md").write_text(
+                "\n".join(
+                    [
+                        "## Phase P29: Pre-Pitch Readiness Scorecard",
+                        "",
+                        "Status: Done (2026-04-18)",
+                        "",
+                        "## Phase P30: Scorecard Semantic Alignment",
+                        "",
+                        "Status: Done (2026-04-18)",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            snapshot = ReviewSnapshot(
+                active_phase="未识别活动 phase",
+                active_phase_goal="",
+                active_phase_summary="Shared database is reachable but the active phase field is empty.",
+                latest_verified_plan="P30-00-TIER1 Scorecard Semantic Alignment",
+                latest_success_run="P30 control-plane truth alignment + readiness verification",
+                latest_failed_run=None,
+                latest_passing_qa="P30 control-plane truth alignment + readiness verification QA",
+                gate_page_id="gate-id",
+                gate_name="OPUS-4.6 周期审查 Gate",
+                gate_status="Approved",
+                ready_task_id=None,
+                ready_task=None,
+                open_gap_titles=(),
+                stale_gap_titles=(),
+                evidence_mode="database_live",
+                evidence_note="共享 Notion 数据库可达；phase / run / QA / gate 取自实时数据库记录。",
+            )
+
+            aligned = align_snapshot_with_local_phase(snapshot, cwd=root)
+
+        self.assertEqual("P30 Scorecard Semantic Alignment", aligned.active_phase)
+        self.assertIn("本地 roadmap 纠偏", aligned.evidence_note)
 
     def test_write_current_opus_review_brief_from_snapshot_aligns_review_target_with_local_phase(self):
         config = {

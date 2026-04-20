@@ -100,7 +100,15 @@ DATABASE_LINK_LABELS = {
 }
 PHASE_HEADER_RE = re.compile(r"^## Phase P(\d+):\s+(.+)$")
 PLAN_TITLE_RE = re.compile(r"^#\s*(P\d+-\d+)\s+Plan\s*-\s*(.+)$")
-PHASE_STATUS_RE = re.compile(r"^Status:\s+(Active|Done|Deprecated)$", re.IGNORECASE)
+PHASE_STATUS_LINE_RE = re.compile(r"^Status:\s+(.+)$", re.IGNORECASE)
+DONE_PHASE_STATUS_PREFIXES = (
+    "done",
+    "closed",
+    "lifted",
+    "executor 初审完成",
+)
+PLAN_FRONT_MATTER_ID_RE = re.compile(r"^plan:\s*(P\d+(?:-[A-Z0-9]+)+)\s*$", re.IGNORECASE)
+PLAN_FRONT_MATTER_TITLE_RE = re.compile(r"^title:\s*(.+)$", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -414,17 +422,17 @@ def sync_roadmap_phases(
                 phase_id = f"P{phase_num}"
                 phase_name = m.group(2).strip()
                 goal = ""
-                status = "Active"  # default if no Status line found
+                status: str | None = None
                 # Scan subsequent lines for Status and Goal
                 j = i + 1
                 while j < len(lines) and not lines[j].startswith("## Phase "):
-                    sm = PHASE_STATUS_RE.match(lines[j])
-                    if sm:
-                        status = sm.group(1)
+                    parsed_status = phase_status_from_line(lines[j])
+                    if parsed_status:
+                        status = parsed_status
                     if lines[j].startswith("Goal:"):
                         goal = lines[j][5:].strip()
                     j += 1
-                phases.append({"id": phase_id, "name": phase_name, "goal": goal, "status": status})
+                phases.append({"id": phase_id, "name": phase_name, "goal": goal, "status": status or ""})
                 i = j
             else:
                 i += 1
@@ -742,7 +750,7 @@ def active_phase_number_from_roadmap(cwd: Path) -> int | None:
         if match:
             current_phase_number = int(match.group(1))
             continue
-        if current_phase_number is not None and line == "Status: Active":
+        if current_phase_number is not None and phase_status_from_line(line) == "Active":
             return current_phase_number
     return None
 
@@ -758,40 +766,122 @@ def active_phase_label_from_roadmap(cwd: Path) -> str | None:
         if match:
             current_phase_label = f"P{match.group(1)} {match.group(2).strip()}"
             continue
-        if current_phase_label is not None and line == "Status: Active":
+        if current_phase_label is not None and phase_status_from_line(line) == "Active":
             return current_phase_label
     return None
 
 
-def active_phase_directory(cwd: Path, phase_number: int) -> Path | None:
+def latest_phase_number_from_roadmap(cwd: Path) -> int | None:
+    roadmap_path = cwd / ".planning" / "ROADMAP.md"
+    if not roadmap_path.exists():
+        return None
+    latest_phase_number: int | None = None
+    for raw_line in roadmap_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        match = PHASE_HEADER_RE.match(line)
+        if match:
+            latest_phase_number = int(match.group(1))
+    return latest_phase_number
+
+
+def latest_phase_label_from_roadmap(cwd: Path) -> str | None:
+    roadmap_path = cwd / ".planning" / "ROADMAP.md"
+    if not roadmap_path.exists():
+        return None
+    latest_phase_label: str | None = None
+    for raw_line in roadmap_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        match = PHASE_HEADER_RE.match(line)
+        if match:
+            latest_phase_label = f"P{match.group(1)} {match.group(2).strip()}"
+    return latest_phase_label
+
+
+def current_phase_number_from_roadmap(cwd: Path) -> int | None:
+    return active_phase_number_from_roadmap(cwd) or latest_phase_number_from_roadmap(cwd)
+
+
+def current_phase_label_from_roadmap(cwd: Path) -> str | None:
+    return active_phase_label_from_roadmap(cwd) or latest_phase_label_from_roadmap(cwd)
+
+
+def phase_directory(cwd: Path, phase_number: int) -> Path | None:
     phases_root = cwd / ".planning" / "phases"
     if not phases_root.exists():
         return None
-    prefix = f"{phase_number:02d}-"
-    candidates = sorted(path for path in phases_root.iterdir() if path.is_dir() and path.name.startswith(prefix))
+    prefixes = (
+        f"{phase_number:02d}-",
+        f"P{phase_number}-",
+        f"P{phase_number:02d}-",
+    )
+    candidates = sorted(
+        path
+        for path in phases_root.iterdir()
+        if path.is_dir() and any(path.name.startswith(prefix) for prefix in prefixes)
+    )
     return candidates[0] if candidates else None
 
 
 def local_phase_default_plan(cwd: Path) -> str | None:
-    active_phase_number = active_phase_number_from_roadmap(cwd)
-    if active_phase_number is None:
+    phase_number = current_phase_number_from_roadmap(cwd)
+    if phase_number is None:
         return None
-    phase_dir = active_phase_directory(cwd, active_phase_number)
+    phase_dir = phase_directory(cwd, phase_number)
     if phase_dir is None:
         return None
     plan_files = sorted(phase_dir.glob("*-PLAN.md"))
     if not plan_files:
         return None
-    title_line = plan_files[-1].read_text(encoding="utf-8").splitlines()[0].strip()
-    match = PLAN_TITLE_RE.match(title_line)
-    if match:
-        return f"{match.group(1)} {match.group(2).strip()}"
+    for plan_path in reversed(plan_files):
+        plan_title = plan_display_title_from_file(plan_path)
+        if plan_title:
+            return plan_title
     return None
 
 
 def effective_default_plan(config: dict[str, Any], *, cwd: Path | None = None) -> str:
     repo_cwd = cwd or Path.cwd()
     return local_phase_default_plan(repo_cwd) or config.get("default_plan", "P1-01 建立自动执行 / QA 回写闭环")
+
+
+def normalize_phase_status(raw_status: str) -> str | None:
+    status = raw_status.strip()
+    if not status:
+        return None
+    lowered = status.casefold()
+    if lowered.startswith("active"):
+        return "Active"
+    if lowered.startswith("deprecated"):
+        return "Deprecated"
+    if any(lowered.startswith(prefix) for prefix in DONE_PHASE_STATUS_PREFIXES):
+        return "Done"
+    return None
+
+
+def phase_status_from_line(line: str) -> str | None:
+    match = PHASE_STATUS_LINE_RE.match(line.strip())
+    if not match:
+        return None
+    return normalize_phase_status(match.group(1))
+
+
+def plan_display_title_from_file(path: Path) -> str | None:
+    plan_id: str | None = None
+    title: str | None = None
+    for raw_line in path.read_text(encoding="utf-8").splitlines()[:40]:
+        line = raw_line.strip()
+        match = PLAN_TITLE_RE.match(line)
+        if match:
+            return f"{match.group(1)} {match.group(2).strip()}"
+        plan_match = PLAN_FRONT_MATTER_ID_RE.match(line)
+        if plan_match:
+            plan_id = plan_match.group(1).strip()
+        title_match = PLAN_FRONT_MATTER_TITLE_RE.match(line)
+        if title_match:
+            title = title_match.group(1).strip()
+        if plan_id and title:
+            return f"{plan_id} {title}"
+    return None
 
 
 def database_id(config: dict[str, Any], key: str) -> str:
@@ -1395,6 +1485,25 @@ def first_row(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
     return rows[0] if rows else None
 
 
+def row_last_edited_time(row: dict[str, Any] | None) -> str:
+    if not row:
+        return ""
+    value = row.get("last_edited_time")
+    return value if isinstance(value, str) else ""
+
+
+def prefer_fresher_row(preferred_row: dict[str, Any] | None, candidate_row: dict[str, Any] | None) -> dict[str, Any] | None:
+    if preferred_row is None:
+        return candidate_row
+    if candidate_row is None:
+        return preferred_row
+    preferred_stamp = row_last_edited_time(preferred_row)
+    candidate_stamp = row_last_edited_time(candidate_row)
+    if preferred_stamp and candidate_stamp and candidate_stamp > preferred_stamp:
+        return candidate_row
+    return preferred_row
+
+
 def build_superseded_gap_fix_plan(success_run_title: str, duplicate: bool = False) -> str:
     note = f"Superseded by successful run {success_run_title}."
     if duplicate:
@@ -1482,6 +1591,22 @@ def fetch_review_snapshot(client: NotionClient, config: dict[str, Any]) -> Revie
             page_size=1,
         )
     )
+    latest_success_run_row = first_row(
+        client.query_database(
+            database_id(config, "runs"),
+            filter_payload={"property": "Status", "select": {"equals": "Succeeded"}},
+            sorts=[{"timestamp": "last_edited_time", "direction": "descending"}],
+            page_size=1,
+        )
+    )
+    latest_failed_run_row = first_row(
+        client.query_database(
+            database_id(config, "runs"),
+            filter_payload={"property": "Status", "select": {"equals": "Failed"}},
+            sorts=[{"timestamp": "last_edited_time", "direction": "descending"}],
+            page_size=1,
+        )
+    )
     active_phase_row = first_row(
         client.query_database(
             database_id(config, "roadmap"),
@@ -1497,22 +1622,8 @@ def fetch_review_snapshot(client: NotionClient, config: dict[str, Any]) -> Revie
             page_size=1,
         )
     )
-    success_run_row = github_success_run_row or first_row(
-        client.query_database(
-            database_id(config, "runs"),
-            filter_payload={"property": "Status", "select": {"equals": "Succeeded"}},
-            sorts=[{"timestamp": "last_edited_time", "direction": "descending"}],
-            page_size=1,
-        )
-    )
-    failed_run_row = github_failed_run_row or first_row(
-        client.query_database(
-            database_id(config, "runs"),
-            filter_payload={"property": "Status", "select": {"equals": "Failed"}},
-            sorts=[{"timestamp": "last_edited_time", "direction": "descending"}],
-            page_size=1,
-        )
-    )
+    success_run_row = prefer_fresher_row(github_success_run_row, latest_success_run_row)
+    failed_run_row = prefer_fresher_row(github_failed_run_row, latest_failed_run_row)
     passing_qa_row = None
     if success_run_row and row_text(success_run_row, "Run"):
         passing_qa_row = first_row(
@@ -1935,21 +2046,27 @@ def align_snapshot_with_local_phase(
     *,
     cwd: Path,
 ) -> ReviewSnapshot:
-    local_phase_label = active_phase_label_from_roadmap(cwd)
-    local_phase_number = active_phase_number_from_roadmap(cwd)
+    local_phase_label = current_phase_label_from_roadmap(cwd)
+    local_phase_number = current_phase_number_from_roadmap(cwd)
     if local_phase_label is None or local_phase_number is None:
         return snapshot
+    if snapshot.active_phase == local_phase_label:
+        return snapshot
     current_phase_number = snapshot_phase_number(snapshot)
-    if current_phase_number is not None and current_phase_number >= local_phase_number:
+    if (
+        snapshot.active_phase not in {"", "未识别活动 phase"}
+        and current_phase_number is not None
+        and current_phase_number >= local_phase_number
+    ):
         return snapshot
     evidence_note = snapshot.evidence_note or snapshot_evidence_mode_detail(snapshot)
-    correction_note = f"当前 active phase 已按本地 roadmap 纠偏为 `{local_phase_label}`。"
+    correction_note = f"当前阶段已按本地 roadmap 纠偏为 `{local_phase_label}`。"
     if correction_note not in evidence_note:
         evidence_note = f"{evidence_note} {correction_note}".strip()
     active_phase_summary = snapshot.active_phase_summary or ""
     if "repo roadmap" not in active_phase_summary:
         active_phase_summary = (
-            f"{active_phase_summary} Repo roadmap active phase override applied."
+            f"{active_phase_summary} Repo roadmap current phase override applied."
         ).strip()
     return replace(
         snapshot,
@@ -2051,7 +2168,7 @@ def build_local_run_snapshot(
         snapshot = fetch_review_snapshot_from_repo_docs(cwd, config)
     except RuntimeError:
         snapshot = ReviewSnapshot(
-            active_phase=active_phase_label_from_roadmap(cwd) or "未识别活动 phase",
+            active_phase=current_phase_label_from_roadmap(cwd) or "未识别活动 phase",
             active_phase_goal="",
             active_phase_summary="Recovered locally because Notion writeback timed out before any durable shared write completed.",
             latest_verified_plan=config.get("default_plan", plan_id),

@@ -550,6 +550,56 @@
             </ol>
           </section>
 
+          <section
+            class="workbench-visual-board workbench-explain-runtime-board"
+            aria-labelledby="workbench-explain-runtime-title"
+          >
+            <div class="workbench-visual-header">
+              <div>
+                <p class="eyebrow">explain runtime</p>
+                <h3 id="workbench-explain-runtime-title">Explain 运行态</h3>
+              </div>
+              <span
+                id="workbench-explain-runtime-badge"
+                class="workbench-visual-badge"
+                data-state="idle"
+              >未报告</span>
+            </div>
+            <p id="workbench-explain-runtime-summary" class="workbench-visual-summary">
+              这块只展示 LLM explain / prewarm 缓存的运行观察态，方便操作者一眼确认当前跑的是哪个 backend、有没有用到缓存。它只是运行态视图，不引入新的控制真值，不覆盖 controller.py。
+            </p>
+            <div class="workbench-summary-grid" aria-label="explain runtime status">
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">Backend / Model</span>
+                <strong id="workbench-explain-runtime-backend">未报告</strong>
+                <p id="workbench-explain-runtime-backend-detail" class="workbench-summary-note">
+                  后端暂未在 bootstrap / bundle 响应中提供 explain_runtime，前端保留占位。
+                </p>
+              </article>
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">最近来源</span>
+                <strong id="workbench-explain-runtime-source">未观察</strong>
+                <p id="workbench-explain-runtime-source-detail" class="workbench-summary-note">
+                  cached_llm 表示命中预热缓存；live_llm 表示走了实时 LLM；未上报则按未观察处理。
+                </p>
+              </article>
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">缓存新鲜度</span>
+                <strong id="workbench-explain-runtime-cache">待命</strong>
+                <p id="workbench-explain-runtime-cache-detail" class="workbench-summary-note">
+                  没看到 cached_at 时默认按"还未预热"显示；缓存只在 demo_server 进程内有效，重启需重新预热。
+                </p>
+              </article>
+              <article class="workbench-summary-card">
+                <span class="workbench-summary-label">观察边界</span>
+                <strong id="workbench-explain-runtime-boundary">runtime status only</strong>
+                <p class="workbench-summary-note">
+                  此卡只展示 explain / cache 运行态，是操作者视角的观察值，不是新的控制真值，也不替代 controller.py / runner.py。
+                </p>
+              </article>
+            </div>
+          </section>
+
           <section class="workbench-history-board" aria-labelledby="workbench-history-title">
             <div class="workbench-visual-header">
               <div>
