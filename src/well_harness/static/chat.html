@@ -849,6 +849,52 @@
                 <span>C919 反推系统 · E-TRAS · P43-02.5 reference panel</span>
               </div>
 
+              <!-- P43-02.5 Step D2 · 19 visible controls panel (Q6=B pivot)
+                   12 core + 7 unlock/deploy gating + 1 auxiliary debug button
+                   Each input has data-c919-field · read by collectC919PanelSnapshot() -->
+              <div id="c919-controls-panel" class="c919-controls-panel" aria-label="C919 面板控制 · 19 可见控件">
+                <div class="c919-ctrl-group">
+                  <h4 class="c919-ctrl-group-title">核心输入 (12)</h4>
+                  <div class="c919-ctrl-row">
+                    <label class="c919-ctrl"><span>TRA (°)</span><input type="range" data-c919-field="tra_deg" min="-32" max="0" step="0.1" value="0"/><span class="c919-ctrl-val" data-display-for="tra_deg">0.0</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="atltla"/><span>ATLTLA</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="apwtla"/><span>APWTLA</span></label>
+                  </div>
+                  <div class="c919-ctrl-row">
+                    <label class="c919-ctrl"><span>N1K (%)</span><input type="range" data-c919-field="n1k_percent" min="0" max="120" step="1" value="35"/><span class="c919-ctrl-val" data-display-for="n1k_percent">35</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="engine_running" checked/><span>engine_running</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="tr_inhibited"/><span>tr_inhibited</span></label>
+                  </div>
+                  <div class="c919-ctrl-row">
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="tr_wow" checked/><span>tr_wow</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="lgcu1_mlg_wow_value" checked/><span>LGCU1 value</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="lgcu1_mlg_wow_valid" checked/><span>LGCU1 valid</span></label>
+                  </div>
+                  <div class="c919-ctrl-row">
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="lgcu2_mlg_wow_value" checked/><span>LGCU2 value</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="lgcu2_mlg_wow_valid" checked/><span>LGCU2 valid</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="e_tras_over_temp_fault"/><span>over_temp_fault</span></label>
+                  </div>
+                </div>
+                <div class="c919-ctrl-group">
+                  <h4 class="c919-ctrl-group-title">Unlock/Deploy Gating (7 · v4.2 Q6=B)</h4>
+                  <div class="c919-ctrl-row">
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="tls_ls_a_unlocked" data-c919-composite-valid="tls_ls_a_valid"/><span>TLS A unlock</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="tls_ls_b_unlocked" data-c919-composite-valid="tls_ls_b_valid"/><span>TLS B unlock</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="left_pylon_ls_a_unlocked" data-c919-composite-targets="left_pylon_ls_b_unlocked,right_pylon_ls_a_unlocked,right_pylon_ls_b_unlocked"/><span>Pylon unlock (all 4)</span></label>
+                  </div>
+                  <div class="c919-ctrl-row">
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="pls_ls_a_locked" data-c919-composite-targets="pls_ls_b_locked" checked/><span>PLS locked (a+b)</span></label>
+                    <label class="c919-ctrl"><span>TR position (%)</span><input type="range" data-c919-field="tr_position_percent" min="0" max="100" step="1" value="0"/><span class="c919-ctrl-val" data-display-for="tr_position_percent">0</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="trcu_power_on" checked/><span>TRCU power</span></label>
+                  </div>
+                  <div class="c919-ctrl-row c919-ctrl-row-buttons">
+                    <button type="button" class="c919-ctrl-btn c919-ctrl-btn-advance" id="c919-btn-advance-deploy">▶ Advance deploy latches</button>
+                    <button type="button" class="c919-ctrl-btn c919-ctrl-btn-stow" id="c919-btn-stow-latches">■ Stow latches (debug)</button>
+                  </div>
+                </div>
+              </div>
+
               <!-- Legacy placeholder card (hidden · kept for audit · v1 commit 9daa7f6 origin) -->
               <div class="c919-placeholder-card" style="display:none">
                 <header class="c919-placeholder-header">

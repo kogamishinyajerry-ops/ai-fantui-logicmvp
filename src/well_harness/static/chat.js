@@ -2775,12 +2775,118 @@ function clearAiHighlights() {
   });
 
 
+  // P43-02.5 Step D2 · initialize c919 controls panel (debounce 150ms + button handlers)
+  var c919DebounceId = null;
+  var c919ControlsInited = false;
+  function c919SubmitSnapshot() {
+    if (currentSystem !== 'c919-etras') { return; }
+    var snap = collectC919PanelSnapshot();
+    lastTruthPayloadBySystem['c919-etras'] = { snapshot: snap };
+    requestJson('/api/system-snapshot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system_id: 'c919-etras', snapshot: snap }),
+    }).then(function(data) {
+      applySystemSnapshotToCanvas(data, snap);
+    }).catch(function(err) {
+      console.error('[P43-02.5] c919 panel POST failed:', err);
+    });
+  }
+  function c919DebouncedSubmit() {
+    if (c919DebounceId) { clearTimeout(c919DebounceId); }
+    c919DebounceId = setTimeout(function() {
+      c919DebounceId = null;
+      c919SubmitSnapshot();
+    }, 150); // v4.2 §2c tunable to 300ms if POST storm observed
+  }
+  function initC919ControlsPanel() {
+    if (c919ControlsInited) { return; }
+    var panel = document.getElementById('c919-controls-panel');
+    if (!panel) { return; }
+    c919ControlsInited = true;
+    // wire per-control change → display value + debounced POST
+    var inputs = panel.querySelectorAll('[data-c919-field]');
+    var i;
+    var el;
+    var evt;
+    for (i = 0; i < inputs.length; i += 1) {
+      el = inputs[i];
+      evt = (el.type === 'range') ? 'input' : 'change';
+      el.addEventListener(evt, function(e) {
+        var tgt = e.currentTarget;
+        var field = tgt.getAttribute('data-c919-field');
+        // Update value display for sliders
+        var disp = panel.querySelector('[data-display-for="' + field + '"]');
+        if (disp) {
+          disp.textContent = (tgt.type === 'range') ? tgt.value : (tgt.checked ? 'on' : 'off');
+        }
+        // Composite-valid: if checking an *_unlocked, also auto-set *_valid=true
+        var compValid = tgt.getAttribute('data-c919-composite-valid');
+        if (compValid && tgt.checked) {
+          // find any hidden input for compValid · otherwise handled in collectC919PanelSnapshot default
+          var dummyField = panel.querySelector('[data-c919-field="' + compValid + '"]');
+          if (dummyField && dummyField.type === 'checkbox') { dummyField.checked = true; }
+        }
+        // Composite-targets: mirror state to sibling fields (e.g., Pylon unlock sets 4)
+        var compTargets = tgt.getAttribute('data-c919-composite-targets');
+        if (compTargets) {
+          var targets = compTargets.split(',');
+          var j;
+          for (j = 0; j < targets.length; j += 1) {
+            var tf = panel.querySelector('[data-c919-field="' + targets[j].trim() + '"]');
+            if (tf && tf.type === 'checkbox') { tf.checked = tgt.checked; }
+          }
+        }
+        c919DebouncedSubmit();
+      });
+    }
+    // Advance deploy latches button (control #19)
+    var advanceBtn = document.getElementById('c919-btn-advance-deploy');
+    if (advanceBtn) {
+      advanceBtn.addEventListener('click', function() {
+        // v4.2 §2c row 19 · cancel pending debounce + atomic set timer fields + immediate POST
+        if (c919DebounceId) { clearTimeout(c919DebounceId); c919DebounceId = null; }
+        var snap = collectC919PanelSnapshot();
+        snap.lock_unlock_confirm_s = 0.4;
+        snap.tr_position_deployed_confirm_s = 0.5;
+        snap.tr_stowed_locked_confirm_s = 0.0; // keep CMD3 latched
+        // comm2_timer_s is display-only · not overridden (v4.1 fix)
+        lastTruthPayloadBySystem['c919-etras'] = { snapshot: snap };
+        requestJson('/api/system-snapshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ system_id: 'c919-etras', snapshot: snap }),
+        }).then(function(data) {
+          applySystemSnapshotToCanvas(data, snap);
+        });
+      });
+    }
+    // Stow latches button (control #19-alt · auxiliary debug)
+    var stowBtn = document.getElementById('c919-btn-stow-latches');
+    if (stowBtn) {
+      stowBtn.addEventListener('click', function() {
+        if (c919DebounceId) { clearTimeout(c919DebounceId); c919DebounceId = null; }
+        var snap = collectC919PanelSnapshot();
+        snap.tr_stowed_locked_confirm_s = 1.0; // force CMD3 reset
+        lastTruthPayloadBySystem['c919-etras'] = { snapshot: snap };
+        requestJson('/api/system-snapshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ system_id: 'c919-etras', snapshot: snap }),
+        }).then(function(data) {
+          applySystemSnapshotToCanvas(data, snap);
+        });
+      });
+    }
+  }
+
   if (systemSelect) {
     systemSelect.addEventListener('change', function() {
       currentSystem = systemSelect.value;
       // P43-02.5 Step D1 T4 · tag body with data-c919-active for CSS hide of #canvas-global-controls
       if (currentSystem === 'c919-etras') {
         document.body.setAttribute('data-c919-active', 'true');
+        initC919ControlsPanel();
       } else {
         document.body.removeAttribute('data-c919-active');
       }
