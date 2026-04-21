@@ -11,7 +11,8 @@ from typing import Any, Dict
 from urllib.parse import urlparse
 
 # Add src/ to path for well_harness imports
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+_REPO_ROOT = Path(__file__).resolve().parent.parent  # scripts/ -> repo root
+sys.path.insert(0, str(_REPO_ROOT / "src"))
 
 from well_harness.adapters.c919_etras_frozen_v1 import (
     C919ReverseThrustSystem,
@@ -24,7 +25,7 @@ from well_harness.adapters.c919_etras_frozen_v1 import (
 from well_harness.adapters.c919_etras_frozen_v1.cmd3_latch_controller import Cmd3LatchController
 
 PORT = 9191
-STATIC = Path(__file__).resolve().parents[2] / "src" / "well_harness" / "static" / "c919_etras_panel"
+STATIC = _REPO_ROOT / "src" / "well_harness" / "static" / "c919_etras_panel"
 
 _config = FrozenConfig()
 _logger = TelemetryLogger()
