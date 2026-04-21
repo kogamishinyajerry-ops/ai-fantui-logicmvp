@@ -47,6 +47,9 @@ let suspendWorkbenchPacketWorkspacePersistence = false;
 const maxWorkbenchRunHistory = 6;
 const maxWorkbenchPacketRevisionHistory = 8;
 
+// P43 authority contract — written only via assignFrozenSpec; never mutated directly
+let frozenSpec = null;
+
 const workbenchPresets = {
   ready_archived: {
     label: "一键通过验收",
@@ -297,6 +300,24 @@ async function refreshRecentWorkbenchArchives() {
     setRequestStatus(`刷新最近 archive 列表失败：${String(error.message || error)}`, "error");
   }
 }
+
+// ─── P43 authority helpers ────────────────────────────────────────────────────
+
+function deepFreeze(obj) {
+  if (obj === null || typeof obj !== "object") {
+    return obj;
+  }
+  Object.getOwnPropertyNames(obj).forEach((name) => {
+    deepFreeze(obj[name]);
+  });
+  return Object.freeze(obj);
+}
+
+function assignFrozenSpec(spec) {
+  frozenSpec = deepFreeze(JSON.parse(JSON.stringify(spec)));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function workbenchBrowserStorage() {
   try {

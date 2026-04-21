@@ -145,8 +145,12 @@ def check_r3(js: str) -> dict:
         missing.append("deepFreeze declaration MISSING")
 
     # Must NOT exist bare writes outside assignFrozenSpec body
-    # assignFrozenSpec is the one authorized writer — its body assignment is expected
-    all_bare = _grep_lines(js, r"frozenSpec\s*=(?!=)")  # = but not ==
+    # Exclude variable declarations (let/const/var frozenSpec = ...) — those are not writes
+    _js_lines = js.splitlines()
+    all_bare = [
+        ln for ln in _grep_lines(js, r"frozenSpec\s*=(?!=)")
+        if not re.search(r"\b(?:let|const|var)\s+frozenSpec\b", _js_lines[ln - 1])
+    ]
     if all_bare:
         assign_block = _extract_block(
             js, r"(?:function\s+assignFrozenSpec|\bassignFrozenSpec\s*=\s*(?:function|\())", max_lines=20

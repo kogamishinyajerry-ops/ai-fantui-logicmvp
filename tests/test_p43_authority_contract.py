@@ -145,8 +145,12 @@ class TestR3FrozenSpecControlledWriter:
     )
     def test_r3_no_bare_frozenspec_assignment(self, wjs: str):
         """No bare `frozenSpec = ...` outside assignFrozenSpec body."""
-        # Collect all lines with frozenSpec = (assignment, not ==)
-        candidate_lines = _grep(wjs, r"frozenSpec\s*=(?!=)")
+        # Collect assignments but exclude variable declarations (let/const/var frozenSpec = ...)
+        _wjs_lines = wjs.splitlines()
+        candidate_lines = [
+            ln for ln in _grep(wjs, r"frozenSpec\s*=(?!=)")
+            if not re.search(r"\b(?:let|const|var)\s+frozenSpec\b", _wjs_lines[ln - 1])
+        ]
         # Remove lines inside assignFrozenSpec body (heuristic: within 15 lines of declaration)
         decl_line = next(
             (i + 1 for i, l in enumerate(wjs.splitlines())
