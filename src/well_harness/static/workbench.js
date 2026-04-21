@@ -323,6 +323,13 @@ async function handleStartGen() {
     setRequestStatus("未找到已冻结规格 — 请先审批 Spec 再生成。", "error");
     return;
   }
+  // Write frozenSpec into the packet editor so runWorkbenchBundle() submits
+  // the frozen content, never a post-approval draft edit (R4 authority boundary)
+  const packetEl = workbenchElement("workbench-packet-json");
+  if (packetEl) {
+    packetEl.value = prettyJson(frozenSpec);
+    renderWorkbenchPacketDraftState();
+  }
   setCurrentWorkbenchRunLabel("Frozen Spec 生成");
   await runWorkbenchBundle();
 }
