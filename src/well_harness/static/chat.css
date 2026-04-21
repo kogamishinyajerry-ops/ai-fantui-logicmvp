@@ -3272,3 +3272,196 @@ input[type="range"].ndp-range::-webkit-slider-thumb:active {
   background: #1a2236;
   color: #e2e8f0;
 }
+
+/* ============================================================
+ * C919 E-TRAS · certified placeholder panel (2026-04-21)
+ * Shown when user switches to C919 反推系统.
+ * Full SVG signal-flow generation is scope of P43-05 Progressive
+ * panel preview (Batch-3) · this placeholder is honest surrogate.
+ * ============================================================ */
+.c919-etras-placeholder {
+  padding: 24px;
+  overflow: auto;
+}
+
+.c919-placeholder-card {
+  max-width: 920px;
+  margin: 0 auto;
+  background: linear-gradient(145deg, #16213e 0%, #0f1b33 100%);
+  border: 1px solid #2d4a7c;
+  border-radius: 12px;
+  padding: 28px 32px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  color: #e2e8f0;
+  font-family: "Helvetica Neue", Arial, "PingFang SC", sans-serif;
+}
+
+.c919-placeholder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(45, 74, 124, 0.5);
+  margin-bottom: 24px;
+}
+
+.c919-placeholder-header .eyebrow {
+  font-size: 11px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: #53ff92;
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.c919-placeholder-header h2 {
+  margin: 0 0 8px;
+  font-size: 26px;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.c919-placeholder-subtitle {
+  margin: 0;
+  color: #9bb0cc;
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 620px;
+}
+
+.c919-placeholder-badge {
+  background: rgba(255, 176, 55, 0.15);
+  color: #ffb037;
+  border: 1px solid rgba(255, 176, 55, 0.4);
+  border-radius: 18px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.c919-placeholder-section {
+  margin-bottom: 24px;
+}
+
+.c919-placeholder-section h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  color: #53ff92;
+  font-weight: 600;
+}
+
+.c919-placeholder-section p {
+  margin: 0 0 10px;
+  line-height: 1.65;
+  color: #cbd5e0;
+  font-size: 14px;
+}
+
+.c919-placeholder-section strong {
+  color: #ffffff;
+}
+
+.c919-placeholder-section code {
+  background: rgba(40, 244, 255, 0.1);
+  color: #28f4ff;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.c919-placeholder-section a {
+  color: #28f4ff;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(40, 244, 255, 0.4);
+}
+
+.c919-placeholder-section a:hover {
+  color: #7eeafb;
+  border-bottom-color: #7eeafb;
+}
+
+.c919-placeholder-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.c919-placeholder-grid li {
+  background: rgba(45, 74, 124, 0.2);
+  border: 1px solid rgba(45, 74, 124, 0.4);
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.c919-placeholder-grid li strong {
+  display: block;
+  font-size: 11px;
+  color: #9bb0cc;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.c919-placeholder-grid li span {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #e2e8f0;
+  word-break: break-all;
+}
+
+.c919-placeholder-chain {
+  margin: 12px 0 0;
+  padding-left: 24px;
+  color: #cbd5e0;
+  font-size: 14px;
+  line-height: 1.85;
+}
+
+.c919-placeholder-chain li {
+  margin-bottom: 6px;
+}
+
+.c919-placeholder-chain li strong {
+  color: #53ff92;
+}
+
+.c919-placeholder-roadmap ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.c919-placeholder-roadmap li {
+  padding: 8px 0;
+  color: #cbd5e0;
+  font-size: 13px;
+  line-height: 1.5;
+  border-bottom: 1px dashed rgba(45, 74, 124, 0.3);
+}
+
+.c919-placeholder-roadmap li:last-child {
+  border-bottom: none;
+}
+
+.c919-placeholder-footer {
+  margin-top: 20px;
+  padding: 16px 18px;
+  background: rgba(40, 244, 255, 0.06);
+  border-left: 3px solid #28f4ff;
+  border-radius: 4px;
+}
+
+.c919-placeholder-footer p {
+  margin: 0;
+  color: #9bcdda;
+  font-size: 13px;
+  line-height: 1.6;
+}

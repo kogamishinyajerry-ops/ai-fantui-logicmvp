@@ -577,6 +577,87 @@
               </svg>
             </div>
 
+            <!-- C919 E-TRAS · certified · P34/P38 真实 PDF 接入 · 面板 SVG 生成 scope = P43-05 Progressive panel preview (待 Batch-3 执行) -->
+            <div id="chain-topology-c919-etras" class="chain-topology canvas-map c919-etras-placeholder" style="display:none" aria-label="C919 E-TRAS 控制链路占位面板">
+              <div class="c919-placeholder-card">
+                <header class="c919-placeholder-header">
+                  <div>
+                    <p class="eyebrow">certified · in use</p>
+                    <h2>C919 反推系统 · E-TRAS</h2>
+                    <p class="c919-placeholder-subtitle">Electric Thrust Reverser Actuation System · 甲方（C919 TRCU 团队）· P34 接入 · P38 真实 PDF 入库 · SHA256 锁</p>
+                  </div>
+                  <span class="c919-placeholder-badge">待 P43-05 生成完整信号流图</span>
+                </header>
+
+                <section class="c919-placeholder-section">
+                  <h3>🚥 为什么当前没有 SVG 信号流图？</h3>
+                  <p>C919 E-TRAS 的 adapter、intake packet、hardware schema 与 traceability matrix 已在 P34 (2026-04-20) + P38 (2026-04-20) 全部接入后端，但控制链路的 SVG 信号流图是 <strong>P43-05 Progressive panel preview</strong> 的职责范围：由 AI 从 <code>frozen spec</code> 自动生成面板，而不是手画（hand-drafted SVG 会变成第二份真值 · 违 §3e R3/R5 authority contract）。</p>
+                  <p>今天已批准的 <strong>GATE-P43-02-BATCH-PLAN-QUALITY (Option A)</strong> 解锁 P43-02 + P43-03 + P43-04（workflow + doc pipeline + freeze gate）· 面板生成在 <strong>Batch-3（P43-05/06/07）</strong>。</p>
+                </section>
+
+                <section class="c919-placeholder-section">
+                  <h3>📋 已接入的真实数据</h3>
+                  <ul class="c919-placeholder-grid">
+                    <li>
+                      <strong>源文档</strong>
+                      <span>uploads/20260417-C919反推控制逻辑需求文档.pdf · 10 pages · 989 KB</span>
+                    </li>
+                    <li>
+                      <strong>SHA256</strong>
+                      <span><code>dbe3f76b8ab0682e7ea41ab36a970ad4897c4bfc5461a60a8f0831d485631da5</code></span>
+                    </li>
+                    <li>
+                      <strong>Authority</strong>
+                      <span>甲方 C919 TRCU 团队 · Appendix A Q1/Q2/Q3 sign-off resolved（Kogami 2026-04-20 代 TRCU 明示接纳）</span>
+                    </li>
+                    <li>
+                      <strong>Adapter</strong>
+                      <span><code>adapters.c919_etras_adapter.C919_ETRAS_CONTROLLER_METADATA</code> · truth_level=<strong>certified</strong> · status=<strong>In use</strong></span>
+                    </li>
+                    <li>
+                      <strong>Hardware schema</strong>
+                      <span><a href="/api/hardware/schema?system_id=c919-etras" target="_blank" rel="noopener">GET /api/hardware/schema?system_id=c919-etras</a>（返 6733 bytes · MLG_WOW / LGCU1/LGCU2 redundancy / TR_INHIBITED / EICU_CMD2/3 / FADEC_DEPLOY_CMD1 / 6 组 timing 阈值）</span>
+                    </li>
+                    <li>
+                      <strong>Traceability Matrix</strong>
+                      <span>docs/c919_etras/traceability_matrix.md · 5 张表 + Appendix A</span>
+                    </li>
+                  </ul>
+                </section>
+
+                <section class="c919-placeholder-section">
+                  <h3>🧭 控制链路层级（PDF §1.1.1–§1.1.3 描述）</h3>
+                  <p>10 页 PDF 定义的链路骨架（待 P43-05 渲染成 SVG）：</p>
+                  <ol class="c919-placeholder-chain">
+                    <li><strong>传感器层</strong>：MLG_WOW（主起落架称重） · TR_INHIBITED（电气反推抑制） · LGCU1/LGCU2 双余度输入</li>
+                    <li><strong>LGCU 余度选择</strong>：PDF 表2 列 1-4 描述 LGCU1/LGCU2 valid+value 组合 → 选出 selected MLG_WOW</li>
+                    <li><strong>TR 命令阶梯</strong>：EICU_CMD2（§1.1.1 图2）→ EICU_CMD3（§1.1.2 图3）→ TR_COMMAND3（§1.1.2 图4）→ FADEC_DEPLOY_CMD1（§1.1.3 图5）</li>
+                    <li><strong>时序守护</strong>：confirmation_0.5s · lock_confirmation_400ms · tr_wow_true/false_persist · deploy/stow cycle · idle_to_max</li>
+                    <li><strong>安全极限</strong>：max_n1k_deploy_limit（§1.1.3 ⑤）· TR_STOWED_LOCKED_CONFIRM</li>
+                    <li><strong>执行器</strong>：Thrust Reverser Cowl（电驱动作动器） · position feedback</li>
+                  </ol>
+                </section>
+
+                <section class="c919-placeholder-section c919-placeholder-roadmap">
+                  <h3>🗺️ 面板生成路线图</h3>
+                  <ul>
+                    <li>✅ P34 (2026-04-20)：adapter + intake_packet 接入 · Kogami GATE-P34-PLAN Approved</li>
+                    <li>✅ P38 (2026-04-20)：PDF 真实入库 + TRCU sign-off · Kogami GATE-P38-PLAN Approved</li>
+                    <li>✅ P43-00 v8 (2026-04-21)：milestone plan + §3d 8-entry delta · Gate Approved</li>
+                    <li>✅ P43-01 CLOSED (2026-04-21)：Contract Proof Spike + 7-endpoint API contract lock</li>
+                    <li>✅ P43-02 PLAN-QUALITY (2026-04-21 · <strong>今日</strong>)：Batch plan v3.1 Gate Approved Option A · 8-entry §3d delta applied</li>
+                    <li>⏳ Batch-2 execution：workflow automaton + R1-R6 authority contract + server-side doc extract + Bug D fix + FREEZE event + open-questions registry（P43-02/03/04 · 3-4 day cadence）</li>
+                    <li>🔜 <strong>Batch-3 (P43-05 + P43-06 + P43-07)</strong>：<strong>Progressive panel preview</strong> — AI 从 C919 frozen spec 自动生成本面板 SVG · draft_design_state authority contract · debug/wire 闭环</li>
+                    <li>🔜 Batch-4 (P43-08/09/10)：iteration · Final Approval (demonstrative/upgrade pending) · archive</li>
+                  </ul>
+                </section>
+
+                <footer class="c919-placeholder-footer">
+                  <p>📎 C919 E-TRAS 面板的"空白"不是 bug · 是 <strong>governance 有意的延迟</strong>：面板由 P43-05 AI 从 frozen spec 生成 · 避免手画 SVG 成为第二套 truth · 冲突 §3e R5 validator 的"单一 truth in frozen spec"原则。</p>
+                </footer>
+              </div>
+            </div>
+
             </div><!-- /.zoom-surface -->
           </div><!-- /.zoom-container -->
 
