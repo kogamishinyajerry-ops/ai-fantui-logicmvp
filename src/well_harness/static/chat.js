@@ -1267,6 +1267,64 @@ function _applySuggestedOverrides(overrides) {
     updateVisibleConnectionStates(rendered.resolvedStates, rendered.blockedByNode);
   }
 
+  // P43-02.5 Step C · C919 reference panel annotation helper
+  // Populates non-asserted_component_values fields: timer countdowns (from input snapshot),
+  // completion_reached badge (from truth_evaluation), and tr_position_percent aggregate bar.
+  // Called after renderChainMap() when currentSystem === 'c919-etras'.
+  function applyC919Annotations(snapshotData, inputSnapshot) {
+    if (!snapshotData) { return; }
+    var topology = document.getElementById('chain-topology-c919-etras');
+    if (!topology) { return; }
+
+    var truthEval = snapshotData.truth_evaluation || {};
+    var asserted = truthEval.asserted_component_values || {};
+    var input = inputSnapshot || {};
+
+    // Timer annotation countdowns (server-computed · display-only per v4.1)
+    var timerFields = [
+      'comm2_timer_s',
+      'lock_unlock_confirm_s',
+      'tr_position_deployed_confirm_s',
+      'tr_stowed_locked_confirm_s'
+    ];
+    var ti;
+    var field;
+    var val;
+    var els;
+    var k;
+    for (ti = 0; ti < timerFields.length; ti += 1) {
+      field = timerFields[ti];
+      val = input[field];
+      els = topology.querySelectorAll('[data-value-for="' + field + '"]');
+      for (k = 0; k < els.length; k += 1) {
+        els[k].textContent = (typeof val === 'number') ? val.toFixed(2) + 's' : '—';
+      }
+    }
+
+    // Completion badge (from truth_evaluation.completion_reached · not in asserted_component_values)
+    var completionEls = topology.querySelectorAll('[data-value-for="completion_reached"]');
+    var completionText = '—';
+    if (truthEval.completion_reached === true) {
+      completionText = '✓ DEPLOYED';
+    } else if (truthEval.completion_reached === false) {
+      completionText = '○ not reached';
+    }
+    for (k = 0; k < completionEls.length; k += 1) {
+      completionEls[k].textContent = completionText;
+    }
+
+    // TR position aggregate bar (reads from asserted_component_values.tr_position_percent)
+    var trPos = asserted.tr_position_percent;
+    var barEls = topology.querySelectorAll('[data-bar-for="tr_position_percent"]');
+    var pct;
+    if (typeof trPos === 'number') {
+      pct = Math.max(0, Math.min(100, trPos));
+      for (k = 0; k < barEls.length; k += 1) {
+        barEls[k].setAttribute('width', (pct * 1.6).toFixed(1)); // 160px bar × pct/100
+      }
+    }
+  }
+
   function buildLeverSnapshotComponentValues(data, payload) {
     var hud = data && data.hud ? data.hud : {};
     var outputs = data && data.outputs ? data.outputs : {};
@@ -1646,7 +1704,7 @@ function clearAiHighlights() {
     return nodeStates;
   }
 
-  function applySystemSnapshotToCanvas(snapshotData) {
+  function applySystemSnapshotToCanvas(snapshotData, inputSnapshot) {
     var truthEvaluation;
 
     if (snapshotData && Array.isArray(snapshotData.nodes) && snapshotData.nodes.length) {
@@ -1662,6 +1720,11 @@ function clearAiHighlights() {
         ? truthEvaluation.asserted_component_values
         : {}
     );
+
+    // P43-02.5 Step C · c919-specific annotation extension (timers + completion + aggregate bar)
+    if (currentSystem === 'c919-etras') {
+      applyC919Annotations(snapshotData, inputSnapshot);
+    }
   }
 
   function applySnapshotToCanvas(data, payload) {
