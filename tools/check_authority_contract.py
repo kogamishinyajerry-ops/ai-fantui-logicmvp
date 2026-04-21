@@ -274,11 +274,13 @@ def check_r6(js: str, py_bundle: str) -> dict:
     if not approve_block:
         missing.append("final_approve handler MISSING — removeItem(draft) unverifiable (expected: P43-08)")
     else:
+        # Accept either the inline removeItem call or the clearDraftDesignState() wrapper (both are compliant)
         if not re.search(
-            r"localStorage\.removeItem\([^)]*(?:draft_design_state|draftDesignState)[^)]*\)",
+            r"(?:localStorage\.removeItem\([^)]*(?:draft_design_state|draftDesignState)[^)]*\)"
+            r"|clearDraftDesignState\(\))",
             approve_block,
         ):
-            issues.append("  final_approve block: localStorage.removeItem(draft_design_state) NOT found")
+            issues.append("  final_approve block: neither localStorage.removeItem(draft_design_state) nor clearDraftDesignState() found")
 
     # Archive bundle must not contain draft keys
     for pat in [r"draft_design_state", r"draftDesignState"]:

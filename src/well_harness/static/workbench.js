@@ -343,6 +343,26 @@ function validateDraftAgainstFrozen(draft, frozen) {
   return { valid: deviations.length === 0, deviations };
 }
 
+function handleFinalApprove() {
+  const packetEl = workbenchElement("workbench-packet-json");
+  const raw = packetEl ? packetEl.value : "";
+  let currentSpec;
+  try {
+    currentSpec = JSON.parse(raw || "{}");
+  } catch (error) {
+    setRequestStatus(`审批失败：Packet JSON 解析错误 — ${String(error.message || error)}`, "error");
+    return;
+  }
+
+  // Freeze the approved spec (R3 — only authorised write path)
+  assignFrozenSpec(currentSpec);
+
+  // Delete draft immediately after freezing (R6)
+  clearDraftDesignState();
+
+  setRequestStatus("Spec 已冻结。草稿已清除。可执行生成。", "success");
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 function workbenchBrowserStorage() {

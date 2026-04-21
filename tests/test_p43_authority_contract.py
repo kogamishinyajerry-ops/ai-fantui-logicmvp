@@ -271,12 +271,16 @@ class TestR6LifecycleBoundary:
         reason="P43-08: final_approve handler not yet implemented",
     )
     def test_r6_final_approve_removes_draft(self, wjs: str):
-        """final_approve block must call localStorage.removeItem(draft key)."""
+        """final_approve block must delete draft via removeItem or clearDraftDesignState()."""
         block = _find_block(wjs, r"final.approve|finalApprove|handleFinalApprove|Final Approval")
         assert block, "final_approve handler not found"
-        pattern = r"localStorage\.removeItem\([^)]*(?:draft_design_state|draftDesignState)[^)]*\)"
+        pattern = (
+            r"(?:localStorage\.removeItem\([^)]*(?:draft_design_state|draftDesignState)[^)]*\)"
+            r"|clearDraftDesignState\(\))"
+        )
         assert re.search(pattern, block), (
-            "R6 VIOLATION: final_approve block does not call localStorage.removeItem(draft_design_state)"
+            "R6 VIOLATION: final_approve block does not delete draft "
+            "(expected clearDraftDesignState() or localStorage.removeItem(draft_design_state))"
         )
 
     def test_r6_archive_bundle_excludes_draft(self, wpy: str):
