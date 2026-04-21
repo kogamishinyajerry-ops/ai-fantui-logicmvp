@@ -24,6 +24,7 @@ from well_harness.controller_adapter import build_reference_controller_adapter
 from well_harness.adapters.landing_gear_adapter import build_landing_gear_controller_adapter
 from well_harness.adapters.bleed_air_adapter import build_bleed_air_controller_adapter
 from well_harness.adapters.efds_adapter import build_efds_controller_adapter
+from well_harness.adapters.c919_etras_adapter import build_c919_etras_controller_adapter
 from well_harness.llm_client import LLMClientError, get_llm_backend_metadata, get_llm_client
 from well_harness.document_intake import (
     apply_safe_schema_repairs,
@@ -3218,10 +3219,14 @@ SYSTEM_REGISTRY = {
     "landing-gear": build_landing_gear_controller_adapter,
     "bleed-air": build_bleed_air_controller_adapter,
     "efds": build_efds_controller_adapter,
+    # P43-02.5 (2026-04-21): C919 E-TRAS · certified · P34+P38 真实 PDF 接入 ·
+    # reference panel target for P43-05 AI panel generator validation
+    "c919-etras": build_c919_etras_controller_adapter,
 }
 
 # Cache built (stateless) adapters — avoid per-request instantiation overhead.
-@lru_cache(maxsize=4)
+# P43-02.5: bumped maxsize 4→5 to accommodate c919-etras without evicting others.
+@lru_cache(maxsize=5)
 def _cached_adapter(system_id: str) -> Any:
     builder = SYSTEM_REGISTRY.get(system_id)
     if builder is None:
@@ -3281,6 +3286,58 @@ def _default_snapshot_for_system(system_id: str) -> dict:
             "pilot.altitude_override": "AUTO",
             "actuator.flare_array": 24.0,
             "actuator.limiter_valve": "REGULATED",
+        }
+    elif system_id == "c919-etras":
+        # P43-02.5 (2026-04-21): C919 E-TRAS default snapshot · nominal pre-deploy
+        # state (aircraft on ground · engines at idle · TR fully stowed · no faults).
+        # 34 fields aligned with c919_etras_adapter.py _snapshot_* helper calls.
+        # PDF §1.1.x traceability preserved via hardware YAML (SHA256-locked).
+        return {
+            # --- A/C inputs ---
+            "tra_deg": 0.0,                         # PDF §Step1 · throttle at forward idle
+            "n1k_percent": 35.0,                    # Engine N1K at idle (adapter MONITOR_N1K)
+            "engine_running": True,
+            "tr_inhibited": False,                  # A/C bus · not inhibited
+            # --- LGCU 双余度 MLG_WOW input (PDF 表2) ---
+            "lgcu1_mlg_wow_value": True,            # LGCU1 reports on-ground
+            "lgcu1_mlg_wow_valid": True,
+            "lgcu2_mlg_wow_value": True,            # LGCU2 reports on-ground
+            "lgcu2_mlg_wow_valid": True,
+            # --- Selected TR_WOW (adapter _select_mlg_wow output · pre-computed for default) ---
+            "tr_wow": True,
+            # --- TLS (Translating Lock Sleeve · 双余度) · stowed=locked → unlocked=False ---
+            "tls_ls_a_valid": True,
+            "tls_ls_a_unlocked": False,
+            "tls_ls_b_valid": True,
+            "tls_ls_b_unlocked": False,
+            # --- PLS (Primary Lock Sleeve · 双余度) · stowed=locked=True ---
+            "pls_ls_a_locked": True,
+            "pls_ls_b_locked": True,
+            # --- Pylon locks (left+right · each 双余度) · stowed=locked → unlocked=False ---
+            "left_pylon_ls_a_valid": True,
+            "left_pylon_ls_a_unlocked": False,
+            "left_pylon_ls_b_valid": True,
+            "left_pylon_ls_b_unlocked": False,
+            "right_pylon_ls_a_valid": True,
+            "right_pylon_ls_a_unlocked": False,
+            "right_pylon_ls_b_valid": True,
+            "right_pylon_ls_b_unlocked": False,
+            # --- Actuator/state inputs (nominal no-action) ---
+            "apwtla": False,                        # All-pylons-wow-to-long-aggregate
+            "atltla": False,                        # All-tls-long-to-long-aggregate
+            # --- Sensors ---
+            "vdt_sensor_valid": True,
+            "e_tras_over_temp_fault": False,
+            "trcu_power_on": True,
+            # --- TR position (fully stowed at rest) ---
+            "tr_position_percent": 0.0,
+            # --- Command history (no prior EICU_CMD3 firing) ---
+            "prev_eicu_cmd3": False,
+            # --- Timing confirmation counters (accumulated dwell at nominal state) ---
+            "comm2_timer_s": 0.0,
+            "lock_unlock_confirm_s": 0.0,
+            "tr_position_deployed_confirm_s": 0.0,
+            "tr_stowed_locked_confirm_s": 2.0,      # ≥ 1.0s (TR_STOWED_LOCKED_CONFIRM_S) · nominal
         }
     return {}
 
