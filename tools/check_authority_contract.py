@@ -20,6 +20,7 @@ _REPO = Path(__file__).resolve().parent.parent
 _WORKBENCH_JS = _REPO / "src" / "well_harness" / "static" / "workbench.js"
 _WORKBENCH_PY = _REPO / "src" / "well_harness" / "workbench_bundle.py"
 _DEMO_SERVER   = _REPO / "src" / "well_harness" / "demo_server.py"
+_GENERATOR_PY  = _REPO / "src" / "well_harness" / "tools" / "generate_adapter.py"
 
 
 # ──────────────────────────────────────────────
@@ -58,24 +59,48 @@ def _extract_block(text: str, start_pattern: str, max_lines: int = 80) -> str:
 # ──────────────────────────────────────────────
 
 def check_r1(js: str, py_demo: str) -> dict:
-    """R1: Only UI writes draft_design_state; Python backend never writes."""
-    bad_patterns = [
-        r"draft_design_state",
-        r"draftDesignState",
-    ]
+    """R1: Only UI writes draft_design_state; Python backend never writes.
+
+    Scans demo_server.py AND all *.py under src/well_harness/ (excl. static assets).
+    """
+    bad_patterns = [r"draft_design_state", r"draftDesignState"]
     backend_hits: list[str] = []
+
+    # demo_server.py (passed in from caller)
     for pat in bad_patterns:
         lines = _grep_lines(py_demo, pat)
         if lines:
             backend_hits.append(f"  demo_server.py:{lines} pattern='{pat}'")
 
-    # In JS, writes are fine (UI owns it); only check Python backend
+    # All other Python files under src/well_harness/ (wide backend scan)
+    well_harness = _REPO / "src" / "well_harness"
+    if well_harness.exists():
+        for py_file in sorted(well_harness.rglob("*.py")):
+            # Skip static asset directories (not Python logic)
+            if "static" in py_file.parts:
+                continue
+            # workbench_bundle.py is separately governed by R6
+            if py_file.name == "workbench_bundle.py":
+                continue
+            # demo_server.py already scanned above
+            if py_file.name == "demo_server.py":
+                continue
+            try:
+                text = py_file.read_text(encoding="utf-8")
+            except Exception:
+                continue
+            for pat in bad_patterns:
+                hits = _grep_lines(text, pat)
+                if hits:
+                    rel = py_file.relative_to(_REPO)
+                    backend_hits.append(f"  {rel}:{hits} pattern='{pat}'")
+
     status = "PASS" if not backend_hits else "FAIL"
     return {
         "rule": "R1",
         "title": "Only UI writes draft_design_state; backend never writes",
         "status": status,
-        "detail": backend_hits or ["demo_server.py: 0 occurrences of draft_design_state — compliant"],
+        "detail": backend_hits or ["src/well_harness/**/*.py: 0 occurrences of draft_design_state — compliant"],
     }
 
 
@@ -90,7 +115,11 @@ def check_r2(js: str) -> dict:
             "status": "MISSING",
             "detail": ["final_approve handler not yet implemented (expected: P43-08)"],
         }
-    read_patterns = [r"getItem", r"JSON\.parse.*draft", r"draft_design_state", r"draftDesignState"]
+    # Only flag actual value-reads, not removeItem (which is R6 compliance, not a violation)
+    read_patterns = [
+        r"getItem\([^)]*(?:draft_design_state|draftDesignState)",
+        r"JSON\.parse[^;]*(?:draft_design_state|draftDesignState)",
+    ]
     bad: list[str] = []
     for pat in read_patterns:
         if re.search(pat, block):
@@ -115,11 +144,21 @@ def check_r3(js: str) -> dict:
     if not re.search(r"function deepFreeze|const deepFreeze\s*=|var deepFreeze\s*=", js):
         missing.append("deepFreeze declaration MISSING")
 
-    # Must NOT exist (bare writes)
-    bare_lines = _grep_lines(js, r"frozenSpec\s*=(?!=)")  # = but not ==
-    # exclude lines inside assignFrozenSpec body
-    if bare_lines:
-        issues.append(f"  bare frozenSpec= assignment at lines: {bare_lines}")
+    # Must NOT exist bare writes outside assignFrozenSpec body
+    # assignFrozenSpec is the one authorized writer — its body assignment is expected
+    all_bare = _grep_lines(js, r"frozenSpec\s*=(?!=)")  # = but not ==
+    if all_bare:
+        assign_block = _extract_block(
+            js, r"(?:function\s+assignFrozenSpec|\bassignFrozenSpec\s*=\s*(?:function|\())", max_lines=20
+        )
+        authorized_count = len(re.findall(r"frozenSpec\s*=(?!=)", assign_block)) if assign_block else 0
+        unauthorized = len(all_bare) - authorized_count
+        if unauthorized > 0:
+            issues.append(
+                f"  bare frozenSpec= at {len(all_bare)} site(s); "
+                f"{authorized_count} inside assignFrozenSpec (authorized); "
+                f"{unauthorized} unauthorized"
+            )
 
     # Must NOT exist (alias mutate patterns)
     forbidden = [
@@ -150,25 +189,46 @@ def check_r3(js: str) -> dict:
 
 
 def check_r4(js: str) -> dict:
-    """R4: Generator reads frozenSpec only, never draft_design_state."""
+    """R4: Generator reads frozenSpec only, never draft_design_state (JS handler + Python generator)."""
+    issues: list[str] = []
+    missing: list[str] = []
+
+    # JS handler check
     gen_block = _extract_block(js, r"start_gen|generatePanel|runGeneration|handleStartGen")
     if not gen_block:
+        missing.append("JS generator handler not yet implemented (expected: P43-05/06)")
+    else:
+        for pat in [r"draft_design_state", r"draftDesignState"]:
+            if re.search(pat, gen_block):
+                issues.append(f"  JS generator block reads draft pattern: '{pat}'")
+
+    # Python generator check (generate_adapter.py is the authoritative backend generator)
+    if _GENERATOR_PY.exists():
+        py_gen = _GENERATOR_PY.read_text(encoding="utf-8")
+        for pat in [r"draft_design_state", r"draftDesignState"]:
+            lines = _grep_lines(py_gen, pat)
+            if lines:
+                issues.append(f"  generate_adapter.py:{lines} reads draft pattern '{pat}'")
+
+    if issues:
+        return {
+            "rule": "R4",
+            "title": "Generator reads frozenSpec only, never draft",
+            "status": "FAIL",
+            "detail": issues + missing,
+        }
+    if missing:
         return {
             "rule": "R4",
             "title": "Generator reads frozenSpec only, never draft",
             "status": "MISSING",
-            "detail": ["Generator function not yet implemented (expected: P43-05/06)"],
+            "detail": missing,
         }
-    bad: list[str] = []
-    for pat in [r"draft_design_state", r"draftDesignState"]:
-        if re.search(pat, gen_block):
-            bad.append(f"  Generator block reads draft pattern: '{pat}'")
-    status = "PASS" if not bad else "FAIL"
     return {
         "rule": "R4",
         "title": "Generator reads frozenSpec only, never draft",
-        "status": status,
-        "detail": bad or ["No draft reads in generator block — compliant"],
+        "status": "PASS",
+        "detail": ["No draft reads in JS generator block or generate_adapter.py — compliant"],
     }
 
 
@@ -182,18 +242,21 @@ def check_r5(js: str) -> dict:
             "status": "MISSING",
             "detail": ["validateDraftAgainstFrozen not yet implemented (expected: P43-07)"],
         }
+    # count_js > 0 means at least one reference — but we require exactly one *declaration*
+    decl_count = _grep_count(js, r"function validateDraftAgainstFrozen|validateDraftAgainstFrozen\s*=")
     issues: list[str] = []
-    if count_js > 1:
-        # Check it's only declared once (singleton)
-        decl_count = _grep_count(js, r"function validateDraftAgainstFrozen|validateDraftAgainstFrozen\s*=")
-        if decl_count > 1:
-            issues.append(f"  validateDraftAgainstFrozen declared {decl_count} times — must be singleton")
+    if decl_count == 0:
+        issues.append(
+            f"  validateDraftAgainstFrozen referenced {count_js}× but no declaration found — must be a declared singleton"
+        )
+    elif decl_count > 1:
+        issues.append(f"  validateDraftAgainstFrozen declared {decl_count} times — must be singleton (exactly 1)")
     status = "PASS" if not issues else "FAIL"
     return {
         "rule": "R5",
         "title": "validateDraftAgainstFrozen singleton in workbench.js",
         "status": status,
-        "detail": issues or [f"validateDraftAgainstFrozen found {count_js} reference(s) — compliant"],
+        "detail": issues or [f"validateDraftAgainstFrozen: 1 declaration, {count_js} reference(s) — compliant"],
     }
 
 
