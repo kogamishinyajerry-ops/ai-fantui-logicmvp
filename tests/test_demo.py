@@ -1105,7 +1105,7 @@ class DemoIntentLayerTests(unittest.TestCase):
 
         for fragment in (
             "function extractNodeStates(snapshotData)",
-            "function applySystemSnapshotToCanvas(snapshotData)",
+            "function applySystemSnapshotToCanvas(snapshotData, inputSnapshot)",  # P43-02.5 Step C · signature extended (optional inputSnapshot arg · backward-compat at runtime)
             "function applyAiHighlights(highlightedNodes, suggestionNodes)",
             "function clearAiHighlights()",
             "requestJson('/api/system-snapshot?system_id=' + encodeURIComponent(qSystemId))",

@@ -1,0 +1,337 @@
+{
+  "phase": "P43-02.5",
+  "plan_revision": "v4.2",
+  "system": "c919-etras",
+  "viewBox": [
+    0,
+    0,
+    1100,
+    640
+  ],
+  "nodes": [
+    {
+      "id": "tra_deg",
+      "kind": "sensor",
+      "col": 1,
+      "x": 30,
+      "y": 24
+    },
+    {
+      "id": "atltla",
+      "kind": "sensor",
+      "col": 1,
+      "x": 30,
+      "y": 64
+    },
+    {
+      "id": "apwtla",
+      "kind": "sensor",
+      "col": 1,
+      "x": 30,
+      "y": 104
+    },
+    {
+      "id": "engine_running",
+      "kind": "sensor",
+      "col": 1,
+      "x": 30,
+      "y": 144
+    },
+    {
+      "id": "n1k_percent",
+      "kind": "sensor",
+      "col": 1,
+      "x": 30,
+      "y": 184
+    },
+    {
+      "id": "tr_inhibited",
+      "kind": "sensor",
+      "col": 1,
+      "x": 30,
+      "y": 224
+    },
+    {
+      "id": "mlg_wow",
+      "kind": "sensor",
+      "col": 1,
+      "x": 30,
+      "y": 264
+    },
+    {
+      "id": "tr_wow",
+      "kind": "sensor",
+      "col": 1,
+      "x": 30,
+      "y": 304
+    },
+    {
+      "id": "trcu_power_on",
+      "kind": "sensor",
+      "col": 1,
+      "x": 30,
+      "y": 344
+    },
+    {
+      "id": "e_tras_over_temp_fault",
+      "kind": "sensor",
+      "col": 1,
+      "x": 30,
+      "y": 384
+    },
+    {
+      "id": "tr_position_percent",
+      "kind": "sensor",
+      "col": 1,
+      "x": 30,
+      "y": 424
+    },
+    {
+      "id": "lock_state",
+      "kind": "sensor",
+      "col": 1,
+      "x": 30,
+      "y": 464
+    },
+    {
+      "id": "ln_eicu_cmd2",
+      "kind": "logic",
+      "col": 3,
+      "x": 360,
+      "y": 0
+    },
+    {
+      "id": "ln_eicu_cmd3",
+      "kind": "logic",
+      "col": 3,
+      "x": 360,
+      "y": 0
+    },
+    {
+      "id": "ln_tr_command3_enable",
+      "kind": "logic",
+      "col": 3,
+      "x": 360,
+      "y": 0
+    },
+    {
+      "id": "ln_fadec_deploy_command",
+      "kind": "logic",
+      "col": 3,
+      "x": 360,
+      "y": 0
+    },
+    {
+      "id": "ln_fadec_stow_command",
+      "kind": "logic",
+      "col": 3,
+      "x": 360,
+      "y": 0
+    },
+    {
+      "id": "eicu_cmd2",
+      "kind": "command",
+      "col": 5,
+      "x": 720,
+      "y": 65
+    },
+    {
+      "id": "eicu_cmd3",
+      "kind": "command",
+      "col": 5,
+      "x": 720,
+      "y": 165
+    },
+    {
+      "id": "tr_command3_enable",
+      "kind": "command",
+      "col": 5,
+      "x": 720,
+      "y": 265
+    },
+    {
+      "id": "fadec_deploy_command",
+      "kind": "command",
+      "col": 5,
+      "x": 720,
+      "y": 365
+    },
+    {
+      "id": "fadec_stow_command",
+      "kind": "command",
+      "col": 5,
+      "x": 720,
+      "y": 465
+    }
+  ],
+  "edges": [
+    {
+      "from": "lgcu_annotation",
+      "to": "mlg_wow"
+    },
+    {
+      "from": "atltla",
+      "to": "ln_eicu_cmd2"
+    },
+    {
+      "from": "apwtla",
+      "to": "ln_eicu_cmd2"
+    },
+    {
+      "from": "mlg_wow",
+      "to": "ln_eicu_cmd2"
+    },
+    {
+      "from": "tr_inhibited",
+      "to": "ln_eicu_cmd2"
+    },
+    {
+      "from": "atltla",
+      "to": "ln_eicu_cmd3"
+    },
+    {
+      "from": "mlg_wow",
+      "to": "ln_eicu_cmd3"
+    },
+    {
+      "from": "engine_running",
+      "to": "ln_eicu_cmd3"
+    },
+    {
+      "from": "tr_inhibited",
+      "to": "ln_eicu_cmd3"
+    },
+    {
+      "from": "tr_stowed_locked_s",
+      "to": "ln_eicu_cmd3"
+    },
+    {
+      "from": "e_tras_over_temp_fault",
+      "to": "ln_tr_command3_enable"
+    },
+    {
+      "from": "tra_deg",
+      "to": "ln_tr_command3_enable"
+    },
+    {
+      "from": "ln_eicu_cmd3",
+      "to": "ln_tr_command3_enable"
+    },
+    {
+      "from": "tr_stowed_locked_s",
+      "to": "ln_tr_command3_enable"
+    },
+    {
+      "from": "engine_running",
+      "to": "ln_fadec_deploy_command"
+    },
+    {
+      "from": "n1k_percent",
+      "to": "ln_fadec_deploy_command"
+    },
+    {
+      "from": "tr_wow",
+      "to": "ln_fadec_deploy_command"
+    },
+    {
+      "from": "tra_deg",
+      "to": "ln_fadec_deploy_command"
+    },
+    {
+      "from": "tr_position_percent",
+      "to": "ln_fadec_deploy_command"
+    },
+    {
+      "from": "ln_tr_command3_enable",
+      "to": "ln_fadec_deploy_command"
+    },
+    {
+      "from": "lock_unlock_s",
+      "to": "ln_fadec_deploy_command"
+    },
+    {
+      "from": "deployed_s",
+      "to": "ln_fadec_deploy_command"
+    },
+    {
+      "from": "lock_state",
+      "to": "ln_fadec_deploy_command"
+    },
+    {
+      "from": "tra_deg",
+      "to": "ln_fadec_stow_command"
+    },
+    {
+      "from": "n1k_percent",
+      "to": "ln_fadec_stow_command"
+    },
+    {
+      "from": "engine_running",
+      "to": "ln_fadec_stow_command"
+    },
+    {
+      "from": "fadec_deploy_command",
+      "to": "ln_fadec_stow_command"
+    },
+    {
+      "from": "ln_eicu_cmd2",
+      "to": "eicu_cmd2"
+    },
+    {
+      "from": "ln_eicu_cmd3",
+      "to": "eicu_cmd3"
+    },
+    {
+      "from": "ln_tr_command3_enable",
+      "to": "tr_command3_enable"
+    },
+    {
+      "from": "ln_fadec_deploy_command",
+      "to": "fadec_deploy_command"
+    },
+    {
+      "from": "ln_fadec_stow_command",
+      "to": "fadec_stow_command"
+    },
+    {
+      "from": "fadec_deploy_command",
+      "to": "completion_aggregate"
+    },
+    {
+      "from": "tr_position_percent",
+      "to": "tr_position_bar"
+    },
+    {
+      "from": "eicu_cmd2",
+      "to": "eicu_cmd3"
+    },
+    {
+      "from": "eicu_cmd3",
+      "to": "tr_command3_enable"
+    },
+    {
+      "from": "tr_command3_enable",
+      "to": "fadec_deploy_command"
+    },
+    {
+      "from": "lock_state",
+      "to": "lock_aggregate"
+    },
+    {
+      "from": "mlg_wow",
+      "to": "ln_fadec_deploy_command"
+    },
+    {
+      "from": "comm2_timer_s",
+      "to": "ln_eicu_cmd2"
+    },
+    {
+      "from": "fadec_deploy_command",
+      "to": "tr_position_percent"
+    },
+    {
+      "from": "e_tras_over_temp_fault",
+      "to": "ln_fadec_deploy_command"
+    }
+  ]
+}

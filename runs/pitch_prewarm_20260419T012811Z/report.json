@@ -1,0 +1,112 @@
+{
+  "generated_at": "2026-04-19T01:28:26Z",
+  "backend": "ollama",
+  "model": "qwen2.5:7b-instruct",
+  "host": "127.0.0.1",
+  "port": 8799,
+  "reused_running_server": false,
+  "boot_ms": 309.9,
+  "system_id": "thrust-reverser",
+  "cases": [
+    {
+      "name": "wow_a_logic1_active",
+      "question": "L1门为什么active",
+      "status": 200,
+      "snapshot_elapsed_ms": 1.5,
+      "node_count": 19,
+      "active_logic": [
+        "logic1",
+        "logic2"
+      ]
+    },
+    {
+      "name": "wow_a_logic3_active",
+      "question": "L3门为什么active",
+      "status": 200,
+      "snapshot_elapsed_ms": 1.3,
+      "node_count": 19,
+      "active_logic": [
+        "logic2",
+        "logic3"
+      ]
+    }
+  ],
+  "rounds": [
+    {
+      "name": "warm",
+      "status": 200,
+      "elapsed_ms": 14900.8,
+      "requested_count": 2,
+      "warmed_count": 2,
+      "cache_hits": 0,
+      "cache_misses": 2,
+      "errors": [],
+      "results": [
+        {
+          "index": 0,
+          "question": "L1门为什么active",
+          "system_id": "thrust-reverser",
+          "response_source": "live_llm",
+          "cache_key": "77481cc46a9c59e0dbfc2793",
+          "cached_at": "2026-04-19T01:28:20Z",
+          "llm_backend": "ollama",
+          "llm_model": "qwen2.5:7b-instruct"
+        },
+        {
+          "index": 1,
+          "question": "L3门为什么active",
+          "system_id": "thrust-reverser",
+          "response_source": "live_llm",
+          "cache_key": "d1aacb46c082059e66e9bde0",
+          "cached_at": "2026-04-19T01:28:26Z",
+          "llm_backend": "ollama",
+          "llm_model": "qwen2.5:7b-instruct"
+        }
+      ]
+    },
+    {
+      "name": "verify_cache",
+      "status": 200,
+      "elapsed_ms": 1.2,
+      "requested_count": 2,
+      "warmed_count": 2,
+      "cache_hits": 2,
+      "cache_misses": 0,
+      "errors": [],
+      "results": [
+        {
+          "index": 0,
+          "question": "L1门为什么active",
+          "system_id": "thrust-reverser",
+          "response_source": "cached_llm",
+          "cache_key": "77481cc46a9c59e0dbfc2793",
+          "cached_at": "2026-04-19T01:28:20Z",
+          "llm_backend": "ollama",
+          "llm_model": "qwen2.5:7b-instruct"
+        },
+        {
+          "index": 1,
+          "question": "L3门为什么active",
+          "system_id": "thrust-reverser",
+          "response_source": "cached_llm",
+          "cache_key": "d1aacb46c082059e66e9bde0",
+          "cached_at": "2026-04-19T01:28:26Z",
+          "llm_backend": "ollama",
+          "llm_model": "qwen2.5:7b-instruct"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "verdict": "GREEN",
+    "expected_count": 2,
+    "snapshot_ok": true,
+    "warm_ok": true,
+    "verify_ok": true,
+    "verified_cache_hits": 2,
+    "llm_backend": "ollama",
+    "llm_model": "qwen2.5:7b-instruct"
+  },
+  "verdict": "GREEN",
+  "error": null
+}
