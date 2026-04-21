@@ -3284,6 +3284,109 @@ input[type="range"].ndp-range::-webkit-slider-thumb:active {
   overflow: auto;
 }
 
+/* ============================================================
+ * P43-02.5 · C919 Reference Panel SVG styles (v4.2)
+ * 2 new class rules: .lgcu-selector-svg + .timing-guard-svg
+ * Plus support: aggregate badge/bar · safety diamond · col labels
+ * ============================================================ */
+
+.c919-reference-panel .chain-svg {
+  width: 100%;
+  height: auto;
+  min-height: 520px;
+}
+
+.c919-reference-panel .chain-col-label {
+  fill: rgba(160, 200, 255, 0.65);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.c919-reference-panel .chain-annotation-label {
+  fill: rgba(200, 220, 255, 0.8);
+  font-weight: 500;
+}
+
+.c919-reference-panel .chain-annotation-detail {
+  fill: rgba(180, 200, 230, 0.7);
+}
+
+/* v4.2 new class 1: LGCU 双余度 selector · concentric double box */
+.lgcu-selector-svg {
+  fill: rgba(40, 60, 100, 0.3);
+  stroke: rgba(100, 180, 220, 0.55);
+  stroke-width: 1.2;
+}
+
+.lgcu-selector-back {
+  fill: rgba(40, 60, 100, 0.18);
+  stroke: rgba(100, 180, 220, 0.35);
+  stroke-width: 1;
+  stroke-dasharray: 3 2;
+}
+
+/* v4.2 new class 2: timing guard hexagon · with inline countdown text */
+.timing-guard-svg {
+  fill: rgba(60, 50, 20, 0.3);
+  stroke: rgba(220, 180, 80, 0.55);
+  stroke-width: 1.2;
+}
+
+/* Supporting styles · safety diamond */
+.safety-limit-svg {
+  fill: rgba(100, 30, 30, 0.25);
+  stroke: rgba(255, 100, 100, 0.6);
+  stroke-width: 1.2;
+}
+
+/* Supporting styles · col 6 aggregate badge + bar */
+.aggregate-badge-svg {
+  fill: rgba(20, 40, 60, 0.55);
+  stroke: rgba(100, 180, 220, 0.4);
+  stroke-width: 1;
+}
+
+.aggregate-bar-bg {
+  fill: rgba(30, 50, 80, 0.6);
+}
+
+.aggregate-bar-fill {
+  fill: #28f4ff;
+  transition: width 200ms ease-out;
+}
+
+/* v4.2 conn-line-dashed for non-adapter-direct visual cascade hints */
+.c919-reference-panel .conn-line.conn-line-dashed {
+  stroke: rgba(120, 160, 200, 0.35);
+  stroke-dasharray: 4 3;
+  stroke-width: 0.8;
+}
+
+/* P43-02.5 freeze banner · certified · in use */
+.c919-panel-freeze-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  margin: 12px 16px;
+  background: rgba(20, 60, 40, 0.4);
+  border: 1px solid rgba(83, 255, 146, 0.35);
+  border-radius: 6px;
+  color: rgba(200, 255, 220, 0.9);
+  font-size: 12px;
+}
+
+.c919-panel-freeze-banner .eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(83, 255, 146, 0.9);
+}
+
+
 .c919-placeholder-card {
   max-width: 920px;
   margin: 0 auto;
