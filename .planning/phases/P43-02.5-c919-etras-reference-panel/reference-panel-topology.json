@@ -1,6 +1,6 @@
 {
   "phase": "P43-02.5",
-  "plan_revision": "v4.2",
+  "plan_revision": "v4.3-pdf-spec-aligned",
   "system": "c919-etras",
   "viewBox": [
     0,
@@ -8,6 +8,8 @@
     1100,
     640
   ],
+  "spec_authority": "PDF 20260417-C919反推控制逻辑需求文档.docx §1.1.1-§1.1.3 Figure 2-5",
+  "adapter_divergence": "see COUNTER-F-adapter-spec-compliance-gaps.md (F1-F5)",
   "nodes": [
     {
       "id": "tra_deg",
@@ -170,14 +172,6 @@
       "to": "mlg_wow"
     },
     {
-      "from": "atltla",
-      "to": "ln_eicu_cmd2"
-    },
-    {
-      "from": "apwtla",
-      "to": "ln_eicu_cmd2"
-    },
-    {
       "from": "mlg_wow",
       "to": "ln_eicu_cmd2"
     },
@@ -186,27 +180,35 @@
       "to": "ln_eicu_cmd2"
     },
     {
-      "from": "atltla",
-      "to": "ln_eicu_cmd3"
+      "from": "comm2_timer_s",
+      "to": "ln_eicu_cmd2"
     },
     {
-      "from": "mlg_wow",
-      "to": "ln_eicu_cmd3"
+      "from": "tr_position_percent",
+      "to": "ln_eicu_cmd2"
+    },
+    {
+      "from": "atltla",
+      "to": "comm2_timer_s"
     },
     {
       "from": "engine_running",
       "to": "ln_eicu_cmd3"
     },
     {
+      "from": "mlg_wow",
+      "to": "ln_eicu_cmd3"
+    },
+    {
       "from": "tr_inhibited",
       "to": "ln_eicu_cmd3"
     },
     {
-      "from": "tr_stowed_locked_s",
+      "from": "apwtla",
       "to": "ln_eicu_cmd3"
     },
     {
-      "from": "e_tras_over_temp_fault",
+      "from": "tr_stowed_locked_confirm_s",
       "to": "ln_tr_command3_enable"
     },
     {
@@ -214,19 +216,27 @@
       "to": "ln_tr_command3_enable"
     },
     {
-      "from": "ln_eicu_cmd3",
+      "from": "trcu_power_on",
       "to": "ln_tr_command3_enable"
     },
     {
-      "from": "tr_stowed_locked_s",
+      "from": "e_tras_over_temp_fault",
       "to": "ln_tr_command3_enable"
+    },
+    {
+      "from": "ln_tr_command3_enable",
+      "to": "eicu_cmd3"
     },
     {
       "from": "engine_running",
       "to": "ln_fadec_deploy_command"
     },
     {
-      "from": "n1k_percent",
+      "from": "tr_inhibited",
+      "to": "ln_fadec_deploy_command"
+    },
+    {
+      "from": "lock_unlock_confirm_s",
       "to": "ln_fadec_deploy_command"
     },
     {
@@ -234,28 +244,20 @@
       "to": "ln_fadec_deploy_command"
     },
     {
+      "from": "n1k_percent",
+      "to": "ln_fadec_deploy_command"
+    },
+    {
       "from": "tra_deg",
       "to": "ln_fadec_deploy_command"
     },
     {
-      "from": "tr_position_percent",
-      "to": "ln_fadec_deploy_command"
-    },
-    {
-      "from": "ln_tr_command3_enable",
-      "to": "ln_fadec_deploy_command"
-    },
-    {
-      "from": "lock_unlock_s",
-      "to": "ln_fadec_deploy_command"
-    },
-    {
-      "from": "deployed_s",
-      "to": "ln_fadec_deploy_command"
-    },
-    {
       "from": "lock_state",
-      "to": "ln_fadec_deploy_command"
+      "to": "lock_unlock_confirm_s"
+    },
+    {
+      "from": "atltla",
+      "to": "lock_unlock_confirm_s"
     },
     {
       "from": "tra_deg",
@@ -294,6 +296,10 @@
       "to": "fadec_stow_command"
     },
     {
+      "from": "eicu_cmd3",
+      "to": "trcu_power_on"
+    },
+    {
       "from": "fadec_deploy_command",
       "to": "completion_aggregate"
     },
@@ -302,36 +308,28 @@
       "to": "tr_position_bar"
     },
     {
-      "from": "eicu_cmd2",
-      "to": "eicu_cmd3"
-    },
-    {
-      "from": "eicu_cmd3",
-      "to": "tr_command3_enable"
-    },
-    {
-      "from": "tr_command3_enable",
-      "to": "fadec_deploy_command"
-    },
-    {
       "from": "lock_state",
       "to": "lock_aggregate"
-    },
-    {
-      "from": "mlg_wow",
-      "to": "ln_fadec_deploy_command"
-    },
-    {
-      "from": "comm2_timer_s",
-      "to": "ln_eicu_cmd2"
     },
     {
       "from": "fadec_deploy_command",
       "to": "tr_position_percent"
     },
     {
-      "from": "e_tras_over_temp_fault",
-      "to": "ln_fadec_deploy_command"
+      "from": "trcu_power_on",
+      "to": "safety_115vac_trcu"
+    },
+    {
+      "from": "tr_position_percent",
+      "to": "tr_position_deployed_confirm_s"
+    },
+    {
+      "from": "lock_state",
+      "to": "tr_stowed_locked_confirm_s"
+    },
+    {
+      "from": "fadec_deploy_command",
+      "to": "ln_eicu_cmd2"
     }
   ]
 }

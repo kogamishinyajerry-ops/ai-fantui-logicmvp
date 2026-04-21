@@ -3489,6 +3489,36 @@ body[data-c919-active="true"] #canvas-global-controls {
   color: rgba(83, 255, 146, 0.9);
 }
 
+/* P43-02.5 v4.3 Counter F · spec-vs-adapter divergence banner */
+.c919-spec-divergence-banner {
+  margin: 8px 16px;
+  padding: 10px 14px;
+  background: rgba(80, 30, 20, 0.35);
+  border: 1px solid rgba(255, 140, 80, 0.5);
+  border-radius: 6px;
+  color: rgba(255, 220, 200, 0.92);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.c919-spec-divergence-banner strong {
+  display: block;
+  margin-bottom: 4px;
+  color: rgba(255, 180, 120, 0.98);
+  font-size: 12px;
+}
+
+.c919-spec-divergence-banner p {
+  margin: 4px 0;
+}
+
+.c919-spec-divergence-banner code {
+  background: rgba(40, 30, 25, 0.5);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
 
 .c919-placeholder-card {
   max-width: 920px;
