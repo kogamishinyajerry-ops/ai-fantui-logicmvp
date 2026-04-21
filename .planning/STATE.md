@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: P43-02 Batch combined plan v3.1 submitted · awaiting GATE-P43-02-BATCH-PLAN-QUALITY Kogami decision · 8-entry §Q Q1 §3d delta request bundled · Codex r4 final 可过-Gate (commit 987d723)
-last_updated: "2026-04-21T06:15:00.000Z"
+status: P43-02 Batch combined plan v3.1 APPROVED · GATE-P43-02-BATCH-PLAN-QUALITY Approved by Kogami (Option A · 2026-04-21) · P43-00 v7→v8 §3d amended with 8 delta entries · P43-02 Batch execution authorized · next = Step 3a/A workflow automaton contract docs
+last_updated: "2026-04-21T06:30:00.000Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 43
@@ -18,9 +18,59 @@ Last activity: 2026-04-21
 
 ## Current Position
 
-**P43-02 Batch combined plan v3.1 submitted · awaiting GATE-P43-02-BATCH-PLAN-QUALITY (Kogami plan-quality 前置门) · Codex r4 final 可过-Gate endorsement · 8-entry §3d delta bundled**
+**P43-02 Batch combined plan v3.1 APPROVED · GATE-P43-02-BATCH-PLAN-QUALITY Approved by Kogami (Option A · 2026-04-21) · P43-00 v7→v8 §3d amended · Batch-2 execution authorized · next = Step 3a/A workflow automaton contract docs**
 
-Phase: P43-02 Batch (P43-02 + P43-03 + P43-04 combined · Q1=D · plan-quality pre-gate · execution gate remains `GATE-P43-02-BATCH-CLOSURE` pending all 19 Exit Criteria)
+Phase: P43-02 Batch (P43-02 + P43-03 + P43-04 combined · Q1=D · plan-quality gate CLEARED · execution gate `GATE-P43-02-BATCH-CLOSURE` remains pending all 19 Exit Criteria + 13 Codex `可过-Gate` trailers)
+
+### GATE-P43-02-BATCH-PLAN-QUALITY Approved (2026-04-21 · Kogami Option A)
+
+**Kogami decision**: Approve all 8 §Q Q1 §3d delta entries + `GATE-P43-02-BATCH-PLAN-QUALITY` (plan-quality 前置门 CLEARED).
+
+**Approval act** (single commit):
+- `P43-00-PLAN.md` v7 → **v8** · §3d amended (Source Code Whitelist +1 row `pyproject.toml` · Doc Deliverables Whitelist +1 row `docs/<system>/traceability_matrix.md` per-system · Test Whitelist +6 rows 4 tests + 2 fixture dirs) · §8b governance ledger appended
+- `P43-02-00-PLAN.md` v3.1 frontmatter → `APPROVED`
+- `.planning/STATE.md` + `.planning/ROADMAP.md` updated to reflect execution authorization
+
+**v7 → v8 invariants preserved**: only §3d (3 sub-sections) amended · Q-lock untouched · Blacklist/Schema/Tooling+CI/兼容性 unchanged · §3e R1-R6 mechanical column unchanged · §1/§2/§3a-c/§3e/§4-§11 unchanged.
+
+### P43-02 Batch · Execution authorization
+
+Executor authorized to proceed with §3 execution plan:
+- **Next immediate action**: Step 3a/A (workflow automaton contract docs · `docs/P43-workflow-automaton-contract.md` + `.yaml` · doc-only · no source changes · no Codex round required)
+- **Subsequent 13 Codex Q7=A rounds** (per plan §8): 10 adapter-boundary + 3 sub-phase closure — triggered at Step 3a/B onwards per touchpoint
+- **Source-level work** begins at Step 3a/B (R1-R6 authority-contract tests scaffold + `tools/check_authority_contract.py`) — Codex round #1
+
+**Execution gate pending** (`GATE-P43-02-BATCH-CLOSURE`): submission blocked until all 19 Exit Criteria green + 13 Codex rounds all `可过-Gate` + three-lane regression PASS vs post-P43-01 baseline `61b12b3`.
+
+### P43-02 Batch plan arc (2026-04-21 · 5 revisions · 4 Codex rounds)
+
+| Revision | Commit | Codex round | Verdict |
+|----------|--------|-------------|---------|
+| v1 (draft) | `03e4acf` | r1 | 需修正·信号强 (6 required + 2 polish) |
+| v2 (surgical rewrite) | `1781641` | r2 | 需修正·信号强 (3 required + 1 polish) |
+| v3 (surgical addendum) | `ee0d018` | r3 | 需修正·信号弱 (3 text + 1 polish) |
+| v3.1 (janitorial) | `ac30621` | r4 pass 1 | 需修正·信号弱 (version drift) |
+| v3.1 (scrub 1) | `4aed5fd` | r4 pass 2 | 需修正·信号弱 (§6/§7 lifecycle) |
+| **v3.1 (final)** | **`987d723`** | **r4 final** | **`可过-Gate`** |
+| v3.1 (+§10 submission) | `b010e36` | — | Kogami submission ready |
+| **v3.1 APPROVED · P43-00 v8** | `(this commit)` | — | **GATE-P43-02-BATCH-PLAN-QUALITY Approved (Kogami Option A)** |
+
+### P43-02 Batch · Plan content digest (v3.1 · APPROVED)
+
+- **Scope**: 3 sub-phases combined · ~2100-2700 LOC · 3-4 days wall-time
+  - P43-02: Workflow automaton + authority contract R1-R6 + archive compat + API contract lock + multi-tab lock + dual-SHA manifest
+  - P43-03: Server-side PDF/DOCX extraction + `/api/document/extract` endpoint + Bug D fix (semantic category binding) + readAsText regression rewrite
+  - P43-04: FREEZE event + `workbench freeze` CLI + `docs/<system>/traceability_matrix.md` SKELETON emission
+- **Tests**: 16 authority (14 R1-R6 + 2 observability) + ~30 other ≈ **~46 new default-lane tests** · plus e2e opt-in
+- **Endpoints**: 8 total (P43-01's 7 + `/api/document/extract`) · `/api/workbench/freeze` dropped (CLI-only)
+- **Codex arc planned**: 13 rounds (10 adapter-boundary + 3 sub-phase closure)
+
+### Archive — prior position (P43-01 Contract Proof Spike CLOSED · 2026-04-21)
+
+[P43-01 prior-position history preserved below]
+
+---
+
 
 ### P43-02 Batch plan submission arc (2026-04-21 · same-day path ① · 5 plan revisions · 4 Codex rounds)
 
@@ -68,12 +118,7 @@ Gate approval requires amending `P43-00-PLAN.md` v7 §3d with 8 new entries (see
   - v2 pyproject.toml pre-emptive → v3 formal §Q Q1 delta entry #7 (r2 #2 closure)
   - Q5-B (harden apply_all_safe to strict bool) deleted as L3 violation (r1 #6 closure · v2) · only Q5-A soften text remains
 
-### Archive — P43-01 Contract Proof Spike CLOSED (2026-04-21)
-
-[P43-01 prior-position history preserved below]
-
 ---
-
 
 ### P43-01 Execution arc
 

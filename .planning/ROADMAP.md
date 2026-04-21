@@ -1020,28 +1020,30 @@ Status: Executed & Green · Awaiting `GATE-P41-CLOSURE: Approved`
 
 ## Phase P43: Control Logic Workbench end-to-end milestone
 
-Status: **Plan v7 GATE-P43-PLAN Approved** (Kogami 2026-04-20) · **P43-01 Contract Proof Spike CLOSED** · **GATE-P43-01-CLOSURE Approved** (Kogami 2026-04-21) · **P43-02 Batch plan v3.1 submitted · awaiting GATE-P43-02-BATCH-PLAN-QUALITY** (Kogami plan-quality 前置门 · 2026-04-21 · Codex r4 `可过-Gate` @ `987d723` · 8-entry §3d delta bundled)
+Status: **Plan v8 GATE-P43-PLAN Approved + §3d amended** (Kogami 2026-04-20 v7 Approved · 2026-04-21 v8 §3d 8-entry delta applied) · **P43-01 Contract Proof Spike CLOSED** · **GATE-P43-01-CLOSURE Approved** (Kogami 2026-04-21) · **P43-02 Batch plan v3.1 APPROVED · GATE-P43-02-BATCH-PLAN-QUALITY Approved** (Kogami 2026-04-21 · Option A) · **Batch-2 execution authorized · next = Step 3a/A**
 
-### P43-02 Batch Sub-phase: Orchestrator + Document Pipeline + Freeze Gate (plan v3.1 submitted · awaiting plan-quality gate)
+### P43-02 Batch Sub-phase: Orchestrator + Document Pipeline + Freeze Gate (plan v3.1 APPROVED · execution authorized)
 
-**Branch**: `codex/p43-02-orchestrator-extend` (not merged · execution unblocked by Gate approval)
-**Plan artifact**: `.planning/phases/P43-control-logic-workbench/P43-02-00-PLAN.md` v3.1 @ HEAD `987d723`
-**Gate ID (this submission)**: `GATE-P43-02-BATCH-PLAN-QUALITY` (plan-quality 前置门 · pre-execution)
-**Execution gate (future · post-implementation)**: `GATE-P43-02-BATCH-CLOSURE`
-**Codex Q7=A arc**: r1 强 → r2 强 → r3 弱 → r4 弱 → **r4 final `可过-Gate`** (5 plan revisions: v1→v2→v3→v3.1→v3.1 final-scrub)
-**Submission package**: see plan §10 (Codex arc · 8-entry §3d delta · Q-lock compliance · Kogami options A/B/C)
+**Branch**: `codex/p43-02-orchestrator-extend` (not merged · execution authorized starting next commit)
+**Plan artifact**: `.planning/phases/P43-control-logic-workbench/P43-02-00-PLAN.md` v3.1 (`APPROVED` · Kogami Option A · 2026-04-21)
+**Parent plan**: `P43-00-PLAN.md` v8 (§3d amended with 8 delta entries · §1-§3a-c / §3e / §4-§11 unchanged · §8b governance ledger appended)
+**Gate 1 (PLAN-QUALITY · CLEARED)**: `GATE-P43-02-BATCH-PLAN-QUALITY` · Approved by Kogami 2026-04-21 · Option A (all 8 delta entries + Gate)
+**Gate 2 (BATCH-CLOSURE · PENDING)**: `GATE-P43-02-BATCH-CLOSURE` · submission criteria per plan §6 (all 19 Exit Criteria + 13 Codex `可过-Gate` trailers + three-lane regression)
+**Codex Q7=A arc (plan-quality)**: r1 强 → r2 强 → r3 弱 → r4 弱 → **r4 final `可过-Gate` @ `987d723`** (5 plan revisions)
 
-**8-entry §3d whitelist delta bundled** (Q1=A · formal package · per plan §10.2):
-1. `tests/test_p43_document_pipeline.py` (Test Whitelist)
-2. `tests/test_p43_clarification_stable_ids.py` (Test Whitelist · Bug D semantic category binding · 6 regression cases)
-3. `tests/test_p43_freeze_gate.py` (Test Whitelist)
-4. `tests/test_p43_dual_sha_manifest.py` (Test Whitelist · Q12=B+a null-tolerant 4-组合)
-5. `tests/fixtures/p43_document_pipeline/` (PDF/DOCX/TXT/MD corpus)
-6. `tests/fixtures/p43_pre_archive/` (backward-compat)
-7. `pyproject.toml` → `[project.optional-dependencies] document = ["pypdf>=4.0", "python-docx>=1.0"]` (Source Code Whitelist new row · repo-root packaging metadata)
-8. `docs/<system>/traceability_matrix.md` per-system freeze-time SKELETON emission (Doc Deliverables Whitelist new row · aligned with P43-00 §2c:190 P34-P42 precedent)
+**Next immediate action**: Step 3a/A (workflow automaton contract docs · doc-only · no Codex round required · no source changes)
 
-**Awaiting Kogami decision**: A (approve all 8 + Gate · **Executor recommendation**) / B (approve Gate + partial subset · triggers v3.2 re-plan for rejected entries) / C (reject Gate · Batch-2 hard-frozen · R4 arbitration).
+**8-entry §3d whitelist delta APPLIED** (P43-00 v7 → v8 · Kogami Option A 2026-04-21 · see P43-00 §8b governance ledger):
+1. ✅ `tests/test_p43_document_pipeline.py` (Test Whitelist)
+2. ✅ `tests/test_p43_clarification_stable_ids.py` (Test Whitelist · Bug D semantic category binding · 6 regression cases)
+3. ✅ `tests/test_p43_freeze_gate.py` (Test Whitelist)
+4. ✅ `tests/test_p43_dual_sha_manifest.py` (Test Whitelist · Q12=B+a null-tolerant 4-组合)
+5. ✅ `tests/fixtures/p43_document_pipeline/` (PDF/DOCX/TXT/MD corpus)
+6. ✅ `tests/fixtures/p43_pre_archive/` (backward-compat)
+7. ✅ `pyproject.toml` → `[project.optional-dependencies] document = ["pypdf>=4.0", "python-docx>=1.0"]` (Source Code Whitelist new row · repo-root packaging metadata)
+8. ✅ `docs/<system>/traceability_matrix.md` per-system freeze-time SKELETON emission (Doc Deliverables Whitelist new row · aligned with P43-00 §2c:190 P34-P42 precedent)
+
+**Kogami decision (2026-04-21)**: **Option A APPROVED** · all 8 delta entries + Gate approved in single commit · zero rejection fallback invoked · Batch-2 runway clear.
 
 **Scope digest**: 3 sub-phases combined (P43-02 + P43-03 + P43-04) · ~2100-2700 LOC · 3-4 days wall-time · 13 Codex adapter-boundary review rounds planned for execution · 16 authority tests (14 R1-R6 + 2 observability) + ~30 other ≈ ~46 new default-lane tests · 8 endpoints total (P43-01's 7 + `/api/document/extract` · `/api/workbench/freeze` dropped as CLI-only).
 

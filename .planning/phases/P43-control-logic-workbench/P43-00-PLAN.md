@@ -1,9 +1,9 @@
 ---
 phase: P43
 plan: P43-00
-plan_revision: v7 (Kogami strengthen-before-Gate directive · KL-1/2/3 closed into §3e mechanical · Gate Approved)
-title: Control Logic Workbench end-to-end milestone — v7 · 3 strengthenings applied · GATE-P43-PLAN Approved
-status: APPROVED · GATE-P43-PLAN (v7): Approved (Kogami 2026-04-20) · Q1/Q2/Q4/Q7/Q8/Q10/Q12 locked per Executor recommendations
+plan_revision: v8 (Kogami GATE-P43-02-BATCH-PLAN-QUALITY Option A · §3d amended with 8 delta entries · no §3e / §3c / §1-§2 / §4-§11 changes · structural invariants preserved)
+title: Control Logic Workbench end-to-end milestone — v8 · §3d 8-entry delta applied per GATE-P43-02-BATCH-PLAN-QUALITY Approval
+status: APPROVED · GATE-P43-PLAN (v7): Approved (Kogami 2026-04-20) · GATE-P43-02-BATCH-PLAN-QUALITY: Approved (Kogami 2026-04-21 · Option A · v7 → v8 §3d amendment) · Q1/Q2/Q4/Q7/Q8/Q10/Q12 locked per Executor recommendations
 date: 2026-04-20
 owner: Claude App Opus 4.7 (Solo Executor) · v5.2 solo-signed + v5.3 addendum
 verified-by: codex-gpt54-xhigh (r1 需阻止 · r2/r3/r4/r5 需修正·信号强 · r5 明示 "值得 v6 最后一次 · 只修 3 刀" · Kogami 批 option A · v6 3 surgical fixes applied)
@@ -276,6 +276,7 @@ P43-02-00-PLAN.md 前置必备章节。**v4 三级阶梯：**
 | `src/well_harness/ai_doc_analyzer.py` | 加 PDF/DOCX server-side reader | 修 `blockers`/`blocking_reasons` bug（P43-01 必修） | 不相关重构 |
 | `src/well_harness/document_intake.py` | 加 clarification ID 契约 | 既有 gate 加 optional field | 改 intake gate 语义 |
 | `src/well_harness/tools/generate_adapter.py` | — | 接受 frozen spec input 的 kwargs 扩展 | **新增 domain hardcode · 暴露 "hardcode 开关" · 改 adapter emit shape**（v4 收紧 · 删 v3 错项） |
+| `pyproject.toml` **(v8 新增 · Kogami GATE-P43-02-BATCH-PLAN-QUALITY Option A · r2 #2 closure)** | 加 `[project.optional-dependencies] <name> = [...]` extras · Q12=B+a `document = ["pypdf>=4.0", "python-docx>=1.0"]` 率先落地 | 加其他 optional extras（仅 P43 scope · 不改 required deps） | rename / remove / 改 build system / 改 required deps / bump lockfile / 引入新构建后端 |
 
 #### Doc Deliverables Whitelist（P43 必须新建的 docs/ 文件 · 显式授权 · 防 §3d 自撞）
 
@@ -289,6 +290,7 @@ v3 规则"未列入 touched-files 则 violation"与 §3a/§8 要求新建多份 
 | `docs/P43-workflow-automaton.yaml` | P43-02 产出 | machine-readable 版本（runtime state validation 用） |
 | `docs/P43-authority-contract-verification.md` | P43-02 产出 | §3e R1-R6 每条的 CI / test 方案 |
 | `docs/P43-archive-compat-report.md` | P43-02 产出 | 既有 archive 向 P43 restore 回归报告 |
+| `docs/<system>/traceability_matrix.md` (per-system emission) **(v8 新增 · Kogami GATE-P43-02-BATCH-PLAN-QUALITY Option A · r2 #1 closure)** | P43-04 产出 + P43-08 扩写 | freeze-time emit per-system · P43-04 填 open-questions section 初始骨架（其他 section 空占位 + "deferred to P43-08" comment）· P43-08 Final Approval 扩写其他 section（source_documents / components / logic_nodes / acceptance_scenarios）· aligned with §2c:190 P34-P42 precedent（`docs/c919_etras/` + `docs/thrust_reverser/`）|
 
 其他 docs/ 文件新建 = violation（防 doc 蔓延）。
 
@@ -303,6 +305,12 @@ v3 规则"未列入 touched-files 则 violation"与 §3a/§8 要求新建多份 
 | `tests/test_p43_api_contract_lock.py` | P43-02 | `/api/workbench/*` endpoint shape 回归 |
 | `tests/test_p43_multi_tab_lock.py` | P43-02 | C13 cross-tab lock 场景 |
 | `tests/fixtures/p43_validator_cases.json` **(v6 显式 · Codex r6 whitelist 自撞修正)** | P43-02 | §3e R5 fixture-only validator I/O（describes expected output · 不复制规则） |
+| `tests/test_p43_document_pipeline.py` **(v8 新增 · Kogami GATE-P43-02-BATCH-PLAN-QUALITY Option A · delta entry #1)** | P43-03 | server-side `extract_document_text` PDF/DOCX/TXT/MD + error branches regression |
+| `tests/test_p43_clarification_stable_ids.py` **(v8 新增 · delta entry #2 · r2 #3 closure)** | P43-03 | Bug D semantic category binding regression · 6 cases（category→stable / legacy 2-tuple / unknown ID warn+skip / None fallback / unknown str fallback / no-category fixture backward-compat）|
+| `tests/test_p43_freeze_gate.py` **(v8 新增 · delta entry #3)** | P43-04 | FREEZE state transition + `docs/<system>/traceability_matrix.md` SKELETON emission regression |
+| `tests/test_p43_dual_sha_manifest.py` **(v8 新增 · delta entry #4 · r1 #4 closure)** | P43-02 | Q12=B+a dual-SHA null-tolerant manifest regression（4 组合：都缺 / 仅缺 canonical / 仅缺 binary / 都有 · P42 archive backward-compat）|
+| `tests/fixtures/p43_document_pipeline/` (directory · ~5 files) **(v8 新增 · delta entry #5)** | P43-03 | PDF/DOCX/TXT/MD fixture corpus · feed `test_p43_document_pipeline.py` |
+| `tests/fixtures/p43_pre_archive/` (directory · ~3 files) **(v8 新增 · delta entry #6)** | P43-02 | pre-P43 archive fixture · feed existing `test_p43_archive_backward_compat.py` |
 
 其他 tests/ 文件新建需 Executor 判是否合理 · 超出列表须加 §3d 更新。
 
@@ -571,6 +579,49 @@ P43-08..P43-10 iteration + approval + archive（合 1 gate · reiterate loop + F
 - Gate 直接由 Kogami 批 · 策略：Kogami-authoritative · 非 Codex-validated · 符合 v5.2 Solo Executor + v5.3 addendum 的 Kogami-final-arbiter 原则
 
 **Runtime re-evaluation gate（保留）：** P43-01 Contract Proof Spike land 后 · Kogami 审 `docs/P43-contract-proof-report.md` 时仍 MUST 核 KL-1/2/3 的 mechanical guard 是否真 reject 出假 exploit · 若 spike 揭示 guard 被绕过真 exploit · P43-02 plan 必修。
+
+---
+
+## 8b. Appendix B · Kogami GATE-P43-02-BATCH-PLAN-QUALITY Option A · §3d 8-entry 延拓记录（v8 · 2026-04-21）
+
+**治理依据**：P43-02-00-PLAN.md v3.1 (HEAD `987d723`) 经 Codex Q7=A 4 轮 adversarial review（r1 强 → r2 强 → r3 弱 → r4 弱 → r4 final `可过-Gate`）· Solo Executor 2026-04-21 向 Kogami 提交 `GATE-P43-02-BATCH-PLAN-QUALITY`（plan-quality 前置门）附 8-entry §3d delta request。Kogami 同日批 **Option A**（approve all 8 + Gate）· 本 §8b 作 v8 §3d amendment 的治理历史记录。
+
+**批准的 8 entries（已并入本 plan §3d）：**
+
+| # | Delta entry | §3d sub-section | Ladder | Rationale |
+|---|-------------|-----------------|--------|-----------|
+| 1 | `tests/test_p43_document_pipeline.py` | Test Whitelist | new | P43-03 document pipeline regression |
+| 2 | `tests/test_p43_clarification_stable_ids.py` | Test Whitelist | new | P43-03 Bug D semantic category binding · 6 regression cases |
+| 3 | `tests/test_p43_freeze_gate.py` | Test Whitelist | new | P43-04 FREEZE + traceability_matrix.md SKELETON regression |
+| 4 | `tests/test_p43_dual_sha_manifest.py` | Test Whitelist | new | P43-02 Q12=B+a dual-SHA null-tolerant regression |
+| 5 | `tests/fixtures/p43_document_pipeline/` (dir) | Test Whitelist | new | PDF/DOCX/TXT/MD fixture corpus |
+| 6 | `tests/fixtures/p43_pre_archive/` (dir) | Test Whitelist | new | pre-P43 archive fixture for existing backward-compat test |
+| 7 | `pyproject.toml` L1 additive `[project.optional-dependencies]` | Source Code Whitelist new row | L1 | Q12=B+a pypdf + python-docx optional extras · base install 不变 · 不触 lockfile |
+| 8 | `docs/<system>/traceability_matrix.md` per-system emission | Doc Deliverables Whitelist new row | L1 | P43-04 freeze-time SKELETON + P43-08 matrix 扩写 · aligned with §2c:190 P34-P42 precedent |
+
+**Gate 批准条件满足（P43-02-00-PLAN.md v3.1 §10.1 Codex arc）：**
+
+| Round | Commit | Verdict |
+|-------|--------|---------|
+| r1 | `03e4acf` | 需修正·信号强 (6 required + 2 polish) → closed in v2 |
+| r2 | `1781641` | 需修正·信号强 (3 required + 1 polish) → closed in v3 |
+| r3 | `ee0d018` | 需修正·信号弱 (3 text + 1 polish) → closed in v3.1 |
+| r4 pass 1/2 | `ac30621` → `4aed5fd` → `987d723` | 需修正·信号弱 (metadata / §6-§7 lifecycle) → all closed |
+| **r4 final** | **`987d723`** | **`可过-Gate`** · submission-blocker cleared |
+
+**Kogami approval act**：2026-04-21 · Option A · 本 v8 commit
+
+**v7 → v8 invariants preserved**：
+- §1-§2 / §3a-c / §3e / §4 / §5 / §6 / §7 / §8 / §8a / §9 / §10 / §11 均未变更
+- 仅 §3d (Source Code Whitelist · Doc Deliverables Whitelist · Test Whitelist) 加 8 entry
+- Q-lock（Q1=D / Q2=A / Q4=A / Q7=A / Q8=B / Q10=B / Q12=B+a）未变
+- Blacklist · JSON Schema Whitelist · Tooling+CI Whitelist · 兼容性验收 条款未变
+- §3e R1-R6 mechanical verification column 未变
+
+**Downstream effect**：
+- P43-02 Batch execution authorized per P43-02-00-PLAN.md v3.1 §10.3
+- Executor proceeds to §3 execution plan Step 3a/A（workflow automaton contract docs）
+- Execution gate `GATE-P43-02-BATCH-CLOSURE` remains pending · 待 3 sub-phase 源码落齐 + 19 Exit Criteria + 13 Codex `可过-Gate` trailers
 
 ---
 
