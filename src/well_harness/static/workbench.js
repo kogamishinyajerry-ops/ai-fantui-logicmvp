@@ -327,6 +327,22 @@ async function handleStartGen() {
   await runWorkbenchBundle();
 }
 
+function validateDraftAgainstFrozen(draft, frozen) {
+  if (frozen === null) {
+    return { valid: true, deviations: [] };
+  }
+  if (draft === null || typeof draft !== "object" || typeof frozen !== "object") {
+    return { valid: false, deviations: [{ field: "(root)", reason: "draft or frozen is not an object" }] };
+  }
+  const deviations = [];
+  for (const key of Object.keys(frozen)) {
+    if (JSON.stringify(frozen[key]) !== JSON.stringify(draft[key])) {
+      deviations.push({ field: key, frozen: frozen[key], draft: draft[key] });
+    }
+  }
+  return { valid: deviations.length === 0, deviations };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 function workbenchBrowserStorage() {
