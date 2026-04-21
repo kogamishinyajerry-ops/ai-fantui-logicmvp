@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C919 E-TRAS 控制逻辑面板 V1.0</title>
+<style>
+:root {
+  --bg0: #020810;
+  --bg1: #080f1e;
+  --bg2: #0c1628;
+  --bg3: #111e34;
+  --bg4: #19273f;
+  --b0: #1c2e4a;
+  --b1: #243654;
+  --b2: #2d4168;
+  --text0: #e8eef8;
+  --text1: #9ab0cc;
+  --text2: #5a7090;
+  --amber: #f5a623;
+  --amber2: #ffc657;
+  --amber-d: rgba(245,166,35,0.15);
+  --green: #4ade80;
+  --green-d: rgba(74,222,128,0.12);
+  --red: #f87171;
+  --red-d: rgba(248,113,113,0.12);
+  --cyan: #22d3ee;
+  --cyan-d: rgba(34,211,238,0.12);
+  --blue: #60a5fa;
+  --yellow: #fbbf24;
+  --mono: 'JetBrains Mono','Cascadia Mono','SF Mono',monospace;
+  --ui: 'Inter','PingFang SC',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg0);color:var(--text0);font-family:var(--ui);font-size:12px;display:flex;flex-direction:column}
+
+/* ── HEADER ─────────────────────────── */
+header{
+  height:44px;background:var(--bg1);border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;z-index:10;
+}
+.hbadge{
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;
+  padding:3px 10px;border-radius:3px;
+  background:linear-gradient(135deg,#0a1f40,#0b2d5a);
+  border:1px solid var(--cyan);color:var(--cyan);
+}
+.htitle{font-size:14px;font-weight:600;color:var(--text0)}
+.hsub{font-size:10px;color:var(--text2);font-family:var(--mono)}
+.hgap{flex:1}
+.hcontrols{display:flex;align-items:center;gap:8px}
+.btn{
+  padding:4px 12px;border-radius:4px;border:1px solid var(--b2);
+  background:var(--bg3);color:var(--text1);cursor:pointer;font-size:11px;
+  transition:all .15s;
+}
+.btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.btn.active{background:var(--cyan-d);border-color:var(--cyan);color:var(--cyan)}
+.btn.danger:hover{border-color:var(--red);color:var(--red)}
+.sim-indicator{
+  width:8px;height:8px;border-radius:50%;background:var(--red);
+  box-shadow:0 0 6px var(--red);transition:all .3s;
+}
+.sim-indicator.running{background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+.htime{font-family:var(--mono);font-size:12px;color:var(--amber);min-width:64px;text-align:right}
+.state-pill{
+  padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700;font-family:var(--mono);
+  background:var(--bg3);border:1px solid var(--b2);color:var(--text2);
+  transition:all .3s;min-width:200px;text-align:center;
+}
+.state-pill.armed{border-color:var(--amber);color:var(--amber);background:var(--amber-d)}
+.state-pill.active{border-color:var(--green);color:var(--green);background:var(--green-d)}
+.state-pill.fault{border-color:var(--red);color:var(--red);background:var(--red-d)}
+
+/* ── LAYOUT ─────────────────────────── */
+.workspace{
+  flex:1;overflow:hidden;
+  display:grid;
+  grid-template-columns:310px 1fr 300px;
+  gap:1px;background:var(--b0);
+}
+.panel{background:var(--bg1);overflow-y:auto;display:flex;flex-direction:column}
+
+/* ── SECTION / LABEL ─────────────────── */
+.sec{border-bottom:1px solid var(--b0);padding:8px 12px;display:flex;flex-direction:column;gap:6px}
+.sec-title{
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--text2);margin-bottom:2px;
+}
+.row{display:flex;align-items:center;gap:6px}
+.row label{color:var(--text2);font-size:11px;flex:1;white-space:nowrap}
+.val{font-family:var(--mono);font-size:11px;color:var(--text1);min-width:48px;text-align:right}
+
+/* ── TOGGLE ─────────────────────────── */
+.tog{position:relative;display:inline-block;width:36px;height:18px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0}
+.tog span{
+  position:absolute;inset:0;border-radius:9px;cursor:pointer;
+  background:var(--bg4);border:1px solid var(--b1);transition:.2s;
+}
+.tog span::after{
+  content:'';position:absolute;width:12px;height:12px;border-radius:50%;
+  background:var(--text2);top:2px;left:2px;transition:.2s;
+}
+.tog input:checked+span{background:var(--green-d);border-color:var(--green)}
+.tog input:checked+span::after{background:var(--green);transform:translateX(18px)}
+.tog.warn input:checked+span{background:var(--red-d);border-color:var(--red)}
+.tog.warn input:checked+span::after{background:var(--red)}
+
+/* ── SLIDER ─────────────────────────── */
+input[type=range]{
+  -webkit-appearance:none;height:4px;border-radius:2px;
+  background:var(--b2);outline:none;cursor:pointer;width:100%;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--amber);cursor:pointer;border:2px solid var(--bg2);
+}
+
+/* ── LOCK PANEL ─────────────────────── */
+.locks-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:8px 12px}
+.lock-item{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:6px 4px;border-radius:6px;border:1px solid var(--b0);
+  background:var(--bg2);cursor:pointer;transition:all .2s;
+  min-height:68px;
+}
+.lock-item.locked{border-color:var(--green);background:var(--green-d)}
+.lock-item.unlocked{border-color:var(--amber);background:var(--amber-d)}
+.lock-icon{font-size:18px;line-height:1}
+.lock-name{font-size:9px;color:var(--text2);font-weight:600;text-transform:uppercase;text-align:center}
+.lock-status{font-size:9px;font-family:var(--mono);font-weight:700;text-align:center}
+.locked .lock-status{color:var(--green)}
+.unlocked .lock-status{color:var(--amber)}
+
+/* ── STATE MACHINE ───────────────────── */
+.sm-container{padding:10px 12px}
+.sm-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text2);margin-bottom:8px}
+.sm-flow{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:4px;
+}
+.sm-node{
+  padding:5px 4px;border-radius:4px;border:1px solid var(--b1);
+  background:var(--bg2);text-align:center;cursor:default;
+  transition:all .25s;
+}
+.sm-node .sn-code{font-family:var(--mono);font-size:9px;color:var(--text2);font-weight:700}
+.sm-node .sn-label{font-size:9px;color:var(--text2);margin-top:2px;line-height:1.2}
+.sm-node.current{border-color:var(--cyan);background:var(--cyan-d)}
+.sm-node.current .sn-code{color:var(--cyan)}
+.sm-node.current .sn-label{color:var(--cyan)}
+.sm-node.fault{border-color:var(--red);background:var(--red-d)}
+.sm-node.fault .sn-code,.sm-node.fault .sn-label{color:var(--red)}
+.sm-node.done{border-color:var(--green);background:var(--green-d)}
+.sm-node.done .sn-code,.sm-node.done .sn-label{color:var(--green)}
+.sm-arrow{display:flex;align-items:center;justify-content:center;color:var(--b2);font-size:14px;padding:0 2px}
+
+/* ── DERIVED SIGNALS ─────────────────── */
+.derived-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:0 12px 10px}
+.sig-card{
+  padding:7px 9px;border-radius:5px;border:1px solid var(--b0);background:var(--bg2);
+  display:flex;flex-direction:column;gap:3px;transition:all .2s;
+}
+.sig-card.on{border-color:var(--green);background:var(--green-d)}
+.sig-card.on .sc-name{color:var(--green)}
+.sig-card.on .sc-val{color:var(--green)}
+.sig-card.off .sc-name{color:var(--text2)}
+.sc-name{font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.sc-val{font-family:var(--mono);font-size:13px;font-weight:700}
+
+/* ── GAUGES ─────────────────────────── */
+.gauges-row{display:flex;gap:8px;padding:8px 12px;justify-content:space-around}
+.gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:4px}
+.gauge-svg{width:80px;height:50px}
+.gauge-label{font-size:9px;color:var(--text2);text-align:center;text-transform:uppercase;letter-spacing:.06em}
+.gauge-val{font-family:var(--mono);font-size:12px;color:var(--amber);font-weight:700}
+
+/* CMD2 timer bar */
+.timer-bar-wrap{padding:0 12px 8px}
+.timer-label{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;display:flex;justify-content:space-between}
+.timer-track{height:8px;border-radius:4px;background:var(--b1);overflow:hidden;position:relative}
+.timer-fill{height:100%;border-radius:4px;background:var(--amber);transition:width .15s;max-width:100%}
+.timer-fill.warn{background:var(--red)}
+
+/* ── OUTPUTS ─────────────────────────── */
+.out-grid{display:flex;flex-direction:column;gap:6px;padding:10px 12px}
+.out-big{
+  padding:12px 14px;border-radius:6px;border:1px solid var(--b1);background:var(--bg2);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;transition:all .2s;
+}
+.out-big.on{border-color:var(--green);background:var(--green-d)}
+.out-big.on .ob-val{color:var(--green)}
+.out-big.off .ob-val{color:var(--text2)}
+.ob-name{font-size:10px;font-weight:600;color:var(--text1);flex:1}
+.ob-sub{font-size:9px;color:var(--text2);margin-top:2px}
+.ob-val{font-family:var(--mono);font-size:13px;font-weight:700;min-width:40px;text-align:right;transition:all .2s}
+.ob-dot{width:10px;height:10px;border-radius:50%;background:var(--bg4);flex-shrink:0;transition:all .2s}
+.out-big.on .ob-dot{background:var(--green);box-shadow:0 0 8px var(--green)}
+
+.out-cmd{
+  padding:8px 10px;border-radius:5px;border:1px solid var(--b0);background:var(--bg2);
+  display:flex;align-items:center;justify-content:space-between;transition:all .2s;
+}
+.out-cmd.on{border-color:var(--amber);background:var(--amber-d)}
+.oc-name{font-size:10px;color:var(--text1)}
+.oc-val{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text2);transition:all .2s}
+.out-cmd.on .oc-val{color:var(--amber)}
+
+/* ── TELEMETRY LOG ───────────────────── */
+.log-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:0 12px 10px}
+.log-head{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;padding:6px 0;display:flex;justify-content:space-between}
+.log-body{
+  flex:1;overflow-y:auto;background:var(--bg0);border:1px solid var(--b0);border-radius:4px;
+  font-family:var(--mono);font-size:10px;color:var(--text2);padding:4px 6px;
+  line-height:1.6;
+}
+.log-line.active{color:var(--green)}
+.log-line.fault{color:var(--red)}
+.log-line.armed{color:var(--amber)}
+
+/* ── PRESETS ─────────────────────────── */
+.presets{
+  height:50px;border-top:1px solid var(--b0);background:var(--bg1);
+  display:flex;align-items:center;padding:0 14px;gap:8px;flex-shrink:0;overflow-x:auto;
+}
+.presets span{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;margin-right:4px}
+.preset-btn{
+  padding:4px 10px;border-radius:4px;border:1px solid var(--b1);
+  background:var(--bg3);color:var(--text2);cursor:pointer;font-size:10px;
+  white-space:nowrap;transition:all .15s;flex-shrink:0;
+}
+.preset-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-d)}
+
+/* ── SCROLLBAR ───────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="hbadge">C919 · E-TRAS</div>
+  <div class="htitle">反推控制逻辑面板</div>
+  <div class="hsub">Frozen V1.0 · 2026-04-21</div>
+  <div class="hgap"></div>
+  <div class="hcontrols">
+    <div class="sim-indicator" id="simDot"></div>
+    <button class="btn" id="btnPlay" onclick="toggleSim()">▶ 仿真</button>
+    <button class="btn danger" onclick="resetSim()">↺ 重置</button>
+    <div class="htime" id="hTime">T: 0.000s</div>
+    <div class="state-pill" id="statePill">S0 · AIR STOWED LOCKED</div>
+  </div>
+</header>
+
+<!-- WORKSPACE -->
+<div class="workspace">
+
+  <!-- ■ LEFT: 输入信号 -->
+  <div class="panel" id="inputPanel">
+
+    <!-- LGCU WOW 双通道 -->
+    <div class="sec">
+      <div class="sec-title">LGCU 主轮载荷（双通道）</div>
+      <div class="row"><label>LGCU1 有效</label><label class="tog"><input type="checkbox" id="lgcu1Valid" checked onchange="sync()"><span></span></label></div>
+      <div class="row"><label>LGCU1 WOW</label><label class="tog"><input type="checkbox" id="lgcu1Wow" onchange="sync()"><span></span></label><span class="val" id="v_lgcu1">0</span></div>
+      <div class="row"><label>LGCU2 有效</label><label class="tog"><input type="checkbox" id="lgcu2Valid" checked onchange="sync()"><span></span></label></div>
+      <div class="row"><label>LGCU2 WOW</label><label class="tog"><input type="checkbox" id="lgcu2Wow" onchange="sync()"><span></span></label><span class="val" id="v_lgcu2">0</span></div>
+    </div>
+
+    <!-- 油门杆 -->
+    <div class="sec">
+      <div class="sec-title">油门台信号</div>
+      <div class="row"><label>TRA 角度</label><span class="val" id="v_tra">0.0°</span></div>
+      <div class="row"><input type="range" id="traDeg" min="-32" max="2" step="0.1" value="0" oninput="syncTra()"></div>
+      <div class="row" style="margin-top:4px">
+        <label>ATLTLA (SW1)</label>
+        <label class="tog"><input type="checkbox" id="atltla" onchange="sync()"><span></span></label>
+        <span class="val" id="v_atltla" style="min-width:32px;text-align:right">0</span>
+      </div>
+      <div class="row">
+        <label>APWTLA (SW2)</label>
+        <label class="tog"><input type="checkbox" id="apwtla" onchange="sync()"><span></span></label>
+        <span class="val" id="v_apwtla" style="min-width:32px;text-align:right">0</span>
+      </div>
+    </div>
+
+    <!-- 系统模式 -->
+    <div class="sec">
+      <div class="sec-title">发动机 / 系统模式</div>
+      <div class="row"><label>Engine Running</label><label class="tog"><input type="checkbox" id="engineRunning" onchange="sync()"><span></span></label></div>
+      <div class="row"><label>TR Inhibited</label><label class="tog warn"><input type="checkbox" id="trInhibited" onchange="sync()"><span></span></label></div>
+      <div class="row"><label>TRCU Menu Mode</label><label class="tog"><input type="checkbox" id="trcuMenu" onchange="sync()"><span></span></label></div>
+      <div class="row"><label>Maintenance Cycle</label><label class="tog"><input type="checkbox" id="maintenanceCycle" onchange="sync()"><span></span></label></div>
+    </div>
+
+    <!-- TR 位置 + N1k -->
+    <div class="sec">
+      <div class="sec-title">反推位置 &amp; 转速</div>
+      <div class="row"><label>TR Position</label><span class="val" id="v_trpos">0%</span></div>
+      <div class="row"><input type="range" id="trPosition" min="0" max="100" step="0.5" value="0" oninput="syncPos()"></div>
+      <div class="row" style="margin-top:4px"><label>N1k</label><span class="val" id="v_n1k">50%</span></div>
+      <div class="row"><input type="range" id="n1k" min="0" max="110" step="0.5" value="50" oninput="syncN1k()"></div>
+      <div class="row" style="margin-top:4px">
+        <label>Max N1k Deploy Limit</label>
+        <span class="val" id="v_n1kDep">84%</span>
+        <input type="range" id="n1kDepLim" min="60" max="100" step="1" value="84" style="width:70px" oninput="syncN1kLim()">
+      </div>
+      <div class="row">
+        <label>Max N1k Stow Limit</label>
+        <span class="val" id="v_n1kStow">72%</span>
+        <input type="range" id="n1kStowLim" min="50" max="95" step="1" value="72" style="width:70px" oninput="syncN1kLim()">
+      </div>
+    </div>
+
+    <!-- 故障位 -->
+    <div class="sec">
+      <div class="sec-title">故障位</div>
+      <div class="row"><label>E-TRAS Over Temp Fault</label><label class="tog warn"><input type="checkbox" id="overTemp" onchange="sync()"><span></span></label></div>
+    </div>
+
+    <!-- 5把锁 -->
+    <div class="sec">
+      <div class="sec-title">锁状态（TLS · 吊挂锁 · PLS）</div>
+      <div class="locks-grid" id="locksGrid">
+        <!-- TLS -->
+        <div class="lock-item locked" id="lk_tls" onclick="cycleLock('tls')">
+          <div class="lock-icon">🔒</div>
+          <div class="lock-name">TLS</div>
+          <div class="lock-status" id="ls_tls">LOCKED</div>
+        </div>
+        <!-- Pylon L -->
+        <div class="lock-item locked" id="lk_pl" onclick="cycleLock('pl')">
+          <div class="lock-icon">🔒</div>
+          <div class="lock-name">吊挂<br>L</div>
+          <div class="lock-status" id="ls_pl">LOCKED</div>
+        </div>
+        <!-- Pylon R -->
+        <div class="lock-item locked" id="lk_pr" onclick="cycleLock('pr')">
+          <div class="lock-icon">🔒</div>
+          <div class="lock-name">吊挂<br>R</div>
+          <div class="lock-status" id="ls_pr">LOCKED</div>
+        </div>
+        <!-- PLS L -->
+        <div class="lock-item locked" id="lk_plsl" onclick="cycleLock('plsl')">
+          <div class="lock-icon">🔒</div>
+          <div class="lock-name">PLS<br>L</div>
+          <div class="lock-status" id="ls_plsl">LOCKED</div>
+        </div>
+        <!-- PLS R -->
+        <div class="lock-item locked" id="lk_plsr" onclick="cycleLock('plsr')">
+          <div class="lock-icon">🔒</div>
+          <div class="lock-name">PLS<br>R</div>
+          <div class="lock-status" id="ls_plsr">LOCKED</div>
+        </div>
+      </div>
+      <div style="padding:0 4px 4px;font-size:9px;color:var(--text2)">点击锁图标切换 LOCKED → UNLOCKED → AMBIGUOUS</div>
+    </div>
+  </div><!-- /left -->
+
+  <!-- ■ CENTER: 状态机 + 派生信号 -->
+  <div class="panel" id="centerPanel">
+
+    <!-- 状态机流程 -->
+    <div class="sm-container">
+      <div class="sm-title">冻结状态机 · S0 → S10 + SF</div>
+      <div class="sm-flow" id="smFlow">
+        <!-- 动态生成 -->
+      </div>
+    </div>
+
+    <!-- 分隔 -->
+    <div style="height:1px;background:var(--b0);margin:0 12px"></div>
+
+    <!-- 派生信号 -->
+    <div style="padding:8px 12px 4px">
+      <div class="sec-title">派生信号</div>
+    </div>
+    <div class="derived-grid" id="derivedGrid">
+      <div class="sig-card off" id="ds_mlgwow">
+        <div class="sc-name">Selected_MLG_WOW</div>
+        <div class="sc-val" id="dv_mlgwow">FALSE</div>
+      </div>
+      <div class="sig-card off" id="ds_trwow">
+        <div class="sc-name">TR_WOW</div>
+        <div class="sc-val" id="dv_trwow">FALSE</div>
+        <div style="font-size:9px;color:var(--text2);font-family:var(--mono)" id="dv_trwowAcc">▲0.00s</div>
+      </div>
+      <div class="sig-card off" id="ds_unlock">
+        <div class="sc-name">Unlock_Confirmed</div>
+        <div class="sc-val" id="dv_unlock">FALSE</div>
+      </div>
+      <div class="sig-card off" id="ds_stowed">
+        <div class="sc-name">Stowed &amp; Locked</div>
+        <div class="sc-val" id="dv_stowed">FALSE</div>
+        <div style="font-size:9px;color:var(--text2);font-family:var(--mono)" id="dv_stowedAcc">▲0.00s</div>
+      </div>
+      <div class="sig-card off" id="ds_cmd3en">
+        <div class="sc-name">TR_Cmd3_Enable</div>
+        <div class="sc-val" id="dv_cmd3en">FALSE</div>
+      </div>
+      <div class="sig-card off" id="ds_cmd3">
+        <div class="sc-name">CMD3 Latch</div>
+        <div class="sc-val" id="dv_cmd3">FALSE</div>
+      </div>
+    </div>
+
+    <!-- 仪表 -->
+    <div style="padding:8px 12px 4px;border-top:1px solid var(--b0)">
+      <div class="sec-title">实时仪表</div>
+    </div>
+    <div class="gauges-row">
+      <!-- TR Position 圆弧仪表 -->
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 80 50">
+          <path d="M10,45 A35,35,0,0,1,70,45" fill="none" stroke="#1c2e4a" stroke-width="6" stroke-linecap="round"/>
+          <path id="gTrArc" d="M10,45 A35,35,0,0,1,70,45" fill="none" stroke="#f5a623" stroke-width="6" stroke-linecap="round" stroke-dasharray="0,1000"/>
+          <text x="40" y="35" text-anchor="middle" fill="#f5a623" font-size="10" font-family="monospace" font-weight="700" id="gTrText">0%</text>
+          <text x="40" y="48" text-anchor="middle" fill="#5a7090" font-size="7">TR POS</text>
+        </svg>
+      </div>
+      <!-- N1k 圆弧仪表 -->
+      <div class="gauge-wrap">
+        <svg class="gauge-svg" viewBox="0 0 80 50">
+          <path d="M10,45 A35,35,0,0,1,70,45" fill="none" stroke="#1c2e4a" stroke-width="6" stroke-linecap="round"/>
+          <path id="gN1Arc" d="M10,45 A35,35,0,0,1,70,45" fill="none" stroke="#60a5fa" stroke-width="6" stroke-linecap="round" stroke-dasharray="0,1000"/>
+          <text x="40" y="35" text-anchor="middle" fill="#60a5fa" font-size="10" font-family="monospace" font-weight="700" id="gN1Text">50%</text>
+          <text x="40" y="48" text-anchor="middle" fill="#5a7090" font-size="7">N1K</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- CMD2 定时器 -->
+    <div class="timer-bar-wrap">
+      <div class="timer-label">
+        <span>CMD2 计时器</span>
+        <span id="timerValTxt">0.0 / 30.0 s</span>
+      </div>
+      <div class="timer-track">
+        <div class="timer-fill" id="timerFill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- 快速预设 -->
+    <div style="padding:8px 12px 4px;border-top:1px solid var(--b0)">
+      <div class="sec-title">快捷场景预设</div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 10px">
+      <button class="preset-btn" onclick="loadPreset('idle')">空中空闲</button>
+      <button class="preset-btn" onclick="loadPreset('grounded')">接地待命</button>
+      <button class="preset-btn" onclick="loadPreset('armed')">装备解锁</button>
+      <button class="preset-btn" onclick="loadPreset('deploying')">展开中</button>
+      <button class="preset-btn" onclick="loadPreset('deployed')">完全展开</button>
+      <button class="preset-btn" onclick="loadPreset('pullback')">回杆</button>
+      <button class="preset-btn" onclick="loadPreset('stowing')">收起中</button>
+      <button class="preset-btn" onclick="loadPreset('relocked')">收起锁定</button>
+      <button class="preset-btn" onclick="loadPreset('inhibit')">⚠ 抑制</button>
+      <button class="preset-btn" onclick="loadPreset('overtemp')">🔥 过温</button>
+    </div>
+  </div><!-- /center -->
+
+  <!-- ■ RIGHT: 输出 + 遥测 -->
+  <div class="panel" id="outputPanel">
+
+    <!-- 主电气输出 -->
+    <div class="sec">
+      <div class="sec-title">主电气输出</div>
+    </div>
+    <div class="out-grid">
+      <div class="out-big off" id="ob_single">
+        <div>
+          <div class="ob-name">SinglePhase Unlock Power</div>
+          <div class="ob-sub">TLS + 两吊挂锁 115VAC 单相</div>
+        </div>
+        <div class="ob-dot"></div>
+        <div class="ob-val" id="ov_single">OFF</div>
+      </div>
+      <div class="out-big off" id="ob_three">
+        <div>
+          <div class="ob-name">ThreePhase TRCU Power</div>
+          <div class="ob-sub">TRCU 115VAC 三相作动</div>
+        </div>
+        <div class="ob-dot"></div>
+        <div class="ob-val" id="ov_three">OFF</div>
+      </div>
+    </div>
+
+    <!-- FADEC 命令 -->
+    <div style="padding:8px 12px 4px;border-top:1px solid var(--b0)">
+      <div class="sec-title">FADEC 命令</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;padding:0 12px 8px">
+      <div class="out-cmd off" id="oc_deploy">
+        <span class="oc-name">FADEC_Deploy_Command</span>
+        <span class="oc-val" id="ocv_deploy">FALSE</span>
+      </div>
+      <div class="out-cmd off" id="oc_stow">
+        <span class="oc-name">FADEC_Stow_Command</span>
+        <span class="oc-val" id="ocv_stow">FALSE</span>
+      </div>
+      <div class="out-cmd off" id="oc_unlock">
+        <span class="oc-name">Unlock_Confirmed</span>
+        <span class="oc-val" id="ocv_unlock">FALSE</span>
+      </div>
+      <div class="out-cmd off" id="oc_stowlk">
+        <span class="oc-name">TR_Stowed_And_Locked</span>
+        <span class="oc-val" id="ocv_stowlk">FALSE</span>
+      </div>
+    </div>
+
+    <!-- 遥测日志 -->
+    <div class="log-wrap" style="border-top:1px solid var(--b0);padding-top:0">
+      <div class="log-head" style="padding:6px 0">
+        <span>遥测日志 (最近 40 条)</span>
+        <span id="logCount" style="color:var(--text2)">0 ticks</span>
+      </div>
+      <div class="log-body" id="logBody"></div>
+    </div>
+
+  </div><!-- /right -->
+
+</div><!-- /workspace -->
+
+<!-- PRESET BAR -->
+<div class="presets">
+  <span>Step</span>
+  <button class="preset-btn" onclick="loadPreset('step1')">Step1: WOW接地</button>
+  <button class="preset-btn" onclick="loadPreset('step2')">Step2: SW1进入</button>
+  <button class="preset-btn" onclick="loadPreset('step3')">Step3: SW2进入</button>
+  <button class="preset-btn" onclick="loadPreset('step4')">Step4: 展开指令</button>
+  <button class="preset-btn" onclick="loadPreset('step5')">Step5: 80%展开</button>
+  <button class="preset-btn" onclick="loadPreset('step6')">Step6: 最大反推</button>
+  <button class="preset-btn" onclick="loadPreset('step7')">Step7: 回杆</button>
+  <button class="preset-btn" onclick="loadPreset('step8')">Step8: 收起指令</button>
+  <button class="preset-btn" onclick="loadPreset('step9')">Step9: 回锁</button>
+  <button class="preset-btn" onclick="loadPreset('step10')">Step10: 断电</button>
+</div>
+
+<script>
+// ── STATE MACHINE 定义 ─────────────────────────────────
+const STATES = [
+  {id:'S0_AIR_STOWED_LOCKED',     code:'S0', label:'空中\n收起锁定'},
+  {id:'S1_GROUND_ARMED',          code:'S1', label:'地面\n装备'},
+  {id:'S2_UNLOCK_POWER_ON',       code:'S2', label:'单相\n解锁供电'},
+  {id:'S3_TRCU_POWER_ON',         code:'S3', label:'三相\n作动供电'},
+  {id:'S4_DEPLOYING',             code:'S4', label:'展开\n中'},
+  {id:'S5_DEPLOYED_IDLE_REVERSE', code:'S5', label:'反推\n慢车'},
+  {id:'S6_MAX_REVERSE',           code:'S6', label:'最大\n反推'},
+  {id:'S7_DECEL_WAIT_STOW',       code:'S7', label:'减速\n待收'},
+  {id:'S8_STOWING',               code:'S8', label:'收起\n中'},
+  {id:'S9_LOCK_CONFIRM',          code:'S9', label:'锁止\n确认'},
+  {id:'S10_STOWED_LOCKED_POWER_OFF',code:'S10',label:'断电\n完成'},
+  {id:'SF_ABORT_OR_FAULT',        code:'SF', label:'故障\n中止'},
+];
+
+const STATE_ORDER = ['S0','S1','S2','S3','S4','S5','S6','S7','S8','S9','S10','SF'];
+
+// ── 锁状态存储 ────────────────────────────────────────
+const lockState = {tls:'locked',pl:'locked',pr:'locked',plsl:'locked',plsr:'locked'};
+const LOCK_CYCLE = ['locked','unlocked','ambiguous'];
+const LOCK_ICONS = {locked:'🔒',unlocked:'🔓',ambiguous:'⚠️'};
+const LOCK_LABELS = {locked:'LOCKED',unlocked:'UNLOCKED',ambiguous:'AMBIG'};
+
+function cycleLock(k){
+  const i = LOCK_CYCLE.indexOf(lockState[k]);
+  lockState[k] = LOCK_CYCLE[(i+1)%3];
+  renderLock(k);
+  sync();
+}
+function renderLock(k){
+  const st = lockState[k];
+  const el = document.getElementById('lk_'+k);
+  el.className = 'lock-item '+st;
+  el.querySelector('.lock-icon').textContent = LOCK_ICONS[st];
+  document.getElementById('ls_'+k).textContent = LOCK_LABELS[st];
+}
+Object.keys(lockState).forEach(renderLock);
+
+function getLockPayload(){
+  function pair(k){
+    const s = lockState[k];
+    return {locked:s==='locked',unlocked:s==='unlocked'};
+  }
+  const tls=pair('tls'), pl=pair('pl'), pr=pair('pr'), plsl=pair('plsl'), plsr=pair('plsr');
+  return {
+    tls_locked:tls.locked, tls_unlocked:tls.unlocked,
+    pylon_lock_l_locked:pl.locked, pylon_lock_l_unlocked:pl.unlocked,
+    pylon_lock_r_locked:pr.locked, pylon_lock_r_unlocked:pr.unlocked,
+    pls_l_locked:plsl.locked, pls_l_unlocked:plsl.unlocked,
+    pls_r_locked:plsr.locked, pls_r_unlocked:plsr.unlocked,
+  };
+}
+
+// ── 状态机渲染 ────────────────────────────────────────
+function buildSmFlow(){
+  const el = document.getElementById('smFlow');
+  el.innerHTML = '';
+  STATES.forEach(s=>{
+    const div = document.createElement('div');
+    div.className='sm-node';
+    div.id='sm_'+s.code;
+    div.innerHTML=`<div class="sn-code">${s.code}</div><div class="sn-label">${s.label.replace(/\n/,'<br>')}</div>`;
+    el.appendChild(div);
+  });
+}
+buildSmFlow();
+
+function updateSm(stateId){
+  STATES.forEach(s=>{
+    const el = document.getElementById('sm_'+s.code);
+    if(!el)return;
+    el.className='sm-node';
+    if(s.id===stateId){
+      if(stateId==='SF_ABORT_OR_FAULT') el.classList.add('fault');
+      else if(['S9_LOCK_CONFIRM','S10_STOWED_LOCKED_POWER_OFF'].includes(stateId)) el.classList.add('done');
+      else el.classList.add('current');
+    }
+  });
+}
+
+// ── 仿真控制 ──────────────────────────────────────────
+let simRunning=false, simTimer=null, tickCount=0;
+
+function toggleSim(){
+  simRunning=!simRunning;
+  const dot=document.getElementById('simDot');
+  const btn=document.getElementById('btnPlay');
+  if(simRunning){
+    dot.classList.add('running');
+    btn.textContent='⏸ 暂停';
+    btn.classList.add('active');
+    simTimer=setInterval(doTick,100);
+  } else {
+    dot.classList.remove('running');
+    btn.textContent='▶ 仿真';
+    btn.classList.remove('active');
+    clearInterval(simTimer);
+  }
+}
+
+async function resetSim(){
+  if(simRunning) toggleSim();
+  tickCount=0;
+  document.getElementById('logBody').innerHTML='';
+  document.getElementById('logCount').textContent='0 ticks';
+  await fetch('/api/reset',{method:'POST'});
+  doTick();
+}
+
+function sync(){
+  if(!simRunning) doTick();
+}
+
+// ── TRA 连动 ATLTLA/APWTLA ───────────────────────────
+function syncTra(){
+  const v=parseFloat(document.getElementById('traDeg').value);
+  document.getElementById('v_tra').textContent=v.toFixed(1)+'°';
+  // SW1 [-1.4, -6.2], SW2 [-5, -9.8]
+  const sw1 = (v<=-1.4&&v>=-6.2);
+  const sw2 = (v<=-5.0&&v>=-9.8);
+  document.getElementById('atltla').checked=sw1;
+  document.getElementById('apwtla').checked=sw2;
+  document.getElementById('v_atltla').textContent=sw1?'1':'0';
+  document.getElementById('v_apwtla').textContent=sw2?'1':'0';
+  sync();
+}
+function syncPos(){
+  const v=parseFloat(document.getElementById('trPosition').value);
+  document.getElementById('v_trpos').textContent=v.toFixed(1)+'%';
+  sync();
+}
+function syncN1k(){
+  const v=parseFloat(document.getElementById('n1k').value);
+  document.getElementById('v_n1k').textContent=v.toFixed(1)+'%';
+  sync();
+}
+function syncN1kLim(){
+  document.getElementById('v_n1kDep').textContent=document.getElementById('n1kDepLim').value+'%';
+  document.getElementById('v_n1kStow').textContent=document.getElementById('n1kStowLim').value+'%';
+  sync();
+}
+
+// ── 构建输入快照 ──────────────────────────────────────
+function buildPayload(){
+  const g = id=>document.getElementById(id);
+  const b = id=>g(id).checked;
+  const f = id=>parseFloat(g(id).value);
+  return {
+    lgcu1_mlg_wow: b('lgcu1Wow'),
+    lgcu2_mlg_wow: b('lgcu2Wow'),
+    lgcu1_valid: b('lgcu1Valid'),
+    lgcu2_valid: b('lgcu2Valid'),
+    tra_deg: f('traDeg'),
+    atltla: b('atltla'),
+    apwtla: b('apwtla'),
+    tr_inhibited: b('trInhibited'),
+    engine_running: b('engineRunning'),
+    trcu_menu_mode: b('trcuMenu'),
+    maintenance_cycle_on_going: b('maintenanceCycle'),
+    tr_position_pct: f('trPosition'),
+    n1k_pct: f('n1k'),
+    max_n1k_deploy_limit_pct: f('n1kDepLim'),
+    max_n1k_stow_limit_pct: f('n1kStowLim'),
+    etras_over_temp_fault: b('overTemp'),
+    locks: getLockPayload(),
+    dt_s: 0.1,
+  };
+}
+
+// ── 渲染响应 ─────────────────────────────────────────
+function updateUI(data){
+  // Header
+  const s=data.state;
+  const pill=document.getElementById('statePill');
+  pill.textContent=s;
+  pill.className='state-pill';
+  if(s==='SF_ABORT_OR_FAULT') pill.classList.add('fault');
+  else if(s==='S1_GROUND_ARMED'||s==='S2_UNLOCK_POWER_ON') pill.classList.add('armed');
+  else if(!['S0_AIR_STOWED_LOCKED'].includes(s)) pill.classList.add('active');
+
+  document.getElementById('hTime').textContent='T: '+(data.t_s||0).toFixed(2)+'s';
+
+  // State machine
+  updateSm(data.state);
+
+  // Derived signals
+  const d=data.derived||{};
+  function setSig(id,val){
+    document.getElementById('ds_'+id).className='sig-card '+(val?'on':'off');
+    document.getElementById('dv_'+id).textContent=val?'TRUE':'FALSE';
+  }
+  setSig('mlgwow',d.selected_mlg_wow);
+  setSig('trwow',d.tr_wow);
+  setSig('unlock',d.unlock_confirmed);
+  setSig('stowed',d.tr_stowed_and_locked);
+  setSig('cmd3en',d.tr_command3_enable);
+  setSig('cmd3',d.cmd3_latch);
+  document.getElementById('dv_trwowAcc').textContent='▲'+(d.tr_wow_acc_s||0).toFixed(2)+'s';
+  document.getElementById('dv_stowedAcc').textContent='▲'+(d.stowed_acc_s||0).toFixed(2)+'s';
+
+  // Gauges
+  const trPct = parseFloat(document.getElementById('trPosition').value);
+  const n1Pct = parseFloat(document.getElementById('n1k').value);
+  setArcGauge('gTrArc','gTrText',trPct,100,'%','#f5a623');
+  setArcGauge('gN1Arc','gN1Text',n1Pct,110,'%','#60a5fa');
+
+  // CMD2 timer
+  const t=d.cmd2_timer_s||0, lim=30;
+  const pct=Math.min(t/lim*100,100);
+  const tf=document.getElementById('timerFill');
+  tf.style.width=pct+'%';
+  tf.className='timer-fill'+(pct>80?' warn':'');
+  document.getElementById('timerValTxt').textContent=t.toFixed(1)+' / '+lim+'.0 s';
+
+  // Main outputs
+  const o=data.outputs||{};
+  setOutBig('ob_single','ov_single',o.single_phase_unlock_power_on);
+  setOutBig('ob_three','ov_three',o.three_phase_trcu_power_on);
+  setOutCmd('oc_deploy','ocv_deploy',o.fadec_deploy_command);
+  setOutCmd('oc_stow','ocv_stow',o.fadec_stow_command);
+  setOutCmd('oc_unlock','ocv_unlock',o.unlock_confirmed);
+  setOutCmd('oc_stowlk','ocv_stowlk',o.tr_stowed_and_locked);
+
+  // Lock indicator updates from server response
+  const lk=data.locks||{};
+  updateLockFromServer('tls',lk.tls_locked,lk.tls_unlocked);
+  updateLockFromServer('pl',lk.pylon_lock_l_locked,lk.pylon_lock_l_unlocked);
+  updateLockFromServer('pr',lk.pylon_lock_r_locked,lk.pylon_lock_r_unlocked);
+  updateLockFromServer('plsl',lk.pls_l_locked,lk.pls_l_unlocked);
+  updateLockFromServer('plsr',lk.pls_r_locked,lk.pls_r_unlocked);
+
+  // Log
+  appendLog(data);
+}
+
+function updateLockFromServer(k,locked,unlocked){
+  // only sync visual if consistent with what we sent
+}
+
+function setOutBig(id,valId,on){
+  document.getElementById(id).className='out-big '+(on?'on':'off');
+  document.getElementById(valId).textContent=on?'ON':'OFF';
+}
+function setOutCmd(id,valId,on){
+  document.getElementById(id).className='out-cmd '+(on?'on':'off');
+  document.getElementById(valId).textContent=on?'TRUE':'FALSE';
+}
+
+function setArcGauge(arcId,txtId,val,max,unit,color){
+  const arcEl=document.getElementById(arcId);
+  const len=110; // arc perimeter approx
+  const pct=Math.min(Math.max(val/max,0),1);
+  const dash=pct*len;
+  arcEl.setAttribute('stroke-dasharray',dash+','+(len-dash+200));
+  arcEl.setAttribute('stroke',pct>0.9?'#f87171':color);
+  document.getElementById(txtId).textContent=val.toFixed(0)+unit;
+}
+
+// ── 日志 ─────────────────────────────────────────────
+const LOG_MAX=40;
+const logLines=[];
+function appendLog(data){
+  tickCount++;
+  document.getElementById('logCount').textContent=tickCount+' ticks';
+  const s=data.state.replace('_AIR_STOWED_LOCKED','').replace('_GROUND_ARMED','').replace('_','_');
+  const cls = data.state==='SF_ABORT_OR_FAULT'?'fault':
+               ['S1','S2'].some(x=>data.state.startsWith(x))?'armed':'active';
+  const o=data.outputs||{};
+  const line=`<span class="log-line ${cls}" >[${(data.t_s||0).toFixed(2).padStart(7)}s] ${data.state} | 1ph:${o.single_phase_unlock_power_on?'ON ':'OFF'} 3ph:${o.three_phase_trcu_power_on?'ON ':'OFF'} DEP:${o.fadec_deploy_command?'T':'F'} STW:${o.fadec_stow_command?'T':'F'}</span>`;
+  logLines.push(line);
+  if(logLines.length>LOG_MAX) logLines.shift();
+  const lb=document.getElementById('logBody');
+  lb.innerHTML=logLines.join('\n');
+  lb.scrollTop=lb.scrollHeight;
+}
+
+// ── TICK ─────────────────────────────────────────────
+async function doTick(){
+  try{
+    const resp=await fetch('/api/tick',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(buildPayload()),
+    });
+    if(!resp.ok)return;
+    const data=await resp.json();
+    if(data.error){console.error(data.error);return;}
+    updateUI(data);
+  } catch(e){console.warn(e);}
+}
+
+// ── WOW helper ───────────────────────────────────────
+function setWow(on){
+  document.getElementById('lgcu1Wow').checked=on;
+  document.getElementById('lgcu2Wow').checked=on;
+  document.getElementById('v_lgcu1').textContent=on?'1':'0';
+  document.getElementById('v_lgcu2').textContent=on?'1':'0';
+}
+function setTra(deg){
+  document.getElementById('traDeg').value=deg;
+  syncTra();
+}
+function setPos(pct){
+  document.getElementById('trPosition').value=pct;
+  document.getElementById('v_trpos').textContent=pct+'%';
+}
+function setLockAll(st){
+  Object.keys(lockState).forEach(k=>{lockState[k]=st;renderLock(k);});
+}
+
+// ── 预设场景 ─────────────────────────────────────────
+const PRESETS = {
+  idle:{lgcu1Wow:false,lgcu2Wow:false,engineRunning:false,traDeg:0,trPosition:0,n1k:0,overTemp:false,trInhibited:false,trcuMenu:false,maintenanceCycle:false,locks:'all-locked'},
+  grounded:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:0,trPosition:0,n1k:50,overTemp:false,trInhibited:false,locks:'all-locked'},
+  armed:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:-2.0,trPosition:0,n1k:60,overTemp:false,trInhibited:false,atltla:true,locks:'all-locked'},
+  deploying:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:-7.0,trPosition:30,n1k:70,overTemp:false,trInhibited:false,apwtla:true,atltla:true,locks:'all-unlocked'},
+  deployed:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:-15.0,trPosition:100,n1k:70,overTemp:false,trInhibited:false,apwtla:true,atltla:true,locks:'all-unlocked'},
+  pullback:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:0,trPosition:100,n1k:55,overTemp:false,trInhibited:false,apwtla:false,atltla:false,locks:'all-unlocked'},
+  stowing:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:0,trPosition:50,n1k:55,overTemp:false,trInhibited:false,apwtla:false,atltla:false,locks:'all-unlocked'},
+  relocked:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:0,trPosition:0,n1k:40,overTemp:false,trInhibited:false,locks:'all-locked'},
+  inhibit:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:-15.0,trPosition:50,n1k:70,trInhibited:true,locks:'all-unlocked'},
+  overtemp:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:-15.0,trPosition:80,n1k:70,overTemp:true,locks:'all-unlocked'},
+  step1:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:0,trPosition:0,n1k:50,locks:'all-locked'},
+  step2:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:-2.0,trPosition:0,n1k:60,atltla:true,locks:'all-locked'},
+  step3:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:-7.0,trPosition:0,n1k:65,atltla:true,apwtla:true,locks:'all-unlocked'},
+  step4:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:-15.0,trPosition:10,n1k:70,atltla:true,apwtla:true,locks:'all-unlocked'},
+  step5:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:-15.0,trPosition:85,n1k:70,atltla:true,apwtla:true,locks:'all-unlocked'},
+  step6:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:-28.0,trPosition:100,n1k:70,atltla:true,apwtla:true,locks:'all-unlocked'},
+  step7:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:0,trPosition:100,n1k:60,atltla:false,apwtla:false,locks:'all-unlocked'},
+  step8:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:0,trPosition:50,n1k:55,atltla:false,apwtla:false,locks:'all-unlocked'},
+  step9:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:true,traDeg:0,trPosition:0,n1k:40,atltla:false,apwtla:false,locks:'all-locked'},
+  step10:{lgcu1Wow:true,lgcu2Wow:true,engineRunning:false,traDeg:0,trPosition:0,n1k:0,locks:'all-locked'},
+};
+
+function loadPreset(name){
+  const p=PRESETS[name];
+  if(!p)return;
+  const set=(id,v)=>{const el=document.getElementById(id);if(!el)return;if(typeof v==='boolean')el.checked=v;else el.value=v;};
+  if(p.lgcu1Wow!=null){set('lgcu1Wow',p.lgcu1Wow);document.getElementById('v_lgcu1').textContent=p.lgcu1Wow?'1':'0';}
+  if(p.lgcu2Wow!=null){set('lgcu2Wow',p.lgcu2Wow);document.getElementById('v_lgcu2').textContent=p.lgcu2Wow?'1':'0';}
+  if(p.engineRunning!=null) set('engineRunning',p.engineRunning);
+  if(p.trInhibited!=null) set('trInhibited',p.trInhibited);
+  if(p.trcuMenu!=null) set('trcuMenu',p.trcuMenu);
+  if(p.maintenanceCycle!=null) set('maintenanceCycle',p.maintenanceCycle);
+  if(p.overTemp!=null) set('overTemp',p.overTemp);
+  if(p.traDeg!=null){set('traDeg',p.traDeg);syncTra();}
+  if(p.atltla!=null) set('atltla',p.atltla);
+  if(p.apwtla!=null) set('apwtla',p.apwtla);
+  if(p.trPosition!=null){set('trPosition',p.trPosition);document.getElementById('v_trpos').textContent=p.trPosition+'%';}
+  if(p.n1k!=null){set('n1k',p.n1k);document.getElementById('v_n1k').textContent=p.n1k+'%';}
+  if(p.locks==='all-locked') setLockAll('locked');
+  if(p.locks==='all-unlocked'){['tls','pl','pr','plsl','plsr'].forEach(k=>{lockState[k]='unlocked';renderLock(k);});}
+  sync();
+}
+
+// ── INIT ─────────────────────────────────────────────
+(async()=>{
+  try{await fetch('/api/reset',{method:'POST'});}catch(e){}
+  syncTra();
+  doTick();
+})();
+</script>
+</body>
+</html>
