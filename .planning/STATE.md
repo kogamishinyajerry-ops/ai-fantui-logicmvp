@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: P43-02.5 GATE-CLOSURE submitted · frozen_v1 migrated · P43-02 Batch APPROVED awaiting Step 3a/A · next = Kogami approve GATE-P43-02.5-CLOSURE then P43-02 Batch execution
-last_updated: "2026-04-21T18:00:00.000Z"
+status: P43-03 DONE · authority contract R1-R6 PASS · state machine wired · Codex round#3 in progress · branch = claude/c919-etras-frozen-v1-migration
+last_updated: "2026-04-21T21:30:00.000Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 43
@@ -19,7 +19,7 @@ Last activity: 2026-04-21
 
 ## Current Position
 
-**P43-02.5 Steps A-E DONE · GATE-P43-02.5-CLOSURE Submitted · frozen_v1 migrated to FANTUI · P43-02 Batch APPROVED awaiting Kogami gate then Step 3a/A**
+**P43-03 COMPLETE · R1-R6 Authority Contract PASS=6 · Workflow State Machine wired · 853 tests green**
 
 ### 2026-04-21 Session Summary
 

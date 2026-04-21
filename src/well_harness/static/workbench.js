@@ -378,12 +378,8 @@ async function handleStartGen() {
     return;
   }
   setCurrentWorkbenchRunLabel("Frozen Spec 生成");
-  try {
-    await runWorkbenchBundle();
-    dispatchWorkflowEvent("gen_complete");
-  } catch (_) {
-    dispatchWorkflowEvent("gen_fail");
-  }
+  const genOk = await runWorkbenchBundle();
+  dispatchWorkflowEvent(genOk ? "gen_complete" : "gen_fail");
 }
 
 function validateDraftAgainstFrozen(draft, frozen) {
@@ -419,8 +415,15 @@ function handleFinalApprove() {
   // Delete draft immediately after freezing (R6)
   clearDraftDesignState();
 
-  // Advance workflow state machine: INIT/PANEL_READY → FROZEN
-  dispatchWorkflowEvent("confirm_freeze");
+  // Dispatch correct state machine event based on current state:
+  // PANEL_READY/ANNOTATING → final_approve → APPROVING → approve_ok → APPROVED
+  // INIT/FROZEN → confirm_freeze → FROZEN
+  if (workflowState === "PANEL_READY" || workflowState === "ANNOTATING") {
+    dispatchWorkflowEvent("final_approve");
+    dispatchWorkflowEvent("approve_ok");
+  } else {
+    dispatchWorkflowEvent("confirm_freeze");
+  }
 
   setRequestStatus("Spec 已冻结。草稿已清除。可执行生成。", "success");
 }
@@ -3428,13 +3431,13 @@ async function runWorkbenchBundle() {
     requestPayload = collectWorkbenchRequestPayload();
   } catch (error) {
     if (!isLatestWorkbenchRequest(requestId)) {
-      return;
+      return false;
     }
     renderFailureResponse(String(error.message || error), {
       sourceMode: "当前来源：输入解析失败。",
       requestStatusMessage: String(error.message || error),
     });
-    return;
+    return false;
   }
   maybeCaptureCurrentPacketRevision({
     title: `${currentWorkbenchRunLabel} / 运行前 Packet`,
@@ -3455,17 +3458,19 @@ async function runWorkbenchBundle() {
     });
     const payload = await response.json();
     if (!isLatestWorkbenchRequest(requestId)) {
-      return;
+      return false;
     }
     if (!response.ok) {
       throw new Error(payload.message || payload.error || "workbench bundle request failed");
     }
     renderBundleResponse(payload);
+    return true;
   } catch (error) {
     if (!isLatestWorkbenchRequest(requestId)) {
-      return;
+      return false;
     }
     renderFailureResponse(String(error.message || error));
+    return false;
   }
 }
 
