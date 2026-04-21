@@ -3513,10 +3513,25 @@ function installExecutionHandlers() {
   });
 }
 
+function installP43Handlers() {
+  const approveBtn = workbenchElement("workbench-final-approve");
+  if (approveBtn) {
+    approveBtn.addEventListener("click", () => { handleFinalApprove(); });
+  }
+  const startGenBtn = workbenchElement("workbench-start-gen");
+  if (startGenBtn) {
+    startGenBtn.addEventListener("click", () => { void handleStartGen(); });
+  }
+}
+
 function installPersistenceHandlers() {
   workbenchElement("workbench-packet-json").addEventListener("input", () => {
     renderWorkbenchPacketDraftState();
     persistWorkbenchPacketWorkspace();
+    saveDraftDesignState({
+      packetJsonText: workbenchElement("workbench-packet-json").value,
+      savedAt: new Date().toISOString(),
+    });
   });
 
   workbenchPersistedFieldIds.forEach((id) => {
@@ -3560,6 +3575,7 @@ function installToolbarHandlers() {
   installExecutionHandlers();
   installPersistenceHandlers();
   installRecoveryAndRepairHandlers();
+  installP43Handlers();
 }
 
 function installViewModeHandlers() {
