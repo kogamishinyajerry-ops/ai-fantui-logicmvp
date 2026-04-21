@@ -2,14 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: P43-02 Batch combined plan v3.1 APPROVED · GATE-P43-02-BATCH-PLAN-QUALITY Approved by Kogami (Option A · 2026-04-21) · P43-00 v7→v8 §3d amended with 8 delta entries · P43-02 Batch execution authorized · next = Step 3a/A workflow automaton contract docs
-last_updated: "2026-04-21T06:30:00.000Z"
+status: P43-02.5 GATE-CLOSURE submitted · frozen_v1 migrated · P43-02 Batch APPROVED awaiting Step 3a/A · next = Kogami approve GATE-P43-02.5-CLOSURE then P43-02 Batch execution
+last_updated: "2026-04-21T18:00:00.000Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 43
   completed_phases: 42
   total_plans: 2
   completed_plans: 1
+  notes: "P43-02.5 Steps A-E done · GATE submitted · frozen_v1 on branch claude/c919-etras-frozen-v1-migration (pushed)"
 ---
 
 # State
@@ -18,7 +19,31 @@ Last activity: 2026-04-21
 
 ## Current Position
 
-**P43-02 Batch combined plan v3.1 APPROVED · GATE-P43-02-BATCH-PLAN-QUALITY Approved by Kogami (Option A · 2026-04-21) · P43-00 v7→v8 §3d amended · Batch-2 execution authorized · next = Step 3a/A workflow automaton contract docs**
+**P43-02.5 Steps A-E DONE · GATE-P43-02.5-CLOSURE Submitted · frozen_v1 migrated to FANTUI · P43-02 Batch APPROVED awaiting Kogami gate then Step 3a/A**
+
+### 2026-04-21 Session Summary
+
+**P43-02.5 Completed (全部 Steps A-E committed):**
+- Step A: Backend audit confirmed (SYSTEM_REGISTRY c919-etras, lru_cache(5), 17-field asserted_component_values)
+- Step B: SVG 22 truth-tracked + 10 annotation nodes, 6-column grid, 41 conn-lines, c919- prefixed defs
+- Step C: C919 state dispatcher, C919_SVG_NODE_MAP, asserted_component_values driven
+- Step D1: 8 chat.js touchpoints (T1-T8), ALLOWED_SYSTEM_IDS +c919-etras, operate stub
+- Step D2: 19 visible controls + debounce 150ms + Advance/Stow latch buttons
+- Step E: Hardware tooltips, freeze banner, cache-busting, schema-alignment test (5/5), carry-forward artifacts
+- Gate: `GATE-P43-02.5-CLOSURE` submitted to Kogami
+
+**frozen_v1 Migration (branch: claude/c919-etras-frozen-v1-migration, pushed):**
+- `src/well_harness/adapters/c919_etras_frozen_v1/` — 14 modules, 12-step tick, frozen spec V1.0
+- `scripts/c919_etras_panel_server.py` — standalone MFD panel server (port 9191)
+- `src/well_harness/static/c919_etras_panel/index.html` — aviation MFD panel UI
+- `tests/test_c919_etras_frozen_v1_{unit,integration}.py` — 40 tests
+- `docs/c919_etras/requirements_v0_9.md` — standardised V0.9 requirements
+- 845 tests pass, 0 regression
+
+**Governance:**
+- DEC-FANTUI-001: frozen_v1 as independent reference engine (Notion synced)
+- DEC-FANTUI-002: Subagent priority principle added to CLAUDE.md (Notion synced)
+- GATE-P43-02.5-CLOSURE: Submitted (Notion synced)
 
 Phase: P43-02 Batch (P43-02 + P43-03 + P43-04 combined · Q1=D · plan-quality gate CLEARED · execution gate `GATE-P43-02-BATCH-CLOSURE` remains pending all 19 Exit Criteria + 13 Codex `可过-Gate` trailers)
 
