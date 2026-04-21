@@ -2,7 +2,7 @@
 gate: GATE-P43-PLAN-v9-AMEND
 parent_plan: P43-00-PLAN.md v8 → v9
 requester: Claude App Opus 4.7 (Solo Executor)
-triggered_by: P43-02.5-00-PLAN v4.1 (HEAD tbd · post Codex r4 需修正·信号弱 · 3 delta batched · r3/r4 required all addressed)
+triggered_by: P43-02.5-00-PLAN v4.2 (HEAD tbd · post Codex r5 需修正·信号弱 text-consistency · 3 delta batched · r3/r4/r5 required all addressed · Kogami R4 arbitration NOT needed per r5 path recommendation)
 date: 2026-04-21
 classification: Parent-plan §3d whitelist amend · batches Test + Docs entries (D5=A one roundtrip)
 urgency: blocks Step E only · Steps B/C/D1/D2 can proceed in parallel
@@ -48,7 +48,7 @@ P43-02.5 v4.1 plan requires **three §3d whitelist entries** that are not curren
 
 ## Approval options (Kogami single choice)
 
-- **Option A** · Approve Delta 1 + Delta 2 + Delta 3 · plan v4 继续执行 · Step E 可落 artifact 到 phase 文件夹 · Delta 3 E2E test 补运行时 flow 覆盖
+- **Option A** · Approve Delta 1 + Delta 2 + Delta 3 · plan v4.2 继续执行 · Step E 可落 artifact 到 phase 文件夹 · Delta 3 backend-flow test 补运行时 flow 覆盖
 - **Option B** · Approve Delta 1 + Delta 3 · skip Delta 2 · P43-02.5 plan 降级 Q4=A'（artifact 改放 reports/ precedent path）· **Executor 建议**（unit + E2E test 均必须 · docs 可降级）
 - **Option C** · Approve only Delta 1 · skip Delta 2 + Delta 3 · 破 Codex r3 R3 闭环 · 不推荐
 - **Option D** · Rework · Kogami 指出具体不妥之处 · executor path ① 修正后重提 v10 amend
