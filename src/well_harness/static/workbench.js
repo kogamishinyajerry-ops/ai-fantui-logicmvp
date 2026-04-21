@@ -4,6 +4,7 @@ const workbenchRepairPath = "/api/workbench/repair";
 const workbenchArchiveRestorePath = "/api/workbench/archive-restore";
 const workbenchRecentArchivesPath = "/api/workbench/recent-archives";
 const workbenchPacketWorkspaceStorageKey = "well-harness-workbench-packet-workspace-v1";
+const draftDesignStateKey = "draft_design_state";
 const workbenchPersistedFieldIds = [
   "workbench-scenario-id",
   "workbench-fault-mode-id",
@@ -317,6 +318,15 @@ function assignFrozenSpec(spec) {
   frozenSpec = deepFreeze(JSON.parse(JSON.stringify(spec)));
 }
 
+async function handleStartGen() {
+  if (frozenSpec === null) {
+    setRequestStatus("未找到已冻结规格 — 请先审批 Spec 再生成。", "error");
+    return;
+  }
+  setCurrentWorkbenchRunLabel("Frozen Spec 生成");
+  await runWorkbenchBundle();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 function workbenchBrowserStorage() {
@@ -612,6 +622,51 @@ function loadPersistedWorkbenchPacketWorkspace() {
     return null;
   }
 }
+
+// ─── P43 draft_design_state persistence (UI-owned, never read by backend) ─────
+
+function saveDraftDesignState(draftObj) {
+  const storage = workbenchBrowserStorage();
+  if (!storage) {
+    return;
+  }
+  try {
+    storage.setItem(draftDesignStateKey, JSON.stringify(draftObj));
+  } catch (error) {
+    // Ignore persistence failures so the workbench stays usable.
+  }
+}
+
+function loadDraftDesignState() {
+  const storage = workbenchBrowserStorage();
+  if (!storage) {
+    return null;
+  }
+  const raw = storage.getItem(draftDesignStateKey);
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    clearDraftDesignState();
+    return null;
+  }
+}
+
+function clearDraftDesignState() {
+  const storage = workbenchBrowserStorage();
+  if (!storage) {
+    return;
+  }
+  try {
+    storage.removeItem(draftDesignStateKey);
+  } catch (error) {
+    // Ignore cleanup failures.
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function workspaceSnapshotDownloadName() {
   const now = new Date();
