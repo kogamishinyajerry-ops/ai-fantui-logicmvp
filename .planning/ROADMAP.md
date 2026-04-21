@@ -1020,7 +1020,41 @@ Status: Executed & Green · Awaiting `GATE-P41-CLOSURE: Approved`
 
 ## Phase P43: Control Logic Workbench end-to-end milestone
 
-Status: **Plan v7 GATE-P43-PLAN Approved** (Kogami 2026-04-20) · **P43-01 Contract Proof Spike CLOSED** · **GATE-P43-01-CLOSURE Approved** (Kogami 2026-04-21) · **P43-02 kickoff authorized**
+Status: **Plan v7 GATE-P43-PLAN Approved** (Kogami 2026-04-20) · **P43-01 Contract Proof Spike CLOSED** · **GATE-P43-01-CLOSURE Approved** (Kogami 2026-04-21) · **P43-02 Batch plan v3.1 submitted · awaiting GATE-P43-02-BATCH-PLAN-QUALITY** (Kogami plan-quality 前置门 · 2026-04-21 · Codex r4 `可过-Gate` @ `987d723` · 8-entry §3d delta bundled)
+
+### P43-02 Batch Sub-phase: Orchestrator + Document Pipeline + Freeze Gate (plan v3.1 submitted · awaiting plan-quality gate)
+
+**Branch**: `codex/p43-02-orchestrator-extend` (not merged · execution unblocked by Gate approval)
+**Plan artifact**: `.planning/phases/P43-control-logic-workbench/P43-02-00-PLAN.md` v3.1 @ HEAD `987d723`
+**Gate ID (this submission)**: `GATE-P43-02-BATCH-PLAN-QUALITY` (plan-quality 前置门 · pre-execution)
+**Execution gate (future · post-implementation)**: `GATE-P43-02-BATCH-CLOSURE`
+**Codex Q7=A arc**: r1 强 → r2 强 → r3 弱 → r4 弱 → **r4 final `可过-Gate`** (5 plan revisions: v1→v2→v3→v3.1→v3.1 final-scrub)
+**Submission package**: see plan §10 (Codex arc · 8-entry §3d delta · Q-lock compliance · Kogami options A/B/C)
+
+**8-entry §3d whitelist delta bundled** (Q1=A · formal package · per plan §10.2):
+1. `tests/test_p43_document_pipeline.py` (Test Whitelist)
+2. `tests/test_p43_clarification_stable_ids.py` (Test Whitelist · Bug D semantic category binding · 6 regression cases)
+3. `tests/test_p43_freeze_gate.py` (Test Whitelist)
+4. `tests/test_p43_dual_sha_manifest.py` (Test Whitelist · Q12=B+a null-tolerant 4-组合)
+5. `tests/fixtures/p43_document_pipeline/` (PDF/DOCX/TXT/MD corpus)
+6. `tests/fixtures/p43_pre_archive/` (backward-compat)
+7. `pyproject.toml` → `[project.optional-dependencies] document = ["pypdf>=4.0", "python-docx>=1.0"]` (Source Code Whitelist new row · repo-root packaging metadata)
+8. `docs/<system>/traceability_matrix.md` per-system freeze-time SKELETON emission (Doc Deliverables Whitelist new row · aligned with P43-00 §2c:190 P34-P42 precedent)
+
+**Awaiting Kogami decision**: A (approve all 8 + Gate · **Executor recommendation**) / B (approve Gate + partial subset · triggers v3.2 re-plan for rejected entries) / C (reject Gate · Batch-2 hard-frozen · R4 arbitration).
+
+**Scope digest**: 3 sub-phases combined (P43-02 + P43-03 + P43-04) · ~2100-2700 LOC · 3-4 days wall-time · 13 Codex adapter-boundary review rounds planned for execution · 16 authority tests (14 R1-R6 + 2 observability) + ~30 other ≈ ~46 new default-lane tests · 8 endpoints total (P43-01's 7 + `/api/document/extract` · `/api/workbench/freeze` dropped as CLI-only).
+
+**Commit arc (v1→v3.1 final-scrub)**:
+- `03e4acf` v1 draft · Codex r1 需修正·信号强 (6 required + 2 polish)
+- `1781641` v2 surgical rewrite · closes r1 · Codex r2 需修正·信号强 (3 required + 1 polish)
+- `ee0d018` v3 surgical addendum · closes r2 (whitelist anchor / pyproject explicit / semantic category) · Codex r3 需修正·信号弱
+- `ac30621` v3.1 janitorial · closes r3 (§2b heading / pyproject pre-emptive / Bug D 6 cases / §6 v2→v3 wording)
+- `4aed5fd` v3.1 metadata scrub (r4 pass 1 · 7 version-drift sites closed)
+- `987d723` v3.1 §6/§7 lifecycle scrub (r4 pass 2 · 5 lifecycle lines closed)
+- `(this commit)` v3.1 §10 Kogami submission section + STATE.md + ROADMAP.md · **Codex r4 final `可过-Gate`** verdict stamped on `987d723`
+
+---
 
 ### P43-01 Sub-phase: Contract Proof Spike (CLOSED)
 

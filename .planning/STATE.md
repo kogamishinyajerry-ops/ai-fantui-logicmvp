@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: P43-01 Contract Proof Spike CLOSED · GATE-P43-01-CLOSURE Approved by Kogami · P43-02 (workflow/orchestrator/panel) kickoff authorized
-last_updated: "2026-04-21T00:00:00.000Z"
+status: P43-02 Batch combined plan v3.1 submitted · awaiting GATE-P43-02-BATCH-PLAN-QUALITY Kogami decision · 8-entry §Q Q1 §3d delta request bundled · Codex r4 final 可过-Gate (commit 987d723)
+last_updated: "2026-04-21T06:15:00.000Z"
 last_activity: 2026-04-21
 progress:
   total_phases: 43
@@ -18,9 +18,62 @@ Last activity: 2026-04-21
 
 ## Current Position
 
-**P43-01 Contract Proof Spike CLOSED · GATE-P43-01-CLOSURE Approved by Kogami (2026-04-21) · P43-02 next**
+**P43-02 Batch combined plan v3.1 submitted · awaiting GATE-P43-02-BATCH-PLAN-QUALITY (Kogami plan-quality 前置门) · Codex r4 final 可过-Gate endorsement · 8-entry §3d delta bundled**
 
-Phase: P43-01 — Contract Proof Spike (sub-phase of P43 · completed)
+Phase: P43-02 Batch (P43-02 + P43-03 + P43-04 combined · Q1=D · plan-quality pre-gate · execution gate remains `GATE-P43-02-BATCH-CLOSURE` pending all 19 Exit Criteria)
+
+### P43-02 Batch plan submission arc (2026-04-21 · same-day path ① · 5 plan revisions · 4 Codex rounds)
+
+| Revision | Commit | Codex round | Verdict | Closure |
+|----------|--------|-------------|---------|---------|
+| v1 (draft) | `03e4acf` | r1 | 需修正·信号强 (6 required + 2 polish) | path ① → v2 |
+| v2 (surgical rewrite) | `1781641` | r2 | 需修正·信号强 (3 required + 1 polish) | path ① → v3 |
+| v3 (surgical addendum on v2) | `ee0d018` | r3 | 需修正·信号弱 (3 text + 1 polish) | path ① → v3.1 janitorial |
+| v3.1 (janitorial) | `ac30621` | r4 pass 1 | 需修正·信号弱 (version drift) | scrub → `4aed5fd` |
+| v3.1 (scrub 1) | `4aed5fd` | r4 pass 2 | 需修正·信号弱 (§6/§7 lifecycle drift) | scrub → `987d723` |
+| **v3.1 (final)** | **`987d723`** | **r4 final** | **`可过-Gate`** | **submission-blocker 清除** |
+| v3.1 (+§10 submission) | `(this commit)` | — | — | Kogami submission ready |
+
+### P43-02 Batch plan v3.1 · Codex r4 final endorsement (verbatim)
+
+> **可过-Gate — 未发现新的阻断项。§6 顶部 callout 已写明 v3.1 lifecycle 对齐 (r4)，生命周期文案已统一到 v3.1 / Codex r4。§7 stop point #6 已改为 Codex r4。987d723 仅改这一份 plan，diff 只覆盖指出的 §6/§7 生命周期漂移，没有引入新的文案 drift。r1/r2/r3 closure 和当前 r4 提交态仍自洽。**
+>
+> *边界说明：本次仅是 GATE-P43-02-BATCH-PLAN-QUALITY submission-blocker 复检，不涉及源码或 Exit Criteria #1-#19 证据重审。*
+
+### P43-02 Batch · §3d whitelist delta request (Q1=A · 8 entries)
+
+Gate approval requires amending `P43-00-PLAN.md` v7 §3d with 8 new entries (see plan §10.2 for full table). Rejection fallbacks enumerated in plan §7 stop point #7.
+
+1. `tests/test_p43_document_pipeline.py` (Test Whitelist)
+2. `tests/test_p43_clarification_stable_ids.py` (Test Whitelist · 6 regression cases for Bug D semantic category binding)
+3. `tests/test_p43_freeze_gate.py` (Test Whitelist)
+4. `tests/test_p43_dual_sha_manifest.py` (Test Whitelist · Q12=B+a null-tolerant 4-组合)
+5. `tests/fixtures/p43_document_pipeline/` (Test Whitelist · ~5 files PDF/DOCX/TXT/MD corpus)
+6. `tests/fixtures/p43_pre_archive/` (Test Whitelist · ~3 files backward-compat)
+7. `pyproject.toml` L1 additive `[project.optional-dependencies] document = ["pypdf>=4.0", "python-docx>=1.0"]` (Source Code Whitelist new row · repo-root packaging metadata)
+8. `docs/<system>/traceability_matrix.md` per-system freeze-time SKELETON emission (Doc Deliverables Whitelist new row · aligned with P43-00 §2c:190 P34-P42 precedent)
+
+### P43-02 Batch · Plan content digest (v3.1)
+
+- **Scope**: 3 sub-phases combined · ~2100-2700 LOC · 3-4 days wall-time
+  - P43-02: Workflow automaton + authority contract R1-R6 + archive compat + API contract lock + multi-tab lock + dual-SHA manifest
+  - P43-03: Server-side PDF/DOCX extraction + `/api/document/extract` endpoint + Bug D fix (semantic category binding) + readAsText regression rewrite
+  - P43-04: FREEZE event + `workbench freeze` CLI + `docs/<system>/traceability_matrix.md` SKELETON emission
+- **Tests**: 16 authority (14 R1-R6 + 2 observability) + ~30 other ≈ **~46 new default-lane tests** · plus e2e opt-in (multi-tab + R3 runtime mutation + R5 Node parity deferred to P43-09)
+- **Endpoints**: 8 total (P43-01's 7 + `/api/document/extract`) · `/api/workbench/freeze` dropped (CLI-only)
+- **Codex arc**: 13 rounds (10 adapter-boundary + 3 sub-phase closure) planned for execution
+- **Key structural decisions across revisions**:
+  - v2 `open_questions_<system>.md` 自创分叉 → v3 回归 parent-anchored `docs/<system>/traceability_matrix.md` (r2 #1 closure)
+  - v2 source-order positional mapping for Bug D → v3 semantic `Ambiguity.category` L1 additive field + LLM prompt extension + clarify-{i} warning fallback (r2 #3 closure)
+  - v2 pyproject.toml pre-emptive → v3 formal §Q Q1 delta entry #7 (r2 #2 closure)
+  - Q5-B (harden apply_all_safe to strict bool) deleted as L3 violation (r1 #6 closure · v2) · only Q5-A soften text remains
+
+### Archive — P43-01 Contract Proof Spike CLOSED (2026-04-21)
+
+[P43-01 prior-position history preserved below]
+
+---
+
 
 ### P43-01 Execution arc
 
