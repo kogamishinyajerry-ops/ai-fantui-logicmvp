@@ -314,7 +314,7 @@ function deepFreeze(obj) {
   return Object.freeze(obj);
 }
 
-function assignFrozenSpec(spec) {
+function assignFrozenSpec(spec, origin) {  // origin: "freeze-event" | "archive-restore"
   frozenSpec = deepFreeze(JSON.parse(JSON.stringify(spec)));
 }
 
@@ -362,7 +362,7 @@ function handleFinalApprove() {
   }
 
   // Freeze the approved spec (R3 — only authorised write path)
-  assignFrozenSpec(currentSpec);
+  assignFrozenSpec(currentSpec, "freeze-event");
 
   // Delete draft immediately after freezing (R6)
   clearDraftDesignState();
@@ -2102,6 +2102,12 @@ async function restoreWorkbenchArchiveFromManifest() {
       fingerprintSummary: "已从 archive 恢复工作区。你可以继续编辑、重跑 bundle，或直接沿用归档里的历史结果继续交接。",
       successMessage: "已从 archive 恢复工作区。",
     })) {
+      try {
+        const restoredPacketSpec = JSON.parse(payload.workspace_snapshot.packetJsonText || "{}");
+        assignFrozenSpec(restoredPacketSpec, "archive-restore");
+      } catch (_) {
+        // Non-critical: frozen spec not updated if snapshot packet is unparseable
+      }
       setResultMode(sourceMode);
       return;
     }

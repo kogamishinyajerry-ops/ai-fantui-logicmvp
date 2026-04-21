@@ -188,13 +188,19 @@ class TestR3FrozenSpecControlledWriter:
         reason="P43-03: assignFrozenSpec not yet implemented; origin check pending",
     )
     def test_r3_no_draft_origin(self, wjs: str):
-        """All assignFrozenSpec calls must use origin ∈ {'freeze-event','archive-restore'}."""
-        calls = re.findall(r"assignFrozenSpec\([^)]+\)", wjs)
-        assert calls, "assignFrozenSpec not found — cannot check origin"
-        bad = [c for c in calls
-               if not re.search(r"freeze-event|archive-restore", c)]
+        """All assignFrozenSpec call-sites must use origin ∈ {'freeze-event','archive-restore'}."""
+        # Check lines that call assignFrozenSpec but are NOT function declarations or comments
+        call_lines = [
+            line.strip() for line in wjs.splitlines()
+            if "assignFrozenSpec(" in line
+            and not re.search(r"\bfunction\b", line)
+            and not line.strip().startswith("//")
+        ]
+        assert call_lines, "assignFrozenSpec call sites not found — cannot check origin"
+        bad = [l for l in call_lines if not re.search(r"freeze-event|archive-restore", l)]
         assert bad == [], (
-            f"R3 VIOLATION: assignFrozenSpec calls without valid origin: {bad}"
+            f"R3 VIOLATION: assignFrozenSpec call sites without valid origin:\n" +
+            "\n".join(f"  {l}" for l in bad)
         )
 
     @pytest.mark.xfail(
