@@ -23,9 +23,7 @@
           <select id="chat-system-select" aria-label="切换系统">
             <option value="thrust-reverser">反推系统（简化基线）</option>
             <option value="c919-etras">C919 反推系统（E-TRAS · certified）</option>
-            <option value="landing-gear">起落架系统</option>
-            <option value="bleed-air">引气阀系统</option>
-            <option value="efds">干扰弹系统</option>
+            <!-- UI-frozen 2026-04-21 (Kogami directive): landing-gear / bleed-air / efds demonstrative 3 套 使命完成 · adapter + chain-topology SVG 在 DOM 保留为 dormant backup · 仅移除切换入口 -->
           </select>
         </label>
 
@@ -717,8 +715,7 @@
           <span>📊 逆向诊断分析</span>
           <select class="analysis-system-select" id="diag-system-select">
             <option value="thrust-reverser">Thrust Reverser</option>
-            <option value="landing-gear">Landing Gear</option>
-            <option value="bleed-air">Bleed Air</option>
+            <!-- UI-frozen 2026-04-21: landing-gear / bleed-air removed from diagnosis panel -->
           </select>
           <button type="button" class="analysis-panel-close" data-close="diagnosis-panel">✕</button>
         </div>
@@ -745,8 +742,7 @@
           <span>🎲 可靠性仿真</span>
           <select class="analysis-system-select" id="mc-system-select">
             <option value="thrust-reverser">Thrust Reverser</option>
-            <option value="landing-gear">Landing Gear</option>
-            <option value="bleed-air">Bleed Air</option>
+            <!-- UI-frozen 2026-04-21: landing-gear / bleed-air removed from Monte Carlo panel -->
           </select>
           <button type="button" class="analysis-panel-close" data-close="monte-carlo-panel">✕</button>
         </div>
@@ -766,8 +762,7 @@
           <span>🔍 敏感性分析</span>
           <select class="analysis-system-select" id="sensitivity-system-select">
             <option value="thrust-reverser">Thrust Reverser</option>
-            <option value="landing-gear">Landing Gear</option>
-            <option value="bleed-air">Bleed Air</option>
+            <!-- UI-frozen 2026-04-21: landing-gear / bleed-air removed from sensitivity panel -->
           </select>
           <button type="button" class="analysis-panel-close" data-close="sensitivity-panel">✕</button>
         </div>
@@ -785,8 +780,7 @@
           <select class="analysis-system-select" id="hw-schema-system-select">
             <option value="thrust-reverser">Thrust Reverser</option>
             <option value="c919-etras">C919 E-TRAS</option>
-            <option value="landing-gear">Landing Gear</option>
-            <option value="bleed-air">Bleed Air</option>
+            <!-- UI-frozen 2026-04-21: landing-gear / bleed-air removed from hardware schema panel -->
           </select>
           <button type="button" class="analysis-panel-close" data-close="hardware-schema-panel">✕</button>
         </div>
