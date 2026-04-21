@@ -2,7 +2,7 @@
 gate: GATE-P43-PLAN-v9-AMEND
 parent_plan: P43-00-PLAN.md v8 → v9
 requester: Claude App Opus 4.7 (Solo Executor)
-triggered_by: P43-02.5-00-PLAN v3 (HEAD f25953e · post Codex r2 needed·strong closure)
+triggered_by: P43-02.5-00-PLAN v4.1 (HEAD tbd · post Codex r4 需修正·信号弱 · 3 delta batched · r3/r4 required all addressed)
 date: 2026-04-21
 classification: Parent-plan §3d whitelist amend · batches Test + Docs entries (D5=A one roundtrip)
 urgency: blocks Step E only · Steps B/C/D1/D2 can proceed in parallel
@@ -13,7 +13,7 @@ status: DRAFT · awaiting user submission to Kogami
 
 ## Summary
 
-P43-02.5 v3 plan requires **two §3d whitelist entries** that are not currently authorized by P43-00 v8. Per D5=A executor decision, batch both into one Kogami roundtrip to minimize amend overhead (v8 precedent set by the 8-entry Kogami Option A amend on 2026-04-21).
+P43-02.5 v4.1 plan requires **three §3d whitelist entries** that are not currently authorized by P43-00 v8 (2 Test Whitelist mandatory · 2 Docs Whitelist optional · 3 total new entries · Delta 2 groups 2 files into one logical delta). Per D5=A executor decision (v4.1 Codex r4 reconfirmed), batch all into one Kogami roundtrip to minimize amend overhead (v8 precedent set by the 8-entry Kogami Option A amend on 2026-04-21).
 
 ## Requested deltas
 
@@ -31,9 +31,9 @@ P43-02.5 v3 plan requires **two §3d whitelist entries** that are not currently 
 
 | 新建测试 | 负责 Phase | 用途 |
 |---------|----------|------|
-| `tests/test_p43_02_5_c919_panel_e2e_deploy_flow.py` | P43-02.5 | `@pytest.mark.e2e` · 运行时 DOM/event/POST 级 E2E 验收 · 脚本化 Exit #25 "Unlock→deploy 完整链演示": 自动设 TRA=-14 + atltla=true + apwtla=true + tls_a/b unlock + pylon_unlock + pls_locked=false + tr_position=90 + trcu_power=true + 触发 "Advance deploy latches" button → 断言 POST /api/system-snapshot response 的 `active_logic_node_ids` 含全 4 truth-tracked ln_* + `asserted_component_values.fadec_deploy_command=true` · 防 Q6=B 19 控件 panel 未来改动后静态 schema-alignment 漏 flow-level drift |
+| `tests/e2e/test_p43_02_5_c919_panel_deploy_flow.py` | P43-02.5 | **Backend-only integration test** (v4.1 Codex r4 R1 修正 · 不走 DOM) · 使用 `tests/e2e/conftest.py` 既有 subprocess+HTTP fixture (boots demo_server on port 8799 · adapter:97 onwards)· 脚本化 Exit #25 "Unlock→deploy 完整链演示": 构造 snapshot dict (TRA=-14 + atltla=true + apwtla=true + tls_a/b unlock + pylon_unlock + pls_locked=false + tr_position=90 + trcu_power=true + lock_unlock_confirm_s=0.4 + tr_position_deployed_confirm_s=0.5 + tr_stowed_locked_confirm_s=0.0) + POST `/api/system-snapshot` → 断言 response `truth_evaluation.active_logic_node_ids` 含全 4 truth-tracked ln_* (eicu_cmd2/eicu_cmd3/tr_command3_enable/fadec_deploy_command) + `asserted_component_values.fadec_deploy_command=true` + `completion_reached=true` · 防 Q6=B 19 控件 panel 未来改动后静态 schema-alignment 漏 flow-level drift |
 
-**Rationale**: Codex r3 明确指出 `test_p43_02_5_c919_panel_schema_alignment.py` (Delta 1) 只断言静态 `data-node ⊂ spec ids`，无法验证 unlock→deploy 运行时 flow。Delta 3 用独立 E2E 文件跑 Exit #25 脚本化验收。沿用现有 `@pytest.mark.e2e` marker + 三路 regression lane (E2E pytest ≥ 50 passed)，不新建 CI job，不引入 Playwright stack（沿 vanilla JS scope）。
+**Rationale**: Codex r3 明确指出 `test_p43_02_5_c919_panel_schema_alignment.py` (Delta 1) 只断言静态 `data-node ⊂ spec ids`，无法验证 unlock→deploy 运行时 flow。Delta 3 **v4.1 修正**: 文件路径从 flat `tests/` 移到 `tests/e2e/` 子树（与既有 `tests/e2e/conftest.py` fixture 同 scope · r4 指出 flat path 拿不到 subprocess+HTTP fixture）· 且改为 **backend-only integration test** 不走 DOM (repo 无 Playwright stack · `pyproject.toml:30` 确认)· 仍能覆盖 Exit #25 flow 的 adapter-boundary 部分 · UI DOM 部分通过 Exit #25 手工 browser inspection (human-eye · §4 列出) 覆盖。
 
 ### Delta 2 (optional · recommended) — Docs Whitelist +2
 
@@ -44,7 +44,7 @@ P43-02.5 v3 plan requires **two §3d whitelist entries** that are not currently 
 
 **Rationale**: Codex r2 P3 修正 v2 plan 错误措辞 "docs whitelist per-phase 已涵盖"。父计划 v8 §3d Docs Whitelist 实际只明授 `docs/` 下文件（P43-00:287-294）。`.planning/phases/<phase>/reports/` 路径仅是 P43-02 precedent（P43-02-00:188,254,382,481），不是 parent-plan blanket 授权。
 
-**Alternative降级路径 (Q4=A')**: 若 Kogami 拒 Delta 2 · P43-02.5 将 artifact 改放 `reports/p43-02-5-c919-reference-panel/` 目录（precedent-backed 而非 new whitelist entry），Test Whitelist delta 1 不受影响。
+**Alternative降级路径 (Q4=A')**: 若 Kogami 拒 Delta 2 · P43-02.5 将 artifact 改放 `reports/p43-02-5-c919-reference-panel/` 目录（precedent-backed 而非 new whitelist entry），**Test Whitelist Delta 1 + Delta 3 不受影响**（v4.1 Codex r4 Polish 修正 · 原 "Delta 1 不受影响" 遗漏 Delta 3 E2E）。
 
 ## Approval options (Kogami single choice)
 
