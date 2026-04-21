@@ -54,6 +54,8 @@
     'landing-gear': '起落架系统',
     'bleed-air': '引气阀系统',
     efds: '干扰弹系统',
+    // P43-02.5 Step D1 T1 · c919-etras SYSTEM_LABELS entry
+    'c919-etras': 'C919 反推系统（E-TRAS）',
   };
   var NODE_STATE_CLASSES = ['is-active', 'is-blocked', 'is-inactive'];
   var NODE_VALUE_KEYS = {
@@ -289,9 +291,18 @@
   }
 
   function buildDefaultLeverPayload(promptText, systemId) {
+    var sid = systemId || 'thrust-reverser';
+    // P43-02.5 Step D1 T2 · c919-etras branch · don't force thrust-reverser fields
+    // Panel-state is read via collectC919PanelSnapshot() when T3 constructs the POST body
+    if (sid === 'c919-etras') {
+      return {
+        prompt: promptText || '',
+        system_id: sid,
+      };
+    }
     return {
       prompt: promptText || '',
-      system_id: systemId || 'thrust-reverser',
+      system_id: sid,
       tra_deg: 0.0,
       radio_altitude_ft: 5.0,
       engine_running: true,
@@ -394,6 +405,14 @@
   }
 
 function _applySuggestedOverrides(overrides) {
+    // P43-02.5 Step D1 T5 · c919-etras no-op (route user to panel controls)
+    // Thrust-reverser stays on _sendLeverSnapshot path. C919 stub operate returns
+    // parameter_overrides={} so in practice this branch won't fire for c919,
+    // but defensive guard for future P43-05 enabling real operate suggestions.
+    if (currentSystem === 'c919-etras') {
+      console.debug('[P43-02.5] _applySuggestedOverrides c919-etras: no-op · use panel controls');
+      return Promise.resolve({ snapshotData: null, requestPayload: null, nodeStates: {}, fallbackText: '' });
+    }
     var basePayload = lastTruthPayloadBySystem[currentSystem]
         ? copyObject(lastTruthPayloadBySystem[currentSystem])
         : buildDefaultLeverPayload('', currentSystem);
@@ -2417,7 +2436,59 @@ function clearAiHighlights() {
   }
 
   function canvasAdjustmentsSupported() {
+    // P43-02.5 Step D1 T4 · Q5=A unify (hide + return false for c919-etras)
+    // c919 panel uses its own 19 visible controls in panel body · canvas global
+    // controls (#canvas-global-controls · feedback_mode / n1k_limit) are hidden
+    // via #canvas-global-controls[data-hide-for-c919] CSS rule.
     return currentSystem === 'thrust-reverser';
+  }
+
+  // P43-02.5 Step D1 · collectC919PanelSnapshot reads 34 fields from DOM inputs
+  // + defaults. Used by T3 handleGeneralQuestion c919 branch + T6 handleOperateIntent
+  // + Step D2 per-control POST. Returns full snapshot dict for POST body.
+  function collectC919PanelSnapshot() {
+    // Default snapshot mirrors demo_server.py:3290-3340 _default_snapshot_for_system c919
+    var snap = {
+      tra_deg: 0.0,
+      n1k_percent: 35.0,
+      engine_running: true,
+      tr_inhibited: false,
+      lgcu1_mlg_wow_value: true, lgcu1_mlg_wow_valid: true,
+      lgcu2_mlg_wow_value: true, lgcu2_mlg_wow_valid: true,
+      tr_wow: true,
+      tls_ls_a_valid: true, tls_ls_a_unlocked: false,
+      tls_ls_b_valid: true, tls_ls_b_unlocked: false,
+      pls_ls_a_locked: true, pls_ls_b_locked: true,
+      left_pylon_ls_a_valid: true, left_pylon_ls_a_unlocked: false,
+      left_pylon_ls_b_valid: true, left_pylon_ls_b_unlocked: false,
+      right_pylon_ls_a_valid: true, right_pylon_ls_a_unlocked: false,
+      right_pylon_ls_b_valid: true, right_pylon_ls_b_unlocked: false,
+      apwtla: false, atltla: false, vdt_sensor_valid: true,
+      e_tras_over_temp_fault: false, trcu_power_on: true,
+      tr_position_percent: 0.0, prev_eicu_cmd3: false,
+      comm2_timer_s: 0.0, lock_unlock_confirm_s: 0.0,
+      tr_position_deployed_confirm_s: 0.0, tr_stowed_locked_confirm_s: 2.0,
+    };
+    // Override with DOM panel input values (populated by Step D2 · each input has data-c919-field)
+    var inputs = document.querySelectorAll('#c919-controls-panel [data-c919-field]');
+    var i;
+    var el;
+    var field;
+    var val;
+    for (i = 0; i < inputs.length; i += 1) {
+      el = inputs[i];
+      field = el.getAttribute('data-c919-field');
+      if (!field) { continue; }
+      if (el.type === 'checkbox') {
+        snap[field] = el.checked;
+      } else if (el.type === 'range' || el.type === 'number') {
+        val = parseFloat(el.value);
+        snap[field] = isNaN(val) ? snap[field] : val;
+      } else {
+        snap[field] = el.value;
+      }
+    }
+    return snap;
   }
 
   function collectCanvasGlobalOverrides() {
@@ -2707,6 +2778,12 @@ function clearAiHighlights() {
   if (systemSelect) {
     systemSelect.addEventListener('change', function() {
       currentSystem = systemSelect.value;
+      // P43-02.5 Step D1 T4 · tag body with data-c919-active for CSS hide of #canvas-global-controls
+      if (currentSystem === 'c919-etras') {
+        document.body.setAttribute('data-c919-active', 'true');
+      } else {
+        document.body.removeAttribute('data-c919-active');
+      }
       hideDetailPanel();
       lastTruthSnapshot = null;
       referenceTopologyNodes = [];
@@ -2928,12 +3005,28 @@ function clearAiHighlights() {
   // Truth engine first: fetch a live snapshot, update canvas immediately, then
   // call AI explain with node_states so the blue discussion ring stays advisory.
   function handleGeneralQuestion(qText, qSystemId, qPayload) {
+    // P43-02.5 Step D1 T3 · c919-etras branch reads panel state (not GET default)
+    // ensures chat/explain snapshot === current panel snapshot (byte-identical)
+    var c919PanelSnapshot = (qSystemId === 'c919-etras') ? collectC919PanelSnapshot() : null;
+
     var truthPayload = qSystemId === 'thrust-reverser'
       ? copyObject(lastTruthPayloadBySystem[qSystemId] || qPayload)
-      : copyObject(qPayload);
-    var truthRequest = qSystemId === 'thrust-reverser'
-      ? _sendLeverSnapshot(truthPayload)
-      : requestJson('/api/system-snapshot?system_id=' + encodeURIComponent(qSystemId));
+      : (qSystemId === 'c919-etras' ? { system_id: qSystemId, snapshot: c919PanelSnapshot } : copyObject(qPayload));
+
+    var truthRequest;
+    if (qSystemId === 'thrust-reverser') {
+      truthRequest = _sendLeverSnapshot(truthPayload);
+    } else if (qSystemId === 'c919-etras') {
+      // POST /api/system-snapshot with current panel state · byte-identical with operate link
+      truthRequest = requestJson('/api/system-snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(truthPayload),
+      });
+    } else {
+      truthRequest = requestJson('/api/system-snapshot?system_id=' + encodeURIComponent(qSystemId));
+    }
+
     var fallbackFormatter = qSystemId === 'thrust-reverser'
       ? null
       : function(data) { return formatSystemSnapshotAnswer(data, qSystemId); };
@@ -2955,7 +3048,14 @@ function clearAiHighlights() {
         var explainPayload;
 
         if (qSystemId !== 'thrust-reverser') {
-          applySystemSnapshotToCanvas(snapshotData);
+          // P43-02.5 Step D1 T6 (partial) · cache c919 snapshot into lastTruthPayloadBySystem
+          // so subsequent operate/explain calls have the same snapshot (byte-identical)
+          if (qSystemId === 'c919-etras' && c919PanelSnapshot) {
+            lastTruthPayloadBySystem[qSystemId] = { snapshot: c919PanelSnapshot };
+          }
+          // P43-02.5 Step C · pass inputSnapshot for timer annotation display
+          var inputSnap = (qSystemId === 'c919-etras') ? c919PanelSnapshot : null;
+          applySystemSnapshotToCanvas(snapshotData, inputSnap);
           renderTruthEvalFromSnapshot(snapshotData, null);
         }
 
@@ -3023,10 +3123,18 @@ function hasOperateIntent(qText, qLower) {
   }
 
   function handleOperateIntent(text, systemId) {
+    // P43-02.5 Step D1 T6 · c919-etras reads panel state + caches it (snapshot convergence)
+    var c919Snap = null;
+    if (systemId === 'c919-etras') {
+      c919Snap = collectC919PanelSnapshot();
+      lastTruthPayloadBySystem[systemId] = { snapshot: c919Snap };
+    }
     var operatePayload = {
       question: text,
       system_id: systemId,
-      current_snapshot: lastTruthPayloadBySystem[systemId] || null,
+      current_snapshot: systemId === 'c919-etras'
+        ? { snapshot: c919Snap }
+        : (lastTruthPayloadBySystem[systemId] || null),
     };
     setInputLoading(true);
     clearAiHighlights();

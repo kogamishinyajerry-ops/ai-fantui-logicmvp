@@ -3364,6 +3364,13 @@ input[type="range"].ndp-range::-webkit-slider-thumb:active {
   stroke-width: 0.8;
 }
 
+/* P43-02.5 Step D1 T4 · hide #canvas-global-controls when c919-etras active
+ * Q5=A unify: canvasAdjustmentsSupported() returns false + controls hidden
+ * panel body's 19 visible controls are c919's only interaction surface */
+body[data-c919-active="true"] #canvas-global-controls {
+  display: none !important;
+}
+
 /* P43-02.5 freeze banner · certified · in use */
 .c919-panel-freeze-banner {
   display: flex;

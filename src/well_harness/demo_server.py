@@ -1025,7 +1025,9 @@ def _validate_chat_payload(payload: dict) -> tuple[dict | None, dict | None]:
     """
     MAX_QUESTION_CHARS = 8000
     MAX_SNAPSHOT_NODES = 200
-    ALLOWED_SYSTEM_IDS = {"thrust-reverser", "landing-gear", "bleed-air", "efds"}
+    # P43-02.5 Step D1 T7 · c919-etras allowlist addition
+    # Enables /api/chat/reason + /api/chat/operate for C919 E-TRAS system
+    ALLOWED_SYSTEM_IDS = {"thrust-reverser", "landing-gear", "bleed-air", "efds", "c919-etras"}
 
     raw_question = payload.get("question", "")
     if not isinstance(raw_question, str):
@@ -1110,7 +1112,32 @@ def _handle_chat_operate(request_payload: dict) -> tuple[dict | None, dict | Non
     snapshot = validated["snapshot"]
     nodes = validated["nodes"]
 
-    # Build context from current snapshot
+    # P43-02.5 Step D1 T8 · c919-etras operate stub (panel-only interaction mode)
+    # Real operate prompt (with c919 5-logic + 17-component vocab + LLM dispatch)
+    # deferred to P43-05 Progressive panel preview. This stub keeps the endpoint
+    # available (no 400 invalid_system_id) but routes user to panel controls.
+    if system_id == "c919-etras":
+        return {
+            "action_type": "manual_steps",
+            "parameter_overrides": {},
+            "trajectory_steps": [],
+            "reasoning": (
+                "C919 E-TRAS operate 当前为 panel-only 交互模式 (P43-02.5 reference panel)。"
+                "请直接在左侧控制面板调节对应控件 (TRA / ATLTLA / APWTLA / unlock toggles / "
+                "tr_position / N1K / timer advance button 等)。"
+                "AI-driven operate 建议将在 P43-05 Progressive panel preview 阶段实装。"
+            ),
+            "confidence": 1.0,
+            "gate_plan": {},
+            "ai_explanation": (
+                "P43-02.5 hand-crafted reference panel 是 frozen spec 的 rendering 层，"
+                "不包含 AI 自动 suggest override 能力。在当前阶段，请将用户指令转化为面板操作："
+                f"例如「{question[:60]}」请用户在面板中相应调节。"
+            ),
+            "auto_apply": False,
+        }, None
+
+    # Build context from current snapshot (thrust-reverser / landing-gear / bleed-air / efds)
     logic = snapshot.get("logic", {})
     outputs = snapshot.get("outputs", {})
 
