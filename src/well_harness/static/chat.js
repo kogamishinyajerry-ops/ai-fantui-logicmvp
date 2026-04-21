@@ -405,13 +405,53 @@
   }
 
 function _applySuggestedOverrides(overrides) {
-    // P43-02.5 Step D1 T5 · c919-etras no-op (route user to panel controls)
-    // Thrust-reverser stays on _sendLeverSnapshot path. C919 stub operate returns
-    // parameter_overrides={} so in practice this branch won't fire for c919,
-    // but defensive guard for future P43-05 enabling real operate suggestions.
+    // P43-02.5 v4.4 · c919-etras writes overrides to bottom-panel DOM inputs
+    // + triggers re-evaluation via POST /api/system-snapshot. This enables
+    // detail-panel inline adjust (click node → tune → apply) to properly
+    // mutate state, while still keeping bottom panel as the source-of-truth
+    // DOM surface for collectC919PanelSnapshot().
     if (currentSystem === 'c919-etras') {
-      console.debug('[P43-02.5] _applySuggestedOverrides c919-etras: no-op · use panel controls');
-      return Promise.resolve({ snapshotData: null, requestPayload: null, nodeStates: {}, fallbackText: '' });
+      var panelEl = document.getElementById('c919-controls-panel');
+      if (panelEl) {
+        var k;
+        for (k in overrides) {
+          if (!Object.prototype.hasOwnProperty.call(overrides, k)) { continue; }
+          var input = panelEl.querySelector('[data-c919-field="' + k + '"]');
+          if (!input) { continue; }
+          var val = overrides[k];
+          if (input.type === 'checkbox') {
+            input.checked = !!val;
+          } else if (input.type === 'range' || input.type === 'number') {
+            input.value = String(val);
+            var disp = panelEl.querySelector('[data-display-for="' + k + '"]');
+            if (disp) { disp.textContent = String(val); }
+          } else {
+            input.value = String(val);
+          }
+        }
+      }
+      // Synchronous POST (cancel any pending debounce first · latest-wins per v4.1)
+      if (typeof c919DebounceId !== 'undefined' && c919DebounceId) {
+        clearTimeout(c919DebounceId);
+        c919DebounceId = null;
+      }
+      var snap = collectC919PanelSnapshot();
+      // For numeric overrides not tied to a DOM input (timers · rare), merge directly
+      var kk;
+      for (kk in overrides) {
+        if (Object.prototype.hasOwnProperty.call(overrides, kk)) {
+          snap[kk] = overrides[kk];
+        }
+      }
+      lastTruthPayloadBySystem['c919-etras'] = { snapshot: snap };
+      return requestJson('/api/system-snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ system_id: 'c919-etras', snapshot: snap }),
+      }).then(function(data) {
+        applySystemSnapshotToCanvas(data, snap);
+        return { snapshotData: data, requestPayload: snap, nodeStates: {}, fallbackText: '' };
+      });
     }
     var basePayload = lastTruthPayloadBySystem[currentSystem]
         ? copyObject(lastTruthPayloadBySystem[currentSystem])
@@ -2242,9 +2282,9 @@ function clearAiHighlights() {
         applyBtn.title = '应用当前参数';
       }
 
-      if (!canvasAdjustmentsSupported()) {
+      if (!perNodeAdjustSupported()) {
         adjustSection.hidden = false;
-        adjustParamRow.innerHTML = '<p class="ndp-param-hint">当前画布参数调节仅支持反推系统参考链路。</p>';
+        adjustParamRow.innerHTML = '<p class="ndp-param-hint">当前系统参数调节仅支持反推系统与 C919 E-TRAS 参考链路。</p>';
         if (applyBtn) {
           applyBtn.disabled = true;
           applyBtn.title = '当前系统不支持该参数调节面板';
@@ -2252,7 +2292,42 @@ function clearAiHighlights() {
         return;
       }
 
-      // Node IDs that map to an adjustable lever parameter
+      // P43-02.5 v4.4 · C919 adjustable nodes map (19 interactive + read-only hints)
+      // Maps each truth-tracked node id to its adjustable snapshot field(s).
+      // Logic nodes (ln_*) + command outputs (eicu_*/fadec_*/tr_command3_enable)
+      // are computed · shown as read-only explainer with input node references.
+      var C919_ADJUSTABLE_NODES = {
+        // 12 sensor inputs (core)
+        tra_deg:               { type: 'float', label: 'TRA 推力杆角度', unit: '°', min: -32, max: 0, step: 0.1, key: 'tra_deg' },
+        atltla:                { type: 'bool',  label: 'ATLTLA · 微动开关1 (-1.4°~-6.2°)', key: 'atltla' },
+        apwtla:                { type: 'bool',  label: 'APWTLA · 微动开关2 (-5°~-9.8°)', key: 'apwtla' },
+        engine_running:        { type: 'bool',  label: '发动机运行', key: 'engine_running' },
+        n1k_percent:           { type: 'float', label: 'N1K 转速', unit: '%', min: 0, max: 120, step: 1, key: 'n1k_percent' },
+        tr_inhibited:          { type: 'bool',  label: 'TR 电气抑制', key: 'tr_inhibited' },
+        mlg_wow:               { type: 'derived', label: 'MLG_WOW (由 LGCU 余度选择)', hint: '请调节 lgcu1/lgcu2 四字段 (Table 2)' },
+        tr_wow:                { type: 'bool',  label: 'TR_WOW (2.25s/120ms 滤波)', key: 'tr_wow' },
+        trcu_power_on:         { type: 'bool',  label: 'TRCU 电源状态 (truth-tracked status · 非 gating)', key: 'trcu_power_on' },
+        e_tras_over_temp_fault:{ type: 'bool',  label: 'E-TRAS 过温故障 (safety abort)', key: 'e_tras_over_temp_fault' },
+        tr_position_percent:   { type: 'float', label: 'TR 反推位置', unit: '%', min: 0, max: 100, step: 1, key: 'tr_position_percent' },
+        lock_state:            { type: 'derived', label: 'lock_state aggregate', hint: '由 pls_ls_*/tls_ls_*/pylon_ls_* 传感器 + tr_position_percent 推导' },
+        // 5 logic nodes (read-only · computed)
+        ln_eicu_cmd2:          { type: 'computed', label: 'PDF §1.1.1 · MLG_WOW ∧ ¬TR_Inhibited ∧ (Comm2&lt;30s) ∧ ¬TR_Deployed', inputs: ['mlg_wow', 'tr_inhibited', 'comm2_timer_s', 'tr_position_percent'] },
+        ln_eicu_cmd3:          { type: 'computed', label: 'PDF §1.1.2 · (Engine∨TRCU_menu) ∧ MLG_WOW ∧ ¬TR_Inhibited ∧ APWTLA', inputs: ['engine_running', 'mlg_wow', 'tr_inhibited', 'apwtla'] },
+        ln_tr_command3_enable: { type: 'computed', label: 'PDF §1.1.2 图4 · ¬[(Stowed_Locked_1s∧TRA≥-1.4∧115VAC) ∨ OverTemp]', inputs: ['tr_stowed_locked_confirm_s', 'tra_deg', 'trcu_power_on', 'e_tras_over_temp_fault'] },
+        ln_fadec_deploy_command:{ type: 'computed', label: 'PDF §1.1.3 图5 · 6-input AND (Eng∨Maint ∧ ¬Inh ∧ Unlock ∧ TR_WOW ∧ N1k ∧ TRA<-11.74)', inputs: ['engine_running', 'tr_inhibited', 'lock_unlock_confirm_s', 'tr_wow', 'n1k_percent', 'tra_deg'] },
+        ln_fadec_stow_command: { type: 'computed', label: 'PDF §2 Step 7 · TRA≥-1.4 ∧ N1k≤Stow ∧ Engine ∧ ¬Deploy', inputs: ['tra_deg', 'n1k_percent', 'engine_running', 'fadec_deploy_command'] },
+        // 5 command outputs (read-only · from logic nodes)
+        eicu_cmd2:             { type: 'computed', label: 'EICU CMD2 output · driven by ln_eicu_cmd2', inputs: ['ln_eicu_cmd2'] },
+        eicu_cmd3:             { type: 'computed', label: 'EICU CMD3 output · driven by ln_eicu_cmd3 + TR_Command3_Enable reset', inputs: ['ln_eicu_cmd3', 'ln_tr_command3_enable'] },
+        tr_command3_enable:    { type: 'computed', label: 'TR_Command3_Enable output · feedback to EICU', inputs: ['ln_tr_command3_enable'] },
+        fadec_deploy_command:  { type: 'computed', label: 'FADEC Deploy CMD1 · drives TRCU deploy', inputs: ['ln_fadec_deploy_command'] },
+        fadec_stow_command:    { type: 'computed', label: 'FADEC Stow CMD1 · drives TRCU stow', inputs: ['ln_fadec_stow_command'] },
+      };
+
+      // Dispatch adjustable-nodes table by current system
+      var adjustableNodes = (currentSystem === 'c919-etras') ? C919_ADJUSTABLE_NODES : null;
+
+      // Node IDs that map to an adjustable lever parameter (thrust-reverser)
       var ADJUSTABLE_NODES = {
         radio_altitude_ft: { type: 'float', label: '无线电高度', unit: 'ft',
           min: 0, max: 20, step: 1, key: 'radio_altitude_ft' },
@@ -2268,16 +2343,44 @@ function clearAiHighlights() {
           min: 0, max: 100, step: 1, key: 'deploy_position_percent' },
       };
 
-      var cfg = ADJUSTABLE_NODES[nodeId];
+      var cfg = (adjustableNodes || ADJUSTABLE_NODES)[nodeId];
       adjustSection.hidden = false;
+
+      // P43-02.5 v4.4 · handle c919 computed/derived/read-only nodes (no slider)
+      if (cfg && (cfg.type === 'computed' || cfg.type === 'derived')) {
+        adjustParamRow.innerHTML = '';
+        var explainer = document.createElement('div');
+        explainer.className = 'ndp-param-explainer';
+        var html = '<p class="ndp-param-label">' + escHtml(cfg.label || nodeId) + '</p>';
+        if (cfg.hint) {
+          html += '<p class="ndp-param-hint">' + escHtml(cfg.hint) + '</p>';
+        }
+        if (cfg.inputs && cfg.inputs.length) {
+          html += '<p class="ndp-param-hint">输入节点: ' +
+            cfg.inputs.map(function(ii) { return '<code>' + escHtml(ii) + '</code>'; }).join(' · ') + '</p>';
+        }
+        explainer.innerHTML = html;
+        adjustParamRow.appendChild(explainer);
+        if (applyBtn) {
+          applyBtn.disabled = true;
+          applyBtn.textContent = '应用 (computed · 不可直接调)';
+          applyBtn.title = '此节点由输入节点推导 · 请点击输入节点调节';
+        }
+        return;
+      }
+
       if (cfg) {
         adjustParamRow.innerHTML = '';
 
         var currentVal = null;
-        // For deploy_position_percent (VDT): read directly from lastTruthPayloadBySystem
-        // since truth_evaluation.asserted_component_values is empty for lever-snapshot.
-        // buildCanonicalLeverPayloadFromSnapshot stores the correct value from hud.
-        var payload = lastTruthPayloadBySystem[currentSystem] || {};
+        // P43-02.5 v4.4 · c919-etras reads from collectC919PanelSnapshot() (nested)
+        // thrust-reverser reads from lastTruthPayloadBySystem[...][cfg.key] (flat)
+        var payload;
+        if (currentSystem === 'c919-etras') {
+          payload = (typeof collectC919PanelSnapshot === 'function') ? collectC919PanelSnapshot() : {};
+        } else {
+          payload = lastTruthPayloadBySystem[currentSystem] || {};
+        }
         if (payload[cfg.key] !== undefined) {
           currentVal = cfg.type === 'bool' ? payload[cfg.key] : parseFloat(payload[cfg.key]);
         } else if (lastTruthSnapshot) {
@@ -2436,11 +2539,18 @@ function clearAiHighlights() {
   }
 
   function canvasAdjustmentsSupported() {
-    // P43-02.5 Step D1 T4 · Q5=A unify (hide + return false for c919-etras)
-    // c919 panel uses its own 19 visible controls in panel body · canvas global
-    // controls (#canvas-global-controls · feedback_mode / n1k_limit) are hidden
-    // via #canvas-global-controls[data-hide-for-c919] CSS rule.
+    // Global controls (#canvas-global-controls · feedback_mode / n1k_limit)
+    // are thrust-specific. c919 has its own bottom controls panel + per-node
+    // detail adjust (see perNodeAdjustSupported).
     return currentSystem === 'thrust-reverser';
+  }
+
+  function perNodeAdjustSupported() {
+    // P43-02.5 v4.4 · per-node inline adjust (right-side detail panel)
+    // Supported for thrust-reverser (lever-snapshot path) AND c919-etras
+    // (POST /api/system-snapshot path). Detail panel click → inline
+    // slider/toggle → apply rewrites DOM + triggers re-eval.
+    return currentSystem === 'thrust-reverser' || currentSystem === 'c919-etras';
   }
 
   // P43-02.5 Step D1 · collectC919PanelSnapshot reads 34 fields from DOM inputs

@@ -2746,6 +2746,34 @@ body.drawer-open .chat-drawer {
   color: var(--text-dim, #8b9bb4);
   margin-top: 2px;
 }
+
+/* P43-02.5 v4.4 · computed/derived node explainer in detail panel */
+.ndp-param-explainer {
+  padding: 8px 10px;
+  background: rgba(30, 50, 80, 0.3);
+  border-left: 2px solid rgba(100, 180, 220, 0.55);
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.ndp-param-explainer .ndp-param-label {
+  color: rgba(200, 220, 240, 0.95);
+  font-weight: 500;
+  margin: 0 0 4px;
+}
+
+.ndp-param-explainer .ndp-param-hint {
+  margin: 2px 0;
+}
+
+.ndp-param-explainer code {
+  background: rgba(30, 50, 80, 0.6);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  color: rgba(160, 220, 255, 0.85);
+}
 .ndp-slider-track {
   position: relative;
   height: 20px;
