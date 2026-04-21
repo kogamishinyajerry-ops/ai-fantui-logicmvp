@@ -143,6 +143,7 @@ _SYSTEM_YAML_MAP = {
     "thrust-reverser": "thrust_reverser_hardware_v1.yaml",
     "landing-gear": "landing_gear_hardware_v1.yaml",
     "bleed-air": "bleed_air_hardware_v1.yaml",
+    "c919-etras": "c919_etras_hardware_v1.yaml",
 }
 
 # Systems whose YAML format is loadable by load_thrust_reverser_hardware.
