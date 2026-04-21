@@ -106,8 +106,8 @@ def check_r1(js: str, py_demo: str) -> dict:
 
 def check_r2(js: str) -> dict:
     """R2: final_approve handler never READs draft_design_state."""
-    # Find final-approve handler block
-    block = _extract_block(js, r"final.approve|finalApprove|Final Approval|handleFinalApprove")
+    # Find the handleFinalApprove function body (not a dict key like final_approve)
+    block = _extract_block(js, r"function\s+handleFinalApprove|handleFinalApprove\s*=\s*(?:async\s+)?function")
     if not block:
         return {
             "rule": "R2",
@@ -270,7 +270,7 @@ def check_r6(js: str, py_bundle: str) -> dict:
     missing: list[str] = []
 
     # Approval handler must removeItem draft
-    approve_block = _extract_block(js, r"final.approve|finalApprove|Final Approval|handleFinalApprove")
+    approve_block = _extract_block(js, r"function\s+handleFinalApprove|handleFinalApprove\s*=\s*(?:async\s+)?function")
     if not approve_block:
         missing.append("final_approve handler MISSING — removeItem(draft) unverifiable (expected: P43-08)")
     else:

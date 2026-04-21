@@ -396,7 +396,8 @@
           <div class="workbench-action-row">
             <button type="button" id="run-workbench-bundle" class="workbench-run-button">生成 Bundle</button>
             <button type="button" id="workbench-final-approve" class="workbench-toolbar-button is-primary">冻结审批 Spec</button>
-            <button type="button" id="workbench-start-gen" class="workbench-toolbar-button">生成 (Frozen Spec)</button>
+            <button type="button" id="workbench-start-gen" class="workbench-toolbar-button" disabled>生成 (Frozen Spec)</button>
+            <span id="workbench-workflow-state" class="workbench-workflow-badge" data-state="init" aria-live="polite" aria-label="工作流状态">INIT</span>
             <p id="workbench-request-status" class="workbench-request-status" role="status" aria-live="polite">等待生成。</p>
           </div>
         </section>

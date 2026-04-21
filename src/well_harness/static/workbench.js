@@ -51,6 +51,49 @@ const maxWorkbenchPacketRevisionHistory = 8;
 // P43 authority contract — written only via assignFrozenSpec; never mutated directly
 let frozenSpec = null;
 
+// P43 workflow state machine (P43-03)
+let workflowState = "INIT";
+
+const _workflowTransitions = {
+  INIT:        { confirm_freeze: "FROZEN",      load_packet: "INIT" },
+  FROZEN:      { start_gen: "GENERATING",       confirm_freeze: "FROZEN",   reiterate: "INIT" },
+  GENERATING:  { gen_complete: "PANEL_READY",   gen_fail: "ERROR",          reiterate: "INIT" },
+  PANEL_READY: { final_approve: "APPROVING",    start_gen: "GENERATING",    reiterate: "INIT" },
+  APPROVING:   { approve_ok: "APPROVED",        approve_fail: "PANEL_READY" },
+  APPROVED:    { archive: "ARCHIVING" },
+  ARCHIVING:   { archive_ok: "ARCHIVED",        archive_fail: "APPROVED" },
+  ARCHIVED:    {},
+  ERROR:       { reiterate: "INIT" },
+};
+
+function dispatchWorkflowEvent(event) {
+  const next = (_workflowTransitions[workflowState] || {})[event];
+  if (next === undefined) {
+    return false;
+  }
+  workflowState = next;
+  updateWorkflowUI();
+  return true;
+}
+
+function updateWorkflowUI() {
+  const approveBtn  = workbenchElement("workbench-final-approve");
+  const startGenBtn = workbenchElement("workbench-start-gen");
+  const badge       = workbenchElement("workbench-workflow-state");
+
+  // "冻结审批 Spec" enabled when spec is not yet frozen or after generation
+  const approveEnabled = ["INIT", "PANEL_READY", "ANNOTATING", "WIRING"].includes(workflowState);
+  // "生成 (Frozen Spec)" enabled only when a frozen spec exists
+  const startGenEnabled = workflowState === "FROZEN";
+
+  if (approveBtn)  approveBtn.disabled  = !approveEnabled;
+  if (startGenBtn) startGenBtn.disabled = !startGenEnabled;
+  if (badge) {
+    badge.textContent    = workflowState;
+    badge.dataset.state  = workflowState.toLowerCase();
+  }
+}
+
 const workbenchPresets = {
   ready_archived: {
     label: "一键通过验收",
@@ -330,8 +373,17 @@ async function handleStartGen() {
     packetEl.value = prettyJson(frozenSpec);
     renderWorkbenchPacketDraftState();
   }
+  if (!dispatchWorkflowEvent("start_gen")) {
+    setRequestStatus("当前工作流状态不允许启动生成。", "error");
+    return;
+  }
   setCurrentWorkbenchRunLabel("Frozen Spec 生成");
-  await runWorkbenchBundle();
+  try {
+    await runWorkbenchBundle();
+    dispatchWorkflowEvent("gen_complete");
+  } catch (_) {
+    dispatchWorkflowEvent("gen_fail");
+  }
 }
 
 function validateDraftAgainstFrozen(draft, frozen) {
@@ -366,6 +418,9 @@ function handleFinalApprove() {
 
   // Delete draft immediately after freezing (R6)
   clearDraftDesignState();
+
+  // Advance workflow state machine: INIT/PANEL_READY → FROZEN
+  dispatchWorkflowEvent("confirm_freeze");
 
   setRequestStatus("Spec 已冻结。草稿已清除。可执行生成。", "success");
 }
@@ -3620,6 +3675,7 @@ function installViewModeHandlers() {
 window.addEventListener("DOMContentLoaded", () => {
   installViewModeHandlers();
   installToolbarHandlers();
+  updateWorkflowUI();
   if (checkUrlIntakeParam()) {
     const bundleBtn = workbenchElement("run-workbench-bundle") || workbenchElement("workbench-bundle-btn");
     if (bundleBtn) {

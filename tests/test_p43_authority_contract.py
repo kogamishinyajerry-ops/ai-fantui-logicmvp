@@ -97,7 +97,7 @@ class TestR2FinalApproveNoDraftRead:
     )
     def test_r2_final_approve_handler_exists(self, wjs: str):
         """final_approve handler must exist before we can verify R2."""
-        block = _find_block(wjs, r"final.approve|finalApprove|handleFinalApprove|Final Approval")
+        block = _find_block(wjs, r"function\s+handleFinalApprove|handleFinalApprove\s*=\s*(?:async\s+)?function")
         assert block != "", "final_approve handler not found in workbench.js"
 
     @pytest.mark.xfail(
@@ -106,7 +106,7 @@ class TestR2FinalApproveNoDraftRead:
     )
     def test_r2_handler_no_draft_getitem(self, wjs: str):
         """final_approve block must not call getItem on draft key."""
-        block = _find_block(wjs, r"final.approve|finalApprove|handleFinalApprove|Final Approval")
+        block = _find_block(wjs, r"function\s+handleFinalApprove|handleFinalApprove\s*=\s*(?:async\s+)?function")
         assert block, "final_approve handler not found — skipping R2 read check"
         read_hits = [p for p in [r"getItem.*draft", r"draft_design_state", r"draftDesignState"]
                      if re.search(p, block)]
@@ -278,7 +278,7 @@ class TestR6LifecycleBoundary:
     )
     def test_r6_final_approve_removes_draft(self, wjs: str):
         """final_approve block must delete draft via removeItem or clearDraftDesignState()."""
-        block = _find_block(wjs, r"final.approve|finalApprove|handleFinalApprove|Final Approval")
+        block = _find_block(wjs, r"function\s+handleFinalApprove|handleFinalApprove\s*=\s*(?:async\s+)?function")
         assert block, "final_approve handler not found"
         pattern = (
             r"(?:localStorage\.removeItem\([^)]*(?:draft_design_state|draftDesignState)[^)]*\)"
