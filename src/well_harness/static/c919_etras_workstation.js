@@ -347,6 +347,36 @@
       const active = isTruthyComponent(nodeId, value);
       group.dataset.state = active ? "active" : "idle";
     });
+
+    // Wire state coloring (Simulink-style):
+    //   - fault-flagged wires (data-fault="true") turn RED when their src is asserted TRUE
+    //   - regular wires turn GREEN when both src and dst are active
+    //   - otherwise idle (grey)
+    const nodeActive = (id) => {
+      if (!id) return false;
+      if (activeIds.has(id)) return true;
+      return isTruthyComponent(id, asserted[id]);
+    };
+    chainSvg.querySelectorAll(".chain-wire").forEach((wire) => {
+      const src = wire.getAttribute("data-src");
+      const dst = wire.getAttribute("data-dst");
+      const isFaultWire = wire.getAttribute("data-fault") === "true";
+      const srcActive = nodeActive(src);
+      const dstActive = nodeActive(dst);
+      let state = "idle";
+      if (isFaultWire && srcActive) state = "fault";
+      else if (srcActive && dstActive) state = "active";
+      wire.dataset.state = state;
+      // Swap the arrow marker so the tip color matches the wire state.
+      if (state === "active") wire.setAttribute("marker-end", "url(#etras-arr-active)");
+      else if (state === "fault") wire.setAttribute("marker-end", "url(#etras-arr-fault)");
+      else wire.setAttribute("marker-end", "url(#etras-arr-idle)");
+    });
+    // Junction dots inherit state from their src signal.
+    chainSvg.querySelectorAll(".chain-junction").forEach((dot) => {
+      const src = dot.getAttribute("data-src");
+      dot.dataset.state = nodeActive(src) ? "active" : "idle";
+    });
   }
 
   function isTruthyComponent(id, value) {

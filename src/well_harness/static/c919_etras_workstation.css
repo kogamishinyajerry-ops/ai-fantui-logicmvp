@@ -605,10 +605,47 @@ html, body {
   stroke: var(--etras-text-mute);
   stroke-width: 1.3;
   fill: none;
+  stroke-linejoin: miter;
+  stroke-linecap: butt;
+  transition: stroke 0.15s ease;
 }
 #etras-logic-chain .chain-wire[data-state="active"] {
   stroke: var(--etras-active);
   stroke-width: 1.8;
+}
+#etras-logic-chain .chain-wire[data-state="fault"] {
+  stroke: var(--etras-fail);
+  stroke-width: 1.8;
+}
+/* Simulink-style junction dots at wire fan-out points. */
+#etras-logic-chain .chain-junction {
+  fill: var(--etras-text-mute);
+  stroke: none;
+  transition: fill 0.15s ease;
+}
+#etras-logic-chain .chain-junction[data-state="active"] {
+  fill: var(--etras-active);
+}
+/* Simulink-style AND gate icon (D-shape) overlay on logic blocks. */
+#etras-logic-chain .gate-icon {
+  fill: var(--etras-panel);
+  stroke: var(--etras-accent);
+  stroke-width: 1;
+  transition: fill 0.15s ease, stroke 0.15s ease;
+}
+#etras-logic-chain .chain-logic[data-state="active"] .gate-icon {
+  fill: rgba(0, 229, 160, 0.15);
+  stroke: var(--etras-active);
+}
+#etras-logic-chain .gate-label {
+  font-size: 9px;
+  font-weight: 600;
+  fill: var(--etras-accent);
+  font-family: 'Courier New', monospace;
+  pointer-events: none;
+}
+#etras-logic-chain .chain-logic[data-state="active"] .gate-label {
+  fill: var(--etras-active);
 }
 .chain-legend {
   font-size: 0.65rem;
