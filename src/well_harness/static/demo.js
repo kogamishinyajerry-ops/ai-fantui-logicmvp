@@ -273,10 +273,13 @@
       else                         wire.setAttribute("marker-end", "url(#fan-arr-idle)");
     });
 
-    // 3. Junction dots inherit src state
+    // 3. Junction dots inherit src state; fault-bus junctions turn red when source is asserted
     chainSvg.querySelectorAll(".chain-junction").forEach((dot) => {
       const src = dot.getAttribute("data-src");
-      dot.dataset.state = nodeActive(nodeById, src) ? "active" : "idle";
+      const isFault = dot.getAttribute("data-fault") === "true";
+      const srcActive = nodeActive(nodeById, src);
+      if (isFault && srcActive) dot.dataset.state = "fault";
+      else dot.dataset.state = srcActive ? "active" : "idle";
     });
   }
 

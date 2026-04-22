@@ -383,6 +383,9 @@ html, body {
 #fan-chain-svg .chain-junction[data-state="active"] {
   fill: var(--fan-active);
 }
+#fan-chain-svg .chain-junction[data-state="fault"] {
+  fill: var(--fan-fail);
+}
 
 .fan-chain-legend {
   font-size: 10.5px;
