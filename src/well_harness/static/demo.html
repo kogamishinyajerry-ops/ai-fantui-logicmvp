@@ -301,21 +301,21 @@
               <use href="#fan-gate-and" class="gate-icon" x="266" y="74" width="18" height="14"/>
               <text x="275" y="84" text-anchor="middle" class="gate-label">&amp;</text>
               <text x="340" y="88" text-anchor="middle" class="logic-id">L1</text>
-              <text x="340" y="100" text-anchor="middle" class="logic-sub">SW1 AND RA&lt;6 AND !INH</text>
+              <text x="340" y="100" text-anchor="middle" class="logic-sub">SW1 AND RA&lt;6 AND !INH AND !DEP</text>
             </g>
             <g class="chain-logic" data-node="logic2">
               <rect x="260" y="170" width="160" height="38" rx="4"/>
               <use href="#fan-gate-and" class="gate-icon" x="266" y="174" width="18" height="14"/>
               <text x="275" y="184" text-anchor="middle" class="gate-label">&amp;</text>
               <text x="340" y="188" text-anchor="middle" class="logic-id">L2</text>
-              <text x="340" y="200" text-anchor="middle" class="logic-sub">SW2 AND GND AND EEC</text>
+              <text x="340" y="200" text-anchor="middle" class="logic-sub">SW2 AND eng AND GND AND !INH AND EEC</text>
             </g>
             <g class="chain-logic" data-node="logic3">
               <rect x="260" y="260" width="160" height="38" rx="4"/>
               <use href="#fan-gate-and" class="gate-icon" x="266" y="264" width="18" height="14"/>
               <text x="275" y="274" text-anchor="middle" class="gate-label">&amp;</text>
               <text x="340" y="278" text-anchor="middle" class="logic-id">L3</text>
-              <text x="340" y="290" text-anchor="middle" class="logic-sub">ETRAC AND N1K&lt;lim</text>
+              <text x="340" y="290" text-anchor="middle" class="logic-sub">TLS AND N1K&lt;lim AND TRA≤-11.74°</text>
             </g>
 
             <!-- INTERMEDIATE column -->
@@ -366,7 +366,7 @@
                  WIRES — Simulink-style orthogonal routing.
                  Lane x values: 230/234/238 (inputs→logic), 460 (logic→intermediate),
                                 465 (L3 fanout trunk), 690 (intermediate→output/L4).
-                 Backward feedback wires (TLS→L2, ETRAC→L3) routed through TOP lane
+                 Backward feedback wire (TLS→L3) routed through TOP lane
                  (y=26/30) around the main grid.
             ═════════════════════════════════════════════════════════════════════ -->
 
@@ -395,10 +395,12 @@
             <!-- n1k → L3; eec_enable → L2 -->
             <path d="M 170 248 H 230 V 270 H 260" class="chain-wire" data-src="n1k" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
             <path d="M 170 284 H 240 V 200 H 260" class="chain-wire" data-src="eec_enable" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
-            <!-- reverser_inhibited → L3 (fault signal — red when inhibit active) -->
-            <path d="M 170 320 H 238 V 292 H 260" class="chain-wire" data-src="reverser_inhibited" data-dst="logic3" data-fault="true" marker-end="url(#fan-arr-idle)"/>
-            <!-- etrac_540v → L3 (backward feedback through top lane) -->
-            <path d="M 660 170 H 696 V 30 H 242 V 280 H 260" class="chain-wire" data-src="etrac_540v" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
+            <!-- reverser_inhibited fault bus (x=226 trunk): L1/L2/L3 all require !INH -->
+            <path d="M 170 320 H 226 V 88 H 260" class="chain-wire" data-src="reverser_inhibited" data-dst="logic1" data-fault="true" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 226 188 H 260" class="chain-wire" data-src="reverser_inhibited" data-dst="logic2" data-fault="true" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 226 290 H 260" class="chain-wire" data-src="reverser_inhibited" data-dst="logic3" data-fault="true" marker-end="url(#fan-arr-idle)"/>
+            <circle cx="226" cy="188" r="3" class="chain-junction" data-src="reverser_inhibited"/>
+            <circle cx="226" cy="290" r="3" class="chain-junction" data-src="reverser_inhibited"/>
 
             <!-- L3 → eec_deploy + pls_power + pdu_motor (fan-out trunk at x=465) -->
             <path d="M 420 279 H 465 V 260 H 500" class="chain-wire" data-src="logic3" data-dst="eec_deploy" marker-end="url(#fan-arr-idle)"/>
@@ -569,6 +571,9 @@
         <p class="fan-eng-note">
           <code>aircraft_on_ground</code> 在本工作台中对应真实系统的 WOW（Weight on Wheels）信号，
           由 LGCIU 双余度综合输出。在实际工程中，单 LGCIU 失效时系统应仍能正确判断接地状态。
+        </p>
+        <p class="fan-eng-note">
+          <strong>架构壁垒：</strong><code>DeployController</code> 是唯一可审计的控制真值引擎；<code>lever_snapshot_payload</code> 是可解释输出层（每个状态均附带失效条件和证据链）；<code>HarnessConfig / Adapter</code> 边界支持从 C919 E-TRAS 迁移至其他飞机型号而无需重写核心逻辑。
         </p>
       </div>
 
