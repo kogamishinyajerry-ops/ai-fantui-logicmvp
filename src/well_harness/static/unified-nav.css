@@ -1,0 +1,117 @@
+/* Unified navigation bar — shared across all FANTUI LogicMVP UI surfaces.
+ *
+ * Injected into: index.html, demo.html, c919_etras_workstation.html,
+ * fantui_circuit.html, c919_etras_panel/{index,circuit}.html.
+ *
+ * Design goals:
+ * - Aviation-dark MFD palette (matches ETRAS workstation theme)
+ * - Fixed top bar so the logic-panel sticky scroll doesn't hide nav
+ * - Logical grouping: entry → workstations → circuits → simulation
+ * - Current-page indicator via data-nav-current attribute on <body>
+ * - Height: 48px (used as `scroll-margin-top` and sticky offset elsewhere)
+ */
+
+:root {
+  --nav-bg:        #0b1624;
+  --nav-border:    #1e3050;
+  --nav-text:      #c6d5e8;
+  --nav-text-dim:  #6a7d95;
+  --nav-accent:    #00c8f5;
+  --nav-active:    #00e5a0;
+  --nav-divider:   rgba(255,255,255,0.06);
+  --nav-height:    48px;
+}
+
+.unified-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-height);
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--nav-border);
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--nav-text);
+  display: flex;
+  align-items: stretch;
+  z-index: 1000;
+  box-shadow: 0 1px 0 rgba(0,200,245,0.08);
+}
+
+.unified-nav-brand {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  color: var(--nav-accent);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  border-right: 1px solid var(--nav-divider);
+  white-space: nowrap;
+}
+.unified-nav-brand::before {
+  content: "▸";
+  margin-right: 6px;
+  color: var(--nav-active);
+}
+
+.unified-nav-groups {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  flex: 1;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.unified-nav-group {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 0 4px;
+  border-right: 1px solid var(--nav-divider);
+}
+.unified-nav-group:last-child { border-right: none; }
+
+.unified-nav-group-label {
+  display: flex;
+  align-items: center;
+  padding: 0 8px 0 10px;
+  color: var(--nav-text-dim);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.unified-nav-link {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  color: var(--nav-text);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  white-space: nowrap;
+}
+.unified-nav-link:hover {
+  color: var(--nav-accent);
+  background: rgba(0,200,245,0.06);
+}
+.unified-nav-link[data-current="true"] {
+  color: var(--nav-active);
+  border-bottom-color: var(--nav-active);
+  background: rgba(0,229,160,0.05);
+}
+
+.unified-nav-link-ext::after {
+  content: "↗";
+  margin-left: 4px;
+  color: var(--nav-text-dim);
+  font-size: 10px;
+}
+
+/* Spacer so fixed nav doesn't overlap page content */
+body.unified-nav-enabled {
+  padding-top: var(--nav-height);
+}

@@ -200,9 +200,11 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, workbench_recent_archives_payload())
             return
 
-        # Default entry: thrust reverser workstation (chat.html shelved in Phase A)
+        # Default entry: unified landing page with 2x3 card grid
+        # (Phase A: chat.html shelved; Phase UI-C: root now serves index.html
+        # instead of demo.html so user can reach all 6 surfaces.)
         if parsed.path in ("", "/"):
-            self._serve_static("demo.html")
+            self._serve_static("index.html")
             return
 
         if parsed.path in ("/demo.html", "/expert/demo.html"):
@@ -2332,7 +2334,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def demo_url(host: str, port: int) -> str:
-    return f"http://{host}:{port}/demo.html"
+    return f"http://{host}:{port}/index.html"
 
 
 def open_browser(url: str, opener=webbrowser.open) -> bool:

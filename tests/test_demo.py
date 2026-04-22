@@ -821,8 +821,47 @@ class DemoIntentLayerTests(unittest.TestCase):
             thread.join(timeout=2)
 
         self.assertEqual(response.status, 200)
-        # Phase A (2026-04-22): chat.html shelved; root URL now serves demo.html.
-        self.assertIn("<title>Well Harness 反推逻辑演示舱</title>", html)
+        # Phase A (2026-04-22): chat.html shelved.
+        # Phase UI-C (2026-04-22): root URL now serves index.html (2x3 card grid
+        # landing page) instead of demo.html, so user can reach all 6 surfaces.
+        self.assertIn("<title>FANTUI LogicMVP · 主入口</title>", html)
+        self.assertIn("/demo.html", html)
+        self.assertIn("/c919_etras_workstation.html", html)
+        self.assertIn("/fantui_circuit.html", html)
+        self.assertIn("/c919_etras_panel/circuit.html", html)
+
+    def test_demo_server_index_html_contains_all_six_surfaces(self):
+        """index.html 2x3 grid must link to all 6 UI surfaces (or mark placeholders)."""
+        html = (DEMO_UI_STATIC_DIR / "index.html").read_text(encoding="utf-8")
+        for surface_href in (
+            "/demo.html",
+            "/c919_etras_workstation.html",
+            "/fantui_circuit.html",
+            "/c919_etras_panel/circuit.html",
+            "http://127.0.0.1:9191/",
+        ):
+            self.assertIn(surface_href, html, f"index.html missing surface link: {surface_href}")
+        # Unified nav must be present
+        self.assertIn('class="unified-nav"', html)
+        self.assertIn('/unified-nav.css', html)
+        # Hero title
+        self.assertIn("FANTUI LogicMVP", html)
+
+    def test_demo_server_unified_nav_css_served(self):
+        """/unified-nav.css must serve 200 for all pages that import it."""
+        server, thread = start_demo_server()
+        try:
+            connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+            connection.request("GET", "/unified-nav.css")
+            response = connection.getresponse()
+            body = response.read().decode("utf-8")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+        self.assertEqual(response.status, 200)
+        self.assertIn(".unified-nav", body)
+        self.assertIn("--nav-height", body)
 
     def test_demo_server_serves_workbench_acceptance_shell(self):
         server, thread = start_demo_server()
@@ -1408,7 +1447,7 @@ class DemoIntentLayerTests(unittest.TestCase):
 
     def test_demo_server_open_browser_helper_reports_failures(self):
         url = demo_server.demo_url("127.0.0.1", 8000)
-        self.assertEqual(url, "http://127.0.0.1:8000/demo.html")
+        self.assertEqual(url, "http://127.0.0.1:8000/index.html")
 
         opener = mock.Mock(return_value=True)
         self.assertTrue(demo_server.open_browser(url, opener=opener))
@@ -1418,7 +1457,7 @@ class DemoIntentLayerTests(unittest.TestCase):
         with redirect_stdout(buffer):
             self.assertFalse(demo_server.open_browser(url, opener=mock.Mock(return_value=False)))
         self.assertIn("Could not open browser automatically.", buffer.getvalue())
-        self.assertIn("Open http://127.0.0.1:8000/demo.html manually.", buffer.getvalue())
+        self.assertIn("Open http://127.0.0.1:8000/index.html manually.", buffer.getvalue())
 
         buffer = io.StringIO()
         with redirect_stdout(buffer):
@@ -1426,7 +1465,7 @@ class DemoIntentLayerTests(unittest.TestCase):
                 demo_server.open_browser(url, opener=mock.Mock(side_effect=RuntimeError("blocked")))
             )
         self.assertIn("Could not open browser automatically: blocked.", buffer.getvalue())
-        self.assertIn("Open http://127.0.0.1:8000/demo.html manually.", buffer.getvalue())
+        self.assertIn("Open http://127.0.0.1:8000/index.html manually.", buffer.getvalue())
 
     def test_demo_server_help_documents_optional_open_affordance(self):
         result = subprocess.run(
@@ -1479,8 +1518,8 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIs(created_servers[0].handler_class, DemoRequestHandler)
         self.assertTrue(created_servers[0].serve_forever_called)
         self.assertTrue(created_servers[0].server_close_called)
-        open_browser.assert_called_once_with("http://127.0.0.1:8765/demo.html")
-        self.assertIn("Serving well-harness demo UI at http://127.0.0.1:8765/demo.html", buffer.getvalue())
+        open_browser.assert_called_once_with("http://127.0.0.1:8765/index.html")
+        self.assertIn("Serving well-harness demo UI at http://127.0.0.1:8765/index.html", buffer.getvalue())
 
         with mock.patch.object(demo_server, "ThreadingHTTPServer", side_effect=fake_server):
             with mock.patch.object(demo_server, "open_browser") as open_browser:

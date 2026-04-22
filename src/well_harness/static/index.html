@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FANTUI LogicMVP · 主入口</title>
+<link rel="stylesheet" href="/unified-nav.css">
+<style>
+  :root {
+    --home-bg:      #05111c;
+    --home-panel:   #0b1624;
+    --home-border:  #1e3050;
+    --home-text:    #c6d5e8;
+    --home-dim:     #6a7d95;
+    --home-accent:  #00c8f5;
+    --home-active:  #00e5a0;
+    --home-warn:    #f5c518;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--home-bg); color: var(--home-text); font-family: "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", sans-serif; min-height: 100vh; }
+  body.unified-nav-enabled { padding-top: 48px; }
+
+  .home-main {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 32px 32px 64px;
+  }
+  .home-hero {
+    border: 1px solid var(--home-border);
+    background: linear-gradient(135deg, rgba(0,200,245,0.04), rgba(0,229,160,0.02));
+    padding: 24px 28px;
+    margin-bottom: 28px;
+  }
+  .home-hero h1 {
+    margin: 0 0 6px;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--home-accent);
+    letter-spacing: 0.03em;
+  }
+  .home-hero p {
+    margin: 0;
+    color: var(--home-dim);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .home-hero strong { color: var(--home-text); font-weight: 500; }
+
+  .home-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 960px) {
+    .home-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .home-grid { grid-template-columns: 1fr; }
+  }
+
+  .home-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--home-panel);
+    border: 1px solid var(--home-border);
+    padding: 18px 18px 16px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+    min-height: 148px;
+  }
+  .home-card:hover {
+    border-color: var(--home-accent);
+    background: rgba(0,200,245,0.03);
+    transform: translateY(-1px);
+  }
+  .home-card[data-external="true"]:hover {
+    border-color: var(--home-warn);
+  }
+
+  .home-card-kind {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--home-dim);
+    font-family: 'Courier New', monospace;
+    margin-bottom: 8px;
+  }
+  .home-card[data-scope="workstation"] .home-card-kind { color: var(--home-active); }
+  .home-card[data-scope="circuit"]     .home-card-kind { color: var(--home-accent); }
+  .home-card[data-scope="simulation"]  .home-card-kind { color: var(--home-warn); }
+
+  .home-card-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--home-text);
+    margin: 0 0 6px;
+  }
+  .home-card-subtitle {
+    font-size: 11px;
+    color: var(--home-dim);
+    font-family: 'Courier New', monospace;
+    margin: 0 0 10px;
+  }
+  .home-card-desc {
+    font-size: 12px;
+    color: var(--home-text);
+    line-height: 1.55;
+    opacity: 0.78;
+    flex: 1;
+  }
+  .home-card-arrow {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    color: var(--home-dim);
+    font-size: 14px;
+  }
+  .home-card:hover .home-card-arrow { color: var(--home-accent); }
+  .home-card[data-external="true"] .home-card-arrow::after {
+    content: "↗";
+    margin-left: 2px;
+  }
+
+  .home-footer {
+    margin-top: 32px;
+    padding: 16px 18px;
+    border-top: 1px solid var(--home-border);
+    font-size: 11px;
+    color: var(--home-dim);
+    line-height: 1.7;
+  }
+  .home-footer code { font-family: 'Courier New', monospace; color: var(--home-text); }
+</style>
+</head>
+<body class="unified-nav-enabled" data-nav-current="home">
+
+<header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
+  <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">工作台</span>
+      <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">反推逻辑</a>
+      <a href="/c919_etras_workstation.html" class="unified-nav-link" data-nav-key="etras">C919 E-TRAS</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">电路图</span>
+      <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
+      <a href="/c919_etras_panel/circuit.html" class="unified-nav-link" data-nav-key="etras-circuit">E-TRAS 电路</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">仿真</span>
+      <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
+    </div>
+  </div>
+</header>
+
+<main class="home-main">
+  <section class="home-hero" aria-labelledby="home-hero-title">
+    <h1 id="home-hero-title">FANTUI LogicMVP · 真值驱动的反推控制逻辑演示</h1>
+    <p>
+      共 <strong>6 个 surface</strong>，分为 <strong>工作台</strong>、<strong>电路图</strong>、<strong>仿真面板</strong> 三类。
+      所有逻辑计算源自 <code>src/well_harness/adapters/*.py</code>，页面只做可视化和输入。
+    </p>
+  </section>
+
+  <section class="home-grid" aria-label="功能入口">
+    <!-- 工作台 -->
+    <a href="/demo.html" class="home-card" data-scope="workstation" aria-labelledby="card-demo-title">
+      <span class="home-card-kind">工作台</span>
+      <h2 class="home-card-title" id="card-demo-title">反推逻辑工作台</h2>
+      <p class="home-card-subtitle">/demo.html</p>
+      <p class="home-card-desc">TRA 拉杆 → SW1/SW2 → L1-L4 → THR_LOCK 的 stateless 信号级真值评估。4 个场景 preset。</p>
+      <span class="home-card-arrow">→</span>
+    </a>
+
+    <a href="/c919_etras_workstation.html" class="home-card" data-scope="workstation" aria-labelledby="card-etras-title">
+      <span class="home-card-kind">工作台</span>
+      <h2 class="home-card-title" id="card-etras-title">C919 E-TRAS 工作台</h2>
+      <p class="home-card-subtitle">/c919_etras_workstation.html</p>
+      <p class="home-card-desc">E-TRAS 4 段展开链：EICU_CMD2 / CMD3 / TR_Command3_Enable / FADEC_Deploy。6 preset + 可靠度蒙特卡洛。</p>
+      <span class="home-card-arrow">→</span>
+    </a>
+
+    <!-- 仿真（第 1 行第 3 个）-->
+    <a href="http://127.0.0.1:9191/" class="home-card" data-scope="simulation" data-external="true" aria-labelledby="card-panel-title">
+      <span class="home-card-kind">仿真 · 外部服务</span>
+      <h2 class="home-card-title" id="card-panel-title">C919 MFD 仿真面板</h2>
+      <p class="home-card-subtitle">http://127.0.0.1:9191</p>
+      <p class="home-card-desc">有状态机的动态重放。需另起 <code>scripts/c919_etras_panel_server.py</code>。</p>
+      <span class="home-card-arrow">→</span>
+    </a>
+
+    <!-- 电路图 -->
+    <a href="/fantui_circuit.html" class="home-card" data-scope="circuit" aria-labelledby="card-fantui-circuit-title">
+      <span class="home-card-kind">电路图</span>
+      <h2 class="home-card-title" id="card-fantui-circuit-title">反推电路图</h2>
+      <p class="home-card-subtitle">/fantui_circuit.html</p>
+      <p class="home-card-desc">FANTUI 域内静态 SVG：controller.py::DeployController 信号拓扑。</p>
+      <span class="home-card-arrow">→</span>
+    </a>
+
+    <a href="/c919_etras_panel/circuit.html" class="home-card" data-scope="circuit" aria-labelledby="card-etras-circuit-title">
+      <span class="home-card-kind">电路图</span>
+      <h2 class="home-card-title" id="card-etras-circuit-title">E-TRAS 电路图</h2>
+      <p class="home-card-subtitle">/c919_etras_panel/circuit.html</p>
+      <p class="home-card-desc">C919 thrust-reverser PDF §2 静态 SVG 拓扑，对应 frozen_v1 规范。</p>
+      <span class="home-card-arrow">→</span>
+    </a>
+
+    <!-- 第 6 格：占位（未来扩展）-->
+    <div class="home-card" data-scope="placeholder" style="opacity:0.45; cursor:default; pointer-events:none;" aria-hidden="true">
+      <span class="home-card-kind">未来扩展</span>
+      <h2 class="home-card-title">—</h2>
+      <p class="home-card-subtitle">TBD</p>
+      <p class="home-card-desc">Phase D 及后续计划中可能的新 surface（如 timeline 独立面板、双系统对比仿真等）。</p>
+    </div>
+  </section>
+
+  <footer class="home-footer">
+    <p>
+      <strong style="color:var(--home-text)">真值源</strong>：<code>src/well_harness/adapters/*.py</code> ·
+      <strong style="color:var(--home-text)">demo_server</strong>：<code>python3 -m well_harness.demo_server --host 127.0.0.1 --port 8002</code> ·
+      <strong style="color:var(--home-text)">搁置内容</strong>：<code>archive/shelved/</code>（LLM explain / multi-system UI / timeline）
+    </p>
+  </footer>
+</main>
+
+</body>
+</html>

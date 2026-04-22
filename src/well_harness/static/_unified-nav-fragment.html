@@ -1,0 +1,42 @@
+<!-- Unified navigation bar — copy this block into each UI surface.
+
+To use:
+  1. Include `<link rel="stylesheet" href="/unified-nav.css">` in <head>.
+  2. Add `class="unified-nav-enabled"` to <body>.
+  3. Paste the <header class="unified-nav">...</header> block as the first
+     child of <body>, above all other content.
+  4. Set data-current="true" on the link matching the current page.
+  5. If the page already has a top offset / sticky element, add 48px
+     (var(--nav-height)) to the top offset to clear the nav.
+
+Groups:
+  - brand (FANTUI LogicMVP) → links to /index.html (root entry)
+  - 工作台 (workstations) → /demo.html (反推) + /c919_etras_workstation.html (E-TRAS)
+  - 电路图 (circuit diagrams) → /fantui_circuit.html + /c919_etras_panel/circuit.html
+  - 仿真 (live simulation) → http://127.0.0.1:9191/ (C919 MFD panel, external server)
+
+NOTE on :9191 link — it is marked `unified-nav-link-ext` because the
+C919 simulation panel is served by a separate process (scripts/
+c919_etras_panel_server.py) on a different port. Users must start
+that server separately; the link opens in the same tab by default.
+-->
+
+<header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
+  <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">工作台</span>
+      <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">反推逻辑</a>
+      <a href="/c919_etras_workstation.html" class="unified-nav-link" data-nav-key="etras">C919 E-TRAS</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">电路图</span>
+      <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
+      <a href="/c919_etras_panel/circuit.html" class="unified-nav-link" data-nav-key="etras-circuit">E-TRAS 电路</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">仿真</span>
+      <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
+    </div>
+  </div>
+</header>
