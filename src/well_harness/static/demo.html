@@ -311,7 +311,7 @@
               <text x="340" y="200" text-anchor="middle" class="logic-sub">SW2 AND eng AND GND AND !INH AND EEC</text>
             </g>
             <g class="chain-logic" data-node="logic3">
-              <rect x="260" y="260" width="160" height="38" rx="4"/>
+              <rect x="260" y="260" width="160" height="50" rx="4"/>
               <use href="#fan-gate-and" class="gate-icon" x="266" y="264" width="18" height="14"/>
               <text x="275" y="274" text-anchor="middle" class="gate-label">&amp;</text>
               <text x="340" y="272" text-anchor="middle" class="logic-id">L3</text>
@@ -371,8 +371,9 @@
                    (inputs→logic1/2), 246 (TLS feedback top lane y=28),
                    460 (logic→intermediate), 465 (L3 fanout trunk),
                    690 (intermediate→output/L4).
-                 ENG/GND→L3 use off-page stub notation (x=244, y=281/286):
+                 ENG/GND→L3 use off-page stub notation (x=244, y=281/290):
                    n1k@y=270 (x=230-260) and eec@x=240 (y=200-284) block full routing.
+                 rev_inh→L3 moved to y=304; L3 gate height expanded to 50.
             ═════════════════════════════════════════════════════════════════════ -->
 
             <!-- Wires — each carries data-src / data-dst so JS colors them based
@@ -402,16 +403,16 @@
             <path d="M 170 284 H 240 V 200 H 260" class="chain-wire" data-src="eec_enable" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
             <!-- engine_running / aircraft_on_ground → L3 (off-page stub notation).
                  Full routing blocked by n1k@y=270 (x=230-260) and eec@x=240 (y=200-284).
-                 Stubs start x=244 (+3.1px clear of eec active edge) at y=281/286
-                 (+3.2px clear of TLS y=276; +2.2px clear of rev_inh y=290). -->
+                 Stubs start x=244 at y=281/290 (+3.2px from TLS y=276; +12.2px from
+                 rev_inh y=304; L3 gate expanded height=50 to accommodate). -->
             <path d="M 244 281 H 260" class="chain-wire" data-src="engine_running" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
-            <path d="M 244 286 H 260" class="chain-wire" data-src="aircraft_on_ground" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 244 290 H 260" class="chain-wire" data-src="aircraft_on_ground" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
             <!-- reverser_inhibited fault bus (x=226 trunk): L1/L2/L3 all require !INH -->
             <path d="M 170 320 H 226 V 88 H 260" class="chain-wire" data-src="reverser_inhibited" data-dst="logic1" data-fault="true" marker-end="url(#fan-arr-idle)"/>
             <path d="M 226 188 H 260" class="chain-wire" data-src="reverser_inhibited" data-dst="logic2" data-fault="true" marker-end="url(#fan-arr-idle)"/>
-            <path d="M 226 290 H 260" class="chain-wire" data-src="reverser_inhibited" data-dst="logic3" data-fault="true" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 226 304 H 260" class="chain-wire" data-src="reverser_inhibited" data-dst="logic3" data-fault="true" marker-end="url(#fan-arr-idle)"/>
             <circle cx="226" cy="188" r="3" class="chain-junction" data-src="reverser_inhibited" data-fault="true"/>
-            <circle cx="226" cy="290" r="3" class="chain-junction" data-src="reverser_inhibited" data-fault="true"/>
+            <circle cx="226" cy="304" r="3" class="chain-junction" data-src="reverser_inhibited" data-fault="true"/>
 
             <!-- L3 → eec_deploy + pls_power + pdu_motor (fan-out trunk at x=465) -->
             <path d="M 420 279 H 465 V 260 H 500" class="chain-wire" data-src="logic3" data-dst="eec_deploy" marker-end="url(#fan-arr-idle)"/>
