@@ -78,6 +78,8 @@
     outFadecDeployV:  $("output-fadec-deploy-value"),
     outFadecStowV:    $("output-fadec-stow-value"),
     presetStatus:     $("etras-preset-status"),
+    sw1HintWindow:    $("etras-sw1-hint-window"),
+    sw2HintWindow:    $("etras-sw2-hint-window"),
     probabilityNodeList: $("etras-probability-node-list"),
     simTrials:        $("etras-sim-trials"),
     simSeed:          $("etras-sim-seed"),
@@ -255,6 +257,17 @@
       const [zone, label] = zoneFromTra(snapshot.tra_deg);
       readouts.traZone.dataset.zone = zone;
       readouts.traZone.textContent = label;
+    }
+    // SW1 (ATLTLA) closes [-6.2, -1.4]; SW2 (APWTLA) closes [-9.8, -5.0].
+    // These windows are transient — the hint reflects whether the lever is
+    // currently traversing the closing range, not the latched snapshot value.
+    if (readouts.sw1HintWindow) {
+      const inSw1 = snapshot.tra_deg >= -6.2 && snapshot.tra_deg <= -1.4;
+      readouts.sw1HintWindow.textContent = inSw1 ? "in window" : "off";
+    }
+    if (readouts.sw2HintWindow) {
+      const inSw2 = snapshot.tra_deg >= -9.8 && snapshot.tra_deg <= -5.0;
+      readouts.sw2HintWindow.textContent = inSw2 ? "in window" : "off";
     }
   }
 
@@ -445,7 +458,8 @@
       apply: () => {
         presets["landing-deploy"].apply();
         setSlider(inputs.tra, -32.0);
-        setSlider(inputs.n1k, 90);
+        // n1k must stay < adapter deploy gate (84%) to keep fadec_deploy_command true
+        setSlider(inputs.n1k, 82);
         setSlider(inputs.trPosition, 100);
       },
     },
@@ -485,6 +499,9 @@
         presets["nominal-stowed"].apply();
         setSlider(inputs.tra, -15.0);
         setSlider(inputs.n1k, 60);
+        // Aircraft is reverse-deploying — clear the stow-confirm timer so the
+        // adapter doesn't reset eicu_cmd3 down the stow path.
+        setNumber(inputs.stowedConfirm, 0);
         // Lever swept past both SW windows — switches latched true
         setChecked(inputs.atltla, true);
         setChecked(inputs.apwtla, true);

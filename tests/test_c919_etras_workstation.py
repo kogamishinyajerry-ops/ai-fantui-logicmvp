@@ -104,6 +104,30 @@ class C919EtrasWorkstationStaticTests(unittest.TestCase):
         self.assertIn("function seededRandom(seed)", js)
         self.assertNotIn('"/api/monte-carlo/run"', js)
 
+    def test_workstation_js_renders_sw1_sw2_hint_window(self):
+        """SW1/SW2 'in window' hint spans must be wired in renderLeverHud.
+
+        Codex round#2 P2: HTML exposed `etras-sw1-hint-window` /
+        `etras-sw2-hint-window` but JS never updated them — TRA slider movement
+        left the hint stuck at 'off' forever, misleading operators.
+        """
+        js = WORKSTATION_JS.read_text(encoding="utf-8")
+        # Refs registered
+        self.assertRegex(js, r'sw1HintWindow\s*:\s*\$\("etras-sw1-hint-window"\)',
+                         "sw1HintWindow ref missing")
+        self.assertRegex(js, r'sw2HintWindow\s*:\s*\$\("etras-sw2-hint-window"\)',
+                         "sw2HintWindow ref missing")
+        # renderLeverHud writes them based on TRA window membership
+        self.assertIn("readouts.sw1HintWindow", js,
+                      "renderLeverHud must update sw1HintWindow")
+        self.assertIn("readouts.sw2HintWindow", js,
+                      "renderLeverHud must update sw2HintWindow")
+        # Window thresholds match adapter spec: SW1 [-6.2, -1.4], SW2 [-9.8, -5.0]
+        self.assertIn("-6.2", js, "SW1 lower threshold -6.2 missing")
+        self.assertIn("-1.4", js, "SW1 upper threshold -1.4 missing")
+        self.assertIn("-9.8", js, "SW2 lower threshold -9.8 missing")
+        self.assertIn("-5.0", js, "SW2 upper threshold -5.0 missing")
+
     def test_workstation_js_uses_explicit_sw1_sw2_inputs(self):
         """SW1/SW2 must come from explicit DOM checkboxes, not auto-derived from TRA.
 
@@ -111,16 +135,20 @@ class C919EtrasWorkstationStaticTests(unittest.TestCase):
         them from TRA bypasses the latch semantics — once SW1/SW2 close during the
         lever sweep they stay set, and the adapter consumes the latched state directly.
         Codex C-7 BUG#1/#2 caught this; the regression check guards against revival.
+
+        Whitespace-tolerant — keyed on identifiers, not column spacing.
         """
         js = WORKSTATION_JS.read_text(encoding="utf-8")
-        self.assertIn('atltla:              $("etras-atltla"),', js,
-                      "atltla input ref missing from `inputs` object")
-        self.assertIn('apwtla:              $("etras-apwtla"),', js,
-                      "apwtla input ref missing from `inputs` object")
-        self.assertIn("apwtla:                     checked(inputs.apwtla),", js,
-                      "buildSnapshot must read apwtla from inputs.apwtla")
-        self.assertIn("atltla:                     checked(inputs.atltla),", js,
-                      "buildSnapshot must read atltla from inputs.atltla")
+        # Inputs object refs (whitespace-tolerant)
+        self.assertRegex(js, r'atltla\s*:\s*\$\("etras-atltla"\)',
+                         "atltla input ref missing from `inputs` object")
+        self.assertRegex(js, r'apwtla\s*:\s*\$\("etras-apwtla"\)',
+                         "apwtla input ref missing from `inputs` object")
+        # buildSnapshot reads from explicit inputs (whitespace-tolerant)
+        self.assertRegex(js, r'apwtla\s*:\s*checked\(inputs\.apwtla\)',
+                         "buildSnapshot must read apwtla from inputs.apwtla")
+        self.assertRegex(js, r'atltla\s*:\s*checked\(inputs\.atltla\)',
+                         "buildSnapshot must read atltla from inputs.atltla")
         self.assertNotIn("computeAtltla", js,
                          "auto-derive helper computeAtltla must be removed")
         self.assertNotIn("computeApwtla", js,
@@ -132,19 +160,25 @@ class C919EtrasWorkstationStaticTests(unittest.TestCase):
         Reason: Codex C-7 BUG#4 — early `return` exited the whole simulation on the
         first successful trial, producing successCount=1 / failureCount=nTrials-1.
         Loop body MUST iterate all trials.
+
+        Uses regex on the whole success branch, robust to refactors that preserve
+        semantics.
         """
         js = WORKSTATION_JS.read_text(encoding="utf-8")
-        loop_start = js.find("for (let runIndex = 1; runIndex <= nTrials")
-        self.assertGreater(loop_start, 0, "reliability trial loop not found")
-        # Find the success branch — `if (!failedNodeIds.length)` block
-        success_branch_start = js.find("if (!failedNodeIds.length)", loop_start)
-        self.assertGreater(success_branch_start, loop_start, "success branch not found")
-        # Look at next ~120 chars after success_branch_start; must contain `continue`, not `return`
-        success_block = js[success_branch_start:success_branch_start + 200]
-        self.assertIn("continue", success_block,
+        # Match the success branch as a whole: { successCount += 1; continue; }
+        # Whitespace and intermediate statements tolerated, but `continue;` mandatory
+        # and `return` (any form) within the same branch forbidden.
+        success_branch_re = re.compile(
+            r"if\s*\(\s*!failedNodeIds\.length\s*\)\s*\{(?P<body>[^}]*)\}",
+            re.DOTALL,
+        )
+        match = success_branch_re.search(js)
+        self.assertIsNotNone(match, "success branch `if (!failedNodeIds.length) { ... }` not found")
+        body = match.group("body")
+        self.assertIn("continue", body,
                       "success branch must continue to next trial, not return")
-        self.assertNotIn("return;", success_block,
-                         "success branch must NOT early-return — bug regression")
+        self.assertNotRegex(body, r"\breturn\b",
+                            "success branch must NOT contain return — bug regression")
 
     def test_workstation_svg_data_nodes_subset_of_adapter_spec(self):
         """Every data-node in the chain SVG ⊂ adapter spec components ∪ logic_nodes.
@@ -406,6 +440,101 @@ class C919EtrasWorkstationPresetAdapterIntegrationTests(unittest.TestCase):
         self.assertTrue(
             asserted.get("fadec_stow_command"),
             "stow-return preset must trigger fadec_stow_command (n1k must be < 30%)",
+        )
+
+    def test_preset_max_reverse_n1k_below_deploy_gate(self):
+        """max-reverse must keep n1k below adapter deploy limit (84%).
+
+        Codex round#2 caught: original n1k=90 exceeded the gate, dropping
+        fadec_deploy_command and breaking the preset's intended outcome.
+        """
+        snap = dict(self.NOMINAL_STOWED_SNAPSHOT)
+        snap.update({
+            "tra_deg": -32.0,
+            "n1k_percent": 82.0,  # corrected value — must be < 84%
+            "tr_position_percent": 100.0,
+            "atltla": True, "apwtla": True,
+            "tls_ls_a_unlocked": True, "tls_ls_b_unlocked": True,
+            "pls_ls_a_locked": False, "pls_ls_b_locked": False,
+            "left_pylon_ls_a_unlocked": True, "left_pylon_ls_b_unlocked": True,
+            "right_pylon_ls_a_unlocked": True, "right_pylon_ls_b_unlocked": True,
+            "comm2_timer_s": 1.0,
+            "lock_unlock_confirm_s": 0.5,
+            "tr_position_deployed_confirm_s": 0.5,
+            "tr_stowed_locked_confirm_s": 0.0,
+            "prev_eicu_cmd3": True,
+        })
+        evaluation = self._post_snapshot(snap)
+        asserted = evaluation.get("asserted_component_values", {})
+        self.assertTrue(
+            asserted.get("fadec_deploy_command"),
+            "max-reverse n1k=82 must still pass the < 84% deploy gate",
+        )
+        self.assertTrue(evaluation.get("completion_reached"),
+                        "max-reverse must reach completion (deploy fully asserted)")
+
+    def test_preset_max_reverse_n1k_at_old_buggy_value_breaks_deploy(self):
+        """Old max-reverse value (n1k=90) must NOT trigger fadec_deploy_command —
+        confirms adapter deploy gate is < 84%."""
+        snap = dict(self.NOMINAL_STOWED_SNAPSHOT)
+        snap.update({
+            "tra_deg": -32.0,
+            "n1k_percent": 90.0,  # the buggy value Codex round#2 P1 flagged
+            "tr_position_percent": 100.0,
+            "atltla": True, "apwtla": True,
+            "tls_ls_a_unlocked": True, "tls_ls_b_unlocked": True,
+            "pls_ls_a_locked": False, "pls_ls_b_locked": False,
+            "left_pylon_ls_a_unlocked": True, "left_pylon_ls_b_unlocked": True,
+            "right_pylon_ls_a_unlocked": True, "right_pylon_ls_b_unlocked": True,
+            "comm2_timer_s": 1.0,
+            "lock_unlock_confirm_s": 0.5,
+            "tr_position_deployed_confirm_s": 0.5,
+            "tr_stowed_locked_confirm_s": 0.0,
+            "prev_eicu_cmd3": True,
+        })
+        evaluation = self._post_snapshot(snap)
+        asserted = evaluation.get("asserted_component_values", {})
+        self.assertFalse(
+            asserted.get("fadec_deploy_command"),
+            "n1k=90% must NOT pass deploy gate — adapter limit is < 84%",
+        )
+
+    def test_preset_lock_fault_does_not_complete_deploy(self):
+        """lock-fault: partial unlock (right pylon stuck locked) must block deploy.
+
+        Codex round#2 P1 caught: inheriting tr_stowed_locked_confirm_s=2.0 from
+        nominal-stowed forced eicu_cmd3=False via the adapter reset path, so the
+        preset never reached the intended fault state. Fix: zero stowedConfirm.
+        """
+        snap = dict(self.NOMINAL_STOWED_SNAPSHOT)
+        snap.update({
+            "tra_deg": -15.0,
+            "n1k_percent": 60.0,
+            "atltla": True, "apwtla": True,
+            "prev_eicu_cmd3": True,
+            "tr_stowed_locked_confirm_s": 0.0,  # the fix
+            # Partial unlock — right pylon stuck locked
+            "tls_ls_a_unlocked": True, "tls_ls_b_unlocked": True,
+            "pls_ls_a_locked": False, "pls_ls_b_locked": False,
+            "left_pylon_ls_a_unlocked": True, "left_pylon_ls_b_unlocked": True,
+            "right_pylon_ls_a_unlocked": False,  # fault
+            "right_pylon_ls_b_unlocked": False,
+            "comm2_timer_s": 1.0,
+        })
+        evaluation = self._post_snapshot(snap)
+        asserted = evaluation.get("asserted_component_values", {})
+        # eicu_cmd3 should be reachable (SR latch path is open)
+        active = set(evaluation.get("active_logic_node_ids", []))
+        self.assertIn("ln_eicu_cmd3", active,
+                      "lock-fault: SR latch path must be open (no stow reset)")
+        # But fadec_deploy_command must NOT fire — partial unlock blocks tr_command3_enable
+        self.assertFalse(
+            asserted.get("fadec_deploy_command"),
+            "lock-fault: partial unlock must block fadec_deploy_command",
+        )
+        self.assertFalse(
+            evaluation.get("completion_reached"),
+            "lock-fault: must NOT reach completion (this is the fault scenario)",
         )
 
     def test_preset_stow_return_blocked_when_n1k_exceeds_stow_limit(self):
