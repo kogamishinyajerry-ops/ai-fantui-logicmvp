@@ -489,14 +489,14 @@
             <tr>
               <td class="sig-name">RA</td>
               <td>Radio Altitude (ft)</td>
-              <td>无线电高度表（RALT）；C919 使用双余度 LGCIU 综合判断</td>
+              <td>双余度无线电高度表（RALT），独立于 LGCIU/WOW 链路</td>
               <td>L1 设 RA &lt; 6 ft 确保飞机已接地；防止空中误展开（灾难性失效）</td>
             </tr>
             <tr>
               <td class="sig-name">N1K</td>
               <td>Fan Speed Ratio (% corrected)</td>
               <td>N1 传感器；K 表示修正转速（温度/压力修正）</td>
-              <td>L3 限制 N1K &lt; 84%：高转速展开会产生严重气动干扰和结构载荷</td>
+              <td>L3 限制 N1K &lt; max_n1k_deploy_limit（demo 默认 60%，可配置，上限参考值 84%）：高转速展开会产生严重气动干扰和结构载荷</td>
             </tr>
             <tr>
               <td class="sig-name">aircraft_on_ground</td>
@@ -520,7 +520,7 @@
               <td class="sig-name">eec_enable</td>
               <td>EEC (FADEC) Enable</td>
               <td>FADEC 控制通道就绪信号</td>
-              <td>L3 要求 FADEC 计算通道处于 ACTIVE 状态，防止 FADEC 故障时发出展开命令</td>
+              <td>L2 要求 FADEC 计算通道处于 ACTIVE 状态，防止 FADEC 故障时发出展开命令</td>
             </tr>
           </tbody>
         </table>
@@ -533,7 +533,7 @@
           <tbody>
             <tr>
               <td class="sig-name">L1</td>
-              <td>SW1 AND 接地(WOW/RA) AND NOT 抑制 AND 未展开</td>
+              <td>SW1 AND RA &lt; 6 ft AND NOT 抑制 AND 未展开</td>
               <td>TLS 115VAC 解锁供电</td>
               <td>L1 失效 → 反推机械锁永不解开，反推无法展开（安全状态）</td>
             </tr>
@@ -545,7 +545,7 @@
             </tr>
             <tr>
               <td class="sig-name">L3</td>
-              <td>ETRAC就绪 AND N1K&lt;84% AND EEC_enable AND NOT 抑制</td>
+              <td>engine_running AND aircraft_on_ground AND NOT 抑制 AND TLS_Unlocked AND N1K &lt; 60%（demo 默认）AND TRA ≤ −11.74°</td>
               <td>EEC 展开命令 + PLS 供电 + PDU 电机启动</td>
               <td>L3 失效 → 执行机构不动；N1K 保护防止高速展开引发发动机喘振</td>
             </tr>
