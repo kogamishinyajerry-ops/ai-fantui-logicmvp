@@ -575,56 +575,61 @@
   }
 
   function runReliabilitySimulation() {
-    const nTrials = clamp(parseInt(readouts.simTrials ? readouts.simTrials.value : "10000", 10) || 10000, 1, 50000);
-    const seed = parseInt(readouts.simSeed ? readouts.simSeed.value : "42", 10) || 0;
-    if (readouts.simTrials) readouts.simTrials.value = String(nTrials);
-    if (readouts.simSeed) readouts.simSeed.value = String(seed);
+    try {
+      const nTrials = clamp(parseInt(readouts.simTrials ? readouts.simTrials.value : "10000", 10) || 10000, 1, 50000);
+      const seed = parseInt(readouts.simSeed ? readouts.simSeed.value : "42", 10) || 0;
+      if (readouts.simTrials) readouts.simTrials.value = String(nTrials);
+      if (readouts.simSeed) readouts.simSeed.value = String(seed);
 
-    const nodeIds = selectedReliabilityNodeIds();
-    const rng = seededRandom(seed);
-    const primaryFailureCounts = new Map(nodeIds.map((id) => [id, 0]));
-    const involvedFailureCounts = new Map(nodeIds.map((id) => [id, 0]));
-    const failureSamples = [];
-    let successCount = 0;
+      const nodeIds = selectedReliabilityNodeIds();
+      const rng = seededRandom(seed);
+      const primaryFailureCounts = new Map(nodeIds.map((id) => [id, 0]));
+      const involvedFailureCounts = new Map(nodeIds.map((id) => [id, 0]));
+      const failureSamples = [];
+      let successCount = 0;
 
-    for (let runIndex = 1; runIndex <= nTrials; runIndex += 1) {
-      const failedNodeIds = [];
-      nodeIds.forEach((nodeId) => {
-        if (rng() > readProbability(nodeId)) failedNodeIds.push(nodeId);
-      });
-      if (!failedNodeIds.length) {
-        successCount += 1;
-        return;
+      for (let runIndex = 1; runIndex <= nTrials; runIndex += 1) {
+        const failedNodeIds = [];
+        nodeIds.forEach((nodeId) => {
+          if (rng() > readProbability(nodeId)) failedNodeIds.push(nodeId);
+        });
+        if (!failedNodeIds.length) {
+          successCount += 1;
+          continue;
+        }
+        const primary = failedNodeIds[0];
+        primaryFailureCounts.set(primary, (primaryFailureCounts.get(primary) || 0) + 1);
+        failedNodeIds.forEach((nodeId) => {
+          involvedFailureCounts.set(nodeId, (involvedFailureCounts.get(nodeId) || 0) + 1);
+        });
+        if (failureSamples.length < 6) {
+          failureSamples.push({ runIndex, failedNodeIds });
+        }
       }
-      const primary = failedNodeIds[0];
-      primaryFailureCounts.set(primary, (primaryFailureCounts.get(primary) || 0) + 1);
-      failedNodeIds.forEach((nodeId) => {
-        involvedFailureCounts.set(nodeId, (involvedFailureCounts.get(nodeId) || 0) + 1);
+
+      const failureCount = nTrials - successCount;
+      const successRate = successCount / nTrials;
+      const analyticalRate = nodeIds.reduce((product, nodeId) => product * readProbability(nodeId), 1);
+      const topCauses = Array.from(primaryFailureCounts.entries())
+        .filter(([, count]) => count > 0)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 6);
+
+      renderReliabilityResults({
+        nTrials,
+        nodeIds,
+        successRate,
+        analyticalRate,
+        failureCount,
+        topCauses,
+        involvedFailureCounts,
+        failureSamples,
       });
-      if (failureSamples.length < 6) {
-        failureSamples.push({ runIndex, failedNodeIds });
-      }
+      markSimulationCauses(topCauses.map(([nodeId]) => nodeId).slice(0, 3));
+    } catch (err) {
+      console.warn("[c919-workstation] reliability simulation failed:", err);
+      if (readouts.simScopeLabel) readouts.simScopeLabel.textContent = "仿真失败：" + (err && err.message ? err.message : String(err));
     }
-
-    const failureCount = nTrials - successCount;
-    const successRate = successCount / nTrials;
-    const analyticalRate = nodeIds.reduce((product, nodeId) => product * readProbability(nodeId), 1);
-    const topCauses = Array.from(primaryFailureCounts.entries())
-      .filter(([, count]) => count > 0)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6);
-
-    renderReliabilityResults({
-      nTrials,
-      nodeIds,
-      successRate,
-      analyticalRate,
-      failureCount,
-      topCauses,
-      involvedFailureCounts,
-      failureSamples,
-    });
-    markSimulationCauses(topCauses.map(([nodeId]) => nodeId).slice(0, 3));
   }
 
   function seededRandom(seed) {
@@ -716,8 +721,14 @@
     document.querySelectorAll(".preset-btn").forEach((btn) => {
       btn.addEventListener("click", () => applyPreset(btn.dataset.preset));
     });
-    if (readouts.simRunButton) readouts.simRunButton.addEventListener("click", runReliabilitySimulation);
-    if (readouts.bulkApplyButton) readouts.bulkApplyButton.addEventListener("click", applyBulkProbability);
+    const runButton = $("etras-run-simulation");
+    const bulkButton = $("etras-apply-bulk-probability");
+    if (runButton) {
+      runButton.addEventListener("click", runReliabilitySimulation);
+    }
+    if (bulkButton) {
+      bulkButton.addEventListener("click", applyBulkProbability);
+    }
   }
 
   // ═══════════ Bootstrap ═══════════
