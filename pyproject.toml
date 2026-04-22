@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "well-harness"
 version = "0.1.0"
-description = "Simulation harness for thrust reverser deploy control logic"
+description = "Engineering workbench for aviation control logic: requirements to runtime verification evidence"
 readme = "README.md"
 requires-python = ">=3.9"
 # Runtime stays stdlib-only — demo_server.py imports no third-party packages.

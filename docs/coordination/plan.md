@@ -3,15 +3,15 @@
 <!-- AUTO-SYNCED COORDINATION PLAN SNAPSHOT START -->
 ## 当前自动同步快照
 
-- 当前阶段：`P30 Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2`
-- 当前已验证 Plan：`P30-00-TIER1 Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2 维度`
-- 最近成功执行证据：`P30 explain runtime + prewarm visibility sync`
-- 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
+- 当前阶段：`P43-03 DONE · R1-R6 Authority Contract PASS=6 · P43-02 Batch 执行中（P43-04 pending）`
+- 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
+- 最近成功执行证据：`local validation suite PASS · main@433949d · 726 passed 12 xpassed (default lane) · 24/24 checks`
+- 当前 Gate：`GATE-P43-02-BATCH-CLOSURE pending（所有 19 Exit Criteria + 13 Codex rounds 完成后提交）`
 - 当前 Opus 状态：`当前无需 Opus 审查`
-- 当前证据模式：`repo-doc fallback mode`
-- 证据模式说明：共享 Notion 数据库与活跃控制面页面当前不可达；当前快照由 repo freeze packet 与 handoff docs 恢复。
-- 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
-- 当前结论：当前最高优先级是把 spec-driven workbench 收成统一 engineer-facing workflow，而不是继续做 P6 控制面清理或新增 demo 表面。
+- 当前证据模式：`repo-doc snapshot`
+- 证据模式说明：本快照由 repo 本地验证证据手动刷新（2026-04-22 治理收口）；下次 CI notion-sync 成功后将由自动同步覆盖。
+- 当前 QA 摘要：`PASS. 726 passed, 12 xpassed, 27 deselected (e2e opt-in) · validation suite 24/24 · main@433949d`
+- 当前结论：治理收口优先——CI validation 闭环已修复，HEAD / 阶段 / 测试基线已对齐到单一真值。P43-04 为 P43-02 Batch 最后子阶段，待执行。
 - 当前唯一人工动作：继续自动开发；当前无需手动触发 Opus 4.6。
 
 ## 当前开发架构与执行规则

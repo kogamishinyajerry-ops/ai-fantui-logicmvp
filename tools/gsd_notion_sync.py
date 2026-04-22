@@ -57,6 +57,11 @@ DEFAULT_DATABASES = {
     "decisions": "33cc6894-2bed-8116-82de-e0f63f9f5f59",
     "assets": "33cc6894-2bed-818b-920a-fd13f828d23e",
 }
+# Fallback page IDs used only when notion_control_plane.json is absent or lacks a key.
+# At runtime load_control_plane_config() uses setdefault(), so the JSON config always wins
+# for any key it already defines. Drift between these values and the JSON config is a
+# maintenance risk (stale fallbacks) but does NOT cause live writes to wrong pages during
+# normal operation. Keep in sync with .planning/notion_control_plane.json pages section.
 DEFAULT_PAGES = {
     "dashboard": "33cc6894-2bed-8136-b5c9-f9ba5b4b44ec",
     "constitution": "33cc6894-2bed-8148-b2c5-ec68c440f5ef",

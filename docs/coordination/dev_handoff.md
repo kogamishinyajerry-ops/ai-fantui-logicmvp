@@ -3,15 +3,15 @@
 <!-- AUTO-SYNCED DEV HANDOFF SNAPSHOT START -->
 ## 当前自动同步交接基线
 
-- 活动 phase：`P30 Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2`
-- 当前已验证 Plan：`P30-00-TIER1 Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2 维度`
-- 最近成功执行证据：`P30 explain runtime + prewarm visibility sync`
-- 当前证据模式：`repo-doc fallback mode`
-- 证据模式说明：共享 Notion 数据库与活跃控制面页面当前不可达；当前快照由 repo freeze packet 与 handoff docs 恢复。
-- 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
-- 当前运行摘要：`Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
-- 当前 demo / freeze 基线已经稳定；当前主线已切到 P7 spec-driven workbench。
-- 当前优先级是让 engineer-facing onboarding / playback / diagnosis / knowledge 工具形成连续工作流，而不是继续扩 demo 表面。
+- 活动 phase：`P43-03 DONE · R1-R6 Authority Contract PASS=6 · P43-02 Batch 执行中（P43-04 pending）`
+- 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
+- 最近成功执行证据：`local validation suite PASS · main@433949d · 726 passed 12 xpassed (default lane) · 24/24 checks`
+- 当前证据模式：`repo-doc snapshot`
+- 证据模式说明：本快照由 repo 本地验证证据手动刷新（2026-04-22 治理收口）；下次 CI notion-sync 成功后将由自动同步覆盖。
+- 当前 QA 摘要：`PASS. 726 passed, 12 xpassed, 27 deselected (e2e opt-in) · validation suite 24/24 · main@433949d`
+- 当前运行摘要：`治理收口 pass：CI validation 闭环修复 + repo/Notion SoT 对齐 + README 定位刷新。本地验证全绿，726 passed 12 xpassed。`
+- 当前主线：P43-02 Batch 执行中，P43-03 sub-phase 已完成，P43-04（FREEZE event + workbench freeze CLI + traceability_matrix）待执行。
+- 当前优先级：完成 P43-04，提交 GATE-P43-02-BATCH-CLOSURE（所有 19 Exit Criteria + 13 Codex rounds 完成后）。
 
 ## 当前开发架构与执行规则
 
