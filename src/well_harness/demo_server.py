@@ -1434,9 +1434,13 @@ def _lever_summary(
         }
     elif not outputs.logic2_active:
         failed = ", ".join(condition.name for condition in explain.logic2.failed_conditions)
+        blocker_text = f"当前卡在 L2：{failed or 'logic2 条件未完全满足'}。"
+        l3_shared = {c.name for c in explain.logic2.failed_conditions} & {"engine_running", "aircraft_on_ground"}
+        if l3_shared:
+            blocker_text += "（L3 对这些信号独立检查，同步被阻塞。）"
         summary = {
             "headline": f"TRA {tra_deg:.1f}°：SW2 已触发，但 L2 / 540V 尚未放行。",
-            "blocker": f"当前卡在 L2：{failed or 'logic2 条件未完全满足'}。",
+            "blocker": blocker_text,
             "next_step": "下一步：恢复 engine / ground / inhibited / EEC enable 等 L2 条件。",
         }
     elif not outputs.logic3_active:

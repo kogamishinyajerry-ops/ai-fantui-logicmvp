@@ -380,7 +380,7 @@
             <!-- sw1 / radio_altitude_ft → L1; aircraft_on_ground → L2 and also L3 (independent check) -->
             <path d="M 170 54 H 232 V 78 H 260" class="chain-wire" data-src="sw1" data-dst="logic1" marker-end="url(#fan-arr-idle)"/>
             <path d="M 170 90 H 238 V 184 H 260" class="chain-wire" data-src="aircraft_on_ground" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
-            <path d="M 238 184 V 280 H 260" class="chain-wire" data-src="aircraft_on_ground" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 238 184 H 244 V 282 H 260" class="chain-wire" data-src="aircraft_on_ground" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
             <circle cx="238" cy="184" r="3" class="chain-junction" data-src="aircraft_on_ground"/>
             <path d="M 170 126 H 232 V 98 H 260" class="chain-wire" data-src="radio_altitude_ft" data-dst="logic1" marker-end="url(#fan-arr-idle)"/>
 
@@ -391,7 +391,7 @@
             <!-- sw2 / engine_running → L2; engine_running also fans out to L3 (L3 checks it independently) -->
             <path d="M 170 170 H 234 V 180 H 260" class="chain-wire" data-src="sw2" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
             <path d="M 170 206 H 234 V 196 H 260" class="chain-wire" data-src="engine_running" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
-            <path d="M 234 206 V 266 H 260" class="chain-wire" data-src="engine_running" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 234 206 H 242 V 278 H 260" class="chain-wire" data-src="engine_running" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
             <circle cx="234" cy="206" r="3" class="chain-junction" data-src="engine_running"/>
             <!-- tls_unlocked → L3 (backward feedback through top lane) -->
             <path d="M 660 106 H 702 V 28 H 246 V 276 H 260" class="chain-wire" data-src="tls_unlocked" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
@@ -528,7 +528,7 @@
             <tr>
               <td class="sig-name">reverser_not_deployed_eec<br/><small>（图中 !DEP）</small></td>
               <td>EEC Reverser Not-Deployed Feedback</td>
-              <td>EEC（FADEC）内部状态标志：反推展开位置 ≤ 0%（未展开）</td>
+              <td>demo 中以 <code>deploy_position_percent ≤ 0%</code> 近似映射（plant.py first-cut）；真实 EEC not-deployed 信号模型未经最终确认</td>
               <td>L1 专用条件；EEC 视角确认反推处于收起位，防止对已展开的反推重复发 TLS 解锁命令</td>
             </tr>
             <tr>
