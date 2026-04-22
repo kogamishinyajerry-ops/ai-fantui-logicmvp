@@ -38,10 +38,10 @@ T-0 前 Kogami 一行命令看完 6 维度，红就去 re-run，绿就上台。
 | 前缀（runs/） | 对应命令 | verdict 源 |
 |-------------|---------|-----------|
 | `dress_rehearsal_*` | `scripts/dress_rehearsal.py` | `rehearsal_report.md` 里的 `Verdict: **PASS/FAIL**` |
-| `integrated_timing_minimax_*` | `scripts/integrated_timing_rehearsal.py --backend minimax` | `report.json` sections 各自 `verdict` 字段聚合 |
-| `integrated_timing_ollama_*` | `scripts/integrated_timing_rehearsal.py --backend ollama` | 同上 |
+| `integrated_timing_minimax_*` | `archive/shelved/llm-features/scripts/integrated_timing_rehearsal.py --backend minimax` | `report.json` sections 各自 `verdict` 字段聚合 |
+| `integrated_timing_ollama_*` | `archive/shelved/llm-features/scripts/integrated_timing_rehearsal.py --backend ollama` | 同上 |
 | `backend_switch_drill_*` | `scripts/backend_switch_drill.py` | `report.json` 的 `minimax_to_ollama` / `ollama_to_minimax` aggregate verdict |
-| `local_model_smoke_*` | `scripts/local_model_smoke.py` | `report.json` summary.verdict |
+| `local_model_smoke_*` | `archive/shelved/llm-features/scripts/local_model_smoke.py` | `report.json` summary.verdict |
 | `demo_rehearsal_dual_backend_*` | `scripts/demo_rehearsal.py` dual-backend mode | `report.json` overall verdict |
 
 ### 不在本 scorecard 的维度（显式声明）

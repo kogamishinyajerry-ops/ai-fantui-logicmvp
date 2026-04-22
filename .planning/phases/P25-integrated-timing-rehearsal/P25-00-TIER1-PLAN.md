@@ -52,7 +52,7 @@ P25 做一件具体的事：把 pitch_script 的段落时间表**升格为可验
 
 | Sub | 工作 | 工作日 | 关键产出 |
 | --- | --- | ----- | -------- |
-| P25-01 | `scripts/integrated_timing_rehearsal.py` — 段落→API map + 预算核对 + 双后端聚合 | 0.5d | script + 单测 |
+| P25-01 | `archive/shelved/llm-features/scripts/integrated_timing_rehearsal.py` — 段落→API map + 预算核对 + 双后端聚合 | 0.5d | script + 单测 |
 | P25-02 | 首轮双后端真跑 | 0.3d | `runs/integrated_timing_<backend>_<ts>/report.json` × 2 |
 | P25-03 | findings 归档 `docs/demo/integrated-timing-findings.md` | 0.2d | 逐段 budget/实测/裕度 + 风险提示 |
 | P25-04 | closure + GATE self-sign (v4.0) | 0.2d | 三轨绿 + 控制塔 DECISION + ROADMAP + Notion sync |
@@ -61,7 +61,7 @@ P25 做一件具体的事：把 pitch_script 的段落时间表**升格为可验
 
 ## Exit Criteria
 
-- [ ] `scripts/integrated_timing_rehearsal.py` 可独立跑（MOCK + 真跑两套路径）
+- [ ] `archive/shelved/llm-features/scripts/integrated_timing_rehearsal.py` 可独立跑（MOCK + 真跑两套路径）
 - [ ] 双后端 (MiniMax + Ollama qwen2.5:7b) 各一轮真跑 artefact 入库
 - [ ] `docs/demo/integrated-timing-findings.md` 逐段 budget/实测/裕度 + 若有超预算段，含风险提示
 - [ ] 主 pytest 658/1skip 零回归 · e2e 49/49 零回归 · adversarial 8/8 零回归

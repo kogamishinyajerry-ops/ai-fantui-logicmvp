@@ -7,7 +7,8 @@ import sys
 from typing import Any
 
 
-# Root now serves chat.html; the legacy expert demo UI with #system-selector lives on /demo.html.
+# Phase A (2026-04-22): chat.html shelved; root and /demo.html both serve the
+# expert demo UI with #system-selector.
 DEMO_URL = "http://localhost:7891/demo.html"
 
 OUTPUT_FORMATS = {"text", "json"}

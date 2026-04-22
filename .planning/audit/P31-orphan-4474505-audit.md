@@ -30,7 +30,7 @@ File-level breakdown (grouped for audit):
 | Truth layer | controller.py, runner.py, controller_adapter.py, adapters/, models.py | **0 / 0** | — (untouched) |
 | Adapter boundary | llm_client.py | +28 / -0 | Tier 1 |
 | API surface | demo_server.py | +321 / -0 | Tier 1 |
-| New pitch infra | scripts/pitch_prewarm.py | +542 new | Tier 2 |
+| New pitch infra | archive/shelved/llm-features/scripts/pitch_prewarm.py | +542 new | Tier 2 |
 | Readiness tooling | scripts/pitch_readiness.py | +43 / -0 | Tier 2 |
 | UI observability (chat) | chat.{html,js,css} | +314 / -0 | Tier 2 |
 | UI observability (workbench) | workbench.{html,js,css} | +227 / -0 | Tier 2 |
@@ -97,7 +97,7 @@ My read from the control-tower sync text added to STATE.md — "P21–P30 的 `Q
 
 Rebuttal weight: **partially accepted.** When we re-land, we keep the Done/Approved status-line updates (they match the on-control-tower truth) but add a v5.2 audit footnote making explicit that these were post-hoc catch-up edits rolled forward from the v4.0 Extended Autonomy window, not net-new Gate approvals issued by Codex.
 
-### Counterargument C5 · is the `scripts/pitch_prewarm.py` new infra a P25 closure or a new feature?
+### Counterargument C5 · is the `archive/shelved/llm-features/scripts/pitch_prewarm.py` new infra a P25 closure or a new feature?
 
 Concern: The file is 542 new lines realizing what `docs/coordination/plan.md` flagged as "P25 option C". No DECISION header. Is this scope creep disguised as closure?
 
@@ -138,7 +138,7 @@ All six are **provenance gaps**, not code gaps. All six are closable by re-landi
 
 - `src/well_harness/llm_client.py` (+28): keep in full.
 - `src/well_harness/demo_server.py` (+321): keep in full; the LRU cache + prewarm endpoint is clean.
-- `scripts/pitch_prewarm.py` (+542 new): keep in full; add `# P25-Cx DECISION header` comment.
+- `archive/shelved/llm-features/scripts/pitch_prewarm.py` (+542 new): keep in full; add `# P25-Cx DECISION header` comment.
 - `scripts/pitch_readiness.py` (+43): keep in full.
 - `src/well_harness/static/chat.{html,js,css}` (+314): keep in full (observability only).
 - `src/well_harness/static/workbench.{html,js,css}` (+227): keep in full (observability only).

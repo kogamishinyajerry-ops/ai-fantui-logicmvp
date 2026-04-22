@@ -82,7 +82,7 @@ docs/demo/local_model_poc.md  [NEW]
 docs/demo/disaster_runbook.md  [PATCH]
   • 场景 1 (MiniMax 降级) 新增"自动切 Ollama"恢复动作
 
-scripts/local_model_smoke.py  [NEW]
+archive/shelved/llm-features/scripts/local_model_smoke.py  [NEW]
   • 启动 demo_server + LLM_BACKEND=ollama
   • 三 wow 路径 HTTP 重放，断言 evidence/explanation 非空
 ```
@@ -93,7 +93,7 @@ scripts/local_model_smoke.py  [NEW]
 |-----|------|-------|---------|-------|
 | P21-01 | LLM adapter 边界抽取 | 1–2d | `llm_client.py` + `test_llm_client.py` + demo_server 3 点位 refactor · MiniMax 路径零回归 | **自动** |
 | P21-02 | Ollama 后端 + 候选模型矩阵 | 2–3d | `OllamaClient` 实现 + `config/llm/local_model_candidates.yaml` + 首选 qwen2.5:7b 验证 | **自动** |
-| P21-03 | e2e 参数化 + 本地烟雾脚本 | 1–2d | `tests/e2e/conftest.py` 加 `llm_backend` fixture · `scripts/local_model_smoke.py` 真跑 | **自动** |
+| P21-03 | e2e 参数化 + 本地烟雾脚本 | 1–2d | `tests/e2e/conftest.py` 加 `llm_backend` fixture · `archive/shelved/llm-features/scripts/local_model_smoke.py` 真跑 | **自动** |
 | P21-04 | 立项汇报物 + disaster 更新 | 1–2d | `docs/demo/local_model_poc.md` · disaster_runbook.md PATCH · 架构图 (ASCII/Mermaid) | **自动** |
 | P21-05 | Phase 收口 Gate + main merge | 0.5d | Executor 初审 + Notion 04A 条目建为 Awaiting + 治理同步 · branch 清理 · 待 Kogami 触发 Notion AI Opus 4.7 独立 Gate | **自动至 Gate 待审** |
 
@@ -128,7 +128,7 @@ scripts/local_model_smoke.py  [NEW]
 | # | 风险 | 概率 | 影响 | 检测手段 | 缓解 |
 |---|-----|-----|-----|---------|-----|
 | R1 | Ollama 响应结构与 MiniMax 不一致，导致 explanation 字段解析失败 | 中 | 前端降级 UI 显示乱码 | `tests/test_llm_client.py` 两路 fixture 断言 `chat()` 返回 str | 在 OllamaClient 内部完成 shape 归一化，向上只暴露 str |
-| R2 | 本地 7B 模型生成速度 > 30s，超出 MiniMax 降级 timeout | 中 | 演示现场卡顿 | `scripts/local_model_smoke.py` 打印每路 elapsed_ms，warn if >5s | `max_tokens` 压到 300（MiniMax 默认 600）；prompt 加"极简回答"指令；7B 不够则降 4B (qwen2.5:3b) |
+| R2 | 本地 7B 模型生成速度 > 30s，超出 MiniMax 降级 timeout | 中 | 演示现场卡顿 | `archive/shelved/llm-features/scripts/local_model_smoke.py` 打印每路 elapsed_ms，warn if >5s | `max_tokens` 压到 300（MiniMax 默认 600）；prompt 加"极简回答"指令；7B 不够则降 4B (qwen2.5:3b) |
 | R3 | `ollama pull` 需要 GB 级下载，会场无网络时不可用 | 低 | 演示机没模型文件 | PoC 交付时 bundle 一份 qwen2.5:7b 的 `~/.ollama/models/` 目录到冻结包 | 冻结基线 tarball 新增 `local_model_weights/` 子目录（如确需） |
 | R4 | LLM_BACKEND 切换导致主 pytest 回归（639→<639） | 低 | main CI 红 | 每 sub-phase 末尾必须跑 `pytest -m "not e2e" -q` 并贴 tail -3 | MiniMaxClient 路径保持 default；测试用 `monkeypatch.setenv` 显式切换 |
 | R5 | 国产模型生成内容触发敏感词过滤，输出 "" 或拒绝 | 低 | 现场生成空白 | 三 wow prompt 预先离线 smoke 三次，记在 `docs/demo/local_model_poc.md` 中 | 备用 prompt 预置（换措辞）；前端已有 empty response 降级 UI |
@@ -140,7 +140,7 @@ scripts/local_model_smoke.py  [NEW]
 - [ ] 主 pytest: 639 passed, 1 skipped（基线不变）
 - [ ] Opt-in e2e: 49 passed（现有）+ 新增 ≥3 条（wow_{a,b,c} 参数化跨 backend），总 ≥52
 - [ ] Adversarial: 8/8
-- [ ] `LLM_BACKEND=ollama ollama serve & python3 scripts/local_model_smoke.py` 真跑 3/3 wow 路径绿，每路 elapsed_ms 落盘
+- [ ] `LLM_BACKEND=ollama ollama serve & python3 archive/shelved/llm-features/scripts/local_model_smoke.py` 真跑 3/3 wow 路径绿，每路 elapsed_ms 落盘
 - [ ] `docs/demo/local_model_poc.md` 含：为什么国产化、adapter 架构图、切换命令单、3 wow 路径演示脚本、性能数据
 - [ ] `docs/demo/disaster_runbook.md` 场景 1 追加"自动切 Ollama"恢复动作
 - [ ] Executor 初审完成 + Notion 04A GATE-P21-CLOSURE 建为 Awaiting + 治理同步（02B/04A/05/06/控制塔/决策日志）+ 等 Kogami 触发 Notion AI Opus 4.7 独立 Gate

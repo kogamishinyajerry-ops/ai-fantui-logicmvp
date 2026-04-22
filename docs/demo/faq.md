@@ -1,5 +1,8 @@
 # 立项汇报 FAQ — 甲方典型问题 × 应答 × 证据
 
+> **NOTE (Phase A · 2026-04-22):** 本文档包含 LLM / chat.html / `/api/chat/*` / `llm_client.py` / MiniMax / Ollama 相关条目，这些功能已搁置到 `archive/shelved/llm-features/`。**以下内容保留作历史参考，不代表当前代码库的活跃状态。** 详见 `archive/shelved/llm-features/SHELVED.md`。
+
+
 **格式约定：**
 - 每条问答带 **证据文件** 字段——应答不引用代码/文档/真跑 artefact 的，不写进本文档。
 - 每条标注 **R-原则** 锚点——让甲方快速找到合规抓手。

@@ -1,5 +1,8 @@
 # SLA 草案 — Well Harness Co-development
 
+> **NOTE (Phase A · 2026-04-22):** 本文档包含 LLM / chat.html / `/api/chat/*` / `llm_client.py` / MiniMax / Ollama 相关条目，这些功能已搁置到 `archive/shelved/llm-features/`。**以下内容保留作历史参考，不代表当前代码库的活跃状态。** 详见 `archive/shelved/llm-features/SHELVED.md`。
+
+
 > **给谁看：** 甲方采购 + IT 运维 + 安全合规
 > **回答什么：** 不同部署阶段（演示 / 预生产 / 生产）的可用性、响应时间、数据留存、AI 供应链选型
 > **什么情况下变动：** 每次 Phase 升级（H2-24 / H2-25 / H2-26）同步刷新（编号命名空间统一见 `docs/co-development/roadmap-2026H2.md` 顶部说明，2026-04-20 P32 去重）
