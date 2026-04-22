@@ -6,14 +6,14 @@
 - 结论：PASS；当前稳定基线由 GitHub-backed validation evidence 支撑。
 - 当前阶段：`P43 Control Logic Workbench end-to-end milestone`
 - 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`P43-03 governance closure: CI fix + SoT alignment + README reposition`
+- 最近成功执行证据：`demo.html L3 wire clarity iter-7→9 · Codex APPROVE × 2 · main=4189198`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
 - 当前证据模式：`active-page degraded mode`
 - 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
-- 当前 QA 摘要：`PASS. 24/24 shared validation checks pass.`
-- 当前运行摘要：`24/24 shared validation checks pass.`
+- 当前 QA 摘要：`PASS. 2/2 shared validation checks pass.`
+- 当前运行摘要：`2/2 shared validation checks pass.`
 
 ## 当前执行规则
 

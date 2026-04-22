@@ -2,22 +2,43 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: P43-03 DONE · authority contract R1-R6 PASS · state machine wired · Codex round#3 in progress · branch = claude/c919-etras-frozen-v1-migration
-last_updated: "2026-04-21T21:30:00.000Z"
-last_activity: 2026-04-21
+status: demo.html SVG wire clarity iter-7→iter-9 APPROVED by Codex (code review + dual-role) · main=4189198 pushed
+last_updated: "2026-04-23T18:00:00.000Z"
+last_activity: 2026-04-23
 progress:
   total_phases: 43
   completed_phases: 42
   total_plans: 2
   completed_plans: 1
-  notes: "P43-02.5 Steps A-E done · GATE submitted · frozen_v1 on branch claude/c919-etras-frozen-v1-migration (pushed)"
+  notes: "demo.html L3 off-page stub notation finalized at iter-9 · both Codex reviews APPROVE · no P0/P1/P2 blockers"
 ---
 
 # State
 
-Last activity: 2026-04-21
+Last activity: 2026-04-23
 
-## Current Position
+## 2026-04-23 Session — demo.html L3 wire clarity (iter-7 → iter-9)
+
+**Goal**: Show L3 independently checks `engine_running` and `aircraft_on_ground` (not inherited from L2) in the SVG chain diagram, without creating visual wire crossings.
+
+**Iterations and Codex verdicts:**
+- iter-7 (`f700838`): off-page stub (x=241, y=278/282) — **P2×2** (eec clearance 0.1px, TLS clearance 1.1px at active 1.8px stroke)
+- iter-8 (`95973e2`): stubs moved to (x=244, y=281/286) — **P2×1** (aircraft→rev_inh only 2.2px SVG, ~1.6px rendered at 0.73× scale)
+- iter-9 (`4189198`): L3 gate height 38→50, rev_inh→L3 branch y=290→304, aircraft stub y=286→290 — **APPROVE × 2** (code review + dual-role)
+
+**Final clearances at active 1.8px stroke:**
+- TLS(y=276) → engine(y=281): 3.2px SVG / 2.3px rendered
+- engine(y=281) → aircraft(y=290): 7.2px SVG / 5.3px rendered
+- aircraft(y=290) → rev_inh(y=304): 12.2px SVG / 8.9px rendered
+
+**Codex dual-role verdict (Role A 商业立项 + Role B 动力控制逻辑):**
+- No P0/P1/P2 blockers; single P3 observation (TLS→L3 feedback line ~3.2px from engine stub, not blocking at current browser size)
+- L3 engineering semantics preserved: `controller.py:69` independent checks unchanged
+- `pytest -q tests/test_controller.py -k 'logic3 or logic4'` 6 passed
+
+---
+
+## Previous Position (P43-03 · 2026-04-21)
 
 **P43-03 COMPLETE · R1-R6 Authority Contract PASS=6 · Workflow State Machine wired · 853 tests green**
 

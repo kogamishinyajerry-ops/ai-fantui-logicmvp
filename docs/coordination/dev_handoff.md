@@ -5,11 +5,11 @@
 
 - 活动 phase：`P43 Control Logic Workbench end-to-end milestone`
 - 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`P43-03 governance closure: CI fix + SoT alignment + README reposition`
+- 最近成功执行证据：`demo.html L3 wire clarity iter-7→9 · Codex APPROVE × 2 · main=4189198`
 - 当前证据模式：`active-page degraded mode`
 - 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
-- 当前 QA 摘要：`PASS. 24/24 shared validation checks pass.`
-- 当前运行摘要：`24/24 shared validation checks pass.`
+- 当前 QA 摘要：`PASS. 2/2 shared validation checks pass.`
+- 当前运行摘要：`2/2 shared validation checks pass.`
 - 当前 demo / freeze 基线已经稳定；当前主线已切到 P7 spec-driven workbench。
 - 当前优先级是让 engineer-facing onboarding / playback / diagnosis / knowledge 工具形成连续工作流，而不是继续扩 demo 表面。
 
@@ -30,7 +30,7 @@
 1. [AI FANTUI LogicMVP 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
 2. [01 当前状态（自动同步）](https://www.notion.so/346c6894-2bed-81cf-afd0-d060768d56d7)
 3. [09C 当前 Opus 4.6 审查简报](https://www.notion.so/34ac6894-2bed-81ec-908b-f5268e22ac9d)
-4. [10 Freeze Demo Packet](https://www.notion.so/341c6894-2bed-8104-9ab1-f133d6da80f4)
+4. [10 Freeze Demo Packet](https://www.notion.so/34ac6894-2bed-8159-aec4-e99f7b3d2f51)
 5. [GitHub Actions / GSD Automation Loop](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 
 ## 当前交接结论
