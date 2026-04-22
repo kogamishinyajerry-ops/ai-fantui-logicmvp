@@ -1,10 +1,10 @@
 # Well Harness
 
-## Project Status: Frozen (2026-04-14)
+## Project Status: Active on `claude/c919-etras-frozen-v1-migration` branch (updated 2026-04-22)
 
-All P0-P15 phases are complete and approved by Opus 4.6. This project is in maintenance mode — no new feature development. Only regression protection and critical security hardening are active.
+**Current work**: Phase A (LLM features shelved) → Phase B/C (2 logic workstations + 2 simulation panels + 2 static circuit diagrams). See `.planning/STATE.md` for the current phase, `.planning/ROADMAP.md` for phase history.
 
-See [ROADMAP.md](.planning/ROADMAP.md) for the full phase history and Milestone 8 closure record.
+**Freeze note**: The original `main` was frozen at Milestone 9 (2026-04-15) after P0-P16. The active branch reopens scope for C919 E-TRAS integration (P43) + UI restructuring (Phase A 2026-04-22). LLM chat/P14/P15 removed from active code, see `archive/shelved/llm-features/SHELVED.md`.
 
 `well-harness` is a lightweight simulation harness for the thrust reverser deploy logic we have confirmed in the discussion.
 

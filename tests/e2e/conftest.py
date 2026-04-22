@@ -109,28 +109,6 @@ def demo_server():
         _kill_server(proc)
 
 
-@pytest.fixture(scope="function")
-def no_minimax_key_server(tmp_path):
-    """Boot a second demo_server with HOME pointing at an empty tmp dir.
-
-    Forces `_get_minimax_api_key()` to return '' so LLM endpoints fall into
-    the `minimax_api_key_missing` error branch (resilience scenario).
-    """
-    port = 8798
-    if not _port_free(port):
-        pytest.fail(f"Port {port} is already in use")
-    empty_home = tmp_path / "no_minimax_home"
-    empty_home.mkdir()
-    proc = _spawn_server(port, home_override=str(empty_home))
-    try:
-        if not _wait_ready(port, READY_TIMEOUT_S):
-            _kill_server(proc)
-            pytest.fail(f"no-key demo_server did not become ready on :{port}")
-        yield f"http://127.0.0.1:{port}"
-    finally:
-        _kill_server(proc)
-
-
 @pytest.fixture
 def api_post() -> Callable[[str, str, dict, float], tuple[int, object]]:
     """Return a helper that POSTs JSON and returns (status, parsed_body)."""

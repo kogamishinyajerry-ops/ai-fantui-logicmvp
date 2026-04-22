@@ -19,6 +19,8 @@ dev = [
     "pytest>=9.0",
     "pytest-subtests>=0.14",
     "jsonschema>=4.17",
+    "numpy>=1.24",
+    "pyyaml>=6.0",
 ]
 
 [tool.setuptools.package-dir]
@@ -32,6 +34,10 @@ where = ["src"]
 addopts = "-m 'not e2e'"
 # Constrain discovery to tests/ so shelved archive trees are never collected.
 testpaths = ["tests"]
+# Make bare `pytest` work without requiring PYTHONPATH=src:. on the caller:
+# - src: well_harness package imports
+# - . (repo root): tools.* and tests.* imports from a few cross-file suites
+pythonpath = ["src", "."]
 markers = [
     "e2e: opt-in end-to-end tests that boot demo_server on :8799 (run with -m e2e)",
 ]
