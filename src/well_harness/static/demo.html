@@ -85,7 +85,7 @@
             <span class="fan-condition-label">N1K · 风扇转速 (%)</span>
             <span class="fan-condition-value" id="fan-n1k-value">35%</span>
             <input type="range" id="fan-n1k" min="0" max="110" step="1" value="35" aria-label="N1K 风扇转速">
-            <div class="fan-condition-hint">L3 deploy 限值：&lt; 84%</div>
+            <div class="fan-condition-hint">L3 deploy 限值：&lt; max_n1k_deploy_limit（默认 60%）</div>
           </label>
 
           <label class="fan-condition">
@@ -264,7 +264,7 @@
             <!-- INPUTS column -->
             <g class="chain-node" data-node="sw1">
               <rect x="10" y="40" width="160" height="28" rx="3"/>
-              <text x="90" y="58" text-anchor="middle">SW1 · TRA ≤ 0°</text>
+              <text x="90" y="58" text-anchor="middle">SW1 · TRA [-1.4°,-6.2°]</text>
             </g>
             <g class="chain-node" data-node="aircraft_on_ground">
               <rect x="10" y="76" width="160" height="28" rx="3"/>
@@ -276,7 +276,7 @@
             </g>
             <g class="chain-node" data-node="sw2">
               <rect x="10" y="156" width="160" height="28" rx="3"/>
-              <text x="90" y="174" text-anchor="middle">SW2 · TRA ≤ -13°</text>
+              <text x="90" y="174" text-anchor="middle">SW2 · TRA [-5°,-9.8°]</text>
             </g>
             <g class="chain-node" data-node="engine_running">
               <rect x="10" y="192" width="160" height="28" rx="3"/>
@@ -284,7 +284,7 @@
             </g>
             <g class="chain-node" data-node="n1k">
               <rect x="10" y="234" width="160" height="28" rx="3"/>
-              <text x="90" y="252" text-anchor="middle">N1K &lt; 84%</text>
+              <text x="90" y="252" text-anchor="middle">N1K &lt; max_n1k</text>
             </g>
             <g class="chain-node" data-node="eec_enable">
               <rect x="10" y="270" width="160" height="28" rx="3"/>
@@ -301,14 +301,14 @@
               <use href="#fan-gate-and" class="gate-icon" x="266" y="74" width="18" height="14"/>
               <text x="275" y="84" text-anchor="middle" class="gate-label">&amp;</text>
               <text x="340" y="88" text-anchor="middle" class="logic-id">L1</text>
-              <text x="340" y="100" text-anchor="middle" class="logic-sub">SW1 AND GND AND RA&lt;6</text>
+              <text x="340" y="100" text-anchor="middle" class="logic-sub">SW1 AND RA&lt;6 AND !INH</text>
             </g>
             <g class="chain-logic" data-node="logic2">
               <rect x="260" y="170" width="160" height="38" rx="4"/>
               <use href="#fan-gate-and" class="gate-icon" x="266" y="174" width="18" height="14"/>
               <text x="275" y="184" text-anchor="middle" class="gate-label">&amp;</text>
               <text x="340" y="188" text-anchor="middle" class="logic-id">L2</text>
-              <text x="340" y="200" text-anchor="middle" class="logic-sub">SW2 AND eng AND TLS</text>
+              <text x="340" y="200" text-anchor="middle" class="logic-sub">SW2 AND GND AND EEC</text>
             </g>
             <g class="chain-logic" data-node="logic3">
               <rect x="260" y="260" width="160" height="38" rx="4"/>
@@ -374,9 +374,9 @@
                  on endpoint states. data-fault="true" marks fault wires that turn
                  RED when their source is asserted TRUE. -->
 
-            <!-- sw1 / aircraft_on_ground / radio_altitude_ft → L1 -->
+            <!-- sw1 / radio_altitude_ft → L1; aircraft_on_ground → L2 -->
             <path d="M 170 54 H 232 V 78 H 260" class="chain-wire" data-src="sw1" data-dst="logic1" marker-end="url(#fan-arr-idle)"/>
-            <path d="M 170 90 H 232 V 88 H 260" class="chain-wire" data-src="aircraft_on_ground" data-dst="logic1" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 170 90 H 238 V 184 H 260" class="chain-wire" data-src="aircraft_on_ground" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
             <path d="M 170 126 H 232 V 98 H 260" class="chain-wire" data-src="radio_altitude_ft" data-dst="logic1" marker-end="url(#fan-arr-idle)"/>
 
             <!-- L1 → tls115 → tls_unlocked (sensor sequence) -->
@@ -386,15 +386,15 @@
             <!-- sw2 / engine_running → L2 -->
             <path d="M 170 170 H 234 V 180 H 260" class="chain-wire" data-src="sw2" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
             <path d="M 170 206 H 234 V 196 H 260" class="chain-wire" data-src="engine_running" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
-            <!-- tls_unlocked → L2 (backward feedback through top lane) -->
-            <path d="M 660 106 H 700 V 26 H 238 V 188 H 260" class="chain-wire" data-src="tls_unlocked" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
+            <!-- tls_unlocked → L3 (backward feedback through top lane) -->
+            <path d="M 660 106 H 702 V 28 H 246 V 276 H 260" class="chain-wire" data-src="tls_unlocked" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
 
             <!-- L2 → etrac_540v -->
             <path d="M 420 189 H 460 V 170 H 500" class="chain-wire" data-src="logic2" data-dst="etrac_540v" marker-end="url(#fan-arr-idle)"/>
 
-            <!-- n1k / eec_enable → L3 -->
+            <!-- n1k → L3; eec_enable → L2 -->
             <path d="M 170 248 H 230 V 270 H 260" class="chain-wire" data-src="n1k" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
-            <path d="M 170 284 H 234 V 282 H 260" class="chain-wire" data-src="eec_enable" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 170 284 H 240 V 200 H 260" class="chain-wire" data-src="eec_enable" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
             <!-- reverser_inhibited → L3 (fault signal — red when inhibit active) -->
             <path d="M 170 320 H 238 V 292 H 260" class="chain-wire" data-src="reverser_inhibited" data-dst="logic3" data-fault="true" marker-end="url(#fan-arr-idle)"/>
             <!-- etrac_540v → L3 (backward feedback through top lane) -->
@@ -477,26 +477,26 @@
             <tr>
               <td class="sig-name">SW1</td>
               <td>Thrust Reverser Deploy Switch 1</td>
-              <td>TRA ≤ 0° 时由凸轮机构触发的位置微动开关</td>
+              <td>TRA ∈ [-1.4°, -6.2°] 窗口内由凸轮机构触发的微动开关</td>
               <td>防止在前向推力区间意外触发反推展开命令</td>
             </tr>
             <tr>
               <td class="sig-name">SW2</td>
               <td>Thrust Reverser Deploy Switch 2</td>
-              <td>TRA ≤ -13° 深反推区的第二个位置开关</td>
+              <td>TRA ∈ [-5°, -9.8°] 深反推区的第二位置开关</td>
               <td>双重机械确认：只有进入深反推区才允许激活主展开链路</td>
             </tr>
             <tr>
               <td class="sig-name">RA</td>
               <td>Radio Altitude (ft)</td>
               <td>双余度无线电高度表（RALT），独立于 LGCIU/WOW 链路</td>
-              <td>L1 设 RA &lt; 6 ft 确保飞机已接地；防止空中误展开（灾难性失效）</td>
+              <td>L1 低空防护门控（RA &lt; 6 ft）；非接地确认——接地判断由 WOW/aircraft_on_ground（L2/L3）完成</td>
             </tr>
             <tr>
               <td class="sig-name">N1K</td>
               <td>Fan Speed Ratio (% corrected)</td>
               <td>N1 传感器；K 表示修正转速（温度/压力修正）</td>
-              <td>L3 限制 N1K &lt; max_n1k_deploy_limit（demo 默认 60%，可配置，上限参考值 84%）：高转速展开会产生严重气动干扰和结构载荷</td>
+              <td>L3 限制 N1K &lt; max_n1k_deploy_limit（demo 默认 60%）：高转速展开会产生严重气动干扰和结构载荷</td>
             </tr>
             <tr>
               <td class="sig-name">aircraft_on_ground</td>
@@ -539,13 +539,13 @@
             </tr>
             <tr>
               <td class="sig-name">L2</td>
-              <td>SW2 AND 发动机运行 AND 接地 AND NOT 抑制 AND TLS_Unlocked AND EEC</td>
+              <td>SW2 AND 发动机运行 AND 接地 AND NOT 抑制 AND EEC</td>
               <td>ETRAC 540VDC PDU 动力</td>
               <td>L2 失效 → 电动执行机构无动力，反推保持收起位</td>
             </tr>
             <tr>
               <td class="sig-name">L3</td>
-              <td>engine_running AND aircraft_on_ground AND NOT 抑制 AND TLS_Unlocked AND N1K &lt; 60%（demo 默认）AND TRA ≤ −11.74°</td>
+              <td>engine_running AND aircraft_on_ground AND NOT 抑制 AND TLS_Unlocked AND N1K &lt; max_n1k_deploy_limit（默认 60%）AND TRA ≤ −11.74°</td>
               <td>EEC 展开命令 + PLS 供电 + PDU 电机启动</td>
               <td>L3 失效 → 执行机构不动；N1K 保护防止高速展开引发发动机喘振</td>
             </tr>
