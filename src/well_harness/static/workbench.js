@@ -2909,6 +2909,7 @@ function explainRuntimeSourceLabel(source) {
 }
 
 function explainRuntimeBadgeState(runtime) {
+  if (runtime.status === "shelved") return "shelved";
   if (!runtime.reported) return "idle";
   if (runtime.backendMatch === false || runtime.status === "warning") return "blocked";
   if (runtime.source === "cached_llm") return "ready";
@@ -2918,6 +2919,7 @@ function explainRuntimeBadgeState(runtime) {
 }
 
 function explainRuntimeBadgeText(runtime) {
+  if (runtime.status === "shelved") return "已搁置";
   if (!runtime.reported) return "未报告";
   if (runtime.backendMatch === false) return "后端不一致";
   if (runtime.status === "ready" && runtime.source === "cached_llm") return "缓存已验证";
@@ -2943,6 +2945,22 @@ function renderExplainRuntime(payload) {
   const runtime = readExplainRuntimePayload(payload);
   badge.dataset.state = explainRuntimeBadgeState(runtime);
   badge.textContent = explainRuntimeBadgeText(runtime);
+
+  // Phase A (2026-04-22): LLM features shelved. Short-circuit to a clean
+  // "shelved" rendering so the cache/backend/source panels don't misreport
+  // zero-counters as observed prewarm telemetry.
+  if (runtime.status === "shelved") {
+    summary.textContent = runtime.detail || "LLM explain 功能已搁置。";
+    backendStrong.textContent = "已搁置";
+    backendDetail.textContent = "LLM 后端已从活跃代码库搁置，见 archive/shelved/llm-features/SHELVED.md。";
+    sourceStrong.textContent = "已搁置";
+    sourceDetail.textContent = "explain 路由已移除，不会产生新的观察记录。";
+    cacheStrong.textContent = "已搁置";
+    cacheDetail.textContent = "LLM 缓存链路已停用；无 cached_at / 命中统计。";
+    boundaryStrong.textContent = runtime.boundaryNote || "LLM 已搁置 — 非控制真值";
+    return;
+  }
+
   if (!runtime.reported) {
     summary.textContent = "当前 workbench 响应还没带 explain runtime 观察值，所以这里只保留占位。";
   } else if (runtime.observedAt) {
