@@ -170,7 +170,7 @@
     const nodes = Array.isArray(data.nodes) ? data.nodes : [];
     const nodeById = new Map(nodes.map((n) => [n.id, n]));
 
-    renderLeverHud(request);
+    renderLeverHud(request, data);
     renderTraLock(data);
     renderChain(nodeById);
     renderOutputs(nodeById);
@@ -179,7 +179,7 @@
     renderFaultPanel();
   }
 
-  function renderLeverHud(req) {
+  function renderLeverHud(req, data) {
     if (readouts.traValue) readouts.traValue.textContent = req.tra_deg.toFixed(1) + "°";
     if (readouts.traZone) {
       const [zone, label] = zoneFromTra(req.tra_deg);
@@ -188,7 +188,15 @@
     }
     if (readouts.raValue)  readouts.raValue.textContent  = req.radio_altitude_ft.toFixed(0) + " ft";
     if (readouts.n1kValue) readouts.n1kValue.textContent = (req.n1k * 100).toFixed(0) + "%";
-    if (readouts.vdtValue) readouts.vdtValue.textContent = req.deploy_position_percent.toFixed(0) + "%";
+    if (readouts.vdtValue) {
+      // Prefer the backend's actual plant-driven VDT from hud.deploy_position_percent
+      // (authoritative in auto_scrubber, echoes the override in manual mode). Fall
+      // back to the request slider if the response is missing it for any reason.
+      const hudVdt = data && data.hud && typeof data.hud.deploy_position_percent === "number"
+        ? data.hud.deploy_position_percent
+        : req.deploy_position_percent;
+      readouts.vdtValue.textContent = hudVdt.toFixed(0) + "%";
+    }
   }
 
   // ═══════════ TRA=-14° lock rendering ═══════════
@@ -493,13 +501,13 @@
   // VDT slider ↔ feedback_mode coupling: in auto_scrubber mode the backend
   // ignores the slider (plant simulation drives VDT). Disable the slider to
   // prevent the UX trap where VDT looks dragged to 95% but L4 never fires.
+  // We keep the slider's .value untouched on mode flips so (a) the backend
+  // VDT readout rendered from hud.deploy_position_percent stays authoritative
+  // and (b) a user's previous manual override is preserved across toggles.
   function syncVdtSliderToFeedbackMode() {
     const mode = inputs.feedbackMode ? inputs.feedbackMode.value : "auto_scrubber";
     const isAuto = mode === "auto_scrubber";
-    if (inputs.vdt) {
-      inputs.vdt.disabled = isAuto;
-      if (isAuto) inputs.vdt.value = "0";
-    }
+    if (inputs.vdt) inputs.vdt.disabled = isAuto;
     if (readouts.vdtHint) {
       readouts.vdtHint.dataset.mode = mode;
       readouts.vdtHint.textContent = isAuto
