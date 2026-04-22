@@ -76,9 +76,46 @@
     outFadecDeployV:  $("output-fadec-deploy-value"),
     outFadecStowV:    $("output-fadec-stow-value"),
     presetStatus:     $("etras-preset-status"),
+    probabilityNodeList: $("etras-probability-node-list"),
+    simTrials:        $("etras-sim-trials"),
+    simSeed:          $("etras-sim-seed"),
+    simScope:         $("etras-sim-scope"),
+    simRunButton:     $("etras-run-simulation"),
+    bulkProbability:  $("etras-bulk-probability"),
+    bulkApplyButton:  $("etras-apply-bulk-probability"),
+    simSuccessRate:   $("etras-sim-success-rate"),
+    simFailureCount:  $("etras-sim-failure-count"),
+    simAnalyticalRate: $("etras-sim-analytical-rate"),
+    simScopeLabel:    $("etras-sim-scope-label"),
+    simTopCauses:     $("etras-sim-top-causes"),
+    simFailureSamples: $("etras-sim-failure-samples"),
   };
 
   const chainSvg = document.getElementById("etras-logic-chain");
+
+  const RELIABILITY_NODES = [
+    { id: "mlg_wow", kind: "INPUT", label: "mlg_wow · WOW 仲裁", normalProbability: 0.9990 },
+    { id: "tr_wow", kind: "INPUT", label: "tr_wow · 2.25s SET", normalProbability: 0.9990 },
+    { id: "atltla", kind: "INPUT", label: "atltla · SW1", normalProbability: 0.9990 },
+    { id: "tra_deg", kind: "INPUT", label: "tra_deg · 油门角度", normalProbability: 0.9990 },
+    { id: "tr_inhibited", kind: "INPUT", label: "tr_inhibited · 抑制位", normalProbability: 0.9990 },
+    { id: "ln_eicu_cmd2", kind: "LOGIC", label: "EICU_CMD2 · 单相解锁", normalProbability: 0.9990 },
+    { id: "eicu_cmd2", kind: "OUTPUT", label: "eicu_cmd2 · 1-φ unlock", normalProbability: 0.9990 },
+    { id: "apwtla", kind: "INPUT", label: "apwtla · SW2", normalProbability: 0.9990 },
+    { id: "ln_eicu_cmd3", kind: "LOGIC", label: "EICU_CMD3 · 三相 TRCU", normalProbability: 0.9990 },
+    { id: "eicu_cmd3", kind: "OUTPUT", label: "eicu_cmd3 · 3-φ TRCU", normalProbability: 0.9990 },
+    { id: "lock_state", kind: "INPUT", label: "lock_state · 锁聚合", normalProbability: 0.9990 },
+    { id: "ln_tr_command3_enable", kind: "LOGIC", label: "TR_Command3_Enable", normalProbability: 0.9990 },
+    { id: "tr_command3_enable", kind: "OUTPUT", label: "tr_command3_enable", normalProbability: 0.9990 },
+    { id: "n1k_percent", kind: "INPUT", label: "n1k_percent · 转速", normalProbability: 0.9990 },
+    { id: "tr_position_percent", kind: "INPUT", label: "tr_position_percent · VDT", normalProbability: 0.9990 },
+    { id: "ln_fadec_deploy_command", kind: "LOGIC", label: "FADEC_Deploy · 展开命令", normalProbability: 0.9990 },
+    { id: "fadec_deploy_command", kind: "OUTPUT", label: "fadec_deploy_command", normalProbability: 0.9990 },
+    { id: "ln_fadec_stow_command", kind: "LOGIC", label: "FADEC_Stow · 收起命令", normalProbability: 0.9990 },
+    { id: "fadec_stow_command", kind: "OUTPUT", label: "fadec_stow_command", normalProbability: 0.9990 },
+  ];
+  const RELIABILITY_NODE_BY_ID = new Map(RELIABILITY_NODES.map((node) => [node.id, node]));
+  let lastEvaluationContext = { activeIds: new Set(), asserted: {} };
 
   // ═══════════ Helpers ═══════════
   function checked(el) { return !!(el && el.checked); }
@@ -202,6 +239,7 @@
     const activeIds  = new Set(evaluation.active_logic_node_ids || []);
     const summary    = evaluation.summary || "";
     const completion = evaluation.completion_reached === true;
+    lastEvaluationContext = { activeIds, asserted };
 
     renderLeverHud(snapshot);
     renderHud(asserted, snapshot);
@@ -284,6 +322,7 @@
 
   function renderChainSvg(activeIds, asserted) {
     if (!chainSvg) return;
+    clearSimulationMarkers();
     // Logic gates
     chainSvg.querySelectorAll(".chain-logic").forEach((group) => {
       const nodeId = group.getAttribute("data-node");
@@ -470,6 +509,203 @@
     fetchEvaluation();
   }
 
+  // ═══════════ Reliability simulation candidate ═══════════
+  function renderProbabilityRows() {
+    if (!readouts.probabilityNodeList) return;
+    readouts.probabilityNodeList.innerHTML = RELIABILITY_NODES.map((node) => {
+      const pct = (node.normalProbability * 100).toFixed(2);
+      return `
+        <label class="probability-node-row" data-prob-row="${escapeAttr(node.id)}">
+          <span class="probability-node-label">
+            <span class="probability-node-kind">${escapeHtml(node.kind)}</span>${escapeHtml(node.label)}
+          </span>
+          <input class="probability-input" type="number" min="0" max="100" step="0.01"
+                 value="${pct}" data-prob-node="${escapeAttr(node.id)}"
+                 aria-label="${escapeAttr(node.label)} 正常运行概率百分比">
+        </label>
+      `;
+    }).join("");
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function escapeAttr(value) {
+    return escapeHtml(value).replace(/'/g, "&#39;");
+  }
+
+  function readProbability(nodeId) {
+    const input = document.querySelector(`[data-prob-node="${cssEscape(nodeId)}"]`);
+    const raw = input ? parseFloat(input.value) : NaN;
+    const pct = Number.isFinite(raw) ? raw : (RELIABILITY_NODE_BY_ID.get(nodeId)?.normalProbability || 0) * 100;
+    return clamp(pct, 0, 100) / 100;
+  }
+
+  function cssEscape(value) {
+    if (window.CSS && typeof window.CSS.escape === "function") return window.CSS.escape(value);
+    return String(value).replace(/"/g, '\\"');
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function selectedReliabilityNodeIds() {
+    const scope = readouts.simScope ? readouts.simScope.value : "all";
+    if (scope !== "active") return RELIABILITY_NODES.map((node) => node.id);
+
+    const ids = new Set();
+    if (chainSvg) {
+      chainSvg.querySelectorAll('[data-node][data-state="active"]').forEach((el) => {
+        const id = el.getAttribute("data-node");
+        if (RELIABILITY_NODE_BY_ID.has(id)) ids.add(id);
+      });
+    }
+    lastEvaluationContext.activeIds.forEach((id) => {
+      if (RELIABILITY_NODE_BY_ID.has(id)) ids.add(id);
+    });
+    if (lastEvaluationContext.activeIds.has("ln_eicu_cmd2")) ids.add("tr_inhibited");
+    if (lastEvaluationContext.activeIds.has("ln_tr_command3_enable")) ids.add("lock_state");
+    return ids.size ? Array.from(ids) : RELIABILITY_NODES.map((node) => node.id);
+  }
+
+  function runReliabilitySimulation() {
+    const nTrials = clamp(parseInt(readouts.simTrials ? readouts.simTrials.value : "10000", 10) || 10000, 1, 50000);
+    const seed = parseInt(readouts.simSeed ? readouts.simSeed.value : "42", 10) || 0;
+    if (readouts.simTrials) readouts.simTrials.value = String(nTrials);
+    if (readouts.simSeed) readouts.simSeed.value = String(seed);
+
+    const nodeIds = selectedReliabilityNodeIds();
+    const rng = seededRandom(seed);
+    const primaryFailureCounts = new Map(nodeIds.map((id) => [id, 0]));
+    const involvedFailureCounts = new Map(nodeIds.map((id) => [id, 0]));
+    const failureSamples = [];
+    let successCount = 0;
+
+    for (let runIndex = 1; runIndex <= nTrials; runIndex += 1) {
+      const failedNodeIds = [];
+      nodeIds.forEach((nodeId) => {
+        if (rng() > readProbability(nodeId)) failedNodeIds.push(nodeId);
+      });
+      if (!failedNodeIds.length) {
+        successCount += 1;
+        return;
+      }
+      const primary = failedNodeIds[0];
+      primaryFailureCounts.set(primary, (primaryFailureCounts.get(primary) || 0) + 1);
+      failedNodeIds.forEach((nodeId) => {
+        involvedFailureCounts.set(nodeId, (involvedFailureCounts.get(nodeId) || 0) + 1);
+      });
+      if (failureSamples.length < 6) {
+        failureSamples.push({ runIndex, failedNodeIds });
+      }
+    }
+
+    const failureCount = nTrials - successCount;
+    const successRate = successCount / nTrials;
+    const analyticalRate = nodeIds.reduce((product, nodeId) => product * readProbability(nodeId), 1);
+    const topCauses = Array.from(primaryFailureCounts.entries())
+      .filter(([, count]) => count > 0)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6);
+
+    renderReliabilityResults({
+      nTrials,
+      nodeIds,
+      successRate,
+      analyticalRate,
+      failureCount,
+      topCauses,
+      involvedFailureCounts,
+      failureSamples,
+    });
+    markSimulationCauses(topCauses.map(([nodeId]) => nodeId).slice(0, 3));
+  }
+
+  function seededRandom(seed) {
+    let state = seed >>> 0;
+    return function nextRandom() {
+      state += 0x6D2B79F5;
+      let t = state;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function renderReliabilityResults(result) {
+    if (readouts.simSuccessRate) readouts.simSuccessRate.textContent = formatProbability(result.successRate);
+    if (readouts.simFailureCount) readouts.simFailureCount.textContent = `${result.failureCount} / ${result.nTrials}`;
+    if (readouts.simAnalyticalRate) readouts.simAnalyticalRate.textContent = formatProbability(result.analyticalRate);
+    if (readouts.simScopeLabel) {
+      const scopeLabel = readouts.simScope && readouts.simScope.value === "active" ? "当前激活链路" : "全节点";
+      readouts.simScopeLabel.textContent = `${scopeLabel} · ${result.nodeIds.length} 个节点 · 固定 seed 本地仿真`;
+    }
+    if (readouts.simTopCauses) {
+      if (!result.topCauses.length) {
+        readouts.simTopCauses.innerHTML = '<div class="simulation-cause-row"><span>无失败样本</span><strong>0</strong></div>';
+      } else {
+        readouts.simTopCauses.innerHTML = result.topCauses.map(([nodeId, count]) => {
+          const share = result.failureCount ? count / result.failureCount : 0;
+          const involved = result.involvedFailureCounts.get(nodeId) || count;
+          return `
+            <div class="simulation-cause-row">
+              <span>${escapeHtml(nodeLabel(nodeId))}</span>
+              <strong>${count} primary · ${involved} involved · ${formatProbability(share)}</strong>
+            </div>
+          `;
+        }).join("");
+      }
+    }
+    if (readouts.simFailureSamples) {
+      readouts.simFailureSamples.innerHTML = result.failureSamples.map((sample) => `
+        <div class="simulation-sample-row">
+          <span>#${sample.runIndex}: ${escapeHtml(sample.failedNodeIds.map(nodeLabel).join(" / "))}</span>
+          <strong>${sample.failedNodeIds.length}</strong>
+        </div>
+      `).join("");
+    }
+  }
+
+  function nodeLabel(nodeId) {
+    return RELIABILITY_NODE_BY_ID.get(nodeId)?.label || nodeId;
+  }
+
+  function formatProbability(value) {
+    if (!Number.isFinite(value)) return "—";
+    return (value * 100).toFixed(value >= 0.999 ? 3 : 2) + "%";
+  }
+
+  function markSimulationCauses(nodeIds) {
+    clearSimulationMarkers();
+    nodeIds.forEach((nodeId) => {
+      if (!chainSvg) return;
+      const el = chainSvg.querySelector(`[data-node="${cssEscape(nodeId)}"]`);
+      if (el) el.dataset.simCause = "top";
+    });
+  }
+
+  function clearSimulationMarkers() {
+    if (!chainSvg) return;
+    chainSvg.querySelectorAll("[data-sim-cause]").forEach((el) => {
+      delete el.dataset.simCause;
+    });
+  }
+
+  function applyBulkProbability() {
+    const raw = readouts.bulkProbability ? parseFloat(readouts.bulkProbability.value) : 99.9;
+    const pct = clamp(Number.isFinite(raw) ? raw : 99.9, 0, 100);
+    if (readouts.bulkProbability) readouts.bulkProbability.value = pct.toFixed(2);
+    document.querySelectorAll("[data-prob-node]").forEach((input) => {
+      input.value = pct.toFixed(2);
+    });
+  }
+
   // ═══════════ Wire input listeners ═══════════
   function installListeners() {
     Object.values(inputs).forEach((el) => {
@@ -480,10 +716,13 @@
     document.querySelectorAll(".preset-btn").forEach((btn) => {
       btn.addEventListener("click", () => applyPreset(btn.dataset.preset));
     });
+    if (readouts.simRunButton) readouts.simRunButton.addEventListener("click", runReliabilitySimulation);
+    if (readouts.bulkApplyButton) readouts.bulkApplyButton.addEventListener("click", applyBulkProbability);
   }
 
   // ═══════════ Bootstrap ═══════════
   function boot() {
+    renderProbabilityRows();
     installListeners();
     fetchEvaluation();  // initial render
   }

@@ -74,6 +74,10 @@ class C919EtrasWorkstationStaticTests(unittest.TestCase):
             'id="output-fadec-deploy"',
             'id="output-fadec-stow"',
             'id="etras-preset-status"',
+            'id="etras-probability-node-list"',
+            'id="etras-run-simulation"',
+            'id="etras-sim-success-rate"',
+            'id="etras-sim-top-causes"',
         ):
             self.assertIn(fragment, html, f"missing fragment: {fragment}")
 
@@ -85,6 +89,8 @@ class C919EtrasWorkstationStaticTests(unittest.TestCase):
         self.assertIn("--etras-active:", css)
         self.assertIn(".chain-node[data-state=\"active\"]", css)
         self.assertIn(".chain-logic[data-state=\"active\"]", css)
+        self.assertIn(".probability-node-row", css)
+        self.assertIn("[data-sim-cause=\"top\"]", css)
 
     def test_workstation_js_exists_and_posts_to_system_snapshot(self):
         self.assertTrue(WORKSTATION_JS.is_file(), "c919_etras_workstation.js missing")
@@ -93,6 +99,10 @@ class C919EtrasWorkstationStaticTests(unittest.TestCase):
         self.assertIn('const SYSTEM_ID = "c919-etras"', js)
         self.assertIn("buildSnapshot()", js)
         self.assertIn("renderChainSvg(", js)
+        self.assertIn("const RELIABILITY_NODES = [", js)
+        self.assertIn("function runReliabilitySimulation()", js)
+        self.assertIn("function seededRandom(seed)", js)
+        self.assertNotIn('"/api/monte-carlo/run"', js)
 
     def test_workstation_svg_data_nodes_subset_of_adapter_spec(self):
         """Every data-node in the chain SVG ⊂ adapter spec components ∪ logic_nodes.
@@ -119,6 +129,29 @@ class C919EtrasWorkstationStaticTests(unittest.TestCase):
             unknown,
             f"data-node ids not in adapter spec: {sorted(unknown)}\n"
             f"allowed: {sorted(allowed)}",
+        )
+
+    def test_every_visible_svg_node_has_probability_model(self):
+        """Every visible chain node gets a normal-operation probability input."""
+        html = WORKSTATION_HTML.read_text(encoding="utf-8")
+        js = WORKSTATION_JS.read_text(encoding="utf-8")
+
+        svg_start = html.find('id="etras-logic-chain"')
+        svg_end = html.find("</svg>", svg_start)
+        self.assertGreater(svg_end, svg_start, "chain SVG bounds not found")
+        svg_section = html[svg_start:svg_end]
+        svg_node_ids = set(re.findall(r'data-node="([a-z0-9_]+)"', svg_section))
+
+        reliability_start = js.find("const RELIABILITY_NODES = [")
+        reliability_end = js.find("const RELIABILITY_NODE_BY_ID", reliability_start)
+        self.assertGreater(reliability_end, reliability_start, "RELIABILITY_NODES block not found")
+        reliability_section = js[reliability_start:reliability_end]
+        probability_node_ids = set(re.findall(r'id:\s*"([a-z0-9_]+)"', reliability_section))
+
+        self.assertEqual(
+            svg_node_ids,
+            probability_node_ids,
+            "Normal-operation probability coverage must match every visible SVG data-node.",
         )
 
     def test_preset_buttons_match_js_preset_keys(self):
