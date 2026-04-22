@@ -75,6 +75,20 @@
           SW1 (ATLTLA) 闭合窗：−6.2° ~ −1.4° · SW2 (APWTLA) 闭合窗：−9.8° ~ −5°<br>
           FADEC Deploy 阈值：TRA &lt; −11.74° · Stow 阈值：TRA ≥ 0°
         </div>
+        <div class="lever-switch-hint" aria-hidden="true">
+          TRA 窗口提示：SW1 <span id="etras-sw1-hint-window">off</span> · SW2 <span id="etras-sw2-hint-window">off</span>
+          <br><em>（实际 snapshot 的 SW1/SW2 来自下方显式开关 — 反映状态机必须先走过这些闭合阶段才能推到 deploy/stow）</em>
+        </div>
+        <div class="condition-check-inline lever-switch-toggles">
+          <label class="condition-check">
+            <input type="checkbox" id="etras-atltla">
+            <span>atltla · SW1 显式置位</span>
+          </label>
+          <label class="condition-check">
+            <input type="checkbox" id="etras-apwtla">
+            <span>apwtla · SW2 显式置位</span>
+          </label>
+        </div>
       </section>
 
       <!-- Condition Panel (key binary flags + N1K) -->
@@ -88,7 +102,7 @@
             <span class="condition-label">N1K (风扇转速 %)</span>
             <span class="condition-value" id="etras-n1k-value">35%</span>
             <input type="range" id="etras-n1k" min="0" max="110" step="1" value="35" aria-label="N1K 风扇转速百分比">
-            <div class="condition-hint">Deploy 限值：≤ 84% · Stow 限值：≤ 72%</div>
+            <div class="condition-hint">Deploy 限值：&lt; 84% · Stow 限值：&lt; 30% (adapter MAX_N1K_STOW_LIMIT_PERCENT)</div>
           </label>
         </div>
 
@@ -289,7 +303,7 @@
         <h2 id="hud-heading" class="panel-title">
           <span class="presenter-callout">[HUD]</span> 中间信号 + 计时诊断
         </h2>
-        <div class="hud-grid">
+        <dl class="hud-grid">
           <div class="hud-row">
             <dt>mlg_wow (selected)</dt>
             <dd id="hud-mlg-wow">—</dd>
@@ -330,7 +344,7 @@
             <dt>过温 / 抑制</dt>
             <dd id="hud-faults">—</dd>
           </div>
-        </div>
+        </dl>
       </section>
 
       <!-- Logic Chain SVG -->
@@ -339,7 +353,7 @@
           <span class="presenter-callout">[链路]</span> E-TRAS 逻辑链路（信号流）
         </h2>
         <div class="chain-scroll">
-          <svg id="etras-logic-chain" viewBox="0 0 960 420" width="100%" role="img" aria-label="C919 E-TRAS 逻辑链路图">
+          <svg id="etras-logic-chain" viewBox="0 0 960 480" width="100%" role="img" aria-label="C919 E-TRAS 逻辑链路图">
             <defs>
               <marker id="etras-arr-active" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
                 <path d="M0,0 L7,3.5 L0,7 Z" fill="#00e5a0"/>
@@ -403,6 +417,13 @@
               <rect x="10" y="196" width="160" height="28" rx="3"/>
               <text x="90" y="214" text-anchor="middle">apwtla (SW2)</text>
             </g>
+
+            <!-- e_tras_over_temp_fault → TR_Command3_Enable (inhibit input) -->
+            <g class="chain-node" data-node="e_tras_over_temp_fault">
+              <rect x="10" y="232" width="160" height="28" rx="3"/>
+              <text x="90" y="250" text-anchor="middle">e_tras_over_temp_fault</text>
+            </g>
+            <line x1="170" y1="246" x2="500" y2="270" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
 
             <g class="chain-logic" data-node="ln_eicu_cmd3">
               <rect x="500" y="180" width="170" height="38" rx="4"/>
@@ -476,6 +497,14 @@
               <text x="850" y="400" text-anchor="middle" class="output-sub">(收起指令)</text>
             </g>
             <line x1="170" y1="138" x2="500" y2="395" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+
+            <!-- ROW 8: engine_running gates both FADEC commands -->
+            <g class="chain-node" data-node="engine_running">
+              <rect x="10" y="420" width="160" height="28" rx="3"/>
+              <text x="90" y="438" text-anchor="middle">engine_running</text>
+            </g>
+            <line x1="170" y1="434" x2="500" y2="350" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+            <line x1="170" y1="434" x2="500" y2="400" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
 
           </svg>
         </div>

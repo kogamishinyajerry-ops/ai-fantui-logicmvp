@@ -46,6 +46,8 @@
     stowedConfirm:       $("etras-stowed-confirm"),
     prevCmd3:            $("etras-prev-cmd3"),
     trWow:               $("etras-tr-wow"),
+    atltla:              $("etras-atltla"),
+    apwtla:              $("etras-apwtla"),
   };
 
   // ═══════════ Output DOM references ═══════════
@@ -107,6 +109,8 @@
     { id: "lock_state", kind: "INPUT", label: "lock_state · 锁聚合", normalProbability: 0.9990 },
     { id: "ln_tr_command3_enable", kind: "LOGIC", label: "TR_Command3_Enable", normalProbability: 0.9990 },
     { id: "tr_command3_enable", kind: "OUTPUT", label: "tr_command3_enable", normalProbability: 0.9990 },
+    { id: "e_tras_over_temp_fault", kind: "INPUT", label: "e_tras_over_temp_fault · 过温抑制", normalProbability: 0.9990 },
+    { id: "engine_running", kind: "INPUT", label: "engine_running · 发动机运行", normalProbability: 0.9990 },
     { id: "n1k_percent", kind: "INPUT", label: "n1k_percent · 转速", normalProbability: 0.9990 },
     { id: "tr_position_percent", kind: "INPUT", label: "tr_position_percent · VDT", normalProbability: 0.9990 },
     { id: "ln_fadec_deploy_command", kind: "LOGIC", label: "FADEC_Deploy · 展开命令", normalProbability: 0.9990 },
@@ -150,8 +154,8 @@
       right_pylon_ls_a_unlocked:  checked(inputs.rightPylonAUnlocked),
       right_pylon_ls_b_valid:     true,
       right_pylon_ls_b_unlocked:  checked(inputs.rightPylonBUnlocked),
-      apwtla:                     computeApwtla(numValue(inputs.tra, 0)),
-      atltla:                     computeAtltla(numValue(inputs.tra, 0)),
+      apwtla:                     checked(inputs.apwtla),
+      atltla:                     checked(inputs.atltla),
       vdt_sensor_valid:           checked(inputs.vdtValid),
       e_tras_over_temp_fault:     checked(inputs.overTempFault),
       trcu_power_on:              checked(inputs.trcuPowerOn),
@@ -163,11 +167,6 @@
       tr_stowed_locked_confirm_s: numValue(inputs.stowedConfirm, 2),
     };
   }
-
-  // SW1: ATLTLA closes when TRA ∈ [-6.2, -1.4]
-  function computeAtltla(tra) { return tra <= -1.4 && tra >= -6.2; }
-  // SW2: APWTLA closes when TRA ∈ [-9.8, -5.0]
-  function computeApwtla(tra) { return tra <= -5.0 && tra >= -9.8; }
 
   function zoneFromTra(tra) {
     if (tra <= -25)   return ["max-rev",  "MAX REV"];
@@ -406,6 +405,8 @@
         setChecked(inputs.rightPylonAUnlocked, false);
         setChecked(inputs.rightPylonBUnlocked, false);
         setChecked(inputs.prevCmd3, false);
+        setChecked(inputs.atltla, false);
+        setChecked(inputs.apwtla, false);
         setNumber(inputs.comm2Timer, 0);
         setNumber(inputs.unlockConfirm, 0);
         setNumber(inputs.deployedConfirm, 0);
@@ -419,6 +420,9 @@
         setSlider(inputs.tra, -25.0);
         setSlider(inputs.n1k, 60);
         setSlider(inputs.trPosition, 85);
+        // SW1/SW2 latched during lever sweep through the closing windows
+        setChecked(inputs.atltla, true);
+        setChecked(inputs.apwtla, true);
         // Unlocks propagated
         setChecked(inputs.tlsAUnlocked, true);
         setChecked(inputs.tlsBUnlocked, true);
@@ -450,9 +454,13 @@
       apply: () => {
         presets["nominal-stowed"].apply();
         setSlider(inputs.tra, 0);
-        setSlider(inputs.n1k, 45);
+        // n1k must be < 30% (adapter MAX_N1K_STOW_LIMIT_PERCENT) for stow path
+        setSlider(inputs.n1k, 25);
         setSlider(inputs.trPosition, 30);  // mid-stow
         setChecked(inputs.prevCmd3, true);
+        // SW1/SW2 reset on the return — stow path doesn't gate on them
+        setChecked(inputs.atltla, false);
+        setChecked(inputs.apwtla, false);
         setChecked(inputs.tlsAUnlocked, true);
         setChecked(inputs.tlsBUnlocked, true);
         setChecked(inputs.plsALocked, false);
@@ -477,6 +485,10 @@
         presets["nominal-stowed"].apply();
         setSlider(inputs.tra, -15.0);
         setSlider(inputs.n1k, 60);
+        // Lever swept past both SW windows — switches latched true
+        setChecked(inputs.atltla, true);
+        setChecked(inputs.apwtla, true);
+        setChecked(inputs.prevCmd3, true);
         // Partial unlock — TLS yes but pylons still locked
         setChecked(inputs.tlsAUnlocked, true);
         setChecked(inputs.tlsBUnlocked, true);

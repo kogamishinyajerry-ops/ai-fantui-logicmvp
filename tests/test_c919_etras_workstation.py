@@ -104,6 +104,48 @@ class C919EtrasWorkstationStaticTests(unittest.TestCase):
         self.assertIn("function seededRandom(seed)", js)
         self.assertNotIn('"/api/monte-carlo/run"', js)
 
+    def test_workstation_js_uses_explicit_sw1_sw2_inputs(self):
+        """SW1/SW2 must come from explicit DOM checkboxes, not auto-derived from TRA.
+
+        Reason: adapter requires explicit atltla/apwtla snapshot fields. Auto-deriving
+        them from TRA bypasses the latch semantics — once SW1/SW2 close during the
+        lever sweep they stay set, and the adapter consumes the latched state directly.
+        Codex C-7 BUG#1/#2 caught this; the regression check guards against revival.
+        """
+        js = WORKSTATION_JS.read_text(encoding="utf-8")
+        self.assertIn('atltla:              $("etras-atltla"),', js,
+                      "atltla input ref missing from `inputs` object")
+        self.assertIn('apwtla:              $("etras-apwtla"),', js,
+                      "apwtla input ref missing from `inputs` object")
+        self.assertIn("apwtla:                     checked(inputs.apwtla),", js,
+                      "buildSnapshot must read apwtla from inputs.apwtla")
+        self.assertIn("atltla:                     checked(inputs.atltla),", js,
+                      "buildSnapshot must read atltla from inputs.atltla")
+        self.assertNotIn("computeAtltla", js,
+                         "auto-derive helper computeAtltla must be removed")
+        self.assertNotIn("computeApwtla", js,
+                         "auto-derive helper computeApwtla must be removed")
+
+    def test_workstation_js_reliability_loop_uses_continue_not_return(self):
+        """Monte Carlo trial loop must use `continue` on success, not `return`.
+
+        Reason: Codex C-7 BUG#4 — early `return` exited the whole simulation on the
+        first successful trial, producing successCount=1 / failureCount=nTrials-1.
+        Loop body MUST iterate all trials.
+        """
+        js = WORKSTATION_JS.read_text(encoding="utf-8")
+        loop_start = js.find("for (let runIndex = 1; runIndex <= nTrials")
+        self.assertGreater(loop_start, 0, "reliability trial loop not found")
+        # Find the success branch — `if (!failedNodeIds.length)` block
+        success_branch_start = js.find("if (!failedNodeIds.length)", loop_start)
+        self.assertGreater(success_branch_start, loop_start, "success branch not found")
+        # Look at next ~120 chars after success_branch_start; must contain `continue`, not `return`
+        success_block = js[success_branch_start:success_branch_start + 200]
+        self.assertIn("continue", success_block,
+                      "success branch must continue to next trial, not return")
+        self.assertNotIn("return;", success_block,
+                         "success branch must NOT early-return — bug regression")
+
     def test_workstation_svg_data_nodes_subset_of_adapter_spec(self):
         """Every data-node in the chain SVG ⊂ adapter spec components ∪ logic_nodes.
 
@@ -261,6 +303,130 @@ class C919EtrasWorkstationServerTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
             thread.join(timeout=2)
+
+
+class C919EtrasWorkstationPresetAdapterIntegrationTests(unittest.TestCase):
+    """Integration: each JS preset's snapshot reaches the documented adapter outcome.
+
+    Mirrors the JS preset definitions in c919_etras_workstation.js. If a preset is
+    edited, this test must be updated. Catches the regression Codex C-7 found:
+    presets that auto-derived atltla/apwtla from TRA appeared to work in the smoke
+    test (which hardcoded both true) but failed in real preset-driven flows.
+    """
+
+    # Baseline matches the JS `nominal-stowed` preset.
+    NOMINAL_STOWED_SNAPSHOT = {
+        "tra_deg": 0.0,
+        "n1k_percent": 35.0,
+        "engine_running": True,
+        "tr_inhibited": False,
+        "lgcu1_mlg_wow_value": True, "lgcu1_mlg_wow_valid": True,
+        "lgcu2_mlg_wow_value": True, "lgcu2_mlg_wow_valid": True,
+        "tr_wow": True,
+        "tls_ls_a_valid": True, "tls_ls_a_unlocked": False,
+        "tls_ls_b_valid": True, "tls_ls_b_unlocked": False,
+        "pls_ls_a_locked": True, "pls_ls_b_locked": True,
+        "left_pylon_ls_a_valid": True, "left_pylon_ls_a_unlocked": False,
+        "left_pylon_ls_b_valid": True, "left_pylon_ls_b_unlocked": False,
+        "right_pylon_ls_a_valid": True, "right_pylon_ls_a_unlocked": False,
+        "right_pylon_ls_b_valid": True, "right_pylon_ls_b_unlocked": False,
+        "apwtla": False, "atltla": False,
+        "vdt_sensor_valid": True,
+        "e_tras_over_temp_fault": False,
+        "trcu_power_on": True,
+        "tr_position_percent": 0.0,
+        "prev_eicu_cmd3": False,
+        "comm2_timer_s": 0.0,
+        "lock_unlock_confirm_s": 0.0,
+        "tr_position_deployed_confirm_s": 0.0,
+        "tr_stowed_locked_confirm_s": 2.0,
+    }
+
+    def _post_snapshot(self, snapshot: dict) -> dict:
+        server, thread = _start_server()
+        try:
+            port = server.server_port
+            status, payload = _http_post_json(port, "/api/system-snapshot", {
+                "system_id": "c919-etras",
+                "snapshot": snapshot,
+            })
+            self.assertEqual(status, 200, f"snapshot POST returned {status}")
+            return payload["truth_evaluation"]
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+    def test_preset_landing_deploy_reaches_completion(self):
+        snap = dict(self.NOMINAL_STOWED_SNAPSHOT)
+        snap.update({
+            "tra_deg": -25.0,
+            "n1k_percent": 60.0,
+            "tr_position_percent": 85.0,
+            "atltla": True, "apwtla": True,
+            "tls_ls_a_unlocked": True, "tls_ls_b_unlocked": True,
+            "pls_ls_a_locked": False, "pls_ls_b_locked": False,
+            "left_pylon_ls_a_unlocked": True, "left_pylon_ls_b_unlocked": True,
+            "right_pylon_ls_a_unlocked": True, "right_pylon_ls_b_unlocked": True,
+            "comm2_timer_s": 1.0,
+            "lock_unlock_confirm_s": 0.5,
+            "tr_position_deployed_confirm_s": 0.5,
+            "tr_stowed_locked_confirm_s": 0.0,
+            "prev_eicu_cmd3": True,
+        })
+        evaluation = self._post_snapshot(snap)
+        active = set(evaluation.get("active_logic_node_ids", []))
+        self.assertEqual(
+            active,
+            {"ln_eicu_cmd2", "ln_eicu_cmd3", "ln_tr_command3_enable", "ln_fadec_deploy_command"},
+            "landing-deploy preset must light all 4 deploy logic nodes",
+        )
+        self.assertTrue(evaluation.get("completion_reached"))
+        asserted = evaluation.get("asserted_component_values", {})
+        self.assertTrue(asserted.get("fadec_deploy_command"))
+        self.assertFalse(asserted.get("fadec_stow_command"))
+
+    def test_preset_stow_return_reaches_stow_command(self):
+        """stow-return: n1k=25 (< adapter MAX_N1K_STOW_LIMIT_PERCENT=30) is required."""
+        snap = dict(self.NOMINAL_STOWED_SNAPSHOT)
+        snap.update({
+            "tra_deg": 0.0,
+            "n1k_percent": 25.0,
+            "tr_position_percent": 30.0,
+            "atltla": False, "apwtla": False,
+            "tls_ls_a_unlocked": True, "tls_ls_b_unlocked": True,
+            "pls_ls_a_locked": False, "pls_ls_b_locked": False,
+            "left_pylon_ls_a_unlocked": True, "left_pylon_ls_b_unlocked": True,
+            "right_pylon_ls_a_unlocked": True, "right_pylon_ls_b_unlocked": True,
+            "prev_eicu_cmd3": True,
+            "tr_stowed_locked_confirm_s": 0.0,
+        })
+        evaluation = self._post_snapshot(snap)
+        asserted = evaluation.get("asserted_component_values", {})
+        self.assertTrue(
+            asserted.get("fadec_stow_command"),
+            "stow-return preset must trigger fadec_stow_command (n1k must be < 30%)",
+        )
+
+    def test_preset_stow_return_blocked_when_n1k_exceeds_stow_limit(self):
+        """Old stow-return value (n1k=45) must NOT trigger stow command — adapter limit is 30%."""
+        snap = dict(self.NOMINAL_STOWED_SNAPSHOT)
+        snap.update({
+            "tra_deg": 0.0,
+            "n1k_percent": 45.0,  # the buggy value Codex C-7 BUG#3 flagged
+            "tr_position_percent": 30.0,
+            "tls_ls_a_unlocked": True, "tls_ls_b_unlocked": True,
+            "pls_ls_a_locked": False, "pls_ls_b_locked": False,
+            "left_pylon_ls_a_unlocked": True, "left_pylon_ls_b_unlocked": True,
+            "right_pylon_ls_a_unlocked": True, "right_pylon_ls_b_unlocked": True,
+            "prev_eicu_cmd3": True,
+        })
+        evaluation = self._post_snapshot(snap)
+        asserted = evaluation.get("asserted_component_values", {})
+        self.assertFalse(
+            asserted.get("fadec_stow_command"),
+            "n1k=45% must NOT pass stow gate — confirms adapter MAX_N1K_STOW_LIMIT_PERCENT=30",
+        )
 
 
 if __name__ == "__main__":
