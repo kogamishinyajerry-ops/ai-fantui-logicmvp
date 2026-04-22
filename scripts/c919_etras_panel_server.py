@@ -146,6 +146,8 @@ class Handler(BaseHTTPRequestHandler):
                 "tra_idle_reverse_deg": _config.tra_idle_reverse_deg,
                 "tra_stow_threshold_deg": _config.tra_stow_threshold_deg,
             })
+        elif path in ("/circuit", "/circuit.html"):
+            self._serve_file(STATIC / "circuit.html", "text/html; charset=utf-8")
         else:
             self._404()
 

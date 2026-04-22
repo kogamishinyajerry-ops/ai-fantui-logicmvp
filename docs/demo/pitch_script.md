@@ -134,7 +134,7 @@
 
 **技术锚点：**
 - 切换命令：`LLM_BACKEND=ollama` + `OLLAMA_MODEL=qwen2.5:7b-instruct`
-- P21 adapter：`src/well_harness/llm_client.py`（Protocol + MiniMax + Ollama + factory）
+- P21 adapter：`archive/shelved/llm-features/src/llm_client.py`（Protocol + MiniMax + Ollama + factory）
 - 候选清单：`config/llm/local_model_candidates.yaml`
 - 真跑证据：`runs/local_model_smoke_20260418T072226Z/report.json`（7B 3/3 PASS, 4.2–5.4s）
 - 双后端真跑：`runs/demo_rehearsal_dual_backend_20260418T074215Z/report.json`（14/14 PASS）
