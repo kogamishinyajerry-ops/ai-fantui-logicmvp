@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: demo.html SVG wire clarity iter-7→iter-9 APPROVED by Codex (code review + dual-role) · main=4189198 pushed
-last_updated: "2026-04-23T18:00:00.000Z"
+status: demo-ui bug fixes (VDT slider coupling · landing-deploy preset) APPROVED by Codex · main=daca0cf pushed
+last_updated: "2026-04-23T18:30:00.000Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 43
   completed_phases: 42
   total_plans: 2
   completed_plans: 1
-  notes: "demo.html L3 off-page stub notation finalized at iter-9 · both Codex reviews APPROVE · no P0/P1/P2 blockers"
+  notes: "iter-9 L3 off-page stubs + two user-reported UI bugs (VDT/feedback_mode silent coupling + landing-deploy L1 red) fixed and Codex APPROVED"
 ---
 
 # State
@@ -35,6 +35,18 @@ Last activity: 2026-04-23
 - No P0/P1/P2 blockers; single P3 observation (TLS→L3 feedback line ~3.2px from engine stub, not blocking at current browser size)
 - L3 engineering semantics preserved: `controller.py:69` independent checks unchanged
 - `pytest -q tests/test_controller.py -k 'logic3 or logic4'` 6 passed
+
+### 2026-04-23 — Demo UI bug fixes (user-reported)
+
+**Bug 1: VDT slider silently ignored in auto_scrubber mode**
+- Root cause: `auto_scrubber` uses plant-simulated VDT driven by `pdu_motor_cmd`, ignoring `deploy_position_percent` from the request. User dragging VDT to 95% had zero effect on L4, but clicking the "着陆展开全链路" preset first worked because it switched to `manual_feedback_override`.
+- Fix (`f007483` → `daca0cf`): disable the VDT slider in `auto_scrubber` + dynamic hint; `renderLeverHud` now uses `data.hud.deploy_position_percent` (backend-authoritative) instead of the request value; preserve slider state across mode toggles.
+
+**Bug 2: L1 red under "着陆展开全链路" preset**
+- Root cause: original preset set VDT=95, which flips `reverser_not_deployed_eec` to False and correctly fails L1's `!DEP` interlock — but that contradicts the "full chain active" framing.
+- Fix (`f007483`): landing-deploy now VDT=0 (deployment-in-progress: L1+L2+L3 active, L4 pending on VDT90); max-reverse relabeled "展开到位" with TRA=-31.5 (avoids exclusive lower bound) + VDT=100 (post-deploy: L1 correctly blocked, L4 active).
+
+**Codex reviews**: P2 found on `f007483` (hard-reset slider discarded user state + stale readout) → fixed in `daca0cf` → **APPROVE** with no new findings. 725 tests pass.
 
 ---
 
