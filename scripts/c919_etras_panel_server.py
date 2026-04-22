@@ -26,6 +26,9 @@ from well_harness.adapters.c919_etras_frozen_v1.cmd3_latch_controller import Cmd
 
 PORT = 9191
 STATIC = _REPO_ROOT / "src" / "well_harness" / "static" / "c919_etras_panel"
+# Phase UI-F (2026-04-22): shared unified-nav.css lives in parent static dir,
+# served from /unified-nav.css on this server so panel pages can `<link>` it.
+SHARED_STATIC_ROOT = _REPO_ROOT / "src" / "well_harness" / "static"
 
 _config = FrozenConfig()
 _logger = TelemetryLogger()
@@ -148,6 +151,10 @@ class Handler(BaseHTTPRequestHandler):
             })
         elif path in ("/circuit", "/circuit.html"):
             self._serve_file(STATIC / "circuit.html", "text/html; charset=utf-8")
+        elif path == "/unified-nav.css":
+            # Serve shared unified-nav styles from parent static dir so pages
+            # on this port can link to /unified-nav.css like pages on :8002.
+            self._serve_file(SHARED_STATIC_ROOT / "unified-nav.css", "text/css; charset=utf-8")
         else:
             self._404()
 

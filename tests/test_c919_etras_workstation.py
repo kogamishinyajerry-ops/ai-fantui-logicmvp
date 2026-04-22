@@ -246,11 +246,12 @@ class C919EtrasWorkstationStaticTests(unittest.TestCase):
         )
 
     def test_demo_html_links_to_workstation(self):
-        """demo.html 其他入口 should include a link to the new workstation."""
+        """demo.html unified nav should include a link to the E-TRAS workstation."""
         demo_html_path = STATIC_DIR / "demo.html"
         demo_html = demo_html_path.read_text(encoding="utf-8")
         self.assertIn("/c919_etras_workstation.html", demo_html)
-        self.assertIn("C919 E-TRAS 逻辑工作台", demo_html)
+        # Phase UI-D (2026-04-22): unified nav uses "C919 E-TRAS" (not 逻辑工作台).
+        self.assertIn("C919 E-TRAS", demo_html)
 
 
 class C919EtrasWorkstationServerTests(unittest.TestCase):

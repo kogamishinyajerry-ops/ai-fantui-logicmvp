@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>C919 E-TRAS 控制逻辑电路图</title>
+<link rel="stylesheet" href="/unified-nav.css">
 <style>
   :root {
     --bg:     #0a0e14;
@@ -82,7 +83,28 @@
   .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 </style>
 </head>
-<body>
+<body class="unified-nav-enabled" data-nav-current="etras-circuit">
+
+<header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
+  <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">工作台</span>
+      <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">反推逻辑</a>
+      <a href="/c919_etras_workstation.html" class="unified-nav-link" data-nav-key="etras">C919 E-TRAS</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">电路图</span>
+      <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
+      <a href="/c919_etras_panel/circuit.html" class="unified-nav-link" data-nav-key="etras-circuit" data-current="true">E-TRAS 电路</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">仿真</span>
+      <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
+    </div>
+  </div>
+</header>
+
 
 <header>
   <div>

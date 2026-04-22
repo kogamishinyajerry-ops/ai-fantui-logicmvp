@@ -110,11 +110,30 @@ html, body {
   grid-template-columns: 420px 1fr;
   gap: 18px;
   margin-top: 18px;
+  align-items: start;
 }
 
 @media (max-width: 1120px) {
   .etras-layout {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Phase UI-E (2026-04-22): right column follows scroll so HUD + chain SVG
+ * + output cards stay visible while user works in the tall left input column.
+ * Offset by unified-nav height (48px) + 14px breathing room. */
+.etras-outputs {
+  position: sticky;
+  top: 62px;
+  max-height: calc(100vh - 78px);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+@media (max-width: 1120px) {
+  .etras-outputs {
+    position: static;
+    max-height: none;
+    overflow: visible;
   }
 }
 

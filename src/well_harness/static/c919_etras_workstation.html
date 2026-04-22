@@ -7,9 +7,30 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
   <link rel="stylesheet" href="/design-tokens.css">
+  <link rel="stylesheet" href="/unified-nav.css">
   <link rel="stylesheet" href="/c919_etras_workstation.css">
 </head>
-<body data-system="c919-etras">
+<body class="unified-nav-enabled" data-system="c919-etras" data-nav-current="etras">
+
+<header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
+  <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">工作台</span>
+      <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">反推逻辑</a>
+      <a href="/c919_etras_workstation.html" class="unified-nav-link" data-nav-key="etras" data-current="true">C919 E-TRAS</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">电路图</span>
+      <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
+      <a href="/c919_etras_panel/circuit.html" class="unified-nav-link" data-nav-key="etras-circuit">E-TRAS 电路</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">仿真</span>
+      <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
+    </div>
+  </div>
+</header>
 
 <header class="etras-header">
   <div class="etras-header-inner">
@@ -20,13 +41,6 @@
     <div class="etras-header-meta">
       <span class="etras-badge">FROZEN V1.0</span>
       <span class="etras-scope-note">控制器真值源：<code>src/well_harness/adapters/c919_etras_adapter.py</code></span>
-      <nav class="etras-nav" aria-label="其他入口">
-        <a href="/demo.html">← 反推逻辑演示舱</a>
-        <span aria-hidden="true">|</span>
-        <a href="http://localhost:9191/" target="_blank" rel="noopener">C919 仿真面板 :9191 ↗</a>
-        <span aria-hidden="true">|</span>
-        <a href="http://localhost:9191/circuit" target="_blank" rel="noopener">C919 电路图 ↗</a>
-      </nav>
     </div>
   </div>
 </header>

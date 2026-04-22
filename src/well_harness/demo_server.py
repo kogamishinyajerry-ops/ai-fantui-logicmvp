@@ -453,7 +453,15 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
     def _serve_static(self, relative_path: str):
         static_root = STATIC_DIR.resolve()
         target_path = (static_root / relative_path).resolve()
-        if target_path.parent != static_root or not target_path.is_file():
+        # Path must live inside static_root (traversal guard) and exist as a file.
+        # Phase UI-F (2026-04-22): allow nested static paths like
+        # /c919_etras_panel/circuit.html so the unified-nav can link to them.
+        try:
+            target_path.relative_to(static_root)
+        except ValueError:
+            self._send_json(404, {"error": "not_found"})
+            return
+        if not target_path.is_file():
             self._send_json(404, {"error": "not_found"})
             return
 
@@ -840,23 +848,6 @@ def default_workbench_archive_root() -> Path:
 
 def reference_workbench_packet_payload() -> dict:
     return json.loads(REFERENCE_PACKET_PATH.read_text(encoding="utf-8"))
-
-
-def _latest_run_dir(prefix: str, runs_dir: Path | None = None) -> Path | None:
-    root = runs_dir or RUNS_DIR
-    if not root.exists():
-        return None
-    candidates = sorted(
-        (path for path in root.iterdir() if path.is_dir() and path.name.startswith(prefix)),
-        key=lambda path: path.name,
-        reverse=True,
-    )
-    return candidates[0] if candidates else None
-
-
-def _parse_run_timestamp(dirname: str) -> str:
-    match = re.search(r"(\d{8}T\d{6}Z)$", dirname)
-    return match.group(1) if match else ""
 
 
 def build_explain_runtime_payload() -> dict[str, Any]:
