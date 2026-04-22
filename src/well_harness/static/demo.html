@@ -367,32 +367,30 @@
 
             <!-- ═════════════════════════════════════════════════════════════════════
                  WIRES — Simulink-style orthogonal routing.
-                 Lane x values: 230/234/238 (inputs→logic), 460 (logic→intermediate),
-                                465 (L3 fanout trunk), 690 (intermediate→output/L4).
-                 Backward feedback wire (TLS→L3) routed through TOP lane
-                 (y=26/30) around the main grid.
+                 Lane x values: 226 (rev_inh fault bus), 230/232/234/238/240
+                   (inputs→logic1/2), 246 (TLS feedback top lane y=28),
+                   460 (logic→intermediate), 465 (L3 fanout trunk),
+                   690 (intermediate→output/L4).
+                 ENG/GND→L3 use off-page stub notation (x=241, y=278/282):
+                   n1k@y=270 (x=230-260) and eec@x=240 (y=200-284) block full routing.
             ═════════════════════════════════════════════════════════════════════ -->
 
             <!-- Wires — each carries data-src / data-dst so JS colors them based
                  on endpoint states. data-fault="true" marks fault wires that turn
                  RED when their source is asserted TRUE. -->
 
-            <!-- sw1 / radio_altitude_ft → L1; aircraft_on_ground → L2 and also L3 (independent check) -->
+            <!-- sw1 / radio_altitude_ft → L1; aircraft_on_ground → L2 -->
             <path d="M 170 54 H 232 V 78 H 260" class="chain-wire" data-src="sw1" data-dst="logic1" marker-end="url(#fan-arr-idle)"/>
             <path d="M 170 90 H 238 V 184 H 260" class="chain-wire" data-src="aircraft_on_ground" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
-            <path d="M 238 184 H 244 V 282 H 260" class="chain-wire" data-src="aircraft_on_ground" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
-            <circle cx="238" cy="184" r="3" class="chain-junction" data-src="aircraft_on_ground"/>
             <path d="M 170 126 H 232 V 98 H 260" class="chain-wire" data-src="radio_altitude_ft" data-dst="logic1" marker-end="url(#fan-arr-idle)"/>
 
             <!-- L1 → tls115 → tls_unlocked (sensor sequence) -->
             <path d="M 420 89 H 460 V 70 H 500" class="chain-wire" data-src="logic1" data-dst="tls115" marker-end="url(#fan-arr-idle)"/>
             <path d="M 580 84 V 92" class="chain-wire" data-src="tls115" data-dst="tls_unlocked" marker-end="url(#fan-arr-idle)"/>
 
-            <!-- sw2 / engine_running → L2; engine_running also fans out to L3 (L3 checks it independently) -->
+            <!-- sw2 / engine_running → L2 -->
             <path d="M 170 170 H 234 V 180 H 260" class="chain-wire" data-src="sw2" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
             <path d="M 170 206 H 234 V 196 H 260" class="chain-wire" data-src="engine_running" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
-            <path d="M 234 206 H 242 V 278 H 260" class="chain-wire" data-src="engine_running" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
-            <circle cx="234" cy="206" r="3" class="chain-junction" data-src="engine_running"/>
             <!-- tls_unlocked → L3 (backward feedback through top lane) -->
             <path d="M 660 106 H 702 V 28 H 246 V 276 H 260" class="chain-wire" data-src="tls_unlocked" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
 
@@ -402,6 +400,11 @@
             <!-- n1k → L3; eec_enable → L2 -->
             <path d="M 170 248 H 230 V 270 H 260" class="chain-wire" data-src="n1k" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
             <path d="M 170 284 H 240 V 200 H 260" class="chain-wire" data-src="eec_enable" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
+            <!-- engine_running / aircraft_on_ground → L3 (off-page stub notation).
+                 Full routing blocked by n1k@y=270 (x=230-260) and eec@x=240 (y=200-284).
+                 Stubs start x=241 (past eec vertical) at y=278/282 (past TLS end y=276). -->
+            <path d="M 241 278 H 260" class="chain-wire" data-src="engine_running" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 241 282 H 260" class="chain-wire" data-src="aircraft_on_ground" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
             <!-- reverser_inhibited fault bus (x=226 trunk): L1/L2/L3 all require !INH -->
             <path d="M 170 320 H 226 V 88 H 260" class="chain-wire" data-src="reverser_inhibited" data-dst="logic1" data-fault="true" marker-end="url(#fan-arr-idle)"/>
             <path d="M 226 188 H 260" class="chain-wire" data-src="reverser_inhibited" data-dst="logic2" data-fault="true" marker-end="url(#fan-arr-idle)"/>
