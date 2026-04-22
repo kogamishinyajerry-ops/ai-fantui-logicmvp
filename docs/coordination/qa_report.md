@@ -3,17 +3,17 @@
 <!-- AUTO-SYNCED QA REPORT SNAPSHOT START -->
 ## 当前自动同步 QA 基线
 
-- 结论：PASS；当前稳定基线由本地实测 + GitHub Actions 证据支撑。
-- 当前阶段：`P43 Control Logic Workbench end-to-end milestone — P43-03 DONE · P43-04 pending`
+- 结论：PASS；当前稳定基线由 GitHub-backed validation evidence 支撑。
+- 当前阶段：`P43 Control Logic Workbench end-to-end milestone`
 - 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`local PASS · main@5b85f2b · 726 passed 12 xpassed · 24/24 checks · GitHub Actions run #24785138908 全绿`
-- 当前 Gate：`GATE-P43-02-BATCH-CLOSURE pending`
+- 最近成功执行证据：`P43-03 governance closure: CI fix + SoT alignment + README reposition`
+- 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
-- Open Gap 数量：`0（待 CI notion-sync 回写后以 Notion DB 为准）`
-- 当前证据模式：`repo-doc snapshot（2026-04-22 治理收口）`
-- 证据模式说明：ROADMAP.md P43 Active 前缀已修正，解析器正确识别 P43；CI validation 全绿（GitHub Actions run #24785138908）。下次 CI notion-sync 成功后将由自动同步覆盖。
-- 当前 QA 摘要：`PASS. 726 passed, 12 xpassed, 27 deselected (e2e opt-in) · validation suite 24/24 · main@5b85f2b`
-- 当前运行摘要：`治理收口全绿：CI workflow fix + ROADMAP Active fix + SoT 对齐 + README 重定位 + GitHub Actions 三 job pass。`
+- Open Gap 数量：`0`
+- 当前证据模式：`active-page degraded mode`
+- 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
+- 当前 QA 摘要：`PASS. 24/24 shared validation checks pass.`
+- 当前运行摘要：`24/24 shared validation checks pass.`
 
 ## 当前执行规则
 
