@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C919 E-TRAS 逻辑控制工作台</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
+  <link rel="stylesheet" href="/design-tokens.css">
+  <link rel="stylesheet" href="/c919_etras_workstation.css">
+</head>
+<body data-system="c919-etras">
+
+<header class="etras-header">
+  <div class="etras-header-inner">
+    <div class="etras-title">
+      <h1>C919 E-TRAS 逻辑控制工作台</h1>
+      <div class="etras-subtitle">Electric Thrust Reverser Actuation System · Frozen V1.0</div>
+    </div>
+    <div class="etras-header-meta">
+      <span class="etras-badge">FROZEN V1.0</span>
+      <span class="etras-scope-note">控制器真值源：<code>src/well_harness/adapters/c919_etras_adapter.py</code></span>
+      <nav class="etras-nav" aria-label="其他入口">
+        <a href="/demo.html">← 反推逻辑演示舱</a>
+        <span aria-hidden="true">|</span>
+        <a href="http://localhost:9191/" target="_blank" rel="noopener">C919 仿真面板 :9191 ↗</a>
+        <span aria-hidden="true">|</span>
+        <a href="http://localhost:9191/circuit" target="_blank" rel="noopener">C919 电路图 ↗</a>
+      </nav>
+    </div>
+  </div>
+</header>
+
+<main class="etras-main">
+
+  <!-- ════════════════════════════════════════════════════════════════
+       STATUS BANNER — overall E-TRAS chain summary
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="etras-status-banner panel" id="etras-status-banner" aria-live="polite">
+    <div class="etras-status-badge" id="etras-status-badge" data-state="idle">IDLE</div>
+    <div class="etras-status-text">
+      <div class="etras-status-line" id="etras-status-summary">初始状态：地面停机、反推收起上锁、发动机怠速、所有锁已闭合。拖动油门或切换下方条件观察逻辑链路激活。</div>
+      <div class="etras-status-sub" id="etras-status-sub">完成状态：<span id="etras-completion-flag">等待输入</span></div>
+    </div>
+  </section>
+
+  <div class="etras-layout">
+
+    <!-- ════════════════════════════════════════════════════════════
+         LEFT COLUMN — INPUTS (lever + conditions)
+    ════════════════════════════════════════════════════════════ -->
+    <aside class="etras-inputs">
+
+      <!-- Lever Panel -->
+      <section class="panel etras-lever-panel" aria-labelledby="lever-heading">
+        <h2 id="lever-heading" class="panel-title">
+          <span class="presenter-callout">[输入]</span> 油门拉杆 (TRA)
+        </h2>
+        <div class="lever-hud">
+          <span class="lever-value-label">TRA：</span>
+          <span class="lever-value" id="etras-tra-value">0.0°</span>
+          <span class="lever-zone" id="etras-tra-zone" data-zone="fwd">FWD IDLE</span>
+        </div>
+        <input type="range" id="etras-tra-lever"
+               min="-32" max="10" step="0.1" value="0.0"
+               aria-label="油门角度 -32° 到 +10°">
+        <div class="lever-scale" aria-hidden="true">
+          <span class="lever-tick tick-full-reverse">-32°<br><em>MAX REV</em></span>
+          <span class="lever-tick tick-reverse-idle">-11.74°<br><em>REV IDLE</em></span>
+          <span class="lever-tick tick-sw1-edge">-6.2°<br><em>SW1↑</em></span>
+          <span class="lever-tick tick-fwd-idle">-1.4°<br><em>FWD IDLE</em></span>
+          <span class="lever-tick tick-fwd">+10°<br><em>MAX FWD</em></span>
+        </div>
+        <div class="lever-note">
+          SW1 (ATLTLA) 闭合窗：−6.2° ~ −1.4° · SW2 (APWTLA) 闭合窗：−9.8° ~ −5°<br>
+          FADEC Deploy 阈值：TRA &lt; −11.74° · Stow 阈值：TRA ≥ 0°
+        </div>
+      </section>
+
+      <!-- Condition Panel (key binary flags + N1K) -->
+      <section class="panel etras-condition-panel" aria-labelledby="condition-heading">
+        <h2 id="condition-heading" class="panel-title">
+          <span class="presenter-callout">[条件]</span> 发动机 + 系统模式
+        </h2>
+
+        <div class="condition-row">
+          <label class="condition-slider">
+            <span class="condition-label">N1K (风扇转速 %)</span>
+            <span class="condition-value" id="etras-n1k-value">35%</span>
+            <input type="range" id="etras-n1k" min="0" max="110" step="1" value="35" aria-label="N1K 风扇转速百分比">
+            <div class="condition-hint">Deploy 限值：≤ 84% · Stow 限值：≤ 72%</div>
+          </label>
+        </div>
+
+        <div class="condition-grid">
+          <label class="condition-check">
+            <input type="checkbox" id="etras-engine-running" checked>
+            <span>engine_running · 发动机运转</span>
+          </label>
+          <label class="condition-check">
+            <input type="checkbox" id="etras-tr-inhibited">
+            <span>tr_inhibited · 反推抑制</span>
+          </label>
+          <label class="condition-check">
+            <input type="checkbox" id="etras-over-temp-fault">
+            <span>e_tras_over_temp_fault · 过温故障</span>
+          </label>
+          <label class="condition-check">
+            <input type="checkbox" id="etras-trcu-power-on" checked>
+            <span>trcu_power_on · TRCU 已通电</span>
+          </label>
+          <label class="condition-check">
+            <input type="checkbox" id="etras-vdt-valid" checked>
+            <span>vdt_sensor_valid · VDT 传感器有效</span>
+          </label>
+        </div>
+      </section>
+
+      <!-- Condition Panel (WOW redundancy) -->
+      <section class="panel etras-wow-panel" aria-labelledby="wow-heading">
+        <h2 id="wow-heading" class="panel-title">
+          <span class="presenter-callout">[WOW]</span> 主着陆架双余度（PDF 表2）
+        </h2>
+        <div class="condition-grid">
+          <label class="condition-check">
+            <input type="checkbox" id="etras-lgcu1-value" checked>
+            <span>LGCU1 MLG_WOW value</span>
+          </label>
+          <label class="condition-check">
+            <input type="checkbox" id="etras-lgcu1-valid" checked>
+            <span>LGCU1 valid</span>
+          </label>
+          <label class="condition-check">
+            <input type="checkbox" id="etras-lgcu2-value" checked>
+            <span>LGCU2 MLG_WOW value</span>
+          </label>
+          <label class="condition-check">
+            <input type="checkbox" id="etras-lgcu2-valid" checked>
+            <span>LGCU2 valid</span>
+          </label>
+        </div>
+        <div class="condition-hint">选出的 mlg_wow 按 LGCU1/2 仲裁；冲突→False（保守）</div>
+      </section>
+
+      <!-- Condition Panel (Locks) -->
+      <section class="panel etras-lock-panel" aria-labelledby="locks-heading">
+        <h2 id="locks-heading" class="panel-title">
+          <span class="presenter-callout">[锁]</span> TLS / PLS / Pylon 锁状态
+        </h2>
+        <div class="lock-group">
+          <h3 class="lock-subtitle">TLS (Translating Lock Sleeve · 双余度)</h3>
+          <label class="condition-check"><input type="checkbox" id="etras-tls-a-unlocked"> <span>tls_ls_a_unlocked</span></label>
+          <label class="condition-check"><input type="checkbox" id="etras-tls-b-unlocked"> <span>tls_ls_b_unlocked</span></label>
+        </div>
+        <div class="lock-group">
+          <h3 class="lock-subtitle">PLS (Primary Lock Sleeve · 双余度)</h3>
+          <label class="condition-check"><input type="checkbox" id="etras-pls-a-locked" checked> <span>pls_ls_a_locked</span></label>
+          <label class="condition-check"><input type="checkbox" id="etras-pls-b-locked" checked> <span>pls_ls_b_locked</span></label>
+        </div>
+        <div class="lock-group">
+          <h3 class="lock-subtitle">Pylon 锁（左右各双余度）</h3>
+          <label class="condition-check"><input type="checkbox" id="etras-left-pylon-a-unlocked"> <span>left_pylon_ls_a_unlocked</span></label>
+          <label class="condition-check"><input type="checkbox" id="etras-left-pylon-b-unlocked"> <span>left_pylon_ls_b_unlocked</span></label>
+          <label class="condition-check"><input type="checkbox" id="etras-right-pylon-a-unlocked"> <span>right_pylon_ls_a_unlocked</span></label>
+          <label class="condition-check"><input type="checkbox" id="etras-right-pylon-b-unlocked"> <span>right_pylon_ls_b_unlocked</span></label>
+        </div>
+      </section>
+
+      <!-- Actuator / Timing inputs -->
+      <section class="panel etras-actuator-panel" aria-labelledby="actuator-heading">
+        <h2 id="actuator-heading" class="panel-title">
+          <span class="presenter-callout">[执行]</span> 执行机构 + 计时
+        </h2>
+
+        <div class="condition-row">
+          <label class="condition-slider">
+            <span class="condition-label">TR_Position (VDT %)</span>
+            <span class="condition-value" id="etras-tr-position-value">0%</span>
+            <input type="range" id="etras-tr-position" min="0" max="100" step="1" value="0" aria-label="反推位移百分比">
+            <div class="condition-hint">FADEC Deploy 持续阈值 ≥ 80%（0.5s 驻留）</div>
+          </label>
+        </div>
+
+        <div class="condition-grid timing-grid">
+          <label class="condition-slider small">
+            <span class="condition-label">comm2_timer_s</span>
+            <input type="number" id="etras-comm2-timer" min="0" max="60" step="0.1" value="0.0">
+          </label>
+          <label class="condition-slider small">
+            <span class="condition-label">lock_unlock_confirm_s</span>
+            <input type="number" id="etras-unlock-confirm" min="0" max="10" step="0.05" value="0.0">
+          </label>
+          <label class="condition-slider small">
+            <span class="condition-label">tr_position_deployed_confirm_s</span>
+            <input type="number" id="etras-deployed-confirm" min="0" max="10" step="0.05" value="0.0">
+          </label>
+          <label class="condition-slider small">
+            <span class="condition-label">tr_stowed_locked_confirm_s</span>
+            <input type="number" id="etras-stowed-confirm" min="0" max="10" step="0.05" value="2.0">
+          </label>
+        </div>
+
+        <div class="condition-check-inline">
+          <label class="condition-check"><input type="checkbox" id="etras-prev-cmd3"> <span>prev_eicu_cmd3</span></label>
+          <label class="condition-check"><input type="checkbox" id="etras-tr-wow" checked> <span>tr_wow (filtered)</span></label>
+        </div>
+      </section>
+
+      <!-- Scenario Presets -->
+      <section class="panel etras-preset-panel" aria-labelledby="preset-heading">
+        <h2 id="preset-heading" class="panel-title">
+          <span class="presenter-callout">[场景]</span> 预设演示场景
+        </h2>
+        <p class="preset-note">点击按钮一键装载该场景的输入组合，观察逻辑链路激活差异。</p>
+        <div class="preset-grid">
+          <button type="button" class="preset-btn" data-preset="nominal-stowed">默认（空中收起上锁）</button>
+          <button type="button" class="preset-btn" data-preset="landing-deploy">着陆展开全链路</button>
+          <button type="button" class="preset-btn" data-preset="max-reverse">最大反推（MAX REV）</button>
+          <button type="button" class="preset-btn" data-preset="stow-return">收起回杆</button>
+          <button type="button" class="preset-btn" data-preset="over-temp-abort">过温中断</button>
+          <button type="button" class="preset-btn" data-preset="lock-fault">锁传感器故障</button>
+        </div>
+        <div class="preset-status" id="etras-preset-status" aria-live="polite">当前场景：默认（空中收起上锁）</div>
+      </section>
+
+    </aside>
+
+    <!-- ════════════════════════════════════════════════════════════
+         RIGHT COLUMN — OUTPUTS (HUD + SVG + commands)
+    ════════════════════════════════════════════════════════════ -->
+    <section class="etras-outputs">
+
+      <!-- HUD Panel -->
+      <section class="panel etras-hud-panel" aria-labelledby="hud-heading">
+        <h2 id="hud-heading" class="panel-title">
+          <span class="presenter-callout">[HUD]</span> 中间信号 + 计时诊断
+        </h2>
+        <div class="hud-grid">
+          <div class="hud-row">
+            <dt>mlg_wow (selected)</dt>
+            <dd id="hud-mlg-wow">—</dd>
+          </div>
+          <div class="hud-row">
+            <dt>tr_wow (filter output)</dt>
+            <dd id="hud-tr-wow">—</dd>
+          </div>
+          <div class="hud-row">
+            <dt>SW1 ATLTLA / SW2 APWTLA</dt>
+            <dd id="hud-switches">—</dd>
+          </div>
+          <div class="hud-row">
+            <dt>lock_state</dt>
+            <dd id="hud-lock-state">—</dd>
+          </div>
+          <div class="hud-row">
+            <dt>CMD2 timer (s)</dt>
+            <dd id="hud-cmd2-timer">—</dd>
+          </div>
+          <div class="hud-row">
+            <dt>CMD3 latch (prev)</dt>
+            <dd id="hud-cmd3-latch">—</dd>
+          </div>
+          <div class="hud-row">
+            <dt>TR_Command3_Enable</dt>
+            <dd id="hud-cmd3-enable">—</dd>
+          </div>
+          <div class="hud-row">
+            <dt>TR_Position / threshold</dt>
+            <dd id="hud-tr-position">—</dd>
+          </div>
+          <div class="hud-row">
+            <dt>N1K / deploy limit</dt>
+            <dd id="hud-n1k">—</dd>
+          </div>
+          <div class="hud-row">
+            <dt>过温 / 抑制</dt>
+            <dd id="hud-faults">—</dd>
+          </div>
+        </div>
+      </section>
+
+      <!-- Logic Chain SVG -->
+      <section class="panel etras-chain-panel" aria-labelledby="chain-heading">
+        <h2 id="chain-heading" class="panel-title">
+          <span class="presenter-callout">[链路]</span> E-TRAS 逻辑链路（信号流）
+        </h2>
+        <div class="chain-scroll">
+          <svg id="etras-logic-chain" viewBox="0 0 960 420" width="100%" role="img" aria-label="C919 E-TRAS 逻辑链路图">
+            <defs>
+              <marker id="etras-arr-active" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                <path d="M0,0 L7,3.5 L0,7 Z" fill="#00e5a0"/>
+              </marker>
+              <marker id="etras-arr-idle" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                <path d="M0,0 L7,3.5 L0,7 Z" fill="#3a5570"/>
+              </marker>
+            </defs>
+
+            <!-- Column headers -->
+            <text x="90" y="24" fill="#3a5570" font-size="10" text-anchor="middle" font-family="Courier New">INPUTS</text>
+            <text x="340" y="24" fill="#3a5570" font-size="10" text-anchor="middle" font-family="Courier New">INTERMEDIATE</text>
+            <text x="580" y="24" fill="#3a5570" font-size="10" text-anchor="middle" font-family="Courier New">LOGIC NODES</text>
+            <text x="840" y="24" fill="#3a5570" font-size="10" text-anchor="middle" font-family="Courier New">OUTPUTS</text>
+
+            <!-- ROW 1: WOW pipeline -->
+            <g class="chain-node" data-node="mlg_wow">
+              <rect x="10" y="46" width="160" height="28" rx="3"/>
+              <text x="90" y="64" text-anchor="middle">mlg_wow (selected)</text>
+            </g>
+            <line x1="170" y1="60" x2="210" y2="60" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+            <g class="chain-node" data-node="tr_wow">
+              <rect x="210" y="46" width="160" height="28" rx="3"/>
+              <text x="290" y="64" text-anchor="middle">tr_wow (2.25s SET)</text>
+            </g>
+            <line x1="370" y1="60" x2="500" y2="60" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+
+            <!-- ROW 2: atltla + tra + wow + inhibit + cmd2 timer → EICU_CMD2 -->
+            <g class="chain-node" data-node="atltla">
+              <rect x="10" y="88" width="160" height="28" rx="3"/>
+              <text x="90" y="106" text-anchor="middle">atltla (SW1)</text>
+            </g>
+            <g class="chain-node" data-node="tra_deg">
+              <rect x="10" y="124" width="160" height="28" rx="3"/>
+              <text x="90" y="142" text-anchor="middle">tra_deg</text>
+            </g>
+            <g class="chain-node" data-node="tr_inhibited">
+              <rect x="10" y="160" width="160" height="28" rx="3"/>
+              <text x="90" y="178" text-anchor="middle">tr_inhibited</text>
+            </g>
+
+            <g class="chain-logic" data-node="ln_eicu_cmd2">
+              <rect x="500" y="100" width="170" height="38" rx="4"/>
+              <text x="585" y="120" text-anchor="middle" class="logic-id">EICU_CMD2</text>
+              <text x="585" y="132" text-anchor="middle" class="logic-sub">单相解锁 (30s 定时)</text>
+            </g>
+            <line x1="170" y1="102" x2="500" y2="110" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+            <line x1="170" y1="138" x2="500" y2="120" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+            <line x1="170" y1="174" x2="500" y2="130" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+
+            <!-- EICU_CMD2 → output single-phase power -->
+            <line x1="670" y1="119" x2="750" y2="119" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+            <g class="chain-node" data-node="eicu_cmd2">
+              <rect x="750" y="102" width="200" height="34" rx="3"/>
+              <text x="850" y="120" text-anchor="middle">eicu_cmd2 (1-φ unlock)</text>
+              <text x="850" y="130" text-anchor="middle" class="output-sub">单相解锁供电</text>
+            </g>
+
+            <!-- ROW 3: apwtla + tr_wow + inhibit + prev_cmd3 → EICU_CMD3 (SR latch) -->
+            <g class="chain-node" data-node="apwtla">
+              <rect x="10" y="196" width="160" height="28" rx="3"/>
+              <text x="90" y="214" text-anchor="middle">apwtla (SW2)</text>
+            </g>
+
+            <g class="chain-logic" data-node="ln_eicu_cmd3">
+              <rect x="500" y="180" width="170" height="38" rx="4"/>
+              <text x="585" y="200" text-anchor="middle" class="logic-id">EICU_CMD3</text>
+              <text x="585" y="212" text-anchor="middle" class="logic-sub">三相 TRCU (SR-latch)</text>
+            </g>
+            <line x1="170" y1="210" x2="500" y2="200" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+            <line x1="370" y1="60" x2="500" y2="190" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+
+            <!-- EICU_CMD3 → three_phase_trcu_power_on -->
+            <line x1="670" y1="199" x2="750" y2="199" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+            <g class="chain-node" data-node="eicu_cmd3">
+              <rect x="750" y="182" width="200" height="34" rx="3"/>
+              <text x="850" y="200" text-anchor="middle">eicu_cmd3 (3-φ TRCU)</text>
+              <text x="850" y="210" text-anchor="middle" class="output-sub">三相 TRCU 供电</text>
+            </g>
+
+            <!-- ROW 4: Lock aggregator -->
+            <g class="chain-node" data-node="lock_state">
+              <rect x="210" y="252" width="160" height="28" rx="3"/>
+              <text x="290" y="270" text-anchor="middle">lock_state (agg)</text>
+            </g>
+            <line x1="370" y1="266" x2="500" y2="260" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+
+            <!-- ROW 5: TR_Command3_Enable gate -->
+            <g class="chain-logic" data-node="ln_tr_command3_enable">
+              <rect x="500" y="248" width="170" height="38" rx="4"/>
+              <text x="585" y="268" text-anchor="middle" class="logic-id">TR_Command3_Enable</text>
+              <text x="585" y="280" text-anchor="middle" class="logic-sub">CMD3 解锁 · 过温/收起禁止</text>
+            </g>
+            <line x1="670" y1="267" x2="750" y2="267" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+            <g class="chain-node" data-node="tr_command3_enable">
+              <rect x="750" y="250" width="200" height="34" rx="3"/>
+              <text x="850" y="268" text-anchor="middle">tr_command3_enable</text>
+            </g>
+
+            <!-- ROW 6: N1K + VDT position + TRA → FADEC_Deploy -->
+            <g class="chain-node" data-node="n1k_percent">
+              <rect x="10" y="302" width="160" height="28" rx="3"/>
+              <text x="90" y="320" text-anchor="middle">n1k_percent</text>
+            </g>
+            <g class="chain-node" data-node="tr_position_percent">
+              <rect x="10" y="338" width="160" height="28" rx="3"/>
+              <text x="90" y="356" text-anchor="middle">tr_position_percent</text>
+            </g>
+
+            <g class="chain-logic" data-node="ln_fadec_deploy_command">
+              <rect x="500" y="318" width="170" height="38" rx="4"/>
+              <text x="585" y="338" text-anchor="middle" class="logic-id">FADEC_Deploy</text>
+              <text x="585" y="350" text-anchor="middle" class="logic-sub">展开命令 (TRA&lt;−11.74°)</text>
+            </g>
+            <line x1="170" y1="316" x2="500" y2="328" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+            <line x1="170" y1="352" x2="500" y2="340" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+            <line x1="670" y1="337" x2="750" y2="337" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+            <g class="chain-node" data-node="fadec_deploy_command">
+              <rect x="750" y="320" width="200" height="34" rx="3"/>
+              <text x="850" y="338" text-anchor="middle">fadec_deploy_command</text>
+              <text x="850" y="348" text-anchor="middle" class="output-sub">(展开指令)</text>
+            </g>
+
+            <!-- ROW 7: FADEC_Stow -->
+            <g class="chain-logic" data-node="ln_fadec_stow_command">
+              <rect x="500" y="370" width="170" height="38" rx="4"/>
+              <text x="585" y="390" text-anchor="middle" class="logic-id">FADEC_Stow</text>
+              <text x="585" y="402" text-anchor="middle" class="logic-sub">收起命令 (TRA≥0° 通路)</text>
+            </g>
+            <line x1="670" y1="389" x2="750" y2="389" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+            <g class="chain-node" data-node="fadec_stow_command">
+              <rect x="750" y="372" width="200" height="34" rx="3"/>
+              <text x="850" y="390" text-anchor="middle">fadec_stow_command</text>
+              <text x="850" y="400" text-anchor="middle" class="output-sub">(收起指令)</text>
+            </g>
+            <line x1="170" y1="138" x2="500" y2="395" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+
+          </svg>
+        </div>
+        <p class="chain-legend">
+          <span class="legend-dot active"></span> 激活 ·
+          <span class="legend-dot idle"></span> 未激活 ·
+          <span class="legend-dot blocked"></span> 阻塞
+        </p>
+      </section>
+
+      <!-- Outputs Panel -->
+      <section class="panel etras-outputs-panel" aria-labelledby="outputs-heading">
+        <h2 id="outputs-heading" class="panel-title">
+          <span class="presenter-callout">[输出]</span> FADEC 命令 + 供电状态
+        </h2>
+        <div class="outputs-grid">
+          <div class="output-card" id="output-single-phase" data-state="idle">
+            <div class="output-label">SINGLE-PHASE UNLOCK</div>
+            <div class="output-value" id="output-single-phase-value">OFF</div>
+            <div class="output-note">EICU CMD2 · 115 VAC 1-phase</div>
+          </div>
+          <div class="output-card" id="output-three-phase" data-state="idle">
+            <div class="output-label">THREE-PHASE TRCU</div>
+            <div class="output-value" id="output-three-phase-value">OFF</div>
+            <div class="output-note">EICU CMD3 · 540 VDC TRCU</div>
+          </div>
+          <div class="output-card" id="output-fadec-deploy" data-state="idle">
+            <div class="output-label">FADEC DEPLOY</div>
+            <div class="output-value" id="output-fadec-deploy-value">OFF</div>
+            <div class="output-note">展开命令</div>
+          </div>
+          <div class="output-card" id="output-fadec-stow" data-state="idle">
+            <div class="output-label">FADEC STOW</div>
+            <div class="output-value" id="output-fadec-stow-value">OFF</div>
+            <div class="output-note">收起命令</div>
+          </div>
+        </div>
+      </section>
+
+    </section>
+  </div>
+
+  <footer class="etras-footer">
+    <p>
+      <strong>真值源：</strong>
+      <code>src/well_harness/adapters/c919_etras_adapter.py</code> ·
+      <strong>硬件契约：</strong>
+      <code>config/hardware/c919_etras_hardware_v1.yaml</code> (SHA256-locked) ·
+      <strong>场景类型：</strong>
+      本工作台做 <em>stateless signal-level evaluation</em>。状态机动态重放请用 <a href="http://localhost:9191/" target="_blank" rel="noopener">:9191 仿真面板</a>。
+    </p>
+  </footer>
+
+</main>
+
+<script src="/c919_etras_workstation.js" defer></script>
+</body>
+</html>

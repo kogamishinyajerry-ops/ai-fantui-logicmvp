@@ -1,0 +1,234 @@
+"""Phase C · static-asset and route tests for c919_etras_workstation.html.
+
+Asserts structural invariants so the workstation page keeps its contract
+with the adapter truth source (src/well_harness/adapters/c919_etras_adapter.py):
+
+- Route serves 200 and contains key section IDs (lever, condition, HUD, outputs, SVG).
+- SVG data-node ids are subset of the C919 ETRAS spec (components + logic_nodes).
+- CSS + JS assets resolve at 200 and parse.
+- Preset keys in HTML buttons match preset keys in the JS module.
+- The 4 output cards exist and are keyed to the 4 FADEC/power signals.
+"""
+from __future__ import annotations
+
+import http.client
+import json
+import re
+import threading
+import unittest
+from http.server import ThreadingHTTPServer
+from pathlib import Path
+
+from well_harness.adapters.c919_etras_adapter import build_c919_etras_workbench_spec
+from well_harness.demo_server import DemoRequestHandler
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+STATIC_DIR = PROJECT_ROOT / "src" / "well_harness" / "static"
+WORKSTATION_HTML = STATIC_DIR / "c919_etras_workstation.html"
+WORKSTATION_CSS = STATIC_DIR / "c919_etras_workstation.css"
+WORKSTATION_JS = STATIC_DIR / "c919_etras_workstation.js"
+
+
+def _start_server():
+    server = ThreadingHTTPServer(("127.0.0.1", 0), DemoRequestHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    return server, thread
+
+
+def _http_get(port: int, path: str) -> tuple[int, str, str]:
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+    conn.request("GET", path)
+    resp = conn.getresponse()
+    body = resp.read().decode("utf-8")
+    content_type = resp.getheader("Content-Type", "")
+    conn.close()
+    return resp.status, content_type, body
+
+
+def _http_post_json(port: int, path: str, payload: dict) -> tuple[int, dict]:
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
+    body = json.dumps(payload)
+    conn.request("POST", path, body=body, headers={"Content-Type": "application/json"})
+    resp = conn.getresponse()
+    data = resp.read().decode("utf-8")
+    conn.close()
+    return resp.status, json.loads(data) if data else {}
+
+
+class C919EtrasWorkstationStaticTests(unittest.TestCase):
+    """Static-file invariants that don't need a running server."""
+
+    def test_workstation_html_exists_and_has_key_section_ids(self):
+        self.assertTrue(WORKSTATION_HTML.is_file(), "c919_etras_workstation.html missing")
+        html = WORKSTATION_HTML.read_text(encoding="utf-8")
+        for fragment in (
+            "<title>C919 E-TRAS 逻辑控制工作台</title>",
+            'id="etras-status-banner"',
+            'id="etras-tra-lever"',
+            'id="etras-n1k"',
+            'id="etras-logic-chain"',
+            'id="output-single-phase"',
+            'id="output-three-phase"',
+            'id="output-fadec-deploy"',
+            'id="output-fadec-stow"',
+            'id="etras-preset-status"',
+        ):
+            self.assertIn(fragment, html, f"missing fragment: {fragment}")
+
+    def test_workstation_css_exists(self):
+        self.assertTrue(WORKSTATION_CSS.is_file(), "c919_etras_workstation.css missing")
+        css = WORKSTATION_CSS.read_text(encoding="utf-8")
+        # CSS custom properties for the aviation theme
+        self.assertIn("--etras-accent:", css)
+        self.assertIn("--etras-active:", css)
+        self.assertIn(".chain-node[data-state=\"active\"]", css)
+        self.assertIn(".chain-logic[data-state=\"active\"]", css)
+
+    def test_workstation_js_exists_and_posts_to_system_snapshot(self):
+        self.assertTrue(WORKSTATION_JS.is_file(), "c919_etras_workstation.js missing")
+        js = WORKSTATION_JS.read_text(encoding="utf-8")
+        self.assertIn('const API_URL = "/api/system-snapshot"', js)
+        self.assertIn('const SYSTEM_ID = "c919-etras"', js)
+        self.assertIn("buildSnapshot()", js)
+        self.assertIn("renderChainSvg(", js)
+
+    def test_workstation_svg_data_nodes_subset_of_adapter_spec(self):
+        """Every data-node in the chain SVG ⊂ adapter spec components ∪ logic_nodes.
+
+        Same contract that P43-02.5 enforced on chat.html's c919 section.
+        """
+        html = WORKSTATION_HTML.read_text(encoding="utf-8")
+        # Extract data-node values from the SVG section only
+        svg_start = html.find('id="etras-logic-chain"')
+        svg_end = html.find("</svg>", svg_start)
+        self.assertGreater(svg_end, svg_start, "chain SVG bounds not found")
+        svg_section = html[svg_start:svg_end]
+
+        node_ids = set(re.findall(r'data-node="([a-z0-9_]+)"', svg_section))
+        self.assertGreater(len(node_ids), 0, "no data-node ids found in SVG")
+
+        spec = build_c919_etras_workbench_spec()
+        component_ids = {c["id"] for c in spec.get("components", [])}
+        logic_node_ids = {ln["id"] for ln in spec.get("logic_nodes", [])}
+        allowed = component_ids | logic_node_ids
+
+        unknown = node_ids - allowed
+        self.assertFalse(
+            unknown,
+            f"data-node ids not in adapter spec: {sorted(unknown)}\n"
+            f"allowed: {sorted(allowed)}",
+        )
+
+    def test_preset_buttons_match_js_preset_keys(self):
+        """HTML <button data-preset> keys must match the JS `presets` object keys."""
+        html = WORKSTATION_HTML.read_text(encoding="utf-8")
+        js = WORKSTATION_JS.read_text(encoding="utf-8")
+
+        html_keys = set(re.findall(r'data-preset="([a-z0-9\-]+)"', html))
+        # Extract the keys from the JS `presets = { ... }` object header lines.
+        # Match lines like `  "nominal-stowed": {` within the presets block.
+        js_keys = set(re.findall(r'"([a-z0-9\-]+)":\s*\{\s*\n\s*label:', js))
+
+        self.assertEqual(
+            html_keys, js_keys,
+            f"HTML preset buttons {sorted(html_keys)} do not match JS keys {sorted(js_keys)}",
+        )
+
+    def test_demo_html_links_to_workstation(self):
+        """demo.html 其他入口 should include a link to the new workstation."""
+        demo_html_path = STATIC_DIR / "demo.html"
+        demo_html = demo_html_path.read_text(encoding="utf-8")
+        self.assertIn("/c919_etras_workstation.html", demo_html)
+        self.assertIn("C919 E-TRAS 逻辑工作台", demo_html)
+
+
+class C919EtrasWorkstationServerTests(unittest.TestCase):
+    """Live-server integration tests (spin up demo_server in-process)."""
+
+    def test_route_serves_html_200(self):
+        server, thread = _start_server()
+        try:
+            port = server.server_port
+            status, content_type, body = _http_get(port, "/c919_etras_workstation.html")
+            self.assertEqual(status, 200)
+            self.assertIn("text/html", content_type)
+            self.assertIn("C919 E-TRAS 逻辑控制工作台", body)
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+    def test_assets_serve_200(self):
+        server, thread = _start_server()
+        try:
+            port = server.server_port
+            for path, ct_hint in (
+                ("/c919_etras_workstation.css", "text/css"),
+                ("/c919_etras_workstation.js",  "application/javascript"),
+            ):
+                status, content_type, body = _http_get(port, path)
+                self.assertEqual(status, 200, f"{path} returned {status}")
+                self.assertIn(ct_hint, content_type, f"{path} content-type={content_type}")
+                self.assertGreater(len(body), 0, f"{path} body empty")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+    def test_system_snapshot_post_landing_deploy_activates_all_four_logic_nodes(self):
+        """Sanity: landing-deploy-like snapshot reaches completion_reached=True."""
+        server, thread = _start_server()
+        try:
+            port = server.server_port
+            snapshot = {
+                "tra_deg": -25.0,
+                "n1k_percent": 60.0,
+                "engine_running": True,
+                "tr_inhibited": False,
+                "lgcu1_mlg_wow_value": True, "lgcu1_mlg_wow_valid": True,
+                "lgcu2_mlg_wow_value": True, "lgcu2_mlg_wow_valid": True,
+                "tr_wow": True,
+                "tls_ls_a_valid": True, "tls_ls_a_unlocked": True,
+                "tls_ls_b_valid": True, "tls_ls_b_unlocked": True,
+                "pls_ls_a_locked": False, "pls_ls_b_locked": False,
+                "left_pylon_ls_a_valid": True, "left_pylon_ls_a_unlocked": True,
+                "left_pylon_ls_b_valid": True, "left_pylon_ls_b_unlocked": True,
+                "right_pylon_ls_a_valid": True, "right_pylon_ls_a_unlocked": True,
+                "right_pylon_ls_b_valid": True, "right_pylon_ls_b_unlocked": True,
+                "apwtla": True, "atltla": True,
+                "vdt_sensor_valid": True,
+                "e_tras_over_temp_fault": False,
+                "trcu_power_on": True,
+                "tr_position_percent": 85.0,
+                "prev_eicu_cmd3": True,
+                "comm2_timer_s": 1.0,
+                "lock_unlock_confirm_s": 0.5,
+                "tr_position_deployed_confirm_s": 0.5,
+                "tr_stowed_locked_confirm_s": 0.0,
+            }
+            status, payload = _http_post_json(port, "/api/system-snapshot", {
+                "system_id": "c919-etras",
+                "snapshot": snapshot,
+            })
+            self.assertEqual(status, 200)
+            self.assertIn("truth_evaluation", payload)
+            evaluation = payload["truth_evaluation"]
+            active = set(evaluation.get("active_logic_node_ids", []))
+            self.assertEqual(
+                active,
+                {"ln_eicu_cmd2", "ln_eicu_cmd3", "ln_tr_command3_enable", "ln_fadec_deploy_command"},
+                f"unexpected active set: {active}",
+            )
+            self.assertTrue(evaluation.get("completion_reached"), "should reach completion")
+            asserted = evaluation.get("asserted_component_values", {})
+            self.assertTrue(asserted.get("fadec_deploy_command"))
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
+
+if __name__ == "__main__":
+    unittest.main()
