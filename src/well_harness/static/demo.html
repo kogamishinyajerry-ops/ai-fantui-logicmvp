@@ -455,6 +455,126 @@
     </section>
   </div>
 
+  <!-- Engineering reference panel -->
+  <details class="fan-eng-ref" id="fan-eng-ref">
+    <summary class="fan-eng-ref-summary">
+      <span class="fan-callout">[工程参考]</span> 信号定义与控制逻辑工程语义
+      <span class="fan-eng-ref-hint">展开查看每个信号在真实 FADEC/E-TRAS 架构中的对应关系</span>
+    </summary>
+    <div class="fan-eng-ref-body">
+
+      <div class="fan-eng-section">
+        <h3 class="fan-eng-section-title">输入信号 · 航空工程映射</h3>
+        <table class="fan-eng-table">
+          <thead><tr><th>信号</th><th>工程全称</th><th>真实来源</th><th>安全意图</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="sig-name">TRA</td>
+              <td>Throttle Resolver Angle</td>
+              <td>LVDT（线性可变差动变压器）连接油门四连杆</td>
+              <td>飞行员意图源头；反推区间 0°~-32° 由 FADEC 接管解释</td>
+            </tr>
+            <tr>
+              <td class="sig-name">SW1</td>
+              <td>Thrust Reverser Deploy Switch 1</td>
+              <td>TRA ≤ 0° 时由凸轮机构触发的位置微动开关</td>
+              <td>防止在前向推力区间意外触发反推展开命令</td>
+            </tr>
+            <tr>
+              <td class="sig-name">SW2</td>
+              <td>Thrust Reverser Deploy Switch 2</td>
+              <td>TRA ≤ -13° 深反推区的第二个位置开关</td>
+              <td>双重机械确认：只有进入深反推区才允许激活主展开链路</td>
+            </tr>
+            <tr>
+              <td class="sig-name">RA</td>
+              <td>Radio Altitude (ft)</td>
+              <td>无线电高度表（RALT）；C919 使用双余度 LGCIU 综合判断</td>
+              <td>L1 设 RA &lt; 6 ft 确保飞机已接地；防止空中误展开（灾难性失效）</td>
+            </tr>
+            <tr>
+              <td class="sig-name">N1K</td>
+              <td>Fan Speed Ratio (% corrected)</td>
+              <td>N1 传感器；K 表示修正转速（温度/压力修正）</td>
+              <td>L3 限制 N1K &lt; 84%：高转速展开会产生严重气动干扰和结构载荷</td>
+            </tr>
+            <tr>
+              <td class="sig-name">aircraft_on_ground</td>
+              <td>WOW (Weight on Wheels)</td>
+              <td>LGCIU（起落架控制接口单元）压缩传感器综合输出</td>
+              <td>L2 要求飞机已落地；WOW 是防止飞行中展开的核心硬件联锁</td>
+            </tr>
+            <tr>
+              <td class="sig-name">engine_running</td>
+              <td>Engine Running Status</td>
+              <td>FADEC 综合 N2 &gt; 某阈值 + 燃油流量信号</td>
+              <td>反推展开只在发动机运行时有效；防止地面牵引时的误操作</td>
+            </tr>
+            <tr>
+              <td class="sig-name">reverser_inhibited</td>
+              <td>Reverser Inhibit Signal</td>
+              <td>FADEC 综合多路信号（飞行高度、反推系统故障、TOGA 推力等）</td>
+              <td>任何路径触发抑制时，整个展开链路立即锁断（L1-L3 共同条件）</td>
+            </tr>
+            <tr>
+              <td class="sig-name">eec_enable</td>
+              <td>EEC (FADEC) Enable</td>
+              <td>FADEC 控制通道就绪信号</td>
+              <td>L3 要求 FADEC 计算通道处于 ACTIVE 状态，防止 FADEC 故障时发出展开命令</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="fan-eng-section">
+        <h3 class="fan-eng-section-title">控制逻辑层 · 工程意义</h3>
+        <table class="fan-eng-table">
+          <thead><tr><th>逻辑层</th><th>通过条件</th><th>输出命令</th><th>失效后果</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="sig-name">L1</td>
+              <td>SW1 AND 接地(WOW/RA) AND NOT 抑制 AND 未展开</td>
+              <td>TLS 115VAC 解锁供电</td>
+              <td>L1 失效 → 反推机械锁永不解开，反推无法展开（安全状态）</td>
+            </tr>
+            <tr>
+              <td class="sig-name">L2</td>
+              <td>SW2 AND 发动机运行 AND 接地 AND NOT 抑制 AND TLS_Unlocked AND EEC</td>
+              <td>ETRAC 540VDC PDU 动力</td>
+              <td>L2 失效 → 电动执行机构无动力，反推保持收起位</td>
+            </tr>
+            <tr>
+              <td class="sig-name">L3</td>
+              <td>ETRAC就绪 AND N1K&lt;84% AND EEC_enable AND NOT 抑制</td>
+              <td>EEC 展开命令 + PLS 供电 + PDU 电机启动</td>
+              <td>L3 失效 → 执行机构不动；N1K 保护防止高速展开引发发动机喘振</td>
+            </tr>
+            <tr>
+              <td class="sig-name">L4</td>
+              <td>L3 AND VDT ≥ 90%（展开到位反馈）</td>
+              <td>THR_LOCK 释放（允许油门深推入反推区）</td>
+              <td>L4 失效 → 飞行员无法增加反推力；展开未到位时反推力不足影响着陆距离</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="fan-eng-section">
+        <h3 class="fan-eng-section-title">重要说明</h3>
+        <p class="fan-eng-note">
+          本工作台为 <strong>stateless 信号级评估</strong>：每次计算基于当前快照，不维护时序状态机。
+          真实 E-TRAS 系统中，TLS 解锁 → PDU 通电 → 展开命令之间存在严格时序和超时保护逻辑（由 EICU 内部状态机管理）。
+          时序仿真请使用「反推时序仿真面板」或「C919 MFD 仿真面板」。
+        </p>
+        <p class="fan-eng-note">
+          <code>aircraft_on_ground</code> 在本工作台中对应真实系统的 WOW（Weight on Wheels）信号，
+          由 LGCIU 双余度综合输出。在实际工程中，单 LGCIU 失效时系统应仍能正确判断接地状态。
+        </p>
+      </div>
+
+    </div>
+  </details>
+
   <footer class="fan-footer">
     <strong style="color:var(--fan-text)">真值源：</strong>
     <code>src/well_harness/demo_server.py::lever_snapshot_payload</code> →
