@@ -88,11 +88,11 @@
             <div class="fan-condition-hint">L3 deploy 限值：&lt; max_n1k_deploy_limit（默认 60%）</div>
           </label>
 
-          <label class="fan-condition">
+          <label class="fan-condition" id="fan-vdt-row">
             <span class="fan-condition-label">VDT · deploy 反馈 (%)</span>
             <span class="fan-condition-value" id="fan-vdt-value">0%</span>
-            <input type="range" id="fan-vdt" min="0" max="100" step="1" value="0" aria-label="VDT deploy 位置反馈">
-            <div class="fan-condition-hint">VDT90 触发：≥ 90%（仅 manual 模式）</div>
+            <input type="range" id="fan-vdt" min="0" max="100" step="1" value="0" aria-label="VDT deploy 位置反馈" disabled>
+            <div class="fan-condition-hint" id="fan-vdt-hint">auto_scrubber 模式：VDT 由 plant 仿真驱动，滑块已禁用。切到 manual_feedback_override 可手动测试 VDT90 → L4。</div>
           </label>
 
           <div class="fan-condition">

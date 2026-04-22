@@ -259,6 +259,8 @@ html, body {
   font-family: 'Courier New', monospace;
 }
 .fan-condition input[type="range"] { accent-color: var(--fan-accent); }
+.fan-condition input[type="range"]:disabled { opacity: 0.35; cursor: not-allowed; }
+.fan-condition-hint[data-mode="auto_scrubber"] { color: var(--fan-warn, #f5c518); }
 .fan-condition-check {
   display: flex;
   align-items: center;

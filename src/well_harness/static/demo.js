@@ -57,6 +57,7 @@
     traLockMsg:      $("fan-tra-lock-msg"),
     faultCount:      $("fan-fault-count"),
     faultActiveList: $("fan-fault-active-list"),
+    vdtHint:         $("fan-vdt-hint"),
   };
 
   const chainSvg = document.getElementById("fan-chain-svg");
@@ -426,17 +427,25 @@
         setSlider(inputs.tra, -26);
         setSlider(inputs.ra, 2);
         setSlider(inputs.n1k, 70);
-        setSlider(inputs.vdt, 95);
+        // VDT=0 at preset load: L1 (!DEP) + L2 + L3 all active, L4 waiting
+        // for VDT90. Drag VDT up to watch L1 correctly release (!DEP flips
+        // false after deployment) and L4 fire — the true deployment cycle.
+        setSlider(inputs.vdt, 0);
         setChecked(inputs.aircraftOnGround, true);
         setSelect(inputs.feedbackMode, "manual_feedback_override");
       },
     },
     "max-reverse": {
-      label: "最大反推",
+      label: "最大反推（展开到位）",
       apply: () => {
         presets["landing-deploy"].apply();
-        setSlider(inputs.tra, -32);
+        // TRA=-31.5 stays inside the exclusive reverse_travel range
+        // (-32.0, 0.0); TRA=-32 would fail L4's strict lower bound.
+        setSlider(inputs.tra, -31.5);
         setSlider(inputs.n1k, 80);
+        // VDT=100 shows the POST-deploy state: L4 active / THR_LOCK released.
+        // L1 correctly drops to blocked because `!DEP` flipped — L1 has
+        // already done its job and no longer asserts TLS unlock.
         setSlider(inputs.vdt, 100);
       },
     },
@@ -473,11 +482,30 @@
     const preset = presets[key];
     if (!preset) return;
     preset.apply();
+    syncVdtSliderToFeedbackMode();
     if (readouts.presetStatus) readouts.presetStatus.textContent = "当前场景：" + preset.label;
     document.querySelectorAll(".fan-preset-btn").forEach((btn) => {
       btn.setAttribute("aria-pressed", btn.dataset.preset === key ? "true" : "false");
     });
     fetchEvaluation();
+  }
+
+  // VDT slider ↔ feedback_mode coupling: in auto_scrubber mode the backend
+  // ignores the slider (plant simulation drives VDT). Disable the slider to
+  // prevent the UX trap where VDT looks dragged to 95% but L4 never fires.
+  function syncVdtSliderToFeedbackMode() {
+    const mode = inputs.feedbackMode ? inputs.feedbackMode.value : "auto_scrubber";
+    const isAuto = mode === "auto_scrubber";
+    if (inputs.vdt) {
+      inputs.vdt.disabled = isAuto;
+      if (isAuto) inputs.vdt.value = "0";
+    }
+    if (readouts.vdtHint) {
+      readouts.vdtHint.dataset.mode = mode;
+      readouts.vdtHint.textContent = isAuto
+        ? "auto_scrubber 模式：VDT 由 plant 仿真驱动，滑块已禁用。切到 manual_feedback_override 可手动测试 VDT90 → L4。"
+        : "manual_feedback_override：直接把 VDT 推到 ≥ 90% 触发 VDT90 → L4 → THR_LOCK。";
+    }
   }
 
   // ═══════════ Wire listeners ═══════════
@@ -487,6 +515,11 @@
       const evt = (el.type === "checkbox" || el.tagName === "SELECT") ? "change" : "input";
       el.addEventListener(evt, scheduleFetch);
     });
+
+    // Feedback mode changes → re-sync VDT slider enable state
+    if (inputs.feedbackMode) {
+      inputs.feedbackMode.addEventListener("change", syncVdtSliderToFeedbackMode);
+    }
 
     // TRA slider: guard deep-range while locked
     if (inputs.tra) {
@@ -508,6 +541,7 @@
 
   function boot() {
     installListeners();
+    syncVdtSliderToFeedbackMode();
     fetchEvaluation();
   }
 
