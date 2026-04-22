@@ -372,6 +372,16 @@ html, body {
   stroke: var(--fan-text-mute);
   stroke-width: 1.3;
   fill: none;
+  stroke-linejoin: miter;
+  stroke-linecap: butt;
+}
+/* Simulink-style junction dots at wire fan-out points. */
+#fan-chain-svg .chain-junction {
+  fill: var(--fan-text-mute);
+  stroke: none;
+}
+#fan-chain-svg .chain-junction[data-state="active"] {
+  fill: var(--fan-active);
 }
 
 .fan-chain-legend {
@@ -429,6 +439,180 @@ html, body {
   font-size: 10px;
   color: var(--fan-text-mute);
   font-family: 'Courier New', monospace;
+}
+
+/* ══════════ Wire state coloring (UI-H2) ══════════ */
+
+#fan-chain-svg .chain-wire[data-state="active"] {
+  stroke: var(--fan-active);
+  stroke-width: 1.8;
+}
+#fan-chain-svg .chain-wire[data-state="fault"] {
+  stroke: var(--fan-fail);
+  stroke-width: 1.8;
+}
+#fan-chain-svg .chain-junction[data-state="active"] {
+  fill: var(--fan-active);
+}
+
+/* ══════════ Gate icon (UI-H3) ══════════ */
+
+#fan-chain-svg .gate-icon {
+  fill: var(--fan-panel);
+  stroke: var(--fan-accent);
+  stroke-width: 1;
+  transition: fill 0.15s, stroke 0.15s;
+}
+#fan-chain-svg .chain-logic[data-state="active"] .gate-icon {
+  fill: rgba(0,229,160,0.18);
+  stroke: var(--fan-active);
+}
+#fan-chain-svg .chain-logic[data-state="blocked"] .gate-icon {
+  stroke: var(--fan-fail);
+}
+#fan-chain-svg .gate-label {
+  font-size: 9px;
+  font-weight: 600;
+  fill: var(--fan-accent);
+  font-family: 'Courier New', monospace;
+  pointer-events: none;
+}
+#fan-chain-svg .chain-logic[data-state="active"] .gate-label { fill: var(--fan-active); }
+#fan-chain-svg .chain-logic[data-state="blocked"] .gate-label { fill: var(--fan-fail); }
+
+/* ══════════ TRA lock (UI-H / deep-range gate) ══════════ */
+
+.fan-lever-lock-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.fan-tra-lock-badge {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  padding: 3px 9px;
+  border: 1px solid var(--fan-fail);
+  color: var(--fan-fail);
+  background: rgba(224,85,85,0.06);
+  border-radius: 2px;
+  transition: all 0.15s;
+}
+.fan-tra-lock-badge[data-locked="false"] {
+  border-color: var(--fan-active);
+  color: var(--fan-active);
+  background: rgba(0,229,160,0.06);
+}
+.fan-tra-lock-range {
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  color: var(--fan-text-mute);
+  transition: color 0.15s;
+}
+.fan-tra-lock-range[data-locked="false"] { color: var(--fan-active); }
+
+/* ══════════ Fault injection panel ══════════ */
+
+.fan-fault-count {
+  float: right;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--fan-text-dim);
+  font-family: 'Courier New', monospace;
+  padding: 1px 8px;
+  border: 1px solid var(--fan-border-hi);
+  border-radius: 2px;
+  margin-left: 8px;
+}
+.fan-fault-count[data-active="true"] {
+  color: var(--fan-fail);
+  border-color: var(--fan-fail);
+  background: rgba(224,85,85,0.06);
+}
+.fan-fault-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 16px;
+  margin-top: 4px;
+}
+@media (max-width: 520px) {
+  .fan-fault-grid { grid-template-columns: 1fr; }
+}
+.fan-fault-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fan-fault-group-label {
+  font-size: 10px;
+  color: var(--fan-text-dim);
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+  border-bottom: 1px dotted var(--fan-border);
+  padding-bottom: 2px;
+}
+.fan-fault-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 3px 6px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  transition: background 0.1s, border-color 0.1s;
+}
+.fan-fault-row:hover { background: var(--fan-panel-hi); border-color: var(--fan-border-hi); }
+.fan-fault-row[data-active="true"] {
+  background: rgba(224,85,85,0.07);
+  border-color: var(--fan-fail);
+}
+.fan-fault-row input[type="checkbox"] {
+  accent-color: var(--fan-fail);
+  width: 13px; height: 13px;
+  flex-shrink: 0;
+}
+.fan-fault-node {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  color: var(--fan-text);
+  min-width: 56px;
+}
+.fan-fault-type-tag {
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  color: var(--fan-text-mute);
+}
+.fan-fault-row[data-active="true"] .fan-fault-node  { color: var(--fan-fail); }
+.fan-fault-row[data-active="true"] .fan-fault-type-tag { color: var(--fan-fail); opacity: 0.8; }
+.fan-fault-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dotted var(--fan-border);
+}
+.fan-fault-clear-btn {
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  padding: 4px 12px;
+  background: transparent;
+  border: 1px solid var(--fan-border-hi);
+  color: var(--fan-text-dim);
+  cursor: pointer;
+  border-radius: 2px;
+  transition: border-color 0.1s, color 0.1s;
+}
+.fan-fault-clear-btn:hover { border-color: var(--fan-fail); color: var(--fan-fail); }
+.fan-fault-active-list {
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  color: var(--fan-fail);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ══════════ Footer ══════════ */

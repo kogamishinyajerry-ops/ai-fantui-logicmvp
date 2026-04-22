@@ -27,6 +27,7 @@
     </div>
     <div class="unified-nav-group">
       <span class="unified-nav-group-label">仿真</span>
+      <a href="/fan_sim_panel.html" class="unified-nav-link" data-nav-key="fan-sim">反推仿真</a>
       <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
     </div>
   </div>
@@ -375,6 +376,13 @@
               <marker id="etras-arr-idle" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
                 <path d="M0,0 L7,3.5 L0,7 Z" fill="#3a5570"/>
               </marker>
+              <marker id="etras-arr-fault" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                <path d="M0,0 L7,3.5 L0,7 Z" fill="#e05555"/>
+              </marker>
+              <!-- Simulink-style AND gate icon (D-shape): flat left, rounded right. -->
+              <symbol id="gate-and" viewBox="0 0 18 14" overflow="visible">
+                <path d="M 1 1 L 9 1 A 6 6 0 0 1 9 13 L 1 13 Z"/>
+              </symbol>
             </defs>
 
             <!-- Column headers -->
@@ -383,19 +391,21 @@
             <text x="580" y="24" fill="#3a5570" font-size="10" text-anchor="middle" font-family="Courier New">LOGIC NODES</text>
             <text x="840" y="24" fill="#3a5570" font-size="10" text-anchor="middle" font-family="Courier New">OUTPUTS</text>
 
-            <!-- ROW 1: WOW pipeline -->
+            <!-- Blocks (unchanged positions; wires below rewritten to
+                 Simulink-style orthogonal routing with shared lanes). -->
+
+            <!-- ROW 1 — WOW pipeline: mlg_wow → tr_wow (y=60) -->
             <g class="chain-node" data-node="mlg_wow">
               <rect x="10" y="46" width="160" height="28" rx="3"/>
               <text x="90" y="64" text-anchor="middle">mlg_wow (selected)</text>
             </g>
-            <line x1="170" y1="60" x2="210" y2="60" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+            <path d="M 170 60 H 210" class="chain-wire" data-src="mlg_wow" data-dst="tr_wow" marker-end="url(#etras-arr-idle)"/>
             <g class="chain-node" data-node="tr_wow">
               <rect x="210" y="46" width="160" height="28" rx="3"/>
               <text x="290" y="64" text-anchor="middle">tr_wow (2.25s SET)</text>
             </g>
-            <line x1="370" y1="60" x2="500" y2="60" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
 
-            <!-- ROW 2: atltla + tra + wow + inhibit + cmd2 timer → EICU_CMD2 -->
+            <!-- INPUT blocks (left column) -->
             <g class="chain-node" data-node="atltla">
               <rect x="10" y="88" width="160" height="28" rx="3"/>
               <text x="90" y="106" text-anchor="middle">atltla (SW1)</text>
@@ -408,73 +418,14 @@
               <rect x="10" y="160" width="160" height="28" rx="3"/>
               <text x="90" y="178" text-anchor="middle">tr_inhibited</text>
             </g>
-
-            <g class="chain-logic" data-node="ln_eicu_cmd2">
-              <rect x="500" y="100" width="170" height="38" rx="4"/>
-              <text x="585" y="120" text-anchor="middle" class="logic-id">EICU_CMD2</text>
-              <text x="585" y="132" text-anchor="middle" class="logic-sub">单相解锁 (30s 定时)</text>
-            </g>
-            <line x1="170" y1="102" x2="500" y2="110" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
-            <line x1="170" y1="138" x2="500" y2="120" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
-            <line x1="170" y1="174" x2="500" y2="130" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
-
-            <!-- EICU_CMD2 → output single-phase power -->
-            <line x1="670" y1="119" x2="750" y2="119" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
-            <g class="chain-node" data-node="eicu_cmd2">
-              <rect x="750" y="102" width="200" height="34" rx="3"/>
-              <text x="850" y="120" text-anchor="middle">eicu_cmd2 (1-φ unlock)</text>
-              <text x="850" y="130" text-anchor="middle" class="output-sub">单相解锁供电</text>
-            </g>
-
-            <!-- ROW 3: apwtla + tr_wow + inhibit + prev_cmd3 → EICU_CMD3 (SR latch) -->
             <g class="chain-node" data-node="apwtla">
               <rect x="10" y="196" width="160" height="28" rx="3"/>
               <text x="90" y="214" text-anchor="middle">apwtla (SW2)</text>
             </g>
-
-            <!-- e_tras_over_temp_fault → TR_Command3_Enable (inhibit input) -->
             <g class="chain-node" data-node="e_tras_over_temp_fault">
               <rect x="10" y="232" width="160" height="28" rx="3"/>
               <text x="90" y="250" text-anchor="middle">e_tras_over_temp_fault</text>
             </g>
-            <line x1="170" y1="246" x2="500" y2="270" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
-
-            <g class="chain-logic" data-node="ln_eicu_cmd3">
-              <rect x="500" y="180" width="170" height="38" rx="4"/>
-              <text x="585" y="200" text-anchor="middle" class="logic-id">EICU_CMD3</text>
-              <text x="585" y="212" text-anchor="middle" class="logic-sub">三相 TRCU (SR-latch)</text>
-            </g>
-            <line x1="170" y1="210" x2="500" y2="200" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
-            <line x1="370" y1="60" x2="500" y2="190" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
-
-            <!-- EICU_CMD3 → three_phase_trcu_power_on -->
-            <line x1="670" y1="199" x2="750" y2="199" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
-            <g class="chain-node" data-node="eicu_cmd3">
-              <rect x="750" y="182" width="200" height="34" rx="3"/>
-              <text x="850" y="200" text-anchor="middle">eicu_cmd3 (3-φ TRCU)</text>
-              <text x="850" y="210" text-anchor="middle" class="output-sub">三相 TRCU 供电</text>
-            </g>
-
-            <!-- ROW 4: Lock aggregator -->
-            <g class="chain-node" data-node="lock_state">
-              <rect x="210" y="252" width="160" height="28" rx="3"/>
-              <text x="290" y="270" text-anchor="middle">lock_state (agg)</text>
-            </g>
-            <line x1="370" y1="266" x2="500" y2="260" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
-
-            <!-- ROW 5: TR_Command3_Enable gate -->
-            <g class="chain-logic" data-node="ln_tr_command3_enable">
-              <rect x="500" y="248" width="170" height="38" rx="4"/>
-              <text x="585" y="268" text-anchor="middle" class="logic-id">TR_Command3_Enable</text>
-              <text x="585" y="280" text-anchor="middle" class="logic-sub">CMD3 解锁 · 过温/收起禁止</text>
-            </g>
-            <line x1="670" y1="267" x2="750" y2="267" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
-            <g class="chain-node" data-node="tr_command3_enable">
-              <rect x="750" y="250" width="200" height="34" rx="3"/>
-              <text x="850" y="268" text-anchor="middle">tr_command3_enable</text>
-            </g>
-
-            <!-- ROW 6: N1K + VDT position + TRA → FADEC_Deploy -->
             <g class="chain-node" data-node="n1k_percent">
               <rect x="10" y="302" width="160" height="28" rx="3"/>
               <text x="90" y="320" text-anchor="middle">n1k_percent</text>
@@ -483,42 +434,142 @@
               <rect x="10" y="338" width="160" height="28" rx="3"/>
               <text x="90" y="356" text-anchor="middle">tr_position_percent</text>
             </g>
+            <g class="chain-node" data-node="engine_running">
+              <rect x="10" y="420" width="160" height="28" rx="3"/>
+              <text x="90" y="438" text-anchor="middle">engine_running</text>
+            </g>
 
+            <!-- INTERMEDIATE: lock_state aggregator (col 2) -->
+            <g class="chain-node" data-node="lock_state">
+              <rect x="210" y="252" width="160" height="28" rx="3"/>
+              <text x="290" y="270" text-anchor="middle">lock_state (agg)</text>
+            </g>
+
+            <!-- LOGIC gates (col 3). Each has an AND-gate icon (D-shape) in top-left. -->
+            <g class="chain-logic" data-node="ln_eicu_cmd2">
+              <rect x="500" y="100" width="170" height="38" rx="4"/>
+              <use href="#gate-and" class="gate-icon" x="506" y="104" width="18" height="14"/>
+              <text x="515" y="114" text-anchor="middle" class="gate-label">&amp;</text>
+              <text x="585" y="120" text-anchor="middle" class="logic-id">EICU_CMD2</text>
+              <text x="585" y="132" text-anchor="middle" class="logic-sub">单相解锁 (30s 定时)</text>
+            </g>
+            <g class="chain-logic" data-node="ln_eicu_cmd3">
+              <rect x="500" y="180" width="170" height="38" rx="4"/>
+              <use href="#gate-and" class="gate-icon" x="506" y="184" width="18" height="14"/>
+              <text x="515" y="194" text-anchor="middle" class="gate-label">&amp;</text>
+              <text x="585" y="200" text-anchor="middle" class="logic-id">EICU_CMD3</text>
+              <text x="585" y="212" text-anchor="middle" class="logic-sub">三相 TRCU (SR-latch)</text>
+            </g>
+            <g class="chain-logic" data-node="ln_tr_command3_enable">
+              <rect x="500" y="248" width="170" height="38" rx="4"/>
+              <use href="#gate-and" class="gate-icon" x="506" y="252" width="18" height="14"/>
+              <text x="515" y="262" text-anchor="middle" class="gate-label">&amp;</text>
+              <text x="585" y="268" text-anchor="middle" class="logic-id">TR_Command3_Enable</text>
+              <text x="585" y="280" text-anchor="middle" class="logic-sub">CMD3 解锁 · 过温/收起禁止</text>
+            </g>
             <g class="chain-logic" data-node="ln_fadec_deploy_command">
               <rect x="500" y="318" width="170" height="38" rx="4"/>
+              <use href="#gate-and" class="gate-icon" x="506" y="322" width="18" height="14"/>
+              <text x="515" y="332" text-anchor="middle" class="gate-label">&amp;</text>
               <text x="585" y="338" text-anchor="middle" class="logic-id">FADEC_Deploy</text>
               <text x="585" y="350" text-anchor="middle" class="logic-sub">展开命令 (TRA&lt;−11.74°)</text>
             </g>
-            <line x1="170" y1="316" x2="500" y2="328" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
-            <line x1="170" y1="352" x2="500" y2="340" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
-            <line x1="670" y1="337" x2="750" y2="337" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+            <g class="chain-logic" data-node="ln_fadec_stow_command">
+              <rect x="500" y="370" width="170" height="38" rx="4"/>
+              <use href="#gate-and" class="gate-icon" x="506" y="374" width="18" height="14"/>
+              <text x="515" y="384" text-anchor="middle" class="gate-label">&amp;</text>
+              <text x="585" y="390" text-anchor="middle" class="logic-id">FADEC_Stow</text>
+              <text x="585" y="402" text-anchor="middle" class="logic-sub">收起命令 (TRA≥0° 通路)</text>
+            </g>
+
+            <!-- OUTPUT blocks (col 4) -->
+            <g class="chain-node" data-node="eicu_cmd2">
+              <rect x="750" y="102" width="200" height="34" rx="3"/>
+              <text x="850" y="120" text-anchor="middle">eicu_cmd2 (1-φ unlock)</text>
+              <text x="850" y="130" text-anchor="middle" class="output-sub">单相解锁供电</text>
+            </g>
+            <g class="chain-node" data-node="eicu_cmd3">
+              <rect x="750" y="182" width="200" height="34" rx="3"/>
+              <text x="850" y="200" text-anchor="middle">eicu_cmd3 (3-φ TRCU)</text>
+              <text x="850" y="210" text-anchor="middle" class="output-sub">三相 TRCU 供电</text>
+            </g>
+            <g class="chain-node" data-node="tr_command3_enable">
+              <rect x="750" y="250" width="200" height="34" rx="3"/>
+              <text x="850" y="268" text-anchor="middle">tr_command3_enable</text>
+            </g>
             <g class="chain-node" data-node="fadec_deploy_command">
               <rect x="750" y="320" width="200" height="34" rx="3"/>
               <text x="850" y="338" text-anchor="middle">fadec_deploy_command</text>
               <text x="850" y="348" text-anchor="middle" class="output-sub">(展开指令)</text>
             </g>
-
-            <!-- ROW 7: FADEC_Stow -->
-            <g class="chain-logic" data-node="ln_fadec_stow_command">
-              <rect x="500" y="370" width="170" height="38" rx="4"/>
-              <text x="585" y="390" text-anchor="middle" class="logic-id">FADEC_Stow</text>
-              <text x="585" y="402" text-anchor="middle" class="logic-sub">收起命令 (TRA≥0° 通路)</text>
-            </g>
-            <line x1="670" y1="389" x2="750" y2="389" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
             <g class="chain-node" data-node="fadec_stow_command">
               <rect x="750" y="372" width="200" height="34" rx="3"/>
               <text x="850" y="390" text-anchor="middle">fadec_stow_command</text>
               <text x="850" y="400" text-anchor="middle" class="output-sub">(收起指令)</text>
             </g>
-            <line x1="170" y1="138" x2="500" y2="395" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
 
-            <!-- ROW 8: engine_running gates both FADEC commands -->
-            <g class="chain-node" data-node="engine_running">
-              <rect x="10" y="420" width="160" height="28" rx="3"/>
-              <text x="90" y="438" text-anchor="middle">engine_running</text>
-            </g>
-            <line x1="170" y1="434" x2="500" y2="350" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
-            <line x1="170" y1="434" x2="500" y2="400" class="chain-wire" marker-end="url(#etras-arr-idle)"/>
+            <!-- ════════════════════════════════════════════════════════════
+                 WIRES — Simulink-style orthogonal routing.
+
+                 Lane assignments (vertical buses between columns):
+                   BUS_TR_WOW_FANOUT = x=400 (tr_wow → CMD2 + CMD3)
+                   BUS_INPUT→CMD2    = x=442 (atltla → EICU_CMD2)
+                   BUS_TRA_TRUNK     = x=438 (tra_deg fan-out: CMD2 + FADEC_Stow)
+                   BUS_INHIBIT       = x=446 (tr_inhibited → EICU_CMD2)
+                   BUS_APWTLA        = x=446 (apwtla → EICU_CMD3; range [200,210])
+                   BUS_OVERTEMP      = x=446 (over_temp → TR_Command3_Enable; [246,268])
+                   BUS_N1K           = x=446 (n1k_percent → FADEC_Deploy; [316,328])
+                   BUS_TR_POS        = x=450 (tr_position_percent → FADEC_Deploy)
+                   BUS_ENGINE_TRUNK  = x=432 (engine_running fan-out: Deploy + Stow)
+                   BUS_LOCK_STATE    = x=480 (lock_state → TR_Command3_Enable)
+
+                 All wires use <path> with orthogonal HV segments.
+                 Arrow markers appear only at the destination block entry.
+                 Fan-out branches use <circle class="chain-junction"> dots.
+            ════════════════════════════════════════════════════════════ -->
+
+            <!-- tr_wow → EICU_CMD2 + EICU_CMD3 (fan-out at x=400) -->
+            <path d="M 370 60 H 400 V 110 H 500" class="chain-wire" data-src="tr_wow" data-dst="ln_eicu_cmd2" marker-end="url(#etras-arr-idle)"/>
+            <path d="M 400 110 V 190 H 500" class="chain-wire" data-src="tr_wow" data-dst="ln_eicu_cmd3" marker-end="url(#etras-arr-idle)"/>
+            <circle cx="400" cy="110" r="3" class="chain-junction" data-src="tr_wow"/>
+
+            <!-- atltla → EICU_CMD2 -->
+            <path d="M 170 102 H 442 V 108 H 500" class="chain-wire" data-src="atltla" data-dst="ln_eicu_cmd2" marker-end="url(#etras-arr-idle)"/>
+
+            <!-- tra_deg → EICU_CMD2 + tra_deg → FADEC_Stow (fan-out at x=438) -->
+            <path d="M 170 138 H 438 V 120 H 500" class="chain-wire" data-src="tra_deg" data-dst="ln_eicu_cmd2" marker-end="url(#etras-arr-idle)"/>
+            <path d="M 438 138 V 400 H 500" class="chain-wire" data-src="tra_deg" data-dst="ln_fadec_stow_command" marker-end="url(#etras-arr-idle)"/>
+            <circle cx="438" cy="138" r="3" class="chain-junction" data-src="tra_deg"/>
+
+            <!-- tr_inhibited → EICU_CMD2 (fault signal — red when inhibit active) -->
+            <path d="M 170 174 H 446 V 130 H 500" class="chain-wire" data-src="tr_inhibited" data-dst="ln_eicu_cmd2" data-fault="true" marker-end="url(#etras-arr-idle)"/>
+
+            <!-- apwtla → EICU_CMD3 -->
+            <path d="M 170 210 H 446 V 204 H 500" class="chain-wire" data-src="apwtla" data-dst="ln_eicu_cmd3" marker-end="url(#etras-arr-idle)"/>
+
+            <!-- e_tras_over_temp_fault → TR_Command3_Enable (fault signal — red when asserted) -->
+            <path d="M 170 246 H 446 V 272 H 500" class="chain-wire" data-src="e_tras_over_temp_fault" data-dst="ln_tr_command3_enable" data-fault="true" marker-end="url(#etras-arr-idle)"/>
+
+            <!-- lock_state → TR_Command3_Enable -->
+            <path d="M 370 266 H 480 V 260 H 500" class="chain-wire" data-src="lock_state" data-dst="ln_tr_command3_enable" marker-end="url(#etras-arr-idle)"/>
+
+            <!-- n1k_percent → FADEC_Deploy -->
+            <path d="M 170 316 H 446 V 330 H 500" class="chain-wire" data-src="n1k_percent" data-dst="ln_fadec_deploy_command" marker-end="url(#etras-arr-idle)"/>
+
+            <!-- tr_position_percent → FADEC_Deploy -->
+            <path d="M 170 352 H 450 V 344 H 500" class="chain-wire" data-src="tr_position_percent" data-dst="ln_fadec_deploy_command" marker-end="url(#etras-arr-idle)"/>
+
+            <!-- engine_running → FADEC_Stow + FADEC_Deploy (fan-out at x=432) -->
+            <path d="M 170 434 H 432 V 395 H 500" class="chain-wire" data-src="engine_running" data-dst="ln_fadec_stow_command" marker-end="url(#etras-arr-idle)"/>
+            <path d="M 432 395 V 348 H 500" class="chain-wire" data-src="engine_running" data-dst="ln_fadec_deploy_command" marker-end="url(#etras-arr-idle)"/>
+            <circle cx="432" cy="395" r="3" class="chain-junction" data-src="engine_running"/>
+
+            <!-- LOGIC → OUTPUT (all horizontal, clean) -->
+            <path d="M 670 119 H 750" class="chain-wire" data-src="ln_eicu_cmd2" data-dst="eicu_cmd2" marker-end="url(#etras-arr-idle)"/>
+            <path d="M 670 199 H 750" class="chain-wire" data-src="ln_eicu_cmd3" data-dst="eicu_cmd3" marker-end="url(#etras-arr-idle)"/>
+            <path d="M 670 267 H 750" class="chain-wire" data-src="ln_tr_command3_enable" data-dst="tr_command3_enable" marker-end="url(#etras-arr-idle)"/>
+            <path d="M 670 337 H 750" class="chain-wire" data-src="ln_fadec_deploy_command" data-dst="fadec_deploy_command" marker-end="url(#etras-arr-idle)"/>
+            <path d="M 670 389 H 750" class="chain-wire" data-src="ln_fadec_stow_command" data-dst="fadec_stow_command" marker-end="url(#etras-arr-idle)"/>
 
           </svg>
         </div>
