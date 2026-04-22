@@ -1157,6 +1157,32 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertEqual(0, explain_runtime["verified_cache_hits"])
         self.assertIn("LLM features shelved", explain_runtime["detail"])
 
+    def test_workbench_js_renders_shelved_explain_runtime_with_distinct_copy(self):
+        """workbench.js must short-circuit shelved status so the cache/source/backend
+        cards don't misreport zero counters as observed prewarm telemetry.
+
+        Phase A Codex review noted the payload was shelved but the renderer had no
+        shelved branch — operators saw '待命 / 一旦在 chat / demo 舱发起 explain' copy
+        pointing at removed flows. This regression test pins the corrective branches
+        into the static asset.
+        """
+        script = (DEMO_UI_STATIC_DIR / "workbench.js").read_text(encoding="utf-8")
+        # Badge state + text branches
+        self.assertIn('if (runtime.status === "shelved") return "shelved";', script,
+                      "explainRuntimeBadgeState missing shelved branch")
+        self.assertIn('if (runtime.status === "shelved") return "已搁置";', script,
+                      "explainRuntimeBadgeText missing shelved branch")
+        # renderExplainRuntime short-circuit
+        self.assertIn('if (runtime.status === "shelved") {', script,
+                      "renderExplainRuntime missing shelved short-circuit")
+        # Distinct shelved copy (not the generic '待命/一旦在 chat / demo' fallback)
+        self.assertIn("LLM 后端已从活跃代码库搁置", script,
+                      "shelved branch must use distinct copy, not generic idle fallback")
+        self.assertIn("explain 路由已移除", script,
+                      "shelved branch must explain that explain routes are removed")
+        self.assertIn("LLM 缓存链路已停用", script,
+                      "shelved branch must explain cache pipeline is offline")
+
     def test_demo_server_recent_archives_api_lists_recent_workbench_archives(self):
         bundle = build_workbench_bundle(
             demo_server.intake_packet_from_dict(demo_server.reference_workbench_packet_payload()),
