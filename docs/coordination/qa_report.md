@@ -3,17 +3,17 @@
 <!-- AUTO-SYNCED QA REPORT SNAPSHOT START -->
 ## 当前自动同步 QA 基线
 
-- 结论：PASS；当前稳定基线由本地实测 + repo-doc 快照支撑（2026-04-22 治理收口刷新）。
-- 当前阶段：`P43-03 DONE · R1-R6 Authority Contract PASS=6 · P43-02 Batch 执行中`
+- 结论：PASS；当前稳定基线由本地实测 + GitHub Actions 证据支撑。
+- 当前阶段：`P43 Control Logic Workbench end-to-end milestone — P43-03 DONE · P43-04 pending`
 - 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`local validation suite PASS · main@433949d · 726 passed 12 xpassed (default lane) · 24/24 checks`
+- 最近成功执行证据：`local PASS · main@5b85f2b · 726 passed 12 xpassed · 24/24 checks · GitHub Actions run #24785138908 全绿`
 - 当前 Gate：`GATE-P43-02-BATCH-CLOSURE pending`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0（待 CI notion-sync 回写后以 Notion DB 为准）`
-- 当前证据模式：`repo-doc snapshot`
-- 证据模式说明：本快照由本地验证证据手动刷新（2026-04-22）；CI validation 已修复（workflow 依赖安装对齐 pyproject.toml [dev]），下次 CI 成功后将由自动同步覆盖。
-- 当前 QA 摘要：`PASS. 726 passed, 12 xpassed, 27 deselected (e2e opt-in) · validation suite 24/24 · main@433949d`
-- 当前运行摘要：`治理收口 pass：CI workflow 修复 + 三协调文档快照刷新 + default_plan 对齐 P43 + README 定位刷新。本地验证全绿。`
+- 当前证据模式：`repo-doc snapshot（2026-04-22 治理收口）`
+- 证据模式说明：ROADMAP.md P43 Active 前缀已修正，解析器正确识别 P43；CI validation 全绿（GitHub Actions run #24785138908）。下次 CI notion-sync 成功后将由自动同步覆盖。
+- 当前 QA 摘要：`PASS. 726 passed, 12 xpassed, 27 deselected (e2e opt-in) · validation suite 24/24 · main@5b85f2b`
+- 当前运行摘要：`治理收口全绿：CI workflow fix + ROADMAP Active fix + SoT 对齐 + README 重定位 + GitHub Actions 三 job pass。`
 
 ## 当前执行规则
 

@@ -1039,7 +1039,7 @@ Status: Executed & Green · Awaiting `GATE-P41-CLOSURE: Approved`
 
 ## Phase P43: Control Logic Workbench end-to-end milestone
 
-Status: **Plan v8 GATE-P43-PLAN Approved + §3d amended** (Kogami 2026-04-20 v7 Approved · 2026-04-21 v8 §3d 8-entry delta applied) · **P43-01 Contract Proof Spike CLOSED** · **GATE-P43-01-CLOSURE Approved** (Kogami 2026-04-21) · **P43-02 Batch plan v3.1 APPROVED · GATE-P43-02-BATCH-PLAN-QUALITY Approved** (Kogami 2026-04-21 · Option A) · **Batch-2 execution authorized · next = Step 3a/A**
+Status: Active — P43-02 Batch execution in progress · P43-03 DONE · P43-04 pending · Plan v8 GATE-P43-PLAN Approved + §3d amended (Kogami 2026-04-20 v7 Approved · 2026-04-21 v8 §3d 8-entry delta applied) · P43-01 Contract Proof Spike CLOSED · GATE-P43-01-CLOSURE Approved (Kogami 2026-04-21) · P43-02 Batch plan v3.1 APPROVED · GATE-P43-02-BATCH-PLAN-QUALITY Approved (Kogami 2026-04-21 · Option A) · GATE-P43-02-BATCH-CLOSURE pending
 
 ### P43-02 Batch Sub-phase: Orchestrator + Document Pipeline + Freeze Gate (plan v3.1 APPROVED · execution authorized)
 

@@ -3,15 +3,15 @@
 <!-- AUTO-SYNCED DEV HANDOFF SNAPSHOT START -->
 ## 当前自动同步交接基线
 
-- 活动 phase：`P43-03 DONE · R1-R6 Authority Contract PASS=6 · P43-02 Batch 执行中（P43-04 pending）`
+- 活动 phase：`P43 Control Logic Workbench end-to-end milestone — P43-03 DONE · P43-04 pending`
 - 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`local validation suite PASS · main@433949d · 726 passed 12 xpassed (default lane) · 24/24 checks`
-- 当前证据模式：`repo-doc snapshot`
-- 证据模式说明：本快照由 repo 本地验证证据手动刷新（2026-04-22 治理收口）；下次 CI notion-sync 成功后将由自动同步覆盖。
-- 当前 QA 摘要：`PASS. 726 passed, 12 xpassed, 27 deselected (e2e opt-in) · validation suite 24/24 · main@433949d`
-- 当前运行摘要：`治理收口 pass：CI validation 闭环修复 + repo/Notion SoT 对齐 + README 定位刷新。本地验证全绿，726 passed 12 xpassed。`
-- 当前主线：P43-02 Batch 执行中，P43-03 sub-phase 已完成，P43-04（FREEZE event + workbench freeze CLI + traceability_matrix）待执行。
-- 当前优先级：完成 P43-04，提交 GATE-P43-02-BATCH-CLOSURE（所有 19 Exit Criteria + 13 Codex rounds 完成后）。
+- 最近成功执行证据：`local validation suite PASS · main@5b85f2b · 726 passed 12 xpassed (default lane) · 24/24 checks · GitHub Actions 全绿`
+- 当前证据模式：`repo-doc snapshot（2026-04-22 治理收口）`
+- 证据模式说明：ROADMAP.md P43 Status 行已修正（Active 前缀），解析器现正确识别 P43。CI validation 全绿。下次 CI notion-sync 成功后将由自动同步覆盖。
+- 当前 QA 摘要：`PASS. 726 passed, 12 xpassed, 27 deselected (e2e opt-in) · validation suite 24/24 · main@5b85f2b · GitHub Actions all green`
+- 当前运行摘要：`治理收口 pass：CI workflow 修复 + ROADMAP Active 修正 + SoT 对齐 + README 定位刷新 + GitHub Actions 三 job 全绿。`
+- 当前主线：P43-02 Batch 执行中，P43-03 已完成，P43-04 pending。下一步：执行 P43-04 后提交 GATE-P43-02-BATCH-CLOSURE。
+- 当前优先级：P43-04 执行 → GATE-P43-02-BATCH-CLOSURE 提交。
 
 ## 当前开发架构与执行规则
 
