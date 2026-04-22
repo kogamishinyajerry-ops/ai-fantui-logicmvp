@@ -84,7 +84,7 @@
 - `test_wow_c_missing_outcome_returns_400`
 - `test_wow_c_max_results_bound_is_respected`
 
-**降级额外锚**（`test_demo_resilience.py`）：
+**降级额外锚**（`archive/shelved/llm-features/tests/e2e/test_demo_resilience.py`）：
 - `test_resilience_diagnosis_unknown_system_returns_400`
 
 **Notion 战略页**：AI FANTUI LogicMVP 控制塔 → P19 Sprint → 3 哇瞬间 Deck

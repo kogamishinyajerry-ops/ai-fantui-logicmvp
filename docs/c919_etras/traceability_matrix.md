@@ -150,6 +150,6 @@ All three items are tracked in the intake packet's `source_documents` field via 
 |---|---|---|---|
 | Default suite (non-e2e) | `PYTHONPATH=src python -m pytest tests/` | 747 passed, 1 skipped, 49 deselected in ~61 s | 63 new (`test_c919_etras_adapter.py`) + 684 pre-existing |
 | Opt-in e2e | `PYTHONPATH=src python -m pytest tests/ -m e2e` | 49 passed, 748 deselected in ~1.5 s | All 49 e2e including `test_resilience_adversarial_truth_engine_still_passes` |
-| Adversarial 8/8 | `WELL_HARNESS_PORT=8799 python src/well_harness/static/adversarial_test.py` (via `tests/e2e/test_demo_resilience.py::test_resilience_adversarial_truth_engine_still_passes`) | 8/8 ALL TESTS PASSED | Wraps the adversarial script under live `demo_server` on :8799 |
+| Adversarial 8/8 | `WELL_HARNESS_PORT=8799 python src/well_harness/static/adversarial_test.py` (via `archive/shelved/llm-features/tests/e2e/test_demo_resilience.py::test_resilience_adversarial_truth_engine_still_passes`) | 8/8 ALL TESTS PASSED | Wraps the adversarial script under live `demo_server` on :8799 |
 
 Zero regression against the 684-test pre-existing baseline. The 63 new tests cover: metadata / schema shape (9), MLG_WOW redundancy (6), EICU CMD2 / CMD3 / TR_Command3_Enable (14), FADEC Deploy / Stow (15), lock fallback (6), Step 1–10 timeline (3), fault injection (5), intake packet (2), hardware YAML (3).
