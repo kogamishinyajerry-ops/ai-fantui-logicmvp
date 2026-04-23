@@ -197,14 +197,21 @@
   <text x="72" y="374" fill="#e05555" font-size="9.5" text-anchor="middle" font-family="Courier New">ETRAS FAULT</text>
   <text x="72" y="383" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">过温故障 / 抑制</text>
 
-  <!-- wires out from inputs -->
-  <line x1="132" y1="43" x2="218" y2="43" stroke="#00c8f5" stroke-width="1.2" marker-end="url(#a-blue)"/>
-  <line x1="132" y1="77" x2="218" y2="77" stroke="#00c8f5" stroke-width="1.2" marker-end="url(#a-blue)"/>
-  <line x1="132" y1="149" x2="218" y2="149" stroke="#00c8f5" stroke-width="1.2" marker-end="url(#a-blue)"/>
-  <line x1="132" y1="183" x2="218" y2="183" stroke="#00c8f5" stroke-width="1.2" marker-end="url(#a-blue)"/>
-  <line x1="132" y1="244" x2="218" y2="244" stroke="#3a5570" stroke-width="1" marker-end="url(#a-dim)"/>
-  <line x1="132" y1="299" x2="218" y2="299" stroke="#3a5570" stroke-width="1" marker-end="url(#a-dim)"/>
-  <line x1="132" y1="373" x2="218" y2="373" stroke="#e05555" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#a-red)"/>
+  <!-- wires out from inputs.
+       LGCU1/LGCU2 → WOW FILTER; TRA/ENGINE → CMD2; TR_POS → CMD3.
+       LOCK INPUTS uses a vertical trunk further down to reach LOCKS AGG
+       (block at y=380..440), so no stray horizontal at y=244.
+       ETRAS FAULT routes into CMD3 SR LATCH (used by the SET
+       !etras_over_temp guard), not into the empty strip at y=373. -->
+  <line x1="132" y1="43"  x2="220" y2="43"  stroke="#00c8f5" stroke-width="1.2" marker-end="url(#a-blue)"/>
+  <line x1="132" y1="77"  x2="220" y2="77"  stroke="#00c8f5" stroke-width="1.2" marker-end="url(#a-blue)"/>
+  <line x1="132" y1="149" x2="220" y2="149" stroke="#00c8f5" stroke-width="1.2" marker-end="url(#a-blue)"/>
+  <line x1="132" y1="183" x2="220" y2="183" stroke="#00c8f5" stroke-width="1.2" marker-end="url(#a-blue)"/>
+  <line x1="132" y1="299" x2="220" y2="299" stroke="#3a5570" stroke-width="1" marker-end="url(#a-dim)"/>
+  <!-- ETRAS FAULT → CMD3 SR LATCH (as !etras_over_temp SET guard) -->
+  <line x1="132" y1="373" x2="180" y2="373" stroke="#e05555" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="180" y1="373" x2="180" y2="332" stroke="#e05555" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="180" y1="332" x2="220" y2="332" stroke="#e05555" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#a-red)"/>
 
   <!-- ═══════════════════════════════════
        FILTERING / TIMING COLUMN (x: 220-500)
@@ -219,11 +226,14 @@
   <text x="310" y="85" fill="#cdd6e0" font-size="8" text-anchor="middle" font-family="Courier New">RESET delay: 0.0 s</text>
   <text x="310" y="98" fill="#7a9bb5" font-size="8" text-anchor="middle" font-family="Courier New">voted WOW (LGCU1 OR LGCU2)</text>
 
-  <!-- WOW FILTER → selected_mlg_wow wire out -->
-  <line x1="400" y1="66" x2="460" y2="66" stroke="#00c8f5" stroke-width="1.5"/>
+  <!-- WOW FILTER → selected_mlg_wow → state machine. tr_wow drives the
+       S0→S1 transition so the arrow terminates at S1 GND_STOWED_LOCKED
+       left-center (not in the mid-column gap at y=200, which landed
+       between S2 and S3 boxes). -->
+  <line x1="400" y1="66"  x2="460" y2="66"  stroke="#00c8f5" stroke-width="1.5"/>
   <text x="430" y="62" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">tr_wow</text>
-  <line x1="460" y1="66" x2="460" y2="200" stroke="#00c8f5" stroke-width="1.5"/>
-  <line x1="460" y1="200" x2="518" y2="200" stroke="#00c8f5" stroke-width="1.5" marker-end="url(#a-blue)"/>
+  <line x1="460" y1="66"  x2="460" y2="108" stroke="#00c8f5" stroke-width="1.5"/>
+  <line x1="460" y1="108" x2="522" y2="108" stroke="#00c8f5" stroke-width="1.5" marker-end="url(#a-blue)"/>
 
   <!-- CMD2 block (unlock timer) -->
   <rect x="220" y="140" width="180" height="76" rx="3" fill="#0d2040" stroke="#00c8f5" stroke-width="1.5"/>
@@ -232,9 +242,6 @@
   <text x="310" y="184" fill="#cdd6e0" font-size="8" text-anchor="middle" font-family="Courier New">timer limit:  2.0 s</text>
   <text x="310" y="196" fill="#cdd6e0" font-size="8" text-anchor="middle" font-family="Courier New">1-phase unlock → 3-phase TRCU</text>
   <text x="310" y="208" fill="#7a9bb5" font-size="8" text-anchor="middle" font-family="Courier New">TRA &lt; idle_rev_deg 触发</text>
-
-  <line x1="132" y1="149" x2="132" y2="178" stroke="#00c8f5" stroke-width="1.2"/>
-  <line x1="132" y1="178" x2="218" y2="178" stroke="#00c8f5" stroke-width="1.2"/>
 
   <!-- CMD2 → out -->
   <line x1="400" y1="178" x2="510" y2="178" stroke="#00c8f5" stroke-width="1.5" marker-end="url(#a-blue)"/>
@@ -262,7 +269,7 @@
   <text x="310" y="436" fill="#cdd6e0" font-size="8" text-anchor="middle" font-family="Courier New">→ tr_stowed_and_locked</text>
 
   <line x1="132" y1="244" x2="132" y2="410" stroke="#3a5570" stroke-width="1"/>
-  <line x1="132" y1="410" x2="218" y2="410" stroke="#3a5570" stroke-width="1" marker-end="url(#a-dim)"/>
+  <line x1="132" y1="410" x2="220" y2="410" stroke="#3a5570" stroke-width="1" marker-end="url(#a-dim)"/>
 
   <!-- LOCKS → state machine -->
   <line x1="400" y1="410" x2="510" y2="410" stroke="#3a5570" stroke-width="1" marker-end="url(#a-dim)"/>
@@ -346,55 +353,62 @@
   <text x="924" y="170" fill="#00c8f5" font-size="9.5" text-anchor="middle" font-family="Courier New">1-PH UNLOCK PWR</text>
   <text x="924" y="178" fill="#7a9bb5" font-size="7" text-anchor="middle" font-family="Courier New">single_phase_unlock_power_on</text>
 
-  <line x1="722" y1="170" x2="842" y2="167" stroke="#00c8f5" stroke-width="1.5" marker-end="url(#a-blue)"/>
+  <line x1="722" y1="170" x2="844" y2="167" stroke="#00c8f5" stroke-width="1.5" marker-end="url(#a-blue)"/>
 
   <!-- 3-phase TRCU -->
   <rect x="844" y="192" width="160" height="30" rx="3" fill="#0d2040" stroke="#00c8f5" stroke-width="1.2"/>
   <text x="924" y="210" fill="#00c8f5" font-size="9.5" text-anchor="middle" font-family="Courier New">3-PH TRCU PWR</text>
   <text x="924" y="218" fill="#7a9bb5" font-size="7" text-anchor="middle" font-family="Courier New">three_phase_trcu_power_on</text>
 
-  <line x1="722" y1="200" x2="842" y2="207" stroke="#00c8f5" stroke-width="1.5" marker-end="url(#a-blue)"/>
+  <line x1="722" y1="200" x2="844" y2="207" stroke="#00c8f5" stroke-width="1.5" marker-end="url(#a-blue)"/>
 
   <!-- FADEC DEPLOY -->
   <rect x="844" y="264" width="160" height="30" rx="3" fill="#0d2a00" stroke="#00e5a0" stroke-width="1.5"/>
   <text x="924" y="282" fill="#00e5a0" font-size="9.5" text-anchor="middle" font-family="Courier New">FADEC DEPLOY CMD</text>
   <text x="924" y="290" fill="#7a9bb5" font-size="7" text-anchor="middle" font-family="Courier New">fadec_deploy_command</text>
 
-  <line x1="722" y1="234" x2="860" y2="278" stroke="#00e5a0" stroke-width="1.5" marker-end="url(#a-green)"/>
+  <line x1="722" y1="234" x2="844" y2="279" stroke="#00e5a0" stroke-width="1.5" marker-end="url(#a-green)"/>
 
   <!-- FADEC STOW -->
   <rect x="844" y="356" width="160" height="30" rx="3" fill="#1a0000" stroke="#e05555" stroke-width="1.5"/>
   <text x="924" y="374" fill="#e05555" font-size="9.5" text-anchor="middle" font-family="Courier New">FADEC STOW CMD</text>
   <text x="924" y="382" fill="#7a9bb5" font-size="7" text-anchor="middle" font-family="Courier New">fadec_stow_command</text>
 
-  <line x1="722" y1="352" x2="842" y2="371" stroke="#e05555" stroke-width="1.5" marker-end="url(#a-red)"/>
+  <line x1="722" y1="352" x2="844" y2="371" stroke="#e05555" stroke-width="1.5" marker-end="url(#a-red)"/>
 
   <!-- UNLOCK CONFIRMED -->
   <rect x="844" y="404" width="160" height="30" rx="3" fill="#0d2040" stroke="#3a5570" stroke-width="1"/>
   <text x="924" y="422" fill="#7a9bb5" font-size="9.5" text-anchor="middle" font-family="Courier New">UNLOCK CONFIRMED</text>
   <text x="924" y="430" fill="#3a5570" font-size="7" text-anchor="middle" font-family="Courier New">unlock_confirmed</text>
 
-  <line x1="722" y1="420" x2="842" y2="419" stroke="#3a5570" stroke-width="1" marker-end="url(#a-dim)"/>
+  <line x1="722" y1="420" x2="844" y2="419" stroke="#3a5570" stroke-width="1" marker-end="url(#a-dim)"/>
 
   <!-- TR_STOWED_AND_LOCKED -->
   <rect x="844" y="444" width="160" height="30" rx="3" fill="#0d2040" stroke="#3a5570" stroke-width="1"/>
   <text x="924" y="462" fill="#7a9bb5" font-size="9.5" text-anchor="middle" font-family="Courier New">TR STOWED+LOCKED</text>
   <text x="924" y="470" fill="#3a5570" font-size="7" text-anchor="middle" font-family="Courier New">tr_stowed_and_locked</text>
 
-  <line x1="722" y1="434" x2="842" y2="459" stroke="#3a5570" stroke-width="1" marker-end="url(#a-dim)"/>
+  <line x1="722" y1="434" x2="844" y2="459" stroke="#3a5570" stroke-width="1" marker-end="url(#a-dim)"/>
 
-  <!-- Feedback: tr_stowed_and_locked → CMD3 RESET -->
+  <!-- Feedback: tr_stowed_and_locked → CMD3 RESET.
+       Horizontal placed at y=322 (between S4 DEPLOYED bottom y=310 and
+       S5 STOWING top y=336). Label sits in the filter-column / state-
+       column gap at x=455 so it never collides with the "TRA回收 /
+       stow_cmd" transition label at (640, 328). Previously the label
+       lived at (600, 312) which overlapped S4's bottom rect. -->
   <line x1="844" y1="462" x2="800" y2="462" stroke="#3a5570" stroke-width="1" stroke-dasharray="3,4"/>
-  <line x1="800" y1="462" x2="800" y2="318" stroke="#3a5570" stroke-width="1" stroke-dasharray="3,4"/>
-  <line x1="800" y1="318" x2="400" y2="318" stroke="#3a5570" stroke-width="1" stroke-dasharray="3,4" marker-end="url(#a-dim)"/>
-  <text x="600" y="312" fill="#3a5570" font-size="7.5" text-anchor="middle" font-family="Courier New">RESET feedback</text>
+  <line x1="800" y1="462" x2="800" y2="322" stroke="#3a5570" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="800" y1="322" x2="400" y2="322" stroke="#3a5570" stroke-width="1" stroke-dasharray="3,4" marker-end="url(#a-dim)"/>
+  <text x="455" y="319" fill="#3a5570" font-size="7.5" text-anchor="middle" font-family="Courier New">RESET feedback</text>
 
   <!-- ═══════ KEY PARAMS annotation ═══════ -->
-  <rect x="522" y="500" width="200" height="48" rx="2" fill="#0a0e14" stroke="#1e3048"/>
+  <!-- rect height 48 → 54 so the fourth line (baseline y=549) fits
+       inside the box; previously the last row overflowed the bottom. -->
+  <rect x="522" y="500" width="200" height="54" rx="2" fill="#0a0e14" stroke="#1e3048"/>
   <text x="622" y="516" fill="#3a5570" font-size="8" text-anchor="middle" font-family="Courier New">KEY PARAMETERS</text>
   <text x="622" y="528" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">wow_set_delay=0.5s  wow_reset=0.0s</text>
   <text x="622" y="540" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">cmd2_limit=2.0s  stow_dwell=0.5s</text>
-  <text x="622" y="549" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">deployed_thr=90%  tra_idle_rev=−5°</text>
+  <text x="622" y="550" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">deployed_thr=90%  tra_idle_rev=−5°</text>
 
 </svg>
 </div>
