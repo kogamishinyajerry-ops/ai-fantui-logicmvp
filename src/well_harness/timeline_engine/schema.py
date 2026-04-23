@@ -22,7 +22,7 @@ EVENT_KINDS = (
     "start_deploy_sequence",  # shorthand: schedules sw1/sw2 triggers + tra_deg ramp
 )
 
-SystemId = Literal["fantui", "c919_etras"]
+SystemId = Literal["fantui", "c919-etras"]
 
 
 @dataclass(frozen=True)
@@ -67,6 +67,10 @@ class TimelineEvent:
             raise ValueError(f"t_s must be non-negative; got {self.t_s}")
         if self.kind == "ramp_input" and (self.duration_s is None or self.duration_s <= 0):
             raise ValueError("ramp_input requires positive duration_s")
+        if self.kind == "inject_fault" and self.duration_s is not None and self.duration_s <= 0:
+            raise ValueError("inject_fault duration_s must be positive (or null for open-ended)")
+        if self.kind == "start_deploy_sequence" and self.duration_s is not None and self.duration_s <= 0:
+            raise ValueError("start_deploy_sequence duration_s must be positive")
 
 
 @dataclass(frozen=True)
@@ -80,6 +84,16 @@ class FaultScheduleEntry:
     fault_type: str
     start_s: float
     end_s: float
+
+    def __post_init__(self) -> None:
+        if not self.node_id:
+            raise ValueError("FaultScheduleEntry.node_id must be non-empty")
+        if self.start_s < 0:
+            raise ValueError(f"start_s must be non-negative; got {self.start_s}")
+        if self.end_s <= self.start_s:
+            raise ValueError(
+                f"end_s ({self.end_s}) must be > start_s ({self.start_s})"
+            )
 
     def is_active_at(self, t_s: float) -> bool:
         return self.start_s <= t_s < self.end_s
@@ -106,7 +120,7 @@ class Timeline:
             raise ValueError(f"step_s must be positive; got {self.step_s}")
         if self.duration_s <= 0:
             raise ValueError(f"duration_s must be positive; got {self.duration_s}")
-        if self.system not in ("fantui", "c919_etras"):
+        if self.system not in ("fantui", "c919-etras"):
             raise ValueError(f"unknown system {self.system!r}")
 
 

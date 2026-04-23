@@ -31,7 +31,7 @@ class Executor(Protocol):
     C919 12-step system, the FANTUI latched switches and plant state).
     """
 
-    # Short identifier ("fantui" | "c919_etras").
+    # Short identifier ("fantui" | "c919-etras").
     system_id: str
 
     # Canonical list of logic node ids this executor reports

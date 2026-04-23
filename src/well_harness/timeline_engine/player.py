@@ -140,8 +140,14 @@ class TimelinePlayer:
                     first_active_t_s[node_id] = tick_end
                 if state == "blocked" and node_id not in first_blocked_t_s:
                     first_blocked_t_s[node_id] = tick_end
-            # Detect "first broken gate this tick" — a gate flipping from active → blocked
-            for node_id, state in logic_states.items():
+            # Detect "first broken gate this tick" — a gate flipping from active → blocked.
+            # Iterate the executor's canonical logic_node_ids ordering so
+            # attribution is deterministic regardless of how the executor
+            # built its logic_states dict.
+            for node_id in executor.logic_node_ids:
+                if node_id not in logic_states:
+                    continue
+                state = logic_states[node_id]
                 prev = prev_logic_states.get(node_id)
                 if prev == "active" and state == "blocked":
                     failure_cascade.append(
@@ -308,19 +314,22 @@ class TimelinePlayer:
                 logic_first_blocked_t_s={},
                 failure_cascade=[],
             )
-        # "Deployed successfully" = at some frame, logic4 active AND
-        # thr_lock output released (either system's convention).
-        deployed = any(
-            frame.logic_states.get("logic4") == "active"
-            or frame.outputs.get("logic4_active") is True
-            for frame in frames
-        )
+        # thr_lock release is the authoritative "deployed" signal — any
+        # gate-stuck fault that prevents the terminal unlock command from
+        # firing (e.g. thr_lock:cmd_blocked) must flip deployed_successfully
+        # back to False even if L4 reported active mid-trace.
         thr_released = any(
             frame.outputs.get("throttle_electronic_lock_release_cmd") is True
             or frame.outputs.get("throttle_lock_release_cmd") is True
             or frame.outputs.get("thr_lock") == "active"
             for frame in frames
         )
+        l4_ever_active = any(
+            frame.logic_states.get("logic4") == "active"
+            or frame.outputs.get("logic4_active") is True
+            for frame in frames
+        )
+        deployed = l4_ever_active and thr_released
         return TimelineOutcome(
             deployed_successfully=deployed,
             thr_lock_released=thr_released,

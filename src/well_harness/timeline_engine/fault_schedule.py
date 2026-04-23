@@ -36,6 +36,7 @@ def compile_fault_schedule(timeline: Timeline) -> list[FaultScheduleEntry]:
     compiled: list[FaultScheduleEntry] = list(timeline.fault_schedule)
 
     # Group open injects by target so clear_fault can close them.
+    # Each entry is (index_in_compiled, FaultScheduleEntry).
     open_by_target: dict[str, list[tuple[int, FaultScheduleEntry]]] = {}
 
     for event in timeline.events:
@@ -57,9 +58,19 @@ def compile_fault_schedule(timeline: Timeline) -> list[FaultScheduleEntry]:
             open_by_target.setdefault(event.target, []).append((idx, entry))
         elif event.kind == "clear_fault":
             pending = open_by_target.get(event.target) or []
+            # Drop entries that have already expired by the time this
+            # clear_fault fires — their end_s ≤ event.t_s so they are
+            # no longer active and cannot be closed further.
+            pending = [
+                (idx, entry) for idx, entry in pending if entry.end_s > event.t_s
+            ]
+            open_by_target[event.target] = pending
             if not pending:
                 continue
-            idx, pending_entry = pending.pop()
+            # Close the EARLIEST still-active injection (FIFO match):
+            # this preserves the intuitive "open/close" pairing when a
+            # script does inject → short-duration inject → clear.
+            idx, pending_entry = pending.pop(0)
             clamped_end = min(event.t_s, pending_entry.end_s)
             compiled[idx] = FaultScheduleEntry(
                 node_id=pending_entry.node_id,

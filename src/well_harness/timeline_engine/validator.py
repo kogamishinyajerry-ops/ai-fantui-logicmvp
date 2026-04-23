@@ -21,13 +21,28 @@ class ValidationError(ValueError):
         self.message = message
 
 
-def _require(payload: dict, key: str, expected_type: type, field: str) -> Any:
+def _type_label(expected_type) -> str:
+    if isinstance(expected_type, tuple):
+        return " or ".join(t.__name__ for t in expected_type)
+    return expected_type.__name__
+
+
+def _require(payload: dict, key: str, expected_type, field: str) -> Any:
     if key not in payload:
         raise ValidationError(field, f"required key {key!r} missing")
     value = payload[key]
+    # Reject bool where numeric is expected (Python's bool is int).
+    if expected_type in (int, float) or (
+        isinstance(expected_type, tuple) and expected_type == (int, float)
+    ):
+        if isinstance(value, bool) or not isinstance(value, expected_type):
+            raise ValidationError(
+                field, f"expected {_type_label(expected_type)}, got {type(value).__name__}"
+            )
+        return value
     if not isinstance(value, expected_type):
         raise ValidationError(
-            field, f"expected {expected_type.__name__}, got {type(value).__name__}"
+            field, f"expected {_type_label(expected_type)}, got {type(value).__name__}"
         )
     return value
 
@@ -112,9 +127,9 @@ def parse_timeline(payload: dict) -> Timeline:
         raise ValidationError("<root>", "payload must be an object")
 
     system = _require(payload, "system", str, "system")
-    if system not in ("fantui", "c919_etras"):
+    if system not in ("fantui", "c919-etras"):
         raise ValidationError(
-            "system", f"must be 'fantui' or 'c919_etras'; got {system!r}"
+            "system", f"must be 'fantui' or 'c919-etras'; got {system!r}"
         )
 
     step_s = _require(payload, "step_s", (int, float), "step_s")  # type: ignore[arg-type]
