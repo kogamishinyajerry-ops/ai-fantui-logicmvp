@@ -2,20 +2,67 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: L4 reverse_travel inclusive-lower fix + L1 post-deploy explanation · Codex APPROVE · main=9d18f05
-last_updated: "2026-04-23T09:56:00.000Z"
+status: Timeline simulator delivered · 4 PRs + 3 Codex-review rounds · main=2e9571b
+last_updated: "2026-04-23T11:55:00.000Z"
 last_activity: 2026-04-23
 progress:
-  total_phases: 43
-  completed_phases: 42
+  total_phases: 44
+  completed_phases: 43
   total_plans: 2
   completed_plans: 1
-  notes: "controller L4 boundary bug fixed via new between_lower_inclusive comparison type · L1 post-deploy UX note added · Codex APPROVE · 725 tests green"
+  notes: "timeline engine (schema+validator+player) + FANTUI/C919 executors + /api/timeline-simulate + UI with 4 presets · 765 tests green · 0 CRITICAL findings"
 ---
 
 # State
 
 Last activity: 2026-04-23
+
+## 2026-04-23 Session — Timeline Simulator (全流程故障率仿真) · 4-PR delivery
+
+**Goal**: User request "增加一个全流程故障率仿真功能模块" — timeline-driven simulation driving both control logic systems (FANTUI demo + C919 E-TRAS) through a "时间-指令/状态" table.
+
+**Architecture (4 PRs, each followed by a Codex review):**
+
+### PR-1 · Timeline engine foundation (ecdd259 + ce7265c)
+- `src/well_harness/timeline_engine/` new package: schema / validator / player / Executor protocol
+- 7 event kinds: set_input, ramp_input, inject_fault, clear_fault, mark_phase, assert_condition, start_deploy_sequence
+- Half-open [start, end) intervals, deterministic tick order
+- Codex PR-1 fixes: P1×1 (deployed_successfully requires L4 AND thr_release) + P2×4 (canonical id "c919-etras", fault_schedule FIFO match, validator tuple-type, FaultScheduleEntry invariants) + P3×1 (cascade iteration via executor.logic_node_ids)
+
+### PR-2 · FANTUI Executor + API (0c21236 + 5a1556a)
+- `FantuiExecutor` wraps DeployController + LatchedSwitches + SimplifiedDeployPlant
+- `/api/timeline-simulate` on `demo_server.py` port 8002
+- 2 fixtures: `nominal_landing.json`, `sw1_stuck_at_touchdown.json`
+- 13-pair fault whitelist
+- Codex PR-2 fixes: MAJOR×4 (logic_stuck_false → blocked mapping, cascade suppression under no-fault runs, API runtime-error → 400, fault-id whitelist) + MINOR×2 (tick/event caps, fixture N1k unit)
+
+### PR-3 · C919 E-TRAS Executor + API (0eae71e + 2e9571b)
+- `C919ETRASExecutor` wraps frozen-V1.0 `C919ReverseThrustSystem` (12-step tick) + TR-position plant + lock plant + unlock-engaged latch
+- `/api/timeline-simulate` on `c919_etras_panel_server.py` port 9191
+- 2 fixtures: `c919_nominal_deploy.json`, `c919_tr_inhibited_blocks_deploy.json`
+- 14-pair fault whitelist
+- Auto-derive ATLTLA/APWTLA from TRA window membership ([-6.2°,-1.4°] / [-9.8°,-5.0°])
+- Codex PR-3 fixes: MAJOR×3 (unlock_engaged now releases at S9_LOCK_CONFIRM so multi-cycle sim reaches S10, ln_fadec_stow_command no longer false-positive blocked in cruise, TimelineOutcome.extra + Executor.summarize_outcome architecture for system-specific outcome)
+
+### PR-4 · Timeline Simulator UI (67af398)
+- `src/well_harness/static/timeline-sim.html` served from both port 8002 and 9191
+- 4 built-in presets + custom mode
+- Client-side router: `system="c919-etras"` → POST :9191, else same-origin
+- Outcome cards (system-aware), logic-node timeline bars, assertions list, failure-cascade table
+- 4 smoke tests
+
+**Regression**: 765 tests green (+40 vs start of session) · 0 CRITICAL / 0 failing.
+
+**Key files**:
+- `src/well_harness/timeline_engine/` (new package, 5 modules)
+- `src/well_harness/timeline_engine/executors/{fantui,c919_etras}.py`
+- `src/well_harness/timelines/*.json` (4 fixtures)
+- `src/well_harness/static/timeline-sim.html`
+- `src/well_harness/demo_server.py` (+/api/timeline-simulate)
+- `scripts/c919_etras_panel_server.py` (+/api/timeline-simulate + /timeline-sim.html route)
+- `tests/test_timeline_*.py` (4 test modules, 40 tests)
+
+**User-visible**: `python3 -m well_harness.demo_server` (:8002) + `python3 scripts/c919_etras_panel_server.py` (:9191) → browser `http://localhost:8002/timeline-sim.html` → pick preset → Run.
 
 ## 2026-04-23 Session — demo.html L3 wire clarity (iter-7 → iter-9)
 
