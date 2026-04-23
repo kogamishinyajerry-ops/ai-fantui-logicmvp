@@ -185,15 +185,19 @@ def scenario_lever_mode_switch_reset(port: int) -> ScenarioResult:
             "all three mode-switch smoke requests must return HTTP 200",
         )
 
+    # Post-scrubber-extension: auto_scrubber at TRA=-14 holds the lever long
+    # enough for plant VDT to reach 90% → logic4 correctly latches. Mode
+    # switching is exercised via the mode string + VDT source, not by
+    # asserting a false-blocked L4 that was actually a scrubber-too-short bug.
     expected_checks = (
         (auto_before["mode"] == "canonical_pullback_scrubber", "auto_before should use canonical_pullback_scrubber"),
-        (auto_before["outputs"]["logic4_active"] is False, "auto_before should keep logic4 blocked"),
+        (auto_before["outputs"]["logic4_active"] is True, "auto_before at TRA=-14 should run plant long enough for L4"),
+        (auto_before["input"]["deploy_position_percent"] == 0.0, "auto_before: request deploy_position_percent defaults to 0"),
         (manual["mode"] == "manual_feedback_override", "manual request should switch into manual feedback override"),
         (manual["outputs"]["logic4_active"] is True, "manual override 95 should activate logic4"),
+        (manual["hud"]["deploy_position_percent"] == 95.0, "manual hud VDT echoes the user's override value"),
         (auto_after["mode"] == "canonical_pullback_scrubber", "auto_after should return to canonical_pullback_scrubber"),
-        (auto_after["outputs"]["logic4_active"] is False, "auto_after should drop logic4 back to blocked"),
         (auto_after["input"]["deploy_position_percent"] == 0.0, "auto_after should not retain stale manual deploy_position_percent"),
-        (auto_after["hud"]["deploy_90_percent_vdt"] is False, "auto_after should not retain stale VDT90 state"),
     )
     for passed, message in expected_checks:
         if not passed:

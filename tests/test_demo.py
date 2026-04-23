@@ -357,14 +357,19 @@ class DemoIntentLayerTests(unittest.TestCase):
                 "etrac_540v": "active",
                 "logic3": "blocked",
             },
+            # At TRA=-14 with all L3 inputs satisfied, the canonical scrubber
+            # now holds long enough for plant VDT to reach 90% → L4 latches
+            # → THR_LOCK releases. (Previously the scrubber was too short and
+            # falsely showed the chain stuck at L3/VDT90, which the user
+            # correctly flagged as a bug.)
             -14: {
                 "logic3": "active",
                 "eec_deploy": "active",
                 "pls_power": "active",
                 "pdu_motor": "active",
-                "vdt90": "inactive",
-                "logic4": "blocked",
-                "thr_lock": "blocked",
+                "vdt90": "active",
+                "logic4": "active",
+                "thr_lock": "active",
             },
         }
         server, thread = start_demo_server()
@@ -400,8 +405,9 @@ class DemoIntentLayerTests(unittest.TestCase):
                     for node_id, state in expected.items():
                         self.assertEqual(node_states[node_id], state)
                     if tra_deg == -14:
-                        self.assertFalse(payload["hud"]["deploy_90_percent_vdt"])
-                        self.assertIn("deploy_90_percent_vdt", payload["summary"]["blocker"])
+                        # Scrubber now holds long enough for plant VDT to reach 90%.
+                        self.assertTrue(payload["hud"]["deploy_90_percent_vdt"])
+                        self.assertTrue(payload["outputs"]["logic4_active"])
         finally:
             server.shutdown()
             server.server_close()

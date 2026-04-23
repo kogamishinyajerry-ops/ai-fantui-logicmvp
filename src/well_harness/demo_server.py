@@ -1354,7 +1354,14 @@ def build_workbench_archive_restore_response(request_payload: dict) -> tuple[dic
 
 
 def _canonical_pullback_sequence(tra_deg: float, config: HarnessConfig) -> list[float]:
-    """Return a tiny canonical pullback path for the interactive UI scrubber."""
+    """Return a tiny canonical pullback path for the interactive UI scrubber.
+
+    When the pilot holds TRA in the deploy-cmd range (≤ logic3_tra_deg_threshold),
+    hold the lever long enough for plant VDT to reach 90% under the default
+    deploy rate. Without this, auto_scrubber shows L4 permanently blocked on
+    `deploy_90_percent_vdt` because the scrubber window is too short for the
+    plant to complete the deployment cycle.
+    """
     target = _clamp_tra(tra_deg, config)
     if target >= 0.0:
         return [0.0]
@@ -1365,7 +1372,14 @@ def _canonical_pullback_sequence(tra_deg: float, config: HarnessConfig) -> list[
     if target <= config.sw2_window.near_zero_deg:
         sequence.extend([-7.0] * 4)
 
-    final_repeats = 4 if target <= config.logic3_tra_deg_threshold else 2
+    if target <= config.logic3_tra_deg_threshold:
+        # Budget enough ticks for plant VDT to reach 90% (and a small margin
+        # so L4 latches cleanly). deploy_rate_percent_per_s × step_s × N ≥ 100
+        # → N ≥ 100 / (rate × step_s). +4 cushion covers L3-activation lag.
+        deploy_ticks_needed = int(100.0 / max(1e-6, config.deploy_rate_percent_per_s * config.step_s)) + 4
+        final_repeats = max(4, deploy_ticks_needed)
+    else:
+        final_repeats = 2
     sequence.extend([target] * final_repeats)
     return sequence
 
