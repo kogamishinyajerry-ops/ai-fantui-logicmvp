@@ -159,6 +159,9 @@ class TimelineOutcome:
     logic_first_active_t_s: dict[str, float]  # e.g. {"logic1": 0.3, "logic4": 14.2}
     logic_first_blocked_t_s: dict[str, float]
     failure_cascade: list[dict[str, Any]]     # [{at_s, trigger_fault, broken_gate, downstream}]
+    # Executor-supplied extra fields (e.g. C919 fills in
+    # reached_deployed_state / final_state / tr_position_peak_pct).
+    extra: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

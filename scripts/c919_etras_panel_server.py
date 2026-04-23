@@ -165,15 +165,23 @@ def _handle_c919_timeline_simulate(request_payload: dict) -> dict:
 
 
 def _c919_timeline_trace_to_json(trace) -> dict:
-    # The base TimelineOutcome.deployed_successfully checks FANTUI-specific
-    # signals; compute a C919-native "deployed" indicator too.
+    # TimelineOutcome.extra is populated by C919ETRASExecutor.summarize_outcome
+    # (Codex PR-3 MAJOR #3 architecture fix). Fall back to computing here if
+    # the player ran without summarize_outcome support.
+    extra = trace.outcome.extra or {}
     frames = trace.frames
-    c919_deployed = any(f.outputs.get("fadec_deploy_command") is True for f in frames)
-    c919_reached_deployed_state = any(
-        f.outputs.get("state") in ("S5_DEPLOYED_IDLE_REVERSE", "S6_MAX_REVERSE") for f in frames
-    )
-    final_state = frames[-1].outputs.get("state") if frames else None
-    tr_position_peak = max((f.outputs.get("tr_position_pct", 0.0) for f in frames), default=0.0)
+    c919_deployed = extra.get("deployed_successfully")
+    if c919_deployed is None:
+        c919_deployed = any(f.outputs.get("fadec_deploy_command") is True for f in frames)
+    c919_reached = extra.get("reached_deployed_state")
+    if c919_reached is None:
+        c919_reached = any(
+            f.outputs.get("state") in ("S5_DEPLOYED_IDLE_REVERSE", "S6_MAX_REVERSE") for f in frames
+        )
+    final_state = extra.get("final_state") or (frames[-1].outputs.get("state") if frames else None)
+    tr_position_peak = extra.get("tr_position_peak_pct")
+    if tr_position_peak is None:
+        tr_position_peak = max((f.outputs.get("tr_position_pct", 0.0) for f in frames), default=0.0)
 
     return {
         "timeline": {
@@ -219,7 +227,7 @@ def _c919_timeline_trace_to_json(trace) -> dict:
         ],
         "outcome": {
             "deployed_successfully": c919_deployed,
-            "reached_deployed_state": c919_reached_deployed_state,
+            "reached_deployed_state": c919_reached,
             "final_state": final_state,
             "tr_position_peak_pct": tr_position_peak,
             "logic_first_active_t_s": trace.outcome.logic_first_active_t_s,

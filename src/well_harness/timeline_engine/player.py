@@ -204,6 +204,21 @@ class TimelinePlayer:
             failure_cascade,
             executor.logic_node_ids,
         )
+        # Executor may provide extra outcome fields (Codex PR-3 MAJOR #3
+        # — outcome computation should be system-specific, not hard-coded
+        # to FANTUI signals). Opt-in via summarize_outcome(frames).
+        summarizer = getattr(executor, "summarize_outcome", None)
+        if callable(summarizer):
+            try:
+                extra = summarizer(frames)
+            except Exception:
+                extra = {}
+            if isinstance(extra, dict):
+                outcome.extra = dict(extra)
+                # Let the executor override the FANTUI-centric deployed
+                # flag if it reports its own.
+                if "deployed_successfully" in extra:
+                    outcome.deployed_successfully = bool(extra["deployed_successfully"])
         return TimelineTrace(
             timeline=timeline,
             frames=frames,

@@ -29,6 +29,12 @@ class Executor(Protocol):
     Implementations MUST NOT mutate `inputs` or `active_faults`.
     Implementations MAY carry internal state between ticks (e.g. the
     C919 12-step system, the FANTUI latched switches and plant state).
+
+    Implementations MAY provide a `summarize_outcome(frames)` method that
+    returns a dict of system-specific outcome fields (e.g. C919 would
+    emit reached_deployed_state / final_state). TimelinePlayer will merge
+    these into the base TimelineOutcome via `extra` when present. Without
+    this method the base FANTUI-oriented outcome is produced.
     """
 
     # Short identifier ("fantui" | "c919-etras").

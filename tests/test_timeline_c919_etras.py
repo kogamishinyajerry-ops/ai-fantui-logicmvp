@@ -119,6 +119,54 @@ class C919ExecutorDirectTests(unittest.TestCase):
         self.assertFalse(post_fault.outputs.get("three_phase_trcu_power_on"),
                          msg="CMD3 three-phase TRCU power must be cut after over-temp")
 
+    def test_full_deploy_stow_cycle_reaches_s10(self):
+        """Codex PR-3 MAJOR #1 regression: unlock_engaged must release at
+        S9_LOCK_CONFIRM so the lock dwell accumulator can accumulate and
+        the state machine can transition S9 → S10. Previously unlock_engaged
+        latched permanently and the sim stalled at S9 forever.
+        """
+        timeline = Timeline(
+            system="c919-etras",
+            step_s=0.05,
+            duration_s=22.0,
+            initial_inputs={
+                "tra_deg": 5.0,
+                "lgcu1_mlg_wow": True, "lgcu2_mlg_wow": True,
+                "lgcu1_valid": True, "lgcu2_valid": True,
+                "engine_running": True, "tr_inhibited": False,
+                "etras_over_temp_fault": False,
+                "n1k_pct": 25.0, "max_n1k_deploy_limit_pct": 84.0, "max_n1k_stow_limit_pct": 30.0,
+            },
+            events=[
+                TimelineEvent(t_s=0.5, kind="ramp_input", target="tra_deg", value=-12.5, duration_s=3.5),
+                TimelineEvent(t_s=8.0, kind="ramp_input", target="tra_deg", value=-28.0, duration_s=1.0),
+                TimelineEvent(t_s=12.0, kind="ramp_input", target="tra_deg", value=0.0, duration_s=1.0),
+            ],
+        )
+        trace = TimelinePlayer(timeline, C919ETRASExecutor()).run()
+        states_seen = {f.outputs.get("state") for f in trace.frames}
+        self.assertIn("S10_STOWED_LOCKED_POWER_OFF", states_seen,
+                      msg=f"full cycle must reach S10; saw states={states_seen}")
+        # Final state should be S10.
+        self.assertEqual(trace.frames[-1].outputs.get("state"),
+                         "S10_STOWED_LOCKED_POWER_OFF")
+
+    def test_outcome_extra_populated_for_c919(self):
+        """Codex PR-3 MAJOR #3: TimelineOutcome.extra must carry C919-specific
+        fields (deployed_successfully / reached_deployed_state / etc)
+        contributed by Executor.summarize_outcome.
+        """
+        path = TIMELINE_FIXTURES_DIR / "c919_nominal_deploy.json"
+        timeline = parse_timeline(json.loads(path.read_text("utf-8")))
+        trace = TimelinePlayer(timeline, C919ETRASExecutor()).run()
+        self.assertIn("reached_deployed_state", trace.outcome.extra)
+        self.assertIn("final_state", trace.outcome.extra)
+        self.assertIn("tr_position_peak_pct", trace.outcome.extra)
+        self.assertTrue(trace.outcome.extra["reached_deployed_state"])
+        self.assertGreater(trace.outcome.extra["tr_position_peak_pct"], 80.0)
+        # Executor override should also flip the base deployed_successfully.
+        self.assertTrue(trace.outcome.deployed_successfully)
+
     def test_unknown_fault_raises(self):
         timeline = Timeline(
             system="c919-etras",

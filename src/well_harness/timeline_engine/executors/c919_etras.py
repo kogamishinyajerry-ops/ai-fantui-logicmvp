@@ -89,6 +89,24 @@ class C919ETRASExecutor:
         self._tr_position_pinned = None
         self._unlock_engaged = False
 
+    def summarize_outcome(self, frames) -> dict[str, Any]:
+        """C919-specific outcome fields for TimelineOutcome.extra."""
+        if not frames:
+            return {}
+        deployed = any(f.outputs.get("fadec_deploy_command") is True for f in frames)
+        reached = any(
+            f.outputs.get("state") in ("S5_DEPLOYED_IDLE_REVERSE", "S6_MAX_REVERSE")
+            for f in frames
+        )
+        final_state = frames[-1].outputs.get("state")
+        peak = max((f.outputs.get("tr_position_pct", 0.0) for f in frames), default=0.0)
+        return {
+            "deployed_successfully": deployed,
+            "reached_deployed_state": reached,
+            "final_state": final_state,
+            "tr_position_peak_pct": peak,
+        }
+
     def tick(
         self,
         t_s: float,
@@ -129,14 +147,22 @@ class C919ETRASExecutor:
                 )
 
         # --- Lock plant: CMD2 drives the unlock mechanism. Once CMD2 has
-        # fired, treat the actuators as physically unlocked for the rest of
-        # the run — CMD2 can toggle during TRA sweep (SW1 window transit),
-        # but mechanically the unlocks stay engaged until a full stow cycle
-        # re-lands. Auto-releasing unlock_engaged mid-sweep would force
-        # stowed_and_locked_latched back True and reset the CMD3 latch.
-        # Re-lock happens at reset() (i.e. the start of the next run).
+        # fired, treat the actuators as physically unlocked — CMD2 can
+        # toggle during TRA sweep (SW1 window transit), but mechanically
+        # the unlocks stay engaged through the deploy cycle. Release only
+        # when the state machine has moved into the post-deploy lock
+        # confirmation (S9) or stowed-locked terminal state (S10) AND
+        # position has returned to 0 AND CMD2 is off — otherwise the
+        # perpetual unlocked report would keep tr_stowed_and_locked=False
+        # and the state machine would stall at S9 forever (Codex PR-3
+        # MAJOR #1).
         if outputs.single_phase_unlock_power_on:
             self._unlock_engaged = True
+        elif (
+            outputs.state in (SystemState.S9_LOCK_CONFIRM, SystemState.S10_STOWED_LOCKED_POWER_OFF)
+            and self._tr_position_pct < 1.0
+        ):
+            self._unlock_engaged = False
 
         output_dict = _outputs_to_dict(outputs, self._tr_position_pct)
         logic_states = _logic_states_from_outputs(outputs, raw_inputs)
@@ -406,13 +432,13 @@ def _logic_states_from_outputs(outputs, raw_inputs: RawInputs) -> dict[str, str]
     else:
         states["ln_fadec_deploy_command"] = "idle"
 
-    # ln_fadec_stow_command
-    if outputs.fadec_stow_command:
-        states["ln_fadec_stow_command"] = "active"
-    elif raw_inputs.tra_deg >= 0.0 and raw_inputs.engine_running:
-        states["ln_fadec_stow_command"] = "blocked"
-    else:
-        states["ln_fadec_stow_command"] = "idle"
+    # ln_fadec_stow_command — stow is a pilot-initiated action (TRA return
+    # after a deploy cycle), not a safety gate that "should have fired"
+    # under normal flight. Reporting 'blocked' in steady cruise is
+    # misleading, so we only distinguish active vs idle (Codex PR-3 MAJOR
+    # #2). A fault that prevents stow (e.g. tr_position:stuck_deployed)
+    # still surfaces via failure_cascade when the position fails to drop.
+    states["ln_fadec_stow_command"] = "active" if outputs.fadec_stow_command else "idle"
 
     return states
 
