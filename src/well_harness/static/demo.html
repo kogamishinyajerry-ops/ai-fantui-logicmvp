@@ -91,8 +91,8 @@
           <label class="fan-condition" id="fan-vdt-row">
             <span class="fan-condition-label">VDT · deploy 反馈 (%)</span>
             <span class="fan-condition-value" id="fan-vdt-value">0%</span>
-            <input type="range" id="fan-vdt" min="0" max="100" step="1" value="0" aria-label="VDT deploy 位置反馈" disabled>
-            <div class="fan-condition-hint" id="fan-vdt-hint">auto_scrubber 模式：VDT 由 plant 仿真驱动，滑块已禁用。切到 manual_feedback_override 可手动测试 VDT90 → L4。</div>
+            <input type="range" id="fan-vdt" min="0" max="100" step="1" value="0" aria-label="VDT deploy 位置反馈">
+            <div class="fan-condition-hint" id="fan-vdt-hint">直接把 VDT 推到 ≥ 90% 触发 VDT90 → L4 → THR_LOCK。</div>
           </label>
 
           <div class="fan-condition">
@@ -116,13 +116,6 @@
           </div>
         </div>
 
-        <div class="fan-feedback-mode">
-          <label for="fan-feedback-mode">VDT 反馈模式：</label>
-          <select id="fan-feedback-mode">
-            <option value="auto_scrubber" selected>auto_scrubber · 自动推进 VDT</option>
-            <option value="manual_feedback_override">manual_feedback_override · 手动置 VDT%</option>
-          </select>
-        </div>
       </section>
       <section class="fan-panel" aria-labelledby="fault-heading">
         <h2 id="fault-heading" class="fan-panel-title">

@@ -25,7 +25,6 @@
     aircraftOnGround:  $("fan-aircraft-on-ground"),
     reverserInhibited: $("fan-reverser-inhibited"),
     eecEnable:         $("fan-eec-enable"),
-    feedbackMode:      $("fan-feedback-mode"),
   };
 
   const readouts = {
@@ -114,7 +113,7 @@
       aircraft_on_ground:       checked(inputs.aircraftOnGround),
       reverser_inhibited:       checked(inputs.reverserInhibited),
       eec_enable:               checked(inputs.eecEnable),
-      feedback_mode:            inputs.feedbackMode ? inputs.feedbackMode.value : "auto_scrubber",
+      feedback_mode:            "manual_feedback_override",
       deploy_position_percent:  numValue(inputs.vdt, 0),
       fault_injections:         buildFaultInjections(),
     };
@@ -189,8 +188,7 @@
     if (readouts.raValue)  readouts.raValue.textContent  = req.radio_altitude_ft.toFixed(0) + " ft";
     if (readouts.n1kValue) readouts.n1kValue.textContent = (req.n1k * 100).toFixed(0) + "%";
     if (readouts.vdtValue) {
-      // Prefer the backend's actual plant-driven VDT from hud.deploy_position_percent
-      // (authoritative in auto_scrubber, echoes the override in manual mode). Fall
+      // Prefer the backend's echoed VDT from hud.deploy_position_percent; fall
       // back to the request slider if the response is missing it for any reason.
       const hudVdt = data && data.hud && typeof data.hud.deploy_position_percent === "number"
         ? data.hud.deploy_position_percent
@@ -424,7 +422,6 @@
         setChecked(inputs.aircraftOnGround, false);
         setChecked(inputs.reverserInhibited, false);
         setChecked(inputs.eecEnable, true);
-        setSelect(inputs.feedbackMode, "auto_scrubber");
         clearAllFaults();
       },
     },
@@ -440,7 +437,6 @@
         // false after deployment) and L4 fire — the true deployment cycle.
         setSlider(inputs.vdt, 0);
         setChecked(inputs.aircraftOnGround, true);
-        setSelect(inputs.feedbackMode, "manual_feedback_override");
       },
     },
     "max-reverse": {
@@ -490,30 +486,11 @@
     const preset = presets[key];
     if (!preset) return;
     preset.apply();
-    syncVdtSliderToFeedbackMode();
     if (readouts.presetStatus) readouts.presetStatus.textContent = "当前场景：" + preset.label;
     document.querySelectorAll(".fan-preset-btn").forEach((btn) => {
       btn.setAttribute("aria-pressed", btn.dataset.preset === key ? "true" : "false");
     });
     fetchEvaluation();
-  }
-
-  // VDT slider ↔ feedback_mode coupling: in auto_scrubber mode the backend
-  // ignores the slider (plant simulation drives VDT). Disable the slider to
-  // prevent the UX trap where VDT looks dragged to 95% but L4 never fires.
-  // We keep the slider's .value untouched on mode flips so (a) the backend
-  // VDT readout rendered from hud.deploy_position_percent stays authoritative
-  // and (b) a user's previous manual override is preserved across toggles.
-  function syncVdtSliderToFeedbackMode() {
-    const mode = inputs.feedbackMode ? inputs.feedbackMode.value : "auto_scrubber";
-    const isAuto = mode === "auto_scrubber";
-    if (inputs.vdt) inputs.vdt.disabled = isAuto;
-    if (readouts.vdtHint) {
-      readouts.vdtHint.dataset.mode = mode;
-      readouts.vdtHint.textContent = isAuto
-        ? "auto_scrubber 模式：VDT 由 plant 仿真驱动，滑块已禁用。切到 manual_feedback_override 可手动测试 VDT90 → L4。"
-        : "manual_feedback_override：直接把 VDT 推到 ≥ 90% 触发 VDT90 → L4 → THR_LOCK。";
-    }
   }
 
   // ═══════════ Wire listeners ═══════════
@@ -523,11 +500,6 @@
       const evt = (el.type === "checkbox" || el.tagName === "SELECT") ? "change" : "input";
       el.addEventListener(evt, scheduleFetch);
     });
-
-    // Feedback mode changes → re-sync VDT slider enable state
-    if (inputs.feedbackMode) {
-      inputs.feedbackMode.addEventListener("change", syncVdtSliderToFeedbackMode);
-    }
 
     // TRA slider: guard deep-range while locked
     if (inputs.tra) {
@@ -549,7 +521,6 @@
 
   function boot() {
     installListeners();
-    syncVdtSliderToFeedbackMode();
     fetchEvaluation();
   }
 

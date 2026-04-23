@@ -854,7 +854,6 @@ class DemoIntentLayerTests(unittest.TestCase):
             'id="fan-aircraft-on-ground"',
             'id="fan-reverser-inhibited"',
             'id="fan-eec-enable"',
-            'id="fan-feedback-mode"',
             'id="fan-status-badge"',
             'id="fan-chain-svg"',
             'id="fan-out-tls115"',

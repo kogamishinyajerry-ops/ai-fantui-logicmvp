@@ -270,24 +270,6 @@ html, body {
 }
 .fan-condition-check input { accent-color: var(--fan-active); }
 
-.fan-feedback-mode {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--fan-text-dim);
-  font-family: 'Courier New', monospace;
-  margin-top: 6px;
-}
-.fan-feedback-mode select {
-  background: var(--fan-panel-hi);
-  border: 1px solid var(--fan-border-hi);
-  color: var(--fan-text);
-  padding: 3px 8px;
-  font-family: 'Courier New', monospace;
-  font-size: 11px;
-}
-
 /* ══════════ HUD panel ══════════ */
 
 .fan-hud-grid {
