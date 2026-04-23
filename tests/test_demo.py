@@ -555,7 +555,7 @@ class DemoIntentLayerTests(unittest.TestCase):
                 "expected_logic4_active": False,
                 "expected_thr_lock_state": "blocked",
                 # With L3 inactive, deploy_90_percent_vdt is gated False in display even though
-                # deploy_position_percent=95.0. tra_deg=0.0 fails L4's between_exclusive(-32,0)
+                # deploy_position_percent=95.0. tra_deg=0.0 fails L4's between_lower_inclusive [-32,0)
                 # check (0.0 is not < 0.0), making it the first unmet L4 condition.
                 "expected_logic4_failed": "tra_deg",
             },
@@ -2332,7 +2332,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             evidence,
         )
         self.assertIn(
-            "blocked_status: name=tra_deg source=explain_condition observed=True checkpoint=4.9s value=-14 required=between_exclusive -32..0",
+            "blocked_status: name=tra_deg source=explain_condition observed=True checkpoint=4.9s value=-14 required=between_lower_inclusive -32..0",
             evidence,
         )
         self.assertIn(

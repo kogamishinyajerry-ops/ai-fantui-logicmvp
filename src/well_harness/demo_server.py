@@ -1461,15 +1461,29 @@ def _lever_summary(
             "next_step": next_step,
         }
     elif feedback_mode == "manual_feedback_override":
+        l1_post_deploy_note = (
+            "（L1 此刻阻塞是预期：反推已部署 → !DEP 自然回落，L1 属于首次解锁门，已完成使命。）"
+            if (not outputs.logic1_active
+                and {c.name for c in explain.logic1.failed_conditions} <= {"reverser_not_deployed_eec"}
+                and sensors.deploy_position_percent > 0)
+            else ""
+        )
         summary = {
             "headline": f"TRA {tra_deg:.1f}°：manual feedback override 已把 VDT90 推到触发态，L4 / THR_LOCK 已点亮。",
-            "blocker": "当前无 L4 blocker；这是 simplified plant feedback override 的诊断演示结果。",
+            "blocker": "当前无 L4 blocker；这是 simplified plant feedback override 的诊断演示结果。" + l1_post_deploy_note,
             "next_step": "下一步：切回 auto scrubber，或降低 deploy feedback 观察 VDT90 / THR_LOCK 退回 blocked。",
         }
     else:
+        l1_post_deploy_note = (
+            "（L1 此刻阻塞是预期：反推已部署 → !DEP 自然回落。）"
+            if (not outputs.logic1_active
+                and {c.name for c in explain.logic1.failed_conditions} <= {"reverser_not_deployed_eec"}
+                and sensors.deploy_position_percent > 0)
+            else ""
+        )
         summary = {
             "headline": f"TRA {tra_deg:.1f}°：L4 已满足，THR_LOCK release command 已触发。",
-            "blocker": "当前无 L4 blocker。",
+            "blocker": "当前无 L4 blocker。" + l1_post_deploy_note,
             "next_step": "下一步：查看证据或返回问答抽屉做诊断解释。",
         }
 

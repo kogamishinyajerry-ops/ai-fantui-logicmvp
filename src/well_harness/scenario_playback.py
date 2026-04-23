@@ -180,6 +180,9 @@ def _evaluate_condition(
     if condition.comparison == "between_exclusive":
         lower, upper = threshold_value
         return current_value > resolve_threshold(lower) and current_value < resolve_threshold(upper)
+    if condition.comparison == "between_lower_inclusive":
+        lower, upper = threshold_value
+        return current_value >= resolve_threshold(lower) and current_value < resolve_threshold(upper)
 
     resolved_threshold_value = resolve_threshold(threshold_value)
     if condition.comparison == "==":

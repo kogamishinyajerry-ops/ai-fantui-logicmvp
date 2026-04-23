@@ -447,9 +447,9 @@
       label: "最大反推（展开到位）",
       apply: () => {
         presets["landing-deploy"].apply();
-        // TRA=-31.5 stays inside the exclusive reverse_travel range
-        // (-32.0, 0.0); TRA=-32 would fail L4's strict lower bound.
-        setSlider(inputs.tra, -31.5);
+        // TRA=-32 is the mechanical stop and is inclusive in the L4 range
+        // [-32, 0), so L4 correctly engages at the slider's leftmost value.
+        setSlider(inputs.tra, -32);
         setSlider(inputs.n1k, 80);
         // VDT=100 shows the POST-deploy state: L4 active / THR_LOCK released.
         // L1 correctly drops to blocked because `!DEP` flipped — L1 has
