@@ -23,6 +23,9 @@ from well_harness.adapters.c919_etras_frozen_v1 import (
     TelemetryLogger,
 )
 from well_harness.adapters.c919_etras_frozen_v1.cmd3_latch_controller import Cmd3LatchController
+from well_harness.timeline_engine import TimelinePlayer, parse_timeline
+from well_harness.timeline_engine.validator import ValidationError as TimelineValidationError
+from well_harness.timeline_engine.executors.c919_etras import C919ETRASExecutor
 
 PORT = 9191
 STATIC = _REPO_ROOT / "src" / "well_harness" / "static" / "c919_etras_panel"
@@ -118,6 +121,114 @@ def _build_tick_response(outputs, sys_ref: C919ReverseThrustSystem, inp: RawInpu
     }
 
 
+# ---- Timeline-simulate endpoint (PR-3) -------------------------------------
+
+_TIMELINE_MAX_DURATION_S = 600.0
+_TIMELINE_MIN_STEP_S = 0.01
+_TIMELINE_MAX_TICKS = 20_000
+_TIMELINE_MAX_EVENTS = 500
+
+
+def _handle_c919_timeline_simulate(request_payload: dict) -> dict:
+    """Run a Timeline against the C919 E-TRAS executor and return trace JSON."""
+    try:
+        timeline = parse_timeline(request_payload)
+    except TimelineValidationError as exc:
+        return {"_status": 400, "error": "invalid_timeline", "field": exc.field, "message": exc.message}
+
+    if timeline.system != "c919-etras":
+        return {
+            "_status": 400,
+            "error": "unsupported_system",
+            "message": f"this endpoint only runs C919 E-TRAS timelines; got system={timeline.system!r}",
+        }
+    if timeline.duration_s > _TIMELINE_MAX_DURATION_S:
+        return {"_status": 400, "error": "timeline_too_long",
+                "message": f"duration_s must be <= {_TIMELINE_MAX_DURATION_S}s"}
+    if timeline.step_s < _TIMELINE_MIN_STEP_S:
+        return {"_status": 400, "error": "timeline_step_too_small",
+                "message": f"step_s must be >= {_TIMELINE_MIN_STEP_S}s"}
+    tick_count = int(timeline.duration_s / timeline.step_s) + 1
+    if tick_count > _TIMELINE_MAX_TICKS:
+        return {"_status": 400, "error": "timeline_too_many_ticks",
+                "message": f"duration_s/step_s would produce {tick_count} ticks; max {_TIMELINE_MAX_TICKS}"}
+    if len(timeline.events) > _TIMELINE_MAX_EVENTS:
+        return {"_status": 400, "error": "timeline_too_many_events",
+                "message": f"events list has {len(timeline.events)} entries; max {_TIMELINE_MAX_EVENTS}"}
+
+    try:
+        executor = C919ETRASExecutor()
+        trace = TimelinePlayer(timeline, executor).run()
+    except (ValueError, TypeError) as exc:
+        return {"_status": 400, "error": "invalid_timeline", "message": str(exc)}
+    return _c919_timeline_trace_to_json(trace)
+
+
+def _c919_timeline_trace_to_json(trace) -> dict:
+    # The base TimelineOutcome.deployed_successfully checks FANTUI-specific
+    # signals; compute a C919-native "deployed" indicator too.
+    frames = trace.frames
+    c919_deployed = any(f.outputs.get("fadec_deploy_command") is True for f in frames)
+    c919_reached_deployed_state = any(
+        f.outputs.get("state") in ("S5_DEPLOYED_IDLE_REVERSE", "S6_MAX_REVERSE") for f in frames
+    )
+    final_state = frames[-1].outputs.get("state") if frames else None
+    tr_position_peak = max((f.outputs.get("tr_position_pct", 0.0) for f in frames), default=0.0)
+
+    return {
+        "timeline": {
+            "system": trace.timeline.system,
+            "step_s": trace.timeline.step_s,
+            "duration_s": trace.timeline.duration_s,
+            "title": trace.timeline.title,
+            "description": trace.timeline.description,
+        },
+        "frames": [
+            {
+                "tick": f.tick,
+                "t_s": f.t_s,
+                "phase": f.phase,
+                "inputs": f.inputs,
+                "outputs": f.outputs,
+                "logic_states": f.logic_states,
+                "active_faults": f.active_faults,
+                "events_fired": f.events_fired,
+            }
+            for f in trace.frames
+        ],
+        "transitions": [
+            {
+                "tick": f.tick,
+                "t_s": f.t_s,
+                "phase": f.phase,
+                "logic_states": f.logic_states,
+                "active_faults": f.active_faults,
+            }
+            for f in trace.transitions
+        ],
+        "assertions": [
+            {
+                "at_s": a.at_s,
+                "target": a.target,
+                "expected": a.expected,
+                "observed": a.observed,
+                "passed": a.passed,
+                "note": a.note,
+            }
+            for a in trace.assertions
+        ],
+        "outcome": {
+            "deployed_successfully": c919_deployed,
+            "reached_deployed_state": c919_reached_deployed_state,
+            "final_state": final_state,
+            "tr_position_peak_pct": tr_position_peak,
+            "logic_first_active_t_s": trace.outcome.logic_first_active_t_s,
+            "logic_first_blocked_t_s": trace.outcome.logic_first_blocked_t_s,
+            "failure_cascade": trace.outcome.failure_cascade,
+        },
+    }
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
@@ -179,6 +290,16 @@ class Handler(BaseHTTPRequestHandler):
                 _logger = TelemetryLogger()
                 _system = C919ReverseThrustSystem(config=_config, logger=_logger)
             self._json({"ok": True, "state": SystemState.S0_AIR_STOWED_LOCKED.value})
+        elif path == "/api/timeline-simulate":
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length)
+            try:
+                data = json.loads(body) if body else {}
+            except json.JSONDecodeError as e:
+                self._json({"error": "invalid_json", "message": str(e)}, 400)
+                return
+            resp = _handle_c919_timeline_simulate(data)
+            self._json(resp, code=resp.pop("_status", 200))
         else:
             self._404()
 
