@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>全流程故障率仿真 · Timeline Simulator</title>
+<link rel="stylesheet" href="/unified-nav.css">
+<style>
+  :root {
+    --bg:         #05111c;
+    --panel:      #0b1624;
+    --panel-2:    #10202d;
+    --border:     #1e3050;
+    --text:       #c6d5e8;
+    --dim:        #6a7d95;
+    --accent:     #00c8f5;
+    --active:     #00e5a0;
+    --blocked:    #ff5a6a;
+    --idle:       #6a7d95;
+    --warn:       #f5c518;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", sans-serif;
+    min-height: 100vh; }
+  body.unified-nav-enabled { padding-top: 48px; }
+  main { max-width: 1360px; margin: 0 auto; padding: 20px 24px 64px; }
+  h1 { margin: 0 0 4px; font-size: 18px; color: var(--accent); font-weight: 500; letter-spacing: 0.03em; }
+  .sub { color: var(--dim); font-size: 13px; margin-bottom: 20px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .panel {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 14px 16px;
+  }
+  .panel h2 { margin: 0 0 10px; font-size: 13px; color: var(--accent); letter-spacing: 0.05em; text-transform: uppercase; font-weight: 500; }
+
+  .preset-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  .preset-row label { color: var(--dim); font-size: 12px; }
+  select, button, input[type="text"] {
+    background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 10px; font-size: 12px; font-family: inherit;
+  }
+  select { min-width: 240px; }
+  button { cursor: pointer; transition: background 0.1s; }
+  button:hover { background: #15293a; }
+  button.primary { background: var(--accent); color: #05111c; border-color: var(--accent); font-weight: 500; }
+  button.primary:hover { background: var(--active); border-color: var(--active); }
+
+  textarea {
+    width: 100%; height: 440px; resize: vertical;
+    background: #03101b; color: var(--text); border: 1px solid var(--border);
+    font-family: "SF Mono", "Menlo", "Consolas", monospace; font-size: 11px;
+    padding: 10px; line-height: 1.5;
+  }
+  textarea:focus { outline: 1px solid var(--accent); }
+
+  .status { font-size: 11px; color: var(--dim); margin-top: 8px; min-height: 16px; }
+  .status.err { color: var(--blocked); }
+  .status.ok { color: var(--active); }
+
+  /* Outcome card */
+  .outcome-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+  .outcome-cell { background: var(--panel-2); padding: 8px 10px; border: 1px solid var(--border); }
+  .outcome-cell .k { color: var(--dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .outcome-cell .v { font-size: 14px; margin-top: 2px; }
+  .outcome-cell .v.active { color: var(--active); }
+  .outcome-cell .v.blocked { color: var(--blocked); }
+
+  /* Logic timeline */
+  .logic-timeline { display: grid; gap: 4px; margin-top: 8px; }
+  .logic-row { display: grid; grid-template-columns: 180px 1fr; gap: 8px; align-items: center; }
+  .logic-row .name { color: var(--dim); font-size: 12px; font-family: monospace; }
+  .logic-bar { display: flex; height: 18px; border: 1px solid var(--border); background: #03101b; }
+  .logic-cell { flex: 1 1 0; min-width: 1px; }
+  .logic-cell.active { background: var(--active); }
+  .logic-cell.blocked { background: var(--blocked); }
+  .logic-cell.idle { background: transparent; }
+
+  /* Assertions */
+  .assert-list { margin-top: 8px; }
+  .assert-item {
+    display: grid; grid-template-columns: 60px 1fr 80px; gap: 8px;
+    font-size: 12px; padding: 4px 6px; border-bottom: 1px solid var(--border);
+  }
+  .assert-item:last-child { border-bottom: none; }
+  .assert-item .t { color: var(--dim); font-family: monospace; }
+  .assert-item .msg { color: var(--text); }
+  .assert-item .verdict { text-align: right; font-weight: 500; }
+  .assert-item .verdict.pass { color: var(--active); }
+  .assert-item .verdict.fail { color: var(--blocked); }
+
+  /* Cascade table */
+  table.cascade { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  table.cascade th { text-align: left; color: var(--dim); font-weight: 400; padding: 4px 6px; border-bottom: 1px solid var(--border); }
+  table.cascade td { padding: 4px 6px; border-bottom: 1px solid var(--border); font-family: monospace; color: var(--text); }
+  table.cascade td.faults { color: var(--warn); }
+
+  .right-col { display: grid; gap: 12px; }
+  .legend { display: flex; gap: 12px; font-size: 11px; color: var(--dim); margin-top: 6px; }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: -1px; border: 1px solid var(--border); }
+  .legend .active::before { background: var(--active); }
+  .legend .blocked::before { background: var(--blocked); }
+  .legend .idle::before { background: transparent; }
+
+  .hint { font-size: 11px; color: var(--dim); margin-top: 4px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>全流程故障率仿真 · Timeline Simulator</h1>
+  <div class="sub">按"时间-指令/状态"表驱动控制逻辑面板，逐步触发逻辑/故障并获取完整仿真结果。同时支持 FANTUI 演示系统 和 C919 E-TRAS 冻结 V1.0。</div>
+
+  <div class="grid">
+    <!-- Left column: editor + controls -->
+    <div>
+      <div class="panel">
+        <h2>Timeline 脚本</h2>
+        <div class="preset-row">
+          <label>预设：</label>
+          <select id="presetSelect">
+            <option value="fantui_nominal">FANTUI · 正常反推部署</option>
+            <option value="fantui_sw1_stuck">FANTUI · SW1 卡死 (L1 阻塞)</option>
+            <option value="c919_nominal">C919 E-TRAS · 正常部署</option>
+            <option value="c919_tr_inhibited">C919 E-TRAS · TR_Inhibited 阻塞</option>
+            <option value="custom">(自定义)</option>
+          </select>
+          <button id="loadPreset">加载</button>
+          <button id="runBtn" class="primary">▶ 运行仿真</button>
+        </div>
+        <textarea id="timelineJson" spellcheck="false"></textarea>
+        <div class="status" id="status"></div>
+        <div class="hint">
+          · fantui 系统自动 POST 到 <code>/api/timeline-simulate</code>（当前端口）<br>
+          · c919-etras 系统 POST 到 <code>http://localhost:9191/api/timeline-simulate</code>（需已启动面板服务器）
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column: results -->
+    <div class="right-col">
+      <div class="panel">
+        <h2>仿真结果 · Outcome</h2>
+        <div class="outcome-grid" id="outcomeGrid">
+          <div class="outcome-cell"><div class="k">状态</div><div class="v">未运行</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>逻辑节点时间线</h2>
+        <div class="legend">
+          <span class="active">active</span>
+          <span class="blocked">blocked</span>
+          <span class="idle">idle</span>
+        </div>
+        <div class="logic-timeline" id="logicTimeline"></div>
+      </div>
+
+      <div class="panel">
+        <h2>断言结果 · Assertions</h2>
+        <div class="assert-list" id="assertList"><div class="hint">（无）</div></div>
+      </div>
+
+      <div class="panel">
+        <h2>故障级联 · Failure Cascade</h2>
+        <div id="cascadeWrap"><div class="hint">（无）</div></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+// =========================================================================
+// Timeline Simulator UI · PR-4
+// =========================================================================
+
+const PRESETS = {
+  fantui_nominal: {
+    title: "Nominal landing — full reverser deployment cycle",
+    description: "Aircraft on final approach → touchdown → throttle pullback through SW1/SW2 → deploy → THR_LOCK release. All conditions nominal; no faults injected.",
+    system: "fantui",
+    step_s: 0.1,
+    duration_s: 18.0,
+    initial_inputs: {
+      radio_altitude_ft: 500.0, tra_deg: 0.0,
+      engine_running: true, aircraft_on_ground: false,
+      reverser_inhibited: false, eec_enable: true,
+      n1k: 45.0, max_n1k_deploy_limit: 60.0,
+    },
+    events: [
+      { t_s: 0.0,  kind: "mark_phase", target: "descent" },
+      { t_s: 0.0,  kind: "ramp_input", target: "radio_altitude_ft", value: 5.0, duration_s: 5.0 },
+      { t_s: 5.0,  kind: "mark_phase", target: "landing" },
+      { t_s: 5.0,  kind: "set_input",  target: "aircraft_on_ground", value: true },
+      { t_s: 5.0,  kind: "set_input",  target: "radio_altitude_ft",  value: 2.0 },
+      { t_s: 6.0,  kind: "mark_phase", target: "throttle_push" },
+      { t_s: 6.0,  kind: "ramp_input", target: "tra_deg", value: -26.0, duration_s: 4.0 },
+      { t_s: 10.0, kind: "mark_phase", target: "deploy" },
+      { t_s: 12.0, kind: "assert_condition", target: "logic3", value: "active" },
+      { t_s: 16.0, kind: "assert_condition", target: "logic4_active", value: true }
+    ]
+  },
+  fantui_sw1_stuck: {
+    title: "SW1 stuck_off at touchdown — L1 chain broken",
+    system: "fantui",
+    step_s: 0.1,
+    duration_s: 18.0,
+    initial_inputs: {
+      radio_altitude_ft: 500.0, tra_deg: 0.0,
+      engine_running: true, aircraft_on_ground: false,
+      reverser_inhibited: false, eec_enable: true,
+      n1k: 45.0, max_n1k_deploy_limit: 60.0,
+    },
+    events: [
+      { t_s: 0.0,  kind: "ramp_input", target: "radio_altitude_ft", value: 5.0, duration_s: 5.0 },
+      { t_s: 5.0,  kind: "set_input",  target: "aircraft_on_ground", value: true },
+      { t_s: 5.0,  kind: "set_input",  target: "radio_altitude_ft", value: 2.0 },
+      { t_s: 5.0,  kind: "inject_fault", target: "sw1:stuck_off" },
+      { t_s: 6.0,  kind: "ramp_input", target: "tra_deg", value: -26.0, duration_s: 4.0 },
+      { t_s: 17.0, kind: "assert_condition", target: "logic1", value: "blocked" },
+      { t_s: 17.0, kind: "assert_condition", target: "logic4_active", value: false }
+    ]
+  },
+  c919_nominal: {
+    title: "C919 E-TRAS — nominal landing deploy cycle",
+    system: "c919-etras",
+    step_s: 0.05,
+    duration_s: 14.0,
+    initial_inputs: {
+      tra_deg: 5.0,
+      lgcu1_mlg_wow: false, lgcu2_mlg_wow: false,
+      lgcu1_valid: true, lgcu2_valid: true,
+      engine_running: true, tr_inhibited: false,
+      etras_over_temp_fault: false,
+      n1k_pct: 25.0, max_n1k_deploy_limit_pct: 84.0, max_n1k_stow_limit_pct: 30.0
+    },
+    events: [
+      { t_s: 0.0, kind: "set_input", target: "lgcu1_mlg_wow", value: true },
+      { t_s: 0.0, kind: "set_input", target: "lgcu2_mlg_wow", value: true },
+      { t_s: 0.5, kind: "ramp_input", target: "tra_deg", value: -12.5, duration_s: 3.5 },
+      { t_s: 6.0, kind: "assert_condition", target: "ln_eicu_cmd3", value: "active" },
+      { t_s: 10.0, kind: "assert_condition", target: "fadec_deploy_command", value: true }
+    ]
+  },
+  c919_tr_inhibited: {
+    title: "C919 E-TRAS — TR_Inhibited blocks deploy chain",
+    system: "c919-etras",
+    step_s: 0.05,
+    duration_s: 10.0,
+    initial_inputs: {
+      tra_deg: 5.0,
+      lgcu1_mlg_wow: false, lgcu2_mlg_wow: false,
+      lgcu1_valid: true, lgcu2_valid: true,
+      engine_running: true, tr_inhibited: false,
+      etras_over_temp_fault: false,
+      n1k_pct: 25.0, max_n1k_deploy_limit_pct: 84.0, max_n1k_stow_limit_pct: 30.0
+    },
+    events: [
+      { t_s: 0.0, kind: "set_input", target: "lgcu1_mlg_wow", value: true },
+      { t_s: 0.0, kind: "set_input", target: "lgcu2_mlg_wow", value: true },
+      { t_s: 0.5, kind: "ramp_input", target: "tra_deg", value: -12.5, duration_s: 3.5 },
+      { t_s: 1.0, kind: "inject_fault", target: "tr_inhibited:stuck_on" },
+      { t_s: 2.3, kind: "assert_condition", target: "ln_eicu_cmd2", value: "blocked" },
+      { t_s: 9.0, kind: "assert_condition", target: "fadec_deploy_command", value: false }
+    ]
+  },
+  custom: {
+    system: "fantui",
+    step_s: 0.1,
+    duration_s: 5.0,
+    initial_inputs: {},
+    events: []
+  }
+};
+
+const FANTUI_PORT = 8002;
+const C919_PORT = 9191;
+
+const $ = id => document.getElementById(id);
+const statusEl = $("status");
+
+function setStatus(msg, kind = "") {
+  statusEl.textContent = msg;
+  statusEl.className = "status " + kind;
+}
+
+function loadPresetInEditor(key) {
+  const preset = PRESETS[key];
+  if (!preset) return;
+  $("timelineJson").value = JSON.stringify(preset, null, 2);
+  setStatus("已加载预设 · " + (preset.title || key));
+}
+
+$("loadPreset").addEventListener("click", () => {
+  loadPresetInEditor($("presetSelect").value);
+});
+$("presetSelect").addEventListener("change", () => {
+  loadPresetInEditor($("presetSelect").value);
+});
+
+function resolveEndpoint(system) {
+  if (system === "c919-etras") {
+    return `http://localhost:${C919_PORT}/api/timeline-simulate`;
+  }
+  // Default to same origin (fantui).
+  return "/api/timeline-simulate";
+}
+
+async function runSimulation() {
+  let payload;
+  try {
+    payload = JSON.parse($("timelineJson").value);
+  } catch (e) {
+    setStatus("JSON 解析失败: " + e.message, "err");
+    return;
+  }
+  const endpoint = resolveEndpoint(payload.system);
+  setStatus("运行中 · POST " + endpoint);
+  try {
+    const resp = await fetch(endpoint, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      setStatus(`HTTP ${resp.status} · ${data.error || "unknown"} — ${data.message || ""}`, "err");
+      return;
+    }
+    renderResult(data);
+    const passed = data.assertions.filter(a => a.passed).length;
+    const total = data.assertions.length;
+    setStatus(`完成 · ${data.frames.length} frames, ${total} assertions (${passed} pass)`, "ok");
+  } catch (e) {
+    setStatus("请求失败: " + e.message + "（若 system=c919-etras 请确认 9191 端口已启动）", "err");
+  }
+}
+
+$("runBtn").addEventListener("click", runSimulation);
+
+function renderResult(data) {
+  renderOutcome(data.outcome);
+  renderLogicTimeline(data.frames);
+  renderAssertions(data.assertions);
+  renderCascade(data.outcome.failure_cascade || []);
+}
+
+function renderOutcome(outcome) {
+  const cells = [];
+  const pushCell = (k, v, kindClass = "") =>
+    cells.push(`<div class="outcome-cell"><div class="k">${escape(k)}</div><div class="v ${kindClass}">${escape(String(v))}</div></div>`);
+
+  if ("deployed_successfully" in outcome) {
+    pushCell("deployed_successfully", outcome.deployed_successfully, outcome.deployed_successfully ? "active" : "blocked");
+  }
+  if ("thr_lock_released" in outcome) {
+    pushCell("thr_lock_released", outcome.thr_lock_released, outcome.thr_lock_released ? "active" : "blocked");
+  }
+  if ("reached_deployed_state" in outcome) {
+    pushCell("reached_deployed_state", outcome.reached_deployed_state, outcome.reached_deployed_state ? "active" : "blocked");
+  }
+  if ("final_state" in outcome) {
+    pushCell("final_state", outcome.final_state);
+  }
+  if ("tr_position_peak_pct" in outcome) {
+    pushCell("tr_position_peak_pct", outcome.tr_position_peak_pct.toFixed(1));
+  }
+  const firsts = outcome.logic_first_active_t_s || {};
+  const firstsList = Object.entries(firsts).map(([k, v]) => `${k}: ${v.toFixed(2)}s`).join("\n") || "—";
+  pushCell("logic_first_active", firstsList);
+  const cascadeCount = (outcome.failure_cascade || []).length;
+  pushCell("failure_cascade_count", cascadeCount, cascadeCount ? "blocked" : "active");
+
+  $("outcomeGrid").innerHTML = cells.join("");
+}
+
+function renderLogicTimeline(frames) {
+  if (!frames.length) { $("logicTimeline").innerHTML = '<div class="hint">(no frames)</div>'; return; }
+  // Collect all logic node ids present in any frame
+  const ids = [...new Set(frames.flatMap(f => Object.keys(f.logic_states || {})))];
+  const rows = ids.map(id => {
+    const cells = frames.map(f => {
+      const st = (f.logic_states || {})[id] || "idle";
+      return `<div class="logic-cell ${st}" title="t=${f.t_s.toFixed(2)}s ${st}"></div>`;
+    }).join("");
+    return `<div class="logic-row"><div class="name">${escape(id)}</div><div class="logic-bar">${cells}</div></div>`;
+  });
+  $("logicTimeline").innerHTML = rows.join("");
+}
+
+function renderAssertions(assertions) {
+  if (!assertions.length) { $("assertList").innerHTML = '<div class="hint">（无）</div>'; return; }
+  const rows = assertions.map(a => `
+    <div class="assert-item">
+      <div class="t">${a.at_s.toFixed(1)}s</div>
+      <div class="msg">${escape(a.target)} = ${escape(String(a.observed))} <span class="hint">(expected ${escape(String(a.expected))})</span>${a.note ? '<br><span class="hint">'+escape(a.note)+'</span>' : ''}</div>
+      <div class="verdict ${a.passed ? 'pass' : 'fail'}">${a.passed ? 'PASS' : 'FAIL'}</div>
+    </div>`);
+  $("assertList").innerHTML = rows.join("");
+}
+
+function renderCascade(cascade) {
+  if (!cascade.length) { $("cascadeWrap").innerHTML = '<div class="hint">（无）</div>'; return; }
+  const rows = cascade.map(c => `
+    <tr>
+      <td>${c.at_s.toFixed(2)}s</td>
+      <td>${escape(c.broken_gate)}</td>
+      <td class="faults">${(c.active_faults || []).map(escape).join(", ") || "—"}</td>
+    </tr>`).join("");
+  $("cascadeWrap").innerHTML = `<table class="cascade">
+    <thead><tr><th>t_s</th><th>broken_gate</th><th>active_faults</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+function escape(s) {
+  return String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+}
+
+// Init: load first preset
+loadPresetInEditor("fantui_nominal");
+</script>
+</body>
+</html>
