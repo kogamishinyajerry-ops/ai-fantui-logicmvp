@@ -31,6 +31,12 @@ from well_harness.document_intake import (
 from well_harness.models import HarnessConfig, PilotInputs, ResolvedInputs
 from well_harness.plant import PlantState, SimplifiedDeployPlant
 from well_harness.switches import LatchedThrottleSwitches, SwitchState
+from well_harness.timeline_engine import (
+    TimelinePlayer,
+    ValidationError as TimelineValidationError,
+    parse_timeline,
+)
+from well_harness.timeline_engine.executors.fantui import FantuiExecutor
 from well_harness.workbench_bundle import (
     SandboxEscapeError,
     archive_workbench_bundle,
@@ -233,6 +239,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if parsed.path not in {
             "/api/demo",
             "/api/lever-snapshot",
+            "/api/timeline-simulate",
             SYSTEM_SNAPSHOT_POST_PATH,
             WORKBENCH_BUNDLE_PATH,
             WORKBENCH_REPAIR_PATH,
@@ -287,6 +294,11 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                     fault_injections=fault_injections,
                 ),
             )
+            return
+        if parsed.path == "/api/timeline-simulate":
+            result = _handle_timeline_simulate(request_payload)
+            status = result.pop("_status", 200)
+            self._send_json(status, result)
             return
         if parsed.path == SYSTEM_SNAPSHOT_POST_PATH:
             system_id = request_payload.get("system_id")
@@ -772,6 +784,97 @@ def _apply_fault_injections_to_snapshot_payload(
     result["active_fault_node_ids"] = list(fault_map.keys())
     result["fault_injections"] = fault_injections or []
     return result
+
+
+_TIMELINE_MAX_DURATION_S = 600.0
+_TIMELINE_MIN_STEP_S = 0.01
+
+
+def _handle_timeline_simulate(request_payload: dict) -> dict:
+    """Run a Timeline against the FANTUI executor and return the trace as JSON.
+
+    Returns `_status` key for the HTTP code to use (200 / 400).
+    """
+    try:
+        timeline = parse_timeline(request_payload)
+    except TimelineValidationError as exc:
+        return {"_status": 400, "error": "invalid_timeline", "field": exc.field, "message": exc.message}
+
+    if timeline.system != "fantui":
+        return {
+            "_status": 400,
+            "error": "unsupported_system",
+            "message": f"this endpoint only runs FANTUI timelines; got system={timeline.system!r}",
+        }
+    if timeline.duration_s > _TIMELINE_MAX_DURATION_S:
+        return {
+            "_status": 400,
+            "error": "timeline_too_long",
+            "message": f"duration_s must be <= {_TIMELINE_MAX_DURATION_S}s",
+        }
+    if timeline.step_s < _TIMELINE_MIN_STEP_S:
+        return {
+            "_status": 400,
+            "error": "timeline_step_too_small",
+            "message": f"step_s must be >= {_TIMELINE_MIN_STEP_S}s",
+        }
+
+    executor = FantuiExecutor()
+    trace = TimelinePlayer(timeline, executor).run()
+    return _timeline_trace_to_json(trace)
+
+
+def _timeline_trace_to_json(trace) -> dict:
+    return {
+        "timeline": {
+            "system": trace.timeline.system,
+            "step_s": trace.timeline.step_s,
+            "duration_s": trace.timeline.duration_s,
+            "title": trace.timeline.title,
+            "description": trace.timeline.description,
+        },
+        "frames": [
+            {
+                "tick": f.tick,
+                "t_s": f.t_s,
+                "phase": f.phase,
+                "inputs": f.inputs,
+                "outputs": f.outputs,
+                "logic_states": f.logic_states,
+                "active_faults": f.active_faults,
+                "events_fired": f.events_fired,
+            }
+            for f in trace.frames
+        ],
+        "transitions": [
+            {
+                "tick": f.tick,
+                "t_s": f.t_s,
+                "phase": f.phase,
+                "logic_states": f.logic_states,
+                "active_faults": f.active_faults,
+            }
+            for f in trace.transitions
+        ],
+        "assertions": [
+            {
+                "at_s": a.at_s,
+                "target": a.target,
+                "expected": a.expected,
+                "observed": a.observed,
+                "passed": a.passed,
+                "note": a.note,
+            }
+            for a in trace.assertions
+        ],
+        "outcome": {
+            "deployed_successfully": trace.outcome.deployed_successfully,
+            "thr_lock_released": trace.outcome.thr_lock_released,
+            "logic_first_active_t_s": trace.outcome.logic_first_active_t_s,
+            "logic_first_blocked_t_s": trace.outcome.logic_first_blocked_t_s,
+            "failure_cascade": trace.outcome.failure_cascade,
+        },
+    }
 
 
 def parse_lever_snapshot_request(request_payload: dict) -> tuple[dict | None, dict | None]:

@@ -1,0 +1,31 @@
+{
+  "title": "SW1 stuck_off at touchdown — L1 chain broken",
+  "description": "Same flight profile as nominal_landing, but SW1 is stuck in the OPEN position at the moment of touchdown. Expected: L1 never activates (sw1 condition fails), which cascades to no TLS unlock, no L2/L3, and THR_LOCK remains blocked for the entire simulation.",
+  "system": "fantui",
+  "step_s": 0.1,
+  "duration_s": 18.0,
+  "initial_inputs": {
+    "radio_altitude_ft": 500.0,
+    "tra_deg": 0.0,
+    "engine_running": true,
+    "aircraft_on_ground": false,
+    "reverser_inhibited": false,
+    "eec_enable": true,
+    "n1k": 0.45,
+    "max_n1k_deploy_limit": 60.0
+  },
+  "events": [
+    { "t_s": 0.0,  "kind": "mark_phase", "target": "descent" },
+    { "t_s": 0.0,  "kind": "ramp_input", "target": "radio_altitude_ft", "value": 5.0, "duration_s": 5.0 },
+    { "t_s": 5.0,  "kind": "mark_phase", "target": "landing" },
+    { "t_s": 5.0,  "kind": "set_input",  "target": "aircraft_on_ground", "value": true },
+    { "t_s": 5.0,  "kind": "set_input",  "target": "radio_altitude_ft", "value": 2.0 },
+    { "t_s": 5.0,  "kind": "inject_fault", "target": "sw1:stuck_off", "note": "micro-switch jams at touchdown" },
+    { "t_s": 6.0,  "kind": "mark_phase", "target": "throttle_push" },
+    { "t_s": 6.0,  "kind": "ramp_input", "target": "tra_deg",          "value": -26.0, "duration_s": 4.0 },
+    { "t_s": 10.0, "kind": "mark_phase", "target": "deploy_attempt" },
+    { "t_s": 17.0, "kind": "assert_condition", "target": "logic1", "value": "blocked", "note": "L1 must stay blocked because sw1 never latches" },
+    { "t_s": 17.0, "kind": "assert_condition", "target": "logic4_active", "value": false, "note": "L4 must remain false — chain broken at L1" },
+    { "t_s": 17.0, "kind": "assert_condition", "target": "throttle_electronic_lock_release_cmd", "value": false, "note": "THR_LOCK must NOT release — safety preserved" }
+  ]
+}
