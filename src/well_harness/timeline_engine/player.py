@@ -143,21 +143,27 @@ class TimelinePlayer:
             # Detect "first broken gate this tick" — a gate flipping from active → blocked.
             # Iterate the executor's canonical logic_node_ids ordering so
             # attribution is deterministic regardless of how the executor
-            # built its logic_states dict.
-            for node_id in executor.logic_node_ids:
-                if node_id not in logic_states:
-                    continue
-                state = logic_states[node_id]
-                prev = prev_logic_states.get(node_id)
-                if prev == "active" and state == "blocked":
-                    failure_cascade.append(
-                        {
-                            "at_s": tick_end,
-                            "broken_gate": node_id,
-                            "active_faults": list(active_fault_ids),
-                        }
-                    )
-                    break  # Only the first broken gate per tick (Codex guidance)
+            # built its logic_states dict. Only record when a fault is
+            # actually active: the nominal FANTUI lifecycle flips L1 from
+            # active → blocked post-deploy (reverser_not_deployed_eec goes
+            # False once the plant starts moving), and that is not a
+            # failure — it's the intended handoff to L2/L3/L4 (Codex PR-2
+            # MAJOR #2).
+            if active_fault_ids:
+                for node_id in executor.logic_node_ids:
+                    if node_id not in logic_states:
+                        continue
+                    state = logic_states[node_id]
+                    prev = prev_logic_states.get(node_id)
+                    if prev == "active" and state == "blocked":
+                        failure_cascade.append(
+                            {
+                                "at_s": tick_end,
+                                "broken_gate": node_id,
+                                "active_faults": list(active_fault_ids),
+                            }
+                        )
+                        break  # Only the first broken gate per tick (Codex guidance)
 
             frame = TraceFrame(
                 tick=tick,

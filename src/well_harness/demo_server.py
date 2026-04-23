@@ -788,6 +788,10 @@ def _apply_fault_injections_to_snapshot_payload(
 
 _TIMELINE_MAX_DURATION_S = 600.0
 _TIMELINE_MIN_STEP_S = 0.01
+# Belt-and-braces cap so a user cannot request 600s / 0.01s = 60,000 ticks
+# just because each individual bound is within range (Codex PR-2 MINOR #1).
+_TIMELINE_MAX_TICKS = 20_000
+_TIMELINE_MAX_EVENTS = 500
 
 
 def _handle_timeline_simulate(request_payload: dict) -> dict:
@@ -818,9 +822,32 @@ def _handle_timeline_simulate(request_payload: dict) -> dict:
             "error": "timeline_step_too_small",
             "message": f"step_s must be >= {_TIMELINE_MIN_STEP_S}s",
         }
+    tick_count = int(timeline.duration_s / timeline.step_s) + 1
+    if tick_count > _TIMELINE_MAX_TICKS:
+        return {
+            "_status": 400,
+            "error": "timeline_too_many_ticks",
+            "message": f"duration_s/step_s would produce {tick_count} ticks; max {_TIMELINE_MAX_TICKS}",
+        }
+    if len(timeline.events) > _TIMELINE_MAX_EVENTS:
+        return {
+            "_status": 400,
+            "error": "timeline_too_many_events",
+            "message": f"events list has {len(timeline.events)} entries; max {_TIMELINE_MAX_EVENTS}",
+        }
 
-    executor = FantuiExecutor()
-    trace = TimelinePlayer(timeline, executor).run()
+    try:
+        executor = FantuiExecutor()
+        trace = TimelinePlayer(timeline, executor).run()
+    except (ValueError, TypeError) as exc:
+        # Runtime errors (unknown fault id, bad set_input value, …) get
+        # surfaced as a 400 rather than a 500 so the UI can show the
+        # validation message inline (Codex PR-2 MAJOR #3).
+        return {
+            "_status": 400,
+            "error": "invalid_timeline",
+            "message": str(exc),
+        }
     return _timeline_trace_to_json(trace)
 
 

@@ -118,6 +118,83 @@ class FantuiExecutorDirectTests(unittest.TestCase):
         self.assertEqual(final.logic_states.get("logic4"), "active")
         self.assertTrue(final.outputs["throttle_electronic_lock_release_cmd"])
 
+    def test_logic_stuck_false_marks_gate_blocked_not_idle(self):
+        """Codex PR-2 MAJOR #1 regression: logic3:logic_stuck_false should
+        force logic3 state to 'blocked' even though the underlying explain
+        would have had no failed_conditions (gate was satisfied pre-mask).
+        """
+        timeline = Timeline(
+            system="fantui",
+            step_s=0.1,
+            duration_s=12.0,
+            initial_inputs={
+                "radio_altitude_ft": 5.0,
+                "tra_deg": 0.0,
+                "engine_running": True,
+                "aircraft_on_ground": True,
+                "reverser_inhibited": False,
+                "eec_enable": True,
+                "n1k": 45.0,
+                "max_n1k_deploy_limit": 60.0,
+            },
+            events=[
+                TimelineEvent(t_s=0.0, kind="ramp_input", target="tra_deg", value=-26.0, duration_s=4.0),
+                # Inject late enough that L3 WOULD be satisfied by the
+                # normal explain pipeline if not for the fault.
+                TimelineEvent(t_s=5.0, kind="inject_fault", target="logic3:logic_stuck_false"),
+            ],
+        )
+        trace = TimelinePlayer(timeline, FantuiExecutor()).run()
+        # After the fault injects, L3 must report blocked, not idle.
+        post_fault_frames = [f for f in trace.frames if f.t_s >= 5.1]
+        self.assertTrue(post_fault_frames)
+        for f in post_fault_frames:
+            self.assertEqual(
+                f.logic_states.get("logic3"),
+                "blocked",
+                msg=f"t_s={f.t_s}: logic3 should be blocked under logic_stuck_false, got {f.logic_states}",
+            )
+        # Cascade should have at least one entry attributing a broken
+        # gate to the logic_stuck_false fault.
+        fault_attrs = [
+            c for c in trace.outcome.failure_cascade
+            if "logic3:logic_stuck_false" in c.get("active_faults", [])
+        ]
+        self.assertTrue(fault_attrs, msg=f"expected cascade entry, got {trace.outcome.failure_cascade}")
+
+    def test_nominal_deploy_records_no_false_cascade(self):
+        """Codex PR-2 MAJOR #2 regression: a fault-free trace must not
+        report a failure_cascade entry, even though the nominal lifecycle
+        flips L1 from active → blocked post-deploy.
+        """
+        path = TIMELINE_FIXTURES_DIR / "nominal_landing.json"
+        timeline = parse_timeline(json.loads(path.read_text("utf-8")))
+        trace = TimelinePlayer(timeline, FantuiExecutor()).run()
+        self.assertEqual(
+            trace.outcome.failure_cascade, [],
+            msg=f"nominal run should have empty failure_cascade, got {trace.outcome.failure_cascade}",
+        )
+
+    def test_unknown_fault_id_raises(self):
+        """Codex PR-2 MAJOR #4 regression: executor must reject unknown
+        fault ids rather than silently treating them as no-ops.
+        """
+        timeline = Timeline(
+            system="fantui",
+            step_s=0.1,
+            duration_s=2.0,
+            initial_inputs={
+                "radio_altitude_ft": 5.0, "tra_deg": 0.0, "engine_running": True,
+                "aircraft_on_ground": True, "reverser_inhibited": False,
+                "eec_enable": True, "n1k": 45.0, "max_n1k_deploy_limit": 60.0,
+            },
+            events=[
+                TimelineEvent(t_s=0.5, kind="inject_fault", target="sw1:stuckoff"),
+            ],
+        )
+        with self.assertRaises(ValueError):
+            TimelinePlayer(timeline, FantuiExecutor()).run()
+
     def test_time_varying_fault_cleared_mid_sim(self):
         """SW1 stuck from t=5→7s then cleared; if TRA is already past SW1
         window before t=7, L1 can still fire after the fault clears thanks
@@ -178,6 +255,24 @@ class FantuiTimelineApiTests(unittest.TestCase):
         )
         self.assertEqual(status, 400)
         self.assertEqual(body.get("error"), "unsupported_system")
+
+    def test_unknown_fault_returns_400_invalid_timeline(self):
+        payload = {
+            "system": "fantui",
+            "step_s": 0.1,
+            "duration_s": 2.0,
+            "initial_inputs": {
+                "radio_altitude_ft": 5.0, "tra_deg": 0.0, "engine_running": True,
+                "aircraft_on_ground": True, "reverser_inhibited": False,
+                "eec_enable": True, "n1k": 45.0, "max_n1k_deploy_limit": 60.0,
+            },
+            "events": [
+                {"t_s": 0.5, "kind": "inject_fault", "target": "sw1:stuckoff"},
+            ],
+        }
+        status, body = post_json(self.server.server_port, "/api/timeline-simulate", payload)
+        self.assertEqual(status, 400)
+        self.assertEqual(body.get("error"), "invalid_timeline")
 
     def test_nominal_landing_api_roundtrip(self):
         path = TIMELINE_FIXTURES_DIR / "nominal_landing.json"

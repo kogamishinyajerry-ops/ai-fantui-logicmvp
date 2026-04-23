@@ -37,6 +37,28 @@ _PILOT_INPUT_KEYS = {
 }
 
 
+# Whitelist of (node_id, fault_type) pairs the FANTUI executor knows how to apply.
+# Unknown faults raise ValueError so they surface as 400 responses instead of being
+# silently ignored (Codex PR-2 MAJOR #4).
+_FANTUI_FAULT_WHITELIST: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("sw1", "stuck_off"),
+        ("sw1", "stuck_on"),
+        ("sw2", "stuck_off"),
+        ("sw2", "stuck_on"),
+        ("tls115", "sensor_zero"),
+        ("vdt90", "cmd_blocked"),
+        ("radio_altitude_ft", "sensor_zero"),
+        ("n1k", "sensor_zero"),
+        ("logic1", "logic_stuck_false"),
+        ("logic2", "logic_stuck_false"),
+        ("logic3", "logic_stuck_false"),
+        ("logic4", "logic_stuck_false"),
+        ("thr_lock", "cmd_blocked"),
+    }
+)
+
+
 class FantuiExecutor:
     """Stateful FANTUI tick runner conforming to the Executor protocol."""
 
@@ -107,7 +129,7 @@ class FantuiExecutor:
         self._plant_state = self._plant.advance(self._plant_state, outputs, dt_s)
 
         output_dict = _outputs_to_dict(outputs)
-        logic_states = _logic_states_from_outputs_and_explain(outputs, explain)
+        logic_states = _logic_states_from_outputs_and_explain(outputs, explain, fault_map)
         resolved_dict = _resolved_inputs_to_dict(resolved, sensors)
         self._last_resolved = resolved_dict
 
@@ -124,15 +146,25 @@ class FantuiExecutor:
 def _build_fault_map(active_faults: list[str]) -> dict[str, str]:
     """Convert ['sw1:stuck_off'] to {'sw1': 'stuck_off'}.
 
-    Later entries override earlier ones on the same node_id.
+    Later entries override earlier ones on the same node_id. Unknown fault
+    ids raise ValueError so /api/timeline-simulate returns 400 rather than
+    silently dropping a typo like "sw1:stuckoff" (Codex PR-2 MAJOR #4).
     """
     fault_map: dict[str, str] = {}
     for entry in active_faults:
         if ":" in entry:
             node_id, fault_type = entry.split(":", 1)
-            fault_map[node_id.strip()] = fault_type.strip()
+            node_id = node_id.strip()
+            fault_type = fault_type.strip()
         elif entry:
-            fault_map[entry.strip()] = ""
+            node_id, fault_type = entry.strip(), ""
+        else:
+            continue
+        if (node_id, fault_type) not in _FANTUI_FAULT_WHITELIST:
+            raise ValueError(
+                f"unknown FANTUI fault {node_id!r}:{fault_type!r} — not in executor whitelist"
+            )
+        fault_map[node_id] = fault_type
     return fault_map
 
 
@@ -230,14 +262,25 @@ def _outputs_to_dict(outputs: ControllerOutputs) -> dict[str, Any]:
     }
 
 
-def _logic_states_from_outputs_and_explain(outputs, explain) -> dict[str, str]:
-    """Map controller outputs + explain into 'active' / 'blocked' / 'idle'."""
+def _logic_states_from_outputs_and_explain(
+    outputs, explain, fault_map: dict[str, str]
+) -> dict[str, str]:
+    """Map controller outputs + explain into 'active' / 'blocked' / 'idle'.
+
+    A `logicN:logic_stuck_false` fault forces the node to 'blocked' even
+    when the pre-fault `explain.failed_conditions` would be empty (i.e. the
+    underlying logic was satisfied but got masked by the output override).
+    Without this override the cascade reporter sees the gate as 'idle' and
+    misses the fault-induced break (Codex PR-2 MAJOR #1).
+    """
     states: dict[str, str] = {}
     for idx, name in enumerate(("logic1", "logic2", "logic3", "logic4"), start=1):
         active = getattr(outputs, f"logic{idx}_active")
         layer_explain = getattr(explain, f"logic{idx}")
         if active:
             states[name] = "active"
+        elif fault_map.get(name) == "logic_stuck_false":
+            states[name] = "blocked"
         elif layer_explain.failed_conditions:
             states[name] = "blocked"
         else:

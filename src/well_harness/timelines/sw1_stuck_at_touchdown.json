@@ -11,7 +11,7 @@
     "aircraft_on_ground": false,
     "reverser_inhibited": false,
     "eec_enable": true,
-    "n1k": 0.45,
+    "n1k": 45.0,
     "max_n1k_deploy_limit": 60.0
   },
   "events": [
