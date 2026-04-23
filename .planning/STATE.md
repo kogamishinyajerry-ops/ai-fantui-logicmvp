@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: demo-ui bug fixes (VDT slider coupling · landing-deploy preset) APPROVED by Codex · main=daca0cf pushed
-last_updated: "2026-04-23T18:30:00.000Z"
+status: L4 reverse_travel inclusive-lower fix + L1 post-deploy explanation · Codex APPROVE · main=9d18f05
+last_updated: "2026-04-23T09:56:00.000Z"
 last_activity: 2026-04-23
 progress:
   total_phases: 43
   completed_phases: 42
   total_plans: 2
   completed_plans: 1
-  notes: "iter-9 L3 off-page stubs + two user-reported UI bugs (VDT/feedback_mode silent coupling + landing-deploy L1 red) fixed and Codex APPROVED"
+  notes: "controller L4 boundary bug fixed via new between_lower_inclusive comparison type · L1 post-deploy UX note added · Codex APPROVE · 725 tests green"
 ---
 
 # State
@@ -47,6 +47,26 @@ Last activity: 2026-04-23
 - Fix (`f007483`): landing-deploy now VDT=0 (deployment-in-progress: L1+L2+L3 active, L4 pending on VDT90); max-reverse relabeled "展开到位" with TRA=-31.5 (avoids exclusive lower bound) + VDT=100 (post-deploy: L1 correctly blocked, L4 active).
 
 **Codex reviews**: P2 found on `f007483` (hard-reset slider discarded user state + stale readout) → fixed in `daca0cf` → **APPROVE** with no new findings. 725 tests pass.
+
+### 2026-04-23 — L4 reverse_travel boundary bug + L1 post-deploy clarification (`9d18f05`)
+
+**User screenshot report**: TRA=-32°, VDT=100%, manual_override, all inputs green — L1 and L4 both BLOCKED. Two distinct root causes:
+
+**Bug A (real, now fixed)**: L4 `tra_deg` used `between_exclusive(-32, 0)`, so TRA=-32° (mechanical stop, slider's leftmost value) silently failed the strict lower bound. UI told the user "可以在 -32°~0° 自由拖动", controller disagreed at the edge.
+
+Introduced new comparison type `between_lower_inclusive` (lower ≤ val < upper) and applied to L4 `tra_deg`. Upper bound stays strict (TRA=0° is forward detent). Touches 11 files:
+- `controller.py` / `system_spec.py` / `reference_thrust_reverser.spec.json` — declarations
+- `scenario_playback.py` / `demo.py` / `tools/generate_adapter.py` — four implementation sites kept in sync
+- `demo_server.py::_lever_summary` — Bug B explanation
+- `static/demo.js` — max-reverse preset TRA restored to -32°
+- `tests/test_demo.py`, `tests/fixtures/demo_answer_asset_v1.json` — comparison string rename
+- `tools/demo_path_smoke.py::scenario_lever_extreme_clamp` — previously codified the bug; now correctly asserts L4 active + THR_LOCK active at TRA=-32°
+
+**Bug B (semantically correct, now explained)**: At VDT=100%, `reverser_not_deployed_eec = (100 ≤ 0) = False` → L1's `!DEP` interlock correctly fails. L1 is a first-unlock gate; once reverser is deployed, `!DEP` naturally releases — this is design behavior, not a failure. `_lever_summary` now appends a clarifying note on L4-active branches: "L1 此刻阻塞是预期：反推已部署 → !DEP 自然回落，L1 属于首次解锁门，已完成使命。"
+
+**Codex review verdict**: APPROVE on all 5 focus areas (new comparison consistency across 4 impl sites · boundary behavior · old `between_exclusive` untouched · smoke-test flip logically correct · L1 post-deploy heuristic accurate).
+
+**Live verification** on user's exact input (TRA=-32, VDT=100, manual, all toggles on): L2/L3/L4 active, THR_LOCK active, L1 blocked with explanatory note.
 
 ---
 
