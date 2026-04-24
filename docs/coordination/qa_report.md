@@ -6,14 +6,14 @@
 - 结论：PASS；当前稳定基线由 GitHub-backed validation evidence 支撑。
 - 当前阶段：`P43 Control Logic Workbench end-to-end milestone`
 - 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`demo.html L3 wire clarity iter-7→9 · Codex APPROVE × 2 · main=4189198`
+- 最近成功执行证据：`controller L4 reverse_travel bound + L1 post-deploy clarity · Codex APPROVE · main=9d18f05`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
-- 当前证据模式：`active-page degraded mode`
-- 证据模式说明：共享 Notion 数据库当前不可达；当前快照由 dashboard 与活跃 status / 09C / freeze 页面恢复。
-- 当前 QA 摘要：`PASS. 2/2 shared validation checks pass.`
-- 当前运行摘要：`2/2 shared validation checks pass.`
+- 当前证据模式：`repo-doc fallback mode`
+- 证据模式说明：共享 Notion 数据库与活跃控制面页面当前不可达；当前快照由 repo freeze packet 与 handoff docs 恢复。
+- 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
+- 当前运行摘要：`Focused control-plane maintenance run passed. Carried forward the stronger shared validation baseline: 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
 
 ## 当前执行规则
 
