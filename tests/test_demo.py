@@ -830,11 +830,14 @@ class DemoIntentLayerTests(unittest.TestCase):
         # Phase A (2026-04-22): chat.html shelved.
         # Phase UI-C (2026-04-22): root URL now serves index.html (2x3 card grid
         # landing page) instead of demo.html, so user can reach all 6 surfaces.
-        self.assertIn("<title>FANTUI LogicMVP · 主入口</title>", html)
+        self.assertIn("<title>FANTUI LogicMVP · 民航反推控制逻辑验证工作台</title>", html)
         self.assertIn("/demo.html", html)
         self.assertIn("/c919_etras_workstation.html", html)
         self.assertIn("/fantui_circuit.html", html)
         self.assertIn("/c919_etras_panel/circuit.html", html)
+        # 文档页（2026-04-24 新增）
+        self.assertIn("/fantui_requirements.html", html)
+        self.assertIn("/c919_requirements.html", html)
 
     def test_demo_html_slim_workstation_structure(self):
         """Slim demo.html (Phase UI-D) must have: unified nav, TRA lever, condition
