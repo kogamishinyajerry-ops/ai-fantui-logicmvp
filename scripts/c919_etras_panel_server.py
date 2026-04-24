@@ -22,7 +22,10 @@ from well_harness.adapters.c919_etras_frozen_v1 import (
     SystemState,
     TelemetryLogger,
 )
-from well_harness.adapters.c919_etras_frozen_v1.cmd3_latch_controller import Cmd3LatchController
+from well_harness.adapters.c919_etras_frozen_v1.cmd3_latch_controller import (
+    Cmd3LatchController,
+    derive_tr_command3_enable,
+)
 from well_harness.timeline_engine import TimelinePlayer, parse_timeline
 from well_harness.timeline_engine.validator import ValidationError as TimelineValidationError
 from well_harness.timeline_engine.executors.c919_etras import C919ETRASExecutor
@@ -81,7 +84,7 @@ def _parse_inputs(body: Dict[str, Any]) -> RawInputs:
 
 
 def _build_tick_response(outputs, sys_ref: C919ReverseThrustSystem, inp: RawInputs) -> dict:
-    tr_cmd3_enable = Cmd3LatchController.derive_tr_command3_enable(
+    tr_cmd3_enable = derive_tr_command3_enable(
         outputs.tr_stowed_and_locked, inp.etras_over_temp_fault
     )
     return {

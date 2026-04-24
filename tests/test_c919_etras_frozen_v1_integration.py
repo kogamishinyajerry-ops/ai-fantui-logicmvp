@@ -172,6 +172,11 @@ class TestSafetyPreemption:
     """TR_Inhibited / 过温 → 任意状态 → SF 抢占。"""
 
     def test_inhibit_forces_sf_from_s4(self, inputs_factory, locks_factory):
+        # OPEN-Q-V2-03: 本测试场景只 unlock TLS + 两吊挂锁，PLS 保持 locked。
+        # 在 Fix C1 之后该组合下 unlock_confirmed=False（Deploy 链路已堵），
+        # SF 仍由 tr_inhibited=True 独立触发，断言仍成立。若测试原意是"正常
+        # Deploy 途中被 inhibit 打断"，应补上 pls_l/pls_r=unlocked 使 Deploy
+        # 链路先真正生效再被抢占。
         sys_ = C919ReverseThrustSystem()
         sys_.sm.force(SystemState.S4_DEPLOYING)
         inp = inputs_factory(

@@ -394,13 +394,12 @@ def _logic_states_from_outputs(outputs, raw_inputs: RawInputs) -> dict[str, str]
     else:
         states["ln_eicu_cmd2"] = "idle"
 
-    # ln_eicu_cmd3 — triggerable when the set-path is lit (APWTLA + ground +
-    # engine). A latched tr_inhibited or stowed-locked reset will still flip
-    # this to 'blocked' because the controller would otherwise have fired.
+    # ln_eicu_cmd3 — triggerable mirrors Cmd3LatchController.tick Set condition
+    # (v1.0 safety floor retained pending v2 Enable公式，see OPEN-Q-V2-01).
     cmd3_triggerable = (
         raw_inputs.apwtla
         and outputs.selected_mlg_wow
-        and raw_inputs.engine_running
+        and (raw_inputs.engine_running or raw_inputs.trcu_menu_mode)
     )
     if outputs.three_phase_trcu_power_on:
         states["ln_eicu_cmd3"] = "active"

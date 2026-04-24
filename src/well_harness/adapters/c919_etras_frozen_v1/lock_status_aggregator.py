@@ -12,8 +12,7 @@ class LockStatusAggregator:
 
     @staticmethod
     def compute_unlock_confirmed(locks: LockInputs) -> bool:
-        # §5.5 Deploy 的 Unlock_Confirmed：TLS + 两把吊挂锁的 Unlocked 传感均确认
-        # （PLS 仅作为最终上锁确认的一部分，不参与解锁许可）
+        # v2 §4.3: PLS 为"主锁"，与 TLS + 两吊挂锁同级参与解锁许可判断
         return (
             locks.tls_unlocked
             and (not locks.tls_locked)
@@ -21,6 +20,10 @@ class LockStatusAggregator:
             and (not locks.pylon_lock_l_locked)
             and locks.pylon_lock_r_unlocked
             and (not locks.pylon_lock_r_locked)
+            and locks.pls_l_unlocked
+            and (not locks.pls_l_locked)
+            and locks.pls_r_unlocked
+            and (not locks.pls_r_locked)
         )
 
     def tick_stowed_and_locked(

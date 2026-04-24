@@ -14,7 +14,7 @@ from .wow_selector import compute_selected_mlg_wow
 from .tr_wow_filter import TrWowFilter
 from .lock_status_aggregator import LockStatusAggregator
 from .cmd2_controller import Cmd2Controller
-from .cmd3_latch_controller import Cmd3LatchController
+from .cmd3_latch_controller import Cmd3LatchController, derive_tr_command3_enable
 from .fadec_deploy_logic import compute_fadec_deploy_command
 from .fadec_stow_logic import compute_fadec_stow_command
 from .state_machine import StateMachine, StateMachineContext
@@ -34,6 +34,7 @@ __all__ = [
     "LockStatusAggregator",
     "Cmd2Controller",
     "Cmd3LatchController",
+    "derive_tr_command3_enable",
     "compute_fadec_deploy_command",
     "compute_fadec_stow_command",
     "StateMachine",

@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Optional
 
 from .cmd2_controller import Cmd2Controller
-from .cmd3_latch_controller import Cmd3LatchController
+from .cmd3_latch_controller import Cmd3LatchController, derive_tr_command3_enable
 from .fadec_deploy_logic import compute_fadec_deploy_command
 from .fadec_stow_logic import compute_fadec_stow_command
 from .lock_status_aggregator import LockStatusAggregator
@@ -77,8 +77,8 @@ class C919ReverseThrustSystem:
         # Step 5–6 CMD2 (计时器内部 tick)
         single_phase_unlock_power_on = self.cmd2.tick(inp, selected_mlg_wow, dt)
 
-        # Step 7 派生 TR_Command3_Enable
-        tr_command3_enable = Cmd3LatchController.derive_tr_command3_enable(
+        # Step 7 派生 TR_Command3_Enable（FADEC→EICU 信号）
+        tr_command3_enable = derive_tr_command3_enable(
             tr_stowed_and_locked, inp.etras_over_temp_fault
         )
 

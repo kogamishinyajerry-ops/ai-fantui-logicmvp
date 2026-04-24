@@ -151,6 +151,34 @@ class C919ExecutorDirectTests(unittest.TestCase):
         self.assertEqual(trace.frames[-1].outputs.get("state"),
                          "S10_STOWED_LOCKED_POWER_OFF")
 
+    def test_logic_states_cmd3_blocked_in_menu_mode_with_inhibit(self):
+        """Codex round-2 MINOR 回归：trcu_menu_mode=True + engine_off + WOW + APWTLA +
+        tr_inhibited=True → 真实 three_phase=False，但 Set-path 是 lit 的
+        (menu_mode 替代 engine)，所以 ln_eicu_cmd3 必须报 'blocked' 而非 'idle'。
+        """
+        executor = C919ETRASExecutor()
+        result = executor.tick(
+            t_s=0.0,
+            dt_s=0.1,
+            inputs={
+                "tra_deg": -7.0,
+                "lgcu1_mlg_wow": True, "lgcu2_mlg_wow": True,
+                "lgcu1_valid": True, "lgcu2_valid": True,
+                "engine_running": False,
+                "trcu_menu_mode": True,
+                "tr_inhibited": True,
+                "tr_position_pct": 0.0,
+                "n1k_pct": 30.0,
+            },
+            active_faults=[],
+        )
+        self.assertFalse(result.outputs["three_phase_trcu_power_on"],
+                         msg="tr_inhibited=True 时三相电不得上")
+        self.assertEqual(
+            result.logic_states["ln_eicu_cmd3"], "blocked",
+            msg="Set-path 已 lit (menu_mode+WOW+APWTLA) 但 inhibit 阻断 → blocked",
+        )
+
     def test_outcome_extra_populated_for_c919(self):
         """Codex PR-3 MAJOR #3: TimelineOutcome.extra must carry C919-specific
         fields (deployed_successfully / reached_deployed_state / etc)

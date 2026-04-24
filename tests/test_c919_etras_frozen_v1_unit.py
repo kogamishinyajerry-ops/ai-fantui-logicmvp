@@ -14,6 +14,7 @@ from well_harness.adapters.c919_etras_frozen_v1 import (
     compute_fadec_deploy_command,
     compute_fadec_stow_command,
     compute_selected_mlg_wow,
+    derive_tr_command3_enable,
 )
 
 
@@ -141,7 +142,7 @@ class TestCmd3Latch:
         set_inp = self._set_inp(inputs_factory)
         c.tick(set_inp, True, True)
         # 收起上锁 → tr_command3_enable=False → Reset
-        e = Cmd3LatchController.derive_tr_command3_enable(True, False)
+        e = derive_tr_command3_enable(True, False)
         assert e is False
         low_inp = inputs_factory(apwtla=False)
         assert c.tick(low_inp, True, tr_command3_enable=False) is False
@@ -150,10 +151,64 @@ class TestCmd3Latch:
         c = Cmd3LatchController()
         set_inp = self._set_inp(inputs_factory)
         c.tick(set_inp, True, True)
-        e = Cmd3LatchController.derive_tr_command3_enable(False, True)
+        e = derive_tr_command3_enable(False, True)
         assert e is False
         hot_inp = inputs_factory(apwtla=True, etras_over_temp_fault=True)
         assert c.tick(hot_inp, True, tr_command3_enable=False) is False
+
+    # --- Codex CRITICAL 回归：锁死 v1.0 兜底行为（OPEN-Q-V2-01）---
+
+    def test_airborne_apwtla_fault_does_not_energize_three_phase(
+        self, inputs_factory, locks_factory
+    ):
+        """空中 APWTLA 故障不得上三相电（Codex 2026-04-24 CRITICAL 回归）。
+
+        删除 v1.0 的 engine/WOW/inhibit 兜底后可复现错误通电 1s；本测试锁死
+        兜底恢复后的正确行为——空中 + 全锁 + APWTLA=1 必须保持三相电断开。
+        """
+        sys_ = C919ReverseThrustSystem()
+        airborne_with_apwtla = inputs_factory(
+            lgcu1_valid=True, lgcu2_valid=True,
+            lgcu1_mlg_wow=False, lgcu2_mlg_wow=False,  # airborne
+            engine_running=False,                      # engine off
+            tra_deg=-7.0, atltla=False, apwtla=True,   # APWTLA fault
+            tr_position_pct=0.0,
+            locks=locks_factory(),                     # 全 locked
+        )
+        for _ in range(15):  # 覆盖 1s stowed-and-locked dwell 窗口
+            out = sys_.tick(airborne_with_apwtla, 0.1)
+            assert out.three_phase_trcu_power_on is False, \
+                "空中 APWTLA 故障不得在任何 tick 上三相电"
+
+    def test_set_blocked_when_engine_off(self, inputs_factory):
+        """engine_off + apwtla=True + enable=True → Set 不触发（v1.0 兜底）。"""
+        c = Cmd3LatchController()
+        inp = inputs_factory(apwtla=True, engine_running=False,
+                             lgcu1_mlg_wow=True, lgcu2_mlg_wow=True)
+        assert c.tick(inp, selected_mlg_wow=True, tr_command3_enable=True) is False
+
+    def test_set_blocked_when_inhibited(self, inputs_factory):
+        """tr_inhibited=True + apwtla=True + enable=True → Set 不触发（v1.0 兜底）。"""
+        c = Cmd3LatchController()
+        inp = inputs_factory(apwtla=True, engine_running=True, tr_inhibited=True)
+        assert c.tick(inp, selected_mlg_wow=True, tr_command3_enable=True) is False
+
+    def test_set_blocked_when_airborne(self, inputs_factory):
+        """selected_mlg_wow=False + apwtla=True + enable=True → Set 不触发（v1.0 兜底）。"""
+        c = Cmd3LatchController()
+        inp = inputs_factory(apwtla=True, engine_running=True)
+        assert c.tick(inp, selected_mlg_wow=False, tr_command3_enable=True) is False
+
+    def test_set_allowed_in_trcu_menu_mode_engine_off(self, inputs_factory):
+        """维护工况：trcu_menu_mode=True + engine_off + apwtla=True → Set 触发。
+
+        v1.0 Set 条件里 engine_running 与 trcu_menu_mode 是 OR 关系，维护台可以
+        在发动机关停下测试三相电路（Codex round-2 补充用例）。
+        """
+        c = Cmd3LatchController()
+        inp = inputs_factory(apwtla=True, engine_running=False, trcu_menu_mode=True,
+                             lgcu1_mlg_wow=True, lgcu2_mlg_wow=True)
+        assert c.tick(inp, selected_mlg_wow=True, tr_command3_enable=True) is True
 
 
 # ---------- §5.5 Deploy ----------
@@ -213,12 +268,21 @@ class TestStow:
 
 # ---------- §5.7 Lock aggregator ----------
 class TestLockAggregator:
-    def test_unlock_confirmed_tls_and_both_pylons(self, locks_factory):
-        locks = locks_factory(tls="unlocked", pl_l="unlocked", pl_r="unlocked")
+    def test_unlock_confirmed_all_five_locks(self, locks_factory):
+        # v2 §4.3: PLS 为主锁，全部五把锁均需 unlocked
+        locks = locks_factory(tls="unlocked", pl_l="unlocked", pl_r="unlocked",
+                              pls_l="unlocked", pls_r="unlocked")
         assert LockStatusAggregator.compute_unlock_confirmed(locks) is True
 
+    def test_unlock_not_confirmed_when_pls_locked(self, locks_factory):
+        # PLS 任一未开锁 → 不得确认
+        locks = locks_factory(tls="unlocked", pl_l="unlocked", pl_r="unlocked",
+                              pls_l="locked", pls_r="unlocked")
+        assert LockStatusAggregator.compute_unlock_confirmed(locks) is False
+
     def test_unlock_not_confirmed_when_tls_locked(self, locks_factory):
-        locks = locks_factory(tls="locked", pl_l="unlocked", pl_r="unlocked")
+        locks = locks_factory(tls="locked", pl_l="unlocked", pl_r="unlocked",
+                              pls_l="unlocked", pls_r="unlocked")
         assert LockStatusAggregator.compute_unlock_confirmed(locks) is False
 
     def test_stowed_and_locked_requires_1s_dwell(self, locks_factory):
