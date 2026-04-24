@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FANTUI 需求分析 · 从规范到控制逻辑</title>
+<link rel="stylesheet" href="/unified-nav.css">
+<style>
+:root {
+  --bg0: #02080f;
+  --bg1: #070f1c;
+  --bg2: #0b1628;
+  --bg3: #101e36;
+  --b0:  #1a2d48;
+  --b1:  #243a5c;
+  --text0: #e4ecf7;
+  --text1: #94accc;
+  --text2: #526880;
+  --cyan:  #22d3ee;
+  --cyan-d: rgba(34,211,238,.1);
+  --green: #4ade80;
+  --green-d: rgba(74,222,128,.1);
+  --amber: #f5a623;
+  --amber-d: rgba(245,166,35,.1);
+  --red:   #f87171;
+  --red-d: rgba(248,113,113,.1);
+  --violet:#b69dff;
+  --mono: 'JetBrains Mono','SF Mono',monospace;
+  --ui: 'Inter','PingFang SC',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg0);color:var(--text0);font-family:var(--ui);font-size:13px;line-height:1.7}
+body.unified-nav-enabled{padding-top:48px}
+
+.page{max-width:960px;margin:0 auto;padding:32px 28px 80px}
+
+/* ── Hero ── */
+.hero{border:1px solid var(--b1);background:linear-gradient(135deg,rgba(34,211,238,.04),rgba(74,222,128,.02));padding:28px 32px;margin-bottom:32px}
+.hero-tag{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--cyan);text-transform:uppercase;margin-bottom:10px}
+.hero h1{font-size:22px;font-weight:600;color:var(--text0);margin-bottom:8px;letter-spacing:.01em}
+.hero p{color:var(--text1);font-size:13px;max-width:680px}
+
+/* ── TOC ── */
+.toc{background:var(--bg2);border:1px solid var(--b0);padding:16px 20px;margin-bottom:32px;display:grid;grid-template-columns:1fr 1fr;gap:4px 24px}
+.toc-title{grid-column:1/-1;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text2);margin-bottom:8px}
+.toc a{color:var(--text1);text-decoration:none;font-size:12px;font-family:var(--mono)}
+.toc a:hover{color:var(--cyan)}
+
+/* ── Section ── */
+.section{margin-bottom:48px}
+.sec-anchor{display:block;visibility:hidden;margin-top:-60px;padding-top:60px}
+.sec-hd{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--b0)}
+.sec-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--cyan);background:var(--cyan-d);border:1px solid rgba(34,211,238,.3);padding:2px 8px;border-radius:3px;white-space:nowrap}
+.sec-hd h2{font-size:17px;font-weight:600;color:var(--text0)}
+
+/* ── Blocks ── */
+p{margin-bottom:12px;color:var(--text1)}
+strong{color:var(--text0);font-weight:600}
+em{color:var(--cyan);font-style:normal}
+
+.req-card{border:1px solid var(--b1);background:var(--bg2);padding:14px 18px;margin-bottom:10px;border-radius:2px}
+.req-id{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:2px;margin-right:8px}
+.req-id.sr{background:var(--red-d);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.req-id.fr{background:var(--green-d);color:var(--green);border:1px solid rgba(74,222,128,.3)}
+.req-id.ir{background:var(--amber-d);color:var(--amber);border:1px solid rgba(245,166,35,.3)}
+.req-id.pr{background:var(--cyan-d);color:var(--cyan);border:1px solid rgba(34,211,238,.3)}
+.req-title{font-size:13px;font-weight:600;color:var(--text0)}
+.req-body{margin-top:8px;color:var(--text1);font-size:12px}
+.req-rationale{margin-top:6px;font-size:11px;color:var(--text2);font-family:var(--mono)}
+
+.flow{background:var(--bg0);border:1px solid var(--b0);padding:16px 20px;font-family:var(--mono);font-size:11px;color:var(--cyan);line-height:1.9;overflow-x:auto;margin:14px 0}
+
+.table-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--bg3);color:var(--text2);text-transform:uppercase;font-size:10px;letter-spacing:.08em;font-weight:700;padding:8px 12px;text-align:left;border-bottom:1px solid var(--b1)}
+td{padding:7px 12px;border-bottom:1px solid var(--b0);color:var(--text1);vertical-align:top}
+td:first-child{font-family:var(--mono);font-size:11px;white-space:nowrap}
+tr:hover td{background:var(--bg2)}
+.pass{color:var(--green)}
+.block{color:var(--red)}
+.warn{color:var(--amber)}
+
+.ai-box{background:linear-gradient(135deg,rgba(182,157,255,.06),rgba(34,211,238,.03));border:1px solid rgba(182,157,255,.3);padding:18px 22px;margin:14px 0;border-radius:2px}
+.ai-box-hd{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--violet);margin-bottom:10px}
+.ai-box p{color:var(--text1);margin-bottom:8px}
+.ai-box p:last-child{margin-bottom:0}
+
+.decision{display:flex;gap:12px;margin-bottom:10px;padding:10px 14px;background:var(--bg2);border:1px solid var(--b0);border-left:3px solid var(--amber)}
+.decision-q{font-size:11px;color:var(--amber);font-family:var(--mono);flex-shrink:0;font-weight:700}
+.decision-body{font-size:12px;color:var(--text1)}
+
+.code{font-family:var(--mono);font-size:11px;background:var(--bg0);border:1px solid var(--b0);padding:12px 16px;margin:10px 0;color:var(--green);overflow-x:auto;line-height:1.7}
+.code .cm{color:var(--text2)}
+.code .kw{color:var(--cyan)}
+.code .val{color:var(--amber)}
+
+.trace-row{display:grid;grid-template-columns:80px 1fr 1fr;gap:0;border-bottom:1px solid var(--b0)}
+.trace-row:first-child{background:var(--bg3);border-bottom:2px solid var(--b1)}
+.trace-row>div{padding:8px 12px;font-size:11px}
+.trace-row:first-child>div{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);font-weight:700}
+.trace-id{font-family:var(--mono);color:var(--amber);font-weight:700}
+.trace-impl{font-family:var(--mono);color:var(--cyan);font-size:10px}
+
+.verify-step{display:flex;gap:14px;margin-bottom:12px;padding:12px 16px;background:var(--bg2);border:1px solid var(--b0)}
+.vs-num{width:24px;height:24px;border-radius:50%;background:var(--cyan-d);border:1px solid var(--cyan);color:var(--cyan);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:var(--mono)}
+.vs-body{font-size:12px;color:var(--text1)}
+.vs-body strong{color:var(--text0)}
+.vs-cmd{display:inline-block;font-family:var(--mono);font-size:10px;background:var(--bg0);border:1px solid var(--b0);padding:1px 6px;color:var(--amber);margin-top:4px}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--b1);border-radius:2px}
+</style>
+</head>
+<body class="unified-nav-enabled" data-nav-current="fantui-req">
+
+<header class="unified-nav" role="navigation">
+  <a href="/index.html" class="unified-nav-brand">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">工作台</span>
+      <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">反推逻辑</a>
+      <a href="/c919_etras_workstation.html" class="unified-nav-link" data-nav-key="etras">C919 E-TRAS</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">电路图</span>
+      <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
+      <a href="/c919_etras_panel/circuit.html" class="unified-nav-link" data-nav-key="etras-circuit">E-TRAS 电路</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">仿真</span>
+      <a href="/fan_console.html" class="unified-nav-link" data-nav-key="fan-console">反推操作台</a>
+      <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">文档</span>
+      <a href="/fantui_requirements.html" class="unified-nav-link" data-nav-key="fantui-req">FANTUI 需求</a>
+      <a href="/c919_requirements.html" class="unified-nav-link" data-nav-key="c919-req">C919 需求</a>
+    </div>
+  </div>
+</header>
+
+<div class="page">
+
+  <div class="hero">
+    <div class="hero-tag">需求分析文档 · FANTUI-REQ-V1.0</div>
+    <h1>FANTUI 反推控制逻辑 · 从需求规范到控制面板</h1>
+    <p>本文档完整记录 FANTUI（民航推力反向器控制逻辑验证工作台）的需求来源、AI 对需求的解析过程、关键设计决策，以及每条需求如何被追溯到可执行的 Python 控制逻辑与浏览器仿真面板。</p>
+  </div>
+
+  <nav class="toc">
+    <div class="toc-title">目录</div>
+    <a href="#s1">§1 系统背景与安全边界</a>
+    <a href="#s2">§2 需求规范（SR / FR / IR / PR）</a>
+    <a href="#s3">§3 AI 需求解析与设计决策</a>
+    <a href="#s4">§4 需求 → 代码可追溯矩阵</a>
+    <a href="#s5">§5 控制逻辑推导过程</a>
+    <a href="#s6">§6 控制面板验证方法</a>
+  </nav>
+
+  <!-- §1 -->
+  <div class="section">
+    <span class="sec-anchor" id="s1"></span>
+    <div class="sec-hd">
+      <span class="sec-num">§ 1</span>
+      <h2>系统背景与安全边界</h2>
+    </div>
+
+    <p>推力反向器（Thrust Reverser）是喷气式飞机着陆时将发动机推力方向改变为向前分量、辅助制动的关键机构。对于 C919 这类大型干线飞机，反推系统的展开与收起需要满足严格的安全边界——<strong>一旦在不满足条件时展开，后果可能是飞机偏出跑道或结构损坏</strong>。</p>
+
+    <p>FANTUI 的控制逻辑来自对 C919 E-TRAS（电动反推作动系统）适航规范文件的分析提炼。规范的核心约束可以归纳为三条安全边界：</p>
+
+    <div class="flow">
+  ┌─ 安全边界 1：空中绝对禁止展开 ─────────────────────────────────┐
+  │  无线电高度 ≥ 6 ft 时，任何反推展开指令均不得产生硬件命令      │
+  └──────────────────────────────────────────────────────────────────┘
+  ┌─ 安全边界 2：反推装置未到位时禁止进入深反推区 ─────────────────┐
+  │  VDT（位移传感器）< 90% 时，油门杆物理区间锁定在 -14°         │
+  └──────────────────────────────────────────────────────────────────┘
+  ┌─ 安全边界 3：抑制信号具有最高优先级 ───────────────────────────┐
+  │  reverser_inhibited = True 时，立即中断 L3 以及所有下游命令    │
+  └──────────────────────────────────────────────────────────────────┘</div>
+
+    <p>这三条安全边界是 CCAR-25（中国民用航空规章 第25部 运输类飞机适航标准）中对飞行安全关键系统的基础要求，在 DO-178C 软件研制保证框架下需要 100% 测试覆盖。</p>
+  </div>
+
+  <!-- §2 -->
+  <div class="section">
+    <span class="sec-anchor" id="s2"></span>
+    <div class="sec-hd">
+      <span class="sec-num">§ 2</span>
+      <h2>需求规范</h2>
+    </div>
+
+    <p style="margin-bottom:16px"><strong>安全需求（Safety Requirements）</strong> — 违反即为系统性失效，必须在控制逻辑中硬编码。</p>
+
+    <div class="req-card">
+      <span class="req-id sr">SR-01</span><span class="req-title">空中禁止展开</span>
+      <div class="req-body">当无线电高度 radio_altitude_ft ≥ 6.0 ft 时，系统不得发出 TLS 115VAC 供电命令，从而阻断整条展开链路。</div>
+      <div class="req-rationale">来源: CCAR-25.933(a)(1) · 优先级: CRITICAL · 违反后果: 空中意外展开导致气动失控</div>
+    </div>
+
+    <div class="req-card">
+      <span class="req-id sr">SR-02</span><span class="req-title">抑制信号最高优先级</span>
+      <div class="req-body">reverser_inhibited = True 时，L3 门立即变 False，eec_deploy_cmd / pls_power_cmd / pdu_motor_cmd 全部切断，无论其他条件是否满足。该信号不可被其他逻辑覆盖。</div>
+      <div class="req-rationale">来源: 飞行员超控设计原则 · 优先级: CRITICAL · 典型场景: 发动机异常、结构告警</div>
+    </div>
+
+    <div class="req-card">
+      <span class="req-id sr">SR-03</span><span class="req-title">高转速下禁止展开</span>
+      <div class="req-body">N1k（风扇转速）≥ max_n1k_deploy_limit（默认 85%）时，L3 门阻断，禁止 PDU 驱动翻转斗运动，防止高速气流下的机械损坏。</div>
+      <div class="req-rationale">来源: 发动机结构强度边界 · 优先级: CRITICAL · 典型场景: 复飞中意外拉杆</div>
+    </div>
+
+    <div class="req-card">
+      <span class="req-id sr">SR-04</span><span class="req-title">未到位禁止深反推</span>
+      <div class="req-body">VDT 位置 < 90% 时，油门杆深拉区（-32° ~ -14°）必须物理锁定，L4 不激活，throttle_electronic_lock_release_cmd = False。</div>
+      <div class="req-rationale">来源: 翻转斗机械干涉防护 · 优先级: CRITICAL · 实现: 前端守卫 + 后端回拨双重保险</div>
+    </div>
+
+    <p style="margin:20px 0 16px"><strong>功能需求（Functional Requirements）</strong> — 系统必须实现的控制功能。</p>
+
+    <div class="req-card">
+      <span class="req-id fr">FR-01</span><span class="req-title">地面展开许可（L1 门）</span>
+      <div class="req-body">满足 SW1 激活 AND 飞机在地面 AND RA &lt; 6 ft AND 反推未展开时，发出 TLS 115VAC 供电命令，开始机械解锁序列。</div>
+    </div>
+    <div class="req-card">
+      <span class="req-id fr">FR-02</span><span class="req-title">动力回路使能（L2 门）</span>
+      <div class="req-body">满足 SW2 激活 AND 发动机运行 AND TLS 已解锁 AND EEC 使能 AND 无抑制时，发出 ETRAC 540VDC 供电命令。</div>
+    </div>
+    <div class="req-card">
+      <span class="req-id fr">FR-03</span><span class="req-title">展开驱动命令（L3 门）</span>
+      <div class="req-body">满足 ETRAC 已供电 AND TRA ≤ -11.74° AND N1k &lt; 限制 AND EEC 使能 AND 无抑制时，联合发出 EEC展开 / PLS供电 / PDU电机三路命令，驱动翻转斗物理展开。</div>
+    </div>
+    <div class="req-card">
+      <span class="req-id fr">FR-04</span><span class="req-title">油门电子锁释放（L4 门）</span>
+      <div class="req-body">满足 L3 激活 AND VDT ≥ 90% AND TRA 在反推区 AND 地面 AND 发动机运行时，发出 throttle_electronic_lock_release_cmd，允许油门杆进入深反推区（≤ -14°）。</div>
+    </div>
+
+    <p style="margin:20px 0 16px"><strong>接口需求（Interface Requirements）</strong> — 硬件传感器与执行机构的信号约束。</p>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>ID</th><th>信号</th><th>类型</th><th>范围</th><th>约束说明</th></tr>
+        <tr><td><span class="req-id ir" style="display:inline-block;font-size:9px">IR-01</span></td><td>tra_deg</td><td>float</td><td>-32° ~ 0°</td><td>越过 -1.4° 触发 SW1，越过 -5.0° 触发 SW2（闩锁，单次跨越即锁定）</td></tr>
+        <tr><td><span class="req-id ir" style="display:inline-block;font-size:9px">IR-02</span></td><td>radio_altitude_ft</td><td>float</td><td>0 ~ ∞</td><td>6.0 ft 为 L1 的硬门限，sensor_zero 故障时 RA=0 反而满足 L1（已知边界效应）</td></tr>
+        <tr><td><span class="req-id ir" style="display:inline-block;font-size:9px">IR-03</span></td><td>n1k</td><td>float</td><td>0 ~ 110%</td><td>默认上限 85%，运营商可通过 max_n1k_deploy_limit 调整</td></tr>
+        <tr><td><span class="req-id ir" style="display:inline-block;font-size:9px">IR-04</span></td><td>tls_unlocked_ls</td><td>bool</td><td>—</td><td>物理传感器；仿真中简化为 TLS 供电后经 0.3s 延迟置 True</td></tr>
+        <tr><td><span class="req-id ir" style="display:inline-block;font-size:9px">IR-05</span></td><td>deploy_position_percent</td><td>float</td><td>0 ~ 100%</td><td>VDT 位移传感器；90% 触发 VDT90 信号；支持手动注入覆盖 plant 模型</td></tr>
+        <tr><td><span class="req-id ir" style="display:inline-block;font-size:9px">IR-06</span></td><td>reverser_inhibited</td><td>bool</td><td>—</td><td>驾驶舱抑制按钮；True 时阻断 L3，最高优先级，不可被任何逻辑降权</td></tr>
+      </table>
+    </div>
+
+    <p style="margin:20px 0 16px"><strong>性能需求（Performance Requirements）</strong> — 时序与响应约束。</p>
+
+    <div class="req-card"><span class="req-id pr">PR-01</span><span class="req-title">TLS 解锁延迟</span><div class="req-body">TLS 115VAC 供电后，至少 0.3s 内 TLS_Unlocked_LS 不得为 True（机械响应时间）。仿真步长 0.1s，至少 3 个 tick 后解锁。</div></div>
+    <div class="req-card"><span class="req-id pr">PR-02</span><span class="req-title">PLS 解锁延迟</span><div class="req-body">PLS 供电后，至少 0.2s 内 PLS_Unlocked 不得为 True（4 路并联锁，动作略快于 TLS）。</div></div>
+    <div class="req-card"><span class="req-id pr">PR-03</span><span class="req-title">展开速率</span><div class="req-body">PDU 电机驱动下，VDT 展开速率为 30%/s（仿真简化线性模型）。从 0% 到 90% 理论耗时 3.0s。</div></div>
+  </div>
+
+  <!-- §3 -->
+  <div class="section">
+    <span class="sec-anchor" id="s3"></span>
+    <div class="sec-hd">
+      <span class="sec-num">§ 3</span>
+      <h2>AI 需求解析与设计决策</h2>
+    </div>
+
+    <div class="ai-box">
+      <div class="ai-box-hd">AI 解析视角</div>
+      <p>在接收到上述原始需求规范后，AI（Claude Code · Opus 4.7）的核心任务是将自然语言规范转化为可执行的 Python 控制逻辑，同时保持每条代码行都可追溯到具体需求条款。以下是解析过程中识别出的关键设计歧义与决策。</p>
+    </div>
+
+    <p style="margin-bottom:16px"><strong>识别到的 5 个关键设计决策：</strong></p>
+
+    <div class="decision">
+      <div class="decision-q">决策 D1</div>
+      <div class="decision-body"><strong>选择无状态纯函数架构</strong><br>
+      需求文本对"历史依赖"没有明确规定。AI 分析认为：SR-01/SR-02 的强制性要求"任何时刻满足条件即生效、不满足即切断"，这天然适合无状态评估。有状态架构虽然更接近真实硬件行为，但会引入隐式历史依赖，使故障注入和形式化验证变得复杂。<br>
+      <strong>结论：DeployController.evaluate() 设计为纯函数，状态（锁位置、积分器）外置到 SimplifiedDeployPlant。</strong></div>
+    </div>
+
+    <div class="decision">
+      <div class="decision-q">决策 D2</div>
+      <div class="decision-body"><strong>SW1/SW2 使用闩锁语义</strong><br>
+      原始需求说"TRA 进入反推区间激活 SW1"，但未说明 SW1 是电平触发（在区间内 = 激活）还是边沿触发（穿越边界激活、之后保持）。AI 基于真实位置开关（latched position switch）的物理特性，选择了闩锁语义：TRA 穿越 SW1 窗口（-1.4° ~ -6.2°）一次即锁定为 True，直到 reset。<br>
+      <strong>结论：LatchedThrottleSwitches 实现边沿检测 + 闩锁，而非电平检测。</strong></div>
+    </div>
+
+    <div class="decision">
+      <div class="decision-q">决策 D3</div>
+      <div class="decision-body"><strong>reverser_inhibited 的位置选择</strong><br>
+      需求 SR-02 说"最高优先级"，但没有说明它应该插入哪一层门。可能的方案：A) 在 L1 检查（最早阻断）；B) 在 L3 检查（只阻断展开命令，不阻断解锁供电）；C) 两者都检查。AI 分析认为：L1 的作用是 TLS 供电，只要发动机在运转、TLS 已供电，本身不危险；L3 产生的 PDU 驱动才是物理危险源。选择方案 B：在 L3 单点检查，保持 L1/L2 供电（维持锁机构在通电状态），仅阻断展开动作。<br>
+      <strong>结论：reverser_inhibited 的 NOT 条件仅出现在 L3，L1/L2 保留继续运行。</strong></div>
+    </div>
+
+    <div class="decision">
+      <div class="decision-q">决策 D4</div>
+      <div class="decision-body"><strong>RA=0（传感器失效）的边界效应</strong><br>
+      SR-01 要求 RA &lt; 6ft 才允许 L1 激活。如果 RA 传感器故障置零，RA=0 &lt; 6 = True，L1 反而满足。AI 判断这是合理的设计取舍：传感器失效应由传感器冗余架构（双余度 RA）在上游解决，控制逻辑层不做反向补偿（否则会引入新的边界条件）。文档明确标注此行为而非修复它。<br>
+      <strong>结论：维持 RA &lt; 6.0 的简单判断，传感器失效边界效应在文档中显式记录。</strong></div>
+    </div>
+
+    <div class="decision">
+      <div class="decision-q">决策 D5</div>
+      <div class="decision-body"><strong>TRA 深拉区锁的三层实现</strong><br>
+      SR-04 要求"VDT &lt; 90% 时锁定深拉区"，但没有规定锁在哪一层实现。AI 分析发现单层锁存在被绕过的风险（前端滑块可被 JS 修改，后端可被直接 POST）。最终采用三层防御：前端 guardTraSlider() 立即拦截 → 后端 effective_tra_deg 回拨 → 前端同步回拨。<br>
+      <strong>结论：三层互补实现，即使某一层被绕过，另外两层仍然有效。</strong></div>
+    </div>
+  </div>
+
+  <!-- §4 -->
+  <div class="section">
+    <span class="sec-anchor" id="s4"></span>
+    <div class="sec-hd">
+      <span class="sec-num">§ 4</span>
+      <h2>需求 → 代码可追溯矩阵</h2>
+    </div>
+    <p>每条需求与其在代码库中的精确实现位置的对应关系：</p>
+    <div style="border:1px solid var(--b0);margin:14px 0">
+      <div class="trace-row">
+        <div>需求 ID</div><div>含义摘要</div><div>代码实现位置</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">SR-01</div>
+        <div>RA ≥ 6ft 阻断 L1</div>
+        <div class="trace-impl">controller.py:30 — radio_altitude_ft &lt; logic1_ra_ft_threshold(6.0)</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">SR-02</div>
+        <div>抑制最高优先级</div>
+        <div class="trace-impl">controller.py:79 — NOT reverser_inhibited 作为 L3 AND 条件</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">SR-03</div>
+        <div>高转速阻断 L3</div>
+        <div class="trace-impl">controller.py:93 — n1k &lt; max_n1k_deploy_limit</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">SR-04</div>
+        <div>VDT&lt;90% 锁深拉区</div>
+        <div class="trace-impl">demo_server.py:_build_tra_lock_payload() + demo.js:guardTraSlider()</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">FR-01</div>
+        <div>L1 门 → TLS 115VAC</div>
+        <div class="trace-impl">controller.py:26–49 — logic1_conditions + tls_115vac_cmd=logic1.active</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">FR-02</div>
+        <div>L2 门 → ETRAC 540VDC</div>
+        <div class="trace-impl">controller.py:50–68 — logic2_conditions + etrac_540vdc_cmd=logic2.active</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">FR-03</div>
+        <div>L3 门 → EEC/PLS/PDU</div>
+        <div class="trace-impl">controller.py:69–106 — logic3_conditions + eec/pls/pdu_cmd=logic3.active</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">FR-04</div>
+        <div>L4 门 → 油门锁释放</div>
+        <div class="trace-impl">controller.py:107–135 — logic4_conditions + throttle_lock_release=logic4.active</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">IR-01</div>
+        <div>SW1/SW2 闩锁语义</div>
+        <div class="trace-impl">switches.py — LatchedThrottleSwitches.update() / SwitchWindow.contains()</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">IR-04</div>
+        <div>TLS 解锁延迟 0.3s</div>
+        <div class="trace-impl">plant.py:48 — tls_powered_s ≥ config.tls_unlock_delay_s(0.3)</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">PR-01/02</div>
+        <div>TLS/PLS 延迟积分</div>
+        <div class="trace-impl">plant.py:47–56 — tls_powered_s/pls_powered_s 各自独立积分</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">PR-03</div>
+        <div>展开速率 30%/s</div>
+        <div class="trace-impl">plant.py:71 — deploy_rate_percent_per_s * dt_s + models.py:HarnessConfig(43)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- §5 -->
+  <div class="section">
+    <span class="sec-anchor" id="s5"></span>
+    <div class="sec-hd">
+      <span class="sec-num">§ 5</span>
+      <h2>控制逻辑推导过程</h2>
+    </div>
+
+    <p>AI 将需求矩阵转化为最终代码的推导路径：</p>
+
+    <p><strong>Step 1 — 识别 AND 级联结构</strong></p>
+    <p>需求 FR-01~04 之间存在严格的先后依赖关系：L2 需要 L1 产生的 TLS_Unlocked 作为输入，L3 需要 L2 产生的 ETRAC 供电，L4 需要 L3 激活。这天然形成了 AND 级联（而非 OR 并联），任意一级失效即断链——这正是"多重冗余安全门"的工程意图。</p>
+
+    <p><strong>Step 2 — 确定每一门的最小条件集</strong></p>
+    <div class="code">
+<span class="cm"># L1 最小条件集：保证"空中不展开"（SR-01）+ 拉杆到位（IR-01）</span>
+L1 = <span class="kw">radio_altitude_ft</span> &lt; <span class="val">6.0</span>
+     <span class="kw">AND sw1</span>                           <span class="cm"># 拉杆进入反推区</span>
+     <span class="kw">AND NOT reverser_inhibited</span>       <span class="cm"># SR-02（此处仅防 L1 误供电）</span>
+     <span class="kw">AND reverser_not_deployed_eec</span>    <span class="cm"># 已展开则不重复供电</span>
+
+<span class="cm"># L2 最小条件集：确认地面、发动机运行、TLS 物理到位</span>
+L2 = <span class="kw">sw2</span>                               <span class="cm"># 深反推区确认</span>
+     <span class="kw">AND engine_running</span>
+     <span class="kw">AND aircraft_on_ground</span>
+     <span class="kw">AND NOT reverser_inhibited</span>
+     <span class="kw">AND eec_enable</span>
+
+<span class="cm"># L3 最小条件集：加入转速保护（SR-03）+ 位置保护（TRA ≤ -11.74°）</span>
+L3 = <span class="kw">engine_running</span>
+     <span class="kw">AND aircraft_on_ground</span>
+     <span class="kw">AND NOT reverser_inhibited</span>       <span class="cm"># SR-02 核心位置</span>
+     <span class="kw">AND tls_unlocked_ls</span>              <span class="cm"># L1 产生的物理条件</span>
+     <span class="kw">AND n1k</span> &lt; <span class="val">max_n1k_deploy_limit</span>  <span class="cm"># SR-03</span>
+     <span class="kw">AND tra_deg</span> &lt;= <span class="val">-11.74</span>           <span class="cm"># 深拉区才驱动展开</span>
+
+<span class="cm"># L4 最小条件集：VDT90 确认（SR-04）+ 保持基础地面条件</span>
+L4 = <span class="kw">deploy_90_percent_vdt</span>           <span class="cm"># SR-04 核心条件</span>
+     <span class="kw">AND tra_deg</span> in [<span class="val">-32</span>, <span class="val">0</span>)         <span class="cm"># 在反推区间才释放</span>
+     <span class="kw">AND aircraft_on_ground</span>
+     <span class="kw">AND engine_running</span></div>
+
+    <p><strong>Step 3 — 命令输出映射</strong></p>
+    <p>每个门的激活状态直接映射到硬件命令，无额外逻辑——这是"需求即代码"原则的体现：</p>
+
+    <div class="table-wrap">
+      <table>
+        <tr><th>门</th><th>输出命令</th><th>物理效果</th></tr>
+        <tr><td>L1 → True</td><td>tls_115vac_cmd = ON</td><td>TLS 位移锁 115VAC 供电，开始机械解锁（需 0.3s）</td></tr>
+        <tr><td>L2 → True</td><td>etrac_540vdc_cmd = ON</td><td>ETRAC 电气反推控制器 540VDC 供电</td></tr>
+        <tr><td>L3 → True</td><td>eec_deploy_cmd / pls_power_cmd / pdu_motor_cmd = ON</td><td>EEC 展开指令 + PLS 主锁供电 + PDU 电机驱动翻转斗</td></tr>
+        <tr><td>L4 → True</td><td>throttle_electronic_lock_release_cmd = ON</td><td>油门杆电子锁释放，允许进入深反推区（≤ -14°）</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- §6 -->
+  <div class="section">
+    <span class="sec-anchor" id="s6"></span>
+    <div class="sec-hd">
+      <span class="sec-num">§ 6</span>
+      <h2>控制面板验证方法</h2>
+    </div>
+    <p>以下是在 <a href="/fan_console.html" style="color:var(--cyan)">反推实时操作台</a> 中验证各条需求的步骤：</p>
+
+    <div class="verify-step">
+      <div class="vs-num">1</div>
+      <div class="vs-body"><strong>验证 SR-01（空中禁止展开）</strong><br>
+        将 RA 滑杆拖至 20ft，其余条件全部满足（接地、SW1/SW2、N1k=60%）。观察 L1 门是否为 FALSE。此时 L2/L3/L4 均应断开。<br>
+        <span class="vs-cmd">预期: L1=FALSE · tls_115vac_cmd=OFF · 整条链路断开</span>
+      </div>
+    </div>
+
+    <div class="verify-step">
+      <div class="vs-num">2</div>
+      <div class="vs-body"><strong>验证 SR-02（抑制最高优先级）</strong><br>
+        加载预设「展开指令 (-15°)」，确认 L3=TRUE 后，打开「Reverser Inhibited」开关。观察 L3 是否立即变 FALSE，eec/pls/pdu 命令是否全部切断。<br>
+        <span class="vs-cmd">预期: L3=FALSE · eec_deploy_cmd=OFF · VDT 停止上升</span>
+      </div>
+    </div>
+
+    <div class="verify-step">
+      <div class="vs-num">3</div>
+      <div class="vs-body"><strong>验证 SR-03（高转速阻断）</strong><br>
+        将 N1k 滑杆拖至 90%，Max N1k 保持默认 85%。其余条件满足。观察 L3 是否因 N1k &gt; 限制而阻断。<br>
+        <span class="vs-cmd">预期: L3=FALSE · pdu_motor_cmd=OFF</span>
+      </div>
+    </div>
+
+    <div class="verify-step">
+      <div class="vs-num">4</div>
+      <div class="vs-body"><strong>验证 SR-04（VDT&lt;90% 锁深拉区）</strong><br>
+        使用「VDT 位置注入」滑杆将 VDT 设为 80%，TRA=-20°。观察 VDT≥90% 指示灯是否为 NO，L4 是否为 FALSE，throttle_electronic_lock_release_cmd 是否为 OFF。<br>
+        <span class="vs-cmd">预期: VDT≥90%=NO · L4=FALSE · THR_LOCK=OFF</span>
+      </div>
+    </div>
+
+    <div class="verify-step">
+      <div class="vs-num">5</div>
+      <div class="vs-body"><strong>验证正常全链路（FR-01→04）</strong><br>
+        依次加载预设：接地怠速 → 拉入SW1 → 拉入SW2 → 展开指令。观察 L1→L2→L3 依次激活，VDT 上升至 90% 后 L4 激活，THR_LOCK 释放。点击「📈 时序图」查看完整时间-状态曲线。<br>
+        <span class="vs-cmd">预期: 4个门依次激活 · THR_LOCK=ON · VDT=90%+</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

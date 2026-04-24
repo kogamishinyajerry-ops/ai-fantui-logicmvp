@@ -91,6 +91,7 @@
   .home-card[data-scope="workstation"] .home-card-kind { color: var(--home-active); }
   .home-card[data-scope="circuit"]     .home-card-kind { color: var(--home-accent); }
   .home-card[data-scope="simulation"]  .home-card-kind { color: var(--home-warn); }
+  .home-card[data-scope="docs"]        .home-card-kind { color: #b07af5; }
 
   .home-card-title {
     font-size: 16px;
@@ -269,6 +270,11 @@
       <a href="/fan_console.html" class="unified-nav-link" data-nav-key="fan-console">反推操作台</a>
       <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
     </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">文档</span>
+      <a href="/fantui_requirements.html" class="unified-nav-link" data-nav-key="fantui-req">FANTUI 需求</a>
+      <a href="/c919_requirements.html" class="unified-nav-link" data-nav-key="c919-req">C919 需求</a>
+    </div>
   </div>
 </header>
 
@@ -377,6 +383,23 @@
       <h2 class="home-card-title" id="card-fan-console-title">反推实时操作台</h2>
       <p class="home-card-subtitle">/fan_console.html</p>
       <p class="home-card-desc">高自由度 tick 驱动的反推仿真：TRA 杠杆 / RA / N1k 实时可调，L1–L4 逻辑门 + 命令 + VDT 仪表 + 时间-状态曲线抽屉，覆盖展开 / 收起 / 抑制 / 过温全链路。</p>
+      <span class="home-card-arrow">→</span>
+    </a>
+
+    <!-- 文档：需求分析 -->
+    <a href="/fantui_requirements.html" class="home-card" data-scope="docs" aria-labelledby="card-fantui-req-title">
+      <span class="home-card-kind">文档</span>
+      <h2 class="home-card-title" id="card-fantui-req-title">FANTUI 需求分析</h2>
+      <p class="home-card-subtitle">/fantui_requirements.html</p>
+      <p class="home-card-desc">SR / FR / IR / PR 需求规范 + AI 设计决策 D1–D5 + 12 条需求→代码可追溯矩阵 + L1–L4 控制逻辑推导过程。</p>
+      <span class="home-card-arrow">→</span>
+    </a>
+
+    <a href="/c919_requirements.html" class="home-card" data-scope="docs" aria-labelledby="card-c919-req-title">
+      <span class="home-card-kind">文档</span>
+      <h2 class="home-card-title" id="card-c919-req-title">C919 需求分析</h2>
+      <p class="home-card-subtitle">/c919_requirements.html</p>
+      <p class="home-card-desc">AR / SM / FR 架构需求 + 12 态状态机 S0–SF + AI 推导决策 C1–C4（为何 FANTUI 无状态→C919 状态机）+ 状态→命令可追溯矩阵。</p>
       <span class="home-card-arrow">→</span>
     </a>
   </section>
