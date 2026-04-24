@@ -844,7 +844,7 @@ function updateUI(data){
   appendLog(data);
 
   // Capture TR position into chart buffer (TR pos is an input, not logged).
-  const trPct = parseFloat(document.getElementById('trPosition').value);
+  // Reuse the `trPct` already computed for the gauge arc above.
   _pushTrPos(data.t_s || 0, trPct);
 
   // Throttle chart refresh to every ~400ms so tick rate (10 Hz) does not

@@ -7,6 +7,10 @@ Python-driven data contract in test_fantui_tick_runtime.py.
 """
 from __future__ import annotations
 
+import re
+import shutil
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -81,6 +85,45 @@ class C919PanelServerAssetRoutingTests(unittest.TestCase):
     def test_shared_js_file_exists(self):
         self.assertTrue(TIMESERIES_JS.is_file(),
                         msg=f"shared chart module missing at {TIMESERIES_JS}")
+
+
+class C919PanelScriptSyntaxTests(unittest.TestCase):
+    """Run the panel's embedded JS through ``node --check`` so that a
+    duplicate-declaration or brace-mismatch regression (like the one that
+    broke the 仿真/时序图 buttons on 2026-04-24) trips CI rather than
+    silently reaching the browser.
+
+    Skipped when ``node`` is not on PATH (e.g. minimal CI images).
+    """
+
+    _SCRIPT_RE = re.compile(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>')
+
+    def test_panel_index_iife_parses_as_valid_js(self):
+        if not shutil.which("node"):
+            self.skipTest("node not available — skipping JS syntax check")
+        html = C919_INDEX.read_text(encoding="utf-8")
+        blocks = self._SCRIPT_RE.findall(html)
+        # Filter out the external-src stub (empty body) and sort by size.
+        inline = sorted((b for b in blocks if b.strip()), key=len, reverse=True)
+        self.assertTrue(inline, "no inline JS blocks in C919 panel HTML")
+        script = inline[0]
+        # Wrap in an IIFE so it's valid as a standalone module check.
+        with tempfile.NamedTemporaryFile(suffix=".js", mode="w",
+                                         delete=False, encoding="utf-8") as tmp:
+            tmp.write(script)
+            tmp_path = tmp.name
+        try:
+            result = subprocess.run(
+                ["node", "--check", tmp_path],
+                capture_output=True, text=True, timeout=10,
+            )
+            if result.returncode != 0:
+                self.fail(f"C919 panel IIFE failed node --check:\n"
+                          f"stderr:\n{result.stderr}\n"
+                          f"(this usually means a duplicate const/let or "
+                          f"unbalanced braces)")
+        finally:
+            Path(tmp_path).unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
