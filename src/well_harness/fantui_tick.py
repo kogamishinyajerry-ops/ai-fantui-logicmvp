@@ -166,6 +166,26 @@ class FantuiTickSystem:
                 "sample_count": len(self._log),
             }
 
+    def set_plant_position(self, pct: float) -> None:
+        """Force deploy_position_percent to a specific value.
+
+        Lock states and power-integration timers are preserved so that the
+        controller feedback (tls_unlocked_ls, deploy_90_percent_vdt, etc.)
+        updates correctly on the very next tick. The plant's advance() path
+        will then continue integrating from the injected position.
+        """
+        if not isinstance(pct, (int, float)) or not math.isfinite(pct):
+            raise ValueError("deploy_position_percent must be finite")
+        pct = max(0.0, min(100.0, float(pct)))
+        with self._lock:
+            self._plant_state = PlantState(
+                tls_powered_s=self._plant_state.tls_powered_s,
+                pls_powered_s=self._plant_state.pls_powered_s,
+                tls_unlocked_ls=self._plant_state.tls_unlocked_ls,
+                pls_unlocked_ls=self._plant_state.pls_unlocked_ls,
+                deploy_position_percent=pct,
+            )
+
     def tick(self, pilot: PilotInputs, dt_s: float) -> FantuiTickRecord:
         """Advance one discrete step.
 

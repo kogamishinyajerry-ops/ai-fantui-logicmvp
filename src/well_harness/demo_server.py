@@ -101,6 +101,7 @@ FANTUI_TICK_PATH = "/api/fantui/tick"
 FANTUI_RESET_PATH = "/api/fantui/reset"
 FANTUI_LOG_PATH = "/api/fantui/log"
 FANTUI_STATE_PATH = "/api/fantui/state"
+FANTUI_SET_VDT_PATH = "/api/fantui/set_vdt"
 
 STATIC_ROUTE_ALIASES = {
     "/favicon.ico": "favicon.svg",
@@ -280,6 +281,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             SENSITIVITY_SWEEP_PATH,
             FANTUI_TICK_PATH,
             FANTUI_RESET_PATH,
+            FANTUI_SET_VDT_PATH,
         }:
             self._send_json(404, {"error": "not_found"})
             return
@@ -339,6 +341,19 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if parsed.path == FANTUI_RESET_PATH:
             _FANTUI_SYSTEM.reset()
             self._send_json(200, {"ok": True, "t_s": 0.0})
+            return
+        if parsed.path == FANTUI_SET_VDT_PATH:
+            try:
+                pct = float(request_payload.get("deploy_position_percent", 0))
+            except (TypeError, ValueError):
+                self._send_json(400, {"error": "deploy_position_percent must be a number"})
+                return
+            try:
+                _FANTUI_SYSTEM.set_plant_position(pct)
+            except ValueError as exc:
+                self._send_json(400, {"error": str(exc)})
+                return
+            self._send_json(200, _FANTUI_SYSTEM.snapshot())
             return
         if parsed.path == SYSTEM_SNAPSHOT_POST_PATH:
             system_id = request_payload.get("system_id")
