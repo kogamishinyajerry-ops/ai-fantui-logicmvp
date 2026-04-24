@@ -23,3 +23,7 @@ build/
 
 artifacts/workbench-bundles/
 onboarding验证/
+
+# Generated process artifacts (archived to GitHub 2026-04-24, keep gitignored locally)
+tmp/
+output/
