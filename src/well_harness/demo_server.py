@@ -28,6 +28,7 @@ from well_harness.document_intake import (
     intake_packet_to_dict,
     intake_template_payload,
 )
+from well_harness.fantui_tick import FantuiTickSystem, parse_pilot_inputs
 from well_harness.models import HarnessConfig, PilotInputs, ResolvedInputs
 from well_harness.plant import PlantState, SimplifiedDeployPlant
 from well_harness.switches import LatchedThrottleSwitches, SwitchState
@@ -93,6 +94,13 @@ MONTE_CARLO_RUN_PATH = "/api/monte-carlo/run"
 # Hardware schema discovery (P19.8)
 HARDWARE_SCHEMA_PATH = "/api/hardware/schema"
 SENSITIVITY_SWEEP_PATH = "/api/sensitivity-sweep"
+# FANTUI stateful tick endpoints — live counterpart to C919 /api/tick.
+# The existing /api/lever-snapshot stays stateless; this triad is separate
+# so the two surfaces don't fight each other or share global state.
+FANTUI_TICK_PATH = "/api/fantui/tick"
+FANTUI_RESET_PATH = "/api/fantui/reset"
+FANTUI_LOG_PATH = "/api/fantui/log"
+FANTUI_STATE_PATH = "/api/fantui/state"
 
 STATIC_ROUTE_ALIASES = {
     "/favicon.ico": "favicon.svg",
@@ -178,6 +186,14 @@ LEVER_SNAPSHOT_FAULT_TYPES = {
 }
 FAULT_INJECTION_REASON = "fault_injection"
 
+# ── FANTUI stateful tick singleton ─────────────────────────────────────────
+# Module-level state, protected by _FANTUI_LOCK. Restarting the server clears
+# it; ``POST /api/fantui/reset`` is the in-process reset.
+import threading as _threading
+
+_FANTUI_SYSTEM = FantuiTickSystem()
+_FANTUI_LOCK = _threading.Lock()
+
 
 class DemoRequestHandler(BaseHTTPRequestHandler):
     """Serve the static demo shell and a thin JSON API around DemoAnswer."""
@@ -232,6 +248,26 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._handle_hardware_schema(system_id=system_id)
             return
 
+        if parsed.path == FANTUI_LOG_PATH:
+            with _FANTUI_LOCK:
+                recs = _FANTUI_SYSTEM.records()
+            self._send_json(200, recs)
+            return
+
+        if parsed.path == FANTUI_STATE_PATH:
+            with _FANTUI_LOCK:
+                self._send_json(200, {
+                    "t_s": round(_FANTUI_SYSTEM.t_s, 3),
+                    "sw1": _FANTUI_SYSTEM.switch_state.sw1,
+                    "sw2": _FANTUI_SYSTEM.switch_state.sw2,
+                    "deploy_position_percent": round(
+                        _FANTUI_SYSTEM.plant_state.deploy_position_percent, 3,
+                    ),
+                    "tls_unlocked_ls": _FANTUI_SYSTEM.plant_state.tls_unlocked_ls,
+                    "sample_count": len(_FANTUI_SYSTEM.records()),
+                })
+            return
+
         self._send_json(404, {"error": "not_found"})
 
     def do_POST(self):
@@ -248,6 +284,8 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             MONTE_CARLO_RUN_PATH,
             HARDWARE_SCHEMA_PATH,
             SENSITIVITY_SWEEP_PATH,
+            FANTUI_TICK_PATH,
+            FANTUI_RESET_PATH,
         }:
             self._send_json(404, {"error": "not_found"})
             return
@@ -299,6 +337,15 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             result = _handle_timeline_simulate(request_payload)
             status = result.pop("_status", 200)
             self._send_json(status, result)
+            return
+        if parsed.path == FANTUI_TICK_PATH:
+            status, result = _handle_fantui_tick(request_payload)
+            self._send_json(status, result)
+            return
+        if parsed.path == FANTUI_RESET_PATH:
+            with _FANTUI_LOCK:
+                _FANTUI_SYSTEM.reset()
+            self._send_json(200, {"ok": True, "t_s": 0.0})
             return
         if parsed.path == SYSTEM_SNAPSHOT_POST_PATH:
             system_id = request_payload.get("system_id")
@@ -792,6 +839,33 @@ _TIMELINE_MIN_STEP_S = 0.01
 # just because each individual bound is within range (Codex PR-2 MINOR #1).
 _TIMELINE_MAX_TICKS = 20_000
 _TIMELINE_MAX_EVENTS = 500
+
+
+def _handle_fantui_tick(request_payload: dict) -> tuple[int, dict]:
+    """Advance the FANTUI stateful tick system one step and return a snapshot.
+
+    Paired with ``/api/fantui/reset`` and ``/api/fantui/log``. The response
+    mirrors what /api/log emits so the same ``timeseries_chart.js`` module can
+    render either panel's buffer.
+    """
+    try:
+        pilot = parse_pilot_inputs(request_payload)
+    except ValueError as exc:
+        return 400, {"error": "invalid_input", "message": str(exc)}
+    try:
+        dt_s = float(request_payload.get("dt_s", 0.1))
+    except (TypeError, ValueError):
+        return 400, {"error": "invalid_dt_s"}
+    # Guard: tick step must be positive and small enough to avoid jumping
+    # over switch windows. 1.0s is a conservative ceiling for this plant.
+    if dt_s <= 0 or dt_s > 1.0:
+        return 400, {"error": "dt_s_out_of_range", "message": "0 < dt_s <= 1.0"}
+
+    with _FANTUI_LOCK:
+        rec = _FANTUI_SYSTEM.tick(pilot, dt_s)
+        snapshot = rec.as_dict()
+        snapshot["sample_count"] = len(_FANTUI_SYSTEM.records())
+    return 200, snapshot
 
 
 def _handle_timeline_simulate(request_payload: dict) -> dict:

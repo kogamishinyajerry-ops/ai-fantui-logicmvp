@@ -234,6 +234,29 @@ input[type=range]::-webkit-slider-thumb{
 }
 .preset-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-d)}
 
+/* ── TIME-SERIES DRAWER ──────────────── */
+.tsc-drawer{
+  flex-shrink:0;background:var(--bg1);border-top:1px solid var(--b1);
+  max-height:0;overflow:hidden;transition:max-height .25s ease;
+}
+.tsc-drawer.open{max-height:320px}
+.tsc-drawer-inner{padding:8px 12px 10px;display:flex;flex-direction:column;gap:6px}
+.tsc-drawer-head{
+  display:flex;align-items:center;gap:10px;font-size:10px;
+  color:var(--text2);text-transform:uppercase;letter-spacing:.08em;
+}
+.tsc-drawer-title{color:var(--cyan);font-family:var(--mono);font-weight:700}
+.tsc-drawer-chart{
+  background:var(--bg0);border:1px solid var(--b0);border-radius:3px;
+  overflow-x:auto;
+}
+#tsc-svg{display:block;font-family:var(--mono)}
+.tsc-legend{
+  display:flex;flex-wrap:wrap;gap:10px;font-size:10px;
+  color:var(--text2);font-family:var(--mono);
+}
+.tsc-legend-item{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+
 /* ── SCROLLBAR ───────────────────────── */
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -257,6 +280,8 @@ input[type=range]::-webkit-slider-thumb{
     </div>
     <div class="unified-nav-group">
       <span class="unified-nav-group-label">仿真</span>
+      <a href="http://127.0.0.1:8002/fan_console.html" class="unified-nav-link unified-nav-link-ext" data-nav-key="fan-console">反推操作台</a>
+      <a href="http://127.0.0.1:8002/fan_sim_panel.html" class="unified-nav-link unified-nav-link-ext" data-nav-key="fan-sim">反推时序</a>
       <a href="/" class="unified-nav-link" data-nav-key="panel-9191" data-current="true">C919 MFD :9191</a>
     </div>
   </div>
@@ -273,6 +298,7 @@ input[type=range]::-webkit-slider-thumb{
     <div class="sim-indicator" id="simDot"></div>
     <button class="btn" id="btnPlay" onclick="toggleSim()">▶ 仿真</button>
     <button class="btn danger" onclick="resetSim()">↺ 重置</button>
+    <button class="btn" id="btnChart" onclick="toggleChart()">📈 时序图</button>
     <div class="htime" id="hTime">T: 0.000s</div>
     <div class="state-pill" id="statePill">S0 · AIR STOWED LOCKED</div>
   </div>
@@ -546,6 +572,23 @@ input[type=range]::-webkit-slider-thumb{
 
 </div><!-- /workspace -->
 
+<!-- TIME-SERIES DRAWER (collapsed by default) -->
+<div class="tsc-drawer" id="tscDrawer" aria-hidden="true">
+  <div class="tsc-drawer-inner">
+    <div class="tsc-drawer-head">
+      <span class="tsc-drawer-title">时间-状态曲线</span>
+      <span>数据源: /api/log · 最近 200 ticks</span>
+      <span style="flex:1"></span>
+      <span id="tscCount" style="font-family:var(--mono)">0 samples</span>
+    </div>
+    <div class="tsc-drawer-chart">
+      <svg id="tsc-svg" viewBox="0 0 1100 240" width="1100" height="240"
+           role="img" aria-label="C919 E-TRAS 时间序列图"></svg>
+    </div>
+    <div id="tsc-legend" class="tsc-legend"></div>
+  </div>
+</div>
+
 <!-- PRESET BAR -->
 <div class="presets">
   <span>Step</span>
@@ -561,6 +604,7 @@ input[type=range]::-webkit-slider-thumb{
   <button class="preset-btn" onclick="loadPreset('step10')">Step10: 断电</button>
 </div>
 
+<script src="/timeseries_chart.js"></script>
 <script>
 // ── STATE MACHINE 定义 ─────────────────────────────────
 const STATES = [
@@ -668,6 +712,9 @@ async function resetSim(){
   tickCount=0;
   document.getElementById('logBody').innerHTML='';
   document.getElementById('logCount').textContent='0 ticks';
+  _resetTrPos();
+  if (c919Chart) c919Chart.clear();
+  document.getElementById('tscCount').textContent='0 samples';
   await fetch('/api/reset',{method:'POST'});
   doTick();
 }
@@ -796,6 +843,21 @@ function updateUI(data){
 
   // Log
   appendLog(data);
+
+  // Capture TR position into chart buffer (TR pos is an input, not logged).
+  const trPct = parseFloat(document.getElementById('trPosition').value);
+  _pushTrPos(data.t_s || 0, trPct);
+
+  // Throttle chart refresh to every ~400ms so tick rate (10 Hz) does not
+  // flood the DOM with re-renders. Drawer-closed → skip entirely.
+  const drawer = document.getElementById('tscDrawer');
+  if (drawer && drawer.classList.contains('open')){
+    const now = Date.now();
+    if (now - _lastChartUpdate > 400){
+      _lastChartUpdate = now;
+      refreshChart();
+    }
+  }
 }
 
 function updateLockFromServer(k,locked,unlocked){
@@ -819,6 +881,114 @@ function setArcGauge(arcId,txtId,val,max,unit,color){
   arcEl.setAttribute('stroke-dasharray',dash+','+(len-dash+200));
   arcEl.setAttribute('stroke',pct>0.9?'#f87171':color);
   document.getElementById(txtId).textContent=val.toFixed(0)+unit;
+}
+
+// ── 时间-状态图（TimeseriesChart 驱动） ──────────────
+// 冻结状态机有 12 个状态（S0..S10 + SF），把它们编码成 0..11 的数值轴。
+const C919_STATE_INDEX = {
+  'S0_AIR_STOWED_LOCKED':0,
+  'S1_GROUND_ARMED':1,
+  'S2_UNLOCK_POWER_ON':2,
+  'S3_TRCU_POWER_ON':3,
+  'S4_DEPLOYING':4,
+  'S5_DEPLOYED_IDLE_REVERSE':5,
+  'S6_MAX_REVERSE':6,
+  'S7_DECEL_WAIT_STOW':7,
+  'S8_STOWING':8,
+  'S9_LOCK_CONFIRM':9,
+  'S10_STOWED_LOCKED_POWER_OFF':10,
+  'SF_ABORT_OR_FAULT':11,
+};
+// 信号→泳道映射，和面板 6 分组语义一致。
+const C919_LANES = ['STATE','INPUT','POWER','CMD','LOCKS','TR'];
+const C919_SERIES_DEFS = [
+  // STATE lane (12 discrete levels)
+  {lane:'STATE', id:'state', label:'State', color:'#22d3ee', unit:'S#',
+   display_min:0, display_max:11,
+   transform:(r)=>{const k=r.state; return C919_STATE_INDEX[k] != null ? C919_STATE_INDEX[k] : 0;}},
+  // INPUT lane
+  {lane:'INPUT', id:'selwow', label:'Sel_WOW', color:'#60a5fa', field:'Selected_MLG_WOW'},
+  {lane:'INPUT', id:'trwow',  label:'TR_WOW',  color:'#4ade80', field:'TR_WOW'},
+  // POWER lane
+  {lane:'POWER', id:'p1ph', label:'1φ Unlock', color:'#f5a623', field:'SinglePhaseUnlockPower_On'},
+  {lane:'POWER', id:'p3ph', label:'3φ TRCU',   color:'#fbbf24', field:'ThreePhaseTRCUPower_On'},
+  // CMD lane
+  {lane:'CMD',   id:'dep',  label:'DEPLOY',   color:'#f87171', field:'FADEC_Deploy_Command'},
+  {lane:'CMD',   id:'stw',  label:'STOW',     color:'#ffaa33', field:'FADEC_Stow_Command'},
+  {lane:'CMD',   id:'unl',  label:'Unlock✓',  color:'#4ade80', field:'Unlock_Confirmed'},
+  // LOCKS lane — OR of unlocked indications is most informative
+  {lane:'LOCKS', id:'tls_u', label:'TLS↑',   color:'#f5a623', field:'TLS_Unlocked'},
+  {lane:'LOCKS', id:'pls_u', label:'PLS↑L',  color:'#fbbf24', field:'PLS_L_Unlocked'},
+  {lane:'LOCKS', id:'stwlk', label:'Stw&Lk', color:'#4ade80', field:'TR_Stowed_And_Locked'},
+  // TR lane (derived from panel slider since /api/log does not include it)
+  // Fallback: we synthesize samples client-side in buildChartPayload below.
+];
+const C919_LANE_SERIES = {
+  STATE:['state'], INPUT:['selwow','trwow'],
+  POWER:['p1ph','p3ph'], CMD:['dep','stw','unl'],
+  LOCKS:['tls_u','pls_u','stwlk'], TR:['tr_pos'],
+};
+
+let c919Chart = null;
+function ensureChart(){
+  if (c919Chart) return c919Chart;
+  const svg = document.getElementById('tsc-svg');
+  const legend = document.getElementById('tsc-legend');
+  if (!svg || !window.TimeseriesChart) return null;
+  c919Chart = TimeseriesChart.create({
+    svg, legend, width: 1100, height: 240,
+    laneLabels: C919_LANES,
+    laneSeries: C919_LANE_SERIES,
+  });
+  return c919Chart;
+}
+
+// Client-side buffer for TR position (not logged server-side).
+const _trPosBuffer = [];  // {t_s, pct}
+function _pushTrPos(t_s, pct){
+  _trPosBuffer.push({t_s, pct});
+  if (_trPosBuffer.length > 400) _trPosBuffer.splice(0, _trPosBuffer.length - 400);
+}
+function _resetTrPos(){ _trPosBuffer.length = 0; }
+
+let _lastChartUpdate = 0;
+async function refreshChart(){
+  const chart = ensureChart();
+  if (!chart) return;
+  try{
+    const r = await fetch('/api/log');
+    if (!r.ok) return;
+    const records = await r.json();
+    // Merge TR position samples as a synthetic series
+    const defs = C919_SERIES_DEFS.concat([{
+      lane:'TR', id:'tr_pos', label:'TR pos', color:'#f5a623', unit:'%',
+      display_min:0, display_max:100,
+      // Build an interpolation-friendly record list by mapping t_s→pct
+    }]);
+    const payload = TimeseriesChart.buildPayload(records, defs.filter(d=>d.id!=='tr_pos'));
+    // Build TR pos series from the local buffer (not in /api/log).
+    const trSamples = _trPosBuffer.map(p => [p.t_s, p.pct]);
+    payload.series.push({
+      id:'tr_pos', label:'TR pos', color:'#f5a623', unit:'%',
+      display_min:0, display_max:100, samples: trSamples,
+    });
+    // Use record timeline for x-axis, but if TR buffer extends further, use it.
+    if (trSamples.length > 0){
+      payload.time_end_s = Math.max(payload.time_end_s, trSamples[trSamples.length-1][0]);
+    }
+    chart.setData(payload);
+    document.getElementById('tscCount').textContent = records.length + ' samples';
+  }catch(e){/* swallow */ }
+}
+
+function toggleChart(){
+  const drawer = document.getElementById('tscDrawer');
+  const btn = document.getElementById('btnChart');
+  const open = !drawer.classList.contains('open');
+  drawer.classList.toggle('open', open);
+  drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+  btn.classList.toggle('active', open);
+  if (open) refreshChart();
 }
 
 // ── 日志 ─────────────────────────────────────────────

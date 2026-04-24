@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>反推实时操作台 · FANTUI LogicMVP</title>
+<link rel="stylesheet" href="/unified-nav.css">
+<style>
+:root {
+  --bg0: #02080f;
+  --bg1: #071020;
+  --bg2: #0c1830;
+  --bg3: #112443;
+  --bg4: #182e52;
+  --b0: #1c2f4d;
+  --b1: #253d65;
+  --b2: #2e4a7d;
+  --text0: #e6ecf6;
+  --text1: #95adca;
+  --text2: #56708d;
+  --amber: #f5a623;
+  --amber-d: rgba(245,166,35,0.15);
+  --green: #4ade80;
+  --green-d: rgba(74,222,128,0.12);
+  --red: #f87171;
+  --red-d: rgba(248,113,113,0.12);
+  --cyan: #22d3ee;
+  --cyan-d: rgba(34,211,238,0.12);
+  --mono: 'JetBrains Mono','SF Mono',monospace;
+  --ui: 'Inter','PingFang SC',system-ui,sans-serif;
+  --nav-h: 48px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg0);color:var(--text0);font-family:var(--ui);font-size:12px;display:flex;flex-direction:column;padding-top:var(--nav-h)}
+
+.console-head{
+  height:44px;background:var(--bg1);border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;
+}
+.hbadge{
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;
+  padding:3px 10px;border-radius:3px;
+  background:linear-gradient(135deg,#0a1f40,#0b2d5a);
+  border:1px solid var(--cyan);color:var(--cyan);
+}
+.htitle{font-size:14px;font-weight:600}
+.hsub{font-size:10px;color:var(--text2);font-family:var(--mono)}
+.hgap{flex:1}
+.hcontrols{display:flex;align-items:center;gap:8px}
+.btn{
+  padding:4px 12px;border-radius:4px;border:1px solid var(--b2);
+  background:var(--bg3);color:var(--text1);cursor:pointer;font-size:11px;
+  transition:all .15s;font-family:var(--ui);
+}
+.btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.btn.active{background:var(--cyan-d);border-color:var(--cyan);color:var(--cyan)}
+.btn.danger:hover{border-color:var(--red);color:var(--red)}
+.sim-dot{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red);transition:all .3s}
+.sim-dot.running{background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+.htime{font-family:var(--mono);font-size:12px;color:var(--amber);min-width:70px;text-align:right}
+
+/* ── LAYOUT ── */
+.workspace{
+  flex:1;overflow:hidden;display:grid;
+  grid-template-columns:310px 1fr 300px;gap:1px;background:var(--b0);
+}
+.panel{background:var(--bg1);overflow-y:auto;display:flex;flex-direction:column}
+
+.sec{border-bottom:1px solid var(--b0);padding:10px 12px;display:flex;flex-direction:column;gap:7px}
+.sec-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text2);margin-bottom:3px}
+.row{display:flex;align-items:center;gap:6px}
+.row label{color:var(--text1);font-size:11px;flex:1;white-space:nowrap}
+.val{font-family:var(--mono);font-size:11px;color:var(--text1);min-width:58px;text-align:right}
+
+.tog{position:relative;display:inline-block;width:36px;height:18px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0}
+.tog span{position:absolute;inset:0;border-radius:9px;cursor:pointer;background:var(--bg4);border:1px solid var(--b1);transition:.2s}
+.tog span::after{content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:var(--text2);top:2px;left:2px;transition:.2s}
+.tog input:checked+span{background:var(--green-d);border-color:var(--green)}
+.tog input:checked+span::after{background:var(--green);transform:translateX(18px)}
+.tog.warn input:checked+span{background:var(--red-d);border-color:var(--red)}
+.tog.warn input:checked+span::after{background:var(--red)}
+
+input[type=range]{
+  -webkit-appearance:none;height:4px;border-radius:2px;
+  background:var(--b2);outline:none;cursor:pointer;width:100%;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+  background:var(--amber);cursor:pointer;border:2px solid var(--bg2);
+}
+
+/* ── Logic gate cards ── */
+.gate-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 12px}
+.gate-card{
+  padding:9px 10px;border-radius:5px;border:1px solid var(--b0);background:var(--bg2);
+  display:flex;flex-direction:column;gap:4px;transition:all .2s;
+}
+.gate-card.on{border-color:var(--green);background:var(--green-d)}
+.gate-card.on .g-name{color:var(--green)}
+.gate-card.on .g-val{color:var(--green)}
+.gate-card.off .g-name{color:var(--text2)}
+.g-name{font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.g-val{font-family:var(--mono);font-size:13px;font-weight:700}
+.g-sub{font-size:9px;color:var(--text2);font-family:var(--mono)}
+
+.cmd-grid{display:flex;flex-direction:column;gap:4px;padding:6px 12px 12px}
+.cmd-row{
+  padding:7px 10px;border-radius:4px;border:1px solid var(--b0);background:var(--bg2);
+  display:flex;align-items:center;justify-content:space-between;gap:6px;transition:all .2s;
+}
+.cmd-row.on{border-color:var(--amber);background:var(--amber-d)}
+.cmd-row.on .c-val{color:var(--amber)}
+.c-name{font-size:10px;color:var(--text1)}
+.c-val{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text2);transition:all .2s}
+
+/* ── Plant gauges ── */
+.gauges{display:flex;gap:8px;padding:10px 12px;justify-content:space-around;border-top:1px solid var(--b0)}
+.gauge{display:flex;flex-direction:column;align-items:center;gap:4px}
+.gauge svg{width:80px;height:50px}
+
+/* ── Log ── */
+.log-wrap{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:0 12px 10px}
+.log-head{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;padding:6px 0;display:flex;justify-content:space-between}
+.log-body{
+  flex:1;overflow-y:auto;background:var(--bg0);border:1px solid var(--b0);border-radius:4px;
+  font-family:var(--mono);font-size:10px;color:var(--text2);padding:4px 6px;line-height:1.6;
+}
+.log-line.active{color:var(--green)}
+.log-line.armed{color:var(--amber)}
+
+/* ── Presets ── */
+.presets{
+  height:48px;border-top:1px solid var(--b0);background:var(--bg1);
+  display:flex;align-items:center;padding:0 14px;gap:8px;flex-shrink:0;overflow-x:auto;
+}
+.presets span{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.1em;white-space:nowrap;margin-right:4px}
+.preset-btn{
+  padding:4px 10px;border-radius:4px;border:1px solid var(--b1);
+  background:var(--bg3);color:var(--text2);cursor:pointer;font-size:10px;
+  white-space:nowrap;transition:all .15s;flex-shrink:0;font-family:var(--ui);
+}
+.preset-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-d)}
+
+/* ── Chart drawer ── */
+.tsc-drawer{
+  flex-shrink:0;background:var(--bg1);border-top:1px solid var(--b1);
+  max-height:0;overflow:hidden;transition:max-height .25s ease;
+}
+.tsc-drawer.open{max-height:320px}
+.tsc-drawer-inner{padding:8px 12px 10px;display:flex;flex-direction:column;gap:6px}
+.tsc-drawer-head{display:flex;align-items:center;gap:10px;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em}
+.tsc-drawer-title{color:var(--cyan);font-family:var(--mono);font-weight:700}
+.tsc-drawer-chart{background:var(--bg0);border:1px solid var(--b0);border-radius:3px;overflow-x:auto}
+#tsc-svg{display:block;font-family:var(--mono)}
+.tsc-legend{display:flex;flex-wrap:wrap;gap:10px;font-size:10px;color:var(--text2);font-family:var(--mono)}
+.tsc-legend-item{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+</style>
+</head>
+<body class="unified-nav-enabled" data-nav-current="fan-console">
+
+<header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
+  <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">工作台</span>
+      <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">反推逻辑</a>
+      <a href="/c919_etras_workstation.html" class="unified-nav-link" data-nav-key="etras">C919 E-TRAS</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">电路图</span>
+      <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
+      <a href="/c919_etras_panel/circuit.html" class="unified-nav-link" data-nav-key="etras-circuit">E-TRAS 电路</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">仿真</span>
+      <a href="/fan_console.html" class="unified-nav-link" data-nav-key="fan-console" data-current="true">反推操作台</a>
+      <a href="/fan_sim_panel.html" class="unified-nav-link" data-nav-key="fan-sim">反推时序</a>
+      <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
+    </div>
+  </div>
+</header>
+
+<div class="console-head">
+  <div class="hbadge">FANTUI · LIVE</div>
+  <div class="htitle">反推实时操作台</div>
+  <div class="hsub">POST /api/fantui/tick · stateful</div>
+  <div class="hgap"></div>
+  <div class="hcontrols">
+    <div class="sim-dot" id="simDot"></div>
+    <button class="btn" id="btnPlay" onclick="toggleSim()">▶ 仿真</button>
+    <button class="btn danger" onclick="resetSim()">↺ 重置</button>
+    <button class="btn" id="btnChart" onclick="toggleChart()">📈 时序图</button>
+    <div class="htime" id="hTime">T: 0.000s</div>
+  </div>
+</div>
+
+<div class="workspace">
+
+  <!-- LEFT: 输入杠杆 -->
+  <div class="panel">
+    <div class="sec">
+      <div class="sec-title">飞行环境</div>
+      <div class="row"><label>Radio Altitude</label><span class="val" id="v_ra">20 ft</span></div>
+      <div class="row"><input type="range" id="ra" min="0" max="50" step="0.5" value="20" oninput="syncRa()"></div>
+      <div class="row" style="margin-top:4px"><label>Aircraft On Ground</label><label class="tog"><input type="checkbox" id="onGround" checked onchange="sync()"><span></span></label></div>
+      <div class="row"><label>Engine Running</label><label class="tog"><input type="checkbox" id="engineRunning" onchange="sync()"><span></span></label></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">油门杆 · TRA</div>
+      <div class="row"><label>TRA 角度</label><span class="val" id="v_tra">0.0°</span></div>
+      <div class="row"><input type="range" id="tra" min="-32" max="2" step="0.1" value="0" oninput="syncTra()"></div>
+      <div class="row" style="margin-top:4px">
+        <label>SW1 (latched)</label>
+        <span class="val" id="v_sw1" style="min-width:32px">0</span>
+      </div>
+      <div class="row">
+        <label>SW2 (latched)</label>
+        <span class="val" id="v_sw2" style="min-width:32px">0</span>
+      </div>
+      <div style="font-size:9px;color:var(--text2);font-family:var(--mono);margin-top:2px">
+        SW1 window: [-1.4°, -6.2°] · SW2 window: [-5.0°, -9.8°]
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">引擎参数 · N1k</div>
+      <div class="row"><label>N1k</label><span class="val" id="v_n1k">55%</span></div>
+      <div class="row"><input type="range" id="n1k" min="0" max="110" step="0.5" value="55" oninput="syncN1k()"></div>
+      <div class="row" style="margin-top:4px">
+        <label>Max N1k Deploy Limit</label>
+        <span class="val" id="v_n1klim">85%</span>
+      </div>
+      <div class="row"><input type="range" id="n1klim" min="60" max="100" step="1" value="85" oninput="syncN1kLim()"></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-title">抑制与使能</div>
+      <div class="row"><label>Reverser Inhibited</label><label class="tog warn"><input type="checkbox" id="inhibit" onchange="sync()"><span></span></label></div>
+      <div class="row"><label>EEC Enable</label><label class="tog"><input type="checkbox" id="eec" checked onchange="sync()"><span></span></label></div>
+    </div>
+  </div>
+
+  <!-- CENTER: 逻辑门 + 命令 + 仪表 -->
+  <div class="panel">
+    <div style="padding:10px 12px 4px"><div class="sec-title">逻辑门 · 实时求值</div></div>
+    <div class="gate-grid">
+      <div class="gate-card off" id="gate_l1">
+        <div class="g-name">L1 · RA &lt; 6 ft · SW1 · !Inhibit · !Deployed_EEC</div>
+        <div class="g-val" id="gv_l1">FALSE</div>
+      </div>
+      <div class="gate-card off" id="gate_l2">
+        <div class="g-name">L2 · Engine · GND · !Inhibit · SW2 · EEC</div>
+        <div class="g-val" id="gv_l2">FALSE</div>
+      </div>
+      <div class="gate-card off" id="gate_l3">
+        <div class="g-name">L3 · Engine · GND · !Inhibit · TLS↑ · N1k &lt; max · TRA ≤ -11.74°</div>
+        <div class="g-val" id="gv_l3">FALSE</div>
+      </div>
+      <div class="gate-card off" id="gate_l4">
+        <div class="g-name">L4 · VDT90 · -32° ≤ TRA &lt; 0° · GND · Engine</div>
+        <div class="g-val" id="gv_l4">FALSE</div>
+      </div>
+    </div>
+
+    <div style="padding:8px 12px 4px;border-top:1px solid var(--b0)"><div class="sec-title">电气 / 作动命令</div></div>
+    <div class="cmd-grid">
+      <div class="cmd-row off" id="cmd_tls"><span class="c-name">TLS 115VAC</span><span class="c-val" id="cv_tls">OFF</span></div>
+      <div class="cmd-row off" id="cmd_etrac"><span class="c-name">ETRAC 540VDC</span><span class="c-val" id="cv_etrac">OFF</span></div>
+      <div class="cmd-row off" id="cmd_eec"><span class="c-name">EEC Deploy</span><span class="c-val" id="cv_eec">OFF</span></div>
+      <div class="cmd-row off" id="cmd_pls"><span class="c-name">PLS Power</span><span class="c-val" id="cv_pls">OFF</span></div>
+      <div class="cmd-row off" id="cmd_pdu"><span class="c-name">PDU Motor</span><span class="c-val" id="cv_pdu">OFF</span></div>
+      <div class="cmd-row off" id="cmd_thr"><span class="c-name">Throttle Unlock (THR_LOCK_RELEASE)</span><span class="c-val" id="cv_thr">OFF</span></div>
+    </div>
+
+    <div class="gauges">
+      <div class="gauge">
+        <svg viewBox="0 0 80 50">
+          <path d="M10,45 A35,35,0,0,1,70,45" fill="none" stroke="#1c2e4a" stroke-width="6" stroke-linecap="round"/>
+          <path id="gVdtArc" d="M10,45 A35,35,0,0,1,70,45" fill="none" stroke="#b69dff" stroke-width="6" stroke-linecap="round" stroke-dasharray="0,1000"/>
+          <text x="40" y="33" text-anchor="middle" fill="#b69dff" font-size="11" font-family="monospace" font-weight="700" id="gVdtTxt">0%</text>
+          <text x="40" y="48" text-anchor="middle" fill="#56708d" font-size="7">VDT (deploy%)</text>
+        </svg>
+      </div>
+      <div class="gauge">
+        <svg viewBox="0 0 80 50">
+          <path d="M10,45 A35,35,0,0,1,70,45" fill="none" stroke="#1c2e4a" stroke-width="6" stroke-linecap="round"/>
+          <path id="gTraArc" d="M10,45 A35,35,0,0,1,70,45" fill="none" stroke="#f5a623" stroke-width="6" stroke-linecap="round" stroke-dasharray="0,1000"/>
+          <text x="40" y="33" text-anchor="middle" fill="#f5a623" font-size="11" font-family="monospace" font-weight="700" id="gTraTxt">0.0°</text>
+          <text x="40" y="48" text-anchor="middle" fill="#56708d" font-size="7">TRA</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: plant 状态 + 日志 -->
+  <div class="panel">
+    <div class="sec">
+      <div class="sec-title">反推位置（plant 模型）</div>
+      <div class="row"><label>Deploy Position</label><span class="val" id="v_pos">0.0%</span></div>
+      <div class="row" style="font-size:9px;color:var(--text2)"><label>驱动条件</label><span class="val" id="v_drive">–</span></div>
+      <div class="row"><label>TLS 解锁</label><span class="val" id="v_tlsu">NO</span></div>
+      <div class="row"><label>PLS 全解锁</label><span class="val" id="v_plsu">NO</span></div>
+      <div class="row"><label>VDT ≥ 90%</label><span class="val" id="v_vdt90">NO</span></div>
+    </div>
+
+    <div class="log-wrap">
+      <div class="log-head">
+        <span>遥测日志 (最近 40 条)</span>
+        <span id="logCount" style="color:var(--text2)">0 ticks</span>
+      </div>
+      <div class="log-body" id="logBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Chart drawer -->
+<div class="tsc-drawer" id="tscDrawer" aria-hidden="true">
+  <div class="tsc-drawer-inner">
+    <div class="tsc-drawer-head">
+      <span class="tsc-drawer-title">时间-状态曲线</span>
+      <span>数据源: /api/fantui/log · 最近 400 ticks</span>
+      <span style="flex:1"></span>
+      <span id="tscCount" style="font-family:var(--mono)">0 samples</span>
+    </div>
+    <div class="tsc-drawer-chart">
+      <svg id="tsc-svg" viewBox="0 0 1100 240" width="1100" height="240"
+           role="img" aria-label="FANTUI 反推时间序列图"></svg>
+    </div>
+    <div id="tsc-legend" class="tsc-legend"></div>
+  </div>
+</div>
+
+<div class="presets">
+  <span>Preset</span>
+  <button class="preset-btn" onclick="loadPreset('air')">空中（RA=20, engine off）</button>
+  <button class="preset-btn" onclick="loadPreset('ground_idle')">接地怠速</button>
+  <button class="preset-btn" onclick="loadPreset('arm_sw1')">拉入 SW1 (-3°)</button>
+  <button class="preset-btn" onclick="loadPreset('arm_sw2')">拉入 SW2 (-8°)</button>
+  <button class="preset-btn" onclick="loadPreset('deploy')">展开指令 (-15°)</button>
+  <button class="preset-btn" onclick="loadPreset('full_rev')">全反推 (-28°)</button>
+  <button class="preset-btn" onclick="loadPreset('pull_back')">回杆</button>
+  <button class="preset-btn" onclick="loadPreset('inhibit')">⚠ 抑制</button>
+</div>
+
+<script src="/timeseries_chart.js"></script>
+<script>
+// ── helpers ─────────────────────────────────────────
+const $ = (id)=>document.getElementById(id);
+const get = (id)=>$(id).value;
+const getB = (id)=>$(id).checked;
+const num = (id)=>parseFloat($(id).value);
+
+function syncRa(){$('v_ra').textContent=num('ra').toFixed(1)+' ft';sync();}
+function syncTra(){$('v_tra').textContent=num('tra').toFixed(1)+'°';sync();}
+function syncN1k(){$('v_n1k').textContent=num('n1k').toFixed(1)+'%';sync();}
+function syncN1kLim(){$('v_n1klim').textContent=num('n1klim')+'%';sync();}
+
+function buildPayload(){
+  return {
+    radio_altitude_ft: num('ra'),
+    tra_deg: num('tra'),
+    engine_running: getB('engineRunning'),
+    aircraft_on_ground: getB('onGround'),
+    reverser_inhibited: getB('inhibit'),
+    eec_enable: getB('eec'),
+    n1k: num('n1k'),
+    max_n1k_deploy_limit: num('n1klim'),
+    dt_s: 0.1,
+  };
+}
+
+// ── state ───────────────────────────────────────────
+let simRunning=false, simTimer=null, tickCount=0;
+
+function toggleSim(){
+  simRunning=!simRunning;
+  const btn=$('btnPlay'), dot=$('simDot');
+  if(simRunning){
+    dot.classList.add('running');btn.textContent='⏸ 暂停';btn.classList.add('active');
+    simTimer=setInterval(doTick,100);
+  } else {
+    dot.classList.remove('running');btn.textContent='▶ 仿真';btn.classList.remove('active');
+    clearInterval(simTimer);
+  }
+}
+
+async function resetSim(){
+  if(simRunning) toggleSim();
+  tickCount=0;
+  $('logBody').innerHTML='';
+  $('logCount').textContent='0 ticks';
+  $('tscCount').textContent='0 samples';
+  if(chart) chart.clear();
+  await fetch('/api/fantui/reset',{method:'POST'});
+  doTick();
+}
+
+function sync(){ if(!simRunning) doTick(); }
+
+async function doTick(){
+  try{
+    const r = await fetch('/api/fantui/tick',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(buildPayload()),
+    });
+    if(!r.ok){ const err=await r.json().catch(()=>({})); console.warn('tick err',err); return; }
+    const d = await r.json();
+    updateUI(d);
+  }catch(e){ console.warn(e); }
+}
+
+function setGate(id,v){
+  const el=$('gate_'+id);el.className='gate-card '+(v?'on':'off');
+  $('gv_'+id).textContent=v?'TRUE':'FALSE';
+}
+function setCmd(id,v){
+  const el=$('cmd_'+id);el.className='cmd-row '+(v?'on':'off');
+  $('cv_'+id).textContent=v?'ON':'OFF';
+}
+function setArc(arcId,txtId,val,max,unit,color,fmt){
+  const len=110, pct=Math.min(Math.max(val/max,0),1);
+  const dash=pct*len;
+  $(arcId).setAttribute('stroke-dasharray',dash+','+(len-dash+200));
+  $(arcId).setAttribute('stroke',pct>0.9?'#f87171':color);
+  $(txtId).textContent=(fmt||((v)=>v.toFixed(0)+unit))(val);
+}
+
+function updateUI(d){
+  $('hTime').textContent='T: '+(d.t_s||0).toFixed(2)+'s';
+  $('v_sw1').textContent=d.sw1?'1':'0';
+  $('v_sw2').textContent=d.sw2?'1':'0';
+  setGate('l1',d.logic1_active);
+  setGate('l2',d.logic2_active);
+  setGate('l3',d.logic3_active);
+  setGate('l4',d.logic4_active);
+  setCmd('tls',d.tls_115vac_cmd);
+  setCmd('etrac',d.etrac_540vdc_cmd);
+  setCmd('eec',d.eec_deploy_cmd);
+  setCmd('pls',d.pls_power_cmd);
+  setCmd('pdu',d.pdu_motor_cmd);
+  setCmd('thr',d.throttle_electronic_lock_release_cmd);
+  setArc('gVdtArc','gVdtTxt',d.deploy_position_percent||0,100,'%','#b69dff');
+  setArc('gTraArc','gTraTxt',d.tra_deg||0,32,'°','#f5a623',
+    (v)=>v.toFixed(1)+'°');
+  $('v_pos').textContent=(d.deploy_position_percent||0).toFixed(1)+'%';
+  // Plant drive-condition readout for pedagogical transparency
+  const driveOn = d.etrac_540vdc_cmd && d.pdu_motor_cmd && d.pls_power_cmd && d.tls_unlocked_ls && d.all_pls_unlocked_ls;
+  $('v_drive').textContent = driveOn ? 'ARMED' : _whyNotDriving(d);
+  $('v_tlsu').textContent=d.tls_unlocked_ls?'YES':'NO';
+  $('v_plsu').textContent=d.all_pls_unlocked_ls?'YES':'NO';
+  $('v_vdt90').textContent=d.deploy_90_percent_vdt?'YES':'NO';
+  appendLog(d);
+
+  const drawer=$('tscDrawer');
+  if(drawer && drawer.classList.contains('open')){
+    const now=Date.now();
+    if(now-_lastChartUpdate>400){ _lastChartUpdate=now; refreshChart(); }
+  }
+}
+
+function _whyNotDriving(d){
+  if(!d.etrac_540vdc_cmd) return 'ETRAC off (L2 blocked)';
+  if(!d.pdu_motor_cmd || !d.pls_power_cmd) return 'L3 blocked';
+  if(!d.tls_unlocked_ls) return 'TLS 未解锁';
+  if(!d.all_pls_unlocked_ls) return 'PLS 未解锁';
+  return '–';
+}
+
+// ── log ─────────────────────────────────────────────
+const logLines=[];
+function appendLog(d){
+  tickCount++;
+  $('logCount').textContent=tickCount+' ticks';
+  const gates='L'+(d.logic1_active?'1':'·')+(d.logic2_active?'2':'·')+(d.logic3_active?'3':'·')+(d.logic4_active?'4':'·');
+  const cls = d.logic4_active ? 'active' : (d.logic3_active||d.logic1_active ? 'armed' : '');
+  const line=`<span class="log-line ${cls}">[${(d.t_s||0).toFixed(2).padStart(7)}s] ${gates} TRA=${(d.tra_deg||0).toFixed(1)}° VDT=${(d.deploy_position_percent||0).toFixed(0)}% SW=${d.sw1?1:0}${d.sw2?1:0} TLS=${d.tls_unlocked_ls?'U':'L'}</span>`;
+  logLines.push(line);
+  if(logLines.length>40) logLines.shift();
+  const lb=$('logBody');
+  lb.innerHTML=logLines.join('\n');
+  lb.scrollTop=lb.scrollHeight;
+}
+
+// ── Chart ──────────────────────────────────────────
+const FANTUI_LANES = ['INPUT','LOGIC','POWER','SENSOR','CMD'];
+const FANTUI_SERIES_DEFS = [
+  {lane:'INPUT', id:'ra',  label:'RA',  color:'#ff6f91', unit:'ft',  display_min:0, display_max:50,  field:'radio_altitude_ft'},
+  {lane:'INPUT', id:'tra', label:'TRA', color:'#ffaa33', unit:'°',   display_min:-32, display_max:2,  field:'tra_deg'},
+  {lane:'LOGIC', id:'sw1', label:'SW1', color:'#28f4ff', field:'sw1'},
+  {lane:'LOGIC', id:'sw2', label:'SW2', color:'#86d9ff', field:'sw2'},
+  {lane:'LOGIC', id:'l1',  label:'L1',  color:'#34d4ff', field:'logic1_active'},
+  {lane:'LOGIC', id:'l2',  label:'L2',  color:'#5de0ff', field:'logic2_active'},
+  {lane:'LOGIC', id:'l3',  label:'L3',  color:'#7de8ff', field:'logic3_active'},
+  {lane:'LOGIC', id:'l4',  label:'L4',  color:'#b0f1ff', field:'logic4_active'},
+  {lane:'POWER', id:'tls', label:'TLS', color:'#7dff9a', field:'tls_115vac_cmd'},
+  {lane:'POWER', id:'et',  label:'ETRAC',color:'#86ffbf',field:'etrac_540vdc_cmd'},
+  {lane:'POWER', id:'pls', label:'PLS', color:'#b6ffd0', field:'pls_power_cmd'},
+  {lane:'SENSOR',id:'vdt', label:'VDT', color:'#b69dff', unit:'%', display_min:0, display_max:100, field:'deploy_position_percent'},
+  {lane:'SENSOR',id:'tlsu',label:'TLS↑',color:'#d5c3ff', field:'tls_unlocked_ls'},
+  {lane:'CMD',   id:'eec', label:'EEC', color:'#ffd65c', field:'eec_deploy_cmd'},
+  {lane:'CMD',   id:'pdu', label:'PDU', color:'#ffc48a', field:'pdu_motor_cmd'},
+  {lane:'CMD',   id:'thr', label:'THR_LOCK', color:'#ff8c7a', field:'throttle_electronic_lock_release_cmd'},
+];
+const FANTUI_LANE_SERIES = {};
+FANTUI_SERIES_DEFS.forEach(d=>{(FANTUI_LANE_SERIES[d.lane] ||= []).push(d.id);});
+
+let chart=null, _lastChartUpdate=0;
+function ensureChart(){
+  if(chart) return chart;
+  const svg=$('tsc-svg'), legend=$('tsc-legend');
+  if(!svg||!window.TimeseriesChart) return null;
+  chart = TimeseriesChart.create({
+    svg, legend, width:1100, height:240,
+    laneLabels: FANTUI_LANES, laneSeries: FANTUI_LANE_SERIES,
+  });
+  return chart;
+}
+async function refreshChart(){
+  const c = ensureChart(); if(!c) return;
+  try{
+    const r = await fetch('/api/fantui/log');
+    if(!r.ok) return;
+    const recs = await r.json();
+    const payload = TimeseriesChart.buildPayload(recs, FANTUI_SERIES_DEFS);
+    c.setData(payload);
+    $('tscCount').textContent = recs.length + ' samples';
+  }catch(e){}
+}
+function toggleChart(){
+  const dr=$('tscDrawer'), b=$('btnChart');
+  const open=!dr.classList.contains('open');
+  dr.classList.toggle('open',open);
+  dr.setAttribute('aria-hidden', open?'false':'true');
+  b.classList.toggle('active',open);
+  if(open) refreshChart();
+}
+
+// ── presets ────────────────────────────────────────
+const PRESETS = {
+  air:       {ra:20, tra:0,   engineRunning:false, onGround:false, inhibit:false, eec:true, n1k:0,  n1klim:85},
+  ground_idle:{ra:4,tra:0,    engineRunning:true,  onGround:true,  inhibit:false, eec:true, n1k:45, n1klim:85},
+  arm_sw1:   {ra:4, tra:-3,   engineRunning:true,  onGround:true,  inhibit:false, eec:true, n1k:55, n1klim:85},
+  arm_sw2:   {ra:4, tra:-8,   engineRunning:true,  onGround:true,  inhibit:false, eec:true, n1k:55, n1klim:85},
+  deploy:    {ra:4, tra:-15,  engineRunning:true,  onGround:true,  inhibit:false, eec:true, n1k:60, n1klim:85},
+  full_rev:  {ra:4, tra:-28,  engineRunning:true,  onGround:true,  inhibit:false, eec:true, n1k:70, n1klim:85},
+  pull_back: {ra:4, tra:0,    engineRunning:true,  onGround:true,  inhibit:false, eec:true, n1k:50, n1klim:85},
+  inhibit:   {ra:4, tra:-15,  engineRunning:true,  onGround:true,  inhibit:true,  eec:true, n1k:60, n1klim:85},
+};
+function loadPreset(key){
+  const p=PRESETS[key]; if(!p) return;
+  const setV=(id,v)=>{const el=$(id); if(!el) return; if(typeof v==='boolean') el.checked=v; else el.value=v;};
+  Object.entries(p).forEach(([k,v])=>setV(k,v));
+  syncRa();syncTra();syncN1k();syncN1kLim();
+  sync();
+}
+
+// ── boot ───────────────────────────────────────────
+(async()=>{
+  try{ await fetch('/api/fantui/reset',{method:'POST'}); }catch(e){}
+  syncRa();syncTra();syncN1k();syncN1kLim();
+  doTick();
+})();
+</script>
+</body>
+</html>

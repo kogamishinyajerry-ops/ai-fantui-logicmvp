@@ -274,6 +274,9 @@ class Handler(BaseHTTPRequestHandler):
             # Serve shared unified-nav styles from parent static dir so pages
             # on this port can link to /unified-nav.css like pages on :8002.
             self._serve_file(SHARED_STATIC_ROOT / "unified-nav.css", "text/css; charset=utf-8")
+        elif path == "/timeseries_chart.js":
+            # Shared timeseries renderer used by the live chart on this panel.
+            self._serve_file(SHARED_STATIC_ROOT / "timeseries_chart.js", "application/javascript; charset=utf-8")
         elif path in ("/timeline-sim.html", "/timeline-sim"):
             # PR-4: shared timeline-simulator UI; page auto-routes its POST to
             # port 9191 for c919-etras timelines, so access from either port works.
