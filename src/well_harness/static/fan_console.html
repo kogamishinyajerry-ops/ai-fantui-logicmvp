@@ -149,7 +149,7 @@ input[type=range]::-webkit-slider-thumb{
   flex-shrink:0;background:var(--bg1);border-top:1px solid var(--b1);
   max-height:0;overflow:hidden;transition:max-height .25s ease;
 }
-.tsc-drawer.open{max-height:320px}
+.tsc-drawer.open{max-height:320px;overflow:visible}
 .tsc-drawer-inner{padding:8px 12px 10px;display:flex;flex-direction:column;gap:6px}
 .tsc-drawer-head{display:flex;align-items:center;gap:10px;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em}
 .tsc-drawer-title{color:var(--cyan);font-family:var(--mono);font-weight:700}
@@ -157,6 +157,31 @@ input[type=range]::-webkit-slider-thumb{
 #tsc-svg{display:block;font-family:var(--mono)}
 .tsc-legend{display:flex;flex-wrap:wrap;gap:10px;font-size:10px;color:var(--text2);font-family:var(--mono)}
 .tsc-legend-item{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+
+/* ── Series selector dropdown ── */
+.tsc-selector{position:relative;display:inline-block}
+.tsc-selector>summary{
+  cursor:pointer;list-style:none;padding:2px 10px;border-radius:3px;
+  border:1px solid var(--b1);background:var(--bg3);color:var(--cyan);
+  font-size:10px;font-family:var(--mono);user-select:none;
+}
+.tsc-selector>summary::-webkit-details-marker,.tsc-selector>summary::marker{display:none}
+.tsc-selector-panel{
+  position:absolute;top:calc(100% + 3px);left:0;z-index:300;
+  background:var(--bg2);border:1px solid var(--b1);border-radius:5px;
+  padding:8px 10px;display:grid;grid-template-columns:repeat(3,1fr);
+  gap:4px 14px;min-width:400px;box-shadow:0 6px 20px rgba(0,0,0,.6);
+}
+.tsc-sel-header{
+  grid-column:1/-1;display:flex;align-items:center;gap:8px;
+  margin-bottom:5px;border-bottom:1px solid var(--b0);padding-bottom:5px;
+}
+.tsc-sel-header span{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em;flex:1}
+.tsc-sel-act{font-size:9px;color:var(--text2);cursor:pointer;text-decoration:underline;white-space:nowrap;background:none;border:none;padding:0;font-family:var(--mono)}
+.tsc-sel-act:hover{color:var(--cyan)}
+.tsc-sel-item{display:flex;align-items:center;gap:5px;cursor:pointer;font-size:10px;color:var(--text1);font-family:var(--mono);white-space:nowrap}
+.tsc-sel-item input[type=checkbox]{cursor:pointer;accent-color:var(--cyan);flex-shrink:0}
+.tsc-sel-swatch{width:18px;height:3px;border-radius:1px;display:inline-block;flex-shrink:0}
 
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -326,6 +351,16 @@ input[type=range]::-webkit-slider-thumb{
     <div class="tsc-drawer-head">
       <span class="tsc-drawer-title">时间-状态曲线</span>
       <span>数据源: /api/fantui/log · 最近 400 ticks</span>
+      <details class="tsc-selector" id="tscSelector">
+        <summary id="tscSelectorSummary">选择信号 ▾</summary>
+        <div class="tsc-selector-panel" id="tscSelectorPanel">
+          <div class="tsc-sel-header">
+            <span>显示的信号通道</span>
+            <button class="tsc-sel-act" onclick="selectAllSeries()">全选</button>
+            <button class="tsc-sel-act" onclick="clearAllSeries()">清空</button>
+          </div>
+        </div>
+      </details>
       <span style="flex:1"></span>
       <span id="tscCount" style="font-family:var(--mono)">0 samples</span>
     </div>
@@ -540,7 +575,56 @@ function toggleChart(){
   dr.classList.toggle('open',open);
   dr.setAttribute('aria-hidden', open?'false':'true');
   b.classList.toggle('active',open);
-  if(open) refreshChart();
+  if(open){ ensureChart(); initSeriesSelector(); refreshChart(); }
+}
+
+// ── Series selector ────────────────────────────────
+const _DEFAULT_VISIBLE_FAN = new Set(['ra','tra','sw1','l1','l2','l3','l4','vdt']);
+let _selectorInited = false;
+
+function initSeriesSelector(){
+  if(_selectorInited) return;
+  _selectorInited = true;
+  const panel = $('tscSelectorPanel');
+  if(!panel) return;
+  FANTUI_SERIES_DEFS.forEach(def=>{
+    const lbl = document.createElement('label');
+    lbl.className = 'tsc-sel-item';
+    lbl.title = def.lane + (def.unit ? ' · ' + def.unit : ' · bool');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.dataset.seriesId = def.id;
+    cb.checked = _DEFAULT_VISIBLE_FAN.has(def.id);
+    cb.addEventListener('change', onSelectorChange);
+    const sw = document.createElement('span');
+    sw.className = 'tsc-sel-swatch';
+    sw.style.background = def.color || '#6a7d95';
+    lbl.appendChild(cb);
+    lbl.appendChild(sw);
+    lbl.appendChild(document.createTextNode(def.label + ' [' + def.lane + ']'));
+    panel.appendChild(lbl);
+  });
+  onSelectorChange();
+}
+
+function _getSelectedIds(){
+  return Array.from(document.querySelectorAll('#tscSelectorPanel input[type=checkbox]'))
+    .filter(c=>c.checked).map(c=>c.dataset.seriesId);
+}
+function onSelectorChange(){
+  if(!chart) return;
+  const ids = _getSelectedIds();
+  chart.setVisibleSeries(ids.length === FANTUI_SERIES_DEFS.length ? null : ids);
+  const summary = $('tscSelectorSummary');
+  if(summary) summary.textContent = '选择信号 (' + ids.length + '/' + FANTUI_SERIES_DEFS.length + ') ▾';
+}
+function selectAllSeries(){
+  document.querySelectorAll('#tscSelectorPanel input[type=checkbox]').forEach(c=>{c.checked=true;});
+  onSelectorChange();
+}
+function clearAllSeries(){
+  document.querySelectorAll('#tscSelectorPanel input[type=checkbox]').forEach(c=>{c.checked=false;});
+  onSelectorChange();
 }
 
 // ── presets ────────────────────────────────────────

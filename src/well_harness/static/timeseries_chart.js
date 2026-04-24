@@ -91,6 +91,8 @@
     let payload = null;
     let cursorLine = null;
     let replayTimer = null;
+    // null → show all; Set<string> → show only the listed series ids.
+    let _visibleIds = null;
 
     function scaleX(t, tStart, tEnd) {
       if (tEnd <= tStart) return PAD_LEFT;
@@ -196,7 +198,9 @@
       laneLabels.forEach((lane, li) => {
         const top = laneTop(li);
         const ids = laneSeries[lane] || [];
-        ids.forEach((id, idIdx) => {
+        let laneFirstVisible = true;
+        ids.forEach((id) => {
+          if (_visibleIds && !_visibleIds.has(id)) return;
           const s = smap.get(id);
           if (!s || !s.samples || s.samples.length === 0) return;
 
@@ -206,8 +210,9 @@
           const color = s.color || "#6a7d95";
           const isBoolean = vMin === 0 && vMax === 1;
 
-          // Unit label on first series of the lane
-          if (idIdx === 0) {
+          // Unit label on first visible series of the lane
+          if (laneFirstVisible) {
+            laneFirstVisible = false;
             const yLbl = svgEl("text", {
               x: W - PAD_RIGHT + 2, y: top + 10,
               fill: TEXT_DIM, "font-size": "8", "text-anchor": "start",
@@ -275,6 +280,7 @@
       const smap = seriesMap();
       laneLabels.forEach((lane) => {
         (laneSeries[lane] || []).forEach((id) => {
+          if (_visibleIds && !_visibleIds.has(id)) return;
           const s = smap.get(id);
           if (!s) return;
           const item = document.createElement("div");
@@ -330,6 +336,11 @@
       if (progress) progress.textContent = "";
     }
 
+    function setVisibleSeries(ids) {
+      _visibleIds = ids ? new Set(ids) : null;
+      render();
+    }
+
     return {
       setData,
       clear,
@@ -337,8 +348,10 @@
       startReplay,
       stopReplay,
       renderLegend,
+      setVisibleSeries,
       // Expose config for integration probes / tests
       get payload() { return payload; },
+      get visibleIds() { return _visibleIds; },
     };
   }
 
