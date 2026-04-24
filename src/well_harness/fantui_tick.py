@@ -12,6 +12,8 @@ endpoint intentionally remains untouched — it fills a different UX slot
 """
 from __future__ import annotations
 
+import math
+import threading
 from collections import deque
 from dataclasses import dataclass
 from typing import Any, Deque, Dict, List
@@ -112,29 +114,57 @@ class FantuiTickSystem:
         self._plant_state: PlantState = PlantState()
         self._switch_state: SwitchState = SwitchState(previous_tra_deg=0.0)
         self._log: Deque[FantuiTickRecord] = deque(maxlen=self.LOG_CAP)
+        # Internal lock for thread-safe tick/reset/records. Callers are not
+        # required to hold any outer lock — this class is self-sufficient.
+        # RLock (not Lock) so re-entrant patterns (e.g., a reset() called
+        # from inside a tick hook in the future) don't deadlock.
+        self._lock = threading.RLock()
 
     # ── Public API ──────────────────────────────────────────────────────────
 
     @property
     def t_s(self) -> float:
-        return self._t_s
+        with self._lock:
+            return self._t_s
 
     @property
     def plant_state(self) -> PlantState:
-        return self._plant_state
+        with self._lock:
+            return self._plant_state
 
     @property
     def switch_state(self) -> SwitchState:
-        return self._switch_state
+        with self._lock:
+            return self._switch_state
 
     def reset(self) -> None:
-        self._t_s = 0.0
-        self._plant_state = PlantState()
-        self._switch_state = SwitchState(previous_tra_deg=0.0)
-        self._log.clear()
+        with self._lock:
+            self._t_s = 0.0
+            self._plant_state = PlantState()
+            self._switch_state = SwitchState(previous_tra_deg=0.0)
+            self._log.clear()
 
     def records(self) -> List[Dict[str, Any]]:
-        return [r.as_dict() for r in self._log]
+        with self._lock:
+            return [r.as_dict() for r in self._log]
+
+    def snapshot(self) -> Dict[str, Any]:
+        """Atomically read ``t_s`` + switch/plant state + log count.
+
+        Grouping these in one lock avoids torn reads when the caller wants
+        a coherent snapshot for e.g. ``/api/fantui/state``.
+        """
+        with self._lock:
+            return {
+                "t_s": round(self._t_s, 3),
+                "sw1": self._switch_state.sw1,
+                "sw2": self._switch_state.sw2,
+                "deploy_position_percent": round(
+                    self._plant_state.deploy_position_percent, 3,
+                ),
+                "tls_unlocked_ls": self._plant_state.tls_unlocked_ls,
+                "sample_count": len(self._log),
+            }
 
     def tick(self, pilot: PilotInputs, dt_s: float) -> FantuiTickRecord:
         """Advance one discrete step.
@@ -142,10 +172,36 @@ class FantuiTickSystem:
         Plant and switches use the pilot inputs + previous outputs to update
         sensors before the controller re-evaluates — matching the pattern
         used by ``runner.py`` in non-streaming traces.
+
+        Thread-safe: acquires ``self._lock`` for the whole step so concurrent
+        ``records()`` readers can't observe torn state or iterate the deque
+        while ``append`` happens (CPython raises ``RuntimeError: deque mutated
+        during iteration`` in that case).
         """
+        # Reject non-finite dt_s before acquiring the lock — propagating NaN
+        # into ``_t_s`` would permanently poison the clock, and subsequent
+        # JSON responses would emit non-standard ``NaN`` tokens that browsers
+        # cannot parse (Codex review, 2026-04-24, CRITICAL finding).
+        if not isinstance(dt_s, (int, float)) or not math.isfinite(dt_s):
+            raise ValueError("dt_s must be finite")
         if dt_s <= 0:
             raise ValueError("dt_s must be > 0")
 
+        with self._lock:
+            return self._tick_locked(pilot, dt_s)
+
+    def tick_with_count(self, pilot: PilotInputs, dt_s: float) -> tuple[FantuiTickRecord, int]:
+        """Tick + return current log size atomically, for HTTP responses that
+        want to expose ``sample_count`` without a racing second call."""
+        if not isinstance(dt_s, (int, float)) or not math.isfinite(dt_s):
+            raise ValueError("dt_s must be finite")
+        if dt_s <= 0:
+            raise ValueError("dt_s must be > 0")
+        with self._lock:
+            rec = self._tick_locked(pilot, dt_s)
+            return rec, len(self._log)
+
+    def _tick_locked(self, pilot: PilotInputs, dt_s: float) -> FantuiTickRecord:
         # Update latched switches from TRA motion
         self._switch_state = self.switches.update(self._switch_state, pilot.tra_deg)
 
@@ -215,9 +271,14 @@ def parse_pilot_inputs(body: Dict[str, Any]) -> PilotInputs:
     def f(key: str, default: float) -> float:
         v = body.get(key, default)
         try:
-            return float(v)
+            fv = float(v)
         except (TypeError, ValueError) as exc:
             raise ValueError(f"field {key!r} must be a number") from exc
+        # Reject NaN / ±Infinity — they silently propagate through the plant
+        # and corrupt every downstream tick (Codex review, 2026-04-24).
+        if not math.isfinite(fv):
+            raise ValueError(f"field {key!r} must be a finite number")
+        return fv
 
     def b(key: str, default: bool) -> bool:
         v = body.get(key, default)

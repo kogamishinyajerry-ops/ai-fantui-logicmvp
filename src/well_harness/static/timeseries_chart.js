@@ -370,6 +370,10 @@
       const samples = [];
       for (const rec of recs) {
         if (rec.t_s == null) continue;
+        // Drop non-finite timestamps — NaN/Infinity would render as
+        // "NaN,NaN" polyline points and wipe the entire series.
+        // (Codex review, 2026-04-24, MINOR finding.)
+        if (!Number.isFinite(rec.t_s)) continue;
         if (rec.t_s < tStart) continue;
         let v;
         if (typeof def.transform === "function") {
@@ -380,6 +384,9 @@
         if (v == null) continue;
         if (typeof v === "boolean") v = v ? 1 : 0;
         if (typeof v !== "number") continue;
+        // Same defense for sample values — one NaN sample anywhere in the
+        // series corrupts the SVG polyline for the whole lane.
+        if (!Number.isFinite(v)) continue;
         samples.push([rec.t_s, v]);
       }
       return {

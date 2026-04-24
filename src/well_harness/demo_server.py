@@ -187,12 +187,13 @@ LEVER_SNAPSHOT_FAULT_TYPES = {
 FAULT_INJECTION_REASON = "fault_injection"
 
 # ── FANTUI stateful tick singleton ─────────────────────────────────────────
-# Module-level state, protected by _FANTUI_LOCK. Restarting the server clears
-# it; ``POST /api/fantui/reset`` is the in-process reset.
-import threading as _threading
-
+# Module-level state. ``FantuiTickSystem`` is itself thread-safe — see its
+# internal ``_lock`` — so no outer lock is needed here. Restarting the server
+# clears the state; ``POST /api/fantui/reset`` is the in-process reset.
+# ``_FANTUI_LOCK`` is kept as an alias to the system's internal lock for
+# backward-compatibility with any test that reached in directly.
 _FANTUI_SYSTEM = FantuiTickSystem()
-_FANTUI_LOCK = _threading.Lock()
+_FANTUI_LOCK = _FANTUI_SYSTEM._lock
 
 
 class DemoRequestHandler(BaseHTTPRequestHandler):
@@ -249,23 +250,16 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == FANTUI_LOG_PATH:
-            with _FANTUI_LOCK:
-                recs = _FANTUI_SYSTEM.records()
+            # records() is internally locked; the copy it returns is
+            # self-contained so JSON serialization can run unlocked.
+            recs = _FANTUI_SYSTEM.records()
             self._send_json(200, recs)
             return
 
         if parsed.path == FANTUI_STATE_PATH:
-            with _FANTUI_LOCK:
-                self._send_json(200, {
-                    "t_s": round(_FANTUI_SYSTEM.t_s, 3),
-                    "sw1": _FANTUI_SYSTEM.switch_state.sw1,
-                    "sw2": _FANTUI_SYSTEM.switch_state.sw2,
-                    "deploy_position_percent": round(
-                        _FANTUI_SYSTEM.plant_state.deploy_position_percent, 3,
-                    ),
-                    "tls_unlocked_ls": _FANTUI_SYSTEM.plant_state.tls_unlocked_ls,
-                    "sample_count": len(_FANTUI_SYSTEM.records()),
-                })
+            # Atomic snapshot — one lock acquisition covers all fields
+            # so callers don't observe torn state.
+            self._send_json(200, _FANTUI_SYSTEM.snapshot())
             return
 
         self._send_json(404, {"error": "not_found"})
@@ -343,8 +337,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(status, result)
             return
         if parsed.path == FANTUI_RESET_PATH:
-            with _FANTUI_LOCK:
-                _FANTUI_SYSTEM.reset()
+            _FANTUI_SYSTEM.reset()
             self._send_json(200, {"ok": True, "t_s": 0.0})
             return
         if parsed.path == SYSTEM_SNAPSHOT_POST_PATH:
@@ -856,15 +849,16 @@ def _handle_fantui_tick(request_payload: dict) -> tuple[int, dict]:
         dt_s = float(request_payload.get("dt_s", 0.1))
     except (TypeError, ValueError):
         return 400, {"error": "invalid_dt_s"}
-    # Guard: tick step must be positive and small enough to avoid jumping
-    # over switch windows. 1.0s is a conservative ceiling for this plant.
-    if dt_s <= 0 or dt_s > 1.0:
+    # Guard: tick step must be positive, finite, and small enough to avoid
+    # jumping over switch windows. 1.0s is a conservative ceiling.
+    # ``math.isfinite`` rejects NaN / ±Inf before they can poison ``_t_s``
+    # (Codex review, 2026-04-24, CRITICAL).
+    if not math.isfinite(dt_s) or dt_s <= 0 or dt_s > 1.0:
         return 400, {"error": "dt_s_out_of_range", "message": "0 < dt_s <= 1.0"}
 
-    with _FANTUI_LOCK:
-        rec = _FANTUI_SYSTEM.tick(pilot, dt_s)
-        snapshot = rec.as_dict()
-        snapshot["sample_count"] = len(_FANTUI_SYSTEM.records())
+    rec, count = _FANTUI_SYSTEM.tick_with_count(pilot, dt_s)
+    snapshot = rec.as_dict()
+    snapshot["sample_count"] = count
     return 200, snapshot
 
 

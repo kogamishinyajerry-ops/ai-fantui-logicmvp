@@ -111,6 +111,74 @@ class FantuiTickSystemUnitTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             sys_.tick(_pilot(), -0.1)
 
+    def test_tick_rejects_non_finite_dt(self):
+        """CRITICAL regression (Codex 2026-04-24): ``dt_s = NaN`` used to
+        silently poison ``_t_s`` and emit non-standard-JSON responses."""
+        import math as _m
+        sys_ = FantuiTickSystem()
+        for bad in (float("nan"), float("inf"), float("-inf")):
+            with self.assertRaises(ValueError):
+                sys_.tick(_pilot(), bad)
+        # tick_with_count applies the same guard.
+        with self.assertRaises(ValueError):
+            sys_.tick_with_count(_pilot(), float("nan"))
+        # And state is untouched after the guards fire.
+        self.assertTrue(_m.isfinite(sys_.t_s))
+        self.assertEqual(len(sys_.records()), 0)
+
+    def test_tick_accepts_dt_s_equal_to_one_second_boundary(self):
+        """The HTTP ceiling is ``dt_s <= 1.0`` inclusive; the runtime must
+        accept the exact boundary without raising."""
+        sys_ = FantuiTickSystem()
+        rec = sys_.tick(_pilot(), 1.0)
+        self.assertAlmostEqual(rec.t_s, 1.0, places=6)
+        self.assertEqual(len(sys_.records()), 1)
+
+    def test_tick_concurrent_writers_and_readers_do_not_raise(self):
+        """MAJOR regression (Codex 2026-04-24): ``records()`` iterating the
+        deque while ``tick()`` appended used to raise
+        ``RuntimeError: deque mutated during iteration``. With the internal
+        lock the two paths are safe regardless of caller holding an outer
+        lock.
+        """
+        import threading as _t
+        sys_ = FantuiTickSystem()
+        errors = []
+
+        def writer():
+            try:
+                for _ in range(2000):
+                    sys_.tick(_pilot(tra_deg=-8.0), 0.001)
+            except Exception as exc:  # pragma: no cover
+                errors.append(("writer", repr(exc)))
+
+        def reader():
+            try:
+                for _ in range(2000):
+                    sys_.records()
+            except Exception as exc:  # pragma: no cover
+                errors.append(("reader", repr(exc)))
+
+        threads = [_t.Thread(target=writer) for _ in range(2)] + \
+                  [_t.Thread(target=reader) for _ in range(2)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        self.assertEqual(errors, [], msg=f"concurrent access raised: {errors}")
+        # All writers completed despite interleaved reads.
+        self.assertEqual(len(sys_.records()), FantuiTickSystem.LOG_CAP)
+
+    def test_snapshot_returns_coherent_atomic_state(self):
+        sys_ = FantuiTickSystem()
+        sys_.tick(_pilot(tra_deg=-8.0), 0.1)
+        snap = sys_.snapshot()
+        for k in ("t_s", "sw1", "sw2", "deploy_position_percent",
+                  "tls_unlocked_ls", "sample_count"):
+            self.assertIn(k, snap)
+        self.assertEqual(snap["sample_count"], 1)
+
     def test_log_ring_buffer_caps_at_LOG_CAP(self):
         sys_ = FantuiTickSystem()
         cap = FantuiTickSystem.LOG_CAP
@@ -175,8 +243,7 @@ class FantuiHttpEndpointTests(unittest.TestCase):
     def setUp(self):
         # Reset the module-level singleton so previous tests' state doesn't leak.
         from well_harness import demo_server
-        with demo_server._FANTUI_LOCK:
-            demo_server._FANTUI_SYSTEM.reset()
+        demo_server._FANTUI_SYSTEM.reset()
         self.server = ThreadingHTTPServer(("127.0.0.1", 0), DemoRequestHandler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -249,6 +316,47 @@ class FantuiHttpEndpointTests(unittest.TestCase):
             s, body = self._req("POST", "/api/fantui/tick", {"dt_s": bad_dt})
             self.assertEqual(s, 400, msg=f"dt_s={bad_dt} should be 400")
             self.assertEqual(body.get("error"), "dt_s_out_of_range")
+
+    def test_tick_accepts_dt_s_boundary_one(self):
+        """dt_s=1.0 is the documented inclusive ceiling — must return 200."""
+        s, body = self._req("POST", "/api/fantui/tick",
+                            {"tra_deg": -8.0, "dt_s": 1.0, "engine_running": True})
+        self.assertEqual(s, 200, msg=body)
+        self.assertAlmostEqual(body["t_s"], 1.0, places=3)
+
+    def test_tick_rejects_non_finite_dt_via_raw_json(self):
+        """CRITICAL regression (Codex 2026-04-24): raw JSON ``NaN`` /
+        ``Infinity`` tokens are accepted by Python's ``json.loads`` and used
+        to permanently corrupt the tick clock. Must be rejected with 400.
+        """
+        # json.dumps(..., allow_nan=True) emits non-standard ``NaN`` / ``Infinity``
+        # tokens that Python can parse back (but browsers cannot). The handler
+        # must short-circuit before the value reaches ``FantuiTickSystem``.
+        import http.client as _c
+
+        for raw_body in (b'{"dt_s": NaN}',
+                         b'{"dt_s": Infinity}',
+                         b'{"dt_s": -Infinity}',
+                         b'{"n1k": NaN}'):
+            conn = _c.HTTPConnection(self.host, self.port, timeout=5)
+            conn.request("POST", "/api/fantui/tick",
+                         body=raw_body,
+                         headers={"Content-Type": "application/json"})
+            resp = conn.getresponse()
+            status = resp.status
+            body = json.loads(resp.read().decode("utf-8"))
+            conn.close()
+            self.assertEqual(status, 400,
+                             msg=f"raw {raw_body!r} should be rejected")
+            self.assertIn(body.get("error"),
+                          {"dt_s_out_of_range", "invalid_input"},
+                          msg=f"unexpected error shape for {raw_body!r}: {body}")
+
+        # After all the bad requests, the system clock is still finite.
+        import math as _m
+        s, state = self._req("GET", "/api/fantui/state")
+        self.assertEqual(s, 200)
+        self.assertTrue(_m.isfinite(state["t_s"]))
 
     def test_tick_rejects_invalid_input_types(self):
         s, body = self._req("POST", "/api/fantui/tick", {"n1k": "abc"})
@@ -330,6 +438,16 @@ class TimeseriesChartFileStructureTests(unittest.TestCase):
         for marker in ("time_start_s", "time_end_s", "series",
                        "display_min", "display_max", "samples"):
             self.assertIn(marker, src, msg=f"chart module missing {marker!r}")
+
+    def test_buildPayload_filters_non_finite_samples(self):
+        """Codex 2026-04-24 MINOR finding: ``buildPayload`` must skip
+        NaN/Infinity ``t_s`` and ``v`` so a single bad sample does not
+        blank the entire polyline."""
+        src = self.JS_PATH.read_text(encoding="utf-8")
+        self.assertIn("Number.isFinite(rec.t_s)", src,
+                      msg="buildPayload must guard rec.t_s against NaN/Infinity")
+        self.assertIn("Number.isFinite(v)", src,
+                      msg="buildPayload must guard sample value against NaN/Infinity")
 
 
 if __name__ == "__main__":
