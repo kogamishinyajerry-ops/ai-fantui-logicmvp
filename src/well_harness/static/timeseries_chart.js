@@ -2,7 +2,6 @@
  * timeseries_chart.js — shared multi-lane SVG timeseries renderer.
  *
  * Used by:
- *   - /fan_sim_panel.html      (GET /api/monitor-timeline, FANTUI)
  *   - /fan_console.html        (POST /api/fantui/tick, FANTUI live)
  *   - /c919_etras_panel/       (POST /api/tick, C919 live)
  *

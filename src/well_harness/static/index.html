@@ -267,7 +267,6 @@
     <div class="unified-nav-group">
       <span class="unified-nav-group-label">仿真</span>
       <a href="/fan_console.html" class="unified-nav-link" data-nav-key="fan-console">反推操作台</a>
-      <a href="/fan_sim_panel.html" class="unified-nav-link" data-nav-key="fan-sim">反推时序</a>
       <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
     </div>
   </div>
@@ -372,12 +371,12 @@
       <span class="home-card-arrow">→</span>
     </a>
 
-    <!-- 第 6 格：仿真面板 -->
-    <a href="/fan_sim_panel.html" class="home-card" data-scope="simulation" aria-labelledby="card-fan-sim-title">
+    <!-- 第 6 格：反推实时操作台（覆盖旧版 fan_sim_panel 的全部能力） -->
+    <a href="/fan_console.html" class="home-card" data-scope="simulation" aria-labelledby="card-fan-console-title">
       <span class="home-card-kind">仿真</span>
-      <h2 class="home-card-title" id="card-fan-sim-title">反推时序仿真面板</h2>
-      <p class="home-card-subtitle">/fan_sim_panel.html</p>
-      <p class="home-card-desc">有状态反推展开 / 收起时序仿真。展示 TLS 解锁 → PDU 供电 → VDT 位置反馈 → 油门锁释放的完整时序。</p>
+      <h2 class="home-card-title" id="card-fan-console-title">反推实时操作台</h2>
+      <p class="home-card-subtitle">/fan_console.html</p>
+      <p class="home-card-desc">高自由度 tick 驱动的反推仿真：TRA 杠杆 / RA / N1k 实时可调，L1–L4 逻辑门 + 命令 + VDT 仪表 + 时间-状态曲线抽屉，覆盖展开 / 收起 / 抑制 / 过温全链路。</p>
       <span class="home-card-arrow">→</span>
     </a>
   </section>
