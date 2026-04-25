@@ -167,6 +167,22 @@ E11-09 → E11-13/14 → E11-05 → E11-03 → E11-04 → E11-06
 
 **未在 §3.6 立法的原因**：Opus 4.7 警告"先 codify 再实证"是 v2.3 的同一陷阱。tier-trigger 规则有效性*取决于* E11-09 结果——E11-09 跑完前不写进 constitution。
 
+### 3.6.1 Leading Indicator OUTCOME — fired ≤2 rounds (2026-04-25)
+
+E11-09 PR #13 落地 = **2 轮 Codex APPROVE**（R1 BLOCKER 真实 JS bug 被抓 + R2 CLEAN APPROVE）。R1 的 BLOCKER 不是 honesty 类（不是 fabricated surface claim），是**真实 runtime bug**（workbench.js 共享 shell + bundle 但 binding bundle-only 元素无 null guard），属于 reactive review 正常工作。
+
+**Action 触发**：governance bundle #2 已通过 PR #14 落地（2026-04-25）：
+
+- `.planning/constitution.md` v2.3 §Codex Persona Pipeline Tier-Trigger 子节添加
+- `.planning/codex_personas/README.md` §Invocation 表替换默认 5-persona 规则
+- 自此**所有** E11 后续子 phase（E11-13..19）默认按 tier-trigger 跑 Codex persona review，不再 5 个并行 by default
+
+**Tier-trigger 落地后保留不变**：v2.2 / v2.3 触发 + §Surface Inventory + §Anchor 格式细则 + v6.1 Codex 触发清单 + RETRO 序号 + Hard Stop + Verbatim Exception。仅持 5-persona 调用频率被软化。
+
+**回滚条件（已写入 constitution v2.3）**：连续两个 Tier-B 子 phase 在 post-merge 检出 ≥1 条 fabricated surface → 自动回滚 5-persona 默认 + 起 retro 后继。
+
+**详细记录**：`.planning/retrospectives/RETRO-V61-054-ui-copy-probe-birth.md` §6.
+
 ---
 
 ## 3.7 E12 phase 并发开启条件（Opus 4.7 conditional No）
