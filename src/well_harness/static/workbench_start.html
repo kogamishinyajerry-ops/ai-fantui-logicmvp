@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Workbench · 选择你的工作台入口</title>
+<link rel="stylesheet" href="/unified-nav.css">
+<link rel="stylesheet" href="/workbench_start.css">
+</head>
+<body class="unified-nav-enabled" data-nav-current="workbench-start">
+
+<header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
+  <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">工作台</span>
+      <a href="/workbench/start" class="unified-nav-link" data-nav-key="workbench-start" data-current="true">入口选择</a>
+      <a href="/workbench" class="unified-nav-link" data-nav-key="workbench">完整面板</a>
+    </div>
+  </div>
+</header>
+
+<main class="ws-main" id="workbench-start-main">
+  <section class="ws-hero" aria-labelledby="ws-hero-title">
+    <h1 id="ws-hero-title">先告诉我你今天来做什么</h1>
+    <p>
+      <strong>Workbench</strong> 是同一个 3 列面板，今天会承载 5 类工作。
+      下面 6 张卡片各自把你带进 <code>/workbench</code> 主面板，并附一个稳定的
+      <code>?intent=</code> 标记。 <em>本期 (E11-02) 还没有按 intent 自动重排面板</em>——
+      标记落地是为了 E11-05 / E11-08 / E11-11 这几期能基于它做角色化裁剪。
+      想跳过引导直接看完整面板？ <a href="/workbench" class="ws-skip-link">/workbench →</a>
+    </p>
+  </section>
+
+  <section class="ws-axes" aria-labelledby="ws-axes-title">
+    <h2 id="ws-axes-title">这页在按"角色 + 工作意图"两个维度组织入口</h2>
+    <ul>
+      <li>
+        <strong>P1–P5</strong> 是 E11-01 baseline 5-persona review 里的工程角色
+        （Junior FCS / Senior FCS / Demo Presenter / V&amp;V / Apps Engineer），
+        每个 persona 在主面板里有自己最常落地的起手任务。
+      </li>
+      <li>
+        <strong>KOGAMI</strong> 不是 persona，是项目内部的<em>审批权限</em>角色（仅 Kogami 可签发 proposal）。
+        与 P1–P5 同列展示，是因为审批入口和上面五种工作一样来自 Workbench。
+      </li>
+    </ul>
+  </section>
+
+  <section class="ws-tiles" aria-label="角色 + 意图入口">
+    <a href="/workbench?intent=learn-demo"
+       class="ws-tile"
+       data-persona="P1"
+       data-intent="learn-demo"
+       id="ws-tile-learn-demo">
+      <span class="ws-tile-kind">学习与演示</span>
+      <h2 class="ws-tile-title">跑 4 张一键验收预设</h2>
+      <p class="ws-tile-subtitle">P1 · Junior FCS · 30 分钟内上手</p>
+      <p class="ws-tile-desc">
+        落到 <code>/workbench</code>「一键预设验收卡」。 当前 4 张：
+        <em>通过并留档 / 阻塞演示 / 快速通过 / 留档复跑</em>，每张点完会自动跑
+        intake → bundle 真实链路；其中 ready_archived 与 archive_retry 还会
+        落 archive 目录，blocked_follow_up 与 ready_preview 不落 archive。
+        不要求先碰 JSON。
+      </p>
+      <ul class="ws-tile-bullets">
+        <li>4 张预设：ready_archived / blocked_follow_up / ready_preview / archive_retry</li>
+        <li>archiveBundle: true 仅 2/4（ready_archived + archive_retry）</li>
+        <li>wow_a/b/c 起手卡片是 E11-05 范围，本期暂未上线</li>
+      </ul>
+      <span class="ws-tile-arrow">→</span>
+    </a>
+
+    <a href="/workbench?intent=engineer-probe"
+       class="ws-tile"
+       data-persona="P2"
+       data-intent="engineer-probe"
+       id="ws-tile-engineer-probe">
+      <span class="ws-tile-kind">工程师调试</span>
+      <h2 class="ws-tile-title">读 3 列 shell + Raw JSON 抽屉</h2>
+      <p class="ws-tile-subtitle">P2 · Senior FCS · 真值只读 / 提案受签</p>
+      <p class="ws-tile-desc">
+        落到 <code>/workbench</code> 的 control / document / circuit 三列 shell + 「开发调试 / Raw JSON」
+        抽屉。 改动 spec 不会改真值，只能转成 ticket / proposal 走签批。
+        TRA / RA / N1k 等 lever 调参在 <code>/demo.html</code>，本期 <code>?intent=</code> 还没把它合入。
+      </p>
+      <ul class="ws-tile-bullets">
+        <li>truth-engine 是 read-only（红线见底部）</li>
+        <li>顶部 ticket / identity chrome 默认显示，可读不可改</li>
+        <li>L1–L4 着色 + 认证链 banner 在 E11-06/07 上线</li>
+      </ul>
+      <span class="ws-tile-arrow">→</span>
+    </a>
+
+    <a href="/workbench?intent=demo-stage"
+       class="ws-tile"
+       data-persona="P3"
+       data-intent="demo-stage"
+       id="ws-tile-demo-stage">
+      <span class="ws-tile-kind">立项 / 汇报演示</span>
+      <h2 class="ws-tile-title">用「通过并留档」预设走 happy path</h2>
+      <p class="ws-tile-subtitle">P3 · Demo Presenter · 上台前最后过一遍</p>
+      <p class="ws-tile-desc">
+        本期主面板还没有专门的 demo mode。 暂时推荐：先点
+        <em>「一键通过验收」（ready_archived）</em> 走通 happy path，
+        再点 <em>「一键看阻塞态」（blocked_follow_up）</em> 演示 clarification gate。
+        反推逻辑 lever-driven 演示（TRA / RA / N1k）在 <code>/demo.html</code>；
+        wow_a/b/c 目前只在 <code>tests/e2e/test_wow_a_causal_chain.py</code> 里有，没有 UI 走读 surface。
+      </p>
+      <ul class="ws-tile-bullets">
+        <li>建议演示前隐藏浏览器侧栏 + 关闭 Approval Center 抽屉</li>
+        <li>"一键留档复跑" 适合演示同秒重复点也不崩</li>
+        <li>无-chrome demo mode + UI wow_a 走读 进入 E11-05/08 范围</li>
+      </ul>
+      <span class="ws-tile-arrow">→</span>
+    </a>
+
+    <a href="/workbench?intent=customer-repro"
+       class="ws-tile"
+       data-persona="P5"
+       data-intent="customer-repro"
+       id="ws-tile-customer-repro">
+      <span class="ws-tile-kind">客户问题复现</span>
+      <h2 class="ws-tile-title">填 9 个 knowledge 字段</h2>
+      <p class="ws-tile-subtitle">P5 · Apps Engineer · intake → bundle → archive</p>
+      <p class="ws-tile-desc">
+        落到 <code>/workbench</code> 的 knowledge 区（"Resolution / Knowledge 字段"折叠面板）。 当前 schema 是 9 字段：
+        Observed Symptoms / Evidence Links / Confirmed Root Cause / Repair Action / Validation After Fix /
+        Residual Risk / Suggested Logic Change / Reliability Gain Hypothesis / Guardrail Note。
+        客户邮件原文 → ticket payload 的字段映射工具是 E11-08 范围，
+        本期暂时手抄进 Evidence Links。
+      </p>
+      <ul class="ws-tile-bullets">
+        <li>knowledge 字段已经在主面板渲染（dt/dd 列表）</li>
+        <li>customer_quote / repro_recipe / screenshot_refs 等扩展字段是 E11-08 范围</li>
+        <li>提交后转到 intake → bundle 真实链路，不新增第二套规则</li>
+      </ul>
+      <span class="ws-tile-arrow">→</span>
+    </a>
+
+    <a href="/workbench?intent=approval-review#approval-center-entry"
+       class="ws-tile"
+       data-persona="KOGAMI"
+       data-intent="approval-review"
+       id="ws-tile-approval-review">
+      <span class="ws-tile-kind">提案审核（Kogami）</span>
+      <h2 class="ws-tile-title">Approval Center · 静态 shell 占位</h2>
+      <p class="ws-tile-subtitle">label 上写 Kogami-only · 角色判定逻辑未实现</p>
+      <p class="ws-tile-desc">
+        落到 <code>/workbench</code> 底栏的 Approval Center 入口。 当前
+        是静态 HTML：3 道 lane（Pending / Accept / Reject）+ 两个按钮 + 一句
+        "Approval actions are Kogami-only" 的告示文案。 <strong>workbench.js
+        没有 approval-action handler</strong>，按钮点了不会落账（对 Kogami 也不会）。
+        hash-chain 查阅 / SHA 分组 / JSONL 导出 / 状态过滤 / 角色判定都是 E11-08 范围，
+        本期只是给后续 phase 留好 selector 锚点。
+      </p>
+      <ul class="ws-tile-bullets">
+        <li>data-approval-role="KOGAMI" + data-approval-action 锚点已就位</li>
+        <li>Pending lane 当前只是占位文案，没有真实 proposal 列表</li>
+        <li>角色判定 / 实际签批落账逻辑完全在 E11-08 后</li>
+      </ul>
+      <span class="ws-tile-arrow">→</span>
+    </a>
+
+    <a href="/workbench?intent=vv-trace"
+       class="ws-tile"
+       data-persona="P4"
+       data-intent="vv-trace"
+       id="ws-tile-vv-trace">
+      <span class="ws-tile-kind">V&amp;V 适航追溯</span>
+      <h2 class="ws-tile-title">沿 intake → bundle → archive 走读</h2>
+      <p class="ws-tile-subtitle">P4 · QA / V&amp;V · DO-178C 风格审计</p>
+      <p class="ws-tile-desc">
+        本期主面板还没有专门的 trace-matrix 视图。 当前能做的：
+        从某个 acceptance preset 跑出 bundle，去 archive 包里读结果，
+        对照 <code>controller.py</code> + <code>adapters/*.py</code> 找 requirement 引用。
+        CSV / JSONL trace 导出在 E11-09 后才上线。
+      </p>
+      <ul class="ws-tile-bullets">
+        <li>archive package 自带 timestamp + slug 目录 + SHA256 文件完整性哈希（不是 git commit SHA）</li>
+        <li>truth-engine SHA / adversarial 8/8 / e2e 状态条进入 E11-06 范围</li>
+        <li>本期产出物均为内部研究证据，不构成适航合规声明</li>
+      </ul>
+      <span class="ws-tile-arrow">→</span>
+    </a>
+  </section>
+
+  <section class="ws-redline" aria-labelledby="ws-redline-title">
+    <h2 id="ws-redline-title">红线 · 你点哪一张都不会改的东西</h2>
+    <ul>
+      <li><code>controller.py</code> · 19-node truth engine · 4 logic gates — <strong>read-only</strong></li>
+      <li><code>adapters/*.py</code> 真值出口 — <strong>read-only</strong></li>
+      <li>已签 audit event 的 hash chain — <strong>append-only</strong></li>
+      <li>wow_a fixture 的 BEAT_DEEP_PAYLOAD — <strong>frozen</strong></li>
+    </ul>
+    <p class="ws-redline-note">
+      所有"修改"都走 proposal → ticket → Kogami 签批 流程；
+      详见 <a href="/workbench?intent=approval-review#approval-center-entry">Approval Center</a>
+      与
+      <a href="/index.html">主入口 · 工作台总览</a>。
+    </p>
+  </section>
+</main>
+
+</body>
+</html>
