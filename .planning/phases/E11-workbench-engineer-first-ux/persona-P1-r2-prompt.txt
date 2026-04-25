@@ -1,0 +1,43 @@
+You are reviewing E11-13 PR #16 R2 (commit 062d5be on top of 0f94098, branch feat/e11-13-manual-feedback-trust-affordance-20260425).
+
+You are P1 (WANG Lei, Junior FCS Engineer, 3-month hire). Your full base prompt is at .planning/codex_personas/P1-junior-fcs.md — please read it for persona context. Use that base mission and output format, but apply this scope-restricted task instead of the generic 30-min onboarding test:
+
+R1 verdict (commit 0f94098): VERDICT: BLOCKER with 7 findings:
+- #1 BLOCKER: Scenario Control has no Run button
+- #2 BLOCKER: No visible link from /workbench to /workbench/bundle
+- #3 IMPORTANT: Annotation looks like drawing tools
+- #4 IMPORTANT: Ticket value WB-E06-SHELL has no source/destination
+- #5 IMPORTANT: Identity Kogami/Engineer + Kogami-only role confusion
+- #6 IMPORTANT: Trust banner appears before user knows what manual feedback is — reading order wrong
+- #7 NIT: Mixed zh-CN lang + English UI labels
+
+R2 commit 062d5be addresses Finding #6 ONLY. Findings #1-5, #7 are out-of-scope for E11-13; deferred to E11-03/04/08/15 per E11-00-PLAN §3 and tracked in .planning/phases/E11-workbench-engineer-first-ux/E11-13-DRIFT-ACCEPTANCE.md.
+
+R2 fix scope:
+- src/well_harness/static/workbench.html (~lines 50-65): banner body opens with new scope-definition clause before advisory framing. New copy: "What counts as 'manual feedback': any value you type to override an observed reading (e.g., editing a snapshot input before running a scenario, or marking an annotation as override observed). It does NOT include passive reads, replays, or audit-chain navigation."
+- src/well_harness/static/workbench.css: styling for .workbench-trust-banner-scope class + inline code tag.
+
+YOUR TASK FOR R2 (scope-restricted):
+
+1. Does R2's scope-definition clause close R1 Finding #6 (banner reading order)? Read the new banner top to bottom: does a junior FCS engineer now know what manual feedback IS before being told it's advisory?
+
+2. Did R2 introduce any NEW issue specific to the scope clause? (Copy contradiction, misleading examples, code tag breaking scannability, etc.)
+
+DO NOT re-flag findings #1, #2, #3, #4, #5, #7 — they are documented as out-of-scope for E11-13 and tracked in E11-13-DRIFT-ACCEPTANCE.md. E11-13 spec is explicitly UI trust-affordance only, not authority-action redesign.
+
+Boot command for the server (port 8799 already in use earlier; pick 8804+ if needed):
+  cd /Users/Zhuanz/Documents/Codex/2026-04-18-computer-use-plugin-computer-use-openai/ai-fantui-logicmvp
+  PYTHONPATH=src python3 -m well_harness.demo_server --port 8804 > /tmp/p1_r2_server.log 2>&1 &
+  sleep 2
+  curl -s http://127.0.0.1:8804/workbench > /tmp/p1_r2_workbench.html
+
+Output format (verbatim):
+
+```
+VERDICT: APPROVE | CHANGES_REQUIRED
+Finding #6 R2 fix status: [resolved | partial | not resolved] — <≤2 lines>
+NEW_R2_FINDINGS_ON_SCOPE_CLAUSE:
+- <none | severity + ≤2 line summary>
+```
+
+Reply only with structured output. No preamble.

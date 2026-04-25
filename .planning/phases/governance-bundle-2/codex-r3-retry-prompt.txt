@@ -1,0 +1,38 @@
+You are reviewing governance bundle #2 R3-retry (PR #14, branch feat/governance-bundle-2-persona-tier-trigger-20260425, commit 58426cf on top of e259a42).
+
+History:
+- R1 (1f25bb5): CHANGES_REQUIRED — F1 BLOCKER tier-aware closure conflict, F2 IMPORTANT rollback divergence, F3 IMPORTANT trigger non-determinism
+- R2 (419286b): R1 fixes applied. Codex R2 returned partial — F1/F2 partial (drift in E11-00-PLAN), F3 not resolved (drift in constitution + RETRO §6.2), + 1 NEW IMPORTANT (README §Purpose stale)
+- R2-fix (e259a42): All R2 findings addressed across 4 docs (README + constitution + RETRO + E11-00-PLAN)
+- R3 (process crashed mid-stream, no formal verdict; intermediate observations identified 2 residual drift in README §命令模板 + §Cost supersession note)
+- R3-fix (58426cf, this PR): Both intermediate-observation drift addressed
+
+R3-fix changes (1 file, 9+/9- lines):
+1. README §命令模板 lines 73-81: Replaced "Tier-B (1 persona 默认 — P1 Junior FCS)" + "Tier-B 轮换" twin examples with single block using `PERSONA=` variable + comment chain pointing to PERSONA-ROTATION-STATE.md round-robin source-of-truth + append command.
+2. README §Cost line 131: Removed "The earlier 'candidate §6.2 re-evaluate' framing is superseded — §6.3 is canonical." (Codex flagged the supersession sentence as itself drift — it kept the dead §6.2 string in the canonical spec.)
+
+Files unchanged this round: .planning/constitution.md, .planning/retrospectives/RETRO-V61-054-ui-copy-probe-birth.md, .planning/phases/E11-workbench-engineer-first-ux/E11-00-PLAN.md.
+
+Your task: Issue formal R3 verdict on the bundle as it stands at 58426cf. Verify:
+
+1. README §命令模板 now describes Tier-B per-sub-phase round-robin (no surviving "default P1 / owner override" mental model)
+2. README §Cost / §Anti-bias / §Output convention / §Purpose all consistent with cross-sub-phase rotation rule (no mentions of dead §6.2 / "re-evaluate" / "default P1 + owner rotation" wording)
+3. constitution.md §Codex Persona Pipeline Tier-Trigger and §Tier-trigger table fully match README §Invocation rule
+4. RETRO-V61-054 §6.2 / §6.3 fully match constitution rollback semantics (3 actions: rollback 3 sub-phases / open successor RETRO / re-engage Opus 4.7)
+5. E11-00-PLAN §1, §3.6, §3.6.1, §6, §8, §9, §11 all tier-aware in alignment with new rule
+
+Output format (verbatim):
+```
+VERDICT: APPROVE | CHANGES_REQUIRED
+README §命令模板: [resolved | drift] — <≤2 lines>
+README cross-section consistency (§Purpose / §Invocation / §Output / §Anti-bias / §Cost): [resolved | drift] — <≤2 lines>
+constitution + README convergence: [resolved | drift] — <≤2 lines>
+RETRO §6.2/§6.3 + constitution rollback convergence: [resolved | drift] — <≤2 lines>
+E11-00-PLAN tier-aware: [resolved | drift] — <≤2 lines>
+NEW_R3_FINDINGS:
+- <none | severity + ≤2 line summary>
+```
+
+Be ruthless. If even one document still has stale wording, mark drift. If the rotation-state-file path appears different in different docs, flag it. If the counting command appears in README but not constitution, flag it (rule layer must be self-contained).
+
+Reply only with structured output. No preamble.

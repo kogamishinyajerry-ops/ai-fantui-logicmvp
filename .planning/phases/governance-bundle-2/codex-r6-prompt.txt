@@ -1,0 +1,49 @@
+You are reviewing governance bundle #2 R6 (PR #14, branch feat/governance-bundle-2-persona-tier-trigger-20260425, commit ee602b0 on top of d0a3c86).
+
+History (6 rounds — recursive coherence drift):
+- R1 → R5: each round closed structural findings but introduced new drift in references/paraphrases
+- R5 verdict (commit d0a3c86): CHANGES_REQUIRED — 3 IMPORTANT all about "claimed convergence is itself drifted" (3 verbatim spots not identical / E11-00-PLAN pointers expand rule / bash override branch lacks literal assignment)
+- R6 strategy switch (commit ee602b0): collapse to 1 canonical (constitution.md:343) + N pure pointers. Zero rule body anywhere except constitution. Recognized this is the same v2.3 PR meta-loop captured in RETRO-V61-054 §6.5.
+
+R6 changes (3 files, 19+/41-):
+1. README §Tier-trigger (lines 29-33): collapsed from 30+ lines (rule table + counting cmd + exception bullet + 判断时机) to 4-line pure-pointer paragraph. ZERO rule body remains.
+2. RETRO §6.2 line 147: collapsed Tier-A + Tier-B bullets to 1 sentence: "rule itself is canonical at constitution.md §Codex Persona Pipeline Tier-Trigger; this bullet records decision, not rule body. Do not paraphrase here."
+3. E11-00-PLAN lines 17, 163, 214, 316: each replaced with pure pointer "see constitution.md §Codex Persona Pipeline Tier-Trigger (canonical). 本 plan 不重述规则." ZERO rule restatement remains.
+4. README §命令模板 bash Step 3a/3b: 5 explicit `# PERSONA=P{1,2,3,4,5}` lines as literal toggle (was: comment block referencing nonexistent code). User toggles 2 comment markers to switch path; both paths share hard-constraint sentinel.
+
+Files reviewed (R6 commit ee602b0):
+- .planning/codex_personas/README.md (especially lines 29-33, 46-82)
+- .planning/constitution.md (UNCHANGED this round; only canonical rule body)
+- .planning/retrospectives/RETRO-V61-054-ui-copy-probe-birth.md (line 147)
+- .planning/phases/E11-workbench-engineer-first-ux/E11-00-PLAN.md (lines 17, 163, 214, 316)
+
+Untouched-by-design (README operational sections, NOT rule restatement):
+- README §Output convention (Tier-A aggregator vs Tier-B single verdict — README's owned procedural content, not in constitution)
+- README §Anti-bias safeguard (per-tier anti-bias mechanism — README's owned content, not in constitution)
+- README §Cost / latency baseline (cost record — README's owned content)
+
+Your task: Issue formal R6 verdict. Verify:
+
+1. Rule body (Tier-A trigger condition, Tier-B persona-selection SSOT, counting command, rollback condition) appears in EXACTLY ONE place — constitution.md §Codex Persona Pipeline Tier-Trigger. Anywhere else that has even a fragment of the rule = drift.
+2. Every E11-00-PLAN reference to the rule is now a pure pointer with zero rule restatement (no "default round-robin", no "P1→P5", no "STATE.md SSOT" expansion in PLAN).
+3. README §Tier-trigger header section lines 29-33 contains ZERO rule body (only pointer + history reference).
+4. RETRO §6.2 line 147 contains ZERO rule body (only pointer + decision-arc reference).
+5. README §命令模板 Step 3a/3b: BOTH paths are literally executable (Step 3a is active code; Step 3b has 5 commented `# PERSONA=Px` lines that user can uncomment); hard-constraint sentinel applies to both.
+6. README §Output convention / §Anti-bias safeguard / §Cost ARE allowed to keep their current content because they describe README's owned operational mechanisms (aggregator vs single verdict / per-tier anti-bias / token cost record) — these are NOT rule body, they are procedural documentation. ONLY mark as drift if these sections have leaked rule body (e.g., a copy of the trigger condition or the SSOT statement).
+
+Output format (verbatim):
+```
+VERDICT: APPROVE | CHANGES_REQUIRED
+Rule body in 1 place only (constitution): [resolved | drift] — <≤2 lines>
+E11-00-PLAN pure pointers (zero restatement): [resolved | drift] — <≤2 lines>
+README §Tier-trigger pure pointer: [resolved | drift] — <≤2 lines>
+RETRO §6.2 pure pointer: [resolved | drift] — <≤2 lines>
+Bash template both paths literal: [resolved | drift] — <≤2 lines>
+README owned operational sections free of rule body: [resolved | drift] — <≤2 lines>
+NEW_R6_FINDINGS:
+- <none | severity + ≤2 line summary>
+```
+
+Be ruthless. The PR has now run for 6 rounds. If you find ANY surviving rule restatement (even a fragment) outside constitution, mark drift. If a pointer says "see X" but isn't pure (it adds rule details after the see), mark drift. The R6 strategy is binary: rule body lives in constitution, references are pointers — ANY rule fragment outside constitution proves the strategy didn't take.
+
+Reply only with structured output. No preamble.

@@ -1,0 +1,44 @@
+You are reviewing governance bundle #2 R5 (PR #14, branch feat/governance-bundle-2-persona-tier-trigger-20260425, commit d0a3c86 on top of fa4605b).
+
+History (5 rounds total now, mirroring v2.3 PR's 5-round meta-loop):
+- R1 (1f25bb5): F1 BLOCKER tier-aware closure / F2 IMPORTANT rollback divergence / F3 IMPORTANT trigger non-determinism
+- R2 (e259a42): R1 fixes — partial (drift across 4 docs)
+- R3 (crashed) → R3-fix (58426cf): README §命令模板 + cost-note residual drift
+- R3-retry (verdict on 58426cf): F1 IMPORTANT Tier-B SSOT divergence / F2 IMPORTANT §3.6 temporal drift
+- R4 (fa4605b verdict): R3-retry partial — IMPORTANT E11-00-PLAN:17/214/316 shorthand drift
+- R5-fix (d0a3c86, this PR): canonical-pointer pattern + bash template scripts both paths
+
+R5-fix changes (2 files, 31+/11- lines):
+1. F1 strategy switch — canonical-pointer pattern: instead of expanding every shorthand into the full SSOT statement (which led to drift on each rewrite), the FULL SSOT statement now lives in exactly 3 places verbatim (constitution.md:343, README:40, RETRO §6.2:148). Every other reference in E11-00-PLAN points to constitution.md §Codex Persona Pipeline Tier-Trigger as canonical. Lines 17, 163, 214, 316 all rewritten to use this pointer pattern.
+2. F2 §3.6 line 232 (Counterargument C-Opus) past-tense: "当前 phase 用 §3.6 leading indicator decide 是否启动" → "已 fired (2026-04-25), governance bundle #2 已通过 PR #14 落 constitution".
+3. README §命令模板 (lines 73-100) replaced with 5-step bash script that LITERALLY implements the rule: read $LAST from STATE_FILE → compute $DEFAULT round-robin successor → choose default-or-override path → assert PERSONA != $LAST → run codex → append to STATE_FILE. A reader of just the template can now derive the rule from the script.
+
+Files reviewed (R5 commit d0a3c86):
+- .planning/codex_personas/README.md (lines 40, 73-100, 116)
+- .planning/phases/E11-workbench-engineer-first-ux/E11-00-PLAN.md (lines 17, 163, 214, 232, 316)
+
+Files unchanged this round: .planning/constitution.md (canonical), .planning/retrospectives/RETRO-V61-054-ui-copy-probe-birth.md.
+
+Your task: Issue formal R5 verdict. Verify:
+
+1. The 3 verbatim spots (constitution.md:343, README:40, RETRO §6.2:148) carry an IDENTICAL SSOT statement (state-file SSOT + default round-robin successor + owner writes non-default + no-consecutive-repeat constraint).
+2. Every other reference in E11-00-PLAN is a pointer to constitution.md §Codex Persona Pipeline Tier-Trigger (no surviving partial-rewrite shorthand).
+3. README §命令模板 5-step script LITERALLY implements the rule (a reader of just the template should be able to extract: read state file → compute default → owner override path → no-repeat assertion → run → write back).
+4. E11-00-PLAN §3.6 + §3.6.1 + §4 (Counterargument C-Opus rebuttal at line 232) all have consistent past-tense "已 fired / 已 landed" framing — no surviving present-tense "uses leading indicator to decide" or "candidate" framing anywhere in the plan.
+5. Cross-doc references resolve: pointers to "constitution.md §Codex Persona Pipeline Tier-Trigger" actually find that section; pointers to "README §Anti-bias safeguard" find the right anchor.
+
+Output format (verbatim):
+```
+VERDICT: APPROVE | CHANGES_REQUIRED
+3 canonical verbatim spots identical: [resolved | drift] — <≤2 lines>
+E11-00-PLAN pointer pattern (no shorthand drift): [resolved | drift] — <≤2 lines>
+README §命令模板 implements rule literally: [resolved | drift] — <≤2 lines>
+§3.6/§3.6.1/§4 temporal coherence (all past-tense post-fired): [resolved | drift] — <≤2 lines>
+Cross-doc reference targets resolve: [resolved | drift] — <≤2 lines>
+NEW_R5_FINDINGS:
+- <none | severity + ≤2 line summary>
+```
+
+Be ruthless. The PR is at 5 rounds; if you find ANY surviving drift, this is round 6 territory. Tolerance for ambiguity = zero. If a pointer says "see constitution §X" but §X doesn't exist with that exact name, that's drift. If the bash template assertion is wrong, that's drift. If §3.6.1 says "已 landed" but §4 still says "uses to decide", that's drift.
+
+Reply only with structured output. No preamble.

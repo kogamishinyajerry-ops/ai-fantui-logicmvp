@@ -1,0 +1,32 @@
+You are reviewing governance bundle #2 R2 fixes (PR #14, branch feat/governance-bundle-2-persona-tier-trigger-20260425, commit 419286b on top of 1f25bb5).
+
+R1 (commit 1f25bb5) returned CHANGES_REQUIRED with 3 findings:
+- F1 BLOCKER: tier-B "1 persona" conflicts with §Output convention (5 verdicts assumed) + §Anti-bias safeguard (uniqueness check impossible) + E11-00-PLAN closure
+- F2 IMPORTANT: rollback divergence — constitution.md:359 / RETRO §6.2 / README §Cost give 3 different rollback definitions
+- F3 IMPORTANT: trigger non-determinism — "copy diff ≥10 行" no counting command; "同一 sub-phase 不重复同一 persona" rotation rule vacuous for Tier-B
+
+Files to review (R2 commit 419286b):
+- .planning/codex_personas/README.md
+- .planning/constitution.md (only the bundle #2 § block, lines ~340-370)
+- .planning/retrospectives/RETRO-V61-054-ui-copy-probe-birth.md (only §6.x — context for §6.3 canonical reference)
+
+R2 fixes claim:
+1. F1 fix: Split §Output convention into Tier-A (aggregator) + Tier-B (1 verdict, no aggregator, no within-PR uniqueness, anti-bias delegated to Surface Inventory + cross-sub-phase rotation + rollback). Anti-bias safeguard same split.
+2. F2 fix: Picked RETRO §6.3 as canonical (3 explicit actions: rollback 3 sub-phases / open successor RETRO / re-engage Opus). constitution.md and README now both reference §6.3 with same 3 actions or invoke it explicitly.
+3. F3 fix: Added explicit `git diff --stat $(git merge-base HEAD main)..HEAD -- 'src/well_harness/static/*.{html,js,css}'` counting command + PR-body requirement to print `copy_diff_lines=N (insertions=X, deletions=Y)`. Redefined rotation as cross-sub-phase round-robin P1->P2->P3->P4->P5->P1 with state file `.planning/phases/<epic>/PERSONA-ROTATION-STATE.md`.
+
+Your task: Verify each R1 finding is genuinely resolved with no new spec-coherence drift, OR identify what's still inconsistent.
+
+Output format (verbatim):
+```
+VERDICT: APPROVE | CHANGES_REQUIRED
+F1: [resolved | partial | not resolved] — <reason ≤2 lines>
+F2: [resolved | partial | not resolved] — <reason ≤2 lines>
+F3: [resolved | partial | not resolved] — <reason ≤2 lines>
+NEW_FINDINGS:
+- <none | severity + ≤2 line summary>
+```
+
+Be ruthless. If the upgrade-path "if Tier-B mid-PR scope-expands to Tier-A, prior verdict discarded" is hand-wavy, flag it. If the rotation state file doesn't exist yet (it's referenced but not created in this PR), decide whether that's a BLOCKER (rule unenforceable) or NIT (file gets created on first Tier-B sub-phase). If anti-bias is genuinely weaker for Tier-B and the fix doesn't honestly say so, flag it. Cross-doc grep: every reference to rollback / §6.3 / §6.2 must converge.
+
+Reply only with the structured output above. No preamble.

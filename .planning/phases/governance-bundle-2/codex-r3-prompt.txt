@@ -1,0 +1,43 @@
+You are reviewing governance bundle #2 R3 fixes (PR #14, branch feat/governance-bundle-2-persona-tier-trigger-20260425, commit e259a42 on top of 419286b).
+
+R2 (commit 419286b) returned CHANGES_REQUIRED with these findings:
+- F1 partial: E11-00-PLAN hardcoded 5-persona closure/uniqueness/aggregator at lines 17, 256, 260, 302
+- F2 partial: E11-00-PLAN:182 collapsed rollback to 2 actions, not RETRO §6.3's 3 actions
+- F3 not resolved: constitution.md:343 + RETRO §6.2 still had old "default-P1 + owner rotation" wording
+- NEW IMPORTANT: README:9 §Purpose said "pipeline ensures inter-persona finding uniqueness", false for Tier-B
+- NIT: PERSONA-ROTATION-STATE.md not created (acceptable on first Tier-B sub-phase)
+
+R3 fixes claim (commit e259a42):
+1. F1 fix: Updated E11-00-PLAN §1 success criterion (Tier-A=5/5; Tier-B=1/1 + rotation), §6 Required output split tier-aware (within-PR uniqueness Tier-A only), §6 aggregator Tier-A only / Tier-B = single verdict file, §8 verification table tier-aware, §9 closure #3 tier-aware, §11 trailer tier-aware.
+2. F2 fix: E11-00-PLAN:182 reproduced canonical RETRO §6.3 verbatim — 3 actions (rollback 3 sub-phases / open successor RETRO / re-engage Opus 4.7) + header "canonical = RETRO §6.3, constitution §Codex Persona Pipeline Tier-Trigger 引用".
+3. F3 fix: constitution.md:343 + RETRO §6.2 line 148 both updated to cross-sub-phase round-robin P1→P2→P3→P4→P5→P1, default start P1, state file pointer, "no consecutive same persona". constitution.md additionally inlines the `git diff --stat` counting command so the canonical rule layer is self-contained.
+4. NEW fix: README §Purpose split into Tier-A (within-PR uniqueness) + Tier-B (N/A, delegated to Surface Inventory + cross-sub-phase rotation + RETRO §6.3 rollback).
+5. Consistency fan-out: E11-00-PLAN §3.6 candidate-rule line 165, Counterargument #2 line 215 (tier-aware anti-bias), risk table line 243 (tier-aware cost), constitution.md:11 changelog (rotation note added).
+
+Files (R3 commit e259a42):
+- .planning/codex_personas/README.md
+- .planning/constitution.md
+- .planning/retrospectives/RETRO-V61-054-ui-copy-probe-birth.md
+- .planning/phases/E11-workbench-engineer-first-ux/E11-00-PLAN.md
+
+Your task: Verify each R2 finding is genuinely closed AND no new spec drift was introduced. Pay attention to:
+- Is rollback semantics now identical (3 actions verbatim) across constitution / RETRO §6.3 / E11-00-PLAN:182 / README §Cost? (no surviving 2-step or "re-evaluate" wording)
+- Is rotation rule now identical (cross-sub-phase round-robin) across all 4 docs? (no surviving "same sub-phase no repeat" or "default P1 + owner rotation")
+- Does §1 / §6 / §8 / §9 / §11 in E11-00-PLAN correctly distinguish Tier-A from Tier-B closure semantics?
+- Does §Purpose in README accurately describe what Tier-B inherits vs what Tier-A inherits, without overpromising uniqueness?
+- Counterargument #2's "(c) tier-aware anti-bias" claim accurate vs the actual rule layer?
+
+Output format (verbatim):
+```
+VERDICT: APPROVE | CHANGES_REQUIRED
+F1: [resolved | partial | not resolved] — <reason ≤2 lines>
+F2: [resolved | partial | not resolved] — <reason ≤2 lines>
+F3: [resolved | partial | not resolved] — <reason ≤2 lines>
+NEW_R2_IMPORTANT: [resolved | partial | not resolved] — <reason ≤2 lines>
+NEW_R3_FINDINGS:
+- <none | severity + ≤2 line summary>
+```
+
+Be ruthless. Every cross-doc claim above must hold; if even one document still has stale wording, mark not-resolved. If the consistency fan-out introduced new drift (e.g., counterargument's tier-aware claim contradicts what's in §6 Required output), flag it.
+
+Reply only with the structured output. No preamble.

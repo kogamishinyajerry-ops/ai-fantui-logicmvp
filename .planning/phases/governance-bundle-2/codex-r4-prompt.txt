@@ -1,0 +1,39 @@
+You are reviewing governance bundle #2 R4 (PR #14, branch feat/governance-bundle-2-persona-tier-trigger-20260425, commit fa4605b on top of 58426cf).
+
+History:
+- R1 (1f25bb5): CHANGES_REQUIRED — F1 BLOCKER tier-aware closure conflict, F2 IMPORTANT rollback divergence, F3 IMPORTANT trigger non-determinism
+- R2 (419286b → e259a42): R1 + R2 fixes (4-doc cross-coherence)
+- R3 (process crashed) → R3-fix (58426cf): README §命令模板 + §Cost residual drift fixed
+- R3-retry (58426cf): CHANGES_REQUIRED — F1 IMPORTANT Tier-B selection rule/template divergence, F2 IMPORTANT E11-00-PLAN §3.6 temporally stale
+- R4-fix (fa4605b, this PR): both R3-retry findings addressed
+
+R4-fix changes (4 files, 12+/13- lines):
+1. F1 fix — Tier-B selection SSOT: README:40 (rule table), README:116 (anti-bias #1), constitution.md:343 (canonical rule), RETRO §6.2:148 — all 4 spots reframed so `PERSONA-ROTATION-STATE.md` is the ONLY source of truth. Default = round-robin successor of last entry. Owner does not "override the round-robin"; owner "writes a non-default value to the state file". Hard constraint (no consecutive same persona) is rule-enforced, not owner-discretionary.
+2. F2 fix — E11-00-PLAN §3.6 historicized: Action column relabeled "历史决策表 (landed as PR #14)", removed "5-persona pipeline tier-trigger 候选规则" subsection, replaced with "触发条件 (landed)" pointing to constitution as canonical. "未在 §3.6 立法 → 当时未在 §3.6 立法" past-tense. §3.6 + §3.6.1 + §3.7 now form a single linear decision-arc.
+
+Files reviewed (R4 commit fa4605b):
+- .planning/codex_personas/README.md (lines 40, 116)
+- .planning/constitution.md (line 343)
+- .planning/retrospectives/RETRO-V61-054-ui-copy-probe-birth.md (line 148, §6.2)
+- .planning/phases/E11-workbench-engineer-first-ux/E11-00-PLAN.md (lines 155-168)
+
+Your task: Issue formal R4 verdict. Verify:
+
+1. Tier-B selection rule wording is now identical pattern across all 4 docs (state-file SSOT + default = round-robin successor + owner writes non-default + hard constraint = no consecutive repeat). No surviving "default starting P1 + owner override" mental model.
+2. E11-00-PLAN §3.6 + §3.6.1 form a single coherent decision-arc — no surviving "candidate / pending" framing alongside "已落地 PR #14" claim.
+3. constitution.md + README + RETRO + E11-00-PLAN all reference each other correctly (no orphan section pointers).
+4. The RUNNABLE example (README §命令模板:73-81) and the RULE TEXT now describe the same Tier-B selection process.
+
+Output format (verbatim):
+```
+VERDICT: APPROVE | CHANGES_REQUIRED
+R3-retry-F1 (Tier-B SSOT): [resolved | drift] — <≤2 lines>
+R3-retry-F2 (§3.6 historicized): [resolved | drift] — <≤2 lines>
+Cross-doc convergence (rule + template + closure + rollback + counting cmd): [resolved | drift] — <≤2 lines>
+NEW_R4_FINDINGS:
+- <none | severity + ≤2 line summary>
+```
+
+Be ruthless. If the rule text and the runnable template still describe different processes (e.g., one says "owner override", other says "state file SSOT"), flag drift. If §3.6 + §3.6.1 still have any residual "candidate" wording, flag drift. If a new contradiction was introduced by the historicization, flag NEW_R4.
+
+Reply only with structured output. No preamble.

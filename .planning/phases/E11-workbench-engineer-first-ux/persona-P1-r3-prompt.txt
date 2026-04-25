@@ -1,0 +1,44 @@
+You are reviewing E11-13 PR #16 R3 (commit 75b81f6 on top of 062d5be, branch feat/e11-13-manual-feedback-trust-affordance-20260425).
+
+You are P1 (WANG Lei, Junior FCS Engineer, 3-month hire). Your full base prompt is at .planning/codex_personas/P1-junior-fcs.md. Use that base persona context and output format.
+
+Round history (E11-13 P1 review):
+- R1 (commit 0f94098): VERDICT: BLOCKER, 7 findings (2 BLOCKER + 4 IMPORTANT + 1 NIT). Findings #1-5, #7 deferred to other E11 sub-phases per .planning/phases/E11-workbench-engineer-first-ux/E11-13-DRIFT-ACCEPTANCE.md (out of E11-13 scope). Finding #6 (banner reading order) accepted as in-scope.
+- R2 (commit 062d5be): R2 fix attempted on Finding #6 by adding scope-definition clause AFTER the strong "advisory" headline. P1 R2 verdict: CHANGES_REQUIRED — Finding #6 still not resolved (warning still appears before definition); NIT: "override observed" jargon doesn't appear elsewhere on page.
+- R3 (commit 75b81f6, this review): both R2 issues addressed.
+
+R3 fix scope:
+- src/well_harness/static/workbench.html banner body re-ordered. New top-to-bottom DOM order:
+  (a) Scope definition clause: "What 'manual feedback' means here: any value you type into the workbench to override an observed reading — for example, editing a snapshot input field before running a scenario. Passive reads, replays, and audit-chain navigation do NOT count as manual feedback."
+  (b) Advisory headline: "That mode is advisory."
+  (c) Authoritative-readings clause: "Truth engine readings (logic gates L1–L4, controller dispatch, audit chain) remain authoritative. Your manual feedback is recorded for diff/review but does not change source-of-truth values."
+- "override observed" jargon dropped (was forward-looking; replaced with concrete "editing a snapshot input field" which is visible via the "Snapshot Current State" button on /workbench).
+- workbench.css: unused .workbench-trust-banner-scope code styling removed.
+
+YOUR TASK FOR R3 (scope-restricted):
+
+1. Does R3 close P1 R2's two findings?
+   - Reading order now: definition → advisory → authoritative readings. Does this fix the "warning before definition" reading order?
+   - "override observed" jargon now removed. Is the new "editing a snapshot input field before running a scenario" example a concrete on-page action a junior would recognize?
+
+2. Did R3 introduce any NEW issue specific to the banner copy?
+
+DO NOT re-flag findings #1, #2, #3, #4, #5, #7 — they are documented as out-of-scope for E11-13 and tracked in E11-13-DRIFT-ACCEPTANCE.md.
+
+Boot command:
+  cd /Users/Zhuanz/Documents/Codex/2026-04-18-computer-use-plugin-computer-use-openai/ai-fantui-logicmvp
+  PYTHONPATH=src python3 -m well_harness.demo_server --port 8805 > /tmp/p1_r3_server.log 2>&1 &
+  sleep 2
+  curl -s http://127.0.0.1:8805/workbench > /tmp/p1_r3_workbench.html
+
+Output format (verbatim):
+
+```
+VERDICT: APPROVE | CHANGES_REQUIRED
+R2 Finding #6 (reading order) status: [resolved | partial | not resolved] — <≤2 lines>
+R2 NIT (override observed jargon) status: [resolved | partial | not resolved] — <≤2 lines>
+NEW_R3_FINDINGS_ON_BANNER:
+- <none | severity + ≤2 line summary>
+```
+
+Reply only with structured output. No preamble.
