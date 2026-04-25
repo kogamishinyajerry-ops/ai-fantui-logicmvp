@@ -248,6 +248,30 @@ Recorded as `DEC-20260425-WOW-A-FULL-AUTONOMY-GRANT` (Notion 04 决策日志 DB)
    - **[REWRITE]** 找不到锚点但功能已规划 → 文案改写为 `planned for <Phase-ID> scope` 或 `coming in <Phase-ID>`，并在 §Surface Inventory 标 `[planned:<Phase-ID>]`。
    - **[DELETE]** 找不到锚点且无规划 → 删除该 claim。
 
+#### Anchor 格式细则
+
+每一条 anchor 必须是 **可执行的 ripgrep / sed 命令的目标**，即 `<file>:<line>` 或 `<file>:<line-range>`。section-only 引用（如 `constitution.md §v5.2 红线`）不算 anchor，必须落到行号。
+
+**正面 claim**（"X feature 已 ship" / "Y 字段是 N 个" / "Z 类型是 SHA256"）：anchor 指向声明该 feature/字段/类型的具体源代码行。
+
+**负面 claim / 缺位 claim**（`behavior (negative)` / `feature-name (negative)` 类，如 "本期还没有 demo mode" / "JS 没有 approval handler"）：anchor 必须包含两部分：
+- **search-scope anchor**：声明被搜索的 file（或 file:line-range），必须支持 reviewer 用同一命令复跑 grep 验证
+- **peer-feature anchor**（可选但强烈推荐）：同一 file 中*存在*的相似 feature 的 file:line，用作对照（"这里有 view-mode-toggle 但没有 demo-mode-toggle"）
+
+**absence-claim 写作模板**：
+
+```
+src/well_harness/static/workbench.html:275-310 (view-mode-toggle-bar 存在；grep "demo-mode-toggle" 在该 file 内 0 hits)
+```
+
+或多文件 scope：
+
+```
+src/well_harness/static/workbench.js (grep "approval-action" 0 hits, 对照 :3641 preset-trigger handler 存在)
+```
+
+reviewer 抽查时复跑该 grep；若 hits 数与 anchor 描述不一致 → MISMATCH，进入 v2.3 失效条件。
+
 ### 与 v2.2 EMPIRICAL-CLAIM-PROBE 的关系
 - v2.2 治**数值/计算/百分比/SHA 等可量化断言**，对照源是计算复跑 / pytest / runs/。
 - v2.3 治**界面/行为/字段/角色等可定位断言**，对照源是 src/ ripgrep 锚点。
