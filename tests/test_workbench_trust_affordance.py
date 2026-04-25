@@ -52,7 +52,12 @@ def test_static_html_has_feedback_mode_chip() -> None:
 
 
 def test_static_html_has_trust_banner() -> None:
-    """Trust banner DOM + advisory copy + dismiss control present."""
+    """Trust banner DOM + advisory copy + dismiss control + scope definition present.
+
+    Scope-definition clause added in P1-R1 fix (Finding 6): the banner now
+    explains what counts as "manual feedback" so the advisory framing arrives
+    after the user knows what is being scoped.
+    """
     html = (STATIC_DIR / "workbench.html").read_text(encoding="utf-8")
     assert 'id="workbench-trust-banner"' in html
     assert "Manual feedback mode is advisory." in html
@@ -60,6 +65,10 @@ def test_static_html_has_trust_banner() -> None:
     assert "advisory" in html
     assert "data-trust-banner-dismiss" in html
     assert "Hide for session" in html
+    # P1-R1 Finding 6: scope definition before advisory framing
+    assert 'workbench-trust-banner-scope' in html
+    assert 'What counts as "manual feedback"' in html
+    assert "override observed" in html
 
 
 def test_static_css_has_feedback_mode_styling() -> None:
