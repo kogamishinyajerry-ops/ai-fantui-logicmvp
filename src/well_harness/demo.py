@@ -1701,4 +1701,7 @@ def _condition_requirement(comparison: str, threshold_value) -> str:
     if comparison == "between_exclusive" and isinstance(threshold_value, tuple):
         left, right = threshold_value
         return f"between_exclusive {_format_demo_value(left)}..{_format_demo_value(right)}"
+    if comparison == "between_lower_inclusive" and isinstance(threshold_value, tuple):
+        left, right = threshold_value
+        return f"between_lower_inclusive {_format_demo_value(left)}..{_format_demo_value(right)}"
     return f"{comparison} {_format_demo_value(threshold_value)}"

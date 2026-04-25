@@ -1,5 +1,8 @@
 # AI FANTUI LogicMVP — 震撼级立项汇报 Demo
 
+> **NOTE (Phase A · 2026-04-22):** 本文档包含 LLM / chat.html / `/api/chat/*` / `llm_client.py` / MiniMax / Ollama 相关条目，这些功能已搁置到 `archive/shelved/llm-features/`。**以下内容保留作历史参考，不代表当前代码库的活跃状态。** 详见 `archive/shelved/llm-features/SHELVED.md`。
+
+
 > Historical P19 presentation draft. Superseded by `docs/demo/pitch_script.md` / `docs/demo/faq.md` / `docs/demo/preflight_checklist.md` in P22. Do not use this file as the current pitch baseline.
 
 **适用场景**: 立项汇报 / 投资人演示 / 技术评审

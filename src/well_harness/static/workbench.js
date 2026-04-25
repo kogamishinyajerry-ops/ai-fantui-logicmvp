@@ -4,6 +4,7 @@ const workbenchRepairPath = "/api/workbench/repair";
 const workbenchArchiveRestorePath = "/api/workbench/archive-restore";
 const workbenchRecentArchivesPath = "/api/workbench/recent-archives";
 const workbenchPacketWorkspaceStorageKey = "well-harness-workbench-packet-workspace-v1";
+const draftDesignStateKey = "draft_design_state";
 const workbenchPersistedFieldIds = [
   "workbench-scenario-id",
   "workbench-fault-mode-id",
@@ -87,6 +88,52 @@ function bootWorkbenchShell() {
   bootWorkbenchColumnSafely("control", bootWorkbenchControlPanel);
   bootWorkbenchColumnSafely("document", bootWorkbenchDocumentPanel);
   bootWorkbenchColumnSafely("circuit", bootWorkbenchCircuitPanel);
+}
+
+// P43 authority contract — written only via assignFrozenSpec; never mutated directly
+let frozenSpec = null;
+
+// P43 workflow state machine (P43-03)
+let workflowState = "INIT";
+
+const _workflowTransitions = {
+  INIT:        { confirm_freeze: "FROZEN",      load_packet: "INIT" },
+  FROZEN:      { start_gen: "GENERATING",       confirm_freeze: "FROZEN",   reiterate: "INIT" },
+  GENERATING:  { gen_complete: "PANEL_READY",   gen_fail: "ERROR",          reiterate: "INIT" },
+  PANEL_READY: { final_approve: "APPROVING",    start_gen: "GENERATING",    reiterate: "INIT" },
+  APPROVING:   { approve_ok: "APPROVED",        approve_fail: "PANEL_READY" },
+  APPROVED:    { archive: "ARCHIVING" },
+  ARCHIVING:   { archive_ok: "ARCHIVED",        archive_fail: "APPROVED" },
+  ARCHIVED:    {},
+  ERROR:       { reiterate: "INIT" },
+};
+
+function dispatchWorkflowEvent(event) {
+  const next = (_workflowTransitions[workflowState] || {})[event];
+  if (next === undefined) {
+    return false;
+  }
+  workflowState = next;
+  updateWorkflowUI();
+  return true;
+}
+
+function updateWorkflowUI() {
+  const approveBtn  = workbenchElement("workbench-final-approve");
+  const startGenBtn = workbenchElement("workbench-start-gen");
+  const badge       = workbenchElement("workbench-workflow-state");
+
+  // "冻结审批 Spec" enabled when spec is not yet frozen or after generation
+  const approveEnabled = ["INIT", "PANEL_READY", "ANNOTATING", "WIRING"].includes(workflowState);
+  // "生成 (Frozen Spec)" enabled only when a frozen spec exists
+  const startGenEnabled = workflowState === "FROZEN";
+
+  if (approveBtn)  approveBtn.disabled  = !approveEnabled;
+  if (startGenBtn) startGenBtn.disabled = !startGenEnabled;
+  if (badge) {
+    badge.textContent    = workflowState;
+    badge.dataset.state  = workflowState.toLowerCase();
+  }
 }
 
 const workbenchPresets = {
@@ -339,6 +386,91 @@ async function refreshRecentWorkbenchArchives() {
     setRequestStatus(`刷新最近 archive 列表失败：${String(error.message || error)}`, "error");
   }
 }
+
+// ─── P43 authority helpers ────────────────────────────────────────────────────
+
+function deepFreeze(obj) {
+  if (obj === null || typeof obj !== "object") {
+    return obj;
+  }
+  Object.getOwnPropertyNames(obj).forEach((name) => {
+    deepFreeze(obj[name]);
+  });
+  return Object.freeze(obj);
+}
+
+function assignFrozenSpec(spec, origin) {  // origin: "freeze-event" | "archive-restore"
+  frozenSpec = deepFreeze(JSON.parse(JSON.stringify(spec)));
+}
+
+async function handleStartGen() {
+  if (frozenSpec === null) {
+    setRequestStatus("未找到已冻结规格 — 请先审批 Spec 再生成。", "error");
+    return;
+  }
+  // Write frozenSpec into the packet editor so runWorkbenchBundle() submits
+  // the frozen content, never a post-approval draft edit (R4 authority boundary)
+  const packetEl = workbenchElement("workbench-packet-json");
+  if (packetEl) {
+    packetEl.value = prettyJson(frozenSpec);
+    renderWorkbenchPacketDraftState();
+  }
+  if (!dispatchWorkflowEvent("start_gen")) {
+    setRequestStatus("当前工作流状态不允许启动生成。", "error");
+    return;
+  }
+  setCurrentWorkbenchRunLabel("Frozen Spec 生成");
+  const genOk = await runWorkbenchBundle();
+  dispatchWorkflowEvent(genOk ? "gen_complete" : "gen_fail");
+}
+
+function validateDraftAgainstFrozen(draft, frozen) {
+  if (frozen === null) {
+    return { valid: true, deviations: [] };
+  }
+  if (draft === null || typeof draft !== "object" || typeof frozen !== "object") {
+    return { valid: false, deviations: [{ field: "(root)", reason: "draft or frozen is not an object" }] };
+  }
+  const deviations = [];
+  for (const key of Object.keys(frozen)) {
+    if (JSON.stringify(frozen[key]) !== JSON.stringify(draft[key])) {
+      deviations.push({ field: key, frozen: frozen[key], draft: draft[key] });
+    }
+  }
+  return { valid: deviations.length === 0, deviations };
+}
+
+function handleFinalApprove() {
+  const packetEl = workbenchElement("workbench-packet-json");
+  const raw = packetEl ? packetEl.value : "";
+  let currentSpec;
+  try {
+    currentSpec = JSON.parse(raw || "{}");
+  } catch (error) {
+    setRequestStatus(`审批失败：Packet JSON 解析错误 — ${String(error.message || error)}`, "error");
+    return;
+  }
+
+  // Freeze the approved spec (R3 — only authorised write path)
+  assignFrozenSpec(currentSpec, "freeze-event");
+
+  // Delete draft immediately after freezing (R6)
+  clearDraftDesignState();
+
+  // Dispatch correct state machine event based on current state:
+  // PANEL_READY/ANNOTATING → final_approve → APPROVING → approve_ok → APPROVED
+  // INIT/FROZEN → confirm_freeze → FROZEN
+  if (workflowState === "PANEL_READY" || workflowState === "ANNOTATING") {
+    dispatchWorkflowEvent("final_approve");
+    dispatchWorkflowEvent("approve_ok");
+  } else {
+    dispatchWorkflowEvent("confirm_freeze");
+  }
+
+  setRequestStatus("Spec 已冻结。草稿已清除。可执行生成。", "success");
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function workbenchBrowserStorage() {
   try {
@@ -633,6 +765,51 @@ function loadPersistedWorkbenchPacketWorkspace() {
     return null;
   }
 }
+
+// ─── P43 draft_design_state persistence (UI-owned, never read by backend) ─────
+
+function saveDraftDesignState(draftObj) {
+  const storage = workbenchBrowserStorage();
+  if (!storage) {
+    return;
+  }
+  try {
+    storage.setItem(draftDesignStateKey, JSON.stringify(draftObj));
+  } catch (error) {
+    // Ignore persistence failures so the workbench stays usable.
+  }
+}
+
+function loadDraftDesignState() {
+  const storage = workbenchBrowserStorage();
+  if (!storage) {
+    return null;
+  }
+  const raw = storage.getItem(draftDesignStateKey);
+  if (!raw) {
+    return null;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    clearDraftDesignState();
+    return null;
+  }
+}
+
+function clearDraftDesignState() {
+  const storage = workbenchBrowserStorage();
+  if (!storage) {
+    return;
+  }
+  try {
+    storage.removeItem(draftDesignStateKey);
+  } catch (error) {
+    // Ignore cleanup failures.
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function workspaceSnapshotDownloadName() {
   const now = new Date();
@@ -2025,6 +2202,12 @@ async function restoreWorkbenchArchiveFromManifest() {
       fingerprintSummary: "已从 archive 恢复工作区。你可以继续编辑、重跑 bundle，或直接沿用归档里的历史结果继续交接。",
       successMessage: "已从 archive 恢复工作区。",
     })) {
+      try {
+        const restoredPacketSpec = JSON.parse(payload.workspace_snapshot.packetJsonText || "{}");
+        assignFrozenSpec(restoredPacketSpec, "archive-restore");
+      } catch (_) {
+        // Non-critical: frozen spec not updated if snapshot packet is unparseable
+      }
       setResultMode(sourceMode);
       return;
     }
@@ -2768,6 +2951,7 @@ function explainRuntimeSourceLabel(source) {
 }
 
 function explainRuntimeBadgeState(runtime) {
+  if (runtime.status === "shelved") return "shelved";
   if (!runtime.reported) return "idle";
   if (runtime.backendMatch === false || runtime.status === "warning") return "blocked";
   if (runtime.source === "cached_llm") return "ready";
@@ -2777,6 +2961,7 @@ function explainRuntimeBadgeState(runtime) {
 }
 
 function explainRuntimeBadgeText(runtime) {
+  if (runtime.status === "shelved") return "已搁置";
   if (!runtime.reported) return "未报告";
   if (runtime.backendMatch === false) return "后端不一致";
   if (runtime.status === "ready" && runtime.source === "cached_llm") return "缓存已验证";
@@ -2802,6 +2987,22 @@ function renderExplainRuntime(payload) {
   const runtime = readExplainRuntimePayload(payload);
   badge.dataset.state = explainRuntimeBadgeState(runtime);
   badge.textContent = explainRuntimeBadgeText(runtime);
+
+  // Phase A (2026-04-22): LLM features shelved. Short-circuit to a clean
+  // "shelved" rendering so the cache/backend/source panels don't misreport
+  // zero-counters as observed prewarm telemetry.
+  if (runtime.status === "shelved") {
+    summary.textContent = runtime.detail || "LLM explain 功能已搁置。";
+    backendStrong.textContent = "已搁置";
+    backendDetail.textContent = "LLM 后端已从活跃代码库搁置，见 archive/shelved/llm-features/SHELVED.md。";
+    sourceStrong.textContent = "已搁置";
+    sourceDetail.textContent = "explain 路由已移除，不会产生新的观察记录。";
+    cacheStrong.textContent = "已搁置";
+    cacheDetail.textContent = "LLM 缓存链路已停用；无 cached_at / 命中统计。";
+    boundaryStrong.textContent = runtime.boundaryNote || "LLM 已搁置 — 非控制真值";
+    return;
+  }
+
   if (!runtime.reported) {
     summary.textContent = "当前 workbench 响应还没带 explain runtime 观察值，所以这里只保留占位。";
   } else if (runtime.observedAt) {
@@ -3290,13 +3491,13 @@ async function runWorkbenchBundle() {
     requestPayload = collectWorkbenchRequestPayload();
   } catch (error) {
     if (!isLatestWorkbenchRequest(requestId)) {
-      return;
+      return false;
     }
     renderFailureResponse(String(error.message || error), {
       sourceMode: "当前来源：输入解析失败。",
       requestStatusMessage: String(error.message || error),
     });
-    return;
+    return false;
   }
   maybeCaptureCurrentPacketRevision({
     title: `${currentWorkbenchRunLabel} / 运行前 Packet`,
@@ -3317,17 +3518,19 @@ async function runWorkbenchBundle() {
     });
     const payload = await response.json();
     if (!isLatestWorkbenchRequest(requestId)) {
-      return;
+      return false;
     }
     if (!response.ok) {
       throw new Error(payload.message || payload.error || "workbench bundle request failed");
     }
     renderBundleResponse(payload);
+    return true;
   } catch (error) {
     if (!isLatestWorkbenchRequest(requestId)) {
-      return;
+      return false;
     }
     renderFailureResponse(String(error.message || error));
+    return false;
   }
 }
 
@@ -3443,10 +3646,25 @@ function installExecutionHandlers() {
   });
 }
 
+function installP43Handlers() {
+  const approveBtn = workbenchElement("workbench-final-approve");
+  if (approveBtn) {
+    approveBtn.addEventListener("click", () => { handleFinalApprove(); });
+  }
+  const startGenBtn = workbenchElement("workbench-start-gen");
+  if (startGenBtn) {
+    startGenBtn.addEventListener("click", () => { void handleStartGen(); });
+  }
+}
+
 function installPersistenceHandlers() {
   workbenchElement("workbench-packet-json").addEventListener("input", () => {
     renderWorkbenchPacketDraftState();
     persistWorkbenchPacketWorkspace();
+    saveDraftDesignState({
+      packetJsonText: workbenchElement("workbench-packet-json").value,
+      savedAt: new Date().toISOString(),
+    });
   });
 
   workbenchPersistedFieldIds.forEach((id) => {
@@ -3490,6 +3708,7 @@ function installToolbarHandlers() {
   installExecutionHandlers();
   installPersistenceHandlers();
   installRecoveryAndRepairHandlers();
+  installP43Handlers();
 }
 
 function installViewModeHandlers() {
@@ -3522,6 +3741,7 @@ window.addEventListener("DOMContentLoaded", () => {
   bootWorkbenchShell();
   installViewModeHandlers();
   installToolbarHandlers();
+  updateWorkflowUI();
   if (checkUrlIntakeParam()) {
     const bundleBtn = workbenchElement("run-workbench-bundle") || workbenchElement("workbench-bundle-btn");
     if (bundleBtn) {

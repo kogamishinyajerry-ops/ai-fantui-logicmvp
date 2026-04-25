@@ -304,6 +304,7 @@ def _generate_evaluate_snapshot(spec: dict, system_id: str) -> tuple[list[str], 
         "neq": "lv != threshold",
         "after_unlock": "_eval_after_unlock(lv, threshold, snap)",
         "between_exclusive": "_eval_between_exclusive(lv, threshold, snap)",
+        "between_lower_inclusive": "_eval_between_lower_inclusive(lv, threshold, snap)",
     }
 
     eval_lines.append("")
@@ -348,7 +349,7 @@ def _generate_evaluate_snapshot(spec: dict, system_id: str) -> tuple[list[str], 
             # Threshold: if it's a string component ID, resolve it; otherwise use as Python literal
             if isinstance(threshold_val, str) and threshold_val in comp_value_lookup:
                 eval_lines.append(f"            threshold_{cond_name} = self._resolve_param({json.dumps(threshold_val)}, snap)")
-            elif comp == "between_exclusive" and isinstance(threshold_val, (list, tuple)):
+            elif comp in ("between_exclusive", "between_lower_inclusive") and isinstance(threshold_val, (list, tuple)):
                 eval_lines.append(f"            threshold_{cond_name} = {threshold_val!r}")
             else:
                 eval_lines.append(f"            threshold_{cond_name} = {_py_literal(threshold_val)}")
@@ -358,6 +359,8 @@ def _generate_evaluate_snapshot(spec: dict, system_id: str) -> tuple[list[str], 
                 eval_lines.append(f"            cond_{cond_name}_passed = self._eval_after_unlock(lv_{cond_name}, threshold_{cond_name}, snap)")
             elif comp == "between_exclusive":
                 eval_lines.append(f"            cond_{cond_name}_passed = self._eval_between_exclusive(lv_{cond_name}, threshold_{cond_name}, snap)")
+            elif comp == "between_lower_inclusive":
+                eval_lines.append(f"            cond_{cond_name}_passed = self._eval_between_lower_inclusive(lv_{cond_name}, threshold_{cond_name}, snap)")
             else:
                 eval_lines.append(f"            try:")
                 eval_lines.append(f"                lv = lv_{cond_name}")
@@ -481,6 +484,7 @@ def _generate_condition_helpers(comparisons_used: set[str]) -> list[str]:
 
     needs_after_unlock = "after_unlock" in comparisons_used
     needs_between_exclusive = "between_exclusive" in comparisons_used
+    needs_between_lower_inclusive = "between_lower_inclusive" in comparisons_used
 
     if needs_after_unlock:
         lines.append("    @staticmethod")
@@ -500,6 +504,20 @@ def _generate_condition_helpers(comparisons_used: set[str]) -> list[str]:
         lines.append("        try:")
         lines.append("            lv_f = float(lv)")
         lines.append("            return float(lower) < lv_f < float(upper)")
+        lines.append("        except (TypeError, ValueError):")
+        lines.append("            return False")
+        lines.append("")
+
+    if needs_between_lower_inclusive:
+        lines.append("    @staticmethod")
+        lines.append("    def _eval_between_lower_inclusive(lv: Any, threshold: Any, snap: dict) -> bool:")
+        lines.append("        # between_lower_inclusive: lower <= lv < upper")
+        lines.append("        if not isinstance(threshold, (list, tuple)) or len(threshold) != 2:")
+        lines.append("            return False")
+        lines.append("        lower, upper = threshold")
+        lines.append("        try:")
+        lines.append("            lv_f = float(lv)")
+        lines.append("            return float(lower) <= lv_f < float(upper)")
         lines.append("        except (TypeError, ValueError):")
         lines.append("            return False")
         lines.append("")

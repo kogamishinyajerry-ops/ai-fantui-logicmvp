@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FANTUI LogicMVP · 民航反推控制逻辑验证工作台</title>
+<link rel="stylesheet" href="/unified-nav.css">
+<style>
+  :root {
+    --home-bg:      #05111c;
+    --home-panel:   #0b1624;
+    --home-border:  #1e3050;
+    --home-text:    #c6d5e8;
+    --home-dim:     #6a7d95;
+    --home-accent:  #00c8f5;
+    --home-active:  #00e5a0;
+    --home-warn:    #f5c518;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--home-bg); color: var(--home-text); font-family: "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", sans-serif; min-height: 100vh; }
+  body.unified-nav-enabled { padding-top: 48px; }
+
+  .home-main {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 32px 32px 64px;
+  }
+  .home-hero {
+    border: 1px solid var(--home-border);
+    background: linear-gradient(135deg, rgba(0,200,245,0.04), rgba(0,229,160,0.02));
+    padding: 24px 28px;
+    margin-bottom: 28px;
+  }
+  .home-hero h1 {
+    margin: 0 0 6px;
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--home-accent);
+    letter-spacing: 0.03em;
+  }
+  .home-hero p {
+    margin: 0;
+    color: var(--home-dim);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .home-hero strong { color: var(--home-text); font-weight: 500; }
+
+  .home-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 960px) {
+    .home-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .home-grid { grid-template-columns: 1fr; }
+  }
+
+  .home-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--home-panel);
+    border: 1px solid var(--home-border);
+    padding: 18px 18px 16px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s ease, transform 0.15s ease, background 0.15s ease;
+    min-height: 148px;
+  }
+  .home-card:hover {
+    border-color: var(--home-accent);
+    background: rgba(0,200,245,0.03);
+    transform: translateY(-1px);
+  }
+  .home-card[data-external="true"]:hover {
+    border-color: var(--home-warn);
+  }
+
+  .home-card-kind {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--home-dim);
+    font-family: 'Courier New', monospace;
+    margin-bottom: 8px;
+  }
+  .home-card[data-scope="workstation"] .home-card-kind { color: var(--home-active); }
+  .home-card[data-scope="circuit"]     .home-card-kind { color: var(--home-accent); }
+  .home-card[data-scope="simulation"]  .home-card-kind { color: var(--home-warn); }
+  .home-card[data-scope="docs"]        .home-card-kind { color: #b07af5; }
+
+  .home-card-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--home-text);
+    margin: 0 0 6px;
+  }
+  .home-card-subtitle {
+    font-size: 11px;
+    color: var(--home-dim);
+    font-family: 'Courier New', monospace;
+    margin: 0 0 10px;
+  }
+  .home-card-desc {
+    font-size: 12px;
+    color: var(--home-text);
+    line-height: 1.55;
+    opacity: 0.78;
+    flex: 1;
+  }
+  .home-card-arrow {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    color: var(--home-dim);
+    font-size: 14px;
+  }
+  .home-card:hover .home-card-arrow { color: var(--home-accent); }
+  .home-card[data-external="true"] .home-card-arrow::after {
+    content: "↗";
+    margin-left: 2px;
+  }
+
+  .home-footer {
+    margin-top: 32px;
+    padding: 16px 18px;
+    border-top: 1px solid var(--home-border);
+    font-size: 11px;
+    color: var(--home-dim);
+    line-height: 1.7;
+  }
+  .home-footer code { font-family: 'Courier New', monospace; color: var(--home-text); }
+
+  /* ── Business Brief ── */
+  .home-brief {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 640px) { .home-brief { grid-template-columns: 1fr; } }
+  .home-brief-block {
+    background: var(--home-panel);
+    border: 1px solid var(--home-border);
+    padding: 16px 18px;
+  }
+  .home-brief-block h2 {
+    margin: 0 0 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--home-dim);
+    font-family: 'Courier New', monospace;
+  }
+  .home-brief-block p {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--home-text);
+    line-height: 1.65;
+  }
+  .home-brief-block strong { color: var(--home-accent); font-weight: 500; }
+
+  /* ── Metrics strip ── */
+  .home-metrics {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--home-border);
+    margin-bottom: 24px;
+    overflow: hidden;
+  }
+  .home-metric {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 14px 12px;
+    border-right: 1px solid var(--home-border);
+    background: var(--home-panel);
+  }
+  .home-metric:last-child { border-right: none; }
+  .home-metric-value {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--home-active);
+    font-family: 'Courier New', monospace;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .home-metric-label {
+    font-size: 10px;
+    color: var(--home-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-align: center;
+  }
+
+  /* ── Demo guide ── */
+  .home-guide {
+    margin-top: 24px;
+    border: 1px solid var(--home-border);
+    background: var(--home-panel);
+    padding: 18px 22px;
+  }
+  .home-guide h2 {
+    margin: 0 0 14px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--home-dim);
+    font-family: 'Courier New', monospace;
+  }
+  .home-guide-steps {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  @media (max-width: 640px) { .home-guide-steps { grid-template-columns: 1fr; } }
+  .home-guide-steps li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    font-size: 12px;
+    color: var(--home-text);
+    line-height: 1.55;
+  }
+  .home-guide-step-num {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    background: rgba(0,200,245,0.12);
+    border: 1px solid rgba(0,200,245,0.3);
+    color: var(--home-accent);
+    font-size: 10px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .home-guide-steps strong { color: var(--home-accent); font-weight: 500; }
+  .home-guide-steps em { color: var(--home-dim); font-style: normal; }
+</style>
+</head>
+<body class="unified-nav-enabled" data-nav-current="home">
+
+<header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
+  <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">工作台</span>
+      <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">反推逻辑</a>
+      <a href="/c919_etras_workstation.html" class="unified-nav-link" data-nav-key="etras">C919 E-TRAS</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">电路图</span>
+      <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
+      <a href="/c919_etras_panel/circuit.html" class="unified-nav-link" data-nav-key="etras-circuit">E-TRAS 电路</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">仿真</span>
+      <a href="/fan_console.html" class="unified-nav-link" data-nav-key="fan-console">反推操作台</a>
+      <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">文档</span>
+      <a href="/fantui_requirements.html" class="unified-nav-link" data-nav-key="fantui-req">FANTUI 需求</a>
+      <a href="/c919_requirements.html" class="unified-nav-link" data-nav-key="c919-req">C919 需求</a>
+    </div>
+  </div>
+</header>
+
+<main class="home-main">
+  <section class="home-hero" aria-labelledby="home-hero-title">
+    <h1 id="home-hero-title">FANTUI LogicMVP · 民航推力反向器控制逻辑 · 需求到验证证据工作台</h1>
+    <p>
+      面向民用航空发动机控制工程师的 <strong>AI 辅助设计验证工具</strong>。参考对象：C919 电动反推驱动系统 (E-TRAS)。
+      将控制逻辑需求规范与可执行验证证据直接绑定——规范变更立即触发全链路刷新，消除传统人工翻译断层。
+    </p>
+  </section>
+
+  <!-- Business brief: what + why -->
+  <div class="home-brief" role="region" aria-label="项目简报">
+    <div class="home-brief-block">
+      <h2>这是什么</h2>
+      <p>
+        传统控制逻辑验证依赖工程师手工翻译规范文档为测试用例，周期长且容易遗漏。
+        本工作台通过 <strong>adapter 层将规范直接绑定到可执行逻辑</strong>，
+        提供从"反推拉杆位移"到"油门锁释放命令"的全链路信号级可视化验证，
+        每个逻辑条件均有 Python 真值源支撑，可追溯至 C919 FADEC 规范条款。
+      </p>
+    </div>
+    <div class="home-brief-block">
+      <h2>解决什么问题</h2>
+      <p>
+        民航适航验证的核心挑战是 <strong>需求→设计→实现 三层之间的可追溯性</strong>。
+        本工作台将控制逻辑的每个 AND 门条件映射到具体 adapter 接口，
+        支持故障注入仿真（SW 卡死/传感器失效/逻辑门固断），
+        为设计评审提供可复现的工程验证证据（内部研究用途，不构成适航合规声明）。
+      </p>
+    </div>
+  </div>
+
+  <!-- Metrics strip -->
+  <div class="home-metrics" role="region" aria-label="验证基线指标">
+    <div class="home-metric">
+      <span class="home-metric-value">726</span>
+      <span class="home-metric-label">测试全绿</span>
+    </div>
+    <div class="home-metric">
+      <span class="home-metric-value">L1–L4</span>
+      <span class="home-metric-label">控制逻辑层</span>
+    </div>
+    <div class="home-metric">
+      <span class="home-metric-value">E-TRAS</span>
+      <span class="home-metric-label">C919 参考系统</span>
+    </div>
+    <div class="home-metric">
+      <span class="home-metric-value">12+</span>
+      <span class="home-metric-label">故障注入场景</span>
+    </div>
+    <div class="home-metric">
+      <span class="home-metric-value">CCAR-25</span>
+      <span class="home-metric-label">适航参考标准</span>
+    </div>
+  </div>
+
+  <section class="home-grid" aria-label="功能入口">
+    <!-- 工作台 -->
+    <a href="/demo.html" class="home-card" data-scope="workstation" aria-labelledby="card-demo-title">
+      <span class="home-card-kind">工作台</span>
+      <h2 class="home-card-title" id="card-demo-title">反推逻辑工作台</h2>
+      <p class="home-card-subtitle">/demo.html</p>
+      <p class="home-card-desc">油门拉杆位置 → 位置开关 → 4 层 AND 逻辑门 → 油门锁释放命令。实时信号链路可视化 + 故障注入。5 个场景预设，含着陆展开全链路。</p>
+      <span class="home-card-arrow">→</span>
+    </a>
+
+    <a href="/c919_etras_workstation.html" class="home-card" data-scope="workstation" aria-labelledby="card-etras-title">
+      <span class="home-card-kind">工作台</span>
+      <h2 class="home-card-title" id="card-etras-title">C919 E-TRAS 工作台</h2>
+      <p class="home-card-subtitle">/c919_etras_workstation.html</p>
+      <p class="home-card-desc">C919 电动反推完整展开链：EICU 双通道 → FADEC 部署命令。6 预设场景 + 蒙特卡洛可靠度仿真，支持故障树验证。</p>
+      <span class="home-card-arrow">→</span>
+    </a>
+
+    <!-- 仿真（第 1 行第 3 个）-->
+    <a href="http://127.0.0.1:9191/" class="home-card" data-scope="simulation" data-external="true" aria-labelledby="card-panel-title">
+      <span class="home-card-kind">仿真 · 外部服务</span>
+      <h2 class="home-card-title" id="card-panel-title">C919 MFD 仿真面板</h2>
+      <p class="home-card-subtitle">http://127.0.0.1:9191</p>
+      <p class="home-card-desc">有状态机的动态重放。需另起 <code>scripts/c919_etras_panel_server.py</code>。</p>
+      <span class="home-card-arrow">→</span>
+    </a>
+
+    <!-- 电路图 -->
+    <a href="/fantui_circuit.html" class="home-card" data-scope="circuit" aria-labelledby="card-fantui-circuit-title">
+      <span class="home-card-kind">电路图</span>
+      <h2 class="home-card-title" id="card-fantui-circuit-title">反推电路图</h2>
+      <p class="home-card-subtitle">/fantui_circuit.html</p>
+      <p class="home-card-desc">FANTUI 域内静态 SVG：controller.py::DeployController 信号拓扑。</p>
+      <span class="home-card-arrow">→</span>
+    </a>
+
+    <a href="/c919_etras_panel/circuit.html" class="home-card" data-scope="circuit" aria-labelledby="card-etras-circuit-title">
+      <span class="home-card-kind">电路图</span>
+      <h2 class="home-card-title" id="card-etras-circuit-title">E-TRAS 电路图</h2>
+      <p class="home-card-subtitle">/c919_etras_panel/circuit.html</p>
+      <p class="home-card-desc">C919 thrust-reverser PDF §2 静态 SVG 拓扑，对应 frozen_v1 规范。</p>
+      <span class="home-card-arrow">→</span>
+    </a>
+
+    <!-- 第 6 格：反推实时操作台（覆盖旧版 fan_sim_panel 的全部能力） -->
+    <a href="/fan_console.html" class="home-card" data-scope="simulation" aria-labelledby="card-fan-console-title">
+      <span class="home-card-kind">仿真</span>
+      <h2 class="home-card-title" id="card-fan-console-title">反推实时操作台</h2>
+      <p class="home-card-subtitle">/fan_console.html</p>
+      <p class="home-card-desc">高自由度 tick 驱动的反推仿真：TRA 杠杆 / RA / N1k 实时可调，L1–L4 逻辑门 + 命令 + VDT 仪表 + 时间-状态曲线抽屉，覆盖展开 / 收起 / 抑制 / 过温全链路。</p>
+      <span class="home-card-arrow">→</span>
+    </a>
+
+    <!-- 文档：需求分析 -->
+    <a href="/fantui_requirements.html" class="home-card" data-scope="docs" aria-labelledby="card-fantui-req-title">
+      <span class="home-card-kind">文档</span>
+      <h2 class="home-card-title" id="card-fantui-req-title">FANTUI 需求分析</h2>
+      <p class="home-card-subtitle">/fantui_requirements.html</p>
+      <p class="home-card-desc">SR / FR / IR / PR 需求规范 + AI 设计决策 D1–D5 + 12 条需求→代码可追溯矩阵 + L1–L4 控制逻辑推导过程。</p>
+      <span class="home-card-arrow">→</span>
+    </a>
+
+    <a href="/c919_requirements.html" class="home-card" data-scope="docs" aria-labelledby="card-c919-req-title">
+      <span class="home-card-kind">文档</span>
+      <h2 class="home-card-title" id="card-c919-req-title">C919 需求分析</h2>
+      <p class="home-card-subtitle">/c919_requirements.html</p>
+      <p class="home-card-desc">AR / SM / FR 架构需求 + 12 态状态机 S0–SF + AI 推导决策 C1–C4（为何 FANTUI 无状态→C919 状态机）+ 状态→命令可追溯矩阵。</p>
+      <span class="home-card-arrow">→</span>
+    </a>
+  </section>
+
+  <!-- Demo guide for evaluators -->
+  <nav class="home-guide" aria-labelledby="home-guide-title">
+    <h2 id="home-guide-title">评审演示路径 · 建议顺序</h2>
+    <ol class="home-guide-steps">
+      <li>
+        <span class="home-guide-step-num">1</span>
+        <span>
+          进入 <strong>反推逻辑工作台</strong>，点击预设「着陆展开全链路」，
+          观察 L1→L2→L3→L4 信号链依次激活，绿色连线代表条件满足。
+          <em>（展示：正常部署逻辑完整性）</em>
+        </span>
+      </li>
+      <li>
+        <span class="home-guide-step-num">2</span>
+        <span>
+          在「故障注入」面板勾选 <strong>SW1 stuck_off</strong>，
+          观察 L1 因单点失效锁死，油门锁无法释放。
+          <em>（展示：安全联锁有效性 / FMEA 可验证性）</em>
+        </span>
+      </li>
+      <li>
+        <span class="home-guide-step-num">3</span>
+        <span>
+          切换到 <strong>C919 E-TRAS 工作台</strong>，选择预设「正常展开」，
+          观察 EICU CMD2→CMD3→FADEC_Deploy 的双通道激活顺序。
+          <em>（展示：实机架构对应关系）</em>
+        </span>
+      </li>
+      <li>
+        <span class="home-guide-step-num">4</span>
+        <span>
+          查看 <strong>反推电路图</strong>，确认 SVG 拓扑与
+          <code>controller.py::DeployController</code> 信号一一对应。
+          <em>（展示：规范→代码→可视化三层追溯）</em>
+        </span>
+      </li>
+    </ol>
+  </nav>
+
+  <footer class="home-footer">
+    <p>
+      <strong style="color:var(--home-text)">真值源</strong>：<code>src/well_harness/adapters/*.py</code> ·
+      <strong style="color:var(--home-text)">启动服务</strong>：<code>python3 -m well_harness.demo_server --host 127.0.0.1 --port 8002</code> ·
+      <strong style="color:var(--home-text)">验证覆盖</strong>：726 passed · 主分支 CI 全绿
+    </p>
+  </footer>
+</main>
+
+</body>
+</html>

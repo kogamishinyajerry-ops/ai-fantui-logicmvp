@@ -1,20 +1,25 @@
 # Well Harness
 
-## Project Status: Frozen (2026-04-14)
+## Project Status: `main@433949d` · P43-03 DONE · 726 tests green (updated 2026-04-22)
 
-All P0-P15 phases are complete and approved by Opus 4.6. This project is in maintenance mode — no new feature development. Only regression protection and critical security hardening are active.
+**Current work**: P43-02 Batch execution (P43-03 complete · P43-04 pending). See `.planning/STATE.md` for the current phase, `.planning/ROADMAP.md` for phase history.
 
-See [ROADMAP.md](.planning/ROADMAP.md) for the full phase history and Milestone 8 closure record.
+**Branch note**: Active development is on `main`. The `claude/c919-etras-frozen-v1-migration` branch carried the C919 E-TRAS frozen_v1 reference engine and has been merged. The original `main` was frozen at Milestone 9 (2026-04-15) after P0-P16; scope has since expanded through P43. LLM chat/P14/P15 removed from active code, see `archive/shelved/llm-features/SHELVED.md`.
 
-`well-harness` is a lightweight simulation harness for the thrust reverser deploy logic we have confirmed in the discussion.
+`well-harness` is an engineering workbench for aviation control logic — from requirements and specifications to runtime verification evidence. The core workflow is:
 
-The first cut focuses on deploy-only behavior:
+`requirements / source material → spec clarification → adapter truth → playback → diagnosis → knowledge artifact → bundle/archive → traceability`
 
-- control logic 1 through 4
-- throttle lever reverse pull-back and return
-- SW1 / SW2 latched switch behavior
-- a simplified plant model for TLS / PLS / VDT feedback
-- a CLI that prints a timeline for debugging
+The reference system is the C919 thrust reverser deploy control logic. The workbench currently covers:
+
+- adapter-backed control logic evaluation (logic 1 through 4)
+- playback simulation with throttle lever, SW1 / SW2 latch model, and plant feedback
+- diagnosis traces linking logic transitions to before/after condition evidence
+- knowledge artifact and workbench bundle generation for archiving and review
+- a deterministic demo layer (`well_harness demo`) for controlled live reasoning — not a full AI system
+- a CLI and local UI shell for engineering debugging and presenter walkthroughs
+
+The simplified plant model (TLS / PLS / VDT feedback) is an intentional first-cut for control sequencing. It is not a complete physical actuator model. The confirmed control truth lives in `controller.py` and is not modified by the demo or UI layers.
 
 ## Architecture
 

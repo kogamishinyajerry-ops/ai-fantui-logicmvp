@@ -2,7 +2,7 @@
 
 > **给谁看：** Kogami + 演讲演练团队
 > **回答什么：** pitch_script.md 的 7 段硬时间表，在真实 backend 下每段 backend API 叠加时间是否容得下？
-> **研究方法：** `scripts/integrated_timing_rehearsal.py` × 双后端 × N=2 真跑
+> **研究方法：** `archive/shelved/llm-features/scripts/integrated_timing_rehearsal.py` × 双后端 × N=2 真跑
 > **最新更新：** 2026-04-18
 
 ---
@@ -131,8 +131,8 @@ pitch_script.md 第 10–21 行固定的 7 段硬时间表里，标有 backend A
 ## 五、复现
 
 ```bash
-python3 scripts/integrated_timing_rehearsal.py --backend minimax
-python3 scripts/integrated_timing_rehearsal.py --backend ollama --ollama-model qwen2.5:7b-instruct
+python3 archive/shelved/llm-features/scripts/integrated_timing_rehearsal.py --backend minimax
+python3 archive/shelved/llm-features/scripts/integrated_timing_rehearsal.py --backend ollama --ollama-model qwen2.5:7b-instruct
 ```
 
 Artefacts 自动落 `runs/integrated_timing_<backend>_<ts>/report.json` +

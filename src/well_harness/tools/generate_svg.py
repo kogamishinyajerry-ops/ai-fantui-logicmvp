@@ -11,7 +11,7 @@ Usage:
 The output is a self-contained HTML `<g>` element containing:
   - Node groups (<g class="node-group" data-node="...">) for every component
   - Connection lines (<line data-conn-from="..." data-conn-to="...">) for every edge
-  - Color scheme matching chat.html (input=cyan, logic=orange, command=blue, final=green)
+  - Color scheme: input=cyan, logic=orange, command=blue, final=green (legacy chat.html palette; chat.html shelved 2026-04-22)
 
 Layout algorithm: hierarchical grid with topological sorting.
   - Level 0: root/input components (no logic condition sources them)

@@ -3,9 +3,9 @@
 <!-- AUTO-SYNCED COORDINATION PLAN SNAPSHOT START -->
 ## 当前自动同步快照
 
-- 当前阶段：`P30 Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2`
-- 当前已验证 Plan：`P30-00-TIER1 Scorecard 语义与 findings §5.1 决策对齐 — integrated_timing 两 backend 合并为 best-of-2 维度`
-- 最近成功执行证据：`P30 explain runtime + prewarm visibility sync`
+- 当前阶段：`P43 Control Logic Workbench end-to-end milestone`
+- 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
+- 最近成功执行证据：`controller L4 reverse_travel bound + L1 post-deploy clarity · Codex APPROVE · main=9d18f05`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - 当前证据模式：`repo-doc fallback mode`
@@ -39,8 +39,8 @@
 
 - [Notion 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
 - [01 当前状态（自动同步）](https://www.notion.so/346c6894-2bed-81cf-afd0-d060768d56d7)
-- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/346c6894-2bed-81cb-9a11-fb66c1d2e723)
-- [10 Freeze Demo Packet](https://www.notion.so/341c6894-2bed-8104-9ab1-f133d6da80f4)
+- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/34ac6894-2bed-81ec-908b-f5268e22ac9d)
+- [10 Freeze Demo Packet](https://www.notion.so/34ac6894-2bed-8159-aec4-e99f7b3d2f51)
 - [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)
 - [GitHub Actions](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
 

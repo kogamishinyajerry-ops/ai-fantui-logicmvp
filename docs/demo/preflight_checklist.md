@@ -50,9 +50,9 @@
 
 | # | 项目 | 一键命令 | Pass 信号 | Fail 处置 |
 | -- | ---- | -------- | --------- | --------- |
-| 14 | 双后端 rehearsal | `python3 scripts/demo_rehearsal_dual_backend.py 2>&1 | tail -3` | `verdict=PASS` | Ollama 重启 / 按 disaster_runbook 场景 1 |
+| 14 | 双后端 rehearsal | `python3 archive/shelved/llm-features/scripts/demo_rehearsal_dual_backend.py 2>&1 | tail -3` | `verdict=PASS` | Ollama 重启 / 按 disaster_runbook 场景 1 |
 | 15 | Dress rehearsal（wow 轨）| `python3 scripts/dress_rehearsal.py 2>&1 | tail -3` | `13/13 pass` | 查 controller.py 回归 |
-| 16 | Pitch prewarm（explain 缓存）| `python3 scripts/pitch_prewarm.py 2>&1 | tail -3` | `verdict=GREEN` 且 `cache_hits=2/2` | 检查 backend 是否启动 / 看 runs/pitch_prewarm_*/report.json |
+| 16 | Pitch prewarm（explain 缓存）| `python3 archive/shelved/llm-features/scripts/pitch_prewarm.py 2>&1 | tail -3` | `verdict=GREEN` 且 `cache_hits=2/2` | 检查 backend 是否启动 / 看 runs/pitch_prewarm_*/report.json |
 
 ---
 
@@ -88,13 +88,13 @@ python3 -m pytest --tb=short -q 2>&1 | tail -3
 python3 -m pytest -m e2e --tb=short -q 2>&1 | tail -3
 
 # Dual-backend rehearsal
-python3 scripts/demo_rehearsal_dual_backend.py --skip-minimax-if-no-key --skip-ollama-if-unreachable 2>&1 | tail -5
+python3 archive/shelved/llm-features/scripts/demo_rehearsal_dual_backend.py --skip-minimax-if-no-key --skip-ollama-if-unreachable 2>&1 | tail -5
 
 # Dress rehearsal
 python3 scripts/dress_rehearsal.py 2>&1 | tail -3
 
 # Pitch prewarm (explain 缓存)
-python3 scripts/pitch_prewarm.py 2>&1 | tail -3
+python3 archive/shelved/llm-features/scripts/pitch_prewarm.py 2>&1 | tail -3
 ```
 
 **四行绿 + verdict=PASS + 13/13 + verdict=GREEN + cache_hits=2/2 = 全部 pass。** 看到任何红即按 disaster_runbook 处置。
@@ -111,7 +111,7 @@ python3 scripts/pitch_prewarm.py 2>&1 | tail -3
 │       OLLAMA_MODEL=qwen2.5:7b-instruct           │
 │       pkill -f demo_server                       │
 │       python3 -m well_harness.demo_server &      │
-│       python3 scripts/pitch_prewarm.py           │
+│       python3 archive/shelved/llm-features/scripts/pitch_prewarm.py           │
 │       Cmd-Shift-R                                │
 │                                                  │
 │  2. Ollama 也挂？                                 │

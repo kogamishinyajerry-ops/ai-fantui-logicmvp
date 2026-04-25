@@ -24,7 +24,7 @@
    export LLM_BACKEND=ollama
    export OLLAMA_MODEL=qwen2.5:7b-instruct   # 候选见 config/llm/local_model_candidates.yaml
    pkill -f well_harness.demo_server && python3 -m well_harness.demo_server &
-   python3 scripts/pitch_prewarm.py
+   python3 archive/shelved/llm-features/scripts/pitch_prewarm.py
    ```
    浏览器硬刷后，聊天抽屉恢复工作；再跑一次 pitch prewarm，wow_a 的两个 canonical explain 问题会恢复为透明缓存命中。
 2. 备选：`export MINIMAX_API_KEY=$BACKUP_MINIMAX_KEY`（备份 key 在 `.env.backup`）后重启 demo_server。

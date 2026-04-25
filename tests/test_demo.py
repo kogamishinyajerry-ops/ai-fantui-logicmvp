@@ -357,14 +357,19 @@ class DemoIntentLayerTests(unittest.TestCase):
                 "etrac_540v": "active",
                 "logic3": "blocked",
             },
+            # At TRA=-14 with all L3 inputs satisfied, the canonical scrubber
+            # now holds long enough for plant VDT to reach 90% → L4 latches
+            # → THR_LOCK releases. (Previously the scrubber was too short and
+            # falsely showed the chain stuck at L3/VDT90, which the user
+            # correctly flagged as a bug.)
             -14: {
                 "logic3": "active",
                 "eec_deploy": "active",
                 "pls_power": "active",
                 "pdu_motor": "active",
-                "vdt90": "inactive",
-                "logic4": "blocked",
-                "thr_lock": "blocked",
+                "vdt90": "active",
+                "logic4": "active",
+                "thr_lock": "active",
             },
         }
         server, thread = start_demo_server()
@@ -400,8 +405,9 @@ class DemoIntentLayerTests(unittest.TestCase):
                     for node_id, state in expected.items():
                         self.assertEqual(node_states[node_id], state)
                     if tra_deg == -14:
-                        self.assertFalse(payload["hud"]["deploy_90_percent_vdt"])
-                        self.assertIn("deploy_90_percent_vdt", payload["summary"]["blocker"])
+                        # Scrubber now holds long enough for plant VDT to reach 90%.
+                        self.assertTrue(payload["hud"]["deploy_90_percent_vdt"])
+                        self.assertTrue(payload["outputs"]["logic4_active"])
         finally:
             server.shutdown()
             server.server_close()
@@ -555,7 +561,7 @@ class DemoIntentLayerTests(unittest.TestCase):
                 "expected_logic4_active": False,
                 "expected_thr_lock_state": "blocked",
                 # With L3 inactive, deploy_90_percent_vdt is gated False in display even though
-                # deploy_position_percent=95.0. tra_deg=0.0 fails L4's between_exclusive(-32,0)
+                # deploy_position_percent=95.0. tra_deg=0.0 fails L4's between_lower_inclusive [-32,0)
                 # check (0.0 is not < 0.0), making it the first unmet L4 condition.
                 "expected_logic4_failed": "tra_deg",
             },
@@ -821,10 +827,105 @@ class DemoIntentLayerTests(unittest.TestCase):
             thread.join(timeout=2)
 
         self.assertEqual(response.status, 200)
-        # Phase 3: root URL now serves chat.html (new default entry point)
-        self.assertIn("<title>AI FANTUI Logic — 对话控制台</title>", html)
-        self.assertIn("id=\"chat-input\"", html)
-        self.assertIn("id=\"chat-messages\"", html)
+        # Phase A (2026-04-22): chat.html shelved.
+        # Phase UI-C (2026-04-22): root URL now serves index.html (2x3 card grid
+        # landing page) instead of demo.html, so user can reach all 6 surfaces.
+        self.assertIn("<title>FANTUI LogicMVP · 民航反推控制逻辑验证工作台</title>", html)
+        self.assertIn("/demo.html", html)
+        self.assertIn("/c919_etras_workstation.html", html)
+        self.assertIn("/fantui_circuit.html", html)
+        self.assertIn("/c919_etras_panel/circuit.html", html)
+        # 文档页（2026-04-24 新增）
+        self.assertIn("/fantui_requirements.html", html)
+        self.assertIn("/c919_requirements.html", html)
+
+    def test_demo_html_slim_workstation_structure(self):
+        """Slim demo.html (Phase UI-D) must have: unified nav, TRA lever, condition
+        panel, HUD, chain SVG with logic1-4 + thr_lock nodes, 4 output cards, 5 presets."""
+        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
+        # Unified nav
+        self.assertIn('class="unified-nav"', html)
+        self.assertIn('/unified-nav.css', html)
+        self.assertIn('data-current="true"', html)
+        # Key interactive elements
+        for fragment in (
+            'id="fan-tra-lever"',
+            'id="fan-ra"',
+            'id="fan-n1k"',
+            'id="fan-vdt"',
+            'id="fan-engine-running"',
+            'id="fan-aircraft-on-ground"',
+            'id="fan-reverser-inhibited"',
+            'id="fan-eec-enable"',
+            'id="fan-status-badge"',
+            'id="fan-chain-svg"',
+            'id="fan-out-tls115"',
+            'id="fan-out-etrac"',
+            'id="fan-out-eec"',
+            'id="fan-out-thr"',
+        ):
+            self.assertIn(fragment, html, f"slim demo.html missing: {fragment}")
+        # Chain SVG data-nodes: all 4 logic gates + final output
+        for data_node in ("logic1", "logic2", "logic3", "logic4", "thr_lock",
+                          "sw1", "sw2", "radio_altitude_ft", "tls_unlocked", "vdt90"):
+            self.assertIn(f'data-node="{data_node}"', html,
+                          f"chain SVG missing data-node: {data_node}")
+        # Presets
+        for preset in ("nominal-fwd", "landing-deploy", "max-reverse",
+                       "stow-return", "inhibit-block"):
+            self.assertIn(f'data-preset="{preset}"', html,
+                          f"preset button missing: {preset}")
+        # Must NOT contain shelved legacy panels
+        for legacy in ("presenter-run-card", "chain-inspector", "landing-gear-inputs",
+                       "bleed-air-inputs", "efds-inputs", "monitor-panel",
+                       "system-selector", "result-grid"):
+            self.assertNotIn(legacy, html,
+                             f"slim demo.html must NOT contain legacy: {legacy}")
+
+    def test_demo_js_posts_to_lever_snapshot(self):
+        """demo.js should talk to /api/lever-snapshot with debounced POST."""
+        js = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
+        self.assertIn('const API_URL = "/api/lever-snapshot"', js)
+        self.assertIn("buildRequest()", js)
+        self.assertIn("renderAll(data, payload)", js)
+        # Preset keys match HTML
+        for preset in ("nominal-fwd", "landing-deploy", "max-reverse",
+                       "stow-return", "inhibit-block"):
+            self.assertIn(f'"{preset}"', js,
+                          f"demo.js missing preset logic for: {preset}")
+
+    def test_demo_server_index_html_contains_all_six_surfaces(self):
+        """index.html 2x3 grid must link to all 6 UI surfaces (or mark placeholders)."""
+        html = (DEMO_UI_STATIC_DIR / "index.html").read_text(encoding="utf-8")
+        for surface_href in (
+            "/demo.html",
+            "/c919_etras_workstation.html",
+            "/fantui_circuit.html",
+            "/c919_etras_panel/circuit.html",
+            "http://127.0.0.1:9191/",
+        ):
+            self.assertIn(surface_href, html, f"index.html missing surface link: {surface_href}")
+        # Unified nav must be present
+        self.assertIn('class="unified-nav"', html)
+        self.assertIn('/unified-nav.css', html)
+        # Hero title
+        self.assertIn("FANTUI LogicMVP", html)
+
+    def test_demo_server_unified_nav_css_served(self):
+        """/unified-nav.css must serve 200 for all pages that import it."""
+        server, thread = start_demo_server()
+        try:
+            connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+            connection.request("GET", "/unified-nav.css")
+            response = connection.getresponse()
+            body = response.read().decode("utf-8")
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+        self.assertEqual(response.status, 200)
+        self.assertIn(".unified-nav", body)
+        self.assertIn("--nav-height", body)
 
     def test_demo_server_serves_workbench_acceptance_shell(self):
         server, thread = start_demo_server()
@@ -866,324 +967,6 @@ class DemoIntentLayerTests(unittest.TestCase):
             server.shutdown()
             server.server_close()
             thread.join(timeout=2)
-
-    def test_chat_explain_parses_structured_minimax_json_and_includes_node_states(self):
-        demo_server._clear_chat_explain_cache()
-        captured_payload = {}
-
-        class FakeResponse:
-            def __enter__(self):
-                return self
-
-            def __exit__(self, exc_type, exc, tb):
-                return False
-
-            def read(self):
-                return json.dumps(
-                    {
-                        "choices": [
-                            {
-                                "message": {
-                                    "content": (
-                                        "```json\n"
-                                        "{\"explanation\": \"L1 已激活，但 THR_LOCK 仍受 VDT90 阻塞。\", "
-                                        "\"highlighted_nodes\": [\"L1\", \"THR_LOCK\"], "
-                                        "\"suggestion_nodes\": [\"VDT90\"], "
-                                        "\"confidence\": 0.95}\n"
-                                        "```"
-                                    )
-                                }
-                            }
-                        ]
-                    },
-                    ensure_ascii=False,
-                ).encode("utf-8")
-
-        def fake_urlopen(request, timeout=30):
-            del timeout
-            captured_payload["body"] = json.loads(request.data.decode("utf-8"))
-            return FakeResponse()
-
-        from well_harness import llm_client as lc
-
-        def _fixed_key(self):
-            return "test-key"
-
-        with mock.patch.object(lc.MiniMaxClient, "api_key", property(_fixed_key)):
-            with mock.patch("urllib.request.urlopen", side_effect=fake_urlopen):
-                response_payload, error_payload = demo_server._handle_chat_explain(
-                    {
-                        "question": "为什么 THR_LOCK 没释放？",
-                        "system_id": "thrust-reverser",
-                        "node_states": {"L1": "active", "THR_LOCK": "blocked"},
-                        "lever_snapshot": {
-                            "nodes": [
-                                {"id": "L1", "state": "active"},
-                                {"id": "THR_LOCK", "state": "blocked"},
-                            ]
-                        },
-                    }
-                )
-
-        self.assertIsNone(error_payload)
-        self.assertEqual(response_payload["explanation"], "L1 已激活，但 THR_LOCK 仍受 VDT90 阻塞。")
-        self.assertEqual(response_payload["highlighted_nodes"], ["L1", "THR_LOCK"])
-        self.assertEqual(response_payload["suggestion_nodes"], ["VDT90"])
-        self.assertEqual(response_payload["confidence"], 0.95)
-
-        minimax_payload = captured_payload["body"]
-        self.assertEqual(minimax_payload["model"], "minimax-m2.7-highspeed")
-        self.assertIn("当前 node_states（真值）", minimax_payload["messages"][0]["content"])
-        self.assertIn("L1: active(已激活)", minimax_payload["messages"][0]["content"])
-        self.assertIn("THR_LOCK: blocked(阻塞)", minimax_payload["messages"][0]["content"])
-
-    def test_chat_explain_cache_reuses_identical_truth_context_with_transparent_source(self):
-        demo_server._clear_chat_explain_cache()
-
-        class FakeClient:
-            def __init__(self):
-                self.calls = 0
-
-            def chat(self, messages, **kwargs):
-                del messages, kwargs
-                self.calls += 1
-                return json.dumps(
-                    {
-                        "explanation": "THR_LOCK 没释放，因为 VDT90 还未满足。",
-                        "highlighted_nodes": ["THR_LOCK", "VDT90"],
-                        "suggestion_nodes": ["logic4"],
-                        "confidence": 0.91,
-                    },
-                    ensure_ascii=False,
-                )
-
-        fake_client = FakeClient()
-        payload = {
-            "question": "为什么 THR_LOCK 没释放？",
-            "system_id": "thrust-reverser",
-            "node_states": {"THR_LOCK": "blocked", "VDT90": "inactive"},
-            "lever_snapshot": {
-                "nodes": [
-                    {"id": "THR_LOCK", "state": "blocked"},
-                    {"id": "VDT90", "state": "inactive"},
-                ],
-                "logic": {"logic4": {"active": False, "failed_conditions": ["VDT90"]}},
-                "outputs": {"throttle_electronic_lock_release_cmd": False, "deploy_90_percent_vdt": False},
-            },
-        }
-
-        with mock.patch.object(demo_server, "get_llm_client", return_value=fake_client):
-            with mock.patch.dict(
-                os.environ,
-                {"LLM_BACKEND": "ollama", "OLLAMA_MODEL": "qwen2.5:7b-instruct"},
-                clear=False,
-            ):
-                live_payload, live_error = demo_server._handle_chat_explain(payload)
-                cached_payload, cached_error = demo_server._handle_chat_explain(payload)
-
-        self.assertIsNone(live_error)
-        self.assertIsNone(cached_error)
-        self.assertEqual(fake_client.calls, 1)
-        self.assertEqual(live_payload["response_source"], "live_llm")
-        self.assertEqual(cached_payload["response_source"], "cached_llm")
-        self.assertEqual(live_payload["cache_key"], cached_payload["cache_key"])
-        self.assertEqual(cached_payload["llm_backend"], "ollama")
-        self.assertEqual(cached_payload["llm_model"], "qwen2.5:7b-instruct")
-        self.assertEqual(cached_payload["highlighted_nodes"], ["THR_LOCK", "VDT90"])
-
-    def test_chat_explain_prewarm_reports_hits_and_misses(self):
-        demo_server._clear_chat_explain_cache()
-
-        class FakeClient:
-            def __init__(self):
-                self.calls = 0
-
-            def chat(self, messages, **kwargs):
-                self.calls += 1
-                return json.dumps(
-                    {
-                        "explanation": f"response-{self.calls}",
-                        "highlighted_nodes": ["L1"],
-                        "suggestion_nodes": ["logic1"],
-                        "confidence": 0.88,
-                    },
-                    ensure_ascii=False,
-                )
-
-        fake_client = FakeClient()
-        repeated_payload = {
-            "question": "L1门为什么active",
-            "system_id": "thrust-reverser",
-            "node_states": {"L1": "active"},
-            "lever_snapshot": {
-                "nodes": [{"id": "L1", "state": "active"}],
-                "logic": {"logic1": {"active": True, "failed_conditions": []}},
-                "outputs": {"throttle_electronic_lock_release_cmd": False, "deploy_90_percent_vdt": False},
-            },
-        }
-        distinct_payload = {
-            "question": "L3门为什么blocked",
-            "system_id": "thrust-reverser",
-            "node_states": {"L3": "blocked"},
-            "lever_snapshot": {
-                "nodes": [{"id": "L3", "state": "blocked"}],
-                "logic": {"logic3": {"active": False, "failed_conditions": ["TRA"]}},
-                "outputs": {"throttle_electronic_lock_release_cmd": False, "deploy_90_percent_vdt": False},
-            },
-        }
-
-        with mock.patch.object(demo_server, "get_llm_client", return_value=fake_client):
-            with mock.patch.dict(
-                os.environ,
-                {"LLM_BACKEND": "ollama", "OLLAMA_MODEL": "qwen2.5:7b-instruct"},
-                clear=False,
-            ):
-                response_payload, error_payload = demo_server._handle_chat_explain_prewarm(
-                    {"requests": [repeated_payload, repeated_payload, distinct_payload]}
-                )
-
-        self.assertIsNone(error_payload)
-        self.assertEqual(fake_client.calls, 2)
-        self.assertEqual(response_payload["requested_count"], 3)
-        self.assertEqual(response_payload["warmed_count"], 3)
-        self.assertEqual(response_payload["cache_hits"], 1)
-        self.assertEqual(response_payload["cache_misses"], 2)
-        self.assertEqual(response_payload["errors"], [])
-        self.assertEqual(
-            [item["response_source"] for item in response_payload["results"]],
-            ["live_llm", "cached_llm", "live_llm"],
-        )
-
-    def test_chat_explain_without_truth_context_stays_live_and_out_of_cache(self):
-        demo_server._clear_chat_explain_cache()
-
-        class FakeClient:
-            def __init__(self):
-                self.calls = 0
-
-            def chat(self, messages, **kwargs):
-                del messages, kwargs
-                self.calls += 1
-                return json.dumps(
-                    {
-                        "explanation": f"live-{self.calls}",
-                        "highlighted_nodes": [],
-                        "suggestion_nodes": [],
-                        "confidence": 0.5,
-                    },
-                    ensure_ascii=False,
-                )
-
-        fake_client = FakeClient()
-        payload = {
-            "question": "L3门为什么active",
-            "system_id": "thrust-reverser",
-        }
-
-        with mock.patch.object(demo_server, "get_llm_client", return_value=fake_client):
-            with mock.patch.dict(
-                os.environ,
-                {"LLM_BACKEND": "ollama", "OLLAMA_MODEL": "qwen2.5:7b-instruct"},
-                clear=False,
-            ):
-                first_payload, first_error = demo_server._handle_chat_explain(payload)
-                second_payload, second_error = demo_server._handle_chat_explain(payload)
-
-        self.assertIsNone(first_error)
-        self.assertIsNone(second_error)
-        self.assertEqual(fake_client.calls, 2)
-        self.assertEqual(first_payload["response_source"], "live_llm")
-        self.assertEqual(second_payload["response_source"], "live_llm")
-        self.assertEqual(first_payload["cache_key"], "")
-        self.assertEqual(second_payload["cache_key"], "")
-        self.assertEqual(first_payload["cached_at"], "")
-        self.assertEqual(second_payload["cached_at"], "")
-
-    def test_chat_static_assets_include_truth_first_ai_overlay_flow(self):
-        script = (DEMO_UI_STATIC_DIR / "chat.js").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "chat.css").read_text(encoding="utf-8")
-
-        for fragment in (
-            "function extractNodeStates(snapshotData)",
-            "function applySystemSnapshotToCanvas(snapshotData)",
-            "function applyAiHighlights(highlightedNodes, suggestionNodes)",
-            "function clearAiHighlights()",
-            "requestJson('/api/system-snapshot?system_id=' + encodeURIComponent(qSystemId))",
-            "node_states: nodeStates",
-            "data-highlighted",
-            "highlighted_nodes",
-            "suggestion_nodes",
-            "lastTruthPayloadBySystem",
-            "function formatExplainResponseFootnote(aiData)",
-            "response_source",
-            "chat-message-footnote",
-        ):
-            self.assertIn(fragment, script)
-        self.assertIn(".chat-message-footnote", css)
-
-        for fragment in (
-            ".chain-node-svg.ai-discussed",
-            ".logic-gate-svg.ai-discussed",
-            ".chain-node-svg.ai-suggested",
-            ".logic-gate-svg.ai-suggested",
-            ".chat-message[data-highlighted] .chat-message-content",
-            "@keyframes aiDiscussedPulse",
-            "@keyframes aiSuggestedPulse",
-        ):
-            self.assertIn(fragment, css)
-
-    def test_chat_static_assets_include_persistent_explain_status_panel(self):
-        html = (DEMO_UI_STATIC_DIR / "chat.html").read_text(encoding="utf-8")
-        script = (DEMO_UI_STATIC_DIR / "chat.js").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "chat.css").read_text(encoding="utf-8")
-
-        for fragment in (
-            'id="explain-status-panel"',
-            'id="explain-status-source"',
-            'id="explain-status-backend"',
-            'id="explain-status-cache"',
-            'id="explain-status-updated"',
-            'Explain 状态',
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            "var lastExplainStatusBySystem = {};",
-            "function renderExplainStatusPanel()",
-            "function syncExplainStatus(systemId, aiData)",
-            "function markExplainStatusFailure(systemId, err)",
-            "syncExplainStatus(qSystemId, aiData);",
-            "markExplainStatusFailure(qSystemId, err);",
-        ):
-            self.assertIn(fragment, script)
-
-        for fragment in (
-            ".explain-status-panel",
-            ".explain-status-pill.is-live",
-            ".explain-status-pill.is-cached",
-            ".explain-status-note",
-        ):
-            self.assertIn(fragment, css)
-
-    def test_chat_static_assets_include_icon_links_and_live_global_controls(self):
-        html = (DEMO_UI_STATIC_DIR / "chat.html").read_text(encoding="utf-8")
-        script = (DEMO_UI_STATIC_DIR / "chat.js").read_text(encoding="utf-8")
-
-        for fragment in (
-            'rel="icon" href="/favicon.svg"',
-            'rel="apple-touch-icon" href="/apple-touch-icon.svg"',
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            "function renderRequestFailure(err)",
-            "function applyCanvasGlobalControls()",
-            "function bindCanvasGlobalControls()",
-            "fbSelect.addEventListener('change', function() {",
-            "n1kSlider.addEventListener('change', function() {",
-            "return currentSystem === 'thrust-reverser';",
-        ):
-            self.assertIn(fragment, script)
 
     def test_workbench_static_shell_contains_key_acceptance_sections(self):
         html = (DEMO_UI_STATIC_DIR / "workbench.html").read_text(encoding="utf-8")
@@ -1466,56 +1249,42 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertEqual("custom_reverse_control_v1", recent_archive["system_id"])
         self.assertTrue(recent_archive["ready_for_spec_build"])
 
-    def test_workbench_bootstrap_explain_runtime_uses_latest_pitch_prewarm_report(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            runs_dir = Path(temp_dir)
-            latest_dir = runs_dir / "pitch_prewarm_20260419T020304Z"
-            latest_dir.mkdir()
-            (latest_dir / "report.json").write_text(
-                json.dumps(
-                    {
-                        "generated_at": "2026-04-19T02:03:10Z",
-                        "verdict": "GREEN",
-                        "summary": {
-                            "verified_cache_hits": 2,
-                            "expected_count": 2,
-                            "requested_backend": "ollama",
-                            "requested_model": "qwen2.5:7b-instruct",
-                            "llm_backend": "ollama",
-                            "llm_model": "qwen2.5:7b-instruct",
-                            "backend_match": True,
-                        },
-                        "rounds": [
-                            {"name": "warm", "results": []},
-                            {
-                                "name": "verify",
-                                "results": [
-                                    {
-                                        "response_source": "cached_llm",
-                                        "cached_at": "2026-04-19T02:02:59Z",
-                                    }
-                                ],
-                            },
-                        ],
-                    },
-                    ensure_ascii=False,
-                ),
-                encoding="utf-8",
-            )
-
-            with mock.patch.object(demo_server, "RUNS_DIR", runs_dir):
-                payload = demo_server.workbench_bootstrap_payload()
-
+    def test_workbench_bootstrap_explain_runtime_returns_shelved_payload(self):
+        # Phase A (2026-04-22): LLM features shelved. explain_runtime returns
+        # a stable idle payload without consulting pitch_prewarm reports.
+        payload = demo_server.workbench_bootstrap_payload()
         explain_runtime = payload["explain_runtime"]
-        self.assertEqual("ready", explain_runtime["status"])
-        self.assertEqual("pitch_prewarm", explain_runtime["status_source"])
-        self.assertEqual("ollama", explain_runtime["llm_backend"])
-        self.assertEqual("qwen2.5:7b-instruct", explain_runtime["llm_model"])
-        self.assertEqual("cached_llm", explain_runtime["response_source"])
-        self.assertEqual("2026-04-19T02:02:59Z", explain_runtime["cached_at"])
-        self.assertEqual(2, explain_runtime["verified_cache_hits"])
-        self.assertEqual(2, explain_runtime["expected_count"])
-        self.assertIn("最近预热验证缓存命中 2/2", explain_runtime["detail"])
+        self.assertEqual("shelved", explain_runtime["status"])
+        self.assertEqual("", explain_runtime["llm_backend"])
+        self.assertEqual("", explain_runtime["llm_model"])
+        self.assertEqual(0, explain_runtime["verified_cache_hits"])
+        self.assertIn("LLM features shelved", explain_runtime["detail"])
+
+    def test_workbench_js_renders_shelved_explain_runtime_with_distinct_copy(self):
+        """workbench.js must short-circuit shelved status so the cache/source/backend
+        cards don't misreport zero counters as observed prewarm telemetry.
+
+        Phase A Codex review noted the payload was shelved but the renderer had no
+        shelved branch — operators saw '待命 / 一旦在 chat / demo 舱发起 explain' copy
+        pointing at removed flows. This regression test pins the corrective branches
+        into the static asset.
+        """
+        script = (DEMO_UI_STATIC_DIR / "workbench.js").read_text(encoding="utf-8")
+        # Badge state + text branches
+        self.assertIn('if (runtime.status === "shelved") return "shelved";', script,
+                      "explainRuntimeBadgeState missing shelved branch")
+        self.assertIn('if (runtime.status === "shelved") return "已搁置";', script,
+                      "explainRuntimeBadgeText missing shelved branch")
+        # renderExplainRuntime short-circuit
+        self.assertIn('if (runtime.status === "shelved") {', script,
+                      "renderExplainRuntime missing shelved short-circuit")
+        # Distinct shelved copy (not the generic '待命/一旦在 chat / demo' fallback)
+        self.assertIn("LLM 后端已从活跃代码库搁置", script,
+                      "shelved branch must use distinct copy, not generic idle fallback")
+        self.assertIn("explain 路由已移除", script,
+                      "shelved branch must explain that explain routes are removed")
+        self.assertIn("LLM 缓存链路已停用", script,
+                      "shelved branch must explain cache pipeline is offline")
 
     def test_demo_server_recent_archives_api_lists_recent_workbench_archives(self):
         bundle = build_workbench_bundle(
@@ -1742,7 +1511,7 @@ class DemoIntentLayerTests(unittest.TestCase):
 
     def test_demo_server_open_browser_helper_reports_failures(self):
         url = demo_server.demo_url("127.0.0.1", 8000)
-        self.assertEqual(url, "http://127.0.0.1:8000/chat.html")
+        self.assertEqual(url, "http://127.0.0.1:8000/index.html")
 
         opener = mock.Mock(return_value=True)
         self.assertTrue(demo_server.open_browser(url, opener=opener))
@@ -1752,7 +1521,7 @@ class DemoIntentLayerTests(unittest.TestCase):
         with redirect_stdout(buffer):
             self.assertFalse(demo_server.open_browser(url, opener=mock.Mock(return_value=False)))
         self.assertIn("Could not open browser automatically.", buffer.getvalue())
-        self.assertIn("Open http://127.0.0.1:8000/chat.html manually.", buffer.getvalue())
+        self.assertIn("Open http://127.0.0.1:8000/index.html manually.", buffer.getvalue())
 
         buffer = io.StringIO()
         with redirect_stdout(buffer):
@@ -1760,7 +1529,7 @@ class DemoIntentLayerTests(unittest.TestCase):
                 demo_server.open_browser(url, opener=mock.Mock(side_effect=RuntimeError("blocked")))
             )
         self.assertIn("Could not open browser automatically: blocked.", buffer.getvalue())
-        self.assertIn("Open http://127.0.0.1:8000/chat.html manually.", buffer.getvalue())
+        self.assertIn("Open http://127.0.0.1:8000/index.html manually.", buffer.getvalue())
 
     def test_demo_server_help_documents_optional_open_affordance(self):
         result = subprocess.run(
@@ -1813,8 +1582,8 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIs(created_servers[0].handler_class, DemoRequestHandler)
         self.assertTrue(created_servers[0].serve_forever_called)
         self.assertTrue(created_servers[0].server_close_called)
-        open_browser.assert_called_once_with("http://127.0.0.1:8765/chat.html")
-        self.assertIn("Serving well-harness demo UI at http://127.0.0.1:8765/chat.html", buffer.getvalue())
+        open_browser.assert_called_once_with("http://127.0.0.1:8765/index.html")
+        self.assertIn("Serving well-harness demo UI at http://127.0.0.1:8765/index.html", buffer.getvalue())
 
         with mock.patch.object(demo_server, "ThreadingHTTPServer", side_effect=fake_server):
             with mock.patch.object(demo_server, "open_browser") as open_browser:
@@ -2107,1306 +1876,6 @@ class DemoIntentLayerTests(unittest.TestCase):
             "not a complete physical model",
         ):
             self.assertIn(fragment, talk_track)
-
-    def test_demo_static_assets_include_presenter_route_strip(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
-        result = subprocess.run(
-            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
-        self.assertEqual(result.stderr, "")
-
-        for fragment in (
-            "class=\"presenter-route-strip\"",
-            "aria-label=\"演示走查路径\"",
-            "演示路径",
-            "[输入]",
-            "选问题",
-            "[链路]",
-            "看主板",
-            "[高亮]",
-            "讲关联",
-            "[结果]",
-            "扫证据",
-            "[调试]",
-            "查 JSON",
-            "人工演示提示，不是自动化验收。",
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            ".presenter-route-strip",
-            ".route-strip-title",
-            ".route-strip-note",
-            ".route-step",
-            "overflow-x: auto",
-            "scroll-snap-type: x proximity",
-        ):
-            self.assertIn(fragment, css)
-
-        for fragment in (
-            "screenshot-free presenter route strip",
-            "[Input] -> [Chain] -> [Highlight] -> [Structured answer] -> [Raw JSON]",
-            "manual walkthrough guide",
-            "replaces screenshot annotations",
-            "not browser E2E automation",
-            "not a screenshot annotation tool",
-            "not a control-truth source",
-        ):
-            self.assertIn(fragment, talk_track)
-
-        for fragment in (
-            "Use the screenshot-free route strip",
-            "Input -> Chain -> Highlight -> Structured answer -> Raw JSON",
-            "not browser E2E automation",
-            "not a new answer payload or control truth",
-        ):
-            self.assertIn(fragment, result.stdout)
-
-    def test_demo_static_assets_include_visible_presenter_run_card(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
-        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-        result = subprocess.run(
-            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
-        self.assertEqual(result.stderr, "")
-
-        for fragment in (
-            "class=\"panel presenter-run-card\"",
-            "id=\"presenter-run-card-title\"",
-            "Presenter Run Card",
-            "首屏可点击演示顺序",
-            "不是自动 readiness detector",
-            "人工预演提示，不是浏览器自动化，也不是新的控制真值。",
-            "class=\"presenter-run-card-grid\"",
-            "class=\"run-card-step\"",
-            "class=\"run-card-trigger is-selected\"",
-            "运行桥接题",
-            "运行未释放诊断",
-            "运行触发题",
-            "运行阈值预演",
-            "`controller.py` 仍是唯一控制真值。",
-            "`simplified plant feedback` 只用于演示解释，不是完整实时物理模型。",
-            "Raw JSON 只是同一份 `DemoAnswer` 的调试视图",
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            ".presenter-run-card",
-            ".presenter-run-card-header",
-            ".presenter-run-card-grid",
-            ".run-card-step",
-            ".run-card-kicker",
-            ".run-card-trigger",
-            ".run-card-trigger.is-selected",
-            ".presenter-run-card-rails",
-            ".presenter-run-card-boundary",
-        ):
-            self.assertIn(fragment, css)
-
-        for fragment in (
-            "Presenter Run Card",
-            "four clickable bridge / diagnose / trigger / proposal steps",
-            "manual presenter aid",
-            "not an automatic readiness detector",
-        ):
-            self.assertIn(fragment, talk_track)
-
-        for fragment in (
-            "clickable `Presenter Run Card`",
-            "same bridge / diagnose / trigger / proposal order",
-            "reuses the existing prompt flow and `DemoAnswer` payload",
-        ):
-            self.assertIn(fragment, readme)
-
-        for fragment in (
-            "Use the visible Presenter Run Card",
-            "bridge / diagnose / trigger / proposal sequence",
-            "matching visible card on the first screen",
-        ):
-            self.assertIn(fragment, result.stdout)
-
-    def test_demo_static_assets_include_lever_presenter_presets(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
-        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
-        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-        result = subprocess.run(
-            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
-        self.assertEqual(result.stderr, "")
-
-        for fragment in (
-            "class=\"lever-presets\"",
-            "id=\"lever-presets-title\"",
-            "id=\"lever-preset-status\"",
-            "快速回填当前 `POST /api/lever-snapshot` 输入",
-            "data-lever-preset=\"l3_waiting_vdt90\"",
-            "data-lever-preset=\"ra_boundary_blocks_logic1\"",
-            "data-lever-preset=\"n1k_limit_blocks_logic3\"",
-            "data-lever-preset=\"manual_vdt90_ready\"",
-            "L3 等待 VDT90",
-            "RA blocker",
-            "N1K blocker",
-            "VDT90 ready",
-            "当前场景：自定义起步位（先自由左拉到 -14° 门槛，再等待 L4 放开深拉区）。",
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            ".lever-presets",
-            ".lever-presets-header",
-            ".lever-preset-status",
-            ".lever-presets-grid",
-            ".lever-preset-card",
-            ".lever-preset-trigger",
-            ".lever-preset-trigger.is-selected",
-        ):
-            self.assertIn(fragment, css)
-
-        for fragment in (
-            "const leverPresets = {",
-            "l3_waiting_vdt90:",
-            "ra_boundary_blocks_logic1:",
-            "n1k_limit_blocks_logic3:",
-            "manual_vdt90_ready:",
-            "function applyLeverPresetPayload(payload)",
-            "function syncLeverPresetSelection(presetKey)",
-            "document.querySelectorAll(\"[data-lever-preset]\")",
-            "syncLeverPresetSelection(null);",
-        ):
-            self.assertIn(fragment, script)
-
-        for fragment in (
-            "visible `演示场景预设` row",
-            "L3 等待 VDT90",
-            "RA blocker",
-            "N1K blocker",
-            "VDT90 ready",
-            "do not create a second state machine",
-        ):
-            self.assertIn(fragment, talk_track)
-
-        for fragment in (
-            "visible `演示场景预设` buttons",
-            "`L3 等待 VDT90`, `RA blocker`, `N1K blocker`, and `VDT90 ready`",
-            "do not create a second state machine",
-        ):
-            self.assertIn(fragment, readme)
-
-        for fragment in (
-            "Use the visible lever presets",
-            "L3 等待 VDT90, RA blocker, N1K blocker, and VDT90 ready",
-            "without inventing a second state machine",
-        ):
-            self.assertIn(fragment, result.stdout)
-
-    def test_demo_static_assets_include_audience_answer_field_legend(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
-        result = subprocess.run(
-            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
-        self.assertEqual(result.stderr, "")
-
-        for fragment in (
-            "id=\"answer-field-legend\"",
-            "class=\"answer-field-legend\"",
-            "字段说明",
-            "<dt>intent</dt>",
-            "<dt>matched_node</dt>",
-            "<dt>target_logic</dt>",
-            "<dt>evidence</dt>",
-            "<dt>outcome</dt>",
-            "<dt>possible_causes</dt>",
-            "<dt>required_changes</dt>",
-            "<dt>risks</dt>",
-            "<dt>raw JSON</dt>",
-            "受控 demo 意图，不是开放式 LLM 意图识别。",
-            "答案关联的 catalog 节点 / alias。",
-            "答案关联的逻辑门。",
-            "现有 harness evidence 摘要。",
-            "受控提示，不是完整根因证明。",
-            "dry-run / proposal 建议；不会直接修改 controller.py。",
-            "简化模型和变更风险提示。",
-            "同一份 DemoAnswer 的调试视图，不是第二套答案。",
-            "不改变 UI/API payload",
-            "不创建 schema",
-            "不新增控制真值",
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            ".answer-field-legend",
-            ".answer-field-legend summary",
-            ".answer-field-legend dl",
-            ".answer-field-legend dt",
-            ".answer-field-legend dd",
-        ):
-            self.assertIn(fragment, css)
-
-        for fragment in (
-            "Audience answer-field legend",
-            "intent",
-            "matched_node",
-            "target_logic",
-            "evidence",
-            "outcome",
-            "possible_causes",
-            "required_changes",
-            "risks",
-            "raw JSON",
-            "reading aid",
-            "not a new schema, payload, or control truth",
-        ):
-            self.assertIn(fragment, talk_track)
-
-        for fragment in (
-            "Audience answer-field legend",
-            "compact answer guide",
-            "Audience answer-field legend",
-            "Answer sections counts",
-            "Structured answer",
-        ):
-            self.assertIn(fragment, result.stdout)
-
-    def test_demo_static_assets_include_compact_answer_guide_layout(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
-        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-        result = subprocess.run(
-            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
-        self.assertEqual(result.stderr, "")
-
-        for fragment in (
-            "class=\"answer-guide\"",
-            "aria-label=\"答案字段与结果分区导览\"",
-            "class=\"answer-guide-intro\"",
-            "结果导览",
-            "字段说明和数量标签都来自同一份答案。",
-            "class=\"answer-guide-grid\"",
-            "id=\"answer-field-legend\"",
-            "id=\"answer-section-summary\"",
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            ".answer-guide",
-            ".answer-guide-intro",
-            ".answer-guide-grid",
-            "grid-template-columns: minmax(260px, 0.95fr) minmax(260px, 1.05fr)",
-            ".answer-guide .answer-field-legend",
-            ".answer-guide .answer-section-summary",
-            "grid-template-columns: 1fr",
-        ):
-            self.assertIn(fragment, css)
-
-        for fragment in (
-            "compact answer guide",
-            "legend and `Answer sections` summary",
-            "same `DemoAnswer` payload",
-        ):
-            self.assertIn(fragment, talk_track)
-
-        for fragment in (
-            "compact answer guide",
-            "`Answer sections`",
-            "without changing the `DemoAnswer` payload",
-        ):
-            self.assertIn(fragment, readme)
-
-        for fragment in (
-            "compact answer guide",
-            "Audience answer-field legend",
-            "Answer sections counts",
-        ):
-            self.assertIn(fragment, result.stdout)
-
-    def test_demo_static_assets_include_mobile_answer_guide_spacing(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
-        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-        result = subprocess.run(
-            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
-        self.assertEqual(result.stderr, "")
-
-        for fragment in (
-            "class=\"answer-guide\"",
-            "class=\"answer-guide-grid\"",
-            "id=\"answer-field-legend\"",
-            "id=\"answer-section-summary\"",
-            "id=\"answer-section-summary-items\"",
-            "id=\"answer-section-keyboard-hint\"",
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            "@media (max-width: 780px)",
-            ".answer-guide",
-            "gap: 12px",
-            "padding: 12px",
-            "border-radius: 12px",
-            ".answer-guide-intro",
-            "line-height: 1.45",
-            ".answer-guide-grid",
-            "grid-template-columns: 1fr",
-            ".answer-guide .answer-field-legend",
-            ".answer-guide .answer-section-summary",
-            ".summary-chip",
-            "min-height: 42px",
-            "white-space: normal",
-            "button.summary-chip",
-            "text-align: left",
-            "@media (max-width: 520px)",
-            "width: 100%",
-        ):
-            self.assertIn(fragment, css)
-
-        for fragment in (
-            "mobile / narrow screens",
-            "compact answer guide top-to-bottom",
-            "touch-friendly scanning",
-            "without changing the payload",
-        ):
-            self.assertIn(fragment, talk_track)
-
-        for fragment in (
-            "narrow screens",
-            "touch-friendly spacing",
-            "same payload and field semantics",
-        ):
-            self.assertIn(fragment, readme)
-
-        for fragment in (
-            "narrow screens",
-            "compact answer guide top-to-bottom",
-            "touch-friendly",
-        ):
-            self.assertIn(fragment, result.stdout)
-
-    def test_demo_static_assets_include_showcase_surface_layout(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-
-        for fragment in (
-            "class=\"showcase-mission\"",
-            "拖动反推拉杆，实时看 SW / logic / plant feedback 如何点亮。",
-            "class=\"showcase-surface\"",
-            "aria-label=\"中文演示展示面\"",
-            "class=\"showcase-intro\"",
-            "演示流",
-            "拉杆 -> HUD -> 逻辑主板 -> 时间监控",
-            "class=\"showcase-grid\"",
-            "class=\"panel lever-panel\"",
-            "id=\"lever-tra\"",
-            "class=\"condition-panel\"",
-            "id=\"condition-ra\"",
-            "id=\"condition-engine-running\"",
-            "id=\"condition-aircraft-ground\"",
-            "id=\"condition-reverser-inhibited\"",
-            "id=\"condition-eec-enable\"",
-            "id=\"condition-n1k\"",
-            "id=\"condition-n1k-limit\"",
-            "id=\"condition-feedback-mode\"",
-            "id=\"condition-deploy-position\"",
-            "条件面板",
-            "VDT 模式",
-            "VDT 反馈",
-            "manual_feedback_override",
-            "simplified plant diagnostic override",
-            ">=90% 点亮 VDT90",
-            "L1 需要 RA &lt; 6ft",
-            "L3 需要 N1K &lt; limit",
-            "type=\"range\"",
-            "min=\"-32\"",
-            "max=\"0\"",
-            "value=\"0\"",
-            "左侧更深反推 -32°",
-            "右侧前推 0°",
-            "SW1 -1.4° ~ -6.2°",
-            "SW2 -5.0° ~ -9.8°",
-            "L3 ≤ -11.74°",
-            "L4 条件限值 -14°",
-            "id=\"lever-lock-badge\"",
-            "id=\"lever-lock-status\"",
-            "id=\"lever-conditional-range\"",
-            "class=\"lever-deck-grid\"",
-            "class=\"lever-live-grid\"",
-            "把 VDT 调节上移到主控 deck",
-            "id=\"hud-tra\"",
-            "id=\"lever-result\"",
-            "class=\"panel qa-drawer\"",
-            "id=\"raw-json-details\"",  # view="beginner" added for beginner/expert toggle
-            "原始 JSON 调试",
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            ".showcase-mission",
-            ".showcase-surface",
-            ".showcase-intro",
-            ".showcase-kicker",
-            ".showcase-grid",
-            ".lever-panel",
-            ".lever-console",
-            ".lever-readout",
-            ".lever-thresholds",
-            ".lever-live-grid",
-            ".live-control",
-            ".condition-panel",
-            ".condition-grid",
-            ".condition-range",
-            ".condition-toggle",
-            ".condition-number",
-            ".condition-select",
-            ".condition-span-2",
-            ".condition-span-3",
-            ".condition-wide",
-            ".feedback-override-control",
-            ".hud-grid",
-            ".lever-result",
-            ".qa-drawer",
-            "minmax(500px, 1.08fr) minmax(560px, 1.2fr)",
-            "grid-template-areas:",
-            "\"prompt chain\"",
-            "\"result chain\"",
-            ".showcase-grid .lever-panel",
-            ".showcase-grid .chain-panel",
-            ".showcase-grid .result-grid",
-            ".showcase-grid .grouped-examples",
-            ".showcase-grid .examples button",
-            "overflow-wrap: anywhere",
-            ".showcase-grid textarea",
-            ".logic-stage",
-            ".logic-stage-wide",
-            ".logic-note",
-            ".chain-panel",
-            "position: sticky",
-            "border-color: rgba(40, 244, 255, 0.36)",
-            ".chain-node.is-blocked",
-            ".chain-node.is-inactive",
-            ".chain-inspector",
-            ".chain-inspector > summary",
-            ".output-card",
-            ".showcase-grid .highlight-explanation",
-            ".raw-card .debug-inspector",
-            ".raw-card pre",
-            "box-shadow: none",
-            "opacity: 0.68",
-            "@media (max-width: 780px)",
-            ".showcase-grid .grouped-examples",
-            "grid-template-columns: 1fr",
-            ".showcase-grid .example-group",
-            "width: auto",
-            "\"prompt\"",
-            "\"chain\"",
-            "\"result\"",
-        ):
-            self.assertIn(fragment, css)
-
-        for fragment in (
-            "interactive reverse-lever cockpit",
-            "lever cockpit showcase",
-            "throttle lever, HUD, control chain, and current-result summary",
-            "POST /api/lever-snapshot",
-            "secondary drawer",
-        ):
-            self.assertIn(fragment, readme)
-
-    def test_demo_static_assets_include_desktop_first_screen_density_polish(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-
-        for fragment in (
-            "class=\"lever-note\"",
-            "class=\"condition-panel-heading\"",
-            "class=\"condition-note\"",
-            "class=\"lever-lock-banner\"",
-            "class=\"lever-live-grid\"",
-            "反馈 / 诊断（simplified plant）",
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            "@media (min-width: 1101px) and (max-height: 1120px)",
-            ".hero",
-            ".presenter-route-strip",
-            ".showcase-surface",
-            ".showcase-grid",
-            ".lever-panel",
-            ".lever-console,",
-            ".condition-panel {",
-            ".condition-grid",
-            ".lever-live-grid",
-            ".hud-grid div,",
-            ".feedback-grid div {",
-            ".lever-result {",
-        ):
-            self.assertIn(fragment, css)
-
-    def test_demo_static_assets_include_monitor_timeline_panel(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
-
-        for fragment in (
-            "class=\"panel monitor-panel monitor-panel-inline\"",
-            "id=\"monitor-panel-title\"",
-            "状态 vs 时间",
-            "id=\"monitor-refresh-button\"",
-            "id=\"monitor-series-checkboxes\"",
-            "id=\"monitor-status\"",
-            "id=\"monitor-summary\"",
-            "id=\"monitor-events\"",
-            "id=\"monitor-selection-note\"",
-            "id=\"monitor-chart\"",
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            ".monitor-panel",
-            ".monitor-panel-inline",
-            ".monitor-panel-header",
-            ".monitor-panel-controls",
-            ".monitor-select-wrap",
-            ".monitor-refresh-button",
-            ".monitor-summary",
-            ".monitor-summary-chip",
-            ".monitor-events",
-            ".monitor-event-card",
-            ".monitor-chart-shell",
-            ".monitor-selection-note",
-            ".monitor-chart",
-            ".monitor-grid-line",
-            ".monitor-event-line",
-            ".monitor-series-line",
-            ".monitor-axis-label",
-            ".monitor-value-label",
-        ):
-            self.assertIn(fragment, css)
-
-        for fragment in (
-            "const monitorDefaultSeriesId = \"all\";",
-            "function renderMonitorTimeline(payload)",
-            "function renderMonitorSummary(payload)",
-            "function renderMonitorEvents(payload)",
-            "function buildMonitorXAxisTicks(timeStart, timeEnd)",
-            "function populateMonitorSeriesCheckboxes(payload)",
-            "function renderMonitorChart(payload)",
-            "function renderMonitorTimelineError(message)",
-            "async function loadMonitorTimeline()",
-            "fetch(\"/api/monitor-timeline\"",
-            "monitorRefreshButton?.addEventListener(\"click\"",
-            "loadMonitorTimeline();",
-        ):
-            self.assertIn(fragment, script)
-
-    def test_demo_static_assets_include_cockpit_toggle_and_hud_polish(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-
-        for fragment in (
-            "id=\"condition-engine-running\"",
-            "id=\"condition-aircraft-ground\"",
-            "id=\"condition-reverser-inhibited\"",
-            "id=\"condition-eec-enable\"",
-            "id=\"condition-feedback-mode\"",
-            "id=\"condition-deploy-position\"",
-            "id=\"hud-tra\"",
-            "id=\"hud-engine-ground\"",
-            "id=\"hud-eec-enable\"",
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            ".condition-toggle input[type=\"checkbox\"]",
-            "appearance: none",
-            ".condition-toggle input[type=\"checkbox\"]::before",
-            ".condition-toggle input[type=\"checkbox\"]:checked",
-            "translateX(18px)",
-            ".condition-toggle input[type=\"checkbox\"]:focus-visible",
-            ".hud-grid dt",
-            "text-transform: uppercase",
-            ".hud-grid dd",
-            "font-weight: 800",
-            "text-shadow: 0 0 12px rgba(40, 244, 255, 0.16)",
-        ):
-            self.assertIn(fragment, css)
-
-    def test_demo_static_assets_include_interactive_lever_snapshot_wiring(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
-
-        for fragment in (
-            "id=\"lever-tra\"",
-            "type=\"range\"",
-            "name=\"tra_deg\"",
-            "name=\"radio_altitude_ft\"",
-            "name=\"engine_running\"",
-            "name=\"aircraft_on_ground\"",
-            "name=\"reverser_inhibited\"",
-            "name=\"eec_enable\"",
-            "name=\"n1k\"",
-            "name=\"max_n1k_deploy_limit\"",
-            "id=\"lever-tra-value\"",
-            "id=\"lever-lock-badge\"",
-            "id=\"lever-lock-status\"",
-            "id=\"lever-conditional-range\"",
-            "id=\"lever-status\"",
-            "id=\"hud-switches\"",
-            "id=\"hud-locks\"",
-            "id=\"hud-position\"",
-            "id=\"lever-feedback-details\"",
-            "反馈 / 诊断（simplified plant）",
-            "first-cut feedback / diagnostic 假设",
-            "id=\"lever-evidence-details\"",
-            "证据 / 风险（默认折叠）",
-            "诊断问答（冻结 / 后续开发）",
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            ".lever-panel",
-            ".lever-console",
-            ".lever-deck-grid",
-            ".lever-track-stack",
-            ".lever-live-stack",
-            ".lever-lock-banner",
-            ".lever-lock-badge",
-            ".lever-lock-status",
-            ".lever-range-rail",
-            ".range-chip",
-            ".lever-live-grid",
-            ".lever-live-header",
-            ".live-control",
-            "#lever-tra",
-            ".condition-panel",
-            ".condition-grid",
-            ".condition-toggle-rail",
-            ".condition-range",
-            ".condition-toggle",
-            ".condition-number",
-            ".condition-select",
-            ".condition-span-2",
-            ".condition-span-3",
-            ".feedback-override-control",
-            ".hud-grid",
-            ".feedback-panel",
-            ".feedback-grid",
-            ".lever-result",
-            ".lever-evidence-details",
-            ".qa-drawer",
-            ".logic-note",
-            ".chain-node.is-active",
-            ".chain-node.is-blocked",
-            ".chain-node.is-inactive",
-        ):
-            self.assertIn(fragment, css)
-
-        for fragment in (
-            "function renderTraLockState(payload)",
-            "function clampLeverTraToUnlockedBand(rawValue)",
-            "function syncConditionReadouts()",
-            "function collectLeverSnapshotPayload(traDeg)",
-            "async function runLeverSnapshot(traDeg, requestId = beginInteractionRequest())",
-            "fetch(\"/api/lever-snapshot\"",
-            "traLock.boundary_unlock_ready",
-            "traLock.allowed_reverse_min_deg",
-            "traLock.visual_reverse_min_deg",
-            "leverInput.dataset.allowedReverseMin",
-            "leverInput.dataset.deepRangeLocked",
-            "clampLeverTraToUnlockedBand(Number(leverInput.value))",
-            "document.getElementById(\"lever-conditional-range\")",
-            "document.getElementById(\"lever-lock-status\")",
-            "radio_altitude_ft: Number(document.getElementById(\"condition-ra\").value)",
-            "engine_running: document.getElementById(\"condition-engine-running\").checked",
-            "aircraft_on_ground: document.getElementById(\"condition-aircraft-ground\").checked",
-            "reverser_inhibited: document.getElementById(\"condition-reverser-inhibited\").checked",
-            "eec_enable: document.getElementById(\"condition-eec-enable\").checked",
-            "n1k: Number(document.getElementById(\"condition-n1k\").value)",
-            "max_n1k_deploy_limit: Number(document.getElementById(\"condition-n1k-limit\").value)",
-            "feedback_mode: document.getElementById(\"condition-feedback-mode\").value",
-            "deploy_position_percent: Number(document.getElementById(\"condition-deploy-position\").value)",
-            "leverInput.addEventListener(\"input\"",
-            "document.querySelectorAll(",
-            ".condition-panel input, .condition-panel select, .lever-live-grid input, .lever-live-grid select",
-            "scheduleLeverSnapshot()",
-            "function applyLeverNodeStates(nodes)",
-            "is-blocked",
-            "is-inactive",
-            "DeployController.explain",
-            "不是完整实时物理仿真",
-        ):
-            self.assertIn(fragment, script)
-
-        self.assertIn("min=\"-32\"", html)
-
-        self.assertIn("id=\"raw-json-details\"", html)  # view="beginner" added for beginner/expert toggle
-        self.assertNotIn("id=\"raw-json-details\" class=\"debug-inspector\" open", html)
-        self.assertNotIn("class=\"chain-node sub-node logic-node\"", html)
-
-    def test_demo_static_assets_include_chain_state_truth_boundary_legend(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
-        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-        result = subprocess.run(
-            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
-        self.assertEqual(result.stderr, "")
-
-        for fragment in (
-            "class=\"chain-state-legend\"",
-            "状态图例 / truth boundary",
-            "Active = 当前已点亮",
-            "Blocked = 等待条件",
-            "Inactive = 当前路径未进入",
-            "Controller truth：SW / L1-L4 / command 节点来自后端 controller snapshot。",
-            "Simplified plant feedback：TLS unlock / PLS unlock / VDT90 / 位移只用于演示反馈",
-            "颜色来自后端快照，不是完整因果证明。",
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            ".chain-state-legend",
-            ".chain-state-legend-header",
-            ".chain-state-chip-row",
-            ".state-chip",
-            ".state-chip.is-active",
-            ".state-chip.is-blocked",
-            ".state-chip.is-inactive",
-            ".truth-boundary-rails",
-            ".truth-rail.controller",
-            ".truth-rail.plant",
-        ):
-            self.assertIn(fragment, css)
-
-        for fragment in (
-            "visible `状态图例 / truth boundary`",
-            "`Active` means the backend snapshot currently lights the node",
-            "`Blocked` means the node is waiting on named conditions",
-            "separates controller truth from simplified plant feedback",
-        ):
-            self.assertIn(fragment, talk_track)
-
-        for fragment in (
-            "visible `状态图例 / truth boundary` strip",
-            "Active / Blocked / Inactive",
-            "distinguish controller truth from simplified plant feedback",
-        ):
-            self.assertIn(fragment, readme)
-
-        for fragment in (
-            "Use the visible 状态图例 / truth boundary",
-            "Active / Blocked / Inactive",
-            "separate controller truth from simplified plant feedback",
-        ):
-            self.assertIn(fragment, result.stdout)
-
-    def test_demo_static_assets_include_lever_result_reading_rails(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
-        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-        result = subprocess.run(
-            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
-        self.assertEqual(result.stderr, "")
-
-        for fragment in (
-            "class=\"lever-result-note\"",
-            "Headline -> Blocker -> Next step",
-            "同一份 lever snapshot",
-            "class=\"lever-result-grid\"",
-            "class=\"result-rail result-rail-headline\"",
-            "class=\"result-rail result-rail-blocker\"",
-            "class=\"result-rail result-rail-next-step\"",
-            "class=\"result-rail-kicker\">1. Headline</p>",
-            "class=\"result-rail-kicker\">2. Blocker</p>",
-            "class=\"result-rail-kicker\">3. Next step</p>",
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            ".lever-result-note",
-            ".lever-result-grid",
-            ".result-rail",
-            ".result-rail-kicker",
-            ".result-rail-blocker",
-            ".result-rail-next-step",
-        ):
-            self.assertIn(fragment, css)
-
-        for fragment in (
-            "read it top-to-bottom as `Headline -> Blocker -> Next step`",
-            "same lever snapshot payload",
-            "not a second presenter-only explanation layer",
-        ):
-            self.assertIn(fragment, talk_track)
-
-        for fragment in (
-            "fixed presenter reading rails",
-            "`Headline`, `Blocker`, and `Next step`",
-            "same lever snapshot payload",
-        ):
-            self.assertIn(fragment, readme)
-
-        for fragment in (
-            "Read 当前结论 in the fixed order Headline -> Blocker -> Next step",
-            "same lever snapshot payload",
-        ):
-            self.assertIn(fragment, result.stdout)
-
-    def test_demo_static_assets_include_result_source_note(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
-        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
-        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-        result = subprocess.run(
-            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
-        self.assertEqual(result.stderr, "")
-
-        for fragment in (
-            "id=\"result-source-mode\"",
-            "class=\"result-source-mode\"",
-            "当前来源：等待 payload。",
-            "id=\"result-payload-note\"",
-            "结构化结果、当前结论和 Raw JSON 会共用同一份 payload。",
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            ".result-source-mode",
-            ".result-payload-note",
-        ):
-            self.assertIn(fragment, css)
-
-        for fragment in (
-            "function setResultSourceInfo(modeText, payloadNote)",
-            "当前来源：受控 prompt / POST /api/demo / DemoAnswer。",
-            "结构化结果、高亮解释和 Raw JSON 共用同一份 DemoAnswer payload。",
-            "当前来源：拉杆快照 / POST /api/lever-snapshot。",
-            "当前结论、折叠证据区和 Raw JSON 共用同一份 lever snapshot payload。",
-            "当前来源：UI/API 错误。",
-            "当前没有生成新的业务 payload；请先修复输入或网络错误。",
-        ):
-            self.assertIn(fragment, script)
-
-        for fragment in (
-            "visible source note in `结果摘要`",
-            "`POST /api/demo / DemoAnswer` or `POST /api/lever-snapshot`",
-            "share one payload",
-        ):
-            self.assertIn(fragment, talk_track)
-
-        for fragment in (
-            "visible source note",
-            "`POST /api/demo / DemoAnswer`",
-            "`POST /api/lever-snapshot`",
-            "share one payload",
-        ):
-            self.assertIn(fragment, readme)
-
-        for fragment in (
-            "Use the visible source note in 结果摘要",
-            "DemoAnswer or lever-snapshot output",
-            "one payload story",
-        ):
-            self.assertIn(fragment, result.stdout)
-
-    def test_demo_static_assets_hold_lever_result_when_demoanswer_is_active(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
-        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
-        readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
-        result = subprocess.run(
-            [sys.executable, str(DEMO_UI_HANDCHECK_SCRIPT_PATH), "--walkthrough"],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        self.assertEqual(result.returncode, 0, msg=result.stdout + result.stderr)
-        self.assertEqual(result.stderr, "")
-
-        for fragment in (
-            "id=\"lever-result-mode\"",
-            "class=\"lever-result-mode\"",
-            "当前结论来源：等待 lever snapshot。",
-        ):
-            self.assertIn(fragment, html)
-
-        for fragment in (
-            ".lever-result-mode",
-            "border-radius: 999px",
-            "font-family: var(--font-mono)",
-        ):
-            self.assertIn(fragment, css)
-
-        for fragment in (
-            "function setLeverResultMode(modeText)",
-            "function setLeverResultPlaceholder(headline, blocker, nextStep, evidenceItems, modeText)",
-            "当前结论来源：问答模式已激活；lever snapshot rails 已暂停。",
-            "当前结果来自 DemoAnswer；如需当前结论，请重新拖动拉杆或使用场景预设。",
-            "当前不是 lever snapshot。",
-            "继续读 Structured answer，或重新请求 lever snapshot。",
-            "当前结果区显示的是 DemoAnswer，不复用上一次 lever snapshot。",
-            "当前结论来源：lever snapshot / POST /api/lever-snapshot。",
-            "当前结论来源：UI/API 错误；lever snapshot rails 已暂停。",
-            "当前没有新的业务 payload；请先修复错误再看当前结论。",
-        ):
-            self.assertIn(fragment, script)
-
-        for fragment in (
-            "lever `当前结论` rail should switch into a visible hold state",
-            "stale lever evidence",
-        ):
-            self.assertIn(fragment, talk_track)
-
-        for fragment in (
-            "visible hold state",
-            "previous lever snapshot",
-            "active payload source",
-        ):
-            self.assertIn(fragment, readme)
-
-        for fragment in (
-            "confirm 当前结论 switches to a visible hold state",
-            "stale lever snapshot text",
-        ):
-            self.assertIn(fragment, result.stdout)
-
-    def test_demo_static_assets_prefer_latest_interaction_response(self):
-        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
-
-        for fragment in (
-            "let latestInteractionRequestId = 0;",
-            "function beginInteractionRequest()",
-            "function isLatestInteractionRequest(requestId)",
-            "async function runPrompt(prompt, requestId = beginInteractionRequest())",
-            "async function runLeverSnapshot(traDeg, requestId = beginInteractionRequest())",
-            "if (!isLatestInteractionRequest(requestId)) {",
-            "return {stale: true};",
-            "window.clearTimeout(leverSnapshotTimer);",
-        ):
-            self.assertIn(fragment, script)
-
-    def test_demo_static_assets_include_presenter_callout_labels(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        talk_track = DEMO_PRESENTER_TALK_TRACK_PATH.read_text(encoding="utf-8")
-
-        for label in (
-            "[输入]",
-            "[链路]",
-            "[高亮]",
-            "[结果]",
-            "[调试]",
-        ):
-            self.assertIn(f"<span class=\"presenter-callout\">{label}</span>", html)
-
-        for label in ("[Input]", "[Chain]", "[Highlight]", "[Structured answer]", "[Raw JSON]"):
-            self.assertIn(label, talk_track)
-
-        self.assertIn("提问区", html)
-        self.assertIn("逻辑主板", html)
-        self.assertIn("为什么高亮", html)
-        self.assertIn("推理结果", html)
-        self.assertIn("原始 JSON 调试", html)
-        self.assertIn("page callout labels", talk_track)
-        self.assertIn(".presenter-callout", css)
-        self.assertIn("var(--accent-dark)", css)
-
-    def test_demo_static_html_contains_key_ui_elements(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-
-        self.assertIn("well-harness 确定性演示", html)
-        self.assertIn("反推逻辑演示舱", html)
-        self.assertIn("确定性演示层", html)
-        self.assertIn("简化 plant", html)
-        self.assertIn("data-tooltip", html)  # acronym tooltip system
-        self.assertIn("固定控制链路", html)  # chain-summary aria-label preserved
-        self.assertIn("data-node=\"logic4\"", html)
-        self.assertIn("data-node=\"vdt90\"", html)
-        self.assertIn("data-prompt=\"为什么 throttle lock 没释放\"", html)
-        self.assertIn("logic-note", html)
-        self.assertIn("诊断问答（冻结 / 后续开发）", html)
-
-    def test_demo_static_assets_include_polish_and_highlight_refinements(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
-
-        self.assertIn("id=\"ui-status\"", html)
-        self.assertIn("data-node=\"tls115\"", html)
-        self.assertIn("data-node=\"etrac_540v\"", html)
-        self.assertIn("data-node=\"eec_deploy\"", html)
-        self.assertIn("data-node=\"pls_power\"", html)
-        self.assertIn("data-node=\"pdu_motor\"", html)
-        self.assertIn("data-node=\"thr_lock\"", html)
-        self.assertIn("button:disabled", css)
-        self.assertIn(".answer-section.is-error", css)
-        self.assertIn(".logic-stage", css)
-        self.assertIn(".logic-note", css)
-        self.assertIn("确定性推理中...", script)
-        self.assertIn("请输入一个受控 demo prompt", script)
-        self.assertIn("network_error", script)
-        self.assertIn("document.querySelectorAll(\"[data-prompt]\")", script)
-        self.assertIn("\"logic4->thr_lock\": [\"logic4\", \"thr_lock\"]", script)
-        self.assertIn("thr_lock: [\"thr_lock\"]", script)
-        self.assertIn("logic3: [\"logic3\", \"eec_deploy\", \"pls_power\", \"pdu_motor\"]", script)
-
-    def test_demo_static_assets_include_flow_polish_controls(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
-
-        self.assertIn("id=\"selected-example\"", html)
-        self.assertIn("class=\"is-selected\" aria-pressed=\"true\"", html)
-        self.assertIn("aria-pressed=\"false\"", html)
-        self.assertIn("mobile-step-rail", html)
-        self.assertIn("id=\"raw-json-details\"", html)  # view="beginner" added for beginner/expert toggle
-        self.assertIn("<summary><span class=\"presenter-callout\">[调试]</span> 原始 JSON 调试</summary>", html)
-        self.assertIn(".examples button.is-selected", css)
-        self.assertIn(".raw-card summary", css)
-        self.assertIn(".chain-map.mobile-step-rail", css)
-        self.assertIn("overflow-x: auto", css)
-        self.assertIn("scroll-snap-type: x proximity", css)
-        self.assertIn("function syncSelectedPrompt(prompt)", script)
-        self.assertIn("button.setAttribute(\"aria-pressed\", isSelected ? \"true\" : \"false\")", script)
-        self.assertIn("当前示例：自定义问题", script)
-        self.assertIn("syncSelectedPrompt(promptInput.value)", script)
-
-    def test_demo_static_assets_include_prompt_guidance_and_keyboard_affordance(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
-
-        self.assertIn("grouped-examples", html)
-        self.assertIn("data-category=\"bridge\"", html)
-        self.assertIn("data-category=\"diagnosis\"", html)
-        self.assertIn("data-category=\"trigger\"", html)
-        self.assertIn("data-category=\"proposal\"", html)
-        self.assertIn("data-intent=\"logic4_thr_lock_bridge\"", html)
-        self.assertIn("data-intent=\"diagnose_problem\"", html)
-        self.assertIn("data-intent=\"trigger_node\"", html)
-        self.assertIn("data-intent=\"propose_logic_change\"", html)
-        self.assertIn("链路关系", html)
-        self.assertIn("未释放诊断", html)
-        self.assertIn("触发影响", html)
-        self.assertIn("改阈值预演", html)
-        self.assertIn("id=\"prompt-keyboard-hint\"", html)
-        self.assertIn("按 Cmd/Ctrl+Enter 运行；普通 Enter 换行。", html)
-        self.assertIn("<details id=\"demo-help\" class=\"demo-help\">", html)
-        self.assertIn("不是开放式 LLM", html)
-        self.assertIn("简化 plant", html)
-
-        self.assertIn(".grouped-examples", css)
-        self.assertIn(".example-group", css)
-        self.assertIn(".prompt-hint", css)
-        self.assertIn(".demo-help summary", css)
-
-        self.assertIn("promptInput.addEventListener(\"keydown\"", script)
-        self.assertIn("event.metaKey || event.ctrlKey", script)
-        self.assertIn("event.key === \"Enter\"", script)
-        self.assertIn("event.preventDefault()", script)
-        self.assertIn("form.requestSubmit()", script)
-
-    def test_demo_static_assets_include_highlight_explanation(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
-
-        self.assertIn("id=\"highlight-explanation\"", html)
-        self.assertIn("为什么高亮", html)
-        self.assertIn("id=\"highlight-payload-fields\"", html)
-        self.assertIn("id=\"highlight-node-list\"", html)
-        self.assertIn("id=\"highlight-explanation-list\"", html)
-        self.assertIn("id=\"chain-inspector\"", html)
-        self.assertIn("详细解释 / 当前结论", html)
-        self.assertIn("高亮来自答案里的命中节点 / 目标逻辑", html)
-        self.assertIn("不是完整因果证明", html)
-
-        self.assertIn(".highlight-explanation", css)
-        self.assertIn(".highlight-explanation h3", css)
-        self.assertIn(".highlight-explanation li", css)
-        self.assertIn(".chain-inspector", css)
-        self.assertIn(".chain-inspector-body", css)
-
-        self.assertIn("function highlightedNodesForPayload(payload)", script)
-        self.assertIn("function renderHighlightExplanation(payload)", script)
-        self.assertIn("highlightedNodesForPayload(payload)", script)
-        self.assertIn("答案关联：意图=", script)
-        self.assertIn("命中节点=${textOrDash(payload.matched_node)}", script)
-        self.assertIn("目标逻辑=${textOrDash(payload.target_logic)}", script)
-        self.assertIn("链路桥接：L4 是上游逻辑门，THR_LOCK 是下游释放命令。", script)
-        self.assertIn("L3 相关答案会同时点亮 EEC / PLS / PDU 命令子节点。", script)
-        self.assertIn("这里只表示答案关联，不是完整因果证明", script)
-        self.assertIn("UI/API 错误时不显示链路高亮。", script)
-
-    def test_demo_static_assets_include_answer_section_summary(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
-
-        self.assertIn("id=\"answer-section-summary\"", html)
-        self.assertIn("结果分区", html)
-        self.assertIn("id=\"answer-section-keyboard-hint\"", html)
-        self.assertIn("方向键可在分区标签之间移动。", html)
-        self.assertIn("id=\"answer-section-summary-items\"", html)
-        self.assertIn("summary-chip is-empty", html)
-        self.assertIn("默认折叠；展开查看证据 / 风险。", html)
-
-        self.assertIn(".answer-section-summary", css)
-        self.assertIn(".summary-hint", css)
-        self.assertIn(".summary-chips", css)
-        self.assertIn(".summary-chip", css)
-        self.assertIn("button.summary-chip", css)
-        self.assertIn(".summary-chip.is-empty", css)
-        self.assertIn(".summary-chip.is-error", css)
-        self.assertIn(".summary-chip:focus-visible", css)
-        self.assertIn(".answer-section:focus-visible", css)
-        self.assertIn("scroll-margin-top", css)
-
-        self.assertIn("function answerSectionId(sectionName)", script)
-        self.assertIn("return `answer-section-${sectionName}`", script)
-        self.assertIn("function focusAnswerSection(sectionName)", script)
-        self.assertIn("document.getElementById(answerSectionId(sectionName))", script)
-        self.assertIn("target.focus({preventScroll: true})", script)
-        self.assertIn("target.scrollIntoView({behavior: \"smooth\", block: \"start\"})", script)
-        self.assertIn("function renderAnswerSectionSummary(payload)", script)
-        self.assertIn("function renderAnswerSectionSummaryUnavailable()", script)
-        self.assertIn("section.id = answerSectionId(title)", script)
-        self.assertIn("section.tabIndex = -1", script)
-        self.assertIn("const chip = document.createElement(\"button\")", script)
-        self.assertIn("chip.type = \"button\"", script)
-        self.assertIn("chip.setAttribute(\"aria-controls\", answerSectionId(sectionName))", script)
-        self.assertIn("chip.setAttribute(\"aria-describedby\", \"answer-section-keyboard-hint\")", script)
-        self.assertIn("chip.addEventListener(\"click\", () => focusAnswerSection(sectionName))", script)
-        self.assertIn("chip.addEventListener(\"keydown\", handleSummaryChipKeydown)", script)
-        self.assertIn("sections.map((sectionName)", script)
-        self.assertIn("Array.isArray(payload[sectionName]) ? payload[sectionName] : []", script)
-        self.assertIn("${sectionLabels[sectionName] || sectionName} ${count} 条", script)
-        self.assertIn("${sectionLabels[sectionName] || sectionName} 0 条 — 本答案为空", script)
-        self.assertIn("UI/API 错误时分区摘要不可用。", script)
-        self.assertIn("renderAnswerSectionSummary(payload)", script)
-        self.assertIn("renderAnswerSectionSummaryUnavailable()", script)
-        for section_name in ("evidence", "outcome", "possible_causes", "required_changes", "risks"):
-            self.assertIn(f"\"{section_name}\"", script)
-
-    def test_demo_static_assets_include_answer_section_jump_focus(self):
-        css = (DEMO_UI_STATIC_DIR / "demo.css").read_text(encoding="utf-8")
-        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
-
-        self.assertIn("function answerSectionId(sectionName)", script)
-        self.assertIn("return `answer-section-${sectionName}`", script)
-        self.assertIn("function focusAnswerSection(sectionName)", script)
-        self.assertIn("document.getElementById(answerSectionId(sectionName))", script)
-        self.assertIn("target.focus({preventScroll: true})", script)
-        self.assertIn("target.scrollIntoView({behavior: \"smooth\", block: \"start\"})", script)
-        self.assertIn("section.id = answerSectionId(title)", script)
-        self.assertIn("section.tabIndex = -1", script)
-        self.assertIn("const chip = document.createElement(\"button\")", script)
-        self.assertIn("chip.type = \"button\"", script)
-        self.assertIn("chip.setAttribute(\"aria-controls\", answerSectionId(sectionName))", script)
-        self.assertIn("chip.addEventListener(\"click\", () => focusAnswerSection(sectionName))", script)
-        self.assertIn("UI/API 错误时分区摘要不可用。", script)
-        self.assertIn(".summary-chip:focus-visible", css)
-        self.assertIn(".answer-section:focus-visible", css)
-        self.assertIn("scroll-margin-top", css)
-
-    def test_demo_static_assets_include_answer_section_keyboard_navigation(self):
-        html = (DEMO_UI_STATIC_DIR / "demo.html").read_text(encoding="utf-8")
-        script = (DEMO_UI_STATIC_DIR / "demo.js").read_text(encoding="utf-8")
-
-        self.assertIn("id=\"answer-section-keyboard-hint\"", html)
-        self.assertIn("方向键可在分区标签之间移动。", html)
-        self.assertIn("function focusSummaryChip(currentChip, key)", script)
-        self.assertIn("function handleSummaryChipKeydown(event)", script)
-        self.assertIn("#answer-section-summary-items button.summary-chip", script)
-        self.assertIn("[\"ArrowRight\", \"ArrowDown\", \"ArrowLeft\", \"ArrowUp\", \"Home\", \"End\"].includes(event.key)", script)
-        self.assertIn("event.preventDefault()", script)
-        self.assertIn("focusSummaryChip(event.currentTarget, event.key)", script)
-        self.assertIn("ArrowRight: Math.min(currentIndex + 1, lastIndex)", script)
-        self.assertIn("ArrowDown: Math.min(currentIndex + 1, lastIndex)", script)
-        self.assertIn("ArrowLeft: Math.max(currentIndex - 1, 0)", script)
-        self.assertIn("ArrowUp: Math.max(currentIndex - 1, 0)", script)
-        self.assertIn("Home: 0", script)
-        self.assertIn("End: lastIndex", script)
-        self.assertIn("chips[targetIndex].focus()", script)
-        self.assertIn("chip.addEventListener(\"click\", () => focusAnswerSection(sectionName))", script)
-        self.assertIn("chip.addEventListener(\"keydown\", handleSummaryChipKeydown)", script)
-        self.assertIn("chip.setAttribute(\"aria-describedby\", \"answer-section-keyboard-hint\")", script)
-        self.assertNotIn("event.key === \" \"", script)
 
     def test_node_catalog_covers_expected_chain_nodes(self):
         node_ids = {node.node_id for node in NODE_CATALOG}
@@ -3871,7 +2340,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             evidence,
         )
         self.assertIn(
-            "blocked_status: name=tra_deg source=explain_condition observed=True checkpoint=4.9s value=-14 required=between_exclusive -32..0",
+            "blocked_status: name=tra_deg source=explain_condition observed=True checkpoint=4.9s value=-14 required=between_lower_inclusive -32..0",
             evidence,
         )
         self.assertIn(

@@ -493,7 +493,7 @@ def current_reference_workbench_spec(config: HarnessConfig | None = None) -> Con
             description="VDT90、反推 travel、发动机和地面条件共同驱动 THR_LOCK。注意：VDT90 由 L3 扇出的 PDU motor 驱动位移反馈产生，L4 实际上间接依赖 L3 的成立（物理因果链：L3 → pdu_motor_cmd → deploy_position_percent ≥ 90% → VDT90 → L4）。",
             conditions=(
                 LogicConditionSpec("deploy_90_percent_vdt", "deploy_position_percent", ">=", active_config.deploy_90_threshold_percent, "VDT 反馈位移已达到 90%（由 L3 驱动 PDU 产生）"),
-                LogicConditionSpec("tra_deg", "tra_deg", "between_exclusive", (active_config.reverse_travel_min_deg, active_config.reverse_travel_max_deg), "TRA 必须处于有效反推 travel 内"),
+                LogicConditionSpec("tra_deg", "tra_deg", "between_lower_inclusive", (active_config.reverse_travel_min_deg, active_config.reverse_travel_max_deg), "TRA 必须处于有效反推 travel 内（下界包含：机械停位即最大反推，仍有效）"),
                 LogicConditionSpec("aircraft_on_ground", "aircraft_on_ground", "==", True, "飞机必须在地面"),
                 LogicConditionSpec("engine_running", "engine_running", "==", True, "发动机必须运行"),
             ),

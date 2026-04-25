@@ -78,7 +78,7 @@
 - `test_wow_b_n_trials_zero_is_clamped_to_min` — 降级路径
 - `test_wow_b_n_trials_overflow_is_clamped_to_max` — 降级路径
 
-**降级路径额外锚**（`tests/e2e/test_frontend_degradation.py`）：
+**降级路径额外锚**（`archive/shelved/llm-features/tests/e2e/test_frontend_degradation.py`）：
 - `test_frontend_monte_carlo_bad_n_trials_returns_renderable_response[0/-1/1500000]`
 - `test_frontend_monte_carlo_bad_type_returns_structured_400_not_html`
 

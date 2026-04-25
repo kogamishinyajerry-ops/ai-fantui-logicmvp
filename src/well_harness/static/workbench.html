@@ -182,8 +182,6 @@
       <section class="panel workbench-nav-panel" aria-label="页面入口">
         <a class="workbench-nav-link" href="/demo.html">返回反推逻辑演示舱</a>
         <span class="workbench-nav-divider" aria-hidden="true"></span>
-        <a class="workbench-nav-link" href="/ai-doc-analyzer.html">AI Document Analyzer</a>
-        <span class="workbench-nav-divider" aria-hidden="true"></span>
         <span class="workbench-nav-note">当前页用于验收 P7 workbench bundle / archive，不替代 demo 舱。</span>
       </section>
 
@@ -545,6 +543,9 @@
 
           <div class="workbench-action-row">
             <button type="button" id="run-workbench-bundle" class="workbench-run-button">生成 Bundle</button>
+            <button type="button" id="workbench-final-approve" class="workbench-toolbar-button is-primary">冻结审批 Spec</button>
+            <button type="button" id="workbench-start-gen" class="workbench-toolbar-button" disabled>生成 (Frozen Spec)</button>
+            <span id="workbench-workflow-state" class="workbench-workflow-badge" data-state="init" aria-live="polite" aria-label="工作流状态">INIT</span>
             <p id="workbench-request-status" class="workbench-request-status" role="status" aria-live="polite">等待生成。</p>
           </div>
         </section>

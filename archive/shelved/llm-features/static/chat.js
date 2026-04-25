@@ -54,6 +54,8 @@
     'landing-gear': '起落架系统',
     'bleed-air': '引气阀系统',
     efds: '干扰弹系统',
+    // P43-02.5 Step D1 T1 · c919-etras SYSTEM_LABELS entry
+    'c919-etras': 'C919 反推系统（E-TRAS）',
   };
   var NODE_STATE_CLASSES = ['is-active', 'is-blocked', 'is-inactive'];
   var NODE_VALUE_KEYS = {
@@ -289,9 +291,18 @@
   }
 
   function buildDefaultLeverPayload(promptText, systemId) {
+    var sid = systemId || 'thrust-reverser';
+    // P43-02.5 Step D1 T2 · c919-etras branch · don't force thrust-reverser fields
+    // Panel-state is read via collectC919PanelSnapshot() when T3 constructs the POST body
+    if (sid === 'c919-etras') {
+      return {
+        prompt: promptText || '',
+        system_id: sid,
+      };
+    }
     return {
       prompt: promptText || '',
-      system_id: systemId || 'thrust-reverser',
+      system_id: sid,
       tra_deg: 0.0,
       radio_altitude_ft: 5.0,
       engine_running: true,
@@ -394,6 +405,54 @@
   }
 
 function _applySuggestedOverrides(overrides) {
+    // P43-02.5 v4.4 · c919-etras writes overrides to bottom-panel DOM inputs
+    // + triggers re-evaluation via POST /api/system-snapshot. This enables
+    // detail-panel inline adjust (click node → tune → apply) to properly
+    // mutate state, while still keeping bottom panel as the source-of-truth
+    // DOM surface for collectC919PanelSnapshot().
+    if (currentSystem === 'c919-etras') {
+      var panelEl = document.getElementById('c919-controls-panel');
+      if (panelEl) {
+        var k;
+        for (k in overrides) {
+          if (!Object.prototype.hasOwnProperty.call(overrides, k)) { continue; }
+          var input = panelEl.querySelector('[data-c919-field="' + k + '"]');
+          if (!input) { continue; }
+          var val = overrides[k];
+          if (input.type === 'checkbox') {
+            input.checked = !!val;
+          } else if (input.type === 'range' || input.type === 'number') {
+            input.value = String(val);
+            var disp = panelEl.querySelector('[data-display-for="' + k + '"]');
+            if (disp) { disp.textContent = String(val); }
+          } else {
+            input.value = String(val);
+          }
+        }
+      }
+      // Synchronous POST (cancel any pending debounce first · latest-wins per v4.1)
+      if (typeof c919DebounceId !== 'undefined' && c919DebounceId) {
+        clearTimeout(c919DebounceId);
+        c919DebounceId = null;
+      }
+      var snap = collectC919PanelSnapshot();
+      // For numeric overrides not tied to a DOM input (timers · rare), merge directly
+      var kk;
+      for (kk in overrides) {
+        if (Object.prototype.hasOwnProperty.call(overrides, kk)) {
+          snap[kk] = overrides[kk];
+        }
+      }
+      lastTruthPayloadBySystem['c919-etras'] = { snapshot: snap };
+      return requestJson('/api/system-snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ system_id: 'c919-etras', snapshot: snap }),
+      }).then(function(data) {
+        applySystemSnapshotToCanvas(data, snap);
+        return { snapshotData: data, requestPayload: snap, nodeStates: {}, fallbackText: '' };
+      });
+    }
     var basePayload = lastTruthPayloadBySystem[currentSystem]
         ? copyObject(lastTruthPayloadBySystem[currentSystem])
         : buildDefaultLeverPayload('', currentSystem);
@@ -1267,6 +1326,64 @@ function _applySuggestedOverrides(overrides) {
     updateVisibleConnectionStates(rendered.resolvedStates, rendered.blockedByNode);
   }
 
+  // P43-02.5 Step C · C919 reference panel annotation helper
+  // Populates non-asserted_component_values fields: timer countdowns (from input snapshot),
+  // completion_reached badge (from truth_evaluation), and tr_position_percent aggregate bar.
+  // Called after renderChainMap() when currentSystem === 'c919-etras'.
+  function applyC919Annotations(snapshotData, inputSnapshot) {
+    if (!snapshotData) { return; }
+    var topology = document.getElementById('chain-topology-c919-etras');
+    if (!topology) { return; }
+
+    var truthEval = snapshotData.truth_evaluation || {};
+    var asserted = truthEval.asserted_component_values || {};
+    var input = inputSnapshot || {};
+
+    // Timer annotation countdowns (server-computed · display-only per v4.1)
+    var timerFields = [
+      'comm2_timer_s',
+      'lock_unlock_confirm_s',
+      'tr_position_deployed_confirm_s',
+      'tr_stowed_locked_confirm_s'
+    ];
+    var ti;
+    var field;
+    var val;
+    var els;
+    var k;
+    for (ti = 0; ti < timerFields.length; ti += 1) {
+      field = timerFields[ti];
+      val = input[field];
+      els = topology.querySelectorAll('[data-value-for="' + field + '"]');
+      for (k = 0; k < els.length; k += 1) {
+        els[k].textContent = (typeof val === 'number') ? val.toFixed(2) + 's' : '—';
+      }
+    }
+
+    // Completion badge (from truth_evaluation.completion_reached · not in asserted_component_values)
+    var completionEls = topology.querySelectorAll('[data-value-for="completion_reached"]');
+    var completionText = '—';
+    if (truthEval.completion_reached === true) {
+      completionText = '✓ DEPLOYED';
+    } else if (truthEval.completion_reached === false) {
+      completionText = '○ not reached';
+    }
+    for (k = 0; k < completionEls.length; k += 1) {
+      completionEls[k].textContent = completionText;
+    }
+
+    // TR position aggregate bar (reads from asserted_component_values.tr_position_percent)
+    var trPos = asserted.tr_position_percent;
+    var barEls = topology.querySelectorAll('[data-bar-for="tr_position_percent"]');
+    var pct;
+    if (typeof trPos === 'number') {
+      pct = Math.max(0, Math.min(100, trPos));
+      for (k = 0; k < barEls.length; k += 1) {
+        barEls[k].setAttribute('width', (pct * 1.6).toFixed(1)); // 160px bar × pct/100
+      }
+    }
+  }
+
   function buildLeverSnapshotComponentValues(data, payload) {
     var hud = data && data.hud ? data.hud : {};
     var outputs = data && data.outputs ? data.outputs : {};
@@ -1646,7 +1763,7 @@ function clearAiHighlights() {
     return nodeStates;
   }
 
-  function applySystemSnapshotToCanvas(snapshotData) {
+  function applySystemSnapshotToCanvas(snapshotData, inputSnapshot) {
     var truthEvaluation;
 
     if (snapshotData && Array.isArray(snapshotData.nodes) && snapshotData.nodes.length) {
@@ -1662,6 +1779,11 @@ function clearAiHighlights() {
         ? truthEvaluation.asserted_component_values
         : {}
     );
+
+    // P43-02.5 Step C · c919-specific annotation extension (timers + completion + aggregate bar)
+    if (currentSystem === 'c919-etras') {
+      applyC919Annotations(snapshotData, inputSnapshot);
+    }
   }
 
   function applySnapshotToCanvas(data, payload) {
@@ -2160,9 +2282,9 @@ function clearAiHighlights() {
         applyBtn.title = '应用当前参数';
       }
 
-      if (!canvasAdjustmentsSupported()) {
+      if (!perNodeAdjustSupported()) {
         adjustSection.hidden = false;
-        adjustParamRow.innerHTML = '<p class="ndp-param-hint">当前画布参数调节仅支持反推系统参考链路。</p>';
+        adjustParamRow.innerHTML = '<p class="ndp-param-hint">当前系统参数调节仅支持反推系统与 C919 E-TRAS 参考链路。</p>';
         if (applyBtn) {
           applyBtn.disabled = true;
           applyBtn.title = '当前系统不支持该参数调节面板';
@@ -2170,7 +2292,42 @@ function clearAiHighlights() {
         return;
       }
 
-      // Node IDs that map to an adjustable lever parameter
+      // P43-02.5 v4.4 · C919 adjustable nodes map (19 interactive + read-only hints)
+      // Maps each truth-tracked node id to its adjustable snapshot field(s).
+      // Logic nodes (ln_*) + command outputs (eicu_*/fadec_*/tr_command3_enable)
+      // are computed · shown as read-only explainer with input node references.
+      var C919_ADJUSTABLE_NODES = {
+        // 12 sensor inputs (core)
+        tra_deg:               { type: 'float', label: 'TRA 推力杆角度', unit: '°', min: -32, max: 0, step: 0.1, key: 'tra_deg' },
+        atltla:                { type: 'bool',  label: 'ATLTLA · 微动开关1 (-1.4°~-6.2°)', key: 'atltla' },
+        apwtla:                { type: 'bool',  label: 'APWTLA · 微动开关2 (-5°~-9.8°)', key: 'apwtla' },
+        engine_running:        { type: 'bool',  label: '发动机运行', key: 'engine_running' },
+        n1k_percent:           { type: 'float', label: 'N1K 转速', unit: '%', min: 0, max: 120, step: 1, key: 'n1k_percent' },
+        tr_inhibited:          { type: 'bool',  label: 'TR 电气抑制', key: 'tr_inhibited' },
+        mlg_wow:               { type: 'derived', label: 'MLG_WOW (由 LGCU 余度选择)', hint: '请调节 lgcu1/lgcu2 四字段 (Table 2)' },
+        tr_wow:                { type: 'bool',  label: 'TR_WOW (2.25s/120ms 滤波)', key: 'tr_wow' },
+        trcu_power_on:         { type: 'bool',  label: 'TRCU 电源状态 (truth-tracked status · 非 gating)', key: 'trcu_power_on' },
+        e_tras_over_temp_fault:{ type: 'bool',  label: 'E-TRAS 过温故障 (safety abort)', key: 'e_tras_over_temp_fault' },
+        tr_position_percent:   { type: 'float', label: 'TR 反推位置', unit: '%', min: 0, max: 100, step: 1, key: 'tr_position_percent' },
+        lock_state:            { type: 'derived', label: 'lock_state aggregate', hint: '由 pls_ls_*/tls_ls_*/pylon_ls_* 传感器 + tr_position_percent 推导' },
+        // 5 logic nodes (read-only · computed)
+        ln_eicu_cmd2:          { type: 'computed', label: 'PDF §1.1.1 · MLG_WOW ∧ ¬TR_Inhibited ∧ (Comm2&lt;30s) ∧ ¬TR_Deployed', inputs: ['mlg_wow', 'tr_inhibited', 'comm2_timer_s', 'tr_position_percent'] },
+        ln_eicu_cmd3:          { type: 'computed', label: 'PDF §1.1.2 · (Engine∨TRCU_menu) ∧ MLG_WOW ∧ ¬TR_Inhibited ∧ APWTLA', inputs: ['engine_running', 'mlg_wow', 'tr_inhibited', 'apwtla'] },
+        ln_tr_command3_enable: { type: 'computed', label: 'PDF §1.1.2 图4 · ¬[(Stowed_Locked_1s∧TRA≥-1.4∧115VAC) ∨ OverTemp]', inputs: ['tr_stowed_locked_confirm_s', 'tra_deg', 'trcu_power_on', 'e_tras_over_temp_fault'] },
+        ln_fadec_deploy_command:{ type: 'computed', label: 'PDF §1.1.3 图5 · 6-input AND (Eng∨Maint ∧ ¬Inh ∧ Unlock ∧ TR_WOW ∧ N1k ∧ TRA<-11.74)', inputs: ['engine_running', 'tr_inhibited', 'lock_unlock_confirm_s', 'tr_wow', 'n1k_percent', 'tra_deg'] },
+        ln_fadec_stow_command: { type: 'computed', label: 'PDF §2 Step 7 · TRA≥-1.4 ∧ N1k≤Stow ∧ Engine ∧ ¬Deploy', inputs: ['tra_deg', 'n1k_percent', 'engine_running', 'fadec_deploy_command'] },
+        // 5 command outputs (read-only · from logic nodes)
+        eicu_cmd2:             { type: 'computed', label: 'EICU CMD2 output · driven by ln_eicu_cmd2', inputs: ['ln_eicu_cmd2'] },
+        eicu_cmd3:             { type: 'computed', label: 'EICU CMD3 output · driven by ln_eicu_cmd3 + TR_Command3_Enable reset', inputs: ['ln_eicu_cmd3', 'ln_tr_command3_enable'] },
+        tr_command3_enable:    { type: 'computed', label: 'TR_Command3_Enable output · feedback to EICU', inputs: ['ln_tr_command3_enable'] },
+        fadec_deploy_command:  { type: 'computed', label: 'FADEC Deploy CMD1 · drives TRCU deploy', inputs: ['ln_fadec_deploy_command'] },
+        fadec_stow_command:    { type: 'computed', label: 'FADEC Stow CMD1 · drives TRCU stow', inputs: ['ln_fadec_stow_command'] },
+      };
+
+      // Dispatch adjustable-nodes table by current system
+      var adjustableNodes = (currentSystem === 'c919-etras') ? C919_ADJUSTABLE_NODES : null;
+
+      // Node IDs that map to an adjustable lever parameter (thrust-reverser)
       var ADJUSTABLE_NODES = {
         radio_altitude_ft: { type: 'float', label: '无线电高度', unit: 'ft',
           min: 0, max: 20, step: 1, key: 'radio_altitude_ft' },
@@ -2186,16 +2343,44 @@ function clearAiHighlights() {
           min: 0, max: 100, step: 1, key: 'deploy_position_percent' },
       };
 
-      var cfg = ADJUSTABLE_NODES[nodeId];
+      var cfg = (adjustableNodes || ADJUSTABLE_NODES)[nodeId];
       adjustSection.hidden = false;
+
+      // P43-02.5 v4.4 · handle c919 computed/derived/read-only nodes (no slider)
+      if (cfg && (cfg.type === 'computed' || cfg.type === 'derived')) {
+        adjustParamRow.innerHTML = '';
+        var explainer = document.createElement('div');
+        explainer.className = 'ndp-param-explainer';
+        var html = '<p class="ndp-param-label">' + escHtml(cfg.label || nodeId) + '</p>';
+        if (cfg.hint) {
+          html += '<p class="ndp-param-hint">' + escHtml(cfg.hint) + '</p>';
+        }
+        if (cfg.inputs && cfg.inputs.length) {
+          html += '<p class="ndp-param-hint">输入节点: ' +
+            cfg.inputs.map(function(ii) { return '<code>' + escHtml(ii) + '</code>'; }).join(' · ') + '</p>';
+        }
+        explainer.innerHTML = html;
+        adjustParamRow.appendChild(explainer);
+        if (applyBtn) {
+          applyBtn.disabled = true;
+          applyBtn.textContent = '应用 (computed · 不可直接调)';
+          applyBtn.title = '此节点由输入节点推导 · 请点击输入节点调节';
+        }
+        return;
+      }
+
       if (cfg) {
         adjustParamRow.innerHTML = '';
 
         var currentVal = null;
-        // For deploy_position_percent (VDT): read directly from lastTruthPayloadBySystem
-        // since truth_evaluation.asserted_component_values is empty for lever-snapshot.
-        // buildCanonicalLeverPayloadFromSnapshot stores the correct value from hud.
-        var payload = lastTruthPayloadBySystem[currentSystem] || {};
+        // P43-02.5 v4.4 · c919-etras reads from collectC919PanelSnapshot() (nested)
+        // thrust-reverser reads from lastTruthPayloadBySystem[...][cfg.key] (flat)
+        var payload;
+        if (currentSystem === 'c919-etras') {
+          payload = (typeof collectC919PanelSnapshot === 'function') ? collectC919PanelSnapshot() : {};
+        } else {
+          payload = lastTruthPayloadBySystem[currentSystem] || {};
+        }
         if (payload[cfg.key] !== undefined) {
           currentVal = cfg.type === 'bool' ? payload[cfg.key] : parseFloat(payload[cfg.key]);
         } else if (lastTruthSnapshot) {
@@ -2354,7 +2539,66 @@ function clearAiHighlights() {
   }
 
   function canvasAdjustmentsSupported() {
+    // Global controls (#canvas-global-controls · feedback_mode / n1k_limit)
+    // are thrust-specific. c919 has its own bottom controls panel + per-node
+    // detail adjust (see perNodeAdjustSupported).
     return currentSystem === 'thrust-reverser';
+  }
+
+  function perNodeAdjustSupported() {
+    // P43-02.5 v4.4 · per-node inline adjust (right-side detail panel)
+    // Supported for thrust-reverser (lever-snapshot path) AND c919-etras
+    // (POST /api/system-snapshot path). Detail panel click → inline
+    // slider/toggle → apply rewrites DOM + triggers re-eval.
+    return currentSystem === 'thrust-reverser' || currentSystem === 'c919-etras';
+  }
+
+  // P43-02.5 Step D1 · collectC919PanelSnapshot reads 34 fields from DOM inputs
+  // + defaults. Used by T3 handleGeneralQuestion c919 branch + T6 handleOperateIntent
+  // + Step D2 per-control POST. Returns full snapshot dict for POST body.
+  function collectC919PanelSnapshot() {
+    // Default snapshot mirrors demo_server.py:3290-3340 _default_snapshot_for_system c919
+    var snap = {
+      tra_deg: 0.0,
+      n1k_percent: 35.0,
+      engine_running: true,
+      tr_inhibited: false,
+      lgcu1_mlg_wow_value: true, lgcu1_mlg_wow_valid: true,
+      lgcu2_mlg_wow_value: true, lgcu2_mlg_wow_valid: true,
+      tr_wow: true,
+      tls_ls_a_valid: true, tls_ls_a_unlocked: false,
+      tls_ls_b_valid: true, tls_ls_b_unlocked: false,
+      pls_ls_a_locked: true, pls_ls_b_locked: true,
+      left_pylon_ls_a_valid: true, left_pylon_ls_a_unlocked: false,
+      left_pylon_ls_b_valid: true, left_pylon_ls_b_unlocked: false,
+      right_pylon_ls_a_valid: true, right_pylon_ls_a_unlocked: false,
+      right_pylon_ls_b_valid: true, right_pylon_ls_b_unlocked: false,
+      apwtla: false, atltla: false, vdt_sensor_valid: true,
+      e_tras_over_temp_fault: false, trcu_power_on: true,
+      tr_position_percent: 0.0, prev_eicu_cmd3: false,
+      comm2_timer_s: 0.0, lock_unlock_confirm_s: 0.0,
+      tr_position_deployed_confirm_s: 0.0, tr_stowed_locked_confirm_s: 2.0,
+    };
+    // Override with DOM panel input values (populated by Step D2 · each input has data-c919-field)
+    var inputs = document.querySelectorAll('#c919-controls-panel [data-c919-field]');
+    var i;
+    var el;
+    var field;
+    var val;
+    for (i = 0; i < inputs.length; i += 1) {
+      el = inputs[i];
+      field = el.getAttribute('data-c919-field');
+      if (!field) { continue; }
+      if (el.type === 'checkbox') {
+        snap[field] = el.checked;
+      } else if (el.type === 'range' || el.type === 'number') {
+        val = parseFloat(el.value);
+        snap[field] = isNaN(val) ? snap[field] : val;
+      } else {
+        snap[field] = el.value;
+      }
+    }
+    return snap;
   }
 
   function collectCanvasGlobalOverrides() {
@@ -2641,9 +2885,121 @@ function clearAiHighlights() {
   });
 
 
+  // P43-02.5 Step D2 · initialize c919 controls panel (debounce 150ms + button handlers)
+  var c919DebounceId = null;
+  var c919ControlsInited = false;
+  function c919SubmitSnapshot() {
+    if (currentSystem !== 'c919-etras') { return; }
+    var snap = collectC919PanelSnapshot();
+    lastTruthPayloadBySystem['c919-etras'] = { snapshot: snap };
+    requestJson('/api/system-snapshot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system_id: 'c919-etras', snapshot: snap }),
+    }).then(function(data) {
+      applySystemSnapshotToCanvas(data, snap);
+    }).catch(function(err) {
+      console.error('[P43-02.5] c919 panel POST failed:', err);
+    });
+  }
+  function c919DebouncedSubmit() {
+    if (c919DebounceId) { clearTimeout(c919DebounceId); }
+    c919DebounceId = setTimeout(function() {
+      c919DebounceId = null;
+      c919SubmitSnapshot();
+    }, 150); // v4.2 §2c tunable to 300ms if POST storm observed
+  }
+  function initC919ControlsPanel() {
+    if (c919ControlsInited) { return; }
+    var panel = document.getElementById('c919-controls-panel');
+    if (!panel) { return; }
+    c919ControlsInited = true;
+    // wire per-control change → display value + debounced POST
+    var inputs = panel.querySelectorAll('[data-c919-field]');
+    var i;
+    var el;
+    var evt;
+    for (i = 0; i < inputs.length; i += 1) {
+      el = inputs[i];
+      evt = (el.type === 'range') ? 'input' : 'change';
+      el.addEventListener(evt, function(e) {
+        var tgt = e.currentTarget;
+        var field = tgt.getAttribute('data-c919-field');
+        // Update value display for sliders
+        var disp = panel.querySelector('[data-display-for="' + field + '"]');
+        if (disp) {
+          disp.textContent = (tgt.type === 'range') ? tgt.value : (tgt.checked ? 'on' : 'off');
+        }
+        // Composite-valid: if checking an *_unlocked, also auto-set *_valid=true
+        var compValid = tgt.getAttribute('data-c919-composite-valid');
+        if (compValid && tgt.checked) {
+          // find any hidden input for compValid · otherwise handled in collectC919PanelSnapshot default
+          var dummyField = panel.querySelector('[data-c919-field="' + compValid + '"]');
+          if (dummyField && dummyField.type === 'checkbox') { dummyField.checked = true; }
+        }
+        // Composite-targets: mirror state to sibling fields (e.g., Pylon unlock sets 4)
+        var compTargets = tgt.getAttribute('data-c919-composite-targets');
+        if (compTargets) {
+          var targets = compTargets.split(',');
+          var j;
+          for (j = 0; j < targets.length; j += 1) {
+            var tf = panel.querySelector('[data-c919-field="' + targets[j].trim() + '"]');
+            if (tf && tf.type === 'checkbox') { tf.checked = tgt.checked; }
+          }
+        }
+        c919DebouncedSubmit();
+      });
+    }
+    // Advance deploy latches button (control #19)
+    var advanceBtn = document.getElementById('c919-btn-advance-deploy');
+    if (advanceBtn) {
+      advanceBtn.addEventListener('click', function() {
+        // v4.2 §2c row 19 · cancel pending debounce + atomic set timer fields + immediate POST
+        if (c919DebounceId) { clearTimeout(c919DebounceId); c919DebounceId = null; }
+        var snap = collectC919PanelSnapshot();
+        snap.lock_unlock_confirm_s = 0.4;
+        snap.tr_position_deployed_confirm_s = 0.5;
+        snap.tr_stowed_locked_confirm_s = 0.0; // keep CMD3 latched
+        // comm2_timer_s is display-only · not overridden (v4.1 fix)
+        lastTruthPayloadBySystem['c919-etras'] = { snapshot: snap };
+        requestJson('/api/system-snapshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ system_id: 'c919-etras', snapshot: snap }),
+        }).then(function(data) {
+          applySystemSnapshotToCanvas(data, snap);
+        });
+      });
+    }
+    // Stow latches button (control #19-alt · auxiliary debug)
+    var stowBtn = document.getElementById('c919-btn-stow-latches');
+    if (stowBtn) {
+      stowBtn.addEventListener('click', function() {
+        if (c919DebounceId) { clearTimeout(c919DebounceId); c919DebounceId = null; }
+        var snap = collectC919PanelSnapshot();
+        snap.tr_stowed_locked_confirm_s = 1.0; // force CMD3 reset
+        lastTruthPayloadBySystem['c919-etras'] = { snapshot: snap };
+        requestJson('/api/system-snapshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ system_id: 'c919-etras', snapshot: snap }),
+        }).then(function(data) {
+          applySystemSnapshotToCanvas(data, snap);
+        });
+      });
+    }
+  }
+
   if (systemSelect) {
     systemSelect.addEventListener('change', function() {
       currentSystem = systemSelect.value;
+      // P43-02.5 Step D1 T4 · tag body with data-c919-active for CSS hide of #canvas-global-controls
+      if (currentSystem === 'c919-etras') {
+        document.body.setAttribute('data-c919-active', 'true');
+        initC919ControlsPanel();
+      } else {
+        document.body.removeAttribute('data-c919-active');
+      }
       hideDetailPanel();
       lastTruthSnapshot = null;
       referenceTopologyNodes = [];
@@ -2865,12 +3221,28 @@ function clearAiHighlights() {
   // Truth engine first: fetch a live snapshot, update canvas immediately, then
   // call AI explain with node_states so the blue discussion ring stays advisory.
   function handleGeneralQuestion(qText, qSystemId, qPayload) {
+    // P43-02.5 Step D1 T3 · c919-etras branch reads panel state (not GET default)
+    // ensures chat/explain snapshot === current panel snapshot (byte-identical)
+    var c919PanelSnapshot = (qSystemId === 'c919-etras') ? collectC919PanelSnapshot() : null;
+
     var truthPayload = qSystemId === 'thrust-reverser'
       ? copyObject(lastTruthPayloadBySystem[qSystemId] || qPayload)
-      : copyObject(qPayload);
-    var truthRequest = qSystemId === 'thrust-reverser'
-      ? _sendLeverSnapshot(truthPayload)
-      : requestJson('/api/system-snapshot?system_id=' + encodeURIComponent(qSystemId));
+      : (qSystemId === 'c919-etras' ? { system_id: qSystemId, snapshot: c919PanelSnapshot } : copyObject(qPayload));
+
+    var truthRequest;
+    if (qSystemId === 'thrust-reverser') {
+      truthRequest = _sendLeverSnapshot(truthPayload);
+    } else if (qSystemId === 'c919-etras') {
+      // POST /api/system-snapshot with current panel state · byte-identical with operate link
+      truthRequest = requestJson('/api/system-snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(truthPayload),
+      });
+    } else {
+      truthRequest = requestJson('/api/system-snapshot?system_id=' + encodeURIComponent(qSystemId));
+    }
+
     var fallbackFormatter = qSystemId === 'thrust-reverser'
       ? null
       : function(data) { return formatSystemSnapshotAnswer(data, qSystemId); };
@@ -2892,7 +3264,14 @@ function clearAiHighlights() {
         var explainPayload;
 
         if (qSystemId !== 'thrust-reverser') {
-          applySystemSnapshotToCanvas(snapshotData);
+          // P43-02.5 Step D1 T6 (partial) · cache c919 snapshot into lastTruthPayloadBySystem
+          // so subsequent operate/explain calls have the same snapshot (byte-identical)
+          if (qSystemId === 'c919-etras' && c919PanelSnapshot) {
+            lastTruthPayloadBySystem[qSystemId] = { snapshot: c919PanelSnapshot };
+          }
+          // P43-02.5 Step C · pass inputSnapshot for timer annotation display
+          var inputSnap = (qSystemId === 'c919-etras') ? c919PanelSnapshot : null;
+          applySystemSnapshotToCanvas(snapshotData, inputSnap);
           renderTruthEvalFromSnapshot(snapshotData, null);
         }
 
@@ -2960,10 +3339,18 @@ function hasOperateIntent(qText, qLower) {
   }
 
   function handleOperateIntent(text, systemId) {
+    // P43-02.5 Step D1 T6 · c919-etras reads panel state + caches it (snapshot convergence)
+    var c919Snap = null;
+    if (systemId === 'c919-etras') {
+      c919Snap = collectC919PanelSnapshot();
+      lastTruthPayloadBySystem[systemId] = { snapshot: c919Snap };
+    }
     var operatePayload = {
       question: text,
       system_id: systemId,
-      current_snapshot: lastTruthPayloadBySystem[systemId] || null,
+      current_snapshot: systemId === 'c919-etras'
+        ? { snapshot: c919Snap }
+        : (lastTruthPayloadBySystem[systemId] || null),
     };
     setInputLoading(true);
     clearAiHighlights();

@@ -45,7 +45,7 @@ P26 做一件具体的事：**写一个 pytest 测试，解析所有立项物料
 | `docs/demo/wow_a_causal_chain.md` | 场景 A 卡 | `src/well_harness/controller.py` 相关函数 |
 | `docs/demo/wow_b_monte_carlo.md` | 场景 B 卡 | `src/well_harness/monte_carlo_engine.py` |
 | `docs/demo/wow_c_reverse_diagnose.md` | 场景 C 卡 | `src/well_harness/fault_diagnosis.py` |
-| `docs/demo/integrated-timing-findings.md` | P25 发现 | `scripts/integrated_timing_rehearsal.py` · `runs/integrated_timing_*/` |
+| `docs/demo/integrated-timing-findings.md` | P25 发现 | `archive/shelved/llm-features/scripts/integrated_timing_rehearsal.py` · `runs/integrated_timing_*/` |
 
 ### 提取规则
 

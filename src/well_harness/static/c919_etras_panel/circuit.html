@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>C919 E-TRAS 控制逻辑电路图</title>
+<link rel="stylesheet" href="/unified-nav.css">
+<style>
+  :root {
+    --bg:     #0a0e14;
+    --panel:  #111820;
+    --border: #1e3048;
+    --active: #00c8f5;
+    --active2:#0095c8;
+    --green:  #00e5a0;
+    --warn:   #f5c518;
+    --fail:   #e05555;
+    --text:   #cdd6e0;
+    --label:  #7a9bb5;
+    --dim:    #3a5570;
+    --s0:     #0d2236;
+    --s1:     #0d3220;
+    --s2:     #1a2000;
+    --s3:     #1a1200;
+    --s4:     #1a0000;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Courier New', monospace;
+    min-height: 100vh; padding: 20px;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 12px; margin-bottom: 20px;
+  }
+  header h1 { font-size: 1.1rem; letter-spacing: 0.08em; color: var(--active); }
+  header .subtitle { font-size: 0.75rem; color: var(--label); }
+  .badge {
+    font-size: 0.65rem; padding: 2px 8px;
+    border: 1px solid var(--active2); border-radius: 2px;
+    color: var(--active2); letter-spacing: 0.1em;
+  }
+  .diagram-wrap {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 4px; padding: 24px 20px; overflow-x: auto;
+  }
+  .state-table {
+    margin-top: 20px; width: 100%; border-collapse: collapse;
+    font-size: 0.72rem;
+  }
+  .state-table th {
+    background: #111820; color: var(--active); padding: 6px 10px;
+    text-align: left; border-bottom: 1px solid var(--border);
+    letter-spacing: 0.06em;
+  }
+  .state-table td {
+    padding: 5px 10px; border-bottom: 1px solid #0f1e30;
+    color: var(--label); vertical-align: top;
+  }
+  .state-table tr:hover td { background: #111c28; }
+  .state-table .state-id { color: var(--active); font-weight: bold; }
+  .state-table .cond { color: #cdd6e0; font-size: 0.7rem; }
+  .state-table .out { color: var(--green); }
+  .info-row {
+    margin-top: 16px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .info-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 3px; padding: 12px;
+  }
+  .info-card h3 { font-size: 0.72rem; color: var(--active); margin-bottom: 8px; letter-spacing: 0.06em; }
+  .info-card p, .info-card li { font-size: 0.7rem; color: var(--label); line-height: 1.65; }
+  .info-card ul { padding-left: 14px; }
+  footer { margin-top: 20px; font-size: 0.65rem; color: #3a5570; text-align: center; }
+  .legend {
+    display: flex; gap: 24px; flex-wrap: wrap;
+    margin-top: 14px; font-size: 0.72rem; color: var(--label);
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+</style>
+</head>
+<body class="unified-nav-enabled" data-nav-current="etras-circuit">
+
+<header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
+  <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">工作台</span>
+      <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">反推逻辑</a>
+      <a href="/c919_etras_workstation.html" class="unified-nav-link" data-nav-key="etras">C919 E-TRAS</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">电路图</span>
+      <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
+      <a href="/c919_etras_panel/circuit.html" class="unified-nav-link" data-nav-key="etras-circuit" data-current="true">E-TRAS 电路</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">仿真</span>
+      <a href="http://127.0.0.1:8002/fan_console.html" class="unified-nav-link unified-nav-link-ext" data-nav-key="fan-console">反推操作台</a>
+      <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">文档</span>
+      <a href="http://127.0.0.1:8002/fantui_requirements.html" class="unified-nav-link" data-nav-key="fantui-req">FANTUI 需求</a>
+      <a href="http://127.0.0.1:8002/c919_requirements.html" class="unified-nav-link" data-nav-key="c919-req">C919 需求</a>
+    </div>
+  </div>
+</header>
+
+
+<header>
+  <div>
+    <h1>C919 E-TRAS 控制逻辑电路图</h1>
+    <div class="subtitle">Electromechanical Thrust Reverser Actuation System — State Machine &amp; Signal Flow</div>
+  </div>
+  <div class="badge">FROZEN V1.0</div>
+</header>
+
+<div class="diagram-wrap">
+<svg viewBox="0 0 1020 560" width="100%" style="min-width:860px;max-width:1280px;display:block;margin:auto"
+     xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a-blue" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0 L7,3.5 L0,7 Z" fill="#00c8f5"/>
+    </marker>
+    <marker id="a-green" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0 L7,3.5 L0,7 Z" fill="#00e5a0"/>
+    </marker>
+    <marker id="a-amber" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0 L7,3.5 L0,7 Z" fill="#f5c518"/>
+    </marker>
+    <marker id="a-red" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0 L7,3.5 L0,7 Z" fill="#e05555"/>
+    </marker>
+    <marker id="a-dim" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+      <path d="M0,0 L7,3.5 L0,7 Z" fill="#3a5570"/>
+    </marker>
+  </defs>
+
+  <!-- ═══════════ SECTION HEADERS ═══════════ -->
+  <text x="10" y="18" fill="#3a5570" font-size="9" font-family="Courier New">INPUTS</text>
+  <text x="220" y="18" fill="#3a5570" font-size="9" font-family="Courier New">FILTERING / TIMING</text>
+  <text x="520" y="18" fill="#3a5570" font-size="9" font-family="Courier New">STATE MACHINE</text>
+  <text x="840" y="18" fill="#3a5570" font-size="9" font-family="Courier New">OUTPUTS</text>
+
+  <!-- dividers -->
+  <line x1="210" y1="22" x2="210" y2="545" stroke="#1e3048" stroke-width="0.8" stroke-dasharray="3,4"/>
+  <line x1="510" y1="22" x2="510" y2="545" stroke="#1e3048" stroke-width="0.8" stroke-dasharray="3,4"/>
+  <line x1="830" y1="22" x2="830" y2="545" stroke="#1e3048" stroke-width="0.8" stroke-dasharray="3,4"/>
+
+  <!-- ═══════════════════════════════════
+       INPUTS COLUMN (x: 10-200)
+  ═══════════════════════════════════ -->
+
+  <!-- LGCU1 WOW -->
+  <rect x="12" y="30" width="120" height="26" rx="2" fill="#0d2236" stroke="#1e3048"/>
+  <text x="72" y="44" fill="#cdd6e0" font-size="9.5" text-anchor="middle" font-family="Courier New">LGCU1 WOW</text>
+  <text x="72" y="53" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">着陆传感器 1</text>
+
+  <!-- LGCU2 WOW -->
+  <rect x="12" y="64" width="120" height="26" rx="2" fill="#0d2236" stroke="#1e3048"/>
+  <text x="72" y="78" fill="#cdd6e0" font-size="9.5" text-anchor="middle" font-family="Courier New">LGCU2 WOW</text>
+  <text x="72" y="87" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">着陆传感器 2</text>
+
+  <!-- LGCU valid labels -->
+  <rect x="12" y="98" width="120" height="20" rx="2" fill="#0a1420" stroke="#1e3048"/>
+  <text x="72" y="112" fill="#7a9bb5" font-size="8" text-anchor="middle" font-family="Courier New">LGCU1/2 VALID</text>
+
+  <!-- TRA -->
+  <rect x="12" y="136" width="120" height="26" rx="2" fill="#0d2236" stroke="#1e3048"/>
+  <text x="72" y="150" fill="#cdd6e0" font-size="9.5" text-anchor="middle" font-family="Courier New">TRA (deg)</text>
+  <text x="72" y="159" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">油门杆角度</text>
+
+  <!-- ENGINE RUNNING -->
+  <rect x="12" y="170" width="120" height="26" rx="2" fill="#0d2236" stroke="#1e3048"/>
+  <text x="72" y="184" fill="#cdd6e0" font-size="9.5" text-anchor="middle" font-family="Courier New">ENGINE RUN</text>
+  <text x="72" y="193" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">发动机运行状态</text>
+
+  <!-- LOCK INPUTS group -->
+  <rect x="12" y="210" width="120" height="68" rx="2" fill="#0a1420" stroke="#1e3048"/>
+  <text x="72" y="226" fill="#7a9bb5" font-size="8.5" text-anchor="middle" font-family="Courier New">LOCK INPUTS</text>
+  <text x="72" y="240" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">TLS / PYLON_L/R</text>
+  <text x="72" y="253" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">PLS_L/R</text>
+  <text x="72" y="268" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">各 locked/unlocked 状态</text>
+  <text x="72" y="275" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">位传感器</text>
+
+  <!-- TR_POS / N1K -->
+  <rect x="12" y="286" width="120" height="26" rx="2" fill="#0d2236" stroke="#1e3048"/>
+  <text x="72" y="300" fill="#cdd6e0" font-size="9.5" text-anchor="middle" font-family="Courier New">TR_POS_PCT</text>
+  <text x="72" y="309" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">反推位置百分比</text>
+
+  <rect x="12" y="320" width="120" height="26" rx="2" fill="#0d2236" stroke="#1e3048"/>
+  <text x="72" y="334" fill="#cdd6e0" font-size="9.5" text-anchor="middle" font-family="Courier New">N1K_PCT</text>
+  <text x="72" y="343" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">风扇转速百分比</text>
+
+  <!-- FAULTS -->
+  <rect x="12" y="360" width="120" height="26" rx="2" fill="#1a0000" stroke="#e05555" stroke-width="0.8"/>
+  <text x="72" y="374" fill="#e05555" font-size="9.5" text-anchor="middle" font-family="Courier New">ETRAS FAULT</text>
+  <text x="72" y="383" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">过温故障 / 抑制</text>
+
+  <!-- wires out from inputs.
+       LGCU1/LGCU2 → WOW FILTER; TRA/ENGINE → CMD2; TR_POS → CMD3.
+       LOCK INPUTS uses a vertical trunk further down to reach LOCKS AGG
+       (block at y=380..440), so no stray horizontal at y=244.
+       ETRAS FAULT routes into CMD3 SR LATCH (used by the SET
+       !etras_over_temp guard), not into the empty strip at y=373. -->
+  <line x1="132" y1="43"  x2="220" y2="43"  stroke="#00c8f5" stroke-width="1.2" marker-end="url(#a-blue)"/>
+  <line x1="132" y1="77"  x2="220" y2="77"  stroke="#00c8f5" stroke-width="1.2" marker-end="url(#a-blue)"/>
+  <line x1="132" y1="149" x2="220" y2="149" stroke="#00c8f5" stroke-width="1.2" marker-end="url(#a-blue)"/>
+  <line x1="132" y1="183" x2="220" y2="183" stroke="#00c8f5" stroke-width="1.2" marker-end="url(#a-blue)"/>
+  <line x1="132" y1="299" x2="220" y2="299" stroke="#3a5570" stroke-width="1" marker-end="url(#a-dim)"/>
+  <!-- ETRAS FAULT → CMD3 SR LATCH (as !etras_over_temp SET guard) -->
+  <line x1="132" y1="373" x2="180" y2="373" stroke="#e05555" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="180" y1="373" x2="180" y2="332" stroke="#e05555" stroke-width="1" stroke-dasharray="4,3"/>
+  <line x1="180" y1="332" x2="220" y2="332" stroke="#e05555" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#a-red)"/>
+
+  <!-- ═══════════════════════════════════
+       FILTERING / TIMING COLUMN (x: 220-500)
+  ═══════════════════════════════════ -->
+
+  <!-- WOW FILTER block -->
+  <rect x="220" y="28" width="180" height="76" rx="3" fill="#0d2040" stroke="#00c8f5" stroke-width="1.5"/>
+  <text x="310" y="46" fill="#00c8f5" font-size="10" text-anchor="middle" font-family="Courier New" font-weight="bold">WOW FILTER</text>
+  <text x="310" y="58" fill="#7a9bb5" font-size="8" text-anchor="middle" font-family="Courier New">落地滤波 / 延时逻辑</text>
+  <line x1="310" y1="62" x2="310" y2="63" stroke="#1e3048"/>
+  <text x="310" y="74" fill="#cdd6e0" font-size="8" text-anchor="middle" font-family="Courier New">SET delay:   0.5 s</text>
+  <text x="310" y="85" fill="#cdd6e0" font-size="8" text-anchor="middle" font-family="Courier New">RESET delay: 0.0 s</text>
+  <text x="310" y="98" fill="#7a9bb5" font-size="8" text-anchor="middle" font-family="Courier New">voted WOW (LGCU1 OR LGCU2)</text>
+
+  <!-- WOW FILTER → selected_mlg_wow → state machine. tr_wow drives the
+       S0→S1 transition so the arrow terminates at S1 GND_STOWED_LOCKED
+       left-center (not in the mid-column gap at y=200, which landed
+       between S2 and S3 boxes). -->
+  <line x1="400" y1="66"  x2="460" y2="66"  stroke="#00c8f5" stroke-width="1.5"/>
+  <text x="430" y="62" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">tr_wow</text>
+  <line x1="460" y1="66"  x2="460" y2="108" stroke="#00c8f5" stroke-width="1.5"/>
+  <line x1="460" y1="108" x2="522" y2="108" stroke="#00c8f5" stroke-width="1.5" marker-end="url(#a-blue)"/>
+
+  <!-- CMD2 block (unlock timer) -->
+  <rect x="220" y="140" width="180" height="76" rx="3" fill="#0d2040" stroke="#00c8f5" stroke-width="1.5"/>
+  <text x="310" y="158" fill="#00c8f5" font-size="10" text-anchor="middle" font-family="Courier New" font-weight="bold">CMD2 CONTROLLER</text>
+  <text x="310" y="170" fill="#7a9bb5" font-size="8" text-anchor="middle" font-family="Courier New">解锁电源定时器</text>
+  <text x="310" y="184" fill="#cdd6e0" font-size="8" text-anchor="middle" font-family="Courier New">timer limit:  2.0 s</text>
+  <text x="310" y="196" fill="#cdd6e0" font-size="8" text-anchor="middle" font-family="Courier New">1-phase unlock → 3-phase TRCU</text>
+  <text x="310" y="208" fill="#7a9bb5" font-size="8" text-anchor="middle" font-family="Courier New">TRA &lt; idle_rev_deg 触发</text>
+
+  <!-- CMD2 → out -->
+  <line x1="400" y1="178" x2="510" y2="178" stroke="#00c8f5" stroke-width="1.5" marker-end="url(#a-blue)"/>
+  <text x="455" y="174" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">cmd2_active</text>
+
+  <!-- CMD3 SR LATCH block -->
+  <rect x="220" y="256" width="180" height="96" rx="3" fill="#0d2040" stroke="#00c8f5" stroke-width="1.5"/>
+  <text x="310" y="274" fill="#00c8f5" font-size="10" text-anchor="middle" font-family="Courier New" font-weight="bold">CMD3 SR LATCH</text>
+  <text x="310" y="286" fill="#7a9bb5" font-size="8" text-anchor="middle" font-family="Courier New">反推使能 SR 触发器</text>
+  <text x="310" y="300" fill="#cdd6e0" font-size="8" text-anchor="middle" font-family="Courier New">SET:   tr_stowed_and_locked=0</text>
+  <text x="310" y="312" fill="#cdd6e0" font-size="8" text-anchor="middle" font-family="Courier New">        &amp; !etras_over_temp</text>
+  <text x="310" y="324" fill="#cdd6e0" font-size="8" text-anchor="middle" font-family="Courier New">RESET: tr_stowed_and_locked=1</text>
+  <text x="310" y="338" fill="#7a9bb5" font-size="8" text-anchor="middle" font-family="Courier New">latch 输出: tr_command3_enable</text>
+  <text x="310" y="348" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">stowed_dwell: 0.5 s</text>
+
+  <!-- CMD3 → out -->
+  <line x1="400" y1="304" x2="510" y2="304" stroke="#00c8f5" stroke-width="1.5" marker-end="url(#a-blue)"/>
+  <text x="455" y="299" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">cmd3_enable</text>
+
+  <!-- LOCKS AGG block -->
+  <rect x="220" y="380" width="180" height="60" rx="3" fill="#0d2040" stroke="#3a5570" stroke-width="1"/>
+  <text x="310" y="398" fill="#7a9bb5" font-size="9.5" text-anchor="middle" font-family="Courier New">LOCKS AGGREGATOR</text>
+  <text x="310" y="411" fill="#7a9bb5" font-size="8" text-anchor="middle" font-family="Courier New">TLS + PYLON_L/R + PLS_L/R</text>
+  <text x="310" y="424" fill="#cdd6e0" font-size="8" text-anchor="middle" font-family="Courier New">→ unlock_confirmed</text>
+  <text x="310" y="436" fill="#cdd6e0" font-size="8" text-anchor="middle" font-family="Courier New">→ tr_stowed_and_locked</text>
+
+  <line x1="132" y1="244" x2="132" y2="410" stroke="#3a5570" stroke-width="1"/>
+  <line x1="132" y1="410" x2="220" y2="410" stroke="#3a5570" stroke-width="1" marker-end="url(#a-dim)"/>
+
+  <!-- LOCKS → state machine -->
+  <line x1="400" y1="410" x2="510" y2="410" stroke="#3a5570" stroke-width="1" marker-end="url(#a-dim)"/>
+
+  <!-- ═══════════════════════════════════
+       STATE MACHINE COLUMN (x: 520-820)
+  ═══════════════════════════════════ -->
+
+  <!-- States: vertical stack -->
+  <!-- S0: AIR_STOWED_LOCKED -->
+  <rect x="522" y="30" width="200" height="36" rx="3" fill="#0d2236" stroke="#00c8f5" stroke-width="1.5"/>
+  <text x="622" y="48" fill="#00c8f5" font-size="9.5" text-anchor="middle" font-family="Courier New" font-weight="bold">S0: AIR_STOWED_LOCKED</text>
+  <text x="622" y="59" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">空中 / 反推收起锁定（初始态）</text>
+
+  <!-- S0 → S1 transition -->
+  <line x1="622" y1="66" x2="622" y2="88" stroke="#00c8f5" stroke-width="1.5" marker-end="url(#a-blue)"/>
+  <text x="640" y="82" fill="#7a9bb5" font-size="7.5" font-family="Courier New">WOW 落地 + TRA反推</text>
+
+  <!-- S1: GND_STOWED_LOCKED -->
+  <rect x="522" y="90" width="200" height="36" rx="3" fill="#0d3220" stroke="#00e5a0" stroke-width="1.5"/>
+  <text x="622" y="108" fill="#00e5a0" font-size="9.5" text-anchor="middle" font-family="Courier New" font-weight="bold">S1: GND_STOWED_LOCKED</text>
+  <text x="622" y="119" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">地面 / 收起锁定 — CMD2 启动</text>
+
+  <!-- S1 → S2 -->
+  <line x1="622" y1="126" x2="622" y2="150" stroke="#00e5a0" stroke-width="1.5" marker-end="url(#a-green)"/>
+  <text x="640" y="144" fill="#7a9bb5" font-size="7.5" font-family="Courier New">CMD2 &lt; 2s / 1-ph unlock</text>
+
+  <!-- S2: UNLOCKING -->
+  <rect x="522" y="152" width="200" height="36" rx="3" fill="#1a2000" stroke="#00e5a0" stroke-width="1.5"/>
+  <text x="622" y="170" fill="#00e5a0" font-size="9.5" text-anchor="middle" font-family="Courier New" font-weight="bold">S2: UNLOCKING</text>
+  <text x="622" y="181" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">解锁进行中 — 等待 unlock_confirmed</text>
+
+  <!-- S2 → S3 -->
+  <line x1="622" y1="188" x2="622" y2="210" stroke="#00e5a0" stroke-width="1.5" marker-end="url(#a-green)"/>
+  <text x="640" y="204" fill="#7a9bb5" font-size="7.5" font-family="Courier New">unlock_confirmed + cmd3_en</text>
+
+  <!-- S3: DEPLOYING -->
+  <rect x="522" y="212" width="200" height="36" rx="3" fill="#1a1a00" stroke="#f5c518" stroke-width="1.5"/>
+  <text x="622" y="230" fill="#f5c518" font-size="9.5" text-anchor="middle" font-family="Courier New" font-weight="bold">S3: DEPLOYING</text>
+  <text x="622" y="241" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">展开中 — FADEC_DEPLOY ON</text>
+
+  <!-- S3 → S4 -->
+  <line x1="622" y1="248" x2="622" y2="272" stroke="#f5c518" stroke-width="1.5" marker-end="url(#a-amber)"/>
+  <text x="640" y="266" fill="#7a9bb5" font-size="7.5" font-family="Courier New">tr_pos ≥ deployed_thr</text>
+
+  <!-- S4: DEPLOYED -->
+  <rect x="522" y="274" width="200" height="36" rx="3" fill="#1a1200" stroke="#f5c518" stroke-width="2"/>
+  <text x="622" y="292" fill="#f5c518" font-size="9.5" text-anchor="middle" font-family="Courier New" font-weight="bold">S4: DEPLOYED</text>
+  <text x="622" y="303" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">完全展开 — 反推力产生</text>
+
+  <!-- S4 → S5 STOWING (when TRA back) -->
+  <line x1="622" y1="310" x2="622" y2="334" stroke="#e05555" stroke-width="1.5" marker-end="url(#a-red)"/>
+  <text x="640" y="328" fill="#7a9bb5" font-size="7.5" font-family="Courier New">TRA回收 / stow_cmd</text>
+
+  <!-- S5: STOWING -->
+  <rect x="522" y="336" width="200" height="36" rx="3" fill="#200010" stroke="#e05555" stroke-width="1.5"/>
+  <text x="622" y="354" fill="#e05555" font-size="9.5" text-anchor="middle" font-family="Courier New" font-weight="bold">S5: STOWING</text>
+  <text x="622" y="365" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">收回中 — FADEC_STOW ON</text>
+
+  <!-- S5 → S0 (air) -->
+  <line x1="622" y1="372" x2="622" y2="396" stroke="#e05555" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#a-red)"/>
+  <text x="640" y="390" fill="#7a9bb5" font-size="7.5" font-family="Courier New">stowed_and_locked + !WOW</text>
+
+  <!-- S6: GND_STOWED_LOCKED after stow -->
+  <rect x="522" y="398" width="200" height="36" rx="3" fill="#0d2236" stroke="#3a5570" stroke-width="1"/>
+  <text x="622" y="416" fill="#7a9bb5" font-size="9.5" text-anchor="middle" font-family="Courier New">S0/S1 RESET</text>
+  <text x="622" y="427" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">CMD3 latch RESET</text>
+
+  <!-- fault bypass: → S_FAULT -->
+  <rect x="522" y="450" width="200" height="36" rx="3" fill="#1a0000" stroke="#e05555" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="622" y="468" fill="#e05555" font-size="9.5" text-anchor="middle" font-family="Courier New">S_FAULT / INHIBITED</text>
+  <text x="622" y="479" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">ETRAS fault / tr_inhibited → STOW CMD</text>
+  <line x1="622" y1="373" x2="522" y2="468" stroke="#e05555" stroke-width="1" stroke-dasharray="3,4" marker-end="url(#a-red)"/>
+
+  <!-- ═══════════════════════════════════
+       OUTPUTS COLUMN (x: 840-1010)
+  ═══════════════════════════════════ -->
+
+  <!-- 1-phase unlock -->
+  <rect x="844" y="152" width="160" height="30" rx="3" fill="#0d2040" stroke="#00c8f5" stroke-width="1.2"/>
+  <text x="924" y="170" fill="#00c8f5" font-size="9.5" text-anchor="middle" font-family="Courier New">1-PH UNLOCK PWR</text>
+  <text x="924" y="178" fill="#7a9bb5" font-size="7" text-anchor="middle" font-family="Courier New">single_phase_unlock_power_on</text>
+
+  <line x1="722" y1="170" x2="844" y2="167" stroke="#00c8f5" stroke-width="1.5" marker-end="url(#a-blue)"/>
+
+  <!-- 3-phase TRCU -->
+  <rect x="844" y="192" width="160" height="30" rx="3" fill="#0d2040" stroke="#00c8f5" stroke-width="1.2"/>
+  <text x="924" y="210" fill="#00c8f5" font-size="9.5" text-anchor="middle" font-family="Courier New">3-PH TRCU PWR</text>
+  <text x="924" y="218" fill="#7a9bb5" font-size="7" text-anchor="middle" font-family="Courier New">three_phase_trcu_power_on</text>
+
+  <line x1="722" y1="200" x2="844" y2="207" stroke="#00c8f5" stroke-width="1.5" marker-end="url(#a-blue)"/>
+
+  <!-- FADEC DEPLOY -->
+  <rect x="844" y="264" width="160" height="30" rx="3" fill="#0d2a00" stroke="#00e5a0" stroke-width="1.5"/>
+  <text x="924" y="282" fill="#00e5a0" font-size="9.5" text-anchor="middle" font-family="Courier New">FADEC DEPLOY CMD</text>
+  <text x="924" y="290" fill="#7a9bb5" font-size="7" text-anchor="middle" font-family="Courier New">fadec_deploy_command</text>
+
+  <line x1="722" y1="234" x2="844" y2="279" stroke="#00e5a0" stroke-width="1.5" marker-end="url(#a-green)"/>
+
+  <!-- FADEC STOW -->
+  <rect x="844" y="356" width="160" height="30" rx="3" fill="#1a0000" stroke="#e05555" stroke-width="1.5"/>
+  <text x="924" y="374" fill="#e05555" font-size="9.5" text-anchor="middle" font-family="Courier New">FADEC STOW CMD</text>
+  <text x="924" y="382" fill="#7a9bb5" font-size="7" text-anchor="middle" font-family="Courier New">fadec_stow_command</text>
+
+  <line x1="722" y1="352" x2="844" y2="371" stroke="#e05555" stroke-width="1.5" marker-end="url(#a-red)"/>
+
+  <!-- UNLOCK CONFIRMED -->
+  <rect x="844" y="404" width="160" height="30" rx="3" fill="#0d2040" stroke="#3a5570" stroke-width="1"/>
+  <text x="924" y="422" fill="#7a9bb5" font-size="9.5" text-anchor="middle" font-family="Courier New">UNLOCK CONFIRMED</text>
+  <text x="924" y="430" fill="#3a5570" font-size="7" text-anchor="middle" font-family="Courier New">unlock_confirmed</text>
+
+  <line x1="722" y1="420" x2="844" y2="419" stroke="#3a5570" stroke-width="1" marker-end="url(#a-dim)"/>
+
+  <!-- TR_STOWED_AND_LOCKED -->
+  <rect x="844" y="444" width="160" height="30" rx="3" fill="#0d2040" stroke="#3a5570" stroke-width="1"/>
+  <text x="924" y="462" fill="#7a9bb5" font-size="9.5" text-anchor="middle" font-family="Courier New">TR STOWED+LOCKED</text>
+  <text x="924" y="470" fill="#3a5570" font-size="7" text-anchor="middle" font-family="Courier New">tr_stowed_and_locked</text>
+
+  <line x1="722" y1="434" x2="844" y2="459" stroke="#3a5570" stroke-width="1" marker-end="url(#a-dim)"/>
+
+  <!-- Feedback: tr_stowed_and_locked → CMD3 RESET.
+       Horizontal placed at y=322 (between S4 DEPLOYED bottom y=310 and
+       S5 STOWING top y=336). Label sits in the filter-column / state-
+       column gap at x=455 so it never collides with the "TRA回收 /
+       stow_cmd" transition label at (640, 328). Previously the label
+       lived at (600, 312) which overlapped S4's bottom rect. -->
+  <line x1="844" y1="462" x2="800" y2="462" stroke="#3a5570" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="800" y1="462" x2="800" y2="322" stroke="#3a5570" stroke-width="1" stroke-dasharray="3,4"/>
+  <line x1="800" y1="322" x2="400" y2="322" stroke="#3a5570" stroke-width="1" stroke-dasharray="3,4" marker-end="url(#a-dim)"/>
+  <text x="455" y="319" fill="#3a5570" font-size="7.5" text-anchor="middle" font-family="Courier New">RESET feedback</text>
+
+  <!-- ═══════ KEY PARAMS annotation ═══════ -->
+  <!-- rect height 48 → 54 so the fourth line (baseline y=549) fits
+       inside the box; previously the last row overflowed the bottom. -->
+  <rect x="522" y="500" width="200" height="54" rx="2" fill="#0a0e14" stroke="#1e3048"/>
+  <text x="622" y="516" fill="#3a5570" font-size="8" text-anchor="middle" font-family="Courier New">KEY PARAMETERS</text>
+  <text x="622" y="528" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">wow_set_delay=0.5s  wow_reset=0.0s</text>
+  <text x="622" y="540" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">cmd2_limit=2.0s  stow_dwell=0.5s</text>
+  <text x="622" y="550" fill="#7a9bb5" font-size="7.5" text-anchor="middle" font-family="Courier New">deployed_thr=90%  tra_idle_rev=−5°</text>
+
+</svg>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#00c8f5"></div>Control Signal</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#00e5a0"></div>DEPLOY Path</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f5c518"></div>Deployed State</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#e05555"></div>STOW / Fault Path</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#3a5570"></div>Status / Feedback</div>
+</div>
+
+<div class="info-row">
+  <div class="info-card">
+    <h3>WOW FILTER — 落地确认逻辑</h3>
+    <p>对 LGCU1 OR LGCU2 的 WOW 信号做 0.5s SET 延时（防弹跳）、0.0s RESET（即时响应离地）。输出 <code>tr_wow</code> 驱动状态机从 S0→S1。</p>
+  </div>
+  <div class="info-card">
+    <h3>CMD2 — 解锁电源时序</h3>
+    <p>TRA 进入反推角度后，先接通单相解锁电源（1-ph unlock），计时 2.0s 后切换为三相 TRCU 全功率。防止冷状态瞬间大电流冲击。</p>
+  </div>
+  <div class="info-card">
+    <h3>CMD3 SR LATCH — 展开使能</h3>
+    <ul>
+      <li><b>SET：</b>反推不在收起+锁定位置 &amp;&amp; 无过温故障</li>
+      <li><b>RESET：</b>tr_stowed_and_locked = 1（需 0.5s 驻留）</li>
+      <li>Latch 状态 <code>cmd3_latch</code> 阻止意外展开命令</li>
+    </ul>
+  </div>
+  <div class="info-card">
+    <h3>故障安全路径</h3>
+    <ul>
+      <li>ETRAS_OVER_TEMP → 立即 STOW CMD，CMD3 SET 禁止</li>
+      <li>TR_INHIBITED → 禁止任何展开命令</li>
+      <li>空中离地（!WOW）→ 立即 STOW，状态回 S0</li>
+      <li>N1K ≥ deploy limit → 阻止展开</li>
+    </ul>
+  </div>
+</div>
+
+<footer>C919 E-TRAS · Frozen V1.0 · Branch claude/c919-etras-frozen-v1-migration · Port 9191</footer>
+
+</body>
+</html>

@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C919 E-TRAS 需求分析 · 从规范到状态机</title>
+<link rel="stylesheet" href="/unified-nav.css">
+<style>
+:root {
+  --bg0: #020810;
+  --bg1: #070f1c;
+  --bg2: #0b1628;
+  --bg3: #101e36;
+  --b0:  #1a2d48;
+  --b1:  #243a5c;
+  --text0: #e4ecf7;
+  --text1: #94accc;
+  --text2: #526880;
+  --cyan:  #22d3ee;
+  --cyan-d: rgba(34,211,238,.1);
+  --green: #4ade80;
+  --green-d: rgba(74,222,128,.1);
+  --amber: #f5a623;
+  --amber-d: rgba(245,166,35,.1);
+  --red:   #f87171;
+  --red-d: rgba(248,113,113,.1);
+  --violet:#b69dff;
+  --blue:  #60a5fa;
+  --mono: 'JetBrains Mono','SF Mono',monospace;
+  --ui: 'Inter','PingFang SC',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg0);color:var(--text0);font-family:var(--ui);font-size:13px;line-height:1.7}
+body.unified-nav-enabled{padding-top:48px}
+
+.page{max-width:960px;margin:0 auto;padding:32px 28px 80px}
+
+.hero{border:1px solid var(--b1);background:linear-gradient(135deg,rgba(96,165,250,.04),rgba(182,157,255,.02));padding:28px 32px;margin-bottom:32px}
+.hero-tag{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--blue);text-transform:uppercase;margin-bottom:10px}
+.hero h1{font-size:22px;font-weight:600;color:var(--text0);margin-bottom:8px}
+.hero p{color:var(--text1);font-size:13px;max-width:680px}
+
+.toc{background:var(--bg2);border:1px solid var(--b0);padding:16px 20px;margin-bottom:32px;display:grid;grid-template-columns:1fr 1fr;gap:4px 24px}
+.toc-title{grid-column:1/-1;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text2);margin-bottom:8px}
+.toc a{color:var(--text1);text-decoration:none;font-size:12px;font-family:var(--mono)}
+.toc a:hover{color:var(--cyan)}
+
+.section{margin-bottom:48px}
+.sec-anchor{display:block;visibility:hidden;margin-top:-60px;padding-top:60px}
+.sec-hd{display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--b0)}
+.sec-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--blue);background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);padding:2px 8px;border-radius:3px;white-space:nowrap}
+.sec-hd h2{font-size:17px;font-weight:600;color:var(--text0)}
+
+p{margin-bottom:12px;color:var(--text1)}
+strong{color:var(--text0);font-weight:600}
+
+.req-card{border:1px solid var(--b1);background:var(--bg2);padding:14px 18px;margin-bottom:10px;border-radius:2px}
+.req-id{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:2px;margin-right:8px}
+.req-id.sr{background:var(--red-d);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+.req-id.ar{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.3)}
+.req-id.sm{background:var(--amber-d);color:var(--amber);border:1px solid rgba(245,166,35,.3)}
+.req-id.fr{background:var(--green-d);color:var(--green);border:1px solid rgba(74,222,128,.3)}
+.req-title{font-size:13px;font-weight:600;color:var(--text0)}
+.req-body{margin-top:8px;color:var(--text1);font-size:12px}
+.req-rationale{margin-top:6px;font-size:11px;color:var(--text2);font-family:var(--mono)}
+
+/* State machine diagram */
+.sm-diagram{margin:16px 0;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.sm-node{padding:8px 6px;text-align:center;border:1px solid var(--b0);background:var(--bg2);border-radius:3px}
+.sm-node.active-path{border-color:var(--cyan);background:var(--cyan-d)}
+.sm-node.stow-path{border-color:var(--green);background:var(--green-d)}
+.sm-node.fault{border-color:var(--red);background:var(--red-d)}
+.sm-node .sn-code{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text2)}
+.sm-node.active-path .sn-code{color:var(--cyan)}
+.sm-node.stow-path .sn-code{color:var(--green)}
+.sm-node.fault .sn-code{color:var(--red)}
+.sm-node .sn-label{font-size:10px;color:var(--text2);margin-top:3px;line-height:1.3}
+.sm-arrow{display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--text2)}
+
+.flow{background:var(--bg0);border:1px solid var(--b0);padding:16px 20px;font-family:var(--mono);font-size:11px;color:var(--cyan);line-height:1.9;overflow-x:auto;margin:14px 0}
+
+.table-wrap{overflow-x:auto;margin:14px 0}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--bg3);color:var(--text2);text-transform:uppercase;font-size:10px;letter-spacing:.08em;font-weight:700;padding:8px 12px;text-align:left;border-bottom:1px solid var(--b1)}
+td{padding:7px 12px;border-bottom:1px solid var(--b0);color:var(--text1);vertical-align:top}
+td:first-child{font-family:var(--mono);font-size:11px;white-space:nowrap}
+tr:hover td{background:var(--bg2)}
+
+.ai-box{background:linear-gradient(135deg,rgba(182,157,255,.06),rgba(96,165,250,.03));border:1px solid rgba(182,157,255,.3);padding:18px 22px;margin:14px 0;border-radius:2px}
+.ai-box-hd{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--violet);margin-bottom:10px}
+.ai-box p{color:var(--text1);margin-bottom:8px}
+.ai-box p:last-child{margin-bottom:0}
+
+.compare-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.compare-card{background:var(--bg2);border:1px solid var(--b1);padding:14px 16px;border-radius:2px}
+.compare-hd{font-size:11px;font-weight:700;color:var(--text0);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.compare-tag{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:2px;font-weight:700}
+.fantui-tag{background:var(--cyan-d);color:var(--cyan);border:1px solid rgba(34,211,238,.3)}
+.c919-tag{background:rgba(96,165,250,.1);color:var(--blue);border:1px solid rgba(96,165,250,.3)}
+.compare-item{font-size:12px;color:var(--text1);padding:3px 0;border-bottom:1px solid var(--b0);display:flex;gap:8px}
+.compare-item:last-child{border-bottom:none}
+.compare-item .k{color:var(--text2);font-size:11px;flex-shrink:0;font-family:var(--mono)}
+
+.decision{display:flex;gap:12px;margin-bottom:10px;padding:10px 14px;background:var(--bg2);border:1px solid var(--b0);border-left:3px solid var(--violet)}
+.decision-q{font-size:11px;color:var(--violet);font-family:var(--mono);flex-shrink:0;font-weight:700}
+.decision-body{font-size:12px;color:var(--text1)}
+
+.trace-row{display:grid;grid-template-columns:70px 120px 1fr;gap:0;border-bottom:1px solid var(--b0)}
+.trace-row:first-child{background:var(--bg3);border-bottom:2px solid var(--b1)}
+.trace-row>div{padding:7px 10px;font-size:11px}
+.trace-row:first-child>div{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);font-weight:700}
+.trace-id{font-family:var(--mono);color:var(--amber);font-weight:700}
+.trace-state{font-family:var(--mono);color:var(--blue);font-size:10px}
+
+.step-seq{counter-reset:step}
+.step{display:flex;gap:14px;margin-bottom:10px;padding:11px 14px;background:var(--bg2);border:1px solid var(--b0)}
+.step-num{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--blue);background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.3);padding:2px 7px;border-radius:2px;white-space:nowrap;flex-shrink:0;align-self:flex-start}
+.step-body{font-size:12px;color:var(--text1)}
+.step-body strong{color:var(--text0)}
+.step-tag{display:inline-block;font-family:var(--mono);font-size:9px;background:var(--bg0);border:1px solid var(--b0);padding:1px 6px;color:var(--amber);margin-top:4px}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--b1);border-radius:2px}
+</style>
+</head>
+<body class="unified-nav-enabled" data-nav-current="c919-req">
+
+<header class="unified-nav" role="navigation">
+  <a href="/index.html" class="unified-nav-brand">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">工作台</span>
+      <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">反推逻辑</a>
+      <a href="/c919_etras_workstation.html" class="unified-nav-link" data-nav-key="etras">C919 E-TRAS</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">电路图</span>
+      <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
+      <a href="/c919_etras_panel/circuit.html" class="unified-nav-link" data-nav-key="etras-circuit">E-TRAS 电路</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">仿真</span>
+      <a href="/fan_console.html" class="unified-nav-link" data-nav-key="fan-console">反推操作台</a>
+      <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">文档</span>
+      <a href="/fantui_requirements.html" class="unified-nav-link" data-nav-key="fantui-req">FANTUI 需求</a>
+      <a href="/c919_requirements.html" class="unified-nav-link" data-nav-key="c919-req">C919 需求</a>
+    </div>
+  </div>
+</header>
+
+<div class="page">
+
+  <div class="hero">
+    <div class="hero-tag">需求分析文档 · C919-REQ-V1.0</div>
+    <h1>C919 E-TRAS 控制系统 · 从规范到状态机</h1>
+    <p>本文档记录 C919 电动反推作动系统（E-TRAS）的需求来源、与 FANTUI 基础框架的差异、AI 将规范转化为 12 状态机的分析过程，以及如何通过 C919 MFD 仿真面板验证每条需求。</p>
+  </div>
+
+  <nav class="toc">
+    <div class="toc-title">目录</div>
+    <a href="#s1">§1 C919 E-TRAS 系统架构</a>
+    <a href="#s2">§2 与 FANTUI 的关键差异</a>
+    <a href="#s3">§3 需求规范（AR / SM / FR）</a>
+    <a href="#s4">§4 AI 需求解析与状态机推导</a>
+    <a href="#s5">§5 状态 → 输出命令可追溯矩阵</a>
+    <a href="#s6">§6 仿真面板验证方法</a>
+  </nav>
+
+  <!-- §1 -->
+  <div class="section">
+    <span class="sec-anchor" id="s1"></span>
+    <div class="sec-hd">
+      <span class="sec-num">§ 1</span>
+      <h2>C919 E-TRAS 系统架构</h2>
+    </div>
+
+    <p>C919（商用飞机有限责任公司）采用<strong>电动反推作动系统（E-TRAS）</strong>，相比传统液压反推有以下根本差异：</p>
+
+    <div class="flow">
+  传统液压反推：                     C919 E-TRAS（电动）：
+  ┌─────────────┐                  ┌──────────────────────────┐
+  │  液压管路    │                  │ 115VAC + 540VDC 电气总线  │
+  │  机械开关    │        →         │ EICU 双通道控制器         │
+  │  单一路径    │                  │ FADEC 接口（部署命令）    │
+  └─────────────┘                  │ TLS/PLS 电磁锁           │
+                                   │ PDU 电机 + 翻转斗         │
+                                   └──────────────────────────┘</div>
+
+    <p><strong>EICU（电子接口控制组件）双通道冗余架构：</strong>EICU 有两个独立处理通道（CMD1 / CMD2），任意一个通道健康即可发出控制命令。这与 FANTUI 的单一逻辑链有根本区别——C919 需要表达"哪个通道激活、是否降级运行"这类有状态概念。</p>
+
+    <p><strong>FADEC 接口：</strong>全权数字发动机控制器（FADEC）是反推展开的最终执行门——FADEC_Deploy_Command 和 FADEC_Stow_Command 由控制逻辑产生，FADEC 执行后才真正驱动 PDU 电机。这增加了一个间接层，需要在状态机中单独表达"FADEC 已收到命令"这一中间状态。</p>
+
+    <p><strong>TLS + PLS 机械锁序列：</strong>C919 的锁机构比 FANTUI 简化模型更复杂——TLS（位移锁）负责解锁 TR 翻转斗的初始位移，PLS（主锁，共 4 路：左右各 2 个）在展开过程中逐步解锁。整个序列有严格的时序要求。</p>
+  </div>
+
+  <!-- §2 -->
+  <div class="section">
+    <span class="sec-anchor" id="s2"></span>
+    <div class="sec-hd">
+      <span class="sec-num">§ 2</span>
+      <h2>与 FANTUI 的关键差异</h2>
+    </div>
+
+    <div class="compare-grid">
+      <div class="compare-card">
+        <div class="compare-hd"><span class="compare-tag fantui-tag">FANTUI</span> 反推逻辑框架</div>
+        <div class="compare-item"><span class="k">架构</span>无状态纯函数评估</div>
+        <div class="compare-item"><span class="k">逻辑</span>4 级 AND 门级联</div>
+        <div class="compare-item"><span class="k">状态</span>无（历史由 plant 外置）</div>
+        <div class="compare-item"><span class="k">输出</span>6 路命令（布尔）</div>
+        <div class="compare-item"><span class="k">冗余</span>无双通道（单路径）</div>
+        <div class="compare-item"><span class="k">故障</span>故障注入覆写节点</div>
+        <div class="compare-item"><span class="k">面板</span>fan_console.html (实时)</div>
+      </div>
+      <div class="compare-card">
+        <div class="compare-hd"><span class="compare-tag c919-tag">C919</span> E-TRAS 控制系统</div>
+        <div class="compare-item"><span class="k">架构</span>12 状态 + SF 故障状态机</div>
+        <div class="compare-item"><span class="k">逻辑</span>状态转移条件（有历史依赖）</div>
+        <div class="compare-item"><span class="k">状态</span>有（S0→S10 + SF）</div>
+        <div class="compare-item"><span class="k">输出</span>单相/三相供电 + FADEC 命令</div>
+        <div class="compare-item"><span class="k">冗余</span>EICU 双通道 CMD1/CMD2</div>
+        <div class="compare-item"><span class="k">故障</span>SF_ABORT_OR_FAULT 专用状态</div>
+        <div class="compare-item"><span class="k">面板</span>C919 MFD :9191 (有状态)</div>
+      </div>
+    </div>
+
+    <div class="ai-box">
+      <div class="ai-box-hd">AI 架构选择依据</div>
+      <p>当 AI 分析 C919 E-TRAS 规范时，发现 FANTUI 的无状态架构无法直接适用的核心原因：<strong>锁机构的解锁状态无法从当前输入信号推断</strong>——TLS 是否已解锁取决于过去是否曾经供过电 0.3s 以上，这是历史状态，不是当前信号。</p>
+      <p>进一步分析发现，C919 规范文件本身就使用"状态"来描述系统行为（"在 S3 状态下，接收到 WOW 信号时转移到 S4"），这强烈提示状态机是最自然的实现模型。AI 据此决定：<strong>将 FANTUI 的纯函数逻辑扩展为有限状态机（FSM），每个状态对应一组稳定的输出命令集合</strong>。</p>
+    </div>
+  </div>
+
+  <!-- §3 -->
+  <div class="section">
+    <span class="sec-anchor" id="s3"></span>
+    <div class="sec-hd">
+      <span class="sec-num">§ 3</span>
+      <h2>需求规范</h2>
+    </div>
+
+    <p style="margin-bottom:16px"><strong>架构需求（Architecture Requirements）</strong></p>
+
+    <div class="req-card">
+      <span class="req-id ar">AR-01</span><span class="req-title">电气总线双路供电</span>
+      <div class="req-body">系统必须区分 115VAC 单相供电（用于 TLS/PLS 解锁）和 540VDC 三相供电（用于 TRCU/PDU 驱动），两路总线独立控制，不得混用。</div>
+      <div class="req-rationale">来源: C919 电气架构规范 §4.2 · 对应输出: SinglePhaseUnlockPower_On / ThreePhaseTRCUPower_On</div>
+    </div>
+
+    <div class="req-card">
+      <span class="req-id ar">AR-02</span><span class="req-title">EICU 双通道冗余</span>
+      <div class="req-body">EICU 的两个控制通道（CMD1/CMD2）必须独立评估条件，其中任意一个通道健康且条件满足即可发出命令。双通道同时失效时进入 SF 故障状态。</div>
+      <div class="req-rationale">来源: DO-178C DAL-A 要求的双通道冗余架构 · 面板中 LGCU1_WOW / LGCU2_WOW 分别对应两通道</div>
+    </div>
+
+    <div class="req-card">
+      <span class="req-id ar">AR-03</span><span class="req-title">FADEC 命令接口</span>
+      <div class="req-body">控制逻辑不直接驱动 PDU 电机，而是向 FADEC 发出 FADEC_Deploy_Command 或 FADEC_Stow_Command，由 FADEC 负责最终执行。控制逻辑需等待 FADEC 确认信号。</div>
+      <div class="req-rationale">来源: FADEC 接口控制文件 ICD-FADEC-TR-002</div>
+    </div>
+
+    <p style="margin:20px 0 16px"><strong>状态机需求（State Machine Requirements）</strong> — 11 个运行状态 + 1 个故障状态。</p>
+
+    <div class="sm-diagram">
+      <div class="sm-node" style="border-color:var(--text2)">
+        <div class="sn-code" style="color:var(--text2)">S0</div>
+        <div class="sn-label">空中收起锁定</div>
+      </div>
+      <div class="sm-arrow">→</div>
+      <div class="sm-node active-path">
+        <div class="sn-code">S1</div>
+        <div class="sn-label">地面装备</div>
+      </div>
+      <div class="sm-arrow">→</div>
+
+      <div class="sm-node active-path">
+        <div class="sn-code">S2</div>
+        <div class="sn-label">单相解锁供电</div>
+      </div>
+      <div class="sm-arrow">→</div>
+      <div class="sm-node active-path">
+        <div class="sn-code">S3</div>
+        <div class="sn-label">三相作动供电</div>
+      </div>
+      <div class="sm-arrow">→</div>
+
+      <div class="sm-node active-path">
+        <div class="sn-code">S4</div>
+        <div class="sn-label">展开中</div>
+      </div>
+      <div class="sm-arrow">→</div>
+      <div class="sm-node active-path">
+        <div class="sn-code">S5</div>
+        <div class="sn-label">反推慢车</div>
+      </div>
+      <div class="sm-arrow">→</div>
+      <div class="sm-node active-path">
+        <div class="sn-code">S6</div>
+        <div class="sn-label">最大反推</div>
+      </div>
+      <div class="sm-arrow"></div>
+
+      <div class="sm-arrow" style="text-align:center;font-size:10px;color:var(--text2)">收起↓</div>
+      <div class="sm-node stow-path">
+        <div class="sn-code">S7</div>
+        <div class="sn-label">减速待收</div>
+      </div>
+      <div class="sm-arrow">→</div>
+      <div class="sm-node stow-path">
+        <div class="sn-code">S8</div>
+        <div class="sn-label">收起中</div>
+      </div>
+      <div class="sm-arrow">→</div>
+
+      <div class="sm-node stow-path">
+        <div class="sn-code">S9</div>
+        <div class="sn-label">锁止确认</div>
+      </div>
+      <div class="sm-arrow">→</div>
+      <div class="sm-node stow-path">
+        <div class="sn-code">S10</div>
+        <div class="sn-label">断电完成</div>
+      </div>
+      <div class="sm-arrow">→S0</div>
+      <div class="sm-node fault">
+        <div class="sn-code">SF</div>
+        <div class="sn-label">故障中止</div>
+      </div>
+    </div>
+
+    <div class="req-card" style="margin-top:16px">
+      <span class="req-id sm">SM-01</span><span class="req-title">S0 → S1：地面装备</span>
+      <div class="req-body">转移条件：Selected_MLG_WOW = True（主起落架接地信号，任意 LGCU 通道有效）AND engine_running = True。进入 S1 后，系统进入"地面装备"状态，等待飞行员拉反推杆。</div>
+    </div>
+    <div class="req-card">
+      <span class="req-id sm">SM-02</span><span class="req-title">S1 → S2：单相解锁供电</span>
+      <div class="req-body">转移条件：SW1 激活（TRA 越过 -1.4° ~ -6.2° 区间）AND LGCU1/2 WOW AND engine_running。输出：SinglePhaseUnlockPower_On = True，开始向 TLS 和两侧吊挂锁供 115VAC。</div>
+    </div>
+    <div class="req-card">
+      <span class="req-id sm">SM-03</span><span class="req-title">S2 → S3：三相作动供电</span>
+      <div class="req-body">转移条件：TLS_Unlocked = True AND PLS_L_Unlocked = True AND SW2 激活（TRA ≤ -5.0°）。输出：ThreePhaseTRCUPower_On = True，向 TRCU 供 540VDC。</div>
+    </div>
+    <div class="req-card">
+      <span class="req-id sm">SM-04</span><span class="req-title">S3 → S4：展开中</span>
+      <div class="req-body">转移条件：FADEC_Deploy_Command 已发出 AND Unlock_Confirmed = True。进入 S4，FADEC 驱动 PDU 电机展开翻转斗，TR_Position 开始上升。</div>
+    </div>
+    <div class="req-card">
+      <span class="req-id sm">SM-05</span><span class="req-title">S4 → S5/S6：反推出力</span>
+      <div class="req-body">TR_Position ≥ 90%（VDT90）时进入 S5（慢车反推）。飞行员继续拉杆至深反推区（TRA ≤ -28°）后进入 S6（最大反推）。</div>
+    </div>
+    <div class="req-card">
+      <span class="req-id sm">SM-06</span><span class="req-title">S6/S5 → S7：减速待收</span>
+      <div class="req-body">转移条件：TRA 回到 0°（飞行员推杆）。系统进入减速等待收起状态，发出 FADEC_Stow_Command，准备驱动 PDU 反向运动。</div>
+    </div>
+    <div class="req-card">
+      <span class="req-id sm">SM-07</span><span class="req-title">S7→S8→S9→S10→S0：收起锁定</span>
+      <div class="req-body">S8（收起中）：TR_Position 下降。S9（锁止确认）：TR_Position ≤ 0% AND TLS/PLS 重新锁定。S10（断电完成）：所有电气供电切断。S0（初始状态）：等待下次接地。</div>
+    </div>
+    <div class="req-card" style="border-color:rgba(248,113,113,.3)">
+      <span class="req-id sr">SM-SF</span><span class="req-title">任意状态 → SF：故障中止</span>
+      <div class="req-body">故障触发条件：EICU 双通道同时失效 / 传感器完全失联 / 展开过程中检测到位置传感器异常 / 飞行员主动触发中止。SF 状态下：所有命令切断，需人工干预重置。</div>
+      <div class="req-rationale">SF 是任意状态的全局转移目标，优先级最高，不被任何门所拦截</div>
+    </div>
+
+    <p style="margin:20px 0 16px"><strong>功能需求（Functional Requirements）</strong></p>
+
+    <div class="req-card">
+      <span class="req-id fr">FR-C1</span><span class="req-title">翻转斗到位确认后才允许最大推力</span>
+      <div class="req-body">与 FANTUI SR-04 等价：TR_Position &lt; 90% 时不进入 S6（最大反推），且 TRA 深拉区（≤ -28°）在 S5 状态确认前不可用。</div>
+    </div>
+    <div class="req-card">
+      <span class="req-id fr">FR-C2</span><span class="req-title">锁机构完全到位才允许断电</span>
+      <div class="req-body">进入 S10（断电完成）的条件之一是 TR_Stowed_And_Locked = True——确认翻转斗已物理归位且所有锁机构重新锁定，防止断电后机构漂移。</div>
+    </div>
+    <div class="req-card">
+      <span class="req-id fr">FR-C3</span><span class="req-title">过温保护</span>
+      <div class="req-body">PDU 电机过温时（overtemp 信号），在 S4/S5/S6 状态下立即发出 FADEC_Stow_Command 并跳转 S7（收起序列），防止因长时间大电流导致电机损坏。</div>
+    </div>
+  </div>
+
+  <!-- §4 -->
+  <div class="section">
+    <span class="sec-anchor" id="s4"></span>
+    <div class="sec-hd">
+      <span class="sec-num">§ 4</span>
+      <h2>AI 需求解析与状态机推导</h2>
+    </div>
+
+    <div class="ai-box">
+      <div class="ai-box-hd">AI 解析视角</div>
+      <p>AI 在处理 C919 E-TRAS 规范时，首先尝试将 FANTUI 的 4 门级联架构直接移植，但很快发现以下歧义无法在无状态框架下表达：(1) "TLS 已解锁"依赖历史；(2) "FADEC 已确认展开"是异步事件；(3) "过温时立即收起"是事件驱动转移，不是条件评估。因此 AI 切换到状态机模型，将每个稳定的系统行为点定义为一个状态。</p>
+    </div>
+
+    <p><strong>推导路径：从 FANTUI AND 门到 C919 状态机</strong></p>
+
+    <div class="decision">
+      <div class="decision-q">决策 C1</div>
+      <div class="decision-body"><strong>FANTUI L1/L2 的供电时序 → C919 S1/S2/S3 三级状态</strong><br>
+      FANTUI 中 L1 和 L2 在同一评估函数里，只要条件满足就同时为 True。但 C919 规范明确要求先完成 TLS 解锁（单相供电）才能开启三相供电。这意味着存在一个中间状态 S2，其中单相已上电但三相尚未激活。AI 将 L1 映射为 S2 的入口条件，L2 映射为 S3 的入口条件。</div>
+    </div>
+
+    <div class="decision">
+      <div class="decision-q">决策 C2</div>
+      <div class="decision-body"><strong>FADEC 的间接性 → 独立的 S3→S4 转移</strong><br>
+      FANTUI 的 L3 门直接产生 PDU 电机命令。C919 规范说"控制逻辑向 FADEC 发指令，FADEC 确认后才执行"。这个"等待确认"阶段不能在无状态函数中表达。AI 设计了 S3（三相供电已建立，等待 FADEC_Deploy_Command）→ S4（FADEC 已确认，展开中）的显式转移。</div>
+    </div>
+
+    <div class="decision">
+      <div class="decision-q">决策 C3</div>
+      <div class="decision-body"><strong>反推收起是独立路径 → S7~S10 专用收起链</strong><br>
+      FANTUI 的逻辑只处理展开方向（无收起路径，收起是植入模型自动处理）。C919 规范有详细的收起步骤：慢停 → FADEC 收起命令 → 等待 TR 归位 → 确认锁定 → 断电。AI 为此增加了 4 个独立的收起状态（S7/S8/S9/S10），与展开路径（S1~S6）对称。</div>
+    </div>
+
+    <div class="decision">
+      <div class="decision-q">决策 C4</div>
+      <div class="decision-body"><strong>故障处理 → SF 作为全局逃逸状态</strong><br>
+      FANTUI 通过"故障注入覆写节点"模拟故障，但这是测试工具行为，不是运行时行为。C919 规范要求系统本身在运行时检测故障并进入安全状态。AI 设计了 SF_ABORT_OR_FAULT 作为从任意状态均可转移的全局逃逸目标，优先级高于所有正常转移条件。</div>
+    </div>
+  </div>
+
+  <!-- §5 -->
+  <div class="section">
+    <span class="sec-anchor" id="s5"></span>
+    <div class="sec-hd">
+      <span class="sec-num">§ 5</span>
+      <h2>状态 → 输出命令可追溯矩阵</h2>
+    </div>
+    <p>每个状态对应的稳定输出命令集合：</p>
+    <div style="border:1px solid var(--b0);margin:14px 0">
+      <div class="trace-row">
+        <div>状态</div><div>状态名</div><div>激活的输出命令</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">S0</div>
+        <div class="trace-state">AIR_STOWED_LOCKED</div>
+        <div style="color:var(--text2);font-size:11px">（全部 OFF）飞机在空中，所有反推命令禁止</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">S1</div>
+        <div class="trace-state">GROUND_ARMED</div>
+        <div style="font-size:11px;color:var(--text1)">（全部 OFF）已接地，等待飞行员拉杆</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">S2</div>
+        <div class="trace-state">UNLOCK_POWER_ON</div>
+        <div style="font-size:11px;color:var(--amber)">SinglePhaseUnlockPower_On = <strong>ON</strong>（TLS/吊挂锁 115VAC）</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">S3</div>
+        <div class="trace-state">TRCU_POWER_ON</div>
+        <div style="font-size:11px;color:var(--amber)">SinglePhaseUnlockPower_On = ON <strong>+</strong> ThreePhaseTRCUPower_On = <strong>ON</strong></div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">S4</div>
+        <div class="trace-state">DEPLOYING</div>
+        <div style="font-size:11px;color:var(--red)">S3 所有 ON <strong>+</strong> FADEC_Deploy_Command = <strong>ON</strong> · TR_Position 上升</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">S5</div>
+        <div class="trace-state">DEPLOYED_IDLE_REVERSE</div>
+        <div style="font-size:11px;color:var(--red)">FADEC_Deploy_Command = ON · TR_Position ≥ 90% · 慢车反推出力</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">S6</div>
+        <div class="trace-state">MAX_REVERSE</div>
+        <div style="font-size:11px;color:var(--red)">FADEC_Deploy_Command = ON · TRA ≤ -28° · 最大反推出力</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">S7</div>
+        <div class="trace-state">DECEL_WAIT_STOW</div>
+        <div style="font-size:11px;color:var(--green)">FADEC_Stow_Command = <strong>ON</strong> · FADEC_Deploy_Command = OFF</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">S8</div>
+        <div class="trace-state">STOWING</div>
+        <div style="font-size:11px;color:var(--green)">FADEC_Stow_Command = ON · TR_Position 下降</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">S9</div>
+        <div class="trace-state">LOCK_CONFIRM</div>
+        <div style="font-size:11px;color:var(--green)">TR_Stowed_And_Locked = ON · 等待锁机构确认</div>
+      </div>
+      <div class="trace-row">
+        <div class="trace-id">S10</div>
+        <div class="trace-state">STOWED_LOCKED_POWER_OFF</div>
+        <div style="font-size:11px;color:var(--text1)">（全部 OFF）锁定完成，电气供电切断，回归初始</div>
+      </div>
+      <div class="trace-row" style="border-left:3px solid var(--red)">
+        <div class="trace-id" style="color:var(--red)">SF</div>
+        <div class="trace-state" style="color:var(--red)">ABORT_OR_FAULT</div>
+        <div style="font-size:11px;color:var(--red)">所有命令强制切断 · 进入安全保持状态 · 需人工重置</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- §6 -->
+  <div class="section">
+    <span class="sec-anchor" id="s6"></span>
+    <div class="sec-hd">
+      <span class="sec-num">§ 6</span>
+      <h2>仿真面板验证方法</h2>
+    </div>
+    <p>在 <a href="http://127.0.0.1:9191/" style="color:var(--cyan)" target="_blank">C919 MFD 仿真面板（:9191）</a> 中按以下步骤验证状态机需求。需先启动 C919 面板服务器：<code style="font-family:var(--mono);font-size:10px;background:var(--bg2);padding:1px 6px;color:var(--amber)">python3 scripts/c919_etras_panel_server.py</code></p>
+
+    <div class="step">
+      <div class="step-num">Step 1</div>
+      <div class="step-body"><strong>验证 SM-01（S0→S1 接地装备）</strong><br>
+        点击「Step1: WOW接地」预设，观察状态从 S0 跳转到 S1（地面装备），状态机节点变为已激活色。面板标签页显示 1ph:OFF · 3ph:OFF，尚无供电。<br>
+        <span class="step-tag">验证需求: SM-01 + AR-02（WOW来自双通道）</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">Step 2</div>
+      <div class="step-body"><strong>验证 SM-02（S1→S2 单相供电）</strong><br>
+        点击「Step2: SW1进入」（TRA=-2°），观察状态跳转 S2，日志行显示 1ph:ON。TLS 锁图标变为橙色（供电中），等待 0.3s 解锁。<br>
+        <span class="step-tag">验证需求: SM-02 + AR-01（单相独立）</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">Step 3</div>
+      <div class="step-body"><strong>验证 SM-03（S2→S3 三相供电）</strong><br>
+        点击「Step3: SW2进入」（TRA=-7°，锁全解锁），观察跳转 S3，日志显示 1ph:ON · 3ph:ON。TRCU 功率总线建立，FADEC 命令仍为 OFF（等待 S4 触发）。<br>
+        <span class="step-tag">验证需求: SM-03 + AR-01（三相独立）</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">Step 4</div>
+      <div class="step-body"><strong>验证 SM-04~05（S3→S4→S5 展开与到位）</strong><br>
+        点击「Step4: 展开指令」（TRA=-15°, TR=10%），观察 S4 激活，FADEC_Deploy=T。再点击「Step5: 80%展开」（TR=85%），状态仍在 S4。此时打开时序图，可见 DEPLOY 信号持续激活而 TR_pos 曲线上升。<br>
+        <span class="step-tag">验证需求: SM-04 + FR-C1（90%前不进S5）</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">Step 5</div>
+      <div class="step-body"><strong>验证 SM-SF（故障中止）</strong><br>
+        在 S4/S5 状态下，点击「⚠ 抑制」或「🔥 过温」预设，观察状态跳转到 SF_ABORT_OR_FAULT（红色），所有命令立即切断，日志显示 fault 状态。这验证了 SF 的全局逃逸优先级。<br>
+        <span class="step-tag">验证需求: SM-SF + FR-C3（过温保护）</span>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">Step 6</div>
+      <div class="step-body"><strong>验证完整收起链（S7→S10）</strong><br>
+        从 S6（Step6: 最大反推）依次点击 Step7（回杆）→ Step8（收起指令）→ Step9（回锁）→ Step10（断电），观察状态沿 S7→S8→S9→S10 顺序流转，最终回到 S0。打开时序图查看 STOW 命令曲线和 TR_pos 下降曲线。<br>
+        <span class="step-tag">验证需求: SM-06/07 + FR-C2（锁到位才断电）</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

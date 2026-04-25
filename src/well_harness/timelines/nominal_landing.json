@@ -1,0 +1,30 @@
+{
+  "title": "Nominal landing — full reverser deployment cycle",
+  "description": "Aircraft on final approach → touchdown → throttle pullback through SW1/SW2 → deploy → THR_LOCK release. All conditions nominal; no faults injected.",
+  "system": "fantui",
+  "step_s": 0.1,
+  "duration_s": 18.0,
+  "initial_inputs": {
+    "radio_altitude_ft": 500.0,
+    "tra_deg": 0.0,
+    "engine_running": true,
+    "aircraft_on_ground": false,
+    "reverser_inhibited": false,
+    "eec_enable": true,
+    "n1k": 45.0,
+    "max_n1k_deploy_limit": 60.0
+  },
+  "events": [
+    { "t_s": 0.0,  "kind": "mark_phase", "target": "descent",         "note": "approach" },
+    { "t_s": 0.0,  "kind": "ramp_input", "target": "radio_altitude_ft", "value": 5.0, "duration_s": 5.0, "note": "descend 500→5 ft in 5s" },
+    { "t_s": 5.0,  "kind": "mark_phase", "target": "landing",         "note": "main gear touchdown" },
+    { "t_s": 5.0,  "kind": "set_input",  "target": "aircraft_on_ground", "value": true },
+    { "t_s": 5.0,  "kind": "set_input",  "target": "radio_altitude_ft", "value": 2.0 },
+    { "t_s": 6.0,  "kind": "mark_phase", "target": "throttle_push",   "note": "pilot pulls reverse lever" },
+    { "t_s": 6.0,  "kind": "ramp_input", "target": "tra_deg",          "value": -26.0, "duration_s": 4.0, "note": "0°→-26° pullback (SW1→SW2→L3 threshold)" },
+    { "t_s": 10.0, "kind": "mark_phase", "target": "deploy" },
+    { "t_s": 12.0, "kind": "assert_condition", "target": "logic3",     "value": "active", "note": "L3 should be active 2s after deploy-range reach" },
+    { "t_s": 16.0, "kind": "assert_condition", "target": "logic4_active", "value": true, "note": "L4 should fire once plant VDT reaches 90%" },
+    { "t_s": 17.0, "kind": "mark_phase", "target": "end",             "note": "throttle_lock released, simulation end" }
+  ]
+}

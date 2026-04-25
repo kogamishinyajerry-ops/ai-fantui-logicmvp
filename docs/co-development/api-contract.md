@@ -1,5 +1,8 @@
 # API 契约清单 — Well Harness v1
 
+> **NOTE (Phase A · 2026-04-22):** 本文档包含 LLM / chat.html / `/api/chat/*` / `llm_client.py` / MiniMax / Ollama 相关条目，这些功能已搁置到 `archive/shelved/llm-features/`。**以下内容保留作历史参考，不代表当前代码库的活跃状态。** 详见 `archive/shelved/llm-features/SHELVED.md`。
+
+
 > **给谁看：** 甲方接入方工程师 + 安全评审工程师
 > **回答什么：** 工作台当前对外暴露了哪些 API，请求/响应长什么样，版本怎么升
 > **什么情况下变动：** 新增 field 只追加，不破坏 v1；破坏性变更另起 `/api/v2/*` 路径

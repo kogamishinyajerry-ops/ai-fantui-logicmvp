@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "well-harness"
 version = "0.1.0"
-description = "Simulation harness for thrust reverser deploy control logic"
+description = "Engineering workbench for aviation control logic: requirements to runtime verification evidence"
 readme = "README.md"
 requires-python = ">=3.9"
 # Runtime stays stdlib-only — demo_server.py imports no third-party packages.
@@ -16,9 +16,11 @@ requires-python = ">=3.9"
 # Install with: pip install -e '.[dev]'
 # Covers the pytest default lane + the schema-validation scripts under tools/.
 dev = [
-    "pytest>=9.0",
-    "pytest-subtests>=0.14",
+    "pytest>=8.0",
+    "pytest-subtests>=0.11",
     "jsonschema>=4.17",
+    "numpy>=1.24",
+    "pyyaml>=6.0",
 ]
 
 [tool.setuptools.package-dir]
@@ -30,6 +32,12 @@ where = ["src"]
 [tool.pytest.ini_options]
 # Default CI lane excludes e2e; opt-in with: pytest -m e2e (or pytest -m "e2e or not e2e")
 addopts = "-m 'not e2e'"
+# Constrain discovery to tests/ so shelved archive trees are never collected.
+testpaths = ["tests"]
+# Make bare `pytest` work without requiring PYTHONPATH=src:. on the caller:
+# - src: well_harness package imports
+# - . (repo root): tools.* and tests.* imports from a few cross-file suites
+pythonpath = ["src", "."]
 markers = [
     "e2e: opt-in end-to-end tests that boot demo_server on :8799 (run with -m e2e)",
 ]

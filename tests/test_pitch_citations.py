@@ -40,7 +40,7 @@ PITCH_DOCS = [
 # Allowed path roots — citations must start with one of these
 PATH_ROOTS = (
     "src/", "tests/", "scripts/", "runs/", "docs/",
-    "config/", "data/", ".planning/",
+    "config/", "data/", ".planning/", "archive/",
 )
 
 # Match: optional backtick + root + path + (optional line/func suffix)
@@ -49,9 +49,12 @@ PATH_ROOTS = (
 # Valid extensions we see in pitch materials:
 EXT_RE = r"(?:\.py|\.md|\.json|\.yaml|\.yml|\.css|\.html|\.tar|\.gz|\.sha256|\.txt|\.log)"
 
+# Anchor: root prefix must not be preceded by another path-like char (prevents
+# matching `src/` inside a longer path like `archive/shelved/.../src/foo.py`).
 CITATION_RE = re.compile(
+    r"(?<![A-Za-z0-9_./\-])"                    # left boundary: no path char
     r"`?"                                       # optional leading backtick
-    r"((?:src|tests|scripts|runs|docs|config|data|\.planning)"
+    r"((?:src|tests|scripts|runs|docs|config|data|\.planning|archive)"
     r"/[A-Za-z0-9_./\-]+"                       # body
     rf"(?:{EXT_RE}|/))"                          # extension or trailing slash
     r"(?::\d+)?"                                # optional :line

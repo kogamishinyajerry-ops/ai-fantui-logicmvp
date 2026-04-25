@@ -3,16 +3,11 @@
 from __future__ import annotations
 
 import argparse
-from collections import OrderedDict
-import copy
 from dataclasses import replace
-from datetime import datetime, timezone
 from functools import lru_cache
-import hashlib
 import json
 import math
 import re
-from threading import Lock
 from typing import Any
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -24,7 +19,7 @@ from well_harness.controller_adapter import build_reference_controller_adapter
 from well_harness.adapters.landing_gear_adapter import build_landing_gear_controller_adapter
 from well_harness.adapters.bleed_air_adapter import build_bleed_air_controller_adapter
 from well_harness.adapters.efds_adapter import build_efds_controller_adapter
-from well_harness.llm_client import LLMClientError, get_llm_backend_metadata, get_llm_client
+from well_harness.adapters.c919_etras_adapter import build_c919_etras_controller_adapter
 from well_harness.document_intake import (
     apply_safe_schema_repairs,
     assess_intake_packet,
@@ -33,9 +28,16 @@ from well_harness.document_intake import (
     intake_packet_to_dict,
     intake_template_payload,
 )
+from well_harness.fantui_tick import FantuiTickSystem, parse_pilot_inputs
 from well_harness.models import HarnessConfig, PilotInputs, ResolvedInputs
 from well_harness.plant import PlantState, SimplifiedDeployPlant
 from well_harness.switches import LatchedThrottleSwitches, SwitchState
+from well_harness.timeline_engine import (
+    TimelinePlayer,
+    ValidationError as TimelineValidationError,
+    parse_timeline,
+)
+from well_harness.timeline_engine.executors.fantui import FantuiExecutor
 from well_harness.workbench_bundle import (
     SandboxEscapeError,
     archive_workbench_bundle,
@@ -43,17 +45,6 @@ from well_harness.workbench_bundle import (
     load_workbench_archive_manifest,
     load_workbench_archive_restore_payload,
 )
-from well_harness.ai_doc_analyzer import (
-    P14SessionStore,
-    analyze_document,
-    convert_markdown_to_intake,
-    evaluate_clarification,
-    generate_prompt_document,
-    run_pipeline_from_intake,
-    _build_questions_from_ambiguities,
-)
-
-
 STATIC_DIR = Path(__file__).with_name("static")
 REFERENCE_PACKET_DIR = Path(__file__).with_name("reference_packets")
 REFERENCE_PACKET_PATH = REFERENCE_PACKET_DIR / "custom_reverse_control_v1.json"
@@ -61,6 +52,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 RUNS_DIR = REPO_ROOT / "runs"
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
+# Server-side DoS guard: 10 MB, aligned with browser client limit.
+_MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
 CONTENT_TYPES = {
     ".html": "text/html; charset=utf-8",
     ".css": "text/css; charset=utf-8",
@@ -94,18 +87,6 @@ MONITOR_AIRCRAFT_ON_GROUND = True
 MONITOR_REVERSER_INHIBITED = False
 MONITOR_EEC_ENABLE = True
 
-# P14 AI Document Analyzer routes
-P14_ANALYZE_PATH = "/api/p14/analyze-document"
-P14_CLARIFY_PATH = "/api/p14/clarify"
-P14_GENERATE_PATH = "/api/p14/generate-prompt"
-# P15 Pipeline Integration routes
-P15_CONVERT_PATH = "/api/p15/convert-to-intake"
-P15_RUN_PIPELINE_PATH = "/api/p15/run-pipeline"
-# Chat AI explain + operate routes (MiniMax LLM integration)
-CHAT_EXPLAIN_PATH = "/api/chat/explain"
-CHAT_EXPLAIN_PREWARM_PATH = "/api/chat/explain-prewarm"
-CHAT_OPERATE_PATH = "/api/chat/operate"
-CHAT_REASON_PATH = "/api/chat/reason"
 # Reverse diagnosis API (P19.6)
 DIAGNOSIS_RUN_PATH = "/api/diagnosis/run"
 # Monte Carlo reliability API (P19.7)
@@ -113,6 +94,14 @@ MONTE_CARLO_RUN_PATH = "/api/monte-carlo/run"
 # Hardware schema discovery (P19.8)
 HARDWARE_SCHEMA_PATH = "/api/hardware/schema"
 SENSITIVITY_SWEEP_PATH = "/api/sensitivity-sweep"
+# FANTUI stateful tick endpoints — live counterpart to C919 /api/tick.
+# The existing /api/lever-snapshot stays stateless; this triad is separate
+# so the two surfaces don't fight each other or share global state.
+FANTUI_TICK_PATH = "/api/fantui/tick"
+FANTUI_RESET_PATH = "/api/fantui/reset"
+FANTUI_LOG_PATH = "/api/fantui/log"
+FANTUI_STATE_PATH = "/api/fantui/state"
+FANTUI_SET_VDT_PATH = "/api/fantui/set_vdt"
 
 STATIC_ROUTE_ALIASES = {
     "/favicon.ico": "favicon.svg",
@@ -143,6 +132,7 @@ _SYSTEM_YAML_MAP = {
     "thrust-reverser": "thrust_reverser_hardware_v1.yaml",
     "landing-gear": "landing_gear_hardware_v1.yaml",
     "bleed-air": "bleed_air_hardware_v1.yaml",
+    "c919-etras": "c919_etras_hardware_v1.yaml",
 }
 
 # Systems whose YAML format is loadable by load_thrust_reverser_hardware.
@@ -197,6 +187,15 @@ LEVER_SNAPSHOT_FAULT_TYPES = {
 }
 FAULT_INJECTION_REASON = "fault_injection"
 
+# ── FANTUI stateful tick singleton ─────────────────────────────────────────
+# Module-level state. ``FantuiTickSystem`` is itself thread-safe — see its
+# internal ``_lock`` — so no outer lock is needed here. Restarting the server
+# clears the state; ``POST /api/fantui/reset`` is the in-process reset.
+# ``_FANTUI_LOCK`` is kept as an alias to the system's internal lock for
+# backward-compatibility with any test that reached in directly.
+_FANTUI_SYSTEM = FantuiTickSystem()
+_FANTUI_LOCK = _FANTUI_SYSTEM._lock
+
 
 class DemoRequestHandler(BaseHTTPRequestHandler):
     """Serve the static demo shell and a thin JSON API around DemoAnswer."""
@@ -225,22 +224,19 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, workbench_recent_archives_payload())
             return
 
-        # Phase 3: chat.html is the new default entry point
+        # Default entry: unified landing page with 2x3 card grid
+        # (Phase A: chat.html shelved; Phase UI-C: root now serves index.html
+        # instead of demo.html so user can reach all 6 surfaces.)
         if parsed.path in ("", "/"):
-            self._serve_static("chat.html")
+            self._serve_static("index.html")
             return
 
-        # Backward-compat aliases (expert sub-path)
         if parsed.path in ("/demo.html", "/expert/demo.html"):
             self._serve_static("demo.html")
             return
 
         if parsed.path in ("/workbench", "/workbench.html", "/expert/workbench.html"):
             self._serve_static("workbench.html")
-            return
-
-        if parsed.path in ("/ai-doc-analyzer.html", "/expert/ai-doc-analyzer.html"):
-            self._serve_static("ai-doc-analyzer.html")
             return
 
         relative_path = unquote(parsed.path.lstrip("/"))
@@ -254,6 +250,19 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._handle_hardware_schema(system_id=system_id)
             return
 
+        if parsed.path == FANTUI_LOG_PATH:
+            # records() is internally locked; the copy it returns is
+            # self-contained so JSON serialization can run unlocked.
+            recs = _FANTUI_SYSTEM.records()
+            self._send_json(200, recs)
+            return
+
+        if parsed.path == FANTUI_STATE_PATH:
+            # Atomic snapshot — one lock acquisition covers all fields
+            # so callers don't observe torn state.
+            self._send_json(200, _FANTUI_SYSTEM.snapshot())
+            return
+
         self._send_json(404, {"error": "not_found"})
 
     def do_POST(self):
@@ -261,23 +270,18 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if parsed.path not in {
             "/api/demo",
             "/api/lever-snapshot",
+            "/api/timeline-simulate",
             SYSTEM_SNAPSHOT_POST_PATH,
             WORKBENCH_BUNDLE_PATH,
             WORKBENCH_REPAIR_PATH,
             WORKBENCH_ARCHIVE_RESTORE_PATH,
-            P14_ANALYZE_PATH,
-            P14_CLARIFY_PATH,
-            P14_GENERATE_PATH,
-            P15_CONVERT_PATH,
-            P15_RUN_PIPELINE_PATH,
-            CHAT_EXPLAIN_PATH,
-            CHAT_EXPLAIN_PREWARM_PATH,
-            CHAT_OPERATE_PATH,
-            CHAT_REASON_PATH,
             DIAGNOSIS_RUN_PATH,
             MONTE_CARLO_RUN_PATH,
             HARDWARE_SCHEMA_PATH,
             SENSITIVITY_SWEEP_PATH,
+            FANTUI_TICK_PATH,
+            FANTUI_RESET_PATH,
+            FANTUI_SET_VDT_PATH,
         }:
             self._send_json(404, {"error": "not_found"})
             return
@@ -325,6 +329,32 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                 ),
             )
             return
+        if parsed.path == "/api/timeline-simulate":
+            result = _handle_timeline_simulate(request_payload)
+            status = result.pop("_status", 200)
+            self._send_json(status, result)
+            return
+        if parsed.path == FANTUI_TICK_PATH:
+            status, result = _handle_fantui_tick(request_payload)
+            self._send_json(status, result)
+            return
+        if parsed.path == FANTUI_RESET_PATH:
+            _FANTUI_SYSTEM.reset()
+            self._send_json(200, {"ok": True, "t_s": 0.0})
+            return
+        if parsed.path == FANTUI_SET_VDT_PATH:
+            try:
+                pct = float(request_payload.get("deploy_position_percent", 0))
+            except (TypeError, ValueError):
+                self._send_json(400, {"error": "deploy_position_percent must be a number"})
+                return
+            try:
+                _FANTUI_SYSTEM.set_plant_position(pct)
+            except ValueError as exc:
+                self._send_json(400, {"error": str(exc)})
+                return
+            self._send_json(200, _FANTUI_SYSTEM.snapshot())
+            return
         if parsed.path == SYSTEM_SNAPSHOT_POST_PATH:
             system_id = request_payload.get("system_id")
             snapshot = request_payload.get("snapshot")
@@ -356,61 +386,6 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == WORKBENCH_ARCHIVE_RESTORE_PATH:
             response_payload, error_payload = build_workbench_archive_restore_response(request_payload)
-            if error_payload is not None:
-                self._send_json(400, error_payload)
-                return
-            self._send_json(200, response_payload)
-            return
-
-        # P14 AI Document Analyzer handlers
-        if parsed.path == P14_ANALYZE_PATH:
-            response_payload, error_payload = _handle_p14_analyze(request_payload)
-            if error_payload is not None:
-                self._send_json(400, error_payload)
-                return
-            self._send_json(200, response_payload)
-            return
-        if parsed.path == P14_CLARIFY_PATH:
-            response_payload, error_payload = _handle_p14_clarify(request_payload)
-            if error_payload is not None:
-                self._send_json(400, error_payload)
-                return
-            self._send_json(200, response_payload)
-            return
-        if parsed.path == P14_GENERATE_PATH:
-            response_payload, error_payload = _handle_p14_generate(request_payload)
-            if error_payload is not None:
-                self._send_json(400, error_payload)
-                return
-            self._send_json(200, response_payload)
-            return
-
-        # Chat AI explain handler (MiniMax LLM)
-        if parsed.path == CHAT_EXPLAIN_PATH:
-            response_payload, error_payload = _handle_chat_explain(request_payload)
-            if error_payload is not None:
-                self._send_json(400, error_payload)
-                return
-            self._send_json(200, response_payload)
-            return
-        if parsed.path == CHAT_EXPLAIN_PREWARM_PATH:
-            response_payload, error_payload = _handle_chat_explain_prewarm(request_payload)
-            if error_payload is not None:
-                self._send_json(400, error_payload)
-                return
-            self._send_json(200, response_payload)
-            return
-
-        if parsed.path == CHAT_OPERATE_PATH:
-            response_payload, error_payload = _handle_chat_operate(request_payload)
-            if error_payload is not None:
-                self._send_json(400, error_payload)
-                return
-            self._send_json(200, response_payload)
-            return
-
-        if parsed.path == CHAT_REASON_PATH:
-            response_payload, error_payload = _handle_chat_reason(request_payload)
             if error_payload is not None:
                 self._send_json(400, error_payload)
                 return
@@ -480,22 +455,6 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                 self._send_json(500, {"error": str(exc)})
             return
 
-        # P15 Pipeline Integration handlers
-        if parsed.path == P15_CONVERT_PATH:
-            response_payload, error_payload = _handle_p15_convert(request_payload)
-            if error_payload is not None:
-                self._send_json(400, error_payload)
-                return
-            self._send_json(200, response_payload)
-            return
-        if parsed.path == P15_RUN_PIPELINE_PATH:
-            response_payload, error_payload = _handle_p15_run_pipeline(request_payload)
-            if error_payload is not None:
-                self._send_json(400, error_payload)
-                return
-            self._send_json(200, response_payload)
-            return
-
         if parsed.path == SENSITIVITY_SWEEP_PATH:
             response_payload, error_payload = build_sensitivity_sweep_payload(request_payload)
             if error_payload is not None:
@@ -561,7 +520,15 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
     def _serve_static(self, relative_path: str):
         static_root = STATIC_DIR.resolve()
         target_path = (static_root / relative_path).resolve()
-        if target_path.parent != static_root or not target_path.is_file():
+        # Path must live inside static_root (traversal guard) and exist as a file.
+        # Phase UI-F (2026-04-22): allow nested static paths like
+        # /c919_etras_panel/circuit.html so the unified-nav can link to them.
+        try:
+            target_path.relative_to(static_root)
+        except ValueError:
+            self._send_json(404, {"error": "not_found"})
+            return
+        if not target_path.is_file():
             self._send_json(404, {"error": "not_found"})
             return
 
@@ -580,1193 +547,6 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
-
-
-# ---------------------------------------------------------------------------
-# P14 AI Document Analyzer handlers
-# ---------------------------------------------------------------------------
-
-# Module-level session store singleton (created lazily via P14SessionStore())
-_p14_session_store: P14SessionStore | None = None
-
-
-def _get_p14_store() -> P14SessionStore:
-    global _p14_session_store
-    if _p14_session_store is None:
-        _p14_session_store = P14SessionStore()
-    return _p14_session_store
-
-
-# Server-side DoS guard: 10 MB, aligned with browser client limit.
-_MAX_DOCUMENT_BYTES = 10 * 1024 * 1024  # 10 MB production limit
-
-
-_MINIMAX_API_KEY: str | None = None
-CHAT_EXPLAIN_CACHE_MAX_ENTRIES = 48
-CHAT_EXPLAIN_PREWARM_MAX_REQUESTS = 12
-_chat_explain_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
-_chat_explain_cache_lock = Lock()
-
-
-def _get_minimax_api_key() -> str:
-    global _MINIMAX_API_KEY
-    if _MINIMAX_API_KEY is None:
-        key_path = Path.home() / ".minimax_key"
-        if key_path.exists():
-            _MINIMAX_API_KEY = key_path.read_text().strip()
-        else:
-            _MINIMAX_API_KEY = ""
-    return _MINIMAX_API_KEY
-
-
-def _utc_now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-
-
-def _canonical_json(value: Any) -> str:
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), default=str)
-
-
-def _normalize_explain_question(question: str) -> str:
-    return re.sub(r"\s+", " ", str(question).strip()).lower()
-
-
-def _build_chat_explain_cache_key(
-    *,
-    question: str,
-    system_id: str,
-    snapshot: dict[str, Any],
-    demo_answer: dict[str, Any],
-    node_states: dict[str, Any],
-    backend_meta: dict[str, str],
-) -> str:
-    key_payload = {
-        "backend": backend_meta.get("backend", ""),
-        "model": backend_meta.get("model", ""),
-        "system_id": system_id,
-        "question": _normalize_explain_question(question),
-        "truth_context": {
-            "node_states": node_states,
-            "snapshot_nodes": snapshot.get("nodes", []),
-            "snapshot_logic": snapshot.get("logic", {}),
-            "snapshot_outputs": snapshot.get("outputs", {}),
-            "demo_answer": demo_answer,
-        },
-    }
-    return hashlib.sha256(_canonical_json(key_payload).encode("utf-8")).hexdigest()[:24]
-
-
-def _clear_chat_explain_cache() -> None:
-    with _chat_explain_cache_lock:
-        _chat_explain_cache.clear()
-
-
-def _get_cached_chat_explain_payload(cache_key: str) -> dict[str, Any] | None:
-    with _chat_explain_cache_lock:
-        cached_payload = _chat_explain_cache.get(cache_key)
-        if cached_payload is None:
-            return None
-        _chat_explain_cache.move_to_end(cache_key)
-        return copy.deepcopy(cached_payload)
-
-
-def _store_cached_chat_explain_payload(cache_key: str, payload: dict[str, Any]) -> None:
-    with _chat_explain_cache_lock:
-        _chat_explain_cache[cache_key] = copy.deepcopy(payload)
-        _chat_explain_cache.move_to_end(cache_key)
-        while len(_chat_explain_cache) > CHAT_EXPLAIN_CACHE_MAX_ENTRIES:
-            _chat_explain_cache.popitem(last=False)
-
-
-def _materialize_chat_explain_response(payload: dict[str, Any], response_source: str) -> dict[str, Any]:
-    response_payload = copy.deepcopy(payload)
-    response_payload["response_source"] = response_source
-    return response_payload
-
-
-def _sanitize_chat_explain_node_list(values: Any) -> list[str]:
-    if not isinstance(values, list):
-        return []
-    return [str(node_id).strip() for node_id in values if str(node_id).strip()]
-
-
-def _chat_explain_has_truth_context(
-    snapshot: dict[str, Any], demo_answer: dict[str, Any], node_states: dict[str, Any]
-) -> bool:
-    if node_states:
-        return True
-    if demo_answer:
-        return True
-    return any(bool(snapshot.get(field_name)) for field_name in ("nodes", "logic", "outputs"))
-
-
-def _handle_chat_explain(request_payload: dict) -> tuple[dict | None, dict | None]:
-    """Handle POST /api/chat/explain — use MiniMax LLM to generate a contextual explanation.
-
-    Input:  {
-        "question": str,          # user's natural language question
-        "system_id": str,         # e.g. "thrust-reverser"
-        "prompt": str,           # original user text
-        "tra_deg": float,
-        "radio_altitude_ft": float,
-        "engine_running": bool,
-        "aircraft_on_ground": bool,
-        "reverser_inhibited": bool,
-        "eec_enable": bool,
-        "n1k": float,
-        "feedback_mode": str,
-        "lever_snapshot": dict | None,   # optional pre-fetched lever-snapshot data
-        "node_states": dict[str, str],   # optional truth-engine node state map
-    }
-
-    Output: {
-        "explanation": str,
-        "highlighted_nodes": list[str],
-        "suggestion_nodes": list[str],
-        "confidence": float,
-    }
-    """
-    question = request_payload.get("question", "")
-    system_id = request_payload.get("system_id", "thrust-reverser")
-    snapshot = request_payload.get("lever_snapshot") or {}
-    demo_answer = request_payload.get("demo_answer") or {}
-    node_states = request_payload.get("node_states", {})
-
-    if not question:
-        return None, {"error": "missing_question", "message": "question field is required."}
-    if not isinstance(node_states, dict):
-        node_states = {}
-
-    # Build a concise context summary from the snapshot data
-    nodes = snapshot.get("nodes", [])
-    logic = snapshot.get("logic", {})
-    outputs = snapshot.get("outputs", {})
-
-    # Build node state summary
-    node_lines = []
-    for node in nodes:
-        state_label = {"active": "亮(激活)", "inactive": "暗(未激活)", "blocked": "红(阻塞)"}.get(
-            node.get("state", ""), node.get("state", "?")
-        )
-        node_lines.append(f"  {node.get('id', '?')}: {state_label}")
-    node_summary = "\n".join(node_lines) if node_lines else "  (无节点数据)"
-
-    # Build logic gate summary
-    logic_lines = []
-    for gate_id in ("logic1", "logic2", "logic3", "logic4"):
-        info = logic.get(gate_id, {})
-        active = info.get("active", False)
-        failed = info.get("failed_conditions", [])
-        status = f"激活" if active else (f"阻塞: {', '.join(failed)}" if failed else "未激活")
-        logic_lines.append(f"  {gate_id}: {status}")
-    logic_summary = "\n".join(logic_lines)
-
-    # Build output summary
-    output_lines = [
-        f"  THR_LOCK: {'已释放' if outputs.get('throttle_electronic_lock_release_cmd') else '未释放'}",
-        f"  VDT90: {'触发' if outputs.get('deploy_90_percent_vdt') else '未触发'}",
-    ]
-    output_summary = "\n".join(output_lines)
-
-    if not node_states and nodes:
-        for node in nodes:
-            node_id = node.get("id")
-            node_state = node.get("state")
-            if isinstance(node_id, str) and isinstance(node_state, str):
-                node_states[node_id] = node_state
-
-    node_state_lines: list[str] = []
-    for node_id, node_state in node_states.items():
-        state_label = {"active": "active(已激活)", "inactive": "inactive(未激活)", "blocked": "blocked(阻塞)"}.get(
-            str(node_state), str(node_state)
-        )
-        node_state_lines.append(f"  {node_id}: {state_label}")
-    node_states_summary = "\n".join(node_state_lines) if node_state_lines else "  (未提供 node_states)"
-
-    # Phase C: When demo_answer is provided (non-thrust-reverser systems),
-    # build context from the demo answer instead of lever-snapshot
-    if demo_answer and not nodes:
-        matched = demo_answer.get("matched_node", "")
-        intent = demo_answer.get("intent", "")
-        target_logic = demo_answer.get("target_logic", "")
-        evidence = demo_answer.get("evidence", [])
-        demo_text = demo_answer.get("answer", "") or demo_answer.get("reasoning", "")
-        node_summary = f"  匹配节点: {matched}" if matched else "  (通用问题)"
-        logic_summary = f"  目标逻辑: {target_logic}" if target_logic else ""
-        evidence_str = "\n  ".join(f"- {e}" for e in evidence) if evidence else "  无"
-        output_summary = f"""  推理结果: {demo_text[:200]}
-  证据链:
-  {evidence_str}""" if demo_text else "  (无推理结果)"
-
-    system_labels = {
-        "thrust-reverser": "Thrust Reverser（反推力系统）",
-        "landing-gear": "Landing Gear（起落架）",
-        "bleed-air": "Bleed Air Valve（引气系统）",
-        "efds": "EFDS（干扰弹系统）",
-    }
-    system_label = system_labels.get(system_id, system_id)
-    try:
-        backend_meta = get_llm_backend_metadata()
-    except LLMClientError as exc:
-        return None, {"error": exc.code, "message": exc.message}
-    cache_key = ""
-    cache_enabled = _chat_explain_has_truth_context(
-        snapshot,
-        demo_answer if isinstance(demo_answer, dict) else {},
-        node_states,
-    )
-    if cache_enabled:
-        cache_key = _build_chat_explain_cache_key(
-            question=question,
-            system_id=system_id,
-            snapshot=snapshot,
-            demo_answer=demo_answer if isinstance(demo_answer, dict) else {},
-            node_states=node_states,
-            backend_meta=backend_meta,
-        )
-        cached_payload = _get_cached_chat_explain_payload(cache_key)
-        if cached_payload is not None:
-            return _materialize_chat_explain_response(cached_payload, "cached_llm"), None
-
-    # Build system prompt for MiniMax
-    system_prompt = f"""你是控制逻辑分析助手。用户正在使用一个确定性控制逻辑推理引擎来诊断 {system_label} 的状态。
-
-你会收到：
-1. 用户的问题
-2. 真值引擎返回的节点状态（node_states）—— 这是100%准确的
-3. 当前系统的逻辑链路定义和补充上下文
-
-你的任务：
-- 用中文解释节点状态变化的原因和影响
-- 在 highlighted_nodes 中列出你讨论到的所有节点ID（如 L1, TLS, VDT90, THR_LOCK）
-- 在 suggestion_nodes 中列出你建议用户进一步检查的节点ID
-- 在 confidence 中评估你对自己回答的信心（0.0-1.0）
-
-你绝对不能：
-- 自己推断节点应该是 active 还是 blocked
-- 与 node_states 中的真值结果矛盾
-- 编造不在当前系统中的节点ID
-
-当前 node_states（真值）：
-{node_states_summary}
-
-当前链路补充上下文：
-=== 节点状态 ===
-{node_summary}
-
-=== 逻辑门状态 ===
-{logic_summary}
-
-=== 输出指令状态 ===
-{output_summary}
-
-你的回复要求：
-1. 基于以上真实数据，用中文（夹杂必要英文技术术语）解释当前链路状态
-2. 重点回答用户的问题："{question}"
-3. 如果某个逻辑门被阻塞，分析原因并说明下游影响
-4. 如果链路完整激活，解释激活路径
-5. 保持专业但易懂，适合航空工程师阅读
-6. explanation 控制在 200-400 字以内
-7. 只返回 JSON，不要加 markdown 代码块
-
-请用以下 JSON 格式回复：
-{{"explanation": "你的中文解释", "highlighted_nodes": ["节点ID1", "节点ID2"], "suggestion_nodes": ["建议检查的ID"], "confidence": 0.95}}"""
-
-    user_prompt = f"用户问题：{question}"
-
-    try:
-        raw_content = get_llm_client().chat(
-            [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.3,
-            max_tokens=600,
-            timeout=30.0,
-        )
-    except LLMClientError as exc:
-        return None, {"error": exc.code, "message": exc.message}
-
-    try:
-        json_str = re.sub(r"^```(?:json)?\s*", "", raw_content.strip())
-        json_str = re.sub(r"\s*```$", "", json_str)
-        parsed = json.loads(json_str)
-        if not isinstance(parsed, dict):
-            raise ValueError("LLM response was not a JSON object.")
-        explanation = parsed.get("explanation", raw_content)
-        highlighted_nodes = parsed.get("highlighted_nodes", [])
-        suggestion_nodes = parsed.get("suggestion_nodes", [])
-        confidence_raw = parsed.get("confidence", 0.5)
-    except (json.JSONDecodeError, TypeError, ValueError):
-        explanation = raw_content
-        highlighted_nodes = []
-        suggestion_nodes = []
-        confidence_raw = 0.5
-
-    if not isinstance(highlighted_nodes, list):
-        highlighted_nodes = []
-    if not isinstance(suggestion_nodes, list):
-        suggestion_nodes = []
-    try:
-        confidence = max(0.0, min(1.0, float(confidence_raw)))
-    except (TypeError, ValueError):
-        confidence = 0.5
-    if not math.isfinite(confidence):
-        confidence = 0.5
-
-    cache_created_at = _utc_now_iso() if cache_enabled else ""
-    response_payload = {
-        "explanation": str(explanation).strip(),
-        "highlighted_nodes": _sanitize_chat_explain_node_list(highlighted_nodes),
-        "suggestion_nodes": _sanitize_chat_explain_node_list(suggestion_nodes),
-        "confidence": confidence,
-        "cache_key": cache_key,
-        "cached_at": cache_created_at,
-        "llm_backend": backend_meta.get("backend", ""),
-        "llm_model": backend_meta.get("model", ""),
-    }
-    if cache_enabled:
-        _store_cached_chat_explain_payload(cache_key, response_payload)
-    return _materialize_chat_explain_response(response_payload, "live_llm"), None
-
-
-def _handle_chat_explain_prewarm(request_payload: dict) -> tuple[dict | None, dict | None]:
-    requests = request_payload.get("requests")
-    if not isinstance(requests, list) or not requests:
-        return None, {
-            "error": "missing_requests",
-            "message": "requests must be a non-empty list of chat/explain payloads.",
-        }
-    if len(requests) > CHAT_EXPLAIN_PREWARM_MAX_REQUESTS:
-        return None, {
-            "error": "too_many_requests",
-            "message": f"requests exceeds maximum of {CHAT_EXPLAIN_PREWARM_MAX_REQUESTS} items.",
-        }
-
-    results: list[dict[str, Any]] = []
-    errors: list[dict[str, Any]] = []
-    cache_hits = 0
-    cache_misses = 0
-
-    for index, raw_request in enumerate(requests):
-        if not isinstance(raw_request, dict):
-            errors.append(
-                {
-                    "index": index,
-                    "error": "invalid_request",
-                    "message": "each requests item must be a JSON object.",
-                }
-            )
-            continue
-        snapshot = raw_request.get("lever_snapshot") or {}
-        demo_answer = raw_request.get("demo_answer") or {}
-        node_states = raw_request.get("node_states") if isinstance(raw_request.get("node_states"), dict) else {}
-        if not _chat_explain_has_truth_context(snapshot, demo_answer, node_states):
-            errors.append(
-                {
-                    "index": index,
-                    "error": "missing_truth_context",
-                    "message": "prewarm requests must include node_states, lever_snapshot, or demo_answer context.",
-                }
-            )
-            continue
-        response_payload, error_payload = _handle_chat_explain(raw_request)
-        if error_payload is not None:
-            errors.append({"index": index, **error_payload})
-            continue
-        assert response_payload is not None
-        response_source = str(response_payload.get("response_source", "live_llm"))
-        if response_source == "cached_llm":
-            cache_hits += 1
-        else:
-            cache_misses += 1
-        results.append(
-            {
-                "index": index,
-                "question": str(raw_request.get("question", "")),
-                "system_id": str(raw_request.get("system_id", "thrust-reverser")),
-                "response_source": response_source,
-                "cache_key": str(response_payload.get("cache_key", "")),
-                "cached_at": str(response_payload.get("cached_at", "")),
-                "llm_backend": str(response_payload.get("llm_backend", "")),
-                "llm_model": str(response_payload.get("llm_model", "")),
-            }
-        )
-
-    return {
-        "requested_count": len(requests),
-        "warmed_count": len(results),
-        "cache_hits": cache_hits,
-        "cache_misses": cache_misses,
-        "results": results,
-        "errors": errors,
-    }, None
-
-
-def _validate_chat_payload(payload: dict) -> tuple[dict | None, dict | None]:
-    """Shared input validation for /api/chat/reason and /api/chat/operate.
-
-    Pure function: takes a request dict, returns (validated, error). No I/O,
-    no global state, no side effects. The validation rules are byte-for-byte
-    the Round 2 chat/reason rules so the two endpoints expose an identical
-    attack surface.
-
-    Returns exactly one of:
-      * ({"question": str, "system_id": str, "snapshot": dict, "nodes": list}, None)
-      * (None, {"error": <code>, "message": <human-readable>})
-
-    Error codes (preserved verbatim from Round 2 — DO NOT rename, downstream
-    consumers / log-based alerts / front-end toast handlers depend on these
-    exact strings):
-      invalid_question_type, missing_question, question_too_long,
-      invalid_system_id, invalid_current_snapshot, snapshot_nodes_too_large
-    """
-    MAX_QUESTION_CHARS = 8000
-    MAX_SNAPSHOT_NODES = 200
-    ALLOWED_SYSTEM_IDS = {"thrust-reverser", "landing-gear", "bleed-air", "efds"}
-
-    raw_question = payload.get("question", "")
-    if not isinstance(raw_question, str):
-        return None, {
-            "error": "invalid_question_type",
-            "message": "question must be a string.",
-        }
-    question = raw_question.strip()
-    if not question:
-        return None, {"error": "missing_question", "message": "question field is required."}
-    if len(question) > MAX_QUESTION_CHARS:
-        return None, {
-            "error": "question_too_long",
-            "message": f"question exceeds maximum of {MAX_QUESTION_CHARS} characters.",
-        }
-
-    raw_system_id = payload.get("system_id", "thrust-reverser")
-    if not isinstance(raw_system_id, str) or raw_system_id not in ALLOWED_SYSTEM_IDS:
-        return None, {
-            "error": "invalid_system_id",
-            "message": f"system_id must be one of {sorted(ALLOWED_SYSTEM_IDS)}.",
-        }
-    system_id = raw_system_id
-
-    raw_snapshot = payload.get("current_snapshot")
-    if raw_snapshot is None:
-        snapshot = {}
-    elif isinstance(raw_snapshot, dict):
-        snapshot = raw_snapshot
-    else:
-        return None, {
-            "error": "invalid_current_snapshot",
-            "message": "current_snapshot must be a JSON object or null.",
-        }
-
-    raw_nodes = snapshot.get("nodes", [])
-    if isinstance(raw_nodes, list) and len(raw_nodes) > MAX_SNAPSHOT_NODES:
-        return None, {
-            "error": "snapshot_nodes_too_large",
-            "message": f"current_snapshot.nodes exceeds maximum of {MAX_SNAPSHOT_NODES} entries.",
-        }
-    nodes = raw_nodes if isinstance(raw_nodes, list) else []
-
-    return {
-        "question": question,
-        "system_id": system_id,
-        "snapshot": snapshot,
-        "nodes": nodes,
-    }, None
-
-
-def _handle_chat_operate(request_payload: dict) -> tuple[dict | None, dict | None]:
-    """Handle POST /api/chat/operate — use MiniMax LLM to suggest lever parameter overrides.
-
-    Input:  {
-        "question": str,          # user's natural language question (e.g. "把VDT调节到90%")
-        "system_id": str,         # e.g. "thrust-reverser"
-        "current_snapshot": dict | None,   # optional lever-snapshot result for context
-    }
-
-    Output: {
-        "action_type": str,           # "suggest_parameter_override" | "manual_steps" | "cannot_operate"
-        "parameter_overrides": dict,  # fields to override in lever payload
-        "trajectory_steps": list,     # optional multi-step sequence
-        "reasoning": str,             # why this action was chosen
-        "confidence": float,
-        "gate_plan": dict,            # optional: per-gate dependency map for "满足L1-L4" requests
-        "ai_explanation": str,        # human-readable explanation
-    }
-    """
-    # ── Input validation (security Round 3 — mirrors chat/reason) ────────
-    # Closes Round 2 BACKLOG C-sibling (HIGH, SECURITY-PENDING). Uses the
-    # exact same _validate_chat_payload helper as /api/chat/reason so both
-    # endpoints expose an identical attack surface. Operate-specific
-    # validation (allowed_override_fields whitelist, feedback_mode enum,
-    # auto_apply bool coercion) is preserved verbatim downstream.
-    validated, error = _validate_chat_payload(request_payload)
-    if error is not None:
-        return None, error
-    question = validated["question"]
-    system_id = validated["system_id"]
-    snapshot = validated["snapshot"]
-    nodes = validated["nodes"]
-
-    # Build context from current snapshot
-    logic = snapshot.get("logic", {})
-    outputs = snapshot.get("outputs", {})
-
-    logic_lines = []
-    for gate_id in ("logic1", "logic2", "logic3", "logic4"):
-        info = logic.get(gate_id, {})
-        active = info.get("active", False)
-        failed = info.get("failed_conditions", [])
-        status = f"激活" if active else (f"阻塞: {', '.join(failed)}" if failed else "未激活")
-        logic_lines.append(f"  {gate_id}: {status}")
-    logic_summary = "\n".join(logic_lines)
-
-    output_lines = [
-        f"  THR_LOCK: {'已释放' if outputs.get('throttle_electronic_lock_release_cmd') else '未释放'}",
-        f"  VDT90: {'触发' if outputs.get('deploy_90_percent_vdt') else '未触发'}",
-    ]
-    output_summary = "\n".join(output_lines)
-
-    system_labels = {
-        "thrust-reverser": "Thrust Reverser（反推力系统）",
-        "landing-gear": "Landing Gear（起落架）",
-        "bleed-air": "Bleed Air Valve（引气系统）",
-        "efds": "EFDS（干扰弹系统）",
-    }
-    system_label = system_labels.get(system_id, system_id)
-
-    # Controllable vs plant-output parameter definitions
-    controllable_params = [
-        "tra_deg (-32~0°): TRA位置角度，-14°为反推激活阈值",
-        "radio_altitude_ft (0~20ft): 无线电高度",
-        "engine_running (bool): 发动机是否运行",
-        "aircraft_on_ground (bool): 飞机是否在地面",
-        "reverser_inhibited (bool): 反推是否被抑制",
-        "eec_enable (bool): EEC是否使能",
-        "n1k (0~120%): 低压轴转速百分比",
-        "feedback_mode: 'auto_scrubber'|'manual_feedback_override'",
-        "deploy_position_percent (0~100%): 手动模式下的目标部署位置",
-    ]
-    plant_output_params = [
-        "VDT90: 由 deploy_position_percent + 时间积分决定，是plant计算输出，不可直接设置",
-        "THR_LOCK: 由 logic4 激活状态决定，是plant计算输出",
-        "TLS115V: 由 logic1 激活状态决定，是plant计算输出",
-    ]
-
-    system_prompt = f"""你是控制逻辑操作助手。用户正在使用 {system_label} 仿真推理引擎。
-
-你会收到：
-1. 用户的问题（可能要求调节某个参数到目标值，或要求"满足某逻辑条件"）
-2. 当前逻辑门和输出状态
-
-你的任务：
-- 分析用户请求，判断是否可以通过调整可控参数来实现
-- 如果可以，在 parameter_overrides 中给出建议的参数值
-- 在 action_type 中指明操作类型
-- 在 reasoning 中解释你的推理过程
-- 在 confidence 中评估置信度（0.0-1.0）
-
-可操控的参数（可直接设置）：
-{chr(10).join(f"- {p}" for p in controllable_params)}
-
-plant 输出参数（不可直接设置，只能通过操控输入间接影响）：
-{chr(10).join(f"- {p}" for p in plant_output_params)}
-
-逻辑门状态：
-{logic_summary}
-
-输出状态：
-{output_summary}
-
-操作规则（按优先级）：
-1. 如果用户说"VDT达到90%" → 建议 feedback_mode=manual_feedback_override + deploy_position_percent=90
-2. 如果用户说"把TRA拉到-14°" → 建议 tra_deg=-14.0
-3. 如果用户说"满足L1/L2/L3/L4"或"满足L1-L4" → 立即分析当前状态，给出能让这些gate激活的所有必要参数，
-   返回 action_type=suggest_parameter_override + 完整 parameter_overrides + gate_plan + auto_apply=true
-   注意：auto_apply=true 表示前端会立即自动应用这些参数，不需要用户再点确认
-4. 如果用户要求直接设置plant输出（VDT90/THR_LOCK/TLS115V）→ action_type=cannot_operate，说明这些是plant输出
-
-请用以下 JSON 格式回复（不要加 markdown 代码块）：
-{{
-  "action_type": "suggest_parameter_override | manual_steps | cannot_operate",
-  "parameter_overrides": {{"字段名": 值}},
-  "auto_apply": false,
-  "trajectory_steps": [],
-  "reasoning": "推理说明",
-  "confidence": 0.95,
-  "gate_plan": {{}},
-  "ai_explanation": "面向用户的简短确认文字（说明改了什么参数）"
-}}"""
-
-    user_prompt = f"用户问题：{question}\n\n当前逻辑门状态：\n{logic_summary}\n\n当前输出状态：\n{output_summary}"
-
-    try:
-        raw_content = get_llm_client().chat(
-            [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.3,
-            max_tokens=1500,
-            timeout=30.0,
-        )
-    except LLMClientError as exc:
-        return None, {"error": exc.code, "message": exc.message}
-
-    try:
-        json_str = re.sub(r"^```(?:json)?\s*", "", raw_content.strip())
-        json_str = re.sub(r"\s*```$", "", json_str)
-        parsed = json.loads(json_str)
-        if not isinstance(parsed, dict):
-            raise ValueError("LLM response was not a JSON object.")
-    except (json.JSONDecodeError, TypeError, ValueError):
-        return {
-            "action_type": "cannot_operate",
-            "parameter_overrides": {},
-            "auto_apply": False,
-            "trajectory_steps": [],
-            "reasoning": "AI响应解析失败",
-            "confidence": 0.0,
-            "gate_plan": {},
-            "ai_explanation": f"抱歉，AI响应解析失败。请手动调节参数。原始响应：{raw_content[:200]}",
-        }, None
-
-    VALID_ACTION_TYPES = {"suggest_parameter_override", "manual_steps", "cannot_operate"}
-
-    raw_action_type = str(parsed.get("action_type", "cannot_operate"))
-    action_type = raw_action_type if raw_action_type in VALID_ACTION_TYPES else "cannot_operate"
-    parameter_overrides = parsed.get("parameter_overrides", {})
-    trajectory_steps = parsed.get("trajectory_steps", [])
-    reasoning = str(parsed.get("reasoning", ""))
-    confidence_raw = parsed.get("confidence", 0.5)
-    gate_plan = parsed.get("gate_plan", {})
-    auto_apply_raw = parsed.get("auto_apply", False)
-    auto_apply = isinstance(auto_apply_raw, bool) and auto_apply_raw is True
-    ai_explanation = str(parsed.get("ai_explanation", reasoning))
-
-    allowed_override_fields = {
-        "tra_deg", "radio_altitude_ft", "engine_running", "aircraft_on_ground",
-        "reverser_inhibited", "eec_enable", "n1k", "feedback_mode", "deploy_position_percent",
-        "max_n1k_deploy_limit",
-    }
-    allowed_feedback_modes = {"auto_scrubber", "manual_feedback_override"}
-    if isinstance(parameter_overrides, dict):
-        cleaned = {}
-        for k, v in parameter_overrides.items():
-            if k not in allowed_override_fields:
-                continue
-            if k in ("engine_running", "aircraft_on_ground", "reverser_inhibited", "eec_enable"):
-                if isinstance(v, bool):
-                    cleaned[k] = v
-                elif isinstance(v, str):
-                    cleaned[k] = v.lower() in ("true", "1", "yes", "on")
-            elif k in ("tra_deg", "radio_altitude_ft", "n1k", "deploy_position_percent", "max_n1k_deploy_limit"):
-                try:
-                    float_val = float(v)
-                    if math.isfinite(float_val):
-                        cleaned[k] = float_val
-                except (TypeError, ValueError):
-                    pass
-            elif k == "feedback_mode":
-                if isinstance(v, str) and v in allowed_feedback_modes:
-                    cleaned[k] = v
-        parameter_overrides = cleaned
-    else:
-        parameter_overrides = {}
-
-    try:
-        confidence = max(0.0, min(1.0, float(confidence_raw)))
-    except (TypeError, ValueError):
-        confidence = 0.5
-    if not math.isfinite(confidence):
-        confidence = 0.5
-
-    return {
-        "action_type": action_type,
-        "parameter_overrides": parameter_overrides,
-        "auto_apply": auto_apply,
-        "trajectory_steps": trajectory_steps if isinstance(trajectory_steps, list) else [],
-        "reasoning": reasoning,
-        "confidence": confidence,
-        "gate_plan": gate_plan if isinstance(gate_plan, dict) else {},
-        "ai_explanation": ai_explanation,
-    }, None
-
-
-def _handle_chat_reason(request_payload: dict) -> tuple[dict | None, dict | None]:
-    """Handle POST /api/chat/reason — unified deep reasoning endpoint.
-
-    Receives a live truth snapshot and lets the AI reason deeply about any
-    control-logic question, including causal、反事实、system-level, and diagnostic.
-    Quickly refuses off-topic or under-informed questions.
-    """
-    # ── Input validation (security Round 2 / refactored Round 3) ─────────
-    # Round 3 extracted the inline block to module-level _validate_chat_payload
-    # so /api/chat/operate can apply the EXACT same rules. Behavior is
-    # byte-for-byte equivalent to the Round 2 inline implementation: same 6
-    # error codes, same messages, same structured 4xx envelopes.
-    validated, error = _validate_chat_payload(request_payload)
-    if error is not None:
-        return None, error
-    question = validated["question"]
-    system_id = validated["system_id"]
-    snapshot = validated["snapshot"]
-    nodes = validated["nodes"]
-
-    logic = snapshot.get("logic", {})
-    outputs = snapshot.get("outputs", {})
-    hud = snapshot.get("hud", {})
-    spec = snapshot.get("spec", {})
-
-    # Build node state summary
-    node_lines = []
-    for node in nodes:
-        state_label = {"active": "亮(激活)", "inactive": "暗(未激活)", "blocked": "红(阻塞)"}.get(
-            node.get("state", ""), node.get("state", "?")
-        )
-        node_lines.append(f"  {node.get('id', '?')}: {state_label}")
-    node_summary = "\n".join(node_lines) if node_lines else "  (无节点数据)"
-
-    # Build logic gate summary (brief)
-    logic_lines = []
-    for gate_id in ("logic1", "logic2", "logic3", "logic4"):
-        info = logic.get(gate_id, {})
-        active = info.get("active", False)
-        failed = info.get("failed_conditions", [])
-        status = f"激活" if active else (f"阻塞: {', '.join(failed)}" if failed else "未激活")
-        logic_lines.append(f"  {gate_id}: {status}")
-    logic_summary = "\n".join(logic_lines)
-
-    # Build full logic condition definitions (for deep reasoning)
-    logic_def_lines = []
-    for gate_id in ("logic1", "logic2", "logic3", "logic4"):
-        info = logic.get(gate_id, {})
-        active = info.get("active", False)
-        logic_def_lines.append(f"【{gate_id}】{'[激活]' if active else '[未激活]'}")
-        conditions = info.get("conditions", [])
-        if conditions:
-            for c in conditions:
-                status = "✓通过" if c.get("passed") else "✗未过"
-                thresh = c.get("threshold_value")
-                comp = c.get("comparison", "")
-                cur = c.get("current_value")
-                thresh_str = f" {comp} {thresh}" if thresh is not None else ""
-                logic_def_lines.append(f"  - {c.get('name','?')}: 当前值={cur}{thresh_str} [{status}]")
-        else:
-            # No conditions means gate was skipped / locked out
-            logic_def_lines.append(f"  (无条件记录，gate被跳过)")
-        failed = info.get("failed_conditions", [])
-        if failed:
-            logic_def_lines.append(f"  阻塞原因: {', '.join(failed)}")
-    logic_definitions = "\n".join(logic_def_lines)
-
-    # Build output summary
-    output_lines = [
-        f"  THR_LOCK: {'已释放' if outputs.get('throttle_electronic_lock_release_cmd') else '未释放'}",
-        f"  VDT90: {'触发' if outputs.get('deploy_90_percent_vdt') else '未触发'}",
-        f"  TLS115V: {'有电' if outputs.get('tls_115vac_cmd') else '断电'}",
-        f"  ETRAC540V: {'触发' if outputs.get('etrac_540vdc_cmd') else '未触发'}",
-        f"  EEC_DEPLOY: {'激活' if outputs.get('eec_deploy_cmd') else '未激活'}",
-        f"  PLS_POWER: {'激活' if outputs.get('pls_power_cmd') else '未激活'}",
-        f"  PDU_MOTOR: {'激活' if outputs.get('pdu_motor_cmd') else '未激活'}",
-    ]
-    output_summary = "\n".join(output_lines)
-
-    # Build spec summary (链路定义)
-    spec_summary = ""
-    if spec:
-        spec_lines = spec.get("description_lines", [])
-        if spec_lines:
-            spec_summary = "\n".join(f"  {l}" for l in spec_lines[:30])
-        else:
-            spec_summary = f"  {spec.get('title', system_id)}"
-
-    # Node → state map for quick reference
-    node_state_lines = []
-    for node in nodes:
-        nid = node.get("id", "?")
-        state = node.get("state", "?")
-        node_state_lines.append(f"  {nid}: {state}")
-    node_states_summary = "\n".join(node_state_lines) if node_state_lines else "  (无)"
-
-    system_labels = {
-        "thrust-reverser": "Thrust Reverser（反推力系统）",
-        "landing-gear": "Landing Gear（起落架）",
-        "bleed-air": "Bleed Air Valve（引气系统）",
-        "efds": "EFDS（干扰弹系统）",
-    }
-    system_label = system_labels.get(system_id, system_id)
-
-    system_prompt = f"""你是 {system_label} 的控制逻辑深度推理助手。
-
-## 你拥有的真实数据（来自 truth engine，100%准确）
-=== 节点状态 ===
-{node_states_summary}
-
-=== 逻辑门状态 ===
-{logic_summary}
-
-=== 逻辑门完整条件 ===
-{logic_definitions}
-
-=== 指令输出 ===
-{output_summary}
-
-=== 链路定义（spec）===
-{spec_summary if spec_summary else '  (无 spec 数据)'}
-
-## 你的核心能力（按优先级使用）
-
-1. **因果推理**：基于上述真实数据，解释为什么某个 gate 激活/阻塞
-2. **反事实推理**：分析"如果X则Y"的逻辑后果（基于 threshold 和 comparison）
-3. **系统原理**：基于 spec 数据解释系统架构、节点关系、激活路径
-4. **故障诊断**：结合 failed_conditions 和 conditions 的通过状态定位根因
-5. **操作建议**：当用户要求操作时，给出 suggest_parameter_override
-
-## 你的回答边界
-
-严格拒绝以下问题：
-- 与控制逻辑完全无关：天气、地理、政治、航空事故原因（非本系统故障）
-- 完全无法回答的问题：没有任何数据可以支撑推理
-- 格式：「拒绝原因：XXXX」→ confidence = 0.0，refusal = true
-
-你不可以：
-- 编造节点状态或 threshold
-- 声称某个 gate 激活但 failed_conditions 不为空
-- 超出 {system_label} 的系统范围
-
-## 回答格式要求
-
-请直接返回以下 JSON（不要 markdown 代码块，不要额外文字）：
-{{
-  "response_type": "analysis" | "explanation" | "refusal" | "operation_suggestion",
-  "explanation": "面向工程师的核心回答（100-300字）",
-  "highlighted_nodes": ["节点ID1", ...],
-  "suggestion_nodes": ["建议检查的节点ID", ...],
-  "confidence": 0.0-1.0,
-  "refusal": false,
-  "refusal_reason": "",
-  "parameter_overrides": {{}},
-  "auto_apply": false,
-  "deep_reasoning": "你的完整推理链，向工程师展示分析过程"
-}}
-
-response_type 判定：
-- 讨论节点状态、why/how/what → analysis 或 explanation
-- 要求操作/调节/满足条件 → operation_suggestion
-- 超出边界 → refusal
-
-confidence 指导：
-- 有充足数据支撑 → 0.7-1.0
-- 数据有限但可推理 → 0.4-0.7
-- 数据严重不足 → < 0.4 + refusal=true"""
-
-    user_prompt = f"用户问题：{question}"
-
-    try:
-        raw_content = get_llm_client().chat(
-            [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.3,
-            max_tokens=1500,
-            timeout=30.0,
-        )
-    except LLMClientError as exc:
-        return None, {"error": exc.code, "message": exc.message}
-
-    try:
-        json_str = re.sub(r"^```(?:json)?\s*", "", raw_content.strip())
-        json_str = re.sub(r"\s*```$", "", json_str)
-        parsed = json.loads(json_str)
-        if not isinstance(parsed, dict):
-            raise ValueError("Not a JSON object.")
-    except (json.JSONDecodeError, TypeError, ValueError) as exc:
-        truncation_markers = ("...", "继续", "continue", "{\"_", "partial")
-        is_truncated = (
-            len(raw_content.strip()) >= 1150 or
-            any(raw_content.strip().endswith(m) for m in truncation_markers) or
-            raw_content.strip().count('{') > raw_content.strip().count('}')
-        )
-        if is_truncated:
-            return None, {
-                "error": "minimax_response_truncated",
-                "message": "LLM response was truncated. Try again or simplify the question.",
-            }
-        return None, {
-            "error": "minimax_json_parse_error",
-            "message": f"AI响应格式异常（非JSON）：{exc}",
-        }
-
-    VALID_RESPONSE_TYPES = {"analysis", "explanation", "refusal", "operation_suggestion"}
-    raw_rt = str(parsed.get("response_type", "analysis"))
-    response_type = raw_rt if raw_rt in VALID_RESPONSE_TYPES else "analysis"
-
-    explanation = str(parsed.get("explanation", ""))
-    highlighted = parsed.get("highlighted_nodes", [])
-    suggestions = parsed.get("suggestion_nodes", [])
-    confidence_raw = parsed.get("confidence", 0.5)
-    refusal_raw = parsed.get("refusal", False)
-    refusal = isinstance(refusal_raw, bool) and refusal_raw is True
-    refusal_reason = str(parsed.get("refusal_reason", ""))
-    parameter_overrides = parsed.get("parameter_overrides", {})
-    auto_apply_raw = parsed.get("auto_apply", False)
-    auto_apply = isinstance(auto_apply_raw, bool) and auto_apply_raw is True
-    deep_reasoning = str(parsed.get("deep_reasoning", ""))
-
-    allowed_override_fields = {
-        "tra_deg", "radio_altitude_ft", "engine_running", "aircraft_on_ground",
-        "reverser_inhibited", "eec_enable", "n1k", "feedback_mode", "deploy_position_percent",
-        "max_n1k_deploy_limit",
-    }
-    allowed_feedback_modes = {"auto_scrubber", "manual_feedback_override"}
-    if isinstance(parameter_overrides, dict):
-        cleaned = {}
-        for k, v in parameter_overrides.items():
-            if k not in allowed_override_fields:
-                continue
-            if k in ("engine_running", "aircraft_on_ground", "reverser_inhibited", "eec_enable"):
-                if isinstance(v, bool):
-                    cleaned[k] = v
-                elif isinstance(v, str):
-                    cleaned[k] = v.lower() in ("true", "1", "yes", "on")
-            elif k in ("tra_deg", "radio_altitude_ft", "n1k", "deploy_position_percent", "max_n1k_deploy_limit"):
-                try:
-                    cleaned[k] = float(v)
-                except (TypeError, ValueError):
-                    pass
-            elif k == "feedback_mode":
-                if isinstance(v, str) and v in allowed_feedback_modes:
-                    cleaned[k] = v
-        parameter_overrides = cleaned
-    else:
-        parameter_overrides = {}
-
-    try:
-        confidence_raw_val = float(confidence_raw)
-        if not math.isfinite(confidence_raw_val):
-            confidence = 0.5
-        else:
-            confidence = max(0.0, min(1.0, confidence_raw_val))
-    except (TypeError, ValueError):
-        confidence = 0.5
-
-    return {
-        "response_type": response_type,
-        "explanation": explanation,
-        "highlighted_nodes": highlighted if isinstance(highlighted, list) else [],
-        "suggestion_nodes": suggestions if isinstance(suggestions, list) else [],
-        "confidence": confidence,
-        "refusal": refusal,
-        "refusal_reason": refusal_reason,
-        "parameter_overrides": parameter_overrides,
-        "auto_apply": auto_apply,
-        "deep_reasoning": deep_reasoning,
-    }, None
-
-
-def _handle_p14_analyze(request_payload: dict) -> tuple[dict | None, dict | None]:
-    """Handle POST /api/p14/analyze-document."""
-    session_id = request_payload.get("session_id")
-    if not isinstance(session_id, str) or not session_id.strip():
-        return None, {"error": "missing_session_id", "message": "session_id is required and must be a non-empty string."}
-
-    document_text = request_payload.get("document_text")
-    if not isinstance(document_text, str):
-        return None, {"error": "missing_document_text", "message": "document_text is required."}
-    if not document_text.strip():
-        return None, {"error": "empty_document", "message": "document_text must not be empty."}
-    if len(document_text.encode("utf-8")) > _MAX_DOCUMENT_BYTES:
-        return None, {
-            "error": "document_too_large",
-            "message": f"document_text exceeds maximum size of {_MAX_DOCUMENT_BYTES} bytes (10MB server-side limit).",
-        }
-
-    document_name = request_payload.get("document_name", "untitled")
-    if not isinstance(document_name, str) or len(document_name) > 255:
-        return None, {"error": "invalid_document_name", "message": "document_name must be a string of at most 255 characters."}
-
-    store = _get_p14_store()
-    session = store.create(session_id.strip(), document_text, document_name.strip() or "untitled")
-    ambiguities_or_error = analyze_document(document_text)
-    if isinstance(ambiguities_or_error, dict):
-        return None, {
-            "error": ambiguities_or_error.get("error", "analysis_failed"),
-            "message": ambiguities_or_error.get("message", str(ambiguities_or_error)),
-        }
-    ambiguities = ambiguities_or_error
-    session.ambiguities = ambiguities
-    session.questions = _build_questions_from_ambiguities(ambiguities)
-    # If no ambiguities were detected, mark session complete immediately
-    if not session.questions:
-        session.is_complete = True
-    store.update(session)
-
-    # Return first question alongside ambiguities so UI can start the loop immediately
-    first_q = session.next_question()
-    return {
-        "session_id": session_id,
-        "ambiguities": [a.to_dict() for a in ambiguities],
-        "total_count": len(ambiguities),
-        "first_question": first_q.to_dict() if first_q else None,
-        "progress": session.progress(),
-        "is_complete": session.is_complete,
-    }, None
-
-
-def _handle_p14_clarify(request_payload: dict) -> tuple[dict | None, dict | None]:
-    """Handle POST /api/p14/clarify."""
-    session_id = request_payload.get("session_id")
-    if not isinstance(session_id, str) or not session_id.strip():
-        return None, {"error": "missing_session_id", "message": "session_id is required."}
-
-    answer = request_payload.get("answer")
-    if not isinstance(answer, str) or not answer.strip():
-        return None, {"error": "empty_answer", "message": "answer must be a non-empty string."}
-
-    store = _get_p14_store()
-    session = store.get(session_id.strip())
-    if session is None:
-        return None, {"error": "session_not_found", "message": f"Session '{session_id}' not found."}
-
-    result = evaluate_clarification(session, answer.strip())
-    store.update(session)
-
-    return {
-        "session_id": session_id,
-        "next_question": result.next_question.to_dict() if result.next_question else None,
-        "progress": result.progress,
-        "is_complete": result.is_complete,
-    }, None
-
-
-def _handle_p14_generate(request_payload: dict) -> tuple[dict | None, dict | None]:
-    """Handle POST /api/p14/generate-prompt."""
-    session_id = request_payload.get("session_id")
-    if not isinstance(session_id, str) or not session_id.strip():
-        return None, {"error": "missing_session_id", "message": "session_id is required."}
-
-    store = _get_p14_store()
-    session = store.get(session_id.strip())
-    if session is None:
-        return None, {"error": "session_not_found", "message": f"Session '{session_id}' not found."}
-
-    if not session.is_complete:
-        return None, {"error": "session_incomplete", "message": "Cannot generate prompt until all clarification questions are answered."}
-
-    if session.generated_prompt is None:
-        prompt_doc = generate_prompt_document(session)
-        # generate_prompt_document returns str | dict; dict = error
-        if isinstance(prompt_doc, dict):
-            return None, {"error": prompt_doc.get("error", "generation_failed"), "message": prompt_doc.get("message", str(prompt_doc))}
-        session.generated_prompt = prompt_doc
-        store.update(session)
-
-    word_count = len(session.generated_prompt.split())
-    return {
-        "session_id": session_id,
-        "prompt_document": session.generated_prompt,
-        "word_count": word_count,
-    }, None
-
-
-# ---------------------------------------------------------------------------
-# P15 Pipeline Integration handlers
-# ---------------------------------------------------------------------------
-
-
-def _handle_p15_convert(request_payload: dict) -> tuple[dict | None, dict | None]:
-    """Handle POST /api/p15/convert-to-intake.
-
-    Input:  {session_id: str, system_id?: str}
-    Output: {intake_packet: dict, validation: {valid: bool, errors: list}}
-    """
-    session_id = request_payload.get("session_id")
-    if not isinstance(session_id, str) or not session_id.strip():
-        return None, {"error": "missing_session_id", "message": "session_id is required and must be a non-empty string."}
-
-    system_id = request_payload.get("system_id", "generated-system")
-
-    store = _get_p14_store()
-    session = store.get(session_id.strip())
-    if session is None:
-        return None, {"error": "session_not_found", "message": f"Session '{session_id}' not found."}
-
-    prompt_doc = session.generated_prompt
-    if prompt_doc is None:
-        # Try to generate it on demand
-        if not session.is_complete:
-            return None, {"error": "session_incomplete", "message": "Cannot convert: session clarification not complete."}
-        result = generate_prompt_document(session)
-        if isinstance(result, dict):
-            return None, {"error": result.get("error", "generation_failed"), "message": result.get("message", str(result))}
-        prompt_doc = result
-        session.generated_prompt = prompt_doc
-        store.update(session)
-
-    intake_dict = convert_markdown_to_intake(prompt_doc, system_id)
-    if isinstance(intake_dict, dict) and "error" in intake_dict:
-        return None, {"error": intake_dict.get("error", "conversion_failed"), "message": intake_dict.get("message", str(intake_dict))}
-
-    errors: list[str] = []
-    try:
-        intake_packet_from_dict(intake_dict)
-    except (ValueError, KeyError, TypeError) as exc:
-        # Try to extract a field path from common error message patterns.
-        msg = str(exc)
-        field_path = ""
-        # ValueError: "foo must be a non-empty string." → field: "foo"
-        # ValueError: "component.bar must be a 2-item list" → field: "components[*].bar"
-        # KeyError: 'foo' → field: "foo"
-        if isinstance(exc, ValueError):
-            import re
-            m = re.match(r"^(\S+(?:\.\S+)*)\s+must", msg)
-            if m:
-                raw = m.group(1)
-                field_path = raw.replace("component.", "components[*].").replace("logic_condition.", "logic_nodes[*].conditions[*].")
-        elif isinstance(exc, KeyError):
-            field_path = str(exc).strip("'\"")
-        if field_path:
-            errors.append(f"[{field_path}] {msg}")
-        else:
-            errors.append(f"Intake packet validation failed: {msg}")
-
-    # Basic validation
-    required_fields = ["system_id", "title", "objective", "components", "logic_nodes"]
-    for field in required_fields:
-        if field not in intake_dict or not intake_dict[field]:
-            errors.append(f"Missing required field: {field}")
-
-    return {
-        "intake_packet": intake_dict,
-        "validation": {"valid": len(errors) == 0, "errors": errors},
-    }, None
-
-
-def _handle_p15_run_pipeline(request_payload: dict) -> tuple[dict | None, dict | None]:
-    """Handle POST /api/p15/run-pipeline.
-
-    Input:  {intake_packet: dict, session_id?: str}
-    Output: {status, assessment, bundle, system_snapshot} or {status: blocked, blockers, message}
-    """
-    intake_packet = request_payload.get("intake_packet")
-    if not isinstance(intake_packet, dict):
-        return None, {"error": "missing_intake_packet", "message": "intake_packet is required and must be a dict."}
-
-    session_id = request_payload.get("session_id")
-    clarification_history: list[tuple[str, str]] | None = None
-    if isinstance(session_id, str) and session_id.strip():
-        store = _get_p14_store()
-        session = store.get(session_id.strip())
-        if session is not None:
-            clarification_history = session.clarification_history
-
-    result = run_pipeline_from_intake(intake_packet, session_clarification_history=clarification_history)
-    if isinstance(result, dict) and "error" in result:
-        return None, {"error": result.get("error", "pipeline_failed"), "message": result.get("message", str(result))}
-
-    return result, None
 
 
 def _clamp_tra(tra_deg: float, config: HarnessConfig) -> float:
@@ -2061,6 +841,152 @@ def _apply_fault_injections_to_snapshot_payload(
     return result
 
 
+_TIMELINE_MAX_DURATION_S = 600.0
+_TIMELINE_MIN_STEP_S = 0.01
+# Belt-and-braces cap so a user cannot request 600s / 0.01s = 60,000 ticks
+# just because each individual bound is within range (Codex PR-2 MINOR #1).
+_TIMELINE_MAX_TICKS = 20_000
+_TIMELINE_MAX_EVENTS = 500
+
+
+def _handle_fantui_tick(request_payload: dict) -> tuple[int, dict]:
+    """Advance the FANTUI stateful tick system one step and return a snapshot.
+
+    Paired with ``/api/fantui/reset`` and ``/api/fantui/log``. The response
+    mirrors what /api/log emits so the same ``timeseries_chart.js`` module can
+    render either panel's buffer.
+    """
+    try:
+        pilot = parse_pilot_inputs(request_payload)
+    except ValueError as exc:
+        return 400, {"error": "invalid_input", "message": str(exc)}
+    try:
+        dt_s = float(request_payload.get("dt_s", 0.1))
+    except (TypeError, ValueError):
+        return 400, {"error": "invalid_dt_s"}
+    # Guard: tick step must be positive, finite, and small enough to avoid
+    # jumping over switch windows. 1.0s is a conservative ceiling.
+    # ``math.isfinite`` rejects NaN / ±Inf before they can poison ``_t_s``
+    # (Codex review, 2026-04-24, CRITICAL).
+    if not math.isfinite(dt_s) or dt_s <= 0 or dt_s > 1.0:
+        return 400, {"error": "dt_s_out_of_range", "message": "0 < dt_s <= 1.0"}
+
+    rec, count = _FANTUI_SYSTEM.tick_with_count(pilot, dt_s)
+    snapshot = rec.as_dict()
+    snapshot["sample_count"] = count
+    return 200, snapshot
+
+
+def _handle_timeline_simulate(request_payload: dict) -> dict:
+    """Run a Timeline against the FANTUI executor and return the trace as JSON.
+
+    Returns `_status` key for the HTTP code to use (200 / 400).
+    """
+    try:
+        timeline = parse_timeline(request_payload)
+    except TimelineValidationError as exc:
+        return {"_status": 400, "error": "invalid_timeline", "field": exc.field, "message": exc.message}
+
+    if timeline.system != "fantui":
+        return {
+            "_status": 400,
+            "error": "unsupported_system",
+            "message": f"this endpoint only runs FANTUI timelines; got system={timeline.system!r}",
+        }
+    if timeline.duration_s > _TIMELINE_MAX_DURATION_S:
+        return {
+            "_status": 400,
+            "error": "timeline_too_long",
+            "message": f"duration_s must be <= {_TIMELINE_MAX_DURATION_S}s",
+        }
+    if timeline.step_s < _TIMELINE_MIN_STEP_S:
+        return {
+            "_status": 400,
+            "error": "timeline_step_too_small",
+            "message": f"step_s must be >= {_TIMELINE_MIN_STEP_S}s",
+        }
+    tick_count = int(timeline.duration_s / timeline.step_s) + 1
+    if tick_count > _TIMELINE_MAX_TICKS:
+        return {
+            "_status": 400,
+            "error": "timeline_too_many_ticks",
+            "message": f"duration_s/step_s would produce {tick_count} ticks; max {_TIMELINE_MAX_TICKS}",
+        }
+    if len(timeline.events) > _TIMELINE_MAX_EVENTS:
+        return {
+            "_status": 400,
+            "error": "timeline_too_many_events",
+            "message": f"events list has {len(timeline.events)} entries; max {_TIMELINE_MAX_EVENTS}",
+        }
+
+    try:
+        executor = FantuiExecutor()
+        trace = TimelinePlayer(timeline, executor).run()
+    except (ValueError, TypeError) as exc:
+        # Runtime errors (unknown fault id, bad set_input value, …) get
+        # surfaced as a 400 rather than a 500 so the UI can show the
+        # validation message inline (Codex PR-2 MAJOR #3).
+        return {
+            "_status": 400,
+            "error": "invalid_timeline",
+            "message": str(exc),
+        }
+    return _timeline_trace_to_json(trace)
+
+
+def _timeline_trace_to_json(trace) -> dict:
+    return {
+        "timeline": {
+            "system": trace.timeline.system,
+            "step_s": trace.timeline.step_s,
+            "duration_s": trace.timeline.duration_s,
+            "title": trace.timeline.title,
+            "description": trace.timeline.description,
+        },
+        "frames": [
+            {
+                "tick": f.tick,
+                "t_s": f.t_s,
+                "phase": f.phase,
+                "inputs": f.inputs,
+                "outputs": f.outputs,
+                "logic_states": f.logic_states,
+                "active_faults": f.active_faults,
+                "events_fired": f.events_fired,
+            }
+            for f in trace.frames
+        ],
+        "transitions": [
+            {
+                "tick": f.tick,
+                "t_s": f.t_s,
+                "phase": f.phase,
+                "logic_states": f.logic_states,
+                "active_faults": f.active_faults,
+            }
+            for f in trace.transitions
+        ],
+        "assertions": [
+            {
+                "at_s": a.at_s,
+                "target": a.target,
+                "expected": a.expected,
+                "observed": a.observed,
+                "passed": a.passed,
+                "note": a.note,
+            }
+            for a in trace.assertions
+        ],
+        "outcome": {
+            "deployed_successfully": trace.outcome.deployed_successfully,
+            "thr_lock_released": trace.outcome.thr_lock_released,
+            "logic_first_active_t_s": trace.outcome.logic_first_active_t_s,
+            "logic_first_blocked_t_s": trace.outcome.logic_first_blocked_t_s,
+            "failure_cascade": trace.outcome.failure_cascade,
+        },
+    }
+
+
 def parse_lever_snapshot_request(request_payload: dict) -> tuple[dict | None, dict | None]:
     lever_inputs = {}
     for field_name, options in LEVER_NUMERIC_INPUTS.items():
@@ -2137,38 +1063,14 @@ def reference_workbench_packet_payload() -> dict:
     return json.loads(REFERENCE_PACKET_PATH.read_text(encoding="utf-8"))
 
 
-def _latest_run_dir(prefix: str, runs_dir: Path | None = None) -> Path | None:
-    root = runs_dir or RUNS_DIR
-    if not root.exists():
-        return None
-    candidates = sorted(
-        (path for path in root.iterdir() if path.is_dir() and path.name.startswith(prefix)),
-        key=lambda path: path.name,
-        reverse=True,
-    )
-    return candidates[0] if candidates else None
-
-
-def _parse_run_timestamp(dirname: str) -> str:
-    match = re.search(r"(\d{8}T\d{6}Z)$", dirname)
-    return match.group(1) if match else ""
-
-
 def build_explain_runtime_payload() -> dict[str, Any]:
-    try:
-        backend_meta = get_llm_backend_metadata()
-    except LLMClientError as exc:
-        backend_meta = {
-            "backend": "",
-            "model": "",
-            "detail": exc.message,
-        }
-
-    payload: dict[str, Any] = {
-        "status": "idle",
+    # LLM features shelved in Phase A (2026-04-22). Return a stable idle payload
+    # so workbench clients can still render the runtime panel without runtime error.
+    return {
+        "status": "shelved",
         "status_source": "runtime_config",
-        "llm_backend": str(backend_meta.get("backend", "") or ""),
-        "llm_model": str(backend_meta.get("model", "") or ""),
+        "llm_backend": "",
+        "llm_model": "",
         "response_source": "unknown",
         "cached_at": "",
         "observed_at_utc": "",
@@ -2177,71 +1079,9 @@ def build_explain_runtime_payload() -> dict[str, Any]:
         "backend_match": None,
         "requested_backend": "",
         "requested_model": "",
-        "detail": str(backend_meta.get("detail", "") or "尚未观察到 pitch explain 预热结果。"),
+        "detail": "LLM features shelved — see archive/shelved/llm-features/SHELVED.md.",
         "boundary_note": "这是 explain runtime / pitch 运维状态，不是新的控制真值。",
     }
-
-    latest_dir = _latest_run_dir("pitch_prewarm_")
-    if latest_dir is None:
-        return payload
-
-    report_path = latest_dir / "report.json"
-    if not report_path.is_file():
-        return payload
-
-    try:
-        report = json.loads(report_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        payload["status"] = "warning"
-        payload["status_source"] = "pitch_prewarm"
-        payload["detail"] = f"无法读取 {report_path.name}。"
-        payload["observed_at_utc"] = _parse_run_timestamp(latest_dir.name)
-        return payload
-
-    summary = report.get("summary") if isinstance(report.get("summary"), dict) else {}
-    rounds = report.get("rounds") if isinstance(report.get("rounds"), list) else []
-    verify_round = rounds[-1] if rounds else {}
-    results = verify_round.get("results") if isinstance(verify_round, dict) and isinstance(verify_round.get("results"), list) else []
-    first_result = next((item for item in results if isinstance(item, dict)), {})
-    verdict = str(report.get("verdict") or summary.get("verdict") or "").upper()
-    hits = int(summary.get("verified_cache_hits", 0) or 0)
-    expected = int(summary.get("expected_count", 0) or 0)
-    actual_backend = str(summary.get("llm_backend") or payload["llm_backend"] or "")
-    actual_model = str(summary.get("llm_model") or payload["llm_model"] or "")
-    requested_backend = str(summary.get("requested_backend") or "")
-    requested_model = str(summary.get("requested_model") or "")
-    backend_match = summary.get("backend_match")
-    cached_at = str(first_result.get("cached_at", "") or "")
-    response_source = str(first_result.get("response_source", "") or "")
-    observed_at = str(report.get("generated_at") or _parse_run_timestamp(latest_dir.name) or "")
-
-    payload.update(
-        {
-            "status": "ready" if verdict in ("GREEN", "PASS") else "warning",
-            "status_source": "pitch_prewarm",
-            "llm_backend": actual_backend,
-            "llm_model": actual_model,
-            "response_source": response_source or ("cached_llm" if hits > 0 else "unknown"),
-            "cached_at": cached_at,
-            "observed_at_utc": observed_at,
-            "verified_cache_hits": hits,
-            "expected_count": expected,
-            "backend_match": backend_match,
-            "requested_backend": requested_backend,
-            "requested_model": requested_model,
-        }
-    )
-
-    if backend_match is False:
-        payload["detail"] = (
-            f"请求 {requested_backend or 'unknown'} / {requested_model or 'auto'}，"
-            f"但最近预热实际命中 {actual_backend or 'unknown'} / {actual_model or 'unknown'}。"
-        )
-    elif expected > 0:
-        payload["detail"] = f"最近预热验证缓存命中 {hits}/{expected}。"
-    else:
-        payload["detail"] = "最近 pitch prewarm 未产生命中统计。"
-    return payload
 
 
 def recent_workbench_archive_summaries(*, limit: int = 6) -> list[dict]:
@@ -2727,7 +1567,14 @@ def build_workbench_archive_restore_response(request_payload: dict) -> tuple[dic
 
 
 def _canonical_pullback_sequence(tra_deg: float, config: HarnessConfig) -> list[float]:
-    """Return a tiny canonical pullback path for the interactive UI scrubber."""
+    """Return a tiny canonical pullback path for the interactive UI scrubber.
+
+    When the pilot holds TRA in the deploy-cmd range (≤ logic3_tra_deg_threshold),
+    hold the lever long enough for plant VDT to reach 90% under the default
+    deploy rate. Without this, auto_scrubber shows L4 permanently blocked on
+    `deploy_90_percent_vdt` because the scrubber window is too short for the
+    plant to complete the deployment cycle.
+    """
     target = _clamp_tra(tra_deg, config)
     if target >= 0.0:
         return [0.0]
@@ -2738,7 +1585,14 @@ def _canonical_pullback_sequence(tra_deg: float, config: HarnessConfig) -> list[
     if target <= config.sw2_window.near_zero_deg:
         sequence.extend([-7.0] * 4)
 
-    final_repeats = 4 if target <= config.logic3_tra_deg_threshold else 2
+    if target <= config.logic3_tra_deg_threshold:
+        # Budget enough ticks for plant VDT to reach 90% (and a small margin
+        # so L4 latches cleanly). deploy_rate_percent_per_s × step_s × N ≥ 100
+        # → N ≥ 100 / (rate × step_s). +4 cushion covers L3-activation lag.
+        deploy_ticks_needed = int(100.0 / max(1e-6, config.deploy_rate_percent_per_s * config.step_s)) + 4
+        final_repeats = max(4, deploy_ticks_needed)
+    else:
+        final_repeats = 2
     sequence.extend([target] * final_repeats)
     return sequence
 
@@ -2807,9 +1661,13 @@ def _lever_summary(
         }
     elif not outputs.logic2_active:
         failed = ", ".join(condition.name for condition in explain.logic2.failed_conditions)
+        blocker_text = f"当前卡在 L2：{failed or 'logic2 条件未完全满足'}。"
+        l3_shared = {c.name for c in explain.logic2.failed_conditions} & {"engine_running", "aircraft_on_ground"}
+        if l3_shared:
+            blocker_text += "（L3 对这些信号独立检查，同步被阻塞。）"
         summary = {
             "headline": f"TRA {tra_deg:.1f}°：SW2 已触发，但 L2 / 540V 尚未放行。",
-            "blocker": f"当前卡在 L2：{failed or 'logic2 条件未完全满足'}。",
+            "blocker": blocker_text,
             "next_step": "下一步：恢复 engine / ground / inhibited / EEC enable 等 L2 条件。",
         }
     elif not outputs.logic3_active:
@@ -2830,15 +1688,29 @@ def _lever_summary(
             "next_step": next_step,
         }
     elif feedback_mode == "manual_feedback_override":
+        l1_post_deploy_note = (
+            "（L1 此刻阻塞是预期：反推已部署 → !DEP 自然回落，L1 属于首次解锁门，已完成使命。）"
+            if (not outputs.logic1_active
+                and {c.name for c in explain.logic1.failed_conditions} <= {"reverser_not_deployed_eec"}
+                and sensors.deploy_position_percent > 0)
+            else ""
+        )
         summary = {
             "headline": f"TRA {tra_deg:.1f}°：manual feedback override 已把 VDT90 推到触发态，L4 / THR_LOCK 已点亮。",
-            "blocker": "当前无 L4 blocker；这是 simplified plant feedback override 的诊断演示结果。",
+            "blocker": "当前无 L4 blocker；这是 simplified plant feedback override 的诊断演示结果。" + l1_post_deploy_note,
             "next_step": "下一步：切回 auto scrubber，或降低 deploy feedback 观察 VDT90 / THR_LOCK 退回 blocked。",
         }
     else:
+        l1_post_deploy_note = (
+            "（L1 此刻阻塞是预期：反推已部署 → !DEP 自然回落。）"
+            if (not outputs.logic1_active
+                and {c.name for c in explain.logic1.failed_conditions} <= {"reverser_not_deployed_eec"}
+                and sensors.deploy_position_percent > 0)
+            else ""
+        )
         summary = {
             "headline": f"TRA {tra_deg:.1f}°：L4 已满足，THR_LOCK release command 已触发。",
-            "blocker": "当前无 L4 blocker。",
+            "blocker": "当前无 L4 blocker。" + l1_post_deploy_note,
             "next_step": "下一步：查看证据或返回问答抽屉做诊断解释。",
         }
 
@@ -3217,10 +2089,14 @@ SYSTEM_REGISTRY = {
     "landing-gear": build_landing_gear_controller_adapter,
     "bleed-air": build_bleed_air_controller_adapter,
     "efds": build_efds_controller_adapter,
+    # P43-02.5 (2026-04-21): C919 E-TRAS · certified · P34+P38 真实 PDF 接入 ·
+    # reference panel target for P43-05 AI panel generator validation
+    "c919-etras": build_c919_etras_controller_adapter,
 }
 
 # Cache built (stateless) adapters — avoid per-request instantiation overhead.
-@lru_cache(maxsize=4)
+# P43-02.5: bumped maxsize 4→5 to accommodate c919-etras without evicting others.
+@lru_cache(maxsize=5)
 def _cached_adapter(system_id: str) -> Any:
     builder = SYSTEM_REGISTRY.get(system_id)
     if builder is None:
@@ -3280,6 +2156,58 @@ def _default_snapshot_for_system(system_id: str) -> dict:
             "pilot.altitude_override": "AUTO",
             "actuator.flare_array": 24.0,
             "actuator.limiter_valve": "REGULATED",
+        }
+    elif system_id == "c919-etras":
+        # P43-02.5 (2026-04-21): C919 E-TRAS default snapshot · nominal pre-deploy
+        # state (aircraft on ground · engines at idle · TR fully stowed · no faults).
+        # 34 fields aligned with c919_etras_adapter.py _snapshot_* helper calls.
+        # PDF §1.1.x traceability preserved via hardware YAML (SHA256-locked).
+        return {
+            # --- A/C inputs ---
+            "tra_deg": 0.0,                         # PDF §Step1 · throttle at forward idle
+            "n1k_percent": 35.0,                    # Engine N1K at idle (adapter MONITOR_N1K)
+            "engine_running": True,
+            "tr_inhibited": False,                  # A/C bus · not inhibited
+            # --- LGCU 双余度 MLG_WOW input (PDF 表2) ---
+            "lgcu1_mlg_wow_value": True,            # LGCU1 reports on-ground
+            "lgcu1_mlg_wow_valid": True,
+            "lgcu2_mlg_wow_value": True,            # LGCU2 reports on-ground
+            "lgcu2_mlg_wow_valid": True,
+            # --- Selected TR_WOW (adapter _select_mlg_wow output · pre-computed for default) ---
+            "tr_wow": True,
+            # --- TLS (Translating Lock Sleeve · 双余度) · stowed=locked → unlocked=False ---
+            "tls_ls_a_valid": True,
+            "tls_ls_a_unlocked": False,
+            "tls_ls_b_valid": True,
+            "tls_ls_b_unlocked": False,
+            # --- PLS (Primary Lock Sleeve · 双余度) · stowed=locked=True ---
+            "pls_ls_a_locked": True,
+            "pls_ls_b_locked": True,
+            # --- Pylon locks (left+right · each 双余度) · stowed=locked → unlocked=False ---
+            "left_pylon_ls_a_valid": True,
+            "left_pylon_ls_a_unlocked": False,
+            "left_pylon_ls_b_valid": True,
+            "left_pylon_ls_b_unlocked": False,
+            "right_pylon_ls_a_valid": True,
+            "right_pylon_ls_a_unlocked": False,
+            "right_pylon_ls_b_valid": True,
+            "right_pylon_ls_b_unlocked": False,
+            # --- Actuator/state inputs (nominal no-action) ---
+            "apwtla": False,                        # All-pylons-wow-to-long-aggregate
+            "atltla": False,                        # All-tls-long-to-long-aggregate
+            # --- Sensors ---
+            "vdt_sensor_valid": True,
+            "e_tras_over_temp_fault": False,
+            "trcu_power_on": True,
+            # --- TR position (fully stowed at rest) ---
+            "tr_position_percent": 0.0,
+            # --- Command history (no prior EICU_CMD3 firing) ---
+            "prev_eicu_cmd3": False,
+            # --- Timing confirmation counters (accumulated dwell at nominal state) ---
+            "comm2_timer_s": 0.0,
+            "lock_unlock_confirm_s": 0.0,
+            "tr_position_deployed_confirm_s": 0.0,
+            "tr_stowed_locked_confirm_s": 2.0,      # ≥ 1.0s (TR_STOWED_LOCKED_CONFIRM_S) · nominal
         }
     return {}
 
@@ -3642,7 +2570,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def demo_url(host: str, port: int) -> str:
-    return f"http://{host}:{port}/chat.html"
+    return f"http://{host}:{port}/index.html"
 
 
 def open_browser(url: str, opener=webbrowser.open) -> bool:

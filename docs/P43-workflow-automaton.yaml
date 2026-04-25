@@ -1,0 +1,334 @@
+# P43 Workflow Automaton — Machine-Readable Specification
+# Authority: P43-00 §3c · P43-workflow-automaton-contract.md §1
+# Version: 1.0 · 2026-04-21
+# Used by: tests/test_p43_workflow_automaton.py
+
+version: 1
+generated_at_utc: "2026-04-21T18:00:00Z"
+source_doc: "docs/P43-workflow-automaton-contract.md"
+
+# ──────────────────────────────────────────────
+# STATES
+# ──────────────────────────────────────────────
+states:
+  INIT:
+    kind: initial
+    description: "Workbench loaded, no document imported"
+  INTAKED:
+    kind: normal
+    description: "Document received; pre-processing queued"
+  PARSING:
+    kind: normal
+    description: "LLM/parser extracting ambiguities"
+  AWAITING_ANSWERS:
+    kind: normal
+    description: "≥1 open clarification question pending operator"
+  FREEZING:
+    kind: normal
+    description: "All clarifications answered; freeze guard in progress"
+  FROZEN:
+    kind: normal
+    description: "Frozen spec SHA-locked and immutable"
+  GENERATING:
+    kind: normal
+    description: "Panel SVG + wiring scaffold generation in progress"
+  PANEL_READY:
+    kind: normal
+    description: "Generated panel rendered; no active edits"
+  WIRING:
+    kind: normal
+    description: "Operator actively editing signal wiring"
+  DEBUGGING:
+    kind: normal
+    description: "Snapshot submitted; diff/validation active"
+  ANNOTATING:
+    kind: normal
+    description: "Operator adding semantic annotations"
+  ITERATING:
+    kind: transient
+    description: "reiterate fired; MUST resolve to PARSING within same tick"
+    resolves_to: PARSING
+  APPROVING:
+    kind: transient
+    description: "final_approve side-effect sequence in flight"
+    resolves_to: APPROVED
+    timeout_s: 30
+    timeout_action: rollback_to_pre_approving
+  APPROVED:
+    kind: terminal_normal
+    description: "All side-effects committed; workbench complete"
+  ARCHIVING:
+    kind: transient
+    description: "archive event fired; bundle being written"
+    resolves_to: ARCHIVED
+  ARCHIVED:
+    kind: terminal_normal
+    description: "Bundle + manifest committed; read-only"
+  ERROR:
+    kind: terminal_fault
+    description: "Unrecoverable fault; operator session reset required"
+
+# ──────────────────────────────────────────────
+# EVENTS
+# ──────────────────────────────────────────────
+events:
+  import_doc:
+    idempotency: non_idempotent
+    dedup_token: "SHA-256(file_bytes)"
+    transitions:
+      - from: INIT
+        to: INTAKED
+        guard: "file_size > 0 AND mime IN {application/pdf, application/vnd.openxmlformats-officedocument.wordprocessingml.document}"
+        on_guard_fail: stay_INIT
+      - from: INIT
+        to: ERROR
+        guard: "parser_raises OR returns_null"
+        error_code: pdf_extract_failure
+
+  answer_question:
+    idempotency: idempotent
+    dedup_token: "(question_id, answer)"
+    transitions:
+      - from: AWAITING_ANSWERS
+        to: AWAITING_ANSWERS
+        guard: "remaining_open_questions > 0 AFTER this answer"
+      - from: AWAITING_ANSWERS
+        to: FREEZING
+        guard: "all questions answered OR all waived with operator_alias"
+
+  confirm_freeze:
+    idempotency: idempotent
+    dedup_token: "frozen_spec_sha"
+    transitions:
+      - from: AWAITING_ANSWERS
+        to: FROZEN
+        guard: "all_questions_answered OR all_waived_with_alias"
+        side_effects:
+          - emit_frozen_spec_json
+          - compute_sha256
+          - write_traceability_matrix_skeleton
+      - from: AWAITING_ANSWERS
+        to: ERROR
+        guard: "NOT (all_answered OR all_waived)"
+        error_code: ambiguity_unresolved
+      - from: FREEZING
+        to: FROZEN
+        guard: null
+        side_effects:
+          - emit_frozen_spec_json
+          - compute_sha256
+          - write_traceability_matrix_skeleton
+
+  start_gen:
+    idempotency: non_idempotent
+    dedup_token: "(frozen_spec_sha, gen_round_counter)"
+    transitions:
+      - from: FROZEN
+        to: GENERATING
+        guard: "frozen_spec_sha IS NOT NULL"
+      - from: GENERATING
+        to: ERROR
+        guard: "llm_fails OR returns_malformed_svg"
+        error_code: regen_failure
+        retry_limit: 3
+
+  wire_change:
+    idempotency: idempotent
+    dedup_token: "(node_id, signal_value)"
+    transitions:
+      - from: [PANEL_READY, WIRING, DEBUGGING]
+        to: WIRING
+        guard: "payload non-empty AND node_id IN spec.components UNION spec.logic_nodes"
+
+  submit_snapshot:
+    idempotency: non_idempotent
+    dedup_token: "SHA-256(sorted_snapshot_json)"
+    transitions:
+      - from: [WIRING, DEBUGGING]
+        to: PANEL_READY
+        guard: "evaluate_snapshot returns no validation errors"
+      - from: [WIRING, DEBUGGING]
+        to: DEBUGGING
+        guard: "evaluate_snapshot returns validation errors"
+
+  annotate:
+    idempotency: idempotent
+    dedup_token: "(node_id, text)"
+    transitions:
+      - from: [PANEL_READY, WIRING, ANNOTATING]
+        to: ANNOTATING
+        guard: "annotation has node_id AND text fields"
+
+  reiterate:
+    idempotency: non_idempotent
+    dedup_token: null
+    destructive: true
+    r3_invariant: "MUST NOT write back to frozenSpec"
+    transitions:
+      - from: [FROZEN, GENERATING, PANEL_READY, WIRING, DEBUGGING, ANNOTATING, ITERATING]
+        to: ITERATING
+        guard: "operator_confirmed"
+        side_effects:
+          - clear_draft_design_state
+          - reset_gen_round_counter
+      - from: ITERATING
+        to: PARSING
+        guard: null
+        note: "synchronous resolution — no async between ITERATING and PARSING"
+
+  final_approve:
+    idempotency: non_idempotent
+    dedup_token: "(system_id, frozen_spec_sha)"
+    transitions:
+      - from: [PANEL_READY, ANNOTATING]
+        to: APPROVING
+        guard: "panel has >= 1 truth-tracked node AND no unresolved validation errors"
+      - from: APPROVING
+        to: APPROVED
+        guard: "all 4 side-effect steps succeeded"
+      - from: APPROVING
+        to: ERROR
+        guard: "any side-effect step failed"
+        error_code: partial_approve_rollback
+    side_effect_sequence:
+      - step: 1
+        action: "localStorage workspace state key → APPROVING"
+      - step: 2
+        action: "server-side adapter.emit_adapter() + SYSTEM_REGISTRY row append"
+        atomic: true
+      - step: 3
+        action: "workbench_bundle.archive_workbench_bundle() manifest append"
+        atomic: true
+      - step: 4
+        action: "localStorage workspace state key → APPROVED; delete draft_design_state key"
+    rollback_on_failure: "revert to pre-step-1 state (PANEL_READY or ANNOTATING)"
+
+  archive:
+    idempotency: non_idempotent
+    dedup_token: "(system_id, frozen_spec_sha, archive_timestamp)"
+    transitions:
+      - from: APPROVED
+        to: ARCHIVING
+        guard: "workbench_bundle.archive_workbench_bundle callable AND output path writable"
+      - from: ARCHIVING
+        to: ARCHIVED
+        guard: "bundle write succeeded"
+      - from: ARCHIVING
+        to: ERROR
+        guard: "bundle write failed after 1 retry"
+        error_code: archive_write_failure
+
+# ──────────────────────────────────────────────
+# TRANSITION TABLE (machine-verifiable)
+# Format: legal / illegal / conditional
+# ──────────────────────────────────────────────
+transition_matrix:
+  # Row = state, Column = event, Value = L(legal)/I(illegal)/C(conditional)
+  INIT:            {import_doc: L, answer_question: I, confirm_freeze: I, start_gen: I, wire_change: I, submit_snapshot: I, annotate: I, reiterate: I, final_approve: I, archive: I}
+  INTAKED:         {import_doc: I, answer_question: I, confirm_freeze: I, start_gen: I, wire_change: I, submit_snapshot: I, annotate: I, reiterate: I, final_approve: I, archive: I}
+  PARSING:         {import_doc: I, answer_question: I, confirm_freeze: I, start_gen: I, wire_change: I, submit_snapshot: I, annotate: I, reiterate: I, final_approve: I, archive: I}
+  AWAITING_ANSWERS: {import_doc: I, answer_question: L, confirm_freeze: C, start_gen: I, wire_change: I, submit_snapshot: I, annotate: I, reiterate: I, final_approve: I, archive: I}
+  FREEZING:        {import_doc: I, answer_question: I, confirm_freeze: L, start_gen: I, wire_change: I, submit_snapshot: I, annotate: I, reiterate: I, final_approve: I, archive: I}
+  FROZEN:          {import_doc: I, answer_question: I, confirm_freeze: I, start_gen: L, wire_change: I, submit_snapshot: I, annotate: I, reiterate: L, final_approve: I, archive: I}
+  GENERATING:      {import_doc: I, answer_question: I, confirm_freeze: I, start_gen: I, wire_change: I, submit_snapshot: I, annotate: I, reiterate: L, final_approve: I, archive: I}
+  PANEL_READY:     {import_doc: I, answer_question: I, confirm_freeze: I, start_gen: I, wire_change: L, submit_snapshot: I, annotate: L, reiterate: L, final_approve: L, archive: I}
+  WIRING:          {import_doc: I, answer_question: I, confirm_freeze: I, start_gen: I, wire_change: L, submit_snapshot: L, annotate: L, reiterate: L, final_approve: I, archive: I}
+  DEBUGGING:       {import_doc: I, answer_question: I, confirm_freeze: I, start_gen: I, wire_change: L, submit_snapshot: L, annotate: I, reiterate: L, final_approve: I, archive: I}
+  ANNOTATING:      {import_doc: I, answer_question: I, confirm_freeze: I, start_gen: I, wire_change: I, submit_snapshot: I, annotate: L, reiterate: L, final_approve: L, archive: I}
+  ITERATING:       {import_doc: I, answer_question: I, confirm_freeze: I, start_gen: I, wire_change: I, submit_snapshot: I, annotate: I, reiterate: L, final_approve: I, archive: I}
+  APPROVING:       {import_doc: I, answer_question: I, confirm_freeze: I, start_gen: I, wire_change: I, submit_snapshot: I, annotate: I, reiterate: I, final_approve: I, archive: I}
+  APPROVED:        {import_doc: I, answer_question: I, confirm_freeze: I, start_gen: I, wire_change: I, submit_snapshot: I, annotate: I, reiterate: I, final_approve: I, archive: L}
+  ARCHIVING:       {import_doc: I, answer_question: I, confirm_freeze: I, start_gen: I, wire_change: I, submit_snapshot: I, annotate: I, reiterate: I, final_approve: I, archive: I}
+  ARCHIVED:        {import_doc: I, answer_question: I, confirm_freeze: I, start_gen: I, wire_change: I, submit_snapshot: I, annotate: I, reiterate: I, final_approve: I, archive: I}
+  ERROR:           {import_doc: I, answer_question: I, confirm_freeze: I, start_gen: I, wire_change: I, submit_snapshot: I, annotate: I, reiterate: I, final_approve: I, archive: I}
+
+# C (conditional) entries for AWAITING_ANSWERS.confirm_freeze:
+conditional_guards:
+  AWAITING_ANSWERS.confirm_freeze: "all_questions_answered OR (all_waived AND operator_alias IS NOT NULL)"
+
+# ──────────────────────────────────────────────
+# ERROR TAXONOMY
+# ──────────────────────────────────────────────
+error_taxonomy:
+  pdf_extract_failure:
+    trigger: "import_doc parser returns null or raises"
+    recovery: "reset_to_INIT; prompt re-upload"
+  ambiguity_unresolved:
+    trigger: "confirm_freeze guard fails — unanswered questions"
+    recovery: "return_to_AWAITING_ANSWERS; surface unresolved question_ids"
+  regen_failure:
+    trigger: "start_gen LLM call fails or malformed SVG; after 3 retries"
+    recovery: "stay_FROZEN; frozen spec preserved"
+    retry_limit: 3
+  iteration_overflow:
+    trigger: "reiterate counter > 10 without final_approve"
+    recovery: "block_reiterate; require operator acknowledgment"
+    threshold: 10
+  schema_drift:
+    trigger: "generated node IDs NOT ⊆ spec.components ∪ spec.logic_nodes"
+    recovery: "abort_panel_render; return_to_FROZEN; emit drift report"
+  partial_approve_rollback:
+    trigger: "final_approve side-effect step 2, 3, or 4 fails"
+    recovery: "rollback to pre-step-1 state; log failed_step; no partial commit"
+  archive_write_failure:
+    trigger: "archive bundle write fails after 1 retry"
+    recovery: "preserve APPROVED state; prompt manual retry"
+    retry_limit: 1
+  external_state_delete:
+    trigger: "localStorage key deleted externally during active session"
+    recovery: "emit warning; prompt operator reload from last bundle"
+
+# ──────────────────────────────────────────────
+# PERSISTENCE MODEL
+# ──────────────────────────────────────────────
+persistence:
+  sources:
+    - id: localStorage
+      owner: "src/well_harness/static/workbench.js"
+      key: workbench_workspace
+      write_protocol: "single-key atomic localStorage.setItem"
+      contains: [current_state, draft_design_state, frozen_spec_sha, annotation_cache, ui_toggle_state]
+    - id: bundle_manifest
+      owner: "src/well_harness/workbench_bundle.py"
+      write_protocol: "archive_workbench_bundle atomic append-only"
+      contains: [bundle_file_list, sha_checksums, system_id, archive_timestamp, operator_alias]
+  prohibited_third_sources:
+    - state.yaml
+    - new SQLite table
+    - server-side in-memory session dict (new module)
+    - workbench/orchestrator.py
+
+# ──────────────────────────────────────────────
+# CROSS-PHASE TEST OWNERSHIP
+# ──────────────────────────────────────────────
+test_ownership:
+  - invariant: "state enum completeness (17 states)"
+    phase: P43-02
+    test_file: "tests/test_p43_workflow_automaton.py"
+  - invariant: "all legal transitions succeed"
+    phase: P43-02
+    test_file: "tests/test_p43_workflow_automaton.py"
+  - invariant: "all illegal transitions rejected"
+    phase: P43-02
+    test_file: "tests/test_p43_workflow_automaton.py"
+  - invariant: "ITERATING resolves to PARSING synchronously"
+    phase: P43-02
+    test_file: "tests/test_p43_workflow_automaton.py"
+  - invariant: "R1-R6 authority rules (14 tests)"
+    phase: P43-02
+    test_file: "tests/test_p43_authority_contract.py"
+  - invariant: "FREEZE event + traceability_matrix emit"
+    phase: P43-03
+    test_file: "tests/test_p43_freeze_gate.py"
+  - invariant: "reiterate -> PARSING (non-FROZEN source)"
+    phase: P43-08
+    test_file: "tests/test_p43_iteration_loop.py"
+  - invariant: "final_approve side-effect ordering"
+    phase: P43-08
+    test_file: "tests/test_p43_approval_sequence.py"
+  - invariant: "archive backward-compat (P42 bundles)"
+    phase: P43-02
+    test_file: "tests/test_p43_archive_backward_compat.py"
+  - invariant: "partial_approve_rollback error recovery"
+    phase: P43-08
+    test_file: "tests/test_p43_approval_sequence.py"

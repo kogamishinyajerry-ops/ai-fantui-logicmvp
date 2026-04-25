@@ -245,7 +245,7 @@ P17 解冻申请的关键语义：**本次申请不是打破冻结，是请求 G
   - `.planning/STATE.md`（P0–P18.5 + P19.18 全部状态）
   - `docs/architecture/federation-model.md`（联邦架构宪法级文档）
   - `tests/e2e/fixtures/schema_snapshot.json`（e2e 断言的 schema 锚）
-  - `tests/e2e/test_wow_{a,b,c}_*.py` + `test_demo_resilience.py` + `test_frontend_degradation.py`（38+11 opt-in e2e）
+  - `tests/e2e/test_wow_{a,b,c}_*.py` + `test_demo_resilience.py` + `archive/shelved/llm-features/tests/e2e/test_frontend_degradation.py`（38+11 opt-in e2e）
   - `src/well_harness/static/adversarial_test.py`（R5 adversarial 8/8 守门）
 
 ---

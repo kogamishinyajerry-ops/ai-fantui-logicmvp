@@ -2,21 +2,325 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: P42 v2 executed & green · path ① post-Codex remediation · awaiting GATE-P42-CLOSURE
-last_updated: "2026-04-20T00:00:00.000Z"
-last_activity: 2026-04-20
+status: Timeline simulator delivered · 4 PRs + 3 Codex-review rounds · main=2e9571b
+last_updated: "2026-04-23T11:55:00.000Z"
+last_activity: 2026-04-23
 progress:
-  total_phases: 42
-  completed_phases: 41
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 44
+  completed_phases: 43
+  total_plans: 2
+  completed_plans: 1
+  notes: "timeline engine (schema+validator+player) + FANTUI/C919 executors + /api/timeline-simulate + UI with 4 presets · 765 tests green · 0 CRITICAL findings"
 ---
 
 # State
 
-Last activity: 2026-04-20
+Last activity: 2026-04-23
 
-## Current Position
+## 2026-04-23 Session — Timeline Simulator (全流程故障率仿真) · 4-PR delivery
+
+**Goal**: User request "增加一个全流程故障率仿真功能模块" — timeline-driven simulation driving both control logic systems (FANTUI demo + C919 E-TRAS) through a "时间-指令/状态" table.
+
+**Architecture (4 PRs, each followed by a Codex review):**
+
+### PR-1 · Timeline engine foundation (ecdd259 + ce7265c)
+- `src/well_harness/timeline_engine/` new package: schema / validator / player / Executor protocol
+- 7 event kinds: set_input, ramp_input, inject_fault, clear_fault, mark_phase, assert_condition, start_deploy_sequence
+- Half-open [start, end) intervals, deterministic tick order
+- Codex PR-1 fixes: P1×1 (deployed_successfully requires L4 AND thr_release) + P2×4 (canonical id "c919-etras", fault_schedule FIFO match, validator tuple-type, FaultScheduleEntry invariants) + P3×1 (cascade iteration via executor.logic_node_ids)
+
+### PR-2 · FANTUI Executor + API (0c21236 + 5a1556a)
+- `FantuiExecutor` wraps DeployController + LatchedSwitches + SimplifiedDeployPlant
+- `/api/timeline-simulate` on `demo_server.py` port 8002
+- 2 fixtures: `nominal_landing.json`, `sw1_stuck_at_touchdown.json`
+- 13-pair fault whitelist
+- Codex PR-2 fixes: MAJOR×4 (logic_stuck_false → blocked mapping, cascade suppression under no-fault runs, API runtime-error → 400, fault-id whitelist) + MINOR×2 (tick/event caps, fixture N1k unit)
+
+### PR-3 · C919 E-TRAS Executor + API (0eae71e + 2e9571b)
+- `C919ETRASExecutor` wraps frozen-V1.0 `C919ReverseThrustSystem` (12-step tick) + TR-position plant + lock plant + unlock-engaged latch
+- `/api/timeline-simulate` on `c919_etras_panel_server.py` port 9191
+- 2 fixtures: `c919_nominal_deploy.json`, `c919_tr_inhibited_blocks_deploy.json`
+- 14-pair fault whitelist
+- Auto-derive ATLTLA/APWTLA from TRA window membership ([-6.2°,-1.4°] / [-9.8°,-5.0°])
+- Codex PR-3 fixes: MAJOR×3 (unlock_engaged now releases at S9_LOCK_CONFIRM so multi-cycle sim reaches S10, ln_fadec_stow_command no longer false-positive blocked in cruise, TimelineOutcome.extra + Executor.summarize_outcome architecture for system-specific outcome)
+
+### PR-4 · Timeline Simulator UI (67af398)
+- `src/well_harness/static/timeline-sim.html` served from both port 8002 and 9191
+- 4 built-in presets + custom mode
+- Client-side router: `system="c919-etras"` → POST :9191, else same-origin
+- Outcome cards (system-aware), logic-node timeline bars, assertions list, failure-cascade table
+- 4 smoke tests
+
+**Regression**: 765 tests green (+40 vs start of session) · 0 CRITICAL / 0 failing.
+
+**Key files**:
+- `src/well_harness/timeline_engine/` (new package, 5 modules)
+- `src/well_harness/timeline_engine/executors/{fantui,c919_etras}.py`
+- `src/well_harness/timelines/*.json` (4 fixtures)
+- `src/well_harness/static/timeline-sim.html`
+- `src/well_harness/demo_server.py` (+/api/timeline-simulate)
+- `scripts/c919_etras_panel_server.py` (+/api/timeline-simulate + /timeline-sim.html route)
+- `tests/test_timeline_*.py` (4 test modules, 40 tests)
+
+**User-visible**: `python3 -m well_harness.demo_server` (:8002) + `python3 scripts/c919_etras_panel_server.py` (:9191) → browser `http://localhost:8002/timeline-sim.html` → pick preset → Run.
+
+## 2026-04-23 Session — demo.html L3 wire clarity (iter-7 → iter-9)
+
+**Goal**: Show L3 independently checks `engine_running` and `aircraft_on_ground` (not inherited from L2) in the SVG chain diagram, without creating visual wire crossings.
+
+**Iterations and Codex verdicts:**
+- iter-7 (`f700838`): off-page stub (x=241, y=278/282) — **P2×2** (eec clearance 0.1px, TLS clearance 1.1px at active 1.8px stroke)
+- iter-8 (`95973e2`): stubs moved to (x=244, y=281/286) — **P2×1** (aircraft→rev_inh only 2.2px SVG, ~1.6px rendered at 0.73× scale)
+- iter-9 (`4189198`): L3 gate height 38→50, rev_inh→L3 branch y=290→304, aircraft stub y=286→290 — **APPROVE × 2** (code review + dual-role)
+
+**Final clearances at active 1.8px stroke:**
+- TLS(y=276) → engine(y=281): 3.2px SVG / 2.3px rendered
+- engine(y=281) → aircraft(y=290): 7.2px SVG / 5.3px rendered
+- aircraft(y=290) → rev_inh(y=304): 12.2px SVG / 8.9px rendered
+
+**Codex dual-role verdict (Role A 商业立项 + Role B 动力控制逻辑):**
+- No P0/P1/P2 blockers; single P3 observation (TLS→L3 feedback line ~3.2px from engine stub, not blocking at current browser size)
+- L3 engineering semantics preserved: `controller.py:69` independent checks unchanged
+- `pytest -q tests/test_controller.py -k 'logic3 or logic4'` 6 passed
+
+### 2026-04-23 — Demo UI bug fixes (user-reported)
+
+**Bug 1: VDT slider silently ignored in auto_scrubber mode**
+- Root cause: `auto_scrubber` uses plant-simulated VDT driven by `pdu_motor_cmd`, ignoring `deploy_position_percent` from the request. User dragging VDT to 95% had zero effect on L4, but clicking the "着陆展开全链路" preset first worked because it switched to `manual_feedback_override`.
+- Fix (`f007483` → `daca0cf`): disable the VDT slider in `auto_scrubber` + dynamic hint; `renderLeverHud` now uses `data.hud.deploy_position_percent` (backend-authoritative) instead of the request value; preserve slider state across mode toggles.
+
+**Bug 2: L1 red under "着陆展开全链路" preset**
+- Root cause: original preset set VDT=95, which flips `reverser_not_deployed_eec` to False and correctly fails L1's `!DEP` interlock — but that contradicts the "full chain active" framing.
+- Fix (`f007483`): landing-deploy now VDT=0 (deployment-in-progress: L1+L2+L3 active, L4 pending on VDT90); max-reverse relabeled "展开到位" with TRA=-31.5 (avoids exclusive lower bound) + VDT=100 (post-deploy: L1 correctly blocked, L4 active).
+
+**Codex reviews**: P2 found on `f007483` (hard-reset slider discarded user state + stale readout) → fixed in `daca0cf` → **APPROVE** with no new findings. 725 tests pass.
+
+### 2026-04-23 — L4 reverse_travel boundary bug + L1 post-deploy clarification (`9d18f05`)
+
+**User screenshot report**: TRA=-32°, VDT=100%, manual_override, all inputs green — L1 and L4 both BLOCKED. Two distinct root causes:
+
+**Bug A (real, now fixed)**: L4 `tra_deg` used `between_exclusive(-32, 0)`, so TRA=-32° (mechanical stop, slider's leftmost value) silently failed the strict lower bound. UI told the user "可以在 -32°~0° 自由拖动", controller disagreed at the edge.
+
+Introduced new comparison type `between_lower_inclusive` (lower ≤ val < upper) and applied to L4 `tra_deg`. Upper bound stays strict (TRA=0° is forward detent). Touches 11 files:
+- `controller.py` / `system_spec.py` / `reference_thrust_reverser.spec.json` — declarations
+- `scenario_playback.py` / `demo.py` / `tools/generate_adapter.py` — four implementation sites kept in sync
+- `demo_server.py::_lever_summary` — Bug B explanation
+- `static/demo.js` — max-reverse preset TRA restored to -32°
+- `tests/test_demo.py`, `tests/fixtures/demo_answer_asset_v1.json` — comparison string rename
+- `tools/demo_path_smoke.py::scenario_lever_extreme_clamp` — previously codified the bug; now correctly asserts L4 active + THR_LOCK active at TRA=-32°
+
+**Bug B (semantically correct, now explained)**: At VDT=100%, `reverser_not_deployed_eec = (100 ≤ 0) = False` → L1's `!DEP` interlock correctly fails. L1 is a first-unlock gate; once reverser is deployed, `!DEP` naturally releases — this is design behavior, not a failure. `_lever_summary` now appends a clarifying note on L4-active branches: "L1 此刻阻塞是预期：反推已部署 → !DEP 自然回落，L1 属于首次解锁门，已完成使命。"
+
+**Codex review verdict**: APPROVE on all 5 focus areas (new comparison consistency across 4 impl sites · boundary behavior · old `between_exclusive` untouched · smoke-test flip logically correct · L1 post-deploy heuristic accurate).
+
+**Live verification** on user's exact input (TRA=-32, VDT=100, manual, all toggles on): L2/L3/L4 active, THR_LOCK active, L1 blocked with explanatory note.
+
+---
+
+## Previous Position (P43-03 · 2026-04-21)
+
+**P43-03 COMPLETE · R1-R6 Authority Contract PASS=6 · Workflow State Machine wired · 853 tests green**
+
+### 2026-04-21 Session Summary
+
+**P43-02.5 Completed (全部 Steps A-E committed):**
+- Step A: Backend audit confirmed (SYSTEM_REGISTRY c919-etras, lru_cache(5), 17-field asserted_component_values)
+- Step B: SVG 22 truth-tracked + 10 annotation nodes, 6-column grid, 41 conn-lines, c919- prefixed defs
+- Step C: C919 state dispatcher, C919_SVG_NODE_MAP, asserted_component_values driven
+- Step D1: 8 chat.js touchpoints (T1-T8), ALLOWED_SYSTEM_IDS +c919-etras, operate stub
+- Step D2: 19 visible controls + debounce 150ms + Advance/Stow latch buttons
+- Step E: Hardware tooltips, freeze banner, cache-busting, schema-alignment test (5/5), carry-forward artifacts
+- Gate: `GATE-P43-02.5-CLOSURE` submitted to Kogami
+
+**frozen_v1 Migration (branch: claude/c919-etras-frozen-v1-migration, pushed):**
+- `src/well_harness/adapters/c919_etras_frozen_v1/` — 14 modules, 12-step tick, frozen spec V1.0
+- `scripts/c919_etras_panel_server.py` — standalone MFD panel server (port 9191)
+- `src/well_harness/static/c919_etras_panel/index.html` — aviation MFD panel UI
+- `tests/test_c919_etras_frozen_v1_{unit,integration}.py` — 40 tests
+- `docs/c919_etras/requirements_v0_9.md` — standardised V0.9 requirements
+- 845 tests pass, 0 regression
+
+**Governance:**
+- DEC-FANTUI-001: frozen_v1 as independent reference engine (Notion synced)
+- DEC-FANTUI-002: Subagent priority principle added to CLAUDE.md (Notion synced)
+- GATE-P43-02.5-CLOSURE: Submitted (Notion synced)
+
+Phase: P43-02 Batch (P43-02 + P43-03 + P43-04 combined · Q1=D · plan-quality gate CLEARED · execution gate `GATE-P43-02-BATCH-CLOSURE` remains pending all 19 Exit Criteria + 13 Codex `可过-Gate` trailers)
+
+### GATE-P43-02-BATCH-PLAN-QUALITY Approved (2026-04-21 · Kogami Option A)
+
+**Kogami decision**: Approve all 8 §Q Q1 §3d delta entries + `GATE-P43-02-BATCH-PLAN-QUALITY` (plan-quality 前置门 CLEARED).
+
+**Approval act** (single commit):
+- `P43-00-PLAN.md` v7 → **v8** · §3d amended (Source Code Whitelist +1 row `pyproject.toml` · Doc Deliverables Whitelist +1 row `docs/<system>/traceability_matrix.md` per-system · Test Whitelist +6 rows 4 tests + 2 fixture dirs) · §8b governance ledger appended
+- `P43-02-00-PLAN.md` v3.1 frontmatter → `APPROVED`
+- `.planning/STATE.md` + `.planning/ROADMAP.md` updated to reflect execution authorization
+
+**v7 → v8 invariants preserved**: only §3d (3 sub-sections) amended · Q-lock untouched · Blacklist/Schema/Tooling+CI/兼容性 unchanged · §3e R1-R6 mechanical column unchanged · §1/§2/§3a-c/§3e/§4-§11 unchanged.
+
+### P43-02 Batch · Execution authorization
+
+Executor authorized to proceed with §3 execution plan:
+- **Next immediate action**: Step 3a/A (workflow automaton contract docs · `docs/P43-workflow-automaton-contract.md` + `.yaml` · doc-only · no source changes · no Codex round required)
+- **Subsequent 13 Codex Q7=A rounds** (per plan §8): 10 adapter-boundary + 3 sub-phase closure — triggered at Step 3a/B onwards per touchpoint
+- **Source-level work** begins at Step 3a/B (R1-R6 authority-contract tests scaffold + `tools/check_authority_contract.py`) — Codex round #1
+
+**Execution gate pending** (`GATE-P43-02-BATCH-CLOSURE`): submission blocked until all 19 Exit Criteria green + 13 Codex rounds all `可过-Gate` + three-lane regression PASS vs post-P43-01 baseline `61b12b3`.
+
+### P43-02 Batch plan arc (2026-04-21 · 5 revisions · 4 Codex rounds)
+
+| Revision | Commit | Codex round | Verdict |
+|----------|--------|-------------|---------|
+| v1 (draft) | `03e4acf` | r1 | 需修正·信号强 (6 required + 2 polish) |
+| v2 (surgical rewrite) | `1781641` | r2 | 需修正·信号强 (3 required + 1 polish) |
+| v3 (surgical addendum) | `ee0d018` | r3 | 需修正·信号弱 (3 text + 1 polish) |
+| v3.1 (janitorial) | `ac30621` | r4 pass 1 | 需修正·信号弱 (version drift) |
+| v3.1 (scrub 1) | `4aed5fd` | r4 pass 2 | 需修正·信号弱 (§6/§7 lifecycle) |
+| **v3.1 (final)** | **`987d723`** | **r4 final** | **`可过-Gate`** |
+| v3.1 (+§10 submission) | `b010e36` | — | Kogami submission ready |
+| **v3.1 APPROVED · P43-00 v8** | `(this commit)` | — | **GATE-P43-02-BATCH-PLAN-QUALITY Approved (Kogami Option A)** |
+
+### P43-02 Batch · Plan content digest (v3.1 · APPROVED)
+
+- **Scope**: 3 sub-phases combined · ~2100-2700 LOC · 3-4 days wall-time
+  - P43-02: Workflow automaton + authority contract R1-R6 + archive compat + API contract lock + multi-tab lock + dual-SHA manifest
+  - P43-03: Server-side PDF/DOCX extraction + `/api/document/extract` endpoint + Bug D fix (semantic category binding) + readAsText regression rewrite
+  - P43-04: FREEZE event + `workbench freeze` CLI + `docs/<system>/traceability_matrix.md` SKELETON emission
+- **Tests**: 16 authority (14 R1-R6 + 2 observability) + ~30 other ≈ **~46 new default-lane tests** · plus e2e opt-in
+- **Endpoints**: 8 total (P43-01's 7 + `/api/document/extract`) · `/api/workbench/freeze` dropped (CLI-only)
+- **Codex arc planned**: 13 rounds (10 adapter-boundary + 3 sub-phase closure)
+
+### Archive — prior position (P43-01 Contract Proof Spike CLOSED · 2026-04-21)
+
+[P43-01 prior-position history preserved below]
+
+---
+
+
+### P43-02 Batch plan submission arc (2026-04-21 · same-day path ① · 5 plan revisions · 4 Codex rounds)
+
+| Revision | Commit | Codex round | Verdict | Closure |
+|----------|--------|-------------|---------|---------|
+| v1 (draft) | `03e4acf` | r1 | 需修正·信号强 (6 required + 2 polish) | path ① → v2 |
+| v2 (surgical rewrite) | `1781641` | r2 | 需修正·信号强 (3 required + 1 polish) | path ① → v3 |
+| v3 (surgical addendum on v2) | `ee0d018` | r3 | 需修正·信号弱 (3 text + 1 polish) | path ① → v3.1 janitorial |
+| v3.1 (janitorial) | `ac30621` | r4 pass 1 | 需修正·信号弱 (version drift) | scrub → `4aed5fd` |
+| v3.1 (scrub 1) | `4aed5fd` | r4 pass 2 | 需修正·信号弱 (§6/§7 lifecycle drift) | scrub → `987d723` |
+| **v3.1 (final)** | **`987d723`** | **r4 final** | **`可过-Gate`** | **submission-blocker 清除** |
+| v3.1 (+§10 submission) | `(this commit)` | — | — | Kogami submission ready |
+
+### P43-02 Batch plan v3.1 · Codex r4 final endorsement (verbatim)
+
+> **可过-Gate — 未发现新的阻断项。§6 顶部 callout 已写明 v3.1 lifecycle 对齐 (r4)，生命周期文案已统一到 v3.1 / Codex r4。§7 stop point #6 已改为 Codex r4。987d723 仅改这一份 plan，diff 只覆盖指出的 §6/§7 生命周期漂移，没有引入新的文案 drift。r1/r2/r3 closure 和当前 r4 提交态仍自洽。**
+>
+> *边界说明：本次仅是 GATE-P43-02-BATCH-PLAN-QUALITY submission-blocker 复检，不涉及源码或 Exit Criteria #1-#19 证据重审。*
+
+### P43-02 Batch · §3d whitelist delta request (Q1=A · 8 entries)
+
+Gate approval requires amending `P43-00-PLAN.md` v7 §3d with 8 new entries (see plan §10.2 for full table). Rejection fallbacks enumerated in plan §7 stop point #7.
+
+1. `tests/test_p43_document_pipeline.py` (Test Whitelist)
+2. `tests/test_p43_clarification_stable_ids.py` (Test Whitelist · 6 regression cases for Bug D semantic category binding)
+3. `tests/test_p43_freeze_gate.py` (Test Whitelist)
+4. `tests/test_p43_dual_sha_manifest.py` (Test Whitelist · Q12=B+a null-tolerant 4-组合)
+5. `tests/fixtures/p43_document_pipeline/` (Test Whitelist · ~5 files PDF/DOCX/TXT/MD corpus)
+6. `tests/fixtures/p43_pre_archive/` (Test Whitelist · ~3 files backward-compat)
+7. `pyproject.toml` L1 additive `[project.optional-dependencies] document = ["pypdf>=4.0", "python-docx>=1.0"]` (Source Code Whitelist new row · repo-root packaging metadata)
+8. `docs/<system>/traceability_matrix.md` per-system freeze-time SKELETON emission (Doc Deliverables Whitelist new row · aligned with P43-00 §2c:190 P34-P42 precedent)
+
+### P43-02 Batch · Plan content digest (v3.1)
+
+- **Scope**: 3 sub-phases combined · ~2100-2700 LOC · 3-4 days wall-time
+  - P43-02: Workflow automaton + authority contract R1-R6 + archive compat + API contract lock + multi-tab lock + dual-SHA manifest
+  - P43-03: Server-side PDF/DOCX extraction + `/api/document/extract` endpoint + Bug D fix (semantic category binding) + readAsText regression rewrite
+  - P43-04: FREEZE event + `workbench freeze` CLI + `docs/<system>/traceability_matrix.md` SKELETON emission
+- **Tests**: 16 authority (14 R1-R6 + 2 observability) + ~30 other ≈ **~46 new default-lane tests** · plus e2e opt-in (multi-tab + R3 runtime mutation + R5 Node parity deferred to P43-09)
+- **Endpoints**: 8 total (P43-01's 7 + `/api/document/extract`) · `/api/workbench/freeze` dropped (CLI-only)
+- **Codex arc**: 13 rounds (10 adapter-boundary + 3 sub-phase closure) planned for execution
+- **Key structural decisions across revisions**:
+  - v2 `open_questions_<system>.md` 自创分叉 → v3 回归 parent-anchored `docs/<system>/traceability_matrix.md` (r2 #1 closure)
+  - v2 source-order positional mapping for Bug D → v3 semantic `Ambiguity.category` L1 additive field + LLM prompt extension + clarify-{i} warning fallback (r2 #3 closure)
+  - v2 pyproject.toml pre-emptive → v3 formal §Q Q1 delta entry #7 (r2 #2 closure)
+  - Q5-B (harden apply_all_safe to strict bool) deleted as L3 violation (r1 #6 closure · v2) · only Q5-A soften text remains
+
+---
+
+### P43-01 Execution arc
+
+| Step | Commit | Outcome |
+|------|--------|---------|
+| A partial | `48e4796` | S1 fixture + draft report + Kogami escalation (2 new Counter-F bugs surfaced — B1/B2 beyond plan prediction) |
+| B (Kogami Option X) | `5d2d3ec` | Bugs A/B1/B2 surgical fix (~5 LOC at `ai_doc_analyzer.py:840,843,866,867`) + 4 regression tests |
+| B Codex | `8d76cf5` | `可过-Gate` + 3 optional doc polish items applied |
+| D/E/F | `7fd243d` | Playwright readAsText evidence (pdf=`%PDF-1.7` garbage confirmed) + `docs/P43-api-contract-lock.yaml` (7 endpoints) + R6/R7/R8 inventory |
+| G finalize | `4d40aee` | Executive summary + Exit Criteria mechanical verification |
+| G scrubs | `6729768` / `e86a8cc` / `9a51183` | Closed Codex r1 (3 fixes) / r2 (7 fixes) / r3 (1 fix) |
+| G closure | `e579a16` | Codex r4 `可过-Gate` trailer + Kogami submission |
+| Gate approval | (this commit) | Kogami GATE-P43-01-CLOSURE approved |
+
+### Counter F closure (4 bugs · unified root cause)
+
+All four bugs traced to a single pattern: no internal contract lock between producer and consumer **within** `run_pipeline_from_intake()`'s own data path.
+
+| Bug | Anchor | Fix status |
+|-----|--------|------------|
+| A | `ai_doc_analyzer.py:840` (READ side `blocking_reasons` / EMIT `blockers`) | Fixed in Step B |
+| B1 | `ai_doc_analyzer.py:866` (`bundle.playback_report.scenarios` → `1 if .. else 0`) | Fixed in Step B |
+| B2 | `ai_doc_analyzer.py:867` (`bundle.fault_diagnosis_report.fault_modes` → `1 if .. else 0`) | Fixed in Step B |
+| D | `ai_doc_analyzer.py:799` (`clarify-{i}` vs stable question_id consumer at `document_intake.py:839`) | Deferred to P43-03 per Q12=B+a |
+
+### Three-lane regression (re-run 2026-04-21)
+
+- Default pytest: **800 passed, 1 skipped** (P42 baseline 796 + 4 spike default tests · zero regression)
+- E2E pytest: **50 passed** (P42 baseline 49 + 1 Playwright readAsText e2e · includes adversarial wrapper)
+- Zero regression vs main baseline `a6521ca`.
+
+### Non-blocking polish (future slice)
+
+- `src/well_harness/demo_server.py:2666` error message says `"apply_all_safe must be true"` but runtime guard is truthiness-based. Codex r4 flagged as explicitly non-blocking; fix candidate for P43-02 or a standalone cleanup slice.
+
+### Next: P43-02 (workflow / orchestrator / panel)
+
+Per plan §3 Step G item 4, Gate approval authorizes P43-02 kickoff. P43-02 should consume `docs/P43-api-contract-lock.yaml` as authoritative endpoint contract for all new frontend consumers, following S3b grep-alignment pattern.
+
+---
+
+## Archive — prior position (P43 plan Gate Approved 2026-04-20)
+
+**P43 milestone plan v7 GATE-Approved (Kogami 2026-04-20) · P43-01 Contract Proof Spike next**
+
+Phase: P43 — Control Logic Workbench end-to-end milestone
+
+- Branch `codex/p43-control-logic-workbench` merged to `main` via non-FF (`99211bd`)
+- 7 plan revisions v1→v7 · 6 Codex adversarial rounds · 3 Kogami R4 arbitrations
+- v7 closes all Codex r6 residuals (KL-1/2/3) via Kogami strengthen-before-Gate directive
+- §3d 12+ file whitelist with L1/L2/L3 ladder · §3e 6 authority contract rules (R1-R6) mechanically verifiable in default lane
+- Q answers locked: Q1=D (4 gates) · Q2=A (vanilla JS) · Q4=A (alias approval) · Q7=A (Codex per touchpoint) · Q8=B (spike + contract lock) · Q10=B (md+yaml) · Q12=B+a (server-side pypdf+docx, no OCR)
+
+### Codex adversarial review (P43 · 6 rounds · path ① governance arc)
+
+P43 path ① governance pattern extends P42 precedent. 6 rounds of adversarial review refined plan from v1 needing-block through surgical closure:
+
+| r | v | verdict | action |
+|---|---|---------|--------|
+| 1 | v1 | 需阻止（6 counters A-F） | Kogami path ① → v2 |
+| 2 | v2 | 需修正·信号强（4 cuts） | path ① → v3 |
+| 3 | v3 | 需修正·信号强 | path ① → v4 |
+| 4 | v4 | 需修正·信号强（3 surgical） | path ① → v5 |
+| 5 | v5 | 需修正·信号强（3 precise · "值得 v6 最后一次") | Kogami Option A → v6 |
+| 6 | v6 | 需修正·信号强（3 residuals · "不建议 v7") | Kogami Option B + strengthen directive → **v7 Gate Approved** |
+
+### Next after GATE-P43-PLAN (v7) Approved
+
+按 Q1=D gate batching strategy：
+1. Draft `P43-01-00-PLAN.md` (Contract Proof Spike · 8 scope items · ~1 day · ~200 LOC fix + docs + asserted-pass harness)
+2. Submit independent GATE-P43-01-PLAN
+3. After GATE-P43-01-PLAN Approved → execute P43-01 · produce `docs/P43-contract-proof-report.md` + `docs/P43-api-contract-lock.yaml`
+4. Kogami re-review post-spike → determine whether P43-02..10 scope holds or v8 needed
+
+---
+
+## Archive — prior position (P42 CLOSED 2026-04-20)
 
 **P42 v2 executed & green — awaiting `GATE-P42-CLOSURE: Approved` (2026-04-20)**
 

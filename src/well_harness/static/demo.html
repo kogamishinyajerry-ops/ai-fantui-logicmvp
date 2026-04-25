@@ -1,1957 +1,610 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Well Harness 反推逻辑演示舱</title>
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
-    <link rel="manifest" href="/manifest.json">
-    <link rel="stylesheet" href="/demo.css">
-    <style>
-      :root {
-        --text-secondary: var(--text-muted);
-        --status-active: #2dd4a0;
-        --status-blocked: #e05252;
-        --status-inactive: #3a3f4a;
-      }
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Well Harness 反推逻辑演示舱</title>
+<link rel="stylesheet" href="/unified-nav.css">
+<link rel="stylesheet" href="/demo.css">
+</head>
+<body class="unified-nav-enabled" data-nav-current="demo">
 
-      .chain-node-group,
-      .logic-gate-group {
-        cursor: default;
-      }
+<header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
+  <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">工作台</span>
+      <a href="/demo.html" class="unified-nav-link" data-nav-key="demo" data-current="true">反推逻辑</a>
+      <a href="/c919_etras_workstation.html" class="unified-nav-link" data-nav-key="etras">C919 E-TRAS</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">电路图</span>
+      <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
+      <a href="/c919_etras_panel/circuit.html" class="unified-nav-link" data-nav-key="etras-circuit">E-TRAS 电路</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">仿真</span>
+      <a href="/fan_console.html" class="unified-nav-link" data-nav-key="fan-console">反推操作台</a>
+      <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
+    </div>
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">文档</span>
+      <a href="/fantui_requirements.html" class="unified-nav-link" data-nav-key="fantui-req">FANTUI 需求</a>
+      <a href="/c919_requirements.html" class="unified-nav-link" data-nav-key="c919-req">C919 需求</a>
+    </div>
+  </div>
+</header>
 
-      .chain-node-group .chain-node-svg,
-      .logic-gate-group .logic-gate-svg {
-        transition:
-          fill 0.28s ease,
-          stroke 0.28s ease,
-          filter 0.28s ease,
-          opacity 0.28s ease;
-      }
+<main class="fan-workstation">
+  <header class="fan-header">
+    <h1>反推逻辑演示舱 · FANTUI LogicMVP</h1>
+    <span class="fan-header-note">TRA → SW1/SW2 → L1/L2/L3/L4 → THR_LOCK · stateless 信号级评估</span>
+  </header>
 
-      .chain-node-group .chain-node-svg {
-        fill: rgba(12, 18, 24, 0.94);
-        stroke: rgba(91, 102, 117, 0.58);
-        stroke-width: 1.35;
-      }
+  <section id="fan-status-banner" class="fan-status-banner" aria-labelledby="status-heading">
+    <h2 id="status-heading" class="visually-hidden" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);">系统状态</h2>
+    <span id="fan-status-badge" class="fan-status-badge" data-state="idle">IDLE</span>
+    <span id="fan-status-summary" class="fan-status-summary">等待拉杆快照 …</span>
+    <span id="fan-completion-flag" class="fan-completion-flag" data-reached="false">未达成</span>
+  </section>
 
-      .chain-node-group .input-node-svg {
-        stroke: rgba(148, 163, 184, 0.42);
-        stroke-dasharray: 4 2;
-      }
+  <section class="fan-presets" aria-label="场景预设">
+    <span class="fan-preset-label">[预设]</span>
+    <button class="fan-preset-btn" data-preset="nominal-fwd">默认前向</button>
+    <button class="fan-preset-btn" data-preset="landing-deploy">着陆展开全链路</button>
+    <button class="fan-preset-btn" data-preset="max-reverse">最大反推</button>
+    <button class="fan-preset-btn" data-preset="stow-return">收起回杆</button>
+    <button class="fan-preset-btn" data-preset="inhibit-block">抑制位阻塞</button>
+    <span id="fan-preset-status" class="fan-preset-status">未选择预设</span>
+  </section>
 
-      .chain-node-group .command-node-svg {
-        stroke: rgba(255, 176, 55, 0.32);
-      }
+  <div class="fan-grid">
+    <!-- Left column: inputs -->
+    <section class="fan-col-left">
+      <section class="fan-panel" aria-labelledby="lever-heading">
+        <h2 id="lever-heading" class="fan-panel-title"><span class="fan-callout">[输入]</span> 反推拉杆 (TRA)</h2>
+        <div class="fan-lever">
+          <span class="fan-lever-label">TRA</span>
+          <input type="range" id="fan-tra-lever" min="-32" max="0" step="0.5" value="0" aria-label="TRA 拉杆角度">
+          <span id="fan-tra-value" class="fan-lever-value">0.0°</span>
+          <span id="fan-tra-zone" class="fan-lever-zone" data-zone="fwd">FWD</span>
+        </div>
+        <div class="fan-lever-lock-row">
+          <span id="fan-tra-lock-badge" class="fan-tra-lock-badge" data-locked="true">深拉区关闭</span>
+          <span id="fan-tra-lock-range" class="fan-tra-lock-range">条件深拉区 -32°~-14°（关闭）</span>
+        </div>
+        <p id="fan-tra-lock-msg" class="fan-lever-hint">默认从 0° 起步；当 L4 不满足时，TRA 自由区 -14°~0°；满足 VDT≥90% 后才开放 -32°~-14° 深拉区。</p>
+      </section>
 
-      .chain-node-group .sensor-node-svg {
-        stroke: rgba(40, 244, 255, 0.34);
-      }
-
-      .chain-node-group .final-node-svg {
-        stroke: rgba(34, 197, 94, 0.42);
-      }
-
-      .logic-gate-group .logic-gate-svg {
-        fill: rgba(11, 18, 23, 0.96);
-        stroke: rgba(40, 244, 255, 0.68);
-        stroke-width: 2.1;
-      }
-
-      .chain-node-group.is-active .chain-node-svg,
-      .chain-node-svg.is-active,
-      .logic-gate-group.is-active .logic-gate-svg,
-      .logic-gate-svg.is-active {
-        fill: rgba(34, 197, 94, 0.16);
-        stroke: var(--status-active);
-        filter:
-          drop-shadow(0 0 8px rgba(34, 197, 94, 0.46))
-          drop-shadow(0 0 16px rgba(34, 197, 94, 0.2));
-        animation: node-pulse 2.2s ease-in-out infinite;
-      }
-
-      .chain-node-group.is-blocked .chain-node-svg,
-      .chain-node-svg.is-blocked,
-      .logic-gate-group.is-blocked .logic-gate-svg,
-      .logic-gate-svg.is-blocked {
-        fill: rgba(224, 82, 82, 0.12);
-        stroke: var(--status-blocked);
-        filter: drop-shadow(0 0 8px rgba(224, 82, 82, 0.22));
-        animation: node-pulse-blocked 1.8s ease-in-out infinite;
-      }
-
-      .chain-node-group.is-inactive .chain-node-svg,
-      .chain-node-svg.is-inactive,
-      .logic-gate-group.is-inactive .logic-gate-svg,
-      .logic-gate-svg.is-inactive {
-        opacity: 0.56;
-        filter: saturate(0.55);
-      }
-
-      .node-status-dot {
-        fill: var(--status-inactive);
-        transition: fill 0.28s ease, filter 0.28s ease, opacity 0.28s ease;
-      }
-
-      .chain-node-group.is-active .node-status-dot,
-      .logic-gate-group.is-active .node-status-dot,
-      .node-status-dot.is-active {
-        fill: var(--status-active);
-        filter: drop-shadow(0 0 6px rgba(45, 212, 160, 0.48));
-      }
-
-      .chain-node-group.is-blocked .node-status-dot,
-      .logic-gate-group.is-blocked .node-status-dot,
-      .node-status-dot.is-blocked {
-        fill: var(--status-blocked);
-        filter: drop-shadow(0 0 6px rgba(224, 82, 82, 0.38));
-      }
-
-      .chain-node-group.is-inactive .node-status-dot,
-      .logic-gate-group.is-inactive .node-status-dot,
-      .node-status-dot.is-inactive {
-        fill: var(--status-inactive);
-      }
-
-      .node-type-tag {
-        fill: var(--text-secondary);
-        font-family: var(--font-mono);
-        font-size: 7px;
-        letter-spacing: 0.08em;
-        pointer-events: none;
-      }
-
-      .chain-node-group .chain-node-label {
-        fill: var(--text-main);
-      }
-
-      .chain-node-group .chain-node-value {
-        fill: var(--accent-cyan);
-        font-size: 8px;
-      }
-
-      .logic-gate-group .logic-gate-label {
-        fill: rgba(40, 244, 255, 0.72);
-        font-size: 8px;
-      }
-
-      .chain-topology .conn-line {
-        fill: none;
-        stroke: rgba(148, 163, 184, 0.28);
-        stroke-width: 1;
-        stroke-dasharray: none;
-        opacity: 0.72;
-        transition: stroke 0.28s ease, opacity 0.28s ease, filter 0.28s ease;
-      }
-
-      .chain-topology .conn-input {
-        stroke: rgba(148, 163, 184, 0.34);
-        stroke-width: 1;
-      }
-
-      .chain-topology .conn-logic {
-        stroke: rgba(74, 144, 217, 0.55);
-        stroke-width: 1.2;
-      }
-
-      .chain-topology .conn-merge {
-        stroke: rgba(74, 144, 217, 0.4);
-        stroke-width: 1.2;
-        stroke-dasharray: 4 3;
-      }
-
-      .chain-topology .conn-final {
-        stroke: var(--status-active);
-        stroke-width: 1.4;
-      }
-
-      .chain-topology .conn-line.is-active {
-        opacity: 1;
-        filter: drop-shadow(0 0 4px rgba(74, 144, 217, 0.16));
-      }
-
-      .chain-topology .conn-line.is-blocked {
-        stroke: rgba(224, 82, 82, 0.4);
-        opacity: 0.92;
-      }
-
-      .chain-topology .conn-line.is-inactive {
-        opacity: 0.3;
-      }
-    </style>
-  </head>
-  <body data-view="beginner">
-    <div id="guided-hint-bar" class="guided-hint-bar" aria-live="polite" style="display:none"></div>
-    <main class="shell">
-      <section class="hero" aria-labelledby="page-title">
-        <div>
-          <p class="eyebrow">well-harness 确定性演示</p>
-          <label class="system-selector-wrap">
-            <select id="system-selector" aria-label="选择控制子系统">
-              <option value="thrust-reverser">Thrust Reverser (反推)</option>
-              <option value="landing-gear">Landing Gear (起落架)</option>
-              <option value="bleed-air">Bleed Air Valve (引气)</option>
-              <option value="efds">Emergency Flare Deployment (干扰弹)</option>
-            </select>
+      <section class="fan-panel" aria-labelledby="condition-heading">
+        <h2 id="condition-heading" class="fan-panel-title"><span class="fan-callout">[输入]</span> 条件面板</h2>
+        <div class="fan-conditions">
+          <label class="fan-condition">
+            <span class="fan-condition-label">RA · 无线电高度 (ft)</span>
+            <span class="fan-condition-value" id="fan-ra-value">0 ft</span>
+            <input type="range" id="fan-ra" min="0" max="100" step="1" value="0" aria-label="RA 无线电高度">
+            <div class="fan-condition-hint">L1 gate: RA &lt; 6 ft</div>
           </label>
-          <h1 id="page-title">反推逻辑演示舱</h1>
-          <p class="boundary">
-            这是确定性演示层，基于内置 nominal-deploy / retract-reset 和简化 plant；
-            不是开放式 AI，也不是完整物理模型。
-          </p>
-          <p class="showcase-mission">
-            拖动反推拉杆，实时看 SW / logic / plant feedback 如何点亮。
-          </p>
-          <button type="button" class="btn-primary" id="guided-demo-btn" style="margin-top:12px">
-            ▶ Guided Demo — 带我走一遍
-          </button>
-        </div>
-        <div class="chain-summary" aria-label="固定控制链路">
-          <span data-tooltip="Switch 1，上游使能信号，-14° TRA 时闭合">SW1</span> ->
-          <span data-tooltip="Logic Node 1，解锁链路入口">L1</span>/<span data-tooltip="Thrust Reverser Latch System，115PSI 液压锁">TLS115</span> ->
-          <span data-tooltip="Thrust Reverser Latch System，液压解锁阀">TLS</span> 解锁 ->
-          <span data-tooltip="Switch 2，L1 解锁后闭合">SW2</span> ->
-          <span data-tooltip="Logic Node 2，540V 电源母线使能">L2</span>/<span data-tooltip="540V 电源母线，旋翼/风扇驱动">540V</span> ->
-          <span data-tooltip="Logic Node 3，EEC+PLS+PDU 三路扇出">L3</span>/<span data-tooltip="Electronic Engine Controller，发动机控制电脑">EEC</span>+<span data-tooltip="Pressure Limit Switch，压力限制开关">PLS</span>+<span data-tooltip="Power Drive Unit，电机驱动单元">PDU</span> ->
-          <span data-tooltip="Variable Displacement Table，展开位置 ≥90% 时激活">VDT90</span> ->
-          <span data-tooltip="Logic Node 4，THR_LOCK 释放命令">L4</span>/<span data-tooltip="Thrust Lock，反推锁释放机构">THR_LOCK</span>
-        </div>
-      </section>
 
-      <nav class="presenter-route-strip" aria-label="页面入口" style="padding:0.5rem 0; font-size:0.82rem; gap:0.75rem;">
-        <span style="color:rgba(200,240,255,0.5)">其他入口:</span>
-        <a href="/ai-doc-analyzer.html" style="color:#c8fff1;font-weight:600;text-decoration:none;">AI Document Analyzer</a>
-        <span style="color:rgba(200,255,241,0.2)">|</span>
-        <a href="/workbench.html" style="color:#c8fff1;font-weight:600;text-decoration:none;">Workbench 验收台</a>
-      </nav>
+          <label class="fan-condition">
+            <span class="fan-condition-label">N1K · 风扇转速 (%)</span>
+            <span class="fan-condition-value" id="fan-n1k-value">35%</span>
+            <input type="range" id="fan-n1k" min="0" max="110" step="1" value="35" aria-label="N1K 风扇转速">
+            <div class="fan-condition-hint">L3 deploy 限值：&lt; max_n1k_deploy_limit（默认 60%）</div>
+          </label>
 
-      <nav class="presenter-route-strip" aria-label="演示走查路径">
-        <p class="route-strip-title">演示路径</p>
-        <ol>
-          <li><span class="route-step">1</span><span class="presenter-callout">[输入]</span> 选问题</li>
-          <li><span class="route-step">2</span><span class="presenter-callout">[链路]</span> 看主板</li>
-          <li><span class="route-step">3</span><span class="presenter-callout">[高亮]</span> 讲关联</li>
-          <li><span class="route-step">4</span><span class="presenter-callout">[结果]</span> 扫证据</li>
-          <li><span class="route-step">5</span><span class="presenter-callout">[调试]</span> 查 JSON</li>
-        </ol>
-        <p class="route-strip-note">人工演示提示，不是自动化验收。</p>
-      </nav>
+          <label class="fan-condition" id="fan-vdt-row">
+            <span class="fan-condition-label">VDT · deploy 反馈 (%)</span>
+            <span class="fan-condition-value" id="fan-vdt-value">0%</span>
+            <input type="range" id="fan-vdt" min="0" max="100" step="1" value="0" aria-label="VDT deploy 位置反馈">
+            <div class="fan-condition-hint" id="fan-vdt-hint">直接把 VDT 推到 ≥ 90% 触发 VDT90 → L4 → THR_LOCK。</div>
+          </label>
 
-      <section class="panel presenter-run-card" aria-labelledby="presenter-run-card-title">
-        <div class="presenter-run-card-header">
-          <div>
-            <h2 id="presenter-run-card-title"><span class="presenter-callout">[演示]</span> Presenter Run Card</h2>
-            <p class="presenter-run-card-note">
-              首屏可点击演示顺序：复用现有 prompt、`POST /api/demo` 和 `DemoAnswer`，不是自动 readiness detector。
-            </p>
+          <div class="fan-condition">
+            <span class="fan-condition-label">二元输入</span>
+            <label class="fan-condition-check">
+              <input type="checkbox" id="fan-engine-running" checked>
+              <span>engine_running</span>
+            </label>
+            <label class="fan-condition-check">
+              <input type="checkbox" id="fan-aircraft-on-ground" checked>
+              <span>aircraft_on_ground</span>
+            </label>
+            <label class="fan-condition-check">
+              <input type="checkbox" id="fan-reverser-inhibited">
+              <span>reverser_inhibited</span>
+            </label>
+            <label class="fan-condition-check">
+              <input type="checkbox" id="fan-eec-enable" checked>
+              <span>eec_enable</span>
+            </label>
           </div>
-          <p class="presenter-run-card-boundary">
-            人工预演提示，不是浏览器自动化，也不是新的控制真值。
-          </p>
         </div>
-        <div class="presenter-run-card-grid" aria-label="首屏 presenter run card">
-          <article class="run-card-step">
-            <p class="run-card-kicker">Step 1</p>
-            <h3>Bridge</h3>
-            <p>先讲 `logic4` 到 `THR_LOCK` 的链路关系。</p>
-            <button
-              type="button"
-              class="run-card-trigger is-selected"
-              aria-pressed="true"
-              data-category="bridge"
-              data-intent="logic4_thr_lock_bridge"
-              data-prompt="logic4 和 throttle lock 有什么关系"
-            >运行桥接题</button>
-          </article>
-          <article class="run-card-step">
-            <p class="run-card-kicker">Step 2</p>
-            <h3>Diagnose</h3>
-            <p>再切到 throttle lock 未释放的受控诊断。</p>
-            <button
-              type="button"
-              class="run-card-trigger"
-              aria-pressed="false"
-              data-category="diagnosis"
-              data-intent="diagnose_problem"
-              data-prompt="为什么 throttle lock 没释放"
-            >运行未释放诊断</button>
-          </article>
-          <article class="run-card-step">
-            <p class="run-card-kicker">Step 3</p>
-            <h3>Trigger</h3>
-            <p>展示 `logic3` 激活后怎样扇出到 EEC / PLS / PDU。</p>
-            <button
-              type="button"
-              class="run-card-trigger"
-              aria-pressed="false"
-              data-category="trigger"
-              data-intent="trigger_node"
-              data-prompt="触发 logic3 会发生什么"
-            >运行触发题</button>
-          </article>
-          <article class="run-card-step">
-            <p class="run-card-kicker">Step 4</p>
-            <h3>Proposal</h3>
-            <p>最后用 dry-run proposal 强调“解释，不改真值”。</p>
-            <button
-              type="button"
-              class="run-card-trigger"
-              aria-pressed="false"
-              data-category="proposal"
-              data-intent="propose_logic_change"
-              data-prompt="把 logic3 的 TRA 阈值改成 -8 会发生什么"
-            >运行阈值预演</button>
-          </article>
+
+      </section>
+      <section class="fan-panel" aria-labelledby="fault-heading">
+        <h2 id="fault-heading" class="fan-panel-title">
+          <span class="fan-callout">[故障注入]</span> 节点故障模拟
+          <span id="fan-fault-count" class="fan-fault-count">0 故障</span>
+        </h2>
+        <div class="fan-fault-grid">
+          <!-- 开关固断 -->
+          <div class="fan-fault-group">
+            <div class="fan-fault-group-label">开关 (SW)</div>
+            <label class="fan-fault-row">
+              <input type="checkbox" class="fan-fault-check" data-node="sw1" data-fault="stuck_off">
+              <span class="fan-fault-node">SW1</span>
+              <span class="fan-fault-type-tag">stuck_off</span>
+            </label>
+            <label class="fan-fault-row">
+              <input type="checkbox" class="fan-fault-check" data-node="sw1" data-fault="stuck_on">
+              <span class="fan-fault-node">SW1</span>
+              <span class="fan-fault-type-tag">stuck_on</span>
+            </label>
+            <label class="fan-fault-row">
+              <input type="checkbox" class="fan-fault-check" data-node="sw2" data-fault="stuck_off">
+              <span class="fan-fault-node">SW2</span>
+              <span class="fan-fault-type-tag">stuck_off</span>
+            </label>
+            <label class="fan-fault-row">
+              <input type="checkbox" class="fan-fault-check" data-node="sw2" data-fault="stuck_on">
+              <span class="fan-fault-node">SW2</span>
+              <span class="fan-fault-type-tag">stuck_on</span>
+            </label>
+          </div>
+          <!-- 传感器归零 -->
+          <div class="fan-fault-group">
+            <div class="fan-fault-group-label">传感器 (sensor_zero)</div>
+            <label class="fan-fault-row">
+              <input type="checkbox" class="fan-fault-check" data-node="radio_altitude_ft" data-fault="sensor_zero">
+              <span class="fan-fault-node">RA</span>
+              <span class="fan-fault-type-tag">→ 0 ft</span>
+            </label>
+            <label class="fan-fault-row">
+              <input type="checkbox" class="fan-fault-check" data-node="n1k" data-fault="sensor_zero">
+              <span class="fan-fault-node">N1K</span>
+              <span class="fan-fault-type-tag">→ 0%</span>
+            </label>
+            <label class="fan-fault-row">
+              <input type="checkbox" class="fan-fault-check" data-node="tls115" data-fault="sensor_zero">
+              <span class="fan-fault-node">TLS115</span>
+              <span class="fan-fault-type-tag">断路</span>
+            </label>
+          </div>
+          <!-- 逻辑门固断 -->
+          <div class="fan-fault-group">
+            <div class="fan-fault-group-label">逻辑门 (logic_stuck_false)</div>
+            <label class="fan-fault-row">
+              <input type="checkbox" class="fan-fault-check" data-node="logic1" data-fault="logic_stuck_false">
+              <span class="fan-fault-node">L1</span>
+              <span class="fan-fault-type-tag">stuck false</span>
+            </label>
+            <label class="fan-fault-row">
+              <input type="checkbox" class="fan-fault-check" data-node="logic2" data-fault="logic_stuck_false">
+              <span class="fan-fault-node">L2</span>
+              <span class="fan-fault-type-tag">stuck false</span>
+            </label>
+            <label class="fan-fault-row">
+              <input type="checkbox" class="fan-fault-check" data-node="logic3" data-fault="logic_stuck_false">
+              <span class="fan-fault-node">L3</span>
+              <span class="fan-fault-type-tag">stuck false</span>
+            </label>
+            <label class="fan-fault-row">
+              <input type="checkbox" class="fan-fault-check" data-node="logic4" data-fault="logic_stuck_false">
+              <span class="fan-fault-node">L4</span>
+              <span class="fan-fault-type-tag">stuck false</span>
+            </label>
+          </div>
+          <!-- 执行机构封锁 -->
+          <div class="fan-fault-group">
+            <div class="fan-fault-group-label">执行机构 (cmd_blocked)</div>
+            <label class="fan-fault-row">
+              <input type="checkbox" class="fan-fault-check" data-node="vdt90" data-fault="cmd_blocked">
+              <span class="fan-fault-node">VDT90</span>
+              <span class="fan-fault-type-tag">封锁</span>
+            </label>
+            <label class="fan-fault-row">
+              <input type="checkbox" class="fan-fault-check" data-node="thr_lock" data-fault="cmd_blocked">
+              <span class="fan-fault-node">THR_LOCK</span>
+              <span class="fan-fault-type-tag">封锁</span>
+            </label>
+          </div>
         </div>
-        <ul class="presenter-run-card-rails">
-          <li>`controller.py` 仍是唯一控制真值。</li>
-          <li>`simplified plant feedback` 只用于演示解释，不是完整实时物理模型。</li>
-          <li>Raw JSON 只是同一份 `DemoAnswer` 的调试视图，不是第二套答案。</li>
-        </ul>
+        <div class="fan-fault-footer">
+          <button type="button" id="fan-fault-clear" class="fan-fault-clear-btn">清除所有故障</button>
+          <span id="fan-fault-active-list" class="fan-fault-active-list"></span>
+        </div>
+      </section>
+    </section>
+
+    <!-- Right column: outputs + chain + HUD -->
+    <section class="fan-col-right">
+      <section class="fan-panel" aria-labelledby="hud-heading">
+        <h2 id="hud-heading" class="fan-panel-title"><span class="fan-callout">[HUD]</span> 关键中间信号</h2>
+        <dl class="fan-hud-grid">
+          <div class="fan-hud-row"><dt>SW1 (TRA 段)</dt><dd id="fan-hud-sw1">—</dd></div>
+          <div class="fan-hud-row"><dt>SW2 (深反推)</dt><dd id="fan-hud-sw2">—</dd></div>
+          <div class="fan-hud-row"><dt>TLS 解锁</dt><dd id="fan-hud-tls">—</dd></div>
+          <div class="fan-hud-row"><dt>VDT90 反馈</dt><dd id="fan-hud-vdt90">—</dd></div>
+          <div class="fan-hud-row"><dt>L1 / L2 / L3 / L4</dt><dd id="fan-hud-logic">—</dd></div>
+          <div class="fan-hud-row"><dt>THR_LOCK 释放</dt><dd id="fan-hud-thr-lock">—</dd></div>
+        </dl>
       </section>
 
-      <div class="view-mode-toggle-bar" style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:rgba(79,184,255,0.08);border:1px solid rgba(79,184,255,0.2);border-radius:8px;margin-bottom:16px">
-        <span class="view-mode-label" style="font-size:0.8rem;color:#8ca0b4;white-space:nowrap">视图模式:</span>
-        <button type="button" class="view-mode-btn is-active" data-view="beginner" id="view-btn-beginner" style="background:rgba(40,244,255,0.15);border:1px solid rgba(40,244,255,0.4);color:#28f4ff;padding:4px 12px;border-radius:6px;font-size:0.8rem;cursor:pointer">
-          初级视图
-        </button>
-        <button type="button" class="view-mode-btn" data-view="expert" id="view-btn-expert" style="background:transparent;border:1px solid rgba(79,184,255,0.25);color:#8ca0b4;padding:4px 12px;border-radius:6px;font-size:0.8rem;cursor:pointer">
-          专家视图
-        </button>
-        <span style="font-size:0.72rem;color:#5a7080;margin-left:4px" id="view-mode-hint">— 默认只看反推逻辑，适合快速演示</span>
+      <section class="fan-panel" aria-labelledby="chain-heading">
+        <h2 id="chain-heading" class="fan-panel-title"><span class="fan-callout">[链路]</span> 反推逻辑链路</h2>
+        <div class="fan-chain-scroll">
+          <svg id="fan-chain-svg" viewBox="0 0 900 400" width="100%" role="img" aria-label="反推逻辑链路图">
+            <defs>
+              <marker id="fan-arr-idle" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                <path d="M0,0 L7,3.5 L0,7 Z" fill="#46597a"/>
+              </marker>
+              <marker id="fan-arr-active" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                <path d="M0,0 L7,3.5 L0,7 Z" fill="#00e5a0"/>
+              </marker>
+              <marker id="fan-arr-fault" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+                <path d="M0,0 L7,3.5 L0,7 Z" fill="#e05555"/>
+              </marker>
+              <!-- Simulink-style AND gate icon (D-shape): flat left, rounded right. -->
+              <symbol id="fan-gate-and" viewBox="0 0 18 14" overflow="visible">
+                <path d="M 1 1 L 9 1 A 6 6 0 0 1 9 13 L 1 13 Z"/>
+              </symbol>
+            </defs>
+
+            <!-- Column headers -->
+            <text x="90"  y="22" fill="#6a7d95" font-size="10" text-anchor="middle">INPUTS</text>
+            <text x="340" y="22" fill="#6a7d95" font-size="10" text-anchor="middle">LOGIC GATES</text>
+            <text x="580" y="22" fill="#6a7d95" font-size="10" text-anchor="middle">INTERMEDIATE</text>
+            <text x="810" y="22" fill="#6a7d95" font-size="10" text-anchor="middle">OUTPUT</text>
+
+            <!-- ═════ Blocks (position unchanged; wires below use Simulink orthogonal routing) ═════ -->
+
+            <!-- INPUTS column -->
+            <g class="chain-node" data-node="sw1">
+              <rect x="10" y="40" width="160" height="28" rx="3"/>
+              <text x="90" y="58" text-anchor="middle">SW1 · TRA [-1.4°,-6.2°]</text>
+            </g>
+            <g class="chain-node" data-node="aircraft_on_ground">
+              <rect x="10" y="76" width="160" height="28" rx="3"/>
+              <text x="90" y="94" text-anchor="middle">aircraft_on_ground</text>
+            </g>
+            <g class="chain-node" data-node="radio_altitude_ft">
+              <rect x="10" y="112" width="160" height="28" rx="3"/>
+              <text x="90" y="130" text-anchor="middle">RA &lt; 6 ft</text>
+            </g>
+            <g class="chain-node" data-node="sw2">
+              <rect x="10" y="156" width="160" height="28" rx="3"/>
+              <text x="90" y="174" text-anchor="middle">SW2 · TRA [-5°,-9.8°]</text>
+            </g>
+            <g class="chain-node" data-node="engine_running">
+              <rect x="10" y="192" width="160" height="28" rx="3"/>
+              <text x="90" y="210" text-anchor="middle">engine_running</text>
+            </g>
+            <g class="chain-node" data-node="n1k">
+              <rect x="10" y="234" width="160" height="28" rx="3"/>
+              <text x="90" y="252" text-anchor="middle">N1K &lt; max_n1k</text>
+            </g>
+            <g class="chain-node" data-node="eec_enable">
+              <rect x="10" y="270" width="160" height="28" rx="3"/>
+              <text x="90" y="288" text-anchor="middle">eec_enable</text>
+            </g>
+            <g class="chain-node" data-node="reverser_inhibited">
+              <rect x="10" y="306" width="160" height="28" rx="3"/>
+              <text x="90" y="324" text-anchor="middle">NOT reverser_inhibited</text>
+            </g>
+
+            <!-- LOGIC GATES column — each has AND-gate icon in top-left corner. -->
+            <g class="chain-logic" data-node="logic1">
+              <rect x="260" y="70" width="160" height="38" rx="4"/>
+              <use href="#fan-gate-and" class="gate-icon" x="266" y="74" width="18" height="14"/>
+              <text x="275" y="84" text-anchor="middle" class="gate-label">&amp;</text>
+              <text x="340" y="88" text-anchor="middle" class="logic-id">L1</text>
+              <text x="340" y="100" text-anchor="middle" class="logic-sub">SW1 AND RA&lt;6 AND !INH AND !DEP</text>
+            </g>
+            <g class="chain-logic" data-node="logic2">
+              <rect x="260" y="170" width="160" height="38" rx="4"/>
+              <use href="#fan-gate-and" class="gate-icon" x="266" y="174" width="18" height="14"/>
+              <text x="275" y="184" text-anchor="middle" class="gate-label">&amp;</text>
+              <text x="340" y="188" text-anchor="middle" class="logic-id">L2</text>
+              <text x="340" y="200" text-anchor="middle" class="logic-sub">SW2 AND eng AND GND AND !INH AND EEC</text>
+            </g>
+            <g class="chain-logic" data-node="logic3">
+              <rect x="260" y="260" width="160" height="50" rx="4"/>
+              <use href="#fan-gate-and" class="gate-icon" x="266" y="264" width="18" height="14"/>
+              <text x="275" y="274" text-anchor="middle" class="gate-label">&amp;</text>
+              <text x="340" y="272" text-anchor="middle" class="logic-id">L3</text>
+              <text text-anchor="middle" class="logic-sub">
+                <tspan x="340" y="281">eng·GND·!INH·TLS</tspan>
+                <tspan x="340" dy="9">N1K&lt;lim·TRA≤-11.74°</tspan>
+              </text>
+            </g>
+
+            <!-- INTERMEDIATE column -->
+            <g class="chain-node" data-node="tls115">
+              <rect x="500" y="56" width="160" height="28" rx="3"/>
+              <text x="580" y="74" text-anchor="middle">TLS 115VAC cmd</text>
+            </g>
+            <g class="chain-node" data-node="tls_unlocked">
+              <rect x="500" y="92" width="160" height="28" rx="3"/>
+              <text x="580" y="110" text-anchor="middle">TLS_Unlocked LS</text>
+            </g>
+            <g class="chain-node" data-node="vdt90">
+              <rect x="500" y="128" width="160" height="28" rx="3"/>
+              <text x="580" y="146" text-anchor="middle">VDT90 (≥ 90% deploy)</text>
+            </g>
+            <g class="chain-node" data-node="etrac_540v">
+              <rect x="500" y="156" width="160" height="28" rx="3"/>
+              <text x="580" y="174" text-anchor="middle">ETRAC 540VDC cmd</text>
+            </g>
+            <g class="chain-node" data-node="eec_deploy">
+              <rect x="500" y="246" width="160" height="28" rx="3"/>
+              <text x="580" y="264" text-anchor="middle">EEC_deploy cmd</text>
+            </g>
+            <g class="chain-node" data-node="pls_power">
+              <rect x="500" y="282" width="160" height="28" rx="3"/>
+              <text x="580" y="300" text-anchor="middle">PLS power</text>
+            </g>
+            <g class="chain-node" data-node="pdu_motor">
+              <rect x="500" y="318" width="160" height="28" rx="3"/>
+              <text x="580" y="336" text-anchor="middle">PDU motor cmd</text>
+            </g>
+
+            <!-- OUTPUT column -->
+            <g class="chain-logic" data-node="logic4">
+              <rect x="720" y="130" width="160" height="38" rx="4"/>
+              <use href="#fan-gate-and" class="gate-icon" x="726" y="134" width="18" height="14"/>
+              <text x="735" y="144" text-anchor="middle" class="gate-label">&amp;</text>
+              <text x="800" y="148" text-anchor="middle" class="logic-id">L4</text>
+              <text x="800" y="160" text-anchor="middle" class="logic-sub">L3 AND VDT90</text>
+            </g>
+            <g class="chain-node" data-node="thr_lock">
+              <rect x="720" y="200" width="160" height="34" rx="3"/>
+              <text x="800" y="218" text-anchor="middle">THR_LOCK release</text>
+              <text x="800" y="228" text-anchor="middle" class="output-sub">logic4 → 油门锁释放</text>
+            </g>
+
+            <!-- ═════════════════════════════════════════════════════════════════════
+                 WIRES — Simulink-style orthogonal routing.
+                 Lane x values: 226 (rev_inh fault bus), 230/232/234/238/240
+                   (inputs→logic1/2), 246 (TLS feedback top lane y=28),
+                   460 (logic→intermediate), 465 (L3 fanout trunk),
+                   690 (intermediate→output/L4).
+                 ENG/GND→L3 use off-page stub notation (x=244, y=281/290):
+                   n1k@y=270 (x=230-260) and eec@x=240 (y=200-284) block full routing.
+                 rev_inh→L3 moved to y=304; L3 gate height expanded to 50.
+            ═════════════════════════════════════════════════════════════════════ -->
+
+            <!-- Wires — each carries data-src / data-dst so JS colors them based
+                 on endpoint states. data-fault="true" marks fault wires that turn
+                 RED when their source is asserted TRUE. -->
+
+            <!-- sw1 / radio_altitude_ft → L1; aircraft_on_ground → L2 -->
+            <path d="M 170 54 H 232 V 78 H 260" class="chain-wire" data-src="sw1" data-dst="logic1" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 170 90 H 238 V 184 H 260" class="chain-wire" data-src="aircraft_on_ground" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 170 126 H 232 V 98 H 260" class="chain-wire" data-src="radio_altitude_ft" data-dst="logic1" marker-end="url(#fan-arr-idle)"/>
+
+            <!-- L1 → tls115 → tls_unlocked (sensor sequence) -->
+            <path d="M 420 89 H 460 V 70 H 500" class="chain-wire" data-src="logic1" data-dst="tls115" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 580 84 V 92" class="chain-wire" data-src="tls115" data-dst="tls_unlocked" marker-end="url(#fan-arr-idle)"/>
+
+            <!-- sw2 / engine_running → L2 -->
+            <path d="M 170 170 H 234 V 180 H 260" class="chain-wire" data-src="sw2" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 170 206 H 234 V 196 H 260" class="chain-wire" data-src="engine_running" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
+            <!-- tls_unlocked → L3 (backward feedback through top lane) -->
+            <path d="M 660 106 H 702 V 28 H 246 V 276 H 260" class="chain-wire" data-src="tls_unlocked" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
+
+            <!-- L2 → etrac_540v -->
+            <path d="M 420 189 H 460 V 170 H 500" class="chain-wire" data-src="logic2" data-dst="etrac_540v" marker-end="url(#fan-arr-idle)"/>
+
+            <!-- n1k → L3; eec_enable → L2 -->
+            <path d="M 170 248 H 230 V 270 H 260" class="chain-wire" data-src="n1k" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 170 284 H 240 V 200 H 260" class="chain-wire" data-src="eec_enable" data-dst="logic2" marker-end="url(#fan-arr-idle)"/>
+            <!-- engine_running / aircraft_on_ground → L3 (off-page stub notation).
+                 Full routing blocked by n1k@y=270 (x=230-260) and eec@x=240 (y=200-284).
+                 Stubs start x=244 at y=281/290 (+3.2px from TLS y=276; +12.2px from
+                 rev_inh y=304; L3 gate expanded height=50 to accommodate). -->
+            <path d="M 244 281 H 260" class="chain-wire" data-src="engine_running" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 244 290 H 260" class="chain-wire" data-src="aircraft_on_ground" data-dst="logic3" marker-end="url(#fan-arr-idle)"/>
+            <!-- reverser_inhibited fault bus (x=226 trunk): L1/L2/L3 all require !INH -->
+            <path d="M 170 320 H 226 V 88 H 260" class="chain-wire" data-src="reverser_inhibited" data-dst="logic1" data-fault="true" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 226 188 H 260" class="chain-wire" data-src="reverser_inhibited" data-dst="logic2" data-fault="true" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 226 304 H 260" class="chain-wire" data-src="reverser_inhibited" data-dst="logic3" data-fault="true" marker-end="url(#fan-arr-idle)"/>
+            <circle cx="226" cy="188" r="3" class="chain-junction" data-src="reverser_inhibited" data-fault="true"/>
+            <circle cx="226" cy="304" r="3" class="chain-junction" data-src="reverser_inhibited" data-fault="true"/>
+
+            <!-- L3 → eec_deploy + pls_power + pdu_motor (fan-out trunk at x=465) -->
+            <path d="M 420 279 H 465 V 260 H 500" class="chain-wire" data-src="logic3" data-dst="eec_deploy" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 465 279 V 296 H 500" class="chain-wire" data-src="logic3" data-dst="pls_power" marker-end="url(#fan-arr-idle)"/>
+            <path d="M 465 296 V 332 H 500" class="chain-wire" data-src="logic3" data-dst="pdu_motor" marker-end="url(#fan-arr-idle)"/>
+            <circle cx="465" cy="279" r="3" class="chain-junction" data-src="logic3"/>
+            <circle cx="465" cy="296" r="3" class="chain-junction" data-src="logic3"/>
+
+            <!-- pdu_motor → vdt90 (deploy → sensor; routed via x=690 right lane) -->
+            <path d="M 660 332 H 690 V 142 H 660" class="chain-wire" data-src="pdu_motor" data-dst="vdt90" marker-end="url(#fan-arr-idle)"/>
+
+            <!-- vdt90 → L4 -->
+            <path d="M 660 142 H 720" class="chain-wire" data-src="vdt90" data-dst="logic4" marker-end="url(#fan-arr-idle)"/>
+
+            <!-- L3 → L4 (routed through bottom lane y=368 to avoid intermediate blocks) -->
+            <path d="M 420 298 H 440 V 368 H 690 V 162 H 720" class="chain-wire" data-src="logic3" data-dst="logic4" marker-end="url(#fan-arr-idle)"/>
+
+            <!-- L4 → thr_lock -->
+            <path d="M 800 168 V 200" class="chain-wire" data-src="logic4" data-dst="thr_lock" marker-end="url(#fan-arr-idle)"/>
+          </svg>
+        </div>
+        <p class="fan-chain-legend">
+          <span><span class="fan-legend-dot active"></span>激活</span>
+          <span><span class="fan-legend-dot idle"></span>未激活</span>
+          <span><span class="fan-legend-dot blocked"></span>阻塞</span>
+        </p>
+      </section>
+
+      <section class="fan-panel" aria-labelledby="outputs-heading">
+        <h2 id="outputs-heading" class="fan-panel-title"><span class="fan-callout">[输出]</span> 反推命令</h2>
+        <div class="fan-outputs-grid">
+          <div class="fan-output-card" id="fan-out-tls115" data-state="idle">
+            <div class="fan-output-label">TLS 115VAC</div>
+            <div class="fan-output-value" id="fan-out-tls115-value">OFF</div>
+            <div class="fan-output-note">L1 → TLS 解锁供电</div>
+          </div>
+          <div class="fan-output-card" id="fan-out-etrac" data-state="idle">
+            <div class="fan-output-label">ETRAC 540VDC</div>
+            <div class="fan-output-value" id="fan-out-etrac-value">OFF</div>
+            <div class="fan-output-note">L2 → PDU 动力</div>
+          </div>
+          <div class="fan-output-card" id="fan-out-eec" data-state="idle">
+            <div class="fan-output-label">EEC DEPLOY</div>
+            <div class="fan-output-value" id="fan-out-eec-value">OFF</div>
+            <div class="fan-output-note">L3 → 展开命令</div>
+          </div>
+          <div class="fan-output-card" id="fan-out-thr" data-state="idle">
+            <div class="fan-output-label">THR_LOCK RELEASE</div>
+            <div class="fan-output-value" id="fan-out-thr-value">OFF</div>
+            <div class="fan-output-note">L4 → 油门反向区解锁</div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- Engineering reference panel -->
+  <details class="fan-eng-ref" id="fan-eng-ref">
+    <summary class="fan-eng-ref-summary">
+      <span class="fan-callout">[工程参考]</span> 信号定义与控制逻辑工程语义
+      <span class="fan-eng-ref-hint">展开查看每个信号在真实 FADEC/E-TRAS 架构中的对应关系</span>
+    </summary>
+    <div class="fan-eng-ref-body">
+
+      <div class="fan-eng-section">
+        <h3 class="fan-eng-section-title">输入信号 · 航空工程映射</h3>
+        <table class="fan-eng-table">
+          <thead><tr><th>信号</th><th>工程全称</th><th>真实来源</th><th>安全意图</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="sig-name">TRA</td>
+              <td>Throttle Resolver Angle</td>
+              <td>LVDT（线性可变差动变压器）连接油门四连杆</td>
+              <td>飞行员意图源头；反推区间 0°~-32° 由 FADEC 接管解释</td>
+            </tr>
+            <tr>
+              <td class="sig-name">SW1</td>
+              <td>Thrust Reverser Deploy Switch 1</td>
+              <td>TRA ∈ [-1.4°, -6.2°] 窗口内由凸轮机构触发的微动开关</td>
+              <td>防止在前向推力区间意外触发反推展开命令</td>
+            </tr>
+            <tr>
+              <td class="sig-name">SW2</td>
+              <td>Thrust Reverser Deploy Switch 2</td>
+              <td>TRA ∈ [-5°, -9.8°] 深反推区的第二位置开关</td>
+              <td>双重机械确认：只有进入深反推区才允许激活主展开链路</td>
+            </tr>
+            <tr>
+              <td class="sig-name">RA</td>
+              <td>Radio Altitude (ft)</td>
+              <td>双余度无线电高度表（RALT），独立于 LGCIU/WOW 链路</td>
+              <td>L1 低空防护门控（RA &lt; 6 ft）；非接地确认——接地判断由 WOW/aircraft_on_ground（L2/L3）完成</td>
+            </tr>
+            <tr>
+              <td class="sig-name">N1K</td>
+              <td>Fan Speed Ratio (% corrected)</td>
+              <td>N1 传感器；K 表示修正转速（温度/压力修正）</td>
+              <td>L3 限制 N1K &lt; max_n1k_deploy_limit（demo 默认 60%）：高转速展开会产生严重气动干扰和结构载荷</td>
+            </tr>
+            <tr>
+              <td class="sig-name">aircraft_on_ground</td>
+              <td>WOW (Weight on Wheels)</td>
+              <td>LGCIU（起落架控制接口单元）压缩传感器综合输出</td>
+              <td>L2 要求飞机已落地；WOW 是防止飞行中展开的核心硬件联锁</td>
+            </tr>
+            <tr>
+              <td class="sig-name">engine_running</td>
+              <td>Engine Running Status</td>
+              <td>FADEC 综合 N2 &gt; 某阈值 + 燃油流量信号</td>
+              <td>反推展开只在发动机运行时有效；防止地面牵引时的误操作</td>
+            </tr>
+            <tr>
+              <td class="sig-name">reverser_inhibited</td>
+              <td>Reverser Inhibit Signal</td>
+              <td>FADEC 综合多路信号（飞行高度、反推系统故障、TOGA 推力等）</td>
+              <td>任何路径触发抑制时，整个展开链路立即锁断（L1-L3 共同条件）</td>
+            </tr>
+            <tr>
+              <td class="sig-name">reverser_not_deployed_eec<br/><small>（图中 !DEP）</small></td>
+              <td>EEC Reverser Not-Deployed Feedback</td>
+              <td>demo 中以 <code>deploy_position_percent ≤ 0%</code> 近似映射（plant.py first-cut）；真实 EEC not-deployed 信号模型未经最终确认</td>
+              <td>L1 专用条件；EEC 视角确认反推处于收起位，防止对已展开的反推重复发 TLS 解锁命令</td>
+            </tr>
+            <tr>
+              <td class="sig-name">eec_enable</td>
+              <td>EEC (FADEC) Enable</td>
+              <td>FADEC 控制通道就绪信号</td>
+              <td>L2 要求 FADEC 计算通道处于 ACTIVE 状态，防止 FADEC 故障时发出展开命令</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <section class="showcase-surface" aria-label="中文演示展示面">
-        <div class="showcase-intro">
-          <p class="showcase-kicker">演示流</p>
-          <p>拉杆 -> HUD -> 逻辑主板 -> 时间监控；详细解释和当前结论默认收起，问答诊断继续放在次要抽屉。</p>
-        </div>
-        <div class="showcase-grid">
-          <section class="panel lever-panel" aria-labelledby="lever-title">
-            <h2 id="lever-title"><span class="presenter-callout">[输入]</span> 反推拉杆</h2>
-            <p class="lever-note">受控拉杆快照：视觉量程始终保持 -32° 到 0°；L4 未满足时只开放 -14° 到 0° 的自由拖动，不新增第二套控制真值。</p>
-            <div class="lever-console">
-              <div class="lever-deck-grid">
-                <div class="lever-track-stack">
-                  <div class="lever-readout">
-                    <span data-tooltip="Thrust Reverser Actuation angle，反推作动角度，负值=拉出">TRA</span>
-                    <output id="lever-tra-value" for="lever-tra">0.0°</output>
-                  </div>
-                  <label class="lever-track" for="lever-tra">
-                    <span class="lever-track-label">左侧更深反推 -32°</span>
-                    <input id="lever-tra" name="tra_deg" type="range" min="-32" max="0" step="0.1" value="0" data-allowed-reverse-min="-14" data-deep-range-locked="true" data-boundary-unlock-ready="false" aria-describedby="lever-threshold-note lever-lock-status lever-range-note">
-                    <span class="lever-track-label">右侧前推 0°</span>
-                  </label>
-                  <div class="lever-thresholds" id="lever-threshold-note" aria-label="拉杆阈值标尺">
-                    <span data-tooltip="Switch 1，上游使能信号，-14° TRA 时闭合">SW1 -1.4° ~ -6.2°</span>
-                    <span data-tooltip="Switch 2，L1 解锁后闭合">SW2 -5.0° ~ -9.8°</span>
-                    <span data-tooltip="Logic Node 3，TRA 低于该阈值后满足展开扇出条件">L3 ≤ -11.74°</span>
-                    <span data-tooltip="Logic Node 4，达到该门槛后允许释放 THR_LOCK">L4 条件限值 -14°</span>
-                  </div>
-                  <div class="lever-range-rail" id="lever-range-note" aria-label="TRA 条件量程">
-                    <span id="lever-conditional-range" class="range-chip is-conditional is-locked">条件深拉区 -32° ~ -14°（关闭）</span>
-                    <span class="range-chip is-open">自由区 -14° ~ 0°</span>
-                  </div>
-                  <div class="lever-lock-banner" aria-live="polite">
-                    <span id="lever-lock-badge" class="lever-lock-badge is-locked">深拉区关闭</span>
-                    <p id="lever-lock-status" class="lever-lock-status">默认从 0° 起步；当 L4 不满足时，可以先自由左拉到 -14° 门槛，满足条件后才继续开放 -32° 到 -14° 深拉区。</p>
-                  </div>
-                </div>
-                <div class="lever-live-stack">
-                  <div class="lever-live-header">
-                    <h3>高频演示控件</h3>
-                    <p>把 VDT 调节上移到主控 deck，方便同屏观察右侧逻辑主板，不用反复往下翻。</p>
-                  </div>
-                  <div class="lever-live-grid" aria-label="高频演示控件">
-                    <label class="live-control live-control-mode" for="condition-feedback-mode">
-                      <span data-tooltip="Variable Displacement Table，位移反馈模式切换">VDT 模式</span>
-                      <select id="condition-feedback-mode" name="feedback_mode" aria-describedby="condition-feedback-note">
-                        <option value="auto_scrubber">自动反馈</option>
-                        <option value="manual_feedback_override" selected>手动 override</option>
-                      </select>
-                      <small id="condition-feedback-note">manual override 只改 simplified plant diagnostic override / feedback。</small>
-                    </label>
-                    <label class="live-control live-control-vdt" for="condition-deploy-position">
-                      <span data-tooltip="Variable Displacement Table，展开位移反馈百分比">VDT 反馈 <output id="condition-deploy-position-value" for="condition-deploy-position">0%</output></span>
-                      <input id="condition-deploy-position" name="deploy_position_percent" type="range" min="0" max="100" step="1" value="0" aria-describedby="condition-deploy-note">
-                      <small id="condition-deploy-note">>=90% 点亮 VDT90，推动 L4 / THR_LOCK 演示。</small>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <section class="lever-presets" aria-labelledby="lever-presets-title">
-              <div class="lever-presets-header">
-                <div>
-                  <h3 id="lever-presets-title">演示场景预设</h3>
-                  <p class="lever-presets-note">快速回填当前 `POST /api/lever-snapshot` 输入，用来切镜头，不是第二套状态机。</p>
-                </div>
-                <p id="lever-preset-status" class="lever-preset-status" aria-live="polite">当前场景：自定义起步位（先自由左拉到 -14° 门槛，再等待 L4 放开深拉区）。</p>
-              </div>
-              <div class="lever-presets-grid">
-                <article class="lever-preset-card">
-                  <button type="button" class="lever-preset-trigger" aria-pressed="false" data-lever-preset="l3_waiting_vdt90">L3 等待 VDT90</button>
-                  <p>L3 已亮，等待 VDT90 / THR_LOCK。</p>
-                </article>
-                <article class="lever-preset-card">
-                  <button type="button" class="lever-preset-trigger" aria-pressed="false" data-lever-preset="ra_boundary_blocks_logic1">RA blocker</button>
-                  <p>把 RA 推到边界，观察链路卡在 L1。</p>
-                </article>
-                <article class="lever-preset-card">
-                  <button type="button" class="lever-preset-trigger" aria-pressed="false" data-lever-preset="n1k_limit_blocks_logic3">N1K blocker</button>
-                  <p>只改 N1K，演示 L3 阻塞。</p>
-                </article>
-                <article class="lever-preset-card">
-                  <button type="button" class="lever-preset-trigger" aria-pressed="false" data-lever-preset="manual_vdt90_ready">VDT90 ready</button>
-                  <p>把 VDT 推到 95%，直接演示 VDT90 -> L4 -> THR_LOCK。</p>
-                </article>
-              </div>
-            </section>
-            <section class="condition-panel" aria-labelledby="condition-panel-title">
-              <div class="condition-panel-heading">
-                <h3 id="condition-panel-title">条件面板</h3>
-                <p>把边界条件、限制量和 blocker toggle 收成更短的操作面，减少桌面拥挤感。</p>
-              </div>
-              <div class="condition-grid">
-                <label class="condition-range condition-span-1" for="condition-ra">
-                  <span data-tooltip="Radio Altitude，无线电高度，ft 为单位">RA <output id="condition-ra-value" for="condition-ra">5.0 ft</output></span>
-                  <input id="condition-ra" name="radio_altitude_ft" type="range" min="0" max="20" step="0.1" value="5" aria-describedby="condition-ra-note">
-                  <small id="condition-ra-note">L1 需要 RA &lt; 6ft</small>
-                </label>
-                <label class="condition-range condition-span-1" for="condition-n1k">
-                  <span data-tooltip="N1 Core Speed，风扇/核心机转速，百分比">N1K <output id="condition-n1k-value" for="condition-n1k">35.0</output></span>
-                  <input id="condition-n1k" name="n1k" type="range" min="0" max="120" step="0.5" value="35" aria-describedby="condition-n1k-note">
-                  <small id="condition-n1k-note">L3 需要 N1K &lt; limit</small>
-                </label>
-                <label class="condition-number condition-span-1" for="condition-n1k-limit">
-                  <span data-tooltip="N1 Core Speed limit，L3 允许展开的最大转速阈值">N1K limit</span>
-                  <input id="condition-n1k-limit" name="max_n1k_deploy_limit" type="number" min="0.1" max="120" step="0.5" value="60">
-                </label>
-              </div>
-              <div class="condition-toggle-rail">
-                <label class="condition-toggle condition-span-1">
-                  <input id="condition-engine-running" name="engine_running" type="checkbox" checked>
-                  <span>发动机运行</span>
-                </label>
-                <label class="condition-toggle condition-span-1">
-                  <input id="condition-aircraft-ground" name="aircraft_on_ground" type="checkbox" checked>
-                  <span>飞机在地面</span>
-                </label>
-                <label class="condition-toggle condition-span-1">
-                  <input id="condition-reverser-inhibited" name="reverser_inhibited" type="checkbox">
-                  <span>反推抑制</span>
-                </label>
-                <label class="condition-toggle condition-span-1">
-                  <input id="condition-eec-enable" name="eec_enable" type="checkbox" checked>
-                  <span data-tooltip="Electronic Engine Controller Enable，发动机控制使能">EEC enable</span>
-                </label>
-              </div>
-              <p class="condition-note">TLS / PLS / VDT / 位移仍然只是 simplified plant feedback，不是完整实时物理模型。</p>
-            </section>
-            <dl class="hud-grid" aria-label="拉杆状态 HUD">
-              <div><dt data-tooltip="Thrust Reverser Actuation angle，deg 为单位">TRA deg</dt><dd id="hud-tra">-</dd></div>
-              <div><dt><span data-tooltip="Switch 1，上游使能信号，-14° TRA 时闭合">SW1</span> / <span data-tooltip="Switch 2，L1 解锁后闭合">SW2</span></dt><dd id="hud-switches">-</dd></div>
-              <div><dt>无线电高度</dt><dd id="hud-ra">-</dd></div>
-              <div><dt>发动机 / 地面</dt><dd id="hud-engine-ground">-</dd></div>
-              <div><dt>反推抑制</dt><dd id="hud-inhibited">-</dd></div>
-              <div><dt data-tooltip="Electronic Engine Controller Enable，发动机控制使能">EEC enable</dt><dd id="hud-eec-enable">-</dd></div>
-              <div><dt data-tooltip="N1 Core Speed，与 L3 转速限制阈值并列显示">N1K / limit</dt><dd id="hud-n1k">-</dd></div>
-            </dl>
-            <details class="feedback-panel" id="lever-feedback-details">
-              <summary>反馈 / 诊断（simplified plant）</summary>
-              <dl class="feedback-grid" aria-label="反馈与诊断">
-                <div><dt><span data-tooltip="Thrust Reverser Latch System，液压解锁阀">TLS</span> / <span data-tooltip="Pressure Limit Switch，压力限制开关">PLS</span> 解锁</dt><dd id="hud-locks">-</dd></div>
-                <div><dt>位移 / <span data-tooltip="Variable Displacement Table，展开位置 ≥90% 时激活">VDT90</span></dt><dd id="hud-position">-</dd></div>
-              </dl>
-              <p>这些是 first-cut feedback / diagnostic 假设，不是完整实时物理模型。</p>
-            </details>
-            <p id="lever-status" class="lever-status" role="status" aria-live="polite">等待拉杆快照。</p>
-          </section>
 
-          <!-- ===== Landing Gear Input Panel ===== -->
-          <section id="landing-gear-inputs" view="beginner" class="panel system-input-panel" style="display:none" aria-labelledby="lg-inputs-title">
-            <h2 id="lg-inputs-title"><span class="presenter-callout">[输入]</span> 起落架控制</h2>
-            <p class="system-input-note">调节以下输入信号，观察逻辑链路的推理结论变化。</p>
-            <details class="control-manual">
-              <summary><span class="presenter-callout">[手册]</span> 起落架控制手册</summary>
-              <div class="control-manual-body">
-                <p class="control-manual-note">
-                  本面板对应 `landing_gear_adapter.py` 的放下真值。控制链分为两级：先验证手柄和液压，再验证机械 uplock 释放，最后用位置与 downlock 回读确认完成。
-                </p>
-                <div class="control-manual-grid">
-                  <section class="control-manual-card">
-                    <h3>控制目标</h3>
-                    <p>在手柄选择 DOWN 且液压满足门限时，打开 selector valve；uplock 释放后，驱动 extend actuator；位置达到完成门限且 downlock 结合后，判定放下完成。</p>
-                  </section>
-                  <section class="control-manual-card">
-                    <h3>关键判据</h3>
-                    <ul>
-                      <li>`gear_handle_position = DOWN`</li>
-                      <li>`hydraulic_pressure_psi >= 2200`</li>
-                      <li>`uplock_released = 1`</li>
-                      <li>`gear_position_percent >= 99`</li>
-                      <li>`downlock_engaged = 1`</li>
-                    </ul>
-                  </section>
-                  <section class="control-manual-card">
-                    <h3>读图顺序</h3>
-                    <ol>
-                      <li>先看手柄是否为 DOWN。</li>
-                      <li>再看液压是否越过 2200 psi。</li>
-                      <li>若选择阀已发令但作动器未伸展，优先检查 uplock。</li>
-                      <li>伸展后仍未完成，查看位置百分比与 downlock 回读。</li>
-                    </ol>
-                  </section>
-                  <section class="control-manual-card">
-                    <h3>常见阻塞</h3>
-                    <ul>
-                      <li>手柄未置于 DOWN。</li>
-                      <li>液压低于 2200 psi，L1 不通过。</li>
-                      <li>uplock 仍未释放，L2 被阻塞。</li>
-                      <li>位置已接近完成但 downlock 未结合，说明机械锁定尚未闭合。</li>
-                    </ul>
-                  </section>
-                </div>
-              </div>
-            </details>
-            <!-- System status banner -->
-            <div id="landing-gear-status-banner" class="system-status-banner" role="status" aria-live="polite">
-              <span class="status-dot dot-idle"></span>
-              <span class="status-label">等待快照</span>
-            </div>
-            <div class="system-input-grid lg-input-grid">
-              <!-- ===== LG-L1: Handle + Hydraulic ===== -->
-              <div class="input-group-header"><span class="presenter-callout">[LG-L1]</span> 手柄 + 液压预检</div>
-              <label class="system-input-select" for="lg-gear-handle">
-                <span>Gear Handle</span>
-                <select id="lg-gear-handle" name="gear_handle_position" aria-label="Gear Handle Position">
-                  <option value="UP" selected>UP</option>
-                  <option value="DOWN">DOWN</option>
-                </select>
-              </label>
-              <label class="system-input-range" for="lg-hyd-pressure">
-                <span>Hyd Pressure <output for="lg-hyd-pressure" id="lg-hyd-pressure-value">0 psi</output></span>
-                <input id="lg-hyd-pressure" name="hydraulic_pressure_psi" type="range" min="0" max="3000" step="10" value="0">
-                <small class="threshold-hint">LG-L1：液压 ≥ 2200 psi</small>
-              </label>
-              <!-- ===== LG-L2: Uplock Release ===== -->
-              <div class="input-group-header"><span class="presenter-callout">[LG-L2]</span> 锁闩释放</div>
-              <label class="system-input-toggle" for="lg-uplock-released">
-                <span>Uplock Released</span>
-                <input id="lg-uplock-released" name="uplock_released" type="checkbox" value="1">
-              </label>
-              <!-- ===== Completion Feedback ===== -->
-              <div class="input-group-header"><span class="presenter-callout">[完成]</span> 放下确认</div>
-              <label class="system-input-range" for="lg-gear-position">
-                <span>Gear Position <output for="lg-gear-position" id="lg-gear-position-value">0%</output></span>
-                <input id="lg-gear-position" name="gear_position_percent" type="range" min="0" max="100" step="1" value="0">
-                <small class="threshold-hint">完成：位置 ≥ 99% 且 downlock = 1</small>
-              </label>
-              <label class="system-input-toggle" for="lg-downlock-engaged">
-                <span>Downlock Engaged</span>
-                <input id="lg-downlock-engaged" name="downlock_engaged" type="checkbox" value="1">
-              </label>
-            </div>
-            <div class="system-input-actions">
-              <button type="button" class="btn-primary system-snapshot-btn" data-system="landing-gear">触发推理 →</button>
-              <button type="button" class="btn-demo" id="lg-demo-btn" title="自动填入完整触发组合并运行推理">演示场景 →</button>
-              <button type="button" class="btn-reset" id="lg-reset-btn" title="恢复为默认值">重置</button>
-            </div>
-          </section>
-
-          <!-- ===== Bleed Air Input Panel ===== -->
-          <section id="bleed-air-inputs" view="beginner" class="panel system-input-panel" style="display:none" aria-labelledby="ba-inputs-title">
-            <h2 id="ba-inputs-title"><span class="presenter-callout">[输入]</span> 引气活门控制</h2>
-            <p class="system-input-note">调节以下输入信号，观察逻辑链路的推理结论变化。</p>
-            <details class="control-manual">
-              <summary><span class="presenter-callout">[手册]</span> 引气活门控制手册</summary>
-              <div class="control-manual-body">
-                <p class="control-manual-note">
-                  当前真值采用开阈值 35 psi、关闭迟滞地板 32 psi、过压门限 65 psi。控制单元只有在 Ready 状态下才允许开放命令；低压或过压优先导致关闭。
-                </p>
-                <div class="control-manual-grid">
-                  <section class="control-manual-card">
-                    <h3>控制目标</h3>
-                    <p>保持可用引气但避免抖振和过压。入口压力健康时允许开阀；压力跌破迟滞地板或进入过压区间时，命令保持关闭。</p>
-                  </section>
-                  <section class="control-manual-card">
-                    <h3>关键判据</h3>
-                    <ul>
-                      <li>`pressure_healthy := inlet_pressure >= 35`</li>
-                      <li>`pressure_too_low := inlet_pressure < 32`</li>
-                      <li>`overpressure := inlet_pressure >= 65`</li>
-                      <li>`valve_cmd := pressure_healthy AND control_unit_ready AND NOT overpressure`</li>
-                      <li>完成回读：`valve_position = OPEN` 且 `outlet_pressure >= 35`</li>
-                    </ul>
-                  </section>
-                  <section class="control-manual-card">
-                    <h3>读图顺序</h3>
-                    <ol>
-                      <li>先看入口压力区间是否处于 35 到 65 psi 之间。</li>
-                      <li>再确认 `control_unit_ready` 为真。</li>
-                      <li>若命令允许但阀位仍 CLOSED，优先看 `valve_position` 回读。</li>
-                      <li>阀位已 OPEN 时，再看 `outlet_pressure` 是否建立到健康区间。</li>
-                    </ol>
-                  </section>
-                  <section class="control-manual-card">
-                    <h3>常见阻塞</h3>
-                    <ul>
-                      <li>控制单元未 Ready，命令固定保持关闭。</li>
-                      <li>入口压力低于 32 psi，迟滞关闭路径优先。</li>
-                      <li>入口压力达到 65 psi 或以上，进入过压关闭路径。</li>
-                      <li>阀已指令打开但出口压力未建立，说明执行器或下游压降仍需排查。</li>
-                    </ul>
-                  </section>
-                </div>
-              </div>
-            </details>
-            <!-- System status banner -->
-            <div id="bleed-air-status-banner" class="system-status-banner" role="status" aria-live="polite">
-              <span class="status-dot dot-idle"></span>
-              <span class="status-label">等待快照</span>
-            </div>
-            <div class="system-input-grid ba-input-grid">
-              <!-- ===== Input Conditions ===== -->
-              <div class="input-group-header"><span class="presenter-callout">[压力]</span> 入口条件</div>
-              <label class="system-input-range" for="ba-inlet-pressure">
-                <span>Inlet Pressure <output for="ba-inlet-pressure" id="ba-inlet-pressure-value">0.0 psi</output></span>
-                <input id="ba-inlet-pressure" name="inlet_pressure" type="range" min="0" max="100" step="1" value="0">
-                <small class="threshold-hint">≥35psi 开阀 | &lt;32psi 关阀 | ≥65psi 过压关闭</small>
-              </label>
-              <label class="system-input-range" for="ba-outlet-pressure">
-                <span>Outlet Pressure <output for="ba-outlet-pressure" id="ba-outlet-pressure-value">0.0 psi</output></span>
-                <input id="ba-outlet-pressure" name="outlet_pressure" type="range" min="0" max="100" step="1" value="0">
-                <small class="threshold-hint">完成条件：出口压力 ≥ 35 psi</small>
-              </label>
-              <!-- ===== Valve + Control ===== -->
-              <div class="input-group-header"><span class="presenter-callout">[控制]</span> 阀门与控制单元</div>
-              <label class="system-input-toggle" for="ba-control-unit-ready">
-                <span>Control Unit Ready</span>
-                <input id="ba-control-unit-ready" name="control_unit_ready" type="checkbox" value="1">
-              </label>
-              <label class="system-input-select" for="ba-valve-position">
-                <span>Valve Position</span>
-                <select id="ba-valve-position" name="valve_position" aria-label="Valve Position">
-                  <option value="CLOSED" selected>CLOSED</option>
-                  <option value="OPEN">OPEN</option>
-                </select>
-              </label>
-            </div>
-            <div class="system-input-actions">
-              <button type="button" class="btn-primary system-snapshot-btn" data-system="bleed-air">触发推理 →</button>
-              <button type="button" class="btn-demo" id="ba-demo-btn" title="自动填入完整触发组合并运行推理">演示场景 →</button>
-              <button type="button" class="btn-reset" id="ba-reset-btn" title="恢复为默认值">重置</button>
-            </div>
-          </section>
-
-          <!-- ===== EFDS Input Panel ===== -->
-          <section id="efds-inputs" view="beginner" class="panel system-input-panel" style="display:none" aria-labelledby="efds-inputs-title">
-            <h2 id="efds-inputs-title"><span class="presenter-callout">[输入]</span> 干扰弹部署控制</h2>
-            <p class="system-input-note">调节以下输入信号，观察逻辑链路的推理结论变化。</p>
-            <details class="control-manual restricted-manual">
-              <summary><span class="presenter-callout">[手册]</span> EFDS 安全边界说明</summary>
-              <div class="control-manual-body">
-                <p class="control-manual-note">
-                  该子系统涉及受限的防务/反制释放逻辑。本界面只保留快照监视与演示说明，不新增更细的释放操作手册、触发流程或实施指导。
-                </p>
-                <div class="control-manual-grid">
-                  <section class="control-manual-card">
-                    <h3>本面板用途</h3>
-                    <p>用于查看 threat、altitude、temperature、channel 等信号在演示快照中的状态映射，以及它们在 UI 中的显示方式。</p>
-                  </section>
-                  <section class="control-manual-card">
-                    <h3>允许的阅读方式</h3>
-                    <ul>
-                      <li>把各字段当作监测量与状态量读取。</li>
-                      <li>把高度、温度、通道状态当作演示输入，而不是操作指令。</li>
-                      <li>把本页内容视为 UI 受控展示，不视为运行手册。</li>
-                    </ul>
-                  </section>
-                  <section class="control-manual-card">
-                    <h3>不在本页展开</h3>
-                    <ul>
-                      <li>更细的释放授权链。</li>
-                      <li>战术使用条件。</li>
-                      <li>可执行的部署步骤或调参建议。</li>
-                    </ul>
-                  </section>
-                </div>
-              </div>
-            </details>
-            <!-- System status banner -->
-            <div id="efds-status-banner" class="system-status-banner" role="status" aria-live="polite">
-              <span class="status-dot dot-idle"></span>
-              <span class="status-label">等待快照</span>
-            </div>
-            <div class="system-input-grid efds-input-grid">
-              <!-- ===== LN-01: Threat ===== -->
-              <div class="input-group-header"><span class="presenter-callout">[LN-01]</span> 威胁分类</div>
-              <label class="system-input-select" for="efds-threat-mls">
-                <span data-tooltip="Missile Launch Sensor，导弹来袭威胁传感器状态">MLS Threat State</span>
-                <select id="efds-threat-mls" name="sensor.threat.mls" aria-label="MLS Threat State">
-                  <option value="IDLE" selected>IDLE</option>
-                  <option value="THREAT_DETECTED">THREAT_DETECTED</option>
-                  <option value="MISSLE_INBOUND">MISSLE_INBOUND</option>
-                </select>
-                <small class="threshold-hint">→ 设为 <b>MISSLE_INBOUND</b> 触发 LN-01</small>
-              </label>
-              <!-- ===== LN-02: Altitude ===== -->
-              <div class="input-group-header"><span class="presenter-callout">[LN-02]</span> 高度门限</div>
-              <label class="system-input-select" for="efds-alt-override">
-                <span>Altitude Override</span>
-                <select id="efds-alt-override" name="pilot.altitude_override" aria-label="Altitude Override Mode">
-                  <option value="AUTO" selected>AUTO</option>
-                  <option value="1000FT">1000FT</option>
-                  <option value="2000FT">2000FT</option>
-                  <option value="5000FT">5000FT</option>
-                  <option value="NONE">NONE</option>
-                </select>
-                <small class="threshold-hint">⚠️ 设为 1000FT/2000FT/5000FT 之一！<b>AUTO</b> 会阻止 LN-02</small>
-              </label>
-              <label class="system-input-range" for="efds-alt-radar">
-                <span>Radar Altitude <output for="efds-alt-radar" id="efds-alt-radar-value">5000 ft</output></span>
-                <input id="efds-alt-radar" name="sensor.alt.radar" type="range" min="0" max="50000" step="100" value="5000">
-                <small>LN-02：雷达高度 ≥ 底限</small>
-              </label>
-              <label class="system-input-range" for="efds-alt-baro">
-                <span>Baro Altitude <output for="efds-alt-baro" id="efds-alt-baro-value">5200 ft</output></span>
-                <input id="efds-alt-baro" name="sensor.alt.baro" type="range" min="0" max="50000" step="100" value="5200">
-                <small>AUTO 模式下作为有效高度</small>
-              </label>
-              <!-- ===== LN-03: Temperature ===== -->
-              <div class="input-group-header"><span class="presenter-callout">[LN-03]</span> 环境温度</div>
-              <label class="system-input-range" for="efds-temp-ext">
-                <span>External Temp <output for="efds-temp-ext" id="efds-temp-ext-value">15°C</output></span>
-                <input id="efds-temp-ext" name="sensor.temp.external" type="range" min="-50" max="60" step="1" value="15">
-                <small>LN-03 gate：必须 &gt; -20°C</small>
-              </label>
-              <!-- ===== LN-04: Firing Channel ===== -->
-              <div class="input-group-header"><span class="presenter-callout">[LN-04]</span> 发射授权</div>
-              <label class="system-input-select" for="efds-armed-relay">
-                <span>Armed Relay</span>
-                <select id="efds-armed-relay" name="logic.armed_relay" aria-label="Armed Relay State">
-                  <option value="OPEN" selected>OPEN</option>
-                  <option value="CLOSED">CLOSED</option>
-                </select>
-                <small class="threshold-hint">→ 设为 <b>CLOSED</b> 才能授权 LN-04</small>
-              </label>
-              <label class="system-input-select" for="efds-crosslink">
-                <span>Crosslink Validator</span>
-                <select id="efds-crosslink" name="logic.crosslink_validator" aria-label="Crosslink Validator">
-                  <option value="FALSE" selected>FALSE</option>
-                  <option value="TRUE">TRUE</option>
-                </select>
-                <small class="threshold-hint">→ 设为 <b>TRUE</b> 才能授权 LN-04</small>
-              </label>
-              <label class="system-input-select" for="efds-firing-channel">
-                <span>Firing Channel</span>
-                <select id="efds-firing-channel" name="logic.firing_channel" aria-label="Firing Channel State">
-                  <option value="READY" selected>READY</option>
-                  <option value="COUNTING">COUNTING</option>
-                  <option value="EXPIRED">EXPIRED</option>
-                </select>
-                <small class="threshold-hint">→ 设为 <b>COUNTING</b> 才能触发 LN-04</small>
-              </label>
-              <!-- ===== Pilot Controls ===== -->
-              <div class="input-group-header"><span class="presenter-callout">[飞行员]</span> 人工控制</div>
-              <label class="system-input-select" for="efds-arm-switch">
-                <span>Pilot Arm Switch</span>
-                <select id="efds-arm-switch" name="pilot.arm_switch" aria-label="Pilot Arm Switch">
-                  <option value="SAFE" selected>SAFE</option>
-                  <option value="ARM">ARM</option>
-                  <option value="AUTO">AUTO</option>
-                </select>
-                <small class="threshold-hint">→ 设为 <b>ARM</b> 或 <b>AUTO</b> 激活授权</small>
-              </label>
-              <label class="system-input-select" for="efds-manual-dispense">
-                <span>Manual Dispense</span>
-                <select id="efds-manual-dispense" name="pilot.manual_dispense" aria-label="Manual Dispense">
-                  <option value="RELEASED" selected>RELEASED</option>
-                  <option value="CONFIRMED">CONFIRMED</option>
-                </select>
-              </label>
-            </div>
-            <div class="system-input-actions">
-              <button type="button" class="btn-primary system-snapshot-btn" data-system="efds">触发推理 →</button>
-              <button type="button" class="btn-demo" id="efds-demo-btn" title="自动填入完整触发组合并运行推理">演示场景 →</button>
-              <button type="button" class="btn-reset" id="efds-reset-btn" title="恢复 EFDS 所有输入为默认值">重置</button>
-            </div>
-          </section>
-
-          <details class="panel qa-drawer" aria-labelledby="qa-drawer-title">
-            <summary id="qa-drawer-title"><span class="presenter-callout">[问答]</span> 诊断问答（冻结 / 后续开发）</summary>
-            <p class="qa-drawer-note">当前主舞台先聚焦拉杆、条件面板、逻辑主板和当前结论；问答入口暂时冻结为次要诊断抽屉。</p>
-            <h2 id="prompt-title"><span class="presenter-callout">[输入]</span> 提问区</h2>
-            <div class="examples grouped-examples" aria-label="演示问题示例">
-              <section class="example-group" aria-labelledby="example-bridge-title">
-                <h3 id="example-bridge-title">链路关系</h3>
-                <button type="button" class="is-selected" aria-pressed="true" data-category="bridge" data-intent="logic4_thr_lock_bridge" data-prompt="logic4 和 throttle lock 有什么关系">logic4 和 throttle lock 有什么关系</button>
-              </section>
-              <section class="example-group" aria-labelledby="example-diagnosis-title">
-                <h3 id="example-diagnosis-title">未释放诊断</h3>
-                <button type="button" aria-pressed="false" data-category="diagnosis" data-intent="diagnose_problem" data-prompt="为什么 throttle lock 没释放">为什么 throttle lock 没释放</button>
-              </section>
-              <section class="example-group" aria-labelledby="example-trigger-title">
-                <h3 id="example-trigger-title">触发影响</h3>
-                <button type="button" aria-pressed="false" data-category="trigger" data-intent="trigger_node" data-prompt="触发 logic3 会发生什么">触发 logic3 会发生什么</button>
-              </section>
-              <section class="example-group" aria-labelledby="example-proposal-title">
-                <h3 id="example-proposal-title">改阈值预演</h3>
-                <button type="button" aria-pressed="false" data-category="proposal" data-intent="propose_logic_change" data-prompt="把 logic3 的 TRA 阈值改成 -8 会发生什么">把 logic3 的 TRA 阈值改成 -8 会发生什么</button>
-              </section>
-            </div>
-            <form id="demo-form" class="prompt-form">
-              <label for="demo-prompt">受控问题</label>
-              <textarea id="demo-prompt" name="prompt" rows="3" aria-describedby="prompt-keyboard-hint">logic4 和 throttle lock 有什么关系</textarea>
-              <p id="prompt-keyboard-hint" class="prompt-hint">按 Cmd/Ctrl+Enter 运行；普通 Enter 换行。</p>
-              <button id="submit-button" type="submit">运行演示</button>
-            </form>
-            <p id="ui-status" class="ui-status" role="status" aria-live="polite">准备运行受控问题。</p>
-            <p id="selected-example" class="selected-example" aria-live="polite">当前示例：logic4 和 throttle lock 有什么关系</p>
-            <details id="demo-help" class="demo-help">
-              <summary>边界说明</summary>
-              <p>
-                仅支持受控短句；答案基于内置场景和简化 plant，不是开放式 LLM 或完整物理模型。
-              </p>
-            </details>
-          </details>
-
-          <section class="panel chain-panel" aria-labelledby="chain-title">
-            <!-- logic-note: chain topology uses state classes is-active/is-blocked/is-inactive -->
-            <div class="panel-heading">
-              <h2 id="chain-title"><span class="presenter-callout">[链路]</span> 逻辑主板</h2>
-              <p>拉杆模式显示后端快照状态；问答模式显示答案关联。</p>
-            </div>
-            <section class="chain-state-legend" aria-label="状态图例与 truth boundary">
-              <div class="chain-state-legend-header">
-                <h3>状态图例 / truth boundary</h3>
-                <p>颜色来自后端快照，不是完整因果证明。</p>
-              </div>
-              <div class="chain-state-chip-row">
-                <span class="state-chip is-active">Active = 当前已点亮</span>
-                <span class="state-chip is-blocked">Blocked = 等待条件</span>
-                <span class="state-chip is-inactive">Inactive = 当前路径未进入</span>
-              </div>
-              <div class="truth-boundary-rails">
-                <p class="truth-rail controller">Controller truth：SW / L1-L4 / command 节点来自后端 controller snapshot。</p>
-                <p class="truth-rail plant">Simplified plant feedback：TLS unlock / PLS unlock / VDT90 / 位移只用于演示反馈，不是完整物理模型。</p>
-              </div>
-            </section>
-            <div id="chain-topology-thrust-reverser" class="chain-topology mobile-step-rail" aria-label="反推控制系统信号流">
-              <svg class="chain-svg" viewBox="0 0 900 480" role="img" aria-label="反推控制链路信号流图">
-                <defs>
-                  <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#53ff92"/>
-                  </marker>
-                  <marker id="arrow-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#28f4ff"/>
-                  </marker>
-                  <marker id="arrow-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#4a5568"/>
-                  </marker>
-                  <!-- AND gate symbol -->
-                  <symbol id="and-gate" viewBox="0 0 40 30">
-                    <polygon points="0,0 25,15 0,30" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                  </symbol>
-                </defs>
-
-                <!-- ===== ROW 1: Input Conditions ===== -->
-                <!-- L1 branch inputs -->
-                <g class="chain-node-group" data-node="radio_altitude_ft">
-                  <rect x="10" y="18" width="72" height="36" rx="8" class="chain-node-svg input-node-svg"/>
-                  <circle class="node-status-dot" cx="17" cy="25" r="3"/>
-                  <text class="node-type-tag" x="24" y="22">IN</text>
-                  <text x="46" y="32" class="chain-node-label" text-anchor="middle" data-tooltip="Radio Altitude，无线电高度，ft 为单位">RA</text>
-                  <text x="74" y="26" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="radio_altitude_ft">—</text>
-                </g>
-
-                <g class="chain-node-group" data-node="sw1">
-                  <rect x="10" y="58" width="72" height="36" rx="8" class="chain-node-svg input-node-svg"/>
-                  <circle class="node-status-dot" cx="17" cy="65" r="3"/>
-                  <text class="node-type-tag" x="24" y="62">IN</text>
-                  <text x="46" y="72" class="chain-node-label" text-anchor="middle" data-tooltip="Switch 1，-14° TRA 时闭合，上游使能">SW1</text>
-                  <text x="74" y="66" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="sw1">—</text>
-                </g>
-
-                <g class="chain-node-group" data-node="reverser_inhibited">
-                  <rect x="10" y="98" width="72" height="36" rx="8" class="chain-node-svg input-node-svg"/>
-                  <circle class="node-status-dot" cx="17" cy="105" r="3"/>
-                  <text class="node-type-tag" x="24" y="102">IN</text>
-                  <text x="46" y="112" class="chain-node-label" text-anchor="middle" data-tooltip="Reverser Inhibited，安全抑制信号">Inhibit</text>
-                  <text x="74" y="106" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="reverser_inhibited">—</text>
-                </g>
-
-                <!-- L2 branch inputs -->
-                <g class="chain-node-group" data-node="engine_running">
-                  <rect x="10" y="198" width="72" height="36" rx="8" class="chain-node-svg input-node-svg"/>
-                  <circle class="node-status-dot" cx="17" cy="205" r="3"/>
-                  <text class="node-type-tag" x="24" y="202">IN</text>
-                  <text x="46" y="212" class="chain-node-label" text-anchor="middle" data-tooltip="Engine Running，发动机运行状态">ENG</text>
-                  <text x="74" y="206" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="engine_running">—</text>
-                </g>
-
-                <g class="chain-node-group" data-node="aircraft_on_ground">
-                  <rect x="10" y="238" width="72" height="36" rx="8" class="chain-node-svg input-node-svg"/>
-                  <circle class="node-status-dot" cx="17" cy="245" r="3"/>
-                  <text class="node-type-tag" x="24" y="242">IN</text>
-                  <text x="46" y="252" class="chain-node-label" text-anchor="middle" data-tooltip="Aircraft on Ground，地面感应信号">GND</text>
-                  <text x="74" y="246" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="aircraft_on_ground">—</text>
-                </g>
-
-                <g class="chain-node-group" data-node="sw2">
-                  <rect x="10" y="278" width="72" height="36" rx="8" class="chain-node-svg input-node-svg"/>
-                  <circle class="node-status-dot" cx="17" cy="285" r="3"/>
-                  <text class="node-type-tag" x="24" y="282">IN</text>
-                  <text x="46" y="292" class="chain-node-label" text-anchor="middle" data-tooltip="Switch 2，L1 解锁后闭合">SW2</text>
-                  <text x="74" y="286" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="sw2">—</text>
-                </g>
-
-                <g class="chain-node-group" data-node="eec_enable">
-                  <rect x="10" y="318" width="72" height="36" rx="8" class="chain-node-svg input-node-svg"/>
-                  <circle class="node-status-dot" cx="17" cy="325" r="3"/>
-                  <text class="node-type-tag" x="24" y="322">IN</text>
-                  <text x="46" y="332" class="chain-node-label" text-anchor="middle" data-tooltip="Electronic Engine Controller Enable，发动机控制使能">EEC En</text>
-                  <text x="74" y="326" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="eec_enable">—</text>
-                </g>
-
-                <!-- L3/L4 inputs -->
-                <g class="chain-node-group" data-node="n1k">
-                  <rect x="10" y="368" width="72" height="36" rx="8" class="chain-node-svg input-node-svg"/>
-                  <circle class="node-status-dot" cx="17" cy="375" r="3"/>
-                  <text class="node-type-tag" x="24" y="372">IN</text>
-                  <text x="46" y="382" class="chain-node-label" text-anchor="middle" data-tooltip="N1 Core Speed，风扇/核心机转速，百分比">N1K</text>
-                  <text x="74" y="376" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="n1k">—</text>
-                </g>
-
-                <g class="chain-node-group" data-node="tra_deg">
-                  <rect x="10" y="408" width="72" height="36" rx="8" class="chain-node-svg input-node-svg"/>
-                  <circle class="node-status-dot" cx="17" cy="415" r="3"/>
-                  <text class="node-type-tag" x="24" y="412">IN</text>
-                  <text x="46" y="422" class="chain-node-label" text-anchor="middle" data-tooltip="Thrust Reverser Actuation angle，反推作动角度，负值=拉出">TRA</text>
-                  <text x="74" y="416" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="tra_deg">—</text>
-                </g>
-
-                <!-- ===== ROW 2: L1 and L2 AND gates ===== -->
-                <!-- L1 AND gate -->
-                <g class="logic-gate-group" data-node="logic1" transform="translate(110 55)">
-                  <polygon points="0,0 40,15 0,30" class="logic-gate-svg"/>
-                  <circle class="node-status-dot" cx="3" cy="6" r="3"/>
-                  <text x="20" y="19" class="logic-gate-label" text-anchor="middle" font-size="8">AND</text>
-                </g>
-                <text x="130" y="42" class="chain-node-label" text-anchor="middle" data-node-label="logic1" data-tooltip="Logic Node 1，解锁链路入口">L1</text>
-
-                <!-- L1 output: TLS -->
-                <g class="chain-node-group" data-node="tls115">
-                  <rect x="165" y="55" width="72" height="36" rx="8" class="chain-node-svg command-node-svg"/>
-                  <circle class="node-status-dot" cx="172" cy="62" r="3"/>
-                  <text class="node-type-tag" x="179" y="59">CMD</text>
-                  <text x="201" y="69" class="chain-node-label" text-anchor="middle" data-tooltip="Thrust Reverser Latch System，液压解锁阀">TLS</text>
-                  <text x="229" y="63" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="tls_115vac_cmd">—</text>
-                </g>
-
-                <!-- L2 AND gate -->
-                <g class="logic-gate-group" data-node="logic2" transform="translate(110 235)">
-                  <polygon points="0,0 40,15 0,30" class="logic-gate-svg"/>
-                  <circle class="node-status-dot" cx="3" cy="6" r="3"/>
-                  <text x="20" y="19" class="logic-gate-label" text-anchor="middle" font-size="8">AND</text>
-                </g>
-                <text x="130" y="222" class="chain-node-label" text-anchor="middle" data-node-label="logic2" data-tooltip="Logic Node 2，540V 电源母线使能">L2</text>
-
-                <!-- L2 output: ETRAC -->
-                <g class="chain-node-group" data-node="etrac_540v">
-                  <rect x="165" y="235" width="72" height="36" rx="8" class="chain-node-svg command-node-svg"/>
-                  <circle class="node-status-dot" cx="172" cy="242" r="3"/>
-                  <text class="node-type-tag" x="179" y="239">CMD</text>
-                  <text x="201" y="249" class="chain-node-label" text-anchor="middle" data-tooltip="ETRAC（电源轨控制），540V 电源母线，旋翼/风扇驱动">ETRAC</text>
-                  <text x="229" y="243" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="etrac_540vdc_cmd">—</text>
-                </g>
-
-                <!-- ===== ROW 3: L3 AND gate ===== -->
-                <!-- L3 AND gate -->
-                <g class="logic-gate-group" data-node="logic3" transform="translate(355 145)">
-                  <polygon points="0,0 40,15 0,30" class="logic-gate-svg"/>
-                  <circle class="node-status-dot" cx="3" cy="6" r="3"/>
-                  <text x="20" y="19" class="logic-gate-label" text-anchor="middle" font-size="8">AND</text>
-                </g>
-                <text x="375" y="132" class="chain-node-label" text-anchor="middle" data-node-label="logic3" data-tooltip="Logic Node 3，EEC+PLS+PDU 三路扇出">L3</text>
-
-                <!-- L3 outputs: EEC / PLS / PDU -->
-                <g class="chain-node-group" data-node="eec_deploy">
-                  <rect x="410" y="105" width="72" height="36" rx="8" class="chain-node-svg command-node-svg"/>
-                  <circle class="node-status-dot" cx="417" cy="112" r="3"/>
-                  <text class="node-type-tag" x="424" y="109">CMD</text>
-                  <text x="446" y="119" class="chain-node-label" text-anchor="middle" data-tooltip="Electronic Engine Controller，发动机控制电脑">EEC</text>
-                  <text x="474" y="113" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="eec_deploy_cmd">—</text>
-                </g>
-
-                <g class="chain-node-group" data-node="pls_power">
-                  <rect x="410" y="145" width="72" height="36" rx="8" class="chain-node-svg command-node-svg"/>
-                  <circle class="node-status-dot" cx="417" cy="152" r="3"/>
-                  <text class="node-type-tag" x="424" y="149">CMD</text>
-                  <text x="446" y="159" class="chain-node-label" text-anchor="middle" data-tooltip="Pressure Limit Switch，压力限制开关">PLS</text>
-                  <text x="474" y="153" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="pls_power_cmd">—</text>
-                </g>
-
-                <g class="chain-node-group" data-node="pdu_motor">
-                  <rect x="410" y="185" width="72" height="36" rx="8" class="chain-node-svg command-node-svg"/>
-                  <circle class="node-status-dot" cx="417" cy="192" r="3"/>
-                  <text class="node-type-tag" x="424" y="189">CMD</text>
-                  <text x="446" y="199" class="chain-node-label" text-anchor="middle" data-tooltip="Power Drive Unit，电机驱动单元">PDU</text>
-                  <text x="474" y="193" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="pdu_motor_cmd">—</text>
-                </g>
-
-                <!-- ===== ROW 4: VDT90 feedback ===== -->
-                <g class="chain-node-group" data-node="vdt90">
-                  <rect x="500" y="120" width="72" height="36" rx="8" class="chain-node-svg sensor-node-svg"/>
-                  <circle class="node-status-dot" cx="507" cy="127" r="3"/>
-                  <text class="node-type-tag" x="514" y="124">SNS</text>
-                  <text x="536" y="134" class="chain-node-label" text-anchor="middle" data-tooltip="Variable Displacement Table，展开位置 ≥90% 时激活">VDT90</text>
-                  <text x="564" y="128" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="deploy_position_percent">—</text>
-                </g>
-
-                <!-- ===== ROW 5: L4 AND gate ===== -->
-                <g class="logic-gate-group" data-node="logic4" transform="translate(595 145)">
-                  <polygon points="0,0 40,15 0,30" class="logic-gate-svg"/>
-                  <circle class="node-status-dot" cx="3" cy="6" r="3"/>
-                  <text x="20" y="19" class="logic-gate-label" text-anchor="middle" font-size="8">AND</text>
-                </g>
-                <text x="615" y="132" class="chain-node-label" text-anchor="middle" data-node-label="logic4" data-tooltip="Logic Node 4，THR_LOCK 释放命令">L4</text>
-
-                <!-- THR_LOCK output -->
-                <g class="chain-node-group" data-node="thr_lock">
-                  <rect x="650" y="145" width="100" height="36" rx="8" class="chain-node-svg command-node-svg final-node-svg"/>
-                  <circle class="node-status-dot" cx="657" cy="152" r="3"/>
-                  <text x="700" y="159" class="chain-node-label" text-anchor="middle" data-tooltip="Thrust Lock，反推锁释放机构">THR_LOCK</text>
-                  <text x="742" y="153" class="chain-node-value" text-anchor="end" font-size="8" data-value-for="throttle_electronic_lock_release_cmd">—</text>
-                </g>
-
-                <!-- ===== CONNECTION LINES ===== -->
-                <!-- L1 inputs → L1 gate -->
-                <line x1="82" y1="33" x2="110" y2="70" class="conn-line conn-input" data-conn-from="radio_altitude_ft" data-conn-to="logic1" data-conn-blocker="radio_altitude_ft"/>
-                <line x1="82" y1="73" x2="110" y2="70" class="conn-line conn-input" data-conn-from="sw1" data-conn-to="logic1" data-conn-blocker="sw1"/>
-                <line x1="82" y1="113" x2="110" y2="70" class="conn-line conn-input" data-conn-from="reverser_inhibited" data-conn-to="logic1" data-conn-blocker="reverser_inhibited"/>
-                <!-- L1 gate → TLS -->
-                <line x1="150" y1="70" x2="165" y2="70" class="conn-line conn-logic" marker-end="url(#arrow-cyan)" data-conn-from="logic1" data-conn-to="tls115"/>
-                <!-- TLS → L3 -->
-                <line x1="237" y1="70" x2="355" y2="160" class="conn-line conn-merge" marker-end="url(#arrow-cyan)" data-conn-from="tls115" data-conn-to="logic3" data-conn-blocker="tls_unlocked_ls"/>
-
-                <!-- L2 inputs → L2 gate -->
-                <line x1="82" y1="213" x2="110" y2="250" class="conn-line conn-input" data-conn-from="engine_running" data-conn-to="logic2" data-conn-blocker="engine_running"/>
-                <line x1="82" y1="253" x2="110" y2="250" class="conn-line conn-input" data-conn-from="aircraft_on_ground" data-conn-to="logic2" data-conn-blocker="aircraft_on_ground"/>
-                <line x1="82" y1="293" x2="110" y2="250" class="conn-line conn-input" data-conn-from="sw2" data-conn-to="logic2" data-conn-blocker="sw2"/>
-                <line x1="82" y1="333" x2="110" y2="250" class="conn-line conn-input" data-conn-from="eec_enable" data-conn-to="logic2" data-conn-blocker="eec_enable"/>
-                <!-- L2 gate → ETRAC -->
-                <line x1="150" y1="250" x2="165" y2="250" class="conn-line conn-logic" marker-end="url(#arrow-cyan)" data-conn-from="logic2" data-conn-to="etrac_540v"/>
-                <!-- ETRAC → L3 -->
-                <line x1="237" y1="250" x2="355" y2="160" class="conn-line conn-merge" marker-end="url(#arrow-cyan)" data-conn-from="etrac_540v" data-conn-to="logic3"/>
-
-                <!-- N1K → L3 -->
-                <line x1="82" y1="393" x2="355" y2="160" class="conn-line conn-input" marker-end="url(#arrow-gray)" data-conn-from="n1k" data-conn-to="logic3" data-conn-blocker="n1k"/>
-                <!-- TRA → L3 -->
-                <line x1="82" y1="423" x2="355" y2="160" class="conn-line conn-input" marker-end="url(#arrow-gray)" data-conn-from="tra_deg" data-conn-to="logic3" data-conn-blocker="tra_deg"/>
-
-                <!-- L3 gate → outputs -->
-                <line x1="395" y1="160" x2="410" y2="120" class="conn-line conn-logic" marker-end="url(#arrow-cyan)" data-conn-from="logic3" data-conn-to="eec_deploy"/>
-                <line x1="395" y1="160" x2="410" y2="160" class="conn-line conn-logic" marker-end="url(#arrow-cyan)" data-conn-from="logic3" data-conn-to="pls_power"/>
-                <line x1="395" y1="160" x2="410" y2="200" class="conn-line conn-logic" marker-end="url(#arrow-cyan)" data-conn-from="logic3" data-conn-to="pdu_motor"/>
-
-                <!-- EEC/PLS/PDU → VDT90 -->
-                <line x1="482" y1="135" x2="500" y2="135" class="conn-line conn-merge" marker-end="url(#arrow-gray)" data-conn-from="pdu_motor" data-conn-to="vdt90"/>
-
-                <!-- VDT90 → L4 -->
-                <line x1="572" y1="135" x2="595" y2="160" class="conn-line conn-logic" marker-end="url(#arrow-cyan)" data-conn-from="vdt90" data-conn-to="logic4" data-conn-blocker="deploy_90_percent_vdt"/>
-
-                <!-- L4 → THR_LOCK -->
-                <line x1="635" y1="160" x2="650" y2="160" class="conn-line conn-final" marker-end="url(#arrow-green)" data-conn-from="logic4" data-conn-to="thr_lock"/>
-
-                <!-- Section labels -->
-                <text x="46" y="12" class="section-label">输入条件</text>
-                <text x="130" y="105" class="section-label" data-tooltip="Logic Node 1，解锁链路入口">L1</text>
-                <text x="130" y="285" class="section-label" data-tooltip="Logic Node 2，540V 电源母线使能">L2</text>
-                <text x="375" y="105" class="section-label" data-tooltip="Logic Node 3，EEC+PLS+PDU 三路扇出">L3</text>
-                <text x="615" y="105" class="section-label" data-tooltip="Logic Node 4，THR_LOCK 释放命令">L4</text>
-              </svg>
-            </div>
-
-            <div id="chain-topology-landing-gear" class="chain-topology" style="display:none" aria-label="起落架控制系统信号流">
-              <svg class="chain-svg" viewBox="0 0 500 420" role="img" aria-label="起落架控制链路信号流图">
-                <defs>
-                  <marker id="arrow-lg-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#28f4ff"/>
-                  </marker>
-                  <marker id="arrow-lg-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#53ff92"/>
-                  </marker>
-                  <marker id="arrow-lg-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#4a5568"/>
-                  </marker>
-                </defs>
-
-                <text x="250" y="18" class="system-title-label" text-anchor="middle">起落架放下控制 — 两级串联</text>
-
-                <!-- ===== INPUTS ===== -->
-                <rect x="60" y="40" width="100" height="36" rx="6" class="chain-node-svg input-node-svg" data-node="gear_handle_position"/>
-                <text x="110" y="55" class="chain-node-label" text-anchor="middle">手柄</text>
-                <text x="110" y="70" class="chain-node-value" text-anchor="middle" data-value-for="gear_handle_position">—</text>
-
-                <rect x="60" y="90" width="100" height="36" rx="6" class="chain-node-svg input-node-svg" data-node="hydraulic_pressure_psi"/>
-                <text x="110" y="105" class="chain-node-label" text-anchor="middle">液压 PSI</text>
-                <text x="110" y="120" class="chain-node-value" text-anchor="middle" data-value-for="hydraulic_pressure_psi">—</text>
-
-                <!-- ===== LG-L1 AND ===== -->
-                <svg x="200" y="90" width="44" height="30">
-                  <polygon points="0,0 44,15 0,30" class="logic-gate-svg" data-node="lg_l1_handle_and_pressure"/>
-                </svg>
-                <text x="222" y="110" class="logic-gate-label" text-anchor="middle">AND</text>
-                <text x="222" y="80" class="chain-node-label" text-anchor="middle" data-node-label="lg_l1_handle_and_pressure">LG-L1</text>
-
-                <!-- Selector Valve (intermediate signal) -->
-                <rect x="270" y="90" width="120" height="36" rx="6" class="chain-node-svg command-node-svg" data-node="selector_valve_cmd"/>
-                <text x="330" y="105" class="chain-node-label" text-anchor="middle">选择阀</text>
-                <text x="330" y="120" class="chain-node-value" text-anchor="middle" data-value-for="selector_valve_cmd">—</text>
-
-                <!-- ===== Uplock Released ===== -->
-                <rect x="270" y="160" width="120" height="36" rx="6" class="chain-node-svg input-node-svg" data-node="uplock_released"/>
-                <text x="330" y="175" class="chain-node-label" text-anchor="middle">锁闩释放</text>
-                <text x="330" y="190" class="chain-node-value" text-anchor="middle" data-value-for="uplock_released">—</text>
-
-                <!-- ===== LG-L2 AND ===== -->
-                <svg x="200" y="240" width="44" height="30">
-                  <polygon points="0,0 44,15 0,30" class="logic-gate-svg" data-node="lg_l2_extend_after_uplock_release"/>
-                </svg>
-                <text x="222" y="260" class="logic-gate-label" text-anchor="middle">AND</text>
-                <text x="222" y="230" class="chain-node-label" text-anchor="middle" data-node-label="lg_l2_extend_after_uplock_release">LG-L2</text>
-
-                <!-- Extend Actuator (final command) -->
-                <rect x="270" y="240" width="140" height="36" rx="6" class="chain-node-svg command-node-svg final-node-svg" data-node="extend_actuator_cmd"/>
-                <text x="340" y="255" class="chain-node-label" text-anchor="middle">伸展作动</text>
-                <text x="340" y="270" class="chain-node-value" text-anchor="middle" data-value-for="extend_actuator_cmd">—</text>
-
-                <!-- ===== OUTPUTS ===== -->
-                <rect x="270" y="310" width="80" height="36" rx="6" class="chain-node-svg sensor-node-svg" data-node="gear_position_percent"/>
-                <text x="310" y="325" class="chain-node-label" text-anchor="middle">位置%</text>
-                <text x="310" y="340" class="chain-node-value" text-anchor="middle" data-value-for="gear_position_percent">—</text>
-
-                <rect x="370" y="310" width="80" height="36" rx="6" class="chain-node-svg sensor-node-svg" data-node="downlock_engaged"/>
-                <text x="410" y="325" class="chain-node-label" text-anchor="middle">锁闩锁定</text>
-                <text x="410" y="340" class="chain-node-value" text-anchor="middle" data-value-for="downlock_engaged">—</text>
-
-                <!-- ===== CONNECTION LINES ===== -->
-                <!-- Handle → LG-L1 -->
-                <line x1="160" y1="58" x2="200" y2="105" class="conn-line conn-input" marker-end="url(#arrow-lg-cyan)"/>
-                <!-- Pressure → LG-L1 -->
-                <line x1="160" y1="108" x2="200" y2="105" class="conn-line conn-input" marker-end="url(#arrow-lg-cyan)"/>
-                <!-- LG-L1 → Selector Valve -->
-                <line x1="244" y1="105" x2="270" y2="108" class="conn-line conn-logic" marker-end="url(#arrow-lg-cyan)"/>
-                <!-- Selector Valve → LG-L2 (internal) -->
-                <line x1="330" y1="126" x2="330" y2="190" class="conn-line conn-internal" marker-end="url(#arrow-lg-gray)"/>
-                <!-- Uplock → LG-L2 -->
-                <line x1="270" y1="178" x2="200" y2="255" class="conn-line conn-input" marker-end="url(#arrow-lg-cyan)"/>
-                <!-- LG-L2 → Extend -->
-                <line x1="244" y1="255" x2="270" y2="258" class="conn-line conn-final" marker-end="url(#arrow-lg-green)"/>
-                <!-- Extend → Outputs -->
-                <line x1="340" y1="276" x2="310" y2="310" class="conn-line" marker-end="url(#arrow-lg-gray)"/>
-                <line x1="340" y1="276" x2="410" y2="310" class="conn-line" marker-end="url(#arrow-lg-gray)"/>
-
-                <!-- Section labels -->
-                <text x="110" y="28" class="section-label">输入</text>
-                <text x="222" y="28" class="section-label">LG-L1</text>
-                <text x="330" y="28" class="section-label">中间/锁闩</text>
-                <text x="222" y="218" class="section-label">LG-L2</text>
-                <text x="340" y="218" class="section-label">命令</text>
-                <text x="340" y="298" class="section-label">输出</text>
-              </svg>
-              <!-- Per-system state legend for non-thrust topology -->
-              <div class="chain-topology-legend">
-                <span class="state-chip is-active">● Active</span>
-                <span class="state-chip is-blocked">● Blocked</span>
-                <span class="state-chip is-inactive">● Inactive</span>
-                <span class="legend-sep">|</span>
-                <span class="legend-note">颜色来自快照 truth evaluation</span>
-              </div>
-              <div class="fbd-expand-notice">
-                <span class="presenter-callout">🔬</span>
-                科研级 IEC 61131-3 FBD 电路图（上方已展开）
-              </div>
-              <details class="fbd-diagram" open>
-                <summary><span class="presenter-callout">[FBD]</span> IEC 61131-3 FBD / 起落架放下控制</summary>
-                <div class="fbd-diagram-body">
-                  <p class="fbd-description">
-                    起落架放下真值由两级 AND 与两个阈值判据组成：先用 MUX 把手柄状态译码为布尔量，再用液压门限和 uplock 释放条件驱动命令链；完成判据单独由位置与 downlock 回读确认。
-                  </p>
-                  <div class="fbd-expression-grid">
-                    <p class="fbd-expression">HANDLE_DOWN := MUX(sel=gear_handle_position, DOWN-&gt;1, UP-&gt;0)</p>
-                    <p class="fbd-expression">SELECTOR_VALVE_CMD := HANDLE_DOWN AND (hydraulic_pressure_psi &gt;= 2200)</p>
-                    <p class="fbd-expression">EXTEND_ACTUATOR_CMD := SELECTOR_VALVE_CMD AND uplock_released</p>
-                    <p class="fbd-expression">COMPLETION := EXTEND_ACTUATOR_CMD AND (gear_position_percent &gt;= 99) AND downlock_engaged</p>
-                  </div>
-                  <svg class="chain-svg fbd-svg" viewBox="0 0 1180 430" role="img" aria-label="起落架 IEC 61131-3 功能块图">
-                    <defs>
-                      <marker id="fbd-lg-arrow-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                        <path d="M0,0 L0,6 L8,3 z" fill="#28f4ff"/>
-                      </marker>
-                      <marker id="fbd-lg-arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                        <path d="M0,0 L0,6 L8,3 z" fill="#53ff92"/>
-                      </marker>
-                      <marker id="fbd-lg-arrow-amber" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                        <path d="M0,0 L0,6 L8,3 z" fill="#ffb037"/>
-                      </marker>
-                    </defs>
-
-                    <text x="590" y="22" class="system-title-label" text-anchor="middle">IEC 61131-3 FBD — 起落架放下控制</text>
-
-                    <g transform="translate(40 64)">
-                      <rect width="150" height="58" rx="10" class="chain-node-svg input-node-svg fbd-io-block" data-node="gear_handle_position"/>
-                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Gear Handle</text>
-                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="gear_handle_position">—</text>
-                      <text x="75" y="53" class="fbd-text-meta" text-anchor="middle">UP / DOWN</text>
-                    </g>
-                    <g transform="translate(40 152)">
-                      <rect width="150" height="58" rx="10" class="chain-node-svg input-node-svg fbd-io-block" data-node="hydraulic_pressure_psi"/>
-                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Hyd Pressure</text>
-                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="hydraulic_pressure_psi">—</text>
-                      <text x="75" y="53" class="fbd-text-meta" text-anchor="middle">psi</text>
-                    </g>
-                    <g transform="translate(40 240)">
-                      <rect width="150" height="58" rx="10" class="chain-node-svg input-node-svg fbd-io-block" data-node="uplock_released"/>
-                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Uplock Released</text>
-                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="uplock_released">—</text>
-                      <text x="75" y="53" class="fbd-text-meta" text-anchor="middle">bool</text>
-                    </g>
-                    <g transform="translate(40 328)">
-                      <rect width="150" height="58" rx="10" class="chain-node-svg sensor-node-svg fbd-io-block" data-node="gear_position_percent"/>
-                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Gear Position</text>
-                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="gear_position_percent">—</text>
-                      <text x="75" y="53" class="fbd-text-meta" text-anchor="middle">percent</text>
-                    </g>
-                    <g transform="translate(930 328)">
-                      <rect width="170" height="58" rx="10" class="chain-node-svg sensor-node-svg fbd-io-block" data-node="downlock_engaged"/>
-                      <text x="85" y="22" class="fbd-text-title" text-anchor="middle">Downlock Engaged</text>
-                      <text x="85" y="40" class="chain-node-value" text-anchor="middle" data-value-for="downlock_engaged">—</text>
-                      <text x="85" y="53" class="fbd-text-meta" text-anchor="middle">final latch feedback</text>
-                    </g>
-
-                    <g transform="translate(250 56)">
-                      <rect width="140" height="82" rx="10" class="fbd-block"/>
-                      <text x="70" y="24" class="fbd-text-title" text-anchor="middle">MUX</text>
-                      <text x="70" y="45" class="fbd-text-meta" text-anchor="middle">SEL = gear_handle_position</text>
-                      <text x="70" y="61" class="fbd-text-meta" text-anchor="middle">DOWN -&gt; 1 | UP -&gt; 0</text>
-                    </g>
-                    <g transform="translate(250 150)">
-                      <rect width="140" height="82" rx="10" class="fbd-block fbd-block--amber"/>
-                      <text x="70" y="24" class="fbd-text-title" text-anchor="middle">GE</text>
-                      <text x="70" y="45" class="fbd-text-meta" text-anchor="middle">hydraulic_pressure_psi</text>
-                      <text x="70" y="61" class="fbd-text-meta" text-anchor="middle">&gt;= 2200 psi</text>
-                    </g>
-                    <g transform="translate(450 112)">
-                      <rect width="150" height="92" rx="10" class="logic-gate-svg fbd-block" data-node="lg_l1_handle_and_pressure"/>
-                      <text x="75" y="26" class="fbd-text-title" text-anchor="middle">AND</text>
-                      <text x="75" y="49" class="fbd-text-meta" text-anchor="middle">LG-L1</text>
-                      <text x="75" y="66" class="fbd-text-meta" text-anchor="middle">handle_down</text>
-                      <text x="75" y="80" class="fbd-text-meta" text-anchor="middle">AND pressure_ok</text>
-                    </g>
-                    <g transform="translate(660 128)">
-                      <rect width="150" height="58" rx="10" class="chain-node-svg command-node-svg fbd-io-block" data-node="selector_valve_cmd"/>
-                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Selector Valve Cmd</text>
-                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="selector_valve_cmd">—</text>
-                      <text x="75" y="53" class="fbd-text-meta" text-anchor="middle">hydraulic enable</text>
-                    </g>
-                    <g transform="translate(660 224)">
-                      <rect width="150" height="92" rx="10" class="logic-gate-svg fbd-block" data-node="lg_l2_extend_after_uplock_release"/>
-                      <text x="75" y="26" class="fbd-text-title" text-anchor="middle">AND</text>
-                      <text x="75" y="49" class="fbd-text-meta" text-anchor="middle">LG-L2</text>
-                      <text x="75" y="66" class="fbd-text-meta" text-anchor="middle">selector_valve_cmd</text>
-                      <text x="75" y="80" class="fbd-text-meta" text-anchor="middle">AND uplock_released</text>
-                    </g>
-                    <g transform="translate(870 240)">
-                      <rect width="160" height="58" rx="10" class="chain-node-svg command-node-svg final-node-svg fbd-io-block" data-node="extend_actuator_cmd"/>
-                      <text x="80" y="22" class="fbd-text-title" text-anchor="middle">Extend Actuator Cmd</text>
-                      <text x="80" y="40" class="chain-node-value" text-anchor="middle" data-value-for="extend_actuator_cmd">—</text>
-                      <text x="80" y="53" class="fbd-text-meta" text-anchor="middle">extension drive</text>
-                    </g>
-                    <g transform="translate(450 312)">
-                      <rect width="150" height="82" rx="10" class="fbd-block fbd-block--amber"/>
-                      <text x="75" y="24" class="fbd-text-title" text-anchor="middle">GE</text>
-                      <text x="75" y="45" class="fbd-text-meta" text-anchor="middle">gear_position_percent</text>
-                      <text x="75" y="61" class="fbd-text-meta" text-anchor="middle">&gt;= 99%</text>
-                    </g>
-                    <g transform="translate(660 332)">
-                      <rect width="200" height="76" rx="10" class="fbd-block fbd-block--green"/>
-                      <text x="100" y="24" class="fbd-text-title" text-anchor="middle">AND</text>
-                      <text x="100" y="45" class="fbd-text-meta" text-anchor="middle">completion monitor</text>
-                      <text x="100" y="61" class="fbd-text-meta" text-anchor="middle">extend_cmd AND pos_ge_99 AND downlock</text>
-                    </g>
-
-                    <line x1="190" y1="93" x2="250" y2="97" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-lg-arrow-cyan)"/>
-                    <text x="214" y="86" class="fbd-wire-label">handle state</text>
-                    <line x1="190" y1="181" x2="250" y2="191" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-lg-arrow-cyan)"/>
-                    <text x="214" y="171" class="fbd-wire-label">pressure</text>
-                    <line x1="390" y1="97" x2="450" y2="140" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-lg-arrow-cyan)"/>
-                    <text x="406" y="103" class="fbd-wire-label">handle_down_bool</text>
-                    <line x1="390" y1="191" x2="450" y2="176" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-lg-arrow-amber)"/>
-                    <text x="406" y="198" class="fbd-wire-label fbd-wire-label--amber">pressure_ok</text>
-                    <line x1="600" y1="158" x2="660" y2="157" class="fbd-wire fbd-wire--green" marker-end="url(#fbd-lg-arrow-green)"/>
-                    <text x="619" y="149" class="fbd-wire-label fbd-wire-label--green">selector_valve_cmd</text>
-                    <line x1="810" y1="157" x2="810" y2="270" class="fbd-wire fbd-wire--gray"/>
-                    <line x1="810" y1="270" x2="660" y2="270" class="fbd-wire fbd-wire--gray" marker-end="url(#fbd-lg-arrow-cyan)"/>
-                    <text x="700" y="263" class="fbd-wire-label">cmd feedback</text>
-                    <line x1="190" y1="269" x2="660" y2="270" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-lg-arrow-cyan)"/>
-                    <text x="356" y="260" class="fbd-wire-label">uplock_released</text>
-                    <line x1="810" y1="270" x2="870" y2="269" class="fbd-wire fbd-wire--green" marker-end="url(#fbd-lg-arrow-green)"/>
-                    <text x="829" y="260" class="fbd-wire-label fbd-wire-label--green">extend_actuator_cmd</text>
-                    <line x1="190" y1="357" x2="450" y2="353" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-lg-arrow-cyan)"/>
-                    <text x="305" y="346" class="fbd-wire-label">position</text>
-                    <line x1="600" y1="353" x2="660" y2="353" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-lg-arrow-amber)"/>
-                    <text x="614" y="344" class="fbd-wire-label fbd-wire-label--amber">position_complete</text>
-                    <line x1="950" y1="298" x2="950" y2="332" class="fbd-wire fbd-wire--green" marker-end="url(#fbd-lg-arrow-green)"/>
-                    <text x="962" y="319" class="fbd-wire-label fbd-wire-label--green">extend_cmd</text>
-                    <line x1="930" y1="357" x2="860" y2="370" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-lg-arrow-cyan)"/>
-                    <text x="864" y="348" class="fbd-wire-label">downlock</text>
-
-                    <text x="80" y="46" class="section-label">inputs</text>
-                    <text x="320" y="46" class="section-label">decode / thresholds</text>
-                    <text x="525" y="92" class="section-label">logic stage 1</text>
-                    <text x="735" y="108" class="section-label">command</text>
-                    <text x="735" y="220" class="section-label">logic stage 2</text>
-                    <text x="530" y="302" class="section-label">completion threshold</text>
-                    <text x="760" y="322" class="section-label">done monitor</text>
-                  </svg>
-                  <p class="fbd-caption">颜色约定：青色为布尔/数据线，绿色为已使能命令路径，琥珀色为门限与比较结果。</p>
-                </div>
-              </details>
-            </div>
-
-            <div id="chain-topology-bleed-air" class="chain-topology" style="display:none" aria-label="引气控制系统信号流">
-              <svg class="chain-svg" viewBox="0 0 560 360" role="img" aria-label="引气活门控制链路信号流图">
-                <defs>
-                  <marker id="arrow-ba-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#53ff92"/>
-                  </marker>
-                  <marker id="arrow-ba-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#ffb037"/>
-                  </marker>
-                  <marker id="arrow-ba-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#4a5568"/>
-                  </marker>
-                  <marker id="arrow-ba-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#28f4ff"/>
-                  </marker>
-                </defs>
-
-                <text x="280" y="18" class="system-title-label" text-anchor="middle">引气活门控制 — 互斥分支决策</text>
-
-                <!-- ===== INPUTS ===== -->
-                <rect x="30" y="50" width="120" height="40" rx="6" class="chain-node-svg input-node-svg" data-node="inlet_pressure"/>
-                <text x="90" y="67" class="chain-node-label" text-anchor="middle">入口压力</text>
-                <text x="90" y="84" class="chain-node-value" text-anchor="middle" data-value-for="inlet_pressure">—</text>
-
-                <rect x="30" y="110" width="120" height="36" rx="6" class="chain-node-svg input-node-svg" data-node="control_unit_ready"/>
-                <text x="90" y="125" class="chain-node-label" text-anchor="middle">控制单元</text>
-                <text x="90" y="140" class="chain-node-value" text-anchor="middle" data-value-for="control_unit_ready">—</text>
-
-                <!-- ===== DECISION BRANCH ===== -->
-                <!-- Pressure label ranges -->
-                <text x="90" y="46" class="chain-node-sublabel" text-anchor="middle">psi</text>
-
-                <!-- LN-Open gate -->
-                <svg x="210" y="40" width="50" height="35">
-                  <polygon points="0,0 50,17 0,35" class="logic-gate-svg gate-open" data-node="valve_open_logic"/>
-                </svg>
-                <text x="235" y="22" class="chain-node-label" text-anchor="middle" data-node-label="valve_open_logic">LN-Open</text>
-                <text x="235" y="58" class="logic-gate-label" text-anchor="middle">AND</text>
-
-                <!-- LN-Close gate -->
-                <svg x="210" y="110" width="50" height="35">
-                  <polygon points="0,0 50,17 0,35" class="logic-gate-svg gate-close" data-node="valve_close_logic"/>
-                </svg>
-                <text x="235" y="92" class="chain-node-label" text-anchor="middle" data-node-label="valve_close_logic">LN-Close</text>
-                <text x="235" y="128" class="logic-gate-label" text-anchor="middle">OR</text>
-
-                <!-- Branch labels -->
-                <text x="235" y="80" class="branch-label branch-label-open-text">打开</text>
-                <text x="235" y="152" class="branch-label branch-label-close-text">关闭</text>
-
-                <!-- ===== COMMANDS ===== -->
-                <rect x="295" y="40" width="90" height="36" rx="6" class="chain-node-svg command-node-svg cmd-open" data-node="valve_cmd"/>
-                <text x="340" y="55" class="chain-node-label" text-anchor="middle">活门打开</text>
-                <text x="340" y="70" class="chain-node-value" text-anchor="middle" data-value-for="valve_cmd">—</text>
-
-                <rect x="295" y="110" width="90" height="36" rx="6" class="chain-node-svg command-node-svg cmd-close" data-node="valve_cmd"/>
-                <text x="340" y="125" class="chain-node-label" text-anchor="middle">活门关闭</text>
-                <text x="340" y="140" class="chain-node-value" text-anchor="middle" data-value-for="valve_cmd">—</text>
-
-                <!-- ===== OUTPUTS ===== -->
-                <rect x="295" y="180" width="90" height="36" rx="6" class="chain-node-svg sensor-node-svg" data-node="valve_position"/>
-                <text x="340" y="195" class="chain-node-label" text-anchor="middle">活门位置</text>
-                <text x="340" y="210" class="chain-node-value" text-anchor="middle" data-value-for="valve_position">—</text>
-
-                <rect x="295" y="230" width="90" height="36" rx="6" class="chain-node-svg sensor-node-svg" data-node="outlet_pressure"/>
-                <text x="340" y="245" class="chain-node-label" text-anchor="middle">出口压力</text>
-                <text x="340" y="260" class="chain-node-value" text-anchor="middle" data-value-for="outlet_pressure">—</text>
-
-                <!-- Valve position indicator -->
-                <text x="340" y="290" class="chain-node-sublabel" text-anchor="middle" data-valve-state>OPEN/CLOSED</text>
-
-                <!-- ===== CONNECTION LINES ===== -->
-                <!-- Pressure → LN-Open -->
-                <line x1="150" y1="70" x2="210" y2="57" class="conn-line conn-input" marker-end="url(#arrow-ba-cyan)"/>
-                <!-- CU Ready → LN-Open -->
-                <line x1="150" y1="128" x2="210" y2="57" class="conn-line conn-input" marker-end="url(#arrow-ba-cyan)"/>
-                <!-- Pressure → LN-Close (both <32 and >=65 thresholds) -->
-                <line x1="150" y1="70" x2="210" y2="127" class="conn-line conn-input" marker-end="url(#arrow-ba-orange)"/>
-
-                <!-- LN-Open → Valve Open cmd -->
-                <line x1="260" y1="57" x2="295" y2="58" class="conn-line conn-open" marker-end="url(#arrow-ba-green)"/>
-                <!-- LN-Close → Valve Close cmd -->
-                <line x1="260" y1="127" x2="295" y2="128" class="conn-line conn-close" marker-end="url(#arrow-ba-orange)"/>
-
-                <!-- Valve cmds → position -->
-                <line x1="340" y1="76" x2="340" y2="180" class="conn-line" marker-end="url(#arrow-ba-gray)"/>
-                <line x1="340" y1="146" x2="340" y2="180" class="conn-line" marker-end="url(#arrow-ba-gray)"/>
-
-                <!-- Pressure → outlet -->
-                <line x1="150" y1="70" x2="340" y2="248" class="conn-line conn-internal" marker-end="url(#arrow-ba-gray)"/>
-
-                <!-- ===== THRESHOLD ANNOTATIONS ===== -->
-                <text x="180" y="100" class="threshold-annotation">≥35psi &amp; &lt;65psi</text>
-                <text x="180" y="170" class="threshold-annotation">(&lt;32 or ≥65)psi</text>
-
-                <!-- Section labels -->
-                <text x="90" y="28" class="section-label">输入</text>
-                <text x="235" y="28" class="section-label">决策分支</text>
-                <text x="340" y="28" class="section-label">命令</text>
-                <text x="340" y="170" class="section-label">状态</text>
-              </svg>
-              <!-- Per-system state legend -->
-              <div class="chain-topology-legend">
-                <span class="state-chip is-active">● Active</span>
-                <span class="state-chip is-blocked">● Blocked</span>
-                <span class="state-chip is-inactive">● Inactive</span>
-                <span class="legend-sep">|</span>
-                <span class="legend-note">颜色来自快照 truth evaluation</span>
-              </div>
-              <div class="fbd-expand-notice">
-                <span class="presenter-callout">🔬</span>
-                科研级 IEC 61131-3 FBD 电路图（上方已展开）
-              </div>
-              <details class="fbd-diagram" open>
-                <summary><span class="presenter-callout">[FBD]</span> IEC 61131-3 FBD / 引气活门控制</summary>
-                <div class="fbd-diagram-body">
-                  <p class="fbd-description">
-                    引气真值带迟滞与过压保护。GE/GT 比较器先判断健康区间、低压区间和过压区间；OR 产生关闭优先级，MUX 再在关闭请求与开放使能之间选择最终 `valve_cmd`。
-                  </p>
-                  <div class="fbd-expression-grid">
-                    <p class="fbd-expression">PRESSURE_HEALTHY := inlet_pressure &gt;= 35</p>
-                    <p class="fbd-expression">LOW_PRESSURE := 32 &gt; inlet_pressure</p>
-                    <p class="fbd-expression">CLOSE_REQ := LOW_PRESSURE OR (inlet_pressure &gt;= 65)</p>
-                    <p class="fbd-expression">VALVE_CMD := MUX(sel=CLOSE_REQ, D0=(PRESSURE_HEALTHY AND control_unit_ready), D1=0)</p>
-                  </div>
-                  <svg class="chain-svg fbd-svg" viewBox="0 0 1240 430" role="img" aria-label="引气系统 IEC 61131-3 功能块图">
-                    <defs>
-                      <marker id="fbd-ba-arrow-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                        <path d="M0,0 L0,6 L8,3 z" fill="#28f4ff"/>
-                      </marker>
-                      <marker id="fbd-ba-arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                        <path d="M0,0 L0,6 L8,3 z" fill="#53ff92"/>
-                      </marker>
-                      <marker id="fbd-ba-arrow-amber" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                        <path d="M0,0 L0,6 L8,3 z" fill="#ffb037"/>
-                      </marker>
-                    </defs>
-
-                    <text x="620" y="22" class="system-title-label" text-anchor="middle">IEC 61131-3 FBD — 引气活门控制</text>
-
-                    <g transform="translate(40 72)">
-                      <rect width="160" height="58" rx="10" class="chain-node-svg input-node-svg fbd-io-block" data-node="inlet_pressure"/>
-                      <text x="80" y="22" class="fbd-text-title" text-anchor="middle">Inlet Pressure</text>
-                      <text x="80" y="40" class="chain-node-value" text-anchor="middle" data-value-for="inlet_pressure">—</text>
-                      <text x="80" y="53" class="fbd-text-meta" text-anchor="middle">psi</text>
-                    </g>
-                    <g transform="translate(40 160)">
-                      <rect width="160" height="58" rx="10" class="chain-node-svg input-node-svg fbd-io-block" data-node="control_unit_ready"/>
-                      <text x="80" y="22" class="fbd-text-title" text-anchor="middle">Control Unit Ready</text>
-                      <text x="80" y="40" class="chain-node-value" text-anchor="middle" data-value-for="control_unit_ready">—</text>
-                      <text x="80" y="53" class="fbd-text-meta" text-anchor="middle">bool</text>
-                    </g>
-                    <g transform="translate(40 274)">
-                      <rect width="160" height="58" rx="10" class="chain-node-svg sensor-node-svg fbd-io-block" data-node="valve_position"/>
-                      <text x="80" y="22" class="fbd-text-title" text-anchor="middle">Valve Position</text>
-                      <text x="80" y="40" class="chain-node-value" text-anchor="middle" data-value-for="valve_position">—</text>
-                      <text x="80" y="53" class="fbd-text-meta" text-anchor="middle">OPEN / CLOSED</text>
-                    </g>
-                    <g transform="translate(40 346)">
-                      <rect width="160" height="58" rx="10" class="chain-node-svg sensor-node-svg fbd-io-block" data-node="outlet_pressure"/>
-                      <text x="80" y="22" class="fbd-text-title" text-anchor="middle">Outlet Pressure</text>
-                      <text x="80" y="40" class="chain-node-value" text-anchor="middle" data-value-for="outlet_pressure">—</text>
-                      <text x="80" y="53" class="fbd-text-meta" text-anchor="middle">psi</text>
-                    </g>
-
-                    <g transform="translate(260 52)">
-                      <rect width="140" height="82" rx="10" class="fbd-block fbd-block--amber"/>
-                      <text x="70" y="24" class="fbd-text-title" text-anchor="middle">GE</text>
-                      <text x="70" y="45" class="fbd-text-meta" text-anchor="middle">inlet_pressure</text>
-                      <text x="70" y="61" class="fbd-text-meta" text-anchor="middle">&gt;= 35 psi</text>
-                    </g>
-                    <g transform="translate(260 150)">
-                      <rect width="140" height="82" rx="10" class="fbd-block fbd-block--amber"/>
-                      <text x="70" y="24" class="fbd-text-title" text-anchor="middle">GT</text>
-                      <text x="70" y="45" class="fbd-text-meta" text-anchor="middle">32 psi &gt; P</text>
-                      <text x="70" y="61" class="fbd-text-meta" text-anchor="middle">low-pressure detect</text>
-                    </g>
-                    <g transform="translate(260 248)">
-                      <rect width="140" height="82" rx="10" class="fbd-block fbd-block--amber"/>
-                      <text x="70" y="24" class="fbd-text-title" text-anchor="middle">GE</text>
-                      <text x="70" y="45" class="fbd-text-meta" text-anchor="middle">inlet_pressure</text>
-                      <text x="70" y="61" class="fbd-text-meta" text-anchor="middle">&gt;= 65 psi</text>
-                    </g>
-
-                    <g transform="translate(460 84)">
-                      <rect width="170" height="86" rx="10" class="logic-gate-svg fbd-block" data-node="valve_open_logic"/>
-                      <text x="85" y="24" class="fbd-text-title" text-anchor="middle">AND</text>
-                      <text x="85" y="44" class="fbd-text-meta" text-anchor="middle">open_enable</text>
-                      <text x="85" y="60" class="fbd-text-meta" text-anchor="middle">pressure_healthy</text>
-                      <text x="85" y="74" class="fbd-text-meta" text-anchor="middle">AND control_unit_ready</text>
-                    </g>
-                    <g transform="translate(460 216)">
-                      <rect width="170" height="86" rx="10" class="logic-gate-svg fbd-block" data-node="valve_close_logic"/>
-                      <text x="85" y="24" class="fbd-text-title" text-anchor="middle">OR</text>
-                      <text x="85" y="44" class="fbd-text-meta" text-anchor="middle">close_req</text>
-                      <text x="85" y="60" class="fbd-text-meta" text-anchor="middle">low_pressure</text>
-                      <text x="85" y="74" class="fbd-text-meta" text-anchor="middle">OR overpressure</text>
-                    </g>
-                    <g transform="translate(690 136)">
-                      <rect width="170" height="104" rx="10" class="fbd-block"/>
-                      <text x="85" y="24" class="fbd-text-title" text-anchor="middle">MUX</text>
-                      <text x="85" y="46" class="fbd-text-meta" text-anchor="middle">SEL = close_req</text>
-                      <text x="85" y="64" class="fbd-text-meta" text-anchor="middle">D0 = open_enable</text>
-                      <text x="85" y="80" class="fbd-text-meta" text-anchor="middle">D1 = 0 (force close)</text>
-                    </g>
-                    <g transform="translate(920 160)">
-                      <rect width="150" height="58" rx="10" class="chain-node-svg command-node-svg fbd-io-block" data-node="valve_cmd"/>
-                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Valve Cmd</text>
-                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="valve_cmd">—</text>
-                      <text x="75" y="53" class="fbd-text-meta" text-anchor="middle">1=open / 0=close</text>
-                    </g>
-
-                    <g transform="translate(460 332)">
-                      <rect width="170" height="76" rx="10" class="fbd-block"/>
-                      <text x="85" y="24" class="fbd-text-title" text-anchor="middle">MUX</text>
-                      <text x="85" y="46" class="fbd-text-meta" text-anchor="middle">SEL = valve_position</text>
-                      <text x="85" y="62" class="fbd-text-meta" text-anchor="middle">OPEN -&gt; 1 | CLOSED -&gt; 0</text>
-                    </g>
-                    <g transform="translate(690 320)">
-                      <rect width="170" height="82" rx="10" class="fbd-block fbd-block--amber"/>
-                      <text x="85" y="24" class="fbd-text-title" text-anchor="middle">GE</text>
-                      <text x="85" y="45" class="fbd-text-meta" text-anchor="middle">outlet_pressure</text>
-                      <text x="85" y="61" class="fbd-text-meta" text-anchor="middle">&gt;= 35 psi</text>
-                    </g>
-                    <g transform="translate(920 308)">
-                      <rect width="190" height="92" rx="10" class="fbd-block fbd-block--green"/>
-                      <text x="95" y="24" class="fbd-text-title" text-anchor="middle">AND</text>
-                      <text x="95" y="46" class="fbd-text-meta" text-anchor="middle">pressurization complete</text>
-                      <text x="95" y="63" class="fbd-text-meta" text-anchor="middle">valve_open_bool</text>
-                      <text x="95" y="79" class="fbd-text-meta" text-anchor="middle">AND outlet_pressure_ok</text>
-                    </g>
-
-                    <line x1="200" y1="101" x2="260" y2="93" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-ba-arrow-cyan)"/>
-                    <text x="216" y="88" class="fbd-wire-label">pressure</text>
-                    <line x1="200" y1="101" x2="260" y2="191" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-ba-arrow-cyan)"/>
-                    <text x="205" y="145" class="fbd-wire-label">pressure</text>
-                    <line x1="200" y1="101" x2="260" y2="289" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-ba-arrow-cyan)"/>
-                    <text x="207" y="250" class="fbd-wire-label">pressure</text>
-                    <line x1="200" y1="189" x2="460" y2="127" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-ba-arrow-cyan)"/>
-                    <text x="302" y="128" class="fbd-wire-label">control_unit_ready</text>
-                    <line x1="400" y1="93" x2="460" y2="120" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-ba-arrow-amber)"/>
-                    <text x="409" y="85" class="fbd-wire-label fbd-wire-label--amber">pressure_healthy</text>
-                    <line x1="400" y1="191" x2="460" y2="250" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-ba-arrow-amber)"/>
-                    <text x="409" y="205" class="fbd-wire-label fbd-wire-label--amber">low_pressure</text>
-                    <line x1="400" y1="289" x2="460" y2="268" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-ba-arrow-amber)"/>
-                    <text x="405" y="301" class="fbd-wire-label fbd-wire-label--amber">overpressure</text>
-                    <line x1="630" y1="127" x2="690" y2="171" class="fbd-wire fbd-wire--green" marker-end="url(#fbd-ba-arrow-green)"/>
-                    <text x="644" y="135" class="fbd-wire-label fbd-wire-label--green">open_enable</text>
-                    <line x1="630" y1="259" x2="690" y2="205" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-ba-arrow-amber)"/>
-                    <text x="648" y="248" class="fbd-wire-label fbd-wire-label--amber">close_req</text>
-                    <line x1="860" y1="188" x2="920" y2="189" class="fbd-wire fbd-wire--green" marker-end="url(#fbd-ba-arrow-green)"/>
-                    <text x="873" y="179" class="fbd-wire-label fbd-wire-label--green">valve_cmd</text>
-
-                    <line x1="200" y1="303" x2="460" y2="370" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-ba-arrow-cyan)"/>
-                    <text x="305" y="320" class="fbd-wire-label">valve_position</text>
-                    <line x1="200" y1="375" x2="690" y2="361" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-ba-arrow-cyan)"/>
-                    <text x="432" y="351" class="fbd-wire-label">outlet_pressure</text>
-                    <line x1="630" y1="370" x2="920" y2="344" class="fbd-wire fbd-wire--green" marker-end="url(#fbd-ba-arrow-green)"/>
-                    <text x="755" y="350" class="fbd-wire-label fbd-wire-label--green">valve_open_bool</text>
-                    <line x1="860" y1="361" x2="920" y2="370" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-ba-arrow-amber)"/>
-                    <text x="867" y="352" class="fbd-wire-label fbd-wire-label--amber">outlet_ok</text>
-
-                    <text x="94" y="52" class="section-label">inputs</text>
-                    <text x="330" y="40" class="section-label">comparators</text>
-                    <text x="545" y="72" class="section-label">open / close logic</text>
-                    <text x="775" y="126" class="section-label">command select</text>
-                    <text x="998" y="148" class="section-label">command output</text>
-                    <text x="540" y="320" class="section-label">feedback decode</text>
-                    <text x="776" y="308" class="section-label">completion threshold</text>
-                  </svg>
-                  <p class="fbd-caption">关闭路径优先级高于开放路径，因此 MUX 的 `SEL=close_req` 始终先裁决低压/过压状态。</p>
-                </div>
-              </details>
-            </div>
-
-            <div id="chain-topology-efds" class="chain-topology" style="display:none" aria-label="干扰弹控制系统信号流">
-              <svg class="chain-svg" viewBox="0 0 900 520" role="img" aria-label="干扰弹部署控制链路信号流图">
-                <defs>
-                  <marker id="arrow-efds-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#28f4ff"/>
-                  </marker>
-                  <marker id="arrow-efds-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#53ff92"/>
-                  </marker>
-                  <marker id="arrow-efds-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#ffb037"/>
-                  </marker>
-                  <marker id="arrow-efds-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#ff4f6a"/>
-                  </marker>
-                  <marker id="arrow-efds-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                    <path d="M0,0 L0,6 L8,3 z" fill="#4a5568"/>
-                  </marker>
-                </defs>
-
-                <text x="450" y="18" class="system-title-label" text-anchor="middle">Emergency Flare Deployment System — 红外干扰弹部署控制</text>
-
-                <!-- ===== LN-01: Threat Classification ===== -->
-                <!-- MLS Sensor -->
-                <rect x="30" y="50" width="120" height="44" rx="6" class="chain-node-svg sensor-node-svg" data-node="sensor.threat.mls"/>
-                <text x="90" y="66" class="chain-node-label" text-anchor="middle" data-tooltip="Missile Launch Sensor，导弹来袭威胁传感器">MLS 传感器</text>
-                <text x="90" y="82" class="chain-node-value" text-anchor="middle" data-value-for="sensor.threat.mls">—</text>
-
-                <!-- LN-01 Gate -->
-                <svg x="220" y="44" width="60" height="56">
-                  <polygon points="0,0 60,28 0,56" class="logic-gate-svg gate-threat" data-node="ln.01"/>
-                </svg>
-                <text x="250" y="30" class="chain-node-label" text-anchor="middle" data-node-label="ln.01">LN-01</text>
-                <text x="250" y="76" class="logic-gate-label" text-anchor="middle">OR</text>
-                <text x="250" y="105" class="chain-node-sublabel" text-anchor="middle">威胁分类</text>
-
-                <!-- ===== LN-02: Altitude Floor ===== -->
-                <!-- Radar Alt -->
-                <rect x="30" y="160" width="110" height="36" rx="6" class="chain-node-svg input-node-svg" data-node="sensor.alt.radar"/>
-                <text x="85" y="175" class="chain-node-label" text-anchor="middle">雷达高度</text>
-                <text x="85" y="191" class="chain-node-value" text-anchor="middle" data-value-for="sensor.alt.radar">—</text>
-                <text x="85" y="204" class="chain-node-sublabel" text-anchor="middle">ft AGL</text>
-
-                <!-- Pilot Alt Override -->
-                <rect x="30" y="210" width="110" height="36" rx="6" class="chain-node-svg input-node-svg" data-node="pilot.altitude_override"/>
-                <text x="85" y="225" class="chain-node-label" text-anchor="middle">高度底限选择</text>
-                <text x="85" y="241" class="chain-node-value" text-anchor="middle" data-value-for="pilot.altitude_override">—</text>
-
-                <!-- LN-02 Gate -->
-                <svg x="220" y="195" width="60" height="56">
-                  <polygon points="0,0 60,28 0,56" class="logic-gate-svg gate-altitude" data-node="ln.02"/>
-                </svg>
-                <text x="250" y="182" class="chain-node-label" text-anchor="middle" data-node-label="ln.02">LN-02</text>
-                <text x="250" y="227" class="logic-gate-label" text-anchor="middle">AND</text>
-                <text x="250" y="262" class="chain-node-sublabel" text-anchor="middle">高度检查</text>
-
-                <!-- ===== LN-03: Temperature Gate ===== -->
-                <!-- Temp Sensor -->
-                <rect x="30" y="310" width="110" height="36" rx="6" class="chain-node-svg input-node-svg" data-node="sensor.temp.external"/>
-                <text x="85" y="325" class="chain-node-label" text-anchor="middle">外部温度</text>
-                <text x="85" y="341" class="chain-node-value" text-anchor="middle" data-value-for="sensor.temp.external">—</text>
-                <text x="85" y="354" class="chain-node-sublabel" text-anchor="middle">°C</text>
-
-                <!-- LN-03 Gate -->
-                <svg x="220" y="295" width="60" height="56">
-                  <polygon points="0,0 60,28 0,56" class="logic-gate-svg gate-temp" data-node="ln.03"/>
-                </svg>
-                <text x="250" y="282" class="chain-node-label" text-anchor="middle" data-node-label="ln.03">LN-03</text>
-                <text x="250" y="327" class="logic-gate-label" text-anchor="middle">AND</text>
-                <text x="250" y="362" class="chain-node-sublabel" text-anchor="middle">温度检查</text>
-
-                <!-- ===== LN-04: Firing Authorization AND ===== -->
-                <!-- Arm Relay -->
-                <rect x="380" y="50" width="100" height="36" rx="6" class="chain-node-svg logic-gate-node-svg" data-node="logic.armed_relay"/>
-                <text x="430" y="65" class="chain-node-label" text-anchor="middle">Arm Relay</text>
-                <text x="430" y="81" class="chain-node-value" text-anchor="middle" data-value-for="logic.armed_relay">—</text>
-
-                <!-- Crosslink Validator -->
-                <rect x="380" y="100" width="100" height="36" rx="6" class="chain-node-svg logic-gate-node-svg" data-node="logic.crosslink_validator"/>
-                <text x="430" y="115" class="chain-node-label" text-anchor="middle">Crosslink</text>
-                <text x="430" y="131" class="chain-node-value" text-anchor="middle" data-value-for="logic.crosslink_validator">—</text>
-
-                <!-- Firing Channel -->
-                <rect x="380" y="150" width="100" height="36" rx="6" class="chain-node-svg logic-gate-node-svg" data-node="logic.firing_channel"/>
-                <text x="430" y="165" class="chain-node-label" text-anchor="middle">Firing Ch.</text>
-                <text x="430" y="181" class="chain-node-value" text-anchor="middle" data-value-for="logic.firing_channel">—</text>
-
-                <!-- LN-04 Gate -->
-                <svg x="560" y="80" width="60" height="70">
-                  <polygon points="0,0 60,35 0,70" class="logic-gate-svg gate-authorize" data-node="ln.04"/>
-                </svg>
-                <text x="590" y="66" class="chain-node-label" text-anchor="middle" data-node-label="ln.04">LN-04</text>
-                <text x="590" y="119" class="logic-gate-label" text-anchor="middle">AND</text>
-                <text x="590" y="162" class="chain-node-sublabel" text-anchor="middle">授权AND</text>
-
-                <!-- ===== Flare Array Actuator ===== -->
-                <rect x="710" y="100" width="110" height="40" rx="6" class="chain-node-svg actuator-node-svg" data-node="actuator.flare_array"/>
-                <text x="765" y="116" class="chain-node-label" text-anchor="middle">Flare Array</text>
-                <text x="765" y="132" class="chain-node-value" text-anchor="middle" data-value-for="actuator.flare_array">—</text>
-
-                <!-- Deploy Indicator -->
-                <rect x="740" y="155" width="60" height="24" rx="4" class="chain-node-svg deploy-indicator" data-node="flare.deploy_now"/>
-                <text x="770" y="170" class="chain-node-label" text-anchor="middle" data-value-for="flare.deploy_now">—</text>
-
-                <!-- Pilot Controls (right side) -->
-                <rect x="710" y="220" width="110" height="32" rx="6" class="chain-node-svg pilot-node-svg" data-node="pilot.arm_switch"/>
-                <text x="765" y="234" class="chain-node-label" text-anchor="middle">Arm Switch</text>
-                <text x="765" y="248" class="chain-node-value" text-anchor="middle" data-value-for="pilot.arm_switch">—</text>
-
-                <rect x="710" y="265" width="110" height="32" rx="6" class="chain-node-svg pilot-node-svg" data-node="pilot.manual_dispense"/>
-                <text x="765" y="279" class="chain-node-label" text-anchor="middle">Manual Disp.</text>
-                <text x="765" y="293" class="chain-node-value" text-anchor="middle" data-value-for="pilot.manual_dispense">—</text>
-
-                <!-- ===== CONNECTION LINES ===== -->
-                <!-- MLS → LN-01 -->
-                <line x1="150" y1="72" x2="220" y2="72" class="conn-line conn-threat" marker-end="url(#arrow-efds-cyan)"/>
-                <text x="185" y="65" class="threshold-annotation">THREAT_DETECTED / MISSLE_INBOUND</text>
-
-                <!-- Radar Alt → LN-02 -->
-                <line x1="140" y1="178" x2="220" y2="223" class="conn-line conn-input" marker-end="url(#arrow-efds-cyan)"/>
-                <!-- Alt Override → LN-02 -->
-                <line x1="140" y1="228" x2="220" y2="223" class="conn-line conn-input" marker-end="url(#arrow-efds-cyan)"/>
-
-                <!-- Temp → LN-03 -->
-                <line x1="140" y1="328" x2="220" y2="323" class="conn-line conn-input" marker-end="url(#arrow-efds-cyan)"/>
-
-                <!-- Arm Relay → LN-04 (direct to AND gate, right side) -->
-                <line x1="480" y1="68" x2="560" y2="100" class="conn-line conn-input" marker-end="url(#arrow-efds-cyan)"/>
-                <!-- Crosslink → LN-04 (direct to AND gate, right side) -->
-                <line x1="480" y1="118" x2="560" y2="115" class="conn-line conn-input" marker-end="url(#arrow-efds-cyan)"/>
-                <!-- Firing Channel → LN-04 (direct to AND gate, right side) -->
-                <line x1="480" y1="168" x2="560" y2="130" class="conn-line conn-input" marker-end="url(#arrow-efds-cyan)"/>
-
-                <!-- LN-04 → Flare Array -->
-                <line x1="620" y1="115" x2="710" y2="120" class="conn-line conn-fire" marker-end="url(#arrow-efds-green)"/>
-
-                <!-- Flare Array → Deploy indicator -->
-                <line x1="765" y1="140" x2="770" y2="155" class="conn-line" marker-end="url(#arrow-efds-gray)"/>
-
-                <!-- Pilot Controls → show as info -->
-                <line x1="765" y1="252" x2="765" y2="265" class="conn-line conn-pilot" stroke-dasharray="4,3"/>
-
-                <!-- ===== THRESHOLD LABELS ===== -->
-                <text x="165" y="155" class="threshold-annotation">≥ 底限高度</text>
-                <text x="165" y="300" class="threshold-annotation">> -20°C</text>
-                <text x="320" y="100" class="threshold-annotation">CLOSED</text>
-                <text x="320" y="130" class="threshold-annotation">TRUE</text>
-                <text x="320" y="175" class="threshold-annotation">COUNTING</text>
-
-                <!-- ===== SECTION LABELS ===== -->
-                <text x="90" y="38" class="section-label">传感器</text>
-                <text x="250" y="38" class="section-label">LN-01</text>
-                <text x="250" y="188" class="section-label">LN-02</text>
-                <text x="250" y="288" class="section-label">LN-03</text>
-                <text x="430" y="38" class="section-label">逻辑门</text>
-                <text x="590" y="58" class="section-label">LN-04</text>
-                <text x="765" y="88" class="section-label">执行器</text>
-                <text x="765" y="208" class="section-label">飞行员</text>
-              </svg>
-              <!-- Per-system state legend -->
-              <div class="chain-topology-legend">
-                <span class="state-chip is-active">● Active</span>
-                <span class="state-chip is-blocked">● Blocked</span>
-                <span class="state-chip is-inactive">● Inactive</span>
-                <span class="legend-sep">|</span>
-                <span class="legend-note">颜色来自快照 truth evaluation</span>
-              </div>
-              <div class="fbd-expand-notice">
-                <span class="presenter-callout">🔬</span>
-                科研级 IEC 61131-3 FBD 电路图（上方已展开）
-              </div>
-              <details class="fbd-diagram restricted-manual" open>
-                <summary><span class="presenter-callout">[FBD]</span> EFDS 非操作性监测示意</summary>
-                <div class="fbd-diagram-body">
-                  <p class="fbd-description">
-                    这里不新增更细的释放授权 FBD 或部署手册。仅保留一个非操作性的监测示意图，说明 threat / altitude / temperature / channel 信号如何被整理成 UI 快照与安全提示。
-                  </p>
-                  <svg class="chain-svg fbd-svg" viewBox="0 0 980 250" role="img" aria-label="EFDS 非操作性监测功能块图">
-                    <defs>
-                      <marker id="fbd-efds-arrow-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                        <path d="M0,0 L0,6 L8,3 z" fill="#28f4ff"/>
-                      </marker>
-                      <marker id="fbd-efds-arrow-amber" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                        <path d="M0,0 L0,6 L8,3 z" fill="#ffb037"/>
-                      </marker>
-                    </defs>
-                    <text x="490" y="22" class="system-title-label" text-anchor="middle">EFDS 监测边界图 — 仅用于 UI 安全展示</text>
-                    <g transform="translate(30 68)">
-                      <rect width="150" height="52" rx="10" class="chain-node-svg sensor-node-svg fbd-io-block" data-node="sensor.threat.mls"/>
-                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Threat Telemetry</text>
-                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="sensor.threat.mls">—</text>
-                    </g>
-                    <g transform="translate(30 138)">
-                      <rect width="150" height="52" rx="10" class="chain-node-svg sensor-node-svg fbd-io-block" data-node="sensor.alt.radar"/>
-                      <text x="75" y="22" class="fbd-text-title" text-anchor="middle">Altitude Telemetry</text>
-                      <text x="75" y="40" class="chain-node-value" text-anchor="middle" data-value-for="sensor.alt.radar">—</text>
-                    </g>
-                    <g transform="translate(220 84)">
-                      <rect width="150" height="84" rx="10" class="fbd-block"/>
-                      <text x="75" y="24" class="fbd-text-title" text-anchor="middle">MUX</text>
-                      <text x="75" y="45" class="fbd-text-meta" text-anchor="middle">display source select</text>
-                      <text x="75" y="62" class="fbd-text-meta" text-anchor="middle">telemetry -&gt; snapshot</text>
-                    </g>
-                    <g transform="translate(430 54)">
-                      <rect width="150" height="84" rx="10" class="fbd-block fbd-block--amber"/>
-                      <text x="75" y="24" class="fbd-text-title" text-anchor="middle">OR</text>
-                      <text x="75" y="45" class="fbd-text-meta" text-anchor="middle">attention summary</text>
-                      <text x="75" y="62" class="fbd-text-meta" text-anchor="middle">threat / temp / channel flags</text>
-                    </g>
-                    <g transform="translate(430 150)">
-                      <rect width="150" height="64" rx="10" class="fbd-block"/>
-                      <text x="75" y="24" class="fbd-text-title" text-anchor="middle">AND</text>
-                      <text x="75" y="45" class="fbd-text-meta" text-anchor="middle">snapshot valid + panel active</text>
-                    </g>
-                    <g transform="translate(650 102)">
-                      <rect width="170" height="64" rx="10" class="fbd-block fbd-block--amber"/>
-                      <text x="85" y="24" class="fbd-text-title" text-anchor="middle">UI Safety Boundary</text>
-                      <text x="85" y="45" class="fbd-text-meta" text-anchor="middle">monitor-only, no release detail</text>
-                    </g>
-                    <g transform="translate(860 102)">
-                      <rect width="90" height="64" rx="10" class="chain-node-svg sensor-node-svg fbd-io-block"/>
-                      <text x="45" y="24" class="fbd-text-title" text-anchor="middle">UI Status</text>
-                      <text x="45" y="45" class="fbd-text-meta" text-anchor="middle">safe demo</text>
-                    </g>
-                    <line x1="180" y1="94" x2="220" y2="112" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-efds-arrow-cyan)"/>
-                    <line x1="180" y1="164" x2="220" y2="140" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-efds-arrow-cyan)"/>
-                    <line x1="370" y1="126" x2="430" y2="96" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-efds-arrow-cyan)"/>
-                    <line x1="370" y1="126" x2="430" y2="182" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-efds-arrow-cyan)"/>
-                    <line x1="580" y1="96" x2="650" y2="126" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-efds-arrow-amber)"/>
-                    <line x1="580" y1="182" x2="650" y2="142" class="fbd-wire fbd-wire--cyan" marker-end="url(#fbd-efds-arrow-cyan)"/>
-                    <line x1="820" y1="134" x2="860" y2="134" class="fbd-wire fbd-wire--amber" marker-end="url(#fbd-efds-arrow-amber)"/>
-                  </svg>
-                  <p class="fbd-caption">如果后续需要继续完善 EFDS 页面，可仅限于监测、审计和安全说明层面的 UI 改进。</p>
-                </div>
-              </details>
-            </div>
-
-            <section class="panel monitor-panel monitor-panel-inline" aria-labelledby="monitor-panel-title">
-              <div class="monitor-panel-header">
-                <div>
-                  <h3 id="monitor-panel-title"><span class="presenter-callout">[监控]</span> 状态 vs 时间</h3>
-                  <p class="monitor-panel-note">
-                    同一张图里查看整条监测时间线；右上角可以切换到某个特定对象，不再把很多小图堆满页面。
-                  </p>
-                </div>
-                <div class="monitor-panel-controls">
-                  <div id="monitor-series-checkboxes" class="monitor-series-checkboxes" role="group" aria-label="选择监控参数"></div>
-                  <button type="button" id="monitor-refresh-button" class="monitor-refresh-button">刷新监控图</button>
-                </div>
-              </div>
-              <p id="monitor-status" class="monitor-status" role="status" aria-live="polite">监控时间线读取中...</p>
-              <div id="monitor-summary" class="monitor-summary" aria-label="监控总结"></div>
-              <div id="monitor-events" class="monitor-events" aria-label="监控关键时刻"></div>
-              <div class="monitor-chart-shell">
-                <p id="monitor-selection-note" class="monitor-selection-note">当前显示：全部对象（归一化）。</p>
-                <div id="monitor-chart" class="monitor-chart" aria-live="polite"></div>
-              </div>
-            </section>
-            <details id="chain-inspector" class="chain-inspector">
-              <summary><span class="presenter-callout">[展开]</span> 详细解释 / 当前结论</summary>
-              <div class="chain-inspector-body">
-                <aside id="highlight-explanation" class="highlight-explanation" aria-live="polite">
-                  <h3><span class="presenter-callout">[高亮]</span> 为什么高亮</h3>
-                  <p id="highlight-payload-fields">等待演示答案。</p>
-                  <p id="highlight-node-list">高亮节点：-</p>
-                  <ul id="highlight-explanation-list">
-                    <li>高亮来自答案里的命中节点 / 目标逻辑。</li>
-                    <li>高亮只表示答案关联，不是完整因果证明或物理根因证明。</li>
-                  </ul>
-                </aside>
-                <section id="lever-result" class="lever-result chain-conclusion" aria-live="polite">
-                  <h3>当前结论</h3>
-                  <p class="lever-result-note">读法固定为 Headline -> Blocker -> Next step；三段都来自同一份 lever snapshot。</p>
-                  <p id="lever-result-mode" class="lever-result-mode">当前结论来源：等待 lever snapshot。</p>
-                  <div class="lever-result-grid">
-                    <section class="result-rail result-rail-headline" aria-label="当前结论 headline">
-                      <p class="result-rail-kicker">1. Headline</p>
-                      <p id="lever-headline">拉杆快照读取中。</p>
-                    </section>
-                    <section class="result-rail result-rail-blocker" aria-label="当前 blocker">
-                      <p class="result-rail-kicker">2. Blocker</p>
-                      <p id="lever-blocker">-</p>
-                    </section>
-                    <section class="result-rail result-rail-next-step" aria-label="下一步">
-                      <p class="result-rail-kicker">3. Next step</p>
-                      <p id="lever-next-step">-</p>
-                    </section>
-                  </div>
-                  <details id="lever-evidence-details" class="lever-evidence-details">
-                    <summary>证据 / 风险（默认折叠）</summary>
-                    <ul id="lever-evidence-list"></ul>
-                  </details>
-                </section>
-              </div>
-            </details>
-          </section>
-
-          <section class="result-grid" aria-label="演示答案">
-            <article class="panel meta-card">
-              <h2>结果摘要</h2>
-              <dl class="meta-list">
-                <div><dt>意图</dt><dd id="intent-value">-</dd></div>
-                <div><dt>命中节点</dt><dd id="matched-node-value">-</dd></div>
-                <div><dt>目标逻辑</dt><dd id="target-logic-value">-</dd></div>
-              </dl>
-              <p id="result-source-mode" class="result-source-mode">当前来源：等待 payload。</p>
-              <p id="result-payload-note" class="result-payload-note">结构化结果、当前结论和 Raw JSON 会共用同一份 payload。</p>
-            </article>
-
-            <article class="panel output-card">
-              <h2><span class="presenter-callout">[结果]</span> 推理结果</h2>
-              <div class="answer-guide" aria-label="答案字段与结果分区导览">
-                <div class="answer-guide-intro">
-                  <h3>结果导览</h3>
-                  <p>字段说明和数量标签都来自同一份答案。</p>
-                </div>
-                <div class="answer-guide-grid">
-                  <details id="answer-field-legend" class="answer-field-legend">
-                    <summary>字段说明</summary>
-                    <dl>
-                      <div><dt>intent</dt><dd>受控 demo 意图，不是开放式 LLM 意图识别。</dd></div>
-                      <div><dt>matched_node</dt><dd>答案关联的 catalog 节点 / alias。</dd></div>
-                      <div><dt>target_logic</dt><dd>答案关联的逻辑门。</dd></div>
-                      <div><dt>evidence</dt><dd>现有 harness evidence 摘要。</dd></div>
-                      <div><dt>outcome</dt><dd>结果摘要。</dd></div>
-                      <div><dt>possible_causes</dt><dd>受控提示，不是完整根因证明。</dd></div>
-                      <div><dt>required_changes</dt><dd>dry-run / proposal 建议；不会直接修改 controller.py。</dd></div>
-                      <div><dt>risks</dt><dd>简化模型和变更风险提示。</dd></div>
-                      <div><dt>raw JSON</dt><dd>同一份 DemoAnswer 的调试视图，不是第二套答案。</dd></div>
-                    </dl>
-                    <p>
-                      这里只是阅读辅助；不改变 UI/API payload，不创建 schema，也不新增控制真值。
-                    </p>
-                  </details>
-              <div id="answer-section-summary" class="answer-section-summary" aria-live="polite">
-                <h3>结果分区</h3>
-                <p id="answer-section-keyboard-hint" class="summary-hint">方向键可在分区标签之间移动。</p>
-                <div id="answer-section-summary-items" class="summary-chips">
-                  <span class="summary-chip is-empty">默认折叠；展开查看证据 / 风险。</span>
-                </div>
-              </div>
-            </div>
-          </div>
-              <div id="structured-output" class="structured-output" aria-live="polite"></div>
-            </article>
-
-            <article class="panel raw-card">
-              <details id="raw-json-details" view="beginner" class="debug-inspector">
-                <summary><span class="presenter-callout">[调试]</span> 原始 JSON 调试</summary>
-                <pre id="raw-json">{}</pre>
-              </details>
-            </article>
-          </section>
-        </div>
-      </section>
-    </main>
-    <script src="/demo.js"></script>
-  </body>
+      <div class="fan-eng-section">
+        <h3 class="fan-eng-section-title">控制逻辑层 · 工程意义</h3>
+        <table class="fan-eng-table">
+          <thead><tr><th>逻辑层</th><th>通过条件</th><th>输出命令</th><th>失效后果</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="sig-name">L1</td>
+              <td>SW1 AND RA &lt; 6 ft AND NOT 抑制 AND 未展开</td>
+              <td>TLS 115VAC 解锁供电</td>
+              <td>L1 失效 → 反推机械锁永不解开，反推无法展开（安全状态）</td>
+            </tr>
+            <tr>
+              <td class="sig-name">L2</td>
+              <td>SW2 AND 发动机运行 AND 接地 AND NOT 抑制 AND EEC</td>
+              <td>ETRAC 540VDC PDU 动力</td>
+              <td>L2 失效 → 电动执行机构无动力，反推保持收起位</td>
+            </tr>
+            <tr>
+              <td class="sig-name">L3</td>
+              <td>engine_running AND aircraft_on_ground AND NOT 抑制 AND TLS_Unlocked AND N1K &lt; max_n1k_deploy_limit（默认 60%）AND TRA ≤ −11.74°</td>
+              <td>EEC 展开命令 + PLS 供电 + PDU 电机启动</td>
+              <td>L3 失效 → 执行机构不动；N1K 保护防止高速展开引发发动机喘振</td>
+            </tr>
+            <tr>
+              <td class="sig-name">L4</td>
+              <td>L3 AND VDT ≥ 90%（展开到位反馈）</td>
+              <td>THR_LOCK 释放（允许油门深推入反推区）</td>
+              <td>L4 失效 → 飞行员无法增加反推力；展开未到位时反推力不足影响着陆距离</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="fan-eng-section">
+        <h3 class="fan-eng-section-title">重要说明</h3>
+        <p class="fan-eng-note">
+          本工作台为 <strong>stateless 信号级评估</strong>：每次计算基于当前快照，不维护时序状态机。
+          真实 E-TRAS 系统中，TLS 解锁 → PDU 通电 → 展开命令之间存在严格时序和超时保护逻辑（由 EICU 内部状态机管理）。
+          时序仿真请使用「反推时序仿真面板」或「C919 MFD 仿真面板」。
+        </p>
+        <p class="fan-eng-note">
+          <code>aircraft_on_ground</code> 在本工作台中对应真实系统的 WOW（Weight on Wheels）信号，
+          由 LGCIU 双余度综合输出。在实际工程中，单 LGCIU 失效时系统应仍能正确判断接地状态。
+        </p>
+        <p class="fan-eng-note">
+          <strong>架构壁垒：</strong><code>DeployController</code> 是唯一可审计的控制真值引擎；<code>lever_snapshot_payload</code> 是可解释输出层（每个逻辑层提供 <code>failed_conditions</code> + <code>blocked_by</code>，顶层附 <code>evidence</code> 追溯链）；<code>HarnessConfig / Adapter</code> 边界支持从 C919 E-TRAS 迁移至其他飞机型号而无需重写核心逻辑。
+        </p>
+      </div>
+
+    </div>
+  </details>
+
+  <footer class="fan-footer">
+    <strong style="color:var(--fan-text)">真值源：</strong>
+    <code>src/well_harness/demo_server.py::lever_snapshot_payload</code> →
+    <code>src/well_harness/controller.py::DeployController</code> ·
+    <strong style="color:var(--fan-text)">场景类型：</strong>
+    本工作台做 stateless signal-level evaluation（无状态机回放）。
+  </footer>
+</main>
+
+<script src="/demo.js" defer></script>
+</body>
 </html>

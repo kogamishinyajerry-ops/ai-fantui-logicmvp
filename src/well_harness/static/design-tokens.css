@@ -1,9 +1,10 @@
 /* design-tokens.css — P24-01 canonical visual source
  *
  * Single source of truth for color / typography / motion / elevation across
- * demo.html, chat.html, workbench.html, ai-doc-analyzer.html.
+ * demo.html and workbench.html. (chat.html and ai-doc-analyzer.html shelved
+ * in Phase A 2026-04-22; see archive/shelved/llm-features/SHELVED.md.)
  *
- * Loaded via @import from demo.css / chat.css / workbench.css.
+ * Loaded via @import from demo.css / workbench.css.
  * Surface-specific overrides live in each surface's own :root block AFTER
  * this file — their values win by cascade order.
  *

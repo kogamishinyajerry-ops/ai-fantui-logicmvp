@@ -144,20 +144,24 @@ def scenario_lever_extreme_clamp(port: int) -> ScenarioResult:
         (payload["hud"]["deploy_90_percent_vdt"] is True, "manual override at 100 should activate VDT90"),
         (payload["tra_lock"]["locked"] is False, "the deep range should be open once the -14° lock boundary satisfies L4"),
         (payload["outputs"]["logic3_active"] is True, "logic3 should remain active after the clamped edge-case request"),
-        ("tra_deg" in payload["logic"]["logic4"]["failed_conditions"], "logic4 should still expose the deep-angle tra_deg blocker at -32.0°"),
+        # L4 tra_deg is now between_lower_inclusive: -32° is the mechanical
+        # stop and IS a valid reverse-travel position, so at TRA=-32 with VDT
+        # override=100, L4 should fully engage and THR_LOCK should release.
+        (payload["outputs"]["logic4_active"] is True, "logic4 should activate at TRA=-32° under manual VDT override (lower-inclusive reverse_travel bound)"),
+        ("tra_deg" not in payload["logic"]["logic4"]["failed_conditions"], "tra_deg must NOT be a failed_condition at TRA=-32° — that was the old exclusive-bound bug"),
     )
     for passed, message in expected_checks:
         if not passed:
             return fail_result("lever_extreme_clamp", status, message)
 
     node_states = {node["id"]: node["state"] for node in payload["nodes"]}
-    if node_states.get("thr_lock") != "blocked":
-        return fail_result("lever_extreme_clamp", status, "THR_LOCK should stay in a controlled blocked state once the deep range is open but logic4 falls back on tra_deg")
+    if node_states.get("thr_lock") != "active":
+        return fail_result("lever_extreme_clamp", status, f"THR_LOCK should be active (released) at TRA=-32° with VDT override=100, but got state={node_states.get('thr_lock')}")
 
     return pass_result(
         "lever_extreme_clamp",
         status,
-        "lever snapshot clamps extreme numeric inputs, coerces boolean-like strings, and keeps the full -32°..0° slider open once the -14° L4 lock boundary is satisfied, even if THR_LOCK later falls back to a controlled blocked state at -32°.",
+        "lever snapshot clamps extreme numeric inputs, coerces boolean-like strings, and keeps the full -32°..0° slider open; TRA=-32° with VDT override=100 now correctly engages L4 and releases THR_LOCK (inclusive lower bound on reverse_travel).",
     )
 
 
@@ -181,15 +185,19 @@ def scenario_lever_mode_switch_reset(port: int) -> ScenarioResult:
             "all three mode-switch smoke requests must return HTTP 200",
         )
 
+    # Post-scrubber-extension: auto_scrubber at TRA=-14 holds the lever long
+    # enough for plant VDT to reach 90% → logic4 correctly latches. Mode
+    # switching is exercised via the mode string + VDT source, not by
+    # asserting a false-blocked L4 that was actually a scrubber-too-short bug.
     expected_checks = (
         (auto_before["mode"] == "canonical_pullback_scrubber", "auto_before should use canonical_pullback_scrubber"),
-        (auto_before["outputs"]["logic4_active"] is False, "auto_before should keep logic4 blocked"),
+        (auto_before["outputs"]["logic4_active"] is True, "auto_before at TRA=-14 should run plant long enough for L4"),
+        (auto_before["input"]["deploy_position_percent"] == 0.0, "auto_before: request deploy_position_percent defaults to 0"),
         (manual["mode"] == "manual_feedback_override", "manual request should switch into manual feedback override"),
         (manual["outputs"]["logic4_active"] is True, "manual override 95 should activate logic4"),
+        (manual["hud"]["deploy_position_percent"] == 95.0, "manual hud VDT echoes the user's override value"),
         (auto_after["mode"] == "canonical_pullback_scrubber", "auto_after should return to canonical_pullback_scrubber"),
-        (auto_after["outputs"]["logic4_active"] is False, "auto_after should drop logic4 back to blocked"),
         (auto_after["input"]["deploy_position_percent"] == 0.0, "auto_after should not retain stale manual deploy_position_percent"),
-        (auto_after["hud"]["deploy_90_percent_vdt"] is False, "auto_after should not retain stale VDT90 state"),
     )
     for passed, message in expected_checks:
         if not passed:

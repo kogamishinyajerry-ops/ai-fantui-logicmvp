@@ -115,9 +115,14 @@ class DeployController:
             _condition(
                 name="tra_deg",
                 current_value=inputs.tra_deg,
-                comparison="between_exclusive",
+                # Lower-inclusive, upper-exclusive: TRA at the mechanical stop
+                # (reverse_travel_min_deg = -32°) is a valid fully-reversed
+                # position and must engage L4; TRA at 0° is the forward detent
+                # and must NOT engage L4. A strict-both-bounds check would
+                # silently drop L4 at the slider's leftmost value.
+                comparison="between_lower_inclusive",
                 threshold_value=(self.config.reverse_travel_min_deg, self.config.reverse_travel_max_deg),
-                passed=self.config.reverse_travel_min_deg < inputs.tra_deg < self.config.reverse_travel_max_deg,
+                passed=self.config.reverse_travel_min_deg <= inputs.tra_deg < self.config.reverse_travel_max_deg,
             ),
             _condition(
                 "aircraft_on_ground",

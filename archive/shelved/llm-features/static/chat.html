@@ -7,7 +7,7 @@
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
   <link rel="manifest" href="/manifest.json">
-  <link rel="stylesheet" href="/chat.css">
+  <link rel="stylesheet" href="/chat.css?v=P43-02.5">
 </head>
 <body>
   <div class="chat-app">
@@ -21,10 +21,9 @@
         <label class="system-switch" for="chat-system-select">
           <span>系统</span>
           <select id="chat-system-select" aria-label="切换系统">
-            <option value="thrust-reverser">反推系统</option>
-            <option value="landing-gear">起落架系统</option>
-            <option value="bleed-air">引气阀系统</option>
-            <option value="efds">干扰弹系统</option>
+            <option value="thrust-reverser">反推系统（简化基线）</option>
+            <option value="c919-etras">C919 反推系统（E-TRAS · certified）</option>
+            <!-- UI-frozen 2026-04-21 (Kogami directive): landing-gear / bleed-air / efds demonstrative 3 套 使命完成 · adapter + chain-topology SVG 在 DOM 保留为 dormant backup · 仅移除切换入口 -->
           </select>
         </label>
 
@@ -578,6 +577,414 @@
               </svg>
             </div>
 
+            <!-- C919 E-TRAS · certified · P34/P38 真实 PDF 接入 · hand-crafted reference panel (P43-02.5 · v4.2 · 22 truth-tracked + 10 annotation nodes · frozen-spec rendering · 非第二份 truth) -->
+            <div id="chain-topology-c919-etras" class="chain-topology canvas-map mobile-step-rail c919-reference-panel" style="display:none" aria-label="C919 E-TRAS 控制链路信号流">
+              <svg class="chain-svg" viewBox="0 0 1100 640" role="img" aria-label="C919 E-TRAS 控制链路信号流图" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <marker id="c919-arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#53ff92"/></marker>
+                  <marker id="c919-arrow-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#28f4ff"/></marker>
+                  <marker id="c919-arrow-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#4a5568"/></marker>
+                  <marker id="c919-arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#ff5454"/></marker>
+                </defs>
+                <!-- Col labels -->
+                <text x="95" y="14" class="chain-col-label" text-anchor="middle" data-annotation="true">Sensors</text>
+                <text x="260" y="14" class="chain-col-label" text-anchor="middle" data-annotation="true">LGCU 余度</text>
+                <text x="430" y="14" class="chain-col-label" text-anchor="middle" data-annotation="true">Logic (ln_*)</text>
+                <text x="610" y="14" class="chain-col-label" text-anchor="middle" data-annotation="true">Timing · Safety</text>
+                <text x="780" y="14" class="chain-col-label" text-anchor="middle" data-annotation="true">Commands</text>
+                <text x="970" y="14" class="chain-col-label" text-anchor="middle" data-annotation="true">Aggregate</text>
+
+                <!-- ===== Col 1 · 12 sensor components (truth-tracked) ===== -->
+                <g class="chain-node-group" data-node="tra_deg">
+                  <rect x="30" y="24" width="130" height="32" rx="6" class="chain-node-svg sensor-node-svg"/>
+                  <circle class="node-status-dot" cx="38" cy="32" r="3"/>
+                  <text class="node-type-tag" x="45" y="29">SEN</text>
+                  <text x="95" y="42" class="chain-node-label" text-anchor="middle" data-tooltip="TRA · 推力杆位置 · -32~0°">tra_deg</text>
+                  <text x="155" y="36" class="chain-node-value" text-anchor="end" font-size="9" data-value-for="tra_deg">—</text>
+                </g>
+                <g class="chain-node-group" data-node="atltla">
+                  <rect x="30" y="64" width="130" height="32" rx="6" class="chain-node-svg sensor-node-svg"/>
+                  <circle class="node-status-dot" cx="38" cy="72" r="3"/>
+                  <text class="node-type-tag" x="45" y="69">SEN</text>
+                  <text x="95" y="82" class="chain-node-label" text-anchor="middle" data-tooltip="ATLTLA · At Landing Low TRA · PDF §1.1.1">atltla</text>
+                  <text x="155" y="76" class="chain-node-value" text-anchor="end" font-size="9" data-value-for="atltla">—</text>
+                </g>
+                <g class="chain-node-group" data-node="apwtla">
+                  <rect x="30" y="104" width="130" height="32" rx="6" class="chain-node-svg sensor-node-svg"/>
+                  <circle class="node-status-dot" cx="38" cy="112" r="3"/>
+                  <text class="node-type-tag" x="45" y="109">SEN</text>
+                  <text x="95" y="122" class="chain-node-label" text-anchor="middle" data-tooltip="APWTLA · At Pushback Warning · PDF §1.1.1">apwtla</text>
+                  <text x="155" y="116" class="chain-node-value" text-anchor="end" font-size="9" data-value-for="apwtla">—</text>
+                </g>
+                <g class="chain-node-group" data-node="engine_running">
+                  <rect x="30" y="144" width="130" height="32" rx="6" class="chain-node-svg sensor-node-svg"/>
+                  <circle class="node-status-dot" cx="38" cy="152" r="3"/>
+                  <text class="node-type-tag" x="45" y="149">SEN</text>
+                  <text x="95" y="162" class="chain-node-label" text-anchor="middle" data-tooltip="Engine running · deploy/stow gate">engine_running</text>
+                  <text x="155" y="156" class="chain-node-value" text-anchor="end" font-size="9" data-value-for="engine_running">—</text>
+                </g>
+                <g class="chain-node-group" data-node="n1k_percent">
+                  <rect x="30" y="184" width="130" height="32" rx="6" class="chain-node-svg sensor-node-svg"/>
+                  <circle class="node-status-dot" cx="38" cy="192" r="3"/>
+                  <text class="node-type-tag" x="45" y="189">SEN</text>
+                  <text x="95" y="202" class="chain-node-label" text-anchor="middle" data-tooltip="N1K% · deploy envelope &lt; 84%">n1k_percent</text>
+                  <text x="155" y="196" class="chain-node-value" text-anchor="end" font-size="9" data-value-for="n1k_percent">—</text>
+                </g>
+                <g class="chain-node-group" data-node="tr_inhibited">
+                  <rect x="30" y="224" width="130" height="32" rx="6" class="chain-node-svg sensor-node-svg"/>
+                  <circle class="node-status-dot" cx="38" cy="232" r="3"/>
+                  <text class="node-type-tag" x="45" y="229">SEN</text>
+                  <text x="95" y="242" class="chain-node-label" text-anchor="middle" data-tooltip="TR_Inhibited · A/C bus block">tr_inhibited</text>
+                  <text x="155" y="236" class="chain-node-value" text-anchor="end" font-size="9" data-value-for="tr_inhibited">—</text>
+                </g>
+                <g class="chain-node-group" data-node="mlg_wow">
+                  <rect x="30" y="264" width="130" height="32" rx="6" class="chain-node-svg sensor-node-svg"/>
+                  <circle class="node-status-dot" cx="38" cy="272" r="3"/>
+                  <text class="node-type-tag" x="45" y="269">SEN</text>
+                  <text x="95" y="282" class="chain-node-label" text-anchor="middle" data-tooltip="MLG_WOW · derived from LGCU redundancy">mlg_wow</text>
+                  <text x="155" y="276" class="chain-node-value" text-anchor="end" font-size="9" data-value-for="mlg_wow">—</text>
+                </g>
+                <g class="chain-node-group" data-node="tr_wow">
+                  <rect x="30" y="304" width="130" height="32" rx="6" class="chain-node-svg sensor-node-svg"/>
+                  <circle class="node-status-dot" cx="38" cy="312" r="3"/>
+                  <text class="node-type-tag" x="45" y="309">SEN</text>
+                  <text x="95" y="322" class="chain-node-label" text-anchor="middle" data-tooltip="TR_WOW · 2.25s filtered">tr_wow</text>
+                  <text x="155" y="316" class="chain-node-value" text-anchor="end" font-size="9" data-value-for="tr_wow">—</text>
+                </g>
+                <g class="chain-node-group" data-node="trcu_power_on">
+                  <rect x="30" y="344" width="130" height="32" rx="6" class="chain-node-svg sensor-node-svg"/>
+                  <circle class="node-status-dot" cx="38" cy="352" r="3"/>
+                  <text class="node-type-tag" x="45" y="349">SEN</text>
+                  <text x="95" y="362" class="chain-node-label" text-anchor="middle" data-tooltip="TRCU power · truth-tracked status (non-gating)">trcu_power_on</text>
+                  <text x="155" y="356" class="chain-node-value" text-anchor="end" font-size="9" data-value-for="trcu_power_on">—</text>
+                </g>
+                <g class="chain-node-group" data-node="e_tras_over_temp_fault">
+                  <rect x="30" y="384" width="130" height="32" rx="6" class="chain-node-svg sensor-node-svg"/>
+                  <circle class="node-status-dot" cx="38" cy="392" r="3"/>
+                  <text class="node-type-tag" x="45" y="389">SEN</text>
+                  <text x="95" y="402" class="chain-node-label" text-anchor="middle" data-tooltip="E-TRAS over temp · safety abort">e_tras_over_temp_fault</text>
+                  <text x="155" y="396" class="chain-node-value" text-anchor="end" font-size="9" data-value-for="e_tras_over_temp_fault">—</text>
+                </g>
+                <g class="chain-node-group" data-node="tr_position_percent">
+                  <rect x="30" y="424" width="130" height="32" rx="6" class="chain-node-svg sensor-node-svg"/>
+                  <circle class="node-status-dot" cx="38" cy="432" r="3"/>
+                  <text class="node-type-tag" x="45" y="429">SEN</text>
+                  <text x="95" y="442" class="chain-node-label" text-anchor="middle" data-tooltip="TR position % · ≥80% = deployed">tr_position_percent</text>
+                  <text x="155" y="436" class="chain-node-value" text-anchor="end" font-size="9" data-value-for="tr_position_percent">—</text>
+                </g>
+                <g class="chain-node-group" data-node="lock_state">
+                  <rect x="30" y="464" width="130" height="32" rx="6" class="chain-node-svg sensor-node-svg"/>
+                  <circle class="node-status-dot" cx="38" cy="472" r="3"/>
+                  <text class="node-type-tag" x="45" y="469">SEN</text>
+                  <text x="95" y="482" class="chain-node-label" text-anchor="middle" data-tooltip="lock_state aggregate (LOCKED/PARTIAL/UNLOCKED_CONFIRMED/UNKNOWN)">lock_state</text>
+                  <text x="155" y="476" class="chain-node-value" text-anchor="end" font-size="9" data-value-for="lock_state">—</text>
+                </g>
+
+                <!-- ===== Col 2 · LGCU 余度 annotation (not truth-tracked) ===== -->
+                <g class="chain-annotation-group" data-annotation="true">
+                  <rect x="200" y="230" width="120" height="60" rx="4" class="lgcu-selector-svg"/>
+                  <rect x="210" y="240" width="120" height="60" rx="4" class="lgcu-selector-svg lgcu-selector-back"/>
+                  <text x="260" y="226" class="chain-annotation-label" text-anchor="middle" font-size="10">LGCU 双余度</text>
+                  <text x="220" y="258" class="chain-annotation-detail" font-size="8">LGCU1 v/valid</text>
+                  <text x="230" y="278" class="chain-annotation-detail" font-size="8">LGCU2 v/valid</text>
+                  <text x="265" y="310" class="chain-annotation-detail" font-size="8" text-anchor="middle">→ mlg_wow (select)</text>
+                </g>
+
+                <!-- ===== Col 3 · 5 logic nodes (truth-tracked) ===== -->
+                <g class="chain-node-group" data-node="ln_eicu_cmd2">
+                  <polygon points="360,60 490,80 360,100" class="chain-node-svg logic-gate-svg"/>
+                  <text x="395" y="85" class="chain-node-label" font-size="9" data-tooltip="PDF §1.1.1 图2 · EICU CMD2 · 4-input AND · MLG_WOW ∧ ¬TR_Inhibited ∧ (Comm2_timer&lt;30s) ∧ ¬TR_Deployed · 用于解锁TLS+吊挂锁 · ⚠ adapter 与 PDF 有偏差 (Counter F1)">ln_eicu_cmd2</text>
+                </g>
+                <g class="chain-node-group" data-node="ln_eicu_cmd3">
+                  <polygon points="360,160 490,180 360,200" class="chain-node-svg logic-gate-svg"/>
+                  <text x="395" y="185" class="chain-node-label" font-size="9" data-tooltip="PDF §1.1.2 图3 · EICU CMD3 · 4-input AND · (Engine_Running∨TRCU_menu) ∧ MLG_WOW ∧ ¬TR_Inhibited ∧ APWTLA · 用于115VAC三相电给TRCU · ⚠ adapter 用 atltla 不是 apwtla (Counter F2)">ln_eicu_cmd3</text>
+                </g>
+                <g class="chain-node-group" data-node="ln_tr_command3_enable">
+                  <polygon points="360,260 490,280 360,300" class="chain-node-svg logic-gate-svg"/>
+                  <text x="395" y="285" class="chain-node-label" font-size="8" data-tooltip="PDF §1.1.2 图4 · TR_Command3_Enable (FADEC→EICU reset) · ¬[(Stowed_Locked_1s ∧ TRA≥-1.4 ∧ 115VAC@TRCU) ∨ E-TRAS_OverTemp] · 用于重置CMD3断三相电 · ⚠ adapter 方向反了 (Counter F3)">ln_tr_cmd3_en</text>
+                </g>
+                <g class="chain-node-group" data-node="ln_fadec_deploy_command">
+                  <polygon points="360,360 490,380 360,400" class="chain-node-svg logic-gate-svg"/>
+                  <text x="395" y="385" class="chain-node-label" font-size="8" data-tooltip="PDF §1.1.3 图5 · FADEC Deploy CMD1 · 6-input AND · (Eng_Run∨Maint) ∧ ¬TR_Inhibited ∧ Unlock_Confirmed ∧ TR_WOW ∧ (N1k≤limit) ∧ (TRA&lt;-11.74) · 命令TRCU展开反推 · ⚠ adapter 多 2 项 tr_command3_enable+tr_deployed 缺 ¬tr_inhibited (Counter F4)">ln_fadec_deploy</text>
+                </g>
+                <g class="chain-node-group" data-node="ln_fadec_stow_command">
+                  <polygon points="360,460 490,480 360,500" class="chain-node-svg logic-gate-svg"/>
+                  <text x="395" y="485" class="chain-node-label" font-size="8" data-tooltip="PDF §2 Step 7 · FADEC Stow CMD1 · AND · TRA≥-1.4 ∧ (N1k≤Stow_limit) ∧ Engine_Running ∧ ¬Deploy_CMD · 命令TRCU收起反推 (Counter F5 minor)">ln_fadec_stow</text>
+                </g>
+
+                <!-- ===== Col 4 · Timing + Safety annotation ===== -->
+                <g class="chain-annotation-group" data-annotation="true">
+                  <polygon points="560,160 600,140 640,160 640,200 600,220 560,200" class="timing-guard-svg"/>
+                  <text x="600" y="175" class="chain-annotation-label" text-anchor="middle" font-size="8">comm2_timer_s</text>
+                  <text x="600" y="190" class="chain-annotation-detail" text-anchor="middle" font-size="8" data-value-for="comm2_timer_s">—</text>
+                  <text x="600" y="205" class="chain-annotation-detail" text-anchor="middle" font-size="7">display-only</text>
+                </g>
+                <g class="chain-annotation-group" data-annotation="true">
+                  <polygon points="560,260 600,240 640,260 640,300 600,320 560,300" class="timing-guard-svg"/>
+                  <text x="600" y="275" class="chain-annotation-label" text-anchor="middle" font-size="8">lock_unlock_s</text>
+                  <text x="600" y="290" class="chain-annotation-detail" text-anchor="middle" font-size="8" data-value-for="lock_unlock_confirm_s">—</text>
+                  <text x="600" y="305" class="chain-annotation-detail" text-anchor="middle" font-size="7">≥ 0.4s</text>
+                </g>
+                <g class="chain-annotation-group" data-annotation="true">
+                  <polygon points="560,360 600,340 640,360 640,400 600,420 560,400" class="timing-guard-svg"/>
+                  <text x="600" y="375" class="chain-annotation-label" text-anchor="middle" font-size="8">deployed_s</text>
+                  <text x="600" y="390" class="chain-annotation-detail" text-anchor="middle" font-size="8" data-value-for="tr_position_deployed_confirm_s">—</text>
+                  <text x="600" y="405" class="chain-annotation-detail" text-anchor="middle" font-size="7">≥ 0.5s</text>
+                </g>
+                <g class="chain-annotation-group" data-annotation="true">
+                  <polygon points="560,460 600,440 640,460 640,500 600,520 560,500" class="timing-guard-svg"/>
+                  <text x="600" y="475" class="chain-annotation-label" text-anchor="middle" font-size="8">stowed_locked_s</text>
+                  <text x="600" y="490" class="chain-annotation-detail" text-anchor="middle" font-size="8" data-value-for="tr_stowed_locked_confirm_s">—</text>
+                  <text x="600" y="505" class="chain-annotation-detail" text-anchor="middle" font-size="7">reset ≥ 1.0s</text>
+                </g>
+                <g class="chain-annotation-group" data-annotation="true">
+                  <polygon points="600,560 640,580 600,600 560,580" class="safety-limit-svg"/>
+                  <text x="600" y="585" class="chain-annotation-label" text-anchor="middle" font-size="8">N1K envelope</text>
+                </g>
+
+                <!-- ===== Col 5 · 5 command components (truth-tracked) ===== -->
+                <g class="chain-node-group" data-node="eicu_cmd2">
+                  <rect x="720" y="65" width="120" height="30" rx="3" class="chain-node-svg actuator-node-svg"/>
+                  <text x="780" y="83" class="chain-node-label" text-anchor="middle" font-size="9" data-tooltip="EICU CMD2 · derived from ln_eicu_cmd2">eicu_cmd2</text>
+                </g>
+                <g class="chain-node-group" data-node="eicu_cmd3">
+                  <rect x="720" y="165" width="120" height="30" rx="3" class="chain-node-svg actuator-node-svg"/>
+                  <text x="780" y="183" class="chain-node-label" text-anchor="middle" font-size="9" data-tooltip="EICU CMD3 · S-R latched">eicu_cmd3</text>
+                </g>
+                <g class="chain-node-group" data-node="tr_command3_enable">
+                  <rect x="720" y="265" width="120" height="30" rx="3" class="chain-node-svg actuator-node-svg"/>
+                  <text x="780" y="283" class="chain-node-label" text-anchor="middle" font-size="9" data-tooltip="TR CMD3 enable">tr_command3_enable</text>
+                </g>
+                <g class="chain-node-group" data-node="fadec_deploy_command">
+                  <rect x="720" y="365" width="120" height="30" rx="3" class="chain-node-svg actuator-node-svg"/>
+                  <text x="780" y="383" class="chain-node-label" text-anchor="middle" font-size="9" data-tooltip="FADEC deploy · final deploy command">fadec_deploy_command</text>
+                </g>
+                <g class="chain-node-group" data-node="fadec_stow_command">
+                  <rect x="720" y="465" width="120" height="30" rx="3" class="chain-node-svg actuator-node-svg"/>
+                  <text x="780" y="483" class="chain-node-label" text-anchor="middle" font-size="9" data-tooltip="FADEC stow · reverse command">fadec_stow_command</text>
+                </g>
+
+                <!-- ===== Col 6 · Aggregate annotation ===== -->
+                <g class="chain-annotation-group" data-annotation="true">
+                  <rect x="880" y="420" width="190" height="48" rx="6" class="aggregate-badge-svg"/>
+                  <text x="975" y="440" class="chain-annotation-label" text-anchor="middle" font-size="10">TR position</text>
+                  <rect x="895" y="448" width="160" height="8" rx="2" class="aggregate-bar-bg"/>
+                  <rect x="895" y="448" width="0" height="8" rx="2" class="aggregate-bar-fill" data-bar-for="tr_position_percent"/>
+                </g>
+                <g class="chain-annotation-group" data-annotation="true">
+                  <rect x="880" y="500" width="190" height="48" rx="6" class="aggregate-badge-svg"/>
+                  <text x="975" y="520" class="chain-annotation-label" text-anchor="middle" font-size="10">Completion</text>
+                  <text x="975" y="538" class="chain-annotation-detail" text-anchor="middle" font-size="9" data-value-for="completion_reached">—</text>
+                </g>
+
+                <!-- ===== Connection lines (≥40) · v4.3 PDF spec alignment · Counter F remediation ===== -->
+                <!-- LGCU annotation → mlg_wow (Table 2 selector · PDF §1.1.1 ①) -->
+                <line class="conn-line" x1="200" y1="260" x2="160" y2="280" marker-end="url(#c919-arrow-cyan)" data-conn-from="lgcu_annotation" data-conn-to="mlg_wow"/>
+
+                <!-- PDF §1.1.1 图2 · EICU CMD2 · 4-input AND -->
+                <line class="conn-line" x1="160" y1="280" x2="360" y2="78" marker-end="url(#c919-arrow-green)" data-conn-from="mlg_wow" data-conn-to="ln_eicu_cmd2"/>
+                <line class="conn-line" x1="160" y1="240" x2="360" y2="82" marker-end="url(#c919-arrow-red)" data-conn-from="tr_inhibited" data-conn-to="ln_eicu_cmd2"/>
+                <line class="conn-line" x1="560" y1="180" x2="360" y2="86" marker-end="url(#c919-arrow-green)" data-conn-from="comm2_timer_s" data-conn-to="ln_eicu_cmd2"/>
+                <line class="conn-line" x1="160" y1="440" x2="360" y2="90" marker-end="url(#c919-arrow-red)" data-conn-from="tr_position_percent" data-conn-to="ln_eicu_cmd2"/>
+                <!-- ATLTLA → Comm2 timer reset (PDF §1.1.1 ③ · timing driver · NOT direct CMD2 AND input) -->
+                <line class="conn-line conn-line-dashed" x1="160" y1="80" x2="560" y2="170" data-conn-from="atltla" data-conn-to="comm2_timer_s"/>
+
+                <!-- PDF §1.1.2 图3 · EICU CMD3 · 4-input AND · NOTE: spec uses APWTLA (microswitch 2) not ATLTLA (adapter bug F2) -->
+                <line class="conn-line" x1="160" y1="160" x2="360" y2="178" marker-end="url(#c919-arrow-green)" data-conn-from="engine_running" data-conn-to="ln_eicu_cmd3"/>
+                <line class="conn-line" x1="160" y1="280" x2="360" y2="182" marker-end="url(#c919-arrow-green)" data-conn-from="mlg_wow" data-conn-to="ln_eicu_cmd3"/>
+                <line class="conn-line" x1="160" y1="240" x2="360" y2="186" marker-end="url(#c919-arrow-red)" data-conn-from="tr_inhibited" data-conn-to="ln_eicu_cmd3"/>
+                <line class="conn-line" x1="160" y1="120" x2="360" y2="190" marker-end="url(#c919-arrow-green)" data-conn-from="apwtla" data-conn-to="ln_eicu_cmd3"/>
+
+                <!-- PDF §1.1.2 图4 · TR_Command3_Enable · NOT-of-OR reset logic · 4 inputs to OR -->
+                <line class="conn-line" x1="560" y1="480" x2="360" y2="278" marker-end="url(#c919-arrow-red)" data-conn-from="tr_stowed_locked_confirm_s" data-conn-to="ln_tr_command3_enable"/>
+                <line class="conn-line" x1="160" y1="40" x2="360" y2="282" marker-end="url(#c919-arrow-red)" data-conn-from="tra_deg" data-conn-to="ln_tr_command3_enable"/>
+                <line class="conn-line" x1="160" y1="360" x2="360" y2="286" marker-end="url(#c919-arrow-red)" data-conn-from="trcu_power_on" data-conn-to="ln_tr_command3_enable"/>
+                <line class="conn-line" x1="160" y1="400" x2="360" y2="290" marker-end="url(#c919-arrow-red)" data-conn-from="e_tras_over_temp_fault" data-conn-to="ln_tr_command3_enable"/>
+                <!-- TR_Command3_Enable output → reset CMD3 (FADEC→EICU feedback) -->
+                <line class="conn-line conn-line-dashed" x1="490" y1="280" x2="720" y2="195" marker-end="url(#c919-arrow-red)" data-conn-from="ln_tr_command3_enable" data-conn-to="eicu_cmd3"/>
+
+                <!-- PDF §1.1.3 图5 · FADEC Deploy CMD1 · 6-input AND · ⚠ NOT driven by ln_eicu_cmd2/3/tr_command3_enable (adapter bug F4) -->
+                <line class="conn-line" x1="160" y1="160" x2="360" y2="370" marker-end="url(#c919-arrow-green)" data-conn-from="engine_running" data-conn-to="ln_fadec_deploy_command"/>
+                <line class="conn-line" x1="160" y1="240" x2="360" y2="375" marker-end="url(#c919-arrow-red)" data-conn-from="tr_inhibited" data-conn-to="ln_fadec_deploy_command"/>
+                <line class="conn-line" x1="560" y1="280" x2="360" y2="380" marker-end="url(#c919-arrow-green)" data-conn-from="lock_unlock_confirm_s" data-conn-to="ln_fadec_deploy_command"/>
+                <line class="conn-line" x1="160" y1="320" x2="360" y2="385" marker-end="url(#c919-arrow-green)" data-conn-from="tr_wow" data-conn-to="ln_fadec_deploy_command"/>
+                <line class="conn-line" x1="160" y1="200" x2="360" y2="390" marker-end="url(#c919-arrow-green)" data-conn-from="n1k_percent" data-conn-to="ln_fadec_deploy_command"/>
+                <line class="conn-line" x1="160" y1="40" x2="360" y2="395" marker-end="url(#c919-arrow-green)" data-conn-from="tra_deg" data-conn-to="ln_fadec_deploy_command"/>
+                <!-- Unlock_Confirmed composite annotation: TLS+Pylon unlocked OR (ATLTLA ∧ 400ms confirm) · display hint -->
+                <line class="conn-line conn-line-dashed" x1="160" y1="480" x2="560" y2="270" data-conn-from="lock_state" data-conn-to="lock_unlock_confirm_s"/>
+                <line class="conn-line conn-line-dashed" x1="160" y1="80" x2="560" y2="275" data-conn-from="atltla" data-conn-to="lock_unlock_confirm_s"/>
+
+                <!-- PDF §2 Step 7 · FADEC Stow CMD1 -->
+                <line class="conn-line" x1="160" y1="40" x2="360" y2="475" marker-end="url(#c919-arrow-green)" data-conn-from="tra_deg" data-conn-to="ln_fadec_stow_command"/>
+                <line class="conn-line" x1="160" y1="200" x2="360" y2="480" marker-end="url(#c919-arrow-green)" data-conn-from="n1k_percent" data-conn-to="ln_fadec_stow_command"/>
+                <line class="conn-line" x1="160" y1="160" x2="360" y2="485" marker-end="url(#c919-arrow-green)" data-conn-from="engine_running" data-conn-to="ln_fadec_stow_command"/>
+                <line class="conn-line" x1="720" y1="380" x2="360" y2="490" marker-end="url(#c919-arrow-red)" data-conn-from="fadec_deploy_command" data-conn-to="ln_fadec_stow_command"/>
+
+                <!-- Col 3 logic → Col 5 command output (5 lines · 1:1 driver) -->
+                <line class="conn-line" x1="490" y1="80" x2="720" y2="80" marker-end="url(#c919-arrow-green)" data-conn-from="ln_eicu_cmd2" data-conn-to="eicu_cmd2"/>
+                <line class="conn-line" x1="490" y1="180" x2="720" y2="180" marker-end="url(#c919-arrow-green)" data-conn-from="ln_eicu_cmd3" data-conn-to="eicu_cmd3"/>
+                <line class="conn-line" x1="490" y1="280" x2="720" y2="280" marker-end="url(#c919-arrow-green)" data-conn-from="ln_tr_command3_enable" data-conn-to="tr_command3_enable"/>
+                <line class="conn-line" x1="490" y1="380" x2="720" y2="380" marker-end="url(#c919-arrow-green)" data-conn-from="ln_fadec_deploy_command" data-conn-to="fadec_deploy_command"/>
+                <line class="conn-line" x1="490" y1="480" x2="720" y2="480" marker-end="url(#c919-arrow-green)" data-conn-from="ln_fadec_stow_command" data-conn-to="fadec_stow_command"/>
+
+                <!-- EICU CMD3 → 115VAC@TRCU (power enable · not boolean gate to CMD1) -->
+                <line class="conn-line conn-line-dashed" x1="840" y1="180" x2="160" y2="360" data-conn-from="eicu_cmd3" data-conn-to="trcu_power_on"/>
+
+                <!-- Col 5 → Col 6 aggregate feeds -->
+                <line class="conn-line" x1="840" y1="380" x2="880" y2="524" marker-end="url(#c919-arrow-cyan)" data-conn-from="fadec_deploy_command" data-conn-to="completion_aggregate"/>
+                <line class="conn-line" x1="160" y1="440" x2="880" y2="444" marker-end="url(#c919-arrow-cyan)" data-conn-from="tr_position_percent" data-conn-to="tr_position_bar"/>
+                <line class="conn-line" x1="160" y1="480" x2="880" y2="518" marker-end="url(#c919-arrow-cyan)" data-conn-from="lock_state" data-conn-to="lock_aggregate"/>
+
+                <!-- Actuation feedback: deploy command drives tr_position_percent (hardware · not logic) -->
+                <line class="conn-line conn-line-dashed" x1="720" y1="385" x2="160" y2="450" data-conn-from="fadec_deploy_command" data-conn-to="tr_position_percent"/>
+                <!-- PDF Figure 4 display hints · additional semantic annotations -->
+                <line class="conn-line conn-line-dashed" x1="160" y1="360" x2="560" y2="580" data-conn-from="trcu_power_on" data-conn-to="safety_115vac_trcu"/>
+                <line class="conn-line conn-line-dashed" x1="160" y1="440" x2="560" y2="380" data-conn-from="tr_position_percent" data-conn-to="tr_position_deployed_confirm_s"/>
+                <!-- PDF §2 Step 9: stow-locked confirmation feeds TR_Command3_Enable reset -->
+                <line class="conn-line conn-line-dashed" x1="160" y1="480" x2="560" y2="480" data-conn-from="lock_state" data-conn-to="tr_stowed_locked_confirm_s"/>
+                <!-- TR_Deployed feedback to CMD2 (PDF §1.1.1 ④) -->
+                <line class="conn-line conn-line-dashed" x1="840" y1="380" x2="490" y2="75" data-conn-from="fadec_deploy_command" data-conn-to="ln_eicu_cmd2"/>
+              </svg>
+
+              <!-- P43-02.5 freeze banner · replaces v3 placeholder card after execution -->
+              <div class="c919-panel-freeze-banner">
+                <span class="eyebrow">certified · in use</span>
+                <span>C919 反推系统 · E-TRAS · P43-02.5 reference panel · v4.3 PDF-spec aligned</span>
+              </div>
+
+              <!-- P43-02.5 v4.3 · Spec-vs-adapter divergence warning (Counter F) -->
+              <div class="c919-spec-divergence-banner">
+                <strong>⚠ Spec-vs-adapter 分歧</strong>
+                <p>SVG 拓扑 + 节点 tooltip 按 PDF <code>20260417-C919反推控制逻辑需求文档</code> §1.1.1-§1.1.3 Figure 2-5 绘制。但 c919_etras_adapter 的 boolean logic 与 PDF 有 5 处偏差（详见 <code>.planning/phases/P43-02.5-c919-etras-reference-panel/COUNTER-F-adapter-spec-compliance-gaps.md</code> · F1-F5）：adapter 对 CMD2 用 (atltla∨apwtla)，PDF 要求 MLG_WOW∧¬TR_Inhibited∧(Comm2&lt;30s)∧¬TR_Deployed；adapter 对 CMD3 用 atltla，PDF 要求 APWTLA；TR_Command3_Enable 方向反了；FADEC Deploy 多 2 项少 1 项。</p>
+                <p>当前 panel 状态颜色仍由 adapter 驱动（§3e R5 · panel = rendering of truth），所以若 panel 按 PDF 全满条件却未激活节点，<strong>是 adapter-spec 偏差所致</strong>，不是 panel bug。adapter 修复属 P34.1 新 phase（超 P43-02.5 scope · Kogami R4 仲裁中）。</p>
+              </div>
+
+              <!-- P43-02.5 Step D2 · 19 visible controls panel (Q6=B pivot)
+                   12 core + 7 unlock/deploy gating + 1 auxiliary debug button
+                   Each input has data-c919-field · read by collectC919PanelSnapshot() -->
+              <div id="c919-controls-panel" class="c919-controls-panel" aria-label="C919 面板控制 · 19 可见控件">
+                <div class="c919-ctrl-group">
+                  <h4 class="c919-ctrl-group-title">核心输入 (12)</h4>
+                  <div class="c919-ctrl-row">
+                    <label class="c919-ctrl"><span>TRA (°)</span><input type="range" data-c919-field="tra_deg" min="-32" max="0" step="0.1" value="0"/><span class="c919-ctrl-val" data-display-for="tra_deg">0.0</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="atltla"/><span>ATLTLA</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="apwtla"/><span>APWTLA</span></label>
+                  </div>
+                  <div class="c919-ctrl-row">
+                    <label class="c919-ctrl"><span>N1K (%)</span><input type="range" data-c919-field="n1k_percent" min="0" max="120" step="1" value="35"/><span class="c919-ctrl-val" data-display-for="n1k_percent">35</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="engine_running" checked/><span>engine_running</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="tr_inhibited"/><span>tr_inhibited</span></label>
+                  </div>
+                  <div class="c919-ctrl-row">
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="tr_wow" checked/><span>tr_wow</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="lgcu1_mlg_wow_value" checked/><span>LGCU1 value</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="lgcu1_mlg_wow_valid" checked/><span>LGCU1 valid</span></label>
+                  </div>
+                  <div class="c919-ctrl-row">
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="lgcu2_mlg_wow_value" checked/><span>LGCU2 value</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="lgcu2_mlg_wow_valid" checked/><span>LGCU2 valid</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="e_tras_over_temp_fault"/><span>over_temp_fault</span></label>
+                  </div>
+                </div>
+                <div class="c919-ctrl-group">
+                  <h4 class="c919-ctrl-group-title">Unlock/Deploy Gating (7 · v4.2 Q6=B)</h4>
+                  <div class="c919-ctrl-row">
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="tls_ls_a_unlocked" data-c919-composite-valid="tls_ls_a_valid"/><span>TLS A unlock</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="tls_ls_b_unlocked" data-c919-composite-valid="tls_ls_b_valid"/><span>TLS B unlock</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="left_pylon_ls_a_unlocked" data-c919-composite-targets="left_pylon_ls_b_unlocked,right_pylon_ls_a_unlocked,right_pylon_ls_b_unlocked"/><span>Pylon unlock (all 4)</span></label>
+                  </div>
+                  <div class="c919-ctrl-row">
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="pls_ls_a_locked" data-c919-composite-targets="pls_ls_b_locked" checked/><span>PLS locked (a+b)</span></label>
+                    <label class="c919-ctrl"><span>TR position (%)</span><input type="range" data-c919-field="tr_position_percent" min="0" max="100" step="1" value="0"/><span class="c919-ctrl-val" data-display-for="tr_position_percent">0</span></label>
+                    <label class="c919-ctrl"><input type="checkbox" data-c919-field="trcu_power_on" checked/><span>TRCU power</span></label>
+                  </div>
+                  <div class="c919-ctrl-row c919-ctrl-row-buttons">
+                    <button type="button" class="c919-ctrl-btn c919-ctrl-btn-advance" id="c919-btn-advance-deploy">▶ Advance deploy latches</button>
+                    <button type="button" class="c919-ctrl-btn c919-ctrl-btn-stow" id="c919-btn-stow-latches">■ Stow latches (debug)</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Legacy placeholder card (hidden · kept for audit · v1 commit 9daa7f6 origin) -->
+              <div class="c919-placeholder-card" style="display:none">
+                <header class="c919-placeholder-header">
+                  <div>
+                    <p class="eyebrow">certified · in use</p>
+                    <h2>C919 反推系统 · E-TRAS</h2>
+                    <p class="c919-placeholder-subtitle">Electric Thrust Reverser Actuation System · 甲方（C919 TRCU 团队）· P34 接入 · P38 真实 PDF 入库 · SHA256 锁</p>
+                  </div>
+                  <span class="c919-placeholder-badge">待 P43-05 生成完整信号流图</span>
+                </header>
+
+                <section class="c919-placeholder-section">
+                  <h3>🚥 为什么当前没有 SVG 信号流图？</h3>
+                  <p>C919 E-TRAS 的 adapter、intake packet、hardware schema 与 traceability matrix 已在 P34 (2026-04-20) + P38 (2026-04-20) 全部接入后端，但控制链路的 SVG 信号流图是 <strong>P43-05 Progressive panel preview</strong> 的职责范围：由 AI 从 <code>frozen spec</code> 自动生成面板，而不是手画（hand-drafted SVG 会变成第二份真值 · 违 §3e R3/R5 authority contract）。</p>
+                  <p>今天已批准的 <strong>GATE-P43-02-BATCH-PLAN-QUALITY (Option A)</strong> 解锁 P43-02 + P43-03 + P43-04（workflow + doc pipeline + freeze gate）· 面板生成在 <strong>Batch-3（P43-05/06/07）</strong>。</p>
+                </section>
+
+                <section class="c919-placeholder-section">
+                  <h3>📋 已接入的真实数据</h3>
+                  <ul class="c919-placeholder-grid">
+                    <li>
+                      <strong>源文档</strong>
+                      <span>uploads/20260417-C919反推控制逻辑需求文档.pdf · 10 pages · 989 KB</span>
+                    </li>
+                    <li>
+                      <strong>SHA256</strong>
+                      <span><code>dbe3f76b8ab0682e7ea41ab36a970ad4897c4bfc5461a60a8f0831d485631da5</code></span>
+                    </li>
+                    <li>
+                      <strong>Authority</strong>
+                      <span>甲方 C919 TRCU 团队 · Appendix A Q1/Q2/Q3 sign-off resolved（Kogami 2026-04-20 代 TRCU 明示接纳）</span>
+                    </li>
+                    <li>
+                      <strong>Adapter</strong>
+                      <span><code>adapters.c919_etras_adapter.C919_ETRAS_CONTROLLER_METADATA</code> · truth_level=<strong>certified</strong> · status=<strong>In use</strong></span>
+                    </li>
+                    <li>
+                      <strong>Hardware schema</strong>
+                      <span><a href="/api/hardware/schema?system_id=c919-etras" target="_blank" rel="noopener">GET /api/hardware/schema?system_id=c919-etras</a>（返 6733 bytes · MLG_WOW / LGCU1/LGCU2 redundancy / TR_INHIBITED / EICU_CMD2/3 / FADEC_DEPLOY_CMD1 / 6 组 timing 阈值）</span>
+                    </li>
+                    <li>
+                      <strong>Traceability Matrix</strong>
+                      <span>docs/c919_etras/traceability_matrix.md · 5 张表 + Appendix A</span>
+                    </li>
+                  </ul>
+                </section>
+
+                <section class="c919-placeholder-section">
+                  <h3>🧭 控制链路层级（PDF §1.1.1–§1.1.3 描述）</h3>
+                  <p>10 页 PDF 定义的链路骨架（待 P43-05 渲染成 SVG）：</p>
+                  <ol class="c919-placeholder-chain">
+                    <li><strong>传感器层</strong>：MLG_WOW（主起落架称重） · TR_INHIBITED（电气反推抑制） · LGCU1/LGCU2 双余度输入</li>
+                    <li><strong>LGCU 余度选择</strong>：PDF 表2 列 1-4 描述 LGCU1/LGCU2 valid+value 组合 → 选出 selected MLG_WOW</li>
+                    <li><strong>TR 命令阶梯</strong>：EICU_CMD2（§1.1.1 图2）→ EICU_CMD3（§1.1.2 图3）→ TR_COMMAND3（§1.1.2 图4）→ FADEC_DEPLOY_CMD1（§1.1.3 图5）</li>
+                    <li><strong>时序守护</strong>：confirmation_0.5s · lock_confirmation_400ms · tr_wow_true/false_persist · deploy/stow cycle · idle_to_max</li>
+                    <li><strong>安全极限</strong>：max_n1k_deploy_limit（§1.1.3 ⑤）· TR_STOWED_LOCKED_CONFIRM</li>
+                    <li><strong>执行器</strong>：Thrust Reverser Cowl（电驱动作动器） · position feedback</li>
+                  </ol>
+                </section>
+
+                <section class="c919-placeholder-section c919-placeholder-roadmap">
+                  <h3>🗺️ 面板生成路线图</h3>
+                  <ul>
+                    <li>✅ P34 (2026-04-20)：adapter + intake_packet 接入 · Kogami GATE-P34-PLAN Approved</li>
+                    <li>✅ P38 (2026-04-20)：PDF 真实入库 + TRCU sign-off · Kogami GATE-P38-PLAN Approved</li>
+                    <li>✅ P43-00 v8 (2026-04-21)：milestone plan + §3d 8-entry delta · Gate Approved</li>
+                    <li>✅ P43-01 CLOSED (2026-04-21)：Contract Proof Spike + 7-endpoint API contract lock</li>
+                    <li>✅ P43-02 PLAN-QUALITY (2026-04-21 · <strong>今日</strong>)：Batch plan v3.1 Gate Approved Option A · 8-entry §3d delta applied</li>
+                    <li>⏳ Batch-2 execution：workflow automaton + R1-R6 authority contract + server-side doc extract + Bug D fix + FREEZE event + open-questions registry（P43-02/03/04 · 3-4 day cadence）</li>
+                    <li>🔜 <strong>Batch-3 (P43-05 + P43-06 + P43-07)</strong>：<strong>Progressive panel preview</strong> — AI 从 C919 frozen spec 自动生成本面板 SVG · draft_design_state authority contract · debug/wire 闭环</li>
+                    <li>🔜 Batch-4 (P43-08/09/10)：iteration · Final Approval (demonstrative/upgrade pending) · archive</li>
+                  </ul>
+                </section>
+
+                <footer class="c919-placeholder-footer">
+                  <p>📎 C919 E-TRAS 面板的"空白"不是 bug · 是 <strong>governance 有意的延迟</strong>：面板由 P43-05 AI 从 frozen spec 生成 · 避免手画 SVG 成为第二套 truth · 冲突 §3e R5 validator 的"单一 truth in frozen spec"原则。</p>
+                </footer>
+              </div>
+            </div>
+
             </div><!-- /.zoom-surface -->
           </div><!-- /.zoom-container -->
 
@@ -716,8 +1123,7 @@
           <span>📊 逆向诊断分析</span>
           <select class="analysis-system-select" id="diag-system-select">
             <option value="thrust-reverser">Thrust Reverser</option>
-            <option value="landing-gear">Landing Gear</option>
-            <option value="bleed-air">Bleed Air</option>
+            <!-- UI-frozen 2026-04-21: landing-gear / bleed-air removed from diagnosis panel -->
           </select>
           <button type="button" class="analysis-panel-close" data-close="diagnosis-panel">✕</button>
         </div>
@@ -744,8 +1150,7 @@
           <span>🎲 可靠性仿真</span>
           <select class="analysis-system-select" id="mc-system-select">
             <option value="thrust-reverser">Thrust Reverser</option>
-            <option value="landing-gear">Landing Gear</option>
-            <option value="bleed-air">Bleed Air</option>
+            <!-- UI-frozen 2026-04-21: landing-gear / bleed-air removed from Monte Carlo panel -->
           </select>
           <button type="button" class="analysis-panel-close" data-close="monte-carlo-panel">✕</button>
         </div>
@@ -765,8 +1170,7 @@
           <span>🔍 敏感性分析</span>
           <select class="analysis-system-select" id="sensitivity-system-select">
             <option value="thrust-reverser">Thrust Reverser</option>
-            <option value="landing-gear">Landing Gear</option>
-            <option value="bleed-air">Bleed Air</option>
+            <!-- UI-frozen 2026-04-21: landing-gear / bleed-air removed from sensitivity panel -->
           </select>
           <button type="button" class="analysis-panel-close" data-close="sensitivity-panel">✕</button>
         </div>
@@ -783,8 +1187,8 @@
           <span>🛠️ 硬件规格</span>
           <select class="analysis-system-select" id="hw-schema-system-select">
             <option value="thrust-reverser">Thrust Reverser</option>
-            <option value="landing-gear">Landing Gear</option>
-            <option value="bleed-air">Bleed Air</option>
+            <option value="c919-etras">C919 E-TRAS</option>
+            <!-- UI-frozen 2026-04-21: landing-gear / bleed-air removed from hardware schema panel -->
           </select>
           <button type="button" class="analysis-panel-close" data-close="hardware-schema-panel">✕</button>
         </div>
@@ -804,7 +1208,7 @@
       </div>
 
       <p class="chat-drawer-footnote">对话面板只承载对话和快捷操作；主画布、真值评估条、底部输入栏持续常驻。</p>
-      <script src="/chat.js"></script>
+      <script src="/chat.js?v=P43-02.5"></script>
     </aside>
   </div>
 </body>

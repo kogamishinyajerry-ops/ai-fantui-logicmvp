@@ -578,9 +578,9 @@
           "threshold_value": 90.0
         },
         {
-          "comparison": "between_exclusive",
+          "comparison": "between_lower_inclusive",
           "name": "tra_deg",
-          "note": "TRA 必须处于有效反推 travel 内",
+          "note": "TRA 必须处于有效反推 travel 内（下界包含：机械停位即最大反推，仍有效）",
           "source_component_id": "tra_deg",
           "threshold_value": [
             -32.0,

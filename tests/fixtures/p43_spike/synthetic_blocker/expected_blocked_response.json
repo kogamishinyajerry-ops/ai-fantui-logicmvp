@@ -1,0 +1,7 @@
+{
+  "blockers": [
+    "at least one source document is required."
+  ],
+  "message": "存在阻塞问题，无法构建诊断 bundle。请先解决以下问题。",
+  "status": "blocked"
+}
