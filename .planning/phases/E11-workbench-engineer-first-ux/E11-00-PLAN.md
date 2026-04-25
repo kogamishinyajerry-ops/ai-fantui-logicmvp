@@ -152,20 +152,19 @@ E11-09 → E11-13/14 → E11-05 → E11-03 → E11-04 → E11-06
 
 > Opus 4.7 (2026-04-25) §1 governance weight 诊断输出。
 
-**E11-09 是 governance machinery 是否过载的实证 gate**：
+**E11-09 是 governance machinery 是否过载的实证 gate**（已 fired 2026-04-25 — §3.6.1 OUTCOME 见下）：
 
-| E11-09 Codex 轮数 | 解读 | Action |
+| E11-09 Codex 轮数 | 解读 | Action（历史决策表） |
 |---|---|---|
-| ≤ 2 轮 APPROVE | v2.3 已摊销 — Surface Inventory 把 honesty 反射弧前置成功 | 软化 5-persona pipeline 改 tier-trigger（candidate `governance bundle #2`） |
-| 3 轮且 round-trip 仍围绕 honesty | process bloat 实锤 | 整组规则降一档（候选：5-persona 直接降为 1-persona 默认 + 其他 v2.3 子条款重审） |
+| ≤ 2 轮 APPROVE | v2.3 已摊销 — Surface Inventory 把 honesty 反射弧前置成功 | 软化 5-persona pipeline 改 tier-trigger（landed as `governance bundle #2`, PR #14, 2026-04-25） |
+| 3 轮且 round-trip 仍围绕 honesty | process bloat 实锤 | 整组规则降一档（hypothetical：5-persona 直接降为 1-persona 默认 + 其他 v2.3 子条款重审） |
 | ≥ 4 轮 | governance 失效，需要 Opus 4.7 再介入诊断 | 暂停 E11 子 phase 推进 + 起 retro |
 
-**5-persona pipeline tier-trigger 候选规则**（待 E11-09 实证后立法 / 否决）：
-- 触发条件 = (a) 子 phase 含 user-facing copy diff ≥ 10 行 **AND** (b) 该子 phase 的 §Surface Inventory 含 ≥ 3 条 [REWRITE/DELETE]
-- 否则降为 1-persona Tier-B（跨-sub-phase 轮换 P1→P2→P3→P4→P5→P1；状态记录在 `.planning/phases/<epic>/PERSONA-ROTATION-STATE.md`；不得在连续两个 Tier-B sub-phase 上跑同一 persona）
-- v2.2 / v2.3 / v6.1 / Surface Inventory / RETRO 序号全部保留，**不动**
+**触发条件（landed）**：(a) 子 phase 含 user-facing copy diff ≥ 10 行 **AND** (b) 该子 phase 的 §Surface Inventory 含 ≥ 3 条 [REWRITE/DELETE] → Tier-A (5 personas 并行)。否则 → Tier-B (1 persona, `PERSONA-ROTATION-STATE.md` 选 persona)。完整规则在 `constitution.md` §Codex Persona Pipeline Tier-Trigger（governance bundle #2 落地版本）；本节仅记录"为什么这条规则被这样写"的 leading-indicator 决策弧。
 
-**未在 §3.6 立法的原因**：Opus 4.7 警告"先 codify 再实证"是 v2.3 的同一陷阱。tier-trigger 规则有效性*取决于* E11-09 结果——E11-09 跑完前不写进 constitution。
+**保留不变**：v2.2 / v2.3 / v6.1 / Surface Inventory / RETRO 序号全部保留，**不动**。
+
+**当时未在 §3.6 立法的原因**：Opus 4.7 警告"先 codify 再实证"是 v2.3 的同一陷阱。tier-trigger 规则有效性 *曾 取决于* E11-09 结果——E11-09 跑完前不写进 constitution。E11-09 ≤2 轮 APPROVE fired 后，governance bundle #2 才作为 PR #14 落 constitution（详见 §3.6.1）。
 
 ### 3.6.1 Leading Indicator OUTCOME — fired ≤2 rounds (2026-04-25)
 

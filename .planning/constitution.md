@@ -340,7 +340,7 @@ scope=src/well_harness/static/workbench.js (grep "approval-action\|data-approval
 | 条件 | persona 数 | 选哪个 |
 |---|---|---|
 | user-facing copy diff ≥ 10 行 **AND** §Surface Inventory 含 ≥ 3 条 [REWRITE/DELETE] | **5 (Tier-A，全 P1–P5 并行)** | 全跑 |
-| 其他所有情形（含 doc-only / 纯 refactor / copy diff < 10 行 / 无 [REWRITE/DELETE]） | **1 (Tier-B)** | 跨-sub-phase 轮换：P1 → P2 → P3 → P4 → P5 → P1（默认起点 P1 Junior FCS）。Owner 可按 sub-phase 内容覆盖（demo-arc 重 → P3；适航 trace 重 → P4 等），但**不得在连续两个 Tier-B sub-phase 上跑同一 persona**。轮换状态记录在 `.planning/phases/<epic>/PERSONA-ROTATION-STATE.md`（每次 Tier-B sub-phase commit 后追加一行 `<sub-phase-id>: P? (<reason>)`，新 epic 重置为 P1） |
+| 其他所有情形（含 doc-only / 纯 refactor / copy diff < 10 行 / 无 [REWRITE/DELETE]） | **1 (Tier-B)** | **`.planning/phases/<epic>/PERSONA-ROTATION-STATE.md` 是 Tier-B 选 persona 的唯一 source of truth。** 默认 = 末行 persona 在 P1→P2→P3→P4→P5→P1 序列中的下一位（新 epic 第一行 = P1 Junior FCS）。Owner 可写入非默认值（如 demo-arc 重 → P3；适航 trace 重 → P4），唯一硬约束：写入值**不得**与上一行 Tier-B persona 相同。每次 Tier-B sub-phase commit 后必须追加一行 `<sub-phase-id>: P? (<reason>)`；新 epic 重置序列起点 = P1 |
 
 **"copy diff ≥ 10 行" 计数命令（确定性，作者必须在 PR body 引用结果）：**
 
