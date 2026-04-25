@@ -5,7 +5,7 @@
 
 - 活动 phase：`P43 Control Logic Workbench end-to-end milestone`
 - 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`E11-07 PR #22 merged (Authority Contract banner, Tier-B P5 APPROVE_WITH_NITS) — 2026-04-26`
+- 最近成功执行证据：`E11-08 PR #23 merged (role affordance for non-Kogami, Tier-B P1 APPROVE) — 2026-04-26`
 - 当前证据模式：`repo-doc fallback mode`
 - 证据模式说明：共享 Notion 数据库与活跃控制面页面当前不可达；当前快照由 repo freeze packet 与 handoff docs 恢复。
 - 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
