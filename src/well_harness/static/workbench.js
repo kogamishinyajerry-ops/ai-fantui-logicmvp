@@ -60,10 +60,16 @@ function bootWorkbenchColumnSafely(columnName, bootFn) {
   }
 }
 
+// E11-03 (2026-04-26): the three columns were renamed from technical
+// nouns ("Scenario Control / Spec Review Surface / Logic Circuit Surface")
+// to engineer-task verbs ("Probe & Trace / Annotate & Propose / Hand off
+// & Track"). Underlying ids and data-column tokens stay stable so e2e
+// selectors don't break — only the visible status copy here changes.
 function bootWorkbenchControlPanel() {
   const status = workbenchElement("workbench-control-status");
   if (status) {
-    status.textContent = "Control panel ready. Scenario actions are staged for E07+.";
+    status.textContent =
+      "Probe & Trace ready. Scenario actions are staged for E07+.";
     status.dataset.tone = "ready";
   }
 }
@@ -71,7 +77,8 @@ function bootWorkbenchControlPanel() {
 function bootWorkbenchDocumentPanel() {
   const status = workbenchElement("workbench-document-status");
   if (status) {
-    status.textContent = "Document panel ready. Text-range annotation arrives in E07.";
+    status.textContent =
+      "Annotate & Propose ready. Text-range annotation arrives in E07.";
     status.dataset.tone = "ready";
   }
 }
@@ -79,7 +86,8 @@ function bootWorkbenchDocumentPanel() {
 function bootWorkbenchCircuitPanel() {
   const status = workbenchElement("workbench-circuit-status");
   if (status) {
-    status.textContent = "Circuit panel ready. Overlay annotation arrives in E07.";
+    status.textContent =
+      "Hand off & Track ready. Overlay annotation arrives in E07.";
     status.dataset.tone = "ready";
   }
 }
