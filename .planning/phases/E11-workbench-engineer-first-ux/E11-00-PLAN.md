@@ -102,11 +102,83 @@
 | **E11-09** | 双 h1 修复 — 把旧 "Workbench Bundle 验收台" 整页迁到 `/workbench/bundle` 子路径，主 `/workbench` 只保留 Epic-06..10 shell | 无 | 不（仅前端路由，不动 demo_server 真值出口） |
 | **E11-10** | Codex persona-review pipeline — 5 个 reusable prompts 落 `.planning/codex_personas/`，并跑首轮 review on E11-02..09 阶段产出 | E11-02..09 一一就绪后逐个跑 | 不 |
 | **E11-11** | E2E coverage — 增 `tests/e2e/test_e11_workbench_onboarding.py` 锁住 onboarding flow 的关键 selector 不被改坏 | E11-02 | 不 |
-| **E11-12** | CLOSURE — `E11-05-CLOSURE.md` + 5 personas review summary + 三轨证据 + 自签 GATE-E11-CLOSURE: Approved (v6.1) | E11-01..11 | 不 |
+| **E11-12** | CLOSURE — `E11-12-CLOSURE.md` + persona review summary + 三轨证据 + 自签 GATE-E11-CLOSURE: Approved (v6.1) | E11-01..19（除 E11-12 自身外的 18 项 closed） | 不 |
+| **E11-13** | manual_feedback_override **trust-affordance 修复（UI/可视化层）** — 加警示 banner + 模式标识 chip + 失谐告警，让用户*看起来不再越权*。**不是** authority-chain breach 修复（873 + adversarial 8/8 已证 truth-engine 实际未被越权），而是 UI affordance 让用户对真值失去信任的"可视污染"修复。Opus 4.7 (2026-04-25) reframe；详见 §3.5。 | E11-01（P2-1 Reading B locked） | 不 |
+| **E11-14** | manual_feedback_override **服务端 role guard** — `/api/lever-snapshot` 对 manual_feedback_override 增 actor + ticket-binding 检查，未签 sign-off 时端点返回 409 而不是 200（仍不动 controller）。配合 E11-13 形成"UI 看不到 + 服务端拒绝"两道防线。 | E11-13 | 不（adapter boundary 内的 endpoint 守护，不进 controller / models / adapters/*.py 真值出口） |
+| **E11-15** | UI 字符串中文优先化 sweep — 全部 user-facing label / button 默认中文，英文降为 muted sublabel；保持底层 selector ID 不变 | E11-03 | 不 |
+| **E11-16** | 服务端 approval endpoint 加固 — `/api/workbench/*` approval 类 endpoint 增 actor + ticket + artifact-hash 三元绑定，与 audit chain hash 链接（不动 controller） | E11-08 | 不 |
+| **E11-17** | Presenter mode toggle — 一键隐藏 annotation / approval / dev chrome；narration fallback ribbon 在 AI 服务慢/down 时显示静态文案 | E11-02 | 不 |
+| **E11-18** | 逐 logic-gate trace tuple 显示 — Logic Circuit Surface 上 L1–L4 各自挂 (requirement_id, test_id, artifact_hash) 三元；annotation schema 升级要求三元 | E11-04 | 不 |
+| **E11-19** | Apps-engineer 客户视图 — customer 复现面板 + repro recipe 字段 + ticket schema enrichment + 重复 case 模糊搜索 | E11-04 | 不 |
 
-> 红线维持: E11-01..12 全部仅触碰 `src/well_harness/static/workbench.{html,css,js}`、`src/well_harness/static/annotation_overlay.js`、新增的 e2e 测试、新增的 `.planning/` 文档。**不进入** `controller.py` / `runner.py` / `models.py` (truth-bearing) / `adapters/` / wow_a fixture。
+> 红线维持: E11-01..19 全部仅触碰 `src/well_harness/static/workbench.{html,css,js}`、`src/well_harness/static/annotation_overlay.js`、`src/well_harness/demo_server.py`（仅 endpoint guard，不动 controller dispatch）、新增的 e2e 测试、新增的 `.planning/` 文档。**不进入** `controller.py` / `runner.py` / `models.py` (truth-bearing) / `adapters/` / wow_a fixture。
 
 > **(v2.3) Copy 硬约束**: 本期 user-facing copy 必须在 §1.5 Surface Inventory 全数登记，未登记的 copy 改动视为越界。每个子 phase PR body 或同级 `<phase-id>-SURFACE-INVENTORY.md` 必须含完整表 + ANCHORED/REWRITE/DELETE 三类计数 + commit trailer `UI-Copy-Probe: <N> claims swept (<A> anchored / <P> planned / <D> deleted)`。E11-02 已追溯补登 `E11-02-SURFACE-INVENTORY.md`，作为模板范例。
+
+---
+
+## 3.5 执行排序（Opus 4.7 strategic input · 2026-04-25）
+
+> 数据源：Notion @Opus 4.7 异步会话，2026-04-25。审查范围 = E11-02 + v2.3 governance bundle 落地后的 strategic review。
+> 完整 Opus 输出存档在 PR #11 description / Notion 04 决策日志 DB。
+
+### 排序（next 6 sub-phases）
+
+```
+E11-09 → E11-13/14 → E11-05 → E11-03 → E11-04 → E11-06
+```
+
+**逐项理由**（Opus 4.7 verbatim）：
+
+1. **E11-09 dual-h1 修复** — 30 秒 quick win，先清债（双 h1 是身份分裂遗债），同时作为 §3.6 leading indicator 量度 governance 摊销。
+2. **E11-13 + E11-14 manual_feedback_override 修复** — 提前到第 2 而非第 3。**关键 reframe**: 不是 authority-chain breach（873 + adversarial 8/8 已证 truth-engine 没被越权），是 **UI affordance 让用户*看起来*越权**——比 demo BLOCKER 更污染信任。修复在 UI / 服务端 endpoint guard 两层，不进 controller。
+3. **E11-05 wow 起手卡片** — 兜 P3 demo presenter 的 BLOCKER #1（presenter 找不到 wow 入口）。
+4. **E11-03 三列重命名** — P1 / P2 工程师任务命名升级。
+5. **E11-04 annotation 词汇升级** — P1 / P2 / P5 domain anchoring。
+6. **E11-06 status bar** — 基础设施收尾。
+
+### Opus 4.7 拒绝的备选
+
+- **B（直接全做 P2-1 truth-boundary fix 链 + 其他都推后）**：拒绝。错在把"看起来越权"上升为 R1-R5 红线 fix——是过度反应。
+- **C（先做 E11-12 closure 收 phase 再换新 phase）**：拒绝。18 子 phase 没做先 closure 是伪闭环。
+
+### E11-15..19 的位置
+
+不进 next-6 排序。Opus 4.7 把它们归为"E11 closure 前置纯前端期"——E11-09 ≤ 2 轮 APPROVE 后、E11-06 完成后再启动，期间可并发开纯 spec 类 E12（不动 src/）。
+
+---
+
+## 3.6 Leading Indicator · E11-09 ≤ 2 Codex 轮 = governance 摊销证据
+
+> Opus 4.7 (2026-04-25) §1 governance weight 诊断输出。
+
+**E11-09 是 governance machinery 是否过载的实证 gate**：
+
+| E11-09 Codex 轮数 | 解读 | Action |
+|---|---|---|
+| ≤ 2 轮 APPROVE | v2.3 已摊销 — Surface Inventory 把 honesty 反射弧前置成功 | 软化 5-persona pipeline 改 tier-trigger（candidate `governance bundle #2`） |
+| 3 轮且 round-trip 仍围绕 honesty | process bloat 实锤 | 整组规则降一档（候选：5-persona 直接降为 1-persona 默认 + 其他 v2.3 子条款重审） |
+| ≥ 4 轮 | governance 失效，需要 Opus 4.7 再介入诊断 | 暂停 E11 子 phase 推进 + 起 retro |
+
+**5-persona pipeline tier-trigger 候选规则**（待 E11-09 实证后立法 / 否决）：
+- 触发条件 = (a) 子 phase 含 user-facing copy diff ≥ 10 行 **AND** (b) 该子 phase 的 §Surface Inventory 含 ≥ 3 条 [REWRITE/DELETE]
+- 否则降为 1-persona（任选 P1/P2/P3/P4/P5 之一，默认 P1 + 当期 owner 视情况轮换）
+- v2.2 / v2.3 / v6.1 / Surface Inventory / RETRO 序号全部保留，**不动**
+
+**未在 §3.6 立法的原因**：Opus 4.7 警告"先 codify 再实证"是 v2.3 的同一陷阱。tier-trigger 规则有效性*取决于* E11-09 结果——E11-09 跑完前不写进 constitution。
+
+---
+
+## 3.7 E12 phase 并发开启条件（Opus 4.7 conditional No）
+
+**目前状态**：E11 closure 前**不**开 E12 src/-touching 候选（fault diagnosis MVP / multi-system generalization / OpenFOAM 联合）。
+
+**条件解锁**：满足全部 3 条后可并发启动一个**不动 src/** 的 E12 spec phase（如 fault diagnosis 的 PRD + intake packet schema）：
+1. E11-09 ≤ 2 轮 Codex APPROVE（证 v2.3 摊销）
+2. E11-06 完成（E11-15..19 进入纯前端期）
+3. 该 E12 候选明确不动 `src/well_harness/{controller,runner,models,plant}.py` / `adapters/` / `tests/e2e/test_wow_a*`
+
+**理由**：并发 src/ phase 会拉高 truth-engine 触碰风险且让"v2.3 摊销 vs bloat"归因失败（两个 phase 同时跑 Codex 会污染 leading indicator 数据）。
 
 ---
 
@@ -130,13 +202,19 @@
 
 **反对论点**: Epic-06..10 已经把 Workbench 完整交付，再开 E11 是不是 over-engineering？应该作为 Epic-06 的 follow-up minor PR 即可。
 
-**Rebuttal**: (a) E11 跨 5 epic 的 UI surface（onboarding 跨 06，annotation 跨 07，approval 跨 08，prompt/ticket 跨 09，PR review 跨 10）— 单 PR 解决会变成 mega-PR；分 12 个 sub-phase 各自小 PR + Codex review，可控性更高。(b) E11 引入新 governance artefact (Codex personas pipeline)，本身值得 phase-level 文档 trace。(c) v6.1 Solo Autonomy 允许 Claude Code 自启 phase，不需要怕 phase 数量；过度细分 < 过度合并造成的回退困难。结论：用 Phase 是正确粒度。
+**Rebuttal**: (a) E11 跨 5 epic 的 UI surface（onboarding 跨 06，annotation 跨 07，approval 跨 08，prompt/ticket 跨 09，PR review 跨 10）— 单 PR 解决会变成 mega-PR；分 19 个 sub-phase（baseline review + Opus 4.7 amendment 后）各自小 PR + Codex review，可控性更高。(b) E11 引入新 governance artefact (Codex personas pipeline)，本身值得 phase-level 文档 trace。(c) v6.1 Solo Autonomy 允许 Claude Code 自启 phase，不需要怕 phase 数量；过度细分 < 过度合并造成的回退困难。结论：用 Phase 是正确粒度。
 
 ### Counterargument C-UI: "本期 copy 里我是否写了一个 src/ 还没 ship 的 surface？"
 
 **反对论点**（v2.3 立法后强制必答）: landing / tile / banner / tooltip 的 copy 是否描述了某个 feature / field / role-gate / behavior，而该 surface 在当前 commit 的 src/ 里其实不存在或只存在于计划态？
 
 **Rebuttal stage**: 本期作者必须在 commit 前对每条 user-facing copy claim 执行 grep 回 src/ 的 sweep，结果登记到 §1.5 Surface Inventory，三选一处置（ANCHORED / REWRITE-as-planned / DELETE）。E11-02 4 轮 Codex round-trip（详 RETRO-V61-054）证明：缺这道反射弧时，Codex 会逐条 ripgrep 在 review 阶段揭穿，付出 4 轮代价；做完反射弧后 Codex 只需抽查 inventory 1-3 行真实性即可一轮 APPROVE。结论：每个含 user-facing copy 的子 phase 必填 §Surface Inventory，不能跳过。
+
+### Counterargument C-Opus: "我是否在 governance 投资曲线已经 over-process 的情况下还在加新规则？"
+
+**反对论点**（Opus 4.7 strategic review 后强制必答）: v6.1 + v2.2 + v2.3 + 5-persona pipeline + Surface Inventory + RETRO 序号 = 短期内累积 6 项 process artefact。是否已经 process > delivery？
+
+**Rebuttal stage**: Opus 4.7 异步审查（2026-04-25）独立判断"正好偏过 5–10%"，不需要回滚 v2.2/v2.3/v6.1，但 5-persona pipeline 该改 tier-trigger。**未立即立法 tier-trigger 的原因**：Opus 自己警告"先 codify 再实证"是反模式（同 v2.3 PR 5 轮 round-trip 的根因）。当前 phase 用 §3.6 leading indicator (E11-09 ≤ 2 轮 = 摊销证据) 决定是否启动 governance bundle #2 软化。Phase Owner 在每个新子 phase 启动前必答：(a) 本子 phase 触发哪些 governance trigger？(b) trigger 数量是否大于该子 phase 实际 LOC 改动？(c) 若 (b) 是 yes，先停下来重审 process。
 
 ---
 
@@ -185,8 +263,15 @@
 | E11-10 | doc | ~600 (5 prompts) | 1.5h | self-review only |
 | E11-11 | test | ~150 | 1h | YES (新 e2e 期望) |
 | E11-12 | closure | ~200 | 30min | YES (Tier 1 + persona summary) |
+| E11-13 | code (HTML/CSS) | ~100 | 45min | YES (UI 交互模式变更 + manual mode trust 可视化) |
+| E11-14 | code (Python endpoint guard) | ~80 | 1h | YES (server-side guard, adapter boundary 内) |
+| E11-15 | refactor (HTML strings) | ~250 | 1.5h | YES (UI 字符串大改 + v2.3 §Surface Inventory) |
+| E11-16 | code (Python) | ~120 | 1h | YES (approval endpoint 三元绑定) |
+| E11-17 | code (HTML/CSS/JS) | ~180 | 1h | YES (presenter mode toggle = UI 交互模式变更) |
+| E11-18 | code (HTML/JS) | ~150 | 1h | YES (logic-gate trace tuple + schema 升级) |
+| E11-19 | code (HTML/JS + schema) | ~250 | 1.5h | YES (UI 交互模式变更 + ticket schema enrichment) |
 
-**Total: ~2200 LOC across 12 sub-phases, ~9h sequential or ~3h with parallelism on independent ones.**
+**Total: ~3330 LOC across 19 sub-phases, ~15h sequential or ~5-6h with parallelism on independent ones.** (12-row baseline expanded to 19 per E11-01 baseline review + Opus 4.7 amendment, 2026-04-25.)
 
 ---
 
@@ -208,13 +293,15 @@
 
 E11 关闭需满足全部下列条件，自签 `GATE-E11-CLOSURE: Approved` (v6.1 solo-signed)：
 
-1. ✅ §3 中 12 sub-phase 全部 merged 到 main
+1. ✅ §3 中 19 sub-phase 全部 merged 到 main（E11-01..19）
 2. ✅ §8 verification protocol 全部通过
-3. ✅ Codex 5 personas review 给出 0 BLOCKER
+3. ✅ Codex persona review 给出 0 BLOCKER（人选数量按 §3.6 leading indicator 决出的 5-persona-或-tier-trigger 规则跑）
 4. ✅ truth-engine 红线 0 触碰
-5. ✅ E11-05-CLOSURE.md 在 .planning/phases/ 落地
+5. ✅ E11-12-CLOSURE.md 在 `.planning/phases/E11-workbench-engineer-first-ux/` 落地
 6. ✅ Notion 同步：phase 页 + DEC-20260425-E11-WORKBENCH-UX-OVERHAUL + Roadmap 行
 7. ✅ HANDOVER.md 增补 §E11 Onboarding Flow + 真实工程师 30 分钟基准 acceptance criteria
+8. ✅ 每个含 user-facing copy 的子 phase 已落 `<phase-id>-SURFACE-INVENTORY.md`（v2.3 §1.5 强制）
+9. ✅ §3.6 Leading Indicator 决策已 land（E11-09 ≤ 2 轮 → governance bundle #2 软化 5-persona；否则记录 retro 后维持现状）
 
 ---
 
