@@ -4,7 +4,9 @@
 > **Date:** 2026-04-25
 > **Status:** retroactive — E11-02 (PR #10, merge `384901e`) was completed before v2.3 立法.
 > Inventory reconstructed from Codex R1–R4 ripgrep traces; serves as worked example for §1.5 template in E11-00-PLAN.md.
-> **R1 amendment (2026-04-25, post v2.3 PR R1)**: Codex R1 on the v2.3 governance bundle returned BLOCKER because 6 inventory rows (#9, #11, #12, #19, #22, #25–28) were `[ANCHORED]` without concrete `file:line`. Fix landed in same PR + a v2.3 spec append clarifying absence-claim anchor format.
+> **R1 amendment (2026-04-25, post v2.3 PR R1)**: Codex R1 on the v2.3 governance bundle returned BLOCKER because 9 inventory rows (#9, #11, #12, #19, #22, #25, #26, #27, #28) were `[ANCHORED]` without concrete `file:line`. Fix landed in same PR + a v2.3 spec append clarifying absence-claim anchor format.
+>
+> **R2/R3 amendments (2026-04-25, post v2.3 PR R2/R3)**: R2 caught a recursive honesty miss in row #11 peer description ("intermediate/advanced" did not exist; actual was beginner/expert) + suggested explicit `scope=<file>` / `peer=<file>:<line-range>` notation (verbatim). R3 caught a self-contradiction in v2.3 spec line 253 vs 258 (whether `scope=<file>` without line-range counts as anchor) + row #18 still using old `grep → no X` prose. Both reconciled: spec line 253 now distinguishes positive-claim and negative-claim anchor formats explicitly; row #18 rewritten to scope=/peer= notation.
 
 ## 0. Why this doc exists
 
@@ -39,7 +41,7 @@ This file backfills what §Surface Inventory **should have looked like at commit
 | 15 | workbench_start.html:124 | "客户邮件原文 → ticket payload 字段映射工具是 E11-08 范围" | feature-name (negative) | E11-00-PLAN.md §3 row E11-08 | [REWRITE → planned for E11-08] |
 | 16 | workbench_start.html:128 | "knowledge 字段已经在主面板渲染（dt/dd 列表）" | feature-name | src/well_harness/static/workbench.html:1041-1044 (dt/dd render) | [ANCHORED] |
 | 17 | workbench_start.html:144 | "Approval Center · 静态 shell 占位" | surface-location | src/well_harness/static/workbench.html:139-163 (静态 lanes) | [ANCHORED] |
-| 18 | workbench_start.html:145 | "label 上写 Kogami-only · 角色判定逻辑未实现" | role-gate | src/well_harness/static/workbench.html:136 (label) + grep workbench.js → no approval-action handler | [ANCHORED] |
+| 18 | workbench_start.html:145 | "label 上写 Kogami-only · 角色判定逻辑未实现" | role-gate | peer=src/well_harness/static/workbench.html:136 ("Approval actions are Kogami-only" 静态 label); scope=src/well_harness/static/workbench.js (grep "approval-action\|data-approval-action" 0 hits — handler 未实现) | [ANCHORED] |
 | 19 | workbench_start.html:147 | "workbench.js 没有 approval-action handler，按钮点了不会落账（对 Kogami 也不会）" | behavior (negative) | scope=src/well_harness/static/workbench.js (grep "approval-action\|data-approval-action" 0 hits); peer=src/well_harness/static/workbench.js:3641-3642 (preset-trigger handler 真实存在，作对照) | [ANCHORED] |
 | 20 | workbench_start.html:152 | "data-approval-role=KOGAMI + data-approval-action 锚点已就位" | feature-name | src/well_harness/static/workbench.html:142,156,160 | [ANCHORED] |
 | 21 | workbench_start.html:155 | "hash-chain 查阅 / SHA 分组 / JSONL 导出 / 状态过滤 / 角色判定 都是 E11-08 范围" | feature-name (negative) | E11-00-PLAN.md §3 row E11-08 | [REWRITE → planned for E11-08] |

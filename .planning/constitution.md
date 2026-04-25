@@ -250,9 +250,13 @@ Recorded as `DEC-20260425-WOW-A-FULL-AUTONOMY-GRANT` (Notion 04 决策日志 DB)
 
 #### Anchor 格式细则
 
-每一条 anchor 必须是 **可执行的 ripgrep / sed 命令的目标**，即 `<file>:<line>` 或 `<file>:<line-range>`。section-only 引用（如 `constitution.md §v5.2 红线`）不算 anchor，必须落到行号。
+每一条 anchor 必须是 **可执行的 ripgrep / sed 命令的目标**，按 claim 类别分两种合法形式：
+- **正面 claim 锚点**：必须是 `<file>:<line>` 或 `<file>:<line-range>`（`sed -n <line>p <file>` 可定位声明源行）。
+- **负面 claim 锚点**：必须是 `scope=<file>`（带或不带 line-range；不带时表示 grep 跑全文件，命令为 `grep <selector> <file>`），可附 `peer=<file>:<line-range>` 作对照。
 
-**正面 claim**（"X feature 已 ship" / "Y 字段是 N 个" / "Z 类型是 SHA256"）：anchor 指向声明该 feature/字段/类型的具体源代码行。
+下面"正面"与"负面"两段分别细化两种格式。任何 section-only 引用（如 `constitution.md §v5.2 红线`）都不算 anchor——必须落到行号或 `scope=<file>` 形式。
+
+**正面 claim**（"X feature 已 ship" / "Y 字段是 N 个" / "Z 类型是 SHA256"）：anchor 指向声明该 feature/字段/类型的具体源代码行 `<file>:<line>` 或 `<file>:<line-range>`。
 
 **负面 claim / 缺位 claim**（`behavior (negative)` / `feature-name (negative)` 类，如 "本期还没有 demo mode" / "JS 没有 approval handler"）：anchor 必须含两部分，使用 **显式 `scope=` / `peer=` 前缀** 以避免被读成"file:line-range 是 grep 的限定范围"：
 - **scope=`<file>`**（必填）：声明被搜索的 file 路径，**不带 line-range**——grep 跑全文件。reviewer 必须能用 `grep <selector> <file>` 一行复跑。
