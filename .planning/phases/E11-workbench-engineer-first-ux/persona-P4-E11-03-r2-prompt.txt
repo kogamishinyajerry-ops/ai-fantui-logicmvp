@@ -1,0 +1,43 @@
+You are Codex GPT-5.4 acting as **Persona P4 — V&V Engineer** (Tier-A pipeline, E11-03 R2 closure check).
+
+# Shared R2 context for E11-03 closure check
+
+**Repo:** `kogamishinyajerry-ops/ai-fantui-logicmvp`
+**Branch:** `feat/e11-03-column-rename-20260426`
+**PR:** #19
+**R2 HEAD:** `897e34b` (single fix commit on top of R1 `2df105c`)
+
+## R2 fixes per finding
+
+**P5 R1 IMPORTANT** — internal roadmap tokens "E07/E07+" leaked into hydrated boot-status copy. R2 rewrites all 3 strings to drop the tokens:
+- `"Probe & Trace ready. Scenario actions are staged for the next bundle."`
+- `"Annotate & Propose ready. Text-range annotation is staged for the next bundle."`
+- `"Hand off & Track ready. Overlay annotation is staged for the next bundle."`
+
+`tests/test_workbench_column_rename.py::test_workbench_js_boot_status_drops_internal_phase_tokens` asserts "E07" does NOT appear inside the 3 boot functions.
+
+**P4 R1 IMPORTANT** — the 3 renamed pre-hydration HTML boot-status strings were not positively locked (only stale-copy absence was asserted). R2 adds `test_workbench_html_carries_new_boot_status` parametrized over all 3 strings.
+
+**P4 R1 NIT** — JS boot copy was only locked at the `"X ready"` prefix. R2 promotes `test_workbench_js_boot_status_uses_new_names` to assert the FULL sentence byte-for-byte for all 3 columns.
+
+**P1 R1 NIT** — failure-path fallback in `bootWorkbenchColumnSafely()` reverted to the raw column token ("control panel failed independently…"). R2 introduces a `WORKBENCH_COLUMN_LABEL` map (control→Probe & Trace, document→Annotate & Propose, circuit→Hand off & Track) and rewrites the failure copy to use the label. `test_workbench_js_failure_fallback_uses_task_verb_label` locks the contract.
+
+**Out-of-scope deferrals:**
+- P3 NIT (Hand off & Track skeleton mismatch — SW1/Logic1-4/THR_LOCK chrome): future surface buildout (E11-15 polish or follow-on sub-phase).
+
+## Verification
+
+- 956 / 956 pytest pass (37 in `test_workbench_column_rename.py`, +5 vs R1's 32)
+- Truth-engine red line preserved: `git diff --name-only main..897e34b` shows only `.planning/`, `static/workbench.{js,html}`, `tests/test_workbench_column_rename.py`
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+For each R1 finding YOU raised, state explicitly: CLOSED / OPEN / DEFERRED-WITH-DISCLOSURE.
+
+Live-probe at least one path you're unsure about. Cite the probe.
+
+If you raise NEW findings, classify in-scope or out-of-scope. Out-of-scope → NIT/INFO only.
+
+Sign as: **{your persona ID and role} (Tier-A, E11-03 R2)**
