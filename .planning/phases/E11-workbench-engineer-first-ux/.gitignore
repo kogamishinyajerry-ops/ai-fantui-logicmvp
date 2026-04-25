@@ -1,0 +1,4 @@
+# Codex persona raw stdout dumps — local forensics only, not committed
+# (clean final reports persona-P{1..5}-output.md ARE committed at phase dir root)
+baseline-persona-outputs/
+persona-P*-stdout.log
