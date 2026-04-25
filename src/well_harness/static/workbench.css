@@ -104,6 +104,138 @@
   box-shadow: 0 0 6px rgba(120, 220, 170, 0.5);
 }
 
+/* E11-05 (2026-04-25): wow_a/b/c canonical-scenario starter cards.
+   Top-of-/workbench placement so the demo presenter has a one-click
+   走读 entrypoint to BEAT_DEEP_PAYLOAD / Monte-Carlo / Reverse-Diagnose
+   without typing payloads by hand. */
+.workbench-wow-starters {
+  margin-bottom: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(120, 200, 255, 0.28);
+  border-radius: 12px;
+  background: rgba(12, 28, 48, 0.55);
+}
+
+.workbench-wow-starters-header {
+  margin-bottom: 0.85rem;
+}
+
+.workbench-wow-starters-header h2 {
+  margin: 0.2rem 0 0.35rem;
+  font-size: 1.15rem;
+  color: #d8ecff;
+}
+
+.workbench-wow-starters-sub {
+  margin: 0;
+  color: rgba(206, 223, 236, 0.78);
+  font-size: 0.85rem;
+}
+
+.workbench-wow-starters-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+@media (max-width: 960px) {
+  .workbench-wow-starters-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.workbench-wow-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid rgba(120, 200, 255, 0.22);
+  border-radius: 10px;
+  background: rgba(8, 18, 34, 0.65);
+}
+
+.workbench-wow-card header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+}
+
+.workbench-wow-card h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: #e6f1ff;
+}
+
+.workbench-wow-tag {
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(120, 200, 255, 0.18);
+  color: #9ed3ff;
+  font-family: "SFMono-Regular", "Menlo", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
+.workbench-wow-card-desc {
+  margin: 0;
+  color: rgba(206, 223, 236, 0.84);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.workbench-wow-card-desc code {
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  background: rgba(120, 200, 255, 0.12);
+  color: #b8e0ff;
+  font-size: 0.8rem;
+}
+
+.workbench-wow-run-button {
+  align-self: flex-start;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid rgba(120, 200, 255, 0.5);
+  border-radius: 6px;
+  background: rgba(120, 200, 255, 0.16);
+  color: #d8ecff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.workbench-wow-run-button:hover:not([disabled]) {
+  background: rgba(120, 200, 255, 0.28);
+}
+
+.workbench-wow-run-button[disabled] {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.workbench-wow-result {
+  min-height: 1.3rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(206, 223, 236, 0.82);
+  font-family: "SFMono-Regular", "Menlo", monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.workbench-wow-result[data-wow-state="ok"] {
+  border: 1px solid rgba(120, 220, 170, 0.35);
+  color: #d4f5e2;
+}
+
+.workbench-wow-result[data-wow-state="error"] {
+  border: 1px solid rgba(247, 144, 144, 0.5);
+  color: #ffd6d6;
+}
+
 /* E11-13: trust-affordance banner. Visible only when
    data-feedback-mode = manual_feedback_override AND not session-dismissed.
    Explains the advisory boundary so the user does not infer authority

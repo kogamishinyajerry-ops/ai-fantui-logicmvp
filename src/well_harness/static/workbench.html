@@ -48,6 +48,112 @@
         </label>
       </section>
 
+      <section
+        id="workbench-wow-starters"
+        class="workbench-wow-starters"
+        aria-label="Canonical demo scenarios — one-click starter cards"
+      >
+        <header class="workbench-wow-starters-header">
+          <p class="eyebrow">canonical scenarios</p>
+          <h2>起手卡 · One-click 走读</h2>
+          <p class="workbench-wow-starters-sub">
+            预填 BEAT_DEEP_PAYLOAD / Monte-Carlo / Reverse-Diagnose 入口，落地 wow_a/b/c demo 弧。
+          </p>
+        </header>
+        <div class="workbench-wow-starters-grid">
+          <article
+            class="workbench-wow-card"
+            data-wow-id="wow_a"
+            aria-labelledby="workbench-wow-a-title"
+          >
+            <header>
+              <span class="workbench-wow-tag">wow_a</span>
+              <h3 id="workbench-wow-a-title">Causal Chain · 因果链走读</h3>
+            </header>
+            <p class="workbench-wow-card-desc">
+              POST <code>/api/lever-snapshot</code> with BEAT_DEEP_PAYLOAD (tra=-35°, n1k=0.92,
+              deploy=95%) — latches L1–L4 deep-deploy chain.
+            </p>
+            <button
+              type="button"
+              class="workbench-wow-run-button"
+              data-wow-action="run"
+              data-wow-id="wow_a"
+            >
+              一键运行 wow_a
+            </button>
+            <div
+              class="workbench-wow-result"
+              data-wow-result-for="wow_a"
+              role="status"
+              aria-live="polite"
+            >
+              尚未运行。
+            </div>
+          </article>
+          <article
+            class="workbench-wow-card"
+            data-wow-id="wow_b"
+            aria-labelledby="workbench-wow-b-title"
+          >
+            <header>
+              <span class="workbench-wow-tag">wow_b</span>
+              <h3 id="workbench-wow-b-title">Monte Carlo · 1000-trial 可靠性</h3>
+            </header>
+            <p class="workbench-wow-card-desc">
+              POST <code>/api/monte-carlo/run</code> with seed=42 — 1000 次抽样，输出
+              success_rate + failure_modes 分布。
+            </p>
+            <button
+              type="button"
+              class="workbench-wow-run-button"
+              data-wow-action="run"
+              data-wow-id="wow_b"
+            >
+              一键运行 wow_b
+            </button>
+            <div
+              class="workbench-wow-result"
+              data-wow-result-for="wow_b"
+              role="status"
+              aria-live="polite"
+            >
+              尚未运行。
+            </div>
+          </article>
+          <article
+            class="workbench-wow-card"
+            data-wow-id="wow_c"
+            aria-labelledby="workbench-wow-c-title"
+          >
+            <header>
+              <span class="workbench-wow-tag">wow_c</span>
+              <h3 id="workbench-wow-c-title">Reverse Diagnose · 反向诊断</h3>
+            </header>
+            <p class="workbench-wow-card-desc">
+              POST <code>/api/diagnosis/run</code> with outcome=deploy_confirmed — 反求
+              触发该 outcome 的参数组合（max_results=10）。
+            </p>
+            <button
+              type="button"
+              class="workbench-wow-run-button"
+              data-wow-action="run"
+              data-wow-id="wow_c"
+            >
+              一键运行 wow_c
+            </button>
+            <div
+              class="workbench-wow-result"
+              data-wow-result-for="wow_c"
+              role="status"
+              aria-live="polite"
+            >
+              尚未运行。
+            </div>
+          </article>
+        </div>
+      </section>
+
       <aside
         id="workbench-trust-banner"
         class="workbench-trust-banner"
