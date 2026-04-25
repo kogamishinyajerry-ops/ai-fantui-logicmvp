@@ -8,6 +8,7 @@
 .workbench-collab-bottom-bar,
 .workbench-collab-grid,
 .workbench-annotation-toolbar,
+.workbench-approval-center,
 .workbench-annotation-inbox {
   border: 1px solid rgba(143, 214, 233, 0.16);
   background: rgba(8, 18, 29, 0.86);
@@ -219,9 +220,39 @@
   backdrop-filter: blur(16px);
 }
 
+.workbench-approval-center {
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+.workbench-approval-center h2,
+.workbench-approval-center h3 {
+  margin: 0;
+}
+
+.workbench-approval-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.workbench-approval-lane {
+  min-height: 7rem;
+  border: 1px solid rgba(143, 214, 233, 0.16);
+  border-radius: 8px;
+  background: rgba(5, 14, 23, 0.62);
+  padding: 0.85rem;
+}
+
+.workbench-approval-lane p {
+  color: rgba(240, 247, 255, 0.76);
+}
+
 @media (max-width: 1180px) {
   .workbench-collab-topbar,
-  .workbench-collab-grid {
+  .workbench-collab-grid,
+  .workbench-approval-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -1,0 +1,1 @@
+{"type":"schema.extended","schema":"workbench.audit.events","event_types":["proposal.submitted","proposal.accepted","proposal.rejected"],"observed_at":"2026-04-25T00:00:00Z","note":"Workbench proposal audit event types registered for E08."}

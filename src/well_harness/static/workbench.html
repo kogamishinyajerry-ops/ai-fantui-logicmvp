@@ -129,11 +129,38 @@
           type="button"
           class="workbench-toolbar-button"
           data-role="KOGAMI"
+          aria-controls="approval-center-panel"
         >
           Approval Center
         </button>
-        <span>Approval actions are disabled until E08.</span>
+        <span>Approval actions are Kogami-only.</span>
       </footer>
+
+      <section
+        id="approval-center-panel"
+        class="workbench-approval-center"
+        data-approval-role="KOGAMI"
+        aria-labelledby="approval-center-title"
+      >
+        <header>
+          <p class="eyebrow">approval center</p>
+          <h2 id="approval-center-title">Kogami Proposal Triage</h2>
+        </header>
+        <div class="workbench-approval-grid">
+          <article class="workbench-approval-lane" data-approval-lane="pending">
+            <h3>Pending</h3>
+            <p>Submitted annotation proposals wait here before acceptance or rejection.</p>
+          </article>
+          <article class="workbench-approval-lane" data-approval-lane="accept">
+            <h3>Accept</h3>
+            <button type="button" class="workbench-toolbar-button" data-approval-action="accept">Accept Proposal</button>
+          </article>
+          <article class="workbench-approval-lane" data-approval-lane="reject">
+            <h3>Reject</h3>
+            <button type="button" class="workbench-toolbar-button" data-approval-action="reject">Reject Proposal</button>
+          </article>
+        </div>
+      </section>
 
       <section class="hero" aria-labelledby="workbench-page-title">
         <div>
