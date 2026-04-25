@@ -14,7 +14,7 @@
 
 成功标准（goal-backward verifier）：
 1. 一个第一次接触 Workbench 的飞机控制工程师，**不读代码、不看 HANDOVER**，凭页面 affordance 能在 30 分钟内独立完成：(a) 选一个 wow-scenario 跑通，(b) 在某个 logic gate 边上贴一条 domain-anchored annotation，(c) 把这条 annotation 转成 Claude Code prompt 输出给同事。
-2. 5 个 Codex personas 各自跑一次 review，BLOCKER 等级问题 = 0；IMPORTANT 等级 ≤ 2 个/persona。
+2. Codex persona review BLOCKER 等级问题 = 0；IMPORTANT 等级 ≤ 2/persona。Persona 数量按 §3.6 leading indicator 决出的 tier-trigger 规则跑（Tier-A = 5/5；Tier-B = 1/1，跨-sub-phase 轮换 P1→P5）。governance bundle #2 落地于 2026-04-25（PR #14），E11-13..19 默认按 tier-trigger。
 3. main 三轨绿（default ≥ 863 / e2e 27 passed / adversarial 8/8）。
 4. truth-engine 红线 0 触碰。
 5. **(v2.3) 每个子 phase 的 user-facing copy 在 §Surface Inventory 全数登记**，锚点 line 真实存在；评审者抽查 1-3 行命中率 100%。
@@ -162,7 +162,7 @@ E11-09 → E11-13/14 → E11-05 → E11-03 → E11-04 → E11-06
 
 **5-persona pipeline tier-trigger 候选规则**（待 E11-09 实证后立法 / 否决）：
 - 触发条件 = (a) 子 phase 含 user-facing copy diff ≥ 10 行 **AND** (b) 该子 phase 的 §Surface Inventory 含 ≥ 3 条 [REWRITE/DELETE]
-- 否则降为 1-persona（任选 P1/P2/P3/P4/P5 之一，默认 P1 + 当期 owner 视情况轮换）
+- 否则降为 1-persona Tier-B（跨-sub-phase 轮换 P1→P2→P3→P4→P5→P1；状态记录在 `.planning/phases/<epic>/PERSONA-ROTATION-STATE.md`；不得在连续两个 Tier-B sub-phase 上跑同一 persona）
 - v2.2 / v2.3 / v6.1 / Surface Inventory / RETRO 序号全部保留，**不动**
 
 **未在 §3.6 立法的原因**：Opus 4.7 警告"先 codify 再实证"是 v2.3 的同一陷阱。tier-trigger 规则有效性*取决于* E11-09 结果——E11-09 跑完前不写进 constitution。
@@ -179,7 +179,7 @@ E11-09 PR #13 落地 = **2 轮 Codex APPROVE**（R1 BLOCKER 真实 JS bug 被抓
 
 **Tier-trigger 落地后保留不变**：v2.2 / v2.3 触发 + §Surface Inventory + §Anchor 格式细则 + v6.1 Codex 触发清单 + RETRO 序号 + Hard Stop + Verbatim Exception。仅持 5-persona 调用频率被软化。
 
-**回滚条件（已写入 constitution v2.3）**：连续两个 Tier-B 子 phase 在 post-merge 检出 ≥1 条 fabricated surface → 自动回滚 5-persona 默认 + 起 retro 后继。
+**回滚条件（canonical = RETRO-V61-054 §6.3，constitution v2.3 §Codex Persona Pipeline Tier-Trigger 引用）**：连续两个 Tier-B 子 phase 在 post-merge 检出 ≥1 条 fabricated surface（v2.3 §UI-COPY-PROBE §失效条件） → 自动执行三项动作：(1) 接下来 3 个 user-facing 子 phase 强制回滚到默认 5-persona（不允许 Tier-B），(2) 开新 RETRO-V61-* 文件记录失败摊销并链接到 RETRO-V61-054，(3) 重新 engage Opus 4.7 strategic review 决定是否永久退役 tier-trigger 或 sharpen 触发条件。
 
 **详细记录**：`.planning/retrospectives/RETRO-V61-054-ui-copy-probe-birth.md` §6.
 
@@ -212,7 +212,7 @@ E11-09 PR #13 落地 = **2 轮 Codex APPROVE**（R1 BLOCKER 真实 JS bug 被抓
 
 **反对论点**: 同一个 LLM 模型扮演 5 个不同角色，本质上还是同一份 weights 在 reason，可能产出 5 份相似的 review。Tier 1 adversarial 要求 ≥3 reasoned objections + rebuttal，但 Codex 是 GPT-5.4，不是 Claude；模型多样性可能不够。
 
-**Rebuttal**: (a) Codex 是 OpenAI GPT-5.4，与 Claude Opus 4.7 是不同 family，前次 PR #5 R1 review 已经实证捕到 Claude 漏的事实错误（plant deploy 6% vs 0%），证明 inter-model 盲点不重叠。(b) 5 personas 设计中刻意拉开 background：Junior（不会 Python deep dive 的）vs QA/V&V（会跑 traceability 的）vs Demo Presenter（不关心代码只关心叙事弧的）— context 拉开后即使是 same weights 也会 surface 不同 dimension。(c) 加 anti-bias safeguard：每个 persona 必须产出 ≥1 个其他 persona 没提到的 finding，否则 review 不算 valid（pipeline 强制项）。结论：bias 风险存在但已通过 distinct context + cross-persona uniqueness 要求 mitigated。
+**Rebuttal**: (a) Codex 是 OpenAI GPT-5.4，与 Claude Opus 4.7 是不同 family，前次 PR #5 R1 review 已经实证捕到 Claude 漏的事实错误（plant deploy 6% vs 0%），证明 inter-model 盲点不重叠。(b) 5 personas 设计中刻意拉开 background：Junior（不会 Python deep dive 的）vs QA/V&V（会跑 traceability 的）vs Demo Presenter（不关心代码只关心叙事弧的）— context 拉开后即使是 same weights 也会 surface 不同 dimension。(c) anti-bias safeguard 是 tier-aware（governance bundle #2, 2026-04-25 起生效）：**Tier-A** 时每个 persona 必须产出 ≥1 个其他 persona 没提到的 finding（within-PR uniqueness）；**Tier-B** 时 within-PR uniqueness N/A，bias 由跨-sub-phase 轮换（P1→P5→P1）+ §Surface Inventory grep 锚点 + RETRO §6.3 rollback 三层兜底承担。结论：bias 风险存在但已通过 distinct context + tier-aware anti-bias 机制 mitigated。
 
 ### Counterargument #3: "这是 Phase 还是单纯一个 UX iteration？"
 
@@ -240,7 +240,7 @@ E11-09 PR #13 落地 = **2 轮 Codex APPROVE**（R1 BLOCKER 真实 JS bug 被抓
 |---|---|---|
 | 改 workbench.html 大量 selector 导致 e2e + adversarial 测试失败 | High | 每 sub-phase 末跑三轨；保留底层 `id` 和 `data-*` selector 不动，只改 visible label / class / 排版 |
 | 新 onboarding flow 与已有 ticket 流程冲突 | Med | E11-02 的 `/workbench/start` 单纯是入口，导向已有按钮；不替换底层 prompt/ticket 逻辑 |
-| Codex 5 personas pipeline 跑一轮 ≈ 5 × 10min ≈ 1h CPU 时间 | Low | 后台跑（已有先例），分 batch；persona 失败 retry 1 次后转 manual review |
+| Codex persona pipeline cost — Tier-A ≈ 5 × 10min ≈ 1h CPU；Tier-B ≈ 10min CPU（governance bundle #2 后默认 Tier-B） | Low | 后台跑（已有先例），Tier-A 时 5 并发；persona 失败 retry 1 次后转 manual review |
 | 工程师在 Authority Contract banner 之外仍误以为可改 truth | Med | E11-07 banner + E11-04 annotation 词汇双重锁；同时不提供任何会让工程师以为"在 UI 改 truth-engine"的 affordance |
 | 角色 affordance E11-08 暴露 Kogami-only 操作的 implementation detail | Low | 仅展示 "Awaiting Kogami sign-off" 文案，不暴露内部 actor 列表 |
 
@@ -253,13 +253,16 @@ E11-09 PR #13 落地 = **2 轮 Codex APPROVE**（R1 BLOCKER 真实 JS bug 被抓
 1. **Persona 背景** — role / experience / mental model
 2. **Mission** — "你是 Pn，你被叫来 review Workbench；你 30 分钟内的目标是 X"
 3. **Workbench access** — 自己 boot demo_server :8799 + curl `/workbench` HTML + 实测 selector
-4. **Required output** — Verdict (APPROVE / CHANGES_REQUIRED / BLOCKER) + 5-10 numbered findings + ≥1 finding NOT covered by other personas
+4. **Required output** — Verdict (APPROVE / CHANGES_REQUIRED / BLOCKER) + 5-10 numbered findings.
+   - **Tier-A only:** 必须 ≥1 finding NOT covered by other 4 personas（within-PR uniqueness 反模式同质化）
+   - **Tier-B:** within-PR uniqueness N/A（仅 1 persona 跑），anti-bias 由跨-sub-phase 轮换 + §Surface Inventory 承担（详见 §3.6.1 + constitution.md §Codex Persona Pipeline Tier-Trigger）
 5. **Anti-bias hook** — 在 prompt 末附 "若你产出的 findings 全是 surface 抱怨，重做：找一个 *contract-level* 风险（authority bypass、truth drift、role escalation 等）"
 
-每轮 review 跑完后：
-- Claude Code 汇总 5 份 verdict 进 `.planning/phases/E11-workbench-engineer-first-ux/E11-04-PERSONA-REVIEW-RESULTS.md`
+每轮 review 跑完后（tier-aware）：
+- **Tier-A**: Claude Code 汇总 5 份 verdict 进 `E11-04-PERSONA-REVIEW-RESULTS.md`（aggregator 模式）
+- **Tier-B**: 单 verdict 文件 `.planning/phases/<phase-id>/persona-<P?>-output.md` 即 review 记录（无 aggregator）
 - 每个 finding ranked: BLOCKER → 必修 / IMPORTANT → 本 phase 修 / NIT → 进 next-phase queue
-- BLOCKER 数为 0 是 phase CLOSURE 必要条件之一
+- BLOCKER 数为 0 是 phase CLOSURE 必要条件之一（Tier-A 跨 5/5；Tier-B 该 1/1）
 
 ---
 
@@ -299,7 +302,7 @@ E11-09 PR #13 落地 = **2 轮 Codex APPROVE**（R1 BLOCKER 真实 JS bug 被抓
 | E2E lane | 27+N passed (N = E11-11 新增 onboarding 测试数), 0 failed | `pytest -v -m e2e --no-header` |
 | Adversarial | ALL TESTS PASSED 8/8 | `WELL_HARNESS_PORT=8799 python3 src/well_harness/static/adversarial_test.py` |
 | Truth-engine 红线 | `git diff main..HEAD -- src/well_harness/controller.py src/well_harness/runner.py src/well_harness/models.py src/well_harness/adapters/` 输出空 | `git diff` |
-| Codex personas | 5/5 verdict in {APPROVE, APPROVE_WITH_COMMENTS}, BLOCKER count = 0 across all | `.planning/phases/E11-workbench-engineer-first-ux/E11-04-PERSONA-REVIEW-RESULTS.md` |
+| Codex personas | Tier-aware: Tier-A → 5/5 verdict ∈ {APPROVE, APPROVE_WITH_COMMENTS}, BLOCKER=0 across all 5; Tier-B → 1/1 verdict ∈ {APPROVE, APPROVE_WITH_COMMENTS}, BLOCKER=0. Tier 由 §3.6 + constitution §Codex Persona Pipeline Tier-Trigger 规则按当期 sub-phase 决定 | Tier-A: `E11-04-PERSONA-REVIEW-RESULTS.md`. Tier-B: `.planning/phases/<phase-id>/persona-<P?>-output.md` |
 | Onboarding 30 分钟基准 | (manual / next-session) | TBD via real engineer beta或 E11-12 之后再测 |
 | EMPIRICAL-CLAIM-PROBE 合规 | 每个 PR 含 numeric runtime claim 必须实测 / TODO 标 / 引 commit:line | per-PR review |
 
@@ -311,7 +314,7 @@ E11 关闭需满足全部下列条件，自签 `GATE-E11-CLOSURE: Approved` (v6.
 
 1. ✅ §3 中 19 sub-phase 全部 merged 到 main（E11-01..19）
 2. ✅ §8 verification protocol 全部通过
-3. ✅ Codex persona review 给出 0 BLOCKER（人选数量按 §3.6 leading indicator 决出的 5-persona-或-tier-trigger 规则跑）
+3. ✅ Codex persona review 给出 0 BLOCKER（每个 sub-phase 按 tier-trigger 决出的 Tier-A 5/5 或 Tier-B 1/1 verdict；governance bundle #2 后 Tier-B 跨-sub-phase 轮换 P1→P5）
 4. ✅ truth-engine 红线 0 触碰
 5. ✅ E11-12-CLOSURE.md 在 `.planning/phases/E11-workbench-engineer-first-ux/` 落地
 6. ✅ Notion 同步：phase 页 + DEC-20260425-E11-WORKBENCH-UX-OVERHAUL + Roadmap 行
@@ -339,4 +342,4 @@ E11 关闭需满足全部下列条件，自签 `GATE-E11-CLOSURE: Approved` (v6.
 Execution-by: claudecode-opus47 · v6.1 · solo-autonomy
 ```
 
-> 本 PLAN.md 自身被 Kogami v6.1 Solo Autonomy 授权直接落到 main 不需 Gate；E11-12 CLOSURE 时由 Claude Code 自签 GATE-E11-CLOSURE: Approved 并贴最终 5-persona Codex review 结果。
+> 本 PLAN.md 自身被 Kogami v6.1 Solo Autonomy 授权直接落到 main 不需 Gate；E11-12 CLOSURE 时由 Claude Code 自签 GATE-E11-CLOSURE: Approved 并贴最终 Codex review 结果（按 §3.6 + constitution §Codex Persona Pipeline Tier-Trigger 决出的 tier；Tier-A 全 5 verdicts / Tier-B 单 verdict）。

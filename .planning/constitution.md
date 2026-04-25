@@ -8,7 +8,7 @@
 >
 > **v2.3 增量：** 在 v6.1 Codex 触发清单内追加 §UI-COPY-PROBE（与 EMPIRICAL-CLAIM-PROBE 并列触发，治 user-facing copy 中的 fabricated surface claim）。来源：E11-02 4 轮 Codex round-trip 全部围绕 tile-copy honesty boundary（详 RETRO-V61-054）+ Opus 4.7 异步根因诊断（C1 stage 缺位 / C2 prompt-shape 偏置 / C3 Solo Autonomy 自审无 grep 强制点位）。v6.1 五条件 verbatim exception 不变。
 >
-> **governance bundle #2 (2026-04-25):** v2.3 §UI-COPY-PROBE 触发条件、§Surface Inventory 强制、§Anchor 格式细则 全部不动。本次仅在 v2.3 节内追加 §Codex Persona Pipeline Tier-Trigger 子节——把"每个 user-facing UI 子 phase 默认跑全 5-persona Codex review"软化为"copy diff ≥10 行 AND ≥3 [REWRITE/DELETE] → 跑全 5 (Tier-A)；否则跑 1 (Tier-B 默认 P1)"。触发条件：E11-09 PR #13 ≤2 轮 Codex APPROVE 实证 v2.3 已摊销（leading indicator fired）。详见 RETRO-V61-054 §6 + `.planning/codex_personas/README.md` §Invocation。
+> **governance bundle #2 (2026-04-25):** v2.3 §UI-COPY-PROBE 触发条件、§Surface Inventory 强制、§Anchor 格式细则 全部不动。本次仅在 v2.3 节内追加 §Codex Persona Pipeline Tier-Trigger 子节——把"每个 user-facing UI 子 phase 默认跑全 5-persona Codex review"软化为"copy diff ≥10 行 AND ≥3 [REWRITE/DELETE] → 跑全 5 (Tier-A)；否则跑 1 (Tier-B 跨-sub-phase 轮换 P1→P5→P1，起点 P1)"。触发条件：E11-09 PR #13 ≤2 轮 Codex APPROVE 实证 v2.3 已摊销（leading indicator fired）。详见 RETRO-V61-054 §6 + `.planning/codex_personas/README.md` §Invocation。
 
 ## Milestone Hold (historical, 2026-04-13)
 
@@ -340,13 +340,24 @@ scope=src/well_harness/static/workbench.js (grep "approval-action\|data-approval
 | 条件 | persona 数 | 选哪个 |
 |---|---|---|
 | user-facing copy diff ≥ 10 行 **AND** §Surface Inventory 含 ≥ 3 条 [REWRITE/DELETE] | **5 (Tier-A，全 P1–P5 并行)** | 全跑 |
-| 其他所有情形（含 doc-only / 纯 refactor / copy diff < 10 行 / 无 [REWRITE/DELETE]） | **1 (Tier-B)** | 默认 P1（junior FCS）；当期 phase owner 可按"同一 sub-phase 不重复同一 persona"原则轮换至 P2/P3/P4/P5 |
+| 其他所有情形（含 doc-only / 纯 refactor / copy diff < 10 行 / 无 [REWRITE/DELETE]） | **1 (Tier-B)** | 跨-sub-phase 轮换：P1 → P2 → P3 → P4 → P5 → P1（默认起点 P1 Junior FCS）。Owner 可按 sub-phase 内容覆盖（demo-arc 重 → P3；适航 trace 重 → P4 等），但**不得在连续两个 Tier-B sub-phase 上跑同一 persona**。轮换状态记录在 `.planning/phases/<epic>/PERSONA-ROTATION-STATE.md`（每次 Tier-B sub-phase commit 后追加一行 `<sub-phase-id>: P? (<reason>)`，新 epic 重置为 P1） |
+
+**"copy diff ≥ 10 行" 计数命令（确定性，作者必须在 PR body 引用结果）：**
+
+```bash
+git diff --stat $(git merge-base HEAD main)..HEAD -- \
+  'src/well_harness/static/*.html' \
+  'src/well_harness/static/*.js' \
+  'src/well_harness/static/*.css'
+```
+
+读取最后一行 `N files changed, X insertions(+), Y deletions(-)` 的 `X + Y`。`X + Y ≥ 10` 即满足"copy diff ≥ 10 行"条件。该数字必须出现在 PR body 的 §Surface Inventory 标题行下方（例：`copy_diff_lines=12 (insertions=8, deletions=4)`），便于 Codex / 后续 reviewer 复现。
 
 **例外（仍跑全 5）：**
 - 该子 phase 触发 v2.2 EMPIRICAL-CLAIM-PROBE 同时也是 user-facing UI 子 phase（数值+surface 双轨断言，需要全角度审）
 - Phase Owner 主动声明"本子 phase 范围特别敏感"（authority chain / red-line 边界 / 适航 trace 等）
 
-**判断时机：** 子 phase commit 之前，作者填完 §Surface Inventory 后立刻知道 trigger 条件是否满足。
+**判断时机：** 子 phase commit 之前，作者填完 §Surface Inventory + 跑完计数命令后立刻知道 trigger 条件是否满足。
 
 **保留不变：**
 - v2.2 EMPIRICAL-CLAIM-PROBE 的全部触发条件

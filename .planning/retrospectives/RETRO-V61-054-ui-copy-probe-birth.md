@@ -144,8 +144,8 @@ Opus 4.7 §1 strategic review (2026-04-25) set E11-09 dual-h1 fix as the **leadi
 Per Opus §1 verbatim spec, this RETRO §6.1 unlocks the rule change:
 
 **5-persona pipeline → tier-trigger:**
-- Tier-A (5 personas, all parallel): user-facing copy diff ≥ 10 lines **AND** §Surface Inventory ≥ 3 [REWRITE/DELETE] rows
-- Tier-B (1 persona, default P1; rotation to P2/P3/P4/P5 by phase owner): all other cases
+- Tier-A (5 personas, all parallel): user-facing copy diff ≥ 10 lines **AND** §Surface Inventory ≥ 3 [REWRITE/DELETE] rows. "copy diff ≥10 lines" is computed by `git diff --stat $(git merge-base HEAD main)..HEAD -- 'src/well_harness/static/*.{html,js,css}'` (X+Y from the last summary line); the number is printed in PR body for reviewer reproducibility.
+- Tier-B (1 persona, cross-sub-phase round-robin P1→P2→P3→P4→P5→P1): all other cases. Owner may override per sub-phase content, but must not repeat the same persona on two consecutive Tier-B sub-phases. State recorded in `.planning/phases/<epic>/PERSONA-ROTATION-STATE.md`; sequence resets per epic.
 
 Landed in:
 - `.planning/constitution.md` §v2.3 § Codex Persona Pipeline Tier-Trigger (this PR)

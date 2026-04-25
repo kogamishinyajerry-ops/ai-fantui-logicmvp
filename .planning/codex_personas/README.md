@@ -6,7 +6,13 @@
 
 ## Purpose
 
-5 reusable Codex prompts that turn `gpt-5.4` into specific reviewer personas for Workbench UX validation. Each persona has distinct background, mission, and required-output shape. Pipeline ensures **inter-persona finding uniqueness** to mitigate same-model bias risk (Tier-1 adversarial counterargument #2 in E11 PLAN).
+5 reusable Codex prompts that turn `gpt-5.4` into specific reviewer personas for Workbench UX validation. Each persona has distinct background, mission, and required-output shape.
+
+**Anti-bias model (governance bundle #2, 2026-04-25):**
+- **Tier-A (5-parallel):** within-PR inter-persona finding uniqueness (each persona must contribute ≥1 finding NOT mentioned by other 4) mitigates same-model bias.
+- **Tier-B (1-persona default):** within-PR uniqueness is **N/A by definition**. Anti-bias is delegated to (a) v2.3 §Surface Inventory grep evidence layer + (b) cross-sub-phase persona round-robin (P1→P2→P3→P4→P5→P1) so consecutive Tier-B sub-phases don't share reviewer perspective + (c) RETRO-V61-054 §6.3 rollback if two consecutive Tier-B sub-phases miss a fabricated surface claim.
+
+See §Tier-trigger below for which tier fires when.
 
 ## Persona inventory
 
