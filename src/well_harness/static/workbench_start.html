@@ -59,11 +59,13 @@
       <p class="ws-tile-desc">
         落到 <code>/workbench</code>「一键预设验收卡」。 当前 4 张：
         <em>通过并留档 / 阻塞演示 / 快速通过 / 留档复跑</em>，每张点完会自动跑
-        intake → bundle → archive 真实链路，不要求先碰 JSON。
+        intake → bundle 真实链路；其中 ready_archived 与 archive_retry 还会
+        落 archive 目录，blocked_follow_up 与 ready_preview 不落 archive。
+        不要求先碰 JSON。
       </p>
       <ul class="ws-tile-bullets">
         <li>4 张预设：ready_archived / blocked_follow_up / ready_preview / archive_retry</li>
-        <li>主面板默认"初级视图"，连续点多次以最后一次为准</li>
+        <li>archiveBundle: true 仅 2/4（ready_archived + archive_retry）</li>
         <li>wow_a/b/c 起手卡片是 E11-05 范围，本期暂未上线</li>
       </ul>
       <span class="ws-tile-arrow">→</span>
@@ -102,12 +104,13 @@
         本期主面板还没有专门的 demo mode。 暂时推荐：先点
         <em>「一键通过验收」（ready_archived）</em> 走通 happy path，
         再点 <em>「一键看阻塞态」（blocked_follow_up）</em> 演示 clarification gate。
-        wow_a/b/c 三幕走读放在 <code>/demo.html</code>。
+        反推逻辑 lever-driven 演示（TRA / RA / N1k）在 <code>/demo.html</code>；
+        wow_a/b/c 目前只在 <code>tests/e2e/test_wow_a_causal_chain.py</code> 里有，没有 UI 走读 surface。
       </p>
       <ul class="ws-tile-bullets">
         <li>建议演示前隐藏浏览器侧栏 + 关闭 Approval Center 抽屉</li>
         <li>"一键留档复跑" 适合演示同秒重复点也不崩</li>
-        <li>无-chrome demo mode 进入 E11-05/08 范围</li>
+        <li>无-chrome demo mode + UI wow_a 走读 进入 E11-05/08 范围</li>
       </ul>
       <span class="ws-tile-arrow">→</span>
     </a>
@@ -140,18 +143,20 @@
        data-intent="approval-review"
        id="ws-tile-approval-review">
       <span class="ws-tile-kind">提案审核（Kogami）</span>
-      <h2 class="ws-tile-title">Approval Center · Pending / Accept / Reject</h2>
-      <p class="ws-tile-subtitle">role-gated · "Approval actions are Kogami-only"</p>
+      <h2 class="ws-tile-title">Approval Center · 静态 shell 占位</h2>
+      <p class="ws-tile-subtitle">label 上写 Kogami-only · 角色判定逻辑未实现</p>
       <p class="ws-tile-desc">
         落到 <code>/workbench</code> 底栏的 Approval Center 入口。 当前
-        triage 面板只有 3 道 lane（Pending / Accept / Reject）+ 两个按钮。
-        hash-chain 查阅 / SHA 分组 / JSONL 导出 / 状态过滤 是 E11-08 后才上线，
-        本期不要承诺。
+        是静态 HTML：3 道 lane（Pending / Accept / Reject）+ 两个按钮 + 一句
+        "Approval actions are Kogami-only" 的告示文案。 <strong>workbench.js
+        没有 approval-action handler</strong>，按钮点了不会落账（对 Kogami 也不会）。
+        hash-chain 查阅 / SHA 分组 / JSONL 导出 / 状态过滤 / 角色判定都是 E11-08 范围，
+        本期只是给后续 phase 留好 selector 锚点。
       </p>
       <ul class="ws-tile-bullets">
-        <li>非 Kogami 进入：button 仍显示，但 Accept/Reject 不会落账</li>
-        <li>Pending lane 当前只是占位文案，不显示真实 proposal 列表</li>
-        <li>data-approval-role="KOGAMI" 已经标好，未来角色判断有锚点</li>
+        <li>data-approval-role="KOGAMI" + data-approval-action 锚点已就位</li>
+        <li>Pending lane 当前只是占位文案，没有真实 proposal 列表</li>
+        <li>角色判定 / 实际签批落账逻辑完全在 E11-08 后</li>
       </ul>
       <span class="ws-tile-arrow">→</span>
     </a>
@@ -171,7 +176,7 @@
         CSV / JSONL trace 导出在 E11-09 后才上线。
       </p>
       <ul class="ws-tile-bullets">
-        <li>archive package 自带时间戳目录，可作为 commit-SHA 锚点</li>
+        <li>archive package 自带 timestamp + slug 目录 + SHA256 文件完整性哈希（不是 git commit SHA）</li>
         <li>truth-engine SHA / adversarial 8/8 / e2e 状态条进入 E11-06 范围</li>
         <li>本期产出物均为内部研究证据，不构成适航合规声明</li>
       </ul>
