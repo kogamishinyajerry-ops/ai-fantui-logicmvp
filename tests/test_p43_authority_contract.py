@@ -2,16 +2,18 @@
 
 All tests are string-grep style: they inspect source files, not runtime behaviour.
 
-Tests marked @pytest.mark.xfail are for rules whose implementation is pending
-in later P43 sub-phases. They will be unmarked as each phase lands.
+All R1-R6 sub-phases (P43-02 through P43-08) have landed; xfail markers were
+removed in 2026-04-25 (PROMOTE per `docs/workbench/xpassed-audit-20260425.md`)
+so these tests now act as load-bearing regression guards rather than
+pending-implementation parking lots.
 
-R1  (P43-02 · Step 3a/B)   — backend never writes draft_design_state   [PASS now]
-R2  (P43-08)                — final_approve never reads draft            [xfail: handler missing]
-R3  (P43-03/04)             — frozenSpec via assignFrozenSpec+deepFreeze [xfail: not yet]
-R4  (P43-05/06)             — generator reads frozen only                [xfail: not yet]
-R5  (P43-07)                — validateDraftAgainstFrozen singleton        [xfail: not yet]
-R6a (P43-08)                — final_approve removes draft key             [xfail: handler missing]
-R6b (P43-02 · Step 3a/B)   — archive bundle excludes draft               [PASS now]
+R1  (P43-02 · Step 3a/B)   — backend never writes draft_design_state   [PASS]
+R2  (P43-08)                — final_approve never reads draft            [PASS]
+R3  (P43-03/04)             — frozenSpec via assignFrozenSpec+deepFreeze [PASS]
+R4  (P43-05/06)             — generator reads frozen only                [PASS]
+R5  (P43-07)                — validateDraftAgainstFrozen singleton        [PASS]
+R6a (P43-08)                — final_approve removes draft key             [PASS]
+R6b (P43-02 · Step 3a/B)   — archive bundle excludes draft               [PASS]
 """
 from __future__ import annotations
 
@@ -86,24 +88,15 @@ class TestR1BackendNoDraftWrite:
 
 
 # ──────────────────────────────────────────────
-# R2 — final_approve handler never reads draft
-# (xfail: final_approve handler not yet implemented — P43-08)
+# R2 — final_approve handler never reads draft (P43-08 landed)
 # ──────────────────────────────────────────────
 
 class TestR2FinalApproveNoDraftRead:
-    @pytest.mark.xfail(
-        strict=False,
-        reason="P43-08: final_approve handler not yet implemented in workbench.js",
-    )
     def test_r2_final_approve_handler_exists(self, wjs: str):
         """final_approve handler must exist before we can verify R2."""
         block = _find_block(wjs, r"function\s+handleFinalApprove|handleFinalApprove\s*=\s*(?:async\s+)?function")
         assert block != "", "final_approve handler not found in workbench.js"
 
-    @pytest.mark.xfail(
-        strict=False,
-        reason="P43-08: final_approve handler not yet implemented",
-    )
     def test_r2_handler_no_draft_getitem(self, wjs: str):
         """final_approve block must not call getItem on draft key."""
         block = _find_block(wjs, r"function\s+handleFinalApprove|handleFinalApprove\s*=\s*(?:async\s+)?function")
@@ -116,33 +109,20 @@ class TestR2FinalApproveNoDraftRead:
 
 
 # ──────────────────────────────────────────────
-# R3 — frozenSpec only via assignFrozenSpec+deepFreeze
-# (xfail: assignFrozenSpec/deepFreeze not yet in workbench.js — P43-03/04)
+# R3 — frozenSpec only via assignFrozenSpec+deepFreeze (P43-03/04 landed)
 # ──────────────────────────────────────────────
 
 class TestR3FrozenSpecControlledWriter:
-    @pytest.mark.xfail(
-        strict=False,
-        reason="P43-03: assignFrozenSpec not yet implemented in workbench.js",
-    )
     def test_r3_assign_frozen_spec_declared(self, wjs: str):
         """assignFrozenSpec function must be declared in workbench.js."""
         found = bool(re.search(r"function assignFrozenSpec|assignFrozenSpec\s*=", wjs))
         assert found, "assignFrozenSpec declaration missing from workbench.js"
 
-    @pytest.mark.xfail(
-        strict=False,
-        reason="P43-03: deepFreeze not yet implemented in workbench.js",
-    )
     def test_r3_deepfreeze_declared(self, wjs: str):
         """deepFreeze function must be declared in workbench.js."""
         found = bool(re.search(r"function deepFreeze|const deepFreeze\s*=|var deepFreeze\s*=", wjs))
         assert found, "deepFreeze declaration missing from workbench.js"
 
-    @pytest.mark.xfail(
-        strict=False,
-        reason="P43-03: frozenSpec not yet introduced; bare-write check vacuously passes but marked xfail for parity",
-    )
     def test_r3_no_bare_frozenspec_assignment(self, wjs: str):
         """No bare `frozenSpec = ...` outside assignFrozenSpec body."""
         # Collect assignments but exclude variable declarations (let/const/var frozenSpec = ...)
@@ -168,10 +148,6 @@ class TestR3FrozenSpecControlledWriter:
         bad = [ln for ln in candidate_lines if ln not in allowed]
         assert bad == [], f"R3 VIOLATION: bare frozenSpec= outside assignFrozenSpec at lines {bad}"
 
-    @pytest.mark.xfail(
-        strict=False,
-        reason="P43-03: frozenSpec not yet introduced; alias-mutate check vacuously passes",
-    )
     def test_r3_no_alias_mutate_patterns(self, wjs: str):
         """Forbidden alias-mutate patterns must not appear."""
         forbidden = [
@@ -183,10 +159,6 @@ class TestR3FrozenSpecControlledWriter:
         found = [p for p in forbidden if re.search(p, wjs)]
         assert found == [], f"R3 VIOLATION: alias-mutate patterns found: {found}"
 
-    @pytest.mark.xfail(
-        strict=False,
-        reason="P43-03: assignFrozenSpec not yet implemented; origin check pending",
-    )
     def test_r3_no_draft_origin(self, wjs: str):
         """All assignFrozenSpec call-sites must use origin ∈ {'freeze-event','archive-restore'}."""
         # Check lines that call assignFrozenSpec but are NOT function declarations or comments
@@ -203,10 +175,6 @@ class TestR3FrozenSpecControlledWriter:
             "\n".join(f"  {l}" for l in bad)
         )
 
-    @pytest.mark.xfail(
-        strict=False,
-        reason="P43-03: deepFreeze not yet implemented; runtime enforcement pending",
-    )
     def test_r3_deepfreeze_called_in_assign(self, wjs: str):
         """assignFrozenSpec body must call deepFreeze(newSpec)."""
         block = _find_block(wjs, r"function assignFrozenSpec|assignFrozenSpec\s*=")
@@ -217,24 +185,15 @@ class TestR3FrozenSpecControlledWriter:
 
 
 # ──────────────────────────────────────────────
-# R4 — generator reads frozenSpec only, never draft
-# (xfail: generator not yet implemented — P43-05/06)
+# R4 — generator reads frozenSpec only, never draft (P43-05/06 landed)
 # ──────────────────────────────────────────────
 
 class TestR4GeneratorFrozenOnly:
-    @pytest.mark.xfail(
-        strict=False,
-        reason="P43-05: generator function not yet implemented in workbench.js",
-    )
     def test_r4_generator_exists(self, wjs: str):
         """Generator function must be present before R4 can be verified."""
         block = _find_block(wjs, r"start_gen|generatePanel|runGeneration|handleStartGen")
         assert block != "", "Generator function not found in workbench.js"
 
-    @pytest.mark.xfail(
-        strict=False,
-        reason="P43-05: generator not yet implemented",
-    )
     def test_r4_generator_no_draft_read(self, wjs: str):
         """Generator block must not read draft_design_state."""
         block = _find_block(wjs, r"start_gen|generatePanel|runGeneration|handleStartGen")
@@ -244,15 +203,10 @@ class TestR4GeneratorFrozenOnly:
 
 
 # ──────────────────────────────────────────────
-# R5 — validateDraftAgainstFrozen singleton in workbench.js
-# (xfail: not yet implemented — P43-07)
+# R5 — validateDraftAgainstFrozen singleton in workbench.js (P43-07 landed)
 # ──────────────────────────────────────────────
 
 class TestR5ValidatorSingleton:
-    @pytest.mark.xfail(
-        strict=False,
-        reason="P43-07: validateDraftAgainstFrozen not yet implemented",
-    )
     def test_r5_singleton_declared(self, wjs: str):
         """validateDraftAgainstFrozen must be declared exactly once in workbench.js."""
         decl_count = len(re.findall(
@@ -266,16 +220,12 @@ class TestR5ValidatorSingleton:
 
 
 # ──────────────────────────────────────────────
-# R6 — final_approve deletes draft; archive excludes draft
-# R6a: final_approve handler (xfail — P43-08)
-# R6b: archive exclusion (PASS now — absence check)
+# R6 — final_approve deletes draft; archive excludes draft (P43-08 landed)
+# R6a: final_approve handler removes draft
+# R6b: archive bundle excludes draft (always-on absence check)
 # ──────────────────────────────────────────────
 
 class TestR6LifecycleBoundary:
-    @pytest.mark.xfail(
-        strict=False,
-        reason="P43-08: final_approve handler not yet implemented",
-    )
     def test_r6_final_approve_removes_draft(self, wjs: str):
         """final_approve block must delete draft via removeItem or clearDraftDesignState()."""
         block = _find_block(wjs, r"function\s+handleFinalApprove|handleFinalApprove\s*=\s*(?:async\s+)?function")
