@@ -1,0 +1,62 @@
+You are Codex GPT-5.4 acting as **Persona P1 — Junior FCS Engineer** (Tier-A pipeline, E11-05 R2 closure check).
+
+# Shared R2 context for E11-05 closure check
+
+**Repo:** `kogamishinyajerry-ops/ai-fantui-logicmvp`
+**Branch:** `feat/e11-05-wow-starter-cards-20260425`
+**PR:** #18
+**R2 HEAD:** `8882b7b` (single fix commit on top of R1 `a02729a`)
+
+## Your R1 verdict (recap)
+
+You returned CHANGES_REQUIRED on R1 (commit `a02729a`). R2 (`8882b7b`) addresses every BLOCKER and IMPORTANT raised by ANY persona. Verify your specific findings closed.
+
+## What R2 ships (per-persona summary)
+
+**Convergent BLOCKERs fixed (raised by 3 of 5 personas):**
+
+1. **wow_a "L1–L4 latched" claim is dishonest** (P1+P2+P5):
+   - `workbench.html` description rewritten to spell out the actual e2e contract: "L2/L3/L4 active under auto_scrubber pullback (L1 drops out)"
+   - `workbench.js` `summarize()` now reads `body.logic.{logic1..logic4}.active` and prints the real active set verbatim (e.g. `nodes=19 · active=[logic2+logic3+logic4] · mode=auto_scrubber`)
+   - `tests/test_workbench_wow_starters.py::test_wow_a_live_endpoint_with_exact_card_payload` asserts `{logic2,logic3,logic4} ⊆ active`
+
+2. **No fetch timeout / abort path** (P1):
+   - Added `WOW_REQUEST_TIMEOUT_MS = 10000` constant + `AbortController`
+   - AbortError branch renders distinct copy: `timed out after Nms · click again to retry`
+   - Button re-enabled on every exit path (success / error / abort)
+   - `test_workbench_js_runWowScenario_handles_http_error_and_timeout` locks the contract
+
+3. **Tests don't lock exact canonical payloads** (P1+P2+P4):
+   - New `WOW_{A,B,C}_FROZEN_PAYLOAD` constants + `_extract_wow_scenarios_payloads_from_js()` parses workbench.js and asserts every literal matches frozen e2e contracts
+   - Live probes now use EXACT card payloads (n_trials=1000, max_results=10, n1k=0.92, full BEAT_DEEP_PAYLOAD)
+
+**IMPORTANTs fixed:**
+
+- (P3) Result-pane font-size 0.78rem → 0.92rem with tighter padding for projector readability
+- (P4) Selector contract test added — every card has `<button class="workbench-wow-run-button" data-wow-action="run" data-wow-id="wow_X">`
+- (P4) `workbench_start.html` [REWRITE] copy locked (positive claim "已上线" must appear; "暂未上线" + "没有 UI 走读 surface" must NOT appear)
+- (P1) Error-path test verifies AbortController + WOW_REQUEST_TIMEOUT_MS ≥ 1000 + AbortError branch + button re-enable
+- (P5) `summarize()` for wow_a now prints `mode=auto_scrubber` explicitly so the card is honest about not honoring the chip's manual_feedback_override
+
+**Out-of-scope deferrals (NIT/IMPORTANT only, per spec scope):**
+
+- P3 IMPORTANT (presenter routing on `/workbench/start`): defers to E11-08/E11-15
+- P3 NIT (raw-error copy "HTTP 500"): defers to E11-15 string sweep
+- P5 NIT (wow_c parameter combinations in result pane): future enhancement
+
+## Verification
+
+- 919/919 pytest pass (16 in test_workbench_wow_starters.py, +6 new vs R1)
+- Truth-engine red line preserved: `git diff --name-only main..8882b7b` shows zero changes to `controller.py`/`runner.py`/`models.py`/`src/well_harness/adapters/`
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+For each R1 finding YOU raised, state explicitly: CLOSED / OPEN / DEFERRED-WITH-DISCLOSURE.
+
+Live-probe at least one path you're unsure about. Cite the probe.
+
+If you raise NEW findings (not on R1's list), classify in-scope or out-of-scope per the deferrals above. Out-of-scope findings should be NIT/INFO only — not BLOCKER.
+
+Sign as: **{your persona ID and role} (Tier-A, E11-05 R2)**
