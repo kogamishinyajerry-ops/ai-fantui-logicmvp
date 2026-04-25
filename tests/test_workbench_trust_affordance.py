@@ -52,23 +52,29 @@ def test_static_html_has_feedback_mode_chip() -> None:
 
 
 def test_static_html_has_trust_banner() -> None:
-    """Trust banner DOM + advisory copy + dismiss control + scope definition present.
+    """Trust banner DOM + advisory copy + dismiss control + scope definition.
 
-    Scope-definition clause added in P1-R1 fix (Finding 6): the banner now
-    explains what counts as "manual feedback" so the advisory framing arrives
-    after the user knows what is being scoped.
+    P1-R2 fix (Finding #6 not-resolved at R2 first attempt): scope definition
+    must appear BEFORE the advisory framing in DOM/reading order. P1-R2 NIT:
+    "override observed" jargon removed (didn't appear elsewhere on page).
     """
     html = (STATIC_DIR / "workbench.html").read_text(encoding="utf-8")
     assert 'id="workbench-trust-banner"' in html
-    assert "Manual feedback mode is advisory." in html
-    assert "Truth engine readings" in html
     assert "advisory" in html
+    assert "Truth engine readings" in html
     assert "data-trust-banner-dismiss" in html
     assert "Hide for session" in html
-    # P1-R1 Finding 6: scope definition before advisory framing
+    # Scope-definition clause present
     assert 'workbench-trust-banner-scope' in html
-    assert 'What counts as "manual feedback"' in html
-    assert "override observed" in html
+    assert 'What "manual feedback" means here' in html
+    # P1-R2 NIT fix: jargon "override observed" removed
+    assert "override observed" not in html
+    # P1-R2 BLOCKER fix: scope definition appears BEFORE the advisory headline
+    scope_idx = html.index("workbench-trust-banner-scope")
+    advisory_idx = html.index("That mode is advisory.")
+    assert scope_idx < advisory_idx, (
+        "Scope clause must precede advisory framing per P1-R2 finding #6 fix"
+    )
 
 
 def test_static_css_has_feedback_mode_styling() -> None:
@@ -124,9 +130,11 @@ def test_workbench_route_serves_chip_and_banner() -> None:
     assert 'id="workbench-feedback-mode"' in body
     assert 'data-feedback-mode="manual_feedback_override"' in body
     assert 'id="workbench-trust-banner"' in body
-    assert "Manual feedback mode is advisory." in body
+    assert "That mode is advisory." in body
     assert "Truth engine readings" in body
     assert "Hide for session" in body
+    # P1-R2 fix: scope definition before advisory framing
+    assert 'What "manual feedback" means here' in body
 
 
 def test_bundle_route_does_not_serve_shell_chip() -> None:

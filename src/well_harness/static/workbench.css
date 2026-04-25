@@ -156,14 +156,6 @@
   font-weight: 600;
 }
 
-.workbench-trust-banner-scope code {
-  background: rgba(247, 188, 92, 0.16);
-  border-radius: 4px;
-  padding: 0.05rem 0.35rem;
-  font-family: var(--font-mono, ui-monospace, "SFMono-Regular", "Menlo", monospace);
-  font-size: 0.8rem;
-}
-
 .workbench-trust-banner-dismiss {
   flex: 0 0 auto;
   align-self: center;

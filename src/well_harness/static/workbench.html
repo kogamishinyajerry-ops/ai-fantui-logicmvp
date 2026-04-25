@@ -57,13 +57,12 @@
       >
         <span class="workbench-trust-banner-icon" aria-hidden="true">⚠</span>
         <div class="workbench-trust-banner-body">
-          <strong>Manual feedback mode is advisory.</strong>
           <span class="workbench-trust-banner-scope">
-            <em>What counts as "manual feedback":</em> any value you type to override an observed reading
-            (e.g., editing a snapshot input before running a scenario, or marking an annotation as
-            <code>override observed</code>). It does NOT include passive reads, replays, or audit-chain
-            navigation.
+            <em>What "manual feedback" means here:</em> any value you type into the workbench to override
+            an observed reading — for example, editing a snapshot input field before running a scenario.
+            Passive reads, replays, and audit-chain navigation do NOT count as manual feedback.
           </span>
+          <strong>That mode is advisory.</strong>
           <span>
             Truth engine readings (logic gates L1–L4, controller dispatch, audit chain) remain authoritative.
             Your manual feedback is recorded for diff/review but does not change source-of-truth values.
