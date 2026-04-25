@@ -3956,6 +3956,60 @@ function installWowStarters() {
   });
 }
 
+// E11-08 (2026-04-26): role affordance.
+// When the workbench identity is NOT Kogami, replace the Approval Center
+// entry button + panel with an explicit "Pending Kogami sign-off"
+// affordance instead of leaving disabled UI in place. setWorkbenchIdentity
+// is exported on window for tests + URL-param-driven demo flow.
+function applyRoleAffordance() {
+  const chip = document.getElementById("workbench-identity");
+  if (!chip) {
+    return;
+  }
+  const identity = chip.getAttribute("data-identity-name") || "";
+  const isKogami = identity.trim() === "Kogami";
+  const entry = document.getElementById("approval-center-entry");
+  const panel = document.getElementById("approval-center-panel");
+  const affordance = document.getElementById(
+    "workbench-pending-signoff-affordance",
+  );
+  if (entry) {
+    entry.hidden = !isKogami;
+    entry.setAttribute("aria-disabled", isKogami ? "false" : "true");
+  }
+  if (panel) {
+    panel.hidden = !isKogami;
+  }
+  if (affordance) {
+    affordance.setAttribute(
+      "data-pending-signoff",
+      isKogami ? "hidden" : "visible",
+    );
+  }
+}
+
+function setWorkbenchIdentity(name) {
+  const chip = document.getElementById("workbench-identity");
+  if (!chip || typeof name !== "string" || !name.trim()) {
+    return false;
+  }
+  chip.setAttribute("data-identity-name", name.trim());
+  const label = chip.querySelector("strong");
+  if (label) {
+    // Preserve the trailing role suffix (e.g., "/ Engineer") if present.
+    const suffix = label.textContent.includes("/")
+      ? label.textContent.split("/").slice(1).join("/").trimStart()
+      : "";
+    label.textContent = suffix ? `${name.trim()} / ${suffix}` : name.trim();
+  }
+  applyRoleAffordance();
+  return true;
+}
+
+if (typeof window !== "undefined") {
+  window.setWorkbenchIdentity = setWorkbenchIdentity;
+}
+
 // E11-06 (2026-04-26): hydrate the state-of-the-world status bar.
 // Reads /api/workbench/state-of-world and writes the four advisory
 // fields into the bar. Falls back to "—" so the page never shows a
@@ -4002,6 +4056,20 @@ window.addEventListener("DOMContentLoaded", () => {
   installFeedbackModeAffordance();
   installWowStarters();
   void hydrateStateOfWorldBar();
+  // E11-08: apply role affordance after DOM is ready. Honors
+  // ?identity=<name> URL param so demos / tests can flip identity
+  // without rebuilding the page.
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get("identity");
+    if (requested && requested.trim()) {
+      setWorkbenchIdentity(requested);
+    } else {
+      applyRoleAffordance();
+    }
+  } catch (_err) {
+    applyRoleAffordance();
+  }
 
   // E11-09 (2026-04-25): bundle UI lives on /workbench/bundle, served by
   // workbench_bundle.html. The /workbench shell page (workbench.html) does

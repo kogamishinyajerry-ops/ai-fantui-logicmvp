@@ -371,6 +371,45 @@
   background: rgba(247, 188, 92, 0.16);
 }
 
+/* E11-08 (2026-04-26): Role affordance for non-Kogami identities.
+   Replaces the disabled-UI failure mode (where a non-Kogami user would
+   see grayed-out approval buttons with no explanation) with an explicit
+   "Pending Kogami sign-off" affordance. The section starts hidden and
+   is revealed by applyRoleAffordance() in workbench.js when the
+   identity attribute is anything other than "Kogami". */
+.workbench-pending-signoff {
+  display: none;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin: 0.85rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(120, 200, 255, 0.32);
+  border-radius: 8px;
+  background: rgba(20, 35, 55, 0.6);
+  color: #d4e8ff;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.workbench-pending-signoff[data-pending-signoff="visible"] {
+  display: flex;
+}
+
+.workbench-pending-signoff-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.workbench-pending-signoff-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.workbench-pending-signoff-body strong {
+  color: #e6f1ff;
+}
+
 /* E11-07 (2026-04-26): Authority Contract banner.
    Permanent, always-visible 1-line banner above the 3-column grid that
    announces the truth-engine read-only contract and links to the v6.1
