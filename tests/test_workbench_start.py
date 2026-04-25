@@ -2,12 +2,15 @@
 
 These tests lock the public contract introduced by sub-phase E11-02:
 
-* `/workbench/start` returns a 200 HTML response with a 5-tile selector.
-* Each persona-aligned tile carries a stable `id` + `data-persona` +
-  `data-intent` so future E2E coverage and ticket templates can target it.
-* Each tile deep-links into `/workbench` with an `intent=` query parameter
-  (and optional `#fragment`) — preserving the existing workbench shell
-  contract while letting the onboarding page steer behavior.
+* `/workbench/start` returns a 200 HTML response with a 5-persona +
+  1-role (Kogami) tile selector — 6 entries total.
+* Each tile carries a stable `id` + `data-persona` + `data-intent` so
+  future E2E coverage and ticket templates can target it.
+* Each tile deep-links into `/workbench` with an `intent=` query
+  parameter. Hash fragments may only point at ids that actually exist
+  in `workbench.html` (no dead anchors that drop users at the page top).
+* Arbitrary `?intent=` payloads must NOT be reflected by `/workbench`.
+* The truth-engine red-line is visible on the onboarding page itself.
 
 Truth-engine surfaces are NOT touched by E11-02, only static assets and
 the demo_server route table.
@@ -21,6 +24,7 @@ import threading
 from html.parser import HTMLParser
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlparse
 
 import pytest
 
@@ -50,10 +54,29 @@ class _TileCollector(HTMLParser):
             self.tiles[tile_id] = attr_map
 
 
+class _IdCollector(HTMLParser):
+    """Collect every element id in an HTML file."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.ids: set[str] = set()
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        for key, value in attrs:
+            if key == "id" and value:
+                self.ids.add(value)
+
+
 def _parse_start_tiles() -> dict[str, dict[str, str]]:
     parser = _TileCollector()
     parser.feed((STATIC_DIR / "workbench_start.html").read_text(encoding="utf-8"))
     return parser.tiles
+
+
+def _parse_workbench_ids() -> set[str]:
+    parser = _IdCollector()
+    parser.feed((STATIC_DIR / "workbench.html").read_text(encoding="utf-8"))
+    return parser.ids
 
 
 def _start_demo_server() -> tuple[ThreadingHTTPServer, threading.Thread]:
@@ -98,18 +121,22 @@ def test_workbench_start_static_assets_resolve() -> None:
     assert ".ws-tile" in css_body, "stylesheet missing tile selector"
 
 
-def test_workbench_start_has_five_persona_tiles() -> None:
+def test_workbench_start_has_six_entry_tiles() -> None:
+    """5 personas (P1-P5) + 1 role (KOGAMI Approval) = 6 entries."""
     tiles = _parse_start_tiles()
     expected_ids = {
-        "ws-tile-learn-demo",
-        "ws-tile-engineer-probe",
-        "ws-tile-customer-repro",
-        "ws-tile-approval-review",
-        "ws-tile-vv-trace",
+        "ws-tile-learn-demo",       # P1
+        "ws-tile-engineer-probe",   # P2
+        "ws-tile-demo-stage",       # P3
+        "ws-tile-customer-repro",   # P5
+        "ws-tile-approval-review",  # KOGAMI (role, not persona)
+        "ws-tile-vv-trace",         # P4
     }
     assert expected_ids <= set(tiles), (
-        f"missing persona tiles: {expected_ids - set(tiles)}"
+        f"missing entry tiles: {expected_ids - set(tiles)}"
     )
+    extras = set(tiles) - expected_ids
+    assert not extras, f"unexpected extra tiles: {extras}"
 
 
 def test_workbench_start_tiles_carry_persona_metadata() -> None:
@@ -117,6 +144,7 @@ def test_workbench_start_tiles_carry_persona_metadata() -> None:
     expected_persona = {
         "ws-tile-learn-demo":      "P1",
         "ws-tile-engineer-probe":  "P2",
+        "ws-tile-demo-stage":      "P3",
         "ws-tile-customer-repro":  "P5",
         "ws-tile-approval-review": "KOGAMI",
         "ws-tile-vv-trace":        "P4",
@@ -142,6 +170,43 @@ def test_workbench_start_tiles_deep_link_into_workbench() -> None:
         )
 
 
+def test_workbench_start_tile_hash_targets_exist_or_absent() -> None:
+    """R1-F1: dead hash fragments (#wow_a / #probe / #repro / #audit) had to go.
+
+    Tiles may either omit a hash fragment, or use one that resolves to a real
+    id in workbench.html. No dead anchors allowed — they make the tile lie
+    about 'landing at the starter task'.
+    """
+    tiles = _parse_start_tiles()
+    workbench_ids = _parse_workbench_ids()
+    for tile_id, attrs in tiles.items():
+        href = attrs.get("href", "")
+        fragment = urlparse(href).fragment
+        if fragment:
+            assert fragment in workbench_ids, (
+                f"{tile_id}: hash fragment #{fragment!r} not present in workbench.html "
+                f"(would drop user at page top instead of starter task)"
+            )
+
+
+def test_workbench_route_ignores_arbitrary_intent_param() -> None:
+    """R1-F4 verbatim: `/workbench` must not reflect arbitrary intent= payloads."""
+    server, thread = _start_demo_server()
+    try:
+        connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
+        connection.request("GET", "/workbench?intent=%3Csvg%20onload%3Dalert(1)%3E")
+        response = connection.getresponse()
+        body = response.read().decode("utf-8")
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+
+    assert response.status == 200
+    assert "Control Logic Workbench" in body
+    assert "<svg onload=alert(1)>" not in body
+
+
 def test_workbench_start_displays_redline_section() -> None:
     """Truth-engine boundary must be visible on the onboarding page itself —
     no user should reach the workbench without first seeing what is read-only."""
@@ -152,3 +217,12 @@ def test_workbench_start_displays_redline_section() -> None:
         "onboarding page must call out the 19-node truth engine as read-only"
     )
     assert "wow_a fixture" in body
+
+
+def test_workbench_start_explains_persona_vs_role_axis() -> None:
+    """R1-F3 mitigation: page must explain that KOGAMI is a role lane (not a
+    persona) so the surface isn't mis-sold as 'persona-aligned'."""
+    body = (STATIC_DIR / "workbench_start.html").read_text(encoding="utf-8")
+    assert 'class="ws-axes"' in body, "missing role-vs-persona axis explainer"
+    assert "KOGAMI" in body
+    assert "persona" in body.lower()
