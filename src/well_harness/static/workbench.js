@@ -48,22 +48,44 @@ let suspendWorkbenchPacketWorkspacePersistence = false;
 const maxWorkbenchRunHistory = 6;
 const maxWorkbenchPacketRevisionHistory = 8;
 
+// E11-03 R2 (P1 NIT fix, 2026-04-26): translate the internal column
+// token (control/document/circuit) into the user-facing engineer-task
+// verb so the failure-path copy never reverts to technical-noun
+// phrasing. Mapping mirrors the rename in workbench.html.
+const WORKBENCH_COLUMN_LABEL = {
+  control: "Probe & Trace",
+  document: "Annotate & Propose",
+  circuit: "Hand off & Track",
+};
+
 function bootWorkbenchColumnSafely(columnName, bootFn) {
   try {
     bootFn();
   } catch (error) {
     const status = workbenchElement(`workbench-${columnName}-status`);
     if (status) {
-      status.textContent = `${columnName} panel failed independently: ${error.message || error}`;
+      const label = WORKBENCH_COLUMN_LABEL[columnName] || columnName;
+      status.textContent = `${label} panel failed independently: ${error.message || error}`;
       status.dataset.tone = "warning";
     }
   }
 }
 
+// E11-03 (2026-04-26): the three columns were renamed from technical
+// nouns ("Scenario Control / Spec Review Surface / Logic Circuit Surface")
+// to engineer-task verbs ("Probe & Trace / Annotate & Propose / Hand off
+// & Track"). Underlying ids and data-column tokens stay stable so e2e
+// selectors don't break — only the visible status copy here changes.
+//
+// E11-03 R2 (P5 IMPORTANT fix, 2026-04-26): drop internal phase tokens
+// ("E07+", "E07") from the user-visible hydrated copy. Customers/new
+// engineers should not need to know roadmap codes; the staging note is
+// rephrased in plain language.
 function bootWorkbenchControlPanel() {
   const status = workbenchElement("workbench-control-status");
   if (status) {
-    status.textContent = "Control panel ready. Scenario actions are staged for E07+.";
+    status.textContent =
+      "Probe & Trace ready. Scenario actions are staged for the next bundle.";
     status.dataset.tone = "ready";
   }
 }
@@ -71,7 +93,8 @@ function bootWorkbenchControlPanel() {
 function bootWorkbenchDocumentPanel() {
   const status = workbenchElement("workbench-document-status");
   if (status) {
-    status.textContent = "Document panel ready. Text-range annotation arrives in E07.";
+    status.textContent =
+      "Annotate & Propose ready. Text-range annotation is staged for the next bundle.";
     status.dataset.tone = "ready";
   }
 }
@@ -79,7 +102,8 @@ function bootWorkbenchDocumentPanel() {
 function bootWorkbenchCircuitPanel() {
   const status = workbenchElement("workbench-circuit-status");
   if (status) {
-    status.textContent = "Circuit panel ready. Overlay annotation arrives in E07.";
+    status.textContent =
+      "Hand off & Track ready. Overlay annotation is staged for the next bundle.";
     status.dataset.tone = "ready";
   }
 }
