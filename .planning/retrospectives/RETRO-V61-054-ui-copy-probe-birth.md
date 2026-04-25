@@ -94,6 +94,30 @@ PR #5 数值漂移 + E11-02 surface 漂移是同一根因的两个表面：未�
 
 ---
 
+## 5b. Meta-loop: v2.3 PR itself ran 5 Codex rounds (2026-04-25)
+
+The legislation PR (this PR — `feat/E11-02b-v23-ui-copy-probe-20260425`) took **5 Codex rounds** to APPROVE — the same depth as E11-02 itself, ironically.
+
+| Round | Verdict | Finding |
+|---|---|---|
+| R1 | BLOCKER | 9 inventory rows `[ANCHORED]` without concrete `file:line`; v2.3 spec gap on absence-claim anchor format |
+| R2 | CHANGES_REQUIRED | R2-F1 IMPORTANT: row #11 peer feature mis-stated as "beginner/intermediate/advanced" — actual is only beginner/expert (recursive honesty miss inside the worked example demonstrating the rule); R2-F2 NIT verbatim: scope=/peer= notation |
+| R3 | CHANGES_REQUIRED | R3-F1 IMPORTANT: spec line 253 said "anchor must be file:line" but line 258 then defined valid `scope=<file>` (no line) — three statements with three slightly different cardinality / line-range claims; R3-F2 IMPORTANT: row #18 still using old prose; R3-F3 NIT: count "6" while listing 9 |
+| R4 | CHANGES_REQUIRED | R3-F1 still NOT_CLOSED — fresh-rewritten spec still had 3 sentences with conflicting cardinality wording; R4-F1 IMPORTANT: "必须含两部分" vs "peer optional" |
+| R5 | **APPROVE** | rule collapsed to single-source 3-subsection canonical form |
+
+**Meta-lessons** (filed for future v2.X legislation):
+
+1. **Recursive honesty boundary** — the worked example demonstrating the rule must itself pass the rule. Codex R2 caught a fabricated peer feature (3 buttons claimed; only 2 exist) inside the very inventory used to demonstrate v2.3. Reflex when authoring legislation: **after each rule edit, grep-validate every example sentence against current src.** Self-application is mandatory.
+
+2. **Spec coherence drift across iterations** — R3 / R4 each added new wording while leaving older wording in place. By R4, three different sentences gave three subtly different cardinality rules. Reflex when revising spec: **collapse to single-source-of-truth form (subsections with explicit "仅此一字段为必填" wording) rather than appending new prose alongside the old.** Three statements of the same rule = three places to disagree.
+
+3. **5-round legislation cost** — averaging 130k tokens per round, the v2.3 PR consumed ~650k Codex tokens. This is acceptable as a one-time legislative cost (the rule covers all future user-facing UI phases), but signals the marginal cost of rule-while-applying. Future legislation should consider drafting on a *separate* worked example so the rule is canonical before being applied retroactively.
+
+The meta-loop itself is evidence that v2.3 works: Codex correctly used v2.3's own anchor-format rule to identify the worked-example-violates-rule problem, and used it again to identify spec-coherence drift. The rule is self-consistent because Codex's review process — running the rule on the document defining it — would have terminated faster (or not at all) if the rule had been internally inconsistent.
+
+---
+
 ## 6. Open questions
 
 - **Q1**：是否要把 §Surface Inventory 抽象成 `tools/inventory_check.py` 自动化校验脚本（grep 锚点行真实存在）？现状是手动 + Codex 抽查。
