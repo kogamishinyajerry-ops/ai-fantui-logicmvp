@@ -45,38 +45,56 @@ Author commit messages claim ambitious convergence ("3 spots verbatim identical"
 
 ---
 
-## 3. Methodology rule (adopt going forward)
+## 3. Methodology rule (ratified by Opus 4.7 strategic review, 2026-04-25)
 
-### 3.1 Single-canonical-source declaration before R1
+> **§3 scope** *(Opus Q3 amendment)*: all §3 rules apply only to **doc-only** rule-bundle PRs. Source-code rule-bundle PRs (e.g., new authority gate in `runner.py`) follow standard R4 Opus trigger and v6.1 Hard Stop ≥4. If 同型 loop 在 source-code PR 上首次出现，open a successor RETRO before extending §3.
+>
+> **Rationale (Opus)**: source code has pytest + executability automatically grounding spec drift; spec coherence drift is a doc-only phenomenon (no compiler). Legislating §3 without explicit scope = over-extension to unobserved scenarios, itself a v2.2 EMPIRICAL-CLAIM-PROBE violation.
 
-For any rule-bundle PR, the PR description MUST explicitly declare:
-- **Canonical home**: exactly one file:section that owns the rule body (e.g., `constitution.md §Codex Persona Pipeline Tier-Trigger`)
-- **Pointer policy**: every other reference is a pure pointer (file:section name + ≤1 sentence purpose). No rule restatement.
-- **Allowed-restatement zones**: explicitly enumerate which docs/sections are allowed to contain rule-shaped content because they own that operational view (e.g., README §命令模板 = bash implementation, README §Anti-bias safeguard = mechanism documentation, RETRO §6.x = decision-arc history). These zones are NOT drift; they are by-design operational/historical content.
+### 3.1 Anti-superlative claim rule *(Opus Q2 amendment — replaces prior "allowed-restatement zone" approach)*
 
-Without this declaration, Codex has no way to distinguish "rule body" from "operational documentation" from "changelog narrative", and will flag everything that contains rule-shaped sentences.
+The root cause of recursive coherence drift is asymmetric grading: **Codex grades strictly literally against any superlative claim the author writes in commit messages or PR descriptions**. As soon as the author asserts `verbatim identical` or `pure pointers`, Codex treats 100% character equality as a required passing condition; any partial-convergence is flagged as drift.
 
-### 3.2 Hard-stop at R3 with structural escalation
+**Rule**: rule-bundle PR commit messages and PR descriptions are **forbidden** to use superlative coherence claims. The banned phrase list (Chinese + English):
 
-**v6.1 amendment**: ≥3 Codex rounds on a rule-bundle PR = automatic Opus 4.7 Notion strategic review trigger. Continuing past R3 autonomously enters known-trap territory.
+- `verbatim identical` / 字面相等 / 完全一致
+- `pure pointers` / 纯指针 / 仅指针
+- `1 canonical + N pointers` / 单源 + 全指针
+- `zero drift` / 零漂移
+- `fractal-clean` / 全层级一致
 
-This supersedes the prior "≥4 rounds = governance failure" threshold for rule-bundle PRs specifically. (Other PR types still use ≥4.)
+**Standard substitute template** (use verbatim):
 
-### 3.3 R-budget cap
+> *"1 canonical source at `<path>`; downstream references may drift in wording but must not contradict canonical."*
 
-Rule-bundle PRs get a hard 4-round budget. R5 = forced merge or revert; no R6+ allowed. Author must choose at R5 between:
-- (a) merge with explicit acceptance of remaining drift (recorded in PR body as "drift accepted: <list>")
-- (b) revert and ship a smaller bundle
+This attacks the feedback loop itself — one order of magnitude smaller than enumerating "allowed-restatement zones" per-PR (which itself drifts between PRs and can be reverse-graded by Codex).
 
-PR #11 (5 rounds) and PR #14 (6 rounds) both violated this cap retroactively. Going forward this is enforced.
+### 3.2 R3 Opus consultation trigger for doc-only rule-bundle PRs *(Opus Q1 amendment)*
 
-### 3.4 Anti-overpromise commit-message rule
+A PR qualifies as "rule-bundle" iff:
 
-Commit messages on rule-bundle PRs MUST NOT claim convergence using superlatives:
-- ❌ "verbatim identical", "exactly N spots", "pure pointers", "zero rule fragments outside X"
-- ✅ "rule body lives at <file:section>; references at <list> updated to point", "operational/historical content at <list> retained by design"
+- (a) it modifies ≥1 constitution rule body **AND** (b) adds/rewrites ≥2 cross-doc pointers to that rule, **OR**
+- (c) it is explicitly labeled `governance-bundle` in commit subject prefix or PR title
 
-The asymmetric grading (Codex literalism + author overpromise) is the core mechanic. Removing overpromise breaks the cycle.
+Such PRs trigger automatic Opus 4.7 Notion strategic review consultation at **R3** (普通 PR 仍 R4). Continuing past R3 without Opus input enters known-trap territory.
+
+The objective trigger condition (a∧b ∨ c) prevents the trigger itself from drifting between PRs.
+
+### 3.3 R-budget two-tier cap *(Opus Q4 amendment)*
+
+For doc-only rule-bundle PRs:
+
+- **R3**: §3.2 Opus consultation trigger fires
+- **R5**: mandatory `drift-acceptance` declaration in PR body listing every outstanding cross-doc delta Codex flagged (using §3.1 standard template phrasing, no superlatives)
+- **R6**: hard cap, binary author choice:
+  - (a) rollback to a smaller bundle, OR
+  - (b) merge-with-explicit-drift signed by author (PR body must contain the drift-acceptance list)
+
+After 3 doc-only rule-bundle PRs run under this new regime, re-evaluate whether to tighten the hard cap to R5 (currently R6 because PR #14 successfully merged at R6 with drift acceptance — capping below already-observed-successful values would block known viable paths and force authors to split rule-bundles into 2 PRs, doubling drift surface).
+
+### 3.4 (deprecated by §3.1)
+
+The original §3.4 "anti-overpromise commit-message rule" is subsumed by Opus's §3.1 amendment (root-cause fix is the explicit superlative ban + standard template, not a vague anti-overpromise heuristic).
 
 ---
 
@@ -93,19 +111,24 @@ Per Path A merge (2026-04-25), PR #14 ships with these R6-flagged drift surfaces
 
 ---
 
-## 5. Open questions (deferred to user / Opus 4.7)
+## 5. Open questions — resolved by Opus 4.7 (2026-04-25)
 
-- **Q1**: Should §3.2 R3-Opus-trigger be codified into constitution.md v2.4 immediately, or wait for a third recursive-drift instance? (Two instances may not be enough sample size; legislating prematurely is itself a recursive-drift trap.)
-- **Q2**: Is the "allowed-restatement zone" enumeration in §3.1 itself drift-prone? (E.g., what stops the zone list from drifting between PRs?) — possibly need a fixed exemption schema in constitution.
-- **Q3**: PR #11 + PR #14 both ran on doc-only changes. Is this pattern bounded to doc-only PRs, or will source-code rule-bundle PRs (e.g., a new authority gate in `runner.py`) trigger the same loop?
+- **Q1 (codify §3.2 R3-trigger now or wait for 3rd instance?)** → **CODIFY NOW with objective trigger**. Opus rationale: 2 instances same root cause = mechanism generalized; waiting for N=3 is itself recursive-process-bloat (§1's diagnosis self-applied). §3.2 amended with objective (a∧b ∨ c) trigger.
+- **Q2 (allowed-restatement zone list itself drift-prone?)** → **AMEND root cause**. Opus reframed: real cause is Codex grading author's superlative claim literally, not "restatement allowed/not". §3.1 replaced with explicit superlative-claim ban + standard-template phrase.
+- **Q3 (doc-only scope or source-code too?)** → **CODIFY NOW with explicit doc-only scope**. Opus rationale: source code has pytest/executability auto-grounding spec drift; legislating without scope violates v2.2 EMPIRICAL-CLAIM-PROBE. §3 preamble adds "doc-only only" + RETRO-trigger if pattern observed on source-code PR.
+- **Q4 (4-round R-budget cap)** → **AMEND to R3/R5/R6 two-tier**. Opus rationale: 4-cap below already-observed-successful R6 of PR #14 would block known viable path + force PR splits doubling drift surface. §3.3 amended with R3 trigger / R5 declaration / R6 hard cap; re-evaluate to R5 after 3 PRs in new regime.
+
+New open questions (post-Opus):
+- **Q5**: After 3 doc-only rule-bundle PRs run under §3.2 R3 trigger + §3.3 R6 cap, is the empirical R5/R6 distribution biased toward R6? If yes, tighten cap to R5 in successor RETRO. (Telemetry: track Codex-rounds-to-merge per rule-bundle PR.)
 
 ---
 
 ## 6. Provenance
 
-- **Initial diagnosis**: in-session, 2026-04-25, after R6 verdict
-- **Status**: candidate methodology rule, not yet codified into constitution v2.4
-- **Pending**: Opus 4.7 strategic review (Notion async session) to validate §3.1 declaration template + §3.2 R3 hard-stop threshold + decide whether v2.4 amendment is appropriate
+- **Initial diagnosis**: in-session, 2026-04-25, after PR #14 R6 verdict
+- **Strategic review**: Opus 4.7 (Notion async session, 2026-04-25) — 4/4 codify/amend (see §3 verbatim Opus rewrites)
+- **Status**: methodology rule **ratified**; constitution v2.4 amendment landing in same PR (#15)
+- **Supersedes**: RETRO-V61-054 §6.5 candidate marker (now formalized)
 
 ---
 
@@ -113,7 +136,7 @@ Per Path A merge (2026-04-25), PR #14 ships with these R6-flagged drift surfaces
 
 ```
 Authored-by: claudecode-opus47 · v6.1 · solo-autonomy
-Status: methodology candidate (not yet constitution-bound)
-Supersedes: nothing yet (RETRO-V61-054 §6.5 was the precursor)
-Triggers-Opus: yes (Q1 / Q2 / Q3 + §3.1 / §3.2 / §3.3 calibration)
+Strategic-reviewer: Opus 4.7 (Notion async, 2026-04-25 ratified)
+Status: methodology ratified; pairs with constitution v2.4 amendment
+Supersedes: RETRO-V61-054 §6.5 candidate marker
 ```
