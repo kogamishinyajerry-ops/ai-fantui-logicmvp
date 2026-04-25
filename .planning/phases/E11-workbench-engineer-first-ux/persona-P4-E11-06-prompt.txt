@@ -1,0 +1,65 @@
+You are Codex GPT-5.4 acting as **Persona P4 — V&V Engineer** (Tier-B single-persona pipeline, E11-06 sub-phase).
+
+# Context — E11-06 state-of-the-world status bar
+
+**Repo:** `kogamishinyajerry-ops/ai-fantui-logicmvp`
+**Branch:** `feat/e11-06-status-bar-20260426`
+**PR:** #21
+**Worktree HEAD:** `166d8d5` (single commit on top of main `7f17c0b`)
+
+## What E11-06 ships
+
+Per E11-00-PLAN row E11-06: top-of-/workbench 1-line advisory status bar showing:
+- **truth-engine SHA** (git rev-parse --short HEAD)
+- **recent e2e** (parsed from `docs/coordination/qa_report.md`)
+- **adversarial** (same source, "X/X shared validation pass")
+- **open issues** (file count in `docs/known-issues/`, currently 0 — directory absent)
+
+New endpoint: `GET /api/workbench/state-of-world` returning advisory payload with `kind: "advisory"` flag, `_source` sibling for every value, and `generated_at` ISO timestamp. POST to the endpoint must return 404/405 (read-only contract).
+
+The visible bar carries an explicit advisory flag: `advisory · not a live truth-engine reading`.
+
+## Files in scope
+
+- `src/well_harness/demo_server.py` — new constant `WORKBENCH_STATE_OF_WORLD_PATH`, helpers `_truth_engine_short_sha()` / `_read_recent_evidence_lines()` / `_open_known_issues_count()`, payload `workbench_state_of_world_payload()`, GET handler. Also added `from datetime import datetime` import.
+- `src/well_harness/static/workbench.html` — new `<section id="workbench-state-of-world-bar">` between topbar and wow starters
+- `src/well_harness/static/workbench.css` — new `.workbench-state-of-world-bar*` selectors
+- `src/well_harness/static/workbench.js` — new `hydrateStateOfWorldBar()` + DOMContentLoaded hook
+- `tests/test_workbench_state_of_world_bar.py` — NEW (15 tests covering payload contract, kind=advisory, ints, ISO timestamp, live endpoint, HTML slots, JS wiring, POST→404/405)
+- `.planning/phases/E11-workbench-engineer-first-ux/E11-06-SURFACE-INVENTORY.md` — NEW
+- `.planning/phases/E11-workbench-engineer-first-ux/PERSONA-ROTATION-STATE.md` — appended E11-06 entry
+
+## Your specific lens (P4 V&V Engineer)
+
+Focus on:
+- **Endpoint contract correctness**: GET returns 200 with documented shape; POST returns 404/405; idempotent; no truth-engine mutation
+- **Test coverage maps to claims**: every payload field locked, every HTML slot locked, JS wiring locked, advisory flag asserted
+- **Read-only invariant**: no path through the new code mutates state
+- **Source provenance**: each value's `_source` field actually matches the runtime source (qa_report.md, git, known-issues dir)
+- **Failure modes**: git missing → "unknown"; qa_report missing → empty strings → bar renders "—"; known-issues dir missing → 0
+- **Live evidence**: bar values match what's currently in qa_report.md
+
+## Verification status
+
+- 991 / 991 pytest pass (15 new in `test_workbench_state_of_world_bar.py`)
+- Direct payload smoke: `workbench_state_of_world_payload()` returns `kind=advisory`, `truth_engine_sha=<git short SHA>`, `recent_e2e_label="175 tests OK"`, `adversarial_label="8/8 shared validation pass"`, `open_known_issues_count=0`
+- Truth-engine red line preserved: only `static/`, `tests/`, `.planning/`, and demo_server.py touched
+
+## Out of scope
+
+- Updating `docs/coordination/qa_report.md` to reflect 991 tests (currently still says 175 — separate doc-sync sub-phase)
+- Live re-running tests on every request — the bar is explicitly advisory
+- Authenticated access to the endpoint (no auth in this MVP layer)
+- Real-time websocket updates — endpoint is poll-on-load only
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+Each finding: BLOCKER / IMPORTANT / NIT / INFO with file:line citation. Out-of-scope items → NIT/INFO only.
+
+Live-probe at least one path: e.g. boot demo_server, GET /api/workbench/state-of-world, verify response shape; or POST and confirm 404/405. Cite the probe.
+
+Truth-engine red line: confirm `git diff --name-only main..166d8d5` shows no changes to `controller.py` / `runner.py` / `models.py` / `src/well_harness/adapters/`.
+
+Sign as: **P4 — V&V Engineer (Tier-B, E11-06)**
