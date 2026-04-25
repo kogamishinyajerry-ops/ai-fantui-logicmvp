@@ -13,6 +13,34 @@ if str(_SRC) not in sys.path:
 from well_harness.adapters.c919_etras_frozen_v1 import LockInputs, RawInputs
 
 
+# E11-14 (2026-04-25): /api/lever-snapshot requires actor + ticket_id +
+# manual_override_signoff when feedback_mode = manual_feedback_override.
+# Tests that exercise the override path (not the guard itself) use this
+# helper to extend their request payload with a fixed sign-off triplet.
+# Tests of the guard itself (negative cases) live in
+# tests/test_lever_snapshot_manual_override_guard.py.
+MANUAL_OVERRIDE_SIGNOFF = {
+    "actor": "TestSuite",
+    "ticket_id": "WB-TEST",
+    "manual_override_signoff": {
+        "signed_by": "TestSuite",
+        "signed_at": "2026-04-25T00:00:00Z",
+        "ticket_id": "WB-TEST",
+    },
+}
+
+
+def with_signoff_if_manual_override(payload: dict) -> dict:
+    """Return payload with sign-off attached when feedback_mode = manual_feedback_override.
+
+    Existing fields in payload take precedence (so a test setting actor=""
+    can still produce a 409 when intentionally exercising the guard).
+    """
+    if isinstance(payload, dict) and payload.get("feedback_mode") == "manual_feedback_override":
+        return {**MANUAL_OVERRIDE_SIGNOFF, **payload}
+    return payload
+
+
 def make_locks(
     *,
     tls: str = "locked",

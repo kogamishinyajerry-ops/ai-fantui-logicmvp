@@ -325,7 +325,10 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if parsed.path == "/api/lever-snapshot":
             lever_inputs, error_payload = parse_lever_snapshot_request(request_payload)
             if error_payload is not None:
-                self._send_json(400, error_payload)
+                # E11-14: parser may attach `_status` (e.g., 409 for manual_override_unsigned);
+                # default to 400 for legacy parse errors.
+                status_code = error_payload.pop("_status", 400)
+                self._send_json(status_code, error_payload)
                 return
 
             fault_injections = lever_inputs.pop("_fault_injections", None)
@@ -617,6 +620,74 @@ def _parse_feedback_mode(request_payload: dict) -> tuple[str | None, dict | None
             "message": "feedback_mode must be auto_scrubber or manual_feedback_override.",
         }
     return normalized, None
+
+
+# E11-14 (2026-04-25): server-side role guard for manual_feedback_override.
+# When feedback_mode = manual_feedback_override, the request must include
+# actor + ticket_id + manual_override_signoff. If any are missing/malformed,
+# the endpoint returns 409 Conflict (paired with E11-13 UI affordance, this
+# forms the "UI 看不到 + 服务端拒绝" two-line defense). Truth-engine red line
+# stays put: no controller / runner / models / adapters/*.py changes.
+def _validate_manual_override_signoff(request_payload: dict, feedback_mode: str) -> dict | None:
+    """Return error_payload (with `_status` 409) if signoff is missing/invalid; else None.
+
+    Only enforced when feedback_mode == "manual_feedback_override". For
+    auto_scrubber, this returns None unconditionally (no extra fields needed).
+    """
+    if feedback_mode != "manual_feedback_override":
+        return None
+
+    actor = request_payload.get("actor")
+    ticket_id = request_payload.get("ticket_id")
+    signoff = request_payload.get("manual_override_signoff")
+
+    def reject(field: str, message: str) -> dict:
+        return {
+            "_status": 409,
+            "error": "manual_override_unsigned",
+            "field": field,
+            "message": message,
+            "remediation": (
+                "manual_feedback_override requires actor + ticket_id + manual_override_signoff. "
+                "Acquire sign-off via Approval Center, or switch to auto_scrubber."
+            ),
+        }
+
+    if not isinstance(actor, str) or not actor.strip():
+        return reject("actor", "manual_feedback_override requires a non-empty actor string.")
+    if not isinstance(ticket_id, str) or not ticket_id.strip():
+        return reject("ticket_id", "manual_feedback_override requires a non-empty ticket_id string.")
+
+    if not isinstance(signoff, dict):
+        return reject(
+            "manual_override_signoff",
+            "manual_feedback_override requires a manual_override_signoff object.",
+        )
+    signed_by = signoff.get("signed_by")
+    signed_at = signoff.get("signed_at")
+    signoff_ticket = signoff.get("ticket_id")
+    if not isinstance(signed_by, str) or not signed_by.strip():
+        return reject(
+            "manual_override_signoff.signed_by",
+            "manual_override_signoff.signed_by must be a non-empty string.",
+        )
+    if not isinstance(signed_at, str) or not signed_at.strip():
+        return reject(
+            "manual_override_signoff.signed_at",
+            "manual_override_signoff.signed_at must be a non-empty timestamp string.",
+        )
+    if not isinstance(signoff_ticket, str) or not signoff_ticket.strip():
+        return reject(
+            "manual_override_signoff.ticket_id",
+            "manual_override_signoff.ticket_id must be a non-empty string.",
+        )
+    if signoff_ticket.strip() != ticket_id.strip():
+        return reject(
+            "manual_override_signoff.ticket_id",
+            "manual_override_signoff.ticket_id must match the request's ticket_id.",
+        )
+
+    return None
 
 
 def _normalize_fault_injection_node_id(node_id: str) -> str:
@@ -1016,6 +1087,12 @@ def parse_lever_snapshot_request(request_payload: dict) -> tuple[dict | None, di
     if error_payload is not None:
         return None, error_payload
     lever_inputs["feedback_mode"] = feedback_mode
+
+    # E11-14: enforce server-side role guard on manual_feedback_override.
+    # No-op for auto_scrubber; returns 409 payload when signoff missing/invalid.
+    signoff_error = _validate_manual_override_signoff(request_payload, feedback_mode)
+    if signoff_error is not None:
+        return None, signoff_error
 
     deploy_position_percent, error_payload = _parse_float_input(
         request_payload,

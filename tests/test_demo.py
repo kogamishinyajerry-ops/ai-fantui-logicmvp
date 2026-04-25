@@ -19,6 +19,9 @@ from well_harness.demo_server import DemoRequestHandler
 from well_harness.models import HarnessConfig
 from well_harness.workbench_bundle import archive_workbench_bundle, build_workbench_bundle
 
+# E11-14: helper for tests using manual_feedback_override (auto-attach sign-off)
+from conftest import with_signoff_if_manual_override  # noqa: E402
+
 
 PROJECT_ROOT = Path(__file__).parents[1]
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -467,7 +470,7 @@ class DemoIntentLayerTests(unittest.TestCase):
                     connection.request(
                         "POST",
                         "/api/lever-snapshot",
-                        body=json.dumps(case["request"]).encode("utf-8"),
+                        body=json.dumps(with_signoff_if_manual_override(case["request"])).encode("utf-8"),
                         headers={"Content-Type": "application/json"},
                     )
                     response = connection.getresponse()
@@ -575,7 +578,7 @@ class DemoIntentLayerTests(unittest.TestCase):
                     connection.request(
                         "POST",
                         "/api/lever-snapshot",
-                        body=json.dumps(case["request"]).encode("utf-8"),
+                        body=json.dumps(with_signoff_if_manual_override(case["request"])).encode("utf-8"),
                         headers={"Content-Type": "application/json"},
                     )
                     response = connection.getresponse()
@@ -611,11 +614,11 @@ class DemoIntentLayerTests(unittest.TestCase):
                 "POST",
                 "/api/lever-snapshot",
                 body=json.dumps(
-                    {
+                    with_signoff_if_manual_override({
                         "tra_deg": -20.0,
                         "feedback_mode": "manual_feedback_override",
                         "deploy_position_percent": 50.0,
-                    }
+                    })
                 ).encode("utf-8"),
                 headers={"Content-Type": "application/json"},
             )
@@ -650,11 +653,11 @@ class DemoIntentLayerTests(unittest.TestCase):
                 "POST",
                 "/api/lever-snapshot",
                 body=json.dumps(
-                    {
+                    with_signoff_if_manual_override({
                         "tra_deg": -20.0,
                         "feedback_mode": "manual_feedback_override",
                         "deploy_position_percent": 95.0,
-                    }
+                    })
                 ).encode("utf-8"),
                 headers={"Content-Type": "application/json"},
             )
@@ -689,11 +692,11 @@ class DemoIntentLayerTests(unittest.TestCase):
                 "POST",
                 "/api/lever-snapshot",
                 body=json.dumps(
-                    {
+                    with_signoff_if_manual_override({
                         "tra_deg": 0.0,
                         "feedback_mode": "manual_feedback_override",
                         "deploy_position_percent": 95.0,
-                    }
+                    })
                 ).encode("utf-8"),
                 headers={"Content-Type": "application/json"},
             )

@@ -105,6 +105,11 @@
   // ═══════════ Request builder ═══════════
 
   function buildRequest() {
+    // E11-14 (2026-04-25): /api/lever-snapshot now requires actor + ticket_id +
+    // manual_override_signoff when feedback_mode = manual_feedback_override.
+    // Demo flow ships canned sign-off matching the demo Approval Center exit
+    // state (Kogami signed WB-DEMO at deploy). Real UI will fill these from
+    // the sign-off ticket post-E11-08.
     return {
       tra_deg:                  numValue(inputs.tra, 0),
       radio_altitude_ft:        numValue(inputs.ra, 0),
@@ -114,6 +119,13 @@
       reverser_inhibited:       checked(inputs.reverserInhibited),
       eec_enable:               checked(inputs.eecEnable),
       feedback_mode:            "manual_feedback_override",
+      actor:                    "Kogami",
+      ticket_id:                "WB-DEMO",
+      manual_override_signoff:  {
+        signed_by: "Kogami",
+        signed_at: "2026-04-25T00:00:00Z",
+        ticket_id: "WB-DEMO",
+      },
       deploy_position_percent:  numValue(inputs.vdt, 0),
       fault_injections:         buildFaultInjections(),
     };
