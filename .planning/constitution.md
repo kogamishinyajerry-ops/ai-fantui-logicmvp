@@ -1,8 +1,10 @@
 # AI FANTUI LogicMVP Constitution
 
-> **Constitution version:** v2.1 (2026-04-20, P32 W6 refresh under v5.2 Claude App Solo Mode)
+> **Constitution version:** v2.2 (2026-04-25, v6.1 Solo Autonomy Delegation refresh)
 >
-> **Note:** 本文件保留 2026-04-13 Milestone Hold 的原始叙述作为历史证据，并在下方追加 Milestone 9 Project Freeze 的 Lifted 叙述（2026-04-15 → 2026-04-20）+ v5.2 Solo Mode 治理条款 + Phase Registry 更新到 P32。早期 Milestone Hold（P4–P11 范围）已于 2026-04-13 为 Milestone 6 在 P13 启动时事实上 Lifted（见 `.planning/ROADMAP.md` Milestone 6/7/8 Lifted 行）；后续 Milestone 9 Freeze 于本次 constitution 刷新中正式追认 Lifted。
+> **Note:** 本文件保留 2026-04-13 Milestone Hold 的原始叙述作为历史证据，并在下方追加 Milestone 9 Project Freeze 的 Lifted 叙述（2026-04-15 → 2026-04-20）+ v5.2 Solo Mode 治理条款 + v6.0 Codex Joint Dev Mode（2026-04-22, Notion Page 11）+ v6.1 Solo Autonomy Delegation（2026-04-25, DEC-20260425-WOW-A-FULL-AUTONOMY-GRANT）+ Phase Registry 更新到 P32。早期 Milestone Hold（P4–P11 范围）已于 2026-04-13 为 Milestone 6 在 P13 启动时事实上 Lifted（见 `.planning/ROADMAP.md` Milestone 6/7/8 Lifted 行）；后续 Milestone 9 Freeze 于 2026-04-20 P32 W3 中正式追认 Lifted。
+>
+> **v2.2 增量：** 仅追加 v6.1 Solo Autonomy 节 + 升级 Governance Mode Timeline。v5.2 / v6.0 内容不变，作为历史层叠保留。
 
 ## Milestone Hold (historical, 2026-04-13)
 
@@ -138,7 +140,9 @@ Between 2026-04-15 and 2026-04-18, under the v4.0 Extended Autonomy Mode then-in
 - **v3.0 双 Opus (2026-04-xx → 2026-04-17):** Claude Code Opus 4.7 as Executor; Notion AI Opus 4.7 as independent Gate reviewer. Retired when v4.0 Extended Autonomy allowed Executor self-signing.
 - **v4.0 Extended Autonomy (2026-04-17 → 2026-04-19):** Executor allowed to self-sign Gate within a ≥3-Phase深度验收 window when Kogami 显式 renewed the mandate. Used for P17 → P30 close-out.
 - **v5.1 Pair Mode (2026-04-19 → 2026-04-20):** Short-lived dual-Executor pair (Claude App + Codex). Abandoned after orphan commit `4474505` (Codex, unsigned) triggered the P31 orphan-triage response.
-- **v5.2 Claude App Solo Mode (2026-04-20, active):** Claude App Opus 4.7 as sole Executor. All Gate decisions (PLAN, CLOSURE) require explicit Kogami signature; Executor never self-selects the next Phase direction. See `v5.2 Solo Mode` section below for red lines.
+- **v5.2 Claude App Solo Mode (2026-04-20 → 2026-04-22):** Claude App Opus 4.7 as sole Executor. All Gate decisions (PLAN, CLOSURE) require explicit Kogami signature; Executor never self-selects the next Phase direction.
+- **v6.0 Multi-Agent × Codex Joint Dev (2026-04-22 → 2026-04-25):** Claude Code 主执行 + Codex 强制盲点审查回到清单（多文件前端 / API 契约变更 / e2e 期望变更 / UI 变更 / 用户 UX 批评后首次实现 / OpenFOAM 误差等触发硬性调用）。Verbatim exception 5 条件允许跳过 round-2。详见 Notion Page 11 v6.0 节。
+- **v6.1 Solo Autonomy Delegation (2026-04-25, active):** Kogami 在 PR #5 Gate 后口头授权 Claude Code 全权（Notion + PR merge + Codex 自决 + 新 phase 启停），仅 truth-engine 红线维持。详见 v6.1 Solo Autonomy 节、DEC-20260425-WOW-A-FULL-AUTONOMY-GRANT、Notion Page 11 §v6.1。
 
 ## v5.2 Claude App Solo Mode (active)
 
@@ -178,3 +182,68 @@ Claude App Opus 4.7 (Solo Executor) · v5.2 solo-signed · YYYY-MM-DD
 
 - Workspace mount `.git/*.lock` residues are known blockers. v5.2 convention: scratch clone at `/sessions/<id>/p31-work/repo` + git bundle transfer when locks persist. Bundles live under `.planning/audit/bundles/` with adjacent README import instructions.
 - Workspace mount file edits only permitted on paths that do NOT coincide with files changed by a pending bundle, to avoid FF merge conflicts.
+
+---
+
+## v6.1 Claude Code Solo Autonomy Delegation (2026-04-25, active)
+
+### Origin
+
+Kogami 2026-04-25 verbatim grant, after PR #5 GATE-WOW-A-NARRATION-FIX: Approved:
+
+> 全权授权你进行开发，根据你的建议继续执行，只有truth-engine不许动，其他权限都交给你，你可以按照分工，调用codex配合你。记得在Notion页面里更新我这次的授权，以及Claude code的权限说明
+
+Recorded as `DEC-20260425-WOW-A-FULL-AUTONOMY-GRANT` (Notion 04 决策日志 DB) and reflected in Notion Page 11 §v6.1 Solo Autonomy Delegation. v5.2 五红线和 v6.0 联合开发 Codex 触发清单作为基线继承；v6.1 仅在其上叠加授权层。
+
+### Allowed (without per-step Kogami sign-off)
+
+- Git: push / rebase / force-push 仅在 Claude 自己创建的 dev 分支；main 与 reviewer 已 ack 的 PR head 仍走 PR 流程
+- `gh pr merge`：合并任何 OPEN PR 到 main，前提 (1) 未触红线 (2) 三轨证据齐全 (3) Codex 已审查（如触发 v6.0 / v6.1 trigger 清单）
+- Notion 写入：04 决策日志、03 会话记录、Page 11 模型分工、Roadmap、其他子页
+- Codex 调用自决：`/codex-gpt54` 何时调由 Claude 判断；硬触发清单与 v6.0 一致
+- 自启 Phase：写 PLAN.md / 执行 / 写 CLOSURE.md / 自签 GATE-Pxx-CLOSURE: Approved；Tier 1 adversarial self-review (≥3 反对意见 + rebuttal) 仍硬性必跑
+- 测试 / 调试 / `demo_server` 启停 / git bisect
+
+### Forbidden（红线维持，触碰即停车）
+
+- `src/well_harness/controller.py` 任何编辑（pure truth engine）
+- `src/well_harness/runner.py` truth 层 / 19-node schema / 4 logic gate 条件定义
+- `src/well_harness/adapters/` truth-bearing 改动（白名单：纯 metadata / docstring）
+- `runs/dress_rehearsal_*/wow_*_timeline.json` fixture 数据
+- Force-push 到 main / 已 merge 分支；squash 重写 main 历史；`--no-verify` / `--no-gpg-sign`
+- 假装跑了测试（数字必须来自真实 stdout 粘贴）
+- 自创规则版本号（v6.1 之后下次叠加层应是 v6.2，不得跳号）
+
+### Codex 触发清单（继承 v6.0 + V61-001 新增 + v6.1 EMPIRICAL-CLAIM-PROBE）
+
+继承 v6.0 硬性触发：多文件前端、API 契约、e2e 期望变更、UI 交互模式、用户 UX 批评首次实现、OpenFOAM solver 报错、Phase E2E ≥3 case 连续失败、Docker+OpenFOAM 联合调试、`foam_agent_adapter.py` >5 LOC、`_generate_*.py` CFD 几何新增、GSD 产出物。
+
+继承 RETRO-V61-001 新增：安全敏感 operator endpoint、byte-reproducibility 敏感路径、跨 ≥3 文件 API schema rename。
+
+**v6.1 新增 EMPIRICAL-CLAIM-PROBE 规则（2026-04-25）：** PR prose（test docstring / 文件级 comment / demo doc / PR description）写下任何关于服务端 runtime 行为的具体数字（plant deploy %、sim time、tick count、logic-X activation timing 等）之前，Claude Code 必须 boot 相关代码路径在本地实测一次，或显式标 `TODO(probe-before-merge)`，或引用数字定义所在的 commit:line。仅基于 mental-model 算术得出的数字禁止落地到 regression-locked 测试或客户向 demo doc。来源：PR #5 round 1 Codex 命中 BEAT_EARLY ~6% deploy 实际 0% （详 `.planning/audit/AUDIT-20260425-claude-pr5-round1-plant-deploy-blindspot.md`）。
+
+### Verbatim Exception（继承 v6.0，五条件 AND）
+
+允许跳过 Codex round 2 直接 apply 修复的条件，五条全部满足：(1) 修复逐行 diff-level 匹配 Codex `Suggested fix` bullet；(2) 总改动 ≤20 LOC；(3) 触及 ≤2 个文件；(4) 不改动任何 public API surface；(5) PR body 显式引用 round number + finding ID。
+
+### Self-Pass-Rate 强制
+
+任何触发 EMPIRICAL-CLAIM-PROBE 软/硬规则的 PR body 必须含 `external_gate_self_estimated_pass_rate: <0..1>`。低估 / 高估都进 retro 计分。
+
+### Hard Stop Points
+
+- 需要修红线 → 停 + 索取 Kogami explicit "truth-engine 修复 logic-X" 字面授权
+- Codex returns BLOCKER 不能 verbatim 修 → 停 + 升级到 Kogami
+- 三轨任一连续 ≥3 次新增失败且非 inherited → 停 + 写 forensics + 升级
+- 意外触红线（grep 命中 `controller.py` 在 `git diff` 中）→ `git checkout` 撤销 + 立即停车汇报
+
+### Commit Trailer (v6.1)
+
+```
+Execution-by: claudecode-opus47 · v6.1 · solo-autonomy
+```
+
+### 撤销条件
+
+- Kogami chat 中显式 "撤销 v6.1 / 收回授权 / 暂停自驱"
+- Claude Code 自评发现已超出能力边界（含红线无法绕开） → 自请暂停 + 升级
