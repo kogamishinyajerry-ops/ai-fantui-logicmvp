@@ -47,6 +47,48 @@ let suspendWorkbenchPacketWorkspacePersistence = false;
 const maxWorkbenchRunHistory = 6;
 const maxWorkbenchPacketRevisionHistory = 8;
 
+function bootWorkbenchColumnSafely(columnName, bootFn) {
+  try {
+    bootFn();
+  } catch (error) {
+    const status = workbenchElement(`workbench-${columnName}-status`);
+    if (status) {
+      status.textContent = `${columnName} panel failed independently: ${error.message || error}`;
+      status.dataset.tone = "warning";
+    }
+  }
+}
+
+function bootWorkbenchControlPanel() {
+  const status = workbenchElement("workbench-control-status");
+  if (status) {
+    status.textContent = "Control panel ready. Scenario actions are staged for E07+.";
+    status.dataset.tone = "ready";
+  }
+}
+
+function bootWorkbenchDocumentPanel() {
+  const status = workbenchElement("workbench-document-status");
+  if (status) {
+    status.textContent = "Document panel ready. Text-range annotation arrives in E07.";
+    status.dataset.tone = "ready";
+  }
+}
+
+function bootWorkbenchCircuitPanel() {
+  const status = workbenchElement("workbench-circuit-status");
+  if (status) {
+    status.textContent = "Circuit panel ready. Overlay annotation arrives in E07.";
+    status.dataset.tone = "ready";
+  }
+}
+
+function bootWorkbenchShell() {
+  bootWorkbenchColumnSafely("control", bootWorkbenchControlPanel);
+  bootWorkbenchColumnSafely("document", bootWorkbenchDocumentPanel);
+  bootWorkbenchColumnSafely("circuit", bootWorkbenchCircuitPanel);
+}
+
 const workbenchPresets = {
   ready_archived: {
     label: "一键通过验收",
@@ -3477,6 +3519,7 @@ function installViewModeHandlers() {
 }
 
 window.addEventListener("DOMContentLoaded", () => {
+  bootWorkbenchShell();
   installViewModeHandlers();
   installToolbarHandlers();
   if (checkUrlIntakeParam()) {

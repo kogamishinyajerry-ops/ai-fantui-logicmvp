@@ -12,6 +12,100 @@
   </head>
   <body data-view="beginner">
     <main class="shell workbench-shell">
+      <section id="workbench-topbar" class="workbench-collab-topbar" aria-label="Workbench identity and routing">
+        <div class="workbench-collab-brand">
+          <p class="eyebrow">control logic workbench</p>
+          <h1>Control Logic Workbench</h1>
+        </div>
+        <div id="workbench-identity" class="workbench-collab-chip" data-role="ENGINEER">
+          <span>Identity</span>
+          <strong>Kogami / Engineer</strong>
+        </div>
+        <div id="workbench-ticket" class="workbench-collab-chip" data-ticket="WB-E06-SHELL">
+          <span>Ticket</span>
+          <strong>WB-E06-SHELL</strong>
+        </div>
+        <label class="workbench-collab-system" for="workbench-system-select">
+          <span>System</span>
+          <select id="workbench-system-select">
+            <option value="thrust-reverser">Thrust Reverser</option>
+            <option value="landing-gear">Landing Gear</option>
+            <option value="bleed-air-valve">Bleed Air Valve</option>
+            <option value="c919-etras">C919 E-TRAS</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="workbench-collab-grid" aria-label="Three-column collaboration workbench">
+        <article id="workbench-control-panel" class="workbench-collab-column" data-column="control">
+          <header>
+            <p class="eyebrow">control panel</p>
+            <h2>Scenario Control</h2>
+          </header>
+          <div id="workbench-control-status" class="workbench-collab-status" aria-live="polite">
+            Waiting for control panel boot.
+          </div>
+          <div class="workbench-collab-control-list" aria-label="Control panel skeleton">
+            <button type="button" class="workbench-toolbar-button is-primary">Load Active Ticket</button>
+            <button type="button" class="workbench-toolbar-button">Snapshot Current State</button>
+          </div>
+        </article>
+
+        <article id="workbench-document-panel" class="workbench-collab-column" data-column="document">
+          <header>
+            <p class="eyebrow">document</p>
+            <h2>Spec Review Surface</h2>
+          </header>
+          <div id="workbench-document-status" class="workbench-collab-status" aria-live="polite">
+            Waiting for document panel boot.
+          </div>
+          <div class="workbench-collab-document">
+            <p>Reference packet, clarification notes, and future text-range annotations will land here.</p>
+            <pre>Intake -> Clarification -> Playback -> Diagnosis -> Knowledge</pre>
+          </div>
+        </article>
+
+        <article id="workbench-circuit-panel" class="workbench-collab-column" data-column="circuit">
+          <header>
+            <p class="eyebrow">circuit</p>
+            <h2>Logic Circuit Surface</h2>
+          </header>
+          <div id="workbench-circuit-status" class="workbench-collab-status" aria-live="polite">
+            Waiting for circuit panel boot.
+          </div>
+          <div class="workbench-collab-circuit" aria-label="Circuit skeleton">
+            <span>SW1</span>
+            <span>Logic 1</span>
+            <span>Logic 2</span>
+            <span>Logic 3</span>
+            <span>Logic 4</span>
+            <span>THR LOCK</span>
+          </div>
+        </article>
+      </section>
+
+      <aside id="annotation-inbox" class="workbench-annotation-inbox" aria-label="Annotation Inbox">
+        <header>
+          <p class="eyebrow">annotation inbox</p>
+          <h2>Review Queue</h2>
+        </header>
+        <ul id="annotation-inbox-list">
+          <li>No proposals submitted yet.</li>
+        </ul>
+      </aside>
+
+      <footer id="workbench-bottom-bar" class="workbench-collab-bottom-bar" aria-label="Workbench actions">
+        <button
+          id="approval-center-entry"
+          type="button"
+          class="workbench-toolbar-button"
+          data-role="KOGAMI"
+        >
+          Approval Center
+        </button>
+        <span>Approval actions are disabled until E08.</span>
+      </footer>
+
       <section class="hero" aria-labelledby="workbench-page-title">
         <div>
           <p class="eyebrow">well-harness workbench acceptance</p>
