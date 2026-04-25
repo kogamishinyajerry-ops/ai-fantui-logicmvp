@@ -254,21 +254,25 @@ Recorded as `DEC-20260425-WOW-A-FULL-AUTONOMY-GRANT` (Notion 04 决策日志 DB)
 
 **正面 claim**（"X feature 已 ship" / "Y 字段是 N 个" / "Z 类型是 SHA256"）：anchor 指向声明该 feature/字段/类型的具体源代码行。
 
-**负面 claim / 缺位 claim**（`behavior (negative)` / `feature-name (negative)` 类，如 "本期还没有 demo mode" / "JS 没有 approval handler"）：anchor 必须包含两部分：
-- **search-scope anchor**：声明被搜索的 file（或 file:line-range），必须支持 reviewer 用同一命令复跑 grep 验证
-- **peer-feature anchor**（可选但强烈推荐）：同一 file 中*存在*的相似 feature 的 file:line，用作对照（"这里有 view-mode-toggle 但没有 demo-mode-toggle"）
+**负面 claim / 缺位 claim**（`behavior (negative)` / `feature-name (negative)` 类，如 "本期还没有 demo mode" / "JS 没有 approval handler"）：anchor 必须含两部分，使用 **显式 `scope=` / `peer=` 前缀** 以避免被读成"file:line-range 是 grep 的限定范围"：
+- **scope=`<file>`**（必填）：声明被搜索的 file 路径，**不带 line-range**——grep 跑全文件。reviewer 必须能用 `grep <selector> <file>` 一行复跑。
+- **peer=`<file>:<line-range>`**（可选但强烈推荐）：同一 file（或同一概念邻域）中*存在*的相似 feature 的 file:line，用作对照锚（"这里有 view-mode-toggle 但没有 demo-mode-toggle"）。
 
 **absence-claim 写作模板**：
 
 ```
-src/well_harness/static/workbench.html:275-310 (view-mode-toggle-bar 存在；grep "demo-mode-toggle" 在该 file 内 0 hits)
+scope=src/well_harness/static/workbench.html (grep "demo-mode\|demo-stage" 0 hits); peer=src/well_harness/static/workbench.html:283-299 (view-mode-toggle-bar 存在，仅 beginner / expert 两键)
 ```
 
-或多文件 scope：
+或仅 scope（无 peer 时）：
 
 ```
-src/well_harness/static/workbench.js (grep "approval-action" 0 hits, 对照 :3641 preset-trigger handler 存在)
+scope=src/well_harness/static/workbench.js (grep "approval-action\|data-approval-action" 0 hits)
 ```
+
+**禁止格式**（旧版本曾使用，现在 v2.3 失效条件之一）：
+- `(absence claim — verified by absence of <X> in <file>)` —— 没有可执行 grep 命令
+- `<file>:<line-range> (peer description)` 不带 `scope=` 前缀 —— 容易被误读为"grep 范围"
 
 reviewer 抽查时复跑该 grep；若 hits 数与 anchor 描述不一致 → MISMATCH，进入 v2.3 失效条件。
 
