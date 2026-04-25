@@ -158,6 +158,17 @@
     renderInboxDraft(draft);
   }
 
+  // E11-04 (2026-04-26): map underlying annotation type IDs to the
+  // domain-anchored labels rendered on the toolbar. The IDs stay stable
+  // (e2e selectors depend on data-annotation-tool="point" etc.); only the
+  // visible status copy changes.
+  const TOOL_DOMAIN_LABEL = {
+    "point": "标记信号",
+    "area": "圈选 logic gate",
+    "link": "关联 spec",
+    "text-range": "引用 requirement 段",
+  };
+
   function setActiveTool(tool) {
     if (!tools.includes(tool)) {
       return;
@@ -170,7 +181,8 @@
     });
     const status = document.getElementById("workbench-annotation-active-tool");
     if (status) {
-      status.textContent = `${tool} tool active`;
+      const label = TOOL_DOMAIN_LABEL[tool] || tool;
+      status.textContent = `${label} 工具激活`;
     }
   }
 
