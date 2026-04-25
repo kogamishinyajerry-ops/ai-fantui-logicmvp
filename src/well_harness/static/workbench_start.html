@@ -54,16 +54,17 @@
        data-intent="learn-demo"
        id="ws-tile-learn-demo">
       <span class="ws-tile-kind">学习与演示</span>
-      <h2 class="ws-tile-title">先看一遍因果链 (wow_a)</h2>
+      <h2 class="ws-tile-title">跑 4 张一键验收预设</h2>
       <p class="ws-tile-subtitle">P1 · Junior FCS · 30 分钟内上手</p>
       <p class="ws-tile-desc">
-        进入主面板后手动加载 wow_a 场景预设，跟着 BEAT_EARLY → BEAT_DEEP → BEAT_BLOCKED 三幕，
-        看 19-node truth engine 在工作台上的可视化。 适合第一次接触本仓库的人。
+        落到 <code>/workbench</code>「一键预设验收卡」。 当前 4 张：
+        <em>通过并留档 / 阻塞演示 / 快速通过 / 留档复跑</em>，每张点完会自动跑
+        intake → bundle → archive 真实链路，不要求先碰 JSON。
       </p>
       <ul class="ws-tile-bullets">
-        <li>主面板提供 wow_a payload 预设，可一键 POST</li>
-        <li>narration 离线时显示静态文案，不会黑屏</li>
-        <li>右栏 spec 列表点开就是引用条款，不必查代码</li>
+        <li>4 张预设：ready_archived / blocked_follow_up / ready_preview / archive_retry</li>
+        <li>主面板默认"初级视图"，连续点多次以最后一次为准</li>
+        <li>wow_a/b/c 起手卡片是 E11-05 范围，本期暂未上线</li>
       </ul>
       <span class="ws-tile-arrow">→</span>
     </a>
@@ -74,16 +75,17 @@
        data-intent="engineer-probe"
        id="ws-tile-engineer-probe">
       <span class="ws-tile-kind">工程师调试</span>
-      <h2 class="ws-tile-title">probe lever / inspect logic gates</h2>
+      <h2 class="ws-tile-title">读 3 列 shell + Raw JSON 抽屉</h2>
       <p class="ws-tile-subtitle">P2 · Senior FCS · 真值只读 / 提案受签</p>
       <p class="ws-tile-desc">
-        TRA / RA / N1k / feedback_mode 全字段在主面板可调，逻辑门 L1–L4
-        实时着色；改动 spec 不会改真值，只能转成 ticket / proposal 走签批。
+        落到 <code>/workbench</code> 的 control / document / circuit 三列 shell + 「开发调试 / Raw JSON」
+        抽屉。 改动 spec 不会改真值，只能转成 ticket / proposal 走签批。
+        TRA / RA / N1k 等 lever 调参在 <code>/demo.html</code>，本期 <code>?intent=</code> 还没把它合入。
       </p>
       <ul class="ws-tile-bullets">
         <li>truth-engine 是 read-only（红线见底部）</li>
-        <li>认证链异常 (e.g. L4 越过 L3) 在主面板会着红色</li>
-        <li>当前 lever payload 可复制为 curl 行</li>
+        <li>顶部 ticket / identity chrome 默认显示，可读不可改</li>
+        <li>L1–L4 着色 + 认证链 banner 在 E11-06/07 上线</li>
       </ul>
       <span class="ws-tile-arrow">→</span>
     </a>
@@ -94,17 +96,18 @@
        data-intent="demo-stage"
        id="ws-tile-demo-stage">
       <span class="ws-tile-kind">立项 / 汇报演示</span>
-      <h2 class="ws-tile-title">10 分钟 pitch 走 wow_a/b/c</h2>
+      <h2 class="ws-tile-title">用「通过并留档」预设走 happy path</h2>
       <p class="ws-tile-subtitle">P3 · Demo Presenter · 上台前最后过一遍</p>
       <p class="ws-tile-desc">
-        当前主面板和"学习与演示"用的是同一套 wow_a 预设；
-        本期还没有上线"无 chrome 演示模式"。 暂时建议演示前缩减浏览器侧栏 + 隐藏 Approval Center。
-        <em>(精简 demo mode 进入 E11-05/08 范围)</em>
+        本期主面板还没有专门的 demo mode。 暂时推荐：先点
+        <em>「一键通过验收」（ready_archived）</em> 走通 happy path，
+        再点 <em>「一键看阻塞态」（blocked_follow_up）</em> 演示 clarification gate。
+        wow_a/b/c 三幕走读放在 <code>/demo.html</code>。
       </p>
       <ul class="ws-tile-bullets">
-        <li>wow_a 时序在主面板可一键回放</li>
-        <li>narration 离线时仍显示静态文案</li>
-        <li>E11-05 后会加单键 demo-mode 切换</li>
+        <li>建议演示前隐藏浏览器侧栏 + 关闭 Approval Center 抽屉</li>
+        <li>"一键留档复跑" 适合演示同秒重复点也不崩</li>
+        <li>无-chrome demo mode 进入 E11-05/08 范围</li>
       </ul>
       <span class="ws-tile-arrow">→</span>
     </a>
@@ -115,17 +118,18 @@
        data-intent="customer-repro"
        id="ws-tile-customer-repro">
       <span class="ws-tile-kind">客户问题复现</span>
-      <h2 class="ws-tile-title">把客户邮件翻成可跑用例</h2>
-      <p class="ws-tile-subtitle">P5 · Apps Engineer · ticket → repro → 回信</p>
+      <h2 class="ws-tile-title">填 5 个 knowledge 字段</h2>
+      <p class="ws-tile-subtitle">P5 · Apps Engineer · intake → bundle → archive</p>
       <p class="ws-tile-desc">
-        主面板内的 prompt / ticket 表单接受 customer_quote / repro_recipe /
-        observed_response / engineer_assessment / screenshot_refs；
-        填完提交后落到 Kogami Approval 队列。
+        落到 <code>/workbench</code> 的 knowledge 区。 当前 schema 是 5 字段：
+        Observed Symptoms / Evidence Links / Confirmed Root Cause / Repair Action / Residual Risk。
+        客户邮件原文 → ticket payload 的字段映射工具是 E11-08 范围，
+        本期暂时手抄进 Evidence Links。
       </p>
       <ul class="ws-tile-bullets">
-        <li>当前 lever 状态可附进 repro_recipe</li>
-        <li>与 Approval Center 同 schema</li>
-        <li>未签 sign-off 时显示 "Pending Kogami"，非 disabled</li>
+        <li>knowledge 字段已经在主面板渲染（dt/dd 列表）</li>
+        <li>customer_quote / repro_recipe / screenshot_refs 等扩展字段是 E11-08 范围</li>
+        <li>提交后转到 intake → bundle 真实链路，不新增第二套规则</li>
       </ul>
       <span class="ws-tile-arrow">→</span>
     </a>
@@ -136,17 +140,18 @@
        data-intent="approval-review"
        id="ws-tile-approval-review">
       <span class="ws-tile-kind">提案审核（Kogami）</span>
-      <h2 class="ws-tile-title">Approval Center · 待签 + 已签</h2>
-      <p class="ws-tile-subtitle">role-gated · 仅 Kogami 可签</p>
+      <h2 class="ws-tile-title">Approval Center · Pending / Accept / Reject</h2>
+      <p class="ws-tile-subtitle">role-gated · "Approval actions are Kogami-only"</p>
       <p class="ws-tile-desc">
-        进入 Approval Center 列表，按 SHA / requirement 版本分组。
-        非 Kogami 进入会看到 "Pending Kogami sign-off" 而不是禁用按钮——
-        透明，不假装"权限缺失"。
+        落到 <code>/workbench</code> 底栏的 Approval Center 入口。 当前
+        triage 面板只有 3 道 lane（Pending / Accept / Reject）+ 两个按钮。
+        hash-chain 查阅 / SHA 分组 / JSONL 导出 / 状态过滤 是 E11-08 后才上线，
+        本期不要承诺。
       </p>
       <ul class="ws-tile-bullets">
-        <li>每条 proposal 的 hash chain 可点开</li>
-        <li>已签 / 已驳回 状态过滤</li>
-        <li>导出 audit JSONL 一键到剪贴板</li>
+        <li>非 Kogami 进入：button 仍显示，但 Accept/Reject 不会落账</li>
+        <li>Pending lane 当前只是占位文案，不显示真实 proposal 列表</li>
+        <li>data-approval-role="KOGAMI" 已经标好，未来角色判断有锚点</li>
       </ul>
       <span class="ws-tile-arrow">→</span>
     </a>
@@ -157,17 +162,18 @@
        data-intent="vv-trace"
        id="ws-tile-vv-trace">
       <span class="ws-tile-kind">V&amp;V 适航追溯</span>
-      <h2 class="ws-tile-title">requirement → design → code → test</h2>
-      <p class="ws-tile-subtitle">P4 · QA / V&amp;V · DO-178C 风格审计链</p>
+      <h2 class="ws-tile-title">沿 intake → bundle → archive 走读</h2>
+      <p class="ws-tile-subtitle">P4 · QA / V&amp;V · DO-178C 风格审计</p>
       <p class="ws-tile-desc">
-        从一条 requirement 反查 adapter / controller / 测试用例 / 已签 proposal /
-        approval hash。 每条记录都附 commit SHA + 签名时间戳，可作为
-        内部研究证据（非适航合规声明）。
+        本期主面板还没有专门的 trace-matrix 视图。 当前能做的：
+        从某个 acceptance preset 跑出 bundle，去 archive 包里读结果，
+        对照 <code>controller.py</code> + <code>adapters/*.py</code> 找 requirement 引用。
+        CSV / JSONL trace 导出在 E11-09 后才上线。
       </p>
       <ul class="ws-tile-bullets">
-        <li>truth-engine SHA 显示在状态栏</li>
-        <li>approval event 与 requirement revision 双向链接</li>
-        <li>导出 trace 矩阵 (CSV / JSONL)</li>
+        <li>archive package 自带时间戳目录，可作为 commit-SHA 锚点</li>
+        <li>truth-engine SHA / adversarial 8/8 / e2e 状态条进入 E11-06 范围</li>
+        <li>本期产出物均为内部研究证据，不构成适航合规声明</li>
       </ul>
       <span class="ws-tile-arrow">→</span>
     </a>
