@@ -118,7 +118,70 @@ The meta-loop itself is evidence that v2.3 works: Codex correctly used v2.3's ow
 
 ---
 
-## 6. Open questions
+## 6. Amortization confirmation — E11-09 leading indicator fired (2026-04-25)
+
+Opus 4.7 §1 strategic review (2026-04-25) set E11-09 dual-h1 fix as the **leading indicator** for whether v2.3 UI-COPY-PROBE has been amortized. Decision rule:
+
+| E11-09 Codex 轮数 | 解读 | Action |
+|---|---|---|
+| ≤ 2 轮 APPROVE | v2.3 已摊销 — Surface Inventory 把 honesty 反射弧前置成功 | 软化 5-persona pipeline 改 tier-trigger（governance bundle #2） |
+| 3 轮且 round-trip 仍围绕 honesty | process bloat 实锤 | 整组规则降一档 |
+| ≥ 4 轮 | governance 失效 | Opus 4.7 再介入诊断 |
+
+### 6.1 Outcome — E11-09 PR #13
+
+**Total rounds: 2 (R1 BLOCKER → R2 APPROVE).**
+
+| Round | Verdict | Type of finding | Was it honesty-related? |
+|---|---|---|---|
+| R1 | BLOCKER | F1: real JS error — `workbench.js` shared between routes, unconditionally bound 14+ bundle-only DOM elements that don't exist on shell route. F2 IMPORTANT: test coverage didn't catch JS boot path. | **No.** F1 is a runtime bug (TypeError on null .addEventListener), found by Codex's empirical Node-level reasoning. Not a fabricated-surface-claim issue. F2 is missing-test-coverage of the bug. Both are *real engineering defects*, caught by reactive review working as intended. |
+| R2 | APPROVE | none | (CLEAN) |
+
+**Interpretation:** ≤2 rounds met. The R1 BLOCKER was *not* an honesty-class finding (which would have indicated v2.3 reflex still incomplete) — it was a real reactive bug catch. v2.3 § Surface Inventory worked: 4-row inventory landed verbatim, all anchors empirically verified, 0 fabricated surface claims found. **v2.3 amortization confirmed.**
+
+### 6.2 governance bundle #2 — persona pipeline tier-trigger
+
+Per Opus §1 verbatim spec, this RETRO §6.1 unlocks the rule change:
+
+**5-persona pipeline → tier-trigger:** the rule itself is canonical at `.planning/constitution.md` §Codex Persona Pipeline Tier-Trigger. This bullet records the decision (governance bundle #2 landing on 2026-04-25 PR #14), not the rule body — read constitution for the actual Tier-A trigger condition, the Tier-B persona-selection SSOT, the counting command, the rollback semantics, and the verbatim text. Do not paraphrase here.
+
+Landed in:
+- `.planning/constitution.md` §v2.3 § Codex Persona Pipeline Tier-Trigger (this PR)
+- `.planning/codex_personas/README.md` §Invocation table (this PR)
+- Governance Mode Timeline entry "governance bundle #2 persona tier-trigger" (this PR)
+
+**Things NOT changed:**
+- v2.2 EMPIRICAL-CLAIM-PROBE triggers
+- v2.3 §UI-COPY-PROBE triggers / §Surface Inventory mandate / §Anchor 格式细则
+- v6.1 Codex trigger list
+- RETRO numbering / Self-Pass-Rate strict / Hard Stop Points / Verbatim Exception 5 conditions
+
+### 6.3 Rollback condition (codified)
+
+If two consecutive Tier-B sub-phases produce ≥1 fabricated surface claim caught at post-merge time (per v2.3 §UI-COPY-PROBE §失效条件), automatically:
+1. Roll back to default 5-persona for the next 3 sub-phases
+2. Open a successor RETRO-V61-* documenting the failed amortization
+3. Re-engage Opus 4.7 strategic review
+
+### 6.4 Cost estimate
+
+- Pre-tier-trigger (default 5-persona): ~1M Codex tokens / user-facing UI sub-phase
+- Post-tier-trigger Tier-B default: ~200k tokens / sub-phase  
+- Post-tier-trigger Tier-A (rare, expected ~1 in 4-5): ~1M tokens / sub-phase
+- Estimated savings on persona pipeline: **~70–80%** Codex tokens
+- E11-15..19 still pending (5 sub-phases). At 4 Tier-B + 1 Tier-A: ~1.8M tokens vs default 5M. Savings ~64%, conservative.
+
+### 6.5 Meta-observation
+
+The Leading Indicator pattern (set a binary outcome that determines next governance action *before* the first observation) is itself a methodology artifact worth retaining. It avoids both extremes:
+- "Codify rules pre-emptively" (v2.3 PR's 5-round trap — the rule had to be defined while applied to itself)
+- "Wait for retrospective" (would require N completed sub-phases under default 5-persona before deciding to soften)
+
+Future v2.X legislation should consider committing leading indicators alongside the rule, not after.
+
+---
+
+## 7. Open questions
 
 - **Q1**：是否要把 §Surface Inventory 抽象成 `tools/inventory_check.py` 自动化校验脚本（grep 锚点行真实存在）？现状是手动 + Codex 抽查。
   - 倾向：**不要现在做**。手动表 + Codex 抽查在 E11-03..09 跑完后再决定是否需要自动化。过早自动化会让 inventory 退化成"过 lint 即可"的形式主义。
@@ -129,7 +192,7 @@ The meta-loop itself is evidence that v2.3 works: Codex correctly used v2.3's ow
 
 ---
 
-## 7. Provenance
+## 8. Provenance
 
 - Codex round logs (R1–R4): captured in branch `feat/E11-02-workbench-start-onboarding-20260425` PR body and merge `384901e`
 - Opus 4.7 异步会话 transcript: Notion `@Opus 4.7` session 2026-04-25 (内部链接，本仓库不留 binary copy)
@@ -138,7 +201,7 @@ The meta-loop itself is evidence that v2.3 works: Codex correctly used v2.3's ow
 
 ---
 
-## 8. Trailer
+## 9. Trailer
 
 ```
 Authored-by:    claudecode-opus47 · v6.1 · solo-autonomy
