@@ -928,10 +928,14 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn("--nav-height", body)
 
     def test_demo_server_serves_workbench_acceptance_shell(self):
+        # E11-09 (2026-04-25): legacy "Workbench Bundle 验收台" page moved
+        # from /workbench to /workbench/bundle. /workbench is now the
+        # Epic-06..10 collab shell. Bundle UI assertions follow the
+        # content to its new route.
         server, thread = start_demo_server()
         try:
             connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
-            connection.request("GET", "/workbench.html")
+            connection.request("GET", "/workbench/bundle")
             response = connection.getresponse()
             html = response.read().decode("utf-8")
         finally:
@@ -969,7 +973,9 @@ class DemoIntentLayerTests(unittest.TestCase):
             thread.join(timeout=2)
 
     def test_workbench_static_shell_contains_key_acceptance_sections(self):
-        html = (DEMO_UI_STATIC_DIR / "workbench.html").read_text(encoding="utf-8")
+        # E11-09 (2026-04-25): bundle acceptance UI relocated to
+        # workbench_bundle.html (served at /workbench/bundle).
+        html = (DEMO_UI_STATIC_DIR / "workbench_bundle.html").read_text(encoding="utf-8")
 
         self.assertIn("连续点多个预设时，以最后一次点击结果为准。", html)
         self.assertIn("一眼看懂的验收面板", html)
@@ -1169,7 +1175,9 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn(".workbench-history-card[data-selected=\"true\"]", stylesheet)
 
     def test_workbench_static_assets_include_explain_runtime_board(self):
-        html = (DEMO_UI_STATIC_DIR / "workbench.html").read_text(encoding="utf-8")
+        # E11-09 (2026-04-25): explain-runtime board lives in the bundle UI,
+        # which moved from /workbench to /workbench/bundle.
+        html = (DEMO_UI_STATIC_DIR / "workbench_bundle.html").read_text(encoding="utf-8")
         script = (DEMO_UI_STATIC_DIR / "workbench.js").read_text(encoding="utf-8")
         stylesheet = (DEMO_UI_STATIC_DIR / "workbench.css").read_text(encoding="utf-8")
 
