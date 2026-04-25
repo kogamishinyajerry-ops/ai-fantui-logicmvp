@@ -33,8 +33,8 @@
 
 ## 3. 预期 AI 输出（文字描述）
 
-- **Step 1 AI 叙述**：着陆姿态 + TLS unlock 确认 → 前两档亮；TRA 只到 -5° 未达深拉，logic3 按住不动；logic4 等反馈回路
-- **Step 2 AI 叙述**：深拉过线 → logic3 进入 deep-reverse commit；logic4 未亮是真值引擎等 `deploy_90_percent_vdt` 反馈节点翻位，不是 bug
+- **Step 1 AI 叙述**：着陆姿态 + TLS unlock 确认 → 前两档亮；TRA 只到 -5° 未达深拉阈值，canonical pullback 短，plant 只 deploy ~6%，logic3/4 按住不动
+- **Step 2 AI 叙述**：深拉过线 → auto_scrubber 在 ~4.4s 内驱动 plant VDT 到 100%，反馈节点 `deploy_90_percent_vdt` 翻位 → 真值引擎一次 POST 内端到端跑完 logic2 → logic3 → logic4 → thr_lock 因果链；logic1 在 deploy 完成后因 `reverser_not_deployed_eec` 翻位而熄灭，这是真值引擎的实时状态机投影，不是 AI 填充
 - **Step 3 AI 叙述**：飞机抬升到空中 → 链路第一道门断裂，不看 TRA 多深，先看姿态；safety-first 的 interlock 严守因果
 
 ---
@@ -42,7 +42,7 @@
 ## 4. UI 预期（节点高亮 / 连线流光 / Canvas 状态）
 
 - **Step 1**：logic1 + logic2 节点点亮（活性色）；logic3/logic4 保持待命灰；连线从 input 节点流向 logic1/2
-- **Step 2**：logic2 + logic3 点亮；logic4 仍灰（关键视觉对比，体现反馈回路存在）；连线流光延伸到 logic3
+- **Step 2**：logic2 + logic3 + logic4 同步点亮，thr_lock 解锁；logic1 在 reverser 完全 deploy 后因 `reverser_not_deployed_eec` 翻位而熄灭；连线流光从 input → logic2 → logic3 → 反馈节点 `vdt90` → logic4 → thr_lock，呈现端到端因果链（包含反馈回路本身的视觉走线）
 - **Step 3**：4 个 logic 节点全灰；连线从 `radio_altitude_ft` 节点出发后**立即熄灭**（在 logic1 前断开），其他 lever 保持不变
 
 ---
@@ -61,7 +61,7 @@
 ## 6. 降级台词（AI 延迟 > 10s 或拒答）
 
 > "AI 讲故事卡了一下 —— 没关系，看灯。真值引擎是决定者，AI 只是解释者。
-> logic2 和 logic3 按我说的顺序亮起来了，因果顺序写在链路里，不在 LLM 里。
+> logic2 → logic3 → logic4 按我说的顺序亮起来了，因果顺序写在链路里，不在 LLM 里。
 > 演示期间 AI 挂了，安全不挂。这正是我们的架构红线 —— R2 原则。"
 
 ---
@@ -74,7 +74,7 @@
 - `test_wow_a_lever_snapshot_returns_19_nodes_with_contract_fields` — 锁 19 节点 + {id, state} 契约
 - `test_wow_a_lever_snapshot_exposes_four_logic_gates` — 锁 4 logic gate 命名
 - `test_wow_a_beat_early_activates_logic1_and_logic2_only` — Step 1
-- `test_wow_a_beat_deep_activates_logic2_and_logic3` — Step 2（含 logic4 必须为 false 的不变量）
+- `test_wow_a_beat_deep_activates_logic2_and_logic3` — Step 2（在 auto_scrubber 模式下锁 logic2 + logic3 + logic4 同时 active；测试名为历史命名保留稳定，断言契约见函数 docstring）
 - `test_wow_a_beat_blocked_deactivates_entire_chain` — Step 3
 - `test_wow_a_truth_engine_is_deterministic` — 同输入 byte-identical
 - `test_wow_a_response_under_500ms_warm` — Timing 预算锚

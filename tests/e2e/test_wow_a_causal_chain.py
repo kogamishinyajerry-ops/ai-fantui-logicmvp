@@ -17,17 +17,30 @@ import pytest
 EXPECTED_LOGIC_KEYS = {"logic1", "logic2", "logic3", "logic4"}
 EXPECTED_NODE_COUNT = 19
 
-# Domain semantics (probed from live demo_server on c0f7a0d):
+# Domain semantics (probed from live demo_server post-a46e4e6 / 2ded020):
 #   logic1 = landing-regime detector: RA < threshold AND on_ground AND NOT inhibited
+#            AND reverser_not_deployed_eec; the last condition flips False once the
+#            plant fully deploys, so logic1 may de-activate during BEAT_DEEP.
 #   logic2 = TLS-unlock confirmation
 #   logic3 = deep-reverse commit: TRA crossed lock threshold AND logic2 AND SW2 closed
-#   logic4 = deploy-confirmed feedback: requires deploy_90_percent_vdt node, which is
-#           driven by the feedback loop (not by a single lever-snapshot POST)
+#   logic4 = deploy-confirmed feedback: requires deploy_90_percent_vdt. Under
+#           feedback_mode='auto_scrubber' the server-side canonical pullback
+#           (demo_server._canonical_pullback_sequence, extended in commit a46e4e6)
+#           holds the lever long enough for plant VDT to reach 100%, so the feedback
+#           node flips True within a single /api/lever-snapshot call and logic4
+#           latches. Under manual_feedback_override mode, logic4 activates only when
+#           the caller supplies deploy_position_percent ≥ 90.
 #
-# Therefore wow-A locks what the truth engine CAN deliver from a single POST:
-#   - BEAT_EARLY   (tra_deg=-5)  → logic1 + logic2 active, logic3 + logic4 inactive
-#   - BEAT_DEEP    (tra_deg=-35) → logic2 + logic3 active (deeper reverse commit)
-#   - BEAT_BLOCKED (airborne)   → all four inactive (chain broken at logic1)
+# Therefore wow-A locks what auto_scrubber delivers from a single POST:
+#   - BEAT_EARLY   (tra_deg=-5)  → logic1 + logic2 active; the canonical pullback
+#                                  is short for non-deep TRA so plant only reaches
+#                                  ~6% deploy and logic3/4 remain inactive.
+#   - BEAT_DEEP    (tra_deg=-35) → logic2 + logic3 + logic4 active; the extended
+#                                  canonical pullback runs the plant to 100%
+#                                  deploy within ~4.4s, latching the full chain.
+#                                  logic1 de-activates as reverser_not_deployed_eec
+#                                  flips False mid-deploy.
+#   - BEAT_BLOCKED (airborne)   → all four inactive (chain broken at logic1).
 # These three beats together form the demo's causal-chain narrative.
 BEAT_EARLY_PAYLOAD = {
     "tra_deg": -5, "radio_altitude_ft": 2,
@@ -90,11 +103,20 @@ def test_wow_a_beat_early_activates_logic1_and_logic2_only(demo_server, api_post
 
 @pytest.mark.e2e
 def test_wow_a_beat_deep_activates_logic2_and_logic3(demo_server, api_post):
-    """Demo beat 2: deep reverse demand → at least logic2 + logic3 active.
+    """Demo beat 2: deep reverse under auto_scrubber drives the full chain.
 
-    logic4 requires deploy_90_percent_vdt (feedback-loop driven), unreachable
-    from a single lever-snapshot POST. Lock the invariant that nobody wires
-    logic4 directly to deploy_position_percent.
+    Per commit a46e4e6 ("fix(scrubber): extend canonical pullback hold to let
+    plant VDT reach 90%"), feedback_mode='auto_scrubber' with tra_deg below
+    logic3_tra_deg_threshold runs the in-server plant to 100% deploy within
+    ~4.4s of simulated time. Inside a single /api/lever-snapshot call the
+    feedback node deploy_90_percent_vdt flips True and logic4 latches.
+
+    Test name retained for stability; the locked invariants are now:
+      (a) at least logic2 + logic3 are active (deep-reverse commit), and
+      (b) logic4 is also active under auto_scrubber (post-a46e4e6 reality).
+    The "single POST cannot activate logic4 without feedback" invariant is
+    a manual-mode concern; see manual_feedback_override path with
+    deploy_position_percent < 90 to probe it.
     """
     status, body = api_post(demo_server, "/api/lever-snapshot", BEAT_DEEP_PAYLOAD)
     assert status == 200
@@ -103,8 +125,10 @@ def test_wow_a_beat_deep_activates_logic2_and_logic3(demo_server, api_post):
     assert {"logic2", "logic3"} <= active, (
         f"BEAT_DEEP should at least activate logic2+logic3, got {active}"
     )
-    assert logic["logic4"].get("active") is False, (
-        "logic4 must remain feedback-gated; a single POST must not activate it"
+    assert logic["logic4"].get("active") is True, (
+        "logic4 must activate under auto_scrubber's extended canonical pullback "
+        "(plant VDT reaches 100% within the lever-snapshot window — see "
+        "demo_server._canonical_pullback_sequence and commit a46e4e6)"
     )
 
 
