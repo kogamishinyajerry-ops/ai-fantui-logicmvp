@@ -70,15 +70,35 @@ for p in P1 P2 P3 P4 P5; do
 done
 wait
 
-# Tier-B（1 persona，跨-sub-phase 轮换 P1 → P2 → P3 → P4 → P5 → P1，起点 P1）：
-# 启动新 epic 第一个 Tier-B sub-phase 跑 P1；后续按 PERSONA-ROTATION-STATE.md 末行下一个值轮换。
-# 例：当期 epic 已记录 sub-phase X1: P1, X2: P2 → 当前 sub-phase 应跑 P3。
-PERSONA=P3  # 由 .planning/phases/<epic>/PERSONA-ROTATION-STATE.md 决定，不得与上一行 Tier-B sub-phase 重复
+# Tier-B（1 persona）：PERSONA-ROTATION-STATE.md 是唯一 source of truth。
+#
+# Step 1 — Read state file last entry (or "" if file empty / new epic):
+STATE_FILE=.planning/phases/<epic>/PERSONA-ROTATION-STATE.md
+LAST=$(tail -1 "$STATE_FILE" 2>/dev/null | grep -oE 'P[1-5]' || echo "")
+#
+# Step 2 — Compute default = round-robin successor of last (P1 if empty):
+case "$LAST" in
+  P1) DEFAULT=P2 ;; P2) DEFAULT=P3 ;; P3) DEFAULT=P4 ;;
+  P4) DEFAULT=P5 ;; P5) DEFAULT=P1 ;; *)  DEFAULT=P1 ;;
+esac
+#
+# Step 3a — Default path: take the round-robin successor as-is.
+PERSONA=$DEFAULT
+#
+# Step 3b — Override path: owner writes a non-default P-value motivated by
+# sub-phase content (e.g., demo-arc-heavy → P3; 适航 trace heavy → P4).
+# Hard constraint enforced by rule layer: PERSONA must NOT equal $LAST.
+# (Uncomment + edit ONE of the two lines above to choose a path.)
+#
+[ "$PERSONA" = "$LAST" ] && { echo "ERROR: PERSONA=$PERSONA equals LAST=$LAST — violates no-consecutive-repeat"; exit 1; }
+#
+# Step 4 — Run the chosen persona:
 cx-auto 20 && codex exec --skip-git-repo-check -c 'model="gpt-5.4"' \
   "$(cat .planning/codex_personas/${PERSONA}-*.md)" \
   > .planning/phases/<phase-id>/persona-${PERSONA}-output.md 2>&1
-# commit 后追加一行到 PERSONA-ROTATION-STATE.md：
-# echo "<phase-id>: ${PERSONA} (<reason — content fit / round-robin>)" >> .planning/phases/<epic>/PERSONA-ROTATION-STATE.md
+#
+# Step 5 — Append the new entry to the state file (canonical write):
+echo "<phase-id>: ${PERSONA} (<reason — round-robin | content-fit-override>)" >> "$STATE_FILE"
 ```
 
 ## Output convention

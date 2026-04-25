@@ -14,7 +14,7 @@
 
 成功标准（goal-backward verifier）：
 1. 一个第一次接触 Workbench 的飞机控制工程师，**不读代码、不看 HANDOVER**，凭页面 affordance 能在 30 分钟内独立完成：(a) 选一个 wow-scenario 跑通，(b) 在某个 logic gate 边上贴一条 domain-anchored annotation，(c) 把这条 annotation 转成 Claude Code prompt 输出给同事。
-2. Codex persona review BLOCKER 等级问题 = 0；IMPORTANT 等级 ≤ 2/persona。Persona 数量按 §3.6 leading indicator 决出的 tier-trigger 规则跑（Tier-A = 5/5；Tier-B = 1/1，跨-sub-phase 轮换 P1→P5）。governance bundle #2 落地于 2026-04-25（PR #14），E11-13..19 默认按 tier-trigger。
+2. Codex persona review BLOCKER 等级问题 = 0；IMPORTANT 等级 ≤ 2/persona。Persona 数量与选取规则按 `constitution.md` §Codex Persona Pipeline Tier-Trigger（governance bundle #2，2026-04-25 PR #14 落地版本）跑：Tier-A = 5/5 全 persona 并行；Tier-B = 1/1，按 `.planning/phases/<epic>/PERSONA-ROTATION-STATE.md` SSOT 选取（默认值 = 末行 round-robin 后继；owner 可写非默认；不得与上一行 Tier-B 同 persona）。E11-13..19 默认按 tier-trigger。
 3. main 三轨绿（default ≥ 863 / e2e 27 passed / adversarial 8/8）。
 4. truth-engine 红线 0 触碰。
 5. **(v2.3) 每个子 phase 的 user-facing copy 在 §Surface Inventory 全数登记**，锚点 line 真实存在；评审者抽查 1-3 行命中率 100%。
@@ -160,7 +160,7 @@ E11-09 → E11-13/14 → E11-05 → E11-03 → E11-04 → E11-06
 | 3 轮且 round-trip 仍围绕 honesty | process bloat 实锤 | 整组规则降一档（hypothetical：5-persona 直接降为 1-persona 默认 + 其他 v2.3 子条款重审） |
 | ≥ 4 轮 | governance 失效，需要 Opus 4.7 再介入诊断 | 暂停 E11 子 phase 推进 + 起 retro |
 
-**触发条件（landed）**：(a) 子 phase 含 user-facing copy diff ≥ 10 行 **AND** (b) 该子 phase 的 §Surface Inventory 含 ≥ 3 条 [REWRITE/DELETE] → Tier-A (5 personas 并行)。否则 → Tier-B (1 persona, `PERSONA-ROTATION-STATE.md` 选 persona)。完整规则在 `constitution.md` §Codex Persona Pipeline Tier-Trigger（governance bundle #2 落地版本）；本节仅记录"为什么这条规则被这样写"的 leading-indicator 决策弧。
+**触发条件（landed, 完整规则在 `constitution.md` §Codex Persona Pipeline Tier-Trigger — governance bundle #2 落地版本）**：(a) 子 phase 含 user-facing copy diff ≥ 10 行 **AND** (b) 该子 phase 的 §Surface Inventory 含 ≥ 3 条 [REWRITE/DELETE] → Tier-A (5 personas 并行)。否则 → Tier-B (1 persona，按 `.planning/phases/<epic>/PERSONA-ROTATION-STATE.md` SSOT 选取：默认 = 末行 round-robin 后继；owner 可写非默认；不得与上一行 Tier-B 重复)。本节仅记录"为什么这条规则被这样写"的 leading-indicator 决策弧；任何 shorthand 引用此规则的他处必指向 constitution canonical 节。
 
 **保留不变**：v2.2 / v2.3 / v6.1 / Surface Inventory / RETRO 序号全部保留，**不动**。
 
@@ -211,7 +211,7 @@ E11-09 PR #13 落地 = **2 轮 Codex APPROVE**（R1 BLOCKER 真实 JS bug 被抓
 
 **反对论点**: 同一个 LLM 模型扮演 5 个不同角色，本质上还是同一份 weights 在 reason，可能产出 5 份相似的 review。Tier 1 adversarial 要求 ≥3 reasoned objections + rebuttal，但 Codex 是 GPT-5.4，不是 Claude；模型多样性可能不够。
 
-**Rebuttal**: (a) Codex 是 OpenAI GPT-5.4，与 Claude Opus 4.7 是不同 family，前次 PR #5 R1 review 已经实证捕到 Claude 漏的事实错误（plant deploy 6% vs 0%），证明 inter-model 盲点不重叠。(b) 5 personas 设计中刻意拉开 background：Junior（不会 Python deep dive 的）vs QA/V&V（会跑 traceability 的）vs Demo Presenter（不关心代码只关心叙事弧的）— context 拉开后即使是 same weights 也会 surface 不同 dimension。(c) anti-bias safeguard 是 tier-aware（governance bundle #2, 2026-04-25 起生效）：**Tier-A** 时每个 persona 必须产出 ≥1 个其他 persona 没提到的 finding（within-PR uniqueness）；**Tier-B** 时 within-PR uniqueness N/A，bias 由跨-sub-phase 轮换（P1→P5→P1）+ §Surface Inventory grep 锚点 + RETRO §6.3 rollback 三层兜底承担。结论：bias 风险存在但已通过 distinct context + tier-aware anti-bias 机制 mitigated。
+**Rebuttal**: (a) Codex 是 OpenAI GPT-5.4，与 Claude Opus 4.7 是不同 family，前次 PR #5 R1 review 已经实证捕到 Claude 漏的事实错误（plant deploy 6% vs 0%），证明 inter-model 盲点不重叠。(b) 5 personas 设计中刻意拉开 background：Junior（不会 Python deep dive 的）vs QA/V&V（会跑 traceability 的）vs Demo Presenter（不关心代码只关心叙事弧的）— context 拉开后即使是 same weights 也会 surface 不同 dimension。(c) anti-bias safeguard 是 tier-aware（完整规则见 `constitution.md` §Codex Persona Pipeline Tier-Trigger / `codex_personas/README.md` §Anti-bias safeguard）：**Tier-A** 时每个 persona 必须产出 ≥1 个其他 persona 没提到的 finding（within-PR uniqueness）；**Tier-B** 时 within-PR uniqueness N/A，bias 由 (i) `PERSONA-ROTATION-STATE.md` SSOT 强制跨-sub-phase 不同 persona + (ii) §Surface Inventory grep 锚点 + (iii) RETRO §6.3 rollback 三层兜底承担。结论：bias 风险存在但已通过 distinct context + tier-aware anti-bias 机制 mitigated。
 
 ### Counterargument #3: "这是 Phase 还是单纯一个 UX iteration？"
 
@@ -229,7 +229,7 @@ E11-09 PR #13 落地 = **2 轮 Codex APPROVE**（R1 BLOCKER 真实 JS bug 被抓
 
 **反对论点**（Opus 4.7 strategic review 后强制必答）: v6.1 + v2.2 + v2.3 + 5-persona pipeline + Surface Inventory + RETRO 序号 = 短期内累积 6 项 process artefact。是否已经 process > delivery？
 
-**Rebuttal stage**: Opus 4.7 异步审查（2026-04-25）独立判断"正好偏过 5–10%"，不需要回滚 v2.2/v2.3/v6.1，但 5-persona pipeline 该改 tier-trigger。**未立即立法 tier-trigger 的原因**：Opus 自己警告"先 codify 再实证"是反模式（同 v2.3 PR 5 轮 round-trip 的根因）。当前 phase 用 §3.6 leading indicator (E11-09 ≤ 2 轮 = 摊销证据) 决定是否启动 governance bundle #2 软化。Phase Owner 在每个新子 phase 启动前必答：(a) 本子 phase 触发哪些 governance trigger？(b) trigger 数量是否大于该子 phase 实际 LOC 改动？(c) 若 (b) 是 yes，先停下来重审 process。
+**Rebuttal stage**: Opus 4.7 异步审查（2026-04-25）独立判断"正好偏过 5–10%"，不需要回滚 v2.2/v2.3/v6.1，但 5-persona pipeline 该改 tier-trigger。**当时未立即立法 tier-trigger 的原因**：Opus 警告"先 codify 再实证"是反模式（同 v2.3 PR 5 轮 round-trip 的根因）。§3.6 leading indicator (E11-09 ≤ 2 轮 = 摊销证据) 已 fired (2026-04-25)，governance bundle #2 已通过 PR #14 落 constitution（详 §3.6.1）。Phase Owner 在每个新子 phase 启动前仍必答：(a) 本子 phase 触发哪些 governance trigger？(b) trigger 数量是否大于该子 phase 实际 LOC 改动？(c) 若 (b) 是 yes，先停下来重审 process。
 
 ---
 
@@ -313,7 +313,7 @@ E11 关闭需满足全部下列条件，自签 `GATE-E11-CLOSURE: Approved` (v6.
 
 1. ✅ §3 中 19 sub-phase 全部 merged 到 main（E11-01..19）
 2. ✅ §8 verification protocol 全部通过
-3. ✅ Codex persona review 给出 0 BLOCKER（每个 sub-phase 按 tier-trigger 决出的 Tier-A 5/5 或 Tier-B 1/1 verdict；governance bundle #2 后 Tier-B 跨-sub-phase 轮换 P1→P5）
+3. ✅ Codex persona review 给出 0 BLOCKER（每个 sub-phase 按 `constitution.md` §Codex Persona Pipeline Tier-Trigger 决出的 Tier-A 5/5 或 Tier-B 1/1 verdict；Tier-B persona 由 `PERSONA-ROTATION-STATE.md` SSOT 选取）
 4. ✅ truth-engine 红线 0 触碰
 5. ✅ E11-12-CLOSURE.md 在 `.planning/phases/E11-workbench-engineer-first-ux/` 落地
 6. ✅ Notion 同步：phase 页 + DEC-20260425-E11-WORKBENCH-UX-OVERHAUL + Roadmap 行
