@@ -1,0 +1,11 @@
+{
+  "changed_files": [
+    "docs/workbench/HANDOVER.md"
+  ],
+  "findings": [],
+  "pr_url": "local-demo://workbench-e2e-20260425T040608Z",
+  "reviewed_at": "2026-04-25T04:06:32Z",
+  "source_proposal": "prop_demo_e2e_001",
+  "ticket_id": "WB-E10-DEMO",
+  "verdict": "accepted"
+}

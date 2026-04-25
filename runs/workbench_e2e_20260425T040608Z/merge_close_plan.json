@@ -1,0 +1,13 @@
+{
+  "actions": [
+    "record_pr_acceptance",
+    "record_ticket_close"
+  ],
+  "actor": "Kogami",
+  "live_merge_performed": false,
+  "mode": "stub",
+  "pr_url": "local-demo://workbench-e2e-20260425T040608Z",
+  "source_proposal": "prop_demo_e2e_001",
+  "ticket_id": "WB-E10-DEMO",
+  "verdict": "accepted"
+}

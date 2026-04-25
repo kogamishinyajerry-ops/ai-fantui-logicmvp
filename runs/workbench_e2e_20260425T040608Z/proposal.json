@@ -1,0 +1,19 @@
+{
+  "anchor": {
+    "end_offset": 28,
+    "selector": "#workbench-document-panel",
+    "start_offset": 0,
+    "text_quote": "Reference packet"
+  },
+  "author": "engineer-a",
+  "created_at": "2026-04-25T04:06:08Z",
+  "id": "prop_demo_e2e_001",
+  "note": "Demo ticket for PR review and close loop evidence.",
+  "source": {},
+  "status": "pending",
+  "surface": "document",
+  "system_id": "thrust-reverser",
+  "ticket_id": "WB-E10-DEMO",
+  "tool": "text-range",
+  "updated_at": "2026-04-25T04:06:08Z"
+}
