@@ -3,6 +3,7 @@
 > **Authored by:** Claude Code Opus 4.7 (1M context) · v6.1 Solo Autonomy
 > **Date:** 2026-04-25
 > **Sub-phase:** E11-09 dual-h1 fix (leading indicator per §3.6 of E11-00-PLAN)
+> **R1 amendment**: Codex R1 verdict was BLOCKER — `workbench.js` (shared between both routes) unconditionally bound bundle-only DOM elements that don't exist on /workbench. Fixed via single-point sentinel guard at DOMContentLoaded entry (`if (!document.getElementById("workbench-packet-json")) return;`). Local Node smoke test (jsdom-style stub, not in CI) confirms both DOMs boot clean. New static-structural test `test_workbench_js_has_bundle_sentinel_guard` locks the guard in place.
 
 ## 0. Scope
 

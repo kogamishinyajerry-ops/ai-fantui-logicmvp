@@ -105,3 +105,60 @@ def test_shell_and_bundle_files_share_no_h1() -> None:
     # Cross-file leakage guard
     assert "Workbench Bundle 验收台</h1>" not in shell_html
     assert "Control Logic Workbench</h1>" not in bundle_html
+
+
+def test_workbench_js_has_bundle_sentinel_guard() -> None:
+    """E11-09 R1 BLOCKER fix: workbench.js is shared between /workbench (shell)
+    and /workbench/bundle (bundle) but its DOMContentLoaded handler used to
+    unconditionally bind bundle-only elements (e.g. #workbench-packet-json,
+    #load-reference-packet, #run-workbench-bundle), throwing
+    `Cannot read properties of null (reading 'addEventListener')` on the
+    shell page.
+
+    The fix is a sentinel guard that detects whether bundle DOM is present
+    by probing for `#workbench-packet-json` (the bundle's textarea input),
+    early-returning on the shell page before installToolbarHandlers /
+    updateWorkflowUI / loadBootstrapPayload run.
+
+    This test is a structural-static check — it does NOT execute JS. A real
+    JS-boot smoke test (jsdom or headless browser) is deferred to E11-11
+    e2e coverage sub-phase per v2.3 §C-Opus governance-weight calibration.
+    """
+    js_text = (STATIC_DIR / "workbench.js").read_text(encoding="utf-8")
+
+    # 1. Sentinel probe must be present
+    assert 'getElementById("workbench-packet-json")' in js_text, (
+        "missing E11-09 sentinel probe — bundle/shell discriminator removed?"
+    )
+
+    # 2. Early-return must be present
+    assert "if (!onBundlePage)" in js_text, (
+        "missing E11-09 onBundlePage early-return guard"
+    )
+
+    # 3. Guard must precede the bundle installers in DOMContentLoaded handler
+    sentinel_pos = js_text.index('getElementById("workbench-packet-json")')
+    install_toolbar_call_pos = js_text.index("installToolbarHandlers();", sentinel_pos)
+    update_workflow_call_pos = js_text.index("updateWorkflowUI();", sentinel_pos)
+    load_bootstrap_call_pos = js_text.index("loadBootstrapPayload()", sentinel_pos)
+
+    assert sentinel_pos < install_toolbar_call_pos, (
+        "E11-09 guard must precede installToolbarHandlers"
+    )
+    assert sentinel_pos < update_workflow_call_pos, (
+        "E11-09 guard must precede updateWorkflowUI"
+    )
+    assert sentinel_pos < load_bootstrap_call_pos, (
+        "E11-09 guard must precede loadBootstrapPayload"
+    )
+
+    # 4. Shell-essential boot calls (bootWorkbenchShell, installViewModeHandlers)
+    #    must appear BEFORE the guard so they still run on /workbench.
+    shell_boot_pos = js_text.index("bootWorkbenchShell();")
+    view_mode_pos = js_text.index("installViewModeHandlers();")
+    assert shell_boot_pos < sentinel_pos, (
+        "bootWorkbenchShell must run on /workbench (before bundle guard)"
+    )
+    assert view_mode_pos < sentinel_pos, (
+        "installViewModeHandlers must run on /workbench (before bundle guard)"
+    )
