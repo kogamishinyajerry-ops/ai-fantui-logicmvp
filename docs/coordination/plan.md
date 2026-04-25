@@ -5,7 +5,7 @@
 
 - 当前阶段：`P43 Control Logic Workbench end-to-end milestone`
 - 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`controller L4 reverse_travel bound + L1 post-deploy clarity · Codex APPROVE · main=9d18f05`
+- 最近成功执行证据：`governance bundle #2 (PR #14) merged + RETRO-V61-055 PR #15 opened (2026-04-25)`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - 当前证据模式：`repo-doc fallback mode`
@@ -39,7 +39,7 @@
 
 - [Notion 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
 - [01 当前状态（自动同步）](https://www.notion.so/346c6894-2bed-81cf-afd0-d060768d56d7)
-- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/34ac6894-2bed-81ec-908b-f5268e22ac9d)
+- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/34dc6894-2bed-81fb-bf60-ea687dff25e7)
 - [10 Freeze Demo Packet](https://www.notion.so/34ac6894-2bed-8159-aec4-e99f7b3d2f51)
 - [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)
 - [GitHub Actions](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
