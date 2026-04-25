@@ -1,10 +1,12 @@
 # AI FANTUI LogicMVP Constitution
 
-> **Constitution version:** v2.2 (2026-04-25, v6.1 Solo Autonomy Delegation refresh)
+> **Constitution version:** v2.3 (2026-04-25, UI-COPY-PROBE rule append)
 >
 > **Note:** 本文件保留 2026-04-13 Milestone Hold 的原始叙述作为历史证据，并在下方追加 Milestone 9 Project Freeze 的 Lifted 叙述（2026-04-15 → 2026-04-20）+ v5.2 Solo Mode 治理条款 + v6.0 Codex Joint Dev Mode（2026-04-22, Notion Page 11）+ v6.1 Solo Autonomy Delegation（2026-04-25, DEC-20260425-WOW-A-FULL-AUTONOMY-GRANT）+ Phase Registry 更新到 P32。早期 Milestone Hold（P4–P11 范围）已于 2026-04-13 为 Milestone 6 在 P13 启动时事实上 Lifted（见 `.planning/ROADMAP.md` Milestone 6/7/8 Lifted 行）；后续 Milestone 9 Freeze 于 2026-04-20 P32 W3 中正式追认 Lifted。
 >
 > **v2.2 增量：** 仅追加 v6.1 Solo Autonomy 节 + 升级 Governance Mode Timeline。v5.2 / v6.0 内容不变，作为历史层叠保留。
+>
+> **v2.3 增量：** 在 v6.1 Codex 触发清单内追加 §UI-COPY-PROBE（与 EMPIRICAL-CLAIM-PROBE 并列触发，治 user-facing copy 中的 fabricated surface claim）。来源：E11-02 4 轮 Codex round-trip 全部围绕 tile-copy honesty boundary（详 RETRO-V61-054）+ Opus 4.7 异步根因诊断（C1 stage 缺位 / C2 prompt-shape 偏置 / C3 Solo Autonomy 自审无 grep 强制点位）。v6.1 五条件 verbatim exception 不变。
 
 ## Milestone Hold (historical, 2026-04-13)
 
@@ -143,6 +145,7 @@ Between 2026-04-15 and 2026-04-18, under the v4.0 Extended Autonomy Mode then-in
 - **v5.2 Claude App Solo Mode (2026-04-20 → 2026-04-22):** Claude App Opus 4.7 as sole Executor. All Gate decisions (PLAN, CLOSURE) require explicit Kogami signature; Executor never self-selects the next Phase direction.
 - **v6.0 Multi-Agent × Codex Joint Dev (2026-04-22 → 2026-04-25):** Claude Code 主执行 + Codex 强制盲点审查回到清单（多文件前端 / API 契约变更 / e2e 期望变更 / UI 变更 / 用户 UX 批评后首次实现 / OpenFOAM 误差等触发硬性调用）。Verbatim exception 5 条件允许跳过 round-2。详见 Notion Page 11 v6.0 节。
 - **v6.1 Solo Autonomy Delegation (2026-04-25, active):** Kogami 在 PR #5 Gate 后口头授权 Claude Code 全权（Notion + PR merge + Codex 自决 + 新 phase 启停），仅 truth-engine 红线维持。详见 v6.1 Solo Autonomy 节、DEC-20260425-WOW-A-FULL-AUTONOMY-GRANT、Notion Page 11 §v6.1。
+- **v2.3 UI-COPY-PROBE 立法 (2026-04-25, active):** v6.1 治理底色不变，追加 §UI-COPY-PROBE 规则（与 EMPIRICAL-CLAIM-PROBE 并列触发）。E11-02 4 轮 Codex round-trip 全部围绕 tile-copy fabricated surface claim → Opus 4.7 异步诊断 → 立 v2.3。详见 v2.3 节、RETRO-V61-054。
 
 ## v5.2 Claude App Solo Mode (active)
 
@@ -221,6 +224,51 @@ Recorded as `DEC-20260425-WOW-A-FULL-AUTONOMY-GRANT` (Notion 04 决策日志 DB)
 继承 RETRO-V61-001 新增：安全敏感 operator endpoint、byte-reproducibility 敏感路径、跨 ≥3 文件 API schema rename。
 
 **v6.1 新增 EMPIRICAL-CLAIM-PROBE 规则（2026-04-25）：** PR prose（test docstring / 文件级 comment / demo doc / PR description）写下任何关于服务端 runtime 行为的具体数字（plant deploy %、sim time、tick count、logic-X activation timing 等）之前，Claude Code 必须 boot 相关代码路径在本地实测一次，或显式标 `TODO(probe-before-merge)`，或引用数字定义所在的 commit:line。仅基于 mental-model 算术得出的数字禁止落地到 regression-locked 测试或客户向 demo doc。来源：PR #5 round 1 Codex 命中 BEAT_EARLY ~6% deploy 实际 0% （详 `.planning/audit/AUDIT-20260425-claude-pr5-round1-plant-deploy-blindspot.md`）。
+
+## v2.3 · UI-COPY-PROBE
+
+### 触发条件
+任何写入 repo 的 user-facing 自然语言文本，包括但不限于：
+- 入口页 / landing 页的 tile title / tile description / hero copy
+- button label / link text / empty state / tooltip / modal body
+- toast / banner / inline notice
+- onboarding 步骤说明 / 错误提示文案
+
+豁免：
+- 纯 a11y 标签（aria-label）若与可见 label 1:1 同步
+- 自动从 schema / enum / config 渲染的字符串（值由代码生成，文案即数据）
+
+### 强制 stage（写完之后、commit 之前必走）
+对本期新增/修改的每一条 user-facing copy，作者必须执行 **claim-to-source sweep**：
+
+1. **拆 claim**：把 copy 拆成可验证的具体声明单元（surface 名、行为、字段、角色、限制、数据来源、文件格式、SHA 类型……）。叙述性形容词（"流畅"、"清晰"）不计 claim。
+2. **grep 回 src/**：每一条 claim 必须在 src/ tests/ schemas/ config/ 至少一个文件中找到 line-number 锚点；锚点要支持该 claim 当前已 ship，不是计划态。
+3. **三选一处置**：
+   - **[ANCHORED]** 找到锚点 → 在本期 PLAN doc 的 §Surface Inventory 登记 `claim → file:line`。
+   - **[REWRITE]** 找不到锚点但功能已规划 → 文案改写为 `planned for <Phase-ID> scope` 或 `coming in <Phase-ID>`，并在 §Surface Inventory 标 `[planned:<Phase-ID>]`。
+   - **[DELETE]** 找不到锚点且无规划 → 删除该 claim。
+
+### 与 v2.2 EMPIRICAL-CLAIM-PROBE 的关系
+- v2.2 治**数值/计算/百分比/SHA 等可量化断言**，对照源是计算复跑 / pytest / runs/。
+- v2.3 治**界面/行为/字段/角色等可定位断言**，对照源是 src/ ripgrep 锚点。
+- 两条并列触发，不互相覆盖；同一条 copy 同时含数值与 surface 时，必须双轨都过。
+
+### 审查侧的展开
+- 评审者（Codex / 第二视角）有权要求作者贴出 §Surface Inventory；缺失或残缺直接 CHANGES_REQUIRED，不进入逐字 ripgrep round-trip。
+- 评审者抽查 §Surface Inventory 中任意一行的锚点是否真实成立；命中 fabricated 锚点 → 视为伪造证据（同 v5.2 反假装条款）。
+
+### 失效条件
+- 作者声称已做 sweep 但 §Surface Inventory 缺失 / 行数与 copy 不对应 / 锚点 line 不存在 → 当轮 review 视为未做自审，要求重做（不是逐条修）。
+- 连续两期被外部 reviewer 抓出 ≥1 条 fabricated surface → 触发该 Phase Owner 的 self-pass-rate 校准复盘。
+
+### Trailer
+任何含 user-facing copy 改动的 commit，message 末尾追加：
+`UI-Copy-Probe: <N> claims swept (<A> anchored / <P> planned / <D> deleted)`
+
+### 来源
+- E11-02 PR #10 4 轮 Codex round-trip 全部围绕 tile-copy honesty boundary（fabricated knowledge field 名、虚构 archive 行为、虚构 role gate、SHA256 vs commit-SHA 混淆、不存在的 wow_a UI 走读 surface）
+- Opus 4.7 异步根因诊断（Notion 异步 session, 2026-04-25）：C1 stage 缺位（v2.2 只触发数值类断言，UI copy 整类逃出触网）/ C2 prompt-shape 偏置（landing/tile copy 训练近邻 = marketing 文案）/ C3 Solo Autonomy 自审无 grep 强制点位
+- 详见 `.planning/retrospectives/RETRO-V61-054-ui-copy-probe-birth.md`
 
 ### Verbatim Exception（继承 v6.0，五条件 AND）
 
