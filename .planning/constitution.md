@@ -250,35 +250,59 @@ Recorded as `DEC-20260425-WOW-A-FULL-AUTONOMY-GRANT` (Notion 04 决策日志 DB)
 
 #### Anchor 格式细则
 
-每一条 anchor 必须是 **可执行的 ripgrep / sed 命令的目标**，按 claim 类别分两种合法形式：
-- **正面 claim 锚点**：必须是 `<file>:<line>` 或 `<file>:<line-range>`（`sed -n <line>p <file>` 可定位声明源行）。
-- **负面 claim 锚点**：必须是 `scope=<file>`（带或不带 line-range；不带时表示 grep 跑全文件，命令为 `grep <selector> <file>`），可附 `peer=<file>:<line-range>` 作对照。
+每一条 anchor 必须是 **可执行的 ripgrep / sed 命令的目标**。按 claim 极性，正合法形式只有两种之一：
 
-下面"正面"与"负面"两段分别细化两种格式。任何 section-only 引用（如 `constitution.md §v5.2 红线`）都不算 anchor——必须落到行号或 `scope=<file>` 形式。
+##### 正面 claim 的 anchor（`<file>:<line>` 形式）
 
-**正面 claim**（"X feature 已 ship" / "Y 字段是 N 个" / "Z 类型是 SHA256"）：anchor 指向声明该 feature/字段/类型的具体源代码行 `<file>:<line>` 或 `<file>:<line-range>`。
+适用于"X feature 已 ship" / "Y 字段是 N 个" / "Z 类型是 SHA256" 等可在源代码中**找到声明行**的断言。
 
-**负面 claim / 缺位 claim**（`behavior (negative)` / `feature-name (negative)` 类，如 "本期还没有 demo mode" / "JS 没有 approval handler"）：anchor 必须含两部分，使用 **显式 `scope=` / `peer=` 前缀** 以避免被读成"file:line-range 是 grep 的限定范围"：
-- **scope=`<file>`**（必填）：声明被搜索的 file 路径，**不带 line-range**——grep 跑全文件。reviewer 必须能用 `grep <selector> <file>` 一行复跑。
-- **peer=`<file>:<line-range>`**（可选但强烈推荐）：同一 file（或同一概念邻域）中*存在*的相似 feature 的 file:line，用作对照锚（"这里有 view-mode-toggle 但没有 demo-mode-toggle"）。
+- 唯一合法形式：`<file>:<line>` 或 `<file>:<line-range>`
+- reviewer 复跑命令：`sed -n <line>p <file>`（应输出 claim 所声明的 token / label / value）
 
-**absence-claim 写作模板**：
+##### 负面 claim 的 anchor（`scope=<file>[:line-range]` + 可选 `peer=<file>:<line-range>`）
+
+适用于"本期还没有 demo mode" / "JS 没有 approval handler" 等**通过 grep 验证缺位**的断言。
+
+- **scope= 字段**（必填，且**仅此一字段为必填**）：
+  - 形式 1：`scope=<file>` —— grep 跑全 file，命令 `grep <selector> <file>` 应返回 0 hits
+  - 形式 2：`scope=<file>:<line-range>` —— 缩小 grep 范围到该 line-range，命令 `sed -n <line-range>p <file> | grep <selector>` 应返回 0 hits
+  - 形式 1 是默认；只有当 claim 明确针对某一区域（"在 toolbar 区没有 X"）时才用形式 2
+- **peer= 字段**（可选，强烈推荐）：
+  - 形式：`peer=<file>:<line-range>` —— 指向**真实存在**的相似 feature，用作对照锚
+  - 不写 peer 不算违规；写了以后 reviewer 会 sed 复跑该 line-range 验证 peer 真实存在
+
+reviewer 复跑命令：(a) 对 scope= 部分跑 grep，hits 数必须与 anchor 描述一致；(b) 若有 peer=，对其跑 sed，行内容必须支持 anchor 描述。任一不一致 → MISMATCH，进入 v2.3 失效条件。
+
+##### 通用约束（所有 anchor）
+
+- section-only 引用（如 `constitution.md §v5.2 红线` / `PROJECT.md §Vision`）**不算 anchor**——必须落到行号或 `scope=<file>` 形式。
+- 多锚点用 ` + ` 拼接（参见正面 claim 多源支持的情形）。
+
+##### 写作模板
+
+正面 claim：
+
+```
+src/well_harness/static/workbench.js:140-164 (preset 数组定义 4 项 + 各自 archiveBundle 标记)
+```
+
+负面 claim（带 peer）：
 
 ```
 scope=src/well_harness/static/workbench.html (grep "demo-mode\|demo-stage" 0 hits); peer=src/well_harness/static/workbench.html:283-299 (view-mode-toggle-bar 存在，仅 beginner / expert 两键)
 ```
 
-或仅 scope（无 peer 时）：
+负面 claim（仅 scope）：
 
 ```
 scope=src/well_harness/static/workbench.js (grep "approval-action\|data-approval-action" 0 hits)
 ```
 
-**禁止格式**（旧版本曾使用，现在 v2.3 失效条件之一）：
-- `(absence claim — verified by absence of <X> in <file>)` —— 没有可执行 grep 命令
-- `<file>:<line-range> (peer description)` 不带 `scope=` 前缀 —— 容易被误读为"grep 范围"
+##### 禁止格式（v2.3 失效条件之一）
 
-reviewer 抽查时复跑该 grep；若 hits 数与 anchor 描述不一致 → MISMATCH，进入 v2.3 失效条件。
+- `(absence claim — verified by absence of <X> in <file>)` —— 自然语言而非可执行 grep 命令
+- `<file>:<line-range> (peer description)` 不带 `scope=` 前缀但描述 peer feature —— 容易被误读为"grep 范围"
+- section-only 引用（如 `constitution.md §v5.2`）作为唯一 anchor——参见上面通用约束
 
 ### 与 v2.2 EMPIRICAL-CLAIM-PROBE 的关系
 - v2.2 治**数值/计算/百分比/SHA 等可量化断言**，对照源是计算复跑 / pytest / runs/。
