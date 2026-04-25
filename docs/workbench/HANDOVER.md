@@ -130,3 +130,67 @@ The committed demo run follows the same local path:
   - `.planning/phases/E08-approval-center/E08-05-CLOSURE.md`
   - `.planning/phases/E09-prompt-ticket-auth/E09-05-CLOSURE.md`
   - `.planning/phases/E10-pr-review-close-loop/E10-05-CLOSURE.md`
+
+## Post-merge Observation List
+
+Three observable behaviours that the closed E06–E10 stack does not exercise in unit / e2e / adversarial coverage and that should be watched once PR #3 is merged into `main`. None are blockers for merge; each is an invariant whose breakage would surface only outside the existing test windows.
+
+### 1. Long-idle canvas memory stability
+
+**Why this is a gap:** The annotation overlay (`src/well_harness/static/annotation_overlay.js`) keeps draft markers and Annotation Inbox state in browser memory. Existing tests assert structural correctness over short-lived requests; nothing exercises a multi-hour idle session where the same Workbench tab keeps overlays mounted, drafts accumulate, and DOM listeners remain bound.
+
+**When to observe:** On the next dress-rehearsal day or any demo machine that boots `/workbench` early in the morning and reaches the demo slot 4–8 hours later without page reload.
+
+**How to observe:**
+
+```bash
+# leave Workbench open on /workbench in Chrome with DevTools Performance Monitor
+# baseline at T+0, then sample at T+1h, T+4h, T+8h
+# expected: JS heap growth < 25 MB across 8h with no triage actions
+# escalation trigger: heap > 200 MB OR any "DOM Nodes" line monotonically rising
+```
+
+If heap creeps, capture a heap snapshot and check for retained `AnnotationDraft` instances; the prime suspect is the Inbox renderer not releasing draft references after triage.
+
+### 2. Multi-tab restricted-auth lock convergence
+
+**Why this is a gap:** `src/well_harness/collab/restricted_auth.py` enforces the `Authorized Engineer` + `Scope Files` invariants per call, but two tabs of `/workbench` open against the same demo_server can each generate ticket prompts concurrently. Existing tests are single-actor, single-tab. A real reviewer scenario (two reviewer tabs + one engineer tab) is not exercised.
+
+**When to observe:** Any time more than one human is reviewing simultaneously, especially during dress rehearsal where Kogami may have the canvas open while another reviewer drives the Approval Center.
+
+**How to observe:**
+
+```bash
+# Tab A and Tab B both load /workbench against http://127.0.0.1:8799
+# Tab A: submit a proposal → ticket published
+# Tab B: within 2 seconds, attempt to submit a different proposal targeting
+#        an overlapping Scope File set
+# expected: second submission either (a) wins cleanly with hash-chain order
+#           preserved, or (b) is rejected with a structured WorkbenchPermissionError
+# regression signal: silent acceptance with hash-chain fork OR last-write-wins
+#                    where Tab A's proposal disappears from the pending lane
+```
+
+The audit-events.jsonl line ordering is the truth source: parse it after the test and confirm each `proposal.submitted` precedes its corresponding `proposal.accepted` / `proposal.rejected` and that no two events share the same `prev_hash`.
+
+### 3. 02 task DB seven-field round-trip
+
+**Why this is a gap:** E09 closure recorded a one-time schema check confirming the seven required fields exist in the 02 task DB (`Type`, `Source Proposal`, `Authorized Engineer`, `Scope Files`, `Generated Prompt`, `PR URL`, `Verdict`). The check ran against the schema, not against runtime read+write behaviour. PR #3 deliberately does not write to Notion. After merge, the first real engineer-facing run will be the first time the local ticket payload meets the live DB.
+
+**When to observe:** First post-merge ticket flow that produces a `tickets/*.json` and is then manually mirrored into the Notion 02 task DB (per HANDOVER §Status: "no Notion writes" — sync is Kogami-driven).
+
+**How to observe:**
+
+```bash
+# After Kogami creates the first 02 task DB row from a tickets/*.json:
+# 1. Read back the Notion row and dump it as JSON.
+# 2. Run a structural diff against the source ticket payload:
+diff <(jq -S . tickets/<ticket_id>.json) \
+     <(notion-export 02 <row_id> | jq -S 'del(.last_edited_time, .created_time)')
+# expected: every key from the seven-field set round-trips byte-for-byte
+#           after stripping Notion-managed timestamps
+# regression signal: missing fields, type coercion (string→list, list→string),
+#                    or truncated `Generated Prompt` on the Notion side
+```
+
+If the round-trip fails, the failure mode and exact field is the diagnostic — the 02 DB schema is the contract surface that future Workbench↔Notion sync work will build on, so any drift here must be caught before downstream automation is layered on top.
