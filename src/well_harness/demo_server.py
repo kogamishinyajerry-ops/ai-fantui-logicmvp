@@ -235,6 +235,10 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._serve_static("demo.html")
             return
 
+        if parsed.path in ("/workbench/start", "/workbench/start.html"):
+            self._serve_static("workbench_start.html")
+            return
+
         if parsed.path in ("/workbench", "/workbench.html", "/expert/workbench.html"):
             self._serve_static("workbench.html")
             return

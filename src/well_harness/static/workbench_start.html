@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Workbench · 选择你的工作台入口</title>
+<link rel="stylesheet" href="/unified-nav.css">
+<link rel="stylesheet" href="/workbench_start.css">
+</head>
+<body class="unified-nav-enabled" data-nav-current="workbench-start">
+
+<header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
+  <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div class="unified-nav-group">
+      <span class="unified-nav-group-label">工作台</span>
+      <a href="/workbench/start" class="unified-nav-link" data-nav-key="workbench-start">入口选择</a>
+      <a href="/workbench" class="unified-nav-link" data-nav-key="workbench">完整面板</a>
+    </div>
+  </div>
+</header>
+
+<main class="ws-main" id="workbench-start-main">
+  <section class="ws-hero" aria-labelledby="ws-hero-title">
+    <h1 id="ws-hero-title">先告诉我你今天来做什么</h1>
+    <p>
+      <strong>Workbench</strong> 同时承载 5 类用户（学习 / 调试 / 客户复现 / 审批 / 适航追溯）。
+      请选择一张卡片，我会把面板配置成你需要的样子，并直接落到对应的起手任务。
+      想要完整面板？ 跳过这里 <a href="/workbench" class="ws-skip-link">直接进入 /workbench →</a>
+    </p>
+  </section>
+
+  <section class="ws-tiles" aria-label="角色入口">
+    <a href="/workbench?intent=learn-demo#wow_a"
+       class="ws-tile"
+       data-persona="P1"
+       data-intent="learn-demo"
+       id="ws-tile-learn-demo">
+      <span class="ws-tile-kind">学习与演示</span>
+      <h2 class="ws-tile-title">先看一遍因果链 (wow_a)</h2>
+      <p class="ws-tile-subtitle">P1 · Junior FCS · 30 分钟内上手</p>
+      <p class="ws-tile-desc">
+        从 BEAT_EARLY → BEAT_DEEP → BEAT_BLOCKED 三幕，看到 19-node truth engine
+        在工作台上的完整可视化。 适合第一次接触本仓库的人。
+      </p>
+      <ul class="ws-tile-bullets">
+        <li>一键预填 wow_a payload，无需手输 JSON</li>
+        <li>narration 在线/离线两套，AI 服务断了不黑屏</li>
+        <li>右栏 spec 点开就是引用条款，不用查代码</li>
+      </ul>
+      <span class="ws-tile-arrow">→</span>
+    </a>
+
+    <a href="/workbench?intent=engineer-probe#probe"
+       class="ws-tile"
+       data-persona="P2"
+       data-intent="engineer-probe"
+       id="ws-tile-engineer-probe">
+      <span class="ws-tile-kind">工程师调试</span>
+      <h2 class="ws-tile-title">probe lever / inspect logic gates</h2>
+      <p class="ws-tile-subtitle">P2 · Senior FCS · 真值只读 / 提案受签</p>
+      <p class="ws-tile-desc">
+        TRA / RA / N1k / feedback_mode 全字段可调，逻辑门 L1–L4
+        实时着色；改动 spec 不会改真值，只会变成可签 ticket。
+      </p>
+      <ul class="ws-tile-bullets">
+        <li>顶部贴 🔒 Truth Engine — Read Only banner</li>
+        <li>认证链异常 (e.g. L4 越过 L3) 红框告警</li>
+        <li>可一键复制当前 lever payload 为 curl 行</li>
+      </ul>
+      <span class="ws-tile-arrow">→</span>
+    </a>
+
+    <a href="/workbench?intent=customer-repro#repro"
+       class="ws-tile"
+       data-persona="P5"
+       data-intent="customer-repro"
+       id="ws-tile-customer-repro">
+      <span class="ws-tile-kind">客户问题复现</span>
+      <h2 class="ws-tile-title">把客户邮件翻成可跑用例</h2>
+      <p class="ws-tile-subtitle">P5 · Apps Engineer · ticket → repro → 回信</p>
+      <p class="ws-tile-desc">
+        模板化 ticket payload（customer_quote / repro_recipe / observed_response /
+        engineer_assessment / screenshot_refs），一次填完，
+        提交后能直接落到对内 prompt + 对外回信草稿。
+      </p>
+      <ul class="ws-tile-bullets">
+        <li>当前 lever 状态自动并入 repro_recipe</li>
+        <li>与 Approval Center 同 schema，不需要二次翻译</li>
+        <li>未签 sign-off 时显示 "Pending Kogami"，非 disabled</li>
+      </ul>
+      <span class="ws-tile-arrow">→</span>
+    </a>
+
+    <a href="/workbench?intent=approval-review#approval-center-entry"
+       class="ws-tile"
+       data-persona="KOGAMI"
+       data-intent="approval-review"
+       id="ws-tile-approval-review">
+      <span class="ws-tile-kind">提案审核（Kogami）</span>
+      <h2 class="ws-tile-title">Approval Center · 待签 + 已签</h2>
+      <p class="ws-tile-subtitle">role-gated · 仅 Kogami 可签</p>
+      <p class="ws-tile-desc">
+        进入 Approval Center 列表，按 SHA / requirement 版本分组。
+        非 Kogami 进入会看到 "Pending Kogami sign-off" 而不是禁用按钮——
+        透明，不假装"权限缺失"。
+      </p>
+      <ul class="ws-tile-bullets">
+        <li>每条 proposal 的 hash chain 可点开</li>
+        <li>已签 / 已驳回 状态过滤</li>
+        <li>导出 audit JSONL 一键到剪贴板</li>
+      </ul>
+      <span class="ws-tile-arrow">→</span>
+    </a>
+
+    <a href="/workbench?intent=vv-trace#audit"
+       class="ws-tile"
+       data-persona="P4"
+       data-intent="vv-trace"
+       id="ws-tile-vv-trace">
+      <span class="ws-tile-kind">V&amp;V 适航追溯</span>
+      <h2 class="ws-tile-title">requirement → design → code → test</h2>
+      <p class="ws-tile-subtitle">P4 · QA / V&amp;V · DO-178C 风格审计链</p>
+      <p class="ws-tile-desc">
+        从一条 requirement 反查 adapter / controller / 测试用例 / 已签 proposal /
+        approval hash。 每条记录都附 commit SHA + 签名时间戳，可作为
+        内部研究证据（非适航合规声明）。
+      </p>
+      <ul class="ws-tile-bullets">
+        <li>truth-engine SHA 显示在状态栏</li>
+        <li>approval event 与 requirement revision 双向链接</li>
+        <li>导出 trace 矩阵 (CSV / JSONL)</li>
+      </ul>
+      <span class="ws-tile-arrow">→</span>
+    </a>
+  </section>
+
+  <section class="ws-redline" aria-labelledby="ws-redline-title">
+    <h2 id="ws-redline-title">红线 · 你点哪一张都不会改的东西</h2>
+    <ul>
+      <li><code>controller.py</code> · 19-node truth engine · 4 logic gates — <strong>read-only</strong></li>
+      <li><code>adapters/*.py</code> 真值出口 — <strong>read-only</strong></li>
+      <li>已签 audit event 的 hash chain — <strong>append-only</strong></li>
+      <li>wow_a fixture 的 BEAT_DEEP_PAYLOAD — <strong>frozen</strong></li>
+    </ul>
+    <p class="ws-redline-note">
+      所有"修改"都走 proposal → ticket → Kogami 签批 流程；
+      详见 <a href="/workbench?intent=approval-review#approval-center-entry">Approval Center</a>
+      与
+      <a href="/index.html">主入口 · 工作台总览</a>。
+    </p>
+  </section>
+</main>
+
+</body>
+</html>
