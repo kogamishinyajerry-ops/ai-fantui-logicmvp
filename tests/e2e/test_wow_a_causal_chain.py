@@ -32,9 +32,9 @@ EXPECTED_NODE_COUNT = 19
 #           the caller supplies deploy_position_percent ≥ 90.
 #
 # Therefore wow-A locks what auto_scrubber delivers from a single POST:
-#   - BEAT_EARLY   (tra_deg=-5)  → logic1 + logic2 active; the canonical pullback
-#                                  is short for non-deep TRA so plant only reaches
-#                                  ~6% deploy and logic3/4 remain inactive.
+#   - BEAT_EARLY   (tra_deg=-5)  → logic1 + logic2 active; TRA never crosses the
+#                                  L3 threshold, so the plant remains at 0%
+#                                  deploy and logic3/4 remain inactive.
 #   - BEAT_DEEP    (tra_deg=-35) → logic2 + logic3 + logic4 active; the extended
 #                                  canonical pullback runs the plant to 100%
 #                                  deploy within ~4.4s, latching the full chain.

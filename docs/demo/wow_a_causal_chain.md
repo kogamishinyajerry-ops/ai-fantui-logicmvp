@@ -33,7 +33,7 @@
 
 ## 3. 预期 AI 输出（文字描述）
 
-- **Step 1 AI 叙述**：着陆姿态 + TLS unlock 确认 → 前两档亮；TRA 只到 -5° 未达深拉阈值，canonical pullback 短，plant 只 deploy ~6%，logic3/4 按住不动
+- **Step 1 AI 叙述**：着陆姿态 + TLS unlock 确认 → 前两档亮；TRA 只到 -5° 未达深拉阈值，L3 不放行，plant 保持 0% deploy，logic3/4 按住不动
 - **Step 2 AI 叙述**：深拉过线 → auto_scrubber 在 ~4.4s 内驱动 plant VDT 到 100%，反馈节点 `deploy_90_percent_vdt` 翻位 → 真值引擎一次 POST 内端到端跑完 logic2 → logic3 → logic4 → thr_lock 因果链；logic1 在 deploy 完成后因 `reverser_not_deployed_eec` 翻位而熄灭，这是真值引擎的实时状态机投影，不是 AI 填充
 - **Step 3 AI 叙述**：飞机抬升到空中 → 链路第一道门断裂，不看 TRA 多深，先看姿态；safety-first 的 interlock 严守因果
 
