@@ -1,5 +1,6 @@
 import http.client, json, unittest
 
+from conftest import with_signoff_if_manual_override  # E11-14
 from tests.test_demo import start_demo_server
 
 
@@ -27,6 +28,8 @@ class FaultInjectionTests(unittest.TestCase):
         cls.thread.join(timeout=2)
 
     def _post(self, payload):
+        # E11-14: auto-attach sign-off when feedback_mode = manual_feedback_override
+        payload = with_signoff_if_manual_override(payload)
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
         try:
             connection.request(

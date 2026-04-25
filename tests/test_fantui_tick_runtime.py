@@ -376,6 +376,14 @@ class FantuiHttpEndpointTests(unittest.TestCase):
             "reverser_inhibited": False, "eec_enable": True,
             "n1k": 50.0, "max_n1k_deploy_limit": 85.0,
             "feedback_mode": "manual_feedback_override",
+            # E11-14 sign-off triplet
+            "actor": "FantuiTest",
+            "ticket_id": "WB-FANTUI",
+            "manual_override_signoff": {
+                "signed_by": "FantuiTest",
+                "signed_at": "2026-04-25T00:00:00Z",
+                "ticket_id": "WB-FANTUI",
+            },
         })
         self.assertEqual(s, 200)
         # Whatever the exact response shape, it must not claim L1-L4 are active

@@ -9,3 +9,4 @@
 ## Sequence
 
 E11-13: P1 (round-robin start; first Tier-B sub-phase under bundle #2)
+E11-14: P2 (round-robin successor; Senior FCS Engineer fits server-side / API contract review)

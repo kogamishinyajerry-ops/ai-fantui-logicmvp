@@ -12,7 +12,34 @@ import sys
 
 PORT = int(os.environ.get("WELL_HARNESS_PORT", "8766"))
 
+# E11-14 (2026-04-25): /api/lever-snapshot requires actor + ticket_id +
+# manual_override_signoff when feedback_mode = manual_feedback_override.
+# The api() helper auto-injects a fixed sign-off triplet for any payload
+# using manual_feedback_override so the truth-engine resilience tests (which
+# exercise the override path) keep working under the new server guard.
+# Tests of the guard itself live in tests/test_lever_snapshot_manual_override_guard.py.
+#
+# ⚠ CANNED ADVERSARIAL-TEST FIXTURE — NOT REAL AUTHENTICATION. These are
+# placeholder strings that make adversarial probes well-formed; they do not
+# represent any signed approval. Replay/nonce/freshness checks are E11-16.
+MANUAL_OVERRIDE_SIGNOFF = {
+    "actor": "AdversarialBot",
+    "ticket_id": "WB-ADVERSARIAL",
+    "manual_override_signoff": {
+        "signed_by": "AdversarialBot",
+        "signed_at": "2026-04-25T00:00:00Z",
+        "ticket_id": "WB-ADVERSARIAL",
+    },
+}
+
+
 def api(path, payload):
+    if isinstance(payload, dict) and payload.get("feedback_mode") == "manual_feedback_override":
+        # Auto-attach sign-off fields; explicit fields in the original payload
+        # take precedence so a test can still assert 409 by overriding actor=""
+        # or similar.
+        merged = {**MANUAL_OVERRIDE_SIGNOFF, **payload}
+        payload = merged
     conn = http.client.HTTPConnection("127.0.0.1", PORT, timeout=10)
     conn.request("POST", path, body=json.dumps(payload).encode(), headers={"Content-Type": "application/json"})
     resp = conn.getresponse()

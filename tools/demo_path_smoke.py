@@ -56,7 +56,25 @@ def start_demo_server() -> tuple[ThreadingHTTPServer | None, threading.Thread | 
     return server, thread
 
 
+# E11-14 (2026-04-25): /api/lever-snapshot requires actor + ticket_id +
+# manual_override_signoff when feedback_mode = manual_feedback_override.
+# Smoke scenarios pass through request_json with manual_feedback_override
+# payloads; this helper auto-attaches a fixed sign-off triplet so existing
+# scenarios keep working under the new server guard.
+_SMOKE_OVERRIDE_SIGNOFF = {
+    "actor": "DemoSmoke",
+    "ticket_id": "WB-SMOKE",
+    "manual_override_signoff": {
+        "signed_by": "DemoSmoke",
+        "signed_at": "2026-04-25T00:00:00Z",
+        "ticket_id": "WB-SMOKE",
+    },
+}
+
+
 def request_json(port: int | None, path: str, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    if isinstance(payload, dict) and payload.get("feedback_mode") == "manual_feedback_override":
+        payload = {**_SMOKE_OVERRIDE_SIGNOFF, **payload}
     if port is None:
         if path == "/api/demo":
             prompt = str(payload.get("prompt", "")).strip()
@@ -66,7 +84,9 @@ def request_json(port: int | None, path: str, payload: dict[str, Any]) -> tuple[
         if path == "/api/lever-snapshot":
             lever_inputs, error_payload = parse_lever_snapshot_request(payload)
             if error_payload is not None:
-                return 400, error_payload
+                # E11-14: parser may attach `_status` (e.g., 409 manual_override_unsigned).
+                status_code = error_payload.pop("_status", 400)
+                return status_code, error_payload
             return 200, lever_snapshot_payload(**lever_inputs)
         return 404, {"error": "not_found"}
 
