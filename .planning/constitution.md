@@ -1,6 +1,6 @@
 # AI FANTUI LogicMVP Constitution
 
-> **Constitution version:** v2.3 (2026-04-25, UI-COPY-PROBE rule append + governance bundle #2 persona tier-trigger amortization)
+> **Constitution version:** v2.4 (2026-04-25, +Recursive Coherence Drift Mitigation for doc-only rule-bundle PRs, ratified by Opus 4.7 strategic review)
 >
 > **Note:** 本文件保留 2026-04-13 Milestone Hold 的原始叙述作为历史证据，并在下方追加 Milestone 9 Project Freeze 的 Lifted 叙述（2026-04-15 → 2026-04-20）+ v5.2 Solo Mode 治理条款 + v6.0 Codex Joint Dev Mode（2026-04-22, Notion Page 11）+ v6.1 Solo Autonomy Delegation（2026-04-25, DEC-20260425-WOW-A-FULL-AUTONOMY-GRANT）+ Phase Registry 更新到 P32。早期 Milestone Hold（P4–P11 范围）已于 2026-04-13 为 Milestone 6 在 P13 启动时事实上 Lifted（见 `.planning/ROADMAP.md` Milestone 6/7/8 Lifted 行）；后续 Milestone 9 Freeze 于 2026-04-20 P32 W3 中正式追认 Lifted。
 >
@@ -9,6 +9,8 @@
 > **v2.3 增量：** 在 v6.1 Codex 触发清单内追加 §UI-COPY-PROBE（与 EMPIRICAL-CLAIM-PROBE 并列触发，治 user-facing copy 中的 fabricated surface claim）。来源：E11-02 4 轮 Codex round-trip 全部围绕 tile-copy honesty boundary（详 RETRO-V61-054）+ Opus 4.7 异步根因诊断（C1 stage 缺位 / C2 prompt-shape 偏置 / C3 Solo Autonomy 自审无 grep 强制点位）。v6.1 五条件 verbatim exception 不变。
 >
 > **governance bundle #2 (2026-04-25):** v2.3 §UI-COPY-PROBE 触发条件、§Surface Inventory 强制、§Anchor 格式细则 全部不动。本次仅在 v2.3 节内追加 §Codex Persona Pipeline Tier-Trigger 子节——把"每个 user-facing UI 子 phase 默认跑全 5-persona Codex review"软化为"copy diff ≥10 行 AND ≥3 [REWRITE/DELETE] → 跑全 5 (Tier-A)；否则跑 1 (Tier-B 跨-sub-phase 轮换 P1→P5→P1，起点 P1)"。触发条件：E11-09 PR #13 ≤2 轮 Codex APPROVE 实证 v2.3 已摊销（leading indicator fired）。详见 RETRO-V61-054 §6 + `.planning/codex_personas/README.md` §Invocation。
+>
+> **v2.4 增量 (2026-04-25, ratified by Opus 4.7):** 追加 §Recursive Coherence Drift Mitigation — applies only to doc-only rule-bundle PRs (objective trigger: modifies ≥1 constitution rule body AND adds/rewrites ≥2 cross-doc pointers, OR labeled `governance-bundle`). Triggers Opus consultation at R3 (普通 PR 仍 R4); R5 mandatory drift-acceptance declaration; R6 hard cap (binary: rollback or merge-with-explicit-drift). Forbidden superlatives in commit/PR bodies. 1 canonical source at `<path>`; downstream references may drift in wording but must not contradict canonical. Source: RETRO-V61-055 §3 (PR #15) + Opus 4.7 strategic review same day. v2.2 / v2.3 / governance bundle #2 / Verbatim Exception / RETRO 序号 / Self-Pass-Rate 全部不动。
 
 ## Milestone Hold (historical, 2026-04-13)
 
@@ -149,6 +151,7 @@ Between 2026-04-15 and 2026-04-18, under the v4.0 Extended Autonomy Mode then-in
 - **v6.1 Solo Autonomy Delegation (2026-04-25, active):** Kogami 在 PR #5 Gate 后口头授权 Claude Code 全权（Notion + PR merge + Codex 自决 + 新 phase 启停），仅 truth-engine 红线维持。详见 v6.1 Solo Autonomy 节、DEC-20260425-WOW-A-FULL-AUTONOMY-GRANT、Notion Page 11 §v6.1。
 - **v2.3 UI-COPY-PROBE 立法 (2026-04-25, active):** v6.1 治理底色不变，追加 §UI-COPY-PROBE 规则（与 EMPIRICAL-CLAIM-PROBE 并列触发）。E11-02 4 轮 Codex round-trip 全部围绕 tile-copy fabricated surface claim → Opus 4.7 异步诊断 → 立 v2.3。详见 v2.3 节、RETRO-V61-054。
 - **governance bundle #2 persona tier-trigger (2026-04-25, active):** v2.3 触发条件不动，仅追加 §Codex Persona Pipeline Tier-Trigger 子节。E11-09 PR #13 leading indicator fired (≤2 Codex 轮 APPROVE) → 5-persona 默认软化为 tier-trigger（copy diff ≥10 + ≥3 [REWRITE/DELETE] = 5；否则 1）。预期 Codex token 节约 ~70–80% on persona pipeline。详见 v2.3 §Codex Persona Pipeline Tier-Trigger、RETRO-V61-054 §6。
+- **v2.4 Recursive Coherence Drift Mitigation (2026-04-25, active, ratified by Opus 4.7):** doc-only rule-bundle PR R3 Opus consultation trigger + R5 drift-acceptance declaration + R6 hard cap + forbidden-superlative list + standard substitute template. Source: RETRO-V61-055 §3 + Opus 4.7 strategic review same day. Confirmed instances: PR #11 (5R), PR #14 (6R, merged with drift acceptance). v6.1 Hard Stop ≥4 仍适用于 source-code 与非 rule-bundle PR。详见 v2.3 §Recursive Coherence Drift Mitigation、RETRO-V61-055。
 
 ## v5.2 Claude App Solo Mode (active)
 
@@ -376,6 +379,36 @@ git diff --stat $(git merge-base HEAD main)..HEAD -- \
 详细 codification 在 `.planning/retrospectives/RETRO-V61-054-ui-copy-probe-birth.md` §6.3，本条款是规则层引用；两处不一致以 RETRO §6.3 为准。
 
 **详细文档：** `.planning/codex_personas/README.md` §Invocation 表，更新于本 bundle。RETRO-V61-054 §6 amortization 实证记录。
+
+### Recursive Coherence Drift Mitigation（v2.4, 2026-04-25, ratified by Opus 4.7）
+
+**Scope:** doc-only rule-bundle PRs only. Source-code rule-bundle PRs follow standard R4 Opus trigger and v6.1 Hard Stop ≥4. (Source code has pytest/executability auto-grounding spec drift; coherence drift is a doc-only phenomenon.)
+
+**Rule-bundle PR objective trigger:** PR qualifies as "rule-bundle" iff (a) modifies ≥1 constitution rule body **AND** (b) adds/rewrites ≥2 cross-doc pointers to that rule, **OR** (c) labeled `governance-bundle` in commit subject prefix or PR title.
+
+**Anti-superlative claim rule:** rule-bundle PR commit messages and PR descriptions are **forbidden** to use these phrases (Chinese + English):
+
+- `verbatim identical` / 字面相等 / 完全一致
+- `pure pointers` / 纯指针 / 仅指针
+- `1 canonical + N pointers` / 单源 + 全指针
+- `zero drift` / 零漂移
+- `fractal-clean` / 全层级一致
+
+**Standard substitute template** (use verbatim when describing canonical rule layout):
+
+> *"1 canonical source at `<path>`; downstream references may drift in wording but must not contradict canonical."*
+
+**R-budget two-tier cap (replaces v6.1 Hard Stop ≥4 for doc-only rule-bundle PRs):**
+
+- **R3:** automatic Opus 4.7 Notion strategic review consultation trigger (bypassing further Codex rounds without Opus input enters known-trap territory)
+- **R5:** mandatory `drift-acceptance` declaration in PR body listing every outstanding cross-doc delta Codex flagged (using §3.1 standard template phrasing, no superlatives)
+- **R6:** hard cap, binary author choice — (a) rollback to a smaller bundle, OR (b) merge-with-explicit-drift signed by author (PR body must contain the drift-acceptance list)
+
+**Re-evaluation:** after 3 doc-only rule-bundle PRs run under this regime, decide whether to tighten R6 → R5 hard cap. Currently R6 because PR #14 successfully merged at R6 with drift acceptance — capping below already-observed-successful values would block known viable paths.
+
+**Source:** RETRO-V61-055 §3 (recursive coherence drift on rule-bundle PRs) + Opus 4.7 strategic review (Notion async session, 2026-04-25, 4/4 codify/amend). Confirmed instances: PR #11 v2.3 UI-COPY-PROBE (5 rounds), PR #14 governance bundle #2 (6 rounds, merged with drift acceptance).
+
+**Rollback condition:** if any doc-only rule-bundle PR observes the recursive-drift pattern continuing despite §3.1 + §3.2 + §3.3 application, open successor RETRO and re-engage Opus 4.7 strategic review.
 
 ### Verbatim Exception（继承 v6.0，五条件 AND）
 
