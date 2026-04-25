@@ -371,6 +371,61 @@
   background: rgba(247, 188, 92, 0.16);
 }
 
+/* E11-07 (2026-04-26): Authority Contract banner.
+   Permanent, always-visible 1-line banner above the 3-column grid that
+   announces the truth-engine read-only contract and links to the v6.1
+   red-line clause. Distinct visual language from the manual_feedback
+   trust banner (which is conditional/dismissible) — this banner is
+   neither dismissible nor conditional. */
+.workbench-authority-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+  padding: 0.55rem 0.95rem;
+  border: 1px solid rgba(120, 220, 170, 0.32);
+  border-radius: 8px;
+  background: rgba(20, 40, 30, 0.6);
+  color: #c8e8d4;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.workbench-authority-banner-icon {
+  font-size: 1rem;
+}
+
+.workbench-authority-banner-headline {
+  font-weight: 600;
+  color: #d8f5e2;
+  letter-spacing: 0.02em;
+}
+
+.workbench-authority-banner-sep {
+  color: rgba(206, 223, 236, 0.42);
+}
+
+.workbench-authority-banner-rule {
+  color: rgba(200, 232, 212, 0.86);
+}
+
+.workbench-authority-banner-link {
+  margin-left: auto;
+  padding: 0.18rem 0.55rem;
+  border-radius: 4px;
+  background: rgba(120, 220, 170, 0.12);
+  color: #b6ecc8;
+  font-size: 0.78rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.workbench-authority-banner-link:hover {
+  background: rgba(120, 220, 170, 0.22);
+  color: #d8f5e2;
+}
+
 .workbench-annotation-toolbar {
   display: flex;
   align-items: center;

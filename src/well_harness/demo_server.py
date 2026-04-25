@@ -258,6 +258,14 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._serve_static("workbench.html")
             return
 
+        # E11-07 (2026-04-26): Authority Contract banner link target.
+        # Serves the v6.1 truth-engine red-line clause as plain text so
+        # the banner's "v6.1 红线条款 →" link resolves to a real, in-repo
+        # excerpt rather than a 404. Read-only; no truth-engine mutation.
+        if parsed.path in ("/v6.1-redline", "/v6.1-redline.txt"):
+            self._serve_v61_redline_excerpt()
+            return
+
         relative_path = unquote(parsed.path.lstrip("/"))
         if relative_path and Path(relative_path).suffix in CONTENT_TYPES:
             self._serve_static(relative_path)
@@ -591,6 +599,43 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
         content_type = CONTENT_TYPES.get(target_path.suffix, "application/octet-stream")
         self._send_bytes(200, target_path.read_bytes(), content_type)
+
+    def _serve_v61_redline_excerpt(self):
+        """E11-07 (2026-04-26): serve the v6.1 truth-engine red-line clause
+        as plain text. Sourced from .planning/constitution.md so the demo
+        ships the same words the constitution does, with no drift risk."""
+        repo_root = Path(__file__).resolve().parents[2]
+        constitution = repo_root / ".planning" / "constitution.md"
+        try:
+            full_text = constitution.read_text(encoding="utf-8")
+        except (FileNotFoundError, OSError):
+            full_text = ""
+        excerpt_lines = ["# v6.1 truth-engine red-line clause\n", ""]
+        if full_text:
+            # Pull the explicit "Forbidden（红线维持）" section. If the
+            # exact heading drifts, fall back to a small static excerpt
+            # so the link still resolves to *something* truthful.
+            anchor = full_text.find("Forbidden（红线维持")
+            if anchor != -1:
+                end = full_text.find("\n## ", anchor)
+                section = full_text[anchor:end] if end != -1 else full_text[anchor:]
+                excerpt_lines.append(section.rstrip())
+            else:
+                excerpt_lines.append(
+                    "Truth-engine 红线: controller / runner / models / "
+                    "adapters/ are read-only by design. Workbench surfaces "
+                    "may propose changes via ticket / proposal — they may "
+                    "never mutate truth-engine values directly. See "
+                    ".planning/constitution.md §v6.1 Solo Autonomy Delegation."
+                )
+        else:
+            excerpt_lines.append(
+                "Truth-engine 红线 source file (.planning/constitution.md) "
+                "is not available in this checkout. The contract remains: "
+                "controller / runner / models / adapters/ are read-only."
+            )
+        body = "\n".join(excerpt_lines).encode("utf-8")
+        self._send_bytes(200, body, "text/plain; charset=utf-8")
 
     def _send_json(self, status_code: int, payload: dict):
         # Compact JSON: no indentation (machine-to-machine API, not human-readable)
