@@ -26,38 +26,11 @@ See §Tier-trigger below for which tier fires when.
 
 ## Invocation
 
-### Tier-trigger（governance bundle #2 落地，2026-04-25 起生效）
+### Tier-trigger
 
-> **变更：** 之前默认每个 user-facing UI 子 phase 跑全 5-persona 并行 review。E11-09 ≤2 轮 Codex APPROVE 实证 v2.3 UI-COPY-PROBE 已摊销 → Opus 4.7 §1 strategic input 通过 → 5-persona 默认改为 **tier-trigger**。详见 `.planning/retrospectives/RETRO-V61-054-ui-copy-probe-birth.md` §6 + `constitution.md` §v2.3 持久化条款。
+> **Canonical rule definition lives in `.planning/constitution.md` §Codex Persona Pipeline Tier-Trigger.** This document does not redefine or paraphrase the rule. To know which tier fires, when to fire it, who selects the Tier-B persona, what the rollback condition is, or how to compute "copy diff ≥ 10 行" — read constitution. This README's only role in the rule layer is to point.
 >
-> v2.2 / v2.3 / v6.1 / §Surface Inventory / RETRO 序号 全部保留，**不动**。本次只软化 persona pipeline 的默认调用规则，不动其他规则。
-
-按下表决定调多少 persona：
-
-| 子 phase 特征 | persona 数 | 选哪个 |
-|---|---|---|
-| user-facing copy diff ≥ 10 行 **AND** §Surface Inventory 含 ≥ 3 条 [REWRITE/DELETE] | **5（全 P1–P5 并行）** | 全跑 |
-| 其他所有情形（含 doc-only / 纯 refactor / copy diff < 10 行 / 无 [REWRITE/DELETE]） | **1** | **`PERSONA-ROTATION-STATE.md` 是唯一 source of truth。** 默认值 = 末行 persona 在 P1→P2→P3→P4→P5→P1 序列中的下一位（新 epic 第一行 = P1 Junior FCS）。Owner 可写入非默认值（如 demo-arc 重 → P3；适航 trace 重 → P4），唯一硬约束：写入值**不得**与上一行 Tier-B persona 相同 |
-
-**"copy diff ≥ 10 行" 计数命令（确定性，作者必须在 PR body 引用结果）：**
-
-```bash
-# 在 PR feature branch 上跑（base = main 或当期 phase 的 trunk merge-base）：
-git diff --stat $(git merge-base HEAD main)..HEAD -- \
-  'src/well_harness/static/*.html' \
-  'src/well_harness/static/*.js' \
-  'src/well_harness/static/*.css'
-```
-
-读取最后一行 `N files changed, X insertions(+), Y deletions(-)` 中的 `X + Y`。`X + Y ≥ 10` 即满足"copy diff ≥ 10 行"条件。该数字必须出现在 PR body 的 §Surface Inventory 标题行下方（例：`copy_diff_lines=12 (insertions=8, deletions=4)`），便于 Codex / 后续 reviewer 复现。
-
-**轮换状态记录：** 当前期 Tier-B 已用 persona 序列记录在 `.planning/phases/<epic>/PERSONA-ROTATION-STATE.md`（owner 在每次 Tier-B sub-phase commit 后追加一行 `<sub-phase-id>: P? (<reason>)`）。新 epic 启动时序列重置为 P1。
-
-**判断时机：** 子 phase commit 之前，作者填完 §Surface Inventory + 跑完计数命令后立刻知道 trigger 条件是否满足。
-
-**例外（仍跑全 5）：**
-- 该子 phase 触发了 v2.2 EMPIRICAL-CLAIM-PROBE 同时也是 user-facing UI 子 phase（数值+surface 双轨断言，需要全角度审）
-- Phase Owner 主动声明"本子 phase 范围特别敏感"（authority chain / red-line 边界 / 适航 trace 等）
+> History: governance bundle #2 (2026-04-25 PR #14) softened the prior 5-persona default. Decision arc: `.planning/retrospectives/RETRO-V61-054-ui-copy-probe-birth.md` §6.
 
 ### 命令模板
 
@@ -82,14 +55,21 @@ case "$LAST" in
   P4) DEFAULT=P5 ;; P5) DEFAULT=P1 ;; *)  DEFAULT=P1 ;;
 esac
 #
-# Step 3a — Default path: take the round-robin successor as-is.
+# Step 3 — Choose path (uncomment exactly ONE of 3a or 3b):
+#
+# Step 3a (DEFAULT path): take the round-robin successor as-is.
 PERSONA=$DEFAULT
 #
-# Step 3b — Override path: owner writes a non-default P-value motivated by
+# Step 3b (OVERRIDE path): owner writes a non-default P-value motivated by
 # sub-phase content (e.g., demo-arc-heavy → P3; 适航 trace heavy → P4).
-# Hard constraint enforced by rule layer: PERSONA must NOT equal $LAST.
-# (Uncomment + edit ONE of the two lines above to choose a path.)
+# To use, comment out Step 3a above and uncomment exactly one literal line below:
+# PERSONA=P1   # demo-not-applicable
+# PERSONA=P2   # senior FCS deep code review
+# PERSONA=P3   # demo-arc-heavy sub-phase
+# PERSONA=P4   # 适航 trace / V&V heavy sub-phase
+# PERSONA=P5   # customer-facing / triage scenario
 #
+# Hard constraint enforced by rule layer (must hold for both paths):
 [ "$PERSONA" = "$LAST" ] && { echo "ERROR: PERSONA=$PERSONA equals LAST=$LAST — violates no-consecutive-repeat"; exit 1; }
 #
 # Step 4 — Run the chosen persona:

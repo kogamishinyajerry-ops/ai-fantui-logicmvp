@@ -143,9 +143,7 @@ Opus 4.7 §1 strategic review (2026-04-25) set E11-09 dual-h1 fix as the **leadi
 
 Per Opus §1 verbatim spec, this RETRO §6.1 unlocks the rule change:
 
-**5-persona pipeline → tier-trigger:**
-- Tier-A (5 personas, all parallel): user-facing copy diff ≥ 10 lines **AND** §Surface Inventory ≥ 3 [REWRITE/DELETE] rows. "copy diff ≥10 lines" is computed by `git diff --stat $(git merge-base HEAD main)..HEAD -- 'src/well_harness/static/*.{html,js,css}'` (X+Y from the last summary line); the number is printed in PR body for reviewer reproducibility.
-- Tier-B (1 persona): all other cases. `.planning/phases/<epic>/PERSONA-ROTATION-STATE.md` is the canonical source-of-truth for persona selection. Default value = round-robin successor (P1→P2→P3→P4→P5→P1) of last entry; new epic = P1. Owner may write a non-default value (content fit, e.g., demo-arc → P3); hard constraint: written value must not equal the immediately preceding Tier-B entry. Sequence resets per epic.
+**5-persona pipeline → tier-trigger:** the rule itself is canonical at `.planning/constitution.md` §Codex Persona Pipeline Tier-Trigger. This bullet records the decision (governance bundle #2 landing on 2026-04-25 PR #14), not the rule body — read constitution for the actual Tier-A trigger condition, the Tier-B persona-selection SSOT, the counting command, the rollback semantics, and the verbatim text. Do not paraphrase here.
 
 Landed in:
 - `.planning/constitution.md` §v2.3 § Codex Persona Pipeline Tier-Trigger (this PR)
