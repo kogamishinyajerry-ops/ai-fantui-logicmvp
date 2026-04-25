@@ -356,7 +356,13 @@ scope=src/well_harness/static/workbench.js (grep "approval-action\|data-approval
 
 **估计成本节约：** Tier-B 单 persona ~200k tokens / 子 phase；vs 默认 5-persona ~1M tokens / 子 phase。E11 phase 大致 4-5 个子 phase 中有 1 个会触发 Tier-A，其余 Tier-B → ~70–80% Codex token 节约 on persona pipeline。
 
-**回滚条件：** 连续两个 Tier-B 子 phase 的 user-facing copy 在 post-merge 阶段被发现 ≥1 条 fabricated surface（即 v2.3 §UI-COPY-PROBE 失效条件被触发） → 自动回滚到 5-persona 默认 + 入 RETRO-V61-054 §6.2 候选触发位置。
+**回滚条件（canonical = RETRO-V61-054 §6.3）：** 连续两个 Tier-B 子 phase 的 user-facing copy 在 post-merge 阶段被发现 ≥1 条 fabricated surface（即 v2.3 §UI-COPY-PROBE §失效条件被触发） → 自动执行三项动作：
+
+1. 接下来 3 个 user-facing 子 phase 强制回滚到默认 5-persona（不允许 Tier-B）
+2. 开新 RETRO-V61-* 文件记录失败摊销，链接到 RETRO-V61-054
+3. 重新 engage Opus 4.7 strategic review 决定是否永久退役 tier-trigger 或 sharpen 触发条件
+
+详细 codification 在 `.planning/retrospectives/RETRO-V61-054-ui-copy-probe-birth.md` §6.3，本条款是规则层引用；两处不一致以 RETRO §6.3 为准。
 
 **详细文档：** `.planning/codex_personas/README.md` §Invocation 表，更新于本 bundle。RETRO-V61-054 §6 amortization 实证记录。
 
