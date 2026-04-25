@@ -3789,10 +3789,154 @@ function installFeedbackModeAffordance() {
   }
 }
 
+// E11-05 (2026-04-25): wow_a/b/c canonical-scenario starter cards.
+// Mirrors BEAT_DEEP_PAYLOAD from tests/e2e/test_wow_a_causal_chain.py:51 and
+// the monte-carlo / reverse-diagnose API contracts from the matching e2e
+// suites. One click → POST (with bounded timeout) → single-line summary in
+// the card's result area.
+//
+// The exact card payloads are FROZEN — tests/test_workbench_wow_starters.py
+// asserts byte-equality against this object; do not silently re-tune
+// n_trials, max_results, n1k, or BEAT_DEEP_PAYLOAD shape without updating
+// the regression lock and the surface-inventory drift acceptance.
+const WOW_REQUEST_TIMEOUT_MS = 10000;
+
+const WOW_SCENARIOS = {
+  wow_a: {
+    endpoint: "/api/lever-snapshot",
+    // BEAT_DEEP_PAYLOAD per tests/e2e/test_wow_a_causal_chain.py:51
+    payload: {
+      tra_deg: -35,
+      radio_altitude_ft: 2,
+      engine_running: true,
+      aircraft_on_ground: true,
+      reverser_inhibited: false,
+      eec_enable: true,
+      n1k: 0.92,
+      feedback_mode: "auto_scrubber",
+      deploy_position_percent: 95,
+    },
+    // P1+P2+P5 R2 fix: read actual logic-gate states from the response
+    // instead of overstating "L1–L4 latched". Under auto_scrubber pullback
+    // the e2e contract says BEAT_DEEP latches at minimum {logic2, logic3,
+    // logic4} with logic1 dropping out (reverser_not_deployed_eec flips
+    // false mid-deploy). Print the live active set verbatim so the card
+    // never overstates the truth.
+    summarize: (body) => {
+      const logic = body && typeof body.logic === "object" ? body.logic : {};
+      const order = ["logic1", "logic2", "logic3", "logic4"];
+      const active = order.filter((k) => logic[k] && logic[k].active === true);
+      const nodes = Array.isArray(body && body.nodes) ? body.nodes : [];
+      const activeStr = active.length === 0 ? "none" : active.join("+");
+      return `nodes=${nodes.length} · active=[${activeStr}] · mode=auto_scrubber`;
+    },
+  },
+  wow_b: {
+    endpoint: "/api/monte-carlo/run",
+    payload: { system_id: "thrust-reverser", n_trials: 1000, seed: 42 },
+    summarize: (body) => {
+      if (!body) return "(empty body)";
+      const sr = typeof body.success_rate === "number" ? body.success_rate.toFixed(4) : body.success_rate;
+      const failures = body.n_failures;
+      const trials = body.n_trials;
+      return `trials=${trials} · success_rate=${sr} · failures=${failures}`;
+    },
+  },
+  wow_c: {
+    endpoint: "/api/diagnosis/run",
+    payload: { system_id: "thrust-reverser", outcome: "deploy_confirmed", max_results: 10 },
+    summarize: (body) => {
+      if (!body) return "(empty body)";
+      const total = body.total_combos_found;
+      const returned = Array.isArray(body.results) ? body.results.length : 0;
+      const grid = body.grid_resolution;
+      return `outcome=${body.outcome} · total_combos=${total} · returned=${returned} · grid=${grid}`;
+    },
+  },
+};
+
+async function runWowScenario(wowId) {
+  const scenario = WOW_SCENARIOS[wowId];
+  const button = document.querySelector(
+    `.workbench-wow-run-button[data-wow-id="${wowId}"]`,
+  );
+  const result = document.querySelector(
+    `.workbench-wow-result[data-wow-result-for="${wowId}"]`,
+  );
+  if (!scenario || !result) {
+    return;
+  }
+  if (button) {
+    button.disabled = true;
+  }
+  result.removeAttribute("data-wow-state");
+  result.textContent = `POST ${scenario.endpoint} ...`;
+  // P1 R2 BLOCKER fix: bounded timeout via AbortController so a stalled
+  // endpoint cannot freeze the card mid-demo.
+  const controller =
+    typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timeoutHandle = controller
+    ? setTimeout(() => controller.abort(), WOW_REQUEST_TIMEOUT_MS)
+    : null;
+  try {
+    const t0 = performance.now();
+    const response = await fetch(scenario.endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(scenario.payload),
+      signal: controller ? controller.signal : undefined,
+    });
+    const ms = Math.round(performance.now() - t0);
+    let body = null;
+    try {
+      body = await response.json();
+    } catch (_err) {
+      body = null;
+    }
+    if (!response.ok) {
+      result.setAttribute("data-wow-state", "error");
+      const errMsg = body && body.error ? body.error : `HTTP ${response.status}`;
+      result.textContent = `${response.status} · ${errMsg} · ${ms}ms`;
+      return;
+    }
+    result.setAttribute("data-wow-state", "ok");
+    result.textContent = `200 OK · ${scenario.summarize(body)} · ${ms}ms`;
+  } catch (err) {
+    result.setAttribute("data-wow-state", "error");
+    if (err && err.name === "AbortError") {
+      result.textContent = `timed out after ${WOW_REQUEST_TIMEOUT_MS}ms · click again to retry`;
+    } else {
+      result.textContent = `network error: ${err && err.message ? err.message : err}`;
+    }
+  } finally {
+    if (timeoutHandle !== null) {
+      clearTimeout(timeoutHandle);
+    }
+    if (button) {
+      button.disabled = false;
+    }
+  }
+}
+
+function installWowStarters() {
+  const buttons = document.querySelectorAll(
+    '.workbench-wow-run-button[data-wow-action="run"]',
+  );
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const wowId = btn.getAttribute("data-wow-id");
+      if (wowId && WOW_SCENARIOS[wowId]) {
+        void runWowScenario(wowId);
+      }
+    });
+  });
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   bootWorkbenchShell();
   installViewModeHandlers();
   installFeedbackModeAffordance();
+  installWowStarters();
 
   // E11-09 (2026-04-25): bundle UI lives on /workbench/bundle, served by
   // workbench_bundle.html. The /workbench shell page (workbench.html) does

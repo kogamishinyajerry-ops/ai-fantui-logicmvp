@@ -66,7 +66,7 @@
       <ul class="ws-tile-bullets">
         <li>4 张预设：ready_archived / blocked_follow_up / ready_preview / archive_retry</li>
         <li>archiveBundle: true 仅 2/4（ready_archived + archive_retry）</li>
-        <li>wow_a/b/c 起手卡片是 E11-05 范围，本期暂未上线</li>
+        <li>wow_a/b/c 起手卡片已上线（E11-05），见 <code>/workbench</code> 顶部「起手卡」</li>
       </ul>
       <span class="ws-tile-arrow">→</span>
     </a>
@@ -105,12 +105,13 @@
         <em>「一键通过验收」（ready_archived）</em> 走通 happy path，
         再点 <em>「一键看阻塞态」（blocked_follow_up）</em> 演示 clarification gate。
         反推逻辑 lever-driven 演示（TRA / RA / N1k）在 <code>/demo.html</code>；
-        wow_a/b/c 目前只在 <code>tests/e2e/test_wow_a_causal_chain.py</code> 里有，没有 UI 走读 surface。
+        wow_a/b/c 起手卡 已在 <code>/workbench</code> 顶部上线（E11-05），可以一键走读
+        BEAT_DEEP_PAYLOAD / Monte-Carlo / Reverse-Diagnose。
       </p>
       <ul class="ws-tile-bullets">
         <li>建议演示前隐藏浏览器侧栏 + 关闭 Approval Center 抽屉</li>
         <li>"一键留档复跑" 适合演示同秒重复点也不崩</li>
-        <li>无-chrome demo mode + UI wow_a 走读 进入 E11-05/08 范围</li>
+        <li>无-chrome demo mode 进入 E11-08 范围（wow_a 走读 已 E11-05 完成）</li>
       </ul>
       <span class="ws-tile-arrow">→</span>
     </a>
