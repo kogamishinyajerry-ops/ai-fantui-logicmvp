@@ -1,0 +1,71 @@
+You are Codex GPT-5.4 acting as **Persona P3 — Demo Presenter** (Tier-A 5-persona pipeline, E11-05 sub-phase).
+
+# Shared context for E11-05 review (all 5 personas)
+
+**Repo:** `kogamishinyajerry-ops/ai-fantui-logicmvp`
+**Branch:** `feat/e11-05-wow-starter-cards-20260425`
+**PR:** #18
+**Worktree HEAD:** `a02729a` (single commit on top of main `a17e744`)
+
+## What E11-05 ships
+
+Per `E11-00-PLAN.md` row E11-05: top-of-/workbench one-click starter cards for the three demo wow scenarios.
+
+Files in scope:
+- `src/well_harness/static/workbench.html` — NEW `<section id="workbench-wow-starters">` between topbar (line 49) and trust banner. Contains 3 cards keyed `data-wow-id="wow_{a,b,c}"`.
+- `src/well_harness/static/workbench.css` — NEW selectors `.workbench-wow-starters*`, `.workbench-wow-card*`, `.workbench-wow-run-button`, `.workbench-wow-result*`.
+- `src/well_harness/static/workbench.js` — NEW `WOW_SCENARIOS` const, `runWowScenario(wowId)`, `installWowStarters()`, plus 1 hook line in DOMContentLoaded.
+- `src/well_harness/static/workbench_start.html` — 3 [REWRITE] lines updating stale claims that E11-05 hadn't shipped.
+- `tests/test_workbench_wow_starters.py` — NEW (10 tests covering static HTML invariants, JS wiring, live endpoint contracts).
+- `.planning/phases/E11-workbench-engineer-first-ux/E11-05-SURFACE-INVENTORY.md` — NEW (records the [ANCHORED]/[REWRITE] taxonomy + Tier-A trigger).
+- `.planning/phases/E11-workbench-engineer-first-ux/PERSONA-ROTATION-STATE.md` — appended E11-05 = Tier-A.
+
+## Three scenarios
+
+| ID | Endpoint | Payload sentinel | Source contract |
+|---|---|---|---|
+| wow_a | `POST /api/lever-snapshot` | `BEAT_DEEP_PAYLOAD` (tra=-35°, n1k=0.92, deploy=95%) | `tests/e2e/test_wow_a_causal_chain.py:51` |
+| wow_b | `POST /api/monte-carlo/run` | `{system_id:"thrust-reverser", n_trials:1000, seed:42}` | `tests/e2e/test_wow_b_monte_carlo.py:_run` |
+| wow_c | `POST /api/diagnosis/run` | `{system_id:"thrust-reverser", outcome:"deploy_confirmed", max_results:10}` | `tests/e2e/test_wow_c_reverse_diagnose.py:test_wow_c_deploy_confirmed_returns_nonempty_results` |
+
+## Truth-engine red line (must hold)
+
+Files NOT touched: `src/well_harness/controller.py`, `runner.py`, `models.py`, `src/well_harness/adapters/`. `git diff --name-only main..a02729a` should show only static/, tests/, and .planning/ paths.
+
+## Verification status
+
+- 913 / 913 pytest pass (10 new tests in `test_workbench_wow_starters.py`, 0 regression)
+- `pytest tests/test_workbench_wow_starters.py -q` returns 10 passed in ~2s
+- All three e2e contract tests for wow_a/b/c continue to pass against the same payloads the cards send
+
+## Out of scope
+
+- E11-06 status bar (truth-engine SHA, e2e status) — separate sub-phase
+- E11-08 no-chrome demo mode — explicit follow-up sub-phase
+- Stylistic font/color tuning beyond what's in the new selectors — E11-15 sweep scope
+- Per-system payload variations (currently fixed `system_id="thrust-reverser"`) — flag as INFO/NIT only
+- Backend changes to /api/lever-snapshot, /api/monte-carlo/run, /api/diagnosis/run — explicit out-of-scope (truth-engine red line)
+
+## Your specific lens
+
+Focus on: does this land for the live demo arc — card titles convey the wow, copy is rehearsable, latency feels live, results panel is readable from across the room, error states don't break the flow.
+
+Read the files listed under "Files in scope" above (full, not summarized). Form an independent verdict from your persona's perspective.
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+For each finding, classify:
+- **BLOCKER** — must fix before merge (regression, safety, contract violation)
+- **IMPORTANT** — should fix in this PR or follow-up sub-phase
+- **NIT** — minor, optional
+- **INFO** — note for the record
+
+Each finding should cite a file:line. If you raise out-of-scope findings (E11-06/E11-08/E11-15 territory or backend), label them INFO/NIT only — not BLOCKER.
+
+If you live-probe (boot demo_server, curl, etc.), cite the probe.
+
+Truth-engine red line check: confirm `git diff --name-only a17e744..a02729a` shows zero changes to controller.py / runner.py / models.py / src/well_harness/adapters/.
+
+Sign as: **P3 — Demo Presenter (Tier-A, E11-05)**

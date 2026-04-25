@@ -121,50 +121,172 @@ def test_workbench_js_installWowStarters_wired_to_dom() -> None:
 # ─── 3. Live endpoint contracts the cards depend on ──────────────────
 
 
-def test_wow_a_live_endpoint_returns_nodes(server) -> None:
-    """wow_a card summarize() reads body.nodes — must be a list on 200."""
-    status, body = _post(server, "/api/lever-snapshot", {
-        "tra_deg": -35,
-        "radio_altitude_ft": 2,
-        "engine_running": True,
-        "aircraft_on_ground": True,
-        "reverser_inhibited": False,
-        "eec_enable": True,
-        "n1k": 0.92,
-        "feedback_mode": "auto_scrubber",
-        "deploy_position_percent": 95,
-    })
+# ─── P1+P2+P4 R2 BLOCKER fix: lock exact canonical card payloads ─────
+#
+# The exact payloads are FROZEN via these literals. If workbench.js drifts
+# (e.g. n_trials → 50, max_results → 5, n1k → 0.5), the test below catches
+# it before it reaches a live demo.
+WOW_A_FROZEN_PAYLOAD = {
+    "tra_deg": -35,
+    "radio_altitude_ft": 2,
+    "engine_running": True,
+    "aircraft_on_ground": True,
+    "reverser_inhibited": False,
+    "eec_enable": True,
+    "n1k": 0.92,
+    "feedback_mode": "auto_scrubber",
+    "deploy_position_percent": 95,
+}
+WOW_B_FROZEN_PAYLOAD = {"system_id": "thrust-reverser", "n_trials": 1000, "seed": 42}
+WOW_C_FROZEN_PAYLOAD = {
+    "system_id": "thrust-reverser",
+    "outcome": "deploy_confirmed",
+    "max_results": 10,
+}
+
+
+def _extract_wow_scenarios_payloads_from_js() -> dict[str, dict]:
+    """Parse the WOW_SCENARIOS block out of workbench.js so the exact card
+    literals can be compared against the frozen e2e contracts."""
+    js = (STATIC_DIR / "workbench.js").read_text(encoding="utf-8")
+    out: dict[str, dict] = {}
+    for wow_id, frozen in (
+        ("wow_a", WOW_A_FROZEN_PAYLOAD),
+        ("wow_b", WOW_B_FROZEN_PAYLOAD),
+        ("wow_c", WOW_C_FROZEN_PAYLOAD),
+    ):
+        # Each scenario is keyed by `<wow_id>: { ... }` inside WOW_SCENARIOS.
+        # We don't need a full JS parser: assert each frozen field appears
+        # in the file in a payload key:value form near the wow_id.
+        anchor = js.find(f"{wow_id}:")
+        assert anchor != -1, f"WOW_SCENARIOS missing entry for {wow_id}"
+        # Take a slice large enough to contain the whole payload object.
+        slice_ = js[anchor : anchor + 1200]
+        for k, v in frozen.items():
+            if isinstance(v, bool):
+                literal = "true" if v else "false"
+            elif isinstance(v, str):
+                literal = f'"{v}"'
+            else:
+                literal = str(v)
+            assert (
+                f"{k}: {literal}" in slice_
+            ), f"{wow_id}.{k} drift: expected `{k}: {literal}` near {wow_id}: in workbench.js"
+        out[wow_id] = frozen
+    return out
+
+
+def test_workbench_js_freezes_exact_canonical_payloads() -> None:
+    """Lock every shipped wow_a/b/c payload literal against the e2e contract.
+
+    P1+P2+P4 R2 BLOCKER fix — without this, n_trials/seed/max_results/n1k
+    can silently drift in workbench.js and the cards would no longer match
+    `tests/e2e/test_wow_a_causal_chain.py:51`,
+    `tests/e2e/test_wow_b_monte_carlo.py:_run`, or
+    `tests/e2e/test_wow_c_reverse_diagnose.py:test_wow_c_deploy_confirmed`.
+    """
+    _extract_wow_scenarios_payloads_from_js()
+
+
+def test_wow_a_live_endpoint_with_exact_card_payload(server) -> None:
+    """wow_a card POSTs the EXACT BEAT_DEEP_PAYLOAD; assert e2e contract."""
+    status, body = _post(server, "/api/lever-snapshot", WOW_A_FROZEN_PAYLOAD)
     assert status == 200
     assert isinstance(body.get("nodes"), list)
     assert len(body["nodes"]) > 0
+    # P1+P2+P5 R2 BLOCKER fix: the card no longer overstates "L1–L4
+    # latched"; verify the actual e2e contract holds — under auto_scrubber
+    # BEAT_DEEP must latch logic2+logic3+logic4 (logic1 may drop out).
+    logic = body.get("logic", {}) or {}
+    assert isinstance(logic, dict), "wow_a response must expose `logic` dict"
+    active = {k for k, v in logic.items() if isinstance(v, dict) and v.get("active") is True}
+    assert {"logic2", "logic3", "logic4"} <= active, (
+        f"BEAT_DEEP must latch at least logic2+logic3+logic4, got {active}"
+    )
 
 
-def test_wow_b_live_endpoint_returns_success_rate(server) -> None:
-    """wow_b card summarize() reads body.success_rate / n_failures / n_trials."""
-    status, body = _post(server, "/api/monte-carlo/run", {
-        "system_id": "thrust-reverser",
-        "n_trials": 100,
-        "seed": 42,
-    })
+def test_wow_b_live_endpoint_with_exact_card_payload(server) -> None:
+    """wow_b card POSTs n_trials=1000, seed=42 — probe with the SAME values."""
+    status, body = _post(server, "/api/monte-carlo/run", WOW_B_FROZEN_PAYLOAD)
     assert status == 200
+    assert body["n_trials"] == 1000  # exact card value, not 100
     assert "success_rate" in body
     assert "n_failures" in body
-    assert "n_trials" in body
-    assert body["n_trials"] == 100
 
 
-def test_wow_c_live_endpoint_returns_results(server) -> None:
-    """wow_c card summarize() reads body.outcome / total_combos_found / results / grid_resolution."""
-    status, body = _post(server, "/api/diagnosis/run", {
-        "system_id": "thrust-reverser",
-        "outcome": "deploy_confirmed",
-        "max_results": 5,
-    })
+def test_wow_c_live_endpoint_with_exact_card_payload(server) -> None:
+    """wow_c card POSTs max_results=10 — probe with the SAME value."""
+    status, body = _post(server, "/api/diagnosis/run", WOW_C_FROZEN_PAYLOAD)
     assert status == 200
     assert body["outcome"] == "deploy_confirmed"
     assert "total_combos_found" in body
     assert "grid_resolution" in body
     assert isinstance(body.get("results"), list)
+    assert len(body["results"]) <= 10  # bounded by max_results
+
+
+# ─── P4 R2 IMPORTANT fix: lock selector contract ─────────────────────
+
+
+@pytest.mark.parametrize("wow_id", ["wow_a", "wow_b", "wow_c"])
+def test_workbench_html_card_has_run_button_selector(wow_id: str) -> None:
+    """The click handler binds via .workbench-wow-run-button[data-wow-action="run"];
+    if the selector contract drifts the card becomes inert."""
+    html = (STATIC_DIR / "workbench.html").read_text(encoding="utf-8")
+    # Each card must have a button with class workbench-wow-run-button,
+    # data-wow-action="run", and matching data-wow-id.
+    pattern = re.compile(
+        r'<button[^>]*?class="workbench-wow-run-button"[^>]*?'
+        r'data-wow-action="run"[^>]*?data-wow-id="' + re.escape(wow_id) + r'"',
+        re.DOTALL,
+    )
+    alt_pattern = re.compile(
+        r'<button[^>]*?data-wow-id="' + re.escape(wow_id) + r'"[^>]*?'
+        r'class="workbench-wow-run-button"[^>]*?data-wow-action="run"',
+        re.DOTALL,
+    )
+    assert pattern.search(html) or alt_pattern.search(html), (
+        f"wow card {wow_id} is missing the click-binding selector contract"
+    )
+
+
+# ─── P4 R2 IMPORTANT fix: lock workbench_start.html [REWRITE] copy ───
+
+
+def test_workbench_start_reflects_e11_05_shipped() -> None:
+    """The 3 [REWRITE] lines on workbench_start.html must claim E11-05 has shipped,
+    not the stale 'not yet shipped' text."""
+    html = (STATIC_DIR / "workbench_start.html").read_text(encoding="utf-8")
+    # Positive claim (must appear): cards are live on /workbench.
+    assert "wow_a/b/c 起手卡片已上线（E11-05）" in html
+    # Negative claim (must NOT appear): the stale "not yet shipped" line.
+    assert "wow_a/b/c 起手卡片是 E11-05 范围，本期暂未上线" not in html
+    # Negative claim (must NOT appear): "no UI 走读 surface".
+    assert "没有 UI 走读 surface" not in html
+
+
+# ─── P1 R2 IMPORTANT fix: error-path UI assertions ──────────────────
+
+
+def test_workbench_js_runWowScenario_handles_http_error_and_timeout() -> None:
+    """The click handler must render HTTP-error and abort/timeout failures
+    distinctly, never a stuck `POST ... ` placeholder.
+
+    P1 R2 BLOCKER fix — without bounded timeout + abort path, the card
+    freezes mid-demo when an endpoint stalls.
+    """
+    js = (STATIC_DIR / "workbench.js").read_text(encoding="utf-8")
+    # AbortController + bounded timeout
+    assert "AbortController" in js, "no abort path; stalled requests freeze the card"
+    assert "WOW_REQUEST_TIMEOUT_MS" in js, "no bounded timeout constant"
+    assert "AbortError" in js, "AbortError branch must render distinct copy"
+    # HTTP-error branch
+    assert 'data-wow-state", "error"' in js
+    # Re-enable the button on every exit (success / error / abort)
+    assert "button.disabled = false" in js
+    # Sanity: the timeout constant has a real numeric value, not 0.
+    m = re.search(r"WOW_REQUEST_TIMEOUT_MS\s*=\s*(\d+)", js)
+    assert m and int(m.group(1)) >= 1000, "timeout must be ≥ 1000ms"
 
 
 def test_workbench_html_serves_with_wow_section(server) -> None:

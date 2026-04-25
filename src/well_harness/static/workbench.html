@@ -72,7 +72,9 @@
             </header>
             <p class="workbench-wow-card-desc">
               POST <code>/api/lever-snapshot</code> with BEAT_DEEP_PAYLOAD (tra=-35°, n1k=0.92,
-              deploy=95%) — latches L1–L4 deep-deploy chain.
+              deploy=95%, feedback_mode=auto_scrubber) — under auto_scrubber pullback the
+              gates that latch are L2/L3/L4 (L1 drops out as reverser_not_deployed_eec
+              flips false mid-deploy, per <code>tests/e2e/test_wow_a_causal_chain.py</code>).
             </p>
             <button
               type="button"

@@ -214,14 +214,16 @@
 }
 
 .workbench-wow-result {
+  /* P3 R2 IMPORTANT fix: bump font-size from 0.78rem → 0.92rem so the
+     live-summary line is readable from across the room on a projector. */
   min-height: 1.3rem;
-  padding: 0.5rem 0.65rem;
+  padding: 0.55rem 0.7rem;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.04);
-  color: rgba(206, 223, 236, 0.82);
+  color: rgba(206, 223, 236, 0.86);
   font-family: "SFMono-Regular", "Menlo", monospace;
-  font-size: 0.78rem;
-  line-height: 1.45;
+  font-size: 0.92rem;
+  line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
 }

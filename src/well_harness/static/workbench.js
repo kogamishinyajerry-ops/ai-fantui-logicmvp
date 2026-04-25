@@ -3790,12 +3790,21 @@ function installFeedbackModeAffordance() {
 }
 
 // E11-05 (2026-04-25): wow_a/b/c canonical-scenario starter cards.
-// Mirrors BEAT_DEEP_PAYLOAD from tests/e2e/test_wow_a_causal_chain.py and the
-// monte-carlo / reverse-diagnose API contracts from the matching e2e suites.
-// One click → POST → single-line summary in the card's result area.
+// Mirrors BEAT_DEEP_PAYLOAD from tests/e2e/test_wow_a_causal_chain.py:51 and
+// the monte-carlo / reverse-diagnose API contracts from the matching e2e
+// suites. One click → POST (with bounded timeout) → single-line summary in
+// the card's result area.
+//
+// The exact card payloads are FROZEN — tests/test_workbench_wow_starters.py
+// asserts byte-equality against this object; do not silently re-tune
+// n_trials, max_results, n1k, or BEAT_DEEP_PAYLOAD shape without updating
+// the regression lock and the surface-inventory drift acceptance.
+const WOW_REQUEST_TIMEOUT_MS = 10000;
+
 const WOW_SCENARIOS = {
   wow_a: {
     endpoint: "/api/lever-snapshot",
+    // BEAT_DEEP_PAYLOAD per tests/e2e/test_wow_a_causal_chain.py:51
     payload: {
       tra_deg: -35,
       radio_altitude_ft: 2,
@@ -3807,10 +3816,19 @@ const WOW_SCENARIOS = {
       feedback_mode: "auto_scrubber",
       deploy_position_percent: 95,
     },
+    // P1+P2+P5 R2 fix: read actual logic-gate states from the response
+    // instead of overstating "L1–L4 latched". Under auto_scrubber pullback
+    // the e2e contract says BEAT_DEEP latches at minimum {logic2, logic3,
+    // logic4} with logic1 dropping out (reverser_not_deployed_eec flips
+    // false mid-deploy). Print the live active set verbatim so the card
+    // never overstates the truth.
     summarize: (body) => {
+      const logic = body && typeof body.logic === "object" ? body.logic : {};
+      const order = ["logic1", "logic2", "logic3", "logic4"];
+      const active = order.filter((k) => logic[k] && logic[k].active === true);
       const nodes = Array.isArray(body && body.nodes) ? body.nodes : [];
-      const active = nodes.filter((n) => n && n.state === "active").length;
-      return `nodes=${nodes.length} · active=${active} · L1–L4 chain latched.`;
+      const activeStr = active.length === 0 ? "none" : active.join("+");
+      return `nodes=${nodes.length} · active=[${activeStr}] · mode=auto_scrubber`;
     },
   },
   wow_b: {
@@ -3853,12 +3871,20 @@ async function runWowScenario(wowId) {
   }
   result.removeAttribute("data-wow-state");
   result.textContent = `POST ${scenario.endpoint} ...`;
+  // P1 R2 BLOCKER fix: bounded timeout via AbortController so a stalled
+  // endpoint cannot freeze the card mid-demo.
+  const controller =
+    typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timeoutHandle = controller
+    ? setTimeout(() => controller.abort(), WOW_REQUEST_TIMEOUT_MS)
+    : null;
   try {
     const t0 = performance.now();
     const response = await fetch(scenario.endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(scenario.payload),
+      signal: controller ? controller.signal : undefined,
     });
     const ms = Math.round(performance.now() - t0);
     let body = null;
@@ -3877,8 +3903,15 @@ async function runWowScenario(wowId) {
     result.textContent = `200 OK · ${scenario.summarize(body)} · ${ms}ms`;
   } catch (err) {
     result.setAttribute("data-wow-state", "error");
-    result.textContent = `network error: ${err && err.message ? err.message : err}`;
+    if (err && err.name === "AbortError") {
+      result.textContent = `timed out after ${WOW_REQUEST_TIMEOUT_MS}ms · click again to retry`;
+    } else {
+      result.textContent = `network error: ${err && err.message ? err.message : err}`;
+    }
   } finally {
+    if (timeoutHandle !== null) {
+      clearTimeout(timeoutHandle);
+    }
     if (button) {
       button.disabled = false;
     }
