@@ -36,8 +36,25 @@
         </label>
       </section>
 
+      <section id="workbench-annotation-toolbar" class="workbench-annotation-toolbar" aria-label="Annotation tools">
+        <span class="workbench-annotation-toolbar-label">Annotation</span>
+        <button type="button" class="workbench-annotation-tool is-active" data-annotation-tool="point">Point</button>
+        <button type="button" class="workbench-annotation-tool" data-annotation-tool="area">Area</button>
+        <button type="button" class="workbench-annotation-tool" data-annotation-tool="link">Link</button>
+        <button type="button" class="workbench-annotation-tool" data-annotation-tool="text-range">Text Range</button>
+        <span id="workbench-annotation-active-tool" class="workbench-annotation-active-tool" aria-live="polite">
+          Point tool active
+        </span>
+      </section>
+
       <section class="workbench-collab-grid" aria-label="Three-column collaboration workbench">
-        <article id="workbench-control-panel" class="workbench-collab-column" data-column="control">
+        <article
+          id="workbench-control-panel"
+          class="workbench-collab-column workbench-annotation-surface"
+          data-column="control"
+          data-annotation-surface="control"
+          tabindex="0"
+        >
           <header>
             <p class="eyebrow">control panel</p>
             <h2>Scenario Control</h2>
@@ -51,7 +68,13 @@
           </div>
         </article>
 
-        <article id="workbench-document-panel" class="workbench-collab-column" data-column="document">
+        <article
+          id="workbench-document-panel"
+          class="workbench-collab-column workbench-annotation-surface"
+          data-column="document"
+          data-annotation-surface="document"
+          tabindex="0"
+        >
           <header>
             <p class="eyebrow">document</p>
             <h2>Spec Review Surface</h2>
@@ -65,7 +88,13 @@
           </div>
         </article>
 
-        <article id="workbench-circuit-panel" class="workbench-collab-column" data-column="circuit">
+        <article
+          id="workbench-circuit-panel"
+          class="workbench-collab-column workbench-annotation-surface"
+          data-column="circuit"
+          data-annotation-surface="circuit"
+          tabindex="0"
+        >
           <header>
             <p class="eyebrow">circuit</p>
             <h2>Logic Circuit Surface</h2>
@@ -1015,6 +1044,7 @@
       </div>
     </main>
 
+    <script src="/annotation_overlay.js"></script>
     <script src="/workbench.js"></script>
   </body>
 </html>

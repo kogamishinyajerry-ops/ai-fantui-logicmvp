@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-fantui.local/schemas/annotation_proposal.schema.json",
+  "title": "AnnotationProposal",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "tool",
+    "surface",
+    "anchor",
+    "note",
+    "author",
+    "ticket_id",
+    "system_id",
+    "status",
+    "created_at",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^prop_[A-Za-z0-9_-]{3,96}$"
+    },
+    "tool": {
+      "type": "string",
+      "enum": ["point", "area", "link", "text-range"]
+    },
+    "surface": {
+      "type": "string",
+      "enum": ["control", "document", "circuit"]
+    },
+    "anchor": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": true,
+      "properties": {
+        "x": {"type": "number", "minimum": 0, "maximum": 1},
+        "y": {"type": "number", "minimum": 0, "maximum": 1},
+        "width": {"type": "number", "minimum": 0, "maximum": 1},
+        "height": {"type": "number", "minimum": 0, "maximum": 1},
+        "href": {"type": "string"},
+        "selector": {"type": "string"},
+        "start_offset": {"type": "integer", "minimum": 0},
+        "end_offset": {"type": "integer", "minimum": 0},
+        "text_quote": {"type": "string"}
+      }
+    },
+    "note": {
+      "type": "string",
+      "minLength": 1
+    },
+    "author": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ticket_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "system_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "accepted", "rejected"]
+    },
+    "created_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "updated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}
