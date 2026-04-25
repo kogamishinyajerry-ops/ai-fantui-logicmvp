@@ -17,7 +17,12 @@
           <p class="eyebrow">control logic workbench</p>
           <h1>Control Logic Workbench</h1>
         </div>
-        <div id="workbench-identity" class="workbench-collab-chip" data-role="ENGINEER">
+        <div
+          id="workbench-identity"
+          class="workbench-collab-chip"
+          data-role="ENGINEER"
+          data-identity-name="Kogami"
+        >
           <span>Identity</span>
           <strong>Kogami / Engineer</strong>
         </div>
@@ -345,6 +350,24 @@
         </button>
         <span>Approval actions are Kogami-only.</span>
       </footer>
+
+      <section
+        id="workbench-pending-signoff-affordance"
+        class="workbench-pending-signoff"
+        role="status"
+        aria-live="polite"
+        data-pending-signoff="hidden"
+      >
+        <span class="workbench-pending-signoff-icon" aria-hidden="true">🛈</span>
+        <div class="workbench-pending-signoff-body">
+          <strong>Pending Kogami sign-off</strong>
+          <span>
+            你的提案已加入排队，等待 Kogami 处理。Approval 操作是 Kogami 专属
+            authority — 你的角色当前不会看到 disabled UI，而是这条 explicit
+            "排队中" 提示。
+          </span>
+        </div>
+      </section>
 
       <section
         id="approval-center-panel"
