@@ -3956,11 +3956,52 @@ function installWowStarters() {
   });
 }
 
+// E11-06 (2026-04-26): hydrate the state-of-the-world status bar.
+// Reads /api/workbench/state-of-world and writes the four advisory
+// fields into the bar. Falls back to "—" so the page never shows a
+// half-broken bar. Failures are silent (the bar starts with "…"
+// placeholders so there is no flash of the wrong content).
+const WORKBENCH_STATE_OF_WORLD_PATH = "/api/workbench/state-of-world";
+
+async function hydrateStateOfWorldBar() {
+  const bar = document.getElementById("workbench-state-of-world-bar");
+  if (!bar) {
+    return;
+  }
+  try {
+    const response = await fetch(WORKBENCH_STATE_OF_WORLD_PATH, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) {
+      return;
+    }
+    const payload = await response.json();
+    const writeField = (key, value) => {
+      const slot = bar.querySelector(`[data-sow-value="${key}"]`);
+      if (slot) {
+        slot.textContent =
+          value === null || value === undefined || value === ""
+            ? "—"
+            : String(value);
+      }
+    };
+    writeField("truth_engine_sha", payload.truth_engine_sha);
+    writeField("recent_e2e_label", payload.recent_e2e_label);
+    writeField("adversarial_label", payload.adversarial_label);
+    writeField("open_known_issues_count", payload.open_known_issues_count);
+  } catch (_err) {
+    // Silent — the bar already shows "…" placeholders, which renders as
+    // a benign "still loading" state instead of a broken half-page.
+  }
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   bootWorkbenchShell();
   installViewModeHandlers();
   installFeedbackModeAffordance();
   installWowStarters();
+  void hydrateStateOfWorldBar();
 
   // E11-09 (2026-04-25): bundle UI lives on /workbench/bundle, served by
   // workbench_bundle.html. The /workbench shell page (workbench.html) does
