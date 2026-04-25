@@ -375,6 +375,17 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                             "For authoritative manual feedback, use /api/lever-snapshot "
                             "with feedback_mode=manual_feedback_override + sign-off."
                         ),
+                        # E11-14 R3 (P2 R2 IMPORTANT #4 fix, 2026-04-25): every 409
+                        # path must disclose the deferred replay/freshness gap so
+                        # callers don't mistake structural validation for latched
+                        # authorization. set_vdt's bypass nature is itself a live
+                        # residual risk surface.
+                        "residual_risk": (
+                            "Test-probe bypass remains structural; "
+                            "test_probe_acknowledgment=true is not authentication. "
+                            "Replay/nonce/freshness validation and one-shot latching are "
+                            "scoped to E11-16 (approval endpoint hardening)."
+                        ),
                     },
                 )
                 return

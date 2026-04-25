@@ -238,6 +238,11 @@ def test_set_vdt_requires_test_probe_acknowledgment(server) -> None:
     assert body.get("error") == "test_probe_unacknowledged"
     assert "test probe" in body.get("message", "").lower()
     assert "/api/lever-snapshot" in body.get("message", "")
+    # P2 R2 IMPORTANT #4 R3 fix: every 409 path must disclose deferred
+    # replay/freshness scope (not just /api/lever-snapshot).
+    risk = body.get("residual_risk", "")
+    assert "E11-16" in risk
+    assert "structural" in risk.lower() or "authentication" in risk.lower()
 
 
 def test_set_vdt_with_acknowledgment_succeeds(server) -> None:
