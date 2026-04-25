@@ -102,6 +102,27 @@ def test_workbench_html_does_not_carry_stale_column_title(stale: str) -> None:
     assert stale not in html, f"stale technical-noun copy still present: {stale}"
 
 
+# ─── 2b. New pre-hydration boot-status copy is POSITIVELY locked ──────
+#
+# P4 R1 IMPORTANT fix: rows 7/9/11 of the surface inventory cover the
+# pre-hydration "Waiting for ... panel boot." strings. R1 only verified
+# absence of the stale copy; R2 also asserts presence of the new copy
+# so a drift to any other phrasing would fail the suite.
+
+
+@pytest.mark.parametrize(
+    "boot_status",
+    [
+        "Waiting for probe &amp; trace panel boot.",
+        "Waiting for annotate &amp; propose panel boot.",
+        "Waiting for hand off &amp; track panel boot.",
+    ],
+)
+def test_workbench_html_carries_new_boot_status(boot_status: str) -> None:
+    html = (STATIC_DIR / "workbench.html").read_text(encoding="utf-8")
+    assert boot_status in html, f"missing renamed pre-hydration boot status: {boot_status}"
+
+
 # ─── 3. Underlying IDs / data attributes preserved ──────────────────
 #
 # Per E11-00-PLAN row E11-03: rename touches *visible copy only*. The
@@ -135,17 +156,23 @@ def test_workbench_html_preserves_stable_anchor(anchor: str) -> None:
 # ─── 4. JS boot status copy matches new column names ────────────────
 
 
+# P4 R1 NIT fix: lock the FULL hydrated boot-status sentence (not just
+# the "X ready" prefix), so future drift in the staging note is also
+# caught. P5 R1 IMPORTANT fix: the strings must NOT contain internal
+# roadmap tokens like "E07+" or "E07".
+
+
 @pytest.mark.parametrize(
     "boot_copy",
     [
-        "Probe & Trace ready",
-        "Annotate & Propose ready",
-        "Hand off & Track ready",
+        "Probe & Trace ready. Scenario actions are staged for the next bundle.",
+        "Annotate & Propose ready. Text-range annotation is staged for the next bundle.",
+        "Hand off & Track ready. Overlay annotation is staged for the next bundle.",
     ],
 )
 def test_workbench_js_boot_status_uses_new_names(boot_copy: str) -> None:
     js = (STATIC_DIR / "workbench.js").read_text(encoding="utf-8")
-    assert boot_copy in js, f"workbench.js boot status missing: {boot_copy}"
+    assert boot_copy in js, f"workbench.js boot status missing exact string: {boot_copy}"
 
 
 def test_workbench_js_boot_status_drops_stale_names() -> None:
@@ -155,6 +182,42 @@ def test_workbench_js_boot_status_drops_stale_names() -> None:
     assert "Control panel ready" not in js
     assert "Document panel ready" not in js
     assert "Circuit panel ready" not in js
+
+
+def test_workbench_js_boot_status_drops_internal_phase_tokens() -> None:
+    """P5 R1 IMPORTANT fix: roadmap tokens like 'E07+'/'E07' must not
+    leak into user-visible boot status strings."""
+    js = (STATIC_DIR / "workbench.js").read_text(encoding="utf-8")
+    # Scope the check to the three boot functions to avoid false
+    # positives in unrelated comments/blocks.
+    for fn in (
+        "bootWorkbenchControlPanel",
+        "bootWorkbenchDocumentPanel",
+        "bootWorkbenchCircuitPanel",
+    ):
+        anchor = js.find(f"function {fn}")
+        assert anchor != -1, f"missing function {fn}"
+        slice_ = js[anchor : anchor + 600]
+        assert "E07" not in slice_, (
+            f"internal phase token 'E07' leaked into {fn} boot status"
+        )
+
+
+# P1 R1 NIT fix: failure-path fallback must use the engineer-task verb,
+# not the internal columnName token.
+
+
+def test_workbench_js_failure_fallback_uses_task_verb_label() -> None:
+    js = (STATIC_DIR / "workbench.js").read_text(encoding="utf-8")
+    # WORKBENCH_COLUMN_LABEL maps control/document/circuit → task verbs
+    assert "WORKBENCH_COLUMN_LABEL" in js
+    assert '"control": "Probe & Trace"' in js or 'control: "Probe & Trace"' in js
+    assert '"document": "Annotate & Propose"' in js or 'document: "Annotate & Propose"' in js
+    assert '"circuit": "Hand off & Track"' in js or 'circuit: "Hand off & Track"' in js
+    # Failure copy must reference the label, not the raw columnName.
+    assert "${label} panel failed independently" in js, (
+        "failure fallback should use the engineer-task verb label, not the raw column token"
+    )
 
 
 # ─── 5. Live-served /workbench reflects the rename end-to-end ───────

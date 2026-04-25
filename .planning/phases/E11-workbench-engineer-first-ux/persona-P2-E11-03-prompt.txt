@@ -1,0 +1,77 @@
+You are Codex GPT-5.4 acting as **Persona P2 — Senior FCS Engineer** (Tier-A 5-persona pipeline, E11-03 sub-phase).
+
+# Shared context for E11-03 review (all 5 personas)
+
+**Repo:** `kogamishinyajerry-ops/ai-fantui-logicmvp`
+**Branch:** `feat/e11-03-column-rename-20260426`
+**PR:** #19
+**Worktree HEAD:** `2df105c` (single commit on top of main `18fdb46`)
+
+## What E11-03 ships
+
+Per E11-00-PLAN row E11-03: rename the three /workbench shell columns from technical nouns to engineer-task verbs while preserving every underlying ID so e2e selectors and JS boot wiring keep working.
+
+Mapping (12 [REWRITE] lines in lockstep):
+| Old | New |
+|---|---|
+| Scenario Control | Probe & Trace · 探针与追踪 |
+| Spec Review Surface | Annotate & Propose · 标注与提案 |
+| Logic Circuit Surface | Hand off & Track · 移交与跟踪 |
+
+(Each title + eyebrow + default boot status + hydrated JS boot status — 4 strings × 3 columns = 12.)
+
+Files in scope:
+- `src/well_harness/static/workbench.html` — 3 [REWRITE] blocks at the column `<header>` + status div (lines ~208-253)
+- `src/well_harness/static/workbench.js` — 3 [REWRITE] boot status strings in `bootWorkbenchControlPanel/DocumentPanel/CircuitPanel` (lines ~63-91)
+- `tests/test_workbench_column_rename.py` — NEW (32 tests covering new copy, stale-copy absence, stable anchors, JS boot copy, live-served route)
+- `.planning/phases/E11-workbench-engineer-first-ux/E11-03-SURFACE-INVENTORY.md` — NEW
+- `.planning/phases/E11-workbench-engineer-first-ux/PERSONA-ROTATION-STATE.md` — appended E11-03 = Tier-A
+
+## Stable-ID invariants (must hold)
+
+The plan explicitly says "保留底层 ID 不变以免 e2e 测试失效". E11-03 preserves:
+
+- `id="workbench-control-panel"` / `data-column="control"` / `data-annotation-surface="control"` / `id="workbench-control-status"`
+- `id="workbench-document-panel"` / `data-column="document"` / `data-annotation-surface="document"` / `id="workbench-document-status"`
+- `id="workbench-circuit-panel"` / `data-column="circuit"` / `data-annotation-surface="circuit"` / `id="workbench-circuit-status"`
+
+The new test file asserts all 12 anchors are still present.
+
+## Truth-engine red line (must hold)
+
+`git diff --name-only main..2df105c` should show only:
+- `.planning/phases/E11-workbench-engineer-first-ux/*`
+- `src/well_harness/static/workbench.html`
+- `src/well_harness/static/workbench.js`
+- `tests/test_workbench_column_rename.py`
+
+NOT touched: `controller.py`, `runner.py`, `models.py`, `src/well_harness/adapters/`.
+
+## Verification status
+
+- 951 / 951 pytest pass (32 new tests in `test_workbench_column_rename.py`, 0 regression)
+- All e2e tests still green (no e2e selector depends on the visible heading text)
+
+## Out of scope
+
+- Re-styling the columns (font, color, spacing) — E11-15 polish scope
+- Other workbench surfaces (annotation toolbar, approval center, wow starter cards) — separate sub-phases
+- Backend or controller code — explicit out-of-scope (truth-engine red line)
+
+## Your specific lens
+
+Focus on: boundary correctness — every stable ID/data-column anchor preserved, no e2e selector silently broken, no API contract drift.
+
+Read the files listed under "Files in scope" (full). Form an independent verdict from your persona's perspective.
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+Each finding: BLOCKER / IMPORTANT / NIT / INFO with file:line citation. Out-of-scope items (E11-15 polish, separate sub-phases, backend) → NIT/INFO only.
+
+Live-probe at least one path you're unsure about (e.g. boot demo_server, GET /workbench, verify rendered text). Cite the probe.
+
+Truth-engine red line: confirm `git diff --name-only main..2df105c` shows only the 4 in-scope path types listed above.
+
+Sign as: **P2 — Senior FCS Engineer (Tier-A, E11-03)**
