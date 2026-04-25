@@ -3737,9 +3737,62 @@ function installViewModeHandlers() {
   setViewMode("beginner");
 }
 
+// E11-13 (2026-04-25): manual_feedback_override trust-affordance.
+// Reads #workbench-feedback-mode chip's data-feedback-mode attribute; mirrors
+// it onto #workbench-trust-banner so the banner shows only when mode =
+// manual_feedback_override. Provides setFeedbackMode(mode) for runtime updates
+// (e.g., when the snapshot endpoint reports a different mode in future
+// E11-14+). Banner dismissal is session-local (sessionStorage); chip + actual
+// mode value remain visible across dismissals.
+function syncTrustBannerForMode(mode) {
+  const banner = document.getElementById("workbench-trust-banner");
+  if (banner) {
+    banner.setAttribute("data-feedback-mode", mode);
+  }
+}
+
+function setFeedbackMode(mode) {
+  const allowed = new Set(["manual_feedback_override", "truth_engine"]);
+  if (!allowed.has(mode)) {
+    return false;
+  }
+  const chip = document.getElementById("workbench-feedback-mode");
+  if (chip) {
+    chip.setAttribute("data-feedback-mode", mode);
+    const label = chip.querySelector("strong");
+    if (label) {
+      label.textContent = mode === "truth_engine" ? "Truth Engine" : "Manual (advisory)";
+    }
+  }
+  syncTrustBannerForMode(mode);
+  return true;
+}
+
+function installFeedbackModeAffordance() {
+  const chip = document.getElementById("workbench-feedback-mode");
+  const banner = document.getElementById("workbench-trust-banner");
+  if (!chip || !banner) {
+    return;
+  }
+  syncTrustBannerForMode(chip.getAttribute("data-feedback-mode") || "manual_feedback_override");
+  if (window.sessionStorage && window.sessionStorage.getItem("workbench-trust-banner-dismissed") === "1") {
+    banner.setAttribute("data-trust-banner-dismissed", "true");
+  }
+  const dismiss = banner.querySelector("[data-trust-banner-dismiss]");
+  if (dismiss) {
+    dismiss.addEventListener("click", () => {
+      banner.setAttribute("data-trust-banner-dismissed", "true");
+      if (window.sessionStorage) {
+        window.sessionStorage.setItem("workbench-trust-banner-dismissed", "1");
+      }
+    });
+  }
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   bootWorkbenchShell();
   installViewModeHandlers();
+  installFeedbackModeAffordance();
 
   // E11-09 (2026-04-25): bundle UI lives on /workbench/bundle, served by
   // workbench_bundle.html. The /workbench shell page (workbench.html) does

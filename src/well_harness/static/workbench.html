@@ -25,6 +25,18 @@
           <span>Ticket</span>
           <strong>WB-E06-SHELL</strong>
         </div>
+        <div
+          id="workbench-feedback-mode"
+          class="workbench-collab-chip workbench-feedback-mode-chip"
+          data-feedback-mode="manual_feedback_override"
+          data-mode-authority="advisory"
+          aria-live="polite"
+          title="Manual feedback override is advisory — truth engine readings remain authoritative."
+        >
+          <span>Feedback Mode</span>
+          <strong>Manual (advisory)</strong>
+          <span class="workbench-feedback-mode-dot" aria-hidden="true"></span>
+        </div>
         <label class="workbench-collab-system" for="workbench-system-select">
           <span>System</span>
           <select id="workbench-system-select">
@@ -35,6 +47,31 @@
           </select>
         </label>
       </section>
+
+      <aside
+        id="workbench-trust-banner"
+        class="workbench-trust-banner"
+        data-feedback-mode="manual_feedback_override"
+        role="note"
+        aria-label="Feedback mode trust affordance"
+      >
+        <span class="workbench-trust-banner-icon" aria-hidden="true">⚠</span>
+        <div class="workbench-trust-banner-body">
+          <strong>Manual feedback mode is advisory.</strong>
+          <span>
+            Truth engine readings (logic gates L1–L4, controller dispatch, audit chain) remain authoritative.
+            Your manual feedback is recorded for diff/review but does not change source-of-truth values.
+          </span>
+        </div>
+        <button
+          type="button"
+          class="workbench-trust-banner-dismiss"
+          aria-label="Hide trust banner for this session"
+          data-trust-banner-dismiss
+        >
+          Hide for session
+        </button>
+      </aside>
 
       <section id="workbench-annotation-toolbar" class="workbench-annotation-toolbar" aria-label="Annotation tools">
         <span class="workbench-annotation-toolbar-label">Annotation</span>
