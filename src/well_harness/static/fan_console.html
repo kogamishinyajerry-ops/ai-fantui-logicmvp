@@ -416,7 +416,10 @@ function syncVdtInj(){
   fetch('/api/fantui/set_vdt',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({deploy_position_percent:pct}),
+    // E11-14 R2: explicit test-probe acknowledgment (this UI is a debug
+    // console; for authoritative manual feedback, use /api/lever-snapshot
+    // with sign-off via the workbench Approval Center).
+    body:JSON.stringify({deploy_position_percent:pct,test_probe_acknowledgment:true}),
   }).then(r=>r.ok&&r.json()).then(snap=>{
     if(snap&&snap.deploy_position_percent!=null)
       $('v_pos').textContent=snap.deploy_position_percent.toFixed(1)+'%';

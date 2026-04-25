@@ -18,6 +18,10 @@ PORT = int(os.environ.get("WELL_HARNESS_PORT", "8766"))
 # using manual_feedback_override so the truth-engine resilience tests (which
 # exercise the override path) keep working under the new server guard.
 # Tests of the guard itself live in tests/test_lever_snapshot_manual_override_guard.py.
+#
+# ⚠ CANNED ADVERSARIAL-TEST FIXTURE — NOT REAL AUTHENTICATION. These are
+# placeholder strings that make adversarial probes well-formed; they do not
+# represent any signed approval. Replay/nonce/freshness checks are E11-16.
 MANUAL_OVERRIDE_SIGNOFF = {
     "actor": "AdversarialBot",
     "ticket_id": "WB-ADVERSARIAL",

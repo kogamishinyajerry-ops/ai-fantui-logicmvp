@@ -354,6 +354,30 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, {"ok": True, "t_s": 0.0})
             return
         if parsed.path == FANTUI_SET_VDT_PATH:
+            # E11-14 R2 (P2 BLOCKER #2, 2026-04-25): set_vdt is a test probe
+            # that bypasses the /api/lever-snapshot sign-off contract. The
+            # endpoint stays available for the fan-console debug UI but now
+            # requires an explicit `test_probe_acknowledgment` field so a
+            # caller cannot accidentally use it to inject manual feedback
+            # while believing they're going through the authority chain.
+            # The 409 message explains the alternative (use /api/lever-snapshot
+            # with sign-off when authority semantics matter).
+            ack = request_payload.get("test_probe_acknowledgment")
+            if ack is not True:
+                self._send_json(
+                    409,
+                    {
+                        "error": "test_probe_unacknowledged",
+                        "message": (
+                            "/api/fantui/set_vdt is a test probe that bypasses the "
+                            "manual_feedback_override authority chain. To use it from "
+                            "tests/dev tooling, pass test_probe_acknowledgment=true. "
+                            "For authoritative manual feedback, use /api/lever-snapshot "
+                            "with feedback_mode=manual_feedback_override + sign-off."
+                        ),
+                    },
+                )
+                return
             try:
                 pct = float(request_payload.get("deploy_position_percent", 0))
             except (TypeError, ValueError):
@@ -651,6 +675,17 @@ def _validate_manual_override_signoff(request_payload: dict, feedback_mode: str)
                 "manual_feedback_override requires actor + ticket_id + manual_override_signoff. "
                 "Acquire sign-off via Approval Center, or switch to auto_scrubber."
             ),
+            # E11-14 R2 (P2 IMPORTANT #4, 2026-04-25): residual risk disclosure.
+            # The current sign-off check is structural only — same triplet can
+            # authorize multiple override payloads (replay) and signed_at is
+            # not freshness-checked. One-shot latch / nonce / freshness is the
+            # E11-16 approval-endpoint hardening scope. Until E11-16 lands,
+            # this guard is "shape correct" not "latched authorization".
+            "residual_risk": (
+                "Sign-off is structural only. Replay across payloads is not blocked; "
+                "signed_at is not freshness-validated. One-shot latch + nonce + "
+                "server-issued approvals scoped to E11-16 (approval endpoint hardening)."
+            ),
         }
 
     if not isinstance(actor, str) or not actor.strip():
@@ -685,6 +720,17 @@ def _validate_manual_override_signoff(request_payload: dict, feedback_mode: str)
         return reject(
             "manual_override_signoff.ticket_id",
             "manual_override_signoff.ticket_id must match the request's ticket_id.",
+        )
+
+    # E11-14 R2 fix (P2 BLOCKER #1, 2026-04-25): actor must equal
+    # manual_override_signoff.signed_by. Without this binding, an attacker
+    # can submit `actor="Mallory"` with `signed_by="Kogami"` and the server
+    # would accept it (P2 verified via live probe). Bind requester identity
+    # to the signoff's signer.
+    if signed_by.strip() != actor.strip():
+        return reject(
+            "actor",
+            "actor must match manual_override_signoff.signed_by (impersonation guard).",
         )
 
     return None
@@ -1088,11 +1134,11 @@ def parse_lever_snapshot_request(request_payload: dict) -> tuple[dict | None, di
         return None, error_payload
     lever_inputs["feedback_mode"] = feedback_mode
 
-    # E11-14: enforce server-side role guard on manual_feedback_override.
-    # No-op for auto_scrubber; returns 409 payload when signoff missing/invalid.
-    signoff_error = _validate_manual_override_signoff(request_payload, feedback_mode)
-    if signoff_error is not None:
-        return None, signoff_error
+    # E11-14 R1 had the guard here; moved to the END of structural parsing
+    # in R2 (P2 IMPORTANT #3, 2026-04-25): a malformed
+    # deploy_position_percent="oops" + missing signoff used to return 409
+    # manual_override_unsigned, masking the real 400. Authority guard now
+    # runs on otherwise-well-formed manual-override requests only.
 
     deploy_position_percent, error_payload = _parse_float_input(
         request_payload,
@@ -1137,6 +1183,15 @@ def parse_lever_snapshot_request(request_payload: dict) -> tuple[dict | None, di
             )
         if normalized_faults:
             lever_inputs["_fault_injections"] = normalized_faults
+
+    # E11-14 R2 (P2 IMPORTANT #3): authority guard runs AFTER structural
+    # parsing so 400 (malformed) precedes 409 (unsigned). No-op for
+    # auto_scrubber; returns 409 payload with `_status` hint when signoff
+    # missing/invalid for manual_feedback_override.
+    signoff_error = _validate_manual_override_signoff(request_payload, feedback_mode)
+    if signoff_error is not None:
+        return None, signoff_error
+
     return lever_inputs, None
 
 

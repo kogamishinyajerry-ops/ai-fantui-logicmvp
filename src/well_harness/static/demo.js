@@ -105,11 +105,15 @@
   // ═══════════ Request builder ═══════════
 
   function buildRequest() {
-    // E11-14 (2026-04-25): /api/lever-snapshot now requires actor + ticket_id +
+    // E11-14 (2026-04-25): /api/lever-snapshot requires actor + ticket_id +
     // manual_override_signoff when feedback_mode = manual_feedback_override.
-    // Demo flow ships canned sign-off matching the demo Approval Center exit
-    // state (Kogami signed WB-DEMO at deploy). Real UI will fill these from
-    // the sign-off ticket post-E11-08.
+    //
+    // ⚠ CANNED DEMO DATA — NOT REAL AUTHENTICATION. The values below are a
+    // hardcoded test-harness sign-off so the demo flow keeps working under
+    // the new server guard. Server today validates only field shape +
+    // actor↔signed_by binding + ticket cross-binding; replay/nonce/freshness
+    // hardening is E11-16 scope. Do NOT show these strings to customers as
+    // proof of authentication. Real sign-off via Approval Center post-E11-08.
     return {
       tra_deg:                  numValue(inputs.tra, 0),
       radio_altitude_ft:        numValue(inputs.ra, 0),

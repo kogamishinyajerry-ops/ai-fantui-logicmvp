@@ -1,0 +1,57 @@
+You are reviewing E11-14 PR #17 (commit 00adad7, branch feat/e11-14-manual-feedback-server-guard-20260425).
+
+You are P2 (CHEN Wei, Senior FCS Engineer, 10y reverser experience). Your full base prompt is at .planning/codex_personas/P2-senior-fcs.md — please read it for persona context. Use that base mission and output format.
+
+This is a Tier-B review (1 persona) per governance bundle #2. P2 was selected as round-robin successor of E11-13 (P1); senior FCS persona fits this PR's authority-contract / API-contract subject matter.
+
+## E11-14 scope (what to review)
+
+Server-side role guard added to `/api/lever-snapshot`:
+- When `feedback_mode = "manual_feedback_override"`, request must include:
+  - `actor` (non-empty string)
+  - `ticket_id` (non-empty string)
+  - `manual_override_signoff` (object with `signed_by`, `signed_at`, `ticket_id`)
+  - `manual_override_signoff.ticket_id` MUST equal request `ticket_id` (cross-binding check)
+- Missing/malformed → 409 Conflict with `error: "manual_override_unsigned"` + remediation message pointing to Approval Center.
+- `feedback_mode = "auto_scrubber"`: no extra fields required (unchanged path).
+
+Files modified:
+- `src/well_harness/demo_server.py` — `_validate_manual_override_signoff()` + `parse_lever_snapshot_request` integration + handler `_status` plumbing
+- `src/well_harness/static/demo.js` — demo client now sends sign-off triplet
+- `src/well_harness/static/adversarial_test.py` — `api()` auto-attaches sign-off
+- `tools/demo_path_smoke.py` — smoke harness auto-attaches sign-off
+- `tests/conftest.py` — shared `with_signoff_if_manual_override()` helper
+- `tests/test_demo.py` / `test_demo_fault_injection.py` / `test_fantui_tick_runtime.py` — 5 affected tests updated
+- `tests/test_lever_snapshot_manual_override_guard.py` — 8 new guard tests
+
+Truth-engine red line: 0 changes to `controller.py` / `runner.py` / `models.py` / `adapters/` (verified via `git diff --stat main..HEAD`).
+
+Per E11-00-PLAN §3 row E11-14: this PR forms the second line of defense paired with E11-13 (PR #16, already merged) UI affordance. Together: "UI 看不到 + 服务端拒绝" — UI hides override controls when not signed off, server rejects unsigned override requests.
+
+## Your task as P2 (Senior FCS, authority-contract focus)
+
+Apply your base P2 mission output format. Findings must be at least 5 numbered findings. Specifically scrutinize:
+
+1. **Authority contract correctness**: does the guard correctly distinguish "request well-formed but unsigned" (409) from "request malformed" (400)? Is the cross-binding check (`signoff.ticket_id == request.ticket_id`) sufficient, or does it allow ticket-replay attacks (e.g., signing one ticket and reusing the signoff object across many requests)?
+
+2. **One-shot latch semantics**: should sign-off be single-use (latched, can't be replayed)? Right now the guard accepts any signoff object that matches structurally. Is "signoff has nonce / timestamp validation" needed for E11-14 scope, or is that out-of-scope (E11-16 approval endpoint hardening)?
+
+3. **Server-side bypass paths**: are there other endpoints that mutate truth-engine state which should also be guarded? (Spot-check: `/api/timeline-simulate`, `/api/fantui/*`, etc.)
+
+4. **Test coverage gaps**: do the 8 new guard tests cover the full state space (auto_scrubber path / valid signoff / 6 negative cases)? Anything missing?
+
+5. **Demo-canned signoff risk**: demo.js ships hardcoded `actor=Kogami, ticket_id=WB-DEMO`. Is this a security smell that customer-facing demos could mistake for authentication? Or acceptable in an internal demo harness?
+
+## Output format
+
+Use your base P2 prompt's output format. End with:
+- VERDICT: APPROVE | CHANGES_REQUIRED | BLOCKER
+- Severity-tagged findings (BLOCKER / IMPORTANT / NIT) with file:line anchors
+- Anti-bias check: name ≥1 finding you'd expect OTHER personas (P1/P3/P4/P5) to MISS
+
+Boot command:
+  cd /Users/Zhuanz/Documents/Codex/2026-04-18-computer-use-plugin-computer-use-openai/ai-fantui-logicmvp
+  PYTHONPATH=src python3 -m well_harness.demo_server --port 8806 > /tmp/p2_server.log 2>&1 &
+  sleep 2
+
+Reply per your base P2 mission output format.

@@ -19,6 +19,10 @@ from well_harness.adapters.c919_etras_frozen_v1 import LockInputs, RawInputs
 # helper to extend their request payload with a fixed sign-off triplet.
 # Tests of the guard itself (negative cases) live in
 # tests/test_lever_snapshot_manual_override_guard.py.
+#
+# ⚠ CANNED TEST FIXTURE — NOT REAL AUTHENTICATION. signed_by/ticket_id are
+# placeholder strings that satisfy the structural guard. Replay/nonce/
+# freshness checks are E11-16 scope.
 MANUAL_OVERRIDE_SIGNOFF = {
     "actor": "TestSuite",
     "ticket_id": "WB-TEST",
