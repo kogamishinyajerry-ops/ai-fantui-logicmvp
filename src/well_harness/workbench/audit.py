@@ -9,6 +9,8 @@ from uuid import uuid4
 
 
 PROPOSAL_AUDIT_EVENT_TYPES = ("proposal.submitted", "proposal.accepted", "proposal.rejected")
+PR_AUDIT_EVENT_TYPES = ("pr.submitted", "pr.accepted", "pr.rejected", "ticket.closed")
+WORKBENCH_AUDIT_EVENT_TYPES = PROPOSAL_AUDIT_EVENT_TYPES + PR_AUDIT_EVENT_TYPES
 
 
 def _utc_now() -> str:
@@ -47,7 +49,7 @@ class AuditEventLog:
         payload: dict[str, Any] | None = None,
         observed_at: str | None = None,
     ) -> dict[str, Any]:
-        if event_type not in PROPOSAL_AUDIT_EVENT_TYPES:
+        if event_type not in WORKBENCH_AUDIT_EVENT_TYPES:
             raise ValueError(f"unsupported audit event type: {event_type}")
         event = {
             "id": f"evt_{uuid4().hex}",

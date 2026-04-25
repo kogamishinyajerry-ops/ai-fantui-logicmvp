@@ -1,0 +1,33 @@
+{
+  "Authorized Engineer": "claude-code",
+  "Created At": "2026-04-25T04:06:32Z",
+  "Generated Prompt": "# Claude Code Workbench Ticket\n\n## anchor\n\n- Proposal: prop_demo_e2e_001\n- Ticket: WB-E10-DEMO\n- System: thrust-reverser\n- Authorized Engineer: claude-code\n- Surface: document\n- Tool: text-range\n- Note: Demo ticket for PR review and close loop evidence.\n- Anchor JSON: {\"end_offset\": 28, \"selector\": \"#workbench-document-panel\", \"start_offset\": 0, \"text_quote\": \"Reference packet\"}\n\n## scope\n\n- src/well_harness/workbench/**\n- docs/workbench/**\n\n## acceptance\n\n- Implement only the scoped Workbench change requested by the annotation proposal.\n- Preserve proposal ID `prop_demo_e2e_001` and ticket ID `WB-E10-DEMO` in handoff notes.\n- Add or update focused tests for the changed behavior.\n- Run the repo's fast-lane validation before handing back.\n\n## non-goals\n\n- Do not edit controller truth, adapter truth, logic gates, pitch materials, or Parking Lot items.\n- Do not write to Notion directly.\n- Do not expand scope files without Kogami approval.\n- Do not present a local stub as a merged or deployed change.\n",
+  "PR URL": "local-demo://workbench-e2e-20260425T040608Z",
+  "Proposal": {
+    "anchor": {
+      "end_offset": 28,
+      "selector": "#workbench-document-panel",
+      "start_offset": 0,
+      "text_quote": "Reference packet"
+    },
+    "author": "engineer-a",
+    "created_at": "2026-04-25T04:06:08Z",
+    "id": "prop_demo_e2e_001",
+    "note": "Demo ticket for PR review and close loop evidence.",
+    "source": {},
+    "status": "pending",
+    "surface": "document",
+    "system_id": "thrust-reverser",
+    "ticket_id": "WB-E10-DEMO",
+    "tool": "text-range",
+    "updated_at": "2026-04-25T04:06:08Z"
+  },
+  "Scope Files": [
+    "src/well_harness/workbench/**",
+    "docs/workbench/**"
+  ],
+  "Source Proposal": "prop_demo_e2e_001",
+  "Task": "WB-E10-DEMO",
+  "Type": "Workbench Annotation",
+  "Verdict": "Pending"
+}
