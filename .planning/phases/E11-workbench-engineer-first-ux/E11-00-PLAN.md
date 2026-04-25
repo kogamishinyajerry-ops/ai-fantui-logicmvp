@@ -17,6 +17,7 @@
 2. 5 个 Codex personas 各自跑一次 review，BLOCKER 等级问题 = 0；IMPORTANT 等级 ≤ 2 个/persona。
 3. main 三轨绿（default ≥ 863 / e2e 27 passed / adversarial 8/8）。
 4. truth-engine 红线 0 触碰。
+5. **(v2.3) 每个子 phase 的 user-facing copy 在 §Surface Inventory 全数登记**，锚点 line 真实存在；评审者抽查 1-3 行命中率 100%。
 
 ---
 
@@ -37,6 +38,38 @@
 | State-of-the-world | 没有顶部 status bar 显示当前真值引擎版本、最近一次 e2e 结果、known issues | 工程师必须读 HANDOVER 才能判断 baseline 健康度 |
 
 > **方法论备注**：以上数字均来自 `wc -l src/well_harness/static/workbench.html` 等真实 grep（满足 v6.1 EMPIRICAL-CLAIM-PROBE rule）；UI surface 的"22 widgets"来自 `grep -c "data-annotation-tool\|data-approval-action\|workbench-collab-"` 实测。
+
+---
+
+## 1.5 Surface Inventory（v2.3 UI-COPY-PROBE 强制）
+
+> 凡本期引入或修改 user-facing copy（tile / label / empty state / tooltip / modal / banner / onboarding），
+> 在此逐条登记，触发 v2.3 UI-COPY-PROBE。叙述形容词不登记，可定位声明必登记。
+>
+> 每个子 phase 结束前，必须在该子 phase 的 PR body 或专属 SURFACE-INVENTORY.md 里补完此表。
+> E11-02 的 worked example 见 `E11-02-SURFACE-INVENTORY.md`。
+
+### Format（每行一个 claim）
+
+| # | Copy 出处 (file:line) | Claim 摘录 (≤40 字) | 类别 | Anchor / Plan-ID | 状态 |
+|---|---|---|---|---|---|
+| 1 | static/<file>:L<n> | "<claim>" | feature-name / field-name / behavior / role-gate / data-source / format-spec / limit / surface-location | src/<file>:L<n> 或 E11-XX | [ANCHORED] / [REWRITE → planned for <Phase-ID>] / [DELETE] |
+
+### 字段约束
+- **Copy 出处**：必填，file:line 必须落到本期 PR diff 内的具体行
+- **Claim 摘录**：必填，剥离修饰只留可验证骨架
+- **类别**（枚举）：feature-name / field-name / behavior / role-gate / data-source / format-spec / limit / surface-location
+- **Anchor / Plan-ID**：[ANCHORED] 必填 src 锚点 file:line；[REWRITE] 必填 Plan-ID（如 E11-04 / E12-01）；[DELETE] 留 "—"
+- **状态**（枚举）：[ANCHORED] / [REWRITE → planned for <Phase-ID>] / [DELETE]
+
+### 总计
+- ANCHORED: <N1>
+- REWRITE-as-planned: <N2>  ← 写入 commit trailer
+- DELETE: <N3>
+
+### 审查锚（给 Codex / 评审者）
+- 评审者从本表抽查任意 1-3 行的 src 锚点真实性
+- 表为空或与本期 copy diff 行数明显不匹配 → CHANGES_REQUIRED，不进入逐条 ripgrep
 
 ---
 
@@ -73,6 +106,8 @@
 
 > 红线维持: E11-01..12 全部仅触碰 `src/well_harness/static/workbench.{html,css,js}`、`src/well_harness/static/annotation_overlay.js`、新增的 e2e 测试、新增的 `.planning/` 文档。**不进入** `controller.py` / `runner.py` / `models.py` (truth-bearing) / `adapters/` / wow_a fixture。
 
+> **(v2.3) Copy 硬约束**: 本期 user-facing copy 必须在 §1.5 Surface Inventory 全数登记，未登记的 copy 改动视为越界。每个子 phase PR body 或同级 `<phase-id>-SURFACE-INVENTORY.md` 必须含完整表 + ANCHORED/REWRITE/DELETE 三类计数 + commit trailer `UI-Copy-Probe: <N> claims swept (<A> anchored / <P> planned / <D> deleted)`。E11-02 已追溯补登 `E11-02-SURFACE-INVENTORY.md`，作为模板范例。
+
 ---
 
 ## 4. Tier-1 Adversarial Self-Review（v5.2 红线 #3 强制）
@@ -96,6 +131,12 @@
 **反对论点**: Epic-06..10 已经把 Workbench 完整交付，再开 E11 是不是 over-engineering？应该作为 Epic-06 的 follow-up minor PR 即可。
 
 **Rebuttal**: (a) E11 跨 5 epic 的 UI surface（onboarding 跨 06，annotation 跨 07，approval 跨 08，prompt/ticket 跨 09，PR review 跨 10）— 单 PR 解决会变成 mega-PR；分 12 个 sub-phase 各自小 PR + Codex review，可控性更高。(b) E11 引入新 governance artefact (Codex personas pipeline)，本身值得 phase-level 文档 trace。(c) v6.1 Solo Autonomy 允许 Claude Code 自启 phase，不需要怕 phase 数量；过度细分 < 过度合并造成的回退困难。结论：用 Phase 是正确粒度。
+
+### Counterargument C-UI: "本期 copy 里我是否写了一个 src/ 还没 ship 的 surface？"
+
+**反对论点**（v2.3 立法后强制必答）: landing / tile / banner / tooltip 的 copy 是否描述了某个 feature / field / role-gate / behavior，而该 surface 在当前 commit 的 src/ 里其实不存在或只存在于计划态？
+
+**Rebuttal stage**: 本期作者必须在 commit 前对每条 user-facing copy claim 执行 grep 回 src/ 的 sweep，结果登记到 §1.5 Surface Inventory，三选一处置（ANCHORED / REWRITE-as-planned / DELETE）。E11-02 4 轮 Codex round-trip（详 RETRO-V61-054）证明：缺这道反射弧时，Codex 会逐条 ripgrep 在 review 阶段揭穿，付出 4 轮代价；做完反射弧后 Codex 只需抽查 inventory 1-3 行真实性即可一轮 APPROVE。结论：每个含 user-facing copy 的子 phase 必填 §Surface Inventory，不能跳过。
 
 ---
 
