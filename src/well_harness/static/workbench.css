@@ -104,6 +104,71 @@
   box-shadow: 0 0 6px rgba(120, 220, 170, 0.5);
 }
 
+/* E11-06 (2026-04-26): state-of-the-world status bar.
+   1-line top-of-/workbench bar showing truth-engine SHA · recent e2e ·
+   adversarial · open known-issues. Read-only, advisory. The trailing
+   "advisory" flag is the contract that this is NOT a live truth-engine
+   reading. */
+.workbench-state-of-world-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid rgba(206, 223, 236, 0.18);
+  border-radius: 8px;
+  background: rgba(8, 18, 34, 0.65);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: rgba(206, 223, 236, 0.86);
+}
+
+.workbench-sow-eyebrow {
+  margin-right: 0.4rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(206, 223, 236, 0.1);
+  color: rgba(206, 223, 236, 0.7);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.workbench-sow-field {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.workbench-sow-label {
+  color: rgba(206, 223, 236, 0.62);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+}
+
+.workbench-sow-value {
+  font-family: "SFMono-Regular", "Menlo", monospace;
+  color: #d8ecff;
+  font-size: 0.88rem;
+}
+
+.workbench-sow-sep {
+  color: rgba(206, 223, 236, 0.32);
+  font-weight: 600;
+}
+
+.workbench-sow-flag {
+  margin-left: auto;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(247, 188, 92, 0.14);
+  color: #f7d398;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
 /* E11-05 (2026-04-25): wow_a/b/c canonical-scenario starter cards.
    Top-of-/workbench placement so the demo presenter has a one-click
    走读 entrypoint to BEAT_DEEP_PAYLOAD / Monte-Carlo / Reverse-Diagnose

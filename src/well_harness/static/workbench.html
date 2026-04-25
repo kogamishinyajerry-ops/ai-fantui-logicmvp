@@ -49,6 +49,41 @@
       </section>
 
       <section
+        id="workbench-state-of-world-bar"
+        class="workbench-state-of-world-bar"
+        aria-label="State-of-the-world status bar (advisory)"
+        data-status-kind="advisory"
+      >
+        <span class="workbench-sow-eyebrow">state of world</span>
+        <span class="workbench-sow-field" data-sow-field="truth_engine_sha"
+              title="git rev-parse --short HEAD">
+          <span class="workbench-sow-label">truth-engine SHA</span>
+          <span class="workbench-sow-value" data-sow-value="truth_engine_sha">…</span>
+        </span>
+        <span class="workbench-sow-sep" aria-hidden="true">·</span>
+        <span class="workbench-sow-field" data-sow-field="recent_e2e"
+              title="docs/coordination/qa_report.md (most recent test run)">
+          <span class="workbench-sow-label">recent e2e</span>
+          <span class="workbench-sow-value" data-sow-value="recent_e2e_label">…</span>
+        </span>
+        <span class="workbench-sow-sep" aria-hidden="true">·</span>
+        <span class="workbench-sow-field" data-sow-field="adversarial"
+              title="docs/coordination/qa_report.md (shared validation)">
+          <span class="workbench-sow-label">adversarial</span>
+          <span class="workbench-sow-value" data-sow-value="adversarial_label">…</span>
+        </span>
+        <span class="workbench-sow-sep" aria-hidden="true">·</span>
+        <span class="workbench-sow-field" data-sow-field="known_issues"
+              title="docs/known-issues/ file count">
+          <span class="workbench-sow-label">open issues</span>
+          <span class="workbench-sow-value" data-sow-value="open_known_issues_count">…</span>
+        </span>
+        <span class="workbench-sow-flag" aria-hidden="false">
+          advisory · not a live truth-engine reading
+        </span>
+      </section>
+
+      <section
         id="workbench-wow-starters"
         class="workbench-wow-starters"
         aria-label="Canonical demo scenarios — one-click starter cards"

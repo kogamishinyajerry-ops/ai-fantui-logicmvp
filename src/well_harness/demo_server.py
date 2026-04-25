@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import replace
+from datetime import datetime
 from functools import lru_cache
 import json
 import math
@@ -72,6 +73,8 @@ WORKBENCH_BUNDLE_PATH = "/api/workbench/bundle"
 WORKBENCH_REPAIR_PATH = "/api/workbench/repair"
 WORKBENCH_ARCHIVE_RESTORE_PATH = "/api/workbench/archive-restore"
 WORKBENCH_RECENT_ARCHIVES_PATH = "/api/workbench/recent-archives"
+# E11-06 (2026-04-26): state-of-the-world status bar endpoint.
+WORKBENCH_STATE_OF_WORLD_PATH = "/api/workbench/state-of-world"
 MONITOR_RA_START_FT = 7.0
 MONITOR_RA_RATE_FT_PER_S = 1.0
 MONITOR_TRA_START_S = 1.0
@@ -222,6 +225,14 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == WORKBENCH_RECENT_ARCHIVES_PATH:
             self._send_json(200, workbench_recent_archives_payload())
+            return
+        if parsed.path == WORKBENCH_STATE_OF_WORLD_PATH:
+            # E11-06 (2026-04-26): aggregated state-of-the-world for the
+            # /workbench top-of-page status bar. Read-only — never mutates
+            # truth-engine state. Fields are *advisory*: they reflect the
+            # last-recorded evidence (git SHA + qa_report.md + freeze
+            # packet), not a live test run.
+            self._send_json(200, workbench_state_of_world_payload())
             return
 
         # Default entry: unified landing page with 2x3 card grid
@@ -1294,6 +1305,98 @@ def workbench_recent_archives_payload() -> dict:
     return {
         "default_archive_root": str(default_workbench_archive_root()),
         "recent_archives": recent_workbench_archive_summaries(),
+    }
+
+
+# ─── E11-06: state-of-the-world helpers ──────────────────────────────
+
+
+def _truth_engine_short_sha() -> str:
+    """Return the short HEAD SHA of the working repo, or 'unknown' if
+    git is unavailable. The bar copy must never crash the page."""
+    import subprocess
+    try:
+        repo_root = Path(__file__).resolve().parents[2]
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip() or "unknown"
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        pass
+    return "unknown"
+
+
+def _read_recent_evidence_lines() -> dict:
+    """Parse the most-recent evidence stamp out of the coordination
+    qa_report. Returns three optional fields. Falls back to empty
+    strings if the file is missing or malformed; the bar then renders
+    "—" instead of crashing."""
+    repo_root = Path(__file__).resolve().parents[2]
+    qa_report = repo_root / "docs" / "coordination" / "qa_report.md"
+    out = {
+        "recent_e2e_label": "",
+        "adversarial_label": "",
+        "last_executed_evidence": "",
+    }
+    try:
+        text = qa_report.read_text(encoding="utf-8")
+    except (FileNotFoundError, OSError):
+        return out
+    # Match e.g. "175 tests OK"
+    m = re.search(r"(\d+)\s*tests?\s*OK", text)
+    if m:
+        out["recent_e2e_label"] = f"{m.group(1)} tests OK"
+    # Match e.g. "8/8 shared validation checks pass"
+    m = re.search(r"(\d+/\d+)\s*shared validation", text)
+    if m:
+        out["adversarial_label"] = f"{m.group(1)} shared validation pass"
+    # Match the most recent execution evidence backtick block
+    m = re.search(r"最近成功执行证据：`([^`]+)`", text)
+    if m:
+        out["last_executed_evidence"] = m.group(1)
+    return out
+
+
+def _open_known_issues_count() -> int:
+    """Count files in docs/known-issues/ (or /known_issues/). Returns 0
+    if the directory does not exist."""
+    repo_root = Path(__file__).resolve().parents[2]
+    for candidate in ("known-issues", "known_issues"):
+        directory = repo_root / "docs" / candidate
+        if directory.is_dir():
+            return sum(
+                1
+                for entry in directory.iterdir()
+                if entry.is_file() and entry.suffix in {".md", ".txt"}
+            )
+    return 0
+
+
+def workbench_state_of_world_payload() -> dict:
+    """E11-06: aggregate read-only fields for the /workbench status bar.
+
+    Honest about its advisory nature: every field has a `source` label
+    so the user can trace where a given value came from, and the
+    `kind: "advisory"` flag is the contract that this is NOT a live
+    truth-engine reading."""
+    evidence = _read_recent_evidence_lines()
+    return {
+        "kind": "advisory",
+        "truth_engine_sha": _truth_engine_short_sha(),
+        "truth_engine_sha_source": "git rev-parse --short HEAD",
+        "recent_e2e_label": evidence["recent_e2e_label"] or "—",
+        "recent_e2e_source": "docs/coordination/qa_report.md",
+        "adversarial_label": evidence["adversarial_label"] or "—",
+        "adversarial_source": "docs/coordination/qa_report.md",
+        "open_known_issues_count": _open_known_issues_count(),
+        "open_known_issues_source": "docs/known-issues/ (file count)",
+        "last_executed_evidence": evidence["last_executed_evidence"] or "—",
+        "generated_at": datetime.utcnow().replace(microsecond=0).isoformat() + "Z",
     }
 
 
