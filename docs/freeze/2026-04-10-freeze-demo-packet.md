@@ -5,7 +5,7 @@
 
 - 当前阶段：`P43 Control Logic Workbench end-to-end milestone`
 - 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`E11-03 PR #19 merged (three-column rename to engineer-task verbs, Tier-A 5/5 APPROVE) — 2026-04-26`
+- 最近成功执行证据：`E11-04 PR #20 merged (annotation vocabulary upgrade, Tier-B P3 APPROVE_WITH_NITS) — 2026-04-26`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
