@@ -3740,6 +3740,20 @@ function installViewModeHandlers() {
 window.addEventListener("DOMContentLoaded", () => {
   bootWorkbenchShell();
   installViewModeHandlers();
+
+  // E11-09 (2026-04-25): bundle UI lives on /workbench/bundle, served by
+  // workbench_bundle.html. The /workbench shell page (workbench.html) does
+  // NOT contain bundle elements like #workbench-packet-json,
+  // #load-reference-packet, #run-workbench-bundle, etc. installToolbarHandlers,
+  // updateWorkflowUI, checkUrlIntakeParam, and loadBootstrapPayload all assume
+  // bundle DOM exists and would throw "Cannot read properties of null" on the
+  // shell page. Sentinel = bundle's textarea input. Absent → shell page →
+  // skip bundle boot entirely. This script is shared between both pages.
+  const onBundlePage = document.getElementById("workbench-packet-json") !== null;
+  if (!onBundlePage) {
+    return;
+  }
+
   installToolbarHandlers();
   updateWorkflowUI();
   if (checkUrlIntakeParam()) {
