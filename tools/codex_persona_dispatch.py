@@ -89,10 +89,67 @@ _VERDICT_PATTERNS = [
 ]
 
 
+_TOKENS_MARKER = re.compile(r"(?:^|\n)tokens used\s*\n\s*\d", re.IGNORECASE)
+
+
+def _final_verdict_block(text: str) -> str:
+    """Return only the text AFTER the last `tokens used\\nNNNN` marker.
+
+    E11-10 R2 final-fix: codex's session-tail layout is reliably:
+        codex
+        <real narrative response with verdict + findings>
+        tokens used
+        <token-count number>
+        <CANONICAL clean verdict block — repeated for downstream consumers>
+
+    Parsing the post-tokens-used block avoids ALL of these earlier-noise
+    sources that can false-match the parser:
+      - prompt echo (`Return one of: **APPROVE** / ...`)
+      - codex's own quoted source code listings
+      - probe output (e.g., `collect` JSON dumped during codex's review)
+      - mid-stream verdict speculation
+
+    If `tokens used` is absent, codex hasn't completed — return empty
+    string so callers see verdict=None + tier_b_acceptance=False.
+    """
+    matches = list(_TOKENS_MARKER.finditer(text))
+    if not matches:
+        return ""
+    last = matches[-1]
+    # Skip past the number on the line after "tokens used".
+    after_marker = text[last.end():]
+    # Drop the rest of the digit line.
+    newline_after_number = after_marker.find("\n")
+    if newline_after_number >= 0:
+        return after_marker[newline_after_number + 1:]
+    return ""
+
+
 def parse_verdict(text: str) -> str | None:
-    """Return the LAST verdict mention in the text, since codex tends to
-    repeat the verdict at the bottom of its summary. Returns None if no
-    verdict marker is found."""
+    """Return the verdict from the post-tokens-used canonical block.
+
+    The FIRST verdict marker in the post-tokens block is codex's canonical
+    declaration. Later occurrences inside finding-evidence text (e.g.,
+    "Live probe: `**APPROVE_WITH_NITS**` plus ...") must be ignored.
+
+    Falls back to whole-text LAST-match scan if there is no `tokens used`
+    marker, so legacy / partial inputs still extract *something* — but
+    `collect()` will mark such results as not-yet-acceptable via the
+    completeness gate.
+    """
+    block = _final_verdict_block(text)
+    if block:
+        # Post-tokens block: first verdict wins (canonical declaration).
+        first_match = None
+        for pattern in _VERDICT_PATTERNS:
+            for match in pattern.finditer(block):
+                verdict = match.group(1)
+                if verdict in VERDICTS:
+                    if first_match is None or match.start() < first_match[1]:
+                        first_match = (verdict, match.start())
+        return first_match[0] if first_match else None
+
+    # Fallback (incomplete output): legacy last-wins scan.
     last_match = None
     for pattern in _VERDICT_PATTERNS:
         for match in pattern.finditer(text):
@@ -105,28 +162,43 @@ def parse_verdict(text: str) -> str | None:
 
 # Match `BLOCKER` / `IMPORTANT` / `NIT` / `INFO` only when used as a
 # severity tag at the start of a finding bullet, not in surrounding prose
-# (e.g., the word "important" in normal sentences). Codex outputs them
-# inside backticks or at the start of a list item with a dash.
+# (e.g., the word "important" in normal sentences). Codex emits them in
+# multiple decorated forms:
+#   - bare:        `- BLOCKER finding`
+#   - backticked:  `- \`BLOCKER\` finding`
+#   - bold:        `- **BLOCKER** finding`
+#   - bold+backtick combos: `- **\`BLOCKER\`** finding`
+# E11-10 R2 BLOCKER #2 closure (P1 finding): the bold form was missed,
+# silently zeroing BLOCKER counts and false-passing tier_b_accepts.
 _FINDING_PATTERN = re.compile(
-    r"(?:^|\n)\s*(?:[-*]\s*)?`?(BLOCKER|IMPORTANT|NIT|INFO)`?\b"
+    r"(?:^|\n)\s*(?:[-*]\s*)?(?:\*\*)?`?(?:\*\*)?(BLOCKER|IMPORTANT|NIT|INFO)(?:\*\*)?`?(?:\*\*)?\b"
 )
 
 
 def count_findings(text: str) -> dict[str, int]:
-    """Count finding tags in the codex verdict block. Codex repeats the
-    verdict block at the end of its output, so we de-duplicate by only
-    counting in the LAST verdict block (everything after the last
-    verdict marker)."""
+    r"""Count finding tags in the codex post-tokens-used canonical block.
+
+    The post-tokens-used block is codex's clean tail copy. Within it,
+    findings are bullet-anchored (`- \`BLOCKER\` ...`) so the existing
+    `_FINDING_PATTERN`'s newline anchor avoids matching inline-quoted
+    severity tags inside finding evidence text.
+
+    For completeness when `tokens used` is absent (incomplete output),
+    fall back to the legacy after-last-verdict-marker scoping on the
+    whole text.
+    """
     counts = {sev: 0 for sev in SEVERITIES}
-
-    # Find the last verdict marker; count findings after that point only.
-    last_verdict_pos = -1
-    for pattern in _VERDICT_PATTERNS:
-        for match in pattern.finditer(text):
-            if match.group(1) in VERDICTS and match.start() > last_verdict_pos:
-                last_verdict_pos = match.start()
-
-    scan_text = text[last_verdict_pos:] if last_verdict_pos >= 0 else text
+    block = _final_verdict_block(text)
+    if block:
+        scan_text = block
+    else:
+        # Legacy fallback: scope to after the last verdict marker.
+        last_verdict_pos = -1
+        for pattern in _VERDICT_PATTERNS:
+            for match in pattern.finditer(text):
+                if match.group(1) in VERDICTS and match.start() > last_verdict_pos:
+                    last_verdict_pos = match.start()
+        scan_text = text[last_verdict_pos:] if last_verdict_pos >= 0 else text
 
     for match in _FINDING_PATTERN.finditer(scan_text):
         sev = match.group(1)
@@ -171,10 +243,19 @@ def collect(epic_dir: Path, sub_phase: str, persona: str) -> CollectResult:
     verdict = parse_verdict(text)
     counts = count_findings(text)
     tokens = parse_tokens_used(text)
+    # E11-10 R2 BLOCKER #1 closure (P1 finding): a partial output file
+    # (one-line `Verdict: APPROVE`, fenced code-block quote, or codex
+    # mid-stream) must NOT pass tier_b_acceptance. Codex emits the
+    # `tokens used\nNNNN` marker exactly once at the end of a session;
+    # absence ⇒ output incomplete ⇒ verdict is not authoritative.
+    output_complete = tokens is not None
     if verdict is None:
         notes.append("no verdict marker found — codex may still be running")
     if tokens is None:
-        notes.append("no `tokens used` marker found — codex output may be incomplete")
+        notes.append(
+            "no `tokens used` marker found — codex output may be incomplete; "
+            "tier_b_acceptance forced to false"
+        )
     return CollectResult(
         sub_phase=sub_phase,
         persona=persona,
@@ -182,7 +263,7 @@ def collect(epic_dir: Path, sub_phase: str, persona: str) -> CollectResult:
         verdict=verdict,
         finding_counts=counts,
         tokens_used=tokens,
-        tier_b_acceptance=tier_b_accepts(verdict, counts),
+        tier_b_acceptance=output_complete and tier_b_accepts(verdict, counts),
         notes=notes,
     )
 
@@ -234,6 +315,16 @@ def next_persona(epic_dir: Path) -> str:
 def append_rotation_entry(
     epic_dir: Path, sub_phase: str, persona: str, tier: str, reason: str
 ) -> str:
+    """Append a canonical rotation entry. Tier-A entries automatically
+    receive the `Rotation pointer unchanged` suffix that
+    `parse_rotation_state` requires to skip them — this keeps `append`
+    and `next-persona` semantics in sync.
+
+    E11-10 R2 IMPORTANT closure (P1 finding): without this suffix, a
+    Tier-A row appended via this function would silently consume the
+    rotation pointer because parse_rotation_state would treat it as a
+    normal Tier-A row that must be counted.
+    """
     if tier not in ("A", "B"):
         raise ValueError(f"tier must be 'A' or 'B', got {tier!r}")
     if persona not in PERSONAS:
@@ -241,7 +332,13 @@ def append_rotation_entry(
     state = rotation_state_path(epic_dir)
     if not state.exists():
         raise FileNotFoundError(state)
-    line = f"{sub_phase}: Tier-{tier} (Persona = {persona} — {reason})\n"
+    if tier == "A":
+        line = (
+            f"{sub_phase}: Tier-A (Persona = {persona} — {reason}). "
+            "All 5 personas dispatched. Rotation pointer unchanged.\n"
+        )
+    else:
+        line = f"{sub_phase}: Tier-B (Persona = {persona} — {reason})\n"
     with state.open("a", encoding="utf-8") as fh:
         fh.write(line)
     return line

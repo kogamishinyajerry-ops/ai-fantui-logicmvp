@@ -284,3 +284,171 @@ def test_collect_notes_when_codex_still_running(tmp_path) -> None:
     result = collect(tmp_path, "E11-XX", "P3")
     assert result.verdict is None
     assert any("no verdict marker" in n for n in result.notes)
+
+
+# ─── 10. R2 BLOCKER #1 closure: incomplete output blocks acceptance ──
+
+
+def test_collect_one_line_verdict_does_not_pass_tier_b(tmp_path) -> None:
+    """E11-10 R2 BLOCKER #1: a one-line `Verdict: APPROVE` must not pass
+    tier_b_acceptance because the codex completion marker is missing."""
+    out = tmp_path / "persona-P3-E11-XX-output.md"
+    out.write_text("Verdict: APPROVE\n", encoding="utf-8")
+    result = collect(tmp_path, "E11-XX", "P3")
+    assert result.verdict == "APPROVE"
+    assert result.tokens_used is None
+    assert result.tier_b_acceptance is False, (
+        "incomplete output (no `tokens used` marker) must not pass acceptance"
+    )
+    assert any("tier_b_acceptance forced to false" in n for n in result.notes)
+
+
+def test_collect_quoted_verdict_in_partial_output_does_not_pass_tier_b(tmp_path) -> None:
+    """E11-10 R2 BLOCKER #1: codex mid-stream may quote the prompt's
+    'Return one of: APPROVE / APPROVE_WITH_NITS / CHANGES_REQUIRED'
+    line. Without the `tokens used` completion marker, the parser must
+    refuse to accept."""
+    out = tmp_path / "persona-P3-E11-XX-output.md"
+    out.write_text(
+        "codex investigating ...\n"
+        "Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.\n"
+        "still working...\n",
+        encoding="utf-8",
+    )
+    result = collect(tmp_path, "E11-XX", "P3")
+    assert result.tier_b_acceptance is False
+
+
+def test_collect_complete_output_passes_tier_b(tmp_path) -> None:
+    """Sanity: when both verdict AND `tokens used` markers are present,
+    a clean APPROVE passes."""
+    out = tmp_path / "persona-P3-E11-XX-output.md"
+    out.write_text(
+        "verdict body\n\n**APPROVE_WITH_NITS**\n\n- `NIT` minor\n\ntokens used\n50000\n",
+        encoding="utf-8",
+    )
+    result = collect(tmp_path, "E11-XX", "P3")
+    assert result.tier_b_acceptance is True
+
+
+# ─── 11. R2 BLOCKER #2 closure: bold finding tags are counted ────────
+
+
+def test_count_findings_handles_bold_blocker_tag() -> None:
+    r"""E11-10 R2 BLOCKER #2: `- **BLOCKER** finding` must count exactly
+    like the backticked `- \`BLOCKER\` finding` form."""
+    text = "**APPROVE_WITH_NITS**\n\n- **BLOCKER** something\n- **IMPORTANT** other\n"
+    counts = count_findings(text)
+    assert counts["BLOCKER"] == 1
+    assert counts["IMPORTANT"] == 1
+
+
+def test_count_findings_handles_mixed_tag_decorations() -> None:
+    """Backticked, bold, and bare tags all in one block."""
+    text = (
+        "**APPROVE_WITH_NITS**\n\n"
+        "- **BLOCKER** bold\n"
+        "- `BLOCKER` backticked\n"
+        "- BLOCKER bare\n"
+        "- **`BLOCKER`** bold-and-backticked\n"
+    )
+    assert count_findings(text)["BLOCKER"] == 4
+
+
+def test_tier_b_accepts_blocks_bold_blocker(tmp_path) -> None:
+    """End-to-end through collect: a bold BLOCKER must FAIL acceptance,
+    not silently pass."""
+    out = tmp_path / "persona-P3-E11-XX-output.md"
+    out.write_text(
+        "**APPROVE_WITH_NITS**\n\n- **BLOCKER** must fix\n\ntokens used\n12345\n",
+        encoding="utf-8",
+    )
+    result = collect(tmp_path, "E11-XX", "P3")
+    assert result.finding_counts["BLOCKER"] == 1
+    assert result.tier_b_acceptance is False
+
+
+# ─── 12. R2 IMPORTANT closure: Tier-A append + next-persona consistency ─
+
+
+def test_append_rotation_tier_a_includes_pointer_unchanged_suffix(tmp_path) -> None:
+    """E11-10 R2 IMPORTANT: a Tier-A row appended by `append-rotation`
+    must include the `Rotation pointer unchanged` suffix so that
+    `next-persona` correctly skips it (per constitution)."""
+    state = tmp_path / "PERSONA-ROTATION-STATE.md"
+    state.write_text(
+        "# header\nE11-X: Tier-B (Persona = P5 — start)\n", encoding="utf-8"
+    )
+    line = append_rotation_entry(tmp_path, "E11-Y", "P1", "A", "Tier-A test")
+    assert "Rotation pointer unchanged" in line, (
+        "Tier-A append must include skip-suffix"
+    )
+    # next-persona should still read the previous P5 as the latest
+    # rotation slot, not the new Tier-A row.
+    assert next_persona(tmp_path) == "P1", (
+        "next-persona should be P1 (round-robin successor of last Tier-B P5), "
+        "not P2 (which would be the case if the Tier-A row consumed the slot)"
+    )
+
+
+def test_append_rotation_tier_b_does_not_include_pointer_unchanged(tmp_path) -> None:
+    """Tier-B rows must NOT include the skip-suffix or they'd be skipped
+    by next-persona too."""
+    state = tmp_path / "PERSONA-ROTATION-STATE.md"
+    state.write_text("# header\n", encoding="utf-8")
+    line = append_rotation_entry(tmp_path, "E11-Y", "P3", "B", "Tier-B test")
+    assert "Rotation pointer unchanged" not in line
+
+
+# ─── 13. R2 final-fix: post-tokens scoping defeats self-reference noise ─
+
+
+def test_post_tokens_scoping_picks_canonical_verdict_not_evidence_quote() -> None:
+    """E11-10 R2 final-fix: codex's evidence text in a CHANGES_REQUIRED
+    finding may quote `**APPROVE_WITH_NITS**` (e.g., 'Live probe:
+    `**APPROVE_WITH_NITS**` returned ...'). The parser must pick the
+    FIRST verdict in the post-tokens block (the canonical declaration),
+    not the LAST (which can be an evidence quote)."""
+    text = (
+        "codex narrative ...\n"
+        "tokens used\n"
+        "100000\n"
+        "**CHANGES_REQUIRED**\n"
+        "\n"
+        "- `BLOCKER` finding 1 — Live probe: `**APPROVE_WITH_NITS**` returned wrong\n"
+        "- `BLOCKER` finding 2 — quoting `**APPROVE**` here too\n"
+    )
+    assert parse_verdict(text) == "CHANGES_REQUIRED"
+    counts = count_findings(text)
+    assert counts["BLOCKER"] == 2
+
+
+def test_post_tokens_scoping_ignores_pre_tokens_noise() -> None:
+    """Codex's mid-stream output may quote source code, prompt text,
+    JSON dumps, etc. that mention every verdict literal. None of that
+    should leak past the `tokens used` boundary."""
+    text = (
+        "Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.\n"
+        "VERDICTS = ('APPROVE', 'APPROVE_WITH_NITS', 'CHANGES_REQUIRED')\n"
+        "{'verdict': 'APPROVE_WITH_NITS', 'BLOCKER': 5}\n"
+        "tokens used\n"
+        "9999\n"
+        "**APPROVE**\n"
+    )
+    assert parse_verdict(text) == "APPROVE"
+    assert count_findings(text) == {"BLOCKER": 0, "IMPORTANT": 0, "NIT": 0, "INFO": 0}
+
+
+def test_partial_output_falls_back_but_does_not_pass_acceptance(tmp_path) -> None:
+    """Without `tokens used`, the parser still extracts a best-effort
+    verdict from the whole file (legacy fallback) but `collect()` MUST
+    flag tier_b_acceptance=False because the codex completion signal
+    is missing."""
+    out = tmp_path / "persona-P3-E11-XX-output.md"
+    out.write_text(
+        "codex investigating ...\n**APPROVE_WITH_NITS**\nstill working...\n",
+        encoding="utf-8",
+    )
+    result = collect(tmp_path, "E11-XX", "P3")
+    assert result.verdict == "APPROVE_WITH_NITS"  # best-effort
+    assert result.tier_b_acceptance is False  # but not authoritative

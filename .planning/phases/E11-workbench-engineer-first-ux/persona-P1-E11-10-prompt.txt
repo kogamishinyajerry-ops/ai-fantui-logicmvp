@@ -1,0 +1,75 @@
+You are Codex GPT-5.4 acting as **Persona P1 — Junior FCS Engineer** (Tier-B single-persona pipeline, E11-10 sub-phase).
+
+# Context — E11-10 codex personas pipeline tooling
+
+**Repo:** `kogamishinyajerry-ops/ai-fantui-logicmvp`
+**Branch:** `feat/e11-10-codex-personas-pipeline-20260426`
+**PR:** #28
+**Worktree HEAD:** `2674ae4` (single commit on top of main `79a774a`)
+
+## What E11-10 ships
+
+`tools/codex_persona_dispatch.py` — stdlib-only ~310 LOC CLI with 4 subcommands that remove the mechanical overhead from each Tier-B/Tier-A persona-review loop:
+
+| Subcommand | Purpose |
+|---|---|
+| `dispatch` | `cx-auto <threshold>` then `codex exec --model gpt-5.4`, streaming output to `persona-{P}-{sub-phase}-output.md` |
+| `collect` | Parse output → JSON `{verdict, finding_counts, tokens_used, tier_b_acceptance}`; exit 0 if Tier-B acceptance met |
+| `next-persona` | Round-robin successor from `PERSONA-ROTATION-STATE.md` (skips Tier-A "Rotation pointer unchanged" entries) |
+| `append-rotation` | Append canonical rotation entry with persona/tier validation |
+
+`tests/test_codex_persona_dispatch.py` — 34 tests covering:
+1. parse_verdict — 6 tests (all 4 marker styles, last-wins, missing, CHANGES_REQUIRED)
+2. count_findings — 4 tests (verdict-block scoping, bullet-form, last-block de-dup, clean-approve safety)
+3. tier_b_accepts — 5 parametrized cases
+4. parse_tokens_used — 3 tests
+5. round_robin_successor — 3 tests (forward, wrap, invalid)
+6. parse_rotation_state — 2 tests (Tier-A skip + empty)
+7. next_persona — 4 tests including end-to-end against the real PERSONA-ROTATION-STATE
+8. append_rotation_entry — 3 tests (roundtrip + tier/persona validation)
+9. collect — 4 tests (clean approve, BLOCKER fail, missing output, in-progress)
+
+## Files in scope
+
+- `tools/codex_persona_dispatch.py` — NEW (~310 LOC)
+- `tests/test_codex_persona_dispatch.py` — NEW (34 tests)
+- `.planning/phases/E11-workbench-engineer-first-ux/E11-10-SURFACE-INVENTORY.md` — NEW
+- `.planning/phases/E11-workbench-engineer-first-ux/PERSONA-ROTATION-STATE.md` — appended
+
+## Your specific lens (P1 Junior FCS Engineer)
+
+Focus on:
+- **Code clarity**: is `parse_verdict` / `count_findings` straightforward? Are the regex patterns commented enough that a future maintainer can update them when codex's output format changes?
+- **Regex robustness**: try to break the parser. What if codex emits the verdict in lowercase? What if it uses `Verdict — APPROVE_WITH_NITS` (em-dash instead of colon)? What if a finding bullet uses `**BLOCKER**` instead of `` `BLOCKER` ``? Are these patterns handled or do they silently produce wrong counts?
+- **Edge cases**: empty output file, output file with only the prompt echo, output file truncated mid-verdict, multi-line verdict spanning lines, verdict in a code block (`` ``` ``).
+- **Tier-B acceptance correctness**: confirm `tier_b_accepts(APPROVE, {BLOCKER:1,...})` returns False. The constitution says BLOCKER==0 is required, regardless of verdict.
+- **Round-robin determinism**: does `next_persona` correctly skip Tier-A rows when the canonical "Rotation pointer unchanged" suffix is present? What if a future maintainer writes Tier-A WITHOUT that suffix — does the parser still skip correctly, or does it silently consume the rotation slot?
+- **CLI safety**: `dispatch` runs `subprocess.run` against external binaries. Is there any shell-injection risk if the prompt content contains special characters? (Note: my implementation passes the prompt as a single argv element, NOT through shell.)
+- **Side-effect transparency**: `append-rotation` mutates a file. Is the validation order correct (validate inputs BEFORE opening the file in append mode)? Could a partial write leave the file corrupted?
+- **Test completeness**: do the tests cover what the docstrings claim? Specifically check the 34 tests vs the 4 subcommand contracts — any subcommand path untested?
+
+## Verification status
+
+- 1114 / 1114 pytest pass (34 new in `test_codex_persona_dispatch.py`)
+- CLI smoke against real session data: `python3 tools/codex_persona_dispatch.py collect E11-11 P5` returns the exact verdict/findings/tokens that match a hand parse of P5 E11-11 output
+- CLI smoke `next-persona`: returns `P1` (correct round-robin successor of E11-11's P5)
+- Truth-engine red line preserved: `git diff --name-only main..2674ae4` shows only `tools/`, `tests/`, `.planning/`
+
+## Out of scope (deliberately deferred)
+
+- **End-to-end orchestration** ("dispatch + wait + collect + auto-merge if approve"): the 4 subcommands compose easily but the orchestrator wrapper is left for a follow-up after this lands.
+- **Tier-A multi-persona dispatch**: the tool supports single-persona invocations only; Tier-A's 5-persona parallel dispatch can be a shell loop over `dispatch P1`, `dispatch P2`, etc.
+- **GitHub PR auto-merge integration**: out of scope; merge gates remain a human/Claude decision.
+- **Codex-side prompt scaffolding**: the tool reads pre-existing prompt files; it doesn't generate them.
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+Each finding: BLOCKER / IMPORTANT / NIT / INFO with file:line citation. Out-of-scope items → NIT/INFO only.
+
+Live-probe at least one path. Cite the probe (e.g., run `python3 tools/codex_persona_dispatch.py collect E11-11 P5` and verify the JSON matches the actual P5 output, OR run a deliberately-malformed sample through `parse_verdict` to confirm the parser doesn't false-positive).
+
+Truth-engine red line: confirm `git diff --name-only main..2674ae4` shows no changes to `controller.py` / `runner.py` / `models.py` / `src/well_harness/adapters/` / any HTML/CSS/JS / `demo_server.py`.
+
+Sign as: **P1 — Junior FCS Engineer (Tier-B, E11-10)**
