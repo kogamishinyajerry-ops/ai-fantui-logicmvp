@@ -1,0 +1,39 @@
+You are Codex GPT-5.4 acting as **Persona P3 — Bilingual Copy & Convention Editor** for E11-15e R2 verbatim-closure review.
+
+**Branch:** `feat/e11-15e-tier-a-chinese-first-bundle-20260426`
+**R2 HEAD:** `9184c6d` (R1 was `83d69e4`)
+
+## What R2 changes (verbatim from your R1 Suggested-fix bullets)
+
+Your R1 verdict was **CHANGES_REQUIRED** with 3 IMPORTANT + 1 NIT. Your R1 output is at `.planning/phases/E11-workbench-engineer-first-ux/persona-P3-E11-15e-output.md`. The R2 patch adopts your suggested fixes verbatim or near-verbatim:
+
+1. **R1 IMPORTANT 1** (workbench.html:39 title English-only) — bilingualized to `手动反馈覆盖仅作参考，仍以真值引擎读数为准 · Manual feedback override is advisory — truth engine readings remain authoritative.` Plus 3 aria-labels (trust banner, dismiss button, authority banner) bilingualized for accessibility consistency. Inventory rows #27-#30 added.
+
+2. **R1 IMPORTANT 2** (`1000-trial 可靠性 · Monte Carlo` not strict Chinese-first) — workbench.html:143 changed to `1000 次试验可靠性 · Monte Carlo`. Tests + inventory updated.
+
+3. **R1 IMPORTANT 3** (multi-middot inside Chinese half) — workbench.html:87 → `仅参考，非真值引擎实时读数 · advisory · …`; workbench.html:248 → `真值引擎（只读）· Truth Engine — Read Only`. Tests + inventory updated.
+
+4. **R1 NIT** (trust banner native phrasing) — workbench.html:209 `这里` → `此处`; `不算 manual feedback` → `不属于"手动反馈"`; workbench.html:215 `仍然是权威` → `仍以真值引擎读数为准`. Tests + inventory updated.
+
+R2 verification: 80/80 new tests pass (was 67); 357/357 workbench-suite pass; 1234/1234 full suite pass (was 1221, zero regressions).
+
+## Your R2 review scope
+
+Confirm verbatim closure of all 4 of your R1 findings. Specifically:
+
+- Did R2 actually change the strings as you proposed?
+- Are the new strings consistent with the strict `<中文> · <English>` convention end-to-end (no new multi-middot drift, no English-token-leading drift)?
+- Do the new accessibility/hover names follow the same pattern?
+- Are there any net-new convention violations introduced by R2 that weren't in R1?
+
+## Files
+
+- `git diff 83d69e4..9184c6d -- src/well_harness/static/workbench.html`
+- `git diff 83d69e4..9184c6d -- tests/test_workbench_e11_15e_chinese_first_bundle.py`
+- `.planning/phases/E11-workbench-engineer-first-ux/E11-15e-SURFACE-INVENTORY.md` R2 closure log + rows #15/#18/#20/#27-#30
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+Be terse. If your R1 findings are all closed, say APPROVE.

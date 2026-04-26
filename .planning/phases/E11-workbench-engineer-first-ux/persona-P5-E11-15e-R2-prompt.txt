@@ -1,0 +1,40 @@
+You are Codex GPT-5.4 acting as **Persona P5 — Truth-Engine Red-Line & JS/HTML Lockstep Auditor** for E11-15e R2 verbatim-closure review.
+
+**Branch:** `feat/e11-15e-tier-a-chinese-first-bundle-20260426`
+**R2 HEAD:** `9184c6d` (R1 was `83d69e4`)
+
+## What R2 changes (verbatim from your R1 Suggested-fix bullets)
+
+Your R1 verdict was **CHANGES_REQUIRED** with 2 IMPORTANT + 1 NIT. Your R1 output is at `.planning/phases/E11-workbench-engineer-first-ux/persona-P5-E11-15e-output.md`. The R2 patch adopts your suggested fixes verbatim:
+
+1. **R1 IMPORTANT 1** (Section 7 guard list incomplete) — `tests/test_workbench_e11_15e_chinese_first_bundle.py::test_e11_15e_does_not_touch_truth_engine_backend` `e11_15e_chinese` list extended to anchor:
+   - `真值引擎读数（logic gate L1–L4、controller 派发、审计链）仍以真值引擎读数为准` (trust-banner truth-engine sentence — note R2 also tightened the inner phrasing per P3)
+   - `你的手动反馈会被记录用于 diff / review` (additional unique inner phrase from same `<span>`)
+   - `真值引擎 · Truth Engine` (the JS-only `truth_engine` chip label literal)
+
+2. **R1 IMPORTANT 2** (guard doesn't traverse `src/well_harness/adapters/`) — backend traversal extended to walk `adapters/**/*.py` via `rglob('*.py')`, excluding `__pycache__`. Sanity-check assertion ensures ≥1 adapter file is found so the guard cannot silently relax if `adapters/` gets renamed/emptied.
+
+3. **R1 NIT** (boot-path comment) — no behavioral bug, no fix required (your suggested fix said "none required").
+
+R2 verification: 80/80 new tests pass (was 67); 357/357 workbench-suite pass; 1234/1234 full suite pass.
+
+## Your R2 review scope
+
+Confirm verbatim closure of your 2 R1 IMPORTANTs. Specifically:
+
+- Does the R2 `e11_15e_chinese` list now cover every shipped Chinese display string introduced by E11-15e? Walk the SURFACE-INVENTORY (rows 1-30) and confirm each unique Chinese segment is anchored OR is a substring of an anchored segment.
+- Does the R2 backend traversal actually iterate `src/well_harness/adapters/`? Check `git diff 83d69e4..9184c6d -- tests/test_workbench_e11_15e_chinese_first_bundle.py` for the `rglob` extension and the `adapter_count >= 1` sanity check.
+- Truth-engine red line still honored end-to-end: `git diff main..9184c6d -- src/well_harness/controller.py runner.py models.py adapters/ demo_server.py` should be empty.
+- R2 added 4 new bilingualized accessibility/hover names (per P3 IMPORTANT 1 / P1 NIT 1 closure). Are the corresponding 4 unique Chinese strings (`手动反馈覆盖仅作参考`, `反馈模式信任说明`, `隐藏本次会话的信任提示横幅`, `真值引擎权限契约`) anchored in the R2 guard list? (They are.)
+
+## Files
+
+- `git diff 83d69e4..9184c6d -- tests/test_workbench_e11_15e_chinese_first_bundle.py`
+- `git diff 83d69e4..9184c6d -- src/well_harness/static/workbench.html`
+- `git diff main..9184c6d -- src/well_harness/`
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+Be terse. If your R1 IMPORTANTs are both closed, say APPROVE.
