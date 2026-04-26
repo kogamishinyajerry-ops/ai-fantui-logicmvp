@@ -452,3 +452,64 @@ def test_partial_output_falls_back_but_does_not_pass_acceptance(tmp_path) -> Non
     result = collect(tmp_path, "E11-XX", "P3")
     assert result.verdict == "APPROVE_WITH_NITS"  # best-effort
     assert result.tier_b_acceptance is False  # but not authoritative
+
+
+# ─── 14. R3 closure: token-marker boundary CONTRACT (P1 R2 BLOCKER) ──
+
+
+def test_indented_tokens_used_does_not_trick_completeness_gate(tmp_path) -> None:
+    """E11-10 R3 BLOCKER closure (P1 R2 finding): an indented `tokens used`
+    line MUST NOT be treated as the codex completion marker. P1's R2
+    live probe constructed exactly this scenario:
+      - prompt-echo verdicts at top
+      - indented `  tokens used\\n12345` (NOT column 0)
+      - canonical `**CHANGES_REQUIRED**` later
+      - `**APPROVE_WITH_NITS**` quoted inside a BLOCKER finding evidence
+    Pre-fix, `parse_tokens_used` matched the indented line (so collect
+    thought file complete) but `_final_verdict_block` did not (so verdict
+    parsing fell back to whole-file scan, picking up the prompt-echo
+    APPROVE_WITH_NITS). Post-fix, the two regexes share the column-0
+    anchor and both reject the indented marker."""
+    out = tmp_path / "persona-P3-E11-XX-output.md"
+    out.write_text(
+        "Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.\n"
+        "  tokens used\n"  # indented! NOT a real codex marker
+        "  12345\n"
+        "**CHANGES_REQUIRED**\n"
+        "- `BLOCKER` finding quoting `**APPROVE_WITH_NITS**`\n",
+        encoding="utf-8",
+    )
+    result = collect(tmp_path, "E11-XX", "P3")
+    # Indented `tokens used` is not a real completion marker.
+    assert result.tokens_used is None, (
+        "indented `tokens used` must not be treated as completion marker"
+    )
+    # Therefore acceptance must NOT pass even though a verdict literal
+    # is present.
+    assert result.tier_b_acceptance is False
+
+
+def test_column_zero_tokens_used_is_recognized() -> None:
+    """Sanity: the strict column-0 form (codex's actual emission shape)
+    is still recognized."""
+    text = "**APPROVE**\ntokens used\n50000\n"
+    from tools.codex_persona_dispatch import parse_tokens_used
+    assert parse_tokens_used(text) == 50000
+
+
+def test_completeness_and_scoping_share_boundary_contract() -> None:
+    """The contract that R2 missed: `parse_tokens_used` and
+    `_final_verdict_block` MUST agree on what counts as the codex
+    completion marker. This test exercises the pair directly to prevent
+    future drift where one is loosened without the other."""
+    from tools.codex_persona_dispatch import parse_tokens_used, _final_verdict_block
+
+    # Indented marker — neither should accept.
+    indented = "verdict\n  tokens used\n  100\n**APPROVE**\n"
+    assert parse_tokens_used(indented) is None
+    assert _final_verdict_block(indented) == ""
+
+    # Column-0 marker — both should accept.
+    canonical = "verdict\ntokens used\n100\n**APPROVE**\n"
+    assert parse_tokens_used(canonical) == 100
+    assert "**APPROVE**" in _final_verdict_block(canonical)

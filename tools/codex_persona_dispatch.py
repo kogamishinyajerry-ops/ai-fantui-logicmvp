@@ -206,11 +206,20 @@ def count_findings(text: str) -> dict[str, int]:
     return counts
 
 
-_TOKENS_PATTERN = re.compile(r"tokens used\s*\n\s*(\d[\d,]*)", re.IGNORECASE)
+# MUST share the same column-0 anchor as `_TOKENS_MARKER` so completeness
+# detection and post-tokens scoping agree on the boundary. R2-R3 closure
+# (P1 R2 BLOCKER): allowing `parse_tokens_used` to match leading-whitespace
+# variants while `_TOKENS_MARKER` required column-0 created a false-pass
+# path — `collect()` would mark the file authoritative but the verdict
+# parser would silently fall back to whole-file scan.
+_TOKENS_PATTERN = re.compile(r"(?:^|\n)tokens used\s*\n\s*(\d[\d,]*)", re.IGNORECASE)
 
 
 def parse_tokens_used(text: str) -> int | None:
-    """Codex emits `tokens used\\nNNNN` near end of session."""
+    """Codex emits `tokens used\\nNNNN` at column 0 near end of session.
+    The column-0 anchor MUST stay in sync with `_TOKENS_MARKER` so the
+    completeness gate and the post-tokens scoping share the same
+    boundary."""
     matches = list(_TOKENS_PATTERN.finditer(text))
     if not matches:
         return None

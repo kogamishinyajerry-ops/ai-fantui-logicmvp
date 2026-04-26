@@ -1,0 +1,80 @@
+You are Codex GPT-5.4 acting as **Persona P1 — Junior FCS Engineer** (Tier-B single-persona pipeline, E11-10 sub-phase, **R2 re-review**).
+
+# Context — E11-10 R2: closure of R1 BLOCKERs
+
+**Repo:** `kogamishinyajerry-ops/ai-fantui-logicmvp`
+**Branch:** `feat/e11-10-codex-personas-pipeline-20260426`
+**PR:** #28
+**Worktree HEAD:** `0b2d4df` (R2 commit on top of R1 `2674ae4`)
+**Original review:** `.planning/phases/E11-workbench-engineer-first-ux/persona-P1-E11-10-output.md` (your R1 output, verdict CHANGES_REQUIRED)
+
+## Your R1 findings (for reference)
+
+You returned **CHANGES_REQUIRED** with these findings:
+
+- **BLOCKER #1**: parser accepted incomplete output as authoritative. Live probes with one-line `Verdict: APPROVE` and fenced-code-block quote both produced `tier_b_acceptance=true`.
+- **BLOCKER #2**: severity counting missed bold finding tags. `**APPROVE_WITH_NITS**` plus `- **BLOCKER** ...` returned `BLOCKER=0` and falsely passed `tier_b_acceptance`.
+- **IMPORTANT**: `append-rotation` and `next-persona` disagreed on Tier-A semantics. Starting from P5, appending Tier-A P1 made `next_persona()` return P2 instead of P1.
+
+## What R2 changes
+
+### BLOCKER #1 closure — post-tokens scoping
+
+New helper `_final_verdict_block(text)` returns ONLY the text after the last `tokens used\nNNNN` marker (codex's session-tail canonical block). Three behavior changes:
+
+- `parse_verdict` now picks the **FIRST** verdict in this block (canonical declaration), not the LAST (which can be an evidence quote inside a finding's "Live probe: ..." text).
+- `count_findings` scopes to the same post-tokens block so quoted source code, prompt text, JSON probe output, etc. cannot inflate counts.
+- `collect()` forces `tier_b_acceptance=False` when `tokens used` is absent — even if a verdict literal is present in the partial output, the codex completion signal must be there for the verdict to be authoritative.
+
+### BLOCKER #2 closure — bold tag matching
+
+Extended `_FINDING_PATTERN` regex to match **all** of these decorated forms in addition to the bare form:
+- `- BLOCKER` (bare)
+- `- \`BLOCKER\`` (backticked)
+- `- **BLOCKER**` (bold)  ← was missing
+- `- **\`BLOCKER\`**` (bold+backtick)  ← was missing
+
+### IMPORTANT closure — Tier-A append consistency
+
+`append_rotation_entry` now automatically inserts the canonical `All 5 personas dispatched. Rotation pointer unchanged.` suffix for Tier-A rows so `parse_rotation_state` correctly skips them. Tier-B rows do NOT get the suffix.
+
+## Files in scope (R2 delta)
+
+- `tools/codex_persona_dispatch.py` — 3 functions revised (~50 LOC delta total): `parse_verdict`, `count_findings`, `append_rotation_entry`; new helpers `_TOKENS_MARKER` regex + `_final_verdict_block(text)` function
+- `tests/test_codex_persona_dispatch.py` — 11 new R2 regression tests (now 45 total, was 34)
+
+## Your specific lens (P1 Junior FCS Engineer, R2)
+
+Focus on:
+- **Did R2 actually close R1 BLOCKERS?** Re-run your original probes:
+  - One-line file `Verdict: APPROVE` → `tier_b_acceptance` should now be **False** (no `tokens used` marker present)
+  - Fenced code block containing `**APPROVE_WITH_NITS**` → if no `tokens used`, should NOT pass acceptance
+  - `**APPROVE_WITH_NITS**` + `- **BLOCKER** finding` + `tokens used\n12345` → BLOCKER count should now be **1** and `tier_b_acceptance` **False**
+- **Did R2 introduce new bugs?** Specifically:
+  - The fallback path (no `tokens used` marker) still uses last-wins LEGACY parsing of `parse_verdict`. Is that the right behavior, or should the fallback also be first-wins for consistency?
+  - The Tier-A append suffix is hardcoded English text. If a future maintainer changes `parse_rotation_state` to accept different suffixes (e.g., translated), the contract drifts. Is the contract documented strongly enough in the docstring?
+- **Self-reference dogfood**: run `python3 tools/codex_persona_dispatch.py collect E11-10 P1` and confirm it now returns `verdict=CHANGES_REQUIRED, BLOCKER=2, IMPORTANT=1, tier_b_acceptance=false` (matching your R1 output). This proves the parser correctly handles its own meta-review.
+- **Edge cases I might have missed**:
+  - What if the post-tokens block contains MULTIPLE clean verdict declarations (e.g., codex emits two verdicts, weird but possible)?
+  - What if the `tokens used\nNNNN` line has leading/trailing whitespace not handled by my regex?
+  - What if codex emits BOTH `**CHANGES_REQUIRED**` AND `**APPROVE**` literally on one line in the post-tokens block (e.g., quoting both for comparison)?
+- **Test completeness**: do the 11 new R2 tests actually exercise the failure modes you found, OR do they test the implementation rather than the contract?
+
+## Verification status
+
+- 1125 / 1125 default pytest pass (45 in `test_codex_persona_dispatch.py`)
+- Real session data: `collect E11-10 P1` → CHANGES_REQUIRED, 2 BLOCKERS, 1 IMPORTANT (matches your R1 output exactly)
+- Real session data: `collect E11-11 P5` → APPROVE_WITH_NITS, 0/1/1/1 (still correct)
+- Truth-engine red line preserved: `git diff --name-only main..0b2d4df` shows only `tools/`, `tests/`, `.planning/`
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+Each finding: BLOCKER / IMPORTANT / NIT / INFO with file:line citation. Out-of-scope items → NIT/INFO only.
+
+Live-probe at least one path. Cite the probe.
+
+Truth-engine red line: confirm `git diff --name-only main..0b2d4df` shows no changes to production code outside `tools/codex_persona_dispatch.py`.
+
+Sign as: **P1 — Junior FCS Engineer (Tier-B, E11-10 R2)**
