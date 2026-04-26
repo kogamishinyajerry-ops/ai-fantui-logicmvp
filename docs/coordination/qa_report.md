@@ -6,7 +6,7 @@
 - 结论：PASS；当前稳定基线由 GitHub-backed validation evidence 支撑。
 - 当前阶段：`P43 Control Logic Workbench end-to-end milestone`
 - 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`E11-10 PR #28 merged (codex personas pipeline tooling — 3 review rounds dogfood-validated parser, P1 R3 APPROVE no findings) — 2026-04-26`
+- 最近成功执行证据：`E11-15d PR #29 merged (approval-flow polish + 2-round doc-honesty closure; R3 self-signed via Executor-即-Gate v3.2 after Codex auth unavailable) — 2026-04-26`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
