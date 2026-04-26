@@ -2495,3 +2495,39 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
 .workbench-rollback-toggle:hover {
   background: rgba(79, 184, 255, 0.08);
 }
+
+/* P45-03 (2026-04-26): interpreter strategy toggle + result badge.
+   The chip lives in the suggestion-form header (default Rules, click
+   flips to LLM). The badge in the result panel header echoes which
+   interpreter actually produced the result — important because LLM
+   transparently falls back to rules on any failure, and the engineer
+   needs to see that without parsing the raw JSON. */
+.workbench-interpreter-strategy-chip {
+  cursor: pointer;
+  margin-top: 0.4rem;
+}
+.workbench-interpreter-strategy-chip[data-interpreter-strategy="llm"] {
+  background: rgba(79, 184, 255, 0.14);
+  border-color: rgba(79, 184, 255, 0.55);
+}
+.workbench-interpreter-strategy-chip[data-interpreter-strategy="llm"] strong {
+  color: #4fb8ff;
+}
+.workbench-suggestion-interpretation-strategy {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  margin-right: 0.4rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+.workbench-suggestion-interpretation-strategy[data-interpreter-strategy="rules"] {
+  background: rgba(0, 229, 160, 0.16); color: #00e5a0;
+}
+.workbench-suggestion-interpretation-strategy[data-interpreter-strategy="llm"] {
+  background: rgba(79, 184, 255, 0.16); color: #4fb8ff;
+}
+.workbench-suggestion-interpretation-strategy[data-interpreter-strategy="llm_fallback_to_rules"] {
+  background: rgba(247, 188, 92, 0.16); color: #f7bc5c;
+}

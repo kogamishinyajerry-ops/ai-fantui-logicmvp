@@ -213,6 +213,36 @@ function installSuggestionFlow() {
   if (confirmBtn) {
     confirmBtn.addEventListener("click", () => submitSuggestionTicket());
   }
+  // P45-03 (2026-04-26): wire the interpreter strategy toggle. Off
+  // (rules) → on (llm) → off … flips the chip's data attribute and
+  // label; runSuggestionInterpret reads the chip on send so the
+  // toggle takes effect on the next 解读 click.
+  const strategyChip = document.getElementById("workbench-interpreter-strategy-toggle");
+  if (strategyChip) {
+    strategyChip.addEventListener("click", () => toggleInterpreterStrategy());
+  }
+}
+
+// P45-03 (2026-04-26): flip the interpreter strategy. The chip's
+// data-interpreter-strategy attribute is the source of truth read by
+// runSuggestionInterpret; this function only mutates DOM.
+function toggleInterpreterStrategy() {
+  const chip = document.getElementById("workbench-interpreter-strategy-toggle");
+  if (!chip) return;
+  const next = chip.getAttribute("data-interpreter-strategy") === "llm" ? "rules" : "llm";
+  chip.setAttribute("data-interpreter-strategy", next);
+  chip.setAttribute("aria-pressed", next === "llm" ? "true" : "false");
+  const label = chip.querySelector("[data-interpreter-strategy-label]");
+  if (label) {
+    label.textContent = next === "llm"
+      ? "🤖 智能解读 · AI"
+      : "📜 规则解读 · Rules";
+  }
+}
+
+function currentInterpreterStrategy() {
+  const chip = document.getElementById("workbench-interpreter-strategy-toggle");
+  return (chip && chip.getAttribute("data-interpreter-strategy")) || "rules";
 }
 
 async function runSuggestionInterpret() {
@@ -227,13 +257,19 @@ async function runSuggestionInterpret() {
     status.textContent = "请先输入建议内容 · enter a suggestion first";
     return;
   }
+  // P45-03: read current strategy + current system from their
+  // single sources of truth so the request is fully self-describing.
+  const strategy = currentInterpreterStrategy();
+  const system_id = currentWorkbenchSystem();
   status.dataset.status = "loading";
-  status.textContent = "解读中… · interpreting…";
+  status.textContent = strategy === "llm"
+    ? "🤖 LLM 解读中… · interpreting via LLM…"
+    : "解读中… · interpreting…";
   try {
     const response = await fetch(SUGGESTION_INTERPRET_PATH, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, strategy, system_id }),
     });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
@@ -257,6 +293,22 @@ function renderSuggestionInterpretation(interpretation) {
   }
   card.hidden = false;
   card.dataset.state = "ready";
+  // P45-03: surface which interpreter actually produced this result
+  // so the engineer can tell "via rules", "via LLM", or "LLM
+  // unavailable — using rules" without parsing the JSON themselves.
+  const strategyBadge = document.getElementById("workbench-suggestion-interpretation-strategy");
+  if (strategyBadge) {
+    const strategy = interpretation.interpreter_strategy || "rules";
+    strategyBadge.dataset.interpreterStrategy = strategy;
+    if (strategy === "llm") {
+      strategyBadge.textContent = `🤖 via ${interpretation.llm_model || "LLM"}`;
+    } else if (strategy === "llm_fallback_to_rules") {
+      const why = interpretation.llm_error || "unknown";
+      strategyBadge.textContent = `⚠ LLM unavailable (${why}) — fell back to rules`;
+    } else {
+      strategyBadge.textContent = "📜 via rules";
+    }
+  }
   const setText = (id, value) => {
     const el = document.getElementById(id);
     if (el) {
