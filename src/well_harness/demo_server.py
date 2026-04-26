@@ -799,7 +799,9 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if strategy == "llm":
             result = interpret_suggestion_text_llm(text, system_id=system_id)
         else:
-            result = interpret_suggestion_text(text)
+            # P46-02: rules path now also honors system_id so the
+            # engineer gets the right vocabulary on every system.
+            result = interpret_suggestion_text(text, system_id=system_id)
             result["interpreter_strategy"] = "rules"
         self._send_json(200, result)
 
@@ -1033,33 +1035,104 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 # (text) -> dict signature.
 # ─────────────────────────────────────────────────────────────────
 
-# Each gate L1..L4 is identified by both its bare label ("L1", "L2",
-# "L3", "L4") and a small set of plain-language synonyms an engineer
-# might write instead of the technical id.
-_GATE_SYNONYMS: dict[str, tuple[str, ...]] = {
-    "L1": ("L1", "l1", "逻辑门 1", "门 1", "tls_115vac_cmd", "TLS"),
-    "L2": ("L2", "l2", "逻辑门 2", "门 2", "etrac_540vdc_cmd", "ETRAC"),
-    "L3": ("L3", "l3", "逻辑门 3", "门 3", "eec_deploy_cmd", "pls_power_cmd", "pdu_motor_cmd", "EEC"),
-    "L4": ("L4", "l4", "逻辑门 4", "门 4", "throttle_electronic_lock_release_cmd", "throttle_unlock"),
+# P46-02 (2026-04-26): per-system gate + signal vocabularies.
+# Each system has its own gate ids (the P45-01 SVG fragment endpoint
+# carries the matching data-gate-id="..." anchors; placeholder
+# systems intentionally have no anchors so the interpreted gate
+# won't glow on the SVG, but the ticket still flows). Adding a new
+# system = drop entries in both _GATE_SYNONYMS_BY_SYSTEM and
+# _SIGNALS_BY_SYSTEM.
+#
+# thrust-reverser carries the canonical L1..L4 vocabulary (was
+# _GATE_SYNONYMS in P44-02; preserved here verbatim so all P44
+# tests keep passing). The other three systems get small but
+# domain-honest tables — placeholder SVGs from P45-01 carry no
+# gate anchors yet, so the interpretation here populates the
+# ticket payload + dev-queue brief but won't drive panel glow
+# until those systems' real circuits are drafted.
+_GATE_SYNONYMS_BY_SYSTEM: dict[str, dict[str, tuple[str, ...]]] = {
+    "thrust-reverser": {
+        "L1": ("L1", "l1", "逻辑门 1", "门 1", "tls_115vac_cmd", "TLS"),
+        "L2": ("L2", "l2", "逻辑门 2", "门 2", "etrac_540vdc_cmd", "ETRAC"),
+        "L3": ("L3", "l3", "逻辑门 3", "门 3", "eec_deploy_cmd", "pls_power_cmd", "pdu_motor_cmd", "EEC"),
+        "L4": ("L4", "l4", "逻辑门 4", "门 4", "throttle_electronic_lock_release_cmd", "throttle_unlock"),
+    },
+    "landing-gear": {
+        "G1": ("G1", "g1", "主起放下", "主起落架放下", "main_gear_down_cmd", "MLG down"),
+        "G2": ("G2", "g2", "主起收上", "主起落架收上", "main_gear_up_cmd", "MLG up"),
+        "G3": ("G3", "g3", "前起放下", "前起落架放下", "nose_gear_down_cmd", "NLG down"),
+        "G4": ("G4", "g4", "前起收上", "前起落架收上", "nose_gear_up_cmd", "NLG up"),
+    },
+    "bleed-air-valve": {
+        "V1": ("V1", "v1", "引气阀开启", "bleed_open_cmd", "bleed open", "PRSOV open"),
+        "V2": ("V2", "v2", "引气阀关闭", "bleed_close_cmd", "bleed close", "PRSOV close"),
+    },
+    "c919-etras": {
+        "E1": ("E1", "e1", "E-TRAS 解锁", "etras_unlock_cmd", "ETRAS unlock"),
+        "E2": ("E2", "e2", "E-TRAS 部署", "etras_deploy_cmd", "ETRAS deploy"),
+        "E3": ("E3", "e3", "E-TRAS 收回", "etras_stow_cmd", "ETRAS stow"),
+    },
 }
 
-# Input signals enumerated in fantui_circuit.html, plus their plain
-# synonyms. Used to populate target_signals when the engineer mentions
-# them directly.
-_KNOWN_TARGET_SIGNALS: tuple[str, ...] = (
-    "radio_altitude_ft",
-    "SW1",
-    "SW2",
-    "reverser_inhibited",
-    "reverser_not_deployed_eec",
-    "engine_running",
-    "aircraft_on_ground",
-    "eec_enable",
-    "tls_unlocked_ls",
-    "n1k",
-    "tra_deg",
-    "deploy_90_percent_vdt",
-)
+_SIGNALS_BY_SYSTEM: dict[str, tuple[str, ...]] = {
+    "thrust-reverser": (
+        "radio_altitude_ft",
+        "SW1",
+        "SW2",
+        "reverser_inhibited",
+        "reverser_not_deployed_eec",
+        "engine_running",
+        "aircraft_on_ground",
+        "eec_enable",
+        "tls_unlocked_ls",
+        "n1k",
+        "tra_deg",
+        "deploy_90_percent_vdt",
+    ),
+    "landing-gear": (
+        "wow", "weight_on_wheels",
+        "gear_handle_position",
+        "gear_door_position",
+        "main_gear_lock_uplock",
+        "main_gear_lock_downlock",
+        "nose_gear_lock_uplock",
+        "nose_gear_lock_downlock",
+        "hyd_pressure_psi",
+    ),
+    "bleed-air-valve": (
+        "bleed_pressure_psi",
+        "bleed_temp_c",
+        "engine_n2_pct",
+        "apu_running",
+        "anti_ice_on",
+    ),
+    "c919-etras": (
+        "tra_deg", "throttle_electronic_lock_release_cmd",
+        "etras_deploy_position_pct",
+        "weight_on_wheels", "wow",
+        "engine_running",
+        "fadec_deploy_enable",
+    ),
+}
+
+
+def _gate_synonyms_for(system_id: str) -> dict[str, tuple[str, ...]]:
+    """Lookup with safe fallback — unknown system_ids resolve to the
+    thrust-reverser table so the rules path never returns an empty
+    vocabulary by accident."""
+    return _GATE_SYNONYMS_BY_SYSTEM.get(system_id) or _GATE_SYNONYMS_BY_SYSTEM["thrust-reverser"]
+
+
+def _signals_for(system_id: str) -> tuple[str, ...]:
+    return _SIGNALS_BY_SYSTEM.get(system_id) or _SIGNALS_BY_SYSTEM["thrust-reverser"]
+
+
+# Back-compat alias: a handful of P44/P45 tests still import
+# _GATE_SYNONYMS / _KNOWN_TARGET_SIGNALS by name. Point both at the
+# thrust-reverser entries so those tests keep passing without a
+# rewrite. New code should use the per-system helpers above.
+_GATE_SYNONYMS = _GATE_SYNONYMS_BY_SYSTEM["thrust-reverser"]
+_KNOWN_TARGET_SIGNALS = _SIGNALS_BY_SYSTEM["thrust-reverser"]
 
 # Verb-style hints that the engineer is proposing a change and what
 # kind of change. Order matters — first match wins. Specific verbs
@@ -1078,11 +1151,14 @@ _CHANGE_KIND_HINTS: tuple[tuple[str, str, str, str], ...] = (
 )
 
 
-def interpret_suggestion_text(text: str) -> dict:
+def interpret_suggestion_text(text: str, *, system_id: str = "thrust-reverser") -> dict:
     """Rule-based interpretation of an engineer modification suggestion.
 
     Returns a dict with the contract:
-      - affected_gates: list[str]   gate ids in {"L1", "L2", "L3", "L4"}
+      - affected_gates: list[str]   gate ids drawn from the active
+                                    system's vocabulary (L1..L4 for
+                                    thrust-reverser, G1..G4 for
+                                    landing-gear, etc.)
       - target_signals: list[str]   recognized input/output signal names
       - change_kind:    str         machine code, e.g. "modify_condition"
       - change_kind_zh: str         human label in Chinese
@@ -1091,6 +1167,11 @@ def interpret_suggestion_text(text: str) -> dict:
       - summary_zh:     str         system restatement in Chinese
       - summary_en:     str         system restatement in English
       - source_text:    str         echo of the input (for audit)
+
+    P46-02: optional system_id selects per-system gate + signal
+    vocabularies. Defaults to "thrust-reverser" so every existing
+    caller (including all P44 tests) keeps working unchanged.
+    Unknown system_ids fall back to the thrust-reverser table.
 
     The function is intentionally conservative: when no gate is
     detected, affected_gates is empty and confidence is low. The UI
@@ -1102,18 +1183,23 @@ def interpret_suggestion_text(text: str) -> dict:
     if not isinstance(text, str):
         text = ""
 
+    gate_vocab = _gate_synonyms_for(system_id)
+    signal_vocab = _signals_for(system_id)
+
     # 1. Gate detection. Each gate id can match by its synonym list;
-    #    we record gates in the canonical L1..L4 order.
+    #    we record gates in the order they appear in the vocab dict
+    #    (Python 3.7+ preserves insertion order, which is the
+    #    declared canonical order per system).
     affected_gates: list[str] = []
-    for gate_id in ("L1", "L2", "L3", "L4"):
-        for synonym in _GATE_SYNONYMS[gate_id]:
+    for gate_id, synonyms in gate_vocab.items():
+        for synonym in synonyms:
             if synonym in text:
                 affected_gates.append(gate_id)
                 break
 
     # 2. Target signal detection.
     target_signals: list[str] = []
-    for signal in _KNOWN_TARGET_SIGNALS:
+    for signal in signal_vocab:
         if signal in text:
             target_signals.append(signal)
 
