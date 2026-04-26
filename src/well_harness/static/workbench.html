@@ -88,113 +88,23 @@
         </span>
       </section>
 
+      <!-- P44-01 (2026-04-26): WOW starter cards moved off /workbench. The
+           workbench is now centered on the control logic panel itself
+           (mounted below at #workbench-circuit-hero); demo scenario
+           shortcuts belong on a separate "scenarios" surface and will be
+           reintroduced there in a later phase. The scaffolding kept here
+           is empty so any reader who lands on this comment knows the
+           previous WOW grid was an explicit removal, not a regression. -->
       <section
-        id="workbench-wow-starters"
-        class="workbench-wow-starters"
-        aria-label="Canonical demo scenarios — one-click starter cards"
-      >
-        <header class="workbench-wow-starters-header">
-          <p class="eyebrow">主流场景</p>
-          <h2>起手卡 · One-click 走读</h2>
-          <p class="workbench-wow-starters-sub">
-            预填 BEAT_DEEP_PAYLOAD / Monte-Carlo / Reverse-Diagnose 入口，落地 wow_a/b/c demo 弧。
-          </p>
-        </header>
-        <div class="workbench-wow-starters-grid">
-          <article
-            class="workbench-wow-card"
-            data-wow-id="wow_a"
-            aria-labelledby="workbench-wow-a-title"
-          >
-            <header>
-              <span class="workbench-wow-tag">wow_a</span>
-              <h3 id="workbench-wow-a-title">因果链走读 · Causal Chain</h3>
-            </header>
-            <p class="workbench-wow-card-desc">
-              POST <code>/api/lever-snapshot</code> with BEAT_DEEP_PAYLOAD (tra=-35°, n1k=0.92,
-              deploy=95%, feedback_mode=auto_scrubber) — under auto_scrubber pullback the
-              gates that latch are L2/L3/L4 (L1 drops out as reverser_not_deployed_eec
-              flips false mid-deploy, per <code>tests/e2e/test_wow_a_causal_chain.py</code>).
-            </p>
-            <button
-              type="button"
-              class="workbench-wow-run-button"
-              data-wow-action="run"
-              data-wow-id="wow_a"
-            >
-              一键运行 wow_a
-            </button>
-            <div
-              class="workbench-wow-result"
-              data-wow-result-for="wow_a"
-              role="status"
-              aria-live="polite"
-            >
-              尚未运行。
-            </div>
-          </article>
-          <article
-            class="workbench-wow-card"
-            data-wow-id="wow_b"
-            aria-labelledby="workbench-wow-b-title"
-          >
-            <header>
-              <span class="workbench-wow-tag">wow_b</span>
-              <h3 id="workbench-wow-b-title">1000 次试验可靠性 · Monte Carlo</h3>
-            </header>
-            <p class="workbench-wow-card-desc">
-              POST <code>/api/monte-carlo/run</code> with seed=42 — 1000 次抽样，输出
-              success_rate + failure_modes 分布。
-            </p>
-            <button
-              type="button"
-              class="workbench-wow-run-button"
-              data-wow-action="run"
-              data-wow-id="wow_b"
-            >
-              一键运行 wow_b
-            </button>
-            <div
-              class="workbench-wow-result"
-              data-wow-result-for="wow_b"
-              role="status"
-              aria-live="polite"
-            >
-              尚未运行。
-            </div>
-          </article>
-          <article
-            class="workbench-wow-card"
-            data-wow-id="wow_c"
-            aria-labelledby="workbench-wow-c-title"
-          >
-            <header>
-              <span class="workbench-wow-tag">wow_c</span>
-              <h3 id="workbench-wow-c-title">反向诊断 · Reverse Diagnose</h3>
-            </header>
-            <p class="workbench-wow-card-desc">
-              POST <code>/api/diagnosis/run</code> with outcome=deploy_confirmed — 反求
-              触发该 outcome 的参数组合（max_results=10）。
-            </p>
-            <button
-              type="button"
-              class="workbench-wow-run-button"
-              data-wow-action="run"
-              data-wow-id="wow_c"
-            >
-              一键运行 wow_c
-            </button>
-            <div
-              class="workbench-wow-result"
-              data-wow-result-for="wow_c"
-              role="status"
-              aria-live="polite"
-            >
-              尚未运行。
-            </div>
-          </article>
-        </div>
-      </section>
+        id="workbench-wow-starters-removed-by-p44-01"
+        hidden
+        aria-hidden="true"
+      ><!--
+        Previous content (E11-05): wow_a/b/c starter cards. Removed by
+        P44-01 to make /workbench's hero the actual circuit panel. The
+        empty <section> remains only as a stable removal sentinel; tests
+        verify it is hidden + carries no interactive children.
+      --></section>
 
       <aside
         id="workbench-trust-banner"
@@ -262,70 +172,50 @@
         </a>
       </aside>
 
-      <section class="workbench-collab-grid" aria-label="Three-column collaboration workbench">
-        <article
-          id="workbench-control-panel"
-          class="workbench-collab-column workbench-annotation-surface"
-          data-column="control"
-          data-annotation-surface="control"
-          tabindex="0"
+      <!-- P44-01 (2026-04-26): control-logic panel is the workbench hero.
+           workbench.js fetches /api/workbench/circuit-fragment on boot and
+           injects the L1→L4 SVG into #workbench-circuit-hero-mount. The
+           SVG carries data-gate-id="L1..L4" anchors so annotation can bind
+           to gates (P44-02). The previous Probe & Trace / Annotate &
+           Propose / Hand off & Track 3-column placeholder grid was removed
+           because it was an empty 3-column shell — the actual circuit
+           panel was missing entirely from /workbench. -->
+      <section
+        id="workbench-circuit-hero"
+        class="workbench-circuit-hero workbench-annotation-surface"
+        data-annotation-surface="circuit"
+        aria-labelledby="workbench-circuit-hero-title"
+        tabindex="0"
+      >
+        <header class="workbench-circuit-hero-header">
+          <p class="eyebrow">控制逻辑面板 · CONTROL LOGIC PANEL</p>
+          <h2 id="workbench-circuit-hero-title">反推逻辑链路 L1 → L4 · Thrust Reverser Authority Chain</h2>
+          <p class="workbench-circuit-hero-sub">
+            点击逻辑门 (L1/L2/L3/L4) 或输入信号即可发起标注；多个标注可打包为修改建议工单 ·
+            Click any logic gate (L1/L2/L3/L4) or input signal to start an annotation;
+            multiple annotations can be packaged into a single change-proposal ticket.
+          </p>
+        </header>
+        <div
+          id="workbench-circuit-hero-mount"
+          class="workbench-circuit-hero-mount"
+          role="img"
+          aria-label="反推逻辑链路 L1 → L4 SVG circuit (loading…)"
+          data-circuit-fragment-endpoint="/api/workbench/circuit-fragment"
+          data-circuit-fragment-status="pending"
         >
-          <header>
-            <p class="eyebrow">probe &amp; trace</p>
-            <h2>探针与追踪 · Probe &amp; Trace</h2>
-          </header>
-          <div id="workbench-control-status" class="workbench-collab-status" aria-live="polite">
-            等待 probe &amp; trace 面板启动 · Waiting for probe &amp; trace panel boot.
-          </div>
-          <div class="workbench-collab-control-list" aria-label="Control panel skeleton">
-            <button type="button" class="workbench-toolbar-button is-primary">加载当前工单 · Load Active Ticket</button>
-            <button type="button" class="workbench-toolbar-button">快照当前状态 · Snapshot Current State</button>
-          </div>
-        </article>
-
-        <article
-          id="workbench-document-panel"
-          class="workbench-collab-column workbench-annotation-surface"
-          data-column="document"
-          data-annotation-surface="document"
-          tabindex="0"
-        >
-          <header>
-            <p class="eyebrow">annotate &amp; propose</p>
-            <h2>标注与提案 · Annotate &amp; Propose</h2>
-          </header>
-          <div id="workbench-document-status" class="workbench-collab-status" aria-live="polite">
-            等待 annotate &amp; propose 面板启动 · Waiting for annotate &amp; propose panel boot.
-          </div>
-          <div class="workbench-collab-document">
-            <p>参考资料、澄清说明，以及未来的 text-range 标注会落在这里 · Reference packet, clarification notes, and future text-range annotations will land here.</p>
-            <pre>Intake -> Clarification -> Playback -> Diagnosis -> Knowledge</pre>
-          </div>
-        </article>
-
-        <article
-          id="workbench-circuit-panel"
-          class="workbench-collab-column workbench-annotation-surface"
-          data-column="circuit"
-          data-annotation-surface="circuit"
-          tabindex="0"
-        >
-          <header>
-            <p class="eyebrow">hand off &amp; track</p>
-            <h2>移交与跟踪 · Hand off &amp; Track</h2>
-          </header>
-          <div id="workbench-circuit-status" class="workbench-collab-status" aria-live="polite">
-            等待 hand off &amp; track 面板启动 · Waiting for hand off &amp; track panel boot.
-          </div>
-          <div class="workbench-collab-circuit" aria-label="Circuit skeleton">
-            <span>SW1</span>
-            <span>Logic 1</span>
-            <span>Logic 2</span>
-            <span>Logic 3</span>
-            <span>Logic 4</span>
-            <span>THR LOCK</span>
-          </div>
-        </article>
+          <p class="workbench-circuit-hero-loading">
+            正在加载控制逻辑面板… · Loading control logic panel…
+          </p>
+        </div>
+        <noscript>
+          <p class="workbench-circuit-hero-noscript">
+            浏览器未启用 JavaScript；请直接打开
+            <a href="/fantui_circuit.html">/fantui_circuit.html</a>
+            查看控制逻辑面板（无标注 / 仅静态版本）·
+            JavaScript disabled — open the static circuit page directly.
+          </p>
+        </noscript>
       </section>
 
       <aside id="annotation-inbox" class="workbench-annotation-inbox" aria-label="Annotation Inbox">

@@ -131,16 +131,18 @@ def test_workbench_route_serves_authority_banner(server) -> None:
     assert "Truth Engine — Read Only" in html
 
 
-# ─── 4. Banner placement: above the 3-column collab grid ────────────
+# ─── 4. Banner placement: above the circuit hero ────────────────────
 
 
-def test_workbench_banner_appears_before_collab_grid() -> None:
-    """The banner must sit ABOVE the 3-column grid so it frames the
-    controller / circuit columns, not below them."""
+def test_workbench_banner_appears_before_circuit_hero() -> None:
+    """P44-01 (replaces collab-grid ordering test): the banner must sit
+    ABOVE the circuit-hero region so it frames the actual control logic
+    panel, not below it. The previous 3-column collab grid was removed
+    because it was empty placeholder scaffolding."""
     html = (STATIC_DIR / "workbench.html").read_text(encoding="utf-8")
     banner_pos = html.find('id="workbench-authority-banner"')
-    grid_pos = html.find('class="workbench-collab-grid"')
-    assert banner_pos != -1 and grid_pos != -1
-    assert banner_pos < grid_pos, (
-        "authority banner must precede the 3-column collab grid"
+    hero_pos = html.find('id="workbench-circuit-hero"')
+    assert banner_pos != -1 and hero_pos != -1
+    assert banner_pos < hero_pos, (
+        "authority banner must precede the circuit hero so it frames the panel"
     )

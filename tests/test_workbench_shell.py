@@ -57,15 +57,25 @@ def test_workbench_route_serves_shell() -> None:
 
     assert response.status == 200
     assert "Control Logic Workbench" in html
-    assert 'id="workbench-control-panel"' in html
+    # P44-01: the workbench is centered on the control logic panel hero,
+    # not the prior empty 3-column shell. Lock the new hero placeholder.
+    assert 'id="workbench-circuit-hero"' in html
+    assert 'data-circuit-fragment-endpoint="/api/workbench/circuit-fragment"' in html
 
 
-def test_workbench_shell_has_three_independent_columns() -> None:
+def test_workbench_shell_has_circuit_hero() -> None:
+    """P44-01 (replaces test_workbench_shell_has_three_independent_columns):
+    the workbench must mount a single circuit-hero region as the page
+    body, not the previous 3-column collab grid."""
     ids = parse_workbench_ids().ids
 
-    assert "workbench-control-panel" in ids
-    assert "workbench-document-panel" in ids
-    assert "workbench-circuit-panel" in ids
+    assert "workbench-circuit-hero" in ids
+    assert "workbench-circuit-hero-mount" in ids
+    assert "workbench-circuit-hero-title" in ids
+    # The old per-column ids must NOT appear (regression guard).
+    assert "workbench-control-panel" not in ids
+    assert "workbench-document-panel" not in ids
+    assert "workbench-circuit-panel" not in ids
 
 
 def test_workbench_shell_has_identity_ticket_and_system_topbar() -> None:
@@ -91,10 +101,18 @@ def test_workbench_shell_has_kogami_approval_entry() -> None:
     assert parser.data_attrs["approval-center-entry"].get("data-role") == "KOGAMI"
 
 
-def test_workbench_javascript_exposes_failure_isolation_hooks() -> None:
+def test_workbench_javascript_exposes_circuit_hero_hydrator() -> None:
+    """P44-01 (replaces failure-isolation hooks for the prior 3-column
+    boot): the workbench JS must expose a single circuit-hero hydrator
+    that fetches the SVG fragment endpoint and injects it into the
+    hero mount. The previous per-column boot functions are gone."""
     script = (STATIC_DIR / "workbench.js").read_text(encoding="utf-8")
 
-    assert "bootWorkbenchControlPanel" in script
-    assert "bootWorkbenchDocumentPanel" in script
-    assert "bootWorkbenchCircuitPanel" in script
-    assert "bootWorkbenchColumnSafely" in script
+    assert "function bootWorkbenchCircuitHero" in script
+    assert "function bootWorkbenchShell" in script
+    assert "/api/workbench/circuit-fragment" in script
+    # Per-column boot functions removed; their presence implies the wrong
+    # abstraction is back.
+    assert "function bootWorkbenchControlPanel" not in script
+    assert "function bootWorkbenchDocumentPanel" not in script
+    assert "function bootWorkbenchCircuitPanel" not in script

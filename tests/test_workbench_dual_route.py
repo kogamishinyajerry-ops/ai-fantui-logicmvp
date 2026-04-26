@@ -64,8 +64,10 @@ def test_workbench_route_serves_shell_only(path: str) -> None:
     assert "Control Logic Workbench</h1>" in body
     # Bundle h1 must NOT leak onto the shell page
     assert "Workbench Bundle 验收台</h1>" not in body
-    # Shell-essential ids still present (regression guard)
-    assert 'id="workbench-control-panel"' in body
+    # P44-01: shell hero (circuit panel) + approval-center-entry are the
+    # essential surfaces (replaces the prior workbench-control-panel id
+    # which belonged to the empty 3-column grid that was removed).
+    assert 'id="workbench-circuit-hero"' in body
     assert 'id="approval-center-entry"' in body
 
 

@@ -52,66 +52,64 @@ const maxWorkbenchPacketRevisionHistory = 8;
 // token (control/document/circuit) into the user-facing engineer-task
 // verb so the failure-path copy never reverts to technical-noun
 // phrasing. Mapping mirrors the rename in workbench.html.
-const WORKBENCH_COLUMN_LABEL = {
-  control: "Probe & Trace",
-  document: "Annotate & Propose",
-  circuit: "Hand off & Track",
-};
-
-function bootWorkbenchColumnSafely(columnName, bootFn) {
-  try {
-    bootFn();
-  } catch (error) {
-    const status = workbenchElement(`workbench-${columnName}-status`);
-    if (status) {
-      const label = WORKBENCH_COLUMN_LABEL[columnName] || columnName;
-      status.textContent = `${label} panel failed independently: ${error.message || error}`;
-      status.dataset.tone = "warning";
-    }
-  }
-}
-
-// E11-03 (2026-04-26): the three columns were renamed from technical
-// nouns ("Scenario Control / Spec Review Surface / Logic Circuit Surface")
-// to engineer-task verbs ("Probe & Trace / Annotate & Propose / Hand off
-// & Track"). Underlying ids and data-column tokens stay stable so e2e
-// selectors don't break — only the visible status copy here changes.
+// P44-01 (2026-04-26): the workbench is now centered on the actual
+// control logic panel. The previous 3-column shell (Probe & Trace /
+// Annotate & Propose / Hand off & Track) was an empty placeholder grid
+// — the L1→L4 logic panel was missing entirely. bootWorkbenchShell now
+// fetches the SVG fragment from /api/workbench/circuit-fragment and
+// injects it into #workbench-circuit-hero-mount.
 //
-// E11-03 R2 (P5 IMPORTANT fix, 2026-04-26): drop internal phase tokens
-// ("E07+", "E07") from the user-visible hydrated copy. Customers/new
-// engineers should not need to know roadmap codes; the staging note is
-// rephrased in plain language.
-function bootWorkbenchControlPanel() {
-  const status = workbenchElement("workbench-control-status");
-  if (status) {
-    status.textContent =
-      "探针与追踪面板就绪，场景动作已编入下一捆 · Probe & Trace ready. Scenario actions are staged for the next bundle.";
-    status.dataset.tone = "ready";
+// The fragment endpoint extracts its content from fantui_circuit.html
+// (single source of truth for the SVG), so /workbench and the static
+// /fantui_circuit.html page never drift.
+async function bootWorkbenchCircuitHero() {
+  const mount = workbenchElement("workbench-circuit-hero-mount");
+  if (!mount) {
+    return;
   }
-}
-
-function bootWorkbenchDocumentPanel() {
-  const status = workbenchElement("workbench-document-status");
-  if (status) {
-    status.textContent =
-      "标注与提案面板就绪，text-range 标注已编入下一捆 · Annotate & Propose ready. Text-range annotation is staged for the next bundle.";
-    status.dataset.tone = "ready";
-  }
-}
-
-function bootWorkbenchCircuitPanel() {
-  const status = workbenchElement("workbench-circuit-status");
-  if (status) {
-    status.textContent =
-      "移交与跟踪面板就绪，覆盖层标注已编入下一捆 · Hand off & Track ready. Overlay annotation is staged for the next bundle.";
-    status.dataset.tone = "ready";
+  const endpoint =
+    mount.getAttribute("data-circuit-fragment-endpoint") ||
+    "/api/workbench/circuit-fragment";
+  try {
+    const response = await fetch(endpoint, { headers: { Accept: "text/html" } });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const fragment = await response.text();
+    if (!fragment.includes("<svg ")) {
+      throw new Error("response missing <svg>");
+    }
+    // Sanity-check that gate anchors traveled with the fragment, so a
+    // future server-side regression doesn't silently break annotation
+    // binding (P44-02 will key on data-gate-id).
+    for (const gateId of ["L1", "L2", "L3", "L4"]) {
+      if (!fragment.includes(`data-gate-id="${gateId}"`)) {
+        throw new Error(`fragment missing data-gate-id="${gateId}"`);
+      }
+    }
+    mount.innerHTML = fragment;
+    mount.setAttribute("data-circuit-fragment-status", "ready");
+    mount.setAttribute(
+      "aria-label",
+      "反推逻辑链路 L1 → L4 SVG circuit (loaded)",
+    );
+  } catch (error) {
+    mount.setAttribute("data-circuit-fragment-status", "error");
+    mount.innerHTML =
+      `<p class="workbench-circuit-hero-error" role="alert">` +
+      `控制逻辑面板加载失败 · Failed to load control logic panel: ` +
+      `${error.message || error}. ` +
+      `请直接打开 <a href="/fantui_circuit.html">/fantui_circuit.html</a> ` +
+      `查看静态版本 · open the static circuit page directly.` +
+      `</p>`;
   }
 }
 
 function bootWorkbenchShell() {
-  bootWorkbenchColumnSafely("control", bootWorkbenchControlPanel);
-  bootWorkbenchColumnSafely("document", bootWorkbenchDocumentPanel);
-  bootWorkbenchColumnSafely("circuit", bootWorkbenchCircuitPanel);
+  // Fire-and-forget: the hero hydrates asynchronously so the rest of the
+  // workbench chrome (topbar, state-of-world bar, trust banner, approval
+  // center) renders immediately without waiting on the fragment request.
+  bootWorkbenchCircuitHero();
 }
 
 // P43 authority contract — written only via assignFrozenSpec; never mutated directly
