@@ -81,7 +81,67 @@ WORKBENCH_STATE_OF_WORLD_PATH = "/api/workbench/state-of-world"
 # P44-01 (2026-04-26): control-logic circuit fragment endpoint.
 # Extracts the L1→L4 SVG block from fantui_circuit.html (single source of
 # truth) so /workbench can mount the circuit panel as the page hero.
+# P45-01 (2026-04-26): same endpoint now parameterized by ?system=<id>.
 WORKBENCH_CIRCUIT_FRAGMENT_PATH = "/api/workbench/circuit-fragment"
+
+# P45-01 (2026-04-26): map system_id → circuit source file under
+# STATIC_DIR. Systems present in the workbench dropdown but missing
+# here fall through to a "circuit not yet wired" placeholder SVG so
+# /workbench renders cleanly instead of erroring out. Adding a new
+# system = drop a circuit HTML file in static/ and add an entry here.
+_CIRCUIT_SOURCE_BY_SYSTEM: dict[str, str] = {
+    "thrust-reverser": "fantui_circuit.html",
+    # landing-gear / bleed-air-valve / c919-etras circuits are not yet
+    # drafted; the dropdown still offers them so engineers can submit
+    # feature requests against the placeholder, and we ship the
+    # parameterized endpoint now so adding a real circuit later is a
+    # one-line change.
+}
+# Per-system gate anchors that MUST appear in the served fragment.
+# Keyed by system_id; if missing → no sanity-check (placeholder
+# systems can't fail this guard).
+_CIRCUIT_REQUIRED_GATES: dict[str, tuple[str, ...]] = {
+    "thrust-reverser": ("L1", "L2", "L3", "L4"),
+}
+
+
+def _circuit_placeholder_fragment(system_id: str) -> str:
+    """Return a self-contained SVG fragment for systems whose circuit
+    file isn't drafted yet. The fragment carries no gate anchors —
+    workbench review-mode + interpreter both gracefully no-op when
+    they find none. The placeholder is honest: it tells the engineer
+    exactly which system isn't wired and invites a ticket."""
+    safe_id = system_id.replace("<", "&lt;").replace(">", "&gt;")
+    return (
+        '<svg viewBox="0 0 1000 640" xmlns="http://www.w3.org/2000/svg" '
+        'data-circuit-system="placeholder" data-circuit-system-id="'
+        f'{safe_id}">'
+        '<rect width="1000" height="640" fill="#04111a"/>'
+        '<rect x="180" y="200" width="640" height="240" rx="14" '
+        'fill="rgba(79,184,255,0.06)" stroke="rgba(79,184,255,0.4)" '
+        'stroke-width="1.5" stroke-dasharray="6 6"/>'
+        '<text x="500" y="290" fill="#4fb8ff" font-size="22" '
+        'font-weight="700" text-anchor="middle">'
+        '🛠 控制逻辑面板尚未接入 · Circuit not yet wired'
+        '</text>'
+        '<text x="500" y="332" fill="#cdd6e0" font-size="14" '
+        f'text-anchor="middle">系统 · system: {safe_id}</text>'
+        '<text x="500" y="370" fill="rgba(206,223,236,0.7)" '
+        'font-size="12" text-anchor="middle">'
+        '该系统的 L1..Ln 逻辑链路还没有 SVG 蓝图。请通过下方 修改建议 '
+        '提交工单，'
+        '</text>'
+        '<text x="500" y="390" fill="rgba(206,223,236,0.7)" '
+        'font-size="12" text-anchor="middle">'
+        'Claude Code 接到 dev-queue 简报后会补齐电路图。'
+        '</text>'
+        '<text x="500" y="420" fill="rgba(206,223,236,0.55)" '
+        'font-size="11" text-anchor="middle" font-style="italic">'
+        'Drop a circuit HTML file under static/ and register it in '
+        '_CIRCUIT_SOURCE_BY_SYSTEM to wire this system.'
+        '</text>'
+        '</svg>'
+    )
 # P44-02 (2026-04-26): rule-based interpretation of free-form engineer
 # modification suggestions. Engineer types text, server returns
 # structured {affected_gates, change_kind, target_signals, summary}
@@ -864,34 +924,56 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         self._send_json(200, record)
 
     def _serve_workbench_circuit_fragment(self):
-        """P44-01 (2026-04-26): serve the L1→L4 SVG fragment that backs
-        the /workbench page hero. Source of truth is fantui_circuit.html
-        (a complete page with the same SVG); we extract the <svg>…</svg>
-        block at request time so the two surfaces never drift.
+        """P44-01 (2026-04-26) + P45-01 (2026-04-26): serve the SVG
+        fragment that backs the /workbench page hero, parameterized by
+        ?system=<id>. thrust-reverser (default) returns the L1→L4
+        circuit extracted from fantui_circuit.html; other systems
+        either map to their own circuit file when one exists, or
+        return a clear "circuit not yet wired" placeholder SVG so the
+        page still renders cleanly.
 
-        The fragment intentionally OMITS the unified-nav header and the
-        info-row / footer of fantui_circuit.html — /workbench wraps the
-        SVG with its own engineer chrome (topbar, state-of-world bar,
-        annotation toolbar, approval center)."""
-        source = STATIC_DIR / "fantui_circuit.html"
+        The fragment intentionally OMITS the unified-nav header and
+        the info-row / footer of the source page — /workbench wraps
+        the SVG with its own engineer chrome (topbar, state-of-world
+        bar, suggestion form, approval center)."""
+        from urllib.parse import parse_qs as _parse_qs, urlparse as _urlparse
+        parsed = _urlparse(self.path)
+        system_id = (_parse_qs(parsed.query).get("system", ["thrust-reverser"])[0] or "thrust-reverser").strip()
+        source_path = _CIRCUIT_SOURCE_BY_SYSTEM.get(system_id)
+        if source_path is None:
+            # System is recognized in the dropdown but has no circuit
+            # file yet → return a placeholder SVG so the workbench
+            # still renders something useful.
+            self._send_bytes(
+                200,
+                _circuit_placeholder_fragment(system_id).encode("utf-8"),
+                "text/html; charset=utf-8",
+            )
+            return
+        source = STATIC_DIR / source_path
         try:
             html = source.read_text(encoding="utf-8")
         except (FileNotFoundError, OSError):
-            self._send_json(503, {"error": "circuit_source_unavailable"})
+            self._send_json(503, {"error": "circuit_source_unavailable", "system": system_id})
             return
         svg_start = html.find("<svg viewBox=\"0 0 1000 640\"")
         svg_end = html.find("</svg>", svg_start)
         if svg_start == -1 or svg_end == -1:
-            self._send_json(503, {"error": "circuit_svg_block_not_found"})
+            self._send_json(503, {"error": "circuit_svg_block_not_found", "system": system_id})
             return
         fragment = html[svg_start : svg_end + len("</svg>")]
-        # Sanity-check: every L1/L2/L3/L4 gate anchor must travel with the
-        # fragment, otherwise downstream annotation binding silently breaks.
-        for gate_id in ("L1", "L2", "L3", "L4"):
+        # Sanity-check: every gate anchor declared for this system
+        # must travel with the fragment, otherwise downstream
+        # annotation binding silently breaks.
+        for gate_id in _CIRCUIT_REQUIRED_GATES.get(system_id, ()):
             if f'data-gate-id="{gate_id}"' not in fragment:
                 self._send_json(
                     503,
-                    {"error": "circuit_fragment_missing_gate_anchor", "gate_id": gate_id},
+                    {
+                        "error": "circuit_fragment_missing_gate_anchor",
+                        "system": system_id,
+                        "gate_id": gate_id,
+                    },
                 )
                 return
         self._send_bytes(200, fragment.encode("utf-8"), "text/html; charset=utf-8")
