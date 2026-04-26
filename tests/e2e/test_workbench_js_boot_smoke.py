@@ -13,9 +13,16 @@ explicitly via `pytest -m e2e tests/e2e/test_workbench_js_boot_smoke.py`.
 
 Reuses the session-scoped `demo_server` fixture from
 `tests/e2e/conftest.py` which boots `well_harness.demo_server` on
-port 8799.
+port 8799 (the port must be free).
 
-Skips gracefully if Playwright + chromium are not installed.
+Reproducible install (clean checkout):
+    pip install -e '.[dev,e2e]'
+    playwright install chromium
+    pytest -m e2e tests/e2e/test_workbench_js_boot_smoke.py
+
+Skips gracefully if Playwright Python driver is missing
+(`pytest.importorskip`); skips per-fixture if the Chromium browser
+binary is missing.
 """
 
 from __future__ import annotations

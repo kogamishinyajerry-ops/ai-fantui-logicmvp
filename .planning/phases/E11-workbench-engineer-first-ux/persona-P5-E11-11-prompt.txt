@@ -1,0 +1,107 @@
+You are Codex GPT-5.4 acting as **Persona P5 — Apps Engineer** (Tier-B single-persona pipeline, E11-11 sub-phase).
+
+# Context — E11-11 JS-boot e2e smoke + bundle-page bug fix
+
+**Repo:** `kogamishinyajerry-ops/ai-fantui-logicmvp`
+**Branch:** `feat/e11-11-e2e-js-boot-smoke-20260426`
+**PR:** #27
+**Worktree HEAD:** `9da3d97` (single commit on top of main `060f698`)
+
+## What E11-11 ships
+
+This sub-phase has TWO components, both delivered together:
+
+### Component 1 — e2e infra (the planned scope)
+
+`tests/e2e/test_workbench_js_boot_smoke.py` (NEW, 8 Playwright tests):
+- Marked `@pytest.mark.e2e` (default `pytest` run deselects it via
+  `pyproject.toml addopts = "-m 'not e2e'"`; opt-in via `pytest -m e2e`)
+- Auto-skips via `pytest.importorskip("playwright.sync_api")` if
+  Playwright is absent, and via `pytest.skip(...)` if Chromium is absent
+- Reuses the session-scoped `demo_server` fixture from
+  `tests/e2e/conftest.py` (boots `well_harness.demo_server` on :8799)
+
+E11-08 closure (4 tests): default Kogami visibility, `?identity=Engineer`
+swap, `window.setWorkbenchIdentity` programmatic toggle, blank-string guard.
+
+E11-13 closure (2 tests): shell + bundle pages both boot without JS errors.
+
+E11-15c closure (2 tests): real-DOM headers + buttons all render Chinese-first.
+
+### Component 2 — bundle-page bug surfaced + fixed in lockstep
+
+The first run of `test_bundle_workbench_boots_without_js_errors`
+crashed with:
+```
+TypeError: document.createElement is not a function
+    at workbench.js:1225:27
+    at Array.map (<anonymous>)
+    at renderFingerprintDocumentList (workbench.js:1224)
+    at renderSystemFingerprint (workbench.js:1311)
+    at renderSystemFingerprintFromPacketPayload (workbench.js:1658)
+    at loadBootstrapPayload (workbench.js:3502)
+```
+
+Root cause: `documents.map((document) => { ... })` shadowed the global
+DOM `document`, so `document.createElement(...)` called a method on the
+plain data object instead of the DOM. The bundle page was silently
+rendering nothing for the System Fingerprint document list.
+
+Fix: rename the loop parameter `document → doc` at TWO sites:
+- `workbench.js:1224` `renderFingerprintDocumentList` (the crashing site)
+- `workbench.js:1649` `renderSystemFingerprintFromPacketPayload` (sibling
+  anti-pattern; didn't crash because it doesn't call `document.X`, but
+  same shadow pattern, eliminated for hygiene + to satisfy the new
+  guard test)
+
+Both edits are pure variable-rename refactors — zero behavior change in
+any non-shadowed code path; the bundle code path is restored to its
+intended behavior.
+
+`tests/test_workbench_js_no_global_shadowing.py` (NEW, 2 tests in
+default lane): static-source regex guard against arrow-callback and
+named-function shadowing of the `document` global. So even if the e2e
+suite is deselected, the regression is caught.
+
+## Files in scope
+
+- `src/well_harness/static/workbench.js` — 2 loop-parameter renames (BUGFIX)
+- `tests/e2e/test_workbench_js_boot_smoke.py` — NEW (8 e2e tests)
+- `tests/test_workbench_js_no_global_shadowing.py` — NEW (2 guard tests)
+- `.planning/phases/E11-workbench-engineer-first-ux/E11-11-SURFACE-INVENTORY.md` — NEW
+- `.planning/phases/E11-workbench-engineer-first-ux/PERSONA-ROTATION-STATE.md` — appended
+
+## Your specific lens (P5 Apps Engineer)
+
+Focus on:
+- **Reproducibility**: can a fresh checkout (`pip install -e . && playwright install chromium && pytest -m e2e tests/e2e/test_workbench_js_boot_smoke.py`) reproduce 8/8 pass? Are there hidden environment assumptions (e.g., must run from repo root, must have port 8799 free, must have specific Python version)?
+- **Browser boot health**: are there other latent JS bugs the e2e suite SHOULD have caught but didn't? (e.g., other shadow patterns, race conditions in `loadBootstrapPayload`, console warnings that aren't pageerror-level but indicate trouble.)
+- **Bug fix correctness**: are the 2 renames truly behavior-preserving? Specifically — is there ANY caller that depends on the original `document` shadow being in scope inside that closure? (e.g., closures captured via assignment to outer-scope refs, JSON serialization that captures the shadowed name.)
+- **Bug fix completeness**: I claim 2 shadow sites; have I missed any? The static-source guard test is a regex; verify it actually covers the cases by independently grepping `\(.*document.*\)\s*=>` and `function\s+\w+\s*\(.*document.*\)` patterns in workbench.js / annotation_overlay.js / any other JS.
+- **e2e suite resilience**: do the tests pass deterministically across reruns? Does any test rely on timing rather than `wait_until="networkidle"` or explicit waits? (I added 500ms waits for the no-error tests to give async handlers a chance to throw — is that sufficient or should it be longer / event-driven?)
+- **Default-lane safety**: confirm the new e2e suite does NOT run in the default `pytest` lane (since CI-level integrations may not have Chromium). Verify by `pytest --collect-only` showing the e2e tests as deselected.
+- **Cross-impact on existing e2e**: do `tests/e2e/test_wow_*.py` still pass under `pytest -m e2e`? (The session-scoped `demo_server` fixture is shared.)
+
+## Verification status
+
+- 1080 / 1080 default-lane pytest pass (35 deselected = the new e2e suite + existing wow_a/b/c)
+- 8 / 8 e2e suite pass under `pytest -m e2e tests/e2e/test_workbench_js_boot_smoke.py` locally (Playwright + Chromium 145.0.7632.6)
+- 2 / 2 new shadow-guard tests pass
+
+## Out of scope (deliberately deferred)
+
+- **Existing wow_a/b/c e2e tests** — not modified.
+- **JS smoke for `/workbench/start` or other static pages** — narrow scope to /workbench (shell + bundle).
+- **CI integration** (auto-running e2e in GitHub Actions) — local infra only for now.
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+Each finding: BLOCKER / IMPORTANT / NIT / INFO with file:line citation. Out-of-scope items → NIT/INFO only.
+
+Live-probe at least one path. Cite the probe.
+
+Truth-engine red line: confirm `git diff --name-only main..9da3d97` shows no changes to `controller.py` / `runner.py` / `models.py` / `src/well_harness/adapters/` / `workbench.html` / `workbench.css` / `demo_server.py`.
+
+Sign as: **P5 — Apps Engineer (Tier-B, E11-11)**
