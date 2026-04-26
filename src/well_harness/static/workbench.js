@@ -391,6 +391,22 @@ function renderProposalsInbox(proposals) {
       const targets = (interp.target_signals || []).join(", ") || "—";
       const summary = interp.summary_zh || interp.summary_en || "(无 · empty)";
       const author = p.author_name || "anonymous";
+      // P44-05: accept/reject buttons. Only OPEN proposals get them
+      // (terminal proposals just show the status pill); CSS gates
+      // visibility on body[data-review-mode="on"] so engineers don't
+      // see actionable buttons on tickets they merely submitted.
+      const actions = p.status === "OPEN"
+        ? (
+            `<div class="workbench-annotation-inbox-item-actions">` +
+            `  <button type="button" class="workbench-toolbar-button is-primary" ` +
+            `          data-proposal-action="accept" data-proposal-id="${escape(p.id)}">` +
+            `    ✅ 通过 · Accept</button>` +
+            `  <button type="button" class="workbench-toolbar-button" ` +
+            `          data-proposal-action="reject" data-proposal-id="${escape(p.id)}">` +
+            `    ✕ 驳回 · Reject</button>` +
+            `</div>`
+          )
+        : "";
       return (
         `<li class="workbench-annotation-inbox-item" data-proposal-id="${escape(p.id)}" data-status="${escape(p.status)}">` +
         `  <div class="workbench-annotation-inbox-item-line">` +
@@ -405,6 +421,7 @@ function renderProposalsInbox(proposals) {
         `    <span>signals: ${escape(targets)}</span>` +
         `  </div>` +
         `  <div class="workbench-annotation-inbox-item-summary">${escape(summary)}</div>` +
+        actions +
         `</li>`
       );
     })
@@ -414,13 +431,27 @@ function renderProposalsInbox(proposals) {
   // Delegated handler — re-attached on every render so it always
   // matches the current set of cards.
   for (const card of list.querySelectorAll(".workbench-annotation-inbox-item")) {
-    card.addEventListener("click", () => {
+    card.addEventListener("click", (event) => {
+      // Ignore clicks on action buttons — they have their own
+      // dedicated handlers below and shouldn't double-fire as a
+      // gate-spotlight.
+      if (event.target.closest("[data-proposal-action]")) return;
       const id = card.getAttribute("data-proposal-id");
       const proposal = (_latestProposals || []).find((p) => p.id === id);
       const gates = (proposal && proposal.interpretation && proposal.interpretation.affected_gates) || [];
       for (const gateId of gates) {
         spotlightCircuitGate(gateId);
       }
+    });
+  }
+  // P44-05: accept/reject buttons. Delegated handler — re-attached
+  // every render alongside the cards.
+  for (const btn of list.querySelectorAll("[data-proposal-action]")) {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();  // don't trigger the card click
+      const action = btn.getAttribute("data-proposal-action");
+      const id = btn.getAttribute("data-proposal-id");
+      transitionProposal(id, action);
     });
   }
 }
@@ -558,6 +589,61 @@ function spotlightInboxByGate(gateId) {
   setTimeout(() => card.classList.remove("is-review-spotlight"), 1500);
   if (typeof card.scrollIntoView === "function") {
     card.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// P44-05 (2026-04-26): accept / reject + dev-queue handoff.
+//
+// Reviewer clicks ✅ / ✕ on a ticket card → POST to
+// /api/proposals/<id>/<accept|reject>. The server flips status,
+// appends an audit-trail history entry, and (on accept) writes a
+// markdown handoff brief Claude Code's /gsd-execute-phase reads in a
+// later session. We re-fetch the inbox so the status pill flips
+// (and the now-terminal ticket loses its action buttons) without a
+// page reload. Anchors auto-update because applyReviewAnchors only
+// counts OPEN tickets — the accepted gate stops glowing as soon as
+// it has no open tickets left.
+// ─────────────────────────────────────────────────────────────────
+
+async function transitionProposal(proposalId, action) {
+  if (!proposalId || (action !== "accept" && action !== "reject")) return;
+  const identity = document.getElementById("workbench-identity");
+  const actor = identity
+    ? identity.getAttribute("data-identity-name") || "anonymous"
+    : "anonymous";
+  let note = null;
+  if (action === "reject") {
+    // Cheap free-form reason capture — keeps the audit trail useful
+    // without bolting on a modal. Empty/cancelled = no note.
+    const reason = window.prompt(
+      "驳回理由（可选）· Rejection reason (optional):",
+      "",
+    );
+    if (reason && reason.trim()) {
+      note = reason.trim();
+    }
+  }
+  try {
+    const response = await fetch(`${PROPOSALS_PATH}/${encodeURIComponent(proposalId)}/${action}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actor, note }),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    await loadProposalsInbox();
+  } catch (error) {
+    // Surface the error inline on the suggestion-status row so it
+    // shows up wherever the reviewer is looking. Fine to share with
+    // the engineer-side status field — no engineer action is
+    // running at the same moment.
+    const status = document.getElementById("workbench-suggestion-status");
+    if (status) {
+      status.dataset.status = "error";
+      status.textContent = `${action} 失败 · ${action} failed: ${error.message || error}`;
+    }
   }
 }
 

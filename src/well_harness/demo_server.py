@@ -330,6 +330,14 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if parsed.path == PROPOSALS_PATH:
             self._handle_create_proposal()
             return
+        # P44-05 (2026-04-26): /api/proposals/<id>/accept|reject. We
+        # match on the prefix + suffix here so the id segment is
+        # opaque (matches whatever shape _new_proposal_id() produces).
+        if parsed.path.startswith(PROPOSALS_PATH + "/") and (
+            parsed.path.endswith("/accept") or parsed.path.endswith("/reject")
+        ):
+            self._handle_proposal_transition(parsed.path)
+            return
         if parsed.path not in {
             "/api/demo",
             "/api/lever-snapshot",
@@ -783,6 +791,78 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             return
         self._send_json(201, record)
 
+    def _handle_proposal_transition(self, raw_path: str):
+        """P44-05 (2026-04-26): accept or reject a proposal.
+
+        POST /api/proposals/<id>/accept  →  flips OPEN → ACCEPTED, writes
+                                            a dev-queue brief Claude Code
+                                            can pick up via /gsd-execute-phase
+        POST /api/proposals/<id>/reject  →  flips OPEN → REJECTED
+
+        Optional JSON body:
+          {
+            "actor": "Kogami",      (optional, defaults to "anonymous")
+            "note":  "free text"    (optional, persisted to history;
+                                     useful as rejection reason)
+          }
+
+        Returns 200 with the updated record. Errors:
+          404 — proposal id not found
+          409 — proposal already ACCEPTED or REJECTED
+          400 — invalid path / json
+        """
+        # Path shape: /api/proposals/<id>/<action>
+        suffix = raw_path[len(PROPOSALS_PATH) + 1 :]
+        try:
+            proposal_id, action = suffix.rsplit("/", 1)
+        except ValueError:
+            self._send_json(400, {"error": "invalid_proposal_action_path"})
+            return
+        if action not in ("accept", "reject") or not proposal_id:
+            self._send_json(400, {"error": "invalid_proposal_action"})
+            return
+        new_status = "ACCEPTED" if action == "accept" else "REJECTED"
+        # Body is optional — empty/missing is fine.
+        actor = "anonymous"
+        note: str | None = None
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        if length > 0:
+            if length > 50_000:
+                self._send_json(400, {"error": "oversized_body"})
+                return
+            try:
+                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                self._send_json(400, {"error": "invalid_json"})
+                return
+            if isinstance(payload, dict):
+                actor = str(payload.get("actor") or "anonymous")
+                raw_note = payload.get("note")
+                note = str(raw_note) if isinstance(raw_note, str) and raw_note.strip() else None
+        record, error_code = update_proposal_status(
+            proposal_id,
+            new_status=new_status,
+            actor=actor,
+            note=note,
+        )
+        if error_code == "not_found":
+            self._send_json(404, {"error": "proposal_not_found", "id": proposal_id})
+            return
+        if error_code == "already_terminal":
+            self._send_json(
+                409,
+                {
+                    "error": "proposal_already_terminal",
+                    "id": proposal_id,
+                    "current_status": (record or {}).get("status"),
+                },
+            )
+            return
+        if error_code is not None or record is None:
+            self._send_json(500, {"error": "proposal_transition_failed"})
+            return
+        self._send_json(200, record)
+
     def _serve_workbench_circuit_fragment(self):
         """P44-01 (2026-04-26): serve the L1→L4 SVG fragment that backs
         the /workbench page hero. Source of truth is fantui_circuit.html
@@ -1084,6 +1164,159 @@ def list_proposals(*, status_filter: str | None = None) -> list[dict]:
             continue
         records.append(data)
     return records
+
+
+# ─── P44-05 (2026-04-26): accept / reject + dev-queue handoff ───────
+#
+# Reviewer-side mutations on a proposal. Two transitions only:
+#     OPEN → ACCEPTED   ... + writes a dev-queue brief for Claude Code
+#     OPEN → REJECTED   ... no dev-queue side-effect
+# Re-accepting / re-rejecting an already-terminal proposal is rejected
+# with a 409. Truth-engine red line preserved: this only mutates the
+# proposal JSON + writes a markdown brief under .planning/dev_queue/;
+# the actual code change still goes through Claude Code's normal
+# /gsd-execute-phase workflow + git PR review.
+
+DEV_QUEUE_BRIEF_VERSION = 1
+
+
+def dev_queue_dir() -> Path:
+    """Mirrors proposals_dir() but for the dev-queue handoff briefs.
+    Tests override via WORKBENCH_DEV_QUEUE_DIR; production falls back
+    to <repo>/.planning/dev_queue/. The directory is created on first
+    call (parents=True, exist_ok=True)."""
+    override = os.environ.get("WORKBENCH_DEV_QUEUE_DIR")
+    if override:
+        path = Path(override).expanduser()
+    else:
+        path = Path(__file__).resolve().parents[2] / ".planning" / "dev_queue"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _load_proposal_record(proposal_id: str) -> dict | None:
+    """Read a single proposal record by id, or None if not found / bad
+    JSON. Caller must hold _PROPOSALS_LOCK if mutating afterwards."""
+    target = proposals_dir() / f"{proposal_id}.json"
+    if not target.is_file():
+        return None
+    try:
+        data = json.loads(target.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def _write_proposal_record(record: dict) -> None:
+    """Persist the proposal back to disk (overwrite). Caller MUST hold
+    _PROPOSALS_LOCK so concurrent reviewers don't race the audit
+    trail."""
+    target = proposals_dir() / f"{record['id']}.json"
+    target.write_text(
+        json.dumps(record, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def update_proposal_status(
+    proposal_id: str,
+    *,
+    new_status: str,
+    actor: str,
+    note: str | None = None,
+) -> tuple[dict | None, str | None]:
+    """Transition a proposal's status. Returns (record, error_code).
+    error_code is one of: None, "not_found", "invalid_status",
+    "already_terminal". Allowed transitions: OPEN → ACCEPTED |
+    REJECTED. Any history entry written includes actor + optional
+    free-form note (e.g. rejection reason)."""
+    if new_status not in ("ACCEPTED", "REJECTED"):
+        return None, "invalid_status"
+    with _PROPOSALS_LOCK:
+        record = _load_proposal_record(proposal_id)
+        if record is None:
+            return None, "not_found"
+        current = record.get("status")
+        if current != "OPEN":
+            return record, "already_terminal"
+        record["status"] = new_status
+        history_entry = {
+            "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "actor": actor or "anonymous",
+            "action": "accepted" if new_status == "ACCEPTED" else "rejected",
+        }
+        if note:
+            history_entry["note"] = note
+        record.setdefault("history", []).append(history_entry)
+        _write_proposal_record(record)
+        if new_status == "ACCEPTED":
+            # Side-effect: drop a markdown brief Claude Code can pick
+            # up on its next /gsd-execute-phase. Failure to write the
+            # brief should NOT fail the accept call — the proposal is
+            # already mutated and the user expects the status flip to
+            # be the source of truth. Log and move on.
+            try:
+                write_dev_queue_brief(record)
+            except OSError:
+                pass
+    return record, None
+
+
+def write_dev_queue_brief(record: dict) -> Path:
+    """Write a markdown handoff brief Claude Code's /gsd-execute-phase
+    can read in a later session. Returns the brief's path. Schema is
+    locked by P44-05 tests (the markdown is an external contract)."""
+    path = dev_queue_dir() / f"{record['id']}.md"
+    interp = record.get("interpretation") or {}
+    affected_gates = ", ".join(interp.get("affected_gates") or []) or "—"
+    target_signals = ", ".join(interp.get("target_signals") or []) or "—"
+    history = record.get("history") or []
+    accepted_entry = next(
+        (h for h in reversed(history) if h.get("action") == "accepted"),
+        None,
+    )
+    accepted_at = accepted_entry["at"] if accepted_entry else "—"
+    accepted_by = accepted_entry["actor"] if accepted_entry else "—"
+    brief = (
+        f"# Proposal {record['id']}\n"
+        f"\n"
+        f"<!-- dev_queue brief schema v{DEV_QUEUE_BRIEF_VERSION} —"
+        f" generated by demo_server.write_dev_queue_brief; do not"
+        f" hand-edit -->\n"
+        f"\n"
+        f"- **Status**: ACCEPTED ({accepted_at} by {accepted_by})\n"
+        f"- **System**: {record.get('system_id', '—')}\n"
+        f"- **Affected gates**: {affected_gates}\n"
+        f"- **Target signals**: {target_signals}\n"
+        f"- **Change kind**: {interp.get('change_kind', '—')}\n"
+        f"- **Confidence**: {interp.get('confidence', '—')}\n"
+        f"- **Submitted by**: {record.get('author_name', '—')}"
+        f" ({record.get('author_role', '—')})\n"
+        f"- **Ticket**: {record.get('ticket_id', '—')}\n"
+        f"- **Created**: {record.get('created_at', '—')}\n"
+        f"\n"
+        f"## Engineer's original suggestion · 工程师原始建议\n"
+        f"\n"
+        f"> {record.get('source_text', '').strip() or '(empty)'}\n"
+        f"\n"
+        f"## System interpretation · 系统解读\n"
+        f"\n"
+        f"- Summary (zh): {interp.get('summary_zh', '—')}\n"
+        f"- Summary (en): {interp.get('summary_en', '—')}\n"
+        f"\n"
+        f"## Handoff to Claude Code\n"
+        f"\n"
+        f"1. Open this brief and the linked proposal JSON at"
+        f" `.planning/proposals/{record['id']}.json`.\n"
+        f"2. Run `/gsd-execute-phase` to plan + implement the change"
+        f" against the truth-engine code (controller / runner /"
+        f" models / adapters).\n"
+        f"3. After commit, mark this brief complete by deleting it"
+        f" from `.planning/dev_queue/` (the proposal JSON's status"
+        f" remains the audit truth).\n"
+    )
+    path.write_text(brief, encoding="utf-8")
+    return path
 
 
 def _clamp_tra(tra_deg: float, config: HarnessConfig) -> float:

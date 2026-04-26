@@ -29,3 +29,6 @@ tmp/
 output/
 # P44-03: change-proposal store (per-session demo state, not source-of-truth)
 .planning/proposals/
+# P44-05: dev-queue handoff briefs (per-accept demo state; Claude Code reads
+# these in a later /gsd-execute-phase session and deletes them on completion)
+.planning/dev_queue/

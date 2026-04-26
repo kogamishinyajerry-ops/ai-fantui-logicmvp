@@ -2421,3 +2421,21 @@ body[data-review-mode="on"] .workbench-circuit-hero-mount [data-gate-id].is-revi
   outline-offset: 2px;
   animation: workbench-review-spotlight-fade 1.4s ease-out forwards;
 }
+
+/* P44-05 (2026-04-26): accept/reject buttons live on every OPEN
+   ticket card but are hidden until the reviewer flips Review Mode
+   ON. Engineers who only submit tickets never see actionable
+   buttons; the reviewer sees them on every OPEN ticket the moment
+   they enter their lens. */
+.workbench-annotation-inbox-item-actions {
+  display: none;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+}
+body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"] .workbench-annotation-inbox-item-actions {
+  display: flex;
+}
+.workbench-annotation-inbox-item-actions .workbench-toolbar-button {
+  padding: 0.25rem 0.55rem;
+  font-size: 0.7rem;
+}
