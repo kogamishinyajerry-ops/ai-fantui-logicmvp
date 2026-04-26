@@ -207,7 +207,10 @@ def test_llm_strategy_returns_normalized_llm_response(server, monkeypatch):
     assert auth == "Bearer sk-test-fake-key"
     # Body must include the requested model name.
     assert '"model": "MiniMax-M2.7-highspeed"' in captured["body"]
-    assert captured["timeout"] == 30.0
+    # 60s lets the reasoning-style MiniMax-M2.7-highspeed finish
+    # without prematurely tripping the urllib timeout (raised from
+    # 30s after a real session showed the call running long).
+    assert captured["timeout"] == 60.0
 
 
 def test_strip_json_fences_drops_minimax_think_block():
