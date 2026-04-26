@@ -2439,3 +2439,59 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
   padding: 0.25rem 0.55rem;
   font-size: 0.7rem;
 }
+
+/* P44-06 (2026-04-26): panel version chip + rollback hints.
+   The chip lives in the topbar and surfaces "panel version = truth
+   SHA + accepted count" so the engineer always knows what version
+   of the panel they're looking at. The rollback-hints block lives
+   inside each ACCEPTED ticket card and reveals the git commands
+   the engineer would run themselves — the workbench never executes
+   git mutations, the hints are pure read-only instruction. */
+.workbench-panel-version-chip {
+  cursor: pointer;
+}
+.workbench-panel-version-chip[data-panel-version-state="ready"] strong {
+  color: #00e5a0;
+}
+.workbench-panel-version-chip[data-panel-version-state="error"] strong {
+  color: #ff8888;
+}
+.workbench-rollback-hints {
+  display: none;
+  margin-top: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  background: rgba(79, 184, 255, 0.06);
+  border: 1px solid rgba(79, 184, 255, 0.25);
+  border-radius: 4px;
+  font-size: 0.65rem;
+  line-height: 1.5;
+  color: #cdd6e0;
+}
+.workbench-rollback-hints[data-rollback-state="open"] {
+  display: block;
+}
+.workbench-rollback-hints code {
+  display: block;
+  padding: 0.25rem 0.45rem;
+  margin: 0.2rem 0;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 3px;
+  color: #4fb8ff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.65rem;
+  white-space: pre;
+  overflow-x: auto;
+}
+.workbench-rollback-toggle {
+  margin-top: 0.4rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.65rem;
+  background: transparent;
+  color: #4fb8ff;
+  border: 1px solid rgba(79, 184, 255, 0.4);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.workbench-rollback-toggle:hover {
+  background: rgba(79, 184, 255, 0.08);
+}

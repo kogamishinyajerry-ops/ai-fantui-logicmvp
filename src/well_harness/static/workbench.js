@@ -118,6 +118,7 @@ function bootWorkbenchShell() {
   installSuggestionFlow();
   installProposalInbox();
   installReviewModeToggle();
+  installPanelVersionChip();
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -356,6 +357,8 @@ async function loadProposalsInbox() {
     // proposal set. Safe no-op if review mode is off — the CSS rule
     // gated on body[data-review-mode="off"] hides every anchor.
     applyReviewAnchors(proposals);
+    // P44-06: refresh the panel-version chip's accepted-count.
+    refreshPanelVersionChip();
   } catch (error) {
     list.dataset.inboxState = "error";
     list.innerHTML =
@@ -407,6 +410,22 @@ function renderProposalsInbox(proposals) {
             `</div>`
           )
         : "";
+      // P44-06: rollback hints. Only ACCEPTED proposals get them —
+      // they're the ones that have (or will have) a corresponding
+      // truth-engine commit the engineer might want to revert. The
+      // hints are pure read-only instructions; the workbench never
+      // executes git mutations.
+      const rollback = p.status === "ACCEPTED"
+        ? (
+            `<button type="button" class="workbench-rollback-toggle" ` +
+            `        data-rollback-toggle-for="${escape(p.id)}" aria-expanded="false">` +
+            `  🔁 回滚指引 · Rollback hints</button>` +
+            `<div class="workbench-rollback-hints" ` +
+            `     data-rollback-hints-for="${escape(p.id)}" data-rollback-state="closed">` +
+            renderRollbackHints(p) +
+            `</div>`
+          )
+        : "";
       return (
         `<li class="workbench-annotation-inbox-item" data-proposal-id="${escape(p.id)}" data-status="${escape(p.status)}">` +
         `  <div class="workbench-annotation-inbox-item-line">` +
@@ -422,6 +441,7 @@ function renderProposalsInbox(proposals) {
         `  </div>` +
         `  <div class="workbench-annotation-inbox-item-summary">${escape(summary)}</div>` +
         actions +
+        rollback +
         `</li>`
       );
     })
@@ -452,6 +472,18 @@ function renderProposalsInbox(proposals) {
       const action = btn.getAttribute("data-proposal-action");
       const id = btn.getAttribute("data-proposal-id");
       transitionProposal(id, action);
+    });
+  }
+  // P44-06: rollback-hints expander toggle. Same delegated pattern.
+  for (const btn of list.querySelectorAll("[data-rollback-toggle-for]")) {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const id = btn.getAttribute("data-rollback-toggle-for");
+      const hints = list.querySelector(`[data-rollback-hints-for="${id}"]`);
+      if (!hints) return;
+      const open = hints.getAttribute("data-rollback-state") === "open";
+      hints.setAttribute("data-rollback-state", open ? "closed" : "open");
+      btn.setAttribute("aria-expanded", open ? "false" : "true");
     });
   }
 }
@@ -645,6 +677,98 @@ async function transitionProposal(proposalId, action) {
       status.textContent = `${action} 失败 · ${action} failed: ${error.message || error}`;
     }
   }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// P44-06 (2026-04-26): panel version chip + rollback hints.
+//
+// The chip surfaces "what version of the panel am I looking at" =
+// truth-engine HEAD SHA + count of ACCEPTED proposals. Click → jump
+// to the inbox so the engineer can skim the decision history. The
+// rollback-hints expander lives inside each ACCEPTED ticket card and
+// reveals the exact git commands the engineer would run themselves
+// to revert that proposal's commit. The workbench never executes
+// git mutations; the hints are pure read-only instruction (truth
+// engine red line stays intact).
+// ─────────────────────────────────────────────────────────────────
+
+const STATE_OF_WORLD_PATH = "/api/workbench/state-of-world";
+
+let _panelVersionSha = null;
+
+function installPanelVersionChip() {
+  const chip = document.getElementById("workbench-panel-version-chip");
+  if (!chip) return;
+  chip.addEventListener("click", () => {
+    const inbox = document.getElementById("annotation-inbox");
+    if (inbox && typeof inbox.scrollIntoView === "function") {
+      inbox.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+  // Fire both fetches in parallel so the chip flips from loading →
+  // ready in one tick. The proposals fetch is ALREADY in flight via
+  // installProposalInbox() above; we just need its count, which the
+  // inbox loader stashes via _latestProposals + invokes
+  // refreshPanelVersionChip(). Here we only need the SHA.
+  fetch(STATE_OF_WORLD_PATH)
+    .then((r) => (r.ok ? r.json() : null))
+    .then((body) => {
+      _panelVersionSha = (body && body.truth_engine_sha) || null;
+      refreshPanelVersionChip();
+    })
+    .catch(() => {
+      const chip2 = document.getElementById("workbench-panel-version-chip");
+      if (chip2) {
+        chip2.setAttribute("data-panel-version-state", "error");
+        const label = chip2.querySelector("[data-panel-version-label]");
+        if (label) label.textContent = "—";
+      }
+    });
+}
+
+function refreshPanelVersionChip() {
+  const chip = document.getElementById("workbench-panel-version-chip");
+  if (!chip) return;
+  const label = chip.querySelector("[data-panel-version-label]");
+  if (!label) return;
+  const accepted = (_latestProposals || []).filter((p) => p.status === "ACCEPTED").length;
+  if (_panelVersionSha == null) {
+    // SHA fetch not back yet — show count alone so the chip still
+    // updates the moment the inbox arrives.
+    label.textContent = `… · ${accepted} 已通过 · accepted`;
+    return;
+  }
+  chip.setAttribute("data-panel-version-state", "ready");
+  label.textContent = `${_panelVersionSha} · ${accepted} 已通过 · accepted`;
+}
+
+function renderRollbackHints(proposal) {
+  const escape = (text) =>
+    String(text == null ? "" : text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  const id = escape(proposal.id);
+  // The brief filename matches the proposal id by construction
+  // (see write_dev_queue_brief in demo_server.py). The grep pattern
+  // matches both PR titles ("...PROP-XXX...") and dev-queue brief
+  // mentions, so the engineer can find the commit regardless of
+  // whether Claude Code referenced the brief or the proposal id in
+  // its commit message.
+  return (
+    `<p>找到并回滚此提议对应的真值引擎提交 · Find &amp; revert this proposal's truth-engine commit:</p>` +
+    `<code>git log --oneline --all --grep="${id}"</code>` +
+    `<code>git revert &lt;sha-from-above&gt;</code>` +
+    `<p>或查看本提议的 dev-queue 简报 · Or inspect this proposal's dev-queue brief:</p>` +
+    `<code>cat .planning/dev_queue/${id}.md</code>` +
+    `<p style="margin-top:0.45rem;color:rgba(206,223,236,0.7);">` +
+    `工作台只读，不会替你执行 git 命令；请在终端确认无误后再回滚 ·` +
+    ` Workbench is read-only and will never run git for you;` +
+    ` confirm the SHA in your terminal before reverting.` +
+    `</p>`
+  );
 }
 
 // P43 authority contract — written only via assignFrozenSpec; never mutated directly
