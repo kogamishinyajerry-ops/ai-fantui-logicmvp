@@ -61,9 +61,11 @@ def server():
 @pytest.mark.parametrize(
     "title",
     [
-        "Probe &amp; Trace · 探针与追踪",
-        "Annotate &amp; Propose · 标注与提案",
-        "Hand off &amp; Track · 移交与跟踪",
+        # E11-15c flipped to Chinese-first to match the rest of the page;
+        # English suffix preserved so substring locks still pass.
+        "探针与追踪 · Probe &amp; Trace",
+        "标注与提案 · Annotate &amp; Propose",
+        "移交与跟踪 · Hand off &amp; Track",
     ],
 )
 def test_workbench_html_carries_new_column_title(title: str) -> None:
@@ -226,10 +228,10 @@ def test_workbench_js_failure_fallback_uses_task_verb_label() -> None:
 def test_workbench_route_serves_renamed_columns(server) -> None:
     status, html = _get(server, "/workbench")
     assert status == 200
-    # New copy
-    assert "Probe &amp; Trace · 探针与追踪" in html
-    assert "Annotate &amp; Propose · 标注与提案" in html
-    assert "Hand off &amp; Track · 移交与跟踪" in html
+    # E11-15c flipped these from English-first to Chinese-first.
+    assert "探针与追踪 · Probe &amp; Trace" in html
+    assert "标注与提案 · Annotate &amp; Propose" in html
+    assert "移交与跟踪 · Hand off &amp; Track" in html
     # Stable anchors still served
     assert 'id="workbench-control-panel"' in html
     assert 'data-column="circuit"' in html
