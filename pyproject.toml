@@ -23,6 +23,14 @@ dev = [
     "pyyaml>=6.0",
 ]
 
+# Install with: pip install -e '.[e2e]' && playwright install chromium
+# Adds the Playwright Python driver for tests/e2e/test_workbench_js_boot_smoke.py.
+# The driver download (`playwright install chromium`) must still be run separately
+# because Playwright manages browsers outside Python's package metadata.
+e2e = [
+    "playwright>=1.45",
+]
+
 [tool.setuptools.package-dir]
 "" = "src"
 
