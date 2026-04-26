@@ -5,7 +5,7 @@
 
 - 当前阶段：`P43 Control Logic Workbench end-to-end milestone`
 - 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`P44-02 PR #33 merged (chrome slim to 1-row topbar + free-form suggestion flow with rule-based interpreter; replaces 3 banners + 4-button annotation toolbar; circuit panel L1->L4 fits first viewport; 1113/1113 full suite, 65/65 new lockstep tests; Self-Gate via Executor-即-Gate v3.2) — 2026-04-26`
+- 最近成功执行证据：`P44-06 PR #38 merged (P44 series complete: P44-03 proposals persistence + inbox / P44-04 reviewer mode + glowing anchors / P44-05 accept-reject + dev-queue handoff brief / P44-06 panel-version chip + rollback hints — full engineer→reviewer→Claude Code loop on /workbench; 1238/1238 full suite, 125/125 new P44-03..06 tests, 1 ACCEPTED proposal end-to-end smoke verified; Self-Gate via Executor-即-Gate v3.2) — 2026-04-26`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
@@ -34,6 +34,15 @@
 | **P16 AI Canvas Sync** | `9845c83` | Opus 4.6 A+ 架构（truth engine 先行 + AI 标注后到）：truth engine 驱动 canvas (<100ms)，MiniMax 解释，节点叠加高亮层 `.ai-discussed`；430 tests 无回归 |
 | **Aerospace Dark HUD UI 升级** | `9845c83` | 6 优先级 CSS 改造：CSS 变量重塑 + SVG 精密仪表节点 + 连接线状态 + 终端风格抽屉 + 微交互 + Truth Eval Bar HUD 化；430 tests 无回归 |
 | **external_dependencies schema** | `abef4e9` | `control_system_spec_v1` 新增 `external_dependencies` 字段（含 `externalDependencySpec`），联邦架构宪法级文档就绪 |
+
+## P44 Workbench engineer→reviewer→Claude Code loop（2026-04-26）
+
+| 改进项 | 提交 | 说明 |
+|--------|------|------|
+| **P44-03 Proposals persistence + inbox** | `fd9856b` | `/api/proposals` POST/GET，文件级持久化 (`.planning/proposals/PROP-*.json`)，工程师确认 interpretation 后提交即落盘并出现在 review queue；adapter-only，truth-engine 红线由测试守护；36 new tests |
+| **P44-04 Reviewer mode + glowing anchors** | `8e6cdbe` | 顶栏 `审核视角 · Review Mode` 切换；OPEN 提议在 SVG 上发光闪烁 + 每个 gate 的开 ticket 数 badge；点击门 → spotlight 工单卡，点击工单 → spotlight 门；100% static-only，32 new tests |
+| **P44-05 Accept/reject + dev-queue handoff** | `daa360d` | `/api/proposals/<id>/accept|reject`：状态翻转 + 审计 history append；accept 时写 `.planning/dev_queue/PROP-XXX.md` 给 Claude Code `/gsd-execute-phase` 未来 session 接手；adapter-only；29 new tests |
+| **P44-06 Panel version chip + rollback hints** | `f0f7806` | 顶栏 `📜 面板版本 · Panel Version` 芯片显示 truth-engine SHA + ACCEPTED 计数；每个 ACCEPTED 工单卡可展开 `🔁 回滚指引`，给出 `git log --grep` + `git revert` 命令；workbench 永不替工程师执行 git；frontend-only，28 new tests |
 
 ## 当前用途
 
