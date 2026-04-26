@@ -12,9 +12,13 @@
   </head>
   <body data-view="beginner">
     <main class="shell workbench-shell">
-      <section id="workbench-topbar" class="workbench-collab-topbar" aria-label="Workbench identity and routing">
-        <div class="workbench-collab-brand">
-          <p class="eyebrow">工程师工作区</p>
+      <!-- P44-02 (2026-04-26): topbar compressed to a single thin row so
+           the control-logic circuit hero fits in the first viewport. The
+           h1 stays (single page-title source of truth) but rendered at a
+           much smaller font via .workbench-collab-topbar.is-compact in
+           workbench.css. -->
+      <section id="workbench-topbar" class="workbench-collab-topbar is-compact" aria-label="Workbench identity and routing">
+        <div class="workbench-collab-brand workbench-collab-brand-compact">
           <h1>控制逻辑工作台 · Control Logic Workbench</h1>
         </div>
         <div
@@ -106,71 +110,27 @@
         verify it is hidden + carries no interactive children.
       --></section>
 
-      <aside
-        id="workbench-trust-banner"
-        class="workbench-trust-banner"
-        data-feedback-mode="manual_feedback_override"
-        role="note"
-        aria-label="反馈模式信任说明 · Feedback mode trust affordance"
+      <!-- P44-02 (2026-04-26): trust banner + annotation toolbar +
+           authority banner all removed. The 4-tool annotation paradigm
+           (point/area/link/text-range) was a design dead-end — engineers
+           shouldn't have to learn a tool grammar. The new flow is:
+           (1) write a free-form modification suggestion at
+               #workbench-suggestion-input below the circuit hero;
+           (2) the system interprets via /api/workbench/interpret-suggestion
+               and highlights the affected gate(s) on the SVG;
+           (3) engineer confirms the interpretation matches intent;
+           (4) submit ticket.
+           The truth-engine read-only constraint is now expressed by the
+           workflow itself (engineers PROPOSE, never edit) plus the small
+           🔒 chip in the topbar; the full /v6.1-redline route remains
+           reachable via the chip's title attribute for direct linking. -->
+      <span
+        id="workbench-truth-engine-chip"
+        class="workbench-truth-engine-chip"
+        title="真值引擎只读：工程师只能提交修改建议工单，不能直接改真值。点击查看 v6.1 红线条款 · Truth engine is read-only: engineers may only submit change-proposal tickets, never mutate truth directly."
       >
-        <span class="workbench-trust-banner-icon" aria-hidden="true">⚠</span>
-        <div class="workbench-trust-banner-body">
-          <span class="workbench-trust-banner-scope">
-            <em>此处"手动反馈"的含义 · What "manual feedback" means here:</em> 你在工作台中手动键入用来覆盖某个观测读数的任何值——例如在运行一个场景前编辑快照输入字段
-            (any value you type into the workbench to override an observed reading — for example, editing a snapshot input field before running a scenario).
-            被动读取、回放与审计链导航不属于"手动反馈" (Passive reads, replays, and audit-chain navigation do NOT count as manual feedback).
-          </span>
-          <strong>该模式仅作参考 · That mode is advisory.</strong>
-          <span>
-            真值引擎读数（logic gate L1–L4、controller 派发、审计链）仍以真值引擎读数为准 · Truth engine readings (logic gates L1–L4, controller dispatch, audit chain) remain authoritative.
-            你的手动反馈会被记录用于 diff / review，但不改写真值 · Your manual feedback is recorded for diff/review but does not change source-of-truth values.
-          </span>
-        </div>
-        <button
-          type="button"
-          class="workbench-trust-banner-dismiss"
-          aria-label="隐藏本次会话的信任提示横幅 · Hide trust banner for this session"
-          data-trust-banner-dismiss
-        >
-          隐藏（本次会话）· Hide for session
-        </button>
-      </aside>
-
-      <section id="workbench-annotation-toolbar" class="workbench-annotation-toolbar" aria-label="Annotation tools">
-        <span class="workbench-annotation-toolbar-label">标注</span>
-        <button type="button" class="workbench-annotation-tool is-active" data-annotation-tool="point">标记信号</button>
-        <button type="button" class="workbench-annotation-tool" data-annotation-tool="area">圈选 logic gate</button>
-        <button type="button" class="workbench-annotation-tool" data-annotation-tool="link">关联 spec</button>
-        <button type="button" class="workbench-annotation-tool" data-annotation-tool="text-range">引用 requirement 段</button>
-        <span id="workbench-annotation-active-tool" class="workbench-annotation-active-tool" aria-live="polite">
-          标记信号 工具激活
-        </span>
-      </section>
-
-      <aside
-        id="workbench-authority-banner"
-        class="workbench-authority-banner"
-        role="note"
-        aria-label="真值引擎权限契约 · Truth-engine authority contract"
-      >
-        <span class="workbench-authority-banner-icon" aria-hidden="true">🔒</span>
-        <span class="workbench-authority-banner-headline">
-          真值引擎（只读）· Truth Engine — Read Only
-        </span>
-        <span class="workbench-authority-banner-sep" aria-hidden="true">·</span>
-        <span class="workbench-authority-banner-rule">
-          Propose 不修改 · 工程师只能提交 ticket / proposal，不能直接改真值
-        </span>
-        <a
-          class="workbench-authority-banner-link"
-          href="/v6.1-redline"
-          target="_blank"
-          rel="noopener"
-          title="v6.1 truth-engine red line — sourced from .planning/constitution.md"
-        >
-          v6.1 红线条款 →
-        </a>
-      </aside>
+        <a href="/v6.1-redline" target="_blank" rel="noopener">🔒 真值引擎只读 · Truth Engine read-only</a>
+      </span>
 
       <!-- P44-01 (2026-04-26): control-logic panel is the workbench hero.
            workbench.js fetches /api/workbench/circuit-fragment on boot and
@@ -216,6 +176,113 @@
             JavaScript disabled — open the static circuit page directly.
           </p>
         </noscript>
+      </section>
+
+      <!-- P44-02 (2026-04-26): suggestion-input flow replaces the
+           4-tool annotation toolbar. Engineer types a free-form
+           modification suggestion, system interprets via
+           /api/workbench/interpret-suggestion, highlights the affected
+           gate(s) on the SVG, engineer confirms the interpretation
+           matches intent, then submits the ticket. -->
+      <section
+        id="workbench-suggestion-flow"
+        class="workbench-suggestion-flow"
+        aria-labelledby="workbench-suggestion-flow-title"
+      >
+        <header class="workbench-suggestion-flow-header">
+          <h2 id="workbench-suggestion-flow-title">提交修改建议 · Submit Change Proposal</h2>
+          <p class="workbench-suggestion-flow-sub">
+            用中文/英文写下你对控制逻辑的修改建议；系统会解读并把命中的逻辑门高亮，请你确认解读无误后再提交工单 ·
+            Type your modification suggestion in plain Chinese/English; the system will interpret it,
+            highlight the affected gate(s), and ask you to confirm the interpretation matches your intent
+            before the ticket is submitted.
+          </p>
+        </header>
+        <form
+          id="workbench-suggestion-form"
+          class="workbench-suggestion-form"
+          autocomplete="off"
+        >
+          <label
+            for="workbench-suggestion-input"
+            class="workbench-suggestion-input-label"
+          >
+            修改建议 · Modification suggestion
+          </label>
+          <textarea
+            id="workbench-suggestion-input"
+            class="workbench-suggestion-input"
+            rows="3"
+            maxlength="2000"
+            placeholder="例：L1 的 SW1 == True 判据应该改成 SW1 == True 且持续 ≥ 50ms，避免抖动 · e.g. The L1 condition SW1 == True should be changed to SW1 == True for ≥ 50ms to avoid bouncing."
+            required
+          ></textarea>
+          <div class="workbench-suggestion-form-actions">
+            <button
+              id="workbench-suggestion-interpret-btn"
+              type="submit"
+              class="workbench-toolbar-button is-primary"
+            >
+              解读建议 · Interpret
+            </button>
+            <span
+              id="workbench-suggestion-status"
+              class="workbench-suggestion-status"
+              aria-live="polite"
+              data-status="idle"
+            ></span>
+          </div>
+        </form>
+
+        <article
+          id="workbench-suggestion-interpretation"
+          class="workbench-suggestion-interpretation"
+          data-state="empty"
+          aria-live="polite"
+          hidden
+        >
+          <header class="workbench-suggestion-interpretation-header">
+            <h3>系统解读 · System Interpretation</h3>
+            <span
+              id="workbench-suggestion-interpretation-confidence"
+              class="workbench-suggestion-interpretation-confidence"
+              data-confidence="0"
+            ></span>
+          </header>
+          <dl class="workbench-suggestion-interpretation-fields">
+            <dt>命中逻辑门 · Affected gate(s)</dt>
+            <dd id="workbench-suggestion-interpretation-gates">—</dd>
+            <dt>建议变更类型 · Change kind</dt>
+            <dd id="workbench-suggestion-interpretation-change-kind">—</dd>
+            <dt>目标信号 · Target signal(s)</dt>
+            <dd id="workbench-suggestion-interpretation-targets">—</dd>
+            <dt>系统重述 · System restatement</dt>
+            <dd id="workbench-suggestion-interpretation-summary">—</dd>
+          </dl>
+          <div class="workbench-suggestion-interpretation-actions">
+            <button
+              id="workbench-suggestion-confirm-btn"
+              type="button"
+              class="workbench-toolbar-button is-primary"
+            >
+              ✅ 确认并提交工单 · Confirm & submit ticket
+            </button>
+            <button
+              id="workbench-suggestion-reinterpret-btn"
+              type="button"
+              class="workbench-toolbar-button"
+            >
+              ↻ 重新解读 · Re-interpret
+            </button>
+            <button
+              id="workbench-suggestion-cancel-btn"
+              type="button"
+              class="workbench-toolbar-button"
+            >
+              ✕ 取消 · Cancel
+            </button>
+          </div>
+        </article>
       </section>
 
       <aside id="annotation-inbox" class="workbench-annotation-inbox" aria-label="Annotation Inbox">
