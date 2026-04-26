@@ -62,14 +62,27 @@ const maxWorkbenchPacketRevisionHistory = 8;
 // The fragment endpoint extracts its content from fantui_circuit.html
 // (single source of truth for the SVG), so /workbench and the static
 // /fantui_circuit.html page never drift.
+// P45-01 (2026-04-26): which system the hero currently displays. The
+// dropdown #workbench-system-select is the single source of truth;
+// changing it triggers a fragment re-fetch via reloadWorkbenchCircuitHero.
+function currentWorkbenchSystem() {
+  const select = document.getElementById("workbench-system-select");
+  return (select && select.value) || "thrust-reverser";
+}
+
 async function bootWorkbenchCircuitHero() {
   const mount = workbenchElement("workbench-circuit-hero-mount");
   if (!mount) {
     return;
   }
-  const endpoint =
+  const endpointBase =
     mount.getAttribute("data-circuit-fragment-endpoint") ||
     "/api/workbench/circuit-fragment";
+  const system = currentWorkbenchSystem();
+  const endpoint = `${endpointBase}?system=${encodeURIComponent(system)}`;
+  // Mark which system the SVG belongs to so review-mode + interpreter
+  // can stay in sync if either runs before the fetch resolves.
+  mount.setAttribute("data-circuit-system", system);
   try {
     const response = await fetch(endpoint, { headers: { Accept: "text/html" } });
     if (!response.ok) {
@@ -79,24 +92,27 @@ async function bootWorkbenchCircuitHero() {
     if (!fragment.includes("<svg ")) {
       throw new Error("response missing <svg>");
     }
-    // Sanity-check that gate anchors traveled with the fragment, so a
-    // future server-side regression doesn't silently break annotation
-    // binding (P44-02 will key on data-gate-id).
-    for (const gateId of ["L1", "L2", "L3", "L4"]) {
-      if (!fragment.includes(`data-gate-id="${gateId}"`)) {
-        throw new Error(`fragment missing data-gate-id="${gateId}"`);
+    // Per-system gate sanity-check: only the wired thrust-reverser
+    // is required to carry L1..L4. Placeholder SVGs from
+    // unwired systems are intentionally gate-less and pass through.
+    if (system === "thrust-reverser") {
+      for (const gateId of ["L1", "L2", "L3", "L4"]) {
+        if (!fragment.includes(`data-gate-id="${gateId}"`)) {
+          throw new Error(`fragment missing data-gate-id="${gateId}"`);
+        }
       }
     }
     mount.innerHTML = fragment;
     mount.setAttribute("data-circuit-fragment-status", "ready");
     mount.setAttribute(
       "aria-label",
-      "反推逻辑链路 L1 → L4 SVG circuit (loaded)",
+      `${system} SVG circuit (loaded)`,
     );
     // P44-04: re-apply review anchors against the freshly hydrated SVG
     // so that if the inbox already loaded (race with this fetch) and we
     // computed gate→count, the badges show up the instant the SVG
-    // appears. Safe no-op if review mode is off or proposals empty.
+    // appears. Safe no-op if review mode is off, proposals empty, or
+    // the new fragment carries no gate anchors (placeholder system).
     applyReviewAnchors(_latestProposals);
   } catch (error) {
     mount.setAttribute("data-circuit-fragment-status", "error");
@@ -110,6 +126,24 @@ async function bootWorkbenchCircuitHero() {
   }
 }
 
+// P45-01 (2026-04-26): re-fetch + re-render the hero for the
+// currently-selected system. Wired to the dropdown's `change` event
+// so toggling system in the topbar re-paints the panel without a
+// page reload. Idempotent — calling it twice is fine, the second
+// fetch just races and the latest one wins.
+async function reloadWorkbenchCircuitHero() {
+  const mount = document.getElementById("workbench-circuit-hero-mount");
+  if (!mount) return;
+  // Reset state so the loading affordance shows up while the new
+  // fragment is in flight.
+  mount.setAttribute("data-circuit-fragment-status", "pending");
+  mount.innerHTML =
+    `<p class="workbench-circuit-hero-loading">` +
+    `正在加载控制逻辑面板… · Loading control logic panel…` +
+    `</p>`;
+  await bootWorkbenchCircuitHero();
+}
+
 function bootWorkbenchShell() {
   // Fire-and-forget: the hero hydrates asynchronously so the rest of the
   // workbench chrome (topbar, state-of-world bar, approval center)
@@ -119,6 +153,18 @@ function bootWorkbenchShell() {
   installProposalInbox();
   installReviewModeToggle();
   installPanelVersionChip();
+  installSystemSelectorReload();
+}
+
+// P45-01 (2026-04-26): wire the system dropdown so changing the
+// selection re-fetches the circuit fragment for the new system. The
+// proposals inbox + review-mode anchors are system-agnostic for now
+// (one inbox shared across all systems); a later phase can scope
+// them per-system if the demo grows.
+function installSystemSelectorReload() {
+  const select = document.getElementById("workbench-system-select");
+  if (!select) return;
+  select.addEventListener("change", () => reloadWorkbenchCircuitHero());
 }
 
 // ─────────────────────────────────────────────────────────────────
