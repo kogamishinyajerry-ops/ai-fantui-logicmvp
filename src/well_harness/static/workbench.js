@@ -111,6 +111,7 @@ function bootWorkbenchShell() {
   // renders immediately without waiting on the fragment request.
   bootWorkbenchCircuitHero();
   installSuggestionFlow();
+  installProposalInbox();
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -254,7 +255,7 @@ function clearSuggestionInterpretation() {
   }
 }
 
-function submitSuggestionTicket() {
+async function submitSuggestionTicket() {
   const status = document.getElementById("workbench-suggestion-status");
   if (!_lastInterpretation) {
     if (status) {
@@ -263,26 +264,137 @@ function submitSuggestionTicket() {
     }
     return;
   }
-  // P44-02 stops here: persistence to /api/proposals (durable ticket
-  // store + reviewer-side glow-on-panel UI) is P44-03. For now we
-  // confirm the round-trip works and clear the input so the engineer
-  // can write the next suggestion.
+  // P44-03: POST the confirmed interpretation to the proposal store and
+  // re-fetch the inbox so the new ticket shows up below immediately.
+  const identity = document.getElementById("workbench-identity");
+  const ticketChip = document.getElementById("workbench-ticket");
+  const systemSelect = document.getElementById("workbench-system-select");
+  const payload = {
+    source_text: _lastInterpretation.source_text || "",
+    interpretation: _lastInterpretation,
+    author_name: identity ? identity.getAttribute("data-identity-name") || "anonymous" : "anonymous",
+    author_role: identity ? identity.getAttribute("data-role") || "ENGINEER" : "ENGINEER",
+    ticket_id: ticketChip ? ticketChip.getAttribute("data-ticket") || "ad-hoc" : "ad-hoc",
+    system_id: systemSelect ? systemSelect.value || "thrust-reverser" : "thrust-reverser",
+  };
   if (status) {
-    status.dataset.status = "success";
-    status.textContent =
-      "工单已记录到本会话草稿（持久化将在 P44-03 接入）· ticket queued in session draft (persistence lands in P44-03)";
+    status.dataset.status = "loading";
+    status.textContent = "提交中… · submitting…";
   }
-  const input = document.getElementById("workbench-suggestion-input");
-  if (input) {
-    input.value = "";
+  try {
+    const response = await fetch(PROPOSALS_PATH, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (response.status !== 201) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const created = await response.json();
+    const input = document.getElementById("workbench-suggestion-input");
+    if (input) {
+      input.value = "";
+    }
+    clearSuggestionInterpretation();
+    if (status) {
+      status.dataset.status = "success";
+      status.textContent = `工单 ${created.id} 已提交 · ticket ${created.id} submitted`;
+    }
+    await loadProposalsInbox();
+  } catch (error) {
+    if (status) {
+      status.dataset.status = "error";
+      status.textContent = `提交失败 · submit failed: ${error.message || error}`;
+    }
   }
-  clearSuggestionInterpretation();
-  if (status) {
-    // re-set after clearSuggestionInterpretation cleared the status
-    status.dataset.status = "success";
-    status.textContent =
-      "工单已记录到本会话草稿（持久化将在 P44-03 接入）· ticket queued in session draft (persistence lands in P44-03)";
+}
+
+// ─────────────────────────────────────────────────────────────────
+// P44-03 (2026-04-26): proposal inbox.
+// ─────────────────────────────────────────────────────────────────
+
+const PROPOSALS_PATH = "/api/proposals";
+
+function installProposalInbox() {
+  const refreshBtn = document.getElementById("annotation-inbox-refresh-btn");
+  if (refreshBtn) {
+    refreshBtn.addEventListener("click", () => loadProposalsInbox());
   }
+  // Fire-and-forget initial load — runs in parallel with circuit hero
+  // hydration so the inbox shows up as soon as the proposals API
+  // responds, regardless of how long the SVG fetch takes.
+  loadProposalsInbox();
+}
+
+async function loadProposalsInbox() {
+  const list = document.getElementById("annotation-inbox-list");
+  if (!list) {
+    return;
+  }
+  list.dataset.inboxState = "loading";
+  try {
+    const response = await fetch(PROPOSALS_PATH);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const body = await response.json();
+    const proposals = Array.isArray(body.proposals) ? body.proposals : [];
+    renderProposalsInbox(proposals);
+    list.dataset.inboxState = proposals.length === 0 ? "empty" : "ready";
+  } catch (error) {
+    list.dataset.inboxState = "error";
+    list.innerHTML =
+      `<li class="workbench-annotation-inbox-empty">` +
+      `载入工单列表失败 · failed to load proposals: ${error.message || error}` +
+      `</li>`;
+  }
+}
+
+function renderProposalsInbox(proposals) {
+  const list = document.getElementById("annotation-inbox-list");
+  if (!list) {
+    return;
+  }
+  if (proposals.length === 0) {
+    list.innerHTML =
+      `<li class="workbench-annotation-inbox-empty">` +
+      `暂无已提交工单 · no proposals submitted yet` +
+      `</li>`;
+    return;
+  }
+  const escape = (text) =>
+    String(text == null ? "" : text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  const items = proposals
+    .map((p) => {
+      const interp = p.interpretation || {};
+      const gates = (interp.affected_gates || []).join(", ") || "—";
+      const targets = (interp.target_signals || []).join(", ") || "—";
+      const summary = interp.summary_zh || interp.summary_en || "(无 · empty)";
+      const author = p.author_name || "anonymous";
+      return (
+        `<li class="workbench-annotation-inbox-item" data-proposal-id="${escape(p.id)}" data-status="${escape(p.status)}">` +
+        `  <div class="workbench-annotation-inbox-item-line">` +
+        `    <span class="workbench-annotation-inbox-item-id">${escape(p.id)}</span>` +
+        `    <span class="workbench-annotation-inbox-item-status" data-status="${escape(p.status)}">${escape(p.status)}</span>` +
+        `    <span class="workbench-annotation-inbox-item-gate">命中 · gate: ${escape(gates)}</span>` +
+        `    <span class="workbench-annotation-inbox-item-kind">${escape(interp.change_kind_zh || "")} · ${escape(interp.change_kind_en || "")}</span>` +
+        `  </div>` +
+        `  <div class="workbench-annotation-inbox-item-meta">` +
+        `    <span>${escape(author)}</span> · ` +
+        `    <span>${escape(p.created_at || "")}</span> · ` +
+        `    <span>signals: ${escape(targets)}</span>` +
+        `  </div>` +
+        `  <div class="workbench-annotation-inbox-item-summary">${escape(summary)}</div>` +
+        `</li>`
+      );
+    })
+    .join("");
+  list.innerHTML = items;
 }
 
 // P43 authority contract — written only via assignFrozenSpec; never mutated directly

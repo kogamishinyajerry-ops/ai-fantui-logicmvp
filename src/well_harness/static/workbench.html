@@ -285,13 +285,30 @@
         </article>
       </section>
 
+      <!-- P44-03 (2026-04-26): annotation inbox is now backed by the
+           /api/proposals store. When the engineer submits a confirmed
+           interpretation, workbench.js POSTs to /api/proposals and then
+           re-fetches the list so the new ticket shows up immediately
+           below. The static "暂无已提交提案" placeholder is the
+           empty-state fallback rendered when GET /api/proposals returns
+           an empty list. -->
       <aside id="annotation-inbox" class="workbench-annotation-inbox" aria-label="Annotation Inbox">
         <header>
-          <p class="eyebrow">标注收件箱</p>
+          <p class="eyebrow">已提交工单</p>
           <h2>审核队列 · Review Queue</h2>
+          <button
+            id="annotation-inbox-refresh-btn"
+            type="button"
+            class="workbench-toolbar-button workbench-annotation-inbox-refresh"
+            title="刷新工单列表 · Refresh proposal list"
+          >↻ 刷新 · Refresh</button>
         </header>
-        <ul id="annotation-inbox-list">
-          <li>暂无已提交提案 · No proposals submitted yet.</li>
+        <ul
+          id="annotation-inbox-list"
+          data-inbox-state="loading"
+          aria-live="polite"
+        >
+          <li class="workbench-annotation-inbox-empty">载入中… · loading…</li>
         </ul>
       </aside>
 

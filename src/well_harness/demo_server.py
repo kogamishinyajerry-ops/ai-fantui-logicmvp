@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import argparse
+import os
+import secrets
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import lru_cache
 import json
 import math
 import re
+import threading
 from typing import Any
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -85,6 +88,10 @@ WORKBENCH_CIRCUIT_FRAGMENT_PATH = "/api/workbench/circuit-fragment"
 # so the UI can highlight the affected SVG gate(s) and ask the engineer
 # to confirm the interpretation matches intent before ticket submission.
 WORKBENCH_INTERPRET_SUGGESTION_PATH = "/api/workbench/interpret-suggestion"
+# P44-03 (2026-04-26): change-proposal persistence. POST creates a new
+# proposal record (engineer-confirmed interpretation), GET lists all
+# stored records for the workbench inbox + KOGAMI reviewer surface.
+PROPOSALS_PATH = "/api/proposals"
 MONITOR_RA_START_FT = 7.0
 MONITOR_RA_RATE_FT_PER_S = 1.0
 MONITOR_TRA_START_S = 1.0
@@ -274,6 +281,13 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._serve_workbench_circuit_fragment()
             return
 
+        # P44-03 (2026-04-26): change-proposals list endpoint.
+        if parsed.path == PROPOSALS_PATH:
+            qs = parse_qs(parsed.query)
+            status_filter = qs.get("status", [None])[0]
+            self._send_json(200, {"proposals": list_proposals(status_filter=status_filter)})
+            return
+
         # E11-07 (2026-04-26): Authority Contract banner link target.
         # Serves the v6.1 truth-engine red-line clause as plain text so
         # the banner's "v6.1 红线条款 →" link resolves to a real, in-repo
@@ -312,6 +326,9 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == WORKBENCH_INTERPRET_SUGGESTION_PATH:
             self._handle_interpret_suggestion()
+            return
+        if parsed.path == PROPOSALS_PATH:
+            self._handle_create_proposal()
             return
         if parsed.path not in {
             "/api/demo",
@@ -689,6 +706,83 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         result = interpret_suggestion_text(text)
         self._send_json(200, result)
 
+    def _handle_create_proposal(self):
+        """P44-03 (2026-04-26): create a change-proposal record.
+
+        POST body:
+          {
+            "source_text": "...",            (required, the engineer's
+                                              original suggestion text)
+            "interpretation": { ... },       (required, the structured
+                                              interpretation the engineer
+                                              just confirmed)
+            "author_name": "Kogami / Engineer",   (optional, defaults to
+                                              "anonymous")
+            "author_role": "ENGINEER",       (optional, defaults to
+                                              "ENGINEER")
+            "ticket_id": "WB-E06-SHELL",     (optional, defaults to
+                                              "ad-hoc")
+            "system_id": "thrust-reverser"   (optional, defaults to
+                                              "thrust-reverser")
+          }
+
+        Returns 201 with the persisted record.
+
+        Truth-engine red line preserved: proposals are an adapter-only
+        store under .planning/proposals/ — no truth-engine module is
+        modified, no controller/runner/models/adapter is rewritten by
+        accepting a proposal. P44-05 will wire ACCEPTED proposals into
+        Claude Code's /gsd-execute-phase pipeline; that pipeline still
+        writes through normal git/PR review, so truth never bypasses the
+        constitutional gates."""
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        if length <= 0 or length > 200_000:
+            self._send_json(400, {"error": "empty_or_oversized_body"})
+            return
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self._send_json(400, {"error": "invalid_json"})
+            return
+        source_text = payload.get("source_text", "")
+        interpretation = payload.get("interpretation")
+        if not isinstance(source_text, str) or not source_text.strip():
+            self._send_json(400, {"error": "missing_or_empty_source_text"})
+            return
+        if not isinstance(interpretation, dict):
+            self._send_json(400, {"error": "missing_or_invalid_interpretation"})
+            return
+        # Schema sanity-check on interpretation: must carry the canonical
+        # fields the UI showed the engineer for confirmation.
+        for required_field in (
+            "affected_gates",
+            "target_signals",
+            "change_kind",
+            "summary_zh",
+        ):
+            if required_field not in interpretation:
+                self._send_json(
+                    400,
+                    {
+                        "error": "interpretation_missing_field",
+                        "field": required_field,
+                    },
+                )
+                return
+        try:
+            record = create_proposal(
+                source_text=source_text,
+                interpretation=interpretation,
+                author_name=str(payload.get("author_name") or "anonymous"),
+                author_role=str(payload.get("author_role") or "ENGINEER"),
+                ticket_id=str(payload.get("ticket_id") or "ad-hoc"),
+                system_id=str(payload.get("system_id") or "thrust-reverser"),
+            )
+        except OSError as exc:
+            self._send_json(500, {"error": "proposal_persistence_failed", "detail": str(exc)})
+            return
+        self._send_json(201, record)
+
     def _serve_workbench_circuit_fragment(self):
         """P44-01 (2026-04-26): serve the L1→L4 SVG fragment that backs
         the /workbench page hero. Source of truth is fantui_circuit.html
@@ -882,6 +976,114 @@ def interpret_suggestion_text(text: str) -> dict:
         "summary_en": summary_en,
         "source_text": text,
     }
+
+
+# ─────────────────────────────────────────────────────────────────
+# P44-03 (2026-04-26): change-proposal persistence.
+# Adapter-only store under .planning/proposals/{PROP-...}.json. One
+# JSON file per proposal so git diffs are readable per-ticket and a
+# proposal can be rolled back with a single `git revert`.
+# Tests override the directory via the WORKBENCH_PROPOSALS_DIR env var.
+# ─────────────────────────────────────────────────────────────────
+
+_PROPOSALS_LOCK = threading.Lock()
+
+
+def proposals_dir() -> Path:
+    """Return the directory the proposal store writes to. Tests override
+    via the WORKBENCH_PROPOSALS_DIR environment variable; production
+    falls back to <repo>/.planning/proposals/. The directory is created
+    on first call (parents=True, exist_ok=True)."""
+    override = os.environ.get("WORKBENCH_PROPOSALS_DIR")
+    if override:
+        path = Path(override).expanduser()
+    else:
+        path = Path(__file__).resolve().parents[2] / ".planning" / "proposals"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _new_proposal_id() -> str:
+    """Stable, sortable proposal id: PROP-YYYYMMDDTHHMMSSffffff-<6-hex>.
+    Microsecond resolution keeps filename sort = creation order even when
+    the same caller submits several proposals back-to-back."""
+    now = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%f")
+    suffix = secrets.token_hex(3)
+    return f"PROP-{now}-{suffix}"
+
+
+def create_proposal(
+    *,
+    source_text: str,
+    interpretation: dict,
+    author_name: str = "anonymous",
+    author_role: str = "ENGINEER",
+    ticket_id: str = "ad-hoc",
+    system_id: str = "thrust-reverser",
+) -> dict:
+    """Persist a new proposal record. Returns the record (with the
+    server-assigned id, created_at, status="OPEN", and history seeded
+    with a single 'submitted' entry). Thread-safe.
+
+    Schema (locked by tests/test_workbench_p44_03_proposals.py):
+      id              str    PROP-YYYYMMDDTHHMMSS-{6-hex}
+      created_at      str    ISO-8601 UTC, with 'Z' suffix
+      status          str    one of: OPEN | ACCEPTED | REJECTED
+      author_name     str
+      author_role     str
+      ticket_id       str
+      system_id       str
+      source_text     str    the engineer's original suggestion text
+      interpretation  dict   the structured interpretation the engineer
+                             confirmed (mirrors interpret_suggestion_text
+                             output)
+      history         list   [{at, actor, action, [note]}, ...] —
+                             append-only audit trail
+    """
+    record = {
+        "id": _new_proposal_id(),
+        "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "status": "OPEN",
+        "author_name": author_name,
+        "author_role": author_role,
+        "ticket_id": ticket_id,
+        "system_id": system_id,
+        "source_text": source_text,
+        "interpretation": interpretation,
+        "history": [
+            {
+                "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "actor": author_name,
+                "action": "submitted",
+            }
+        ],
+    }
+    with _PROPOSALS_LOCK:
+        target = proposals_dir() / f"{record['id']}.json"
+        target.write_text(
+            json.dumps(record, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+    return record
+
+
+def list_proposals(*, status_filter: str | None = None) -> list[dict]:
+    """Return all stored proposal records, newest first. If status_filter
+    is provided (e.g. 'OPEN'), only records matching that status are
+    returned. Bad / unreadable files are skipped silently; the directory
+    is the truth, no in-memory cache."""
+    records: list[dict] = []
+    for path in sorted(proposals_dir().glob("PROP-*.json"), reverse=True):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        if status_filter and data.get("status") != status_filter:
+            continue
+        records.append(data)
+    return records
 
 
 def _clamp_tra(tra_deg: float, config: HarnessConfig) -> float:

@@ -27,3 +27,5 @@ onboarding验证/
 # Generated process artifacts (archived to GitHub 2026-04-24, keep gitignored locally)
 tmp/
 output/
+# P44-03: change-proposal store (per-session demo state, not source-of-truth)
+.planning/proposals/
