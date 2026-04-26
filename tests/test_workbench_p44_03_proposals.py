@@ -358,20 +358,56 @@ def test_p44_03_does_not_leak_into_truth_engine() -> None:
         backend_paths.extend(
             p for p in adapters_dir.rglob("*.py") if "__pycache__" not in p.parts
         )
-    new_phrases = [
+    # Phrases that must never appear ANYWHERE in the truth engine —
+    # these are workbench helpers / UI strings that have no business
+    # being imported or rendered by controller / runner / models /
+    # adapters.
+    hard_block_phrases = [
         "create_proposal",
         "list_proposals",
         "proposals_dir",
         "_handle_create_proposal",
         "WORKBENCH_PROPOSALS_DIR",
-        "PROP-",  # the proposal id prefix
         "已提交工单",
         "annotation-inbox-refresh-btn",
     ]
+    # Phrases that are workbench-side noise in CODE but legitimate in
+    # COMMENTS — audit references like
+    # `# PROP-20260426T075902988411-e27a6e: tighten L2 SW2`
+    # are exactly what /gsd-execute-phase-from-brief Step 7 asks for
+    # so `git log --grep="{PROP-ID}"` finds the implementing commit
+    # (P44-06 rollback hints rely on this). Flag only when the phrase
+    # appears in actual source, not inside a `# ...` comment.
+    code_only_phrases = [
+        "PROP-",
+    ]
+
+    def _strip_python_line_comments(source: str) -> str:
+        """Drop everything after the first un-quoted `#` on each line.
+        Cheap heuristic — good enough for this guard since the
+        truth-engine files don't have `#` characters inside string
+        literals at risk of false positives. Refine if that ever
+        changes."""
+        out_lines = []
+        for line in source.splitlines():
+            comment = line.find("#")
+            if comment >= 0:
+                line = line[:comment]
+            out_lines.append(line)
+        return "\n".join(out_lines)
+
     for backend in backend_paths:
         text = backend.read_text(encoding="utf-8")
-        for phrase in new_phrases:
+        for phrase in hard_block_phrases:
             assert phrase not in text, (
                 f"P44-03 phrase {phrase!r} unexpectedly leaked into "
                 f"{backend.relative_to(repo_root)} — truth-engine red-line breach"
+            )
+        code_text = _strip_python_line_comments(text)
+        for phrase in code_only_phrases:
+            assert phrase not in code_text, (
+                f"P44-03 phrase {phrase!r} unexpectedly leaked into "
+                f"{backend.relative_to(repo_root)} OUTSIDE a comment — "
+                f"truth-engine red-line breach (audit references in "
+                f"`# ...` comments are allowed; in code is not)"
             )

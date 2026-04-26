@@ -2204,7 +2204,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             "blocked_status: name=logic2_active source=trace_field observed=False checkpoint=1.1s value=False required=True",
             evidence,
         )
-        self.assertIn("logic2 explain@1.1s failed_conditions: sw2。", evidence)
+        self.assertIn("logic2 explain@1.1s failed_conditions: sw2, sw2_hysteresis_tra_deg。", evidence)
         self.assertIn("events@1.2s: sw2 False->True; logic2_active False->True; etrac_540vdc_cmd False->True", evidence)
         self.assertIn("1.2s", outcome)
         self.assertIn("SW2", possible_causes)
@@ -2289,11 +2289,18 @@ class DemoIntentLayerTests(unittest.TestCase):
             "blocked_status: name=sw2 source=explain_condition observed=False checkpoint=1.1s value=False required=True",
             evidence,
         )
+        # PROP-20260426T075902988411-e27a6e: L2's SW2 dependency is
+        # tightened with a TRA hysteresis margin; the new condition
+        # also blocks at 1.1s because TRA = -2° is well above -5.5°.
+        self.assertIn(
+            "blocked_status: name=sw2_hysteresis_tra_deg source=explain_condition observed=False checkpoint=1.1s value=-2 required=<= -5.5",
+            evidence,
+        )
         self.assertIn(
             "blocked_status: name=eec_enable source=explain_condition observed=True checkpoint=1.1s value=True required=True",
             evidence,
         )
-        self.assertIn("logic2 explain@1.1s failed_conditions: sw2。", evidence)
+        self.assertIn("logic2 explain@1.1s failed_conditions: sw2, sw2_hysteresis_tra_deg。", evidence)
         self.assertIn("events@1.2s: sw2 False->True; logic2_active False->True; etrac_540vdc_cmd False->True", evidence)
         self.assertIn("1.2s", outcome)
         self.assertIn("sw2", possible_causes)
@@ -2467,7 +2474,7 @@ class DemoIntentLayerTests(unittest.TestCase):
             "blocked_status: name=etrac_540vdc_cmd source=trace_field observed=False checkpoint=1.1s value=False required=True",
             evidence,
         )
-        self.assertIn("logic2 explain@1.1s failed_conditions: sw2。", evidence)
+        self.assertIn("logic2 explain@1.1s failed_conditions: sw2, sw2_hysteresis_tra_deg。", evidence)
         self.assertIn("events@1.2s: sw2 False->True; logic2_active False->True; etrac_540vdc_cmd False->True", evidence)
         self.assertIn("1.2s", outcome)
         self.assertIn("sw2", possible_causes)

@@ -34,6 +34,14 @@ class HarnessConfig:
         )
     )
     logic1_ra_ft_threshold: float = 6.0
+    # PROP-20260426T075902988411-e27a6e (2026-04-26): "L2 SW2 应该 tighten".
+    # Engineer-accepted tightening of L2's SW2 dependency: SW2 may
+    # remain latched up to TRA = sw2_window.near_zero_deg (-5.0°),
+    # but L2 should only honor SW2 when the lever is actually held
+    # below this stricter threshold. This adds a 0.5° hysteresis
+    # margin at the upper edge of the SW2 latch window so L2
+    # deactivates 0.5° before SW2 itself resets.
+    logic2_sw2_max_tra_deg: float = -5.5
     logic3_tra_deg_threshold: float = -11.74
     reverse_travel_min_deg: float = -32.0
     reverse_travel_max_deg: float = 0.0

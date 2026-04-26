@@ -498,6 +498,13 @@
           "threshold_value": true
         },
         {
+          "comparison": "<=",
+          "name": "sw2_hysteresis_tra_deg",
+          "note": "TRA 必须低于 SW2 hysteresis 阈值（PROP-20260426T075902988411-e27a6e: tighten L2 SW2 dependency）",
+          "source_component_id": "tra_deg",
+          "threshold_value": -5.5
+        },
+        {
           "comparison": "==",
           "name": "eec_enable",
           "note": "EEC enable 必须为真",
@@ -505,7 +512,7 @@
           "threshold_value": true
         }
       ],
-      "description": "发动机/地面/SW2/EEC 边界共同驱动 ETRAC。",
+      "description": "发动机/地面/SW2/EEC 边界共同驱动 ETRAC（PROP-20260426T075902988411-e27a6e: 增加 SW2 TRA hysteresis 收紧条件）。",
       "downstream_component_ids": [
         "etrac_voltage_v"
       ],
