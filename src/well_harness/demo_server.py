@@ -75,6 +75,10 @@ WORKBENCH_ARCHIVE_RESTORE_PATH = "/api/workbench/archive-restore"
 WORKBENCH_RECENT_ARCHIVES_PATH = "/api/workbench/recent-archives"
 # E11-06 (2026-04-26): state-of-the-world status bar endpoint.
 WORKBENCH_STATE_OF_WORLD_PATH = "/api/workbench/state-of-world"
+# P44-01 (2026-04-26): control-logic circuit fragment endpoint.
+# Extracts the L1→L4 SVG block from fantui_circuit.html (single source of
+# truth) so /workbench can mount the circuit panel as the page hero.
+WORKBENCH_CIRCUIT_FRAGMENT_PATH = "/api/workbench/circuit-fragment"
 MONITOR_RA_START_FT = 7.0
 MONITOR_RA_RATE_FT_PER_S = 1.0
 MONITOR_TRA_START_S = 1.0
@@ -256,6 +260,12 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
         if parsed.path in ("/workbench", "/workbench.html", "/expert/workbench.html"):
             self._serve_static("workbench.html")
+            return
+
+        # P44-01 (2026-04-26): control-logic circuit fragment for /workbench
+        # hero. Returns the L1→L4 SVG block extracted from fantui_circuit.html.
+        if parsed.path == WORKBENCH_CIRCUIT_FRAGMENT_PATH:
+            self._serve_workbench_circuit_fragment()
             return
 
         # E11-07 (2026-04-26): Authority Contract banner link target.
@@ -636,6 +646,39 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             )
         body = "\n".join(excerpt_lines).encode("utf-8")
         self._send_bytes(200, body, "text/plain; charset=utf-8")
+
+    def _serve_workbench_circuit_fragment(self):
+        """P44-01 (2026-04-26): serve the L1→L4 SVG fragment that backs
+        the /workbench page hero. Source of truth is fantui_circuit.html
+        (a complete page with the same SVG); we extract the <svg>…</svg>
+        block at request time so the two surfaces never drift.
+
+        The fragment intentionally OMITS the unified-nav header and the
+        info-row / footer of fantui_circuit.html — /workbench wraps the
+        SVG with its own engineer chrome (topbar, state-of-world bar,
+        annotation toolbar, approval center)."""
+        source = STATIC_DIR / "fantui_circuit.html"
+        try:
+            html = source.read_text(encoding="utf-8")
+        except (FileNotFoundError, OSError):
+            self._send_json(503, {"error": "circuit_source_unavailable"})
+            return
+        svg_start = html.find("<svg viewBox=\"0 0 1000 640\"")
+        svg_end = html.find("</svg>", svg_start)
+        if svg_start == -1 or svg_end == -1:
+            self._send_json(503, {"error": "circuit_svg_block_not_found"})
+            return
+        fragment = html[svg_start : svg_end + len("</svg>")]
+        # Sanity-check: every L1/L2/L3/L4 gate anchor must travel with the
+        # fragment, otherwise downstream annotation binding silently breaks.
+        for gate_id in ("L1", "L2", "L3", "L4"):
+            if f'data-gate-id="{gate_id}"' not in fragment:
+                self._send_json(
+                    503,
+                    {"error": "circuit_fragment_missing_gate_anchor", "gate_id": gate_id},
+                )
+                return
+        self._send_bytes(200, fragment.encode("utf-8"), "text/html; charset=utf-8")
 
     def _send_json(self, status_code: int, payload: dict):
         # Compact JSON: no indentation (machine-to-machine API, not human-readable)
