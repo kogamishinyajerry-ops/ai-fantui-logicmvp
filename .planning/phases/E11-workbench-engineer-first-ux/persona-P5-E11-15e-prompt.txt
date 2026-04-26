@@ -1,0 +1,55 @@
+You are Codex GPT-5.4 acting as **Persona P5 — Truth-Engine Red-Line & JS/HTML Lockstep Auditor** (Tier-A persona pipeline, E11-15e sub-phase, R1).
+
+Read `.planning/phases/E11-workbench-engineer-first-ux/_E11-15e-prompt-shared-context.md` for sub-phase scope, files, and verification baseline.
+
+## Your specific lens (P5 — Truth-Engine Red-Line & JS/HTML Lockstep Auditor)
+
+The truth-engine red line (per `.planning/constitution.md`) forbids display-copy work from touching `controller.py`, `runner.py`, `models.py`, `src/well_harness/adapters/`, and `demo_server.py`. E11-15e claims compliance and adds a guard test. Your job is to verify the red line is honored and the new lockstep contracts won't drift.
+
+1. **Truth-engine red-line compliance**
+   - `git diff main..83d69e4 -- src/well_harness/controller.py src/well_harness/runner.py src/well_harness/models.py src/well_harness/adapters/ src/well_harness/demo_server.py` — should be empty.
+   - The new test `test_e11_15e_does_not_touch_truth_engine_backend` at `tests/test_workbench_e11_15e_chinese_first_bundle.py` Section 7 scans these 4 backend files for the 23 Chinese display strings. Verify:
+     - All 23 Chinese display strings introduced in this PR are in the guard's `e11_15e_chinese` list (no missing).
+     - The 4 backend file paths are correct and exhaustive (any other backend file with truth-engine status?).
+     - Note: `demo_server.py` is one file but `adapters/` is a directory — the guard reads `controller.py`, `runner.py`, `models.py`, `demo_server.py` only. Should it also iterate `src/well_harness/adapters/*.py`?
+
+2. **JS/HTML lockstep correctness**
+   The static HTML chip text `<strong>手动（仅参考）· Manual (advisory)</strong>` (workbench.html:42) and the JS dynamic write at workbench.js:3788 (`label.textContent = mode === "truth_engine" ? "真值引擎 · Truth Engine" : "手动（仅参考）· Manual (advisory)";`) must remain consistent. Audit:
+   - On first mode switch, JS replaces the static HTML's `<strong>` text. Both branches now produce bilingual output. ✅
+   - Are there OTHER JS write paths to `workbench-feedback-mode strong` that bypass this function? grep workbench.js for `feedback-mode`, `feedbackMode`, `data-feedback-mode` write operations.
+   - Does workbench.js have any `innerHTML` / `textContent` assignment to `workbench-trust-banner-headline` / `workbench-authority-banner-headline` / state-of-world labels / boot status that could bypass the bilingual contract?
+
+3. **Truth-engine red-line guard scope**
+   - The guard scans for **Chinese display strings** in backend. Good defense.
+   - Should the guard ALSO assert that workbench.html / workbench.js DON'T import or reference truth-engine values (e.g., that the bilingualization isn't accidentally pulling truth from `controller.py`)? Probably out of scope — copy is static — but worth a sanity check.
+
+4. **Static-HTML snapshot vs JS-dynamic state**
+   - When the demo loads, the static HTML serves `<strong>手动（仅参考）· Manual (advisory)</strong>`. JS hydration fires `installFeedbackModeAffordance` which calls `setFeedbackMode("manual_feedback_override")`, which re-writes the chip text. Verify the JS literal exactly matches the static HTML (no whitespace drift, no Chinese-character variant).
+   - Same audit for the boot status placeholders: static HTML serves `等待 probe & trace 面板启动 · Waiting for probe & trace panel boot.` then JS replaces it with the existing `Probe & Trace ready. Scenario actions are staged for the next bundle.` (still English-only — out-of-scope per SURFACE-INVENTORY Section 3). Is that English-only post-hydration string a contradiction with the Chinese-first commitment, or correctly deferred?
+
+5. **Constitutional adapter-interface rule**
+   - Per `.planning/constitution.md`: "新系统 truth 只能通过显式 adapter interface 接入；禁止绕过 adapter 新增 hardcoded truth path." E11-15e adds zero new truth paths. Confirm.
+
+## Files to inspect
+
+- `git diff main..83d69e4` (full diff)
+- `src/well_harness/controller.py`, `runner.py`, `models.py`, `demo_server.py`, `adapters/` (verify untouched)
+- `src/well_harness/static/workbench.html`
+- `src/well_harness/static/workbench.js` (especially `installFeedbackModeAffordance`, `setFeedbackMode`, `bootWorkbench*Panel`)
+- `tests/test_workbench_e11_15e_chinese_first_bundle.py` Sections 5, 7
+- `.planning/constitution.md` (truth-engine red-line definitions)
+
+## Out of scope for your lens (other personas cover these)
+
+- P1: engineer-task-flow regression
+- P2: surface-inventory honesty + closure-claim guards
+- P3: bilingual copy quality + convention adherence
+- P4: lockstep test contract preservation
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+Then list findings with severity tags (`BLOCKER` / `IMPORTANT` / `NIT`), each with `file:line` reference and `Suggested fix:` bullet.
+
+If the truth-engine red line is breached, flag as `BLOCKER` minimum.

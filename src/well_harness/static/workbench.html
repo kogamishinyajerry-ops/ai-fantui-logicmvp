@@ -36,7 +36,7 @@
           data-feedback-mode="manual_feedback_override"
           data-mode-authority="advisory"
           aria-live="polite"
-          title="Manual feedback override is advisory — truth engine readings remain authoritative."
+          title="手动反馈覆盖仅作参考，仍以真值引擎读数为准 · Manual feedback override is advisory — truth engine readings remain authoritative."
         >
           <span>反馈模式 · Feedback Mode</span>
           <strong>手动（仅参考）· Manual (advisory)</strong>
@@ -84,7 +84,7 @@
           <span class="workbench-sow-value" data-sow-value="open_known_issues_count">…</span>
         </span>
         <span class="workbench-sow-flag" aria-hidden="false">
-          仅参考 · 非真值引擎实时读数 · advisory · not a live truth-engine reading
+          仅参考，非真值引擎实时读数 · advisory · not a live truth-engine reading
         </span>
       </section>
 
@@ -140,7 +140,7 @@
           >
             <header>
               <span class="workbench-wow-tag">wow_b</span>
-              <h3 id="workbench-wow-b-title">1000-trial 可靠性 · Monte Carlo</h3>
+              <h3 id="workbench-wow-b-title">1000 次试验可靠性 · Monte Carlo</h3>
             </header>
             <p class="workbench-wow-card-desc">
               POST <code>/api/monte-carlo/run</code> with seed=42 — 1000 次抽样，输出
@@ -201,25 +201,25 @@
         class="workbench-trust-banner"
         data-feedback-mode="manual_feedback_override"
         role="note"
-        aria-label="Feedback mode trust affordance"
+        aria-label="反馈模式信任说明 · Feedback mode trust affordance"
       >
         <span class="workbench-trust-banner-icon" aria-hidden="true">⚠</span>
         <div class="workbench-trust-banner-body">
           <span class="workbench-trust-banner-scope">
-            <em>这里"手动反馈"的含义 · What "manual feedback" means here:</em> 你在工作台中手动键入用来覆盖某个观测读数的任何值——例如在运行一个场景前编辑快照输入字段
+            <em>此处"手动反馈"的含义 · What "manual feedback" means here:</em> 你在工作台中手动键入用来覆盖某个观测读数的任何值——例如在运行一个场景前编辑快照输入字段
             (any value you type into the workbench to override an observed reading — for example, editing a snapshot input field before running a scenario).
-            被动读取、回放与审计链导航不算 manual feedback (Passive reads, replays, and audit-chain navigation do NOT count as manual feedback).
+            被动读取、回放与审计链导航不属于"手动反馈" (Passive reads, replays, and audit-chain navigation do NOT count as manual feedback).
           </span>
           <strong>该模式仅作参考 · That mode is advisory.</strong>
           <span>
-            真值引擎读数（logic gate L1–L4、controller 派发、审计链）仍然是权威 · Truth engine readings (logic gates L1–L4, controller dispatch, audit chain) remain authoritative.
+            真值引擎读数（logic gate L1–L4、controller 派发、审计链）仍以真值引擎读数为准 · Truth engine readings (logic gates L1–L4, controller dispatch, audit chain) remain authoritative.
             你的手动反馈会被记录用于 diff / review，但不改写真值 · Your manual feedback is recorded for diff/review but does not change source-of-truth values.
           </span>
         </div>
         <button
           type="button"
           class="workbench-trust-banner-dismiss"
-          aria-label="Hide trust banner for this session"
+          aria-label="隐藏本次会话的信任提示横幅 · Hide trust banner for this session"
           data-trust-banner-dismiss
         >
           隐藏（本次会话）· Hide for session
@@ -241,11 +241,11 @@
         id="workbench-authority-banner"
         class="workbench-authority-banner"
         role="note"
-        aria-label="Truth-engine authority contract"
+        aria-label="真值引擎权限契约 · Truth-engine authority contract"
       >
         <span class="workbench-authority-banner-icon" aria-hidden="true">🔒</span>
         <span class="workbench-authority-banner-headline">
-          真值引擎 · 只读 · Truth Engine — Read Only
+          真值引擎（只读）· Truth Engine — Read Only
         </span>
         <span class="workbench-authority-banner-sep" aria-hidden="true">·</span>
         <span class="workbench-authority-banner-rule">
