@@ -544,11 +544,54 @@ function renderProposalsInbox(proposals) {
             `</div>`
           )
         : "";
+      // P47-02 (2026-04-27): kind badge + revert affordances.
+      // - kind="revert" → render a banner showing the original PROP id
+      //   and the truth-engine SHA being reverted, plus a "modify" tag
+      //   on modify proposals stays implicit.
+      // - kind="modify" + ACCEPTED + landed_truth_sha → render a
+      //   "提议回退此修改" button that creates a new revert proposal
+      //   via POST /api/proposals/<id>/propose-revert. The button is
+      //   hidden if there's no landed sha yet (the executor hasn't
+      //   recorded the merge SHA).
+      const kind = p.kind || "modify";
+      const kindBadge = kind === "revert"
+        ? (
+            `<span class="workbench-annotation-inbox-item-kind-badge" ` +
+            `      data-proposal-kind="revert">🔄 REVERT</span>`
+          )
+        : "";
+      const revertBanner = kind === "revert"
+        ? (
+            `<div class="workbench-annotation-inbox-item-revert-banner" ` +
+            `     data-revert-of="${escape(p.revert_of_proposal_id || "")}">` +
+            `  ↩ 回退目标 · Reverts: ` +
+            `<code>${escape(p.revert_of_proposal_id || "—")}</code>` +
+            ` · commit <code>${escape(p.revert_target_sha || "—")}</code>` +
+            `</div>`
+          )
+        : "";
+      const proposeRevertBtn =
+        kind === "modify" && p.status === "ACCEPTED" && p.landed_truth_sha
+          ? (
+              `<button type="button" class="workbench-toolbar-button workbench-propose-revert-button" ` +
+              `        data-propose-revert-for="${escape(p.id)}" ` +
+              `        title="为这条已落地的修改创建一张回退工单。回退也走完整工单闭环（提议→评审→执行）。 · ` +
+              `Create a revert ticket for this landed change. Reverts go through the full proposal flow.">` +
+              `  ↩ 提议回退此修改 · Propose revert</button>`
+            )
+          : "";
+      const landedSha = p.landed_truth_sha
+        ? (
+            `<span class="workbench-annotation-inbox-item-landed">已落地 · landed: ` +
+            `<code>${escape(p.landed_truth_sha)}</code></span>`
+          )
+        : "";
       return (
-        `<li class="workbench-annotation-inbox-item" data-proposal-id="${escape(p.id)}" data-status="${escape(p.status)}">` +
+        `<li class="workbench-annotation-inbox-item" data-proposal-id="${escape(p.id)}" data-status="${escape(p.status)}" data-proposal-kind="${escape(kind)}">` +
         `  <div class="workbench-annotation-inbox-item-line">` +
         `    <span class="workbench-annotation-inbox-item-id">${escape(p.id)}</span>` +
         `    <span class="workbench-annotation-inbox-item-status" data-status="${escape(p.status)}">${escape(p.status)}</span>` +
+        kindBadge +
         `    <span class="workbench-annotation-inbox-item-gate">命中 · gate: ${escape(gates)}</span>` +
         `    <span class="workbench-annotation-inbox-item-kind">${escape(interp.change_kind_zh || "")} · ${escape(interp.change_kind_en || "")}</span>` +
         `  </div>` +
@@ -556,9 +599,12 @@ function renderProposalsInbox(proposals) {
         `    <span>${escape(author)}</span> · ` +
         `    <span>${escape(p.created_at || "")}</span> · ` +
         `    <span>signals: ${escape(targets)}</span>` +
+        (landedSha ? ` · ${landedSha}` : "") +
         `  </div>` +
+        revertBanner +
         `  <div class="workbench-annotation-inbox-item-summary">${escape(summary)}</div>` +
         actions +
+        proposeRevertBtn +
         rollback +
         `</li>`
       );
@@ -603,6 +649,58 @@ function renderProposalsInbox(proposals) {
       hints.setAttribute("data-rollback-state", open ? "closed" : "open");
       btn.setAttribute("aria-expanded", open ? "false" : "true");
     });
+  }
+  // P47-02 (2026-04-27): propose-revert button. Creates a new revert
+  // proposal targeting the landed truth-engine commit; on success,
+  // refreshes the inbox so the new revert ticket appears at the top.
+  for (const btn of list.querySelectorAll("[data-propose-revert-for]")) {
+    btn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      const id = btn.getAttribute("data-propose-revert-for");
+      if (!id) return;
+      const original = (_latestProposals || []).find((p) => p.id === id);
+      const sha = (original && original.landed_truth_sha) || "—";
+      const ok = window.confirm(
+        `为已落地工单 ${id}\n` +
+        `创建一张回退工单（目标真值提交 ${sha}）？\n\n` +
+        `回退也走完整工单闭环：` +
+        `这只是提议，需要走 评审-接纳-执行 才会真的回退到代码上。`
+      );
+      if (!ok) return;
+      btn.setAttribute("disabled", "");
+      btn.textContent = "提交中… · submitting…";
+      try {
+        await proposeRevertProposal(id);
+      } finally {
+        btn.removeAttribute("disabled");
+      }
+    });
+  }
+}
+
+async function proposeRevertProposal(originalProposalId) {
+  try {
+    const response = await fetch(
+      `/api/proposals/${encodeURIComponent(originalProposalId)}/propose-revert`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }
+    );
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      const detail = errBody.error || `HTTP ${response.status}`;
+      window.alert(
+        `创建回退工单失败 · failed to create revert proposal:\n${detail}`
+      );
+      return;
+    }
+    await loadProposalsInbox();
+  } catch (e) {
+    window.alert(
+      `创建回退工单出错 · network error:\n${(e && e.message) || e}`
+    );
   }
 }
 

@@ -415,6 +415,16 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         ):
             self._handle_proposal_transition(parsed.path)
             return
+        # P47-02 (2026-04-27): /api/proposals/<id>/landed and
+        # /api/proposals/<id>/propose-revert.
+        if parsed.path.startswith(PROPOSALS_PATH + "/") and parsed.path.endswith("/landed"):
+            self._handle_proposal_landed(parsed.path)
+            return
+        if parsed.path.startswith(PROPOSALS_PATH + "/") and parsed.path.endswith(
+            "/propose-revert"
+        ):
+            self._handle_proposal_propose_revert(parsed.path)
+            return
         if parsed.path not in {
             "/api/demo",
             "/api/lever-snapshot",
@@ -959,6 +969,150 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(500, {"error": "proposal_transition_failed"})
             return
         self._send_json(200, record)
+
+    def _handle_proposal_landed(self, raw_path: str):
+        """P47-02 (2026-04-27): record the truth-engine commit SHA that
+        fulfills an ACCEPTED proposal. Called by the executor (Claude
+        Code skill) after merging the truth-engine PR.
+
+        POST /api/proposals/<id>/landed
+        Body: {"sha": "abc1234[5678…]", "actor": "..."}  (actor optional)
+
+        Errors:
+          400 — bad path / json / sha format
+          404 — proposal id not found
+          409 — proposal not ACCEPTED, OR a different SHA already landed
+        """
+        suffix = raw_path[len(PROPOSALS_PATH) + 1 :]
+        # Strip trailing /landed
+        if not suffix.endswith("/landed"):
+            self._send_json(400, {"error": "invalid_landed_path"})
+            return
+        proposal_id = suffix[: -len("/landed")]
+        if not proposal_id:
+            self._send_json(400, {"error": "invalid_proposal_id"})
+            return
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        if length <= 0:
+            self._send_json(400, {"error": "missing_body"})
+            return
+        if length > 50_000:
+            self._send_json(400, {"error": "oversized_body"})
+            return
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self._send_json(400, {"error": "invalid_json"})
+            return
+        if not isinstance(payload, dict):
+            self._send_json(400, {"error": "invalid_json_object"})
+            return
+        sha = payload.get("sha")
+        actor = str(payload.get("actor") or "claude-code-executor")
+        if not isinstance(sha, str) or not sha.strip():
+            self._send_json(400, {"error": "missing_sha"})
+            return
+        record, error_code = record_proposal_landed(
+            proposal_id, sha=sha, actor=actor
+        )
+        if error_code == "not_found":
+            self._send_json(404, {"error": "proposal_not_found", "id": proposal_id})
+            return
+        if error_code == "invalid_sha":
+            self._send_json(400, {"error": "invalid_sha_format"})
+            return
+        if error_code == "wrong_status":
+            self._send_json(
+                409,
+                {
+                    "error": "proposal_not_accepted",
+                    "id": proposal_id,
+                    "current_status": (record or {}).get("status"),
+                },
+            )
+            return
+        if error_code == "already_landed":
+            self._send_json(
+                409,
+                {
+                    "error": "proposal_already_landed",
+                    "id": proposal_id,
+                    "existing_sha": (record or {}).get("landed_truth_sha"),
+                },
+            )
+            return
+        if error_code is not None or record is None:
+            self._send_json(500, {"error": "proposal_landed_failed"})
+            return
+        self._send_json(200, record)
+
+    def _handle_proposal_propose_revert(self, raw_path: str):
+        """P47-02 (2026-04-27): create a new revert proposal targeting
+        an already-landed accepted proposal.
+
+        POST /api/proposals/<id>/propose-revert
+        Body: {"author_name": "Kogami"}  (optional)
+
+        Errors:
+          400 — bad path / json
+          404 — original proposal id not found
+          409 — original is not ACCEPTED-with-landed-sha, OR a revert is
+                already in flight
+        """
+        suffix = raw_path[len(PROPOSALS_PATH) + 1 :]
+        if not suffix.endswith("/propose-revert"):
+            self._send_json(400, {"error": "invalid_revert_path"})
+            return
+        original_id = suffix[: -len("/propose-revert")]
+        if not original_id:
+            self._send_json(400, {"error": "invalid_proposal_id"})
+            return
+        author_name = "anonymous"
+        author_role = "REVIEWER"
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        if length > 0:
+            if length > 50_000:
+                self._send_json(400, {"error": "oversized_body"})
+                return
+            try:
+                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                self._send_json(400, {"error": "invalid_json"})
+                return
+            if isinstance(payload, dict):
+                author_name = str(payload.get("author_name") or "anonymous")
+                author_role = str(payload.get("author_role") or "REVIEWER")
+        record, error_code = create_revert_proposal(
+            original_id,
+            author_name=author_name,
+            author_role=author_role,
+        )
+        if error_code == "not_found":
+            self._send_json(404, {"error": "proposal_not_found", "id": original_id})
+            return
+        if error_code == "not_landed":
+            self._send_json(
+                409,
+                {
+                    "error": "original_not_landed",
+                    "id": original_id,
+                    "hint": "original must be ACCEPTED with a landed_truth_sha",
+                },
+            )
+            return
+        if error_code == "already_reverted":
+            self._send_json(
+                409,
+                {
+                    "error": "revert_already_in_flight",
+                    "id": original_id,
+                },
+            )
+            return
+        if error_code is not None or record is None:
+            self._send_json(500, {"error": "propose_revert_failed"})
+            return
+        self._send_json(201, record)
 
     def _serve_workbench_circuit_fragment(self):
         """P44-01 (2026-04-26) + P45-01 (2026-04-26): serve the SVG
@@ -1525,12 +1679,16 @@ def create_proposal(
     author_role: str = "ENGINEER",
     ticket_id: str = "ad-hoc",
     system_id: str = "thrust-reverser",
+    kind: str = "modify",
+    revert_of_proposal_id: str | None = None,
+    revert_target_sha: str | None = None,
 ) -> dict:
     """Persist a new proposal record. Returns the record (with the
     server-assigned id, created_at, status="OPEN", and history seeded
     with a single 'submitted' entry). Thread-safe.
 
-    Schema (locked by tests/test_workbench_p44_03_proposals.py):
+    Schema (locked by tests/test_workbench_p44_03_proposals.py +
+    tests/test_workbench_p47_02_revert_proposals.py):
       id              str    PROP-YYYYMMDDTHHMMSS-{6-hex}
       created_at      str    ISO-8601 UTC, with 'Z' suffix
       status          str    one of: OPEN | ACCEPTED | REJECTED
@@ -1544,7 +1702,25 @@ def create_proposal(
                              output)
       history         list   [{at, actor, action, [note]}, ...] —
                              append-only audit trail
+      kind            str    P47-02: "modify" (default) | "revert"
+      revert_of_proposal_id  str | None  set when kind="revert" — the
+                             id of the original proposal being reverted
+      revert_target_sha      str | None  set when kind="revert" — the
+                             truth-engine commit SHA being reverted
+                             (i.e. the original proposal's
+                             landed_truth_sha, which the skill will
+                             treat as the diff to undo)
+      landed_truth_sha       str | None  set by /landed endpoint when
+                             the executor merges the truth-engine PR
+                             that fulfills this proposal
     """
+    if kind not in ("modify", "revert"):
+        raise ValueError(f"invalid kind: {kind!r}")
+    if kind == "revert":
+        if not revert_of_proposal_id:
+            raise ValueError("revert proposals require revert_of_proposal_id")
+        if not revert_target_sha:
+            raise ValueError("revert proposals require revert_target_sha")
     record = {
         "id": _new_proposal_id(),
         "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -1555,6 +1731,10 @@ def create_proposal(
         "system_id": system_id,
         "source_text": source_text,
         "interpretation": interpretation,
+        "kind": kind,
+        "revert_of_proposal_id": revert_of_proposal_id,
+        "revert_target_sha": revert_target_sha,
+        "landed_truth_sha": None,
         "history": [
             {
                 "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -1570,6 +1750,145 @@ def create_proposal(
             encoding="utf-8",
         )
     return record
+
+
+# ─── P47-02 (2026-04-27): revert-as-proposal + landed-SHA tracking ──
+#
+# After the executor (Claude Code skill) merges a truth-engine PR that
+# fulfills an accepted proposal, the skill calls
+# `POST /api/proposals/<id>/landed { sha }` to record the merge SHA on
+# the proposal record. Once recorded, the inbox card surfaces a
+# "propose revert" button: clicking it calls
+# `POST /api/proposals/<id>/propose-revert`, which creates a NEW
+# proposal with kind="revert" + revert_target_sha=<the landed SHA>.
+# That revert proposal goes through the standard accept-flow and
+# produces a dev-queue brief telling the executor "treat the file
+# contents at <parent-sha> as the target ground truth" — handing the
+# user Q2(b) semantics: skill plans/asks/edits, doesn't blindly run
+# `git revert`.
+
+
+def record_proposal_landed(
+    proposal_id: str,
+    *,
+    sha: str,
+    actor: str = "claude-code-executor",
+) -> tuple[dict | None, str | None]:
+    """Record the truth-engine commit SHA that fulfills this proposal.
+    Called by the skill after PR merge. Returns (record, error_code).
+    error_code: None | "not_found" | "invalid_sha" | "wrong_status"
+    | "already_landed".
+
+    SHA validation is loose on purpose — accepts 7-40 hex chars so
+    both short and full SHAs work. Tighter validation belongs in the
+    skill.
+    """
+    if not sha or not isinstance(sha, str):
+        return None, "invalid_sha"
+    sha = sha.strip().lower()
+    if not re.match(r"^[0-9a-f]{7,40}$", sha):
+        return None, "invalid_sha"
+    with _PROPOSALS_LOCK:
+        record = _load_proposal_record(proposal_id)
+        if record is None:
+            return None, "not_found"
+        if record.get("status") != "ACCEPTED":
+            return record, "wrong_status"
+        if record.get("landed_truth_sha"):
+            # Idempotent guard — re-recording the same SHA is a no-op,
+            # but trying to overwrite with a different SHA is rejected.
+            if record["landed_truth_sha"].lower() == sha:
+                return record, None
+            return record, "already_landed"
+        record["landed_truth_sha"] = sha
+        record.setdefault("history", []).append(
+            {
+                "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "actor": actor or "claude-code-executor",
+                "action": "landed",
+                "note": f"truth-engine commit {sha}",
+            }
+        )
+        _write_proposal_record(record)
+    return record, None
+
+
+def create_revert_proposal(
+    original_proposal_id: str,
+    *,
+    author_name: str = "anonymous",
+    author_role: str = "REVIEWER",
+) -> tuple[dict | None, str | None]:
+    """Create a new proposal that proposes reverting the truth-engine
+    commit landed for `original_proposal_id`. Returns (record, error).
+    error: None | "not_found" | "not_landed" | "already_reverted".
+
+    Validation:
+      - original must exist
+      - original must be ACCEPTED with a landed_truth_sha
+      - no prior revert proposal already targeting the same SHA may
+        be OPEN or ACCEPTED (avoid duplicate revert work)
+
+    The new revert proposal carries:
+      - kind = "revert"
+      - revert_of_proposal_id = <original id>
+      - revert_target_sha     = <original.landed_truth_sha>
+      - source_text = "Propose revert of PROP-XXX (commit SHA)"
+      - interpretation = passthrough copy of the original's
+        interpretation, with summary fields prefixed "[REVERT] ..." so
+        the inbox card reads sensibly.
+    """
+    with _PROPOSALS_LOCK:
+        original = _load_proposal_record(original_proposal_id)
+        if original is None:
+            return None, "not_found"
+        if original.get("status") != "ACCEPTED":
+            return None, "not_landed"
+        target_sha = original.get("landed_truth_sha")
+        if not target_sha:
+            return None, "not_landed"
+        # Guard: refuse to create a duplicate revert. Walk the proposals
+        # directory looking for any open / accepted revert proposal with
+        # the same revert_target_sha.
+        for path in proposals_dir().glob("PROP-*.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if not isinstance(data, dict):
+                continue
+            if data.get("kind") != "revert":
+                continue
+            if data.get("revert_target_sha") != target_sha:
+                continue
+            if data.get("status") in ("OPEN", "ACCEPTED"):
+                return None, "already_reverted"
+    # Build the revert record OUTSIDE the lock — create_proposal
+    # acquires the lock itself.
+    orig_interp = original.get("interpretation") or {}
+    revert_interp = {
+        **orig_interp,
+        "summary_zh": f"[REVERT] 撤销 {original_proposal_id} 的修改 · {orig_interp.get('summary_zh', '')}".strip(),
+        "summary_en": f"[REVERT] undo {original_proposal_id} · {orig_interp.get('summary_en', '')}".strip(),
+        "change_kind": "revert",
+    }
+    source_text = (
+        f"Propose revert of {original_proposal_id} (truth-engine commit {target_sha}).\n"
+        f"Original engineer suggestion was:\n"
+        f"> {original.get('source_text', '').strip() or '(empty)'}"
+    )
+    record = create_proposal(
+        source_text=source_text,
+        interpretation=revert_interp,
+        author_name=author_name,
+        author_role=author_role,
+        ticket_id=original.get("ticket_id", "ad-hoc"),
+        system_id=original.get("system_id", "thrust-reverser"),
+        kind="revert",
+        revert_of_proposal_id=original_proposal_id,
+        revert_target_sha=target_sha,
+    )
+    return record, None
 
 
 def list_proposals(
@@ -1698,7 +2017,8 @@ def update_proposal_status(
 def write_dev_queue_brief(record: dict) -> Path:
     """Write a markdown handoff brief Claude Code's /gsd-execute-phase
     can read in a later session. Returns the brief's path. Schema is
-    locked by P44-05 tests (the markdown is an external contract)."""
+    locked by P44-05 tests + P47-02 tests (the markdown is an external
+    contract)."""
     path = dev_queue_dir() / f"{record['id']}.md"
     interp = record.get("interpretation") or {}
     affected_gates = ", ".join(interp.get("affected_gates") or []) or "—"
@@ -1710,46 +2030,141 @@ def write_dev_queue_brief(record: dict) -> Path:
     )
     accepted_at = accepted_entry["at"] if accepted_entry else "—"
     accepted_by = accepted_entry["actor"] if accepted_entry else "—"
-    brief = (
-        f"# Proposal {record['id']}\n"
+    kind = record.get("kind") or "modify"
+    if kind == "revert":
+        brief = _write_revert_brief_body(
+            record=record,
+            interp=interp,
+            affected_gates=affected_gates,
+            target_signals=target_signals,
+            accepted_at=accepted_at,
+            accepted_by=accepted_by,
+        )
+    else:
+        brief = (
+            f"# Proposal {record['id']}\n"
+            f"\n"
+            f"<!-- dev_queue brief schema v{DEV_QUEUE_BRIEF_VERSION} —"
+            f" generated by demo_server.write_dev_queue_brief; do not"
+            f" hand-edit -->\n"
+            f"\n"
+            f"- **Kind**: modify\n"
+            f"- **Status**: ACCEPTED ({accepted_at} by {accepted_by})\n"
+            f"- **System**: {record.get('system_id', '—')}\n"
+            f"- **Affected gates**: {affected_gates}\n"
+            f"- **Target signals**: {target_signals}\n"
+            f"- **Change kind**: {interp.get('change_kind', '—')}\n"
+            f"- **Confidence**: {interp.get('confidence', '—')}\n"
+            f"- **Submitted by**: {record.get('author_name', '—')}"
+            f" ({record.get('author_role', '—')})\n"
+            f"- **Ticket**: {record.get('ticket_id', '—')}\n"
+            f"- **Created**: {record.get('created_at', '—')}\n"
+            f"\n"
+            f"## Engineer's original suggestion · 工程师原始建议\n"
+            f"\n"
+            f"> {record.get('source_text', '').strip() or '(empty)'}\n"
+            f"\n"
+            f"## System interpretation · 系统解读\n"
+            f"\n"
+            f"- Summary (zh): {interp.get('summary_zh', '—')}\n"
+            f"- Summary (en): {interp.get('summary_en', '—')}\n"
+            f"\n"
+            f"## Handoff to Claude Code\n"
+            f"\n"
+            f"1. Open this brief and the linked proposal JSON at"
+            f" `.planning/proposals/{record['id']}.json`.\n"
+            f"2. Run `/gsd-execute-phase` to plan + implement the change"
+            f" against the truth-engine code (controller / runner /"
+            f" models / adapters).\n"
+            f"3. After merging the truth-engine PR, record the merge SHA on"
+            f" this proposal so the workbench can offer the revert path:\n"
+            f"   ```\n"
+            f"   curl -X POST http://localhost:8770/api/proposals/{record['id']}/landed \\\n"
+            f"        -H 'Content-Type: application/json' \\\n"
+            f"        -d '{{\"sha\": \"<merge-commit-sha>\", \"actor\": \"claude-code-executor\"}}'\n"
+            f"   ```\n"
+            f"4. Mark this brief complete by deleting it from"
+            f" `.planning/dev_queue/` (the proposal JSON's status"
+            f" remains the audit truth).\n"
+        )
+    path.write_text(brief, encoding="utf-8")
+    return path
+
+
+def _write_revert_brief_body(
+    *,
+    record: dict,
+    interp: dict,
+    affected_gates: str,
+    target_signals: str,
+    accepted_at: str,
+    accepted_by: str,
+) -> str:
+    """P47-02: revert brief body. Different from a modify brief in
+    two ways: (1) the executor's job is to re-create a target file
+    state derived from `<revert_target_sha>~1`, not implement a
+    free-form suggestion; (2) the brief explicitly references the
+    original proposal so the audit trail stays linked."""
+    target_sha = record.get("revert_target_sha", "—")
+    original_id = record.get("revert_of_proposal_id", "—")
+    return (
+        f"# Proposal {record['id']} · REVERT\n"
         f"\n"
-        f"<!-- dev_queue brief schema v{DEV_QUEUE_BRIEF_VERSION} —"
+        f"<!-- dev_queue brief schema v{DEV_QUEUE_BRIEF_VERSION} (revert) —"
         f" generated by demo_server.write_dev_queue_brief; do not"
         f" hand-edit -->\n"
         f"\n"
+        f"- **Kind**: revert\n"
         f"- **Status**: ACCEPTED ({accepted_at} by {accepted_by})\n"
         f"- **System**: {record.get('system_id', '—')}\n"
-        f"- **Affected gates**: {affected_gates}\n"
-        f"- **Target signals**: {target_signals}\n"
-        f"- **Change kind**: {interp.get('change_kind', '—')}\n"
-        f"- **Confidence**: {interp.get('confidence', '—')}\n"
+        f"- **Reverts proposal**: `{original_id}`\n"
+        f"- **Reverts truth-engine commit**: `{target_sha}`\n"
+        f"- **Affected gates** (inherited from original): {affected_gates}\n"
+        f"- **Target signals** (inherited from original): {target_signals}\n"
         f"- **Submitted by**: {record.get('author_name', '—')}"
         f" ({record.get('author_role', '—')})\n"
         f"- **Ticket**: {record.get('ticket_id', '—')}\n"
         f"- **Created**: {record.get('created_at', '—')}\n"
         f"\n"
-        f"## Engineer's original suggestion · 工程师原始建议\n"
+        f"## Why this revert was proposed · 提议理由\n"
         f"\n"
         f"> {record.get('source_text', '').strip() or '(empty)'}\n"
         f"\n"
-        f"## System interpretation · 系统解读\n"
+        f"## Reverse-target state · 目标态\n"
         f"\n"
-        f"- Summary (zh): {interp.get('summary_zh', '—')}\n"
-        f"- Summary (en): {interp.get('summary_en', '—')}\n"
+        f"The executor must restore truth-engine files affected by"
+        f" commit `{target_sha}` to the state they had at"
+        f" `{target_sha}~1` (the parent commit). To inspect the diff"
+        f" that needs undoing:\n"
+        f"\n"
+        f"```\n"
+        f"git show {target_sha}\n"
+        f"git diff {target_sha}~1 {target_sha} -- <files>\n"
+        f"```\n"
         f"\n"
         f"## Handoff to Claude Code\n"
         f"\n"
         f"1. Open this brief and the linked proposal JSON at"
         f" `.planning/proposals/{record['id']}.json`.\n"
-        f"2. Run `/gsd-execute-phase` to plan + implement the change"
-        f" against the truth-engine code (controller / runner /"
-        f" models / adapters).\n"
-        f"3. After commit, mark this brief complete by deleting it"
-        f" from `.planning/dev_queue/` (the proposal JSON's status"
-        f" remains the audit truth).\n"
+        f"2. Inspect the original commit's diff; treat the file"
+        f" contents at `{target_sha}~1` as the desired ground truth.\n"
+        f"3. Plan/ask/implement the reversal via the standard"
+        f" `/gsd-execute-phase-from-brief` flow — DO NOT just run"
+        f" `git revert` blindly. The executor's planner-and-confirm"
+        f" cycle must still apply (per Q2 user direction 2026-04-27)"
+        f" so any incidental conflicts surface for the engineer to"
+        f" resolve, not the bot.\n"
+        f"4. After merging the revert PR, record its SHA on this"
+        f" revert proposal:\n"
+        f"   ```\n"
+        f"   curl -X POST http://localhost:8770/api/proposals/{record['id']}/landed \\\n"
+        f"        -H 'Content-Type: application/json' \\\n"
+        f"        -d '{{\"sha\": \"<revert-merge-sha>\", \"actor\": \"claude-code-executor\"}}'\n"
+        f"   ```\n"
+        f"5. Mark this brief complete by deleting it from"
+        f" `.planning/dev_queue/` (the proposal JSON's status remains"
+        f" the audit truth).\n"
     )
-    path.write_text(brief, encoding="utf-8")
-    return path
 
 
 def _clamp_tra(tra_deg: float, config: HarnessConfig) -> float:
