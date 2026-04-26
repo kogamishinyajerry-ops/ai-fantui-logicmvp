@@ -5,7 +5,7 @@
 
 - 当前阶段：`P43 Control Logic Workbench end-to-end milestone`
 - 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`P45-03 PR #42 merged (P45 series shipped on top of P44 loop: P45-01 multi-system circuit routing — /workbench dropdown re-paints panel for any system, placeholder SVG for unwired ones / P45-02 per-system inbox filtering — proposals scope to current system, header shows scope inline / P45-03 LLM interpreter via MiniMax-M2.7-highspeed with deterministic rules-fallback — strategy chip flips between rules and AI, badge shows which interpreter ran or fell back; 1292/1292 full suite, 54/54 new P45-01..03 tests, real LLM call verified end-to-end with <think>...</think> + JSON-fence stripper; Self-Gate via Executor-即-Gate v3.2) — 2026-04-26`
+- 最近成功执行证据：`P46-03 PR #46 merged (P46 series closes the loop: P46-01 dev-server startup script + make dev — one-command boot, MiniMax key resolved from env / ~/.zshrc / ~/.minimax_key, port-killer + state-dir setup baked in / P46-02 per-system gate synonyms — rules interpreter now covers all 4 systems with domain-honest vocabularies (L1..L4 / G1..G4 / V1..V2 / E1..E3) and unknown-system fallback / P46-03 /gsd-execute-phase-from-brief Claude Code skill spec + dev-queue brief contract test — last manual gap closed: skill picks brief, plans, asks before edit, branches + PRs; 16-test contract locks every brief field the skill parses incl. HTML schema marker for version drift; truth-engine red line preserved by always-ask + always-PR safeguards; 1348/1348 full suite, 56/56 new P46-01..03 tests; Self-Gate via Executor-即-Gate v3.2) — 2026-04-26`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
@@ -51,6 +51,14 @@
 | **P45-01 Multi-system circuit routing** | `24d917a` | `/api/workbench/circuit-fragment?system=<id>`：thrust-reverser 走 `fantui_circuit.html` 的 L1..L4 SVG，其它三系统返回 placeholder SVG（命名系统、邀请提交工单、给出"如何接入"提示）；XSS-safe；下拉菜单切换即时 re-paint；13 new tests |
 | **P45-02 Per-system inbox filtering** | `f94013a` | `list_proposals(system_filter=...)` + `GET /api/proposals?system=<id>`；前端 inbox 自动按当前系统过滤，header 显示 `审核队列 · Review Queue · <system>` 体现 scope；下拉切换同时刷新面板 + inbox；14 new tests |
 | **P45-03 LLM interpreter via MiniMax-M2.7-highspeed** | `aa24e02` | 顶栏 `📜 规则解读 ↔ 🤖 智能解读` 切换；规则解读保持 default（零延迟、确定性），LLM 解读用 MiniMax-M2.7-highspeed（OpenAI 兼容 API at `api.minimaxi.com/v1`，stdlib `urllib.request`，零新依赖）；reasoning-style `<think>...</think>` 与 ```` ```json ```` fence 都被解析器剥离；任何失败（无 key/网络/解析）静默回退到规则解读，结果带 `interpreter_strategy` 与 `llm_error` 字段；result panel 显示绿/蓝/黄三色 badge 表明哪条路径出的结果；adapter-only，truth-engine 红线守护；27 new tests |
+
+## P46 Workbench loop closure（2026-04-26）
+
+| 改进项 | 提交 | 说明 |
+|--------|------|------|
+| **P46-01 Dev-server startup script + make dev** | `cad0b26` | `scripts/dev-serve.sh` 一条命令启动：MiniMax key 按 `MINIMAX_API_KEY` → `Minimax_API_key` → `~/.zshrc grep` → `~/.minimax_key` 顺序解析（缺 key 时降级为规则解读，server 仍启动）；`.planning/proposals` + `.planning/dev_queue` 自动创建；端口被占用时先 kill 再启动（重跑幂等）；`set -euo pipefail` 防御；`Makefile` 提供 `make dev` / `make test` / `make help` alias；20 new tests 覆盖脚本/Makefile 契约 + `bash -n` 语法守护 |
+| **P46-02 Per-system gate synonyms** | `9de4e2c` | 规则解读器从"thrust-reverser-only"扩到全部 4 个 dropdown 系统：L1..L4（thrust-reverser，原版未改）/ G1..G4（landing-gear: 主起放下/收上 + 前起放下/收上）/ V1..V2（bleed-air-valve: 引气阀开启/关闭）/ E1..E3（c919-etras: ETRAS 解锁/部署/收回）；每系统独立 `_SIGNALS_BY_SYSTEM` 字典；未知 system_id 静默回退到 thrust-reverser；端点把 system_id 透传到规则路径（LLM 路径 P45-03 已支持）；back-compat 别名保持 `_GATE_SYNONYMS` / `_KNOWN_TARGET_SIGNALS` 可用；live verified 4 系统都返回正确 `affected_gates`；20 new tests |
+| **P46-03 Skill spec + dev-queue brief contract** | `277b6bb` | `/gsd-execute-phase-from-brief` Claude Code skill 文件部署到 `~/.claude/commands/`（active）+ `docs/skills/` 仓内快照（discoverable），关闭"engineer accept → truth-engine commit"最后一段手工 gap：skill 拾取最旧 brief、解析 PROP-id、给出 5-bullet 计划、强制要求"Proceed?"确认（无 `--auto-merge` bypass）、走 feature branch + PR（永不直 push main）、`make test` 通过后提交、合并后删 brief；contract test 16 条锁住 `write_dev_queue_brief` 输出每个字段（含 HTML schema marker `schema v1` 用于版本漂移检测）；engineer's source_text 必须逐字保留；`docs/skills/README.md` 解释为什么是 skill 而非 script、安装/刷新方法、truth-engine 红线 |
 
 ## 当前用途
 
