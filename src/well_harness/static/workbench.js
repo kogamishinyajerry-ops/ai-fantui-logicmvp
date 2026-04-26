@@ -85,7 +85,7 @@ function bootWorkbenchControlPanel() {
   const status = workbenchElement("workbench-control-status");
   if (status) {
     status.textContent =
-      "Probe & Trace ready. Scenario actions are staged for the next bundle.";
+      "探针与追踪面板就绪，场景动作已编入下一捆 · Probe & Trace ready. Scenario actions are staged for the next bundle.";
     status.dataset.tone = "ready";
   }
 }
@@ -94,7 +94,7 @@ function bootWorkbenchDocumentPanel() {
   const status = workbenchElement("workbench-document-status");
   if (status) {
     status.textContent =
-      "Annotate & Propose ready. Text-range annotation is staged for the next bundle.";
+      "标注与提案面板就绪，text-range 标注已编入下一捆 · Annotate & Propose ready. Text-range annotation is staged for the next bundle.";
     status.dataset.tone = "ready";
   }
 }
@@ -103,7 +103,7 @@ function bootWorkbenchCircuitPanel() {
   const status = workbenchElement("workbench-circuit-status");
   if (status) {
     status.textContent =
-      "Hand off & Track ready. Overlay annotation is staged for the next bundle.";
+      "移交与跟踪面板就绪，覆盖层标注已编入下一捆 · Hand off & Track ready. Overlay annotation is staged for the next bundle.";
     status.dataset.tone = "ready";
   }
 }
