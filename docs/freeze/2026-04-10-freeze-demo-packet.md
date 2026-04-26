@@ -5,7 +5,7 @@
 
 - 当前阶段：`P43 Control Logic Workbench end-to-end milestone`
 - 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`P44-06 PR #38 merged (P44 series complete: P44-03 proposals persistence + inbox / P44-04 reviewer mode + glowing anchors / P44-05 accept-reject + dev-queue handoff brief / P44-06 panel-version chip + rollback hints — full engineer→reviewer→Claude Code loop on /workbench; 1238/1238 full suite, 125/125 new P44-03..06 tests, 1 ACCEPTED proposal end-to-end smoke verified; Self-Gate via Executor-即-Gate v3.2) — 2026-04-26`
+- 最近成功执行证据：`P45-03 PR #42 merged (P45 series shipped on top of P44 loop: P45-01 multi-system circuit routing — /workbench dropdown re-paints panel for any system, placeholder SVG for unwired ones / P45-02 per-system inbox filtering — proposals scope to current system, header shows scope inline / P45-03 LLM interpreter via MiniMax-M2.7-highspeed with deterministic rules-fallback — strategy chip flips between rules and AI, badge shows which interpreter ran or fell back; 1292/1292 full suite, 54/54 new P45-01..03 tests, real LLM call verified end-to-end with <think>...</think> + JSON-fence stripper; Self-Gate via Executor-即-Gate v3.2) — 2026-04-26`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
@@ -43,6 +43,14 @@
 | **P44-04 Reviewer mode + glowing anchors** | `8e6cdbe` | 顶栏 `审核视角 · Review Mode` 切换；OPEN 提议在 SVG 上发光闪烁 + 每个 gate 的开 ticket 数 badge；点击门 → spotlight 工单卡，点击工单 → spotlight 门；100% static-only，32 new tests |
 | **P44-05 Accept/reject + dev-queue handoff** | `daa360d` | `/api/proposals/<id>/accept|reject`：状态翻转 + 审计 history append；accept 时写 `.planning/dev_queue/PROP-XXX.md` 给 Claude Code `/gsd-execute-phase` 未来 session 接手；adapter-only；29 new tests |
 | **P44-06 Panel version chip + rollback hints** | `f0f7806` | 顶栏 `📜 面板版本 · Panel Version` 芯片显示 truth-engine SHA + ACCEPTED 计数；每个 ACCEPTED 工单卡可展开 `🔁 回滚指引`，给出 `git log --grep` + `git revert` 命令；workbench 永不替工程师执行 git；frontend-only，28 new tests |
+
+## P45 Workbench multi-system + LLM upgrade（2026-04-26）
+
+| 改进项 | 提交 | 说明 |
+|--------|------|------|
+| **P45-01 Multi-system circuit routing** | `24d917a` | `/api/workbench/circuit-fragment?system=<id>`：thrust-reverser 走 `fantui_circuit.html` 的 L1..L4 SVG，其它三系统返回 placeholder SVG（命名系统、邀请提交工单、给出"如何接入"提示）；XSS-safe；下拉菜单切换即时 re-paint；13 new tests |
+| **P45-02 Per-system inbox filtering** | `f94013a` | `list_proposals(system_filter=...)` + `GET /api/proposals?system=<id>`；前端 inbox 自动按当前系统过滤，header 显示 `审核队列 · Review Queue · <system>` 体现 scope；下拉切换同时刷新面板 + inbox；14 new tests |
+| **P45-03 LLM interpreter via MiniMax-M2.7-highspeed** | `aa24e02` | 顶栏 `📜 规则解读 ↔ 🤖 智能解读` 切换；规则解读保持 default（零延迟、确定性），LLM 解读用 MiniMax-M2.7-highspeed（OpenAI 兼容 API at `api.minimaxi.com/v1`，stdlib `urllib.request`，零新依赖）；reasoning-style `<think>...</think>` 与 ```` ```json ```` fence 都被解析器剥离；任何失败（无 key/网络/解析）静默回退到规则解读，结果带 `interpreter_strategy` 与 `llm_error` 字段；result panel 显示绿/蓝/黄三色 badge 表明哪条路径出的结果；adapter-only，truth-engine 红线守护；27 new tests |
 
 ## 当前用途
 
