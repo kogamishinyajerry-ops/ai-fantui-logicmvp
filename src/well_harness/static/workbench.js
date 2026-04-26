@@ -1221,7 +1221,7 @@ function renderFingerprintDocumentList(documents, fallbackText) {
     return;
   }
 
-  container.replaceChildren(...documents.map((document) => {
+  container.replaceChildren(...documents.map((doc) => {
     const card = document.createElement("article");
     card.className = "workbench-fingerprint-item";
 
@@ -1230,20 +1230,20 @@ function renderFingerprintDocumentList(documents, fallbackText) {
 
     const title = document.createElement("strong");
     title.className = "workbench-fingerprint-item-title";
-    title.textContent = document.title || document.id || "未命名文档";
+    title.textContent = doc.title || doc.id || "未命名文档";
 
     const chips = document.createElement("div");
     chips.className = "workbench-fingerprint-chip-row";
     chips.append(
-      createFingerprintChip(documentKindLabel(document.kind), "source"),
-      createFingerprintChip(documentRoleLabel(document.role), "role"),
+      createFingerprintChip(documentKindLabel(doc.kind), "source"),
+      createFingerprintChip(documentRoleLabel(doc.role), "role"),
     );
 
     header.append(title, chips);
 
     const location = document.createElement("p");
     location.className = "workbench-fingerprint-item-detail";
-    location.textContent = document.location || "未提供路径";
+    location.textContent = doc.location || "未提供路径";
 
     card.append(header, location);
     return card;
@@ -1646,7 +1646,7 @@ function renderSystemFingerprintFromPacketPayload(packetPayload, {
 } = {}) {
   const documents = Array.isArray(packetPayload.source_documents) ? packetPayload.source_documents : [];
   const signals = Array.isArray(packetPayload.components) ? packetPayload.components : [];
-  const documentKinds = uniqueValues(documents.map((document) => document.kind));
+  const documentKinds = uniqueValues(documents.map((doc) => doc.kind));
   const sourceModeParts = [joinWithFallback(documentKinds.map(documentKindLabel), "未识别来源")];
   if (documentKinds.length > 1) {
     sourceModeParts.push("混合来源");
