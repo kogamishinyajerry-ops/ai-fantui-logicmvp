@@ -157,14 +157,26 @@ function bootWorkbenchShell() {
 }
 
 // P45-01 (2026-04-26): wire the system dropdown so changing the
-// selection re-fetches the circuit fragment for the new system. The
-// proposals inbox + review-mode anchors are system-agnostic for now
-// (one inbox shared across all systems); a later phase can scope
-// them per-system if the demo grows.
+// selection re-fetches the circuit fragment for the new system.
+// P45-02 (2026-04-26): also re-loads the proposals inbox scoped to
+// the new system so the engineer sees only that system's tickets.
 function installSystemSelectorReload() {
   const select = document.getElementById("workbench-system-select");
   if (!select) return;
-  select.addEventListener("change", () => reloadWorkbenchCircuitHero());
+  select.addEventListener("change", () => {
+    reloadWorkbenchCircuitHero();
+    loadProposalsInbox();
+  });
+}
+
+// P45-02 (2026-04-26): mirror the current system in the inbox
+// header so the engineer always knows which system's tickets are
+// in front of them. Single DOM mutation per refresh; safe to call
+// every load.
+function refreshInboxHeaderForSystem(system) {
+  const header = document.querySelector("#annotation-inbox header h2");
+  if (!header) return;
+  header.textContent = `审核队列 · Review Queue · ${system}`;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -389,8 +401,16 @@ async function loadProposalsInbox() {
     return;
   }
   list.dataset.inboxState = "loading";
+  // P45-02 (2026-04-26): scope the inbox to the currently-selected
+  // system. The dropdown is the single source of truth (same one
+  // that drives the circuit fragment in P45-01); a tile in the
+  // inbox header echoes the scope so the engineer can tell which
+  // system they're looking at.
+  const system = currentWorkbenchSystem();
+  list.dataset.inboxSystem = system;
+  refreshInboxHeaderForSystem(system);
   try {
-    const response = await fetch(PROPOSALS_PATH);
+    const response = await fetch(`${PROPOSALS_PATH}?system=${encodeURIComponent(system)}`);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
