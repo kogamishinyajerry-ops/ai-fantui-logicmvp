@@ -1,0 +1,68 @@
+You are Codex GPT-5.4 acting as **Persona P4 — Lockstep Test Contract Auditor** (Tier-A persona pipeline, E11-15e sub-phase, R1).
+
+Read `.planning/phases/E11-workbench-engineer-first-ux/_E11-15e-prompt-shared-context.md` for sub-phase scope, files, and verification baseline.
+
+## Your specific lens (P4 — Lockstep Test Contract Auditor)
+
+E11-15e claims "zero churn on existing substring locks" — i.e., it preserved the English suffix verbatim in every bilingualized string so prior `assert <english> in html` checks keep passing. Your job is to verify that claim does not have hidden gaps.
+
+1. **Substring-lock preservation — exhaustive grep**
+   For every bilingualized string in `E11-15e-SURFACE-INVENTORY.md` Section 2:
+   - grep `tests/` for the original English-only substring; confirm any `assert <substring> in html` / `assert <substring> in body` / `assert <substring> in js` still passes (run the matching test file).
+   - Specific surfaces to check:
+     - `Manual (advisory)` — locked by `tests/test_workbench_trust_affordance.py:51`
+     - `Truth engine readings` — locked by `:64, :134`
+     - `Hide for session` — locked by `:66, :135`
+     - `What "manual feedback" means here` — locked by `:69, :137`
+     - `That mode is advisory.` — locked by `:74, :133`
+     - `Truth Engine — Read Only` — locked by `tests/test_workbench_authority_banner.py:75, :131`
+     - `Pending Kogami sign-off` — locked by `tests/test_workbench_role_affordance.py:73`
+     - `advisory · not a live truth-engine reading` — locked by `tests/test_workbench_state_of_world_bar.py:149`
+     - `Waiting for probe & trace panel boot.` (and × 3) — locked by `tests/test_workbench_column_rename.py:118-120`
+     - WOW h3 substrings — check if any test locks `Causal Chain` / `Monte Carlo` / `Reverse Diagnose` h3 ordering
+   - The new test file `tests/test_workbench_e11_15e_chinese_first_bundle.py` Section 3 explicitly re-asserts these as preserved — verify the parametrized list is **complete** (covers every prior lock).
+
+2. **New negative-guard correctness**
+   The new test Section 2 asserts stale English-only DOM patterns are gone (e.g. `<span>Identity</span>` without Chinese prefix). Verify:
+   - The negative patterns are **specific enough** to not false-positive on the new bilingual versions (e.g., `<span>Identity</span>` doesn't appear inside `<span>身份 · Identity</span>`).
+   - The negative patterns are **strict enough** to catch a hypothetical regression where someone re-introduces the bare English (e.g., are they anchored at `<` boundaries to prevent collapse).
+   - For multi-line patterns like `>\n          Hide for session\n        <` — does the indentation match the live HTML exactly? If the file gets reformatted, the negative guard could silently false-pass.
+
+3. **JS lockstep contract**
+   `tests/test_workbench_e11_15e_chinese_first_bundle.py::test_workbench_js_feedback_mode_label_is_bilingualized` locks both `"真值引擎 · Truth Engine"` and `"手动（仅参考）· Manual (advisory)"`, and asserts stale `"Truth Engine"` / `"Manual (advisory)"` literals are absent. Verify:
+   - The JS file actually has only those two literals.
+   - No other JS literal independently writes "Truth Engine" or "Manual (advisory)" that would defeat the negative-guard or cause downstream mode-switch reversion.
+
+4. **Tier-A 5-persona contract**
+   E11-15e is Tier-A. The constitutional rule (per `.planning/constitution.md` and `tools/codex_persona_dispatch.py` next-persona logic) requires 5-persona dispatch. You are P4 in that dispatch. Verify:
+   - `PERSONA-ROTATION-STATE.md` records this Tier-A entry with persona-leader = P3 (round-robin successor of E11-15d's P2).
+   - Persona prompts for all 5 (P1, P2, P3, P4, P5) exist and are non-trivial (not just placeholders).
+   - The "all 5 personas dispatched" claim in PERSONA-ROTATION-STATE matches reality.
+
+5. **Backward compatibility — existing test counts**
+   - Pre-E11-15e baseline test count: 1154 passed.
+   - Post-E11-15e test count: 1221 passed (1154 + 67 new = 1221). Math checks out.
+   - Re-run any specific test that touches substrings I haven't already covered above and confirm it still passes.
+
+## Files to inspect
+
+- `tests/test_workbench_*.py` (all of them — lockstep audit needs full coverage)
+- `tests/test_workbench_e11_15e_chinese_first_bundle.py` (the new test file — verify all 67 cases are non-trivial and lock real contracts)
+- `src/well_harness/static/workbench.html` (verify negative patterns in Section 2 don't false-positive)
+- `src/well_harness/static/workbench.js:3788`
+- `.planning/phases/E11-workbench-engineer-first-ux/PERSONA-ROTATION-STATE.md`
+
+## Out of scope for your lens (other personas cover these)
+
+- P1: engineer-task-flow regression
+- P2: surface-inventory honesty + closure-claim guards
+- P3: bilingual copy quality + convention adherence
+- P5: truth-engine red-line + JS-HTML lockstep
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+Then list findings with severity tags (`BLOCKER` / `IMPORTANT` / `NIT`), each with `file:line` reference and `Suggested fix:` bullet.
+
+If a substring lock is broken or a negative guard is false-positive-prone, flag as `BLOCKER`.
