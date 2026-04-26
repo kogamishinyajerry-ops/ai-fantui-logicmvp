@@ -79,6 +79,12 @@ WORKBENCH_STATE_OF_WORLD_PATH = "/api/workbench/state-of-world"
 # Extracts the L1→L4 SVG block from fantui_circuit.html (single source of
 # truth) so /workbench can mount the circuit panel as the page hero.
 WORKBENCH_CIRCUIT_FRAGMENT_PATH = "/api/workbench/circuit-fragment"
+# P44-02 (2026-04-26): rule-based interpretation of free-form engineer
+# modification suggestions. Engineer types text, server returns
+# structured {affected_gates, change_kind, target_signals, summary}
+# so the UI can highlight the affected SVG gate(s) and ask the engineer
+# to confirm the interpretation matches intent before ticket submission.
+WORKBENCH_INTERPRET_SUGGESTION_PATH = "/api/workbench/interpret-suggestion"
 MONITOR_RA_START_FT = 7.0
 MONITOR_RA_RATE_FT_PER_S = 1.0
 MONITOR_TRA_START_S = 1.0
@@ -304,6 +310,9 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         parsed = urlparse(self.path)
+        if parsed.path == WORKBENCH_INTERPRET_SUGGESTION_PATH:
+            self._handle_interpret_suggestion()
+            return
         if parsed.path not in {
             "/api/demo",
             "/api/lever-snapshot",
@@ -647,6 +656,39 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         body = "\n".join(excerpt_lines).encode("utf-8")
         self._send_bytes(200, body, "text/plain; charset=utf-8")
 
+    def _handle_interpret_suggestion(self):
+        """P44-02 (2026-04-26): rule-based interpretation of a free-form
+        engineer modification suggestion. POST body: {"text": "..."}.
+        Returns a structured interpretation the UI can show back to the
+        engineer for confirmation. The interpreter logic is a pure
+        function (interpret_suggestion_text) so it can be unit-tested
+        without spinning the server.
+
+        Truth-engine red line preserved: this endpoint READS the
+        engineer's text and returns a structured restatement; it never
+        writes to controller / runner / models / adapters. P44-03 will
+        add a separate /api/proposals POST that persists confirmed
+        interpretations to a draft store; even that store is adapter-only,
+        not truth-engine."""
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        if length <= 0 or length > 100_000:
+            self._send_json(400, {"error": "empty_or_oversized_body"})
+            return
+        try:
+            payload = json.loads(self.rfile.read(length).decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self._send_json(400, {"error": "invalid_json"})
+            return
+        text = payload.get("text", "")
+        if not isinstance(text, str) or not text.strip():
+            self._send_json(400, {"error": "missing_or_empty_text"})
+            return
+        if len(text) > 5000:
+            self._send_json(400, {"error": "text_too_long", "max_chars": 5000})
+            return
+        result = interpret_suggestion_text(text)
+        self._send_json(200, result)
+
     def _serve_workbench_circuit_fragment(self):
         """P44-01 (2026-04-26): serve the L1→L4 SVG fragment that backs
         the /workbench page hero. Source of truth is fantui_circuit.html
@@ -692,6 +734,154 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
+
+
+# ─────────────────────────────────────────────────────────────────
+# P44-02 (2026-04-26): rule-based interpretation of free-form
+# engineer modification suggestions. Pure function, no side effects,
+# no I/O, no truth-engine access — easy to unit-test independently of
+# the HTTP handler.
+#
+# This is rule-based intentionally for the first slice: the rules are
+# under git version control so behavior is deterministic and reviewable.
+# A future P44-X may swap in an LLM-backed interpreter behind the same
+# (text) -> dict signature.
+# ─────────────────────────────────────────────────────────────────
+
+# Each gate L1..L4 is identified by both its bare label ("L1", "L2",
+# "L3", "L4") and a small set of plain-language synonyms an engineer
+# might write instead of the technical id.
+_GATE_SYNONYMS: dict[str, tuple[str, ...]] = {
+    "L1": ("L1", "l1", "逻辑门 1", "门 1", "tls_115vac_cmd", "TLS"),
+    "L2": ("L2", "l2", "逻辑门 2", "门 2", "etrac_540vdc_cmd", "ETRAC"),
+    "L3": ("L3", "l3", "逻辑门 3", "门 3", "eec_deploy_cmd", "pls_power_cmd", "pdu_motor_cmd", "EEC"),
+    "L4": ("L4", "l4", "逻辑门 4", "门 4", "throttle_electronic_lock_release_cmd", "throttle_unlock"),
+}
+
+# Input signals enumerated in fantui_circuit.html, plus their plain
+# synonyms. Used to populate target_signals when the engineer mentions
+# them directly.
+_KNOWN_TARGET_SIGNALS: tuple[str, ...] = (
+    "radio_altitude_ft",
+    "SW1",
+    "SW2",
+    "reverser_inhibited",
+    "reverser_not_deployed_eec",
+    "engine_running",
+    "aircraft_on_ground",
+    "eec_enable",
+    "tls_unlocked_ls",
+    "n1k",
+    "tra_deg",
+    "deploy_90_percent_vdt",
+)
+
+# Verb-style hints that the engineer is proposing a change and what
+# kind of change. Order matters — first match wins. Specific verbs
+# (loosen / tighten / add / remove / tune) come BEFORE the generic
+# `modify_condition` so phrases like "should be loosen for X" classify
+# as loosen rather than modify.
+_CHANGE_KIND_HINTS: tuple[tuple[str, str, str, str], ...] = (
+    # (regex pattern, change_kind code, zh label, en label)
+    (r"(放宽|放松|loosen|relax)", "loosen_condition", "放宽判据", "loosen condition"),
+    (r"(收紧|加严|tighten|stricter|更严格)", "tighten_condition", "收紧判据", "tighten condition"),
+    (r"(去掉|删除|移除|不再需要|drop|remove|delete|eliminate)", "remove_condition", "删除判据", "remove condition"),
+    (r"(增加|加上|新增|添加|add|introduce|include)", "add_condition", "新增判据", "add condition"),
+    (r"(调整|微调|tune|adjust|tweak)", "tune_condition", "调整判据", "tune condition"),
+    (r"(应该改成|应改成|改成|应改为|改为|update|change to|set to|should be)", "modify_condition", "修改判据", "modify condition"),
+    (r"(建议|suggest|propose|recommend)", "propose_change", "提出建议", "propose change"),
+)
+
+
+def interpret_suggestion_text(text: str) -> dict:
+    """Rule-based interpretation of an engineer modification suggestion.
+
+    Returns a dict with the contract:
+      - affected_gates: list[str]   gate ids in {"L1", "L2", "L3", "L4"}
+      - target_signals: list[str]   recognized input/output signal names
+      - change_kind:    str         machine code, e.g. "modify_condition"
+      - change_kind_zh: str         human label in Chinese
+      - change_kind_en: str         human label in English
+      - confidence:     float       in [0.0, 1.0] — heuristic
+      - summary_zh:     str         system restatement in Chinese
+      - summary_en:     str         system restatement in English
+      - source_text:    str         echo of the input (for audit)
+
+    The function is intentionally conservative: when no gate is
+    detected, affected_gates is empty and confidence is low. The UI
+    should still render the result and let the engineer either confirm
+    (keeping the loose interpretation) or rewrite the suggestion.
+    """
+    import re
+
+    if not isinstance(text, str):
+        text = ""
+
+    # 1. Gate detection. Each gate id can match by its synonym list;
+    #    we record gates in the canonical L1..L4 order.
+    affected_gates: list[str] = []
+    for gate_id in ("L1", "L2", "L3", "L4"):
+        for synonym in _GATE_SYNONYMS[gate_id]:
+            if synonym in text:
+                affected_gates.append(gate_id)
+                break
+
+    # 2. Target signal detection.
+    target_signals: list[str] = []
+    for signal in _KNOWN_TARGET_SIGNALS:
+        if signal in text:
+            target_signals.append(signal)
+
+    # 3. Change kind detection. First match wins; falls back to
+    #    "propose_change" so we always have a label.
+    change_kind = "propose_change"
+    change_kind_zh = "提出建议"
+    change_kind_en = "propose change"
+    for pattern, code, zh, en in _CHANGE_KIND_HINTS:
+        if re.search(pattern, text, re.IGNORECASE):
+            change_kind = code
+            change_kind_zh = zh
+            change_kind_en = en
+            break
+
+    # 4. Confidence heuristic. We weight gate detection most heavily
+    #    (the panel highlight is only useful if we know which gate),
+    #    then signal detection, then having an explicit change verb.
+    confidence = 0.0
+    if affected_gates:
+        confidence += 0.5
+    if target_signals:
+        confidence += 0.3
+    if change_kind != "propose_change":
+        confidence += 0.2
+    confidence = min(1.0, confidence)
+
+    # 5. Summary restatement.
+    gates_label = "、".join(affected_gates) if affected_gates else "(未识别)"
+    signals_label = "、".join(target_signals) if target_signals else "(未识别)"
+    summary_zh = (
+        f"系统理解：你想在 {gates_label} 上对 {signals_label} 执行 "
+        f"{change_kind_zh}（confidence={int(confidence * 100)}%）。"
+    )
+    gates_label_en = ", ".join(affected_gates) if affected_gates else "(none)"
+    signals_label_en = ", ".join(target_signals) if target_signals else "(none)"
+    summary_en = (
+        f"System reading: you propose to {change_kind_en} on gate(s) "
+        f"{gates_label_en}, target signal(s) {signals_label_en} "
+        f"(confidence={int(confidence * 100)}%)."
+    )
+
+    return {
+        "affected_gates": affected_gates,
+        "target_signals": target_signals,
+        "change_kind": change_kind,
+        "change_kind_zh": change_kind_zh,
+        "change_kind_en": change_kind_en,
+        "confidence": confidence,
+        "summary_zh": summary_zh,
+        "summary_en": summary_en,
+        "source_text": text,
+    }
 
 
 def _clamp_tra(tra_deg: float, config: HarnessConfig) -> float:

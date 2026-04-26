@@ -54,42 +54,22 @@ def server():
         t.join(timeout=2)
 
 
-# ─── 1. Banner is present on /workbench ──────────────────────────────
+# ─── 1. Truth-engine read-only chip is present on /workbench ────────
+# P44-02: the bilingual authority banner was replaced with a small chip
+# in the topbar so the circuit hero fits in the first viewport. The
+# /v6.1-redline route still resolves so the chip's link is live.
 
 
-def test_workbench_html_has_authority_banner() -> None:
+def test_workbench_html_has_truth_engine_chip() -> None:
     html = (STATIC_DIR / "workbench.html").read_text(encoding="utf-8")
-    assert 'id="workbench-authority-banner"' in html
-    assert 'role="note"' in html
-    # Always-visible: no data-dismissed attribute, no conditional class
-    # toggling. The banner stays on screen for the entire session.
-    assert "data-trust-banner-dismiss" not in (
-        html.split('id="workbench-authority-banner"')[1].split("</aside>")[0]
-    )
-
-
-@pytest.mark.parametrize(
-    "phrase",
-    [
-        "🔒",
-        "Truth Engine — Read Only",
-        "Propose 不修改",
-        "工程师只能提交 ticket / proposal",
-        "v6.1 红线条款",
-    ],
-)
-def test_workbench_html_banner_carries_canonical_copy(phrase: str) -> None:
-    html = (STATIC_DIR / "workbench.html").read_text(encoding="utf-8")
-    assert phrase in html, f"missing canonical banner copy: {phrase}"
-
-
-def test_workbench_html_banner_links_to_v61_redline_route() -> None:
-    """The banner link must point at the in-repo route, not at an
-    external GitHub URL or a stale /.planning/ path that the static
-    handler would 404 on."""
-    html = (STATIC_DIR / "workbench.html").read_text(encoding="utf-8")
-    banner_block = html.split('id="workbench-authority-banner"')[1].split("</aside>")[0]
-    assert 'href="/v6.1-redline"' in banner_block
+    assert 'id="workbench-truth-engine-chip"' in html
+    assert "🔒 真值引擎只读" in html
+    assert 'href="/v6.1-redline"' in html
+    # The old multi-line banner must be gone.
+    assert 'id="workbench-authority-banner"' not in html
+    # Banner-only sentence ("Propose 不修改 ...") was carried only by the
+    # full banner; if it leaks back in, the bigger chrome is back too.
+    assert "Propose 不修改" not in html
 
 
 # ─── 2. /v6.1-redline route works ────────────────────────────────────
@@ -120,29 +100,29 @@ def test_v61_redline_route_alias_with_extension(server) -> None:
     assert body  # non-empty
 
 
-# ─── 3. Live-served /workbench renders banner end-to-end ────────────
+# ─── 3. Live-served /workbench renders the chip end-to-end ──────────
 
 
-def test_workbench_route_serves_authority_banner(server) -> None:
+def test_workbench_route_serves_truth_engine_chip(server) -> None:
     status, html, _ = _get(server, "/workbench")
     assert status == 200
-    assert 'id="workbench-authority-banner"' in html
+    assert 'id="workbench-truth-engine-chip"' in html
     assert 'href="/v6.1-redline"' in html
-    assert "Truth Engine — Read Only" in html
+    assert "真值引擎只读" in html
 
 
-# ─── 4. Banner placement: above the circuit hero ────────────────────
+# ─── 4. Chip placement: above the circuit hero ──────────────────────
 
 
-def test_workbench_banner_appears_before_circuit_hero() -> None:
-    """P44-01 (replaces collab-grid ordering test): the banner must sit
-    ABOVE the circuit-hero region so it frames the actual control logic
-    panel, not below it. The previous 3-column collab grid was removed
-    because it was empty placeholder scaffolding."""
+def test_workbench_truth_engine_chip_appears_before_circuit_hero() -> None:
+    """P44-02 (replaces banner-before-hero ordering test): the chip
+    must sit ABOVE the circuit hero so the read-only contract is visible
+    before the engineer interacts with the panel."""
     html = (STATIC_DIR / "workbench.html").read_text(encoding="utf-8")
-    banner_pos = html.find('id="workbench-authority-banner"')
+    chip_pos = html.find('id="workbench-truth-engine-chip"')
     hero_pos = html.find('id="workbench-circuit-hero"')
-    assert banner_pos != -1 and hero_pos != -1
-    assert banner_pos < hero_pos, (
-        "authority banner must precede the circuit hero so it frames the panel"
+    assert chip_pos != -1 and hero_pos != -1
+    assert chip_pos < hero_pos, (
+        "truth-engine chip must precede the circuit hero so the read-only "
+        "contract is visible before the engineer scrolls into the panel"
     )

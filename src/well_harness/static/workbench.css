@@ -28,6 +28,63 @@
   backdrop-filter: blur(16px);
 }
 
+/* P44-02 (2026-04-26): compact topbar mode. Brand collapses to a
+   single small h1, chips shrink to 1-line height, the whole bar lands
+   at ~48px so the circuit hero fits in the first viewport. */
+.workbench-collab-topbar.is-compact {
+  padding: 0.4rem 1rem;
+  gap: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+.workbench-collab-brand-compact h1 {
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #c9e8ff;
+}
+.workbench-collab-topbar.is-compact .workbench-collab-chip,
+.workbench-collab-topbar.is-compact .workbench-collab-system {
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.workbench-collab-topbar.is-compact .workbench-collab-chip span,
+.workbench-collab-topbar.is-compact .workbench-collab-system span {
+  font-size: 0.65rem;
+}
+.workbench-collab-topbar.is-compact .workbench-collab-chip strong {
+  font-size: 0.78rem;
+}
+.workbench-collab-topbar.is-compact .workbench-collab-system select {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.78rem;
+}
+.workbench-collab-topbar.is-compact .workbench-feedback-mode-chip {
+  padding: 0.2rem 0.55rem;
+}
+
+/* P44-02: truth-engine read-only chip — replaces the bilingual
+   authority banner. Sits inline with the topbar grid as a 6th column
+   (or wraps below on narrow screens). */
+.workbench-truth-engine-chip {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 0.5rem 0;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid rgba(143, 214, 233, 0.22);
+  border-radius: 6px;
+  background: rgba(8, 17, 28, 0.6);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+}
+.workbench-truth-engine-chip a {
+  color: rgba(247, 188, 92, 0.95);
+  text-decoration: none;
+}
+.workbench-truth-engine-chip a:hover {
+  text-decoration: underline;
+}
+
 .workbench-collab-brand h1,
 .workbench-collab-column h2,
 .workbench-annotation-inbox h2 {
@@ -2116,4 +2173,136 @@ body[data-view="expert"] [view="beginner"] {
   color: #d6efff;
   border-color: rgba(79, 184, 255, 0.3);
   background: rgba(61, 126, 255, 0.14);
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   P44-01 / P44-02: control-logic circuit hero + suggestion flow.
+   ───────────────────────────────────────────────────────────────── */
+
+.workbench-circuit-hero {
+  border: 1px solid rgba(143, 214, 233, 0.18);
+  background: rgba(8, 17, 28, 0.72);
+  border-radius: 8px;
+  padding: 0.8rem 1rem 0.6rem;
+  margin-bottom: 0.8rem;
+}
+.workbench-circuit-hero-header { margin: 0 0 0.4rem 0; }
+.workbench-circuit-hero-header .eyebrow {
+  font-size: 0.65rem; letter-spacing: 0.08em;
+  color: rgba(206, 223, 236, 0.55); margin: 0;
+}
+.workbench-circuit-hero-header h2 {
+  margin: 0.1rem 0 0.2rem 0;
+  font-size: 1.05rem; font-weight: 500; color: #d8eeff;
+}
+.workbench-circuit-hero-sub {
+  font-size: 0.72rem; color: rgba(206, 223, 236, 0.7);
+  line-height: 1.5; margin: 0;
+}
+.workbench-circuit-hero-mount {
+  margin-top: 0.6rem; min-height: 320px;
+  background: #0a0e14; border-radius: 4px; padding: 8px;
+}
+.workbench-circuit-hero-mount[data-circuit-fragment-status="pending"]
+  .workbench-circuit-hero-loading {
+  color: rgba(206, 223, 236, 0.55);
+  font-style: italic;
+  text-align: center; padding: 60px 0;
+}
+.workbench-circuit-hero-mount[data-circuit-fragment-status="error"]
+  .workbench-circuit-hero-error {
+  color: #ff8888; padding: 16px; border: 1px dashed #ff8888;
+  border-radius: 4px;
+}
+
+/* Highlight class applied by suggestion-flow JS to gates the system
+   interpreted as the target of the engineer's modification suggestion.
+   The class is added to the <use href="#and-gate-active"> element via
+   data-gate-id matching the interpreter's affected_gates list. */
+.workbench-circuit-hero-mount [data-gate-id].is-suggestion-target {
+  filter: drop-shadow(0 0 6px #f7bc5c) drop-shadow(0 0 12px #f7bc5c);
+  animation: workbench-gate-pulse 1.8s ease-in-out infinite;
+}
+@keyframes workbench-gate-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+/* P44-02 suggestion flow */
+.workbench-suggestion-flow {
+  border: 1px solid rgba(143, 214, 233, 0.18);
+  background: rgba(8, 17, 28, 0.72);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.8rem;
+}
+.workbench-suggestion-flow-header h2 {
+  margin: 0; font-size: 0.95rem; font-weight: 500; color: #d8eeff;
+}
+.workbench-suggestion-flow-sub {
+  margin: 0.3rem 0 0.7rem; font-size: 0.7rem; color: rgba(206, 223, 236, 0.7);
+  line-height: 1.5;
+}
+.workbench-suggestion-form {
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.workbench-suggestion-input-label {
+  font-size: 0.7rem; letter-spacing: 0.04em;
+  color: rgba(206, 223, 236, 0.7);
+}
+.workbench-suggestion-input {
+  width: 100%; box-sizing: border-box;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(143, 214, 233, 0.28);
+  border-radius: 6px;
+  background: #0a0e14; color: #edf8ff;
+  font-family: inherit; font-size: 0.8rem; line-height: 1.5;
+  resize: vertical;
+}
+.workbench-suggestion-input:focus {
+  outline: none; border-color: #f7bc5c;
+  box-shadow: 0 0 0 2px rgba(247, 188, 92, 0.18);
+}
+.workbench-suggestion-form-actions {
+  display: flex; align-items: center; gap: 0.6rem;
+}
+.workbench-suggestion-status {
+  font-size: 0.7rem; color: rgba(206, 223, 236, 0.65);
+}
+.workbench-suggestion-status[data-status="loading"] { color: #f7bc5c; }
+.workbench-suggestion-status[data-status="error"] { color: #ff8888; }
+.workbench-suggestion-status[data-status="success"] { color: #00e5a0; }
+
+.workbench-suggestion-interpretation {
+  margin-top: 0.7rem; padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(247, 188, 92, 0.35);
+  background: rgba(247, 188, 92, 0.06);
+  border-radius: 6px;
+}
+.workbench-suggestion-interpretation-header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+.workbench-suggestion-interpretation-header h3 {
+  margin: 0; font-size: 0.8rem; color: #f7bc5c; font-weight: 500;
+}
+.workbench-suggestion-interpretation-confidence {
+  font-size: 0.65rem; color: rgba(247, 188, 92, 0.85);
+}
+.workbench-suggestion-interpretation-fields {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 0.7rem;
+  margin: 0.4rem 0 0.6rem;
+  font-size: 0.75rem;
+}
+.workbench-suggestion-interpretation-fields dt {
+  color: rgba(206, 223, 236, 0.65);
+  font-size: 0.68rem; letter-spacing: 0.04em;
+}
+.workbench-suggestion-interpretation-fields dd {
+  color: #edf8ff; margin: 0;
+}
+.workbench-suggestion-interpretation-actions {
+  display: flex; gap: 0.5rem; flex-wrap: wrap;
 }

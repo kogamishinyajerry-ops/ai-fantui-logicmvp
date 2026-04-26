@@ -107,9 +107,182 @@ async function bootWorkbenchCircuitHero() {
 
 function bootWorkbenchShell() {
   // Fire-and-forget: the hero hydrates asynchronously so the rest of the
-  // workbench chrome (topbar, state-of-world bar, trust banner, approval
-  // center) renders immediately without waiting on the fragment request.
+  // workbench chrome (topbar, state-of-world bar, approval center)
+  // renders immediately without waiting on the fragment request.
   bootWorkbenchCircuitHero();
+  installSuggestionFlow();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// P44-02 (2026-04-26): suggestion-input flow.
+// Engineer types a free-form modification suggestion, the server
+// interprets it via /api/workbench/interpret-suggestion, the UI
+// highlights the interpreted gate(s) on the SVG, the engineer
+// confirms the interpretation matches intent, then submits the ticket.
+// ─────────────────────────────────────────────────────────────────
+
+const SUGGESTION_INTERPRET_PATH = "/api/workbench/interpret-suggestion";
+
+let _lastInterpretation = null;
+
+function installSuggestionFlow() {
+  const form = document.getElementById("workbench-suggestion-form");
+  const interpretBtn = document.getElementById("workbench-suggestion-interpret-btn");
+  const reinterpretBtn = document.getElementById("workbench-suggestion-reinterpret-btn");
+  const cancelBtn = document.getElementById("workbench-suggestion-cancel-btn");
+  const confirmBtn = document.getElementById("workbench-suggestion-confirm-btn");
+  if (!form || !interpretBtn) {
+    return;  // not on /workbench
+  }
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    runSuggestionInterpret();
+  });
+  if (reinterpretBtn) {
+    reinterpretBtn.addEventListener("click", () => runSuggestionInterpret());
+  }
+  if (cancelBtn) {
+    cancelBtn.addEventListener("click", () => clearSuggestionInterpretation());
+  }
+  if (confirmBtn) {
+    confirmBtn.addEventListener("click", () => submitSuggestionTicket());
+  }
+}
+
+async function runSuggestionInterpret() {
+  const input = document.getElementById("workbench-suggestion-input");
+  const status = document.getElementById("workbench-suggestion-status");
+  if (!input || !status) {
+    return;
+  }
+  const text = (input.value || "").trim();
+  if (!text) {
+    status.dataset.status = "error";
+    status.textContent = "请先输入建议内容 · enter a suggestion first";
+    return;
+  }
+  status.dataset.status = "loading";
+  status.textContent = "解读中… · interpreting…";
+  try {
+    const response = await fetch(SUGGESTION_INTERPRET_PATH, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const interpretation = await response.json();
+    _lastInterpretation = interpretation;
+    renderSuggestionInterpretation(interpretation);
+    highlightSuggestionGates(interpretation.affected_gates || []);
+    status.dataset.status = "success";
+    status.textContent = "解读完成，请确认 · interpretation ready, please confirm";
+  } catch (error) {
+    status.dataset.status = "error";
+    status.textContent = `解读失败 · interpret failed: ${error.message || error}`;
+  }
+}
+
+function renderSuggestionInterpretation(interpretation) {
+  const card = document.getElementById("workbench-suggestion-interpretation");
+  if (!card) {
+    return;
+  }
+  card.hidden = false;
+  card.dataset.state = "ready";
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.textContent = value || "—";
+    }
+  };
+  setText(
+    "workbench-suggestion-interpretation-gates",
+    (interpretation.affected_gates || []).join(", ") || "(未识别 · none identified)",
+  );
+  setText(
+    "workbench-suggestion-interpretation-change-kind",
+    interpretation.change_kind_zh && interpretation.change_kind_en
+      ? `${interpretation.change_kind_zh} · ${interpretation.change_kind_en}`
+      : interpretation.change_kind_en || "(未识别 · none identified)",
+  );
+  setText(
+    "workbench-suggestion-interpretation-targets",
+    (interpretation.target_signals || []).join(", ") || "(未识别 · none identified)",
+  );
+  setText(
+    "workbench-suggestion-interpretation-summary",
+    interpretation.summary_zh || interpretation.summary_en || "(无 · empty)",
+  );
+  const conf = document.getElementById("workbench-suggestion-interpretation-confidence");
+  if (conf) {
+    const c = typeof interpretation.confidence === "number" ? interpretation.confidence : 0;
+    conf.dataset.confidence = String(c);
+    conf.textContent = `置信度 · confidence: ${(c * 100).toFixed(0)}%`;
+  }
+}
+
+function highlightSuggestionGates(gateIds) {
+  const mount = document.getElementById("workbench-circuit-hero-mount");
+  if (!mount) {
+    return;
+  }
+  // Clear any previous highlight
+  for (const el of mount.querySelectorAll(".is-suggestion-target")) {
+    el.classList.remove("is-suggestion-target");
+  }
+  for (const gateId of gateIds) {
+    for (const el of mount.querySelectorAll(`[data-gate-id="${gateId}"]`)) {
+      el.classList.add("is-suggestion-target");
+    }
+  }
+}
+
+function clearSuggestionInterpretation() {
+  _lastInterpretation = null;
+  const card = document.getElementById("workbench-suggestion-interpretation");
+  if (card) {
+    card.hidden = true;
+    card.dataset.state = "empty";
+  }
+  highlightSuggestionGates([]);
+  const status = document.getElementById("workbench-suggestion-status");
+  if (status) {
+    status.dataset.status = "idle";
+    status.textContent = "";
+  }
+}
+
+function submitSuggestionTicket() {
+  const status = document.getElementById("workbench-suggestion-status");
+  if (!_lastInterpretation) {
+    if (status) {
+      status.dataset.status = "error";
+      status.textContent = "尚无解读结果可提交 · no interpretation to submit yet";
+    }
+    return;
+  }
+  // P44-02 stops here: persistence to /api/proposals (durable ticket
+  // store + reviewer-side glow-on-panel UI) is P44-03. For now we
+  // confirm the round-trip works and clear the input so the engineer
+  // can write the next suggestion.
+  if (status) {
+    status.dataset.status = "success";
+    status.textContent =
+      "工单已记录到本会话草稿（持久化将在 P44-03 接入）· ticket queued in session draft (persistence lands in P44-03)";
+  }
+  const input = document.getElementById("workbench-suggestion-input");
+  if (input) {
+    input.value = "";
+  }
+  clearSuggestionInterpretation();
+  if (status) {
+    // re-set after clearSuggestionInterpretation cleared the status
+    status.dataset.status = "success";
+    status.textContent =
+      "工单已记录到本会话草稿（持久化将在 P44-03 接入）· ticket queued in session draft (persistence lands in P44-03)";
+  }
 }
 
 // P43 authority contract — written only via assignFrozenSpec; never mutated directly
