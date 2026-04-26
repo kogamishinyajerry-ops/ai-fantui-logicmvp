@@ -168,3 +168,41 @@ def test_e11_15d_does_not_touch_api_remediation_message() -> None:
         assert new_string not in demo_server, (
             f"E11-15d Chinese {new_string!r} unexpectedly leaked into demo_server.py"
         )
+
+
+# ─── 7. P2 R1 IMPORTANT closure: surface inventory honesty guard ─────
+
+
+def test_e11_15d_surface_inventory_does_not_overclaim_closure() -> None:
+    """P2 R1 IMPORTANT closure: an earlier draft of E11-15d-SURFACE-INVENTORY.md
+    claimed `last English-only surface` and `uniformly Chinese-first`,
+    but P2 verified `/workbench` still has English-only `Hide for session`,
+    `Truth Engine — Read Only`, `No proposals submitted yet.`, and
+    `Pending Kogami sign-off`. The doc was corrected to defer those to
+    a future E11-15e sub-phase. This guard prevents the overclaim from
+    being reintroduced silently."""
+    repo_root = Path(__file__).resolve().parents[1]
+    surface_inventory = (
+        repo_root
+        / ".planning"
+        / "phases"
+        / "E11-workbench-engineer-first-ux"
+        / "E11-15d-SURFACE-INVENTORY.md"
+    )
+    text = surface_inventory.read_text(encoding="utf-8")
+    forbidden_overclaims = [
+        "last English-only surface",
+        "uniformly Chinese-first",
+    ]
+    for phrase in forbidden_overclaims:
+        # The doc's leading blockquote (lines starting `>`) explicitly
+        # references the forbidden phrases as part of explaining why
+        # they were removed. Skip those lines to avoid self-reference
+        # false-positives — the guard cares about fresh claims, not
+        # the historical-correction note.
+        for line in text.splitlines():
+            if phrase in line and not line.lstrip().startswith(">"):
+                raise AssertionError(
+                    f"E11-15d-SURFACE-INVENTORY contains forbidden overclaim "
+                    f"phrase {phrase!r} on line: {line!r}"
+                )

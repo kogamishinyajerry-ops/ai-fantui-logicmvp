@@ -2,8 +2,12 @@
 
 > Per `.planning/constitution.md §UI-COPY-PROBE` (v2.3) and §Codex Persona Pipeline Tier-Trigger.
 >
-> Closes the last English-only surface in the workbench demo: the
-> Approval Center lane labels + buttons + pending-lane body copy.
+> Bilingualizes the Approval Center lane labels + buttons + pending-lane
+> body copy (6 strings). Note: this is NOT the final Chinese-first
+> sweep — see "English-only surfaces still remaining" below for what
+> stays English after this sub-phase. P2 R1 review IMPORTANT closure:
+> earlier draft of this inventory overclaimed "last English-only surface"
+> and "uniformly Chinese-first" — corrected.
 
 ## Surface diff inventory
 
@@ -71,14 +75,36 @@ Files NOT touched: `controller.py`, `runner.py`, `models.py`,
 `src/well_harness/adapters/`, `workbench.js`, `workbench.css`,
 `demo_server.py`. Truth-engine boundary preserved.
 
-## Closure summary
+## Workbench Chinese-first thread progress (NOT closure)
 
-With E11-15d, the entire `/workbench` UI is uniformly Chinese-first:
+E11-15d is one slice in a multi-sub-phase Chinese-first thread:
 - E11-15: 5 eyebrows
 - E11-15b: h1 + 2 buttons + h2 + entry button + caption + h2
 - E11-15c: 3 column h2s + page eyebrow dedup
 - **E11-15d: 3 lane h3s + 2 lane buttons + 1 body copy** (this sub-phase)
 
-The only remaining English-only string is the API remediation message
-in `demo_server.py:743`, which is backend contract and intentionally
-preserved.
+## English-only surfaces still remaining (NOT in this sub-phase)
+
+P2 R1 review identified these surfaces still English-only on /workbench
+after E11-15d. They are deferred to follow-up sub-phases:
+
+- `Hide for session` (workbench.html:225) — trust banner dismiss button.
+  Locked by `tests/test_workbench_trust_affordance.py:66,135`.
+- `Truth Engine — Read Only` (workbench.html:248) — authority banner
+  headline. Locked by `tests/test_workbench_authority_banner.py:75,131`.
+- `No proposals submitted yet.` (workbench.html:337) — annotation inbox
+  empty-state placeholder.
+- `Pending Kogami sign-off` (workbench.html:363) — affordance strong
+  text. Locked by `tests/test_workbench_role_affordance.py:73`.
+- WOW starter card h3s (workbench.html:111, 143, 173) — `Causal Chain ·
+  因果链走读` etc. are English-first; same direction-flip pattern as
+  E11-15c column h2s could apply.
+- Topbar chip labels (`Identity` / `Ticket` / `Feedback Mode` / `System`)
+  — left as functional labels next to dynamic content.
+
+The backend API remediation message in `demo_server.py:743` is also
+intentionally preserved as backend contract.
+
+A future E11-15e sub-phase can cover the trust-banner / authority-headline
+/ inbox-placeholder / affordance-strong / WOW-h3-direction strings as
+a Tier-A bundle (estimated 7+ REWRITE → Tier-A).
