@@ -91,11 +91,17 @@ WORKBENCH_CIRCUIT_FRAGMENT_PATH = "/api/workbench/circuit-fragment"
 # system = drop a circuit HTML file in static/ and add an entry here.
 _CIRCUIT_SOURCE_BY_SYSTEM: dict[str, str] = {
     "thrust-reverser": "fantui_circuit.html",
-    # landing-gear / bleed-air-valve / c919-etras circuits are not yet
-    # drafted; the dropdown still offers them so engineers can submit
-    # feature requests against the placeholder, and we ship the
-    # parameterized endpoint now so adding a real circuit later is a
-    # one-line change.
+    # c919-etras circuit not yet drafted; placeholder SVG fires when
+    # the dropdown is set to it and the engineer can still submit
+    # tickets against the placeholder (proposal flow + dev-queue
+    # brief work fine without a live SVG).
+    #
+    # FROZEN 2026-04-26: landing-gear + bleed-air-valve were removed
+    # from the dropdown per user direction (not the demo's target
+    # cases). Their per-system gate + signal synonyms below stay as
+    # architectural demonstrators that the workbench is general
+    # across systems; they're routable via direct ?system= query but
+    # no engineer surface advertises them.
 }
 # Per-system gate anchors that MUST appear in the served fragment.
 # Keyed by system_id; if missing → no sanity-check (placeholder
@@ -1057,12 +1063,15 @@ _GATE_SYNONYMS_BY_SYSTEM: dict[str, dict[str, tuple[str, ...]]] = {
         "L3": ("L3", "l3", "逻辑门 3", "门 3", "eec_deploy_cmd", "pls_power_cmd", "pdu_motor_cmd", "EEC"),
         "L4": ("L4", "l4", "逻辑门 4", "门 4", "throttle_electronic_lock_release_cmd", "throttle_unlock"),
     },
+    # FROZEN 2026-04-26 (landing-gear): kept for architectural demo
+    # of the per-system vocabulary. Not exposed in the dropdown.
     "landing-gear": {
         "G1": ("G1", "g1", "主起放下", "主起落架放下", "main_gear_down_cmd", "MLG down"),
         "G2": ("G2", "g2", "主起收上", "主起落架收上", "main_gear_up_cmd", "MLG up"),
         "G3": ("G3", "g3", "前起放下", "前起落架放下", "nose_gear_down_cmd", "NLG down"),
         "G4": ("G4", "g4", "前起收上", "前起落架收上", "nose_gear_up_cmd", "NLG up"),
     },
+    # FROZEN 2026-04-26 (bleed-air-valve): same as landing-gear above.
     "bleed-air-valve": {
         "V1": ("V1", "v1", "引气阀开启", "bleed_open_cmd", "bleed open", "PRSOV open"),
         "V2": ("V2", "v2", "引气阀关闭", "bleed_close_cmd", "bleed close", "PRSOV close"),
@@ -1270,7 +1279,15 @@ def interpret_suggestion_text(text: str, *, system_id: str = "thrust-reverser") 
 
 MINIMAX_API_BASE = "https://api.minimaxi.com/v1"
 MINIMAX_DEFAULT_MODEL = "MiniMax-M2.7-highspeed"
-MINIMAX_REQUEST_TIMEOUT_SEC = 30.0
+# MiniMax-M2.7-highspeed is a reasoning model: it emits a
+# <think>...</think> block before the JSON answer and the
+# reasoning portion can run 20-40s on prompts with multiple
+# constraints. 60s leaves headroom so real engineer-typed
+# suggestions don't trip the urllib timeout and quietly fall
+# back to rules. The fallback semantics still apply if the call
+# runs over — the engineer sees an amber "fell back to rules"
+# badge instead of an error.
+MINIMAX_REQUEST_TIMEOUT_SEC = 60.0
 
 
 def _resolve_minimax_api_key() -> str | None:

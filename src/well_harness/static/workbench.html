@@ -85,10 +85,17 @@
         </button>
         <label class="workbench-collab-system" for="workbench-system-select">
           <span>系统 · System</span>
+          <!-- 2026-04-26: landing-gear + bleed-air-valve frozen out of
+               the dropdown per user direction (not the demo's target
+               cases). Backend routing + per-system synonym tables for
+               those two systems remain in the codebase as architectural
+               demonstrators; they're just no longer exposed to engineers.
+               To re-expose: re-add the <option> entries here. To remove
+               entirely: also drop their entries from
+               _CIRCUIT_SOURCE_BY_SYSTEM / _GATE_SYNONYMS_BY_SYSTEM /
+               _SIGNALS_BY_SYSTEM in demo_server.py. -->
           <select id="workbench-system-select">
             <option value="thrust-reverser">Thrust Reverser</option>
-            <option value="landing-gear">Landing Gear</option>
-            <option value="bleed-air-valve">Bleed Air Valve</option>
             <option value="c919-etras">C919 E-TRAS</option>
           </select>
         </label>
