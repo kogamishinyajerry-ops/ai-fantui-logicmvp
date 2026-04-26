@@ -3785,7 +3785,7 @@ function setFeedbackMode(mode) {
     chip.setAttribute("data-feedback-mode", mode);
     const label = chip.querySelector("strong");
     if (label) {
-      label.textContent = mode === "truth_engine" ? "Truth Engine" : "Manual (advisory)";
+      label.textContent = mode === "truth_engine" ? "真值引擎 · Truth Engine" : "手动（仅参考）· Manual (advisory)";
     }
   }
   syncTrustBannerForMode(mode);

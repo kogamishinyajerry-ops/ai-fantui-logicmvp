@@ -23,11 +23,11 @@
           data-role="ENGINEER"
           data-identity-name="Kogami"
         >
-          <span>Identity</span>
+          <span>身份 · Identity</span>
           <strong>Kogami / Engineer</strong>
         </div>
         <div id="workbench-ticket" class="workbench-collab-chip" data-ticket="WB-E06-SHELL">
-          <span>Ticket</span>
+          <span>工单 · Ticket</span>
           <strong>WB-E06-SHELL</strong>
         </div>
         <div
@@ -38,12 +38,12 @@
           aria-live="polite"
           title="Manual feedback override is advisory — truth engine readings remain authoritative."
         >
-          <span>Feedback Mode</span>
-          <strong>Manual (advisory)</strong>
+          <span>反馈模式 · Feedback Mode</span>
+          <strong>手动（仅参考）· Manual (advisory)</strong>
           <span class="workbench-feedback-mode-dot" aria-hidden="true"></span>
         </div>
         <label class="workbench-collab-system" for="workbench-system-select">
-          <span>System</span>
+          <span>系统 · System</span>
           <select id="workbench-system-select">
             <option value="thrust-reverser">Thrust Reverser</option>
             <option value="landing-gear">Landing Gear</option>
@@ -62,29 +62,29 @@
         <span class="workbench-sow-eyebrow">当前现状</span>
         <span class="workbench-sow-field" data-sow-field="truth_engine_sha"
               title="git rev-parse --short HEAD">
-          <span class="workbench-sow-label">truth-engine SHA</span>
+          <span class="workbench-sow-label">真值引擎 SHA · truth-engine SHA</span>
           <span class="workbench-sow-value" data-sow-value="truth_engine_sha">…</span>
         </span>
         <span class="workbench-sow-sep" aria-hidden="true">·</span>
         <span class="workbench-sow-field" data-sow-field="recent_e2e"
               title="docs/coordination/qa_report.md (most recent test run)">
-          <span class="workbench-sow-label">recent e2e</span>
+          <span class="workbench-sow-label">最近 e2e · recent e2e</span>
           <span class="workbench-sow-value" data-sow-value="recent_e2e_label">…</span>
         </span>
         <span class="workbench-sow-sep" aria-hidden="true">·</span>
         <span class="workbench-sow-field" data-sow-field="adversarial"
               title="docs/coordination/qa_report.md (shared validation)">
-          <span class="workbench-sow-label">adversarial</span>
+          <span class="workbench-sow-label">对抗样本 · adversarial</span>
           <span class="workbench-sow-value" data-sow-value="adversarial_label">…</span>
         </span>
         <span class="workbench-sow-sep" aria-hidden="true">·</span>
         <span class="workbench-sow-field" data-sow-field="known_issues"
               title="docs/known-issues/ file count">
-          <span class="workbench-sow-label">open issues</span>
+          <span class="workbench-sow-label">未关闭问题 · open issues</span>
           <span class="workbench-sow-value" data-sow-value="open_known_issues_count">…</span>
         </span>
         <span class="workbench-sow-flag" aria-hidden="false">
-          advisory · not a live truth-engine reading
+          仅参考 · 非真值引擎实时读数 · advisory · not a live truth-engine reading
         </span>
       </section>
 
@@ -108,7 +108,7 @@
           >
             <header>
               <span class="workbench-wow-tag">wow_a</span>
-              <h3 id="workbench-wow-a-title">Causal Chain · 因果链走读</h3>
+              <h3 id="workbench-wow-a-title">因果链走读 · Causal Chain</h3>
             </header>
             <p class="workbench-wow-card-desc">
               POST <code>/api/lever-snapshot</code> with BEAT_DEEP_PAYLOAD (tra=-35°, n1k=0.92,
@@ -140,7 +140,7 @@
           >
             <header>
               <span class="workbench-wow-tag">wow_b</span>
-              <h3 id="workbench-wow-b-title">Monte Carlo · 1000-trial 可靠性</h3>
+              <h3 id="workbench-wow-b-title">1000-trial 可靠性 · Monte Carlo</h3>
             </header>
             <p class="workbench-wow-card-desc">
               POST <code>/api/monte-carlo/run</code> with seed=42 — 1000 次抽样，输出
@@ -170,7 +170,7 @@
           >
             <header>
               <span class="workbench-wow-tag">wow_c</span>
-              <h3 id="workbench-wow-c-title">Reverse Diagnose · 反向诊断</h3>
+              <h3 id="workbench-wow-c-title">反向诊断 · Reverse Diagnose</h3>
             </header>
             <p class="workbench-wow-card-desc">
               POST <code>/api/diagnosis/run</code> with outcome=deploy_confirmed — 反求
@@ -206,14 +206,14 @@
         <span class="workbench-trust-banner-icon" aria-hidden="true">⚠</span>
         <div class="workbench-trust-banner-body">
           <span class="workbench-trust-banner-scope">
-            <em>What "manual feedback" means here:</em> any value you type into the workbench to override
-            an observed reading — for example, editing a snapshot input field before running a scenario.
-            Passive reads, replays, and audit-chain navigation do NOT count as manual feedback.
+            <em>这里"手动反馈"的含义 · What "manual feedback" means here:</em> 你在工作台中手动键入用来覆盖某个观测读数的任何值——例如在运行一个场景前编辑快照输入字段
+            (any value you type into the workbench to override an observed reading — for example, editing a snapshot input field before running a scenario).
+            被动读取、回放与审计链导航不算 manual feedback (Passive reads, replays, and audit-chain navigation do NOT count as manual feedback).
           </span>
-          <strong>That mode is advisory.</strong>
+          <strong>该模式仅作参考 · That mode is advisory.</strong>
           <span>
-            Truth engine readings (logic gates L1–L4, controller dispatch, audit chain) remain authoritative.
-            Your manual feedback is recorded for diff/review but does not change source-of-truth values.
+            真值引擎读数（logic gate L1–L4、controller 派发、审计链）仍然是权威 · Truth engine readings (logic gates L1–L4, controller dispatch, audit chain) remain authoritative.
+            你的手动反馈会被记录用于 diff / review，但不改写真值 · Your manual feedback is recorded for diff/review but does not change source-of-truth values.
           </span>
         </div>
         <button
@@ -222,7 +222,7 @@
           aria-label="Hide trust banner for this session"
           data-trust-banner-dismiss
         >
-          Hide for session
+          隐藏（本次会话）· Hide for session
         </button>
       </aside>
 
@@ -245,7 +245,7 @@
       >
         <span class="workbench-authority-banner-icon" aria-hidden="true">🔒</span>
         <span class="workbench-authority-banner-headline">
-          Truth Engine — Read Only
+          真值引擎 · 只读 · Truth Engine — Read Only
         </span>
         <span class="workbench-authority-banner-sep" aria-hidden="true">·</span>
         <span class="workbench-authority-banner-rule">
@@ -275,7 +275,7 @@
             <h2>探针与追踪 · Probe &amp; Trace</h2>
           </header>
           <div id="workbench-control-status" class="workbench-collab-status" aria-live="polite">
-            Waiting for probe &amp; trace panel boot.
+            等待 probe &amp; trace 面板启动 · Waiting for probe &amp; trace panel boot.
           </div>
           <div class="workbench-collab-control-list" aria-label="Control panel skeleton">
             <button type="button" class="workbench-toolbar-button is-primary">加载当前工单 · Load Active Ticket</button>
@@ -295,10 +295,10 @@
             <h2>标注与提案 · Annotate &amp; Propose</h2>
           </header>
           <div id="workbench-document-status" class="workbench-collab-status" aria-live="polite">
-            Waiting for annotate &amp; propose panel boot.
+            等待 annotate &amp; propose 面板启动 · Waiting for annotate &amp; propose panel boot.
           </div>
           <div class="workbench-collab-document">
-            <p>Reference packet, clarification notes, and future text-range annotations will land here.</p>
+            <p>参考资料、澄清说明，以及未来的 text-range 标注会落在这里 · Reference packet, clarification notes, and future text-range annotations will land here.</p>
             <pre>Intake -> Clarification -> Playback -> Diagnosis -> Knowledge</pre>
           </div>
         </article>
@@ -315,7 +315,7 @@
             <h2>移交与跟踪 · Hand off &amp; Track</h2>
           </header>
           <div id="workbench-circuit-status" class="workbench-collab-status" aria-live="polite">
-            Waiting for hand off &amp; track panel boot.
+            等待 hand off &amp; track 面板启动 · Waiting for hand off &amp; track panel boot.
           </div>
           <div class="workbench-collab-circuit" aria-label="Circuit skeleton">
             <span>SW1</span>
@@ -334,7 +334,7 @@
           <h2>审核队列 · Review Queue</h2>
         </header>
         <ul id="annotation-inbox-list">
-          <li>No proposals submitted yet.</li>
+          <li>暂无已提交提案 · No proposals submitted yet.</li>
         </ul>
       </aside>
 
@@ -360,7 +360,7 @@
       >
         <span class="workbench-pending-signoff-icon" aria-hidden="true">🛈</span>
         <div class="workbench-pending-signoff-body">
-          <strong>Pending Kogami sign-off</strong>
+          <strong>等待 Kogami 签字 · Pending Kogami sign-off</strong>
           <span>
             你的提案已加入排队，等待 Kogami 处理。Approval 操作是 Kogami 专属
             authority — 你的角色当前不会看到 disabled UI，而是这条 explicit
