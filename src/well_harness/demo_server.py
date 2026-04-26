@@ -342,10 +342,21 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             return
 
         # P44-03 (2026-04-26): change-proposals list endpoint.
+        # P45-02 (2026-04-26): now accepts ?system=<id> so the workbench
+        # inbox scopes to the currently-selected system.
         if parsed.path == PROPOSALS_PATH:
             qs = parse_qs(parsed.query)
             status_filter = qs.get("status", [None])[0]
-            self._send_json(200, {"proposals": list_proposals(status_filter=status_filter)})
+            system_filter = qs.get("system", [None])[0]
+            self._send_json(
+                200,
+                {
+                    "proposals": list_proposals(
+                        status_filter=status_filter,
+                        system_filter=system_filter,
+                    ),
+                },
+            )
             return
 
         # E11-07 (2026-04-26): Authority Contract banner link target.
@@ -1229,11 +1240,17 @@ def create_proposal(
     return record
 
 
-def list_proposals(*, status_filter: str | None = None) -> list[dict]:
-    """Return all stored proposal records, newest first. If status_filter
-    is provided (e.g. 'OPEN'), only records matching that status are
-    returned. Bad / unreadable files are skipped silently; the directory
-    is the truth, no in-memory cache."""
+def list_proposals(
+    *,
+    status_filter: str | None = None,
+    system_filter: str | None = None,
+) -> list[dict]:
+    """Return all stored proposal records, newest first. Optional
+    filters narrow the result set:
+      status_filter:  e.g. 'OPEN'             — only that status
+      system_filter:  e.g. 'thrust-reverser'  — only that system
+    Bad / unreadable files are skipped silently; the directory is
+    the truth, no in-memory cache."""
     records: list[dict] = []
     for path in sorted(proposals_dir().glob("PROP-*.json"), reverse=True):
         try:
@@ -1243,6 +1260,8 @@ def list_proposals(*, status_filter: str | None = None) -> list[dict]:
         if not isinstance(data, dict):
             continue
         if status_filter and data.get("status") != status_filter:
+            continue
+        if system_filter and data.get("system_id") != system_filter:
             continue
         records.append(data)
     return records
