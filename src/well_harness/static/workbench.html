@@ -53,6 +53,25 @@
              to scroll the matching ticket card into view and spotlight
              it; click a ticket card to spotlight its anchor on the SVG.
              Default OFF; the chip is the only switch. -->
+        <!-- P44-06 (2026-04-26): panel version chip. Shows the current
+             truth-engine HEAD SHA + count of ACCEPTED proposals so the
+             engineer always knows "what version of the panel am I
+             looking at, and how many decisions shaped it". Read-only;
+             clicking the chip jumps to the inbox so the engineer can
+             skim the accepted-decision history. The chip never
+             writes — git rollback is an explicit terminal action the
+             engineer runs themselves, with the hints surfaced inside
+             each ACCEPTED ticket card. -->
+        <button
+          id="workbench-panel-version-chip"
+          type="button"
+          class="workbench-collab-chip workbench-panel-version-chip"
+          data-panel-version-state="loading"
+          title="面板版本 = 真值引擎 HEAD SHA + 已通过的修改提议数。点击跳转到工单审核队列查看决策历史 · Panel version = truth-engine HEAD SHA + count of ACCEPTED proposals. Click to jump to the review queue and skim the decision history."
+        >
+          <span>📜 面板版本 · Panel Version</span>
+          <strong data-panel-version-label>载入中… · loading…</strong>
+        </button>
         <button
           id="workbench-review-mode-toggle"
           type="button"
