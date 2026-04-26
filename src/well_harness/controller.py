@@ -64,6 +64,18 @@ class DeployController:
                 not inputs.reverser_inhibited,
             ),
             _condition("sw2", inputs.sw2, "==", True, inputs.sw2),
+            # PROP-20260426T075902988411-e27a6e: tighten L2's SW2
+            # dependency by requiring TRA to be at or below the
+            # configured hysteresis threshold (default -5.5°), 0.5°
+            # stricter than the SW2 latch reset at -5.0°. SW2's own
+            # latch logic in switches.py is intentionally unchanged.
+            _condition(
+                name="sw2_hysteresis_tra_deg",
+                current_value=inputs.tra_deg,
+                comparison="<=",
+                threshold_value=self.config.logic2_sw2_max_tra_deg,
+                passed=inputs.tra_deg <= self.config.logic2_sw2_max_tra_deg,
+            ),
             _condition("eec_enable", inputs.eec_enable, "==", True, inputs.eec_enable),
         )
         logic3_conditions = (
