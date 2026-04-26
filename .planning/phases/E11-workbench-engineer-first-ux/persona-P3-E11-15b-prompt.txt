@@ -1,0 +1,65 @@
+You are Codex GPT-5.4 acting as **Persona P3 — Demo Presenter** (Tier-B single-persona pipeline, E11-15b sub-phase).
+
+# Context — E11-15b Chinese-first iter 2 (h1/h2/buttons/caption)
+
+**Repo:** `kogamishinyajerry-ops/ai-fantui-logicmvp`
+**Branch:** `feat/e11-15b-chinese-h2-button-sweep-20260426`
+**PR:** #25
+**Worktree HEAD:** `7543d77` (single commit on top of main `0c2e0b6`)
+
+## What E11-15b ships
+
+Continuation of E11-15 (which flipped 5 eyebrow labels). 7 remaining English-only h1/h2/button/caption strings on /workbench bilingualized as `<中文> · <English>`, preserving English suffixes so existing dual-route test locks (e.g. `Control Logic Workbench</h1>`) keep passing without modification.
+
+| File:Line | Before | After |
+|---|---|---|
+| `workbench.html:18` | `<h1>Control Logic Workbench</h1>` | `<h1>控制逻辑工作台 · Control Logic Workbench</h1>` |
+| `workbench.html:281` | `Load Active Ticket` (button) | `加载当前工单 · Load Active Ticket` |
+| `workbench.html:282` | `Snapshot Current State` (button) | `快照当前状态 · Snapshot Current State` |
+| `workbench.html:334` | `<h2>Review Queue</h2>` | `<h2>审核队列 · Review Queue</h2>` |
+| `workbench.html:349` | `Approval Center` (button text) | `审批中心 · Approval Center` |
+| `workbench.html:351` | `Approval actions are Kogami-only.` (caption) | `审批操作仅限 Kogami · Approval actions are Kogami-only.` |
+| `workbench.html:380` | `<h2 id="approval-center-title">Kogami Proposal Triage</h2>` | `<h2 id="approval-center-title">Kogami 提案审批 · Kogami Proposal Triage</h2>` |
+
+## Files in scope
+
+- `src/well_harness/static/workbench.html` — 7 strings flipped
+- `tests/test_workbench_chinese_h2_button_sweep.py` — NEW (28 tests)
+- `tests/test_workbench_chinese_eyebrow_sweep.py` — 1-line h1 lock update (line 119) to track new bilingual h1
+- `.planning/phases/E11-workbench-engineer-first-ux/E11-15b-SURFACE-INVENTORY.md` — NEW
+- `.planning/phases/E11-workbench-engineer-first-ux/PERSONA-ROTATION-STATE.md` — appended
+
+## Your specific lens (P3 Demo Presenter)
+
+Focus on:
+- **Reading rhythm**: do the 7 bilingual strings flow naturally when a Chinese-speaking demo audience reads the page top-to-bottom? Any awkward 中文 · English pairing where the Chinese feels translated rather than native?
+- **First-glance demo impression**: open `/workbench` cold — does the page now read Chinese-first across header, control buttons, annotation inbox, and approval center? Or is there still residual English-first surface that defeats the goal?
+- **Translation quality**: especially `加载当前工单` for "Load Active Ticket" (vs. `加载活跃工单`/`载入当前工单`), `快照当前状态` for "Snapshot Current State", `审核队列` for "Review Queue", `Kogami 提案审批` for "Kogami Proposal Triage" — are these the most natural professional FCS-engineer renderings, or would a native Chinese FCS engineer phrase any of them differently?
+- **Bilingual delimiter consistency**: every flip uses ` · ` (space-middot-space). Is this consistent with the rest of the codebase's bilingual pattern (e.g., column h2s `Probe & Trace · 探针与追踪`)? Note the column h2s use English-first; the new sweep uses Chinese-first. Is this asymmetry acceptable for demo flow, or does it look inconsistent at a glance?
+- **API contract preservation**: confirm `demo_server.py:743` remediation message is unchanged AND no Chinese leaks into the backend file (test #28 covers this — verify the assertion is correct).
+- **English suffix preservation**: confirm dual-route exact-substring locks (e.g., `Control Logic Workbench</h1>`) still pass via the preserved English suffix.
+
+## Verification status
+
+- 1063 / 1063 pytest pass (28 new in `test_workbench_chinese_h2_button_sweep.py`; full suite green)
+- Truth-engine red line preserved: `git diff --name-only main..7543d77` shows only `.planning/...`, `static/workbench.html`, and 2 test files.
+- Adjacent suite (chinese_eyebrow + dual_route + shell + role_affordance + column_rename + lever_snapshot_manual_override_guard) — 126/126 pass.
+
+## Out of scope (deliberately deferred)
+
+- **Approval lane h3s** (`Pending`/`Accept`/`Reject`) + lane buttons (`Accept Proposal`/`Reject Proposal`) — functional approval-flow strings; deferred to focused approval-flow polish sub-phase.
+- **API remediation message** in `demo_server.py:743` — backend contract, locked.
+- **Reverse direction**: column h2s currently use English-first (`Probe & Trace · 探针与追踪`); could be flipped to Chinese-first in a future sweep for delimiter symmetry.
+- **`workbench.js` / `workbench.css`** — pure HTML sweep.
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+Each finding: BLOCKER / IMPORTANT / NIT / INFO with file:line citation. Out-of-scope items → NIT/INFO only.
+
+Live-probe at least one path (open `/workbench` headlessly and verify served HTML carries the new bilingual strings). Cite the probe.
+
+Truth-engine red line: confirm `git diff --name-only main..7543d77` shows no changes to `controller.py` / `runner.py` / `models.py` / `src/well_harness/adapters/` / `workbench.js` / `workbench.css` / `demo_server.py`.
+
+Sign as: **P3 — Demo Presenter (Tier-B, E11-15b)**
