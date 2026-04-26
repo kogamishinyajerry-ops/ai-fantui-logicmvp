@@ -184,10 +184,15 @@
            Propose / Hand off & Track 3-column placeholder grid was removed
            because it was an empty 3-column shell — the actual circuit
            panel was missing entirely from /workbench. -->
+      <!-- 2026-04-26: removed `workbench-annotation-surface` class +
+           data-annotation-surface attribute. They were the bind
+           points for the legacy point/area/link/text-range overlay
+           in annotation_overlay.js — the user explicitly rejected
+           that paradigm in P44-02. The script tag was a residual
+           that turned every panel click into a stray green dot. -->
       <section
         id="workbench-circuit-hero"
-        class="workbench-circuit-hero workbench-annotation-surface"
-        data-annotation-surface="circuit"
+        class="workbench-circuit-hero"
         aria-labelledby="workbench-circuit-hero-title"
         tabindex="0"
       >
@@ -441,7 +446,14 @@
       <!-- E11-09 (2026-04-25): legacy "Workbench Bundle 验收台" content moved to /workbench/bundle. This page is now the Epic-06..10 shell only. -->
     </main>
 
-    <script src="/annotation_overlay.js"></script>
+    <!-- 2026-04-26: annotation_overlay.js removed from /workbench.
+         The legacy point/area/link/text-range overlay was a design
+         dead-end (P44-02 ripped out the toolbar UI; the script tag
+         was the lingering hook that turned panel clicks into stray
+         green dots). The current flow is suggestion-form ONLY:
+         engineer types text → interpret → confirm → submit ticket.
+         The overlay file still exists for /workbench/bundle which
+         hasn't migrated to the new flow yet. -->
     <script src="/workbench.js"></script>
   </body>
 </html>
