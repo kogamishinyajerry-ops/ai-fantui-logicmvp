@@ -85,8 +85,11 @@ E11-15d is one slice in a multi-sub-phase Chinese-first thread:
 
 ## English-only surfaces still remaining (NOT in this sub-phase)
 
-P2 R1 review identified these surfaces still English-only on /workbench
-after E11-15d. They are deferred to follow-up sub-phases:
+P2 R1 + R2 review identified these surfaces still English-only on
+`/workbench` after E11-15d. The list is **non-exhaustive** — a future
+E11-15e bundle should also `grep -nE "^[^>]*[A-Za-z][^<]*</(h[1-6]|button|p|li|span|strong)>"
+src/well_harness/static/workbench.html` to enumerate the long-tail.
+Known English-or-English-first surfaces deferred to follow-up sub-phases:
 
 - `Hide for session` (workbench.html:225) — trust banner dismiss button.
   Locked by `tests/test_workbench_trust_affordance.py:66,135`.
@@ -101,10 +104,24 @@ after E11-15d. They are deferred to follow-up sub-phases:
   E11-15c column h2s could apply.
 - Topbar chip labels (`Identity` / `Ticket` / `Feedback Mode` / `System`)
   — left as functional labels next to dynamic content.
+- `Manual (advisory)` (workbench.html:42) — feedback-mode chip dynamic
+  text rendered both via HTML and JS (`workbench.js:3788`).
+- System dropdown options (workbench.html:48-51) — `Thrust Reverser` /
+  `Landing Gear` / `Bleed Air Valve` / `C919 E-TRAS` — domain proper
+  nouns; bilingualization optional.
+- State-of-world labels (workbench.html:65, 71, 77, 83, 87) —
+  `truth-engine SHA`, `recent e2e`, `adversarial`, `open issues`,
+  `advisory · not a live truth-engine reading`.
+- Trust-banner body copy (workbench.html:209, 213, 215).
+- Boot placeholders in column shells (workbench.html:278, 298, 318) —
+  `Waiting for ... panel boot.` (column trio).
+- Reference-packet block (workbench.html:301-302) — `Reference packet,
+  clarification notes, and future text-range annotations will land here.`
+  + `Intake -> Clarification -> Playback -> Diagnosis -> Knowledge`.
 
 The backend API remediation message in `demo_server.py:743` is also
 intentionally preserved as backend contract.
 
-A future E11-15e sub-phase can cover the trust-banner / authority-headline
-/ inbox-placeholder / affordance-strong / WOW-h3-direction strings as
-a Tier-A bundle (estimated 7+ REWRITE → Tier-A).
+A future E11-15e sub-phase can cover these as a Tier-A bundle (estimated
+15+ REWRITE → Tier-A). Per E11-03 precedent, lockstep test contract
+updates will be required for the locked strings.
