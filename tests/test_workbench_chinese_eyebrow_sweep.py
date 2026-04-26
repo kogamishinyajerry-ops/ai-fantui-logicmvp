@@ -115,8 +115,10 @@ def test_e11_03_column_eyebrows_preserved(preserved_eyebrow: str) -> None:
 @pytest.mark.parametrize(
     "anchor",
     [
-        # h1/h2 main titles untouched
-        "<h1>Control Logic Workbench</h1>",
+        # h1 main title is bilingualized by E11-15b (Chinese-first); the
+        # English suffix `Control Logic Workbench</h1>` is preserved as
+        # locked by test_workbench_dual_route.
+        "<h1>控制逻辑工作台 · Control Logic Workbench</h1>",
         # IDs of containing sections untouched
         'id="workbench-state-of-world-bar"',
         'id="workbench-wow-starters"',
