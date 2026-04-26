@@ -57,7 +57,10 @@ def server():
 @pytest.mark.parametrize(
     "eyebrow_html",
     [
-        '<p class="eyebrow">控制逻辑工作台</p>',
+        # E11-15c: page eyebrow changed from `控制逻辑工作台` (which
+        # duplicated the h1) to `工程师工作区` so eyebrow + h1 read as
+        # category + title rather than two copies of the same phrase.
+        '<p class="eyebrow">工程师工作区</p>',
         '<span class="workbench-sow-eyebrow">当前现状</span>',
         '<p class="eyebrow">主流场景</p>',
         '<p class="eyebrow">标注收件箱</p>',
@@ -140,6 +143,11 @@ def test_e11_15_preserves_structural_anchors(anchor: str) -> None:
 def test_workbench_route_serves_chinese_eyebrows(server) -> None:
     status, html = _get(server, "/workbench")
     assert status == 200
+    # E11-15c: page eyebrow flipped to `工程师工作区`; the literal
+    # `控制逻辑工作台` is still served via the h1 (`控制逻辑工作台 ·
+    # Control Logic Workbench`), so we still assert it as a substring
+    # of the served page.
+    assert "工程师工作区" in html
     assert "控制逻辑工作台" in html
     assert "当前现状" in html
     assert "主流场景" in html
@@ -157,6 +165,6 @@ def test_e11_15_only_touches_static_html() -> None:
     js = (STATIC_DIR / "workbench.js").read_text(encoding="utf-8")
     css = (STATIC_DIR / "workbench.css").read_text(encoding="utf-8")
     # The new Chinese strings live only in HTML, not JS or CSS.
-    for chinese in ["控制逻辑工作台", "当前现状", "主流场景", "标注收件箱", "审批中心"]:
+    for chinese in ["工程师工作区", "当前现状", "主流场景", "标注收件箱", "审批中心"]:
         assert chinese not in js, f"unexpected Chinese eyebrow leaked into workbench.js: {chinese}"
         assert chinese not in css, f"unexpected Chinese eyebrow leaked into workbench.css: {chinese}"
