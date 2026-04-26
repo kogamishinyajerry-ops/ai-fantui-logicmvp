@@ -160,25 +160,41 @@ def test_workbench_route_reflects_direction_flip(server) -> None:
 
 def test_e11_15c_only_touches_static_html_and_tests() -> None:
     """The fix is HTML + test-only. Demo server, controller, runner,
-    models, adapters, JS, and CSS must NOT carry the new strings."""
-    repo_root = Path(__file__).resolve().parents[1]
-    backend_files = [
-        repo_root / "src" / "well_harness" / "demo_server.py",
-        repo_root / "src" / "well_harness" / "controller.py",
-        repo_root / "src" / "well_harness" / "runner.py",
-        repo_root / "src" / "well_harness" / "models.py",
-    ]
-    for f in backend_files:
-        if not f.exists():
-            continue
-        content = f.read_text(encoding="utf-8")
-        for new_string in ["工程师工作区", "探针与追踪 · Probe"]:
-            assert new_string not in content, (
-                f"E11-15c string {new_string!r} unexpectedly leaked into {f.name}"
-            )
+    models, adapters, JS, and CSS must NOT carry any of the 4 new
+    strings.
 
-    js = (STATIC_DIR / "workbench.js").read_text(encoding="utf-8")
-    css = (STATIC_DIR / "workbench.css").read_text(encoding="utf-8")
-    for new_string in ["工程师工作区"]:
-        assert new_string not in js
-        assert new_string not in css
+    P4 IMPORTANT closure (E11-15c review): every backend / JS / CSS /
+    adapters file is scanned against EVERY new string, not just a
+    subset.
+    """
+    repo_root = Path(__file__).resolve().parents[1]
+    well_harness_root = repo_root / "src" / "well_harness"
+
+    new_strings = [
+        "工程师工作区",
+        "探针与追踪 · Probe",
+        "标注与提案 · Annotate",
+        "移交与跟踪 · Hand off",
+    ]
+
+    scan_targets: list[Path] = [
+        well_harness_root / "demo_server.py",
+        well_harness_root / "controller.py",
+        well_harness_root / "runner.py",
+        well_harness_root / "models.py",
+        well_harness_root / "static" / "workbench.js",
+        well_harness_root / "static" / "workbench.css",
+    ]
+    adapters_dir = well_harness_root / "adapters"
+    if adapters_dir.is_dir():
+        scan_targets.extend(p for p in adapters_dir.rglob("*.py"))
+
+    for target in scan_targets:
+        if not target.exists():
+            continue
+        content = target.read_text(encoding="utf-8")
+        for new_string in new_strings:
+            assert new_string not in content, (
+                f"E11-15c string {new_string!r} unexpectedly leaked into "
+                f"{target.relative_to(repo_root)}"
+            )

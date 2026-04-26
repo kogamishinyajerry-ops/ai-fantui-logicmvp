@@ -1,0 +1,64 @@
+You are Codex GPT-5.4 acting as **Persona P4 — V&V Engineer** (Tier-B single-persona pipeline, E11-15c sub-phase).
+
+# Context — E11-15c closure of P3 NITs
+
+**Repo:** `kogamishinyajerry-ops/ai-fantui-logicmvp`
+**Branch:** `feat/e11-15c-column-h2-flip-eyebrow-dedup-20260426`
+**PR:** #26
+**Worktree HEAD:** `938a5a2` (single commit on top of main `62e58fb`)
+
+## What E11-15c ships
+
+Direct closure of the 2 NITs raised by P3 Demo Presenter on E11-15b (`persona-P3-E11-15b-output.md:165-167`).
+
+| File:Line | Before | After | Closes |
+|---|---|---|---|
+| `workbench.html:17` | eyebrow `控制逻辑工作台` | `工程师工作区` | NIT #1 (h1 + eyebrow duplication) |
+| `workbench.html:275` | h2 `Probe & Trace · 探针与追踪` | `探针与追踪 · Probe & Trace` | NIT #2 (direction asymmetry) |
+| `workbench.html:295` | h2 `Annotate & Propose · 标注与提案` | `标注与提案 · Annotate & Propose` | NIT #2 |
+| `workbench.html:315` | h2 `Hand off & Track · 移交与跟踪` | `移交与跟踪 · Hand off & Track` | NIT #2 |
+
+## Files in scope
+
+- `src/well_harness/static/workbench.html` — 4 strings flipped
+- `tests/test_workbench_column_rename.py` — 2 assertion blocks updated (param values + live-route check) for new Chinese-first column h2 strings
+- `tests/test_workbench_chinese_eyebrow_sweep.py` — page-eyebrow lock updated from `控制逻辑工作台` to `工程师工作区`; truth-engine token list + live-route check updated to add `工程师工作区` while keeping `控制逻辑工作台` (still served via h1 substring)
+- `tests/test_workbench_chinese_direction_consistency.py` — NEW (15 tests)
+- `.planning/phases/E11-workbench-engineer-first-ux/E11-15c-SURFACE-INVENTORY.md` — NEW
+- `.planning/phases/E11-workbench-engineer-first-ux/PERSONA-ROTATION-STATE.md` — appended
+
+## Your specific lens (P4 V&V Engineer)
+
+This is the highest-stakes lens for THIS sub-phase, because we are touching test contracts that prior sub-phases (E11-03, E11-15) locked. The V&V question is: **did we preserve every invariant the prior contracts intended, or did the contract migration accidentally weaken something?**
+
+Focus on:
+- **Contract migration completeness**: For every test we updated in lockstep with HTML, verify the new assertion is at least as strong as the old one. (E.g., E11-03 locked the EXACT bilingual h2 string; we changed direction — is the new assertion still locking the exact full string?)
+- **Eyebrow-vs-h1 invariant strength**: `test_eyebrow_and_h1_are_not_chinese_duplicates` is a NEW programmatic invariant that closes NIT #1. Does it actually catch any future regression where someone re-introduces duplication, or could it be silently bypassed (e.g., by adding whitespace, by changing the markup structure such that the parser fails open)?
+- **English suffix preservation**: 4 substring locks (e.g., `Probe & Trace</h2>`) are claimed preserved. Verify by independent grep.
+- **Live-route ↔ static-source agreement**: the live `/workbench` route should serve exactly what the static file contains. Spot-check one path live.
+- **Truth-engine isolation**: the new `工程师工作区` and `探针与追踪 · Probe` strings must not leak into demo_server.py / controller.py / runner.py / models.py / workbench.js / workbench.css. The new test #15 covers this; verify the test's negative assertions are correct (i.e., grep the actual files yourself).
+- **Cross-contract compatibility**: did E11-15b's contracts (h1 bilingual, button bilingualization, API isolation) survive intact? Spot-check `tests/test_workbench_chinese_h2_button_sweep.py` and `tests/test_workbench_role_affordance.py` still pass.
+- **Translation/semantic coherence of `工程师工作区`**: is this the right meta-category for the page, or does it implicitly contradict the data-role of the chip below (`Kogami / Engineer`)? Could it be misread as "this page is only for the Engineer role" when in fact Kogami also uses it?
+
+## Verification status
+
+- 1078 / 1078 pytest pass (15 new in `test_workbench_chinese_direction_consistency.py`; full suite green)
+- Adjacent suite (column_rename + chinese_eyebrow_sweep + chinese_h2_button_sweep + dual_route + shell + role_affordance) — 126/126 pass.
+
+## Out of scope (deliberately deferred)
+
+- **Approval lane h3s + lane buttons** (`Pending`/`Accept`/`Reject`/`Accept Proposal`/`Reject Proposal`) — functional approval-flow strings.
+- **API remediation message** in `demo_server.py:743` — backend contract.
+- **`workbench.js` / `workbench.css`** — pure HTML+test sweep.
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+Each finding: BLOCKER / IMPORTANT / NIT / INFO with file:line citation. Out-of-scope items → NIT/INFO only.
+
+Live-probe at least one path. Cite the probe.
+
+Truth-engine red line: confirm `git diff --name-only main..938a5a2` shows no changes to `controller.py` / `runner.py` / `models.py` / `src/well_harness/adapters/` / `workbench.js` / `workbench.css` / `demo_server.py`.
+
+Sign as: **P4 — V&V Engineer (Tier-B, E11-15c)**
