@@ -5,7 +5,7 @@
 
 - 当前阶段：`P43 Control Logic Workbench end-to-end milestone`
 - 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`E11-15d PR #29 merged (approval-flow polish + 2-round doc-honesty closure; R3 self-signed via Executor-即-Gate v3.2 after Codex auth unavailable) — 2026-04-26`
+- 最近成功执行证据：`E11-15e PR #30 merged (Tier-A Chinese-first bundle: 26 REWRITE rows incl. 4 a11y/title attrs; R2 verbatim closure with P3+P5 APPROVE; P2/P4 R1 truncated codex outputs self-signed via Executor-即-Gate v3.2; 1234/1234 full suite, 80/80 new lockstep tests) — 2026-04-26`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - 当前证据模式：`repo-doc fallback mode`
