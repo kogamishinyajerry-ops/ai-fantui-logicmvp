@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="/demo.css">
     <link rel="stylesheet" href="/workbench.css">
   </head>
-  <body data-view="beginner">
+  <body data-view="beginner" data-review-mode="off">
     <main class="shell workbench-shell">
       <!-- P44-02 (2026-04-26): topbar compressed to a single thin row so
            the control-logic circuit hero fits in the first viewport. The
@@ -46,6 +46,24 @@
           <strong>手动（仅参考）· Manual (advisory)</strong>
           <span class="workbench-feedback-mode-dot" aria-hidden="true"></span>
         </div>
+        <!-- P44-04 (2026-04-26): reviewer mode toggle. When ON, every OPEN
+             proposal in the inbox lights up its affected gate(s) on the
+             SVG with a pulsing glow ("review anchor") + a small badge
+             showing the open-ticket count for that gate. Click an anchor
+             to scroll the matching ticket card into view and spotlight
+             it; click a ticket card to spotlight its anchor on the SVG.
+             Default OFF; the chip is the only switch. -->
+        <button
+          id="workbench-review-mode-toggle"
+          type="button"
+          class="workbench-collab-chip workbench-review-mode-chip"
+          data-review-mode-state="off"
+          aria-pressed="false"
+          title="开启审核视角后，面板上每个被工单命中的逻辑门会发光闪烁，点击发光门可定位到对应的工单卡 · Enable Review Mode to glow every gate that has open proposal tickets; click a glowing gate to jump to its ticket."
+        >
+          <span>审核视角 · Review Mode</span>
+          <strong data-review-mode-label>关闭 · Off</strong>
+        </button>
         <label class="workbench-collab-system" for="workbench-system-select">
           <span>系统 · System</span>
           <select id="workbench-system-select">

@@ -93,6 +93,11 @@ async function bootWorkbenchCircuitHero() {
       "aria-label",
       "反推逻辑链路 L1 → L4 SVG circuit (loaded)",
     );
+    // P44-04: re-apply review anchors against the freshly hydrated SVG
+    // so that if the inbox already loaded (race with this fetch) and we
+    // computed gate→count, the badges show up the instant the SVG
+    // appears. Safe no-op if review mode is off or proposals empty.
+    applyReviewAnchors(_latestProposals);
   } catch (error) {
     mount.setAttribute("data-circuit-fragment-status", "error");
     mount.innerHTML =
@@ -112,6 +117,7 @@ function bootWorkbenchShell() {
   bootWorkbenchCircuitHero();
   installSuggestionFlow();
   installProposalInbox();
+  installReviewModeToggle();
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -311,9 +317,13 @@ async function submitSuggestionTicket() {
 
 // ─────────────────────────────────────────────────────────────────
 // P44-03 (2026-04-26): proposal inbox.
+// P44-04 (2026-04-26): _latestProposals doubles as the source of
+// truth for the review-mode glowing-anchor overlay below.
 // ─────────────────────────────────────────────────────────────────
 
 const PROPOSALS_PATH = "/api/proposals";
+
+let _latestProposals = [];
 
 function installProposalInbox() {
   const refreshBtn = document.getElementById("annotation-inbox-refresh-btn");
@@ -339,8 +349,13 @@ async function loadProposalsInbox() {
     }
     const body = await response.json();
     const proposals = Array.isArray(body.proposals) ? body.proposals : [];
+    _latestProposals = proposals;
     renderProposalsInbox(proposals);
     list.dataset.inboxState = proposals.length === 0 ? "empty" : "ready";
+    // P44-04: refresh the review-mode anchors against the new
+    // proposal set. Safe no-op if review mode is off — the CSS rule
+    // gated on body[data-review-mode="off"] hides every anchor.
+    applyReviewAnchors(proposals);
   } catch (error) {
     list.dataset.inboxState = "error";
     list.innerHTML =
@@ -395,6 +410,155 @@ function renderProposalsInbox(proposals) {
     })
     .join("");
   list.innerHTML = items;
+  // P44-04: clicking a ticket card spotlights its anchor on the SVG.
+  // Delegated handler — re-attached on every render so it always
+  // matches the current set of cards.
+  for (const card of list.querySelectorAll(".workbench-annotation-inbox-item")) {
+    card.addEventListener("click", () => {
+      const id = card.getAttribute("data-proposal-id");
+      const proposal = (_latestProposals || []).find((p) => p.id === id);
+      const gates = (proposal && proposal.interpretation && proposal.interpretation.affected_gates) || [];
+      for (const gateId of gates) {
+        spotlightCircuitGate(gateId);
+      }
+    });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// P44-04 (2026-04-26): reviewer-mode glowing anchors.
+//
+// When the reviewer toggles "审核视角 · Review Mode" ON, each OPEN
+// proposal in the inbox lights up its `interpretation.affected_gates`
+// on the SVG with a pulsing glow + a small badge showing how many
+// open tickets that gate has. Click a glowing anchor to scroll the
+// matching ticket card into view and spotlight it; click a ticket
+// card to spotlight its anchor on the SVG (handled in
+// renderProposalsInbox above).
+//
+// Truth-engine red line: this whole module reads from /api/proposals
+// only and never touches controller/runner/models/adapters.
+// ─────────────────────────────────────────────────────────────────
+
+function installReviewModeToggle() {
+  const btn = document.getElementById("workbench-review-mode-toggle");
+  if (!btn) {
+    return;
+  }
+  btn.addEventListener("click", () => {
+    const next = btn.getAttribute("data-review-mode-state") === "on" ? "off" : "on";
+    setReviewMode(next);
+  });
+}
+
+function setReviewMode(state) {
+  const enabled = state === "on";
+  document.body.setAttribute("data-review-mode", enabled ? "on" : "off");
+  const btn = document.getElementById("workbench-review-mode-toggle");
+  if (btn) {
+    btn.setAttribute("data-review-mode-state", enabled ? "on" : "off");
+    btn.setAttribute("aria-pressed", enabled ? "true" : "false");
+    const label = btn.querySelector("[data-review-mode-label]");
+    if (label) {
+      label.textContent = enabled ? "开启 · On" : "关闭 · Off";
+    }
+  }
+  applyReviewAnchors(_latestProposals);
+}
+
+function applyReviewAnchors(proposals) {
+  const mount = document.getElementById("workbench-circuit-hero-mount");
+  if (!mount) {
+    return;
+  }
+  // Strip every prior anchor + badge so a refresh always reflects the
+  // current OPEN-ticket set, not a stale superset.
+  for (const el of mount.querySelectorAll(".is-review-anchor")) {
+    el.classList.remove("is-review-anchor");
+  }
+  for (const badge of mount.querySelectorAll(".workbench-review-anchor-badge")) {
+    badge.remove();
+  }
+  if (document.body.getAttribute("data-review-mode") !== "on") {
+    return;  // off — leave the SVG untouched, no anchors, no badges
+  }
+  // Compute per-gate OPEN-ticket counts from the latest proposal set.
+  const counts = new Map();
+  for (const p of proposals || []) {
+    if (p.status !== "OPEN") continue;
+    const gates = (p.interpretation && p.interpretation.affected_gates) || [];
+    for (const g of gates) {
+      counts.set(g, (counts.get(g) || 0) + 1);
+    }
+  }
+  for (const [gateId, count] of counts) {
+    const targets = mount.querySelectorAll(`[data-gate-id="${gateId}"]`);
+    if (targets.length === 0) continue;
+    for (const el of targets) {
+      el.classList.add("is-review-anchor");
+      // Bind the click ONCE — re-application is fine because the same
+      // listener stays attached, and removing/re-adding handlers per
+      // refresh would be churn for no observable difference.
+      if (!el.dataset.reviewAnchorClickWired) {
+        el.dataset.reviewAnchorClickWired = "1";
+        el.addEventListener("click", () => spotlightInboxByGate(gateId));
+      }
+    }
+    // Place the count badge next to the gate <use> (the first matching
+    // element). The badge is an SVG <text> appended to the same parent
+    // <svg> so it inherits the panel's coordinate system.
+    const useEl = mount.querySelector(`use[data-gate-id="${gateId}"]`);
+    if (useEl && useEl.ownerSVGElement) {
+      const x = parseFloat(useEl.getAttribute("x") || "0");
+      const y = parseFloat(useEl.getAttribute("y") || "0");
+      const w = parseFloat(useEl.getAttribute("width") || "0");
+      const badge = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      badge.setAttribute("class", "workbench-review-anchor-badge");
+      badge.setAttribute("data-review-anchor-badge-for", gateId);
+      badge.setAttribute("x", String(x + w + 4));
+      badge.setAttribute("y", String(y + 12));
+      badge.textContent = String(count);
+      useEl.ownerSVGElement.appendChild(badge);
+    }
+  }
+}
+
+function spotlightCircuitGate(gateId) {
+  const mount = document.getElementById("workbench-circuit-hero-mount");
+  if (!mount) return;
+  for (const el of mount.querySelectorAll(`[data-gate-id="${gateId}"]`)) {
+    el.classList.remove("is-review-spotlight");
+    // Force reflow so the animation restarts on rapid re-clicks.
+    void el.getBoundingClientRect();
+    el.classList.add("is-review-spotlight");
+    setTimeout(() => el.classList.remove("is-review-spotlight"), 1500);
+  }
+  const useEl = mount.querySelector(`use[data-gate-id="${gateId}"]`);
+  if (useEl && typeof useEl.scrollIntoView === "function") {
+    useEl.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+}
+
+function spotlightInboxByGate(gateId) {
+  const list = document.getElementById("annotation-inbox-list");
+  if (!list) return;
+  // Find the first OPEN ticket whose affected_gates contains gateId.
+  const target = (_latestProposals || []).find(
+    (p) => p.status === "OPEN" &&
+      ((p.interpretation && p.interpretation.affected_gates) || []).includes(gateId),
+  );
+  if (!target) return;
+  const card = list.querySelector(`[data-proposal-id="${target.id}"]`);
+  if (!card) return;
+  for (const c of list.querySelectorAll(".is-review-spotlight")) {
+    c.classList.remove("is-review-spotlight");
+  }
+  void card.getBoundingClientRect();
+  card.classList.add("is-review-spotlight");
+  setTimeout(() => card.classList.remove("is-review-spotlight"), 1500);
+  if (typeof card.scrollIntoView === "function") {
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 }
 
 // P43 authority contract — written only via assignFrozenSpec; never mutated directly

@@ -2370,3 +2370,54 @@ body[data-view="expert"] [view="beginner"] {
   margin-top: 0.35rem; font-size: 0.72rem;
   color: rgba(216, 238, 255, 0.85); line-height: 1.5;
 }
+
+/* P44-04 (2026-04-26): reviewer mode — glowing anchors on the SVG +
+   per-gate count badge + spotlight when an inbox card or its anchor
+   gets clicked. The toggle chip lives in the topbar and flips
+   body[data-review-mode] between "off" and "on"; the SVG-side rules
+   are scoped under that attribute so all the visual weight disappears
+   the moment the reviewer leaves review mode. */
+.workbench-review-mode-chip[data-review-mode-state="on"] {
+  background: rgba(79, 184, 255, 0.14);
+  border-color: rgba(79, 184, 255, 0.55);
+}
+.workbench-review-mode-chip[data-review-mode-state="on"] strong {
+  color: #4fb8ff;
+}
+body[data-review-mode="off"] .is-review-anchor,
+body[data-review-mode="off"] .workbench-review-anchor-badge {
+  display: none !important;
+}
+body[data-review-mode="on"] .workbench-circuit-hero-mount [data-gate-id].is-review-anchor {
+  filter: drop-shadow(0 0 6px #4fb8ff) drop-shadow(0 0 14px rgba(79, 184, 255, 0.55));
+  animation: workbench-review-anchor-pulse 1.6s ease-in-out infinite;
+  cursor: pointer;
+}
+@keyframes workbench-review-anchor-pulse {
+  0%, 100% { opacity: 0.85; }
+  50%      { opacity: 1; }
+}
+.workbench-circuit-hero-mount .workbench-review-anchor-badge {
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: #04111a;
+  stroke-width: 3px;
+  fill: #4fb8ff;
+  font-size: 11px;
+  font-weight: 700;
+}
+/* Spotlight: applied transiently to the gate just clicked (or the
+   gate whose ticket card was just clicked). 1.4s fade. */
+.workbench-circuit-hero-mount [data-gate-id].is-review-spotlight {
+  filter: drop-shadow(0 0 10px #ffd166) drop-shadow(0 0 24px rgba(255, 209, 102, 0.7));
+  animation: workbench-review-spotlight-fade 1.4s ease-out forwards;
+}
+@keyframes workbench-review-spotlight-fade {
+  0%   { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+.workbench-annotation-inbox-item.is-review-spotlight {
+  outline: 2px solid #ffd166;
+  outline-offset: 2px;
+  animation: workbench-review-spotlight-fade 1.4s ease-out forwards;
+}
