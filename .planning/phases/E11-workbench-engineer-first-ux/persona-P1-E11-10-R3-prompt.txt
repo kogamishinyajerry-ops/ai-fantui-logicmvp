@@ -1,0 +1,83 @@
+You are Codex GPT-5.4 acting as **Persona P1 — Junior FCS Engineer** (Tier-B single-persona pipeline, E11-10 sub-phase, **R3 re-review**).
+
+# Context — E11-10 R3: closure of R2 BLOCKER
+
+**Repo:** `kogamishinyajerry-ops/ai-fantui-logicmvp`
+**Branch:** `feat/e11-10-codex-personas-pipeline-20260426`
+**PR:** #28
+**Worktree HEAD:** `97fe889` (R3 commit on top of R2 `0b2d4df`)
+**Your R2 review:** `.planning/phases/E11-workbench-engineer-first-ux/persona-P1-E11-10-R2-output.md` (verdict CHANGES_REQUIRED)
+
+## Your R2 finding (for reference)
+
+You returned **CHANGES_REQUIRED** with this BLOCKER:
+
+> R2 still has a false-pass path when the completion marker is whitespace-variant. `_TOKENS_MARKER` only recognizes `tokens used` at column 0, but `parse_tokens_used()` accepts leading spaces, and `collect()` uses `parse_tokens_used()` to decide the file is complete. That means `collect()` can mark output authoritative while `parse_verdict()` and `count_findings()` silently fall back to the old whole-file scan. Live probe: a synthetic file with prompt-echo verdicts, an indented `tokens used` line, canonical `**CHANGES_REQUIRED**`, and a quoted `**APPROVE_WITH_NITS**` inside a BLOCKER finding returned `verdict=APPROVE_WITH_NITS`, `BLOCKER=0`, `tokens_used=12345`, `tier_b_acceptance=True`. That reopens the same false-accept class R2 was meant to close.
+
+Plus an IMPORTANT noting that R2 tests didn't cover the contract that completeness detection and post-tokens scoping must share the same boundary.
+
+## What R3 changes
+
+### BLOCKER closure — boundary contract unification
+
+`_TOKENS_PATTERN` (used by `parse_tokens_used`) now also requires column-0 anchor:
+
+```python
+# was:
+_TOKENS_PATTERN = re.compile(r"tokens used\s*\n\s*(\d[\d,]*)", re.IGNORECASE)
+# is:
+_TOKENS_PATTERN = re.compile(r"(?:^|\n)tokens used\s*\n\s*(\d[\d,]*)", re.IGNORECASE)
+```
+
+This matches `_TOKENS_MARKER`'s `(?:^|\n)tokens used\s*\n\s*\d` anchor. The two regexes now agree on what counts as the codex completion marker: only column-0 `tokens used\nNNNN` qualifies.
+
+Both regex docstrings now explicitly document the boundary-contract requirement.
+
+### IMPORTANT closure — contract regression tests
+
+3 new R3 tests cover the failure mode P1 R2 demonstrated:
+
+1. `test_indented_tokens_used_does_not_trick_completeness_gate` — recreates P1's exact synthetic scenario; verifies `tokens_used=None` and `tier_b_acceptance=False`
+2. `test_column_zero_tokens_used_is_recognized` — sanity that the strict form (codex's actual emission) still works
+3. `test_completeness_and_scoping_share_boundary_contract` — directly tests the two functions agree on the boundary, preventing future drift where one is loosened without the other
+
+## Files in scope (R3 delta)
+
+- `tools/codex_persona_dispatch.py` — 1-line regex tightening + docstring updates (~10 LOC delta)
+- `tests/test_codex_persona_dispatch.py` — 3 new regression tests (now 48 total, was 45)
+
+## Your specific lens (P1 Junior FCS Engineer, R3)
+
+Focus on:
+- **Did R3 actually close R2 BLOCKER?** Re-run your R2 live probe verbatim:
+  - Synthetic file: prompt-echo verdicts + `  tokens used\n  12345` (indented) + `**CHANGES_REQUIRED**` + `**APPROVE_WITH_NITS**` quoted in a BLOCKER finding evidence
+  - Pre-R3: `tier_b_acceptance=True` (false-pass)
+  - Post-R3 expectation: `tokens_used=None`, `tier_b_acceptance=False`
+- **Did R3 introduce new false-negatives?** Specifically: are there codex-emission shapes where the column-0 anchor IS too strict?
+  - Codex output samples in this repo: do all real `tokens used` markers actually start at column 0? (You can grep `^tokens used$` across all `.planning/phases/E11-*/persona-*-output.md` to confirm)
+  - What about codex emitting `\ntokens used` after a non-newline character (e.g., another tool result with no trailing newline)? My regex uses `(?:^|\n)` which handles `^` (start of string) and `\n` (after a newline) — but NOT mid-line. Is that the right call?
+- **Are the 3 new tests actually exercising the contract?** Specifically:
+  - Test #3 directly probes both `parse_tokens_used` and `_final_verdict_block` against indented vs canonical inputs. Does it actually pin the contract, or could a future maintainer satisfy it while still introducing the original bug?
+- **Other R2 findings unchanged**: BLOCKER #1 + #2 + IMPORTANT from R1, plus IMPORTANT from R2, are all closed (R2 commit + R3 contract tests). Verify by re-running the original R1 live probes:
+  - One-line `Verdict: APPROVE` → tier_b_acceptance must stay False
+  - `**APPROVE_WITH_NITS**` + `- **BLOCKER** finding` + `tokens used\n12345` → BLOCKER count = 1, tier_b_acceptance = False
+  - Self-dogfood `collect E11-10 P1` → CHANGES_REQUIRED, 2 BLOCKERS, 1 IMPORTANT
+
+## Verification status
+
+- 1128 / 1128 default pytest pass (48 in `test_codex_persona_dispatch.py`)
+- P1 R2 live probe scenario reproduced + closure confirmed: `tier_b_acceptance` is now False for indented `tokens used`
+- Real artifact checks: `collect E11-10 P1` → CHANGES_REQUIRED 2/1/0/0 (matches your R1 output); `collect E11-11 P5` → APPROVE_WITH_NITS 0/1/1/1
+- Truth-engine red line preserved: `git diff --name-only main..97fe889` shows only `tools/`, `tests/`, `.planning/`
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+Each finding: BLOCKER / IMPORTANT / NIT / INFO with file:line citation. Out-of-scope items → NIT/INFO only.
+
+Live-probe at least one path. Cite the probe.
+
+Truth-engine red line: confirm `git diff --name-only main..97fe889` shows no changes to production code outside `tools/codex_persona_dispatch.py`.
+
+Sign as: **P1 — Junior FCS Engineer (Tier-B, E11-10 R3)**

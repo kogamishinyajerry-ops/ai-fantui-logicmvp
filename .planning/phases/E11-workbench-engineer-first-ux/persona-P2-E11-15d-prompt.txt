@@ -1,0 +1,64 @@
+You are Codex GPT-5.4 acting as **Persona P2 — Senior FCS Engineer** (Tier-B single-persona pipeline, E11-15d sub-phase).
+
+# Context — E11-15d approval-flow polish
+
+**Repo:** `kogamishinyajerry-ops/ai-fantui-logicmvp`
+**Branch:** `feat/e11-15d-approval-flow-polish-20260426`
+**PR:** #29
+**Worktree HEAD:** `288d322` (single commit on top of main `b10fcba`)
+
+## What E11-15d ships
+
+Closes the LAST English-only surface in the workbench demo. With this sub-phase, `/workbench` is uniformly Chinese-first; only the backend API remediation message in `demo_server.py:743` stays English (backend contract, locked by `tests/test_lever_snapshot_manual_override_guard.py:151`).
+
+| File:Line | Before | After |
+|---|---|---|
+| `workbench.html:384` | `<h3>Pending</h3>` | `<h3>待审 · Pending</h3>` |
+| `workbench.html:385` | body `Submitted annotation proposals wait here before acceptance or rejection.` | bilingual `已提交的标注提案在被通过或驳回前在此排队 · ...` |
+| `workbench.html:388` | `<h3>Accept</h3>` | `<h3>通过 · Accept</h3>` |
+| `workbench.html:389` | btn `Accept Proposal` | `通过提案 · Accept Proposal` |
+| `workbench.html:392` | `<h3>Reject</h3>` | `<h3>驳回 · Reject</h3>` |
+| `workbench.html:393` | btn `Reject Proposal` | `驳回提案 · Reject Proposal` |
+
+## Files in scope
+
+- `src/well_harness/static/workbench.html` — 6 strings flipped (lines 384-393)
+- `tests/test_workbench_approval_flow_polish.py` — NEW (25 tests)
+- `.planning/phases/E11-workbench-engineer-first-ux/E11-15d-SURFACE-INVENTORY.md` — NEW
+- `.planning/phases/E11-workbench-engineer-first-ux/PERSONA-ROTATION-STATE.md` — appended via `tools/codex_persona_dispatch.py append-rotation`
+
+## Your specific lens (P2 Senior FCS Engineer)
+
+Focus on:
+- **Visible-copy consistency**: do the 6 new bilingual approval-flow strings work harmoniously with the surrounding E11-15b approval-center surface (`Kogami 提案审批 · Kogami Proposal Triage` h2, `审批中心 · Approval Center` entry button, `审批操作仅限 Kogami · ...` caption)? Does the page now read uniformly as a Chinese-first FCS engineer's approval workflow?
+- **Functional flow integrity**: the lane buttons (`通过提案`, `驳回提案`) carry `data-approval-action="accept"`/`"reject"` attributes. Confirm those structural anchors are preserved (they're the JS-binding points). Same for `data-approval-lane` on the lane articles.
+- **Translation quality for FCS workflow domain**: are `待审`/`通过`/`驳回` the right approval-flow verbs for an aviation FCS engineer's workspace? Alternatives could be `待批`/`批准`/`拒绝` (more generic) or `待审议`/`通过审议`/`审议驳回` (more formal). The current choice biases toward concise + workshop-feel.
+- **Test completeness**: the 25 tests cover (a) positive bilingual locks, (b) negative stale-English locks, (c) English suffix preservation, (d) structural anchor preservation, (e) live-served route, (f) backend isolation. Any contract claim untested?
+- **Backend isolation correctness**: `test_e11_15d_does_not_touch_api_remediation_message` asserts `demo_server.py` remediation message is unchanged AND no Chinese strings leak in. Verify by independent grep that the assertion is correct (i.e., `demo_server.py` really doesn't contain `待审`/`通过提案`/`驳回提案`/`已提交的标注提案`).
+- **Closure claim verification**: I claim `/workbench` is now uniformly Chinese-first. Verify by `grep -nE ">[A-Za-z][^<]*</h[1-3]>|>[A-Za-z][^<]*</button>"` on `workbench.html` to confirm no remaining English-only h1/h2/h3/button content. Acceptable exceptions: identifier strings in topbar chips (`Identity`, `Ticket`, `System`, `Feedback Mode`), system option labels (`Thrust Reverser`, etc.) which are domain proper-nouns, and the `eyebrow` decorative labels in the column trio (locked by E11-03 tests).
+
+## Verification status
+
+- 1153 / 1153 default pytest pass (25 new in `test_workbench_approval_flow_polish.py`)
+- Truth-engine red line preserved: `git diff --name-only main..288d322` shows only `static/workbench.html`, `tests/test_workbench_approval_flow_polish.py`, and `.planning/`
+- E11-10 tooling validated: `python3 tools/codex_persona_dispatch.py next-persona` returned `P2` (used to derive your persona); `append-rotation E11-15d P2 B "..."` was used to append the rotation entry
+
+## Out of scope (deliberately deferred or preserved)
+
+- **API remediation message** in `demo_server.py:743` — backend contract.
+- **Approval Center entry button + Kogami-only caption** + `approval-center-title` h2 — already bilingualized by E11-15b.
+- **Topbar chips** (`Identity` / `Ticket` / `Feedback Mode` / `System`) — left as labels next to dynamic Chinese content.
+- **System dropdown options** (`Thrust Reverser` / `Landing Gear` / `Bleed Air Valve` / `C919 E-TRAS`) — domain proper nouns; bilingualization can be a separate sub-phase if the user wants.
+- **Column-trio eyebrows** — locked by E11-03; bilingual h2 already gives Chinese-first signal.
+
+## Verdict format
+
+Return one of: **APPROVE** / **APPROVE_WITH_NITS** / **CHANGES_REQUIRED**.
+
+Each finding: BLOCKER / IMPORTANT / NIT / INFO with file:line citation. Out-of-scope items → NIT/INFO only.
+
+Live-probe at least one path. Cite the probe.
+
+Truth-engine red line: confirm `git diff --name-only main..288d322` shows no changes to `controller.py` / `runner.py` / `models.py` / `src/well_harness/adapters/` / `workbench.js` / `workbench.css` / `demo_server.py`.
+
+Sign as: **P2 — Senior FCS Engineer (Tier-B, E11-15d)**
