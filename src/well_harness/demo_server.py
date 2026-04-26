@@ -2477,6 +2477,125 @@ def _truth_engine_short_sha() -> str:
     return "unknown"
 
 
+# P47-01 (2026-04-27): multi-namespace panel-version chip.
+#
+# Three truth namespaces — each one is a set of files that, taken
+# together, define one of the three "things the engineer sees on
+# /workbench". The chip surfaces the latest commit that touched
+# each namespace's file set, so an engineer can spot at a glance
+# whether (e.g.) requirements-doc has drifted past logic-truth.
+#
+# Namespaces are fixed; adding a 4th later is a single dict entry
+# here + a render row in workbench.js.
+_PANEL_NAMESPACES: tuple[dict, ...] = (
+    {
+        "namespace": "logic_truth",
+        "label_zh": "逻辑电路真值",
+        "label_en": "Logic truth",
+        # files relative to repo root
+        "files": (
+            "src/well_harness/controller.py",
+            "src/well_harness/models.py",
+            "src/well_harness/runner.py",
+            "src/well_harness/adapters",
+        ),
+    },
+    {
+        "namespace": "requirements",
+        "label_zh": "需求文档",
+        "label_en": "Requirements",
+        "files": (
+            "docs/thrust_reverser/requirements_supplement.md",
+            "docs/c919_etras/requirements_v0_9.md",
+            "src/well_harness/static/fantui_requirements.html",
+            "src/well_harness/static/c919_requirements.html",
+        ),
+    },
+    {
+        "namespace": "simulation_workbench",
+        "label_zh": "仿真工作台",
+        "label_en": "Simulation panel",
+        "files": (
+            "src/well_harness/static/timeline-sim.html",
+            "docs/panels/sim_panel_requirements.md",
+        ),
+    },
+)
+
+
+def _namespace_head_info(files: tuple[str, ...]) -> dict:
+    """Latest commit (short_sha + subject + ISO commit time) that
+    touched ANY of the namespace's files. Returns 'unknown' fields
+    if git is unavailable. Never crashes the page.
+
+    `git log -1 --format=<fmt> -- <files>` is the canonical way to
+    say "give me the most recent commit that touched any of these
+    paths". Walks history, not just HEAD, so a namespace whose
+    files weren't touched in the last commit still reports its
+    own last-touch SHA accurately.
+    """
+    import subprocess
+    repo_root = Path(__file__).resolve().parents[2]
+    out = {
+        "head_sha": "unknown",
+        "head_subject": "—",
+        "head_committed_at": "—",
+    }
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "log",
+                "-1",
+                "--format=%h%x09%s%x09%cI",
+                "--",
+                *files,
+            ],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return out
+    if result.returncode != 0:
+        return out
+    line = (result.stdout or "").strip()
+    if not line:
+        # No commit yet touches this namespace (e.g. brand-new files).
+        return out
+    parts = line.split("\t", 2)
+    if len(parts) >= 1 and parts[0]:
+        out["head_sha"] = parts[0]
+    if len(parts) >= 2 and parts[1]:
+        out["head_subject"] = parts[1]
+    if len(parts) >= 3 and parts[2]:
+        out["head_committed_at"] = parts[2]
+    return out
+
+
+def _panel_namespaces_payload() -> list[dict]:
+    """Compose the per-namespace head info for the state-of-world
+    payload. One git invocation per namespace (3 total, ~6ms each
+    on a warm cache)."""
+    payload: list[dict] = []
+    for ns in _PANEL_NAMESPACES:
+        info = _namespace_head_info(ns["files"])
+        payload.append(
+            {
+                "namespace": ns["namespace"],
+                "label_zh": ns["label_zh"],
+                "label_en": ns["label_en"],
+                "files": list(ns["files"]),
+                "head_sha": info["head_sha"],
+                "head_subject": info["head_subject"],
+                "head_committed_at": info["head_committed_at"],
+                "head_source": "git log -1 --format -- <files>",
+            }
+        )
+    return payload
+
+
 def _read_recent_evidence_lines() -> dict:
     """Parse the most-recent evidence stamp out of the coordination
     qa_report. Returns three optional fields. Falls back to empty
@@ -2535,6 +2654,9 @@ def workbench_state_of_world_payload() -> dict:
         "kind": "advisory",
         "truth_engine_sha": _truth_engine_short_sha(),
         "truth_engine_sha_source": "git rev-parse --short HEAD",
+        # P47-01: per-namespace last-touch lineage so the engineer can
+        # see whether (e.g.) requirements drifted past logic_truth.
+        "panel_namespaces": _panel_namespaces_payload(),
         "recent_e2e_label": evidence["recent_e2e_label"] or "—",
         "recent_e2e_source": "docs/coordination/qa_report.md",
         "adversarial_label": evidence["adversarial_label"] or "—",

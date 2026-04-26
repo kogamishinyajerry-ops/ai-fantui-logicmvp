@@ -833,6 +833,9 @@ function installPanelVersionChip() {
     .then((body) => {
       _panelVersionSha = (body && body.truth_engine_sha) || null;
       refreshPanelVersionChip();
+      // P47-01: render the per-namespace lineage rows.
+      const namespaces = (body && body.panel_namespaces) || [];
+      renderPanelNamespaces(namespaces);
     })
     .catch(() => {
       const chip2 = document.getElementById("workbench-panel-version-chip");
@@ -841,7 +844,64 @@ function installPanelVersionChip() {
         const label = chip2.querySelector("[data-panel-version-label]");
         if (label) label.textContent = "—";
       }
+      // P47-01: surface namespace fetch error too — empty is not the same
+      // as failed; the engineer should know the lineage view is unavailable.
+      const ns = document.getElementById("workbench-panel-namespaces");
+      if (ns) {
+        ns.setAttribute("data-panel-namespaces-state", "error");
+        ns.hidden = false;
+        ns.innerHTML =
+          `<span class="workbench-panel-namespace-row" data-panel-namespace="error">` +
+          `<span class="ns-label">命名空间血缘 · namespace lineage:</span>` +
+          `<span class="ns-subject">— (state-of-world fetch failed)</span>` +
+          `</span>`;
+      }
     });
+}
+
+// P47-01 (2026-04-27): render per-namespace last-touch rows.
+//
+// Three rows in fixed order — logic_truth / requirements /
+// simulation_workbench — each showing label + short_sha + commit
+// subject (truncated). Subject is also surfaced as title for the
+// hover full text + commit time. Click on a row jumps to the inbox
+// (same destination as the main chip) so the engineer can scroll
+// through the decision history.
+function renderPanelNamespaces(namespaces) {
+  const container = document.getElementById("workbench-panel-namespaces");
+  if (!container) return;
+  if (!Array.isArray(namespaces) || namespaces.length === 0) {
+    container.hidden = true;
+    return;
+  }
+  const escape = (text) =>
+    String(text == null ? "" : text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  const rows = namespaces.map((ns) => {
+    const namespace = escape(ns.namespace || "");
+    const labelZh = escape(ns.label_zh || ns.namespace || "");
+    const labelEn = escape(ns.label_en || "");
+    const sha = escape(ns.head_sha || "—");
+    const subject = escape(ns.head_subject || "—");
+    const committedAt = escape(ns.head_committed_at || "—");
+    const tooltip = escape(`${ns.head_subject || "—"} · ${ns.head_committed_at || "—"}`);
+    return (
+      `<span class="workbench-panel-namespace-row"` +
+      ` data-panel-namespace="${namespace}"` +
+      ` title="${tooltip}">` +
+      `<span class="ns-label">${labelZh} · ${labelEn}</span>` +
+      `<span class="ns-sha">${sha}</span>` +
+      `<span class="ns-subject">${subject}</span>` +
+      `</span>`
+    );
+  });
+  container.innerHTML = rows.join("");
+  container.setAttribute("data-panel-namespaces-state", "ready");
+  container.hidden = false;
 }
 
 function refreshPanelVersionChip() {
