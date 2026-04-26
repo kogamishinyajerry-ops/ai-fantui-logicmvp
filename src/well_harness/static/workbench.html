@@ -234,6 +234,23 @@
             highlight the affected gate(s), and ask you to confirm the interpretation matches your intent
             before the ticket is submitted.
           </p>
+          <!-- P45-03 (2026-04-26): interpreter strategy toggle. Default
+               OFF = rules interpreter (deterministic, zero deps). When
+               ON, the interpret POST sends strategy=llm and the server
+               calls MiniMax-M2.7-highspeed; on any LLM failure (no key,
+               network, parse error) it transparently falls back to
+               rules and the badge in the result panel says so. -->
+          <button
+            id="workbench-interpreter-strategy-toggle"
+            type="button"
+            class="workbench-collab-chip workbench-interpreter-strategy-chip"
+            data-interpreter-strategy="rules"
+            aria-pressed="false"
+            title="规则解读零延迟、可重现；🤖 智能解读用 MiniMax-M2.7-highspeed，需要 MINIMAX_API_KEY，失败会自动回退到规则解读 · Rules interpreter is zero-latency + reproducible. AI interpreter uses MiniMax-M2.7-highspeed (requires MINIMAX_API_KEY); on any LLM failure it transparently falls back to rules."
+          >
+            <span>解读策略 · Interpreter</span>
+            <strong data-interpreter-strategy-label>📜 规则解读 · Rules</strong>
+          </button>
         </header>
         <form
           id="workbench-suggestion-form"
@@ -280,6 +297,14 @@
         >
           <header class="workbench-suggestion-interpretation-header">
             <h3>系统解读 · System Interpretation</h3>
+            <!-- P45-03: which interpreter produced this result. JS
+                 swaps text in based on the response's
+                 interpreter_strategy field. -->
+            <span
+              id="workbench-suggestion-interpretation-strategy"
+              class="workbench-suggestion-interpretation-strategy"
+              data-interpreter-strategy="rules"
+            ></span>
             <span
               id="workbench-suggestion-interpretation-confidence"
               class="workbench-suggestion-interpretation-confidence"

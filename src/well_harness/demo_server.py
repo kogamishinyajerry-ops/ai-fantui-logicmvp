@@ -755,17 +755,23 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
     def _handle_interpret_suggestion(self):
         """P44-02 (2026-04-26): rule-based interpretation of a free-form
         engineer modification suggestion. POST body: {"text": "..."}.
-        Returns a structured interpretation the UI can show back to the
-        engineer for confirmation. The interpreter logic is a pure
-        function (interpret_suggestion_text) so it can be unit-tested
-        without spinning the server.
+
+        P45-03 (2026-04-26): now also supports an LLM strategy. POST
+        body or query string:
+          {"text": "...", "strategy": "rules" | "llm",
+           "system_id": "thrust-reverser"}
+        The default remains "rules" so every existing caller is
+        unaffected. With strategy="llm", interpret_suggestion_text_llm
+        is called; on any failure (no API key, network, parse error)
+        it falls back to rules and tags the response with
+        interpreter_strategy="llm_fallback_to_rules" + llm_error.
 
         Truth-engine red line preserved: this endpoint READS the
-        engineer's text and returns a structured restatement; it never
-        writes to controller / runner / models / adapters. P44-03 will
-        add a separate /api/proposals POST that persists confirmed
-        interpretations to a draft store; even that store is adapter-only,
-        not truth-engine."""
+        engineer's text and returns a structured restatement; it
+        never writes to controller / runner / models / adapters. The
+        LLM call is an outbound HTTP request; the result is parsed
+        and normalized to the same schema as the rules interpreter
+        before being returned."""
         length = int(self.headers.get("Content-Length", "0") or "0")
         if length <= 0 or length > 100_000:
             self._send_json(400, {"error": "empty_or_oversized_body"})
@@ -782,7 +788,19 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if len(text) > 5000:
             self._send_json(400, {"error": "text_too_long", "max_chars": 5000})
             return
-        result = interpret_suggestion_text(text)
+        # Strategy may come from POST body (preferred) or query string
+        # (convenience). Unknown strategies fall back to "rules" rather
+        # than 400 — being permissive here keeps the demo resilient if
+        # a frontend version ships with a typoed value.
+        strategy = str(payload.get("strategy") or "rules").strip().lower()
+        if strategy not in ("rules", "llm"):
+            strategy = "rules"
+        system_id = str(payload.get("system_id") or "thrust-reverser").strip() or "thrust-reverser"
+        if strategy == "llm":
+            result = interpret_suggestion_text_llm(text, system_id=system_id)
+        else:
+            result = interpret_suggestion_text(text)
+            result["interpreter_strategy"] = "rules"
         self._send_json(200, result)
 
     def _handle_create_proposal(self):
@@ -1149,6 +1167,217 @@ def interpret_suggestion_text(text: str) -> dict:
         "summary_en": summary_en,
         "source_text": text,
     }
+
+
+# ─────────────────────────────────────────────────────────────────
+# P45-03 (2026-04-26): LLM-backed interpretation via MiniMax-M2.7.
+# Same (text, system_id) → dict signature as the rules interpreter,
+# so callers can swap strategies without touching downstream wiring.
+# On any failure (no API key, network timeout, malformed response)
+# the function falls back to the rules interpreter and tags the
+# result with interpreter_strategy="llm_fallback_to_rules".
+#
+# Uses urllib.request from the stdlib so the workbench keeps zero
+# pip dependencies. The LLM call is fully bounded: 30s timeout,
+# narrow JSON schema, strict normalization.
+# ─────────────────────────────────────────────────────────────────
+
+MINIMAX_API_BASE = "https://api.minimaxi.com/v1"
+MINIMAX_DEFAULT_MODEL = "MiniMax-M2.7-highspeed"
+MINIMAX_REQUEST_TIMEOUT_SEC = 30.0
+
+
+def _resolve_minimax_api_key() -> str | None:
+    """Try several names for the MiniMax key in this order:
+      1. MINIMAX_API_KEY env (the canonical name from the user's
+         minimix.py wrapper)
+      2. Minimax_API_key env (the actual variable name in the user's
+         ~/.zshrc — preserve the exact case)
+      3. ~/.minimax_key file (the fallback the user's wrapper reads
+         when env is unset)
+    Returns the trimmed key or None if no source has it."""
+    for env_name in ("MINIMAX_API_KEY", "Minimax_API_key"):
+        value = os.environ.get(env_name)
+        if value and value.strip():
+            return value.strip()
+    fallback = Path(os.path.expanduser("~/.minimax_key"))
+    try:
+        if fallback.is_file():
+            text = fallback.read_text(encoding="utf-8").strip()
+            if text:
+                return text
+    except OSError:
+        pass
+    return None
+
+
+def _llm_interpret_prompt(text: str, system_id: str) -> str:
+    """Build the strict-JSON prompt the LLM must respond to. Naming
+    the schema fields explicitly + asking for JSON-only output keeps
+    the parse step trivial and the cost low."""
+    return (
+        "你是 AI FANTUI 控制逻辑工作台的解读助手。\n"
+        "工程师写下了对当前控制逻辑的修改建议；你的任务是把这段自然语言"
+        "解读为结构化 JSON，让工作台能在 SVG 面板上高亮命中的逻辑门，并请"
+        "工程师确认。\n\n"
+        f"当前系统 system_id: {system_id}\n"
+        "已知逻辑门 (thrust-reverser): L1, L2, L3, L4。"
+        "其它系统暂未接入 SVG，affected_gates 可返回 []。\n"
+        "已知信号: tls_115vac_cmd, etrac_540vdc_cmd, eec_deploy_cmd, "
+        "pls_power_cmd, pdu_motor_cmd, throttle_electronic_lock_release_cmd, "
+        "SW1, SW2, SW3, RA, TRA, n1k。\n"
+        "已知 change_kind 取值: tighten_condition, loosen_condition, "
+        "remove_condition, add_condition, modify_condition, tune_threshold, "
+        "propose_change。\n\n"
+        f'工程师的建议原文:\n"""{text}"""\n\n'
+        "请只输出 JSON（不要 markdown 围栏、不要解释），字段精确匹配下表:\n"
+        "{\n"
+        '  "affected_gates":   ["L1"|...],   // 命中的逻辑门 id 列表\n'
+        '  "target_signals":   ["SW1"|...],  // 命中的信号名列表\n'
+        '  "change_kind":      "tighten_condition"|...,\n'
+        '  "change_kind_zh":   "收紧判据"|...,\n'
+        '  "change_kind_en":   "tighten condition"|...,\n'
+        '  "confidence":       0.0..1.0,\n'
+        '  "summary_zh":       "中文一句话重述工程师的意图",\n'
+        '  "summary_en":       "English one-sentence restatement"\n'
+        "}\n"
+    )
+
+
+def _strip_json_fences(raw: str) -> str:
+    """LLMs sometimes wrap JSON in ```json ... ``` even when told not
+    to. Reasoning-style models (MiniMax-M2.7-highspeed) also emit a
+    `<think>...</think>` block BEFORE the answer. Strip both so the
+    JSON parser sees only the structured payload."""
+    text = raw.strip()
+    # Drop reasoning blocks. There can be more than one — peel each
+    # `<think>...</think>` pair greedily.
+    while True:
+        start = text.find("<think>")
+        if start < 0:
+            break
+        end = text.find("</think>", start)
+        if end < 0:
+            # Unterminated — drop everything from <think> onward as a
+            # last-ditch recovery, then bail out of the loop.
+            text = text[:start]
+            break
+        text = (text[:start] + text[end + len("</think>"):]).strip()
+    if text.startswith("```"):
+        # Drop opening fence (with optional language tag) + closing fence.
+        text = text.split("```", 1)[1]
+        if text.lstrip().lower().startswith("json"):
+            text = text.lstrip()[4:]
+        text = text.rsplit("```", 1)[0]
+    return text.strip()
+
+
+def _normalize_llm_interpretation(raw_dict: dict, source_text: str) -> dict:
+    """Coerce the LLM's response into the canonical schema +
+    enforce types. Missing fields fall back to safe defaults so
+    the UI never sees an undefined."""
+    def _str_list(value) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        return [str(item) for item in value if isinstance(item, (str, int))]
+    confidence = raw_dict.get("confidence", 0.5)
+    try:
+        confidence = max(0.0, min(1.0, float(confidence)))
+    except (TypeError, ValueError):
+        confidence = 0.5
+    return {
+        "affected_gates": _str_list(raw_dict.get("affected_gates")),
+        "target_signals": _str_list(raw_dict.get("target_signals")),
+        "change_kind": str(raw_dict.get("change_kind") or "propose_change"),
+        "change_kind_zh": str(raw_dict.get("change_kind_zh") or "提出建议"),
+        "change_kind_en": str(raw_dict.get("change_kind_en") or "propose change"),
+        "confidence": confidence,
+        "summary_zh": str(raw_dict.get("summary_zh") or ""),
+        "summary_en": str(raw_dict.get("summary_en") or ""),
+        "source_text": source_text,
+    }
+
+
+def _call_minimax_chat_completion(prompt: str, *, api_key: str, model: str) -> str:
+    """One-shot POST to MiniMax chat/completions. Returns the raw
+    assistant content string. Raises urllib.error.URLError or
+    ValueError on transport / parse failure — caller wraps both."""
+    import urllib.request as _urlreq
+    body = json.dumps(
+        {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.2,
+            # MiniMax-M2.7-highspeed is a reasoning model — its
+            # <think>...</think> block can eat ~500 tokens before it
+            # writes a single character of the answer. 4096 leaves
+            # comfortable headroom for both the reasoning and the
+            # ~200-token JSON payload.
+            "max_tokens": 4096,
+        }
+    ).encode("utf-8")
+    request = _urlreq.Request(
+        f"{MINIMAX_API_BASE}/chat/completions",
+        data=body,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    with _urlreq.urlopen(request, timeout=MINIMAX_REQUEST_TIMEOUT_SEC) as response:
+        raw = response.read().decode("utf-8")
+    parsed = json.loads(raw)
+    choices = parsed.get("choices") or []
+    if not choices:
+        raise ValueError("llm_response_missing_choices")
+    message = choices[0].get("message") or {}
+    content = message.get("content")
+    if not isinstance(content, str) or not content.strip():
+        raise ValueError("llm_response_missing_content")
+    return content
+
+
+def interpret_suggestion_text_llm(
+    text: str,
+    *,
+    system_id: str = "thrust-reverser",
+    model: str | None = None,
+) -> dict:
+    """LLM-backed counterpart to interpret_suggestion_text. Returns
+    the same canonical schema PLUS:
+      interpreter_strategy: "llm" | "llm_fallback_to_rules"
+      llm_model:            the model name actually used (when llm)
+      llm_error:            the failure reason (when fallback)
+    On any failure the rules interpreter is invoked so the engineer
+    always gets SOME interpretation."""
+    api_key = _resolve_minimax_api_key()
+    if not api_key:
+        fallback = interpret_suggestion_text(text)
+        fallback["interpreter_strategy"] = "llm_fallback_to_rules"
+        fallback["llm_error"] = "missing_api_key"
+        return fallback
+    chosen_model = model or MINIMAX_DEFAULT_MODEL
+    prompt = _llm_interpret_prompt(text, system_id)
+    try:
+        raw_content = _call_minimax_chat_completion(
+            prompt, api_key=api_key, model=chosen_model,
+        )
+        cleaned = _strip_json_fences(raw_content)
+        parsed = json.loads(cleaned)
+        if not isinstance(parsed, dict):
+            raise ValueError("llm_response_not_object")
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        # Catches urllib.error.URLError (subclass of OSError),
+        # timeouts, JSON parse errors, and our own ValueError raises.
+        fallback = interpret_suggestion_text(text)
+        fallback["interpreter_strategy"] = "llm_fallback_to_rules"
+        fallback["llm_error"] = type(exc).__name__ + ": " + str(exc)[:200]
+        return fallback
+    result = _normalize_llm_interpretation(parsed, source_text=text)
+    result["interpreter_strategy"] = "llm"
+    result["llm_model"] = chosen_model
+    return result
 
 
 # ─────────────────────────────────────────────────────────────────
