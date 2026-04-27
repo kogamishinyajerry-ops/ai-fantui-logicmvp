@@ -3737,3 +3737,188 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
 .workbench-live-log-line[data-level="error"] .workbench-live-log-msg {
   color: rgba(255, 140, 140, 1);
 }
+
+/* ─── P52-01: left tool dock + slide-in drawer ────────────────────
+   The dock is a fixed left-side strip of icon buttons. Each button
+   targets a `data-dock-section` value via body[data-active-tool].
+   Sections matching the active tool render as a slide-in drawer
+   over the canvas (the circuit hero stays underneath, visible when
+   the drawer closes). All other sections stay hidden in the DOM.
+
+   Layout choice: drawer is fixed-position (not in flow) so opening
+   it doesn't reflow the canvas. The user keeps their place on the
+   circuit panel, the drawer comes in from the left, they read /
+   click, then dismiss.
+   --------------------------------------------------------------- */
+:root {
+  --workbench-dock-width: 64px;
+  --workbench-drawer-width: 380px;
+}
+
+body {
+  /* Reserve dock space so the canvas content doesn't slide under it. */
+  padding-left: var(--workbench-dock-width);
+}
+
+.workbench-dock {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--workbench-dock-width);
+  background: rgba(8, 14, 22, 0.92);
+  border-right: 1px solid rgba(143, 214, 233, 0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+  padding: 0.6rem 0.4rem;
+  z-index: 50;
+  backdrop-filter: blur(12px);
+}
+
+.workbench-dock-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text-muted, #93a8b8);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.18rem;
+  padding: 0.5rem 0.2rem;
+  font: inherit;
+  transition:
+    color var(--duration-fast, 120ms) var(--ease-standard, ease),
+    background var(--duration-fast, 120ms) var(--ease-standard, ease),
+    border-color var(--duration-fast, 120ms) var(--ease-standard, ease);
+}
+.workbench-dock-btn:hover {
+  color: var(--text-main, #e6eef6);
+  background: rgba(103, 232, 249, 0.08);
+  border-color: rgba(103, 232, 249, 0.18);
+}
+.workbench-dock-btn:focus-visible {
+  outline: 2px solid var(--accent, #67e8f9);
+  outline-offset: 2px;
+}
+.workbench-dock-btn[aria-pressed="true"] {
+  color: var(--accent, #67e8f9);
+  background: rgba(103, 232, 249, 0.14);
+  border-color: rgba(103, 232, 249, 0.42);
+}
+.workbench-dock-btn-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+.workbench-dock-btn-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+}
+
+/* Tool drawer: every section that lives behind a dock button gets
+   .workbench-tool-drawer-section. Hidden by default (the `hidden`
+   attribute carries that). When a tool is active, its matching
+   section renders as a fixed left-side drawer over the canvas. */
+.workbench-tool-drawer-section {
+  /* No layout — `hidden` attribute keeps these out of flow until
+     a dock activation overrides it. */
+}
+body[data-active-tool="annotate"] [data-dock-section="annotate"],
+body[data-active-tool="approve"] [data-dock-section="approve"],
+body[data-active-tool="monitor"] [data-dock-section="monitor"],
+body[data-active-tool="new"] [data-dock-section="new"] {
+  display: block;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: var(--workbench-dock-width);
+  width: var(--workbench-drawer-width);
+  max-width: calc(100vw - var(--workbench-dock-width));
+  z-index: 40;
+  overflow-y: auto;
+  background: rgba(11, 18, 26, 0.96);
+  border-right: 1px solid rgba(143, 214, 233, 0.22);
+  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.45);
+  padding: 0.85rem 0.95rem 1.4rem;
+  /* Override the `hidden` attribute that would otherwise keep them
+     display:none; the attribute selector loses to higher-specificity
+     rules but `display:block` here is explicit anyway. */
+  visibility: visible;
+}
+/* Tame the older sections' margins so they don't push past the
+   drawer's intrinsic padding when reused. */
+body[data-active-tool] [data-dock-section][hidden] {
+  display: block;
+}
+
+/* Drawer header (re-usable across all tool sections) */
+.workbench-tool-drawer-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0 0 0.7rem 0;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid rgba(143, 214, 233, 0.18);
+}
+.workbench-tool-drawer-header .eyebrow {
+  margin: 0;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted, #93a8b8);
+}
+.workbench-tool-drawer-header h2,
+.workbench-tool-drawer-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  flex: 1;
+}
+.workbench-tool-drawer-close {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-muted, #93a8b8);
+  cursor: pointer;
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0.1rem 0.45rem;
+  margin-left: auto;
+  transition:
+    color var(--duration-fast, 120ms),
+    background var(--duration-fast, 120ms);
+}
+.workbench-tool-drawer-close:hover {
+  color: var(--text-main, #e6eef6);
+  background: rgba(255, 255, 255, 0.06);
+}
+.workbench-tool-drawer-empty {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted, #93a8b8);
+  line-height: 1.55;
+}
+
+/* Override P51-02's fixed-bottom positioning since live-log now
+   lives inside the monitor drawer. The .workbench-live-log-panel
+   block earlier in this file pinned position:fixed bottom:0; we
+   neutralize that when the drawer is the host. */
+body[data-active-tool] section.workbench-live-log-panel.workbench-tool-drawer-section {
+  position: fixed;  /* re-apply explicitly so the rule above wins */
+  border-top: none;
+}
+section.workbench-live-log-panel .workbench-live-log-body {
+  max-height: none;
+}
+section.workbench-live-log-panel .workbench-live-log-stream {
+  height: calc(100vh - 8rem);
+}
+
+/* When NO tool is active, hide the dock-section sections regardless
+   of the rules above — `hidden` attribute is the source of truth.
+   This is just for safety: the body[data-active-tool=""] selector
+   doesn't match any of the `body[data-active-tool="X"]` rules. */

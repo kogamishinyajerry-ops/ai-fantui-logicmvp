@@ -10,8 +10,79 @@
     <link rel="stylesheet" href="/demo.css">
     <link rel="stylesheet" href="/workbench.css">
   </head>
-  <body data-view="beginner" data-review-mode="off">
+  <body data-view="beginner" data-review-mode="off" data-active-tool="">
+    <!-- P52-01 (2026-04-27): left-side tool dock. Fixed position so
+         it stays visible regardless of canvas scroll. Click an icon
+         to set body[data-active-tool], which CSS uses to slide in
+         the matching tool drawer over the canvas. The circuit hero
+         in the canvas stays visible behind the drawer; close the
+         drawer (click the active icon again) to see the full
+         canvas. -->
+    <nav id="workbench-dock" class="workbench-dock" aria-label="Workbench tool dock">
+      <button
+        type="button"
+        class="workbench-dock-btn"
+        data-dock-target="new"
+        title="新建逻辑控制电路 · Create new control circuit"
+        aria-pressed="false"
+      >
+        <span class="workbench-dock-btn-icon" aria-hidden="true">🆕</span>
+        <span class="workbench-dock-btn-label">新建</span>
+      </button>
+      <button
+        type="button"
+        class="workbench-dock-btn"
+        data-dock-target="annotate"
+        title="批注 · Annotate / submit a change proposal"
+        aria-pressed="false"
+      >
+        <span class="workbench-dock-btn-icon" aria-hidden="true">✏️</span>
+        <span class="workbench-dock-btn-label">批注</span>
+      </button>
+      <button
+        type="button"
+        class="workbench-dock-btn"
+        data-dock-target="approve"
+        title="审批 · Approval center / governance review"
+        aria-pressed="false"
+      >
+        <span class="workbench-dock-btn-icon" aria-hidden="true">✅</span>
+        <span class="workbench-dock-btn-label">审批</span>
+      </button>
+      <button
+        type="button"
+        class="workbench-dock-btn"
+        data-dock-target="monitor"
+        title="监控 · Live log + plan timeline"
+        aria-pressed="false"
+      >
+        <span class="workbench-dock-btn-icon" aria-hidden="true">📊</span>
+        <span class="workbench-dock-btn-label">监控</span>
+      </button>
+    </nav>
     <main class="shell workbench-shell">
+      <!-- P52-01: placeholder drawer for the "new circuit" tool.
+           Real creation flow comes in a later slice; for now this
+           is just an empty stub so the dock button has somewhere
+           to land. -->
+      <section
+        id="workbench-tool-new"
+        class="workbench-tool-drawer-section"
+        data-dock-section="new"
+        aria-labelledby="workbench-tool-new-title"
+        hidden
+      >
+        <header class="workbench-tool-drawer-header">
+          <p class="eyebrow">new control circuit</p>
+          <h2 id="workbench-tool-new-title">新建逻辑控制电路 · Coming soon</h2>
+          <button type="button" class="workbench-tool-drawer-close" data-dock-close>×</button>
+        </header>
+        <p class="workbench-tool-drawer-empty">
+          新逻辑创建流程正在开发中。届时这里会引导你从空白模板或既有面板派生新的真值引擎。
+          New-circuit creation is in development; this drawer will eventually let you
+          derive a fresh circuit from a template or an existing panel.
+        </p>
+      </section>
       <!-- P44-02 (2026-04-26): topbar compressed to a single thin row so
            the control-logic circuit hero fits in the first viewport. The
            h1 stays (single page-title source of truth) but rendered at a
@@ -248,8 +319,10 @@
            matches intent, then submits the ticket. -->
       <section
         id="workbench-suggestion-flow"
-        class="workbench-suggestion-flow"
+        class="workbench-suggestion-flow workbench-tool-drawer-section"
         aria-labelledby="workbench-suggestion-flow-title"
+        data-dock-section="annotate"
+        hidden
       >
         <header class="workbench-suggestion-flow-header">
           <h2 id="workbench-suggestion-flow-title">提交修改建议 · Submit Change Proposal</h2>
@@ -379,7 +452,13 @@
            below. The static "暂无已提交提案" placeholder is the
            empty-state fallback rendered when GET /api/proposals returns
            an empty list. -->
-      <aside id="annotation-inbox" class="workbench-annotation-inbox" aria-label="Annotation Inbox">
+      <aside
+        id="annotation-inbox"
+        class="workbench-annotation-inbox workbench-tool-drawer-section"
+        aria-label="Annotation Inbox"
+        data-dock-section="approve"
+        hidden
+      >
         <header>
           <p class="eyebrow">已提交工单</p>
           <h2>审核队列 · Review Queue</h2>
@@ -539,7 +618,13 @@
         </ul>
       </aside>
 
-      <footer id="workbench-bottom-bar" class="workbench-collab-bottom-bar" aria-label="Workbench actions">
+      <footer
+        id="workbench-bottom-bar"
+        class="workbench-collab-bottom-bar workbench-tool-drawer-section"
+        aria-label="Workbench actions"
+        data-dock-section="approve"
+        hidden
+      >
         <button
           id="approval-center-entry"
           type="button"
@@ -554,10 +639,12 @@
 
       <section
         id="workbench-pending-signoff-affordance"
-        class="workbench-pending-signoff"
+        class="workbench-pending-signoff workbench-tool-drawer-section"
         role="status"
         aria-live="polite"
         data-pending-signoff="hidden"
+        data-dock-section="approve"
+        hidden
       >
         <span class="workbench-pending-signoff-icon" aria-hidden="true">🛈</span>
         <div class="workbench-pending-signoff-body">
@@ -572,9 +659,11 @@
 
       <section
         id="approval-center-panel"
-        class="workbench-approval-center"
+        class="workbench-approval-center workbench-tool-drawer-section"
         data-approval-role="KOGAMI"
         aria-labelledby="approval-center-title"
+        data-dock-section="approve"
+        hidden
       >
         <header>
           <p class="eyebrow">审批中心</p>
@@ -612,16 +701,26 @@
          the latest line; collapsible to keep the panel out of the
          way when not needed. Pinned to the bottom of viewport via
          CSS so it doesn't push the inbox content. -->
-    <details id="workbench-live-log-panel" class="workbench-live-log-panel">
-      <summary class="workbench-live-log-summary">
-        <span class="workbench-live-log-eyebrow">live log</span>
+    <!-- P52-01 (2026-04-27): live log panel migrated into the
+         "monitor" dock drawer. Was fixed-bottom in P51-02; now it's
+         a tool-drawer section like every other panel so it doesn't
+         eat viewport when no one's watching. -->
+    <section
+      id="workbench-live-log-panel"
+      class="workbench-live-log-panel workbench-tool-drawer-section"
+      data-dock-section="monitor"
+      hidden
+    >
+      <header class="workbench-tool-drawer-header">
+        <p class="eyebrow">live log</p>
+        <h2>实时日志 · Live Log</h2>
         <span id="workbench-live-log-status" class="workbench-live-log-status">disconnected</span>
-        <span class="workbench-live-log-tail">▾</span>
-      </summary>
+        <button type="button" class="workbench-tool-drawer-close" data-dock-close>×</button>
+      </header>
       <div class="workbench-live-log-body">
         <pre id="workbench-live-log-stream" class="workbench-live-log-stream" aria-live="polite"></pre>
       </div>
-    </details>
+    </section>
     <script src="/workbench.js"></script>
   </body>
 </html>
