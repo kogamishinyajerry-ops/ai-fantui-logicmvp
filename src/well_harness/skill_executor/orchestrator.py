@@ -312,7 +312,9 @@ def execute_proposal(
         # full audit shows what would have shipped. skip_push is
         # the test-only escape hatch for "don't actually push".
         try:
-            branch_name = _branch_name_for(proposal_id, record.exec_id)
+            branch_name = _branch_name_for(
+                proposal_id, record.exec_id, kind=record.kind,
+            )
             create_branch(
                 repo_root=repo_root,
                 branch_name=branch_name,
@@ -509,12 +511,19 @@ def _planner_failure_plan(exc: Exception) -> PlannedChange:
     )
 
 
-def _branch_name_for(proposal_id: str, exec_id: str) -> str:
-    """`feat/exec-PROP-XXX-{6char}` — short suffix from exec_id
-    keeps the branch name compact while keeping it unique even if
-    the same proposal is executed twice."""
+def _branch_name_for(
+    proposal_id: str,
+    exec_id: str,
+    *,
+    kind: ExecutionKind = ExecutionKind.MODIFY,
+) -> str:
+    """`feat/exec-PROP-XXX-{6char}` for modify, `revert/exec-...`
+    for revert. Short suffix from exec_id keeps the branch name
+    compact while still unique if the same proposal runs twice.
+    """
     short = exec_id.split("-")[-1]
-    return f"feat/exec-{proposal_id}-{short}"
+    prefix = "revert" if kind == ExecutionKind.REVERT else "feat"
+    return f"{prefix}/exec-{proposal_id}-{short}"
 
 
 def _build_commit_message(
@@ -547,10 +556,23 @@ def _build_commit_message(
 
 
 def _pr_title_for(proposal: dict, plan: PlannedChange) -> str:
+    """`feat(...)` for modify, `revert(...)` for revert. Bound to
+    70 chars so the GitHub PR list view doesn't truncate."""
     interp = proposal.get("interpretation") or {}
     change_kind = interp.get("change_kind") or proposal.get("kind") or "modify"
+    is_revert = (proposal.get("kind") or "modify") == "revert"
+    prefix = "revert" if is_revert else "feat"
+    if is_revert:
+        # For reverts the change_kind is "revert"; surface the
+        # original target SHA in the title so reviewers see what's
+        # being undone without opening the PR body.
+        target_sha = (proposal.get("revert_target_sha") or "?")[:8]
+        return (
+            f"{prefix}({proposal.get('system_id', 'thrust-reverser')}): "
+            f"undo {target_sha} per {proposal['id']}"
+        )[:70]
     return (
-        f"feat({proposal.get('system_id', 'thrust-reverser')}): "
+        f"{prefix}({proposal.get('system_id', 'thrust-reverser')}): "
         f"{change_kind} per {proposal['id']}"
     )[:70]
 
