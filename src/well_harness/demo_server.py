@@ -87,6 +87,11 @@ WORKBENCH_CIRCUIT_FRAGMENT_PATH = "/api/workbench/circuit-fragment"
 # from the in-memory log_stream ring buffer (last 500 entries) so a
 # demo observer sees the executor's activity in real time.
 WORKBENCH_LOG_STREAM_PATH = "/api/workbench/log-stream"
+# P51-03 (2026-04-27): persistent governance decision history.
+# Returns newest-first list of decisions across all executions so the
+# workbench can render a single audit table instead of rescanning
+# per-exec audit JSONs.
+WORKBENCH_GOVERNANCE_HISTORY_PATH = "/api/workbench/governance/history"
 
 # P45-01 (2026-04-26): map system_id → circuit source file under
 # STATIC_DIR. Systems present in the workbench dropdown but missing
@@ -312,6 +317,9 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == WORKBENCH_LOG_STREAM_PATH:
             self._serve_log_stream(parsed)
+            return
+        if parsed.path == WORKBENCH_GOVERNANCE_HISTORY_PATH:
+            self._serve_governance_history(parsed)
             return
         if parsed.path == SYSTEM_SNAPSHOT_PATH:
             system_id = parsed.query.split("system_id=")[1].split("&")[0] if "system_id=" in parsed.query else "thrust-reverser"
@@ -827,6 +835,31 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"error": str(exc)})
         except Exception as exc:
             self._send_json(500, {"error": str(exc)})
+
+    def _serve_governance_history(self, parsed):
+        """P51-03: GET /api/workbench/governance/history[?limit=N].
+        Returns newest-first decision history persisted to disk by
+        the orchestrator's governance gate. Survives restarts so a
+        reviewer landing on the dashboard sees the full backlog,
+        not just decisions from the current process lifetime."""
+        from urllib.parse import parse_qs
+
+        from well_harness.skill_executor.governance_history import (
+            read_history,
+        )
+
+        qs = parse_qs(parsed.query)
+        try:
+            limit_raw = qs.get("limit", [None])[0]
+            limit = int(limit_raw) if limit_raw is not None else None
+        except (TypeError, ValueError):
+            limit = None
+
+        entries = read_history(limit=limit)
+        self._send_json(
+            200,
+            {"decisions": [e.to_json() for e in entries]},
+        )
 
     def _serve_log_stream(self, parsed):
         """P51-02: Server-Sent Events stream of the workbench log

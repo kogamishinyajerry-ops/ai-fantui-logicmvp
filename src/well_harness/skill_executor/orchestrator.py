@@ -750,6 +750,7 @@ def _run_governance_gate(
         )
         _transition(record, "governance_approved", audit_dir)
         _persist(record, audit_dir)
+        _record_governance_history(record, review_payload, verdict)
         return "approved"
 
     # Polling loop
@@ -769,6 +770,7 @@ def _run_governance_gate(
             review_payload["decided_by"] = info["actor"]
             review_payload["decision_note"] = info.get("note", "")
             _abort_with_cancel(record, audit_dir, cancel_exc, applied=None)
+            _record_governance_history(record, review_payload, verdict)
             return "cancelled"
 
         result = poller(audit_dir=audit_dir, exec_id=record.exec_id)
@@ -789,6 +791,7 @@ def _run_governance_gate(
                 )
                 _transition(record, "governance_approved", audit_dir)
                 _persist(record, audit_dir)
+                _record_governance_history(record, review_payload, verdict)
                 return "approved"
             # rejected
             review_payload["decision"] = "rejected"
@@ -807,6 +810,7 @@ def _run_governance_gate(
             )
             _transition(record, "governance_rejected", audit_dir)
             _finish(record, audit_dir)
+            _record_governance_history(record, review_payload, verdict)
             return "rejected"
 
         if time.monotonic() >= deadline:
@@ -821,6 +825,7 @@ def _run_governance_gate(
             )
             _transition(record, "user_abort", audit_dir)
             _finish(record, audit_dir)
+            _record_governance_history(record, review_payload, verdict)
             return "timeout"
 
         sleep_fn(poll_interval_sec)
@@ -830,6 +835,36 @@ def _default_governance_poll(*, audit_dir: Path, exec_id: str):
     return read_and_clear_governance(
         audit_dir=audit_dir, exec_id=exec_id,
     )
+
+
+def _record_governance_history(
+    record: ExecutionRecord, review_payload: dict, verdict: Any,
+) -> None:
+    """P51-03: persist the finalized governance decision so the
+    workbench /governance/history endpoint can show a cross-exec
+    decision log without rescanning all per-exec audits. Best-
+    effort — IO failure here MUST NOT break the executor since
+    audit JSON is the canonical record."""
+    try:
+        from well_harness.skill_executor.governance_history import (
+            record_decision,
+        )
+        verdict_dict = (
+            verdict.to_json() if hasattr(verdict, "to_json")
+            else dict(review_payload)
+        )
+        record_decision(
+            exec_id=record.exec_id,
+            proposal_id=record.proposal_id,
+            decision=str(review_payload.get("decision") or ""),
+            decided_at=str(review_payload.get("decided_at") or ""),
+            decided_by=str(review_payload.get("decided_by") or ""),
+            decision_note=str(review_payload.get("decision_note") or ""),
+            verdict=verdict_dict,
+        )
+    except Exception:  # noqa: BLE001
+        # Persistence is supplementary; never fail the run on it.
+        pass
 
 
 def _capture_dry_run_diff(*, repo_root: Path, git_runner: Any) -> str:
