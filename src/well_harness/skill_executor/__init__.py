@@ -38,6 +38,13 @@ Subsequent phases (NOT in P48-01):
     P48-07: revert flow protocol
 """
 
+from well_harness.skill_executor.applier import (
+    AppliedEdit,
+    ApplyError,
+    ApplyResult,
+    apply_edits,
+    revert_edits,
+)
 from well_harness.skill_executor.audit import (
     AUDIT_DIR_NAME,
     audit_dir,
@@ -50,6 +57,15 @@ from well_harness.skill_executor.errors import (
     AuditSchemaError,
     InvalidExecutionTransitionError,
     SkillExecutorError,
+)
+from well_harness.skill_executor.gate import (
+    GateResult,
+    check_test_gate,
+)
+from well_harness.skill_executor.test_runner import (
+    TestRunnerError,
+    parse_pytest_output,
+    run_tests,
 )
 from well_harness.skill_executor.llm_client import (
     LLMResponse,
@@ -96,6 +112,9 @@ __all__ = [
     "AUDIT_DIR_NAME",
     "AUDIT_SCHEMA_VERSION",
     "ALLOWED_TRANSITIONS",
+    "AppliedEdit",
+    "ApplyError",
+    "ApplyResult",
     "Ask",
     "AskResponse",
     "AuditSchemaError",
@@ -104,6 +123,7 @@ __all__ = [
     "ExecutionRecord",
     "ExecutionState",
     "FileEdit",
+    "GateResult",
     "InvalidExecutionTransitionError",
     "LLMResponse",
     "LLMResponseError",
@@ -118,16 +138,22 @@ __all__ = [
     "SkillExecutorError",
     "TERMINAL_STATES",
     "TestResult",
+    "TestRunnerError",
+    "apply_edits",
     "audit_dir",
     "call_minimax",
+    "check_test_gate",
     "is_terminal",
     "list_audits",
     "namespace_for_path",
     "new_execution_id",
     "next_state",
+    "parse_pytest_output",
     "plan_from_brief",
     "read_audit",
     "resolve_minimax_api_key",
+    "revert_edits",
+    "run_tests",
     "strip_json_fences",
     "validate_edit_path",
     "write_audit",
