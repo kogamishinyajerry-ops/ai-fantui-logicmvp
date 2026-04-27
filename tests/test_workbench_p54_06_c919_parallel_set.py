@@ -98,7 +98,12 @@ def test_toggle_pinned_top_right_via_fixed_or_absolute():
             "workbench-spec-panel",
             "spec",
             "/workbench_spec.html",
-            "/c919_requirements.html?embed=1",
+            # P54-08: C919 spec view repointed from the legacy
+            # /c919_requirements.html (text-heavy, original style)
+            # to /workbench_c919_spec.html (workbench-native rebuild
+            # with KPIs / state-flow / cards / matrix), parallel to
+            # how thrust-reverser uses /workbench_spec.html.
+            "/workbench_c919_spec.html",
         ),
     ],
 )

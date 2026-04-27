@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C919 E-TRAS 需求文档 · C919 E-TRAS Requirements</title>
+<style>
+:root {
+  --bg: #050914;
+  --bg-card: rgba(255, 255, 255, 0.03);
+  --bg-card-hover: rgba(255, 255, 255, 0.05);
+  --hairline: rgba(255, 255, 255, 0.08);
+  --accent: #67e8f9;
+  --text-main: #edf8ff;
+  --text-muted: #93a8b8;
+  --critical: #f87171;
+  --architecture: #60a5fa;
+  --state: #fbbf24;
+  --functional: #4ade80;
+  --safe: #00e5a0;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+               "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+.spec-shell {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 1.6rem 1.75rem 3rem;
+}
+
+.spec-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  padding-bottom: 1rem;
+  margin-bottom: 1.6rem;
+  border-bottom: 1px solid var(--hairline);
+}
+.spec-eyebrow {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin: 0;
+}
+.spec-h1 {
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  margin: 0;
+  color: var(--text-main);
+}
+.spec-tag {
+  margin-left: auto;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  color: var(--text-muted);
+  background: var(--bg-card);
+}
+
+.spec-overview {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 1.4rem;
+  margin-bottom: 1.6rem;
+  align-items: start;
+}
+.spec-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.7rem;
+}
+.spec-kpi {
+  background: var(--bg-card);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+}
+.spec-kpi-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+}
+.spec-kpi-value {
+  font-size: 1.55rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  color: var(--text-main);
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+.spec-kpi-unit {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.spec-donut-card {
+  background: var(--bg-card);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.spec-donut-card-eyebrow {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin: 0 0 0.2rem;
+}
+.spec-donut {
+  width: 130px;
+  height: 130px;
+  position: relative;
+}
+.spec-donut svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.spec-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.spec-donut-pct {
+  font-size: 1.4rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-main);
+}
+.spec-donut-sub {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.spec-donut-legend {
+  display: flex;
+  gap: 0.85rem;
+  margin-top: 0.2rem;
+  font-size: 0.7rem;
+}
+.spec-donut-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+}
+.spec-donut-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.spec-section-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  margin: 1.6rem 0 0.85rem;
+  color: var(--text-main);
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+.spec-section-title::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  background: var(--accent);
+  border-radius: 2px;
+  opacity: 0.6;
+}
+.spec-section-hint {
+  margin-left: 0.4rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.spec-req-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.7rem;
+}
+.spec-req-card {
+  background: var(--bg-card);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  transition: background 168ms cubic-bezier(0.32, 0.72, 0, 1),
+              border-color 168ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.spec-req-card:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(143, 214, 233, 0.2);
+}
+.spec-req-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+  flex-wrap: wrap;
+}
+.spec-req-id {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+.spec-req-id[data-kind="ar"] {
+  color: var(--architecture);
+  background: rgba(96, 165, 250, 0.1);
+}
+.spec-req-id[data-kind="sm"] {
+  color: var(--state);
+  background: rgba(251, 191, 36, 0.1);
+}
+.spec-req-id[data-kind="fr"] {
+  color: var(--functional);
+  background: rgba(74, 222, 128, 0.1);
+}
+.spec-req-id[data-kind="sr"] {
+  color: var(--critical);
+  background: rgba(248, 113, 113, 0.1);
+}
+.spec-req-title {
+  font-size: 0.83rem;
+  font-weight: 500;
+  color: var(--text-main);
+}
+.spec-req-trace {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 0.2rem;
+}
+.spec-req-trace-pill {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.62rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+}
+.spec-req-body {
+  font-size: 0.76rem;
+  line-height: 1.55;
+  color: rgba(237, 248, 255, 0.85);
+  margin: 0;
+}
+.spec-req-meta {
+  margin-top: 0.45rem;
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+/* C919-specific: state-machine flow strip */
+.spec-state-flow {
+  background: var(--bg-card);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+}
+.spec-state-track {
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+  min-width: max-content;
+}
+.spec-state-node {
+  flex-shrink: 0;
+  min-width: 78px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 0.5rem 0.5rem;
+  text-align: center;
+  position: relative;
+}
+.spec-state-node[data-kind="initial"] {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+.spec-state-node[data-kind="active"] {
+  border-color: rgba(96, 165, 250, 0.45);
+  background: rgba(96, 165, 250, 0.06);
+}
+.spec-state-node[data-kind="stow"] {
+  border-color: rgba(0, 229, 160, 0.4);
+  background: rgba(0, 229, 160, 0.05);
+}
+.spec-state-node[data-kind="fault"] {
+  border-color: rgba(248, 113, 113, 0.45);
+  background: rgba(248, 113, 113, 0.06);
+}
+.spec-state-code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: 0.02em;
+}
+.spec-state-node[data-kind="active"] .spec-state-code { color: var(--architecture); }
+.spec-state-node[data-kind="stow"] .spec-state-code { color: var(--safe); }
+.spec-state-node[data-kind="fault"] .spec-state-code { color: var(--critical); }
+.spec-state-label {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+  white-space: nowrap;
+}
+.spec-state-arrow {
+  align-self: center;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  user-select: none;
+}
+.spec-state-fault-attach {
+  position: relative;
+  padding-left: 0.7rem;
+}
+.spec-state-fault-attach::before {
+  content: '✕';
+  position: absolute;
+  left: -0.1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--critical);
+  font-size: 0.7rem;
+}
+
+/* Diff-vs-FANTUI compact comparison */
+.spec-compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.7rem;
+}
+.spec-compare-card {
+  background: var(--bg-card);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+}
+.spec-compare-key {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 0.45rem;
+}
+.spec-compare-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  font-size: 0.74rem;
+}
+.spec-compare-side {
+  padding: 0.4rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--hairline);
+}
+.spec-compare-side-label {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+.spec-compare-side[data-side="fantui"] .spec-compare-side-label { color: var(--accent); }
+.spec-compare-side[data-side="c919"] .spec-compare-side-label { color: var(--architecture); }
+
+/* Traceability: state → output matrix (compact) */
+.spec-matrix-card {
+  background: var(--bg-card);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+}
+.spec-matrix {
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  width: 100%;
+}
+.spec-matrix th, .spec-matrix td {
+  padding: 0.4rem 0.55rem;
+  text-align: center;
+  border-bottom: 1px solid var(--hairline);
+}
+.spec-matrix thead th {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.66rem;
+  font-weight: 500;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.025);
+}
+.spec-matrix tbody th {
+  text-align: left;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+.spec-matrix-cell-on {
+  color: var(--accent);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+.spec-matrix-cell-off {
+  color: rgba(255, 255, 255, 0.12);
+}
+.spec-matrix-row-label {
+  text-align: left !important;
+  padding-right: 0.85rem !important;
+  color: var(--text-main) !important;
+}
+
+.spec-footer-note {
+  margin: 1.8rem 0 0;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* P54-08: nav-hide guard so the page renders cleanly when iframed
+   into the workbench (matches fan_console.html / demo.html). The
+   page has no unified-nav of its own, but keeping the hook in place
+   makes the embed contract uniform across all 4 surfaces. */
+html.is-iframe-embed .unified-nav { display: none !important; }
+html.is-iframe-embed body.unified-nav-enabled { padding-top: 0 !important; }
+</style>
+<script>
+  (function () {
+    try {
+      var isEmbedded = window.self !== window.top
+        || /[?&]embed=1\b/.test(window.location.search);
+      if (isEmbedded) document.documentElement.classList.add('is-iframe-embed');
+    } catch (e) { document.documentElement.classList.add('is-iframe-embed'); }
+  })();
+</script>
+</head>
+<body>
+<main class="spec-shell">
+
+  <!-- ── Header strip ──────────────────────────────────────── -->
+  <header class="spec-header">
+    <p class="spec-eyebrow">requirements</p>
+    <h1 class="spec-h1">C919 E-TRAS 需求文档 · C919 E-TRAS Requirements</h1>
+    <span class="spec-tag">C919-ETRAS-REQ-V0.9</span>
+  </header>
+
+  <!-- ── Summary KPIs + coverage donut ─────────────────────── -->
+  <section class="spec-overview" aria-label="需求总览 · Overview">
+    <div class="spec-kpis">
+      <article class="spec-kpi">
+        <div class="spec-kpi-label">运行状态 · States</div>
+        <div class="spec-kpi-value">11 <span class="spec-kpi-unit">+ 1 fault</span></div>
+      </article>
+      <article class="spec-kpi">
+        <div class="spec-kpi-label">需求总数 · Total</div>
+        <div class="spec-kpi-value">15 <span class="spec-kpi-unit">items</span></div>
+      </article>
+      <article class="spec-kpi">
+        <div class="spec-kpi-label">追溯输出 · Outputs</div>
+        <div class="spec-kpi-value">5 <span class="spec-kpi-unit">cmds</span></div>
+      </article>
+    </div>
+    <article class="spec-donut-card" aria-label="覆盖率 · Coverage">
+      <p class="spec-donut-card-eyebrow">追溯覆盖 · trace coverage</p>
+      <div class="spec-donut">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
+          <!-- 100% complete arc, dasharray 2*pi*40 ≈ 251.3 -->
+          <circle cx="50" cy="50" r="40" fill="none" stroke="var(--accent)" stroke-width="10"
+                  stroke-dasharray="251.3" stroke-dashoffset="0" stroke-linecap="round"/>
+        </svg>
+        <div class="spec-donut-center">
+          <span class="spec-donut-pct">100%</span>
+          <span class="spec-donut-sub">covered</span>
+        </div>
+      </div>
+      <div class="spec-donut-legend">
+        <span class="spec-donut-legend-item">
+          <span class="spec-donut-legend-dot" style="background: var(--accent)"></span>已追溯
+        </span>
+        <span class="spec-donut-legend-item">
+          <span class="spec-donut-legend-dot" style="background: rgba(255,255,255,0.06)"></span>缺口
+        </span>
+      </div>
+    </article>
+  </section>
+
+  <!-- ── State-machine flow ────────────────────────────────── -->
+  <h2 class="spec-section-title">
+    状态机流程 · State machine
+    <span class="spec-section-hint">S0 → S6 展开 · S7 → S0 收起 · SF 全局故障</span>
+  </h2>
+  <div class="spec-state-flow" aria-label="state machine flow">
+    <div class="spec-state-track">
+      <div class="spec-state-node" data-kind="initial">
+        <div class="spec-state-code">S0</div>
+        <div class="spec-state-label">空中收起</div>
+      </div>
+      <span class="spec-state-arrow">→</span>
+      <div class="spec-state-node" data-kind="active">
+        <div class="spec-state-code">S1</div>
+        <div class="spec-state-label">地面装备</div>
+      </div>
+      <span class="spec-state-arrow">→</span>
+      <div class="spec-state-node" data-kind="active">
+        <div class="spec-state-code">S2</div>
+        <div class="spec-state-label">单相解锁</div>
+      </div>
+      <span class="spec-state-arrow">→</span>
+      <div class="spec-state-node" data-kind="active">
+        <div class="spec-state-code">S3</div>
+        <div class="spec-state-label">三相作动</div>
+      </div>
+      <span class="spec-state-arrow">→</span>
+      <div class="spec-state-node" data-kind="active">
+        <div class="spec-state-code">S4</div>
+        <div class="spec-state-label">展开中</div>
+      </div>
+      <span class="spec-state-arrow">→</span>
+      <div class="spec-state-node" data-kind="active">
+        <div class="spec-state-code">S5</div>
+        <div class="spec-state-label">慢车反推</div>
+      </div>
+      <span class="spec-state-arrow">→</span>
+      <div class="spec-state-node" data-kind="active">
+        <div class="spec-state-code">S6</div>
+        <div class="spec-state-label">最大反推</div>
+      </div>
+      <span class="spec-state-arrow">↓</span>
+      <div class="spec-state-node" data-kind="stow">
+        <div class="spec-state-code">S7</div>
+        <div class="spec-state-label">减速待收</div>
+      </div>
+      <span class="spec-state-arrow">→</span>
+      <div class="spec-state-node" data-kind="stow">
+        <div class="spec-state-code">S8</div>
+        <div class="spec-state-label">收起中</div>
+      </div>
+      <span class="spec-state-arrow">→</span>
+      <div class="spec-state-node" data-kind="stow">
+        <div class="spec-state-code">S9</div>
+        <div class="spec-state-label">锁止确认</div>
+      </div>
+      <span class="spec-state-arrow">→</span>
+      <div class="spec-state-node" data-kind="stow">
+        <div class="spec-state-code">S10</div>
+        <div class="spec-state-label">断电完成</div>
+      </div>
+      <span class="spec-state-arrow">→ S0</span>
+      <div class="spec-state-node spec-state-fault-attach" data-kind="fault">
+        <div class="spec-state-code">SF</div>
+        <div class="spec-state-label">故障中止</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Architecture requirements (AR) ────────────────────── -->
+  <h2 class="spec-section-title">
+    架构需求 · Architecture
+    <span class="spec-section-hint">AR-01 → AR-03 · 共 3 条</span>
+  </h2>
+  <div class="spec-req-grid">
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="ar">AR-01</span>
+        <span class="spec-req-title">电气总线双路供电</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">115VAC</span>
+          <span class="spec-req-trace-pill">540VDC</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        系统区分 115VAC 单相（TLS / PLS 解锁）与 540VDC 三相（TRCU / PDU 驱动），两路总线独立控制，不得混用。
+      </p>
+      <div class="spec-req-meta">来源: C919 电气架构规范 §4.2</div>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="ar">AR-02</span>
+        <span class="spec-req-title">EICU 双通道冗余</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">CMD1</span>
+          <span class="spec-req-trace-pill">CMD2</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        EICU 两个控制通道独立评估条件，任一通道健康且条件满足即发命令；双通道同时失效进入 SF 故障状态。
+      </p>
+      <div class="spec-req-meta">DO-178C DAL-A · LGCU1_WOW / LGCU2_WOW 双通道</div>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="ar">AR-03</span>
+        <span class="spec-req-title">FADEC 命令接口</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">FADEC</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        控制逻辑不直接驱动 PDU，而是发出 FADEC_Deploy_Command / FADEC_Stow_Command，由 FADEC 执行并回送确认。
+      </p>
+      <div class="spec-req-meta">ICD-FADEC-TR-002</div>
+    </article>
+  </div>
+
+  <!-- ── State-machine requirements (SM) ───────────────────── -->
+  <h2 class="spec-section-title">
+    状态转移需求 · State transitions
+    <span class="spec-section-hint">SM-01 → SM-07 · 全局故障 SM-SF</span>
+  </h2>
+  <div class="spec-req-grid">
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="sm">SM-01</span>
+        <span class="spec-req-title">S0 → S1 地面装备</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">S1</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        Selected_MLG_WOW = True ∧ engine_running = True，进入"地面装备"等待飞行员拉杆。
+      </p>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="sm">SM-02</span>
+        <span class="spec-req-title">S1 → S2 单相解锁供电</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">S2</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        SW1 激活 (TRA ∈ -6.2°~-1.4°) ∧ LGCU WOW ∧ engine_running → SinglePhaseUnlockPower_On。
+      </p>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="sm">SM-03</span>
+        <span class="spec-req-title">S2 → S3 三相作动供电</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">S3</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        TLS_Unlocked ∧ PLS_L_Unlocked ∧ SW2 激活 (TRA ≤ -5.0°) → ThreePhaseTRCUPower_On (540VDC)。
+      </p>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="sm">SM-04</span>
+        <span class="spec-req-title">S3 → S4 展开中</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">S4</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        FADEC_Deploy_Command 已发 ∧ Unlock_Confirmed → FADEC 驱动 PDU，TR_Position 上升。
+      </p>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="sm">SM-05</span>
+        <span class="spec-req-title">S4 → S5/S6 反推出力</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">S5</span>
+          <span class="spec-req-trace-pill">S6</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        TR_Position ≥ 90% (VDT90) → S5 慢车；继续拉杆 TRA ≤ -28° → S6 最大反推。
+      </p>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="sm">SM-06</span>
+        <span class="spec-req-title">S6/S5 → S7 减速待收</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">S7</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        TRA 回到 0° (推杆) → 发出 FADEC_Stow_Command，进入收起准备态。
+      </p>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="sm">SM-07</span>
+        <span class="spec-req-title">S7 → S8/S9/S10 → S0</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">S8</span>
+          <span class="spec-req-trace-pill">S9</span>
+          <span class="spec-req-trace-pill">S10</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        S8 收起中 → S9 TR_Position ≤ 0% ∧ TLS/PLS 重锁 → S10 断电 → S0 等待下次接地。
+      </p>
+    </article>
+    <article class="spec-req-card" style="border-color: rgba(248,113,113,0.32)">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="sr">SM-SF</span>
+        <span class="spec-req-title">任意状态 → SF 故障中止</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">SF</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        EICU 双通道失效 / 传感器全失联 / 位置异常 / 飞行员主动中止 → 切断所有命令，需人工重置。
+      </p>
+      <div class="spec-req-meta">最高优先级，全局转移目标</div>
+    </article>
+  </div>
+
+  <!-- ── Functional requirements (FR) ──────────────────────── -->
+  <h2 class="spec-section-title">
+    功能需求 · Functional requirements
+    <span class="spec-section-hint">FR-C1 → FR-C3 · 共 3 条</span>
+  </h2>
+  <div class="spec-req-grid">
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="fr">FR-C1</span>
+        <span class="spec-req-title">到位确认才允许最大推力</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">S5→S6</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        与 FANTUI SR-04 等价：TR_Position &lt; 90% 时不进入 S6；TRA 深拉区 (≤ -28°) 在 S5 确认前不可用。
+      </p>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="fr">FR-C2</span>
+        <span class="spec-req-title">锁机构到位才允许断电</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">S10</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        进入 S10 的条件之一是 TR_Stowed_And_Locked = True，确认翻转斗已物理归位且所有锁重新锁定。
+      </p>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="fr">FR-C3</span>
+        <span class="spec-req-title">PDU 过温保护</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">S4-6→S7</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        PDU 电机过温信号 (overtemp) 在 S4/S5/S6 立即发出 FADEC_Stow_Command 并跳转 S7。
+      </p>
+    </article>
+  </div>
+
+  <!-- ── Diff vs FANTUI ────────────────────────────────────── -->
+  <h2 class="spec-section-title">
+    与 FANTUI 的关键差异 · vs FANTUI
+    <span class="spec-section-hint">3 处架构级差异</span>
+  </h2>
+  <div class="spec-compare">
+    <article class="spec-compare-card">
+      <div class="spec-compare-key">控制范式 · Paradigm</div>
+      <div class="spec-compare-row">
+        <div class="spec-compare-side" data-side="fantui">
+          <div class="spec-compare-side-label">FANTUI</div>
+          4 门 AND 级联，无状态评估
+        </div>
+        <div class="spec-compare-side" data-side="c919">
+          <div class="spec-compare-side-label">C919</div>
+          12 状态有限状态机 + 异步 FADEC 反馈
+        </div>
+      </div>
+    </article>
+    <article class="spec-compare-card">
+      <div class="spec-compare-key">驱动方式 · Drive</div>
+      <div class="spec-compare-row">
+        <div class="spec-compare-side" data-side="fantui">
+          <div class="spec-compare-side-label">FANTUI</div>
+          直接驱动 PDU 电机 (L4 输出)
+        </div>
+        <div class="spec-compare-side" data-side="c919">
+          <div class="spec-compare-side-label">C919</div>
+          经 FADEC 间接驱动，等待确认
+        </div>
+      </div>
+    </article>
+    <article class="spec-compare-card">
+      <div class="spec-compare-key">冗余 · Redundancy</div>
+      <div class="spec-compare-row">
+        <div class="spec-compare-side" data-side="fantui">
+          <div class="spec-compare-side-label">FANTUI</div>
+          单通道 RA 高度信号
+        </div>
+        <div class="spec-compare-side" data-side="c919">
+          <div class="spec-compare-side-label">C919</div>
+          EICU CMD1/CMD2 双通道 (DAL-A)
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <!-- ── State → output traceability matrix ────────────────── -->
+  <h2 class="spec-section-title">
+    状态 → 输出命令矩阵 · Traceability
+    <span class="spec-section-hint">5 cmds × 12 states</span>
+  </h2>
+  <div class="spec-matrix-card">
+    <table class="spec-matrix" aria-label="State × output command traceability matrix">
+      <thead>
+        <tr>
+          <th class="spec-matrix-row-label">输出命令</th>
+          <th>S0</th><th>S1</th><th>S2</th><th>S3</th><th>S4</th><th>S5</th>
+          <th>S6</th><th>S7</th><th>S8</th><th>S9</th><th>S10</th><th>SF</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th class="spec-matrix-row-label">SinglePhaseUnlockPower</th>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+        </tr>
+        <tr>
+          <th class="spec-matrix-row-label">ThreePhaseTRCUPower</th>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+        </tr>
+        <tr>
+          <th class="spec-matrix-row-label">FADEC_Deploy_Command</th>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+        </tr>
+        <tr>
+          <th class="spec-matrix-row-label">FADEC_Stow_Command</th>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+        </tr>
+        <tr>
+          <th class="spec-matrix-row-label">All_Commands_Inhibit</th>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-on">●</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="spec-footer-note">
+    11 个运行状态 + 1 个故障状态 · 5 路输出命令 · 与 FANTUI 4 门级联架构形成对照 · ACCEPTED proposals will surface as backlinks here.
+  </p>
+</main>
+</body>
+</html>
