@@ -6175,3 +6175,62 @@ function _wbLiveLogConnect() {
   if (!panel) return;
   _wbLiveLogConnect();
 })();
+
+// ─── P52-01: tool dock + drawer wiring ─────────────────────────────
+//
+// Click a dock button → activate that tool. The CSS uses
+// body[data-active-tool] to slide the matching `data-dock-section`
+// in as a left-side drawer over the canvas. Clicking the active
+// button again or pressing Esc dismisses the drawer.
+//
+// We deliberately don't move DOM nodes — the existing sections keep
+// their original IDs/classes/positions. Activation just toggles
+// visibility via the CSS rule `body[data-active-tool="X"]
+// [data-dock-section="X"] { display: block; position: fixed; ... }`.
+
+(function _wbDockBoot() {
+  if (typeof document === "undefined") return;
+  const dock = document.getElementById("workbench-dock");
+  if (!dock) return;
+  const buttons = Array.from(
+    dock.querySelectorAll("[data-dock-target]")
+  );
+  if (buttons.length === 0) return;
+
+  function setActive(tool) {
+    document.body.dataset.activeTool = tool || "";
+    for (const btn of buttons) {
+      const isActive = btn.getAttribute("data-dock-target") === tool;
+      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    }
+  }
+
+  for (const btn of buttons) {
+    btn.addEventListener("click", () => {
+      const target = btn.getAttribute("data-dock-target");
+      const current = document.body.dataset.activeTool || "";
+      if (target === current) {
+        setActive("");  // click active button = close drawer
+      } else {
+        setActive(target);
+      }
+    });
+  }
+
+  // Drawer's close button (×). Multiple sections each have one;
+  // event delegation keeps it simple.
+  document.addEventListener("click", (ev) => {
+    const target = ev.target;
+    if (!(target instanceof HTMLElement)) return;
+    if (target.matches("[data-dock-close]")) {
+      setActive("");
+    }
+  });
+
+  // Esc closes the drawer.
+  document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && document.body.dataset.activeTool) {
+      setActive("");
+    }
+  });
+})();
