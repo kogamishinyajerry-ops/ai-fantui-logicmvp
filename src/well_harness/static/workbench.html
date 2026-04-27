@@ -495,214 +495,58 @@
         </noscript>
       </section>
 
-      <!-- P54-02: simulation panel — Claude-grade stub layout.
-           Left column = parameter inputs (initial conditions for the
-           thrust-reverser model), right column = time-series output
-           with placeholder waveform. Hooks for future real solver
-           wiring: id="workbench-sim-run-btn", id="workbench-sim-chart-mount". -->
+      <!-- P54-03 (2026-04-28): the simulation / cockpit / requirements
+           views embed the THREE existing mature pages (timeline-sim.html,
+           fan_console.html, fantui_requirements.html) as iframes rather
+           than re-implementing them. Iframes keep their independent CSS
+           isolated and preserve all interactivity. The earlier P54-02
+           stubs were a mistake — those mature pages already exist. -->
       <section
         id="workbench-sim-panel"
-        class="workbench-canvas-view workbench-sim-panel"
+        class="workbench-canvas-view workbench-canvas-view-embed"
         data-canvas-view="sim"
         aria-labelledby="workbench-sim-panel-title"
         hidden
       >
-        <header class="workbench-canvas-view-header">
-          <p class="eyebrow">simulation</p>
-          <h2 id="workbench-sim-panel-title">反推仿真模拟 · Thrust-Reverser Simulation</h2>
-          <p class="workbench-canvas-view-sub">
-            按当前控制电路回放反推动作的关键状态变量；调参后点击运行即可重放波形 ·
-            Replay key state variables of the thrust-reverser sequence under the current
-            control circuit. Tweak the inputs and re-run to compare waveforms.
-          </p>
-        </header>
-        <div class="workbench-sim-grid">
-          <aside class="workbench-sim-params" aria-label="仿真参数 · Simulation parameters">
-            <p class="workbench-sim-section-eyebrow">参数 · Parameters</p>
-            <label class="workbench-sim-field">
-              <span>初始推力 · Initial thrust (kN)</span>
-              <input type="number" value="120" step="1" min="0" max="500">
-            </label>
-            <label class="workbench-sim-field">
-              <span>反推延迟 · Reverse delay (ms)</span>
-              <input type="number" value="250" step="10" min="0" max="2000">
-            </label>
-            <label class="workbench-sim-field">
-              <span>跑道摩擦系数 · μ</span>
-              <input type="number" value="0.18" step="0.01" min="0" max="1">
-            </label>
-            <label class="workbench-sim-field">
-              <span>积分步长 · dt (ms)</span>
-              <input type="number" value="20" step="5" min="1" max="200">
-            </label>
-            <button
-              id="workbench-sim-run-btn"
-              type="button"
-              class="workbench-toolbar-button is-primary"
-            >▶ 运行 · Run</button>
-          </aside>
-          <main class="workbench-sim-output" aria-label="仿真输出 · Simulation output">
-            <p class="workbench-sim-section-eyebrow">时间序列 · Waveform</p>
-            <div id="workbench-sim-chart-mount" class="workbench-sim-chart">
-              <svg viewBox="0 0 320 180" preserveAspectRatio="none" role="img"
-                   aria-label="占位波形 · Placeholder waveform">
-                <!-- gridlines -->
-                <g stroke="currentColor" stroke-opacity="0.08" stroke-width="0.5">
-                  <line x1="0" y1="45" x2="320" y2="45"/>
-                  <line x1="0" y1="90" x2="320" y2="90"/>
-                  <line x1="0" y1="135" x2="320" y2="135"/>
-                </g>
-                <!-- placeholder waveform -->
-                <path d="M0,140 L60,140 L80,40 L160,40 L180,90 L260,90 L280,140 L320,140"
-                      fill="none" stroke="#67e8f9" stroke-width="1.5"/>
-                <text x="6" y="14" font-size="9" fill="currentColor" opacity="0.6">推力 thrust</text>
-                <text x="6" y="172" font-size="9" fill="currentColor" opacity="0.6">t (s) →</text>
-              </svg>
-            </div>
-            <dl class="workbench-sim-stats">
-              <dt>峰值反推 · Peak reverse</dt><dd>—</dd>
-              <dt>到达静止 · Settle time</dt><dd>—</dd>
-              <dt>违反门约束 · Gate violations</dt><dd>—</dd>
-            </dl>
-          </main>
-        </div>
+        <h2 id="workbench-sim-panel-title" class="visually-hidden">反推仿真模拟 · Thrust-Reverser Simulation</h2>
+        <iframe
+          src="/timeline-sim.html"
+          class="workbench-canvas-iframe"
+          title="反推仿真模拟 · Thrust-Reverser Simulation"
+          loading="lazy"
+        ></iframe>
       </section>
 
-      <!-- P54-02: demo cockpit — instrument-cluster stub layout.
-           Throttle quadrant on left, indicator-light cluster on right
-           tracking the L1-L4 gate states from the control circuit.
-           Hooks: id="workbench-cockpit-throttle", id="workbench-cockpit-indicators". -->
       <section
         id="workbench-cockpit-panel"
-        class="workbench-canvas-view workbench-cockpit-panel"
+        class="workbench-canvas-view workbench-canvas-view-embed"
         data-canvas-view="cockpit"
         aria-labelledby="workbench-cockpit-panel-title"
         hidden
       >
-        <header class="workbench-canvas-view-header">
-          <p class="eyebrow">cockpit</p>
-          <h2 id="workbench-cockpit-panel-title">反推演示舱 · Thrust-Reverser Cockpit</h2>
-          <p class="workbench-canvas-view-sub">
-            模拟驾驶舱仪表，展示控制电路下游的人机界面：推力杆位置、反推杆状态、L1–L4 状态灯 ·
-            Cockpit-side mirror of the control circuit: throttle quadrant, reverse lever,
-            and the L1–L4 gate status lights pilots actually see.
-          </p>
-        </header>
-        <div class="workbench-cockpit-grid">
-          <aside id="workbench-cockpit-throttle" class="workbench-cockpit-throttle"
-                 aria-label="推力杆 · Throttle quadrant">
-            <p class="workbench-cockpit-section-eyebrow">推力杆 · Throttle</p>
-            <div class="workbench-cockpit-quadrant">
-              <div class="workbench-cockpit-lever" data-lever="forward">
-                <span class="workbench-cockpit-lever-label">FWD</span>
-                <span class="workbench-cockpit-lever-track" aria-hidden="true"></span>
-              </div>
-              <div class="workbench-cockpit-lever workbench-cockpit-lever-reverse" data-lever="reverse">
-                <span class="workbench-cockpit-lever-label">REV</span>
-                <span class="workbench-cockpit-lever-track" aria-hidden="true"></span>
-              </div>
-            </div>
-            <p class="workbench-cockpit-status">
-              <span class="workbench-cockpit-status-label">当前推力 · current thrust</span>
-              <strong>0%</strong>
-            </p>
-          </aside>
-          <main id="workbench-cockpit-indicators" class="workbench-cockpit-indicators"
-                aria-label="状态灯 · Indicator lights">
-            <p class="workbench-cockpit-section-eyebrow">状态灯 · Indicators</p>
-            <ul class="workbench-cockpit-light-grid">
-              <li class="workbench-cockpit-light" data-gate="L1" data-status="ready">
-                <span class="workbench-cockpit-light-dot" aria-hidden="true"></span>
-                <span class="workbench-cockpit-light-label">L1</span>
-                <span class="workbench-cockpit-light-desc">空地判据 · Air/Ground</span>
-              </li>
-              <li class="workbench-cockpit-light" data-gate="L2" data-status="ready">
-                <span class="workbench-cockpit-light-dot" aria-hidden="true"></span>
-                <span class="workbench-cockpit-light-label">L2</span>
-                <span class="workbench-cockpit-light-desc">主轮接地 · Main gear WoW</span>
-              </li>
-              <li class="workbench-cockpit-light" data-gate="L3" data-status="ready">
-                <span class="workbench-cockpit-light-dot" aria-hidden="true"></span>
-                <span class="workbench-cockpit-light-label">L3</span>
-                <span class="workbench-cockpit-light-desc">推力杆位 · Throttle pos</span>
-              </li>
-              <li class="workbench-cockpit-light" data-gate="L4" data-status="armed">
-                <span class="workbench-cockpit-light-dot" aria-hidden="true"></span>
-                <span class="workbench-cockpit-light-label">L4</span>
-                <span class="workbench-cockpit-light-desc">反推授权 · REV authority</span>
-              </li>
-            </ul>
-            <p class="workbench-cockpit-hint">
-              点击演示按钮可触发整链路联动（待接入仿真）·
-              Demo trigger will animate the full L1→L4 chain (sim wiring TBD).
-            </p>
-          </main>
-        </div>
+        <h2 id="workbench-cockpit-panel-title" class="visually-hidden">反推演示舱 · Thrust-Reverser Cockpit</h2>
+        <iframe
+          src="/fan_console.html"
+          class="workbench-canvas-iframe"
+          title="反推演示舱 · Thrust-Reverser Cockpit"
+          loading="lazy"
+        ></iframe>
       </section>
 
-      <!-- P54-02: requirements doc — structured spec stub.
-           Heading + REQ-ID traceability table linking each requirement
-           back to the gate(s) it constrains. Hooks: id="workbench-spec-table". -->
       <section
         id="workbench-spec-panel"
-        class="workbench-canvas-view workbench-spec-panel"
+        class="workbench-canvas-view workbench-canvas-view-embed"
         data-canvas-view="spec"
         aria-labelledby="workbench-spec-panel-title"
         hidden
       >
-        <header class="workbench-canvas-view-header">
-          <p class="eyebrow">requirements</p>
-          <h2 id="workbench-spec-panel-title">反推需求文档 · Thrust-Reverser Requirements</h2>
-          <p class="workbench-canvas-view-sub">
-            每条需求映射到控制电路里的具体逻辑门，所有 ACCEPTED 提案都附在这里追溯 ·
-            Each requirement traces to a gate in the control circuit; ACCEPTED proposals
-            are linked back here as the requirement evolves.
-          </p>
-        </header>
-        <div class="workbench-spec-content">
-          <h3 class="workbench-spec-section-title">1 · 安全门约束 · Safety gate constraints</h3>
-          <table id="workbench-spec-table" class="workbench-spec-table">
-            <thead>
-              <tr>
-                <th scope="col">REQ ID</th>
-                <th scope="col">需求 · Requirement</th>
-                <th scope="col">命中门 · Trace</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th scope="row">REQ-TR-001</th>
-                <td>反推仅在飞机确认接地后允许激活 · Reverse thrust only activates after weight-on-wheels confirmed.</td>
-                <td><code>L1</code> + <code>L2</code></td>
-              </tr>
-              <tr>
-                <th scope="row">REQ-TR-002</th>
-                <td>推力杆必须在 IDLE 位置且驾驶员主动拉起反推杆 · Throttle must be at IDLE before reverse lever is permitted.</td>
-                <td><code>L3</code></td>
-              </tr>
-              <tr>
-                <th scope="row">REQ-TR-003</th>
-                <td>反推授权信号 (L4) 必须在所有上游条件满足后 50ms 内点亮 · L4 authority must light within 50ms of upstream conditions clearing.</td>
-                <td><code>L4</code></td>
-              </tr>
-              <tr>
-                <th scope="row">REQ-TR-004</th>
-                <td>任一上游门掉线时，反推授权必须立即撤销 · Loss of any upstream gate must immediately revoke L4.</td>
-                <td><code>L1</code> + <code>L2</code> + <code>L3</code> → <code>L4</code></td>
-              </tr>
-            </tbody>
-          </table>
-
-          <h3 class="workbench-spec-section-title">2 · 性能约束 · Performance constraints</h3>
-          <ul class="workbench-spec-list">
-            <li><strong>REQ-TR-101</strong> · 从主轮接地到反推完全展开应 ≤ 1.5s · Time from main gear touchdown to full reverse deployment ≤ 1.5s.</li>
-            <li><strong>REQ-TR-102</strong> · 反推峰值在跑道摩擦 μ=0.18 工况下应能在 1500m 内将地速从 70m/s 减至 30m/s.</li>
-          </ul>
-
-          <p class="workbench-spec-footer">
-            <em>已通过的修改提案会在此处自动出现回链 · ACCEPTED proposals will surface as backlinks here once the spec store is wired (P54-05 follow-up).</em>
-          </p>
-        </div>
+        <h2 id="workbench-spec-panel-title" class="visually-hidden">反推需求文档 · Thrust-Reverser Requirements</h2>
+        <iframe
+          src="/fantui_requirements.html"
+          class="workbench-canvas-iframe"
+          title="反推需求文档 · Thrust-Reverser Requirements"
+          loading="lazy"
+        ></iframe>
       </section>
 
       <!-- P44-02 (2026-04-26): suggestion-input flow replaces the
