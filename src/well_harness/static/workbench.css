@@ -2285,11 +2285,11 @@ body[data-view="expert"] [view="beginner"] {
 }
 .workbench-suggestion-input {
   width: 100%; box-sizing: border-box;
-  padding: 0.6rem 0.75rem;
+  padding: 0.55rem 0.7rem;
   border: 1px solid var(--wb-hairline);
   border-radius: 8px;
   background: rgba(10, 14, 20, 0.65); color: #edf8ff;
-  font-family: inherit; font-size: 0.82rem; line-height: 1.55;
+  font-family: inherit; font-size: 0.78rem; line-height: 1.55;
   resize: vertical;
   transition:
     border-color var(--wb-duration-drawer) var(--wb-ease-out),
@@ -3795,7 +3795,11 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
   --workbench-drawer-width: 380px;
   --wb-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
   --wb-duration-drawer: 168ms;
-  --wb-hairline: rgba(143, 214, 233, 0.10);
+  /* P53-02: neutral hairline replaces the cyan-tinted version.
+     Cyan-on-dark hairlines read as "tech demo"; Claude.app uses
+     neutral whites for separators and reserves the brand accent
+     for focus rings + active states only. */
+  --wb-hairline: rgba(255, 255, 255, 0.08);
   --wb-dock-bg: #0E1320;
   --wb-drawer-bg: #0F1828;
   --wb-active-fill: rgba(103, 232, 249, 0.12);
@@ -3993,18 +3997,18 @@ body[data-active-tool="new"] [data-dock-section="new"][hidden] {
 }
 .workbench-tool-drawer-header .eyebrow {
   margin: 0;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   color: var(--text-muted, #93a8b8);
   font-weight: 500;
 }
 .workbench-tool-drawer-header h2,
 .workbench-tool-drawer-header h3 {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: -0.005em;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: -0.003em;
   flex: 1;
   color: var(--text-main, #e6eef6);
 }
@@ -4012,12 +4016,12 @@ body[data-active-tool="new"] [data-dock-section="new"][hidden] {
   appearance: none;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--text-muted, #93a8b8);
   cursor: pointer;
-  font-size: 1.15rem;
+  font-size: 1rem;
   line-height: 1;
-  padding: 0.25rem 0.5rem;
+  padding: 0.2rem 0.4rem;
   margin-left: auto;
   transition:
     color var(--wb-duration-drawer) var(--wb-ease-out),
@@ -4247,6 +4251,21 @@ body[data-active-tool="new"] [data-dock-section="new"][hidden] {
   border: none;
   padding: 0;
   background: transparent;
+}
+.workbench-annotation-inbox-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.6rem 0 0.45rem;
+}
+.workbench-annotation-inbox-toolbar-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #93a8b8);
+}
+.workbench-annotation-inbox-toolbar .workbench-annotation-inbox-refresh {
+  margin-left: auto;
 }
 
 /* P52-03: live-log is now an inner block of the monitor drawer.
