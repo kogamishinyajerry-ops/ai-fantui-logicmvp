@@ -2822,3 +2822,190 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
   opacity: 0.55;
   cursor: progress;
 }
+
+/* P50-02a (2026-04-27): executor metrics observability panel.
+   Lives in the proposal inbox area as a collapsible details/summary.
+   Collapsed by default — expands when reviewer wants a system view.
+   Updates every 5s on the same poll loop as the badges. */
+.workbench-metrics-panel {
+  margin: 0.5rem 0 0.65rem 0;
+  border: 1px solid rgba(150, 168, 184, 0.22);
+  border-radius: 6px;
+  background: rgba(11, 18, 24, 0.4);
+  font-size: 0.7rem;
+}
+.workbench-metrics-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.45rem 0.7rem;
+  cursor: pointer;
+  user-select: none;
+}
+.workbench-metrics-summary::-webkit-details-marker { display: none; }
+.workbench-metrics-summary::before {
+  content: "▸";
+  font-size: 0.65rem;
+  color: rgba(206, 223, 236, 0.5);
+  transition: transform 120ms ease;
+}
+.workbench-metrics-panel[open] .workbench-metrics-summary::before {
+  transform: rotate(90deg);
+}
+.workbench-metrics-summary-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.58rem;
+  color: rgba(206, 223, 236, 0.55);
+}
+.workbench-metrics-summary-line {
+  font-size: 0.7rem;
+  color: #cfe1ee;
+}
+.workbench-metrics-body {
+  padding: 0.5rem 0.7rem 0.7rem 0.7rem;
+  border-top: 1px solid rgba(150, 168, 184, 0.18);
+}
+.workbench-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 0.6rem;
+}
+.workbench-metrics-card {
+  background: rgba(150, 168, 184, 0.05);
+  border: 1px solid rgba(150, 168, 184, 0.16);
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.workbench-metrics-card-label {
+  font-size: 0.55rem;
+  color: rgba(206, 223, 236, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.workbench-metrics-card strong {
+  font-size: 0.95rem;
+  color: #cfe1ee;
+}
+.workbench-metrics-state-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-bottom: 0.6rem;
+}
+.workbench-metrics-state-row {
+  display: grid;
+  grid-template-columns: 5.2rem 1fr 2.2rem;
+  align-items: center;
+  gap: 0.4rem;
+}
+.workbench-metrics-state-label {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: right;
+  color: rgba(206, 223, 236, 0.7);
+}
+/* Reuse the badge color palette from P49-01b for the state labels */
+.workbench-metrics-state-label[data-execution-css="init"]     { color: #aab8c4; }
+.workbench-metrics-state-label[data-execution-css="planning"] { color: #4fb8ff; }
+.workbench-metrics-state-label[data-execution-css="asking"]   { color: #00c8f5; }
+.workbench-metrics-state-label[data-execution-css="editing"]  { color: #b07cff; }
+.workbench-metrics-state-label[data-execution-css="testing"]  { color: #f7bc5c; }
+.workbench-metrics-state-label[data-execution-css="pr-open"]  { color: #4ee5a8; }
+.workbench-metrics-state-label[data-execution-css="landed"]   { color: #00e5a0; }
+.workbench-metrics-state-label[data-execution-css="aborted"]  { color: #ff913c; }
+.workbench-metrics-state-label[data-execution-css="failed"]   { color: #ff6b6b; }
+.workbench-metrics-state-bar-track {
+  background: rgba(150, 168, 184, 0.08);
+  height: 0.5rem;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.workbench-metrics-state-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 200ms ease;
+}
+.workbench-metrics-state-bar-fill[data-execution-css="init"]     { background: rgba(150, 168, 184, 0.45); }
+.workbench-metrics-state-bar-fill[data-execution-css="planning"] { background: rgba(79, 184, 255, 0.55); }
+.workbench-metrics-state-bar-fill[data-execution-css="asking"]   { background: rgba(0, 200, 245, 0.65); }
+.workbench-metrics-state-bar-fill[data-execution-css="editing"]  { background: rgba(176, 124, 255, 0.55); }
+.workbench-metrics-state-bar-fill[data-execution-css="testing"]  { background: rgba(247, 188, 92, 0.6); }
+.workbench-metrics-state-bar-fill[data-execution-css="pr-open"]  { background: rgba(78, 229, 168, 0.55); }
+.workbench-metrics-state-bar-fill[data-execution-css="landed"]   { background: rgba(0, 229, 160, 0.7); }
+.workbench-metrics-state-bar-fill[data-execution-css="aborted"]  { background: rgba(255, 145, 60, 0.6); }
+.workbench-metrics-state-bar-fill[data-execution-css="failed"]   { background: rgba(255, 107, 107, 0.65); }
+.workbench-metrics-state-count {
+  font-size: 0.65rem;
+  color: rgba(206, 223, 236, 0.75);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.workbench-metrics-failures {
+  margin-top: 0.45rem;
+}
+.workbench-metrics-failures-empty {
+  margin: 0;
+  font-size: 0.62rem;
+  color: rgba(206, 223, 236, 0.45);
+  font-style: italic;
+}
+.workbench-metrics-failures-eyebrow {
+  margin: 0 0 0.2rem 0;
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(206, 223, 236, 0.5);
+}
+.workbench-metrics-failures-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.workbench-metrics-failures-list li {
+  display: grid;
+  grid-template-columns: 4.5rem auto 1fr;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.62rem;
+  color: rgba(206, 223, 236, 0.85);
+}
+.workbench-metrics-failures-list code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.58rem;
+  color: rgba(206, 223, 236, 0.55);
+}
+.workbench-metrics-failures-state {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.55rem;
+  letter-spacing: 0.04em;
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid transparent;
+}
+.workbench-metrics-failures-state[data-execution-css="aborted"] {
+  color: #ff913c;
+  background: rgba(255, 145, 60, 0.16);
+  border-color: rgba(255, 145, 60, 0.4);
+}
+.workbench-metrics-failures-state[data-execution-css="failed"] {
+  color: #ff6b6b;
+  background: rgba(255, 92, 92, 0.16);
+  border-color: rgba(255, 92, 92, 0.5);
+}
+.workbench-metrics-failures-reason {
+  color: rgba(206, 223, 236, 0.7);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

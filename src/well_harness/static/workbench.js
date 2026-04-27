@@ -450,6 +450,9 @@ function installProposalInbox() {
   // within 5s) and auto-clear (CLI consumes signal → exec leaves
   // ASKING → next poll renders empty).
   startPendingExecPoll(5000);
+  // P50-02a: also fire an immediate metrics fetch so the panel
+  // is populated before the first 5s tick.
+  refreshExecutionMetrics();
 }
 
 async function loadProposalsInbox() {
@@ -874,10 +877,13 @@ function startPendingExecPoll(intervalMs) {
   // Periodic refresh so cards auto-clear once CLI consumes signal
   // AND the per-card execution-state badge stays current as the
   // executor walks through its lifecycle (P49-01b).
+  // P50-02a: same loop also refreshes the metrics panel so the
+  // dashboard stays current without a separate timer.
   _pendingExecPollHandle = setInterval(
     () => {
       refreshPendingExecutions();
       refreshExecutionBadges();
+      refreshExecutionMetrics();
     },
     intervalMs || 5000
   );
@@ -1055,6 +1061,158 @@ async function sendExecutionCancel(execId) {
 if (typeof window !== "undefined") {
   window.__WB_EXECUTION_STATE_INFO = EXECUTION_STATE_INFO;
   window.__WB_renderExecutionBadge = renderExecutionBadge;
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// P50-02a (2026-04-27): executor observability metrics panel.
+//
+// Reads /api/skill-executions/metrics and renders four header
+// cards (total / pass-rate / median / p95) + 9-state bar chart
+// + recent-failures list. Re-runs on the same 5s poll loop as
+// the badges, so reviewers see the system health update without
+// page reload.
+//
+// Pure DOM updates — no heavy charting library. The bars are
+// just <div>s with widths proportional to count/max.
+// ─────────────────────────────────────────────────────────────────
+
+const SKILL_EXECUTIONS_METRICS_PATH = "/api/skill-executions/metrics";
+
+function _formatDuration(seconds) {
+  if (seconds == null) return "—";
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  if (seconds < 3600) return `${(seconds / 60).toFixed(1)}m`;
+  return `${(seconds / 3600).toFixed(1)}h`;
+}
+
+function _formatPassRate(rate) {
+  if (rate == null) return "—";
+  return `${(rate * 100).toFixed(0)}%`;
+}
+
+async function refreshExecutionMetrics() {
+  const panel = document.getElementById("workbench-metrics-panel");
+  if (!panel) return;  // page without the panel (older test harnesses)
+  let metrics;
+  try {
+    const r = await fetch(SKILL_EXECUTIONS_METRICS_PATH);
+    if (!r.ok) return;
+    metrics = await r.json();
+  } catch (_) {
+    return;
+  }
+  renderExecutionMetrics(metrics);
+}
+
+function renderExecutionMetrics(metrics) {
+  const escape = (text) =>
+    String(text == null ? "" : text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  // Header summary line (visible even when collapsed)
+  const summary = document.getElementById("workbench-metrics-summary-line");
+  if (summary) {
+    if (!metrics || metrics.total === 0) {
+      summary.textContent = "尚无执行 · no executions yet";
+    } else {
+      summary.textContent =
+        `${metrics.total} 次 · pass ${_formatPassRate(metrics.pass_rate)} · ` +
+        `median ${_formatDuration(metrics.median_duration_sec)}`;
+    }
+  }
+
+  // Header cards
+  const set = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  };
+  set("workbench-metric-total", String(metrics.total));
+  set("workbench-metric-pass-rate", _formatPassRate(metrics.pass_rate));
+  set(
+    "workbench-metric-median-duration",
+    _formatDuration(metrics.median_duration_sec)
+  );
+  set(
+    "workbench-metric-p95-duration",
+    _formatDuration(metrics.p95_duration_sec)
+  );
+
+  // 9-state bar chart. Render every state in canonical order so
+  // the layout stays stable even when some buckets are zero.
+  const barsContainer = document.getElementById(
+    "workbench-metrics-state-bars"
+  );
+  if (barsContainer && metrics.by_state) {
+    const stateOrder = [
+      "INIT", "PLANNING", "ASKING", "EDITING", "TESTING",
+      "PR_OPEN", "LANDED", "ABORTED", "FAILED",
+    ];
+    const counts = stateOrder.map((s) => metrics.by_state[s] || 0);
+    const maxCount = Math.max(1, ...counts);
+    barsContainer.innerHTML = stateOrder
+      .map((state, i) => {
+        const count = counts[i];
+        const info = EXECUTION_STATE_INFO[state] || { css: "unknown" };
+        const widthPct = count === 0 ? 0 : Math.max(4, (count / maxCount) * 100);
+        return (
+          `<div class="workbench-metrics-state-row">` +
+          `  <span class="workbench-metrics-state-label" data-execution-css="${escape(info.css)}">` +
+          `    ${escape(state)}` +
+          `  </span>` +
+          `  <div class="workbench-metrics-state-bar-track">` +
+          `    <div class="workbench-metrics-state-bar-fill" data-execution-css="${escape(info.css)}" ` +
+          `         style="width: ${widthPct.toFixed(1)}%"></div>` +
+          `  </div>` +
+          `  <span class="workbench-metrics-state-count">${count}</span>` +
+          `</div>`
+        );
+      })
+      .join("");
+  }
+
+  // Recent failures list
+  const failuresContainer = document.getElementById(
+    "workbench-metrics-failures"
+  );
+  if (failuresContainer) {
+    const failures = metrics.recent_failures || [];
+    if (failures.length === 0) {
+      failuresContainer.innerHTML =
+        `<p class="workbench-metrics-failures-empty">` +
+        `  最近无失败 · no recent failures` +
+        `</p>`;
+    } else {
+      failuresContainer.innerHTML =
+        `<p class="workbench-metrics-failures-eyebrow">` +
+        `  最近失败 · recent failures` +
+        `</p>` +
+        `<ul class="workbench-metrics-failures-list">` +
+        failures
+          .map(
+            (f) =>
+              `<li>` +
+              `<span class="workbench-metrics-failures-state" data-execution-css="${
+                f.state === "ABORTED" ? "aborted" : "failed"
+              }">${escape(f.state)}</span>` +
+              `<code>${escape(f.exec_id)}</code>` +
+              `<span class="workbench-metrics-failures-reason">${escape(f.abort_reason)}</span>` +
+              `</li>`
+          )
+          .join("") +
+        `</ul>`;
+    }
+  }
+}
+
+// Expose for console debugging / future tests
+if (typeof window !== "undefined") {
+  window.__WB_renderExecutionMetrics = renderExecutionMetrics;
+  window.__WB_refreshExecutionMetrics = refreshExecutionMetrics;
 }
 
 // ─────────────────────────────────────────────────────────────────
