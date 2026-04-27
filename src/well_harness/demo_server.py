@@ -411,6 +411,22 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if parsed.path == f"{SKILL_EXECUTIONS_PATH}/metrics":
             self._handle_skill_execution_metrics()
             return
+        # P50-10 (2026-04-27): forensics bundle. Hands the user
+        # a single zip containing audits + slo_history.jsonl +
+        # manifest, for offline incident review or sharing with a
+        # colleague.
+        if parsed.path == f"{SKILL_EXECUTIONS_PATH}/forensics-bundle":
+            qs = parse_qs(parsed.query)
+            since = qs.get("since", [None])[0]
+            limit_raw = qs.get("limit", [None])[0]
+            limit = 100  # default cap
+            if limit_raw is not None:
+                try:
+                    limit = max(0, int(limit_raw))
+                except ValueError:
+                    pass
+            self._handle_forensics_bundle(since=since, limit=limit)
+            return
         # P50-08b (2026-04-27): SLO transition timeline. Answers
         # "when did this start breaking?" by replaying every
         # GREEN→YELLOW/RED transition the metrics endpoint has
@@ -1387,6 +1403,51 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             "transitions": [t.to_json() for t in transitions],
             "count": len(transitions),
         })
+
+    def _handle_forensics_bundle(
+        self, *, since: str | None, limit: int,
+    ) -> None:
+        """GET /api/skill-executions/forensics-bundle.
+        Streams a zip of audits + slo_history + manifest so an
+        oncall can grab a snapshot of system state in one click
+        for offline review or sharing with a colleague.
+
+        Query params:
+          - since: ISO timestamp; drop audits older than this
+          - limit: cap on audit count (newest-first), default 100
+
+        Always returns 200 with a zip body — empty audit dirs
+        produce a small bundle with just the manifest + README.
+        """
+        try:
+            from well_harness.skill_executor.audit import audit_dir
+            from well_harness.skill_executor.forensics_bundle import (
+                build_bundle,
+                default_bundle_filename,
+            )
+        except ImportError:
+            self._send_json(500, {"error": "skill_executor_unavailable"})
+            return
+        try:
+            zip_bytes, _manifest = build_bundle(
+                audit_dir(), since=since, limit=limit,
+            )
+        except OSError:
+            self._send_json(500, {"error": "bundle_build_failed"})
+            return
+        # Force a download with a UTC-stamped filename so the
+        # operator's downloads folder doesn't collect collision-y
+        # `bundle.zip` `bundle (1).zip` ladders.
+        self.send_response(200)
+        self.send_header("Content-Type", "application/zip")
+        self.send_header(
+            "Content-Disposition",
+            f'attachment; filename="{default_bundle_filename()}"',
+        )
+        self.send_header("Content-Length", str(len(zip_bytes)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(zip_bytes)
 
     def _handle_get_skill_execution(self, exec_id: str) -> None:
         """GET /api/skill-executions/<exec_id>. Returns the audit

@@ -1241,7 +1241,22 @@ function _formatPassRate(rate) {
   return `${(rate * 100).toFixed(0)}%`;
 }
 
+// P50-10: keep the forensics-bundle link click from toggling the
+// <details> panel open/closed. The link lives inside the
+// <summary> so its click bubbles up to the disclosure widget by
+// default; we stop propagation so the download starts without
+// changing the panel's expansion state.
+function _bindForensicsLink() {
+  const link = document.getElementById("workbench-metrics-forensics-link");
+  if (!link || link.__wbBound) return;
+  link.__wbBound = true;
+  link.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+}
+
 async function refreshExecutionMetrics() {
+  _bindForensicsLink();
   const panel = document.getElementById("workbench-metrics-panel");
   if (!panel) return;  // page without the panel (older test harnesses)
   let metrics;
