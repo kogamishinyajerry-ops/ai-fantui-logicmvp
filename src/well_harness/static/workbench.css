@@ -1,5 +1,23 @@
 @import url("/design-tokens.css");
 
+/* P52-00 (2026-04-27): workbench surface base. Without an explicit
+   body background, the browser default (white) shows through every
+   gap between the semi-transparent chrome panels — and any text
+   that inherits the light --text-main token in those gaps becomes
+   invisible (white-on-white). Mirrors the body block demo.css has
+   carried since P24-01. The reset (margin/padding/min-height) keeps
+   the shell flush with the viewport so the dock work in P52-01 has
+   a stable canvas.*/
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-base);
+  color: var(--text-main);
+  min-height: 100vh;
+  font-family: var(--font-sans, "Helvetica Neue", Arial, "PingFang SC",
+    "Hiragino Sans GB", sans-serif);
+}
+
 .workbench-shell {
   padding-bottom: 4rem;
 }
