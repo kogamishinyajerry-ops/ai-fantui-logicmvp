@@ -115,6 +115,16 @@ from well_harness.skill_executor.forensics_bundle import (
     build_bundle as build_forensics_bundle,
     default_bundle_filename as default_forensics_bundle_filename,
 )
+from well_harness.skill_executor.slo_webhook_throttle import (
+    DEFAULT_MIN_INTERVAL_SEC as DEFAULT_WEBHOOK_THROTTLE_MIN_INTERVAL_SEC,
+    ThrottleDecision,
+    WebhookThrottleState,
+    read_state as read_webhook_throttle_state,
+    record_fire as record_webhook_fire,
+    resolve_min_interval_sec as resolve_webhook_throttle_interval,
+    should_fire as should_fire_webhook,
+    write_state as write_webhook_throttle_state,
+)
 from well_harness.skill_executor.slo_webhook import (
     DispatchResult as SLOWebhookDispatchResult,
     WebhookDispatchError,
@@ -254,7 +264,9 @@ __all__ = [
     "SLOThresholds",
     "SLOTransition",
     "SLOWebhookDispatchResult",
+    "ThrottleDecision",
     "WebhookDispatchError",
+    "WebhookThrottleState",
     "MINIMAX_API_BASE",
     "MINIMAX_DEFAULT_MODEL",
     "MINIMAX_REQUEST_TIMEOUT_SEC",

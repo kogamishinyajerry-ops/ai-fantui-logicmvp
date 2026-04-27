@@ -1377,9 +1377,44 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         # Webhook failures are swallowed by dispatch_transition's
         # internal try/except — alerting must never break the
         # dashboard.
+        # P50-11: per-severity throttle suppresses repeat alerts
+        # within an interval window so a flapping system doesn't
+        # spam the operator. Throttle state is persisted to disk
+        # next to slo_history.jsonl.
         if transition is not None:
             try:
-                dispatch_transition(transition)
+                from well_harness.skill_executor.slo_webhook_throttle import (
+                    read_state, record_fire, resolve_min_interval_sec,
+                    should_fire, write_state,
+                )
+                from datetime import datetime, timezone
+                state = read_state(audit_dir())
+                now_iso = datetime.now(timezone.utc).strftime(
+                    "%Y-%m-%dT%H:%M:%SZ"
+                )
+                decision = should_fire(
+                    transition,
+                    state=state,
+                    now_iso=now_iso,
+                    min_interval_sec=resolve_min_interval_sec(),
+                )
+                if decision.allow:
+                    dispatch_transition(transition)
+                    record_fire(
+                        state,
+                        to_severity=str(getattr(
+                            transition, "to_severity", "",
+                        )),
+                        now_iso=now_iso,
+                    )
+                    try:
+                        write_state(audit_dir(), state)
+                    except OSError:
+                        # Read-only fs / disk full: don't fail the
+                        # request. Worst case the next poll might
+                        # re-fire (effectively no throttle that one
+                        # round) — better than no metrics response.
+                        pass
             except Exception:
                 # Defense in depth: even unexpected failures here
                 # must not propagate to the metrics response.
