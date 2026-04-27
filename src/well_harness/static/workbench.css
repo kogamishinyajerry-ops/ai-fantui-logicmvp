@@ -3631,3 +3631,91 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* P51-02 (2026-04-27): Live Log Panel — terminal-style fixed-bottom
+   pane fed by SSE. Collapsible to keep out of the way when the
+   reviewer doesn't need a log tail. */
+.workbench-live-log-panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #050a0e;
+  border-top: 1px solid rgba(80, 130, 80, 0.3);
+  z-index: 50;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.68rem;
+  color: rgba(150, 220, 160, 0.9);
+}
+.workbench-live-log-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.35rem 0.85rem;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(0, 0, 0, 0.55);
+  border-bottom: 1px solid rgba(80, 130, 80, 0.18);
+}
+.workbench-live-log-summary::-webkit-details-marker { display: none; }
+.workbench-live-log-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(140, 220, 150, 0.85);
+  font-weight: 700;
+  font-size: 0.6rem;
+}
+.workbench-live-log-status {
+  margin-left: auto;
+  font-size: 0.62rem;
+  color: rgba(180, 220, 180, 0.65);
+}
+.workbench-live-log-tail {
+  font-size: 0.7rem;
+  color: rgba(140, 220, 150, 0.6);
+}
+.workbench-live-log-panel[open] .workbench-live-log-tail { transform: rotate(180deg); }
+.workbench-live-log-body {
+  max-height: 180px;
+  overflow: hidden;
+}
+.workbench-live-log-stream {
+  margin: 0;
+  padding: 0.55rem 0.85rem;
+  height: 180px;
+  overflow-y: auto;
+  white-space: pre;
+  background: #050a0e;
+  color: rgba(150, 220, 160, 0.92);
+  font-size: 0.66rem;
+  line-height: 1.45;
+}
+.workbench-live-log-line { display: block; }
+.workbench-live-log-ts { color: rgba(120, 175, 130, 0.55); }
+.workbench-live-log-phase { color: rgba(200, 220, 240, 0.65); }
+.workbench-live-log-level { color: rgba(140, 200, 150, 0.7); }
+.workbench-live-log-msg { color: rgba(190, 240, 200, 0.95); }
+/* Phase tinting — keeps the log scannable at a glance */
+.workbench-live-log-line[data-phase="PLANNING"] .workbench-live-log-phase,
+.workbench-live-log-line[data-phase="GOVERNANCE_HOLD"] .workbench-live-log-phase {
+  color: rgba(120, 180, 240, 0.95);
+}
+.workbench-live-log-line[data-phase="EDITING"] .workbench-live-log-phase {
+  color: rgba(240, 200, 110, 0.95);
+}
+.workbench-live-log-line[data-phase="TESTING"] .workbench-live-log-phase {
+  color: rgba(150, 240, 170, 0.95);
+}
+.workbench-live-log-line[data-phase="GOVERNANCE_HOLD"] .workbench-live-log-msg {
+  color: rgba(255, 160, 160, 0.95);
+}
+.workbench-live-log-line[data-level="warn"] .workbench-live-log-msg {
+  color: rgba(255, 220, 130, 0.95);
+}
+.workbench-live-log-line[data-level="error"] {
+  background: rgba(160, 60, 60, 0.16);
+}
+.workbench-live-log-line[data-level="error"] .workbench-live-log-msg {
+  color: rgba(255, 140, 140, 1);
+}

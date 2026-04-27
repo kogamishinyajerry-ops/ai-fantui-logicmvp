@@ -6072,3 +6072,106 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   void loadBootstrapPayload();
 });
+
+// ─── P51-02: Live Log Panel SSE consumer ───────────────────────────
+//
+// Connects to /api/workbench/log-stream as soon as the panel exists.
+// Renders a fixed-tail terminal view (last ~200 lines) with phase-
+// driven coloring. Auto-reconnects after the server's 60s session
+// window closes, carrying the cursor in `?since=N` so no events get
+// dropped between reconnects.
+//
+// Why EventSource over fetch+ReadableStream: the stdlib EventSource
+// handles reconnection, last-event-id, and message framing for free.
+// All we provide is the data handler.
+
+const WORKBENCH_LOG_STREAM_PATH = "/api/workbench/log-stream";
+const LIVE_LOG_TAIL_MAX = 200;
+
+let _wbLiveLogCursor = 0;
+let _wbLiveLogSource = null;
+let _wbLiveLogQueue = [];
+
+function _wbLiveLogStatus(text) {
+  const status = document.getElementById("workbench-live-log-status");
+  if (status) status.textContent = text;
+}
+
+function _wbLiveLogRender() {
+  const stream = document.getElementById("workbench-live-log-stream");
+  if (!stream) return;
+  const escape = (text) =>
+    String(text == null ? "" : text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  const tail = _wbLiveLogQueue.slice(-LIVE_LOG_TAIL_MAX);
+  stream.innerHTML = tail
+    .map((ev) => {
+      const ts = (ev.ts || "").slice(11, 19);  // HH:MM:SS
+      const phase = (ev.phase || "—").padEnd(18);
+      const level = (ev.level || "info").toUpperCase();
+      return (
+        `<span class="workbench-live-log-line" data-phase="${escape(ev.phase || "")}" data-level="${escape(ev.level || "info")}">` +
+        `<span class="workbench-live-log-ts">${escape(ts)}</span> ` +
+        `<span class="workbench-live-log-phase">${escape(phase)}</span> ` +
+        `<span class="workbench-live-log-level">[${escape(level)}]</span> ` +
+        `<span class="workbench-live-log-msg">${escape(ev.message || "")}</span>` +
+        `</span>`
+      );
+    })
+    .join("\n");
+  stream.scrollTop = stream.scrollHeight;
+}
+
+function _wbLiveLogConnect() {
+  if (_wbLiveLogSource) return;
+  if (typeof EventSource === "undefined") {
+    _wbLiveLogStatus("(EventSource unsupported)");
+    return;
+  }
+  const url =
+    WORKBENCH_LOG_STREAM_PATH + "?since=" + encodeURIComponent(_wbLiveLogCursor);
+  let src;
+  try {
+    src = new EventSource(url);
+  } catch (_) {
+    _wbLiveLogStatus("connect failed");
+    return;
+  }
+  _wbLiveLogSource = src;
+  _wbLiveLogStatus("connecting…");
+  src.addEventListener("open", () => _wbLiveLogStatus("connected"));
+  src.addEventListener("message", (ev) => {
+    let payload;
+    try {
+      payload = JSON.parse(ev.data);
+    } catch (_) {
+      return;
+    }
+    if (typeof payload.seq === "number") _wbLiveLogCursor = payload.seq;
+    _wbLiveLogQueue.push(payload);
+    if (_wbLiveLogQueue.length > LIVE_LOG_TAIL_MAX * 2) {
+      _wbLiveLogQueue = _wbLiveLogQueue.slice(-LIVE_LOG_TAIL_MAX);
+    }
+    _wbLiveLogRender();
+  });
+  src.addEventListener("error", () => {
+    _wbLiveLogStatus("reconnecting…");
+    src.close();
+    _wbLiveLogSource = null;
+    // EventSource auto-reconnects on its own when we re-instantiate
+    // it; do that after a brief delay so we don't tight-loop on
+    // server-down.
+    setTimeout(_wbLiveLogConnect, 2000);
+  });
+}
+
+// Boot the panel if it exists. Don't crash on pages that don't
+// include it (workbench_bundle.html, etc.).
+(function _wbLiveLogBoot() {
+  if (typeof document === "undefined") return;
+  const panel = document.getElementById("workbench-live-log-panel");
+  if (!panel) return;
+  _wbLiveLogConnect();
+})();

@@ -607,6 +607,21 @@
          engineer types text → interpret → confirm → submit ticket.
          The overlay file still exists for /workbench/bundle which
          hasn't migrated to the new flow yet. -->
+    <!-- P51-02 (2026-04-27): Live Log Panel. Terminal-style, fed by
+         the SSE stream at /api/workbench/log-stream. Auto-scrolls to
+         the latest line; collapsible to keep the panel out of the
+         way when not needed. Pinned to the bottom of viewport via
+         CSS so it doesn't push the inbox content. -->
+    <details id="workbench-live-log-panel" class="workbench-live-log-panel">
+      <summary class="workbench-live-log-summary">
+        <span class="workbench-live-log-eyebrow">live log</span>
+        <span id="workbench-live-log-status" class="workbench-live-log-status">disconnected</span>
+        <span class="workbench-live-log-tail">▾</span>
+      </summary>
+      <div class="workbench-live-log-body">
+        <pre id="workbench-live-log-stream" class="workbench-live-log-stream" aria-live="polite"></pre>
+      </div>
+    </details>
     <script src="/workbench.js"></script>
   </body>
 </html>
