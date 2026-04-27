@@ -100,10 +100,13 @@ WORKBENCH_GOVERNANCE_HISTORY_PATH = "/api/workbench/governance/history"
 # system = drop a circuit HTML file in static/ and add an entry here.
 _CIRCUIT_SOURCE_BY_SYSTEM: dict[str, str] = {
     "thrust-reverser": "fantui_circuit.html",
-    # c919-etras circuit not yet drafted; placeholder SVG fires when
-    # the dropdown is set to it and the engineer can still submit
-    # tickets against the placeholder (proposal flow + dev-queue
-    # brief work fine without a live SVG).
+    # P54-07 (2026-04-28): wire the existing C919 E-TRAS circuit
+    # SVG so the workbench's circuit view stops showing the
+    # "not yet wired" placeholder when the toggle is on C919.
+    # The SVG uses a different viewBox (0 0 1020 560) than the
+    # thrust-reverser one (0 0 1000 640); the fragment extractor
+    # below was made viewBox-agnostic for this.
+    "c919-etras": "c919_etras_panel/circuit.html",
     #
     # FROZEN 2026-04-26: landing-gear + bleed-air-valve were removed
     # from the dropdown per user direction (not the demo's target
@@ -2055,8 +2058,17 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         except (FileNotFoundError, OSError):
             self._send_json(503, {"error": "circuit_source_unavailable", "system": system_id})
             return
-        svg_start = html.find("<svg viewBox=\"0 0 1000 640\"")
-        svg_end = html.find("</svg>", svg_start)
+        # P54-07 (2026-04-28): viewBox-agnostic SVG extraction. The
+        # original P44-01 implementation hard-coded "0 0 1000 640" so
+        # that C919's "0 0 1020 560" viewBox slipped through to the
+        # placeholder branch. We now find the first `<svg ` tag
+        # carrying a viewBox attribute, regardless of its dimensions,
+        # which keeps thrust-reverser working unchanged while
+        # unlocking c919-etras (and any future system that drafts a
+        # circuit with its own canvas size).
+        svg_match = re.search(r'<svg\s+[^>]*viewBox="[^"]+"', html)
+        svg_start = svg_match.start() if svg_match else -1
+        svg_end = html.find("</svg>", svg_start) if svg_start != -1 else -1
         if svg_start == -1 or svg_end == -1:
             self._send_json(503, {"error": "circuit_svg_block_not_found", "system": system_id})
             return

@@ -95,13 +95,36 @@ def test_landing_gear_returns_placeholder_svg(server):
         )
 
 
-def test_bleed_air_and_c919_also_get_placeholder(server):
-    for system_id in ("bleed-air-valve", "c919-etras"):
-        status, body = _get(server, f"/api/workbench/circuit-fragment?system={system_id}")
-        assert status == 200
-        assert 'data-circuit-system="placeholder"' in body
-        assert f'data-circuit-system-id="{system_id}"' in body
-        assert f"system: {system_id}" in body
+def test_bleed_air_still_gets_placeholder(server):
+    """bleed-air-valve has no circuit file → still placeholder. P54-07
+    wired c919-etras to a real circuit so it no longer fits this case;
+    test_c919_etras_serves_real_circuit_fragment below replaces the
+    obsolete c919 half of this assertion."""
+    status, body = _get(server, "/api/workbench/circuit-fragment?system=bleed-air-valve")
+    assert status == 200
+    assert 'data-circuit-system="placeholder"' in body
+    assert 'data-circuit-system-id="bleed-air-valve"' in body
+    assert "system: bleed-air-valve" in body
+
+
+def test_c919_etras_serves_real_circuit_fragment(server):
+    """P54-07 (2026-04-28): c919-etras now maps to
+    c919_etras_panel/circuit.html. The fragment must be the real
+    SVG (with the C919-specific viewBox 0 0 1020 560), NOT the
+    "circuit not yet wired" placeholder."""
+    status, body = _get(server, "/api/workbench/circuit-fragment?system=c919-etras")
+    assert status == 200
+    assert 'data-circuit-system="placeholder"' not in body, (
+        "C919 must serve real circuit, not placeholder"
+    )
+    assert "<svg" in body
+    assert 'viewBox="0 0 1020 560"' in body
+    # C919 has no L1..L4 anchors — review-mode + interpreter must
+    # still gracefully no-op on this surface.
+    for gate_id in ("L1", "L2", "L3", "L4"):
+        assert f'data-gate-id="{gate_id}"' not in body, (
+            f"C919 fragment unexpectedly carries {gate_id} anchor"
+        )
 
 
 def test_unknown_system_falls_through_to_placeholder(server):
