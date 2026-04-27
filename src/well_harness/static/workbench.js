@@ -1224,6 +1224,10 @@ if (typeof window !== "undefined") {
 // ─────────────────────────────────────────────────────────────────
 
 const SKILL_EXECUTIONS_METRICS_PATH = "/api/skill-executions/metrics";
+// P50-08b: SLO transition timeline endpoint. Pull last 20 entries
+// alongside the metrics on each poll. Newest-last in the response;
+// renderer reverses for a "freshest at top" display.
+const SLO_HISTORY_PATH = "/api/skill-executions/slo-history?limit=20";
 
 function _formatDuration(seconds) {
   if (seconds == null) return "—";
@@ -1249,6 +1253,76 @@ async function refreshExecutionMetrics() {
     return;
   }
   renderExecutionMetrics(metrics);
+  // P50-08b: refresh the SLO transition timeline on the same
+  // poll cadence. Failures here MUST NOT block the metrics
+  // panel — the timeline is supplementary.
+  try {
+    const h = await fetch(SLO_HISTORY_PATH);
+    if (h.ok) {
+      const body = await h.json();
+      renderSloTimeline(body);
+    }
+  } catch (_) {
+    // ignore
+  }
+}
+
+function renderSloTimeline(body) {
+  const container = document.getElementById("workbench-metrics-slo-timeline");
+  const list = document.getElementById("workbench-metrics-slo-timeline-list");
+  if (!container || !list) return;
+  const escape = (text) =>
+    String(text == null ? "" : text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  const transitions = (body && body.transitions) || [];
+  if (transitions.length === 0) {
+    container.setAttribute("hidden", "");
+    list.innerHTML = "";
+    return;
+  }
+  container.removeAttribute("hidden");
+  // Reverse: response is newest-last (file-order); display
+  // newest-first so the freshest transition is at the top.
+  const reversed = transitions.slice().reverse();
+  list.innerHTML = reversed
+    .map((t) => {
+      const breach = (t.breach_slos || []).join(", ") || "(no breach)";
+      const snap = t.snapshot || {};
+      // Compact one-line summary of the snapshot at transition time.
+      const passLifetime =
+        snap.pass_rate != null
+          ? `${(snap.pass_rate * 100).toFixed(0)}%`
+          : "—";
+      const passRecent =
+        snap.pass_rate_recent != null
+          ? `${(snap.pass_rate_recent * 100).toFixed(0)}%`
+          : null;
+      const recentSeg = passRecent ? ` · recent ${passRecent}` : "";
+      return (
+        `<li class="workbench-metrics-slo-timeline-item">` +
+        `  <span class="workbench-metrics-slo-timeline-ts">` +
+        `    ${escape(t.ts)}` +
+        `  </span>` +
+        `  <span class="workbench-metrics-slo-timeline-arrow">` +
+        `    <span class="workbench-metrics-slo-pip" data-slo-severity="${escape(t.from_severity)}">` +
+        `      ${escape(t.from_severity)}` +
+        `    </span>` +
+        `    →` +
+        `    <span class="workbench-metrics-slo-pip" data-slo-severity="${escape(t.to_severity)}">` +
+        `      ${escape(t.to_severity)}` +
+        `    </span>` +
+        `  </span>` +
+        `  <span class="workbench-metrics-slo-timeline-detail">` +
+        `    pass ${passLifetime}${recentSeg} · breach: ${escape(breach)}` +
+        `  </span>` +
+        `</li>`
+      );
+    })
+    .join("");
 }
 
 function renderExecutionMetrics(metrics) {

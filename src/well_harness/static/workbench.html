@@ -445,6 +445,16 @@
               </p>
               <ul id="workbench-metrics-slo-breach-list" class="workbench-metrics-slo-breach-list"></ul>
             </div>
+            <!-- P50-08b (2026-04-27): SLO transition timeline.
+                 Replays every GREEN→YELLOW/RED change so a reviewer
+                 can answer "when did this start breaking?" Hidden
+                 when no transitions exist yet (fresh deploy). -->
+            <div id="workbench-metrics-slo-timeline" class="workbench-metrics-slo-timeline" hidden>
+              <p class="workbench-metrics-slo-eyebrow">
+                SLO 时间线 · transition timeline
+              </p>
+              <ul id="workbench-metrics-slo-timeline-list" class="workbench-metrics-slo-timeline-list"></ul>
+            </div>
             <!-- P50-04 (2026-04-27): failure category breakdown.
                  Shows which buckets have been failing most often
                  (planner_error / git_error / etc.) so a reviewer
