@@ -2823,6 +2823,106 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
   cursor: progress;
 }
 
+/* P51-01 (2026-04-27): Plan Timeline card. Lives above the metrics
+   panel so the freshest execution's lifecycle is the first thing a
+   demo observer sees. Each step's data-step-status drives color +
+   icon: ✓ green for done, ● blue spinner for active, ○ gray pending.
+   Hidden until first render so it doesn't flash empty on cold load. */
+.workbench-plan-timeline {
+  margin: 0.5rem 0 0.45rem 0;
+  border: 1px solid rgba(150, 168, 184, 0.22);
+  border-radius: 6px;
+  background: rgba(11, 18, 24, 0.4);
+  font-size: 0.72rem;
+  padding: 0.55rem 0.7rem;
+}
+.workbench-plan-timeline-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+.workbench-plan-timeline-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.6rem;
+  color: var(--workbench-eyebrow, #80a8c0);
+}
+.workbench-plan-timeline-state {
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(80, 140, 200, 0.18);
+  color: var(--workbench-fg, #cfe);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+}
+.workbench-plan-timeline-state[data-state="LANDED"] { background: rgba(60, 180, 100, 0.25); }
+.workbench-plan-timeline-state[data-state="DRY_RUN_COMPLETE"] { background: rgba(170, 130, 220, 0.25); }
+.workbench-plan-timeline-state[data-state="ABORTED"],
+.workbench-plan-timeline-state[data-state="FAILED"] { background: rgba(220, 90, 90, 0.25); }
+.workbench-plan-timeline-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.workbench-plan-timeline-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.32rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(40, 60, 80, 0.18);
+}
+.workbench-plan-timeline-step[data-step-status="done"] {
+  background: rgba(60, 180, 100, 0.13);
+  color: var(--workbench-fg, #cfe);
+}
+.workbench-plan-timeline-step[data-step-status="active"] {
+  background: rgba(80, 140, 200, 0.18);
+  outline: 1px solid rgba(120, 180, 240, 0.45);
+}
+.workbench-plan-timeline-step[data-step-status="pending"] {
+  background: rgba(40, 60, 80, 0.10);
+  color: rgba(180, 195, 210, 0.55);
+}
+.workbench-plan-timeline-step-icon {
+  font-size: 0.85rem;
+  line-height: 1;
+  width: 1.1rem;
+  flex-shrink: 0;
+}
+.workbench-plan-timeline-step[data-step-status="done"] .workbench-plan-timeline-step-icon {
+  color: rgba(110, 220, 140, 0.9);
+}
+.workbench-plan-timeline-step[data-step-status="active"] .workbench-plan-timeline-step-icon {
+  color: rgba(140, 200, 240, 1);
+  animation: workbenchPlanTimelinePulse 1.2s ease-in-out infinite;
+}
+@keyframes workbenchPlanTimelinePulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1.0;  }
+}
+.workbench-plan-timeline-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  flex: 1;
+}
+.workbench-plan-timeline-step-body strong {
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.workbench-plan-timeline-step-timing {
+  font-size: 0.6rem;
+  color: rgba(180, 195, 210, 0.65);
+  font-variant-numeric: tabular-nums;
+}
+
 /* P50-02a (2026-04-27): executor metrics observability panel.
    Lives in the proposal inbox area as a collapsible details/summary.
    Collapsed by default — expands when reviewer wants a system view.

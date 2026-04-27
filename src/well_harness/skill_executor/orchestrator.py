@@ -66,7 +66,7 @@ from well_harness.skill_executor.models import (
     now_iso,
 )
 from well_harness.skill_executor.gate import check_test_gate
-from well_harness.skill_executor.planner import PlannerError, plan_from_brief
+from well_harness.skill_executor.planner import PlannerError, decompose, plan_from_brief
 from well_harness.skill_executor.pr_maker import (
     PRDetails,
     PRMakerError,
@@ -226,6 +226,20 @@ def execute_proposal(
         state=ExecutionState.INIT.value,
         dry_run=bool(dry_run),
     )
+    # P51-01: rule-based decomposition. The Plan Timeline UI needs
+    # a step list before the LLM planner returns. The classifier reads
+    # the brief + proposal interpretation summary so multilingual hints
+    # in either source land on the right template.
+    interp = proposal.get("interpretation") or {}
+    classifier_text = " ".join(
+        str(x) for x in (
+            brief or "",
+            interp.get("change_kind") or "",
+            interp.get("summary_zh") or "",
+            interp.get("summary_en") or "",
+        ) if x
+    )
+    record.plan_steps = decompose(classifier_text)
     _push_event(
         record,
         kind="init",
@@ -922,19 +936,101 @@ def _transition(record: ExecutionRecord, event: str, audit_dir: Path) -> None:
     """Apply the state transition + write the corresponding event
     to the audit. Raises InvalidExecutionTransitionError (from
     next_state) if the transition isn't allowed — that's a
-    programmer error and should crash the pipeline."""
+    programmer error and should crash the pipeline.
+
+    P51-01: also drives plan_step lifecycle. When we leave a phase,
+    any matching PlanStep that was started gets completed (with
+    actual_duration_sec). When we enter a new phase, any matching
+    PlanStep that hasn't started yet gets started. Each side fires
+    a `plan_step_*` event for the timeline UI.
+    """
     current = ExecutionState(record.state)
     target = next_state(current, event)
+    transition_ts = now_iso()
+
+    # Close out the step we're leaving, if any.
+    _complete_plan_step_for_phase(record, current.value, transition_ts)
+
     record.state = target.value
     record.events.append(
         ExecutionEvent(
-            at=now_iso(),
+            at=transition_ts,
             kind="state_transition",
             from_state=current.value,
             to_state=target.value,
         )
     )
+
+    # Open the step we're entering, if any.
+    _start_plan_step_for_phase(record, target.value, transition_ts)
+
     _persist(record, audit_dir)
+
+
+def _start_plan_step_for_phase(
+    record: ExecutionRecord, phase: str, ts: str
+) -> None:
+    """Mark the first un-started PlanStep for `phase` as started.
+    Emits `plan_step_started`. No-op if no matching step exists or
+    all matching steps already started — orchestrators that double-
+    enter a phase (retry / governance loop) must not double-start.
+    """
+    for step in record.plan_steps:
+        if step.phase_name == phase and not step.started_at:
+            step.started_at = ts
+            record.events.append(
+                ExecutionEvent(
+                    at=ts,
+                    kind="plan_step_started",
+                    note=f"phase={phase} desc={step.description[:80]}",
+                )
+            )
+            return
+
+
+def _complete_plan_step_for_phase(
+    record: ExecutionRecord, phase: str, ts: str
+) -> None:
+    """Mark the first started-but-not-completed PlanStep for
+    `phase` as completed, computing actual_duration_sec from the
+    started_at timestamp. Emits `plan_step_completed`. No-op when
+    no step matches (e.g. INIT → PLANNING leaves INIT, which has no
+    timeline step)."""
+    for step in record.plan_steps:
+        if (
+            step.phase_name == phase
+            and step.started_at
+            and not step.completed_at
+        ):
+            step.completed_at = ts
+            try:
+                start_dt = _parse_iso(step.started_at)
+                end_dt = _parse_iso(ts)
+                step.actual_duration_sec = max(
+                    0.0, (end_dt - start_dt).total_seconds()
+                )
+            except Exception:
+                step.actual_duration_sec = None
+            record.events.append(
+                ExecutionEvent(
+                    at=ts,
+                    kind="plan_step_completed",
+                    note=(
+                        f"phase={phase} actual_sec="
+                        f"{step.actual_duration_sec}"
+                    ),
+                )
+            )
+            return
+
+
+def _parse_iso(s: str):
+    """Tolerant ISO-8601 parser that handles trailing Z."""
+    from datetime import datetime
+    s = s.strip()
+    if s.endswith("Z"):
+        s = s[:-1] + "+00:00"
+    return datetime.fromisoformat(s)
 
 
 def _push_event(record: ExecutionRecord, *, kind: str, note: str = "") -> None:

@@ -42,7 +42,7 @@ from well_harness.skill_executor.llm_client import (
     call_minimax,
     resolve_minimax_api_key,
 )
-from well_harness.skill_executor.models import FileEdit, PlannedChange
+from well_harness.skill_executor.models import FileEdit, PlannedChange, PlanStep
 from well_harness.skill_executor.namespaces import (
     PANEL_NAMESPACES,
     PANEL_NAMESPACES_BY_ID,
@@ -380,3 +380,215 @@ def _parse_and_validate_response(
         affected_namespaces=affected,
         risk_assessment=risk_assessment,
     )
+
+
+# ─── P51-01: Rule-based task decomposition ────────────────────────
+#
+# Why this is separate from `plan_from_brief`:
+#   - decompose() runs synchronously at INIT, before the LLM is
+#     reachable. The Plan Timeline card needs SOMETHING to render
+#     while the LLM is still thinking. If we waited for the LLM to
+#     return a typed PlannedChange, the UI would sit empty for the
+#     first several seconds.
+#   - decompose() is rule-based. The LLM produces the authoritative
+#     edit list; decompose() produces a UX scaffold (5 lifecycle
+#     buckets the user can read at a glance).
+#   - The two pipelines are orthogonal: the LLM plan tells US what
+#     files to touch; decompose() tells the OPERATOR what phases
+#     the run will walk through. They never disagree because they
+#     answer different questions.
+#
+# Templates pick the description text + estimated time per phase.
+# Keyword matching is intentionally simple — false positives are
+# fine (the operator sees both descriptions if the brief matches
+# multiple keywords; we just take the first hit).
+
+
+_KEYWORD_TEMPLATES = (
+    # (template_id, keyword_set)
+    ("modify_param", (
+        "修改参数", "调整参数", "改参数", "修参数",
+        "modify parameter", "tune", "tweak", "adjust",
+    )),
+    ("add_test", (
+        "加测试", "增加测试", "补测试", "新测试",
+        "add test", "add tests", "write test", "regression test",
+    )),
+    ("fix_bug", (
+        "修复 bug", "修复bug", "修 bug", "修bug", "修复缺陷",
+        "fix bug", "bug fix", "patch", "regression", "broken",
+    )),
+)
+
+
+_TEMPLATE_BODIES: dict[str, list[PlanStep]] = {
+    # Each template MUST cover the canonical ASKING/EDITING/TESTING/
+    # PR_OPEN progression so the Plan Timeline UI has a step to
+    # highlight at every state. PLANNING is implicit (the LLM call
+    # itself); we surface the UX-visible steps only.
+    "modify_param": [
+        PlanStep(
+            phase_name="PLANNING",
+            description="LLM 分析 brief，定位待调参数",
+            estimated_seconds=15.0,
+            target_files=[],
+        ),
+        PlanStep(
+            phase_name="ASKING",
+            description="向用户确认参数新值",
+            estimated_seconds=20.0,
+            target_files=[],
+        ),
+        PlanStep(
+            phase_name="EDITING",
+            description="改写常量值并保留旧值注释",
+            estimated_seconds=8.0,
+            target_files=["src/**/*.py"],
+        ),
+        PlanStep(
+            phase_name="TESTING",
+            description="跑回归测试，确认未破坏既有断言",
+            estimated_seconds=240.0,
+            target_files=["tests/"],
+        ),
+        PlanStep(
+            phase_name="PR_OPEN",
+            description="提交 + 推分支 + 开 PR",
+            estimated_seconds=12.0,
+            target_files=[],
+        ),
+    ],
+    "add_test": [
+        PlanStep(
+            phase_name="PLANNING",
+            description="LLM 设计测试用例覆盖目标行为",
+            estimated_seconds=20.0,
+            target_files=[],
+        ),
+        PlanStep(
+            phase_name="ASKING",
+            description="向用户确认覆盖范围",
+            estimated_seconds=15.0,
+            target_files=[],
+        ),
+        PlanStep(
+            phase_name="EDITING",
+            description="新建测试文件 + 必要的 fixtures",
+            estimated_seconds=20.0,
+            target_files=["tests/"],
+        ),
+        PlanStep(
+            phase_name="TESTING",
+            description="确认新测试通过 + 既有套件无回归",
+            estimated_seconds=300.0,
+            target_files=["tests/"],
+        ),
+        PlanStep(
+            phase_name="PR_OPEN",
+            description="提交 + 推分支 + 开 PR",
+            estimated_seconds=12.0,
+            target_files=[],
+        ),
+    ],
+    "fix_bug": [
+        PlanStep(
+            phase_name="PLANNING",
+            description="LLM 分析 bug 现象，定位根因",
+            estimated_seconds=30.0,
+            target_files=[],
+        ),
+        PlanStep(
+            phase_name="ASKING",
+            description="向用户确认修复策略",
+            estimated_seconds=20.0,
+            target_files=[],
+        ),
+        PlanStep(
+            phase_name="EDITING",
+            description="补回归测试 → 修代码 → 验证",
+            estimated_seconds=25.0,
+            target_files=["src/**/*.py", "tests/"],
+        ),
+        PlanStep(
+            phase_name="TESTING",
+            description="新回归用例先红后绿，全套件无新失败",
+            estimated_seconds=300.0,
+            target_files=["tests/"],
+        ),
+        PlanStep(
+            phase_name="PR_OPEN",
+            description="提交 + 推分支 + 开 PR",
+            estimated_seconds=12.0,
+            target_files=[],
+        ),
+    ],
+}
+
+
+_DEFAULT_TEMPLATE: list[PlanStep] = [
+    PlanStep(
+        phase_name="PLANNING",
+        description="LLM 分析 brief 并产出 typed plan",
+        estimated_seconds=20.0,
+        target_files=[],
+    ),
+    PlanStep(
+        phase_name="ASKING",
+        description="向用户确认提议的改动",
+        estimated_seconds=20.0,
+        target_files=[],
+    ),
+    PlanStep(
+        phase_name="EDITING",
+        description="按 plan 改写 file_edits",
+        estimated_seconds=15.0,
+        target_files=[],
+    ),
+    PlanStep(
+        phase_name="TESTING",
+        description="跑全套测试确认无回归",
+        estimated_seconds=240.0,
+        target_files=["tests/"],
+    ),
+    PlanStep(
+        phase_name="PR_OPEN",
+        description="提交 + 推分支 + 开 PR",
+        estimated_seconds=12.0,
+        target_files=[],
+    ),
+]
+
+
+def _classify_template(text: str) -> str:
+    """First-match wins. Lower-cased substring contains is enough —
+    we don't need stemming or NLP for 6 keywords."""
+    haystack = text.lower()
+    for template_id, keywords in _KEYWORD_TEMPLATES:
+        for kw in keywords:
+            if kw in haystack:
+                return template_id
+    return "default"
+
+
+def decompose(task_description: str) -> list[PlanStep]:
+    """Return a fresh PlanStep list for `task_description`.
+
+    Always returns ≥3 steps and covers the EDITING + TESTING +
+    PR_OPEN trio so the Plan Timeline UI has something to highlight
+    at every visible lifecycle stage. Returns FRESH PlanStep
+    instances each call so callers can mutate started_at /
+    completed_at without touching the template.
+    """
+    if not isinstance(task_description, str):
+        task_description = str(task_description or "")
+    template_id = _classify_template(task_description)
+    body = _TEMPLATE_BODIES.get(template_id, _DEFAULT_TEMPLATE)
+    return [
+        PlanStep(
+            phase_name=step.phase_name,
+            description=step.description,
+            estimated_seconds=step.estimated_seconds,
+            target_files=list(step.target_files),
+        )
+        for step in body
+    ]

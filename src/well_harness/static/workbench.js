@@ -1415,6 +1415,67 @@ async function refreshExecutionMetrics() {
   } catch (_) {
     // ignore
   }
+  // P51-01: refresh the Plan Timeline (freshest execution's PlanStep[]).
+  // Failures must not block the metrics panel — supplementary view.
+  try {
+    const e = await fetch(SKILL_EXECUTIONS_PATH);
+    if (e.ok) {
+      const body = await e.json();
+      const executions = body.executions || [];
+      renderPlanTimeline(executions[0] || null);
+    }
+  } catch (_) {
+    // ignore
+  }
+}
+
+function renderPlanTimeline(record) {
+  const container = document.getElementById("workbench-plan-timeline");
+  const title = document.getElementById("workbench-plan-timeline-title");
+  const stateLabel = document.getElementById("workbench-plan-timeline-state");
+  const list = document.getElementById("workbench-plan-timeline-steps");
+  if (!container || !title || !list || !stateLabel) return;
+  const steps = (record && record.plan_steps) || [];
+  if (!record || steps.length === 0) {
+    container.setAttribute("hidden", "");
+    return;
+  }
+  container.removeAttribute("hidden");
+  const escape = (text) =>
+    String(text == null ? "" : text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  title.textContent = record.proposal_id || "—";
+  stateLabel.textContent = record.state || "—";
+  stateLabel.setAttribute("data-state", record.state || "");
+  list.innerHTML = steps
+    .map((s) => {
+      let status = "pending";
+      if (s.completed_at) status = "done";
+      else if (s.started_at) status = "active";
+      const est = s.estimated_seconds != null
+        ? `${Math.round(s.estimated_seconds)}s`
+        : "—";
+      const actual = s.actual_duration_sec != null
+        ? `${s.actual_duration_sec.toFixed(1)}s`
+        : (status === "active" ? "运行中" : "—");
+      return (
+        `<li class="workbench-plan-timeline-step" data-step-status="${status}">` +
+        `  <span class="workbench-plan-timeline-step-icon" aria-hidden="true">` +
+        (status === "done" ? "✓" : status === "active" ? "●" : "○") +
+        `  </span>` +
+        `  <div class="workbench-plan-timeline-step-body">` +
+        `    <strong>${escape(s.phase_name || "")}</strong>` +
+        `    <span>${escape(s.description || "")}</span>` +
+        `    <span class="workbench-plan-timeline-step-timing">est ${escape(est)} · actual ${escape(actual)}</span>` +
+        `  </div>` +
+        `</li>`
+      );
+    })
+    .join("");
 }
 
 function renderSloTimeline(body) {
