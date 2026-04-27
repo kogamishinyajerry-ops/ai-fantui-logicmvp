@@ -399,6 +399,21 @@
         <details id="workbench-metrics-panel" class="workbench-metrics-panel">
           <summary class="workbench-metrics-summary">
             <span class="workbench-metrics-summary-eyebrow">executor metrics</span>
+            <!-- P50-10 (2026-04-27): forensics bundle download.
+                 Lives in the summary so it's reachable without
+                 expanding the panel — when alerted, the operator
+                 wants the snapshot first, the dashboard view second.
+                 An <a> rather than a <button> so the browser handles
+                 the file download naturally; click bubbles past the
+                 <details> toggle thanks to event.stopPropagation in
+                 the handler. -->
+            <a
+              id="workbench-metrics-forensics-link"
+              class="workbench-metrics-forensics-link"
+              href="/api/skill-executions/forensics-bundle"
+              download
+              title="下载快照 · download forensics bundle"
+            >📥 forensics</a>
             <!-- P50-07 (2026-04-27): SLO verdict chip. Color-coded
                  GREEN/YELLOW/RED/NO_DATA so a reviewer's glance at
                  the collapsed summary tells them whether the system

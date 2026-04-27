@@ -3013,6 +3013,32 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
 /* P50-04 (2026-04-27): failure category breakdown. Sits between
    the state bars and the recent_failures list. Only shown when
    total > 0 — hidden by default to avoid empty noise. */
+/* P50-10 (2026-04-27): forensics-bundle download link in the
+   metrics-panel summary. Quiet styling — it's not the primary
+   action, just a one-click path to "grab the system snapshot".
+   Hover surfaces it; resting state stays low-contrast so it
+   doesn't compete with the SLO chip. */
+.workbench-metrics-forensics-link {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.55rem;
+  text-decoration: none;
+  color: rgba(206, 223, 236, 0.55);
+  background: rgba(150, 168, 184, 0.08);
+  border: 1px solid rgba(150, 168, 184, 0.2);
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  margin-right: 0.4rem;
+  transition: color 0.15s ease, background 0.15s ease,
+              border-color 0.15s ease;
+}
+.workbench-metrics-forensics-link:hover,
+.workbench-metrics-forensics-link:focus-visible {
+  color: #cfe1ee;
+  background: rgba(150, 168, 184, 0.18);
+  border-color: rgba(150, 168, 184, 0.45);
+  outline: none;
+}
+
 /* P50-07 (2026-04-27): SLO verdict chip in collapsed summary +
    breach detail in expanded panel. The chip color reuses the same
    green/yellow/red palette as the per-state badges (P49-01b) and

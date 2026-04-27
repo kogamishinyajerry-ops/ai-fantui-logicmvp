@@ -110,6 +110,11 @@ from well_harness.skill_executor.slo_history import (
     load_history as load_slo_history,
     record_transition as record_slo_transition,
 )
+from well_harness.skill_executor.forensics_bundle import (
+    BundleManifest,
+    build_bundle as build_forensics_bundle,
+    default_bundle_filename as default_forensics_bundle_filename,
+)
 from well_harness.skill_executor.slo_webhook import (
     DispatchResult as SLOWebhookDispatchResult,
     WebhookDispatchError,
@@ -219,6 +224,7 @@ __all__ = [
     "AuditSchemaError",
     "AuditSource",
     "BackfillError",
+    "BundleManifest",
     "CategoryAggregate",
     "ClassifiedFailure",
     "CommitResult",
@@ -286,6 +292,8 @@ __all__ = [
     "compute_phase_timings",
     "compute_slo_status",
     "create_branch",
+    "build_forensics_bundle",
+    "default_forensics_bundle_filename",
     "dispatch_slo_transition",
     "load_slo_history",
     "record_slo_transition",
