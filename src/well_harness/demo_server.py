@@ -2900,41 +2900,13 @@ def _truth_engine_short_sha() -> str:
 # each namespace's file set, so an engineer can spot at a glance
 # whether (e.g.) requirements-doc has drifted past logic-truth.
 #
-# Namespaces are fixed; adding a 4th later is a single dict entry
-# here + a render row in workbench.js.
-_PANEL_NAMESPACES: tuple[dict, ...] = (
-    {
-        "namespace": "logic_truth",
-        "label_zh": "逻辑电路真值",
-        "label_en": "Logic truth",
-        # files relative to repo root
-        "files": (
-            "src/well_harness/controller.py",
-            "src/well_harness/models.py",
-            "src/well_harness/runner.py",
-            "src/well_harness/adapters",
-        ),
-    },
-    {
-        "namespace": "requirements",
-        "label_zh": "需求文档",
-        "label_en": "Requirements",
-        "files": (
-            "docs/thrust_reverser/requirements_supplement.md",
-            "docs/c919_etras/requirements_v0_9.md",
-            "src/well_harness/static/fantui_requirements.html",
-            "src/well_harness/static/c919_requirements.html",
-        ),
-    },
-    {
-        "namespace": "simulation_workbench",
-        "label_zh": "仿真工作台",
-        "label_en": "Simulation panel",
-        "files": (
-            "src/well_harness/static/timeline-sim.html",
-            "docs/panels/sim_panel_requirements.md",
-        ),
-    },
+# P48-02 (2026-04-27): the namespace definition lifted to
+# `well_harness.skill_executor.namespaces` so the planner can use
+# the same source of truth when validating "this edit must fall
+# within affected_namespaces". The local `_PANEL_NAMESPACES` alias
+# is kept for backwards compatibility with existing tests.
+from well_harness.skill_executor.namespaces import (
+    PANEL_NAMESPACES as _PANEL_NAMESPACES,
 )
 
 
