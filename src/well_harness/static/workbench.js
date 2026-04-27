@@ -597,12 +597,22 @@ function renderProposalsInbox(proposals) {
       const pendingSlot =
         `<div class="workbench-pending-exec-slot" ` +
         `     data-pending-exec-for="${escape(p.id)}"></div>`;
+      // P49-01b (2026-04-27): execution-state badge slot. Filled
+      // asynchronously by refreshExecutionBadges() with one of 9
+      // possible states (INIT/PLANNING/ASKING/EDITING/TESTING/
+      // PR_OPEN/LANDED/ABORTED/FAILED). Empty until that fetch
+      // resolves; absent entirely if no audit exists for this
+      // proposal yet.
+      const execBadgeSlot =
+        `<span class="workbench-execution-badge-slot" ` +
+        `      data-execution-badge-for="${escape(p.id)}"></span>`;
       return (
         `<li class="workbench-annotation-inbox-item" data-proposal-id="${escape(p.id)}" data-status="${escape(p.status)}" data-proposal-kind="${escape(kind)}">` +
         `  <div class="workbench-annotation-inbox-item-line">` +
         `    <span class="workbench-annotation-inbox-item-id">${escape(p.id)}</span>` +
         `    <span class="workbench-annotation-inbox-item-status" data-status="${escape(p.status)}">${escape(p.status)}</span>` +
         kindBadge +
+        execBadgeSlot +
         `    <span class="workbench-annotation-inbox-item-gate">命中 · gate: ${escape(gates)}</span>` +
         `    <span class="workbench-annotation-inbox-item-kind">${escape(interp.change_kind_zh || "")} · ${escape(interp.change_kind_en || "")}</span>` +
         `  </div>` +
@@ -626,6 +636,8 @@ function renderProposalsInbox(proposals) {
   // P48-06: kick off pending-execution refresh now that the cards
   // exist. The refresher renders into each card's pendingSlot.
   refreshPendingExecutions();
+  // P49-01b: render 9-state execution badge per card.
+  refreshExecutionBadges();
   // P44-04: clicking a ticket card spotlights its anchor on the SVG.
   // Delegated handler — re-attached on every render so it always
   // matches the current set of cards.
@@ -860,10 +872,123 @@ async function sendPendingExecApproval(execId, action) {
 function startPendingExecPoll(intervalMs) {
   if (_pendingExecPollHandle) return;
   // Periodic refresh so cards auto-clear once CLI consumes signal
+  // AND the per-card execution-state badge stays current as the
+  // executor walks through its lifecycle (P49-01b).
   _pendingExecPollHandle = setInterval(
-    () => refreshPendingExecutions(),
+    () => {
+      refreshPendingExecutions();
+      refreshExecutionBadges();
+    },
     intervalMs || 5000
   );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// P49-01b (2026-04-27): per-proposal execution-state badge.
+//
+// Each accepted proposal card carries a small badge showing the
+// current state of the latest skill_executor execution, drawn from
+// the 9-state machine:
+//
+//   INIT      ◯  pre-flight, no work yet
+//   PLANNING  🧠  LLM building the plan
+//   ASKING    ⏳  waiting on engineer in workbench
+//   EDITING   ✏  applying file edits
+//   TESTING   🧪  pytest running
+//   PR_OPEN   🔀  PR submitted, awaiting CI/merge
+//   LANDED    ✅  merged to main
+//   ABORTED   ⊘   user rejected or test gate blocked
+//   FAILED    ✗   executor crashed / unrecoverable error
+//
+// One bulk fetch of /api/skill-executions then group by
+// proposal_id (newest-first ordering preserved by list_audits).
+// Cards without any audit get an empty slot — the badge appears
+// only AFTER the executor has touched the proposal.
+// ─────────────────────────────────────────────────────────────────
+
+const SKILL_EXECUTIONS_PATH = "/api/skill-executions";
+
+const EXECUTION_STATE_INFO = {
+  INIT:     { glyph: "◯",  label_zh: "待启动",   label_en: "Init",     css: "init"     },
+  PLANNING: { glyph: "🧠", label_zh: "计划中",   label_en: "Planning", css: "planning" },
+  ASKING:   { glyph: "⏳", label_zh: "待批准",   label_en: "Asking",   css: "asking"   },
+  EDITING:  { glyph: "✏",  label_zh: "改文件",   label_en: "Editing",  css: "editing"  },
+  TESTING:  { glyph: "🧪", label_zh: "跑测试",   label_en: "Testing",  css: "testing"  },
+  PR_OPEN:  { glyph: "🔀", label_zh: "PR待合",   label_en: "PR Open",  css: "pr-open"  },
+  LANDED:   { glyph: "✅", label_zh: "已落地",   label_en: "Landed",   css: "landed"   },
+  ABORTED:  { glyph: "⊘",  label_zh: "已终止",   label_en: "Aborted",  css: "aborted"  },
+  FAILED:   { glyph: "✗",  label_zh: "失败",     label_en: "Failed",   css: "failed"   },
+};
+
+function renderExecutionBadge(audit) {
+  const escape = (text) =>
+    String(text == null ? "" : text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  const info = EXECUTION_STATE_INFO[audit.state] || {
+    glyph: "?", label_zh: audit.state, label_en: audit.state, css: "unknown",
+  };
+  const isBackfill = audit.audit_source === "backfill";
+  const titleParts = [
+    `Exec: ${audit.exec_id}`,
+    `State: ${audit.state}`,
+  ];
+  if (isBackfill) titleParts.push("audit_source=backfill (reconstructed)");
+  return (
+    `<span class="workbench-execution-badge" ` +
+    `      data-execution-state="${escape(audit.state)}" ` +
+    `      data-execution-css="${escape(info.css)}" ` +
+    `      title="${escape(titleParts.join(" · "))}">` +
+    `  <span class="workbench-execution-badge-glyph">${escape(info.glyph)}</span>` +
+    `  <span class="workbench-execution-badge-label">` +
+    `    ${escape(info.label_zh)} · ${escape(info.label_en)}` +
+    `  </span>` +
+    (isBackfill
+      ? `<span class="workbench-execution-badge-backfill" ` +
+        `      title="此审计是事后回填，并非首次实时记录">↺</span>`
+      : "") +
+    `</span>`
+  );
+}
+
+async function refreshExecutionBadges() {
+  const slots = document.querySelectorAll("[data-execution-badge-for]");
+  if (!slots.length) return;
+  let executions = [];
+  try {
+    const r = await fetch(SKILL_EXECUTIONS_PATH);
+    if (!r.ok) return;
+    const body = await r.json();
+    executions = body.executions || [];
+  } catch (_) {
+    return;
+  }
+  // list_audits returns newest-first, so the FIRST occurrence of
+  // each proposal_id is the freshest audit for that proposal.
+  const latestByProposal = {};
+  for (const exec of executions) {
+    if (!latestByProposal[exec.proposal_id]) {
+      latestByProposal[exec.proposal_id] = exec;
+    }
+  }
+  for (const slot of slots) {
+    const proposalId = slot.getAttribute("data-execution-badge-for");
+    const exec = latestByProposal[proposalId];
+    if (!exec) {
+      slot.innerHTML = "";
+      continue;
+    }
+    slot.innerHTML = renderExecutionBadge(exec);
+  }
+}
+
+// Expose the state map + renderer for tests and console debugging.
+if (typeof window !== "undefined") {
+  window.__WB_EXECUTION_STATE_INFO = EXECUTION_STATE_INFO;
+  window.__WB_renderExecutionBadge = renderExecutionBadge;
 }
 
 // ─────────────────────────────────────────────────────────────────
