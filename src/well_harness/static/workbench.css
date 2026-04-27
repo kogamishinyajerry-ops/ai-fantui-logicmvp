@@ -4431,6 +4431,52 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   color: #edf8ff;
 }
 
+/* P54-04: circuit canvas system toggle (反推 / C919 E-TRAS).
+   Floats in the top-right of the circuit hero only — the section
+   has `position: relative` implicit-ish (we put it absolute). */
+.workbench-circuit-hero {
+  position: relative;
+}
+.workbench-circuit-system-toggle {
+  position: absolute;
+  top: 0.85rem;
+  right: 1rem;
+  display: inline-flex;
+  gap: 1px;
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--wb-hairline);
+  border-radius: 8px;
+  z-index: 5;
+}
+.workbench-circuit-system-btn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #93a8b8);
+  padding: 0.32rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  font-family: inherit;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background var(--wb-duration-drawer) var(--wb-ease-out),
+    color var(--wb-duration-drawer) var(--wb-ease-out);
+}
+.workbench-circuit-system-btn:hover {
+  color: #edf8ff;
+  background: rgba(255, 255, 255, 0.04);
+}
+.workbench-circuit-system-btn[aria-pressed="true"] {
+  color: #051018;
+  background: var(--accent, #67e8f9);
+}
+.workbench-circuit-system-btn:focus-visible {
+  outline: 2px solid var(--accent, #67e8f9);
+  outline-offset: 2px;
+}
+
 /* P54-03: iframe-embed views (sim / cockpit / requirements) host
    existing mature pages — drop the canvas-view padding so the
    iframe fills the available canvas edge to edge, and the

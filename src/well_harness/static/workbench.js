@@ -6277,6 +6277,47 @@ function _wbLiveLogConnect() {
   });
 })();
 
+// ─── P54-04: circuit canvas system toggle (反推 / C919) ─────────────
+//
+// The legacy workbench-system-select dropdown drives circuit fragment
+// re-fetch but is hidden by P53-00. Surface it as a visible pill
+// toggle inside the circuit canvas; clicks update the hidden select
+// (single source of truth) + dispatch its change event so existing
+// reload paths pick it up unchanged.
+(function _wbCircuitSystemToggleBoot() {
+  if (typeof document === "undefined") return;
+  const toggle = document.getElementById("workbench-circuit-system-toggle");
+  if (!toggle) return;
+  const buttons = Array.from(toggle.querySelectorAll("[data-circuit-system]"));
+  if (buttons.length === 0) return;
+
+  function syncFromSelect() {
+    const select = document.getElementById("workbench-system-select");
+    const current = (select && select.value) || "thrust-reverser";
+    for (const btn of buttons) {
+      const isActive = btn.getAttribute("data-circuit-system") === current;
+      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    }
+  }
+
+  for (const btn of buttons) {
+    btn.addEventListener("click", () => {
+      const target = btn.getAttribute("data-circuit-system");
+      if (!target) return;
+      const select = document.getElementById("workbench-system-select");
+      if (select && select.value !== target) {
+        select.value = target;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      syncFromSelect();
+    });
+  }
+
+  // Sync on boot in case the page loads with a non-default system
+  // already selected (e.g. via stored preference).
+  syncFromSelect();
+})();
+
 // ─── P54-02: dock view-group → canvas switcher ────────────────────
 //
 // The top half of the dock holds 4 buttons (`data-view-target=...`)
