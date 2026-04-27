@@ -892,7 +892,41 @@ def test_clearSuggestionDraftFor_preserves_other_systems_pending_state() -> None
     )
 
 
-def test_change_kind_hint_excludes_propose_change_fallback() -> None:
+def test_llm_normalizer_resolves_gate_synonyms() -> None:
+    """Codex round-9 P2-1: the canonicalizer must accept gate
+    aliases (TLS → L1, l1 → L1, 逻辑门 1 → L1) the rules
+    interpreter accepts. Otherwise an LLM that emitted a valid
+    alias is reduced to affected_gates=[]."""
+    raw = {
+        "affected_gates": ["TLS", "L99", "l1"],
+        "target_signals": [],
+        "change_kind": "tighten_condition",
+        "confidence": 0.9,
+    }
+    out = _normalize_llm_interpretation(
+        raw, source_text="x", system_id="thrust-reverser"
+    )
+    # TLS and l1 both alias to L1; L99 dropped. Result must be ["L1"]
+    # (deduplicated, canonical, no L99).
+    assert out["affected_gates"] == ["L1"], (
+        f"expected synonyms resolved to [L1], got {out['affected_gates']}"
+    )
+
+
+def test_llm_normalizer_dedups_synonyms_to_canonical() -> None:
+    """Two synonyms of the same canonical id should collapse to
+    one entry."""
+    raw = {
+        "affected_gates": ["TLS", "l1", "L1"],   # all → L1
+        "target_signals": [],
+        "change_kind": "propose_change",
+        "confidence": 0.5,
+    }
+    out = _normalize_llm_interpretation(
+        raw, source_text="x", system_id="thrust-reverser"
+    )
+    assert out["affected_gates"] == ["L1"]
+
     """Codex P3: the verb hint must NOT advertise "propose change"
     as a remedy — that's the very fallback that triggered the hint
     (zero-confidence dimension). The earlier comprehension filtered
@@ -946,3 +980,19 @@ def test_js_conflict_banner_lists_overlapping_proposals() -> None:
     assert "hideConflictBanner" in clear_fn.group(1), (
         "clearSuggestionInterpretation must also tear down the conflict banner"
     )
+
+
+def test_change_kind_hint_excludes_propose_change_fallback() -> None:
+    """Codex round-1 P3: the verb hint must NOT advertise "propose
+    change" as a remedy — that's the very fallback that triggered
+    the hint (zero-confidence dimension). The earlier comprehension
+    filtered on the Chinese label by mistake; the fix uses the code
+    field."""
+    result = interpret_suggestion_text("这个面板看起来怪怪的")
+    verbs = result["vocabulary_hint"]["change_kind"]
+    assert "propose change" not in [v.lower() for v in verbs], (
+        f"vocabulary_hint must not suggest the fallback verb; got {verbs!r}"
+    )
+    # Sanity: real verbs are still in the list.
+    lowered = [v.lower() for v in verbs]
+    assert any("tighten" in v for v in lowered) or any("loosen" in v for v in lowered)

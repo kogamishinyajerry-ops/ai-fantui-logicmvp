@@ -2558,16 +2558,31 @@ def _normalize_llm_interpretation(
     affected_gates = _str_list(raw_dict.get("affected_gates"))
     target_signals = _str_list(raw_dict.get("target_signals"))
     change_kind = str(raw_dict.get("change_kind") or "propose_change")
-    # Codex round-4 P2-1: canonicalize against the per-system vocab.
-    # If the LLM hallucinated a gate/signal id (e.g. "L99", "BOGUS")
-    # or echoed a change_kind not in our taxonomy, the breakdown
-    # below would score it as a met dimension (100%/100%/100%) and
-    # the UI would claim full confidence — but no real SVG gate can
-    # be highlighted and downstream review/interpreter routing has
-    # no idea what to do with it. Drop unknowns.
+    # Codex round-4 P2-1 + round-9 P2-1: canonicalize against the
+    # per-system vocab. Drop true hallucinations ("L99", "BOGUS")
+    # but RESOLVE synonyms (e.g. "TLS" → "L1", "逻辑门 1" → "L1",
+    # "l1" → "L1") through the gate synonym table — otherwise an
+    # LLM that emitted a valid alias would be reduced to [] even
+    # though the rules interpreter would have accepted it.
     gate_vocab = _gate_synonyms_for(system_id)
     signal_vocab = _signals_for(system_id)
-    affected_gates = [g for g in affected_gates if g in gate_vocab]
+    # Build a synonym → canonical-id reverse index; canonical ids
+    # are also their own synonym so the lookup is uniform.
+    gate_alias_index: dict[str, str] = {}
+    for canonical, syns in gate_vocab.items():
+        gate_alias_index[canonical] = canonical
+        for s in syns:
+            gate_alias_index.setdefault(s, canonical)
+    resolved_gates: list[str] = []
+    seen: set[str] = set()
+    for raw_g in affected_gates:
+        canonical = gate_alias_index.get(raw_g)
+        if canonical and canonical not in seen:
+            resolved_gates.append(canonical)
+            seen.add(canonical)
+    affected_gates = resolved_gates
+    # Signal vocab is a flat tuple of canonical names; keep strict
+    # equality (synonyms aren't defined for signals in this repo).
     target_signals = [s for s in target_signals if s in signal_vocab]
     valid_change_kinds = {h[1] for h in _CHANGE_KIND_HINTS}
     raw_zh = str(raw_dict.get("change_kind_zh") or "提出建议")

@@ -767,12 +767,15 @@ function installSuggestionDraftRestore() {
       // across two systems. By killing the banner on switch we
       // simply force re-interpretation under the new system.
       hideConflictBanner();
-      // Only offer a draft if the input is still empty (the user
-      // didn't already start typing in the new system).
-      if ((input.value || "").trim() === "") {
-        const next = readSuggestionDraft();
-        if (next) showDraftBanner(next);
-      }
+      // Codex round-9 P2-2: the textarea is shared across systems
+      // and never reset on switch, so the previous system's text
+      // is still on screen — the prior "is input empty?" guard
+      // never fired and the new system's draft was never offered.
+      // Clear the textarea on switch so it reflects the now-active
+      // system's state, then surface the draft banner if applicable.
+      input.value = "";
+      const next = readSuggestionDraft();
+      if (next) showDraftBanner(next);
     });
   }
   // Wire the banner's restore + dismiss buttons.
