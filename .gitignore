@@ -32,3 +32,7 @@ output/
 # P44-05: dev-queue handoff briefs (per-accept demo state; Claude Code reads
 # these in a later /gsd-execute-phase session and deletes them on completion)
 .planning/dev_queue/
+
+# P51-03: governance decision history (per-host demo state, written
+# at runtime by the orchestrator's governance gate)
+data/governance_decisions.jsonl
