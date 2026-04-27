@@ -39,4 +39,5 @@ data/governance_decisions.jsonl
 
 # P51-02 / P50-08b: orchestrator runtime state (per-host, written by
 # the live executor / SLO history worker)
-.planning/skill_executions/
+.planning/skill_executions/*
+!.planning/skill_executions/.gitkeep
