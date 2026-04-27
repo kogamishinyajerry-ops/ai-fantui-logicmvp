@@ -6197,11 +6197,52 @@ function _wbLiveLogConnect() {
   );
   if (buttons.length === 0) return;
 
+  // P52-08: remember the dock button that opened the drawer so we
+  // can return focus to it on close (keyboard users shouldn't get
+  // bounced back to <body>).
+  let lastDockTrigger = null;
+
+  function _wbDrawerFocusEntry(tool) {
+    if (!tool) return;
+    // Activation flips `hidden` via CSS, but not until the next
+    // paint — defer the focus call so the drawer is actually
+    // focusable when we hit it.
+    requestAnimationFrame(() => {
+      const candidates = Array.from(
+        document.querySelectorAll(`[data-dock-section="${tool}"]`)
+      );
+      const drawer = candidates.find((el) => !el.hidden) || candidates[0];
+      if (!drawer) return;
+      // Prefer the drawer's close button (canonical first focusable
+      // landmark); fall back to the first focusable child or the
+      // drawer itself with tabindex -1.
+      const firstFocusable =
+        drawer.querySelector("[data-dock-close]") ||
+        drawer.querySelector(
+          "input:not([disabled]), button:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
+        );
+      if (firstFocusable) {
+        firstFocusable.focus();
+      } else {
+        drawer.setAttribute("tabindex", "-1");
+        drawer.focus();
+      }
+    });
+  }
+
   function setActive(tool) {
+    const previous = document.body.dataset.activeTool || "";
     document.body.dataset.activeTool = tool || "";
     for (const btn of buttons) {
       const isActive = btn.getAttribute("data-dock-target") === tool;
       btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    }
+    if (tool) {
+      _wbDrawerFocusEntry(tool);
+    } else if (previous && lastDockTrigger) {
+      // Drawer just closed — return focus to whichever dock button
+      // had opened it.
+      lastDockTrigger.focus();
     }
   }
 
@@ -6212,6 +6253,7 @@ function _wbLiveLogConnect() {
       if (target === current) {
         setActive("");  // click active button = close drawer
       } else {
+        lastDockTrigger = btn;
         setActive(target);
       }
     });
