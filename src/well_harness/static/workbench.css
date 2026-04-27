@@ -2372,10 +2372,17 @@ body[data-view="expert"] [view="beginner"] {
   font-style: italic; font-size: 0.8rem;
 }
 .workbench-annotation-inbox-item {
-  padding: 0.55rem 0.7rem;
-  border: 1px solid rgba(143, 214, 233, 0.18);
-  background: rgba(8, 17, 28, 0.55);
-  border-radius: 6px;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--wb-hairline);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  transition:
+    border-color var(--wb-duration-drawer) var(--wb-ease-out),
+    background var(--wb-duration-drawer) var(--wb-ease-out);
+}
+.workbench-annotation-inbox-item:hover {
+  border-color: rgba(143, 214, 233, 0.22);
+  background: rgba(255, 255, 255, 0.06);
 }
 .workbench-annotation-inbox-item-line {
   display: flex; flex-wrap: wrap; gap: 0.6rem;
@@ -3159,11 +3166,12 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
    the cyan ASKING cards — gate-pending audits BLOCK the
    pipeline and need to be visually loud. */
 .workbench-governance-panel {
-  margin: 0.6rem 0;
-  padding: 0.7rem 0.85rem;
+  margin: 0.6rem 0 1rem;
+  padding: 0.85rem 1rem;
   background: rgba(247, 188, 92, 0.08);
-  border: 1px solid rgba(247, 188, 92, 0.35);
-  border-radius: 0.4rem;
+  border: 1px solid var(--wb-hairline);
+  border-left: 3px solid rgba(247, 188, 92, 0.55);
+  border-radius: 10px;
 }
 .workbench-governance-header {
   display: flex;
@@ -3963,6 +3971,47 @@ body[data-active-tool] [data-dock-section][hidden] {
   font-size: 0.78rem;
   color: var(--text-muted, #93a8b8);
   line-height: 1.55;
+}
+
+/* P52-05: approve drawer inner panel chrome reset.
+   The four legacy approve surfaces had been individually position-
+   fixed siblings; now they're inner blocks of #workbench-tool-approve.
+   Strip the styling that assumed they were standalone so they flow
+   naturally inside the drawer column. */
+.workbench-tool-approve .workbench-collab-bottom-bar {
+  position: static;
+  margin: 0.6rem 0;
+  padding: 0.6rem 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--wb-hairline);
+  border-radius: 10px;
+}
+.workbench-tool-approve .workbench-approval-center {
+  margin: 0.6rem 0 0;
+  padding: 0;
+}
+.workbench-tool-approve .workbench-approval-center > header {
+  margin-bottom: 0.55rem;
+}
+.workbench-tool-approve .workbench-approval-grid {
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+.workbench-tool-approve .workbench-approval-lane {
+  border: 1px solid var(--wb-hairline);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+}
+.workbench-tool-approve .workbench-pending-signoff {
+  margin: 0.6rem 0;
+  border-radius: 10px;
+}
+.workbench-tool-approve #annotation-inbox {
+  border: none;
+  padding: 0;
+  background: transparent;
 }
 
 /* P52-03: live-log is now an inner block of the monitor drawer.
