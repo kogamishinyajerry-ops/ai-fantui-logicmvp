@@ -1255,8 +1255,143 @@ function _bindForensicsLink() {
   });
 }
 
+// P49-02b: poll the governance-hold list on the same 5s cadence
+// as the metrics panel. List endpoint: /api/skill-executions
+// ?state=GOVERNANCE_HOLD. Each card surfaces verdict reasons +
+// approve/reject buttons that POST to the new bridge endpoints.
+const GOVERNANCE_LIST_PATH =
+  "/api/skill-executions?state=GOVERNANCE_HOLD";
+
+async function refreshGovernancePanel() {
+  const panel = document.getElementById("workbench-governance-panel");
+  const list = document.getElementById("workbench-governance-list");
+  if (!panel || !list) return;
+  let body;
+  try {
+    const r = await fetch(GOVERNANCE_LIST_PATH);
+    if (!r.ok) return;
+    body = await r.json();
+  } catch (_) {
+    return;
+  }
+  const audits = (body && body.executions) || [];
+  if (audits.length === 0) {
+    panel.setAttribute("hidden", "");
+    list.innerHTML = "";
+    return;
+  }
+  panel.removeAttribute("hidden");
+  const escape = (text) =>
+    String(text == null ? "" : text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  list.innerHTML = audits
+    .map((rec) => {
+      const review = rec.governance_review || {};
+      const matches = review.matches || [];
+      // Render each matched rule as its own row so the reviewer
+      // sees exactly which criteria triggered the gate.
+      const reasonsHtml = matches.length
+        ? matches
+            .map(
+              (m) =>
+                `<li class="workbench-governance-reason">` +
+                `  <span class="workbench-governance-rule-pill" ` +
+                `        data-governance-rule="${escape(m.rule_id)}">` +
+                `    ${escape(m.rule_id)}` +
+                `  </span>` +
+                `  <span class="workbench-governance-reason-text">` +
+                `    ${escape(m.reason)}` +
+                `  </span>` +
+                `</li>`
+            )
+            .join("")
+        : `<li class="workbench-governance-reason workbench-governance-reason-empty">` +
+          `  (no matches recorded — likely a stale audit)` +
+          `</li>`;
+
+      return (
+        `<li class="workbench-governance-card" ` +
+        `    data-governance-exec-id="${escape(rec.exec_id)}">` +
+        `  <header class="workbench-governance-card-header">` +
+        `    <span class="workbench-governance-exec-id">` +
+        `      ${escape(rec.exec_id)}` +
+        `    </span>` +
+        `    <span class="workbench-governance-proposal-id">` +
+        `      ${escape(rec.proposal_id || "")}` +
+        `    </span>` +
+        `  </header>` +
+        `  <ul class="workbench-governance-reasons">${reasonsHtml}</ul>` +
+        `  <div class="workbench-governance-actions">` +
+        `    <button type="button" ` +
+        `            class="workbench-governance-approve-btn" ` +
+        `            data-governance-action="approve" ` +
+        `            data-governance-exec-id="${escape(rec.exec_id)}">` +
+        `      ✓ 批准 · approve` +
+        `    </button>` +
+        `    <button type="button" ` +
+        `            class="workbench-governance-reject-btn" ` +
+        `            data-governance-action="reject" ` +
+        `            data-governance-exec-id="${escape(rec.exec_id)}">` +
+        `      ✗ 拒绝 · reject` +
+        `    </button>` +
+        `  </div>` +
+        `</li>`
+      );
+    })
+    .join("");
+
+  _bindGovernanceClickHandlers();
+}
+
+function _bindGovernanceClickHandlers() {
+  const list = document.getElementById("workbench-governance-list");
+  if (!list || list.__wbGovBound) return;
+  list.__wbGovBound = true;
+  // Event delegation: one handler at the list level so newly
+  // rendered cards inherit it without re-binding.
+  list.addEventListener("click", async (e) => {
+    const target = e.target.closest("[data-governance-action]");
+    if (!target) return;
+    const execId = target.getAttribute("data-governance-exec-id");
+    const action = target.getAttribute("data-governance-action");
+    if (!execId || !action) return;
+    const endpoint =
+      action === "approve"
+        ? `/api/skill-executions/${encodeURIComponent(execId)}/governance-approve`
+        : `/api/skill-executions/${encodeURIComponent(execId)}/governance-reject`;
+    target.disabled = true;
+    try {
+      const r = await fetch(endpoint, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          actor: "workbench-ui",
+          note: "",
+        }),
+      });
+      // Whether the response was 202 or 4xx, refresh: the next
+      // poll cycle is the source of truth.
+      await refreshGovernancePanel();
+      if (typeof refreshExecutionMetrics === "function") {
+        refreshExecutionMetrics();
+      }
+    } catch (_) {
+      target.disabled = false;
+    }
+  });
+}
+
 async function refreshExecutionMetrics() {
   _bindForensicsLink();
+  // P49-02b: piggyback the governance panel refresh so it runs
+  // on every metrics tick. Failure here MUST NOT block the
+  // metrics body — the gate panel is supplementary.
+  refreshGovernancePanel().catch(() => {});
   const panel = document.getElementById("workbench-metrics-panel");
   if (!panel) return;  // page without the panel (older test harnesses)
   let metrics;

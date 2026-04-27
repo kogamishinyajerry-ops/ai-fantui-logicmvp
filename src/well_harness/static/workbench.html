@@ -390,6 +390,28 @@
             title="刷新工单列表 · Refresh proposal list"
           >↻ 刷新 · Refresh</button>
         </header>
+        <!-- P49-02b (2026-04-27): governance gate review panel.
+             Lists executions paused at GOVERNANCE_HOLD with the
+             rule reasons + approve/reject buttons. Shown
+             prominently because a gate-pending run BLOCKS the
+             pipeline — the reviewer needs to see + act on it
+             before the executor can advance. Hidden when no
+             GOVERNANCE_HOLD audits exist. -->
+        <section
+          id="workbench-governance-panel"
+          class="workbench-governance-panel"
+          aria-live="polite"
+          hidden
+        >
+          <header class="workbench-governance-header">
+            <p class="eyebrow">需要人工审核 · governance review</p>
+            <h3>治理门 · Governance gate</h3>
+          </header>
+          <ul
+            id="workbench-governance-list"
+            class="workbench-governance-list"
+          ></ul>
+        </section>
         <!-- P50-02a (2026-04-27): metrics observability panel.
              Aggregate counts + pass rate + recent failures, populated
              by refreshExecutionMetrics() on the same 5s poll loop

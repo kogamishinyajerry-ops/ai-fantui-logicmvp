@@ -515,13 +515,21 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         #   POST /api/skill-executions/<exec_id>/reject
         # P49-01c (2026-04-27): cancel — abort a non-terminal exec.
         #   POST /api/skill-executions/<exec_id>/cancel
+        # P49-02b (2026-04-27): governance gate UI bridge.
+        #   POST /api/skill-executions/<exec_id>/governance-approve
+        #   POST /api/skill-executions/<exec_id>/governance-reject
         if parsed.path.startswith(SKILL_EXECUTIONS_PATH + "/") and (
             parsed.path.endswith("/approve")
             or parsed.path.endswith("/reject")
             or parsed.path.endswith("/cancel")
+            or parsed.path.endswith("/governance-approve")
+            or parsed.path.endswith("/governance-reject")
         ):
             if parsed.path.endswith("/cancel"):
                 self._handle_skill_execution_cancel(parsed.path)
+            elif parsed.path.endswith("/governance-approve") or \
+                    parsed.path.endswith("/governance-reject"):
+                self._handle_skill_execution_governance(parsed.path)
             else:
                 self._handle_skill_execution_approval(parsed.path)
             return
@@ -1779,6 +1787,128 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             {
                 "exec_id": exec_id,
                 "action": "cancel",
+                "signaled_at": now_iso(),
+                "actor": actor,
+                "note": note,
+                "current_state": record.state,
+            },
+        )
+
+    def _handle_skill_execution_governance(self, raw_path: str) -> None:
+        """POST /api/skill-executions/<exec_id>/governance-{approve,reject}.
+
+        Bridges the workbench's governance card UI to the
+        file-based IPC the orchestrator polls during
+        GOVERNANCE_HOLD. Distinct from /approve and /reject:
+          - /approve and /reject answer the ASKING-state plan ask
+          - /governance-{approve,reject} answer the gate that
+            sits between PLANNING and ASKING (P49-02a)
+
+        Body (optional): {"actor": "...", "note": "..."}.
+        Empty body still works; actor defaults to "anonymous".
+
+        202 = signal queued. The orchestrator's poll loop picks
+        it up at its next interval. 404 if no audit, 409 if the
+        audit isn't in GOVERNANCE_HOLD.
+        """
+        try:
+            from well_harness.skill_executor.audit import (
+                audit_dir as audit_dir_resolver,
+                read_audit,
+            )
+            from well_harness.skill_executor.errors import AuditSchemaError
+            from well_harness.skill_executor.models import now_iso
+            from well_harness.skill_executor.states import ExecutionState
+            from well_harness.skill_executor.workbench_polling import (
+                write_governance_approval,
+                write_governance_reject,
+            )
+        except ImportError:
+            self._send_json(500, {"error": "skill_executor_unavailable"})
+            return
+
+        suffix = raw_path[len(SKILL_EXECUTIONS_PATH) + 1:]
+        try:
+            exec_id, action = suffix.rsplit("/", 1)
+        except ValueError:
+            self._send_json(400, {"error": "invalid_path"})
+            return
+        if action not in ("governance-approve", "governance-reject") \
+                or not exec_id:
+            self._send_json(400, {"error": "invalid_action"})
+            return
+
+        actor = "anonymous"
+        note: str = ""
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        if length > 0:
+            if length > 50_000:
+                self._send_json(400, {"error": "oversized_body"})
+                return
+            try:
+                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                self._send_json(400, {"error": "invalid_json"})
+                return
+            if isinstance(payload, dict):
+                actor = str(payload.get("actor") or "anonymous")
+                raw_note = payload.get("note")
+                if isinstance(raw_note, str) and raw_note.strip():
+                    note = raw_note.strip()
+
+        try:
+            record = read_audit(exec_id)
+        except AuditSchemaError as exc:
+            msg = str(exc).lower()
+            if "not found" in msg or "invalid exec_id shape" in msg:
+                self._send_json(
+                    404, {"error": "audit_not_found", "id": exec_id},
+                )
+                return
+            self._send_json(
+                500, {"error": "audit_unreadable", "detail": str(exc)},
+            )
+            return
+
+        # 409: the audit isn't paused at the gate. Trying to
+        # approve/reject from any other state would be silent
+        # (signal file written, never consumed) — surface the
+        # state mismatch instead.
+        if record.state != ExecutionState.GOVERNANCE_HOLD.value:
+            self._send_json(
+                409,
+                {
+                    "error": "not_in_governance_hold",
+                    "id": exec_id,
+                    "current_state": record.state,
+                },
+            )
+            return
+
+        target_audit_dir = audit_dir_resolver()
+        writer = (
+            write_governance_approval
+            if action == "governance-approve"
+            else write_governance_reject
+        )
+        try:
+            writer(
+                audit_dir=target_audit_dir,
+                exec_id=exec_id,
+                actor=actor,
+                note=note,
+            )
+        except OSError as exc:
+            self._send_json(
+                500, {"error": "signal_write_failed", "detail": str(exc)},
+            )
+            return
+
+        self._send_json(
+            202,
+            {
+                "exec_id": exec_id,
+                "action": action,
                 "signaled_at": now_iso(),
                 "actor": actor,
                 "note": note,
