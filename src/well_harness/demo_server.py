@@ -2466,6 +2466,15 @@ def _llm_interpret_prompt(text: str, system_id: str) -> str:
     gate_ids = list(_gate_synonyms_for(system_id).keys())
     signals = list(_signals_for(system_id))
     change_kind_codes = [h[1] for h in _CHANGE_KIND_HINTS]
+    # Codex round-7 P1: the schema example values must be drawn
+    # from the active system_id's canonical vocab. The previous
+    # version hardcoded "L1"/"SW1" — both thrust-reverser-specific.
+    # MiniMax tends to copy literal example values, so a C919
+    # request would return ["L1"]/["SW1"] and the canonicalizer
+    # would strip them, leaving the engineer with a 0% result on
+    # an otherwise-valid suggestion.
+    gate_example = gate_ids[0] if gate_ids else "L1"
+    signal_example = signals[0] if signals else "SW1"
     return (
         "你是 AI FANTUI 控制逻辑工作台的解读助手。\n"
         "工程师写下了对当前控制逻辑的修改建议；你的任务是把这段自然语言"
@@ -2480,8 +2489,8 @@ def _llm_interpret_prompt(text: str, system_id: str) -> str:
         f'工程师的建议原文:\n"""{text}"""\n\n'
         "请只输出 JSON（不要 markdown 围栏、不要解释），字段精确匹配下表:\n"
         "{\n"
-        '  "affected_gates":   ["L1"|...],   // 命中的逻辑门 id 列表\n'
-        '  "target_signals":   ["SW1"|...],  // 命中的信号名列表\n'
+        f'  "affected_gates":   ["{gate_example}"|...],   // 命中的逻辑门 id 列表\n'
+        f'  "target_signals":   ["{signal_example}"|...],  // 命中的信号名列表\n'
         '  "change_kind":      "tighten_condition"|...,\n'
         '  "change_kind_zh":   "收紧判据"|...,\n'
         '  "change_kind_en":   "tighten condition"|...,\n'

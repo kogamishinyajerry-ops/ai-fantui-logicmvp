@@ -870,6 +870,15 @@ function clearSuggestionDraftFor(sysId) {
     clearTimeout(_suggestionDraftTimer);
     _suggestionDraftTimer = null;
   }
+  // Codex round-7 P2: also clear the pending-snapshot mirror.
+  // Otherwise a typing → submit → system-switch sequence within
+  // the debounce window: clearTimeout would prevent the timer's
+  // own write, but the system-change handler's flush path would
+  // see the still-populated _pendingDraftText/SystemId and write
+  // the just-submitted text back into localStorage under the old
+  // system — resurrecting it on next refresh.
+  _pendingDraftText = null;
+  _pendingDraftSystemId = null;
   if (!sysId) return;
   const map = _readDraftMap();
   if (sysId in map) {

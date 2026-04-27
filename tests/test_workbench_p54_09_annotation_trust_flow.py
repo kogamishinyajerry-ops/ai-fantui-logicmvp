@@ -784,6 +784,42 @@ def test_pending_draft_flushes_on_system_switch() -> None:
     assert "clearTimeout(_suggestionDraftTimer)" in cb
 
 
+def test_llm_prompt_examples_match_active_system_vocab() -> None:
+    """Codex round-7 P1: the schema example values must reflect
+    the active system_id, not hardcoded thrust-reverser ids.
+    Otherwise MiniMax (which copies literal example values) would
+    return TR ids on a C919 request, and the canonicalizer would
+    strip them — leaving the engineer with a 0% interpretation
+    on an otherwise-valid suggestion."""
+    from well_harness.demo_server import _llm_interpret_prompt
+    c919_prompt = _llm_interpret_prompt("test", "c919-etras")
+    # The C919 prompt should not include `["L1"|...]` example —
+    # L1 is thrust-reverser. Use the C919 system's first canonical
+    # gate id (or assert no L-prefixed example for non-TR systems).
+    # The test just asserts the example does NOT hard-code "L1"
+    # for non-TR systems.
+    assert '["L1"|' not in c919_prompt or "L1" in [g for g in []], (
+        "C919 prompt must not advertise L1 as an example gate id"
+    )
+
+
+def test_clearSuggestionDraftFor_clears_pending_snapshot() -> None:
+    """Codex round-7 P2: must null out the _pendingDraftText /
+    _pendingDraftSystemId mirror as well — otherwise a typing →
+    submit → system-switch within the debounce window would
+    resurrect the just-submitted text via the system-change
+    flush path."""
+    fn = re.search(
+        r'function clearSuggestionDraftFor\(sysId\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    assert "_pendingDraftText = null" in body
+    assert "_pendingDraftSystemId = null" in body
+
+
 def test_change_kind_hint_excludes_propose_change_fallback() -> None:
     """Codex P3: the verb hint must NOT advertise "propose change"
     as a remedy — that's the very fallback that triggered the hint
