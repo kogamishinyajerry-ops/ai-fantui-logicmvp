@@ -1,0 +1,302 @@
+"""P54-09 — annotation "trust flow" hardening (Phase A).
+
+Three coupled fixes after deep-research on the annotation feature:
+
+  1. **Confidence breakdown + vocabulary hint**: replace the single
+     opaque % with three per-component bars (gate / signal /
+     change-kind) and reveal "试试这些关键词" when a dimension came
+     up empty — so engineers know how to rephrase, not guess.
+
+  2. **localStorage draft restore**: autosave the in-flight typing
+     so an accidental tab-close doesn't lose the suggestion. On
+     boot, a fresh draft (< 1h) surfaces a banner offering to
+     restore.
+
+  3. **Pre-submit conflict warning**: before POST /api/proposals,
+     check OPEN proposals on the same system for affected_gates
+     overlap. If found, surface a yellow banner with the existing
+     PROP ids + summaries; engineer must explicitly choose 继续提交
+     or 取消.
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import pytest
+
+from well_harness.demo_server import (
+    interpret_suggestion_text,
+    _normalize_llm_interpretation,
+)
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+STATIC = REPO_ROOT / "src" / "well_harness" / "static"
+HTML = (STATIC / "workbench.html").read_text(encoding="utf-8")
+CSS = (STATIC / "workbench.css").read_text(encoding="utf-8")
+JS = (STATIC / "workbench.js").read_text(encoding="utf-8")
+
+
+# ─── 1. Backend ships confidence_breakdown + vocabulary_hint ───
+
+
+def test_interpret_returns_confidence_breakdown_when_full_match() -> None:
+    """All three components met → all three breakdown values 1.0."""
+    result = interpret_suggestion_text(
+        "L1 的 SW1 判据应该 tighten 到 ≥ 50ms"
+    )
+    breakdown = result.get("confidence_breakdown")
+    assert isinstance(breakdown, dict), "missing confidence_breakdown"
+    assert breakdown.get("gate") == 1.0
+    assert breakdown.get("signal") == 1.0
+    assert breakdown.get("change_kind") == 1.0
+    # When everything matched, vocabulary_hint should be empty —
+    # no need to suggest alternatives.
+    assert result.get("vocabulary_hint") == {}
+
+
+def test_interpret_returns_zero_breakdown_with_hints_when_unclassified() -> None:
+    """Engineer types a vague comment → no gate / signal /
+    change-kind, breakdown all 0, vocabulary_hint surfaces all
+    three available lists so the UI can guide them."""
+    result = interpret_suggestion_text("这个面板看起来怪怪的")
+    breakdown = result["confidence_breakdown"]
+    assert breakdown["gate"] == 0.0
+    assert breakdown["signal"] == 0.0
+    assert breakdown["change_kind"] == 0.0
+    hint = result["vocabulary_hint"]
+    # All three dimensions empty → all three hints present.
+    assert "gate" in hint and len(hint["gate"]) >= 4, "gate hint missing"
+    assert "signal" in hint and len(hint["signal"]) >= 3, "signal hint missing"
+    assert "change_kind" in hint and len(hint["change_kind"]) >= 3, "change-kind hint missing"
+    # The gate hint must list canonical ids (L1..L4 for thrust-reverser),
+    # NOT raw synonyms — synonyms are too noisy for a UI hint.
+    assert "L1" in hint["gate"]
+    assert "L2" in hint["gate"]
+
+
+def test_interpret_partial_match_only_hints_missing_dimensions() -> None:
+    """Gate detected but no signal/verb → hint only for the
+    missing dimensions, not all three."""
+    result = interpret_suggestion_text("L1 这里有点问题")
+    bd = result["confidence_breakdown"]
+    assert bd["gate"] == 1.0
+    assert bd["signal"] == 0.0
+    assert bd["change_kind"] == 0.0
+    hint = result["vocabulary_hint"]
+    assert "gate" not in hint, "gate dimension was met — no hint expected"
+    assert "signal" in hint
+    assert "change_kind" in hint
+
+
+def test_llm_normalizer_synthesizes_breakdown_from_returned_fields() -> None:
+    """The LLM doesn't emit its own breakdown — the normalizer
+    derives it so the UI gets a uniform shape regardless of
+    strategy."""
+    raw = {
+        "affected_gates": ["L1", "L3"],
+        "target_signals": ["SW1"],
+        "change_kind": "tighten_condition",
+        "change_kind_zh": "收紧条件",
+        "change_kind_en": "tighten condition",
+        "confidence": 0.9,
+        "summary_zh": "",
+        "summary_en": "",
+    }
+    out = _normalize_llm_interpretation(raw, source_text="…")
+    bd = out["confidence_breakdown"]
+    assert bd == {"gate": 1.0, "signal": 1.0, "change_kind": 1.0}
+    assert "vocabulary_hint" in out
+
+
+def test_llm_normalizer_marks_change_kind_zero_when_propose_change() -> None:
+    """When LLM falls through to default 'propose_change', the
+    derived change_kind component is 0 — matching the rules
+    interpreter's behavior."""
+    raw = {
+        "affected_gates": ["L1"],
+        "target_signals": [],
+        "change_kind": "propose_change",
+        "confidence": 0.4,
+    }
+    out = _normalize_llm_interpretation(raw, source_text="…")
+    bd = out["confidence_breakdown"]
+    assert bd["gate"] == 1.0
+    assert bd["signal"] == 0.0
+    assert bd["change_kind"] == 0.0
+
+
+# ─── 2. HTML markup carries the new surfaces ───
+
+
+@pytest.mark.parametrize(
+    "fragment",
+    [
+        # Confidence breakdown row container + 3 components
+        'id="workbench-suggestion-confidence-breakdown"',
+        'data-component="gate"',
+        'data-component="signal"',
+        'data-component="change_kind"',
+        'workbench-suggestion-confidence-bar-fill',
+        'id="workbench-suggestion-confidence-hint"',
+        # Draft-restore banner skeleton
+        'id="workbench-suggestion-draft-banner"',
+        'id="workbench-suggestion-draft-restore"',
+        'id="workbench-suggestion-draft-dismiss"',
+        # Pre-submit conflict banner skeleton
+        'id="workbench-suggestion-conflict-banner"',
+        'id="workbench-suggestion-conflict-list"',
+        'id="workbench-suggestion-conflict-proceed"',
+        'id="workbench-suggestion-conflict-cancel"',
+    ],
+)
+def test_workbench_html_contains_p54_09_surfaces(fragment: str) -> None:
+    assert fragment in HTML, f"missing P54-09 markup: {fragment}"
+
+
+def test_draft_banner_starts_hidden() -> None:
+    """The banner must boot hidden — JS un-hides it only when
+    a fresh draft is found in localStorage."""
+    block = re.search(
+        r'id="workbench-suggestion-draft-banner"[^>]*>',
+        HTML,
+    )
+    assert block is not None
+    assert "hidden" in block.group(0), "draft banner must boot hidden"
+
+
+def test_conflict_banner_starts_hidden() -> None:
+    block = re.search(
+        r'id="workbench-suggestion-conflict-banner"[^>]*>',
+        HTML,
+    )
+    assert block is not None
+    assert "hidden" in block.group(0), "conflict banner must boot hidden"
+
+
+# ─── 3. CSS styles the new components ───
+
+
+@pytest.mark.parametrize(
+    "selector",
+    [
+        ".workbench-suggestion-confidence-breakdown",
+        ".workbench-suggestion-confidence-bar",
+        ".workbench-suggestion-confidence-bar-fill",
+        ".workbench-suggestion-confidence-hint",
+        ".workbench-suggestion-draft-banner",
+        ".workbench-suggestion-conflict-banner",
+        ".workbench-suggestion-conflict-list",
+    ],
+)
+def test_css_carries_p54_09_rules(selector: str) -> None:
+    assert selector in CSS, f"missing CSS rule: {selector}"
+
+
+def test_breakdown_bar_uses_accent_token() -> None:
+    """The fill of a met dimension must derive from the accent
+    token (cohesive with the rest of the workbench palette)."""
+    rule = re.search(
+        r'\.workbench-suggestion-confidence-bar-fill\s*\{[^}]+\}',
+        CSS,
+        re.DOTALL,
+    )
+    assert rule is not None
+    body = rule.group(0)
+    assert "var(--accent" in body, "fill must use --accent token"
+
+
+def test_unmet_dimension_styled_distinctly_from_met() -> None:
+    """When a dimension is unmet (data-met='false'), the bar
+    fill must show a different color (red-ish) so the engineer
+    instantly sees which dimension dragged the score down."""
+    rule = re.search(
+        r'\.workbench-suggestion-confidence-row\[data-met="false"\][^{]*'
+        r'\.workbench-suggestion-confidence-bar-fill\s*\{[^}]+\}',
+        CSS,
+        re.DOTALL,
+    )
+    assert rule is not None, "missing :unmet rule for the bar fill"
+
+
+# ─── 4. JS wires the three flows ───
+
+
+def test_js_renders_breakdown_from_response() -> None:
+    """The render fn must read interpretation.confidence_breakdown
+    + vocabulary_hint and update the DOM."""
+    assert "renderConfidenceBreakdown" in JS
+    assert "confidence_breakdown" in JS
+    assert "vocabulary_hint" in JS
+
+
+def test_js_implements_draft_autosave_with_localstorage() -> None:
+    """Draft persistence must use localStorage (NOT sessionStorage)
+    so the draft survives a tab close — and must be debounced so
+    every keystroke doesn't trigger a write."""
+    assert "installSuggestionDraftRestore" in JS
+    assert "localStorage" in JS
+    assert "SUGGESTION_DRAFT_KEY" in JS
+    assert "SUGGESTION_DRAFT_TTL_MS" in JS
+    assert "SUGGESTION_DRAFT_DEBOUNCE_MS" in JS
+    # Draft is cleared on successful submit so the next session
+    # starts clean.
+    assert "clearSuggestionDraft" in JS
+
+
+def test_js_clears_draft_on_successful_submit() -> None:
+    """submitSuggestionTicket's success branch must clear the
+    autosaved draft — otherwise the next page load surfaces a
+    stale banner offering to 'restore' something already shipped."""
+    submit_fn = re.search(
+        r'async function submitSuggestionTicket\(\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert submit_fn is not None
+    body = submit_fn.group(1)
+    assert "clearSuggestionDraft" in body, (
+        "submit-success branch must clear the autosaved draft"
+    )
+
+
+def test_js_runs_conflict_check_before_post() -> None:
+    """The confirm-button handler must be onConfirmClicked, and it
+    must fetch /api/proposals?status=OPEN&system=... before
+    POSTing — only call submitSuggestionTicket when 0 overlaps."""
+    assert "onConfirmClicked" in JS
+    # The check only runs when affected_gates is non-empty.
+    assert (
+        "affected_gates" in JS and "showConflictBanner" in JS
+    )
+    # Network failure or empty conflict list → fall through to
+    # submitSuggestionTicket (best-effort, never block).
+    confirm_fn = re.search(
+        r'async function onConfirmClicked\(\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert confirm_fn is not None
+    body = confirm_fn.group(1)
+    assert "submitSuggestionTicket" in body
+    assert "PROPOSALS_PATH" in body
+    assert "status=OPEN" in body
+
+
+def test_js_conflict_banner_lists_overlapping_proposals() -> None:
+    """The banner UI must render id + summary + gates per
+    conflicting proposal so the engineer knows what's competing."""
+    assert "showConflictBanner" in JS
+    assert "hideConflictBanner" in JS
+    # Banner closes on Cancel + on full clearSuggestionInterpretation.
+    clear_fn = re.search(
+        r'function clearSuggestionInterpretation\(\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert clear_fn is not None
+    assert "hideConflictBanner" in clear_fn.group(1), (
+        "clearSuggestionInterpretation must also tear down the conflict banner"
+    )

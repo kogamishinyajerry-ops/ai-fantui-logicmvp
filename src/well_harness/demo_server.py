@@ -2310,6 +2310,31 @@ def interpret_suggestion_text(text: str, *, system_id: str = "thrust-reverser") 
         confidence += 0.2
     confidence = min(1.0, confidence)
 
+    # P54-09 (2026-04-28): per-component confidence breakdown so the UI
+    # can show three small bars (gate / signal / change-kind) instead
+    # of a single opaque number, and surface "vocabulary hints" when a
+    # dimension came up empty so the engineer knows how to rephrase
+    # rather than guessing what the rules want.
+    confidence_breakdown = {
+        "gate": 1.0 if affected_gates else 0.0,
+        "signal": 1.0 if target_signals else 0.0,
+        "change_kind": 1.0 if change_kind != "propose_change" else 0.0,
+    }
+    vocabulary_hint: dict[str, list[str]] = {}
+    if not affected_gates:
+        # Surface the gate id list (canonical, not synonyms) so the
+        # rules feel less mysterious. Synonyms are too noisy.
+        vocabulary_hint["gate"] = list(gate_vocab.keys())
+    if not target_signals:
+        vocabulary_hint["signal"] = list(signal_vocab)
+    if change_kind == "propose_change":
+        # The verb hint pulls a short, human-friendly label list so
+        # the engineer can see "tighten / loosen / replace / add /
+        # remove / modify" rather than the regex internals.
+        vocabulary_hint["change_kind"] = sorted(
+            {hint[3] for hint in _CHANGE_KIND_HINTS if hint[2] != "propose_change"}
+        )
+
     # 5. Summary restatement.
     gates_label = "、".join(affected_gates) if affected_gates else "(未识别)"
     signals_label = "、".join(target_signals) if target_signals else "(未识别)"
@@ -2332,6 +2357,8 @@ def interpret_suggestion_text(text: str, *, system_id: str = "thrust-reverser") 
         "change_kind_zh": change_kind_zh,
         "change_kind_en": change_kind_en,
         "confidence": confidence,
+        "confidence_breakdown": confidence_breakdown,
+        "vocabulary_hint": vocabulary_hint,
         "summary_zh": summary_zh,
         "summary_en": summary_en,
         "source_text": text,
@@ -2462,13 +2489,28 @@ def _normalize_llm_interpretation(raw_dict: dict, source_text: str) -> dict:
         confidence = max(0.0, min(1.0, float(confidence)))
     except (TypeError, ValueError):
         confidence = 0.5
+    affected_gates = _str_list(raw_dict.get("affected_gates"))
+    target_signals = _str_list(raw_dict.get("target_signals"))
+    change_kind = str(raw_dict.get("change_kind") or "propose_change")
+    # P54-09: synthesize the same per-component breakdown the rules
+    # interpreter produces so the UI gets a uniform shape regardless
+    # of which strategy ran. The LLM doesn't return its own breakdown
+    # (we deliberately keep the prompt narrow), so we infer it from
+    # what came back.
+    confidence_breakdown = {
+        "gate": 1.0 if affected_gates else 0.0,
+        "signal": 1.0 if target_signals else 0.0,
+        "change_kind": 1.0 if change_kind != "propose_change" else 0.0,
+    }
     return {
-        "affected_gates": _str_list(raw_dict.get("affected_gates")),
-        "target_signals": _str_list(raw_dict.get("target_signals")),
-        "change_kind": str(raw_dict.get("change_kind") or "propose_change"),
+        "affected_gates": affected_gates,
+        "target_signals": target_signals,
+        "change_kind": change_kind,
         "change_kind_zh": str(raw_dict.get("change_kind_zh") or "提出建议"),
         "change_kind_en": str(raw_dict.get("change_kind_en") or "propose change"),
         "confidence": confidence,
+        "confidence_breakdown": confidence_breakdown,
+        "vocabulary_hint": {},
         "summary_zh": str(raw_dict.get("summary_zh") or ""),
         "summary_en": str(raw_dict.get("summary_en") or ""),
         "source_text": source_text,

@@ -638,6 +638,37 @@
             <strong data-interpreter-strategy-label>📜 规则解读 · Rules</strong>
           </button>
         </div>
+        <!-- P54-09 (2026-04-28): draft restore banner. Hidden by
+             default; populated by JS when localStorage carries a
+             non-empty draft < 1 hour old. -->
+        <div
+          id="workbench-suggestion-draft-banner"
+          class="workbench-suggestion-draft-banner"
+          role="status"
+          aria-live="polite"
+          hidden
+        >
+          <span class="workbench-suggestion-draft-icon" aria-hidden="true">📝</span>
+          <span class="workbench-suggestion-draft-text">
+            检测到
+            <strong id="workbench-suggestion-draft-age">N</strong>
+            分钟前的草稿 · Draft from
+            <strong data-mirror="age"></strong>
+            min ago
+          </span>
+          <span class="workbench-suggestion-draft-preview" id="workbench-suggestion-draft-preview"></span>
+          <button
+            type="button"
+            class="workbench-suggestion-draft-btn is-primary"
+            id="workbench-suggestion-draft-restore"
+          >↩ 恢复</button>
+          <button
+            type="button"
+            class="workbench-suggestion-draft-btn"
+            id="workbench-suggestion-draft-dismiss"
+            aria-label="忽略草稿 · Dismiss draft"
+          >✕</button>
+        </div>
         <form
           id="workbench-suggestion-form"
           class="workbench-suggestion-form"
@@ -697,6 +728,44 @@
               data-confidence="0"
             ></span>
           </header>
+          <!-- P54-09 (2026-04-28): per-component confidence breakdown.
+               Three small bars (gate / signal / change-kind) replace
+               the previous single opaque % so the engineer can see
+               which dimension dragged the overall score down, and a
+               vocabulary-hint reveal explains "why uncertain" without
+               dumping the rules' regex internals. -->
+          <div
+            id="workbench-suggestion-confidence-breakdown"
+            class="workbench-suggestion-confidence-breakdown"
+            data-state="empty"
+          >
+            <div class="workbench-suggestion-confidence-row" data-component="gate">
+              <span class="workbench-suggestion-confidence-label">门 · Gate</span>
+              <span class="workbench-suggestion-confidence-bar" aria-hidden="true">
+                <span class="workbench-suggestion-confidence-bar-fill" data-fill="0"></span>
+              </span>
+              <span class="workbench-suggestion-confidence-pct" data-pct="0">0%</span>
+            </div>
+            <div class="workbench-suggestion-confidence-row" data-component="signal">
+              <span class="workbench-suggestion-confidence-label">信号 · Signal</span>
+              <span class="workbench-suggestion-confidence-bar" aria-hidden="true">
+                <span class="workbench-suggestion-confidence-bar-fill" data-fill="0"></span>
+              </span>
+              <span class="workbench-suggestion-confidence-pct" data-pct="0">0%</span>
+            </div>
+            <div class="workbench-suggestion-confidence-row" data-component="change_kind">
+              <span class="workbench-suggestion-confidence-label">变更 · Kind</span>
+              <span class="workbench-suggestion-confidence-bar" aria-hidden="true">
+                <span class="workbench-suggestion-confidence-bar-fill" data-fill="0"></span>
+              </span>
+              <span class="workbench-suggestion-confidence-pct" data-pct="0">0%</span>
+            </div>
+            <div
+              id="workbench-suggestion-confidence-hint"
+              class="workbench-suggestion-confidence-hint"
+              hidden
+            ></div>
+          </div>
           <dl class="workbench-suggestion-interpretation-fields">
             <dt>命中逻辑门 · Affected gate(s)</dt>
             <dd id="workbench-suggestion-interpretation-gates">—</dd>
@@ -707,6 +776,45 @@
             <dt>系统重述 · System restatement</dt>
             <dd id="workbench-suggestion-interpretation-summary">—</dd>
           </dl>
+          <!-- P54-09 (2026-04-28): pre-submit conflict-warning panel.
+               Hidden by default; populated by the confirm-button
+               handler when GET /api/proposals?status=OPEN&system=...
+               surfaces existing OPEN proposals whose affected_gates
+               overlap the current interpretation's. The user must
+               explicitly choose 继续提交 or 取消 here — the original
+               primary 确认 button is hidden while a conflict is shown. -->
+          <div
+            id="workbench-suggestion-conflict-banner"
+            class="workbench-suggestion-conflict-banner"
+            role="alert"
+            hidden
+          >
+            <div class="workbench-suggestion-conflict-head">
+              <span class="workbench-suggestion-conflict-icon" aria-hidden="true">⚠️</span>
+              <span class="workbench-suggestion-conflict-title">
+                <strong id="workbench-suggestion-conflict-count">N</strong>
+                个 OPEN 工单也在改
+                <strong id="workbench-suggestion-conflict-gates"></strong>
+                · OPEN proposals already touch these gates
+              </span>
+            </div>
+            <ul
+              id="workbench-suggestion-conflict-list"
+              class="workbench-suggestion-conflict-list"
+            ></ul>
+            <div class="workbench-suggestion-conflict-actions">
+              <button
+                type="button"
+                class="workbench-toolbar-button is-primary"
+                id="workbench-suggestion-conflict-proceed"
+              >继续提交 · Submit anyway</button>
+              <button
+                type="button"
+                class="workbench-toolbar-button"
+                id="workbench-suggestion-conflict-cancel"
+              >✕ 取消 · Cancel</button>
+            </div>
+          </div>
           <div class="workbench-suggestion-interpretation-actions">
             <button
               id="workbench-suggestion-confirm-btn"

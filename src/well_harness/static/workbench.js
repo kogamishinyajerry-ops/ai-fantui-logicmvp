@@ -211,7 +211,20 @@ function installSuggestionFlow() {
     cancelBtn.addEventListener("click", () => clearSuggestionInterpretation());
   }
   if (confirmBtn) {
-    confirmBtn.addEventListener("click", () => submitSuggestionTicket());
+    confirmBtn.addEventListener("click", () => onConfirmClicked());
+  }
+  // P54-09 (2026-04-28): wire draft autosave + restore + conflict-banner buttons.
+  installSuggestionDraftRestore();
+  const proceedBtn = document.getElementById("workbench-suggestion-conflict-proceed");
+  const conflictCancelBtn = document.getElementById("workbench-suggestion-conflict-cancel");
+  if (proceedBtn) {
+    proceedBtn.addEventListener("click", () => {
+      hideConflictBanner();
+      submitSuggestionTicket();
+    });
+  }
+  if (conflictCancelBtn) {
+    conflictCancelBtn.addEventListener("click", () => hideConflictBanner());
   }
   // P45-03 (2026-04-26): wire the interpreter strategy toggle. Off
   // (rules) → on (llm) → off … flips the chip's data attribute and
@@ -339,6 +352,78 @@ function renderSuggestionInterpretation(interpretation) {
     conf.dataset.confidence = String(c);
     conf.textContent = `置信度 · confidence: ${(c * 100).toFixed(0)}%`;
   }
+  renderConfidenceBreakdown(interpretation);
+}
+
+// P54-09 (2026-04-28): render the per-component confidence breakdown
+// (gate / signal / change-kind) as 3 mini bars + an optional
+// vocabulary-hint reveal explaining "why uncertain" when something
+// came up empty. The backend ships confidence_breakdown + vocabulary_hint
+// alongside the existing fields; we degrade gracefully if either is
+// missing (older server, or LLM stripped them).
+function renderConfidenceBreakdown(interpretation) {
+  const wrap = document.getElementById("workbench-suggestion-confidence-breakdown");
+  if (!wrap) return;
+  const breakdown = (interpretation && interpretation.confidence_breakdown) || {};
+  const hint = (interpretation && interpretation.vocabulary_hint) || {};
+  // Map component → both Chinese + English in the hint text.
+  const labels = {
+    gate: { zh: "门", en: "gate" },
+    signal: { zh: "信号", en: "signal" },
+    change_kind: { zh: "变更动词", en: "change verb" },
+  };
+  let anyData = false;
+  for (const component of ["gate", "signal", "change_kind"]) {
+    const row = wrap.querySelector(`[data-component="${component}"]`);
+    if (!row) continue;
+    const value = typeof breakdown[component] === "number" ? breakdown[component] : 0;
+    const fill = row.querySelector(".workbench-suggestion-confidence-bar-fill");
+    const pct = row.querySelector(".workbench-suggestion-confidence-pct");
+    if (fill) {
+      const widthPct = Math.round(value * 100);
+      fill.style.width = widthPct + "%";
+      fill.dataset.fill = String(value);
+    }
+    if (pct) {
+      pct.textContent = Math.round(value * 100) + "%";
+      pct.dataset.pct = String(Math.round(value * 100));
+    }
+    row.dataset.met = value > 0 ? "true" : "false";
+    if (typeof breakdown[component] === "number") anyData = true;
+  }
+  // Build the hint when at least one dimension came up empty.
+  const hintEl = document.getElementById("workbench-suggestion-confidence-hint");
+  if (hintEl) {
+    const lines = [];
+    for (const component of ["gate", "signal", "change_kind"]) {
+      const list = hint[component];
+      if (!Array.isArray(list) || list.length === 0) continue;
+      const lab = labels[component];
+      const sample = list.slice(0, 8);
+      const more = list.length > 8 ? `、…（+${list.length - 8}）` : "";
+      const tags = sample.map((v) => `<strong>${escapeHtml(String(v))}</strong>`).join("、");
+      lines.push(
+        `💡 ${lab.zh}（${lab.en}）未识别 — 试试 · try one of: ${tags}${more}`
+      );
+    }
+    if (lines.length > 0) {
+      hintEl.innerHTML = lines.join("<br>");
+      hintEl.hidden = false;
+    } else {
+      hintEl.innerHTML = "";
+      hintEl.hidden = true;
+    }
+  }
+  wrap.dataset.state = anyData ? "ready" : "empty";
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function highlightSuggestionGates(gateIds) {
@@ -370,6 +455,9 @@ function clearSuggestionInterpretation() {
     status.dataset.status = "idle";
     status.textContent = "";
   }
+  // P54-09: any conflict banner from a previous attempt should not
+  // bleed across a re-interpret / cancel.
+  hideConflictBanner();
 }
 
 async function submitSuggestionTicket() {
@@ -417,6 +505,9 @@ async function submitSuggestionTicket() {
       status.dataset.status = "success";
       status.textContent = `工单 ${created.id} 已提交 · ticket ${created.id} submitted`;
     }
+    // P54-09: clear the autosaved draft now that it's safely
+    // committed to the proposal store.
+    clearSuggestionDraft();
     await loadProposalsInbox();
   } catch (error) {
     if (status) {
@@ -424,6 +515,208 @@ async function submitSuggestionTicket() {
       status.textContent = `提交失败 · submit failed: ${error.message || error}`;
     }
   }
+}
+
+// ─── P54-09 (2026-04-28): pre-submit conflict warning ───────────────
+//
+// Before POSTing a confirmed interpretation, fetch OPEN proposals
+// scoped to the same system and detect overlap on `affected_gates`.
+// If any conflicting OPEN proposal exists, show the conflict-banner
+// inside the interpretation card and let the engineer choose
+// "继续提交" (call submitSuggestionTicket) or "取消" (close banner,
+// keep the interpretation visible so they can re-interpret / cancel).
+//
+// The check is best-effort: any GET failure falls through to a normal
+// submit so the user is never blocked by a flaky network. The check
+// is also skipped entirely when affected_gates is empty (no overlap
+// possible). Single API roundtrip — the inbox endpoint returns
+// status-filtered records already.
+async function onConfirmClicked() {
+  const status = document.getElementById("workbench-suggestion-status");
+  if (!_lastInterpretation) {
+    if (status) {
+      status.dataset.status = "error";
+      status.textContent = "尚无解读结果可提交 · no interpretation to submit yet";
+    }
+    return;
+  }
+  const gates = (_lastInterpretation.affected_gates || []).slice();
+  if (gates.length === 0) {
+    submitSuggestionTicket();
+    return;
+  }
+  const systemSelect = document.getElementById("workbench-system-select");
+  const systemId = systemSelect ? systemSelect.value || "thrust-reverser" : "thrust-reverser";
+  let conflicts = [];
+  try {
+    const url =
+      PROPOSALS_PATH +
+      "?status=OPEN&system=" + encodeURIComponent(systemId);
+    const resp = await fetch(url, { headers: { Accept: "application/json" } });
+    if (resp.ok) {
+      const payload = await resp.json();
+      const open = (payload && payload.proposals) || [];
+      conflicts = open.filter((p) => {
+        const g = (p && p.interpretation && p.interpretation.affected_gates) || [];
+        return Array.isArray(g) && g.some((x) => gates.includes(x));
+      });
+    }
+  } catch (_e) {
+    // network/parse failure → don't block the submit
+    conflicts = [];
+  }
+  if (conflicts.length === 0) {
+    submitSuggestionTicket();
+    return;
+  }
+  showConflictBanner(conflicts, gates);
+}
+
+function showConflictBanner(conflicts, currentGates) {
+  const banner = document.getElementById("workbench-suggestion-conflict-banner");
+  const countEl = document.getElementById("workbench-suggestion-conflict-count");
+  const gatesEl = document.getElementById("workbench-suggestion-conflict-gates");
+  const list = document.getElementById("workbench-suggestion-conflict-list");
+  if (!banner || !list) return;
+  if (countEl) countEl.textContent = String(conflicts.length);
+  if (gatesEl) gatesEl.textContent = (currentGates || []).join(", ");
+  // Build the conflict list — short id, summary preview, gate pills.
+  list.innerHTML = "";
+  for (const p of conflicts.slice(0, 5)) {
+    const li = document.createElement("li");
+    const id = (p && p.id) || "PROP-?";
+    const interp = (p && p.interpretation) || {};
+    const summary =
+      interp.summary_zh ||
+      interp.summary_en ||
+      (p && p.source_text) ||
+      "(no summary)";
+    const gates = (interp.affected_gates || []).join(", ");
+    li.innerHTML =
+      `<span class="conflict-id">${escapeHtml(id.slice(0, 24))}</span>` +
+      `<span class="conflict-summary" title="${escapeHtml(summary)}">${escapeHtml(summary)}</span>` +
+      `<span class="conflict-gates">${escapeHtml(gates)}</span>`;
+    list.appendChild(li);
+  }
+  if (conflicts.length > 5) {
+    const more = document.createElement("li");
+    more.className = "conflict-more";
+    more.textContent = `… 以及 ${conflicts.length - 5} 个其他 OPEN 工单 · …and ${conflicts.length - 5} more OPEN proposals`;
+    list.appendChild(more);
+  }
+  banner.hidden = false;
+}
+
+function hideConflictBanner() {
+  const banner = document.getElementById("workbench-suggestion-conflict-banner");
+  if (banner) banner.hidden = true;
+}
+
+// ─── P54-09 (2026-04-28): draft autosave + restore ──────────────────
+//
+// Persist the engineer's in-flight typing to localStorage so an
+// accidental tab-close doesn't lose the suggestion. On page boot,
+// if a draft < 1h old exists and the input is empty, surface a
+// banner offering to restore. On submit success the draft is
+// cleared. Storage key is namespaced by host so multiple workbench
+// instances on different ports don't collide.
+const SUGGESTION_DRAFT_KEY = "workbench/suggestion-draft/v1";
+const SUGGESTION_DRAFT_TTL_MS = 60 * 60 * 1000;  // 1h
+const SUGGESTION_DRAFT_DEBOUNCE_MS = 500;
+let _suggestionDraftTimer = null;
+
+function installSuggestionDraftRestore() {
+  const input = document.getElementById("workbench-suggestion-input");
+  if (!input) return;
+  // Autosave on input (debounced).
+  input.addEventListener("input", () => {
+    if (_suggestionDraftTimer) clearTimeout(_suggestionDraftTimer);
+    _suggestionDraftTimer = setTimeout(() => saveSuggestionDraft(input.value), SUGGESTION_DRAFT_DEBOUNCE_MS);
+  });
+  // On boot, surface a restore banner if a fresh draft exists.
+  const draft = readSuggestionDraft();
+  if (draft && (input.value || "").trim() === "") {
+    showDraftBanner(draft);
+  }
+  // Wire the banner's restore + dismiss buttons.
+  const restoreBtn = document.getElementById("workbench-suggestion-draft-restore");
+  const dismissBtn = document.getElementById("workbench-suggestion-draft-dismiss");
+  if (restoreBtn) {
+    restoreBtn.addEventListener("click", () => {
+      const cur = readSuggestionDraft();
+      if (cur && cur.text) {
+        input.value = cur.text;
+        input.focus();
+      }
+      hideDraftBanner();
+    });
+  }
+  if (dismissBtn) {
+    dismissBtn.addEventListener("click", () => {
+      clearSuggestionDraft();
+      hideDraftBanner();
+    });
+  }
+}
+
+function readSuggestionDraft() {
+  try {
+    const raw = window.localStorage.getItem(SUGGESTION_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed.text !== "string" || !parsed.text.trim()) return null;
+    const ts = typeof parsed.ts === "number" ? parsed.ts : 0;
+    if (Date.now() - ts > SUGGESTION_DRAFT_TTL_MS) {
+      window.localStorage.removeItem(SUGGESTION_DRAFT_KEY);
+      return null;
+    }
+    return parsed;
+  } catch (_e) {
+    return null;
+  }
+}
+
+function saveSuggestionDraft(text) {
+  try {
+    if (!text || !text.trim()) {
+      window.localStorage.removeItem(SUGGESTION_DRAFT_KEY);
+      return;
+    }
+    window.localStorage.setItem(
+      SUGGESTION_DRAFT_KEY,
+      JSON.stringify({ text: text, ts: Date.now() }),
+    );
+  } catch (_e) {
+    // Quota / disabled-storage → silent no-op
+  }
+}
+
+function clearSuggestionDraft() {
+  try {
+    window.localStorage.removeItem(SUGGESTION_DRAFT_KEY);
+  } catch (_e) { /* no-op */ }
+}
+
+function showDraftBanner(draft) {
+  const banner = document.getElementById("workbench-suggestion-draft-banner");
+  if (!banner) return;
+  const ageMin = Math.max(1, Math.round((Date.now() - draft.ts) / 60000));
+  const ageEl = document.getElementById("workbench-suggestion-draft-age");
+  if (ageEl) ageEl.textContent = String(ageMin);
+  for (const mirror of banner.querySelectorAll('[data-mirror="age"]')) {
+    mirror.textContent = String(ageMin);
+  }
+  const preview = document.getElementById("workbench-suggestion-draft-preview");
+  if (preview) {
+    const trimmed = (draft.text || "").trim();
+    preview.textContent = trimmed.length > 60 ? `"${trimmed.slice(0, 60)}…"` : `"${trimmed}"`;
+  }
+  banner.hidden = false;
+}
+
+function hideDraftBanner() {
+  const banner = document.getElementById("workbench-suggestion-draft-banner");
+  if (banner) banner.hidden = true;
 }
 
 // ─────────────────────────────────────────────────────────────────
