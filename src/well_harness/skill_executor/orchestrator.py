@@ -964,6 +964,18 @@ def _transition(record: ExecutionRecord, event: str, audit_dir: Path) -> None:
     # Open the step we're entering, if any.
     _start_plan_step_for_phase(record, target.value, transition_ts)
 
+    # P51-02: push the transition to the live log stream so the
+    # workbench observer sees the lifecycle move. Best-effort.
+    try:
+        from well_harness.skill_executor.log_stream import push as _log_push
+        _log_push(
+            phase=target.value,
+            level="info",
+            message=f"{current.value} → {target.value} ({event})",
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
     _persist(record, audit_dir)
 
 
@@ -1035,6 +1047,27 @@ def _parse_iso(s: str):
 
 def _push_event(record: ExecutionRecord, *, kind: str, note: str = "") -> None:
     record.events.append(ExecutionEvent(at=now_iso(), kind=kind, note=note))
+    # P51-02: mirror to the in-memory log stream for the Live Log
+    # Panel. The audit.events list is the source-of-truth long-term;
+    # log_stream is a transient pane for live demos. Failures here
+    # MUST NOT crash the executor — wrap in try/except.
+    try:
+        from well_harness.skill_executor.log_stream import push as _log_push
+        # Map error-shaped event kinds to "error" level so the panel
+        # colors them red. Everything else is informational.
+        level = "info"
+        if "error" in kind or kind in ("planner_error", "edit_error", "test_runner_error"):
+            level = "error"
+        elif "regress" in kind or kind in ("user_abort", "tests_regress"):
+            level = "warn"
+        _log_push(
+            phase=record.state,
+            level=level,
+            message=f"{kind}: {note}" if note else kind,
+        )
+    except Exception:  # noqa: BLE001
+        # log_stream can never break the executor — swallow.
+        pass
 
 
 def _finish(record: ExecutionRecord, audit_dir: Path) -> None:

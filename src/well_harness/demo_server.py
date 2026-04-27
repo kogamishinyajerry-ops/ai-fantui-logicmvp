@@ -83,6 +83,10 @@ WORKBENCH_STATE_OF_WORLD_PATH = "/api/workbench/state-of-world"
 # truth) so /workbench can mount the circuit panel as the page hero.
 # P45-01 (2026-04-26): same endpoint now parameterized by ?system=<id>.
 WORKBENCH_CIRCUIT_FRAGMENT_PATH = "/api/workbench/circuit-fragment"
+# P51-02 (2026-04-27): Live Log Panel SSE endpoint. Streams events
+# from the in-memory log_stream ring buffer (last 500 entries) so a
+# demo observer sees the executor's activity in real time.
+WORKBENCH_LOG_STREAM_PATH = "/api/workbench/log-stream"
 
 # P45-01 (2026-04-26): map system_id → circuit source file under
 # STATIC_DIR. Systems present in the workbench dropdown but missing
@@ -305,6 +309,9 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == WORKBENCH_BOOTSTRAP_PATH:
             self._send_json(200, workbench_bootstrap_payload())
+            return
+        if parsed.path == WORKBENCH_LOG_STREAM_PATH:
+            self._serve_log_stream(parsed)
             return
         if parsed.path == SYSTEM_SNAPSHOT_PATH:
             system_id = parsed.query.split("system_id=")[1].split("&")[0] if "system_id=" in parsed.query else "thrust-reverser"
@@ -820,6 +827,72 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"error": str(exc)})
         except Exception as exc:
             self._send_json(500, {"error": str(exc)})
+
+    def _serve_log_stream(self, parsed):
+        """P51-02: Server-Sent Events stream of the workbench log
+        ring buffer. Holds the connection open for up to
+        WORKBENCH_LOG_STREAM_DURATION_SEC seconds, polling the
+        buffer every 0.5s and pushing new entries since the client's
+        cursor. Browser auto-reconnects when the connection drops,
+        carrying the cursor in `?since=N` so no events are lost.
+
+        Bounded session length keeps stale tabs from holding threads
+        forever — ThreadingHTTPServer spawns one thread per
+        connection. Every reconnect picks up the next 60s window."""
+        import json as _json
+        import time as _time
+        from urllib.parse import parse_qs
+
+        from well_harness.skill_executor import log_stream
+
+        qs = parse_qs(parsed.query)
+        try:
+            cursor = int(qs.get("since", ["0"])[0])
+        except (TypeError, ValueError):
+            cursor = 0
+
+        # Header phase. Once written, we cannot send a JSON 4xx from
+        # this handler. Test mode exits after ONE drain so a unit
+        # test can call the endpoint without blocking.
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        # Close the underlying TCP connection at end of session so
+        # http.client (and curl) actually return from .read(). The
+        # browser EventSource doesn't care about Connection: keep-
+        # alive — it manages its own auto-reconnect.
+        self.send_header("Connection", "close")
+        self.close_connection = True
+        # CORS not needed (same-origin); skip ACAO so an external
+        # page can't tap the live executor stream.
+        self.end_headers()
+
+        duration = float(
+            os.environ.get("WORKBENCH_LOG_STREAM_DURATION_SEC", "60")
+        )
+        poll = float(
+            os.environ.get("WORKBENCH_LOG_STREAM_POLL_SEC", "0.5")
+        )
+        deadline = _time.time() + duration
+        try:
+            while _time.time() < deadline:
+                events = log_stream.events_since(cursor)
+                for ev in events:
+                    payload = _json.dumps(ev.to_json())
+                    self.wfile.write(
+                        f"data: {payload}\n\n".encode("utf-8")
+                    )
+                    self.wfile.flush()
+                    cursor = ev.seq
+                # Heartbeat comment so proxies don't time out and so
+                # the test client can detect connection liveness.
+                self.wfile.write(f": cursor={cursor}\n\n".encode("utf-8"))
+                self.wfile.flush()
+                _time.sleep(poll)
+        except (BrokenPipeError, ConnectionResetError):
+            # Client disconnected — totally normal for SSE. Don't
+            # log; the caller is just navigating away.
+            return
 
     def _serve_static(self, relative_path: str):
         static_root = STATIC_DIR.resolve()
