@@ -21,6 +21,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
+import urllib.error as _urlerr
 import urllib.request as _urlreq
 
 from well_harness.skill_executor.errors import SkillExecutorError
@@ -35,10 +36,18 @@ MINIMAX_REQUEST_TIMEOUT_SEC: float = 60.0
 
 
 class LLMUnavailableError(SkillExecutorError):
-    """No usable API key found in env or fallback file. Caller can
-    decide whether to fail the whole execution or fall back to
-    rules (the planner does the former — silent fallback would
-    defeat the audit story)."""
+    """LLM service is currently unreachable. Covers:
+      - no usable API key in env / fallback file
+      - HTTP 5xx (server-side temporary failure)
+      - HTTP 408/429 (request timeout, rate limit)
+      - urllib URLError (DNS / connection refused / network down)
+      - socket timeout
+
+    The orchestrator's P50-03 retry loop catches this exception
+    and reattempts with backoff, since by definition all of these
+    are transient. PlannerError (schema/validation) and
+    LLMResponseError (malformed JSON) are NOT retried — those
+    stay deterministic across retries with the same prompt."""
 
 
 class LLMResponseError(SkillExecutorError):
@@ -145,20 +154,33 @@ def call_minimax(
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
-    if request_post is None:
-        raw_body = _default_post(
-            f"{MINIMAX_API_BASE}/chat/completions",
-            body,
-            headers,
-            timeout_sec,
-        )
-    else:
-        raw_body = request_post(
-            f"{MINIMAX_API_BASE}/chat/completions",
-            body,
-            headers,
-            timeout_sec,
-        )
+    # P50-03: HTTP 5xx / network timeouts get classified as
+    # LLMUnavailableError so the orchestrator's retry loop catches
+    # them. Validation errors (bad JSON shape) stay LLMResponseError
+    # because retrying with the same prompt won't help.
+    try:
+        if request_post is None:
+            raw_body = _default_post(
+                f"{MINIMAX_API_BASE}/chat/completions",
+                body,
+                headers,
+                timeout_sec,
+            )
+        else:
+            raw_body = request_post(
+                f"{MINIMAX_API_BASE}/chat/completions",
+                body,
+                headers,
+                timeout_sec,
+            )
+    except _urlerr.HTTPError as exc:
+        raise LLMUnavailableError(
+            f"MiniMax HTTP {exc.code}: {exc.reason}"
+        ) from exc
+    except (_urlerr.URLError, TimeoutError, OSError) as exc:
+        raise LLMUnavailableError(
+            f"MiniMax network error: {exc}"
+        ) from exc
     try:
         parsed = json.loads(raw_body)
     except json.JSONDecodeError as exc:

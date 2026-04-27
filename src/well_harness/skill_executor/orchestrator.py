@@ -132,6 +132,13 @@ def execute_proposal(
     gh_runner: Any = None,
     base_branch: str = "main",
     pr_title_override: str | None = None,
+    # P50-03 (2026-04-27): planner retry on transient failures.
+    # max_planner_retries is the number of EXTRA attempts after the
+    # first one — so default=2 means up to 3 total attempts. Set
+    # to 0 to disable retries entirely (legacy behavior).
+    max_planner_retries: int = 2,
+    planner_retry_delay_sec: float = 2.0,
+    sleep_fn: Callable[[float], None] | None = None,
 ) -> OrchestratorResult:
     """Walk a proposal through the full executor pipeline.
 
@@ -184,24 +191,37 @@ def execute_proposal(
 
     applied: ApplyResult | None = None
 
+    sleep_actual = sleep_fn or _default_sleep
+
     try:
         # ── Step 2: INIT → PLANNING + run planner ────────────────
         _transition(record, "start_planning", audit_dir)
 
-        try:
-            plan = plan_from_brief(
-                proposal_record=proposal,
-                brief_text=brief,
-                api_key=api_key_override,
-                request_post=request_post_for_llm,
+        # P50-03: retry the planner on transient failures
+        # (LLMUnavailableError = 5xx / network / timeout). Schema
+        # / validation errors (PlannerError) are NOT retried —
+        # the same prompt won't produce different output.
+        plan, planner_exc = _run_planner_with_retry(
+            record=record,
+            audit_dir=audit_dir,
+            proposal=proposal,
+            brief=brief,
+            api_key_override=api_key_override,
+            request_post_for_llm=request_post_for_llm,
+            max_retries=max_planner_retries,
+            base_delay_sec=planner_retry_delay_sec,
+            sleep_fn=sleep_actual,
+        )
+        if planner_exc is not None:
+            record.plan = _planner_failure_plan(planner_exc)
+            record.abort_reason = f"planner: {planner_exc}"
+            _push_event(
+                record, kind="planner_error",
+                note=str(planner_exc)[:200],
             )
-        except (PlannerError, LLMUnavailableError) as exc:
-            record.plan = _planner_failure_plan(exc)
-            record.abort_reason = f"planner: {exc}"
-            _push_event(record, kind="planner_error", note=str(exc)[:200])
             _transition(record, "planner_error", audit_dir)
             _finish(record, audit_dir)
-            return OrchestratorResult(record=record, error=exc)
+            return OrchestratorResult(record=record, error=planner_exc)
         record.plan = plan
         record.llm_backend = plan.llm_backend
         _push_event(record, kind="planner_invocation", note="plan ready")
@@ -468,6 +488,77 @@ def execute_proposal(
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────
+
+
+def _default_sleep(seconds: float) -> None:
+    import time
+    time.sleep(seconds)
+
+
+def _run_planner_with_retry(
+    *,
+    record: ExecutionRecord,
+    audit_dir: Path,
+    proposal: dict,
+    brief: str,
+    api_key_override: str | None,
+    request_post_for_llm: Any,
+    max_retries: int,
+    base_delay_sec: float,
+    sleep_fn: Callable[[float], None],
+) -> tuple[PlannedChange | None, Exception | None]:
+    """Run plan_from_brief with retry-on-transient. Returns
+    (plan, None) on success or (None, exc) on terminal failure.
+
+    Retry policy (P50-03):
+      - LLMUnavailableError → transient, retry up to max_retries
+        with exponential backoff (base_delay * 2^attempt, capped
+        at 60s)
+      - PlannerError → permanent, no retry (schema / validation
+        errors don't get better with more attempts)
+      - Any other exception → bubble up to the orchestrator's
+        outer handler
+
+    Each retry attempt is logged as a `planner_retry` audit
+    event so reviewers can see how many tries it took.
+    """
+    attempt = 0
+    while True:
+        try:
+            plan = plan_from_brief(
+                proposal_record=proposal,
+                brief_text=brief,
+                api_key=api_key_override,
+                request_post=request_post_for_llm,
+            )
+            if attempt > 0:
+                _push_event(
+                    record,
+                    kind="planner_retry_success",
+                    note=f"recovered after {attempt} retries",
+                )
+                _persist(record, audit_dir)
+            return plan, None
+        except LLMUnavailableError as exc:
+            if attempt >= max_retries:
+                # Exhausted — bubble back to caller for terminal handling
+                return None, exc
+            delay = min(60.0, base_delay_sec * (2 ** attempt))
+            attempt += 1
+            _push_event(
+                record,
+                kind="planner_retry",
+                note=(
+                    f"attempt={attempt}/{max_retries} "
+                    f"delay={delay}s reason={exc}"
+                )[:200],
+            )
+            _persist(record, audit_dir)
+            sleep_fn(delay)
+            continue
+        except PlannerError as exc:
+            # Schema/validation error — same prompt won't fix it
+            return None, exc
 
 
 def _check_cancel_and_abort(
