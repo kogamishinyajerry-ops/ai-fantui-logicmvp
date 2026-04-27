@@ -6,6 +6,24 @@
 <title>Well Harness 反推逻辑演示舱</title>
 <link rel="stylesheet" href="/unified-nav.css">
 <link rel="stylesheet" href="/demo.css">
+<style>
+/* P54-04: suppress the unified top nav when this page is embedded
+   inside the workbench iframe (the workbench dock is the canonical
+   nav). Triggered by `?embed=1` querystring or any iframe context. */
+html.is-iframe-embed .unified-nav { display: none !important; }
+html.is-iframe-embed body.unified-nav-enabled { padding-top: 0 !important; }
+</style>
+<script>
+  (function () {
+    try {
+      var isEmbedded = window.self !== window.top
+        || /[?&]embed=1\b/.test(window.location.search);
+      if (isEmbedded) document.documentElement.classList.add('is-iframe-embed');
+    } catch (e) {
+      document.documentElement.classList.add('is-iframe-embed');
+    }
+  })();
+</script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="demo">
 

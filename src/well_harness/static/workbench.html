@@ -464,6 +464,32 @@
         aria-labelledby="workbench-circuit-hero-title"
         tabindex="0"
       >
+        <!-- P54-04: floating system toggle (top-right of the circuit
+             canvas). The legacy workbench-system-select stays in place
+             (P53-00 hides the topbar but keeps the JS hook); this chip
+             mirrors its value into a visible pill control native to
+             the new dock+canvas layout. Lives inside the circuit
+             section so it hides automatically when other views are
+             active. -->
+        <div
+          id="workbench-circuit-system-toggle"
+          class="workbench-circuit-system-toggle"
+          role="group"
+          aria-label="控制系统切换 · Switch control system"
+        >
+          <button
+            type="button"
+            class="workbench-circuit-system-btn"
+            data-circuit-system="thrust-reverser"
+            aria-pressed="true"
+          >反推 · Thrust Reverser</button>
+          <button
+            type="button"
+            class="workbench-circuit-system-btn"
+            data-circuit-system="c919-etras"
+            aria-pressed="false"
+          >C919 E-TRAS</button>
+        </div>
         <header class="workbench-circuit-hero-header">
           <p class="eyebrow">控制逻辑面板 · CONTROL LOGIC PANEL</p>
           <h2 id="workbench-circuit-hero-title">反推逻辑链路 L1 → L4 · Thrust Reverser Authority Chain</h2>
@@ -501,6 +527,12 @@
            than re-implementing them. Iframes keep their independent CSS
            isolated and preserve all interactivity. The earlier P54-02
            stubs were a mistake — those mature pages already exist. -->
+      <!-- P54-04: corrected mapping per user direction —
+           仿真 (simulation) → fan_console.html (the real-time operator
+             console WITH adjustable parameters / wow / lever / mode chips)
+           演示 (cockpit demo) → demo.html (反推逻辑演示舱 with lever +
+             condition panels — the original "control logic workstation"
+             surface the user was looking for) -->
       <section
         id="workbench-sim-panel"
         class="workbench-canvas-view workbench-canvas-view-embed"
@@ -510,7 +542,7 @@
       >
         <h2 id="workbench-sim-panel-title" class="visually-hidden">反推仿真模拟 · Thrust-Reverser Simulation</h2>
         <iframe
-          src="/timeline-sim.html"
+          src="/fan_console.html?embed=1"
           class="workbench-canvas-iframe"
           title="反推仿真模拟 · Thrust-Reverser Simulation"
           loading="lazy"
@@ -526,7 +558,7 @@
       >
         <h2 id="workbench-cockpit-panel-title" class="visually-hidden">反推演示舱 · Thrust-Reverser Cockpit</h2>
         <iframe
-          src="/fan_console.html"
+          src="/demo.html?embed=1"
           class="workbench-canvas-iframe"
           title="反推演示舱 · Thrust-Reverser Cockpit"
           loading="lazy"
@@ -542,7 +574,7 @@
       >
         <h2 id="workbench-spec-panel-title" class="visually-hidden">反推需求文档 · Thrust-Reverser Requirements</h2>
         <iframe
-          src="/fantui_requirements.html"
+          src="/fantui_requirements.html?embed=1"
           class="workbench-canvas-iframe"
           title="反推需求文档 · Thrust-Reverser Requirements"
           loading="lazy"

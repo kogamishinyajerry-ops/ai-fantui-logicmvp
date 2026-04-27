@@ -186,7 +186,26 @@ input[type=range]::-webkit-slider-thumb{
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+
+/* P54-04: when this page is loaded inside the workbench's iframe
+   (top-level workbench.html embeds it via /fan_console.html?embed=1),
+   suppress the unified top nav — the workbench dock is the only nav
+   surface a user should see. The script below adds `.is-iframe-embed`
+   to <html> on first paint, so we anchor the rule there. */
+html.is-iframe-embed .unified-nav { display: none !important; }
+html.is-iframe-embed body.unified-nav-enabled { padding-top: 0 !important; }
 </style>
+<script>
+  (function () {
+    try {
+      var isEmbedded = window.self !== window.top
+        || /[?&]embed=1\b/.test(window.location.search);
+      if (isEmbedded) document.documentElement.classList.add('is-iframe-embed');
+    } catch (e) { /* cross-origin top → assume embedded */
+      document.documentElement.classList.add('is-iframe-embed');
+    }
+  })();
+</script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="fan-console">
 

@@ -144,16 +144,23 @@ def test_js_view_switching_handler_present():
 @pytest.mark.parametrize(
     "panel_id,iframe_src",
     [
-        ("workbench-sim-panel", "/timeline-sim.html"),
-        ("workbench-cockpit-panel", "/fan_console.html"),
+        # P54-04 (2026-04-28): mapping corrected. The original P54-03
+        # had 仿真→timeline-sim and 演示→fan_console, both wrong:
+        # - 仿真 is the operator console with adjustable parameters,
+        #   which is fan_console.html
+        # - 演示 is the cockpit with lever + condition panels, which
+        #   is demo.html
+        ("workbench-sim-panel", "/fan_console.html"),
+        ("workbench-cockpit-panel", "/demo.html"),
         ("workbench-spec-panel", "/fantui_requirements.html"),
     ],
 )
 def test_canvas_view_embeds_existing_mature_page(panel_id, iframe_src):
-    """P54-03 (2026-04-28): the sim / cockpit / requirements views
-    embed the EXISTING mature pages via <iframe>, not re-implemented
-    stubs. Earlier P54-02 stubs were a regression — those mature
-    pages already exist and must not be lost."""
+    """The sim / cockpit / requirements views embed the EXISTING
+    mature pages via <iframe>, not re-implemented stubs. The iframe
+    src may carry a `?embed=1` querystring (P54-04 added it as a
+    defense-in-depth signal so the embedded page can suppress its
+    unified-nav)."""
     block = re.search(
         r'<section[^>]*id="' + re.escape(panel_id) + r'"[^>]*>(.*?)</section>',
         HTML,
@@ -162,7 +169,7 @@ def test_canvas_view_embeds_existing_mature_page(panel_id, iframe_src):
     assert block is not None, f"#{panel_id} section missing"
     body = block.group(0)
     iframe_match = re.search(
-        r'<iframe[^>]*src="' + re.escape(iframe_src) + r'"[^>]*>',
+        r'<iframe[^>]*src="' + re.escape(iframe_src) + r'(?:\?[^"]*)?"[^>]*>',
         body,
     )
     assert iframe_match is not None, (
@@ -174,8 +181,8 @@ def test_canvas_view_embeds_existing_mature_page(panel_id, iframe_src):
 @pytest.mark.parametrize(
     "page_path",
     [
-        "src/well_harness/static/timeline-sim.html",
         "src/well_harness/static/fan_console.html",
+        "src/well_harness/static/demo.html",
         "src/well_harness/static/fantui_requirements.html",
     ],
 )
