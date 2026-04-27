@@ -70,27 +70,135 @@
       </button>
     </nav>
     <main class="shell workbench-shell">
-      <!-- P52-01: placeholder drawer for the "new circuit" tool.
-           Real creation flow comes in a later slice; for now this
-           is just an empty stub so the dock button has somewhere
-           to land. -->
+      <!-- P52-07 (2026-04-27): new-circuit creation flow.
+           Replaces the P52-01 "Coming soon" stub with a real template
+           picker + name field + submit. Backend wiring is intentionally
+           stubbed for this slice — the click flow lives entirely in
+           workbench.js (showing a confirmation toast and closing the
+           drawer). A future phase can land the /api/circuits POST. -->
       <section
         id="workbench-tool-new"
-        class="workbench-tool-drawer-section"
+        class="workbench-tool-drawer-section workbench-tool-new"
         data-dock-section="new"
         aria-labelledby="workbench-tool-new-title"
         hidden
       >
         <header class="workbench-tool-drawer-header">
-          <p class="eyebrow">new control circuit</p>
-          <h2 id="workbench-tool-new-title">新建逻辑控制电路 · Coming soon</h2>
+          <p class="eyebrow">new circuit</p>
+          <h2 id="workbench-tool-new-title">新建逻辑控制电路 · New Control Circuit</h2>
           <button type="button" class="workbench-tool-drawer-close" data-dock-close>×</button>
         </header>
-        <p class="workbench-tool-drawer-empty">
-          新逻辑创建流程正在开发中。届时这里会引导你从空白模板或既有面板派生新的真值引擎。
-          New-circuit creation is in development; this drawer will eventually let you
-          derive a fresh circuit from a template or an existing panel.
+
+        <p class="workbench-new-circuit-intro">
+          选择一个起点：从空白开始，套用预置模板，或克隆当前已加载的电路 ·
+          Pick a starting point: start blank, apply a preset template, or clone the currently-loaded circuit.
         </p>
+
+        <fieldset class="workbench-new-circuit-templates" id="workbench-new-circuit-templates">
+          <legend class="workbench-new-circuit-legend">起点 · Starting point</legend>
+          <button
+            type="button"
+            class="workbench-new-circuit-template-card"
+            data-template-id="blank"
+            data-template-selected="true"
+            aria-pressed="true"
+          >
+            <span class="workbench-new-circuit-template-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4" y="4" width="12" height="12" rx="2"/>
+              </svg>
+            </span>
+            <span class="workbench-new-circuit-template-body">
+              <strong>空白 · Blank</strong>
+              <small>一张干净的画布，自己定义所有逻辑门 · Empty canvas, define every gate yourself.</small>
+            </span>
+          </button>
+          <button
+            type="button"
+            class="workbench-new-circuit-template-card"
+            data-template-id="single-and"
+            data-template-selected="false"
+            aria-pressed="false"
+          >
+            <span class="workbench-new-circuit-template-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h4M3 14h4M7 4h4a4 4 0 010 8H7z"/>
+                <path d="M15 10h2"/>
+              </svg>
+            </span>
+            <span class="workbench-new-circuit-template-body">
+              <strong>单输入 AND · Single-input AND</strong>
+              <small>一组开关条件 → 单一动作 · One conjunction of conditions → one action.</small>
+            </span>
+          </button>
+          <button
+            type="button"
+            class="workbench-new-circuit-template-card"
+            data-template-id="two-stage"
+            data-template-selected="false"
+            aria-pressed="false"
+          >
+            <span class="workbench-new-circuit-template-icon" aria-hidden="true">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 5h3M3 9h3M6 4v6"/>
+                <path d="M10 7h3M10 11h3M13 6v6"/>
+                <path d="M17 9h0"/>
+                <circle cx="17" cy="9" r="1"/>
+              </svg>
+            </span>
+            <span class="workbench-new-circuit-template-body">
+              <strong>双级权限链 · Two-stage Authority Chain</strong>
+              <small>类似 L1→L4 反推链路的两级 AND 串联结构 · Two AND stages in series, like the L1→L4 thrust-reverser pattern.</small>
+            </span>
+          </button>
+        </fieldset>
+
+        <button
+          type="button"
+          class="workbench-new-circuit-derive-btn"
+          data-circuit-action="derive-from-current"
+        >
+          <span aria-hidden="true">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 5h6v6"/>
+              <path d="M11 5l-6 6"/>
+              <path d="M9 15l4 4 4-4"/>
+              <path d="M13 19V9"/>
+            </svg>
+          </span>
+          <span>从当前电路派生 · Derive from current circuit</span>
+        </button>
+
+        <form class="workbench-new-circuit-form" autocomplete="off" novalidate>
+          <label
+            for="workbench-new-circuit-name"
+            class="workbench-new-circuit-label"
+          >
+            电路命名 · Circuit name
+          </label>
+          <input
+            type="text"
+            id="workbench-new-circuit-name"
+            class="workbench-new-circuit-input"
+            placeholder="例：备用喷管偏转控制 · e.g. Backup Nozzle Deflection Control"
+            maxlength="120"
+          >
+          <div class="workbench-new-circuit-actions">
+            <button
+              type="button"
+              id="workbench-new-circuit-create-btn"
+              class="workbench-toolbar-button is-primary"
+            >
+              + 创建电路 · Create Circuit
+            </button>
+            <span
+              id="workbench-new-circuit-status"
+              class="workbench-new-circuit-status"
+              aria-live="polite"
+              data-status="idle"
+            ></span>
+          </div>
+        </form>
       </section>
       <!-- P44-02 (2026-04-26): topbar compressed to a single thin row so
            the control-logic circuit hero fits in the first viewport. The

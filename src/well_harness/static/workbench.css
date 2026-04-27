@@ -3977,6 +3977,176 @@ body[data-active-tool] [data-dock-section][hidden] {
   line-height: 1.55;
 }
 
+/* P52-07: new-circuit creation drawer. */
+.workbench-new-circuit-intro {
+  margin: 0 0 1rem;
+  font-size: 0.78rem;
+  color: var(--text-muted, #93a8b8);
+  line-height: 1.55;
+}
+.workbench-new-circuit-templates {
+  border: none;
+  padding: 0;
+  margin: 0 0 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.workbench-new-circuit-legend {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted, #93a8b8);
+  font-weight: 500;
+  padding: 0;
+  margin-bottom: 0.4rem;
+}
+.workbench-new-circuit-template-card {
+  appearance: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  width: 100%;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--wb-hairline);
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color var(--wb-duration-drawer) var(--wb-ease-out),
+    background var(--wb-duration-drawer) var(--wb-ease-out);
+}
+.workbench-new-circuit-template-card:hover {
+  border-color: rgba(143, 214, 233, 0.22);
+  background: rgba(255, 255, 255, 0.06);
+}
+.workbench-new-circuit-template-card:focus-visible {
+  outline: 2px solid var(--accent, #67e8f9);
+  outline-offset: 2px;
+}
+.workbench-new-circuit-template-card[data-template-selected="true"] {
+  background: var(--wb-active-fill);
+  border-color: var(--wb-active-border);
+}
+.workbench-new-circuit-template-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted, #93a8b8);
+}
+.workbench-new-circuit-template-card[data-template-selected="true"] .workbench-new-circuit-template-icon {
+  color: var(--accent, #67e8f9);
+  background: rgba(103, 232, 249, 0.08);
+}
+.workbench-new-circuit-template-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.workbench-new-circuit-template-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+.workbench-new-circuit-template-body strong {
+  font-size: 0.82rem;
+  color: #edf8ff;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.workbench-new-circuit-template-body small {
+  font-size: 0.7rem;
+  color: var(--text-muted, #93a8b8);
+  line-height: 1.45;
+}
+
+.workbench-new-circuit-derive-btn {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  background: transparent;
+  border: 1px dashed var(--wb-hairline);
+  border-radius: 10px;
+  color: var(--text-muted, #93a8b8);
+  font-size: 0.78rem;
+  cursor: pointer;
+  margin-bottom: 1.1rem;
+  transition:
+    border-color var(--wb-duration-drawer) var(--wb-ease-out),
+    color var(--wb-duration-drawer) var(--wb-ease-out);
+}
+.workbench-new-circuit-derive-btn:hover {
+  border-color: rgba(103, 232, 249, 0.4);
+  color: #edf8ff;
+}
+.workbench-new-circuit-derive-btn:focus-visible {
+  outline: 2px solid var(--accent, #67e8f9);
+  outline-offset: 2px;
+}
+.workbench-new-circuit-derive-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.workbench-new-circuit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  border-top: 1px solid var(--wb-hairline);
+  padding-top: 1rem;
+}
+.workbench-new-circuit-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #93a8b8);
+}
+.workbench-new-circuit-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--wb-hairline);
+  border-radius: 8px;
+  background: rgba(10, 14, 20, 0.65);
+  color: #edf8ff;
+  font-family: inherit;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  transition:
+    border-color var(--wb-duration-drawer) var(--wb-ease-out),
+    box-shadow var(--wb-duration-drawer) var(--wb-ease-out);
+}
+.workbench-new-circuit-input:focus {
+  outline: none;
+  border-color: var(--accent, #67e8f9);
+  box-shadow: 0 0 0 2px rgba(103, 232, 249, 0.22);
+}
+.workbench-new-circuit-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.workbench-new-circuit-status {
+  font-size: 0.72rem;
+  color: var(--text-muted, #93a8b8);
+  margin-left: auto;
+}
+.workbench-new-circuit-status[data-status="success"] {
+  color: #00e5a0;
+}
+.workbench-new-circuit-status[data-status="error"] {
+  color: #ff8888;
+}
+
 /* P52-05: approve drawer inner panel chrome reset.
    The four legacy approve surfaces had been individually position-
    fixed siblings; now they're inner blocks of #workbench-tool-approve.

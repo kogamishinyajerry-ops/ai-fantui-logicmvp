@@ -6234,3 +6234,85 @@ function _wbLiveLogConnect() {
     }
   });
 })();
+
+// ─── P52-07: new-circuit creation flow ────────────────────────────
+//
+// Three template cards (radio-like behavior) + derive-from-current
+// shortcut + name input + create button. Backend wiring is stubbed
+// for this slice — submit shows a confirmation in the status span
+// and closes the drawer after a short pause. A future phase can
+// land the /api/circuits POST.
+(function _wbNewCircuitBoot() {
+  if (typeof document === "undefined") return;
+  const drawer = document.getElementById("workbench-tool-new");
+  if (!drawer) return;
+
+  const fieldset = drawer.querySelector("#workbench-new-circuit-templates");
+  const cards = fieldset
+    ? Array.from(fieldset.querySelectorAll("[data-template-id]"))
+    : [];
+  const deriveBtn = drawer.querySelector('[data-circuit-action="derive-from-current"]');
+  const nameInput = drawer.querySelector("#workbench-new-circuit-name");
+  const createBtn = drawer.querySelector("#workbench-new-circuit-create-btn");
+  const statusEl = drawer.querySelector("#workbench-new-circuit-status");
+
+  function selectTemplate(targetId) {
+    for (const card of cards) {
+      const isActive = card.getAttribute("data-template-id") === targetId;
+      card.setAttribute("data-template-selected", isActive ? "true" : "false");
+      card.setAttribute("aria-pressed", isActive ? "true" : "false");
+    }
+  }
+
+  for (const card of cards) {
+    card.addEventListener("click", () => {
+      const id = card.getAttribute("data-template-id");
+      if (id) selectTemplate(id);
+    });
+  }
+
+  if (deriveBtn) {
+    deriveBtn.addEventListener("click", () => {
+      // Treat derive as a fourth implicit selection — mark all
+      // template cards as inactive and surface a status message.
+      for (const card of cards) {
+        card.setAttribute("data-template-selected", "false");
+        card.setAttribute("aria-pressed", "false");
+      }
+      if (statusEl) {
+        statusEl.textContent = "已选: 派生自当前电路 · derive from current selected";
+        statusEl.setAttribute("data-status", "idle");
+      }
+    });
+  }
+
+  function selectedTemplateId() {
+    const active = cards.find(
+      (c) => c.getAttribute("data-template-selected") === "true"
+    );
+    return active ? active.getAttribute("data-template-id") : "derive-from-current";
+  }
+
+  if (createBtn) {
+    createBtn.addEventListener("click", () => {
+      const name = (nameInput && nameInput.value.trim()) || "未命名电路 · Untitled";
+      const tplId = selectedTemplateId();
+      if (statusEl) {
+        statusEl.textContent =
+          `已收到创建请求 · created (template=${tplId}, name="${name}")`;
+        statusEl.setAttribute("data-status", "success");
+      }
+      // Auto-dismiss the drawer after a beat so the user sees the
+      // confirmation but isn't left staring at a stale form.
+      setTimeout(() => {
+        document.body.dataset.activeTool = "";
+        const dock = document.getElementById("workbench-dock");
+        if (dock) {
+          for (const btn of dock.querySelectorAll("[data-dock-target]")) {
+            btn.setAttribute("aria-pressed", "false");
+          }
+        }
+      }, 1200);
+    });
+  }
+})();
