@@ -234,6 +234,59 @@ class Ask:
 
 
 @dataclasses.dataclass
+class PlanStep:
+    """A single step in the rule-based task decomposition (P51-01).
+
+    The decomposer returns a list of these BEFORE the LLM planner
+    runs, giving the workbench UI something concrete to render in
+    the Plan Timeline card. Steps are tied to lifecycle phases
+    (`phase_name` = ExecutionState value) so the orchestrator can
+    mark them started/completed as the audit transitions.
+
+    `target_files` is a hint for the UI (file glob preview); not
+    enforced — the LLM planner produces the authoritative file
+    list. `estimated_seconds` is the rule-of-thumb the template
+    declared; `actual_duration_sec` is filled in at completion.
+    """
+
+    phase_name: str
+    description: str
+    estimated_seconds: float
+    target_files: list[str] = dataclasses.field(default_factory=list)
+    started_at: str = ""
+    completed_at: str = ""
+    actual_duration_sec: float | None = None
+
+    def to_json(self) -> dict:
+        out: dict = {
+            "phase_name": self.phase_name,
+            "description": self.description,
+            "estimated_seconds": self.estimated_seconds,
+            "target_files": list(self.target_files),
+        }
+        if self.started_at:
+            out["started_at"] = self.started_at
+        if self.completed_at:
+            out["completed_at"] = self.completed_at
+        if self.actual_duration_sec is not None:
+            out["actual_duration_sec"] = self.actual_duration_sec
+        return out
+
+    @classmethod
+    def from_json(cls, data: dict) -> "PlanStep":
+        actual = data.get("actual_duration_sec")
+        return cls(
+            phase_name=str(data["phase_name"]),
+            description=str(data["description"]),
+            estimated_seconds=float(data["estimated_seconds"]),
+            target_files=list(data.get("target_files") or []),
+            started_at=str(data.get("started_at") or ""),
+            completed_at=str(data.get("completed_at") or ""),
+            actual_duration_sec=(float(actual) if actual is not None else None),
+        )
+
+
+@dataclasses.dataclass
 class ExecutionEvent:
     """One entry in the events log. Every state transition writes
     one; the planner / executor may also write notes between
@@ -318,6 +371,12 @@ class ExecutionRecord:
     # output (unified diff text); empty when no edits applied.
     dry_run: bool = False
     dry_run_diff: str = ""
+    # P51-01: rule-based task decomposition for the Plan Timeline UI.
+    # Populated at INIT before the LLM planner runs so the dashboard
+    # has something to render even before plan_ready. Steps are tied
+    # to ExecutionState values via phase_name; orchestrator marks them
+    # started/completed as transitions fire.
+    plan_steps: list[PlanStep] = dataclasses.field(default_factory=list)
 
     def to_json(self) -> dict:
         return {
@@ -350,6 +409,7 @@ class ExecutionRecord:
             ),
             "dry_run": self.dry_run,
             "dry_run_diff": self.dry_run_diff,
+            "plan_steps": [s.to_json() for s in self.plan_steps],
         }
 
     @classmethod
@@ -392,6 +452,9 @@ class ExecutionRecord:
             ),
             dry_run=bool(data.get("dry_run", False)),
             dry_run_diff=str(data.get("dry_run_diff") or ""),
+            plan_steps=[
+                PlanStep.from_json(s) for s in (data.get("plan_steps") or [])
+            ],
         )
 
 

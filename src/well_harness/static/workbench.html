@@ -412,6 +412,28 @@
             class="workbench-governance-list"
           ></ul>
         </section>
+        <!-- P51-01 (2026-04-27): Plan Timeline card. Renders the
+             freshest execution's rule-based PlanStep[] so a demo
+             observer sees the lifecycle progress at a glance. Each
+             step's data-step-status drives the visual: ✓ green for
+             completed, spinner blue for in-flight, gray for pending.
+             Populated by renderPlanTimeline() on the same 5s poll
+             that drives the metrics panel. Hidden until the first
+             render so the card doesn't flash empty. -->
+        <section
+          id="workbench-plan-timeline"
+          class="workbench-plan-timeline"
+          aria-live="polite"
+          hidden
+        >
+          <header class="workbench-plan-timeline-header">
+            <span class="workbench-plan-timeline-eyebrow">plan timeline</span>
+            <strong id="workbench-plan-timeline-title">—</strong>
+            <span id="workbench-plan-timeline-state" class="workbench-plan-timeline-state">—</span>
+          </header>
+          <ol id="workbench-plan-timeline-steps" class="workbench-plan-timeline-steps"></ol>
+        </section>
+
         <!-- P50-02a (2026-04-27): metrics observability panel.
              Aggregate counts + pass rate + recent failures, populated
              by refreshExecutionMetrics() on the same 5s poll loop
