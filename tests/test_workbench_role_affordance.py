@@ -28,6 +28,20 @@ import pytest
 
 from well_harness.demo_server import DemoRequestHandler
 
+# P54-00 (2026-04-27): the entire role-affordance UI surface this file
+# locked in (#approval-center-panel, #approval-center-entry,
+# #workbench-pending-signoff-affordance) was deleted as visual noise.
+# Per-card approve/reject buttons are the new approval surface; non-
+# Kogami role gating moves to the per-card handler in workbench.js
+# rather than separate banner UI.
+pytestmark = pytest.mark.skip(
+    reason=(
+        "Obsolete after P54-00: pending-signoff affordance + "
+        "approval-center entry/panel removed; per-card buttons are "
+        "the approval surface and role gating moves to JS."
+    )
+)
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STATIC_DIR = REPO_ROOT / "src" / "well_harness" / "static"

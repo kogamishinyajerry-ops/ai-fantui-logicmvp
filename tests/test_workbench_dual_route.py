@@ -64,11 +64,12 @@ def test_workbench_route_serves_shell_only(path: str) -> None:
     assert "Control Logic Workbench</h1>" in body
     # Bundle h1 must NOT leak onto the shell page
     assert "Workbench Bundle 验收台</h1>" not in body
-    # P44-01: shell hero (circuit panel) + approval-center-entry are the
-    # essential surfaces (replaces the prior workbench-control-panel id
-    # which belonged to the empty 3-column grid that was removed).
+    # P44-01: shell hero (circuit panel) is the essential surface.
+    # P54-00 (2026-04-27) removed #approval-center-entry; the
+    # #workbench-tool-approve drawer + per-card approve/reject
+    # buttons replace the legacy "Approval Center" entry button.
     assert 'id="workbench-circuit-hero"' in body
-    assert 'id="approval-center-entry"' in body
+    assert 'id="workbench-tool-approve"' in body
 
 
 @pytest.mark.parametrize("path", ["/workbench/bundle", "/workbench/bundle.html", "/workbench_bundle.html"])

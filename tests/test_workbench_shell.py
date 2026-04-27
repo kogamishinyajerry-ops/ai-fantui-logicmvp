@@ -7,6 +7,8 @@ from pathlib import Path
 
 from http.server import ThreadingHTTPServer
 
+import pytest
+
 from well_harness.demo_server import DemoRequestHandler
 
 
@@ -94,11 +96,15 @@ def test_workbench_shell_has_annotation_inbox_skeleton() -> None:
     assert "annotation-inbox-list" in ids
 
 
+@pytest.mark.skip(
+    reason=(
+        "Obsolete after P54-00: #approval-center-entry button removed "
+        "with the parent #approval-center-panel. Per-card approve/"
+        "reject buttons are the new approval surface."
+    )
+)
 def test_workbench_shell_has_kogami_approval_entry() -> None:
-    parser = parse_workbench_ids()
-
-    assert "approval-center-entry" in parser.ids
-    assert parser.data_attrs["approval-center-entry"].get("data-role") == "KOGAMI"
+    pass
 
 
 def test_workbench_javascript_exposes_circuit_hero_hydrator() -> None:

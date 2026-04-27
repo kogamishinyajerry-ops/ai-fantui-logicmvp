@@ -81,10 +81,14 @@ def test_approval_center_accepts_and_rejects_with_hash_chain(tmp_path):
     assert _read_events(audit_path)[-1]["type"] == "proposal.rejected"
 
 
+@pytest.mark.skip(
+    reason=(
+        "P54-00 (2026-04-27): the standalone #approval-center-panel "
+        "with its 3-lane pending/accept/reject grid was removed. "
+        "Per-card approve/reject buttons (rendered by workbench.js) "
+        "are the actual approval surface now. Backend approval "
+        "tests above this one still apply."
+    )
+)
 def test_workbench_static_approval_center_exposes_triage_lanes():
-    html = (PROJECT_ROOT / "src/well_harness/static/workbench.html").read_text(encoding="utf-8")
-
-    assert 'id="approval-center-panel"' in html
-    assert 'data-approval-role="KOGAMI"' in html
-    for lane in ["pending", "accept", "reject"]:
-        assert f'data-approval-lane="{lane}"' in html
+    pass
