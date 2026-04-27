@@ -200,6 +200,107 @@ def check_cancel(*, audit_dir: Path, exec_id: str) -> dict | None:
     return read_and_clear_cancel(audit_dir=audit_dir, exec_id=exec_id)
 
 
+# ─── P49-02a: governance approval / reject signals ──────────────
+
+
+def governance_approval_path(*, audit_dir: Path, exec_id: str) -> Path:
+    """Signal file for governance APPROVE. Sibling to .approval /
+    .cancel so the orchestrator's signal surface is one
+    directory. Distinct from .approval because governance and the
+    plan-approval Ask are independent gates: a reviewer can
+    approve governance but later reject the plan in ASKING."""
+    return Path(audit_dir) / f"{exec_id}.governance_approval"
+
+
+def governance_reject_path(*, audit_dir: Path, exec_id: str) -> Path:
+    return Path(audit_dir) / f"{exec_id}.governance_reject"
+
+
+def write_governance_approval(
+    *,
+    audit_dir: Path,
+    exec_id: str,
+    actor: str,
+    note: str = "",
+) -> None:
+    """Write the governance APPROVE signal. JSON body carries actor
+    + ISO timestamp + optional note so the audit captures who
+    cleared the gate and why. Atomic via tmp+rename."""
+    target = governance_approval_path(audit_dir=audit_dir, exec_id=exec_id)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "actor": actor or "anonymous",
+        "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "note": note or "",
+    }
+    tmp = target.with_suffix(".governance_approval.tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, target)
+
+
+def write_governance_reject(
+    *,
+    audit_dir: Path,
+    exec_id: str,
+    actor: str,
+    note: str = "",
+) -> None:
+    target = governance_reject_path(audit_dir=audit_dir, exec_id=exec_id)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "actor": actor or "anonymous",
+        "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "note": note or "",
+    }
+    tmp = target.with_suffix(".governance_reject.tmp")
+    tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+    os.replace(tmp, target)
+
+
+def read_and_clear_governance(
+    *,
+    audit_dir: Path,
+    exec_id: str,
+) -> tuple[str, dict] | None:
+    """Atomically take whichever governance signal is pending.
+    Returns ("approved", payload) or ("rejected", payload), or
+    None if neither file is present. If BOTH are present we
+    prefer reject (safer default — the reviewer probably hit
+    reject after seeing approve was a mistake)."""
+    reject_target = governance_reject_path(
+        audit_dir=audit_dir, exec_id=exec_id,
+    )
+    approve_target = governance_approval_path(
+        audit_dir=audit_dir, exec_id=exec_id,
+    )
+    for kind, target in (
+        ("rejected", reject_target),
+        ("approved", approve_target),
+    ):
+        if not target.is_file():
+            continue
+        try:
+            text = target.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        try:
+            target.unlink()
+        except OSError:
+            pass
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(data, dict) or not data.get("actor"):
+            continue
+        return kind, {
+            "actor": str(data.get("actor") or "anonymous"),
+            "at": str(data.get("at") or ""),
+            "note": str(data.get("note") or ""),
+        }
+    return None
+
+
 class WorkbenchApprovalCallback:
     """Callable matching orchestrator's ApprovalCallback signature.
 
