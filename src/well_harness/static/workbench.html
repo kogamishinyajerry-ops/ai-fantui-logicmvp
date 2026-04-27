@@ -135,6 +135,28 @@
         </button>
       </div>
     </nav>
+    <!-- P54-06: canvas-level system toggle (always visible, drives
+         BOTH the circuit fragment fetch AND the iframe srcs of the
+         sim/cockpit/spec views). Default = thrust-reverser. -->
+    <div
+      id="workbench-system-toggle"
+      class="workbench-system-toggle"
+      role="group"
+      aria-label="控制系统切换 · Switch control system"
+    >
+      <button
+        type="button"
+        class="workbench-system-toggle-btn"
+        data-circuit-system="thrust-reverser"
+        aria-pressed="true"
+      >反推 · Thrust Reverser</button>
+      <button
+        type="button"
+        class="workbench-system-toggle-btn"
+        data-circuit-system="c919-etras"
+        aria-pressed="false"
+      >C919 E-TRAS</button>
+    </div>
     <main class="shell workbench-shell">
       <!-- P52-07 (2026-04-27): new-circuit creation flow.
            Replaces the P52-01 "Coming soon" stub with a real template
@@ -464,32 +486,6 @@
         aria-labelledby="workbench-circuit-hero-title"
         tabindex="0"
       >
-        <!-- P54-04: floating system toggle (top-right of the circuit
-             canvas). The legacy workbench-system-select stays in place
-             (P53-00 hides the topbar but keeps the JS hook); this chip
-             mirrors its value into a visible pill control native to
-             the new dock+canvas layout. Lives inside the circuit
-             section so it hides automatically when other views are
-             active. -->
-        <div
-          id="workbench-circuit-system-toggle"
-          class="workbench-circuit-system-toggle"
-          role="group"
-          aria-label="控制系统切换 · Switch control system"
-        >
-          <button
-            type="button"
-            class="workbench-circuit-system-btn"
-            data-circuit-system="thrust-reverser"
-            aria-pressed="true"
-          >反推 · Thrust Reverser</button>
-          <button
-            type="button"
-            class="workbench-circuit-system-btn"
-            data-circuit-system="c919-etras"
-            aria-pressed="false"
-          >C919 E-TRAS</button>
-        </div>
         <header class="workbench-circuit-hero-header">
           <p class="eyebrow">控制逻辑面板 · CONTROL LOGIC PANEL</p>
           <h2 id="workbench-circuit-hero-title">反推逻辑链路 L1 → L4 · Thrust Reverser Authority Chain</h2>
@@ -541,9 +537,19 @@
         hidden
       >
         <h2 id="workbench-sim-panel-title" class="visually-hidden">反推仿真模拟 · Thrust-Reverser Simulation</h2>
+        <!-- P54-06: data-system-src-* drives iframe re-pointing on
+             system toggle. data-system-title-* + data-system-h2-*
+             keep the iframe title attr and hidden h2 (used by
+             aria-labelledby) in sync with the active system, so
+             screen readers don't announce the wrong surface. -->
         <iframe
-          src="/fan_console.html?embed=1"
           class="workbench-canvas-iframe"
+          data-system-iframe="sim"
+          data-system-src-thrust-reverser="/fan_console.html?embed=1"
+          data-system-src-c919-etras="/c919_etras_workstation.html?embed=1"
+          data-system-title-thrust-reverser="反推仿真模拟 · Thrust-Reverser Simulation"
+          data-system-title-c919-etras="C919 E-TRAS 仿真工作台 · C919 E-TRAS Simulation"
+          src="/fan_console.html?embed=1"
           title="反推仿真模拟 · Thrust-Reverser Simulation"
           loading="lazy"
         ></iframe>
@@ -558,8 +564,13 @@
       >
         <h2 id="workbench-cockpit-panel-title" class="visually-hidden">反推演示舱 · Thrust-Reverser Cockpit</h2>
         <iframe
-          src="/demo.html?embed=1"
           class="workbench-canvas-iframe"
+          data-system-iframe="cockpit"
+          data-system-src-thrust-reverser="/demo.html?embed=1"
+          data-system-src-c919-etras="/c919_etras_panel/index.html?embed=1"
+          data-system-title-thrust-reverser="反推演示舱 · Thrust-Reverser Cockpit"
+          data-system-title-c919-etras="C919 E-TRAS 控制逻辑面板 · C919 E-TRAS Cockpit"
+          src="/demo.html?embed=1"
           title="反推演示舱 · Thrust-Reverser Cockpit"
           loading="lazy"
         ></iframe>
@@ -574,8 +585,13 @@
       >
         <h2 id="workbench-spec-panel-title" class="visually-hidden">反推需求文档 · Thrust-Reverser Requirements</h2>
         <iframe
-          src="/workbench_spec.html"
           class="workbench-canvas-iframe"
+          data-system-iframe="spec"
+          data-system-src-thrust-reverser="/workbench_spec.html"
+          data-system-src-c919-etras="/c919_requirements.html?embed=1"
+          data-system-title-thrust-reverser="反推需求文档 · Thrust-Reverser Requirements"
+          data-system-title-c919-etras="C919 E-TRAS 需求文档 · C919 E-TRAS Requirements"
+          src="/workbench_spec.html"
           title="反推需求文档 · Thrust-Reverser Requirements"
           loading="lazy"
         ></iframe>
