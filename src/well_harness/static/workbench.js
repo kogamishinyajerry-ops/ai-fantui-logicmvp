@@ -274,6 +274,11 @@ async function runSuggestionInterpret() {
   // single sources of truth so the request is fully self-describing.
   const strategy = currentInterpreterStrategy();
   const system_id = currentWorkbenchSystem();
+  // Codex round-2 P2-2: tear down any stale conflict banner from
+  // a prior interpretation. Otherwise the banner's "继续提交" button
+  // would still call submitSuggestionTicket on the NEW _lastInterpretation,
+  // misleading the user about which conflict set they're bypassing.
+  hideConflictBanner();
   status.dataset.status = "loading";
   status.textContent = strategy === "llm"
     ? "🤖 LLM 解读中… · interpreting via LLM…"
@@ -638,9 +643,20 @@ function installSuggestionDraftRestore() {
   const input = document.getElementById("workbench-suggestion-input");
   if (!input) return;
   // Autosave on input (debounced) — scoped to the active system.
+  // Codex round-2 P2-1: capture both the system_id AND the text at
+  // the moment of typing, NOT inside the timer callback. Without
+  // this snapshot, switching systems within the 500ms debounce
+  // window would let the old text get committed under the new
+  // system_id, defeating the per-system isolation this whole flow
+  // is built around.
   input.addEventListener("input", () => {
+    const sysSnapshot = _currentDraftSystemId();
+    const textSnapshot = input.value;
     if (_suggestionDraftTimer) clearTimeout(_suggestionDraftTimer);
-    _suggestionDraftTimer = setTimeout(() => saveSuggestionDraft(input.value), SUGGESTION_DRAFT_DEBOUNCE_MS);
+    _suggestionDraftTimer = setTimeout(
+      () => saveSuggestionDraftFor(sysSnapshot, textSnapshot),
+      SUGGESTION_DRAFT_DEBOUNCE_MS,
+    );
   });
   // On boot, surface a restore banner if a fresh draft exists for
   // the currently active system. Switching systems should clear the
@@ -650,11 +666,15 @@ function installSuggestionDraftRestore() {
     showDraftBanner(draft);
   }
   // When the system changes, re-evaluate which (if any) draft is
-  // applicable. Saves the user from a stale banner across system
-  // toggles.
+  // applicable, and cancel any pending debounce so old text doesn't
+  // leak into the new system's slot (Codex round-2 P2-1).
   const systemSelect = document.getElementById("workbench-system-select");
   if (systemSelect) {
     systemSelect.addEventListener("change", () => {
+      if (_suggestionDraftTimer) {
+        clearTimeout(_suggestionDraftTimer);
+        _suggestionDraftTimer = null;
+      }
       hideDraftBanner();
       // Only offer a draft if the input is still empty (the user
       // didn't already start typing in the new system).
@@ -723,7 +743,15 @@ function readSuggestionDraft() {
 }
 
 function saveSuggestionDraft(text) {
-  const sysId = _currentDraftSystemId();
+  saveSuggestionDraftFor(_currentDraftSystemId(), text);
+}
+
+// Codex round-2 P2-1: explicit-system variant so the debounce
+// callback can write under the system_id captured when the user
+// was actually typing — protecting against the typing-then-switching
+// race within the 500ms debounce window.
+function saveSuggestionDraftFor(sysId, text) {
+  if (!sysId) return;
   const map = _readDraftMap();
   if (!text || !text.trim()) {
     delete map[sysId];

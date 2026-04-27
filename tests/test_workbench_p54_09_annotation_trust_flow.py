@@ -360,6 +360,51 @@ def test_llm_normalizer_uses_per_system_vocab() -> None:
     assert out_tr["vocabulary_hint"]["gate"] != out_c919["vocabulary_hint"]["gate"]
 
 
+def test_draft_debounce_captures_system_at_input_time() -> None:
+    """Codex round-2 P2-1: the debounce callback must write under
+    the system_id snapshotted when the user was typing, not
+    whatever system is active when the timer fires. Otherwise
+    typing on system A then switching to B inside 500ms commits
+    A's text under B."""
+    # The fix is a saveSuggestionDraftFor(sysId, text) helper +
+    # capturing the snapshot in the input listener.
+    assert "saveSuggestionDraftFor" in JS, (
+        "explicit-system save helper must exist"
+    )
+    install_fn = re.search(
+        r'function installSuggestionDraftRestore\(\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert install_fn is not None
+    body = install_fn.group(1)
+    # Snapshot vars captured outside the timer.
+    assert "sysSnapshot" in body
+    assert "textSnapshot" in body
+    # The setTimeout body must use the snapshot, not re-read.
+    assert "saveSuggestionDraftFor(sysSnapshot, textSnapshot)" in body
+    # System change must also cancel the pending debounce so the
+    # old text can't land under the new system after the fact.
+    assert "_suggestionDraftTimer = null" in body
+
+
+def test_runSuggestionInterpret_clears_stale_conflict_banner() -> None:
+    """Codex round-2 P2-2: re-interpreting must hide any banner
+    from a prior conflict check. Otherwise the banner's 继续提交
+    would submit the NEW interpretation against the OLD displayed
+    conflict list — misleading the user."""
+    fn = re.search(
+        r'async function runSuggestionInterpret\(\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    assert "hideConflictBanner" in body, (
+        "runSuggestionInterpret must tear down any stale conflict banner"
+    )
+
+
 def test_change_kind_hint_excludes_propose_change_fallback() -> None:
     """Codex P3: the verb hint must NOT advertise "propose change"
     as a remedy — that's the very fallback that triggered the hint
