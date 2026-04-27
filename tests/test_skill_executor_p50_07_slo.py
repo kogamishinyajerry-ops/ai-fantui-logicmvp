@@ -251,6 +251,8 @@ def test_json_shape_is_stable():
         "pass_rate_yellow", "pass_rate_red",
         "failures_yellow", "failures_red",
         "min_data_points",
+        # P50-08a: rolling-window pass_rate thresholds
+        "recent_pass_rate_yellow", "recent_pass_rate_red",
     }
 
 

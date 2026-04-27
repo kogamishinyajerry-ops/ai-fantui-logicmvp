@@ -211,5 +211,9 @@ def test_metrics_endpoint_returns_stable_top_level_keys(server):
         # P50-07: SLO verdict (overall + breaches + thresholds).
         # Always present once compute_metrics has run.
         "slo_status",
+        # P50-08a: rolling-window pass_rate stats over the last N
+        # records. Always present (pass_rate_recent=null when
+        # under-windowed).
+        "recent_window",
     }
     assert set(body.keys()) == expected
