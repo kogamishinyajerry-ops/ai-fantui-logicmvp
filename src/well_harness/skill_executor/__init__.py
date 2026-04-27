@@ -62,6 +62,10 @@ from well_harness.skill_executor.gate import (
     GateResult,
     check_test_gate,
 )
+from well_harness.skill_executor.gate_check import (
+    GateCheckResult,
+    check_pr_audit_compliance,
+)
 from well_harness.skill_executor.git_ops import (
     CommitResult,
     GitError,
@@ -156,6 +160,7 @@ __all__ = [
     "ExecutionRecord",
     "ExecutionState",
     "FileEdit",
+    "GateCheckResult",
     "GateResult",
     "GitError",
     "InvalidExecutionTransitionError",
@@ -183,6 +188,7 @@ __all__ = [
     "brief_path",
     "build_exec_stamp",
     "call_minimax",
+    "check_pr_audit_compliance",
     "check_test_gate",
     "commit_files",
     "create_branch",
