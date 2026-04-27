@@ -399,6 +399,13 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if parsed.path == f"{SKILL_EXECUTIONS_PATH}/pending":
             self._handle_list_skill_executions(state_filter="ASKING")
             return
+        # P50-02a (2026-04-27): aggregate metrics for the workbench
+        # observability panel. Cheaper than fetching the full audit
+        # list — the panel just renders 9 counts + a pass-rate +
+        # a duration summary.
+        if parsed.path == f"{SKILL_EXECUTIONS_PATH}/metrics":
+            self._handle_skill_execution_metrics()
+            return
         if parsed.path.startswith(f"{SKILL_EXECUTIONS_PATH}/"):
             suffix = parsed.path[len(SKILL_EXECUTIONS_PATH) + 1:]
             # `pending` already handled above; everything else is treated
@@ -1265,6 +1272,22 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             return
         self._send_json(200, records[0].to_json())
+
+    def _handle_skill_execution_metrics(self) -> None:
+        """GET /api/skill-executions/metrics. Returns aggregate
+        Metrics JSON over every audit currently on disk. Empty input
+        produces an all-zero response so the panel can render
+        deterministically before the first execution.
+        """
+        try:
+            from well_harness.skill_executor.audit import list_audits
+            from well_harness.skill_executor.metrics import compute_metrics
+        except ImportError:
+            self._send_json(500, {"error": "skill_executor_unavailable"})
+            return
+        records = list_audits()
+        metrics = compute_metrics(records)
+        self._send_json(200, metrics.to_json())
 
     def _handle_get_skill_execution(self, exec_id: str) -> None:
         """GET /api/skill-executions/<exec_id>. Returns the audit

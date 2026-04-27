@@ -390,6 +390,44 @@
             title="刷新工单列表 · Refresh proposal list"
           >↻ 刷新 · Refresh</button>
         </header>
+        <!-- P50-02a (2026-04-27): metrics observability panel.
+             Aggregate counts + pass rate + recent failures, populated
+             by refreshExecutionMetrics() on the same 5s poll loop
+             that drives badges/pending-exec. Collapsed by default
+             so the inbox stays the primary surface; reviewers expand
+             when they need a system-health glance. -->
+        <details id="workbench-metrics-panel" class="workbench-metrics-panel">
+          <summary class="workbench-metrics-summary">
+            <span class="workbench-metrics-summary-eyebrow">executor metrics</span>
+            <span id="workbench-metrics-summary-line" class="workbench-metrics-summary-line">载入中… · loading…</span>
+          </summary>
+          <div id="workbench-metrics-body" class="workbench-metrics-body" aria-live="polite">
+            <div class="workbench-metrics-grid">
+              <div class="workbench-metrics-card" data-metric="total">
+                <span class="workbench-metrics-card-label">总执行 · total</span>
+                <strong id="workbench-metric-total">—</strong>
+              </div>
+              <div class="workbench-metrics-card" data-metric="pass-rate">
+                <span class="workbench-metrics-card-label">通过率 · pass rate</span>
+                <strong id="workbench-metric-pass-rate">—</strong>
+              </div>
+              <div class="workbench-metrics-card" data-metric="median-duration">
+                <span class="workbench-metrics-card-label">中位耗时 · median</span>
+                <strong id="workbench-metric-median-duration">—</strong>
+              </div>
+              <div class="workbench-metrics-card" data-metric="p95-duration">
+                <span class="workbench-metrics-card-label">p95 耗时 · p95</span>
+                <strong id="workbench-metric-p95-duration">—</strong>
+              </div>
+            </div>
+            <div class="workbench-metrics-state-bars" id="workbench-metrics-state-bars">
+              <!-- 9 bars rendered by JS with live counts -->
+            </div>
+            <div id="workbench-metrics-failures" class="workbench-metrics-failures">
+              <p class="workbench-metrics-failures-empty">最近无失败 · no recent failures</p>
+            </div>
+          </div>
+        </details>
         <ul
           id="annotation-inbox-list"
           data-inbox-state="loading"

@@ -79,6 +79,11 @@ from well_harness.skill_executor.gate_check import (
     GateCheckResult,
     check_pr_audit_compliance,
 )
+from well_harness.skill_executor.metrics import (
+    Metrics,
+    RecentFailure,
+    compute_metrics,
+)
 from well_harness.skill_executor.git_ops import (
     CommitResult,
     GitError,
@@ -195,6 +200,8 @@ __all__ = [
     "LLMResponse",
     "LLMResponseError",
     "LLMUnavailableError",
+    "Metrics",
+    "RecentFailure",
     "MINIMAX_API_BASE",
     "MINIMAX_DEFAULT_MODEL",
     "MINIMAX_REQUEST_TIMEOUT_SEC",
@@ -226,6 +233,7 @@ __all__ = [
     "check_pr_audit_compliance",
     "check_test_gate",
     "commit_files",
+    "compute_metrics",
     "create_branch",
     "current_branch",
     "execute_proposal",
