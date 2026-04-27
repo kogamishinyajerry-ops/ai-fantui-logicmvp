@@ -3738,21 +3738,33 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
   color: rgba(255, 140, 140, 1);
 }
 
-/* ─── P52-01: left tool dock + slide-in drawer ────────────────────
-   The dock is a fixed left-side strip of icon buttons. Each button
+/* ─── P52-01..P52-02: left tool dock + slide-in drawer ──────────────
+   Dock is a fixed left-side strip of icon buttons. Each button
    targets a `data-dock-section` value via body[data-active-tool].
-   Sections matching the active tool render as a slide-in drawer
-   over the canvas (the circuit hero stays underneath, visible when
-   the drawer closes). All other sections stay hidden in the DOM.
+   Sections matching the active tool render as a fixed-position
+   slide-in drawer over the canvas (the circuit hero stays
+   underneath, visible when the drawer closes).
 
-   Layout choice: drawer is fixed-position (not in flow) so opening
-   it doesn't reflow the canvas. The user keeps their place on the
-   circuit panel, the drawer comes in from the left, they read /
-   click, then dismiss.
+   P52-02 design language (borrowed from Claude.app):
+     · base bg #0E1320 (dark + faint warm shift) replaces cold #0B1220
+     · active state = 12% accent fill + 28% accent border (subdued)
+     · transitions = 168ms cubic-bezier(.32,.72,0,1) — claude-spec curve
+     · drawer shadow softened to 0 12px 28px @ 32% (was 8px 0 32px @ 45%)
+     · hairline borders at 0.10 alpha — never visible enough to distract
+     · slide-in animation: opacity + translateX(-12px → 0)
+     · dock label bumped to 0.7rem (~11px), spacing tightened
+     · icons swapped to 1.5px-stroke inline SVG (no emoji)
    --------------------------------------------------------------- */
 :root {
   --workbench-dock-width: 64px;
   --workbench-drawer-width: 380px;
+  --wb-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --wb-duration-drawer: 168ms;
+  --wb-hairline: rgba(143, 214, 233, 0.10);
+  --wb-dock-bg: #0E1320;
+  --wb-drawer-bg: #0F1828;
+  --wb-active-fill: rgba(103, 232, 249, 0.12);
+  --wb-active-border: rgba(103, 232, 249, 0.28);
 }
 
 body {
@@ -3766,13 +3778,13 @@ body {
   top: 0;
   bottom: 0;
   width: var(--workbench-dock-width);
-  background: rgba(8, 14, 22, 0.92);
-  border-right: 1px solid rgba(143, 214, 233, 0.18);
+  background: var(--wb-dock-bg);
+  border-right: 1px solid var(--wb-hairline);
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.4rem;
-  padding: 0.6rem 0.4rem;
+  gap: 0.5rem;
+  padding: 0.7rem 0.5rem;
   z-index: 50;
   backdrop-filter: blur(12px);
 }
@@ -3781,24 +3793,24 @@ body {
   appearance: none;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 10px;
   color: var(--text-muted, #93a8b8);
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.18rem;
-  padding: 0.5rem 0.2rem;
+  gap: 0.32rem;
+  padding: 0.65rem 0.25rem 0.55rem;
   font: inherit;
   transition:
-    color var(--duration-fast, 120ms) var(--ease-standard, ease),
-    background var(--duration-fast, 120ms) var(--ease-standard, ease),
-    border-color var(--duration-fast, 120ms) var(--ease-standard, ease);
+    color var(--wb-duration-drawer) var(--wb-ease-out),
+    background var(--wb-duration-drawer) var(--wb-ease-out),
+    border-color var(--wb-duration-drawer) var(--wb-ease-out);
 }
 .workbench-dock-btn:hover {
   color: var(--text-main, #e6eef6);
-  background: rgba(103, 232, 249, 0.08);
-  border-color: rgba(103, 232, 249, 0.18);
+  background: rgba(103, 232, 249, 0.06);
+  border-color: rgba(103, 232, 249, 0.14);
 }
 .workbench-dock-btn:focus-visible {
   outline: 2px solid var(--accent, #67e8f9);
@@ -3806,16 +3818,20 @@ body {
 }
 .workbench-dock-btn[aria-pressed="true"] {
   color: var(--accent, #67e8f9);
-  background: rgba(103, 232, 249, 0.14);
-  border-color: rgba(103, 232, 249, 0.42);
+  background: var(--wb-active-fill);
+  border-color: var(--wb-active-border);
 }
 .workbench-dock-btn-icon {
-  font-size: 1.4rem;
-  line-height: 1;
+  width: 22px;
+  height: 22px;
+  display: block;
+  /* SVG inherits currentColor via stroke, so we don't set fill here. */
 }
 .workbench-dock-btn-label {
-  font-size: 0.62rem;
-  letter-spacing: 0.06em;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+  line-height: 1;
 }
 
 /* Tool drawer: every section that lives behind a dock button gets
@@ -3839,14 +3855,27 @@ body[data-active-tool="new"] [data-dock-section="new"] {
   max-width: calc(100vw - var(--workbench-dock-width));
   z-index: 40;
   overflow-y: auto;
-  background: rgba(11, 18, 26, 0.96);
-  border-right: 1px solid rgba(143, 214, 233, 0.22);
-  box-shadow: 8px 0 32px rgba(0, 0, 0, 0.45);
-  padding: 0.85rem 0.95rem 1.4rem;
-  /* Override the `hidden` attribute that would otherwise keep them
-     display:none; the attribute selector loses to higher-specificity
-     rules but `display:block` here is explicit anyway. */
+  background: var(--wb-drawer-bg);
+  border-right: 1px solid var(--wb-hairline);
+  border-radius: 0 12px 12px 0;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+  padding: 1rem 1.4rem 1.6rem;
   visibility: visible;
+  /* P52-02 motion: fade + 12px translate-in. Keyframe-based so the
+     hidden→visible transition fires on every dock activation, not
+     just the first paint. */
+  animation: wbDrawerEnter var(--wb-duration-drawer) var(--wb-ease-out) both;
+}
+
+@keyframes wbDrawerEnter {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 /* Tame the older sections' margins so they don't push past the
    drawer's intrinsic padding when reused. */
@@ -3854,47 +3883,57 @@ body[data-active-tool] [data-dock-section][hidden] {
   display: block;
 }
 
-/* Drawer header (re-usable across all tool sections) */
+/* Drawer header (re-usable across all tool sections).
+   North Star ladder: eyebrow 0.7rem uppercase muted ·
+   H2 ~16px content-weight · subtitle 0.85rem muted ·
+   1px hairline ·   24px gap before body. */
 .workbench-tool-drawer-header {
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
-  margin: 0 0 0.7rem 0;
-  padding-bottom: 0.55rem;
-  border-bottom: 1px solid rgba(143, 214, 233, 0.18);
+  gap: 0.65rem;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--wb-hairline);
 }
 .workbench-tool-drawer-header .eyebrow {
   margin: 0;
-  font-size: 0.62rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted, #93a8b8);
+  font-weight: 500;
 }
 .workbench-tool-drawer-header h2,
 .workbench-tool-drawer-header h3 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 600;
+  letter-spacing: -0.005em;
   flex: 1;
+  color: var(--text-main, #e6eef6);
 }
 .workbench-tool-drawer-close {
   appearance: none;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--text-muted, #93a8b8);
   cursor: pointer;
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   line-height: 1;
-  padding: 0.1rem 0.45rem;
+  padding: 0.25rem 0.5rem;
   margin-left: auto;
   transition:
-    color var(--duration-fast, 120ms),
-    background var(--duration-fast, 120ms);
+    color var(--wb-duration-drawer) var(--wb-ease-out),
+    background var(--wb-duration-drawer) var(--wb-ease-out);
 }
 .workbench-tool-drawer-close:hover {
   color: var(--text-main, #e6eef6);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
+}
+.workbench-tool-drawer-close:focus-visible {
+  outline: 2px solid var(--accent, #67e8f9);
+  outline-offset: 2px;
 }
 .workbench-tool-drawer-empty {
   margin: 0;
