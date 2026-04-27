@@ -278,7 +278,12 @@ def test_write_state_atomic(tmp_path):
     # Verify on disk is the JSON we expect
     raw = state_path(tmp_path).read_text(encoding="utf-8")
     parsed = json.loads(raw)
-    assert parsed == {"last_dispatched": {"red": "2026-04-27T13:00:00Z"}}
+    # P50-12 added pending_suppressed alongside last_dispatched.
+    # The atomic-write contract is unchanged; the shape grew.
+    assert parsed == {
+        "last_dispatched": {"red": "2026-04-27T13:00:00Z"},
+        "pending_suppressed": {},
+    }
 
 
 # ─── 6. record_fire mutation ──────────────────────────────────────
