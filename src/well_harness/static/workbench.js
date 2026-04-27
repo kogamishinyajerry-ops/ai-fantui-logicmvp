@@ -219,8 +219,13 @@ function installSuggestionFlow() {
   const conflictCancelBtn = document.getElementById("workbench-suggestion-conflict-cancel");
   if (proceedBtn) {
     proceedBtn.addEventListener("click", () => {
+      // Pull the system snapshot the banner was rendered with —
+      // proceed must file under the same system_id we conflict-
+      // checked, even if the user has since flipped the dropdown.
+      const banner = document.getElementById("workbench-suggestion-conflict-banner");
+      const sysId = banner ? banner.getAttribute("data-system-snapshot") : null;
       hideConflictBanner();
-      submitSuggestionTicket();
+      submitSuggestionTicket(sysId || undefined);
     });
   }
   if (conflictCancelBtn) {
@@ -465,7 +470,7 @@ function clearSuggestionInterpretation() {
   hideConflictBanner();
 }
 
-async function submitSuggestionTicket() {
+async function submitSuggestionTicket(systemIdOverride) {
   const status = document.getElementById("workbench-suggestion-status");
   if (!_lastInterpretation) {
     if (status) {
@@ -474,18 +479,23 @@ async function submitSuggestionTicket() {
     }
     return;
   }
-  // P44-03: POST the confirmed interpretation to the proposal store and
-  // re-fetch the inbox so the new ticket shows up below immediately.
+  // Codex round-4 P2-2: prefer the system_id snapshotted at confirm
+  // time over the live dropdown. This protects against a system
+  // toggle that happens between confirm-click and POST — without
+  // it, the conflict-checked interpretation could be filed under a
+  // different system's inbox.
   const identity = document.getElementById("workbench-identity");
   const ticketChip = document.getElementById("workbench-ticket");
   const systemSelect = document.getElementById("workbench-system-select");
+  const liveSystemId = systemSelect ? systemSelect.value || "thrust-reverser" : "thrust-reverser";
+  const systemId = systemIdOverride || liveSystemId;
   const payload = {
     source_text: _lastInterpretation.source_text || "",
     interpretation: _lastInterpretation,
     author_name: identity ? identity.getAttribute("data-identity-name") || "anonymous" : "anonymous",
     author_role: identity ? identity.getAttribute("data-role") || "ENGINEER" : "ENGINEER",
     ticket_id: ticketChip ? ticketChip.getAttribute("data-ticket") || "ad-hoc" : "ad-hoc",
-    system_id: systemSelect ? systemSelect.value || "thrust-reverser" : "thrust-reverser",
+    system_id: systemId,
   };
   if (status) {
     status.dataset.status = "loading";
@@ -545,36 +555,37 @@ async function onConfirmClicked() {
     }
     return;
   }
-  // Codex round-3 P2-2: snapshot the interpretation identity at
+  // Codex round-3 P2-2 + round-4 P2-2: snapshot BOTH the
+  // interpretation identity and the active system_id at
   // request-start. The conflict check is async; while in flight,
-  // the user could hit "↻ 重新解读" and replace _lastInterpretation.
-  // If the stale response then resolved, we'd render a banner
-  // describing conflicts for the OLD gates, but "继续提交" would
-  // POST the NEW interpretation — masking the actual conflict set.
-  // We discard responses whose snapshot no longer matches the live
-  // interpretation.
+  // the user could (a) hit "↻ 重新解读" and replace
+  // _lastInterpretation, or (b) flip the system dropdown. Either
+  // mutates the post-await state in a way that would let us file
+  // a system-A interpretation under system-B's inbox after having
+  // checked the wrong conflict set. We discard responses whose
+  // snapshot no longer matches the live state, AND we pass the
+  // snapshotted system_id into submitSuggestionTicket so the POST
+  // body uses the system the engineer was actually confirming.
   const snapshot = _lastInterpretation;
-  const gates = (snapshot.affected_gates || []).slice();
-  if (gates.length === 0) {
-    submitSuggestionTicket();
-    return;
-  }
   const systemSelect = document.getElementById("workbench-system-select");
   const systemId = systemSelect ? systemSelect.value || "thrust-reverser" : "thrust-reverser";
+  const gates = (snapshot.affected_gates || []).slice();
+  if (gates.length === 0) {
+    submitSuggestionTicket(systemId);
+    return;
+  }
   let conflicts = [];
   try {
     const url =
       PROPOSALS_PATH +
       "?status=OPEN&system=" + encodeURIComponent(systemId);
     const resp = await fetch(url, { headers: { Accept: "application/json" } });
-    // The interpretation may have been re-run while the fetch was
-    // in flight. If so, drop the stale result silently — the user
-    // is now looking at a different interpretation; whatever
-    // conflict set we got back doesn't apply.
     if (_lastInterpretation !== snapshot) return;
+    if (_currentSystemFromSelect() !== systemId) return;
     if (resp.ok) {
       const payload = await resp.json();
       if (_lastInterpretation !== snapshot) return;
+      if (_currentSystemFromSelect() !== systemId) return;
       const open = (payload && payload.proposals) || [];
       conflicts = open.filter((p) => {
         const g = (p && p.interpretation && p.interpretation.affected_gates) || [];
@@ -582,23 +593,39 @@ async function onConfirmClicked() {
       });
     }
   } catch (_e) {
-    // network/parse failure → don't block the submit
     if (_lastInterpretation !== snapshot) return;
+    if (_currentSystemFromSelect() !== systemId) return;
     conflicts = [];
   }
   if (conflicts.length === 0) {
-    submitSuggestionTicket();
+    submitSuggestionTicket(systemId);
     return;
   }
-  showConflictBanner(conflicts, gates);
+  // Hand the snapshotted system_id to the proceed button so a
+  // post-banner click still files under the correct system even if
+  // the user has since flipped the dropdown.
+  showConflictBanner(conflicts, gates, systemId);
 }
 
-function showConflictBanner(conflicts, currentGates) {
+function _currentSystemFromSelect() {
+  const sel = document.getElementById("workbench-system-select");
+  return (sel && sel.value) || "thrust-reverser";
+}
+
+function showConflictBanner(conflicts, currentGates, systemSnapshot) {
   const banner = document.getElementById("workbench-suggestion-conflict-banner");
   const countEl = document.getElementById("workbench-suggestion-conflict-count");
   const gatesEl = document.getElementById("workbench-suggestion-conflict-gates");
   const list = document.getElementById("workbench-suggestion-conflict-list");
   if (!banner || !list) return;
+  // Stash the system_id this banner was rendered with — proceed
+  // must file under the same system, even if the user toggles the
+  // dropdown while looking at the warning (Codex round-4 P2-2).
+  if (systemSnapshot) {
+    banner.setAttribute("data-system-snapshot", systemSnapshot);
+  } else {
+    banner.removeAttribute("data-system-snapshot");
+  }
   if (countEl) countEl.textContent = String(conflicts.length);
   if (gatesEl) gatesEl.textContent = (currentGates || []).join(", ");
   // Build the conflict list — short id, summary preview, gate pills.
@@ -666,6 +693,15 @@ function installSuggestionDraftRestore() {
   // system_id, defeating the per-system isolation this whole flow
   // is built around.
   input.addEventListener("input", () => {
+    // Codex round-4 P3: once the user starts typing, the restore
+    // banner becomes stale — its preview/age refers to a draft
+    // they're now overwriting. Pressing 恢复 would clobber the
+    // fresh typing; pressing 忽略 would delete the just-saved
+    // autosave instead of the original draft. Hide the banner the
+    // moment the input becomes dirty.
+    if (input.value && input.value.length > 0) {
+      hideDraftBanner();
+    }
     const sysSnapshot = _currentDraftSystemId();
     const textSnapshot = input.value;
     if (_suggestionDraftTimer) clearTimeout(_suggestionDraftTimer);

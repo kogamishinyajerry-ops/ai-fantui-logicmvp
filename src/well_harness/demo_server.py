@@ -2539,6 +2539,20 @@ def _normalize_llm_interpretation(
     affected_gates = _str_list(raw_dict.get("affected_gates"))
     target_signals = _str_list(raw_dict.get("target_signals"))
     change_kind = str(raw_dict.get("change_kind") or "propose_change")
+    # Codex round-4 P2-1: canonicalize against the per-system vocab.
+    # If the LLM hallucinated a gate/signal id (e.g. "L99", "BOGUS")
+    # or echoed a change_kind not in our taxonomy, the breakdown
+    # below would score it as a met dimension (100%/100%/100%) and
+    # the UI would claim full confidence — but no real SVG gate can
+    # be highlighted and downstream review/interpreter routing has
+    # no idea what to do with it. Drop unknowns.
+    gate_vocab = _gate_synonyms_for(system_id)
+    signal_vocab = _signals_for(system_id)
+    affected_gates = [g for g in affected_gates if g in gate_vocab]
+    target_signals = [s for s in target_signals if s in signal_vocab]
+    valid_change_kinds = {h[1] for h in _CHANGE_KIND_HINTS}
+    if change_kind not in valid_change_kinds:
+        change_kind = "propose_change"
     return {
         "affected_gates": affected_gates,
         "target_signals": target_signals,

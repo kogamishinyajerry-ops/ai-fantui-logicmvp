@@ -251,7 +251,7 @@ def test_js_clears_draft_on_successful_submit() -> None:
     autosaved draft — otherwise the next page load surfaces a
     stale banner offering to 'restore' something already shipped."""
     submit_fn = re.search(
-        r'async function submitSuggestionTicket\(\) \{(.*?)^}',
+        r'async function submitSuggestionTicket\([^)]*\) \{(.*?)^}',
         JS,
         re.DOTALL | re.MULTILINE,
     )
@@ -441,6 +441,124 @@ def test_runSuggestionInterpret_clears_stale_conflict_banner() -> None:
     body = fn.group(1)
     assert "hideConflictBanner" in body, (
         "runSuggestionInterpret must tear down any stale conflict banner"
+    )
+
+
+def test_llm_normalizer_drops_hallucinated_gate_ids() -> None:
+    """Codex round-4 P2-1: LLM may hallucinate non-canonical gate
+    ids (e.g. L99). They must be filtered before scoring — otherwise
+    breakdown scores 100% on a value the SVG has no anchor for."""
+    raw = {
+        "affected_gates": ["L1", "L99", "BOGUS"],
+        "target_signals": ["SW1", "TOTALLY_FAKE"],
+        "change_kind": "tighten_condition",
+        "confidence": 0.9,
+    }
+    out = _normalize_llm_interpretation(
+        raw, source_text="x", system_id="thrust-reverser"
+    )
+    assert out["affected_gates"] == ["L1"], (
+        "non-canonical gate ids must be dropped"
+    )
+    assert "TOTALLY_FAKE" not in out["target_signals"]
+    assert "BOGUS" not in out["affected_gates"]
+
+
+def test_llm_normalizer_falls_back_unknown_change_kind() -> None:
+    """If LLM returns a change_kind outside our taxonomy, treat
+    it as the propose_change fallback so breakdown reflects
+    'no recognized verb' rather than 100% on a phantom code."""
+    raw = {
+        "affected_gates": ["L1"],
+        "target_signals": [],
+        "change_kind": "totally_made_up_verb",
+        "confidence": 0.5,
+    }
+    out = _normalize_llm_interpretation(
+        raw, source_text="x", system_id="thrust-reverser"
+    )
+    assert out["change_kind"] == "propose_change"
+    assert out["confidence_breakdown"]["change_kind"] == 0.0
+    # And the fallback now triggers the change_kind hint.
+    assert "change_kind" in out["vocabulary_hint"]
+
+
+def test_onConfirmClicked_snapshots_system_id() -> None:
+    """Codex round-4 P2-2: must snapshot system_id in addition to
+    interpretation, AND pass the snapshot into submitSuggestionTicket
+    so a system toggle between confirm and POST can't reroute the
+    proposal."""
+    fn = re.search(
+        r'async function onConfirmClicked\(\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    assert "_currentSystemFromSelect()" in body, (
+        "must use a system snapshot helper"
+    )
+    # The snapshot is passed downstream.
+    assert "submitSuggestionTicket(systemId)" in body
+
+
+def test_submitSuggestionTicket_accepts_system_override() -> None:
+    """The submit fn must take an optional system_id arg and
+    prefer it over the live dropdown when provided."""
+    fn = re.search(
+        r'async function submitSuggestionTicket\((.*?)\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    args = fn.group(1).strip()
+    body = fn.group(2)
+    assert args, "submitSuggestionTicket must accept an arg"
+    assert "systemIdOverride" in args
+    assert "systemIdOverride" in body
+
+
+def test_conflict_banner_proceed_uses_snapshot_system() -> None:
+    """The 继续提交 button must read the system snapshot stashed on
+    the banner and pass it to submitSuggestionTicket — so the user
+    can't sneak a different system_id between confirmation and
+    final submit."""
+    assert "data-system-snapshot" in JS, (
+        "banner must persist the snapshot system_id"
+    )
+    install_fn = re.search(
+        r'function installSuggestionFlow\(\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert install_fn is not None
+    body = install_fn.group(1)
+    assert "data-system-snapshot" in body
+    assert "submitSuggestionTicket(sysId" in body
+
+
+def test_input_listener_hides_stale_draft_banner() -> None:
+    """Codex round-4 P3: once the textarea becomes dirty, the
+    restore banner must hide — its preview no longer matches the
+    saved draft, and pressing 恢复 / 忽略 in the stale banner would
+    overwrite or delete the wrong content."""
+    install_fn = re.search(
+        r'function installSuggestionDraftRestore\(\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert install_fn is not None
+    body = install_fn.group(1)
+    # Find the input listener.
+    listener = re.search(
+        r'input\.addEventListener\("input", \(\) => \{(.*?)\}\);',
+        body,
+        re.DOTALL,
+    )
+    assert listener is not None
+    listener_body = listener.group(1)
+    assert "hideDraftBanner" in listener_body, (
+        "input listener must hide draft banner once input is dirty"
     )
 
 
