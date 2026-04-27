@@ -85,9 +85,14 @@ class Metrics:
     p95_duration_sec: float | None
     recent_failures: list[RecentFailure]
     backfill_count: int
+    # P50-04: classified failure aggregate. Optional so older
+    # callers that only read the existing fields keep working.
+    # Type is `object` to avoid an import cycle (failure_classifier
+    # imports from metrics for RecentFailure).
+    failure_classification: object | None = None
 
     def to_json(self) -> dict:
-        return {
+        out = {
             "total": self.total,
             "by_state": dict(self.by_state),
             "pass_rate": self.pass_rate,
@@ -97,6 +102,11 @@ class Metrics:
             "recent_failures": [f.to_json() for f in self.recent_failures],
             "backfill_count": self.backfill_count,
         }
+        if self.failure_classification is not None:
+            out["failure_classification"] = (
+                self.failure_classification.to_json()
+            )
+        return out
 
 
 def compute_metrics(
@@ -172,6 +182,30 @@ def compute_metrics(
     # failures so the panel shows the freshest pain.
     recent_failures = failures[:recent_failure_limit]
 
+    # P50-04: classify failures for the dashboard's "what's been
+    # breaking" panel. Lazy import avoids a cycle (failure_classifier
+    # imports RecentFailure from this module). Classification is over
+    # ALL failures in the dataset, not just the recent_failures slice
+    # — so the bucket counts reflect the true population.
+    from well_harness.skill_executor.failure_classifier import (
+        classify_failures,
+    )
+    all_failures = [
+        RecentFailure(
+            exec_id=r.exec_id,
+            proposal_id=r.proposal_id,
+            state=r.state,
+            abort_reason=r.abort_reason or "",
+            finished_at=r.finished_at or "",
+        )
+        for r in records
+        if r.state in (
+            ExecutionState.ABORTED.value,
+            ExecutionState.FAILED.value,
+        )
+    ]
+    classification = classify_failures(all_failures)
+
     return Metrics(
         total=total,
         by_state=by_state,
@@ -181,6 +215,7 @@ def compute_metrics(
         p95_duration_sec=p95_duration,
         recent_failures=recent_failures,
         backfill_count=backfill_count,
+        failure_classification=classification,
     )
 
 

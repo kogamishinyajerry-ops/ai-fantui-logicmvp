@@ -290,10 +290,13 @@ def test_metrics_to_json_round_trip_shape():
     m = compute_metrics(records)
     payload = m.to_json()
     # Must be a JSON-serializable dict with expected top-level keys
+    # P50-04 added failure_classification — required when produced
+    # via compute_metrics (which is the only path tested here).
     assert set(payload.keys()) == {
         "total", "by_state", "pass_rate", "completed_count",
         "median_duration_sec", "p95_duration_sec",
         "recent_failures", "backfill_count",
+        "failure_classification",
     }
     # by_state is itself a dict
     assert isinstance(payload["by_state"], dict)

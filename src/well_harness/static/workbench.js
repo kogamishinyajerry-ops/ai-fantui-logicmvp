@@ -1321,6 +1321,46 @@ function renderExecutionMetrics(metrics) {
       .join("");
   }
 
+  // P50-04: failure category breakdown ("what's been breaking?")
+  const breakdownContainer = document.getElementById(
+    "workbench-metrics-failure-breakdown"
+  );
+  const breakdownList = document.getElementById(
+    "workbench-metrics-failure-categories"
+  );
+  const fc = metrics.failure_classification;
+  if (breakdownContainer && breakdownList) {
+    if (!fc || fc.total === 0) {
+      breakdownContainer.setAttribute("hidden", "");
+      breakdownList.innerHTML = "";
+    } else {
+      breakdownContainer.removeAttribute("hidden");
+      breakdownList.innerHTML = (fc.by_category || [])
+        .map((cat) => {
+          const samples = (cat.sample_details || [])
+            .map((s) => `<code>${escape(s)}</code>`)
+            .join(", ");
+          // Map backend category enum value → CSS class. Most are
+          // identity (planner_error → planner_error); reuse the
+          // existing aborted/failed badge palette for visual
+          // continuity where applicable.
+          return (
+            `<li>` +
+            `  <span class="workbench-metrics-failure-cat-pill" ` +
+            `        data-failure-category="${escape(cat.category)}">` +
+            `    ${escape(cat.category)}` +
+            `  </span>` +
+            `  <span class="workbench-metrics-failure-cat-count">${cat.count}</span>` +
+            `  <span class="workbench-metrics-failure-cat-samples">` +
+            `    ${samples || "<em>(no detail)</em>"}` +
+            `  </span>` +
+            `</li>`
+          );
+        })
+        .join("");
+    }
+  }
+
   // Recent failures list
   const failuresContainer = document.getElementById(
     "workbench-metrics-failures"

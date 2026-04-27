@@ -423,6 +423,17 @@
             <div class="workbench-metrics-state-bars" id="workbench-metrics-state-bars">
               <!-- 9 bars rendered by JS with live counts -->
             </div>
+            <!-- P50-04 (2026-04-27): failure category breakdown.
+                 Shows which buckets have been failing most often
+                 (planner_error / git_error / etc.) so a reviewer
+                 spots trends instead of scrolling through individual
+                 incidents. -->
+            <div id="workbench-metrics-failure-breakdown" class="workbench-metrics-failure-breakdown" hidden>
+              <p class="workbench-metrics-failure-breakdown-eyebrow">
+                失败分类 · failure breakdown
+              </p>
+              <ul id="workbench-metrics-failure-categories" class="workbench-metrics-failure-categories"></ul>
+            </div>
             <div id="workbench-metrics-failures" class="workbench-metrics-failures">
               <p class="workbench-metrics-failures-empty">最近无失败 · no recent failures</p>
             </div>

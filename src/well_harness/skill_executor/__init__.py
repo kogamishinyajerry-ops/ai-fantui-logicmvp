@@ -79,6 +79,14 @@ from well_harness.skill_executor.gate_check import (
     GateCheckResult,
     check_pr_audit_compliance,
 )
+from well_harness.skill_executor.failure_classifier import (
+    CategoryAggregate,
+    ClassifiedFailure,
+    FailureCategory,
+    FailureClassification,
+    classify_failure,
+    classify_failures,
+)
 from well_harness.skill_executor.metrics import (
     Metrics,
     RecentFailure,
@@ -190,6 +198,8 @@ __all__ = [
     "AuditSchemaError",
     "AuditSource",
     "BackfillError",
+    "CategoryAggregate",
+    "ClassifiedFailure",
     "CommitResult",
     "EXEC_STAMP_DELIMITER",
     "EXECUTOR_VERSION",
@@ -197,6 +207,8 @@ __all__ = [
     "ExecutionKind",
     "ExecutionRecord",
     "ExecutionState",
+    "FailureCategory",
+    "FailureClassification",
     "FileEdit",
     "GateCheckResult",
     "GateResult",
@@ -239,6 +251,8 @@ __all__ = [
     "check_cancel",
     "check_pr_audit_compliance",
     "check_test_gate",
+    "classify_failure",
+    "classify_failures",
     "commit_files",
     "compute_metrics",
     "compute_phase_timings",
