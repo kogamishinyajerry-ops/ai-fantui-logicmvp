@@ -333,20 +333,22 @@
         data-dock-section="annotate"
         hidden
       >
-        <header class="workbench-suggestion-flow-header">
+        <!-- P52-04: standard drawer header (eyebrow + h2 + close)
+             so the annotate drawer looks like a sibling of the
+             monitor/approve/new drawers. The interpreter-strategy
+             chip moves down into the form sub-region — it's a
+             control affecting the form, not part of the heading. -->
+        <header class="workbench-tool-drawer-header workbench-suggestion-flow-header">
+          <p class="eyebrow">annotate</p>
           <h2 id="workbench-suggestion-flow-title">提交修改建议 · Submit Change Proposal</h2>
-          <p class="workbench-suggestion-flow-sub">
-            用中文/英文写下你对控制逻辑的修改建议；系统会解读并把命中的逻辑门高亮，请你确认解读无误后再提交工单 ·
-            Type your modification suggestion in plain Chinese/English; the system will interpret it,
-            highlight the affected gate(s), and ask you to confirm the interpretation matches your intent
-            before the ticket is submitted.
-          </p>
-          <!-- P45-03 (2026-04-26): interpreter strategy toggle. Default
-               OFF = rules interpreter (deterministic, zero deps). When
-               ON, the interpret POST sends strategy=llm and the server
-               calls MiniMax-M2.7-highspeed; on any LLM failure (no key,
-               network, parse error) it transparently falls back to
-               rules and the badge in the result panel says so. -->
+          <button type="button" class="workbench-tool-drawer-close" data-dock-close>×</button>
+        </header>
+        <p class="workbench-suggestion-flow-sub">
+          用中文/英文写下你对控制逻辑的修改建议；系统会解读并把命中的逻辑门高亮，请你确认解读无误后再提交工单 ·
+          Type your suggestion in plain Chinese/English. The system will interpret it,
+          highlight affected gate(s), and ask for confirmation before the ticket is submitted.
+        </p>
+        <div class="workbench-suggestion-strategy-row">
           <button
             id="workbench-interpreter-strategy-toggle"
             type="button"
@@ -358,7 +360,7 @@
             <span>解读策略 · Interpreter</span>
             <strong data-interpreter-strategy-label>📜 规则解读 · Rules</strong>
           </button>
-        </header>
+        </div>
         <form
           id="workbench-suggestion-form"
           class="workbench-suggestion-form"
