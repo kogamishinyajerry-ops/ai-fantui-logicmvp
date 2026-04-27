@@ -104,6 +104,12 @@ from well_harness.skill_executor.slo import (
     SLOThresholds,
     compute_slo_status,
 )
+from well_harness.skill_executor.slo_history import (
+    SLOTransition,
+    history_path as slo_history_path,
+    load_history as load_slo_history,
+    record_transition as record_slo_transition,
+)
 from well_harness.skill_executor.git_ops import (
     CommitResult,
     GitError,
@@ -232,6 +238,7 @@ __all__ = [
     "SLOSeverity",
     "SLOStatus",
     "SLOThresholds",
+    "SLOTransition",
     "MINIMAX_API_BASE",
     "MINIMAX_DEFAULT_MODEL",
     "MINIMAX_REQUEST_TIMEOUT_SEC",
@@ -269,6 +276,9 @@ __all__ = [
     "compute_phase_timings",
     "compute_slo_status",
     "create_branch",
+    "load_slo_history",
+    "record_slo_transition",
+    "slo_history_path",
     "current_branch",
     "execute_proposal",
     "head_sha",

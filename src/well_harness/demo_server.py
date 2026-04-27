@@ -411,6 +411,21 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if parsed.path == f"{SKILL_EXECUTIONS_PATH}/metrics":
             self._handle_skill_execution_metrics()
             return
+        # P50-08b (2026-04-27): SLO transition timeline. Answers
+        # "when did this start breaking?" by replaying every
+        # GREEN→YELLOW/RED transition the metrics endpoint has
+        # recorded.
+        if parsed.path == f"{SKILL_EXECUTIONS_PATH}/slo-history":
+            qs = parse_qs(parsed.query)
+            limit_raw = qs.get("limit", [None])[0]
+            limit = None
+            if limit_raw is not None:
+                try:
+                    limit = max(0, int(limit_raw))
+                except ValueError:
+                    limit = None
+            self._handle_slo_history(limit=limit)
+            return
         if parsed.path.startswith(f"{SKILL_EXECUTIONS_PATH}/"):
             suffix = parsed.path[len(SKILL_EXECUTIONS_PATH) + 1:]
             # `pending` already handled above; everything else is treated
@@ -1307,16 +1322,55 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         Metrics JSON over every audit currently on disk. Empty input
         produces an all-zero response so the panel can render
         deterministically before the first execution.
+
+        Side effect (P50-08b): if the SLO verdict has changed since
+        the last poll, append an entry to slo_history.jsonl. The
+        dashboard's 5s polling cadence drives the timeline
+        resolution. Steady-state polls don't append.
         """
         try:
-            from well_harness.skill_executor.audit import list_audits
+            from well_harness.skill_executor.audit import (
+                audit_dir, list_audits,
+            )
             from well_harness.skill_executor.metrics import compute_metrics
+            from well_harness.skill_executor.slo_history import (
+                record_transition,
+            )
         except ImportError:
             self._send_json(500, {"error": "skill_executor_unavailable"})
             return
         records = list_audits()
         metrics = compute_metrics(records)
+        # Record a transition if the verdict changed. Failure to
+        # write the history line must NOT break the metrics
+        # response — the dashboard takes precedence over the log.
+        try:
+            record_transition(
+                audit_dir(),
+                current_status=metrics.slo_status,
+                metrics=metrics,
+            )
+        except OSError:
+            pass
         self._send_json(200, metrics.to_json())
+
+    def _handle_slo_history(self, *, limit: int | None) -> None:
+        """GET /api/skill-executions/slo-history[?limit=N].
+        Returns the SLO transition log as a JSON array — newest-
+        last (file-order). Frontend reverses for display."""
+        try:
+            from well_harness.skill_executor.audit import audit_dir
+            from well_harness.skill_executor.slo_history import (
+                load_history,
+            )
+        except ImportError:
+            self._send_json(500, {"error": "skill_executor_unavailable"})
+            return
+        transitions = load_history(audit_dir(), limit=limit)
+        self._send_json(200, {
+            "transitions": [t.to_json() for t in transitions],
+            "count": len(transitions),
+        })
 
     def _handle_get_skill_execution(self, exec_id: str) -> None:
         """GET /api/skill-executions/<exec_id>. Returns the audit
