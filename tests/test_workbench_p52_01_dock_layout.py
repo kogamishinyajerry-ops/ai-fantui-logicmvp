@@ -85,7 +85,10 @@ def test_body_carries_active_tool_attribute():
         ("workbench-bottom-bar", "approve"),
         ("workbench-pending-signoff-affordance", "approve"),
         ("approval-center-panel", "approve"),
-        ("workbench-live-log-panel", "monitor"),
+        # P52-03: monitor host changed from #workbench-live-log-panel
+        # to the unified #workbench-tool-monitor drawer (which now
+        # contains both the metrics panel and the live-log panel).
+        ("workbench-tool-monitor", "monitor"),
         ("workbench-tool-new", "new"),
     ],
 )
