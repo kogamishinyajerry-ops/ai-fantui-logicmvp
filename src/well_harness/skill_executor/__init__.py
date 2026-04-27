@@ -53,6 +53,10 @@ from well_harness.skill_executor.audit import (
     read_audit,
     write_audit,
 )
+from well_harness.skill_executor.backfill import (
+    BackfillError,
+    synthesize_backfill_audit,
+)
 from well_harness.skill_executor.errors import (
     AuditSchemaError,
     InvalidExecutionTransitionError,
@@ -161,6 +165,7 @@ __all__ = [
     "AskResponse",
     "AuditSchemaError",
     "AuditSource",
+    "BackfillError",
     "CommitResult",
     "EXEC_STAMP_DELIMITER",
     "EXECUTOR_VERSION",
@@ -225,6 +230,7 @@ __all__ = [
     "write_approval_signal",
     "run_tests",
     "strip_json_fences",
+    "synthesize_backfill_audit",
     "validate_edit_path",
     "write_audit",
 ]
