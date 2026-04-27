@@ -4276,6 +4276,14 @@ body[data-active-tool="new"] [data-dock-section="new"][hidden] {
 /* P52-03: live-log is now an inner block of the monitor drawer.
    Override P51-02's fixed-bottom positioning so the panel flows
    naturally inside the drawer instead of pinning to the viewport. */
+/* P54-01: inline guide under the monitor drawer header. */
+.workbench-tool-monitor-guide {
+  margin: 0 0 1rem;
+  font-size: 0.74rem;
+  color: var(--text-muted, #93a8b8);
+  line-height: 1.55;
+}
+
 .workbench-tool-monitor .workbench-live-log-panel {
   position: static;
   left: auto;

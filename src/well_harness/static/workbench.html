@@ -707,11 +707,18 @@
       aria-labelledby="workbench-tool-monitor-title"
       hidden
     >
+<!-- P54-01: inline guide. The user couldn't tell what this drawer was for; one
+           sentence covers the read: it's the operator surface for live executor
+           health + the rolling log stream. -->
       <header class="workbench-tool-drawer-header">
         <p class="eyebrow">monitor</p>
         <h2 id="workbench-tool-monitor-title">运行监控 · Monitor</h2>
         <button type="button" class="workbench-tool-drawer-close" data-dock-close aria-label="关闭抽屉 · Close drawer">×</button>
       </header>
+      <p class="workbench-tool-monitor-guide">
+        实时跟踪执行器健康（成功率 · p95 耗时 · SLO 状态）与滚动日志，每 5 秒自动刷新 ·
+        Live executor health (pass rate · p95 duration · SLO state) and rolling log; auto-refresh every 5s.
+      </p>
 
       <!-- P50-02a metrics panel — moved here from the inbox aside. -->
       <details id="workbench-metrics-panel" class="workbench-metrics-panel" open>
