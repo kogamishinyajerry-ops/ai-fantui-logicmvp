@@ -3013,6 +3013,143 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
 /* P50-04 (2026-04-27): failure category breakdown. Sits between
    the state bars and the recent_failures list. Only shown when
    total > 0 — hidden by default to avoid empty noise. */
+/* P49-02b (2026-04-27): governance-gate review panel.
+   Distinct amber/gold palette so it's visually different from
+   the cyan ASKING cards — gate-pending audits BLOCK the
+   pipeline and need to be visually loud. */
+.workbench-governance-panel {
+  margin: 0.6rem 0;
+  padding: 0.7rem 0.85rem;
+  background: rgba(247, 188, 92, 0.08);
+  border: 1px solid rgba(247, 188, 92, 0.35);
+  border-radius: 0.4rem;
+}
+.workbench-governance-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-bottom: 0.5rem;
+}
+.workbench-governance-header .eyebrow {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #f7bc5c;
+  margin: 0;
+}
+.workbench-governance-header h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #cfe1ee;
+}
+.workbench-governance-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.workbench-governance-card {
+  background: rgba(247, 188, 92, 0.04);
+  border: 1px solid rgba(247, 188, 92, 0.25);
+  border-radius: 0.35rem;
+  padding: 0.5rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.workbench-governance-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.55rem;
+  color: rgba(206, 223, 236, 0.7);
+}
+.workbench-governance-exec-id {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.workbench-governance-proposal-id {
+  color: rgba(206, 223, 236, 0.5);
+}
+.workbench-governance-reasons {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.workbench-governance-reason {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  gap: 0.4rem;
+  font-size: 0.62rem;
+  align-items: center;
+}
+.workbench-governance-reason-empty {
+  color: rgba(206, 223, 236, 0.4);
+  font-style: italic;
+}
+.workbench-governance-rule-pill {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(247, 188, 92, 0.4);
+  background: rgba(247, 188, 92, 0.14);
+  color: #f7bc5c;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.workbench-governance-reason-text {
+  color: rgba(206, 223, 236, 0.85);
+}
+.workbench-governance-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+.workbench-governance-approve-btn,
+.workbench-governance-reject-btn {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease,
+              border-color 0.15s ease;
+}
+.workbench-governance-approve-btn {
+  background: rgba(108, 217, 122, 0.14);
+  border: 1px solid rgba(108, 217, 122, 0.4);
+  color: #6cd97a;
+}
+.workbench-governance-approve-btn:hover:not([disabled]) {
+  background: rgba(108, 217, 122, 0.22);
+}
+.workbench-governance-reject-btn {
+  background: rgba(255, 92, 92, 0.14);
+  border: 1px solid rgba(255, 92, 92, 0.4);
+  color: #ff6b6b;
+}
+.workbench-governance-reject-btn:hover:not([disabled]) {
+  background: rgba(255, 92, 92, 0.22);
+}
+.workbench-governance-approve-btn[disabled],
+.workbench-governance-reject-btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* P50-10 (2026-04-27): forensics-bundle download link in the
    metrics-panel summary. Quiet styling — it's not the primary
    action, just a one-click path to "grab the system snapshot".
