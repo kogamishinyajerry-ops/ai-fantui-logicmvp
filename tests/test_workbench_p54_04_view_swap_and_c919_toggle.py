@@ -50,8 +50,11 @@ JS = (REPO_ROOT / "src" / "well_harness" / "static" / "workbench.js").read_text(
         # workstation" the user was asking for). Was pointing at
         # fan_console.
         ("workbench-cockpit-panel", "/demo.html"),
-        # spec stays on fantui_requirements (correct from P54-03).
-        ("workbench-spec-panel", "/fantui_requirements.html"),
+        # P54-05: spec view repointed to /workbench_spec.html (the
+        # workbench-native rebuild with KPIs + REQ cards + matrix).
+        # The legacy /fantui_requirements.html keeps its standalone
+        # route for direct visitors.
+        ("workbench-spec-panel", "/workbench_spec.html"),
     ],
 )
 def test_canvas_view_iframe_src_corrected(panel_id, expected_iframe_src):
@@ -104,9 +107,11 @@ def test_embedded_page_hides_nav_when_iframed(page_path):
 
 
 def test_workbench_iframe_passes_embed_querystring():
-    """All three iframe srcs include ?embed=1 — a defense-in-depth
-    signal in case the cross-origin window.top check trips up."""
-    for src_base in ("/fan_console.html", "/demo.html", "/fantui_requirements.html"):
+    """The two legacy iframe srcs (fan_console + demo) include
+    ?embed=1 — a defense-in-depth signal so the embedded page can
+    suppress its unified-nav. /workbench_spec.html is workbench-
+    native and has no nav to hide, so it doesn't need the param."""
+    for src_base in ("/fan_console.html", "/demo.html"):
         match = re.search(
             r'<iframe[^>]*src="' + re.escape(src_base) + r'\?embed=1"[^>]*>',
             HTML,

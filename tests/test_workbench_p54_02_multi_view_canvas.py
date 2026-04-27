@@ -152,7 +152,11 @@ def test_js_view_switching_handler_present():
         #   is demo.html
         ("workbench-sim-panel", "/fan_console.html"),
         ("workbench-cockpit-panel", "/demo.html"),
-        ("workbench-spec-panel", "/fantui_requirements.html"),
+        # P54-05: spec view repointed to /workbench_spec.html — a
+        # workbench-native rebuild with summary KPIs, REQ cards, and
+        # a traceability matrix. The legacy /fantui_requirements.html
+        # remains for the standalone /fantui_requirements.html route.
+        ("workbench-spec-panel", "/workbench_spec.html"),
     ],
 )
 def test_canvas_view_embeds_existing_mature_page(panel_id, iframe_src):
@@ -183,7 +187,7 @@ def test_canvas_view_embeds_existing_mature_page(panel_id, iframe_src):
     [
         "src/well_harness/static/fan_console.html",
         "src/well_harness/static/demo.html",
-        "src/well_harness/static/fantui_requirements.html",
+        "src/well_harness/static/workbench_spec.html",
     ],
 )
 def test_embedded_mature_page_exists_on_disk(page_path):

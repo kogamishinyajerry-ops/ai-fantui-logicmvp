@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>反推需求文档 · Thrust-Reverser Requirements</title>
+<style>
+:root {
+  --bg: #050914;
+  --bg-card: rgba(255, 255, 255, 0.03);
+  --bg-card-hover: rgba(255, 255, 255, 0.05);
+  --hairline: rgba(255, 255, 255, 0.08);
+  --accent: #67e8f9;
+  --text-main: #edf8ff;
+  --text-muted: #93a8b8;
+  --critical: #f87171;
+  --functional: #67e8f9;
+  --safe: #00e5a0;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text-main);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB",
+               "Helvetica Neue", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+.spec-shell {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 1.6rem 1.75rem 3rem;
+}
+
+/* ── Header strip ──────────────────────────────────────── */
+.spec-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  padding-bottom: 1rem;
+  margin-bottom: 1.6rem;
+  border-bottom: 1px solid var(--hairline);
+}
+.spec-eyebrow {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin: 0;
+}
+.spec-h1 {
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  margin: 0;
+  color: var(--text-main);
+}
+.spec-tag {
+  margin-left: auto;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  color: var(--text-muted);
+  background: var(--bg-card);
+}
+
+/* ── Summary KPIs + donut row ──────────────────────────── */
+.spec-overview {
+  display: grid;
+  grid-template-columns: 1fr 220px;
+  gap: 1.4rem;
+  margin-bottom: 1.6rem;
+  align-items: start;
+}
+.spec-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.7rem;
+}
+.spec-kpi {
+  background: var(--bg-card);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+}
+.spec-kpi-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+}
+.spec-kpi-value {
+  font-size: 1.55rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  color: var(--text-main);
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+}
+.spec-kpi-unit {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.spec-donut-card {
+  background: var(--bg-card);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.spec-donut-card-eyebrow {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin: 0 0 0.2rem;
+}
+.spec-donut {
+  width: 130px;
+  height: 130px;
+  position: relative;
+}
+.spec-donut svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.spec-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.spec-donut-pct {
+  font-size: 1.4rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-main);
+}
+.spec-donut-sub {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.spec-donut-legend {
+  display: flex;
+  gap: 0.85rem;
+  margin-top: 0.2rem;
+  font-size: 0.7rem;
+}
+.spec-donut-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-muted);
+}
+.spec-donut-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* ── Section heading ───────────────────────────────────── */
+.spec-section-title {
+  font-size: 0.85rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  margin: 1.6rem 0 0.85rem;
+  color: var(--text-main);
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+.spec-section-title::before {
+  content: '';
+  width: 3px;
+  height: 14px;
+  background: var(--accent);
+  border-radius: 2px;
+  opacity: 0.6;
+}
+.spec-section-hint {
+  margin-left: 0.4rem;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* ── REQ card grid ─────────────────────────────────────── */
+.spec-req-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.7rem;
+}
+.spec-req-card {
+  background: var(--bg-card);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  transition: background 168ms cubic-bezier(0.32, 0.72, 0, 1),
+              border-color 168ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.spec-req-card:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(143, 214, 233, 0.2);
+}
+.spec-req-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+.spec-req-id {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+.spec-req-id[data-kind="sr"] {
+  color: var(--critical);
+  background: rgba(248, 113, 113, 0.1);
+}
+.spec-req-id[data-kind="fr"] {
+  color: var(--accent);
+  background: rgba(103, 232, 249, 0.1);
+}
+.spec-req-title {
+  font-size: 0.83rem;
+  font-weight: 500;
+  color: var(--text-main);
+}
+.spec-req-trace {
+  margin-left: auto;
+  display: inline-flex;
+  gap: 0.2rem;
+}
+.spec-req-trace-pill {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.62rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+}
+.spec-req-body {
+  font-size: 0.76rem;
+  line-height: 1.55;
+  color: rgba(237, 248, 255, 0.85);
+  margin: 0;
+}
+.spec-req-meta {
+  margin-top: 0.45rem;
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+/* ── Traceability matrix ───────────────────────────────── */
+.spec-matrix-card {
+  background: var(--bg-card);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+}
+.spec-matrix {
+  border-collapse: collapse;
+  font-size: 0.74rem;
+  width: 100%;
+}
+.spec-matrix th, .spec-matrix td {
+  padding: 0.45rem 0.6rem;
+  text-align: center;
+  border-bottom: 1px solid var(--hairline);
+}
+.spec-matrix thead th {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.025);
+}
+.spec-matrix tbody th {
+  text-align: left;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 500;
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+.spec-matrix-cell-on {
+  color: var(--accent);
+  font-size: 1rem;
+  font-weight: 500;
+}
+.spec-matrix-cell-off {
+  color: rgba(255, 255, 255, 0.12);
+}
+.spec-matrix-row-label {
+  text-align: left !important;
+  padding-right: 0.85rem !important;
+  color: var(--text-main) !important;
+}
+
+.spec-footer-note {
+  margin: 1.8rem 0 0;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-style: italic;
+}
+</style>
+</head>
+<body>
+<main class="spec-shell">
+
+  <!-- ── Header strip ──────────────────────────────────────── -->
+  <header class="spec-header">
+    <p class="spec-eyebrow">requirements</p>
+    <h1 class="spec-h1">反推需求文档 · Thrust-Reverser Requirements</h1>
+    <span class="spec-tag">FANTUI-REQ-V1.0</span>
+  </header>
+
+  <!-- ── Summary KPIs + coverage donut ─────────────────────── -->
+  <section class="spec-overview" aria-label="需求总览 · Overview">
+    <div class="spec-kpis">
+      <article class="spec-kpi">
+        <div class="spec-kpi-label">需求总数 · Total</div>
+        <div class="spec-kpi-value">8 <span class="spec-kpi-unit">items</span></div>
+      </article>
+      <article class="spec-kpi">
+        <div class="spec-kpi-label">安全 · Critical</div>
+        <div class="spec-kpi-value" style="color: var(--critical)">4</div>
+      </article>
+      <article class="spec-kpi">
+        <div class="spec-kpi-label">门覆盖 · Gates</div>
+        <div class="spec-kpi-value">4 / 4</div>
+      </article>
+    </div>
+    <article class="spec-donut-card" aria-label="覆盖率 · Coverage">
+      <p class="spec-donut-card-eyebrow">追溯覆盖 · trace coverage</p>
+      <div class="spec-donut">
+        <svg viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
+          <!-- 100% complete arc, dasharray 2*pi*40 ≈ 251.3 -->
+          <circle cx="50" cy="50" r="40" fill="none" stroke="var(--accent)" stroke-width="10"
+                  stroke-dasharray="251.3" stroke-dashoffset="0" stroke-linecap="round"/>
+        </svg>
+        <div class="spec-donut-center">
+          <span class="spec-donut-pct">100%</span>
+          <span class="spec-donut-sub">covered</span>
+        </div>
+      </div>
+      <div class="spec-donut-legend">
+        <span class="spec-donut-legend-item">
+          <span class="spec-donut-legend-dot" style="background: var(--accent)"></span>已追溯
+        </span>
+        <span class="spec-donut-legend-item">
+          <span class="spec-donut-legend-dot" style="background: rgba(255,255,255,0.06)"></span>缺口
+        </span>
+      </div>
+    </article>
+  </section>
+
+  <!-- ── Safety requirements ───────────────────────────────── -->
+  <h2 class="spec-section-title">
+    安全约束 · Safety constraints
+    <span class="spec-section-hint">CCAR-25.933(a)(1) · 共 4 条</span>
+  </h2>
+  <div class="spec-req-grid">
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="sr">SR-01</span>
+        <span class="spec-req-title">空中禁止展开</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">L1</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        无线电高度 ≥ 6 ft 时禁发 TLS 115VAC 供电命令，阻断展开链路。
+      </p>
+      <div class="spec-req-meta">空中意外展开 → 气动失控</div>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="sr">SR-02</span>
+        <span class="spec-req-title">抑制信号最高优先级</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">L3</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        reverser_inhibited=True 时 L3 立即变 False；EEC/PLS/PDU 三路命令切断，
+        不可被其他逻辑覆盖。
+      </p>
+      <div class="spec-req-meta">飞行员超控 · 发动机异常 · 结构告警</div>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="sr">SR-03</span>
+        <span class="spec-req-title">高转速下禁止展开</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">L3</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        N1k ≥ 85% 时阻断 L3，禁止 PDU 驱动翻转斗，防止高速气流下机械损坏。
+      </p>
+      <div class="spec-req-meta">复飞中意外拉杆 · 发动机结构强度边界</div>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="sr">SR-04</span>
+        <span class="spec-req-title">未到位禁止深反推</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">L4</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        VDT 位置 &lt; 90% 时油门杆深拉区物理锁定，L4 不激活。
+      </p>
+      <div class="spec-req-meta">前端守卫 + 后端回拨双重保险</div>
+    </article>
+  </div>
+
+  <!-- ── Functional requirements ───────────────────────────── -->
+  <h2 class="spec-section-title">
+    功能要求 · Functional requirements
+    <span class="spec-section-hint">门链 L1 → L4 · 共 4 条</span>
+  </h2>
+  <div class="spec-req-grid">
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="fr">FR-01</span>
+        <span class="spec-req-title">地面展开许可</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">L1</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        SW1 激活 ∧ 地面 ∧ RA &lt; 6ft ∧ 反推未展开 → 发出 TLS 115VAC 供电，开始机械解锁。
+      </p>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="fr">FR-02</span>
+        <span class="spec-req-title">动力回路使能</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">L2</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        SW2 ∧ 发动机运行 ∧ TLS 已解锁 ∧ EEC 使能 ∧ 无抑制 → 发出 ETRAC 540VDC 供电。
+      </p>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="fr">FR-03</span>
+        <span class="spec-req-title">展开驱动命令</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">L3</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        ETRAC 已供电 ∧ TRA ≤ -11.74° ∧ N1k &lt; 限制 ∧ EEC ∧ 无抑制 → 联合发出 EEC/PLS/PDU 三路命令。
+      </p>
+    </article>
+    <article class="spec-req-card">
+      <header class="spec-req-card-head">
+        <span class="spec-req-id" data-kind="fr">FR-04</span>
+        <span class="spec-req-title">油门电子锁释放</span>
+        <span class="spec-req-trace">
+          <span class="spec-req-trace-pill">L4</span>
+        </span>
+      </header>
+      <p class="spec-req-body">
+        L3 激活 ∧ VDT ≥ 90% ∧ TRA 在反推区 ∧ 地面 ∧ 发动机运行 → 发出深反推区释放命令。
+      </p>
+    </article>
+  </div>
+
+  <!-- ── Traceability matrix ───────────────────────────────── -->
+  <h2 class="spec-section-title">
+    需求 → 门追溯矩阵 · Traceability
+    <span class="spec-section-hint">8 reqs × 4 gates</span>
+  </h2>
+  <div class="spec-matrix-card">
+    <table class="spec-matrix" aria-label="REQ × Gate traceability matrix">
+      <thead>
+        <tr>
+          <th class="spec-matrix-row-label">REQ</th>
+          <th>L1</th><th>L2</th><th>L3</th><th>L4</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th class="spec-matrix-row-label">SR-01 · 空中禁展</th>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+        </tr>
+        <tr>
+          <th class="spec-matrix-row-label">SR-02 · 抑制优先</th>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-off">·</td>
+        </tr>
+        <tr>
+          <th class="spec-matrix-row-label">SR-03 · 高转速禁展</th>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-off">·</td>
+        </tr>
+        <tr>
+          <th class="spec-matrix-row-label">SR-04 · 未到位禁深推</th>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-on">●</td>
+        </tr>
+        <tr>
+          <th class="spec-matrix-row-label">FR-01 · 地面许可</th>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+        </tr>
+        <tr>
+          <th class="spec-matrix-row-label">FR-02 · 动力使能</th>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+        </tr>
+        <tr>
+          <th class="spec-matrix-row-label">FR-03 · 展开驱动</th>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-on">●</td>
+          <td class="spec-matrix-cell-off">·</td>
+        </tr>
+        <tr>
+          <th class="spec-matrix-row-label">FR-04 · 锁释放</th>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-off">·</td>
+          <td class="spec-matrix-cell-on">●</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="spec-footer-note">
+    已通过的修改提案会在此自动出现回链 · ACCEPTED proposals will surface as backlinks here once the spec store is wired.
+  </p>
+</main>
+</body>
+</html>
