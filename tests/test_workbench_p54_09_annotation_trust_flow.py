@@ -982,6 +982,30 @@ def test_js_conflict_banner_lists_overlapping_proposals() -> None:
     )
 
 
+def test_system_switch_clears_in_flight_interpretation() -> None:
+    """Codex round-10 P1: the system-change handler must also call
+    clearSuggestionInterpretation. Otherwise after switching, a
+    stray Confirm click would submit the OLD interpretation's gate
+    set under the NEW system_id — silently misrouting proposals."""
+    install_fn = re.search(
+        r'function installSuggestionDraftRestore\(\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert install_fn is not None
+    body = install_fn.group(1)
+    change_listener = re.search(
+        r'systemSelect\.addEventListener\("change", \(\) => \{(.*?)\}\);',
+        body,
+        re.DOTALL,
+    )
+    assert change_listener is not None
+    cb = change_listener.group(1)
+    assert "clearSuggestionInterpretation()" in cb, (
+        "system-switch handler must tear down the in-flight interpretation"
+    )
+
+
 def test_change_kind_hint_excludes_propose_change_fallback() -> None:
     """Codex round-1 P3: the verb hint must NOT advertise "propose
     change" as a remedy — that's the very fallback that triggered

@@ -767,12 +767,16 @@ function installSuggestionDraftRestore() {
       // across two systems. By killing the banner on switch we
       // simply force re-interpretation under the new system.
       hideConflictBanner();
-      // Codex round-9 P2-2: the textarea is shared across systems
-      // and never reset on switch, so the previous system's text
-      // is still on screen — the prior "is input empty?" guard
-      // never fired and the new system's draft was never offered.
-      // Clear the textarea on switch so it reflects the now-active
-      // system's state, then surface the draft banner if applicable.
+      // Codex round-9 P2-2 + round-10 P1: the textarea + banners
+      // get reset to reflect the new system, AND the in-flight
+      // interpretation must be torn down too. Otherwise after a
+      // switch the UI looks "reset" but _lastInterpretation still
+      // holds the old gate set, and a stray Confirm click would
+      // submit those old gates under the NEW system_id, mis-routing
+      // proposals across system inboxes. Use the existing
+      // clearSuggestionInterpretation helper so the SVG highlight
+      // + status row + interpretation card all clear together.
+      clearSuggestionInterpretation();
       input.value = "";
       const next = readSuggestionDraft();
       if (next) showDraftBanner(next);
