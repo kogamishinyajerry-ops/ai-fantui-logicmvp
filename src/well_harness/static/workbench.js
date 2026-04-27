@@ -1266,9 +1266,19 @@ function renderExecutionMetrics(metrics) {
     if (!metrics || metrics.total === 0) {
       summary.textContent = "尚无执行 · no executions yet";
     } else {
+      // P50-08a: show rolling-window pass rate alongside lifetime
+      // when populated. A divergence (e.g. lifetime 90%, recent 30%)
+      // is visible even with the panel collapsed.
+      const rw = metrics.recent_window;
+      let recentSegment = "";
+      if (rw && rw.pass_rate_recent != null) {
+        recentSegment =
+          ` · last ${rw.window_size}: ${_formatPassRate(rw.pass_rate_recent)}`;
+      }
       summary.textContent =
-        `${metrics.total} 次 · pass ${_formatPassRate(metrics.pass_rate)} · ` +
-        `median ${_formatDuration(metrics.median_duration_sec)}`;
+        `${metrics.total} 次 · pass ${_formatPassRate(metrics.pass_rate)}` +
+        recentSegment +
+        ` · median ${_formatDuration(metrics.median_duration_sec)}`;
     }
   }
 

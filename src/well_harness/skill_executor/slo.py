@@ -17,14 +17,17 @@ What this is NOT:
     rolling windows if the lifetime view turns out to be too coarse.
 
 Default SLOs:
-  - pass_rate >= 70% → GREEN
-                50%-70% → YELLOW
-                <50% → RED
+  - pass_rate (lifetime) >= 70% → GREEN
+                          50%-70% → YELLOW
+                          <50% → RED
+  - pass_rate_recent (last 20 runs, P50-08a) — same bands as
+        lifetime, only evaluated when total >= window_size.
+        Catches a recent regression that lifetime would smooth out.
   - active_failures_count (FAILED state) <= 2 → GREEN
                                           3-5 → YELLOW
                                           >5 → RED
 
-Both can be overridden by passing custom `thresholds` to
+All can be overridden by passing custom `thresholds` to
 compute_slo_status. NO_DATA verdict overrides everything when
 total < `min_data_points` (default 5) — too few executions to
 draw conclusions from.
@@ -53,6 +56,12 @@ class SLOThresholds:
     failures_yellow: int = 3        # at or above → YELLOW
     failures_red: int = 6           # at or above → RED
     min_data_points: int = 5        # below this → NO_DATA
+    # P50-08a: same severity bands applied to the rolling window
+    # (last N runs). Default to the lifetime thresholds — if a
+    # deploy wants to alert harder on recent regressions it can
+    # tighten these independently.
+    recent_pass_rate_yellow: float = 0.70
+    recent_pass_rate_red: float = 0.50
 
 
 @dataclasses.dataclass
@@ -153,6 +162,45 @@ def compute_slo_status(
                 ),
             )
         )
+
+    # ── SLO 1b (P50-08a): rolling-window pass rate ──
+    # Lifetime pass_rate is the long-term average; pass_rate_recent
+    # catches a recent regression that lifetime numbers would
+    # smooth over. Only evaluated when metrics.pass_rate_recent is
+    # populated (compute_metrics leaves it None when total <
+    # window_size — not enough fresh data to alarm on).
+    pass_rate_recent = getattr(metrics, "pass_rate_recent", None)
+    window_size = int(getattr(metrics, "recent_window_size", 0) or 0)
+    if pass_rate_recent is not None:
+        pass_rate_recent = float(pass_rate_recent)
+        if pass_rate_recent < th.recent_pass_rate_red:
+            breaches.append(
+                SLOBreach(
+                    slo="pass_rate_recent",
+                    severity=SLOSeverity.RED,
+                    actual=pass_rate_recent,
+                    threshold=th.recent_pass_rate_red,
+                    note=(
+                        f"recent {window_size}-run pass rate "
+                        f"{pass_rate_recent:.1%} below RED threshold "
+                        f"{th.recent_pass_rate_red:.1%} — fresh failures"
+                    ),
+                )
+            )
+        elif pass_rate_recent < th.recent_pass_rate_yellow:
+            breaches.append(
+                SLOBreach(
+                    slo="pass_rate_recent",
+                    severity=SLOSeverity.YELLOW,
+                    actual=pass_rate_recent,
+                    threshold=th.recent_pass_rate_yellow,
+                    note=(
+                        f"recent {window_size}-run pass rate "
+                        f"{pass_rate_recent:.1%} below YELLOW threshold "
+                        f"{th.recent_pass_rate_yellow:.1%}"
+                    ),
+                )
+            )
 
     # ── SLO 2: lifetime failed count ──
     by_state = getattr(metrics, "by_state", {}) or {}

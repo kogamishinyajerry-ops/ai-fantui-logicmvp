@@ -94,6 +94,15 @@ class Metrics:
     # dataclass stays back-compat with callers that only read pre-
     # P50-07 fields. Type is `object` to avoid an import cycle.
     slo_status: object | None = None
+    # P50-08a: rolling window over the most recent N executions.
+    # `pass_rate_recent` is None when total < recent_window_size
+    # (not enough fresh signal). Lets the SLO catch a recent
+    # regression even when the lifetime pass_rate is still healthy
+    # — e.g. 200 runs at 90% lifetime but the last 20 are 30%.
+    pass_rate_recent: float | None = None
+    recent_window_size: int = 0
+    recent_passing: int = 0
+    recent_total: int = 0
 
     def to_json(self) -> dict:
         out = {
@@ -112,6 +121,16 @@ class Metrics:
             )
         if self.slo_status is not None:
             out["slo_status"] = self.slo_status.to_json()
+        # P50-08a: rolling-window block. Always emitted (even when
+        # under-windowed → null pass_rate) so the frontend can
+        # render the "last N runs" eyebrow without conditional
+        # shape checks.
+        out["recent_window"] = {
+            "pass_rate_recent": self.pass_rate_recent,
+            "window_size": self.recent_window_size,
+            "passing": self.recent_passing,
+            "total": self.recent_total,
+        }
         return out
 
 
@@ -119,6 +138,7 @@ def compute_metrics(
     records: Iterable[ExecutionRecord],
     *,
     recent_failure_limit: int = 5,
+    recent_window_size: int = 20,
 ) -> Metrics:
     """Aggregate the audit list into a Metrics dataclass.
 
@@ -212,6 +232,25 @@ def compute_metrics(
     ]
     classification = classify_failures(all_failures)
 
+    # P50-08a: rolling-window pass_rate over the most recent N
+    # records. Caller passes records in newest-first order
+    # (list_audits guarantees this); we just take the head slice.
+    # Window only meaningful once total >= window_size — below
+    # that, lifetime IS the recent dataset, so we leave
+    # pass_rate_recent=None to suppress a duplicate SLO.
+    pass_rate_recent: float | None = None
+    recent_passing = 0
+    recent_total = 0
+    if total >= recent_window_size and recent_window_size > 0:
+        recent_slice = records[:recent_window_size]
+        recent_total = len(recent_slice)
+        recent_passing = sum(
+            1 for r in recent_slice if r.state in _PASSING_STATES
+        )
+        pass_rate_recent = (
+            recent_passing / recent_total if recent_total else 0.0
+        )
+
     metrics = Metrics(
         total=total,
         by_state=by_state,
@@ -222,6 +261,10 @@ def compute_metrics(
         recent_failures=recent_failures,
         backfill_count=backfill_count,
         failure_classification=classification,
+        pass_rate_recent=pass_rate_recent,
+        recent_window_size=recent_window_size,
+        recent_passing=recent_passing,
+        recent_total=recent_total,
     )
 
     # P50-07: compute SLO verdict over the assembled metrics. Lazy
