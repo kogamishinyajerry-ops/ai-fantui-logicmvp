@@ -77,10 +77,12 @@ def test_approve_drawer_has_standard_header():
 @pytest.mark.parametrize(
     "section_id",
     [
+        # P54-00 (2026-04-27) deleted three of the original four
+        # legacy approve sections: workbench-bottom-bar (entry-only
+        # button), workbench-pending-signoff-affordance (redundant
+        # info banner), approval-center-panel (3-lane "ugly zone").
+        # Only the inbox aside survives as a legacy section.
         "annotation-inbox",
-        "workbench-bottom-bar",
-        "workbench-pending-signoff-affordance",
-        "approval-center-panel",
     ],
 )
 def test_legacy_approve_section_lives_inside_wrapper(section_id):
@@ -97,10 +99,12 @@ def test_legacy_approve_section_lives_inside_wrapper(section_id):
 @pytest.mark.parametrize(
     "section_id",
     [
+        # P54-00 (2026-04-27) deleted three of the original four
+        # legacy approve sections: workbench-bottom-bar (entry-only
+        # button), workbench-pending-signoff-affordance (redundant
+        # info banner), approval-center-panel (3-lane "ugly zone").
+        # Only the inbox aside survives as a legacy section.
         "annotation-inbox",
-        "workbench-bottom-bar",
-        "workbench-pending-signoff-affordance",
-        "approval-center-panel",
     ],
 )
 def test_legacy_approve_section_dropped_dock_attribute(section_id):

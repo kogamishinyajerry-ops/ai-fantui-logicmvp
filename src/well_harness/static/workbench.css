@@ -2480,12 +2480,17 @@ body[data-review-mode="on"] .workbench-circuit-hero-mount [data-gate-id].is-revi
   gap: 0.4rem;
   margin-top: 0.45rem;
 }
-body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"] .workbench-annotation-inbox-item-actions {
+body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"] .workbench-annotation-inbox-item-actions,
+.workbench-tool-approve .workbench-annotation-inbox-item[data-status="OPEN"] .workbench-annotation-inbox-item-actions {
+  /* P54-00: opening the approve drawer IS the user's review intent;
+     don't hide the action buttons behind a separate review-mode
+     toggle (that toggle's surface is hidden by P53-00 anyway). */
   display: flex;
 }
-.workbench-annotation-inbox-item-actions .workbench-toolbar-button {
-  padding: 0.25rem 0.55rem;
+.workbench-tool-approve .workbench-annotation-inbox-item-actions .workbench-toolbar-button {
+  padding: 0.3rem 0.65rem;
   font-size: 0.7rem;
+  border-radius: 6px;
 }
 
 /* P44-06 (2026-04-26): panel version chip + rollback hints.

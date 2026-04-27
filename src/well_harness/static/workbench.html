@@ -668,66 +668,15 @@
         </ul>
       </aside>
 
-      <footer
-        id="workbench-bottom-bar"
-        class="workbench-collab-bottom-bar"
-        aria-label="Workbench actions"
-      >
-        <button
-          id="approval-center-entry"
-          type="button"
-          class="workbench-toolbar-button"
-          data-role="KOGAMI"
-          aria-controls="approval-center-panel"
-        >
-          审批中心 · Approval Center
-        </button>
-        <span>审批操作仅限 Kogami · Approval actions are Kogami-only.</span>
-      </footer>
-
-      <section
-        id="workbench-pending-signoff-affordance"
-        class="workbench-pending-signoff"
-        role="status"
-        aria-live="polite"
-        data-pending-signoff="hidden"
-      >
-        <span class="workbench-pending-signoff-icon" aria-hidden="true">🛈</span>
-        <div class="workbench-pending-signoff-body">
-          <strong>等待 Kogami 签字 · Pending Kogami sign-off</strong>
-          <span>
-            你的提案已加入排队，等待 Kogami 处理。Approval 操作是 Kogami 专属
-            authority — 你的角色当前不会看到 disabled UI，而是这条 explicit
-            "排队中" 提示。
-          </span>
-        </div>
-      </section>
-
-      <section
-        id="approval-center-panel"
-        class="workbench-approval-center"
-        data-approval-role="KOGAMI"
-        aria-labelledby="approval-center-title"
-      >
-        <header>
-          <p class="eyebrow">审批中心</p>
-          <h2 id="approval-center-title">Kogami 提案审批 · Kogami Proposal Triage</h2>
-        </header>
-        <div class="workbench-approval-grid">
-          <article class="workbench-approval-lane" data-approval-lane="pending">
-            <h3>待审 · Pending</h3>
-            <p>已提交的标注提案在被通过或驳回前在此排队 · Submitted annotation proposals wait here before acceptance or rejection.</p>
-          </article>
-          <article class="workbench-approval-lane" data-approval-lane="accept">
-            <h3>通过 · Accept</h3>
-            <button type="button" class="workbench-toolbar-button" data-approval-action="accept">通过提案 · Accept Proposal</button>
-          </article>
-          <article class="workbench-approval-lane" data-approval-lane="reject">
-            <h3>驳回 · Reject</h3>
-            <button type="button" class="workbench-toolbar-button" data-approval-action="reject">驳回提案 · Reject Proposal</button>
-          </article>
-        </div>
-      </section>
+      <!-- P54-00 (2026-04-27): three legacy approve surfaces removed.
+           The standalone #approval-center-panel was a 3-lane grid
+           with generic Accept/Reject buttons that didn't even target
+           a specific proposal — pure visual noise. The bottom-bar
+           was just an entry button gating that panel. The pending-
+           signoff banner was redundant (the OPEN proposals in the
+           list + drawer title already say "this is awaiting your
+           approval"). Per-card buttons rendered by workbench.js are
+           the actual approval surface now. -->
       </section>
       <!-- /#workbench-tool-approve -->
 

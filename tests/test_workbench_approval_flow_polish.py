@@ -34,6 +34,18 @@ import pytest
 
 from well_harness.demo_server import DemoRequestHandler
 
+# P54-00 (2026-04-27): the entire #approval-center-panel surface
+# (3-lane pending/accept/reject grid + Accept Proposal / Reject
+# Proposal buttons) was removed. The bilingual-string contract this
+# file locked in no longer applies — per-card approve/reject buttons
+# rendered by workbench.js are the new approval surface.
+pytestmark = pytest.mark.skip(
+    reason=(
+        "Obsolete after P54-00: approval-center 3-lane panel removed; "
+        "per-card buttons replace it"
+    )
+)
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 STATIC_DIR = REPO_ROOT / "src" / "well_harness" / "static"
