@@ -2452,21 +2452,31 @@ def _resolve_minimax_api_key() -> str | None:
 def _llm_interpret_prompt(text: str, system_id: str) -> str:
     """Build the strict-JSON prompt the LLM must respond to. Naming
     the schema fields explicitly + asking for JSON-only output keeps
-    the parse step trivial and the cost low."""
+    the parse step trivial and the cost low.
+
+    Codex P54-09 round-6 P1: the canonical vocabularies (gates +
+    signals + change_kinds) are now read from the rules tables so
+    the prompt and the post-LLM canonicalizer can never drift. The
+    earlier hardcoded list said `tune_threshold`, `RA`, `TRA`,
+    `SW3`, `tls_115vac_cmd` — none of which exist in the rules
+    vocab — so a prompt-compliant LLM response was being filtered
+    to empty by the canonicalizer. Now the prompt itself enumerates
+    the very ids the canonicalizer accepts.
+    """
+    gate_ids = list(_gate_synonyms_for(system_id).keys())
+    signals = list(_signals_for(system_id))
+    change_kind_codes = [h[1] for h in _CHANGE_KIND_HINTS]
     return (
         "你是 AI FANTUI 控制逻辑工作台的解读助手。\n"
         "工程师写下了对当前控制逻辑的修改建议；你的任务是把这段自然语言"
         "解读为结构化 JSON，让工作台能在 SVG 面板上高亮命中的逻辑门，并请"
         "工程师确认。\n\n"
         f"当前系统 system_id: {system_id}\n"
-        "已知逻辑门 (thrust-reverser): L1, L2, L3, L4。"
-        "其它系统暂未接入 SVG，affected_gates 可返回 []。\n"
-        "已知信号: tls_115vac_cmd, etrac_540vdc_cmd, eec_deploy_cmd, "
-        "pls_power_cmd, pdu_motor_cmd, throttle_electronic_lock_release_cmd, "
-        "SW1, SW2, SW3, RA, TRA, n1k。\n"
-        "已知 change_kind 取值: tighten_condition, loosen_condition, "
-        "remove_condition, add_condition, modify_condition, tune_threshold, "
-        "propose_change。\n\n"
+        f"已知逻辑门 ({system_id}): {', '.join(gate_ids) or '(暂无)'}。"
+        "如果建议跨系统或没有命中任何门，affected_gates 可返回 []。\n"
+        f"已知信号: {', '.join(signals) or '(暂无)'}。\n"
+        f"已知 change_kind 取值（必须严格使用其中之一）: "
+        f"{', '.join(change_kind_codes)}。\n\n"
         f'工程师的建议原文:\n"""{text}"""\n\n'
         "请只输出 JSON（不要 markdown 围栏、不要解释），字段精确匹配下表:\n"
         "{\n"
@@ -2563,6 +2573,19 @@ def _normalize_llm_interpretation(
         change_kind = "propose_change"
         raw_zh = "提出建议"
         raw_en = "propose change"
+    # Codex round-6 P2: cap the LLM-reported overall confidence by
+    # what the *canonicalized* fields actually warrant. Otherwise an
+    # LLM that emitted ["L99"] (now filtered to []) and confidence=0.9
+    # would still display 90% with the breakdown bars all at 0% —
+    # contradicting the trust-flow UI's whole point. Use the same
+    # weights the rules interpreter uses (0.5 / 0.3 / 0.2) so both
+    # paths converge on the same scale.
+    canonical_max = (
+        (0.5 if affected_gates else 0.0)
+        + (0.3 if target_signals else 0.0)
+        + (0.2 if change_kind != "propose_change" else 0.0)
+    )
+    confidence = min(confidence, canonical_max)
     return {
         "affected_gates": affected_gates,
         "target_signals": target_signals,

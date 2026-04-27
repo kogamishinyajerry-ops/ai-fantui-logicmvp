@@ -668,6 +668,122 @@ def test_llm_normalizer_preserves_labels_when_change_kind_valid() -> None:
     assert out["change_kind_en"] == "tighten the condition"
 
 
+def test_llm_prompt_advertises_the_canonicalizer_vocabulary() -> None:
+    """Codex round-6 P1: the LLM prompt must enumerate the same
+    gate / signal / change_kind ids the canonicalizer accepts.
+    Otherwise a prompt-compliant LLM response (e.g. emitting "RA"
+    or "tune_threshold") is silently filtered to empty by the
+    new canonicalizer."""
+    from well_harness.demo_server import _llm_interpret_prompt
+    prompt = _llm_interpret_prompt("test", "thrust-reverser")
+    # The prompt must surface the actual rules-table signals, NOT
+    # the prior hardcoded list (which used RA, TRA, SW3, ...
+    # signals that don't exist in the rules vocab).
+    assert "radio_altitude_ft" in prompt
+    assert "tra_deg" in prompt
+    # And NOT the old hallucinated names that aren't canonical.
+    assert "tls_115vac_cmd" not in prompt
+    assert "tune_threshold" not in prompt, (
+        "tune_threshold isn't in _CHANGE_KIND_HINTS; advertising it "
+        "would teach the LLM to emit a value the canonicalizer drops"
+    )
+
+
+def test_llm_prompt_lists_canonical_change_kinds() -> None:
+    """All seven canonical change_kind codes must appear in the
+    prompt, drawn from _CHANGE_KIND_HINTS."""
+    from well_harness.demo_server import _llm_interpret_prompt, _CHANGE_KIND_HINTS
+    prompt = _llm_interpret_prompt("test", "thrust-reverser")
+    for h in _CHANGE_KIND_HINTS:
+        code = h[1]
+        assert code in prompt, (
+            f"prompt must advertise the canonical change_kind '{code}'"
+        )
+
+
+def test_llm_prompt_uses_per_system_vocab() -> None:
+    """Switching system_id must change the listed gates/signals so
+    the prompt always matches the same per-system vocab the
+    canonicalizer enforces."""
+    from well_harness.demo_server import _llm_interpret_prompt
+    tr = _llm_interpret_prompt("x", "thrust-reverser")
+    c919 = _llm_interpret_prompt("x", "c919-etras")
+    # The two prompts must differ (different signal vocabs).
+    assert tr != c919
+
+
+def test_llm_normalizer_caps_overall_confidence_after_canonicalization() -> None:
+    """Codex round-6 P2: when affected_gates / target_signals get
+    filtered (or change_kind coerced), the LLM-reported overall
+    confidence must be capped by what the canonicalized fields
+    actually warrant. Otherwise breakdown-bars-at-0% can coexist
+    with a 90% headline confidence — the trust-flow UI would lie."""
+    raw = {
+        "affected_gates": ["L99"],   # hallucinated → filtered to []
+        "target_signals": ["BOGUS"], # filtered to []
+        "change_kind": "fake_verb",  # coerced to propose_change
+        "confidence": 0.9,
+    }
+    out = _normalize_llm_interpretation(
+        raw, source_text="x", system_id="thrust-reverser"
+    )
+    # All three breakdowns are 0; overall confidence must be 0 too.
+    assert out["confidence_breakdown"] == {
+        "gate": 0.0, "signal": 0.0, "change_kind": 0.0,
+    }
+    assert out["confidence"] == 0.0, (
+        f"overall confidence must be capped to 0 when no canonical "
+        f"fields survive; got {out['confidence']}"
+    )
+
+
+def test_llm_normalizer_preserves_partial_confidence() -> None:
+    """When some fields survive canonicalization, confidence is
+    capped by the rules weights (gate=0.5 + signal=0.3 + verb=0.2),
+    not zeroed out."""
+    raw = {
+        "affected_gates": ["L1"],
+        "target_signals": [],
+        "change_kind": "tighten_condition",
+        "confidence": 0.95,  # LLM-reported
+    }
+    out = _normalize_llm_interpretation(
+        raw, source_text="x", system_id="thrust-reverser"
+    )
+    # gate=0.5 + verb=0.2 = 0.7 cap; LLM said 0.95 → cap to 0.7.
+    assert abs(out["confidence"] - 0.7) < 1e-9, (
+        f"expected 0.7, got {out['confidence']}"
+    )
+
+
+def test_pending_draft_flushes_on_system_switch() -> None:
+    """Codex round-6 P3: typing → switch within 500ms must NOT
+    silently lose the most recent burst of keystrokes. The
+    system-change handler flushes _pendingDraftText / _pendingDraftSystemId
+    under the OLD system before canceling the debounce."""
+    assert "_pendingDraftText" in JS
+    assert "_pendingDraftSystemId" in JS
+    install_fn = re.search(
+        r'function installSuggestionDraftRestore\(\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert install_fn is not None
+    body = install_fn.group(1)
+    change_listener = re.search(
+        r'systemSelect\.addEventListener\("change", \(\) => \{(.*?)\}\);',
+        body,
+        re.DOTALL,
+    )
+    assert change_listener is not None
+    cb = change_listener.group(1)
+    # Must call saveSuggestionDraftFor with the old-system snapshot
+    # BEFORE clearTimeout.
+    assert "saveSuggestionDraftFor(_pendingDraftSystemId, _pendingDraftText)" in cb
+    # And must clear the timer afterwards.
+    assert "clearTimeout(_suggestionDraftTimer)" in cb
+
+
 def test_change_kind_hint_excludes_propose_change_fallback() -> None:
     """Codex P3: the verb hint must NOT advertise "propose change"
     as a remedy — that's the very fallback that triggered the hint

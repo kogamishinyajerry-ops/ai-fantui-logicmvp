@@ -684,6 +684,13 @@ const SUGGESTION_DRAFT_KEY = "workbench/suggestion-drafts/v2";
 const SUGGESTION_DRAFT_TTL_MS = 60 * 60 * 1000;  // 1h
 const SUGGESTION_DRAFT_DEBOUNCE_MS = 500;
 let _suggestionDraftTimer = null;
+// Codex round-6 P2: mirror of the most recent unsaved typing —
+// cleared when the debounce fires (committed to localStorage) and
+// flushed proactively on system change so the user's last burst of
+// keystrokes isn't lost when they realize the wrong system is on
+// and switch within the debounce window.
+let _pendingDraftText = null;
+let _pendingDraftSystemId = null;
 
 function installSuggestionDraftRestore() {
   const input = document.getElementById("workbench-suggestion-input");
@@ -707,9 +714,21 @@ function installSuggestionDraftRestore() {
     }
     const sysSnapshot = _currentDraftSystemId();
     const textSnapshot = input.value;
+    // Codex round-6 P2: track the most recent typed snapshot so
+    // the system-change handler can flush it under the OLD system
+    // before canceling the debounce — otherwise mid-debounce
+    // switches lose the user's last 0–500ms of typing entirely.
+    _pendingDraftText = textSnapshot;
+    _pendingDraftSystemId = sysSnapshot;
     if (_suggestionDraftTimer) clearTimeout(_suggestionDraftTimer);
     _suggestionDraftTimer = setTimeout(
-      () => saveSuggestionDraftFor(sysSnapshot, textSnapshot),
+      () => {
+        saveSuggestionDraftFor(sysSnapshot, textSnapshot);
+        // Pending mirror is now committed — clear so a later
+        // system switch doesn't double-flush.
+        _pendingDraftText = null;
+        _pendingDraftSystemId = null;
+      },
       SUGGESTION_DRAFT_DEBOUNCE_MS,
     );
   });
@@ -726,6 +745,15 @@ function installSuggestionDraftRestore() {
   const systemSelect = document.getElementById("workbench-system-select");
   if (systemSelect) {
     systemSelect.addEventListener("change", () => {
+      // Codex round-6 P2: flush any pending unsaved edit under the
+      // OLD system before we kill the debounce — otherwise typing
+      // → switching within 500ms silently discards the last burst,
+      // exactly the case the restore banner is supposed to protect.
+      if (_pendingDraftText !== null && _pendingDraftSystemId) {
+        saveSuggestionDraftFor(_pendingDraftSystemId, _pendingDraftText);
+        _pendingDraftText = null;
+        _pendingDraftSystemId = null;
+      }
       if (_suggestionDraftTimer) {
         clearTimeout(_suggestionDraftTimer);
         _suggestionDraftTimer = null;
