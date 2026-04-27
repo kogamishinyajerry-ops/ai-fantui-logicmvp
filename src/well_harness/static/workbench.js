@@ -6297,8 +6297,25 @@ function _wbLiveLogConnect() {
   function swapIframes(system) {
     const iframes = document.querySelectorAll("iframe[data-system-iframe]");
     for (const frame of iframes) {
-      const attr = "data-system-src-" + system;
-      const next = frame.getAttribute(attr);
+      const srcAttr = "data-system-src-" + system;
+      const titleAttr = "data-system-title-" + system;
+      const next = frame.getAttribute(srcAttr);
+      const nextTitle = frame.getAttribute(titleAttr);
+
+      // Keep the iframe title attr + the labelling <h2> in sync so
+      // screen readers don't announce "Thrust-Reverser" while the
+      // iframe is showing C919 content (Codex P54-06 review P3).
+      if (nextTitle) {
+        frame.setAttribute("title", nextTitle);
+        const labelledById =
+          frame.closest("section") &&
+          frame.closest("section").getAttribute("aria-labelledby");
+        if (labelledById) {
+          const heading = document.getElementById(labelledById);
+          if (heading) heading.textContent = nextTitle;
+        }
+      }
+
       if (!next) continue;
       // Compare against current src origin-relative path to avoid a
       // pointless reload when the user clicks the already-active pill.

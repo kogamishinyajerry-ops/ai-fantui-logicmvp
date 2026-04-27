@@ -163,3 +163,60 @@ def test_js_swaps_iframe_src_on_system_change():
     ), "JS must read the data-system-src-{system} attribute"
     # The boot block name is preserved from P54-04 for traceability.
     assert "_wbCircuitSystemToggleBoot" in JS
+
+
+# ─── 5. accessible labels stay in sync with active system ───
+#
+# Codex P54-06 round-1 review (P3): when the toggle swapped only
+# the iframe src, the section's aria-labelledby <h2> and the
+# iframe title attr stayed pinned to "Thrust-Reverser" — so screen
+# readers and tooltips announced the wrong surface in C919 mode.
+
+
+@pytest.mark.parametrize(
+    "panel_id,thrust_keyword,c919_keyword",
+    [
+        ("workbench-sim-panel", "Thrust-Reverser", "C919"),
+        ("workbench-cockpit-panel", "Thrust-Reverser", "C919"),
+        ("workbench-spec-panel", "Thrust-Reverser", "C919"),
+    ],
+)
+def test_iframe_carries_per_system_title_attributes(
+    panel_id, thrust_keyword, c919_keyword
+):
+    block = re.search(
+        r'<section[^>]*id="' + re.escape(panel_id) + r'"[^>]*>(.*?)</section>',
+        HTML,
+        re.DOTALL,
+    )
+    assert block is not None
+    body = block.group(0)
+    thrust_match = re.search(
+        r'data-system-title-thrust-reverser="([^"]+)"', body
+    )
+    c919_match = re.search(r'data-system-title-c919-etras="([^"]+)"', body)
+    assert thrust_match is not None, (
+        f"#{panel_id}: missing data-system-title-thrust-reverser"
+    )
+    assert c919_match is not None, (
+        f"#{panel_id}: missing data-system-title-c919-etras"
+    )
+    assert thrust_keyword in thrust_match.group(1), (
+        f"#{panel_id}: thrust title should mention {thrust_keyword}"
+    )
+    assert c919_keyword in c919_match.group(1), (
+        f"#{panel_id}: c919 title should mention {c919_keyword}"
+    )
+
+
+def test_js_syncs_iframe_title_and_aria_label_on_swap():
+    """The toggle boot block must also update iframe.title + the
+    aria-labelledby <h2> so screen-reader announcements track the
+    active system, not just the iframe src."""
+    assert 'data-system-title-' in JS, (
+        "JS must read data-system-title-{system} for label sync"
+    )
+    assert 'aria-labelledby' in JS and 'textContent' in JS, (
+        "JS must locate the labelling <h2> via aria-labelledby and "
+        "update its textContent"
+    )

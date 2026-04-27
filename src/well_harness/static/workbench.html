@@ -536,17 +536,21 @@
         aria-labelledby="workbench-sim-panel-title"
         hidden
       >
-        <h2 id="workbench-sim-panel-title" class="visually-hidden">仿真模拟 · Simulation</h2>
+        <h2 id="workbench-sim-panel-title" class="visually-hidden">反推仿真模拟 · Thrust-Reverser Simulation</h2>
         <!-- P54-06: data-system-src-* drives iframe re-pointing on
-             system toggle. Default load = thrust-reverser; toggle to
-             C919 swaps to the workstation page. -->
+             system toggle. data-system-title-* + data-system-h2-*
+             keep the iframe title attr and hidden h2 (used by
+             aria-labelledby) in sync with the active system, so
+             screen readers don't announce the wrong surface. -->
         <iframe
           class="workbench-canvas-iframe"
           data-system-iframe="sim"
           data-system-src-thrust-reverser="/fan_console.html?embed=1"
           data-system-src-c919-etras="/c919_etras_workstation.html?embed=1"
+          data-system-title-thrust-reverser="反推仿真模拟 · Thrust-Reverser Simulation"
+          data-system-title-c919-etras="C919 E-TRAS 仿真工作台 · C919 E-TRAS Simulation"
           src="/fan_console.html?embed=1"
-          title="仿真模拟 · Simulation"
+          title="反推仿真模拟 · Thrust-Reverser Simulation"
           loading="lazy"
         ></iframe>
       </section>
@@ -564,6 +568,8 @@
           data-system-iframe="cockpit"
           data-system-src-thrust-reverser="/demo.html?embed=1"
           data-system-src-c919-etras="/c919_etras_panel/index.html?embed=1"
+          data-system-title-thrust-reverser="反推演示舱 · Thrust-Reverser Cockpit"
+          data-system-title-c919-etras="C919 E-TRAS 控制逻辑面板 · C919 E-TRAS Cockpit"
           src="/demo.html?embed=1"
           title="反推演示舱 · Thrust-Reverser Cockpit"
           loading="lazy"
@@ -583,6 +589,8 @@
           data-system-iframe="spec"
           data-system-src-thrust-reverser="/workbench_spec.html"
           data-system-src-c919-etras="/c919_requirements.html?embed=1"
+          data-system-title-thrust-reverser="反推需求文档 · Thrust-Reverser Requirements"
+          data-system-title-c919-etras="C919 E-TRAS 需求文档 · C919 E-TRAS Requirements"
           src="/workbench_spec.html"
           title="反推需求文档 · Thrust-Reverser Requirements"
           loading="lazy"
