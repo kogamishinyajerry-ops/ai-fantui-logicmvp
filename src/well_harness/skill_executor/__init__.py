@@ -62,6 +62,15 @@ from well_harness.skill_executor.errors import (
     InvalidExecutionTransitionError,
     SkillExecutorError,
 )
+from well_harness.skill_executor.executor_spawner import (
+    SpawnResult,
+    SpawnStatus,
+    SpawnerError,
+    is_auto_spawn_enabled,
+    spawn_executor_for_proposal,
+    spawn_log_path,
+    spawn_marker_path,
+)
 from well_harness.skill_executor.gate import (
     GateResult,
     check_test_gate,
@@ -193,6 +202,9 @@ __all__ = [
     "PlannerError",
     "ProposalIOError",
     "SkillExecutorError",
+    "SpawnResult",
+    "SpawnStatus",
+    "SpawnerError",
     "TERMINAL_STATES",
     "TestResult",
     "TestRunnerError",
@@ -210,6 +222,7 @@ __all__ = [
     "current_branch",
     "execute_proposal",
     "head_sha",
+    "is_auto_spawn_enabled",
     "is_terminal",
     "list_audits",
     "load_brief",
@@ -227,6 +240,9 @@ __all__ = [
     "read_audit",
     "resolve_minimax_api_key",
     "revert_edits",
+    "spawn_executor_for_proposal",
+    "spawn_log_path",
+    "spawn_marker_path",
     "write_approval_signal",
     "run_tests",
     "strip_json_fences",

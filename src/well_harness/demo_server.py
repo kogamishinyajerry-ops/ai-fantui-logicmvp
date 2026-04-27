@@ -1005,6 +1005,36 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if error_code is not None or record is None:
             self._send_json(500, {"error": "proposal_transition_failed"})
             return
+        # P49-01a (2026-04-27): close the trigger loop. On a successful
+        # OPEN→ACCEPTED transition, hand off to the skill_executor as a
+        # detached subprocess. Opt-in via WORKBENCH_AUTO_SPAWN_EXECUTOR;
+        # disabled by default so existing dev workflows are unaffected.
+        # Spawn failures never fail the accept call — the proposal IS
+        # accepted regardless of whether the executor launched.
+        spawn_info: dict | None = None
+        if new_status == "ACCEPTED":
+            try:
+                spawn_result = _spawn_executor_for_proposal(
+                    proposal_id,
+                    repo_root=Path(__file__).resolve().parents[2],
+                )
+                spawn_info = {
+                    "status": spawn_result.status.value,
+                    "pid": spawn_result.pid,
+                    "log": (
+                        str(spawn_result.log_path)
+                        if spawn_result.log_path
+                        else None
+                    ),
+                    "note": spawn_result.note,
+                }
+            except _SpawnerError as exc:
+                spawn_info = {"status": "error", "error": str(exc)}
+        if spawn_info is not None:
+            payload = dict(record)
+            payload["spawn"] = spawn_info
+            self._send_json(200, payload)
+            return
         self._send_json(200, record)
 
     def _handle_proposal_landed(self, raw_path: str):
@@ -3123,6 +3153,11 @@ def _truth_engine_short_sha() -> str:
 # is kept for backwards compatibility with existing tests.
 from well_harness.skill_executor.namespaces import (
     PANEL_NAMESPACES as _PANEL_NAMESPACES,
+)
+from well_harness.skill_executor.executor_spawner import (
+    SpawnStatus as _SpawnStatus,
+    SpawnerError as _SpawnerError,
+    spawn_executor_for_proposal as _spawn_executor_for_proposal,
 )
 
 
