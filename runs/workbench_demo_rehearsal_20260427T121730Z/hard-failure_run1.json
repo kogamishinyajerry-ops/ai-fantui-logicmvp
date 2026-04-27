@@ -1,0 +1,31 @@
+{
+  "scenario": "hard-failure",
+  "exec_id": "EXEC-20260427T122259840412-d52ea0",
+  "proposal_id": "PROP-demo-fail",
+  "final_state": "FAILED",
+  "abort_reason": "apply: old_snippet not found in 'docs/thrust_reverser/requirements_supplement.md'; the planner's context for this file may be stale or wrong. old_snippet[:60] = 'DOES_NOT_EXIST_IN_FILE'",
+  "wall_clock_sec": 0.25,
+  "plan_steps_total": 5,
+  "plan_steps_completed": 3,
+  "events": [
+    "init",
+    "state_transition",
+    "plan_step_started",
+    "planner_invocation",
+    "plan_step_completed",
+    "state_transition",
+    "plan_step_started",
+    "plan_step_completed",
+    "state_transition",
+    "plan_step_started",
+    "edit_error",
+    "plan_step_completed",
+    "state_transition"
+  ],
+  "dry_run": true,
+  "governance_decision": null,
+  "workspace": "/var/folders/q4/859yhpgn6x3fx6kv4mj5gmv40000gp/T/workbench-demo-l38_jbgk",
+  "scenario_run": 1,
+  "scenario_id": "hard-failure",
+  "wall_clock_total_sec": 0.318
+}
