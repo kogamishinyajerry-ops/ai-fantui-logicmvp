@@ -4235,3 +4235,61 @@ body[data-active-tool] [data-dock-section][hidden] {
    of the rules above — `hidden` attribute is the source of truth.
    This is just for safety: the body[data-active-tool=""] selector
    doesn't match any of the `body[data-active-tool="X"]` rules. */
+
+/* ─── P53-00: pure-circuit canvas (Claude.app minimalism) ────────
+   The user mandate is: the main page is ONLY the logic-control
+   circuit. Everything else (page title, identity / ticket /
+   feedback-mode / panel-version / review-mode chips, system
+   selector, state-of-world advisory bar, truth-engine read-only
+   link, circuit hero's own eyebrow + h2 + sub-paragraph) is
+   chrome that belongs inside a drawer or hidden entirely until
+   the user explicitly asks for it via the dock.
+   The elements stay in the DOM (so JS bindings + tests don't
+   break), they just don't paint on the default canvas.
+   These rules use !important to override the older P44-02
+   topbar styling without re-hunting every cascade origin. */
+.workbench-collab-topbar {
+  display: none !important;
+}
+.workbench-state-of-world-bar {
+  display: none !important;
+}
+.workbench-truth-engine-chip {
+  display: none !important;
+}
+.workbench-circuit-hero-header {
+  display: none !important;
+}
+
+/* The circuit hero now owns the canvas. Strip its card chrome
+   (border, background, radius, padding) so the SVG sits flush
+   against the dock; let it grow to fill the viewport vertically
+   so the panel breathes. */
+.workbench-circuit-hero {
+  border: none;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  min-height: calc(100vh - 1rem);
+  display: flex;
+  flex-direction: column;
+}
+.workbench-circuit-hero-mount {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.workbench-circuit-hero-mount > svg {
+  max-width: 100%;
+  max-height: 100%;
+  height: auto;
+}
+
+/* Tighten the main shell so there's no left/right gutter eating
+   into the circuit area beyond the dock width. */
+.workbench-shell {
+  padding: 0;
+}
