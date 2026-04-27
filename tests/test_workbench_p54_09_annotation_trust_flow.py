@@ -262,6 +262,120 @@ def test_js_clears_draft_on_successful_submit() -> None:
     )
 
 
+# ─── 5. Codex round-1 fixes (P2-1 / P2-2 / P3) ──────────────────────
+
+
+def test_drafts_are_scoped_by_system_id() -> None:
+    """Codex P2-1: drafts must be keyed by system_id so a draft
+    typed on thrust-reverser cannot be restored under C919 (which
+    would mis-route the resulting proposal). The v2 storage shape
+    is a map keyed by system_id; each entry carries its own ts."""
+    # Storage key bumped from v1 → v2 to invalidate any pre-fix
+    # global drafts (otherwise a returning user with a stale v1
+    # draft would still see the unsafe behavior once).
+    assert "workbench/suggestion-drafts/v2" in JS, (
+        "draft storage must be the v2 (per-system) layout"
+    )
+    # The read path must consult the active system select.
+    assert "_currentDraftSystemId" in JS
+    # Save + clear paths must operate on the system-keyed map.
+    assert "_readDraftMap" in JS and "_writeDraftMap" in JS
+
+
+def test_clear_draft_only_clears_active_systems_entry() -> None:
+    """clearSuggestionDraft must NOT wipe drafts belonging to
+    other systems — submitting a thrust-reverser ticket should
+    leave the engineer's in-flight C919 draft alone."""
+    fn = re.search(
+        r'function clearSuggestionDraft\(\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    assert "_readDraftMap" in body
+    assert "_writeDraftMap" in body
+    # Must NOT just removeItem the whole key.
+    assert "removeItem(SUGGESTION_DRAFT_KEY)" not in body, (
+        "clearSuggestionDraft must not nuke the entire draft map"
+    )
+
+
+def test_draft_banner_re_evaluates_on_system_switch() -> None:
+    """Switching the system mid-session must hide any stale banner
+    and re-check whether the new system has its own draft."""
+    install_fn = re.search(
+        r'function installSuggestionDraftRestore\(\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert install_fn is not None
+    body = install_fn.group(1)
+    assert "workbench-system-select" in body, (
+        "draft installer must listen to the system-select change event"
+    )
+    assert "hideDraftBanner" in body
+
+
+def test_llm_normalizer_synthesizes_vocabulary_hint_when_dimension_empty() -> None:
+    """Codex P2-2: AI-mode users must also get the rephrasing
+    guidance when the LLM misses a dimension — previously
+    _normalize_llm_interpretation hardcoded an empty hint object."""
+    raw = {
+        "affected_gates": [],
+        "target_signals": [],
+        "change_kind": "propose_change",
+        "confidence": 0.2,
+    }
+    out = _normalize_llm_interpretation(
+        raw, source_text="vague", system_id="thrust-reverser"
+    )
+    hint = out["vocabulary_hint"]
+    # All three dimensions empty → hints for all three.
+    assert "gate" in hint and "L1" in hint["gate"]
+    assert "signal" in hint and len(hint["signal"]) >= 3
+    assert "change_kind" in hint and len(hint["change_kind"]) >= 3
+    # Sanity: the breakdown is also correctly synthesized.
+    assert out["confidence_breakdown"]["gate"] == 0.0
+
+
+def test_llm_normalizer_uses_per_system_vocab() -> None:
+    """The synthesized hint must respect the active system_id —
+    asking for a C919 hint mustn't return thrust-reverser's
+    L1..L4 list (different vocab)."""
+    raw = {
+        "affected_gates": [],
+        "target_signals": [],
+        "change_kind": "propose_change",
+        "confidence": 0.0,
+    }
+    out_tr = _normalize_llm_interpretation(
+        raw, source_text="x", system_id="thrust-reverser"
+    )
+    out_c919 = _normalize_llm_interpretation(
+        raw, source_text="x", system_id="c919-etras"
+    )
+    # The two systems' gate vocabs differ — the synthesized hints
+    # must reflect that.
+    assert out_tr["vocabulary_hint"]["gate"] != out_c919["vocabulary_hint"]["gate"]
+
+
+def test_change_kind_hint_excludes_propose_change_fallback() -> None:
+    """Codex P3: the verb hint must NOT advertise "propose change"
+    as a remedy — that's the very fallback that triggered the hint
+    (zero-confidence dimension). The earlier comprehension filtered
+    on the Chinese label by mistake; the fix uses the code field."""
+    result = interpret_suggestion_text("这个面板看起来怪怪的")
+    verbs = result["vocabulary_hint"]["change_kind"]
+    # Codex's P3 finding: the previous list contained "propose change".
+    assert "propose change" not in [v.lower() for v in verbs], (
+        f"vocabulary_hint must not suggest the fallback verb; got {verbs!r}"
+    )
+    # Sanity: real verbs are still in the list.
+    lowered = [v.lower() for v in verbs]
+    assert any("tighten" in v for v in lowered) or any("loosen" in v for v in lowered)
+
+
 def test_js_runs_conflict_check_before_post() -> None:
     """The confirm-button handler must be onConfirmClicked, and it
     must fetch /api/proposals?status=OPEN&system=... before

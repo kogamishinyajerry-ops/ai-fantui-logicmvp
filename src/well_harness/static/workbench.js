@@ -616,11 +616,20 @@ function hideConflictBanner() {
 //
 // Persist the engineer's in-flight typing to localStorage so an
 // accidental tab-close doesn't lose the suggestion. On page boot,
-// if a draft < 1h old exists and the input is empty, surface a
-// banner offering to restore. On submit success the draft is
-// cleared. Storage key is namespaced by host so multiple workbench
-// instances on different ports don't collide.
-const SUGGESTION_DRAFT_KEY = "workbench/suggestion-draft/v1";
+// if a draft < 1h old exists FOR THE CURRENTLY ACTIVE SYSTEM, surface
+// a banner offering to restore. On submit success the draft is
+// cleared.
+//
+// Codex P54-09 round-1 P2-1 fix: drafts must be scoped by system_id.
+// Without this, an engineer typing on thrust-reverser, switching to
+// C919, and refreshing would be offered the thrust-reverser draft —
+// then submitSuggestionTicket() would file it under C919, mis-routing
+// the proposal. We persist {text, ts, system_id} per-system and only
+// surface the draft whose system_id matches the live select value.
+//
+// Storage layout: a single key holding a map {<system_id>: draft} so
+// each system carries its own most-recent draft and they don't bleed.
+const SUGGESTION_DRAFT_KEY = "workbench/suggestion-drafts/v2";
 const SUGGESTION_DRAFT_TTL_MS = 60 * 60 * 1000;  // 1h
 const SUGGESTION_DRAFT_DEBOUNCE_MS = 500;
 let _suggestionDraftTimer = null;
@@ -628,15 +637,32 @@ let _suggestionDraftTimer = null;
 function installSuggestionDraftRestore() {
   const input = document.getElementById("workbench-suggestion-input");
   if (!input) return;
-  // Autosave on input (debounced).
+  // Autosave on input (debounced) — scoped to the active system.
   input.addEventListener("input", () => {
     if (_suggestionDraftTimer) clearTimeout(_suggestionDraftTimer);
     _suggestionDraftTimer = setTimeout(() => saveSuggestionDraft(input.value), SUGGESTION_DRAFT_DEBOUNCE_MS);
   });
-  // On boot, surface a restore banner if a fresh draft exists.
+  // On boot, surface a restore banner if a fresh draft exists for
+  // the currently active system. Switching systems should clear the
+  // banner (the new system might have its own draft, or none).
   const draft = readSuggestionDraft();
   if (draft && (input.value || "").trim() === "") {
     showDraftBanner(draft);
+  }
+  // When the system changes, re-evaluate which (if any) draft is
+  // applicable. Saves the user from a stale banner across system
+  // toggles.
+  const systemSelect = document.getElementById("workbench-system-select");
+  if (systemSelect) {
+    systemSelect.addEventListener("change", () => {
+      hideDraftBanner();
+      // Only offer a draft if the input is still empty (the user
+      // didn't already start typing in the new system).
+      if ((input.value || "").trim() === "") {
+        const next = readSuggestionDraft();
+        if (next) showDraftBanner(next);
+      }
+    });
   }
   // Wire the banner's restore + dismiss buttons.
   const restoreBtn = document.getElementById("workbench-suggestion-draft-restore");
@@ -659,42 +685,63 @@ function installSuggestionDraftRestore() {
   }
 }
 
-function readSuggestionDraft() {
+function _currentDraftSystemId() {
+  const sel = document.getElementById("workbench-system-select");
+  return (sel && sel.value) || "thrust-reverser";
+}
+
+function _readDraftMap() {
   try {
     const raw = window.localStorage.getItem(SUGGESTION_DRAFT_KEY);
-    if (!raw) return null;
+    if (!raw) return {};
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed.text !== "string" || !parsed.text.trim()) return null;
-    const ts = typeof parsed.ts === "number" ? parsed.ts : 0;
-    if (Date.now() - ts > SUGGESTION_DRAFT_TTL_MS) {
-      window.localStorage.removeItem(SUGGESTION_DRAFT_KEY);
-      return null;
-    }
-    return parsed;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
   } catch (_e) {
+    return {};
+  }
+}
+
+function _writeDraftMap(map) {
+  try {
+    window.localStorage.setItem(SUGGESTION_DRAFT_KEY, JSON.stringify(map));
+  } catch (_e) { /* quota/disabled — silent */ }
+}
+
+function readSuggestionDraft() {
+  const sysId = _currentDraftSystemId();
+  const map = _readDraftMap();
+  const draft = map[sysId];
+  if (!draft || typeof draft.text !== "string" || !draft.text.trim()) return null;
+  const ts = typeof draft.ts === "number" ? draft.ts : 0;
+  if (Date.now() - ts > SUGGESTION_DRAFT_TTL_MS) {
+    delete map[sysId];
+    _writeDraftMap(map);
     return null;
   }
+  // Echo system_id so the banner / submit path can sanity-check.
+  return { text: draft.text, ts: ts, system_id: sysId };
 }
 
 function saveSuggestionDraft(text) {
-  try {
-    if (!text || !text.trim()) {
-      window.localStorage.removeItem(SUGGESTION_DRAFT_KEY);
-      return;
-    }
-    window.localStorage.setItem(
-      SUGGESTION_DRAFT_KEY,
-      JSON.stringify({ text: text, ts: Date.now() }),
-    );
-  } catch (_e) {
-    // Quota / disabled-storage → silent no-op
+  const sysId = _currentDraftSystemId();
+  const map = _readDraftMap();
+  if (!text || !text.trim()) {
+    delete map[sysId];
+  } else {
+    map[sysId] = { text: text, ts: Date.now(), system_id: sysId };
   }
+  _writeDraftMap(map);
 }
 
 function clearSuggestionDraft() {
-  try {
-    window.localStorage.removeItem(SUGGESTION_DRAFT_KEY);
-  } catch (_e) { /* no-op */ }
+  // Only clear the draft for the current system — other systems'
+  // drafts shouldn't be wiped on a thrust-reverser submit.
+  const sysId = _currentDraftSystemId();
+  const map = _readDraftMap();
+  if (sysId in map) {
+    delete map[sysId];
+    _writeDraftMap(map);
+  }
 }
 
 function showDraftBanner(draft) {
