@@ -26,6 +26,7 @@ EDITING
   └─ user_abort    ──→ ABORTED
 TESTING
   ├─ tests_pass        ──→ PR_OPEN
+  ├─ dry_run_complete  ──→ DRY_RUN_COMPLETE   (P49-04)
   ├─ tests_regress     ──→ ABORTED
   ├─ test_runner_error ──→ FAILED
   └─ user_abort        ──→ ABORTED
@@ -33,9 +34,10 @@ PR_OPEN
   ├─ merge_recorded     ──→ LANDED
   ├─ pr_closed_unmerged ──→ ABORTED
   └─ user_abort         ──→ ABORTED
-LANDED   (terminal)
-ABORTED  (terminal)
-FAILED   (terminal)
+LANDED            (terminal)
+DRY_RUN_COMPLETE  (terminal · P49-04 · pipeline ran without commit/push)
+ABORTED           (terminal)
+FAILED            (terminal)
 ```
 """
 
@@ -63,12 +65,22 @@ class ExecutionState(str, enum.Enum):
     TESTING = "TESTING"
     PR_OPEN = "PR_OPEN"
     LANDED = "LANDED"
+    # P49-04: terminal state for dry-run executions. The pipeline
+    # ran the planner + edits + tests but did NOT commit, push,
+    # or open a PR. Distinct from LANDED so the metrics dashboard
+    # doesn't conflate "preview" runs with merged changes.
+    DRY_RUN_COMPLETE = "DRY_RUN_COMPLETE"
     ABORTED = "ABORTED"
     FAILED = "FAILED"
 
 
 TERMINAL_STATES: frozenset[ExecutionState] = frozenset(
-    {ExecutionState.LANDED, ExecutionState.ABORTED, ExecutionState.FAILED}
+    {
+        ExecutionState.LANDED,
+        ExecutionState.DRY_RUN_COMPLETE,
+        ExecutionState.ABORTED,
+        ExecutionState.FAILED,
+    }
 )
 
 
@@ -92,6 +104,8 @@ ALLOWED_TRANSITIONS: dict[tuple[ExecutionState, str], ExecutionState] = {
     (ExecutionState.EDITING, "edit_error"): ExecutionState.FAILED,
     (ExecutionState.EDITING, "user_abort"): ExecutionState.ABORTED,
     (ExecutionState.TESTING, "tests_pass"): ExecutionState.PR_OPEN,
+    # P49-04: dry-run terminates after tests pass — no commit/push/PR
+    (ExecutionState.TESTING, "dry_run_complete"): ExecutionState.DRY_RUN_COMPLETE,
     (ExecutionState.TESTING, "tests_regress"): ExecutionState.ABORTED,
     (ExecutionState.TESTING, "test_runner_error"): ExecutionState.FAILED,
     (ExecutionState.TESTING, "user_abort"): ExecutionState.ABORTED,

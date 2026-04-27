@@ -51,6 +51,8 @@ _ALL_STATES = (
     ExecutionState.TESTING.value,
     ExecutionState.PR_OPEN.value,
     ExecutionState.LANDED.value,
+    # P49-04: dry-run completion as a separate bucket
+    ExecutionState.DRY_RUN_COMPLETE.value,
     ExecutionState.ABORTED.value,
     ExecutionState.FAILED.value,
 )

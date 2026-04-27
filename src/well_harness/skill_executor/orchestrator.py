@@ -162,6 +162,15 @@ def execute_proposal(
     governance_poll_fn: Callable[..., Any] | None = None,
     governance_poll_interval_sec: float = 1.0,
     governance_timeout_sec: float = 3600.0,
+    # P49-04: dry-run mode. When True, the pipeline runs through
+    # PLANNING/EDITING/TESTING but stops short of commit/push/PR.
+    # The captured diff is stored in record.dry_run_diff and the
+    # working tree is reverted; the audit terminates at
+    # DRY_RUN_COMPLETE so a reviewer can preview the change before
+    # approving it for real. Honors the same governance gate as
+    # live runs — a reviewer might want to see the diff exactly
+    # because it touches a sensitive namespace.
+    dry_run: bool = False,
     # `None` means "follow auto_approve" — auto_approve already
     # signals "skip human-in-the-loop", and governance is just
     # another HITL gate. Tests + scripted runs that pass
@@ -215,8 +224,16 @@ def execute_proposal(
         executor_host=socket.gethostname(),
         executor_user=os.environ.get("USER") or "",
         state=ExecutionState.INIT.value,
+        dry_run=bool(dry_run),
     )
-    _push_event(record, kind="init", note=f"proposal {proposal_id}")
+    _push_event(
+        record,
+        kind="init",
+        note=(
+            f"proposal {proposal_id}"
+            + (" [DRY-RUN]" if dry_run else "")
+        ),
+    )
     _persist(record, audit_dir)
 
     applied: ApplyResult | None = None
@@ -426,6 +443,39 @@ def execute_proposal(
         # P49-01c phase-boundary cancel check (post-TESTING, pre-PR).
         # Last point we can cleanly bail without leaving a stale PR.
         if _check_cancel_and_abort(record, audit_dir, applied=applied):
+            return OrchestratorResult(record=record)
+
+        # ── Step 5.5 (P49-04): dry-run terminates here ─────────
+        # Pipeline ran end-to-end through TESTING. Capture the
+        # working-tree diff BEFORE revert_edits puts the files
+        # back, stash it on the audit, then transition straight
+        # to DRY_RUN_COMPLETE without touching git further.
+        # The reviewer reads dry_run_diff to preview what the
+        # real run would have committed.
+        if dry_run:
+            try:
+                record.dry_run_diff = _capture_dry_run_diff(
+                    repo_root=repo_root,
+                    git_runner=git_runner,
+                )
+            except Exception as exc:  # noqa: BLE001
+                # Diff capture is best-effort — if it fails we
+                # still want to revert + report. Empty diff is
+                # the worst case; not an abort.
+                _push_event(
+                    record, kind="dry_run_diff_error",
+                    note=str(exc)[:200],
+                )
+                record.dry_run_diff = ""
+            revert_edits(applied)
+            _push_event(
+                record, kind="dry_run_complete",
+                note=(
+                    f"diff length: {len(record.dry_run_diff)} bytes"
+                ),
+            )
+            _transition(record, "dry_run_complete", audit_dir)
+            _finish(record, audit_dir)
             return OrchestratorResult(record=record)
 
         # ── Step 6: TESTING → PR_OPEN + git + PR ───────────────
@@ -766,6 +816,46 @@ def _default_governance_poll(*, audit_dir: Path, exec_id: str):
     return read_and_clear_governance(
         audit_dir=audit_dir, exec_id=exec_id,
     )
+
+
+def _capture_dry_run_diff(*, repo_root: Path, git_runner: Any) -> str:
+    """Run `git diff` over the working tree to capture the
+    edits-applied state BEFORE revert_edits restores files. Used
+    by the P49-04 dry-run path so the audit carries a unified-
+    diff preview for reviewer scrutiny.
+
+    Empty string if git fails (rare — the planner+applier already
+    ran inside the same repo). Truncated to 64KB so an audit JSON
+    doesn't balloon for a refactor that touches a thousand lines;
+    the truncation is signaled inline so a reader knows to look
+    elsewhere for the full diff.
+    """
+    from well_harness.skill_executor.git_ops import _default_runner
+    runner = git_runner or _default_runner
+    result = runner(
+        ["git", "diff", "--no-color"],
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+        timeout=30.0,
+    )
+    diff_text = ""
+    if hasattr(result, "stdout"):
+        diff_text = result.stdout or ""
+    if hasattr(result, "returncode") and int(result.returncode or 0) != 0:
+        # Non-zero exit but stdout still available — git diff in a
+        # working tree shouldn't fail, but if it did we capture
+        # whatever we got.
+        return diff_text
+    DIFF_MAX_BYTES = 65_536
+    if len(diff_text) > DIFF_MAX_BYTES:
+        truncated = diff_text[:DIFF_MAX_BYTES]
+        return (
+            truncated
+            + "\n\n[... dry-run diff truncated at 64KB. "
+            "Re-run interactively for the full output.]\n"
+        )
+    return diff_text
 
 
 def _check_cancel_and_abort(
