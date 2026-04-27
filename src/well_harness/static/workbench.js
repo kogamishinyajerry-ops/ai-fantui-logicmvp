@@ -445,6 +445,11 @@ function installProposalInbox() {
   // hydration so the inbox shows up as soon as the proposals API
   // responds, regardless of how long the SVG fetch takes.
   loadProposalsInbox();
+  // P48-06: poll for pending skill executions so approve cards
+  // auto-appear (CLI starts an exec → workbench picks it up
+  // within 5s) and auto-clear (CLI consumes signal → exec leaves
+  // ASKING → next poll renders empty).
+  startPendingExecPoll(5000);
 }
 
 async function loadProposalsInbox() {
@@ -586,6 +591,12 @@ function renderProposalsInbox(proposals) {
             `<code>${escape(p.landed_truth_sha)}</code></span>`
           )
         : "";
+      // P48-06 (2026-04-27): pending-execution slot. Filled
+      // asynchronously by refreshPendingExecutions() — empty
+      // until that fetch resolves.
+      const pendingSlot =
+        `<div class="workbench-pending-exec-slot" ` +
+        `     data-pending-exec-for="${escape(p.id)}"></div>`;
       return (
         `<li class="workbench-annotation-inbox-item" data-proposal-id="${escape(p.id)}" data-status="${escape(p.status)}" data-proposal-kind="${escape(kind)}">` +
         `  <div class="workbench-annotation-inbox-item-line">` +
@@ -603,6 +614,7 @@ function renderProposalsInbox(proposals) {
         `  </div>` +
         revertBanner +
         `  <div class="workbench-annotation-inbox-item-summary">${escape(summary)}</div>` +
+        pendingSlot +
         actions +
         proposeRevertBtn +
         rollback +
@@ -611,6 +623,9 @@ function renderProposalsInbox(proposals) {
     })
     .join("");
   list.innerHTML = items;
+  // P48-06: kick off pending-execution refresh now that the cards
+  // exist. The refresher renders into each card's pendingSlot.
+  refreshPendingExecutions();
   // P44-04: clicking a ticket card spotlights its anchor on the SVG.
   // Delegated handler — re-attached on every render so it always
   // matches the current set of cards.
@@ -702,6 +717,153 @@ async function proposeRevertProposal(originalProposalId) {
       `创建回退工单出错 · network error:\n${(e && e.message) || e}`
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// P48-06 (2026-04-27): pending-execution approval bridge.
+//
+// When a proposal has a skill-execution audit in ASKING state,
+// the inbox card shows an "approval card" inside its pendingSlot
+// with the plan rationale + edits + Approve/Reject buttons.
+// Clicking Approve POSTs to /api/skill-executions/<id>/approve;
+// the demo_server writes a signal file the CLI executor's polling
+// callback consumes.
+//
+// We refresh pending executions after every loadProposalsInbox()
+// AND on a 5s timer so the UI auto-clears once the CLI consumes
+// the signal and transitions out of ASKING.
+// ─────────────────────────────────────────────────────────────────
+
+const SKILL_EXECUTIONS_PENDING_PATH = "/api/skill-executions/pending";
+let _pendingExecPollHandle = null;
+
+async function refreshPendingExecutions() {
+  const slots = document.querySelectorAll("[data-pending-exec-for]");
+  if (!slots.length) return;
+  let executions = [];
+  try {
+    const r = await fetch(SKILL_EXECUTIONS_PENDING_PATH);
+    if (!r.ok) return;
+    const body = await r.json();
+    executions = body.executions || [];
+  } catch (_) {
+    return;
+  }
+  // Index by proposal_id for O(1) lookup
+  const byProposal = {};
+  for (const exec of executions) {
+    byProposal[exec.proposal_id] = exec;
+  }
+  for (const slot of slots) {
+    const proposalId = slot.getAttribute("data-pending-exec-for");
+    const exec = byProposal[proposalId];
+    if (!exec) {
+      slot.innerHTML = "";
+      continue;
+    }
+    slot.innerHTML = renderPendingExecCard(exec);
+  }
+  // Wire approve/reject buttons after render
+  for (const btn of document.querySelectorAll("[data-pending-exec-action]")) {
+    btn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      const action = btn.getAttribute("data-pending-exec-action");
+      const execId = btn.getAttribute("data-pending-exec-id");
+      btn.setAttribute("disabled", "");
+      btn.textContent = action === "approve"
+        ? "已批准 · sending…"
+        : "已拒绝 · sending…";
+      await sendPendingExecApproval(execId, action);
+      // Re-poll immediately so the card reflects the new state
+      refreshPendingExecutions();
+    });
+  }
+}
+
+function renderPendingExecCard(exec) {
+  const escape = (text) =>
+    String(text == null ? "" : text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  const plan = exec.plan || {};
+  const rationale = plan.rationale || "";
+  const namespaces = (plan.affected_namespaces || []).join(", ") || "—";
+  const edits = plan.file_edits || [];
+  const editsList = edits
+    .slice(0, 8)
+    .map(
+      (e) =>
+        `<li><code>${escape(e.path)}</code>` +
+        (e.reason ? ` — ${escape(e.reason)}` : "") +
+        `</li>`
+    )
+    .join("");
+  const moreEdits =
+    edits.length > 8 ? `<li>(and ${edits.length - 8} more)</li>` : "";
+  const execId = escape(exec.exec_id);
+  return (
+    `<div class="workbench-pending-exec-card" data-pending-exec="true">` +
+    `  <div class="workbench-pending-exec-header">` +
+    `    ⏳ <strong>Plan 待审 · Awaiting plan approval</strong>` +
+    `    <span class="workbench-pending-exec-id">${execId}</span>` +
+    `  </div>` +
+    `  <div class="workbench-pending-exec-rationale">` +
+    `    <strong>Plan 说明:</strong> ${escape(rationale)}` +
+    `  </div>` +
+    `  <div class="workbench-pending-exec-meta">` +
+    `    <span>命名空间 · namespaces: ${escape(namespaces)}</span>` +
+    `  </div>` +
+    `  <div class="workbench-pending-exec-edits">` +
+    `    <strong>预计改动文件:</strong>` +
+    `    <ul>${editsList}${moreEdits}</ul>` +
+    `  </div>` +
+    `  <div class="workbench-pending-exec-actions">` +
+    `    <button type="button" class="workbench-toolbar-button is-primary" ` +
+    `            data-pending-exec-action="approve" data-pending-exec-id="${execId}">` +
+    `      ✅ 批准 · Approve</button>` +
+    `    <button type="button" class="workbench-toolbar-button" ` +
+    `            data-pending-exec-action="reject" data-pending-exec-id="${execId}">` +
+    `      ✕ 拒绝 · Reject</button>` +
+    `  </div>` +
+    `</div>`
+  );
+}
+
+async function sendPendingExecApproval(execId, action) {
+  try {
+    const r = await fetch(
+      `/api/skill-executions/${encodeURIComponent(execId)}/${action}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }
+    );
+    if (!r.ok) {
+      const body = await r.json().catch(() => ({}));
+      window.alert(
+        `${action === "approve" ? "批准" : "拒绝"}失败:\n` +
+        (body.error || `HTTP ${r.status}`)
+      );
+    }
+  } catch (e) {
+    window.alert(
+      `${action === "approve" ? "批准" : "拒绝"}出错:\n` +
+      ((e && e.message) || e)
+    );
+  }
+}
+
+function startPendingExecPoll(intervalMs) {
+  if (_pendingExecPollHandle) return;
+  // Periodic refresh so cards auto-clear once CLI consumes signal
+  _pendingExecPollHandle = setInterval(
+    () => refreshPendingExecutions(),
+    intervalMs || 5000
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────

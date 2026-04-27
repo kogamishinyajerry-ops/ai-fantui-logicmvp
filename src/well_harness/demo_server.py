@@ -158,6 +158,10 @@ WORKBENCH_INTERPRET_SUGGESTION_PATH = "/api/workbench/interpret-suggestion"
 # proposal record (engineer-confirmed interpretation), GET lists all
 # stored records for the workbench inbox + KOGAMI reviewer surface.
 PROPOSALS_PATH = "/api/proposals"
+# P48-06 (2026-04-27): skill-executor approval bridge.
+# Workbench reads pending audit + writes approval signal files
+# the CLI executor's polling callback consumes.
+SKILL_EXECUTIONS_PATH = "/api/skill-executions"
 MONITOR_RA_START_FT = 7.0
 MONITOR_RA_RATE_FT_PER_S = 1.0
 MONITOR_TRA_START_S = 1.0
@@ -365,6 +369,31 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             )
             return
 
+        # P48-06 (2026-04-27): skill-execution audit reads.
+        #   GET /api/skill-executions             list all
+        #   GET /api/skill-executions?proposal=X  filter by proposal
+        #   GET /api/skill-executions/<exec_id>   single record
+        #   GET /api/skill-executions/pending     ASKING-state records
+        if parsed.path == SKILL_EXECUTIONS_PATH:
+            qs = parse_qs(parsed.query)
+            proposal_filter = qs.get("proposal", [None])[0]
+            state_filter = qs.get("state", [None])[0]
+            self._handle_list_skill_executions(
+                proposal_filter=proposal_filter,
+                state_filter=state_filter,
+            )
+            return
+        if parsed.path == f"{SKILL_EXECUTIONS_PATH}/pending":
+            self._handle_list_skill_executions(state_filter="ASKING")
+            return
+        if parsed.path.startswith(f"{SKILL_EXECUTIONS_PATH}/"):
+            suffix = parsed.path[len(SKILL_EXECUTIONS_PATH) + 1:]
+            # `pending` already handled above; everything else is treated
+            # as an exec_id. Approve/reject suffixes are POST-only.
+            if "/" not in suffix and suffix:
+                self._handle_get_skill_execution(suffix)
+                return
+
         # E11-07 (2026-04-26): Authority Contract banner link target.
         # Serves the v6.1 truth-engine red-line clause as plain text so
         # the banner's "v6.1 红线条款 →" link resolves to a real, in-repo
@@ -424,6 +453,14 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             "/propose-revert"
         ):
             self._handle_proposal_propose_revert(parsed.path)
+            return
+        # P48-06 (2026-04-27): skill-execution approval bridge.
+        #   POST /api/skill-executions/<exec_id>/approve
+        #   POST /api/skill-executions/<exec_id>/reject
+        if parsed.path.startswith(SKILL_EXECUTIONS_PATH + "/") and (
+            parsed.path.endswith("/approve") or parsed.path.endswith("/reject")
+        ):
+            self._handle_skill_execution_approval(parsed.path)
             return
         if parsed.path not in {
             "/api/demo",
@@ -1113,6 +1150,185 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(500, {"error": "propose_revert_failed"})
             return
         self._send_json(201, record)
+
+    # ─── P48-06 (2026-04-27): skill-execution approval bridge ────────
+
+    def _handle_list_skill_executions(
+        self,
+        *,
+        proposal_filter: str | None = None,
+        state_filter: str | None = None,
+    ) -> None:
+        """GET /api/skill-executions[?proposal=X][?state=Y].
+
+        Returns `{executions: [audit-record-as-dict, ...]}` newest
+        first. Both filters are optional. The polling workbench UI
+        uses `?state=ASKING` to find pending executions for the
+        approval card.
+        """
+        try:
+            from well_harness.skill_executor.audit import list_audits
+        except ImportError:
+            self._send_json(500, {"error": "skill_executor_unavailable"})
+            return
+        records = list_audits(
+            proposal_id=proposal_filter,
+            state_filter=state_filter,
+        )
+        self._send_json(
+            200,
+            {"executions": [r.to_json() for r in records]},
+        )
+
+    def _handle_get_skill_execution(self, exec_id: str) -> None:
+        """GET /api/skill-executions/<exec_id>. Returns the audit
+        record, or 404 if not found / 400 if id malformed."""
+        try:
+            from well_harness.skill_executor.audit import read_audit
+            from well_harness.skill_executor.errors import AuditSchemaError
+        except ImportError:
+            self._send_json(500, {"error": "skill_executor_unavailable"})
+            return
+        try:
+            record = read_audit(exec_id)
+        except AuditSchemaError as exc:
+            msg = str(exc).lower()
+            if "not found" in msg:
+                self._send_json(404, {"error": "audit_not_found", "id": exec_id})
+                return
+            if "invalid exec_id shape" in msg:
+                self._send_json(400, {"error": "invalid_exec_id"})
+                return
+            self._send_json(400, {"error": "audit_schema_invalid", "detail": str(exc)})
+            return
+        self._send_json(200, record.to_json())
+
+    def _handle_skill_execution_approval(self, raw_path: str) -> None:
+        """POST /api/skill-executions/<exec_id>/{approve,reject}.
+
+        Writes a single-line approval signal file the CLI executor's
+        polling callback consumes. The audit must currently be in
+        ASKING state — approving/rejecting an audit in any other
+        state is a 409 conflict.
+
+        Optional JSON body: {"actor": "Kogami", "note": "..."}
+        Both fields are recorded back into the audit's most recent
+        Ask entry so a reviewer reading the audit later sees who
+        clicked.
+        """
+        try:
+            from well_harness.skill_executor.audit import (
+                audit_dir as audit_dir_resolver,
+                read_audit,
+                write_audit,
+            )
+            from well_harness.skill_executor.errors import AuditSchemaError
+            from well_harness.skill_executor.models import (
+                AskResponse,
+                now_iso,
+            )
+            from well_harness.skill_executor.workbench_polling import (
+                write_approval_signal,
+            )
+        except ImportError:
+            self._send_json(500, {"error": "skill_executor_unavailable"})
+            return
+
+        suffix = raw_path[len(SKILL_EXECUTIONS_PATH) + 1:]
+        try:
+            exec_id, action = suffix.rsplit("/", 1)
+        except ValueError:
+            self._send_json(400, {"error": "invalid_path"})
+            return
+        if action not in ("approve", "reject") or not exec_id:
+            self._send_json(400, {"error": "invalid_action"})
+            return
+
+        # Optional body — capture actor / note for audit replay
+        actor = "anonymous"
+        note: str | None = None
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        if length > 0:
+            if length > 50_000:
+                self._send_json(400, {"error": "oversized_body"})
+                return
+            try:
+                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                self._send_json(400, {"error": "invalid_json"})
+                return
+            if isinstance(payload, dict):
+                actor = str(payload.get("actor") or "anonymous")
+                raw_note = payload.get("note")
+                note = (
+                    str(raw_note)
+                    if isinstance(raw_note, str) and raw_note.strip()
+                    else None
+                )
+
+        # Read current audit — must exist + be in ASKING
+        try:
+            record = read_audit(exec_id)
+        except AuditSchemaError as exc:
+            msg = str(exc).lower()
+            if "not found" in msg or "invalid exec_id shape" in msg:
+                self._send_json(404, {"error": "audit_not_found", "id": exec_id})
+                return
+            self._send_json(500, {"error": "audit_unreadable", "detail": str(exc)})
+            return
+        if record.state != "ASKING":
+            self._send_json(
+                409,
+                {
+                    "error": "execution_not_in_asking_state",
+                    "id": exec_id,
+                    "current_state": record.state,
+                },
+            )
+            return
+
+        # Patch the most-recent Ask entry with actor + note (the
+        # CLI's polling callback will then read the approval signal,
+        # write user_response back, persist the audit). Doing it
+        # here lets the workbench-side click attribution survive
+        # even if the CLI process crashes between read_audit and
+        # the next write.
+        if record.asks:
+            ask = record.asks[-1]
+            if ask.user_response is None:
+                ask.user_actor = actor
+                if note:
+                    ask.note = note
+                # user_response + user_responded_at are filled by
+                # the CLI side after the signal is consumed; keep
+                # them None here so the polling callback writes
+                # the canonical timestamp.
+                write_audit(record)
+
+        # Drop the signal file the CLI's polling callback reads.
+        target_audit_dir = audit_dir_resolver()
+        try:
+            write_approval_signal(
+                audit_dir=target_audit_dir,
+                exec_id=exec_id,
+                response="approved" if action == "approve" else "rejected",
+            )
+        except OSError as exc:
+            self._send_json(
+                500,
+                {"error": "signal_write_failed", "detail": str(exc)},
+            )
+            return
+
+        self._send_json(
+            202,
+            {
+                "exec_id": exec_id,
+                "action": action,
+                "signaled_at": now_iso(),
+                "actor": actor,
+            },
+        )
 
     def _serve_workbench_circuit_fragment(self):
         """P44-01 (2026-04-26) + P45-01 (2026-04-26): serve the SVG

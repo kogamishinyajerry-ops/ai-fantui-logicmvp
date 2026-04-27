@@ -96,6 +96,13 @@ from well_harness.skill_executor.proposal_io import (
     load_proposal,
     proposal_path,
 )
+from well_harness.skill_executor.workbench_polling import (
+    ApprovalTimeoutError,
+    WorkbenchApprovalCallback,
+    approval_signal_path,
+    read_and_clear_approval,
+    write_approval_signal,
+)
 from well_harness.skill_executor.test_runner import (
     TestRunnerError,
     parse_pytest_output,
@@ -149,6 +156,7 @@ __all__ = [
     "AppliedEdit",
     "ApplyError",
     "ApplyResult",
+    "ApprovalTimeoutError",
     "Ask",
     "AskResponse",
     "AuditSchemaError",
@@ -183,7 +191,9 @@ __all__ = [
     "TERMINAL_STATES",
     "TestResult",
     "TestRunnerError",
+    "WorkbenchApprovalCallback",
     "apply_edits",
+    "approval_signal_path",
     "audit_dir",
     "brief_path",
     "build_exec_stamp",
@@ -208,9 +218,11 @@ __all__ = [
     "plan_from_brief",
     "proposal_path",
     "push_branch",
+    "read_and_clear_approval",
     "read_audit",
     "resolve_minimax_api_key",
     "revert_edits",
+    "write_approval_signal",
     "run_tests",
     "strip_json_fences",
     "validate_edit_path",
