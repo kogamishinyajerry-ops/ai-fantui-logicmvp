@@ -3010,6 +3010,102 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
   text-overflow: ellipsis;
 }
 
+/* P50-04 (2026-04-27): failure category breakdown. Sits between
+   the state bars and the recent_failures list. Only shown when
+   total > 0 — hidden by default to avoid empty noise. */
+.workbench-metrics-failure-breakdown {
+  margin-top: 0.5rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(150, 168, 184, 0.18);
+}
+.workbench-metrics-failure-breakdown-eyebrow {
+  margin: 0 0 0.3rem 0;
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(206, 223, 236, 0.5);
+}
+.workbench-metrics-failure-categories {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.workbench-metrics-failure-categories li {
+  display: grid;
+  grid-template-columns: 7rem 2rem 1fr;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.62rem;
+}
+.workbench-metrics-failure-cat-pill {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-align: center;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Per-category color. Most are red-toned (it's a failure breakdown)
+   but cancel/reject get distinct hues so engineer can tell user
+   action apart from system failure at a glance. */
+.workbench-metrics-failure-cat-pill[data-failure-category="planner_error"],
+.workbench-metrics-failure-cat-pill[data-failure-category="test_runner_error"],
+.workbench-metrics-failure-cat-pill[data-failure-category="apply_error"],
+.workbench-metrics-failure-cat-pill[data-failure-category="git_error"],
+.workbench-metrics-failure-cat-pill[data-failure-category="gh_error"],
+.workbench-metrics-failure-cat-pill[data-failure-category="unhandled"] {
+  color: #ff6b6b;
+  background: rgba(255, 92, 92, 0.14);
+  border-color: rgba(255, 92, 92, 0.4);
+}
+.workbench-metrics-failure-cat-pill[data-failure-category="test_gate"] {
+  color: #f7bc5c;
+  background: rgba(247, 188, 92, 0.14);
+  border-color: rgba(247, 188, 92, 0.4);
+}
+.workbench-metrics-failure-cat-pill[data-failure-category="user_cancel"] {
+  color: #ff913c;
+  background: rgba(255, 145, 60, 0.14);
+  border-color: rgba(255, 145, 60, 0.4);
+}
+.workbench-metrics-failure-cat-pill[data-failure-category="user_reject"] {
+  color: #00c8f5;
+  background: rgba(0, 200, 245, 0.14);
+  border-color: rgba(0, 200, 245, 0.4);
+}
+.workbench-metrics-failure-cat-pill[data-failure-category="other"] {
+  color: #aab8c4;
+  background: rgba(150, 168, 184, 0.1);
+  border-color: rgba(150, 168, 184, 0.3);
+}
+.workbench-metrics-failure-cat-count {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: #cfe1ee;
+}
+.workbench-metrics-failure-cat-samples {
+  color: rgba(206, 223, 236, 0.65);
+  font-size: 0.6rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.workbench-metrics-failure-cat-samples code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.55rem;
+  color: rgba(206, 223, 236, 0.85);
+  margin-right: 0.3rem;
+}
+
 /* P50-02c (2026-04-27): per-execution phase-timing tooltip.
    Click a badge to see how long each phase took. Helps diagnose
    "stuck in ASKING for 2h" vs "stuck in TESTING for 2h" — same

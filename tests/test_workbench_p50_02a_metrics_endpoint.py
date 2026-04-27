@@ -204,5 +204,9 @@ def test_metrics_endpoint_returns_stable_top_level_keys(server):
         "total", "by_state", "pass_rate", "completed_count",
         "median_duration_sec", "p95_duration_sec",
         "recent_failures", "backfill_count",
+        # P50-04: failure classification block. Always present
+        # when the endpoint was hit (even if total=0 → empty
+        # by_category list).
+        "failure_classification",
     }
     assert set(body.keys()) == expected
