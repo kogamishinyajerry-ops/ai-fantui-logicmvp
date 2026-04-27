@@ -2795,3 +2795,30 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
   color: #cfe1ee;
   border-color: rgba(150, 168, 184, 0.25);
 }
+
+/* P49-01c (2026-04-27): inline cancel button next to a non-terminal
+   execution badge. Lets a reviewer abort a stuck execution without
+   leaving the inbox view. Shown only for PLANNING/EDITING/TESTING/
+   PR_OPEN — ASKING uses the existing Approve/Reject card.
+   Terminal states get no button (nothing to cancel). */
+.workbench-execution-cancel-button {
+  margin-left: 0.3rem;
+  padding: 0 0.32rem;
+  border: 1px solid rgba(255, 92, 92, 0.45);
+  border-radius: 999px;
+  background: rgba(255, 92, 92, 0.1);
+  color: #ff6b6b;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+.workbench-execution-cancel-button:hover:not([disabled]) {
+  background: rgba(255, 92, 92, 0.22);
+  border-color: rgba(255, 92, 92, 0.7);
+}
+.workbench-execution-cancel-button[disabled] {
+  opacity: 0.55;
+  cursor: progress;
+}

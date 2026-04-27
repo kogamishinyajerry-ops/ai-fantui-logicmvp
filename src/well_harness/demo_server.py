@@ -470,10 +470,17 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         # P48-06 (2026-04-27): skill-execution approval bridge.
         #   POST /api/skill-executions/<exec_id>/approve
         #   POST /api/skill-executions/<exec_id>/reject
+        # P49-01c (2026-04-27): cancel — abort a non-terminal exec.
+        #   POST /api/skill-executions/<exec_id>/cancel
         if parsed.path.startswith(SKILL_EXECUTIONS_PATH + "/") and (
-            parsed.path.endswith("/approve") or parsed.path.endswith("/reject")
+            parsed.path.endswith("/approve")
+            or parsed.path.endswith("/reject")
+            or parsed.path.endswith("/cancel")
         ):
-            self._handle_skill_execution_approval(parsed.path)
+            if parsed.path.endswith("/cancel"):
+                self._handle_skill_execution_cancel(parsed.path)
+            else:
+                self._handle_skill_execution_approval(parsed.path)
             return
         if parsed.path not in {
             "/api/demo",
@@ -1406,6 +1413,117 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                 "action": action,
                 "signaled_at": now_iso(),
                 "actor": actor,
+            },
+        )
+
+    def _handle_skill_execution_cancel(self, raw_path: str) -> None:
+        """POST /api/skill-executions/<exec_id>/cancel.
+
+        Drops a cancel signal the orchestrator picks up at its next
+        phase boundary. Distinct from /reject:
+          - reject only works in ASKING state (rejecting a plan)
+          - cancel works in any non-terminal state (PLANNING /
+            ASKING / EDITING / TESTING / PR_OPEN) and signals "stop
+            executing now"
+
+        Optional JSON body: {"actor": "Kogami", "note": "..."}
+        Both fields are written into the cancel-signal payload so
+        the audit's abort_reason is informative.
+
+        Returns 202 (signal queued) on success, 404 if no audit
+        exists, 409 if the audit is already in a terminal state.
+        """
+        try:
+            from well_harness.skill_executor.audit import (
+                audit_dir as audit_dir_resolver,
+                read_audit,
+            )
+            from well_harness.skill_executor.errors import AuditSchemaError
+            from well_harness.skill_executor.models import now_iso
+            from well_harness.skill_executor.states import (
+                ExecutionState,
+                is_terminal,
+            )
+            from well_harness.skill_executor.workbench_polling import (
+                write_cancel_signal,
+            )
+        except ImportError:
+            self._send_json(500, {"error": "skill_executor_unavailable"})
+            return
+
+        suffix = raw_path[len(SKILL_EXECUTIONS_PATH) + 1:]
+        try:
+            exec_id, action = suffix.rsplit("/", 1)
+        except ValueError:
+            self._send_json(400, {"error": "invalid_path"})
+            return
+        if action != "cancel" or not exec_id:
+            self._send_json(400, {"error": "invalid_action"})
+            return
+
+        actor = "anonymous"
+        note: str = ""
+        length = int(self.headers.get("Content-Length", "0") or "0")
+        if length > 0:
+            if length > 50_000:
+                self._send_json(400, {"error": "oversized_body"})
+                return
+            try:
+                payload = json.loads(self.rfile.read(length).decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                self._send_json(400, {"error": "invalid_json"})
+                return
+            if isinstance(payload, dict):
+                actor = str(payload.get("actor") or "anonymous")
+                raw_note = payload.get("note")
+                if isinstance(raw_note, str) and raw_note.strip():
+                    note = raw_note.strip()
+
+        try:
+            record = read_audit(exec_id)
+        except AuditSchemaError as exc:
+            msg = str(exc).lower()
+            if "not found" in msg or "invalid exec_id shape" in msg:
+                self._send_json(404, {"error": "audit_not_found", "id": exec_id})
+                return
+            self._send_json(500, {"error": "audit_unreadable", "detail": str(exc)})
+            return
+
+        if is_terminal(ExecutionState(record.state)):
+            self._send_json(
+                409,
+                {
+                    "error": "execution_already_terminal",
+                    "id": exec_id,
+                    "current_state": record.state,
+                },
+            )
+            return
+
+        target_audit_dir = audit_dir_resolver()
+        try:
+            write_cancel_signal(
+                audit_dir=target_audit_dir,
+                exec_id=exec_id,
+                actor=actor,
+                note=note,
+            )
+        except OSError as exc:
+            self._send_json(
+                500,
+                {"error": "signal_write_failed", "detail": str(exc)},
+            )
+            return
+
+        self._send_json(
+            202,
+            {
+                "exec_id": exec_id,
+                "action": "cancel",
+                "signaled_at": now_iso(),
+                "actor": actor,
+                "note": note,
+                "current_state": record.state,
             },
         )
 

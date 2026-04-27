@@ -111,10 +111,15 @@ from well_harness.skill_executor.proposal_io import (
 )
 from well_harness.skill_executor.workbench_polling import (
     ApprovalTimeoutError,
+    ExecutionCancelled,
     WorkbenchApprovalCallback,
     approval_signal_path,
+    cancel_signal_path,
+    check_cancel,
     read_and_clear_approval,
+    read_and_clear_cancel,
     write_approval_signal,
+    write_cancel_signal,
 )
 from well_harness.skill_executor.test_runner import (
     TestRunnerError,
@@ -178,6 +183,7 @@ __all__ = [
     "CommitResult",
     "EXEC_STAMP_DELIMITER",
     "EXECUTOR_VERSION",
+    "ExecutionCancelled",
     "ExecutionKind",
     "ExecutionRecord",
     "ExecutionState",
@@ -215,6 +221,8 @@ __all__ = [
     "brief_path",
     "build_exec_stamp",
     "call_minimax",
+    "cancel_signal_path",
+    "check_cancel",
     "check_pr_audit_compliance",
     "check_test_gate",
     "commit_files",
@@ -237,6 +245,7 @@ __all__ = [
     "proposal_path",
     "push_branch",
     "read_and_clear_approval",
+    "read_and_clear_cancel",
     "read_audit",
     "resolve_minimax_api_key",
     "revert_edits",
@@ -244,6 +253,7 @@ __all__ = [
     "spawn_log_path",
     "spawn_marker_path",
     "write_approval_signal",
+    "write_cancel_signal",
     "run_tests",
     "strip_json_fences",
     "synthesize_backfill_audit",

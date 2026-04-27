@@ -920,6 +920,14 @@ const EXECUTION_STATE_INFO = {
   FAILED:   { glyph: "✗",  label_zh: "失败",     label_en: "Failed",   css: "failed"   },
 };
 
+// P49-01c: states where Cancel is meaningful. ASKING is excluded
+// because the pending-exec card already has Approve/Reject.
+// Terminal states (LANDED/ABORTED/FAILED) get no Cancel button —
+// nothing to cancel anymore.
+const CANCELLABLE_STATES = new Set([
+  "PLANNING", "EDITING", "TESTING", "PR_OPEN",
+]);
+
 function renderExecutionBadge(audit) {
   const escape = (text) =>
     String(text == null ? "" : text)
@@ -937,6 +945,15 @@ function renderExecutionBadge(audit) {
     `State: ${audit.state}`,
   ];
   if (isBackfill) titleParts.push("audit_source=backfill (reconstructed)");
+  const cancelButton = CANCELLABLE_STATES.has(audit.state)
+    ? (
+        `<button type="button" class="workbench-execution-cancel-button" ` +
+        `        data-execution-cancel-id="${escape(audit.exec_id)}" ` +
+        `        data-execution-cancel-state="${escape(audit.state)}" ` +
+        `        title="中断此次执行 · Cancel this execution">` +
+        `  ✕</button>`
+      )
+    : "";
   return (
     `<span class="workbench-execution-badge" ` +
     `      data-execution-state="${escape(audit.state)}" ` +
@@ -950,6 +967,7 @@ function renderExecutionBadge(audit) {
       ? `<span class="workbench-execution-badge-backfill" ` +
         `      title="此审计是事后回填，并非首次实时记录">↺</span>`
       : "") +
+    cancelButton +
     `</span>`
   );
 }
@@ -982,6 +1000,54 @@ async function refreshExecutionBadges() {
       continue;
     }
     slot.innerHTML = renderExecutionBadge(exec);
+  }
+  // P49-01c: wire cancel buttons after render. Each click confirms,
+  // POSTs, and triggers an immediate refresh so the badge transitions
+  // to ABORTED without waiting for the 5s poll tick.
+  for (const btn of document.querySelectorAll("[data-execution-cancel-id]")) {
+    btn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      const execId = btn.getAttribute("data-execution-cancel-id");
+      const stateName = btn.getAttribute("data-execution-cancel-state");
+      const ok = window.confirm(
+        `确认中断该次执行？ · Cancel this ${stateName} execution?\n\n` +
+        `Exec: ${execId}\n\n` +
+        `执行器会在下一个阶段边界停止并回滚已应用的改动。\n` +
+        `The executor will stop at its next phase boundary and revert any applied edits.`
+      );
+      if (!ok) return;
+      btn.setAttribute("disabled", "");
+      btn.textContent = "…";
+      await sendExecutionCancel(execId);
+      // Trigger immediate refresh so the user sees the new state
+      refreshExecutionBadges();
+      refreshPendingExecutions();
+    });
+  }
+}
+
+async function sendExecutionCancel(execId) {
+  try {
+    const r = await fetch(
+      `/api/skill-executions/${encodeURIComponent(execId)}/cancel`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }
+    );
+    if (!r.ok) {
+      const body = await r.json().catch(() => ({}));
+      window.alert(
+        `中断失败 · Cancel failed:\n` +
+        (body.error || `HTTP ${r.status}`)
+      );
+    }
+  } catch (e) {
+    window.alert(
+      `中断出错 · Cancel error:\n` +
+      ((e && e.message) || e)
+    );
   }
 }
 
