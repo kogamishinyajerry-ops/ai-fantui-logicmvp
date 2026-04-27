@@ -310,6 +310,14 @@ class ExecutionRecord:
     # GovernanceVerdict.to_json() plus a `decision` ("approved" |
     # "rejected") and `decided_at` once a reviewer responds.
     governance_review: dict | None = None
+    # P49-04: dry-run mode. When True, the orchestrator runs through
+    # PLANNING/EDITING/TESTING but does NOT commit, push, or open a
+    # PR; instead it captures the file diff and reverts. The audit
+    # ends in DRY_RUN_COMPLETE so a reviewer can preview the change
+    # before approving. dry_run_diff is the captured `git diff`
+    # output (unified diff text); empty when no edits applied.
+    dry_run: bool = False
+    dry_run_diff: str = ""
 
     def to_json(self) -> dict:
         return {
@@ -340,6 +348,8 @@ class ExecutionRecord:
                 if self.governance_review is not None
                 else None
             ),
+            "dry_run": self.dry_run,
+            "dry_run_diff": self.dry_run_diff,
         }
 
     @classmethod
@@ -380,6 +390,8 @@ class ExecutionRecord:
                 if data.get("governance_review") is not None
                 else None
             ),
+            dry_run=bool(data.get("dry_run", False)),
+            dry_run_diff=str(data.get("dry_run_diff") or ""),
         )
 
 

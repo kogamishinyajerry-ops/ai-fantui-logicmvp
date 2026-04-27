@@ -22,13 +22,14 @@ from well_harness.skill_executor.states import (
 # ─── 1. State enum ─────────────────────────────────────────────────────
 
 
-def test_state_enum_has_ten_states():
+def test_state_enum_has_eleven_states():
     """7 non-terminal (INIT/PLANNING/GOVERNANCE_HOLD/ASKING/EDITING/
-    TESTING/PR_OPEN) + 3 terminal (LANDED/ABORTED/FAILED) = 10.
-    GOVERNANCE_HOLD added in P49-02a between PLANNING and ASKING.
-    Locking the count so a future PR can't quietly drop a state
-    and rely on no caller tripping the diff."""
-    assert len(list(ExecutionState)) == 10
+    TESTING/PR_OPEN) + 4 terminal (LANDED/DRY_RUN_COMPLETE/ABORTED/
+    FAILED) = 11. GOVERNANCE_HOLD added in P49-02a;
+    DRY_RUN_COMPLETE added in P49-04. Locking the count so a future
+    PR can't quietly drop a state and rely on no caller tripping
+    the diff."""
+    assert len(list(ExecutionState)) == 11
 
 
 @pytest.mark.parametrize(
@@ -42,6 +43,7 @@ def test_state_enum_has_ten_states():
         "TESTING",
         "PR_OPEN",
         "LANDED",
+        "DRY_RUN_COMPLETE",
         "ABORTED",
         "FAILED",
     ],
@@ -60,9 +62,14 @@ def test_state_enum_serializes_to_string():
 # ─── 2. Terminal states ────────────────────────────────────────────────
 
 
-def test_three_terminal_states():
+def test_four_terminal_states():
     assert TERMINAL_STATES == frozenset(
-        {ExecutionState.LANDED, ExecutionState.ABORTED, ExecutionState.FAILED}
+        {
+            ExecutionState.LANDED,
+            ExecutionState.DRY_RUN_COMPLETE,
+            ExecutionState.ABORTED,
+            ExecutionState.FAILED,
+        }
     )
 
 
@@ -76,6 +83,7 @@ def test_three_terminal_states():
         (ExecutionState.TESTING, False),
         (ExecutionState.PR_OPEN, False),
         (ExecutionState.LANDED, True),
+        (ExecutionState.DRY_RUN_COMPLETE, True),
         (ExecutionState.ABORTED, True),
         (ExecutionState.FAILED, True),
     ],
