@@ -8,9 +8,14 @@ with a timestamp, so a later reader can replay the run.
 INIT
   └─ start_planning ──→ PLANNING
 PLANNING
-  ├─ plan_ready    ──→ ASKING
-  ├─ planner_error ──→ FAILED
-  └─ user_abort    ──→ ABORTED
+  ├─ plan_ready          ──→ ASKING
+  ├─ governance_required ──→ GOVERNANCE_HOLD   (P49-02a)
+  ├─ planner_error       ──→ FAILED
+  └─ user_abort          ──→ ABORTED
+GOVERNANCE_HOLD                                  (P49-02a)
+  ├─ governance_approved ──→ ASKING
+  ├─ governance_rejected ──→ ABORTED
+  └─ user_abort          ──→ ABORTED
 ASKING
   ├─ user_approved ──→ EDITING
   ├─ user_rejected ──→ ABORTED
@@ -48,6 +53,11 @@ class ExecutionState(str, enum.Enum):
 
     INIT = "INIT"
     PLANNING = "PLANNING"
+    # P49-02a: human-review pause between PLANNING and ASKING.
+    # Entered when evaluate_governance(proposal, plan) returns
+    # required=True; exits via governance_approved (→ ASKING) or
+    # governance_rejected/user_abort (→ ABORTED).
+    GOVERNANCE_HOLD = "GOVERNANCE_HOLD"
     ASKING = "ASKING"
     EDITING = "EDITING"
     TESTING = "TESTING"
@@ -70,6 +80,11 @@ ALLOWED_TRANSITIONS: dict[tuple[ExecutionState, str], ExecutionState] = {
     (ExecutionState.PLANNING, "plan_ready"): ExecutionState.ASKING,
     (ExecutionState.PLANNING, "planner_error"): ExecutionState.FAILED,
     (ExecutionState.PLANNING, "user_abort"): ExecutionState.ABORTED,
+    # P49-02a governance gate
+    (ExecutionState.PLANNING, "governance_required"): ExecutionState.GOVERNANCE_HOLD,
+    (ExecutionState.GOVERNANCE_HOLD, "governance_approved"): ExecutionState.ASKING,
+    (ExecutionState.GOVERNANCE_HOLD, "governance_rejected"): ExecutionState.ABORTED,
+    (ExecutionState.GOVERNANCE_HOLD, "user_abort"): ExecutionState.ABORTED,
     (ExecutionState.ASKING, "user_approved"): ExecutionState.EDITING,
     (ExecutionState.ASKING, "user_rejected"): ExecutionState.ABORTED,
     (ExecutionState.ASKING, "user_abort"): ExecutionState.ABORTED,

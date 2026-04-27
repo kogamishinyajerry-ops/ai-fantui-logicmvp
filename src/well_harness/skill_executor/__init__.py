@@ -75,6 +75,17 @@ from well_harness.skill_executor.gate import (
     GateResult,
     check_test_gate,
 )
+from well_harness.skill_executor.governance import (
+    DEFAULT_GUARDED_NAMESPACES,
+    EXTRA_GUARDED_NAMESPACES_ENV,
+    GOVERNANCE_ENABLED_ENV,
+    GovernanceMatch,
+    GovernanceVerdict,
+    RULE_EXPAND_KIND,
+    RULE_LOGIC_TRUTH_NAMESPACE,
+    RULE_RED_RISK,
+    evaluate_governance,
+)
 from well_harness.skill_executor.gate_check import (
     GateCheckResult,
     check_pr_audit_compliance,
@@ -148,6 +159,7 @@ from well_harness.skill_executor.git_ops import (
 )
 from well_harness.skill_executor.orchestrator import (
     EXECUTOR_VERSION,
+    GovernanceTimeoutError,
     OrchestratorError,
     OrchestratorResult,
     execute_proposal,
@@ -174,10 +186,15 @@ from well_harness.skill_executor.workbench_polling import (
     approval_signal_path,
     cancel_signal_path,
     check_cancel,
+    governance_approval_path,
+    governance_reject_path,
     read_and_clear_approval,
     read_and_clear_cancel,
+    read_and_clear_governance,
     write_approval_signal,
     write_cancel_signal,
+    write_governance_approval,
+    write_governance_reject,
 )
 from well_harness.skill_executor.test_runner import (
     TestRunnerError,

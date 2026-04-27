@@ -304,6 +304,12 @@ class ExecutionRecord:
     landed_sha: str = ""
     abort_reason: str = ""
     events: list[ExecutionEvent] = dataclasses.field(default_factory=list)
+    # P49-02a: governance gate verdict + reviewer outcome. Populated
+    # after the planner runs if any rule fired. Stored as a dict for
+    # forward-compat with future rule shapes; the contents are the
+    # GovernanceVerdict.to_json() plus a `decision` ("approved" |
+    # "rejected") and `decided_at` once a reviewer responds.
+    governance_review: dict | None = None
 
     def to_json(self) -> dict:
         return {
@@ -329,6 +335,11 @@ class ExecutionRecord:
             "landed_sha": self.landed_sha,
             "abort_reason": self.abort_reason,
             "events": [e.to_json() for e in self.events],
+            "governance_review": (
+                dict(self.governance_review)
+                if self.governance_review is not None
+                else None
+            ),
         }
 
     @classmethod
@@ -364,6 +375,11 @@ class ExecutionRecord:
             landed_sha=str(data.get("landed_sha") or ""),
             abort_reason=str(data.get("abort_reason") or ""),
             events=[ExecutionEvent.from_json(e) for e in (data.get("events") or [])],
+            governance_review=(
+                dict(data["governance_review"])
+                if data.get("governance_review") is not None
+                else None
+            ),
         )
 
 

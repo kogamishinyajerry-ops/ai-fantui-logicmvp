@@ -22,12 +22,13 @@ from well_harness.skill_executor.states import (
 # ─── 1. State enum ─────────────────────────────────────────────────────
 
 
-def test_state_enum_has_nine_states():
-    """6 non-terminal (INIT/PLANNING/ASKING/EDITING/TESTING/PR_OPEN)
-    + 3 terminal (LANDED/ABORTED/FAILED) = 9. Locking the count so
-    a future PR can't quietly drop a state and rely on no caller
-    tripping the diff."""
-    assert len(list(ExecutionState)) == 9
+def test_state_enum_has_ten_states():
+    """7 non-terminal (INIT/PLANNING/GOVERNANCE_HOLD/ASKING/EDITING/
+    TESTING/PR_OPEN) + 3 terminal (LANDED/ABORTED/FAILED) = 10.
+    GOVERNANCE_HOLD added in P49-02a between PLANNING and ASKING.
+    Locking the count so a future PR can't quietly drop a state
+    and rely on no caller tripping the diff."""
+    assert len(list(ExecutionState)) == 10
 
 
 @pytest.mark.parametrize(
@@ -35,6 +36,7 @@ def test_state_enum_has_nine_states():
     [
         "INIT",
         "PLANNING",
+        "GOVERNANCE_HOLD",
         "ASKING",
         "EDITING",
         "TESTING",

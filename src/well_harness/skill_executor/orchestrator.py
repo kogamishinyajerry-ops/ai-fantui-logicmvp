@@ -35,6 +35,7 @@ from __future__ import annotations
 import dataclasses
 import os
 import socket
+import time
 from pathlib import Path
 from typing import Any, Callable
 
@@ -90,6 +91,11 @@ from well_harness.skill_executor.test_runner import (
 from well_harness.skill_executor.workbench_polling import (
     ExecutionCancelled,
     check_cancel,
+    read_and_clear_governance,
+)
+from well_harness.skill_executor.governance import (
+    GovernanceVerdict,
+    evaluate_governance,
 )
 
 
@@ -100,6 +106,13 @@ class OrchestratorError(SkillExecutorError):
     """Wraps any failure that escapes the pipeline. The audit
     record is the source of truth for what happened; this just
     surfaces the most-recent error to the caller."""
+
+
+class GovernanceTimeoutError(SkillExecutorError):
+    """P49-02a: the governance gate waited longer than
+    governance_timeout_sec without seeing an approve/reject
+    signal. Treated as an abort — better to bail than to silently
+    proceed past a sensitive gate."""
 
 
 @dataclasses.dataclass
@@ -139,6 +152,23 @@ def execute_proposal(
     max_planner_retries: int = 2,
     planner_retry_delay_sec: float = 2.0,
     sleep_fn: Callable[[float], None] | None = None,
+    # P49-02a: governance gate. `governance_poll_fn` is the
+    # injection point for tests — signature
+    # (audit_dir, exec_id) → ("approved" | "rejected", payload) | None.
+    # Default polls workbench_polling.read_and_clear_governance with
+    # `governance_poll_interval_sec` between checks until
+    # `governance_timeout_sec` elapses (raises GovernanceTimeoutError).
+    # Tests pass a fake to short-circuit.
+    governance_poll_fn: Callable[..., Any] | None = None,
+    governance_poll_interval_sec: float = 1.0,
+    governance_timeout_sec: float = 3600.0,
+    # `None` means "follow auto_approve" — auto_approve already
+    # signals "skip human-in-the-loop", and governance is just
+    # another HITL gate. Tests + scripted runs that pass
+    # auto_approve=True don't have to ALSO remember to bypass
+    # governance. Pass an explicit True/False here only when you
+    # want governance behavior to differ from ASKING behavior.
+    auto_approve_governance: bool | None = None,
 ) -> OrchestratorResult:
     """Walk a proposal through the full executor pipeline.
 
@@ -233,8 +263,46 @@ def execute_proposal(
         if _check_cancel_and_abort(record, audit_dir, applied=None):
             return OrchestratorResult(record=record)
 
+        # ── Step 2.5 (P49-02a): governance gate ─────────────────
+        # After the planner produces a concrete plan but before any
+        # ASKING UX, evaluate whether the (proposal, plan) pair
+        # crosses a sensitive boundary (logic_truth namespace, red
+        # risk, or expand kind). If so, transition to
+        # GOVERNANCE_HOLD and wait for an approve/reject signal.
+        # Cancel + timeout also abort the gate.
+        verdict = evaluate_governance(proposal=proposal, plan=plan)
+        gate_taken = False
+        # Resolve the auto-approve-governance default: None mirrors
+        # auto_approve so callers that opted into the legacy
+        # "skip ASKING" flag also bypass governance for free.
+        effective_auto_gov = (
+            auto_approve_governance
+            if auto_approve_governance is not None
+            else auto_approve
+        )
+        if verdict.required:
+            governance_outcome = _run_governance_gate(
+                record=record,
+                audit_dir=audit_dir,
+                verdict=verdict,
+                poll_fn=governance_poll_fn,
+                poll_interval_sec=governance_poll_interval_sec,
+                timeout_sec=governance_timeout_sec,
+                auto_approve=effective_auto_gov,
+                sleep_fn=sleep_actual,
+            )
+            if governance_outcome != "approved":
+                # Aborted — _run_governance_gate already updated
+                # state, abort_reason, and finished_at.
+                return OrchestratorResult(record=record)
+            # On approved: governance_approved already transitioned
+            # GOVERNANCE_HOLD → ASKING. Skip the redundant
+            # plan_ready transition below.
+            gate_taken = True
+
         # ── Step 3: PLANNING → ASKING + wait for approval ────────
-        _transition(record, "plan_ready", audit_dir)
+        if not gate_taken:
+            _transition(record, "plan_ready", audit_dir)
         ask = Ask(
             ask_id=_new_ask_id(record.exec_id),
             question=_ask_question_for(plan),
@@ -559,6 +627,145 @@ def _run_planner_with_retry(
         except PlannerError as exc:
             # Schema/validation error — same prompt won't fix it
             return None, exc
+
+
+def _run_governance_gate(
+    *,
+    record: ExecutionRecord,
+    audit_dir: Path,
+    verdict: GovernanceVerdict,
+    poll_fn: Callable[..., Any] | None,
+    poll_interval_sec: float,
+    timeout_sec: float,
+    auto_approve: bool,
+    sleep_fn: Callable[[float], None],
+) -> str:
+    """Drive the GOVERNANCE_HOLD state. Returns one of:
+      "approved" — caller should continue to ASKING
+      "rejected" — caller should bail; record is already terminal
+      "cancelled" — caller should bail; record is already terminal
+      "timeout"  — caller should bail; record is already terminal
+
+    Mutates `record` (state, governance_review, events, abort_reason,
+    finished_at) and persists via _persist/_finish so the audit
+    reflects every transition the gate took.
+
+    Polls the file-based approve/reject signals (P49-01-style IPC)
+    every `poll_interval_sec`. Cancel signal also aborts. If
+    `timeout_sec` elapses with no decision, the run aborts —
+    silent advance past a sensitive gate is unsafe.
+    """
+    # Move into GOVERNANCE_HOLD and stamp the verdict so a reviewer
+    # can see exactly which rules fired.
+    review_payload = dict(verdict.to_json())
+    review_payload.update({
+        "decision": None,
+        "decided_at": "",
+        "decided_by": "",
+        "decision_note": "",
+    })
+    record.governance_review = review_payload
+    _push_event(
+        record,
+        kind="governance_required",
+        note="; ".join(verdict.reasons())[:240],
+    )
+    _transition(record, "governance_required", audit_dir)
+
+    # Auto-approve path (CLI flag for power users / tests)
+    if auto_approve:
+        review_payload["decision"] = "approved"
+        review_payload["decided_at"] = now_iso()
+        review_payload["decided_by"] = "auto-approve-mode"
+        review_payload["decision_note"] = (
+            "auto_approve_governance=True via execute_proposal"
+        )
+        _push_event(
+            record, kind="governance_approved",
+            note="auto-approve-mode",
+        )
+        _transition(record, "governance_approved", audit_dir)
+        _persist(record, audit_dir)
+        return "approved"
+
+    # Polling loop
+    poller = poll_fn or _default_governance_poll
+    deadline = time.monotonic() + timeout_sec
+    while True:
+        # Cancel takes precedence over the gate decision — a
+        # reviewer who hits Cancel mid-hold means "stop everything",
+        # not "approve via the back door".
+        info = check_cancel(audit_dir=audit_dir, exec_id=record.exec_id)
+        if info is not None:
+            cancel_exc = ExecutionCancelled(
+                actor=info["actor"], note=info.get("note", ""),
+            )
+            review_payload["decision"] = "cancelled"
+            review_payload["decided_at"] = now_iso()
+            review_payload["decided_by"] = info["actor"]
+            review_payload["decision_note"] = info.get("note", "")
+            _abort_with_cancel(record, audit_dir, cancel_exc, applied=None)
+            return "cancelled"
+
+        result = poller(audit_dir=audit_dir, exec_id=record.exec_id)
+        if result is not None:
+            kind, payload = result
+            review_payload["decided_at"] = (
+                payload.get("at") or now_iso()
+            )
+            review_payload["decided_by"] = (
+                payload.get("actor") or "anonymous"
+            )
+            review_payload["decision_note"] = payload.get("note", "")
+            if kind == "approved":
+                review_payload["decision"] = "approved"
+                _push_event(
+                    record, kind="governance_approved",
+                    note=(payload.get("note") or "")[:240],
+                )
+                _transition(record, "governance_approved", audit_dir)
+                _persist(record, audit_dir)
+                return "approved"
+            # rejected
+            review_payload["decision"] = "rejected"
+            record.abort_reason = (
+                "governance: rejected by "
+                f"{payload.get('actor') or 'anonymous'}"
+                + (
+                    f" ({payload.get('note', '')})"
+                    if payload.get("note")
+                    else ""
+                )
+            )
+            _push_event(
+                record, kind="governance_rejected",
+                note=(payload.get("note") or "")[:240],
+            )
+            _transition(record, "governance_rejected", audit_dir)
+            _finish(record, audit_dir)
+            return "rejected"
+
+        if time.monotonic() >= deadline:
+            review_payload["decision"] = "timeout"
+            review_payload["decided_at"] = now_iso()
+            record.abort_reason = (
+                f"governance: no decision within {timeout_sec:.0f}s"
+            )
+            _push_event(
+                record, kind="governance_timeout",
+                note=record.abort_reason,
+            )
+            _transition(record, "user_abort", audit_dir)
+            _finish(record, audit_dir)
+            return "timeout"
+
+        sleep_fn(poll_interval_sec)
+
+
+def _default_governance_poll(*, audit_dir: Path, exec_id: str):
+    return read_and_clear_governance(
+        audit_dir=audit_dir, exec_id=exec_id,
+    )
 
 
 def _check_cancel_and_abort(

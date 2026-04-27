@@ -44,6 +44,8 @@ from well_harness.skill_executor.states import ExecutionState
 _ALL_STATES = (
     ExecutionState.INIT.value,
     ExecutionState.PLANNING.value,
+    # P49-02a — sits between PLANNING and ASKING
+    ExecutionState.GOVERNANCE_HOLD.value,
     ExecutionState.ASKING.value,
     ExecutionState.EDITING.value,
     ExecutionState.TESTING.value,

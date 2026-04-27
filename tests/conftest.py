@@ -1,6 +1,7 @@
 """测试辅助：C919 E-TRAS Frozen V1.0 单元/集成测试共用 fixtures。"""
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -9,6 +10,14 @@ import pytest
 _SRC = Path(__file__).resolve().parents[1] / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
+
+
+# P49-02a (2026-04-27): governance gate is ON by default in
+# production; the test suite default is OFF so existing tests
+# don't have to thread approval signals through every executor
+# call. Tests that exercise the gate explicitly opt back in via
+# a monkeypatch of WORKBENCH_GOVERNANCE_ENABLED to "1".
+os.environ.setdefault("WORKBENCH_GOVERNANCE_ENABLED", "0")
 
 from well_harness.adapters.c919_etras_frozen_v1 import LockInputs, RawInputs
 
