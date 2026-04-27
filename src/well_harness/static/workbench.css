@@ -3013,6 +3013,102 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
 /* P50-04 (2026-04-27): failure category breakdown. Sits between
    the state bars and the recent_failures list. Only shown when
    total > 0 — hidden by default to avoid empty noise. */
+/* P50-07 (2026-04-27): SLO verdict chip in collapsed summary +
+   breach detail in expanded panel. The chip color reuses the same
+   green/yellow/red palette as the per-state badges (P49-01b) and
+   failure-category pills (P50-04) so the dashboard speaks one
+   visual language across all health surfaces. */
+.workbench-metrics-slo-chip {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+  margin-right: 0.4rem;
+}
+.workbench-metrics-slo-chip[data-slo-severity="green"] {
+  color: #6cd97a;
+  background: rgba(108, 217, 122, 0.12);
+  border-color: rgba(108, 217, 122, 0.35);
+}
+.workbench-metrics-slo-chip[data-slo-severity="yellow"] {
+  color: #f7bc5c;
+  background: rgba(247, 188, 92, 0.14);
+  border-color: rgba(247, 188, 92, 0.4);
+}
+.workbench-metrics-slo-chip[data-slo-severity="red"] {
+  color: #ff6b6b;
+  background: rgba(255, 92, 92, 0.14);
+  border-color: rgba(255, 92, 92, 0.45);
+}
+.workbench-metrics-slo-chip[data-slo-severity="no_data"] {
+  color: rgba(206, 223, 236, 0.55);
+  background: rgba(150, 168, 184, 0.08);
+  border-color: rgba(150, 168, 184, 0.25);
+}
+.workbench-metrics-slo-breaches {
+  margin-top: 0.5rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(150, 168, 184, 0.18);
+}
+.workbench-metrics-slo-eyebrow {
+  margin: 0 0 0.3rem 0;
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(206, 223, 236, 0.5);
+}
+.workbench-metrics-slo-breach-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.workbench-metrics-slo-breach-item {
+  display: grid;
+  grid-template-columns: 4.5rem 8rem 1fr;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.62rem;
+}
+.workbench-metrics-slo-breach-pill {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+.workbench-metrics-slo-breach-pill[data-slo-severity="yellow"] {
+  color: #f7bc5c;
+  background: rgba(247, 188, 92, 0.14);
+  border-color: rgba(247, 188, 92, 0.4);
+}
+.workbench-metrics-slo-breach-pill[data-slo-severity="red"] {
+  color: #ff6b6b;
+  background: rgba(255, 92, 92, 0.14);
+  border-color: rgba(255, 92, 92, 0.45);
+}
+.workbench-metrics-slo-breach-name {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.6rem;
+  color: #cfe1ee;
+}
+.workbench-metrics-slo-breach-note {
+  color: rgba(206, 223, 236, 0.7);
+  font-size: 0.6rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .workbench-metrics-failure-breakdown {
   margin-top: 0.5rem;
   padding-top: 0.45rem;

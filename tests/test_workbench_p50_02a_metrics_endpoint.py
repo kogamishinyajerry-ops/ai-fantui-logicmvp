@@ -208,5 +208,8 @@ def test_metrics_endpoint_returns_stable_top_level_keys(server):
         # when the endpoint was hit (even if total=0 → empty
         # by_category list).
         "failure_classification",
+        # P50-07: SLO verdict (overall + breaches + thresholds).
+        # Always present once compute_metrics has run.
+        "slo_status",
     }
     assert set(body.keys()) == expected

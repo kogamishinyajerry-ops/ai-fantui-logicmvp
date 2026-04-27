@@ -97,6 +97,13 @@ from well_harness.skill_executor.phase_timings import (
     PhaseTimings,
     compute_phase_timings,
 )
+from well_harness.skill_executor.slo import (
+    SLOBreach,
+    SLOSeverity,
+    SLOStatus,
+    SLOThresholds,
+    compute_slo_status,
+)
 from well_harness.skill_executor.git_ops import (
     CommitResult,
     GitError,
@@ -221,6 +228,10 @@ __all__ = [
     "PhaseTiming",
     "PhaseTimings",
     "RecentFailure",
+    "SLOBreach",
+    "SLOSeverity",
+    "SLOStatus",
+    "SLOThresholds",
     "MINIMAX_API_BASE",
     "MINIMAX_DEFAULT_MODEL",
     "MINIMAX_REQUEST_TIMEOUT_SEC",
@@ -256,6 +267,7 @@ __all__ = [
     "commit_files",
     "compute_metrics",
     "compute_phase_timings",
+    "compute_slo_status",
     "create_branch",
     "current_branch",
     "execute_proposal",
