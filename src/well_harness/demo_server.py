@@ -369,6 +369,19 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             )
             return
 
+        # P49-01b (2026-04-27): per-proposal latest-audit lookup.
+        # The workbench inbox renders one execution-state badge per
+        # proposal card; rather than each card scanning the full
+        # audit list, the server returns just the freshest record.
+        # Returns 200 with audit JSON, or 204 if no audit exists yet
+        # for this proposal.
+        if (
+            parsed.path.startswith(PROPOSALS_PATH + "/")
+            and parsed.path.endswith("/execution")
+        ):
+            self._handle_proposal_latest_execution(parsed.path)
+            return
+
         # P48-06 (2026-04-27): skill-execution audit reads.
         #   GET /api/skill-executions             list all
         #   GET /api/skill-executions?proposal=X  filter by proposal
@@ -1209,6 +1222,42 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             200,
             {"executions": [r.to_json() for r in records]},
         )
+
+    def _handle_proposal_latest_execution(self, raw_path: str) -> None:
+        """GET /api/proposals/<proposal_id>/execution.
+
+        Returns the most recent skill_executor audit for the given
+        proposal_id (newest first by exec_id). Used by the workbench
+        inbox to render one state badge per proposal card without
+        each card scanning the full audit list.
+
+        200 — audit JSON for the freshest execution
+        204 — no audit exists yet for this proposal (the executor
+              never ran, or was disabled)
+        400 — malformed path
+        """
+        try:
+            from well_harness.skill_executor.audit import list_audits
+        except ImportError:
+            self._send_json(500, {"error": "skill_executor_unavailable"})
+            return
+        # Path shape: /api/proposals/<id>/execution
+        # Strip leading PROPOSALS_PATH + "/" and trailing "/execution"
+        prefix = PROPOSALS_PATH + "/"
+        if not raw_path.startswith(prefix) or not raw_path.endswith("/execution"):
+            self._send_json(400, {"error": "invalid_path"})
+            return
+        proposal_id = raw_path[len(prefix) : -len("/execution")]
+        if not proposal_id or "/" in proposal_id:
+            self._send_json(400, {"error": "invalid_proposal_id"})
+            return
+        records = list_audits(proposal_id=proposal_id)
+        if not records:
+            # 204 No Content — semantically "no execution yet"
+            self.send_response(204)
+            self.end_headers()
+            return
+        self._send_json(200, records[0].to_json())
 
     def _handle_get_skill_execution(self, exec_id: str) -> None:
         """GET /api/skill-executions/<exec_id>. Returns the audit

@@ -2694,3 +2694,104 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
 .workbench-suggestion-interpretation-strategy[data-interpreter-strategy="llm_fallback_to_rules"] {
   background: rgba(247, 188, 92, 0.16); color: #f7bc5c;
 }
+
+/* P49-01b (2026-04-27): per-proposal execution-state badge.
+   Renders inline in the proposal card title row, next to the
+   OPEN/ACCEPTED/REJECTED status. Lights up with the current
+   skill_executor state so the reviewer can see at a glance
+   "is the executor still planning?", "is it waiting on me?",
+   "did it land?". One pill per state, distinct color. */
+.workbench-execution-badge-slot:empty {
+  display: none;
+}
+.workbench-execution-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: 0.35rem;
+  padding: 0.05rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.workbench-execution-badge-glyph {
+  font-size: 0.75rem;
+  line-height: 1;
+}
+.workbench-execution-badge-label {
+  font-size: 0.62rem;
+}
+.workbench-execution-badge-backfill {
+  margin-left: 0.2rem;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: help;
+}
+/* INIT — cool gray, the executor hasn't started */
+.workbench-execution-badge[data-execution-css="init"] {
+  background: rgba(150, 168, 184, 0.14);
+  color: #aab8c4;
+  border-color: rgba(150, 168, 184, 0.3);
+}
+/* PLANNING — blue, LLM is thinking */
+.workbench-execution-badge[data-execution-css="planning"] {
+  background: rgba(79, 184, 255, 0.16);
+  color: #4fb8ff;
+  border-color: rgba(79, 184, 255, 0.4);
+}
+/* ASKING — cyan, waiting on engineer (matches pending-exec card) */
+.workbench-execution-badge[data-execution-css="asking"] {
+  background: rgba(0, 200, 245, 0.16);
+  color: #00c8f5;
+  border-color: rgba(0, 200, 245, 0.5);
+  animation: workbench-exec-asking-pulse 2.4s ease-in-out infinite;
+}
+@keyframes workbench-exec-asking-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 200, 245, 0); }
+  50%      { box-shadow: 0 0 0 4px rgba(0, 200, 245, 0.18); }
+}
+/* EDITING — purple, modifying source files */
+.workbench-execution-badge[data-execution-css="editing"] {
+  background: rgba(176, 124, 255, 0.16);
+  color: #b07cff;
+  border-color: rgba(176, 124, 255, 0.4);
+}
+/* TESTING — yellow, pytest running */
+.workbench-execution-badge[data-execution-css="testing"] {
+  background: rgba(247, 188, 92, 0.16);
+  color: #f7bc5c;
+  border-color: rgba(247, 188, 92, 0.4);
+}
+/* PR_OPEN — light green, PR submitted but not merged */
+.workbench-execution-badge[data-execution-css="pr-open"] {
+  background: rgba(0, 229, 160, 0.13);
+  color: #4ee5a8;
+  border-color: rgba(0, 229, 160, 0.4);
+}
+/* LANDED — deep green, the change is in main */
+.workbench-execution-badge[data-execution-css="landed"] {
+  background: rgba(0, 192, 120, 0.18);
+  color: #00e5a0;
+  border-color: rgba(0, 229, 160, 0.55);
+}
+/* ABORTED — orange, user rejected or test gate blocked */
+.workbench-execution-badge[data-execution-css="aborted"] {
+  background: rgba(255, 145, 60, 0.16);
+  color: #ff913c;
+  border-color: rgba(255, 145, 60, 0.4);
+}
+/* FAILED — red, executor crashed unrecoverably */
+.workbench-execution-badge[data-execution-css="failed"] {
+  background: rgba(255, 92, 92, 0.18);
+  color: #ff6b6b;
+  border-color: rgba(255, 92, 92, 0.5);
+}
+/* Unknown future state — neutral fallback */
+.workbench-execution-badge[data-execution-css="unknown"] {
+  background: rgba(150, 168, 184, 0.1);
+  color: #cfe1ee;
+  border-color: rgba(150, 168, 184, 0.25);
+}
