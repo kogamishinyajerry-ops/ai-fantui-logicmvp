@@ -3912,10 +3912,71 @@ body[data-active-tool="new"] [data-dock-section="new"] {
     transform: translateX(0);
   }
 }
-/* Tame the older sections' margins so they don't push past the
-   drawer's intrinsic padding when reused. */
-body[data-active-tool] [data-dock-section][hidden] {
+/* P53-01: lift the [hidden] attribute ONLY for the matching
+   tool/section pair when that tool is active. The previous
+   `body[data-active-tool] [data-dock-section][hidden]` selector
+   matched body[data-active-tool=""] (set by the dock close path
+   and P52-07's auto-close timeout), which forced ALL hidden
+   drawers into document flow at the top of <main>. */
+body[data-active-tool="annotate"] [data-dock-section="annotate"][hidden],
+body[data-active-tool="approve"] [data-dock-section="approve"][hidden],
+body[data-active-tool="monitor"] [data-dock-section="monitor"][hidden],
+body[data-active-tool="new"] [data-dock-section="new"][hidden] {
   display: block;
+}
+
+/* P53-01: drawer-scoped button polish (Claude.app sizing).
+   The global .workbench-toolbar-button uses 0.75rem 1rem padding +
+   pill radius + teal-on-teal gradient — fine for the legacy demo
+   surfaces, way too loud inside a 380px drawer. Override only when
+   nested under a tool-drawer-section so we don't disturb the
+   workbench-bundle / approval-center legacy surfaces. */
+.workbench-tool-drawer-section .workbench-toolbar-button,
+.workbench-tool-drawer-section .workbench-run-button,
+.workbench-tool-drawer-section .workbench-file-picker {
+  padding: 0.42rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.3;
+  border: 1px solid var(--wb-hairline);
+  background: rgba(255, 255, 255, 0.04);
+  color: #edf8ff;
+  box-shadow: none;
+  transform: none;
+  transition:
+    background var(--wb-duration-drawer) var(--wb-ease-out),
+    border-color var(--wb-duration-drawer) var(--wb-ease-out);
+}
+.workbench-tool-drawer-section .workbench-toolbar-button:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(143, 214, 233, 0.22);
+  box-shadow: none;
+  transform: none;
+}
+.workbench-tool-drawer-section .workbench-toolbar-button:focus-visible {
+  outline: 2px solid var(--accent, #67e8f9);
+  outline-offset: 2px;
+  border-color: var(--accent, #67e8f9);
+  box-shadow: none;
+}
+
+.workbench-tool-drawer-section .workbench-toolbar-button.is-primary {
+  background: var(--accent, #67e8f9);
+  border-color: var(--accent, #67e8f9);
+  color: #051018;
+  font-weight: 600;
+}
+.workbench-tool-drawer-section .workbench-toolbar-button.is-primary:hover {
+  background: rgba(103, 232, 249, 0.85);
+  border-color: rgba(103, 232, 249, 0.85);
+}
+
+/* Same tightening applied to the annotation-inbox-item action chips
+   so the per-row buttons inside the approve drawer scale down too. */
+.workbench-tool-approve .workbench-annotation-inbox-item-actions .workbench-toolbar-button {
+  padding: 0.32rem 0.7rem;
+  font-size: 0.72rem;
 }
 
 /* Drawer header (re-usable across all tool sections).
