@@ -146,17 +146,62 @@ commit subject; keep <70 chars).
 PR body: the commit body verbatim + a "Verification" checklist
 (test count delta, manual smoke steps the user should run).
 
-### Step 8 — On merge, delete the brief
+### Step 8 — After merge: record landed SHA + delete brief
+
+P47-02 (2026-04-27): the workbench needs the merged commit SHA so
+it can offer "propose revert" on the inbox card. Record it before
+deleting the brief:
 
 ```bash
+# 1. Pull main + grab the merged commit's full SHA
+git checkout main && git pull
+MERGED_SHA=$(git log -1 --format=%H --grep="{PROP-ID}")
+
+# 2. Tell the workbench the truth-engine commit landed
+curl -X POST http://localhost:8770/api/proposals/{PROP-ID}/landed \
+     -H 'Content-Type: application/json' \
+     -d "{\"sha\": \"$MERGED_SHA\", \"actor\": \"claude-code-executor\"}"
+
+# 3. Delete the brief (the proposal JSON stays as audit truth)
 rm .planning/dev_queue/{PROP-ID}.md
 git add .planning/dev_queue/
 git commit -m "chore: clear dev_queue/{PROP-ID}.md (PR #N merged)"
 ```
 
-The proposal JSON remains in `.planning/proposals/` as the audit
-truth (status, history, original interpretation). The brief was
-just the handoff signal; once executed it has no further use.
+If the workbench server isn't running locally, skip step 2 — the
+SHA is also recoverable via `git log --grep="{PROP-ID}"`. The
+"propose revert" affordance will light up the next time the user
+manually POSTs the SHA, OR via a future cleanup pass that
+backfills landed SHAs from the git log.
+
+### Step 8a — Revert briefs (kind="revert")
+
+If the brief filename matches a revert proposal (the brief title
+ends in `· REVERT` and the JSON has `kind: "revert"`), follow the
+SAME plan/ask/edit/PR/merge sequence — DO NOT just run
+`git revert <sha>`. Per user direction Q2 (2026-04-27):
+
+> revert 工单的 skill 行为：把要 revert 的 diff 当成"目标态"，
+> 让 skill 像普通工单一样规划 → 询问 → 改写
+
+So:
+
+- Step 4 ("plan"): inspect `git show {revert_target_sha}` to
+  understand what's being undone, but treat the file contents at
+  `{revert_target_sha}~1` as the desired ground truth. Plan the
+  reversal as a regular edit (e.g. "remove the
+  `sw2_hysteresis_tra_deg` condition I added in {target_sha}").
+- Step 5 ("ask"): show the user a clean diff of what will be
+  removed. They may want to keep parts (e.g. the test additions
+  but not the controller change).
+- Step 6 ("edit"): apply only what the user confirmed. Often this
+  IS basically `git revert` for the specific files, but routed
+  through Edit/Write so any conflict with intervening commits
+  surfaces to the user instead of failing silently.
+- Step 7 ("PR"): branch name `revert/{PROP-ID}-undo-{target_sha}`,
+  PR title `revert({system}): undo {target_sha} per {PROP-ID}`.
+- Step 8: same `/landed` call as a modify; the workbench treats
+  revert proposals identically for SHA tracking.
 
 ## Truth-engine red line — critical
 

@@ -2540,6 +2540,60 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
   background: rgba(79, 184, 255, 0.08);
 }
 
+/* P47-02 (2026-04-27): revert affordances — kind badge, revert
+   banner, propose-revert button, landed-sha tag. The revert
+   workflow goes through the same proposal lifecycle as a modify;
+   the visual cues here just make it obvious which side of the
+   loop a given ticket sits on. */
+.workbench-annotation-inbox-item-kind-badge {
+  display: inline-block;
+  padding: 0.1rem 0.4rem;
+  margin-left: 0.4rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border-radius: 3px;
+  background: rgba(255, 184, 79, 0.12);
+  border: 1px solid rgba(255, 184, 79, 0.4);
+  color: #ffb84f;
+}
+.workbench-annotation-inbox-item-revert-banner {
+  margin-top: 0.35rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.65rem;
+  background: rgba(255, 184, 79, 0.06);
+  border-left: 2px solid rgba(255, 184, 79, 0.45);
+  border-radius: 2px;
+  color: rgba(206, 223, 236, 0.85);
+}
+.workbench-annotation-inbox-item-revert-banner code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  color: #ffb84f;
+  font-size: 0.62rem;
+}
+.workbench-annotation-inbox-item-landed code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  color: #00e5a0;
+  font-size: 0.62rem;
+}
+.workbench-propose-revert-button {
+  margin-top: 0.4rem;
+  margin-left: 0.4rem;
+  background: transparent;
+  color: #ffb84f;
+  border: 1px solid rgba(255, 184, 79, 0.4);
+}
+.workbench-propose-revert-button:hover:not([disabled]) {
+  background: rgba(255, 184, 79, 0.08);
+}
+.workbench-propose-revert-button[disabled] {
+  cursor: progress;
+  opacity: 0.6;
+}
+.workbench-annotation-inbox-item[data-proposal-kind="revert"] {
+  border-left: 3px solid rgba(255, 184, 79, 0.45);
+}
+
 /* P45-03 (2026-04-26): interpreter strategy toggle + result badge.
    The chip lives in the suggestion-form header (default Rules, click
    flips to LLM). The badge in the result panel header echoes which
