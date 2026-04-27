@@ -280,9 +280,14 @@ def test_proposals_get_filters_by_status_query(server):
         'id="annotation-inbox-list"',
         'id="annotation-inbox-refresh-btn"',
         'data-inbox-state="loading"',
-        "已提交工单",
-        "审核队列 · Review Queue",
-        "↻ 刷新 · Refresh",
+        # P53-02 (2026-04-27): inbox aside lost its inner header
+        # ("已提交工单" + "审核队列" h2 + "↻ 刷新 · Refresh" button).
+        # The wrapping #workbench-tool-approve drawer header now
+        # carries the "审批中心 · Approval Center" title; the inbox
+        # is just one section inside it. Refresh button is still
+        # present (id preserved for JS) but with a shorter label.
+        "工单 · Proposals",
+        "↻ 刷新",
         "载入中… · loading…",
     ],
 )

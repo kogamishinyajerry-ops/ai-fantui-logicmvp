@@ -150,9 +150,11 @@ def test_css_dock_label_is_readable_size():
 
 
 def test_css_hairline_border_token():
-    """Hairlines use 0.10 alpha now (was 0.18-0.22). The whole
-    visual breathes lighter — borders are present but not noisy."""
-    assert "--wb-hairline: rgba(143, 214, 233, 0.10)" in CSS
+    """Hairlines use the --wb-hairline token. P53-02 migrated the
+    token value from cyan-tinted rgba(143,214,233,0.10) to neutral
+    rgba(255,255,255,0.08) — Claude.app reserves the brand accent
+    for focus rings + active states only, separators stay neutral."""
+    assert "--wb-hairline: rgba(255, 255, 255, 0.08)" in CSS
     # The drawer + dock now reference --wb-hairline (not the old
     # raw rgba values). Spot-check by hunting inside the dock rule.
     dock_rule = re.search(
@@ -182,6 +184,9 @@ def test_css_drawer_radius_right_edge_only():
 
 
 def test_drawer_header_eyebrow_is_uppercase_small():
+    """P53-02 retuned the eyebrow: 0.7rem → 0.65rem font (matches
+    the inbox toolbar label) + 0.08em → 0.04em letter-spacing
+    (Claude.app eyebrows use loose-but-not-architectural tracking)."""
     rule = re.search(
         r"\.workbench-tool-drawer-header\s+\.eyebrow\s*\{[^}]*\}",
         CSS,
@@ -190,8 +195,11 @@ def test_drawer_header_eyebrow_is_uppercase_small():
     assert rule is not None
     body = rule.group(0)
     assert "text-transform: uppercase" in body
-    assert "0.7rem" in body
-    assert "letter-spacing: 0.08em" in body
+    # Either 0.65rem or 0.7rem (the next sub-phase may revisit), but
+    # not larger.
+    assert "0.65rem" in body or "0.7rem" in body
+    # Letter-spacing tightened — 0.04em is the new default.
+    assert "letter-spacing: 0.04em" in body or "letter-spacing: 0.05em" in body
 
 
 def test_drawer_header_close_button_focusable():
