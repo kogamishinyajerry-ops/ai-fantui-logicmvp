@@ -72,6 +72,19 @@
           <span>📜 面板版本 · Panel Version</span>
           <strong data-panel-version-label>载入中… · loading…</strong>
         </button>
+        <!-- P47-01 (2026-04-27): per-namespace lineage rows, populated by JS
+             from /api/workbench/state-of-world > panel_namespaces. Three
+             rows (logic_truth, requirements, simulation_workbench) so the
+             engineer can spot at a glance whether any namespace has
+             drifted past the others. Empty until JS populates; renders
+             inline in the chip-row beneath the main chip via flex-wrap. -->
+        <div
+          id="workbench-panel-namespaces"
+          class="workbench-panel-namespaces"
+          data-panel-namespaces-state="loading"
+          aria-label="面板真值各命名空间最近一次提交 · Latest commit per truth namespace"
+          hidden
+        ></div>
         <button
           id="workbench-review-mode-toggle"
           type="button"
