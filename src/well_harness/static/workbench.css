@@ -4386,3 +4386,377 @@ body[data-active-tool="new"] [data-dock-section="new"][hidden] {
 .workbench-shell {
   padding: 0;
 }
+
+/* ─── P54-02: multi-view canvas + dock view-group ───────────────
+   The dock now carries two stacked groups separated by a hairline.
+   The TOP group ("views") switches the canvas via body[data-active-
+   view="X"]; the BOTTOM group ("tools") opens drawer overlays via
+   body[data-active-tool="X"]. Both states are orthogonal — opening
+   the annotate drawer doesn't change the active canvas underneath. */
+.workbench-dock-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.workbench-dock-divider {
+  height: 1px;
+  margin: 0.4rem 0.5rem;
+  background: var(--wb-hairline);
+}
+
+/* Default-hide every canvas-view; the body[data-active-view="X"]
+   selector below promotes exactly one to display:flex. */
+[data-canvas-view] {
+  display: none;
+}
+body[data-active-view="circuit"] [data-canvas-view="circuit"],
+body[data-active-view="sim"] [data-canvas-view="sim"],
+body[data-active-view="cockpit"] [data-canvas-view="cockpit"],
+body[data-active-view="spec"] [data-canvas-view="spec"] {
+  display: flex;
+}
+/* When no body[data-active-view] is set yet (initial paint, before
+   JS boots), default to showing the circuit so the page doesn't
+   flash empty. */
+body:not([data-active-view]) [data-canvas-view="circuit"] {
+  display: flex;
+}
+
+/* Canvas-view shared chrome — each view is the canvas hero, so
+   match the circuit-hero's full-bleed treatment. */
+.workbench-canvas-view {
+  flex-direction: column;
+  min-height: calc(100vh - 1rem);
+  padding: 1.5rem 1.75rem 2rem;
+  color: #edf8ff;
+}
+.workbench-canvas-view-header {
+  margin: 0 0 1.5rem;
+  max-width: 720px;
+}
+.workbench-canvas-view-header .eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #93a8b8);
+  font-weight: 500;
+}
+.workbench-canvas-view-header h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: #edf8ff;
+}
+.workbench-canvas-view-sub {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-muted, #93a8b8);
+  line-height: 1.6;
+}
+
+/* — Simulation panel — */
+.workbench-sim-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  gap: 1.4rem;
+  align-items: start;
+  max-width: 1080px;
+}
+.workbench-sim-section-eyebrow {
+  margin: 0 0 0.7rem;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #93a8b8);
+  font-weight: 500;
+}
+.workbench-sim-params {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  padding: 1rem 1.1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--wb-hairline);
+  border-radius: 12px;
+}
+.workbench-sim-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.workbench-sim-field span {
+  font-size: 0.72rem;
+  color: var(--text-muted, #93a8b8);
+}
+.workbench-sim-field input {
+  font-family: inherit;
+  font-size: 0.82rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--wb-hairline);
+  border-radius: 6px;
+  background: rgba(10, 14, 20, 0.6);
+  color: #edf8ff;
+}
+.workbench-sim-field input:focus {
+  outline: none;
+  border-color: var(--accent, #67e8f9);
+  box-shadow: 0 0 0 2px rgba(103, 232, 249, 0.22);
+}
+.workbench-sim-params .workbench-toolbar-button {
+  margin-top: 0.4rem;
+}
+.workbench-sim-output {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 1.1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--wb-hairline);
+  border-radius: 12px;
+}
+.workbench-sim-chart {
+  border: 1px solid var(--wb-hairline);
+  border-radius: 8px;
+  background: rgba(5, 10, 20, 0.6);
+  padding: 0.6rem;
+}
+.workbench-sim-chart svg {
+  display: block;
+  width: 100%;
+  height: 220px;
+  color: var(--text-muted, #93a8b8);
+}
+.workbench-sim-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+}
+.workbench-sim-stats dt {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #93a8b8);
+  margin-bottom: 0.25rem;
+}
+.workbench-sim-stats dd {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: #edf8ff;
+  font-variant-numeric: tabular-nums;
+}
+
+/* — Cockpit panel — */
+.workbench-cockpit-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) 1fr;
+  gap: 1.4rem;
+  align-items: start;
+  max-width: 920px;
+}
+.workbench-cockpit-section-eyebrow {
+  margin: 0 0 0.85rem;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #93a8b8);
+  font-weight: 500;
+}
+.workbench-cockpit-throttle,
+.workbench-cockpit-indicators {
+  padding: 1.1rem 1.2rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--wb-hairline);
+  border-radius: 12px;
+}
+.workbench-cockpit-quadrant {
+  display: flex;
+  gap: 0.85rem;
+  align-items: stretch;
+  margin-bottom: 1rem;
+}
+.workbench-cockpit-lever {
+  flex: 1;
+  position: relative;
+  height: 200px;
+  border: 1px solid var(--wb-hairline);
+  border-radius: 10px;
+  background: rgba(10, 14, 20, 0.6);
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 0.6rem;
+}
+.workbench-cockpit-lever-track {
+  position: absolute;
+  top: 12px;
+  bottom: 36px;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  background: linear-gradient(to bottom, var(--accent, #67e8f9) 0%, transparent 60%);
+  border-radius: 2px;
+  opacity: 0.55;
+}
+.workbench-cockpit-lever-reverse .workbench-cockpit-lever-track {
+  background: linear-gradient(to bottom, transparent 30%, #f7bc5c 100%);
+}
+.workbench-cockpit-lever-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-muted, #93a8b8);
+  z-index: 1;
+}
+.workbench-cockpit-status {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 0.78rem;
+}
+.workbench-cockpit-status-label {
+  color: var(--text-muted, #93a8b8);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.workbench-cockpit-status strong {
+  font-size: 1rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.workbench-cockpit-light-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.7rem;
+}
+.workbench-cockpit-light {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.7rem 0.8rem;
+  background: rgba(10, 14, 20, 0.6);
+  border: 1px solid var(--wb-hairline);
+  border-radius: 10px;
+}
+.workbench-cockpit-light-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.04);
+}
+.workbench-cockpit-light[data-status="ready"] .workbench-cockpit-light-dot {
+  background: #00e5a0;
+  box-shadow: 0 0 8px rgba(0, 229, 160, 0.55);
+}
+.workbench-cockpit-light[data-status="armed"] .workbench-cockpit-light-dot {
+  background: #f7bc5c;
+  box-shadow: 0 0 8px rgba(247, 188, 92, 0.55);
+}
+.workbench-cockpit-light-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  color: #edf8ff;
+}
+.workbench-cockpit-light-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted, #93a8b8);
+}
+.workbench-cockpit-hint {
+  margin: 0.85rem 0 0;
+  font-size: 0.72rem;
+  color: var(--text-muted, #93a8b8);
+}
+
+/* — Requirements doc panel — */
+.workbench-spec-panel {
+  align-items: stretch;
+}
+.workbench-spec-content {
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.workbench-spec-section-title {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #edf8ff;
+  letter-spacing: -0.005em;
+}
+.workbench-spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--wb-hairline);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.workbench-spec-table thead th {
+  text-align: left;
+  padding: 0.6rem 0.85rem;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, #93a8b8);
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.025);
+  border-bottom: 1px solid var(--wb-hairline);
+}
+.workbench-spec-table tbody th,
+.workbench-spec-table tbody td {
+  padding: 0.7rem 0.85rem;
+  border-top: 1px solid var(--wb-hairline);
+  vertical-align: top;
+  line-height: 1.55;
+}
+.workbench-spec-table tbody tr:first-child th,
+.workbench-spec-table tbody tr:first-child td {
+  border-top: none;
+}
+.workbench-spec-table tbody th {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 500;
+  color: var(--accent, #67e8f9);
+  font-size: 0.74rem;
+  width: 7.5rem;
+}
+.workbench-spec-table code {
+  font-size: 0.74rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #edf8ff;
+  margin-right: 0.25rem;
+}
+.workbench-spec-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  font-size: 0.78rem;
+  line-height: 1.65;
+  color: #edf8ff;
+}
+.workbench-spec-list strong {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 500;
+  color: var(--accent, #67e8f9);
+  margin-right: 0.4rem;
+}
+.workbench-spec-footer {
+  margin: 0.6rem 0 0;
+  font-size: 0.72rem;
+  color: var(--text-muted, #93a8b8);
+}

@@ -6277,6 +6277,45 @@ function _wbLiveLogConnect() {
   });
 })();
 
+// ─── P54-02: dock view-group → canvas switcher ────────────────────
+//
+// The top half of the dock holds 4 buttons (`data-view-target=...`)
+// that switch which canvas-view paints in the main area. We mirror
+// the tool-drawer pattern: clicking a view button sets
+// `body[data-active-view="X"]` and CSS does the show/hide. Default
+// view is "circuit" so the page boots with the control circuit
+// already painted.
+(function _wbViewSwitchBoot() {
+  if (typeof document === "undefined") return;
+  const dock = document.getElementById("workbench-dock");
+  if (!dock) return;
+  const buttons = Array.from(dock.querySelectorAll("[data-view-target]"));
+  if (buttons.length === 0) return;
+
+  // Boot default view if none is set yet.
+  if (!document.body.dataset.activeView) {
+    document.body.dataset.activeView = "circuit";
+  }
+
+  function setActiveView(view) {
+    document.body.dataset.activeView = view || "circuit";
+    for (const btn of buttons) {
+      const isActive = btn.getAttribute("data-view-target") === view;
+      btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    }
+  }
+
+  // Sync aria-pressed with the boot default.
+  setActiveView(document.body.dataset.activeView || "circuit");
+
+  for (const btn of buttons) {
+    btn.addEventListener("click", () => {
+      const target = btn.getAttribute("data-view-target");
+      if (target) setActiveView(target);
+    });
+  }
+})();
+
 // ─── P52-07: new-circuit creation flow ────────────────────────────
 //
 // Three template cards (radio-like behavior) + derive-from-current
