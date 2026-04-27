@@ -90,6 +90,10 @@ class Metrics:
     # Type is `object` to avoid an import cycle (failure_classifier
     # imports from metrics for RecentFailure).
     failure_classification: object | None = None
+    # P50-07: SLO verdict over the same dataset. Optional so the
+    # dataclass stays back-compat with callers that only read pre-
+    # P50-07 fields. Type is `object` to avoid an import cycle.
+    slo_status: object | None = None
 
     def to_json(self) -> dict:
         out = {
@@ -106,6 +110,8 @@ class Metrics:
             out["failure_classification"] = (
                 self.failure_classification.to_json()
             )
+        if self.slo_status is not None:
+            out["slo_status"] = self.slo_status.to_json()
         return out
 
 
@@ -206,7 +212,7 @@ def compute_metrics(
     ]
     classification = classify_failures(all_failures)
 
-    return Metrics(
+    metrics = Metrics(
         total=total,
         by_state=by_state,
         pass_rate=pass_rate,
@@ -217,6 +223,15 @@ def compute_metrics(
         backfill_count=backfill_count,
         failure_classification=classification,
     )
+
+    # P50-07: compute SLO verdict over the assembled metrics. Lazy
+    # import sidesteps the cycle (slo.py reads Metrics attributes
+    # but doesn't import the class). Done after Metrics is built so
+    # slo can read .total/.pass_rate/.by_state by attribute.
+    from well_harness.skill_executor.slo import compute_slo_status
+    metrics.slo_status = compute_slo_status(metrics)
+
+    return metrics
 
 
 # ─── Helpers ───────────────────────────────────────────────────────

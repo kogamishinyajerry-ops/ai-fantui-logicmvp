@@ -1321,6 +1321,57 @@ function renderExecutionMetrics(metrics) {
       .join("");
   }
 
+  // P50-07: SLO verdict chip + breach list. The chip lives in the
+  // collapsed summary so the panel signals health at a glance; the
+  // breach list expands to actionable detail when the panel opens.
+  const sloChip = document.getElementById("workbench-metrics-slo-chip");
+  const sloBreaches = document.getElementById(
+    "workbench-metrics-slo-breaches"
+  );
+  const sloBreachList = document.getElementById(
+    "workbench-metrics-slo-breach-list"
+  );
+  const slo = metrics.slo_status;
+  if (sloChip) {
+    const overall = (slo && slo.overall) || "no_data";
+    sloChip.setAttribute("data-slo-severity", overall);
+    const labels = {
+      green: "🟢 GREEN",
+      yellow: "🟡 YELLOW",
+      red: "🔴 RED",
+      no_data: "⚪ NO DATA",
+    };
+    sloChip.textContent = labels[overall] || "—";
+  }
+  if (sloBreaches && sloBreachList) {
+    const breaches = (slo && slo.breaches) || [];
+    if (breaches.length === 0) {
+      sloBreaches.setAttribute("hidden", "");
+      sloBreachList.innerHTML = "";
+    } else {
+      sloBreaches.removeAttribute("hidden");
+      sloBreachList.innerHTML = breaches
+        .map((b) => {
+          return (
+            `<li class="workbench-metrics-slo-breach-item" ` +
+            `    data-slo-severity="${escape(b.severity)}">` +
+            `  <span class="workbench-metrics-slo-breach-pill" ` +
+            `        data-slo-severity="${escape(b.severity)}">` +
+            `    ${escape(b.severity.toUpperCase())}` +
+            `  </span>` +
+            `  <span class="workbench-metrics-slo-breach-name">` +
+            `    ${escape(b.slo)}` +
+            `  </span>` +
+            `  <span class="workbench-metrics-slo-breach-note">` +
+            `    ${escape(b.note)}` +
+            `  </span>` +
+            `</li>`
+          );
+        })
+        .join("");
+    }
+  }
+
   // P50-04: failure category breakdown ("what's been breaking?")
   const breakdownContainer = document.getElementById(
     "workbench-metrics-failure-breakdown"

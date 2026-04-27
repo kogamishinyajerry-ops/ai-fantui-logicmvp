@@ -399,6 +399,17 @@
         <details id="workbench-metrics-panel" class="workbench-metrics-panel">
           <summary class="workbench-metrics-summary">
             <span class="workbench-metrics-summary-eyebrow">executor metrics</span>
+            <!-- P50-07 (2026-04-27): SLO verdict chip. Color-coded
+                 GREEN/YELLOW/RED/NO_DATA so a reviewer's glance at
+                 the collapsed summary tells them whether the system
+                 needs attention. Filled by JS; default no_data so
+                 stale templates render neutrally before first poll. -->
+            <span
+              id="workbench-metrics-slo-chip"
+              class="workbench-metrics-slo-chip"
+              data-slo-severity="no_data"
+              title="SLO 状态 · system health"
+            >—</span>
             <span id="workbench-metrics-summary-line" class="workbench-metrics-summary-line">载入中… · loading…</span>
           </summary>
           <div id="workbench-metrics-body" class="workbench-metrics-body" aria-live="polite">
@@ -422,6 +433,17 @@
             </div>
             <div class="workbench-metrics-state-bars" id="workbench-metrics-state-bars">
               <!-- 9 bars rendered by JS with live counts -->
+            </div>
+            <!-- P50-07 (2026-04-27): SLO breach detail. Hidden when
+                 overall is GREEN or NO_DATA (no breach to show).
+                 When YELLOW or RED, lists each SLO that crossed a
+                 threshold with its actual value vs the threshold,
+                 so the reviewer knows exactly what to investigate. -->
+            <div id="workbench-metrics-slo-breaches" class="workbench-metrics-slo-breaches" hidden>
+              <p class="workbench-metrics-slo-eyebrow">
+                SLO 触发 · slo breaches
+              </p>
+              <ul id="workbench-metrics-slo-breach-list" class="workbench-metrics-slo-breach-list"></ul>
             </div>
             <!-- P50-04 (2026-04-27): failure category breakdown.
                  Shows which buckets have been failing most often
