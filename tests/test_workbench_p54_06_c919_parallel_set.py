@@ -77,17 +77,22 @@ def test_toggle_pinned_top_right_via_fixed_or_absolute():
 @pytest.mark.parametrize(
     "panel_id,view_key,thrust_src,c919_src",
     [
+        # P54-07: sim ↔ cockpit C919 sources were swapped in P54-06
+        # (sim showed the workstation, cockpit showed the panel).
+        # Per unified-nav semantics, /c919_etras_workstation.html is
+        # the workstation/cockpit equivalent of /demo.html, and
+        # /c919_etras_panel/index.html is the simulation panel.
         (
             "workbench-sim-panel",
             "sim",
             "/fan_console.html?embed=1",
-            "/c919_etras_workstation.html?embed=1",
+            "/c919_etras_panel/index.html?embed=1",
         ),
         (
             "workbench-cockpit-panel",
             "cockpit",
             "/demo.html?embed=1",
-            "/c919_etras_panel/index.html?embed=1",
+            "/c919_etras_workstation.html?embed=1",
         ),
         (
             "workbench-spec-panel",
