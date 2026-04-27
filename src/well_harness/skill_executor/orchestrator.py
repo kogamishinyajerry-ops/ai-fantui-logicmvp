@@ -87,6 +87,10 @@ from well_harness.skill_executor.test_runner import (
     TestRunnerError,
     run_tests,
 )
+from well_harness.skill_executor.workbench_polling import (
+    ExecutionCancelled,
+    check_cancel,
+)
 
 
 EXECUTOR_VERSION: str = "0.1.0"
@@ -203,6 +207,12 @@ def execute_proposal(
         _push_event(record, kind="planner_invocation", note="plan ready")
         _persist(record, audit_dir)
 
+        # P49-01c phase-boundary cancel check (post-PLANNING).
+        # If a reviewer hit Cancel while the LLM was thinking, abort
+        # before showing them an ASKING card they don't want.
+        if _check_cancel_and_abort(record, audit_dir, applied=None):
+            return OrchestratorResult(record=record)
+
         # ── Step 3: PLANNING → ASKING + wait for approval ────────
         _transition(record, "plan_ready", audit_dir)
         ask = Ask(
@@ -224,7 +234,21 @@ def execute_proposal(
                     "approval_callback is None and auto_approve is False; "
                     "the orchestrator can't advance from ASKING"
                 )
-            response = approval_callback(record, ask)
+            try:
+                response = approval_callback(record, ask)
+            except ExecutionCancelled as cancel_exc:
+                # P49-01c: cancel signal during ASKING. Distinct from
+                # REJECTED — we record actor + note explicitly so the
+                # audit log distinguishes "I disapprove the plan"
+                # from "stop the executor right now".
+                ask.user_response = None
+                ask.user_actor = cancel_exc.actor
+                ask.note = f"cancelled: {cancel_exc.note}".strip(": ")
+                _persist(record, audit_dir)
+                _abort_with_cancel(
+                    record, audit_dir, cancel_exc, applied=None,
+                )
+                return OrchestratorResult(record=record)
             ask.user_response = response
             ask.user_responded_at = now_iso()
         _persist(record, audit_dir)
@@ -279,6 +303,12 @@ def execute_proposal(
             note=f"applied {len(applied.applied)} edits",
         )
 
+        # P49-01c phase-boundary cancel check (post-EDITING, pre-TESTING).
+        # Edits ARE applied at this point — we revert before aborting
+        # so the working tree is clean.
+        if _check_cancel_and_abort(record, audit_dir, applied=applied):
+            return OrchestratorResult(record=record)
+
         # ── Step 5: EDITING → TESTING + run + gate ─────────────
         _transition(record, "edits_applied", audit_dir)
 
@@ -303,6 +333,11 @@ def execute_proposal(
             _push_event(record, kind="tests_regress", note=gate.reason)
             _transition(record, "tests_regress", audit_dir)
             _finish(record, audit_dir)
+            return OrchestratorResult(record=record)
+
+        # P49-01c phase-boundary cancel check (post-TESTING, pre-PR).
+        # Last point we can cleanly bail without leaving a stale PR.
+        if _check_cancel_and_abort(record, audit_dir, applied=applied):
             return OrchestratorResult(record=record)
 
         # ── Step 6: TESTING → PR_OPEN + git + PR ───────────────
@@ -433,6 +468,66 @@ def execute_proposal(
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────
+
+
+def _check_cancel_and_abort(
+    record: ExecutionRecord,
+    audit_dir: Path,
+    *,
+    applied: ApplyResult | None,
+) -> bool:
+    """Check the cancel signal at a phase boundary. If present:
+    revert any applied edits, set abort_reason, fire user_abort,
+    persist + finish. Returns True if cancelled (caller must
+    bail out), False otherwise.
+
+    Why a centralized helper: each phase boundary has the same
+    abort recipe (revert if applied / set reason / transition /
+    finish). One helper keeps the recipe consistent and lets us
+    add behavior (e.g. metrics, notifications) in one place.
+    """
+    info = check_cancel(audit_dir=audit_dir, exec_id=record.exec_id)
+    if info is None:
+        return False
+    cancel_exc = ExecutionCancelled(
+        actor=info["actor"], note=info.get("note", "")
+    )
+    _abort_with_cancel(record, audit_dir, cancel_exc, applied=applied)
+    return True
+
+
+def _abort_with_cancel(
+    record: ExecutionRecord,
+    audit_dir: Path,
+    cancel_exc: ExecutionCancelled,
+    *,
+    applied: ApplyResult | None,
+) -> None:
+    """Drive the audit to ABORTED on a cancel signal. Reverts any
+    applied edits first so the working tree is clean. Idempotent
+    against an already-terminal record (no-op if already terminal,
+    so concurrent cancel signals don't double-fire transitions)."""
+    if is_terminal(ExecutionState(record.state)):
+        return
+    if applied is not None:
+        try:
+            revert_edits(applied)
+        except Exception:
+            # Best-effort revert; the abort proceeds either way.
+            # Engineer can `git status` to inspect the residue.
+            pass
+    note = cancel_exc.note or ""
+    record.abort_reason = (
+        f"cancelled by {cancel_exc.actor}"
+        + (f": {note}" if note else "")
+    )
+    _push_event(
+        record,
+        kind="user_cancel",
+        note=f"actor={cancel_exc.actor} note={note}"[:200],
+    )
+    _transition(record, "user_abort", audit_dir)
+    _finish(record, audit_dir)
 
 
 def _transition(record: ExecutionRecord, event: str, audit_dir: Path) -> None:
