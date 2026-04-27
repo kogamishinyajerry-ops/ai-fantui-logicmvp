@@ -141,76 +141,48 @@ def test_js_view_switching_handler_present():
 # ─── 4. view stubs are real, not "Coming soon" ───────────────
 
 
-def test_sim_panel_has_real_structure():
-    """The simulation panel must contain BOTH a parameter input
-    region and a time-series output region — Claude-grade stub,
-    not a one-line 'Coming soon'."""
+@pytest.mark.parametrize(
+    "panel_id,iframe_src",
+    [
+        ("workbench-sim-panel", "/timeline-sim.html"),
+        ("workbench-cockpit-panel", "/fan_console.html"),
+        ("workbench-spec-panel", "/fantui_requirements.html"),
+    ],
+)
+def test_canvas_view_embeds_existing_mature_page(panel_id, iframe_src):
+    """P54-03 (2026-04-28): the sim / cockpit / requirements views
+    embed the EXISTING mature pages via <iframe>, not re-implemented
+    stubs. Earlier P54-02 stubs were a regression — those mature
+    pages already exist and must not be lost."""
     block = re.search(
-        r'<section[^>]*id="workbench-sim-panel"[^>]*>(.*?)</section>',
+        r'<section[^>]*id="' + re.escape(panel_id) + r'"[^>]*>(.*?)</section>',
         HTML,
         re.DOTALL,
     )
-    assert block is not None
+    assert block is not None, f"#{panel_id} section missing"
     body = block.group(0)
-    # Must reference both an input/parameter region and a chart/output
-    has_inputs = (
-        "sim-params" in body
-        or "sim-input" in body
-        or "参数" in body
+    iframe_match = re.search(
+        r'<iframe[^>]*src="' + re.escape(iframe_src) + r'"[^>]*>',
+        body,
     )
-    has_output = (
-        "sim-output" in body
-        or "sim-chart" in body
-        or "时间序列" in body
-        or "波形" in body
-    )
-    assert has_inputs and has_output, (
-        f"sim panel needs input + output regions (Claude-grade "
-        f"stub, not 'Coming soon'); body sample: {body[:400]!r}"
+    assert iframe_match is not None, (
+        f"#{panel_id} must embed `{iframe_src}` via <iframe> "
+        f"(not a fresh stub); body sample: {body[:400]!r}"
     )
 
 
-def test_cockpit_panel_has_real_structure():
-    """Cockpit panel must include instrument-cluster regions
-    (throttle quadrant + indicator lights) — real layout."""
-    block = re.search(
-        r'<section[^>]*id="workbench-cockpit-panel"[^>]*>(.*?)</section>',
-        HTML,
-        re.DOTALL,
-    )
-    assert block is not None
-    body = block.group(0)
-    has_throttle = (
-        "throttle" in body.lower()
-        or "推力杆" in body
-        or "节流" in body
-    )
-    has_indicators = (
-        "indicator" in body.lower()
-        or "状态灯" in body
-        or "L1" in body or "L2" in body
-    )
-    assert has_throttle and has_indicators, (
-        f"cockpit panel needs throttle + indicators; body: {body[:400]!r}"
-    )
-
-
-def test_spec_panel_has_real_structure():
-    """Requirements doc must include traceability table or
-    structured spec list, not a placeholder."""
-    block = re.search(
-        r'<section[^>]*id="workbench-spec-panel"[^>]*>(.*?)</section>',
-        HTML,
-        re.DOTALL,
-    )
-    assert block is not None
-    body = block.group(0)
-    has_req_ids = (
-        "REQ-" in body or "需求 ID" in body or "Requirement ID" in body
-    )
-    has_traceability = (
-        "trace" in body.lower() or "命中" in body or "linked" in body.lower() or "L1" in body
-    )
-    assert has_req_ids and has_traceability, (
-        f"spec panel needs REQ-IDs + traceability; body: {body[:400]!r}"
+@pytest.mark.parametrize(
+    "page_path",
+    [
+        "src/well_harness/static/timeline-sim.html",
+        "src/well_harness/static/fan_console.html",
+        "src/well_harness/static/fantui_requirements.html",
+    ],
+)
+def test_embedded_mature_page_exists_on_disk(page_path):
+    """Sanity check: the iframe source pages still exist in the repo.
+    A renamed/deleted page would break the embed silently — this test
+    catches that as a build-time tripwire."""
+    assert (REPO_ROOT / page_path).is_file(), (
+        f"missing mature page on disk: {page_path}"
     )
