@@ -1336,6 +1336,9 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             from well_harness.skill_executor.slo_history import (
                 record_transition,
             )
+            from well_harness.skill_executor.slo_webhook import (
+                dispatch_transition,
+            )
         except ImportError:
             self._send_json(500, {"error": "skill_executor_unavailable"})
             return
@@ -1344,14 +1347,27 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         # Record a transition if the verdict changed. Failure to
         # write the history line must NOT break the metrics
         # response — the dashboard takes precedence over the log.
+        transition = None
         try:
-            record_transition(
+            transition = record_transition(
                 audit_dir(),
                 current_status=metrics.slo_status,
                 metrics=metrics,
             )
         except OSError:
             pass
+        # P50-09: best-effort webhook dispatch on real transitions
+        # (steady-state polls produced no transition → no fire).
+        # Webhook failures are swallowed by dispatch_transition's
+        # internal try/except — alerting must never break the
+        # dashboard.
+        if transition is not None:
+            try:
+                dispatch_transition(transition)
+            except Exception:
+                # Defense in depth: even unexpected failures here
+                # must not propagate to the metrics response.
+                pass
         self._send_json(200, metrics.to_json())
 
     def _handle_slo_history(self, *, limit: int | None) -> None:

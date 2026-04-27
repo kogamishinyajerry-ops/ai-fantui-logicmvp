@@ -110,6 +110,14 @@ from well_harness.skill_executor.slo_history import (
     load_history as load_slo_history,
     record_transition as record_slo_transition,
 )
+from well_harness.skill_executor.slo_webhook import (
+    DispatchResult as SLOWebhookDispatchResult,
+    WebhookDispatchError,
+    dispatch_transition as dispatch_slo_transition,
+    resolve_webhook_url as resolve_slo_webhook_url,
+    should_dispatch as should_dispatch_slo_transition,
+    transition_to_event as slo_transition_to_event,
+)
 from well_harness.skill_executor.git_ops import (
     CommitResult,
     GitError,
@@ -239,6 +247,8 @@ __all__ = [
     "SLOStatus",
     "SLOThresholds",
     "SLOTransition",
+    "SLOWebhookDispatchResult",
+    "WebhookDispatchError",
     "MINIMAX_API_BASE",
     "MINIMAX_DEFAULT_MODEL",
     "MINIMAX_REQUEST_TIMEOUT_SEC",
@@ -276,9 +286,13 @@ __all__ = [
     "compute_phase_timings",
     "compute_slo_status",
     "create_branch",
+    "dispatch_slo_transition",
     "load_slo_history",
     "record_slo_transition",
+    "resolve_slo_webhook_url",
+    "should_dispatch_slo_transition",
     "slo_history_path",
+    "slo_transition_to_event",
     "current_branch",
     "execute_proposal",
     "head_sha",
