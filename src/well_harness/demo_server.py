@@ -2551,14 +2551,24 @@ def _normalize_llm_interpretation(
     affected_gates = [g for g in affected_gates if g in gate_vocab]
     target_signals = [s for s in target_signals if s in signal_vocab]
     valid_change_kinds = {h[1] for h in _CHANGE_KIND_HINTS}
+    raw_zh = str(raw_dict.get("change_kind_zh") or "提出建议")
+    raw_en = str(raw_dict.get("change_kind_en") or "propose change")
     if change_kind not in valid_change_kinds:
+        # Codex round-5 P2-2: when we coerce an out-of-taxonomy
+        # change_kind to propose_change, the human-readable labels
+        # must also reset to the fallback's labels — otherwise the
+        # UI displays "tighten condition" while the stored code is
+        # "propose_change", and downstream commit messages /
+        # executor brief carry the contradictory pair.
         change_kind = "propose_change"
+        raw_zh = "提出建议"
+        raw_en = "propose change"
     return {
         "affected_gates": affected_gates,
         "target_signals": target_signals,
         "change_kind": change_kind,
-        "change_kind_zh": str(raw_dict.get("change_kind_zh") or "提出建议"),
-        "change_kind_en": str(raw_dict.get("change_kind_en") or "propose change"),
+        "change_kind_zh": raw_zh,
+        "change_kind_en": raw_en,
         "confidence": confidence,
         "confidence_breakdown": _confidence_breakdown_from_fields(
             affected_gates, target_signals, change_kind

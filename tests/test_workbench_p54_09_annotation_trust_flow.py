@@ -285,9 +285,12 @@ def test_drafts_are_scoped_by_system_id() -> None:
 def test_clear_draft_only_clears_active_systems_entry() -> None:
     """clearSuggestionDraft must NOT wipe drafts belonging to
     other systems — submitting a thrust-reverser ticket should
-    leave the engineer's in-flight C919 draft alone."""
+    leave the engineer's in-flight C919 draft alone. After the
+    round-5 refactor, clearSuggestionDraft delegates to
+    clearSuggestionDraftFor; the per-system semantics live in
+    the latter."""
     fn = re.search(
-        r'function clearSuggestionDraft\(\) \{(.*?)^}',
+        r'function clearSuggestionDraftFor\(sysId\) \{(.*?)^}',
         JS,
         re.DOTALL | re.MULTILINE,
     )
@@ -297,7 +300,7 @@ def test_clear_draft_only_clears_active_systems_entry() -> None:
     assert "_writeDraftMap" in body
     # Must NOT just removeItem the whole key.
     assert "removeItem(SUGGESTION_DRAFT_KEY)" not in body, (
-        "clearSuggestionDraft must not nuke the entire draft map"
+        "clearSuggestionDraftFor must not nuke the entire draft map"
     )
 
 
@@ -392,16 +395,17 @@ def test_clearSuggestionDraft_cancels_pending_debounce() -> None:
     """Codex round-3 P2-1: a pending autosave debounce must be
     canceled before clearSuggestionDraft removes the entry —
     otherwise typing→submit within 500ms lets the timer fire after
-    the delete and resurrect the just-submitted text."""
+    the delete and resurrect the just-submitted text. The cancel
+    lives in clearSuggestionDraftFor (round-5 refactor delegate)."""
     fn = re.search(
-        r'function clearSuggestionDraft\(\) \{(.*?)^}',
+        r'function clearSuggestionDraftFor\(sysId\) \{(.*?)^}',
         JS,
         re.DOTALL | re.MULTILINE,
     )
     assert fn is not None
     body = fn.group(1)
     assert "clearTimeout(_suggestionDraftTimer)" in body, (
-        "clearSuggestionDraft must cancel any pending debounce"
+        "clearSuggestionDraftFor must cancel any pending debounce"
     )
 
 
@@ -560,6 +564,108 @@ def test_input_listener_hides_stale_draft_banner() -> None:
     assert "hideDraftBanner" in listener_body, (
         "input listener must hide draft banner once input is dirty"
     )
+
+
+def test_post_submit_cleanup_uses_snapshot_system() -> None:
+    """Codex round-5 P2-1: the success branch of submitSuggestionTicket
+    must clear the draft for the system we POSTed under, not
+    whatever the live dropdown points at. Otherwise a cross-system
+    submit (snapshot != live) leaves the submit-system's draft
+    alive and resurrects on next refresh."""
+    fn = re.search(
+        r'async function submitSuggestionTicket\([^)]*\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    assert "clearSuggestionDraftFor(systemId)" in body, (
+        "post-submit cleanup must clear the snapshot system's draft, not the live one"
+    )
+
+
+def test_clearSuggestionDraftFor_helper_exists() -> None:
+    """The explicit-system clear helper must exist so the cross-
+    system path can wipe the submit-system's draft."""
+    assert "function clearSuggestionDraftFor(" in JS
+    fn = re.search(
+        r'function clearSuggestionDraftFor\(sysId\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    assert "_suggestionDraftTimer" in body, (
+        "clearSuggestionDraftFor must also cancel the pending debounce"
+    )
+
+
+def test_system_switch_dismisses_conflict_banner() -> None:
+    """Codex round-5 P2-1 (broader): switching system mid-conflict
+    must tear down the banner. Otherwise the cross-system submit
+    path becomes possible — user starts under A, switches to B,
+    clicks 继续提交 → files under A while looking at B."""
+    install_fn = re.search(
+        r'function installSuggestionDraftRestore\(\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert install_fn is not None
+    body = install_fn.group(1)
+    # The system-change listener must call hideConflictBanner.
+    change_listener = re.search(
+        r'systemSelect\.addEventListener\("change", \(\) => \{(.*?)\}\);',
+        body,
+        re.DOTALL,
+    )
+    assert change_listener is not None
+    assert "hideConflictBanner" in change_listener.group(1)
+
+
+def test_llm_normalizer_resets_labels_when_change_kind_coerced() -> None:
+    """Codex round-5 P2-2: when an out-of-taxonomy change_kind is
+    coerced to propose_change, change_kind_zh / change_kind_en must
+    reset to the fallback labels too — otherwise the proposal card
+    shows e.g. 'tighten condition' while the stored code is
+    propose_change, contradicting commit messages downstream."""
+    raw = {
+        "affected_gates": ["L1"],
+        "target_signals": [],
+        "change_kind": "totally_made_up",
+        "change_kind_zh": "收紧条件",
+        "change_kind_en": "tighten condition",
+        "confidence": 0.5,
+    }
+    out = _normalize_llm_interpretation(
+        raw, source_text="x", system_id="thrust-reverser"
+    )
+    assert out["change_kind"] == "propose_change"
+    assert out["change_kind_zh"] == "提出建议", (
+        f"label must reset; got {out['change_kind_zh']!r}"
+    )
+    assert out["change_kind_en"] == "propose change", (
+        f"label must reset; got {out['change_kind_en']!r}"
+    )
+
+
+def test_llm_normalizer_preserves_labels_when_change_kind_valid() -> None:
+    """When change_kind is in the canonical taxonomy, the
+    LLM-provided labels are preserved — only the coerce path
+    resets them."""
+    raw = {
+        "affected_gates": ["L1"],
+        "target_signals": ["SW1"],
+        "change_kind": "tighten_condition",
+        "change_kind_zh": "收紧判据",
+        "change_kind_en": "tighten the condition",
+        "confidence": 0.9,
+    }
+    out = _normalize_llm_interpretation(
+        raw, source_text="x", system_id="thrust-reverser"
+    )
+    assert out["change_kind"] == "tighten_condition"
+    assert out["change_kind_zh"] == "收紧判据"
+    assert out["change_kind_en"] == "tighten the condition"
 
 
 def test_change_kind_hint_excludes_propose_change_fallback() -> None:

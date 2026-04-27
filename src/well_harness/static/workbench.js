@@ -520,9 +520,12 @@ async function submitSuggestionTicket(systemIdOverride) {
       status.dataset.status = "success";
       status.textContent = `工单 ${created.id} 已提交 · ticket ${created.id} submitted`;
     }
-    // P54-09: clear the autosaved draft now that it's safely
-    // committed to the proposal store.
-    clearSuggestionDraft();
+    // P54-09 + Codex round-5 P2-1: clear the autosaved draft for
+    // the system we actually submitted under (NOT just the live
+    // dropdown, which may have been flipped after the snapshot).
+    // Otherwise the just-submitted system keeps its draft and
+    // resurrects it on next refresh.
+    clearSuggestionDraftFor(systemId);
     await loadProposalsInbox();
   } catch (error) {
     if (status) {
@@ -728,6 +731,14 @@ function installSuggestionDraftRestore() {
         _suggestionDraftTimer = null;
       }
       hideDraftBanner();
+      // Codex round-5 P2-1 (broader fix): dismiss any pending
+      // conflict banner too. Otherwise a user who started a
+      // confirm flow under system A, switched to system B, and
+      // clicked 继续提交 would file under A while currently
+      // viewing B — and post-submit cleanup state would split
+      // across two systems. By killing the banner on switch we
+      // simply force re-interpretation under the new system.
+      hideConflictBanner();
       // Only offer a draft if the input is still empty (the user
       // didn't already start typing in the new system).
       if ((input.value || "").trim() === "") {
@@ -814,18 +825,24 @@ function saveSuggestionDraftFor(sysId, text) {
 }
 
 function clearSuggestionDraft() {
-  // Codex round-3 P2-1: cancel any pending autosave debounce
-  // BEFORE deleting the entry — otherwise a typing → submit
-  // within 500ms would let the timer fire after the delete and
-  // resurrect the just-shipped text, causing the next page load
-  // to offer it again as a "draft to restore".
+  clearSuggestionDraftFor(_currentDraftSystemId());
+}
+
+// Codex round-5 P2-1: explicit-system clear so the post-submit
+// cleanup wipes the draft for the system we actually filed under,
+// not whatever the live dropdown points at. Without this, a
+// cross-system submit (snapshot != live) would leave the submit-
+// system's draft alive and reappear on next refresh.
+function clearSuggestionDraftFor(sysId) {
+  // Cancel any pending autosave debounce BEFORE deleting the
+  // entry — otherwise a typing → submit within 500ms would let
+  // the timer fire after the delete and resurrect the just-
+  // shipped text (Codex round-3 P2-1).
   if (_suggestionDraftTimer) {
     clearTimeout(_suggestionDraftTimer);
     _suggestionDraftTimer = null;
   }
-  // Only clear the draft for the current system — other systems'
-  // drafts shouldn't be wiped on a thrust-reverser submit.
-  const sysId = _currentDraftSystemId();
+  if (!sysId) return;
   const map = _readDraftMap();
   if (sysId in map) {
     delete map[sysId];
