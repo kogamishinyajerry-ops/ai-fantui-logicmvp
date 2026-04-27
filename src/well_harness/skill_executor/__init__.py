@@ -51,6 +51,17 @@ from well_harness.skill_executor.errors import (
     InvalidExecutionTransitionError,
     SkillExecutorError,
 )
+from well_harness.skill_executor.llm_client import (
+    LLMResponse,
+    LLMResponseError,
+    LLMUnavailableError,
+    MINIMAX_API_BASE,
+    MINIMAX_DEFAULT_MODEL,
+    MINIMAX_REQUEST_TIMEOUT_SEC,
+    call_minimax,
+    resolve_minimax_api_key,
+    strip_json_fences,
+)
 from well_harness.skill_executor.models import (
     AUDIT_SCHEMA_VERSION,
     Ask,
@@ -61,6 +72,16 @@ from well_harness.skill_executor.models import (
     FileEdit,
     PlannedChange,
     TestResult,
+)
+from well_harness.skill_executor.namespaces import (
+    PANEL_NAMESPACES,
+    PANEL_NAMESPACES_BY_ID,
+    namespace_for_path,
+    validate_edit_path,
+)
+from well_harness.skill_executor.planner import (
+    PlannerError,
+    plan_from_brief,
 )
 from well_harness.skill_executor.states import (
     ALLOWED_TRANSITIONS,
@@ -84,15 +105,30 @@ __all__ = [
     "ExecutionState",
     "FileEdit",
     "InvalidExecutionTransitionError",
+    "LLMResponse",
+    "LLMResponseError",
+    "LLMUnavailableError",
+    "MINIMAX_API_BASE",
+    "MINIMAX_DEFAULT_MODEL",
+    "MINIMAX_REQUEST_TIMEOUT_SEC",
+    "PANEL_NAMESPACES",
+    "PANEL_NAMESPACES_BY_ID",
     "PlannedChange",
+    "PlannerError",
     "SkillExecutorError",
     "TERMINAL_STATES",
     "TestResult",
     "audit_dir",
+    "call_minimax",
     "is_terminal",
     "list_audits",
+    "namespace_for_path",
     "new_execution_id",
     "next_state",
+    "plan_from_brief",
     "read_audit",
+    "resolve_minimax_api_key",
+    "strip_json_fences",
+    "validate_edit_path",
     "write_audit",
 ]
