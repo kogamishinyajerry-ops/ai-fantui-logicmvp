@@ -545,7 +545,16 @@ async function onConfirmClicked() {
     }
     return;
   }
-  const gates = (_lastInterpretation.affected_gates || []).slice();
+  // Codex round-3 P2-2: snapshot the interpretation identity at
+  // request-start. The conflict check is async; while in flight,
+  // the user could hit "↻ 重新解读" and replace _lastInterpretation.
+  // If the stale response then resolved, we'd render a banner
+  // describing conflicts for the OLD gates, but "继续提交" would
+  // POST the NEW interpretation — masking the actual conflict set.
+  // We discard responses whose snapshot no longer matches the live
+  // interpretation.
+  const snapshot = _lastInterpretation;
+  const gates = (snapshot.affected_gates || []).slice();
   if (gates.length === 0) {
     submitSuggestionTicket();
     return;
@@ -558,8 +567,14 @@ async function onConfirmClicked() {
       PROPOSALS_PATH +
       "?status=OPEN&system=" + encodeURIComponent(systemId);
     const resp = await fetch(url, { headers: { Accept: "application/json" } });
+    // The interpretation may have been re-run while the fetch was
+    // in flight. If so, drop the stale result silently — the user
+    // is now looking at a different interpretation; whatever
+    // conflict set we got back doesn't apply.
+    if (_lastInterpretation !== snapshot) return;
     if (resp.ok) {
       const payload = await resp.json();
+      if (_lastInterpretation !== snapshot) return;
       const open = (payload && payload.proposals) || [];
       conflicts = open.filter((p) => {
         const g = (p && p.interpretation && p.interpretation.affected_gates) || [];
@@ -568,6 +583,7 @@ async function onConfirmClicked() {
     }
   } catch (_e) {
     // network/parse failure → don't block the submit
+    if (_lastInterpretation !== snapshot) return;
     conflicts = [];
   }
   if (conflicts.length === 0) {
@@ -762,6 +778,15 @@ function saveSuggestionDraftFor(sysId, text) {
 }
 
 function clearSuggestionDraft() {
+  // Codex round-3 P2-1: cancel any pending autosave debounce
+  // BEFORE deleting the entry — otherwise a typing → submit
+  // within 500ms would let the timer fire after the delete and
+  // resurrect the just-shipped text, causing the next page load
+  // to offer it again as a "draft to restore".
+  if (_suggestionDraftTimer) {
+    clearTimeout(_suggestionDraftTimer);
+    _suggestionDraftTimer = null;
+  }
   // Only clear the draft for the current system — other systems'
   // drafts shouldn't be wiped on a thrust-reverser submit.
   const sysId = _currentDraftSystemId();

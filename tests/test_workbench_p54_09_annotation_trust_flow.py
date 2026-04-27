@@ -388,6 +388,45 @@ def test_draft_debounce_captures_system_at_input_time() -> None:
     assert "_suggestionDraftTimer = null" in body
 
 
+def test_clearSuggestionDraft_cancels_pending_debounce() -> None:
+    """Codex round-3 P2-1: a pending autosave debounce must be
+    canceled before clearSuggestionDraft removes the entry —
+    otherwise typing→submit within 500ms lets the timer fire after
+    the delete and resurrect the just-submitted text."""
+    fn = re.search(
+        r'function clearSuggestionDraft\(\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    assert "clearTimeout(_suggestionDraftTimer)" in body, (
+        "clearSuggestionDraft must cancel any pending debounce"
+    )
+
+
+def test_onConfirmClicked_discards_stale_conflict_responses() -> None:
+    """Codex round-3 P2-2: the conflict-check fetch is async; if
+    the user re-interprets while it's in flight, the stale response
+    must be dropped (snapshot identity check). Otherwise the banner
+    would describe the OLD gates while 继续提交 would POST the NEW
+    interpretation."""
+    fn = re.search(
+        r'async function onConfirmClicked\(\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    # Snapshot variable captured at request-start.
+    assert "const snapshot = _lastInterpretation" in body, (
+        "must snapshot _lastInterpretation at request-start"
+    )
+    # Identity check after each await — drop stale results.
+    # We expect at least one explicit guard.
+    assert "_lastInterpretation !== snapshot" in body
+
+
 def test_runSuggestionInterpret_clears_stale_conflict_banner() -> None:
     """Codex round-2 P2-2: re-interpreting must hide any banner
     from a prior conflict check. Otherwise the banner's 继续提交
