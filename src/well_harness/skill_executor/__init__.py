@@ -84,6 +84,11 @@ from well_harness.skill_executor.metrics import (
     RecentFailure,
     compute_metrics,
 )
+from well_harness.skill_executor.phase_timings import (
+    PhaseTiming,
+    PhaseTimings,
+    compute_phase_timings,
+)
 from well_harness.skill_executor.git_ops import (
     CommitResult,
     GitError,
@@ -201,6 +206,8 @@ __all__ = [
     "LLMResponseError",
     "LLMUnavailableError",
     "Metrics",
+    "PhaseTiming",
+    "PhaseTimings",
     "RecentFailure",
     "MINIMAX_API_BASE",
     "MINIMAX_DEFAULT_MODEL",
@@ -234,6 +241,7 @@ __all__ = [
     "check_test_gate",
     "commit_files",
     "compute_metrics",
+    "compute_phase_timings",
     "create_branch",
     "current_branch",
     "execute_proposal",
