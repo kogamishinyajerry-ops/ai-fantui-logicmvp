@@ -2594,6 +2594,71 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
   border-left: 3px solid rgba(255, 184, 79, 0.45);
 }
 
+/* P48-06 (2026-04-27): pending-execution approval card.
+   Slot lives inside each proposal card; populated by JS when an
+   ASKING-state skill execution is found for that proposal. The
+   card draws attention without being alarming — cyan border so
+   reviewers spot it but the proposal context stays visible. */
+.workbench-pending-exec-slot:empty {
+  display: none;
+}
+.workbench-pending-exec-card {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  background: rgba(0, 200, 245, 0.06);
+  border: 1px solid rgba(0, 200, 245, 0.45);
+  border-left: 3px solid rgba(0, 200, 245, 0.85);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: #cfe1ee;
+}
+.workbench-pending-exec-header {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  font-size: 0.75rem;
+}
+.workbench-pending-exec-header strong {
+  color: #00c8f5;
+}
+.workbench-pending-exec-id {
+  margin-left: auto;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.62rem;
+  color: rgba(206, 223, 236, 0.55);
+}
+.workbench-pending-exec-rationale {
+  margin-top: 0.35rem;
+}
+.workbench-pending-exec-meta {
+  margin-top: 0.2rem;
+  color: rgba(206, 223, 236, 0.7);
+  font-size: 0.65rem;
+}
+.workbench-pending-exec-edits {
+  margin-top: 0.35rem;
+}
+.workbench-pending-exec-edits ul {
+  margin: 0.2rem 0 0 1rem;
+  padding: 0;
+  list-style: disc;
+}
+.workbench-pending-exec-edits code {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  color: #00e5a0;
+  font-size: 0.65rem;
+}
+.workbench-pending-exec-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+}
+.workbench-pending-exec-actions button[disabled] {
+  cursor: progress;
+  opacity: 0.6;
+}
+
 /* P45-03 (2026-04-26): interpreter strategy toggle + result badge.
    The chip lives in the suggestion-form header (default Rules, click
    flips to LLM). The badge in the result panel header echoes which

@@ -146,6 +146,10 @@ def execute_proposal(
         # root we're operating on. Tests pass a tmp_path override.
         audit_dir = repo_root / ".planning" / "skill_executions"
     audit_dir.mkdir(parents=True, exist_ok=True)
+    # P48-06: pin the env var for the duration of this run so any
+    # other module reading audit_dir() (e.g. the demo_server when
+    # the CLI runs alongside it) sees the same directory.
+    os.environ["WORKBENCH_SKILL_EXECUTIONS_DIR"] = str(audit_dir)
 
     # ── Step 0: load proposal + brief ────────────────────────────
     try:
