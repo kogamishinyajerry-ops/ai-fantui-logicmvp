@@ -73,7 +73,12 @@ def server():
         'id="workbench-circuit-hero-mount"',
         'data-circuit-fragment-endpoint="/api/workbench/circuit-fragment"',
         'data-circuit-fragment-status="pending"',
-        'data-annotation-surface="circuit"',
+        # NOTE (2026-04-26): `data-annotation-surface="circuit"` was the
+        # binding hook for the legacy point/area/link/text-range overlay
+        # that produced stray green-dot markers when the panel was clicked.
+        # The overlay was unloaded from /workbench in the
+        # `test_workbench_no_annotation_overlay_2026_04_26.py` contract,
+        # so this anchor is intentionally no longer required here.
         'id="workbench-circuit-hero-title"',
         # Bilingual hero copy
         "控制逻辑面板 · CONTROL LOGIC PANEL",
