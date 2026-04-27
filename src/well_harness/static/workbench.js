@@ -1006,7 +1006,28 @@ async function refreshExecutionBadges() {
       continue;
     }
     slot.innerHTML = renderExecutionBadge(exec);
+    // Stash the proposal_id so the click handler can fetch /timings
+    const badge = slot.querySelector(".workbench-execution-badge");
+    if (badge) {
+      badge.setAttribute("data-execution-proposal-id", proposalId);
+    }
   }
+  // P50-02c: wire badge clicks to the timing tooltip. Click on
+  // the badge (NOT on the cancel button or backfill marker) opens
+  // a popover showing per-phase durations. Click anywhere else on
+  // the page closes it.
+  for (const badge of document.querySelectorAll(".workbench-execution-badge")) {
+    badge.addEventListener("click", async (event) => {
+      // Ignore clicks on the cancel button — that has its own
+      // handler that aborts execution
+      if (event.target.closest(".workbench-execution-cancel-button")) return;
+      event.stopPropagation();
+      const proposalId = badge.getAttribute("data-execution-proposal-id");
+      if (!proposalId) return;
+      await openTimingTooltip(badge, proposalId);
+    });
+  }
+
   // P49-01c: wire cancel buttons after render. Each click confirms,
   // POSTs, and triggers an immediate refresh so the badge transitions
   // to ABORTED without waiting for the 5s poll tick.
@@ -1061,6 +1082,131 @@ async function sendExecutionCancel(execId) {
 if (typeof window !== "undefined") {
   window.__WB_EXECUTION_STATE_INFO = EXECUTION_STATE_INFO;
   window.__WB_renderExecutionBadge = renderExecutionBadge;
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// P50-02c (2026-04-27): per-execution phase-timing tooltip.
+//
+// Click a badge to open a small popover that shows the time spent
+// in each phase. Useful for diagnosing "why is this stuck" — a
+// LANDED execution that took 30 minutes might have spent 29 in
+// ASKING (engineer was slow) or in TESTING (slow test suite).
+//
+// The popover fetches /api/proposals/<id>/execution/timings on
+// open so the data is fresh; closes on outside click.
+// ─────────────────────────────────────────────────────────────────
+
+let _activeTimingTooltip = null;
+
+function _formatPhaseDuration(seconds) {
+  if (seconds == null) return "—";
+  if (seconds < 1) return "<1s";
+  if (seconds < 60) return `${seconds.toFixed(0)}s`;
+  if (seconds < 3600) {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return s ? `${m}m${s}s` : `${m}m`;
+  }
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return m ? `${h}h${m}m` : `${h}h`;
+}
+
+async function openTimingTooltip(anchor, proposalId) {
+  // If a tooltip is already open, close it first
+  if (_activeTimingTooltip) {
+    _activeTimingTooltip.remove();
+    _activeTimingTooltip = null;
+  }
+  let timings;
+  try {
+    const r = await fetch(
+      `/api/proposals/${encodeURIComponent(proposalId)}/execution/timings`
+    );
+    if (!r.ok) return;
+    if (r.status === 204) return;
+    timings = await r.json();
+  } catch (_) {
+    return;
+  }
+  const tooltip = document.createElement("div");
+  tooltip.className = "workbench-execution-timing-tooltip";
+  tooltip.innerHTML = renderTimingTooltip(timings);
+  // Position relative to anchor's bounding rect
+  const rect = anchor.getBoundingClientRect();
+  tooltip.style.top = `${rect.bottom + window.scrollY + 4}px`;
+  tooltip.style.left = `${rect.left + window.scrollX}px`;
+  document.body.appendChild(tooltip);
+  _activeTimingTooltip = tooltip;
+
+  // Close on outside click. Use capture phase so the tooltip's own
+  // clicks don't propagate up and trigger close.
+  const closer = (event) => {
+    if (tooltip.contains(event.target)) return;
+    tooltip.remove();
+    _activeTimingTooltip = null;
+    document.removeEventListener("click", closer, true);
+  };
+  // Defer attachment so the click that opened the tooltip doesn't
+  // immediately close it
+  setTimeout(() => {
+    document.addEventListener("click", closer, true);
+  }, 0);
+}
+
+function renderTimingTooltip(timings) {
+  const escape = (text) =>
+    String(text == null ? "" : text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  const phases = timings.timings || [];
+  // Find the longest duration so we can scale bars
+  const maxDur = Math.max(
+    1,
+    ...phases.map((p) => p.duration_sec || 0)
+  );
+  const rows = phases
+    .map((p) => {
+      const isCurrent = p.phase === timings.current_phase;
+      const info = EXECUTION_STATE_INFO[p.phase] || { css: "unknown" };
+      const dur = p.duration_sec;
+      const widthPct = dur ? Math.max(2, (dur / maxDur) * 100) : 0;
+      return (
+        `<div class="workbench-timing-row${isCurrent ? " is-current" : ""}">` +
+        `  <span class="workbench-timing-phase" data-execution-css="${escape(info.css)}">` +
+        `    ${escape(p.phase)}` +
+        `  </span>` +
+        `  <div class="workbench-timing-bar-track">` +
+        `    <div class="workbench-timing-bar-fill" data-execution-css="${escape(info.css)}" ` +
+        `         style="width: ${widthPct.toFixed(1)}%"></div>` +
+        `  </div>` +
+        `  <span class="workbench-timing-duration">` +
+        `    ${escape(_formatPhaseDuration(dur))}` +
+        `  </span>` +
+        `</div>`
+      );
+    })
+    .join("");
+  const totalLine =
+    timings.total_duration_sec != null
+      ? `<span class="workbench-timing-total">total ${escape(_formatPhaseDuration(timings.total_duration_sec))}</span>`
+      : `<span class="workbench-timing-total">在 ${escape(timings.current_phase)} 中… · in flight</span>`;
+  return (
+    `<div class="workbench-timing-header">` +
+    `  <strong>阶段耗时 · phase timings</strong>` +
+    `  ${totalLine}` +
+    `</div>` +
+    `<div class="workbench-timing-rows">${rows}</div>`
+  );
+}
+
+if (typeof window !== "undefined") {
+  window.__WB_renderTimingTooltip = renderTimingTooltip;
+  window.__WB_openTimingTooltip = openTimingTooltip;
 }
 
 

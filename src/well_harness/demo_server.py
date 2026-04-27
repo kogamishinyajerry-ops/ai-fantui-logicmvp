@@ -375,9 +375,14 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         # audit list, the server returns just the freshest record.
         # Returns 200 with audit JSON, or 204 if no audit exists yet
         # for this proposal.
+        # P50-02c (2026-04-27): also handles /execution/timings for
+        # the lightweight per-phase duration tooltip.
         if (
             parsed.path.startswith(PROPOSALS_PATH + "/")
-            and parsed.path.endswith("/execution")
+            and (
+                parsed.path.endswith("/execution")
+                or parsed.path.endswith("/execution/timings")
+            )
         ):
             self._handle_proposal_latest_execution(parsed.path)
             return
@@ -1245,23 +1250,39 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         inbox to render one state badge per proposal card without
         each card scanning the full audit list.
 
-        200 — audit JSON for the freshest execution
+        Also handles /execution/timings: same audit but only the
+        per-phase timings breakdown (cheaper response for the
+        timing tooltip).
+
+        200 — audit JSON for the freshest execution (or timings)
         204 — no audit exists yet for this proposal (the executor
               never ran, or was disabled)
         400 — malformed path
         """
         try:
             from well_harness.skill_executor.audit import list_audits
+            from well_harness.skill_executor.phase_timings import (
+                compute_phase_timings,
+            )
         except ImportError:
             self._send_json(500, {"error": "skill_executor_unavailable"})
             return
-        # Path shape: /api/proposals/<id>/execution
-        # Strip leading PROPOSALS_PATH + "/" and trailing "/execution"
+        # P50-02c: route /execution and /execution/timings together.
+        # Both share the same audit lookup; only the response shape
+        # differs.
         prefix = PROPOSALS_PATH + "/"
-        if not raw_path.startswith(prefix) or not raw_path.endswith("/execution"):
+        timings_only = raw_path.endswith("/execution/timings")
+        if timings_only:
+            suffix_len = len("/execution/timings")
+        elif raw_path.endswith("/execution"):
+            suffix_len = len("/execution")
+        else:
             self._send_json(400, {"error": "invalid_path"})
             return
-        proposal_id = raw_path[len(prefix) : -len("/execution")]
+        if not raw_path.startswith(prefix):
+            self._send_json(400, {"error": "invalid_path"})
+            return
+        proposal_id = raw_path[len(prefix) : -suffix_len]
         if not proposal_id or "/" in proposal_id:
             self._send_json(400, {"error": "invalid_proposal_id"})
             return
@@ -1271,7 +1292,15 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self.send_response(204)
             self.end_headers()
             return
-        self._send_json(200, records[0].to_json())
+        latest = records[0]
+        if timings_only:
+            self._send_json(200, compute_phase_timings(latest).to_json())
+            return
+        # Default: full audit + a phase_timings sidecar block so
+        # callers get both with one round-trip.
+        payload = latest.to_json()
+        payload["phase_timings"] = compute_phase_timings(latest).to_json()
+        self._send_json(200, payload)
 
     def _handle_skill_execution_metrics(self) -> None:
         """GET /api/skill-executions/metrics. Returns aggregate
