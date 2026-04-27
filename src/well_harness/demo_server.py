@@ -1374,32 +1374,65 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             pass
         # P50-09: best-effort webhook dispatch on real transitions
         # (steady-state polls produced no transition → no fire).
-        # Webhook failures are swallowed by dispatch_transition's
-        # internal try/except — alerting must never break the
-        # dashboard.
         # P50-11: per-severity throttle suppresses repeat alerts
         # within an interval window so a flapping system doesn't
         # spam the operator. Throttle state is persisted to disk
         # next to slo_history.jsonl.
-        if transition is not None:
-            try:
-                from well_harness.skill_executor.slo_webhook_throttle import (
-                    read_state, record_fire, resolve_min_interval_sec,
-                    should_fire, write_state,
-                )
-                from datetime import datetime, timezone
-                state = read_state(audit_dir())
-                now_iso = datetime.now(timezone.utc).strftime(
-                    "%Y-%m-%dT%H:%M:%SZ"
-                )
+        # P50-12: every poll also flushes pending suppressed
+        # events whose throttle window has expired into a single
+        # digest webhook ("while you were silenced, these N
+        # transitions happened"), so a flap-then-stable system
+        # doesn't drop the regression silently.
+        try:
+            from well_harness.skill_executor.slo_webhook_throttle import (
+                read_state, record_fire, record_suppressed,
+                resolve_min_interval_sec, should_fire,
+                take_digest_due, write_state,
+            )
+            from well_harness.skill_executor.slo_webhook import (
+                dispatch_digest,
+            )
+            from datetime import datetime, timezone
+            state = read_state(audit_dir())
+            now_iso = datetime.now(timezone.utc).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            )
+            min_interval = resolve_min_interval_sec()
+            state_dirty = False
+
+            # P50-12: flush any digests whose throttle window has
+            # expired BEFORE processing the new transition. This
+            # ordering means the digest covers events suppressed
+            # in the prior window, not including the current one
+            # (which gets its own normal throttle treatment).
+            due = take_digest_due(
+                state, now_iso=now_iso, min_interval_sec=min_interval,
+            )
+            for severity, events in due.items():
+                try:
+                    dispatch_digest(severity, events, ts=now_iso)
+                except Exception:
+                    # Even an unexpected dispatch_digest failure
+                    # must not propagate. The events were already
+                    # popped from state — accept the data loss to
+                    # keep the dashboard responsive. Future P50-12b
+                    # could retry-queue these.
+                    pass
+                state_dirty = True
+
+            # New transition (P50-09 + P50-11 path)
+            if transition is not None:
                 decision = should_fire(
                     transition,
                     state=state,
                     now_iso=now_iso,
-                    min_interval_sec=resolve_min_interval_sec(),
+                    min_interval_sec=min_interval,
                 )
                 if decision.allow:
-                    dispatch_transition(transition)
+                    try:
+                        dispatch_transition(transition)
+                    except Exception:
+                        pass
                     record_fire(
                         state,
                         to_severity=str(getattr(
@@ -1407,18 +1440,26 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
                         )),
                         now_iso=now_iso,
                     )
-                    try:
-                        write_state(audit_dir(), state)
-                    except OSError:
-                        # Read-only fs / disk full: don't fail the
-                        # request. Worst case the next poll might
-                        # re-fire (effectively no throttle that one
-                        # round) — better than no metrics response.
-                        pass
-            except Exception:
-                # Defense in depth: even unexpected failures here
-                # must not propagate to the metrics response.
-                pass
+                    state_dirty = True
+                else:
+                    # P50-12: stash the suppressed event so a
+                    # future digest can recover it.
+                    record_suppressed(state, transition=transition)
+                    state_dirty = True
+
+            if state_dirty:
+                try:
+                    write_state(audit_dir(), state)
+                except OSError:
+                    # Read-only fs / disk full: don't fail the
+                    # request. Worst case the next poll might
+                    # re-fire (effectively no throttle that one
+                    # round) — better than no metrics response.
+                    pass
+        except Exception:
+            # Defense in depth: even unexpected failures here
+            # must not propagate to the metrics response.
+            pass
         self._send_json(200, metrics.to_json())
 
     def _handle_slo_history(self, *, limit: int | None) -> None:
