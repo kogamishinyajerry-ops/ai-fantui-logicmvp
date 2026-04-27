@@ -125,33 +125,35 @@ def test_workbench_iframe_passes_embed_querystring():
 
 
 def test_circuit_canvas_has_system_toggle():
-    """The circuit view canvas must include a visible pill toggle
-    with both system options (反推 / C919 E-TRAS)."""
-    block = re.search(
-        r'<section[^>]*id="workbench-circuit-hero"[^>]*>(.*?)</section>',
-        HTML,
-        re.DOTALL,
-    )
-    assert block is not None
-    body = block.group(0)
-    assert 'id="workbench-circuit-system-toggle"' in body, (
-        "circuit canvas must contain the system toggle group"
-    )
+    """A visible pill toggle with both system options (反推 / C919
+    E-TRAS) must exist somewhere in the workbench shell. P54-06
+    promoted it from inside #workbench-circuit-hero to a canvas-
+    level #workbench-system-toggle so the same pill drives all 4
+    surfaces (circuit + sim + cockpit + spec)."""
+    assert (
+        'id="workbench-system-toggle"' in HTML
+        or 'id="workbench-circuit-system-toggle"' in HTML
+    ), "workbench must contain the system toggle group (canvas-level after P54-06)"
     for system in ("thrust-reverser", "c919-etras"):
-        assert f'data-circuit-system="{system}"' in body, (
+        assert f'data-circuit-system="{system}"' in HTML, (
             f"missing toggle pill for system={system}"
         )
 
 
 def test_system_toggle_active_state_styled():
     """The active pill (`aria-pressed=\"true\"`) must use the accent
-    token so the user can see at a glance which system is loaded."""
+    token so the user can see at a glance which system is loaded.
+    P54-06 grouped both .workbench-system-toggle-btn (canvas-level)
+    and .workbench-circuit-system-btn (legacy alias) under one rule."""
     rule = re.search(
-        r'\.workbench-circuit-system-btn\[aria-pressed="true"\]\s*\{[^}]*\}',
+        r'\.workbench-(?:circuit-)?system(?:-toggle)?-btn[^{]*'
+        r'\[aria-pressed="true"\][^{]*\{[^}]*\}',
         CSS,
         re.DOTALL,
     )
-    assert rule is not None
+    assert rule is not None, (
+        "no `.workbench-*system-*-btn[aria-pressed=true]` rule found"
+    )
     body = rule.group(0)
     assert "var(--accent" in body or "rgba(103, 232, 249" in body, (
         f"active pill should derive from --accent; rule body: "

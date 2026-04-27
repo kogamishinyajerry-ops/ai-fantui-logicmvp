@@ -4431,24 +4431,29 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   color: #edf8ff;
 }
 
-/* P54-04: circuit canvas system toggle (反推 / C919 E-TRAS).
-   Floats in the top-right of the circuit hero only — the section
-   has `position: relative` implicit-ish (we put it absolute). */
+/* P54-06: canvas-level system toggle (反推 / C919 E-TRAS).
+   Promoted from circuit-hero-only to canvas-wide so the toggle
+   drives circuit + sim + cockpit + spec iframes simultaneously
+   (the "4-piece set" is now mirrored across both systems).
+   Pinned top-right of the viewport, above all canvas views. */
 .workbench-circuit-hero {
   position: relative;
 }
-.workbench-circuit-system-toggle {
-  position: absolute;
+.workbench-system-toggle {
+  position: fixed;
   top: 0.85rem;
   right: 1rem;
   display: inline-flex;
   gap: 1px;
   padding: 2px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(10, 18, 26, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--wb-hairline);
   border-radius: 8px;
-  z-index: 5;
+  z-index: 50;
 }
+.workbench-system-toggle-btn,
 .workbench-circuit-system-btn {
   appearance: none;
   border: none;
@@ -4464,14 +4469,17 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
     background var(--wb-duration-drawer) var(--wb-ease-out),
     color var(--wb-duration-drawer) var(--wb-ease-out);
 }
+.workbench-system-toggle-btn:hover,
 .workbench-circuit-system-btn:hover {
   color: #edf8ff;
   background: rgba(255, 255, 255, 0.04);
 }
+.workbench-system-toggle-btn[aria-pressed="true"],
 .workbench-circuit-system-btn[aria-pressed="true"] {
   color: #051018;
   background: var(--accent, #67e8f9);
 }
+.workbench-system-toggle-btn:focus-visible,
 .workbench-circuit-system-btn:focus-visible {
   outline: 2px solid var(--accent, #67e8f9);
   outline-offset: 2px;

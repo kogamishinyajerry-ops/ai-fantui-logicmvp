@@ -6277,19 +6277,37 @@ function _wbLiveLogConnect() {
   });
 })();
 
-// ─── P54-04: circuit canvas system toggle (反推 / C919) ─────────────
+// ─── P54-04 / P54-06: canvas-level system toggle (反推 / C919) ───────
 //
-// The legacy workbench-system-select dropdown drives circuit fragment
-// re-fetch but is hidden by P53-00. Surface it as a visible pill
-// toggle inside the circuit canvas; clicks update the hidden select
-// (single source of truth) + dispatch its change event so existing
-// reload paths pick it up unchanged.
+// P54-04 introduced this as a circuit-only toggle. P54-06 promotes it
+// to canvas-level: a single click swaps both (a) the legacy
+// #workbench-system-select (which drives the circuit fragment fetch)
+// and (b) the iframe srcs of the sim/cockpit/spec views — so the
+// "4-piece set" is mirrored across both systems and the user sees a
+// consistent set of surfaces no matter which system is active.
 (function _wbCircuitSystemToggleBoot() {
   if (typeof document === "undefined") return;
-  const toggle = document.getElementById("workbench-circuit-system-toggle");
+  const toggle =
+    document.getElementById("workbench-system-toggle") ||
+    document.getElementById("workbench-circuit-system-toggle");
   if (!toggle) return;
   const buttons = Array.from(toggle.querySelectorAll("[data-circuit-system]"));
   if (buttons.length === 0) return;
+
+  function swapIframes(system) {
+    const iframes = document.querySelectorAll("iframe[data-system-iframe]");
+    for (const frame of iframes) {
+      const attr = "data-system-src-" + system;
+      const next = frame.getAttribute(attr);
+      if (!next) continue;
+      // Compare against current src origin-relative path to avoid a
+      // pointless reload when the user clicks the already-active pill.
+      const currentTail = (frame.getAttribute("src") || "").split("?")[0];
+      const nextTail = next.split("?")[0];
+      if (currentTail === nextTail) continue;
+      frame.setAttribute("src", next);
+    }
+  }
 
   function syncFromSelect() {
     const select = document.getElementById("workbench-system-select");
@@ -6298,6 +6316,7 @@ function _wbLiveLogConnect() {
       const isActive = btn.getAttribute("data-circuit-system") === current;
       btn.setAttribute("aria-pressed", isActive ? "true" : "false");
     }
+    swapIframes(current);
   }
 
   for (const btn of buttons) {

@@ -122,7 +122,22 @@ tr:hover td{background:var(--bg2)}
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--b1);border-radius:2px}
+
+/* P54-06: suppress unified top nav when embedded in the workbench. */
+html.is-iframe-embed .unified-nav { display: none !important; }
+html.is-iframe-embed body.unified-nav-enabled { padding-top: 0 !important; }
 </style>
+<script>
+  (function () {
+    try {
+      var isEmbedded = window.self !== window.top
+        || /[?&]embed=1\b/.test(window.location.search);
+      if (isEmbedded) document.documentElement.classList.add('is-iframe-embed');
+    } catch (e) {
+      document.documentElement.classList.add('is-iframe-embed');
+    }
+  })();
+</script>
 </head>
 <body class="unified-nav-enabled" data-nav-current="c919-req">
 
