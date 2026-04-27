@@ -27,6 +27,18 @@ def clip(text: str, limit: int = 400) -> str:
     return f"{stripped[: limit - 15]}... [truncated]"
 
 
+def tail(text: str, limit: int = 8000) -> str:
+    """Last `limit` chars of `text`. For failures we want the END of
+    pytest output (failure summary lives there), not the head — clip()
+    gives us the head, which is just dots. P51-00 fix: when a check
+    fails, report.tail captures `short test summary info` so the CI
+    log actually tells us which test broke."""
+    stripped = text.strip()
+    if len(stripped) <= limit:
+        return stripped
+    return f"... [head truncated, last {limit} chars below]\n{stripped[-limit:]}"
+
+
 def build_default_commands(python_executable: str | None = None) -> tuple[ValidationCommand, ...]:
     python = python_executable or DEFAULT_PYTHON_COMMAND
     return (
@@ -143,13 +155,17 @@ def command_to_text(command: ValidationCommand) -> str:
 
 
 def result_payload(command: ValidationCommand, completed: Any) -> dict[str, Any]:
+    # P51-00: passes use clip (compact head), failures use tail (last
+    # 8KB) so pytest's `short test summary info` block survives into
+    # the CI log instead of being hidden behind 400-char truncation.
+    failed = completed.returncode != 0
     return {
         "name": command.name,
         "command": command_to_text(command),
-        "status": "pass" if completed.returncode == 0 else "fail",
+        "status": "pass" if not failed else "fail",
         "returncode": completed.returncode,
-        "stdout": clip(completed.stdout),
-        "stderr": clip(completed.stderr),
+        "stdout": tail(completed.stdout) if failed else clip(completed.stdout),
+        "stderr": tail(completed.stderr) if failed else clip(completed.stderr),
     }
 
 

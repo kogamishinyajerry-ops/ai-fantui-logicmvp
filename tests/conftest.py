@@ -19,6 +19,17 @@ if str(_SRC) not in sys.path:
 # a monkeypatch of WORKBENCH_GOVERNANCE_ENABLED to "1".
 os.environ.setdefault("WORKBENCH_GOVERNANCE_ENABLED", "0")
 
+# P51-00 (2026-04-27): planner rejects calls when MINIMAX_API_KEY
+# is missing from env / ~/.minimax_key, even when request_post is
+# injected (the key check fires first). CI runners don't carry a
+# key, so 36 orchestrator integration tests passed locally and
+# failed in CI. Setting a non-real default makes tests env-
+# independent. Tests that exercise the missing-key error path
+# (test_planner_raises_when_no_api_key et al.) already
+# monkeypatch.delenv it, so they still hit the LLMUnavailableError
+# branch.
+os.environ.setdefault("MINIMAX_API_KEY", "ci-fake-key-tests-inject-request-post")
+
 from well_harness.adapters.c919_etras_frozen_v1 import LockInputs, RawInputs
 
 
