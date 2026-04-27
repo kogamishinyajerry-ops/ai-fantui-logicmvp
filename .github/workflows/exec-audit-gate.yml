@@ -1,0 +1,116 @@
+name: Skill-Executor PR Audit Gate
+
+# Pre-merge gate: any PR that touches truth-engine namespace
+# files (controller / models / runner / adapters / requirements /
+# simulation_workbench) MUST carry a valid EXEC-id stamp + matching
+# audit JSON. Doc-only / CI-only / test-only PRs pass through.
+#
+# Per Q3(b) (2026-04-27): the gate's job is to make "every truth-
+# engine change goes through the skill executor" mechanically
+# enforceable, not honor-system.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  audit-gate:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v4
+        with:
+          # Get the full history so we can diff against the base.
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compute changed files
+        id: changed
+        run: |
+          # `git diff --name-only` between the PR base and head gives
+          # us every file the PR is proposing to change.
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          git diff --name-only "$BASE_SHA" "$HEAD_SHA" > /tmp/pr-changed.txt
+          echo "PR changes the following files:"
+          cat /tmp/pr-changed.txt
+
+      - name: Persist PR body to a file
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # The body may contain shell metacharacters; write it
+          # verbatim via env to avoid quoting problems.
+          printf '%s' "$PR_BODY" > /tmp/pr-body.txt
+
+      - name: Run audit gate
+        id: gate
+        run: |
+          # Run the gate. Capture stdout for the PR comment AND the
+          # exit code. tee to make logs readable in the Action UI.
+          set +e
+          PYTHONPATH=src python3 -m well_harness.skill_executor.gate_check_cli \
+              verify-pr \
+              --body-file /tmp/pr-body.txt \
+              --changed-files-file /tmp/pr-changed.txt \
+              --repo-root . | tee /tmp/gate-output.md
+          echo "GATE_EXIT=$?" >> "$GITHUB_OUTPUT"
+          set -e
+
+      - name: Comment on PR with verdict
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let body;
+            try {
+              body = fs.readFileSync('/tmp/gate-output.md', 'utf8');
+            } catch (e) {
+              body = `Gate output missing: ${e.message}`;
+            }
+            // Prefix so a reviewer can spot the comment quickly.
+            const marker = '<!-- skill-executor-audit-gate -->';
+            const tagged = `${marker}\n${body}`;
+
+            // Update the existing gate comment if present, else create.
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body && c.body.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: tagged,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: tagged,
+              });
+            }
+
+      - name: Fail if gate blocked
+        if: steps.gate.outputs.GATE_EXIT != '0'
+        run: |
+          echo "::error::Skill-Executor audit gate refused this PR. See the comment for reasons."
+          exit 1
