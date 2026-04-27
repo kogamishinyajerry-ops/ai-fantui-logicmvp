@@ -456,6 +456,25 @@
         </article>
       </section>
 
+      <!-- P52-05 (2026-04-27): unified approve drawer.
+           Wraps the four legacy approve surfaces (annotation-inbox +
+           bottom-bar + pending-signoff + approval-center-panel) plus
+           governance gate + plan timeline so they don't position-
+           fixed-stack on each other when the approve dock button
+           activates. Single drawer header, single close button, all
+           original element IDs preserved for JS bindings. -->
+      <section
+        id="workbench-tool-approve"
+        class="workbench-tool-drawer-section workbench-tool-approve"
+        data-dock-section="approve"
+        aria-labelledby="workbench-tool-approve-title"
+        hidden
+      >
+        <header class="workbench-tool-drawer-header">
+          <p class="eyebrow">approve</p>
+          <h2 id="workbench-tool-approve-title">审批中心 · Approval Center</h2>
+          <button type="button" class="workbench-tool-drawer-close" data-dock-close>×</button>
+        </header>
       <!-- P44-03 (2026-04-26): annotation inbox is now backed by the
            /api/proposals store. When the engineer submits a confirmed
            interpretation, workbench.js POSTs to /api/proposals and then
@@ -465,10 +484,8 @@
            an empty list. -->
       <aside
         id="annotation-inbox"
-        class="workbench-annotation-inbox workbench-tool-drawer-section"
+        class="workbench-annotation-inbox"
         aria-label="Annotation Inbox"
-        data-dock-section="approve"
-        hidden
       >
         <header>
           <p class="eyebrow">已提交工单</p>
@@ -540,10 +557,8 @@
 
       <footer
         id="workbench-bottom-bar"
-        class="workbench-collab-bottom-bar workbench-tool-drawer-section"
+        class="workbench-collab-bottom-bar"
         aria-label="Workbench actions"
-        data-dock-section="approve"
-        hidden
       >
         <button
           id="approval-center-entry"
@@ -559,12 +574,10 @@
 
       <section
         id="workbench-pending-signoff-affordance"
-        class="workbench-pending-signoff workbench-tool-drawer-section"
+        class="workbench-pending-signoff"
         role="status"
         aria-live="polite"
         data-pending-signoff="hidden"
-        data-dock-section="approve"
-        hidden
       >
         <span class="workbench-pending-signoff-icon" aria-hidden="true">🛈</span>
         <div class="workbench-pending-signoff-body">
@@ -579,11 +592,9 @@
 
       <section
         id="approval-center-panel"
-        class="workbench-approval-center workbench-tool-drawer-section"
+        class="workbench-approval-center"
         data-approval-role="KOGAMI"
         aria-labelledby="approval-center-title"
-        data-dock-section="approve"
-        hidden
       >
         <header>
           <p class="eyebrow">审批中心</p>
@@ -604,6 +615,8 @@
           </article>
         </div>
       </section>
+      </section>
+      <!-- /#workbench-tool-approve -->
 
       <!-- E11-09 (2026-04-25): legacy "Workbench Bundle 验收台" content moved to /workbench/bundle. This page is now the Epic-06..10 shell only. -->
     </main>

@@ -81,10 +81,11 @@ def test_body_carries_active_tool_attribute():
     "section_id,tool",
     [
         ("workbench-suggestion-flow", "annotate"),
-        ("annotation-inbox", "approve"),
-        ("workbench-bottom-bar", "approve"),
-        ("workbench-pending-signoff-affordance", "approve"),
-        ("approval-center-panel", "approve"),
+        # P52-05: approve host changed from four sibling sections
+        # (annotation-inbox, workbench-bottom-bar, pending-signoff,
+        # approval-center-panel) to a single #workbench-tool-approve
+        # wrapper so they no longer position-fixed-stack.
+        ("workbench-tool-approve", "approve"),
         # P52-03: monitor host changed from #workbench-live-log-panel
         # to the unified #workbench-tool-monitor drawer (which now
         # contains both the metrics panel and the live-log panel).
