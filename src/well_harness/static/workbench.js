@@ -862,23 +862,27 @@ function clearSuggestionDraft() {
 // cross-system submit (snapshot != live) would leave the submit-
 // system's draft alive and reappear on next refresh.
 function clearSuggestionDraftFor(sysId) {
-  // Cancel any pending autosave debounce BEFORE deleting the
-  // entry — otherwise a typing → submit within 500ms would let
-  // the timer fire after the delete and resurrect the just-
-  // shipped text (Codex round-3 P2-1).
-  if (_suggestionDraftTimer) {
-    clearTimeout(_suggestionDraftTimer);
-    _suggestionDraftTimer = null;
+  // Codex round-7 P2 + round-8 P3: also clear the pending-snapshot
+  // mirror if (and only if) it belongs to the system being cleared.
+  // The simpler "always null" version dropped another system's
+  // in-flight typing in the cross-system flow:
+  //   submit-A in flight → user switches to B + types → submit-A
+  //   resolves and runs clearSuggestionDraftFor("A"), but that
+  //   nulled the pending snapshot for B, so B's keystrokes never
+  //   reached localStorage. Scoped clear preserves B's autosave.
+  if (_pendingDraftSystemId === sysId) {
+    _pendingDraftText = null;
+    _pendingDraftSystemId = null;
+    // Same scoping for the debounce timer: only kill it if it was
+    // scheduled for the system we're clearing (i.e. the same
+    // system as the now-cleared pending snapshot). Otherwise we
+    // might cancel a debounce that was about to commit some other
+    // system's typing.
+    if (_suggestionDraftTimer) {
+      clearTimeout(_suggestionDraftTimer);
+      _suggestionDraftTimer = null;
+    }
   }
-  // Codex round-7 P2: also clear the pending-snapshot mirror.
-  // Otherwise a typing → submit → system-switch sequence within
-  // the debounce window: clearTimeout would prevent the timer's
-  // own write, but the system-change handler's flush path would
-  // see the still-populated _pendingDraftText/SystemId and write
-  // the just-submitted text back into localStorage under the old
-  // system — resurrecting it on next refresh.
-  _pendingDraftText = null;
-  _pendingDraftSystemId = null;
   if (!sysId) return;
   const map = _readDraftMap();
   if (sysId in map) {

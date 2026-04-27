@@ -820,6 +820,78 @@ def test_clearSuggestionDraftFor_clears_pending_snapshot() -> None:
     assert "_pendingDraftSystemId = null" in body
 
 
+def test_llm_normalizer_regenerates_summary_when_canonicalizing() -> None:
+    """Codex round-8 P2: when affected_gates / target_signals get
+    filtered or change_kind coerced, the LLM's prose summary still
+    references the pre-sanitize hallucinated ids. That misleading
+    sentence then ends up persisted in the proposal store and read
+    by skill_executor.decompose(). Fix: regenerate the summary
+    from the canonicalized fields whenever sanitization actually
+    changed something."""
+    raw = {
+        "affected_gates": ["L99", "L1"],   # L99 stripped → ["L1"]
+        "target_signals": [],
+        "change_kind": "tighten_condition",
+        "change_kind_zh": "收紧判据",
+        "change_kind_en": "tighten condition",
+        "confidence": 0.7,
+        "summary_zh": "系统理解：你想在 L99 上执行收紧判据。",
+        "summary_en": "System reading: you propose to tighten condition on gate(s) L99.",
+    }
+    out = _normalize_llm_interpretation(
+        raw, source_text="x", system_id="thrust-reverser"
+    )
+    # The persisted summary must NOT reference the dropped id.
+    assert "L99" not in out["summary_zh"], (
+        f"summary_zh still references hallucinated L99: {out['summary_zh']!r}"
+    )
+    assert "L99" not in out["summary_en"]
+    # And it should reflect the canonicalized fields.
+    assert "L1" in out["summary_zh"]
+
+
+def test_llm_normalizer_preserves_summary_when_no_canonicalization() -> None:
+    """When all LLM fields pass canonicalization unchanged, the
+    LLM's richer prose summary is preserved (it's typically more
+    nuanced than the rules template)."""
+    raw = {
+        "affected_gates": ["L1"],
+        "target_signals": ["SW1"],
+        "change_kind": "tighten_condition",
+        "change_kind_zh": "收紧判据",
+        "change_kind_en": "tighten condition",
+        "confidence": 0.95,
+        "summary_zh": "工程师建议在 L1 上对 SW1 加 50ms 去抖。",
+        "summary_en": "Engineer proposes 50ms debounce on SW1 at L1.",
+    }
+    out = _normalize_llm_interpretation(
+        raw, source_text="x", system_id="thrust-reverser"
+    )
+    # Untouched.
+    assert out["summary_zh"] == raw["summary_zh"]
+    assert out["summary_en"] == raw["summary_en"]
+
+
+def test_clearSuggestionDraftFor_preserves_other_systems_pending_state() -> None:
+    """Codex round-8 P3: a cross-system clear (e.g. submit-A
+    resolving while user is now typing on B) must NOT nuke B's
+    pending-snapshot — otherwise B's keystrokes would never reach
+    localStorage. The fix scopes the pending-clear to the system
+    matching sysId."""
+    fn = re.search(
+        r'function clearSuggestionDraftFor\(sysId\) \{(.*?)^}',
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    # The pending null-out must be guarded by a system-id equality
+    # check, not unconditional.
+    assert "_pendingDraftSystemId === sysId" in body, (
+        "pending-snapshot null-out must be scoped to the cleared sysId"
+    )
+
+
 def test_change_kind_hint_excludes_propose_change_fallback() -> None:
     """Codex P3: the verb hint must NOT advertise "propose change"
     as a remedy — that's the very fallback that triggered the hint

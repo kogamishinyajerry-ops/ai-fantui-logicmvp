@@ -2595,6 +2595,40 @@ def _normalize_llm_interpretation(
         + (0.2 if change_kind != "propose_change" else 0.0)
     )
     confidence = min(confidence, canonical_max)
+    # Codex round-8 P2: if canonicalization actually changed anything
+    # (filtered out hallucinated ids, coerced an unknown change_kind),
+    # the LLM's summary text still describes the pre-sanitize world
+    # ("…在 L99 上对 SW3 执行 tune_threshold…"). Persisting that into
+    # the proposal store means /skill_executor decompose() also sees
+    # the misleading sentence. Regenerate the summaries from the
+    # canonicalized fields whenever the LLM-reported lists differ
+    # from the post-canonical lists; otherwise keep the LLM's text
+    # (it's typically richer than the rules template).
+    raw_gates_in = _str_list(raw_dict.get("affected_gates"))
+    raw_signals_in = _str_list(raw_dict.get("target_signals"))
+    raw_kind_in = str(raw_dict.get("change_kind") or "propose_change")
+    canonicalized = (
+        raw_gates_in != affected_gates
+        or raw_signals_in != target_signals
+        or raw_kind_in != change_kind
+    )
+    if canonicalized:
+        gates_label = "、".join(affected_gates) if affected_gates else "(未识别)"
+        signals_label = "、".join(target_signals) if target_signals else "(未识别)"
+        summary_zh = (
+            f"系统理解：你想在 {gates_label} 上对 {signals_label} 执行 "
+            f"{raw_zh}（confidence={int(confidence * 100)}%）。"
+        )
+        gates_label_en = ", ".join(affected_gates) if affected_gates else "(none)"
+        signals_label_en = ", ".join(target_signals) if target_signals else "(none)"
+        summary_en = (
+            f"System reading: you propose to {raw_en} on gate(s) "
+            f"{gates_label_en}, target signal(s) {signals_label_en} "
+            f"(confidence={int(confidence * 100)}%)."
+        )
+    else:
+        summary_zh = str(raw_dict.get("summary_zh") or "")
+        summary_en = str(raw_dict.get("summary_en") or "")
     return {
         "affected_gates": affected_gates,
         "target_signals": target_signals,
@@ -2608,8 +2642,8 @@ def _normalize_llm_interpretation(
         "vocabulary_hint": _vocabulary_hint_from_fields(
             affected_gates, target_signals, change_kind, system_id
         ),
-        "summary_zh": str(raw_dict.get("summary_zh") or ""),
-        "summary_en": str(raw_dict.get("summary_en") or ""),
+        "summary_zh": summary_zh,
+        "summary_en": summary_en,
         "source_text": source_text,
     }
 
