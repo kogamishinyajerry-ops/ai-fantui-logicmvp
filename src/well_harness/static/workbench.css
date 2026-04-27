@@ -3942,19 +3942,47 @@ body[data-active-tool] [data-dock-section][hidden] {
   line-height: 1.55;
 }
 
-/* Override P51-02's fixed-bottom positioning since live-log now
-   lives inside the monitor drawer. The .workbench-live-log-panel
-   block earlier in this file pinned position:fixed bottom:0; we
-   neutralize that when the drawer is the host. */
-body[data-active-tool] section.workbench-live-log-panel.workbench-tool-drawer-section {
-  position: fixed;  /* re-apply explicitly so the rule above wins */
-  border-top: none;
+/* P52-03: live-log is now an inner block of the monitor drawer.
+   Override P51-02's fixed-bottom positioning so the panel flows
+   naturally inside the drawer instead of pinning to the viewport. */
+.workbench-tool-monitor .workbench-live-log-panel {
+  position: static;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  border-top: 1px solid var(--wb-hairline);
+  margin-top: 1.1rem;
+  padding-top: 0.8rem;
+  background: transparent;
 }
-section.workbench-live-log-panel .workbench-live-log-body {
+.workbench-tool-monitor .workbench-live-log-subheader {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin-bottom: 0.45rem;
+}
+.workbench-tool-monitor .workbench-live-log-subheader .eyebrow {
+  margin: 0;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted, #93a8b8);
+  font-weight: 500;
+}
+.workbench-tool-monitor .workbench-live-log-status {
+  margin-left: auto;
+  font-size: 0.65rem;
+  color: rgba(180, 220, 180, 0.65);
+}
+.workbench-tool-monitor .workbench-live-log-body {
   max-height: none;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--wb-hairline);
 }
-section.workbench-live-log-panel .workbench-live-log-stream {
-  height: calc(100vh - 8rem);
+.workbench-tool-monitor .workbench-live-log-stream {
+  height: 320px;
+  background: #050a0e;
 }
 
 /* When NO tool is active, hide the dock-section sections regardless

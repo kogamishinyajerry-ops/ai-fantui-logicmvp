@@ -522,102 +522,11 @@
           <ol id="workbench-plan-timeline-steps" class="workbench-plan-timeline-steps"></ol>
         </section>
 
-        <!-- P50-02a (2026-04-27): metrics observability panel.
-             Aggregate counts + pass rate + recent failures, populated
-             by refreshExecutionMetrics() on the same 5s poll loop
-             that drives badges/pending-exec. Collapsed by default
-             so the inbox stays the primary surface; reviewers expand
-             when they need a system-health glance. -->
-        <details id="workbench-metrics-panel" class="workbench-metrics-panel">
-          <summary class="workbench-metrics-summary">
-            <span class="workbench-metrics-summary-eyebrow">executor metrics</span>
-            <!-- P50-10 (2026-04-27): forensics bundle download.
-                 Lives in the summary so it's reachable without
-                 expanding the panel — when alerted, the operator
-                 wants the snapshot first, the dashboard view second.
-                 An <a> rather than a <button> so the browser handles
-                 the file download naturally; click bubbles past the
-                 <details> toggle thanks to event.stopPropagation in
-                 the handler. -->
-            <a
-              id="workbench-metrics-forensics-link"
-              class="workbench-metrics-forensics-link"
-              href="/api/skill-executions/forensics-bundle"
-              download
-              title="下载快照 · download forensics bundle"
-            >📥 forensics</a>
-            <!-- P50-07 (2026-04-27): SLO verdict chip. Color-coded
-                 GREEN/YELLOW/RED/NO_DATA so a reviewer's glance at
-                 the collapsed summary tells them whether the system
-                 needs attention. Filled by JS; default no_data so
-                 stale templates render neutrally before first poll. -->
-            <span
-              id="workbench-metrics-slo-chip"
-              class="workbench-metrics-slo-chip"
-              data-slo-severity="no_data"
-              title="SLO 状态 · system health"
-            >—</span>
-            <span id="workbench-metrics-summary-line" class="workbench-metrics-summary-line">载入中… · loading…</span>
-          </summary>
-          <div id="workbench-metrics-body" class="workbench-metrics-body" aria-live="polite">
-            <div class="workbench-metrics-grid">
-              <div class="workbench-metrics-card" data-metric="total">
-                <span class="workbench-metrics-card-label">总执行 · total</span>
-                <strong id="workbench-metric-total">—</strong>
-              </div>
-              <div class="workbench-metrics-card" data-metric="pass-rate">
-                <span class="workbench-metrics-card-label">通过率 · pass rate</span>
-                <strong id="workbench-metric-pass-rate">—</strong>
-              </div>
-              <div class="workbench-metrics-card" data-metric="median-duration">
-                <span class="workbench-metrics-card-label">中位耗时 · median</span>
-                <strong id="workbench-metric-median-duration">—</strong>
-              </div>
-              <div class="workbench-metrics-card" data-metric="p95-duration">
-                <span class="workbench-metrics-card-label">p95 耗时 · p95</span>
-                <strong id="workbench-metric-p95-duration">—</strong>
-              </div>
-            </div>
-            <div class="workbench-metrics-state-bars" id="workbench-metrics-state-bars">
-              <!-- 9 bars rendered by JS with live counts -->
-            </div>
-            <!-- P50-07 (2026-04-27): SLO breach detail. Hidden when
-                 overall is GREEN or NO_DATA (no breach to show).
-                 When YELLOW or RED, lists each SLO that crossed a
-                 threshold with its actual value vs the threshold,
-                 so the reviewer knows exactly what to investigate. -->
-            <div id="workbench-metrics-slo-breaches" class="workbench-metrics-slo-breaches" hidden>
-              <p class="workbench-metrics-slo-eyebrow">
-                SLO 触发 · slo breaches
-              </p>
-              <ul id="workbench-metrics-slo-breach-list" class="workbench-metrics-slo-breach-list"></ul>
-            </div>
-            <!-- P50-08b (2026-04-27): SLO transition timeline.
-                 Replays every GREEN→YELLOW/RED change so a reviewer
-                 can answer "when did this start breaking?" Hidden
-                 when no transitions exist yet (fresh deploy). -->
-            <div id="workbench-metrics-slo-timeline" class="workbench-metrics-slo-timeline" hidden>
-              <p class="workbench-metrics-slo-eyebrow">
-                SLO 时间线 · transition timeline
-              </p>
-              <ul id="workbench-metrics-slo-timeline-list" class="workbench-metrics-slo-timeline-list"></ul>
-            </div>
-            <!-- P50-04 (2026-04-27): failure category breakdown.
-                 Shows which buckets have been failing most often
-                 (planner_error / git_error / etc.) so a reviewer
-                 spots trends instead of scrolling through individual
-                 incidents. -->
-            <div id="workbench-metrics-failure-breakdown" class="workbench-metrics-failure-breakdown" hidden>
-              <p class="workbench-metrics-failure-breakdown-eyebrow">
-                失败分类 · failure breakdown
-              </p>
-              <ul id="workbench-metrics-failure-categories" class="workbench-metrics-failure-categories"></ul>
-            </div>
-            <div id="workbench-metrics-failures" class="workbench-metrics-failures">
-              <p class="workbench-metrics-failures-empty">最近无失败 · no recent failures</p>
-            </div>
-          </div>
-        </details>
+        <!-- P52-03 (2026-04-27): metrics panel relocated to the
+             monitor drawer (#workbench-tool-monitor). Annotators
+             working the inbox no longer have ops health pushed into
+             their surface; operators reach metrics via the dock's
+             monitor button and find them grouped with the live log. -->
         <ul
           id="annotation-inbox-list"
           data-inbox-state="loading"
@@ -705,29 +614,100 @@
          engineer types text → interpret → confirm → submit ticket.
          The overlay file still exists for /workbench/bundle which
          hasn't migrated to the new flow yet. -->
-    <!-- P51-02 (2026-04-27): Live Log Panel. Terminal-style, fed by
-         the SSE stream at /api/workbench/log-stream. Auto-scrolls to
-         the latest line; collapsible to keep the panel out of the
-         way when not needed. Pinned to the bottom of viewport via
-         CSS so it doesn't push the inbox content. -->
-    <!-- P52-01 (2026-04-27): live log panel migrated into the
-         "monitor" dock drawer. Was fixed-bottom in P51-02; now it's
-         a tool-drawer section like every other panel so it doesn't
-         eat viewport when no one's watching. -->
+    <!-- P52-03 (2026-04-27): unified monitor drawer.
+         Hosts BOTH the executor-metrics observability panel and the
+         live-log SSE stream, replacing two separate viewport surfaces
+         (inbox-embedded metrics + bottom-pinned live log) with one
+         dedicated tool drawer. Operators get an at-a-glance health
+         summary up top and the rolling log below — annotators don't
+         see either unless they explicitly click the monitor button.
+         All original element IDs are preserved so refreshExecutionMetrics
+         and the SSE handler keep working without per-call updates. -->
     <section
-      id="workbench-live-log-panel"
-      class="workbench-live-log-panel workbench-tool-drawer-section"
+      id="workbench-tool-monitor"
+      class="workbench-tool-drawer-section workbench-tool-monitor"
       data-dock-section="monitor"
+      aria-labelledby="workbench-tool-monitor-title"
       hidden
     >
       <header class="workbench-tool-drawer-header">
-        <p class="eyebrow">live log</p>
-        <h2>实时日志 · Live Log</h2>
-        <span id="workbench-live-log-status" class="workbench-live-log-status">disconnected</span>
+        <p class="eyebrow">monitor</p>
+        <h2 id="workbench-tool-monitor-title">运行监控 · Monitor</h2>
         <button type="button" class="workbench-tool-drawer-close" data-dock-close>×</button>
       </header>
-      <div class="workbench-live-log-body">
-        <pre id="workbench-live-log-stream" class="workbench-live-log-stream" aria-live="polite"></pre>
+
+      <!-- P50-02a metrics panel — moved here from the inbox aside. -->
+      <details id="workbench-metrics-panel" class="workbench-metrics-panel" open>
+        <summary class="workbench-metrics-summary">
+          <span class="workbench-metrics-summary-eyebrow">executor metrics</span>
+          <a
+            id="workbench-metrics-forensics-link"
+            class="workbench-metrics-forensics-link"
+            href="/api/skill-executions/forensics-bundle"
+            download
+            title="下载快照 · download forensics bundle"
+          >📥 forensics</a>
+          <span
+            id="workbench-metrics-slo-chip"
+            class="workbench-metrics-slo-chip"
+            data-slo-severity="no_data"
+            title="SLO 状态 · system health"
+          >—</span>
+          <span id="workbench-metrics-summary-line" class="workbench-metrics-summary-line">载入中… · loading…</span>
+        </summary>
+        <div id="workbench-metrics-body" class="workbench-metrics-body" aria-live="polite">
+          <div class="workbench-metrics-grid">
+            <div class="workbench-metrics-card" data-metric="total">
+              <span class="workbench-metrics-card-label">总执行 · total</span>
+              <strong id="workbench-metric-total">—</strong>
+            </div>
+            <div class="workbench-metrics-card" data-metric="pass-rate">
+              <span class="workbench-metrics-card-label">通过率 · pass rate</span>
+              <strong id="workbench-metric-pass-rate">—</strong>
+            </div>
+            <div class="workbench-metrics-card" data-metric="median-duration">
+              <span class="workbench-metrics-card-label">中位耗时 · median</span>
+              <strong id="workbench-metric-median-duration">—</strong>
+            </div>
+            <div class="workbench-metrics-card" data-metric="p95-duration">
+              <span class="workbench-metrics-card-label">p95 耗时 · p95</span>
+              <strong id="workbench-metric-p95-duration">—</strong>
+            </div>
+          </div>
+          <div class="workbench-metrics-state-bars" id="workbench-metrics-state-bars">
+            <!-- 9 bars rendered by JS with live counts -->
+          </div>
+          <div id="workbench-metrics-slo-breaches" class="workbench-metrics-slo-breaches" hidden>
+            <p class="workbench-metrics-slo-eyebrow">SLO 触发 · slo breaches</p>
+            <ul id="workbench-metrics-slo-breach-list" class="workbench-metrics-slo-breach-list"></ul>
+          </div>
+          <div id="workbench-metrics-slo-timeline" class="workbench-metrics-slo-timeline" hidden>
+            <p class="workbench-metrics-slo-eyebrow">SLO 时间线 · transition timeline</p>
+            <ul id="workbench-metrics-slo-timeline-list" class="workbench-metrics-slo-timeline-list"></ul>
+          </div>
+          <div id="workbench-metrics-failure-breakdown" class="workbench-metrics-failure-breakdown" hidden>
+            <p class="workbench-metrics-failure-breakdown-eyebrow">失败分类 · failure breakdown</p>
+            <ul id="workbench-metrics-failure-categories" class="workbench-metrics-failure-categories"></ul>
+          </div>
+          <div id="workbench-metrics-failures" class="workbench-metrics-failures">
+            <p class="workbench-metrics-failures-empty">最近无失败 · no recent failures</p>
+          </div>
+        </div>
+      </details>
+
+      <!-- P51-02 live log — now a sub-block, not its own dock section. -->
+      <div
+        id="workbench-live-log-panel"
+        class="workbench-live-log-panel"
+        aria-label="实时日志 · Live Log"
+      >
+        <div class="workbench-live-log-subheader">
+          <p class="eyebrow">live log</p>
+          <span id="workbench-live-log-status" class="workbench-live-log-status">disconnected</span>
+        </div>
+        <div class="workbench-live-log-body">
+          <pre id="workbench-live-log-stream" class="workbench-live-log-stream" aria-live="polite"></pre>
+        </div>
       </div>
     </section>
     <script src="/workbench.js"></script>
