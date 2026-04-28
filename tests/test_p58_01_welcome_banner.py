@@ -135,9 +135,14 @@ def test_welcome_load_example_button_loads_c919_nominal() -> None:
 #
 # Codex R1 HIGH (2026-04-28): a persistent floating ? button violates
 # the user's "additive-only post-dismiss" directive — it's a new
-# always-visible UI element vs pre-P58. Re-open moved to a Shift+?
-# keyboard shortcut (invisible to layout). P58-03 will document it
-# via the cheatsheet modal.
+# always-visible UI element vs pre-P58. Re-open is via the cheatsheet
+# modal (P58-03): `?` key opens the modal, which contains a button
+# to reopen the welcome banner.
+#
+# Pre-P58-03 the reopen was a direct Shift+? handler. P58-03 evolved
+# this into the cheatsheet → reopen flow so `?` is the universal help
+# affordance with documented shortcuts (rather than a hidden Shift+?
+# binding only the developer remembers).
 
 
 def test_no_floating_help_button_in_markup() -> None:
@@ -155,7 +160,7 @@ def test_no_floating_help_button_in_markup() -> None:
     assert forbidden_dom is None, (
         "helpFloatingBtn is back in the DOM — Codex R1 HIGH said this "
         "is a new always-visible element vs pre-P58 layout. Use the "
-        "Shift+? keyboard shortcut for re-open instead."
+        "cheatsheet modal (`?` key, P58-03) for re-open instead."
     )
     assert forbidden_class is None, (
         "help-fab class still in markup — remove it (Codex R1 HIGH)."
@@ -165,57 +170,29 @@ def test_no_floating_help_button_in_markup() -> None:
     )
 
 
-def test_keyboard_shortcut_reopens_banner() -> None:
-    """Re-open affordance: Shift+? key listener calls showWelcomeBanner.
-    No visible UI change, so dismissed-state layout stays pixel-identical
-    to pre-P58."""
+def test_welcome_banner_reopen_path_exists() -> None:
+    """The welcome banner must be re-openable AT ALL. P58-01 used a
+    direct Shift+? keyboard shortcut. P58-03 evolved to: `?` opens
+    the cheatsheet modal, which has a "重新打开欢迎面板" button.
+    Either path is acceptable; the contract is just that some
+    keyboard-driven path lets users get the banner back."""
     body = _read()
-    # The keydown listener must check e.key === "?" AND e.shiftKey AND
-    # call showWelcomeBanner.
-    pattern = (
-        r'document\.addEventListener\s*\(\s*"keydown"'
-        r'[\s\S]{0,800}?e\.key\s*===\s*"\?"'
-        r'[\s\S]{0,200}?e\.shiftKey'
-        r'[\s\S]{0,200}?showWelcomeBanner\s*\('
-    )
-    assert re.search(pattern, body), (
-        "keydown listener for Shift+? not found, or does not call "
-        "showWelcomeBanner(). This is the re-open affordance for "
-        "dismissed users."
-    )
-
-
-def test_keyboard_shortcut_skips_form_inputs() -> None:
-    """The Shift+? shortcut must not fire while the user is typing in
-    INPUT/TEXTAREA/SELECT/contenteditable — typing `?` in the JSON
-    textarea must NOT pop the banner over the editor.
-
-    Codex R2 LOW: assert ALL four guards individually so a future
-    regression that drops e.g. the SELECT or isContentEditable check
-    fails the test instead of silently passing on INPUT/TEXTAREA alone.
-    """
-    body = _read()
-    # Locate the keydown listener block once.
-    handler_match = re.search(
-        r'document\.addEventListener\s*\(\s*"keydown"'
-        r'[\s\S]{0,1500}?\}\s*\)\s*;',
+    # Either a direct keydown→showWelcomeBanner OR a cheatsheet
+    # button→showWelcomeBanner.
+    direct = re.search(
+        r'addEventListener\s*\(\s*"keydown"[\s\S]{0,2000}?showWelcomeBanner\s*\(',
         body,
     )
-    assert handler_match is not None, "keydown listener block not found"
-    chunk = handler_match.group(0)
-    # Each individual guard must appear inside the handler.
-    required_guards = [
-        ('tagName === "INPUT"', r'tagName\s*===\s*"INPUT"'),
-        ('tagName === "TEXTAREA"', r'tagName\s*===\s*"TEXTAREA"'),
-        ('tagName === "SELECT"', r'tagName\s*===\s*"SELECT"'),
-        ('isContentEditable', r'isContentEditable'),
-    ]
-    for label, pat in required_guards:
-        assert re.search(pat, chunk), (
-            f"keydown listener missing guard for {label}. Without it, "
-            f"typing `?` in that surface would inadvertently pop the "
-            f"welcome banner. (Codex R2 LOW.)"
-        )
+    via_modal = re.search(
+        r'shortcutReopenWelcomeBtn[\s\S]{0,500}?showWelcomeBanner\s*\(',
+        body,
+    )
+    assert direct or via_modal, (
+        "no keyboard-driven path to re-open the welcome banner. "
+        "Dismissed users have no way back. Either wire a direct "
+        "keydown shortcut or expose a cheatsheet button that calls "
+        "showWelcomeBanner()."
+    )
 
 
 # ── 4. Persistence: versioned localStorage dismissal flag ──

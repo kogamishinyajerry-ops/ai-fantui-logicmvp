@@ -338,6 +338,111 @@
   .tour-card button:disabled { opacity: 0.4; cursor: not-allowed; }
   .tour-card button:hover:not(:disabled) { filter: brightness(1.15); }
   .tour-card button:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* P58-03: empty-state coaching shown inside the event table when
+     currentTimeline.events is empty. Replaces the previous bare
+     empty <tbody> for "(自定义空白)" preset users. */
+  .empty-coach {
+    text-align: center;
+    padding: 18px 14px;
+    background: var(--panel-2);
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+  }
+  .empty-coach-title {
+    font-size: 13px; color: var(--text); margin: 0 0 6px;
+  }
+  .empty-coach-hint {
+    font-size: 11px; color: var(--dim);
+    margin: 0 0 12px; line-height: 1.5;
+  }
+  .empty-coach-chips {
+    display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+  }
+  .empty-coach-chip {
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .empty-coach-chip:hover { filter: brightness(1.25); }
+  .empty-coach-chip:focus {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+
+  /* P58-03: keyboard shortcut cheatsheet modal. Opens via `?` key
+     when no form input has focus. */
+  .shortcut-modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 90;
+    background: rgba(0, 0, 0, 0.62);
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: auto;
+  }
+  .shortcut-modal[hidden] { display: none; }
+  .shortcut-modal-card {
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 18px 22px 14px;
+    min-width: 340px;
+    max-width: 480px;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  }
+  .shortcut-modal-card h2 {
+    margin: 0 0 12px; font-size: 14px;
+    color: var(--accent); font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .shortcut-table { width: 100%; border-collapse: collapse; }
+  .shortcut-table td {
+    padding: 6px 4px; font-size: 12px;
+    vertical-align: top; line-height: 1.5;
+  }
+  .shortcut-table td:first-child {
+    width: 140px; color: var(--dim);
+  }
+  .shortcut-table kbd {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-family: "SFMono-Regular", Menlo, monospace;
+    font-size: 11px;
+    color: var(--text);
+    margin: 0 2px;
+    white-space: nowrap;
+  }
+  .shortcut-modal-actions {
+    margin-top: 14px;
+    display: flex; gap: 8px;
+    justify-content: flex-end;
+  }
+  .shortcut-modal-actions button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .shortcut-modal-actions button.primary {
+    background: var(--accent); color: var(--bg);
+    border-color: var(--accent); font-weight: 500;
+  }
+  .shortcut-modal-actions button:hover { filter: brightness(1.15); }
+  .shortcut-modal-actions button:focus {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
 </style>
 </head>
 <body>
@@ -490,6 +595,40 @@
       <div class="panel">
         <h2>故障级联 · Failure Cascade</h2>
         <div id="cascadeWrap"><div class="hint">（无）</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- P58-03 onboarding: keyboard shortcut cheatsheet modal. Opens
+       via `?` key (no shift required) when no form input has focus.
+       Replaces P58-01's Shift+? "reopen banner" — `?` is the universal
+       help affordance, with the welcome reopen now a button inside
+       the modal. -->
+  <div id="shortcutModal" class="shortcut-modal" role="dialog"
+       aria-modal="true" aria-labelledby="shortcutModalTitle" hidden>
+    <div class="shortcut-modal-card">
+      <h2 id="shortcutModalTitle">键盘快捷键</h2>
+      <table class="shortcut-table">
+        <tbody>
+          <tr><td>打开此面板</td>
+              <td><kbd>?</kbd></td></tr>
+          <tr><td>运行仿真</td>
+              <td><kbd>Cmd</kbd>+<kbd>Enter</kbd>
+                  / <kbd>Ctrl</kbd>+<kbd>Enter</kbd></td></tr>
+          <tr><td>暂存场景</td>
+              <td><kbd>Cmd</kbd>+<kbd>S</kbd>
+                  / <kbd>Ctrl</kbd>+<kbd>S</kbd></td></tr>
+          <tr><td>关闭面板 / 取消引导</td>
+              <td><kbd>Esc</kbd></td></tr>
+        </tbody>
+      </table>
+      <div class="shortcut-modal-actions">
+        <button id="shortcutReopenWelcomeBtn" type="button">
+          重新打开欢迎面板
+        </button>
+        <button id="shortcutCloseBtn" class="primary" type="button">
+          关闭
+        </button>
       </div>
     </div>
   </div>
@@ -1099,9 +1238,62 @@ $("metaDurationS").addEventListener("change", () => {
 function renderEventTable() {
   const body = $("eventTableBody");
   const events = currentTimeline.events || [];
-  body.innerHTML = events.map((ev, i) => renderEventRow(ev, i)).join("");
+  if (events.length === 0) {
+    // P58-03 empty-state coaching: replace the bare empty <tbody> with
+    // a hint card + 4 starter chips so users on (自定义空白) preset
+    // (or after deleting all events) have a clear next step. Each chip
+    // appends an event of the indicated kind and re-renders.
+    // colspan=7 so the row spans the full 7-column header (delete +
+    // up + down + t_s + kind + target + value/note collapsed).
+    // colspan must match the header column count (currently 8:
+    // # / t_s / kind / target / value / duration_s / note / actions).
+    // Codex P58-03 R1 LOW: a wrong colspan visually clips the coach
+    // card. test_empty_coach_colspan_matches_header_columns guards
+    // future drift.
+    body.innerHTML = `
+      <tr><td colspan="8">
+        <div class="empty-coach" id="emptyCoach">
+          <p class="empty-coach-title">✨ 还没有事件 · 从一个起点开始</p>
+          <p class="empty-coach-hint">点下方任一类型添加首个事件，系统会填充合理默认值。也可切到 Raw 标签直接粘贴 JSON。</p>
+          <div class="empty-coach-chips">
+            <button class="empty-coach-chip" type="button"
+                    data-coach-kind="set_input">+ set_input</button>
+            <button class="empty-coach-chip" type="button"
+                    data-coach-kind="ramp_input">+ ramp_input</button>
+            <button class="empty-coach-chip" type="button"
+                    data-coach-kind="inject_fault">+ inject_fault</button>
+            <button class="empty-coach-chip" type="button"
+                    data-coach-kind="assert_condition">+ assert_condition</button>
+          </div>
+        </div>
+      </td></tr>`;
+  } else {
+    body.innerHTML = events.map((ev, i) => renderEventRow(ev, i)).join("");
+  }
   $("rowCountHint").textContent = `${events.length} event${events.length === 1 ? "" : "s"}`;
 }
+
+// Empty-state chip click → append a starter event of the chosen kind.
+// Defaults are minimal but valid: t_s=0, kind from chip, empty target/value
+// (target dropdown will pick the first catalog entry). The user fills
+// in the detail; the chip just removes the friction of "where do I start".
+document.addEventListener("click", (e) => {
+  const chip = e.target && e.target.closest(".empty-coach-chip");
+  if (!chip) return;
+  const kind = chip.dataset.coachKind;
+  if (!kind) return;
+  const starter = {
+    set_input: { t_s: 0.0, kind: "set_input", target: "", value: null, note: "" },
+    ramp_input: { t_s: 0.0, kind: "ramp_input", target: "", value: 0, duration_s: 1.0, note: "" },
+    inject_fault: { t_s: 0.0, kind: "inject_fault", target: "", note: "" },
+    assert_condition: { t_s: 1.0, kind: "assert_condition", target: "", value: true, note: "" },
+  }[kind];
+  if (!starter) return;
+  if (!Array.isArray(currentTimeline.events)) currentTimeline.events = [];
+  currentTimeline.events.push(starter);
+  renderEventTable();
+  syncToTextarea();
+});
 
 // Codex R1 H2 fix: coerce numeric fields to safe finite numbers BEFORE
 // they reach innerHTML. A hostile Raw payload like {"t_s": "<img onerror>"}
@@ -1838,27 +2030,140 @@ $("welcomeTakeTourBtn").addEventListener("click", (e) => {
   startTour(launcher);
 });
 
-// Shift+? keyboard shortcut re-opens the welcome banner. Invisible to
-// layout (no DOM element), so steady-state UI for dismissed users
-// stays pixel-identical to pre-P58. The shortcut will be documented
-// by P58-03's cheatsheet modal.
-document.addEventListener("keydown", (e) => {
-  // Skip if user is typing in an input/textarea/contenteditable —
-  // typing `?` in the JSON textarea must not pop the banner.
-  const target = e.target;
-  if (target && (
+// =========================================================================
+// P58-03 keyboard shortcuts:
+//   - `?`           → open cheatsheet modal (replaces P58-01's Shift+?
+//                     "reopen banner"; the modal now hosts the welcome
+//                     reopen as a button, making `?` the universal help
+//                     affordance).
+//   - Cmd+Enter / Ctrl+Enter → trigger #runBtn click (run simulation)
+//   - Cmd+S / Ctrl+S         → trigger #saveScenarioBtn click +
+//                              preventDefault so browser's "Save Page"
+//                              dialog doesn't appear
+// All shortcuts skip when the user is typing in an INPUT/TEXTAREA/SELECT/
+// contenteditable so they never collide with text input.
+// =========================================================================
+
+let shortcutModalLauncher = null;
+
+function isFormInputTarget(target) {
+  if (!target) return false;
+  return (
     target.tagName === "INPUT" ||
     target.tagName === "TEXTAREA" ||
     target.tagName === "SELECT" ||
     target.isContentEditable
-  )) {
+  );
+}
+
+function openShortcutModal() {
+  shortcutModalLauncher = document.activeElement;
+  $("shortcutModal").hidden = false;
+  $("shortcutCloseBtn").focus();
+}
+
+function closeShortcutModal() {
+  $("shortcutModal").hidden = true;
+  // Restore focus to the launcher (typically <body> if `?` was hit
+  // outside any focused element). Use #presetSelect as the visible
+  // fallback when launcher isn't focusable, mirroring the tour's
+  // restore strategy.
+  let restored = false;
+  if (shortcutModalLauncher &&
+      typeof shortcutModalLauncher.focus === "function" &&
+      document.contains(shortcutModalLauncher) &&
+      !(shortcutModalLauncher.closest &&
+        shortcutModalLauncher.closest("[hidden]"))) {
+    try { shortcutModalLauncher.focus(); restored = true; } catch (e) {}
+  }
+  if (!restored) {
+    const fallback = document.getElementById("presetSelect");
+    if (fallback) {
+      try { fallback.focus(); } catch (e) {}
+    }
+  }
+  shortcutModalLauncher = null;
+}
+
+$("shortcutCloseBtn").addEventListener("click", closeShortcutModal);
+$("shortcutReopenWelcomeBtn").addEventListener("click", () => {
+  closeShortcutModal();
+  showWelcomeBanner();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+function shortcutModalFocusableButtons() {
+  // The two action buttons inside the cheatsheet card. Order matters
+  // (Tab cycle): reopen-welcome → close. Prev → Next visual order.
+  return [
+    $("shortcutReopenWelcomeBtn"),
+    $("shortcutCloseBtn"),
+  ].filter(el => el && !el.disabled);
+}
+
+document.addEventListener("keydown", (e) => {
+  // While the cheatsheet modal is open: Esc closes, Tab traps focus.
+  // Without the Tab trap, aria-modal=true is a lie — focus leaks
+  // into background DOM (Codex P58-03 R1 MEDIUM).
+  if (!$("shortcutModal").hidden) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeShortcutModal();
+      return;
+    }
+    if (e.key === "Tab") {
+      const buttons = shortcutModalFocusableButtons();
+      if (buttons.length > 0) {
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey) {
+          if (active === first || !buttons.includes(active)) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (active === last || !buttons.includes(active)) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+      return;
+    }
+  }
+  // Skip remaining shortcuts when typing in form inputs so they
+  // don't collide with text entry.
+  if (isFormInputTarget(e.target)) return;
+
+  // `?` — open cheatsheet (no shift required; e.key is already "?"
+  // post-shift on US layouts, and most non-US layouts produce "?" too).
+  // Skip if cheatsheet already open or any other modal/tour is active.
+  if (e.key === "?") {
+    if ($("shortcutModal").hidden &&
+        $("welcomeBanner").hidden &&
+        $("tourOverlay").hidden) {
+      e.preventDefault();
+      openShortcutModal();
+    }
     return;
   }
-  // `?` requires shift on US layout; e.key is "?" already after shift.
-  if (e.key === "?" && e.shiftKey) {
+
+  // Cmd+Enter / Ctrl+Enter — run simulation. Both keys (mac + win/linux).
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
     e.preventDefault();
-    showWelcomeBanner();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const btn = document.getElementById("runBtn");
+    if (btn && !btn.disabled) btn.click();
+    return;
+  }
+
+  // Cmd+S / Ctrl+S — save scratch. Critical to preventDefault so the
+  // browser's native Save Page dialog doesn't fire.
+  if ((e.metaKey || e.ctrlKey) && (e.key === "s" || e.key === "S")) {
+    e.preventDefault();
+    const btn = document.getElementById("saveScenarioBtn");
+    if (btn && !btn.disabled) btn.click();
+    return;
   }
 });
 
