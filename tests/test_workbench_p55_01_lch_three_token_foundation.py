@@ -40,17 +40,65 @@ CSS = (REPO_ROOT / "src" / "well_harness" / "static" / "workbench.css").read_tex
 # ─── 1. The three semantic tokens are declared at :root ───────
 
 
-@pytest.mark.parametrize("token", ["--base", "--accent", "--contrast"])
-def test_root_declares_three_semantic_tokens(token: str) -> None:
-    """workbench.css :root must declare the 3 canonical tokens.
-    Changing these three values is the only knob needed to retheme
-    the workbench end-to-end."""
-    # Find the first :root rule and verify the token is inside.
+@pytest.mark.parametrize("token", ["--base", "--contrast"])
+def test_root_declares_local_semantic_aliases(token: str) -> None:
+    """workbench.css :root must declare local aliases for the 2
+    semantic-token names that don't already exist in the upstream
+    design-tokens.css. (--accent is already declared upstream and
+    inherits unchanged into workbench scope; redeclaring it here
+    would either be redundant or create a self-referential cycle —
+    Codex P55-01 round-1 P1.) Together --base / --accent / --contrast
+    form the 3-token spine; changing those three propagates
+    throughout the workbench."""
     root_rule = re.search(r":root\s*\{(.*?)\n\}", CSS, re.DOTALL)
     assert root_rule is not None, "no :root rule found in workbench.css"
     body = root_rule.group(1)
     assert re.search(rf"^\s*{re.escape(token)}\s*:", body, re.MULTILINE), (
         f"missing root declaration: {token}"
+    )
+
+
+def test_accent_resolves_through_upstream_design_tokens() -> None:
+    """--accent is declared once in design-tokens.css and inherits
+    into workbench scope. No redeclaration in workbench.css :root
+    (which would create a cycle if it referenced var(--accent))."""
+    # workbench.css must NOT redeclare --accent at root.
+    root_rule = re.search(r":root\s*\{(.*?)\n\}", CSS, re.DOTALL)
+    assert root_rule is not None
+    root_body = root_rule.group(1)
+    accent_decl = re.search(
+        r"^\s*--accent\s*:\s*(.+?);", root_body, re.MULTILINE
+    )
+    assert accent_decl is None, (
+        f"workbench.css must not redeclare --accent at :root "
+        f"(it inherits from design-tokens.css). Got: {accent_decl.group(0) if accent_decl else None!r}"
+    )
+    # And the upstream file must still declare it.
+    design_tokens_path = (
+        REPO_ROOT / "src" / "well_harness" / "static" / "design-tokens.css"
+    )
+    upstream = design_tokens_path.read_text(encoding="utf-8")
+    assert re.search(r"^\s*--accent\s*:\s*[^;]+;", upstream, re.MULTILINE), (
+        "design-tokens.css must declare --accent (the upstream source)"
+    )
+
+
+def test_base_alias_propagates_to_body_background() -> None:
+    """Codex P55-01 round-1 P3: the html/body background must come
+    from the same canonical token --base derives from. Otherwise
+    rethemeing --base would change derived surfaces but leave the
+    outer page canvas behind. We satisfy this by declaring
+    --base: var(--bg-base), so changing --bg-base (which drives
+    body bg) propagates through --base into all derivations."""
+    root_rule = re.search(r":root\s*\{(.*?)\n\}", CSS, re.DOTALL)
+    assert root_rule is not None
+    body = root_rule.group(1)
+    base_decl = re.search(r"^\s*--base\s*:\s*([^;]+);", body, re.MULTILINE)
+    assert base_decl is not None
+    value = base_decl.group(1).strip()
+    assert "var(--bg-base)" in value, (
+        f"--base must alias --bg-base so body-bg + derived surfaces "
+        f"share one source of truth; got {value!r}"
     )
 
 

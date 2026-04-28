@@ -4028,10 +4028,20 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
    browsers).
    ─────────────────────────────────────────────────────────────── */
 :root {
-  /* === The three semantic tokens — change THESE to retheme === */
-  --base: #050914;        /* canvas / page background (deep navy) */
-  --accent: var(--accent);      /* the ONE highlight — affected gates only */
-  --contrast: #edf8ff;    /* primary foreground / text */
+  /* === The three semantic tokens.
+     P55-01 round-1 fix (Codex): alias the upstream design-tokens.css
+     palette rather than redeclaring it. design-tokens.css already
+     declares `--bg-base`, `--accent`, `--text-main` for the entire
+     surface set (workbench + demo + fan-console + …); a parallel
+     declaration here would (a) create a self-referential cycle if
+     the right-hand side uses var(--accent), and (b) leave the
+     `body { background: var(--bg-base) }` rule disconnected from
+     our 3-token retheme contract. By aliasing, a future palette
+     swap in design-tokens.css propagates through every derivation
+     and the body bg, with one source of truth. */
+  --base: var(--bg-base);
+  /* --accent inherits as-is from design-tokens.css; no redeclaration. */
+  --contrast: var(--text-main);
 
   /* === Derived neutrals via LCH mix of base ↔ contrast ===
      Keeping these as color-mix expressions (not pre-flattened hex)

@@ -29,17 +29,17 @@ def test_hairline_token_is_neutral():
     """The --wb-hairline token should be neutral white-tint, not
     cyan-tinted. Cyan-tinted hairlines visually scream "tech demo";
     Claude.app uses neutral grays for separators and reserves the
-    accent for focus + active states only."""
-    rule = re.search(
-        r':root\s*\{[^}]*\}',
-        CSS,
-        re.DOTALL,
-    )
-    assert rule is not None
-    body = rule.group(0)
+    accent for focus + active states only.
+
+    Note: this used to scope the lookup to the :root rule via
+    `:root\\s*\\{[^}]*\\}`, but P55-01's docblock comment legitimately
+    contains `}` characters in code examples, which truncates the
+    [^}]* class. Switched to a direct top-level match — the
+    declaration is unique enough not to need scoping."""
     hairline_match = re.search(
-        r'--wb-hairline:\s*([^;]+);',
-        body,
+        r'^\s*--wb-hairline:\s*([^;]+);',
+        CSS,
+        re.MULTILINE,
     )
     assert hairline_match is not None
     value = hairline_match.group(1).strip()
