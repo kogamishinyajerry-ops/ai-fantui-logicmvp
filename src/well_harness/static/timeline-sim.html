@@ -193,10 +193,123 @@
   .legend .idle::before { background: transparent; }
 
   .hint { font-size: 11px; color: var(--dim); margin-top: 4px; }
+
+  /* P58-01 Onboarding: welcome banner + floating help button. Strictly
+     additive — when dismissed (localStorage flag set), the page renders
+     identically to pre-P58 layout. The welcome banner is the first
+     child of <main> so it pushes content down on first load only. */
+  .welcome-banner {
+    border: 1px solid var(--accent);
+    background: linear-gradient(180deg,
+      rgba(0, 200, 245, 0.08) 0%,
+      rgba(0, 200, 245, 0.02) 100%);
+    border-radius: 6px;
+    padding: 14px 18px 12px;
+    margin: 0 0 16px;
+    position: relative;
+  }
+  .welcome-banner[hidden] { display: none; }
+  .welcome-banner h2 {
+    margin: 0 0 6px;
+    font-size: 14px;
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .welcome-banner p {
+    margin: 0 0 10px;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.55;
+  }
+  .welcome-banner .welcome-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .welcome-banner button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .welcome-banner button.primary {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+  .welcome-banner button:hover { filter: brightness(1.15); }
+  .welcome-banner .welcome-dismiss {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    background: transparent;
+    border: none;
+    color: var(--dim);
+    font-size: 18px;
+    line-height: 1;
+    padding: 2px 6px;
+    cursor: pointer;
+  }
+  .welcome-banner .welcome-dismiss:hover { color: var(--text); }
+
+  /* Floating ? button at bottom-right re-opens the welcome banner. */
+  .help-fab {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--panel-2);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    z-index: 50;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    font-family: inherit;
+  }
+  .help-fab:hover { filter: brightness(1.2); }
+  .help-fab:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
 <main>
+  <!-- P58-01 onboarding: welcome banner. Hidden by inline style on
+       initialization if WELCOME_DISMISSED_KEY is set in localStorage —
+       the page below it renders identically to pre-P58 once dismissed. -->
+  <aside id="welcomeBanner" class="welcome-banner" role="region"
+         aria-labelledby="welcomeBannerTitle" hidden>
+    <button id="welcomeDismissBtn" class="welcome-dismiss"
+            aria-label="关闭欢迎面板">×</button>
+    <h2 id="welcomeBannerTitle">欢迎使用 Timeline Simulator</h2>
+    <p>
+      这是一个基于"时间-事件表"驱动的逻辑/故障仿真工作台。你可以：
+      <strong>选择一个内置场景</strong>（如 C919 E-TRAS 正常部署），
+      <strong>在可视化编辑器里调整事件</strong>（按时间触发输入、注入故障、断言条件），
+      <strong>点 ▶ Run 看完整仿真结果</strong>，或暂存/导出自己的场景到本地。
+    </p>
+    <div class="welcome-actions">
+      <button id="welcomeTakeTourBtn" class="primary" type="button">
+        🎯 引导漫游（5 步）
+      </button>
+      <button id="welcomeLoadExampleBtn" type="button">
+        📦 加载一个示例（C919 正常部署）
+      </button>
+      <button id="welcomeDismissBtn2" type="button">
+        知道了，不再显示
+      </button>
+    </div>
+  </aside>
+
   <h1>全流程故障率仿真 · Timeline Simulator</h1>
   <div class="sub">按"时间-指令/状态"表驱动控制逻辑面板，逐步触发逻辑/故障并获取完整仿真结果。同时支持 FANTUI 演示系统 和 C919 E-TRAS 冻结 V1.0。</div>
 
@@ -321,6 +434,13 @@
       </div>
     </div>
   </div>
+
+  <!-- P58-01 onboarding: floating help button. Re-opens the welcome
+       banner when clicked. Fixed-positioned so it doesn't disturb
+       page flow. -->
+  <button id="helpFloatingBtn" class="help-fab" type="button"
+          aria-label="打开帮助 · 重新显示欢迎面板"
+          title="打开帮助">?</button>
 </main>
 
 <script>
@@ -1550,6 +1670,88 @@ function escape(s) {
 
 // Init: load first preset
 loadPresetInEditor("fantui_nominal");
+
+// =========================================================================
+// P58-01 onboarding: welcome banner + floating help button.
+//
+// Strictly additive UI. The page rendered identically to pre-P58 once
+// WELCOME_DISMISSED_KEY is set in localStorage. The floating ? button
+// is the only persistent visible affordance; clicking it re-shows the
+// banner regardless of dismissal state.
+//
+// Versioned dismiss key (`-v1`) lets future P58 phases force-show the
+// banner again (e.g., when the tour content materially changes) by
+// bumping the version suffix without losing the user's preference for
+// older cohorts.
+// =========================================================================
+
+const WELCOME_DISMISSED_KEY = "well-harness:welcome-dismissed-v1";
+
+function isWelcomeDismissed() {
+  try {
+    return localStorage.getItem(WELCOME_DISMISSED_KEY) === "1";
+  } catch (e) {
+    return false;
+  }
+}
+
+function setWelcomeDismissed(dismissed) {
+  try {
+    if (dismissed) {
+      localStorage.setItem(WELCOME_DISMISSED_KEY, "1");
+    } else {
+      localStorage.removeItem(WELCOME_DISMISSED_KEY);
+    }
+  } catch (e) {
+    // localStorage unavailable (private mode etc.) — fall back to
+    // session-only dismissal via the hidden attribute.
+  }
+}
+
+function showWelcomeBanner() {
+  $("welcomeBanner").hidden = false;
+}
+
+function hideWelcomeBanner() {
+  $("welcomeBanner").hidden = true;
+}
+
+function dismissWelcomeBanner() {
+  setWelcomeDismissed(true);
+  hideWelcomeBanner();
+}
+
+$("welcomeDismissBtn").addEventListener("click", dismissWelcomeBanner);
+$("welcomeDismissBtn2").addEventListener("click", dismissWelcomeBanner);
+
+$("welcomeLoadExampleBtn").addEventListener("click", () => {
+  loadPresetInEditor("c919_nominal");
+  $("presetSelect").value = "builtin:c919_nominal";
+  refreshDeleteScenarioButton();
+  setStatus("已加载示例 · C919 正常部署", "ok");
+  dismissWelcomeBanner();
+});
+
+$("welcomeTakeTourBtn").addEventListener("click", () => {
+  // P58-02 will replace this stub with the real guided tour. For
+  // P58-01 we just acknowledge the click and dismiss so the user
+  // isn't blocked. The button is the contract surface tested today;
+  // the tour controller lands in P58-02.
+  setStatus("引导漫游将在 P58-02 上线 · 当前可手动探索预设下拉与可视化编辑器", "");
+  dismissWelcomeBanner();
+});
+
+$("helpFloatingBtn").addEventListener("click", () => {
+  showWelcomeBanner();
+  // Scroll to top so the banner is visible even if user is deep in
+  // the trace view.
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
+// Show banner on first load if not dismissed.
+if (!isWelcomeDismissed()) {
+  showWelcomeBanner();
+}
 </script>
 </body>
 </html>
