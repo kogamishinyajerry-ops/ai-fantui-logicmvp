@@ -513,22 +513,27 @@ function refreshModelIfRawActive() {
   return loadFromTextarea();
 }
 
+// Codex R2 LOW fix: when the guard rejects the change (Raw JSON
+// invalid), the user-typed value would otherwise stay visible in the
+// control while currentTimeline + textarea are unchanged — the strip
+// would lie about the active model. Snap each control back to the
+// model so what the user sees matches the textarea source of truth.
 $("metaSystem").addEventListener("change", () => {
-  if (!refreshModelIfRawActive()) return;
+  if (!refreshModelIfRawActive()) { renderMetaStrip(); return; }
   currentTimeline.system = $("metaSystem").value;
   syncToTextarea();
 });
 $("metaStepS").addEventListener("change", () => {
   const v = parseFloat($("metaStepS").value);
-  if (isNaN(v) || v <= 0) return;
-  if (!refreshModelIfRawActive()) return;
+  if (isNaN(v) || v <= 0) { renderMetaStrip(); return; }
+  if (!refreshModelIfRawActive()) { renderMetaStrip(); return; }
   currentTimeline.step_s = v;
   syncToTextarea();
 });
 $("metaDurationS").addEventListener("change", () => {
   const v = parseFloat($("metaDurationS").value);
-  if (isNaN(v) || v <= 0) return;
-  if (!refreshModelIfRawActive()) return;
+  if (isNaN(v) || v <= 0) { renderMetaStrip(); return; }
+  if (!refreshModelIfRawActive()) { renderMetaStrip(); return; }
   currentTimeline.duration_s = v;
   syncToTextarea();
 });

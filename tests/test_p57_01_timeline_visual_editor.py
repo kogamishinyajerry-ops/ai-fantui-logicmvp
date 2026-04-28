@@ -251,69 +251,131 @@ def test_metadata_handlers_guard_against_raw_active() -> None:
     and the user changes system/step_s/duration_s, the handler MUST
     refresh the model from the textarea before mutating, otherwise
     syncToTextarea() will overwrite the user's in-flight Raw edits.
-    Look for a guard like `loadFromTextarea()` or `refreshModelIfRawActive()`
-    invoked from each metadata handler."""
+
+    Codex R2 MEDIUM tightening: the guard MUST run BEFORE any
+    `currentTimeline.<field> =` assignment in the same handler block.
+    A regex hit on the helper name is not enough — the helper could
+    be called after the mutation, defeating its purpose."""
     body = _read()
-    # The three metadata handlers are addEventListener("change", ...)
-    # blocks for metaSystem / metaStepS / metaDurationS. Each must call
-    # the guard helper before assigning to currentTimeline.
-    pattern = (
-        r'metaSystem.*?(?:loadFromTextarea|refreshModelIfRawActive)'
-        r'|metaStepS.*?(?:loadFromTextarea|refreshModelIfRawActive)'
-        r'|metaDurationS.*?(?:loadFromTextarea|refreshModelIfRawActive)'
-    )
-    matches = re.findall(pattern, body, re.DOTALL)
-    assert len(matches) >= 3, (
-        f"only {len(matches)} of 3 metadata handlers call the "
-        f"raw-active guard. All of metaSystem / metaStepS / "
-        f"metaDurationS must reload from textarea before mutating "
-        f"the model when Raw tab is active (Codex R1 H1)."
-    )
+    # For each handler, extract its full body and assert the guard
+    # call appears BEFORE any currentTimeline assignment.
+    for handler_id in ("metaSystem", "metaStepS", "metaDurationS"):
+        # Match: $("<id>").addEventListener("change", () => { ... });
+        m = re.search(
+            rf'\$\("{handler_id}"\)\.addEventListener\(\s*"change"\s*,'
+            rf'\s*\(\)\s*=>\s*\{{(.*?)\}}\s*\)\s*;',
+            body,
+            re.DOTALL,
+        )
+        assert m is not None, f"handler for {handler_id} not found"
+        h_body = m.group(1)
+        guard_pos = re.search(
+            r"(?:loadFromTextarea|refreshModelIfRawActive)\s*\(", h_body,
+        )
+        mut_pos = re.search(
+            r"currentTimeline\.\w+\s*=", h_body,
+        )
+        assert guard_pos is not None, (
+            f"{handler_id} handler missing raw-active guard call "
+            f"(Codex R1 H1)."
+        )
+        if mut_pos is not None:
+            assert guard_pos.start() < mut_pos.start(), (
+                f"{handler_id} handler calls the guard AFTER mutating "
+                f"currentTimeline. The guard must run first or it "
+                f"can't refuse stale-model writes (Codex R2 MEDIUM)."
+            )
 
 
-def test_event_row_render_coerces_numeric_fields() -> None:
-    """`renderEventRow()` writes ev.t_s and ev.duration_s into the
-    DOM string. Without a number-coerce / NaN-reject step, a hostile
-    Raw payload with `t_s: "<img onerror=...>"` would inject markup.
-    The renderer must call a safe-number helper (Number / safeNumber /
-    parseFloat) before interpolation."""
+def test_event_row_render_coerces_BOTH_t_s_and_duration_s() -> None:
+    """`renderEventRow()` writes BOTH ev.t_s AND ev.duration_s into
+    the DOM string. Codex R2 MEDIUM: R1 H2 fix only proven for t_s;
+    duration_s is the equally dangerous sink. Both must go through
+    a safe-number helper before interpolation."""
     body = _read()
-    # Look for either an explicit safeNumber helper or Number()/parseFloat
-    # applied to ev.t_s or ev.duration_s before interpolation.
-    coerce_pattern = (
-        r'safeNumber\s*\(\s*ev\.t_s'
-        r'|Number\(\s*ev\.t_s\s*\)'
-        r'|parseFloat\(\s*ev\.t_s\s*\)'
-    )
-    has_coerce = re.search(coerce_pattern, body)
-    assert has_coerce is not None, (
-        "renderEventRow does not coerce ev.t_s through a safe number "
-        "helper. Hostile Raw input could inject markup. Use "
-        "safeNumber(ev.t_s, 0) or Number(ev.t_s) before interpolation "
-        "(Codex R1 H2)."
-    )
+    for field in ("t_s", "duration_s"):
+        coerce_pattern = (
+            rf'safeNumber\s*\(\s*ev\.{field}'
+            rf'|Number\(\s*ev\.{field}\s*\)'
+            rf'|parseFloat\(\s*ev\.{field}\s*\)'
+        )
+        has_coerce = re.search(coerce_pattern, body)
+        assert has_coerce is not None, (
+            f"renderEventRow does not coerce ev.{field} through a "
+            f"safe number helper. Hostile Raw input could inject "
+            f"markup via the {field} sink (Codex R2 MEDIUM)."
+        )
 
 
-def test_value_parser_case_folds_booleans_and_null() -> None:
-    """The event-value parser must accept user input "True"/"False"/
-    "null" (any case) as actual booleans / null, not strings. The
-    executors call bool() on values; a truthy string would silently
-    pass a check that should fail (Codex R1 M3)."""
+def test_value_parser_case_folds_all_three_keywords() -> None:
+    """The event-value parser must fold "true"/"false"/"null"
+    (case-insensitive) BEFORE JSON.parse — not just one or two of
+    them. Codex R2 MEDIUM: R1 M3 only required "true"; the "false"
+    and "null" branches must also exist with the same case-folded
+    comparison so all three executor-relevant literals are honored."""
     body = _read()
-    # Look for a toLowerCase() check on the raw value handling either
-    # "true"/"false" (the canonical lowercase form). Allow up to ~150
-    # chars of arbitrary content (including ; and newlines) between
-    # the toLowerCase call and the literal comparison.
-    pattern = (
-        r'toLowerCase\(\)[\s\S]{0,150}["\']true["\']'
-        r'|["\']true["\'][\s\S]{0,150}toLowerCase'
+    # The case-folded variable name is consistent across our impl;
+    # just check each of the three string literals is compared after
+    # a toLowerCase() in the same neighborhood.
+    for keyword in ("true", "false", "null"):
+        pattern = rf'toLowerCase\(\)[\s\S]{{0,300}}["\']{keyword}["\']'
+        m = re.search(pattern, body)
+        assert m is not None, (
+            f"value parser missing case-folded branch for {keyword!r}. "
+            f"All three (true/false/null) must be handled before "
+            f"JSON.parse (Codex R2 MEDIUM)."
+        )
+
+
+def test_value_parser_case_fold_runs_before_json_parse() -> None:
+    """Codex R2 MEDIUM: ordering matters. If JSON.parse runs first,
+    "True" throws SyntaxError and falls through to string. The
+    case-fold (toLowerCase + literal compares) must appear in the
+    source BEFORE the JSON.parse(raw) call inside the same handler
+    branch."""
+    body = _read()
+    # Find the value-field handler block (where 'value' field is
+    # processed). It contains both the toLowerCase block and the
+    # JSON.parse(raw) call. Confirm the toLowerCase appears first.
+    fold_pos = body.find("toLowerCase()")
+    parse_pos = body.find("JSON.parse(raw)")
+    assert fold_pos != -1, "value parser missing toLowerCase()"
+    assert parse_pos != -1, "value parser missing JSON.parse(raw)"
+    assert fold_pos < parse_pos, (
+        "toLowerCase() case-fold runs AFTER JSON.parse(raw). The "
+        "fold must run first or 'True' / 'FALSE' fall through to "
+        "string (Codex R2 MEDIUM)."
     )
-    has_fold = re.search(pattern, body)
-    assert has_fold is not None, (
-        "value parser does not case-fold 'True'/'False'/'null'. "
-        "Add a toLowerCase() check before JSON.parse so typed "
-        "booleans become real booleans (Codex R1 M3)."
-    )
+
+
+def test_metadata_strip_re_renders_after_guard_failure() -> None:
+    """Codex R2 LOW: when the guard rejects the change (Raw JSON
+    invalid OR step/duration <= 0), the user-typed value would
+    otherwise stay visible in the control while the model + textarea
+    are unchanged. After a guard failure, the handler must call
+    `renderMetaStrip()` (or set the input.value back) so the strip
+    doesn't lie about the active model."""
+    body = _read()
+    for handler_id in ("metaSystem", "metaStepS", "metaDurationS"):
+        m = re.search(
+            rf'\$\("{handler_id}"\)\.addEventListener\(\s*"change"\s*,'
+            rf'\s*\(\)\s*=>\s*\{{(.*?)\}}\s*\)\s*;',
+            body,
+            re.DOTALL,
+        )
+        assert m is not None, f"handler for {handler_id} not found"
+        h_body = m.group(1)
+        # Each handler must call renderMetaStrip() somewhere on the
+        # rejection path (or set the input.value back). The simplest
+        # contract: renderMetaStrip is referenced at least once.
+        assert "renderMetaStrip" in h_body or (
+            f'$("{handler_id}").value' in h_body
+        ), (
+            f"{handler_id} handler does not re-render the metadata "
+            f"strip on guard failure. The control would show the "
+            f"user-typed value while the model is unchanged "
+            f"(Codex R2 LOW)."
+        )
 
 
 def test_load_from_textarea_returns_status_for_guard() -> None:
