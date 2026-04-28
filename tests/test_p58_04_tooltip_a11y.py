@@ -42,6 +42,24 @@ def _read() -> str:
     return TIMELINE_SIM.read_text(encoding="utf-8")
 
 
+def _tooltip_window_listener(body: str, evt: str) -> str:
+    """Return the source chunk of the tooltip-specific window
+    addEventListener for `evt`. The page has multiple listeners on
+    "resize" / "scroll" (P58-02 tour reposition, P58-04 tooltip
+    reposition); pick the one that mentions tooltipActiveTarget."""
+    listeners = re.findall(
+        rf'window\.addEventListener\s*\(\s*"{evt}"[\s\S]{{0,1200}}?'
+        rf'\}}\s*(?:,\s*\{{[^}}]*\}}\s*)?\)\s*;',
+        body,
+    )
+    matches = [c for c in listeners if "tooltipActiveTarget" in c]
+    assert matches, (
+        f"no tooltip-specific window {evt!r} listener "
+        f"(expected one referencing tooltipActiveTarget)"
+    )
+    return matches[0]
+
+
 # ── 1. Tooltip bubble DOM ──
 
 
@@ -311,16 +329,26 @@ def test_tooltip_repositions_on_scroll_and_resize() -> None:
     Per Codex P58-04-A: scroll/resize must call a position-only path
     (tooltipPosition), NOT tooltipShow — calling tooltipShow on every
     scroll tick would re-stash aria-describedby = "tooltipBubble" as
-    the "previous" value and corrupt the restore on hide."""
+    the "previous" value and corrupt the restore on hide.
+
+    Tightened (Codex R2 nit): require an actual tooltipPosition() call
+    on tooltipActiveTarget — token presence in nearby comments is not
+    enough to prove the reposition path."""
     body = _read()
     for evt in ("scroll", "resize"):
-        pat = (
-            rf'window\.addEventListener\s*\(\s*"{evt}"[\s\S]{{0,500}}?'
-            rf'(?:tooltipPosition|tooltipShow|tooltipBubble)'
+        # The page has multiple window.addEventListener("resize", ...)
+        # handlers (tour reposition from P58-02, tooltip reposition).
+        # Pick the tooltip-specific one by requiring tooltipActiveTarget.
+        chunk = _tooltip_window_listener(body, evt)
+        assert "tooltipPosition(" in chunk, (
+            f"tooltip-specific window {evt!r} listener does not call "
+            f"tooltipPosition(). Bubble would drift, OR (worse) calls "
+            f"tooltipShow() which re-stashes aria-describedby."
         )
-        assert re.search(pat, body), (
-            f"no window {evt!r} listener triggers tooltip reposition. "
-            f"Bubble would drift away from target on {evt}."
+        assert "tooltipShow(" not in chunk, (
+            f"tooltip-specific window {evt!r} listener calls "
+            f"tooltipShow — this re-stashes aria-describedby and "
+            f"corrupts the restore."
         )
 
 
@@ -370,7 +398,11 @@ def test_tooltip_show_restores_old_target_when_switching() -> None:
     an intervening tooltipHide (e.g., mouse races between buttons), the
     old target's original aria-describedby must be restored before the
     new target's value is stashed. Otherwise A leaks "tooltipBubble"
-    forever as its describedby."""
+    forever as its describedby.
+
+    Tightened (Codex R2 nit): assert ordering — the restore branch
+    must appear BEFORE the new tooltipActiveTarget assignment, not
+    just somewhere in the function."""
     body = _read()
     fn_match = re.search(
         r'function\s+tooltipShow\s*\([^)]*\)\s*\{[\s\S]{0,3000}?\n\}',
@@ -378,18 +410,28 @@ def test_tooltip_show_restores_old_target_when_switching() -> None:
     )
     assert fn_match is not None
     chunk = fn_match.group(0)
-    # Must contain a switch-restore branch BEFORE the new stash.
-    has_old_restore = re.search(
-        r'if\s*\(\s*tooltipActiveTarget\s*\)[\s\S]{0,500}?'
+    restore_re = re.search(
+        r'if\s*\(\s*tooltipActiveTarget\s*\)\s*\{[\s\S]{0,500}?'
         r'(?:setAttribute\s*\(\s*["\']aria-describedby["\']'
         r'|removeAttribute\s*\(\s*["\']aria-describedby["\'])',
         chunk,
     )
-    assert has_old_restore, (
-        "tooltipShow does not restore the previous active target's "
-        "aria-describedby before stashing a new one. Target A would "
-        "be left with stale aria-describedby='tooltipBubble' if the "
-        "mouse races to target B without an intervening hide."
+    assert restore_re is not None, (
+        "tooltipShow has no `if (tooltipActiveTarget) { ... aria-"
+        "describedby ... }` restore branch."
+    )
+    # Find the new-stash assignment (must come AFTER the restore).
+    stash_re = re.search(
+        r'tooltipActiveTarget\s*=\s*targetEl\b',
+        chunk,
+    )
+    assert stash_re is not None, (
+        "tooltipShow never assigns tooltipActiveTarget = targetEl"
+    )
+    assert restore_re.end() < stash_re.start(), (
+        "tooltipShow restores the previous aria-describedby AFTER "
+        "stashing the new target — by then tooltipActiveTarget already "
+        "points at target B, so target A's original value leaks."
     )
 
 
@@ -398,7 +440,11 @@ def test_tooltip_hover_and_focus_tracked_independently() -> None:
     independently. Hiding when EITHER exits would clear the tooltip
     even if the other is still active (e.g., focus a button, hover it,
     then move the mouse away — focus is still on the button but the
-    tooltip vanishes)."""
+    tooltip vanishes).
+
+    Tightened (Codex R2 nit): also assert the resolver picks focus
+    OR hover (not just one), so the resolver actually exercises the
+    independent-modality state."""
     body = _read()
     assert re.search(r'\btooltipHoverTarget\b', body), (
         "no separate tooltipHoverTarget — hover/focus are not tracked "
@@ -407,6 +453,17 @@ def test_tooltip_hover_and_focus_tracked_independently() -> None:
     assert re.search(r'\btooltipFocusTarget\b', body), (
         "no separate tooltipFocusTarget — hover/focus are not tracked "
         "independently. P58-04-C regression."
+    )
+    # Resolver must consult both slots (focus || hover preference).
+    resolver = re.search(
+        r'function\s+tooltipResolveActive\s*\(\s*\)\s*\{[\s\S]{0,2000}?\n\}',
+        body,
+    )
+    assert resolver is not None, "tooltipResolveActive function not found"
+    rchunk = resolver.group(0)
+    assert "tooltipFocusTarget" in rchunk and "tooltipHoverTarget" in rchunk, (
+        "tooltipResolveActive does not consult both hover and focus "
+        "slots — independent-modality fix (P58-04-C) is incomplete."
     )
     # Verify mouseout only clears the hover slot (not focus).
     mouseout = re.search(
@@ -540,3 +597,58 @@ def test_existing_button_visible_text_preserved(
         f"contain {expected_glyph_or_text!r}, got {label!r}. P58-04 "
         f"is additive-only (attributes), not text changes."
     )
+
+
+# ── 7. Codex R2 regression: detached-node guard (P58-04-D) ──
+
+
+def test_tooltip_resolve_active_drops_disconnected_targets() -> None:
+    """Codex P58-04-D: row-action buttons get rebuilt via innerHTML on
+    every renderEventTable() call. focusout does not always fire on a
+    removed element, so tooltipFocusTarget can keep pointing at a
+    detached node. Subsequent tooltipResolveActive() would mask later
+    valid hover tooltips and scroll/resize would position against a
+    dead node.
+
+    tooltipResolveActive() must null any slot whose element is
+    `!isConnected` before resolving the next target."""
+    body = _read()
+    resolver = re.search(
+        r'function\s+tooltipResolveActive\s*\(\s*\)\s*\{[\s\S]{0,2000}?\n\}',
+        body,
+    )
+    assert resolver is not None, "tooltipResolveActive not found"
+    chunk = resolver.group(0)
+    assert "isConnected" in chunk, (
+        "tooltipResolveActive does not check `isConnected`. A focused "
+        "row-action button removed by renderEventTable would strand "
+        "tooltipFocusTarget on a detached node. Per Codex P58-04-D."
+    )
+    # Both slots must be guarded.
+    assert re.search(
+        r'tooltipFocusTarget[\s\S]{0,200}?isConnected', chunk,
+    ), (
+        "tooltipResolveActive guards isConnected but not on "
+        "tooltipFocusTarget — focus-side detach still leaks."
+    )
+    assert re.search(
+        r'tooltipHoverTarget[\s\S]{0,200}?isConnected', chunk,
+    ), (
+        "tooltipResolveActive guards isConnected but not on "
+        "tooltipHoverTarget — hover-side detach still leaks."
+    )
+
+
+def test_tooltip_scroll_resize_handle_detached_active_target() -> None:
+    """Codex P58-04-D: scroll/resize listeners must also bail when
+    tooltipActiveTarget is detached, otherwise tooltipPosition()
+    measures a dead node (getBoundingClientRect returns 0/0/0/0 on
+    detached elements, parking the bubble at the page origin)."""
+    body = _read()
+    for evt in ("scroll", "resize"):
+        chunk = _tooltip_window_listener(body, evt)
+        assert "isConnected" in chunk, (
+            f"tooltip-specific window {evt!r} listener does not guard "
+            f"against a detached active target. Bubble would jump to "
+            f"page origin if the target was removed mid-scroll."
+        )

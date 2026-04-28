@@ -2618,7 +2618,27 @@ function tooltipHide() {
 // Resolve which (if any) target the bubble should currently point at:
 // focus wins over hover so keyboard users keep their tooltip while the
 // mouse moves around.
+//
+// Per Codex P58-04-D: row-action buttons get rebuilt via innerHTML on
+// every renderEventTable() call, and focusout does not always fire on
+// the removed element. Null any slot whose node is no longer in the
+// document so a stranded reference cannot mask later tooltips.
 function tooltipResolveActive() {
+  if (tooltipFocusTarget && !tooltipFocusTarget.isConnected) {
+    tooltipFocusTarget = null;
+  }
+  if (tooltipHoverTarget && !tooltipHoverTarget.isConnected) {
+    tooltipHoverTarget = null;
+  }
+  if (tooltipActiveTarget && !tooltipActiveTarget.isConnected) {
+    // Active target was detached out from under us. Clear stash refs
+    // (we cannot restore aria-describedby on a node that no longer
+    // exists) and hide the bubble.
+    tooltipActiveTarget = null;
+    tooltipPrevDescribedBy = null;
+    const bubble = document.getElementById(TOOLTIP_BUBBLE_ID);
+    if (bubble) bubble.hidden = true;
+  }
   const next = tooltipFocusTarget || tooltipHoverTarget;
   if (next) tooltipShow(next);
   else tooltipHide();
@@ -2669,12 +2689,18 @@ document.addEventListener("keydown", (e) => {
 });
 // Reposition on scroll/resize while shown so the bubble tracks the
 // target. Without this, scrolling moves the target out from under the
-// bubble. Position-only (no stash overwrite per P58-04-A).
+// bubble. Position-only (no stash overwrite per P58-04-A). If the
+// active target was detached (P58-04-D), hide instead of measuring a
+// dead node.
 window.addEventListener("scroll", () => {
-  if (tooltipActiveTarget) tooltipPosition(tooltipActiveTarget);
+  if (!tooltipActiveTarget) return;
+  if (!tooltipActiveTarget.isConnected) { tooltipResolveActive(); return; }
+  tooltipPosition(tooltipActiveTarget);
 }, { passive: true });
 window.addEventListener("resize", () => {
-  if (tooltipActiveTarget) tooltipPosition(tooltipActiveTarget);
+  if (!tooltipActiveTarget) return;
+  if (!tooltipActiveTarget.isConnected) { tooltipResolveActive(); return; }
+  tooltipPosition(tooltipActiveTarget);
 });
 </script>
 </body>
