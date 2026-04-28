@@ -46,16 +46,23 @@ def _tooltip_window_listener(body: str, evt: str) -> str:
     """Return the source chunk of the tooltip-specific window
     addEventListener for `evt`. The page has multiple listeners on
     "resize" / "scroll" (P58-02 tour reposition, P58-04 tooltip
-    reposition); pick the one that mentions tooltipActiveTarget."""
+    reposition); pick the one that mentions BOTH tooltipActiveTarget
+    AND tooltipPosition( so future listeners that only reference one
+    don't silently match (Codex NIT-R3-2)."""
     listeners = re.findall(
         rf'window\.addEventListener\s*\(\s*"{evt}"[\s\S]{{0,1200}}?'
         rf'\}}\s*(?:,\s*\{{[^}}]*\}}\s*)?\)\s*;',
         body,
     )
-    matches = [c for c in listeners if "tooltipActiveTarget" in c]
-    assert matches, (
-        f"no tooltip-specific window {evt!r} listener "
-        f"(expected one referencing tooltipActiveTarget)"
+    matches = [
+        c for c in listeners
+        if "tooltipActiveTarget" in c and "tooltipPosition(" in c
+    ]
+    assert len(matches) == 1, (
+        f"expected exactly one tooltip-specific window {evt!r} listener "
+        f"(referencing tooltipActiveTarget + tooltipPosition), found "
+        f"{len(matches)}. Per Codex NIT-R3-2: do not silently pick the "
+        f"first of multiple matches."
     )
     return matches[0]
 
@@ -455,15 +462,20 @@ def test_tooltip_hover_and_focus_tracked_independently() -> None:
         "independently. P58-04-C regression."
     )
     # Resolver must consult both slots (focus || hover preference).
+    # Per Codex NIT-R3-1: assert the actual precedence expression, not
+    # just that both identifiers appear somewhere in the function.
     resolver = re.search(
         r'function\s+tooltipResolveActive\s*\(\s*\)\s*\{[\s\S]{0,2000}?\n\}',
         body,
     )
     assert resolver is not None, "tooltipResolveActive function not found"
     rchunk = resolver.group(0)
-    assert "tooltipFocusTarget" in rchunk and "tooltipHoverTarget" in rchunk, (
-        "tooltipResolveActive does not consult both hover and focus "
-        "slots — independent-modality fix (P58-04-C) is incomplete."
+    assert re.search(
+        r'tooltipFocusTarget\s*\|\|\s*tooltipHoverTarget', rchunk,
+    ), (
+        "tooltipResolveActive does not contain the focus-OR-hover "
+        "precedence expression. The independent-modality fix (P58-04-C) "
+        "requires focus to win over hover; ordering matters."
     )
     # Verify mouseout only clears the hover slot (not focus).
     mouseout = re.search(
@@ -636,6 +648,18 @@ def test_tooltip_resolve_active_drops_disconnected_targets() -> None:
     ), (
         "tooltipResolveActive guards isConnected but not on "
         "tooltipHoverTarget — hover-side detach still leaks."
+    )
+    # Per Codex NIT-R3-3 (R3 §C residual gap): also assert the
+    # tooltipActiveTarget cleanup branch — the rare case where the
+    # currently-shown target was detached without its slot being the
+    # focus or hover ref (e.g., hover slot was already nulled but the
+    # active target lived a moment longer).
+    assert re.search(
+        r'tooltipActiveTarget[\s\S]{0,200}?isConnected', chunk,
+    ), (
+        "tooltipResolveActive does not clean up a detached "
+        "tooltipActiveTarget. Bubble could remain visible pointing at "
+        "a dead node after a reflow."
     )
 
 
