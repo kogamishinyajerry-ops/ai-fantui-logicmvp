@@ -383,6 +383,57 @@ def test_custom_escape_uses_sticky_flag_not_just_empty_target() -> None:
     )
 
 
+def test_kind_change_clears_sticky_custom_flag() -> None:
+    """Codex R2 LOW: the sticky `_ui_target_custom` flag must be
+    cleared on kind change so each kind's catalog gets a fresh
+    chance to populate the dropdown. A future removal of the
+    `delete ev._ui_target_custom` line in the kind-change branch
+    would silently re-trap the user (custom-mode persists across
+    kinds the user no longer wants to be custom for)."""
+    body = _read()
+    # Find the field === "kind" branch of handleEventCellChange.
+    branch_match = re.search(
+        r'field\s*===\s*["\']kind["\'][\s\S]*?'
+        r'(?=\}\s*else\s+if|\}\s*\)\s*;)',
+        body,
+    )
+    assert branch_match is not None, "kind-change branch not found"
+    branch_body = branch_match.group(0)
+    assert "delete ev._ui_target_custom" in branch_body, (
+        "kind-change branch does not delete the sticky "
+        "_ui_target_custom flag. Without this clear, custom mode "
+        "persists across kinds and traps the dropdown (Codex R2 LOW)."
+    )
+
+
+def test_run_simulation_strips_ui_state_keys_before_post() -> None:
+    """Codex R2 LOW: runSimulation parses the textarea verbatim and
+    POSTs the result. A hand-edited Raw payload could include
+    _ui_* state. syncToTextarea strips on Visual edits, but Raw
+    paste bypasses it. The runSimulation POST path must apply the
+    same _ui_-stripping replacer so end-to-end the wire JSON is
+    clean schema."""
+    body = _read()
+    fn_match = re.search(
+        r'async\s+function\s+runSimulation\s*\([^)]*\)\s*\{(.*?)\n\}',
+        body, re.DOTALL,
+    )
+    assert fn_match is not None, "runSimulation function not found"
+    fn_body = fn_match.group(1)
+    # Look for a JSON.stringify replacer that drops _ui_-prefixed
+    # keys, OR a separate cleanup pass before fetch().
+    pattern = (
+        r'startsWith\(\s*["\']_ui_["\']\s*\)'
+        r'|_ui_[\s\S]{0,80}undefined'
+    )
+    has_strip = re.search(pattern, fn_body)
+    assert has_strip is not None, (
+        "runSimulation does not strip _ui_* keys before POSTing. "
+        "A Raw paste with _ui_ state would leak to the backend "
+        "(Codex R2 LOW)."
+    )
+
+
 def test_sync_to_textarea_strips_ui_state_keys() -> None:
     """The _ui_* flags are UI-only state. They must be stripped
     from the wire JSON so the run-button POST does not send

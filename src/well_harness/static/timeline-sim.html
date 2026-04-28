@@ -996,6 +996,13 @@ async function runSimulation() {
     setStatus("JSON 解析失败: " + e.message, "err");
     return;
   }
+  // Codex R2 LOW fix: a hand-edited Raw payload could include
+  // _ui_* state (e.g. someone pastes a model dump). syncToTextarea
+  // strips on Visual edits, but Raw paste bypasses it. Sanitize
+  // here too so end-to-end the wire JSON is clean schema.
+  payload = JSON.parse(JSON.stringify(payload, (k, v) =>
+    typeof k === "string" && k.startsWith("_ui_") ? undefined : v
+  ));
   const endpoint = resolveEndpoint(payload.system);
   setStatus("运行中 · POST " + endpoint);
   try {
