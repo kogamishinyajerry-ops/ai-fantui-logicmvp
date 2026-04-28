@@ -90,19 +90,28 @@ def test_embedded_page_hides_nav_when_iframed(page_path):
     """Each embedded page must include the nav-hide guard: an
     `is-iframe-embed` class added to <html> when window.self !==
     window.top OR ?embed=1 is in the URL, plus a CSS rule that
-    hides .unified-nav under that class."""
+    hides .unified-nav under that class.
+
+    P56-01 (2026-04-28): the CSS rule moved from inline <style> to
+    the shared /etras_chrome.css. The check now follows the linked
+    stylesheet."""
     html = (REPO_ROOT / page_path).read_text(encoding="utf-8")
     # Detection script
     assert "window.self !== window.top" in html and "is-iframe-embed" in html, (
         f"{page_path} missing the iframe-embed detection script"
     )
-    # CSS hide rule
+    # CSS hide rule — inline OR in a linked /etras_chrome.css
+    chrome_css = (
+        REPO_ROOT / "src" / "well_harness" / "static" / "etras_chrome.css"
+    )
+    chrome_body = chrome_css.read_text(encoding="utf-8") if chrome_css.exists() else ""
+    haystack = html + "\n" + chrome_body
     assert (
-        "html.is-iframe-embed .unified-nav" in html
-        or ".is-iframe-embed .unified-nav" in html
+        "html.is-iframe-embed .unified-nav" in haystack
+        or ".is-iframe-embed .unified-nav" in haystack
     ), (
         f"{page_path} missing CSS rule that hides .unified-nav under "
-        f".is-iframe-embed"
+        f".is-iframe-embed (checked inline + etras_chrome.css)"
     )
 
 
