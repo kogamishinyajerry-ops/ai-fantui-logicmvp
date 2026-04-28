@@ -92,19 +92,28 @@ html:has(body.etras-app) { height: 100%; overflow: hidden; }
 body.etras-app {
   height: 100%;
   overflow: hidden;
-  margin: 0;
-  padding: 0;
   background: var(--bg0);
   color: var(--text0);
   font-family: var(--ui);
   font-size: 12px;
   display: flex;
   flex-direction: column;
+  /* Codex P56-02a round-2 P1: do NOT set margin/padding here.
+     unified-nav.css's `body.unified-nav-enabled { padding-top:
+     var(--nav-height) }` has equal specificity but loads earlier,
+     so any padding override here would clobber its 48px top
+     spacer when the unified nav is visible. */
 }
 
-/* Reset tightens to the app-shell to avoid clobbering cockpit
-   document flow (cockpit relies on UA defaults + their own .css). */
-body.etras-app * { margin: 0; padding: 0; }
+/* Codex P56-02a round-2 P1: dropped the `body.etras-app * { margin:
+   0; padding: 0 }` wildcard descendant reset that originally lived
+   inline on the sim panels. Its specificity (0,1,1) outranked
+   unified-nav.css's `.unified-nav-brand`, `.unified-nav-group`,
+   `.unified-nav-group-label`, `.unified-nav-link` rules (each 0,1,0)
+   and was collapsing the unified-nav's hit areas + spacing.
+   Individual chrome components below set their own margin/padding
+   explicitly; cockpit content unaffected since it's outside the
+   `body.etras-app` scope anyway. */
 
 /* ── Panel-level header (NOT the unified top nav). ── */
 body.etras-app header:not(.unified-nav) {

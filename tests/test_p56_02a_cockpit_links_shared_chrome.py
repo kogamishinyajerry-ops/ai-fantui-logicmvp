@@ -134,6 +134,56 @@ def test_chrome_root_scope_is_safe_for_cockpits() -> None:
     )
 
 
+def test_app_shell_body_does_not_clobber_unified_nav_padding() -> None:
+    """Codex P56-02a round-2 P1: `body.etras-app { padding: 0 }`
+    has equal specificity to unified-nav.css's `body.unified-nav-
+    enabled { padding-top: var(--nav-height) }` but loads later,
+    so it would clobber the 48px nav spacer on non-embedded sim
+    pages. The chrome must not set padding/margin on the body
+    rule — let unified-nav-enabled control it."""
+    chrome = (
+        REPO_ROOT / "src" / "well_harness" / "static" / "etras_chrome.css"
+    ).read_text(encoding="utf-8")
+    body_rule = re.search(
+        r"body\.etras-app\s*\{([^}]+)\}",
+        chrome,
+        re.DOTALL,
+    )
+    assert body_rule is not None
+    body_props = body_rule.group(1)
+    assert "padding:" not in body_props or "padding: " not in body_props, (
+        "body.etras-app must not declare padding — unified-nav.css's "
+        "body.unified-nav-enabled padding-top owns that property"
+    )
+    # Also no `margin: ...` on body that would zero unified-nav's
+    # ancestor margins.
+    assert not re.search(r"^\s*margin\s*:", body_props, re.MULTILINE), (
+        "body.etras-app must not declare margin"
+    )
+
+
+def test_app_shell_no_wildcard_descendant_reset() -> None:
+    """Codex P56-02a round-2 P1: `body.etras-app * { margin: 0;
+    padding: 0 }` outranks unified-nav.css's class selectors
+    (specificity 0,1,1 vs 0,1,0) and collapses .unified-nav-brand /
+    .unified-nav-group / .unified-nav-link spacing on every sim
+    page. The wildcard descendant reset must not exist."""
+    chrome = (
+        REPO_ROOT / "src" / "well_harness" / "static" / "etras_chrome.css"
+    ).read_text(encoding="utf-8")
+    # Strip /* ... */ comments so docblock examples don't false-positive.
+    chrome_no_comments = re.sub(r"/\*.*?\*/", "", chrome, flags=re.DOTALL)
+    bad = re.search(
+        r"body\.etras-app\s+\*\s*\{[^}]*(margin|padding)\s*:",
+        chrome_no_comments,
+        re.DOTALL,
+    )
+    assert bad is None, (
+        "etras_chrome.css must NOT declare `body.etras-app * { margin/padding }` — "
+        "outranks unified-nav.css and breaks the top nav layout"
+    )
+
+
 def test_chrome_app_shell_components_are_scoped() -> None:
     """Component selectors that historically lived bare (.btn,
     .workspace, .panel, .sec, etc.) must now sit under the
