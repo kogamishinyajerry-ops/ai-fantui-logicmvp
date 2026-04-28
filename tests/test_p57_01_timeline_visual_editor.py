@@ -307,6 +307,47 @@ def test_event_row_render_coerces_BOTH_t_s_and_duration_s() -> None:
         )
 
 
+def test_event_row_template_uses_coerced_locals_not_raw_ev_fields() -> None:
+    """Codex R3 MEDIUM tightening: the previous test would still
+    pass if renderEventRow declared safeNumber locals but the
+    template string interpolated raw ev.t_s / ev.duration_s into
+    the value="${...}" sinks anyway — defeating H2 entirely.
+    Extract the renderEventRow body and assert (a) the template
+    contains value="${tS}" / value="${dS}" (or equivalent coerced
+    locals), and (b) the template does NOT contain value="${ev.t_s}"
+    or value="${ev.duration_s}" — those would be the regression."""
+    body = _read()
+    # Match renderEventRow function body up to its closing brace.
+    fn_match = re.search(
+        r'function\s+renderEventRow\s*\(\s*ev\s*,\s*i\s*\)\s*\{(.*?)\n\}',
+        body, re.DOTALL,
+    )
+    assert fn_match is not None, "renderEventRow function not found"
+    fn_body = fn_match.group(1)
+    # Forbid: raw interpolation of ev.t_s / ev.duration_s inside any
+    # value="${...}" attribute (the XSS sink).
+    forbidden = re.search(
+        r'value="\$\{[^}]*\bev\.(t_s|duration_s)\b[^}]*\}"',
+        fn_body,
+    )
+    assert forbidden is None, (
+        f"renderEventRow template interpolates raw "
+        f"ev.{forbidden.group(1)!s} into a value=\"${{...}}\" sink. "
+        f"That defeats the safeNumber coercion. Use the coerced "
+        f"local (tS / dS) in the template (Codex R3 MEDIUM)."
+    )
+    # Require: at least one value="${tS}" or value="${dS}" so the
+    # safeNumber locals actually feed the template.
+    has_coerced_use = re.search(
+        r'value="\$\{(?:tS|dS)\}"', fn_body,
+    )
+    assert has_coerced_use is not None, (
+        "renderEventRow template never uses the coerced tS/dS "
+        "locals — the safeNumber call is dead code. Reference tS "
+        "and dS in value=\"${...}\" interpolations (Codex R3 MEDIUM)."
+    )
+
+
 def test_value_parser_case_folds_all_three_keywords() -> None:
     """The event-value parser must fold "true"/"false"/"null"
     (case-insensitive) BEFORE JSON.parse — not just one or two of
@@ -353,10 +394,20 @@ def test_metadata_strip_re_renders_after_guard_failure() -> None:
     invalid OR step/duration <= 0), the user-typed value would
     otherwise stay visible in the control while the model + textarea
     are unchanged. After a guard failure, the handler must call
-    `renderMetaStrip()` (or set the input.value back) so the strip
-    doesn't lie about the active model."""
+    `renderMetaStrip()` so the strip doesn't lie about the active model.
+
+    Codex R3 MEDIUM tightening: count the renderMetaStrip calls per
+    handler. metaStepS and metaDurationS have TWO rejection paths
+    each (NaN/<=0 and guard failure); both must snap back. metaSystem
+    has ONE rejection path (guard failure). A handler that reset
+    only one path would still pass the loose "is mentioned" check."""
     body = _read()
-    for handler_id in ("metaSystem", "metaStepS", "metaDurationS"):
+    expected_calls = {
+        "metaSystem": 1,    # guard-failure path only
+        "metaStepS": 2,     # NaN/<=0 + guard-failure
+        "metaDurationS": 2, # NaN/<=0 + guard-failure
+    }
+    for handler_id, n_expected in expected_calls.items():
         m = re.search(
             rf'\$\("{handler_id}"\)\.addEventListener\(\s*"change"\s*,'
             rf'\s*\(\)\s*=>\s*\{{(.*?)\}}\s*\)\s*;',
@@ -365,16 +416,13 @@ def test_metadata_strip_re_renders_after_guard_failure() -> None:
         )
         assert m is not None, f"handler for {handler_id} not found"
         h_body = m.group(1)
-        # Each handler must call renderMetaStrip() somewhere on the
-        # rejection path (or set the input.value back). The simplest
-        # contract: renderMetaStrip is referenced at least once.
-        assert "renderMetaStrip" in h_body or (
-            f'$("{handler_id}").value' in h_body
-        ), (
-            f"{handler_id} handler does not re-render the metadata "
-            f"strip on guard failure. The control would show the "
-            f"user-typed value while the model is unchanged "
-            f"(Codex R2 LOW)."
+        n_actual = len(re.findall(r'\brenderMetaStrip\s*\(', h_body))
+        assert n_actual >= n_expected, (
+            f"{handler_id} handler calls renderMetaStrip {n_actual} "
+            f"times but {n_expected} rejection path(s) need snap-back. "
+            f"A path that returns without re-render leaves the input "
+            f"control showing the user-typed value while the model "
+            f"stays old (Codex R3 MEDIUM)."
         )
 
 
