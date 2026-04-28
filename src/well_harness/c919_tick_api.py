@@ -35,6 +35,7 @@ __all__ = [
     "build_c919_tick_response",
     "handle_c919_tick",
     "reset_c919_system",
+    "get_c919_log_records",
     "C919SimState",
 ]
 
@@ -180,3 +181,19 @@ def reset_c919_system(state: C919SimState) -> Dict[str, Any]:
     """Wrapper kept so demo_server.py and the standalone server use
     the same canonical reset path."""
     return state.reset()
+
+
+def get_c919_log_records(state: C919SimState, limit: int = 200) -> list:
+    """Return the last `limit` telemetry records the C919 system has
+    accumulated. Used by the panel's chart/log drawer (`refreshChart`
+    fetches /api/log periodically) and by debugging surfaces.
+
+    Codex P56-04 round-1 P2: until this helper landed, the panel
+    correctly polled /api/log on the unified server but received
+    404, leaving the chart/log drawer dark even though /api/tick
+    worked."""
+    with state.lock:
+        # Snapshot the slice under the lock so JSON serialization
+        # can run unlocked (records is a list of dataclass-like
+        # entries; slicing is sufficient for thread-safe handoff).
+        return list(state.logger.records[-limit:])

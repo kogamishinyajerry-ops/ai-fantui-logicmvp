@@ -218,6 +218,44 @@ def test_unified_server_serves_namespaced_api_c919_reset(
     assert status == 200
 
 
+def _get_json(url: str) -> tuple[int, list]:
+    req = Request(url, method="GET")
+    try:
+        with urlopen(req, timeout=5) as resp:
+            return resp.status, json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        if hasattr(e, "code") and hasattr(e, "read"):
+            try:
+                return e.code, json.loads(e.read().decode("utf-8"))
+            except Exception:
+                return e.code, []
+        raise
+
+
+def test_unified_server_serves_api_log(demo_server_url: str) -> None:
+    """Codex P56-04 round-1 P2: the C919 panel's chart/log drawer
+    polls GET /api/log for telemetry records. Without this endpoint,
+    the drawer renders empty even after /api/tick works."""
+    # Tick a few times so there's something to log.
+    _post_json(f"{demo_server_url}/api/reset", {})
+    for _ in range(3):
+        _post_json(f"{demo_server_url}/api/tick", {"dt_s": 0.1})
+    status, body = _get_json(f"{demo_server_url}/api/log")
+    assert status == 200, f"/api/log returned {status}"
+    assert isinstance(body, list), (
+        f"/api/log must return a JSON array of records; got {type(body).__name__}"
+    )
+
+
+def test_unified_server_serves_namespaced_api_c919_log(
+    demo_server_url: str,
+) -> None:
+    """Namespaced alias parallels the bare /api/log."""
+    status, body = _get_json(f"{demo_server_url}/api/c919/log")
+    assert status == 200
+    assert isinstance(body, list)
+
+
 # ─── 5. State actually transitions across ticks ───
 
 
