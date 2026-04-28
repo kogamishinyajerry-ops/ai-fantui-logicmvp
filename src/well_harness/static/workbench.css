@@ -2648,6 +2648,45 @@ body[data-review-mode="off"] .is-review-anchor,
 body[data-review-mode="off"] .workbench-review-anchor-badge {
   display: none !important;
 }
+
+/* P55-02 (2026-04-28): Stately Studio-style always-on gate marker.
+   Replaces the old amber toggle-gated badge. Visible regardless of
+   review mode so the engineer sees "this gate has open work" at a
+   glance the moment the page loads — Stately's "semantic feedback
+   at the element level" pattern.
+
+   The marker is a small accent-toned rounded rect anchored at the
+   gate's top-right corner, carrying the OPEN-proposal count. Click
+   opens the approve drawer + spotlights the matching ticket card.
+   On hover we lift to full accent so the affordance is obvious. */
+.workbench-circuit-hero-mount .workbench-gate-proposal-marker {
+  cursor: pointer;
+  transition: opacity var(--wb-duration-drawer) var(--wb-ease-out);
+}
+.workbench-circuit-hero-mount .workbench-gate-proposal-marker:hover {
+  opacity: 1;
+}
+.workbench-circuit-hero-mount .workbench-gate-proposal-marker-bg {
+  fill: var(--accent-tint-28);
+  stroke: var(--accent);
+  stroke-width: 1;
+  transition:
+    fill var(--wb-duration-drawer) var(--wb-ease-out),
+    stroke-width var(--wb-duration-drawer) var(--wb-ease-out);
+}
+.workbench-circuit-hero-mount .workbench-gate-proposal-marker:hover
+  .workbench-gate-proposal-marker-bg {
+  fill: var(--accent-tint-50);
+  stroke-width: 1.5;
+}
+.workbench-circuit-hero-mount .workbench-gate-proposal-marker-label {
+  fill: var(--accent);
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  pointer-events: none;
+  user-select: none;
+}
 body[data-review-mode="on"] .workbench-circuit-hero-mount [data-gate-id].is-review-anchor {
   filter: drop-shadow(0 0 6px #4fb8ff) drop-shadow(0 0 14px rgba(79, 184, 255, 0.55));
   animation: workbench-review-anchor-pulse 1.6s ease-in-out infinite;

@@ -2282,23 +2282,119 @@ function setReviewMode(state) {
   applyReviewAnchors(_latestProposals);
 }
 
+// P55-02 (2026-04-28): split the per-gate review surface into two
+// layers, modeled on Stately Studio's always-on semantic indicators
+// + on-demand inspector glow:
+//
+//   Layer 1 — `applyGateProposalMarkers(proposals)`
+//     Always-on, regardless of review-mode. Paints a small Stately-
+//     style accent marker on any gate carrying ≥1 OPEN proposal,
+//     with the count rendered when count > 1. Click opens the
+//     approve drawer + spotlights the matching ticket card. This is
+//     what an engineer sees the instant the page loads — semantic
+//     "this gate has open work" at a glance, no toggle needed.
+//
+//   Layer 2 — `applyReviewSpotlight(proposals)`
+//     Gated by body[data-review-mode="on"]. Adds the heavier glow +
+//     pulse (the auditor's "reviewing now" lens). Preserved from
+//     P44-04 unchanged in behavior.
+//
+// The legacy `applyReviewAnchors(...)` entry point remains as a
+// thin wrapper that calls both — every existing call site stays
+// correct without churn.
 function applyReviewAnchors(proposals) {
+  applyGateProposalMarkers(proposals);
+  applyReviewSpotlight(proposals);
+}
+
+// Layer 1: always-on markers. Stately-style.
+function applyGateProposalMarkers(proposals) {
   const mount = document.getElementById("workbench-circuit-hero-mount");
-  if (!mount) {
-    return;
+  if (!mount) return;
+  // Tear down prior markers so a refresh reflects the current
+  // OPEN-ticket set, not a stale superset.
+  for (const m of mount.querySelectorAll(".workbench-gate-proposal-marker")) {
+    m.remove();
   }
-  // Strip every prior anchor + badge so a refresh always reflects the
-  // current OPEN-ticket set, not a stale superset.
+  // Compute per-gate OPEN-ticket counts.
+  const counts = computeOpenProposalCountsByGate(proposals);
+  for (const [gateId, count] of counts) {
+    const useEl = mount.querySelector(`use[data-gate-id="${gateId}"]`);
+    if (!useEl || !useEl.ownerSVGElement) continue;
+    const x = parseFloat(useEl.getAttribute("x") || "0");
+    const y = parseFloat(useEl.getAttribute("y") || "0");
+    const w = parseFloat(useEl.getAttribute("width") || "0");
+    // Marker = a small rounded rect with the count, anchored at the
+    // top-right corner of the gate. Group <g> so we can wire one
+    // click handler across both the rect + label child elements.
+    const NS = "http://www.w3.org/2000/svg";
+    const group = document.createElementNS(NS, "g");
+    group.setAttribute("class", "workbench-gate-proposal-marker");
+    group.setAttribute("data-marker-for", gateId);
+    group.setAttribute("data-open-count", String(count));
+    // Tooltip via <title>.
+    const title = document.createElementNS(NS, "title");
+    title.textContent =
+      count === 1
+        ? `${count} 个待审工单 · 1 OPEN proposal — 点击审阅 / click to review`
+        : `${count} 个待审工单 · ${count} OPEN proposals — 点击审阅 / click to review`;
+    group.appendChild(title);
+    // Marker geometry. Right edge of gate, slightly above the top-right corner.
+    const markerW = count > 9 ? 18 : 14;
+    const markerH = 14;
+    const markerX = x + w - markerW + 6;
+    const markerY = y - 6;
+    const rect = document.createElementNS(NS, "rect");
+    rect.setAttribute("class", "workbench-gate-proposal-marker-bg");
+    rect.setAttribute("x", String(markerX));
+    rect.setAttribute("y", String(markerY));
+    rect.setAttribute("width", String(markerW));
+    rect.setAttribute("height", String(markerH));
+    rect.setAttribute("rx", "3");
+    rect.setAttribute("ry", "3");
+    group.appendChild(rect);
+    const label = document.createElementNS(NS, "text");
+    label.setAttribute("class", "workbench-gate-proposal-marker-label");
+    label.setAttribute("x", String(markerX + markerW / 2));
+    label.setAttribute("y", String(markerY + markerH / 2 + 0.5));
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("dominant-baseline", "middle");
+    label.textContent = String(count);
+    group.appendChild(label);
+    // Click → open approve drawer + spotlight.
+    group.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openApproveDrawerAndSpotlight(gateId);
+    });
+    useEl.ownerSVGElement.appendChild(group);
+  }
+}
+
+// Layer 2: review-mode spotlight (preserved from P44-04).
+function applyReviewSpotlight(proposals) {
+  const mount = document.getElementById("workbench-circuit-hero-mount");
+  if (!mount) return;
   for (const el of mount.querySelectorAll(".is-review-anchor")) {
     el.classList.remove("is-review-anchor");
   }
-  for (const badge of mount.querySelectorAll(".workbench-review-anchor-badge")) {
-    badge.remove();
+  if (document.body.getAttribute("data-review-mode") !== "on") return;
+  const counts = computeOpenProposalCountsByGate(proposals);
+  for (const [gateId] of counts) {
+    const targets = mount.querySelectorAll(`[data-gate-id="${gateId}"]`);
+    if (targets.length === 0) continue;
+    for (const el of targets) {
+      el.classList.add("is-review-anchor");
+      if (!el.dataset.reviewAnchorClickWired) {
+        el.dataset.reviewAnchorClickWired = "1";
+        el.addEventListener("click", () => spotlightInboxByGate(gateId));
+      }
+    }
   }
-  if (document.body.getAttribute("data-review-mode") !== "on") {
-    return;  // off — leave the SVG untouched, no anchors, no badges
-  }
-  // Compute per-gate OPEN-ticket counts from the latest proposal set.
+}
+
+// Pure helper: aggregates OPEN-ticket counts per gate from the
+// latest proposal set. Extracted so both layers + tests can reuse.
+function computeOpenProposalCountsByGate(proposals) {
   const counts = new Map();
   for (const p of proposals || []) {
     if (p.status !== "OPEN") continue;
@@ -2307,36 +2403,26 @@ function applyReviewAnchors(proposals) {
       counts.set(g, (counts.get(g) || 0) + 1);
     }
   }
-  for (const [gateId, count] of counts) {
-    const targets = mount.querySelectorAll(`[data-gate-id="${gateId}"]`);
-    if (targets.length === 0) continue;
-    for (const el of targets) {
-      el.classList.add("is-review-anchor");
-      // Bind the click ONCE — re-application is fine because the same
-      // listener stays attached, and removing/re-adding handlers per
-      // refresh would be churn for no observable difference.
-      if (!el.dataset.reviewAnchorClickWired) {
-        el.dataset.reviewAnchorClickWired = "1";
-        el.addEventListener("click", () => spotlightInboxByGate(gateId));
-      }
-    }
-    // Place the count badge next to the gate <use> (the first matching
-    // element). The badge is an SVG <text> appended to the same parent
-    // <svg> so it inherits the panel's coordinate system.
-    const useEl = mount.querySelector(`use[data-gate-id="${gateId}"]`);
-    if (useEl && useEl.ownerSVGElement) {
-      const x = parseFloat(useEl.getAttribute("x") || "0");
-      const y = parseFloat(useEl.getAttribute("y") || "0");
-      const w = parseFloat(useEl.getAttribute("width") || "0");
-      const badge = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      badge.setAttribute("class", "workbench-review-anchor-badge");
-      badge.setAttribute("data-review-anchor-badge-for", gateId);
-      badge.setAttribute("x", String(x + w + 4));
-      badge.setAttribute("y", String(y + 12));
-      badge.textContent = String(count);
-      useEl.ownerSVGElement.appendChild(badge);
-    }
+  return counts;
+}
+
+// P55-02: marker click → ensure approve drawer is open, then
+// spotlight the inbox card. Reuses the existing dock-target wiring
+// (clicking the dock's "approve" button is what opens the drawer)
+// and the existing spotlight helper. If the drawer is already open
+// nothing happens visually; the spotlight is the affordance.
+function openApproveDrawerAndSpotlight(gateId) {
+  const dockBtn = document.querySelector(
+    '#workbench-dock [data-dock-target="approve"]'
+  );
+  const isOpen =
+    document.body.getAttribute("data-active-tool") === "approve";
+  if (dockBtn && !isOpen) {
+    dockBtn.click();
   }
+  // Spotlight after the drawer's slide-in finishes (168ms motion
+  // token from P52-02). Wait a bit longer to let the inbox render.
+  setTimeout(() => spotlightInboxByGate(gateId), 220);
 }
 
 function spotlightCircuitGate(gateId) {
