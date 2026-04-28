@@ -131,48 +131,74 @@ def test_welcome_load_example_button_loads_c919_nominal() -> None:
     )
 
 
-# ── 3. Floating ? help button ──
+# ── 3. Re-open affordance: keyboard shortcut, not visible UI ──
+#
+# Codex R1 HIGH (2026-04-28): a persistent floating ? button violates
+# the user's "additive-only post-dismiss" directive — it's a new
+# always-visible UI element vs pre-P58. Re-open moved to a Shift+?
+# keyboard shortcut (invisible to layout). P58-03 will document it
+# via the cheatsheet modal.
 
 
-def test_floating_help_button_exists() -> None:
-    """A persistent ? button bottom-right is the affordance for users
-    who dismissed the banner and later need help. Without it, dismissal
-    is a one-way door."""
+def test_no_floating_help_button_in_markup() -> None:
+    """Codex R1 HIGH: a persistent floating ? FAB breaks the "additive-
+    only post-dismiss" contract because it remains visible for
+    returning users (different from pre-P58). The FAB must be absent
+    from both DOM and CSS in P58-01."""
     body = _read()
+    forbidden_dom = re.search(
+        r'<button[^>]*\bid="helpFloatingBtn"',
+        body,
+    )
+    forbidden_class = re.search(r'class="[^"]*\bhelp-fab\b', body)
+    forbidden_css = re.search(r'\.help-fab\s*\{', body)
+    assert forbidden_dom is None, (
+        "helpFloatingBtn is back in the DOM — Codex R1 HIGH said this "
+        "is a new always-visible element vs pre-P58 layout. Use the "
+        "Shift+? keyboard shortcut for re-open instead."
+    )
+    assert forbidden_class is None, (
+        "help-fab class still in markup — remove it (Codex R1 HIGH)."
+    )
+    assert forbidden_css is None, (
+        "`.help-fab` CSS selector still defined — remove it (Codex R1 HIGH)."
+    )
+
+
+def test_keyboard_shortcut_reopens_banner() -> None:
+    """Re-open affordance: Shift+? key listener calls showWelcomeBanner.
+    No visible UI change, so dismissed-state layout stays pixel-identical
+    to pre-P58."""
+    body = _read()
+    # The keydown listener must check e.key === "?" AND e.shiftKey AND
+    # call showWelcomeBanner.
     pattern = (
-        r'<button[^>]*\bid="helpFloatingBtn"[^>]*class="help-fab"'
+        r'document\.addEventListener\s*\(\s*"keydown"'
+        r'[\s\S]{0,800}?e\.key\s*===\s*"\?"'
+        r'[\s\S]{0,200}?e\.shiftKey'
+        r'[\s\S]{0,200}?showWelcomeBanner\s*\('
     )
     assert re.search(pattern, body), (
-        "floating help button id=helpFloatingBtn class=help-fab not "
-        "found. After welcome dismiss, users have no way to re-open "
-        "the banner without this affordance."
+        "keydown listener for Shift+? not found, or does not call "
+        "showWelcomeBanner(). This is the re-open affordance for "
+        "dismissed users."
     )
 
 
-def test_floating_help_button_reopens_banner() -> None:
-    """Clicking the ? button must re-show the welcome banner. Otherwise
-    the affordance is a no-op and dismiss is still one-way."""
+def test_keyboard_shortcut_skips_form_inputs() -> None:
+    """The Shift+? shortcut must not fire while the user is typing in
+    INPUT/TEXTAREA/SELECT/contenteditable — typing `?` in the JSON
+    textarea must NOT pop the banner over the editor."""
     body = _read()
+    # Check the listener guards against form inputs before checking the key.
     pattern = (
-        r'helpFloatingBtn[\s\S]{0,200}?addEventListener\s*\(\s*"click"'
-        r'[\s\S]{0,300}?showWelcomeBanner\s*\('
+        r'document\.addEventListener\s*\(\s*"keydown"'
+        r'[\s\S]{0,400}?(?:tagName\s*===\s*"INPUT"'
+        r'|tagName\s*===\s*"TEXTAREA")'
     )
     assert re.search(pattern, body), (
-        "helpFloatingBtn click handler does not call "
-        "showWelcomeBanner(). The ? affordance must re-open the banner."
-    )
-
-
-def test_floating_help_button_has_aria_label() -> None:
-    """Screen readers see only the literal `?` glyph without aria-label.
-    Required for WCAG SC 4.1.2."""
-    body = _read()
-    pattern = (
-        r'<button[^>]*\bid="helpFloatingBtn"[^>]*aria-label="[^"]+"'
-    )
-    assert re.search(pattern, body), (
-        "helpFloatingBtn missing aria-label. The literal `?` glyph "
-        "alone is not announced meaningfully by screen readers."
+        "keydown listener does not skip form inputs. Typing in the "
+        "JSON textarea would inadvertently pop the welcome banner."
     )
 
 
@@ -268,4 +294,64 @@ def test_first_load_shows_banner_when_not_dismissed() -> None:
     assert re.search(pattern, body), (
         "first-load auto-show check missing. Need: "
         "if (!isWelcomeDismissed()) showWelcomeBanner();"
+    )
+
+
+# ── 6. Take-Tour stub: must not persist dismissal (Codex R1 MEDIUM) ──
+
+
+def test_take_tour_stub_does_not_persist_dismissal() -> None:
+    """Codex R1 MEDIUM: until P58-02 ships the real tour, clicking
+    'Take a tour' must NOT persist dismissal — otherwise a first-time
+    user who clicks the promised onboarding path loses the banner
+    permanently without receiving any onboarding.
+
+    The stub handler must NOT call dismissWelcomeBanner (which writes
+    localStorage). Session-only hide via hideWelcomeBannerSessionOnly
+    is acceptable — banner returns on next reload."""
+    body = _read()
+    # Find the welcomeTakeTourBtn click handler block.
+    handler_match = re.search(
+        r'welcomeTakeTourBtn[\s\S]{0,200}?addEventListener\s*\(\s*"click"'
+        r'[\s\S]{0,800}?\}\s*\)\s*;',
+        body,
+    )
+    assert handler_match is not None, (
+        "welcomeTakeTourBtn click handler not found"
+    )
+    chunk = handler_match.group(0)
+    # The handler MUST NOT call dismissWelcomeBanner (which persists).
+    assert "dismissWelcomeBanner" not in chunk, (
+        "welcomeTakeTourBtn click handler calls dismissWelcomeBanner — "
+        "this persists dismissal but the tour doesn't exist yet. "
+        "Use hideWelcomeBannerSessionOnly() so the banner returns on "
+        "next reload (Codex R1 MEDIUM)."
+    )
+
+
+def test_take_tour_button_label_indicates_coming_soon() -> None:
+    """The Take-Tour button's visible label must signal that the tour
+    is not yet available — otherwise users click it expecting a
+    tour and get a status message instead. Codex R1 MEDIUM: relabel
+    or disable until P58-02 ships."""
+    body = _read()
+    # Find the button text — should contain something like "P58-02"
+    # or "即将上线" or "coming soon" so the user knows what to expect.
+    btn_match = re.search(
+        r'<button[^>]*\bid="welcomeTakeTourBtn"[^>]*>'
+        r'([\s\S]{0,200}?)</button>',
+        body,
+    )
+    assert btn_match is not None, "welcomeTakeTourBtn element not found"
+    label = btn_match.group(1)
+    coming_soon = (
+        "即将上线" in label
+        or "coming soon" in label.lower()
+        or "P58-02" in label
+    )
+    assert coming_soon, (
+        f"welcomeTakeTourBtn label does not indicate coming-soon "
+        f"status. Current label: {label!r}. Users clicking the "
+        f"primary onboarding CTA expect a tour; the label must "
+        f"flag that it's not yet available (Codex R1 MEDIUM)."
     )

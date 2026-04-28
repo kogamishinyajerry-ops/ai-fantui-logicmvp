@@ -258,27 +258,6 @@
     cursor: pointer;
   }
   .welcome-banner .welcome-dismiss:hover { color: var(--text); }
-
-  /* Floating ? button at bottom-right re-opens the welcome banner. */
-  .help-fab {
-    position: fixed;
-    bottom: 18px;
-    right: 18px;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--panel-2);
-    color: var(--accent);
-    border: 1px solid var(--accent);
-    font-size: 16px;
-    font-weight: 500;
-    cursor: pointer;
-    z-index: 50;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    font-family: inherit;
-  }
-  .help-fab:hover { filter: brightness(1.2); }
-  .help-fab:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -299,7 +278,7 @@
     </p>
     <div class="welcome-actions">
       <button id="welcomeTakeTourBtn" class="primary" type="button">
-        🎯 引导漫游（5 步）
+        🎯 引导漫游（P58-02 即将上线）
       </button>
       <button id="welcomeLoadExampleBtn" type="button">
         📦 加载一个示例（C919 正常部署）
@@ -434,13 +413,6 @@
       </div>
     </div>
   </div>
-
-  <!-- P58-01 onboarding: floating help button. Re-opens the welcome
-       banner when clicked. Fixed-positioned so it doesn't disturb
-       page flow. -->
-  <button id="helpFloatingBtn" class="help-fab" type="button"
-          aria-label="打开帮助 · 重新显示欢迎面板"
-          title="打开帮助">?</button>
 </main>
 
 <script>
@@ -1672,17 +1644,27 @@ function escape(s) {
 loadPresetInEditor("fantui_nominal");
 
 // =========================================================================
-// P58-01 onboarding: welcome banner + floating help button.
+// P58-01 onboarding: welcome banner + Shift+? keyboard re-open shortcut.
 //
-// Strictly additive UI. The page rendered identically to pre-P58 once
-// WELCOME_DISMISSED_KEY is set in localStorage. The floating ? button
-// is the only persistent visible affordance; clicking it re-shows the
-// banner regardless of dismissal state.
+// Strict additive-only UI per user directive (2026-04-28):
+// "绝对不要推翻现在的 UI 设计". Once dismissed via the explicit
+// "知道了，不再显示" or × button, the rendered page is pixel-identical
+// to pre-P58. There is NO persistent visible affordance for re-open
+// (Codex R1 HIGH: a floating ? FAB violates the contract because it's
+// a new always-visible element). Re-open is via Shift+? keyboard
+// shortcut — invisible to layout, will be documented by P58-03's
+// cheatsheet modal once that ships.
+//
+// The 🎯 引导漫游 button is currently a stub for P58-02. Per Codex R1
+// MEDIUM, clicking it must NOT persist dismissal (otherwise users who
+// click the promised path lose onboarding without receiving it).
+// Stub behavior: status message + session-only hide (no localStorage
+// write); on next reload the banner returns until the user explicitly
+// dismisses via × or 知道了.
 //
 // Versioned dismiss key (`-v1`) lets future P58 phases force-show the
-// banner again (e.g., when the tour content materially changes) by
-// bumping the version suffix without losing the user's preference for
-// older cohorts.
+// banner again (when banner content materially changes) by bumping the
+// version suffix without losing older cohorts' preferences.
 // =========================================================================
 
 const WELCOME_DISMISSED_KEY = "well-harness:welcome-dismissed-v1";
@@ -1717,7 +1699,15 @@ function hideWelcomeBanner() {
 }
 
 function dismissWelcomeBanner() {
+  // Persistent dismissal — wired only to explicit × and 知道了 buttons.
   setWelcomeDismissed(true);
+  hideWelcomeBanner();
+}
+
+function hideWelcomeBannerSessionOnly() {
+  // Hide for this session without writing localStorage. Used by the
+  // Take-Tour stub so users who click the promised onboarding path
+  // don't permanently lose the banner before P58-02's tour exists.
   hideWelcomeBanner();
 }
 
@@ -1733,19 +1723,37 @@ $("welcomeLoadExampleBtn").addEventListener("click", () => {
 });
 
 $("welcomeTakeTourBtn").addEventListener("click", () => {
-  // P58-02 will replace this stub with the real guided tour. For
-  // P58-01 we just acknowledge the click and dismiss so the user
-  // isn't blocked. The button is the contract surface tested today;
-  // the tour controller lands in P58-02.
-  setStatus("引导漫游将在 P58-02 上线 · 当前可手动探索预设下拉与可视化编辑器", "");
-  dismissWelcomeBanner();
+  // P58-02 will replace this stub with the real guided tour. Per
+  // Codex R1 MEDIUM: must NOT persist dismissal — otherwise a
+  // first-time user who clicks the promised onboarding path loses
+  // the banner permanently without receiving onboarding.
+  // Session-only hide so the banner returns on next reload.
+  setStatus("引导漫游将在 P58-02 上线 · 现在可点 📦 加载示例 或浏览预设下拉", "");
+  hideWelcomeBannerSessionOnly();
 });
 
-$("helpFloatingBtn").addEventListener("click", () => {
-  showWelcomeBanner();
-  // Scroll to top so the banner is visible even if user is deep in
-  // the trace view.
-  window.scrollTo({ top: 0, behavior: "smooth" });
+// Shift+? keyboard shortcut re-opens the welcome banner. Invisible to
+// layout (no DOM element), so steady-state UI for dismissed users
+// stays pixel-identical to pre-P58. The shortcut will be documented
+// by P58-03's cheatsheet modal.
+document.addEventListener("keydown", (e) => {
+  // Skip if user is typing in an input/textarea/contenteditable —
+  // typing `?` in the JSON textarea must not pop the banner.
+  const target = e.target;
+  if (target && (
+    target.tagName === "INPUT" ||
+    target.tagName === "TEXTAREA" ||
+    target.tagName === "SELECT" ||
+    target.isContentEditable
+  )) {
+    return;
+  }
+  // `?` requires shift on US layout; e.key is "?" already after shift.
+  if (e.key === "?" && e.shiftKey) {
+    e.preventDefault();
+    showWelcomeBanner();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 });
 
 // Show banner on first load if not dismissed.
