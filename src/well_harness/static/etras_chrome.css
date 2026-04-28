@@ -86,9 +86,12 @@ html.is-iframe-embed body.unified-nav-enabled { padding-top: 0 !important; }
 
 /* ── B) APP-SHELL (opt-in via body.etras-app) ──────────────── */
 
-/* Full-viewport layout. Html-level rule keys off the app-shell
-   body — `:has(...)` is broadly supported (2023+). */
-html:has(body.etras-app) { height: 100%; overflow: hidden; margin: 0; }
+/* Full-viewport layout. Codex P56-02a round-4 P2: don't rely on
+   `:has()` for the html-level rule (still missing on older Firefox
+   ESR + some embedded Chromium shells). Pages opt in by setting
+   `class="etras-app-root"` on the <html> tag — same surface where
+   `is-iframe-embed` already lives. */
+html.etras-app-root { height: 100%; overflow: hidden; margin: 0; }
 body.etras-app {
   height: 100%;
   overflow: hidden;

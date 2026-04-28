@@ -129,8 +129,52 @@ def test_chrome_root_scope_is_safe_for_cockpits() -> None:
         "that import the chrome for tokens but use document flow"
     )
     # And the scoped form must exist somewhere.
-    assert "html:has(body.etras-app)" in chrome or "body.etras-app" in chrome, (
+    assert "body.etras-app" in chrome, (
         "etras_chrome.css missing the body.etras-app opt-in scope"
+    )
+
+
+def test_chrome_html_rule_does_not_rely_on_has() -> None:
+    """Codex P56-02a round-4 P2: `:has()` still misses on older
+    Firefox ESR + some embedded Chromium shells. The html-level
+    full-viewport rule must use a regular class selector instead
+    so unsupported browsers fall back gracefully."""
+    chrome = (
+        REPO_ROOT / "src" / "well_harness" / "static" / "etras_chrome.css"
+    ).read_text(encoding="utf-8")
+    chrome_no_comments = re.sub(r"/\*.*?\*/", "", chrome, flags=re.DOTALL)
+    assert ":has(" not in chrome_no_comments, (
+        "etras_chrome.css must not rely on :has() — older Firefox "
+        "ESR / embedded Chromium ignore it, breaking the sim shell "
+        "layout. Use html.etras-app-root or similar opt-in class."
+    )
+    # The opt-in class form must exist.
+    assert "html.etras-app-root" in chrome_no_comments
+
+
+@pytest.mark.parametrize(
+    "page_path",
+    [
+        "src/well_harness/static/fan_console.html",
+        "src/well_harness/static/c919_etras_panel/index.html",
+    ],
+    ids=["fan_console", "c919_panel"],
+)
+def test_sim_panel_html_carries_etras_app_root_class(page_path: str) -> None:
+    """Codex P56-02a round-4 P2: sim panels must declare the
+    full-viewport opt-in via a static class on <html>, NOT through
+    :has(body.etras-app). Class declared inline on the tag co-
+    exists with the iframe-embed script's classList.add('is-
+    iframe-embed') call."""
+    body = (REPO_ROOT / page_path).read_text(encoding="utf-8")
+    html_match = re.search(r"<html[^>]*\bclass=\"([^\"]+)\"", body)
+    assert html_match is not None, (
+        f"{page_path} <html> tag must carry class attribute"
+    )
+    classes = html_match.group(1).split()
+    assert "etras-app-root" in classes, (
+        f"{page_path} <html> missing `etras-app-root` class — "
+        f"required for the opt-in full-viewport layout"
     )
 
 
