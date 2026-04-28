@@ -277,6 +277,13 @@ class Handler(BaseHTTPRequestHandler):
             # Serve shared unified-nav styles from parent static dir so pages
             # on this port can link to /unified-nav.css like pages on :8002.
             self._serve_file(SHARED_STATIC_ROOT / "unified-nav.css", "text/css; charset=utf-8")
+        elif path == "/etras_chrome.css":
+            # P56-01 (2026-04-28): the C919 panel + fan_console both link
+            # the extracted shared chrome (color tokens, header bar, .btn,
+            # .sec, .tog, scrollbar, etc.). The :9191 standalone server
+            # must whitelist it the same way it does /unified-nav.css —
+            # otherwise the live panel 404s and loses the extracted styles.
+            self._serve_file(SHARED_STATIC_ROOT / "etras_chrome.css", "text/css; charset=utf-8")
         elif path == "/timeseries_chart.js":
             # Shared timeseries renderer used by the live chart on this panel.
             self._serve_file(SHARED_STATIC_ROOT / "timeseries_chart.js", "application/javascript; charset=utf-8")

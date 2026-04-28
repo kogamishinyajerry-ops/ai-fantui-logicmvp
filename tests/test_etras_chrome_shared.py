@@ -195,6 +195,34 @@ def test_page_does_not_redeclare_shared_tokens(html_path: Path) -> None:
 # ─── 5. fan_console migrates the .sim-dot → .sim-indicator ───
 
 
+def test_standalone_c919_server_serves_shared_chrome() -> None:
+    """Codex P56-01 round-1 P1: the standalone C919 panel server
+    (scripts/c919_etras_panel_server.py, port 9191) only serves
+    explicitly-whitelisted assets from the shared static root. The
+    C919 panel's new `<link rel="stylesheet" href="/etras_chrome.css">`
+    must resolve there too — otherwise the live :9191 panel 404s
+    and silently loses the extracted styles."""
+    server_script = REPO_ROOT / "scripts" / "c919_etras_panel_server.py"
+    body = server_script.read_text(encoding="utf-8")
+    assert '"/etras_chrome.css"' in body, (
+        "scripts/c919_etras_panel_server.py must whitelist "
+        "/etras_chrome.css so the standalone :9191 panel can resolve "
+        "the shared stylesheet (parallels the existing "
+        "/unified-nav.css case)"
+    )
+    # And it must actually serve the file from SHARED_STATIC_ROOT,
+    # not redirect/404. Look for the _serve_file call after the
+    # route guard (could be many comment lines between).
+    route_pos = body.find('"/etras_chrome.css"')
+    next_elif = body.find("elif", route_pos + 1)
+    block = body[route_pos:next_elif] if next_elif != -1 else body[route_pos:]
+    assert "_serve_file" in block, (
+        "/etras_chrome.css route must call _serve_file with the "
+        "shared static path, not just match the path string"
+    )
+    assert "etras_chrome.css" in block
+
+
 def test_fan_console_uses_canonical_sim_indicator_class() -> None:
     """The HTML inside fan_console must use the canonical class
     name. A residual `.sim-dot` class on the indicator div would

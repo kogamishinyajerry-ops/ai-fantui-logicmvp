@@ -149,17 +149,22 @@ def test_c919_page_hides_nav_when_iframed(page_path):
     assert "window.self !== window.top" in html and "is-iframe-embed" in html, (
         f"{page_path} missing iframe-embed detection script"
     )
-    chrome_css = (
-        REPO_ROOT / "src" / "well_harness" / "static" / "etras_chrome.css"
-    )
-    chrome_body = chrome_css.read_text(encoding="utf-8") if chrome_css.exists() else ""
-    haystack = html + "\n" + chrome_body
+    # Codex P56-01 round-1 P3: only follow the link when the page
+    # actually imports etras_chrome.css; otherwise an unmigrated
+    # page would silently pass on someone else's stylesheet.
+    haystack = html
+    if 'href="/etras_chrome.css"' in html or 'href="etras_chrome.css"' in html:
+        chrome_css = (
+            REPO_ROOT / "src" / "well_harness" / "static" / "etras_chrome.css"
+        )
+        if chrome_css.exists():
+            haystack = html + "\n" + chrome_css.read_text(encoding="utf-8")
     assert (
         "html.is-iframe-embed .unified-nav" in haystack
         or ".is-iframe-embed .unified-nav" in haystack
     ), (
         f"{page_path} missing CSS rule that hides .unified-nav under "
-        f".is-iframe-embed (checked inline + etras_chrome.css)"
+        f".is-iframe-embed"
     )
 
 
