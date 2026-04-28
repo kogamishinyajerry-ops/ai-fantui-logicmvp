@@ -306,8 +306,10 @@ def test_start_tour_moves_focus_into_card() -> None:
     so screen readers announce it and Tab cycles through the controls.
     Standard target: the primary "Next" button (first action)."""
     body = _read()
+    # P58-02 R2: signature evolved from startTour() to startTour(launcher)
+    # so the captured launcher param is explicit. Match either form.
     fn_match = re.search(
-        r'function\s+startTour\s*\(\s*\)\s*\{[\s\S]{0,500}?\n\}',
+        r'function\s+startTour\s*\([^)]*\)\s*\{[\s\S]{0,1000}?\n\}',
         body,
     )
     assert fn_match is not None, "startTour function not found"
@@ -373,25 +375,31 @@ def test_end_tour_restores_focus_to_launcher() -> None:
     element that opened them on close. Otherwise focus lands on
     <body> and screen-reader users have no anchor.
 
-    startTour() must save the launcher (document.activeElement at
-    the time of opening), and endTour() must call .focus() on it.
+    startTour() must accept an explicit launcher OR fall back to
+    document.activeElement, and endTour() must call .focus() on it.
     """
     body = _read()
-    # startTour must save the launcher element.
+    # startTour must accept an explicit launcher param (Codex R2 MED:
+    # the welcome banner is hidden before startTour is called, so an
+    # activeElement-only capture is unreliable).
     start_fn = re.search(
-        r'function\s+startTour\s*\(\s*\)\s*\{[\s\S]{0,500}?\n\}',
+        r'function\s+startTour\s*\(\s*launcher\s*\)\s*\{[\s\S]{0,1000}?\n\}',
         body,
     )
-    assert start_fn is not None, "startTour function not found"
+    assert start_fn is not None, (
+        "startTour does not accept an explicit launcher parameter. "
+        "Per Codex R2 MEDIUM, callers must pass the launcher element "
+        "BEFORE hiding it (e.g. e.currentTarget) so the saved ref is "
+        "the actual button, not whatever activeElement was at hide-time."
+    )
     start_chunk = start_fn.group(0)
-    assert "tourLauncherEl" in start_chunk and "activeElement" in start_chunk, (
-        "startTour does not save the launcher via "
-        "document.activeElement → tourLauncherEl. Focus restoration "
+    assert "tourLauncherEl" in start_chunk, (
+        "startTour does not assign tourLauncherEl. Focus restoration "
         "needs the saved reference."
     )
     # endTour must restore focus.
     end_fn = re.search(
-        r'function\s+endTour\s*\(\s*persistent\s*\)\s*\{[\s\S]{0,600}?\n\}',
+        r'function\s+endTour\s*\(\s*persistent\s*\)\s*\{[\s\S]{0,1500}?\n\}',
         body,
     )
     assert end_fn is not None, "endTour function not found"
@@ -399,6 +407,85 @@ def test_end_tour_restores_focus_to_launcher() -> None:
     assert "tourLauncherEl" in end_chunk and ".focus" in end_chunk, (
         "endTour does not restore focus to the launcher. Screen-reader "
         "users will land on <body> with no anchor (WCAG SC 2.4.3)."
+    )
+
+
+def test_take_tour_handler_captures_launcher_before_hiding_banner() -> None:
+    """Codex P58-02 R2 MEDIUM: the welcomeTakeTourBtn click handler
+    must capture the launcher BEFORE calling hideWelcomeBannerSessionOnly.
+    Otherwise startTour's activeElement snapshot would include a button
+    whose ancestor was just marked [hidden], breaking focus restore."""
+    body = _read()
+    handler_match = re.search(
+        r'welcomeTakeTourBtn[\s\S]{0,200}?addEventListener\s*\(\s*"click"'
+        r'[\s\S]{0,800}?\}\s*\)\s*;',
+        body,
+    )
+    assert handler_match is not None, (
+        "welcomeTakeTourBtn click handler not found"
+    )
+    chunk = handler_match.group(0)
+    # The handler must capture e.currentTarget (or e.target) before
+    # calling hideWelcomeBannerSessionOnly.
+    capture_idx = -1
+    hide_idx = -1
+    capture_match = re.search(r'(?:currentTarget|target)\b', chunk)
+    if capture_match:
+        capture_idx = capture_match.start()
+    hide_match = re.search(r'hideWelcomeBannerSessionOnly', chunk)
+    if hide_match:
+        hide_idx = hide_match.start()
+    assert capture_idx >= 0, (
+        "welcomeTakeTourBtn handler does not capture e.currentTarget "
+        "/ e.target. The launcher must be captured explicitly so it "
+        "survives the banner hide (Codex R2 MEDIUM)."
+    )
+    assert hide_idx >= 0, (
+        "welcomeTakeTourBtn handler does not call "
+        "hideWelcomeBannerSessionOnly."
+    )
+    assert capture_idx < hide_idx, (
+        "welcomeTakeTourBtn handler hides the banner BEFORE capturing "
+        "the launcher. After hide, the launcher is inside [hidden] "
+        "ancestor and focus restore won't work (Codex R2 MEDIUM)."
+    )
+    # And startTour must be called with the captured ref.
+    assert re.search(r'startTour\s*\(\s*launcher\b', chunk), (
+        "welcomeTakeTourBtn handler does not call startTour(launcher). "
+        "The captured ref must be passed explicitly."
+    )
+
+
+def test_end_tour_falls_back_to_visible_control() -> None:
+    """Codex P58-02 R2 MEDIUM: even with an explicit launcher reference,
+    if that launcher lives inside a hidden ancestor (typical case:
+    welcome banner was dismissed before tour), .focus() is a silent
+    no-op and focus lands on <body>. endTour must check focusability
+    (not inside [hidden] ancestor) AND fall back to a visible control
+    like #presetSelect when the launcher is unavailable."""
+    body = _read()
+    end_fn = re.search(
+        r'function\s+endTour\s*\(\s*persistent\s*\)\s*\{[\s\S]{0,1500}?\n\}',
+        body,
+    )
+    assert end_fn is not None, "endTour function not found"
+    chunk = end_fn.group(0)
+    # Must check that the launcher is NOT inside a hidden ancestor.
+    has_hidden_check = (
+        re.search(r'closest\s*\(\s*["\']\[hidden\]', chunk)
+        or "isLauncherFocusable" in chunk
+    )
+    assert has_hidden_check, (
+        "endTour does not check whether the launcher's ancestor is "
+        "[hidden]. Hidden launcher → focus falls to <body>. Either "
+        "inline `el.closest('[hidden]')` or call a helper "
+        "isLauncherFocusable (Codex R2 MEDIUM)."
+    )
+    # Must fall back to a visible control if launcher unavailable.
+    assert "presetSelect" in chunk, (
+        "endTour has no fallback to a visible control. If the launcher "
+        "is hidden or detached, focus would land on <body>. Fall back "
+        "to #presetSelect (or any always-visible interactive control)."
     )
 
 

@@ -1826,14 +1826,16 @@ $("welcomeLoadExampleBtn").addEventListener("click", () => {
   dismissWelcomeBanner();
 });
 
-$("welcomeTakeTourBtn").addEventListener("click", () => {
-  // P58-02 wires the real 5-step guided tour. Hide the welcome
-  // banner (session-only) and start the tour. If the user completes
-  // all 5 steps, the tour persists dismissal (they have seen the
-  // onboarding). If they skip, dismissal is session-only — banner
-  // returns on next reload until explicitly dismissed.
+$("welcomeTakeTourBtn").addEventListener("click", (e) => {
+  // P58-02 wires the real 5-step guided tour. Capture the launcher
+  // BEFORE hiding the banner — once the banner is hidden, the
+  // launcher button sits inside an [hidden] ancestor and is no
+  // longer focusable, so endTour's focus-restore would land on
+  // <body> instead (Codex P58-02 R2 MEDIUM). startTour stores it,
+  // endTour checks visibility and falls back to #presetSelect.
+  const launcher = e.currentTarget;
   hideWelcomeBannerSessionOnly();
-  startTour();
+  startTour(launcher);
 });
 
 // Shift+? keyboard shortcut re-opens the welcome banner. Invisible to
@@ -1930,11 +1932,14 @@ function tourFocusableButtons() {
   ].filter(el => el && !el.disabled);
 }
 
-function startTour() {
+function startTour(launcher) {
   tourCurrentStep = 0;
-  // Remember the launcher so we can restore focus after end. Using
-  // document.activeElement is robust to whatever called startTour.
-  tourLauncherEl = document.activeElement || null;
+  // Prefer the explicit launcher passed by the caller (welcomeTakeTourBtn
+  // captures e.currentTarget BEFORE hiding the banner, so the reference
+  // survives even though the banner element ancestor is then hidden).
+  // Fall back to document.activeElement for callers that don't pass
+  // one. Either way, endTour validates focusability before restoring.
+  tourLauncherEl = launcher || document.activeElement || null;
   tourEl("tourOverlay").hidden = false;
   positionTourStep(0);
   // Move keyboard focus into the tour card so screen readers announce
@@ -1942,14 +1947,38 @@ function startTour() {
   tourEl("tourNextBtn").focus();
 }
 
+function isLauncherFocusable(el) {
+  // True iff the element is still in the DOM, not inside any [hidden]
+  // ancestor, and has a focus() method. Codex P58-02 R2 MEDIUM:
+  // launcher captured before banner hide is still in the DOM but
+  // sits inside an [hidden] ancestor, so .focus() is a no-op and
+  // focus falls back to <body>. Detect that case here.
+  if (!el || typeof el.focus !== "function") return false;
+  if (!document.contains(el)) return false;
+  if (typeof el.closest === "function" && el.closest("[hidden]")) return false;
+  return true;
+}
+
 function endTour(persistent) {
   tourEl("tourOverlay").hidden = true;
-  // Restore focus to the launcher (the welcome banner button or
-  // wherever startTour was triggered). aria-modal=true requires
-  // we return focus on close; otherwise screen-reader users land
-  // on <body> with no anchor.
-  if (tourLauncherEl && typeof tourLauncherEl.focus === "function") {
-    try { tourLauncherEl.focus(); } catch (e) { /* element gone — fine */ }
+  // Restore focus. Two cases:
+  //   1. Launcher is still visible (e.g., user pressed Shift+? to reopen
+  //      the banner and took the tour from there) → focus the launcher.
+  //   2. Launcher is hidden / detached (typical: welcomeTakeTourBtn was
+  //      inside the banner that we hid before opening the tour) →
+  //      fall back to a visible control (#presetSelect is the first
+  //      interactive control of the main flow and is always present).
+  // Without the fallback, focus lands on <body> and screen-reader
+  // users have no anchor (Codex P58-02 R2 MEDIUM).
+  let restored = false;
+  if (isLauncherFocusable(tourLauncherEl)) {
+    try { tourLauncherEl.focus(); restored = true; } catch (e) {}
+  }
+  if (!restored) {
+    const fallback = document.getElementById("presetSelect");
+    if (fallback) {
+      try { fallback.focus(); } catch (e) { /* still ok — body fallback */ }
+    }
   }
   tourLauncherEl = null;
   if (persistent) {
