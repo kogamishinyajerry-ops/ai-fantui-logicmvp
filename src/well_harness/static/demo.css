@@ -17,10 +17,15 @@
   --fan-text:        #c6d5e8;
   --fan-text-dim:    #6a7d95;
   --fan-text-mute:   #46597a;
-  --fan-accent:      #00c8f5;
-  --fan-active:      #00e5a0;
-  --fan-warn:        #f5c518;
-  --fan-fail:        #e05555;
+  /* P56-02b (2026-04-28): the 4 status tokens now alias the shared
+     /etras_chrome.css palette so a future palette tweak propagates
+     to every E-TRAS surface in one edit. Values match the legacy
+     hex literals — no visual change in this page; the sim panels
+     using --cyan/--green/--amber/--red directly shift to match. */
+  --fan-accent:      var(--cyan);
+  --fan-active:      var(--green);
+  --fan-warn:        var(--amber);
+  --fan-fail:        var(--red);
   --fan-logic-bg:    #0e1d30;
 
   --fan-sticky-offset: 64px;  /* unified-nav (48px) + 16px gap */
