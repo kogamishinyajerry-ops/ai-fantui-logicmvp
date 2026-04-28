@@ -26,6 +26,8 @@ Tests use the regex-on-source pattern from P57+P58-01.
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -188,9 +190,11 @@ def test_complete_tour_persists_dismissal() -> None:
         "persist dismissal so returning users don't see the banner "
         "again."
     )
-    # Also verify endTour(true) → setWelcomeDismissed(true).
+    # Also verify endTour(true) → setWelcomeDismissed(true). Larger
+    # window (1200 chars) accommodates the focus-restore logic added
+    # in Codex P58-02 R1 MEDIUM fix.
     end_tour_match = re.search(
-        r'function\s+endTour\s*\(\s*persistent\s*\)\s*\{[\s\S]{0,400}?\n\}',
+        r'function\s+endTour\s*\(\s*persistent\s*\)\s*\{[\s\S]{0,1200}?\n\}',
         body,
     )
     assert end_tour_match is not None, "endTour function not found"
@@ -315,7 +319,138 @@ def test_start_tour_moves_focus_into_card() -> None:
     )
 
 
+# ── 6a. Focus management (Codex R1 MEDIUM): trap + restore ──
+
+
+def test_keydown_handler_traps_tab() -> None:
+    """Codex P58-02 R1 MEDIUM: aria-modal=true + role=dialog without a
+    Tab/Shift+Tab focus trap is a lie — keyboard focus leaks into the
+    background DOM. The keydown handler must intercept Tab and wrap
+    focus within the tour buttons.
+
+    Required behavior verified:
+      - Tab on last → wrap to first
+      - Shift+Tab on first → wrap to last
+    """
+    body = _read()
+    # Find ALL keydown handlers on document (P58-01 added one for
+    # Shift+? to reopen the welcome banner; P58-02 adds another for
+    # Esc/Tab inside the tour). Pick the one that mentions tourOverlay
+    # — that's the tour's handler.
+    handler_chunks = [
+        m.group(0)
+        for m in re.finditer(
+            r'document\.addEventListener\s*\(\s*"keydown"[\s\S]*?\}\s*\)\s*;',
+            body,
+        )
+    ]
+    tour_handlers = [c for c in handler_chunks if "tourOverlay" in c]
+    assert tour_handlers, (
+        "no keydown listener references tourOverlay — the tour's "
+        "Esc/Tab handler is missing or mis-attributed."
+    )
+    chunk = tour_handlers[0]
+    # The handler must check for Tab key.
+    assert re.search(r'e\.key\s*===\s*"Tab"', chunk), (
+        "keydown handler does not check for Tab key. Without it, "
+        "focus leaks into background DOM while the modal is open "
+        "(Codex R1 MEDIUM)."
+    )
+    # And distinguish shift vs no-shift.
+    assert re.search(r'e\.shiftKey', chunk), (
+        "keydown handler does not branch on shiftKey. Shift+Tab needs "
+        "different wrapping logic (last-button-was-active → first)."
+    )
+    # And call .focus() on a button to wrap.
+    assert re.search(r'\.focus\s*\(\s*\)', chunk), (
+        "keydown handler does not call .focus() to wrap focus. The "
+        "Tab key default would leak focus out of the dialog."
+    )
+
+
+def test_end_tour_restores_focus_to_launcher() -> None:
+    """Codex R1 MEDIUM: aria-modal dialogs must restore focus to the
+    element that opened them on close. Otherwise focus lands on
+    <body> and screen-reader users have no anchor.
+
+    startTour() must save the launcher (document.activeElement at
+    the time of opening), and endTour() must call .focus() on it.
+    """
+    body = _read()
+    # startTour must save the launcher element.
+    start_fn = re.search(
+        r'function\s+startTour\s*\(\s*\)\s*\{[\s\S]{0,500}?\n\}',
+        body,
+    )
+    assert start_fn is not None, "startTour function not found"
+    start_chunk = start_fn.group(0)
+    assert "tourLauncherEl" in start_chunk and "activeElement" in start_chunk, (
+        "startTour does not save the launcher via "
+        "document.activeElement → tourLauncherEl. Focus restoration "
+        "needs the saved reference."
+    )
+    # endTour must restore focus.
+    end_fn = re.search(
+        r'function\s+endTour\s*\(\s*persistent\s*\)\s*\{[\s\S]{0,600}?\n\}',
+        body,
+    )
+    assert end_fn is not None, "endTour function not found"
+    end_chunk = end_fn.group(0)
+    assert "tourLauncherEl" in end_chunk and ".focus" in end_chunk, (
+        "endTour does not restore focus to the launcher. Screen-reader "
+        "users will land on <body> with no anchor (WCAG SC 2.4.3)."
+    )
+
+
 # ── 6. No third-party dependency leaked in ──
+
+
+# ── 7. Inline-script syntax check (Codex R1 HIGH carry-forward) ──
+
+
+def test_inline_script_parses_as_valid_javascript() -> None:
+    """Codex P58-02 R1 HIGH: the previous P58-02 commit shipped step 3's
+    desc with unescaped ASCII `"` mid-string ("用户暂存"), which closed
+    the JS string early and made the entire inline `<script>` block
+    fail to parse — `node --check` raised SyntaxError, the page never
+    booted. Regex-on-source tests cannot catch this class of bug
+    because they don't model JS grammar.
+
+    This test extracts the inline `<script>` block and runs it through
+    `node --check`, which validates JS syntax without executing. If
+    Node is not installed (CI without Node), the test is skipped with
+    a clear reason.
+
+    Without this test, future curly-quote/escape mistakes in TOUR_STEPS
+    descriptions or any other inline JS will silently break the page
+    until a manual browser test catches it.
+    """
+    if shutil.which("node") is None:
+        pytest.skip(
+            "node not installed — JS syntax check skipped. Install "
+            "Node.js to enable this safety net."
+        )
+    body = TIMELINE_SIM.read_text(encoding="utf-8")
+    # Extract every <script>...</script> block (the file has one large
+    # inline block plus possibly external-src tags which we ignore).
+    script_blocks = re.findall(
+        r'<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)</script>',
+        body,
+    )
+    assert script_blocks, "no inline <script> block found"
+    for idx, js in enumerate(script_blocks):
+        result = subprocess.run(
+            ["node", "--check", "-"],
+            input=js,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        assert result.returncode == 0, (
+            f"inline <script> block #{idx} fails `node --check` "
+            f"(JS syntax error). Without this test we'd ship a broken "
+            f"page. Stderr:\n{result.stderr}"
+        )
 
 
 def test_tour_uses_no_external_dependency() -> None:

@@ -1897,7 +1897,7 @@ const TOUR_STEPS = [
   {
     selector: "#saveScenarioBtn",
     title: "3 / 5 · 暂存与导入导出",
-    desc: "💾 暂存把当前编辑保存到浏览器本地（命名后可在预设下拉的"用户暂存"里再次加载）。⬇ 导出下载为 .timeline.json；⬆ 导入从 JSON 文件读取整个 timeline。"
+    desc: "💾 暂存把当前编辑保存到浏览器本地（命名后可在预设下拉的「用户暂存」组里再次加载）。⬇ 导出下载为 .timeline.json；⬆ 导入从 JSON 文件读取整个 timeline。"
   },
   {
     selector: "#runBtn",
@@ -1912,11 +1912,29 @@ const TOUR_STEPS = [
 ];
 
 let tourCurrentStep = 0;
+// Saved at startTour() so endTour() can restore focus to the
+// element that launched the tour (typically welcomeTakeTourBtn).
+// Without this, after the tour closes focus lands on <body>, which
+// fails WCAG SC 2.4.3 (Focus Order).
+let tourLauncherEl = null;
 
 function tourEl(id) { return document.getElementById(id); }
 
+// Order matters: this is the Tab cycle. Skip → Prev → Next, with
+// the disabled state on Prev (step 0) handled by tourFocusTrap.
+function tourFocusableButtons() {
+  return [
+    tourEl("tourSkipBtn"),
+    tourEl("tourPrevBtn"),
+    tourEl("tourNextBtn"),
+  ].filter(el => el && !el.disabled);
+}
+
 function startTour() {
   tourCurrentStep = 0;
+  // Remember the launcher so we can restore focus after end. Using
+  // document.activeElement is robust to whatever called startTour.
+  tourLauncherEl = document.activeElement || null;
   tourEl("tourOverlay").hidden = false;
   positionTourStep(0);
   // Move keyboard focus into the tour card so screen readers announce
@@ -1926,6 +1944,14 @@ function startTour() {
 
 function endTour(persistent) {
   tourEl("tourOverlay").hidden = true;
+  // Restore focus to the launcher (the welcome banner button or
+  // wherever startTour was triggered). aria-modal=true requires
+  // we return focus on close; otherwise screen-reader users land
+  // on <body> with no anchor.
+  if (tourLauncherEl && typeof tourLauncherEl.focus === "function") {
+    try { tourLauncherEl.focus(); } catch (e) { /* element gone — fine */ }
+  }
+  tourLauncherEl = null;
   if (persistent) {
     setWelcomeDismissed(true);
   }
@@ -2043,12 +2069,36 @@ tourEl("tourNextBtn").addEventListener("click", tourNext);
 tourEl("tourPrevBtn").addEventListener("click", tourPrev);
 tourEl("tourSkipBtn").addEventListener("click", tourSkip);
 
-// Esc key cancels the tour (session-only). Active only when the
-// overlay is visible.
+// Esc cancels (session-only) + Tab/Shift+Tab focus trap. Active only
+// when the overlay is visible. Without the focus trap, Tab leaks into
+// the background DOM and aria-modal=true becomes a lie (Codex P58-02
+// R1 MEDIUM).
 document.addEventListener("keydown", (e) => {
-  if (!tourEl("tourOverlay").hidden && e.key === "Escape") {
+  if (tourEl("tourOverlay").hidden) return;
+  if (e.key === "Escape") {
     e.preventDefault();
     tourSkip();
+    return;
+  }
+  if (e.key === "Tab") {
+    const buttons = tourFocusableButtons();
+    if (buttons.length === 0) return;
+    const first = buttons[0];
+    const last = buttons[buttons.length - 1];
+    const active = document.activeElement;
+    if (e.shiftKey) {
+      // Shift+Tab on first → wrap to last.
+      if (active === first || !buttons.includes(active)) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      // Tab on last → wrap to first.
+      if (active === last || !buttons.includes(active)) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
   }
 });
 
