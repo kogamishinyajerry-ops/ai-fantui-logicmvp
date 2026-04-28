@@ -101,6 +101,75 @@ def test_fantui_circuit_header_uses_cyan_brand() -> None:
     )
 
 
+# ─── 1b. .badge and .info-card h3 also switch to the cyan brand ───
+# Codex R1 (PR #116) flagged: header h1 was covered, but .badge and
+# .info-card h3 were not. A future edit could revert either to the
+# old green and the suite would still pass.
+
+
+@pytest.mark.parametrize(
+    "selector",
+    [
+        # `.badge` matches both `color:` and `border:` — assert the rule
+        # references the cyan brand somewhere (cyan or cyan-d).
+        r"\.badge",
+        r"\.info-card\s+h3",
+    ],
+)
+def test_fantui_circuit_identity_surfaces_use_cyan(selector: str) -> None:
+    """`.badge` and `.info-card h3` are identity surfaces alongside
+    `header h1`. They must reference the cyan brand token (--cyan or
+    --cyan-d) so the page reads as the unified palette, not the old
+    green-everywhere palette."""
+    body = FANTUI_CIRCUIT.read_text(encoding="utf-8")
+    css = _inline_css(body)
+    rule = re.search(selector + r"\s*\{([^}]+)\}", css, re.DOTALL)
+    assert rule is not None, f"selector {selector!r} not found in CSS"
+    rule_body = rule.group(1)
+    assert "cyan" in rule_body, (
+        f"{selector!r} CSS rule does not reference --cyan or --cyan-d. "
+        f"Identity surfaces must use the cyan brand to match the C919 "
+        f"ETRAS standard. Rule body:\n{rule_body!r}"
+    )
+
+
+# ─── 1c. Active-signal SVG strokes/fills stay green; L4 final-release stays amber ───
+# Codex R1 (PR #116) flagged: the cyan switch is for IDENTITY only.
+# Active signal lines must still be #00e5a0 (green) and L4's final
+# release output must still be #f5c518 (amber). Add a coarse guard so
+# a future edit cannot accidentally swap signal colors for brand colors.
+
+
+def test_fantui_circuit_active_signal_strokes_stay_green() -> None:
+    """The L1-L3 controller-output rect strokes are explicitly
+    `stroke="#00e5a0"`. There must be at least 3 such strokes
+    in the SVG (one per output box: tls / etrac / eec_deploy or
+    pls or pdu). This catches a future edit that accidentally
+    converted active-signal green → cyan along with the brand."""
+    body = FANTUI_CIRCUIT.read_text(encoding="utf-8")
+    green_strokes = re.findall(r'stroke="#00e5a0"', body)
+    assert len(green_strokes) >= 3, (
+        f"only {len(green_strokes)} green (#00e5a0) strokes found — "
+        f"L1-L3 active-signal output boxes / wires must stay green. "
+        f"The cyan switch is for identity surfaces (header / badge / "
+        f"info-card titles) only."
+    )
+
+
+def test_fantui_circuit_l4_final_release_stays_amber() -> None:
+    """The L4 → throttle_unlock final release path is the only amber
+    surface in the SVG. Confirm at least one `#f5c518` stroke remains
+    (the L4 wire to throttle output box, plus the THROTTLE UNLOCK
+    summary badge stroke)."""
+    body = FANTUI_CIRCUIT.read_text(encoding="utf-8")
+    amber_strokes = re.findall(r'stroke="#f5c518"', body)
+    assert len(amber_strokes) >= 2, (
+        f"only {len(amber_strokes)} amber (#f5c518) strokes found — "
+        f"L4 final-release path must stay amber to convey the "
+        f"deeper-than-L1/2/3 authority semantic."
+    )
+
+
 # ─── 2. Each L1-L4 input row carries a Chinese gloss next to it ───
 
 
