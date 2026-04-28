@@ -1,0 +1,272 @@
+/* ============================================================
+   etras_chrome.css — shared chrome for E-TRAS / FANTUI surfaces.
+
+   Extracted from c919_etras_panel/index.html (the visual standard
+   the user picked 2026-04-28 — "都以 C919 ETRAS 为标准，去进行统一").
+   Replaces ~80 lines of duplicate inline CSS in fan_console.html
+   that had drifted on subtle hex values, naming, and padding.
+
+   Pages that import this file get:
+     - the C919 color palette tokens
+     - the 44px header bar (.hbadge / .htitle / .hsub / .hcontrols)
+     - .btn primary/active/danger
+     - .sim-indicator + .running animation
+     - .htime + .state-pill (with .armed / .active / .fault)
+     - .workspace 3-column grid + .panel
+     - .sec / .sec-title / .row / .val section primitives
+     - .tog (with .warn variant) form toggle
+     - input[type=range] slider + amber thumb
+     - global webkit scrollbar
+     - iframe-embed nav suppression
+     - @keyframes blink
+
+   Page-specific surfaces (locks-grid, gauge SVGs, telemetry log,
+   preset bar, time-series drawer, etc.) stay in the page's own
+   <style> block — they aren't chrome, they're content.
+
+   Adding a third system later: import this file, drop in your
+   page-specific surfaces, and you inherit the unified visual.
+   ============================================================ */
+
+:root {
+  --bg0: #020810;
+  --bg1: #080f1e;
+  --bg2: #0c1628;
+  --bg3: #111e34;
+  --bg4: #19273f;
+  --b0: #1c2e4a;
+  --b1: #243654;
+  --b2: #2d4168;
+  --text0: #e8eef8;
+  --text1: #9ab0cc;
+  --text2: #5a7090;
+  --amber: #f5a623;
+  --amber2: #ffc657;
+  --amber-d: rgba(245,166,35,0.15);
+  --green: #4ade80;
+  --green-d: rgba(74,222,128,0.12);
+  --red: #f87171;
+  --red-d: rgba(248,113,113,0.12);
+  --cyan: #22d3ee;
+  --cyan-d: rgba(34,211,238,0.12);
+  --blue: #60a5fa;
+  --yellow: #fbbf24;
+  --mono: 'JetBrains Mono','Cascadia Mono','SF Mono',monospace;
+  --ui: 'Inter','PingFang SC',system-ui,sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: var(--bg0);
+  color: var(--text0);
+  font-family: var(--ui);
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── HEADER (panel-level, not the unified top nav) ─────
+   Codex P56-01 round-2 P3: a bare `header` selector matches BOTH
+   the page's panel header AND the existing <header class="unified-nav">
+   wrapper. The .unified-nav rule overrides height/background but
+   NOT padding/gap, so the top nav inherited 16px padding + 12px
+   gap and overflowed earlier on narrow viewports. Scope away
+   from .unified-nav. */
+header:not(.unified-nav) {
+  height: 44px;
+  background: var(--bg1);
+  border-bottom: 1px solid var(--b1);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+.hbadge {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  padding: 3px 10px;
+  border-radius: 3px;
+  background: linear-gradient(135deg, #0a1f40, #0b2d5a);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
+}
+.htitle { font-size: 14px; font-weight: 600; color: var(--text0); }
+.hsub { font-size: 10px; color: var(--text2); font-family: var(--mono); }
+.hgap { flex: 1; }
+.hcontrols { display: flex; align-items: center; gap: 8px; }
+
+/* ── BUTTONS ────────────────────────── */
+.btn {
+  padding: 4px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--b2);
+  background: var(--bg3);
+  color: var(--text1);
+  cursor: pointer;
+  font-size: 11px;
+  font-family: var(--ui);
+  transition: all .15s;
+}
+.btn:hover { border-color: var(--cyan); color: var(--cyan); }
+.btn.active { background: var(--cyan-d); border-color: var(--cyan); color: var(--cyan); }
+.btn.danger:hover { border-color: var(--red); color: var(--red); }
+
+/* ── SIM INDICATOR (canonical: .sim-indicator) ──
+   fan_console used .sim-dot historically; .sim-indicator is the
+   C919 standard. The pages migrate to this class; the keyframe
+   animation lives on the .running modifier. */
+.sim-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 6px var(--red);
+  transition: all .3s;
+}
+.sim-indicator.running {
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: blink 1s infinite;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .5; }
+}
+
+.htime {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--amber);
+  min-width: 64px;
+  text-align: right;
+}
+
+/* ── STATE PILL (with .armed / .active / .fault) ── */
+.state-pill {
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--mono);
+  background: var(--bg3);
+  border: 1px solid var(--b2);
+  color: var(--text2);
+  transition: all .3s;
+  min-width: 200px;
+  text-align: center;
+}
+.state-pill.armed { border-color: var(--amber); color: var(--amber); background: var(--amber-d); }
+.state-pill.active { border-color: var(--green); color: var(--green); background: var(--green-d); }
+.state-pill.fault { border-color: var(--red); color: var(--red); background: var(--red-d); }
+
+/* ── LAYOUT (3-column workspace) ──────── */
+.workspace {
+  flex: 1;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 310px 1fr 300px;
+  gap: 1px;
+  background: var(--b0);
+}
+.panel {
+  background: var(--bg1);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── SECTION primitives ──────────────── */
+.sec {
+  border-bottom: 1px solid var(--b0);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.sec-title {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  color: var(--text2);
+  margin-bottom: 2px;
+}
+.row { display: flex; align-items: center; gap: 6px; }
+.row label { color: var(--text2); font-size: 11px; flex: 1; white-space: nowrap; }
+.val {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text1);
+  min-width: 48px;
+  text-align: right;
+}
+
+/* ── TOGGLE ─────────────────────────── */
+.tog {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.tog input { opacity: 0; width: 0; height: 0; }
+.tog span {
+  position: absolute;
+  inset: 0;
+  border-radius: 9px;
+  cursor: pointer;
+  background: var(--bg4);
+  border: 1px solid var(--b1);
+  transition: .2s;
+}
+.tog span::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text2);
+  top: 2px;
+  left: 2px;
+  transition: .2s;
+}
+.tog input:checked + span { background: var(--green-d); border-color: var(--green); }
+.tog input:checked + span::after { background: var(--green); transform: translateX(18px); }
+.tog.warn input:checked + span { background: var(--red-d); border-color: var(--red); }
+.tog.warn input:checked + span::after { background: var(--red); }
+
+/* ── RANGE SLIDER ───────────────────── */
+input[type=range] {
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--b2);
+  outline: none;
+  cursor: pointer;
+  width: 100%;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--amber);
+  cursor: pointer;
+  border: 2px solid var(--bg2);
+}
+
+/* ── SCROLLBAR ──────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--b2); border-radius: 2px; }
+
+/* ── IFRAME EMBED — suppress unified top nav ──
+   When the page is loaded inside the workbench iframe (P54-06),
+   the outer chrome doesn't need to repeat the unified nav. */
+html.is-iframe-embed .unified-nav { display: none !important; }
+html.is-iframe-embed body.unified-nav-enabled { padding-top: 0 !important; }

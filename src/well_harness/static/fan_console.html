@@ -5,92 +5,16 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>反推实时操作台 · FANTUI LogicMVP</title>
 <link rel="stylesheet" href="/unified-nav.css">
+<link rel="stylesheet" href="/etras_chrome.css">
 <style>
-:root {
-  --bg0: #02080f;
-  --bg1: #071020;
-  --bg2: #0c1830;
-  --bg3: #112443;
-  --bg4: #182e52;
-  --b0: #1c2f4d;
-  --b1: #253d65;
-  --b2: #2e4a7d;
-  --text0: #e6ecf6;
-  --text1: #95adca;
-  --text2: #56708d;
-  --amber: #f5a623;
-  --amber-d: rgba(245,166,35,0.15);
-  --green: #4ade80;
-  --green-d: rgba(74,222,128,0.12);
-  --red: #f87171;
-  --red-d: rgba(248,113,113,0.12);
-  --cyan: #22d3ee;
-  --cyan-d: rgba(34,211,238,0.12);
-  --mono: 'JetBrains Mono','SF Mono',monospace;
-  --ui: 'Inter','PingFang SC',system-ui,sans-serif;
-  --nav-h: 48px;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden}
-body{background:var(--bg0);color:var(--text0);font-family:var(--ui);font-size:12px;display:flex;flex-direction:column;padding-top:var(--nav-h)}
-
-.console-head{
-  height:44px;background:var(--bg1);border-bottom:1px solid var(--b1);
-  display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;
-}
-.hbadge{
-  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;
-  padding:3px 10px;border-radius:3px;
-  background:linear-gradient(135deg,#0a1f40,#0b2d5a);
-  border:1px solid var(--cyan);color:var(--cyan);
-}
-.htitle{font-size:14px;font-weight:600}
-.hsub{font-size:10px;color:var(--text2);font-family:var(--mono)}
-.hgap{flex:1}
-.hcontrols{display:flex;align-items:center;gap:8px}
-.btn{
-  padding:4px 12px;border-radius:4px;border:1px solid var(--b2);
-  background:var(--bg3);color:var(--text1);cursor:pointer;font-size:11px;
-  transition:all .15s;font-family:var(--ui);
-}
-.btn:hover{border-color:var(--cyan);color:var(--cyan)}
-.btn.active{background:var(--cyan-d);border-color:var(--cyan);color:var(--cyan)}
-.btn.danger:hover{border-color:var(--red);color:var(--red)}
-.sim-dot{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red);transition:all .3s}
-.sim-dot.running{background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 1s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
-.htime{font-family:var(--mono);font-size:12px;color:var(--amber);min-width:70px;text-align:right}
-
-/* ── LAYOUT ── */
-.workspace{
-  flex:1;overflow:hidden;display:grid;
-  grid-template-columns:310px 1fr 300px;gap:1px;background:var(--b0);
-}
-.panel{background:var(--bg1);overflow-y:auto;display:flex;flex-direction:column}
-
-.sec{border-bottom:1px solid var(--b0);padding:10px 12px;display:flex;flex-direction:column;gap:7px}
-.sec-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--text2);margin-bottom:3px}
-.row{display:flex;align-items:center;gap:6px}
-.row label{color:var(--text1);font-size:11px;flex:1;white-space:nowrap}
-.val{font-family:var(--mono);font-size:11px;color:var(--text1);min-width:58px;text-align:right}
-
-.tog{position:relative;display:inline-block;width:36px;height:18px;flex-shrink:0}
-.tog input{opacity:0;width:0;height:0}
-.tog span{position:absolute;inset:0;border-radius:9px;cursor:pointer;background:var(--bg4);border:1px solid var(--b1);transition:.2s}
-.tog span::after{content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:var(--text2);top:2px;left:2px;transition:.2s}
-.tog input:checked+span{background:var(--green-d);border-color:var(--green)}
-.tog input:checked+span::after{background:var(--green);transform:translateX(18px)}
-.tog.warn input:checked+span{background:var(--red-d);border-color:var(--red)}
-.tog.warn input:checked+span::after{background:var(--red)}
-
-input[type=range]{
-  -webkit-appearance:none;height:4px;border-radius:2px;
-  background:var(--b2);outline:none;cursor:pointer;width:100%;
-}
-input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
-  background:var(--amber);cursor:pointer;border:2px solid var(--bg2);
-}
+/* P56-01 (2026-04-28): chrome (color tokens, .hbadge / .btn /
+   .sim-indicator / .sec / .row / .tog / .workspace / slider /
+   scrollbar / iframe-embed nav suppression) is now imported from
+   /etras_chrome.css — single source of truth across every
+   E-TRAS / FANTUI surface, with C919 ETRAS as the standard.
+   This page only declares its content-specific surfaces below
+   (gate cards, plant gauges, telemetry log, preset bar, time-series
+   drawer). */
 
 /* ── Logic gate cards ── */
 .gate-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:10px 12px}
@@ -192,8 +116,7 @@ input[type=range]::-webkit-slider-thumb{
    suppress the unified top nav — the workbench dock is the only nav
    surface a user should see. The script below adds `.is-iframe-embed`
    to <html> on first paint, so we anchor the rule there. */
-html.is-iframe-embed .unified-nav { display: none !important; }
-html.is-iframe-embed body.unified-nav-enabled { padding-top: 0 !important; }
+/* iframe-embed nav suppression now lives in etras_chrome.css. */
 </style>
 <script>
   (function () {
@@ -235,19 +158,19 @@ html.is-iframe-embed body.unified-nav-enabled { padding-top: 0 !important; }
   </div>
 </header>
 
-<div class="console-head">
+<header>
   <div class="hbadge">FANTUI · LIVE</div>
   <div class="htitle">反推实时操作台</div>
   <div class="hsub">POST /api/fantui/tick · stateful</div>
   <div class="hgap"></div>
   <div class="hcontrols">
-    <div class="sim-dot" id="simDot"></div>
+    <div class="sim-indicator" id="simDot"></div>
     <button class="btn" id="btnPlay" onclick="toggleSim()">▶ 仿真</button>
     <button class="btn danger" onclick="resetSim()">↺ 重置</button>
     <button class="btn" id="btnChart" onclick="toggleChart()">📈 时序图</button>
     <div class="htime" id="hTime">T: 0.000s</div>
   </div>
-</div>
+</header>
 
 <div class="workspace">
 

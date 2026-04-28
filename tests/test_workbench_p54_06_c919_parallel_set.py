@@ -142,14 +142,26 @@ def test_iframe_carries_system_src_attributes(
 def test_c919_page_hides_nav_when_iframed(page_path):
     """Each C919 page that can be iframed must include the same
     nav-hide guard the legacy thrust-reverser pages use, so the
-    workbench canvas doesn't expose a second navigation bar."""
+    workbench canvas doesn't expose a second navigation bar.
+
+    P56-01 (2026-04-28): rule moved into shared /etras_chrome.css."""
     html = (REPO_ROOT / page_path).read_text(encoding="utf-8")
     assert "window.self !== window.top" in html and "is-iframe-embed" in html, (
         f"{page_path} missing iframe-embed detection script"
     )
+    # Codex P56-01 round-1 P3: only follow the link when the page
+    # actually imports etras_chrome.css; otherwise an unmigrated
+    # page would silently pass on someone else's stylesheet.
+    haystack = html
+    if 'href="/etras_chrome.css"' in html or 'href="etras_chrome.css"' in html:
+        chrome_css = (
+            REPO_ROOT / "src" / "well_harness" / "static" / "etras_chrome.css"
+        )
+        if chrome_css.exists():
+            haystack = html + "\n" + chrome_css.read_text(encoding="utf-8")
     assert (
-        "html.is-iframe-embed .unified-nav" in html
-        or ".is-iframe-embed .unified-nav" in html
+        "html.is-iframe-embed .unified-nav" in haystack
+        or ".is-iframe-embed .unified-nav" in haystack
     ), (
         f"{page_path} missing CSS rule that hides .unified-nav under "
         f".is-iframe-embed"

@@ -5,120 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>C919 E-TRAS 控制逻辑面板 V1.0</title>
 <link rel="stylesheet" href="/unified-nav.css">
+<link rel="stylesheet" href="/etras_chrome.css">
 <style>
-:root {
-  --bg0: #020810;
-  --bg1: #080f1e;
-  --bg2: #0c1628;
-  --bg3: #111e34;
-  --bg4: #19273f;
-  --b0: #1c2e4a;
-  --b1: #243654;
-  --b2: #2d4168;
-  --text0: #e8eef8;
-  --text1: #9ab0cc;
-  --text2: #5a7090;
-  --amber: #f5a623;
-  --amber2: #ffc657;
-  --amber-d: rgba(245,166,35,0.15);
-  --green: #4ade80;
-  --green-d: rgba(74,222,128,0.12);
-  --red: #f87171;
-  --red-d: rgba(248,113,113,0.12);
-  --cyan: #22d3ee;
-  --cyan-d: rgba(34,211,238,0.12);
-  --blue: #60a5fa;
-  --yellow: #fbbf24;
-  --mono: 'JetBrains Mono','Cascadia Mono','SF Mono',monospace;
-  --ui: 'Inter','PingFang SC',system-ui,sans-serif;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden}
-body{background:var(--bg0);color:var(--text0);font-family:var(--ui);font-size:12px;display:flex;flex-direction:column}
-
-/* ── HEADER ─────────────────────────── */
-header{
-  height:44px;background:var(--bg1);border-bottom:1px solid var(--b1);
-  display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;z-index:10;
-}
-.hbadge{
-  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;
-  padding:3px 10px;border-radius:3px;
-  background:linear-gradient(135deg,#0a1f40,#0b2d5a);
-  border:1px solid var(--cyan);color:var(--cyan);
-}
-.htitle{font-size:14px;font-weight:600;color:var(--text0)}
-.hsub{font-size:10px;color:var(--text2);font-family:var(--mono)}
-.hgap{flex:1}
-.hcontrols{display:flex;align-items:center;gap:8px}
-.btn{
-  padding:4px 12px;border-radius:4px;border:1px solid var(--b2);
-  background:var(--bg3);color:var(--text1);cursor:pointer;font-size:11px;
-  transition:all .15s;
-}
-.btn:hover{border-color:var(--cyan);color:var(--cyan)}
-.btn.active{background:var(--cyan-d);border-color:var(--cyan);color:var(--cyan)}
-.btn.danger:hover{border-color:var(--red);color:var(--red)}
-.sim-indicator{
-  width:8px;height:8px;border-radius:50%;background:var(--red);
-  box-shadow:0 0 6px var(--red);transition:all .3s;
-}
-.sim-indicator.running{background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 1s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
-.htime{font-family:var(--mono);font-size:12px;color:var(--amber);min-width:64px;text-align:right}
-.state-pill{
-  padding:3px 10px;border-radius:12px;font-size:10px;font-weight:700;font-family:var(--mono);
-  background:var(--bg3);border:1px solid var(--b2);color:var(--text2);
-  transition:all .3s;min-width:200px;text-align:center;
-}
-.state-pill.armed{border-color:var(--amber);color:var(--amber);background:var(--amber-d)}
-.state-pill.active{border-color:var(--green);color:var(--green);background:var(--green-d)}
-.state-pill.fault{border-color:var(--red);color:var(--red);background:var(--red-d)}
-
-/* ── LAYOUT ─────────────────────────── */
-.workspace{
-  flex:1;overflow:hidden;
-  display:grid;
-  grid-template-columns:310px 1fr 300px;
-  gap:1px;background:var(--b0);
-}
-.panel{background:var(--bg1);overflow-y:auto;display:flex;flex-direction:column}
-
-/* ── SECTION / LABEL ─────────────────── */
-.sec{border-bottom:1px solid var(--b0);padding:8px 12px;display:flex;flex-direction:column;gap:6px}
-.sec-title{
-  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;
-  color:var(--text2);margin-bottom:2px;
-}
-.row{display:flex;align-items:center;gap:6px}
-.row label{color:var(--text2);font-size:11px;flex:1;white-space:nowrap}
-.val{font-family:var(--mono);font-size:11px;color:var(--text1);min-width:48px;text-align:right}
-
-/* ── TOGGLE ─────────────────────────── */
-.tog{position:relative;display:inline-block;width:36px;height:18px;flex-shrink:0}
-.tog input{opacity:0;width:0;height:0}
-.tog span{
-  position:absolute;inset:0;border-radius:9px;cursor:pointer;
-  background:var(--bg4);border:1px solid var(--b1);transition:.2s;
-}
-.tog span::after{
-  content:'';position:absolute;width:12px;height:12px;border-radius:50%;
-  background:var(--text2);top:2px;left:2px;transition:.2s;
-}
-.tog input:checked+span{background:var(--green-d);border-color:var(--green)}
-.tog input:checked+span::after{background:var(--green);transform:translateX(18px)}
-.tog.warn input:checked+span{background:var(--red-d);border-color:var(--red)}
-.tog.warn input:checked+span::after{background:var(--red)}
-
-/* ── SLIDER ─────────────────────────── */
-input[type=range]{
-  -webkit-appearance:none;height:4px;border-radius:2px;
-  background:var(--b2);outline:none;cursor:pointer;width:100%;
-}
-input[type=range]::-webkit-slider-thumb{
-  -webkit-appearance:none;width:14px;height:14px;border-radius:50%;
-  background:var(--amber);cursor:pointer;border:2px solid var(--bg2);
-}
+/* P56-01 (2026-04-28): chrome (color tokens, header, .btn, .sec,
+   .tog, .workspace, slider, scrollbar) is now imported from
+   /etras_chrome.css. Only this page's specific surfaces remain
+   below: locks-grid, state-machine flow, derived-signal cards,
+   gauges, telemetry log, presets, time-series drawer. */
 
 /* ── LOCK PANEL ─────────────────────── */
 .locks-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:8px 12px}
@@ -282,14 +175,7 @@ input[type=range]::-webkit-slider-thumb{
 .tsc-sel-item input[type=checkbox]{cursor:pointer;accent-color:var(--cyan);flex-shrink:0}
 .tsc-sel-swatch{width:18px;height:3px;border-radius:1px;display:inline-block;flex-shrink:0}
 
-/* ── SCROLLBAR ───────────────────────── */
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
-
-/* P54-06: suppress unified top nav when embedded in the workbench. */
-html.is-iframe-embed .unified-nav { display: none !important; }
-html.is-iframe-embed body.unified-nav-enabled { padding-top: 0 !important; }
+/* Scrollbar + iframe-embed suppression now live in etras_chrome.css. */
 </style>
 <script>
   (function () {
