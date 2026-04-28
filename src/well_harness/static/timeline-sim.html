@@ -258,6 +258,86 @@
     cursor: pointer;
   }
   .welcome-banner .welcome-dismiss:hover { color: var(--text); }
+
+  /* P58-02 Onboarding: 5-step guided tour. Active only while tour is
+     visible. Once #tourOverlay has the `hidden` attribute, the entire
+     tour subtree is display:none — no rendered pixels. Steady-state
+     UI for users who skipped/completed remains pixel-identical to
+     pre-P58. Per user directive (2026-04-28): "绝对不要推翻现在的
+     UI 设计" — additive only. */
+  .tour-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    z-index: 100;
+    pointer-events: none;
+    font-family: inherit;
+  }
+  .tour-overlay[hidden] { display: none; }
+  .tour-dim {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.62);
+    pointer-events: auto;
+    transition: top 0.18s ease-out, left 0.18s ease-out,
+                width 0.18s ease-out, height 0.18s ease-out;
+  }
+  .tour-spotlight-ring {
+    position: absolute;
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    pointer-events: none;
+    box-shadow: 0 0 0 4px rgba(0, 200, 245, 0.18);
+    transition: top 0.18s ease-out, left 0.18s ease-out,
+                width 0.18s ease-out, height 0.18s ease-out;
+  }
+  .tour-card {
+    position: absolute;
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 14px 16px 12px;
+    width: 320px;
+    max-width: calc(100vw - 40px);
+    pointer-events: auto;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    transition: top 0.18s ease-out, left 0.18s ease-out;
+  }
+  .tour-card h3 {
+    margin: 0 0 6px; font-size: 13px;
+    color: var(--accent); font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+  .tour-card-desc {
+    font-size: 12px; line-height: 1.55;
+    color: var(--text); margin: 0 0 12px;
+  }
+  .tour-card-controls {
+    display: flex; gap: 6px; align-items: center;
+  }
+  .tour-step-counter {
+    color: var(--dim); font-size: 11px;
+    margin-right: auto; letter-spacing: 0.03em;
+  }
+  .tour-card button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .tour-card button.primary {
+    background: var(--accent); color: var(--bg);
+    border-color: var(--accent); font-weight: 500;
+  }
+  .tour-card button.tour-skip {
+    color: var(--dim); border-color: transparent;
+    padding: 5px 8px;
+  }
+  .tour-card button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .tour-card button:hover:not(:disabled) { filter: brightness(1.15); }
+  .tour-card button:focus { outline: 2px solid var(--accent); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -278,7 +358,7 @@
     </p>
     <div class="welcome-actions">
       <button id="welcomeTakeTourBtn" class="primary" type="button">
-        🎯 引导漫游（P58-02 即将上线）
+        🎯 引导漫游（5 步）
       </button>
       <button id="welcomeLoadExampleBtn" type="button">
         📦 加载一个示例（C919 正常部署）
@@ -410,6 +490,30 @@
       <div class="panel">
         <h2>故障级联 · Failure Cascade</h2>
         <div id="cascadeWrap"><div class="hint">（无）</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- P58-02 onboarding: 5-step guided tour overlay. Hidden by default;
+       startTour() un-hides + repositions. Once user finishes/skips,
+       overlay re-hides and steady-state DOM/CSS is unchanged from
+       pre-P58. -->
+  <div id="tourOverlay" class="tour-overlay" role="dialog"
+       aria-modal="true" aria-labelledby="tourCardTitle" hidden>
+    <div class="tour-dim" id="tourDimTop"></div>
+    <div class="tour-dim" id="tourDimRight"></div>
+    <div class="tour-dim" id="tourDimBottom"></div>
+    <div class="tour-dim" id="tourDimLeft"></div>
+    <div class="tour-spotlight-ring" id="tourSpotlightRing"
+         aria-hidden="true"></div>
+    <div class="tour-card" id="tourCard">
+      <h3 id="tourCardTitle"></h3>
+      <p class="tour-card-desc" id="tourCardDesc"></p>
+      <div class="tour-card-controls">
+        <span class="tour-step-counter" id="tourStepCounter"></span>
+        <button class="tour-skip" id="tourSkipBtn" type="button">跳过</button>
+        <button id="tourPrevBtn" type="button">上一步</button>
+        <button class="primary" id="tourNextBtn" type="button">下一步</button>
       </div>
     </div>
   </div>
@@ -1723,13 +1827,13 @@ $("welcomeLoadExampleBtn").addEventListener("click", () => {
 });
 
 $("welcomeTakeTourBtn").addEventListener("click", () => {
-  // P58-02 will replace this stub with the real guided tour. Per
-  // Codex R1 MEDIUM: must NOT persist dismissal — otherwise a
-  // first-time user who clicks the promised onboarding path loses
-  // the banner permanently without receiving onboarding.
-  // Session-only hide so the banner returns on next reload.
-  setStatus("引导漫游将在 P58-02 上线 · 现在可点 📦 加载示例 或浏览预设下拉", "");
+  // P58-02 wires the real 5-step guided tour. Hide the welcome
+  // banner (session-only) and start the tour. If the user completes
+  // all 5 steps, the tour persists dismissal (they have seen the
+  // onboarding). If they skip, dismissal is session-only — banner
+  // returns on next reload until explicitly dismissed.
   hideWelcomeBannerSessionOnly();
+  startTour();
 });
 
 // Shift+? keyboard shortcut re-opens the welcome banner. Invisible to
@@ -1760,6 +1864,201 @@ document.addEventListener("keydown", (e) => {
 if (!isWelcomeDismissed()) {
   showWelcomeBanner();
 }
+
+// =========================================================================
+// P58-02 onboarding: 5-step guided tour.
+//
+// Vanilla implementation (no Shepherd.js / no third-party deps). The
+// overlay is hidden via the `hidden` attribute when the tour is not
+// active — so steady-state UI for completed/skipped users stays
+// pixel-identical to pre-P58, per the user's additive-only directive.
+//
+// Implementation strategy: 4 dim panels positioned around the target
+// element form the "spotlight" cutout. A separate accent ring draws
+// the highlight border. Cleaner than a single clip-path mask because
+// it works at any element size + survives reflows during transitions.
+//
+// Persistence: completing all 5 steps sets the dismiss flag (the user
+// has seen onboarding). Skipping uses session-only hide — banner
+// returns on next reload until the user explicitly clicks × or 知道了.
+// =========================================================================
+
+const TOUR_STEPS = [
+  {
+    selector: "#presetSelect",
+    title: "1 / 5 · 选择场景",
+    desc: "从内置预设里挑一个 timeline 场景。系统内置组包含 FANTUI 演示与 C919 E-TRAS 多个工况（正常部署、最大反推、各种故障路径），用户暂存组是你保存到浏览器的自定义场景。"
+  },
+  {
+    selector: ".tabs",
+    title: "2 / 5 · 可视化事件编辑器",
+    desc: "Visual 标签以表格形式列出每个事件（set_input / ramp_input / inject_fault / assert_condition），可调整 t_s / target / value / duration_s 并增删行。Raw 标签是 JSON 逃生通道，复杂结构（比如嵌套 locks）可在 Raw 直接编辑。"
+  },
+  {
+    selector: "#saveScenarioBtn",
+    title: "3 / 5 · 暂存与导入导出",
+    desc: "💾 暂存把当前编辑保存到浏览器本地（命名后可在预设下拉的"用户暂存"里再次加载）。⬇ 导出下载为 .timeline.json；⬆ 导入从 JSON 文件读取整个 timeline。"
+  },
+  {
+    selector: "#runBtn",
+    title: "4 / 5 · 运行仿真",
+    desc: "点 ▶ 运行仿真 把当前 timeline 发送到后端执行，得到完整 trace（每个 tick 的 inputs/outputs + logic_states + 故障级联）。FANTUI 走本地端点，C919 E-TRAS 走单独的 sim 服务。"
+  },
+  {
+    selector: "#assertList",
+    title: "5 / 5 · 查看结果",
+    desc: "断言列表显示每个 assert_condition 的 PASS/FAIL，逻辑时间线展示节点的 active/blocked/idle 状态轨迹，故障级联告诉你哪个门首先因为 stuck/inhibit 而阻断触发。完成 onboarding 后这个面板就是你的工作中心。"
+  }
+];
+
+let tourCurrentStep = 0;
+
+function tourEl(id) { return document.getElementById(id); }
+
+function startTour() {
+  tourCurrentStep = 0;
+  tourEl("tourOverlay").hidden = false;
+  positionTourStep(0);
+  // Move keyboard focus into the tour card so screen readers announce
+  // the dialog and Tab/Esc are intercepted.
+  tourEl("tourNextBtn").focus();
+}
+
+function endTour(persistent) {
+  tourEl("tourOverlay").hidden = true;
+  if (persistent) {
+    setWelcomeDismissed(true);
+  }
+}
+
+function positionTourStep(stepIdx) {
+  const step = TOUR_STEPS[stepIdx];
+  const target = document.querySelector(step.selector);
+  if (!target) {
+    // Step's target element missing (unexpected DOM drift). Skip
+    // gracefully forward; if no further steps work, end the tour.
+    if (stepIdx + 1 < TOUR_STEPS.length) {
+      tourCurrentStep = stepIdx + 1;
+      positionTourStep(tourCurrentStep);
+      return;
+    }
+    endTour(false);
+    return;
+  }
+
+  // Scroll the target into view first so the spotlight lands on
+  // pixels the user can actually see.
+  target.scrollIntoView({ block: "center", behavior: "smooth" });
+
+  // Compute target rect AFTER scrollIntoView (use getBoundingClientRect
+  // — fixed-positioned dim panels match viewport coords).
+  // Defer one frame so the smooth scroll has time to start; then
+  // re-layout. Without this, the spotlight is briefly off-target.
+  requestAnimationFrame(() => {
+    const r = target.getBoundingClientRect();
+    const pad = 6;
+    const top = Math.max(0, r.top - pad);
+    const left = Math.max(0, r.left - pad);
+    const width = r.width + pad * 2;
+    const height = r.height + pad * 2;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // 4 dim panels: top, right, bottom, left of the spotlight rect.
+    Object.assign(tourEl("tourDimTop").style, {
+      top: "0px", left: "0px",
+      width: vw + "px", height: top + "px"
+    });
+    Object.assign(tourEl("tourDimBottom").style, {
+      top: (top + height) + "px", left: "0px",
+      width: vw + "px", height: Math.max(0, vh - top - height) + "px"
+    });
+    Object.assign(tourEl("tourDimLeft").style, {
+      top: top + "px", left: "0px",
+      width: left + "px", height: height + "px"
+    });
+    Object.assign(tourEl("tourDimRight").style, {
+      top: top + "px", left: (left + width) + "px",
+      width: Math.max(0, vw - left - width) + "px", height: height + "px"
+    });
+    // Accent ring around target.
+    Object.assign(tourEl("tourSpotlightRing").style, {
+      top: top + "px", left: left + "px",
+      width: width + "px", height: height + "px"
+    });
+
+    // Card position: prefer below the target; if no room, place above.
+    const cardEl = tourEl("tourCard");
+    const cardW = 320;
+    const cardH = cardEl.offsetHeight || 180;
+    const gap = 14;
+    let cardTop = top + height + gap;
+    if (cardTop + cardH > vh - 12) {
+      cardTop = Math.max(12, top - cardH - gap);
+    }
+    let cardLeft = Math.min(
+      Math.max(12, left + width / 2 - cardW / 2),
+      vw - cardW - 12
+    );
+    Object.assign(cardEl.style, {
+      top: cardTop + "px", left: cardLeft + "px"
+    });
+  });
+
+  // Card content.
+  tourEl("tourCardTitle").textContent = step.title;
+  tourEl("tourCardDesc").textContent = step.desc;
+  tourEl("tourStepCounter").textContent =
+    "步骤 " + (stepIdx + 1) + " / " + TOUR_STEPS.length;
+  tourEl("tourPrevBtn").disabled = (stepIdx === 0);
+  tourEl("tourNextBtn").textContent =
+    (stepIdx === TOUR_STEPS.length - 1) ? "完成" : "下一步";
+}
+
+function tourNext() {
+  if (tourCurrentStep < TOUR_STEPS.length - 1) {
+    tourCurrentStep += 1;
+    positionTourStep(tourCurrentStep);
+  } else {
+    // Last step done — persistent dismiss (user has completed
+    // onboarding).
+    endTour(true);
+  }
+}
+
+function tourPrev() {
+  if (tourCurrentStep > 0) {
+    tourCurrentStep -= 1;
+    positionTourStep(tourCurrentStep);
+  }
+}
+
+function tourSkip() {
+  // Session-only end — banner returns on next reload until explicit
+  // dismiss. Per Codex P58-01 R1 reasoning: skip ≠ "I've onboarded".
+  endTour(false);
+}
+
+tourEl("tourNextBtn").addEventListener("click", tourNext);
+tourEl("tourPrevBtn").addEventListener("click", tourPrev);
+tourEl("tourSkipBtn").addEventListener("click", tourSkip);
+
+// Esc key cancels the tour (session-only). Active only when the
+// overlay is visible.
+document.addEventListener("keydown", (e) => {
+  if (!tourEl("tourOverlay").hidden && e.key === "Escape") {
+    e.preventDefault();
+    tourSkip();
+  }
+});
+
+// Re-position on viewport resize so the spotlight tracks responsive
+// layouts.
+window.addEventListener("resize", () => {
+  if (!tourEl("tourOverlay").hidden) {
+    positionTourStep(tourCurrentStep);
+  }
+});
 </script>
 </body>
 </html>

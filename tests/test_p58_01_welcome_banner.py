@@ -314,19 +314,23 @@ def test_first_load_shows_banner_when_not_dismissed() -> None:
 
 
 # ── 6. Take-Tour stub: must not persist dismissal (Codex R1 MEDIUM) ──
+#
+# After P58-02 ships the real tour, the stub-no-persist contract
+# evolves: skipping the tour is still session-only (banner returns
+# until explicit dismiss), but completing all 5 steps DOES persist.
+# That logic now lives in tests/test_p58_02_guided_tour.py.
+# The label-indicates-coming-soon test was P58-01-only and was
+# retired in P58-02 — the label is now "🎯 引导漫游（5 步）".
 
 
-def test_take_tour_stub_does_not_persist_dismissal() -> None:
-    """Codex R1 MEDIUM: until P58-02 ships the real tour, clicking
-    'Take a tour' must NOT persist dismissal — otherwise a first-time
-    user who clicks the promised onboarding path loses the banner
-    permanently without receiving any onboarding.
-
-    The stub handler must NOT call dismissWelcomeBanner (which writes
-    localStorage). Session-only hide via hideWelcomeBannerSessionOnly
-    is acceptable — banner returns on next reload."""
+def test_take_tour_stub_does_not_persist_dismissal_directly() -> None:
+    """The welcomeTakeTourBtn click handler still must NOT call
+    dismissWelcomeBanner directly. With P58-02 it now calls
+    hideWelcomeBannerSessionOnly() + startTour() — completion of the
+    tour is what persists (via endTour(true)), not the click itself.
+    Skipping mid-tour stays session-only.
+    """
     body = _read()
-    # Find the welcomeTakeTourBtn click handler block.
     handler_match = re.search(
         r'welcomeTakeTourBtn[\s\S]{0,200}?addEventListener\s*\(\s*"click"'
         r'[\s\S]{0,800}?\}\s*\)\s*;',
@@ -336,38 +340,9 @@ def test_take_tour_stub_does_not_persist_dismissal() -> None:
         "welcomeTakeTourBtn click handler not found"
     )
     chunk = handler_match.group(0)
-    # The handler MUST NOT call dismissWelcomeBanner (which persists).
     assert "dismissWelcomeBanner" not in chunk, (
         "welcomeTakeTourBtn click handler calls dismissWelcomeBanner — "
-        "this persists dismissal but the tour doesn't exist yet. "
-        "Use hideWelcomeBannerSessionOnly() so the banner returns on "
-        "next reload (Codex R1 MEDIUM)."
-    )
-
-
-def test_take_tour_button_label_indicates_coming_soon() -> None:
-    """The Take-Tour button's visible label must signal that the tour
-    is not yet available — otherwise users click it expecting a
-    tour and get a status message instead. Codex R1 MEDIUM: relabel
-    or disable until P58-02 ships."""
-    body = _read()
-    # Find the button text — should contain something like "P58-02"
-    # or "即将上线" or "coming soon" so the user knows what to expect.
-    btn_match = re.search(
-        r'<button[^>]*\bid="welcomeTakeTourBtn"[^>]*>'
-        r'([\s\S]{0,200}?)</button>',
-        body,
-    )
-    assert btn_match is not None, "welcomeTakeTourBtn element not found"
-    label = btn_match.group(1)
-    coming_soon = (
-        "即将上线" in label
-        or "coming soon" in label.lower()
-        or "P58-02" in label
-    )
-    assert coming_soon, (
-        f"welcomeTakeTourBtn label does not indicate coming-soon "
-        f"status. Current label: {label!r}. Users clicking the "
-        f"primary onboarding CTA expect a tour; the label must "
-        f"flag that it's not yet available (Codex R1 MEDIUM)."
+        "the click itself must not persist dismissal. Persistence "
+        "happens only on tour completion (via endTour(true)). Use "
+        "hideWelcomeBannerSessionOnly() + startTour() instead."
     )
