@@ -43,14 +43,27 @@ def test_hairline_token_is_neutral():
     )
     assert hairline_match is not None
     value = hairline_match.group(1).strip()
-    # Neutral = either rgba(255,255,255,X) or rgba with R≈G≈B
+    # Neutral = either the legacy white-rgba OR the new alias chain
+    # `var(--hairline)`, where `--hairline` is itself declared
+    # as color-mix off --contrast (NOT --accent) — so the semantic
+    # contract "hairline does NOT carry the brand tint" still holds.
     is_neutral = (
         "rgba(255, 255, 255" in value
         or "rgba(255,255,255" in value
+        or "var(--hairline)" in value
     )
     assert is_neutral, (
         f"--wb-hairline should be neutral white-tint, got: {value}"
     )
+    # If it's the alias chain, also confirm --hairline is declared
+    # off --contrast (the strict contract for "neutral").
+    if "var(--hairline)" in value:
+        h_rule = re.search(r"^\s*--hairline\s*:\s*([^;]+);", CSS, re.MULTILINE)
+        assert h_rule is not None, "--hairline alias target must be declared"
+        h_value = h_rule.group(1).strip()
+        assert "var(--contrast)" in h_value, (
+            f"--hairline must derive from --contrast (neutral), got: {h_value}"
+        )
 
 
 # ─── 2. drawer h2 uses lighter weight ──────────────────────────
