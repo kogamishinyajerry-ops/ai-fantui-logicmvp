@@ -2398,13 +2398,20 @@ function applyGateProposalMarkers(proposals) {
     group.setAttribute("class", "workbench-gate-proposal-marker");
     group.setAttribute("data-marker-for", gateId);
     group.setAttribute("data-open-count", String(count));
-    // Tooltip via <title>.
-    const title = document.createElementNS(NS, "title");
-    title.textContent =
+    // Codex P55-04 round-3 P3: a11y label via aria-label rather than
+    // a child <title>. The <title> element triggers a NATIVE browser
+    // tooltip after a short hover delay, which competes with the
+    // P55-04 popover (the engineer pauses on the marker, custom card
+    // appears, then the native tooltip pops on top and obscures the
+    // first rows). aria-label gives screen readers an accessible
+    // name without invoking the OS tooltip layer.
+    group.setAttribute("role", "button");
+    group.setAttribute(
+      "aria-label",
       count === 1
         ? `${count} 个待审工单 · 1 OPEN proposal — 点击审阅 / click to review`
-        : `${count} 个待审工单 · ${count} OPEN proposals — 点击审阅 / click to review`;
-    group.appendChild(title);
+        : `${count} 个待审工单 · ${count} OPEN proposals — 点击审阅 / click to review`,
+    );
     // Marker geometry. Right edge of gate, slightly above the top-right corner.
     const markerW = count > 9 ? 18 : 14;
     const markerH = 14;
@@ -2552,6 +2559,19 @@ function installGateMarkerHoverPreviews() {
         _gateMarkerPopoverHideTimer = null;
       }, 200);
     });
+    // Codex P55-04 round-3 P3: hide on scroll/resize. The popover
+    // is fixed-position; if the viewport changes after positioning,
+    // it stays at the old coordinates and detaches from the marker
+    // it was anchored to. Hiding is the cheapest correct response —
+    // the user can re-hover for a fresh anchor. capture: true so
+    // we hear the scroll even when nested scroll containers fire it.
+    const onViewportChange = () => {
+      if (!popover.hidden) {
+        hideGateMarkerPopover();
+      }
+    };
+    window.addEventListener("scroll", onViewportChange, { capture: true, passive: true });
+    window.addEventListener("resize", onViewportChange, { passive: true });
   }
 }
 

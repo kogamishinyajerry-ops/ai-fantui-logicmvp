@@ -378,6 +378,49 @@ def test_marker_teardown_dismisses_popover() -> None:
     )
 
 
+# ─── 4c. Native-tooltip + viewport-change avoidance ───
+
+
+def test_marker_uses_aria_label_not_title() -> None:
+    """Codex P55-04 round-3 P3: keeping a child <title> on the
+    marker triggers the browser's native OS tooltip after a short
+    hover delay, which competes with the popover. aria-label gives
+    screen readers an accessible name without invoking the OS
+    tooltip layer."""
+    fn = re.search(
+        r"function applyGateProposalMarkers\(proposals\) \{(.*?)^}",
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    assert 'createElementNS(NS, "title")' not in body, (
+        "marker must NOT create a <title> element (native tooltip "
+        "competes with P55-04 popover)"
+    )
+    # Multi-line setAttribute formatted by prettier-ish style: match
+    # both single-line and multi-line forms.
+    assert re.search(r'setAttribute\(\s*"aria-label"', body), (
+        "marker must carry aria-label for a11y"
+    )
+
+
+def test_popover_hides_on_scroll_and_resize() -> None:
+    """Codex P55-04 round-3 P3: the popover is fixed-position; if
+    the viewport changes after positioning, it stays at the old
+    coordinates and detaches from the gate marker. Hide on scroll
+    and resize so the user can re-hover for a fresh anchor."""
+    fn = re.search(
+        r"function installGateMarkerHoverPreviews\([^)]*\) \{(.*?)^}",
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    assert '"scroll"' in body, "must hide on window scroll"
+    assert '"resize"' in body, "must hide on window resize"
+
+
 # ─── 5. CSS — surface tokens, not bare hex ───
 
 
