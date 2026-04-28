@@ -2377,6 +2377,11 @@ function applyGateProposalMarkers(proposals) {
   for (const m of mount.querySelectorAll(".workbench-gate-proposal-marker")) {
     m.remove();
   }
+  // Codex P55-04 round-1 P2: dismiss the shared hover popover. Its
+  // SVG-marker anchor was just torn down — leaving the popover
+  // visible would float a stale overlay over the canvas/drawer
+  // until the user happens to mouseleave the popover region.
+  hideGateMarkerPopover();
   // Compute per-gate OPEN-ticket counts.
   const counts = computeOpenProposalCountsByGate(proposals);
   for (const [gateId, count] of counts) {
@@ -2425,6 +2430,11 @@ function applyGateProposalMarkers(proposals) {
     // Click → open approve drawer + spotlight.
     group.addEventListener("click", (e) => {
       e.stopPropagation();
+      // Codex P55-04 round-1 P2: dismiss the popover before the
+      // drawer slides in — otherwise the fixed-position overlay
+      // floats above the drawer until the user happens to leave
+      // its hover region.
+      hideGateMarkerPopover();
       openApproveDrawerAndSpotlight(gateId);
     });
     useEl.ownerSVGElement.appendChild(group);
@@ -2447,6 +2457,23 @@ function applyGateProposalMarkers(proposals) {
 // ─────────────────────────────────────────────────────────────────
 
 let _gateMarkerPopoverHideTimer = null;
+
+// Codex P55-04 round-1 P2: shared hide helper. Used by:
+//   - mouseleave grace-period timeout (the normal hide path)
+//   - marker click (drawer is about to open; don't float over it)
+//   - applyGateProposalMarkers tear-down (anchor disappeared)
+// Centralizing also clears any pending grace timer so a queued
+// hide doesn't stomp a subsequent show.
+function hideGateMarkerPopover() {
+  const popover = document.getElementById("workbench-gate-marker-popover");
+  if (!popover) return;
+  if (_gateMarkerPopoverHideTimer) {
+    clearTimeout(_gateMarkerPopoverHideTimer);
+    _gateMarkerPopoverHideTimer = null;
+  }
+  popover.hidden = true;
+  popover.setAttribute("aria-hidden", "true");
+}
 
 function installGateMarkerHoverPreviews() {
   const popover = document.getElementById("workbench-gate-marker-popover");
@@ -2582,8 +2609,7 @@ function renderGateMarkerPopover(gateId) {
         dockBtn.click();
       }
       // Hide the popover so it doesn't linger over the drawer.
-      popover.hidden = true;
-      popover.setAttribute("aria-hidden", "true");
+      hideGateMarkerPopover();
       setTimeout(() => {
         if (proposalId) {
           spotlightInboxByProposalId(proposalId);

@@ -291,6 +291,67 @@ def test_popover_position_anchored_to_marker_via_bounding_rect() -> None:
     )
 
 
+# ─── 4b. Lifecycle: popover dismissed on click + tear-down ───
+
+
+def test_hide_helper_extracted() -> None:
+    """A shared hide helper avoids drift between the three dismissal
+    sites (mouseleave grace, marker click, marker tear-down)."""
+    assert "function hideGateMarkerPopover(" in JS
+
+
+def test_marker_click_dismisses_popover() -> None:
+    """Codex P55-04 round-1 P2: clicking the marker opens the
+    drawer; without dismissing the popover first, the fixed-position
+    overlay floats above the drawer until the user happens to leave
+    its hover region."""
+    fn = re.search(
+        r"function applyGateProposalMarkers\(proposals\) \{(.*?)^}",
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    # Locate the click handler block.
+    click_match = re.search(
+        r'addEventListener\("click",\s*\(e\)\s*=>\s*\{(.*?)\}\)',
+        body,
+        re.DOTALL,
+    )
+    assert click_match is not None
+    click_body = click_match.group(1)
+    assert "hideGateMarkerPopover" in click_body, (
+        "marker click must dismiss the popover before opening the drawer"
+    )
+
+
+def test_marker_teardown_dismisses_popover() -> None:
+    """Codex P55-04 round-1 P2: applyGateProposalMarkers tears down
+    prior markers on every refresh / system switch. The popover's
+    SVG anchor disappears — leaving the popover visible would float
+    a stale overlay over the canvas."""
+    fn = re.search(
+        r"function applyGateProposalMarkers\(proposals\) \{(.*?)^}",
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    # The teardown loop ends with a closing `}` — hideGateMarkerPopover
+    # call must appear at the top of the function body (before new
+    # markers are rendered) so it follows the tear-down pass.
+    teardown_pos = body.find('.workbench-gate-proposal-marker"')
+    hide_pos = body.find("hideGateMarkerPopover(")
+    assert teardown_pos != -1 and hide_pos != -1, (
+        "applyGateProposalMarkers must call hideGateMarkerPopover()"
+    )
+    # And the hide call must precede the per-gate render loop.
+    render_pos = body.find("computeOpenProposalCountsByGate(")
+    assert hide_pos < render_pos, (
+        "hide must happen during tear-down, before the render loop"
+    )
+
+
 # ─── 5. CSS — surface tokens, not bare hex ───
 
 
