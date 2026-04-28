@@ -1,0 +1,27 @@
+{
+  "title": "C919 E-TRAS — LGCU1 disagree (one channel inverted) → S0 hold",
+  "description": "lgcu1:disagree flips LGCU1's MLG_WOW report to the opposite of LGCU2's. With both LGCUs marked valid but disagreeing, the §5.4 wow filter falls back to conservative AND of the valid channels — selected_mlg_wow=FALSE. State machine cannot leave S0_AIR_STOWED_LOCKED. Distinguished from c919_lgcu_invalid_blocks_deploy: in this fixture both validity bits are TRUE but the underlying signals disagree, exercising the disagree-handling branch rather than the both-invalid branch.",
+  "system": "c919-etras",
+  "step_s": 0.05,
+  "duration_s": 8.0,
+  "initial_inputs": {
+    "tra_deg": 5.0,
+    "lgcu1_mlg_wow": true,
+    "lgcu2_mlg_wow": true,
+    "lgcu1_valid": true,
+    "lgcu2_valid": true,
+    "engine_running": true,
+    "tr_inhibited": false,
+    "etras_over_temp_fault": false,
+    "n1k_pct": 25.0,
+    "max_n1k_deploy_limit_pct": 84.0,
+    "max_n1k_stow_limit_pct": 30.0
+  },
+  "events": [
+    { "t_s": 0.0, "kind": "mark_phase", "target": "descent" },
+    { "t_s": 0.0, "kind": "inject_fault", "target": "lgcu1:disagree", "note": "LGCU1 reports inverted MLG_WOW vs LGCU2 — both still valid → conservative FALSE" },
+    { "t_s": 0.5, "kind": "ramp_input", "target": "tra_deg", "value": -12.5, "duration_s": 3.5 },
+    { "t_s": 5.0, "kind": "assert_condition", "target": "fadec_deploy_command", "value": false },
+    { "t_s": 7.5, "kind": "assert_condition", "target": "ln_eicu_cmd2", "value": "idle" }
+  ]
+}

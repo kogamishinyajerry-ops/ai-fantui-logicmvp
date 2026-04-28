@@ -418,6 +418,200 @@ const PRESETS = {
       { t_s: 9.0, kind: "assert_condition", target: "fadec_deploy_command", value: false }
     ]
   },
+  c919_max_reverse: {
+    title: "C919 E-TRAS — max reverse traversal (S0→S6, then transient → S7)",
+    system: "c919-etras",
+    step_s: 0.05,
+    duration_s: 12.0,
+    initial_inputs: {
+      tra_deg: 5.0,
+      lgcu1_mlg_wow: false, lgcu2_mlg_wow: false,
+      lgcu1_valid: true, lgcu2_valid: true,
+      engine_running: true, tr_inhibited: false, etras_over_temp_fault: false,
+      n1k_pct: 25.0, max_n1k_deploy_limit_pct: 84.0, max_n1k_stow_limit_pct: 30.0
+    },
+    events: [
+      { t_s: 0.0, kind: "mark_phase", target: "descent" },
+      { t_s: 0.0, kind: "set_input", target: "lgcu1_mlg_wow", value: true, note: "touchdown" },
+      { t_s: 0.0, kind: "set_input", target: "lgcu2_mlg_wow", value: true },
+      { t_s: 0.5, kind: "mark_phase", target: "throttle_to_reverse" },
+      { t_s: 0.5, kind: "ramp_input", target: "tra_deg", value: -27.0, duration_s: 4.0, note: "+5°→-27° sweep clears SW1/SW2 windows and crosses S5→S6 threshold (-25°)" },
+      { t_s: 6.0, kind: "mark_phase", target: "max_reverse_hold" },
+      { t_s: 7.0, kind: "assert_condition", target: "fadec_deploy_command", value: true, note: "deploy command live in deep reverse" },
+      { t_s: 11.5, kind: "assert_condition", target: "ln_fadec_deploy_command", value: "active" }
+    ]
+  },
+  c919_decel_to_stow: {
+    title: "C919 E-TRAS — full deploy + decel + stow + relock (S0→S10)",
+    system: "c919-etras",
+    step_s: 0.05,
+    duration_s: 22.0,
+    initial_inputs: {
+      tra_deg: 5.0,
+      lgcu1_mlg_wow: false, lgcu2_mlg_wow: false,
+      lgcu1_valid: true, lgcu2_valid: true,
+      engine_running: true, tr_inhibited: false, etras_over_temp_fault: false,
+      n1k_pct: 25.0, max_n1k_deploy_limit_pct: 84.0, max_n1k_stow_limit_pct: 30.0
+    },
+    events: [
+      { t_s: 0.0, kind: "mark_phase", target: "descent" },
+      { t_s: 0.0, kind: "set_input", target: "lgcu1_mlg_wow", value: true },
+      { t_s: 0.0, kind: "set_input", target: "lgcu2_mlg_wow", value: true },
+      { t_s: 0.5, kind: "mark_phase", target: "throttle_to_reverse" },
+      { t_s: 0.5, kind: "ramp_input", target: "tra_deg", value: -27.0, duration_s: 4.0 },
+      { t_s: 6.0, kind: "mark_phase", target: "max_reverse_hold" },
+      { t_s: 7.0, kind: "assert_condition", target: "fadec_deploy_command", value: true },
+      { t_s: 9.0, kind: "mark_phase", target: "decel" },
+      { t_s: 9.0, kind: "ramp_input", target: "tra_deg", value: 5.0, duration_s: 5.0, note: "throttle pull-up out of reverse — clears SW1/SW2 + TRA≥0 enables fadec_stow" },
+      { t_s: 14.5, kind: "mark_phase", target: "stowing" },
+      { t_s: 16.0, kind: "assert_condition", target: "fadec_stow_command", value: true, note: "stow command fires once TRA≥0 + n1k≤30 + 3-phase still on" },
+      { t_s: 18.5, kind: "set_input", target: "locks", value: {
+          tls_locked: true, tls_unlocked: false,
+          pylon_lock_l_locked: true, pylon_lock_l_unlocked: false,
+          pylon_lock_r_locked: true, pylon_lock_r_unlocked: false,
+          pls_l_locked: true, pls_l_unlocked: false,
+          pls_r_locked: true, pls_r_unlocked: false
+      }, note: "physical relocking once TR position is back at 0 — drives stowed_and_locked latch" },
+      { t_s: 21.5, kind: "assert_condition", target: "tr_stowed_and_locked", value: true, note: "1s dwell after all-locked → latch True" }
+    ]
+  },
+  c919_quick_deploy: {
+    title: "C919 E-TRAS — quick deploy + idle reverse hold (S0→S5)",
+    system: "c919-etras",
+    step_s: 0.05,
+    duration_s: 10.0,
+    initial_inputs: {
+      tra_deg: 5.0,
+      lgcu1_mlg_wow: false, lgcu2_mlg_wow: false,
+      lgcu1_valid: true, lgcu2_valid: true,
+      engine_running: true, tr_inhibited: false, etras_over_temp_fault: false,
+      n1k_pct: 25.0, max_n1k_deploy_limit_pct: 84.0, max_n1k_stow_limit_pct: 30.0
+    },
+    events: [
+      { t_s: 0.0, kind: "mark_phase", target: "descent" },
+      { t_s: 0.0, kind: "set_input", target: "lgcu1_mlg_wow", value: true },
+      { t_s: 0.0, kind: "set_input", target: "lgcu2_mlg_wow", value: true },
+      { t_s: 0.5, kind: "mark_phase", target: "deploy" },
+      { t_s: 0.5, kind: "start_deploy_sequence", target: "tra_deg", value: -12.5, duration_s: 2.0, note: "compressed +5°→-12.5° ramp; passes through SW1/SW2 to set CMD2/CMD3 latches and crosses tra_idle_reverse_deg (-11.74°)" },
+      { t_s: 5.0, kind: "mark_phase", target: "idle_reverse_hold" },
+      { t_s: 6.0, kind: "assert_condition", target: "fadec_deploy_command", value: true },
+      { t_s: 9.5, kind: "assert_condition", target: "fadec_deploy_command", value: true, note: "still active — S5 holds while TRA stays in reverse" }
+    ]
+  },
+  c919_etras_over_temp: {
+    title: "C919 E-TRAS — over-temp fault preempts state machine to SF (with executor-gap note)",
+    system: "c919-etras",
+    step_s: 0.05,
+    duration_s: 10.0,
+    initial_inputs: {
+      tra_deg: 5.0,
+      lgcu1_mlg_wow: false, lgcu2_mlg_wow: false,
+      lgcu1_valid: true, lgcu2_valid: true,
+      engine_running: true, tr_inhibited: false, etras_over_temp_fault: false,
+      n1k_pct: 25.0, max_n1k_deploy_limit_pct: 84.0, max_n1k_stow_limit_pct: 30.0
+    },
+    events: [
+      { t_s: 0.0, kind: "mark_phase", target: "descent" },
+      { t_s: 0.0, kind: "set_input", target: "lgcu1_mlg_wow", value: true },
+      { t_s: 0.0, kind: "set_input", target: "lgcu2_mlg_wow", value: true },
+      { t_s: 0.5, kind: "ramp_input", target: "tra_deg", value: -12.5, duration_s: 3.5 },
+      { t_s: 2.5, kind: "mark_phase", target: "fault_inject" },
+      { t_s: 2.5, kind: "inject_fault", target: "etras_over_temp_fault:stuck_on", note: "ETRAS controller over-temp — SF preempts immediately on next tick" },
+      { t_s: 5.0, kind: "assert_condition", target: "state", value: "SF_ABORT_OR_FAULT" },
+      { t_s: 5.0, kind: "assert_condition", target: "three_phase_trcu_power_on", value: false },
+      { t_s: 5.0, kind: "assert_condition", target: "fadec_deploy_command", value: true, note: "EXECUTOR GAP: §5.5 fadec_deploy_command does NOT gate on over_temp; protection comes from SF preempt + CMD3 latch reset, not from withdrawing the command output" },
+      { t_s: 9.0, kind: "assert_condition", target: "state", value: "SF_ABORT_OR_FAULT" }
+    ]
+  },
+  c919_lock_disagreement: {
+    title: "C919 E-TRAS — TLS lock sensor failure blocks deploy chain",
+    system: "c919-etras",
+    step_s: 0.05,
+    duration_s: 10.0,
+    initial_inputs: {
+      tra_deg: 5.0,
+      lgcu1_mlg_wow: false, lgcu2_mlg_wow: false,
+      lgcu1_valid: true, lgcu2_valid: true,
+      engine_running: true, tr_inhibited: false, etras_over_temp_fault: false,
+      n1k_pct: 25.0, max_n1k_deploy_limit_pct: 84.0, max_n1k_stow_limit_pct: 30.0
+    },
+    events: [
+      { t_s: 0.0, kind: "mark_phase", target: "descent" },
+      { t_s: 0.0, kind: "set_input", target: "lgcu1_mlg_wow", value: true },
+      { t_s: 0.0, kind: "set_input", target: "lgcu2_mlg_wow", value: true },
+      { t_s: 0.0, kind: "inject_fault", target: "tls:sensor_fail", note: "TLS unlock sensors stuck reporting locked from t=0" },
+      { t_s: 0.5, kind: "ramp_input", target: "tra_deg", value: -12.5, duration_s: 3.5 },
+      { t_s: 2.0, kind: "assert_condition", target: "ln_eicu_cmd2", value: "active", note: "TRA inside SW1 window → CMD2 fires; only the lock readback is broken" },
+      { t_s: 5.0, kind: "assert_condition", target: "fadec_deploy_command", value: false, note: "unlock_confirmed dead → deploy never fires" },
+      { t_s: 5.0, kind: "assert_condition", target: "unlock_confirmed", value: false },
+      { t_s: 9.0, kind: "assert_condition", target: "fadec_deploy_command", value: false }
+    ]
+  },
+  c919_lgcu_invalid_blocks_deploy: {
+    title: "C919 E-TRAS — both LGCUs invalid → conservative WOW=FALSE → S0 hold",
+    system: "c919-etras",
+    step_s: 0.05,
+    duration_s: 8.0,
+    initial_inputs: {
+      tra_deg: 5.0,
+      lgcu1_mlg_wow: true, lgcu2_mlg_wow: true,
+      lgcu1_valid: true, lgcu2_valid: true,
+      engine_running: true, tr_inhibited: false, etras_over_temp_fault: false,
+      n1k_pct: 25.0, max_n1k_deploy_limit_pct: 84.0, max_n1k_stow_limit_pct: 30.0
+    },
+    events: [
+      { t_s: 0.0, kind: "mark_phase", target: "descent" },
+      { t_s: 0.0, kind: "inject_fault", target: "lgcu_both:invalid", note: "both LGCUs marked invalid — wow filter cannot trust either, conservative FALSE" },
+      { t_s: 0.5, kind: "ramp_input", target: "tra_deg", value: -12.5, duration_s: 3.5, note: "pilot pulls into reverse, but state machine never leaves S0" },
+      { t_s: 5.0, kind: "assert_condition", target: "fadec_deploy_command", value: false, note: "deploy never fires — selected_mlg_wow stays False" },
+      { t_s: 7.5, kind: "assert_condition", target: "ln_eicu_cmd2", value: "idle", note: "CMD2 never goes triggerable because selected_mlg_wow is FALSE" }
+    ]
+  },
+  c919_wow_filter_underflow: {
+    title: "C919 E-TRAS — LGCU1 disagree (one channel inverted) → S0 hold",
+    system: "c919-etras",
+    step_s: 0.05,
+    duration_s: 8.0,
+    initial_inputs: {
+      tra_deg: 5.0,
+      lgcu1_mlg_wow: true, lgcu2_mlg_wow: true,
+      lgcu1_valid: true, lgcu2_valid: true,
+      engine_running: true, tr_inhibited: false, etras_over_temp_fault: false,
+      n1k_pct: 25.0, max_n1k_deploy_limit_pct: 84.0, max_n1k_stow_limit_pct: 30.0
+    },
+    events: [
+      { t_s: 0.0, kind: "mark_phase", target: "descent" },
+      { t_s: 0.0, kind: "inject_fault", target: "lgcu1:disagree", note: "LGCU1 reports inverted MLG_WOW vs LGCU2 — both still valid → conservative FALSE" },
+      { t_s: 0.5, kind: "ramp_input", target: "tra_deg", value: -12.5, duration_s: 3.5 },
+      { t_s: 5.0, kind: "assert_condition", target: "fadec_deploy_command", value: false },
+      { t_s: 7.5, kind: "assert_condition", target: "ln_eicu_cmd2", value: "idle" }
+    ]
+  },
+  c919_n1k_overrun: {
+    title: "C919 E-TRAS — N1k above stow limit blocks S7→S8 transition",
+    system: "c919-etras",
+    step_s: 0.05,
+    duration_s: 18.0,
+    initial_inputs: {
+      tra_deg: 5.0,
+      lgcu1_mlg_wow: false, lgcu2_mlg_wow: false,
+      lgcu1_valid: true, lgcu2_valid: true,
+      engine_running: true, tr_inhibited: false, etras_over_temp_fault: false,
+      n1k_pct: 25.0, max_n1k_deploy_limit_pct: 84.0, max_n1k_stow_limit_pct: 30.0
+    },
+    events: [
+      { t_s: 0.0, kind: "mark_phase", target: "descent" },
+      { t_s: 0.0, kind: "set_input", target: "lgcu1_mlg_wow", value: true },
+      { t_s: 0.0, kind: "set_input", target: "lgcu2_mlg_wow", value: true },
+      { t_s: 0.5, kind: "ramp_input", target: "tra_deg", value: -27.0, duration_s: 4.0 },
+      { t_s: 6.0, kind: "mark_phase", target: "max_reverse_hold" },
+      { t_s: 8.5, kind: "set_input", target: "n1k_pct", value: 50.0, note: "engine spool stays high during decel — above max_n1k_stow_limit (30%)" },
+      { t_s: 9.0, kind: "ramp_input", target: "tra_deg", value: 5.0, duration_s: 5.0, note: "pilot returns throttle — clears SW1/SW2 → S6→S7 transition fires" },
+      { t_s: 14.5, kind: "mark_phase", target: "stow_blocked" },
+      { t_s: 16.0, kind: "assert_condition", target: "fadec_stow_command", value: false, note: "n1k=50 > 30 → stow command gate stays closed" },
+      { t_s: 17.5, kind: "assert_condition", target: "fadec_stow_command", value: false }
+    ]
+  },
   custom: {
     system: "fantui",
     step_s: 0.1,
@@ -558,6 +752,7 @@ const SYSTEM_CATALOGS = {
       "fadec_deploy_command", "fadec_stow_command",
       "tr_stowed_and_locked", "unlock_confirmed",
       "single_phase_unlock_power_on", "three_phase_trcu_power_on",
+      "state",
     ],
   },
 };
@@ -1041,6 +1236,14 @@ function rebuildPresetDropdown() {
     fantui_sw1_stuck: "FANTUI · SW1 卡死 (L1 阻塞)",
     c919_nominal: "C919 E-TRAS · 正常部署",
     c919_tr_inhibited: "C919 E-TRAS · TR_Inhibited 阻塞",
+    c919_max_reverse: "C919 E-TRAS · 最大反推 (S0→S6)",
+    c919_decel_to_stow: "C919 E-TRAS · 全循环 S0→S10",
+    c919_quick_deploy: "C919 E-TRAS · 快速部署 (S0→S5)",
+    c919_etras_over_temp: "C919 E-TRAS · 过温故障 → SF",
+    c919_lock_disagreement: "C919 E-TRAS · TLS 锁传感器失效",
+    c919_lgcu_invalid_blocks_deploy: "C919 E-TRAS · 双 LGCU 失效 → S0 锁定",
+    c919_wow_filter_underflow: "C919 E-TRAS · LGCU1 不一致 → S0 锁定",
+    c919_n1k_overrun: "C919 E-TRAS · N1k 超限阻塞收起",
     custom: "(自定义空白)",
   };
   for (const key of Object.keys(PRESETS)) {
