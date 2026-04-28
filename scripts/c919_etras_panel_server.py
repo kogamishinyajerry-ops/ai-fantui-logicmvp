@@ -26,6 +26,15 @@ from well_harness.adapters.c919_etras_frozen_v1.cmd3_latch_controller import (
     Cmd3LatchController,
     derive_tr_command3_enable,
 )
+# P56-04 (2026-04-28): parse + response helpers are now in
+# well_harness.c919_tick_api so the unified demo_server (port 8002)
+# can mount the same simulation engine. This standalone server keeps
+# its tick/reset routes but delegates to the shared helpers — no more
+# inline duplication that risked drift.
+from well_harness.c919_tick_api import (
+    parse_c919_raw_inputs as _parse_inputs,
+    build_c919_tick_response as _build_tick_response,
+)
 from well_harness.timeline_engine import TimelinePlayer, parse_timeline
 from well_harness.timeline_engine.validator import ValidationError as TimelineValidationError
 from well_harness.timeline_engine.executors.c919_etras import C919ETRASExecutor
@@ -40,88 +49,6 @@ _config = FrozenConfig()
 _logger = TelemetryLogger()
 _system = C919ReverseThrustSystem(config=_config, logger=_logger)
 _lock = Lock()  # 线程安全
-
-
-def _parse_inputs(body: Dict[str, Any]) -> RawInputs:
-    def b(key: str, default: bool = False) -> bool:
-        return bool(body.get(key, default))
-
-    def f(key: str, default: float = 0.0) -> float:
-        return float(body.get(key, default))
-
-    locks_raw = body.get("locks", {})
-    locks = LockInputs(
-        tls_locked=bool(locks_raw.get("tls_locked", True)),
-        tls_unlocked=bool(locks_raw.get("tls_unlocked", False)),
-        pylon_lock_l_locked=bool(locks_raw.get("pylon_lock_l_locked", True)),
-        pylon_lock_l_unlocked=bool(locks_raw.get("pylon_lock_l_unlocked", False)),
-        pylon_lock_r_locked=bool(locks_raw.get("pylon_lock_r_locked", True)),
-        pylon_lock_r_unlocked=bool(locks_raw.get("pylon_lock_r_unlocked", False)),
-        pls_l_locked=bool(locks_raw.get("pls_l_locked", True)),
-        pls_l_unlocked=bool(locks_raw.get("pls_l_unlocked", False)),
-        pls_r_locked=bool(locks_raw.get("pls_r_locked", True)),
-        pls_r_unlocked=bool(locks_raw.get("pls_r_unlocked", False)),
-    )
-    return RawInputs(
-        lgcu1_mlg_wow=b("lgcu1_mlg_wow"),
-        lgcu2_mlg_wow=b("lgcu2_mlg_wow"),
-        lgcu1_valid=b("lgcu1_valid", True),
-        lgcu2_valid=b("lgcu2_valid", True),
-        tra_deg=f("tra_deg"),
-        atltla=b("atltla"),
-        apwtla=b("apwtla"),
-        tr_inhibited=b("tr_inhibited"),
-        engine_running=b("engine_running"),
-        trcu_menu_mode=b("trcu_menu_mode"),
-        maintenance_cycle_on_going=b("maintenance_cycle_on_going"),
-        tr_position_pct=f("tr_position_pct"),
-        n1k_pct=f("n1k_pct", 50.0),
-        max_n1k_deploy_limit_pct=f("max_n1k_deploy_limit_pct", 84.0),
-        max_n1k_stow_limit_pct=f("max_n1k_stow_limit_pct", 72.0),
-        etras_over_temp_fault=b("etras_over_temp_fault"),
-        locks=locks,
-    )
-
-
-def _build_tick_response(outputs, sys_ref: C919ReverseThrustSystem, inp: RawInputs) -> dict:
-    tr_cmd3_enable = derive_tr_command3_enable(
-        outputs.tr_stowed_and_locked, inp.etras_over_temp_fault
-    )
-    return {
-        "t_s": round(sys_ref.t_s, 3),
-        "state": outputs.state.value,
-        "derived": {
-            "selected_mlg_wow": outputs.selected_mlg_wow,
-            "tr_wow": outputs.tr_wow,
-            "tr_wow_acc_s": round(sys_ref.tr_wow_filter._true_acc_s, 3),
-            "unlock_confirmed": outputs.unlock_confirmed,
-            "tr_stowed_and_locked": outputs.tr_stowed_and_locked,
-            "stowed_acc_s": round(sys_ref.locks_agg._stowed_locked_acc_s, 3),
-            "tr_command3_enable": tr_cmd3_enable,
-            "cmd3_latch": sys_ref.cmd3.latch,
-            "cmd2_timer_s": round(sys_ref.cmd2.timer_s, 2),
-        },
-        "outputs": {
-            "single_phase_unlock_power_on": outputs.single_phase_unlock_power_on,
-            "three_phase_trcu_power_on": outputs.three_phase_trcu_power_on,
-            "fadec_deploy_command": outputs.fadec_deploy_command,
-            "fadec_stow_command": outputs.fadec_stow_command,
-            "tr_stowed_and_locked": outputs.tr_stowed_and_locked,
-            "unlock_confirmed": outputs.unlock_confirmed,
-        },
-        "locks": {
-            "tls_locked": outputs.tls_locked,
-            "tls_unlocked": outputs.tls_unlocked,
-            "pylon_lock_l_locked": outputs.pylon_lock_l_locked,
-            "pylon_lock_l_unlocked": outputs.pylon_lock_l_unlocked,
-            "pylon_lock_r_locked": outputs.pylon_lock_r_locked,
-            "pylon_lock_r_unlocked": outputs.pylon_lock_r_unlocked,
-            "pls_l_locked": outputs.pls_l_locked,
-            "pls_l_unlocked": outputs.pls_l_unlocked,
-            "pls_r_locked": outputs.pls_r_locked,
-            "pls_r_unlocked": outputs.pls_r_unlocked,
-        },
-    }
 
 
 # ---- Timeline-simulate endpoint (PR-3) -------------------------------------
