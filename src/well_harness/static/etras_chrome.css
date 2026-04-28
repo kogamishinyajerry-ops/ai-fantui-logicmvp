@@ -66,8 +66,14 @@ body {
   flex-direction: column;
 }
 
-/* ── HEADER ─────────────────────────── */
-header {
+/* ── HEADER (panel-level, not the unified top nav) ─────
+   Codex P56-01 round-2 P3: a bare `header` selector matches BOTH
+   the page's panel header AND the existing <header class="unified-nav">
+   wrapper. The .unified-nav rule overrides height/background but
+   NOT padding/gap, so the top nav inherited 16px padding + 12px
+   gap and overflowed earlier on narrow viewports. Scope away
+   from .unified-nav. */
+header:not(.unified-nav) {
   height: 44px;
   background: var(--bg1);
   border-bottom: 1px solid var(--b1);

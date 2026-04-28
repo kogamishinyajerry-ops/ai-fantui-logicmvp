@@ -125,6 +125,32 @@ def test_shared_chrome_declares_component(selector: str) -> None:
     )
 
 
+def test_panel_header_rule_excludes_unified_nav() -> None:
+    """Codex P56-01 round-2 P3: a bare `header { ... }` rule matches
+    BOTH the page's panel header AND the existing <header class=
+    "unified-nav"> wrapper. .unified-nav overrides height/background
+    but NOT padding/gap, so the top nav inherited 16px padding and
+    overflowed earlier on narrow viewports. The shared rule must
+    scope away from .unified-nav."""
+    body = SHARED_CSS_PATH.read_text(encoding="utf-8")
+    # The header rule must use :not(.unified-nav) (or a class
+    # selector entirely) — a bare `header {` would re-introduce the
+    # leak. Allow either the explicit `:not(.unified-nav)` form or
+    # any class-based selector.
+    bare_header = re.search(r"^header\s*\{", body, re.MULTILINE)
+    assert bare_header is None, (
+        "shared chrome must NOT use a bare `header {` selector — "
+        "it leaks into <header class=\"unified-nav\">. Use "
+        "`header:not(.unified-nav)` or a dedicated class."
+    )
+    # And the scoped form must exist somewhere.
+    assert (
+        "header:not(.unified-nav)" in body
+        or ".panel-head" in body
+        or ".etras-head" in body
+    ), "shared chrome missing the scoped panel-header rule"
+
+
 def test_shared_chrome_uses_c919_canonical_sim_indicator() -> None:
     """fan_console.html historically used `.sim-dot`; C919 uses
     `.sim-indicator`. The shared file picks C919's name as the
