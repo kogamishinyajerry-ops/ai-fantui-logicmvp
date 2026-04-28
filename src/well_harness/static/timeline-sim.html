@@ -218,6 +218,17 @@
           <button id="runBtn" class="primary">▶ 运行仿真</button>
         </div>
 
+        <!-- P57-03 scenario toolbar: save scratch / export / import -->
+        <div class="preset-row">
+          <button id="saveScenarioBtn" title="将当前编辑保存到浏览器 localStorage">💾 暂存</button>
+          <button id="deleteScenarioBtn" title="删除当前选中的用户暂存场景"
+                  style="display:none">🗑 删除</button>
+          <button id="exportJsonBtn" title="下载当前 timeline 为 .json 文件">⬇ 导出</button>
+          <button id="importJsonBtn" title="从 .json 文件导入 timeline">⬆ 导入</button>
+          <input type="file" id="importFileInput" accept=".json"
+                 style="display:none" />
+        </div>
+
         <!-- P57-01 Metadata strip — always visible -->
         <div class="meta-strip">
           <label>System
@@ -974,11 +985,240 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 // ── Preset wiring ─────────────────────────────────────────────────────────
 
 $("loadPreset").addEventListener("click", () => {
-  loadPresetInEditor($("presetSelect").value);
+  loadFromPresetSelection($("presetSelect").value);
 });
 $("presetSelect").addEventListener("change", () => {
-  loadPresetInEditor($("presetSelect").value);
+  loadFromPresetSelection($("presetSelect").value);
+  refreshDeleteScenarioButton();
 });
+
+// =========================================================================
+// P57-03 localStorage scratchpad + import/export
+// =========================================================================
+//
+// localStorage namespace: well-harness:timeline-scenarios.<name>
+//   - per-key payload: stringified timeline JSON (same shape as PRESETS).
+//   - listScratchScenarios() walks localStorage and returns sorted names.
+//
+// Preset dropdown shape:
+//   <select>
+//     <optgroup label="系统内置">  ← built-in PRESETS
+//       <option value="builtin:fantui_nominal">…</option>
+//       …
+//     </optgroup>
+//     <optgroup label="用户暂存">  ← localStorage scratch
+//       <option value="scratch:my_scenario">my_scenario</option>
+//       …
+//     </optgroup>
+//   </select>
+//
+// loadFromPresetSelection() routes value-prefix to either built-in
+// PRESETS or scratch localStorage payloads.
+
+const SCRATCH_PREFIX = "well-harness:timeline-scenarios.";
+
+function listScratchScenarios() {
+  const out = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(SCRATCH_PREFIX)) {
+      out.push(k.substring(SCRATCH_PREFIX.length));
+    }
+  }
+  return out.sort();
+}
+
+function rebuildPresetDropdown() {
+  // Clear and rebuild with two optgroups.
+  const sel = $("presetSelect");
+  const previousValue = sel.value;
+  sel.innerHTML = "";
+
+  const builtinGroup = document.createElement("optgroup");
+  builtinGroup.label = "系统内置";
+  const BUILTIN_LABELS = {
+    fantui_nominal: "FANTUI · 正常反推部署",
+    fantui_sw1_stuck: "FANTUI · SW1 卡死 (L1 阻塞)",
+    c919_nominal: "C919 E-TRAS · 正常部署",
+    c919_tr_inhibited: "C919 E-TRAS · TR_Inhibited 阻塞",
+    custom: "(自定义空白)",
+  };
+  for (const key of Object.keys(PRESETS)) {
+    const opt = document.createElement("option");
+    opt.value = "builtin:" + key;
+    opt.textContent = BUILTIN_LABELS[key] || key;
+    builtinGroup.appendChild(opt);
+  }
+  sel.appendChild(builtinGroup);
+
+  const scratchNames = listScratchScenarios();
+  if (scratchNames.length > 0) {
+    const scratchGroup = document.createElement("optgroup");
+    scratchGroup.label = "用户暂存";
+    for (const name of scratchNames) {
+      const opt = document.createElement("option");
+      opt.value = "scratch:" + name;
+      opt.textContent = name;
+      scratchGroup.appendChild(opt);
+    }
+    sel.appendChild(scratchGroup);
+  }
+
+  // Restore previous selection if it still exists; otherwise default.
+  if (previousValue) {
+    const match = sel.querySelector(`option[value="${previousValue}"]`);
+    if (match) sel.value = previousValue;
+  }
+  refreshDeleteScenarioButton();
+}
+
+function refreshDeleteScenarioButton() {
+  const v = $("presetSelect").value || "";
+  $("deleteScenarioBtn").style.display =
+    v.startsWith("scratch:") ? "" : "none";
+}
+
+function loadFromPresetSelection(value) {
+  if (!value) return;
+  if (value.startsWith("builtin:")) {
+    const key = value.substring("builtin:".length);
+    loadPresetInEditor(key);
+    return;
+  }
+  if (value.startsWith("scratch:")) {
+    const name = value.substring("scratch:".length);
+    const raw = localStorage.getItem(SCRATCH_PREFIX + name);
+    if (!raw) {
+      setStatus("暂存 not found: " + name, "err");
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      currentTimeline = parsed;
+      if (!Array.isArray(currentTimeline.events)) currentTimeline.events = [];
+      renderAll();
+      setStatus("已加载暂存 · " + name);
+    } catch (e) {
+      setStatus("暂存 JSON 解析失败: " + e.message, "err");
+    }
+    return;
+  }
+  // Legacy fallback: treat raw key as built-in preset name.
+  loadPresetInEditor(value);
+}
+
+// ── Save scratch ──────────────────────────────────────────────────────────
+
+$("saveScenarioBtn").addEventListener("click", () => {
+  if (isRawTabActive()) {
+    if (!loadFromTextarea()) return;  // refuse to save invalid Raw
+  }
+  const suggested = (currentTimeline.title || "scratch")
+    .replace(/[^A-Za-z0-9_-]+/g, "_").substring(0, 60);
+  const name = window.prompt("场景名（仅 A-Z a-z 0-9 _ -）", suggested);
+  if (name == null) return;
+  const safe = name.trim().replace(/[^A-Za-z0-9_-]/g, "_").substring(0, 60);
+  if (!safe) {
+    setStatus("名称为空，未保存", "err");
+    return;
+  }
+  // Confirm before silently overwriting an existing scratch.
+  if (localStorage.getItem(SCRATCH_PREFIX + safe) !== null) {
+    if (!window.confirm("覆盖已存在的暂存 " + safe + " ？")) {
+      setStatus("取消保存", "warn");
+      return;
+    }
+  }
+  // Strip _ui_* before storing — same contract as syncToTextarea.
+  const cleaned = JSON.parse(JSON.stringify(currentTimeline, (k, v) =>
+    typeof k === "string" && k.startsWith("_ui_") ? undefined : v
+  ));
+  try {
+    localStorage.setItem(
+      SCRATCH_PREFIX + safe, JSON.stringify(cleaned)
+    );
+  } catch (err) {
+    setStatus("暂存失败：" + (err && err.message || err), "err");
+    return;
+  }
+  rebuildPresetDropdown();
+  $("presetSelect").value = "scratch:" + safe;
+  refreshDeleteScenarioButton();
+  setStatus("已暂存 · " + safe, "ok");
+});
+
+// ── Delete scratch ────────────────────────────────────────────────────────
+
+$("deleteScenarioBtn").addEventListener("click", () => {
+  const v = $("presetSelect").value || "";
+  if (!v.startsWith("scratch:")) return;
+  const name = v.substring("scratch:".length);
+  if (!window.confirm("删除暂存 " + name + " ？")) return;
+  localStorage.removeItem(SCRATCH_PREFIX + name);
+  rebuildPresetDropdown();
+  setStatus("已删除暂存 · " + name);
+});
+
+// ── Export JSON ───────────────────────────────────────────────────────────
+
+$("exportJsonBtn").addEventListener("click", () => {
+  if (isRawTabActive()) {
+    if (!loadFromTextarea()) return;
+  }
+  const cleaned = JSON.parse(JSON.stringify(currentTimeline, (k, v) =>
+    typeof k === "string" && k.startsWith("_ui_") ? undefined : v
+  ));
+  const json = JSON.stringify(cleaned, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const stem = (cleaned.title || "timeline")
+    .replace(/[^A-Za-z0-9_-]+/g, "_").substring(0, 60) || "timeline";
+  a.download = stem + ".timeline.json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  setStatus("已导出 · " + a.download, "ok");
+});
+
+// ── Import JSON ───────────────────────────────────────────────────────────
+
+$("importJsonBtn").addEventListener("click", () => {
+  $("importFileInput").click();
+});
+
+$("importFileInput").addEventListener("change", (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      if (typeof parsed !== "object" || parsed === null) {
+        throw new Error("imported JSON is not an object");
+      }
+      currentTimeline = parsed;
+      if (!Array.isArray(currentTimeline.events)) currentTimeline.events = [];
+      renderAll();
+      setStatus("已导入 · " + file.name, "ok");
+    } catch (err) {
+      setStatus("导入失败: " + err.message, "err");
+    } finally {
+      // Reset so re-importing the same file fires the change event.
+      e.target.value = "";
+    }
+  };
+  reader.onerror = () => {
+    setStatus("文件读取失败: " + (reader.error && reader.error.message || ""), "err");
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+});
+
+// Initialize the dropdown with optgroups on page load.
+rebuildPresetDropdown();
 
 function resolveEndpoint(system) {
   if (system === "c919-etras") {
