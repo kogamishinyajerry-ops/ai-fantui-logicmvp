@@ -298,12 +298,11 @@ def test_marker_has_hover_affordance() -> None:
 # ─── 6a. Refresh-failure clears the always-on layer ───
 
 
-def test_proposal_refresh_failure_clears_marker_state() -> None:
+def test_proposal_refresh_failure_clears_marker_dom() -> None:
     """Codex P55-02 round-2 P2: now that markers are always-on, a
     refresh failure (transient backend outage) must also clear the
-    marker DOM and reset `_latestProposals`. Otherwise the canvas
-    keeps showing the previous counts and clicks resolve against
-    stale data while the inbox correctly shows 'failed to load'."""
+    marker DOM. Otherwise the canvas keeps showing the previous
+    counts while the inbox correctly shows 'failed to load'."""
     fn = re.search(
         r"async function loadProposalsInbox\(\) \{(.*?)^}",
         JS,
@@ -311,17 +310,39 @@ def test_proposal_refresh_failure_clears_marker_state() -> None:
     )
     assert fn is not None
     body = fn.group(1)
-    # Locate the catch block.
     catch_match = re.search(r"\} catch \(error\) \{(.*?)^  \}", body, re.DOTALL | re.MULTILINE)
     assert catch_match is not None, "loadProposalsInbox must have a catch block"
     catch_body = catch_match.group(1)
-    assert "_latestProposals = []" in catch_body, (
-        "catch must reset _latestProposals so click handlers don't "
-        "resolve against stale state"
-    )
     assert "applyReviewAnchors([])" in catch_body, (
-        "catch must call applyReviewAnchors([]) so the always-on "
-        "marker DOM is torn down on refresh failure"
+        "catch must call applyReviewAnchors([]) so both marker layers "
+        "are torn down on refresh failure"
+    )
+
+
+def test_proposal_refresh_failure_preserves_chip_history() -> None:
+    """Codex P55-02 round-3 P2: the previous fix's _latestProposals
+    reset + refreshPanelVersionChip() call would zero the panel-
+    version chip's accepted count on a transient outage even though
+    no approval state changed. The chip must preserve last-known
+    history; the catch path must NOT mutate _latestProposals or
+    re-render the chip."""
+    fn = re.search(
+        r"async function loadProposalsInbox\(\) \{(.*?)^}",
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    catch_match = re.search(r"\} catch \(error\) \{(.*?)^  \}", body, re.DOTALL | re.MULTILINE)
+    assert catch_match is not None
+    catch_body = catch_match.group(1)
+    assert "_latestProposals = []" not in catch_body, (
+        "catch must NOT reset _latestProposals — that zeros the "
+        "chip's accepted count during a transient outage"
+    )
+    assert "refreshPanelVersionChip(" not in catch_body, (
+        "catch must NOT re-render the panel-version chip — the chip "
+        "should preserve its last successful render"
     )
 
 

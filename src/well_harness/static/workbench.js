@@ -986,13 +986,19 @@ async function loadProposalsInbox() {
       `载入工单列表失败 · failed to load proposals: ${error.message || error}` +
       `</li>`;
     // Codex P55-02 round-2 P2: gate markers are now always-on, so a
-    // refresh failure must clear them too — otherwise the canvas
-    // keeps showing the previous render's counts and clicks resolve
-    // against a stale _latestProposals. Reset both so the marker
-    // layer reflects "unknown" instead of "stale".
-    _latestProposals = [];
+    // refresh failure must clear the marker DOM too — otherwise the
+    // canvas keeps showing the previous render's counts while the
+    // inbox correctly switches to the error state.
+    //
+    // Codex P55-02 round-3 P2: leave _latestProposals + the panel-
+    // version chip alone. Resetting _latestProposals would zero the
+    // chip's accepted count even though no approval state actually
+    // changed — a fresh transient outage shouldn't lie about
+    // approval history. The inbox surface already signals the
+    // failure ("failed to load proposals") and the marker DOM is
+    // gone, so there's nothing left to interact with on stale data
+    // until the next successful refresh repaints both layers.
     applyReviewAnchors([]);
-    refreshPanelVersionChip();
   }
 }
 
