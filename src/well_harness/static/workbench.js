@@ -114,6 +114,11 @@ async function bootWorkbenchCircuitHero() {
     // appears. Safe no-op if review mode is off, proposals empty, or
     // the new fragment carries no gate anchors (placeholder system).
     applyReviewAnchors(_latestProposals);
+    // P55-03: paint always-on fan-in count badges. Structural fact
+    // (input arity) — runs once per hydration, not per proposal
+    // refresh. Safe no-op when the fragment carries no
+    // data-input-count anchors (placeholder + c919 systems).
+    applyGateFanInBadges();
   } catch (error) {
     mount.setAttribute("data-circuit-fragment-status", "error");
     mount.innerHTML =
@@ -2421,6 +2426,83 @@ function applyGateProposalMarkers(proposals) {
     group.addEventListener("click", (e) => {
       e.stopPropagation();
       openApproveDrawerAndSpotlight(gateId);
+    });
+    useEl.ownerSVGElement.appendChild(group);
+  }
+}
+
+// P55-03 (2026-04-28): fan-in count badge. Always-on, structural —
+// pairs with the P55-02 proposal marker on the OPPOSITE corner of
+// each gate so an engineer absorbs both pieces of element-level
+// metadata at-a-glance:
+//
+//   top-RIGHT — P55-02 OPEN-proposal count (state, filled accent)
+//   top-LEFT  — P55-03 fan-in count        (structure, outline-only)
+//
+// Reads the count from the SVG's data-input-count attribute (single
+// source of truth — fantui_circuit.html). Skips count < 2 because a
+// single-input "gate" is a passthrough and the badge would be noise.
+function applyGateFanInBadges() {
+  const mount = document.getElementById("workbench-circuit-hero-mount");
+  if (!mount) return;
+  // Idempotency: a system switch re-hydrates the SVG and re-invokes
+  // this function — clear prior badges so we don't duplicate.
+  for (const b of mount.querySelectorAll(".workbench-gate-fan-in-badge")) {
+    b.remove();
+  }
+  const useEls = mount.querySelectorAll("use[data-gate-id][data-input-count]");
+  for (const useEl of useEls) {
+    if (!useEl.ownerSVGElement) continue;
+    const gateId = useEl.getAttribute("data-gate-id");
+    const count = parseInt(useEl.getAttribute("data-input-count") || "0", 10);
+    // Single-input passthroughs don't merit a "1" decoration.
+    if (!Number.isFinite(count) || count < 2) continue;
+    const x = parseFloat(useEl.getAttribute("x") || "0");
+    const y = parseFloat(useEl.getAttribute("y") || "0");
+    const NS = "http://www.w3.org/2000/svg";
+    const group = document.createElementNS(NS, "g");
+    group.setAttribute("class", "workbench-gate-fan-in-badge");
+    group.setAttribute("data-fan-in-for", gateId);
+    group.setAttribute("data-fan-in-count", String(count));
+    const title = document.createElementNS(NS, "title");
+    title.textContent = `${count} 路输入 · ${count}-input gate (fan-in)`;
+    group.appendChild(title);
+    // Geometry: left-overhanging mirror of the proposal marker.
+    // The proposal marker overhangs the gate's right edge; this
+    // badge overhangs the LEFT edge by the same 6px so an engineer
+    // reads both corners as a balanced pair.
+    const badgeW = count > 9 ? 16 : 12;
+    const badgeH = 12;
+    const badgeX = x - 6;
+    const badgeY = y - 6;
+    const rect = document.createElementNS(NS, "rect");
+    rect.setAttribute("class", "workbench-gate-fan-in-badge-bg");
+    rect.setAttribute("x", String(badgeX));
+    rect.setAttribute("y", String(badgeY));
+    rect.setAttribute("width", String(badgeW));
+    rect.setAttribute("height", String(badgeH));
+    rect.setAttribute("rx", "2");
+    rect.setAttribute("ry", "2");
+    group.appendChild(rect);
+    const label = document.createElementNS(NS, "text");
+    label.setAttribute("class", "workbench-gate-fan-in-badge-label");
+    label.setAttribute("x", String(badgeX + badgeW / 2));
+    label.setAttribute("y", String(badgeY + badgeH / 2 + 0.5));
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("dominant-baseline", "middle");
+    label.textContent = String(count);
+    group.appendChild(label);
+    // Codex P55-03 round-2 P3: the rect's pointer-events: stroke
+    // means a click on the 1px outline gets caught by the badge.
+    // Without forwarding, that thin zone becomes a dead spot for
+    // the gate's own click handler (spotlightInboxByGate when
+    // review mode is on). Forward to spotlightCircuitGate (a benign
+    // visual self-highlight) so any click in the badge zone gives
+    // immediate, consistent feedback no matter what the gate's
+    // current handler chain is.
+    group.addEventListener("click", (e) => {
+      e.stopPropagation();
+      spotlightCircuitGate(gateId);
     });
     useEl.ownerSVGElement.appendChild(group);
   }
