@@ -5,14 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Well Harness 反推逻辑演示舱</title>
 <link rel="stylesheet" href="/unified-nav.css">
+<link rel="stylesheet" href="/etras_chrome.css">
 <link rel="stylesheet" href="/demo.css">
-<style>
-/* P54-04: suppress the unified top nav when this page is embedded
-   inside the workbench iframe (the workbench dock is the canonical
-   nav). Triggered by `?embed=1` querystring or any iframe context. */
-html.is-iframe-embed .unified-nav { display: none !important; }
-html.is-iframe-embed body.unified-nav-enabled { padding-top: 0 !important; }
-</style>
+<!-- P56-02a (2026-04-28): the iframe-embed nav-suppression rule
+     used to live inline here; it now lives in /etras_chrome.css
+     (shared since P56-01). The detection <script> below stays
+     inline because it's per-page JS, not CSS. -->
+
 <script>
   (function () {
     try {

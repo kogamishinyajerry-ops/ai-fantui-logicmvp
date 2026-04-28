@@ -8,13 +8,13 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.svg">
   <link rel="stylesheet" href="/design-tokens.css">
   <link rel="stylesheet" href="/unified-nav.css">
+  <link rel="stylesheet" href="/etras_chrome.css">
   <link rel="stylesheet" href="/c919_etras_workstation.css">
-  <style>
-  /* P54-06: suppress unified top nav when this page is embedded in
-     the workbench iframe — the workbench dock is the canonical nav. */
-  html.is-iframe-embed .unified-nav { display: none !important; }
-  html.is-iframe-embed body.unified-nav-enabled { padding-top: 0 !important; }
-  </style>
+  <!-- P56-02a (2026-04-28): the iframe-embed nav-suppression rule
+       moved into /etras_chrome.css (shared since P56-01). The
+       detection <script> below stays inline because it's per-page
+       JS, not CSS. -->
+
   <script>
     (function () {
       try {
