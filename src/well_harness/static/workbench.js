@@ -2429,6 +2429,204 @@ function applyGateProposalMarkers(proposals) {
     });
     useEl.ownerSVGElement.appendChild(group);
   }
+  // P55-04: re-wire hover previews against the freshly-rendered
+  // markers. Old markers (and their listeners) were torn down at
+  // the top of this function; new markers need fresh listeners.
+  installGateMarkerHoverPreviews();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// P55-04 (2026-04-28): Figma-style hover preview popover.
+//
+// Hover over a P55-02 marker → small floating card listing every
+// OPEN proposal for that gate (author, role, age, summary). Click a
+// row → opens the approve drawer + spotlights THAT specific
+// proposal (not the gate-wide first OPEN). Mouseleave with a 200ms
+// grace period so the user can move pointer marker → popover
+// without it vanishing under their cursor.
+// ─────────────────────────────────────────────────────────────────
+
+let _gateMarkerPopoverHideTimer = null;
+
+function installGateMarkerHoverPreviews() {
+  const popover = document.getElementById("workbench-gate-marker-popover");
+  if (!popover) return;
+  const mount = document.getElementById("workbench-circuit-hero-mount");
+  if (!mount) return;
+  // Wire each marker. (applyGateProposalMarkers tears down + rebuilds
+  // markers each refresh, so we re-wire fresh listeners every time.)
+  for (const marker of mount.querySelectorAll(".workbench-gate-proposal-marker")) {
+    const gateId = marker.getAttribute("data-marker-for");
+    if (!gateId) continue;
+    marker.addEventListener("mouseenter", () => {
+      if (_gateMarkerPopoverHideTimer) {
+        clearTimeout(_gateMarkerPopoverHideTimer);
+        _gateMarkerPopoverHideTimer = null;
+      }
+      renderGateMarkerPopover(gateId);
+      // Position the popover relative to the marker's viewport rect.
+      const rect = marker.getBoundingClientRect();
+      // Anchor: just below + slightly right of the marker so it
+      // doesn't cover the gate label. Clamp to viewport so the
+      // popover doesn't spill off the right edge.
+      const margin = 8;
+      const popWidth = 280; // Matches the CSS max-width.
+      let left = rect.right + margin;
+      const viewportRight = window.innerWidth - margin;
+      if (left + popWidth > viewportRight) {
+        left = Math.max(margin, rect.left - popWidth - margin);
+      }
+      const top = rect.bottom + margin;
+      popover.style.left = `${left}px`;
+      popover.style.top = `${top}px`;
+      popover.hidden = false;
+      popover.setAttribute("aria-hidden", "false");
+    });
+    marker.addEventListener("mouseleave", () => {
+      _gateMarkerPopoverHideTimer = setTimeout(() => {
+        popover.hidden = true;
+        popover.setAttribute("aria-hidden", "true");
+        _gateMarkerPopoverHideTimer = null;
+      }, 200);
+    });
+  }
+  // Pointer entering the popover itself cancels any pending hide
+  // (so users can interact with the rows without the popover dying
+  // under their cursor).
+  if (!popover.dataset.hoverWired) {
+    popover.dataset.hoverWired = "1";
+    popover.addEventListener("mouseenter", () => {
+      if (_gateMarkerPopoverHideTimer) {
+        clearTimeout(_gateMarkerPopoverHideTimer);
+        _gateMarkerPopoverHideTimer = null;
+      }
+    });
+    popover.addEventListener("mouseleave", () => {
+      _gateMarkerPopoverHideTimer = setTimeout(() => {
+        popover.hidden = true;
+        popover.setAttribute("aria-hidden", "true");
+        _gateMarkerPopoverHideTimer = null;
+      }, 200);
+    });
+  }
+}
+
+function renderGateMarkerPopover(gateId) {
+  const popover = document.getElementById("workbench-gate-marker-popover");
+  if (!popover) return;
+  const proposals = (_latestProposals || []).filter(
+    (p) =>
+      p.status === "OPEN" &&
+      ((p.interpretation && p.interpretation.affected_gates) || []).includes(
+        gateId,
+      ),
+  );
+  const escape = (text) =>
+    String(text == null ? "" : text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  const header =
+    `<div class="workbench-gate-marker-popover-header">` +
+    `<span class="workbench-gate-marker-popover-gate">${escape(gateId)}</span>` +
+    `<span class="workbench-gate-marker-popover-count">` +
+    `${proposals.length} 个待审 · ${proposals.length} OPEN` +
+    `</span>` +
+    `</div>`;
+  const rows = proposals
+    .map((p) => {
+      const author = p.author_name || "anonymous";
+      const role = p.author_role || "";
+      const interp = p.interpretation || {};
+      const summary =
+        interp.summary_zh || interp.summary_en || p.source_text || "";
+      const age = formatRelativeAge(p.created_at);
+      // Avatar = first 2 chars of author name in a colored circle
+      // tinted by hash(name) % 360 hue.
+      const initials = author.slice(0, 2).toUpperCase();
+      const hue = avatarHueForName(author);
+      return (
+        `<button class="workbench-gate-marker-popover-row" ` +
+        `data-proposal-id="${escape(p.id)}" ` +
+        `type="button">` +
+        `<span class="workbench-gate-marker-popover-avatar" ` +
+        `style="--avatar-hue:${hue}">${escape(initials)}</span>` +
+        `<span class="workbench-gate-marker-popover-meta">` +
+        `<span class="workbench-gate-marker-popover-author">` +
+        `${escape(author)}` +
+        (role ? ` <em>· ${escape(role)}</em>` : "") +
+        `</span>` +
+        `<span class="workbench-gate-marker-popover-age">${escape(age)}</span>` +
+        `</span>` +
+        `<span class="workbench-gate-marker-popover-summary">` +
+        `${escape(summary)}` +
+        `</span>` +
+        `</button>`
+      );
+    })
+    .join("");
+  popover.innerHTML = header + rows;
+  // Wire row clicks: open drawer + spotlight THAT specific proposal.
+  for (const row of popover.querySelectorAll(".workbench-gate-marker-popover-row")) {
+    row.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const proposalId = row.getAttribute("data-proposal-id");
+      const dockBtn = document.querySelector(
+        '#workbench-dock [data-dock-target="approve"]',
+      );
+      const isOpen =
+        document.body.getAttribute("data-active-tool") === "approve";
+      if (dockBtn && !isOpen) {
+        dockBtn.click();
+      }
+      // Hide the popover so it doesn't linger over the drawer.
+      popover.hidden = true;
+      popover.setAttribute("aria-hidden", "true");
+      setTimeout(() => {
+        if (proposalId) {
+          spotlightInboxByProposalId(proposalId);
+        }
+      }, 220);
+    });
+  }
+}
+
+// Hash a name into a stable hue (0-359). Same name across sessions
+// gets the same avatar color; different authors get distinct hues
+// without us hand-maintaining a palette.
+function avatarHueForName(name) {
+  let h = 0;
+  const s = String(name || "");
+  for (let i = 0; i < s.length; i++) {
+    h = (h * 31 + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h) % 360;
+}
+
+// Relative age formatter: "5m ago" / "2h ago" / "3d ago" / "Apr 26"
+// for older. Single helper so future surfaces stay consistent.
+function formatRelativeAge(iso) {
+  if (!iso) return "";
+  const then = new Date(iso).getTime();
+  if (!Number.isFinite(then)) return "";
+  const now = Date.now();
+  const diffMs = now - then;
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "just now · 刚刚";
+  if (minutes < 60) return `${minutes}m ago · ${minutes}分钟前`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago · ${hours}小时前`;
+  const days = Math.floor(hours / 24);
+  if (days < 14) return `${days}d ago · ${days}天前`;
+  // Older — fall back to absolute Mon DD.
+  const d = new Date(then);
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+  return `${months[d.getMonth()]} ${d.getDate()}`;
 }
 
 // P55-03 (2026-04-28): fan-in count badge. Always-on, structural —
