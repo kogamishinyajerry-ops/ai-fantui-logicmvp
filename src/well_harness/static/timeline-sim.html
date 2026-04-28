@@ -541,17 +541,16 @@
         <!-- P57-03 scenario toolbar: save scratch / export / import -->
         <div class="preset-row">
           <button id="saveScenarioBtn"
-                  title="将当前编辑保存到浏览器 localStorage"
                   data-tooltip="保存到浏览器本地（Cmd+S / Ctrl+S）"
                   aria-label="暂存场景到浏览器本地">💾 暂存</button>
-          <button id="deleteScenarioBtn" title="删除当前选中的用户暂存场景"
+          <button id="deleteScenarioBtn"
                   data-tooltip="删除当前选中的用户暂存场景"
                   aria-label="删除当前选中的用户暂存场景"
                   style="display:none">🗑 删除</button>
-          <button id="exportJsonBtn" title="下载当前 timeline 为 .json 文件"
+          <button id="exportJsonBtn"
                   data-tooltip="下载当前 timeline 为 .timeline.json 文件"
                   aria-label="导出 timeline 为 JSON 文件">⬇ 导出</button>
-          <button id="importJsonBtn" title="从 .json 文件导入 timeline"
+          <button id="importJsonBtn"
                   data-tooltip="从本地 .json 文件读取 timeline 并替换当前编辑"
                   aria-label="从 JSON 文件导入 timeline">⬆ 导入</button>
           <input type="file" id="importFileInput" accept=".json"
@@ -1465,14 +1464,14 @@ function renderEventRow(ev, i) {
         <div class="row-actions">
           <button class="row-action-btn" data-action="move-up"
                   ${i === 0 ? "disabled" : ""}
-                  title="上移" data-tooltip="上移此事件"
+                  data-tooltip="上移此事件"
                   aria-label="第 ${i + 1} 行 · 上移">↑</button>
           <button class="row-action-btn" data-action="move-down"
                   ${i === lastIdx ? "disabled" : ""}
-                  title="下移" data-tooltip="下移此事件"
+                  data-tooltip="下移此事件"
                   aria-label="第 ${i + 1} 行 · 下移">↓</button>
           <button class="row-action-btn delete-row" data-action="delete-row"
-                  title="删除" data-tooltip="删除此事件行"
+                  data-tooltip="删除此事件行"
                   aria-label="第 ${i + 1} 行 · 删除">×</button>
         </div>
       </td>
@@ -2524,26 +2523,22 @@ window.addEventListener("resize", () => {
 // =========================================================================
 
 const TOOLTIP_BUBBLE_ID = "tooltipBubble";
+// Single-slot stash, keyed by the currently-active target so repeated
+// tooltipShow() calls (scroll/resize/focus+hover composite) cannot
+// clobber the stash by saving "tooltipBubble" as the "previous" value.
+// Per Codex P58-04-A: reposition-only on same target; restore-then-stash
+// when switching targets.
+let tooltipActiveTarget = null;
 let tooltipPrevDescribedBy = null;
-let tooltipPrevDescribedByEl = null;
+// Per Codex P58-04-C: hover and focus are tracked independently so the
+// bubble does not vanish when one modality exits while the other is
+// still active (e.g., focused + then mouse leaves the button).
+let tooltipHoverTarget = null;
+let tooltipFocusTarget = null;
 
-function tooltipShow(targetEl) {
+function tooltipPosition(targetEl) {
   const bubble = document.getElementById(TOOLTIP_BUBBLE_ID);
   if (!bubble || !targetEl) return;
-  const text = targetEl.getAttribute("data-tooltip");
-  if (!text) return;
-
-  bubble.textContent = text;
-  bubble.hidden = false;
-
-  // aria-describedby wiring: store the previous value so we can restore
-  // it on hide. Screen readers announce the bubble's text when the
-  // target is focused.
-  tooltipPrevDescribedByEl = targetEl;
-  tooltipPrevDescribedBy = targetEl.getAttribute("aria-describedby");
-  targetEl.setAttribute("aria-describedby", TOOLTIP_BUBBLE_ID);
-
-  // Position: prefer above the target, fall back to below if no room.
   // requestAnimationFrame defers measurement so getBoundingClientRect
   // sees the final layout (bubble was previously [hidden] = display:none).
   requestAnimationFrame(() => {
@@ -2560,41 +2555,83 @@ function tooltipShow(targetEl) {
       top = r.bottom + gap;
     }
     if (top + bh > vh - 8) {
-      // Fall back to clamp inside viewport if neither fits.
       top = Math.max(8, Math.min(top, vh - bh - 8));
     }
     let left = r.left + r.width / 2 - bw / 2;
     left = Math.max(8, Math.min(left, vw - bw - 8));
-    // Use page coords (account for scroll) since position:absolute
-    // resolves against the document, not the viewport.
     bubble.style.top = (top + window.scrollY) + "px";
     bubble.style.left = (left + window.scrollX) + "px";
     bubble.setAttribute("data-tooltip-placement", placement);
   });
 }
 
-function tooltipHide() {
+function tooltipShow(targetEl) {
   const bubble = document.getElementById(TOOLTIP_BUBBLE_ID);
-  if (bubble) bubble.hidden = true;
-  // Restore the previous aria-describedby (or remove it if there was none).
-  if (tooltipPrevDescribedByEl) {
+  if (!bubble || !targetEl) return;
+  const text = targetEl.getAttribute("data-tooltip");
+  if (!text) return;
+
+  // Same target: reposition only — do NOT overwrite the stash.
+  if (tooltipActiveTarget === targetEl) {
+    tooltipPosition(targetEl);
+    return;
+  }
+
+  // Switching targets: restore the previous element's aria-describedby
+  // before stashing the new one, so target A's original value is not lost.
+  if (tooltipActiveTarget) {
     if (tooltipPrevDescribedBy === null) {
-      tooltipPrevDescribedByEl.removeAttribute("aria-describedby");
+      tooltipActiveTarget.removeAttribute("aria-describedby");
     } else {
-      tooltipPrevDescribedByEl.setAttribute(
+      tooltipActiveTarget.setAttribute(
         "aria-describedby", tooltipPrevDescribedBy
       );
     }
   }
-  tooltipPrevDescribedByEl = null;
+
+  bubble.textContent = text;
+  bubble.hidden = false;
+
+  tooltipActiveTarget = targetEl;
+  tooltipPrevDescribedBy = targetEl.getAttribute("aria-describedby");
+  targetEl.setAttribute("aria-describedby", TOOLTIP_BUBBLE_ID);
+
+  tooltipPosition(targetEl);
+}
+
+function tooltipHide() {
+  const bubble = document.getElementById(TOOLTIP_BUBBLE_ID);
+  if (bubble) bubble.hidden = true;
+  if (tooltipActiveTarget) {
+    if (tooltipPrevDescribedBy === null) {
+      tooltipActiveTarget.removeAttribute("aria-describedby");
+    } else {
+      tooltipActiveTarget.setAttribute(
+        "aria-describedby", tooltipPrevDescribedBy
+      );
+    }
+  }
+  tooltipActiveTarget = null;
   tooltipPrevDescribedBy = null;
+}
+
+// Resolve which (if any) target the bubble should currently point at:
+// focus wins over hover so keyboard users keep their tooltip while the
+// mouse moves around.
+function tooltipResolveActive() {
+  const next = tooltipFocusTarget || tooltipHoverTarget;
+  if (next) tooltipShow(next);
+  else tooltipHide();
 }
 
 // Delegated listeners — handle dynamically-rendered children too
 // (e.g., row-action buttons regenerated on every renderEventTable).
 document.addEventListener("mouseover", (e) => {
   const target = e.target.closest && e.target.closest("[data-tooltip]");
-  if (target) tooltipShow(target);
+  if (target) {
+    tooltipHoverTarget = target;
+    tooltipResolveActive();
+  }
 });
 document.addEventListener("mouseout", (e) => {
   const target = e.target.closest && e.target.closest("[data-tooltip]");
@@ -2603,38 +2640,41 @@ document.addEventListener("mouseout", (e) => {
     // when a button has nested span / icon. mouseout fires on every
     // boundary cross.
     if (e.relatedTarget && target.contains(e.relatedTarget)) return;
-    tooltipHide();
+    if (tooltipHoverTarget === target) tooltipHoverTarget = null;
+    tooltipResolveActive();
   }
 });
 document.addEventListener("focusin", (e) => {
   const target = e.target.closest && e.target.closest("[data-tooltip]");
-  if (target) tooltipShow(target);
+  if (target) {
+    tooltipFocusTarget = target;
+    tooltipResolveActive();
+  }
 });
 document.addEventListener("focusout", (e) => {
   const target = e.target.closest && e.target.closest("[data-tooltip]");
-  if (target) tooltipHide();
+  if (target) {
+    if (tooltipFocusTarget === target) tooltipFocusTarget = null;
+    tooltipResolveActive();
+  }
 });
 // Esc dismisses tooltip even if focus stays — useful for sticky bubbles
 // after a non-mouse trigger like the keyboard.
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !document.getElementById(TOOLTIP_BUBBLE_ID).hidden) {
+    tooltipHoverTarget = null;
+    tooltipFocusTarget = null;
     tooltipHide();
   }
 });
 // Reposition on scroll/resize while shown so the bubble tracks the
 // target. Without this, scrolling moves the target out from under the
-// bubble.
+// bubble. Position-only (no stash overwrite per P58-04-A).
 window.addEventListener("scroll", () => {
-  if (tooltipPrevDescribedByEl &&
-      !document.getElementById(TOOLTIP_BUBBLE_ID).hidden) {
-    tooltipShow(tooltipPrevDescribedByEl);
-  }
+  if (tooltipActiveTarget) tooltipPosition(tooltipActiveTarget);
 }, { passive: true });
 window.addEventListener("resize", () => {
-  if (tooltipPrevDescribedByEl &&
-      !document.getElementById(TOOLTIP_BUBBLE_ID).hidden) {
-    tooltipShow(tooltipPrevDescribedByEl);
-  }
+  if (tooltipActiveTarget) tooltipPosition(tooltipActiveTarget);
 });
 </script>
 </body>
