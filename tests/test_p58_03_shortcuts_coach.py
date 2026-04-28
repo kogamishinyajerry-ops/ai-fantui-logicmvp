@@ -397,6 +397,118 @@ def test_cmd_s_triggers_save_btn_and_prevents_default() -> None:
     )
 
 
+# ── 4a. Codex R1 fixes: Tab-trap + colspan parity ──
+
+
+def test_shortcut_modal_traps_tab() -> None:
+    """Codex P58-03 R1 MEDIUM: aria-modal=true + role=dialog without
+    a Tab/Shift+Tab focus trap is a lie — keyboard focus leaks into
+    background DOM. Mirror the tour's trap pattern (P58-02): the
+    keydown handler must cycle focus among the modal buttons via
+    shortcutModalFocusableButtons() helper."""
+    body = _read()
+    # Find the keydown handler that gates on shortcutModal !hidden
+    # AND has Tab branch.
+    handler_chunks = [
+        m.group(0)
+        for m in re.finditer(
+            r'document\.addEventListener\s*\(\s*"keydown"[\s\S]*?\}\s*\)\s*;',
+            body,
+        )
+    ]
+    modal_handlers = [
+        c for c in handler_chunks
+        if "shortcutModal" in c and "Tab" in c
+    ]
+    assert modal_handlers, (
+        "no keydown handler combines shortcutModal gate + Tab key "
+        "branch. Without it, Tab leaks focus out of the modal "
+        "(Codex P58-03 R1 MEDIUM)."
+    )
+    chunk = modal_handlers[0]
+    # Must check for Tab AND shiftKey AND call .focus().
+    assert re.search(r'e\.key\s*===\s*"Tab"', chunk), (
+        "shortcutModal keydown handler does not check Tab key"
+    )
+    assert re.search(r'e\.shiftKey', chunk), (
+        "shortcutModal keydown handler does not branch on shiftKey"
+    )
+    assert re.search(r'\.focus\s*\(\s*\)', chunk), (
+        "shortcutModal keydown handler does not call .focus() to wrap"
+    )
+    # Must use the helper (single point of truth for focusable buttons).
+    assert "shortcutModalFocusableButtons" in chunk, (
+        "shortcutModal Tab trap does not use shortcutModalFocusableButtons() "
+        "helper. Inline button list would drift from any future button "
+        "additions to the modal."
+    )
+
+
+def test_shortcut_modal_focusable_buttons_helper() -> None:
+    """Codex P58-03 R1 MEDIUM: the focusable-buttons helper must
+    enumerate the two modal buttons (reopen-welcome + close), filter
+    by !disabled, and be available for the Tab trap to use."""
+    body = _read()
+    fn_match = re.search(
+        r'function\s+shortcutModalFocusableButtons\s*\(\s*\)\s*\{'
+        r'[\s\S]{0,500}?\n\}',
+        body,
+    )
+    assert fn_match is not None, (
+        "shortcutModalFocusableButtons helper not found"
+    )
+    chunk = fn_match.group(0)
+    for btn_id in ("shortcutReopenWelcomeBtn", "shortcutCloseBtn"):
+        assert btn_id in chunk, (
+            f"shortcutModalFocusableButtons does not enumerate "
+            f"{btn_id!r}. The Tab trap would skip that button."
+        )
+    assert re.search(r'!\s*el\.disabled|!el\.disabled', chunk), (
+        "shortcutModalFocusableButtons does not filter by !el.disabled. "
+        "Disabled buttons would consume Tab focus uselessly."
+    )
+
+
+def test_empty_coach_colspan_matches_header_columns() -> None:
+    """Codex P58-03 R1 LOW: the empty-state hint <td colspan> must
+    match the actual header column count, otherwise the coach card
+    visually clips at the wrong width.
+
+    Counts <th> elements inside <table id=eventTable>'s <thead> then
+    asserts the colspan in renderEventTable's empty branch matches.
+    Future column additions to the header → this test fails until
+    the colspan is bumped in lockstep."""
+    body = _read()
+    # Extract the eventTable header.
+    head_match = re.search(
+        r'<table\s+id="eventTable"[\s\S]*?<thead[\s\S]*?</thead>',
+        body,
+    )
+    assert head_match is not None, "eventTable header block not found"
+    th_count = len(re.findall(r'<th\b', head_match.group(0)))
+    assert th_count > 0, "eventTable header has zero <th> — broken markup"
+
+    # Extract the colspan in renderEventTable's empty-state branch.
+    fn_match = re.search(
+        r'function\s+renderEventTable\s*\(\s*\)\s*\{[\s\S]*?\n\}',
+        body,
+    )
+    assert fn_match is not None, "renderEventTable function not found"
+    colspan_match = re.search(
+        r'colspan="(\d+)"', fn_match.group(0)
+    )
+    assert colspan_match is not None, (
+        "renderEventTable empty-state branch has no colspan. The "
+        "coach card needs colspan to span all columns."
+    )
+    actual_colspan = int(colspan_match.group(1))
+    assert actual_colspan == th_count, (
+        f"empty-state colspan={actual_colspan} but header has {th_count} "
+        f"<th> columns. Coach card clips to wrong width. "
+        f"(Codex P58-03 R1 LOW carry-forward.)"
+    )
+
+
 # ── 5. Inline-script syntax (carry-forward from P58-02 R1) ──
 
 

@@ -1245,8 +1245,13 @@ function renderEventTable() {
     // appends an event of the indicated kind and re-renders.
     // colspan=7 so the row spans the full 7-column header (delete +
     // up + down + t_s + kind + target + value/note collapsed).
+    // colspan must match the header column count (currently 8:
+    // # / t_s / kind / target / value / duration_s / note / actions).
+    // Codex P58-03 R1 LOW: a wrong colspan visually clips the coach
+    // card. test_empty_coach_colspan_matches_header_columns guards
+    // future drift.
     body.innerHTML = `
-      <tr><td colspan="7">
+      <tr><td colspan="8">
         <div class="empty-coach" id="emptyCoach">
           <p class="empty-coach-title">✨ 还没有事件 · 从一个起点开始</p>
           <p class="empty-coach-hint">点下方任一类型添加首个事件，系统会填充合理默认值。也可切到 Raw 标签直接粘贴 JSON。</p>
@@ -2087,14 +2092,45 @@ $("shortcutReopenWelcomeBtn").addEventListener("click", () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
+function shortcutModalFocusableButtons() {
+  // The two action buttons inside the cheatsheet card. Order matters
+  // (Tab cycle): reopen-welcome → close. Prev → Next visual order.
+  return [
+    $("shortcutReopenWelcomeBtn"),
+    $("shortcutCloseBtn"),
+  ].filter(el => el && !el.disabled);
+}
+
 document.addEventListener("keydown", (e) => {
-  // Esc closes the cheatsheet modal if it's open. Higher priority than
-  // tour Esc because shortcut modal could be opened DURING a tour
-  // (rare, but `?` handler doesn't gate on tour state).
-  if (!$("shortcutModal").hidden && e.key === "Escape") {
-    e.preventDefault();
-    closeShortcutModal();
-    return;
+  // While the cheatsheet modal is open: Esc closes, Tab traps focus.
+  // Without the Tab trap, aria-modal=true is a lie — focus leaks
+  // into background DOM (Codex P58-03 R1 MEDIUM).
+  if (!$("shortcutModal").hidden) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeShortcutModal();
+      return;
+    }
+    if (e.key === "Tab") {
+      const buttons = shortcutModalFocusableButtons();
+      if (buttons.length > 0) {
+        const first = buttons[0];
+        const last = buttons[buttons.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey) {
+          if (active === first || !buttons.includes(active)) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (active === last || !buttons.includes(active)) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+      return;
+    }
   }
   // Skip remaining shortcuts when typing in form inputs so they
   // don't collide with text entry.
