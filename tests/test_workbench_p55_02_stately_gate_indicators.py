@@ -298,6 +298,30 @@ def test_marker_has_hover_affordance() -> None:
 # ─── 6a. Refresh-failure clears the always-on layer ───
 
 
+def test_refresh_failure_reasserts_freshness_false() -> None:
+    """Codex P55-02 round-5 P2: overlapping refreshes (system switch
+    while a prior load is in flight) can let an older success flip
+    `_proposalsAreFresh` back to true between this request's start
+    and its catch. The catch path must re-assert the flag to false
+    so subsequent setReviewMode() / circuit re-hydration calls don't
+    resurrect markers from stale data."""
+    fn = re.search(
+        r"async function loadProposalsInbox\(\) \{(.*?)^}",
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    catch_match = re.search(r"\} catch \(error\) \{(.*?)^  \}", body, re.DOTALL | re.MULTILINE)
+    assert catch_match is not None
+    catch_body = catch_match.group(1)
+    assert "_proposalsAreFresh = false" in catch_body, (
+        "catch must re-assert _proposalsAreFresh = false to survive "
+        "overlapping refreshes — without it, an older in-flight "
+        "success can resurrect markers from stale data"
+    )
+
+
 def test_proposal_refresh_failure_clears_marker_dom() -> None:
     """Codex P55-02 round-2 P2: now that markers are always-on, a
     refresh failure (transient backend outage) must also clear the

@@ -1020,6 +1020,14 @@ async function loadProposalsInbox() {
     // failure ("failed to load proposals") and the marker DOM is
     // gone, so there's nothing left to interact with on stale data
     // until the next successful refresh repaints both layers.
+    //
+    // Codex P55-02 round-5 P2: re-assert _proposalsAreFresh = false
+    // here. Overlapping refreshes (system switch while a prior load
+    // is in flight) can let an older success flip the flag back to
+    // true before this later request's catch fires. Without this
+    // line, a subsequent setReviewMode() or circuit re-hydration
+    // would resurrect markers from stale data.
+    _proposalsAreFresh = false;
     applyReviewAnchors([]);
   }
 }
