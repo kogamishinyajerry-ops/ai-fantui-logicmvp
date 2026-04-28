@@ -985,6 +985,14 @@ async function loadProposalsInbox() {
       `<li class="workbench-annotation-inbox-empty">` +
       `载入工单列表失败 · failed to load proposals: ${error.message || error}` +
       `</li>`;
+    // Codex P55-02 round-2 P2: gate markers are now always-on, so a
+    // refresh failure must clear them too — otherwise the canvas
+    // keeps showing the previous render's counts and clicks resolve
+    // against a stale _latestProposals. Reset both so the marker
+    // layer reflects "unknown" instead of "stale".
+    _latestProposals = [];
+    applyReviewAnchors([]);
+    refreshPanelVersionChip();
   }
 }
 

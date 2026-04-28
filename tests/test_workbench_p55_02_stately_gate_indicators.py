@@ -295,6 +295,36 @@ def test_marker_has_hover_affordance() -> None:
     assert rule is not None, "missing hover bg lift"
 
 
+# ─── 6a. Refresh-failure clears the always-on layer ───
+
+
+def test_proposal_refresh_failure_clears_marker_state() -> None:
+    """Codex P55-02 round-2 P2: now that markers are always-on, a
+    refresh failure (transient backend outage) must also clear the
+    marker DOM and reset `_latestProposals`. Otherwise the canvas
+    keeps showing the previous counts and clicks resolve against
+    stale data while the inbox correctly shows 'failed to load'."""
+    fn = re.search(
+        r"async function loadProposalsInbox\(\) \{(.*?)^}",
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    # Locate the catch block.
+    catch_match = re.search(r"\} catch \(error\) \{(.*?)^  \}", body, re.DOTALL | re.MULTILINE)
+    assert catch_match is not None, "loadProposalsInbox must have a catch block"
+    catch_body = catch_match.group(1)
+    assert "_latestProposals = []" in catch_body, (
+        "catch must reset _latestProposals so click handlers don't "
+        "resolve against stale state"
+    )
+    assert "applyReviewAnchors([])" in catch_body, (
+        "catch must call applyReviewAnchors([]) so the always-on "
+        "marker DOM is torn down on refresh failure"
+    )
+
+
 # ─── 6. The legacy amber badge is GONE ───
 
 
