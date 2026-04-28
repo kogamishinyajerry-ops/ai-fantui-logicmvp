@@ -498,17 +498,39 @@ function renderMetaStrip() {
   $("metaDurationS").value = currentTimeline.duration_s ?? 5.0;
 }
 
+function isRawTabActive() {
+  const raw = document.querySelector('.tab-panel[data-tab-panel="raw"]');
+  return raw && raw.classList.contains("active");
+}
+
+// Codex R1 H1 fix: when Raw tab is active and the user edits the
+// always-visible metadata strip, we must first reload the model from
+// the textarea — otherwise syncToTextarea() would overwrite their
+// in-flight Raw edits with the stale model. If Raw JSON is invalid we
+// refuse the metadata change so the user can fix the JSON first.
+function refreshModelIfRawActive() {
+  if (!isRawTabActive()) return true;
+  return loadFromTextarea();
+}
+
 $("metaSystem").addEventListener("change", () => {
+  if (!refreshModelIfRawActive()) return;
   currentTimeline.system = $("metaSystem").value;
   syncToTextarea();
 });
 $("metaStepS").addEventListener("change", () => {
   const v = parseFloat($("metaStepS").value);
-  if (!isNaN(v) && v > 0) { currentTimeline.step_s = v; syncToTextarea(); }
+  if (isNaN(v) || v <= 0) return;
+  if (!refreshModelIfRawActive()) return;
+  currentTimeline.step_s = v;
+  syncToTextarea();
 });
 $("metaDurationS").addEventListener("change", () => {
   const v = parseFloat($("metaDurationS").value);
-  if (!isNaN(v) && v > 0) { currentTimeline.duration_s = v; syncToTextarea(); }
+  if (isNaN(v) || v <= 0) return;
+  if (!refreshModelIfRawActive()) return;
+  currentTimeline.duration_s = v;
+  syncToTextarea();
 });
 
 // ── Event table render ────────────────────────────────────────────────────
@@ -520,27 +542,40 @@ function renderEventTable() {
   $("rowCountHint").textContent = `${events.length} event${events.length === 1 ? "" : "s"}`;
 }
 
+// Codex R1 H2 fix: coerce numeric fields to safe finite numbers BEFORE
+// they reach innerHTML. A hostile Raw payload like {"t_s": "<img onerror>"}
+// would otherwise inject markup. NaN / non-finite → fallback to safe
+// defaults; the kind/target/value/note fields go through escapeAttr.
+function safeNumber(v, fallback) {
+  const n = typeof v === "number" ? v : parseFloat(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 function renderEventRow(ev, i) {
   const kindOpts = EVENT_KINDS.map(
-    k => `<option value="${k}"${k === ev.kind ? " selected" : ""}>${k}</option>`
+    k => `<option value="${escapeAttr(k)}"${k === ev.kind ? " selected" : ""}>${escapeAttr(k)}</option>`
   ).join("");
   const valueStr = ev.value === undefined || ev.value === null ? "" :
     (typeof ev.value === "string" ? ev.value : JSON.stringify(ev.value));
+  const tS = safeNumber(ev.t_s, 0);
+  const dS = ev.duration_s === undefined || ev.duration_s === null
+    ? "" : safeNumber(ev.duration_s, "");
+  const lastIdx = (currentTimeline.events.length - 1);
   return `
     <tr data-row-index="${i}">
       <td class="idx">${i + 1}</td>
-      <td><input type="number" step="0.01" min="0" data-field="t_s" value="${ev.t_s ?? 0}" /></td>
+      <td><input type="number" step="0.01" min="0" data-field="t_s" value="${tS}" /></td>
       <td><select data-field="kind">${kindOpts}</select></td>
       <td><input type="text" data-field="target" value="${escapeAttr(ev.target ?? "")}" /></td>
       <td><input type="text" data-field="value" value="${escapeAttr(valueStr)}" placeholder="(optional)" /></td>
-      <td><input type="number" step="0.01" min="0" data-field="duration_s" value="${ev.duration_s ?? ""}" placeholder="—" /></td>
+      <td><input type="number" step="0.01" min="0" data-field="duration_s" value="${dS}" placeholder="—" /></td>
       <td><input type="text" data-field="note" value="${escapeAttr(ev.note ?? "")}" /></td>
       <td>
         <div class="row-actions">
           <button class="row-action-btn" data-action="move-up"
                   ${i === 0 ? "disabled" : ""} title="上移">↑</button>
           <button class="row-action-btn" data-action="move-down"
-                  ${i === (currentTimeline.events.length - 1) ? "disabled" : ""}
+                  ${i === lastIdx ? "disabled" : ""}
                   title="下移">↓</button>
           <button class="row-action-btn delete-row" data-action="delete-row"
                   title="删除">×</button>
@@ -581,14 +616,24 @@ $("eventTableBody").addEventListener("input", e => {
     }
   } else if (field === "value") {
     // Try parse as JSON for bool/number/array; fall back to string.
+    // Codex R1 M3 fix: case-fold true/false/null BEFORE JSON.parse so
+    // typing "True" / "FALSE" yields actual booleans, not the strings
+    // "True"/"FALSE" — executors do raw bool() on these values, and a
+    // truthy string would silently pass a check that should fail.
     const raw = e.target.value;
     if (raw === "") {
       ev.value = null;
     } else {
-      try {
-        ev.value = JSON.parse(raw);
-      } catch {
-        ev.value = raw;
+      const lc = raw.trim().toLowerCase();
+      if (lc === "true") { ev.value = true; }
+      else if (lc === "false") { ev.value = false; }
+      else if (lc === "null") { ev.value = null; }
+      else {
+        try {
+          ev.value = JSON.parse(raw);
+        } catch {
+          ev.value = raw;
+        }
       }
     }
   } else {

@@ -231,6 +231,114 @@ def test_timeline_sim_event_row_has_action_markers(
     )
 
 
+# ─── 4b. Codex R1 safety contracts (Raw-active guard / number coerce / bool fold) ───
+#
+# Codex R1 (PR #117) returned CHANGES_REQUIRED with 2 HIGH + 2 MEDIUM:
+#   H1 — metadata edits in Raw mode silently overwrite Raw textarea
+#        edits because syncToTextarea() runs against the stale model.
+#   H2 — renderEventRow interpolates ev.t_s / ev.duration_s straight
+#        into innerHTML; a hostile Raw payload with string values
+#        could inject markup.
+#   M3 — value parser treats "True" / "False" as strings; executors
+#        bool() those silently the wrong way.
+#   M4 — tests are source-regex only and don't catch the above.
+# The four tests below close the M4 gap by asserting the source
+# contracts that fix H1 / H2 / M3.
+
+
+def test_metadata_handlers_guard_against_raw_active() -> None:
+    """The metadata strip is always visible. When Raw tab is active
+    and the user changes system/step_s/duration_s, the handler MUST
+    refresh the model from the textarea before mutating, otherwise
+    syncToTextarea() will overwrite the user's in-flight Raw edits.
+    Look for a guard like `loadFromTextarea()` or `refreshModelIfRawActive()`
+    invoked from each metadata handler."""
+    body = _read()
+    # The three metadata handlers are addEventListener("change", ...)
+    # blocks for metaSystem / metaStepS / metaDurationS. Each must call
+    # the guard helper before assigning to currentTimeline.
+    pattern = (
+        r'metaSystem.*?(?:loadFromTextarea|refreshModelIfRawActive)'
+        r'|metaStepS.*?(?:loadFromTextarea|refreshModelIfRawActive)'
+        r'|metaDurationS.*?(?:loadFromTextarea|refreshModelIfRawActive)'
+    )
+    matches = re.findall(pattern, body, re.DOTALL)
+    assert len(matches) >= 3, (
+        f"only {len(matches)} of 3 metadata handlers call the "
+        f"raw-active guard. All of metaSystem / metaStepS / "
+        f"metaDurationS must reload from textarea before mutating "
+        f"the model when Raw tab is active (Codex R1 H1)."
+    )
+
+
+def test_event_row_render_coerces_numeric_fields() -> None:
+    """`renderEventRow()` writes ev.t_s and ev.duration_s into the
+    DOM string. Without a number-coerce / NaN-reject step, a hostile
+    Raw payload with `t_s: "<img onerror=...>"` would inject markup.
+    The renderer must call a safe-number helper (Number / safeNumber /
+    parseFloat) before interpolation."""
+    body = _read()
+    # Look for either an explicit safeNumber helper or Number()/parseFloat
+    # applied to ev.t_s or ev.duration_s before interpolation.
+    coerce_pattern = (
+        r'safeNumber\s*\(\s*ev\.t_s'
+        r'|Number\(\s*ev\.t_s\s*\)'
+        r'|parseFloat\(\s*ev\.t_s\s*\)'
+    )
+    has_coerce = re.search(coerce_pattern, body)
+    assert has_coerce is not None, (
+        "renderEventRow does not coerce ev.t_s through a safe number "
+        "helper. Hostile Raw input could inject markup. Use "
+        "safeNumber(ev.t_s, 0) or Number(ev.t_s) before interpolation "
+        "(Codex R1 H2)."
+    )
+
+
+def test_value_parser_case_folds_booleans_and_null() -> None:
+    """The event-value parser must accept user input "True"/"False"/
+    "null" (any case) as actual booleans / null, not strings. The
+    executors call bool() on values; a truthy string would silently
+    pass a check that should fail (Codex R1 M3)."""
+    body = _read()
+    # Look for a toLowerCase() check on the raw value handling either
+    # "true"/"false" (the canonical lowercase form). Allow up to ~150
+    # chars of arbitrary content (including ; and newlines) between
+    # the toLowerCase call and the literal comparison.
+    pattern = (
+        r'toLowerCase\(\)[\s\S]{0,150}["\']true["\']'
+        r'|["\']true["\'][\s\S]{0,150}toLowerCase'
+    )
+    has_fold = re.search(pattern, body)
+    assert has_fold is not None, (
+        "value parser does not case-fold 'True'/'False'/'null'. "
+        "Add a toLowerCase() check before JSON.parse so typed "
+        "booleans become real booleans (Codex R1 M3)."
+    )
+
+
+def test_load_from_textarea_returns_status_for_guard() -> None:
+    """`loadFromTextarea()` must return a truthy-on-success / falsy-on-
+    failure status so the metadata handlers can use it as a guard
+    (`if (!refreshModelIfRawActive()) return;`). A void function
+    can't be guarded against — re-check that the function has an
+    explicit `return true` / `return false` branch."""
+    body = _read()
+    # Find the loadFromTextarea function body and check it returns
+    # both true and false (success vs parse-failure paths).
+    fn_match = re.search(
+        r'function\s+loadFromTextarea\s*\([^)]*\)\s*\{(.*?)\n\}',
+        body,
+        re.DOTALL,
+    )
+    assert fn_match is not None, "loadFromTextarea function not found"
+    fn_body = fn_match.group(1)
+    assert "return true" in fn_body and "return false" in fn_body, (
+        "loadFromTextarea must return true on parse success and false "
+        "on failure so refreshModelIfRawActive can guard metadata "
+        "handlers (Codex R1 H1)."
+    )
+
+
 # ─── 5. JSON metadata (system / step_s / duration_s) stays editable ───
 
 
