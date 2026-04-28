@@ -440,6 +440,151 @@ const EVENT_KINDS = [
   "mark_phase", "assert_condition", "start_deploy_sequence",
 ];
 
+// =========================================================================
+// P57-02 system-aware target catalogs
+// =========================================================================
+//
+// inputs:    canonical input field names accepted by the executor's
+//            _build_pilot / _build_raw_inputs path. Mapped to type
+//            ("bool" / "number") so the value cell can render a typed
+//            control (checkbox / number / text fallback).
+// faults:    "node:type" pairs from the executor whitelist. Picking
+//            from this list guarantees the inject_fault POST passes
+//            backend validation.
+// assertions: logic-node ids and output keys that assert_condition
+//            can target.
+//
+// Source of truth (for FANTUI):
+//   _PILOT_INPUT_KEYS in src/well_harness/timeline_engine/executors/fantui.py
+//   _FANTUI_FAULT_WHITELIST in same file
+//   FantuiExecutor.logic_node_ids
+// Source of truth (for C919):
+//   parse_c919_raw_inputs in src/well_harness/c919_tick_api.py
+//   _C919_FAULT_WHITELIST in src/well_harness/timeline_engine/executors/c919_etras.py
+//   C919ETRASExecutor.logic_node_ids
+
+const SYSTEM_CATALOGS = {
+  "fantui": {
+    inputs: {
+      "radio_altitude_ft": "number",
+      "tra_deg": "number",
+      "engine_running": "bool",
+      "aircraft_on_ground": "bool",
+      "reverser_inhibited": "bool",
+      "eec_enable": "bool",
+      "n1k": "number",
+      "max_n1k_deploy_limit": "number",
+    },
+    faults: [
+      "sw1:stuck_off", "sw1:stuck_on",
+      "sw2:stuck_off", "sw2:stuck_on",
+      "tls115:sensor_zero",
+      "vdt90:cmd_blocked",
+      "radio_altitude_ft:sensor_zero",
+      "n1k:sensor_zero",
+      "logic1:logic_stuck_false",
+      "logic2:logic_stuck_false",
+      "logic3:logic_stuck_false",
+      "logic4:logic_stuck_false",
+      "thr_lock:cmd_blocked",
+    ],
+    assertions: [
+      // Logic-node ids (FantuiExecutor.logic_node_ids).
+      "logic1", "logic2", "logic3", "logic4",
+      // logic_states virtual key tested in nominal_landing.json.
+      "logic4_active",
+      // Real shipped output assertion target (in
+      // src/well_harness/timelines/sw1_stuck_at_touchdown.json:29).
+      // Codex R1 H3: previous catalog had a fake "thr_lock_state"
+      // that the executor never emits, so picking it could never
+      // pass. Replaced with the real output key.
+      "throttle_electronic_lock_release_cmd",
+    ],
+  },
+  "c919-etras": {
+    // Codex R1 H1: previously the catalog also offered
+    // "locks.<flag>" dotted-path keys for set_input/ramp_input,
+    // but the C919 executor reads inputs["locks"] as a NESTED
+    // object only (c919_etras.py:_build_raw_inputs). The player
+    // writes inputs[event.target] verbatim, so dotted keys land
+    // as dead top-level entries the executor ignores. Removed.
+    // Lock states in C919 are state-machine internal; users who
+    // need to drive them should set the nested object directly
+    // via Raw JSON.
+    inputs: {
+      "tra_deg": "number",
+      "lgcu1_mlg_wow": "bool",
+      "lgcu2_mlg_wow": "bool",
+      "lgcu1_valid": "bool",
+      "lgcu2_valid": "bool",
+      "engine_running": "bool",
+      "tr_inhibited": "bool",
+      "etras_over_temp_fault": "bool",
+      "atltla": "bool",
+      "apwtla": "bool",
+      "trcu_menu_mode": "bool",
+      "maintenance_cycle_on_going": "bool",
+      "n1k_pct": "number",
+      "max_n1k_deploy_limit_pct": "number",
+      "max_n1k_stow_limit_pct": "number",
+      "tr_position_pct": "number",
+    },
+    faults: [
+      "tr_inhibited:stuck_on",
+      "etras_over_temp_fault:stuck_on",
+      "engine_running:stuck_off",
+      "lgcu1:disagree", "lgcu1:invalid", "lgcu2:invalid",
+      "lgcu_both:invalid",
+      "atltla:stuck_off", "apwtla:stuck_off",
+      "tls:sensor_fail",
+      "pylon_l:sensor_fail", "pylon_r:sensor_fail",
+      "pls:stuck_unlocked",
+      "tr_position:stuck_deployed",
+    ],
+    assertions: [
+      "ln_eicu_cmd2", "ln_eicu_cmd3",
+      "ln_fadec_deploy_command", "ln_fadec_stow_command",
+      "fadec_deploy_command", "fadec_stow_command",
+      "tr_stowed_and_locked", "unlock_confirmed",
+      "single_phase_unlock_power_on", "three_phase_trcu_power_on",
+    ],
+  },
+};
+
+// Schema accepts duration_s only on these kinds (per
+// timeline_engine/schema.py); others should not invite the user to
+// type a value the schema will reject.
+const KIND_USES_DURATION = new Set([
+  "ramp_input", "inject_fault", "start_deploy_sequence",
+]);
+
+function getTargetOptions(system, kind) {
+  const cat = SYSTEM_CATALOGS[system] || {};
+  if (kind === "set_input" || kind === "ramp_input") {
+    return Object.keys(cat.inputs || {});
+  }
+  if (kind === "inject_fault" || kind === "clear_fault") {
+    return cat.faults || [];
+  }
+  if (kind === "assert_condition") {
+    return cat.assertions || [];
+  }
+  // mark_phase / start_deploy_sequence → free-form (return empty so
+  // the cell renders as a plain text input).
+  return [];
+}
+
+function getValueInputType(system, kind, target) {
+  if (kind === "set_input") {
+    const cat = SYSTEM_CATALOGS[system] || {};
+    const t = (cat.inputs || {})[target];
+    if (t === "bool") return "checkbox";
+    if (t === "number") return "number";
+  }
+  if (kind === "ramp_input") return "number";
+  return "text";
+}
+
 let currentTimeline = {
   title: "", description: "", system: "fantui",
   step_s: 0.1, duration_s: 5.0, initial_inputs: {}, events: [],
@@ -464,7 +609,13 @@ function loadPresetInEditor(key) {
 
 function syncToTextarea() {
   // Source of truth → JSON textarea (the run button's POST source).
-  $("timelineJson").value = JSON.stringify(currentTimeline, null, 2);
+  // Codex R1 H2 (P57-02) leak fix: strip _ui_* keys (UI-only state
+  // like _ui_target_custom) before serializing so the textarea — and
+  // therefore the POST payload — stays clean schema.
+  const cleaned = JSON.parse(JSON.stringify(currentTimeline, (k, v) =>
+    typeof k === "string" && k.startsWith("_ui_") ? undefined : v
+  ));
+  $("timelineJson").value = JSON.stringify(cleaned, null, 2);
 }
 
 function loadFromTextarea() {
@@ -521,6 +672,9 @@ function refreshModelIfRawActive() {
 $("metaSystem").addEventListener("change", () => {
   if (!refreshModelIfRawActive()) { renderMetaStrip(); return; }
   currentTimeline.system = $("metaSystem").value;
+  // P57-02: target/value dropdowns are system-aware, so the event
+  // table must re-render to populate the new catalog options.
+  renderEventTable();
   syncToTextarea();
 });
 $("metaStepS").addEventListener("change", () => {
@@ -556,24 +710,105 @@ function safeNumber(v, fallback) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function renderTargetCell(ev, system) {
+  // P57-02: target cell becomes a <select> populated from the
+  // system+kind-aware catalog, with a "(custom...)" escape that
+  // flips to a free-text input for unknown targets. mark_phase /
+  // start_deploy_sequence kinds get a plain text input directly
+  // (catalog is empty by design — phase names are free-form).
+  //
+  // Codex R1 H2 fix: a sticky `_ui_target_custom` flag on the
+  // event keeps the cell in text-input mode after the user picks
+  // "(custom...)" — without it the empty target would re-render
+  // as the same select and trap the user. The flag is stripped
+  // from the JSON payload by syncToTextarea (it is UI state, not
+  // schema state).
+  const opts = getTargetOptions(system, ev.kind);
+  const tgtStr = ev.target ?? "";
+  if (opts.length === 0 || ev._ui_target_custom === true) {
+    return (
+      `<input type="text" data-field="target" data-target-custom="1" `
+      + `value="${escapeAttr(tgtStr)}" placeholder="(custom target)" />`
+    );
+  }
+  // If the current target is not in the catalog (and non-empty),
+  // the user previously entered a custom value — keep the text
+  // input so subsequent edits don't lose it.
+  const inCatalog = opts.includes(tgtStr);
+  if (!inCatalog && tgtStr !== "") {
+    return (
+      `<input type="text" data-field="target" data-target-custom="1" `
+      + `value="${escapeAttr(tgtStr)}" />`
+    );
+  }
+  const optionTags = opts.map(
+    o => `<option value="${escapeAttr(o)}"${o === tgtStr ? " selected" : ""}>${escapeAttr(o)}</option>`
+  ).join("");
+  return (
+    `<select data-field="target">`
+    + `<option value=""${tgtStr === "" ? " selected" : ""}>(选择)</option>`
+    + optionTags
+    + `<option value="__custom__">(custom...)</option>`
+    + `</select>`
+  );
+}
+
+function renderValueCell(ev, system) {
+  // P57-02: value cell type-aware — checkbox for bool target,
+  // number for number target, text otherwise. The model stores
+  // raw JS booleans/numbers/strings; the input "value" attribute
+  // round-trips through escapeAttr.
+  const t = getValueInputType(system, ev.kind, ev.target ?? "");
+  if (t === "checkbox") {
+    // Codex R1 M1 fix: also accept canonical string booleans
+    // ("true" / "True" / "TRUE") as checked. A raw or hand-edited
+    // timeline that has `"value": "true"` on a bool target should
+    // render checked, not lie about the model. Canonicalize on
+    // first edit (the value handler will normalize string→bool).
+    const isTrue = ev.value === true ||
+      (typeof ev.value === "string" &&
+       ev.value.trim().toLowerCase() === "true");
+    const checked = isTrue ? " checked" : "";
+    return (
+      `<input type="checkbox" data-field="value" data-value-bool="1"`
+      + `${checked} />`
+    );
+  }
+  const valueStr = ev.value === undefined || ev.value === null ? "" :
+    (typeof ev.value === "string" ? ev.value : JSON.stringify(ev.value));
+  if (t === "number") {
+    return (
+      `<input type="number" step="0.01" data-field="value" `
+      + `value="${escapeAttr(valueStr)}" placeholder="(number)" />`
+    );
+  }
+  return (
+    `<input type="text" data-field="value" `
+    + `value="${escapeAttr(valueStr)}" placeholder="(optional)" />`
+  );
+}
+
 function renderEventRow(ev, i) {
+  const system = currentTimeline.system || "fantui";
   const kindOpts = EVENT_KINDS.map(
     k => `<option value="${escapeAttr(k)}"${k === ev.kind ? " selected" : ""}>${escapeAttr(k)}</option>`
   ).join("");
-  const valueStr = ev.value === undefined || ev.value === null ? "" :
-    (typeof ev.value === "string" ? ev.value : JSON.stringify(ev.value));
   const tS = safeNumber(ev.t_s, 0);
   const dS = ev.duration_s === undefined || ev.duration_s === null
     ? "" : safeNumber(ev.duration_s, "");
   const lastIdx = (currentTimeline.events.length - 1);
+  // P57-02: duration_s cell is disabled unless kind ∈
+  // KIND_USES_DURATION (schema rejects it on other kinds, so the
+  // editor must mirror that constraint visually).
+  const dDisabled = KIND_USES_DURATION.has(ev.kind) ? "" : "disabled";
   return `
     <tr data-row-index="${i}">
       <td class="idx">${i + 1}</td>
       <td><input type="number" step="0.01" min="0" data-field="t_s" value="${tS}" /></td>
       <td><select data-field="kind">${kindOpts}</select></td>
-      <td><input type="text" data-field="target" value="${escapeAttr(ev.target ?? "")}" /></td>
-      <td><input type="text" data-field="value" value="${escapeAttr(valueStr)}" placeholder="(optional)" /></td>
-      <td><input type="number" step="0.01" min="0" data-field="duration_s" value="${dS}" placeholder="—" /></td>
+      <td>${renderTargetCell(ev, system)}</td>
+      <td>${renderValueCell(ev, system)}</td>
+      <td><input type="number" step="0.01" min="0" data-field="duration_s" value="${dS}" placeholder="—" ${dDisabled} /></td>
       <td><input type="text" data-field="note" value="${escapeAttr(ev.note ?? "")}" /></td>
       <td>
         <div class="row-actions">
@@ -604,7 +839,7 @@ $("addRow").addEventListener("click", () => {
   syncToTextarea();
 });
 
-$("eventTableBody").addEventListener("input", e => {
+function handleEventCellChange(e) {
   const tr = e.target.closest("tr[data-row-index]");
   if (!tr) return;
   const i = parseInt(tr.dataset.rowIndex, 10);
@@ -619,25 +854,64 @@ $("eventTableBody").addEventListener("input", e => {
     } else if (!isNaN(v)) {
       ev[field] = v;
     }
+  } else if (field === "kind") {
+    // P57-02: kind change rewires target/value/duration cells,
+    // so re-render the entire row instead of patching one input.
+    // Codex R1 H2 fix: clear the sticky custom-mode flag on kind
+    // change so the new kind's catalog gets a fresh chance to
+    // populate the dropdown.
+    ev.kind = e.target.value;
+    if (!KIND_USES_DURATION.has(ev.kind)) delete ev.duration_s;
+    delete ev._ui_target_custom;
+    syncToTextarea();
+    renderEventTable();
+    return;
+  } else if (field === "target") {
+    // Codex R1 H2 fix: "(custom...)" sentinel sets the sticky
+    // _ui_target_custom flag so renderTargetCell keeps showing
+    // the text input on re-render. Without the flag the empty
+    // target would re-render as the same select — the user
+    // would be trapped.
+    if (e.target.value === "__custom__") {
+      ev._ui_target_custom = true;
+      ev.target = "";
+      syncToTextarea();
+      renderEventTable();
+      return;
+    }
+    ev.target = e.target.value;
+    // If the user typed a value that matches a catalog entry
+    // exactly while in custom mode, keep them in custom mode —
+    // it's their decision when to switch back. Re-render to
+    // refresh the value-cell type.
+    syncToTextarea();
+    renderEventTable();
+    return;
   } else if (field === "value") {
-    // Try parse as JSON for bool/number/array; fall back to string.
-    // Codex R1 M3 fix: case-fold true/false/null BEFORE JSON.parse so
-    // typing "True" / "FALSE" yields actual booleans, not the strings
-    // "True"/"FALSE" — executors do raw bool() on these values, and a
-    // truthy string would silently pass a check that should fail.
-    const raw = e.target.value;
-    if (raw === "") {
-      ev.value = null;
+    // P57-02: bool checkbox writes ev.value directly as a boolean;
+    // number/text inputs go through the case-fold path below.
+    if (e.target.dataset.valueBool === "1") {
+      ev.value = e.target.checked === true;
     } else {
-      const lc = raw.trim().toLowerCase();
-      if (lc === "true") { ev.value = true; }
-      else if (lc === "false") { ev.value = false; }
-      else if (lc === "null") { ev.value = null; }
-      else {
-        try {
-          ev.value = JSON.parse(raw);
-        } catch {
-          ev.value = raw;
+      // Try parse as JSON for bool/number/array; fall back to string.
+      // Codex R1 M3 fix: case-fold true/false/null BEFORE JSON.parse so
+      // typing "True" / "FALSE" yields actual booleans, not the strings
+      // "True"/"FALSE" — executors do raw bool() on these values, and a
+      // truthy string would silently pass a check that should fail.
+      const raw = e.target.value;
+      if (raw === "") {
+        ev.value = null;
+      } else {
+        const lc = raw.trim().toLowerCase();
+        if (lc === "true") { ev.value = true; }
+        else if (lc === "false") { ev.value = false; }
+        else if (lc === "null") { ev.value = null; }
+        else {
+          try {
+            ev.value = JSON.parse(raw);
+          } catch {
+            ev.value = raw;
+          }
         }
       }
     }
@@ -645,7 +919,13 @@ $("eventTableBody").addEventListener("input", e => {
     ev[field] = e.target.value;
   }
   syncToTextarea();
-});
+}
+
+// "input" fires on every keystroke (text/number); "change" fires on
+// blur/commit. We need both — checkbox toggles and select changes
+// only fire "change", while text typing fires "input".
+$("eventTableBody").addEventListener("input", handleEventCellChange);
+$("eventTableBody").addEventListener("change", handleEventCellChange);
 
 $("eventTableBody").addEventListener("click", e => {
   const btn = e.target.closest("button[data-action]");
@@ -716,6 +996,13 @@ async function runSimulation() {
     setStatus("JSON 解析失败: " + e.message, "err");
     return;
   }
+  // Codex R2 LOW fix: a hand-edited Raw payload could include
+  // _ui_* state (e.g. someone pastes a model dump). syncToTextarea
+  // strips on Visual edits, but Raw paste bypasses it. Sanitize
+  // here too so end-to-end the wire JSON is clean schema.
+  payload = JSON.parse(JSON.stringify(payload, (k, v) =>
+    typeof k === "string" && k.startsWith("_ui_") ? undefined : v
+  ));
   const endpoint = resolveEndpoint(payload.system);
   setStatus("运行中 · POST " + endpoint);
   try {
