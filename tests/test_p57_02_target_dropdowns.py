@@ -283,6 +283,157 @@ def test_kind_uses_duration_set_exists_and_covers_three_kinds() -> None:
         )
 
 
+# ─── 6. Codex R1 backend-contract truth (H1/H3) ───
+#
+# Codex R1 (PR #118) returned CHANGES_REQUIRED with 3 HIGH + 2 MEDIUM:
+#   H1 — c919 catalog had "locks.*" dotted keys for set_input/ramp_input,
+#        but the executor reads inputs["locks"] as a NESTED object only,
+#        so dotted keys were dead. Removed.
+#   H2 — "(custom...)" escape didn't work: empty target re-rendered as
+#        the same select, trapping the user. Added sticky _ui_target_custom
+#        flag (stripped from JSON wire by syncToTextarea).
+#   H3 — fantui assertion catalog had a fake "thr_lock_state" the
+#        executor never emits. Replaced with the real shipped
+#        "throttle_electronic_lock_release_cmd".
+#   M1 — bool checkbox rendered unchecked for string "true" from raw
+#        paste. Now accepts canonical string booleans as checked.
+#   M2 — tests were source-regex only; close gaps below.
+
+
+def test_c919_catalog_does_not_offer_dotted_locks_inputs() -> None:
+    """Codex R1 H1: the C919 executor reads inputs["locks"] as a
+    nested object only (c919_etras.py:_build_raw_inputs). The
+    timeline player writes inputs[event.target] verbatim, so a
+    "locks.tls_locked" set_input target lands as a dead top-level
+    key the executor ignores. The catalog must NOT advertise such
+    targets — picking one would silently fail at runtime."""
+    body = _read()
+    # Locate c919-etras catalog block and assert no "locks." key.
+    block_match = re.search(
+        r'["\']c919-etras["\']\s*:\s*\{(.*?)\n\s{0,4}\},?',
+        body, re.DOTALL,
+    )
+    assert block_match is not None, "c919-etras catalog block not found"
+    block = block_match.group(1)
+    forbidden = re.findall(r'["\']locks\.[a-z_]+["\']', block)
+    assert not forbidden, (
+        f"c919-etras catalog still advertises dotted locks targets: "
+        f"{forbidden}. The executor doesn't accept these — picking "
+        f"one would silently fail (Codex R1 H1)."
+    )
+
+
+def test_fantui_assertion_catalog_uses_real_output_key() -> None:
+    """Codex R1 H3: the fantui assertion catalog had a fake
+    "thr_lock_state" that the executor never emits. The real
+    shipped output key is "throttle_electronic_lock_release_cmd"
+    (used in src/well_harness/timelines/sw1_stuck_at_touchdown.json).
+    Catalog must include the real key and must NOT include the fake."""
+    body = _read()
+    # Locate fantui catalog block.
+    block_match = re.search(
+        r'["\']fantui["\']\s*:\s*\{(.*?)assertions\s*:\s*\[(.*?)\]',
+        body, re.DOTALL,
+    )
+    assert block_match is not None, "fantui assertions block not found"
+    assertions_block = block_match.group(2)
+    # Strip JS line comments so they don't trip the keyword scans.
+    assertions_no_comments = re.sub(r"//[^\n]*", "", assertions_block)
+    assert "throttle_electronic_lock_release_cmd" in assertions_no_comments, (
+        "fantui assertions catalog missing the real output key "
+        "'throttle_electronic_lock_release_cmd' (used in shipped "
+        "fixture sw1_stuck_at_touchdown.json) (Codex R1 H3)."
+    )
+    # The fake "thr_lock_state" key must NOT appear as an actual
+    # string literal in the assertions list (comments allowed).
+    fake_in_strings = re.search(
+        r'["\']thr_lock_state["\']', assertions_no_comments,
+    )
+    assert fake_in_strings is None, (
+        "fantui assertions catalog still offers fake "
+        "'thr_lock_state' which the executor never emits — "
+        "picking it could never pass (Codex R1 H3)."
+    )
+
+
+def test_custom_escape_uses_sticky_flag_not_just_empty_target() -> None:
+    """Codex R1 H2: clearing ev.target to "" and re-rendering does
+    NOT switch the cell to text input — renderTargetCell falls
+    through to the same select. A sticky flag (e.g.
+    _ui_target_custom) on the event must keep the cell in custom
+    mode after the user picks "(custom...)"."""
+    body = _read()
+    # The handler that processes target == "__custom__" must set a
+    # sticky flag (not just clear ev.target).
+    pattern = (
+        r'if\s*\(\s*e\.target\.value\s*===\s*["\']__custom__["\'][^}]+'
+        r'_ui_target_custom\s*='
+    )
+    has_flag_set = re.search(pattern, body, re.DOTALL)
+    assert has_flag_set is not None, (
+        "the (custom...) handler does not set a sticky "
+        "_ui_target_custom flag. Without the flag, ev.target = ''"
+        "+ re-render falls through to the same select and traps "
+        "the user (Codex R1 H2)."
+    )
+    # And renderTargetCell must check the flag to enter text-input mode.
+    assert "_ui_target_custom" in body, (
+        "_ui_target_custom flag never read in render path — fix "
+        "incomplete."
+    )
+
+
+def test_sync_to_textarea_strips_ui_state_keys() -> None:
+    """The _ui_* flags are UI-only state. They must be stripped
+    from the wire JSON so the run-button POST does not send
+    schema-violating extra keys to the backend."""
+    body = _read()
+    fn_match = re.search(
+        r'function\s+syncToTextarea\s*\([^)]*\)\s*\{(.*?)\n\}',
+        body, re.DOTALL,
+    )
+    assert fn_match is not None, "syncToTextarea function not found"
+    fn_body = fn_match.group(1)
+    # Look for a JSON.stringify replacer that drops _ui_-prefixed keys.
+    pattern = (
+        r'startsWith\(\s*["\']_ui_["\']\s*\)'
+        r'|_ui_[\s\S]{0,50}undefined'
+    )
+    has_strip = re.search(pattern, fn_body)
+    assert has_strip is not None, (
+        "syncToTextarea does not strip _ui_* keys from the wire "
+        "JSON. UI-only state would leak into the POST payload "
+        "(Codex R1 H2 leak)."
+    )
+
+
+def test_checkbox_renders_checked_for_canonical_string_booleans() -> None:
+    """Codex R1 M1: a raw timeline with `"value": "true"` on a bool
+    target loaded through Visual mode rendered the checkbox unchecked
+    because ev.value === true was the only checked condition. A
+    canonical string "true"/"True"/"TRUE" should also render checked
+    so the editor doesn't lie about the loaded model."""
+    body = _read()
+    # Find the renderValueCell function body.
+    fn_match = re.search(
+        r'function\s+renderValueCell\s*\([^)]*\)\s*\{(.*?)\n\}',
+        body, re.DOTALL,
+    )
+    assert fn_match is not None, "renderValueCell function not found"
+    fn_body = fn_match.group(1)
+    # Look for a string-bool check (case-folded "true" string compare).
+    pattern = (
+        r'toLowerCase\(\)[\s\S]{0,80}["\']true["\']'
+        r'|["\']true["\'][\s\S]{0,80}toLowerCase'
+    )
+    has_string_check = re.search(pattern, fn_body)
+    assert has_string_check is not None, (
+        "checkbox render only treats literal JS true as checked. A "
+        "raw timeline with `\"value\": \"true\"` would render "
+        "unchecked, lying about the model (Codex R1 M1)."
+    )
+
+
 def test_duration_cell_renders_disabled_for_irrelevant_kinds() -> None:
     """When kind ∉ KIND_USES_DURATION, the duration_s input must
     be visually disabled (HTML `disabled` attr or a CSS class) so

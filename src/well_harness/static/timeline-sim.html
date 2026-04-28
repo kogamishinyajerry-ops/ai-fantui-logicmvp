@@ -489,11 +489,28 @@ const SYSTEM_CATALOGS = {
       "thr_lock:cmd_blocked",
     ],
     assertions: [
+      // Logic-node ids (FantuiExecutor.logic_node_ids).
       "logic1", "logic2", "logic3", "logic4",
-      "logic4_active", "thr_lock_state",
+      // logic_states virtual key tested in nominal_landing.json.
+      "logic4_active",
+      // Real shipped output assertion target (in
+      // src/well_harness/timelines/sw1_stuck_at_touchdown.json:29).
+      // Codex R1 H3: previous catalog had a fake "thr_lock_state"
+      // that the executor never emits, so picking it could never
+      // pass. Replaced with the real output key.
+      "throttle_electronic_lock_release_cmd",
     ],
   },
   "c919-etras": {
+    // Codex R1 H1: previously the catalog also offered
+    // "locks.<flag>" dotted-path keys for set_input/ramp_input,
+    // but the C919 executor reads inputs["locks"] as a NESTED
+    // object only (c919_etras.py:_build_raw_inputs). The player
+    // writes inputs[event.target] verbatim, so dotted keys land
+    // as dead top-level entries the executor ignores. Removed.
+    // Lock states in C919 are state-machine internal; users who
+    // need to drive them should set the nested object directly
+    // via Raw JSON.
     inputs: {
       "tra_deg": "number",
       "lgcu1_mlg_wow": "bool",
@@ -511,16 +528,6 @@ const SYSTEM_CATALOGS = {
       "max_n1k_deploy_limit_pct": "number",
       "max_n1k_stow_limit_pct": "number",
       "tr_position_pct": "number",
-      "locks.tls_locked": "bool",
-      "locks.tls_unlocked": "bool",
-      "locks.pylon_lock_l_locked": "bool",
-      "locks.pylon_lock_l_unlocked": "bool",
-      "locks.pylon_lock_r_locked": "bool",
-      "locks.pylon_lock_r_unlocked": "bool",
-      "locks.pls_l_locked": "bool",
-      "locks.pls_l_unlocked": "bool",
-      "locks.pls_r_locked": "bool",
-      "locks.pls_r_unlocked": "bool",
     },
     faults: [
       "tr_inhibited:stuck_on",
@@ -602,7 +609,13 @@ function loadPresetInEditor(key) {
 
 function syncToTextarea() {
   // Source of truth → JSON textarea (the run button's POST source).
-  $("timelineJson").value = JSON.stringify(currentTimeline, null, 2);
+  // Codex R1 H2 (P57-02) leak fix: strip _ui_* keys (UI-only state
+  // like _ui_target_custom) before serializing so the textarea — and
+  // therefore the POST payload — stays clean schema.
+  const cleaned = JSON.parse(JSON.stringify(currentTimeline, (k, v) =>
+    typeof k === "string" && k.startsWith("_ui_") ? undefined : v
+  ));
+  $("timelineJson").value = JSON.stringify(cleaned, null, 2);
 }
 
 function loadFromTextarea() {
@@ -703,14 +716,24 @@ function renderTargetCell(ev, system) {
   // flips to a free-text input for unknown targets. mark_phase /
   // start_deploy_sequence kinds get a plain text input directly
   // (catalog is empty by design — phase names are free-form).
+  //
+  // Codex R1 H2 fix: a sticky `_ui_target_custom` flag on the
+  // event keeps the cell in text-input mode after the user picks
+  // "(custom...)" — without it the empty target would re-render
+  // as the same select and trap the user. The flag is stripped
+  // from the JSON payload by syncToTextarea (it is UI state, not
+  // schema state).
   const opts = getTargetOptions(system, ev.kind);
   const tgtStr = ev.target ?? "";
-  if (opts.length === 0) {
-    return `<input type="text" data-field="target" value="${escapeAttr(tgtStr)}" />`;
+  if (opts.length === 0 || ev._ui_target_custom === true) {
+    return (
+      `<input type="text" data-field="target" data-target-custom="1" `
+      + `value="${escapeAttr(tgtStr)}" placeholder="(custom target)" />`
+    );
   }
-  // If the current target is not in the catalog, the user previously
-  // entered a custom value — show the text input + a button to switch
-  // back to the dropdown.
+  // If the current target is not in the catalog (and non-empty),
+  // the user previously entered a custom value — keep the text
+  // input so subsequent edits don't lose it.
   const inCatalog = opts.includes(tgtStr);
   if (!inCatalog && tgtStr !== "") {
     return (
@@ -737,7 +760,15 @@ function renderValueCell(ev, system) {
   // round-trips through escapeAttr.
   const t = getValueInputType(system, ev.kind, ev.target ?? "");
   if (t === "checkbox") {
-    const checked = ev.value === true ? " checked" : "";
+    // Codex R1 M1 fix: also accept canonical string booleans
+    // ("true" / "True" / "TRUE") as checked. A raw or hand-edited
+    // timeline that has `"value": "true"` on a bool target should
+    // render checked, not lie about the model. Canonicalize on
+    // first edit (the value handler will normalize string→bool).
+    const isTrue = ev.value === true ||
+      (typeof ev.value === "string" &&
+       ev.value.trim().toLowerCase() === "true");
+    const checked = isTrue ? " checked" : "";
     return (
       `<input type="checkbox" data-field="value" data-value-bool="1"`
       + `${checked} />`
@@ -826,23 +857,33 @@ function handleEventCellChange(e) {
   } else if (field === "kind") {
     // P57-02: kind change rewires target/value/duration cells,
     // so re-render the entire row instead of patching one input.
+    // Codex R1 H2 fix: clear the sticky custom-mode flag on kind
+    // change so the new kind's catalog gets a fresh chance to
+    // populate the dropdown.
     ev.kind = e.target.value;
     if (!KIND_USES_DURATION.has(ev.kind)) delete ev.duration_s;
+    delete ev._ui_target_custom;
     syncToTextarea();
     renderEventTable();
     return;
   } else if (field === "target") {
-    // P57-02: "(custom...)" sentinel flips the target cell back to
-    // a free-text input so unknown values stay editable.
+    // Codex R1 H2 fix: "(custom...)" sentinel sets the sticky
+    // _ui_target_custom flag so renderTargetCell keeps showing
+    // the text input on re-render. Without the flag the empty
+    // target would re-render as the same select — the user
+    // would be trapped.
     if (e.target.value === "__custom__") {
+      ev._ui_target_custom = true;
       ev.target = "";
       syncToTextarea();
       renderEventTable();
       return;
     }
     ev.target = e.target.value;
-    // System+kind change can shift the value cell type (bool→number),
-    // so re-render to keep the cell in sync with the new target.
+    // If the user typed a value that matches a catalog entry
+    // exactly while in custom mode, keep them in custom mode —
+    // it's their decision when to switch back. Re-render to
+    // refresh the value-cell type.
     syncToTextarea();
     renderEventTable();
     return;
