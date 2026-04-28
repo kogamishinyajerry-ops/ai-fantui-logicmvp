@@ -73,7 +73,7 @@
   flex-shrink:0;background:var(--bg1);border-top:1px solid var(--b1);
   max-height:0;overflow:hidden;transition:max-height .25s ease;
 }
-.tsc-drawer.open{max-height:320px;overflow:visible}
+.tsc-drawer.open{max-height:280px;overflow:hidden}
 .tsc-drawer-inner{padding:8px 12px 10px;display:flex;flex-direction:column;gap:6px}
 .tsc-drawer-head{display:flex;align-items:center;gap:10px;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.08em}
 .tsc-drawer-title{color:var(--cyan);font-family:var(--mono);font-weight:700}
@@ -91,7 +91,7 @@
 }
 .tsc-selector>summary::-webkit-details-marker,.tsc-selector>summary::marker{display:none}
 .tsc-selector-panel{
-  position:absolute;top:calc(100% + 3px);left:0;z-index:300;
+  position:absolute;top:calc(100% + 3px);bottom:auto;left:0;z-index:300;
   background:var(--bg2);border:1px solid var(--b1);border-radius:5px;
   padding:8px 10px;display:grid;grid-template-columns:repeat(3,1fr);
   gap:4px 14px;min-width:400px;box-shadow:0 6px 20px rgba(0,0,0,.6);
@@ -321,7 +321,7 @@
       <span id="tscCount" style="font-family:var(--mono)">0 samples</span>
     </div>
     <div class="tsc-drawer-chart">
-      <svg id="tsc-svg" viewBox="0 0 1100 240" width="1100" height="240"
+      <svg id="tsc-svg" viewBox="0 0 1100 200" width="1100" height="200"
            role="img" aria-label="FANTUI 反推时间序列图"></svg>
     </div>
     <div id="tsc-legend" class="tsc-legend"></div>
@@ -525,7 +525,7 @@ function ensureChart(){
   const svg=$('tsc-svg'), legend=$('tsc-legend');
   if(!svg||!window.TimeseriesChart) return null;
   chart = TimeseriesChart.create({
-    svg, legend, width:1100, height:240,
+    svg, legend, width:1100, height:200,
     laneLabels: FANTUI_LANES, laneSeries: FANTUI_LANE_SERIES,
   });
   return chart;
