@@ -1,0 +1,678 @@
+"""P58-04 — custom tooltip layer + a11y polish (final phase of P58 arc).
+
+Two additive surfaces:
+
+1. Custom tooltip system — a single shared #tooltipBubble element
+   follows whichever element with `data-tooltip` is hovered or focused.
+   Replaces the native `title=` ~1s delay with an instant styled bubble
+   that is also wired to aria-describedby so screen readers announce
+   the tooltip when the target is focused.
+
+   Why a single shared bubble (not per-target instances)? Because the
+   event-table row buttons re-render on every renderEventTable call;
+   tracking per-button bubble state is brittle. Single-bubble + delegated
+   listeners survives re-renders cleanly.
+
+2. a11y polish — aria-label on the icon/emoji-only buttons (toolbar
+   save/delete/export/import + per-row up/down/delete) so screen
+   readers don't read "💾 暂存" as "save emoji" or "× delete row" as
+   just an "x" character.
+
+Strict additive-only per user directive (2026-04-28). Steady-state UI:
+  - #tooltipBubble[hidden] → zero pixels
+  - data-tooltip / aria-label additions are invisible attributes
+  - existing visible button text/glyphs unchanged
+"""
+
+from __future__ import annotations
+
+import re
+import shutil
+import subprocess
+from pathlib import Path
+
+import pytest
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+TIMELINE_SIM = REPO_ROOT / "src" / "well_harness" / "static" / "timeline-sim.html"
+
+
+def _read() -> str:
+    return TIMELINE_SIM.read_text(encoding="utf-8")
+
+
+def _tooltip_window_listener(body: str, evt: str) -> str:
+    """Return the source chunk of the tooltip-specific window
+    addEventListener for `evt`. The page has multiple listeners on
+    "resize" / "scroll" (P58-02 tour reposition, P58-04 tooltip
+    reposition); pick the one that mentions BOTH tooltipActiveTarget
+    AND tooltipPosition( so future listeners that only reference one
+    don't silently match (Codex NIT-R3-2)."""
+    listeners = re.findall(
+        rf'window\.addEventListener\s*\(\s*"{evt}"[\s\S]{{0,1200}}?'
+        rf'\}}\s*(?:,\s*\{{[^}}]*\}}\s*)?\)\s*;',
+        body,
+    )
+    matches = [
+        c for c in listeners
+        if "tooltipActiveTarget" in c and "tooltipPosition(" in c
+    ]
+    assert len(matches) == 1, (
+        f"expected exactly one tooltip-specific window {evt!r} listener "
+        f"(referencing tooltipActiveTarget + tooltipPosition), found "
+        f"{len(matches)}. Per Codex NIT-R3-2: do not silently pick the "
+        f"first of multiple matches."
+    )
+    return matches[0]
+
+
+# ── 1. Tooltip bubble DOM ──
+
+
+def test_tooltip_bubble_exists_and_hidden_by_default() -> None:
+    """#tooltipBubble must exist as a single shared element with the
+    `hidden` attribute. Hidden by default → zero pixels in steady
+    state. role=tooltip so assistive tech recognizes the live region."""
+    body = _read()
+    pattern = (
+        r'<div\s+id="tooltipBubble"[^>]*class="tooltip-bubble"'
+        r'[^>]*role="tooltip"[^>]*\bhidden\b'
+    )
+    assert re.search(pattern, body), (
+        "#tooltipBubble not found, or missing role=tooltip / hidden. "
+        "The single-shared-bubble pattern needs this anchor."
+    )
+
+
+# ── 2. data-tooltip attributes on key buttons ──
+
+
+@pytest.mark.parametrize(
+    "btn_id",
+    [
+        "saveScenarioBtn", "exportJsonBtn", "importJsonBtn",
+        "deleteScenarioBtn", "runBtn",
+    ],
+)
+def test_toolbar_buttons_have_data_tooltip(btn_id: str) -> None:
+    """The five primary toolbar buttons must declare data-tooltip so
+    P58-04's bubble can render their description on hover/focus.
+    Without data-tooltip, only the slow native title= surfaces."""
+    body = _read()
+    pattern = rf'<button[^>]*\bid="{btn_id}"[^>]*\bdata-tooltip="[^"]+"'
+    # Allow attribute order flexibility — id and data-tooltip can swap.
+    fallback_pattern = (
+        rf'<button(?=[^>]*\bid="{btn_id}")[^>]*\bdata-tooltip="[^"]+"'
+    )
+    assert re.search(pattern, body, re.DOTALL) or re.search(
+        fallback_pattern, body, re.DOTALL
+    ), (
+        f"button id={btn_id!r} is missing data-tooltip. The custom "
+        f"tooltip layer relies on this attribute to populate the bubble."
+    )
+
+
+@pytest.mark.parametrize(
+    "btn_id",
+    [
+        "saveScenarioBtn", "exportJsonBtn", "importJsonBtn",
+        "deleteScenarioBtn", "runBtn",
+    ],
+)
+def test_toolbar_buttons_have_aria_label(btn_id: str) -> None:
+    """Each emoji/icon-prefixed toolbar button needs an aria-label so
+    screen readers don't read "💾 暂存" as "save emoji" or "▶ 运行仿真"
+    as "play emoji"."""
+    body = _read()
+    pattern = rf'<button[^>]*\bid="{btn_id}"[^>]*\baria-label="[^"]+"'
+    fallback_pattern = (
+        rf'<button(?=[^>]*\bid="{btn_id}")[^>]*\baria-label="[^"]+"'
+    )
+    assert re.search(pattern, body, re.DOTALL) or re.search(
+        fallback_pattern, body, re.DOTALL
+    ), (
+        f"button id={btn_id!r} is missing aria-label. Emoji-prefixed "
+        f"buttons are unintelligible to screen readers without one."
+    )
+
+
+def test_row_action_buttons_have_data_tooltip_and_aria_label() -> None:
+    """The per-row up / down / delete action buttons (generated by JS
+    in renderEventRow) must include data-tooltip + aria-label. The
+    aria-label MUST include the row index so screen-reader users
+    can distinguish row-1 delete from row-2 delete."""
+    body = _read()
+    # Find renderEventRow function body.
+    fn_match = re.search(
+        r'function\s+renderEventRow\s*\([^)]*\)\s*\{[\s\S]*?\n\}',
+        body,
+    )
+    assert fn_match is not None, "renderEventRow function not found"
+    chunk = fn_match.group(0)
+    # All three actions must have data-tooltip.
+    for action_label, action_kind in [
+        ("上移", "move-up"), ("下移", "move-down"),
+        ("删除", "delete-row"),
+    ]:
+        action_pat = (
+            rf'data-action="{action_kind}"[\s\S]{{0,400}}?'
+            rf'data-tooltip="[^"]+"'
+        )
+        assert re.search(action_pat, chunk), (
+            f"row action {action_kind!r} button is missing data-tooltip. "
+            f"Per-row button hover/focus would silently fall back to "
+            f"the slow native title=."
+        )
+        aria_pat = (
+            rf'data-action="{action_kind}"[\s\S]{{0,400}}?'
+            rf'aria-label="[^"]*\$\{{i\s*\+\s*1\}}'
+        )
+        assert re.search(aria_pat, chunk), (
+            f"row action {action_kind!r} button's aria-label does not "
+            f"include the row index (\\${{i + 1}}). Screen-reader users "
+            f"cannot distinguish row-1 from row-2 actions."
+        )
+
+
+# ── 3. Tooltip controller behavior ──
+
+
+@pytest.mark.parametrize(
+    "fn_name", ["tooltipShow", "tooltipHide"],
+)
+def test_tooltip_controller_functions_exist(fn_name: str) -> None:
+    """Both tooltipShow + tooltipHide must be defined. Show is the
+    enter path; hide is the exit. Without either, the bubble either
+    never renders or never disappears."""
+    body = _read()
+    pattern = rf'function\s+{fn_name}\s*\([^)]*\)\s*\{{'
+    assert re.search(pattern, body), (
+        f"{fn_name} function not found. The tooltip controller is "
+        f"incomplete."
+    )
+
+
+def test_tooltip_show_sets_aria_describedby() -> None:
+    """When the bubble is shown, the target element must get
+    aria-describedby pointing at #tooltipBubble. Otherwise screen
+    readers don't announce the tooltip on focus.
+
+    Also must save the previous aria-describedby (so multiple targets
+    over the lifetime of the page restore correctly on hide)."""
+    body = _read()
+    fn_match = re.search(
+        r'function\s+tooltipShow\s*\([^)]*\)\s*\{[\s\S]{0,3000}?\n\}',
+        body,
+    )
+    assert fn_match is not None, "tooltipShow function not found"
+    chunk = fn_match.group(0)
+    assert re.search(
+        r'setAttribute\s*\(\s*["\']aria-describedby["\']\s*,\s*'
+        r'TOOLTIP_BUBBLE_ID',
+        chunk,
+    ), (
+        "tooltipShow does not set aria-describedby on the target. "
+        "Screen readers will not announce the tooltip."
+    )
+    assert "tooltipPrevDescribedBy" in chunk, (
+        "tooltipShow does not save the previous aria-describedby. "
+        "If the target already had a describedby (e.g., for a separate "
+        "error message), tooltipHide would erase it."
+    )
+
+
+def test_tooltip_hide_restores_previous_aria_describedby() -> None:
+    """tooltipHide must restore the saved previous aria-describedby
+    (or remove the attribute entirely if there was none). Otherwise
+    show→hide pairs leave stale aria-describedby pointers."""
+    body = _read()
+    fn_match = re.search(
+        r'function\s+tooltipHide\s*\(\s*\)\s*\{[\s\S]{0,2000}?\n\}',
+        body,
+    )
+    assert fn_match is not None, "tooltipHide function not found"
+    chunk = fn_match.group(0)
+    # Either restore the saved value OR removeAttribute.
+    has_restore = re.search(
+        r'setAttribute\s*\(\s*["\']aria-describedby["\']'
+        r'[\s\S]{0,200}?tooltipPrevDescribedBy',
+        chunk,
+    )
+    has_remove = re.search(
+        r'removeAttribute\s*\(\s*["\']aria-describedby["\']\s*\)',
+        chunk,
+    )
+    assert has_restore and has_remove, (
+        "tooltipHide does not both (a) setAttribute when previous "
+        "describedby existed, AND (b) removeAttribute when there was "
+        "none. show→hide pairs would leave stale aria-describedby."
+    )
+
+
+def test_tooltip_listeners_are_delegated() -> None:
+    """Listeners must be attached to `document` (delegated) so they
+    catch dynamically-rendered children (e.g., row-action buttons
+    regenerated on every renderEventTable). Per-target listeners
+    would leak after row deletes."""
+    body = _read()
+    required_events = ["mouseover", "mouseout", "focusin", "focusout"]
+    for evt in required_events:
+        pattern = rf'document\.addEventListener\s*\(\s*"{evt}"'
+        assert re.search(pattern, body), (
+            f"no document-level addEventListener for {evt!r}. "
+            f"Per-target listeners would leak across re-renders."
+        )
+
+
+def test_tooltip_listeners_match_data_tooltip_via_closest() -> None:
+    """The delegated listeners must use closest('[data-tooltip]') so
+    they fire when a child of a tooltip target is hovered (e.g., the
+    text inside <button>save</button>). Without closest, hovering
+    over the button's text node misses the listener."""
+    body = _read()
+    pattern = (
+        r'addEventListener\s*\(\s*"(?:mouseover|focusin)"'
+        r'[\s\S]{0,400}?closest\s*\(\s*["\']\[data-tooltip\]["\']\s*\)'
+    )
+    assert re.search(pattern, body), (
+        "tooltip listeners do not use closest('[data-tooltip]'). "
+        "Hovering child elements (e.g., text inside a button) would "
+        "miss the tooltip trigger."
+    )
+
+
+def test_tooltip_mouseout_skips_when_moving_to_child() -> None:
+    """mouseout fires on every boundary cross — including when the
+    cursor moves from button to button's child. Without a contains()
+    check, the bubble flickers between hide/show on internal moves."""
+    body = _read()
+    handler_match = re.search(
+        r'addEventListener\s*\(\s*"mouseout"[\s\S]{0,800}?\}\s*\)\s*;',
+        body,
+    )
+    assert handler_match is not None, "mouseout handler not found"
+    chunk = handler_match.group(0)
+    assert re.search(
+        r'(?:relatedTarget|target)[\s\S]{0,200}?contains\s*\(',
+        chunk,
+    ), (
+        "mouseout handler does not check target.contains(relatedTarget). "
+        "Bubble would flicker when cursor moves between a button and "
+        "its child elements."
+    )
+
+
+def test_tooltip_esc_dismisses_bubble() -> None:
+    """Esc should dismiss the tooltip even if focus remains on the
+    target — useful for keyboard users who want to clear a sticky
+    bubble after a focus-trigger."""
+    body = _read()
+    handler_chunks = re.findall(
+        r'document\.addEventListener\s*\(\s*"keydown"[\s\S]*?\}\s*\)\s*;',
+        body,
+    )
+    has_tooltip_esc = any(
+        re.search(
+            r'tooltipBubble[\s\S]{0,300}?Escape[\s\S]{0,200}?tooltipHide',
+            c,
+        ) or re.search(
+            r'Escape[\s\S]{0,200}?tooltipHide',
+            c,
+        )
+        for c in handler_chunks
+    )
+    assert has_tooltip_esc, (
+        "no keydown handler routes Escape to tooltipHide. Sticky "
+        "bubbles after focus-triggers have no Esc affordance."
+    )
+
+
+def test_tooltip_repositions_on_scroll_and_resize() -> None:
+    """Scrolling moves the target out from under a fixed-position
+    bubble. Resizing changes available space. Both must trigger
+    re-position when bubble is visible.
+
+    Per Codex P58-04-A: scroll/resize must call a position-only path
+    (tooltipPosition), NOT tooltipShow — calling tooltipShow on every
+    scroll tick would re-stash aria-describedby = "tooltipBubble" as
+    the "previous" value and corrupt the restore on hide.
+
+    Tightened (Codex R2 nit): require an actual tooltipPosition() call
+    on tooltipActiveTarget — token presence in nearby comments is not
+    enough to prove the reposition path."""
+    body = _read()
+    for evt in ("scroll", "resize"):
+        # The page has multiple window.addEventListener("resize", ...)
+        # handlers (tour reposition from P58-02, tooltip reposition).
+        # Pick the tooltip-specific one by requiring tooltipActiveTarget.
+        chunk = _tooltip_window_listener(body, evt)
+        assert "tooltipPosition(" in chunk, (
+            f"tooltip-specific window {evt!r} listener does not call "
+            f"tooltipPosition(). Bubble would drift, OR (worse) calls "
+            f"tooltipShow() which re-stashes aria-describedby."
+        )
+        assert "tooltipShow(" not in chunk, (
+            f"tooltip-specific window {evt!r} listener calls "
+            f"tooltipShow — this re-stashes aria-describedby and "
+            f"corrupts the restore."
+        )
+
+
+# ── 6. Codex R1 regression coverage ──
+
+
+def test_tooltip_show_is_reposition_only_on_same_target() -> None:
+    """Codex P58-04-A: repeated tooltipShow(targetEl) on the SAME target
+    (e.g., scroll/resize/focus+hover composite) must skip the stash
+    overwrite, otherwise tooltipPrevDescribedBy gets clobbered with
+    "tooltipBubble" and tooltipHide restores a stale value.
+
+    Verify tooltipShow has an early-return when targetEl already equals
+    the active target, and that scroll/resize listeners use a separate
+    position-only path (not tooltipShow)."""
+    body = _read()
+    fn_match = re.search(
+        r'function\s+tooltipShow\s*\([^)]*\)\s*\{[\s\S]{0,3000}?\n\}',
+        body,
+    )
+    assert fn_match is not None
+    chunk = fn_match.group(0)
+    # Same-target reposition-only guard.
+    assert re.search(
+        r'tooltipActiveTarget\s*===\s*\w+[\s\S]{0,200}?return',
+        chunk,
+    ), (
+        "tooltipShow has no same-target early-return. Repeated calls "
+        "(scroll/resize/focus+hover) will clobber tooltipPrevDescribedBy "
+        "with the bubble id."
+    )
+    # Scroll/resize must NOT call tooltipShow (would re-trigger stash).
+    for evt in ("scroll", "resize"):
+        listener = re.search(
+            rf'window\.addEventListener\s*\(\s*"{evt}"[\s\S]{{0,500}}?\}}',
+            body,
+        )
+        assert listener is not None
+        assert "tooltipShow" not in listener.group(0), (
+            f"window {evt!r} listener calls tooltipShow — this re-stashes "
+            f"aria-describedby on every event and corrupts the restore."
+        )
+
+
+def test_tooltip_show_restores_old_target_when_switching() -> None:
+    """Codex P58-04-A: when switching from target A to target B without
+    an intervening tooltipHide (e.g., mouse races between buttons), the
+    old target's original aria-describedby must be restored before the
+    new target's value is stashed. Otherwise A leaks "tooltipBubble"
+    forever as its describedby.
+
+    Tightened (Codex R2 nit): assert ordering — the restore branch
+    must appear BEFORE the new tooltipActiveTarget assignment, not
+    just somewhere in the function."""
+    body = _read()
+    fn_match = re.search(
+        r'function\s+tooltipShow\s*\([^)]*\)\s*\{[\s\S]{0,3000}?\n\}',
+        body,
+    )
+    assert fn_match is not None
+    chunk = fn_match.group(0)
+    restore_re = re.search(
+        r'if\s*\(\s*tooltipActiveTarget\s*\)\s*\{[\s\S]{0,500}?'
+        r'(?:setAttribute\s*\(\s*["\']aria-describedby["\']'
+        r'|removeAttribute\s*\(\s*["\']aria-describedby["\'])',
+        chunk,
+    )
+    assert restore_re is not None, (
+        "tooltipShow has no `if (tooltipActiveTarget) { ... aria-"
+        "describedby ... }` restore branch."
+    )
+    # Find the new-stash assignment (must come AFTER the restore).
+    stash_re = re.search(
+        r'tooltipActiveTarget\s*=\s*targetEl\b',
+        chunk,
+    )
+    assert stash_re is not None, (
+        "tooltipShow never assigns tooltipActiveTarget = targetEl"
+    )
+    assert restore_re.end() < stash_re.start(), (
+        "tooltipShow restores the previous aria-describedby AFTER "
+        "stashing the new target — by then tooltipActiveTarget already "
+        "points at target B, so target A's original value leaks."
+    )
+
+
+def test_tooltip_hover_and_focus_tracked_independently() -> None:
+    """Codex P58-04-C: hover and focus modalities must be tracked
+    independently. Hiding when EITHER exits would clear the tooltip
+    even if the other is still active (e.g., focus a button, hover it,
+    then move the mouse away — focus is still on the button but the
+    tooltip vanishes).
+
+    Tightened (Codex R2 nit): also assert the resolver picks focus
+    OR hover (not just one), so the resolver actually exercises the
+    independent-modality state."""
+    body = _read()
+    assert re.search(r'\btooltipHoverTarget\b', body), (
+        "no separate tooltipHoverTarget — hover/focus are not tracked "
+        "independently. P58-04-C regression."
+    )
+    assert re.search(r'\btooltipFocusTarget\b', body), (
+        "no separate tooltipFocusTarget — hover/focus are not tracked "
+        "independently. P58-04-C regression."
+    )
+    # Resolver must consult both slots (focus || hover preference).
+    # Per Codex NIT-R3-1: assert the actual precedence expression, not
+    # just that both identifiers appear somewhere in the function.
+    resolver = re.search(
+        r'function\s+tooltipResolveActive\s*\(\s*\)\s*\{[\s\S]{0,2000}?\n\}',
+        body,
+    )
+    assert resolver is not None, "tooltipResolveActive function not found"
+    rchunk = resolver.group(0)
+    assert re.search(
+        r'tooltipFocusTarget\s*\|\|\s*tooltipHoverTarget', rchunk,
+    ), (
+        "tooltipResolveActive does not contain the focus-OR-hover "
+        "precedence expression. The independent-modality fix (P58-04-C) "
+        "requires focus to win over hover; ordering matters."
+    )
+    # Verify mouseout only clears the hover slot (not focus).
+    mouseout = re.search(
+        r'addEventListener\s*\(\s*"mouseout"[\s\S]{0,800}?\}\s*\)\s*;',
+        body,
+    )
+    assert mouseout is not None
+    assert "tooltipHoverTarget" in mouseout.group(0), (
+        "mouseout handler does not touch tooltipHoverTarget — it "
+        "should clear ONLY the hover slot, leaving focus intact."
+    )
+    assert "tooltipFocusTarget = null" not in mouseout.group(0), (
+        "mouseout handler clears tooltipFocusTarget — this defeats "
+        "the independent-modality fix (P58-04-C)."
+    )
+    # Symmetric: focusout only clears focus, not hover.
+    focusout = re.search(
+        r'addEventListener\s*\(\s*"focusout"[\s\S]{0,800}?\}\s*\)\s*;',
+        body,
+    )
+    assert focusout is not None
+    assert "tooltipFocusTarget" in focusout.group(0)
+    assert "tooltipHoverTarget = null" not in focusout.group(0), (
+        "focusout handler clears tooltipHoverTarget — this defeats "
+        "the independent-modality fix (P58-04-C)."
+    )
+
+
+@pytest.mark.parametrize(
+    "btn_id",
+    ["saveScenarioBtn", "exportJsonBtn", "importJsonBtn",
+     "deleteScenarioBtn"],
+)
+def test_tooltip_managed_buttons_have_no_native_title(btn_id: str) -> None:
+    """Codex P58-04-B: any control with data-tooltip MUST NOT also
+    carry a native title= attribute, or the browser will surface the
+    native dwell-tooltip on top of the custom bubble (visible
+    duplicate)."""
+    body = _read()
+    btn_match = re.search(
+        rf'<button[^>]*\bid="{btn_id}"[^>]*>',
+        body,
+    )
+    assert btn_match is not None, f"{btn_id} button tag not found"
+    tag = btn_match.group(0)
+    assert 'data-tooltip="' in tag, (
+        f"{btn_id}: data-tooltip missing — test premise broken"
+    )
+    assert 'title="' not in tag, (
+        f"{btn_id} keeps a native title= alongside data-tooltip. "
+        f"Browser will overlay native tooltip on top of #tooltipBubble. "
+        f"Per Codex P58-04-B: drop title= when data-tooltip is set."
+    )
+
+
+def test_row_action_buttons_have_no_native_title() -> None:
+    """Codex P58-04-B: per-row up/down/delete buttons in renderEventRow
+    must drop their title= now that data-tooltip is present."""
+    body = _read()
+    fn_match = re.search(
+        r'function\s+renderEventRow\s*\([\s\S]+?\n\}',
+        body,
+    )
+    assert fn_match is not None
+    chunk = fn_match.group(0)
+    for action_kind in ("move-up", "move-down", "delete-row"):
+        btn = re.search(
+            rf'<button[^>]*data-action="{action_kind}"[^>]*>',
+            chunk,
+        )
+        assert btn is not None, f"row action {action_kind} button missing"
+        assert 'title="' not in btn.group(0), (
+            f"row action {action_kind} keeps native title= alongside "
+            f"data-tooltip. P58-04-B: native tooltip would surface on "
+            f"top of #tooltipBubble."
+        )
+
+
+# ── 4. Inline-script syntax (carry-forward from P58-02 R1) ──
+
+
+def test_inline_script_still_parses_after_p58_04() -> None:
+    """P58-02 R1 H1 carry-forward: every change to the inline JS must
+    keep node --check passing. P58-04 added significant new code +
+    Chinese strings; verify nothing broke parse."""
+    if shutil.which("node") is None:
+        pytest.skip("node not installed")
+    body = _read()
+    script_blocks = re.findall(
+        r'<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)</script>',
+        body,
+    )
+    assert script_blocks
+    for js in script_blocks:
+        result = subprocess.run(
+            ["node", "--check", "-"],
+            input=js, capture_output=True, text=True, timeout=10,
+        )
+        assert result.returncode == 0, (
+            f"inline <script> parse error after P58-04:\n{result.stderr}"
+        )
+
+
+# ── 5. Layout invariance: existing buttons still have visible text ──
+
+
+@pytest.mark.parametrize(
+    "btn_id,expected_glyph_or_text",
+    [
+        ("saveScenarioBtn", "💾"),
+        ("exportJsonBtn", "⬇"),
+        ("importJsonBtn", "⬆"),
+        ("runBtn", "运行仿真"),
+    ],
+)
+def test_existing_button_visible_text_preserved(
+    btn_id: str, expected_glyph_or_text: str
+) -> None:
+    """Per the user's "do not overhaul UI" directive: P58-04 must not
+    change any existing visible button text or glyph. Only attributes
+    (data-tooltip, aria-label) are added."""
+    body = _read()
+    btn_match = re.search(
+        rf'<button[^>]*\bid="{btn_id}"[^>]*>([\s\S]*?)</button>',
+        body,
+    )
+    assert btn_match is not None, f"button id={btn_id!r} not found"
+    label = btn_match.group(1)
+    assert expected_glyph_or_text in label, (
+        f"button id={btn_id!r} visible text changed: expected to "
+        f"contain {expected_glyph_or_text!r}, got {label!r}. P58-04 "
+        f"is additive-only (attributes), not text changes."
+    )
+
+
+# ── 7. Codex R2 regression: detached-node guard (P58-04-D) ──
+
+
+def test_tooltip_resolve_active_drops_disconnected_targets() -> None:
+    """Codex P58-04-D: row-action buttons get rebuilt via innerHTML on
+    every renderEventTable() call. focusout does not always fire on a
+    removed element, so tooltipFocusTarget can keep pointing at a
+    detached node. Subsequent tooltipResolveActive() would mask later
+    valid hover tooltips and scroll/resize would position against a
+    dead node.
+
+    tooltipResolveActive() must null any slot whose element is
+    `!isConnected` before resolving the next target."""
+    body = _read()
+    resolver = re.search(
+        r'function\s+tooltipResolveActive\s*\(\s*\)\s*\{[\s\S]{0,2000}?\n\}',
+        body,
+    )
+    assert resolver is not None, "tooltipResolveActive not found"
+    chunk = resolver.group(0)
+    assert "isConnected" in chunk, (
+        "tooltipResolveActive does not check `isConnected`. A focused "
+        "row-action button removed by renderEventTable would strand "
+        "tooltipFocusTarget on a detached node. Per Codex P58-04-D."
+    )
+    # Both slots must be guarded.
+    assert re.search(
+        r'tooltipFocusTarget[\s\S]{0,200}?isConnected', chunk,
+    ), (
+        "tooltipResolveActive guards isConnected but not on "
+        "tooltipFocusTarget — focus-side detach still leaks."
+    )
+    assert re.search(
+        r'tooltipHoverTarget[\s\S]{0,200}?isConnected', chunk,
+    ), (
+        "tooltipResolveActive guards isConnected but not on "
+        "tooltipHoverTarget — hover-side detach still leaks."
+    )
+    # Per Codex NIT-R3-3 (R3 §C residual gap): also assert the
+    # tooltipActiveTarget cleanup branch — the rare case where the
+    # currently-shown target was detached without its slot being the
+    # focus or hover ref (e.g., hover slot was already nulled but the
+    # active target lived a moment longer).
+    assert re.search(
+        r'tooltipActiveTarget[\s\S]{0,200}?isConnected', chunk,
+    ), (
+        "tooltipResolveActive does not clean up a detached "
+        "tooltipActiveTarget. Bubble could remain visible pointing at "
+        "a dead node after a reflow."
+    )
+
+
+def test_tooltip_scroll_resize_handle_detached_active_target() -> None:
+    """Codex P58-04-D: scroll/resize listeners must also bail when
+    tooltipActiveTarget is detached, otherwise tooltipPosition()
+    measures a dead node (getBoundingClientRect returns 0/0/0/0 on
+    detached elements, parking the bubble at the page origin)."""
+    body = _read()
+    for evt in ("scroll", "resize"):
+        chunk = _tooltip_window_listener(body, evt)
+        assert "isConnected" in chunk, (
+            f"tooltip-specific window {evt!r} listener does not guard "
+            f"against a detached active target. Bubble would jump to "
+            f"page origin if the target was removed mid-scroll."
+        )
