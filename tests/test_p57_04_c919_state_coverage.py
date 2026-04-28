@@ -326,71 +326,153 @@ def _extract_preset_block(body: str, preset_key: str) -> str | None:
     return None
 
 
+def _js_object_literal_to_json(src: str) -> str:
+    """Convert a JS object-literal substring to JSON text.
+
+    Handles the project's PRESETS subset:
+      - bare identifier keys (key:)             → "key":
+      - true / false / null                     → kept as-is
+      - single-quote string literals            → double-quoted
+      - trailing commas before } or ]           → stripped
+      - escaped chars inside strings            → preserved
+
+    Does NOT handle: function values, comments, template literals,
+    spread operator. The PRESETS block uses none of these — verified
+    on the current source. If the editor convention drifts to use
+    them, this converter must be tightened.
+    """
+    out: list[str] = []
+    i = 0
+    n = len(src)
+    in_string = False
+    quote_char = ""
+    while i < n:
+        ch = src[i]
+        if in_string:
+            out.append(ch)
+            if ch == "\\" and i + 1 < n:
+                out.append(src[i + 1])
+                i += 2
+                continue
+            if ch == quote_char:
+                in_string = False
+                # Normalize to double-quote: rewrite the closing quote.
+                if quote_char == "'":
+                    out[-1] = '"'
+            i += 1
+            continue
+
+        if ch in ('"', "'"):
+            in_string = True
+            quote_char = ch
+            out.append('"' if ch == "'" else ch)
+            i += 1
+            continue
+
+        if ch.isalpha() or ch == "_":
+            j = i
+            while j < n and (src[j].isalnum() or src[j] == "_"):
+                j += 1
+            ident = src[i:j]
+            # Skip whitespace to peek at next non-space char.
+            k = j
+            while k < n and src[k].isspace():
+                k += 1
+            is_key = k < n and src[k] == ":"
+            if ident in ("true", "false", "null"):
+                out.append(ident)
+            elif is_key:
+                out.append(f'"{ident}"')
+            else:
+                # Bare identifier as a value is invalid JS in a literal context;
+                # fall through verbatim so json.loads surfaces it.
+                out.append(ident)
+            i = j
+            continue
+
+        out.append(ch)
+        i += 1
+
+    result = "".join(out)
+    # Strip trailing commas before } or ].
+    result = re.sub(r",(\s*[}\]])", r"\1", result)
+    return result
+
+
+def _extract_preset_value(body: str, preset_key: str) -> str | None:
+    """Pull the `{ ... }` value substring for a single PRESETS entry
+    (i.e., everything to the right of `<key>:`)."""
+    block = _extract_preset_block(body, preset_key)
+    if block is None:
+        return None
+    # block looks like `<key>: { ... }`. Find the first `{`.
+    brace_idx = block.find("{")
+    return block[brace_idx:] if brace_idx != -1 else None
+
+
+def _strip_cosmetic(obj):
+    """Recursively drop cosmetic fields (description, note) so structural
+    comparison ignores free-text drift but catches data drift."""
+    if isinstance(obj, dict):
+        return {
+            k: _strip_cosmetic(v)
+            for k, v in obj.items()
+            if k not in ("description", "note")
+        }
+    if isinstance(obj, list):
+        return [_strip_cosmetic(v) for v in obj]
+    return obj
+
+
 @pytest.mark.parametrize("preset_key", sorted(PRESET_KEY_TO_FIXTURE.keys()))
 def test_preset_block_matches_disk_fixture_shape(preset_key: str) -> None:
-    """Strict parity check: the inline PRESETS block in timeline-sim.html
-    must structurally match the disk JSON fixture for the same key.
+    """Strict structural parity: the inline PRESETS object in
+    timeline-sim.html must match the disk JSON fixture for the same
+    key, after stripping cosmetic free-text fields (description, note).
 
-    Specifically asserts:
-      - identical events.length (so deletes/duplicates surface)
-      - identical mark_phase event count (mark_phase drives
-        TraceFrame.phase, so a missing mark_phase silently changes
-        the workbench's phase column without the existence-check
-        catching it)
-      - identical step_s, duration_s, system tag
+    The full events array, initial_inputs object, and top-level
+    title/system/step_s/duration_s are all deep-compared. Drift in
+    target/value/kind/order/initial_inputs payload will fail this
+    test (the R2 fix for Codex's structural-parity finding — the
+    earlier shallow count-only check let those slip).
 
-    Cosmetic fields (description, individual event notes) are NOT
-    compared — they're free-text user copy. The block is regex-extracted
-    from the JS source via brace-counting, so we don't fully parse JS;
-    instead we count event-shape signatures.
+    The PRESETS value is JS-object-literal syntax (bare keys, bare
+    booleans, possibly trailing commas). _js_object_literal_to_json
+    converts the project's subset to JSON; the conversion is
+    state-machine-based (string-aware) so colons inside string values
+    don't get mistaken for key delimiters.
     """
     body = TIMELINE_SIM_HTML.read_text(encoding="utf-8")
-    block = _extract_preset_block(body, preset_key)
-    assert block is not None, f"preset block for {preset_key!r} not found"
+    js_value_src = _extract_preset_value(body, preset_key)
+    assert js_value_src is not None, f"PRESETS[{preset_key!r}] not found"
 
-    # Count events: each event is a `{ t_s: ... }` literal inside `events: [ ... ]`.
-    # Use brace depth: events start with `{ t_s:` after `events: [`.
-    events_match = re.search(r"events:\s*\[", block)
-    assert events_match is not None, f"no events: [ in preset {preset_key!r}"
-    # The event opening braces: count occurrences of "{ t_s:" inside events list.
-    events_substr = block[events_match.end():]
-    js_event_count = len(re.findall(r"\{\s*t_s\s*:", events_substr))
-    js_mark_phase_count = len(re.findall(r'kind:\s*"mark_phase"', events_substr))
+    json_src = _js_object_literal_to_json(js_value_src)
+    try:
+        js_obj = json.loads(json_src)
+    except json.JSONDecodeError as e:
+        pytest.fail(
+            f"{preset_key}: JS-to-JSON conversion produced invalid JSON: "
+            f"{e}\n\nConverted text:\n{json_src[:500]}"
+        )
 
     fixture_path = FIXTURES_DIR / PRESET_KEY_TO_FIXTURE[preset_key]
-    spec = json.loads(fixture_path.read_text("utf-8"))
-    disk_event_count = len(spec.get("events", []))
-    disk_mark_phase_count = sum(
-        1 for ev in spec.get("events", []) if ev.get("kind") == "mark_phase"
-    )
+    disk_obj = json.loads(fixture_path.read_text("utf-8"))
 
-    assert js_event_count == disk_event_count, (
-        f"{preset_key}: PRESETS has {js_event_count} events, "
-        f"disk fixture has {disk_event_count}. Drift: the workbench "
-        f"would run a different timeline than the disk fixture."
-    )
-    assert js_mark_phase_count == disk_mark_phase_count, (
-        f"{preset_key}: PRESETS has {js_mark_phase_count} mark_phase events, "
-        f"disk fixture has {disk_mark_phase_count}. mark_phase drives "
-        f"TraceFrame.phase — missing marks silently change the phase "
-        f"column without breaking other assertions."
-    )
+    js_clean = _strip_cosmetic(js_obj)
+    disk_clean = _strip_cosmetic(disk_obj)
 
-    # step_s / duration_s / system parity.
-    for field in ("step_s", "duration_s"):
-        js_match = re.search(rf'{field}:\s*([0-9.]+)', block)
-        assert js_match is not None, f"{preset_key}: missing {field} in PRESETS"
-        js_val = float(js_match.group(1))
-        disk_val = float(spec[field])
-        assert js_val == disk_val, (
-            f"{preset_key}: PRESETS {field}={js_val}, disk {field}={disk_val}"
+    # Compare top-level keys we care about (skip anything not in the
+    # disk fixture's vocabulary — e.g., a future PRESETS-only field).
+    structural_keys = ("title", "system", "step_s", "duration_s",
+                       "initial_inputs", "events")
+    for key in structural_keys:
+        assert key in js_clean, f"{preset_key}: PRESETS missing {key!r}"
+        assert key in disk_clean, f"{preset_key}: disk fixture missing {key!r}"
+        assert js_clean[key] == disk_clean[key], (
+            f"{preset_key}: structural drift on {key!r}.\n"
+            f"  PRESETS: {js_clean[key]!r}\n"
+            f"  disk:    {disk_clean[key]!r}"
         )
-    js_system_match = re.search(r'system:\s*"([^"]+)"', block)
-    assert js_system_match is not None, f"{preset_key}: missing system in PRESETS"
-    assert js_system_match.group(1) == spec["system"], (
-        f"{preset_key}: PRESETS system={js_system_match.group(1)!r}, "
-        f"disk system={spec['system']!r}"
-    )
 
 
 def test_state_in_c919_assertion_catalog() -> None:
