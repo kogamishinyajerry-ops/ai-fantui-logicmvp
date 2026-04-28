@@ -1,6 +1,6 @@
 {
-  "title": "C919 E-TRAS — over-temp fault preempts deploy mid-cycle (→ SF)",
-  "description": "Nominal deploy starts. At t=2.5s — partway through the deploy chain — etras_over_temp_fault:stuck_on injects via the A/C bus. The safety_interlock_manager preempts the state machine to SF_ABORT_OR_FAULT regardless of where in the cycle it was. Verifies the SF preemption hook for over-temp (mirrors the existing tr_inhibited fixture for the other SF trigger).",
+  "title": "C919 E-TRAS — over-temp fault preempts state machine to SF (with executor-gap note)",
+  "description": "Nominal deploy starts. At t=2.5s — partway through the deploy chain — etras_over_temp_fault:stuck_on injects via the A/C bus. Two protection layers fire on the next tick: (1) safety_interlock_manager preempts the state machine to SF_ABORT_OR_FAULT, (2) derive_tr_command3_enable returns False, which resets the CMD3 latch → three_phase_trcu_power_on=False. EXECUTOR GAP (deliberately documented by this fixture): compute_fadec_deploy_command in adapters/c919_etras_frozen_v1/fadec_deploy_logic.py does NOT gate on etras_over_temp_fault — it only checks engine_running, tr_inhibited, unlock_confirmed, tr_wow, n1k limit, and TRA. So fadec_deploy_command CAN re-assert as True after over_temp injects, even while state=SF. Asserting the gap explicitly here turns this fixture into a regression net: if a future change adds over_temp to compute_fadec_deploy_command (closing the gap), this fixture's t=5 assertion will FAIL and force a deliberate update — at which point the OPEN-Q-V2 (CMD3-latch §5.4) about deploy-side over-temp gating should be revisited. The system-level safety remains intact via SF preempt + CMD3 reset; the deploy-command-output value is a downstream computation, not the actuation pathway.",
   "system": "c919-etras",
   "step_s": 0.05,
   "duration_s": 10.0,
@@ -26,6 +26,7 @@
     { "t_s": 2.5, "kind": "inject_fault", "target": "etras_over_temp_fault:stuck_on", "note": "ETRAS controller over-temp — SF preempts immediately on next tick" },
     { "t_s": 5.0, "kind": "assert_condition", "target": "state", "value": "SF_ABORT_OR_FAULT", "note": "SF preempts on over_temp regardless of where in the deploy cycle" },
     { "t_s": 5.0, "kind": "assert_condition", "target": "three_phase_trcu_power_on", "value": false, "note": "CMD3 latch resets on tr_command3_enable=False (over_temp clamps it)" },
+    { "t_s": 5.0, "kind": "assert_condition", "target": "fadec_deploy_command", "value": true, "note": "EXECUTOR GAP: compute_fadec_deploy_command does not gate on etras_over_temp_fault, so this stays True post-fault. Documented here so that closing the gap (adding `not over_temp` to §5.5) will FAIL this assertion and force a deliberate fixture update." },
     { "t_s": 9.0, "kind": "assert_condition", "target": "state", "value": "SF_ABORT_OR_FAULT" }
   ]
 }

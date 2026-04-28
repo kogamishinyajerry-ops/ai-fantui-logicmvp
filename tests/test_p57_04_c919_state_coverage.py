@@ -273,19 +273,19 @@ def test_fixture_system_tag(filename: str) -> None:
 TIMELINE_SIM_HTML = REPO_ROOT / "src" / "well_harness" / "static" / "timeline-sim.html"
 
 
-@pytest.mark.parametrize(
-    "preset_key",
-    [
-        "c919_max_reverse",
-        "c919_decel_to_stow",
-        "c919_quick_deploy",
-        "c919_etras_over_temp",
-        "c919_lock_disagreement",
-        "c919_lgcu_invalid_blocks_deploy",
-        "c919_wow_filter_underflow",
-        "c919_n1k_overrun",
-    ],
-)
+PRESET_KEY_TO_FIXTURE = {
+    "c919_max_reverse": "c919_max_reverse.json",
+    "c919_decel_to_stow": "c919_decel_to_stow.json",
+    "c919_quick_deploy": "c919_quick_deploy.json",
+    "c919_etras_over_temp": "c919_etras_over_temp.json",
+    "c919_lock_disagreement": "c919_lock_disagreement.json",
+    "c919_lgcu_invalid_blocks_deploy": "c919_lgcu_invalid_blocks_deploy.json",
+    "c919_wow_filter_underflow": "c919_wow_filter_underflow.json",
+    "c919_n1k_overrun": "c919_n1k_overrun.json",
+}
+
+
+@pytest.mark.parametrize("preset_key", sorted(PRESET_KEY_TO_FIXTURE.keys()))
 def test_preset_in_timeline_sim_html(preset_key: str) -> None:
     """Each fixture must be inlined as a built-in preset in
     timeline-sim.html so the workbench dropdown can offer it without
@@ -303,6 +303,93 @@ def test_preset_in_timeline_sim_html(preset_key: str) -> None:
     assert has_label is not None, (
         f"preset {preset_key!r} missing a BUILTIN_LABELS entry — "
         f"the dropdown would show the raw key instead of a label"
+    )
+
+
+def _extract_preset_block(body: str, preset_key: str) -> str | None:
+    """Pull the `<key>: { ... }` substring for a single PRESETS entry.
+    Returns None if not found. Brace-counts to handle nested objects
+    (the c919_decel_to_stow preset has a nested `locks` object)."""
+    start_match = re.search(rf'\b{re.escape(preset_key)}:\s*\{{', body)
+    if not start_match:
+        return None
+    open_idx = start_match.end() - 1  # position of the opening brace
+    depth = 0
+    for i in range(open_idx, len(body)):
+        ch = body[i]
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return body[start_match.start():i + 1]
+    return None
+
+
+@pytest.mark.parametrize("preset_key", sorted(PRESET_KEY_TO_FIXTURE.keys()))
+def test_preset_block_matches_disk_fixture_shape(preset_key: str) -> None:
+    """Strict parity check: the inline PRESETS block in timeline-sim.html
+    must structurally match the disk JSON fixture for the same key.
+
+    Specifically asserts:
+      - identical events.length (so deletes/duplicates surface)
+      - identical mark_phase event count (mark_phase drives
+        TraceFrame.phase, so a missing mark_phase silently changes
+        the workbench's phase column without the existence-check
+        catching it)
+      - identical step_s, duration_s, system tag
+
+    Cosmetic fields (description, individual event notes) are NOT
+    compared — they're free-text user copy. The block is regex-extracted
+    from the JS source via brace-counting, so we don't fully parse JS;
+    instead we count event-shape signatures.
+    """
+    body = TIMELINE_SIM_HTML.read_text(encoding="utf-8")
+    block = _extract_preset_block(body, preset_key)
+    assert block is not None, f"preset block for {preset_key!r} not found"
+
+    # Count events: each event is a `{ t_s: ... }` literal inside `events: [ ... ]`.
+    # Use brace depth: events start with `{ t_s:` after `events: [`.
+    events_match = re.search(r"events:\s*\[", block)
+    assert events_match is not None, f"no events: [ in preset {preset_key!r}"
+    # The event opening braces: count occurrences of "{ t_s:" inside events list.
+    events_substr = block[events_match.end():]
+    js_event_count = len(re.findall(r"\{\s*t_s\s*:", events_substr))
+    js_mark_phase_count = len(re.findall(r'kind:\s*"mark_phase"', events_substr))
+
+    fixture_path = FIXTURES_DIR / PRESET_KEY_TO_FIXTURE[preset_key]
+    spec = json.loads(fixture_path.read_text("utf-8"))
+    disk_event_count = len(spec.get("events", []))
+    disk_mark_phase_count = sum(
+        1 for ev in spec.get("events", []) if ev.get("kind") == "mark_phase"
+    )
+
+    assert js_event_count == disk_event_count, (
+        f"{preset_key}: PRESETS has {js_event_count} events, "
+        f"disk fixture has {disk_event_count}. Drift: the workbench "
+        f"would run a different timeline than the disk fixture."
+    )
+    assert js_mark_phase_count == disk_mark_phase_count, (
+        f"{preset_key}: PRESETS has {js_mark_phase_count} mark_phase events, "
+        f"disk fixture has {disk_mark_phase_count}. mark_phase drives "
+        f"TraceFrame.phase — missing marks silently change the phase "
+        f"column without breaking other assertions."
+    )
+
+    # step_s / duration_s / system parity.
+    for field in ("step_s", "duration_s"):
+        js_match = re.search(rf'{field}:\s*([0-9.]+)', block)
+        assert js_match is not None, f"{preset_key}: missing {field} in PRESETS"
+        js_val = float(js_match.group(1))
+        disk_val = float(spec[field])
+        assert js_val == disk_val, (
+            f"{preset_key}: PRESETS {field}={js_val}, disk {field}={disk_val}"
+        )
+    js_system_match = re.search(r'system:\s*"([^"]+)"', block)
+    assert js_system_match is not None, f"{preset_key}: missing system in PRESETS"
+    assert js_system_match.group(1) == spec["system"], (
+        f"{preset_key}: PRESETS system={js_system_match.group(1)!r}, "
+        f"disk system={spec['system']!r}"
     )
 
 
