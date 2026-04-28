@@ -139,26 +139,66 @@ def test_app_shell_body_does_not_clobber_unified_nav_padding() -> None:
     has equal specificity to unified-nav.css's `body.unified-nav-
     enabled { padding-top: var(--nav-height) }` but loads later,
     so it would clobber the 48px nav spacer on non-embedded sim
-    pages. The chrome must not set padding/margin on the body
-    rule — let unified-nav-enabled control it."""
+    pages. The chrome must not declare ANY `padding` (shorthand or
+    longhand) on body.etras-app — let unified-nav-enabled control
+    that property.
+
+    Codex P56-02a round-3 P2: `margin: 0` IS allowed and required
+    (zeroes the UA default `body { margin: 8px }`). unified-nav.css
+    does not declare margin on body, so no conflict."""
     chrome = (
         REPO_ROOT / "src" / "well_harness" / "static" / "etras_chrome.css"
     ).read_text(encoding="utf-8")
+    # Strip comments BEFORE the rule extraction so a `}` inside a
+    # docblock comment can't terminate the [^}]+ capture.
+    chrome_no_comments = re.sub(r"/\*.*?\*/", "", chrome, flags=re.DOTALL)
     body_rule = re.search(
         r"body\.etras-app\s*\{([^}]+)\}",
-        chrome,
+        chrome_no_comments,
         re.DOTALL,
     )
     assert body_rule is not None
     body_props = body_rule.group(1)
-    assert "padding:" not in body_props or "padding: " not in body_props, (
-        "body.etras-app must not declare padding — unified-nav.css's "
-        "body.unified-nav-enabled padding-top owns that property"
+    assert not re.search(
+        r"^\s*padding(-top|-right|-bottom|-left)?\s*:",
+        body_props,
+        re.MULTILINE,
+    ), (
+        "body.etras-app must not declare padding (shorthand or "
+        "longhand) — unified-nav.css's body.unified-nav-enabled "
+        "padding-top owns that property"
     )
-    # Also no `margin: ...` on body that would zero unified-nav's
-    # ancestor margins.
-    assert not re.search(r"^\s*margin\s*:", body_props, re.MULTILINE), (
-        "body.etras-app must not declare margin"
+
+
+def test_app_shell_resets_default_body_margin() -> None:
+    """Codex P56-02a round-3 P2: removing the wildcard descendant
+    reset (round-2) was correct, but it also took away the body's
+    own UA-default-margin reset. With nothing zeroing `body
+    { margin: 8px }`, the full-viewport sim shell rendered with an
+    8px gutter around it. The chrome must declare `margin: 0` on
+    body.etras-app — safe because unified-nav.css doesn't touch
+    body margin."""
+    chrome = (
+        REPO_ROOT / "src" / "well_harness" / "static" / "etras_chrome.css"
+    ).read_text(encoding="utf-8")
+    # Strip comments BEFORE locating the rule (a comment containing
+    # `}` would terminate the [^}]+ capture early).
+    chrome_no_comments = re.sub(r"/\*.*?\*/", "", chrome, flags=re.DOTALL)
+    body_rule = re.search(
+        r"body\.etras-app\s*\{([^}]+)\}",
+        chrome_no_comments,
+        re.DOTALL,
+    )
+    assert body_rule is not None
+    body_props = body_rule.group(1)
+    assert re.search(
+        r"^\s*margin\s*:\s*0\s*;",
+        body_props,
+        re.MULTILINE,
+    ), (
+        "body.etras-app must declare `margin: 0` to clear the UA "
+        "default 8px body margin — without it the full-viewport "
+        "shell renders with an 8px gutter"
     )
 
 

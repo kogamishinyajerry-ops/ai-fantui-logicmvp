@@ -88,21 +88,23 @@ html.is-iframe-embed body.unified-nav-enabled { padding-top: 0 !important; }
 
 /* Full-viewport layout. Html-level rule keys off the app-shell
    body — `:has(...)` is broadly supported (2023+). */
-html:has(body.etras-app) { height: 100%; overflow: hidden; }
+html:has(body.etras-app) { height: 100%; overflow: hidden; margin: 0; }
 body.etras-app {
   height: 100%;
   overflow: hidden;
+  /* Codex P56-02a round-3 P2: zero the UA default `body { margin:
+     8px }` so the full-viewport shell sits flush against the
+     viewport edge. Margin is safe to set here (unified-nav.css
+     does NOT declare body margin, only padding-top). The padding
+     override from round-2 P1 stays removed so the unified-nav-
+     enabled spacer keeps its 48px top reserve. */
+  margin: 0;
   background: var(--bg0);
   color: var(--text0);
   font-family: var(--ui);
   font-size: 12px;
   display: flex;
   flex-direction: column;
-  /* Codex P56-02a round-2 P1: do NOT set margin/padding here.
-     unified-nav.css's `body.unified-nav-enabled { padding-top:
-     var(--nav-height) }` has equal specificity but loads earlier,
-     so any padding override here would clobber its 48px top
-     spacer when the unified nav is visible. */
 }
 
 /* Codex P56-02a round-2 P1: dropped the `body.etras-app * { margin:
