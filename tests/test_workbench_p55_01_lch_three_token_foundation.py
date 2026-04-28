@@ -1,0 +1,273 @@
+"""P55-01 — LCH 3-token theme foundation.
+
+Linear's redesign collapsed 98 variables down to 3 semantic tokens
+(base / accent / contrast). We adopt the same spine: `--base` is
+the canvas bg, `--accent` is the ONE highlight color (reserved for
+"currently affected gate"), `--contrast` is the primary fg. All
+neutrals + accent washes derive from those three via `color-mix(in
+lch, ...)`, which is perceptually-uniform and theme-stable.
+
+This phase:
+  1. Declares the 3 root tokens at workbench.css :root
+  2. Adds derived tokens (surface-1/2, hairline, text-muted, ...)
+  3. Migrates the most common ad-hoc rgba/hex literals to the tokens:
+       rgba(103, 232, 249, X)  →  color-mix(--accent X%, transparent)
+       #67e8f9                 →  var(--accent)
+       rgba(255, 255, 255, X)  →  color-mix(--contrast X%, transparent)
+  4. Keeps legacy --wb-* / --workbench-* aliases (rules referencing
+     them still work; they're now derived from the 3 roots)
+
+Future phases migrate the remaining semantic colors (severity reds /
+greens / ambers / SVG fill tints) — those are intentionally NOT
+folded into the 3-token foundation since they carry distinct
+semantic meaning.
+"""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import pytest
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+CSS = (REPO_ROOT / "src" / "well_harness" / "static" / "workbench.css").read_text(
+    encoding="utf-8"
+)
+
+
+# ─── 1. The three semantic tokens are declared at :root ───────
+
+
+@pytest.mark.parametrize("token", ["--base", "--contrast"])
+def test_root_declares_local_semantic_aliases(token: str) -> None:
+    """workbench.css :root must declare local aliases for the 2
+    semantic-token names that don't already exist in the upstream
+    design-tokens.css. (--accent is already declared upstream and
+    inherits unchanged into workbench scope; redeclaring it here
+    would either be redundant or create a self-referential cycle —
+    Codex P55-01 round-1 P1.) Together --base / --accent / --contrast
+    form the 3-token spine; changing those three propagates
+    throughout the workbench."""
+    root_rule = re.search(r":root\s*\{(.*?)\n\}", CSS, re.DOTALL)
+    assert root_rule is not None, "no :root rule found in workbench.css"
+    body = root_rule.group(1)
+    assert re.search(rf"^\s*{re.escape(token)}\s*:", body, re.MULTILINE), (
+        f"missing root declaration: {token}"
+    )
+
+
+def test_accent_resolves_through_upstream_design_tokens() -> None:
+    """--accent is declared once in design-tokens.css and inherits
+    into workbench scope. No redeclaration in workbench.css :root
+    (which would create a cycle if it referenced var(--accent))."""
+    # workbench.css must NOT redeclare --accent at root.
+    root_rule = re.search(r":root\s*\{(.*?)\n\}", CSS, re.DOTALL)
+    assert root_rule is not None
+    root_body = root_rule.group(1)
+    accent_decl = re.search(
+        r"^\s*--accent\s*:\s*(.+?);", root_body, re.MULTILINE
+    )
+    assert accent_decl is None, (
+        f"workbench.css must not redeclare --accent at :root "
+        f"(it inherits from design-tokens.css). Got: {accent_decl.group(0) if accent_decl else None!r}"
+    )
+    # And the upstream file must still declare it.
+    design_tokens_path = (
+        REPO_ROOT / "src" / "well_harness" / "static" / "design-tokens.css"
+    )
+    upstream = design_tokens_path.read_text(encoding="utf-8")
+    assert re.search(r"^\s*--accent\s*:\s*[^;]+;", upstream, re.MULTILINE), (
+        "design-tokens.css must declare --accent (the upstream source)"
+    )
+
+
+def test_base_alias_propagates_to_body_background() -> None:
+    """Codex P55-01 round-1 P3: the html/body background must come
+    from the same canonical token --base derives from. Otherwise
+    rethemeing --base would change derived surfaces but leave the
+    outer page canvas behind. We satisfy this by declaring
+    --base: var(--bg-base), so changing --bg-base (which drives
+    body bg) propagates through --base into all derivations."""
+    root_rule = re.search(r":root\s*\{(.*?)\n\}", CSS, re.DOTALL)
+    assert root_rule is not None
+    body = root_rule.group(1)
+    base_decl = re.search(r"^\s*--base\s*:\s*([^;]+);", body, re.MULTILINE)
+    assert base_decl is not None
+    value = base_decl.group(1).strip()
+    assert "var(--bg-base)" in value, (
+        f"--base must alias --bg-base so body-bg + derived surfaces "
+        f"share one source of truth; got {value!r}"
+    )
+
+
+# ─── 2. Derived tokens use color-mix(in lch, ...) ─────────────
+
+
+@pytest.mark.parametrize(
+    "derived_token",
+    [
+        "--surface-1",
+        "--surface-2",
+        "--hairline",
+        "--text-muted",
+        "--accent-tint-12",
+        "--accent-tint-28",
+    ],
+)
+def test_derived_tokens_use_lch_color_mix(derived_token: str) -> None:
+    """The point of LCH is perceptual uniformity — neutral
+    derivations and accent washes must use color-mix(in lch, ...)
+    so future theme changes propagate predictably. A hex/rgba
+    constant would be a regression."""
+    pattern = re.compile(
+        rf"{re.escape(derived_token)}\s*:\s*color-mix\(\s*in\s+lch,",
+    )
+    assert pattern.search(CSS), (
+        f"{derived_token} must derive via color-mix(in lch, ...)"
+    )
+
+
+# ─── 3. Legacy aliases still resolve ──────────────────────────
+
+
+@pytest.mark.parametrize(
+    "legacy_alias",
+    [
+        "--wb-hairline",
+        "--wb-active-fill",
+        "--wb-active-border",
+        "--wb-dock-bg",
+        "--wb-drawer-bg",
+        "--bg-card",
+        "--bg-card-hover",
+    ],
+)
+def test_legacy_aliases_preserved_for_backwards_compat(legacy_alias: str) -> None:
+    """Pre-P55-01 rules across the 4900-line stylesheet reference
+    these names. They stay declared (each one derived from the 3
+    roots) so no rule needs to migrate in lockstep."""
+    assert re.search(
+        rf"^\s*{re.escape(legacy_alias)}\s*:",
+        CSS,
+        re.MULTILINE,
+    ), f"legacy alias {legacy_alias} must remain declared"
+
+
+# ─── 4. The big literal migration ─────────────────────────────
+
+
+def test_no_remaining_cyan_rgba_literals() -> None:
+    """The accent color #67e8f9 / rgba(103, 232, 249, X) was the
+    most-ad-hoc-repeated literal in the codebase. Every occurrence
+    must now route through var(--accent) or an --accent-tint-* /
+    color-mix expression — otherwise a future accent swap would
+    miss them."""
+    assert "rgba(103, 232, 249" not in CSS, (
+        "raw cyan rgba literal still present; must use --accent token"
+    )
+    assert "#67e8f9" not in CSS, (
+        "raw cyan hex still present; must use var(--accent)"
+    )
+
+
+def test_no_remaining_white_rgba_literals() -> None:
+    """rgba(255, 255, 255, X) was the second-most-common — used
+    for hairlines, surface tints, faint borders. Migrated to
+    color-mix(in lch, var(--contrast) X%, transparent)."""
+    assert "rgba(255, 255, 255" not in CSS, (
+        "raw white rgba still present; must derive from --contrast"
+    )
+
+
+# ─── 5. Single-accent discipline ──────────────────────────────
+
+
+def test_accent_token_used_throughout() -> None:
+    """Sanity: the post-migration file must reference var(--accent)
+    enough times that the migration isn't just removing the
+    literals — they must be replaced with the token."""
+    accent_uses = len(re.findall(r"var\(--accent[\s,)]", CSS))
+    accent_tint_uses = len(re.findall(r"var\(--accent-tint", CSS))
+    assert accent_uses + accent_tint_uses >= 30, (
+        f"expected ≥30 var(--accent*) uses after migration, "
+        f"got {accent_uses} + {accent_tint_uses} tinted"
+    )
+
+
+def test_no_double_wrapped_accent_fallback() -> None:
+    """A textual replace of #67e8f9 → var(--accent) inside an
+    existing var(--accent, #67e8f9) fallback would have produced
+    var(--accent, var(--accent)). Sanity-check that's been cleaned."""
+    assert "var(--accent, var(--accent))" not in CSS
+
+
+# ─── 6. Browser-support note (informational only) ─────────────
+
+
+def test_no_self_referential_token_cycles() -> None:
+    """Codex round-1 P1 + round-2 P1: a custom-property cycle
+    (`--x: var(--y)` and `--y: var(--x)` in the same scope, or
+    `--x: var(--x)`) makes BOTH properties invalid at computed-
+    value time. Browsers fall back to UA defaults — focus rings
+    disappear, hairlines vanish, color-mix() returns transparent.
+    The visible regression is huge but tests using just
+    `var(--accent)` lookups don't catch it. This test parses
+    the :root block and walks the alias graph for cycles."""
+    # Crude but works: only consider 1-hop cycles (X→Y where Y→X).
+    # Multi-hop cycles are rare and the same fix (no redeclaration)
+    # protects against them.
+    rule_match = re.search(
+        r":root\s*\{(.*?)^\}", CSS, re.DOTALL | re.MULTILINE
+    )
+    assert rule_match is not None
+    body = rule_match.group(1)
+    # Strip /* ... */ comments (which may contain spurious
+    # `--x: var(--y)` snippets in our docblock examples).
+    body = re.sub(r"/\*.*?\*/", "", body, flags=re.DOTALL)
+    # Map each --foo declaration to its var(--bar) reference (if simple alias).
+    decls: dict[str, str] = {}
+    for match in re.finditer(
+        r"^\s*(--[A-Za-z0-9_-]+)\s*:\s*([^;]+);",
+        body,
+        re.MULTILINE,
+    ):
+        name = match.group(1)
+        value = match.group(2).strip()
+        decls[name] = value
+    cycles = []
+    for name, value in decls.items():
+        # Match a bare alias of the form `var(--other)` (no
+        # color-mix wrapping — those don't cycle the same way).
+        alias = re.fullmatch(r"var\((--[A-Za-z0-9_-]+)\)", value)
+        if not alias:
+            continue
+        target = alias.group(1)
+        # Self-cycle.
+        if target == name:
+            cycles.append((name, name))
+        # Mutual 1-hop cycle.
+        if target in decls:
+            target_val = decls[target].strip()
+            target_alias = re.fullmatch(r"var\((--[A-Za-z0-9_-]+)\)", target_val)
+            if target_alias and target_alias.group(1) == name:
+                cycles.append((name, target))
+    assert cycles == [], (
+        f"detected custom-property cycle(s) at workbench.css :root: "
+        f"{cycles}. Browsers will treat the cycled tokens as "
+        f"invalid-at-computed-value and downstream rules will lose "
+        f"their styling."
+    )
+
+
+def test_color_mix_is_used_extensively() -> None:
+    """All major browsers shipped lch() + color-mix() by early
+    2023; we rely on them without fallback. Count uses to confirm
+    the migration actually adopted the new syntax rather than
+    leaving everything as flat hex/rgba."""
+    color_mix_count = CSS.count("color-mix(in lch")
+    assert color_mix_count >= 15, (
+        f"expected substantial color-mix(in lch) usage; got "
+        f"{color_mix_count}"
+    )

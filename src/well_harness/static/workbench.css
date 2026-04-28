@@ -359,7 +359,7 @@ html, body {
   min-height: 1.3rem;
   padding: 0.55rem 0.7rem;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in lch, var(--contrast) 4%, transparent);
   color: rgba(206, 223, 236, 0.86);
   font-family: "SFMono-Regular", "Menlo", monospace;
   font-size: 0.92rem;
@@ -1558,7 +1558,7 @@ html, body {
   min-width: 7.25rem;
   padding: 0.65rem 0.9rem;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid color-mix(in lch, var(--contrast) 12%, transparent);
   background: rgba(9, 21, 32, 0.82);
   color: #edf8ff;
   font-weight: 700;
@@ -2297,8 +2297,8 @@ body[data-view="expert"] [view="beginner"] {
 }
 .workbench-suggestion-input:focus {
   outline: none;
-  border-color: var(--accent, #67e8f9);
-  box-shadow: 0 0 0 2px rgba(103, 232, 249, 0.22);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in lch, var(--accent) 22%, transparent);
 }
 .workbench-suggestion-form-actions {
   display: flex; align-items: center; gap: 0.6rem;
@@ -2315,7 +2315,7 @@ body[data-view="expert"] [view="beginner"] {
 .workbench-suggestion-interpretation {
   margin-top: 1rem; padding: 0.85rem 1rem;
   border: 1px solid var(--wb-hairline);
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in lch, var(--contrast) 4%, transparent);
   border-radius: 12px;
 }
 .workbench-suggestion-interpretation-header {
@@ -2358,7 +2358,7 @@ body[data-view="expert"] [view="beginner"] {
   gap: 0.4rem 0.85rem;
   margin: 0.55rem 0 0.85rem;
   padding: 0.55rem 0.7rem;
-  background: rgba(255, 255, 255, 0.025);
+  background: color-mix(in lch, var(--contrast) 2.5%, transparent);
   border: 1px solid var(--wb-hairline);
   border-radius: 8px;
 }
@@ -2379,7 +2379,7 @@ body[data-view="expert"] [view="beginner"] {
 }
 .workbench-suggestion-confidence-bar {
   height: 5px;
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in lch, var(--contrast) 6%, transparent);
   border-radius: 3px;
   overflow: hidden;
   display: block;
@@ -2388,7 +2388,7 @@ body[data-view="expert"] [view="beginner"] {
   display: block;
   height: 100%;
   width: 0;
-  background: var(--accent, #67e8f9);
+  background: var(--accent);
   border-radius: 3px;
   transition: width 168ms cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -2418,7 +2418,7 @@ body[data-view="expert"] [view="beginner"] {
   line-height: 1.5;
 }
 .workbench-suggestion-confidence-hint strong {
-  color: var(--accent, #67e8f9);
+  color: var(--accent);
   font-family: "SF Mono", Menlo, Consolas, monospace;
   font-size: 0.66rem;
   font-weight: 500;
@@ -2433,8 +2433,8 @@ body[data-view="expert"] [view="beginner"] {
   gap: 0.55rem;
   padding: 0.55rem 0.75rem;
   margin: 0.5rem 0 0;
-  background: rgba(103, 232, 249, 0.06);
-  border: 1px solid rgba(103, 232, 249, 0.22);
+  background: color-mix(in lch, var(--accent) 6%, transparent);
+  border: 1px solid color-mix(in lch, var(--accent) 22%, transparent);
   border-radius: 8px;
   font-size: 0.74rem;
   color: #d8eeff;
@@ -2442,7 +2442,7 @@ body[data-view="expert"] [view="beginner"] {
 .workbench-suggestion-draft-banner[hidden] { display: none; }
 .workbench-suggestion-draft-icon { font-size: 0.95rem; }
 .workbench-suggestion-draft-text strong {
-  color: var(--accent, #67e8f9);
+  color: var(--accent);
   font-variant-numeric: tabular-nums;
   margin: 0 0.15rem;
 }
@@ -2459,7 +2459,7 @@ body[data-view="expert"] [view="beginner"] {
 .workbench-suggestion-draft-btn {
   appearance: none;
   border: 1px solid var(--wb-hairline);
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in lch, var(--contrast) 4%, transparent);
   color: #d8eeff;
   padding: 0.28rem 0.6rem;
   border-radius: 6px;
@@ -2471,16 +2471,16 @@ body[data-view="expert"] [view="beginner"] {
     border-color 168ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 .workbench-suggestion-draft-btn:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: color-mix(in lch, var(--contrast) 7%, transparent);
   border-color: rgba(143, 214, 233, 0.32);
 }
 .workbench-suggestion-draft-btn.is-primary {
-  background: rgba(103, 232, 249, 0.12);
-  border-color: rgba(103, 232, 249, 0.32);
-  color: #67e8f9;
+  background: var(--accent-tint-12);
+  border-color: color-mix(in lch, var(--accent) 32%, transparent);
+  color: var(--accent);
 }
 .workbench-suggestion-draft-btn.is-primary:hover {
-  background: rgba(103, 232, 249, 0.18);
+  background: color-mix(in lch, var(--accent) 18%, transparent);
 }
 
 /* P54-09: pre-submit conflict warning banner. Replaces the
@@ -2525,7 +2525,7 @@ body[data-view="expert"] [view="beginner"] {
   gap: 0.5rem;
   align-items: baseline;
   padding: 0.4rem 0.55rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in lch, var(--contrast) 3%, transparent);
   border: 1px solid var(--wb-hairline);
   border-radius: 6px;
   font-size: 0.7rem;
@@ -2545,7 +2545,7 @@ body[data-view="expert"] [view="beginner"] {
 .workbench-suggestion-conflict-list .conflict-gates {
   font-family: "SF Mono", Menlo, Consolas, monospace;
   font-size: 0.62rem;
-  color: var(--accent, #67e8f9);
+  color: var(--accent);
   letter-spacing: 0.02em;
 }
 .workbench-suggestion-conflict-actions {
@@ -2586,7 +2586,7 @@ body[data-view="expert"] [view="beginner"] {
 .workbench-annotation-inbox-item {
   padding: 0.7rem 0.85rem;
   border: 1px solid var(--wb-hairline);
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in lch, var(--contrast) 4%, transparent);
   border-radius: 10px;
   transition:
     border-color var(--wb-duration-drawer) var(--wb-ease-out),
@@ -2594,7 +2594,7 @@ body[data-view="expert"] [view="beginner"] {
 }
 .workbench-annotation-inbox-item:hover {
   border-color: rgba(143, 214, 233, 0.22);
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in lch, var(--contrast) 6%, transparent);
 }
 .workbench-annotation-inbox-item-line {
   display: flex; flex-wrap: wrap; gap: 0.6rem;
@@ -2992,7 +2992,7 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
 .workbench-execution-badge-backfill {
   margin-left: 0.2rem;
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: color-mix(in lch, var(--contrast) 55%, transparent);
   cursor: help;
 }
 /* INIT — cool gray, the executor hasn't started */
@@ -3196,7 +3196,7 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
   margin: 0 0 0.85rem 0;
   border: 1px solid var(--wb-hairline);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in lch, var(--contrast) 3%, transparent);
   font-size: 0.72rem;
 }
 .workbench-metrics-summary {
@@ -3239,7 +3239,7 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
   margin-bottom: 0.85rem;
 }
 .workbench-metrics-card {
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in lch, var(--contrast) 4%, transparent);
   border: 1px solid var(--wb-hairline);
   border-radius: 10px;
   padding: 0.6rem 0.75rem;
@@ -4007,20 +4007,85 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
      · dock label bumped to 0.7rem (~11px), spacing tightened
      · icons swapped to 1.5px-stroke inline SVG (no emoji)
    --------------------------------------------------------------- */
+/* ───────────────────────────────────────────────────────────────
+   P55-01 (2026-04-28): LCH 3-token foundation.
+
+   Linear's redesign collapsed 98 theme variables down to 3 semantic
+   ones (base / accent / contrast) — the rest derive via color-mix
+   in a perceptually-uniform color space (LCH). We adopt the same
+   spine so future theme work, light-mode, and a11y contrast
+   adjustments need to touch only three values.
+
+   The legacy --wb-* / --workbench-* names below are preserved as
+   aliases pointing at the new derived tokens, so existing rules
+   keep rendering unchanged. Future phases can migrate ad-hoc
+   rgba() / hex literals to these tokens incrementally.
+
+   Browser support: lch() + color-mix() are stable in all majors
+   since Chrome 111 / Firefox 113 / Safari 16.2 (early 2023), so
+   we rely on them without fallback in this codebase (workbench.html
+   is served by demo_server.py to engineering staff with current
+   browsers).
+   ─────────────────────────────────────────────────────────────── */
 :root {
+  /* === The three semantic tokens.
+     P55-01 round-1 fix (Codex): alias the upstream design-tokens.css
+     palette rather than redeclaring it. design-tokens.css already
+     declares `--bg-base`, `--accent`, `--text-main` for the entire
+     surface set (workbench + demo + fan-console + …); a parallel
+     declaration here would (a) create a self-referential cycle if
+     the right-hand side uses var(--accent), and (b) leave the
+     `body { background: var(--bg-base) }` rule disconnected from
+     our 3-token retheme contract. By aliasing, a future palette
+     swap in design-tokens.css propagates through every derivation
+     and the body bg, with one source of truth. */
+  --base: var(--bg-base);
+  /* --accent inherits as-is from design-tokens.css; no redeclaration. */
+  --contrast: var(--text-main);
+
+  /* === Derived neutrals via LCH mix of base ↔ contrast ===
+     Keeping these as color-mix expressions (not pre-flattened hex)
+     so they auto-adjust if --base or --contrast changes. */
+  --surface-1: color-mix(in lch, var(--base) 96%, var(--contrast));
+  --surface-2: color-mix(in lch, var(--base) 92%, var(--contrast));
+  --hairline:  color-mix(in lch, var(--contrast) 8%, transparent);
+  --hairline-strong: color-mix(in lch, var(--contrast) 16%, transparent);
+  /* Codex round-2 P1: --text-main is declared upstream in
+     design-tokens.css; redeclaring it here as `var(--contrast)`
+     completed a cycle (--contrast: var(--text-main); --text-main:
+     var(--contrast)), making both invalid at computed-value time
+     and breaking every downstream color-mix that depended on
+     --contrast. The aliasing direction is now: design-tokens.css
+     owns --text-main → workbench-local --contrast aliases that →
+     derivations consume --contrast. No reverse edge. */
+  --text-muted: color-mix(in lch, var(--contrast) 60%, var(--base));
+  --text-faint: color-mix(in lch, var(--contrast) 36%, var(--base));
+
+  /* === Accent washes (perceptually-scaled tints/shades) === */
+  --accent-tint-12: color-mix(in lch, var(--accent) 12%, transparent);
+  --accent-tint-28: color-mix(in lch, var(--accent) 28%, transparent);
+  --accent-tint-50: color-mix(in lch, var(--accent) 50%, transparent);
+  --accent-on:      var(--accent);
+
+  /* === Motion tokens (preserved from P53-02) === */
   --workbench-dock-width: 64px;
   --workbench-drawer-width: 380px;
   --wb-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
   --wb-duration-drawer: 168ms;
-  /* P53-02: neutral hairline replaces the cyan-tinted version.
-     Cyan-on-dark hairlines read as "tech demo"; Claude.app uses
-     neutral whites for separators and reserves the brand accent
-     for focus rings + active states only. */
-  --wb-hairline: rgba(255, 255, 255, 0.08);
-  --wb-dock-bg: #0E1320;
-  --wb-drawer-bg: #0F1828;
-  --wb-active-fill: rgba(103, 232, 249, 0.12);
-  --wb-active-border: rgba(103, 232, 249, 0.28);
+
+  /* === Legacy aliases — ALL derived from the 3 roots above ===
+     New code should reference the canonical names (--accent,
+     --hairline, --text-main, --text-muted, --surface-1, ...).
+     These aliases keep pre-P55-01 rules rendering unchanged
+     while a gradual migration runs in subsequent phases.
+     ─────────────────────────────────────────────────────────── */
+  --wb-hairline: var(--hairline);
+  --wb-dock-bg: color-mix(in lch, var(--base) 92%, var(--contrast));
+  --wb-drawer-bg: color-mix(in lch, var(--base) 88%, var(--contrast));
+  --wb-active-fill: var(--accent-tint-12);
+  --wb-active-border: var(--accent-tint-28);
+  --bg-card: color-mix(in lch, var(--contrast) 3%, transparent);
+  --bg-card-hover: color-mix(in lch, var(--contrast) 5%, transparent);
 }
 
 body {
@@ -4065,15 +4130,15 @@ body {
 }
 .workbench-dock-btn:hover {
   color: var(--text-main, #e6eef6);
-  background: rgba(103, 232, 249, 0.06);
-  border-color: rgba(103, 232, 249, 0.14);
+  background: color-mix(in lch, var(--accent) 6%, transparent);
+  border-color: color-mix(in lch, var(--accent) 14%, transparent);
 }
 .workbench-dock-btn:focus-visible {
-  outline: 2px solid var(--accent, #67e8f9);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 .workbench-dock-btn[aria-pressed="true"] {
-  color: var(--accent, #67e8f9);
+  color: var(--accent);
   background: var(--wb-active-fill);
   border-color: var(--wb-active-border);
 }
@@ -4161,7 +4226,7 @@ body[data-active-tool="new"] [data-dock-section="new"][hidden] {
   font-weight: 500;
   line-height: 1.3;
   border: 1px solid var(--wb-hairline);
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in lch, var(--contrast) 4%, transparent);
   color: #edf8ff;
   box-shadow: none;
   transform: none;
@@ -4170,27 +4235,27 @@ body[data-active-tool="new"] [data-dock-section="new"][hidden] {
     border-color var(--wb-duration-drawer) var(--wb-ease-out);
 }
 .workbench-tool-drawer-section .workbench-toolbar-button:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: color-mix(in lch, var(--contrast) 7%, transparent);
   border-color: rgba(143, 214, 233, 0.22);
   box-shadow: none;
   transform: none;
 }
 .workbench-tool-drawer-section .workbench-toolbar-button:focus-visible {
-  outline: 2px solid var(--accent, #67e8f9);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-color: var(--accent, #67e8f9);
+  border-color: var(--accent);
   box-shadow: none;
 }
 
 .workbench-tool-drawer-section .workbench-toolbar-button.is-primary {
-  background: var(--accent, #67e8f9);
-  border-color: var(--accent, #67e8f9);
+  background: var(--accent);
+  border-color: var(--accent);
   color: #051018;
   font-weight: 600;
 }
 .workbench-tool-drawer-section .workbench-toolbar-button.is-primary:hover {
-  background: rgba(103, 232, 249, 0.85);
-  border-color: rgba(103, 232, 249, 0.85);
+  background: color-mix(in lch, var(--accent) 85%, transparent);
+  border-color: color-mix(in lch, var(--accent) 85%, transparent);
 }
 
 /* Same tightening applied to the annotation-inbox-item action chips
@@ -4246,10 +4311,10 @@ body[data-active-tool="new"] [data-dock-section="new"][hidden] {
 }
 .workbench-tool-drawer-close:hover {
   color: var(--text-main, #e6eef6);
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in lch, var(--contrast) 4%, transparent);
 }
 .workbench-tool-drawer-close:focus-visible {
-  outline: 2px solid var(--accent, #67e8f9);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 .workbench-tool-drawer-empty {
@@ -4290,7 +4355,7 @@ body[data-active-tool="new"] [data-dock-section="new"][hidden] {
   gap: 0.65rem;
   width: 100%;
   text-align: left;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in lch, var(--contrast) 4%, transparent);
   border: 1px solid var(--wb-hairline);
   border-radius: 12px;
   padding: 0.7rem 0.85rem;
@@ -4302,10 +4367,10 @@ body[data-active-tool="new"] [data-dock-section="new"][hidden] {
 }
 .workbench-new-circuit-template-card:hover {
   border-color: rgba(143, 214, 233, 0.22);
-  background: rgba(255, 255, 255, 0.06);
+  background: color-mix(in lch, var(--contrast) 6%, transparent);
 }
 .workbench-new-circuit-template-card:focus-visible {
-  outline: 2px solid var(--accent, #67e8f9);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 .workbench-new-circuit-template-card[data-template-selected="true"] {
@@ -4320,12 +4385,12 @@ body[data-active-tool="new"] [data-dock-section="new"][hidden] {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in lch, var(--contrast) 5%, transparent);
   color: var(--text-muted, #93a8b8);
 }
 .workbench-new-circuit-template-card[data-template-selected="true"] .workbench-new-circuit-template-icon {
-  color: var(--accent, #67e8f9);
-  background: rgba(103, 232, 249, 0.08);
+  color: var(--accent);
+  background: color-mix(in lch, var(--accent) 8%, transparent);
 }
 .workbench-new-circuit-template-icon svg {
   width: 18px;
@@ -4368,11 +4433,11 @@ body[data-active-tool="new"] [data-dock-section="new"][hidden] {
     color var(--wb-duration-drawer) var(--wb-ease-out);
 }
 .workbench-new-circuit-derive-btn:hover {
-  border-color: rgba(103, 232, 249, 0.4);
+  border-color: color-mix(in lch, var(--accent) 40%, transparent);
   color: #edf8ff;
 }
 .workbench-new-circuit-derive-btn:focus-visible {
-  outline: 2px solid var(--accent, #67e8f9);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 .workbench-new-circuit-derive-btn svg {
@@ -4409,8 +4474,8 @@ body[data-active-tool="new"] [data-dock-section="new"][hidden] {
 }
 .workbench-new-circuit-input:focus {
   outline: none;
-  border-color: var(--accent, #67e8f9);
-  box-shadow: 0 0 0 2px rgba(103, 232, 249, 0.22);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in lch, var(--accent) 22%, transparent);
 }
 .workbench-new-circuit-actions {
   display: flex;
@@ -4438,7 +4503,7 @@ body[data-active-tool="new"] [data-dock-section="new"][hidden] {
   position: static;
   margin: 0.6rem 0;
   padding: 0.6rem 0.75rem;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in lch, var(--contrast) 4%, transparent);
   border: 1px solid var(--wb-hairline);
   border-radius: 10px;
 }
@@ -4456,7 +4521,7 @@ body[data-active-tool="new"] [data-dock-section="new"][hidden] {
 }
 .workbench-tool-approve .workbench-approval-lane {
   border: 1px solid var(--wb-hairline);
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in lch, var(--contrast) 4%, transparent);
   border-radius: 10px;
   padding: 0.7rem 0.85rem;
 }
@@ -4684,16 +4749,16 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-system-toggle-btn:hover,
 .workbench-circuit-system-btn:hover {
   color: #edf8ff;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in lch, var(--contrast) 4%, transparent);
 }
 .workbench-system-toggle-btn[aria-pressed="true"],
 .workbench-circuit-system-btn[aria-pressed="true"] {
   color: #051018;
-  background: var(--accent, #67e8f9);
+  background: var(--accent);
 }
 .workbench-system-toggle-btn:focus-visible,
 .workbench-circuit-system-btn:focus-visible {
-  outline: 2px solid var(--accent, #67e8f9);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -4774,7 +4839,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   flex-direction: column;
   gap: 0.7rem;
   padding: 1rem 1.1rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in lch, var(--contrast) 3%, transparent);
   border: 1px solid var(--wb-hairline);
   border-radius: 12px;
 }
@@ -4798,8 +4863,8 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 }
 .workbench-sim-field input:focus {
   outline: none;
-  border-color: var(--accent, #67e8f9);
-  box-shadow: 0 0 0 2px rgba(103, 232, 249, 0.22);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in lch, var(--accent) 22%, transparent);
 }
 .workbench-sim-params .workbench-toolbar-button {
   margin-top: 0.4rem;
@@ -4809,7 +4874,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   flex-direction: column;
   gap: 0.85rem;
   padding: 1rem 1.1rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in lch, var(--contrast) 3%, transparent);
   border: 1px solid var(--wb-hairline);
   border-radius: 12px;
 }
@@ -4866,7 +4931,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-cockpit-throttle,
 .workbench-cockpit-indicators {
   padding: 1.1rem 1.2rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in lch, var(--contrast) 3%, transparent);
   border: 1px solid var(--wb-hairline);
   border-radius: 12px;
 }
@@ -4896,7 +4961,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   left: 50%;
   width: 2px;
   margin-left: -1px;
-  background: linear-gradient(to bottom, var(--accent, #67e8f9) 0%, transparent 60%);
+  background: linear-gradient(to bottom, var(--accent) 0%, transparent 60%);
   border-radius: 2px;
   opacity: 0.55;
 }
@@ -4949,8 +5014,8 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.04);
+  background: color-mix(in lch, var(--contrast) 18%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in lch, var(--contrast) 4%, transparent);
 }
 .workbench-cockpit-light[data-status="ready"] .workbench-cockpit-light-dot {
   background: #00e5a0;
@@ -4997,7 +5062,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.78rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in lch, var(--contrast) 3%, transparent);
   border: 1px solid var(--wb-hairline);
   border-radius: 12px;
   overflow: hidden;
@@ -5010,7 +5075,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   letter-spacing: 0.04em;
   color: var(--text-muted, #93a8b8);
   font-weight: 500;
-  background: rgba(255, 255, 255, 0.025);
+  background: color-mix(in lch, var(--contrast) 2.5%, transparent);
   border-bottom: 1px solid var(--wb-hairline);
 }
 .workbench-spec-table tbody th,
@@ -5027,7 +5092,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-spec-table tbody th {
   font-family: "SF Mono", Menlo, Consolas, monospace;
   font-weight: 500;
-  color: var(--accent, #67e8f9);
+  color: var(--accent);
   font-size: 0.74rem;
   width: 7.5rem;
 }
@@ -5035,7 +5100,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   font-size: 0.74rem;
   padding: 0.1rem 0.4rem;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.05);
+  background: color-mix(in lch, var(--contrast) 5%, transparent);
   color: #edf8ff;
   margin-right: 0.25rem;
 }
@@ -5049,7 +5114,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-spec-list strong {
   font-family: "SF Mono", Menlo, Consolas, monospace;
   font-weight: 500;
-  color: var(--accent, #67e8f9);
+  color: var(--accent);
   margin-right: 0.4rem;
 }
 .workbench-spec-footer {

@@ -87,16 +87,39 @@ def test_css_declares_motion_token():
 
 
 def test_css_declares_warm_dock_bg():
-    """Dock bg moves from cold #0B1220 to faintly-warm #0E1320.
-    Locked at the token level so a future refactor doesn't drift back."""
-    assert "--wb-dock-bg: #0E1320" in CSS or "--wb-dock-bg:#0E1320" in CSS
+    """Dock bg must be a faintly-warm dark surface. P55-01 migrated
+    the literal #0E1320 to a color-mix derivation off --base, so the
+    contract is now "the token is declared + resolves to something
+    near-base (not pure black, not random)" — the literal-hex check
+    locked in P52-02 belonged to the pre-LCH world."""
+    rule = re.search(r"--wb-dock-bg:\s*([^;]+);", CSS)
+    assert rule is not None, "--wb-dock-bg must be declared"
+    value = rule.group(1).strip()
+    # Either the original literal (compat) OR the LCH derivation.
+    is_valid = (
+        "#0E1320" in value
+        or ("color-mix" in value and "var(--base)" in value)
+    )
+    assert is_valid, f"--wb-dock-bg should be near-base; got: {value}"
 
 
 def test_css_active_fill_and_border():
     """Active state = 12% accent fill + 28% accent border (subdued
-    per Claude.app, not the heavier 14%/42% the v1 sketch had)."""
-    assert "rgba(103, 232, 249, 0.12)" in CSS
-    assert "rgba(103, 232, 249, 0.28)" in CSS
+    per Claude.app). P55-01 expressed both via --accent-tint-12 /
+    --accent-tint-28 derivations of the new --accent token; either
+    spelling satisfies the contract."""
+    has_12 = (
+        "rgba(103, 232, 249, 0.12)" in CSS
+        or "--accent-tint-12" in CSS
+        or "color-mix(in lch, var(--accent) 12%" in CSS
+    )
+    has_28 = (
+        "rgba(103, 232, 249, 0.28)" in CSS
+        or "--accent-tint-28" in CSS
+        or "color-mix(in lch, var(--accent) 28%" in CSS
+    )
+    assert has_12, "12% accent fill must be expressed via token or literal"
+    assert has_28, "28% accent border must be expressed via token or literal"
 
 
 def test_css_drawer_shadow_softened():
@@ -150,11 +173,23 @@ def test_css_dock_label_is_readable_size():
 
 
 def test_css_hairline_border_token():
-    """Hairlines use the --wb-hairline token. P53-02 migrated the
-    token value from cyan-tinted rgba(143,214,233,0.10) to neutral
-    rgba(255,255,255,0.08) — Claude.app reserves the brand accent
-    for focus rings + active states only, separators stay neutral."""
-    assert "--wb-hairline: rgba(255, 255, 255, 0.08)" in CSS
+    """Hairlines use the --wb-hairline token. P53-02 made the token
+    neutral (not cyan-tinted); P55-01 derived it from --contrast at
+    8% via color-mix(in lch, ...) so the contract is now
+    "derives from contrast, not accent" — the semantic guarantee
+    that hairlines aren't tinted by the brand color."""
+    rule = re.search(r"--wb-hairline:\s*([^;]+);", CSS)
+    assert rule is not None, "--wb-hairline must remain declared"
+    value = rule.group(1).strip()
+    # Accept either the original literal OR the new derivation chain.
+    is_neutral = (
+        "rgba(255, 255, 255" in value
+        or "var(--hairline)" in value  # alias chain → derives from --contrast
+    )
+    assert is_neutral, (
+        f"--wb-hairline must be neutral (contrast-derived, not accent); "
+        f"got {value!r}"
+    )
     # The drawer + dock now reference --wb-hairline (not the old
     # raw rgba values). Spot-check by hunting inside the dock rule.
     dock_rule = re.search(

@@ -29,28 +29,41 @@ def test_hairline_token_is_neutral():
     """The --wb-hairline token should be neutral white-tint, not
     cyan-tinted. Cyan-tinted hairlines visually scream "tech demo";
     Claude.app uses neutral grays for separators and reserves the
-    accent for focus + active states only."""
-    rule = re.search(
-        r':root\s*\{[^}]*\}',
-        CSS,
-        re.DOTALL,
-    )
-    assert rule is not None
-    body = rule.group(0)
+    accent for focus + active states only.
+
+    Note: this used to scope the lookup to the :root rule via
+    `:root\\s*\\{[^}]*\\}`, but P55-01's docblock comment legitimately
+    contains `}` characters in code examples, which truncates the
+    [^}]* class. Switched to a direct top-level match — the
+    declaration is unique enough not to need scoping."""
     hairline_match = re.search(
-        r'--wb-hairline:\s*([^;]+);',
-        body,
+        r'^\s*--wb-hairline:\s*([^;]+);',
+        CSS,
+        re.MULTILINE,
     )
     assert hairline_match is not None
     value = hairline_match.group(1).strip()
-    # Neutral = either rgba(255,255,255,X) or rgba with R≈G≈B
+    # Neutral = either the legacy white-rgba OR the new alias chain
+    # `var(--hairline)`, where `--hairline` is itself declared
+    # as color-mix off --contrast (NOT --accent) — so the semantic
+    # contract "hairline does NOT carry the brand tint" still holds.
     is_neutral = (
         "rgba(255, 255, 255" in value
         or "rgba(255,255,255" in value
+        or "var(--hairline)" in value
     )
     assert is_neutral, (
         f"--wb-hairline should be neutral white-tint, got: {value}"
     )
+    # If it's the alias chain, also confirm --hairline is declared
+    # off --contrast (the strict contract for "neutral").
+    if "var(--hairline)" in value:
+        h_rule = re.search(r"^\s*--hairline\s*:\s*([^;]+);", CSS, re.MULTILINE)
+        assert h_rule is not None, "--hairline alias target must be declared"
+        h_value = h_rule.group(1).strip()
+        assert "var(--contrast)" in h_value, (
+            f"--hairline must derive from --contrast (neutral), got: {h_value}"
+        )
 
 
 # ─── 2. drawer h2 uses lighter weight ──────────────────────────
