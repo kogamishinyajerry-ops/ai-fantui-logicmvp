@@ -30,10 +30,92 @@
 
   .grid {
     display: grid;
-    grid-template-columns: 420px 1fr;
+    grid-template-columns: 600px 1fr;
     gap: 16px;
     align-items: flex-start;
   }
+
+  /* P57-01 Visual Editor tabs + table */
+  .tabs {
+    display: flex; gap: 0; margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    background: transparent; border: none; color: var(--dim);
+    padding: 8px 14px; font-size: 12px; cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px; font-family: inherit;
+    letter-spacing: 0.04em;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active {
+    color: var(--accent); border-bottom-color: var(--accent);
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Metadata strip (always visible above tabs) */
+  .meta-strip {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;
+    margin-bottom: 10px; padding-bottom: 10px;
+    border-bottom: 1px dashed var(--border);
+  }
+  .meta-strip label {
+    display: flex; flex-direction: column; gap: 3px;
+    font-size: 10px; color: var(--dim);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .meta-strip input, .meta-strip select {
+    background: var(--panel-2); border: 1px solid var(--border);
+    color: var(--text); padding: 4px 6px; font-size: 12px;
+    font-family: inherit;
+  }
+
+  /* Event table */
+  .event-table-wrap { max-height: 380px; overflow: auto; }
+  table#eventTable {
+    width: 100%; border-collapse: collapse; font-size: 11px;
+  }
+  table#eventTable thead {
+    position: sticky; top: 0; background: var(--panel);
+    z-index: 1;
+  }
+  table#eventTable th {
+    text-align: left; color: var(--dim); font-weight: 400;
+    padding: 6px 6px; border-bottom: 1px solid var(--border);
+    text-transform: uppercase; letter-spacing: 0.04em; font-size: 10px;
+  }
+  table#eventTable td {
+    padding: 3px 4px; border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  table#eventTable td.idx { color: var(--dim); width: 24px; }
+  table#eventTable input, table#eventTable select {
+    width: 100%; background: transparent; border: 1px solid transparent;
+    color: var(--text); padding: 3px 4px; font-size: 11px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+  }
+  table#eventTable input:focus, table#eventTable select:focus {
+    outline: 1px solid var(--accent); border-color: var(--accent);
+  }
+  table#eventTable .row-actions {
+    display: flex; gap: 2px; white-space: nowrap;
+  }
+  table#eventTable .row-action-btn {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--dim); width: 22px; height: 22px; padding: 0;
+    cursor: pointer; font-size: 11px; line-height: 1;
+  }
+  table#eventTable .row-action-btn:hover {
+    color: var(--accent); border-color: var(--accent);
+  }
+  table#eventTable .row-action-btn.delete-row:hover {
+    color: var(--blocked); border-color: var(--blocked);
+  }
+  .table-toolbar {
+    display: flex; gap: 6px; margin-top: 8px; align-items: center;
+  }
+  .table-toolbar .hint { margin: 0; }
 
   .panel {
     border: 1px solid var(--border);
@@ -135,7 +217,61 @@
           <button id="loadPreset">加载</button>
           <button id="runBtn" class="primary">▶ 运行仿真</button>
         </div>
-        <textarea id="timelineJson" spellcheck="false"></textarea>
+
+        <!-- P57-01 Metadata strip — always visible -->
+        <div class="meta-strip">
+          <label>System
+            <select id="metaSystem">
+              <option value="fantui">fantui</option>
+              <option value="c919-etras">c919-etras</option>
+            </select>
+          </label>
+          <label>step_s
+            <input id="metaStepS" type="number" step="0.01" min="0.01" />
+          </label>
+          <label>duration_s
+            <input id="metaDurationS" type="number" step="0.1" min="0.1" />
+          </label>
+        </div>
+
+        <!-- P57-01 Tab system: Visual default, Raw escape hatch -->
+        <div class="tabs" role="tablist">
+          <button class="tab-btn active" data-tab="visual"
+                  aria-selected="true" role="tab">可视化编辑</button>
+          <button class="tab-btn" data-tab="raw"
+                  aria-selected="false" role="tab">Raw JSON</button>
+        </div>
+
+        <!-- Visual tab: structured event table -->
+        <div class="tab-panel active" data-tab-panel="visual" role="tabpanel">
+          <div class="event-table-wrap">
+            <table id="eventTable">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>t_s</th>
+                  <th>kind</th>
+                  <th>target</th>
+                  <th>value</th>
+                  <th>duration_s</th>
+                  <th>note</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="eventTableBody"></tbody>
+            </table>
+          </div>
+          <div class="table-toolbar">
+            <button id="addRow" data-action="add-row">+ Add Row</button>
+            <span class="hint" id="rowCountHint">0 events</span>
+          </div>
+        </div>
+
+        <!-- Raw tab: original JSON textarea (POST source of truth) -->
+        <div class="tab-panel" data-tab-panel="raw" role="tabpanel">
+          <textarea id="timelineJson" spellcheck="false"></textarea>
+        </div>
+
         <div class="status" id="status"></div>
         <div class="hint">
           · fantui 系统自动 POST 到 <code>/api/timeline-simulate</code>（当前端口）<br>
@@ -291,12 +427,271 @@ function setStatus(msg, kind = "") {
   statusEl.className = "status " + kind;
 }
 
+// =========================================================================
+// P57-01 Visual Editor model + sync
+// =========================================================================
+//
+// `currentTimeline` is the in-memory model. Both Visual and Raw tabs
+// read/write it. On every change we re-serialize to the textarea so
+// the existing run-button POST path is unchanged.
+
+const EVENT_KINDS = [
+  "set_input", "ramp_input", "inject_fault", "clear_fault",
+  "mark_phase", "assert_condition", "start_deploy_sequence",
+];
+
+let currentTimeline = {
+  title: "", description: "", system: "fantui",
+  step_s: 0.1, duration_s: 5.0, initial_inputs: {}, events: [],
+};
+
 function loadPresetInEditor(key) {
   const preset = PRESETS[key];
   if (!preset) return;
-  $("timelineJson").value = JSON.stringify(preset, null, 2);
+  // Deep-clone so the user's edits don't mutate PRESETS.
+  currentTimeline = JSON.parse(JSON.stringify(preset));
+  // Defensive defaults.
+  if (!Array.isArray(currentTimeline.events)) currentTimeline.events = [];
+  if (typeof currentTimeline.initial_inputs !== "object" ||
+      currentTimeline.initial_inputs === null) {
+    currentTimeline.initial_inputs = {};
+  }
+  renderAll();
   setStatus("已加载预设 · " + (preset.title || key));
 }
+
+// ── Two-way sync ──────────────────────────────────────────────────────────
+
+function syncToTextarea() {
+  // Source of truth → JSON textarea (the run button's POST source).
+  $("timelineJson").value = JSON.stringify(currentTimeline, null, 2);
+}
+
+function loadFromTextarea() {
+  // Raw tab → model. Called when user edits Raw and switches to Visual,
+  // or before run if Raw was edited last.
+  try {
+    const parsed = JSON.parse($("timelineJson").value);
+    if (typeof parsed !== "object" || parsed === null) {
+      throw new Error("timeline must be a JSON object");
+    }
+    if (!Array.isArray(parsed.events)) parsed.events = [];
+    currentTimeline = parsed;
+    return true;
+  } catch (e) {
+    setStatus("Raw JSON 解析失败: " + e.message, "err");
+    return false;
+  }
+}
+
+function renderAll() {
+  renderMetaStrip();
+  renderEventTable();
+  syncToTextarea();
+}
+
+// ── Metadata strip ────────────────────────────────────────────────────────
+
+function renderMetaStrip() {
+  $("metaSystem").value = currentTimeline.system || "fantui";
+  $("metaStepS").value = currentTimeline.step_s ?? 0.1;
+  $("metaDurationS").value = currentTimeline.duration_s ?? 5.0;
+}
+
+function isRawTabActive() {
+  const raw = document.querySelector('.tab-panel[data-tab-panel="raw"]');
+  return raw && raw.classList.contains("active");
+}
+
+// Codex R1 H1 fix: when Raw tab is active and the user edits the
+// always-visible metadata strip, we must first reload the model from
+// the textarea — otherwise syncToTextarea() would overwrite their
+// in-flight Raw edits with the stale model. If Raw JSON is invalid we
+// refuse the metadata change so the user can fix the JSON first.
+function refreshModelIfRawActive() {
+  if (!isRawTabActive()) return true;
+  return loadFromTextarea();
+}
+
+// Codex R2 LOW fix: when the guard rejects the change (Raw JSON
+// invalid), the user-typed value would otherwise stay visible in the
+// control while currentTimeline + textarea are unchanged — the strip
+// would lie about the active model. Snap each control back to the
+// model so what the user sees matches the textarea source of truth.
+$("metaSystem").addEventListener("change", () => {
+  if (!refreshModelIfRawActive()) { renderMetaStrip(); return; }
+  currentTimeline.system = $("metaSystem").value;
+  syncToTextarea();
+});
+$("metaStepS").addEventListener("change", () => {
+  const v = parseFloat($("metaStepS").value);
+  if (isNaN(v) || v <= 0) { renderMetaStrip(); return; }
+  if (!refreshModelIfRawActive()) { renderMetaStrip(); return; }
+  currentTimeline.step_s = v;
+  syncToTextarea();
+});
+$("metaDurationS").addEventListener("change", () => {
+  const v = parseFloat($("metaDurationS").value);
+  if (isNaN(v) || v <= 0) { renderMetaStrip(); return; }
+  if (!refreshModelIfRawActive()) { renderMetaStrip(); return; }
+  currentTimeline.duration_s = v;
+  syncToTextarea();
+});
+
+// ── Event table render ────────────────────────────────────────────────────
+
+function renderEventTable() {
+  const body = $("eventTableBody");
+  const events = currentTimeline.events || [];
+  body.innerHTML = events.map((ev, i) => renderEventRow(ev, i)).join("");
+  $("rowCountHint").textContent = `${events.length} event${events.length === 1 ? "" : "s"}`;
+}
+
+// Codex R1 H2 fix: coerce numeric fields to safe finite numbers BEFORE
+// they reach innerHTML. A hostile Raw payload like {"t_s": "<img onerror>"}
+// would otherwise inject markup. NaN / non-finite → fallback to safe
+// defaults; the kind/target/value/note fields go through escapeAttr.
+function safeNumber(v, fallback) {
+  const n = typeof v === "number" ? v : parseFloat(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function renderEventRow(ev, i) {
+  const kindOpts = EVENT_KINDS.map(
+    k => `<option value="${escapeAttr(k)}"${k === ev.kind ? " selected" : ""}>${escapeAttr(k)}</option>`
+  ).join("");
+  const valueStr = ev.value === undefined || ev.value === null ? "" :
+    (typeof ev.value === "string" ? ev.value : JSON.stringify(ev.value));
+  const tS = safeNumber(ev.t_s, 0);
+  const dS = ev.duration_s === undefined || ev.duration_s === null
+    ? "" : safeNumber(ev.duration_s, "");
+  const lastIdx = (currentTimeline.events.length - 1);
+  return `
+    <tr data-row-index="${i}">
+      <td class="idx">${i + 1}</td>
+      <td><input type="number" step="0.01" min="0" data-field="t_s" value="${tS}" /></td>
+      <td><select data-field="kind">${kindOpts}</select></td>
+      <td><input type="text" data-field="target" value="${escapeAttr(ev.target ?? "")}" /></td>
+      <td><input type="text" data-field="value" value="${escapeAttr(valueStr)}" placeholder="(optional)" /></td>
+      <td><input type="number" step="0.01" min="0" data-field="duration_s" value="${dS}" placeholder="—" /></td>
+      <td><input type="text" data-field="note" value="${escapeAttr(ev.note ?? "")}" /></td>
+      <td>
+        <div class="row-actions">
+          <button class="row-action-btn" data-action="move-up"
+                  ${i === 0 ? "disabled" : ""} title="上移">↑</button>
+          <button class="row-action-btn" data-action="move-down"
+                  ${i === lastIdx ? "disabled" : ""}
+                  title="下移">↓</button>
+          <button class="row-action-btn delete-row" data-action="delete-row"
+                  title="删除">×</button>
+        </div>
+      </td>
+    </tr>`;
+}
+
+function escapeAttr(s) {
+  return String(s).replace(/[&<>"]/g, c =>
+    ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+}
+
+// ── Event table mutations ─────────────────────────────────────────────────
+
+$("addRow").addEventListener("click", () => {
+  currentTimeline.events.push({
+    t_s: 0.0, kind: "set_input", target: "", value: null, note: "",
+  });
+  renderEventTable();
+  syncToTextarea();
+});
+
+$("eventTableBody").addEventListener("input", e => {
+  const tr = e.target.closest("tr[data-row-index]");
+  if (!tr) return;
+  const i = parseInt(tr.dataset.rowIndex, 10);
+  const field = e.target.dataset.field;
+  if (!field) return;
+  const ev = currentTimeline.events[i];
+  if (!ev) return;
+  if (field === "t_s" || field === "duration_s") {
+    const v = e.target.value === "" ? null : parseFloat(e.target.value);
+    if (field === "duration_s" && v === null) {
+      delete ev.duration_s;
+    } else if (!isNaN(v)) {
+      ev[field] = v;
+    }
+  } else if (field === "value") {
+    // Try parse as JSON for bool/number/array; fall back to string.
+    // Codex R1 M3 fix: case-fold true/false/null BEFORE JSON.parse so
+    // typing "True" / "FALSE" yields actual booleans, not the strings
+    // "True"/"FALSE" — executors do raw bool() on these values, and a
+    // truthy string would silently pass a check that should fail.
+    const raw = e.target.value;
+    if (raw === "") {
+      ev.value = null;
+    } else {
+      const lc = raw.trim().toLowerCase();
+      if (lc === "true") { ev.value = true; }
+      else if (lc === "false") { ev.value = false; }
+      else if (lc === "null") { ev.value = null; }
+      else {
+        try {
+          ev.value = JSON.parse(raw);
+        } catch {
+          ev.value = raw;
+        }
+      }
+    }
+  } else {
+    ev[field] = e.target.value;
+  }
+  syncToTextarea();
+});
+
+$("eventTableBody").addEventListener("click", e => {
+  const btn = e.target.closest("button[data-action]");
+  if (!btn) return;
+  const tr = btn.closest("tr[data-row-index]");
+  if (!tr) return;
+  const i = parseInt(tr.dataset.rowIndex, 10);
+  const action = btn.dataset.action;
+  const events = currentTimeline.events;
+  if (action === "delete-row") {
+    events.splice(i, 1);
+  } else if (action === "move-up" && i > 0) {
+    [events[i - 1], events[i]] = [events[i], events[i - 1]];
+  } else if (action === "move-down" && i < events.length - 1) {
+    [events[i], events[i + 1]] = [events[i + 1], events[i]];
+  } else {
+    return;
+  }
+  renderEventTable();
+  syncToTextarea();
+});
+
+// ── Tab switching ─────────────────────────────────────────────────────────
+
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const target = btn.dataset.tab;
+    // If leaving Raw → reparse so Visual reflects any manual JSON edits.
+    const wasRaw = document.querySelector(
+      ".tab-panel[data-tab-panel=raw].active"
+    );
+    if (wasRaw && target === "visual") {
+      if (loadFromTextarea()) renderAll();
+    }
+    document.querySelectorAll(".tab-btn").forEach(b => {
+      const active = b === btn;
+      b.classList.toggle("active", active);
+      b.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    document.querySelectorAll(".tab-panel").forEach(p => {
+      p.classList.toggle("active", p.dataset.tabPanel === target);
+    });
+  });
+});
+
+// ── Preset wiring ─────────────────────────────────────────────────────────
 
 $("loadPreset").addEventListener("click", () => {
   loadPresetInEditor($("presetSelect").value);
