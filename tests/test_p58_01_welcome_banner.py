@@ -188,18 +188,34 @@ def test_keyboard_shortcut_reopens_banner() -> None:
 def test_keyboard_shortcut_skips_form_inputs() -> None:
     """The Shift+? shortcut must not fire while the user is typing in
     INPUT/TEXTAREA/SELECT/contenteditable — typing `?` in the JSON
-    textarea must NOT pop the banner over the editor."""
+    textarea must NOT pop the banner over the editor.
+
+    Codex R2 LOW: assert ALL four guards individually so a future
+    regression that drops e.g. the SELECT or isContentEditable check
+    fails the test instead of silently passing on INPUT/TEXTAREA alone.
+    """
     body = _read()
-    # Check the listener guards against form inputs before checking the key.
-    pattern = (
+    # Locate the keydown listener block once.
+    handler_match = re.search(
         r'document\.addEventListener\s*\(\s*"keydown"'
-        r'[\s\S]{0,400}?(?:tagName\s*===\s*"INPUT"'
-        r'|tagName\s*===\s*"TEXTAREA")'
+        r'[\s\S]{0,1500}?\}\s*\)\s*;',
+        body,
     )
-    assert re.search(pattern, body), (
-        "keydown listener does not skip form inputs. Typing in the "
-        "JSON textarea would inadvertently pop the welcome banner."
-    )
+    assert handler_match is not None, "keydown listener block not found"
+    chunk = handler_match.group(0)
+    # Each individual guard must appear inside the handler.
+    required_guards = [
+        ('tagName === "INPUT"', r'tagName\s*===\s*"INPUT"'),
+        ('tagName === "TEXTAREA"', r'tagName\s*===\s*"TEXTAREA"'),
+        ('tagName === "SELECT"', r'tagName\s*===\s*"SELECT"'),
+        ('isContentEditable', r'isContentEditable'),
+    ]
+    for label, pat in required_guards:
+        assert re.search(pat, chunk), (
+            f"keydown listener missing guard for {label}. Without it, "
+            f"typing `?` in that surface would inadvertently pop the "
+            f"welcome banner. (Codex R2 LOW.)"
+        )
 
 
 # ── 4. Persistence: versioned localStorage dismissal flag ──
