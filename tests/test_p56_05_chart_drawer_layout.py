@@ -143,18 +143,23 @@ def test_tsc_svg_height_fits_drawer(page: Path) -> None:
     )
 
 
-# ─── 4. Selector dropdown opens upward so overflow:hidden doesn't clip it ───
+# ─── 4. Selector dropdown opens downward, contained by drawer's hidden overflow ───
+#
+# Codex R1 (2026-04-28) flagged: opening upward inside a clipped drawer
+# clips the dropdown at the drawer's top edge — worse than downward.
+# With overflow: hidden on the drawer, downward keeps the dropdown
+# inside the drawer body (briefly covering chart area while open),
+# which is contained and reachable.
 
 
 @pytest.mark.parametrize(
     "page", SIM_PAGES, ids=lambda p: p.name,
 )
-def test_tsc_selector_panel_opens_upward(page: Path) -> None:
-    """With `overflow: hidden` on the drawer, the absolutely-
-    positioned `.tsc-selector-panel` would be clipped if it tried
-    to open downward. Flip to `bottom: calc(100% + 3px)` so it
-    appears ABOVE the summary, in the unused space at the top of
-    the drawer head."""
+def test_tsc_selector_panel_opens_downward(page: Path) -> None:
+    """`.tsc-selector-panel` must use `top: calc(100% + ...)` so the
+    dropdown opens downward, INSIDE the clipped drawer. Opening
+    upward would be clipped by `.tsc-drawer.open { overflow: hidden }`
+    at the drawer's top edge (Codex R1 flagged this regression)."""
     body = page.read_text(encoding="utf-8")
     css = _inline_css(body)
     rule = re.search(
@@ -163,20 +168,64 @@ def test_tsc_selector_panel_opens_upward(page: Path) -> None:
         re.DOTALL,
     )
     if rule is None:
-        # fan_console may not have the dropdown; only assert when
-        # the rule exists.
         return
     rule_body = rule.group(1)
-    assert "bottom:" in rule_body or "bottom :" in rule_body, (
-        f"{page.name}: .tsc-selector-panel must declare a `bottom` "
-        f"property so the dropdown opens upward"
-    )
-    # And `top:` should not be set to a positive value (auto is OK).
     top_match = re.search(r"top\s*:\s*([^;}]+)", rule_body)
-    if top_match is not None:
-        top_val = top_match.group(1).strip()
-        assert top_val == "auto" or top_val.startswith("auto"), (
-            f"{page.name}: .tsc-selector-panel still has `top: "
-            f"{top_val}` — combined with bottom it'll stretch the "
-            f"dropdown. Use `top: auto` or omit `top` entirely."
+    assert top_match is not None, (
+        f"{page.name}: .tsc-selector-panel must declare a `top` "
+        f"property so the dropdown opens downward (contained inside "
+        f"the drawer's overflow:hidden box)."
+    )
+    top_val = top_match.group(1).strip()
+    assert top_val.startswith("calc"), (
+        f"{page.name}: .tsc-selector-panel `top: {top_val}` — must "
+        f"open downward via `top: calc(100% + ...)`. Opening upward "
+        f"gets clipped by the drawer's overflow:hidden top edge."
+    )
+    # And `bottom:` must NOT be set to a positive value (auto is OK).
+    bottom_match = re.search(r"bottom\s*:\s*([^;}]+)", rule_body)
+    if bottom_match is not None:
+        bottom_val = bottom_match.group(1).strip()
+        assert bottom_val == "auto" or bottom_val.startswith("auto"), (
+            f"{page.name}: .tsc-selector-panel still has `bottom: "
+            f"{bottom_val}` — that flips it upward into the clipped "
+            f"region. Use `bottom: auto` or omit `bottom` entirely."
         )
+
+
+# ─── 5. JS ensureChart() height matches the static SVG markup ───
+#
+# Codex R1 (2026-04-28) flagged: `TimeseriesChart.create({...height:240})`
+# overwrites the live SVG's height attribute at runtime, so the static
+# height="200" in the markup gets reverted on first render. The runtime
+# config MUST agree with the static SVG.
+
+
+@pytest.mark.parametrize(
+    "page", SIM_PAGES, ids=lambda p: p.name,
+)
+def test_ensure_chart_js_height_matches_svg(page: Path) -> None:
+    """`TimeseriesChart.create({ ..., height: N, ... })` runs every
+    time the drawer first opens and OVERWRITES the SVG's height
+    attribute. If JS still says 240 while the static markup says 200,
+    the chart pops back to 240px on first render and the drawer
+    budget is blown again. Both must declare the same value (≤ 200)."""
+    body = page.read_text(encoding="utf-8")
+    # Match `height: 200` or `height:200` inside a TimeseriesChart.create
+    # call — both pages use this identical pattern.
+    create_match = re.search(
+        r"TimeseriesChart\.create\s*\(\s*\{[^}]*?\bheight\s*:\s*(\d+)",
+        body,
+        re.DOTALL,
+    )
+    assert create_match is not None, (
+        f"{page.name}: cannot find TimeseriesChart.create({{...height:N}}) "
+        f"runtime config — the test needs updating to find it."
+    )
+    h = int(create_match.group(1))
+    assert h <= 200, (
+        f"{page.name}: TimeseriesChart.create({{...height:{h}}}) — JS "
+        f"runtime height must match the static SVG markup (≤ 200). "
+        f"Otherwise the chart reverts to {h}px on first open and the "
+        f"280px drawer budget is blown."
+    )
