@@ -2495,7 +2495,7 @@ function installGateMarkerHoverPreviews() {
       const rect = marker.getBoundingClientRect();
       // Anchor: just below + slightly right of the marker so it
       // doesn't cover the gate label. Clamp to viewport so the
-      // popover doesn't spill off the right edge.
+      // popover doesn't spill off the right OR bottom edges.
       const margin = 8;
       const popWidth = 280; // Matches the CSS max-width.
       let left = rect.right + margin;
@@ -2503,11 +2503,28 @@ function installGateMarkerHoverPreviews() {
       if (left + popWidth > viewportRight) {
         left = Math.max(margin, rect.left - popWidth - margin);
       }
-      const top = rect.bottom + margin;
+      // Codex P55-04 round-2 P2: clamp `top` to window.innerHeight.
+      // The popover can be up to 360px tall (CSS max-height), so a
+      // low-y marker (L4 near the bottom of a 640px SVG) on a
+      // laptop-height viewport would otherwise spill off-screen
+      // and hide later proposal rows. Unhide first so offsetHeight
+      // reads the rendered height; then if it would overflow the
+      // bottom, flip to render ABOVE the marker (rect.top - h - margin).
       popover.style.left = `${left}px`;
-      popover.style.top = `${top}px`;
+      popover.style.top = `${rect.bottom + margin}px`;
       popover.hidden = false;
       popover.setAttribute("aria-hidden", "false");
+      const popHeight = popover.offsetHeight;
+      const viewportBottom = window.innerHeight - margin;
+      let top = rect.bottom + margin;
+      if (top + popHeight > viewportBottom) {
+        // Try flipping above the marker.
+        const flipped = rect.top - margin - popHeight;
+        top = flipped >= margin
+          ? flipped
+          : Math.max(margin, viewportBottom - popHeight);
+      }
+      popover.style.top = `${top}px`;
     });
     marker.addEventListener("mouseleave", () => {
       _gateMarkerPopoverHideTimer = setTimeout(() => {

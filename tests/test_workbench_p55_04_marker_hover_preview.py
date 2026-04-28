@@ -276,6 +276,32 @@ def test_popover_header_carries_gate_id_and_count() -> None:
 # ─── 4. Positioning ───
 
 
+def test_popover_position_clamps_to_viewport_bottom() -> None:
+    """Codex P55-04 round-2 P2: low-y markers (L4 near the bottom
+    of a 640px SVG) on laptop-height viewports could push the
+    popover off the bottom. The position math must measure the
+    rendered popover height and flip above the marker (or pin to
+    bottom-margin) when overflow is detected."""
+    fn = re.search(
+        r"function installGateMarkerHoverPreviews\([^)]*\) \{(.*?)^}",
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    assert "window.innerHeight" in body, (
+        "vertical clamp must consult window.innerHeight"
+    )
+    # Either offsetHeight (preferred) or getBoundingClientRect on the
+    # popover is acceptable for measuring rendered height.
+    assert (
+        "popover.offsetHeight" in body
+        or "popover.getBoundingClientRect" in body
+    ), (
+        "must measure the popover's rendered height before positioning"
+    )
+
+
 def test_popover_position_anchored_to_marker_via_bounding_rect() -> None:
     """SVG element coordinates require getBoundingClientRect to map
     to viewport pixels. Hard-coded x/y would drift on scroll/zoom."""
