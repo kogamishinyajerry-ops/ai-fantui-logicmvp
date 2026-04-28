@@ -335,10 +335,11 @@ def test_keydown_handler_traps_tab() -> None:
       - Shift+Tab on first → wrap to last
     """
     body = _read()
-    # Find ALL keydown handlers on document (P58-01 added one for
-    # Shift+? to reopen the welcome banner; P58-02 adds another for
-    # Esc/Tab inside the tour). Pick the one that mentions tourOverlay
-    # — that's the tour's handler.
+    # Find ALL keydown handlers on document (P58-02 added one for
+    # tour Esc/Tab; P58-03 added one for `?`+Cmd+Enter+Cmd+S — both
+    # reference "tourOverlay" so a generic content filter picks both).
+    # Pick the handler that uses tourFocusableButtons() — that helper
+    # is unique to the tour's Tab-trap handler.
     handler_chunks = [
         m.group(0)
         for m in re.finditer(
@@ -346,10 +347,10 @@ def test_keydown_handler_traps_tab() -> None:
             body,
         )
     ]
-    tour_handlers = [c for c in handler_chunks if "tourOverlay" in c]
+    tour_handlers = [c for c in handler_chunks if "tourFocusableButtons" in c]
     assert tour_handlers, (
-        "no keydown listener references tourOverlay — the tour's "
-        "Esc/Tab handler is missing or mis-attributed."
+        "no keydown listener references tourFocusableButtons — the "
+        "tour's Tab-trap handler is missing or mis-attributed."
     )
     chunk = tour_handlers[0]
     # The handler must check for Tab key.
