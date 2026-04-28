@@ -930,6 +930,17 @@ const PROPOSALS_PATH = "/api/proposals";
 
 let _latestProposals = [];
 
+// P55-02 round-4 (2026-04-28): freshness flag for the always-on
+// marker layer. Markers paint only when this is true (i.e. we have
+// a successfully-fetched proposal set). loadProposalsInbox() flips
+// it to false the moment a refresh starts and the moment a fetch
+// fails, so any subsequent `applyReviewAnchors(_latestProposals)`
+// (e.g. from setReviewMode or circuit re-hydration) tears down
+// rather than repaints from stale data. _latestProposals itself
+// stays preserved so the panel-version chip's accepted count and
+// click-target resolution don't lie about approval history.
+let _proposalsAreFresh = false;
+
 function installProposalInbox() {
   const refreshBtn = document.getElementById("annotation-inbox-refresh-btn");
   if (refreshBtn) {
@@ -955,6 +966,14 @@ async function loadProposalsInbox() {
     return;
   }
   list.dataset.inboxState = "loading";
+  // Codex P55-02 round-4 P3: tear down stale markers the moment a
+  // refresh starts. Otherwise the always-on layer keeps advertising
+  // the previous OPEN-ticket counts during the loading window — and
+  // those counts could already be wrong (another reviewer could
+  // have flipped a status). The pre-P55-02 review-mode-only badges
+  // didn't leak stale state because they were behind a toggle.
+  _proposalsAreFresh = false;
+  applyReviewAnchors([]);
   // P45-02 (2026-04-26): scope the inbox to the currently-selected
   // system. The dropdown is the single source of truth (same one
   // that drives the circuit fragment in P45-01); a tile in the
@@ -971,6 +990,9 @@ async function loadProposalsInbox() {
     const body = await response.json();
     const proposals = Array.isArray(body.proposals) ? body.proposals : [];
     _latestProposals = proposals;
+    // Codex P55-02 round-4: mark fresh BEFORE applyReviewAnchors so
+    // the freshness gate lets the marker repaint go through.
+    _proposalsAreFresh = true;
     renderProposalsInbox(proposals);
     list.dataset.inboxState = proposals.length === 0 ? "empty" : "ready";
     // P44-04: refresh the review-mode anchors against the new
@@ -985,6 +1007,28 @@ async function loadProposalsInbox() {
       `<li class="workbench-annotation-inbox-empty">` +
       `载入工单列表失败 · failed to load proposals: ${error.message || error}` +
       `</li>`;
+    // Codex P55-02 round-2 P2: gate markers are now always-on, so a
+    // refresh failure must clear the marker DOM too — otherwise the
+    // canvas keeps showing the previous render's counts while the
+    // inbox correctly switches to the error state.
+    //
+    // Codex P55-02 round-3 P2: leave _latestProposals + the panel-
+    // version chip alone. Resetting _latestProposals would zero the
+    // chip's accepted count even though no approval state actually
+    // changed — a fresh transient outage shouldn't lie about
+    // approval history. The inbox surface already signals the
+    // failure ("failed to load proposals") and the marker DOM is
+    // gone, so there's nothing left to interact with on stale data
+    // until the next successful refresh repaints both layers.
+    //
+    // Codex P55-02 round-5 P2: re-assert _proposalsAreFresh = false
+    // here. Overlapping refreshes (system switch while a prior load
+    // is in flight) can let an older success flip the flag back to
+    // true before this later request's catch fires. Without this
+    // line, a subsequent setReviewMode() or circuit re-hydration
+    // would resurrect markers from stale data.
+    _proposalsAreFresh = false;
+    applyReviewAnchors([]);
   }
 }
 
@@ -2282,23 +2326,131 @@ function setReviewMode(state) {
   applyReviewAnchors(_latestProposals);
 }
 
+// P55-02 (2026-04-28): split the per-gate review surface into two
+// layers, modeled on Stately Studio's always-on semantic indicators
+// + on-demand inspector glow:
+//
+//   Layer 1 — `applyGateProposalMarkers(proposals)`
+//     Always-on, regardless of review-mode. Paints a small Stately-
+//     style accent marker on any gate carrying ≥1 OPEN proposal,
+//     with the count rendered when count > 1. Click opens the
+//     approve drawer + spotlights the matching ticket card. This is
+//     what an engineer sees the instant the page loads — semantic
+//     "this gate has open work" at a glance, no toggle needed.
+//
+//   Layer 2 — `applyReviewSpotlight(proposals)`
+//     Gated by body[data-review-mode="on"]. Adds the heavier glow +
+//     pulse (the auditor's "reviewing now" lens). Preserved from
+//     P44-04 unchanged in behavior.
+//
+// The legacy `applyReviewAnchors(...)` entry point remains as a
+// thin wrapper that calls both — every existing call site stays
+// correct without churn.
+//
+// Codex P55-02 round-4 P2: the wrapper consults the freshness flag.
+// If proposals are stale (fetch failed, or refresh in progress), we
+// pass [] to both layers so they tear down their DOM rather than
+// repainting from stale `_latestProposals`. setReviewMode() and
+// circuit re-hydration both call us with `_latestProposals`, and
+// without this gate they'd resurrect just-cleared markers.
 function applyReviewAnchors(proposals) {
-  const mount = document.getElementById("workbench-circuit-hero-mount");
-  if (!mount) {
+  if (!_proposalsAreFresh) {
+    applyGateProposalMarkers([]);
+    applyReviewSpotlight([]);
     return;
   }
-  // Strip every prior anchor + badge so a refresh always reflects the
-  // current OPEN-ticket set, not a stale superset.
+  applyGateProposalMarkers(proposals);
+  applyReviewSpotlight(proposals);
+}
+
+// Layer 1: always-on markers. Stately-style.
+function applyGateProposalMarkers(proposals) {
+  const mount = document.getElementById("workbench-circuit-hero-mount");
+  if (!mount) return;
+  // Tear down prior markers so a refresh reflects the current
+  // OPEN-ticket set, not a stale superset.
+  for (const m of mount.querySelectorAll(".workbench-gate-proposal-marker")) {
+    m.remove();
+  }
+  // Compute per-gate OPEN-ticket counts.
+  const counts = computeOpenProposalCountsByGate(proposals);
+  for (const [gateId, count] of counts) {
+    const useEl = mount.querySelector(`use[data-gate-id="${gateId}"]`);
+    if (!useEl || !useEl.ownerSVGElement) continue;
+    const x = parseFloat(useEl.getAttribute("x") || "0");
+    const y = parseFloat(useEl.getAttribute("y") || "0");
+    const w = parseFloat(useEl.getAttribute("width") || "0");
+    // Marker = a small rounded rect with the count, anchored at the
+    // top-right corner of the gate. Group <g> so we can wire one
+    // click handler across both the rect + label child elements.
+    const NS = "http://www.w3.org/2000/svg";
+    const group = document.createElementNS(NS, "g");
+    group.setAttribute("class", "workbench-gate-proposal-marker");
+    group.setAttribute("data-marker-for", gateId);
+    group.setAttribute("data-open-count", String(count));
+    // Tooltip via <title>.
+    const title = document.createElementNS(NS, "title");
+    title.textContent =
+      count === 1
+        ? `${count} 个待审工单 · 1 OPEN proposal — 点击审阅 / click to review`
+        : `${count} 个待审工单 · ${count} OPEN proposals — 点击审阅 / click to review`;
+    group.appendChild(title);
+    // Marker geometry. Right edge of gate, slightly above the top-right corner.
+    const markerW = count > 9 ? 18 : 14;
+    const markerH = 14;
+    const markerX = x + w - markerW + 6;
+    const markerY = y - 6;
+    const rect = document.createElementNS(NS, "rect");
+    rect.setAttribute("class", "workbench-gate-proposal-marker-bg");
+    rect.setAttribute("x", String(markerX));
+    rect.setAttribute("y", String(markerY));
+    rect.setAttribute("width", String(markerW));
+    rect.setAttribute("height", String(markerH));
+    rect.setAttribute("rx", "3");
+    rect.setAttribute("ry", "3");
+    group.appendChild(rect);
+    const label = document.createElementNS(NS, "text");
+    label.setAttribute("class", "workbench-gate-proposal-marker-label");
+    label.setAttribute("x", String(markerX + markerW / 2));
+    label.setAttribute("y", String(markerY + markerH / 2 + 0.5));
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("dominant-baseline", "middle");
+    label.textContent = String(count);
+    group.appendChild(label);
+    // Click → open approve drawer + spotlight.
+    group.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openApproveDrawerAndSpotlight(gateId);
+    });
+    useEl.ownerSVGElement.appendChild(group);
+  }
+}
+
+// Layer 2: review-mode spotlight (preserved from P44-04).
+function applyReviewSpotlight(proposals) {
+  const mount = document.getElementById("workbench-circuit-hero-mount");
+  if (!mount) return;
   for (const el of mount.querySelectorAll(".is-review-anchor")) {
     el.classList.remove("is-review-anchor");
   }
-  for (const badge of mount.querySelectorAll(".workbench-review-anchor-badge")) {
-    badge.remove();
+  if (document.body.getAttribute("data-review-mode") !== "on") return;
+  const counts = computeOpenProposalCountsByGate(proposals);
+  for (const [gateId] of counts) {
+    const targets = mount.querySelectorAll(`[data-gate-id="${gateId}"]`);
+    if (targets.length === 0) continue;
+    for (const el of targets) {
+      el.classList.add("is-review-anchor");
+      if (!el.dataset.reviewAnchorClickWired) {
+        el.dataset.reviewAnchorClickWired = "1";
+        el.addEventListener("click", () => spotlightInboxByGate(gateId));
+      }
+    }
   }
-  if (document.body.getAttribute("data-review-mode") !== "on") {
-    return;  // off — leave the SVG untouched, no anchors, no badges
-  }
-  // Compute per-gate OPEN-ticket counts from the latest proposal set.
+}
+
+// Pure helper: aggregates OPEN-ticket counts per gate from the
+// latest proposal set. Extracted so both layers + tests can reuse.
+function computeOpenProposalCountsByGate(proposals) {
   const counts = new Map();
   for (const p of proposals || []) {
     if (p.status !== "OPEN") continue;
@@ -2307,35 +2459,65 @@ function applyReviewAnchors(proposals) {
       counts.set(g, (counts.get(g) || 0) + 1);
     }
   }
-  for (const [gateId, count] of counts) {
-    const targets = mount.querySelectorAll(`[data-gate-id="${gateId}"]`);
-    if (targets.length === 0) continue;
-    for (const el of targets) {
-      el.classList.add("is-review-anchor");
-      // Bind the click ONCE — re-application is fine because the same
-      // listener stays attached, and removing/re-adding handlers per
-      // refresh would be churn for no observable difference.
-      if (!el.dataset.reviewAnchorClickWired) {
-        el.dataset.reviewAnchorClickWired = "1";
-        el.addEventListener("click", () => spotlightInboxByGate(gateId));
-      }
+  return counts;
+}
+
+// P55-02: marker click → ensure approve drawer is open, then
+// spotlight the inbox card. Reuses the existing dock-target wiring
+// (clicking the dock's "approve" button is what opens the drawer)
+// and the existing spotlight helper. If the drawer is already open
+// nothing happens visually; the spotlight is the affordance.
+//
+// Codex P55-02 round-1 P3: capture the target proposal id
+// synchronously at click time. The 220ms timeout (drawer slide-in
+// motion token) is long enough for proposals to refresh or the
+// reviewer to switch systems — re-resolving inside the timeout
+// would race against a mutated _latestProposals and scroll to the
+// wrong card (or none). Snapshotting the id at click is
+// deterministic.
+function openApproveDrawerAndSpotlight(gateId) {
+  const dockBtn = document.querySelector(
+    '#workbench-dock [data-dock-target="approve"]'
+  );
+  const isOpen =
+    document.body.getAttribute("data-active-tool") === "approve";
+  if (dockBtn && !isOpen) {
+    dockBtn.click();
+  }
+  const targetProposalId = resolveProposalIdForGate(gateId);
+  // Spotlight after the drawer's slide-in finishes (168ms motion
+  // token from P52-02). Wait a bit longer to let the inbox render.
+  setTimeout(() => {
+    if (targetProposalId) {
+      spotlightInboxByProposalId(targetProposalId);
     }
-    // Place the count badge next to the gate <use> (the first matching
-    // element). The badge is an SVG <text> appended to the same parent
-    // <svg> so it inherits the panel's coordinate system.
-    const useEl = mount.querySelector(`use[data-gate-id="${gateId}"]`);
-    if (useEl && useEl.ownerSVGElement) {
-      const x = parseFloat(useEl.getAttribute("x") || "0");
-      const y = parseFloat(useEl.getAttribute("y") || "0");
-      const w = parseFloat(useEl.getAttribute("width") || "0");
-      const badge = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      badge.setAttribute("class", "workbench-review-anchor-badge");
-      badge.setAttribute("data-review-anchor-badge-for", gateId);
-      badge.setAttribute("x", String(x + w + 4));
-      badge.setAttribute("y", String(y + 12));
-      badge.textContent = String(count);
-      useEl.ownerSVGElement.appendChild(badge);
-    }
+  }, 220);
+}
+
+function resolveProposalIdForGate(gateId) {
+  const target = (_latestProposals || []).find(
+    (p) =>
+      p.status === "OPEN" &&
+      ((p.interpretation && p.interpretation.affected_gates) || []).includes(
+        gateId,
+      ),
+  );
+  return target ? target.id : null;
+}
+
+function spotlightInboxByProposalId(proposalId) {
+  const list = document.getElementById("annotation-inbox-list");
+  if (!list) return;
+  const card = list.querySelector(`[data-proposal-id="${proposalId}"]`);
+  if (!card) return;
+  for (const c of list.querySelectorAll(".is-review-spotlight")) {
+    c.classList.remove("is-review-spotlight");
+  }
+  void card.getBoundingClientRect();
+  card.classList.add("is-review-spotlight");
+  setTimeout(() => card.classList.remove("is-review-spotlight"), 1500);
+  if (typeof card.scrollIntoView === "function") {
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 }
 
@@ -2356,24 +2538,9 @@ function spotlightCircuitGate(gateId) {
 }
 
 function spotlightInboxByGate(gateId) {
-  const list = document.getElementById("annotation-inbox-list");
-  if (!list) return;
-  // Find the first OPEN ticket whose affected_gates contains gateId.
-  const target = (_latestProposals || []).find(
-    (p) => p.status === "OPEN" &&
-      ((p.interpretation && p.interpretation.affected_gates) || []).includes(gateId),
-  );
-  if (!target) return;
-  const card = list.querySelector(`[data-proposal-id="${target.id}"]`);
-  if (!card) return;
-  for (const c of list.querySelectorAll(".is-review-spotlight")) {
-    c.classList.remove("is-review-spotlight");
-  }
-  void card.getBoundingClientRect();
-  card.classList.add("is-review-spotlight");
-  setTimeout(() => card.classList.remove("is-review-spotlight"), 1500);
-  if (typeof card.scrollIntoView === "function") {
-    card.scrollIntoView({ behavior: "smooth", block: "center" });
+  const proposalId = resolveProposalIdForGate(gateId);
+  if (proposalId) {
+    spotlightInboxByProposalId(proposalId);
   }
 }
 
