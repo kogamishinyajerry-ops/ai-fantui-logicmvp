@@ -1122,13 +1122,25 @@ $("saveScenarioBtn").addEventListener("click", () => {
     setStatus("名称为空，未保存", "err");
     return;
   }
+  // Confirm before silently overwriting an existing scratch.
+  if (localStorage.getItem(SCRATCH_PREFIX + safe) !== null) {
+    if (!window.confirm("覆盖已存在的暂存 " + safe + " ？")) {
+      setStatus("取消保存", "warn");
+      return;
+    }
+  }
   // Strip _ui_* before storing — same contract as syncToTextarea.
   const cleaned = JSON.parse(JSON.stringify(currentTimeline, (k, v) =>
     typeof k === "string" && k.startsWith("_ui_") ? undefined : v
   ));
-  localStorage.setItem(
-    SCRATCH_PREFIX + safe, JSON.stringify(cleaned)
-  );
+  try {
+    localStorage.setItem(
+      SCRATCH_PREFIX + safe, JSON.stringify(cleaned)
+    );
+  } catch (err) {
+    setStatus("暂存失败：" + (err && err.message || err), "err");
+    return;
+  }
   rebuildPresetDropdown();
   $("presetSelect").value = "scratch:" + safe;
   refreshDeleteScenarioButton();

@@ -108,22 +108,77 @@ def test_localstorage_namespace_is_well_harness() -> None:
 
 
 def test_save_handler_writes_to_localstorage() -> None:
-    """The save handler must call localStorage.setItem with the
-    namespaced key. A handler that only updates DOM but never
-    writes localStorage means the scratch dies on refresh.
+    """The save handler must call localStorage.setItem with BOTH a
+    namespaced key AND a value argument. A handler that only updates
+    DOM but never writes localStorage means the scratch dies on
+    refresh; a setItem call missing the value arg silently no-ops.
 
     Accept either the literal prefix string OR a SCRATCH_PREFIX
-    constant — the contract is "call setItem with the namespaced
-    key", however the source structures the prefix."""
+    constant — the contract is "call setItem(<namespaced-key>, <value>)",
+    however the source structures the prefix."""
     body = _read()
+    # Require: setItem( ... well-harness|SCRATCH_PREFIX ... , <value-token>
+    # The comma + non-empty value-token guarantees a 2-arg call.
     pattern = (
-        r'localStorage\.setItem\s*\([^)]*(?:well-harness|SCRATCH_PREFIX)'
+        r'localStorage\.setItem\s*\(\s*[^,)]*'
+        r'(?:well-harness|SCRATCH_PREFIX)[^)]*,\s*[A-Za-z_$]'
     )
     found = re.search(pattern, body)
     assert found is not None, (
-        "save handler does not call localStorage.setItem with the "
-        "namespaced key (literal or SCRATCH_PREFIX). Without it, "
-        "save is a no-op."
+        "save handler does not call localStorage.setItem with both "
+        "the namespaced key (literal or SCRATCH_PREFIX) AND a value "
+        "argument. Single-arg setItem silently no-ops."
+    )
+
+
+def test_save_handler_wraps_setitem_in_try_catch() -> None:
+    """localStorage.setItem can throw under quota-exceeded or private-
+    mode browsing. The save handler must catch the failure and surface
+    a user-visible status, otherwise the toolbar appears to silently
+    no-op on storage pressure."""
+    body = _read()
+    # Find the save click listener and ensure its body contains
+    # try { localStorage.setItem(...) } catch around the setItem call.
+    save_handler = re.search(
+        r'saveScenarioBtn[\s\S]{0,3000}?\}\s*\)\s*;',
+        body,
+    )
+    assert save_handler is not None, "save handler block not found"
+    chunk = save_handler.group(0)
+    has_try_catch = re.search(
+        r'try\s*\{[^}]*localStorage\.setItem[\s\S]*?\}\s*catch',
+        chunk,
+    )
+    assert has_try_catch is not None, (
+        "save handler does not wrap localStorage.setItem in try/catch. "
+        "Quota-exceeded throws will leave the user with no visible "
+        "feedback (silent failure)."
+    )
+
+
+def test_save_handler_confirms_before_overwriting() -> None:
+    """If the user saves a name that already exists, the handler must
+    ask for confirmation before clobbering — silent overwrite of a
+    hand-crafted scratch is a UX data-loss footgun. Mirrors the
+    confirm() gate already used by the delete handler."""
+    body = _read()
+    save_handler = re.search(
+        r'saveScenarioBtn[\s\S]{0,3000}?\}\s*\)\s*;',
+        body,
+    )
+    assert save_handler is not None, "save handler block not found"
+    chunk = save_handler.group(0)
+    # Look for a getItem(prefix+name) existence check followed by a
+    # confirm() prompt, before the setItem call.
+    has_overwrite_guard = re.search(
+        r'localStorage\.getItem\([^)]*(?:SCRATCH_PREFIX|well-harness)'
+        r'[\s\S]{0,200}?confirm\(',
+        chunk,
+    )
+    assert has_overwrite_guard is not None, (
+        "save handler does not confirm() before overwriting an "
+        "existing scratch entry. Silent overwrite would clobber "
+        "the user's earlier scratch with no warning."
     )
 
 
