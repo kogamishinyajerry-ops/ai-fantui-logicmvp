@@ -100,6 +100,120 @@ def test_cockpit_keeps_iframe_embed_detection_script(page: Path) -> None:
     assert "is-iframe-embed" in body
 
 
+# ─── App-shell scoping: chrome's full-viewport rules must NOT
+#     leak into cockpit pages that don't opt-in. ───
+
+
+def test_chrome_root_scope_is_safe_for_cockpits() -> None:
+    """Codex P56-02a round-1 P1: the chrome's `html, body { height:
+    100%; overflow: hidden; }` and `body { display: flex; ... }`
+    rules were sized for the sim panels' fixed-viewport layout, but
+    leak into the cockpits' document-flow scrolling when linked
+    naïvely. The fix is to scope app-shell rules to opt-in
+    `body.etras-app` so cockpits inheriting only the root-scoped
+    bits (color tokens, scrollbar, iframe-embed) stay intact."""
+    chrome = (
+        REPO_ROOT / "src" / "well_harness" / "static" / "etras_chrome.css"
+    ).read_text(encoding="utf-8")
+    # Bare `html, body { ... overflow: hidden ... }` would leak into
+    # any importing page. Must be scoped via :has(body.etras-app)
+    # or a body.etras-app selector chain.
+    bare_html_body = re.search(
+        r"^html\s*,\s*body\s*\{[^}]*overflow:\s*hidden[^}]*\}",
+        chrome,
+        re.MULTILINE | re.DOTALL,
+    )
+    assert bare_html_body is None, (
+        "etras_chrome.css must NOT declare an unscoped `html, body "
+        "{ overflow: hidden }` rule — it leaks into cockpit pages "
+        "that import the chrome for tokens but use document flow"
+    )
+    # And the scoped form must exist somewhere.
+    assert "html:has(body.etras-app)" in chrome or "body.etras-app" in chrome, (
+        "etras_chrome.css missing the body.etras-app opt-in scope"
+    )
+
+
+def test_chrome_app_shell_components_are_scoped() -> None:
+    """Component selectors that historically lived bare (.btn,
+    .workspace, .panel, .sec, etc.) must now sit under the
+    body.etras-app scope. Otherwise importing the chrome from a
+    page that uses .panel or .btn for its own classes (cockpit
+    c919_etras_workstation.css does!) inherits unwanted properties
+    from the chrome rule."""
+    chrome = (
+        REPO_ROOT / "src" / "well_harness" / "static" / "etras_chrome.css"
+    ).read_text(encoding="utf-8")
+    leaky_classes = [
+        ".btn",
+        ".workspace",
+        ".panel",
+        ".sec",
+        ".row",
+        ".tog",
+        ".hbadge",
+        ".sim-indicator",
+        ".state-pill",
+    ]
+    for cls in leaky_classes:
+        # An unscoped rule would be `^<class> {`. A scoped rule is
+        # `body.etras-app <class> {` or similar.
+        bare = re.search(
+            rf"^\s*{re.escape(cls)}\s*\{{",
+            chrome,
+            re.MULTILINE,
+        )
+        assert bare is None, (
+            f"etras_chrome.css declares an unscoped {cls!r} rule that "
+            f"would leak into pages importing the chrome for tokens "
+            f"only. Scope it under body.etras-app."
+        )
+
+
+@pytest.mark.parametrize(
+    "page_path",
+    [
+        "src/well_harness/static/fan_console.html",
+        "src/well_harness/static/c919_etras_panel/index.html",
+    ],
+    ids=["fan_console", "c919_panel"],
+)
+def test_sim_panel_body_carries_etras_app_class(page_path: str) -> None:
+    """Sim panels opt INTO the chrome's full-viewport layout by
+    adding `etras-app` to body. Without this class, the chrome's
+    app-shell rules don't activate and the sim panel falls back to
+    document flow (broken)."""
+    body = (REPO_ROOT / page_path).read_text(encoding="utf-8")
+    body_match = re.search(r"<body[^>]*\bclass=\"([^\"]+)\"", body)
+    assert body_match is not None, f"{page_path} has no <body class=...>"
+    classes = body_match.group(1).split()
+    assert "etras-app" in classes, (
+        f"{page_path} <body> missing `etras-app` class — without it, "
+        f"the chrome's full-viewport layout doesn't activate"
+    )
+
+
+@pytest.mark.parametrize(
+    "page",
+    COCKPIT_PAGES,
+    ids=lambda p: p.name,
+)
+def test_cockpit_body_does_not_carry_etras_app_class(page: Path) -> None:
+    """Cockpit pages must NOT add `etras-app` — they use document
+    flow, not the full-viewport sim layout. Adding it would
+    re-introduce the round-1 P1 regression (overflow: hidden +
+    flex column on document body)."""
+    body = page.read_text(encoding="utf-8")
+    body_match = re.search(r"<body[^>]*\bclass=\"([^\"]+)\"", body)
+    assert body_match is not None
+    classes = body_match.group(1).split()
+    assert "etras-app" not in classes, (
+        f"{page.name} <body> must NOT carry `etras-app` — it "
+        f"activates the full-viewport sim layout which breaks the "
+        f"cockpit's document flow + custom panel header"
+    )
+
+
 @pytest.mark.parametrize(
     "page",
     COCKPIT_PAGES,
