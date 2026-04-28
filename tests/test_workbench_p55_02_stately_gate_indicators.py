@@ -149,7 +149,11 @@ def test_marker_click_opens_approve_drawer_and_spotlights() -> None:
     assert 'data-dock-target="approve"' in body, (
         "must locate the approve dock button to open the drawer"
     )
-    assert "spotlightInboxByGate(gateId)" in body
+    # Codex P55-02 round-1 P3 fix: target is captured synchronously
+    # at click time (not re-resolved inside the timeout), then the
+    # spotlight runs against the captured proposal id.
+    assert "resolveProposalIdForGate(gateId)" in body
+    assert "spotlightInboxByProposalId(" in body
     # Marker click handler must call this helper.
     marker_fn = re.search(
         r"function applyGateProposalMarkers\(proposals\) \{(.*?)^}",
@@ -158,6 +162,43 @@ def test_marker_click_opens_approve_drawer_and_spotlights() -> None:
     )
     assert marker_fn is not None
     assert "openApproveDrawerAndSpotlight(gateId)" in marker_fn.group(1)
+
+
+def test_marker_click_captures_target_before_timeout() -> None:
+    """Codex P55-02 round-1 P3: the 220ms timeout (drawer slide-in)
+    is long enough for proposals to refresh or the reviewer to
+    switch systems. Re-resolving against `_latestProposals` inside
+    the timeout would race against a mutated list and scroll to the
+    wrong card. The fix: capture `targetProposalId` synchronously
+    BEFORE the setTimeout, then spotlight against the captured id."""
+    fn = re.search(
+        r"function openApproveDrawerAndSpotlight\(gateId\) \{(.*?)^}",
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    # Capture must happen before the setTimeout.
+    capture_pos = body.find("resolveProposalIdForGate(gateId)")
+    timeout_pos = body.find("setTimeout(")
+    assert capture_pos != -1 and timeout_pos != -1
+    assert capture_pos < timeout_pos, (
+        "target proposal id must be captured BEFORE setTimeout, "
+        "otherwise the deferred spotlight races against refresh"
+    )
+    # And the capture must NOT be inside the timeout body.
+    timeout_body = body[timeout_pos:]
+    assert "resolveProposalIdForGate" not in timeout_body, (
+        "resolution must be synchronous at click time, not deferred"
+    )
+
+
+def test_resolve_proposal_id_for_gate_helper_exists() -> None:
+    """The synchronous resolver must be a named helper so it can be
+    reused (legacy gate-click path delegates to it too) and so this
+    test can lock the contract."""
+    assert "function resolveProposalIdForGate(" in JS
+    assert "function spotlightInboxByProposalId(" in JS
 
 
 def test_marker_click_uses_stoppropagation() -> None:

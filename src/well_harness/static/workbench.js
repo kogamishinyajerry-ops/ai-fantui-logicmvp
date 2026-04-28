@@ -2411,6 +2411,14 @@ function computeOpenProposalCountsByGate(proposals) {
 // (clicking the dock's "approve" button is what opens the drawer)
 // and the existing spotlight helper. If the drawer is already open
 // nothing happens visually; the spotlight is the affordance.
+//
+// Codex P55-02 round-1 P3: capture the target proposal id
+// synchronously at click time. The 220ms timeout (drawer slide-in
+// motion token) is long enough for proposals to refresh or the
+// reviewer to switch systems — re-resolving inside the timeout
+// would race against a mutated _latestProposals and scroll to the
+// wrong card (or none). Snapshotting the id at click is
+// deterministic.
 function openApproveDrawerAndSpotlight(gateId) {
   const dockBtn = document.querySelector(
     '#workbench-dock [data-dock-target="approve"]'
@@ -2420,9 +2428,41 @@ function openApproveDrawerAndSpotlight(gateId) {
   if (dockBtn && !isOpen) {
     dockBtn.click();
   }
+  const targetProposalId = resolveProposalIdForGate(gateId);
   // Spotlight after the drawer's slide-in finishes (168ms motion
   // token from P52-02). Wait a bit longer to let the inbox render.
-  setTimeout(() => spotlightInboxByGate(gateId), 220);
+  setTimeout(() => {
+    if (targetProposalId) {
+      spotlightInboxByProposalId(targetProposalId);
+    }
+  }, 220);
+}
+
+function resolveProposalIdForGate(gateId) {
+  const target = (_latestProposals || []).find(
+    (p) =>
+      p.status === "OPEN" &&
+      ((p.interpretation && p.interpretation.affected_gates) || []).includes(
+        gateId,
+      ),
+  );
+  return target ? target.id : null;
+}
+
+function spotlightInboxByProposalId(proposalId) {
+  const list = document.getElementById("annotation-inbox-list");
+  if (!list) return;
+  const card = list.querySelector(`[data-proposal-id="${proposalId}"]`);
+  if (!card) return;
+  for (const c of list.querySelectorAll(".is-review-spotlight")) {
+    c.classList.remove("is-review-spotlight");
+  }
+  void card.getBoundingClientRect();
+  card.classList.add("is-review-spotlight");
+  setTimeout(() => card.classList.remove("is-review-spotlight"), 1500);
+  if (typeof card.scrollIntoView === "function") {
+    card.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 }
 
 function spotlightCircuitGate(gateId) {
@@ -2442,24 +2482,9 @@ function spotlightCircuitGate(gateId) {
 }
 
 function spotlightInboxByGate(gateId) {
-  const list = document.getElementById("annotation-inbox-list");
-  if (!list) return;
-  // Find the first OPEN ticket whose affected_gates contains gateId.
-  const target = (_latestProposals || []).find(
-    (p) => p.status === "OPEN" &&
-      ((p.interpretation && p.interpretation.affected_gates) || []).includes(gateId),
-  );
-  if (!target) return;
-  const card = list.querySelector(`[data-proposal-id="${target.id}"]`);
-  if (!card) return;
-  for (const c of list.querySelectorAll(".is-review-spotlight")) {
-    c.classList.remove("is-review-spotlight");
-  }
-  void card.getBoundingClientRect();
-  card.classList.add("is-review-spotlight");
-  setTimeout(() => card.classList.remove("is-review-spotlight"), 1500);
-  if (typeof card.scrollIntoView === "function") {
-    card.scrollIntoView({ behavior: "smooth", block: "center" });
+  const proposalId = resolveProposalIdForGate(gateId);
+  if (proposalId) {
+    spotlightInboxByProposalId(proposalId);
   }
 }
 
