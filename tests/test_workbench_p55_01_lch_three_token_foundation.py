@@ -206,6 +206,61 @@ def test_no_double_wrapped_accent_fallback() -> None:
 # ─── 6. Browser-support note (informational only) ─────────────
 
 
+def test_no_self_referential_token_cycles() -> None:
+    """Codex round-1 P1 + round-2 P1: a custom-property cycle
+    (`--x: var(--y)` and `--y: var(--x)` in the same scope, or
+    `--x: var(--x)`) makes BOTH properties invalid at computed-
+    value time. Browsers fall back to UA defaults — focus rings
+    disappear, hairlines vanish, color-mix() returns transparent.
+    The visible regression is huge but tests using just
+    `var(--accent)` lookups don't catch it. This test parses
+    the :root block and walks the alias graph for cycles."""
+    # Crude but works: only consider 1-hop cycles (X→Y where Y→X).
+    # Multi-hop cycles are rare and the same fix (no redeclaration)
+    # protects against them.
+    rule_match = re.search(
+        r":root\s*\{(.*?)^\}", CSS, re.DOTALL | re.MULTILINE
+    )
+    assert rule_match is not None
+    body = rule_match.group(1)
+    # Strip /* ... */ comments (which may contain spurious
+    # `--x: var(--y)` snippets in our docblock examples).
+    body = re.sub(r"/\*.*?\*/", "", body, flags=re.DOTALL)
+    # Map each --foo declaration to its var(--bar) reference (if simple alias).
+    decls: dict[str, str] = {}
+    for match in re.finditer(
+        r"^\s*(--[A-Za-z0-9_-]+)\s*:\s*([^;]+);",
+        body,
+        re.MULTILINE,
+    ):
+        name = match.group(1)
+        value = match.group(2).strip()
+        decls[name] = value
+    cycles = []
+    for name, value in decls.items():
+        # Match a bare alias of the form `var(--other)` (no
+        # color-mix wrapping — those don't cycle the same way).
+        alias = re.fullmatch(r"var\((--[A-Za-z0-9_-]+)\)", value)
+        if not alias:
+            continue
+        target = alias.group(1)
+        # Self-cycle.
+        if target == name:
+            cycles.append((name, name))
+        # Mutual 1-hop cycle.
+        if target in decls:
+            target_val = decls[target].strip()
+            target_alias = re.fullmatch(r"var\((--[A-Za-z0-9_-]+)\)", target_val)
+            if target_alias and target_alias.group(1) == name:
+                cycles.append((name, target))
+    assert cycles == [], (
+        f"detected custom-property cycle(s) at workbench.css :root: "
+        f"{cycles}. Browsers will treat the cycled tokens as "
+        f"invalid-at-computed-value and downstream rules will lose "
+        f"their styling."
+    )
+
+
 def test_color_mix_is_used_extensively() -> None:
     """All major browsers shipped lch() + color-mix() by early
     2023; we rely on them without fallback. Count uses to confirm

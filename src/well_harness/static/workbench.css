@@ -4050,7 +4050,14 @@ body[data-review-mode="on"] .workbench-annotation-inbox-item[data-status="OPEN"]
   --surface-2: color-mix(in lch, var(--base) 92%, var(--contrast));
   --hairline:  color-mix(in lch, var(--contrast) 8%, transparent);
   --hairline-strong: color-mix(in lch, var(--contrast) 16%, transparent);
-  --text-main: var(--contrast);
+  /* Codex round-2 P1: --text-main is declared upstream in
+     design-tokens.css; redeclaring it here as `var(--contrast)`
+     completed a cycle (--contrast: var(--text-main); --text-main:
+     var(--contrast)), making both invalid at computed-value time
+     and breaking every downstream color-mix that depended on
+     --contrast. The aliasing direction is now: design-tokens.css
+     owns --text-main → workbench-local --contrast aliases that →
+     derivations consume --contrast. No reverse edge. */
   --text-muted: color-mix(in lch, var(--contrast) 60%, var(--base));
   --text-faint: color-mix(in lch, var(--contrast) 36%, var(--base));
 
