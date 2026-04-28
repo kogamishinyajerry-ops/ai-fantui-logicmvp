@@ -2348,6 +2348,218 @@ body[data-view="expert"] [view="beginner"] {
   display: flex; gap: 0.5rem; flex-wrap: wrap;
 }
 
+/* P54-09 (2026-04-28): per-component confidence breakdown.
+   Three small bars (gate / signal / change-kind) replace the
+   single opaque % so engineers can see which dimension dragged
+   the score down at a glance. */
+.workbench-suggestion-confidence-breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.4rem 0.85rem;
+  margin: 0.55rem 0 0.85rem;
+  padding: 0.55rem 0.7rem;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--wb-hairline);
+  border-radius: 8px;
+}
+.workbench-suggestion-confidence-breakdown[data-state="empty"] { display: none; }
+.workbench-suggestion-confidence-row {
+  display: grid;
+  grid-template-columns: max-content 1fr max-content;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.02em;
+}
+.workbench-suggestion-confidence-label {
+  color: var(--text-muted, #93a8b8);
+  text-transform: uppercase;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.workbench-suggestion-confidence-bar {
+  height: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  display: block;
+}
+.workbench-suggestion-confidence-bar-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--accent, #67e8f9);
+  border-radius: 3px;
+  transition: width 168ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.workbench-suggestion-confidence-row[data-met="false"] .workbench-suggestion-confidence-bar-fill {
+  background: rgba(248, 113, 113, 0.55);
+}
+.workbench-suggestion-confidence-pct {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.62rem;
+  color: rgba(237, 248, 255, 0.7);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  min-width: 2.4rem;
+}
+.workbench-suggestion-confidence-row[data-met="false"] .workbench-suggestion-confidence-pct {
+  color: rgba(248, 113, 113, 0.85);
+}
+.workbench-suggestion-confidence-hint {
+  grid-column: 1 / -1;
+  margin-top: 0.45rem;
+  padding: 0.5rem 0.65rem;
+  background: rgba(248, 113, 113, 0.06);
+  border: 1px solid rgba(248, 113, 113, 0.18);
+  border-radius: 6px;
+  font-size: 0.7rem;
+  color: rgba(237, 248, 255, 0.85);
+  line-height: 1.5;
+}
+.workbench-suggestion-confidence-hint strong {
+  color: var(--accent, #67e8f9);
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.66rem;
+  font-weight: 500;
+  margin: 0 0.15rem;
+}
+
+/* P54-09: draft restore banner. Sits above the input when
+   localStorage carries an autosaved unsubmitted draft < 1h old. */
+.workbench-suggestion-draft-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.75rem;
+  margin: 0.5rem 0 0;
+  background: rgba(103, 232, 249, 0.06);
+  border: 1px solid rgba(103, 232, 249, 0.22);
+  border-radius: 8px;
+  font-size: 0.74rem;
+  color: #d8eeff;
+}
+.workbench-suggestion-draft-banner[hidden] { display: none; }
+.workbench-suggestion-draft-icon { font-size: 0.95rem; }
+.workbench-suggestion-draft-text strong {
+  color: var(--accent, #67e8f9);
+  font-variant-numeric: tabular-nums;
+  margin: 0 0.15rem;
+}
+.workbench-suggestion-draft-preview {
+  flex: 1;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.66rem;
+  color: rgba(237, 248, 255, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.workbench-suggestion-draft-btn {
+  appearance: none;
+  border: 1px solid var(--wb-hairline);
+  background: rgba(255, 255, 255, 0.04);
+  color: #d8eeff;
+  padding: 0.28rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    background 168ms cubic-bezier(0.32, 0.72, 0, 1),
+    border-color 168ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.workbench-suggestion-draft-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(143, 214, 233, 0.32);
+}
+.workbench-suggestion-draft-btn.is-primary {
+  background: rgba(103, 232, 249, 0.12);
+  border-color: rgba(103, 232, 249, 0.32);
+  color: #67e8f9;
+}
+.workbench-suggestion-draft-btn.is-primary:hover {
+  background: rgba(103, 232, 249, 0.18);
+}
+
+/* P54-09: pre-submit conflict warning banner. Replaces the
+   confirm action row when OPEN proposals already touch one of
+   the same gates. */
+.workbench-suggestion-conflict-banner {
+  margin: 0.85rem 0 0.7rem;
+  padding: 0.7rem 0.85rem;
+  background: rgba(247, 188, 92, 0.08);
+  border: 1px solid rgba(247, 188, 92, 0.32);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.workbench-suggestion-conflict-banner[hidden] { display: none; }
+.workbench-suggestion-conflict-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: #f7bc5c;
+}
+.workbench-suggestion-conflict-icon { font-size: 0.95rem; }
+.workbench-suggestion-conflict-title strong {
+  color: #f7bc5c;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.74rem;
+  margin: 0 0.15rem;
+}
+.workbench-suggestion-conflict-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.workbench-suggestion-conflict-list li {
+  display: grid;
+  grid-template-columns: max-content 1fr max-content;
+  gap: 0.5rem;
+  align-items: baseline;
+  padding: 0.4rem 0.55rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--wb-hairline);
+  border-radius: 6px;
+  font-size: 0.7rem;
+}
+.workbench-suggestion-conflict-list .conflict-id {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.62rem;
+  color: var(--text-muted, #93a8b8);
+}
+.workbench-suggestion-conflict-list .conflict-summary {
+  color: #d8eeff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.workbench-suggestion-conflict-list .conflict-gates {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.62rem;
+  color: var(--accent, #67e8f9);
+  letter-spacing: 0.02em;
+}
+.workbench-suggestion-conflict-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+/* When the conflict banner is open, hide the original primary
+   action row so the engineer's only path is through the warning. */
+.workbench-suggestion-interpretation:has(.workbench-suggestion-conflict-banner:not([hidden]))
+  .workbench-suggestion-interpretation-actions {
+  display: none;
+}
+
 /* P44-03: proposal inbox item rows */
 .workbench-annotation-inbox header {
   display: flex; align-items: center; gap: 0.6rem;

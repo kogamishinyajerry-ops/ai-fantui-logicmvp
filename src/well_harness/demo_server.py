@@ -2234,6 +2234,53 @@ _CHANGE_KIND_HINTS: tuple[tuple[str, str, str, str], ...] = (
 )
 
 
+# P54-09 (2026-04-28): per-component breakdown + vocab hints.
+# Extracted so the LLM normalizer can reuse them. Both helpers are
+# pure functions over the canonical interpretation fields plus the
+# active system_id (for per-system vocab tables).
+def _confidence_breakdown_from_fields(
+    affected_gates: list[str],
+    target_signals: list[str],
+    change_kind: str,
+) -> dict[str, float]:
+    return {
+        "gate": 1.0 if affected_gates else 0.0,
+        "signal": 1.0 if target_signals else 0.0,
+        "change_kind": 1.0 if change_kind != "propose_change" else 0.0,
+    }
+
+
+def _vocabulary_hint_from_fields(
+    affected_gates: list[str],
+    target_signals: list[str],
+    change_kind: str,
+    system_id: str,
+) -> dict[str, list[str]]:
+    """Surface canonical vocab lists for any dimension that came up
+    empty. Engineer rephrasing then has concrete words to try.
+    Synonyms are intentionally NOT exposed — they're noisy and the
+    canonical id (e.g. L1) is enough to anchor a rephrasing.
+    """
+    gate_vocab = _gate_synonyms_for(system_id)
+    signal_vocab = _signals_for(system_id)
+    hint: dict[str, list[str]] = {}
+    if not affected_gates:
+        hint["gate"] = list(gate_vocab.keys())
+    if not target_signals:
+        hint["signal"] = list(signal_vocab)
+    if change_kind == "propose_change":
+        # _CHANGE_KIND_HINTS tuple = (pattern, code, zh, en).
+        # Filter on the code (index 1) — index 2 is the Chinese label,
+        # so the prior implementation accidentally always included the
+        # fallback "propose change" entry in the hint list, which
+        # advertised the very degenerate verb that triggered the hint
+        # (Codex P54-09 round-1 P3).
+        hint["change_kind"] = sorted(
+            {h[3] for h in _CHANGE_KIND_HINTS if h[1] != "propose_change"}
+        )
+    return hint
+
+
 def interpret_suggestion_text(text: str, *, system_id: str = "thrust-reverser") -> dict:
     """Rule-based interpretation of an engineer modification suggestion.
 
@@ -2310,6 +2357,18 @@ def interpret_suggestion_text(text: str, *, system_id: str = "thrust-reverser") 
         confidence += 0.2
     confidence = min(1.0, confidence)
 
+    # P54-09 (2026-04-28): per-component confidence breakdown so the UI
+    # can show three small bars (gate / signal / change-kind) instead
+    # of a single opaque number, and surface "vocabulary hints" when a
+    # dimension came up empty so the engineer knows how to rephrase
+    # rather than guessing what the rules want.
+    confidence_breakdown = _confidence_breakdown_from_fields(
+        affected_gates, target_signals, change_kind
+    )
+    vocabulary_hint = _vocabulary_hint_from_fields(
+        affected_gates, target_signals, change_kind, system_id
+    )
+
     # 5. Summary restatement.
     gates_label = "、".join(affected_gates) if affected_gates else "(未识别)"
     signals_label = "、".join(target_signals) if target_signals else "(未识别)"
@@ -2332,6 +2391,8 @@ def interpret_suggestion_text(text: str, *, system_id: str = "thrust-reverser") 
         "change_kind_zh": change_kind_zh,
         "change_kind_en": change_kind_en,
         "confidence": confidence,
+        "confidence_breakdown": confidence_breakdown,
+        "vocabulary_hint": vocabulary_hint,
         "summary_zh": summary_zh,
         "summary_en": summary_en,
         "source_text": text,
@@ -2391,26 +2452,45 @@ def _resolve_minimax_api_key() -> str | None:
 def _llm_interpret_prompt(text: str, system_id: str) -> str:
     """Build the strict-JSON prompt the LLM must respond to. Naming
     the schema fields explicitly + asking for JSON-only output keeps
-    the parse step trivial and the cost low."""
+    the parse step trivial and the cost low.
+
+    Codex P54-09 round-6 P1: the canonical vocabularies (gates +
+    signals + change_kinds) are now read from the rules tables so
+    the prompt and the post-LLM canonicalizer can never drift. The
+    earlier hardcoded list said `tune_threshold`, `RA`, `TRA`,
+    `SW3`, `tls_115vac_cmd` — none of which exist in the rules
+    vocab — so a prompt-compliant LLM response was being filtered
+    to empty by the canonicalizer. Now the prompt itself enumerates
+    the very ids the canonicalizer accepts.
+    """
+    gate_ids = list(_gate_synonyms_for(system_id).keys())
+    signals = list(_signals_for(system_id))
+    change_kind_codes = [h[1] for h in _CHANGE_KIND_HINTS]
+    # Codex round-7 P1: the schema example values must be drawn
+    # from the active system_id's canonical vocab. The previous
+    # version hardcoded "L1"/"SW1" — both thrust-reverser-specific.
+    # MiniMax tends to copy literal example values, so a C919
+    # request would return ["L1"]/["SW1"] and the canonicalizer
+    # would strip them, leaving the engineer with a 0% result on
+    # an otherwise-valid suggestion.
+    gate_example = gate_ids[0] if gate_ids else "L1"
+    signal_example = signals[0] if signals else "SW1"
     return (
         "你是 AI FANTUI 控制逻辑工作台的解读助手。\n"
         "工程师写下了对当前控制逻辑的修改建议；你的任务是把这段自然语言"
         "解读为结构化 JSON，让工作台能在 SVG 面板上高亮命中的逻辑门，并请"
         "工程师确认。\n\n"
         f"当前系统 system_id: {system_id}\n"
-        "已知逻辑门 (thrust-reverser): L1, L2, L3, L4。"
-        "其它系统暂未接入 SVG，affected_gates 可返回 []。\n"
-        "已知信号: tls_115vac_cmd, etrac_540vdc_cmd, eec_deploy_cmd, "
-        "pls_power_cmd, pdu_motor_cmd, throttle_electronic_lock_release_cmd, "
-        "SW1, SW2, SW3, RA, TRA, n1k。\n"
-        "已知 change_kind 取值: tighten_condition, loosen_condition, "
-        "remove_condition, add_condition, modify_condition, tune_threshold, "
-        "propose_change。\n\n"
+        f"已知逻辑门 ({system_id}): {', '.join(gate_ids) or '(暂无)'}。"
+        "如果建议跨系统或没有命中任何门，affected_gates 可返回 []。\n"
+        f"已知信号: {', '.join(signals) or '(暂无)'}。\n"
+        f"已知 change_kind 取值（必须严格使用其中之一）: "
+        f"{', '.join(change_kind_codes)}。\n\n"
         f'工程师的建议原文:\n"""{text}"""\n\n'
         "请只输出 JSON（不要 markdown 围栏、不要解释），字段精确匹配下表:\n"
         "{\n"
-        '  "affected_gates":   ["L1"|...],   // 命中的逻辑门 id 列表\n'
-        '  "target_signals":   ["SW1"|...],  // 命中的信号名列表\n'
+        f'  "affected_gates":   ["{gate_example}"|...],   // 命中的逻辑门 id 列表\n'
+        f'  "target_signals":   ["{signal_example}"|...],  // 命中的信号名列表\n'
         '  "change_kind":      "tighten_condition"|...,\n'
         '  "change_kind_zh":   "收紧判据"|...,\n'
         '  "change_kind_en":   "tighten condition"|...,\n'
@@ -2449,10 +2529,23 @@ def _strip_json_fences(raw: str) -> str:
     return text.strip()
 
 
-def _normalize_llm_interpretation(raw_dict: dict, source_text: str) -> dict:
+def _normalize_llm_interpretation(
+    raw_dict: dict,
+    source_text: str,
+    *,
+    system_id: str = "thrust-reverser",
+) -> dict:
     """Coerce the LLM's response into the canonical schema +
     enforce types. Missing fields fall back to safe defaults so
-    the UI never sees an undefined."""
+    the UI never sees an undefined.
+
+    P54-09 (2026-04-28): system_id is required to synthesize
+    vocabulary_hint when the LLM misses a dimension — without it,
+    AI-mode users would see breakdown bars at 0% with no rephrasing
+    guidance, breaking the trust-flow promise (Codex round-1 P2).
+    Defaults to thrust-reverser so existing tests remain
+    backwards-compatible.
+    """
     def _str_list(value) -> list[str]:
         if not isinstance(value, list):
             return []
@@ -2462,15 +2555,110 @@ def _normalize_llm_interpretation(raw_dict: dict, source_text: str) -> dict:
         confidence = max(0.0, min(1.0, float(confidence)))
     except (TypeError, ValueError):
         confidence = 0.5
+    affected_gates = _str_list(raw_dict.get("affected_gates"))
+    target_signals = _str_list(raw_dict.get("target_signals"))
+    change_kind = str(raw_dict.get("change_kind") or "propose_change")
+    # Codex round-4 P2-1 + round-9 P2-1: canonicalize against the
+    # per-system vocab. Drop true hallucinations ("L99", "BOGUS")
+    # but RESOLVE synonyms (e.g. "TLS" → "L1", "逻辑门 1" → "L1",
+    # "l1" → "L1") through the gate synonym table — otherwise an
+    # LLM that emitted a valid alias would be reduced to [] even
+    # though the rules interpreter would have accepted it.
+    gate_vocab = _gate_synonyms_for(system_id)
+    signal_vocab = _signals_for(system_id)
+    # Build a synonym → canonical-id reverse index; canonical ids
+    # are also their own synonym so the lookup is uniform.
+    gate_alias_index: dict[str, str] = {}
+    for canonical, syns in gate_vocab.items():
+        gate_alias_index[canonical] = canonical
+        for s in syns:
+            gate_alias_index.setdefault(s, canonical)
+    resolved_gates: list[str] = []
+    seen: set[str] = set()
+    for raw_g in affected_gates:
+        canonical = gate_alias_index.get(raw_g)
+        if canonical and canonical not in seen:
+            resolved_gates.append(canonical)
+            seen.add(canonical)
+    affected_gates = resolved_gates
+    # Signal vocab is a flat tuple of canonical names; keep strict
+    # equality (synonyms aren't defined for signals in this repo).
+    target_signals = [s for s in target_signals if s in signal_vocab]
+    valid_change_kinds = {h[1] for h in _CHANGE_KIND_HINTS}
+    raw_zh = str(raw_dict.get("change_kind_zh") or "提出建议")
+    raw_en = str(raw_dict.get("change_kind_en") or "propose change")
+    if change_kind not in valid_change_kinds:
+        # Codex round-5 P2-2: when we coerce an out-of-taxonomy
+        # change_kind to propose_change, the human-readable labels
+        # must also reset to the fallback's labels — otherwise the
+        # UI displays "tighten condition" while the stored code is
+        # "propose_change", and downstream commit messages /
+        # executor brief carry the contradictory pair.
+        change_kind = "propose_change"
+        raw_zh = "提出建议"
+        raw_en = "propose change"
+    # Codex round-6 P2: cap the LLM-reported overall confidence by
+    # what the *canonicalized* fields actually warrant. Otherwise an
+    # LLM that emitted ["L99"] (now filtered to []) and confidence=0.9
+    # would still display 90% with the breakdown bars all at 0% —
+    # contradicting the trust-flow UI's whole point. Use the same
+    # weights the rules interpreter uses (0.5 / 0.3 / 0.2) so both
+    # paths converge on the same scale.
+    canonical_max = (
+        (0.5 if affected_gates else 0.0)
+        + (0.3 if target_signals else 0.0)
+        + (0.2 if change_kind != "propose_change" else 0.0)
+    )
+    confidence = min(confidence, canonical_max)
+    # Codex round-8 P2: if canonicalization actually changed anything
+    # (filtered out hallucinated ids, coerced an unknown change_kind),
+    # the LLM's summary text still describes the pre-sanitize world
+    # ("…在 L99 上对 SW3 执行 tune_threshold…"). Persisting that into
+    # the proposal store means /skill_executor decompose() also sees
+    # the misleading sentence. Regenerate the summaries from the
+    # canonicalized fields whenever the LLM-reported lists differ
+    # from the post-canonical lists; otherwise keep the LLM's text
+    # (it's typically richer than the rules template).
+    raw_gates_in = _str_list(raw_dict.get("affected_gates"))
+    raw_signals_in = _str_list(raw_dict.get("target_signals"))
+    raw_kind_in = str(raw_dict.get("change_kind") or "propose_change")
+    canonicalized = (
+        raw_gates_in != affected_gates
+        or raw_signals_in != target_signals
+        or raw_kind_in != change_kind
+    )
+    if canonicalized:
+        gates_label = "、".join(affected_gates) if affected_gates else "(未识别)"
+        signals_label = "、".join(target_signals) if target_signals else "(未识别)"
+        summary_zh = (
+            f"系统理解：你想在 {gates_label} 上对 {signals_label} 执行 "
+            f"{raw_zh}（confidence={int(confidence * 100)}%）。"
+        )
+        gates_label_en = ", ".join(affected_gates) if affected_gates else "(none)"
+        signals_label_en = ", ".join(target_signals) if target_signals else "(none)"
+        summary_en = (
+            f"System reading: you propose to {raw_en} on gate(s) "
+            f"{gates_label_en}, target signal(s) {signals_label_en} "
+            f"(confidence={int(confidence * 100)}%)."
+        )
+    else:
+        summary_zh = str(raw_dict.get("summary_zh") or "")
+        summary_en = str(raw_dict.get("summary_en") or "")
     return {
-        "affected_gates": _str_list(raw_dict.get("affected_gates")),
-        "target_signals": _str_list(raw_dict.get("target_signals")),
-        "change_kind": str(raw_dict.get("change_kind") or "propose_change"),
-        "change_kind_zh": str(raw_dict.get("change_kind_zh") or "提出建议"),
-        "change_kind_en": str(raw_dict.get("change_kind_en") or "propose change"),
+        "affected_gates": affected_gates,
+        "target_signals": target_signals,
+        "change_kind": change_kind,
+        "change_kind_zh": raw_zh,
+        "change_kind_en": raw_en,
         "confidence": confidence,
-        "summary_zh": str(raw_dict.get("summary_zh") or ""),
-        "summary_en": str(raw_dict.get("summary_en") or ""),
+        "confidence_breakdown": _confidence_breakdown_from_fields(
+            affected_gates, target_signals, change_kind
+        ),
+        "vocabulary_hint": _vocabulary_hint_from_fields(
+            affected_gates, target_signals, change_kind, system_id
+        ),
+        "summary_zh": summary_zh,
+        "summary_en": summary_en,
         "source_text": source_text,
     }
 
@@ -2551,7 +2739,7 @@ def interpret_suggestion_text_llm(
         fallback["interpreter_strategy"] = "llm_fallback_to_rules"
         fallback["llm_error"] = type(exc).__name__ + ": " + str(exc)[:200]
         return fallback
-    result = _normalize_llm_interpretation(parsed, source_text=text)
+    result = _normalize_llm_interpretation(parsed, source_text=text, system_id=system_id)
     result["interpreter_strategy"] = "llm"
     result["llm_model"] = chosen_model
     return result

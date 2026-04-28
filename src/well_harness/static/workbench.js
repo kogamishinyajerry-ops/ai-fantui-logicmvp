@@ -211,7 +211,25 @@ function installSuggestionFlow() {
     cancelBtn.addEventListener("click", () => clearSuggestionInterpretation());
   }
   if (confirmBtn) {
-    confirmBtn.addEventListener("click", () => submitSuggestionTicket());
+    confirmBtn.addEventListener("click", () => onConfirmClicked());
+  }
+  // P54-09 (2026-04-28): wire draft autosave + restore + conflict-banner buttons.
+  installSuggestionDraftRestore();
+  const proceedBtn = document.getElementById("workbench-suggestion-conflict-proceed");
+  const conflictCancelBtn = document.getElementById("workbench-suggestion-conflict-cancel");
+  if (proceedBtn) {
+    proceedBtn.addEventListener("click", () => {
+      // Pull the system snapshot the banner was rendered with —
+      // proceed must file under the same system_id we conflict-
+      // checked, even if the user has since flipped the dropdown.
+      const banner = document.getElementById("workbench-suggestion-conflict-banner");
+      const sysId = banner ? banner.getAttribute("data-system-snapshot") : null;
+      hideConflictBanner();
+      submitSuggestionTicket(sysId || undefined);
+    });
+  }
+  if (conflictCancelBtn) {
+    conflictCancelBtn.addEventListener("click", () => hideConflictBanner());
   }
   // P45-03 (2026-04-26): wire the interpreter strategy toggle. Off
   // (rules) → on (llm) → off … flips the chip's data attribute and
@@ -261,6 +279,11 @@ async function runSuggestionInterpret() {
   // single sources of truth so the request is fully self-describing.
   const strategy = currentInterpreterStrategy();
   const system_id = currentWorkbenchSystem();
+  // Codex round-2 P2-2: tear down any stale conflict banner from
+  // a prior interpretation. Otherwise the banner's "继续提交" button
+  // would still call submitSuggestionTicket on the NEW _lastInterpretation,
+  // misleading the user about which conflict set they're bypassing.
+  hideConflictBanner();
   status.dataset.status = "loading";
   status.textContent = strategy === "llm"
     ? "🤖 LLM 解读中… · interpreting via LLM…"
@@ -339,6 +362,78 @@ function renderSuggestionInterpretation(interpretation) {
     conf.dataset.confidence = String(c);
     conf.textContent = `置信度 · confidence: ${(c * 100).toFixed(0)}%`;
   }
+  renderConfidenceBreakdown(interpretation);
+}
+
+// P54-09 (2026-04-28): render the per-component confidence breakdown
+// (gate / signal / change-kind) as 3 mini bars + an optional
+// vocabulary-hint reveal explaining "why uncertain" when something
+// came up empty. The backend ships confidence_breakdown + vocabulary_hint
+// alongside the existing fields; we degrade gracefully if either is
+// missing (older server, or LLM stripped them).
+function renderConfidenceBreakdown(interpretation) {
+  const wrap = document.getElementById("workbench-suggestion-confidence-breakdown");
+  if (!wrap) return;
+  const breakdown = (interpretation && interpretation.confidence_breakdown) || {};
+  const hint = (interpretation && interpretation.vocabulary_hint) || {};
+  // Map component → both Chinese + English in the hint text.
+  const labels = {
+    gate: { zh: "门", en: "gate" },
+    signal: { zh: "信号", en: "signal" },
+    change_kind: { zh: "变更动词", en: "change verb" },
+  };
+  let anyData = false;
+  for (const component of ["gate", "signal", "change_kind"]) {
+    const row = wrap.querySelector(`[data-component="${component}"]`);
+    if (!row) continue;
+    const value = typeof breakdown[component] === "number" ? breakdown[component] : 0;
+    const fill = row.querySelector(".workbench-suggestion-confidence-bar-fill");
+    const pct = row.querySelector(".workbench-suggestion-confidence-pct");
+    if (fill) {
+      const widthPct = Math.round(value * 100);
+      fill.style.width = widthPct + "%";
+      fill.dataset.fill = String(value);
+    }
+    if (pct) {
+      pct.textContent = Math.round(value * 100) + "%";
+      pct.dataset.pct = String(Math.round(value * 100));
+    }
+    row.dataset.met = value > 0 ? "true" : "false";
+    if (typeof breakdown[component] === "number") anyData = true;
+  }
+  // Build the hint when at least one dimension came up empty.
+  const hintEl = document.getElementById("workbench-suggestion-confidence-hint");
+  if (hintEl) {
+    const lines = [];
+    for (const component of ["gate", "signal", "change_kind"]) {
+      const list = hint[component];
+      if (!Array.isArray(list) || list.length === 0) continue;
+      const lab = labels[component];
+      const sample = list.slice(0, 8);
+      const more = list.length > 8 ? `、…（+${list.length - 8}）` : "";
+      const tags = sample.map((v) => `<strong>${escapeHtml(String(v))}</strong>`).join("、");
+      lines.push(
+        `💡 ${lab.zh}（${lab.en}）未识别 — 试试 · try one of: ${tags}${more}`
+      );
+    }
+    if (lines.length > 0) {
+      hintEl.innerHTML = lines.join("<br>");
+      hintEl.hidden = false;
+    } else {
+      hintEl.innerHTML = "";
+      hintEl.hidden = true;
+    }
+  }
+  wrap.dataset.state = anyData ? "ready" : "empty";
+}
+
+function escapeHtml(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function highlightSuggestionGates(gateIds) {
@@ -370,9 +465,12 @@ function clearSuggestionInterpretation() {
     status.dataset.status = "idle";
     status.textContent = "";
   }
+  // P54-09: any conflict banner from a previous attempt should not
+  // bleed across a re-interpret / cancel.
+  hideConflictBanner();
 }
 
-async function submitSuggestionTicket() {
+async function submitSuggestionTicket(systemIdOverride) {
   const status = document.getElementById("workbench-suggestion-status");
   if (!_lastInterpretation) {
     if (status) {
@@ -381,18 +479,23 @@ async function submitSuggestionTicket() {
     }
     return;
   }
-  // P44-03: POST the confirmed interpretation to the proposal store and
-  // re-fetch the inbox so the new ticket shows up below immediately.
+  // Codex round-4 P2-2: prefer the system_id snapshotted at confirm
+  // time over the live dropdown. This protects against a system
+  // toggle that happens between confirm-click and POST — without
+  // it, the conflict-checked interpretation could be filed under a
+  // different system's inbox.
   const identity = document.getElementById("workbench-identity");
   const ticketChip = document.getElementById("workbench-ticket");
   const systemSelect = document.getElementById("workbench-system-select");
+  const liveSystemId = systemSelect ? systemSelect.value || "thrust-reverser" : "thrust-reverser";
+  const systemId = systemIdOverride || liveSystemId;
   const payload = {
     source_text: _lastInterpretation.source_text || "",
     interpretation: _lastInterpretation,
     author_name: identity ? identity.getAttribute("data-identity-name") || "anonymous" : "anonymous",
     author_role: identity ? identity.getAttribute("data-role") || "ENGINEER" : "ENGINEER",
     ticket_id: ticketChip ? ticketChip.getAttribute("data-ticket") || "ad-hoc" : "ad-hoc",
-    system_id: systemSelect ? systemSelect.value || "thrust-reverser" : "thrust-reverser",
+    system_id: systemId,
   };
   if (status) {
     status.dataset.status = "loading";
@@ -417,6 +520,12 @@ async function submitSuggestionTicket() {
       status.dataset.status = "success";
       status.textContent = `工单 ${created.id} 已提交 · ticket ${created.id} submitted`;
     }
+    // P54-09 + Codex round-5 P2-1: clear the autosaved draft for
+    // the system we actually submitted under (NOT just the live
+    // dropdown, which may have been flipped after the snapshot).
+    // Otherwise the just-submitted system keeps its draft and
+    // resurrects it on next refresh.
+    clearSuggestionDraftFor(systemId);
     await loadProposalsInbox();
   } catch (error) {
     if (status) {
@@ -424,6 +533,391 @@ async function submitSuggestionTicket() {
       status.textContent = `提交失败 · submit failed: ${error.message || error}`;
     }
   }
+}
+
+// ─── P54-09 (2026-04-28): pre-submit conflict warning ───────────────
+//
+// Before POSTing a confirmed interpretation, fetch OPEN proposals
+// scoped to the same system and detect overlap on `affected_gates`.
+// If any conflicting OPEN proposal exists, show the conflict-banner
+// inside the interpretation card and let the engineer choose
+// "继续提交" (call submitSuggestionTicket) or "取消" (close banner,
+// keep the interpretation visible so they can re-interpret / cancel).
+//
+// The check is best-effort: any GET failure falls through to a normal
+// submit so the user is never blocked by a flaky network. The check
+// is also skipped entirely when affected_gates is empty (no overlap
+// possible). Single API roundtrip — the inbox endpoint returns
+// status-filtered records already.
+async function onConfirmClicked() {
+  const status = document.getElementById("workbench-suggestion-status");
+  if (!_lastInterpretation) {
+    if (status) {
+      status.dataset.status = "error";
+      status.textContent = "尚无解读结果可提交 · no interpretation to submit yet";
+    }
+    return;
+  }
+  // Codex round-3 P2-2 + round-4 P2-2: snapshot BOTH the
+  // interpretation identity and the active system_id at
+  // request-start. The conflict check is async; while in flight,
+  // the user could (a) hit "↻ 重新解读" and replace
+  // _lastInterpretation, or (b) flip the system dropdown. Either
+  // mutates the post-await state in a way that would let us file
+  // a system-A interpretation under system-B's inbox after having
+  // checked the wrong conflict set. We discard responses whose
+  // snapshot no longer matches the live state, AND we pass the
+  // snapshotted system_id into submitSuggestionTicket so the POST
+  // body uses the system the engineer was actually confirming.
+  const snapshot = _lastInterpretation;
+  const systemSelect = document.getElementById("workbench-system-select");
+  const systemId = systemSelect ? systemSelect.value || "thrust-reverser" : "thrust-reverser";
+  const gates = (snapshot.affected_gates || []).slice();
+  if (gates.length === 0) {
+    submitSuggestionTicket(systemId);
+    return;
+  }
+  let conflicts = [];
+  try {
+    const url =
+      PROPOSALS_PATH +
+      "?status=OPEN&system=" + encodeURIComponent(systemId);
+    const resp = await fetch(url, { headers: { Accept: "application/json" } });
+    if (_lastInterpretation !== snapshot) return;
+    if (_currentSystemFromSelect() !== systemId) return;
+    if (resp.ok) {
+      const payload = await resp.json();
+      if (_lastInterpretation !== snapshot) return;
+      if (_currentSystemFromSelect() !== systemId) return;
+      const open = (payload && payload.proposals) || [];
+      conflicts = open.filter((p) => {
+        const g = (p && p.interpretation && p.interpretation.affected_gates) || [];
+        return Array.isArray(g) && g.some((x) => gates.includes(x));
+      });
+    }
+  } catch (_e) {
+    if (_lastInterpretation !== snapshot) return;
+    if (_currentSystemFromSelect() !== systemId) return;
+    conflicts = [];
+  }
+  if (conflicts.length === 0) {
+    submitSuggestionTicket(systemId);
+    return;
+  }
+  // Hand the snapshotted system_id to the proceed button so a
+  // post-banner click still files under the correct system even if
+  // the user has since flipped the dropdown.
+  showConflictBanner(conflicts, gates, systemId);
+}
+
+function _currentSystemFromSelect() {
+  const sel = document.getElementById("workbench-system-select");
+  return (sel && sel.value) || "thrust-reverser";
+}
+
+function showConflictBanner(conflicts, currentGates, systemSnapshot) {
+  const banner = document.getElementById("workbench-suggestion-conflict-banner");
+  const countEl = document.getElementById("workbench-suggestion-conflict-count");
+  const gatesEl = document.getElementById("workbench-suggestion-conflict-gates");
+  const list = document.getElementById("workbench-suggestion-conflict-list");
+  if (!banner || !list) return;
+  // Stash the system_id this banner was rendered with — proceed
+  // must file under the same system, even if the user toggles the
+  // dropdown while looking at the warning (Codex round-4 P2-2).
+  if (systemSnapshot) {
+    banner.setAttribute("data-system-snapshot", systemSnapshot);
+  } else {
+    banner.removeAttribute("data-system-snapshot");
+  }
+  if (countEl) countEl.textContent = String(conflicts.length);
+  if (gatesEl) gatesEl.textContent = (currentGates || []).join(", ");
+  // Build the conflict list — short id, summary preview, gate pills.
+  list.innerHTML = "";
+  for (const p of conflicts.slice(0, 5)) {
+    const li = document.createElement("li");
+    const id = (p && p.id) || "PROP-?";
+    const interp = (p && p.interpretation) || {};
+    const summary =
+      interp.summary_zh ||
+      interp.summary_en ||
+      (p && p.source_text) ||
+      "(no summary)";
+    const gates = (interp.affected_gates || []).join(", ");
+    li.innerHTML =
+      `<span class="conflict-id">${escapeHtml(id.slice(0, 24))}</span>` +
+      `<span class="conflict-summary" title="${escapeHtml(summary)}">${escapeHtml(summary)}</span>` +
+      `<span class="conflict-gates">${escapeHtml(gates)}</span>`;
+    list.appendChild(li);
+  }
+  if (conflicts.length > 5) {
+    const more = document.createElement("li");
+    more.className = "conflict-more";
+    more.textContent = `… 以及 ${conflicts.length - 5} 个其他 OPEN 工单 · …and ${conflicts.length - 5} more OPEN proposals`;
+    list.appendChild(more);
+  }
+  banner.hidden = false;
+}
+
+function hideConflictBanner() {
+  const banner = document.getElementById("workbench-suggestion-conflict-banner");
+  if (banner) banner.hidden = true;
+}
+
+// ─── P54-09 (2026-04-28): draft autosave + restore ──────────────────
+//
+// Persist the engineer's in-flight typing to localStorage so an
+// accidental tab-close doesn't lose the suggestion. On page boot,
+// if a draft < 1h old exists FOR THE CURRENTLY ACTIVE SYSTEM, surface
+// a banner offering to restore. On submit success the draft is
+// cleared.
+//
+// Codex P54-09 round-1 P2-1 fix: drafts must be scoped by system_id.
+// Without this, an engineer typing on thrust-reverser, switching to
+// C919, and refreshing would be offered the thrust-reverser draft —
+// then submitSuggestionTicket() would file it under C919, mis-routing
+// the proposal. We persist {text, ts, system_id} per-system and only
+// surface the draft whose system_id matches the live select value.
+//
+// Storage layout: a single key holding a map {<system_id>: draft} so
+// each system carries its own most-recent draft and they don't bleed.
+const SUGGESTION_DRAFT_KEY = "workbench/suggestion-drafts/v2";
+const SUGGESTION_DRAFT_TTL_MS = 60 * 60 * 1000;  // 1h
+const SUGGESTION_DRAFT_DEBOUNCE_MS = 500;
+let _suggestionDraftTimer = null;
+// Codex round-6 P2: mirror of the most recent unsaved typing —
+// cleared when the debounce fires (committed to localStorage) and
+// flushed proactively on system change so the user's last burst of
+// keystrokes isn't lost when they realize the wrong system is on
+// and switch within the debounce window.
+let _pendingDraftText = null;
+let _pendingDraftSystemId = null;
+
+function installSuggestionDraftRestore() {
+  const input = document.getElementById("workbench-suggestion-input");
+  if (!input) return;
+  // Autosave on input (debounced) — scoped to the active system.
+  // Codex round-2 P2-1: capture both the system_id AND the text at
+  // the moment of typing, NOT inside the timer callback. Without
+  // this snapshot, switching systems within the 500ms debounce
+  // window would let the old text get committed under the new
+  // system_id, defeating the per-system isolation this whole flow
+  // is built around.
+  input.addEventListener("input", () => {
+    // Codex round-4 P3: once the user starts typing, the restore
+    // banner becomes stale — its preview/age refers to a draft
+    // they're now overwriting. Pressing 恢复 would clobber the
+    // fresh typing; pressing 忽略 would delete the just-saved
+    // autosave instead of the original draft. Hide the banner the
+    // moment the input becomes dirty.
+    if (input.value && input.value.length > 0) {
+      hideDraftBanner();
+    }
+    const sysSnapshot = _currentDraftSystemId();
+    const textSnapshot = input.value;
+    // Codex round-6 P2: track the most recent typed snapshot so
+    // the system-change handler can flush it under the OLD system
+    // before canceling the debounce — otherwise mid-debounce
+    // switches lose the user's last 0–500ms of typing entirely.
+    _pendingDraftText = textSnapshot;
+    _pendingDraftSystemId = sysSnapshot;
+    if (_suggestionDraftTimer) clearTimeout(_suggestionDraftTimer);
+    _suggestionDraftTimer = setTimeout(
+      () => {
+        saveSuggestionDraftFor(sysSnapshot, textSnapshot);
+        // Pending mirror is now committed — clear so a later
+        // system switch doesn't double-flush.
+        _pendingDraftText = null;
+        _pendingDraftSystemId = null;
+      },
+      SUGGESTION_DRAFT_DEBOUNCE_MS,
+    );
+  });
+  // On boot, surface a restore banner if a fresh draft exists for
+  // the currently active system. Switching systems should clear the
+  // banner (the new system might have its own draft, or none).
+  const draft = readSuggestionDraft();
+  if (draft && (input.value || "").trim() === "") {
+    showDraftBanner(draft);
+  }
+  // When the system changes, re-evaluate which (if any) draft is
+  // applicable, and cancel any pending debounce so old text doesn't
+  // leak into the new system's slot (Codex round-2 P2-1).
+  const systemSelect = document.getElementById("workbench-system-select");
+  if (systemSelect) {
+    systemSelect.addEventListener("change", () => {
+      // Codex round-6 P2: flush any pending unsaved edit under the
+      // OLD system before we kill the debounce — otherwise typing
+      // → switching within 500ms silently discards the last burst,
+      // exactly the case the restore banner is supposed to protect.
+      if (_pendingDraftText !== null && _pendingDraftSystemId) {
+        saveSuggestionDraftFor(_pendingDraftSystemId, _pendingDraftText);
+        _pendingDraftText = null;
+        _pendingDraftSystemId = null;
+      }
+      if (_suggestionDraftTimer) {
+        clearTimeout(_suggestionDraftTimer);
+        _suggestionDraftTimer = null;
+      }
+      hideDraftBanner();
+      // Codex round-5 P2-1 (broader fix): dismiss any pending
+      // conflict banner too. Otherwise a user who started a
+      // confirm flow under system A, switched to system B, and
+      // clicked 继续提交 would file under A while currently
+      // viewing B — and post-submit cleanup state would split
+      // across two systems. By killing the banner on switch we
+      // simply force re-interpretation under the new system.
+      hideConflictBanner();
+      // Codex round-9 P2-2 + round-10 P1: the textarea + banners
+      // get reset to reflect the new system, AND the in-flight
+      // interpretation must be torn down too. Otherwise after a
+      // switch the UI looks "reset" but _lastInterpretation still
+      // holds the old gate set, and a stray Confirm click would
+      // submit those old gates under the NEW system_id, mis-routing
+      // proposals across system inboxes. Use the existing
+      // clearSuggestionInterpretation helper so the SVG highlight
+      // + status row + interpretation card all clear together.
+      clearSuggestionInterpretation();
+      input.value = "";
+      const next = readSuggestionDraft();
+      if (next) showDraftBanner(next);
+    });
+  }
+  // Wire the banner's restore + dismiss buttons.
+  const restoreBtn = document.getElementById("workbench-suggestion-draft-restore");
+  const dismissBtn = document.getElementById("workbench-suggestion-draft-dismiss");
+  if (restoreBtn) {
+    restoreBtn.addEventListener("click", () => {
+      const cur = readSuggestionDraft();
+      if (cur && cur.text) {
+        input.value = cur.text;
+        input.focus();
+      }
+      hideDraftBanner();
+    });
+  }
+  if (dismissBtn) {
+    dismissBtn.addEventListener("click", () => {
+      clearSuggestionDraft();
+      hideDraftBanner();
+    });
+  }
+}
+
+function _currentDraftSystemId() {
+  const sel = document.getElementById("workbench-system-select");
+  return (sel && sel.value) || "thrust-reverser";
+}
+
+function _readDraftMap() {
+  try {
+    const raw = window.localStorage.getItem(SUGGESTION_DRAFT_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch (_e) {
+    return {};
+  }
+}
+
+function _writeDraftMap(map) {
+  try {
+    window.localStorage.setItem(SUGGESTION_DRAFT_KEY, JSON.stringify(map));
+  } catch (_e) { /* quota/disabled — silent */ }
+}
+
+function readSuggestionDraft() {
+  const sysId = _currentDraftSystemId();
+  const map = _readDraftMap();
+  const draft = map[sysId];
+  if (!draft || typeof draft.text !== "string" || !draft.text.trim()) return null;
+  const ts = typeof draft.ts === "number" ? draft.ts : 0;
+  if (Date.now() - ts > SUGGESTION_DRAFT_TTL_MS) {
+    delete map[sysId];
+    _writeDraftMap(map);
+    return null;
+  }
+  // Echo system_id so the banner / submit path can sanity-check.
+  return { text: draft.text, ts: ts, system_id: sysId };
+}
+
+function saveSuggestionDraft(text) {
+  saveSuggestionDraftFor(_currentDraftSystemId(), text);
+}
+
+// Codex round-2 P2-1: explicit-system variant so the debounce
+// callback can write under the system_id captured when the user
+// was actually typing — protecting against the typing-then-switching
+// race within the 500ms debounce window.
+function saveSuggestionDraftFor(sysId, text) {
+  if (!sysId) return;
+  const map = _readDraftMap();
+  if (!text || !text.trim()) {
+    delete map[sysId];
+  } else {
+    map[sysId] = { text: text, ts: Date.now(), system_id: sysId };
+  }
+  _writeDraftMap(map);
+}
+
+function clearSuggestionDraft() {
+  clearSuggestionDraftFor(_currentDraftSystemId());
+}
+
+// Codex round-5 P2-1: explicit-system clear so the post-submit
+// cleanup wipes the draft for the system we actually filed under,
+// not whatever the live dropdown points at. Without this, a
+// cross-system submit (snapshot != live) would leave the submit-
+// system's draft alive and reappear on next refresh.
+function clearSuggestionDraftFor(sysId) {
+  // Codex round-7 P2 + round-8 P3: also clear the pending-snapshot
+  // mirror if (and only if) it belongs to the system being cleared.
+  // The simpler "always null" version dropped another system's
+  // in-flight typing in the cross-system flow:
+  //   submit-A in flight → user switches to B + types → submit-A
+  //   resolves and runs clearSuggestionDraftFor("A"), but that
+  //   nulled the pending snapshot for B, so B's keystrokes never
+  //   reached localStorage. Scoped clear preserves B's autosave.
+  if (_pendingDraftSystemId === sysId) {
+    _pendingDraftText = null;
+    _pendingDraftSystemId = null;
+    // Same scoping for the debounce timer: only kill it if it was
+    // scheduled for the system we're clearing (i.e. the same
+    // system as the now-cleared pending snapshot). Otherwise we
+    // might cancel a debounce that was about to commit some other
+    // system's typing.
+    if (_suggestionDraftTimer) {
+      clearTimeout(_suggestionDraftTimer);
+      _suggestionDraftTimer = null;
+    }
+  }
+  if (!sysId) return;
+  const map = _readDraftMap();
+  if (sysId in map) {
+    delete map[sysId];
+    _writeDraftMap(map);
+  }
+}
+
+function showDraftBanner(draft) {
+  const banner = document.getElementById("workbench-suggestion-draft-banner");
+  if (!banner) return;
+  const ageMin = Math.max(1, Math.round((Date.now() - draft.ts) / 60000));
+  const ageEl = document.getElementById("workbench-suggestion-draft-age");
+  if (ageEl) ageEl.textContent = String(ageMin);
+  for (const mirror of banner.querySelectorAll('[data-mirror="age"]')) {
+    mirror.textContent = String(ageMin);
+  }
+  const preview = document.getElementById("workbench-suggestion-draft-preview");
+  if (preview) {
+    const trimmed = (draft.text || "").trim();
+    preview.textContent = trimmed.length > 60 ? `"${trimmed.slice(0, 60)}…"` : `"${trimmed}"`;
+  }
+  banner.hidden = false;
+}
+
+function hideDraftBanner() {
+  const banner = document.getElementById("workbench-suggestion-draft-banner");
+  if (banner) banner.hidden = true;
 }
 
 // ─────────────────────────────────────────────────────────────────
