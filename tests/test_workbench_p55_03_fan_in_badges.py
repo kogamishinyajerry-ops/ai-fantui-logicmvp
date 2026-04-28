@@ -278,6 +278,48 @@ def test_fan_in_badge_label_uses_monospace() -> None:
     ), "fan-in digit must render in a monospace face"
 
 
+def test_fan_in_badge_bg_uses_pointer_events_stroke() -> None:
+    """Codex P55-03 round-1 P3: the badge group carries an SVG
+    <title> child for the "N-input gate" tooltip. With
+    pointer-events: none on the bg rect, the tooltip would never
+    fire (no hover events captured). The fix is `pointer-events:
+    stroke` on the rect — the outline catches hover (tooltip works)
+    while the rect's transparent interior stays click-through so
+    the 6px gate-overlap zone doesn't eat the gate's review-mode
+    click."""
+    rule = re.search(
+        r"\.workbench-gate-fan-in-badge-bg\s*\{[^}]+\}",
+        CSS,
+        re.DOTALL,
+    )
+    assert rule is not None
+    body = rule.group(0)
+    assert "pointer-events: stroke" in body, (
+        "fan-in badge bg must use pointer-events: stroke so the "
+        "<title> tooltip fires on hover without eating gate clicks"
+    )
+
+
+def test_fan_in_badge_group_does_not_disable_pointer_events() -> None:
+    """If a group-level `.workbench-gate-fan-in-badge { pointer-events:
+    none }` rule reappears it would swallow hover on every child,
+    re-introducing the round-1 P3 bug."""
+    # Look for a rule that targets the group selector exactly (NOT
+    # the -bg / -label children).
+    rule = re.search(
+        r"\.workbench-gate-fan-in-badge(?![-\w])\s*\{([^}]+)\}",
+        CSS,
+        re.DOTALL,
+    )
+    if rule is None:
+        return  # No group-level rule = OK
+    body = rule.group(1)
+    assert "pointer-events: none" not in body, (
+        "group-level pointer-events: none re-introduces the round-1 "
+        "P3 tooltip-suppression bug"
+    )
+
+
 def test_fan_in_badge_label_uses_text_muted_or_contrast() -> None:
     """Outline-only badge needs a legible label color that's clearly
     *not* the accent (which would say "pay attention here"). Use

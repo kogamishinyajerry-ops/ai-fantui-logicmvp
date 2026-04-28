@@ -2694,14 +2694,21 @@ body[data-review-mode="off"] .workbench-review-anchor-badge {
    alongside the louder filled-accent marker. The accent token is
    reserved for state-of-world surfaces; the fan-in badge derives
    stroke + label from contrast tokens (Linear's single-accent
-   discipline). */
-.workbench-circuit-hero-mount .workbench-gate-fan-in-badge {
-  pointer-events: none;
-}
+   discipline).
+
+   Codex P55-03 round-1 P3: the rect uses pointer-events: stroke so
+   the SVG <title> tooltip ("4-input gate (fan-in)") fires when an
+   engineer hovers the badge outline — without this, pointer-events:
+   none on the group would swallow the hover and the tooltip would
+   never appear. `stroke` (vs `auto`) is the precise choice: only
+   the 1px outline catches events, so the rect's transparent
+   interior remains click-through to the gate body underneath in
+   the 6px overlap zone. */
 .workbench-circuit-hero-mount .workbench-gate-fan-in-badge-bg {
   fill: none;
   stroke: var(--hairline-strong);
   stroke-width: 1;
+  pointer-events: stroke;
 }
 .workbench-circuit-hero-mount .workbench-gate-fan-in-badge-label {
   fill: var(--text-muted);
