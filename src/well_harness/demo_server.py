@@ -33,6 +33,15 @@ from well_harness.document_intake import (
     intake_template_payload,
 )
 from well_harness.fantui_tick import FantuiTickSystem, parse_pilot_inputs
+# P56-04 (2026-04-28): C919 sim engine. The c919_etras_panel/index.html
+# POSTs /api/tick on every 100ms timer; until this phase that path 404'd
+# on the unified server, so the panel's ▶仿真 button silently no-op'd.
+from well_harness.c919_tick_api import (
+    C919SimState,
+    handle_c919_tick as _handle_c919_tick_api,
+    reset_c919_system as _reset_c919_system_api,
+    get_c919_log_records as _get_c919_log_records_api,
+)
 from well_harness.models import HarnessConfig, PilotInputs, ResolvedInputs
 from well_harness.plant import PlantState, SimplifiedDeployPlant
 from well_harness.switches import LatchedThrottleSwitches, SwitchState
@@ -204,6 +213,21 @@ FANTUI_RESET_PATH = "/api/fantui/reset"
 FANTUI_LOG_PATH = "/api/fantui/log"
 FANTUI_STATE_PATH = "/api/fantui/state"
 FANTUI_SET_VDT_PATH = "/api/fantui/set_vdt"
+# P56-04 (2026-04-28): C919 sim endpoints. Both bare and namespaced
+# paths point at the same C919SimState — the bare paths are what the
+# legacy panel HTML POSTs to (originally targeting the standalone
+# :9191 server). Namespaced aliases let new code use the cleaner form
+# without disturbing the panel.
+C919_TICK_PATH = "/api/tick"
+C919_TICK_PATH_NAMESPACED = "/api/c919/tick"
+C919_RESET_PATH = "/api/reset"
+C919_RESET_PATH_NAMESPACED = "/api/c919/reset"
+# /api/log is the GET endpoint the panel's refreshChart() polls for
+# the live chart/log drawer. Codex P56-04 round-1 P2: missing this
+# left the drawer dark even after /api/tick started working.
+C919_LOG_PATH = "/api/log"
+C919_LOG_PATH_NAMESPACED = "/api/c919/log"
+_C919_SIM_STATE = C919SimState()
 
 STATIC_ROUTE_ALIASES = {
     "/favicon.ico": "favicon.svg",
@@ -494,6 +518,18 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, recs)
             return
 
+        # P56-04 round-1 P2: C919 telemetry log endpoint. Panel's
+        # refreshChart() polls this for the live chart/log drawer.
+        if parsed.path in (C919_LOG_PATH, C919_LOG_PATH_NAMESPACED):
+            recs = _get_c919_log_records_api(_C919_SIM_STATE)
+            # TelemetryLogger records are dataclasses; serialize via
+            # __dict__ so the panel JS sees a list of plain objects.
+            payload = [
+                r.__dict__ if hasattr(r, "__dict__") else r for r in recs
+            ]
+            self._send_json(200, payload)
+            return
+
         if parsed.path == FANTUI_STATE_PATH:
             # Atomic snapshot — one lock acquisition covers all fields
             # so callers don't observe torn state.
@@ -566,6 +602,10 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             FANTUI_TICK_PATH,
             FANTUI_RESET_PATH,
             FANTUI_SET_VDT_PATH,
+            C919_TICK_PATH,
+            C919_TICK_PATH_NAMESPACED,
+            C919_RESET_PATH,
+            C919_RESET_PATH_NAMESPACED,
         }:
             self._send_json(404, {"error": "not_found"})
             return
@@ -628,6 +668,21 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if parsed.path == FANTUI_RESET_PATH:
             _FANTUI_SYSTEM.reset()
             self._send_json(200, {"ok": True, "t_s": 0.0})
+            return
+        # P56-04 (2026-04-28): C919 sim endpoints. The legacy bare
+        # paths (/api/tick, /api/reset) are what the
+        # c919_etras_panel/index.html JS POSTs to on every 100ms
+        # timer; the namespaced /api/c919/* aliases coexist for new
+        # code. Both routes share one C919SimState so successive
+        # ticks accumulate FSM state across HTTP requests.
+        if parsed.path in (C919_TICK_PATH, C919_TICK_PATH_NAMESPACED):
+            status, result = _handle_c919_tick_api(
+                _C919_SIM_STATE, request_payload,
+            )
+            self._send_json(status, result)
+            return
+        if parsed.path in (C919_RESET_PATH, C919_RESET_PATH_NAMESPACED):
+            self._send_json(200, _reset_c919_system_api(_C919_SIM_STATE))
             return
         if parsed.path == FANTUI_SET_VDT_PATH:
             # E11-14 R2 (P2 BLOCKER #2, 2026-04-25): set_vdt is a test probe
