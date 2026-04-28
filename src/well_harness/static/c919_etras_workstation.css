@@ -12,11 +12,15 @@
   --etras-text:      #cdd6e0;
   --etras-text-dim:  #7a9bb5;
   --etras-text-mute: #3a5570;
-  --etras-accent:    #00c8f5;
-  --etras-active:    #00e5a0;
-  --etras-active-2:  #00b87a;
-  --etras-warn:      #f5c518;
-  --etras-fail:      #e05555;
+  /* P56-02b (2026-04-28): the 4 status tokens now alias the shared
+     /etras_chrome.css palette so a future palette tweak propagates
+     to every E-TRAS surface in one edit. Values match the legacy
+     hex literals — no visual change in this page. */
+  --etras-accent:    var(--cyan);
+  --etras-active:    var(--green);
+  --etras-active-2:  #00b87a;  /* darker variant — no shared equivalent yet */
+  --etras-warn:      var(--amber);
+  --etras-fail:      var(--red);
   --etras-logic-bg:  #0d2236;
   --etras-logic-ring:#1e3048;
   --etras-output-bg: #0d1b2c;
