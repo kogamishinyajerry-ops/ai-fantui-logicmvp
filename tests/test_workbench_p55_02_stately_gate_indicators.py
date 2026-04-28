@@ -346,6 +346,91 @@ def test_proposal_refresh_failure_preserves_chip_history() -> None:
     )
 
 
+# ─── 6b. Freshness flag prevents stale-data repaint ───
+
+
+def test_freshness_flag_declared_at_module_scope() -> None:
+    """Codex P55-02 round-4: a module-level `_proposalsAreFresh`
+    boolean tracks whether `_latestProposals` reflects a successful
+    fetch. Without this, setReviewMode() and circuit-re-hydration
+    paths repaint markers from stale data."""
+    assert re.search(
+        r"^let _proposalsAreFresh\s*=\s*false\s*;",
+        JS,
+        re.MULTILINE,
+    ), "module must declare `let _proposalsAreFresh = false;`"
+
+
+def test_apply_review_anchors_consults_freshness_flag() -> None:
+    """The wrapper must short-circuit (and tear down DOM) when
+    `_proposalsAreFresh` is false. Otherwise setReviewMode() or any
+    other caller passing `_latestProposals` would resurrect the
+    just-cleared markers."""
+    fn = re.search(
+        r"function applyReviewAnchors\(proposals\) \{(.*?)^}",
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    assert "_proposalsAreFresh" in body, (
+        "applyReviewAnchors must consult the freshness flag"
+    )
+    # On the not-fresh branch, both layers must be invoked with []
+    # to tear down their DOM.
+    assert re.search(
+        r"if\s*\(\s*!\s*_proposalsAreFresh\s*\)\s*\{[^}]*"
+        r"applyGateProposalMarkers\(\[\]\)[^}]*"
+        r"applyReviewSpotlight\(\[\]\)",
+        body,
+        re.DOTALL,
+    ), "not-fresh branch must tear down both marker layers"
+
+
+def test_loading_window_clears_markers_immediately() -> None:
+    """Codex P55-02 round-4 P3: the moment a refresh starts, the
+    canvas must drop the previous OPEN counts (they could already
+    be wrong if another reviewer changed status). Setting
+    `_proposalsAreFresh = false` + applyReviewAnchors([]) right after
+    `inboxState = "loading"` enforces this."""
+    fn = re.search(
+        r"async function loadProposalsInbox\(\) \{(.*?)^}",
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    loading_pos = body.find('list.dataset.inboxState = "loading"')
+    fresh_false_pos = body.find("_proposalsAreFresh = false")
+    try_pos = body.find("try {")
+    assert loading_pos != -1 and fresh_false_pos != -1 and try_pos != -1
+    assert loading_pos < fresh_false_pos < try_pos, (
+        "_proposalsAreFresh = false + applyReviewAnchors([]) must "
+        "happen between inboxState='loading' and the try block, so "
+        "the marker tear-down lands in the loading window before "
+        "fetch begins"
+    )
+
+
+def test_success_path_marks_proposals_fresh_before_repaint() -> None:
+    """The success path must flip `_proposalsAreFresh = true` BEFORE
+    calling `applyReviewAnchors(proposals)` — otherwise the
+    freshness gate would block the repaint."""
+    fn = re.search(
+        r"async function loadProposalsInbox\(\) \{(.*?)^}",
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    fresh_true_pos = body.find("_proposalsAreFresh = true")
+    apply_pos = body.find("applyReviewAnchors(proposals)")
+    assert fresh_true_pos != -1 and apply_pos != -1
+    assert fresh_true_pos < apply_pos, (
+        "_proposalsAreFresh = true must precede applyReviewAnchors"
+    )
+
+
 # ─── 6. The legacy amber badge is GONE ───
 
 

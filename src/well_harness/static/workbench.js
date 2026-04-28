@@ -930,6 +930,17 @@ const PROPOSALS_PATH = "/api/proposals";
 
 let _latestProposals = [];
 
+// P55-02 round-4 (2026-04-28): freshness flag for the always-on
+// marker layer. Markers paint only when this is true (i.e. we have
+// a successfully-fetched proposal set). loadProposalsInbox() flips
+// it to false the moment a refresh starts and the moment a fetch
+// fails, so any subsequent `applyReviewAnchors(_latestProposals)`
+// (e.g. from setReviewMode or circuit re-hydration) tears down
+// rather than repaints from stale data. _latestProposals itself
+// stays preserved so the panel-version chip's accepted count and
+// click-target resolution don't lie about approval history.
+let _proposalsAreFresh = false;
+
 function installProposalInbox() {
   const refreshBtn = document.getElementById("annotation-inbox-refresh-btn");
   if (refreshBtn) {
@@ -955,6 +966,14 @@ async function loadProposalsInbox() {
     return;
   }
   list.dataset.inboxState = "loading";
+  // Codex P55-02 round-4 P3: tear down stale markers the moment a
+  // refresh starts. Otherwise the always-on layer keeps advertising
+  // the previous OPEN-ticket counts during the loading window — and
+  // those counts could already be wrong (another reviewer could
+  // have flipped a status). The pre-P55-02 review-mode-only badges
+  // didn't leak stale state because they were behind a toggle.
+  _proposalsAreFresh = false;
+  applyReviewAnchors([]);
   // P45-02 (2026-04-26): scope the inbox to the currently-selected
   // system. The dropdown is the single source of truth (same one
   // that drives the circuit fragment in P45-01); a tile in the
@@ -971,6 +990,9 @@ async function loadProposalsInbox() {
     const body = await response.json();
     const proposals = Array.isArray(body.proposals) ? body.proposals : [];
     _latestProposals = proposals;
+    // Codex P55-02 round-4: mark fresh BEFORE applyReviewAnchors so
+    // the freshness gate lets the marker repaint go through.
+    _proposalsAreFresh = true;
     renderProposalsInbox(proposals);
     list.dataset.inboxState = proposals.length === 0 ? "empty" : "ready";
     // P44-04: refresh the review-mode anchors against the new
@@ -2316,7 +2338,19 @@ function setReviewMode(state) {
 // The legacy `applyReviewAnchors(...)` entry point remains as a
 // thin wrapper that calls both — every existing call site stays
 // correct without churn.
+//
+// Codex P55-02 round-4 P2: the wrapper consults the freshness flag.
+// If proposals are stale (fetch failed, or refresh in progress), we
+// pass [] to both layers so they tear down their DOM rather than
+// repainting from stale `_latestProposals`. setReviewMode() and
+// circuit re-hydration both call us with `_latestProposals`, and
+// without this gate they'd resurrect just-cleared markers.
 function applyReviewAnchors(proposals) {
+  if (!_proposalsAreFresh) {
+    applyGateProposalMarkers([]);
+    applyReviewSpotlight([]);
+    return;
+  }
   applyGateProposalMarkers(proposals);
   applyReviewSpotlight(proposals);
 }
