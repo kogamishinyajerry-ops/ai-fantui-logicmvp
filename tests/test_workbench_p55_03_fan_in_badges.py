@@ -278,6 +278,37 @@ def test_fan_in_badge_label_uses_monospace() -> None:
     ), "fan-in digit must render in a monospace face"
 
 
+def test_fan_in_badge_click_forwards_to_gate_spotlight() -> None:
+    """Codex P55-03 round-2 P3: the bg rect's pointer-events: stroke
+    means the 1px outline catches clicks. Without forwarding to
+    spotlightCircuitGate, that outline zone is a dead spot for the
+    gate's own review-mode click handler (which lives on the
+    underlying <use data-gate-id>). The fix is a click handler on
+    the badge group that calls spotlightCircuitGate(gateId) +
+    stopPropagation."""
+    fn = re.search(
+        r"function applyGateFanInBadges\([^)]*\) \{(.*?)^}",
+        JS,
+        re.DOTALL | re.MULTILINE,
+    )
+    assert fn is not None
+    body = fn.group(1)
+    # Click handler attached.
+    assert 'addEventListener("click"' in body, (
+        "applyGateFanInBadges must wire a click handler so the "
+        "badge zone doesn't become a dead spot"
+    )
+    # Forward to gate self-spotlight (benign, always works).
+    assert "spotlightCircuitGate(gateId)" in body, (
+        "badge click must forward to spotlightCircuitGate so the "
+        "gate gets visual feedback regardless of review-mode state"
+    )
+    # stopPropagation so the click doesn't double-fire.
+    assert "stopPropagation" in body, (
+        "badge click handler must stopPropagation"
+    )
+
+
 def test_fan_in_badge_bg_uses_pointer_events_stroke() -> None:
     """Codex P55-03 round-1 P3: the badge group carries an SVG
     <title> child for the "N-input gate" tooltip. With

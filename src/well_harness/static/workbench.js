@@ -2492,6 +2492,18 @@ function applyGateFanInBadges() {
     label.setAttribute("dominant-baseline", "middle");
     label.textContent = String(count);
     group.appendChild(label);
+    // Codex P55-03 round-2 P3: the rect's pointer-events: stroke
+    // means a click on the 1px outline gets caught by the badge.
+    // Without forwarding, that thin zone becomes a dead spot for
+    // the gate's own click handler (spotlightInboxByGate when
+    // review mode is on). Forward to spotlightCircuitGate (a benign
+    // visual self-highlight) so any click in the badge zone gives
+    // immediate, consistent feedback no matter what the gate's
+    // current handler chain is.
+    group.addEventListener("click", (e) => {
+      e.stopPropagation();
+      spotlightCircuitGate(gateId);
+    });
     useEl.ownerSVGElement.appendChild(group);
   }
 }
