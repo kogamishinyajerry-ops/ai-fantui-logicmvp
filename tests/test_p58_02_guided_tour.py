@@ -481,11 +481,20 @@ def test_end_tour_falls_back_to_visible_control() -> None:
         "inline `el.closest('[hidden]')` or call a helper "
         "isLauncherFocusable (Codex R2 MEDIUM)."
     )
-    # Must fall back to a visible control if launcher unavailable.
-    assert "presetSelect" in chunk, (
-        "endTour has no fallback to a visible control. If the launcher "
-        "is hidden or detached, focus would land on <body>. Fall back "
-        "to #presetSelect (or any always-visible interactive control)."
+    # Must fall back to a visible control if launcher unavailable —
+    # specifically, an EXECUTABLE branch: document.getElementById
+    # ("presetSelect") plus a .focus() call on it. Codex P58-02 R3 LOW:
+    # bare "presetSelect" string match would let a future regression
+    # leave only a comment behind and still pass.
+    fallback_pattern = (
+        r'document\.getElementById\s*\(\s*["\']presetSelect["\']\s*\)'
+        r'[\s\S]{0,300}?\.focus\s*\('
+    )
+    assert re.search(fallback_pattern, chunk), (
+        "endTour does not contain an executable "
+        "document.getElementById('presetSelect') + .focus() fallback. "
+        "Bare string match isn't enough — the fallback must be a real "
+        "code path (Codex P58-02 R3 LOW)."
     )
 
 
