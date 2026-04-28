@@ -19,11 +19,15 @@ Fix:
      the available vertical space when iframed (workbench iframe
      is height-constrained; 320px was eating most of the visible
      workspace area)
-  3. SVG height reduced 240 → 200 so the contained content fits
-     within 280px max-height without clipping itself
-  4. tsc-selector-panel dropdown opens UPWARD (`bottom: calc(100%
-     + 3px); top: auto`) so it stays inside the drawer's clipped
-     region instead of escaping through `overflow: visible`
+  3. SVG height reduced 240 → 200 (markup AND `TimeseriesChart.create`
+     runtime config — the JS overwrites SVG attributes, so both must
+     agree) so the contained content fits within 280px max-height
+  4. tsc-selector-panel dropdown opens DOWNWARD (`top: calc(100% +
+     3px); bottom: auto`) so it stays INSIDE the drawer's clipped
+     region (Codex R1 caught: opening upward inside `overflow:hidden`
+     would clip the dropdown at the drawer's top edge, making it
+     unreachable). Brief overlap with the chart while the dropdown
+     is open is acceptable; the chart re-emerges on close.
 """
 
 from __future__ import annotations
