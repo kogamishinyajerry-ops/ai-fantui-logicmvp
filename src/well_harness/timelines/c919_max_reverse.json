@@ -1,0 +1,30 @@
+{
+  "title": "C919 E-TRAS — max reverse traversal (S0→S6, then transient → S7)",
+  "description": "Touchdown WOW + throttle pulled past -25° to traverse S6_MAX_REVERSE. Verifies the S5→S6 transition threshold (TRA ≤ -25°). Note: S6 is a 1-tick transient under the §6 state machine — both microswitches go FALSE outside [-9.8°, -1.4°], so once TRA crosses -25° the next-tick condition (not atltla AND not apwtla) fires S6→S7 immediately. The fixture's contract is 'S6 must appear in the trace', not 'S6 is the terminal state'.",
+  "system": "c919-etras",
+  "step_s": 0.05,
+  "duration_s": 12.0,
+  "initial_inputs": {
+    "tra_deg": 5.0,
+    "lgcu1_mlg_wow": false,
+    "lgcu2_mlg_wow": false,
+    "lgcu1_valid": true,
+    "lgcu2_valid": true,
+    "engine_running": true,
+    "tr_inhibited": false,
+    "etras_over_temp_fault": false,
+    "n1k_pct": 25.0,
+    "max_n1k_deploy_limit_pct": 84.0,
+    "max_n1k_stow_limit_pct": 30.0
+  },
+  "events": [
+    { "t_s": 0.0, "kind": "mark_phase", "target": "descent" },
+    { "t_s": 0.0, "kind": "set_input", "target": "lgcu1_mlg_wow", "value": true, "note": "touchdown" },
+    { "t_s": 0.0, "kind": "set_input", "target": "lgcu2_mlg_wow", "value": true },
+    { "t_s": 0.5, "kind": "mark_phase", "target": "throttle_to_reverse" },
+    { "t_s": 0.5, "kind": "ramp_input", "target": "tra_deg", "value": -27.0, "duration_s": 4.0, "note": "+5°→-27° sweep clears SW1/SW2 windows and crosses S5→S6 threshold (-25°)" },
+    { "t_s": 6.0, "kind": "mark_phase", "target": "max_reverse_hold" },
+    { "t_s": 7.0, "kind": "assert_condition", "target": "fadec_deploy_command", "value": true, "note": "deploy command live in deep reverse" },
+    { "t_s": 11.5, "kind": "assert_condition", "target": "ln_fadec_deploy_command", "value": "active" }
+  ]
+}

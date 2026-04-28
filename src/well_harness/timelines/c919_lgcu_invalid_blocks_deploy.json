@@ -1,0 +1,27 @@
+{
+  "title": "C919 E-TRAS — both LGCUs invalid → conservative WOW=FALSE → S0 hold",
+  "description": "lgcu_both:invalid forces both LGCU validity bits to FALSE. selected_mlg_wow falls through to the conservative-FALSE branch in the wow-filter (§5.4): without at least one valid LGCU asserting WOW, the system is treated as airborne. State machine stays at S0_AIR_STOWED_LOCKED for the entire run, even though both LGCUs physically report MLG_WOW=True. Verifies the dual-LGCU validity-driven safety floor.",
+  "system": "c919-etras",
+  "step_s": 0.05,
+  "duration_s": 8.0,
+  "initial_inputs": {
+    "tra_deg": 5.0,
+    "lgcu1_mlg_wow": true,
+    "lgcu2_mlg_wow": true,
+    "lgcu1_valid": true,
+    "lgcu2_valid": true,
+    "engine_running": true,
+    "tr_inhibited": false,
+    "etras_over_temp_fault": false,
+    "n1k_pct": 25.0,
+    "max_n1k_deploy_limit_pct": 84.0,
+    "max_n1k_stow_limit_pct": 30.0
+  },
+  "events": [
+    { "t_s": 0.0, "kind": "mark_phase", "target": "descent" },
+    { "t_s": 0.0, "kind": "inject_fault", "target": "lgcu_both:invalid", "note": "both LGCUs marked invalid — wow filter cannot trust either, conservative FALSE" },
+    { "t_s": 0.5, "kind": "ramp_input", "target": "tra_deg", "value": -12.5, "duration_s": 3.5, "note": "pilot pulls into reverse, but state machine never leaves S0" },
+    { "t_s": 5.0, "kind": "assert_condition", "target": "fadec_deploy_command", "value": false, "note": "deploy never fires — selected_mlg_wow stays False" },
+    { "t_s": 7.5, "kind": "assert_condition", "target": "ln_eicu_cmd2", "value": "idle", "note": "CMD2 never goes triggerable because selected_mlg_wow is FALSE" }
+  ]
+}

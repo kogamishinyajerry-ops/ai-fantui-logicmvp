@@ -1,0 +1,30 @@
+{
+  "title": "C919 E-TRAS — quick deploy + idle reverse hold (S0→S5)",
+  "description": "Compressed deploy via start_deploy_sequence shortcut. TRA goes from +5° to -12.5° in 2s — past tra_idle_reverse_deg (-11.74°) so fadec_deploy_command can fire, but well above the -25° max-reverse threshold. Pilot holds idle-reverse — verifies S5 stability under steady throttle. Useful as a soak-test of the deploy chain.",
+  "system": "c919-etras",
+  "step_s": 0.05,
+  "duration_s": 10.0,
+  "initial_inputs": {
+    "tra_deg": 5.0,
+    "lgcu1_mlg_wow": false,
+    "lgcu2_mlg_wow": false,
+    "lgcu1_valid": true,
+    "lgcu2_valid": true,
+    "engine_running": true,
+    "tr_inhibited": false,
+    "etras_over_temp_fault": false,
+    "n1k_pct": 25.0,
+    "max_n1k_deploy_limit_pct": 84.0,
+    "max_n1k_stow_limit_pct": 30.0
+  },
+  "events": [
+    { "t_s": 0.0, "kind": "mark_phase", "target": "descent" },
+    { "t_s": 0.0, "kind": "set_input", "target": "lgcu1_mlg_wow", "value": true },
+    { "t_s": 0.0, "kind": "set_input", "target": "lgcu2_mlg_wow", "value": true },
+    { "t_s": 0.5, "kind": "mark_phase", "target": "deploy" },
+    { "t_s": 0.5, "kind": "start_deploy_sequence", "target": "tra_deg", "value": -12.5, "duration_s": 2.0, "note": "compressed +5°→-12.5° ramp; passes through SW1/SW2 to set CMD2/CMD3 latches and crosses tra_idle_reverse_deg (-11.74°) to enable fadec_deploy_command" },
+    { "t_s": 5.0, "kind": "mark_phase", "target": "idle_reverse_hold" },
+    { "t_s": 6.0, "kind": "assert_condition", "target": "fadec_deploy_command", "value": true },
+    { "t_s": 9.5, "kind": "assert_condition", "target": "fadec_deploy_command", "value": true, "note": "still active — S5 holds while TRA stays in reverse" }
+  ]
+}
