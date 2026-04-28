@@ -2718,6 +2718,125 @@ body[data-review-mode="off"] .workbench-review-anchor-badge {
   pointer-events: none;
   user-select: none;
 }
+
+/* ─── P55-04 (2026-04-28): hover preview popover for gate proposal
+   markers. Single page-level element repositioned per-hover by JS;
+   a Figma-style card with one row per OPEN proposal. */
+#workbench-gate-marker-popover {
+  position: fixed;
+  z-index: 4500;
+  width: 280px;
+  max-width: calc(100vw - 24px);
+  max-height: 360px;
+  overflow-y: auto;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline-strong);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+  padding: 6px;
+  font-size: 12px;
+  color: var(--text-main);
+  transition:
+    opacity var(--wb-duration-drawer) var(--wb-ease-out);
+}
+#workbench-gate-marker-popover[hidden] {
+  display: none;
+}
+.workbench-gate-marker-popover-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 6px 8px 8px;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 4px;
+}
+.workbench-gate-marker-popover-gate {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+.workbench-gate-marker-popover-count {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.workbench-gate-marker-popover-row {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    "avatar meta"
+    "avatar summary";
+  gap: 2px 8px;
+  align-items: start;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--wb-duration-drawer) var(--wb-ease-out);
+}
+.workbench-gate-marker-popover-row:hover {
+  background: var(--accent-tint-12);
+}
+.workbench-gate-marker-popover-row + .workbench-gate-marker-popover-row {
+  margin-top: 2px;
+}
+.workbench-gate-marker-popover-avatar {
+  grid-area: avatar;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  color: var(--contrast);
+  background: lch(45% 35 var(--avatar-hue, 200));
+  border: 1px solid var(--hairline-strong);
+}
+.workbench-gate-marker-popover-meta {
+  grid-area: meta;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.workbench-gate-marker-popover-author {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-main);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workbench-gate-marker-popover-author em {
+  font-style: normal;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.workbench-gate-marker-popover-age {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  flex-shrink: 0;
+}
+.workbench-gate-marker-popover-summary {
+  grid-area: summary;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 body[data-review-mode="on"] .workbench-circuit-hero-mount [data-gate-id].is-review-anchor {
   filter: drop-shadow(0 0 6px #4fb8ff) drop-shadow(0 0 14px rgba(79, 184, 255, 0.55));
   animation: workbench-review-anchor-pulse 1.6s ease-in-out infinite;

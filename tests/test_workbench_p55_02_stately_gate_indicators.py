@@ -97,12 +97,15 @@ def test_spotlight_function_keeps_review_mode_gate() -> None:
 # ─── 2. Marker DOM shape ───
 
 
-def test_marker_emits_svg_group_with_rect_label_and_title() -> None:
+def test_marker_emits_svg_group_with_rect_label_and_aria_label() -> None:
     """Each marker is an SVG <g> carrying:
-       <title>     — accessible tooltip
+       aria-label  — accessible name for screen readers
        <rect>      — accent-tinted background
        <text>      — count label
-    All three must be createElementNS'd against the SVG namespace."""
+    The <rect> + <text> are createElementNS'd against the SVG
+    namespace. The accessible name lives on aria-label rather than
+    a child <title> so the OS-level tooltip layer doesn't fight the
+    P55-04 hover-preview popover (Codex P55-04 round-3 P3)."""
     fn = re.search(
         r"function applyGateProposalMarkers\(proposals\) \{(.*?)^}",
         JS,
@@ -113,7 +116,13 @@ def test_marker_emits_svg_group_with_rect_label_and_title() -> None:
     assert 'createElementNS(NS, "g")' in body
     assert 'createElementNS(NS, "rect")' in body
     assert 'createElementNS(NS, "text")' in body
-    assert 'createElementNS(NS, "title")' in body
+    # No native-tooltip-triggering <title> (would compete with the
+    # P55-04 popover).
+    assert 'createElementNS(NS, "title")' not in body
+    # Screen-reader name lives on aria-label.
+    assert 'setAttribute(\n      "aria-label"' in body or 'setAttribute("aria-label"' in body, (
+        "marker group must carry aria-label for a11y"
+    )
 
 
 def test_marker_carries_data_attributes_for_test_hooks() -> None:
