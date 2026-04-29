@@ -62,9 +62,20 @@ The scenario/snapshot surface is truth-neutral:
   truth decision.
 - Evidence archives include the selected scenario metadata.
 
+## JER-168 Rule
+
+JER-168 makes draft edges inspectable as evidence-only port/signal bindings.
+
+The edge inspector is non-authoritative:
+
+- Selecting an edge shows source node, target node, source port, target port,
+  signal id, and validation status.
+- UI edge metadata is exported with draft JSON for review evidence.
+- Missing endpoint metadata is rendered as `evidence_gap`.
+- Edge inspection never changes control truth or hardware truth.
+
 ## Planned Runtime Rules
 
-- JER-168 will make edge inspection port-aware.
 - JER-169 will close the milestone with a runtime acceptance bundle.
 
 ## Boundaries

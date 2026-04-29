@@ -7600,6 +7600,7 @@ function installEditableWorkbenchShell() {
   const customSnapshotInput = document.getElementById("workbench-custom-snapshot-json");
   const storageKey = "well-harness-editable-workbench-draft-v1";
   let selectedNode = nodes.find((node) => node.getAttribute("aria-pressed") === "true") || nodes[0];
+  let selectedEdge = null;
   let hardwareEvidenceReport = null;
   let lastSandboxDiff = null;
   let currentEditorTool = "select";
@@ -7764,6 +7765,60 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function edgeTargetPortId(edge) {
+    if (!edge || !edge.target) return "";
+    const targetNode = nodes.find((node) => node.getAttribute("data-editable-node-id") === edge.target);
+    if (targetNode && targetNode.getAttribute("data-draft-node") === "true") {
+      return `${edge.target}:in`;
+    }
+    return `${edge.target}:in:ui_edge:${edge.source || "unknown"}`;
+  }
+
+  function edgeInspectorPayload(edge) {
+    const sourceNode = nodes.find((node) => node.getAttribute("data-editable-node-id") === edge.source);
+    const targetNode = nodes.find((node) => node.getAttribute("data-editable-node-id") === edge.target);
+    const missing = [];
+    if (!sourceNode) missing.push("source_node");
+    if (!targetNode) missing.push("target_node");
+    const sourcePortId = edge.source ? `${edge.source}:out` : "";
+    const targetPortId = edgeTargetPortId(edge);
+    return {
+      id: edge.id || `${edge.source}->${edge.target}`,
+      source_node_id: edge.source || "unknown",
+      target_node_id: edge.target || "unknown",
+      source_port_id: sourcePortId || "evidence_gap",
+      target_port_id: targetPortId || "evidence_gap",
+      signal_id: edge.signal_id || `${edge.source || "unknown"}__to__${edge.target || "unknown"}`,
+      evidence_status: missing.length ? "evidence_gap" : "ui_draft",
+      validation_issue: missing.length ? `evidence_gap:${missing.join("+")}` : "none",
+      truth_effect: "none",
+    };
+  }
+
+  function edgePathMetadata(edge) {
+    const payload = edgeInspectorPayload(edge);
+    return [
+      `data-source-port-id="${inspectorText(payload.source_port_id)}"`,
+      `data-target-port-id="${inspectorText(payload.target_port_id)}"`,
+      `data-edge-signal-id="${inspectorText(payload.signal_id)}"`,
+      `data-edge-evidence-status="${inspectorText(payload.evidence_status)}"`,
+    ].join(" ");
+  }
+
+  function attachEditableEdgeHandlers() {
+    if (!edgeSvg) return;
+    const paths = Array.from(edgeSvg.querySelectorAll("[data-editable-edge-id]"));
+    for (const path of paths) {
+      path.addEventListener("click", () => selectEditableEdge(path.getAttribute("data-editable-edge-id") || ""));
+      path.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          selectEditableEdge(path.getAttribute("data-editable-edge-id") || "");
+        }
+      });
+    }
+  }
+
   function renderEditableEdges() {
     if (!edgeSvg) return;
     refreshEditableNodes();
@@ -7778,10 +7833,20 @@ function installEditableWorkbenchShell() {
         `<path data-editable-edge-id="${inspectorText(edge.id)}"`,
         `data-edge-source="${inspectorText(edge.source)}"`,
         `data-edge-target="${inspectorText(edge.target)}"`,
+        edgePathMetadata(edge),
+        'role="button"',
+        'tabindex="0"',
+        `aria-label="${inspectorText(`Edge ${edge.source} to ${edge.target}`)}"`,
         `d="M${source.x} ${source.y} C${midX} ${source.y} ${midX} ${target.y} ${target.x} ${target.y}" />`,
       ].join(" "));
     }
     edgeSvg.innerHTML = paths.join("");
+    const selectedEdgeId = selectedEdge && selectedEdge.id;
+    if (selectedEdgeId) {
+      const path = edgeSvg.querySelector(`[data-editable-edge-id="${CSS.escape(selectedEdgeId)}"]`);
+      if (path) path.setAttribute("aria-pressed", "true");
+    }
+    attachEditableEdgeHandlers();
   }
 
   function validateEditableGraph() {
@@ -7922,6 +7987,21 @@ function installEditableWorkbenchShell() {
 
   function disconnectSelectedEditableEdge() {
     if (!draftEdges.length) return;
+    if (selectedEdge && selectedEdge.id) {
+      const selectedIndex = draftEdges.findIndex((edge) => edge.id === selectedEdge.id);
+      if (selectedIndex >= 0) {
+        recordEditableHistory("disconnect_selected_edge");
+        draftEdges.splice(selectedIndex, 1);
+        selectedEdge = null;
+        if (draftLabel) draftLabel.textContent = "sandbox_candidate edge edit pending";
+        renderEditableEdges();
+        renderInspector();
+        validateEditableGraph();
+        updateEditableDraftHash();
+        persistDraft();
+        return;
+      }
+    }
     const selectedId = selectedNode && selectedNode.getAttribute("data-editable-node-id");
     const index = selectedId
       ? draftEdges.findIndex((edge) => edge.source === selectedId || edge.target === selectedId)
@@ -8049,7 +8129,40 @@ function installEditableWorkbenchShell() {
     evidenceDetail.innerHTML = `<ul>${items}</ul>`;
   }
 
+  function renderEdgeInspector(edge) {
+    const payload = edgeInspectorPayload(edge || {});
+    if (nodeIdSlot) nodeIdSlot.textContent = payload.id;
+    if (labelInput) labelInput.value = `${payload.source_node_id} -> ${payload.target_node_id}`;
+    if (opSelect) opSelect.value = "and";
+    if (ruleCountSlot) ruleCountSlot.textContent = "edge";
+    if (evidenceSlot) evidenceSlot.textContent = payload.evidence_status;
+    if (signalCountSlot) signalCountSlot.textContent = "1";
+    if (sourceRefSlot) sourceRefSlot.textContent = `ui_draft.edges.${payload.id}`;
+    if (!evidenceDetail) return;
+    evidenceDetail.innerHTML = [
+      '<dl class="workbench-inspector-edge-list">',
+      '<div><dt>Source node</dt>',
+      `<dd>${inspectorText(payload.source_node_id)}</dd></div>`,
+      '<div><dt>Target node</dt>',
+      `<dd>${inspectorText(payload.target_node_id)}</dd></div>`,
+      '<div><dt>Source port</dt>',
+      `<dd>${inspectorText(payload.source_port_id)}</dd></div>`,
+      '<div><dt>Target port</dt>',
+      `<dd>${inspectorText(payload.target_port_id)}</dd></div>`,
+      '<div><dt>Signal</dt>',
+      `<dd>${inspectorText(payload.signal_id)}</dd></div>`,
+      '<div><dt>Validation</dt>',
+      `<dd>${inspectorText(payload.validation_issue)}</dd></div>`,
+      '</dl>',
+      '<p class="workbench-inspector-truth-note">truth_effect: none</p>',
+    ].join("");
+  }
+
   function renderInspector() {
+    if (selectedEdge) {
+      renderEdgeInspector(selectedEdge);
+      return;
+    }
     const payload = selectedNodePayload();
     if (!payload) return;
     if (nodeIdSlot) nodeIdSlot.textContent = payload.id;
@@ -8061,7 +8174,33 @@ function installEditableWorkbenchShell() {
     renderInspectorEvidenceDetails(payload);
   }
 
+  function selectEditableEdge(edgeId) {
+    selectedEdge = draftEdges.find((edge) => edge.id === edgeId) || null;
+    if (!selectedEdge) return;
+    selectedNode = null;
+    for (const candidate of nodes) {
+      candidate.setAttribute("aria-pressed", "false");
+    }
+    if (edgeSvg) {
+      for (const path of Array.from(edgeSvg.querySelectorAll("[data-editable-edge-id]"))) {
+        path.setAttribute(
+          "aria-pressed",
+          path.getAttribute("data-editable-edge-id") === selectedEdge.id ? "true" : "false",
+        );
+      }
+    }
+    renderEdgeInspector(selectedEdge);
+    if (graphValidationStatus) {
+      const payload = edgeInspectorPayload(selectedEdge);
+      graphValidationStatus.textContent =
+        `Graph validation: edge ${payload.id} source_port=${payload.source_port_id} target_port=${payload.target_port_id}.`;
+    }
+    updateEditableDraftHash();
+    persistDraft();
+  }
+
   function selectNode(node) {
+    selectedEdge = null;
     const nodeId = node && node.getAttribute("data-editable-node-id") || "";
     if (currentEditorTool === "edge" && pendingEdgeSourceId && nodeId && nodeId !== pendingEdgeSourceId) {
       connectEditableEdge(pendingEdgeSourceId, nodeId);
@@ -8076,6 +8215,11 @@ function installEditableWorkbenchShell() {
     selectedNode = node;
     for (const candidate of nodes) {
       candidate.setAttribute("aria-pressed", candidate === node ? "true" : "false");
+    }
+    if (edgeSvg) {
+      for (const path of Array.from(edgeSvg.querySelectorAll("[data-editable-edge-id]"))) {
+        path.setAttribute("aria-pressed", "false");
+      }
     }
     renderInspector();
     updateEditableDraftHash();
@@ -8160,7 +8304,7 @@ function installEditableWorkbenchShell() {
       selected_node: selected,
       nodes: nodes.map((node) => editableNodeState(node)),
       ports: [],
-      edges: draftEdges.map((edge) => ({ ...edge })),
+      edges: draftEdges.map((edge) => ({ ...edge, ...edgeInspectorPayload(edge) })),
     };
   }
 
