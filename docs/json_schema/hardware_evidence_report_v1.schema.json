@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/hardware_evidence_report_v1.schema.json",
+  "title": "well_harness.hardware_evidence_report v1",
+  "description": "Read-only hardware evidence report for LRU/signal coverage and evidence-gap accounting. This report is audit metadata only and does not promote truth level, assign DAL/PSSA, or alter controller behavior.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema_version",
+    "generated_by",
+    "adapter",
+    "layer",
+    "truth_level_impact",
+    "status",
+    "hardware_summary",
+    "coverage",
+    "evidence_gaps",
+    "boundaries",
+    "checks"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/hardware_evidence_report_v1.schema.json"
+    },
+    "schema_version": {
+      "const": "hardware_evidence_report.v1"
+    },
+    "generated_by": {
+      "type": "string",
+      "minLength": 1
+    },
+    "adapter": {
+      "const": "thrust-reverser"
+    },
+    "layer": {
+      "const": "L6"
+    },
+    "truth_level_impact": {
+      "const": "none"
+    },
+    "status": {
+      "enum": ["pass", "fail"]
+    },
+    "hardware_summary": {
+      "$ref": "#/$defs/hardwareSummary"
+    },
+    "coverage": {
+      "$ref": "#/$defs/coverage"
+    },
+    "evidence_gaps": {
+      "$ref": "#/$defs/evidenceGaps"
+    },
+    "boundaries": {
+      "$ref": "#/$defs/boundaries"
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/check"
+      }
+    }
+  },
+  "$defs": {
+    "pathList": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "hardwareSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "system_id",
+        "kind",
+        "version",
+        "hardware_path",
+        "read_only",
+        "truth_level_impact",
+        "dal_pssa_impact",
+        "controller_truth_source",
+        "controller_truth_modified",
+        "lru_count",
+        "signal_binding_count",
+        "lru_evidence_gap_field_count",
+        "signal_evidence_gap_field_count",
+        "total_evidence_gap_field_count",
+        "inferred_field_count",
+        "frozen_hardware_paths",
+        "read_protected_hardware_paths"
+      ],
+      "properties": {
+        "system_id": {
+          "const": "thrust-reverser"
+        },
+        "kind": {
+          "const": "thrust-reverser-hardware"
+        },
+        "version": {
+          "const": 1
+        },
+        "hardware_path": {
+          "const": "config/hardware/thrust_reverser_hardware_v1.yaml"
+        },
+        "read_only": {
+          "const": true
+        },
+        "truth_level_impact": {
+          "const": "none"
+        },
+        "dal_pssa_impact": {
+          "const": "none"
+        },
+        "controller_truth_source": {
+          "const": "src/well_harness/controller.py"
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "lru_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "signal_binding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lru_evidence_gap_field_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "signal_evidence_gap_field_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_evidence_gap_field_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inferred_field_count": {
+          "const": 0
+        },
+        "frozen_hardware_paths": {
+          "$ref": "#/$defs/pathList"
+        },
+        "read_protected_hardware_paths": {
+          "$ref": "#/$defs/pathList"
+        }
+      }
+    },
+    "coverageCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "expected_count", "actual_count"],
+      "properties": {
+        "status": {
+          "enum": ["pass", "fail"]
+        },
+        "expected_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "actual_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lru_inventory", "signal_bindings"],
+      "properties": {
+        "lru_inventory": {
+          "$ref": "#/$defs/coverageCheck"
+        },
+        "signal_bindings": {
+          "$ref": "#/$defs/coverageCheck"
+        }
+      }
+    },
+    "evidenceGaps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lru_field_count",
+        "signal_field_count",
+        "total_field_count",
+        "inferred_field_count"
+      ],
+      "properties": {
+        "lru_field_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "signal_field_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_field_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "inferred_field_count": {
+          "const": 0
+        }
+      }
+    },
+    "boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "read_only",
+        "controller_truth_modified",
+        "truth_level_impact",
+        "dal_pssa_impact",
+        "frozen_hardware_paths"
+      ],
+      "properties": {
+        "read_only": {
+          "const": true
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "truth_level_impact": {
+          "const": "none"
+        },
+        "dal_pssa_impact": {
+          "const": "none"
+        },
+        "frozen_hardware_paths": {
+          "$ref": "#/$defs/pathList"
+        }
+      }
+    },
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "status"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": ["pass", "fail"]
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}
