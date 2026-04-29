@@ -2,17 +2,25 @@
 
 ## Current Milestone
 
-**Active milestone — Editable Workbench Interaction v2 (updated 2026-04-30)**
+**Active milestone — Editable Workbench Runtime v3 (updated 2026-04-30)**
 
-Editable Control Workbench Core v1 is complete. The next milestone turns the
-proof layer into an operational engineering surface: node-linked evidence,
-visible sandbox diff feedback, draft import/export, and auditable handoff
-archives.
+Editable Control Workbench Core v1 and Interaction v2 are complete. Runtime v3
+bridges the editable UI surface into canonical sandbox runtime models, so
+engineer edits can move through model validation, scenario diffing, and archive
+handoff without creating certified truth.
 
 Current Linear project:
-`AI FANTUI LogicMVP · Editable Workbench Interaction v2`
+`AI FANTUI LogicMVP · Editable Workbench Runtime v3`
 
 Current issue chain:
+
+- JER-165: Canonicalize workbench UI draft into editable_control_model_v1
+- JER-166: Sandbox graph validation report v1
+- JER-167: Scenario selector and custom snapshot sandbox UI
+- JER-168: Port-aware edge inspector v1
+- JER-169: Runtime v3 acceptance bundle and regression proof
+
+Completed interaction layer:
 
 - JER-154: Evidence Inspector hardware mapping v1
 - JER-161: Sandbox run panel and baseline diff UI
