@@ -212,9 +212,11 @@
   <!-- L1 → tls_115vac_cmd (P59-01 output anchor) -->
   <line x1="428" y1="104" x2="560" y2="104" stroke="#00e5a0" stroke-width="2" marker-end="url(#arr-green)"/>
   <rect x="560" y="88" width="200" height="32" rx="3" fill="#0d3320" stroke="#00e5a0" stroke-width="1.5"
-        data-node-kind="signal-output" data-signal-id="tls_115vac_cmd" data-context-gate="L1" data-annotation-anchor="signal_output"/>
+        data-node-kind="signal-output" data-signal-id="tls_115vac_cmd" data-context-gate="L1" data-annotation-anchor="signal_output"
+        data-source-lru-id="etrac" data-lru-id="tls" data-hardware-detail="cable/connector/port:evidence_gap"/>
   <text x="660" y="106" fill="#00e5a0" font-size="10" text-anchor="middle" font-weight="bold"
-        data-node-kind="signal-output" data-signal-id="tls_115vac_cmd" data-context-gate="L1" data-annotation-anchor="signal_output">tls_115vac_cmd</text>
+        data-node-kind="signal-output" data-signal-id="tls_115vac_cmd" data-context-gate="L1" data-annotation-anchor="signal_output"
+        data-source-lru-id="etrac" data-lru-id="tls" data-hardware-detail="cable/connector/port:evidence_gap">tls_115vac_cmd</text>
   <text x="660" y="115" fill="#7a9bb5" font-size="7.5" text-anchor="middle">TLS 解锁命令 (115 VAC)</text>
 
   <!-- ════════════════════════════════════════════════════════════════════
@@ -270,9 +272,11 @@
   <!-- L2 → etrac_540vdc_cmd (P59-01 output anchor) -->
   <line x1="428" y1="240" x2="560" y2="240" stroke="#00e5a0" stroke-width="2" marker-end="url(#arr-green)"/>
   <rect x="560" y="224" width="200" height="32" rx="3" fill="#0d3320" stroke="#00e5a0" stroke-width="1.5"
-        data-node-kind="signal-output" data-signal-id="etrac_540vdc_cmd" data-context-gate="L2" data-annotation-anchor="signal_output"/>
+        data-node-kind="signal-output" data-signal-id="etrac_540vdc_cmd" data-context-gate="L2" data-annotation-anchor="signal_output"
+        data-source-lru-id="etrac" data-lru-id="pdu" data-hardware-detail="cable/connector/port:evidence_gap"/>
   <text x="660" y="242" fill="#00e5a0" font-size="10" text-anchor="middle" font-weight="bold"
-        data-node-kind="signal-output" data-signal-id="etrac_540vdc_cmd" data-context-gate="L2" data-annotation-anchor="signal_output">etrac_540vdc_cmd</text>
+        data-node-kind="signal-output" data-signal-id="etrac_540vdc_cmd" data-context-gate="L2" data-annotation-anchor="signal_output"
+        data-source-lru-id="etrac" data-lru-id="pdu" data-hardware-detail="cable/connector/port:evidence_gap">etrac_540vdc_cmd</text>
   <text x="660" y="251" fill="#7a9bb5" font-size="7.5" text-anchor="middle">ETRAC 上电命令 (540 VDC)</text>
 
   <!-- ════════════════════════════════════════════════════════════════════
@@ -303,9 +307,11 @@
   <text x="130" y="396" fill="#7a9bb5" font-size="6.5" text-anchor="middle">反推未被人工抑制</text>
 
   <rect x="30" y="404" width="200" height="24" rx="2" fill="#0d2236" stroke="#1e3048"
-        data-node-kind="signal-input" data-signal-id="tls_unlocked_ls" data-context-gate="L3" data-annotation-anchor="signal_input"/>
+        data-node-kind="signal-input" data-signal-id="tls_unlocked_ls" data-context-gate="L3" data-annotation-anchor="signal_input"
+        data-lru-id="lock_sensors" data-hardware-detail="cable/connector/port:evidence_gap"/>
   <text x="130" y="415" fill="#cdd6e0" font-size="9.5" text-anchor="middle"
-        data-node-kind="signal-input" data-signal-id="tls_unlocked_ls" data-context-gate="L3" data-annotation-anchor="signal_input">tls_unlocked_ls == True</text>
+        data-node-kind="signal-input" data-signal-id="tls_unlocked_ls" data-context-gate="L3" data-annotation-anchor="signal_input"
+        data-lru-id="lock_sensors" data-hardware-detail="cable/connector/port:evidence_gap">tls_unlocked_ls == True</text>
   <text x="130" y="424" fill="#7a9bb5" font-size="6.5" text-anchor="middle">TLS 位置反馈已解锁</text>
 
   <rect x="30" y="432" width="200" height="24" rx="2" fill="#0d2236" stroke="#1e3048"
@@ -341,22 +347,28 @@
   <line x1="428" y1="402" x2="555" y2="402" stroke="#00e5a0" stroke-width="2"/>
 
   <rect x="560" y="358" width="200" height="24" rx="3" fill="#0d3320" stroke="#00e5a0" stroke-width="1.3"
-        data-node-kind="signal-output" data-signal-id="eec_deploy_cmd" data-context-gate="L3" data-annotation-anchor="signal_output"/>
+        data-node-kind="signal-output" data-signal-id="eec_deploy_cmd" data-context-gate="L3" data-annotation-anchor="signal_output"
+        data-source-lru-id="etrac" data-hardware-detail="cable/connector/port:evidence_gap"/>
   <text x="660" y="374" fill="#00e5a0" font-size="9.5" text-anchor="middle" font-weight="bold"
-        data-node-kind="signal-output" data-signal-id="eec_deploy_cmd" data-context-gate="L3" data-annotation-anchor="signal_output">eec_deploy_cmd</text>
+        data-node-kind="signal-output" data-signal-id="eec_deploy_cmd" data-context-gate="L3" data-annotation-anchor="signal_output"
+        data-source-lru-id="etrac" data-hardware-detail="cable/connector/port:evidence_gap">eec_deploy_cmd</text>
   <line x1="555" y1="370" x2="560" y2="370" stroke="#00e5a0" stroke-width="1.5" marker-end="url(#arr-green)"/>
   <line x1="555" y1="370" x2="555" y2="402" stroke="#00e5a0" stroke-width="1.5"/>
 
   <rect x="560" y="390" width="200" height="24" rx="3" fill="#0d3320" stroke="#00e5a0" stroke-width="1.3"
-        data-node-kind="signal-output" data-signal-id="pls_power_cmd" data-context-gate="L3" data-annotation-anchor="signal_output"/>
+        data-node-kind="signal-output" data-signal-id="pls_power_cmd" data-context-gate="L3" data-annotation-anchor="signal_output"
+        data-source-lru-id="etrac" data-lru-id="pls" data-hardware-detail="cable/connector/port:evidence_gap"/>
   <text x="660" y="406" fill="#00e5a0" font-size="9.5" text-anchor="middle" font-weight="bold"
-        data-node-kind="signal-output" data-signal-id="pls_power_cmd" data-context-gate="L3" data-annotation-anchor="signal_output">pls_power_cmd</text>
+        data-node-kind="signal-output" data-signal-id="pls_power_cmd" data-context-gate="L3" data-annotation-anchor="signal_output"
+        data-source-lru-id="etrac" data-lru-id="pls" data-hardware-detail="cable/connector/port:evidence_gap">pls_power_cmd</text>
   <line x1="555" y1="402" x2="560" y2="402" stroke="#00e5a0" stroke-width="1.5" marker-end="url(#arr-green)"/>
 
   <rect x="560" y="422" width="200" height="24" rx="3" fill="#0d3320" stroke="#00e5a0" stroke-width="1.3"
-        data-node-kind="signal-output" data-signal-id="pdu_motor_cmd" data-context-gate="L3" data-annotation-anchor="signal_output"/>
+        data-node-kind="signal-output" data-signal-id="pdu_motor_cmd" data-context-gate="L3" data-annotation-anchor="signal_output"
+        data-source-lru-id="etrac" data-lru-id="pdu" data-hardware-detail="cable/connector/port:evidence_gap"/>
   <text x="660" y="438" fill="#00e5a0" font-size="9.5" text-anchor="middle" font-weight="bold"
-        data-node-kind="signal-output" data-signal-id="pdu_motor_cmd" data-context-gate="L3" data-annotation-anchor="signal_output">pdu_motor_cmd</text>
+        data-node-kind="signal-output" data-signal-id="pdu_motor_cmd" data-context-gate="L3" data-annotation-anchor="signal_output"
+        data-source-lru-id="etrac" data-lru-id="pdu" data-hardware-detail="cable/connector/port:evidence_gap">pdu_motor_cmd</text>
   <line x1="555" y1="434" x2="560" y2="434" stroke="#00e5a0" stroke-width="1.5" marker-end="url(#arr-green)"/>
   <line x1="555" y1="402" x2="555" y2="434" stroke="#00e5a0" stroke-width="1.5"/>
 
@@ -366,9 +378,11 @@
 
   <!-- L4 inputs — P59-01 annotation anchors per row -->
   <rect x="30" y="496" width="200" height="24" rx="2" fill="#0d2236" stroke="#1e3048"
-        data-node-kind="signal-input" data-signal-id="deploy_90_percent_vdt" data-context-gate="L4" data-annotation-anchor="signal_input"/>
+        data-node-kind="signal-input" data-signal-id="deploy_90_percent_vdt" data-context-gate="L4" data-annotation-anchor="signal_input"
+        data-lru-id="vdt" data-hardware-detail="cable/connector/port:evidence_gap"/>
   <text x="130" y="507" fill="#cdd6e0" font-size="9.5" text-anchor="middle"
-        data-node-kind="signal-input" data-signal-id="deploy_90_percent_vdt" data-context-gate="L4" data-annotation-anchor="signal_input">deploy_90_percent_vdt</text>
+        data-node-kind="signal-input" data-signal-id="deploy_90_percent_vdt" data-context-gate="L4" data-annotation-anchor="signal_input"
+        data-lru-id="vdt" data-hardware-detail="cable/connector/port:evidence_gap">deploy_90_percent_vdt</text>
   <text x="130" y="516" fill="#7a9bb5" font-size="6.5" text-anchor="middle">VDT 位置传感器 ≥ 90%</text>
 
   <rect x="30" y="524" width="200" height="24" rx="2" fill="#0d2236" stroke="#1e3048"
@@ -407,11 +421,14 @@
        label is wrapped onto two <text> lines, both carry the anchor). -->
   <line x1="428" y1="550" x2="560" y2="550" stroke="#f5c518" stroke-width="2" marker-end="url(#arr-yellow)"/>
   <rect x="560" y="534" width="200" height="32" rx="3" fill="#1a1200" stroke="#f5c518" stroke-width="1.8"
-        data-node-kind="signal-output" data-signal-id="throttle_electronic_lock_release_cmd" data-context-gate="L4" data-annotation-anchor="signal_output"/>
+        data-node-kind="signal-output" data-signal-id="throttle_electronic_lock_release_cmd" data-context-gate="L4" data-annotation-anchor="signal_output"
+        data-source-lru-id="etrac" data-hardware-detail="cable/connector/port:evidence_gap"/>
   <text x="660" y="549" fill="#f5c518" font-size="9.5" text-anchor="middle" font-weight="bold"
-        data-node-kind="signal-output" data-signal-id="throttle_electronic_lock_release_cmd" data-context-gate="L4" data-annotation-anchor="signal_output">throttle_electronic_</text>
+        data-node-kind="signal-output" data-signal-id="throttle_electronic_lock_release_cmd" data-context-gate="L4" data-annotation-anchor="signal_output"
+        data-source-lru-id="etrac" data-hardware-detail="cable/connector/port:evidence_gap">throttle_electronic_</text>
   <text x="660" y="560" fill="#f5c518" font-size="9.5" text-anchor="middle" font-weight="bold"
-        data-node-kind="signal-output" data-signal-id="throttle_electronic_lock_release_cmd" data-context-gate="L4" data-annotation-anchor="signal_output">lock_release_cmd</text>
+        data-node-kind="signal-output" data-signal-id="throttle_electronic_lock_release_cmd" data-context-gate="L4" data-annotation-anchor="signal_output"
+        data-source-lru-id="etrac" data-hardware-detail="cable/connector/port:evidence_gap">lock_release_cmd</text>
 
   <!-- ════════════════════════════════════════════════════════════════════
        FINAL RELEASE badge (x ≈ 800-970)
@@ -505,6 +522,18 @@
       <li><code>engine_running == True</code></li>
     </ul>
     <p style="margin-top:6px">输出 <code>throttle_electronic_lock_release_cmd</code>，开放反推深拉区。</p>
+  </div>
+  <div class="info-card" data-hardware-coupling-card="thrust-reverser" data-hardware-schema-endpoint="/api/hardware/schema?system_id=thrust-reverser">
+    <h3>Hardware Coupling — LRU / Carrier</h3>
+    <ul>
+      <li data-lru-id="etrac"><code>ETRAC</code> — controller output owner; connector/cable/port: 未录入 <code>evidence_gap</code></li>
+      <li data-lru-id="tls"><code>TLS</code> — <code>tls_115vac_cmd</code> peer; connector/cable/port: 未录入 <code>evidence_gap</code></li>
+      <li data-lru-id="pdu"><code>PDU</code> — <code>pdu_motor_cmd</code> peer; connector/cable/port: 未录入 <code>evidence_gap</code></li>
+      <li data-lru-id="pls"><code>PLS</code> — <code>pls_power_cmd</code> peer; connector/cable/port: 未录入 <code>evidence_gap</code></li>
+      <li data-lru-id="vdt"><code>VDT</code> — <code>deploy_90_percent_vdt</code> feedback; connector/cable/port: 未录入 <code>evidence_gap</code></li>
+      <li data-lru-id="lock_sensors"><code>LS</code> — <code>tls_unlocked_ls</code> feedback; connector/cable/port: 未录入 <code>evidence_gap</code></li>
+    </ul>
+    <p style="margin-top:6px">Hardware metadata is served by <code>/api/hardware/schema</code>; control truth stays in <code>controller.py</code>.</p>
   </div>
 </div>
 

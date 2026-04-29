@@ -232,6 +232,15 @@ class TestHardwareSchema:
         assert "near_zero_deg" in pl["sw1_window"]
         assert "deep_reverse_deg" in pl["sw1_window"]
 
+    def test_exposes_lru_inventory_and_signal_carrier_bindings(self, server) -> None:
+        _, data = server.request("GET", "/api/hardware/schema")
+        assert len(data["lru_inventory"]) == 11
+        assert len(data["signal_carrier_bindings"]) == 18
+        assert data["lru_inventory"][0]["id"] == "etrac"
+        binding_ids = {row["signal_id"] for row in data["signal_carrier_bindings"]}
+        assert "deploy_90_percent_vdt" in binding_ids
+        assert "throttle_electronic_lock_release_cmd" in binding_ids
+
 
 # ─── POST /api/sensitivity-sweep ─────────────────────────────────────────────
 
