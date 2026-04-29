@@ -211,21 +211,29 @@ def test_work_order_falls_back_when_target_unidentified() -> None:
     )
 
 
-@pytest.mark.parametrize("change_kind_phrase,kind_zh", [
-    ("放宽", "建议放宽"),
-    ("收紧", "建议收紧"),
-    ("删除", "建议在"),  # action template starts with "建议在 ... 中删除"
-    ("新增", "建议在"),  # likewise
-    ("调整", "建议调整"),
-    ("改成", "建议修改"),
+@pytest.mark.parametrize("change_kind_phrase,kind_zh,not_in_wo", [
+    # Codex R1 §F fix: distinguish add vs remove (both previously
+    # asserted the same "建议在" prefix and would not catch a swap).
+    # Each branch must contain a UNIQUE phrase AND must NOT contain
+    # phrases from sibling branches.
+    ("放宽", "建议放宽", "建议收紧"),
+    ("收紧", "建议收紧", "建议放宽"),
+    ("删除", "中删除", "中新增"),
+    ("新增", "中新增", "中删除"),
+    ("调整", "建议调整", "建议修改"),
+    ("改成", "建议修改", "建议调整"),
 ])
 def test_work_order_template_picks_change_kind_specific_action(
-    change_kind_phrase: str, kind_zh: str,
+    change_kind_phrase: str, kind_zh: str, not_in_wo: str,
 ) -> None:
     """Each change_kind branch must produce a distinct action verb in
     the zh work order. Otherwise loosen/tighten/remove/etc. all
     collapse to the same generic propose_change template and the
-    engineer can't tell which direction was intended."""
+    engineer can't tell which direction was intended.
+
+    Codex R1 §F: also assert sibling-branch phrases are NOT present so
+    a future template swap (loosen ↔ tighten, add ↔ remove,
+    tune ↔ modify) fails this test instead of passing silently."""
     text = f"L1 应该{change_kind_phrase}判据"
     result = interpret_suggestion_text(text, system_id="thrust-reverser")
     wo = result["recommended_work_order_zh"]
@@ -233,6 +241,29 @@ def test_work_order_template_picks_change_kind_specific_action(
         f"change_kind={result['change_kind']!r} produced work order "
         f"that does not contain action prefix {kind_zh!r}: {wo}"
     )
+    assert not_in_wo not in wo, (
+        f"change_kind={result['change_kind']!r} work order leaked "
+        f"sibling-branch phrase {not_in_wo!r}: {wo}"
+    )
+
+
+def test_work_order_normalizes_whitespace_in_source_quote() -> None:
+    """Codex R1 §G fix: source paste with mixed whitespace
+    (\\r, \\t, NBSP, zero-width chars) must collapse to single spaces
+    so a 199-char paste cannot expand to >200 visible chars."""
+    # NBSP =  , zero-width space = ​, ZWNJ = ‌
+    weird = "L1  应该\t放宽\r\nSW1​ 的判据"
+    result = interpret_suggestion_text(weird, system_id="thrust-reverser")
+    wo = result["recommended_work_order_zh"]
+    match = re.search(r"「([^」]*)」", wo)
+    assert match is not None
+    quoted = match.group(1)
+    # No tab, CR, NBSP, ZWSP, ZWNJ should remain in the quoted block.
+    forbidden = ("\t", "\r", "\n", " ", "​", "‌", "‍")
+    for ch in forbidden:
+        assert ch not in quoted, (
+            f"quoted source still contains {ch!r} after normalization"
+        )
 
 
 def test_work_order_quotes_truncate_long_source() -> None:
@@ -395,49 +426,129 @@ def test_llm_normalizer_returns_new_fields() -> None:
         )
 
 
-def test_llm_normalizer_unions_llm_outputs_and_rule_scan() -> None:
-    """If the LLM omits affected_outputs but the source text clearly
-    names one (e.g. tls_115vac_cmd), the rule scan must fill it in.
-    Conversely, an LLM-claimed output that's NOT in the source AND
-    not in the canonical vocab is dropped (hallucination guard)."""
-    # LLM omitted affected_outputs but text names tls_115vac_cmd.
-    raw_no_outputs = {
+def test_llm_normalizer_affected_outputs_is_text_corroborated_only() -> None:
+    """Codex R1 P59-02-A fix: affected_outputs means "directly named
+    cmd in the source text", and that contract must be identical
+    across rules and LLM paths. The LLM normalizer therefore IGNORES
+    raw_dict['affected_outputs'] and re-derives from source_text via
+    _detect_affected_outputs. This avoids the rules-vs-LLM specificity
+    drift that R1 flagged (rules empty, LLM claims tls_115vac_cmd →
+    work-order scope changes from L1 to tls_115vac_cmd, false precision).
+
+    If/when we want LLM-inferred outputs that the user did NOT name,
+    they should land in a separate `inferred_outputs` field, not
+    overload `affected_outputs`."""
+    # (a) LLM correctly names tls_115vac_cmd AND text mentions it →
+    #     keep (corroborated).
+    raw_text_match = {
         "affected_gates": ["L1"],
+        "target_signals": [],
+        "affected_outputs": ["tls_115vac_cmd"],
+        "change_kind": "modify_condition",
+        "change_kind_zh": "修改判据",
+        "change_kind_en": "modify condition",
+        "confidence": 0.7,
+    }
+    norm_a = _normalize_llm_interpretation(
+        raw_text_match,
+        source_text="tls_115vac_cmd 时序要改",
+        system_id="thrust-reverser",
+    )
+    assert "tls_115vac_cmd" in norm_a["affected_outputs"]
+
+    # (b) Rule scan backfills when LLM omits — text says
+    #     "etrac_540vdc_cmd" but LLM didn't surface it.
+    raw_omitted = {
+        "affected_gates": ["L2"],
         "target_signals": [],
         "change_kind": "modify_condition",
         "change_kind_zh": "修改判据",
         "change_kind_en": "modify condition",
-        "confidence": 0.8,
+        "confidence": 0.5,
     }
-    norm_a = _normalize_llm_interpretation(
-        raw_no_outputs,
-        source_text="tls_115vac_cmd 时序要改",
+    norm_b = _normalize_llm_interpretation(
+        raw_omitted,
+        source_text="把 etrac_540vdc_cmd 推迟 100ms",
         system_id="thrust-reverser",
     )
-    assert "tls_115vac_cmd" in norm_a["affected_outputs"], (
-        "rule scan should backfill output cmd from source text"
-    )
+    assert "etrac_540vdc_cmd" in norm_b["affected_outputs"]
 
-    # LLM hallucinated "fake_output_cmd" — must be dropped.
-    raw_hallucinated = {
+    # (c) Chinese-paraphrase scenario (R1 §F gap): LLM-correctly-maps
+    #     "TLS 解锁电路" → "tls_115vac_cmd", but source text doesn't
+    #     literally name the cmd. Per the corroboration contract, the
+    #     LLM-only mapping MUST NOT surface in affected_outputs.
+    raw_paraphrase = {
         "affected_gates": ["L1"],
         "target_signals": [],
-        "affected_outputs": ["fake_output_cmd", "tls_115vac_cmd"],
+        "affected_outputs": ["tls_115vac_cmd"],
         "change_kind": "modify_condition",
         "change_kind_zh": "修改判据",
         "change_kind_en": "modify condition",
         "confidence": 0.6,
     }
-    norm_b = _normalize_llm_interpretation(
+    norm_c = _normalize_llm_interpretation(
+        raw_paraphrase,
+        source_text="TLS 解锁电路应该提前",
+        system_id="thrust-reverser",
+    )
+    assert norm_c["affected_outputs"] == [], (
+        "LLM-claimed output without source-text corroboration must "
+        "NOT survive normalization. Got "
+        f"{norm_c['affected_outputs']!r}. Per Codex R1 P59-02-A, this "
+        "would be false precision and would silently change work-"
+        "order scope from a gate to an LLM-guessed cmd."
+    )
+
+    # (d) Hallucinated cmd not in vocab — already excluded since rule
+    #     scan only matches canonical names.
+    raw_hallucinated = {
+        "affected_gates": ["L1"],
+        "target_signals": [],
+        "affected_outputs": ["fake_output_cmd"],
+        "change_kind": "modify_condition",
+        "change_kind_zh": "修改判据",
+        "change_kind_en": "modify condition",
+        "confidence": 0.6,
+    }
+    norm_d = _normalize_llm_interpretation(
         raw_hallucinated,
         source_text="some unrelated text",
         system_id="thrust-reverser",
     )
-    assert "fake_output_cmd" not in norm_b["affected_outputs"], (
-        "hallucinated output must be filtered against canonical vocab"
+    assert "fake_output_cmd" not in norm_d["affected_outputs"]
+
+
+def test_llm_normalizer_preserves_canonical_vocab_order() -> None:
+    """Codex R1 P59-02-LOW: LLM may emit outputs in arbitrary order
+    (e.g. ['pls_power_cmd', 'eec_deploy_cmd']). The normalized list
+    must still walk canonical vocab order so the work-order draft
+    reads in circuit-visual order. With the corroboration-only
+    contract (R1 P59-02-A fix), this is automatic since the rule scan
+    iterates canonical vocab — but lock it in with a test so a future
+    refactor doesn't accidentally re-introduce LLM-order leakage."""
+    raw_reversed = {
+        "affected_gates": ["L3"],
+        "target_signals": [],
+        # LLM emits reversed canonical order intentionally.
+        "affected_outputs": ["pls_power_cmd", "eec_deploy_cmd"],
+        "change_kind": "modify_condition",
+        "change_kind_zh": "修改判据",
+        "change_kind_en": "modify condition",
+        "confidence": 0.6,
+    }
+    norm = _normalize_llm_interpretation(
+        raw_reversed,
+        source_text="eec_deploy_cmd 和 pls_power_cmd 都需要 review",
+        system_id="thrust-reverser",
     )
-    # tls_115vac_cmd was claimed by LLM AND is in the vocab → keep.
-    assert "tls_115vac_cmd" in norm_b["affected_outputs"]
+    # _output_cmd_names_for declares eec_deploy_cmd before
+    # pls_power_cmd in L3's tuple — that order must win.
+    assert norm["affected_outputs"] == [
+        "eec_deploy_cmd", "pls_power_cmd",
+    ], (
+        f"output order should follow canonical vocab, got "
+        f"{norm['affected_outputs']!r}"
+    )
 
 
 # ── 8. End-to-end via /api/workbench/interpret-suggestion ────

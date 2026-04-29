@@ -2437,7 +2437,14 @@ def _render_recommended_work_order(
     # Truncate the source quote so a 2000-char paste doesn't blow up
     # the ticket card. 200 chars is the same envelope the proposal
     # store uses for previews.
-    quoted = source_text.strip().replace("\n", " ")
+    # Codex R1 G: also normalize \r, tabs, NBSP, and zero-width chars
+    # to single spaces so a 199-char source paste cannot expand to
+    # >200 visible chars in the UI by abusing whitespace variants.
+    import re as _re_local
+    quoted = source_text.strip()
+    quoted = _re_local.sub(
+        r"[\r\n\t ​‌‍⁠﻿]+", " ", quoted,
+    )
     if len(quoted) > 200:
         quoted = quoted[:197] + "…"
 
@@ -2837,20 +2844,19 @@ def _normalize_llm_interpretation(
     else:
         summary_zh = str(raw_dict.get("summary_zh") or "")
         summary_en = str(raw_dict.get("summary_en") or "")
-    # P59-02: LLM payload may include affected_outputs (the prompt
-    # asks for it), but we ALSO scan source_text directly so a
-    # malformed/empty LLM list cannot drop a clearly-named output.
-    # Union of LLM claim and rule scan, deduplicated, intersected
-    # with the canonical output vocab so hallucinations are dropped.
-    raw_outputs = _str_list(raw_dict.get("affected_outputs"))
-    output_vocab_set = set(_output_cmd_names_for(system_id))
-    rule_outputs = _detect_affected_outputs(source_text, system_id)
-    affected_outputs: list[str] = []
-    seen_out: set[str] = set()
-    for name in [*raw_outputs, *rule_outputs]:
-        if name in output_vocab_set and name not in seen_out:
-            seen_out.add(name)
-            affected_outputs.append(name)
+    # P59-02 (Codex R1 P59-02-A fix): affected_outputs is the
+    # "directly named cmd" contract, so it MUST be text-corroborated on
+    # both paths — the rules path scans source_text, and the LLM path
+    # does the same. We deliberately ignore raw_dict["affected_outputs"]
+    # claims that aren't supported by source_text, because trusting an
+    # LLM guess would change the contract from "user named X" to "model
+    # mapped X to Y" and would also change work-order scope from a gate
+    # to a less-supported cmd. If the model has truly inferred an
+    # implied output that the user did not name, that belongs in a
+    # separate inferred_outputs field (out of scope for P59-02).
+    # Side-effect: this also fixes the LOW R1 finding on vocab order
+    # because _detect_affected_outputs walks the canonical vocab.
+    affected_outputs = _detect_affected_outputs(source_text, system_id)
 
     work_order_zh, work_order_en = _render_recommended_work_order(
         change_kind=change_kind,
