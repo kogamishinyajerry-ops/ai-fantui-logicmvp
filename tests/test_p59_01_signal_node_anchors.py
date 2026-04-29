@@ -73,18 +73,22 @@ def _gate_synonyms() -> dict[str, tuple[str, ...]]:
     return _GATE_SYNONYMS_BY_SYSTEM["thrust-reverser"]
 
 
-# Output command names — everything in the gate-synonym tuples that
-# looks like a command name (snake_case ending in _cmd or matching
-# known output identifiers). These are the right-column output box
-# labels that should be addressable by name.
-OUTPUT_CMD_NAMES = {
-    "tls_115vac_cmd",
-    "etrac_540vdc_cmd",
-    "eec_deploy_cmd",
-    "pls_power_cmd",
-    "pdu_motor_cmd",
-    "throttle_electronic_lock_release_cmd",
-}
+# Output command names DERIVED from _GATE_SYNONYMS_BY_SYSTEM
+# (Codex P59-SSOT-01): a canonical output command is any synonym in
+# the thrust-reverser table whose name ends with "_cmd". Deriving from
+# the dict means adding a new output (e.g. a future "spoiler_arm_cmd"
+# under L1) automatically grows OUTPUT_CMD_NAMES, and the parametrized
+# anchor-existence test will fail until the SVG also gains the anchor.
+def _derive_output_cmd_names() -> set[str]:
+    return {
+        name
+        for synonyms in _gate_synonyms().values()
+        for name in synonyms
+        if name.endswith("_cmd")
+    }
+
+
+OUTPUT_CMD_NAMES = _derive_output_cmd_names()
 
 # Summary aggregators on the right of the diagram (rendered as the
 # "DEPLOY ENABLE" + "THROTTLE UNLOCK" badges). These are not single
@@ -145,17 +149,29 @@ def test_every_gate_output_cmd_has_svg_anchor(output_cmd: str) -> None:
     )
 
 
-def test_output_cmds_match_gate_synonyms() -> None:
-    """Sanity check: every name in OUTPUT_CMD_NAMES is actually a
-    synonym in _GATE_SYNONYMS_BY_SYSTEM — guards against test drift if
-    the dict is renamed."""
-    synonyms_flat = {
-        s for entries in _gate_synonyms().values() for s in entries
+def test_output_cmds_derived_from_gate_synonyms() -> None:
+    """Codex P59-SSOT-01 fix: OUTPUT_CMD_NAMES is now derived from
+    _GATE_SYNONYMS_BY_SYSTEM rather than hand-maintained. This test
+    documents the derivation and guards against the historically known
+    output set being silently gutted by a dict rewrite — if the
+    derivation drops below 6 names or loses any of the historical
+    members, fail loudly."""
+    historical = {
+        "tls_115vac_cmd", "etrac_540vdc_cmd", "eec_deploy_cmd",
+        "pls_power_cmd", "pdu_motor_cmd",
+        "throttle_electronic_lock_release_cmd",
     }
-    missing = OUTPUT_CMD_NAMES - synonyms_flat
+    missing = historical - OUTPUT_CMD_NAMES
     assert not missing, (
-        f"OUTPUT_CMD_NAMES references {missing} which are not in "
-        f"_GATE_SYNONYMS_BY_SYSTEM. Update either the dict or this test."
+        f"derivation lost historically known output cmds: {missing}. "
+        f"Either restore the synonym to _GATE_SYNONYMS_BY_SYSTEM or "
+        f"update this test if a deliberate removal happened."
+    )
+    # The derivation must also not be empty (catches a regex/filter
+    # bug that silently returns ∅).
+    assert OUTPUT_CMD_NAMES, (
+        "OUTPUT_CMD_NAMES derivation returned empty set — likely a "
+        "filter regression in _derive_output_cmd_names."
     )
 
 
@@ -223,6 +239,86 @@ def test_every_input_rect_has_matching_text_anchor() -> None:
         f"  text-only delta: {tc - rc}\n"
         f"Every input rect must have at least one matching <text> "
         f"with the same data-signal-id (and vice versa)."
+    )
+
+
+def test_every_signal_output_has_at_least_one_rect_and_text_anchor() -> None:
+    """Codex P59-TEST-02 fix: output-side pairing was previously
+    untested. Each (signal-id, context-gate) output pair must have at
+    least one rect AND at least one text carrying the anchor — a
+    future regression dropping the rect anchor (or a text anchor on a
+    wrapped label) must fail this test."""
+    body = _read()
+    rect_pairs = set(re.findall(
+        r'<rect[^>]*data-node-kind="signal-output"[^>]*'
+        r'data-signal-id="([^"]+)"[^>]*'
+        r'data-context-gate="([^"]+)"',
+        body,
+    ))
+    text_pairs = set(re.findall(
+        r'<text[^>]*data-node-kind="signal-output"[^>]*'
+        r'data-signal-id="([^"]+)"[^>]*'
+        r'data-context-gate="([^"]+)"',
+        body,
+    ))
+    assert rect_pairs, "no signal-output rect anchors found"
+    assert text_pairs, "no signal-output text anchors found"
+    assert rect_pairs == text_pairs, (
+        f"output rect/text (signal-id, context-gate) pair sets "
+        f"diverge.\n  rect-only: {rect_pairs - text_pairs}\n"
+        f"  text-only: {text_pairs - rect_pairs}"
+    )
+
+
+def test_wrapped_throttle_output_has_both_text_lines_anchored() -> None:
+    """Codex P59-TEST-02 fix (explicit case): the L4 output label
+    `throttle_electronic_lock_release_cmd` is too long for the box
+    width and is split across 2 <text> lines. Both lines must carry
+    the anchor so a class added to either still glows the visible
+    label. Asymmetric (1 rect + 2 texts) is intentional and
+    correct — guard the count explicitly."""
+    body = _read()
+    text_count = len(re.findall(
+        r'<text[^>]*data-signal-id="throttle_electronic_lock_release_cmd"',
+        body,
+    ))
+    rect_count = len(re.findall(
+        r'<rect[^>]*data-signal-id="throttle_electronic_lock_release_cmd"',
+        body,
+    ))
+    assert rect_count == 1, (
+        f"throttle_electronic_lock_release_cmd rect count is "
+        f"{rect_count}, expected 1."
+    )
+    assert text_count == 2, (
+        f"throttle_electronic_lock_release_cmd label is wrapped onto "
+        f"2 <text> lines; both must carry the anchor. Found "
+        f"{text_count} text anchors."
+    )
+
+
+def test_summary_rect_text_pairing() -> None:
+    """Codex P59-TEST-02 fix: summary-side (DEPLOY ENABLE / THROTTLE
+    UNLOCK) pairing was untested. Each summary id must have one rect
+    + one main-label text both carrying the anchor."""
+    body = _read()
+    rect_ids = Counter(re.findall(
+        r'<rect[^>]*data-node-kind="summary"[^>]*'
+        r'data-summary-id="([^"]+)"',
+        body,
+    ))
+    text_ids = Counter(re.findall(
+        r'<text[^>]*data-node-kind="summary"[^>]*'
+        r'data-summary-id="([^"]+)"',
+        body,
+    ))
+    assert rect_ids == text_ids, (
+        f"summary rect/text counts diverge:\n"
+        f"  rect: {dict(rect_ids)}\n  text: {dict(text_ids)}"
+    )
+    assert set(rect_ids.keys()) == SUMMARY_IDS, (
+        f"summary rect anchors do not match SUMMARY_IDS: "
+        f"got {set(rect_ids.keys())}, expected {SUMMARY_IDS}"
     )
 
 
