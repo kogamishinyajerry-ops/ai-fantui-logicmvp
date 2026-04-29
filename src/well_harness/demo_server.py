@@ -2336,6 +2336,127 @@ def _vocabulary_hint_from_fields(
     return hint
 
 
+def _output_cmd_names_for(system_id: str) -> tuple[str, ...]:
+    """P59-02 (2026-04-29): output command names = entries in the
+    per-system gate synonym table whose name ends with "_cmd". These
+    are the right-column output box labels in the circuit diagram and
+    are addressable by name via [data-signal-id="..."] anchors added in
+    P59-01. Derived (not hand-listed) so adding a new output cmd to
+    _GATE_SYNONYMS_BY_SYSTEM automatically grows the detection set.
+
+    Order is preserved (first by gate, then by tuple position) so that
+    affected_outputs in the interpreter return mirrors the SVG visual
+    order top-to-bottom.
+    """
+    gate_vocab = _gate_synonyms_for(system_id)
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for synonyms in gate_vocab.values():
+        for name in synonyms:
+            if name.endswith("_cmd") and name not in seen:
+                seen.add(name)
+                ordered.append(name)
+    return tuple(ordered)
+
+
+def _detect_affected_outputs(text: str, system_id: str) -> list[str]:
+    """Scan a free-text suggestion for explicit mentions of canonical
+    output command names. Distinct from gate detection — gate detection
+    surfaces the L# id, this helper surfaces the SPECIFIC output cmd so
+    the work-order generator can phrase "调整 tls_115vac_cmd 时序" rather
+    than the looser "调整 L1 输出".
+    """
+    output_vocab = _output_cmd_names_for(system_id)
+    return [name for name in output_vocab if name in text]
+
+
+# P59-02: work-order phrasing templates indexed by change_kind. Each
+# template renders 2 sentences: an action statement + a context line.
+# Plain templates (no LLM) so the workbench can show a deterministic
+# draft engineers can edit. Plain string formatting on purpose — these
+# are short and will be rewritten by the engineer most of the time.
+_WORK_ORDER_ACTION_TEMPLATES_ZH: dict[str, str] = {
+    "loosen_condition": "建议放宽 {scope} 的判据范围。请在工单中给出新的下限/上限并说明理由（例：原 ≤ -11.74° → 新 ≤ -10.0°）。",
+    "tighten_condition": "建议收紧 {scope} 的判据范围。请在工单中给出新的下限/上限并明确触发的安全场景。",
+    "remove_condition": "建议在 {scope} 中删除该判据。请在工单中附 FMEA 评估，说明删除后的最低激活集是否仍满足安全要求。",
+    "add_condition": "建议在 {scope} 中新增判据。请在工单中给出触发条件、默认值、及对应 timeline fixture。",
+    "tune_condition": "建议调整 {scope} 的当前阈值/参数。请在工单中给出当前值、目标值、及预期行为变化。",
+    "modify_condition": "建议修改 {scope} 的判据。请在工单中给出目标值并同步更新 controller.py 中对应分支。",
+    "propose_change": "建议针对 {scope} 提交一个变更工单。请补充修改方向（放宽/收紧/调整/删除/新增），系统将给出更精确的工单模板。",
+}
+_WORK_ORDER_ACTION_TEMPLATES_EN: dict[str, str] = {
+    "loosen_condition": "Loosen the threshold/criterion on {scope}. Provide the new lower/upper bound and rationale (e.g. ≤ -11.74° → ≤ -10.0°).",
+    "tighten_condition": "Tighten the threshold/criterion on {scope}. Provide the new bound and the safety scenario it covers.",
+    "remove_condition": "Remove the criterion from {scope}. Attach FMEA: confirm the minimal activation set still satisfies safety after removal.",
+    "add_condition": "Add a new criterion to {scope}. Provide trigger condition, default value, and corresponding timeline fixture.",
+    "tune_condition": "Tune the current threshold/parameter on {scope}. Provide current value, target value, and expected behavior delta.",
+    "modify_condition": "Modify the criterion on {scope}. Provide the target value and update the corresponding branch in controller.py.",
+    "propose_change": "Open a change ticket targeting {scope}. Add the change direction (loosen/tighten/tune/remove/add) so the system can pick a precise template.",
+}
+
+
+def _render_recommended_work_order(
+    *,
+    change_kind: str,
+    affected_gates: list[str],
+    target_signals: list[str],
+    affected_outputs: list[str],
+    source_text: str,
+) -> tuple[str, str]:
+    """Compose the (zh, en) work-order draft. Pure function over the
+    canonical interpretation fields. Returns two strings — one Chinese
+    one English — so the UI can show whichever the user prefers.
+
+    Scope phrase preference: signal in named gate > signal alone > gate
+    alone > output cmd alone > generic. The result is always a single
+    paragraph the engineer can paste into a ticket and edit.
+    """
+    if affected_gates and target_signals:
+        scope_zh = "、".join(target_signals) + " （在 " + "、".join(affected_gates) + "）"
+        scope_en = ", ".join(target_signals) + " (in " + ", ".join(affected_gates) + ")"
+    elif target_signals:
+        scope_zh = "、".join(target_signals)
+        scope_en = ", ".join(target_signals)
+    elif affected_outputs:
+        scope_zh = "、".join(affected_outputs)
+        scope_en = ", ".join(affected_outputs)
+    elif affected_gates:
+        scope_zh = "、".join(affected_gates)
+        scope_en = ", ".join(affected_gates)
+    else:
+        scope_zh = "（未识别具体目标，请在工单中明确）"
+        scope_en = "(no specific target identified — please clarify in the ticket)"
+
+    action_zh = _WORK_ORDER_ACTION_TEMPLATES_ZH.get(
+        change_kind, _WORK_ORDER_ACTION_TEMPLATES_ZH["propose_change"]
+    ).format(scope=scope_zh)
+    action_en = _WORK_ORDER_ACTION_TEMPLATES_EN.get(
+        change_kind, _WORK_ORDER_ACTION_TEMPLATES_EN["propose_change"]
+    ).format(scope=scope_en)
+
+    # Truncate the source quote so a 2000-char paste doesn't blow up
+    # the ticket card. 200 chars is the same envelope the proposal
+    # store uses for previews.
+    # Codex R1 G + R2 D: normalize whitespace variants to a single
+    # space so a 199-char paste cannot expand >200 visible chars in
+    # the UI by abusing invisibles. \s in Python 3 covers ASCII space
+    # + \r \n \t \v \f + U+00A0 NBSP + U+0085 NEL + U+2028 LSEP +
+    # U+2029 PSEP. Add zero-width / format chars explicitly because
+    # they are not in the whitespace property: U+200B ZWSP, U+200C
+    # ZWNJ, U+200D ZWJ, U+2060 word-joiner, U+FEFF BOM. Module-level
+    # `re` already imported at the top of demo_server.py.
+    quoted = source_text.strip()
+    quoted = re.sub(
+        r"[\s​‌‍⁠﻿]+", " ", quoted,
+    )
+    if len(quoted) > 200:
+        quoted = quoted[:197] + "…"
+
+    work_order_zh = f"建议工单：{action_zh}\n原文：「{quoted}」"
+    work_order_en = f"Recommended ticket: {action_en}\nSource: \"{quoted}\""
+    return work_order_zh, work_order_en
+
+
 def interpret_suggestion_text(text: str, *, system_id: str = "thrust-reverser") -> dict:
     """Rule-based interpretation of an engineer modification suggestion.
 
@@ -2344,13 +2465,23 @@ def interpret_suggestion_text(text: str, *, system_id: str = "thrust-reverser") 
                                     system's vocabulary (L1..L4 for
                                     thrust-reverser, G1..G4 for
                                     landing-gear, etc.)
-      - target_signals: list[str]   recognized input/output signal names
+      - target_signals: list[str]   recognized INPUT signal names from
+                                    _SIGNALS_BY_SYSTEM (left-column
+                                    nodes in the SVG diagram)
+      - affected_outputs: list[str] (P59-02) recognized OUTPUT command
+                                    names from _GATE_SYNONYMS_BY_SYSTEM
+                                    that the user named directly (e.g.
+                                    "tls_115vac_cmd 时序要改"). Distinct
+                                    from affected_gates which captures
+                                    the gate id only.
       - change_kind:    str         machine code, e.g. "modify_condition"
       - change_kind_zh: str         human label in Chinese
       - change_kind_en: str         human label in English
       - confidence:     float       in [0.0, 1.0] — heuristic
       - summary_zh:     str         system restatement in Chinese
       - summary_en:     str         system restatement in English
+      - recommended_work_order_zh: str (P59-02) template-driven draft
+      - recommended_work_order_en: str (P59-02) ditto in English
       - source_text:    str         echo of the input (for audit)
 
     P46-02: optional system_id selects per-system gate + signal
@@ -2382,11 +2513,17 @@ def interpret_suggestion_text(text: str, *, system_id: str = "thrust-reverser") 
                 affected_gates.append(gate_id)
                 break
 
-    # 2. Target signal detection.
+    # 2. Target signal detection (input signals from _SIGNALS_BY_SYSTEM).
     target_signals: list[str] = []
     for signal in signal_vocab:
         if signal in text:
             target_signals.append(signal)
+
+    # 2b. P59-02: detect explicit output command names (e.g.
+    # "tls_115vac_cmd"). Same scan style, distinct list so the work-
+    # order generator can phrase the action against the actual output
+    # box label, not just the parent gate.
+    affected_outputs = _detect_affected_outputs(text, system_id)
 
     # 3. Change kind detection. First match wins; falls back to
     #    "propose_change" so we always have a label.
@@ -2439,9 +2576,19 @@ def interpret_suggestion_text(text: str, *, system_id: str = "thrust-reverser") 
         f"(confidence={int(confidence * 100)}%)."
     )
 
+    # P59-02: recommended work-order text (template-driven, no LLM).
+    work_order_zh, work_order_en = _render_recommended_work_order(
+        change_kind=change_kind,
+        affected_gates=affected_gates,
+        target_signals=target_signals,
+        affected_outputs=affected_outputs,
+        source_text=text,
+    )
+
     return {
         "affected_gates": affected_gates,
         "target_signals": target_signals,
+        "affected_outputs": affected_outputs,
         "change_kind": change_kind,
         "change_kind_zh": change_kind_zh,
         "change_kind_en": change_kind_en,
@@ -2450,6 +2597,8 @@ def interpret_suggestion_text(text: str, *, system_id: str = "thrust-reverser") 
         "vocabulary_hint": vocabulary_hint,
         "summary_zh": summary_zh,
         "summary_en": summary_en,
+        "recommended_work_order_zh": work_order_zh,
+        "recommended_work_order_en": work_order_en,
         "source_text": text,
     }
 
@@ -2640,6 +2789,15 @@ def _normalize_llm_interpretation(
     # equality (synonyms aren't defined for signals in this repo).
     target_signals = [s for s in target_signals if s in signal_vocab]
     valid_change_kinds = {h[1] for h in _CHANGE_KIND_HINTS}
+    # Canonical (code, zh, en) lookup so any time we override raw
+    # labels we use the dict's canonical pair instead of the LLM's
+    # free-form text. Codex R3-A finding: the LLM can encode false
+    # precision inside change_kind_zh/en (e.g. "修改 tls_115vac_cmd
+    # 判据") — that label survived because we only overrode it when
+    # change_kind itself was invalid.
+    canonical_kind_labels: dict[str, tuple[str, str]] = {
+        h[1]: (h[2], h[3]) for h in _CHANGE_KIND_HINTS
+    }
     raw_zh = str(raw_dict.get("change_kind_zh") or "提出建议")
     raw_en = str(raw_dict.get("change_kind_en") or "propose change")
     if change_kind not in valid_change_kinds:
@@ -2674,6 +2832,25 @@ def _normalize_llm_interpretation(
     # canonicalized fields whenever the LLM-reported lists differ
     # from the post-canonical lists; otherwise keep the LLM's text
     # (it's typically richer than the rules template).
+    # P59-02 (R1 P59-02-A): affected_outputs MUST be text-corroborated
+    # on both paths. Rules-path scans source_text; LLM-path does the
+    # same — we ignore raw_dict["affected_outputs"] entirely, because
+    # trusting an LLM guess would change the contract from "user named
+    # X" to "model mapped X to Y". If the model has inferred an output
+    # the user did not name, that belongs in a separate inferred_outputs
+    # field (out of scope for P59-02). Side-effect: this also fixes
+    # the LOW R1 vocab-order leak because _detect_affected_outputs
+    # walks canonical vocab.
+    #
+    # Codex R2 P59-02-A follow-up: derive BEFORE the summary decision
+    # so output drift can also drop the LLM-supplied summary_zh /
+    # summary_en. Otherwise an LLM payload claiming
+    # "tls_115vac_cmd" gets affected_outputs=[] but its summary still
+    # reads "你想修改 tls_115vac_cmd" — same false precision via a
+    # different field.
+    affected_outputs = _detect_affected_outputs(source_text, system_id)
+    raw_outputs_in = _str_list(raw_dict.get("affected_outputs"))
+
     raw_gates_in = _str_list(raw_dict.get("affected_gates"))
     raw_signals_in = _str_list(raw_dict.get("target_signals"))
     raw_kind_in = str(raw_dict.get("change_kind") or "propose_change")
@@ -2681,8 +2858,20 @@ def _normalize_llm_interpretation(
         raw_gates_in != affected_gates
         or raw_signals_in != target_signals
         or raw_kind_in != change_kind
+        or raw_outputs_in != affected_outputs
     )
     if canonicalized:
+        # Codex R3-A: the LLM-supplied change_kind_zh / change_kind_en
+        # can encode false precision in the label string itself
+        # (e.g. "修改 tls_115vac_cmd 判据"). Whenever canonicalization
+        # fires for ANY reason (gate/signal/kind/output drift), reset
+        # the labels to the canonical taxonomy pair so the UI pill
+        # and the regenerated summary do not carry a verbose label
+        # that mentions an un-corroborated cmd. The 5-line block
+        # earlier already handles the change_kind-was-invalid case;
+        # this widens the override to all canonicalization triggers.
+        if change_kind in canonical_kind_labels:
+            raw_zh, raw_en = canonical_kind_labels[change_kind]
         gates_label = "、".join(affected_gates) if affected_gates else "(未识别)"
         signals_label = "、".join(target_signals) if target_signals else "(未识别)"
         summary_zh = (
@@ -2699,9 +2888,19 @@ def _normalize_llm_interpretation(
     else:
         summary_zh = str(raw_dict.get("summary_zh") or "")
         summary_en = str(raw_dict.get("summary_en") or "")
+
+    work_order_zh, work_order_en = _render_recommended_work_order(
+        change_kind=change_kind,
+        affected_gates=affected_gates,
+        target_signals=target_signals,
+        affected_outputs=affected_outputs,
+        source_text=source_text,
+    )
+
     return {
         "affected_gates": affected_gates,
         "target_signals": target_signals,
+        "affected_outputs": affected_outputs,
         "change_kind": change_kind,
         "change_kind_zh": raw_zh,
         "change_kind_en": raw_en,
@@ -2714,6 +2913,8 @@ def _normalize_llm_interpretation(
         ),
         "summary_zh": summary_zh,
         "summary_en": summary_en,
+        "recommended_work_order_zh": work_order_zh,
+        "recommended_work_order_en": work_order_en,
         "source_text": source_text,
     }
 
@@ -2773,7 +2974,11 @@ def interpret_suggestion_text_llm(
     always gets SOME interpretation."""
     api_key = _resolve_minimax_api_key()
     if not api_key:
-        fallback = interpret_suggestion_text(text)
+        # Codex R3-B: fallback must propagate system_id, otherwise
+        # non-default systems (c919-etras / landing-gear / bleed-air-
+        # valve) silently fall back through thrust-reverser vocab and
+        # affected_gates comes up empty.
+        fallback = interpret_suggestion_text(text, system_id=system_id)
         fallback["interpreter_strategy"] = "llm_fallback_to_rules"
         fallback["llm_error"] = "missing_api_key"
         return fallback
@@ -2790,7 +2995,9 @@ def interpret_suggestion_text_llm(
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         # Catches urllib.error.URLError (subclass of OSError),
         # timeouts, JSON parse errors, and our own ValueError raises.
-        fallback = interpret_suggestion_text(text)
+        # Codex R3-B: same system_id propagation on the network /
+        # parse failure path.
+        fallback = interpret_suggestion_text(text, system_id=system_id)
         fallback["interpreter_strategy"] = "llm_fallback_to_rules"
         fallback["llm_error"] = type(exc).__name__ + ": " + str(exc)[:200]
         return fallback
