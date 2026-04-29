@@ -524,6 +524,13 @@
             >
               Derive draft
             </button>
+            <button
+              id="workbench-run-sandbox-btn"
+              type="button"
+              class="workbench-editable-primary"
+            >
+              Run sandbox
+            </button>
           </div>
 
           <div class="workbench-editable-main">
@@ -680,6 +687,34 @@
               >
                 Select a graph node to inspect read-only hardware evidence.
               </div>
+              <section
+                id="workbench-sandbox-diff-panel"
+                class="workbench-sandbox-diff-panel"
+                aria-labelledby="workbench-sandbox-diff-title"
+              >
+                <div class="workbench-inspector-header">
+                  <span id="workbench-sandbox-diff-title">Baseline Diff</span>
+                  <strong id="workbench-diff-verdict">not_run</strong>
+                </div>
+                <dl class="workbench-inspector-facts">
+                  <div>
+                    <dt>Scenario</dt>
+                    <dd id="workbench-diff-scenario">nominal_landing</dd>
+                  </div>
+                  <div>
+                    <dt>Model hash</dt>
+                    <dd id="workbench-diff-model-hash">pending</dd>
+                  </div>
+                  <div>
+                    <dt>First divergence</dt>
+                    <dd id="workbench-diff-first-divergence">not run</dd>
+                  </div>
+                  <div>
+                    <dt>Truth impact</dt>
+                    <dd>none</dd>
+                  </div>
+                </dl>
+              </section>
               <section
                 class="workbench-changerequest-handoff"
                 aria-labelledby="workbench-changerequest-handoff-title"

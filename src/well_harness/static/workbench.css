@@ -4966,13 +4966,14 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 }
 .workbench-editable-status-bar {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto auto;
   gap: 0.55rem;
   align-items: stretch;
 }
 .workbench-editable-status-chip,
 .workbench-editable-primary,
 .workbench-evidence-inspector,
+.workbench-sandbox-diff-panel,
 .workbench-reference-sample-pack {
   border: 1px solid rgba(150, 173, 190, 0.24);
   background: rgba(9, 18, 27, 0.72);
@@ -5227,6 +5228,18 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 }
 .workbench-inspector-empty + .workbench-inspector-truth-note {
   margin-top: 0.2rem;
+}
+.workbench-sandbox-diff-panel {
+  margin-top: 0.7rem;
+  padding: 0.62rem;
+}
+.workbench-sandbox-diff-panel[data-verdict="equivalent"] {
+  border-color: rgba(125, 215, 194, 0.34);
+}
+.workbench-sandbox-diff-panel[data-verdict="divergent"],
+.workbench-sandbox-diff-panel[data-verdict="invalid_model"],
+.workbench-sandbox-diff-panel[data-verdict="invalid_scenario"] {
+  border-color: rgba(240, 193, 91, 0.45);
 }
 .workbench-changerequest-handoff {
   margin-top: 0.85rem;

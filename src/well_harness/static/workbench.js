@@ -7562,6 +7562,7 @@ function installEditableWorkbenchShell() {
 
   const nodes = Array.from(shell.querySelectorAll("[data-editable-node-id]"));
   const deriveBtn = document.getElementById("workbench-derive-draft-btn");
+  const runSandboxBtn = document.getElementById("workbench-run-sandbox-btn");
   const draftLabel = document.getElementById("workbench-draft-status-label");
   const nodeIdSlot = document.getElementById("workbench-inspector-node-id");
   const labelInput = document.getElementById("workbench-inspector-node-label");
@@ -7572,6 +7573,11 @@ function installEditableWorkbenchShell() {
   const sourceRefSlot = document.getElementById("workbench-inspector-source-ref");
   const evidenceSummary = document.getElementById("workbench-inspector-evidence-summary");
   const evidenceDetail = document.getElementById("workbench-inspector-evidence-detail");
+  const diffPanel = document.getElementById("workbench-sandbox-diff-panel");
+  const diffVerdict = document.getElementById("workbench-diff-verdict");
+  const diffScenario = document.getElementById("workbench-diff-scenario");
+  const diffModelHash = document.getElementById("workbench-diff-model-hash");
+  const diffFirstDivergence = document.getElementById("workbench-diff-first-divergence");
   const timelineStrip = document.getElementById("workbench-sandbox-timeline-strip");
   const handoffBtn = document.getElementById("workbench-generate-handoff-btn");
   const handoffStatus = document.getElementById("workbench-handoff-status");
@@ -7580,6 +7586,7 @@ function installEditableWorkbenchShell() {
   const storageKey = "well-harness-editable-workbench-draft-v1";
   let selectedNode = nodes.find((node) => node.getAttribute("aria-pressed") === "true") || nodes[0];
   let hardwareEvidenceReport = null;
+  let lastSandboxDiff = null;
 
   function selectedNodePayload() {
     if (!selectedNode) return null;
@@ -7619,6 +7626,15 @@ function installEditableWorkbenchShell() {
     if (state === "derived") {
       items[0] && items[0].setAttribute("data-step-state", "done");
       items[1] && items[1].setAttribute("data-step-state", "active");
+    } else if (state === "running") {
+      items[0] && items[0].setAttribute("data-step-state", "done");
+      items[1] && items[1].setAttribute("data-step-state", "done");
+      items[2] && items[2].setAttribute("data-step-state", "active");
+    } else if (state === "diff") {
+      items[0] && items[0].setAttribute("data-step-state", "done");
+      items[1] && items[1].setAttribute("data-step-state", "done");
+      items[2] && items[2].setAttribute("data-step-state", "done");
+      items[3] && items[3].setAttribute("data-step-state", "active");
     } else if (state === "handoff") {
       items[0] && items[0].setAttribute("data-step-state", "done");
       items[1] && items[1].setAttribute("data-step-state", "done");
@@ -7797,6 +7813,9 @@ function installEditableWorkbenchShell() {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
       system_id: "thrust-reverser",
       baseline_adapter: "reference-deploy-controller",
+      truth_level_impact: "none",
+      dal_pssa_impact: "none",
+      controller_truth_modified: false,
       selected_node: selected,
       nodes: nodes.map((node) => ({
         id: node.getAttribute("data-editable-node-id") || "",
@@ -7805,6 +7824,74 @@ function installEditableWorkbenchShell() {
         source_ref: node.getAttribute("data-source-ref") || "unknown",
       })),
     };
+  }
+
+  function firstDivergenceText(firstDivergence) {
+    if (!firstDivergence) return "No divergence recorded.";
+    const signal = firstDivergence.signal_id || "unknown_signal";
+    const atS = firstDivergence.at_s;
+    const baseline = firstDivergence.baseline_value;
+    const candidate = firstDivergence.candidate_value;
+    return `${signal} @ ${atS}s · baseline=${baseline} candidate=${candidate}`;
+  }
+
+  function renderWorkbenchSandboxDiff(payload) {
+    lastSandboxDiff = payload || null;
+    const verdict = (payload && payload.verdict) || "invalid_scenario";
+    if (diffPanel) diffPanel.setAttribute("data-verdict", verdict);
+    if (diffVerdict) diffVerdict.textContent = verdict;
+    if (diffScenario) diffScenario.textContent = (payload && payload.scenario_id) || "nominal_landing";
+    if (diffModelHash) {
+      const hash = payload && payload.model_hash;
+      diffModelHash.textContent = hash ? String(hash).slice(0, 16) : "unavailable";
+    }
+    if (diffFirstDivergence) {
+      const summary = payload && payload.summary;
+      if (verdict === "invalid_model" || verdict === "invalid_scenario") {
+        diffFirstDivergence.textContent = (payload && payload.error) || verdict;
+      } else {
+        diffFirstDivergence.textContent = firstDivergenceText(summary && summary.first_divergence);
+      }
+    }
+    setTimelineState("diff");
+    if (handoffStatus) {
+      handoffStatus.textContent =
+        `Sandbox diff ${verdict}. Truth-level impact: none. No live Linear mutation.`;
+    }
+  }
+
+  function runWorkbenchSandboxDiff() {
+    if (!runSandboxBtn || typeof fetch !== "function") return Promise.resolve(null);
+    setTimelineState("running");
+    runSandboxBtn.disabled = true;
+    if (diffVerdict) diffVerdict.textContent = "running";
+    return fetch("/api/workbench/editable-sandbox-run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        scenario_id: "nominal_landing",
+        draft: currentDraftSnapshot(),
+      }),
+    })
+      .then((response) => response.json())
+      .then((payload) => {
+        renderWorkbenchSandboxDiff(payload);
+        return payload;
+      })
+      .catch((err) => {
+        const payload = {
+          verdict: "invalid_scenario",
+          scenario_id: "nominal_landing",
+          truth_level_impact: "none",
+          error: err && err.message ? err.message : "sandbox run failed",
+          summary: { first_divergence: null, assertion_status: "not_run", frame_count: 0 },
+        };
+        renderWorkbenchSandboxDiff(payload);
+        return payload;
+      })
+      .finally(() => {
+        runSandboxBtn.disabled = false;
+      });
   }
 
   function buildEditableHandoffPacket() {
@@ -7850,6 +7937,7 @@ function installEditableWorkbenchShell() {
       "Test delta: targeted pytest pending / default pytest pending / GSD pending",
       "",
       `Changed model hash: ${changedModelHash}`,
+      `Latest sandbox verdict: ${(lastSandboxDiff && lastSandboxDiff.verdict) || "not_run"}`,
       "No live Linear mutation; this packet is copy-ready evidence only.",
     ].join("\n");
     return {
@@ -7877,6 +7965,9 @@ function installEditableWorkbenchShell() {
   }
   if (deriveBtn) {
     deriveBtn.addEventListener("click", () => deriveDraft());
+  }
+  if (runSandboxBtn) {
+    runSandboxBtn.addEventListener("click", () => runWorkbenchSandboxDiff());
   }
   if (labelInput) {
     labelInput.addEventListener("input", () => {
