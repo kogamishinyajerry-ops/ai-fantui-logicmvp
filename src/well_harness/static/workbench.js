@@ -7583,6 +7583,10 @@ function installEditableWorkbenchShell() {
   const handoffStatus = document.getElementById("workbench-handoff-status");
   const linearHandoffOutput = document.getElementById("workbench-linear-handoff-output");
   const prProofOutput = document.getElementById("workbench-pr-proof-output");
+  const exportDraftBtn = document.getElementById("workbench-export-draft-btn");
+  const importDraftBtn = document.getElementById("workbench-import-draft-btn");
+  const draftJsonBuffer = document.getElementById("workbench-draft-json-buffer");
+  const draftJsonStatus = document.getElementById("workbench-draft-json-status");
   const storageKey = "well-harness-editable-workbench-draft-v1";
   let selectedNode = nodes.find((node) => node.getAttribute("aria-pressed") === "true") || nodes[0];
   let hardwareEvidenceReport = null;
@@ -7826,6 +7830,134 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function uniqueSourceRefs() {
+    const refs = [];
+    for (const node of nodes) {
+      const ref = node.getAttribute("data-source-ref") || "";
+      if (ref && refs.indexOf(ref) === -1) refs.push(ref);
+    }
+    return refs;
+  }
+
+  function buildEditableDraftExport() {
+    const snapshot = currentDraftSnapshot();
+    return {
+      kind: "well-harness-workbench-ui-draft",
+      version: 1,
+      draft_state: snapshot.draft_state,
+      system_id: snapshot.system_id,
+      baseline_adapter: snapshot.baseline_adapter,
+      truth_level_impact: "none",
+      dal_pssa_impact: "none",
+      controller_truth_modified: false,
+      selected_node: snapshot.selected_node,
+      nodes: snapshot.nodes,
+      ports: [],
+      edges: [],
+      hardware_bindings: [],
+      source_refs: uniqueSourceRefs(),
+      latest_sandbox_verdict: (lastSandboxDiff && lastSandboxDiff.verdict) || "not_run",
+    };
+  }
+
+  function validateEditableDraftImport(payload) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      throw new Error("draft JSON must be an object");
+    }
+    if (payload.kind !== "well-harness-workbench-ui-draft") {
+      throw new Error("kind must be well-harness-workbench-ui-draft");
+    }
+    if (payload.version !== 1) {
+      throw new Error("version must be 1");
+    }
+    if (payload.system_id !== "thrust-reverser") {
+      throw new Error("system_id must be thrust-reverser");
+    }
+    if (payload.truth_level_impact !== "none") {
+      throw new Error("truth_level_impact must be none");
+    }
+    if (payload.dal_pssa_impact !== "none") {
+      throw new Error("dal_pssa_impact must be none");
+    }
+    if (payload.controller_truth_modified !== false) {
+      throw new Error("controller_truth_modified must be false");
+    }
+    if (!Array.isArray(payload.nodes)) {
+      throw new Error("nodes must be an array");
+    }
+    return payload;
+  }
+
+  function updateNodeDisplay(node) {
+    if (!node) return;
+    const small = node.querySelector("small");
+    if (small) {
+      const op = node.getAttribute("data-node-op") || "and";
+      const ruleCount = node.getAttribute("data-rule-count") || "0";
+      small.textContent = `${op.toUpperCase()} · ${ruleCount} rules`;
+    }
+  }
+
+  function applyEditableDraftImport(payload) {
+    const validated = validateEditableDraftImport(payload);
+    const nodeUpdates = Array.isArray(validated.nodes) ? validated.nodes : [];
+    for (const update of nodeUpdates) {
+      if (!update || typeof update !== "object") continue;
+      const updateId = typeof update.id === "string" ? update.id : "";
+      const node = nodes.find((candidate) => (
+        candidate.getAttribute("data-editable-node-id") === updateId
+      ));
+      if (!node) continue;
+      if (typeof update.label === "string") node.setAttribute("data-node-label", update.label);
+      if (typeof update.op === "string") node.setAttribute("data-node-op", update.op);
+      updateNodeDisplay(node);
+    }
+    const selectedId =
+      validated.selected_node && typeof validated.selected_node.id === "string"
+        ? validated.selected_node.id
+        : "";
+    const importedSelected = nodes.find((node) => (
+      node.getAttribute("data-editable-node-id") === selectedId
+    ));
+    if (importedSelected) selectedNode = importedSelected;
+    shell.setAttribute("data-draft-state", "derived");
+    if (draftLabel) {
+      draftLabel.textContent = "sandbox_candidate restored from imported JSON";
+    }
+    if (draftJsonStatus) {
+      draftJsonStatus.textContent = "sandbox_candidate restored from imported JSON";
+    }
+    setTimelineState("derived");
+    renderInspector();
+    persistDraft();
+    return validated;
+  }
+
+  function exportEditableDraftJson() {
+    if (!draftJsonBuffer) return null;
+    const payload = buildEditableDraftExport();
+    draftJsonBuffer.value = JSON.stringify(payload, null, 2);
+    if (draftJsonStatus) {
+      draftJsonStatus.textContent =
+        "Exported sandbox_candidate draft JSON. Truth-level impact: none.";
+    }
+    return payload;
+  }
+
+  function importEditableDraftJson() {
+    if (!draftJsonBuffer) return null;
+    try {
+      const payload = JSON.parse(draftJsonBuffer.value || "{}");
+      return applyEditableDraftImport(payload);
+    } catch (err) {
+      if (draftJsonStatus) {
+        draftJsonStatus.textContent =
+          err && err.message ? err.message : "draft JSON import failed";
+      }
+      return null;
+    }
+  }
+
   function firstDivergenceText(firstDivergence) {
     if (!firstDivergence) return "No divergence recorded.";
     const signal = firstDivergence.signal_id || "unknown_signal";
@@ -7993,6 +8125,12 @@ function installEditableWorkbenchShell() {
   }
   if (handoffBtn) {
     handoffBtn.addEventListener("click", () => renderEditableHandoffPacket());
+  }
+  if (exportDraftBtn) {
+    exportDraftBtn.addEventListener("click", () => exportEditableDraftJson());
+  }
+  if (importDraftBtn) {
+    importDraftBtn.addEventListener("click", () => importEditableDraftJson());
   }
   if (selectedNode) {
     selectNode(selectedNode);
