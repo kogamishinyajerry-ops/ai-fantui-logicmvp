@@ -18,6 +18,7 @@ from dataclasses import replace
 from typing import Any
 
 from well_harness.controller_adapter import build_reference_controller_adapter
+from well_harness.hardware_registry import build_timeline_hardware_evidence_overlay
 from well_harness.models import ControllerOutputs, HarnessConfig, ResolvedInputs
 from well_harness.plant import PlantState, SimplifiedDeployPlant
 from well_harness.switches import LatchedThrottleSwitches, SwitchState
@@ -138,6 +139,10 @@ class FantuiExecutor:
             logic_states=logic_states,
             resolved_inputs=resolved_dict,
         )
+
+    def summarize_outcome(self, frames) -> dict[str, Any]:
+        """Attach read-only hardware evidence metadata to FANTUI timeline outputs."""
+        return {"hardware_evidence_overlay": build_timeline_hardware_evidence_overlay()}
 
 
 # ---- Helpers ---------------------------------------------------------------

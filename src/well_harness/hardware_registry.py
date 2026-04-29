@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from well_harness.hardware_schema import (
+    HardwareValueRef,
     LruInventoryItem,
     SignalCarrierBinding,
     load_thrust_reverser_hardware,
@@ -143,4 +144,62 @@ def hardware_evidence_summary_to_dict(summary: HardwareEvidenceSummary) -> dict[
         "inferred_field_count": summary.inferred_field_count,
         "frozen_hardware_paths": list(summary.frozen_hardware_paths),
         "read_protected_hardware_paths": list(summary.read_protected_hardware_paths),
+    }
+
+
+def _value_ref_to_dict(value_ref: HardwareValueRef) -> dict[str, Any]:
+    return {"status": value_ref.status, "value": value_ref.value}
+
+
+def build_timeline_hardware_evidence_overlay(
+    system_id: str = ACTIVE_HARDWARE_SYSTEM_ID,
+    *,
+    project_root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Build non-truth hardware metadata for timeline outputs."""
+    if system_id != ACTIVE_HARDWARE_SYSTEM_ID:
+        raise HardwareRegistryError(
+            f"Hardware evidence overlay only supports thrust-reverser, got {system_id!r}"
+        )
+
+    root = Path(project_root) if project_root is not None else _project_root()
+    hardware = load_thrust_reverser_hardware(root / ACTIVE_HARDWARE_PATH)
+    summary = load_hardware_evidence_summary(system_id, project_root=root)
+
+    return {
+        "system_id": summary.system_id,
+        "hardware_path": summary.hardware_path,
+        "read_only": summary.read_only,
+        "truth_level_impact": summary.truth_level_impact,
+        "dal_pssa_impact": summary.dal_pssa_impact,
+        "lru_count": summary.lru_count,
+        "signal_binding_count": summary.signal_binding_count,
+        "total_evidence_gap_field_count": summary.total_evidence_gap_field_count,
+        "inferred_field_count": summary.inferred_field_count,
+        "lru_inventory": [
+            {
+                "id": item.id,
+                "display_name": item.display_name,
+                "value_status": item.value_status,
+                "source_ref": item.source_ref,
+            }
+            for item in hardware.lru_inventory
+        ],
+        "signal_bindings": [
+            {
+                "signal_id": item.signal_id,
+                "direction": item.direction,
+                "source_hardware_id": item.source_hardware_id,
+                "peer_hardware_id": item.peer_hardware_id,
+                "cable": _value_ref_to_dict(item.cable),
+                "connector": _value_ref_to_dict(item.connector),
+                "port_local": _value_ref_to_dict(item.port_local),
+                "port_peer": _value_ref_to_dict(item.port_peer),
+                "redundancy_status": item.redundancy_status,
+                "evidence_status": item.evidence_status,
+                "feeds_logic_nodes": list(item.feeds_logic_nodes),
+                "source_ref": item.source_ref,
+            }
+            for item in hardware.signal_carrier_bindings
+        ],
     }
