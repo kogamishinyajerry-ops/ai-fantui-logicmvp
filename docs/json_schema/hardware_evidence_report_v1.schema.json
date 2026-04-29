@@ -16,6 +16,7 @@
     "hardware_summary",
     "coverage",
     "evidence_gaps",
+    "evidence_index",
     "boundaries",
     "checks"
   ],
@@ -50,6 +51,9 @@
     },
     "evidence_gaps": {
       "$ref": "#/$defs/evidenceGaps"
+    },
+    "evidence_index": {
+      "$ref": "#/$defs/evidenceIndex"
     },
     "boundaries": {
       "$ref": "#/$defs/boundaries"
@@ -206,6 +210,210 @@
         },
         "inferred_field_count": {
           "const": 0
+        }
+      }
+    },
+    "valueRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "value"],
+      "properties": {
+        "status": {
+          "enum": ["known", "evidence_gap"]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "lruInventoryItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "display_name",
+        "value_status",
+        "source_ref",
+        "truth_effect"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "value_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "truth_effect": {
+          "const": "none"
+        }
+      }
+    },
+    "signalBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "signal_id",
+        "direction",
+        "source_hardware_id",
+        "peer_hardware_id",
+        "cable",
+        "connector",
+        "port_local",
+        "port_peer",
+        "redundancy_status",
+        "evidence_status",
+        "feeds_logic_nodes",
+        "source_ref",
+        "carrier_status",
+        "display_status",
+        "truth_effect"
+      ],
+      "properties": {
+        "signal_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direction": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_hardware_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "peer_hardware_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cable": {
+          "$ref": "#/$defs/valueRef"
+        },
+        "connector": {
+          "$ref": "#/$defs/valueRef"
+        },
+        "port_local": {
+          "$ref": "#/$defs/valueRef"
+        },
+        "port_peer": {
+          "$ref": "#/$defs/valueRef"
+        },
+        "redundancy_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "feeds_logic_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^L[1-4]$"
+          }
+        },
+        "source_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "carrier_status": {
+          "enum": ["recorded", "evidence_gap"]
+        },
+        "display_status": {
+          "enum": ["recorded", "not_recorded"]
+        },
+        "truth_effect": {
+          "const": "none"
+        }
+      }
+    },
+    "logicNodeBindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["L1", "L2", "L3", "L4"],
+      "properties": {
+        "L1": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/signalBinding"
+          }
+        },
+        "L2": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/signalBinding"
+          }
+        },
+        "L3": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/signalBinding"
+          }
+        },
+        "L4": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/signalBinding"
+          }
+        }
+      }
+    },
+    "evidenceIndex": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "truth_effect",
+        "read_only",
+        "lru_inventory_count",
+        "signal_binding_count",
+        "evidence_gap_count",
+        "lru_inventory",
+        "signal_bindings",
+        "logic_node_bindings"
+      ],
+      "properties": {
+        "truth_effect": {
+          "const": "none"
+        },
+        "read_only": {
+          "const": true
+        },
+        "lru_inventory_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "signal_binding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evidence_gap_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lru_inventory": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/lruInventoryItem"
+          }
+        },
+        "signal_bindings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/signalBinding"
+          }
+        },
+        "logic_node_bindings": {
+          "$ref": "#/$defs/logicNodeBindings"
         }
       }
     },

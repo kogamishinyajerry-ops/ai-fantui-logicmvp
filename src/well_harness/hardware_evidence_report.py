@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from well_harness.hardware_registry import (
+    build_timeline_hardware_evidence_overlay,
     hardware_evidence_summary_to_dict,
     load_hardware_evidence_summary,
 )
@@ -22,6 +23,70 @@ def make_check(name: str, status: str, **details: Any) -> dict[str, Any]:
 
 def coverage_status(expected_count: int, actual_count: int) -> str:
     return "pass" if expected_count == actual_count else "fail"
+
+
+def _carrier_status(binding: dict[str, Any]) -> str:
+    value_ref_fields = ("cable", "connector", "port_local", "port_peer")
+    if any((binding[field]["status"] == "evidence_gap") for field in value_ref_fields):
+        return "evidence_gap"
+    if binding["redundancy_status"] == "evidence_gap":
+        return "evidence_gap"
+    if binding["evidence_status"] == "evidence_gap":
+        return "evidence_gap"
+    return "recorded"
+
+
+def _indexed_signal_binding(binding: dict[str, Any]) -> dict[str, Any]:
+    status = _carrier_status(binding)
+    return {
+        "signal_id": binding["signal_id"],
+        "direction": binding["direction"],
+        "source_hardware_id": binding["source_hardware_id"],
+        "peer_hardware_id": binding["peer_hardware_id"],
+        "cable": binding["cable"],
+        "connector": binding["connector"],
+        "port_local": binding["port_local"],
+        "port_peer": binding["port_peer"],
+        "redundancy_status": binding["redundancy_status"],
+        "evidence_status": binding["evidence_status"],
+        "feeds_logic_nodes": list(binding["feeds_logic_nodes"]),
+        "source_ref": binding["source_ref"],
+        "carrier_status": status,
+        "display_status": "not_recorded" if status == "evidence_gap" else "recorded",
+        "truth_effect": "none",
+    }
+
+
+def _build_logic_node_bindings(
+    signal_bindings: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    indexed: dict[str, list[dict[str, Any]]] = {f"L{index}": [] for index in range(1, 5)}
+    for binding in signal_bindings:
+        binding_row = _indexed_signal_binding(binding)
+        for logic_node_id in binding_row["feeds_logic_nodes"]:
+            indexed.setdefault(logic_node_id, []).append(binding_row)
+    return indexed
+
+
+def _build_evidence_index(summary: Any) -> dict[str, Any]:
+    overlay = build_timeline_hardware_evidence_overlay(system_id=summary.system_id)
+    signal_bindings = list(overlay["signal_bindings"])
+    return {
+        "truth_effect": "none",
+        "read_only": True,
+        "lru_inventory_count": summary.lru_count,
+        "signal_binding_count": summary.signal_binding_count,
+        "evidence_gap_count": summary.total_evidence_gap_field_count,
+        "lru_inventory": [
+            {**item, "truth_effect": "none"}
+            for item in overlay["lru_inventory"]
+        ],
+        "signal_bindings": [
+            _indexed_signal_binding(binding)
+            for binding in signal_bindings
+        ],
+        "logic_node_bindings": _build_logic_node_bindings(signal_bindings),
+    }
 
 
 def build_hardware_evidence_report(system_id: str = "thrust-reverser") -> dict[str, Any]:
@@ -103,6 +168,7 @@ def build_hardware_evidence_report(system_id: str = "thrust-reverser") -> dict[s
             "total_field_count": summary.total_evidence_gap_field_count,
             "inferred_field_count": summary.inferred_field_count,
         },
+        "evidence_index": _build_evidence_index(summary),
         "boundaries": {
             "read_only": summary.read_only,
             "controller_truth_modified": summary.controller_truth_modified,
