@@ -1,0 +1,367 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/change_request_v0_1.schema.json",
+  "title": "AI FANTUI LogicMVP ChangeRequest draft schema v0.1",
+  "description": "Non-authoritative draft contract for recording proposed project changes. This schema does not approve DAL, truth-level, Charter, or adapter-status changes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "change_request_id",
+    "title",
+    "summary",
+    "authority",
+    "origin",
+    "owner",
+    "status",
+    "classification",
+    "impacts",
+    "dal_impact",
+    "evidence_anchors",
+    "decision_links"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "change_request.v0.1"
+    },
+    "change_request_id": {
+      "type": "string",
+      "pattern": "^CR-[A-Z0-9][A-Z0-9_-]*$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "authority": {
+      "$ref": "#/$defs/authority"
+    },
+    "origin": {
+      "$ref": "#/$defs/origin"
+    },
+    "owner": {
+      "$ref": "#/$defs/owner"
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "proposed",
+        "escalated",
+        "rejected",
+        "superseded"
+      ]
+    },
+    "classification": {
+      "enum": [
+        "bookkeeping",
+        "behavior_change",
+        "dal_impacting",
+        "truth_level_impacting",
+        "charter_impacting"
+      ]
+    },
+    "impacts": {
+      "$ref": "#/$defs/impacts"
+    },
+    "dal_impact": {
+      "$ref": "#/$defs/dalImpact"
+    },
+    "escalation": {
+      "$ref": "#/$defs/escalation"
+    },
+    "evidence_anchors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/linkAnchor"
+      }
+    },
+    "decision_links": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/linkAnchor"
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "classification": {
+            "const": "dal_impacting"
+          }
+        },
+        "required": [
+          "classification"
+        ]
+      },
+      "then": {
+        "required": [
+          "escalation"
+        ],
+        "properties": {
+          "dal_impact": {
+            "properties": {
+              "impact": {
+                "enum": [
+                  "potential",
+                  "confirmed"
+                ]
+              }
+            },
+            "required": [
+              "impact"
+            ]
+          },
+          "escalation": {
+            "properties": {
+              "required": {
+                "const": true
+              }
+            },
+            "required": [
+              "required"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "classification": {
+            "const": "truth_level_impacting"
+          }
+        },
+        "required": [
+          "classification"
+        ]
+      },
+      "then": {
+        "required": [
+          "escalation"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "classification": {
+            "const": "charter_impacting"
+          }
+        },
+        "required": [
+          "classification"
+        ]
+      },
+      "then": {
+        "required": [
+          "escalation"
+        ]
+      }
+    }
+  ],
+  "$defs": {
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "approval_required_before_execution",
+        "approval_routes"
+      ],
+      "properties": {
+        "status": {
+          "const": "draft_non_authoritative"
+        },
+        "approval_required_before_execution": {
+          "const": true
+        },
+        "approval_routes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "kogami_charter",
+              "github_pr_review",
+              "linear_evidence_record"
+            ]
+          }
+        }
+      }
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "source_ref",
+        "created_by",
+        "created_at"
+      ],
+      "properties": {
+        "source": {
+          "enum": [
+            "linear",
+            "github",
+            "notion",
+            "repo",
+            "manual"
+          ]
+        },
+        "source_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "created_by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "created_at": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      }
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "role"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "enum": [
+            "draft_author",
+            "evidence_owner",
+            "decision_owner"
+          ]
+        }
+      }
+    },
+    "impacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "namespaces",
+        "adapters",
+        "truth_level_impact"
+      ],
+      "properties": {
+        "namespaces": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "governance",
+              "requirements",
+              "logic_truth",
+              "adapter",
+              "hardware",
+              "ui",
+              "test",
+              "automation",
+              "documentation"
+            ]
+          }
+        },
+        "adapters": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "truth_level_impact": {
+          "enum": [
+            "none",
+            "demonstrative",
+            "certified"
+          ]
+        }
+      }
+    },
+    "dalImpact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "impact",
+        "rationale"
+      ],
+      "properties": {
+        "impact": {
+          "enum": [
+            "none",
+            "potential",
+            "confirmed"
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "escalation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "route",
+        "reason"
+      ],
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "route": {
+          "enum": [
+            "kogami_charter",
+            "github_pr_review",
+            "linear_evidence_record"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "linkAnchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "linear",
+            "github_pr",
+            "notion_page",
+            "repo_path",
+            "test_output"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "path": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
