@@ -29,7 +29,7 @@ def test_workbench_draft_export_contract_is_truth_neutral() -> None:
     assert 'dal_pssa_impact: "none"' in js
     assert "controller_truth_modified: false" in js
     assert "ports: []" in js
-    assert "edges: []" in js
+    assert "edges:" in js
     assert "source_refs" in js
     assert "selected_node" in js
 

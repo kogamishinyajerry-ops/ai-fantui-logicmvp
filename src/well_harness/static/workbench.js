@@ -7560,10 +7560,15 @@ function installEditableWorkbenchShell() {
   const shell = document.getElementById("workbench-editable-shell");
   if (!shell) return;
 
-  const nodes = Array.from(shell.querySelectorAll("[data-editable-node-id]"));
+  let nodes = Array.from(shell.querySelectorAll("[data-editable-node-id]"));
+  const canvas = document.getElementById("workbench-editable-canvas");
+  const edgeSvg = shell.querySelector(".workbench-editable-edges");
+  const toolbarButtons = Array.from(shell.querySelectorAll("[data-editor-tool]"));
   const deriveBtn = document.getElementById("workbench-derive-draft-btn");
   const runSandboxBtn = document.getElementById("workbench-run-sandbox-btn");
   const draftLabel = document.getElementById("workbench-draft-status-label");
+  const draftHashLabel = document.getElementById("workbench-draft-hash-label");
+  const graphValidationStatus = document.getElementById("workbench-graph-validation-status");
   const nodeIdSlot = document.getElementById("workbench-inspector-node-id");
   const labelInput = document.getElementById("workbench-inspector-node-label");
   const opSelect = document.getElementById("workbench-inspector-node-op");
@@ -7591,6 +7596,16 @@ function installEditableWorkbenchShell() {
   let selectedNode = nodes.find((node) => node.getAttribute("aria-pressed") === "true") || nodes[0];
   let hardwareEvidenceReport = null;
   let lastSandboxDiff = null;
+  let currentEditorTool = "select";
+  let pendingEdgeSourceId = "";
+  let nextDraftNodeIndex = 1;
+  let draftEdges = [
+    { id: "edge_logic1_logic2", source: "logic1", target: "logic2" },
+    { id: "edge_logic2_logic3", source: "logic2", target: "logic3" },
+    { id: "edge_logic3_logic4", source: "logic3", target: "logic4" },
+  ];
+  const undoStack = [];
+  const redoStack = [];
 
   function selectedNodePayload() {
     if (!selectedNode) return null;
@@ -7604,16 +7619,324 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function refreshEditableNodes() {
+    nodes = Array.from(shell.querySelectorAll("[data-editable-node-id]"));
+  }
+
+  function editableNodeState(node) {
+    return {
+      id: node.getAttribute("data-editable-node-id") || "",
+      label: node.getAttribute("data-node-label") || "",
+      op: node.getAttribute("data-node-op") || "and",
+      ruleCount: node.getAttribute("data-rule-count") || "0",
+      evidence: node.getAttribute("data-hardware-evidence") || "evidence_gap",
+      sourceRef: node.getAttribute("data-source-ref") || "ui_draft",
+      x: node.style.getPropertyValue("--node-x") || "50%",
+      y: node.style.getPropertyValue("--node-y") || "50%",
+      draftNode: node.getAttribute("data-draft-node") === "true",
+    };
+  }
+
+  function serializeEditableState() {
+    refreshEditableNodes();
+    return {
+      draftState: shell.getAttribute("data-draft-state") || "baseline",
+      selectedNodeId: selectedNode && selectedNode.getAttribute("data-editable-node-id"),
+      nodes: nodes.map((node) => editableNodeState(node)),
+      edges: draftEdges.map((edge) => ({ ...edge })),
+    };
+  }
+
+  function createEditableNodeElement(nodeState) {
+    if (!canvas) return null;
+    const node = document.createElement("button");
+    node.type = "button";
+    node.className = "workbench-editable-node";
+    node.setAttribute("data-editable-node-id", nodeState.id);
+    node.setAttribute("data-node-label", nodeState.label || nodeState.id);
+    node.setAttribute("data-node-op", nodeState.op || "and");
+    node.setAttribute("data-rule-count", nodeState.ruleCount || "0");
+    node.setAttribute("data-hardware-evidence", nodeState.evidence || "evidence_gap");
+    node.setAttribute("data-source-ref", nodeState.sourceRef || "ui_draft.node");
+    node.setAttribute("data-draft-node", nodeState.draftNode ? "true" : "false");
+    node.style.setProperty("--node-x", nodeState.x || "50%");
+    node.style.setProperty("--node-y", nodeState.y || "50%");
+    node.setAttribute("aria-pressed", "false");
+    const label = document.createElement("span");
+    label.textContent = nodeState.id;
+    const small = document.createElement("small");
+    small.textContent = `${(nodeState.op || "and").toUpperCase()} · ${nodeState.ruleCount || "0"} rules`;
+    node.append(label, small);
+    canvas.appendChild(node);
+    attachEditableNodeHandler(node);
+    return node;
+  }
+
+  function applyEditableState(state) {
+    if (!state || typeof state !== "object") return;
+    const nodeStates = Array.isArray(state.nodes) ? state.nodes : [];
+    for (const existing of Array.from(shell.querySelectorAll('[data-draft-node="true"]'))) {
+      existing.remove();
+    }
+    refreshEditableNodes();
+    for (const nodeState of nodeStates) {
+      if (!nodeState || typeof nodeState !== "object") continue;
+      let node = nodes.find((candidate) => (
+        candidate.getAttribute("data-editable-node-id") === nodeState.id
+      ));
+      if (!node && nodeState.draftNode) {
+        node = createEditableNodeElement(nodeState);
+        refreshEditableNodes();
+      }
+      if (!node) continue;
+      if (typeof nodeState.label === "string") node.setAttribute("data-node-label", nodeState.label);
+      if (typeof nodeState.op === "string") node.setAttribute("data-node-op", nodeState.op);
+      if (typeof nodeState.ruleCount === "string") node.setAttribute("data-rule-count", nodeState.ruleCount);
+      if (typeof nodeState.evidence === "string") node.setAttribute("data-hardware-evidence", nodeState.evidence);
+      if (typeof nodeState.sourceRef === "string") node.setAttribute("data-source-ref", nodeState.sourceRef);
+      if (typeof nodeState.x === "string") node.style.setProperty("--node-x", nodeState.x);
+      if (typeof nodeState.y === "string") node.style.setProperty("--node-y", nodeState.y);
+      updateNodeDisplay(node);
+    }
+    draftEdges = Array.isArray(state.edges)
+      ? state.edges
+          .filter((edge) => edge && typeof edge === "object")
+          .map((edge, index) => ({
+            id: String(edge.id || `edge_imported_${index + 1}`),
+            source: String(edge.source || ""),
+            target: String(edge.target || ""),
+          }))
+      : [];
+    const selectedId = state.selectedNodeId || (state.selected_node && state.selected_node.id);
+    const restoredSelected = nodes.find((node) => (
+      node.getAttribute("data-editable-node-id") === selectedId
+    ));
+    selectedNode = restoredSelected || nodes[0] || null;
+    shell.setAttribute("data-draft-state", state.draftState || "derived");
+    renderEditableEdges();
+    renderInspector();
+    updateEditableDraftHash();
+    validateEditableGraph();
+  }
+
+  function recordEditableHistory(_actionName) {
+    undoStack.push(serializeEditableState());
+    if (undoStack.length > 50) undoStack.shift();
+    redoStack.length = 0;
+  }
+
+  function undoEditableEdit() {
+    if (!undoStack.length) {
+      if (graphValidationStatus) {
+        graphValidationStatus.textContent = "Graph validation: no undo step available.";
+      }
+      return;
+    }
+    redoStack.push(serializeEditableState());
+    applyEditableState(undoStack.pop());
+    persistDraft();
+  }
+
+  function redoEditableEdit() {
+    if (!redoStack.length) {
+      if (graphValidationStatus) {
+        graphValidationStatus.textContent = "Graph validation: no redo step available.";
+      }
+      return;
+    }
+    undoStack.push(serializeEditableState());
+    applyEditableState(redoStack.pop());
+    persistDraft();
+  }
+
+  function editableNodePosition(node) {
+    const rawX = node && node.style.getPropertyValue("--node-x");
+    const rawY = node && node.style.getPropertyValue("--node-y");
+    return {
+      x: Number.parseFloat(rawX || "50") || 50,
+      y: Number.parseFloat(rawY || "50") || 50,
+    };
+  }
+
+  function renderEditableEdges() {
+    if (!edgeSvg) return;
+    refreshEditableNodes();
+    const paths = [];
+    for (const edge of draftEdges) {
+      const sourceNode = nodes.find((node) => node.getAttribute("data-editable-node-id") === edge.source);
+      const targetNode = nodes.find((node) => node.getAttribute("data-editable-node-id") === edge.target);
+      const source = editableNodePosition(sourceNode);
+      const target = editableNodePosition(targetNode);
+      const midX = (source.x + target.x) / 2;
+      paths.push([
+        `<path data-editable-edge-id="${inspectorText(edge.id)}"`,
+        `data-edge-source="${inspectorText(edge.source)}"`,
+        `data-edge-target="${inspectorText(edge.target)}"`,
+        `d="M${source.x} ${source.y} C${midX} ${source.y} ${midX} ${target.y} ${target.x} ${target.y}" />`,
+      ].join(" "));
+    }
+    edgeSvg.innerHTML = paths.join("");
+  }
+
+  function validateEditableGraph() {
+    refreshEditableNodes();
+    const nodeIds = new Set(nodes.map((node) => node.getAttribute("data-editable-node-id") || ""));
+    const seenEdges = new Set();
+    const issues = [];
+    for (const edge of draftEdges) {
+      const edgeKey = `${edge.source}->${edge.target}`;
+      if (!edge.source || !edge.target || !nodeIds.has(edge.source) || !nodeIds.has(edge.target)) {
+        issues.push(`dangling_port:${edge.id || edgeKey}`);
+      }
+      if (edge.source && edge.target && edge.source === edge.target) {
+        issues.push(`invalid_edge:self_loop:${edge.source}`);
+      }
+      if (seenEdges.has(edgeKey)) {
+        issues.push(`invalid_edge:duplicate:${edgeKey}`);
+      }
+      seenEdges.add(edgeKey);
+    }
+    if (graphValidationStatus) {
+      graphValidationStatus.textContent = issues.length
+        ? `Graph validation: ${issues.join(", ")}`
+        : "Graph validation: no issues.";
+    }
+    return issues;
+  }
+
+  function updateEditableDraftHash() {
+    const hash = editableDraftHash(JSON.stringify(currentDraftSnapshot()));
+    shell.setAttribute("data-draft-hash", hash);
+    if (draftHashLabel) draftHashLabel.textContent = hash;
+    return hash;
+  }
+
+  function setEditorTool(tool) {
+    currentEditorTool = tool || "select";
+    for (const button of toolbarButtons) {
+      button.setAttribute(
+        "aria-pressed",
+        button.getAttribute("data-editor-tool") === currentEditorTool ? "true" : "false",
+      );
+    }
+  }
+
+  function nextDraftNodeId() {
+    refreshEditableNodes();
+    while (nodes.some((node) => node.getAttribute("data-editable-node-id") === `draft_node_${nextDraftNodeIndex}`)) {
+      nextDraftNodeIndex += 1;
+    }
+    const nodeId = `draft_node_${nextDraftNodeIndex}`;
+    nextDraftNodeIndex += 1;
+    return nodeId;
+  }
+
+  function addEditableNode() {
+    recordEditableHistory("add_node");
+    shell.setAttribute("data-draft-state", "derived");
+    const nodeId = nextDraftNodeId();
+    const node = createEditableNodeElement({
+      id: nodeId,
+      label: "Draft logic node",
+      op: "and",
+      ruleCount: "0",
+      evidence: "evidence_gap",
+      sourceRef: `ui_draft.nodes.${nodeId}`,
+      x: `${42 + (nextDraftNodeIndex % 5) * 8}%`,
+      y: `${24 + (nextDraftNodeIndex % 4) * 10}%`,
+      draftNode: true,
+    });
+    refreshEditableNodes();
+    if (node) selectNode(node);
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate node edit pending";
+    setTimelineState("derived");
+    renderEditableEdges();
+    validateEditableGraph();
+    updateEditableDraftHash();
+    persistDraft();
+  }
+
+  function removeSelectedEditableNode() {
+    if (!selectedNode) return;
+    const nodeId = selectedNode.getAttribute("data-editable-node-id") || "";
+    if (selectedNode.getAttribute("data-draft-node") !== "true") {
+      if (graphValidationStatus) {
+        graphValidationStatus.textContent = "Graph validation: Baseline reference nodes cannot be removed.";
+      }
+      return;
+    }
+    recordEditableHistory("remove_node");
+    selectedNode.remove();
+    draftEdges = draftEdges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId);
+    refreshEditableNodes();
+    selectedNode = nodes[0] || null;
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate node edit pending";
+    renderEditableEdges();
+    renderInspector();
+    validateEditableGraph();
+    updateEditableDraftHash();
+    persistDraft();
+  }
+
+  function connectEditableEdge(sourceId, targetId) {
+    if (!sourceId || !targetId || sourceId === targetId) {
+      if (graphValidationStatus) {
+        graphValidationStatus.textContent = "Graph validation: invalid_edge cannot connect node to itself.";
+      }
+      return;
+    }
+    const edgeKey = `${sourceId}->${targetId}`;
+    if (draftEdges.some((edge) => `${edge.source}->${edge.target}` === edgeKey)) {
+      if (graphValidationStatus) {
+        graphValidationStatus.textContent = `Graph validation: invalid_edge duplicate ${edgeKey}.`;
+      }
+      return;
+    }
+    recordEditableHistory("connect_edge");
+    draftEdges.push({
+      id: `edge_${sourceId}_${targetId}_${draftEdges.length + 1}`,
+      source: sourceId,
+      target: targetId,
+    });
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate edge edit pending";
+    renderEditableEdges();
+    validateEditableGraph();
+    updateEditableDraftHash();
+    persistDraft();
+  }
+
+  function beginEditableEdgeConnect() {
+    pendingEdgeSourceId = selectedNode && selectedNode.getAttribute("data-editable-node-id") || "";
+    if (graphValidationStatus) {
+      graphValidationStatus.textContent = pendingEdgeSourceId
+        ? `Graph validation: select target node for edge from ${pendingEdgeSourceId}.`
+        : "Graph validation: select a source node before connecting.";
+    }
+  }
+
+  function disconnectSelectedEditableEdge() {
+    if (!draftEdges.length) return;
+    const selectedId = selectedNode && selectedNode.getAttribute("data-editable-node-id");
+    const index = selectedId
+      ? draftEdges.findIndex((edge) => edge.source === selectedId || edge.target === selectedId)
+      : draftEdges.length - 1;
+    const removeIndex = index >= 0 ? index : draftEdges.length - 1;
+    recordEditableHistory("disconnect_edge");
+    draftEdges.splice(removeIndex, 1);
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate edge edit pending";
+    renderEditableEdges();
+    validateEditableGraph();
+    updateEditableDraftHash();
+    persistDraft();
+  }
+
   function persistDraft() {
     try {
       const payload = {
         draftState: shell.getAttribute("data-draft-state") || "baseline",
         selectedNodeId: selectedNode && selectedNode.getAttribute("data-editable-node-id"),
-        nodes: nodes.map((node) => ({
-          id: node.getAttribute("data-editable-node-id"),
-          label: node.getAttribute("data-node-label"),
-          op: node.getAttribute("data-node-op"),
-        })),
+        nodes: nodes.map((node) => editableNodeState(node)),
+        edges: draftEdges.map((edge) => ({ ...edge })),
       };
       window.localStorage.setItem(storageKey, JSON.stringify(payload));
     } catch (_err) {
@@ -7733,11 +8056,24 @@ function installEditableWorkbenchShell() {
   }
 
   function selectNode(node) {
+    const nodeId = node && node.getAttribute("data-editable-node-id") || "";
+    if (currentEditorTool === "edge" && pendingEdgeSourceId && nodeId && nodeId !== pendingEdgeSourceId) {
+      connectEditableEdge(pendingEdgeSourceId, nodeId);
+      pendingEdgeSourceId = "";
+      setEditorTool("select");
+    } else if (currentEditorTool === "edge" && nodeId && !pendingEdgeSourceId) {
+      pendingEdgeSourceId = nodeId;
+      if (graphValidationStatus) {
+        graphValidationStatus.textContent = `Graph validation: select target node for edge from ${nodeId}.`;
+      }
+    }
     selectedNode = node;
     for (const candidate of nodes) {
       candidate.setAttribute("aria-pressed", candidate === node ? "true" : "false");
     }
     renderInspector();
+    updateEditableDraftHash();
+    validateEditableGraph();
     persistDraft();
   }
 
@@ -7747,6 +8083,8 @@ function installEditableWorkbenchShell() {
       draftLabel.textContent = "sandbox_candidate derived from reference sample";
     }
     setTimelineState("derived");
+    updateEditableDraftHash();
+    validateEditableGraph();
     persistDraft();
   }
 
@@ -7763,19 +8101,12 @@ function installEditableWorkbenchShell() {
         }
         setTimelineState("derived");
       }
-      const nodeUpdates = Array.isArray(payload.nodes) ? payload.nodes : [];
-      for (const update of nodeUpdates) {
-        const node = nodes.find((candidate) => (
-          candidate.getAttribute("data-editable-node-id") === update.id
-        ));
-        if (!node) continue;
-        if (typeof update.label === "string") node.setAttribute("data-node-label", update.label);
-        if (typeof update.op === "string") node.setAttribute("data-node-op", update.op);
-      }
-      const selected = nodes.find((node) => (
-        node.getAttribute("data-editable-node-id") === payload.selectedNodeId
-      ));
-      if (selected) selectedNode = selected;
+      applyEditableState({
+        draftState: payload.draftState || "baseline",
+        selectedNodeId: payload.selectedNodeId,
+        nodes: Array.isArray(payload.nodes) ? payload.nodes : [],
+        edges: Array.isArray(payload.edges) ? payload.edges : draftEdges,
+      });
     } catch (_err) {
       // Bad browser draft should not break first paint.
     }
@@ -7821,12 +8152,9 @@ function installEditableWorkbenchShell() {
       dal_pssa_impact: "none",
       controller_truth_modified: false,
       selected_node: selected,
-      nodes: nodes.map((node) => ({
-        id: node.getAttribute("data-editable-node-id") || "",
-        label: node.getAttribute("data-node-label") || "",
-        op: node.getAttribute("data-node-op") || "and",
-        source_ref: node.getAttribute("data-source-ref") || "unknown",
-      })),
+      nodes: nodes.map((node) => editableNodeState(node)),
+      ports: [],
+      edges: draftEdges.map((edge) => ({ ...edge })),
     };
   }
 
@@ -7852,8 +8180,8 @@ function installEditableWorkbenchShell() {
       controller_truth_modified: false,
       selected_node: snapshot.selected_node,
       nodes: snapshot.nodes,
-      ports: [],
-      edges: [],
+      ports: snapshot.ports,
+      edges: snapshot.edges,
       hardware_bindings: [],
       source_refs: uniqueSourceRefs(),
       latest_sandbox_verdict: (lastSandboxDiff && lastSandboxDiff.verdict) || "not_run",
@@ -7900,27 +8228,27 @@ function installEditableWorkbenchShell() {
 
   function applyEditableDraftImport(payload) {
     const validated = validateEditableDraftImport(payload);
-    const nodeUpdates = Array.isArray(validated.nodes) ? validated.nodes : [];
-    for (const update of nodeUpdates) {
-      if (!update || typeof update !== "object") continue;
-      const updateId = typeof update.id === "string" ? update.id : "";
-      const node = nodes.find((candidate) => (
-        candidate.getAttribute("data-editable-node-id") === updateId
-      ));
-      if (!node) continue;
-      if (typeof update.label === "string") node.setAttribute("data-node-label", update.label);
-      if (typeof update.op === "string") node.setAttribute("data-node-op", update.op);
-      updateNodeDisplay(node);
-    }
     const selectedId =
       validated.selected_node && typeof validated.selected_node.id === "string"
         ? validated.selected_node.id
         : "";
-    const importedSelected = nodes.find((node) => (
-      node.getAttribute("data-editable-node-id") === selectedId
-    ));
-    if (importedSelected) selectedNode = importedSelected;
-    shell.setAttribute("data-draft-state", "derived");
+    recordEditableHistory("import_draft");
+    applyEditableState({
+      draftState: "derived",
+      selectedNodeId: selectedId,
+      nodes: validated.nodes.map((node) => ({
+        id: String(node.id || ""),
+        label: String(node.label || node.id || "Draft logic node"),
+        op: String(node.op || "and"),
+        ruleCount: String(node.ruleCount || node.rule_count || "0"),
+        evidence: String(node.evidence || "evidence_gap"),
+        sourceRef: String(node.sourceRef || node.source_ref || "ui_draft.import"),
+        x: String(node.x || "50%"),
+        y: String(node.y || "50%"),
+        draftNode: Boolean(node.draftNode || node.draft_node || String(node.id || "").startsWith("draft_node_")),
+      })),
+      edges: Array.isArray(validated.edges) ? validated.edges : [],
+    });
     if (draftLabel) {
       draftLabel.textContent = "sandbox_candidate restored from imported JSON";
     }
@@ -7928,7 +8256,6 @@ function installEditableWorkbenchShell() {
       draftJsonStatus.textContent = "sandbox_candidate restored from imported JSON";
     }
     setTimelineState("derived");
-    renderInspector();
     persistDraft();
     return validated;
   }
@@ -8091,9 +8418,15 @@ function installEditableWorkbenchShell() {
     return packet;
   }
 
+  function attachEditableNodeHandler(node) {
+    if (!node || node.getAttribute("data-node-handler-attached") === "true") return;
+    node.setAttribute("data-node-handler-attached", "true");
+    node.addEventListener("click", () => selectNode(node));
+  }
+
   restoreDraft();
   for (const node of nodes) {
-    node.addEventListener("click", () => selectNode(node));
+    attachEditableNodeHandler(node);
   }
   if (deriveBtn) {
     deriveBtn.addEventListener("click", () => deriveDraft());
@@ -8101,25 +8434,67 @@ function installEditableWorkbenchShell() {
   if (runSandboxBtn) {
     runSandboxBtn.addEventListener("click", () => runWorkbenchSandboxDiff());
   }
+  for (const button of toolbarButtons) {
+    button.addEventListener("click", () => {
+      const tool = button.getAttribute("data-editor-tool") || "select";
+      if (tool === "node") {
+        setEditorTool("node");
+        addEditableNode();
+        setEditorTool("select");
+      } else if (tool === "edge") {
+        setEditorTool("edge");
+        beginEditableEdgeConnect();
+      } else if (tool === "remove") {
+        removeSelectedEditableNode();
+        setEditorTool("select");
+      } else if (tool === "disconnect") {
+        disconnectSelectedEditableEdge();
+        setEditorTool("select");
+      } else if (tool === "undo") {
+        undoEditableEdit();
+        setEditorTool("select");
+      } else if (tool === "redo") {
+        redoEditableEdit();
+        setEditorTool("select");
+      } else {
+        pendingEdgeSourceId = "";
+        setEditorTool("select");
+      }
+    });
+  }
   if (labelInput) {
     labelInput.addEventListener("input", () => {
       if (!selectedNode) return;
+      if (labelInput.getAttribute("data-edit-history-open") !== "true") {
+        recordEditableHistory("label_edit");
+        labelInput.setAttribute("data-edit-history-open", "true");
+      }
       selectedNode.setAttribute("data-node-label", labelInput.value);
       const small = selectedNode.querySelector("small");
       if (small) {
         small.textContent = `${(opSelect && opSelect.value) || "and"} · draft`;
       }
+      if (draftLabel) draftLabel.textContent = "sandbox_candidate label edit pending";
+      validateEditableGraph();
+      updateEditableDraftHash();
       persistDraft();
+    });
+    labelInput.addEventListener("change", () => {
+      labelInput.removeAttribute("data-edit-history-open");
     });
   }
   if (opSelect) {
     opSelect.addEventListener("change", () => {
       if (!selectedNode) return;
+      recordEditableHistory("op_edit");
       selectedNode.setAttribute("data-node-op", opSelect.value);
       const small = selectedNode.querySelector("small");
       if (small) {
         small.textContent = `${opSelect.value} · ${selectedNode.getAttribute("data-rule-count") || "0"} rules`;
       }
+      if (draftLabel) draftLabel.textContent = "sandbox_candidate op edit pending";
+      validateEditableGraph();
+      updateEditableDraftHash();
       persistDraft();
     });
   }
@@ -8135,6 +8510,9 @@ function installEditableWorkbenchShell() {
   if (selectedNode) {
     selectNode(selectedNode);
   }
+  renderEditableEdges();
+  validateEditableGraph();
+  updateEditableDraftHash();
   hydrateEvidenceSummary();
 }
 
