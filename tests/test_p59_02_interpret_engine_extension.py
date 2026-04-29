@@ -518,6 +518,76 @@ def test_llm_normalizer_affected_outputs_is_text_corroborated_only() -> None:
     assert "fake_output_cmd" not in norm_d["affected_outputs"]
 
 
+def test_llm_normalizer_drops_uncorroborated_cmd_in_summary() -> None:
+    """Codex R2 P59-02-A follow-up: the structured affected_outputs
+    fix is not enough — the LLM-supplied summary_zh / summary_en can
+    still surface an un-corroborated canonical cmd via its own text.
+    Reproducer: source_text = "TLS 解锁电路应该提前", LLM emits
+    affected_outputs=["tls_115vac_cmd"] and a summary mentioning
+    tls_115vac_cmd. The normalizer must regenerate the summary from
+    canonical fields (which now exclude the un-corroborated cmd) so
+    the persisted/displayed summary does not carry false precision.
+    """
+    raw = {
+        "affected_gates": ["L1"],
+        "target_signals": [],
+        "affected_outputs": ["tls_115vac_cmd"],
+        "change_kind": "modify_condition",
+        "change_kind_zh": "修改判据",
+        "change_kind_en": "modify condition",
+        "confidence": 0.6,
+        "summary_zh": "系统理解：你想修改 tls_115vac_cmd。",
+        "summary_en": "System reading: modify tls_115vac_cmd.",
+    }
+    norm = _normalize_llm_interpretation(
+        raw,
+        source_text="TLS 解锁电路应该提前",
+        system_id="thrust-reverser",
+    )
+    # Structured field is empty (corroboration check).
+    assert norm["affected_outputs"] == []
+    # And the summary text MUST NOT carry tls_115vac_cmd because the
+    # output drift triggers regeneration via the canonical template.
+    assert "tls_115vac_cmd" not in norm["summary_zh"], (
+        f"summary_zh leaks un-corroborated cmd: {norm['summary_zh']!r}. "
+        f"Codex R2 P59-02-A follow-up: regenerate summary on output "
+        f"drift, not just on gate/signal/kind drift."
+    )
+    assert "tls_115vac_cmd" not in norm["summary_en"], (
+        f"summary_en leaks un-corroborated cmd: {norm['summary_en']!r}"
+    )
+    # Sanity: the regenerated summary should still mention L1 (the
+    # corroborated gate) so it's not vacuous.
+    assert "L1" in norm["summary_zh"] or "L1" in norm["summary_en"]
+
+
+def test_llm_normalizer_keeps_summary_when_all_fields_corroborate() -> None:
+    """Inverse of the above: if every field (gates, signals, outputs,
+    kind) matches what canonicalization produced, keep the LLM's
+    summary text unchanged (it is typically richer than the rules
+    template, per the existing round-8 P2 contract)."""
+    raw = {
+        "affected_gates": ["L1"],
+        "target_signals": [],
+        # Empty list — matches what the corroboration check produces
+        # for source_text without any cmd mention.
+        "affected_outputs": [],
+        "change_kind": "loosen_condition",
+        "change_kind_zh": "放宽判据",
+        "change_kind_en": "loosen condition",
+        "confidence": 0.8,
+        "summary_zh": "原汁原味的 LLM 摘要。",
+        "summary_en": "Original LLM summary.",
+    }
+    norm = _normalize_llm_interpretation(
+        raw,
+        source_text="L1 应该放宽",
+        system_id="thrust-reverser",
+    )
+    assert norm["summary_zh"] == "原汁原味的 LLM 摘要。"
+    assert norm["summary_en"] == "Original LLM summary."
+
+
 def test_llm_normalizer_preserves_canonical_vocab_order() -> None:
     """Codex R1 P59-02-LOW: LLM may emit outputs in arbitrary order
     (e.g. ['pls_power_cmd', 'eec_deploy_cmd']). The normalized list

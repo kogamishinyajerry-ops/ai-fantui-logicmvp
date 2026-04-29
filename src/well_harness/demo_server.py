@@ -2437,13 +2437,17 @@ def _render_recommended_work_order(
     # Truncate the source quote so a 2000-char paste doesn't blow up
     # the ticket card. 200 chars is the same envelope the proposal
     # store uses for previews.
-    # Codex R1 G: also normalize \r, tabs, NBSP, and zero-width chars
-    # to single spaces so a 199-char source paste cannot expand to
-    # >200 visible chars in the UI by abusing whitespace variants.
-    import re as _re_local
+    # Codex R1 G + R2 D: normalize whitespace variants to a single
+    # space so a 199-char paste cannot expand >200 visible chars in
+    # the UI by abusing invisibles. \s in Python 3 covers ASCII space
+    # + \r \n \t \v \f + U+00A0 NBSP + U+0085 NEL + U+2028 LSEP +
+    # U+2029 PSEP. Add zero-width / format chars explicitly because
+    # they are not in the whitespace property: U+200B ZWSP, U+200C
+    # ZWNJ, U+200D ZWJ, U+2060 word-joiner, U+FEFF BOM. Module-level
+    # `re` already imported at the top of demo_server.py.
     quoted = source_text.strip()
-    quoted = _re_local.sub(
-        r"[\r\n\t ​‌‍⁠﻿]+", " ", quoted,
+    quoted = re.sub(
+        r"[\s​‌‍⁠﻿]+", " ", quoted,
     )
     if len(quoted) > 200:
         quoted = quoted[:197] + "…"
@@ -2819,6 +2823,25 @@ def _normalize_llm_interpretation(
     # canonicalized fields whenever the LLM-reported lists differ
     # from the post-canonical lists; otherwise keep the LLM's text
     # (it's typically richer than the rules template).
+    # P59-02 (R1 P59-02-A): affected_outputs MUST be text-corroborated
+    # on both paths. Rules-path scans source_text; LLM-path does the
+    # same — we ignore raw_dict["affected_outputs"] entirely, because
+    # trusting an LLM guess would change the contract from "user named
+    # X" to "model mapped X to Y". If the model has inferred an output
+    # the user did not name, that belongs in a separate inferred_outputs
+    # field (out of scope for P59-02). Side-effect: this also fixes
+    # the LOW R1 vocab-order leak because _detect_affected_outputs
+    # walks canonical vocab.
+    #
+    # Codex R2 P59-02-A follow-up: derive BEFORE the summary decision
+    # so output drift can also drop the LLM-supplied summary_zh /
+    # summary_en. Otherwise an LLM payload claiming
+    # "tls_115vac_cmd" gets affected_outputs=[] but its summary still
+    # reads "你想修改 tls_115vac_cmd" — same false precision via a
+    # different field.
+    affected_outputs = _detect_affected_outputs(source_text, system_id)
+    raw_outputs_in = _str_list(raw_dict.get("affected_outputs"))
+
     raw_gates_in = _str_list(raw_dict.get("affected_gates"))
     raw_signals_in = _str_list(raw_dict.get("target_signals"))
     raw_kind_in = str(raw_dict.get("change_kind") or "propose_change")
@@ -2826,6 +2849,7 @@ def _normalize_llm_interpretation(
         raw_gates_in != affected_gates
         or raw_signals_in != target_signals
         or raw_kind_in != change_kind
+        or raw_outputs_in != affected_outputs
     )
     if canonicalized:
         gates_label = "、".join(affected_gates) if affected_gates else "(未识别)"
@@ -2844,19 +2868,6 @@ def _normalize_llm_interpretation(
     else:
         summary_zh = str(raw_dict.get("summary_zh") or "")
         summary_en = str(raw_dict.get("summary_en") or "")
-    # P59-02 (Codex R1 P59-02-A fix): affected_outputs is the
-    # "directly named cmd" contract, so it MUST be text-corroborated on
-    # both paths — the rules path scans source_text, and the LLM path
-    # does the same. We deliberately ignore raw_dict["affected_outputs"]
-    # claims that aren't supported by source_text, because trusting an
-    # LLM guess would change the contract from "user named X" to "model
-    # mapped X to Y" and would also change work-order scope from a gate
-    # to a less-supported cmd. If the model has truly inferred an
-    # implied output that the user did not name, that belongs in a
-    # separate inferred_outputs field (out of scope for P59-02).
-    # Side-effect: this also fixes the LOW R1 finding on vocab order
-    # because _detect_affected_outputs walks the canonical vocab.
-    affected_outputs = _detect_affected_outputs(source_text, system_id)
 
     work_order_zh, work_order_en = _render_recommended_work_order(
         change_kind=change_kind,
