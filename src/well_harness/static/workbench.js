@@ -7588,6 +7588,10 @@ function installEditableWorkbenchShell() {
   const handoffStatus = document.getElementById("workbench-handoff-status");
   const linearHandoffOutput = document.getElementById("workbench-linear-handoff-output");
   const prProofOutput = document.getElementById("workbench-pr-proof-output");
+  const prepareArchiveBtn = document.getElementById("workbench-prepare-archive-btn");
+  const downloadArchiveBtn = document.getElementById("workbench-download-archive-btn");
+  const archiveOutput = document.getElementById("workbench-evidence-archive-output");
+  const archiveStatus = document.getElementById("workbench-archive-status");
   const exportDraftBtn = document.getElementById("workbench-export-draft-btn");
   const importDraftBtn = document.getElementById("workbench-import-draft-btn");
   const draftJsonBuffer = document.getElementById("workbench-draft-json-buffer");
@@ -8418,6 +8422,91 @@ function installEditableWorkbenchShell() {
     return packet;
   }
 
+  function checksumEvidenceArchiveField(value) {
+    return editableDraftHash(JSON.stringify(value));
+  }
+
+  function buildWorkbenchEvidenceArchive() {
+    const modelJson = buildEditableDraftExport();
+    const diffSummary = lastSandboxDiff || {
+      verdict: "not_run",
+      scenario_id: "nominal_landing",
+      missing_diff_fallback: true,
+      message: "Run sandbox before using this archive as review evidence.",
+      truth_level_impact: "none",
+    };
+    const handoffPacket = buildEditableHandoffPacket();
+    const redLineMetadata = {
+      red_lines_touched: "none",
+      truth_level_impact: "none",
+      dal_pssa_impact: "none",
+      controller_truth_modified: false,
+      frozen_assets_modified: false,
+      live_linear_mutation: false,
+    };
+    const archiveCore = {
+      kind: "well-harness-workbench-evidence-archive",
+      version: 1,
+      archive_scope: "local_draft_download",
+      generated_at: "browser_local_draft",
+      model_json: modelJson,
+      diff_summary: diffSummary,
+      changerequest_body: handoffPacket.linearIssueBody,
+      pr_proof_packet: handoffPacket.prProofPacket,
+      red_line_metadata: redLineMetadata,
+    };
+    const checksums = {
+      model_json_checksum: checksumEvidenceArchiveField(modelJson),
+      diff_summary_checksum: checksumEvidenceArchiveField(diffSummary),
+      changerequest_body_checksum: checksumEvidenceArchiveField(handoffPacket.linearIssueBody),
+      pr_proof_packet_checksum: checksumEvidenceArchiveField(handoffPacket.prProofPacket),
+    };
+    return {
+      ...archiveCore,
+      checksums: {
+        ...checksums,
+        manifest_checksum: checksumEvidenceArchiveField({ archiveCore, checksums }),
+      },
+    };
+  }
+
+  function renderWorkbenchEvidenceArchive() {
+    const archive = buildWorkbenchEvidenceArchive();
+    if (archiveOutput) archiveOutput.value = JSON.stringify(archive, null, 2);
+    if (archiveStatus) {
+      archiveStatus.textContent =
+        `Prepared local draft archive ${archive.checksums.manifest_checksum}. No live Linear mutation.`;
+    }
+    setTimelineState("handoff");
+    return archive;
+  }
+
+  function downloadWorkbenchEvidenceArchive() {
+    const archive = archiveOutput && archiveOutput.value
+      ? JSON.parse(archiveOutput.value)
+      : renderWorkbenchEvidenceArchive();
+    if (typeof Blob === "undefined" || typeof URL === "undefined" || !document.body) {
+      if (archiveStatus) {
+        archiveStatus.textContent = "Archive JSON prepared locally; browser download API unavailable.";
+      }
+      return archive;
+    }
+    const blob = new Blob([JSON.stringify(archive, null, 2)], { type: "application/json" });
+    const href = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = href;
+    anchor.download = "workbench-evidence-archive-draft.json";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(href);
+    if (archiveStatus) {
+      archiveStatus.textContent =
+        `Downloaded local draft archive ${archive.checksums.manifest_checksum}. No live Linear mutation.`;
+    }
+    return archive;
+  }
+
   function attachEditableNodeHandler(node) {
     if (!node || node.getAttribute("data-node-handler-attached") === "true") return;
     node.setAttribute("data-node-handler-attached", "true");
@@ -8500,6 +8589,12 @@ function installEditableWorkbenchShell() {
   }
   if (handoffBtn) {
     handoffBtn.addEventListener("click", () => renderEditableHandoffPacket());
+  }
+  if (prepareArchiveBtn) {
+    prepareArchiveBtn.addEventListener("click", () => renderWorkbenchEvidenceArchive());
+  }
+  if (downloadArchiveBtn) {
+    downloadArchiveBtn.addEventListener("click", () => downloadWorkbenchEvidenceArchive());
   }
   if (exportDraftBtn) {
     exportDraftBtn.addEventListener("click", () => exportEditableDraftJson());

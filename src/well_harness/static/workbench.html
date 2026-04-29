@@ -786,6 +786,38 @@
                   <span>PR proof packet</span>
                   <textarea id="workbench-pr-proof-output" rows="7" readonly></textarea>
                 </label>
+                <section
+                  class="workbench-evidence-archive"
+                  aria-labelledby="workbench-evidence-archive-title"
+                >
+                  <div class="workbench-inspector-header">
+                    <span id="workbench-evidence-archive-title">Evidence archive</span>
+                    <strong>local draft</strong>
+                  </div>
+                  <div class="workbench-draft-json-actions">
+                    <button
+                      id="workbench-prepare-archive-btn"
+                      type="button"
+                      class="workbench-editable-primary"
+                    >
+                      Prepare archive
+                    </button>
+                    <button
+                      id="workbench-download-archive-btn"
+                      type="button"
+                      class="workbench-editable-primary"
+                    >
+                      Download JSON
+                    </button>
+                  </div>
+                  <label class="workbench-handoff-output" for="workbench-evidence-archive-output">
+                    <span>Archive manifest</span>
+                    <textarea id="workbench-evidence-archive-output" rows="8" readonly></textarea>
+                  </label>
+                  <p id="workbench-archive-status" class="workbench-handoff-status">
+                    Prepare a local draft evidence archive. No live Linear mutation.
+                  </p>
+                </section>
               </section>
             </aside>
           </div>
