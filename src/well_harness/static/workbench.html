@@ -487,25 +487,218 @@
         tabindex="0"
       >
         <header class="workbench-circuit-hero-header">
-          <p class="eyebrow">控制逻辑面板 · CONTROL LOGIC PANEL</p>
-          <h2 id="workbench-circuit-hero-title">反推逻辑链路 L1 → L4 · Thrust Reverser Authority Chain</h2>
+          <p class="eyebrow">可编辑控制工作台 · EDITABLE CONTROL WORKBENCH</p>
+          <h2 id="workbench-circuit-hero-title">Sandbox Draft Canvas · Baseline Diff Workbench</h2>
           <p class="workbench-circuit-hero-sub">
-            点击逻辑门 (L1/L2/L3/L4) 或输入信号即可发起标注；多个标注可打包为修改建议工单 ·
-            Click any logic gate (L1/L2/L3/L4) or input signal to start an annotation;
-            multiple annotations can be packaged into a single change-proposal ticket.
+            编辑 sandbox candidate 图，不改 certified baseline；运行结果只用于 diff 与 ChangeRequest 准备 ·
+            Edit a sandbox candidate graph, never the certified baseline; runs only prepare diffs and ChangeRequests.
           </p>
         </header>
         <div
-          id="workbench-circuit-hero-mount"
-          class="workbench-circuit-hero-mount"
-          role="img"
-          aria-label="反推逻辑链路 L1 → L4 SVG circuit (loading…)"
-          data-circuit-fragment-endpoint="/api/workbench/circuit-fragment"
-          data-circuit-fragment-status="pending"
+          id="workbench-editable-shell"
+          class="workbench-editable-shell"
+          data-draft-state="baseline"
+          aria-label="Editable sandbox control workbench shell"
         >
-          <p class="workbench-circuit-hero-loading">
-            正在加载控制逻辑面板… · Loading control logic panel…
-          </p>
+          <div
+            id="workbench-editable-status-bar"
+            class="workbench-editable-status-bar"
+            aria-label="Draft and baseline status"
+          >
+            <span class="workbench-editable-status-chip" data-status-kind="draft">
+              <span>Draft</span>
+              <strong id="workbench-draft-status-label">Reference view loaded</strong>
+            </span>
+            <span class="workbench-editable-status-chip" data-status-kind="baseline">
+              <span>Baseline</span>
+              <strong>reference-deploy-controller · certified</strong>
+            </span>
+            <span class="workbench-editable-status-chip" data-status-kind="truth">
+              <span>Truth impact</span>
+              <strong>none · sandbox candidate only</strong>
+            </span>
+            <button
+              id="workbench-derive-draft-btn"
+              type="button"
+              class="workbench-editable-primary"
+            >
+              Derive draft
+            </button>
+          </div>
+
+          <div class="workbench-editable-main">
+            <aside
+              id="workbench-editor-toolbar"
+              class="workbench-editor-toolbar"
+              aria-label="Editor tools"
+            >
+              <button type="button" data-editor-tool="select" aria-pressed="true" title="Select">⌖</button>
+              <button type="button" data-editor-tool="node" aria-pressed="false" title="Add node">＋</button>
+              <button type="button" data-editor-tool="edge" aria-pressed="false" title="Connect">↔</button>
+              <button type="button" data-editor-tool="undo" aria-pressed="false" title="Undo">↶</button>
+              <button type="button" data-editor-tool="redo" aria-pressed="false" title="Redo">↷</button>
+            </aside>
+
+            <section
+              id="workbench-editable-canvas"
+              class="workbench-editable-canvas"
+              aria-label="Editable control graph canvas"
+            >
+              <div class="workbench-canvas-grid" aria-hidden="true"></div>
+              <button
+                type="button"
+                class="workbench-editable-node"
+                data-editable-node-id="logic1"
+                data-node-label="L1 RA/SW1 inhibit gate"
+                data-node-op="and"
+                data-rule-count="4"
+                data-hardware-evidence="evidence_gap"
+                data-source-ref="control_system_spec.logic_nodes.logic1"
+                style="--node-x: 13%; --node-y: 24%;"
+                aria-pressed="true"
+              >
+                <span>L1</span>
+                <small>AND · 4 rules</small>
+              </button>
+              <button
+                type="button"
+                class="workbench-editable-node"
+                data-editable-node-id="logic2"
+                data-node-label="L2 ground/SW2/EEC gate"
+                data-node-op="and"
+                data-rule-count="6"
+                data-hardware-evidence="evidence_gap"
+                data-source-ref="control_system_spec.logic_nodes.logic2"
+                style="--node-x: 38%; --node-y: 33%;"
+                aria-pressed="false"
+              >
+                <span>L2</span>
+                <small>AND · 6 rules</small>
+              </button>
+              <button
+                type="button"
+                class="workbench-editable-node"
+                data-editable-node-id="logic3"
+                data-node-label="L3 TLS/N1K/TRA deploy gate"
+                data-node-op="and"
+                data-rule-count="6"
+                data-hardware-evidence="evidence_gap"
+                data-source-ref="control_system_spec.logic_nodes.logic3"
+                style="--node-x: 61%; --node-y: 46%;"
+                aria-pressed="false"
+              >
+                <span>L3</span>
+                <small>AND · 6 rules</small>
+              </button>
+              <button
+                type="button"
+                class="workbench-editable-node"
+                data-editable-node-id="logic4"
+                data-node-label="L4 VDT90 / THR_LOCK release gate"
+                data-node-op="and"
+                data-rule-count="4"
+                data-hardware-evidence="evidence_gap"
+                data-source-ref="control_system_spec.logic_nodes.logic4"
+                style="--node-x: 82%; --node-y: 62%;"
+                aria-pressed="false"
+              >
+                <span>L4</span>
+                <small>AND · 4 rules</small>
+              </button>
+              <svg
+                class="workbench-editable-edges"
+                viewBox="0 0 100 100"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path d="M21 31 C29 31 30 38 38 40" />
+                <path d="M46 40 C53 40 54 50 61 53" />
+                <path d="M69 53 C75 55 76 66 82 69" />
+              </svg>
+              <p class="workbench-editable-canvas-note">
+                Sandbox candidate canvas · edits here prepare diff evidence, not certified truth.
+              </p>
+            </section>
+
+            <aside
+              id="workbench-evidence-inspector"
+              class="workbench-evidence-inspector"
+              aria-label="Evidence inspector"
+            >
+              <div class="workbench-inspector-header">
+                <span>Evidence Inspector</span>
+                <strong id="workbench-inspector-node-id">logic1</strong>
+              </div>
+              <label class="workbench-inspector-field" for="workbench-inspector-node-label">
+                <span>Candidate label</span>
+                <input id="workbench-inspector-node-label" type="text" value="L1 RA/SW1 inhibit gate">
+              </label>
+              <label class="workbench-inspector-field" for="workbench-inspector-node-op">
+                <span>Operation</span>
+                <select id="workbench-inspector-node-op">
+                  <option value="and">and</option>
+                  <option value="or">or</option>
+                  <option value="compare">compare</option>
+                  <option value="between">between</option>
+                  <option value="delay">delay</option>
+                  <option value="latch">latch</option>
+                </select>
+              </label>
+              <dl class="workbench-inspector-facts">
+                <div>
+                  <dt>Rules</dt>
+                  <dd id="workbench-inspector-rule-count">4</dd>
+                </div>
+                <div>
+                  <dt>Hardware evidence</dt>
+                  <dd id="workbench-inspector-evidence-status">evidence_gap</dd>
+                </div>
+                <div>
+                  <dt>Source ref</dt>
+                  <dd id="workbench-inspector-source-ref">control_system_spec.logic_nodes.logic1</dd>
+                </div>
+                <div>
+                  <dt>Truth effect</dt>
+                  <dd>none</dd>
+                </div>
+              </dl>
+            <div
+              id="workbench-inspector-evidence-summary"
+                class="workbench-inspector-evidence-summary"
+                data-evidence-api="/api/hardware/evidence?system_id=thrust-reverser"
+              >
+                Hardware evidence API pending. Draft edits are not certified truth.
+              </div>
+            </aside>
+          </div>
+
+          <ol
+            id="workbench-sandbox-timeline-strip"
+            class="workbench-sandbox-timeline-strip"
+            aria-label="Sandbox workflow timeline"
+          >
+            <li data-step-state="done">Baseline loaded</li>
+            <li data-step-state="active">Draft editable</li>
+            <li data-step-state="idle">Run sandbox</li>
+            <li data-step-state="idle">View diff</li>
+            <li data-step-state="idle">ChangeRequest packet</li>
+          </ol>
+
+          <details class="workbench-reference-sample-pack">
+            <summary>Reference sample pack · read-only SVG circuit</summary>
+            <div
+              id="workbench-circuit-hero-mount"
+              class="workbench-circuit-hero-mount"
+              role="img"
+              aria-label="反推逻辑链路 L1 → L4 SVG circuit (loading…)"
+              data-circuit-fragment-endpoint="/api/workbench/circuit-fragment"
+              data-circuit-fragment-status="pending"
+            >
+              <p class="workbench-circuit-hero-loading">
+                正在加载控制逻辑面板… · Loading control logic panel…
+              </p>
+            </div>
+          </details>
         </div>
         <noscript>
           <p class="workbench-circuit-hero-noscript">
