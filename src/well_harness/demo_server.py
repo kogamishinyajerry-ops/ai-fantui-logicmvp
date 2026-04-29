@@ -4013,6 +4013,15 @@ def _handle_timeline_simulate(request_payload: dict) -> dict:
 
 
 def _timeline_trace_to_json(trace) -> dict:
+    outcome = {
+        "deployed_successfully": trace.outcome.deployed_successfully,
+        "thr_lock_released": trace.outcome.thr_lock_released,
+        "logic_first_active_t_s": trace.outcome.logic_first_active_t_s,
+        "logic_first_blocked_t_s": trace.outcome.logic_first_blocked_t_s,
+        "failure_cascade": trace.outcome.failure_cascade,
+    }
+    if trace.outcome.extra:
+        outcome["extra"] = trace.outcome.extra
     return {
         "timeline": {
             "system": trace.timeline.system,
@@ -4055,13 +4064,7 @@ def _timeline_trace_to_json(trace) -> dict:
             }
             for a in trace.assertions
         ],
-        "outcome": {
-            "deployed_successfully": trace.outcome.deployed_successfully,
-            "thr_lock_released": trace.outcome.thr_lock_released,
-            "logic_first_active_t_s": trace.outcome.logic_first_active_t_s,
-            "logic_first_blocked_t_s": trace.outcome.logic_first_blocked_t_s,
-            "failure_cascade": trace.outcome.failure_cascade,
-        },
+        "outcome": outcome,
     }
 
 
