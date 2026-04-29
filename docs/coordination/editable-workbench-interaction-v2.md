@@ -30,6 +30,22 @@ The evidence mapping is overlay-only:
 - The inspector may show LRU and signal-binding coverage counts, but those
   values never become control truth.
 
+## JER-161 Rule
+
+JER-161 connects `/workbench` to a deterministic sandbox run endpoint. The
+endpoint may derive a sandbox candidate from UI draft metadata, run the
+`nominal_landing` timeline fixture, and return a baseline diff verdict.
+
+The result is evidence only:
+
+- Supported verdicts are `equivalent`, `divergent`, `invalid_model`, and
+  `invalid_scenario`.
+- The baseline remains the certified adapter/controller path.
+- Candidate output remains `sandbox_candidate` evidence with truth-level impact
+  `none`.
+- Invalid draft or scenario input is rendered as a sandbox verdict, not as a
+  certified-truth decision.
+
 ## Boundaries
 
 - Do not edit `src/well_harness/controller.py` truth semantics.

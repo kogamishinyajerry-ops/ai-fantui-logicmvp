@@ -33,6 +33,7 @@ from well_harness.document_intake import (
     intake_template_payload,
 )
 from well_harness.fantui_tick import FantuiTickSystem, parse_pilot_inputs
+from well_harness.editable_workbench_run import build_workbench_sandbox_run_response
 from well_harness.hardware_evidence_report import build_hardware_evidence_report
 from well_harness.hardware_registry import HardwareRegistryError
 # P56-04 (2026-04-28): C919 sim engine. The c919_etras_panel/index.html
@@ -208,6 +209,7 @@ MONTE_CARLO_RUN_PATH = "/api/monte-carlo/run"
 HARDWARE_SCHEMA_PATH = "/api/hardware/schema"
 # Hardware evidence report (JER-153): read-only audit/report payload.
 HARDWARE_EVIDENCE_PATH = "/api/hardware/evidence"
+WORKBENCH_EDITABLE_SANDBOX_RUN_PATH = "/api/workbench/editable-sandbox-run"
 SENSITIVITY_SWEEP_PATH = "/api/sensitivity-sweep"
 # FANTUI stateful tick endpoints — live counterpart to C919 /api/tick.
 # The existing /api/lever-snapshot stays stateless; this triad is separate
@@ -604,6 +606,7 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             WORKBENCH_BUNDLE_PATH,
             WORKBENCH_REPAIR_PATH,
             WORKBENCH_ARCHIVE_RESTORE_PATH,
+            WORKBENCH_EDITABLE_SANDBOX_RUN_PATH,
             DIAGNOSIS_RUN_PATH,
             MONTE_CARLO_RUN_PATH,
             HARDWARE_SCHEMA_PATH,
@@ -772,6 +775,13 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             return
         if parsed.path == WORKBENCH_ARCHIVE_RESTORE_PATH:
             response_payload, error_payload = build_workbench_archive_restore_response(request_payload)
+            if error_payload is not None:
+                self._send_json(400, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+        if parsed.path == WORKBENCH_EDITABLE_SANDBOX_RUN_PATH:
+            response_payload, error_payload = build_workbench_sandbox_run_response(request_payload)
             if error_payload is not None:
                 self._send_json(400, error_payload)
                 return
