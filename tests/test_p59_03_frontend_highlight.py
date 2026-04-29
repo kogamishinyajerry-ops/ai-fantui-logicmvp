@@ -230,7 +230,12 @@ def test_render_recommended_work_order_called_from_render_panel() -> None:
 def test_render_recommended_work_order_handles_empty_gracefully() -> None:
     """When recommended_work_order_zh / _en are both absent (older
     server / fallback path), the function must hide the wrap rather
-    than render an empty box. This protects backwards-compat."""
+    than render an empty box. This protects backwards-compat.
+
+    Codex P59-03 NIT-03 fix: assert the BEHAVIOR (wrap.hidden = true
+    on the empty path), not the exact guard syntax. An equivalent
+    `if (!draft.length)` or `if (draft.trim() === "")` should still
+    pass."""
     body = _read_js()
     fn = re.search(
         r"function\s+renderRecommendedWorkOrder\s*\([^)]*\)\s*\{"
@@ -242,11 +247,82 @@ def test_render_recommended_work_order_handles_empty_gracefully() -> None:
     # Must read both zh and en fields with || fallback.
     assert "recommended_work_order_zh" in chunk
     assert "recommended_work_order_en" in chunk
-    # Must hide the wrap element when draft is empty.
+    # Must set wrap.hidden = true somewhere (the empty-draft path).
+    # Don't pin the exact guard expression; just require the effect
+    # to be present and a contemporaneous empty-state textContent
+    # reset so a stale draft string doesn't outlive a hidden wrap.
     assert re.search(
-        r"if\s*\(\s*!draft\s*\)[\s\S]{0,200}?wrap\.hidden\s*=\s*true",
+        r"wrap\.hidden\s*=\s*true", chunk,
+    ), "renderRecommendedWorkOrder does not set wrap.hidden = true on empty draft"
+    assert re.search(
+        r'textEl\.textContent\s*=\s*""', chunk,
+    ), "renderRecommendedWorkOrder does not clear textEl.textContent on empty draft"
+
+
+def test_render_resets_details_open_state_on_each_render() -> None:
+    """Codex P59-03 NIT-02 regression: ↻ 重新解读 calls
+    runSuggestionInterpret directly (not clearSuggestionInterpretation).
+    If the engineer expanded the draft once, a subsequent
+    interpretation would inherit the open state, contradicting the
+    intended collapsed-by-default UX. renderRecommendedWorkOrder
+    must remove the `open` attribute on every call so each new draft
+    starts collapsed."""
+    body = _read_js()
+    fn = re.search(
+        r"function\s+renderRecommendedWorkOrder\s*\([^)]*\)\s*\{"
+        r"[\s\S]{0,2000}?\n\}",
+        body,
+    )
+    assert fn is not None
+    chunk = fn.group(0)
+    assert re.search(
+        r'wrap\.removeAttribute\s*\(\s*["\']open["\']\s*\)',
         chunk,
-    ), "renderRecommendedWorkOrder does not hide on empty draft"
+    ), (
+        "renderRecommendedWorkOrder does not removeAttribute('open'). "
+        "An expanded draft from a prior interpretation would persist."
+    )
+
+
+def test_copy_handler_clears_pending_reset_timer() -> None:
+    """Codex P59-03 NIT-01 regression: rapid clicks on Copy must not
+    capture a transient label as 'original' and leave the button
+    stuck in the copied state. The handler should use a constant
+    idle label and clear any pending reset timer before scheduling
+    the next one."""
+    body = _read_js()
+    fn = re.search(
+        r"function\s+installRecommendationCopyHandler\s*\([^)]*\)\s*\{"
+        r"[\s\S]{0,4000}?\n\}",
+        body,
+    )
+    assert fn is not None
+    chunk = fn.group(0)
+    # Must reference a stable idle label constant (avoids capturing
+    # transient "已复制" as the next "original" label).
+    assert re.search(
+        r"RECOMMENDATION_COPY_IDLE_LABEL|✓ 已复制[\s\S]{0,400}?复制失败",
+        chunk,
+    ), (
+        "Copy handler captures btn.textContent as the 'original' label "
+        "rather than using a constant idle string — racey."
+    )
+    # Must call clearTimeout before scheduling a new reset.
+    assert "clearTimeout" in chunk, (
+        "Copy handler does not clearTimeout before scheduling a new "
+        "reset — rapid clicks would stack timers and stick the button "
+        "in the copied state."
+    )
+    # Must check execCommand return value (Codex NIT-01: legacy fallback
+    # should treat false as a failure, not silent success).
+    assert re.search(
+        r"execCommand\s*\(\s*[\"']copy[\"']\s*\)\s*===?\s*true",
+        chunk,
+    ), (
+        "Copy handler does not check the boolean return of "
+        "document.execCommand('copy') — non-secure-context denials "
+        "would silently appear successful."
+    )
 
 
 def test_copy_handler_installed_on_dom_ready() -> None:

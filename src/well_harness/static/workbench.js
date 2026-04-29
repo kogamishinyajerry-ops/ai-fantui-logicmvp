@@ -479,6 +479,12 @@ function renderRecommendedWorkOrder(interpretation) {
     (interpretation && interpretation.recommended_work_order_zh) ||
     (interpretation && interpretation.recommended_work_order_en) ||
     "";
+  // Codex P59-03 NIT-02: always reset to collapsed before each
+  // render. Without this, an engineer who expanded the draft on a
+  // prior interpretation would see the next one already open.
+  // ↻ 重新解读 calls runSuggestionInterpret() directly (not
+  // clearSuggestionInterpretation), so the reset has to live here.
+  wrap.removeAttribute("open");
   if (!draft) {
     wrap.hidden = true;
     textEl.textContent = "";
@@ -492,6 +498,14 @@ function renderRecommendedWorkOrder(interpretation) {
 // when available, falls back to a transient textarea otherwise.
 // Wired once on DOMContentLoaded (same lifecycle as the rest of the
 // workbench install* handlers).
+// Codex P59-03 NIT-01: rapid clicks must not capture a transient
+// label as "original" and leave the button stuck in copied state. Use
+// a constant idle label, cancel any pending reset timer before
+// scheduling a new one, and treat execCommand returning false as a
+// failure (legacy contexts where copy is denied).
+const RECOMMENDATION_COPY_IDLE_LABEL = "📋 复制 · Copy";
+let _recommendationCopyResetTimer = null;
+
 function installRecommendationCopyHandler() {
   const btn = document.getElementById(
     "workbench-suggestion-recommendation-copy-btn",
@@ -502,10 +516,11 @@ function installRecommendationCopyHandler() {
       "workbench-suggestion-recommendation-text",
     );
     if (!textEl || !textEl.textContent) return;
-    const original = btn.textContent;
+    let copied = false;
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(textEl.textContent);
+        copied = true;
       } else {
         // Fallback for older browsers / non-secure contexts.
         const ta = document.createElement("textarea");
@@ -514,14 +529,22 @@ function installRecommendationCopyHandler() {
         ta.style.opacity = "0";
         document.body.appendChild(ta);
         ta.select();
-        document.execCommand("copy");
+        copied = document.execCommand("copy") === true;
         document.body.removeChild(ta);
       }
-      btn.textContent = "✓ 已复制 · Copied";
     } catch (_err) {
-      btn.textContent = "复制失败 · Copy failed";
+      copied = false;
     }
-    setTimeout(() => { btn.textContent = original; }, 1500);
+    btn.textContent = copied
+      ? "✓ 已复制 · Copied"
+      : "复制失败 · Copy failed";
+    if (_recommendationCopyResetTimer !== null) {
+      clearTimeout(_recommendationCopyResetTimer);
+    }
+    _recommendationCopyResetTimer = setTimeout(() => {
+      btn.textContent = RECOMMENDATION_COPY_IDLE_LABEL;
+      _recommendationCopyResetTimer = null;
+    }, 1500);
   });
 }
 
