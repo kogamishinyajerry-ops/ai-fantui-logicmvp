@@ -32,9 +32,24 @@ The conversion is sandbox-only:
 - `controller_truth_modified`, `truth_level_impact`, and `dal_pssa_impact`
   remain false/none.
 
+## JER-166 Rule
+
+JER-166 makes graph validation evidence structured enough for the API and UI to
+consume directly.
+
+The validation report remains sandbox-only:
+
+- Every sandbox run response carries `validation_report`.
+- Valid graphs return a pass report with zero issues.
+- Invalid graphs return `invalid_model` plus categorized issues for
+  `invalid_edge`, `dangling_port`, `duplicate_edge`, `unsafe_op`, and
+  `missing_node`.
+- `/workbench` renders the issue summary inside the sandbox diff panel.
+- The report is evidence for a draft candidate only; it does not certify,
+  approve, or mutate truth.
+
 ## Planned Runtime Rules
 
-- JER-166 will make graph validation structured enough for UI and API evidence.
 - JER-167 will add scenario/custom snapshot selection after canonicalization is
   stable.
 - JER-168 will make edge inspection port-aware.

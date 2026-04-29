@@ -24,9 +24,107 @@ from well_harness.timeline_engine import parse_timeline
 
 WORKBENCH_SANDBOX_RUN_KIND = "well-harness-workbench-sandbox-run"
 WORKBENCH_SANDBOX_RUN_VERSION = 1
+WORKBENCH_GRAPH_VALIDATION_REPORT_KIND = "well-harness-workbench-graph-validation-report"
+WORKBENCH_GRAPH_VALIDATION_REPORT_VERSION = 1
+GRAPH_VALIDATION_CATEGORIES = (
+    "invalid_edge",
+    "dangling_port",
+    "duplicate_edge",
+    "unsafe_op",
+    "missing_node",
+)
 SUPPORTED_SCENARIOS = {
     "nominal_landing": "nominal_landing.json",
 }
+
+
+class WorkbenchGraphValidationError(EditableControlModelValidationError):
+    """Validation error with structured graph evidence for `/workbench`."""
+
+    def __init__(self, message: str, validation_report: dict[str, Any]) -> None:
+        super().__init__(message)
+        self.validation_report = validation_report
+
+
+def _empty_validation_categories() -> dict[str, list[dict[str, Any]]]:
+    return {category: [] for category in GRAPH_VALIDATION_CATEGORIES}
+
+
+def _graph_validation_issue(
+    *,
+    category: str,
+    code: str,
+    message: str,
+    severity: str = "error",
+    node_id: str | None = None,
+    edge_id: str | None = None,
+    port_id: str | None = None,
+    field: str | None = None,
+) -> dict[str, Any]:
+    if category not in GRAPH_VALIDATION_CATEGORIES:
+        raise ValueError(f"unsupported graph validation category: {category}")
+    issue: dict[str, Any] = {
+        "category": category,
+        "code": code,
+        "severity": severity,
+        "message": message,
+    }
+    optional_fields = {
+        "node_id": node_id,
+        "edge_id": edge_id,
+        "port_id": port_id,
+        "field": field,
+    }
+    for key, value in optional_fields.items():
+        if value is not None:
+            issue[key] = value
+    return issue
+
+
+def build_workbench_graph_validation_report(
+    issues: list[dict[str, Any]] | None = None,
+    *,
+    status: str | None = None,
+) -> dict[str, Any]:
+    """Build a structured validation report for sandbox graph evidence."""
+    normalized_issues = list(issues or [])
+    categories = _empty_validation_categories()
+    for issue in normalized_issues:
+        categories[str(issue["category"])].append(issue)
+    return {
+        "kind": WORKBENCH_GRAPH_VALIDATION_REPORT_KIND,
+        "version": WORKBENCH_GRAPH_VALIDATION_REPORT_VERSION,
+        "status": status or ("fail" if normalized_issues else "pass"),
+        "issue_count": len(normalized_issues),
+        "categories": categories,
+        "issues": normalized_issues,
+        "truth_level_impact": "none",
+    }
+
+
+def _graph_validation_error(
+    *,
+    category: str,
+    code: str,
+    message: str,
+    node_id: str | None = None,
+    edge_id: str | None = None,
+    port_id: str | None = None,
+    field: str | None = None,
+) -> WorkbenchGraphValidationError:
+    issue = _graph_validation_issue(
+        category=category,
+        code=code,
+        message=message,
+        node_id=node_id,
+        edge_id=edge_id,
+        port_id=port_id,
+        field=field,
+    )
+    return WorkbenchGraphValidationError(
+        message,
+        build_workbench_graph_validation_report([issue]),
+    )
 
 
 def _timeline_dir() -> Path:
@@ -65,19 +163,23 @@ def _invalid_response(
     verdict: str,
     message: str,
     model_hash: str | None = None,
+    validation_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     response = _base_response(
         scenario_id=scenario_id,
         verdict=verdict,
         model_hash=model_hash,
     )
+    graph_report = validation_report or build_workbench_graph_validation_report(status="fail")
     response.update(
         {
             "error": message,
+            "validation_report": graph_report,
             "summary": {
                 "first_divergence": None,
                 "assertion_status": "not_run",
                 "frame_count": 0,
+                "validation_issue_count": graph_report["issue_count"],
             },
         }
     )
@@ -122,7 +224,13 @@ def _draft_node(update: dict[str, Any]) -> dict[str, Any]:
     node_id = _draft_node_id(update.get("id"))
     op = str(update.get("op", "and"))
     if op not in APPROVED_OPS:
-        raise EditableControlModelValidationError(f"draft node {node_id} op is not approved: {op}")
+        raise _graph_validation_error(
+            category="unsafe_op",
+            code="unsafe_op",
+            message=f"draft node {node_id} op is not approved: {op}",
+            node_id=node_id,
+            field="op",
+        )
     return {
         "id": node_id,
         "label": str(update.get("label") or node_id),
@@ -184,23 +292,61 @@ def _ensure_ui_target_port(model: dict[str, Any], *, source_node_id: str, target
 def _apply_ui_edges(model: dict[str, Any], draft: dict[str, Any]) -> None:
     node_ids = {node["id"] for node in model["nodes"]}
     for index, edge in enumerate(draft.get("edges", []), start=1):
+        edge_id = f"edge[{index}]"
         if not isinstance(edge, dict):
-            raise EditableControlModelValidationError("draft edges must be objects")
+            raise _graph_validation_error(
+                category="invalid_edge",
+                code="invalid_edge",
+                message="draft edges must be objects",
+                edge_id=edge_id,
+            )
         source_node_id = str(edge.get("source", "")).strip()
         target_node_id = str(edge.get("target", "")).strip()
         edge_id = str(edge.get("id") or f"{source_node_id}_{target_node_id}_{index}").strip()
+        if not source_node_id:
+            raise _graph_validation_error(
+                category="invalid_edge",
+                code="invalid_edge",
+                message=f"draft edge {edge_id!r} is missing source node",
+                edge_id=edge_id,
+                field="source",
+            )
+        if not target_node_id:
+            raise _graph_validation_error(
+                category="invalid_edge",
+                code="invalid_edge",
+                message=f"draft edge {edge_id!r} is missing target node",
+                edge_id=edge_id,
+                field="target",
+            )
         if source_node_id not in node_ids:
-            raise EditableControlModelValidationError(
-                f"draft edge {edge_id!r} references missing source node {source_node_id!r}"
+            raise _graph_validation_error(
+                category="missing_node",
+                code="missing_source_node",
+                message=f"draft edge {edge_id!r} references missing source node {source_node_id!r}",
+                node_id=source_node_id,
+                edge_id=edge_id,
+                field="source",
             )
         if target_node_id not in node_ids:
-            raise EditableControlModelValidationError(
-                f"draft edge {edge_id!r} references missing target node {target_node_id!r}"
+            raise _graph_validation_error(
+                category="missing_node",
+                code="missing_target_node",
+                message=f"draft edge {edge_id!r} references missing target node {target_node_id!r}",
+                node_id=target_node_id,
+                edge_id=edge_id,
+                field="target",
             )
         source_port_id = f"{source_node_id}:out"
         if not _has_port(model, source_port_id):
-            raise EditableControlModelValidationError(
-                f"draft edge {edge_id!r} references missing source port {source_port_id!r}"
+            raise _graph_validation_error(
+                category="dangling_port",
+                code="missing_source_port",
+                message=f"draft edge {edge_id!r} references missing source port {source_port_id!r}",
+                node_id=source_node_id,
+                edge_id=edge_id,
+                port_id=source_port_id,
+                field="source_port_id",
             )
         target_port_id = _ensure_ui_target_port(
             model,
@@ -209,7 +355,13 @@ def _apply_ui_edges(model: dict[str, Any], draft: dict[str, Any]) -> None:
         )
         canonical_edge_id = f"ui-edge:{edge_id}"
         if any(existing["id"] == canonical_edge_id for existing in model["edges"]):
-            raise EditableControlModelValidationError(f"duplicate draft edge id {canonical_edge_id!r}")
+            raise _graph_validation_error(
+                category="duplicate_edge",
+                code="duplicate_edge",
+                message=f"duplicate draft edge id {canonical_edge_id!r}",
+                edge_id=edge_id,
+                field="id",
+            )
         model["edges"].append(
             {
                 "id": canonical_edge_id,
@@ -250,7 +402,13 @@ def canonicalize_workbench_ui_draft(base_model: dict[str, Any], draft: dict[str,
         if "op" in update and update["op"] is not None:
             op = str(update["op"])
             if op not in APPROVED_OPS:
-                raise EditableControlModelValidationError(f"draft node {node_id} op is not approved: {op}")
+                raise _graph_validation_error(
+                    category="unsafe_op",
+                    code="unsafe_op",
+                    message=f"draft node {node_id} op is not approved: {op}",
+                    node_id=node_id,
+                    field="op",
+                )
             node["op"] = op
     _apply_ui_edges(model, draft)
     source_refs = model["evidence_metadata"].setdefault("source_refs", [])
@@ -292,6 +450,7 @@ def build_workbench_sandbox_run_response(
                 verdict="invalid_model",
                 message=str(exc),
                 model_hash=model_hash,
+                validation_report=getattr(exc, "validation_report", None),
             ),
             None,
         )
@@ -334,6 +493,7 @@ def build_workbench_sandbox_run_response(
         {
             "canonical_model_hash": model_hash,
             "canonical_model": model,
+            "validation_report": build_workbench_graph_validation_report(),
             "diff_report": diff_report,
             "summary": _build_summary(diff_report),
         }

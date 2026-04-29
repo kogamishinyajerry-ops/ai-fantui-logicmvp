@@ -8298,6 +8298,19 @@ function installEditableWorkbenchShell() {
     return `${signal} @ ${atS}s · baseline=${baseline} candidate=${candidate}`;
   }
 
+  function graphValidationReportText(report) {
+    if (!report || !report.categories) return "";
+    const order = ["missing_node", "invalid_edge", "dangling_port", "duplicate_edge", "unsafe_op"];
+    const parts = order
+      .map((category) => {
+        const issues = report.categories[category] || [];
+        return issues.length ? `${category}: ${issues.length}` : "";
+      })
+      .filter(Boolean);
+    if (!parts.length) return "graph validation: no issues";
+    return `graph validation: ${parts.join(", ")}`;
+  }
+
   function renderWorkbenchSandboxDiff(payload) {
     lastSandboxDiff = payload || null;
     const verdict = (payload && payload.verdict) || "invalid_scenario";
@@ -8311,7 +8324,11 @@ function installEditableWorkbenchShell() {
     if (diffFirstDivergence) {
       const summary = payload && payload.summary;
       if (verdict === "invalid_model" || verdict === "invalid_scenario") {
-        diffFirstDivergence.textContent = (payload && payload.error) || verdict;
+        const validationText = graphValidationReportText(payload && payload.validation_report);
+        diffFirstDivergence.textContent = [
+          (payload && payload.error) || verdict,
+          validationText,
+        ].filter(Boolean).join(" | ");
       } else {
         diffFirstDivergence.textContent = firstDivergenceText(summary && summary.first_divergence);
       }
