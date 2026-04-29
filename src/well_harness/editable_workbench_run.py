@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import json
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +36,7 @@ GRAPH_VALIDATION_CATEGORIES = (
 )
 SUPPORTED_SCENARIOS = {
     "nominal_landing": "nominal_landing.json",
+    "sw1_stuck_at_touchdown": "sw1_stuck_at_touchdown.json",
 }
 
 
@@ -139,6 +141,56 @@ def _load_timeline(scenario_id: str):
     return parse_timeline(payload)
 
 
+def _scenario_metadata(
+    scenario_id: str,
+    *,
+    custom_snapshot: dict[str, Any] | None = None,
+    custom_snapshot_requested: bool = False,
+) -> dict[str, Any]:
+    snapshot = custom_snapshot or {}
+    return {
+        "scenario_id": scenario_id,
+        "supported_scenarios": sorted(SUPPORTED_SCENARIOS),
+        "custom_snapshot_applied": bool(custom_snapshot_requested),
+        "custom_snapshot_keys": sorted(snapshot),
+        "custom_snapshot_truth_effect": "none",
+    }
+
+
+def _custom_snapshot_object(request_payload: dict[str, Any]) -> tuple[dict[str, Any], bool]:
+    raw_snapshot = request_payload.get("custom_snapshot")
+    if raw_snapshot is None or raw_snapshot == "":
+        return {}, False
+    if not isinstance(raw_snapshot, dict):
+        raise EditableControlModelValidationError("custom_snapshot must be a JSON object")
+
+    snapshot: dict[str, Any] = {}
+    for key, value in raw_snapshot.items():
+        signal_id = str(key).strip()
+        if not signal_id:
+            raise EditableControlModelValidationError("custom_snapshot input ids must be non-empty")
+        if not isinstance(value, (bool, int, float)):
+            raise EditableControlModelValidationError(
+                f"custom_snapshot {signal_id!r} must be a boolean or number"
+            )
+        snapshot[signal_id] = value
+    return snapshot, True
+
+
+def _apply_custom_snapshot(timeline, custom_snapshot: dict[str, Any]):
+    if not custom_snapshot:
+        return timeline
+    supported_inputs = set(timeline.initial_inputs)
+    unsupported_inputs = sorted(set(custom_snapshot) - supported_inputs)
+    if unsupported_inputs:
+        raise EditableControlModelValidationError(
+            f"custom_snapshot contains unsupported inputs: {unsupported_inputs}"
+        )
+    initial_inputs = dict(timeline.initial_inputs)
+    initial_inputs.update(custom_snapshot)
+    return replace(timeline, initial_inputs=initial_inputs)
+
+
 def _base_response(*, scenario_id: str, verdict: str, model_hash: str | None = None) -> dict[str, Any]:
     return {
         "kind": WORKBENCH_SANDBOX_RUN_KIND,
@@ -164,6 +216,7 @@ def _invalid_response(
     message: str,
     model_hash: str | None = None,
     validation_report: dict[str, Any] | None = None,
+    scenario_metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     response = _base_response(
         scenario_id=scenario_id,
@@ -174,6 +227,7 @@ def _invalid_response(
     response.update(
         {
             "error": message,
+            "scenario_metadata": scenario_metadata or _scenario_metadata(scenario_id),
             "validation_report": graph_report,
             "summary": {
                 "first_divergence": None,
@@ -456,8 +510,18 @@ def build_workbench_sandbox_run_response(
         )
 
     model_hash = editable_control_model_hash(model)
+    custom_snapshot: dict[str, Any] = {}
+    custom_snapshot_requested = False
+    scenario_metadata = _scenario_metadata(scenario_id)
     try:
+        custom_snapshot, custom_snapshot_requested = _custom_snapshot_object(request_payload)
+        scenario_metadata = _scenario_metadata(
+            scenario_id,
+            custom_snapshot=custom_snapshot,
+            custom_snapshot_requested=custom_snapshot_requested,
+        )
         timeline = _load_timeline(scenario_id)
+        timeline = _apply_custom_snapshot(timeline, custom_snapshot)
         diff_report = compare_editable_timeline_to_baseline(
             model,
             timeline,
@@ -470,6 +534,7 @@ def build_workbench_sandbox_run_response(
                 verdict="invalid_scenario",
                 message=f"unsupported scenario_id {scenario_id!r}",
                 model_hash=model_hash,
+                scenario_metadata=scenario_metadata,
             ),
             None,
         )
@@ -480,6 +545,7 @@ def build_workbench_sandbox_run_response(
                 verdict="invalid_model",
                 message=str(exc),
                 model_hash=model_hash,
+                scenario_metadata=scenario_metadata,
             ),
             None,
         )
@@ -493,6 +559,7 @@ def build_workbench_sandbox_run_response(
         {
             "canonical_model_hash": model_hash,
             "canonical_model": model,
+            "scenario_metadata": scenario_metadata,
             "validation_report": build_workbench_graph_validation_report(),
             "diff_report": diff_report,
             "summary": _build_summary(diff_report),
