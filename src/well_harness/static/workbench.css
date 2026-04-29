@@ -5133,6 +5133,12 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   stroke: rgba(125, 215, 194, 0.62);
   stroke-width: 0.55;
   vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  pointer-events: stroke;
+}
+.workbench-editable-edges path[aria-pressed="true"] {
+  stroke: #f0c15b;
+  stroke-width: 1.05;
 }
 .workbench-editable-canvas-note {
   position: absolute;
@@ -5264,6 +5270,24 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-inspector-empty {
   color: rgba(253, 241, 205, 0.82);
   font-style: normal;
+}
+.workbench-inspector-edge-list {
+  display: grid;
+  gap: 0.36rem;
+  margin: 0;
+}
+.workbench-inspector-edge-list div {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  gap: 0.45rem;
+}
+.workbench-inspector-edge-list dt {
+  color: rgba(213, 227, 237, 0.58);
+}
+.workbench-inspector-edge-list dd {
+  margin: 0;
+  color: #eefaff;
+  overflow-wrap: anywhere;
 }
 .workbench-inspector-empty,
 .workbench-inspector-truth-note {
