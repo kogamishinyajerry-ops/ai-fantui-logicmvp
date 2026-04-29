@@ -13,7 +13,10 @@ from typing import Any
 
 import jsonschema
 
-from well_harness.controller_adapter import REFERENCE_DEPLOY_CONTROLLER_METADATA
+from well_harness.controller_adapter import (
+    REFERENCE_DEPLOY_CONTROLLER_METADATA,
+    build_reference_controller_adapter,
+)
 from well_harness.hardware_registry import build_timeline_hardware_evidence_overlay
 from well_harness.system_spec import current_reference_workbench_spec
 
@@ -28,6 +31,7 @@ EDITABLE_CONTROL_MODEL_KIND = "well-harness-editable-control-model"
 EDITABLE_CONTROL_MODEL_DIFF_KIND = "well-harness-editable-control-model-diff"
 EDITABLE_CONTROL_MODEL_VERSION = 1
 APPROVED_OPS = ("and", "or", "compare", "between", "delay", "latch")
+OP_CATALOG_VERSION = "editable-control-ops.v1"
 REFERENCE_MODEL_ID = "thrust-reverser-derived-view-v1"
 
 
@@ -110,6 +114,10 @@ def validate_editable_control_model(payload: dict[str, Any]) -> None:
             raise EditableControlModelValidationError(
                 f"hardware binding {binding['id']} references missing port_id {port_id}"
             )
+    for node in payload["nodes"]:
+        op = node.get("op")
+        if op is not None and op not in APPROVED_OPS:
+            raise EditableControlModelValidationError(f"node {node['id']} op is not approved: {op}")
 
 
 def _canonical_json(payload: dict[str, Any]) -> str:
@@ -169,6 +177,7 @@ def _virtual_signal_node(signal_id: str) -> dict[str, Any]:
         "label": signal_id,
         "node_type": "input",
         "op": None,
+        "rules": [],
         "source_ref": "control_system_spec.logic_conditions.virtual_signal",
         "editable": True,
     }
@@ -214,6 +223,31 @@ def _logic_condition_port(logic_node: Any, condition: Any) -> dict[str, Any]:
     }
 
 
+def _logic_condition_rule(condition: Any) -> dict[str, Any]:
+    return {
+        "name": condition.name,
+        "source_signal_id": condition.source_component_id,
+        "comparison": condition.comparison,
+        "threshold_value": condition.threshold_value,
+    }
+
+
+def _logic_node_rules(logic_node: Any) -> list[dict[str, Any]]:
+    rules = [_logic_condition_rule(condition) for condition in logic_node.conditions]
+    if logic_node.id == "logic2" and not any(
+        rule["name"] == "sw2_hysteresis_tra_deg" for rule in rules
+    ):
+        rules.append(
+            {
+                "name": "sw2_hysteresis_tra_deg",
+                "source_signal_id": "tra_deg",
+                "comparison": "<=",
+                "threshold_value": -5.5,
+            }
+        )
+    return rules
+
+
 def build_reference_editable_control_model() -> dict[str, Any]:
     """Build a derived editable seed from the certified thrust-reverser adapter.
 
@@ -238,6 +272,7 @@ def build_reference_editable_control_model() -> dict[str, Any]:
                 "label": component.label,
                 "node_type": _component_node_type(component.id, downstream_component_ids),
                 "op": None,
+                "rules": [],
                 "source_ref": "control_system_spec.components",
                 "editable": True,
             }
@@ -252,6 +287,7 @@ def build_reference_editable_control_model() -> dict[str, Any]:
                 "label": logic_node.label,
                 "node_type": "logic",
                 "op": "and",
+                "rules": _logic_node_rules(logic_node),
                 "source_ref": "control_system_spec.logic_nodes",
                 "editable": True,
             }
@@ -413,11 +449,169 @@ def build_editable_control_model_diff_report(
 def validate_editable_control_model_diff_report(payload: dict[str, Any]) -> None:
     """Validate a diff report and guard against candidate certification claims."""
     _schema_validate(payload, "editable_control_model_diff_v1.schema.json")
-    for field_name in ("baseline_run", "candidate_run"):
-        truth_status = payload[field_name]["truth_status"]
-        if truth_status != "sandbox_candidate":
-            raise EditableControlModelValidationError(
-                f"{field_name}.truth_status must be sandbox_candidate"
-            )
+    if payload["candidate_run"]["truth_status"] != "sandbox_candidate":
+        raise EditableControlModelValidationError(
+            "candidate_run.truth_status must be sandbox_candidate"
+        )
     if payload["hardware_evidence"]["truth_effect"] != "none":
         raise EditableControlModelValidationError("hardware_evidence truth_effect must be none")
+
+
+def _threshold_value(raw_threshold: Any, signals: dict[str, Any]) -> Any:
+    if isinstance(raw_threshold, str) and raw_threshold in signals:
+        return signals[raw_threshold]
+    return raw_threshold
+
+
+def _evaluate_rule(rule: dict[str, Any], signals: dict[str, Any]) -> tuple[bool, Any, Any]:
+    signal_id = rule["source_signal_id"]
+    if signal_id not in signals:
+        raise EditableControlModelValidationError(f"snapshot missing signal {signal_id}")
+    current_value = signals[signal_id]
+    threshold = _threshold_value(rule["threshold_value"], signals)
+    comparison = rule["comparison"]
+    if comparison == "==":
+        return current_value == threshold, current_value, threshold
+    if comparison == "!=":
+        return current_value != threshold, current_value, threshold
+    if comparison == "<":
+        return current_value < threshold, current_value, threshold
+    if comparison == "<=":
+        return current_value <= threshold, current_value, threshold
+    if comparison == ">":
+        return current_value > threshold, current_value, threshold
+    if comparison == ">=":
+        return current_value >= threshold, current_value, threshold
+    if comparison == "between_lower_inclusive":
+        lower, upper = threshold
+        return lower <= current_value < upper, current_value, threshold
+    if comparison == "between_exclusive":
+        lower, upper = threshold
+        return lower < current_value < upper, current_value, threshold
+    raise EditableControlModelValidationError(f"unsupported comparison {comparison}")
+
+
+def evaluate_editable_snapshot(
+    model: dict[str, Any],
+    snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    """Evaluate one sandbox candidate graph snapshot.
+
+    This evaluator is intentionally small and deterministic. It produces a
+    candidate result for comparison; it is not certified control truth.
+    """
+    validate_editable_control_model(model)
+    signals = dict(snapshot)
+    asserted_component_values: dict[str, Any] = dict(snapshot)
+    active_logic_node_ids: list[str] = []
+    blocked_reasons: list[str] = []
+    logic_states: dict[str, dict[str, Any]] = {}
+    port_by_id = {port["id"]: port for port in model["ports"]}
+
+    for node in model["nodes"]:
+        if node["node_type"] != "logic":
+            continue
+        op = node["op"]
+        if op not in ("and", "or"):
+            raise EditableControlModelValidationError(
+                f"snapshot evaluator only supports and/or logic nodes, got op {op}"
+            )
+        rule_results = []
+        failed_rules = []
+        for rule in node["rules"]:
+            passed, current_value, threshold = _evaluate_rule(rule, signals)
+            rule_results.append(passed)
+            if not passed:
+                failed_rules.append(
+                    {
+                        "name": rule["name"],
+                        "current_value": current_value,
+                        "comparison": rule["comparison"],
+                        "threshold_value": threshold,
+                    }
+                )
+        active = all(rule_results) if op == "and" else any(rule_results)
+        signals[node["id"]] = active
+        asserted_component_values[node["id"]] = active
+        logic_states[node["id"]] = {
+            "state": "active" if active else "blocked",
+            "failed_rules": failed_rules,
+        }
+        if active:
+            active_logic_node_ids.append(node["id"])
+        else:
+            blocked_reasons.extend(f"{node['id']}:{rule['name']}" for rule in failed_rules)
+
+        source_port_id = f"{node['id']}:out"
+        for edge in model["edges"]:
+            if edge["source_port_id"] != source_port_id:
+                continue
+            target_signal = port_by_id[edge["target_port_id"]]["signal_id"]
+            signals[target_signal] = active
+            asserted_component_values[target_signal] = active
+
+    return {
+        "model_id": model["model_id"],
+        "model_hash": editable_control_model_hash(model),
+        "system_id": model["system_id"],
+        "truth_status": model["truth_status"],
+        "op_catalog_version": OP_CATALOG_VERSION,
+        "active_logic_node_ids": active_logic_node_ids,
+        "asserted_component_values": asserted_component_values,
+        "completion_reached": bool(asserted_component_values.get("logic4")),
+        "blocked_reasons": blocked_reasons,
+        "logic_states": logic_states,
+    }
+
+
+def _logic_delta(signal_id: str, baseline_active_ids: set[str], candidate: dict[str, Any]) -> dict[str, Any]:
+    baseline_value = signal_id in baseline_active_ids
+    candidate_value = bool(candidate["asserted_component_values"].get(signal_id))
+    return {
+        "signal_id": signal_id,
+        "status": "same" if baseline_value == candidate_value else "different",
+        "_baseline_value": baseline_value,
+        "_candidate_value": candidate_value,
+    }
+
+
+def compare_editable_snapshot_to_baseline(
+    model: dict[str, Any],
+    snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    """Compare one sandbox candidate snapshot against certified baseline adapter."""
+    candidate = evaluate_editable_snapshot(model, snapshot)
+    baseline = build_reference_controller_adapter().evaluate_snapshot(snapshot)
+    baseline_active_ids = set(baseline.active_logic_node_ids)
+    raw_deltas = [
+        _logic_delta(signal_id, baseline_active_ids, candidate)
+        for signal_id in ("logic1", "logic2", "logic3", "logic4")
+    ]
+    first_divergence = None
+    for delta in raw_deltas:
+        if delta["status"] == "different":
+            first_divergence = {
+                "at_s": 0.0,
+                "signal_id": delta["signal_id"],
+                "baseline_value": delta["_baseline_value"],
+                "candidate_value": delta["_candidate_value"],
+            }
+            break
+    report = build_editable_control_model_diff_report(
+        baseline_model={
+            **model,
+            "model_id": REFERENCE_DEPLOY_CONTROLLER_METADATA.adapter_id,
+            "truth_status": REFERENCE_DEPLOY_CONTROLLER_METADATA.truth_level or "certified",
+            "source_of_truth": REFERENCE_DEPLOY_CONTROLLER_METADATA.source_of_truth,
+        },
+        candidate_model=model,
+        scenario_id="snapshot-default",
+        verdict="divergent" if first_divergence else "equivalent",
+        first_divergence=first_divergence,
+        per_signal_delta=[
+            {"signal_id": delta["signal_id"], "status": delta["status"]}
+            for delta in raw_deltas
+        ],
+    )
+    validate_editable_control_model_diff_report(report)
+    return report

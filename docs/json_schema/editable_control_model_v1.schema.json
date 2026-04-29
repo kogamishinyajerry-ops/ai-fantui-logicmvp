@@ -102,6 +102,7 @@
         "label",
         "node_type",
         "op",
+        "rules",
         "source_ref",
         "editable"
       ],
@@ -139,12 +140,49 @@
             }
           ]
         },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rule"
+          }
+        },
         "source_ref": {
           "$ref": "#/$defs/nonEmptyString"
         },
         "editable": {
           "type": "boolean"
         }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "source_signal_id",
+        "comparison",
+        "threshold_value"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_signal_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "comparison": {
+          "enum": [
+            "==",
+            "!=",
+            "<",
+            "<=",
+            ">",
+            ">=",
+            "between_lower_inclusive",
+            "between_exclusive"
+          ]
+        },
+        "threshold_value": {}
       }
     },
     "port": {
