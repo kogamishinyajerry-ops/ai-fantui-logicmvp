@@ -305,7 +305,15 @@ async function runSuggestionInterpret() {
     const interpretation = await response.json();
     _lastInterpretation = interpretation;
     renderSuggestionInterpretation(interpretation);
-    highlightSuggestionGates(interpretation.affected_gates || []);
+    // P59-03: highlight all addressable nodes — gates + input signals
+    // + named output cmds. summaries is optional and not yet emitted
+    // by the interpreter (kept in the API for future expansion).
+    highlightSuggestionNodes({
+      gates: interpretation.affected_gates || [],
+      signals: interpretation.target_signals || [],
+      outputs: interpretation.affected_outputs || [],
+      summaries: [],
+    });
     status.dataset.status = "success";
     status.textContent = "解读完成，请确认 · interpretation ready, please confirm";
   } catch (error) {
@@ -357,10 +365,18 @@ function renderSuggestionInterpretation(interpretation) {
     "workbench-suggestion-interpretation-targets",
     (interpretation.target_signals || []).join(", ") || "(未识别 · none identified)",
   );
+  // P59-03: surface affected_outputs (output cmd names mentioned
+  // directly in the user's text — distinct from the parent gate).
+  // Falls back to "—" when the field is absent (older server).
+  setText(
+    "workbench-suggestion-interpretation-outputs",
+    (interpretation.affected_outputs || []).join(", ") || "(未识别 · none identified)",
+  );
   setText(
     "workbench-suggestion-interpretation-summary",
     interpretation.summary_zh || interpretation.summary_en || "(无 · empty)",
   );
+  renderRecommendedWorkOrder(interpretation);
   const conf = document.getElementById("workbench-suggestion-interpretation-confidence");
   if (conf) {
     const c = typeof interpretation.confidence === "number" ? interpretation.confidence : 0;
@@ -441,20 +457,120 @@ function escapeHtml(s) {
     .replace(/'/g, "&#39;");
 }
 
-function highlightSuggestionGates(gateIds) {
+// P59-03 (2026-04-29): generalized highlight chain.
+// Original P44-01 highlightSuggestionGates only matched [data-gate-id]
+// (L1..L4). After P59-01 added per-signal anchors (data-signal-id /
+// data-summary-id) and P59-02 surfaced affected_outputs from the
+// interpreter, the workbench can now glow ANY logic node — not just
+// the four gates. highlightSuggestionNodes is the new entry point;
+// highlightSuggestionGates is preserved as a thin alias so any
+// external caller keeps working.
+// P59-03 (2026-04-29): render the recommended work-order draft
+// produced by the P59-02 engine extension. The draft is template-
+// driven on the server (recommended_work_order_zh / _en) and stays in
+// the response payload regardless of LLM strategy. Hidden when no
+// draft is present (pre-P59-02 server, or both fields empty).
+function renderRecommendedWorkOrder(interpretation) {
+  const wrap = document.getElementById("workbench-suggestion-recommendation");
+  if (!wrap) return;
+  const textEl = document.getElementById("workbench-suggestion-recommendation-text");
+  if (!textEl) return;
+  const draft =
+    (interpretation && interpretation.recommended_work_order_zh) ||
+    (interpretation && interpretation.recommended_work_order_en) ||
+    "";
+  if (!draft) {
+    wrap.hidden = true;
+    textEl.textContent = "";
+    return;
+  }
+  textEl.textContent = draft;
+  wrap.hidden = false;
+}
+
+// P59-03: bind the "复制" / Copy button. Uses navigator.clipboard
+// when available, falls back to a transient textarea otherwise.
+// Wired once on DOMContentLoaded (same lifecycle as the rest of the
+// workbench install* handlers).
+function installRecommendationCopyHandler() {
+  const btn = document.getElementById(
+    "workbench-suggestion-recommendation-copy-btn",
+  );
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    const textEl = document.getElementById(
+      "workbench-suggestion-recommendation-text",
+    );
+    if (!textEl || !textEl.textContent) return;
+    const original = btn.textContent;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(textEl.textContent);
+      } else {
+        // Fallback for older browsers / non-secure contexts.
+        const ta = document.createElement("textarea");
+        ta.value = textEl.textContent;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      btn.textContent = "✓ 已复制 · Copied";
+    } catch (_err) {
+      btn.textContent = "复制失败 · Copy failed";
+    }
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  });
+}
+
+function highlightSuggestionNodes(options) {
   const mount = document.getElementById("workbench-circuit-hero-mount");
   if (!mount) {
     return;
   }
-  // Clear any previous highlight
+  const opts = options || {};
+  const gates = Array.isArray(opts.gates) ? opts.gates : [];
+  const signals = Array.isArray(opts.signals) ? opts.signals : [];
+  const outputs = Array.isArray(opts.outputs) ? opts.outputs : [];
+  const summaries = Array.isArray(opts.summaries) ? opts.summaries : [];
+
+  // Clear any previous highlight (covers all 3 attribute kinds since
+  // the CSS selector already does — single classList sweep is enough).
   for (const el of mount.querySelectorAll(".is-suggestion-target")) {
     el.classList.remove("is-suggestion-target");
   }
-  for (const gateId of gateIds) {
+  // Apply new highlights. Per the P59-01 schema, an input signal can
+  // appear in multiple gate columns (engine_running × 3, tra_deg × 2);
+  // querySelectorAll matches all instances so the visual feedback
+  // shows every place in the diagram where the signal lives.
+  for (const gateId of gates) {
     for (const el of mount.querySelectorAll(`[data-gate-id="${gateId}"]`)) {
       el.classList.add("is-suggestion-target");
     }
   }
+  // signals + outputs share the same data-signal-id namespace (inputs
+  // and output cmds are distinguished by data-node-kind, but the
+  // selector is identical).
+  for (const signalId of [...signals, ...outputs]) {
+    for (const el of mount.querySelectorAll(`[data-signal-id="${signalId}"]`)) {
+      el.classList.add("is-suggestion-target");
+    }
+  }
+  for (const summaryId of summaries) {
+    for (const el of mount.querySelectorAll(`[data-summary-id="${summaryId}"]`)) {
+      el.classList.add("is-suggestion-target");
+    }
+  }
+}
+
+// Backwards-compat alias. Keep the old name callable so any external
+// page or skill that imports workbench.js (e.g. via a bookmarklet or
+// the test harness) doesn't break — it just gets the gate-only subset
+// of the new behavior.
+function highlightSuggestionGates(gateIds) {
+  highlightSuggestionNodes({ gates: gateIds || [] });
 }
 
 function clearSuggestionInterpretation() {
@@ -464,7 +580,20 @@ function clearSuggestionInterpretation() {
     card.hidden = true;
     card.dataset.state = "empty";
   }
-  highlightSuggestionGates([]);
+  // P59-03: clear all node highlights, not just gate-only.
+  highlightSuggestionNodes({});
+  // P59-03: also hide the recommended work-order draft so a stale
+  // ticket from a previous interpretation doesn't bleed into a
+  // re-interpret / cancel cycle.
+  const rec = document.getElementById("workbench-suggestion-recommendation");
+  if (rec) {
+    rec.hidden = true;
+    rec.removeAttribute("open");
+  }
+  const recText = document.getElementById(
+    "workbench-suggestion-recommendation-text",
+  );
+  if (recText) recText.textContent = "";
   const status = document.getElementById("workbench-suggestion-status");
   if (status) {
     status.dataset.status = "idle";
@@ -7035,6 +7164,7 @@ window.addEventListener("DOMContentLoaded", () => {
   installViewModeHandlers();
   installFeedbackModeAffordance();
   installWowStarters();
+  installRecommendationCopyHandler();  // P59-03 work-order copy button
   void hydrateStateOfWorldBar();
   // E11-08: apply role affordance after DOM is ready. Honors
   // ?identity=<name> URL param so demos / tests can flip identity

@@ -773,9 +773,39 @@
             <dd id="workbench-suggestion-interpretation-change-kind">—</dd>
             <dt>目标信号 · Target signal(s)</dt>
             <dd id="workbench-suggestion-interpretation-targets">—</dd>
+            <!-- P59-03 (2026-04-29): explicit output cmd names mentioned
+                 in the user's text (distinct from the gate they belong
+                 to). Populated from interpretation.affected_outputs
+                 added by the P59-02 engine extension. -->
+            <dt>命中输出 · Affected output(s)</dt>
+            <dd id="workbench-suggestion-interpretation-outputs">—</dd>
             <dt>系统重述 · System restatement</dt>
             <dd id="workbench-suggestion-interpretation-summary">—</dd>
           </dl>
+          <!-- P59-03 (2026-04-29): recommended work-order draft.
+               Collapsed by default; engineers click to expand and copy
+               the deterministic ticket text built by the P59-02 engine
+               from change_kind + gates/signals/outputs + source text.
+               Hidden when the engine returns no draft (fallback path
+               or pre-P59-02 server). -->
+          <details
+            id="workbench-suggestion-recommendation"
+            class="workbench-suggestion-recommendation"
+            hidden
+          >
+            <summary>🎫 推荐工单措辞 · Recommended ticket draft</summary>
+            <pre
+              id="workbench-suggestion-recommendation-text"
+              class="workbench-suggestion-recommendation-text"
+            ></pre>
+            <div class="workbench-suggestion-recommendation-actions">
+              <button
+                id="workbench-suggestion-recommendation-copy-btn"
+                type="button"
+                class="workbench-toolbar-button"
+              >📋 复制 · Copy</button>
+            </div>
+          </details>
           <!-- P54-09 (2026-04-28): pre-submit conflict-warning panel.
                Hidden by default; populated by the confirm-button
                handler when GET /api/proposals?status=OPEN&system=...
