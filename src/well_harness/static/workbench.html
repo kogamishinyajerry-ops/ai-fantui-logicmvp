@@ -513,6 +513,10 @@
               <span>Baseline</span>
               <strong>reference-deploy-controller · certified</strong>
             </span>
+            <span class="workbench-editable-status-chip" data-status-kind="hash">
+              <span>Draft hash</span>
+              <strong id="workbench-draft-hash-label">ui_draft_pending</strong>
+            </span>
             <span class="workbench-editable-status-chip" data-status-kind="truth">
               <span>Truth impact</span>
               <strong>none · sandbox candidate only</strong>
@@ -542,6 +546,8 @@
               <button type="button" data-editor-tool="select" aria-pressed="true" title="Select">⌖</button>
               <button type="button" data-editor-tool="node" aria-pressed="false" title="Add node">＋</button>
               <button type="button" data-editor-tool="edge" aria-pressed="false" title="Connect">↔</button>
+              <button type="button" data-editor-tool="remove" aria-pressed="false" title="Remove draft node">−</button>
+              <button type="button" data-editor-tool="disconnect" aria-pressed="false" title="Disconnect edge">⨯</button>
               <button type="button" data-editor-tool="undo" aria-pressed="false" title="Undo">↶</button>
               <button type="button" data-editor-tool="redo" aria-pressed="false" title="Redo">↷</button>
             </aside>
@@ -624,6 +630,9 @@
               </svg>
               <p class="workbench-editable-canvas-note">
                 Sandbox candidate canvas · edits here prepare diff evidence, not certified truth.
+              </p>
+              <p id="workbench-graph-validation-status" class="workbench-graph-validation-status">
+                Graph validation: no issues.
               </p>
             </section>
 

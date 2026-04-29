@@ -4966,7 +4966,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 }
 .workbench-editable-status-bar {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto auto;
   gap: 0.55rem;
   align-items: stretch;
 }
@@ -5105,10 +5105,20 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-editable-canvas-note {
   position: absolute;
   left: 0.8rem;
-  bottom: 0.75rem;
+  bottom: 2.1rem;
   margin: 0;
   color: rgba(213, 227, 237, 0.64);
   font-size: 0.72rem;
+}
+.workbench-graph-validation-status {
+  position: absolute;
+  left: 0.8rem;
+  right: 0.8rem;
+  bottom: 0.7rem;
+  margin: 0;
+  color: rgba(253, 241, 205, 0.86);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
 }
 .workbench-evidence-inspector {
   min-width: 0;

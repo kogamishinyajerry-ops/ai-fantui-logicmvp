@@ -59,6 +59,19 @@ payload is an explicit UI draft exchange format, not a truth artifact:
 - The workbench performs no live Linear mutation and no certified baseline
   mutation during import/export.
 
+## JER-163 Rule
+
+JER-163 hardens the editable canvas interaction loop. Node and edge edits remain
+browser-side sandbox candidate state:
+
+- Undo/redo tracks label, operation, draft-node, and edge edits.
+- Draft-node add/remove and edge connect/disconnect update the draft hash.
+- Baseline reference nodes cannot be removed from the UI.
+- Invalid edges and dangling ports surface as graph validation issues, not as
+  certified-truth decisions.
+- Exported draft JSON may carry editable edges, but `truth_level_impact`
+  remains `none`.
+
 ## Boundaries
 
 - Do not edit `src/well_harness/controller.py` truth semantics.
