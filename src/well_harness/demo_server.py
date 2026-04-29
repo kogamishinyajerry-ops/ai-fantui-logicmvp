@@ -33,6 +33,8 @@ from well_harness.document_intake import (
     intake_template_payload,
 )
 from well_harness.fantui_tick import FantuiTickSystem, parse_pilot_inputs
+from well_harness.hardware_evidence_report import build_hardware_evidence_report
+from well_harness.hardware_registry import HardwareRegistryError
 # P56-04 (2026-04-28): C919 sim engine. The c919_etras_panel/index.html
 # POSTs /api/tick on every 100ms timer; until this phase that path 404'd
 # on the unified server, so the panel's ▶仿真 button silently no-op'd.
@@ -204,6 +206,8 @@ DIAGNOSIS_RUN_PATH = "/api/diagnosis/run"
 MONTE_CARLO_RUN_PATH = "/api/monte-carlo/run"
 # Hardware schema discovery (P19.8)
 HARDWARE_SCHEMA_PATH = "/api/hardware/schema"
+# Hardware evidence report (JER-153): read-only audit/report payload.
+HARDWARE_EVIDENCE_PATH = "/api/hardware/evidence"
 SENSITIVITY_SWEEP_PATH = "/api/sensitivity-sweep"
 # FANTUI stateful tick endpoints — live counterpart to C919 /api/tick.
 # The existing /api/lever-snapshot stays stateless; this triad is separate
@@ -509,6 +513,11 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
         if parsed.path == HARDWARE_SCHEMA_PATH:
             system_id = parse_qs(parsed.query).get("system_id", ["thrust-reverser"])[0]
             self._handle_hardware_schema(system_id=system_id)
+            return
+
+        if parsed.path == HARDWARE_EVIDENCE_PATH:
+            system_id = parse_qs(parsed.query).get("system_id", ["thrust-reverser"])[0]
+            self._handle_hardware_evidence(system_id=system_id)
             return
 
         if parsed.path == FANTUI_LOG_PATH:
@@ -891,6 +900,26 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._send_json(200, result)
         except FileNotFoundError as exc:
             self._send_json(400, {"error": str(exc)})
+        except Exception as exc:
+            self._send_json(500, {"error": str(exc)})
+
+    def _handle_hardware_evidence(self, system_id: str = "thrust-reverser") -> None:
+        """Return read-only hardware evidence report metadata."""
+        try:
+            self._send_json(200, build_hardware_evidence_report(system_id=system_id))
+        except HardwareRegistryError:
+            self._send_json(
+                400,
+                {
+                    "error": "hardware_evidence_unsupported_system",
+                    "requested_system_id": system_id,
+                    "supported_system_ids": ["thrust-reverser"],
+                    "read_only": True,
+                    "mutation_performed": False,
+                    "truth_level_impact": "none",
+                    "dal_pssa_impact": "none",
+                },
+            )
         except Exception as exc:
             self._send_json(500, {"error": str(exc)})
 
