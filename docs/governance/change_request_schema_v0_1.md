@@ -20,6 +20,21 @@ It does not approve DAL changes, does not promote truth-level, and does not chan
 - `evidence_anchors`: Linear/GitHub/Notion/repo/test links that justify the request.
 - `decision_links`: later links to decisions or closure notes.
 
+## Editable Workbench Handoff Extension
+
+`workbench_handoff` is an optional v0.1 extension for sandbox candidates produced
+by `/workbench`.
+
+- `mode` must be `draft_only`.
+- `mutation_status` records that Linear writes were not attempted, only dry-run,
+  or completed outside the workbench manually.
+- `changed_model_hash` and `diff_report_hash` identify the sandbox candidate and
+  baseline-diff evidence.
+- `truth_level_impact` and `dal_impact` must remain `none`.
+- `red_line_impact.touched` must remain `["none"]` inside the Codex lane.
+- `linear_issue_body` and `pr_proof_packet` are copy-ready text fields, not live
+  Linear or GitHub mutations.
+
 ## DAL and Truth-Level Guardrail
 
 Non-DAL bookkeeping requests may stay inside Codex Daily Lane as draft records.

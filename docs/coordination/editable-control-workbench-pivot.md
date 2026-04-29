@@ -48,6 +48,20 @@ Initial issue chain:
 - JER-159: ChangeRequest and Linear handoff from draft
 - JER-160: end-to-end acceptance
 
+## JER-159 Handoff Rule
+
+Editable workbench ChangeRequests are evidence packets, not authority changes.
+The Python builder and UI export produce:
+
+- a schema-valid draft ChangeRequest with `workbench_handoff`
+- a Linear-ready issue body containing Outcome, Acceptance, Boundaries,
+  Evidence Required, and Metadata
+- a Codex Daily Lane PR proof packet with truth impact and red-line fields
+
+The export path does not call Linear, does not create PRs, and does not write
+controller or adapter truth. Any generated packet stays `draft_only` until a
+separate governed issue or PR executes real code changes.
+
 ## Stop Rules
 
 Stop and escalate before merging if a PR:
@@ -58,4 +72,3 @@ Stop and escalate before merging if a PR:
 - claims DAL/PSSA/truth-level promotion
 - lets UI, LLM, or hardware evidence become certified truth
 - reports Notion/Opus review as approval for Codex Daily Lane work
-

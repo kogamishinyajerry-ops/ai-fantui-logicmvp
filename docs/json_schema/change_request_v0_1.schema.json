@@ -84,6 +84,9 @@
       "items": {
         "$ref": "#/$defs/linkAnchor"
       }
+    },
+    "workbench_handoff": {
+      "$ref": "#/$defs/workbenchHandoff"
     }
   },
   "allOf": [
@@ -328,6 +331,153 @@
           ]
         },
         "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "redLineImpact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "touched",
+        "rationale"
+      ],
+      "properties": {
+        "touched": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "none",
+              "R1",
+              "R2",
+              "R3",
+              "R4",
+              "R5"
+            ]
+          }
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "workbenchHandoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "mutation_status",
+        "source_ref",
+        "adapter",
+        "layer",
+        "model_id",
+        "changed_model_hash",
+        "diff_report_hash",
+        "diff_verdict",
+        "truth_level_impact",
+        "dal_impact",
+        "red_line_impact",
+        "outcome",
+        "context",
+        "acceptance",
+        "boundaries",
+        "evidence_required",
+        "linear_issue_body",
+        "pr_proof_packet"
+      ],
+      "properties": {
+        "mode": {
+          "const": "draft_only"
+        },
+        "mutation_status": {
+          "enum": [
+            "not_attempted",
+            "dry_run",
+            "external_manual"
+          ]
+        },
+        "source_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "adapter": {
+          "type": "string",
+          "minLength": 1
+        },
+        "layer": {
+          "type": "string",
+          "pattern": "^L[0-9]$"
+        },
+        "model_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "changed_model_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "diff_report_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "diff_verdict": {
+          "enum": [
+            "equivalent",
+            "divergent",
+            "invalid_model",
+            "invalid_scenario",
+            "not_run"
+          ]
+        },
+        "truth_level_impact": {
+          "const": "none"
+        },
+        "dal_impact": {
+          "const": "none"
+        },
+        "red_line_impact": {
+          "$ref": "#/$defs/redLineImpact"
+        },
+        "outcome": {
+          "type": "string",
+          "minLength": 1
+        },
+        "context": {
+          "type": "string",
+          "minLength": 1
+        },
+        "acceptance": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "boundaries": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "evidence_required": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "linear_issue_body": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pr_proof_packet": {
           "type": "string",
           "minLength": 1
         }

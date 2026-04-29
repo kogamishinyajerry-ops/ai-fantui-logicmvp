@@ -669,6 +669,33 @@
               >
                 Hardware evidence API pending. Draft edits are not certified truth.
               </div>
+              <section
+                class="workbench-changerequest-handoff"
+                aria-labelledby="workbench-changerequest-handoff-title"
+              >
+                <div class="workbench-inspector-header">
+                  <span id="workbench-changerequest-handoff-title">ChangeRequest Handoff</span>
+                  <strong>draft only</strong>
+                </div>
+                <button
+                  id="workbench-generate-handoff-btn"
+                  type="button"
+                  class="workbench-editable-primary workbench-handoff-generate"
+                >
+                  Generate handoff
+                </button>
+                <p id="workbench-handoff-status" class="workbench-handoff-status">
+                  No live Linear mutation. Generate copy-ready evidence from the current sandbox draft.
+                </p>
+                <label class="workbench-handoff-output" for="workbench-linear-handoff-output">
+                  <span>Linear issue body</span>
+                  <textarea id="workbench-linear-handoff-output" rows="9" readonly></textarea>
+                </label>
+                <label class="workbench-handoff-output" for="workbench-pr-proof-output">
+                  <span>PR proof packet</span>
+                  <textarea id="workbench-pr-proof-output" rows="7" readonly></textarea>
+                </label>
+              </section>
             </aside>
           </div>
 
