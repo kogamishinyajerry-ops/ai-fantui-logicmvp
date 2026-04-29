@@ -80,9 +80,13 @@ def server():
         # `test_workbench_no_annotation_overlay_2026_04_26.py` contract,
         # so this anchor is intentionally no longer required here.
         'id="workbench-circuit-hero-title"',
-        # Bilingual hero copy
-        "控制逻辑面板 · CONTROL LOGIC PANEL",
-        "反推逻辑链路 L1 → L4 · Thrust Reverser Authority Chain",
+        # JER-158 pivot copy: the circuit hero is now the editable
+        # sandbox workbench. The original SVG still mounts below as a
+        # read-only reference sample pack.
+        "可编辑控制工作台 · EDITABLE CONTROL WORKBENCH",
+        "Sandbox Draft Canvas · Baseline Diff Workbench",
+        "Sandbox candidate canvas",
+        "Reference sample pack · read-only SVG circuit",
         "正在加载控制逻辑面板",
     ],
 )
@@ -240,8 +244,11 @@ def test_workbench_route_serves_new_hero_shell(server) -> None:
     status, body, _ = _get(server, "/workbench")
     assert status == 200
     assert 'id="workbench-circuit-hero"' in body
+    assert 'id="workbench-editable-shell"' in body
+    assert 'id="workbench-evidence-inspector"' in body
     assert 'data-circuit-fragment-endpoint="/api/workbench/circuit-fragment"' in body
-    assert "控制逻辑面板 · CONTROL LOGIC PANEL" in body
+    assert "Sandbox Draft Canvas · Baseline Diff Workbench" in body
+    assert "Reference sample pack · read-only SVG circuit" in body
     # Old wrong-abstraction sentinels must not appear in the live response.
     assert 'class="workbench-collab-grid"' not in body
     assert "一键运行 wow_a" not in body

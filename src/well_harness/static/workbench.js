@@ -7550,6 +7550,193 @@ function _wbLiveLogConnect() {
   }
 })();
 
+// ─── JER-158: editable sandbox canvas shell ───────────────────────
+//
+// This is client-side draft scaffolding only. It lets engineers derive
+// a sandbox candidate from the reference sample, select graph nodes,
+// edit draft labels/ops, and inspect read-only evidence metadata. It
+// never writes controller truth or promotes a candidate to certified.
+function installEditableWorkbenchShell() {
+  const shell = document.getElementById("workbench-editable-shell");
+  if (!shell) return;
+
+  const nodes = Array.from(shell.querySelectorAll("[data-editable-node-id]"));
+  const deriveBtn = document.getElementById("workbench-derive-draft-btn");
+  const draftLabel = document.getElementById("workbench-draft-status-label");
+  const nodeIdSlot = document.getElementById("workbench-inspector-node-id");
+  const labelInput = document.getElementById("workbench-inspector-node-label");
+  const opSelect = document.getElementById("workbench-inspector-node-op");
+  const ruleCountSlot = document.getElementById("workbench-inspector-rule-count");
+  const evidenceSlot = document.getElementById("workbench-inspector-evidence-status");
+  const sourceRefSlot = document.getElementById("workbench-inspector-source-ref");
+  const evidenceSummary = document.getElementById("workbench-inspector-evidence-summary");
+  const timelineStrip = document.getElementById("workbench-sandbox-timeline-strip");
+  const storageKey = "well-harness-editable-workbench-draft-v1";
+  let selectedNode = nodes.find((node) => node.getAttribute("aria-pressed") === "true") || nodes[0];
+
+  function selectedNodePayload() {
+    if (!selectedNode) return null;
+    return {
+      id: selectedNode.getAttribute("data-editable-node-id") || "",
+      label: selectedNode.getAttribute("data-node-label") || "",
+      op: selectedNode.getAttribute("data-node-op") || "and",
+      ruleCount: selectedNode.getAttribute("data-rule-count") || "0",
+      evidence: selectedNode.getAttribute("data-hardware-evidence") || "evidence_gap",
+      sourceRef: selectedNode.getAttribute("data-source-ref") || "unknown",
+    };
+  }
+
+  function persistDraft() {
+    try {
+      const payload = {
+        draftState: shell.getAttribute("data-draft-state") || "baseline",
+        selectedNodeId: selectedNode && selectedNode.getAttribute("data-editable-node-id"),
+        nodes: nodes.map((node) => ({
+          id: node.getAttribute("data-editable-node-id"),
+          label: node.getAttribute("data-node-label"),
+          op: node.getAttribute("data-node-op"),
+        })),
+      };
+      window.localStorage.setItem(storageKey, JSON.stringify(payload));
+    } catch (_err) {
+      // Draft persistence is a convenience. Failure must not block the workbench.
+    }
+  }
+
+  function setTimelineState(state) {
+    if (!timelineStrip) return;
+    const items = Array.from(timelineStrip.querySelectorAll("li"));
+    for (const item of items) {
+      item.setAttribute("data-step-state", "idle");
+    }
+    if (state === "derived") {
+      items[0] && items[0].setAttribute("data-step-state", "done");
+      items[1] && items[1].setAttribute("data-step-state", "active");
+    }
+  }
+
+  function renderInspector() {
+    const payload = selectedNodePayload();
+    if (!payload) return;
+    if (nodeIdSlot) nodeIdSlot.textContent = payload.id;
+    if (labelInput) labelInput.value = payload.label;
+    if (opSelect) opSelect.value = payload.op;
+    if (ruleCountSlot) ruleCountSlot.textContent = payload.ruleCount;
+    if (evidenceSlot) evidenceSlot.textContent = payload.evidence;
+    if (sourceRefSlot) sourceRefSlot.textContent = payload.sourceRef;
+  }
+
+  function selectNode(node) {
+    selectedNode = node;
+    for (const candidate of nodes) {
+      candidate.setAttribute("aria-pressed", candidate === node ? "true" : "false");
+    }
+    renderInspector();
+    persistDraft();
+  }
+
+  function deriveDraft() {
+    shell.setAttribute("data-draft-state", "derived");
+    if (draftLabel) {
+      draftLabel.textContent = "sandbox_candidate derived from reference sample";
+    }
+    setTimelineState("derived");
+    persistDraft();
+  }
+
+  function restoreDraft() {
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (!raw) return;
+      const payload = JSON.parse(raw);
+      if (!payload || typeof payload !== "object") return;
+      if (payload.draftState === "derived") {
+        shell.setAttribute("data-draft-state", "derived");
+        if (draftLabel) {
+          draftLabel.textContent = "sandbox_candidate restored from browser draft";
+        }
+        setTimelineState("derived");
+      }
+      const nodeUpdates = Array.isArray(payload.nodes) ? payload.nodes : [];
+      for (const update of nodeUpdates) {
+        const node = nodes.find((candidate) => (
+          candidate.getAttribute("data-editable-node-id") === update.id
+        ));
+        if (!node) continue;
+        if (typeof update.label === "string") node.setAttribute("data-node-label", update.label);
+        if (typeof update.op === "string") node.setAttribute("data-node-op", update.op);
+      }
+      const selected = nodes.find((node) => (
+        node.getAttribute("data-editable-node-id") === payload.selectedNodeId
+      ));
+      if (selected) selectedNode = selected;
+    } catch (_err) {
+      // Bad browser draft should not break first paint.
+    }
+  }
+
+  function hydrateEvidenceSummary() {
+    if (!evidenceSummary) return;
+    const endpoint = evidenceSummary.getAttribute("data-evidence-api");
+    if (!endpoint || typeof fetch !== "function") return;
+    fetch(endpoint, { headers: { Accept: "application/json" } })
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => {
+        if (!payload || !payload.coverage || !payload.evidence_gaps) return;
+        const lru = payload.coverage.lru_inventory.actual_count;
+        const bindings = payload.coverage.signal_bindings.actual_count;
+        const gaps = payload.evidence_gaps.total_field_count;
+        evidenceSummary.textContent =
+          `Read-only evidence: ${lru} LRUs, ${bindings} signal bindings, ${gaps} evidence-gap fields.`;
+      })
+      .catch(() => {
+        evidenceSummary.textContent = "Hardware evidence API unavailable; draft editing still remains sandbox-only.";
+      });
+  }
+
+  restoreDraft();
+  for (const node of nodes) {
+    node.addEventListener("click", () => selectNode(node));
+  }
+  if (deriveBtn) {
+    deriveBtn.addEventListener("click", () => deriveDraft());
+  }
+  if (labelInput) {
+    labelInput.addEventListener("input", () => {
+      if (!selectedNode) return;
+      selectedNode.setAttribute("data-node-label", labelInput.value);
+      const small = selectedNode.querySelector("small");
+      if (small) {
+        small.textContent = `${(opSelect && opSelect.value) || "and"} · draft`;
+      }
+      persistDraft();
+    });
+  }
+  if (opSelect) {
+    opSelect.addEventListener("change", () => {
+      if (!selectedNode) return;
+      selectedNode.setAttribute("data-node-op", opSelect.value);
+      const small = selectedNode.querySelector("small");
+      if (small) {
+        small.textContent = `${opSelect.value} · ${selectedNode.getAttribute("data-rule-count") || "0"} rules`;
+      }
+      persistDraft();
+    });
+  }
+  if (selectedNode) {
+    selectNode(selectedNode);
+  }
+  hydrateEvidenceSummary();
+}
+
+if (typeof document !== "undefined") {
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", installEditableWorkbenchShell);
+  } else {
+    installEditableWorkbenchShell();
+  }
+}
+
 // ─── P52-07: new-circuit creation flow ────────────────────────────
 //
 // Three template cards (radio-like behavior) + derive-from-current

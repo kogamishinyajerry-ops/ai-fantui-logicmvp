@@ -4949,6 +4949,276 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   display: flex;
 }
 
+/* JER-158: editable control workbench shell.
+   This is a sandbox authoring surface. Certified truth remains in
+   controller/adapter baselines; the UI state below is draft-only. */
+.workbench-editable-shell {
+  width: 100%;
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  gap: 0.7rem;
+  padding: 3.1rem 0.9rem 0.9rem;
+  color: #edf8ff;
+  background:
+    linear-gradient(135deg, rgba(6, 11, 18, 0.96), rgba(12, 18, 24, 0.96)),
+    linear-gradient(90deg, rgba(76, 195, 178, 0.05), rgba(244, 190, 90, 0.04));
+}
+.workbench-editable-status-bar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 0.55rem;
+  align-items: stretch;
+}
+.workbench-editable-status-chip,
+.workbench-editable-primary,
+.workbench-evidence-inspector,
+.workbench-reference-sample-pack {
+  border: 1px solid rgba(150, 173, 190, 0.24);
+  background: rgba(9, 18, 27, 0.72);
+  border-radius: 8px;
+}
+.workbench-editable-status-chip {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.18rem;
+  padding: 0.55rem 0.65rem;
+  min-width: 0;
+}
+.workbench-editable-status-chip span {
+  color: rgba(213, 227, 237, 0.58);
+  font-size: 0.68rem;
+}
+.workbench-editable-status-chip strong {
+  color: #f5fbff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.workbench-editable-primary {
+  color: #041018;
+  background: #7dd7c2;
+  border-color: rgba(125, 215, 194, 0.9);
+  padding: 0 0.95rem;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.workbench-editable-primary:hover {
+  background: #9ee5d4;
+}
+.workbench-editable-main {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 46px minmax(420px, 1fr) minmax(260px, 340px);
+  gap: 0.65rem;
+}
+.workbench-editor-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  align-items: center;
+  padding: 0.5rem 0.35rem;
+  border-right: 1px solid rgba(150, 173, 190, 0.2);
+}
+.workbench-editor-toolbar button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(150, 173, 190, 0.25);
+  border-radius: 8px;
+  background: rgba(8, 16, 24, 0.74);
+  color: #dcecf6;
+  font: inherit;
+  cursor: pointer;
+}
+.workbench-editor-toolbar button[aria-pressed="true"] {
+  color: #041018;
+  background: #f0c15b;
+  border-color: rgba(240, 193, 91, 0.95);
+}
+.workbench-editable-canvas {
+  position: relative;
+  min-height: 520px;
+  overflow: hidden;
+  border: 1px solid rgba(150, 173, 190, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
+    radial-gradient(circle at 18% 24%, rgba(125, 215, 194, 0.13), transparent 19rem),
+    radial-gradient(circle at 78% 70%, rgba(240, 193, 91, 0.11), transparent 18rem),
+    #071019;
+  background-size: 32px 32px, 32px 32px, auto, auto, auto;
+}
+.workbench-editable-node {
+  position: absolute;
+  left: var(--node-x);
+  top: var(--node-y);
+  transform: translate(-50%, -50%);
+  width: 126px;
+  min-height: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(125, 215, 194, 0.32);
+  border-radius: 8px;
+  background: rgba(9, 22, 28, 0.96);
+  color: #eefaff;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  z-index: 2;
+}
+.workbench-editable-node[aria-pressed="true"] {
+  border-color: #f0c15b;
+  box-shadow:
+    0 0 0 2px rgba(240, 193, 91, 0.18),
+    0 12px 32px rgba(0, 0, 0, 0.35);
+}
+.workbench-editable-node span {
+  font-size: 1.02rem;
+  font-weight: 800;
+}
+.workbench-editable-node small {
+  color: rgba(213, 227, 237, 0.68);
+  font-size: 0.68rem;
+}
+.workbench-editable-edges {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.workbench-editable-edges path {
+  fill: none;
+  stroke: rgba(125, 215, 194, 0.62);
+  stroke-width: 0.55;
+  vector-effect: non-scaling-stroke;
+}
+.workbench-editable-canvas-note {
+  position: absolute;
+  left: 0.8rem;
+  bottom: 0.75rem;
+  margin: 0;
+  color: rgba(213, 227, 237, 0.64);
+  font-size: 0.72rem;
+}
+.workbench-evidence-inspector {
+  min-width: 0;
+  padding: 0.75rem;
+  overflow: auto;
+}
+.workbench-inspector-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: baseline;
+  margin-bottom: 0.7rem;
+}
+.workbench-inspector-header span {
+  color: rgba(213, 227, 237, 0.62);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+.workbench-inspector-header strong {
+  color: #f0c15b;
+  font-size: 0.82rem;
+}
+.workbench-inspector-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+  margin-bottom: 0.65rem;
+}
+.workbench-inspector-field span,
+.workbench-inspector-facts dt {
+  color: rgba(213, 227, 237, 0.58);
+  font-size: 0.68rem;
+}
+.workbench-inspector-field input,
+.workbench-inspector-field select {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid rgba(150, 173, 190, 0.25);
+  border-radius: 7px;
+  background: rgba(4, 10, 16, 0.74);
+  color: #f5fbff;
+  padding: 0.45rem 0.5rem;
+  font: inherit;
+}
+.workbench-inspector-facts {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.7rem 0;
+}
+.workbench-inspector-facts div {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: 0.5rem;
+}
+.workbench-inspector-facts dd {
+  margin: 0;
+  color: #eefaff;
+  overflow-wrap: anywhere;
+}
+.workbench-inspector-evidence-summary {
+  margin-top: 0.75rem;
+  padding: 0.65rem;
+  border: 1px dashed rgba(240, 193, 91, 0.32);
+  border-radius: 8px;
+  color: rgba(253, 241, 205, 0.86);
+  background: rgba(71, 48, 9, 0.2);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+.workbench-sandbox-timeline-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.45rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.workbench-sandbox-timeline-strip li {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(150, 173, 190, 0.22);
+  border-radius: 8px;
+  color: rgba(213, 227, 237, 0.72);
+  background: rgba(9, 18, 27, 0.62);
+  font-size: 0.72rem;
+  text-align: center;
+}
+.workbench-sandbox-timeline-strip li[data-step-state="done"] {
+  color: #dff9ee;
+  border-color: rgba(125, 215, 194, 0.36);
+}
+.workbench-sandbox-timeline-strip li[data-step-state="active"] {
+  color: #fff2cb;
+  border-color: rgba(240, 193, 91, 0.42);
+  background: rgba(77, 54, 11, 0.26);
+}
+.workbench-reference-sample-pack {
+  padding: 0.55rem;
+}
+.workbench-reference-sample-pack summary {
+  cursor: pointer;
+  color: rgba(213, 227, 237, 0.78);
+  font-size: 0.76rem;
+}
+.workbench-reference-sample-pack .workbench-circuit-hero-mount {
+  flex: 0 0 auto;
+  min-height: 280px;
+  margin-top: 0.5rem;
+}
+
 /* Canvas-view shared chrome — each view is the canvas hero, so
    match the circuit-hero's full-bleed treatment. */
 .workbench-canvas-view {
