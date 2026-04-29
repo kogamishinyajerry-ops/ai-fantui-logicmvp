@@ -72,6 +72,20 @@ browser-side sandbox candidate state:
 - Exported draft JSON may carry editable edges, but `truth_level_impact`
   remains `none`.
 
+## JER-164 Rule
+
+JER-164 turns the draft handoff into a local evidence archive manifest. The UI
+prepares a downloadable JSON bundle without writing Linear, GitHub, or certified
+truth:
+
+- The manifest includes model JSON, sandbox diff summary, ChangeRequest body,
+  PR proof packet, and red-line metadata.
+- Missing sandbox diff evidence is explicit through `missing_diff_fallback`.
+- Checksum fields cover model JSON, diff summary, ChangeRequest body, PR proof
+  packet, and the manifest itself.
+- `live_linear_mutation`, `controller_truth_modified`, and
+  `frozen_assets_modified` remain `false`.
+
 ## Boundaries
 
 - Do not edit `src/well_harness/controller.py` truth semantics.

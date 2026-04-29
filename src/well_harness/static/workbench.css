@@ -5272,6 +5272,11 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   padding-top: 0.75rem;
   border-top: 1px solid rgba(150, 173, 190, 0.18);
 }
+.workbench-evidence-archive {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(150, 173, 190, 0.18);
+}
 .workbench-handoff-generate {
   width: 100%;
   min-height: 36px;
