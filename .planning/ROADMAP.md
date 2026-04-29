@@ -2,7 +2,36 @@
 
 ## Current Milestone
 
-**Active on `claude/c919-etras-frozen-v1-migration` — Phase A complete, Phase C in planning (updated 2026-04-22)**
+**Active pivot — Editable Control Workbench Core v1 (updated 2026-04-29)**
+
+The product mainline has pivoted from system-specific thrust-reverser/C919
+repair work into an editable control-logic workbench. The workbench should feel
+closer to a Figma/Canvas-style engineering surface with Simulink-style graph
+modeling and sandbox verification.
+
+Current Linear project:
+`AI FANTUI LogicMVP · Editable Control Workbench Core v1`
+
+Current issue chain:
+
+- JER-155: pivot foundation, editable model/diff schema, validator/hash, derived seed
+- JER-156: sandbox snapshot evaluator and baseline diff
+- JER-157: timeline sandbox integration
+- JER-158: workbench editable canvas shell v1
+- JER-159: ChangeRequest and Linear handoff from draft
+- JER-160: end-to-end acceptance
+
+JER-150 through JER-153 are now a Reference Sample Pack / Hardware Evidence
+Sample Pack track. They feed future evidence inspector surfaces, but they are no
+longer the product mainline by themselves.
+
+Non-negotiable pivot boundary: editable control models are
+`sandbox_candidate` artifacts only. They do not modify `controller.py`, frozen
+adapters, frozen hardware YAML, C919 reference packet, truth-level, DAL, or PSSA.
+
+## Prior Active Context
+
+**Previously active on `claude/c919-etras-frozen-v1-migration` — Phase A complete, Phase C in planning (updated 2026-04-22)**
 
 **Historical anchor**: Milestone 9 — Project Freeze (2026-04-15) closed P0-P16. Opus 4.6 adjudicated MVP-达标线 and froze `main`。
 

@@ -1,0 +1,189 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/editable_control_model_diff_v1.schema.json",
+  "title": "well_harness.editable_control_model_diff v1 JSON payload",
+  "description": "Comparison report between sandbox candidate editable models. This report never certifies candidate truth.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "version",
+    "baseline_run",
+    "candidate_run",
+    "scenario_result",
+    "first_divergence",
+    "per_signal_delta",
+    "hardware_evidence",
+    "verdict"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/editable_control_model_diff_v1.schema.json"
+    },
+    "kind": {
+      "const": "well-harness-editable-control-model-diff"
+    },
+    "version": {
+      "const": 1
+    },
+    "baseline_run": {
+      "$ref": "#/$defs/runSummary"
+    },
+    "candidate_run": {
+      "$ref": "#/$defs/runSummary"
+    },
+    "scenario_result": {
+      "$ref": "#/$defs/scenarioResult"
+    },
+    "first_divergence": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/divergence"
+        }
+      ]
+    },
+    "per_signal_delta": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/signalDelta"
+      }
+    },
+    "hardware_evidence": {
+      "$ref": "#/$defs/hardwareEvidence"
+    },
+    "verdict": {
+      "enum": [
+        "equivalent",
+        "divergent",
+        "invalid_model",
+        "invalid_scenario"
+      ]
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "runSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_id",
+        "model_hash",
+        "system_id",
+        "truth_status",
+        "source_of_truth"
+      ],
+      "properties": {
+        "model_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "model_hash": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "system_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "truth_status": {
+          "const": "sandbox_candidate"
+        },
+        "source_of_truth": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "scenarioResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scenario_id",
+        "assertion_status",
+        "frame_count"
+      ],
+      "properties": {
+        "scenario_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "assertion_status": {
+          "enum": [
+            "pass",
+            "fail",
+            "not_run"
+          ]
+        },
+        "frame_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "divergence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "at_s",
+        "signal_id",
+        "baseline_value",
+        "candidate_value"
+      ],
+      "properties": {
+        "at_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "signal_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "baseline_value": {},
+        "candidate_value": {}
+      }
+    },
+    "signalDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "signal_id",
+        "status"
+      ],
+      "properties": {
+        "signal_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "status": {
+          "enum": [
+            "same",
+            "different",
+            "not_compared"
+          ]
+        }
+      }
+    },
+    "hardwareEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "truth_effect",
+        "binding_count",
+        "evidence_gap_count"
+      ],
+      "properties": {
+        "truth_effect": {
+          "const": "none"
+        },
+        "binding_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "evidence_gap_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

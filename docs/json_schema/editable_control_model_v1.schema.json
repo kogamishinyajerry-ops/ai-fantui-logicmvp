@@ -1,0 +1,362 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/editable_control_model_v1.schema.json",
+  "title": "well_harness.editable_control_model v1 JSON payload",
+  "description": "Sandbox-only editable control graph model. This payload is a candidate engineering view, not certified controller truth.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "version",
+    "model_id",
+    "system_id",
+    "truth_status",
+    "view_status",
+    "source_of_truth",
+    "nodes",
+    "ports",
+    "edges",
+    "hardware_bindings",
+    "scenarios",
+    "evidence_metadata",
+    "boundaries"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/editable_control_model_v1.schema.json"
+    },
+    "kind": {
+      "const": "well-harness-editable-control-model"
+    },
+    "version": {
+      "const": 1
+    },
+    "model_id": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "system_id": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "truth_status": {
+      "const": "sandbox_candidate"
+    },
+    "view_status": {
+      "enum": [
+        "derived_view",
+        "draft"
+      ]
+    },
+    "source_of_truth": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/node"
+      }
+    },
+    "ports": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/port"
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/edge"
+      }
+    },
+    "hardware_bindings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/hardwareBinding"
+      }
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/scenario"
+      }
+    },
+    "evidence_metadata": {
+      "$ref": "#/$defs/evidenceMetadata"
+    },
+    "boundaries": {
+      "$ref": "#/$defs/boundaries"
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "node": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "node_type",
+        "op",
+        "source_ref",
+        "editable"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "node_type": {
+          "enum": [
+            "input",
+            "logic",
+            "output",
+            "plant_observer",
+            "fault_injector",
+            "assertion"
+          ]
+        },
+        "op": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "enum": [
+                "and",
+                "or",
+                "compare",
+                "between",
+                "delay",
+                "latch"
+              ]
+            }
+          ]
+        },
+        "source_ref": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "editable": {
+          "type": "boolean"
+        }
+      }
+    },
+    "port": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "node_id",
+        "direction",
+        "signal_id",
+        "value_type",
+        "unit",
+        "required"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "node_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "direction": {
+          "enum": [
+            "in",
+            "out"
+          ]
+        },
+        "signal_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "value_type": {
+          "enum": [
+            "boolean",
+            "number",
+            "string",
+            "state",
+            "unknown"
+          ]
+        },
+        "unit": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "source_port_id",
+        "target_port_id",
+        "edge_type",
+        "evidence_only"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_port_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "target_port_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "edge_type": {
+          "enum": [
+            "input_flow",
+            "command_flow",
+            "feedback_flow",
+            "evidence_only"
+          ]
+        },
+        "evidence_only": {
+          "type": "boolean"
+        }
+      }
+    },
+    "hardwareBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "signal_id",
+        "port_id",
+        "hardware_id",
+        "binding_kind",
+        "evidence_status",
+        "truth_effect",
+        "source_ref"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "signal_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "port_id": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/nonEmptyString"
+            }
+          ]
+        },
+        "hardware_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "binding_kind": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "truth_effect": {
+          "const": "none"
+        },
+        "source_ref": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "description",
+        "timeline_ref"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "label": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "description": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "timeline_ref": {
+          "anyOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/nonEmptyString"
+            }
+          ]
+        }
+      }
+    },
+    "evidenceMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline_adapter_id",
+        "baseline_truth_level",
+        "sample_pack_role",
+        "source_refs"
+      ],
+      "properties": {
+        "baseline_adapter_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "baseline_truth_level": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "sample_pack_role": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        }
+      }
+    },
+    "boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime_scope",
+        "controller_truth_modified",
+        "truth_level_impact",
+        "dal_pssa_impact",
+        "hardware_truth_effect"
+      ],
+      "properties": {
+        "runtime_scope": {
+          "const": "sandbox_only"
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "truth_level_impact": {
+          "const": "none"
+        },
+        "dal_pssa_impact": {
+          "const": "none"
+        },
+        "hardware_truth_effect": {
+          "const": "none"
+        }
+      }
+    }
+  }
+}
