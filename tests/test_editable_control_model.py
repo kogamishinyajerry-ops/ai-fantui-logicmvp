@@ -10,10 +10,32 @@ from well_harness.editable_control_model import (
     EditableControlModelValidationError,
     build_editable_control_model_diff_report,
     build_reference_editable_control_model,
+    compare_editable_snapshot_to_baseline,
     editable_control_model_hash,
+    evaluate_editable_snapshot,
     validate_editable_control_model,
     validate_editable_control_model_diff_report,
 )
+
+
+FULL_CHAIN_SNAPSHOT = {
+    "radio_altitude_ft": 5.0,
+    "tra_deg": -14.0,
+    "sw1": True,
+    "sw2": True,
+    "engine_running": True,
+    "aircraft_on_ground": True,
+    "reverser_inhibited": False,
+    "eec_enable": True,
+    "n1k": 50.0,
+    "max_n1k_deploy_limit": 60.0,
+    "tls_unlocked_ls": True,
+    "all_pls_unlocked_ls": True,
+    "reverser_not_deployed_eec": True,
+    "reverser_fully_deployed_eec": False,
+    "deploy_position_percent": 95.0,
+    "deploy_90_percent_vdt": True,
+}
 
 
 def test_reference_seed_is_schema_valid_sandbox_candidate() -> None:
@@ -36,6 +58,15 @@ def test_reference_seed_is_schema_valid_sandbox_candidate() -> None:
     assert payload["edges"]
     assert payload["hardware_bindings"]
     assert editable_control_model_hash(payload) == editable_control_model_hash(payload)
+
+
+def test_reference_seed_includes_logic_rules_for_snapshot_runtime() -> None:
+    payload = build_reference_editable_control_model()
+    logic2 = next(node for node in payload["nodes"] if node["id"] == "logic2")
+
+    assert logic2["op"] == "and"
+    assert any(rule["name"] == "sw2_hysteresis_tra_deg" for rule in logic2["rules"])
+    assert all(rule["source_signal_id"] for rule in logic2["rules"])
 
 
 def test_validator_rejects_certified_truth_status() -> None:
@@ -100,3 +131,62 @@ def test_diff_report_schema_rejects_certified_candidate_claim() -> None:
 
     with pytest.raises(EditableControlModelValidationError, match="truth_status"):
         validate_editable_control_model_diff_report(report)
+
+
+def test_evaluate_editable_snapshot_matches_full_chain_candidate_rules() -> None:
+    model = build_reference_editable_control_model()
+
+    result = evaluate_editable_snapshot(model, FULL_CHAIN_SNAPSHOT)
+
+    assert result["model_id"] == model["model_id"]
+    assert result["truth_status"] == "sandbox_candidate"
+    assert result["completion_reached"] is True
+    assert set(result["active_logic_node_ids"]) == {"logic1", "logic2", "logic3", "logic4"}
+    assert result["logic_states"]["logic4"]["state"] == "active"
+    assert result["asserted_component_values"]["logic4"] is True
+
+
+def test_compare_editable_snapshot_to_baseline_reports_equivalent_full_chain() -> None:
+    model = build_reference_editable_control_model()
+
+    report = compare_editable_snapshot_to_baseline(model, FULL_CHAIN_SNAPSHOT)
+
+    validate_editable_control_model_diff_report(report)
+    assert report["verdict"] == "equivalent"
+    assert report["first_divergence"] is None
+    assert all(delta["status"] == "same" for delta in report["per_signal_delta"])
+
+
+def test_compare_editable_snapshot_to_baseline_reports_intentional_threshold_drift() -> None:
+    model = build_reference_editable_control_model()
+    logic3 = next(node for node in model["nodes"] if node["id"] == "logic3")
+    tra_rule = next(rule for rule in logic3["rules"] if rule["name"] == "tra_deg")
+    tra_rule["threshold_value"] = -20.0
+
+    report = compare_editable_snapshot_to_baseline(model, FULL_CHAIN_SNAPSHOT)
+
+    validate_editable_control_model_diff_report(report)
+    assert report["verdict"] == "divergent"
+    assert report["first_divergence"]["signal_id"] == "logic3"
+    assert report["first_divergence"]["baseline_value"] is True
+    assert report["first_divergence"]["candidate_value"] is False
+
+
+def test_evaluate_editable_snapshot_rejects_unsafe_op_catalog_entry() -> None:
+    model = build_reference_editable_control_model()
+    logic1 = next(node for node in model["nodes"] if node["id"] == "logic1")
+    logic1["op"] = "python_eval"
+
+    with pytest.raises(EditableControlModelValidationError, match="op"):
+        evaluate_editable_snapshot(model, FULL_CHAIN_SNAPSHOT)
+
+
+def test_hardware_binding_edits_do_not_change_baseline_diff() -> None:
+    model = build_reference_editable_control_model()
+    model["hardware_bindings"][0]["hardware_id"] = "sandbox-edited-hardware"
+    model["hardware_bindings"][0]["evidence_status"] = "evidence_gap"
+
+    report = compare_editable_snapshot_to_baseline(model, FULL_CHAIN_SNAPSHOT)
+
+    assert report["verdict"] == "equivalent"
+    assert report["hardware_evidence"]["truth_effect"] == "none"

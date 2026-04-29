@@ -90,7 +90,10 @@
           "$ref": "#/$defs/nonEmptyString"
         },
         "truth_status": {
-          "const": "sandbox_candidate"
+          "enum": [
+            "sandbox_candidate",
+            "certified"
+          ]
         },
         "source_of_truth": {
           "$ref": "#/$defs/nonEmptyString"
