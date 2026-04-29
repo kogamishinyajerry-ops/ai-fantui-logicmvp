@@ -264,6 +264,12 @@ def test_work_order_normalizes_whitespace_in_source_quote() -> None:
         assert ch not in quoted, (
             f"quoted source still contains {ch!r} after normalization"
         )
+    # Codex R3-N1: doubled ASCII space must also collapse — was the
+    # exact gap that R2 §D's expanded regex grew to fix, but the
+    # original test never pinned this assertion down.
+    assert "  " not in quoted, (
+        f"doubled ASCII spaces survived normalization: {quoted!r}"
+    )
 
 
 def test_work_order_quotes_truncate_long_source() -> None:
@@ -669,3 +675,80 @@ def test_interpret_endpoint_surfaces_new_fields() -> None:
     wo = parsed["recommended_work_order_zh"]
     assert "tra_deg" in wo, f"endpoint work order missing tra_deg: {wo}"
     assert "L3" in wo, f"endpoint work order missing L3: {wo}"
+
+
+# ── 9. Codex R3 regression coverage ──────────────────────────
+
+
+def test_llm_normalizer_drops_verbose_change_kind_label_on_drift() -> None:
+    """Codex R3-A: the LLM can encode false precision INSIDE the
+    change_kind_zh / change_kind_en label string itself
+    (e.g. "修改 tls_115vac_cmd 判据" instead of canonical "修改判据").
+    R2 fixed summary_zh/_en regeneration on canonicalization, but the
+    raw labels were still trusted verbatim. R3-A widens the override:
+    when canonicalization fires for ANY reason (gate/signal/kind/
+    output drift), labels reset to the canonical taxonomy pair."""
+    raw = {
+        "affected_gates": ["L1"],
+        "target_signals": [],
+        # LLM claims tls_115vac_cmd structurally → output drift fires
+        # because source_text doesn't corroborate.
+        "affected_outputs": ["tls_115vac_cmd"],
+        "change_kind": "modify_condition",
+        # Verbose labels embedding the un-corroborated cmd:
+        "change_kind_zh": "修改 tls_115vac_cmd 判据",
+        "change_kind_en": "modify tls_115vac_cmd condition",
+        "confidence": 0.6,
+        "summary_zh": "原始 LLM 摘要。",
+        "summary_en": "Original LLM summary.",
+    }
+    norm = _normalize_llm_interpretation(
+        raw,
+        source_text="TLS 解锁电路应该提前",
+        system_id="thrust-reverser",
+    )
+    # Output corroboration drops the cmd from the structured field.
+    assert norm["affected_outputs"] == []
+    # And the labels must NOT carry it any more.
+    assert "tls_115vac_cmd" not in norm["change_kind_zh"], (
+        f"change_kind_zh still leaks verbose cmd: "
+        f"{norm['change_kind_zh']!r}"
+    )
+    assert "tls_115vac_cmd" not in norm["change_kind_en"], (
+        f"change_kind_en still leaks verbose cmd: "
+        f"{norm['change_kind_en']!r}"
+    )
+    # Should match the canonical _CHANGE_KIND_HINTS entry.
+    assert norm["change_kind_zh"] == "修改判据"
+    assert norm["change_kind_en"] == "modify condition"
+    # Sanity: summary regeneration also cleaned up.
+    assert "tls_115vac_cmd" not in norm["summary_zh"]
+    assert "tls_115vac_cmd" not in norm["summary_en"]
+
+
+def test_llm_fallback_propagates_system_id(monkeypatch) -> None:
+    """Codex R3-B (pre-existing bug): when interpret_suggestion_text_llm
+    falls back to the rules path (missing API key, network failure,
+    JSON parse failure), it must propagate system_id. Otherwise non-
+    default systems silently fall through thrust-reverser vocab and
+    affected_gates comes up empty."""
+    from well_harness import demo_server as ds
+
+    # Force the no-api-key fallback branch by stubbing the resolver.
+    # This is more robust than env-var clearing because the resolver
+    # also reads ~/.minimax_key as a fallback file.
+    monkeypatch.setattr(ds, "_resolve_minimax_api_key", lambda: None)
+
+    result = ds.interpret_suggestion_text_llm(
+        "ETRAS deploy 判据要 tune 调整",
+        system_id="c919-etras",
+    )
+    assert result.get("interpreter_strategy") == "llm_fallback_to_rules"
+    # E2 is c919-etras's deploy gate; the rules path detects it when
+    # given system_id="c919-etras". Without the propagation fix the
+    # fallback runs through thrust-reverser vocab and returns [].
+    assert "E2" in result["affected_gates"], (
+        f"LLM fallback dropped system_id: affected_gates="
+        f"{result['affected_gates']!r} for c919-etras input. Per "
+        f"Codex R3-B, both fallback branches must pass system_id."
+    )

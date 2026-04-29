@@ -2789,6 +2789,15 @@ def _normalize_llm_interpretation(
     # equality (synonyms aren't defined for signals in this repo).
     target_signals = [s for s in target_signals if s in signal_vocab]
     valid_change_kinds = {h[1] for h in _CHANGE_KIND_HINTS}
+    # Canonical (code, zh, en) lookup so any time we override raw
+    # labels we use the dict's canonical pair instead of the LLM's
+    # free-form text. Codex R3-A finding: the LLM can encode false
+    # precision inside change_kind_zh/en (e.g. "修改 tls_115vac_cmd
+    # 判据") — that label survived because we only overrode it when
+    # change_kind itself was invalid.
+    canonical_kind_labels: dict[str, tuple[str, str]] = {
+        h[1]: (h[2], h[3]) for h in _CHANGE_KIND_HINTS
+    }
     raw_zh = str(raw_dict.get("change_kind_zh") or "提出建议")
     raw_en = str(raw_dict.get("change_kind_en") or "propose change")
     if change_kind not in valid_change_kinds:
@@ -2852,6 +2861,17 @@ def _normalize_llm_interpretation(
         or raw_outputs_in != affected_outputs
     )
     if canonicalized:
+        # Codex R3-A: the LLM-supplied change_kind_zh / change_kind_en
+        # can encode false precision in the label string itself
+        # (e.g. "修改 tls_115vac_cmd 判据"). Whenever canonicalization
+        # fires for ANY reason (gate/signal/kind/output drift), reset
+        # the labels to the canonical taxonomy pair so the UI pill
+        # and the regenerated summary do not carry a verbose label
+        # that mentions an un-corroborated cmd. The 5-line block
+        # earlier already handles the change_kind-was-invalid case;
+        # this widens the override to all canonicalization triggers.
+        if change_kind in canonical_kind_labels:
+            raw_zh, raw_en = canonical_kind_labels[change_kind]
         gates_label = "、".join(affected_gates) if affected_gates else "(未识别)"
         signals_label = "、".join(target_signals) if target_signals else "(未识别)"
         summary_zh = (
@@ -2954,7 +2974,11 @@ def interpret_suggestion_text_llm(
     always gets SOME interpretation."""
     api_key = _resolve_minimax_api_key()
     if not api_key:
-        fallback = interpret_suggestion_text(text)
+        # Codex R3-B: fallback must propagate system_id, otherwise
+        # non-default systems (c919-etras / landing-gear / bleed-air-
+        # valve) silently fall back through thrust-reverser vocab and
+        # affected_gates comes up empty.
+        fallback = interpret_suggestion_text(text, system_id=system_id)
         fallback["interpreter_strategy"] = "llm_fallback_to_rules"
         fallback["llm_error"] = "missing_api_key"
         return fallback
@@ -2971,7 +2995,9 @@ def interpret_suggestion_text_llm(
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         # Catches urllib.error.URLError (subclass of OSError),
         # timeouts, JSON parse errors, and our own ValueError raises.
-        fallback = interpret_suggestion_text(text)
+        # Codex R3-B: same system_id propagation on the network /
+        # parse failure path.
+        fallback = interpret_suggestion_text(text, system_id=system_id)
         fallback["interpreter_strategy"] = "llm_fallback_to_rules"
         fallback["llm_error"] = type(exc).__name__ + ": " + str(exc)[:200]
         return fallback
