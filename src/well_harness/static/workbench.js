@@ -7568,8 +7568,10 @@ function installEditableWorkbenchShell() {
   const opSelect = document.getElementById("workbench-inspector-node-op");
   const ruleCountSlot = document.getElementById("workbench-inspector-rule-count");
   const evidenceSlot = document.getElementById("workbench-inspector-evidence-status");
+  const signalCountSlot = document.getElementById("workbench-inspector-signal-count");
   const sourceRefSlot = document.getElementById("workbench-inspector-source-ref");
   const evidenceSummary = document.getElementById("workbench-inspector-evidence-summary");
+  const evidenceDetail = document.getElementById("workbench-inspector-evidence-detail");
   const timelineStrip = document.getElementById("workbench-sandbox-timeline-strip");
   const handoffBtn = document.getElementById("workbench-generate-handoff-btn");
   const handoffStatus = document.getElementById("workbench-handoff-status");
@@ -7577,6 +7579,7 @@ function installEditableWorkbenchShell() {
   const prProofOutput = document.getElementById("workbench-pr-proof-output");
   const storageKey = "well-harness-editable-workbench-draft-v1";
   let selectedNode = nodes.find((node) => node.getAttribute("aria-pressed") === "true") || nodes[0];
+  let hardwareEvidenceReport = null;
 
   function selectedNodePayload() {
     if (!selectedNode) return null;
@@ -7625,6 +7628,78 @@ function installEditableWorkbenchShell() {
     }
   }
 
+  function normalizeInspectorLogicNodeId(nodeId) {
+    const raw = String(nodeId || "").trim();
+    const match = raw.match(/^logic([1-4])$/i);
+    if (match) return `L${match[1]}`;
+    return raw.toUpperCase();
+  }
+
+  function evidenceValueText(valueRef) {
+    if (!valueRef || typeof valueRef !== "object") {
+      return "not recorded (evidence_gap)";
+    }
+    const status = valueRef.status || "evidence_gap";
+    const value = valueRef.value;
+    if (status === "evidence_gap" || value === "TBD" || value === null || value === undefined) {
+      return "not recorded (evidence_gap)";
+    }
+    return `${value} (${status})`;
+  }
+
+  function inspectorText(value) {
+    return String(value === null || value === undefined ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function evidenceRowsForNode(report, nodeId) {
+    if (!report || !report.evidence_index || !report.evidence_index.logic_node_bindings) {
+      return [];
+    }
+    const key = normalizeInspectorLogicNodeId(nodeId);
+    const rows = report.evidence_index.logic_node_bindings[key];
+    return Array.isArray(rows) ? rows : [];
+  }
+
+  function renderInspectorEvidenceDetails(payload) {
+    const rows = evidenceRowsForNode(hardwareEvidenceReport, payload && payload.id);
+    if (signalCountSlot) signalCountSlot.textContent = String(rows.length);
+    if (!evidenceDetail) return;
+    if (!hardwareEvidenceReport) {
+      evidenceDetail.textContent = "Hardware evidence loading. Truth effect remains none.";
+      return;
+    }
+    if (!rows.length) {
+      evidenceDetail.innerHTML = [
+        '<p class="workbench-inspector-empty">No hardware signal binding is recorded for this node.</p>',
+        '<p class="workbench-inspector-truth-note">truth_effect: none</p>',
+      ].join("");
+      return;
+    }
+    const items = rows.map((row) => {
+      const carrier = [
+        `Cable: ${evidenceValueText(row.cable)}`,
+        `Connector: ${evidenceValueText(row.connector)}`,
+        `Local port: ${evidenceValueText(row.port_local)}`,
+        `Peer port: ${evidenceValueText(row.port_peer)}`,
+      ].join(" · ");
+      const status = row.display_status === "not_recorded" ? "not recorded" : "recorded";
+      return [
+        '<li>',
+        `<strong>${inspectorText(row.signal_id || "unknown_signal")}</strong>`,
+        `<span>${inspectorText(row.source_hardware_id || "unknown")} → ${inspectorText(row.peer_hardware_id || "unknown")}</span>`,
+        `<small>${inspectorText(carrier)}</small>`,
+        `<em>${inspectorText(status)} · truth_effect: ${inspectorText(row.truth_effect || "none")}</em>`,
+        '</li>',
+      ].join("");
+    }).join("");
+    evidenceDetail.innerHTML = `<ul>${items}</ul>`;
+  }
+
   function renderInspector() {
     const payload = selectedNodePayload();
     if (!payload) return;
@@ -7634,6 +7709,7 @@ function installEditableWorkbenchShell() {
     if (ruleCountSlot) ruleCountSlot.textContent = payload.ruleCount;
     if (evidenceSlot) evidenceSlot.textContent = payload.evidence;
     if (sourceRefSlot) sourceRefSlot.textContent = payload.sourceRef;
+    renderInspectorEvidenceDetails(payload);
   }
 
   function selectNode(node) {
@@ -7693,11 +7769,13 @@ function installEditableWorkbenchShell() {
       .then((response) => response.ok ? response.json() : null)
       .then((payload) => {
         if (!payload || !payload.coverage || !payload.evidence_gaps) return;
+        hardwareEvidenceReport = payload;
         const lru = payload.coverage.lru_inventory.actual_count;
         const bindings = payload.coverage.signal_bindings.actual_count;
         const gaps = payload.evidence_gaps.total_field_count;
         evidenceSummary.textContent =
           `Read-only evidence: ${lru} LRUs, ${bindings} signal bindings, ${gaps} evidence-gap fields.`;
+        renderInspectorEvidenceDetails(selectedNodePayload());
       })
       .catch(() => {
         evidenceSummary.textContent = "Hardware evidence API unavailable; draft editing still remains sandbox-only.";

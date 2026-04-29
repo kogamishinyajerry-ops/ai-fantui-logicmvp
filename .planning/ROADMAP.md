@@ -2,24 +2,32 @@
 
 ## Current Milestone
 
-**Active pivot — Editable Control Workbench Core v1 (updated 2026-04-29)**
+**Active milestone — Editable Workbench Interaction v2 (updated 2026-04-30)**
 
-The product mainline has pivoted from system-specific thrust-reverser/C919
-repair work into an editable control-logic workbench. The workbench should feel
-closer to a Figma/Canvas-style engineering surface with Simulink-style graph
-modeling and sandbox verification.
+Editable Control Workbench Core v1 is complete. The next milestone turns the
+proof layer into an operational engineering surface: node-linked evidence,
+visible sandbox diff feedback, draft import/export, and auditable handoff
+archives.
 
 Current Linear project:
-`AI FANTUI LogicMVP · Editable Control Workbench Core v1`
+`AI FANTUI LogicMVP · Editable Workbench Interaction v2`
 
 Current issue chain:
+
+- JER-154: Evidence Inspector hardware mapping v1
+- JER-161: Sandbox run panel and baseline diff UI
+- JER-162: Draft import/export JSON round-trip
+- JER-163: Undo/redo and node-edge editing regression v1
+- JER-164: Workbench evidence archive download handoff
+
+Completed pivot foundation:
 
 - JER-155: pivot foundation, editable model/diff schema, validator/hash, derived seed
 - JER-156: sandbox snapshot evaluator and baseline diff
 - JER-157: timeline sandbox integration
 - JER-158: workbench editable canvas shell v1
 - JER-159: ChangeRequest and Linear handoff from draft
-- JER-160: end-to-end acceptance
+- JER-160: end-to-end acceptance bundle
 
 JER-150 through JER-153 are now a Reference Sample Pack / Hardware Evidence
 Sample Pack track. They feed future evidence inspector surfaces, but they are no

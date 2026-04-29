@@ -654,6 +654,10 @@
                   <dd id="workbench-inspector-evidence-status">evidence_gap</dd>
                 </div>
                 <div>
+                  <dt>Mapped signals</dt>
+                  <dd id="workbench-inspector-signal-count">0</dd>
+                </div>
+                <div>
                   <dt>Source ref</dt>
                   <dd id="workbench-inspector-source-ref">control_system_spec.logic_nodes.logic1</dd>
                 </div>
@@ -662,12 +666,19 @@
                   <dd>none</dd>
                 </div>
               </dl>
-            <div
-              id="workbench-inspector-evidence-summary"
+              <div
+                id="workbench-inspector-evidence-summary"
                 class="workbench-inspector-evidence-summary"
                 data-evidence-api="/api/hardware/evidence?system_id=thrust-reverser"
               >
                 Hardware evidence API pending. Draft edits are not certified truth.
+              </div>
+              <div
+                id="workbench-inspector-evidence-detail"
+                class="workbench-inspector-evidence-detail"
+                aria-live="polite"
+              >
+                Select a graph node to inspect read-only hardware evidence.
               </div>
               <section
                 class="workbench-changerequest-handoff"
