@@ -83,6 +83,9 @@ def test_evidence_inspector_has_editable_and_read_only_fields() -> None:
     assert 'id="workbench-inspector-node-op"' in html
     assert 'id="workbench-inspector-evidence-status"' in html
     assert 'id="workbench-inspector-source-ref"' in html
+    assert 'id="workbench-generate-handoff-btn"' in html
+    assert 'id="workbench-linear-handoff-output"' in html
+    assert 'id="workbench-pr-proof-output"' in html
     assert 'data-evidence-api="/api/hardware/evidence?system_id=thrust-reverser"' in html
 
 
@@ -118,3 +121,14 @@ def test_js_wires_draft_derivation_node_selection_and_evidence_api() -> None:
     assert "data-editable-node-id" in js
     assert "workbench-inspector-node-label" in js
     assert "data-evidence-api" in js
+
+
+def test_js_builds_changerequest_linear_handoff_without_live_linear_mutation() -> None:
+    js = _js()
+
+    assert "function buildEditableHandoffPacket" in js
+    assert "workbench-generate-handoff-btn" in js
+    assert "Linear: JER-TBD" in js
+    assert "Truth-level impact: none" in js
+    assert "Red lines touched: none" in js
+    assert "No live Linear mutation" in js

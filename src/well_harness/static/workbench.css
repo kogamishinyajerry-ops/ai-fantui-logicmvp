@@ -5176,6 +5176,43 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   font-size: 0.72rem;
   line-height: 1.45;
 }
+.workbench-changerequest-handoff {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(150, 173, 190, 0.18);
+}
+.workbench-handoff-generate {
+  width: 100%;
+  min-height: 36px;
+  margin-bottom: 0.5rem;
+}
+.workbench-handoff-status {
+  min-height: 34px;
+  margin: 0 0 0.55rem;
+  color: rgba(213, 227, 237, 0.72);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+.workbench-handoff-output {
+  display: grid;
+  gap: 0.32rem;
+  margin-top: 0.55rem;
+}
+.workbench-handoff-output span {
+  color: rgba(213, 227, 237, 0.58);
+  font-size: 0.68rem;
+}
+.workbench-handoff-output textarea {
+  width: 100%;
+  min-height: 112px;
+  resize: vertical;
+  border: 1px solid rgba(150, 173, 190, 0.25);
+  border-radius: 7px;
+  background: rgba(4, 10, 16, 0.74);
+  color: #f5fbff;
+  padding: 0.5rem;
+  font: 0.72rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
 .workbench-sandbox-timeline-strip {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

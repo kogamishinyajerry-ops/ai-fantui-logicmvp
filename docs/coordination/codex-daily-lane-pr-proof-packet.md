@@ -18,6 +18,8 @@ Test delta: <targeted pytest>; <default pytest>; <GSD validation>; <adversarial 
 - Candidate graph outputs are never certified truth.
 - Baseline comparisons must cite the adapter/controller source used for the
   comparison.
+- ChangeRequest/Linear handoff packets are generated as draft evidence only.
+  The workbench must not perform live Linear mutation or claim PR creation.
 - e2e 49/49 and `mypy --strict clean` must not be claimed unless those commands
   are explicitly run and pass in the current PR.
 
@@ -35,4 +37,3 @@ Test delta: <targeted pytest>; <default pytest>; <GSD validation>; <adversarial 
 Notion comments/pages can record what happened, but they do not approve a Codex
 Daily Lane PR. The daily merge gate is Linear issue contract plus GitHub PR plus
 validation evidence.
-
