@@ -90,10 +90,46 @@ class PhysicalLimits:
 
 
 @dataclass(frozen=True)
+class HardwareValueRef:
+    status: str
+    value: str | int | float | None
+
+
+@dataclass(frozen=True)
+class LruInventoryItem:
+    id: str
+    display_name: str
+    quantity_per_engine: int | float | None
+    value_status: str
+    part_number: HardwareValueRef
+    location: HardwareValueRef
+    failure_rate_per_hour: HardwareValueRef
+    source_ref: str
+
+
+@dataclass(frozen=True)
+class SignalCarrierBinding:
+    signal_id: str
+    direction: str
+    source_hardware_id: str
+    peer_hardware_id: str
+    cable: HardwareValueRef
+    connector: HardwareValueRef
+    port_local: HardwareValueRef
+    port_peer: HardwareValueRef
+    redundancy_status: str
+    evidence_status: str
+    feeds_logic_nodes: tuple[str, ...]
+    source_ref: str
+
+
+@dataclass(frozen=True)
 class ThrustReverserHardware:
     kind: str
     version: int
     system_id: str
+    lru_inventory: tuple[LruInventoryItem, ...]
+    signal_carrier_bindings: tuple[SignalCarrierBinding, ...]
     sensor: SensorSpec
     actuator_tra: ActuatorTraSpec
     actuator_vd: ActuatorVDSpec
@@ -112,10 +148,12 @@ def _hardware_to_dict(hw: ThrustReverserHardware) -> dict:
     def _to_dict(obj):
         if dataclasses.is_dataclass(obj):
             result = {}
-            for k, v in dataclasses.asdict(obj).items():
-                result[k] = _to_dict(v)
+            for field in dataclasses.fields(obj):
+                result[field.name] = _to_dict(getattr(obj, field.name))
             return result
-        if isinstance(obj, list):
+        if isinstance(obj, dict):
+            return {k: _to_dict(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
             return [_to_dict(item) for item in obj]
         return obj
 
@@ -143,6 +181,55 @@ def _get_schema() -> dict:
         return json.loads(schema_path.read_text(encoding="utf-8"))
     except Exception as exc:  # pragma: no cover
         raise HardwareSchemaError(f"Cannot load hardware schema JSON: {exc}") from exc
+
+
+def _parse_value_ref(raw: dict[str, Any]) -> HardwareValueRef:
+    return HardwareValueRef(
+        status=str(raw["status"]),
+        value=raw.get("value"),
+    )
+
+
+def _parse_lru_inventory(raw_items: list[dict[str, Any]] | None) -> tuple[LruInventoryItem, ...]:
+    if not raw_items:
+        return ()
+    return tuple(
+        LruInventoryItem(
+            id=str(item["id"]),
+            display_name=str(item["display_name"]),
+            quantity_per_engine=item.get("quantity_per_engine"),
+            value_status=str(item["value_status"]),
+            part_number=_parse_value_ref(item["part_number"]),
+            location=_parse_value_ref(item["location"]),
+            failure_rate_per_hour=_parse_value_ref(item["failure_rate_per_hour"]),
+            source_ref=str(item["source_ref"]),
+        )
+        for item in raw_items
+    )
+
+
+def _parse_signal_carrier_bindings(
+    raw_items: list[dict[str, Any]] | None,
+) -> tuple[SignalCarrierBinding, ...]:
+    if not raw_items:
+        return ()
+    return tuple(
+        SignalCarrierBinding(
+            signal_id=str(item["signal_id"]),
+            direction=str(item["direction"]),
+            source_hardware_id=str(item["source_hardware_id"]),
+            peer_hardware_id=str(item["peer_hardware_id"]),
+            cable=_parse_value_ref(item["cable"]),
+            connector=_parse_value_ref(item["connector"]),
+            port_local=_parse_value_ref(item["port_local"]),
+            port_peer=_parse_value_ref(item["port_peer"]),
+            redundancy_status=str(item["redundancy_status"]),
+            evidence_status=str(item["evidence_status"]),
+            feeds_logic_nodes=tuple(str(node) for node in item["feeds_logic_nodes"]),
+            source_ref=str(item["source_ref"]),
+        )
+        for item in raw_items
+    )
 
 
 # ─── Public API ───────────────────────────────────────────────────────────────
@@ -214,6 +301,10 @@ def load_thrust_reverser_hardware(
         kind=raw["kind"],
         version=raw["version"],
         system_id=raw["system_id"],
+        lru_inventory=_parse_lru_inventory(raw.get("lru_inventory")),
+        signal_carrier_bindings=_parse_signal_carrier_bindings(
+            raw.get("signal_carrier_bindings")
+        ),
         sensor=SensorSpec(
             unit=p["sensor"]["radio_altitude_ft"]["unit"],
             typical_range_ft=p["sensor"]["radio_altitude_ft"]["typical_range_ft"],
