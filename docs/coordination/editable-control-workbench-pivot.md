@@ -62,6 +62,14 @@ The export path does not call Linear, does not create PRs, and does not write
 controller or adapter truth. Any generated packet stays `draft_only` until a
 separate governed issue or PR executes real code changes.
 
+## JER-160 Acceptance Rule
+
+Core v1 acceptance is backend evidence orchestration: derive a thrust-reverser
+sandbox draft, apply a deterministic edit, run timeline sandbox comparison,
+generate a draft-only ChangeRequest/PR proof packet, and archive the evidence
+bundle with checksums. See
+`docs/coordination/editable-workbench-core-v1-acceptance.md`.
+
 ## Stop Rules
 
 Stop and escalate before merging if a PR:

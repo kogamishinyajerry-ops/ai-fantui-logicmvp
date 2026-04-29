@@ -156,6 +156,7 @@ def build_editable_workbench_change_request(
     *,
     title: str,
     source_ref: str,
+    layer: str = DEFAULT_LAYER,
     created_at: str | None = None,
     summary: str | None = None,
 ) -> dict[str, Any]:
@@ -176,7 +177,7 @@ def build_editable_workbench_change_request(
         "mutation_status": "not_attempted",
         "source_ref": source_ref,
         "adapter": model["system_id"],
-        "layer": DEFAULT_LAYER,
+        "layer": layer,
         "model_id": model["model_id"],
         "changed_model_hash": model_hash,
         "diff_report_hash": _hash_payload(diff_report),

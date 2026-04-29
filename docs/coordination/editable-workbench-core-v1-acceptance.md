@@ -1,0 +1,50 @@
+# Editable Workbench Core v1 Acceptance
+
+JER-160 closes the first editable-workbench milestone by proving the loop is
+deterministic and auditable without turning sandbox output into certified truth.
+
+## Acceptance Path
+
+1. Derive the thrust-reverser reference draft with
+   `derive_baseline_draft()`.
+2. Apply a deterministic sandbox edit with `apply_rule_threshold_edit()`.
+3. Run the candidate through the existing timeline sandbox.
+4. Compare candidate output against the certified
+   `ReferenceDeployControllerAdapter` / `FantuiExecutor` baseline.
+5. Generate a draft-only ChangeRequest and Codex PR proof packet.
+6. Archive the evidence bundle with SHA256 checksums.
+
+## Evidence Bundle Files
+
+`archive_editable_workbench_acceptance_bundle()` writes:
+
+- `bundle.json`
+- `model.json`
+- `candidate_trace.json`
+- `diff_report.json`
+- `change_request.json`
+- `pr_proof_packet.md`
+- `README.md`
+- `manifest.json`
+
+The manifest records SHA256 integrity for every evidence file. Validation uses
+`validate_editable_workbench_acceptance_manifest()`.
+
+## Stop Rules Exercised
+
+The acceptance layer rejects:
+
+- non-`thrust-reverser` candidates in this milestone path
+- `truth_status="certified"` candidate claims
+- `controller_truth_modified=true`
+- `truth_level_impact != "none"`
+- `dal_pssa_impact != "none"`
+- non-`fantui` timelines
+- checksum drift in archived files
+
+## Boundaries
+
+- `src/well_harness/controller.py` remains the certified thrust-reverser truth.
+- C919 E-TRAS remains read-only/frozen.
+- The bundle is evidence, not approval.
+- No product LLM/chat path is restored.
