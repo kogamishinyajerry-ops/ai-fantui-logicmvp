@@ -2237,7 +2237,15 @@ body[data-view="expert"] [view="beginner"] {
    interpreted as the target of the engineer's modification suggestion.
    The class is added to the <use href="#and-gate-active"> element via
    data-gate-id matching the interpreter's affected_gates list. */
-.workbench-circuit-hero-mount [data-gate-id].is-suggestion-target {
+.workbench-circuit-hero-mount [data-gate-id].is-suggestion-target,
+.workbench-circuit-hero-mount [data-signal-id].is-suggestion-target,
+.workbench-circuit-hero-mount [data-summary-id].is-suggestion-target {
+  /* P59-03 (2026-04-29): widened from gate-only to also cover signal
+     inputs / outputs / summary nodes that gained data-signal-id and
+     data-summary-id anchors in P59-01. The same drop-shadow + pulse
+     glow is reused so the visual language stays unified — when the
+     interpreter resolves "TRA threshold" it can now glow the actual
+     TRA input rect on the leftmost column, not just the L3 gate. */
   filter: drop-shadow(0 0 6px #f7bc5c) drop-shadow(0 0 12px #f7bc5c);
   animation: workbench-gate-pulse 1.8s ease-in-out infinite;
 }
@@ -2495,6 +2503,59 @@ body[data-view="expert"] [view="beginner"] {
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
+}
+
+/* P59-03 (2026-04-29): recommended work-order draft.
+   Lives in the suggestion panel between the field <dl> and the
+   conflict banner / actions row. Collapsed by default via <details>
+   so the panel keeps its current vertical rhythm; engineers expand
+   to copy-paste a deterministic ticket draft built from
+   recommended_work_order_zh / _en (P59-02 engine output). Pure
+   additive — no existing layout changes. */
+.workbench-suggestion-recommendation {
+  margin: 0.65rem 0 0.4rem;
+  border: 1px solid rgba(143, 214, 233, 0.18);
+  border-radius: 8px;
+  background: rgba(8, 17, 28, 0.45);
+}
+.workbench-suggestion-recommendation[hidden] { display: none; }
+.workbench-suggestion-recommendation > summary {
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: #8fd6e9;
+  padding: 0.45rem 0.7rem;
+  list-style: none;
+  user-select: none;
+}
+.workbench-suggestion-recommendation > summary::-webkit-details-marker { display: none; }
+.workbench-suggestion-recommendation > summary::before {
+  content: "▸ ";
+  display: inline-block;
+  margin-right: 0.2rem;
+  transition: transform 0.15s ease;
+}
+.workbench-suggestion-recommendation[open] > summary::before {
+  content: "▾ ";
+}
+.workbench-suggestion-recommendation-text {
+  margin: 0 0.7rem 0.5rem;
+  padding: 0.55rem 0.7rem;
+  background: rgba(8, 17, 28, 0.7);
+  border: 1px solid rgba(143, 214, 233, 0.12);
+  border-radius: 5px;
+  font-family: "SF Mono", "Monaco", "Menlo", "Courier New", monospace;
+  font-size: 0.74rem;
+  line-height: 1.55;
+  color: #cdd6e0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 14em;
+  overflow-y: auto;
+}
+.workbench-suggestion-recommendation-actions {
+  display: flex;
+  gap: 0.45rem;
+  padding: 0 0.7rem 0.6rem;
 }
 .workbench-suggestion-conflict-banner[hidden] { display: none; }
 .workbench-suggestion-conflict-head {
