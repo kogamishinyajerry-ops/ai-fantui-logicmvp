@@ -521,6 +521,17 @@
               <span>Truth impact</span>
               <strong>none · sandbox candidate only</strong>
             </span>
+            <label class="workbench-sandbox-control" for="workbench-sandbox-scenario-select">
+              <span>Scenario</span>
+              <select id="workbench-sandbox-scenario-select">
+                <option value="nominal_landing" selected>nominal_landing</option>
+                <option value="sw1_stuck_at_touchdown">sw1_stuck_at_touchdown</option>
+              </select>
+            </label>
+            <label class="workbench-sandbox-control" for="workbench-custom-snapshot-json">
+              <span>Snapshot JSON</span>
+              <textarea id="workbench-custom-snapshot-json" rows="1" spellcheck="false">{}</textarea>
+            </label>
             <button
               id="workbench-derive-draft-btn"
               type="button"

@@ -7596,6 +7596,8 @@ function installEditableWorkbenchShell() {
   const importDraftBtn = document.getElementById("workbench-import-draft-btn");
   const draftJsonBuffer = document.getElementById("workbench-draft-json-buffer");
   const draftJsonStatus = document.getElementById("workbench-draft-json-status");
+  const scenarioSelect = document.getElementById("workbench-sandbox-scenario-select");
+  const customSnapshotInput = document.getElementById("workbench-custom-snapshot-json");
   const storageKey = "well-harness-editable-workbench-draft-v1";
   let selectedNode = nodes.find((node) => node.getAttribute("aria-pressed") === "true") || nodes[0];
   let hardwareEvidenceReport = null;
@@ -8171,8 +8173,43 @@ function installEditableWorkbenchShell() {
     return refs;
   }
 
+  function selectedWorkbenchScenarioId() {
+    return (scenarioSelect && scenarioSelect.value) || "nominal_landing";
+  }
+
+  function parseWorkbenchCustomSnapshot() {
+    if (!customSnapshotInput) return null;
+    const raw = String(customSnapshotInput.value || "").trim();
+    if (!raw || raw === "{}") return null;
+    const payload = JSON.parse(raw);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      throw new Error("custom snapshot JSON must be an object");
+    }
+    return payload;
+  }
+
+  function safeWorkbenchCustomSnapshot() {
+    try {
+      return parseWorkbenchCustomSnapshot();
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function currentWorkbenchScenarioMetadata() {
+    const customSnapshot = safeWorkbenchCustomSnapshot() || {};
+    const rawSnapshot = customSnapshotInput ? String(customSnapshotInput.value || "").trim() : "";
+    return {
+      scenario_id: selectedWorkbenchScenarioId(),
+      custom_snapshot_applied: Boolean((rawSnapshot && rawSnapshot !== "{}") || Object.keys(customSnapshot).length > 0),
+      custom_snapshot_keys: Object.keys(customSnapshot).sort(),
+      custom_snapshot_truth_effect: "none",
+    };
+  }
+
   function buildEditableDraftExport() {
     const snapshot = currentDraftSnapshot();
+    const customSnapshot = safeWorkbenchCustomSnapshot() || {};
     return {
       kind: "well-harness-workbench-ui-draft",
       version: 1,
@@ -8187,6 +8224,8 @@ function installEditableWorkbenchShell() {
       ports: snapshot.ports,
       edges: snapshot.edges,
       hardware_bindings: [],
+      selected_scenario_id: selectedWorkbenchScenarioId(),
+      custom_snapshot: customSnapshot,
       source_refs: uniqueSourceRefs(),
       latest_sandbox_verdict: (lastSandboxDiff && lastSandboxDiff.verdict) || "not_run",
     };
@@ -8217,6 +8256,12 @@ function installEditableWorkbenchShell() {
     if (!Array.isArray(payload.nodes)) {
       throw new Error("nodes must be an array");
     }
+    if (
+      payload.custom_snapshot !== undefined
+      && (!payload.custom_snapshot || typeof payload.custom_snapshot !== "object" || Array.isArray(payload.custom_snapshot))
+    ) {
+      throw new Error("custom_snapshot must be an object when present");
+    }
     return payload;
   }
 
@@ -8232,6 +8277,12 @@ function installEditableWorkbenchShell() {
 
   function applyEditableDraftImport(payload) {
     const validated = validateEditableDraftImport(payload);
+    if (scenarioSelect && validated.selected_scenario_id) {
+      scenarioSelect.value = String(validated.selected_scenario_id);
+    }
+    if (customSnapshotInput && validated.custom_snapshot) {
+      customSnapshotInput.value = JSON.stringify(validated.custom_snapshot, null, 2);
+    }
     const selectedId =
       validated.selected_node && typeof validated.selected_node.id === "string"
         ? validated.selected_node.id
@@ -8311,6 +8362,24 @@ function installEditableWorkbenchShell() {
     return `graph validation: ${parts.join(", ")}`;
   }
 
+  function emptyWorkbenchGraphValidationReport(status) {
+    return {
+      kind: "well-harness-workbench-graph-validation-report",
+      version: 1,
+      status: status || "fail",
+      issue_count: 0,
+      categories: {
+        invalid_edge: [],
+        dangling_port: [],
+        duplicate_edge: [],
+        unsafe_op: [],
+        missing_node: [],
+      },
+      issues: [],
+      truth_level_impact: "none",
+    };
+  }
+
   function renderWorkbenchSandboxDiff(payload) {
     lastSandboxDiff = payload || null;
     const verdict = (payload && payload.verdict) || "invalid_scenario";
@@ -8345,13 +8414,32 @@ function installEditableWorkbenchShell() {
     setTimelineState("running");
     runSandboxBtn.disabled = true;
     if (diffVerdict) diffVerdict.textContent = "running";
+    let customSnapshot = null;
+    try {
+      customSnapshot = parseWorkbenchCustomSnapshot();
+    } catch (err) {
+      const payload = {
+        verdict: "invalid_model",
+        scenario_id: selectedWorkbenchScenarioId(),
+        truth_level_impact: "none",
+        error: err && err.message ? err.message : "custom snapshot JSON invalid",
+        scenario_metadata: currentWorkbenchScenarioMetadata(),
+        validation_report: emptyWorkbenchGraphValidationReport("fail"),
+        summary: { first_divergence: null, assertion_status: "not_run", frame_count: 0 },
+      };
+      renderWorkbenchSandboxDiff(payload);
+      runSandboxBtn.disabled = false;
+      return Promise.resolve(payload);
+    }
+    const requestBody = {
+      scenario_id: selectedWorkbenchScenarioId(),
+      draft: currentDraftSnapshot(),
+    };
+    if (customSnapshot) requestBody.custom_snapshot = customSnapshot;
     return fetch("/api/workbench/editable-sandbox-run", {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({
-        scenario_id: "nominal_landing",
-        draft: currentDraftSnapshot(),
-      }),
+      body: JSON.stringify(requestBody),
     })
       .then((response) => response.json())
       .then((payload) => {
@@ -8361,9 +8449,11 @@ function installEditableWorkbenchShell() {
       .catch((err) => {
         const payload = {
           verdict: "invalid_scenario",
-          scenario_id: "nominal_landing",
+          scenario_id: selectedWorkbenchScenarioId(),
           truth_level_impact: "none",
           error: err && err.message ? err.message : "sandbox run failed",
+          scenario_metadata: currentWorkbenchScenarioMetadata(),
+          validation_report: emptyWorkbenchGraphValidationReport("fail"),
           summary: { first_divergence: null, assertion_status: "not_run", frame_count: 0 },
         };
         renderWorkbenchSandboxDiff(payload);
@@ -8406,6 +8496,7 @@ function installEditableWorkbenchShell() {
       "- Truth-level impact: none",
       "- Red lines touched: none",
       `- Changed model hash: ${changedModelHash}`,
+      `- Selected scenario: ${selectedWorkbenchScenarioId()}`,
       "- Agent eligible: No",
     ].join("\n");
     const prProofPacket = [
@@ -8417,6 +8508,7 @@ function installEditableWorkbenchShell() {
       "Test delta: targeted pytest pending / default pytest pending / GSD pending",
       "",
       `Changed model hash: ${changedModelHash}`,
+      `Selected scenario: ${selectedWorkbenchScenarioId()}`,
       `Latest sandbox verdict: ${(lastSandboxDiff && lastSandboxDiff.verdict) || "not_run"}`,
       "No live Linear mutation; this packet is copy-ready evidence only.",
     ].join("\n");
@@ -8447,11 +8539,13 @@ function installEditableWorkbenchShell() {
     const modelJson = buildEditableDraftExport();
     const diffSummary = lastSandboxDiff || {
       verdict: "not_run",
-      scenario_id: "nominal_landing",
+      scenario_id: selectedWorkbenchScenarioId(),
       missing_diff_fallback: true,
       message: "Run sandbox before using this archive as review evidence.",
       truth_level_impact: "none",
     };
+    const scenarioMetadata =
+      (lastSandboxDiff && lastSandboxDiff.scenario_metadata) || currentWorkbenchScenarioMetadata();
     const handoffPacket = buildEditableHandoffPacket();
     const redLineMetadata = {
       red_lines_touched: "none",
@@ -8468,6 +8562,7 @@ function installEditableWorkbenchShell() {
       generated_at: "browser_local_draft",
       model_json: modelJson,
       diff_summary: diffSummary,
+      scenario_metadata: scenarioMetadata,
       changerequest_body: handoffPacket.linearIssueBody,
       pr_proof_packet: handoffPacket.prProofPacket,
       red_line_metadata: redLineMetadata,

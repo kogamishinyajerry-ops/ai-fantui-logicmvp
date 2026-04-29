@@ -48,10 +48,22 @@ The validation report remains sandbox-only:
 - The report is evidence for a draft candidate only; it does not certify,
   approve, or mutate truth.
 
+## JER-167 Rule
+
+JER-167 lets engineers choose a supported sandbox scenario and optionally add a
+custom initial-input snapshot before running the candidate.
+
+The scenario/snapshot surface is truth-neutral:
+
+- The default scenario remains `nominal_landing`.
+- Supported alternatives are explicit UI/API choices.
+- Custom snapshot JSON may only override supported timeline initial inputs.
+- Invalid scenario or snapshot input returns sandbox validation evidence, not a
+  truth decision.
+- Evidence archives include the selected scenario metadata.
+
 ## Planned Runtime Rules
 
-- JER-167 will add scenario/custom snapshot selection after canonicalization is
-  stable.
 - JER-168 will make edge inspection port-aware.
 - JER-169 will close the milestone with a runtime acceptance bundle.
 

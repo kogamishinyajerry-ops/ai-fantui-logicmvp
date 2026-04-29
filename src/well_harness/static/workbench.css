@@ -4966,11 +4966,12 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 }
 .workbench-editable-status-bar {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(150px, 0.85fr) minmax(220px, 1.1fr) auto auto;
   gap: 0.55rem;
   align-items: stretch;
 }
 .workbench-editable-status-chip,
+.workbench-sandbox-control,
 .workbench-editable-primary,
 .workbench-evidence-inspector,
 .workbench-sandbox-diff-panel,
@@ -4991,6 +4992,37 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-editable-status-chip span {
   color: rgba(213, 227, 237, 0.58);
   font-size: 0.68rem;
+}
+.workbench-sandbox-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  padding: 0.45rem 0.55rem;
+}
+.workbench-sandbox-control span {
+  color: rgba(213, 227, 237, 0.58);
+  font-size: 0.68rem;
+}
+.workbench-sandbox-control select,
+.workbench-sandbox-control textarea {
+  width: 100%;
+  min-width: 0;
+  color: #f5fbff;
+  background: rgba(4, 12, 18, 0.82);
+  border: 1px solid rgba(150, 173, 190, 0.22);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.72rem;
+}
+.workbench-sandbox-control select {
+  height: 28px;
+}
+.workbench-sandbox-control textarea {
+  min-height: 28px;
+  max-height: 52px;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 .workbench-editable-status-chip strong {
   color: #f5fbff;
