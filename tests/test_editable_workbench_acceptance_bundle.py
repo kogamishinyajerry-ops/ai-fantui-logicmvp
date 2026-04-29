@@ -12,6 +12,7 @@ from well_harness.editable_workbench_acceptance import (
     apply_rule_threshold_edit,
     archive_editable_workbench_acceptance_bundle,
     build_editable_workbench_acceptance_bundle,
+    build_runtime_v3_acceptance_bundle_from_ui_draft,
     derive_baseline_draft,
     validate_editable_workbench_acceptance_manifest,
 )
@@ -71,8 +72,10 @@ def test_acceptance_bundle_covers_full_editable_workbench_happy_path() -> None:
     assert bundle["kind"] == "well-harness-editable-workbench-acceptance-bundle"
     assert bundle["workflow"]["status"] == "sandbox_candidate_acceptance"
     assert bundle["workflow"]["steps"] == [
+        "capture_ui_draft",
         "derive_baseline_draft",
-        "edit_candidate_graph",
+        "canonicalize_editable_control_model",
+        "validate_candidate_graph",
         "run_sandbox_timeline",
         "compare_baseline_diff",
         "generate_changerequest",
@@ -83,6 +86,11 @@ def test_acceptance_bundle_covers_full_editable_workbench_happy_path() -> None:
     assert bundle["baseline_model"]["truth_status"] == "sandbox_candidate"
     assert bundle["candidate_model"]["truth_status"] == "sandbox_candidate"
     assert bundle["candidate_trace"]["frame_count"] == 180
+    assert bundle["validation_report"]["status"] == "pass"
+    assert bundle["sandbox_run"]["kind"] == "well-harness-workbench-sandbox-run"
+    assert bundle["known_blockers"][0]["gate"] == "opt-in e2e workbench smoke"
+    assert bundle["gate_claims"]["e2e_49_49"] == "not_claimed"
+    assert bundle["gate_claims"]["mypy_strict_clean"] == "not_claimed"
     assert bundle["diff_report"]["verdict"] == "equivalent"
     assert bundle["change_request"]["workbench_handoff"]["layer"] == "L9"
     assert bundle["change_request"]["workbench_handoff"]["truth_level_impact"] == "none"
@@ -108,9 +116,12 @@ def test_acceptance_archive_contains_required_artifacts_and_manifest_checksums(t
     for key in (
         "bundle_json",
         "model_json",
+        "validation_report_json",
+        "sandbox_run_json",
         "candidate_trace_json",
         "diff_report_json",
         "change_request_json",
+        "known_blockers_json",
         "pr_proof_packet_markdown",
         "summary_markdown",
     ):
@@ -119,6 +130,92 @@ def test_acceptance_archive_contains_required_artifacts_and_manifest_checksums(t
         assert len(manifest["integrity"][key]) == 64
         assert (manifest_path.parent / manifest["files"][key]).is_file()
     assert len(manifest["integrity"]["manifest_json"]) == 64
+
+
+def test_runtime_v3_acceptance_bundle_from_ui_draft_covers_required_artifacts() -> None:
+    bundle = build_runtime_v3_acceptance_bundle_from_ui_draft(
+        {
+            "scenario_id": "nominal_landing",
+            "draft": {
+                "system_id": "thrust-reverser",
+                "truth_level_impact": "none",
+                "controller_truth_modified": False,
+                "dal_pssa_impact": "none",
+                "nodes": [],
+                "edges": [
+                    {
+                        "id": "edge_logic1_logic2",
+                        "source": "logic1",
+                        "target": "logic2",
+                    }
+                ],
+            },
+        },
+        source_ref="JER-169",
+        created_at="2026-04-30",
+        test_delta="targeted acceptance pending; e2e 49/49 not claimed; mypy clean not claimed",
+    )
+
+    assert bundle["source_ref"] == "JER-169"
+    assert bundle["model_payload"]["model_id"] == "thrust-reverser-workbench-ui-draft-v1"
+    assert bundle["validation_report"]["kind"] == "well-harness-workbench-graph-validation-report"
+    assert bundle["validation_report"]["status"] == "pass"
+    assert bundle["sandbox_run"]["kind"] == "well-harness-workbench-sandbox-run"
+    assert bundle["sandbox_run"]["canonical_model_hash"] == bundle["model"]["model_hash"]
+    assert bundle["candidate_trace"]["source"] == "workbench_sandbox_run_response"
+    assert bundle["candidate_trace"]["frame_count"] == 180
+    assert bundle["diff_report"]["verdict"] == "equivalent"
+    assert "Linear: JER-169" in bundle["pr_proof_packet"]
+    assert "e2e 49/49 not claimed" in bundle["pr_proof_packet"]
+    assert bundle["gate_claims"]["default_pytest"] == "required"
+    assert bundle["gate_claims"]["adversarial"] == "required"
+    assert bundle["known_blockers"][0]["truth_effect"] == "none"
+
+
+def test_runtime_v3_acceptance_archive_includes_validation_and_blocker_files(tmp_path: Path) -> None:
+    bundle = build_runtime_v3_acceptance_bundle_from_ui_draft(
+        {
+            "scenario_id": "nominal_landing",
+            "draft": {
+                "system_id": "thrust-reverser",
+                "truth_level_impact": "none",
+                "controller_truth_modified": False,
+                "dal_pssa_impact": "none",
+                "nodes": [],
+                "edges": [],
+            },
+        },
+        source_ref="JER-169",
+        created_at="2026-04-30",
+    )
+
+    archive = archive_editable_workbench_acceptance_bundle(bundle, tmp_path)
+    manifest_path = Path(archive["manifest_path"])
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert validate_editable_workbench_acceptance_manifest(manifest, manifest_path=manifest_path) == ()
+    assert (manifest_path.parent / manifest["files"]["validation_report_json"]).is_file()
+    assert (manifest_path.parent / manifest["files"]["sandbox_run_json"]).is_file()
+    assert (manifest_path.parent / manifest["files"]["known_blockers_json"]).is_file()
+
+
+def test_runtime_v3_acceptance_bundle_rejects_invalid_ui_draft() -> None:
+    with pytest.raises(EditableWorkbenchAcceptanceError, match="missing source"):
+        build_runtime_v3_acceptance_bundle_from_ui_draft(
+            {
+                "scenario_id": "nominal_landing",
+                "draft": {
+                    "system_id": "thrust-reverser",
+                    "truth_level_impact": "none",
+                    "controller_truth_modified": False,
+                    "dal_pssa_impact": "none",
+                    "nodes": [],
+                    "edges": [{"id": "broken", "target": "logic2"}],
+                },
+            },
+            source_ref="JER-169",
+            created_at="2026-04-30",
+        )
 
 
 def test_acceptance_bundle_rejects_c919_candidate_because_reference_is_frozen() -> None:

@@ -11,11 +11,11 @@ and archivable as controlled engineering evidence.
 
 ## Issue Chain
 
-- JER-165: Canonicalize workbench UI draft into `editable_control_model_v1`
-- JER-166: Sandbox graph validation report v1
-- JER-167: Scenario selector and custom snapshot sandbox UI
-- JER-168: Port-aware edge inspector v1
-- JER-169: Runtime v3 acceptance bundle and regression proof
+- JER-165: Canonicalize workbench UI draft into `editable_control_model_v1` (Done, PR #148)
+- JER-166: Sandbox graph validation report v1 (Done, PR #149)
+- JER-167: Scenario selector and custom snapshot sandbox UI (Done, PR #150)
+- JER-168: Port-aware edge inspector v1 (Done, PR #151)
+- JER-169: Runtime v3 acceptance bundle and regression proof (In progress)
 
 ## JER-165 Rule
 
@@ -74,9 +74,26 @@ The edge inspector is non-authoritative:
 - Missing endpoint metadata is rendered as `evidence_gap`.
 - Edge inspection never changes control truth or hardware truth.
 
-## Planned Runtime Rules
+## JER-169 Rule
 
-- JER-169 will close the milestone with a runtime acceptance bundle.
+JER-169 closes Runtime v3 with a single acceptance bundle that can be archived
+and reviewed without upgrading the candidate to certified truth.
+
+The acceptance bundle must include:
+
+- Canonical `editable_control_model_v1` JSON derived from the UI draft.
+- Graph `validation_report` from the sandbox run.
+- Sandbox run payload and baseline diff report.
+- Draft-only ChangeRequest packet and Codex PR proof packet.
+- Known gate blockers for opt-in e2e and mypy when they are not clean.
+- Archive manifest checksums for every evidence file.
+
+The bundle is evidence-only:
+
+- It records `truth_level_impact: none` and `dal_pssa_impact: none`.
+- It does not mutate Linear from the workbench.
+- It does not edit controller truth, frozen adapters, C919 reference packets, or
+  product LLM/chat behavior.
 
 ## Boundaries
 
