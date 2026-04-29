@@ -716,6 +716,42 @@
                 </dl>
               </section>
               <section
+                class="workbench-draft-json-exchange"
+                aria-labelledby="workbench-draft-json-title"
+              >
+                <div class="workbench-inspector-header">
+                  <span id="workbench-draft-json-title">Draft JSON</span>
+                  <strong>truth-neutral</strong>
+                </div>
+                <div class="workbench-draft-json-actions">
+                  <button
+                    id="workbench-export-draft-btn"
+                    type="button"
+                    class="workbench-editable-primary"
+                  >
+                    Export draft JSON
+                  </button>
+                  <button
+                    id="workbench-import-draft-btn"
+                    type="button"
+                    class="workbench-editable-primary"
+                  >
+                    Import draft JSON
+                  </button>
+                </div>
+                <label class="workbench-handoff-output" for="workbench-draft-json-buffer">
+                  <span>Sandbox draft payload</span>
+                  <textarea
+                    id="workbench-draft-json-buffer"
+                    rows="7"
+                    spellcheck="false"
+                  ></textarea>
+                </label>
+                <p id="workbench-draft-json-status" class="workbench-handoff-status">
+                  Export or import a sandbox_candidate draft. No certified truth mutation.
+                </p>
+              </section>
+              <section
                 class="workbench-changerequest-handoff"
                 aria-labelledby="workbench-changerequest-handoff-title"
               >

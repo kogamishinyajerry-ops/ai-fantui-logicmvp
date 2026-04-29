@@ -4974,6 +4974,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-editable-primary,
 .workbench-evidence-inspector,
 .workbench-sandbox-diff-panel,
+.workbench-draft-json-exchange,
 .workbench-reference-sample-pack {
   border: 1px solid rgba(150, 173, 190, 0.24);
   background: rgba(9, 18, 27, 0.72);
@@ -5240,6 +5241,21 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-sandbox-diff-panel[data-verdict="invalid_model"],
 .workbench-sandbox-diff-panel[data-verdict="invalid_scenario"] {
   border-color: rgba(240, 193, 91, 0.45);
+}
+.workbench-draft-json-exchange {
+  margin-top: 0.7rem;
+  padding: 0.62rem;
+}
+.workbench-draft-json-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-bottom: 0.55rem;
+}
+.workbench-draft-json-actions .workbench-editable-primary {
+  min-height: 34px;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.72rem;
 }
 .workbench-changerequest-handoff {
   margin-top: 0.85rem;

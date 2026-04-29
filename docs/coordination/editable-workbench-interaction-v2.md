@@ -46,6 +46,19 @@ The result is evidence only:
 - Invalid draft or scenario input is rendered as a sandbox verdict, not as a
   certified-truth decision.
 
+## JER-162 Rule
+
+JER-162 adds browser-local draft import/export for the editable canvas. The
+payload is an explicit UI draft exchange format, not a truth artifact:
+
+- `kind` is `well-harness-workbench-ui-draft` and `version` is `1`.
+- `truth_level_impact` and `dal_pssa_impact` must be `none`.
+- `controller_truth_modified` must be `false`.
+- Import restores candidate node labels, operations, and selected-node state
+  only after the neutral-impact fields validate.
+- The workbench performs no live Linear mutation and no certified baseline
+  mutation during import/export.
+
 ## Boundaries
 
 - Do not edit `src/well_harness/controller.py` truth semantics.
