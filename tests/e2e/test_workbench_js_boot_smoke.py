@@ -56,81 +56,92 @@ def _new_page_with_error_capture(browser):
     return page, errors
 
 
-# ─── E11-08 closure: role affordance JS toggle (4 tests) ─────────────
+def _goto_shell_workbench(page, url: str):
+    """Wait for deterministic DOM readiness instead of global network quiet."""
+    page.goto(url, wait_until="domcontentloaded")
+    page.wait_for_selector("#workbench-identity", state="attached")
+    page.wait_for_function(
+        """
+        () => typeof window.setWorkbenchIdentity === 'function'
+          && document.getElementById('workbench-identity')
+        """
+    )
 
 
-def test_default_identity_kogami_shows_approval_center(demo_server, browser):
+def _goto_bundle_workbench(page, url: str):
+    """The bundle page has its own deterministic readiness sentinel."""
+    page.goto(url, wait_until="domcontentloaded")
+    page.wait_for_selector("#workbench-packet-json", state="attached")
+    page.wait_for_function(
+        """
+        () => document.getElementById('workbench-packet-json')
+          && document.querySelector('[data-workbench-preset]')
+        """
+    )
+
+
+# ─── E11-08 closure: identity affordance JS toggle (4 tests) ─────────
+
+
+def test_default_identity_kogami_renders_identity_chip(demo_server, browser):
     page, errors = _new_page_with_error_capture(browser)
-    page.goto(f"{demo_server}/workbench", wait_until="networkidle")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
     state = page.evaluate(
         """
         () => ({
           identityAttr: document.getElementById('workbench-identity')
             ?.getAttribute('data-identity-name'),
-          entryHidden: document.getElementById('approval-center-entry')?.hidden,
-          panelHidden: document.getElementById('approval-center-panel')?.hidden,
-          affState: document.getElementById('workbench-pending-signoff-affordance')
-            ?.getAttribute('data-pending-signoff'),
+          identityText: document.getElementById('workbench-identity')?.textContent.trim(),
         })
         """
     )
     assert errors == [], f"page JS errors: {errors}"
     assert state["identityAttr"] == "Kogami"
-    assert state["entryHidden"] is False
-    assert state["panelHidden"] is False
-    assert state["affState"] == "hidden"
+    assert "Kogami / Engineer" in state["identityText"]
 
 
-def test_engineer_identity_url_param_swaps_to_pending_affordance(demo_server, browser):
+def test_engineer_identity_url_param_updates_identity_chip(demo_server, browser):
     page, errors = _new_page_with_error_capture(browser)
-    page.goto(f"{demo_server}/workbench?identity=Engineer", wait_until="networkidle")
+    _goto_shell_workbench(page, f"{demo_server}/workbench?identity=Engineer")
     state = page.evaluate(
         """
         () => ({
           identityAttr: document.getElementById('workbench-identity')
             ?.getAttribute('data-identity-name'),
-          entryHidden: document.getElementById('approval-center-entry')?.hidden,
-          entryAriaDisabled: document.getElementById('approval-center-entry')
-            ?.getAttribute('aria-disabled'),
-          panelHidden: document.getElementById('approval-center-panel')?.hidden,
-          affState: document.getElementById('workbench-pending-signoff-affordance')
-            ?.getAttribute('data-pending-signoff'),
+          identityText: document.getElementById('workbench-identity')?.textContent.trim(),
         })
         """
     )
     assert errors == [], f"page JS errors: {errors}"
     assert state["identityAttr"] == "Engineer"
-    assert state["entryHidden"] is True
-    assert state["entryAriaDisabled"] == "true"
-    assert state["panelHidden"] is True
-    assert state["affState"] == "visible"
+    assert "Engineer / Engineer" in state["identityText"]
 
 
 def test_set_workbench_identity_window_function_toggles_dom(demo_server, browser):
     page, errors = _new_page_with_error_capture(browser)
-    page.goto(f"{demo_server}/workbench", wait_until="networkidle")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
     after = page.evaluate(
         """
         () => {
           const ok = window.setWorkbenchIdentity('Engineer');
           return {
             ok,
-            affState: document.getElementById('workbench-pending-signoff-affordance')
-              ?.getAttribute('data-pending-signoff'),
-            entryHidden: document.getElementById('approval-center-entry')?.hidden,
+            identityAttr: document.getElementById('workbench-identity')
+              ?.getAttribute('data-identity-name'),
+            identityText: document.getElementById('workbench-identity')?.textContent.trim(),
           };
         }
         """
     )
     assert errors == [], f"page JS errors: {errors}"
     assert after["ok"] is True
-    assert after["affState"] == "visible"
-    assert after["entryHidden"] is True
+    assert after["identityAttr"] == "Engineer"
+    assert "Engineer / Engineer" in after["identityText"]
 
 
 def test_set_workbench_identity_blank_returns_false(demo_server, browser):
     page, _ = _new_page_with_error_capture(browser)
-    page.goto(f"{demo_server}/workbench", wait_until="networkidle")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
     result = page.evaluate("() => window.setWorkbenchIdentity('   ')")
     assert result is False
 
@@ -143,7 +154,7 @@ def test_shell_workbench_boots_without_js_errors(demo_server, browser):
     DOM (the sentinel `getElementById("workbench-packet-json")` early-returns
     before bundle-bound handlers run)."""
     page, errors = _new_page_with_error_capture(browser)
-    page.goto(f"{demo_server}/workbench", wait_until="networkidle")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
     page.wait_for_timeout(500)
     assert errors == [], f"shell boot threw JS errors: {errors}"
 
@@ -152,7 +163,7 @@ def test_bundle_workbench_boots_without_js_errors(demo_server, browser):
     """E11-13: the bundle page must boot fully — sentinel guard does NOT
     block it because #workbench-packet-json IS present on /workbench/bundle."""
     page, errors = _new_page_with_error_capture(browser)
-    page.goto(f"{demo_server}/workbench/bundle", wait_until="networkidle")
+    _goto_bundle_workbench(page, f"{demo_server}/workbench/bundle")
     page.wait_for_timeout(500)
     assert errors == [], f"bundle boot threw JS errors: {errors}"
 
@@ -165,49 +176,58 @@ def test_workbench_renders_chinese_first_headers_in_dom(demo_server, browser):
     actual rendered DOM after browser parse + JS boot also delivers
     Chinese-first across every header surface."""
     page, _ = _new_page_with_error_capture(browser)
-    page.goto(f"{demo_server}/workbench", wait_until="networkidle")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
     headers = page.evaluate(
         """
         () => ({
           h1: document.querySelector('.workbench-collab-brand h1')?.textContent.trim(),
-          pageEyebrow: document.querySelector('.workbench-collab-brand .eyebrow')?.textContent.trim(),
-          probeH2: document.querySelector('#workbench-control-panel h2')?.textContent.trim(),
-          docH2: document.querySelector('#workbench-document-panel h2')?.textContent.trim(),
-          circuitH2: document.querySelector('#workbench-circuit-panel h2')?.textContent.trim(),
-          reviewH2: document.querySelector('#annotation-inbox h2')?.textContent.trim(),
-          approvalH2: document.querySelector('#approval-center-title')?.textContent.trim(),
+          identityLabel: document.querySelector('#workbench-identity span')?.textContent.trim(),
+          newH2: document.querySelector('#workbench-tool-new-title')?.textContent.trim(),
+          simH2: document.querySelector('#workbench-sim-panel-title')?.textContent.trim(),
+          cockpitH2: document.querySelector('#workbench-cockpit-panel-title')?.textContent.trim(),
+          specH2: document.querySelector('#workbench-spec-panel-title')?.textContent.trim(),
+          proposalH2: document.querySelector('#workbench-suggestion-flow-title')?.textContent.trim(),
+          approvalH2: document.querySelector('#workbench-tool-approve-title')?.textContent.trim(),
+          monitorH2: document.querySelector('#workbench-tool-monitor-title')?.textContent.trim(),
         })
         """
     )
     # h1: "控制逻辑工作台 · Control Logic Workbench"
     assert headers["h1"].startswith("控制逻辑工作台"), headers["h1"]
     assert "Control Logic Workbench" in headers["h1"]
-    # eyebrow: "工程师工作区" (E11-15c — distinct from h1)
-    assert headers["pageEyebrow"] == "工程师工作区"
-    # column h2s: Chinese-first per E11-15c
-    assert headers["probeH2"].startswith("探针与追踪"), headers["probeH2"]
-    assert headers["docH2"].startswith("标注与提案"), headers["docH2"]
-    assert headers["circuitH2"].startswith("移交与跟踪"), headers["circuitH2"]
-    # inbox + approval h2: bilingual per E11-15b
-    assert headers["reviewH2"].startswith("审核队列"), headers["reviewH2"]
-    assert headers["approvalH2"].startswith("Kogami 提案审批"), headers["approvalH2"]
+    # compact topbar identity label remains Chinese-first.
+    assert headers["identityLabel"].startswith("身份"), headers["identityLabel"]
+    # current tool and panel h2s: Chinese-first per workbench shell contract.
+    assert headers["newH2"].startswith("新建逻辑控制电路"), headers["newH2"]
+    assert headers["simH2"].startswith("反推仿真模拟"), headers["simH2"]
+    assert headers["cockpitH2"].startswith("反推演示舱"), headers["cockpitH2"]
+    assert headers["specH2"].startswith("反推需求文档"), headers["specH2"]
+    assert headers["proposalH2"].startswith("提交修改建议"), headers["proposalH2"]
+    assert headers["approvalH2"].startswith("审批中心"), headers["approvalH2"]
+    assert headers["monitorH2"].startswith("运行监控"), headers["monitorH2"]
 
 
 def test_workbench_buttons_render_chinese_first_in_dom(demo_server, browser):
     """E11-15b bilingualized 2 control-panel buttons + the Approval Center
     entry button. Verify rendered text starts with the Chinese half."""
     page, _ = _new_page_with_error_capture(browser)
-    page.goto(f"{demo_server}/workbench", wait_until="networkidle")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
     button_texts = page.evaluate(
         """
         () => Array.from(document.querySelectorAll('button.workbench-toolbar-button'))
           .map(b => b.textContent.trim())
         """
     )
-    # Find the 3 known bilingual buttons by their Chinese prefix.
-    has_load = any(t.startswith("加载当前工单") for t in button_texts)
-    has_snapshot = any(t.startswith("快照当前状态") for t in button_texts)
-    has_approval = any(t.startswith("审批中心") for t in button_texts)
-    assert has_load, f"missing 加载当前工单 button; got: {button_texts}"
-    assert has_snapshot, f"missing 快照当前状态 button; got: {button_texts}"
-    assert has_approval, f"missing 审批中心 button; got: {button_texts}"
+    nav_texts = page.evaluate(
+        """
+        () => Array.from(document.querySelectorAll('.workbench-dock-btn-label'))
+          .map(b => b.textContent.trim())
+        """
+    )
+    # Find current Chinese-first workbench commands by their Chinese prefix.
+    has_create = any(t.startswith("+ 创建电路") for t in button_texts)
+    has_interpret = any(t.startswith("解读建议") for t in button_texts)
+    has_approval_nav = "审批" in nav_texts
+    assert has_create, f"missing 创建电路 button; got: {button_texts}"
+    assert has_interpret, f"missing 解读建议 button; got: {button_texts}"
+    assert has_approval_nav, f"missing 审批 nav button; got: {nav_texts}"

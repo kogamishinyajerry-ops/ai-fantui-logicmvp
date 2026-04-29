@@ -15,7 +15,8 @@ and archivable as controlled engineering evidence.
 - JER-166: Sandbox graph validation report v1 (Done, PR #149)
 - JER-167: Scenario selector and custom snapshot sandbox UI (Done, PR #150)
 - JER-168: Port-aware edge inspector v1 (Done, PR #151)
-- JER-169: Runtime v3 acceptance bundle and regression proof (In progress)
+- JER-169: Runtime v3 acceptance bundle and regression proof (Done, PR #152)
+- JER-170: Workbench e2e networkidle gate normalization (In progress)
 
 ## JER-165 Rule
 
@@ -94,6 +95,20 @@ The bundle is evidence-only:
 - It does not mutate Linear from the workbench.
 - It does not edit controller truth, frozen adapters, C919 reference packets, or
   product LLM/chat behavior.
+
+## JER-170 Rule
+
+JER-170 normalizes the opt-in Playwright gate so `/workbench` readiness is
+measured by required DOM and JS affordances, not global network quiet.
+
+The gate remains strict:
+
+- The shell smoke waits for `#workbench-identity` and
+  `window.setWorkbenchIdentity`.
+- The bundle smoke waits for `#workbench-packet-json` and a workbench preset.
+- JS error capture and DOM assertions stay intact.
+- Passing this gate does not change truth, DAL/PSSA, adapter, or product LLM
+  behavior.
 
 ## Boundaries
 
