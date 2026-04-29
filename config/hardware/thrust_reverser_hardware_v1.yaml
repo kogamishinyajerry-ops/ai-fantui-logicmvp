@@ -55,6 +55,314 @@ kind: thrust-reverser-hardware
 version: 1
 system_id: thrust-reverser
 
+lru_inventory:
+  - id: etrac
+    display_name: "Electronic Thrust Reverser Actuation Controller (ETRAC)"
+    quantity_per_engine: 1
+    value_status: confirmed
+    part_number: {status: evidence_gap, value: TBD}
+    location: {status: evidence_gap, value: TBD}
+    failure_rate_per_hour: {status: evidence_gap, value: null}
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 1 row 1"
+  - id: pdu
+    display_name: "Power Drive Unit (PDU)"
+    quantity_per_engine: 1
+    value_status: confirmed
+    part_number: {status: evidence_gap, value: TBD}
+    location: {status: evidence_gap, value: TBD}
+    failure_rate_per_hour: {status: evidence_gap, value: null}
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 1 row 2"
+  - id: flexible_shafts
+    display_name: "Flexible shafts"
+    quantity_per_engine: 4
+    value_status: confirmed
+    part_number: {status: evidence_gap, value: TBD}
+    location: {status: evidence_gap, value: TBD}
+    failure_rate_per_hour: {status: evidence_gap, value: null}
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 1 row 3"
+  - id: mechanical_actuators
+    display_name: "Mechanical actuators"
+    quantity_per_engine: 4
+    value_status: confirmed
+    part_number: {status: evidence_gap, value: TBD}
+    location: {status: evidence_gap, value: TBD}
+    failure_rate_per_hour: {status: evidence_gap, value: null}
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 1 row 4"
+  - id: tls
+    display_name: "Tertiary Locking System (TLS)"
+    quantity_per_engine: 1
+    value_status: confirmed
+    part_number: {status: evidence_gap, value: TBD}
+    location: {status: evidence_gap, value: TBD}
+    failure_rate_per_hour: {status: evidence_gap, value: null}
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 1 row 5"
+  - id: pls
+    display_name: "Primary Locking System (PLS)"
+    quantity_per_engine: 4
+    value_status: confirmed
+    part_number: {status: evidence_gap, value: TBD}
+    location: {status: evidence_gap, value: TBD}
+    failure_rate_per_hour: {status: evidence_gap, value: null}
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 1 row 6"
+  - id: vdt
+    display_name: "Variable Displacement Transducer (VDT)"
+    quantity_per_engine: 2
+    value_status: confirmed
+    part_number: {status: evidence_gap, value: TBD}
+    location: {status: evidence_gap, value: TBD}
+    failure_rate_per_hour: {status: evidence_gap, value: null}
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 1 row 7"
+  - id: lock_sensors
+    display_name: "Lock proximity sensors (LS)"
+    quantity_per_engine: 10
+    value_status: confirmed
+    part_number: {status: evidence_gap, value: TBD}
+    location: {status: evidence_gap, value: TBD}
+    failure_rate_per_hour: {status: evidence_gap, value: null}
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 1 row 8"
+  - id: mdu
+    display_name: "Manual Drive Unit (MDU)"
+    quantity_per_engine: 2
+    value_status: confirmed
+    part_number: {status: evidence_gap, value: TBD}
+    location: {status: evidence_gap, value: TBD}
+    failure_rate_per_hour: {status: evidence_gap, value: null}
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 1 row 9"
+  - id: cables
+    display_name: "Cables"
+    quantity_per_engine: null
+    value_status: not_applicable
+    part_number: {status: evidence_gap, value: TBD}
+    location: {status: evidence_gap, value: TBD}
+    failure_rate_per_hour: {status: evidence_gap, value: null}
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 1 row 10"
+  - id: mounting_brackets
+    display_name: "Equipment mounting brackets"
+    quantity_per_engine: null
+    value_status: not_applicable
+    part_number: {status: evidence_gap, value: TBD}
+    location: {status: evidence_gap, value: TBD}
+    failure_rate_per_hour: {status: evidence_gap, value: null}
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 1 row 11"
+
+signal_carrier_bindings:
+  - signal_id: radio_altitude_ft
+    direction: input
+    source_hardware_id: external_radio_altimeter
+    peer_hardware_id: etrac
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L1]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 4.1"
+  - signal_id: SW1
+    direction: input
+    source_hardware_id: external_throttle_resolver
+    peer_hardware_id: etrac
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L1]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 4.1"
+  - signal_id: SW2
+    direction: input
+    source_hardware_id: external_throttle_resolver
+    peer_hardware_id: etrac
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L2]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 4.2"
+  - signal_id: reverser_inhibited
+    direction: input
+    source_hardware_id: external_eicu
+    peer_hardware_id: etrac
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L1, L2, L3]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md tables 4.1-4.3"
+  - signal_id: reverser_not_deployed_eec
+    direction: input
+    source_hardware_id: external_eec
+    peer_hardware_id: etrac
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L1]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 4.1"
+  - signal_id: engine_running
+    direction: input
+    source_hardware_id: external_engine_sensor
+    peer_hardware_id: etrac
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L2, L3, L4]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md tables 4.2-4.4"
+  - signal_id: aircraft_on_ground
+    direction: input
+    source_hardware_id: external_air_ground_system
+    peer_hardware_id: etrac
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L2, L3, L4]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md tables 4.2-4.4"
+  - signal_id: eec_enable
+    direction: input
+    source_hardware_id: external_eec
+    peer_hardware_id: etrac
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L2]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 4.2"
+  - signal_id: tls_unlocked_ls
+    direction: feedback
+    source_hardware_id: lock_sensors
+    peer_hardware_id: etrac
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L3]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 3B row 19"
+  - signal_id: n1k
+    direction: input
+    source_hardware_id: external_engine_sensor
+    peer_hardware_id: etrac
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L3]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 4.3"
+  - signal_id: tra_deg
+    direction: input
+    source_hardware_id: external_throttle_resolver
+    peer_hardware_id: etrac
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L3, L4]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md tables 4.3-4.4"
+  - signal_id: deploy_90_percent_vdt
+    direction: feedback
+    source_hardware_id: vdt
+    peer_hardware_id: etrac
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L4]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 3B row 20"
+  - signal_id: tls_115vac_cmd
+    direction: output
+    source_hardware_id: etrac
+    peer_hardware_id: tls
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L1]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 3B row 22"
+  - signal_id: etrac_540vdc_cmd
+    direction: output
+    source_hardware_id: etrac
+    peer_hardware_id: pdu
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L2]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 4.2"
+  - signal_id: eec_deploy_cmd
+    direction: output
+    source_hardware_id: etrac
+    peer_hardware_id: external_eec
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L3]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 3B"
+  - signal_id: pls_power_cmd
+    direction: output
+    source_hardware_id: etrac
+    peer_hardware_id: pls
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L3]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 3B row 23"
+  - signal_id: pdu_motor_cmd
+    direction: output
+    source_hardware_id: etrac
+    peer_hardware_id: pdu
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L3]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 3B row 21"
+  - signal_id: throttle_electronic_lock_release_cmd
+    direction: output
+    source_hardware_id: etrac
+    peer_hardware_id: external_throttle_lock
+    cable: {status: evidence_gap, value: TBD}
+    connector: {status: evidence_gap, value: TBD}
+    port_local: {status: evidence_gap, value: TBD}
+    port_peer: {status: evidence_gap, value: TBD}
+    redundancy_status: evidence_gap
+    evidence_status: evidence_gap
+    feeds_logic_nodes: [L4]
+    source_ref: "docs/thrust_reverser/traceability_matrix.md table 4.4"
+
 parameters:
   sensor:
     radio_altitude_ft:

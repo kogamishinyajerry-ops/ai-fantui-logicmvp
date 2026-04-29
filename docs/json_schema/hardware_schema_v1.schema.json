@@ -24,6 +24,18 @@
       "type": "string",
       "minLength": 1
     },
+    "lru_inventory": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/lruInventoryItem"
+      }
+    },
+    "signal_carrier_bindings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/signalCarrierBinding"
+      }
+    },
     "parameters": {
       "type": "object",
       "additionalProperties": false,
@@ -190,6 +202,161 @@
               }
             }
           }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "valueStatus": {
+      "type": "string",
+      "enum": [
+        "confirmed",
+        "evidence_gap",
+        "not_applicable"
+      ]
+    },
+    "valueRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "value"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/valueStatus"
+        },
+        "value": {
+          "type": [
+            "string",
+            "number",
+            "integer",
+            "null"
+          ]
+        }
+      }
+    },
+    "lruInventoryItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "display_name",
+        "quantity_per_engine",
+        "value_status",
+        "part_number",
+        "location",
+        "failure_rate_per_hour",
+        "source_ref"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "display_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "quantity_per_engine": {
+          "type": [
+            "number",
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "value_status": {
+          "$ref": "#/$defs/valueStatus"
+        },
+        "part_number": {
+          "$ref": "#/$defs/valueRef"
+        },
+        "location": {
+          "$ref": "#/$defs/valueRef"
+        },
+        "failure_rate_per_hour": {
+          "$ref": "#/$defs/valueRef"
+        },
+        "source_ref": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "signalCarrierBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "signal_id",
+        "direction",
+        "source_hardware_id",
+        "peer_hardware_id",
+        "cable",
+        "connector",
+        "port_local",
+        "port_peer",
+        "redundancy_status",
+        "evidence_status",
+        "feeds_logic_nodes",
+        "source_ref"
+      ],
+      "properties": {
+        "signal_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "direction": {
+          "type": "string",
+          "enum": [
+            "input",
+            "feedback",
+            "output"
+          ]
+        },
+        "source_hardware_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "peer_hardware_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cable": {
+          "$ref": "#/$defs/valueRef"
+        },
+        "connector": {
+          "$ref": "#/$defs/valueRef"
+        },
+        "port_local": {
+          "$ref": "#/$defs/valueRef"
+        },
+        "port_peer": {
+          "$ref": "#/$defs/valueRef"
+        },
+        "redundancy_status": {
+          "type": "string",
+          "enum": [
+            "single",
+            "dual",
+            "multiple",
+            "not_applicable",
+            "evidence_gap"
+          ]
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/valueStatus"
+        },
+        "feeds_logic_nodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "source_ref": {
+          "type": "string",
+          "minLength": 1
         }
       }
     }

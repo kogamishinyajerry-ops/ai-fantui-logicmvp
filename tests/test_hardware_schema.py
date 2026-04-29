@@ -11,6 +11,7 @@ Covers:
 from __future__ import annotations
 
 import json
+import copy
 import tempfile
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from well_harness.hardware_schema import (
     HardwareSchemaError,
     HardwareSchemaNotFoundError,
     HardwareSchemaValidationError,
+    _hardware_to_dict,
     load_thrust_reverser_hardware,
 )
 
@@ -170,6 +172,51 @@ class TestLoadValidHardwareYaml:
         hw = load_thrust_reverser_hardware(path, validate=False)
         assert hw.kind == "thrust-reverser-hardware"
 
+    def test_optional_hardware_coupling_sections_default_empty(self, tmp_path: Path) -> None:
+        path = _write_yaml(tmp_path, _VALID_YAML)
+        hw = load_thrust_reverser_hardware(path)
+        assert hw.lru_inventory == ()
+        assert hw.signal_carrier_bindings == ()
+
+    def test_optional_hardware_coupling_sections_parse_typed_rows(self, tmp_path: Path) -> None:
+        data = copy.deepcopy(_VALID_YAML)
+        data["lru_inventory"] = [
+            {
+                "id": "etrac",
+                "display_name": "Electronic Thrust Reverser Actuation Controller",
+                "quantity_per_engine": 1,
+                "value_status": "confirmed",
+                "part_number": {"status": "evidence_gap", "value": "TBD"},
+                "location": {"status": "evidence_gap", "value": "TBD"},
+                "failure_rate_per_hour": {"status": "evidence_gap", "value": None},
+                "source_ref": "unit-test",
+            }
+        ]
+        data["signal_carrier_bindings"] = [
+            {
+                "signal_id": "tls_115vac_cmd",
+                "direction": "output",
+                "source_hardware_id": "etrac",
+                "peer_hardware_id": "tls",
+                "cable": {"status": "evidence_gap", "value": "TBD"},
+                "connector": {"status": "evidence_gap", "value": "TBD"},
+                "port_local": {"status": "evidence_gap", "value": "TBD"},
+                "port_peer": {"status": "evidence_gap", "value": "TBD"},
+                "redundancy_status": "evidence_gap",
+                "evidence_status": "evidence_gap",
+                "feeds_logic_nodes": ["L1"],
+                "source_ref": "unit-test",
+            }
+        ]
+        path = _write_yaml(tmp_path, data)
+        hw = load_thrust_reverser_hardware(path)
+
+        assert hw.lru_inventory[0].id == "etrac"
+        assert hw.lru_inventory[0].part_number.status == "evidence_gap"
+        assert hw.signal_carrier_bindings[0].signal_id == "tls_115vac_cmd"
+        assert hw.signal_carrier_bindings[0].feeds_logic_nodes == ("L1",)
+        assert _hardware_to_dict(hw)["signal_carrier_bindings"][0]["feeds_logic_nodes"] == ["L1"]
+
 
 class TestMissingFileRaises:
     """test_missing_file_raises — non-existent path raises HardwareSchemaNotFoundError."""
@@ -261,3 +308,39 @@ class TestRealYamlFile:
         assert hw.physical_limits.sw1_window.deep_reverse_deg == -6.2
         assert hw.physical_limits.sw2_window.near_zero_deg == -5.0
         assert hw.physical_limits.sw2_window.deep_reverse_deg == -9.8
+
+    def test_real_yaml_has_lru_inventory_and_signal_bindings(self) -> None:
+        hw = load_thrust_reverser_hardware(
+            "config/hardware/thrust_reverser_hardware_v1.yaml"
+        )
+        assert len(hw.lru_inventory) == 11
+        assert len(hw.signal_carrier_bindings) == 18
+        assert {item.id for item in hw.lru_inventory} >= {
+            "etrac",
+            "pdu",
+            "tls",
+            "pls",
+            "vdt",
+            "lock_sensors",
+        }
+        assert {binding.signal_id for binding in hw.signal_carrier_bindings} >= {
+            "tls_115vac_cmd",
+            "pdu_motor_cmd",
+            "deploy_90_percent_vdt",
+            "throttle_electronic_lock_release_cmd",
+        }
+
+    def test_real_yaml_unknown_hardware_data_is_explicit_evidence_gap(self) -> None:
+        hw = load_thrust_reverser_hardware(
+            "config/hardware/thrust_reverser_hardware_v1.yaml"
+        )
+        for item in hw.lru_inventory:
+            assert item.part_number.status == "evidence_gap"
+            assert item.location.status == "evidence_gap"
+            assert item.failure_rate_per_hour.status == "evidence_gap"
+        for binding in hw.signal_carrier_bindings:
+            assert binding.cable.status == "evidence_gap"
+            assert binding.connector.status == "evidence_gap"
+            assert binding.port_local.status == "evidence_gap"
+            assert binding.port_peer.status == "evidence_gap"
+            assert binding.evidence_status == "evidence_gap"
