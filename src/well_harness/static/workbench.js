@@ -7564,6 +7564,7 @@ function installEditableWorkbenchShell() {
   const canvas = document.getElementById("workbench-editable-canvas");
   const edgeSvg = shell.querySelector(".workbench-editable-edges");
   const toolbarButtons = Array.from(shell.querySelectorAll("[data-editor-tool]"));
+  const viewportButtons = Array.from(shell.querySelectorAll("[data-viewport-tool]"));
   const opCatalogButtons = Array.from(shell.querySelectorAll("[data-op-catalog-op]"));
   const opCatalogStatus = document.getElementById("workbench-op-catalog-status");
   const deriveBtn = document.getElementById("workbench-derive-draft-btn");
@@ -7645,6 +7646,8 @@ function installEditableWorkbenchShell() {
   let selectionMarquee = null;
   let suppressNextNodeClick = false;
   let pendingPortHandleSource = null;
+  let viewportPanState = null;
+  let spacePanActive = false;
   let hardwareEvidenceReport = null;
   let lastSandboxDiff = null;
   let currentEditorTool = "select";
@@ -7658,6 +7661,15 @@ function installEditableWorkbenchShell() {
   ];
   const undoStack = [];
   const redoStack = [];
+  const viewportState = {
+    scale: 1,
+    panX: 0,
+    panY: 0,
+  };
+  const viewportScaleBounds = {
+    min: 0.35,
+    max: 2.6,
+  };
   const interfaceBindingRequiredFields = [
     "hardware_id",
     "cable",
@@ -8451,6 +8463,163 @@ function installEditableWorkbenchShell() {
     ));
   }
 
+  function clampViewportScale(value) {
+    const numeric = Number.parseFloat(value);
+    if (!Number.isFinite(numeric)) return 1;
+    return Math.max(viewportScaleBounds.min, Math.min(viewportScaleBounds.max, numeric));
+  }
+
+  function defaultViewportState() {
+    return { scale: 1, panX: 0, panY: 0 };
+  }
+
+  function viewportStateSnapshot() {
+    return {
+      scale: Number(viewportState.scale.toFixed(4)),
+      pan_x: Math.round(viewportState.panX),
+      pan_y: Math.round(viewportState.panY),
+      truth_effect: "none",
+      coordinate_effect: "viewport_only",
+    };
+  }
+
+  function viewportStatusText(actionName) {
+    const snapshot = viewportStateSnapshot();
+    return `Viewport ${actionName}: zoom ${snapshot.scale} pan ${snapshot.pan_x},${snapshot.pan_y}. Truth effect: none.`;
+  }
+
+  function applyViewportTransform(actionName, options) {
+    if (!canvas) return viewportStateSnapshot();
+    const shouldPersist = !options || options.persist !== false;
+    viewportState.scale = clampViewportScale(viewportState.scale);
+    canvas.style.setProperty("--viewport-scale", String(viewportState.scale));
+    canvas.style.setProperty("--viewport-pan-x", `${viewportState.panX}px`);
+    canvas.style.setProperty("--viewport-pan-y", `${viewportState.panY}px`);
+    canvas.setAttribute("data-viewport-scale", viewportState.scale.toFixed(4));
+    canvas.setAttribute("data-viewport-pan-x", String(Math.round(viewportState.panX)));
+    canvas.setAttribute("data-viewport-pan-y", String(Math.round(viewportState.panY)));
+    canvas.setAttribute(
+      "data-viewport-state",
+      viewportState.scale === 1 && viewportState.panX === 0 && viewportState.panY === 0
+        ? "reset"
+        : "transformed",
+    );
+    if (actionName && graphValidationStatus) {
+      graphValidationStatus.textContent = viewportStatusText(actionName);
+    }
+    if (shouldPersist) persistDraft();
+    return viewportStateSnapshot();
+  }
+
+  function setViewportState(nextState, actionName) {
+    const state = nextState && typeof nextState === "object" ? nextState : defaultViewportState();
+    const fallback = defaultViewportState();
+    viewportState.scale = Number.isFinite(Number(state.scale))
+      ? clampViewportScale(state.scale)
+      : fallback.scale;
+    viewportState.panX = Number.isFinite(Number(state.panX)) ? Number(state.panX) : fallback.panX;
+    viewportState.panY = Number.isFinite(Number(state.panY)) ? Number(state.panY) : fallback.panY;
+    return applyViewportTransform(actionName);
+  }
+
+  function resetViewport() {
+    return setViewportState({ scale: 1, panX: 0, panY: 0 }, "reset");
+  }
+
+  function zoomViewportAt(factor, anchor, actionName) {
+    if (!canvas) return viewportStateSnapshot();
+    const rect = canvas.getBoundingClientRect();
+    const anchorPoint = anchor || { x: rect.width / 2, y: rect.height / 2 };
+    const oldScale = viewportState.scale || 1;
+    const nextScale = clampViewportScale(oldScale * factor);
+    const worldX = (anchorPoint.x - viewportState.panX) / oldScale;
+    const worldY = (anchorPoint.y - viewportState.panY) / oldScale;
+    viewportState.scale = nextScale;
+    viewportState.panX = anchorPoint.x - worldX * nextScale;
+    viewportState.panY = anchorPoint.y - worldY * nextScale;
+    return applyViewportTransform(actionName || "zoom");
+  }
+
+  function canvasViewportPoint(event) {
+    if (!canvas || !event) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
+  }
+
+  function selectedNodesForViewportFit() {
+    refreshEditableNodes();
+    const selectedIds = selectedNodeIds.size ? selectedNodeIds : new Set();
+    const selected = nodes.filter((node) => selectedIds.has(editableNodeId(node)));
+    return selected.length ? selected : nodes;
+  }
+
+  function fitViewportToSelection() {
+    if (!canvas) return viewportStateSnapshot();
+    const fitNodes = selectedNodesForViewportFit();
+    if (!fitNodes.length) return viewportStateSnapshot();
+    const rect = canvas.getBoundingClientRect();
+    const positions = fitNodes.map((node) => editableNodePosition(node));
+    const minX = Math.min(...positions.map((position) => position.x));
+    const maxX = Math.max(...positions.map((position) => position.x));
+    const minY = Math.min(...positions.map((position) => position.y));
+    const maxY = Math.max(...positions.map((position) => position.y));
+    const widthPx = Math.max(120, ((maxX - minX) / 100) * rect.width);
+    const heightPx = Math.max(90, ((maxY - minY) / 100) * rect.height);
+    const paddingPx = 96;
+    const scale = clampViewportScale(Math.min(
+      (rect.width - paddingPx) / widthPx,
+      (rect.height - paddingPx) / heightPx,
+    ));
+    const centerX = ((minX + maxX) / 2 / 100) * rect.width;
+    const centerY = ((minY + maxY) / 2 / 100) * rect.height;
+    viewportState.scale = scale;
+    viewportState.panX = rect.width / 2 - centerX * scale;
+    viewportState.panY = rect.height / 2 - centerY * scale;
+    return applyViewportTransform(`fit ${fitNodes.length} node(s)`);
+  }
+
+  function beginViewportPan(event) {
+    if (!canvas || !event) return false;
+    if (!(event.button === 1 || spacePanActive)) return false;
+    viewportPanState = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      panX: viewportState.panX,
+      panY: viewportState.panY,
+    };
+    canvas.setPointerCapture(event.pointerId);
+    canvas.setAttribute("data-viewport-panning", "true");
+    event.preventDefault();
+    return true;
+  }
+
+  function updateViewportPan(event) {
+    if (!viewportPanState || !event || event.pointerId !== viewportPanState.pointerId) return false;
+    viewportState.panX = viewportPanState.panX + (event.clientX - viewportPanState.startX);
+    viewportState.panY = viewportPanState.panY + (event.clientY - viewportPanState.startY);
+    applyViewportTransform("pan", { persist: false });
+    event.preventDefault();
+    return true;
+  }
+
+  function clearViewportPanState(actionName) {
+    if (!viewportPanState) return;
+    viewportPanState = null;
+    if (canvas) canvas.removeAttribute("data-viewport-panning");
+    applyViewportTransform(actionName || "pan complete");
+  }
+
+  function endViewportPan(event) {
+    if (!viewportPanState || !event || event.pointerId !== viewportPanState.pointerId) return false;
+    clearViewportPanState("pan complete");
+    event.preventDefault();
+    return true;
+  }
+
   function clampCanvasPercent(value) {
     const numeric = Number.parseFloat(value);
     if (!Number.isFinite(numeric)) return 50;
@@ -8465,9 +8634,11 @@ function installEditableWorkbenchShell() {
     if (!canvas || !event) return { x: 50, y: 50 };
     const rect = canvas.getBoundingClientRect();
     if (!rect.width || !rect.height) return { x: 50, y: 50 };
+    const rawX = (event.clientX - rect.left - viewportState.panX) / viewportState.scale;
+    const rawY = (event.clientY - rect.top - viewportState.panY) / viewportState.scale;
     return {
-      x: clampCanvasPercent(((event.clientX - rect.left) / rect.width) * 100),
-      y: clampCanvasPercent(((event.clientY - rect.top) / rect.height) * 100),
+      x: clampCanvasPercent((rawX / rect.width) * 100),
+      y: clampCanvasPercent((rawY / rect.height) * 100),
     };
   }
 
@@ -8598,6 +8769,7 @@ function installEditableWorkbenchShell() {
       selectedNodeId: selectedNode && selectedNode.getAttribute("data-editable-node-id"),
       selectedNodeIds: Array.from(selectedNodeIds),
       selectedCatalogOp,
+      viewportState: viewportStateSnapshot(),
       nodes: nodes.map((node) => editableNodeState(node)),
       edges: draftEdges.map((edge) => ({ ...edge })),
     };
@@ -8709,6 +8881,14 @@ function installEditableWorkbenchShell() {
           .map((id) => String(id || ""))
           .filter((id) => nodes.some((node) => editableNodeId(node) === id))
       : [];
+    const nextViewportState = state.viewportState && typeof state.viewportState === "object"
+      ? state.viewportState
+      : defaultViewportState();
+    setViewportState({
+      scale: nextViewportState.scale,
+      panX: nextViewportState.pan_x !== undefined ? nextViewportState.pan_x : nextViewportState.panX,
+      panY: nextViewportState.pan_y !== undefined ? nextViewportState.pan_y : nextViewportState.panY,
+    });
     selectedNodeIds = new Set(restoredSelection);
     const activeNodeId = editableNodeId(selectedNode);
     if (activeNodeId && !selectedNodeIds.size) selectedNodeIds.add(activeNodeId);
@@ -9157,7 +9337,7 @@ function installEditableWorkbenchShell() {
 
   function beginEditableGroupDrag(event, node) {
     if (!event || event.button !== 0 || !node) return;
-    if (currentEditorTool !== "select" || isSelectionModifier(event)) return;
+    if (spacePanActive || currentEditorTool !== "select" || isSelectionModifier(event)) return;
     if (node.getAttribute("data-draft-node") !== "true") return;
     if (!selectedNodeIds.has(editableNodeId(node))) {
       setSingleEditableNodeSelection(node);
@@ -9226,7 +9406,9 @@ function installEditableWorkbenchShell() {
   }
 
   function beginCanvasLasso(event) {
-    if (!canvas || !event || event.button !== 0 || currentEditorTool !== "select") return;
+    if (!canvas || !event || currentEditorTool !== "select") return;
+    if (beginViewportPan(event)) return;
+    if (event.button !== 0) return;
     const target = event.target;
     if (
       target instanceof Element
@@ -9249,6 +9431,7 @@ function installEditableWorkbenchShell() {
   }
 
   function updateCanvasLasso(event) {
+    if (updateViewportPan(event)) return;
     if (!lassoDragState || !event || event.pointerId !== lassoDragState.pointerId) return;
     const current = canvasPointPercent(event);
     const rect = lassoRectFromPoints(lassoDragState.start, current);
@@ -9259,6 +9442,7 @@ function installEditableWorkbenchShell() {
   }
 
   function endCanvasLasso(event) {
+    if (endViewportPan(event)) return;
     if (!lassoDragState || !event || event.pointerId !== lassoDragState.pointerId) return;
     const current = canvasPointPercent(event);
     const rect = lassoRectFromPoints(lassoDragState.start, current);
@@ -10070,6 +10254,8 @@ function installEditableWorkbenchShell() {
       applyEditableState({
         draftState: payload.draftState || "baseline",
         selectedNodeId: payload.selectedNodeId,
+        selectedNodeIds: Array.isArray(payload.selectedNodeIds) ? payload.selectedNodeIds : [],
+        viewportState: payload.viewportState || defaultViewportState(),
         selectedCatalogOp: payload.selectedCatalogOp,
         nodes: Array.isArray(payload.nodes) ? payload.nodes : [],
         edges: Array.isArray(payload.edges) ? payload.edges : draftEdges,
@@ -10126,6 +10312,7 @@ function installEditableWorkbenchShell() {
       truth_level_impact: "none",
       dal_pssa_impact: "none",
       controller_truth_modified: false,
+      viewport_state: viewportStateSnapshot(),
       selected_node: selected,
       nodes: nodes.map((node) => editableNodeState(node)),
       ports: [...typedPorts, ...interfacePorts],
@@ -10199,6 +10386,7 @@ function installEditableWorkbenchShell() {
       truth_level_impact: "none",
       dal_pssa_impact: "none",
       controller_truth_modified: false,
+      viewport_state: snapshot.viewport_state,
       selected_node: snapshot.selected_node,
       selected_node_ids: Array.from(selectedNodeIds),
       nodes: snapshot.nodes,
@@ -10283,6 +10471,12 @@ function installEditableWorkbenchShell() {
     ) {
       throw new Error("custom_snapshot must be an object when present");
     }
+    if (
+      payload.viewport_state !== undefined
+      && (!payload.viewport_state || typeof payload.viewport_state !== "object" || Array.isArray(payload.viewport_state))
+    ) {
+      throw new Error("viewport_state must be an object when present");
+    }
     return payload;
   }
 
@@ -10316,6 +10510,7 @@ function installEditableWorkbenchShell() {
       selectedNodeIds: Array.isArray(validated.selected_node_ids)
         ? validated.selected_node_ids
         : [],
+      viewportState: validated.viewport_state || defaultViewportState(),
       selectedCatalogOp: importedCatalog.selected_op,
       nodes: validated.nodes.map((node) => ({
         id: String(node.id || ""),
@@ -10840,6 +11035,29 @@ function installEditableWorkbenchShell() {
       }
     });
   }
+  for (const button of viewportButtons) {
+    button.addEventListener("click", () => {
+      const tool = button.getAttribute("data-viewport-tool") || "reset";
+      if (tool === "zoom-in") {
+        zoomViewportAt(1.18, null, "zoom in");
+      } else if (tool === "zoom-out") {
+        zoomViewportAt(1 / 1.18, null, "zoom out");
+      } else if (tool === "fit-selection") {
+        fitViewportToSelection();
+      } else {
+        resetViewport();
+      }
+    });
+  }
+  if (canvas) {
+    canvas.addEventListener("wheel", (event) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      const anchor = canvasViewportPoint(event);
+      const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+      event.preventDefault();
+      zoomViewportAt(factor, anchor, "wheel zoom");
+    }, { passive: false });
+  }
   for (const button of opCatalogButtons) {
     button.addEventListener("click", () => {
       const op = button.getAttribute("data-op-catalog-op") || "and";
@@ -10902,10 +11120,26 @@ function installEditableWorkbenchShell() {
     return Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
   }
 
+  function releaseSpacePanMode() {
+    spacePanActive = false;
+    if (canvas) canvas.removeAttribute("data-space-pan-active");
+  }
+
+  function cancelViewportPanMode() {
+    if (!viewportPanState) return;
+    clearViewportPanState("pan cancelled");
+  }
+
   function handleEditableKeyboardShortcut(event) {
     if (!event || isFormShortcutTarget(event.target)) return;
     const key = String(event.key || "").toLowerCase();
     const commandKey = event.metaKey || event.ctrlKey;
+    if (event.code === "Space" || event.key === " ") {
+      spacePanActive = true;
+      if (canvas) canvas.setAttribute("data-space-pan-active", "true");
+      event.preventDefault();
+      return;
+    }
     if (commandKey && key === "d") {
       event.preventDefault();
       duplicateSelectedEditableNode();
@@ -10945,6 +11179,21 @@ function installEditableWorkbenchShell() {
   }
 
   document.addEventListener("keydown", handleEditableKeyboardShortcut);
+  document.addEventListener("keyup", (event) => {
+    if (event && (event.code === "Space" || event.key === " ")) {
+      releaseSpacePanMode();
+    }
+  });
+  window.addEventListener("blur", () => {
+    releaseSpacePanMode();
+    cancelViewportPanMode();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      releaseSpacePanMode();
+      cancelViewportPanMode();
+    }
+  });
   if (applyInterfaceBindingBtn) {
     applyInterfaceBindingBtn.addEventListener("click", () => applySelectedInterfaceBinding());
   }
@@ -10971,6 +11220,7 @@ function installEditableWorkbenchShell() {
   }
   setSelectedOperationCatalogEntry(selectedCatalogOp);
   renderDraftSnapshotManager();
+  applyViewportTransform();
   if (selectedNode) {
     selectNode(selectedNode);
   }

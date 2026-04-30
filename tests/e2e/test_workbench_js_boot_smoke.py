@@ -789,3 +789,76 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
         if item["source"] == "draft_node_1" and item["target"] == "draft_node_2"
     ]
     assert len(matching_edges) == 1
+
+
+def test_workbench_canvas_viewport_pan_zoom_fit_preserves_model_coordinates(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-editor-tool="node"]')
+    page.click('[data-editor-tool="node"]')
+    page.locator('[data-editable-node-id="draft_node_1"]').click(modifiers=["Shift"])
+    page.click("#workbench-export-draft-btn")
+    before = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    before_positions = {
+        node["id"]: (node["x"], node["y"])
+        for node in before["nodes"]
+        if node["id"] in {"draft_node_1", "draft_node_2"}
+    }
+
+    page.click('[data-viewport-tool="zoom-in"]')
+    assert float(page.locator("#workbench-editable-canvas").get_attribute("data-viewport-scale") or "1") > 1
+
+    canvas = page.locator("#workbench-editable-canvas").bounding_box()
+    assert canvas is not None
+    page.keyboard.down("Space")
+    page.mouse.move(canvas["x"] + 120, canvas["y"] + 140)
+    page.mouse.down()
+    page.mouse.move(canvas["x"] + 180, canvas["y"] + 190)
+    page.mouse.up()
+    page.keyboard.up("Space")
+    assert page.locator("#workbench-editable-canvas").get_attribute("data-viewport-pan-x") != "0"
+
+    page.evaluate(
+        """
+        () => {
+          const canvas = document.getElementById('workbench-editable-canvas');
+          const rect = canvas.getBoundingClientRect();
+          canvas.dispatchEvent(new WheelEvent('wheel', {
+            bubbles: true,
+            cancelable: true,
+            ctrlKey: true,
+            deltaY: -120,
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2,
+          }));
+        }
+        """
+    )
+    assert float(page.locator("#workbench-editable-canvas").get_attribute("data-viewport-scale") or "1") > 1
+
+    page.click('[data-viewport-tool="fit-selection"]')
+    page.click("#workbench-export-draft-btn")
+    fitted = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    fitted_positions = {
+        node["id"]: (node["x"], node["y"])
+        for node in fitted["nodes"]
+        if node["id"] in {"draft_node_1", "draft_node_2"}
+    }
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert fitted_positions == before_positions
+    assert fitted["viewport_state"]["truth_effect"] == "none"
+    assert fitted["viewport_state"]["coordinate_effect"] == "viewport_only"
+
+    page.click('[data-viewport-tool="reset"]')
+    assert page.locator("#workbench-editable-canvas").get_attribute("data-viewport-state") == "reset"
