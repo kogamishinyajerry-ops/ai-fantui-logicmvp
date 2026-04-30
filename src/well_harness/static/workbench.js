@@ -7588,6 +7588,11 @@ function installEditableWorkbenchShell() {
   const sourceRefSlot = document.getElementById("workbench-inspector-source-ref");
   const evidenceSummary = document.getElementById("workbench-inspector-evidence-summary");
   const evidenceDetail = document.getElementById("workbench-inspector-evidence-detail");
+  const hardwarePaletteFilter = document.getElementById("workbench-hardware-palette-filter");
+  const hardwarePaletteAction = document.getElementById("workbench-hardware-palette-action");
+  const hardwarePaletteList = document.getElementById("workbench-hardware-palette-list");
+  const hardwarePaletteCount = document.getElementById("workbench-hardware-palette-count");
+  const hardwarePaletteStatus = document.getElementById("workbench-hardware-palette-status");
   const diffPanel = document.getElementById("workbench-sandbox-diff-panel");
   const diffVerdict = document.getElementById("workbench-diff-verdict");
   const diffScenario = document.getElementById("workbench-diff-scenario");
@@ -7649,6 +7654,8 @@ function installEditableWorkbenchShell() {
   let viewportPanState = null;
   let spacePanActive = false;
   let hardwareEvidenceReport = null;
+  let hardwarePaletteItems = [];
+  let selectedHardwarePaletteItemId = "";
   let lastSandboxDiff = null;
   let currentEditorTool = "select";
   let pendingEdgeSourceId = "";
@@ -7828,7 +7835,7 @@ function installEditableWorkbenchShell() {
       port_peer: normalizedInterfaceField(source.port_peer || source.portPeer),
       evidence_status: normalizeEvidenceStatus(source.evidence_status || source.evidenceStatus),
       binding_kind: "ui_interface_binding",
-      source_ref: "ui_draft.interface_binding",
+      source_ref: normalizedInterfaceField(source.source_ref || source.sourceRef || "ui_draft.interface_binding"),
       truth_effect: "none",
     });
   }
@@ -7850,6 +7857,7 @@ function installEditableWorkbenchShell() {
     node.setAttribute("data-interface-port-local", normalized.port_local);
     node.setAttribute("data-interface-port-peer", normalized.port_peer);
     node.setAttribute("data-interface-evidence-status", normalized.evidence_status);
+    node.setAttribute("data-interface-source-ref", normalized.source_ref);
     applyNodeBindingQuality(node, normalized);
     return normalized;
   }
@@ -7863,6 +7871,7 @@ function installEditableWorkbenchShell() {
       port_local: node.getAttribute("data-interface-port-local"),
       port_peer: node.getAttribute("data-interface-port-peer"),
       evidence_status: node.getAttribute("data-interface-evidence-status"),
+      source_ref: node.getAttribute("data-interface-source-ref"),
     }, "node", node.getAttribute("data-editable-node-id") || "unknown");
   }
 
@@ -9830,6 +9839,265 @@ function installEditableWorkbenchShell() {
     evidenceDetail.innerHTML = `<ul>${items}</ul>`;
   }
 
+  function evidenceValueRaw(valueRef) {
+    if (!valueRef || typeof valueRef !== "object") return "evidence_gap";
+    const status = String(valueRef.status || "evidence_gap");
+    const value = valueRef.value;
+    if (status === "evidence_gap" || value === "TBD" || value === null || value === undefined) {
+      return "evidence_gap";
+    }
+    return String(value);
+  }
+
+  function hardwarePaletteItemStatus(row) {
+    if (!row || typeof row !== "object") return "evidence_gap";
+    return String(row.carrier_status || row.value_status || row.display_status || row.evidence_status || "evidence_gap");
+  }
+
+  function hardwarePaletteBinding(item, ownerKind, ownerId) {
+    const source = item && item.binding && typeof item.binding === "object" ? item.binding : {};
+    return normalizeInterfaceBinding({
+      hardware_id: source.hardware_id,
+      cable: source.cable,
+      connector: source.connector,
+      port_local: source.port_local,
+      port_peer: source.port_peer,
+      evidence_status: source.evidence_status,
+      source_ref: source.source_ref || (item && item.source_ref),
+    }, ownerKind, ownerId);
+  }
+
+  function hardwarePalettePortContract(item, nodeId) {
+    const signalId = item && item.signal_id ? String(item.signal_id) : "";
+    const suffix = item && item.kind ? String(item.kind) : "interface";
+    return normalizePortContract({
+      input_signal_id: signalId || `${nodeId}_${suffix}_input`,
+      output_signal_id: signalId ? `${signalId}_candidate` : `${nodeId}_${suffix}_output`,
+      value_type: item && item.value_type ? item.value_type : "unknown",
+      unit: "",
+      required: false,
+      source_ref: `ui_draft.hardware_palette.${item && item.kind ? item.kind : "unknown"}`,
+      truth_effect: "none",
+    }, nodeId);
+  }
+
+  function hardwarePaletteItemsFromEvidence(report) {
+    const index = report && report.evidence_index ? report.evidence_index : {};
+    const lrus = Array.isArray(index.lru_inventory) ? index.lru_inventory : [];
+    const signalBindings = Array.isArray(index.signal_bindings) ? index.signal_bindings : [];
+    const items = [];
+    for (const lru of lrus) {
+      const lruId = normalizedInterfaceField(lru.id);
+      items.push({
+        id: `lru:${lruId}`,
+        kind: "lru",
+        label: lru.display_name || lruId,
+        detail: lruId,
+        status: hardwarePaletteItemStatus(lru),
+        source_ref: lru.source_ref || "hardware_evidence.lru_inventory",
+        binding: {
+          hardware_id: lruId,
+          cable: "evidence_gap",
+          connector: "evidence_gap",
+          port_local: "evidence_gap",
+          port_peer: "evidence_gap",
+          evidence_status: "evidence_gap",
+          source_ref: lru.source_ref || "hardware_evidence.lru_inventory",
+        },
+        value_type: "unknown",
+      });
+    }
+    for (const row of signalBindings) {
+      const signalId = normalizedInterfaceField(row.signal_id);
+      const sourceHardwareId = normalizedInterfaceField(row.source_hardware_id);
+      const peerHardwareId = normalizedInterfaceField(row.peer_hardware_id);
+      const cable = evidenceValueRaw(row.cable);
+      const connector = evidenceValueRaw(row.connector);
+      const portLocal = evidenceValueRaw(row.port_local);
+      const portPeer = evidenceValueRaw(row.port_peer);
+      const evidenceStatus = hardwarePaletteItemStatus(row) === "recorded" ? "ui_draft" : "evidence_gap";
+      const binding = {
+        hardware_id: sourceHardwareId,
+        cable,
+        connector,
+        port_local: portLocal,
+        port_peer: portPeer,
+        evidence_status: evidenceStatus,
+        source_ref: row.source_ref || "hardware_evidence.signal_bindings",
+      };
+      items.push({
+        id: `signal:${signalId}:${sourceHardwareId}:${peerHardwareId}`,
+        kind: "signal",
+        label: signalId,
+        detail: `${sourceHardwareId} -> ${peerHardwareId}`,
+        status: hardwarePaletteItemStatus(row),
+        source_ref: row.source_ref || "hardware_evidence.signal_bindings",
+        signal_id: signalId,
+        binding,
+        value_type: "unknown",
+      });
+      items.push({
+        id: `carrier:${signalId}:${sourceHardwareId}:${peerHardwareId}`,
+        kind: "carrier",
+        label: `${signalId} carrier`,
+        detail: `Cable ${cable} | Connector ${connector} | Ports ${portLocal} -> ${portPeer}`,
+        status: hardwarePaletteItemStatus(row),
+        source_ref: row.source_ref || "hardware_evidence.signal_bindings",
+        signal_id: signalId,
+        binding,
+        value_type: "unknown",
+      });
+    }
+    return items;
+  }
+
+  function currentHardwarePaletteFilter() {
+    return hardwarePaletteFilter ? String(hardwarePaletteFilter.value || "all") : "all";
+  }
+
+  function renderHardwarePalette() {
+    if (!hardwarePaletteList) return [];
+    hardwarePaletteItems = hardwarePaletteItemsFromEvidence(hardwareEvidenceReport);
+    const filter = currentHardwarePaletteFilter();
+    const visible = filter === "all"
+      ? hardwarePaletteItems
+      : hardwarePaletteItems.filter((item) => item.kind === filter);
+    if (hardwarePaletteCount) {
+      hardwarePaletteCount.textContent = `${visible.length}/${hardwarePaletteItems.length}`;
+    }
+    if (!hardwareEvidenceReport) {
+      hardwarePaletteList.setAttribute("data-palette-state", "loading");
+      hardwarePaletteList.textContent = "Hardware evidence loading. Truth effect: none.";
+      return [];
+    }
+    if (!visible.length) {
+      hardwarePaletteList.setAttribute("data-palette-state", "empty");
+      hardwarePaletteList.textContent = "No matching hardware evidence items. Truth effect: none.";
+      return [];
+    }
+    hardwarePaletteList.setAttribute("data-palette-state", "ready");
+    hardwarePaletteList.innerHTML = visible.map((item) => [
+      '<button',
+      'type="button"',
+      'class="workbench-hardware-palette-item"',
+      `data-hardware-palette-id="${inspectorText(item.id)}"`,
+      `data-palette-kind="${inspectorText(item.kind)}"`,
+      `data-hardware-id="${inspectorText(item.binding.hardware_id)}"`,
+      `aria-pressed="${item.id === selectedHardwarePaletteItemId ? "true" : "false"}"`,
+      '>',
+      `<strong>${inspectorText(item.label)}</strong>`,
+      `<span>${inspectorText(item.detail)}</span>`,
+      `<small>${inspectorText(item.source_ref || "hardware_evidence")}</small>`,
+      `<em>${inspectorText(item.kind)} | ${inspectorText(item.status)}</em>`,
+      '</button>',
+    ].join(" ")).join("");
+    return visible;
+  }
+
+  function currentHardwarePaletteAction() {
+    return hardwarePaletteAction ? String(hardwarePaletteAction.value || "create-node") : "create-node";
+  }
+
+  function hardwarePaletteItemById(itemId) {
+    return hardwarePaletteItems.find((item) => item.id === itemId) || null;
+  }
+
+  function addHardwarePaletteNode(item) {
+    if (!item) return null;
+    recordEditableHistory("hardware_palette_node");
+    shell.setAttribute("data-draft-state", "derived");
+    const nodeId = nextDraftNodeId();
+    const node = createEditableNodeElement({
+      id: nodeId,
+      label: `Interface ${item.label}`,
+      op: "and",
+      ruleCount: "0",
+      evidence: item.status === "recorded" || item.status === "confirmed" ? "ui_draft" : "evidence_gap",
+      sourceRef: `ui_draft.hardware_palette.${item.kind}.${item.id}`,
+      op_catalog_entry: "and",
+      hardware_binding: hardwarePaletteBinding(item, "node", nodeId),
+      port_contract: hardwarePalettePortContract(item, nodeId),
+      x: `${36 + (nextDraftNodeIndex % 6) * 8}%`,
+      y: `${24 + (nextDraftNodeIndex % 5) * 9}%`,
+      draftNode: true,
+    });
+    refreshEditableNodes();
+    if (node) selectNode(node);
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate hardware palette node pending";
+    if (hardwarePaletteStatus) {
+      hardwarePaletteStatus.textContent =
+        `Created ${nodeId} from ${item.kind}:${item.label}. Sandbox evidence only; truth effect: none.`;
+    }
+    setTimelineState("derived");
+    renderEditableEdges();
+    validateEditableGraph();
+    updateEditableDraftHash();
+    persistDraft();
+    return node;
+  }
+
+  function applyHardwarePaletteBinding(item) {
+    if (!item) return null;
+    const target = activeInterfaceBindingTarget();
+    if (target.kind === "none") {
+      if (hardwarePaletteStatus) {
+        hardwarePaletteStatus.textContent = "Select a node or edge before applying hardware evidence. Truth effect: none.";
+      }
+      return null;
+    }
+    recordEditableHistory("hardware_palette_binding");
+    const binding = hardwarePaletteBinding(item, target.kind, target.id);
+    if (target.kind === "edge") {
+      setEdgeInterfaceBinding(selectedEdge, binding);
+      if (item.signal_id) {
+        const existingContract = edgePortContract(selectedEdge);
+        const nextContract = {
+          ...existingContract,
+          signal_id: item.signal_id,
+          source_ref: item.source_ref || existingContract.source_ref || "ui_draft.hardware_palette.edge",
+        };
+        if (item.value_type && item.value_type !== "unknown") {
+          nextContract.value_type = item.value_type;
+        }
+        setEdgePortContract(selectedEdge, nextContract);
+      }
+    } else if (target.kind === "node") {
+      setNodeInterfaceBinding(selectedNode, binding);
+    }
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate hardware palette binding pending";
+    renderInspector();
+    renderEditableEdges();
+    if (hardwarePaletteStatus) {
+      hardwarePaletteStatus.textContent =
+        `Applied ${item.kind}:${item.label} to ${target.kind}:${target.id}. Sandbox evidence only; truth effect: none.`;
+    }
+    updateEditableDraftHash();
+    persistDraft();
+    return binding;
+  }
+
+  function handleHardwarePaletteItem(itemId) {
+    selectedHardwarePaletteItemId = itemId;
+    const item = hardwarePaletteItemById(itemId);
+    if (!item) return null;
+    const action = currentHardwarePaletteAction();
+    const result = action === "apply-binding"
+      ? applyHardwarePaletteBinding(item)
+      : addHardwarePaletteNode(item);
+    renderHardwarePalette();
+    return result;
+  }
+
+  function buildHardwarePaletteSummary() {
+    return {
+      item_count: hardwarePaletteItems.length,
+      selected_item_id: selectedHardwarePaletteItemId || null,
+      action: currentHardwarePaletteAction(),
+      source: "read_only_hardware_evidence_api",
+      truth_effect: "none",
+    };
+  }
+
   function activeInterfaceBindingTarget() {
     if (selectedEdge) {
       return {
@@ -10279,10 +10547,12 @@ function installEditableWorkbenchShell() {
         const gaps = payload.evidence_gaps.total_field_count;
         evidenceSummary.textContent =
           `Read-only evidence: ${lru} LRUs, ${bindings} signal bindings, ${gaps} evidence-gap fields.`;
+        renderHardwarePalette();
         renderInspectorEvidenceDetails(selectedNodePayload());
       })
       .catch(() => {
         evidenceSummary.textContent = "Hardware evidence API unavailable; draft editing still remains sandbox-only.";
+        renderHardwarePalette();
       });
   }
 
@@ -10305,6 +10575,7 @@ function installEditableWorkbenchShell() {
     const portCompatibilityReport = buildPortCompatibilityReport(typedPorts, draftEdges);
     const operationCatalog = buildOperationCatalogSummary();
     const ruleParameterSummary = buildRuleParameterSummary();
+    const hardwarePalette = buildHardwarePaletteSummary();
     return {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
       system_id: "thrust-reverser",
@@ -10328,6 +10599,7 @@ function installEditableWorkbenchShell() {
       port_compatibility_report: portCompatibilityReport,
       operation_catalog: operationCatalog,
       rule_parameter_summary: ruleParameterSummary,
+      hardware_palette: hardwarePalette,
     };
   }
 
@@ -10399,6 +10671,7 @@ function installEditableWorkbenchShell() {
       port_compatibility_report: snapshot.port_compatibility_report,
       operation_catalog: snapshot.operation_catalog,
       rule_parameter_summary: snapshot.rule_parameter_summary,
+      hardware_palette: snapshot.hardware_palette,
       draft_snapshot_manifest: buildDraftSnapshotManifestSummary(),
       selected_scenario_id: selectedWorkbenchScenarioId(),
       custom_snapshot: customSnapshot,
@@ -10857,6 +11130,7 @@ function installEditableWorkbenchShell() {
       modelJson.port_compatibility_report || buildPortCompatibilityReport(typedPorts, modelJson.edges || []);
     const operationCatalog = modelJson.operation_catalog || buildOperationCatalogSummary();
     const ruleParameterSummary = modelJson.rule_parameter_summary || buildRuleParameterSummary();
+    const hardwarePalette = modelJson.hardware_palette || buildHardwarePaletteSummary();
     const draftSnapshotManifest =
       modelJson.draft_snapshot_manifest || buildDraftSnapshotManifestSummary();
     const diffSummary = lastSandboxDiff || {
@@ -10892,6 +11166,7 @@ function installEditableWorkbenchShell() {
       port_compatibility_report: portCompatibilityReport,
       operation_catalog: operationCatalog,
       rule_parameter_summary: ruleParameterSummary,
+      hardware_palette: hardwarePalette,
       draft_snapshot_manifest: draftSnapshotManifest,
       changerequest_body: handoffPacket.linearIssueBody,
       pr_proof_packet: handoffPacket.prProofPacket,
@@ -10911,6 +11186,7 @@ function installEditableWorkbenchShell() {
       port_compatibility_report_checksum: checksumEvidenceArchiveField(portCompatibilityReport),
       operation_catalog_checksum: checksumEvidenceArchiveField(operationCatalog),
       rule_parameter_summary_checksum: checksumEvidenceArchiveField(ruleParameterSummary),
+      hardware_palette_checksum: checksumEvidenceArchiveField(hardwarePalette),
       draft_snapshot_manifest_checksum: checksumEvidenceArchiveField(draftSnapshotManifest),
       gate_claims_checksum: checksumEvidenceArchiveField(handoffPacket.gateClaims),
       known_blockers_checksum: checksumEvidenceArchiveField(handoffPacket.knownBlockers),
@@ -11194,6 +11470,28 @@ function installEditableWorkbenchShell() {
       cancelViewportPanMode();
     }
   });
+  if (hardwarePaletteFilter) {
+    hardwarePaletteFilter.addEventListener("change", () => renderHardwarePalette());
+  }
+  if (hardwarePaletteAction) {
+    hardwarePaletteAction.addEventListener("change", () => {
+      if (hardwarePaletteStatus) {
+        hardwarePaletteStatus.textContent =
+          `Palette click action: ${currentHardwarePaletteAction()}. Sandbox evidence only; truth effect: none.`;
+      }
+      renderHardwarePalette();
+    });
+  }
+  if (hardwarePaletteList) {
+    hardwarePaletteList.addEventListener("click", (event) => {
+      const target = event.target instanceof Element
+        ? event.target.closest("[data-hardware-palette-id]")
+        : null;
+      if (!target) return;
+      event.preventDefault();
+      handleHardwarePaletteItem(target.getAttribute("data-hardware-palette-id") || "");
+    });
+  }
   if (applyInterfaceBindingBtn) {
     applyInterfaceBindingBtn.addEventListener("click", () => applySelectedInterfaceBinding());
   }
@@ -11227,6 +11525,7 @@ function installEditableWorkbenchShell() {
   renderEditableEdges();
   validateEditableGraph();
   updateEditableDraftHash();
+  renderHardwarePalette();
   hydrateEvidenceSummary();
 }
 

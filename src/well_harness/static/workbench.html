@@ -738,6 +738,45 @@
                 Select a graph node to inspect read-only hardware evidence.
               </div>
               <section
+                id="workbench-hardware-palette"
+                class="workbench-hardware-palette"
+                aria-labelledby="workbench-hardware-palette-title"
+              >
+                <div class="workbench-inspector-header">
+                  <span id="workbench-hardware-palette-title">Hardware Palette</span>
+                  <strong id="workbench-hardware-palette-count">loading</strong>
+                </div>
+                <div class="workbench-hardware-palette-controls">
+                  <label class="workbench-inspector-field" for="workbench-hardware-palette-filter">
+                    <span>Filter</span>
+                    <select id="workbench-hardware-palette-filter">
+                      <option value="all">all</option>
+                      <option value="lru">lru</option>
+                      <option value="signal">signal</option>
+                      <option value="carrier">carrier</option>
+                    </select>
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-hardware-palette-action">
+                    <span>Click action</span>
+                    <select id="workbench-hardware-palette-action">
+                      <option value="create-node">create node</option>
+                      <option value="apply-binding">apply binding</option>
+                    </select>
+                  </label>
+                </div>
+                <div
+                  id="workbench-hardware-palette-list"
+                  class="workbench-hardware-palette-list"
+                  data-palette-state="loading"
+                  aria-live="polite"
+                >
+                  Hardware evidence loading. Truth effect: none.
+                </div>
+                <p id="workbench-hardware-palette-status" class="workbench-handoff-status">
+                  Palette actions write sandbox evidence only. Truth effect: none.
+                </p>
+              </section>
+              <section
                 id="workbench-rule-parameter-editor"
                 class="workbench-rule-parameter-editor"
                 aria-labelledby="workbench-rule-parameter-title"
