@@ -23,8 +23,8 @@ controlled ChangeRequest handoff.
 - JER-209: Connector/pin map editor v1 (Done)
 - JER-210: Hardware evidence inspector v2 (Done)
 - JER-211: Scenario/debug timeline linked to selected graph elements v1 (Done)
-- JER-212: Candidate-to-baseline diff review workflow v2 (In review)
-- JER-213: ChangeRequest handoff packet from editable draft v1
+- JER-212: Candidate-to-baseline diff review workflow v2 (Done)
+- JER-213: ChangeRequest handoff packet from editable draft v1 (In review)
 
 ## Product Target
 
@@ -208,6 +208,25 @@ The slice remains sandbox-only:
   not that the candidate is certified;
 - `divergent`, `invalid_model`, and `invalid_scenario` remain review states
   that require human follow-up before any ChangeRequest implementation;
+- no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
+  DAL, or PSSA behavior is changed.
+
+## JER-213 Closure Note
+
+JER-213 turns the workbench handoff into a structured ChangeRequest packet.
+The ChangeRequest Handoff section now emits three synchronized artifacts:
+Linear issue body, PR proof text, and `changerequest_handoff_packet` JSON. The
+packet includes Outcome, Acceptance, Boundaries, Evidence Required, Red lines,
+Test delta placeholders, proof checksums, and the embedded proof packet.
+
+The slice remains sandbox-only:
+
+- `changerequest_handoff_packet` is a draft review artifact with
+  `truth_effect: none`, `candidate_state: sandbox_candidate`, and
+  `certification_claim: none`;
+- no live Linear mutation is performed from the browser;
+- e2e 49/49 and mypy clean remain not-claimed placeholders unless separately
+  verified by lane gates;
 - no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
   DAL, or PSSA behavior is changed.
 

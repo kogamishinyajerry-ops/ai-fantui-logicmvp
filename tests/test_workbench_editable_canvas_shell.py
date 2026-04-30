@@ -86,6 +86,7 @@ def test_evidence_inspector_has_editable_and_read_only_fields() -> None:
     assert 'id="workbench-generate-handoff-btn"' in html
     assert 'id="workbench-linear-handoff-output"' in html
     assert 'id="workbench-pr-proof-output"' in html
+    assert 'id="workbench-changerequest-packet-output"' in html
     assert 'data-evidence-api="/api/hardware/evidence?system_id=thrust-reverser"' in html
 
 
@@ -307,13 +308,20 @@ def test_js_builds_changerequest_linear_handoff_without_live_linear_mutation() -
 
     assert "function buildEditableHandoffPacket" in js
     assert "function buildChangeRequestProofPacket" in js
+    assert "function buildChangeRequestHandoffPacket" in js
     assert "function linearIssueBodyFromProofPacket" in js
     assert "function prProofTextFromProofPacket" in js
     assert "workbench-generate-handoff-btn" in js
     assert "changerequest_proof_packet" in js
+    assert "changerequest_handoff_packet" in js
+    assert "changerequest_handoff_packet_checksum" in js
+    assert "changerequest_handoff_packet truth_effect must be none" in js
     assert 'issue: "JER-TBD"' in js
     assert "Candidate state:" in js
     assert "Certification claim:" in js
     assert "Truth-level impact:" in js
     assert "Red lines touched:" in js
+    assert "## Red Lines" in js
+    assert "## Test Delta" in js
+    assert 'kind: "well-harness-workbench-changerequest-handoff-packet"' in js
     assert "No live Linear mutation" in js
