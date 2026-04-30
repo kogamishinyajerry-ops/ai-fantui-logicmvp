@@ -400,3 +400,46 @@ def test_workbench_typed_port_contract_round_trips_through_export_import_and_arc
     assert archive["checksums"]["port_contract_summary_checksum"]
     assert archive["checksums"]["port_compatibility_report_checksum"]
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
+def test_workbench_operation_catalog_adds_typed_sandbox_node(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-op-catalog-op="between"]')
+    assert page.locator("#workbench-op-catalog-status").inner_text() == "BTW · number"
+    page.click('[data-editor-tool="node"]')
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+
+    node = next(item for item in draft["nodes"] if item["id"] == "draft_node_1")
+    typed_ports = {port["id"]: port for port in draft["typed_ports"]}
+    assert errors == [], f"page JS errors: {errors}"
+    assert node["op"] == "between"
+    assert node["op_catalog_entry"] == "between"
+    assert node["op_catalog_version"] == "editable-control-ops.v1"
+    assert node["sourceRef"].startswith("ui_draft.op_catalog.between.")
+    assert node["port_contract"]["value_type"] == "number"
+    assert node["port_contract"]["required"] is True
+    assert typed_ports["draft_node_1:in"]["value_type"] == "number"
+    assert typed_ports["draft_node_1:out"]["signal_id"] == "draft_node_1_between_output"
+    assert draft["operation_catalog"]["version"] == "editable-control-ops.v1"
+    assert draft["operation_catalog"]["selected_op"] == "between"
+    assert draft["operation_catalog"]["truth_effect"] == "none"
+    assert set(draft["operation_catalog"]["approved_ops"]) == {
+        "and",
+        "or",
+        "compare",
+        "between",
+        "delay",
+        "latch",
+    }
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["operation_catalog"]["selected_op"] == "between"
+    assert archive["operation_catalog"]["truth_effect"] == "none"
+    assert archive["checksums"]["operation_catalog_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False

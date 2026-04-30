@@ -7564,6 +7564,8 @@ function installEditableWorkbenchShell() {
   const canvas = document.getElementById("workbench-editable-canvas");
   const edgeSvg = shell.querySelector(".workbench-editable-edges");
   const toolbarButtons = Array.from(shell.querySelectorAll("[data-editor-tool]"));
+  const opCatalogButtons = Array.from(shell.querySelectorAll("[data-op-catalog-op]"));
+  const opCatalogStatus = document.getElementById("workbench-op-catalog-status");
   const deriveBtn = document.getElementById("workbench-derive-draft-btn");
   const runSandboxBtn = document.getElementById("workbench-run-sandbox-btn");
   const draftLabel = document.getElementById("workbench-draft-status-label");
@@ -7628,6 +7630,7 @@ function installEditableWorkbenchShell() {
   let currentEditorTool = "select";
   let pendingEdgeSourceId = "";
   let nextDraftNodeIndex = 1;
+  let selectedCatalogOp = "and";
   let draftEdges = [
     { id: "edge_logic1_logic2", source: "logic1", target: "logic2" },
     { id: "edge_logic2_logic3", source: "logic2", target: "logic3" },
@@ -7642,6 +7645,79 @@ function installEditableWorkbenchShell() {
     "port_local",
     "port_peer",
   ];
+  const editableOperationCatalogVersion = "editable-control-ops.v1";
+  const approvedOperationCatalog = {
+    and: {
+      op: "and",
+      label: "AND gate",
+      short_label: "AND",
+      value_type: "boolean",
+      rule_count: "2",
+    },
+    or: {
+      op: "or",
+      label: "OR gate",
+      short_label: "OR",
+      value_type: "boolean",
+      rule_count: "2",
+    },
+    compare: {
+      op: "compare",
+      label: "Compare threshold",
+      short_label: "CMP",
+      value_type: "number",
+      rule_count: "1",
+    },
+    between: {
+      op: "between",
+      label: "Between window",
+      short_label: "BTW",
+      value_type: "number",
+      rule_count: "2",
+    },
+    delay: {
+      op: "delay",
+      label: "Delay block",
+      short_label: "DLY",
+      value_type: "boolean",
+      rule_count: "1",
+    },
+    latch: {
+      op: "latch",
+      label: "Latch block",
+      short_label: "LAT",
+      value_type: "boolean",
+      rule_count: "1",
+    },
+  };
+
+  function operationCatalogEntry(op) {
+    return approvedOperationCatalog[op] || approvedOperationCatalog.and;
+  }
+
+  function buildOperationCatalogSummary() {
+    return {
+      version: editableOperationCatalogVersion,
+      approved_ops: Object.keys(approvedOperationCatalog),
+      selected_op: selectedCatalogOp,
+      truth_effect: "none",
+    };
+  }
+
+  function setSelectedOperationCatalogEntry(op) {
+    const entry = operationCatalogEntry(op);
+    selectedCatalogOp = entry.op;
+    for (const button of opCatalogButtons) {
+      button.setAttribute(
+        "aria-pressed",
+        button.getAttribute("data-op-catalog-op") === selectedCatalogOp ? "true" : "false",
+      );
+    }
+    if (opCatalogStatus) {
+      opCatalogStatus.textContent = `${entry.short_label} · ${entry.value_type}`;
+    }
+    return entry;
+  }
 
   function normalizedInterfaceField(value) {
     const text = String(value === null || value === undefined ? "" : value).trim();
@@ -7870,6 +7946,19 @@ function installEditableWorkbenchShell() {
       ),
       truth_effect: "none",
     };
+  }
+
+  function portContractForCatalogNode(nodeId, entry) {
+    const catalog = entry || operationCatalogEntry(selectedCatalogOp);
+    return normalizePortContract({
+      input_signal_id: `${nodeId}_${catalog.op}_input`,
+      output_signal_id: `${nodeId}_${catalog.op}_output`,
+      value_type: catalog.value_type,
+      unit: "",
+      required: catalog.op === "compare" || catalog.op === "between",
+      source_ref: `ui_draft.op_catalog.${catalog.op}.port_contract`,
+      truth_effect: "none",
+    }, nodeId);
   }
 
   function nodePortContractTouched(node) {
@@ -8158,6 +8247,10 @@ function installEditableWorkbenchShell() {
       ruleCount: selectedNode.getAttribute("data-rule-count") || "0",
       evidence: selectedNode.getAttribute("data-hardware-evidence") || "evidence_gap",
       sourceRef: selectedNode.getAttribute("data-source-ref") || "unknown",
+      op_catalog_entry: selectedNode.getAttribute("data-op-catalog-entry")
+        || selectedNode.getAttribute("data-node-op")
+        || "and",
+      op_catalog_version: editableOperationCatalogVersion,
       hardware_binding: nodeInterfaceBinding(selectedNode),
     };
     if (nodePortContractTouched(selectedNode)) {
@@ -8178,6 +8271,10 @@ function installEditableWorkbenchShell() {
       ruleCount: node.getAttribute("data-rule-count") || "0",
       evidence: node.getAttribute("data-hardware-evidence") || "evidence_gap",
       sourceRef: node.getAttribute("data-source-ref") || "ui_draft",
+      op_catalog_entry: node.getAttribute("data-op-catalog-entry")
+        || node.getAttribute("data-node-op")
+        || "and",
+      op_catalog_version: editableOperationCatalogVersion,
       hardware_binding: nodeInterfaceBinding(node),
       x: node.style.getPropertyValue("--node-x") || "50%",
       y: node.style.getPropertyValue("--node-y") || "50%",
@@ -8194,6 +8291,7 @@ function installEditableWorkbenchShell() {
     return {
       draftState: shell.getAttribute("data-draft-state") || "baseline",
       selectedNodeId: selectedNode && selectedNode.getAttribute("data-editable-node-id"),
+      selectedCatalogOp,
       nodes: nodes.map((node) => editableNodeState(node)),
       edges: draftEdges.map((edge) => ({ ...edge })),
     };
@@ -8210,6 +8308,10 @@ function installEditableWorkbenchShell() {
     node.setAttribute("data-rule-count", nodeState.ruleCount || "0");
     node.setAttribute("data-hardware-evidence", nodeState.evidence || "evidence_gap");
     node.setAttribute("data-source-ref", nodeState.sourceRef || "ui_draft.node");
+    node.setAttribute(
+      "data-op-catalog-entry",
+      operationCatalogEntry(nodeState.op_catalog_entry || nodeState.opCatalogEntry || nodeState.op || "and").op,
+    );
     node.setAttribute("data-draft-node", nodeState.draftNode ? "true" : "false");
     setNodeInterfaceBinding(node, nodeState.hardware_binding || nodeState.hardwareBinding || {});
     if (nodeState.port_contract || nodeState.portContract) {
@@ -8230,6 +8332,9 @@ function installEditableWorkbenchShell() {
 
   function applyEditableState(state) {
     if (!state || typeof state !== "object") return;
+    if (typeof state.selectedCatalogOp === "string") {
+      setSelectedOperationCatalogEntry(state.selectedCatalogOp);
+    }
     const nodeStates = Array.isArray(state.nodes) ? state.nodes : [];
     for (const existing of Array.from(shell.querySelectorAll('[data-draft-node="true"]'))) {
       existing.remove();
@@ -8250,6 +8355,10 @@ function installEditableWorkbenchShell() {
       if (typeof nodeState.ruleCount === "string") node.setAttribute("data-rule-count", nodeState.ruleCount);
       if (typeof nodeState.evidence === "string") node.setAttribute("data-hardware-evidence", nodeState.evidence);
       if (typeof nodeState.sourceRef === "string") node.setAttribute("data-source-ref", nodeState.sourceRef);
+      node.setAttribute(
+        "data-op-catalog-entry",
+        operationCatalogEntry(nodeState.op_catalog_entry || nodeState.opCatalogEntry || nodeState.op || "and").op,
+      );
       setNodeInterfaceBinding(node, nodeState.hardware_binding || nodeState.hardwareBinding || nodeInterfaceBinding(node));
       if (nodeState.port_contract || nodeState.portContract) {
         setNodePortContract(node, nodeState.port_contract || nodeState.portContract);
@@ -8482,13 +8591,16 @@ function installEditableWorkbenchShell() {
     recordEditableHistory("add_node");
     shell.setAttribute("data-draft-state", "derived");
     const nodeId = nextDraftNodeId();
+    const catalogEntry = operationCatalogEntry(selectedCatalogOp);
     const node = createEditableNodeElement({
       id: nodeId,
-      label: "Draft logic node",
-      op: "and",
-      ruleCount: "0",
+      label: `Draft ${catalogEntry.label}`,
+      op: catalogEntry.op,
+      ruleCount: catalogEntry.rule_count,
       evidence: "evidence_gap",
-      sourceRef: `ui_draft.nodes.${nodeId}`,
+      sourceRef: `ui_draft.op_catalog.${catalogEntry.op}.${nodeId}`,
+      op_catalog_entry: catalogEntry.op,
+      port_contract: portContractForCatalogNode(nodeId, catalogEntry),
       x: `${42 + (nextDraftNodeIndex % 5) * 8}%`,
       y: `${24 + (nextDraftNodeIndex % 4) * 10}%`,
       draftNode: true,
@@ -9044,6 +9156,7 @@ function installEditableWorkbenchShell() {
       applyEditableState({
         draftState: payload.draftState || "baseline",
         selectedNodeId: payload.selectedNodeId,
+        selectedCatalogOp: payload.selectedCatalogOp,
         nodes: Array.isArray(payload.nodes) ? payload.nodes : [],
         edges: Array.isArray(payload.edges) ? payload.edges : draftEdges,
       });
@@ -9090,6 +9203,7 @@ function installEditableWorkbenchShell() {
     const interfacePorts = collectWorkbenchInterfacePorts();
     const portContractSummary = buildPortContractSummary(typedPorts, draftEdges);
     const portCompatibilityReport = buildPortCompatibilityReport(typedPorts, draftEdges);
+    const operationCatalog = buildOperationCatalogSummary();
     return {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
       system_id: "thrust-reverser",
@@ -9110,6 +9224,7 @@ function installEditableWorkbenchShell() {
       binding_coverage: bindingCoverage,
       port_contract_summary: portContractSummary,
       port_compatibility_report: portCompatibilityReport,
+      operation_catalog: operationCatalog,
     };
   }
 
@@ -9177,6 +9292,7 @@ function installEditableWorkbenchShell() {
       binding_coverage: snapshot.binding_coverage,
       port_contract_summary: snapshot.port_contract_summary,
       port_compatibility_report: snapshot.port_compatibility_report,
+      operation_catalog: snapshot.operation_catalog,
       selected_scenario_id: selectedWorkbenchScenarioId(),
       custom_snapshot: customSnapshot,
       source_refs: uniqueSourceRefs(),
@@ -9231,6 +9347,12 @@ function installEditableWorkbenchShell() {
       throw new Error("port_compatibility_report must be an object when present");
     }
     if (
+      payload.operation_catalog !== undefined
+      && (!payload.operation_catalog || typeof payload.operation_catalog !== "object" || Array.isArray(payload.operation_catalog))
+    ) {
+      throw new Error("operation_catalog must be an object when present");
+    }
+    if (
       payload.custom_snapshot !== undefined
       && (!payload.custom_snapshot || typeof payload.custom_snapshot !== "object" || Array.isArray(payload.custom_snapshot))
     ) {
@@ -9262,9 +9384,11 @@ function installEditableWorkbenchShell() {
         ? validated.selected_node.id
         : "";
     recordEditableHistory("import_draft");
+    const importedCatalog = validated.operation_catalog || {};
     applyEditableState({
       draftState: "derived",
       selectedNodeId: selectedId,
+      selectedCatalogOp: importedCatalog.selected_op,
       nodes: validated.nodes.map((node) => ({
         id: String(node.id || ""),
         label: String(node.label || node.id || "Draft logic node"),
@@ -9272,6 +9396,7 @@ function installEditableWorkbenchShell() {
         ruleCount: String(node.ruleCount || node.rule_count || "0"),
         evidence: String(node.evidence || "evidence_gap"),
         sourceRef: String(node.sourceRef || node.source_ref || "ui_draft.import"),
+        op_catalog_entry: String(node.op_catalog_entry || node.opCatalogEntry || node.op || "and"),
         hardware_binding: node.hardware_binding || node.hardwareBinding || {},
         port_contract: node.port_contract || node.portContract || null,
         x: String(node.x || "50%"),
@@ -9481,6 +9606,7 @@ function installEditableWorkbenchShell() {
       snapshot.typed_ports || [],
       snapshot.edges || [],
     );
+    const operationCatalog = snapshot.operation_catalog || buildOperationCatalogSummary();
     const bindingSummary = hardwareBindings.length
       ? hardwareBindings
           .map((binding) => `${binding.owner_kind}:${binding.owner_id} hardware=${binding.hardware_id} cable=${binding.cable} connector=${binding.connector} ports=${binding.port_local}->${binding.port_peer}`)
@@ -9490,6 +9616,8 @@ function installEditableWorkbenchShell() {
       `${portContractSummary.total_ports} typed ports / ${portContractSummary.edge_contracts} edge contracts / required=${portContractSummary.required_ports}`;
     const compatibilitySummary =
       `${portCompatibilityReport.status} / warnings=${portCompatibilityReport.warning_count} / errors=${portCompatibilityReport.error_count}`;
+    const operationCatalogSummary =
+      `${operationCatalog.version} / selected=${operationCatalog.selected_op} / approved=${(operationCatalog.approved_ops || []).join(",")}`;
     const linearIssueBody = [
       "## Outcome",
       `Review sandbox candidate edit for ${node.id || "selected node"} against the certified thrust-reverser baseline.`,
@@ -9514,6 +9642,7 @@ function installEditableWorkbenchShell() {
       "- Binding coverage summary.",
       "- Typed port contract summary.",
       "- Port compatibility report.",
+      "- Operation catalog provenance.",
       "- Targeted pytest and PR proof packet.",
       "- Official mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json.",
       "- e2e 49/49 and mypy --strict clean are not claimed from this local UI archive.",
@@ -9529,6 +9658,7 @@ function installEditableWorkbenchShell() {
       `- Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
       `- Port contract summary: ${portSummary}`,
       `- Port compatibility: ${compatibilitySummary}`,
+      `- Operation catalog: ${operationCatalogSummary}`,
       "- Agent eligible: No",
     ].join("\n");
     const prProofPacket = [
@@ -9546,6 +9676,7 @@ function installEditableWorkbenchShell() {
       `Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
       `Port contract summary: ${portSummary}`,
       `Port compatibility: ${compatibilitySummary}`,
+      `Operation catalog: ${operationCatalogSummary}`,
       "Mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
       "No live Linear mutation; this packet is copy-ready evidence only.",
     ].join("\n");
@@ -9557,6 +9688,7 @@ function installEditableWorkbenchShell() {
       knownBlockers: buildWorkbenchKnownBlockers(),
       portContractSummary,
       portCompatibilityReport,
+      operationCatalog,
     };
   }
 
@@ -9585,6 +9717,7 @@ function installEditableWorkbenchShell() {
       modelJson.port_contract_summary || buildPortContractSummary(typedPorts, modelJson.edges || []);
     const portCompatibilityReport =
       modelJson.port_compatibility_report || buildPortCompatibilityReport(typedPorts, modelJson.edges || []);
+    const operationCatalog = modelJson.operation_catalog || buildOperationCatalogSummary();
     const diffSummary = lastSandboxDiff || {
       verdict: "not_run",
       scenario_id: selectedWorkbenchScenarioId(),
@@ -9616,6 +9749,7 @@ function installEditableWorkbenchShell() {
       typed_ports: typedPorts,
       port_contract_summary: portContractSummary,
       port_compatibility_report: portCompatibilityReport,
+      operation_catalog: operationCatalog,
       changerequest_body: handoffPacket.linearIssueBody,
       pr_proof_packet: handoffPacket.prProofPacket,
       gate_claims: handoffPacket.gateClaims,
@@ -9632,6 +9766,7 @@ function installEditableWorkbenchShell() {
       typed_ports_checksum: checksumEvidenceArchiveField(typedPorts),
       port_contract_summary_checksum: checksumEvidenceArchiveField(portContractSummary),
       port_compatibility_report_checksum: checksumEvidenceArchiveField(portCompatibilityReport),
+      operation_catalog_checksum: checksumEvidenceArchiveField(operationCatalog),
       gate_claims_checksum: checksumEvidenceArchiveField(handoffPacket.gateClaims),
       known_blockers_checksum: checksumEvidenceArchiveField(handoffPacket.knownBlockers),
     };
@@ -9725,6 +9860,16 @@ function installEditableWorkbenchShell() {
       }
     });
   }
+  for (const button of opCatalogButtons) {
+    button.addEventListener("click", () => {
+      const op = button.getAttribute("data-op-catalog-op") || "and";
+      setSelectedOperationCatalogEntry(op);
+      if (draftLabel) {
+        draftLabel.textContent = `sandbox_candidate op catalog selected: ${selectedCatalogOp}`;
+      }
+      persistDraft();
+    });
+  }
   if (labelInput) {
     labelInput.addEventListener("input", () => {
       if (!selectedNode) return;
@@ -9751,6 +9896,7 @@ function installEditableWorkbenchShell() {
       if (!selectedNode) return;
       recordEditableHistory("op_edit");
       selectedNode.setAttribute("data-node-op", opSelect.value);
+      selectedNode.setAttribute("data-op-catalog-entry", operationCatalogEntry(opSelect.value).op);
       const small = selectedNode.querySelector("small");
       if (small) {
         small.textContent = `${opSelect.value} · ${selectedNode.getAttribute("data-rule-count") || "0"} rules`;
@@ -9782,6 +9928,7 @@ function installEditableWorkbenchShell() {
   if (importDraftBtn) {
     importDraftBtn.addEventListener("click", () => importEditableDraftJson());
   }
+  setSelectedOperationCatalogEntry(selectedCatalogOp);
   if (selectedNode) {
     selectNode(selectedNode);
   }
