@@ -17,7 +17,78 @@ and archivable as controlled engineering evidence.
 - JER-168: Port-aware edge inspector v1 (Done, PR #151)
 - JER-169: Runtime v3 acceptance bundle and regression proof (Done, PR #152)
 - JER-170: Workbench e2e networkidle gate normalization (Done, PR #153)
-- JER-171: Official mypy strict gate definition (In progress)
+- JER-171: Official mypy strict gate definition (Done as evidence wrapper, not mypy-clean claim, PR #154)
+- JER-172: Workbench acceptance bundle UI archive/export regression (Done, PR #155)
+- JER-173: Hardware interface binding editor v1 (Done, PR #156)
+- JER-174: Interface binding validation badges v1 (Done, PR #157)
+- JER-175: Typed port editor v1 (Done, PR #158)
+- JER-176: Port compatibility diagnostics v1 (Done, PR #159)
+- JER-177: Port compatibility badges v1 (Done, PR #160)
+- JER-178: Operation catalog palette v1 (Done, PR #161)
+- JER-179: Sandbox rule parameter editor v1 (Done, PR #162)
+- JER-180: Named draft snapshots v1 (Done, PR #163)
+- JER-181: Duplicate and keyboard editing v1 (Done, PR #164)
+- JER-182: Multi-select batch editing v1 (Done)
+- JER-183: Lasso selection and group move v1 (Done)
+- JER-184: Direct port-handle wiring v1 (Done)
+- JER-185: Canvas pan zoom and fit selection v1 (Done)
+- JER-186: Hardware interface palette v1 (Done)
+- JER-187: Hardware binding diagnostics map v1 (Done)
+- JER-188: Diagnostics focus and repair affordances v1 (Done)
+- JER-189: Diagnostic repair actions v1 (Done)
+- JER-190: ChangeRequest proof packet object v1 (Done)
+- JER-191: End-to-end acceptance bundle v1 (Done)
+- JER-192: Workbench acceptance journey regression (Done, PR #174)
+- JER-193: Workbench lasso drag stabilization (Done, PR #175)
+- JER-194: WOW-A early beat fixture rebaseline (Done)
+- JER-195: Interface matrix export v1 (Done)
+- JER-196: Interface matrix import/apply v1 (Done)
+- JER-197: Interface matrix validation preview v1 (Done)
+- JER-198: Interface matrix row diff preview v1 (Done)
+- JER-199: Interface matrix selective apply v1 (Done)
+- JER-200: Interface matrix review table v1 (Done)
+- JER-201: Interface matrix selected-row apply v1 (Done)
+- JER-202: Lasso group-drag flake hardening v1 (Done)
+- JER-203: Interface matrix CSV bridge v1 (Done)
+
+## Closure Summary
+
+Runtime v3 is closed as the bridge from editable UI gestures to canonical,
+executable, reviewable sandbox artifacts. Its completion evidence is the Linear
+issue chain and `origin/main` history through JER-203.
+
+The closure is intentionally evidence-scoped:
+
+- JER-165 through JER-172 delivered canonical model conversion, graph
+  validation, scenario/snapshot input, port-aware edge inspection, acceptance
+  bundle evidence, e2e readiness normalization, honest mypy gate reporting, and
+  archive/export gate fields.
+- JER-173 through JER-185 delivered the first high-freedom editing layer:
+  hardware/interface binding, typed ports, compatibility diagnostics, operation
+  catalog, rule parameter editing, named snapshots, keyboard duplication,
+  multi-select, lasso/group movement, direct port handles, and canvas viewport
+  controls.
+- JER-186 through JER-203 delivered hardware palette and diagnostics, repair
+  affordances/actions, ChangeRequest proof packet, acceptance journey coverage,
+  interface matrix export/import/validation/diff/review/selective apply, lasso
+  hardening, and CSV/TSV bridge.
+
+JER-171 remains a gate-honesty boundary: the official command exists and may
+return `status: blocked`. Runtime v3 closure does not certify a clean mypy
+baseline.
+
+## Successor
+
+Successor Linear project:
+`AI FANTUI LogicMVP · Editable Workbench v4 Authoring + Hardware Design`
+
+Successor issue bridge:
+
+- JER-204: Roadmap and Linear narrative refresh after Runtime v3 closure
+- JER-205 through JER-213: initial v4 backlog for authoring freedom, reusable
+  subsystems, hardware/interface design model, connector/pin map editing,
+  evidence inspector v2, scenario/debug linkage, diff review v2, and
+  ChangeRequest handoff.
 
 ## JER-165 Rule
 
