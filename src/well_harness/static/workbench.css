@@ -5174,6 +5174,20 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-editable-edges path[data-binding-quality="complete"] {
   stroke: rgba(125, 215, 194, 0.86);
 }
+.workbench-editable-edges path[data-port-compatibility="warn"] {
+  stroke: rgba(240, 193, 91, 0.9);
+  stroke-dasharray: 3 3;
+}
+.workbench-editable-edges path[data-port-compatibility="fail"] {
+  stroke: rgba(255, 123, 123, 0.92);
+  stroke-dasharray: 2 2;
+}
+.workbench-editable-edges path[aria-pressed="true"][data-port-compatibility="warn"] {
+  stroke: #f0c15b;
+}
+.workbench-editable-edges path[aria-pressed="true"][data-port-compatibility="fail"] {
+  stroke: #ff7b7b;
+}
 .workbench-editable-canvas-note {
   position: absolute;
   left: 0.8rem;

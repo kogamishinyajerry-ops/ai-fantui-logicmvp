@@ -368,6 +368,11 @@ def test_workbench_typed_port_contract_round_trips_through_export_import_and_arc
         issue["code"] == "value_type_mismatch"
         for issue in draft["port_compatibility_report"]["issues"]
     )
+    assert (
+        page.locator('[data-editable-edge-id="edge_logic1_logic2"]')
+        .get_attribute("data-port-compatibility")
+        == "warn"
+    )
 
     page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
     edge_detail = page.locator("#workbench-inspector-evidence-detail").inner_text()

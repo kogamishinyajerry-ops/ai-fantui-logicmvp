@@ -8376,6 +8376,7 @@ function installEditableWorkbenchShell() {
       `data-target-port-id="${inspectorText(payload.target_port_id)}"`,
       `data-edge-signal-id="${inspectorText(payload.signal_id)}"`,
       `data-edge-evidence-status="${inspectorText(payload.evidence_status)}"`,
+      `data-port-compatibility="${inspectorText(payload.port_compatibility_status)}"`,
       `data-binding-quality="${inspectorText(binding.binding_quality)}"`,
     ].join(" ");
   }
