@@ -32,9 +32,11 @@ EXPECTED_NODE_COUNT = 19
 #           the caller supplies deploy_position_percent ≥ 90.
 #
 # Therefore wow-A locks what auto_scrubber delivers from a single POST:
-#   - BEAT_EARLY   (tra_deg=-5)  → logic1 + logic2 active; TRA never crosses the
-#                                  L3 threshold, so the plant remains at 0%
-#                                  deploy and logic3/4 remain inactive.
+#   - BEAT_EARLY   (tra_deg=-5.6) → logic1 + logic2 active; TRA enters the
+#                                   tightened L2 SW2 hysteresis threshold
+#                                   (≤ -5.5°) but never crosses the L3
+#                                   threshold, so the plant remains at 0%
+#                                   deploy and logic3/4 remain inactive.
 #   - BEAT_DEEP    (tra_deg=-35) → logic2 + logic3 + logic4 active; the extended
 #                                  canonical pullback runs the plant to 100%
 #                                  deploy within ~4.4s, latching the full chain.
@@ -43,7 +45,7 @@ EXPECTED_NODE_COUNT = 19
 #   - BEAT_BLOCKED (airborne)   → all four inactive (chain broken at logic1).
 # These three beats together form the demo's causal-chain narrative.
 BEAT_EARLY_PAYLOAD = {
-    "tra_deg": -5, "radio_altitude_ft": 2,
+    "tra_deg": -5.6, "radio_altitude_ft": 2,
     "engine_running": True, "aircraft_on_ground": True,
     "reverser_inhibited": False, "eec_enable": True, "n1k": 0.8,
     "feedback_mode": "auto_scrubber", "deploy_position_percent": 90,
@@ -91,7 +93,7 @@ def test_wow_a_lever_snapshot_exposes_four_logic_gates(demo_server, api_post):
 
 @pytest.mark.e2e
 def test_wow_a_beat_early_activates_logic1_and_logic2_only(demo_server, api_post):
-    """Demo beat 1: shallow TRA + landing → logic1 + logic2 active, 3/4 pending."""
+    """Demo beat 1: SW2-window TRA + landing → logic1 + logic2 active, 3/4 pending."""
     status, body = api_post(demo_server, "/api/lever-snapshot", BEAT_EARLY_PAYLOAD)
     assert status == 200
     logic = body["logic"]
