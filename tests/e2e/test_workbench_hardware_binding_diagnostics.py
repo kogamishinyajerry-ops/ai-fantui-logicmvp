@@ -186,6 +186,20 @@ def _stable_diagnostics_equal(a, b) -> bool:
     return json.dumps(a, sort_keys=True) == json.dumps(b, sort_keys=True)
 
 
+def _node_by_id(payload: dict, node_id: str) -> dict:
+    for node in payload.get("nodes", []):
+        if isinstance(node, dict) and node.get("id") == node_id:
+            return node
+    raise AssertionError(f"node not found: {node_id}")
+
+
+def _edge_by_signal(payload: dict, signal_id: str) -> dict:
+    for edge in payload.get("edges", []):
+        if isinstance(edge, dict) and edge.get("signal_id") == signal_id:
+            return edge
+    raise AssertionError(f"edge signal not found: {signal_id}")
+
+
 def test_workbench_export_and_archive_include_hardware_binding_diagnostics(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_errors(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
@@ -325,6 +339,87 @@ def test_workbench_binding_diagnostic_focus_selects_node_and_exports_focus(demo_
     assert errors == [], f"page JS errors: {errors}"
 
 
+def test_workbench_diagnostic_repair_clear_binding_logs_and_archives(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_errors(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    _clear_local_draft(page)
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.fill("#workbench-interface-hardware-id", "TR-LRU-001")
+    page.fill("#workbench-interface-cable", "CBL-TR-A")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+    page.locator(
+        '.workbench-binding-diagnostics-target'
+        '[data-diagnostics-rule-id="evidence_gap_density"]'
+        '[data-diagnostics-target-kind="node"]'
+        '[data-diagnostics-target-id="logic1"]',
+    ).first.click()
+
+    page.locator('[data-diagnostics-repair-action="clear_binding"]').click()
+    draft = _export_draft(page)
+    binding = _node_by_id(draft, "logic1")["hardware_binding"]
+    assert binding["hardware_id"] == "evidence_gap"
+    assert binding["cable"] == "evidence_gap"
+    assert binding["evidence_status"] == "evidence_gap"
+
+    repair_log = draft.get("repair_action_log")
+    assert repair_log and repair_log[-1]["action_id"] == "clear_binding"
+    assert repair_log[-1]["target"]["target_kind"] == "node"
+    assert repair_log[-1]["target"]["target_id"] == "logic1"
+    assert repair_log[-1]["truth_effect"] == "none"
+    assert {field["field"] for field in repair_log[-1]["changed_fields"]} >= {"hardware_id", "cable"}
+
+    _import_draft(page, draft)
+    roundtrip = _export_draft(page)
+    assert roundtrip["repair_action_log"] == repair_log
+
+    archive = _prepare_archive(page)
+    assert archive["repair_action_log"] == repair_log
+    assert archive["checksums"]["repair_action_log_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+    assert errors == [], f"page JS errors: {errors}"
+
+
+def test_workbench_diagnostic_repair_marks_unknown_fields_as_evidence_gap(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_errors(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    _clear_local_draft(page)
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.fill("#workbench-interface-hardware-id", "TBD")
+    page.fill("#workbench-interface-cable", "unknown")
+    page.fill("#workbench-interface-connector", "J1")
+    page.select_option("#workbench-interface-evidence-status", "not_recorded")
+    page.click("#workbench-apply-interface-binding-btn")
+    page.locator(
+        '.workbench-binding-diagnostics-target'
+        '[data-diagnostics-rule-id="evidence_gap_density"]'
+        '[data-diagnostics-target-kind="node"]'
+        '[data-diagnostics-target-id="logic1"]',
+    ).first.click()
+
+    page.locator('[data-diagnostics-repair-action="mark_evidence_gap"]').click()
+    draft = _export_draft(page)
+    binding = _node_by_id(draft, "logic1")["hardware_binding"]
+    assert binding["hardware_id"] == "evidence_gap"
+    assert binding["cable"] == "evidence_gap"
+    assert binding["connector"] == "J1"
+    assert binding["evidence_status"] == "evidence_gap"
+
+    log_entry = draft["repair_action_log"][-1]
+    assert log_entry["action_id"] == "mark_evidence_gap"
+    assert log_entry["truth_effect"] == "none"
+    assert {field["field"] for field in log_entry["changed_fields"]} >= {
+        "hardware_id",
+        "cable",
+        "evidence_status",
+    }
+    assert errors == [], f"page JS errors: {errors}"
+
+
 def test_workbench_binding_diagnostic_focus_selects_duplicate_edge_instance(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_errors(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
@@ -364,6 +459,107 @@ def test_workbench_binding_diagnostic_focus_selects_duplicate_edge_instance(demo
     assert archive["diagnostic_focus"]["edge_index"] == 1
     assert archive["diagnostic_focus"]["truth_effect"] == "none"
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
+    assert errors == [], f"page JS errors: {errors}"
+
+
+def test_workbench_diagnostic_repair_copy_explicit_fingerprint_preserves_edge_instance(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_errors(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    _clear_local_draft(page)
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    draft = _export_draft(page)
+    diagnostic_payload = _with_duplicate_binding_payload(draft)
+    _import_draft(page, diagnostic_payload)
+
+    page.locator(
+        '.workbench-binding-diagnostics-target'
+        '[data-diagnostics-rule-id="connector_port_reuse"]'
+        '[data-diagnostics-target-kind="edge"]'
+        '[data-diagnostics-edge-index="2"]',
+    ).first.click()
+    assert page.locator("#workbench-edge-signal-id").input_value() == "gap_probe"
+
+    page.locator('[data-diagnostics-repair-action="copy_explicit_fingerprint"]').click()
+    draft_round = _export_draft(page)
+    repaired_edge = _edge_by_signal(draft_round, "gap_probe")
+    repaired_binding = repaired_edge["hardware_binding"]
+    assert repaired_binding["hardware_id"] == "TR-LRU-001"
+    assert repaired_binding["cable"].startswith("CBL-TR-")
+    assert repaired_binding["connector"] == "J1"
+    assert repaired_binding["evidence_status"] == "ui_draft"
+
+    log_entry = draft_round["repair_action_log"][-1]
+    assert log_entry["action_id"] == "copy_explicit_fingerprint"
+    assert log_entry["target"]["target_kind"] == "edge"
+    assert log_entry["target"]["target_id"] == "edge_logic1_logic2_gap"
+    assert log_entry["target"]["diagnostic_focus"]["edge_index"] == 2
+    assert log_entry["source_binding"]["owner_kind"] == "edge"
+    assert log_entry["truth_effect"] == "none"
+    assert draft_round["controller_truth_modified"] is False
+    assert errors == [], f"page JS errors: {errors}"
+
+
+def test_workbench_diagnostic_repair_log_restores_from_snake_case_local_storage(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_errors(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    _clear_local_draft(page)
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    draft = _export_draft(page)
+    draft["draftState"] = "derived"
+    draft["repair_action_log"] = [
+        {
+            "kind": "well-harness-workbench-diagnostic-repair-action",
+            "version": 1,
+            "id": "repair_restore_probe",
+            "action_id": "clear_binding",
+            "recorded_at": "browser_local_draft",
+            "target": {
+                "target_kind": "node",
+                "target_id": "logic1",
+                "diagnostic_focus": {
+                    "kind": "node",
+                    "target_kind": "node",
+                    "target_id": "logic1",
+                    "node_id": "logic1",
+                    "rule_id": "evidence_gap_density",
+                    "issue_target": "node:logic1",
+                    "truth_effect": "none",
+                },
+                "truth_effect": "none",
+            },
+            "diagnostic_source": {
+                "rule_id": "evidence_gap_density",
+                "issue_target": "node:logic1",
+                "truth_effect": "none",
+            },
+            "changed_fields": [
+                {"field": "hardware_id", "before": "TR-LRU-001", "after": "evidence_gap"},
+            ],
+            "truth_effect": "none",
+        },
+    ]
+    page.evaluate(
+        """
+        (payload) => {
+          window.localStorage.setItem(
+            'well-harness-editable-workbench-draft-v1',
+            JSON.stringify(payload),
+          );
+        }
+        """,
+        draft,
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    restored = _export_draft(page)
+    assert restored["repair_action_log"][0]["id"] == "repair_restore_probe"
+    assert restored["repair_action_log"][0]["target"]["target_id"] == "logic1"
+    assert restored["repair_action_log"][0]["truth_effect"] == "none"
+    assert restored["controller_truth_modified"] is False
     assert errors == [], f"page JS errors: {errors}"
 
 
