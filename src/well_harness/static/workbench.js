@@ -8506,6 +8506,33 @@ function installEditableWorkbenchShell() {
     return `graph validation: ${parts.join(", ")}`;
   }
 
+  function buildWorkbenchGateClaims() {
+    return {
+      default_pytest: "required",
+      gsd_validation: "required",
+      adversarial: "required",
+      e2e_49_49: "not_claimed",
+      mypy_strict_clean: "not_claimed",
+    };
+  }
+
+  function buildWorkbenchKnownBlockers() {
+    return [
+      {
+        gate: "e2e 49/49",
+        status: "not_claimed_clean",
+        evidence: "Workbench archive is local draft evidence; e2e 49/49 is not claimed from this UI export.",
+        truth_effect: "none",
+      },
+      {
+        gate: "PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
+        status: "known_baseline_blocker",
+        evidence: "JER-171 defines the official mypy evidence command; current full-repo strict gate is blocked, not clean.",
+        truth_effect: "none",
+      },
+    ];
+  }
+
   function emptyWorkbenchGraphValidationReport(status) {
     return {
       kind: "well-harness-workbench-graph-validation-report",
@@ -8633,6 +8660,8 @@ function installEditableWorkbenchShell() {
       "- Editable draft JSON export.",
       "- Sandbox baseline diff report.",
       "- Targeted pytest and PR proof packet.",
+      "- Official mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json.",
+      "- e2e 49/49 and mypy --strict clean are not claimed from this local UI archive.",
       "",
       "## Metadata",
       "- Adapter: thrust-reverser",
@@ -8649,17 +8678,20 @@ function installEditableWorkbenchShell() {
       "Layer: L4",
       "Truth-level impact: none",
       "Red lines touched: none",
-      "Test delta: targeted pytest pending / default pytest pending / GSD pending",
+      "Test delta: targeted pytest pending / default pytest pending / GSD pending / e2e 49/49 not claimed / mypy --strict clean not claimed",
       "",
       `Changed model hash: ${changedModelHash}`,
       `Selected scenario: ${selectedWorkbenchScenarioId()}`,
       `Latest sandbox verdict: ${(lastSandboxDiff && lastSandboxDiff.verdict) || "not_run"}`,
+      "Mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
       "No live Linear mutation; this packet is copy-ready evidence only.",
     ].join("\n");
     return {
       changedModelHash,
       linearIssueBody,
       prProofPacket,
+      gateClaims: buildWorkbenchGateClaims(),
+      knownBlockers: buildWorkbenchKnownBlockers(),
     };
   }
 
@@ -8709,6 +8741,8 @@ function installEditableWorkbenchShell() {
       scenario_metadata: scenarioMetadata,
       changerequest_body: handoffPacket.linearIssueBody,
       pr_proof_packet: handoffPacket.prProofPacket,
+      gate_claims: handoffPacket.gateClaims,
+      known_blockers: handoffPacket.knownBlockers,
       red_line_metadata: redLineMetadata,
     };
     const checksums = {
@@ -8716,6 +8750,8 @@ function installEditableWorkbenchShell() {
       diff_summary_checksum: checksumEvidenceArchiveField(diffSummary),
       changerequest_body_checksum: checksumEvidenceArchiveField(handoffPacket.linearIssueBody),
       pr_proof_packet_checksum: checksumEvidenceArchiveField(handoffPacket.prProofPacket),
+      gate_claims_checksum: checksumEvidenceArchiveField(handoffPacket.gateClaims),
+      known_blockers_checksum: checksumEvidenceArchiveField(handoffPacket.knownBlockers),
     };
     return {
       ...archiveCore,

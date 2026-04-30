@@ -126,6 +126,21 @@ expected honest result and points back to the JER-148/JER-171 typing blocker
 record. PR proof packets may cite that JSON, but must not claim `mypy --strict
 clean` until the wrapper reports `pass`.
 
+## JER-172 Rule
+
+JER-172 keeps the `/workbench` local evidence archive aligned with the Runtime
+v3 proof packet rules.
+
+The browser archive must include:
+
+- `gate_claims` with `e2e_49_49: not_claimed` and
+  `mypy_strict_clean: not_claimed`.
+- `known_blockers` that cite the official JER-171 mypy evidence command.
+- `red_line_metadata` proving no controller truth, frozen asset, live Linear,
+  truth-level, DAL, or PSSA mutation.
+- Checksums for both `gate_claims` and `known_blockers` so the local JSON export
+  has integrity coverage for gate evidence.
+
 ## Boundaries
 
 - Do not edit `src/well_harness/controller.py` truth semantics.

@@ -27,6 +27,8 @@ binary is missing.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 pytestmark = pytest.mark.e2e
@@ -231,3 +233,33 @@ def test_workbench_buttons_render_chinese_first_in_dom(demo_server, browser):
     assert has_create, f"missing 创建电路 button; got: {button_texts}"
     assert has_interpret, f"missing 解读建议 button; got: {button_texts}"
     assert has_approval_nav, f"missing 审批 nav button; got: {nav_texts}"
+
+
+def test_workbench_evidence_archive_exports_gate_claims_and_blockers(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click("#workbench-prepare-archive-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const output = document.getElementById('workbench-evidence-archive-output');
+          return output && output.value.includes('well-harness-workbench-evidence-archive');
+        }
+        """
+    )
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+
+    blocker_gates = {blocker["gate"] for blocker in archive["known_blockers"]}
+    assert errors == [], f"page JS errors: {errors}"
+    assert archive["kind"] == "well-harness-workbench-evidence-archive"
+    assert archive["archive_scope"] == "local_draft_download"
+    assert archive["gate_claims"]["mypy_strict_clean"] == "not_claimed"
+    assert archive["gate_claims"]["e2e_49_49"] == "not_claimed"
+    assert "PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json" in blocker_gates
+    assert archive["red_line_metadata"]["truth_level_impact"] == "none"
+    assert archive["red_line_metadata"]["dal_pssa_impact"] == "none"
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+    assert archive["red_line_metadata"]["live_linear_mutation"] is False
+    assert archive["checksums"]["gate_claims_checksum"]
+    assert archive["checksums"]["known_blockers_checksum"]
