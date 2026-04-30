@@ -7638,6 +7638,7 @@ function installEditableWorkbenchShell() {
   const storageKey = "well-harness-editable-workbench-draft-v1";
   const snapshotsStorageKey = "well-harness-editable-workbench-draft-snapshots-v1";
   let selectedNode = nodes.find((node) => node.getAttribute("aria-pressed") === "true") || nodes[0];
+  let selectedNodeIds = new Set(selectedNode ? [selectedNode.getAttribute("data-editable-node-id") || ""] : []);
   let selectedEdge = null;
   let hardwareEvidenceReport = null;
   let lastSandboxDiff = null;
@@ -8381,6 +8382,53 @@ function installEditableWorkbenchShell() {
     nodes = Array.from(shell.querySelectorAll("[data-editable-node-id]"));
   }
 
+  function editableNodeId(node) {
+    return node && (node.getAttribute("data-editable-node-id") || "");
+  }
+
+  function syncEditableNodeSelectionAttributes() {
+    refreshEditableNodes();
+    const selectedCount = selectedNodeIds.size;
+    for (const node of nodes) {
+      const nodeId = editableNodeId(node);
+      const isSelected = selectedNodeIds.has(nodeId);
+      node.setAttribute("aria-pressed", isSelected ? "true" : "false");
+      node.setAttribute("data-multi-selected", isSelected && selectedCount > 1 ? "true" : "false");
+    }
+  }
+
+  function setSingleEditableNodeSelection(node) {
+    selectedNode = node || null;
+    selectedNodeIds = new Set();
+    const nodeId = editableNodeId(selectedNode);
+    if (nodeId) selectedNodeIds.add(nodeId);
+    syncEditableNodeSelectionAttributes();
+  }
+
+  function toggleEditableNodeSelection(node) {
+    const nodeId = editableNodeId(node);
+    if (!nodeId) return;
+    if (selectedNodeIds.has(nodeId) && selectedNodeIds.size > 1) {
+      selectedNodeIds.delete(nodeId);
+    } else {
+      selectedNodeIds.add(nodeId);
+    }
+    selectedNode = node;
+    if (!selectedNodeIds.size) selectedNodeIds.add(nodeId);
+    syncEditableNodeSelectionAttributes();
+  }
+
+  function selectedEditableDraftNodes() {
+    refreshEditableNodes();
+    const selectedIds = selectedNodeIds.size
+      ? selectedNodeIds
+      : new Set(selectedNode ? [editableNodeId(selectedNode)] : []);
+    return nodes.filter((node) => (
+      selectedIds.has(editableNodeId(node))
+      && node.getAttribute("data-draft-node") === "true"
+    ));
+  }
+
   function editableNodeState(node) {
     const state = {
       id: node.getAttribute("data-editable-node-id") || "",
@@ -8412,6 +8460,7 @@ function installEditableWorkbenchShell() {
     return {
       draftState: shell.getAttribute("data-draft-state") || "baseline",
       selectedNodeId: selectedNode && selectedNode.getAttribute("data-editable-node-id"),
+      selectedNodeIds: Array.from(selectedNodeIds),
       selectedCatalogOp,
       nodes: nodes.map((node) => editableNodeState(node)),
       edges: draftEdges.map((edge) => ({ ...edge })),
@@ -8519,7 +8568,16 @@ function installEditableWorkbenchShell() {
       node.getAttribute("data-editable-node-id") === selectedId
     ));
     selectedNode = restoredSelected || nodes[0] || null;
+    const restoredSelection = Array.isArray(state.selectedNodeIds)
+      ? state.selectedNodeIds
+          .map((id) => String(id || ""))
+          .filter((id) => nodes.some((node) => editableNodeId(node) === id))
+      : [];
+    selectedNodeIds = new Set(restoredSelection);
+    const activeNodeId = editableNodeId(selectedNode);
+    if (activeNodeId && !selectedNodeIds.size) selectedNodeIds.add(activeNodeId);
     shell.setAttribute("data-draft-state", state.draftState || "derived");
+    syncEditableNodeSelectionAttributes();
     renderEditableEdges();
     renderInspector();
     updateEditableDraftHash();
@@ -8658,6 +8716,7 @@ function installEditableWorkbenchShell() {
       const path = edgeSvg.querySelector(`[data-editable-edge-id="${CSS.escape(selectedEdgeId)}"]`);
       if (path) path.setAttribute("aria-pressed", "true");
     }
+    syncEditableNodeSelectionAttributes();
     attachEditableEdgeHandlers();
   }
 
@@ -8682,7 +8741,11 @@ function installEditableWorkbenchShell() {
     if (graphValidationStatus) {
       graphValidationStatus.textContent = issues.length
         ? `Graph validation: ${issues.join(", ")}`
-        : "Graph validation: no issues.";
+        : (
+            selectedNodeIds.size > 1
+              ? `Graph validation: no issues. Multi-select: ${selectedNodeIds.size} nodes.`
+              : "Graph validation: no issues."
+          );
     }
     return issues;
   }
@@ -8742,24 +8805,11 @@ function installEditableWorkbenchShell() {
     persistDraft();
   }
 
-  function duplicateSelectedEditableNode() {
-    if (!selectedNode) {
-      if (graphValidationStatus) {
-        graphValidationStatus.textContent = "Graph validation: select a draft node before duplicating.";
-      }
-      return null;
-    }
-    if (selectedNode.getAttribute("data-draft-node") !== "true") {
-      if (graphValidationStatus) {
-        graphValidationStatus.textContent = "Graph validation: Baseline reference nodes cannot be duplicated.";
-      }
-      return null;
-    }
-    recordEditableHistory("duplicate_node");
-    shell.setAttribute("data-draft-state", "derived");
-    const source = editableNodeState(selectedNode);
-    const sourcePosition = editableNodePosition(selectedNode);
+  function duplicateEditableNodeFromSource(sourceNode, offsetIndex) {
+    const source = editableNodeState(sourceNode);
+    const sourcePosition = editableNodePosition(sourceNode);
     const nodeId = nextDraftNodeId();
+    const offset = 6 * (offsetIndex || 1);
     const copiedBinding = {
       hardware_id: source.hardware_binding && source.hardware_binding.hardware_id,
       cable: source.hardware_binding && source.hardware_binding.cable,
@@ -8782,7 +8832,7 @@ function installEditableWorkbenchShell() {
           name: `${rule.name || "draft_rule"}_${nodeId}_${index + 1}`,
         }))
       : [];
-    const node = createEditableNodeElement({
+    return createEditableNodeElement({
       id: nodeId,
       label: `${source.label || source.id} copy`,
       op: source.op || "and",
@@ -8793,35 +8843,67 @@ function installEditableWorkbenchShell() {
       hardware_binding: copiedBinding,
       port_contract: copiedPortContract,
       rules: copiedRules,
-      x: `${Math.min(92, sourcePosition.x + 6)}%`,
-      y: `${Math.min(92, sourcePosition.y + 6)}%`,
+      x: `${Math.min(92, sourcePosition.x + offset)}%`,
+      y: `${Math.min(92, sourcePosition.y + offset)}%`,
       draftNode: true,
     });
+  }
+
+  function duplicateSelectedEditableNode() {
+    const sourceNodes = selectedEditableDraftNodes();
+    if (!sourceNodes.length) {
+      if (graphValidationStatus) {
+        graphValidationStatus.textContent =
+          selectedNode
+            ? "Graph validation: Baseline reference nodes cannot be duplicated."
+            : "Graph validation: select a draft node before duplicating.";
+      }
+      return null;
+    }
+    recordEditableHistory(sourceNodes.length > 1 ? "batch_duplicate_nodes" : "duplicate_node");
+    shell.setAttribute("data-draft-state", "derived");
+    const createdNodes = sourceNodes
+      .map((sourceNode, index) => duplicateEditableNodeFromSource(sourceNode, index + 1))
+      .filter(Boolean);
     refreshEditableNodes();
-    if (node) selectNode(node);
+    selectedNode = createdNodes[createdNodes.length - 1] || selectedNode;
+    selectedNodeIds = new Set(createdNodes.map((node) => editableNodeId(node)).filter(Boolean));
+    syncEditableNodeSelectionAttributes();
+    renderInspector();
     if (draftLabel) draftLabel.textContent = "sandbox_candidate duplicate node edit pending";
     setTimelineState("derived");
     renderEditableEdges();
     validateEditableGraph();
     updateEditableDraftHash();
     persistDraft();
-    return node;
+    if (graphValidationStatus && createdNodes.length > 1) {
+      graphValidationStatus.textContent =
+        `Graph validation: batch duplicated ${createdNodes.length} draft nodes.`;
+    }
+    return createdNodes[createdNodes.length - 1] || null;
   }
 
   function removeSelectedEditableNode() {
-    if (!selectedNode) return;
-    const nodeId = selectedNode.getAttribute("data-editable-node-id") || "";
-    if (selectedNode.getAttribute("data-draft-node") !== "true") {
+    const draftNodesToRemove = selectedEditableDraftNodes();
+    if (!draftNodesToRemove.length) {
       if (graphValidationStatus) {
-        graphValidationStatus.textContent = "Graph validation: Baseline reference nodes cannot be removed.";
+        graphValidationStatus.textContent =
+          selectedNode
+            ? "Graph validation: Baseline reference nodes cannot be removed."
+            : "Graph validation: select a draft node before removing.";
       }
       return;
     }
-    recordEditableHistory("remove_node");
-    selectedNode.remove();
-    draftEdges = draftEdges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId);
+    recordEditableHistory(draftNodesToRemove.length > 1 ? "batch_remove_nodes" : "remove_node");
+    const removedNodeIds = new Set(draftNodesToRemove.map((node) => editableNodeId(node)));
+    for (const node of draftNodesToRemove) {
+      node.remove();
+    }
+    draftEdges = draftEdges.filter((edge) => !removedNodeIds.has(edge.source) && !removedNodeIds.has(edge.target));
     refreshEditableNodes();
     selectedNode = nodes[0] || null;
+    selectedNodeIds = new Set(selectedNode ? [editableNodeId(selectedNode)] : []);
+    syncEditableNodeSelectionAttributes();
     if (draftLabel) draftLabel.textContent = "sandbox_candidate node edit pending";
     renderEditableEdges();
     renderInspector();
@@ -9543,8 +9625,10 @@ function installEditableWorkbenchShell() {
     selectedEdge = draftEdges.find((edge) => edge.id === edgeId) || null;
     if (!selectedEdge) return;
     selectedNode = null;
+    selectedNodeIds = new Set();
     for (const candidate of nodes) {
       candidate.setAttribute("aria-pressed", "false");
+      candidate.setAttribute("data-multi-selected", "false");
     }
     if (edgeSvg) {
       for (const path of Array.from(edgeSvg.querySelectorAll("[data-editable-edge-id]"))) {
@@ -9564,7 +9648,7 @@ function installEditableWorkbenchShell() {
     persistDraft();
   }
 
-  function selectNode(node) {
+  function selectNode(node, options) {
     selectedEdge = null;
     const nodeId = node && node.getAttribute("data-editable-node-id") || "";
     if (currentEditorTool === "edge" && pendingEdgeSourceId && nodeId && nodeId !== pendingEdgeSourceId) {
@@ -9577,9 +9661,10 @@ function installEditableWorkbenchShell() {
         graphValidationStatus.textContent = `Graph validation: select target node for edge from ${nodeId}.`;
       }
     }
-    selectedNode = node;
-    for (const candidate of nodes) {
-      candidate.setAttribute("aria-pressed", candidate === node ? "true" : "false");
+    if (options && options.multiSelect) {
+      toggleEditableNodeSelection(node);
+    } else {
+      setSingleEditableNodeSelection(node);
     }
     if (edgeSvg) {
       for (const path of Array.from(edgeSvg.querySelectorAll("[data-editable-edge-id]"))) {
@@ -9749,6 +9834,7 @@ function installEditableWorkbenchShell() {
       dal_pssa_impact: "none",
       controller_truth_modified: false,
       selected_node: snapshot.selected_node,
+      selected_node_ids: Array.from(selectedNodeIds),
       nodes: snapshot.nodes,
       ports: snapshot.ports,
       typed_ports: snapshot.typed_ports,
@@ -9861,6 +9947,9 @@ function installEditableWorkbenchShell() {
     applyEditableState({
       draftState: "derived",
       selectedNodeId: selectedId,
+      selectedNodeIds: Array.isArray(validated.selected_node_ids)
+        ? validated.selected_node_ids
+        : [],
       selectedCatalogOp: importedCatalog.selected_op,
       nodes: validated.nodes.map((node) => ({
         id: String(node.id || ""),
@@ -10314,7 +10403,9 @@ function installEditableWorkbenchShell() {
   function attachEditableNodeHandler(node) {
     if (!node || node.getAttribute("data-node-handler-attached") === "true") return;
     node.setAttribute("data-node-handler-attached", "true");
-    node.addEventListener("click", () => selectNode(node));
+    node.addEventListener("click", (event) => {
+      selectNode(node, { multiSelect: Boolean(event.shiftKey || event.metaKey || event.ctrlKey) });
+    });
   }
 
   restoreDraft();

@@ -5141,6 +5141,12 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
     0 0 0 2px rgba(240, 193, 91, 0.18),
     0 12px 32px rgba(0, 0, 0, 0.35);
 }
+.workbench-editable-node[data-multi-selected="true"] {
+  border-color: #7dd7c2;
+  box-shadow:
+    0 0 0 2px rgba(125, 215, 194, 0.24),
+    0 12px 32px rgba(0, 0, 0, 0.35);
+}
 .workbench-editable-node span {
   font-size: 1.02rem;
   font-weight: 800;
