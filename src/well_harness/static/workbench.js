@@ -7644,6 +7644,7 @@ function installEditableWorkbenchShell() {
   let groupDragState = null;
   let selectionMarquee = null;
   let suppressNextNodeClick = false;
+  let pendingPortHandleSource = null;
   let hardwareEvidenceReport = null;
   let lastSandboxDiff = null;
   let currentEditorTool = "select";
@@ -8139,6 +8140,23 @@ function installEditableWorkbenchShell() {
         truth_effect: "none",
       },
     ];
+  }
+
+  function portHandlePayload(node, direction) {
+    if (!node) return null;
+    const nodeId = node.getAttribute("data-editable-node-id") || "unknown";
+    const contract = nodePortContract(node);
+    const isOutput = direction === "out";
+    return {
+      node_id: nodeId,
+      direction: isOutput ? "out" : "in",
+      port_id: isOutput ? contract.output_port_id : contract.input_port_id,
+      signal_id: isOutput ? contract.output_signal_id : contract.input_signal_id,
+      value_type: contract.value_type,
+      unit: contract.unit,
+      required: contract.required,
+      truth_effect: "none",
+    };
   }
 
   function edgePortContract(edge) {
@@ -8807,6 +8825,112 @@ function installEditableWorkbenchShell() {
     }
   }
 
+  function clearPortHandleArmedState() {
+    if (!canvas) return;
+    for (const handle of Array.from(canvas.querySelectorAll("[data-port-handle-armed]"))) {
+      handle.removeAttribute("data-port-handle-armed");
+    }
+  }
+
+  function handlePortHandleClick(handle) {
+    if (!handle) return;
+    const ownerId = handle.getAttribute("data-port-handle-owner-id") || "";
+    const direction = handle.getAttribute("data-port-handle-direction") || "";
+    const node = nodes.find((candidate) => editableNodeId(candidate) === ownerId);
+    const payload = portHandlePayload(node, direction);
+    if (!payload) return;
+    if (direction === "out") {
+      pendingPortHandleSource = payload;
+      clearPortHandleArmedState();
+      handle.setAttribute("data-port-handle-armed", "true");
+      if (graphValidationStatus) {
+        graphValidationStatus.textContent =
+          `Graph validation: output port armed ${payload.port_id}; select an input port. Truth effect: none.`;
+      }
+      return;
+    }
+    if (direction !== "in") return;
+    if (!pendingPortHandleSource) {
+      if (graphValidationStatus) {
+        graphValidationStatus.textContent =
+          `Graph validation: select an output port before input ${payload.port_id}.`;
+      }
+      return;
+    }
+    connectEditableEdge(pendingPortHandleSource.node_id, payload.node_id, {
+      source_port_id: pendingPortHandleSource.port_id,
+      target_port_id: payload.port_id,
+      signal_id: `${pendingPortHandleSource.signal_id}__to__${payload.signal_id}`,
+      value_type: pendingPortHandleSource.value_type !== "unknown"
+        ? pendingPortHandleSource.value_type
+        : payload.value_type,
+      unit: pendingPortHandleSource.unit || payload.unit,
+      required: Boolean(pendingPortHandleSource.required || payload.required),
+      source_ref: "ui_draft.port_handle_wiring",
+    });
+    pendingPortHandleSource = null;
+    clearPortHandleArmedState();
+  }
+
+  function attachPortHandleHandlers(handle) {
+    handle.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    handle.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      handlePortHandleClick(handle);
+    });
+    handle.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        event.stopPropagation();
+        handlePortHandleClick(handle);
+      }
+    });
+  }
+
+  function renderEditablePortHandles() {
+    if (!canvas) return;
+    for (const existing of Array.from(canvas.querySelectorAll(".workbench-port-handle"))) {
+      existing.remove();
+    }
+    refreshEditableNodes();
+    for (const node of nodes) {
+      const position = editableNodePosition(node);
+      for (const direction of ["in", "out"]) {
+        const payload = portHandlePayload(node, direction);
+        if (!payload) continue;
+        const handle = document.createElement("button");
+        handle.type = "button";
+        handle.className = "workbench-port-handle";
+        handle.setAttribute("data-port-handle-direction", direction);
+        handle.setAttribute("data-port-handle-owner-id", payload.node_id);
+        handle.setAttribute("data-port-id", payload.port_id);
+        handle.setAttribute("data-signal-id", payload.signal_id);
+        handle.setAttribute("data-value-type", payload.value_type);
+        handle.setAttribute("data-truth-effect", "none");
+        handle.setAttribute(
+          "aria-label",
+          `${direction === "out" ? "Output" : "Input"} port ${payload.port_id}`,
+        );
+        handle.style.setProperty("--node-x", formatCanvasPercent(position.x));
+        handle.style.setProperty("--node-y", formatCanvasPercent(position.y));
+        if (
+          pendingPortHandleSource
+          && direction === "out"
+          && pendingPortHandleSource.node_id === payload.node_id
+          && pendingPortHandleSource.port_id === payload.port_id
+        ) {
+          handle.setAttribute("data-port-handle-armed", "true");
+        }
+        attachPortHandleHandlers(handle);
+        canvas.appendChild(handle);
+      }
+    }
+  }
+
   function renderEditableEdges() {
     if (!edgeSvg) return;
     refreshEditableNodes();
@@ -8836,6 +8960,7 @@ function installEditableWorkbenchShell() {
     }
     syncEditableNodeSelectionAttributes();
     attachEditableEdgeHandlers();
+    renderEditablePortHandles();
   }
 
   function validateEditableGraph() {
@@ -9145,7 +9270,7 @@ function installEditableWorkbenchShell() {
     applyLassoSelection(lassoNodesWithinRect(rect), additive);
   }
 
-  function connectEditableEdge(sourceId, targetId) {
+  function connectEditableEdge(sourceId, targetId, options) {
     if (!sourceId || !targetId || sourceId === targetId) {
       if (graphValidationStatus) {
         graphValidationStatus.textContent = "Graph validation: invalid_edge cannot connect node to itself.";
@@ -9161,16 +9286,20 @@ function installEditableWorkbenchShell() {
     }
     recordEditableHistory("connect_edge");
     const newEdgeId = `edge_${sourceId}_${targetId}_${draftEdges.length + 1}`;
+    const metadata = options && typeof options === "object" ? options : {};
     draftEdges.push({
       id: newEdgeId,
       source: sourceId,
       target: targetId,
-      source_port_id: `${sourceId}:out`,
-      target_port_id: edgeTargetPortId({ source: sourceId, target: targetId }),
-      signal_id: `${sourceId}__to__${targetId}`,
-      value_type: "boolean",
-      unit: "",
-      required: false,
+      source_port_id: normalizedInterfaceField(metadata.source_port_id || `${sourceId}:out`),
+      target_port_id: normalizedInterfaceField(
+        metadata.target_port_id || edgeTargetPortId({ source: sourceId, target: targetId }),
+      ),
+      signal_id: normalizedInterfaceField(metadata.signal_id || `${sourceId}__to__${targetId}`),
+      value_type: normalizePortValueType(metadata.value_type || "boolean"),
+      unit: String(metadata.unit === null || metadata.unit === undefined ? "" : metadata.unit).trim(),
+      required: normalizePortRequired(metadata.required),
+      source_ref: normalizedInterfaceField(metadata.source_ref || "ui_draft.edge_tool"),
       hardware_binding: normalizeInterfaceBinding({}, "edge", newEdgeId),
     });
     if (draftLabel) draftLabel.textContent = "sandbox_candidate edge edit pending";
@@ -9178,6 +9307,10 @@ function installEditableWorkbenchShell() {
     validateEditableGraph();
     updateEditableDraftHash();
     persistDraft();
+    if (graphValidationStatus && metadata.source_ref === "ui_draft.port_handle_wiring") {
+      graphValidationStatus.textContent =
+        `Graph validation: port handle edge ${sourceId}->${targetId} created. Truth effect: none.`;
+    }
   }
 
   function beginEditableEdgeConnect() {

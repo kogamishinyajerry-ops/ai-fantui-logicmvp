@@ -733,3 +733,59 @@ def test_workbench_lasso_selects_and_group_moves_draft_nodes(demo_server, browse
     }
     assert undone_positions["draft_node_1"] == before_positions["draft_node_1"]
     assert undone_positions["draft_node_2"] == before_positions["draft_node_2"]
+
+
+def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-op-catalog-op="compare"]')
+    page.click('[data-editor-tool="node"]')
+    page.click('[data-op-catalog-op="between"]')
+    page.click('[data-editor-tool="node"]')
+
+    source_handle = page.locator(
+        '[data-port-handle-owner-id="draft_node_1"][data-port-handle-direction="out"]'
+    )
+    target_handle = page.locator(
+        '[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="in"]'
+    )
+    source_handle.click()
+    assert source_handle.get_attribute("data-port-handle-armed") == "true"
+    target_handle.click()
+
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    edge = next(
+        item for item in draft["edges"]
+        if item["source"] == "draft_node_1" and item["target"] == "draft_node_2"
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert edge["source_port_id"] == "draft_node_1:out"
+    assert edge["target_port_id"] == "draft_node_2:in"
+    assert edge["signal_id"] == "draft_node_1_compare_output__to__draft_node_2_between_input"
+    assert edge["value_type"] == "number"
+    assert edge["required"] is True
+    assert edge["hardware_binding"]["truth_effect"] == "none"
+    assert draft["port_contract_summary"]["edge_contracts"] >= 1
+    assert draft["truth_level_impact"] == "none"
+
+    source_handle.click()
+    target_handle.click()
+    page.click("#workbench-export-draft-btn")
+    after_duplicate_attempt = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    matching_edges = [
+        item for item in after_duplicate_attempt["edges"]
+        if item["source"] == "draft_node_1" and item["target"] == "draft_node_2"
+    ]
+    assert len(matching_edges) == 1
