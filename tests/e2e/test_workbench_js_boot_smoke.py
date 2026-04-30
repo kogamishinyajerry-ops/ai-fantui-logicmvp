@@ -537,3 +537,71 @@ def test_workbench_named_draft_snapshot_save_restore_export_archive(demo_server,
     assert archive["draft_snapshot_manifest"]["truth_level_impact"] == "none"
     assert archive["checksums"]["draft_snapshot_manifest_checksum"]
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
+def test_workbench_duplicate_keyboard_shortcuts_edit_sandbox_nodes(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-op-catalog-op="compare"]')
+    page.click('[data-editor-tool="node"]')
+    page.fill("#workbench-rule-name", "draft_tra_compare")
+    page.fill("#workbench-rule-source-signal", "tra_deg")
+    page.select_option("#workbench-rule-comparison", ">=")
+    page.fill("#workbench-rule-threshold", "-11.74")
+    page.click("#workbench-apply-rule-parameter-btn")
+    page.click("#workbench-interface-hardware-id")
+    page.fill("#workbench-interface-hardware-id", "TR-LRU-001")
+    page.fill("#workbench-interface-cable", "CBL-TR-A")
+    page.fill("#workbench-interface-connector", "J1")
+    page.fill("#workbench-interface-port-local", "draft_node_1:out")
+    page.fill("#workbench-interface-port-peer", "TR-LRU-001:J1")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+    page.locator('[data-editable-node-id="draft_node_1"]').click()
+    page.keyboard.press("Control+D")
+    page.click("#workbench-export-draft-btn")
+    duplicated = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    draft_nodes = [node for node in duplicated["nodes"] if node["id"].startswith("draft_node_")]
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert [node["id"] for node in draft_nodes] == ["draft_node_1", "draft_node_2"]
+    duplicate = draft_nodes[1]
+    assert duplicate["sourceRef"].startswith("ui_draft.duplicate.draft_node_1.")
+    assert duplicate["port_contract"]["input_port_id"] == "draft_node_2:in"
+    assert duplicate["port_contract"]["output_port_id"] == "draft_node_2:out"
+    assert duplicate["hardware_binding"]["hardware_id"] == "TR-LRU-001"
+    assert duplicate["hardware_binding"]["port_local"] == "draft_node_2:out"
+    assert duplicate["rules"][0]["source_signal_id"] == "tra_deg"
+
+    page.keyboard.press("Control+Z")
+    page.click("#workbench-export-draft-btn")
+    undone = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert [node["id"] for node in undone["nodes"] if node["id"].startswith("draft_node_")] == [
+        "draft_node_1"
+    ]
+
+    page.keyboard.press("Control+Shift+Z")
+    page.click("#workbench-export-draft-btn")
+    redone = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert [node["id"] for node in redone["nodes"] if node["id"].startswith("draft_node_")] == [
+        "draft_node_1",
+        "draft_node_2",
+    ]
+
+    page.keyboard.press("Delete")
+    page.click("#workbench-export-draft-btn")
+    deleted = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert [node["id"] for node in deleted["nodes"] if node["id"].startswith("draft_node_")] == [
+        "draft_node_1"
+    ]
+    assert deleted["truth_level_impact"] == "none"

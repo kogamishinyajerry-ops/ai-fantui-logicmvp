@@ -8742,6 +8742,72 @@ function installEditableWorkbenchShell() {
     persistDraft();
   }
 
+  function duplicateSelectedEditableNode() {
+    if (!selectedNode) {
+      if (graphValidationStatus) {
+        graphValidationStatus.textContent = "Graph validation: select a draft node before duplicating.";
+      }
+      return null;
+    }
+    if (selectedNode.getAttribute("data-draft-node") !== "true") {
+      if (graphValidationStatus) {
+        graphValidationStatus.textContent = "Graph validation: Baseline reference nodes cannot be duplicated.";
+      }
+      return null;
+    }
+    recordEditableHistory("duplicate_node");
+    shell.setAttribute("data-draft-state", "derived");
+    const source = editableNodeState(selectedNode);
+    const sourcePosition = editableNodePosition(selectedNode);
+    const nodeId = nextDraftNodeId();
+    const copiedBinding = {
+      hardware_id: source.hardware_binding && source.hardware_binding.hardware_id,
+      cable: source.hardware_binding && source.hardware_binding.cable,
+      connector: source.hardware_binding && source.hardware_binding.connector,
+      port_local: source.hardware_binding && String(source.hardware_binding.port_local || "").replace(source.id, nodeId),
+      port_peer: source.hardware_binding && String(source.hardware_binding.port_peer || "").replace(source.id, nodeId),
+      evidence_status: source.hardware_binding && source.hardware_binding.evidence_status,
+    };
+    const copiedPortContract = source.port_contract ? {
+      ...source.port_contract,
+      input_port_id: `${nodeId}:in`,
+      output_port_id: `${nodeId}:out`,
+      input_signal_id: `${nodeId}_${source.op || "and"}_input`,
+      output_signal_id: `${nodeId}_${source.op || "and"}_output`,
+      source_ref: `ui_draft.duplicate.${source.id}.port_contract`,
+    } : null;
+    const copiedRules = Array.isArray(source.rules)
+      ? source.rules.map((rule, index) => ({
+          ...rule,
+          name: `${rule.name || "draft_rule"}_${nodeId}_${index + 1}`,
+        }))
+      : [];
+    const node = createEditableNodeElement({
+      id: nodeId,
+      label: `${source.label || source.id} copy`,
+      op: source.op || "and",
+      ruleCount: source.ruleCount || "0",
+      evidence: source.evidence || "evidence_gap",
+      sourceRef: `ui_draft.duplicate.${source.id}.${nodeId}`,
+      op_catalog_entry: source.op_catalog_entry || source.op || "and",
+      hardware_binding: copiedBinding,
+      port_contract: copiedPortContract,
+      rules: copiedRules,
+      x: `${Math.min(92, sourcePosition.x + 6)}%`,
+      y: `${Math.min(92, sourcePosition.y + 6)}%`,
+      draftNode: true,
+    });
+    refreshEditableNodes();
+    if (node) selectNode(node);
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate duplicate node edit pending";
+    setTimelineState("derived");
+    renderEditableEdges();
+    validateEditableGraph();
+    updateEditableDraftHash();
+    persistDraft();
+    return node;
+  }
+
   function removeSelectedEditableNode() {
     if (!selectedNode) return;
     const nodeId = selectedNode.getAttribute("data-editable-node-id") || "";
@@ -10268,6 +10334,9 @@ function installEditableWorkbenchShell() {
         setEditorTool("node");
         addEditableNode();
         setEditorTool("select");
+      } else if (tool === "duplicate") {
+        duplicateSelectedEditableNode();
+        setEditorTool("select");
       } else if (tool === "edge") {
         setEditorTool("edge");
         beginEditableEdgeConnect();
@@ -10345,6 +10414,55 @@ function installEditableWorkbenchShell() {
   if (downloadArchiveBtn) {
     downloadArchiveBtn.addEventListener("click", () => downloadWorkbenchEvidenceArchive());
   }
+
+  function isFormShortcutTarget(target) {
+    if (!(target instanceof HTMLElement)) return false;
+    return Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
+  }
+
+  function handleEditableKeyboardShortcut(event) {
+    if (!event || isFormShortcutTarget(event.target)) return;
+    const key = String(event.key || "").toLowerCase();
+    const commandKey = event.metaKey || event.ctrlKey;
+    if (commandKey && key === "d") {
+      event.preventDefault();
+      duplicateSelectedEditableNode();
+      return;
+    }
+    if (commandKey && key === "z") {
+      event.preventDefault();
+      if (event.shiftKey) {
+        redoEditableEdit();
+      } else {
+        undoEditableEdit();
+      }
+      return;
+    }
+    if (event.ctrlKey && key === "y") {
+      event.preventDefault();
+      redoEditableEdit();
+      return;
+    }
+    if (!commandKey && (event.key === "Delete" || event.key === "Backspace")) {
+      event.preventDefault();
+      if (selectedEdge) {
+        disconnectSelectedEditableEdge();
+      } else {
+        removeSelectedEditableNode();
+      }
+      return;
+    }
+    if (event.key === "Escape" && pendingEdgeSourceId) {
+      event.preventDefault();
+      pendingEdgeSourceId = "";
+      setEditorTool("select");
+      if (graphValidationStatus) {
+        graphValidationStatus.textContent = "Graph validation: edge connection cancelled.";
+      }
+    }
+  }
+
+  document.addEventListener("keydown", handleEditableKeyboardShortcut);
   if (applyInterfaceBindingBtn) {
     applyInterfaceBindingBtn.addEventListener("click", () => applySelectedInterfaceBinding());
   }
