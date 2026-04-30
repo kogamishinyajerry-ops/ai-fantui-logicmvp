@@ -7662,6 +7662,7 @@ function installEditableWorkbenchShell() {
   let selectedHardwarePaletteItemId = "";
   let lastSandboxDiff = null;
   let selectedDiagnosticFocus = null;
+  let repairActionLog = [];
   let currentEditorTool = "select";
   let pendingEdgeSourceId = "";
   let nextDraftNodeIndex = 1;
@@ -8286,6 +8287,153 @@ function installEditableWorkbenchShell() {
     ].join("");
   }
 
+  function normalizeRepairActionId(actionId) {
+    const text = normalizedInterfaceField(actionId);
+    return [
+      "clear_binding",
+      "mark_evidence_gap",
+      "copy_explicit_fingerprint",
+    ].includes(text) ? text : "unknown_repair_action";
+  }
+
+  function repairActionTargetMetadata(target) {
+    const source = target && typeof target === "object" ? target : {};
+    const sourceKind = source.kind || source.target_kind;
+    const activeTarget = sourceKind
+      ? {
+          kind: sourceKind,
+          id: source.id || source.target_id || source.targetId,
+        }
+      : activeInterfaceBindingTarget();
+    const focus = (
+      source.diagnostic_focus
+      && typeof source.diagnostic_focus === "object"
+      && !Array.isArray(source.diagnostic_focus)
+    )
+      ? source.diagnostic_focus
+      : (selectedDiagnosticFocus || currentDiagnosticFocusSummary());
+    return {
+      target_kind: activeTarget.kind || focus.target_kind || "unknown",
+      target_id: activeTarget.id || focus.target_id || "unknown",
+      diagnostic_focus: focus && focus.state !== "none"
+        ? normalizeHardwareBindingFocusTarget(focus)
+        : currentDiagnosticFocusSummary(),
+      truth_effect: "none",
+    };
+  }
+
+  function normalizeRepairChangedFields(fields) {
+    return (Array.isArray(fields) ? fields : [])
+      .filter((field) => field && typeof field === "object")
+      .map((field) => ({
+        field: normalizedInterfaceField(field.field || "unknown"),
+        before: normalizedInterfaceField(field.before),
+        after: normalizedInterfaceField(field.after),
+      }));
+  }
+
+  function normalizeRepairActionLogEntry(entry, fallbackIndex) {
+    const source = entry && typeof entry === "object" ? entry : {};
+    const actionId = normalizeRepairActionId(source.action_id || source.actionId);
+    const target = repairActionTargetMetadata(source.target || source.focus_target || {});
+    return {
+      kind: "well-harness-workbench-diagnostic-repair-action",
+      version: 1,
+      id: normalizedInterfaceField(source.id || `${actionId}_${fallbackIndex || 1}`),
+      action_id: actionId,
+      recorded_at: normalizedInterfaceField(source.recorded_at || source.timestamp || "browser_local_draft"),
+      target,
+      diagnostic_source: {
+        rule_id: normalizedInterfaceField(
+          (source.diagnostic_source && source.diagnostic_source.rule_id)
+            || (target.diagnostic_focus && target.diagnostic_focus.rule_id)
+            || "hardware_binding_diagnostic",
+        ),
+        issue_target: normalizedInterfaceField(
+          (source.diagnostic_source && source.diagnostic_source.issue_target)
+            || (target.diagnostic_focus && target.diagnostic_focus.issue_target)
+            || "unknown",
+        ),
+        truth_effect: "none",
+      },
+      changed_fields: normalizeRepairChangedFields(source.changed_fields || source.changedFields),
+      before_checksum: normalizedInterfaceField(source.before_checksum || source.beforeChecksum),
+      after_checksum: normalizedInterfaceField(source.after_checksum || source.afterChecksum),
+      source_binding: source.source_binding && typeof source.source_binding === "object"
+        ? {
+            owner_kind: normalizedInterfaceField(source.source_binding.owner_kind),
+            owner_id: normalizedInterfaceField(source.source_binding.owner_id),
+            source_ref: normalizedInterfaceField(source.source_binding.source_ref),
+            truth_effect: "none",
+          }
+        : null,
+      truth_effect: "none",
+    };
+  }
+
+  function normalizeRepairActionLog(entries) {
+    return (Array.isArray(entries) ? entries : [])
+      .map((entry, index) => normalizeRepairActionLogEntry(entry, index + 1));
+  }
+
+  function repairActionLogSnapshot() {
+    return normalizeRepairActionLog(repairActionLog);
+  }
+
+  function explicitRepairCopySourceForFocus() {
+    if (!selectedDiagnosticFocus) return null;
+    const target = activeInterfaceBindingTarget();
+    const focus = normalizeHardwareBindingFocusTarget(selectedDiagnosticFocus);
+    const rows = collectWorkbenchHardwareBindings();
+    const eligibleRows = rows.filter((binding) => (
+      binding
+      && binding.evidence_status === "ui_draft"
+      && interfaceBindingRequiredFields.every((fieldName) => !isInterfaceEvidenceGap(binding[fieldName]))
+      && !(
+        binding.owner_kind === target.kind
+        && binding.owner_id === target.id
+        && (
+          focus.edge_index === undefined
+          || !binding.focus_target
+          || binding.focus_target.edge_index === focus.edge_index
+        )
+      )
+    ));
+    if (!eligibleRows.length) return null;
+    const scoped = eligibleRows.filter((binding) => (
+      hardwareBindingOwnerKey(binding) === focus.issue_target
+      || hardwareBindingInterfaceKey(binding) === focus.issue_target
+    ));
+    return scoped[0] || null;
+  }
+
+  function renderHardwareDiagnosticRepairPanel() {
+    if (!selectedDiagnosticFocus) return "";
+    const target = activeInterfaceBindingTarget();
+    if (target.kind === "none") return "";
+    const focus = normalizeHardwareBindingFocusTarget(selectedDiagnosticFocus);
+    const copySource = explicitRepairCopySourceForFocus();
+    const copyLabel = copySource
+      ? `Copy ${copySource.owner_kind}:${copySource.owner_id}`
+      : "Copy explicit fingerprint";
+    return [
+      '<div class="workbench-binding-diagnostics-repair-panel" data-repair-state="ready">',
+      '<strong>Repair selected binding</strong>',
+      `<span>${inspectorText(target.kind)}:${inspectorText(target.id)} · ${inspectorText(focus.rule_id)}</span>`,
+      '<div class="workbench-binding-diagnostics-repair-actions">',
+      '<button type="button" class="workbench-binding-diagnostics-repair-action" data-diagnostics-repair-action="clear_binding">Clear binding</button>',
+      '<button type="button" class="workbench-binding-diagnostics-repair-action" data-diagnostics-repair-action="mark_evidence_gap">Mark gaps</button>',
+      '<button type="button" class="workbench-binding-diagnostics-repair-action" data-diagnostics-repair-action="copy_explicit_fingerprint"',
+      copySource ? "" : ' disabled="disabled"',
+      '>',
+      inspectorText(copyLabel),
+      '</button>',
+      '</div>',
+      '<small>Sandbox draft repair only · truth_effect: none</small>',
+      '</div>',
+    ].join(" ");
+  }
+
   function renderHardwareBindingDiagnostics(report) {
     const diagnostics = report || buildHardwareBindingDiagnosticsReport(collectWorkbenchHardwareBindings());
     if (hardwareBindingDiagnosticsStatus) {
@@ -8308,7 +8456,8 @@ function installEditableWorkbenchShell() {
       return diagnostics;
     }
     hardwareBindingDiagnosticsList.setAttribute("data-diagnostics-state", "ready");
-    hardwareBindingDiagnosticsList.innerHTML = issues.slice(0, 8).map((issue, issueIndex) => [
+    const repairPanel = renderHardwareDiagnosticRepairPanel();
+    const issueHtml = issues.slice(0, 8).map((issue, issueIndex) => [
       '<article',
       'class="workbench-binding-diagnostics-item"',
       `data-severity="${inspectorText(issue.severity || "warning")}"`,
@@ -8323,6 +8472,7 @@ function installEditableWorkbenchShell() {
       renderHardwareDiagnosticFocusTargets(issue, issueIndex),
       '</article>',
     ].join(" ")).join("");
+    hardwareBindingDiagnosticsList.innerHTML = [repairPanel, issueHtml].filter(Boolean).join("");
     return diagnostics;
   }
 
@@ -8499,6 +8649,177 @@ function installEditableWorkbenchShell() {
     renderHardwareBindingDiagnostics();
     updateEditableDraftHash();
     persistDraft();
+  }
+
+  function isRepairUnknownValue(value) {
+    const text = String(value === null || value === undefined ? "" : value).trim().toLowerCase();
+    return !text || ["evidence_gap", "unknown", "tbd", "not_recorded", "n/a", "na"].includes(text);
+  }
+
+  function repairBindingFields(binding) {
+    const source = normalizeInterfaceBinding(binding || {}, "repair", "target");
+    return {
+      hardware_id: source.hardware_id,
+      cable: source.cable,
+      connector: source.connector,
+      port_local: source.port_local,
+      port_peer: source.port_peer,
+      evidence_status: source.evidence_status,
+      source_ref: source.source_ref,
+    };
+  }
+
+  function changedRepairBindingFields(before, after) {
+    const fields = [...interfaceBindingRequiredFields, "evidence_status", "source_ref"];
+    return fields
+      .filter((fieldName) => normalizedInterfaceField(before[fieldName]) !== normalizedInterfaceField(after[fieldName]))
+      .map((fieldName) => ({
+        field: fieldName,
+        before: before[fieldName],
+        after: after[fieldName],
+      }));
+  }
+
+  function setActiveInterfaceBinding(target, binding) {
+    if (!target || target.kind === "none") return null;
+    if (target.kind === "edge") {
+      return setEdgeInterfaceBinding(selectedEdge, binding);
+    }
+    if (target.kind === "node") {
+      return setNodeInterfaceBinding(selectedNode, binding);
+    }
+    return null;
+  }
+
+  function buildDiagnosticRepairBinding(actionId, currentBinding, sourceBinding) {
+    const source = currentBinding && typeof currentBinding === "object" ? currentBinding : {};
+    if (actionId === "clear_binding") {
+      return {
+        hardware_id: "evidence_gap",
+        cable: "evidence_gap",
+        connector: "evidence_gap",
+        port_local: "evidence_gap",
+        port_peer: "evidence_gap",
+        evidence_status: "evidence_gap",
+        source_ref: "ui_draft.diagnostic_repair.clear_binding",
+      };
+    }
+    if (actionId === "mark_evidence_gap") {
+      const next = {
+        hardware_id: isRepairUnknownValue(source.hardware_id) ? "evidence_gap" : source.hardware_id,
+        cable: isRepairUnknownValue(source.cable) ? "evidence_gap" : source.cable,
+        connector: isRepairUnknownValue(source.connector) ? "evidence_gap" : source.connector,
+        port_local: isRepairUnknownValue(source.port_local) ? "evidence_gap" : source.port_local,
+        port_peer: isRepairUnknownValue(source.port_peer) ? "evidence_gap" : source.port_peer,
+        evidence_status: source.evidence_status === "ui_draft" ? "ui_draft" : "evidence_gap",
+        source_ref: "ui_draft.diagnostic_repair.mark_evidence_gap",
+      };
+      return next;
+    }
+    if (actionId === "copy_explicit_fingerprint" && sourceBinding) {
+      return {
+        hardware_id: sourceBinding.hardware_id,
+        cable: sourceBinding.cable,
+        connector: sourceBinding.connector,
+        port_local: sourceBinding.port_local,
+        port_peer: sourceBinding.port_peer,
+        evidence_status: sourceBinding.evidence_status,
+        source_ref: `ui_draft.diagnostic_repair.copy_explicit.${sourceBinding.owner_kind}:${sourceBinding.owner_id}`,
+      };
+    }
+    return null;
+  }
+
+  function appendDiagnosticRepairActionLog(actionId, target, before, after, changedFields, sourceBinding) {
+    const focus = selectedDiagnosticFocus || currentDiagnosticFocusSummary();
+    const rawEntry = {
+      id: `repair_${repairActionLog.length + 1}_${actionId}`,
+      action_id: actionId,
+      recorded_at: "browser_local_draft",
+      target: repairActionTargetMetadata(target),
+      diagnostic_source: {
+        rule_id: focus && focus.rule_id,
+        issue_target: focus && focus.issue_target,
+        truth_effect: "none",
+      },
+      changed_fields: changedFields,
+      before_checksum: checksumEvidenceArchiveField(before),
+      after_checksum: checksumEvidenceArchiveField(after),
+      source_binding: sourceBinding ? {
+        owner_kind: sourceBinding.owner_kind,
+        owner_id: sourceBinding.owner_id,
+        source_ref: sourceBinding.source_ref,
+        truth_effect: "none",
+      } : null,
+      truth_effect: "none",
+    };
+    const entry = normalizeRepairActionLogEntry(rawEntry, repairActionLog.length + 1);
+    repairActionLog = [...repairActionLog, entry].slice(-100);
+    return entry;
+  }
+
+  function applyDiagnosticRepairAction(actionId) {
+    const normalizedActionId = normalizeRepairActionId(actionId);
+    if (!selectedDiagnosticFocus) {
+      if (interfaceBindingStatus) {
+        interfaceBindingStatus.textContent = "Focus a binding diagnostic before applying a repair action. Truth effect: none.";
+      }
+      return null;
+    }
+    const target = activeInterfaceBindingTarget();
+    if (target.kind === "none") {
+      if (interfaceBindingStatus) {
+        interfaceBindingStatus.textContent = "Select a node or edge before applying a repair action. Truth effect: none.";
+      }
+      return null;
+    }
+    const sourceBinding = normalizedActionId === "copy_explicit_fingerprint"
+      ? explicitRepairCopySourceForFocus()
+      : null;
+    const nextBinding = buildDiagnosticRepairBinding(normalizedActionId, target.binding, sourceBinding);
+    if (!nextBinding) {
+      if (interfaceBindingStatus) {
+        interfaceBindingStatus.textContent =
+          `Repair action ${normalizedActionId} has no explicit sandbox source. Truth effect: none.`;
+      }
+      return null;
+    }
+    recordEditableHistory(`diagnostic_repair_${normalizedActionId}`);
+    shell.setAttribute("data-draft-state", "derived");
+    const before = repairBindingFields(target.binding);
+    const applied = setActiveInterfaceBinding(target, nextBinding);
+    const after = repairBindingFields(applied || nextBinding);
+    const changedFields = changedRepairBindingFields(before, after);
+    const logEntry = appendDiagnosticRepairActionLog(
+      normalizedActionId,
+      target,
+      before,
+      after,
+      changedFields,
+      sourceBinding,
+    );
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate diagnostic repair pending";
+    renderInspector();
+    renderEditableEdges();
+    renderHardwareBindingDiagnostics();
+    updateEditableDraftHash();
+    persistDraft();
+    if (interfaceBindingStatus) {
+      interfaceBindingStatus.textContent =
+        `Applied ${normalizedActionId} to ${target.kind}:${target.id}; changed ${changedFields.length} field(s). Truth effect: none.`;
+    }
+    return logEntry;
+  }
+
+  function handleHardwareBindingDiagnosticRepairActivation(event) {
+    const trigger = event && event.target instanceof Element
+      ? event.target.closest("[data-diagnostics-repair-action]")
+      : null;
+    if (!trigger || !hardwareBindingDiagnosticsList || !hardwareBindingDiagnosticsList.contains(trigger)) return;
+    if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    event.stopPropagation();
+    applyDiagnosticRepairAction(trigger.getAttribute("data-diagnostics-repair-action") || "");
   }
 
   function collectWorkbenchInterfacePorts() {
@@ -9371,6 +9692,7 @@ function installEditableWorkbenchShell() {
       selectedNodeId: selectedNode && selectedNode.getAttribute("data-editable-node-id"),
       selectedNodeIds: Array.from(selectedNodeIds),
       diagnosticFocus: currentDiagnosticFocusSummary(),
+      repairActionLog: repairActionLogSnapshot(),
       selectedCatalogOp,
       viewportState: viewportStateSnapshot(),
       nodes: nodes.map((node) => editableNodeState(node)),
@@ -9493,6 +9815,7 @@ function installEditableWorkbenchShell() {
       && state.diagnosticFocus.state === "selected"
         ? normalizeHardwareBindingFocusTarget(state.diagnosticFocus)
         : null;
+    repairActionLog = normalizeRepairActionLog(state.repairActionLog || state.repair_action_log || []);
     setViewportState({
       scale: nextViewportState.scale,
       panX: nextViewportState.pan_x !== undefined ? nextViewportState.pan_x : nextViewportState.panX,
@@ -11160,6 +11483,7 @@ function installEditableWorkbenchShell() {
         selectedNodeId: payload.selectedNodeId,
         selectedNodeIds: Array.isArray(payload.selectedNodeIds) ? payload.selectedNodeIds : [],
         diagnosticFocus: payload.diagnosticFocus || null,
+        repairActionLog: payload.repairActionLog || payload.repair_action_log || [],
         viewportState: payload.viewportState || defaultViewportState(),
         selectedCatalogOp: payload.selectedCatalogOp,
         nodes: Array.isArray(payload.nodes) ? payload.nodes : [],
@@ -11214,6 +11538,7 @@ function installEditableWorkbenchShell() {
     const operationCatalog = buildOperationCatalogSummary();
     const ruleParameterSummary = buildRuleParameterSummary();
     const hardwarePalette = buildHardwarePaletteSummary();
+    const diagnosticRepairActions = repairActionLogSnapshot();
     return {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
       system_id: "thrust-reverser",
@@ -11235,6 +11560,7 @@ function installEditableWorkbenchShell() {
       hardware_bindings: hardwareBindings,
       binding_coverage: bindingCoverage,
       hardware_binding_diagnostics: hardwareBindingDiagnostics,
+      repair_action_log: diagnosticRepairActions,
       port_contract_summary: portContractSummary,
       port_compatibility_report: portCompatibilityReport,
       operation_catalog: operationCatalog,
@@ -11309,6 +11635,7 @@ function installEditableWorkbenchShell() {
       hardware_bindings: snapshot.hardware_bindings,
       binding_coverage: snapshot.binding_coverage,
       hardware_binding_diagnostics: snapshot.hardware_binding_diagnostics,
+      repair_action_log: snapshot.repair_action_log,
       port_contract_summary: snapshot.port_contract_summary,
       port_compatibility_report: snapshot.port_compatibility_report,
       operation_catalog: snapshot.operation_catalog,
@@ -11404,6 +11731,9 @@ function installEditableWorkbenchShell() {
     ) {
       throw new Error("diagnostic_focus must be an object when present");
     }
+    if (payload.repair_action_log !== undefined && !Array.isArray(payload.repair_action_log)) {
+      throw new Error("repair_action_log must be an array when present");
+    }
     return payload;
   }
 
@@ -11438,6 +11768,7 @@ function installEditableWorkbenchShell() {
         ? validated.selected_node_ids
         : [],
       diagnosticFocus: validated.diagnostic_focus || null,
+      repairActionLog: validated.repair_action_log || [],
       viewportState: validated.viewport_state || defaultViewportState(),
       selectedCatalogOp: importedCatalog.selected_op,
       nodes: validated.nodes.map((node) => ({
@@ -11653,6 +11984,7 @@ function installEditableWorkbenchShell() {
     const hardwareBindingDiagnostics = snapshot.hardware_binding_diagnostics
       || buildHardwareBindingDiagnosticsReport(hardwareBindings);
     const diagnosticFocus = snapshot.diagnostic_focus || currentDiagnosticFocusSummary();
+    const diagnosticRepairActions = snapshot.repair_action_log || repairActionLogSnapshot();
     const portContractSummary = snapshot.port_contract_summary || buildPortContractSummary(
       snapshot.typed_ports || [],
       snapshot.edges || [],
@@ -11684,6 +12016,8 @@ function installEditableWorkbenchShell() {
     const diagnosticFocusText = diagnosticFocus && diagnosticFocus.state === "selected"
       ? `${diagnosticFocus.target_kind}:${diagnosticFocus.target_id}${diagnosticFocus.edge_index !== undefined ? `#${diagnosticFocus.edge_index}` : ""} / ${diagnosticFocus.rule_id || "hardware_binding_diagnostic"}`
       : "none";
+    const repairActionText =
+      `${diagnosticRepairActions.length} sandbox repair action(s) / truth_effect=none`;
     const linearIssueBody = [
       "## Outcome",
       `Review sandbox candidate edit for ${node.id || "selected node"} against the certified thrust-reverser baseline.`,
@@ -11708,6 +12042,7 @@ function installEditableWorkbenchShell() {
       "- Binding coverage summary.",
       "- Hardware binding diagnostics report.",
       "- Selected binding diagnostic focus.",
+      "- Diagnostic repair action log.",
       "- Typed port contract summary.",
       "- Port compatibility report.",
       "- Operation catalog provenance.",
@@ -11728,6 +12063,7 @@ function installEditableWorkbenchShell() {
       `- Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
       `- Hardware binding diagnostics: ${bindingDiagnosticsText}`,
       `- Selected diagnostic focus: ${diagnosticFocusText}`,
+      `- Diagnostic repair actions: ${repairActionText}`,
       `- Port contract summary: ${portSummary}`,
       `- Port compatibility: ${compatibilitySummary}`,
       `- Operation catalog: ${operationCatalogSummary}`,
@@ -11750,6 +12086,7 @@ function installEditableWorkbenchShell() {
       `Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
       `Hardware binding diagnostics: ${bindingDiagnosticsText}`,
       `Selected diagnostic focus: ${diagnosticFocusText}`,
+      `Diagnostic repair actions: ${repairActionText}`,
       `Port contract summary: ${portSummary}`,
       `Port compatibility: ${compatibilitySummary}`,
       `Operation catalog: ${operationCatalogSummary}`,
@@ -11766,6 +12103,7 @@ function installEditableWorkbenchShell() {
       knownBlockers: buildWorkbenchKnownBlockers(),
       hardwareBindingDiagnostics,
       diagnosticFocus,
+      diagnosticRepairActions,
       portContractSummary,
       portCompatibilityReport,
       operationCatalog,
@@ -11797,6 +12135,7 @@ function installEditableWorkbenchShell() {
     const hardwareBindingDiagnostics =
       modelJson.hardware_binding_diagnostics || buildHardwareBindingDiagnosticsReport(hardwareBindings);
     const diagnosticFocus = modelJson.diagnostic_focus || currentDiagnosticFocusSummary();
+    const diagnosticRepairActions = modelJson.repair_action_log || repairActionLogSnapshot();
     const typedPorts = modelJson.typed_ports || [];
     const portContractSummary =
       modelJson.port_contract_summary || buildPortContractSummary(typedPorts, modelJson.edges || []);
@@ -11837,6 +12176,7 @@ function installEditableWorkbenchShell() {
       binding_coverage: bindingCoverage,
       hardware_binding_diagnostics: hardwareBindingDiagnostics,
       diagnostic_focus: diagnosticFocus,
+      repair_action_log: diagnosticRepairActions,
       typed_ports: typedPorts,
       port_contract_summary: portContractSummary,
       port_compatibility_report: portCompatibilityReport,
@@ -11859,6 +12199,7 @@ function installEditableWorkbenchShell() {
       binding_coverage_checksum: checksumEvidenceArchiveField(bindingCoverage),
       hardware_binding_diagnostics_checksum: checksumEvidenceArchiveField(hardwareBindingDiagnostics),
       diagnostic_focus_checksum: checksumEvidenceArchiveField(diagnosticFocus),
+      repair_action_log_checksum: checksumEvidenceArchiveField(diagnosticRepairActions),
       typed_ports_checksum: checksumEvidenceArchiveField(typedPorts),
       port_contract_summary_checksum: checksumEvidenceArchiveField(portContractSummary),
       port_compatibility_report_checksum: checksumEvidenceArchiveField(portCompatibilityReport),
@@ -12173,6 +12514,8 @@ function installEditableWorkbenchShell() {
   if (hardwareBindingDiagnosticsList) {
     hardwareBindingDiagnosticsList.addEventListener("click", handleHardwareBindingDiagnosticActivation);
     hardwareBindingDiagnosticsList.addEventListener("keydown", handleHardwareBindingDiagnosticActivation);
+    hardwareBindingDiagnosticsList.addEventListener("click", handleHardwareBindingDiagnosticRepairActivation);
+    hardwareBindingDiagnosticsList.addEventListener("keydown", handleHardwareBindingDiagnosticRepairActivation);
   }
   if (applyInterfaceBindingBtn) {
     applyInterfaceBindingBtn.addEventListener("click", () => applySelectedInterfaceBinding());
