@@ -818,6 +818,16 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     assert ghost_preview["current_binding"] is None
     assert ghost_preview["candidate_binding"]["hardware_id"] == "GHOST-LRU"
     assert "Matrix validation warn" in page.locator("#workbench-interface-matrix-status").inner_text()
+    review = page.locator("#workbench-interface-matrix-review")
+    assert review.get_attribute("data-review-state") == "warn"
+    logic1_review = review.locator('[data-interface-matrix-review-owner-id="logic1"]')
+    assert logic1_review.get_attribute("data-row-status") == "applyable"
+    assert logic1_review.get_attribute("data-row-action") == "apply"
+    assert "hardware_id" in logic1_review.inner_text()
+    assert "TR-LRU-PREVIEW-BEFORE -> TR-LRU-PREVIEW-EDITED" in logic1_review.inner_text()
+    ghost_review = review.locator('[data-interface-matrix-review-owner-id="ghost_edge"]')
+    assert ghost_review.get_attribute("data-row-status") == "skipped"
+    assert ghost_review.get_attribute("data-row-action") == "skip"
 
     page.click("#workbench-export-draft-btn")
     preview_only_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -847,6 +857,10 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     assert node_noop["change_count"] == 0
     assert node_noop["current_binding"]["hardware_id"] == "TR-LRU-PREVIEW-EDITED"
     assert node_noop["candidate_binding"]["hardware_id"] == "TR-LRU-PREVIEW-EDITED"
+    noop_review = review.locator('[data-interface-matrix-review-owner-id="logic1"]')
+    assert noop_review.get_attribute("data-row-status") == "no_op"
+    assert noop_review.get_attribute("data-row-action") == "none"
+    assert "none" in noop_review.inner_text()
 
     page.click("#workbench-export-draft-btn")
     after_apply = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -871,6 +885,10 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     failed_report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
     assert failed_report["status"] == "fail"
     assert failed_report["truth_effect_violation_count"] >= 1
+    assert review.get_attribute("data-review-state") == "fail"
+    reject_review = review.locator('[data-interface-matrix-review-owner-id="logic1"]')
+    assert reject_review.get_attribute("data-row-status") == "reject"
+    assert reject_review.get_attribute("data-row-action") == "none"
     page.click("#workbench-apply-interface-matrix-btn")
     assert "Matrix validation failed" in page.locator("#workbench-interface-matrix-status").inner_text()
     page.click("#workbench-export-draft-btn")

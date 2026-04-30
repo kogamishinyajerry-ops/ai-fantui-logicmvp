@@ -5811,6 +5811,71 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   padding: 0.5rem;
   font: 0.72rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
+.workbench-interface-matrix-review {
+  margin: 0.45rem 0 0.7rem;
+  border: 1px solid rgba(150, 173, 190, 0.22);
+  border-radius: 7px;
+  background: rgba(4, 10, 16, 0.45);
+  overflow: hidden;
+}
+.workbench-interface-matrix-review-summary,
+.workbench-interface-matrix-review-empty {
+  margin: 0;
+  padding: 0.48rem 0.55rem;
+  color: rgba(213, 227, 237, 0.76);
+  font-size: 0.69rem;
+  line-height: 1.35;
+}
+.workbench-interface-matrix-review-table-wrap {
+  max-height: 260px;
+  overflow: auto;
+  border-top: 1px solid rgba(150, 173, 190, 0.16);
+}
+.workbench-interface-matrix-review-table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  font-size: 0.66rem;
+}
+.workbench-interface-matrix-review-table th,
+.workbench-interface-matrix-review-table td {
+  padding: 0.42rem 0.5rem;
+  border-bottom: 1px solid rgba(150, 173, 190, 0.14);
+  text-align: left;
+  vertical-align: top;
+}
+.workbench-interface-matrix-review-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(8, 18, 28, 0.96);
+  color: rgba(213, 227, 237, 0.62);
+  font-weight: 700;
+}
+.workbench-interface-matrix-review-table td {
+  color: rgba(232, 243, 250, 0.86);
+}
+.workbench-interface-matrix-review-table tr[data-row-status="applyable"] {
+  background: rgba(44, 165, 141, 0.08);
+}
+.workbench-interface-matrix-review-table tr[data-row-status="no_op"] {
+  background: rgba(150, 173, 190, 0.06);
+}
+.workbench-interface-matrix-review-table tr[data-row-status="skipped"] {
+  background: rgba(230, 176, 80, 0.08);
+}
+.workbench-interface-matrix-review-table tr[data-row-status="reject"] {
+  background: rgba(255, 95, 110, 0.1);
+}
+.workbench-interface-matrix-review-status,
+.workbench-interface-matrix-review-action,
+.workbench-interface-matrix-review-changes {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.workbench-interface-matrix-review-delta {
+  min-width: 220px;
+  color: rgba(213, 227, 237, 0.74);
+}
 .workbench-sandbox-timeline-strip {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
