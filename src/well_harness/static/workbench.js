@@ -7622,6 +7622,9 @@ function installEditableWorkbenchShell() {
   const hardwareBindingDiagnosticsCount = document.getElementById("workbench-hardware-binding-diagnostics-count");
   const hardwareBindingDiagnosticsGapCount = document.getElementById("workbench-hardware-binding-diagnostics-gap-count");
   const hardwareBindingDiagnosticsList = document.getElementById("workbench-hardware-binding-diagnostics-list");
+  const exportInterfaceMatrixBtn = document.getElementById("workbench-export-interface-matrix-btn");
+  const interfaceMatrixOutput = document.getElementById("workbench-interface-matrix-output");
+  const interfaceMatrixStatus = document.getElementById("workbench-interface-matrix-status");
   const typedPortOwner = document.getElementById("workbench-typed-port-owner");
   const portInputSignalInput = document.getElementById("workbench-port-input-signal");
   const portOutputSignalInput = document.getElementById("workbench-port-output-signal");
@@ -9306,6 +9309,115 @@ function installEditableWorkbenchShell() {
       error_count: issues.filter((issue) => issue.severity === "error").length,
       edges: edgeReports,
       issues,
+      truth_effect: "none",
+    };
+  }
+
+  function interfaceMatrixPortMetadata(port) {
+    if (!port || typeof port !== "object") {
+      return {
+        port_id: "evidence_gap",
+        node_id: "evidence_gap",
+        direction: "evidence_gap",
+        signal_id: "evidence_gap",
+        value_type: "evidence_gap",
+        unit: "",
+        required: false,
+        source_ref: "evidence_gap",
+        truth_effect: "none",
+      };
+    }
+    return {
+      port_id: normalizedInterfaceField(port.id),
+      node_id: normalizedInterfaceField(port.node_id),
+      direction: normalizedInterfaceField(port.direction),
+      signal_id: normalizedInterfaceField(port.signal_id),
+      value_type: normalizedInterfaceField(port.value_type),
+      unit: port.unit === undefined || port.unit === null ? "" : String(port.unit),
+      required: port.required === true,
+      source_ref: normalizedInterfaceField(port.source_ref),
+      truth_effect: "none",
+    };
+  }
+
+  function diagnosticRuleIdsForInterfaceBinding(binding, diagnostics) {
+    const ownerKey = hardwareBindingOwnerKey(binding);
+    const interfaceKey = hardwareBindingInterfaceKey(binding);
+    const issues = diagnostics && Array.isArray(diagnostics.issues) ? diagnostics.issues : [];
+    return Array.from(new Set(issues
+      .filter((issue) => issue && (
+        issue.target === ownerKey
+        || issue.issue_target === ownerKey
+        || issue.target === interfaceKey
+        || issue.issue_target === interfaceKey
+      ))
+      .map((issue) => normalizedInterfaceField(issue.rule_id || "hardware_binding_diagnostic"))));
+  }
+
+  function buildInterfaceMatrixRows(bindings, ports, diagnostics) {
+    const byPortId = portRowsById(ports || []);
+    return (Array.isArray(bindings) ? bindings : []).map((binding, index) => {
+      const normalized = normalizeInterfaceBinding(
+        binding,
+        binding && binding.owner_kind,
+        binding && binding.owner_id,
+      );
+      const quality = interfaceBindingQualityReport(normalized);
+      const localPort = interfaceMatrixPortMetadata(byPortId[normalized.port_local]);
+      const peerPort = interfaceMatrixPortMetadata(byPortId[normalized.port_peer]);
+      const diagnosticRuleIds = diagnosticRuleIdsForInterfaceBinding(normalized, diagnostics);
+      return {
+        row_id: `interface:${String(index + 1).padStart(2, "0")}:${normalized.owner_kind}:${normalized.owner_id}`,
+        owner_kind: normalized.owner_kind,
+        owner_id: normalized.owner_id,
+        hardware_id: normalized.hardware_id,
+        cable: normalized.cable,
+        connector: normalized.connector,
+        port_local: normalized.port_local,
+        port_peer: normalized.port_peer,
+        evidence_status: normalized.evidence_status,
+        binding_quality: quality.status,
+        binding_missing_fields: quality.missing_fields,
+        local_typed_port: localPort,
+        peer_typed_port: peerPort,
+        typed_port_status: localPort.port_id !== "evidence_gap" || peerPort.port_id !== "evidence_gap"
+          ? "linked"
+          : "evidence_gap",
+        diagnostic_issue_count: diagnosticRuleIds.length,
+        diagnostic_rule_ids: diagnosticRuleIds,
+        source_ref: normalized.source_ref,
+        truth_effect: "none",
+      };
+    });
+  }
+
+  function buildWorkbenchInterfaceMatrix(bindings, ports, diagnostics, coverage) {
+    const hardwareBindings = Array.isArray(bindings) ? bindings : [];
+    const typedPorts = Array.isArray(ports) ? ports : [];
+    const bindingDiagnostics = diagnostics || buildHardwareBindingDiagnosticsReport(hardwareBindings);
+    const bindingCoverage = coverage || buildInterfaceBindingCoverageSummary(hardwareBindings);
+    const rows = buildInterfaceMatrixRows(hardwareBindings, typedPorts, bindingDiagnostics);
+    const evidenceGapFieldCount = rows.reduce(
+      (total, row) => total + (Array.isArray(row.binding_missing_fields) ? row.binding_missing_fields.length : 0),
+      0,
+    );
+    return {
+      kind: "well-harness-workbench-interface-matrix",
+      version: 1,
+      system_id: "thrust-reverser",
+      matrix_scope: "sandbox_candidate_interface_design",
+      row_count: rows.length,
+      typed_port_count: typedPorts.length,
+      evidence_gap_field_count: evidenceGapFieldCount,
+      diagnostics_status: bindingDiagnostics.status || "unknown",
+      diagnostics_issue_count: bindingDiagnostics.issue_count || 0,
+      coverage: {
+        total_bindings: bindingCoverage.total_bindings || rows.length,
+        complete: bindingCoverage.complete || 0,
+        partial: bindingCoverage.partial || 0,
+        missing: bindingCoverage.missing || 0,
+      },
+      rows,
       truth_effect: "none",
     };
   }
@@ -11535,6 +11647,12 @@ function installEditableWorkbenchShell() {
     const interfacePorts = collectWorkbenchInterfacePorts();
     const portContractSummary = buildPortContractSummary(typedPorts, draftEdges);
     const portCompatibilityReport = buildPortCompatibilityReport(typedPorts, draftEdges);
+    const interfaceMatrix = buildWorkbenchInterfaceMatrix(
+      hardwareBindings,
+      typedPorts,
+      hardwareBindingDiagnostics,
+      bindingCoverage,
+    );
     const operationCatalog = buildOperationCatalogSummary();
     const ruleParameterSummary = buildRuleParameterSummary();
     const hardwarePalette = buildHardwarePaletteSummary();
@@ -11560,6 +11678,7 @@ function installEditableWorkbenchShell() {
       hardware_bindings: hardwareBindings,
       binding_coverage: bindingCoverage,
       hardware_binding_diagnostics: hardwareBindingDiagnostics,
+      interface_matrix: interfaceMatrix,
       repair_action_log: diagnosticRepairActions,
       port_contract_summary: portContractSummary,
       port_compatibility_report: portCompatibilityReport,
@@ -11637,6 +11756,7 @@ function installEditableWorkbenchShell() {
       hardware_bindings: snapshot.hardware_bindings,
       binding_coverage: snapshot.binding_coverage,
       hardware_binding_diagnostics: snapshot.hardware_binding_diagnostics,
+      interface_matrix: snapshot.interface_matrix,
       repair_action_log: snapshot.repair_action_log,
       port_contract_summary: snapshot.port_contract_summary,
       port_compatibility_report: snapshot.port_compatibility_report,
@@ -11688,6 +11808,18 @@ function installEditableWorkbenchShell() {
       && (!payload.hardware_binding_diagnostics || typeof payload.hardware_binding_diagnostics !== "object" || Array.isArray(payload.hardware_binding_diagnostics))
     ) {
       throw new Error("hardware_binding_diagnostics must be an object when present");
+    }
+    if (
+      payload.interface_matrix !== undefined
+      && (!payload.interface_matrix || typeof payload.interface_matrix !== "object" || Array.isArray(payload.interface_matrix))
+    ) {
+      throw new Error("interface_matrix must be an object when present");
+    }
+    if (
+      payload.interface_matrix !== undefined
+      && payload.interface_matrix.truth_effect !== "none"
+    ) {
+      throw new Error("interface_matrix truth_effect must be none");
     }
     if (payload.typed_ports !== undefined && !Array.isArray(payload.typed_ports)) {
       throw new Error("typed_ports must be an array when present");
@@ -11834,6 +11966,24 @@ function installEditableWorkbenchShell() {
     return payload;
   }
 
+  function exportWorkbenchInterfaceMatrix() {
+    const snapshot = currentDraftSnapshot();
+    const matrix = snapshot.interface_matrix || buildWorkbenchInterfaceMatrix(
+      snapshot.hardware_bindings || [],
+      snapshot.typed_ports || [],
+      snapshot.hardware_binding_diagnostics,
+      snapshot.binding_coverage,
+    );
+    if (interfaceMatrixOutput) {
+      interfaceMatrixOutput.value = JSON.stringify(matrix, null, 2);
+    }
+    if (interfaceMatrixStatus) {
+      interfaceMatrixStatus.textContent =
+        `Exported ${matrix.row_count || 0} interface row(s), ${matrix.evidence_gap_field_count || 0} evidence-gap field(s). Truth effect: none.`;
+    }
+    return matrix;
+  }
+
   function importEditableDraftJson() {
     if (!draftJsonBuffer) return null;
     try {
@@ -11947,6 +12097,13 @@ function installEditableWorkbenchShell() {
       sourceSnapshot.binding_coverage || buildInterfaceBindingCoverageSummary(hardwareBindings);
     const hardwareBindingDiagnostics =
       sourceSnapshot.hardware_binding_diagnostics || buildHardwareBindingDiagnosticsReport(hardwareBindings);
+    const interfaceMatrix =
+      sourceSnapshot.interface_matrix || buildWorkbenchInterfaceMatrix(
+        hardwareBindings,
+        sourceSnapshot.typed_ports || [],
+        hardwareBindingDiagnostics,
+        bindingCoverage,
+      );
     const repairActions = repairActionLogSnapshotFromSource(sourceSnapshot.repair_action_log || []);
     const portContractSummary =
       sourceSnapshot.port_contract_summary || buildPortContractSummary(
@@ -12014,6 +12171,14 @@ function installEditableWorkbenchShell() {
         truth_effect: "none",
       },
       hardware_binding_diagnostics_summary: diagnosticsSummary,
+      interface_matrix_summary: {
+        row_count: interfaceMatrix.row_count || 0,
+        typed_port_count: interfaceMatrix.typed_port_count || 0,
+        evidence_gap_field_count: interfaceMatrix.evidence_gap_field_count || 0,
+        diagnostics_status: interfaceMatrix.diagnostics_status || "unknown",
+        checksum: checksumEvidenceArchiveField(interfaceMatrix),
+        truth_effect: "none",
+      },
       selected_focus: diagnosticFocusSummary,
       diagnostic_focus: diagnosticFocusSummary,
       repair_action_log_summary: repairActionLogSummary,
@@ -12071,6 +12236,11 @@ function installEditableWorkbenchShell() {
     return `${summary.status || "unknown"} / issues=${summary.issue_count || 0} / gaps=${summary.evidence_gap_field_count || 0}`;
   }
 
+  function proofPacketInterfaceMatrixText(packet) {
+    const summary = packet.interface_matrix_summary || {};
+    return `${summary.row_count || 0} row(s) / typed_ports=${summary.typed_port_count || 0} / gaps=${summary.evidence_gap_field_count || 0}`;
+  }
+
   function proofPacketDiagnosticFocusText(packet) {
     const focus = packet.selected_focus || packet.diagnostic_focus || {};
     if (focus.state !== "selected") return "none";
@@ -12104,6 +12274,7 @@ function installEditableWorkbenchShell() {
       "- Editable draft JSON export.",
       "- Sandbox baseline diff report.",
       "- Hardware/interface binding draft evidence.",
+      "- Interface matrix export.",
       "- Binding coverage summary.",
       "- Hardware binding diagnostics report.",
       "- Selected binding diagnostic focus.",
@@ -12128,6 +12299,7 @@ function installEditableWorkbenchShell() {
       `- Changed model hash: ${packet.changed_model_hash}`,
       `- Selected scenario: ${packet.selected_scenario_id}`,
       `- Hardware/interface bindings: ${proofPacketBindingSummaryText(packet)}`,
+      `- Interface matrix: ${proofPacketInterfaceMatrixText(packet)}`,
       `- Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
       `- Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
       `- Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
@@ -12151,6 +12323,7 @@ function installEditableWorkbenchShell() {
       `Selected scenario: ${packet.selected_scenario_id}`,
       `Latest sandbox verdict: ${packet.sandbox_diff && packet.sandbox_diff.verdict}`,
       `Hardware/interface bindings: ${proofPacketBindingSummaryText(packet)}`,
+      `Interface matrix: ${proofPacketInterfaceMatrixText(packet)}`,
       `Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
       `Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
       `Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
@@ -12325,6 +12498,13 @@ function installEditableWorkbenchShell() {
     const bindingCoverage = buildInterfaceBindingCoverageSummary(hardwareBindings);
     const hardwareBindingDiagnostics =
       modelJson.hardware_binding_diagnostics || buildHardwareBindingDiagnosticsReport(hardwareBindings);
+    const interfaceMatrix =
+      modelJson.interface_matrix || buildWorkbenchInterfaceMatrix(
+        hardwareBindings,
+        modelJson.typed_ports || [],
+        hardwareBindingDiagnostics,
+        bindingCoverage,
+      );
     const diagnosticFocus = modelJson.diagnostic_focus || currentDiagnosticFocusSummary();
     const diagnosticRepairActions = modelJson.repair_action_log || repairActionLogSnapshot();
     const typedPorts = modelJson.typed_ports || [];
@@ -12368,6 +12548,7 @@ function installEditableWorkbenchShell() {
       hardware_bindings: hardwareBindings,
       binding_coverage: bindingCoverage,
       hardware_binding_diagnostics: hardwareBindingDiagnostics,
+      interface_matrix: interfaceMatrix,
       diagnostic_focus: diagnosticFocus,
       repair_action_log: diagnosticRepairActions,
       typed_ports: typedPorts,
@@ -12397,6 +12578,7 @@ function installEditableWorkbenchShell() {
       hardware_bindings_checksum: checksumEvidenceArchiveField(hardwareBindings),
       binding_coverage_checksum: checksumEvidenceArchiveField(bindingCoverage),
       hardware_binding_diagnostics_checksum: checksumEvidenceArchiveField(hardwareBindingDiagnostics),
+      interface_matrix_checksum: checksumEvidenceArchiveField(interfaceMatrix),
       diagnostic_focus_checksum: checksumEvidenceArchiveField(diagnosticFocus),
       repair_action_log_checksum: checksumEvidenceArchiveField(diagnosticRepairActions),
       typed_ports_checksum: checksumEvidenceArchiveField(typedPorts),
@@ -12724,6 +12906,9 @@ function installEditableWorkbenchShell() {
   }
   if (applyPortContractBtn) {
     applyPortContractBtn.addEventListener("click", () => applySelectedPortContract());
+  }
+  if (exportInterfaceMatrixBtn) {
+    exportInterfaceMatrixBtn.addEventListener("click", () => exportWorkbenchInterfaceMatrix());
   }
   if (exportDraftBtn) {
     exportDraftBtn.addEventListener("click", () => exportEditableDraftJson());

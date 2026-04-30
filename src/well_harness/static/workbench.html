@@ -912,6 +912,34 @@
                 </div>
               </section>
               <section
+                id="workbench-interface-matrix-export"
+                class="workbench-interface-matrix-export"
+                aria-labelledby="workbench-interface-matrix-title"
+              >
+                <div class="workbench-inspector-header">
+                  <span id="workbench-interface-matrix-title">Interface Matrix</span>
+                  <strong>sandbox export</strong>
+                </div>
+                <button
+                  id="workbench-export-interface-matrix-btn"
+                  type="button"
+                  class="workbench-editable-primary"
+                >
+                  Export matrix
+                </button>
+                <label class="workbench-handoff-output" for="workbench-interface-matrix-output">
+                  <span>Hardware/interface design matrix</span>
+                  <textarea
+                    id="workbench-interface-matrix-output"
+                    rows="7"
+                    readonly
+                  ></textarea>
+                </label>
+                <p id="workbench-interface-matrix-status" class="workbench-handoff-status">
+                  Matrix is local sandbox evidence only. Truth effect: none.
+                </p>
+              </section>
+              <section
                 id="workbench-typed-port-editor"
                 class="workbench-typed-port-editor"
                 aria-labelledby="workbench-typed-port-title"
