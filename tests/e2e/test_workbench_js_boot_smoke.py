@@ -27,6 +27,8 @@ binary is missing.
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 from typing import Any, Iterator
 
@@ -739,6 +741,104 @@ def test_workbench_interface_matrix_import_applies_sandbox_bindings_and_rejects_
     after_reject = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     logic1_after_reject = next(node for node in after_reject["nodes"] if node["id"] == "logic1")
     assert logic1_after_reject["hardware_binding"]["hardware_id"] == "TR-LRU-APPLIED"
+
+
+def test_workbench_interface_matrix_csv_tsv_bridge_round_trips_sandbox_rows(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.fill("#workbench-interface-hardware-id", "TR-LRU-CSV-BEFORE")
+    page.fill("#workbench-interface-cable", "CBL-CSV-BEFORE")
+    page.fill("#workbench-interface-connector", "J-CSV-BEFORE")
+    page.fill("#workbench-interface-port-local", "logic1:out")
+    page.fill("#workbench-interface-port-peer", "TR-LRU-CSV-BEFORE:J-CSV-BEFORE")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+
+    page.click("#workbench-export-interface-matrix-btn")
+    page.click("#workbench-export-interface-matrix-csv-btn")
+    exported_csv = page.locator("#workbench-interface-matrix-csv-output").input_value()
+    assert "row_id,owner_kind,owner_id,hardware_id,cable,connector,port_local,port_peer,evidence_status,truth_effect,source_ref" in exported_csv
+
+    rows = list(csv.DictReader(io.StringIO(exported_csv)))
+    logic1_row = next(row for row in rows if row["owner_kind"] == "node" and row["owner_id"] == "logic1")
+    logic1_row["hardware_id"] = "TR-LRU-CSV,APPLIED"
+    logic1_row["cable"] = ""
+    logic1_row["connector"] = 'J-CSV-"A"'
+    logic1_row["port_peer"] = "TR-LRU-CSV:J-CSV-A"
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, fieldnames=list(rows[0].keys()))
+    writer.writeheader()
+    writer.writerows(rows)
+    page.fill("#workbench-interface-matrix-csv-output", buffer.getvalue())
+    page.click("#workbench-import-interface-matrix-csv-btn")
+    report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
+    assert report["status"] == "warn"
+    assert report["truth_effect"] == "none"
+    assert report["evidence_gap_field_count"] >= 1
+    page.click("#workbench-apply-interface-matrix-btn")
+    assert "Applied 1 matrix row(s)" in page.locator("#workbench-interface-matrix-status").inner_text()
+    page.click("#workbench-export-draft-btn")
+    csv_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    logic1 = next(node for node in csv_draft["nodes"] if node["id"] == "logic1")
+    assert errors == [], f"page JS errors: {errors}"
+    assert logic1["hardware_binding"]["hardware_id"] == "TR-LRU-CSV,APPLIED"
+    assert logic1["hardware_binding"]["cable"] == "evidence_gap"
+    assert logic1["hardware_binding"]["connector"] == 'J-CSV-"A"'
+    assert logic1["hardware_binding"]["truth_effect"] == "none"
+
+    tsv_header = "\t".join([
+        "row_id",
+        "owner_kind",
+        "owner_id",
+        "hardware_id",
+        "cable",
+        "connector",
+        "port_local",
+        "port_peer",
+        "evidence_status",
+        "truth_effect",
+        "source_ref",
+    ])
+    tsv_row = "\t".join([
+        "interface:tsv:logic1",
+        "node",
+        "logic1",
+        "TR-LRU-TSV-APPLIED",
+        "",
+        "J-TSV-APPLIED",
+        "logic1:out",
+        "TR-LRU-TSV-APPLIED:J-TSV-APPLIED",
+        "ui_draft",
+        "none",
+        "ui_draft.tsv.logic1",
+    ])
+    page.fill("#workbench-interface-matrix-csv-output", f"{tsv_header}\n{tsv_row}\n")
+    page.click("#workbench-import-interface-matrix-csv-btn")
+    assert "Matrix validation warn" in page.locator("#workbench-interface-matrix-status").inner_text()
+    page.click("#workbench-apply-interface-matrix-btn")
+    page.click("#workbench-export-draft-btn")
+    tsv_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    logic1_tsv = next(node for node in tsv_draft["nodes"] if node["id"] == "logic1")
+    assert logic1_tsv["hardware_binding"]["hardware_id"] == "TR-LRU-TSV-APPLIED"
+    assert logic1_tsv["hardware_binding"]["cable"] == "evidence_gap"
+    assert logic1_tsv["hardware_binding"]["connector"] == "J-TSV-APPLIED"
+    assert logic1_tsv["hardware_binding"]["truth_effect"] == "none"
+
+    rejected_row = tsv_row.replace("TR-LRU-TSV-APPLIED", "SHOULD-NOT-APPLY", 1).replace("\tnone\t", "\tcertified\t")
+    page.fill("#workbench-interface-matrix-csv-output", f"{tsv_header}\n{rejected_row}\n")
+    page.click("#workbench-import-interface-matrix-csv-btn")
+    failed_report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
+    assert failed_report["status"] == "fail"
+    assert failed_report["truth_effect_violation_count"] >= 1
+    page.click("#workbench-apply-interface-matrix-btn")
+    assert "Matrix validation failed" in page.locator("#workbench-interface-matrix-status").inner_text()
+    page.click("#workbench-export-draft-btn")
+    rejected_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    logic1_after_reject = next(node for node in rejected_draft["nodes"] if node["id"] == "logic1")
+    assert logic1_after_reject["hardware_binding"]["hardware_id"] == "TR-LRU-TSV-APPLIED"
 
 
 def test_workbench_interface_matrix_validation_previews_without_mutating_draft(demo_server, browser):  # type: ignore[no-untyped-def]
