@@ -21,8 +21,8 @@ controlled ChangeRequest handoff.
 - JER-207: Group/subsystem node editor v1 (Done)
 - JER-208: Hardware interface design model v1 (Done)
 - JER-209: Connector/pin map editor v1 (Done)
-- JER-210: Hardware evidence inspector v2 (In review)
-- JER-211: Scenario/debug timeline linked to selected graph elements v1
+- JER-210: Hardware evidence inspector v2 (Done)
+- JER-211: Scenario/debug timeline linked to selected graph elements v1 (In review)
 - JER-212: Candidate-to-baseline diff review workflow v2
 - JER-213: ChangeRequest handoff packet from editable draft v1
 
@@ -169,6 +169,26 @@ The slice remains sandbox-only:
   hardware YAML, C919 reference packets, truth-level, DAL, or PSSA state;
 - archive output includes a Hardware Evidence v2 checksum for review
   reproducibility.
+
+## JER-211 Closure Note
+
+JER-211 links the existing sandbox workflow timeline to the selected graph
+element. The bottom workbench area now includes a Selected Debug Timeline panel
+that follows node and edge selection, shows the active scenario, latest diff
+verdict, trace-link state, graph context, ports, and hardware overlay, and
+updates after a sandbox run. The packet is review/debug evidence, not a
+certification or control-truth claim.
+
+The slice remains sandbox-only:
+
+- `selected_debug_timeline` is serialized into draft export, ChangeRequest proof
+  packet summaries, and evidence archives with `truth_effect: none`;
+- running sandbox updates the selected target's debug verdict and keeps
+  candidate-vs-baseline status as review evidence only;
+- hardware bindings remain overlay metadata and do not participate in certified
+  truth evaluation;
+- no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
+  DAL, or PSSA behavior is changed.
 
 ## JER-205 Sequencing Contract
 

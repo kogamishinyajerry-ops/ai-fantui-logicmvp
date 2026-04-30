@@ -110,6 +110,7 @@ def test_css_declares_editable_workbench_layout() -> None:
     assert "grid-template-columns: 46px minmax(420px, 1fr) minmax(260px, 340px)" in css
     assert ".workbench-evidence-inspector" in css
     assert ".workbench-sandbox-timeline-strip" in css
+    assert ".workbench-selected-debug-timeline" in css
 
 
 def test_component_library_templates_are_exposed_as_sandbox_toolbar_controls() -> None:
@@ -167,6 +168,22 @@ def test_hardware_evidence_v2_inspector_controls_are_sandbox_only_ui() -> None:
     assert "Hardware/interface fields are review evidence only" in html
     assert ".workbench-hardware-evidence-v2" in css
     assert ".workbench-hardware-evidence-v2-row" in css
+
+
+def test_selected_debug_timeline_controls_are_sandbox_only_ui() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-selected-debug-timeline"' in html
+    assert 'id="workbench-selected-debug-target"' in html
+    assert 'id="workbench-selected-debug-scenario"' in html
+    assert 'id="workbench-selected-debug-verdict"' in html
+    assert 'id="workbench-selected-debug-link-status"' in html
+    assert 'id="workbench-selected-debug-hardware"' in html
+    assert 'id="workbench-selected-debug-context"' in html
+    assert "Truth effect: none" in html
+    assert ".workbench-selected-debug-timeline-facts" in css
+    assert ".workbench-selected-debug-context" in css
 
 
 def test_js_wires_draft_derivation_node_selection_and_evidence_api() -> None:
@@ -236,6 +253,20 @@ def test_js_wires_hardware_evidence_v2_as_sandbox_only_selected_owner_packet() -
     assert "hardware_evidence_v2 truth_effect must be none" in js
     assert "Hardware evidence v2:" in js
     assert 'kind: "well-harness-workbench-hardware-evidence-inspector-v2"' in js
+    assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'truth_effect: "none"' in js
+
+
+def test_js_wires_selected_debug_timeline_as_sandbox_only_packet() -> None:
+    js = _js()
+
+    assert "function currentSelectedDebugTimelinePacket" in js
+    assert "function renderSelectedDebugTimeline" in js
+    assert "selected_debug_timeline" in js
+    assert "selected_debug_timeline_checksum" in js
+    assert "selected_debug_timeline truth_effect must be none" in js
+    assert "Selected debug timeline:" in js
+    assert 'kind: "well-harness-workbench-selected-debug-timeline"' in js
     assert 'candidate_state: "sandbox_candidate"' in js
     assert 'truth_effect: "none"' in js
 

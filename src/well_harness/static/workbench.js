@@ -7613,6 +7613,12 @@ function installEditableWorkbenchShell() {
   const diffModelHash = document.getElementById("workbench-diff-model-hash");
   const diffFirstDivergence = document.getElementById("workbench-diff-first-divergence");
   const timelineStrip = document.getElementById("workbench-sandbox-timeline-strip");
+  const selectedDebugTimelineTarget = document.getElementById("workbench-selected-debug-target");
+  const selectedDebugTimelineScenario = document.getElementById("workbench-selected-debug-scenario");
+  const selectedDebugTimelineVerdict = document.getElementById("workbench-selected-debug-verdict");
+  const selectedDebugTimelineLinkStatus = document.getElementById("workbench-selected-debug-link-status");
+  const selectedDebugTimelineHardware = document.getElementById("workbench-selected-debug-hardware");
+  const selectedDebugTimelineContext = document.getElementById("workbench-selected-debug-context");
   const handoffBtn = document.getElementById("workbench-generate-handoff-btn");
   const handoffStatus = document.getElementById("workbench-handoff-status");
   const linearHandoffOutput = document.getElementById("workbench-linear-handoff-output");
@@ -12177,6 +12183,139 @@ function installEditableWorkbenchShell() {
     return remaining;
   }
 
+  function selectedDebugTimelineVerdictValue() {
+    if (lastSandboxDiff && lastSandboxDiff.verdict) return lastSandboxDiff.verdict;
+    const rendered = diffVerdict && String(diffVerdict.textContent || "").trim();
+    return rendered || "not_run";
+  }
+
+  function selectedDebugTimelineState(verdict) {
+    if (verdict === "running") return "running";
+    if (["equivalent", "divergent", "invalid_model", "invalid_scenario"].includes(verdict)) {
+      return "linked_to_latest_diff";
+    }
+    return "selection_only";
+  }
+
+  function selectedDebugTimelineContextForTarget(target, binding) {
+    const selectedBinding = binding || (target && target.binding) || {};
+    if (!target || target.kind === "none") {
+      return {
+        target_kind: "none",
+        target_id: "none",
+        context_label: "No selected graph element.",
+        graph: {},
+        binding: normalizeInterfaceBinding(selectedBinding, "none", "none"),
+      };
+    }
+    if (target.kind === "edge" && selectedEdge) {
+      const payload = edgeInspectorPayload(selectedEdge);
+      return {
+        target_kind: "edge",
+        target_id: target.id,
+        context_label: `${payload.source_node_id} -> ${payload.target_node_id} / ${payload.signal_id}`,
+        graph: {
+          source_node_id: payload.source_node_id,
+          target_node_id: payload.target_node_id,
+          source_port_id: payload.source_port_id,
+          target_port_id: payload.target_port_id,
+          signal_id: payload.signal_id,
+          port_compatibility_status: payload.port_compatibility_status,
+          validation_issue: payload.validation_issue,
+          truth_effect: "none",
+        },
+        binding: normalizeInterfaceBinding(selectedBinding, "edge", target.id),
+      };
+    }
+    const payload = selectedNodePayload() || {};
+    return {
+      target_kind: "node",
+      target_id: payload.id || target.id || "unknown",
+      context_label: `${payload.op || "and"} / ${payload.ruleCount || "0"} rule(s) / ${payload.sourceRef || "unknown"}`,
+      graph: {
+        op: payload.op || "and",
+        rule_count: payload.ruleCount || "0",
+        source_ref: payload.sourceRef || "unknown",
+        hardware_evidence: payload.evidence || "evidence_gap",
+        truth_effect: "none",
+      },
+      binding: normalizeInterfaceBinding(selectedBinding, "node", payload.id || target.id || "unknown"),
+    };
+  }
+
+  function currentSelectedDebugTimelinePacket(state) {
+    const target = activeInterfaceBindingTarget();
+    const context = selectedDebugTimelineContextForTarget(target, target.binding);
+    const verdict = selectedDebugTimelineVerdictValue();
+    const binding = context.binding || normalizeInterfaceBinding({}, context.target_kind, context.target_id);
+    const gapFields = hardwareEvidenceV2GapFields(binding);
+    const latestDiff = lastSandboxDiff || null;
+    return {
+      kind: "well-harness-workbench-selected-debug-timeline",
+      version: 1,
+      target_kind: context.target_kind,
+      target_id: context.target_id,
+      owner_key: `${context.target_kind}:${context.target_id}`,
+      candidate_state: "sandbox_candidate",
+      workflow_state: state || "selection",
+      scenario_id: selectedWorkbenchScenarioId(),
+      scenario_metadata: currentWorkbenchScenarioMetadata(),
+      diff_verdict: verdict,
+      trace_link_status: selectedDebugTimelineState(verdict),
+      graph_context: context.graph,
+      context_label: context.context_label,
+      hardware_binding: binding,
+      hardware_overlay: {
+        hardware_id: binding.hardware_id,
+        connector: binding.connector,
+        cable: binding.cable,
+        port_local: binding.port_local,
+        port_peer: binding.port_peer,
+        evidence_status: binding.evidence_status,
+        evidence_gap_fields: gapFields,
+        truth_effect: "none",
+      },
+      latest_diff: latestDiff
+        ? {
+            verdict: latestDiff.verdict || "unknown",
+            scenario_id: latestDiff.scenario_id || selectedWorkbenchScenarioId(),
+            first_divergence: (
+              latestDiff.summary
+              && latestDiff.summary.first_divergence
+            ) || null,
+            truth_level_impact: "none",
+          }
+        : null,
+      truth_effect: "none",
+    };
+  }
+
+  function renderSelectedDebugTimeline(state) {
+    const packet = currentSelectedDebugTimelinePacket(state);
+    if (timelineStrip) {
+      timelineStrip.setAttribute("data-selected-target", packet.owner_key);
+      timelineStrip.setAttribute("data-debug-verdict", packet.diff_verdict);
+      timelineStrip.setAttribute("data-debug-state", packet.trace_link_status);
+      timelineStrip.setAttribute("data-debug-truth-effect", "none");
+    }
+    if (selectedDebugTimelineTarget) selectedDebugTimelineTarget.textContent = packet.owner_key;
+    if (selectedDebugTimelineScenario) selectedDebugTimelineScenario.textContent = packet.scenario_id;
+    if (selectedDebugTimelineVerdict) selectedDebugTimelineVerdict.textContent = packet.diff_verdict;
+    if (selectedDebugTimelineLinkStatus) {
+      selectedDebugTimelineLinkStatus.textContent = packet.trace_link_status;
+    }
+    if (selectedDebugTimelineHardware) {
+      const overlay = packet.hardware_overlay || {};
+      selectedDebugTimelineHardware.textContent =
+        `${overlay.hardware_id || "evidence_gap"} / ${overlay.connector || "evidence_gap"} / gaps=${(overlay.evidence_gap_fields || []).length}`;
+    }
+    if (selectedDebugTimelineContext) {
+      selectedDebugTimelineContext.textContent =
+        `${packet.context_label} · ${packet.trace_link_status} · truth_effect: none`;
+    }
+    return packet;
+  }
+
   function setTimelineState(state) {
     if (!timelineStrip) return;
     const items = Array.from(timelineStrip.querySelectorAll("li"));
@@ -12202,6 +12341,7 @@ function installEditableWorkbenchShell() {
       items[3] && items[3].setAttribute("data-step-state", "done");
       items[4] && items[4].setAttribute("data-step-state", "active");
     }
+    renderSelectedDebugTimeline(state);
   }
 
   function normalizeInspectorLogicNodeId(nodeId) {
@@ -12985,6 +13125,7 @@ function installEditableWorkbenchShell() {
       '<p class="workbench-inspector-truth-note">truth_effect: none</p>',
     ].join("");
     renderHardwareEvidenceV2Report(buildHardwareEvidenceV2Report(activeInterfaceBindingTarget(), []));
+    renderSelectedDebugTimeline("selection");
     renderRuleParameterEditor();
     renderInterfaceBindingEditor();
     renderHardwareBindingDiagnostics();
@@ -13010,6 +13151,7 @@ function installEditableWorkbenchShell() {
       activeInterfaceBindingTarget(),
       evidenceRowsForNode(hardwareEvidenceReport, payload.id),
     ));
+    renderSelectedDebugTimeline("selection");
     renderRuleParameterEditor();
     renderInterfaceBindingEditor();
     renderHardwareBindingDiagnostics();
@@ -13181,6 +13323,7 @@ function installEditableWorkbenchShell() {
     const ruleParameterSummary = buildRuleParameterSummary();
     const hardwarePalette = buildHardwarePaletteSummary();
     const hardwareEvidenceV2 = currentHardwareEvidenceV2Report();
+    const selectedDebugTimeline = currentSelectedDebugTimelinePacket("snapshot");
     const diagnosticRepairActions = repairActionLogSnapshot();
     return {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
@@ -13215,6 +13358,7 @@ function installEditableWorkbenchShell() {
       rule_parameter_summary: ruleParameterSummary,
       hardware_palette: hardwarePalette,
       hardware_evidence_v2: hardwareEvidenceV2,
+      selected_debug_timeline: selectedDebugTimeline,
     };
   }
 
@@ -13298,6 +13442,7 @@ function installEditableWorkbenchShell() {
       rule_parameter_summary: snapshot.rule_parameter_summary,
       hardware_palette: snapshot.hardware_palette,
       hardware_evidence_v2: snapshot.hardware_evidence_v2,
+      selected_debug_timeline: snapshot.selected_debug_timeline,
       changerequest_proof_packet: changeRequestProofPacket,
       draft_snapshot_manifest: buildDraftSnapshotManifestSummary(),
       selected_scenario_id: selectedWorkbenchScenarioId(),
@@ -13392,6 +13537,18 @@ function installEditableWorkbenchShell() {
       && payload.hardware_evidence_v2.truth_effect !== "none"
     ) {
       throw new Error("hardware_evidence_v2 truth_effect must be none");
+    }
+    if (
+      payload.selected_debug_timeline !== undefined
+      && (!payload.selected_debug_timeline || typeof payload.selected_debug_timeline !== "object" || Array.isArray(payload.selected_debug_timeline))
+    ) {
+      throw new Error("selected_debug_timeline must be an object when present");
+    }
+    if (
+      payload.selected_debug_timeline !== undefined
+      && payload.selected_debug_timeline.truth_effect !== "none"
+    ) {
+      throw new Error("selected_debug_timeline truth_effect must be none");
     }
     if (payload.typed_ports !== undefined && !Array.isArray(payload.typed_ports)) {
       throw new Error("typed_ports must be an array when present");
@@ -14094,6 +14251,8 @@ function installEditableWorkbenchShell() {
       sourceSnapshot.connector_pin_map || buildWorkbenchConnectorPinMap(hardwareBindings);
     const hardwareEvidenceV2 =
       sourceSnapshot.hardware_evidence_v2 || currentHardwareEvidenceV2Report();
+    const selectedDebugTimeline =
+      sourceSnapshot.selected_debug_timeline || currentSelectedDebugTimelinePacket("proof");
     const repairActions = repairActionLogSnapshotFromSource(sourceSnapshot.repair_action_log || []);
     const portContractSummary =
       sourceSnapshot.port_contract_summary || buildPortContractSummary(
@@ -14185,6 +14344,18 @@ function installEditableWorkbenchShell() {
         checksum: checksumEvidenceArchiveField(hardwareEvidenceV2),
         truth_effect: "none",
       },
+      selected_debug_timeline_summary: {
+        target: selectedDebugTimeline.owner_key || "none:none",
+        scenario_id: selectedDebugTimeline.scenario_id || selectedWorkbenchScenarioId(),
+        diff_verdict: selectedDebugTimeline.diff_verdict || "not_run",
+        trace_link_status: selectedDebugTimeline.trace_link_status || "selection_only",
+        hardware_id: (
+          selectedDebugTimeline.hardware_overlay
+          && selectedDebugTimeline.hardware_overlay.hardware_id
+        ) || "evidence_gap",
+        checksum: checksumEvidenceArchiveField(selectedDebugTimeline),
+        truth_effect: "none",
+      },
       selected_focus: diagnosticFocusSummary,
       diagnostic_focus: diagnosticFocusSummary,
       repair_action_log_summary: repairActionLogSummary,
@@ -14262,6 +14433,11 @@ function installEditableWorkbenchShell() {
     return `${summary.target || "none"} / ${summary.coverage_status || "missing"} / selected gaps=${summary.selected_gap_count || 0} / reference signals=${summary.reference_signal_count || 0}`;
   }
 
+  function proofPacketSelectedDebugTimelineText(packet) {
+    const summary = packet.selected_debug_timeline_summary || {};
+    return `${summary.target || "none"} / ${summary.scenario_id || "nominal_landing"} / ${summary.diff_verdict || "not_run"} / ${summary.trace_link_status || "selection_only"}`;
+  }
+
   function proofPacketDiagnosticFocusText(packet) {
     const focus = packet.selected_focus || packet.diagnostic_focus || {};
     if (focus.state !== "selected") return "none";
@@ -14294,6 +14470,7 @@ function installEditableWorkbenchShell() {
       "## Evidence Required",
       "- Editable draft JSON export.",
       "- Sandbox baseline diff report.",
+      "- Selected graph timeline/debug packet.",
       "- Hardware/interface binding draft evidence.",
       "- Hardware Evidence Inspector v2 selected-owner packet.",
       "- Interface matrix export.",
@@ -14327,6 +14504,7 @@ function installEditableWorkbenchShell() {
       `- Interface matrix validation: ${proofPacketInterfaceMatrixValidationText(packet)}`,
       `- Connector/pin map: ${proofPacketConnectorPinMapText(packet)}`,
       `- Hardware evidence v2: ${proofPacketHardwareEvidenceV2Text(packet)}`,
+      `- Selected debug timeline: ${proofPacketSelectedDebugTimelineText(packet)}`,
       `- Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
       `- Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
       `- Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
@@ -14354,6 +14532,7 @@ function installEditableWorkbenchShell() {
       `Interface matrix validation: ${proofPacketInterfaceMatrixValidationText(packet)}`,
       `Connector/pin map: ${proofPacketConnectorPinMapText(packet)}`,
       `Hardware evidence v2: ${proofPacketHardwareEvidenceV2Text(packet)}`,
+      `Selected debug timeline: ${proofPacketSelectedDebugTimelineText(packet)}`,
       `Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
       `Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
       `Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
@@ -14412,9 +14591,9 @@ function installEditableWorkbenchShell() {
 
   function runWorkbenchSandboxDiff() {
     if (!runSandboxBtn || typeof fetch !== "function") return Promise.resolve(null);
-    setTimelineState("running");
     runSandboxBtn.disabled = true;
     if (diffVerdict) diffVerdict.textContent = "running";
+    setTimelineState("running");
     let customSnapshot = null;
     try {
       customSnapshot = parseWorkbenchCustomSnapshot();
@@ -14545,6 +14724,8 @@ function installEditableWorkbenchShell() {
       modelJson.connector_pin_map || buildWorkbenchConnectorPinMap(hardwareBindings);
     const hardwareEvidenceV2 =
       modelJson.hardware_evidence_v2 || currentHardwareEvidenceV2Report();
+    const selectedDebugTimeline =
+      modelJson.selected_debug_timeline || currentSelectedDebugTimelinePacket("archive");
     const diagnosticFocus = modelJson.diagnostic_focus || currentDiagnosticFocusSummary();
     const diagnosticRepairActions = modelJson.repair_action_log || repairActionLogSnapshot();
     const typedPorts = modelJson.typed_ports || [];
@@ -14594,6 +14775,7 @@ function installEditableWorkbenchShell() {
       interface_matrix_validation: interfaceMatrixValidation,
       connector_pin_map: connectorPinMap,
       hardware_evidence_v2: hardwareEvidenceV2,
+      selected_debug_timeline: selectedDebugTimeline,
       diagnostic_focus: diagnosticFocus,
       repair_action_log: diagnosticRepairActions,
       typed_ports: typedPorts,
@@ -14629,6 +14811,7 @@ function installEditableWorkbenchShell() {
       interface_matrix_validation_checksum: checksumEvidenceArchiveField(interfaceMatrixValidation),
       connector_pin_map_checksum: checksumEvidenceArchiveField(connectorPinMap),
       hardware_evidence_v2_checksum: checksumEvidenceArchiveField(hardwareEvidenceV2),
+      selected_debug_timeline_checksum: checksumEvidenceArchiveField(selectedDebugTimeline),
       diagnostic_focus_checksum: checksumEvidenceArchiveField(diagnosticFocus),
       repair_action_log_checksum: checksumEvidenceArchiveField(diagnosticRepairActions),
       typed_ports_checksum: checksumEvidenceArchiveField(typedPorts),

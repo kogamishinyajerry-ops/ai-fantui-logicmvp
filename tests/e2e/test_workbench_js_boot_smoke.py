@@ -471,6 +471,73 @@ def test_workbench_hardware_evidence_v2_tracks_selected_node_and_edge(demo_serve
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_selected_debug_timeline_tracks_selection_diff_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.wait_for_selector("#workbench-selected-debug-timeline")
+    assert page.locator("#workbench-selected-debug-target").inner_text() == "node:logic1"
+    assert page.locator("#workbench-selected-debug-verdict").inner_text() == "not_run"
+    assert page.locator("#workbench-selected-debug-link-status").inner_text() == "selection_only"
+
+    page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
+    page.fill("#workbench-interface-hardware-id", "EDGE-LRU-DEBUG")
+    page.fill("#workbench-interface-cable", "EDGE-CBL-DEBUG")
+    page.fill("#workbench-interface-connector", "EDGE-J-DEBUG")
+    page.fill("#workbench-interface-port-local", "logic1:out")
+    page.fill("#workbench-interface-port-peer", "logic2:in")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+
+    assert page.locator("#workbench-selected-debug-target").inner_text() == "edge:edge_logic1_logic2"
+    assert "EDGE-LRU-DEBUG" in page.locator("#workbench-selected-debug-hardware").inner_text()
+    assert "logic1 -> logic2" in page.locator("#workbench-selected-debug-context").inner_text()
+
+    page.select_option("#workbench-sandbox-scenario-select", "nominal_landing")
+    page.click("#workbench-run-sandbox-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const verdict = document.getElementById('workbench-selected-debug-verdict')?.textContent.trim();
+          return ['equivalent', 'divergent', 'invalid_model', 'invalid_scenario'].includes(verdict);
+        }
+        """
+    )
+    assert (
+        page.locator("#workbench-sandbox-timeline-strip")
+        .get_attribute("data-selected-target")
+        == "edge:edge_logic1_logic2"
+    )
+    assert (
+        page.locator("#workbench-sandbox-timeline-strip")
+        .get_attribute("data-debug-truth-effect")
+        == "none"
+    )
+
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert draft["selected_debug_timeline"]["target_kind"] == "edge"
+    assert draft["selected_debug_timeline"]["target_id"] == "edge_logic1_logic2"
+    assert draft["selected_debug_timeline"]["scenario_id"] == "nominal_landing"
+    assert draft["selected_debug_timeline"]["hardware_overlay"]["hardware_id"] == "EDGE-LRU-DEBUG"
+    assert draft["selected_debug_timeline"]["truth_effect"] == "none"
+
+    page.click("#workbench-generate-handoff-btn")
+    assert "Selected debug timeline:" in page.locator("#workbench-pr-proof-output").input_value()
+    assert "Selected debug timeline:" in page.locator("#workbench-linear-handoff-output").input_value()
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert errors == [], f"page JS errors: {errors}"
+    assert archive["selected_debug_timeline"]["target_kind"] == "edge"
+    assert archive["selected_debug_timeline"]["truth_effect"] == "none"
+    assert archive["changerequest_proof_packet"]["selected_debug_timeline_summary"]["target"] == "edge:edge_logic1_logic2"
+    assert archive["checksums"]["selected_debug_timeline_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_handoff_archive(
     demo_server: str, browser: Any
 ) -> None:

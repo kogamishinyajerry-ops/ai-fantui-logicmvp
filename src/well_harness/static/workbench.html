@@ -1344,6 +1344,37 @@
             <li data-step-state="idle">View diff</li>
             <li data-step-state="idle">ChangeRequest packet</li>
           </ol>
+          <section
+            id="workbench-selected-debug-timeline"
+            class="workbench-selected-debug-timeline"
+            aria-labelledby="workbench-selected-debug-timeline-title"
+          >
+            <div class="workbench-selected-debug-timeline-header">
+              <span id="workbench-selected-debug-timeline-title">Selected Debug Timeline</span>
+              <strong id="workbench-selected-debug-target">node:logic1</strong>
+            </div>
+            <dl class="workbench-selected-debug-timeline-facts">
+              <div>
+                <dt>Scenario</dt>
+                <dd id="workbench-selected-debug-scenario">nominal_landing</dd>
+              </div>
+              <div>
+                <dt>Diff state</dt>
+                <dd id="workbench-selected-debug-verdict">not_run</dd>
+              </div>
+              <div>
+                <dt>Trace link</dt>
+                <dd id="workbench-selected-debug-link-status">selection_only</dd>
+              </div>
+              <div>
+                <dt>Hardware overlay</dt>
+                <dd id="workbench-selected-debug-hardware">evidence_gap</dd>
+              </div>
+            </dl>
+            <p id="workbench-selected-debug-context" class="workbench-selected-debug-context">
+              Select a graph node or edge to bind timeline/debug context. Truth effect: none.
+            </p>
+          </section>
 
           <details class="workbench-reference-sample-pack">
             <summary>Reference sample pack · read-only SVG circuit</summary>
