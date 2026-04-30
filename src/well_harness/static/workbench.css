@@ -5147,6 +5147,22 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
     0 0 0 2px rgba(125, 215, 194, 0.24),
     0 12px 32px rgba(0, 0, 0, 0.35);
 }
+.workbench-selection-marquee {
+  position: absolute;
+  left: var(--marquee-left, 0%);
+  top: var(--marquee-top, 0%);
+  width: var(--marquee-width, 0%);
+  height: var(--marquee-height, 0%);
+  display: none;
+  border: 1px solid rgba(125, 215, 194, 0.88);
+  background: rgba(125, 215, 194, 0.12);
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 4;
+}
+.workbench-selection-marquee[data-active="true"] {
+  display: block;
+}
 .workbench-editable-node span {
   font-size: 1.02rem;
   font-weight: 800;

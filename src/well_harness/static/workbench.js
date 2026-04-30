@@ -7640,6 +7640,10 @@ function installEditableWorkbenchShell() {
   let selectedNode = nodes.find((node) => node.getAttribute("aria-pressed") === "true") || nodes[0];
   let selectedNodeIds = new Set(selectedNode ? [selectedNode.getAttribute("data-editable-node-id") || ""] : []);
   let selectedEdge = null;
+  let lassoDragState = null;
+  let groupDragState = null;
+  let selectionMarquee = null;
+  let suppressNextNodeClick = false;
   let hardwareEvidenceReport = null;
   let lastSandboxDiff = null;
   let currentEditorTool = "select";
@@ -8429,6 +8433,120 @@ function installEditableWorkbenchShell() {
     ));
   }
 
+  function clampCanvasPercent(value) {
+    const numeric = Number.parseFloat(value);
+    if (!Number.isFinite(numeric)) return 50;
+    return Math.max(4, Math.min(96, numeric));
+  }
+
+  function formatCanvasPercent(value) {
+    return `${clampCanvasPercent(value).toFixed(2)}%`;
+  }
+
+  function canvasPointPercent(event) {
+    if (!canvas || !event) return { x: 50, y: 50 };
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return { x: 50, y: 50 };
+    return {
+      x: clampCanvasPercent(((event.clientX - rect.left) / rect.width) * 100),
+      y: clampCanvasPercent(((event.clientY - rect.top) / rect.height) * 100),
+    };
+  }
+
+  function setEditableNodePosition(node, x, y) {
+    if (!node) return;
+    node.style.setProperty("--node-x", formatCanvasPercent(x));
+    node.style.setProperty("--node-y", formatCanvasPercent(y));
+  }
+
+  function isSelectionModifier(event) {
+    return Boolean(event && (event.shiftKey || event.metaKey || event.ctrlKey));
+  }
+
+  function ensureSelectionMarquee() {
+    if (!canvas) return null;
+    if (!selectionMarquee) {
+      selectionMarquee = document.createElement("div");
+      selectionMarquee.className = "workbench-selection-marquee";
+      selectionMarquee.setAttribute("aria-hidden", "true");
+      canvas.appendChild(selectionMarquee);
+    }
+    return selectionMarquee;
+  }
+
+  function setSelectionMarqueeRect(rect) {
+    const marquee = ensureSelectionMarquee();
+    if (!marquee || !rect) return;
+    marquee.style.setProperty("--marquee-left", `${rect.left}%`);
+    marquee.style.setProperty("--marquee-top", `${rect.top}%`);
+    marquee.style.setProperty("--marquee-width", `${rect.width}%`);
+    marquee.style.setProperty("--marquee-height", `${rect.height}%`);
+    marquee.setAttribute("data-active", "true");
+  }
+
+  function hideSelectionMarquee() {
+    if (selectionMarquee) selectionMarquee.setAttribute("data-active", "false");
+  }
+
+  function lassoRectFromPoints(start, current) {
+    const left = Math.min(start.x, current.x);
+    const right = Math.max(start.x, current.x);
+    const top = Math.min(start.y, current.y);
+    const bottom = Math.max(start.y, current.y);
+    return {
+      left,
+      right,
+      top,
+      bottom,
+      width: right - left,
+      height: bottom - top,
+    };
+  }
+
+  function lassoNodesWithinRect(rect) {
+    if (!rect) return [];
+    refreshEditableNodes();
+    return nodes.filter((node) => {
+      const position = editableNodePosition(node);
+      return (
+        position.x >= rect.left
+        && position.x <= rect.right
+        && position.y >= rect.top
+        && position.y <= rect.bottom
+      );
+    });
+  }
+
+  function applyLassoSelection(matchedNodes, additive) {
+    const matches = Array.isArray(matchedNodes) ? matchedNodes : [];
+    if (!additive) selectedNodeIds = new Set();
+    for (const node of matches) {
+      const nodeId = editableNodeId(node);
+      if (nodeId) selectedNodeIds.add(nodeId);
+    }
+    if (matches.length) {
+      selectedNode = matches[matches.length - 1];
+    } else if (!additive && selectedNodeIds.size === 0) {
+      selectedNode = null;
+    }
+    selectedEdge = null;
+    syncEditableNodeSelectionAttributes();
+    if (edgeSvg) {
+      for (const path of Array.from(edgeSvg.querySelectorAll("[data-editable-edge-id]"))) {
+        path.setAttribute("aria-pressed", "false");
+      }
+    }
+    renderInspector();
+    validateEditableGraph();
+    updateEditableDraftHash();
+    persistDraft();
+    if (graphValidationStatus) {
+      const draftCount = matches.filter((node) => node.getAttribute("data-draft-node") === "true").length;
+      graphValidationStatus.textContent =
+        `Graph validation: lasso selected ${matches.length} node(s), ${draftCount} draft movable. Truth effect: none.`;
+    }
+  }
+
   function editableNodeState(node) {
     const state = {
       id: node.getAttribute("data-editable-node-id") || "",
@@ -8910,6 +9028,121 @@ function installEditableWorkbenchShell() {
     validateEditableGraph();
     updateEditableDraftHash();
     persistDraft();
+  }
+
+  function beginEditableGroupDrag(event, node) {
+    if (!event || event.button !== 0 || !node) return;
+    if (currentEditorTool !== "select" || isSelectionModifier(event)) return;
+    if (node.getAttribute("data-draft-node") !== "true") return;
+    if (!selectedNodeIds.has(editableNodeId(node))) {
+      setSingleEditableNodeSelection(node);
+      renderInspector();
+    }
+    const draftNodesToMove = selectedEditableDraftNodes();
+    if (!draftNodesToMove.length) return;
+    groupDragState = {
+      pointerId: event.pointerId,
+      start: canvasPointPercent(event),
+      moved: false,
+      historyRecorded: false,
+      nodes: draftNodesToMove.map((candidate) => ({
+        node: candidate,
+        id: editableNodeId(candidate),
+        position: editableNodePosition(candidate),
+      })),
+    };
+    node.setPointerCapture(event.pointerId);
+  }
+
+  function updateEditableGroupDrag(event) {
+    if (!groupDragState || !event || event.pointerId !== groupDragState.pointerId) return;
+    const current = canvasPointPercent(event);
+    const dx = current.x - groupDragState.start.x;
+    const dy = current.y - groupDragState.start.y;
+    if (!groupDragState.moved && Math.abs(dx) + Math.abs(dy) < 0.8) return;
+    event.preventDefault();
+    if (!groupDragState.historyRecorded) {
+      recordEditableHistory(groupDragState.nodes.length > 1 ? "group_move_nodes" : "move_node");
+      groupDragState.historyRecorded = true;
+    }
+    groupDragState.moved = true;
+    shell.setAttribute("data-draft-state", "derived");
+    for (const item of groupDragState.nodes) {
+      setEditableNodePosition(
+        item.node,
+        item.position.x + dx,
+        item.position.y + dy,
+      );
+    }
+    renderEditableEdges();
+    updateEditableDraftHash();
+    if (graphValidationStatus) {
+      graphValidationStatus.textContent =
+        `Graph validation: moving ${groupDragState.nodes.length} draft node(s). Truth effect: none.`;
+    }
+  }
+
+  function endEditableGroupDrag(event) {
+    if (!groupDragState || !event || event.pointerId !== groupDragState.pointerId) return;
+    const movedCount = groupDragState.nodes.length;
+    const didMove = groupDragState.moved;
+    groupDragState = null;
+    if (!didMove) return;
+    suppressNextNodeClick = true;
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate group move pending";
+    validateEditableGraph();
+    updateEditableDraftHash();
+    persistDraft();
+    if (graphValidationStatus) {
+      graphValidationStatus.textContent =
+        `Graph validation: group moved ${movedCount} draft node(s). Truth effect: none.`;
+    }
+    window.setTimeout(() => { suppressNextNodeClick = false; }, 0);
+  }
+
+  function beginCanvasLasso(event) {
+    if (!canvas || !event || event.button !== 0 || currentEditorTool !== "select") return;
+    const target = event.target;
+    if (
+      target instanceof Element
+      && (
+        target.closest(".workbench-editable-node")
+        || target.closest("[data-editable-edge-id]")
+        || target.closest("input, textarea, select, button")
+      )
+    ) {
+      return;
+    }
+    const start = canvasPointPercent(event);
+    lassoDragState = {
+      pointerId: event.pointerId,
+      start,
+      additive: isSelectionModifier(event),
+      active: false,
+    };
+    canvas.setPointerCapture(event.pointerId);
+  }
+
+  function updateCanvasLasso(event) {
+    if (!lassoDragState || !event || event.pointerId !== lassoDragState.pointerId) return;
+    const current = canvasPointPercent(event);
+    const rect = lassoRectFromPoints(lassoDragState.start, current);
+    if (!lassoDragState.active && rect.width + rect.height < 1.2) return;
+    event.preventDefault();
+    lassoDragState.active = true;
+    setSelectionMarqueeRect(rect);
+  }
+
+  function endCanvasLasso(event) {
+    if (!lassoDragState || !event || event.pointerId !== lassoDragState.pointerId) return;
+    const current = canvasPointPercent(event);
+    const rect = lassoRectFromPoints(lassoDragState.start, current);
+    const shouldApply = lassoDragState.active && (rect.width + rect.height >= 1.2);
+    const additive = lassoDragState.additive;
+    lassoDragState = null;
+    hideSelectionMarquee();
+    if (!shouldApply) return;
+    applyLassoSelection(lassoNodesWithinRect(rect), additive);
   }
 
   function connectEditableEdge(sourceId, targetId) {
@@ -10403,9 +10636,34 @@ function installEditableWorkbenchShell() {
   function attachEditableNodeHandler(node) {
     if (!node || node.getAttribute("data-node-handler-attached") === "true") return;
     node.setAttribute("data-node-handler-attached", "true");
-    node.addEventListener("click", (event) => {
-      selectNode(node, { multiSelect: Boolean(event.shiftKey || event.metaKey || event.ctrlKey) });
+    node.addEventListener("pointerdown", (event) => {
+      beginEditableGroupDrag(event, node);
     });
+    node.addEventListener("pointermove", (event) => {
+      updateEditableGroupDrag(event);
+    });
+    node.addEventListener("pointerup", (event) => {
+      endEditableGroupDrag(event);
+    });
+    node.addEventListener("pointercancel", (event) => {
+      endEditableGroupDrag(event);
+    });
+    node.addEventListener("click", (event) => {
+      if (suppressNextNodeClick) {
+        event.preventDefault();
+        event.stopPropagation();
+        suppressNextNodeClick = false;
+        return;
+      }
+      selectNode(node, { multiSelect: isSelectionModifier(event) });
+    });
+  }
+
+  if (canvas) {
+    canvas.addEventListener("pointerdown", (event) => beginCanvasLasso(event));
+    canvas.addEventListener("pointermove", (event) => updateCanvasLasso(event));
+    canvas.addEventListener("pointerup", (event) => endCanvasLasso(event));
+    canvas.addEventListener("pointercancel", (event) => endCanvasLasso(event));
   }
 
   restoreDraft();
