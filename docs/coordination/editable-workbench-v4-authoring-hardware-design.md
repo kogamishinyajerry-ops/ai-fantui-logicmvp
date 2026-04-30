@@ -18,7 +18,7 @@ controlled ChangeRequest handoff.
 
 - JER-205: Workbench v4 authoring roadmap and acceptance model (Done)
 - JER-206: Component library and reusable subsystem templates v1 (Done)
-- JER-207: Group/subsystem node editor v1
+- JER-207: Group/subsystem node editor v1 (Done)
 - JER-208: Hardware interface design model v1
 - JER-209: Connector/pin map editor v1
 - JER-210: Hardware evidence inspector v2
@@ -92,6 +92,24 @@ The slice remains sandbox-only:
 - template insert does not mutate certified baseline nodes;
 - controller truth, frozen adapters, frozen YAML, and C919 packets are untouched;
 - evidence archive output includes a component-library checksum for review
+  reproducibility.
+
+## JER-207 Closure Note
+
+JER-207 delivers subsystem grouping as the second v4 authoring primitive. The
+workbench can now group selected draft nodes into a named subsystem container,
+rename that container, and ungroup it while preserving the original nodes,
+ports, and draft edges. The canvas renders a subsystem overlay, and the right
+inspector exposes group/rename/ungroup controls.
+
+The slice remains sandbox-only:
+
+- grouping writes `subsystem_groups` metadata and node-side `subsystem_group`
+  provenance only;
+- group operations do not rewrite `draftEdges`, typed ports, controller truth,
+  adapters, hardware YAML, or C919 packets;
+- undo/redo uses the existing editable history snapshots;
+- evidence archive output includes a subsystem-group checksum for review
   reproducibility.
 
 ## JER-205 Sequencing Contract

@@ -557,6 +557,8 @@
               <button type="button" data-editor-tool="select" aria-pressed="true" title="Select">⌖</button>
               <button type="button" data-editor-tool="node" aria-pressed="false" title="Add node">＋</button>
               <button type="button" data-editor-tool="duplicate" aria-pressed="false" title="Duplicate draft node">⧉</button>
+              <button type="button" data-editor-tool="group" aria-pressed="false" title="Group selected draft nodes">▣</button>
+              <button type="button" data-editor-tool="ungroup" aria-pressed="false" title="Ungroup selected subsystem">□</button>
               <button type="button" data-editor-tool="edge" aria-pressed="false" title="Connect">↔</button>
               <button type="button" data-editor-tool="remove" aria-pressed="false" title="Remove draft node">−</button>
               <button type="button" data-editor-tool="disconnect" aria-pressed="false" title="Disconnect edge">⨯</button>
@@ -739,6 +741,28 @@
                   <dd>none</dd>
                 </div>
               </dl>
+              <section
+                id="workbench-subsystem-editor"
+                class="workbench-subsystem-editor"
+                aria-labelledby="workbench-subsystem-title"
+              >
+                <div class="workbench-inspector-header">
+                  <span id="workbench-subsystem-title">Subsystem</span>
+                  <strong id="workbench-subsystem-owner">none</strong>
+                </div>
+                <label class="workbench-inspector-field" for="workbench-subsystem-name">
+                  <span>Subsystem name</span>
+                  <input id="workbench-subsystem-name" type="text" value="Draft subsystem">
+                </label>
+                <div class="workbench-subsystem-actions">
+                  <button id="workbench-create-subsystem-btn" type="button" class="workbench-editable-primary">Group</button>
+                  <button id="workbench-rename-subsystem-btn" type="button" class="workbench-editable-primary">Rename</button>
+                  <button id="workbench-ungroup-subsystem-btn" type="button" class="workbench-editable-primary">Ungroup</button>
+                </div>
+                <p id="workbench-subsystem-status" class="workbench-handoff-status">
+                  Subsystem edits are sandbox metadata only. Truth effect: none.
+                </p>
+              </section>
               <div
                 id="workbench-inspector-evidence-summary"
                 class="workbench-inspector-evidence-summary"

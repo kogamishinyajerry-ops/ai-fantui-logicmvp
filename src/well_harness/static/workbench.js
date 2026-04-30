@@ -7585,6 +7585,12 @@ function installEditableWorkbenchShell() {
   const ruleThresholdInput = document.getElementById("workbench-rule-threshold");
   const applyRuleParameterBtn = document.getElementById("workbench-apply-rule-parameter-btn");
   const ruleParameterStatus = document.getElementById("workbench-rule-parameter-status");
+  const subsystemNameInput = document.getElementById("workbench-subsystem-name");
+  const subsystemOwner = document.getElementById("workbench-subsystem-owner");
+  const createSubsystemBtn = document.getElementById("workbench-create-subsystem-btn");
+  const renameSubsystemBtn = document.getElementById("workbench-rename-subsystem-btn");
+  const ungroupSubsystemBtn = document.getElementById("workbench-ungroup-subsystem-btn");
+  const subsystemStatus = document.getElementById("workbench-subsystem-status");
   const evidenceSlot = document.getElementById("workbench-inspector-evidence-status");
   const signalCountSlot = document.getElementById("workbench-inspector-signal-count");
   const sourceRefSlot = document.getElementById("workbench-inspector-source-ref");
@@ -7681,6 +7687,8 @@ function installEditableWorkbenchShell() {
   let nextDraftNodeIndex = 1;
   let selectedCatalogOp = "and";
   let lastComponentTemplateId = "";
+  let nextSubsystemGroupIndex = 1;
+  let subsystemGroups = [];
   let draftEdges = [
     { id: "edge_logic1_logic2", source: "logic1", target: "logic2" },
     { id: "edge_logic2_logic3", source: "logic2", target: "logic3" },
@@ -10096,6 +10104,7 @@ function installEditableWorkbenchShell() {
   function selectedNodePayload() {
     if (!selectedNode) return null;
     const nodeId = selectedNode.getAttribute("data-editable-node-id") || "";
+    const subsystemGroup = nodeSubsystemMetadata(selectedNode);
     const payload = {
       id: nodeId,
       label: selectedNode.getAttribute("data-node-label") || "",
@@ -10109,6 +10118,9 @@ function installEditableWorkbenchShell() {
       op_catalog_version: editableOperationCatalogVersion,
       hardware_binding: nodeInterfaceBinding(selectedNode),
     };
+    if (subsystemGroup) {
+      payload.subsystem_group = subsystemGroup;
+    }
     if (nodePortContractTouched(selectedNode)) {
       payload.port_contract = nodePortContract(selectedNode);
     }
@@ -10453,6 +10465,313 @@ function installEditableWorkbenchShell() {
     }
   }
 
+  function normalizeSubsystemGroupName(value, fallbackIndex) {
+    const text = String(value === null || value === undefined ? "" : value).trim();
+    return text || `Draft subsystem ${fallbackIndex || 1}`;
+  }
+
+  function normalizeSubsystemGroupRecord(record, fallbackIndex) {
+    if (!record || typeof record !== "object" || Array.isArray(record)) return null;
+    const id = String(record.id || record.group_id || record.groupId || `subsystem_${fallbackIndex || 1}`).trim();
+    if (!id) return null;
+    const nodeIds = Array.isArray(record.node_ids || record.nodeIds)
+      ? record.node_ids || record.nodeIds
+      : [];
+    const uniqueNodeIds = [];
+    for (const nodeId of nodeIds) {
+      const normalized = String(nodeId || "").trim();
+      if (normalized && uniqueNodeIds.indexOf(normalized) === -1) uniqueNodeIds.push(normalized);
+    }
+    return {
+      id,
+      name: normalizeSubsystemGroupName(record.name || record.label, fallbackIndex),
+      node_ids: uniqueNodeIds,
+      created_at: String(record.created_at || record.createdAt || "browser_local_draft"),
+      candidate_state: "sandbox_candidate",
+      source_ref: String(record.source_ref || record.sourceRef || `ui_draft.subsystem_group.${id}`),
+      truth_effect: "none",
+    };
+  }
+
+  function normalizeSubsystemGroups(records) {
+    const normalized = [];
+    const usedIds = new Set();
+    for (const record of Array.isArray(records) ? records : []) {
+      const group = normalizeSubsystemGroupRecord(record, normalized.length + 1);
+      if (!group || usedIds.has(group.id)) continue;
+      usedIds.add(group.id);
+      normalized.push(group);
+    }
+    return normalized;
+  }
+
+  function subsystemGroupById(groupId) {
+    const id = String(groupId || "").trim();
+    return subsystemGroups.find((group) => group.id === id) || null;
+  }
+
+  function nodeSubsystemMetadata(node) {
+    const groupId = node && node.getAttribute("data-subsystem-id");
+    if (!groupId) return null;
+    const group = subsystemGroupById(groupId);
+    return {
+      group_id: groupId,
+      name: group ? group.name : node.getAttribute("data-subsystem-label") || groupId,
+      source_ref: group ? group.source_ref : `ui_draft.subsystem_group.${groupId}`,
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    };
+  }
+
+  function clearNodeSubsystemMetadata(node) {
+    if (!node) return;
+    node.removeAttribute("data-subsystem-id");
+    node.removeAttribute("data-subsystem-label");
+  }
+
+  function setNodeSubsystemMetadata(node, metadata) {
+    if (!node || !metadata || typeof metadata !== "object") {
+      clearNodeSubsystemMetadata(node);
+      return;
+    }
+    const groupId = String(metadata.group_id || metadata.groupId || metadata.id || "").trim();
+    if (!groupId) {
+      clearNodeSubsystemMetadata(node);
+      return;
+    }
+    const group = subsystemGroupById(groupId);
+    node.setAttribute("data-subsystem-id", groupId);
+    node.setAttribute(
+      "data-subsystem-label",
+      group ? group.name : String(metadata.name || metadata.label || groupId),
+    );
+  }
+
+  function subsystemGroupsFromNodeStates(nodeStates) {
+    const groupsById = new Map();
+    for (const nodeState of Array.isArray(nodeStates) ? nodeStates : []) {
+      if (!nodeState || typeof nodeState !== "object") continue;
+      const metadata = nodeState.subsystem_group || nodeState.subsystemGroup;
+      if (!metadata || typeof metadata !== "object") continue;
+      const groupId = String(metadata.group_id || metadata.groupId || metadata.id || "").trim();
+      const nodeId = String(nodeState.id || "").trim();
+      if (!groupId || !nodeId) continue;
+      const existing = groupsById.get(groupId) || {
+        id: groupId,
+        name: metadata.name || metadata.label || groupId,
+        node_ids: [],
+        source_ref: metadata.source_ref || metadata.sourceRef || `ui_draft.subsystem_group.${groupId}`,
+        truth_effect: "none",
+      };
+      if (existing.node_ids.indexOf(nodeId) === -1) existing.node_ids.push(nodeId);
+      groupsById.set(groupId, existing);
+    }
+    return Array.from(groupsById.values());
+  }
+
+  function syncSubsystemNodeAttributes() {
+    refreshEditableNodes();
+    const draftNodeIds = new Set(
+      nodes
+        .filter((node) => node.getAttribute("data-draft-node") === "true")
+        .map((node) => editableNodeId(node))
+        .filter(Boolean),
+    );
+    const normalizedGroups = normalizeSubsystemGroups(subsystemGroups)
+      .map((group) => ({
+        ...group,
+        node_ids: group.node_ids
+          .filter((nodeId) => draftNodeIds.has(nodeId))
+          .filter((nodeId, index, all) => all.indexOf(nodeId) === index),
+      }))
+      .filter((group) => group.node_ids.length > 0);
+    const membership = new Map();
+    for (const group of normalizedGroups) {
+      for (const nodeId of group.node_ids) membership.set(nodeId, group);
+    }
+    subsystemGroups = normalizedGroups;
+    for (const node of nodes) {
+      const group = membership.get(editableNodeId(node));
+      if (group) {
+        setNodeSubsystemMetadata(node, { group_id: group.id, name: group.name });
+      } else {
+        clearNodeSubsystemMetadata(node);
+      }
+    }
+    return subsystemGroups;
+  }
+
+  function selectedSubsystemGroup() {
+    const selectedDraftNodes = selectedEditableDraftNodes();
+    const selectedGroupIds = selectedDraftNodes
+      .map((node) => node.getAttribute("data-subsystem-id") || "")
+      .filter(Boolean);
+    const activeNodeGroupId = selectedNode && selectedNode.getAttribute("data-subsystem-id");
+    const groupId = activeNodeGroupId || selectedGroupIds[0] || "";
+    return subsystemGroupById(groupId);
+  }
+
+  function subsystemGroupsSnapshot() {
+    return syncSubsystemNodeAttributes().map((group) => ({ ...group, node_ids: [...group.node_ids] }));
+  }
+
+  function nextSubsystemGroupId() {
+    while (subsystemGroups.some((group) => group.id === `subsystem_${nextSubsystemGroupIndex}`)) {
+      nextSubsystemGroupIndex += 1;
+    }
+    const groupId = `subsystem_${nextSubsystemGroupIndex}`;
+    nextSubsystemGroupIndex += 1;
+    return groupId;
+  }
+
+  function renderSubsystemOverlays() {
+    if (!canvas) return;
+    for (const existing of Array.from(canvas.querySelectorAll(".workbench-subsystem-overlay"))) {
+      existing.remove();
+    }
+    const groups = subsystemGroupsSnapshot();
+    for (const group of groups) {
+      const groupNodes = group.node_ids
+        .map((nodeId) => nodes.find((node) => editableNodeId(node) === nodeId))
+        .filter(Boolean);
+      if (!groupNodes.length) continue;
+      const positions = groupNodes.map((node) => editableNodePosition(node));
+      const minX = Math.max(2, Math.min(...positions.map((position) => position.x)) - 10);
+      const maxX = Math.min(98, Math.max(...positions.map((position) => position.x)) + 10);
+      const minY = Math.max(4, Math.min(...positions.map((position) => position.y)) - 9);
+      const maxY = Math.min(96, Math.max(...positions.map((position) => position.y)) + 9);
+      const overlay = document.createElement("div");
+      overlay.className = "workbench-subsystem-overlay";
+      overlay.setAttribute("data-subsystem-id", group.id);
+      overlay.setAttribute("data-truth-effect", "none");
+      overlay.style.setProperty("--subsystem-left", `${minX}%`);
+      overlay.style.setProperty("--subsystem-top", `${minY}%`);
+      overlay.style.setProperty("--subsystem-width", `${Math.max(8, maxX - minX)}%`);
+      overlay.style.setProperty("--subsystem-height", `${Math.max(8, maxY - minY)}%`);
+      const label = document.createElement("span");
+      label.textContent = group.name;
+      overlay.appendChild(label);
+      canvas.appendChild(overlay);
+    }
+  }
+
+  function renderSubsystemEditor() {
+    const selectedDraftNodes = selectedEditableDraftNodes();
+    const group = selectedSubsystemGroup();
+    if (subsystemOwner) {
+      subsystemOwner.textContent = group
+        ? `${group.name} · ${group.node_ids.length}`
+        : `${selectedDraftNodes.length} draft selected`;
+    }
+    if (subsystemNameInput) {
+      subsystemNameInput.value = group ? group.name : normalizeSubsystemGroupName("", subsystemGroups.length + 1);
+    }
+    if (createSubsystemBtn) createSubsystemBtn.disabled = selectedDraftNodes.length < 2;
+    if (renameSubsystemBtn) renameSubsystemBtn.disabled = !group;
+    if (ungroupSubsystemBtn) ungroupSubsystemBtn.disabled = !group;
+    if (subsystemStatus) {
+      subsystemStatus.textContent = group
+        ? `Subsystem ${group.id}: ${group.node_ids.length} draft node(s). Truth effect: none.`
+        : "Select two or more draft nodes to create a subsystem. Truth effect: none.";
+    }
+  }
+
+  function groupSelectedDraftNodes() {
+    const selectedDraftNodes = selectedEditableDraftNodes();
+    if (selectedDraftNodes.length < 2) {
+      if (subsystemStatus) {
+        subsystemStatus.textContent = "Select at least two draft nodes before grouping. Truth effect: none.";
+      }
+      return null;
+    }
+    recordEditableHistory("create_subsystem_group");
+    const nodeIds = selectedDraftNodes.map((node) => editableNodeId(node)).filter(Boolean);
+    const nodeIdSet = new Set(nodeIds);
+    subsystemGroups = subsystemGroups
+      .map((group) => ({
+        ...group,
+        node_ids: group.node_ids.filter((nodeId) => !nodeIdSet.has(nodeId)),
+      }))
+      .filter((group) => group.node_ids.length > 0);
+    const groupId = nextSubsystemGroupId();
+    const group = normalizeSubsystemGroupRecord({
+      id: groupId,
+      name: subsystemNameInput && subsystemNameInput.value,
+      node_ids: nodeIds,
+      source_ref: `ui_draft.subsystem_group.${groupId}`,
+      truth_effect: "none",
+    }, subsystemGroups.length + 1);
+    subsystemGroups.push(group);
+    shell.setAttribute("data-draft-state", "derived");
+    syncSubsystemNodeAttributes();
+    renderEditableEdges();
+    renderInspector();
+    validateEditableGraph();
+    updateEditableDraftHash();
+    persistDraft();
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate subsystem group pending";
+    if (subsystemStatus) {
+      subsystemStatus.textContent =
+        `Created ${group.name} with ${group.node_ids.length} draft node(s). Truth effect: none.`;
+    }
+    return group;
+  }
+
+  function renameSelectedSubsystemGroup() {
+    const group = selectedSubsystemGroup();
+    if (!group) {
+      if (subsystemStatus) subsystemStatus.textContent = "Select a subsystem before renaming.";
+      return null;
+    }
+    recordEditableHistory("rename_subsystem_group");
+    const nextName = normalizeSubsystemGroupName(
+      subsystemNameInput && subsystemNameInput.value,
+      subsystemGroups.indexOf(group) + 1,
+    );
+    subsystemGroups = subsystemGroups.map((candidate) => (
+      candidate.id === group.id ? { ...candidate, name: nextName } : candidate
+    ));
+    shell.setAttribute("data-draft-state", "derived");
+    syncSubsystemNodeAttributes();
+    renderEditableEdges();
+    renderInspector();
+    updateEditableDraftHash();
+    persistDraft();
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate subsystem rename pending";
+    if (subsystemStatus) {
+      subsystemStatus.textContent = `Renamed subsystem ${group.id} to ${nextName}. Truth effect: none.`;
+    }
+    return subsystemGroupById(group.id);
+  }
+
+  function ungroupSelectedSubsystem() {
+    const group = selectedSubsystemGroup();
+    if (!group) {
+      if (subsystemStatus) subsystemStatus.textContent = "Select a subsystem before ungrouping.";
+      return null;
+    }
+    recordEditableHistory("ungroup_subsystem_group");
+    const groupNodeIds = new Set(group.node_ids);
+    subsystemGroups = subsystemGroups.filter((candidate) => candidate.id !== group.id);
+    selectedNodeIds = new Set(Array.from(groupNodeIds).filter((nodeId) => (
+      nodes.some((node) => editableNodeId(node) === nodeId)
+    )));
+    selectedNode = nodes.find((node) => selectedNodeIds.has(editableNodeId(node))) || selectedNode;
+    shell.setAttribute("data-draft-state", "derived");
+    syncSubsystemNodeAttributes();
+    syncEditableNodeSelectionAttributes();
+    renderEditableEdges();
+    renderInspector();
+    validateEditableGraph();
+    updateEditableDraftHash();
+    persistDraft();
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate subsystem ungroup pending";
+    if (subsystemStatus) {
+      subsystemStatus.textContent = `Ungrouped ${group.name}. Nodes, ports, and edges preserved.`;
+    }
+    return group;
+  }
+
   function nodeComponentTemplateMetadata(node) {
     const templateId = node && node.getAttribute("data-component-template-id");
     if (!templateId) return null;
@@ -10496,6 +10815,7 @@ function installEditableWorkbenchShell() {
 
   function editableNodeState(node) {
     const componentTemplate = nodeComponentTemplateMetadata(node);
+    const subsystemGroup = nodeSubsystemMetadata(node);
     const state = {
       id: node.getAttribute("data-editable-node-id") || "",
       label: node.getAttribute("data-node-label") || "",
@@ -10521,6 +10841,9 @@ function installEditableWorkbenchShell() {
     if (componentTemplate) {
       state.component_template = componentTemplate;
     }
+    if (subsystemGroup) {
+      state.subsystem_group = subsystemGroup;
+    }
     return state;
   }
 
@@ -10534,6 +10857,7 @@ function installEditableWorkbenchShell() {
       repairActionLog: repairActionLogSnapshot(),
       selectedCatalogOp,
       viewportState: viewportStateSnapshot(),
+      subsystemGroups: subsystemGroupsSnapshot(),
       nodes: nodes.map((node) => editableNodeState(node)),
       edges: draftEdges.map((edge) => ({ ...edge })),
     };
@@ -10566,6 +10890,10 @@ function installEditableWorkbenchShell() {
       node,
       nodeState.component_template || nodeState.componentTemplate || null,
     );
+    setNodeSubsystemMetadata(
+      node,
+      nodeState.subsystem_group || nodeState.subsystemGroup || null,
+    );
     node.style.setProperty("--node-x", nodeState.x || "50%");
     node.style.setProperty("--node-y", nodeState.y || "50%");
     node.setAttribute("aria-pressed", "false");
@@ -10585,6 +10913,9 @@ function installEditableWorkbenchShell() {
       setSelectedOperationCatalogEntry(state.selectedCatalogOp);
     }
     const nodeStates = Array.isArray(state.nodes) ? state.nodes : [];
+    subsystemGroups = normalizeSubsystemGroups(
+      state.subsystemGroups || state.subsystem_groups || subsystemGroupsFromNodeStates(nodeStates),
+    );
     for (const existing of Array.from(shell.querySelectorAll('[data-draft-node="true"]'))) {
       existing.remove();
     }
@@ -10618,6 +10949,10 @@ function installEditableWorkbenchShell() {
       setNodeComponentTemplateMetadata(
         node,
         nodeState.component_template || nodeState.componentTemplate || null,
+      );
+      setNodeSubsystemMetadata(
+        node,
+        nodeState.subsystem_group || nodeState.subsystemGroup || null,
       );
       if (typeof nodeState.x === "string") node.style.setProperty("--node-x", nodeState.x);
       if (typeof nodeState.y === "string") node.style.setProperty("--node-y", nodeState.y);
@@ -10677,6 +11012,7 @@ function installEditableWorkbenchShell() {
     selectedNodeIds = new Set(restoredSelection);
     const activeNodeId = editableNodeId(selectedNode);
     if (activeNodeId && !selectedNodeIds.size) selectedNodeIds.add(activeNodeId);
+    syncSubsystemNodeAttributes();
     shell.setAttribute("data-draft-state", state.draftState || "derived");
     syncEditableNodeSelectionAttributes();
     renderEditableEdges();
@@ -10939,6 +11275,7 @@ function installEditableWorkbenchShell() {
     }
     syncEditableNodeSelectionAttributes();
     attachEditableEdgeHandlers();
+    renderSubsystemOverlays();
     renderEditablePortHandles();
   }
 
@@ -11219,6 +11556,7 @@ function installEditableWorkbenchShell() {
     }
     draftEdges = draftEdges.filter((edge) => !removedNodeIds.has(edge.source) && !removedNodeIds.has(edge.target));
     refreshEditableNodes();
+    syncSubsystemNodeAttributes();
     selectedNode = nodes[0] || null;
     selectedNodeIds = new Set(selectedNode ? [editableNodeId(selectedNode)] : []);
     syncEditableNodeSelectionAttributes();
@@ -12335,6 +12673,7 @@ function installEditableWorkbenchShell() {
     renderInterfaceBindingEditor();
     renderHardwareBindingDiagnostics();
     renderTypedPortEditor();
+    renderSubsystemEditor();
   }
 
   function renderInspector() {
@@ -12355,6 +12694,7 @@ function installEditableWorkbenchShell() {
     renderInterfaceBindingEditor();
     renderHardwareBindingDiagnostics();
     renderTypedPortEditor();
+    renderSubsystemEditor();
   }
 
   function selectEditableEdgeByIndex(edgeIndex, options) {
@@ -12456,6 +12796,7 @@ function installEditableWorkbenchShell() {
         repairActionLog: payload.repairActionLog || payload.repair_action_log || [],
         viewportState: payload.viewportState || defaultViewportState(),
         selectedCatalogOp: payload.selectedCatalogOp,
+        subsystemGroups: payload.subsystemGroups || payload.subsystem_groups || [],
         nodes: Array.isArray(payload.nodes) ? payload.nodes : [],
         edges: Array.isArray(payload.edges) ? payload.edges : draftEdges,
       });
@@ -12513,6 +12854,7 @@ function installEditableWorkbenchShell() {
     );
     const operationCatalog = buildOperationCatalogSummary();
     const componentLibrary = buildComponentLibrarySummary();
+    const subsystemGroupSummary = subsystemGroupsSnapshot();
     const ruleParameterSummary = buildRuleParameterSummary();
     const hardwarePalette = buildHardwarePaletteSummary();
     const diagnosticRepairActions = repairActionLogSnapshot();
@@ -12544,6 +12886,7 @@ function installEditableWorkbenchShell() {
       port_compatibility_report: portCompatibilityReport,
       operation_catalog: operationCatalog,
       component_library: componentLibrary,
+      subsystem_groups: subsystemGroupSummary,
       rule_parameter_summary: ruleParameterSummary,
       hardware_palette: hardwarePalette,
     };
@@ -12624,6 +12967,7 @@ function installEditableWorkbenchShell() {
       port_compatibility_report: snapshot.port_compatibility_report,
       operation_catalog: snapshot.operation_catalog,
       component_library: snapshot.component_library,
+      subsystem_groups: snapshot.subsystem_groups,
       rule_parameter_summary: snapshot.rule_parameter_summary,
       hardware_palette: snapshot.hardware_palette,
       changerequest_proof_packet: changeRequestProofPacket,
@@ -12727,6 +13071,22 @@ function installEditableWorkbenchShell() {
     if (payload.component_library && payload.component_library.truth_effect !== "none") {
       throw new Error("component_library truth_effect must be none");
     }
+    if (payload.subsystem_groups !== undefined && !Array.isArray(payload.subsystem_groups)) {
+      throw new Error("subsystem_groups must be an array when present");
+    }
+    if (Array.isArray(payload.subsystem_groups)) {
+      for (const group of payload.subsystem_groups) {
+        if (!group || typeof group !== "object" || Array.isArray(group)) {
+          throw new Error("subsystem_groups entries must be objects");
+        }
+        if (!Array.isArray(group.node_ids)) {
+          throw new Error("subsystem_groups node_ids must be arrays");
+        }
+        if (group.truth_effect !== undefined && group.truth_effect !== "none") {
+          throw new Error("subsystem_groups truth_effect must be none");
+        }
+      }
+    }
     if (
       payload.rule_parameter_summary !== undefined
       && (!payload.rule_parameter_summary || typeof payload.rule_parameter_summary !== "object" || Array.isArray(payload.rule_parameter_summary))
@@ -12820,6 +13180,7 @@ function installEditableWorkbenchShell() {
       repairActionLog: validated.repair_action_log || [],
       viewportState: validated.viewport_state || defaultViewportState(),
       selectedCatalogOp: importedCatalog.selected_op,
+      subsystemGroups: validated.subsystem_groups || [],
       nodes: validated.nodes.map((node) => ({
         id: String(node.id || ""),
         label: String(node.label || node.id || "Draft logic node"),
@@ -12832,6 +13193,7 @@ function installEditableWorkbenchShell() {
         hardware_binding: node.hardware_binding || node.hardwareBinding || {},
         port_contract: node.port_contract || node.portContract || null,
         component_template: node.component_template || node.componentTemplate || null,
+        subsystem_group: node.subsystem_group || node.subsystemGroup || null,
         x: String(node.x || "50%"),
         y: String(node.y || "50%"),
         draftNode: Boolean(node.draftNode || node.draft_node || String(node.id || "").startsWith("draft_node_")),
@@ -13732,6 +14094,7 @@ function installEditableWorkbenchShell() {
     );
     const operationCatalog = snapshot.operation_catalog || buildOperationCatalogSummary();
     const componentLibrary = snapshot.component_library || buildComponentLibrarySummary();
+    const subsystemGroupSummary = snapshot.subsystem_groups || subsystemGroupsSnapshot();
     const ruleParameterSummary = snapshot.rule_parameter_summary || buildRuleParameterSummary();
     const draftSnapshotManifest = buildDraftSnapshotManifestSummary();
     const changeRequestProofPacket = buildChangeRequestProofPacket(snapshot, changedModelHash);
@@ -13751,6 +14114,7 @@ function installEditableWorkbenchShell() {
       portCompatibilityReport,
       operationCatalog,
       componentLibrary,
+      subsystemGroupSummary,
       ruleParameterSummary,
       draftSnapshotManifest,
     };
@@ -13796,6 +14160,7 @@ function installEditableWorkbenchShell() {
       modelJson.port_compatibility_report || buildPortCompatibilityReport(typedPorts, modelJson.edges || []);
     const operationCatalog = modelJson.operation_catalog || buildOperationCatalogSummary();
     const componentLibrary = modelJson.component_library || buildComponentLibrarySummary();
+    const subsystemGroupSummary = modelJson.subsystem_groups || subsystemGroupsSnapshot();
     const ruleParameterSummary = modelJson.rule_parameter_summary || buildRuleParameterSummary();
     const hardwarePalette = modelJson.hardware_palette || buildHardwarePaletteSummary();
     const draftSnapshotManifest =
@@ -13840,6 +14205,7 @@ function installEditableWorkbenchShell() {
       port_compatibility_report: portCompatibilityReport,
       operation_catalog: operationCatalog,
       component_library: componentLibrary,
+      subsystem_groups: subsystemGroupSummary,
       rule_parameter_summary: ruleParameterSummary,
       hardware_palette: hardwarePalette,
       draft_snapshot_manifest: draftSnapshotManifest,
@@ -13872,6 +14238,7 @@ function installEditableWorkbenchShell() {
       port_compatibility_report_checksum: checksumEvidenceArchiveField(portCompatibilityReport),
       operation_catalog_checksum: checksumEvidenceArchiveField(operationCatalog),
       component_library_checksum: checksumEvidenceArchiveField(componentLibrary),
+      subsystem_groups_checksum: checksumEvidenceArchiveField(subsystemGroupSummary),
       rule_parameter_summary_checksum: checksumEvidenceArchiveField(ruleParameterSummary),
       hardware_palette_checksum: checksumEvidenceArchiveField(hardwarePalette),
       draft_snapshot_manifest_checksum: checksumEvidenceArchiveField(draftSnapshotManifest),
@@ -14006,6 +14373,12 @@ function installEditableWorkbenchShell() {
       } else if (tool === "duplicate") {
         duplicateSelectedEditableNode();
         setEditorTool("select");
+      } else if (tool === "group") {
+        groupSelectedDraftNodes();
+        setEditorTool("select");
+      } else if (tool === "ungroup") {
+        ungroupSelectedSubsystem();
+        setEditorTool("select");
       } else if (tool === "edge") {
         setEditorTool("edge");
         beginEditableEdgeConnect();
@@ -14066,6 +14439,15 @@ function installEditableWorkbenchShell() {
       instantiateComponentTemplate(templateId);
       setEditorTool("select");
     });
+  }
+  if (createSubsystemBtn) {
+    createSubsystemBtn.addEventListener("click", () => groupSelectedDraftNodes());
+  }
+  if (renameSubsystemBtn) {
+    renameSubsystemBtn.addEventListener("click", () => renameSelectedSubsystemGroup());
+  }
+  if (ungroupSubsystemBtn) {
+    ungroupSubsystemBtn.addEventListener("click", () => ungroupSelectedSubsystem());
   }
   if (labelInput) {
     labelInput.addEventListener("input", () => {
@@ -14142,6 +14524,15 @@ function installEditableWorkbenchShell() {
     if (commandKey && key === "d") {
       event.preventDefault();
       duplicateSelectedEditableNode();
+      return;
+    }
+    if (commandKey && key === "g") {
+      event.preventDefault();
+      if (event.shiftKey) {
+        ungroupSelectedSubsystem();
+      } else {
+        groupSelectedDraftNodes();
+      }
       return;
     }
     if (commandKey && key === "z") {
