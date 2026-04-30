@@ -8039,6 +8039,115 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function portRowsById(ports) {
+    const result = {};
+    for (const port of ports || []) {
+      if (port && port.id && !result[port.id]) {
+        result[port.id] = port;
+      }
+    }
+    return result;
+  }
+
+  function portCompatibilityForEdge(edge, ports) {
+    const byId = portRowsById(ports);
+    const contract = edgePortContract(edge);
+    const source = byId[contract.source_port_id] || null;
+    const target = byId[contract.target_port_id] || null;
+    const issues = [];
+    const edgeId = edge && (edge.id || `${edge.source || "unknown"}->${edge.target || "unknown"}`);
+    if (!source) {
+      issues.push({
+        severity: "error",
+        code: "missing_source_port",
+        edge_id: edgeId,
+        port_id: contract.source_port_id,
+        message: `Missing source port ${contract.source_port_id}`,
+      });
+    } else if (source.direction !== "out") {
+      issues.push({
+        severity: "error",
+        code: "source_direction_not_out",
+        edge_id: edgeId,
+        port_id: source.id,
+        message: `Source port ${source.id} direction is ${source.direction}`,
+      });
+    }
+    if (!target) {
+      issues.push({
+        severity: "error",
+        code: "missing_target_port",
+        edge_id: edgeId,
+        port_id: contract.target_port_id,
+        message: `Missing target port ${contract.target_port_id}`,
+      });
+    } else if (target.direction !== "in") {
+      issues.push({
+        severity: "error",
+        code: "target_direction_not_in",
+        edge_id: edgeId,
+        port_id: target.id,
+        message: `Target port ${target.id} direction is ${target.direction}`,
+      });
+    }
+    if (source && target) {
+      const sourceType = source.value_type || "unknown";
+      const targetType = target.value_type || "unknown";
+      if (sourceType === "unknown" || targetType === "unknown") {
+        issues.push({
+          severity: "warning",
+          code: "unknown_value_type",
+          edge_id: edgeId,
+          port_id: `${source.id}->${target.id}`,
+          message: `Unknown value type on ${source.id}->${target.id}`,
+        });
+      } else if (sourceType !== targetType) {
+        issues.push({
+          severity: "warning",
+          code: "value_type_mismatch",
+          edge_id: edgeId,
+          port_id: `${source.id}->${target.id}`,
+          message: `Value type mismatch ${sourceType}->${targetType}`,
+        });
+      }
+    }
+    const status = issues.some((issue) => issue.severity === "error")
+      ? "fail"
+      : (issues.length ? "warn" : "pass");
+    return {
+      edge_id: edgeId,
+      status,
+      source_port_id: contract.source_port_id,
+      target_port_id: contract.target_port_id,
+      source_direction: source ? source.direction : "missing",
+      target_direction: target ? target.direction : "missing",
+      source_value_type: source ? source.value_type : "missing",
+      target_value_type: target ? target.value_type : "missing",
+      issues,
+      truth_effect: "none",
+    };
+  }
+
+  function buildPortCompatibilityReport(ports, edges) {
+    const edgeReports = (edges || []).map((edge) => portCompatibilityForEdge(edge, ports));
+    const issues = edgeReports.flatMap((report) => report.issues);
+    const status = issues.some((issue) => issue.severity === "error")
+      ? "fail"
+      : (issues.length ? "warn" : "pass");
+    return {
+      kind: "well-harness-workbench-port-compatibility-report",
+      version: 1,
+      status,
+      edge_count: edgeReports.length,
+      issue_count: issues.length,
+      warning_count: issues.filter((issue) => issue.severity === "warning").length,
+      error_count: issues.filter((issue) => issue.severity === "error").length,
+      edges: edgeReports,
+      issues,
+      truth_effect: "none",
+    };
+  }
+
   function selectedNodePayload() {
     if (!selectedNode) return null;
     const nodeId = selectedNode.getAttribute("data-editable-node-id") || "";
@@ -8237,6 +8346,7 @@ function installEditableWorkbenchShell() {
     if (!targetNode) missing.push("target_node");
     const sourcePortId = edge.source_port_id || edge.sourcePortId || (edge.source ? `${edge.source}:out` : "");
     const targetPortId = edge.target_port_id || edge.targetPortId || edgeTargetPortId(edge);
+    const compatibility = portCompatibilityForEdge(edge, collectWorkbenchTypedPorts());
     return {
       id: edge.id || `${edge.source}->${edge.target}`,
       source_node_id: edge.source || "unknown",
@@ -8247,6 +8357,11 @@ function installEditableWorkbenchShell() {
       value_type: normalizePortValueType(edge.value_type || edge.valueType || "boolean"),
       unit: String(edge.unit === null || edge.unit === undefined ? "" : edge.unit).trim(),
       required: normalizePortRequired(edge.required),
+      source_port_value_type: compatibility.source_value_type,
+      target_port_value_type: compatibility.target_value_type,
+      source_port_direction: compatibility.source_direction,
+      target_port_direction: compatibility.target_direction,
+      port_compatibility_status: compatibility.status,
       evidence_status: missing.length ? "evidence_gap" : "ui_draft",
       validation_issue: missing.length ? `evidence_gap:${missing.join("+")}` : "none",
       truth_effect: "none",
@@ -8813,8 +8928,14 @@ function installEditableWorkbenchShell() {
       `<dd>${inspectorText(payload.source_port_id)}</dd></div>`,
       '<div><dt>Target port</dt>',
       `<dd>${inspectorText(payload.target_port_id)}</dd></div>`,
+      '<div><dt>Source type</dt>',
+      `<dd>${inspectorText(`${payload.source_port_direction}/${payload.source_port_value_type}`)}</dd></div>`,
+      '<div><dt>Target type</dt>',
+      `<dd>${inspectorText(`${payload.target_port_direction}/${payload.target_port_value_type}`)}</dd></div>`,
       '<div><dt>Signal</dt>',
       `<dd>${inspectorText(payload.signal_id)}</dd></div>`,
+      '<div><dt>Port compatibility</dt>',
+      `<dd>${inspectorText(payload.port_compatibility_status)}</dd></div>`,
       '<div><dt>Validation</dt>',
       `<dd>${inspectorText(payload.validation_issue)}</dd></div>`,
       '</dl>',
@@ -8967,6 +9088,7 @@ function installEditableWorkbenchShell() {
     const typedPorts = collectWorkbenchTypedPorts();
     const interfacePorts = collectWorkbenchInterfacePorts();
     const portContractSummary = buildPortContractSummary(typedPorts, draftEdges);
+    const portCompatibilityReport = buildPortCompatibilityReport(typedPorts, draftEdges);
     return {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
       system_id: "thrust-reverser",
@@ -8986,6 +9108,7 @@ function installEditableWorkbenchShell() {
       hardware_bindings: hardwareBindings,
       binding_coverage: bindingCoverage,
       port_contract_summary: portContractSummary,
+      port_compatibility_report: portCompatibilityReport,
     };
   }
 
@@ -9052,6 +9175,7 @@ function installEditableWorkbenchShell() {
       hardware_bindings: snapshot.hardware_bindings,
       binding_coverage: snapshot.binding_coverage,
       port_contract_summary: snapshot.port_contract_summary,
+      port_compatibility_report: snapshot.port_compatibility_report,
       selected_scenario_id: selectedWorkbenchScenarioId(),
       custom_snapshot: customSnapshot,
       source_refs: uniqueSourceRefs(),
@@ -9098,6 +9222,12 @@ function installEditableWorkbenchShell() {
       && (!payload.port_contract_summary || typeof payload.port_contract_summary !== "object" || Array.isArray(payload.port_contract_summary))
     ) {
       throw new Error("port_contract_summary must be an object when present");
+    }
+    if (
+      payload.port_compatibility_report !== undefined
+      && (!payload.port_compatibility_report || typeof payload.port_compatibility_report !== "object" || Array.isArray(payload.port_compatibility_report))
+    ) {
+      throw new Error("port_compatibility_report must be an object when present");
     }
     if (
       payload.custom_snapshot !== undefined
@@ -9346,6 +9476,10 @@ function installEditableWorkbenchShell() {
       snapshot.typed_ports || [],
       snapshot.edges || [],
     );
+    const portCompatibilityReport = snapshot.port_compatibility_report || buildPortCompatibilityReport(
+      snapshot.typed_ports || [],
+      snapshot.edges || [],
+    );
     const bindingSummary = hardwareBindings.length
       ? hardwareBindings
           .map((binding) => `${binding.owner_kind}:${binding.owner_id} hardware=${binding.hardware_id} cable=${binding.cable} connector=${binding.connector} ports=${binding.port_local}->${binding.port_peer}`)
@@ -9353,6 +9487,8 @@ function installEditableWorkbenchShell() {
       : "none";
     const portSummary =
       `${portContractSummary.total_ports} typed ports / ${portContractSummary.edge_contracts} edge contracts / required=${portContractSummary.required_ports}`;
+    const compatibilitySummary =
+      `${portCompatibilityReport.status} / warnings=${portCompatibilityReport.warning_count} / errors=${portCompatibilityReport.error_count}`;
     const linearIssueBody = [
       "## Outcome",
       `Review sandbox candidate edit for ${node.id || "selected node"} against the certified thrust-reverser baseline.`,
@@ -9376,6 +9512,7 @@ function installEditableWorkbenchShell() {
       "- Hardware/interface binding draft evidence.",
       "- Binding coverage summary.",
       "- Typed port contract summary.",
+      "- Port compatibility report.",
       "- Targeted pytest and PR proof packet.",
       "- Official mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json.",
       "- e2e 49/49 and mypy --strict clean are not claimed from this local UI archive.",
@@ -9390,6 +9527,7 @@ function installEditableWorkbenchShell() {
       `- Hardware/interface bindings: ${bindingSummary}`,
       `- Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
       `- Port contract summary: ${portSummary}`,
+      `- Port compatibility: ${compatibilitySummary}`,
       "- Agent eligible: No",
     ].join("\n");
     const prProofPacket = [
@@ -9406,6 +9544,7 @@ function installEditableWorkbenchShell() {
       `Hardware/interface bindings: ${bindingSummary}`,
       `Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
       `Port contract summary: ${portSummary}`,
+      `Port compatibility: ${compatibilitySummary}`,
       "Mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
       "No live Linear mutation; this packet is copy-ready evidence only.",
     ].join("\n");
@@ -9416,6 +9555,7 @@ function installEditableWorkbenchShell() {
       gateClaims: buildWorkbenchGateClaims(),
       knownBlockers: buildWorkbenchKnownBlockers(),
       portContractSummary,
+      portCompatibilityReport,
     };
   }
 
@@ -9442,6 +9582,8 @@ function installEditableWorkbenchShell() {
     const typedPorts = modelJson.typed_ports || [];
     const portContractSummary =
       modelJson.port_contract_summary || buildPortContractSummary(typedPorts, modelJson.edges || []);
+    const portCompatibilityReport =
+      modelJson.port_compatibility_report || buildPortCompatibilityReport(typedPorts, modelJson.edges || []);
     const diffSummary = lastSandboxDiff || {
       verdict: "not_run",
       scenario_id: selectedWorkbenchScenarioId(),
@@ -9472,6 +9614,7 @@ function installEditableWorkbenchShell() {
       binding_coverage: bindingCoverage,
       typed_ports: typedPorts,
       port_contract_summary: portContractSummary,
+      port_compatibility_report: portCompatibilityReport,
       changerequest_body: handoffPacket.linearIssueBody,
       pr_proof_packet: handoffPacket.prProofPacket,
       gate_claims: handoffPacket.gateClaims,
@@ -9487,6 +9630,7 @@ function installEditableWorkbenchShell() {
       binding_coverage_checksum: checksumEvidenceArchiveField(bindingCoverage),
       typed_ports_checksum: checksumEvidenceArchiveField(typedPorts),
       port_contract_summary_checksum: checksumEvidenceArchiveField(portContractSummary),
+      port_compatibility_report_checksum: checksumEvidenceArchiveField(portCompatibilityReport),
       gate_claims_checksum: checksumEvidenceArchiveField(handoffPacket.gateClaims),
       known_blockers_checksum: checksumEvidenceArchiveField(handoffPacket.knownBlockers),
     };

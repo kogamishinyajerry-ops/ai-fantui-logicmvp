@@ -362,6 +362,17 @@ def test_workbench_typed_port_contract_round_trips_through_export_import_and_arc
     assert typed_ports["logic1:out"]["required"] is True
     assert draft["port_contract_summary"]["total_ports"] >= 2
     assert draft["port_contract_summary"]["truth_effect"] == "none"
+    assert draft["port_compatibility_report"]["status"] == "warn"
+    assert draft["port_compatibility_report"]["truth_effect"] == "none"
+    assert any(
+        issue["code"] == "value_type_mismatch"
+        for issue in draft["port_compatibility_report"]["issues"]
+    )
+
+    page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
+    edge_detail = page.locator("#workbench-inspector-evidence-detail").inner_text()
+    assert "Port compatibility" in edge_detail
+    assert "warn" in edge_detail
 
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
@@ -378,6 +389,9 @@ def test_workbench_typed_port_contract_round_trips_through_export_import_and_arc
     assert errors == [], f"page JS errors: {errors}"
     assert archive["typed_ports"]
     assert archive["port_contract_summary"]["truth_effect"] == "none"
+    assert archive["port_compatibility_report"]["status"] == "warn"
+    assert archive["port_compatibility_report"]["truth_effect"] == "none"
     assert archive["checksums"]["typed_ports_checksum"]
     assert archive["checksums"]["port_contract_summary_checksum"]
+    assert archive["checksums"]["port_compatibility_report_checksum"]
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
