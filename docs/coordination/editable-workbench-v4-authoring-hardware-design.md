@@ -19,7 +19,7 @@ controlled ChangeRequest handoff.
 - JER-205: Workbench v4 authoring roadmap and acceptance model (Done)
 - JER-206: Component library and reusable subsystem templates v1 (Done)
 - JER-207: Group/subsystem node editor v1 (Done)
-- JER-208: Hardware interface design model v1
+- JER-208: Hardware interface design model v1 (Done)
 - JER-209: Connector/pin map editor v1
 - JER-210: Hardware evidence inspector v2
 - JER-211: Scenario/debug timeline linked to selected graph elements v1
@@ -111,6 +111,26 @@ The slice remains sandbox-only:
 - undo/redo uses the existing editable history snapshots;
 - evidence archive output includes a subsystem-group checksum for review
   reproducibility.
+
+## JER-208 Closure Note
+
+JER-208 delivers the first v4 hardware/interface-design foundation slice. The
+repo now has `editable_hardware_interface_design_v1`, a sandbox-only model for
+candidate LRUs, cables, connectors, ports, pins, signal bindings, and explicit
+evidence-gap records. The model lands as a parallel artifact rather than an
+extension of the existing thrust-reverser hardware parameter schema.
+
+The slice remains sandbox-only:
+
+- `candidate_state` must remain `sandbox_candidate`;
+- truth-level, DAL/PSSA, controller truth, and runtime truth impact fields must
+  remain `none` or `false`;
+- signal binding `truth_effect` must remain `none`;
+- reference integrity is checked for LRU, connector, port, pin, cable, and
+  binding IDs, while unknown carrier data must use explicit `evidence_gap`
+  markers;
+- no UI, API, controller, adapter, frozen YAML, or C919 reference packet changes
+  are introduced by this issue.
 
 ## JER-205 Sequencing Contract
 

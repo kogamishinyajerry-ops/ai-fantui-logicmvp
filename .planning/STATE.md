@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-207 subsystem grouping done
+status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-208 hardware interface model done
 last_updated: "2026-05-01T00:00:00.000+08:00"
 last_activity: 2026-05-01
 progress:
@@ -10,7 +10,7 @@ progress:
   completed_phases: 43
   total_plans: 2
   completed_plans: 1
-  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates. JER-207 adds sandbox-only subsystem group/rename/ungroup metadata, overlay, import/export, archive, and undo/redo coverage. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates. JER-207 adds sandbox-only subsystem group/rename/ungroup metadata. JER-208 adds sandbox-only hardware interface design schema/loader/validator/hash evidence. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
@@ -19,10 +19,10 @@ Last activity: 2026-05-01
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
-**Current position**: JER-204 through JER-207 are merged or ready to merge on
-the v4 line. JER-207 is the second v4 authoring primitive: `/workbench` can
-group selected draft nodes into sandbox-only subsystem containers, rename them,
-ungroup them, and preserve ports/edges through export/import/archive.
+**Current position**: JER-204 through JER-208 are merged or ready to merge on
+the v4 line. JER-208 is the first hardware/interface-design foundation slice:
+the repo now has a sandbox-only schema, loader, validator, canonical hash, and
+typed model for candidate LRU/cable/connector/port/pin/binding evidence.
 
 **Linear control plane**:
 
@@ -33,7 +33,8 @@ ungroup them, and preserve ports/edges through export/import/archive.
 - JER-206 is Done after adding component-library template insert/export/archive
   evidence.
 - JER-207 is Done after adding subsystem group/rename/ungroup evidence.
-- JER-208 through JER-213 remain seeded as v4 backlog issues.
+- JER-208 is Done after adding the hardware interface design model foundation.
+- JER-209 through JER-213 remain seeded as v4 backlog issues.
 
 **Runtime v3 closure summary**:
 
@@ -81,6 +82,17 @@ handoff packet.
   `subsystem_groups` metadata with `truth_effect: none`.
 - Undo/redo covers group, rename, and ungroup operations through the existing
   editable history stack.
+
+**JER-208 hardware-interface-design model closure**:
+
+- Added `editable_hardware_interface_design_v1` as a parallel sandbox evidence
+  model, not an extension of the existing thrust-reverser hardware schema.
+- The model covers candidate LRUs, cables, connectors, ports, pins, signal
+  bindings, and explicit evidence-gap records.
+- The validator enforces schema shape, reference integrity, duplicate-id
+  rejection, deterministic canonical hashing, and non-certifying boundaries.
+- No UI, API, controller truth, adapter, or hardware YAML behavior changes are
+  introduced by this slice.
 
 **Hard boundaries**:
 

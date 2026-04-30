@@ -21,10 +21,10 @@ Housekeeping bridge:
 - JER-205: Workbench v4 authoring roadmap and acceptance model (Done, PR #187)
 - JER-206: Component library and reusable subsystem templates v1 (Done)
 - JER-207: Group/subsystem node editor v1 (Done)
+- JER-208: Hardware interface design model v1 (Done)
 
 Workbench v4 seed backlog:
 
-- JER-208: Hardware interface design model v1
 - JER-209: Connector/pin map editor v1
 - JER-210: Hardware evidence inspector v2
 - JER-211: Scenario/debug timeline linked to selected graph elements v1
