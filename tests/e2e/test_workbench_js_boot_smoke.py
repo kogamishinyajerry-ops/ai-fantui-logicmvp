@@ -674,13 +674,23 @@ def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_hando
     )
     linear_body = page.locator("#workbench-linear-handoff-output").input_value()
     pr_proof = page.locator("#workbench-pr-proof-output").input_value()
+    changerequest_packet = json.loads(page.locator("#workbench-changerequest-packet-output").input_value())
     handoff_status = page.locator("#workbench-handoff-status").inner_text()
     assert "Candidate state: sandbox_candidate" in pr_proof
     assert "Certification claim: none" in pr_proof
     assert "Truth-level impact: none" in pr_proof
     assert "No live Linear mutation" in pr_proof
     assert "No live Linear mutation" in handoff_status
+    assert "## Red Lines" in linear_body
+    assert "## Test Delta" in linear_body
     assert "Diagnostic repair actions:" in linear_body
+    assert changerequest_packet["kind"] == "well-harness-workbench-changerequest-handoff-packet"
+    assert changerequest_packet["candidate_state"] == "sandbox_candidate"
+    assert changerequest_packet["certification_claim"] == "none"
+    assert changerequest_packet["truth_effect"] == "none"
+    assert changerequest_packet["live_linear_mutation"] is False
+    assert changerequest_packet["metadata"]["test_delta"]["e2e_49_49"] == "not_claimed"
+    assert changerequest_packet["red_line_metadata"]["controller_truth_modified"] is False
 
     page.click("#workbench-prepare-archive-btn")
     page.wait_for_function(
@@ -693,6 +703,7 @@ def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_hando
     )
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     packet = archive["changerequest_proof_packet"]
+    handoff_packet = archive["changerequest_handoff_packet"]
     red_lines = archive["red_line_metadata"]
     checksums = archive["checksums"]
 
@@ -711,6 +722,11 @@ def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_hando
     assert packet["truth_effect"] == "none"
     assert packet["linear"]["live_mutation"] is False
     assert packet["sandbox_diff"]["verdict"] == verdict
+    assert handoff_packet["kind"] == "well-harness-workbench-changerequest-handoff-packet"
+    assert handoff_packet["metadata"]["sandbox_verdict"] == verdict
+    assert handoff_packet["metadata"]["test_delta"]["mypy_strict_clean"] == "not_claimed"
+    assert handoff_packet["live_linear_mutation"] is False
+    assert handoff_packet["truth_effect"] == "none"
     assert red_lines["truth_level_impact"] == "none"
     assert red_lines["dal_pssa_impact"] == "none"
     assert red_lines["controller_truth_modified"] is False
@@ -721,6 +737,7 @@ def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_hando
     assert checksums["manifest_checksum"]
     assert checksums["diff_summary_checksum"]
     assert checksums["changerequest_proof_packet_checksum"]
+    assert checksums["changerequest_handoff_packet_checksum"]
     assert checksums["gate_claims_checksum"]
     assert checksums["known_blockers_checksum"]
 

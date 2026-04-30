@@ -25,11 +25,12 @@ Housekeeping bridge:
 - JER-209: Connector/pin map editor v1 (Done)
 - JER-210: Hardware evidence inspector v2 (Done)
 - JER-211: Scenario/debug timeline linked to selected graph elements v1 (Done)
-- JER-212: Candidate-to-baseline diff review workflow v2 (In review)
+- JER-212: Candidate-to-baseline diff review workflow v2 (Done)
+- JER-213: ChangeRequest handoff packet from editable draft v1 (In review)
 
 Workbench v4 seed backlog:
-
-- JER-213: ChangeRequest handoff packet from editable draft v1
+- Empty after JER-213 enters review; next v4 planning should decide whether to
+  harden archive restore/API handoff or open the next authoring milestone.
 
 Runtime v3 implementation closure:
 
