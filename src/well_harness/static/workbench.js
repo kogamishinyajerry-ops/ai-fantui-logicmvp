@@ -12523,11 +12523,33 @@ function installEditableWorkbenchShell() {
     }, row.owner_kind, row.owner_id);
   }
 
-  function applyInterfaceMatrixRows(rows) {
+  function applyInterfaceMatrixRows(rows, validationRows) {
     let applied = 0;
     let skipped = 0;
+    let noop = 0;
+    let rejected = 0;
+    const reports = Array.isArray(validationRows) ? validationRows : [];
+    const hasValidationRows = reports.length > 0;
     refreshEditableNodes();
-    for (const row of rows) {
+    for (let index = 0; index < rows.length; index += 1) {
+      const row = rows[index];
+      const report = hasValidationRows ? reports[index] : null;
+      if (report && report.status === "reject") {
+        rejected += 1;
+        continue;
+      }
+      if (report && report.status === "no_op") {
+        noop += 1;
+        continue;
+      }
+      if (report && report.status === "skipped") {
+        skipped += 1;
+        continue;
+      }
+      if (hasValidationRows && (!report || report.action !== "apply")) {
+        skipped += 1;
+        continue;
+      }
       const ownerKind = normalizedInterfaceField(row.owner_kind);
       const ownerId = normalizedInterfaceField(row.owner_id);
       const binding = interfaceBindingFromMatrixRow(row);
@@ -12556,7 +12578,7 @@ function installEditableWorkbenchShell() {
       }
       skipped += 1;
     }
-    return { applied, skipped };
+    return { applied, skipped, noop, rejected };
   }
 
   function applyWorkbenchInterfaceMatrix() {
@@ -12578,20 +12600,24 @@ function installEditableWorkbenchShell() {
         return null;
       }
       const payload = validateInterfaceMatrixImportPayload(parsedPayload);
-      recordEditableHistory("interface_matrix_apply");
-      shell.setAttribute("data-draft-state", "derived");
-      const summary = applyInterfaceMatrixRows(payload.rows);
-      if (draftLabel) draftLabel.textContent = "sandbox_candidate interface matrix applied";
-      renderEditableEdges();
-      renderInspector();
-      validateEditableGraph();
-      updateEditableDraftHash();
-      persistDraft();
+      if ((report.applyable_row_count || 0) > 0) {
+        recordEditableHistory("interface_matrix_apply");
+        shell.setAttribute("data-draft-state", "derived");
+      }
+      const summary = applyInterfaceMatrixRows(payload.rows, report.rows);
+      if (summary.applied > 0) {
+        if (draftLabel) draftLabel.textContent = "sandbox_candidate interface matrix applied";
+        renderEditableEdges();
+        renderInspector();
+        validateEditableGraph();
+        updateEditableDraftHash();
+        persistDraft();
+      }
       const matrix = exportWorkbenchInterfaceMatrix();
       validateWorkbenchInterfaceMatrix({ updateStatus: false });
       if (interfaceMatrixStatus) {
         interfaceMatrixStatus.textContent =
-          `Applied ${summary.applied} matrix row(s), skipped ${summary.skipped}. Export now has ${matrix.row_count || 0} row(s). Truth effect: none.`;
+          `Applied ${summary.applied} matrix row(s), no-op ${summary.noop}, skipped ${summary.skipped}. Export now has ${matrix.row_count || 0} row(s). Truth effect: none.`;
       }
       return summary;
     } catch (err) {

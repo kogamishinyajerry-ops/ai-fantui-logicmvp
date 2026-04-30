@@ -706,7 +706,7 @@ def test_workbench_interface_matrix_import_applies_sandbox_bindings_and_rejects_
     page.fill("#workbench-interface-matrix-output", json.dumps(matrix))
     page.click("#workbench-apply-interface-matrix-btn")
     status = page.locator("#workbench-interface-matrix-status").inner_text()
-    assert "Applied 2 matrix row(s), skipped 1" in status
+    assert "Applied 2 matrix row(s), no-op 0, skipped 1" in status
 
     page.click("#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -836,7 +836,7 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     assert archive["red_line_metadata"]["truth_level_impact"] == "none"
 
     page.click("#workbench-apply-interface-matrix-btn")
-    assert "Applied 2 matrix row(s), skipped 1" in page.locator("#workbench-interface-matrix-status").inner_text()
+    assert "Applied 2 matrix row(s), no-op 0, skipped 1" in page.locator("#workbench-interface-matrix-status").inner_text()
     post_apply_report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
     assert post_apply_report["changed_row_count"] == 0
     assert post_apply_report["noop_row_count"] >= 2
@@ -852,6 +852,16 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     after_apply = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     logic1_after_apply = next(node for node in after_apply["nodes"] if node["id"] == "logic1")
     assert logic1_after_apply["hardware_binding"]["hardware_id"] == "TR-LRU-PREVIEW-EDITED"
+
+    page.click("#workbench-apply-interface-matrix-btn")
+    assert "Applied 0 matrix row(s), no-op 2, skipped 0" in page.locator("#workbench-interface-matrix-status").inner_text()
+    second_apply_report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
+    assert second_apply_report["changed_row_count"] == 0
+    assert second_apply_report["noop_row_count"] >= 2
+    page.click("#workbench-export-draft-btn")
+    after_second_apply = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    logic1_after_second_apply = next(node for node in after_second_apply["nodes"] if node["id"] == "logic1")
+    assert logic1_after_second_apply["hardware_binding"]["hardware_id"] == "TR-LRU-PREVIEW-EDITED"
 
     rejected = json.loads(page.locator("#workbench-interface-matrix-output").input_value())
     rejected["rows"][0]["truth_effect"] = "certified"
