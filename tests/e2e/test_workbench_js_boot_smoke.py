@@ -443,3 +443,51 @@ def test_workbench_operation_catalog_adds_typed_sandbox_node(demo_server, browse
     assert archive["operation_catalog"]["truth_effect"] == "none"
     assert archive["checksums"]["operation_catalog_checksum"]
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
+def test_workbench_rule_parameter_round_trips_through_export_import_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-op-catalog-op="between"]')
+    page.click('[data-editor-tool="node"]')
+    page.fill("#workbench-rule-name", "draft_tra_window")
+    page.fill("#workbench-rule-source-signal", "tra_deg")
+    page.select_option("#workbench-rule-comparison", "between_lower_inclusive")
+    page.fill("#workbench-rule-threshold", "[-32,0]")
+    page.click("#workbench-apply-rule-parameter-btn")
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+
+    node = next(item for item in draft["nodes"] if item["id"] == "draft_node_1")
+    assert errors == [], f"page JS errors: {errors}"
+    assert node["rules"] == [
+        {
+            "name": "draft_tra_window",
+            "source_signal_id": "tra_deg",
+            "comparison": "between_lower_inclusive",
+            "threshold_value": [-32, 0],
+        }
+    ]
+    assert draft["rule_parameter_summary"]["total_rules"] == 1
+    assert draft["rule_parameter_summary"]["truth_effect"] == "none"
+
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.fill("#workbench-draft-json-buffer", json.dumps(draft))
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    round_trip = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    round_trip_node = next(item for item in round_trip["nodes"] if item["id"] == "draft_node_1")
+    assert round_trip_node["rules"][0]["threshold_value"] == [-32, 0]
+    assert round_trip["rule_parameter_summary"]["total_rules"] == 1
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["model_json"]["nodes"][-1]["rules"][0]["comparison"] == "between_lower_inclusive"
+    assert archive["rule_parameter_summary"]["total_rules"] == 1
+    assert archive["rule_parameter_summary"]["truth_effect"] == "none"
+    assert archive["checksums"]["rule_parameter_summary_checksum"]
+    assert archive["red_line_metadata"]["truth_level_impact"] == "none"
