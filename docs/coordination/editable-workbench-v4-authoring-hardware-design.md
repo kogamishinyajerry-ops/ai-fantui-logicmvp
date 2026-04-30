@@ -21,7 +21,7 @@ controlled ChangeRequest handoff.
 - JER-207: Group/subsystem node editor v1 (Done)
 - JER-208: Hardware interface design model v1 (Done)
 - JER-209: Connector/pin map editor v1 (Done)
-- JER-210: Hardware evidence inspector v2
+- JER-210: Hardware evidence inspector v2 (In review)
 - JER-211: Scenario/debug timeline linked to selected graph elements v1
 - JER-212: Candidate-to-baseline diff review workflow v2
 - JER-213: ChangeRequest handoff packet from editable draft v1
@@ -148,6 +148,27 @@ The slice remains sandbox-only:
   missing owners;
 - no backend API, controller, adapter, frozen YAML, C919 packet, truth-level,
   DAL, or PSSA behavior is changed.
+
+## JER-210 Closure Note
+
+JER-210 turns the existing inspector into a selected-owner hardware evidence
+review surface. When an engineer selects a node or edge, the right panel now
+shows the candidate LRU/hardware id, cable, connector, local port, peer port,
+local pin, peer pin, evidence status, source ref, coverage state, connector/pin
+row count, and explicit evidence-gap counts. Node selection keeps the existing
+read-only hardware evidence API signal rows; edge selection uses only the
+sandbox candidate edge binding because there is no certified edge-level truth
+map to claim.
+
+The slice remains sandbox-only:
+
+- `hardware_evidence_v2` is serialized into draft export, ChangeRequest proof
+  packet summaries, and evidence archives with `truth_effect: none`;
+- connector/pin unknowns remain explicit `evidence_gap` values;
+- the inspector does not write controller truth, backend truth, adapters,
+  hardware YAML, C919 reference packets, truth-level, DAL, or PSSA state;
+- archive output includes a Hardware Evidence v2 checksum for review
+  reproducibility.
 
 ## JER-205 Sequencing Contract
 

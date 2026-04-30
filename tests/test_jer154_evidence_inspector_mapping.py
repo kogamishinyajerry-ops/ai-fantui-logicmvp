@@ -74,6 +74,10 @@ def test_workbench_evidence_inspector_has_mapping_surface_and_no_live_mutation()
     assert 'id="workbench-inspector-signal-count"' in html
     assert "function normalizeInspectorLogicNodeId" in js
     assert "function renderInspectorEvidenceDetails" in js
+    assert "function buildHardwareEvidenceV2Report" in js
+    assert "function renderHardwareEvidenceV2Report" in js
+    assert "hardwareBindingEvidenceGapFields" in js
+    assert 'kind: "well-harness-workbench-hardware-evidence-inspector-v2"' in js
     assert "logic_node_bindings" in js
     assert "not recorded" in js
     assert "truth_effect" in js

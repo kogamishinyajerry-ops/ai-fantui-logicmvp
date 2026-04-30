@@ -7596,6 +7596,12 @@ function installEditableWorkbenchShell() {
   const sourceRefSlot = document.getElementById("workbench-inspector-source-ref");
   const evidenceSummary = document.getElementById("workbench-inspector-evidence-summary");
   const evidenceDetail = document.getElementById("workbench-inspector-evidence-detail");
+  const hardwareEvidenceV2Status = document.getElementById("workbench-hardware-evidence-v2-status");
+  const hardwareEvidenceV2Target = document.getElementById("workbench-hardware-evidence-v2-target");
+  const hardwareEvidenceV2Coverage = document.getElementById("workbench-hardware-evidence-v2-coverage");
+  const hardwareEvidenceV2GapCount = document.getElementById("workbench-hardware-evidence-v2-gap-count");
+  const hardwareEvidenceV2PinRows = document.getElementById("workbench-hardware-evidence-v2-pin-rows");
+  const hardwareEvidenceV2Fields = document.getElementById("workbench-hardware-evidence-v2-fields");
   const hardwarePaletteFilter = document.getElementById("workbench-hardware-palette-filter");
   const hardwarePaletteAction = document.getElementById("workbench-hardware-palette-action");
   const hardwarePaletteList = document.getElementById("workbench-hardware-palette-list");
@@ -12270,6 +12276,138 @@ function installEditableWorkbenchShell() {
     evidenceDetail.innerHTML = `<ul>${items}</ul>`;
   }
 
+  function hardwareEvidenceV2GapFields(binding) {
+    const base = hardwareBindingEvidenceGapFields(binding);
+    for (const fieldName of ["pin_local", "pin_peer"]) {
+      if (isInterfaceEvidenceGap(binding && binding[fieldName])) {
+        base.push(fieldName);
+      }
+    }
+    return Array.from(new Set(base));
+  }
+
+  function hardwareEvidenceV2ReferenceGapCount(rows) {
+    return (Array.isArray(rows) ? rows : []).reduce((total, row) => (
+      total + ["cable", "connector", "port_local", "port_peer"]
+        .filter((fieldName) => evidenceValueRaw(row && row[fieldName]) === "evidence_gap").length
+    ), 0);
+  }
+
+  function hardwareEvidenceV2FieldRows(binding) {
+    const source = binding && typeof binding === "object" ? binding : {};
+    return [
+      ["hardware_id", "LRU / hardware"],
+      ["cable", "Cable"],
+      ["connector", "Connector"],
+      ["port_local", "Local port"],
+      ["port_peer", "Peer port"],
+      ["pin_local", "Local pin"],
+      ["pin_peer", "Peer pin"],
+      ["evidence_status", "Evidence status"],
+      ["source_ref", "Source ref"],
+    ].map(([key, label]) => {
+      const value = normalizedInterfaceField(source[key]);
+      return {
+        field: key,
+        label,
+        value,
+        status: isInterfaceEvidenceGap(value) ? "evidence_gap" : "recorded",
+        truth_effect: "none",
+      };
+    });
+  }
+
+  function buildHardwareEvidenceV2Report(target, referenceRows) {
+    const sourceTarget = target && typeof target === "object"
+      ? target
+      : activeInterfaceBindingTarget();
+    const ownerKind = sourceTarget.kind || "none";
+    const ownerId = sourceTarget.id || "none";
+    const binding = normalizeInterfaceBinding(sourceTarget.binding || {}, ownerKind, ownerId);
+    const fieldRows = hardwareEvidenceV2FieldRows(binding);
+    const evidenceGapFields = hardwareEvidenceV2GapFields(binding);
+    const connectorPinMap = meaningfulInterfaceBinding(binding)
+      ? buildWorkbenchConnectorPinMap([binding])
+      : buildWorkbenchConnectorPinMap([]);
+    const quality = interfaceBindingQualityReport(binding);
+    const rows = Array.isArray(referenceRows) ? referenceRows : [];
+    return {
+      kind: "well-harness-workbench-hardware-evidence-inspector-v2",
+      version: 1,
+      target_kind: ownerKind,
+      target_id: ownerId,
+      owner_key: `${ownerKind}:${ownerId}`,
+      candidate_state: "sandbox_candidate",
+      coverage_status: quality.status,
+      coverage_label: quality.label,
+      selected_binding: binding,
+      fields: fieldRows,
+      evidence_gap_count: evidenceGapFields.length,
+      evidence_gap_fields: evidenceGapFields,
+      connector_pin_row_count: connectorPinMap.row_count || 0,
+      connector_pin_evidence_gap_field_count: connectorPinMap.evidence_gap_field_count || 0,
+      reference_signal_count: rows.length,
+      reference_evidence_gap_count: hardwareEvidenceV2ReferenceGapCount(rows),
+      reference_signals: rows.map((row) => ({
+        signal_id: normalizedInterfaceField(row && row.signal_id),
+        source_hardware_id: normalizedInterfaceField(row && row.source_hardware_id),
+        peer_hardware_id: normalizedInterfaceField(row && row.peer_hardware_id),
+        carrier_status: normalizedInterfaceField(row && row.carrier_status),
+        truth_effect: "none",
+      })),
+      truth_effect: "none",
+    };
+  }
+
+  function currentHardwareEvidenceV2Report() {
+    const target = activeInterfaceBindingTarget();
+    const rows = target.kind === "node"
+      ? evidenceRowsForNode(hardwareEvidenceReport, target.id)
+      : [];
+    return buildHardwareEvidenceV2Report(target, rows);
+  }
+
+  function renderHardwareEvidenceV2Report(report) {
+    const payload = report || currentHardwareEvidenceV2Report();
+    if (hardwareEvidenceV2Status) {
+      hardwareEvidenceV2Status.textContent = payload.coverage_status || "missing";
+    }
+    if (hardwareEvidenceV2Target) {
+      hardwareEvidenceV2Target.textContent = `${payload.target_kind}:${payload.target_id}`;
+    }
+    if (hardwareEvidenceV2Coverage) {
+      hardwareEvidenceV2Coverage.textContent =
+        `${payload.coverage_label || payload.coverage_status} · truth_effect: none`;
+    }
+    if (hardwareEvidenceV2GapCount) {
+      hardwareEvidenceV2GapCount.textContent =
+        `${payload.evidence_gap_count || 0} selected / ${payload.reference_evidence_gap_count || 0} reference`;
+    }
+    if (hardwareEvidenceV2PinRows) {
+      hardwareEvidenceV2PinRows.textContent =
+        `${payload.connector_pin_row_count || 0} row(s) / ${payload.connector_pin_evidence_gap_field_count || 0} pin-map gap(s)`;
+    }
+    if (!hardwareEvidenceV2Fields) return payload;
+    const fieldRows = Array.isArray(payload.fields) ? payload.fields : [];
+    if (!fieldRows.length) {
+      hardwareEvidenceV2Fields.textContent =
+        "No selected hardware/interface evidence. Truth effect: none.";
+      return payload;
+    }
+    hardwareEvidenceV2Fields.innerHTML = fieldRows.map((field) => [
+      '<div',
+      'class="workbench-hardware-evidence-v2-row"',
+      `data-gap-state="${field.status === "evidence_gap" ? "gap" : "recorded"}"`,
+      `data-evidence-field="${inspectorText(field.field)}"`,
+      '>',
+      `<strong>${inspectorText(field.label)}</strong>`,
+      `<span>${inspectorText(field.value)}</span>`,
+      `<em>${inspectorText(field.status)} · truth_effect: none</em>`,
+      '</div>',
+    ].join(" ")).join("");
+    return payload;
+  }
+
   function evidenceValueRaw(valueRef) {
     if (!valueRef || typeof valueRef !== "object") return "evidence_gap";
     const status = String(valueRef.status || "evidence_gap");
@@ -12846,6 +12984,7 @@ function installEditableWorkbenchShell() {
       '</dl>',
       '<p class="workbench-inspector-truth-note">truth_effect: none</p>',
     ].join("");
+    renderHardwareEvidenceV2Report(buildHardwareEvidenceV2Report(activeInterfaceBindingTarget(), []));
     renderRuleParameterEditor();
     renderInterfaceBindingEditor();
     renderHardwareBindingDiagnostics();
@@ -12867,6 +13006,10 @@ function installEditableWorkbenchShell() {
     if (evidenceSlot) evidenceSlot.textContent = payload.evidence;
     if (sourceRefSlot) sourceRefSlot.textContent = payload.sourceRef;
     renderInspectorEvidenceDetails(payload);
+    renderHardwareEvidenceV2Report(buildHardwareEvidenceV2Report(
+      activeInterfaceBindingTarget(),
+      evidenceRowsForNode(hardwareEvidenceReport, payload.id),
+    ));
     renderRuleParameterEditor();
     renderInterfaceBindingEditor();
     renderHardwareBindingDiagnostics();
@@ -12998,10 +13141,12 @@ function installEditableWorkbenchShell() {
           `Read-only evidence: ${lru} LRUs, ${bindings} signal bindings, ${gaps} evidence-gap fields.`;
         renderHardwarePalette();
         renderInspectorEvidenceDetails(selectedNodePayload());
+        renderHardwareEvidenceV2Report(currentHardwareEvidenceV2Report());
       })
       .catch(() => {
         evidenceSummary.textContent = "Hardware evidence API unavailable; draft editing still remains sandbox-only.";
         renderHardwarePalette();
+        renderHardwareEvidenceV2Report(currentHardwareEvidenceV2Report());
       });
   }
 
@@ -13035,6 +13180,7 @@ function installEditableWorkbenchShell() {
     const subsystemGroupSummary = subsystemGroupsSnapshot();
     const ruleParameterSummary = buildRuleParameterSummary();
     const hardwarePalette = buildHardwarePaletteSummary();
+    const hardwareEvidenceV2 = currentHardwareEvidenceV2Report();
     const diagnosticRepairActions = repairActionLogSnapshot();
     return {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
@@ -13068,6 +13214,7 @@ function installEditableWorkbenchShell() {
       subsystem_groups: subsystemGroupSummary,
       rule_parameter_summary: ruleParameterSummary,
       hardware_palette: hardwarePalette,
+      hardware_evidence_v2: hardwareEvidenceV2,
     };
   }
 
@@ -13150,6 +13297,7 @@ function installEditableWorkbenchShell() {
       subsystem_groups: snapshot.subsystem_groups,
       rule_parameter_summary: snapshot.rule_parameter_summary,
       hardware_palette: snapshot.hardware_palette,
+      hardware_evidence_v2: snapshot.hardware_evidence_v2,
       changerequest_proof_packet: changeRequestProofPacket,
       draft_snapshot_manifest: buildDraftSnapshotManifestSummary(),
       selected_scenario_id: selectedWorkbenchScenarioId(),
@@ -13232,6 +13380,18 @@ function installEditableWorkbenchShell() {
       && payload.connector_pin_map.truth_effect !== "none"
     ) {
       throw new Error("connector_pin_map truth_effect must be none");
+    }
+    if (
+      payload.hardware_evidence_v2 !== undefined
+      && (!payload.hardware_evidence_v2 || typeof payload.hardware_evidence_v2 !== "object" || Array.isArray(payload.hardware_evidence_v2))
+    ) {
+      throw new Error("hardware_evidence_v2 must be an object when present");
+    }
+    if (
+      payload.hardware_evidence_v2 !== undefined
+      && payload.hardware_evidence_v2.truth_effect !== "none"
+    ) {
+      throw new Error("hardware_evidence_v2 truth_effect must be none");
     }
     if (payload.typed_ports !== undefined && !Array.isArray(payload.typed_ports)) {
       throw new Error("typed_ports must be an array when present");
@@ -13932,6 +14092,8 @@ function installEditableWorkbenchShell() {
     const matrixValidationSummary = interfaceMatrixValidationSummary(interfaceMatrixValidation);
     const connectorPinMap =
       sourceSnapshot.connector_pin_map || buildWorkbenchConnectorPinMap(hardwareBindings);
+    const hardwareEvidenceV2 =
+      sourceSnapshot.hardware_evidence_v2 || currentHardwareEvidenceV2Report();
     const repairActions = repairActionLogSnapshotFromSource(sourceSnapshot.repair_action_log || []);
     const portContractSummary =
       sourceSnapshot.port_contract_summary || buildPortContractSummary(
@@ -14014,6 +14176,15 @@ function installEditableWorkbenchShell() {
         checksum: checksumEvidenceArchiveField(connectorPinMap),
         truth_effect: "none",
       },
+      hardware_evidence_v2_summary: {
+        target: `${hardwareEvidenceV2.target_kind || "none"}:${hardwareEvidenceV2.target_id || "none"}`,
+        coverage_status: hardwareEvidenceV2.coverage_status || "missing",
+        selected_gap_count: hardwareEvidenceV2.evidence_gap_count || 0,
+        reference_signal_count: hardwareEvidenceV2.reference_signal_count || 0,
+        connector_pin_row_count: hardwareEvidenceV2.connector_pin_row_count || 0,
+        checksum: checksumEvidenceArchiveField(hardwareEvidenceV2),
+        truth_effect: "none",
+      },
       selected_focus: diagnosticFocusSummary,
       diagnostic_focus: diagnosticFocusSummary,
       repair_action_log_summary: repairActionLogSummary,
@@ -14086,6 +14257,11 @@ function installEditableWorkbenchShell() {
     return `${summary.row_count || 0} row(s) / gaps=${summary.evidence_gap_field_count || 0}`;
   }
 
+  function proofPacketHardwareEvidenceV2Text(packet) {
+    const summary = packet.hardware_evidence_v2_summary || {};
+    return `${summary.target || "none"} / ${summary.coverage_status || "missing"} / selected gaps=${summary.selected_gap_count || 0} / reference signals=${summary.reference_signal_count || 0}`;
+  }
+
   function proofPacketDiagnosticFocusText(packet) {
     const focus = packet.selected_focus || packet.diagnostic_focus || {};
     if (focus.state !== "selected") return "none";
@@ -14119,6 +14295,7 @@ function installEditableWorkbenchShell() {
       "- Editable draft JSON export.",
       "- Sandbox baseline diff report.",
       "- Hardware/interface binding draft evidence.",
+      "- Hardware Evidence Inspector v2 selected-owner packet.",
       "- Interface matrix export.",
       "- Binding coverage summary.",
       "- Hardware binding diagnostics report.",
@@ -14149,6 +14326,7 @@ function installEditableWorkbenchShell() {
       `- Interface matrix: ${proofPacketInterfaceMatrixText(packet)}`,
       `- Interface matrix validation: ${proofPacketInterfaceMatrixValidationText(packet)}`,
       `- Connector/pin map: ${proofPacketConnectorPinMapText(packet)}`,
+      `- Hardware evidence v2: ${proofPacketHardwareEvidenceV2Text(packet)}`,
       `- Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
       `- Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
       `- Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
@@ -14175,6 +14353,7 @@ function installEditableWorkbenchShell() {
       `Interface matrix: ${proofPacketInterfaceMatrixText(packet)}`,
       `Interface matrix validation: ${proofPacketInterfaceMatrixValidationText(packet)}`,
       `Connector/pin map: ${proofPacketConnectorPinMapText(packet)}`,
+      `Hardware evidence v2: ${proofPacketHardwareEvidenceV2Text(packet)}`,
       `Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
       `Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
       `Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
@@ -14364,6 +14543,8 @@ function installEditableWorkbenchShell() {
       modelJson.interface_matrix_validation || lastInterfaceMatrixValidationReport || null;
     const connectorPinMap =
       modelJson.connector_pin_map || buildWorkbenchConnectorPinMap(hardwareBindings);
+    const hardwareEvidenceV2 =
+      modelJson.hardware_evidence_v2 || currentHardwareEvidenceV2Report();
     const diagnosticFocus = modelJson.diagnostic_focus || currentDiagnosticFocusSummary();
     const diagnosticRepairActions = modelJson.repair_action_log || repairActionLogSnapshot();
     const typedPorts = modelJson.typed_ports || [];
@@ -14412,6 +14593,7 @@ function installEditableWorkbenchShell() {
       interface_matrix: interfaceMatrix,
       interface_matrix_validation: interfaceMatrixValidation,
       connector_pin_map: connectorPinMap,
+      hardware_evidence_v2: hardwareEvidenceV2,
       diagnostic_focus: diagnosticFocus,
       repair_action_log: diagnosticRepairActions,
       typed_ports: typedPorts,
@@ -14446,6 +14628,7 @@ function installEditableWorkbenchShell() {
       interface_matrix_checksum: checksumEvidenceArchiveField(interfaceMatrix),
       interface_matrix_validation_checksum: checksumEvidenceArchiveField(interfaceMatrixValidation),
       connector_pin_map_checksum: checksumEvidenceArchiveField(connectorPinMap),
+      hardware_evidence_v2_checksum: checksumEvidenceArchiveField(hardwareEvidenceV2),
       diagnostic_focus_checksum: checksumEvidenceArchiveField(diagnosticFocus),
       repair_action_log_checksum: checksumEvidenceArchiveField(diagnosticRepairActions),
       typed_ports_checksum: checksumEvidenceArchiveField(typedPorts),

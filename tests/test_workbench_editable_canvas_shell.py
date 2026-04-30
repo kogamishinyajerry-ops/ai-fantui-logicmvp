@@ -154,6 +154,21 @@ def test_connector_pin_map_editor_controls_are_sandbox_only_ui() -> None:
     assert ".workbench-connector-pin-map-editor" in css
 
 
+def test_hardware_evidence_v2_inspector_controls_are_sandbox_only_ui() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-hardware-evidence-v2"' in html
+    assert 'id="workbench-hardware-evidence-v2-target"' in html
+    assert 'id="workbench-hardware-evidence-v2-coverage"' in html
+    assert 'id="workbench-hardware-evidence-v2-gap-count"' in html
+    assert 'id="workbench-hardware-evidence-v2-pin-rows"' in html
+    assert 'id="workbench-hardware-evidence-v2-fields"' in html
+    assert "Hardware/interface fields are review evidence only" in html
+    assert ".workbench-hardware-evidence-v2" in css
+    assert ".workbench-hardware-evidence-v2-row" in css
+
+
 def test_js_wires_draft_derivation_node_selection_and_evidence_api() -> None:
     js = _js()
 
@@ -206,6 +221,22 @@ def test_js_wires_connector_pin_map_round_trip_as_sandbox_only_metadata() -> Non
     assert "pin_local" in js
     assert "pin_peer" in js
     assert "connector pin map truth_effect must be none" in js
+    assert 'truth_effect: "none"' in js
+
+
+def test_js_wires_hardware_evidence_v2_as_sandbox_only_selected_owner_packet() -> None:
+    js = _js()
+
+    assert "function buildHardwareEvidenceV2Report" in js
+    assert "function currentHardwareEvidenceV2Report" in js
+    assert "function renderHardwareEvidenceV2Report" in js
+    assert "hardwareEvidenceV2GapFields" in js
+    assert "hardware_evidence_v2" in js
+    assert "hardware_evidence_v2_checksum" in js
+    assert "hardware_evidence_v2 truth_effect must be none" in js
+    assert "Hardware evidence v2:" in js
+    assert 'kind: "well-harness-workbench-hardware-evidence-inspector-v2"' in js
+    assert 'candidate_state: "sandbox_candidate"' in js
     assert 'truth_effect: "none"' in js
 
 
