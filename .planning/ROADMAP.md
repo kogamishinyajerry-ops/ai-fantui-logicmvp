@@ -20,7 +20,8 @@ Current issue chain:
 - JER-168: Port-aware edge inspector v1 (Done, PR #151)
 - JER-169: Runtime v3 acceptance bundle and regression proof (Done, PR #152)
 - JER-170: Workbench e2e networkidle gate normalization (Done, PR #153)
-- JER-171: Official mypy strict gate definition (In progress)
+- JER-171: Official mypy strict gate definition (Done, PR #154)
+- JER-172: Workbench acceptance bundle UI archive/export regression (In progress)
 
 Completed interaction layer:
 

@@ -29,6 +29,8 @@ def test_evidence_archive_manifest_includes_required_checksum_fields() -> None:
     assert "diff_summary_checksum" in js
     assert "changerequest_body_checksum" in js
     assert "pr_proof_packet_checksum" in js
+    assert "gate_claims_checksum" in js
+    assert "known_blockers_checksum" in js
     assert "manifest_checksum" in js
 
 
@@ -42,4 +44,8 @@ def test_evidence_archive_is_draft_only_and_records_red_lines() -> None:
     assert "frozen_assets_modified: false" in js
     assert "live_linear_mutation: false" in js
     assert "No live Linear mutation" in js
+    assert "buildWorkbenchGateClaims" in js
+    assert "buildWorkbenchKnownBlockers" in js
+    assert "mypy_strict_clean" in js
+    assert "PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json" in js
     assert "api.linear.app" not in js
