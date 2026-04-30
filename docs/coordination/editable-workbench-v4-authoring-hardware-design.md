@@ -22,8 +22,8 @@ controlled ChangeRequest handoff.
 - JER-208: Hardware interface design model v1 (Done)
 - JER-209: Connector/pin map editor v1 (Done)
 - JER-210: Hardware evidence inspector v2 (Done)
-- JER-211: Scenario/debug timeline linked to selected graph elements v1 (In review)
-- JER-212: Candidate-to-baseline diff review workflow v2
+- JER-211: Scenario/debug timeline linked to selected graph elements v1 (Done)
+- JER-212: Candidate-to-baseline diff review workflow v2 (In review)
 - JER-213: ChangeRequest handoff packet from editable draft v1
 
 ## Product Target
@@ -187,6 +187,27 @@ The slice remains sandbox-only:
   candidate-vs-baseline status as review evidence only;
 - hardware bindings remain overlay metadata and do not participate in certified
   truth evaluation;
+- no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
+  DAL, or PSSA behavior is changed.
+
+## JER-212 Closure Note
+
+JER-212 makes candidate-vs-certified baseline diff review explicit and
+archive-ready. The right inspector now has a Diff Review v2 panel that mirrors
+the latest sandbox verdict, selected graph target, active scenario, review
+readiness, archive readiness, first divergence text, and certification claim.
+The corresponding packet is serialized into draft export, ChangeRequest proof
+packet summaries, and local evidence archives.
+
+The slice remains sandbox-only:
+
+- `candidate_baseline_diff_review_v2` is review evidence with
+  `truth_effect: none`, `candidate_state: sandbox_candidate`, and
+  `certification_claim: none`;
+- `equivalent` means behavior matched the baseline for the selected scenario,
+  not that the candidate is certified;
+- `divergent`, `invalid_model`, and `invalid_scenario` remain review states
+  that require human follow-up before any ChangeRequest implementation;
 - no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
   DAL, or PSSA behavior is changed.
 

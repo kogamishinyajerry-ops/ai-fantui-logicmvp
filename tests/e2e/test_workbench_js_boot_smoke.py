@@ -538,6 +538,73 @@ def test_workbench_selected_debug_timeline_tracks_selection_diff_and_archive(dem
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_diff_review_v2_tracks_diff_handoff_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.wait_for_selector("#workbench-diff-review-v2")
+    assert page.locator("#workbench-diff-review-v2-status").inner_text() == "not_run"
+    assert page.locator("#workbench-diff-review-v2-readiness").inner_text() == "run_required"
+    assert page.locator("#workbench-diff-review-v2-archive-state").inner_text() == "not_archive_ready"
+    assert page.locator("#workbench-diff-review-v2-claim").inner_text() == "none"
+
+    page.click("#workbench-derive-draft-btn")
+    page.select_option("#workbench-sandbox-scenario-select", "nominal_landing")
+    page.click("#workbench-run-sandbox-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const verdict = document.getElementById('workbench-diff-review-v2-status')?.textContent.trim();
+          return ['equivalent', 'divergent', 'invalid_model', 'invalid_scenario'].includes(verdict);
+        }
+        """
+    )
+    verdict = page.locator("#workbench-diff-review-v2-status").inner_text()
+    readiness = page.locator("#workbench-diff-review-v2-readiness").inner_text()
+    expected_readiness = {
+        "equivalent": "ready",
+        "divergent": "review_required",
+        "invalid_model": "blocked",
+        "invalid_scenario": "blocked",
+    }[verdict]
+    assert readiness == expected_readiness
+    assert page.locator("#workbench-diff-review-v2-archive-state").inner_text() == "archive_ready"
+    assert page.locator("#workbench-diff-review-v2-scenario").inner_text() == "nominal_landing"
+    assert (
+        page.locator("#workbench-diff-review-v2")
+        .get_attribute("data-review-truth-effect")
+        == "none"
+    )
+
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    review = draft["candidate_baseline_diff_review_v2"]
+    assert review["kind"] == "well-harness-workbench-candidate-baseline-diff-review-v2"
+    assert review["candidate_state"] == "sandbox_candidate"
+    assert review["verdict"] == verdict
+    assert review["review_readiness"] == expected_readiness
+    assert review["archive_state"] == "archive_ready"
+    assert review["certification_claim"] == "none"
+    assert review["controller_truth_modified"] is False
+    assert review["truth_effect"] == "none"
+
+    page.click("#workbench-generate-handoff-btn")
+    assert "Diff review v2:" in page.locator("#workbench-pr-proof-output").input_value()
+    assert "Diff review v2:" in page.locator("#workbench-linear-handoff-output").input_value()
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert errors == [], f"page JS errors: {errors}"
+    assert archive["candidate_baseline_diff_review_v2"]["verdict"] == verdict
+    assert archive["candidate_baseline_diff_review_v2"]["certification_claim"] == "none"
+    assert archive["candidate_baseline_diff_review_v2"]["truth_effect"] == "none"
+    assert archive["changerequest_proof_packet"]["candidate_baseline_diff_review_v2_summary"]["verdict"] == verdict
+    assert archive["checksums"]["candidate_baseline_diff_review_v2_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_handoff_archive(
     demo_server: str, browser: Any
 ) -> None:

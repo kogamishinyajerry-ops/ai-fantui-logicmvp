@@ -186,6 +186,22 @@ def test_selected_debug_timeline_controls_are_sandbox_only_ui() -> None:
     assert ".workbench-selected-debug-context" in css
 
 
+def test_diff_review_v2_controls_are_sandbox_only_archive_ui() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-diff-review-v2"' in html
+    assert 'id="workbench-diff-review-v2-status"' in html
+    assert 'id="workbench-diff-review-v2-target"' in html
+    assert 'id="workbench-diff-review-v2-readiness"' in html
+    assert 'id="workbench-diff-review-v2-archive-state"' in html
+    assert 'id="workbench-diff-review-v2-divergence"' in html
+    assert 'id="workbench-diff-review-v2-claim"' in html
+    assert "Candidate diff review is archive evidence only" in html
+    assert ".workbench-diff-review-v2" in css
+    assert ".workbench-diff-review-v2-facts" in css
+
+
 def test_js_wires_draft_derivation_node_selection_and_evidence_api() -> None:
     js = _js()
 
@@ -268,6 +284,21 @@ def test_js_wires_selected_debug_timeline_as_sandbox_only_packet() -> None:
     assert "Selected debug timeline:" in js
     assert 'kind: "well-harness-workbench-selected-debug-timeline"' in js
     assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'truth_effect: "none"' in js
+
+
+def test_js_wires_diff_review_v2_as_sandbox_only_archive_packet() -> None:
+    js = _js()
+
+    assert "function currentCandidateBaselineDiffReviewV2Report" in js
+    assert "function renderCandidateBaselineDiffReviewV2" in js
+    assert "candidate_baseline_diff_review_v2" in js
+    assert "candidate_baseline_diff_review_v2_checksum" in js
+    assert "candidate_baseline_diff_review_v2 truth_effect must be none" in js
+    assert "Diff review v2:" in js
+    assert 'kind: "well-harness-workbench-candidate-baseline-diff-review-v2"' in js
+    assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'certification_claim: "none"' in js
     assert 'truth_effect: "none"' in js
 
 

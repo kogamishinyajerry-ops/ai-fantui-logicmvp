@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-211 selected debug timeline in review
+status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-212 diff review v2 in review
 last_updated: "2026-05-01T00:00:00.000+08:00"
 last_activity: 2026-05-01
 progress:
@@ -10,7 +10,7 @@ progress:
   completed_phases: 43
   total_plans: 2
   completed_plans: 1
-  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates. JER-207 adds sandbox-only subsystem group/rename/ungroup metadata. JER-208 adds sandbox-only hardware interface design schema/loader/validator/hash evidence. JER-209 adds a connector/pin map editor, draft round-trip, and archive checksum. JER-210 adds a selected-owner Hardware Evidence Inspector v2 packet for LRU/cable/connector/port/pin coverage and evidence gaps. JER-211 adds a selected graph debug timeline packet linked to current scenario, sandbox diff status, ports, and hardware overlay. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates. JER-207 adds sandbox-only subsystem group/rename/ungroup metadata. JER-208 adds sandbox-only hardware interface design schema/loader/validator/hash evidence. JER-209 adds a connector/pin map editor, draft round-trip, and archive checksum. JER-210 adds a selected-owner Hardware Evidence Inspector v2 packet for LRU/cable/connector/port/pin coverage and evidence gaps. JER-211 adds a selected graph debug timeline packet linked to current scenario, sandbox diff status, ports, and hardware overlay. JER-212 adds an archive-ready candidate-to-baseline diff review v2 packet that keeps certification claim none. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
@@ -19,11 +19,10 @@ Last activity: 2026-05-01
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
-**Current position**: JER-204 through JER-210 are merged or in review on the v4
-line and JER-211 is in review. JER-211 links the bottom scenario/debug timeline
-to the selected graph element: nodes and edges expose current scenario, diff
-state, trace-link status, graph context, ports, and hardware overlay as
-sandbox-only evidence.
+**Current position**: JER-204 through JER-211 are merged on the v4 line and
+JER-212 is in review. JER-212 turns the sandbox diff into an archive-ready
+Diff Review v2 packet: `equivalent`, `divergent`, `invalid_model`, and
+`invalid_scenario` remain review evidence only and never certify the candidate.
 
 **Linear control plane**:
 
@@ -37,8 +36,9 @@ sandbox-only evidence.
 - JER-208 is Done after adding the hardware interface design model foundation.
 - JER-209 is Done after adding connector/pin map editor evidence.
 - JER-210 is Done after adding Hardware Evidence Inspector v2 selected-owner evidence.
-- JER-211 is in review after adding selected graph timeline/debug linkage.
-- JER-212 and JER-213 remain seeded as v4 backlog issues.
+- JER-211 is Done after adding selected graph timeline/debug linkage.
+- JER-212 is in review after adding candidate-to-baseline diff review v2 evidence.
+- JER-213 remains seeded as the next v4 backlog issue.
 
 **Runtime v3 closure summary**:
 
@@ -138,6 +138,21 @@ handoff packet.
   `selected_debug_timeline` with `truth_effect: none` and checksum coverage.
 - Running the sandbox updates the selected target's debug verdict without
   changing controller truth or certifying the candidate.
+- No controller truth, backend truth, adapter, frozen YAML, C919 packet,
+  truth-level, DAL, or PSSA behavior changes are introduced by this slice.
+
+**JER-212 diff review v2 closure**:
+
+- The workbench right inspector now exposes a Diff Review v2 panel next to the
+  baseline diff surface.
+- The review packet records verdict, review readiness, archive state, selected
+  target, scenario, first divergence text, hardware evidence summary, and
+  baseline source.
+- Draft export, ChangeRequest proof packet, and local evidence archive carry
+  `candidate_baseline_diff_review_v2` with `truth_effect: none`, certification
+  claim `none`, and checksum coverage.
+- Equivalent, divergent, invalid model, and invalid scenario states remain
+  review evidence only; no sandbox candidate can be marked certified.
 - No controller truth, backend truth, adapter, frozen YAML, C919 packet,
   truth-level, DAL, or PSSA behavior changes are introduced by this slice.
 

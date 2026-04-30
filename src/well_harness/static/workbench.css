@@ -5899,6 +5899,48 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-sandbox-diff-panel[data-verdict="invalid_scenario"] {
   border-color: rgba(240, 193, 91, 0.45);
 }
+.workbench-diff-review-v2 {
+  margin-top: 0.7rem;
+  padding: 0.62rem;
+  border-color: rgba(125, 215, 194, 0.24);
+}
+.workbench-diff-review-v2[data-review-verdict="equivalent"] {
+  border-color: rgba(125, 215, 194, 0.42);
+}
+.workbench-diff-review-v2[data-review-verdict="divergent"],
+.workbench-diff-review-v2[data-review-verdict="invalid_model"],
+.workbench-diff-review-v2[data-review-verdict="invalid_scenario"] {
+  border-color: rgba(240, 193, 91, 0.48);
+}
+.workbench-diff-review-v2[data-review-verdict="not_run"] {
+  border-color: rgba(150, 173, 190, 0.28);
+}
+.workbench-diff-review-v2-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.38rem;
+  margin: 0.5rem 0 0;
+}
+.workbench-diff-review-v2-facts div {
+  min-width: 0;
+  padding: 0.42rem;
+  border: 1px solid rgba(150, 173, 190, 0.17);
+  border-radius: 7px;
+  background: rgba(7, 18, 26, 0.54);
+}
+.workbench-diff-review-v2-facts dt {
+  margin-bottom: 0.2rem;
+  color: rgba(213, 227, 237, 0.58);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+}
+.workbench-diff-review-v2-facts dd {
+  margin: 0;
+  color: rgba(241, 248, 252, 0.92);
+  font-size: 0.68rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
 .workbench-draft-json-exchange {
   margin-top: 0.7rem;
   padding: 0.62rem;
