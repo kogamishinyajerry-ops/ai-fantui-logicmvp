@@ -287,6 +287,286 @@ def test_workbench_duplicate_edge_id_interaction_uses_edge_instance_index(demo_s
     assert errors == [], f"page JS errors: {errors}"
 
 
+def test_workbench_binding_diagnostic_focus_selects_node_and_exports_focus(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_errors(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    _clear_local_draft(page)
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.fill("#workbench-interface-hardware-id", "TR-LRU-001")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+
+    target = page.locator(
+        '.workbench-binding-diagnostics-target'
+        '[data-diagnostics-rule-id="evidence_gap_density"]'
+        '[data-diagnostics-target-kind="node"]'
+        '[data-diagnostics-target-id="logic1"]',
+    ).first
+    target.click()
+
+    assert page.locator('[data-editable-node-id="logic1"]').get_attribute("aria-pressed") == "true"
+    assert page.locator("#workbench-interface-binding-owner").inner_text() == "node:logic1"
+    assert target.get_attribute("aria-pressed") == "true"
+
+    draft = _export_draft(page)
+    focus = draft.get("diagnostic_focus")
+    assert focus["state"] == "selected"
+    assert focus["target_kind"] == "node"
+    assert focus["target_id"] == "logic1"
+    assert focus["truth_effect"] == "none"
+
+    archive = _prepare_archive(page)
+    assert archive["diagnostic_focus"]["target_id"] == "logic1"
+    assert archive["diagnostic_focus"]["truth_effect"] == "none"
+    assert archive["checksums"]["diagnostic_focus_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+    assert errors == [], f"page JS errors: {errors}"
+
+
+def test_workbench_binding_diagnostic_focus_selects_duplicate_edge_instance(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_errors(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    _clear_local_draft(page)
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    draft = _export_draft(page)
+    diagnostic_payload = _with_duplicate_binding_payload(draft)
+    diagnostic_payload["edges"][1]["source"] = "logic2"
+    diagnostic_payload["edges"][1]["target"] = "logic3"
+    _import_draft(page, diagnostic_payload)
+
+    edge_target = page.locator(
+        '.workbench-binding-diagnostics-target'
+        '[data-diagnostics-target-kind="edge"]'
+        '[data-diagnostics-edge-index="1"]',
+    ).first
+    edge_target.click()
+
+    assert page.locator('[data-editable-edge-index="1"]').get_attribute("aria-pressed") == "true"
+    assert page.locator("#workbench-interface-binding-owner").inner_text() == "edge:edge_logic1_logic2"
+    assert page.locator("#workbench-edge-signal-id").input_value() == "dup_sig_b"
+    assert edge_target.get_attribute("aria-pressed") == "true"
+
+    draft_round = _export_draft(page)
+    focus = draft_round.get("diagnostic_focus")
+    assert focus["state"] == "selected"
+    assert focus["target_kind"] == "edge"
+    assert focus["target_id"] == "edge_logic1_logic2"
+    assert focus["edge_index"] == 1
+    assert focus["signal_id"] == "dup_sig_b"
+    assert focus["truth_effect"] == "none"
+
+    archive = _prepare_archive(page)
+    assert archive["diagnostic_focus"]["target_kind"] == "edge"
+    assert archive["diagnostic_focus"]["edge_index"] == 1
+    assert archive["diagnostic_focus"]["truth_effect"] == "none"
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+    assert errors == [], f"page JS errors: {errors}"
+
+
+def test_workbench_binding_diagnostic_focus_ignores_stale_duplicate_edge_index(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_errors(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    _clear_local_draft(page)
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    draft = _export_draft(page)
+    diagnostic_payload = _with_duplicate_binding_payload(draft)
+    diagnostic_payload["edges"][1]["source"] = "logic2"
+    diagnostic_payload["edges"][1]["target"] = "logic3"
+    diagnostic_payload["edges"][1]["signal_id"] = "dup_sig_a"
+    _import_draft(page, diagnostic_payload)
+
+    page.evaluate(
+        """
+        () => {
+          const list = document.getElementById('workbench-hardware-binding-diagnostics-list');
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'workbench-binding-diagnostics-target';
+          button.setAttribute('data-diagnostics-focus', 'true');
+          button.setAttribute('data-diagnostics-target-kind', 'edge');
+          button.setAttribute('data-diagnostics-target-id', 'edge_logic1_logic2');
+          button.setAttribute('data-diagnostics-owner-key', 'edge:edge_logic1_logic2');
+          button.setAttribute('data-diagnostics-rule-id', 'connector_port_reuse');
+          button.setAttribute('data-diagnostics-issue-target', 'stale-index-probe');
+          button.setAttribute('data-diagnostics-edge-id', 'edge_logic1_logic2');
+          button.setAttribute('data-diagnostics-edge-index', '0');
+          button.setAttribute('data-diagnostics-signal-id', 'dup_sig_a');
+          button.setAttribute('data-diagnostics-source-node-id', 'logic2');
+          button.setAttribute('data-diagnostics-target-node-id', 'logic3');
+          button.textContent = 'Stale focus probe';
+          list.appendChild(button);
+        }
+        """
+    )
+
+    page.locator(".workbench-binding-diagnostics-target", has_text="Stale focus probe").click()
+
+    assert page.locator('[data-editable-edge-index="1"]').get_attribute("aria-pressed") == "true"
+    assert page.locator('[data-editable-edge-index="0"]').get_attribute("aria-pressed") == "false"
+    assert page.locator("#workbench-interface-cable").input_value() == "CBL-TR-B"
+
+    draft_round = _export_draft(page)
+    focus = draft_round.get("diagnostic_focus")
+    assert focus["target_kind"] == "edge"
+    assert focus["edge_index"] == 1
+    assert focus["signal_id"] == "dup_sig_a"
+    assert focus["source_node_id"] == "logic2"
+    assert focus["target_node_id"] == "logic3"
+    assert focus["truth_effect"] == "none"
+    assert errors == [], f"page JS errors: {errors}"
+
+
+def test_workbench_binding_diagnostic_focus_uses_route_and_signal_for_same_route_duplicates(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_errors(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    _clear_local_draft(page)
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    draft = _export_draft(page)
+    diagnostic_payload = _with_duplicate_binding_payload(draft)
+    _import_draft(page, diagnostic_payload)
+
+    page.evaluate(
+        """
+        () => {
+          const list = document.getElementById('workbench-hardware-binding-diagnostics-list');
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'workbench-binding-diagnostics-target';
+          button.setAttribute('data-diagnostics-focus', 'true');
+          button.setAttribute('data-diagnostics-target-kind', 'edge');
+          button.setAttribute('data-diagnostics-target-id', 'edge_logic1_logic2');
+          button.setAttribute('data-diagnostics-owner-key', 'edge:edge_logic1_logic2');
+          button.setAttribute('data-diagnostics-rule-id', 'duplicate_ownership');
+          button.setAttribute('data-diagnostics-issue-target', 'same-route-stale-index-probe');
+          button.setAttribute('data-diagnostics-edge-id', 'edge_logic1_logic2');
+          button.setAttribute('data-diagnostics-edge-index', '0');
+          button.setAttribute('data-diagnostics-signal-id', 'dup_sig_b');
+          button.setAttribute('data-diagnostics-source-node-id', 'logic1');
+          button.setAttribute('data-diagnostics-target-node-id', 'logic2');
+          button.textContent = 'Same route stale focus probe';
+          list.appendChild(button);
+        }
+        """
+    )
+
+    page.locator(".workbench-binding-diagnostics-target", has_text="Same route stale focus probe").click()
+
+    assert page.locator('[data-editable-edge-index="1"]').get_attribute("aria-pressed") == "true"
+    assert page.locator('[data-editable-edge-index="0"]').get_attribute("aria-pressed") == "false"
+    assert page.locator("#workbench-edge-signal-id").input_value() == "dup_sig_b"
+
+    focus = _export_draft(page).get("diagnostic_focus")
+    assert focus["edge_index"] == 1
+    assert focus["signal_id"] == "dup_sig_b"
+    assert focus["source_node_id"] == "logic1"
+    assert focus["target_node_id"] == "logic2"
+    assert focus["truth_effect"] == "none"
+    assert errors == [], f"page JS errors: {errors}"
+
+
+def test_workbench_binding_diagnostic_focus_miss_clears_stale_focus(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_errors(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    _clear_local_draft(page)
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.fill("#workbench-interface-hardware-id", "TR-LRU-001")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+    page.locator(
+        '.workbench-binding-diagnostics-target'
+        '[data-diagnostics-rule-id="evidence_gap_density"]'
+        '[data-diagnostics-target-kind="node"]'
+        '[data-diagnostics-target-id="logic1"]',
+    ).first.click()
+    assert _export_draft(page)["diagnostic_focus"]["state"] == "selected"
+
+    page.evaluate(
+        """
+        () => {
+          const list = document.getElementById('workbench-hardware-binding-diagnostics-list');
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'workbench-binding-diagnostics-target';
+          button.setAttribute('data-diagnostics-focus', 'true');
+          button.setAttribute('data-diagnostics-target-kind', 'node');
+          button.setAttribute('data-diagnostics-target-id', 'missing_node');
+          button.setAttribute('data-diagnostics-owner-key', 'node:missing_node');
+          button.setAttribute('data-diagnostics-rule-id', 'evidence_gap_density');
+          button.setAttribute('data-diagnostics-issue-target', 'missing-node-probe');
+          button.setAttribute('data-diagnostics-node-id', 'missing_node');
+          button.textContent = 'Missing node focus probe';
+          list.appendChild(button);
+        }
+        """
+    )
+    page.locator(".workbench-binding-diagnostics-target", has_text="Missing node focus probe").click()
+
+    draft_round = _export_draft(page)
+    assert draft_round["diagnostic_focus"]["state"] == "none"
+    assert draft_round["diagnostic_focus"]["truth_effect"] == "none"
+
+    archive = _prepare_archive(page)
+    assert archive["diagnostic_focus"]["state"] == "none"
+    assert archive["diagnostic_focus"]["truth_effect"] == "none"
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+    assert errors == [], f"page JS errors: {errors}"
+
+
+def test_workbench_binding_diagnostic_focus_clears_after_edge_disconnect_and_node_remove(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_errors(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    _clear_local_draft(page)
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    draft = _export_draft(page)
+    diagnostic_payload = _with_duplicate_binding_payload(draft)
+    diagnostic_payload["edges"][1]["source"] = "logic2"
+    diagnostic_payload["edges"][1]["target"] = "logic3"
+    _import_draft(page, diagnostic_payload)
+
+    page.locator(
+        '.workbench-binding-diagnostics-target'
+        '[data-diagnostics-target-kind="edge"]'
+        '[data-diagnostics-edge-index="1"]',
+    ).first.click()
+    assert _export_draft(page)["diagnostic_focus"]["state"] == "selected"
+
+    page.click('[data-editor-tool="disconnect"]')
+    after_disconnect = _export_draft(page)
+    assert after_disconnect["diagnostic_focus"]["state"] == "none"
+    assert after_disconnect["diagnostic_focus"]["truth_effect"] == "none"
+
+    page.click('[data-editor-tool="node"]')
+    page.fill("#workbench-interface-hardware-id", "TR-LRU-001")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+    page.locator(
+        '.workbench-binding-diagnostics-target'
+        '[data-diagnostics-rule-id="evidence_gap_density"]'
+        '[data-diagnostics-target-kind="node"]'
+        '[data-diagnostics-target-id="draft_node_1"]',
+    ).first.click()
+    assert _export_draft(page)["diagnostic_focus"]["state"] == "selected"
+
+    page.click('[data-editor-tool="remove"]')
+    after_remove = _export_draft(page)
+    assert after_remove["diagnostic_focus"]["state"] == "none"
+    assert after_remove["diagnostic_focus"]["truth_effect"] == "none"
+    assert after_remove["controller_truth_modified"] is False
+    assert errors == [], f"page JS errors: {errors}"
+
+
 def test_workbench_hardware_binding_diagnostics_recomputed_after_import_export_roundtrip(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_errors(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")

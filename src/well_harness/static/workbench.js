@@ -7661,6 +7661,7 @@ function installEditableWorkbenchShell() {
   let hardwarePaletteItems = [];
   let selectedHardwarePaletteItemId = "";
   let lastSandboxDiff = null;
+  let selectedDiagnosticFocus = null;
   let currentEditorTool = "select";
   let pendingEdgeSourceId = "";
   let nextDraftNodeIndex = 1;
@@ -7905,10 +7906,47 @@ function installEditableWorkbenchShell() {
     );
   }
 
+  function nodeBindingFocusTarget(node, nodeIndex) {
+    const nodeId = editableNodeId(node) || "unknown";
+    return {
+      kind: "node",
+      target_kind: "node",
+      target_id: nodeId,
+      node_id: nodeId,
+      node_index: nodeIndex,
+      owner_key: `node:${nodeId}`,
+      focus_effect: "selection_only",
+      truth_effect: "none",
+    };
+  }
+
+  function edgeBindingFocusTarget(edge, edgeIndex) {
+    const edgeId = edge && (edge.id || `${edge.source || "unknown"}->${edge.target || "unknown"}`);
+    return {
+      kind: "edge",
+      target_kind: "edge",
+      target_id: edgeId || "unknown",
+      edge_id: edgeId || "unknown",
+      edge_index: edgeIndex,
+      source_node_id: edge && edge.source ? edge.source : "unknown",
+      target_node_id: edge && edge.target ? edge.target : "unknown",
+      signal_id: edge && edge.signal_id ? edge.signal_id : "evidence_gap",
+      owner_key: `edge:${edgeId || "unknown"}`,
+      focus_effect: "selection_only",
+      truth_effect: "none",
+    };
+  }
+
   function collectWorkbenchHardwareBindings() {
     refreshEditableNodes();
-    const nodeBindings = nodes.map((node) => nodeInterfaceBinding(node));
-    const edgeBindings = draftEdges.map((edge) => edgeInterfaceBinding(edge));
+    const nodeBindings = nodes.map((node, index) => ({
+      ...nodeInterfaceBinding(node),
+      focus_target: nodeBindingFocusTarget(node, index),
+    }));
+    const edgeBindings = draftEdges.map((edge, index) => ({
+      ...edgeInterfaceBinding(edge),
+      focus_target: edgeBindingFocusTarget(edge, index),
+    }));
     return [...nodeBindings, ...edgeBindings].filter(meaningfulInterfaceBinding);
   }
 
@@ -7944,12 +7982,99 @@ function installEditableWorkbenchShell() {
     return [hardwareId, connector, portLocal, portPeer].join("|");
   }
 
+  function normalizeDiagnosticEdgeIndex(value) {
+    const numeric = Number.parseInt(String(value === null || value === undefined ? "" : value), 10);
+    return Number.isInteger(numeric) && numeric >= 0 ? numeric : null;
+  }
+
+  function normalizeHardwareBindingFocusTarget(target, issue) {
+    const source = target && typeof target === "object" ? target : {};
+    const ownerKey = normalizedInterfaceField(source.owner_key || (issue && issue.target) || "unknown:unknown");
+    const rawKind = normalizedInterfaceField(source.target_kind || source.kind || ownerKey.split(":")[0]);
+    const targetKind = rawKind === "edge" || rawKind === "node" ? rawKind : "unknown";
+    const edgeIndex = normalizeDiagnosticEdgeIndex(source.edge_index);
+    const targetId = normalizedInterfaceField(
+      source.target_id
+        || source.node_id
+        || source.edge_id
+        || ownerKey.split(":").slice(1).join(":")
+        || "unknown",
+    );
+    const focus = {
+      kind: targetKind,
+      target_kind: targetKind,
+      target_id: targetId,
+      owner_key: ownerKey,
+      rule_id: normalizedInterfaceField(source.rule_id || (issue && issue.rule_id) || "hardware_binding_diagnostic"),
+      issue_target: normalizedInterfaceField(source.issue_target || (issue && issue.target) || ownerKey),
+      focus_effect: "selection_only",
+      truth_effect: "none",
+    };
+    if (targetKind === "node") {
+      focus.node_id = normalizedInterfaceField(source.node_id || targetId);
+      if (source.node_index !== undefined) {
+        const nodeIndex = normalizeDiagnosticEdgeIndex(source.node_index);
+        if (nodeIndex !== null) focus.node_index = nodeIndex;
+      }
+    }
+    if (targetKind === "edge") {
+      focus.edge_id = normalizedInterfaceField(source.edge_id || targetId);
+      if (edgeIndex !== null) focus.edge_index = edgeIndex;
+      focus.source_node_id = normalizedInterfaceField(source.source_node_id || source.sourceNodeId || "unknown");
+      focus.target_node_id = normalizedInterfaceField(source.target_node_id || source.targetNodeId || "unknown");
+      focus.signal_id = normalizedInterfaceField(source.signal_id || source.signalId || "evidence_gap");
+    }
+    return focus;
+  }
+
+  function hardwareBindingFocusTarget(binding, issue) {
+    if (!binding || typeof binding !== "object") {
+      return normalizeHardwareBindingFocusTarget({}, issue);
+    }
+    if (binding.focus_target && typeof binding.focus_target === "object") {
+      return normalizeHardwareBindingFocusTarget(binding.focus_target, issue);
+    }
+    return normalizeHardwareBindingFocusTarget({
+      kind: binding.owner_kind,
+      target_kind: binding.owner_kind,
+      target_id: binding.owner_id,
+      owner_key: hardwareBindingOwnerKey(binding),
+    }, issue);
+  }
+
+  function uniqueHardwareBindingFocusTargets(bindings, issue) {
+    const targets = [];
+    const seen = new Set();
+    for (const binding of Array.isArray(bindings) ? bindings : []) {
+      const target = hardwareBindingFocusTarget(binding, issue);
+      const key = [
+        target.target_kind,
+        target.target_id,
+        target.edge_index !== undefined ? target.edge_index : "",
+        target.node_index !== undefined ? target.node_index : "",
+      ].join("|");
+      if (target.target_kind === "unknown" || seen.has(key)) continue;
+      seen.add(key);
+      targets.push(target);
+    }
+    return targets;
+  }
+
   function pushHardwareBindingDiagnosticIssue(issues, issue) {
+    const focusTargets = Array.isArray(issue.focus_targets)
+      ? issue.focus_targets.map((target) => normalizeHardwareBindingFocusTarget(target, issue))
+      : [];
+    const primaryFocus = issue.focus_target
+      ? normalizeHardwareBindingFocusTarget(issue.focus_target, issue)
+      : (focusTargets[0] || null);
     issues.push({
       severity: "warning",
       evidence_refs: [],
       truth_effect: "none",
       ...issue,
+      focus_target: primaryFocus,
+      focus_targets: focusTargets,
+      focus_state: primaryFocus ? "focusable" : "unfocusable",
     });
   }
 
@@ -7977,12 +8102,20 @@ function installEditableWorkbenchShell() {
       const gapFields = hardwareBindingEvidenceGapFields(binding);
       evidenceGapFieldCount += gapFields.length;
       if (gapFields.length) {
+        const focusTarget = hardwareBindingFocusTarget(binding, {
+          rule_id: "evidence_gap_density",
+          target: ownerKey,
+        });
         pushHardwareBindingDiagnosticIssue(issues, {
           rule_id: "evidence_gap_density",
           target: ownerKey,
+          target_kind: focusTarget.target_kind,
+          target_id: focusTarget.target_id,
           message: `${ownerKey} has ${gapFields.length} evidence_gap field(s): ${gapFields.join(", ")}`,
           suggestion: "Record missing hardware/interface evidence before treating this candidate as review-ready.",
           evidence_refs: [binding.source_ref || "ui_draft.interface_binding"],
+          focus_target: focusTarget,
+          focus_targets: [focusTarget],
         });
       }
     }
@@ -7996,13 +8129,21 @@ function installEditableWorkbenchShell() {
         truth_effect: "none",
       };
       duplicateOwnerBindings.push(entry);
+      const focusTargets = uniqueHardwareBindingFocusTargets(grouped, {
+        rule_id: "duplicate_ownership",
+        target: ownerKey,
+      });
       pushHardwareBindingDiagnosticIssue(issues, {
         rule_id: "duplicate_ownership",
         severity: "error",
         target: ownerKey,
+        target_kind: focusTargets[0] ? focusTargets[0].target_kind : "unknown",
+        target_id: focusTargets[0] ? focusTargets[0].target_id : ownerKey,
         message: `Duplicate owner binding detected for ${ownerKey}.`,
         suggestion: "Keep one sandbox binding per node/edge owner or split the owner into separate interface objects.",
         evidence_refs: grouped.map((binding) => binding.source_ref || binding.id || ownerKey),
+        focus_target: focusTargets[0] || null,
+        focus_targets: focusTargets,
       });
     }
 
@@ -8022,13 +8163,21 @@ function installEditableWorkbenchShell() {
         truth_effect: "none",
       };
       reusedInterfaceKeys.push(entry);
+      const focusTargets = uniqueHardwareBindingFocusTargets(grouped, {
+        rule_id: "connector_port_reuse",
+        target: interfaceKey,
+      });
       pushHardwareBindingDiagnosticIssue(issues, {
         rule_id: "connector_port_reuse",
         severity: "warning",
         target: interfaceKey,
+        target_kind: focusTargets[0] ? focusTargets[0].target_kind : "unknown",
+        target_id: focusTargets[0] ? focusTargets[0].target_id : interfaceKey,
         message: `Connector/port reuse detected on ${hardwareId} ${connector} ${portLocal}->${portPeer}.`,
         suggestion: "Verify whether the shared connector/port is intentional or assign a distinct interface key.",
         evidence_refs: grouped.map((binding) => binding.source_ref || hardwareBindingOwnerKey(binding)),
+        focus_target: focusTargets[0] || null,
+        focus_targets: focusTargets,
       });
     }
 
@@ -8056,6 +8205,87 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function hardwareDiagnosticFocusKey(focus) {
+    if (!focus || typeof focus !== "object") return "";
+    return [
+      focus.target_kind || focus.kind || "unknown",
+      focus.target_id || focus.node_id || focus.edge_id || "unknown",
+      focus.edge_index !== undefined && focus.edge_index !== null ? focus.edge_index : "",
+      focus.node_index !== undefined && focus.node_index !== null ? focus.node_index : "",
+    ].join("|");
+  }
+
+  function hardwareDiagnosticFocusMatchesSelected(focus) {
+    return Boolean(
+      selectedDiagnosticFocus
+        && hardwareDiagnosticFocusKey(selectedDiagnosticFocus) === hardwareDiagnosticFocusKey(focus),
+    );
+  }
+
+  function hardwareDiagnosticFocusAttributes(focus, issueIndex, targetIndex) {
+    const target = normalizeHardwareBindingFocusTarget(focus || {}, {
+      rule_id: focus && focus.rule_id,
+      target: focus && focus.issue_target,
+    });
+    const attrs = [
+      'data-diagnostics-focus="true"',
+      `data-diagnostics-issue-index="${issueIndex}"`,
+      `data-diagnostics-target-index="${targetIndex}"`,
+      `data-diagnostics-target-kind="${inspectorText(target.target_kind)}"`,
+      `data-diagnostics-target-id="${inspectorText(target.target_id)}"`,
+      `data-diagnostics-owner-key="${inspectorText(target.owner_key)}"`,
+      `data-diagnostics-rule-id="${inspectorText(target.rule_id)}"`,
+      `data-diagnostics-issue-target="${inspectorText(target.issue_target)}"`,
+    ];
+    if (target.node_id) attrs.push(`data-diagnostics-node-id="${inspectorText(target.node_id)}"`);
+    if (target.node_index !== undefined) attrs.push(`data-diagnostics-node-index="${target.node_index}"`);
+    if (target.edge_id) attrs.push(`data-diagnostics-edge-id="${inspectorText(target.edge_id)}"`);
+    if (target.edge_index !== undefined) attrs.push(`data-diagnostics-edge-index="${target.edge_index}"`);
+    if (target.signal_id) attrs.push(`data-diagnostics-signal-id="${inspectorText(target.signal_id)}"`);
+    if (target.source_node_id) attrs.push(`data-diagnostics-source-node-id="${inspectorText(target.source_node_id)}"`);
+    if (target.target_node_id) attrs.push(`data-diagnostics-target-node-id="${inspectorText(target.target_node_id)}"`);
+    return attrs.join(" ");
+  }
+
+  function renderHardwareDiagnosticFocusTarget(focus, issueIndex, targetIndex) {
+    const target = normalizeHardwareBindingFocusTarget(focus || {}, {
+      rule_id: focus && focus.rule_id,
+      target: focus && focus.issue_target,
+    });
+    if (target.target_kind === "unknown") return "";
+    const label = target.target_kind === "edge"
+      ? `Focus edge ${target.edge_id || target.target_id}#${target.edge_index !== undefined ? target.edge_index : "?"}`
+      : `Focus node ${target.node_id || target.target_id}`;
+    const active = hardwareDiagnosticFocusMatchesSelected(target);
+    return [
+      '<button',
+      'type="button"',
+      'class="workbench-binding-diagnostics-target"',
+      hardwareDiagnosticFocusAttributes(target, issueIndex, targetIndex),
+      `aria-pressed="${active ? "true" : "false"}"`,
+      '>',
+      inspectorText(label),
+      '</button>',
+    ].join(" ");
+  }
+
+  function renderHardwareDiagnosticFocusTargets(issue, issueIndex) {
+    const targets = Array.isArray(issue.focus_targets)
+      ? issue.focus_targets
+      : (issue.focus_target ? [issue.focus_target] : []);
+    const buttons = targets
+      .map((target, index) => renderHardwareDiagnosticFocusTarget(target, issueIndex, index))
+      .filter(Boolean);
+    if (!buttons.length) {
+      return '<small class="workbench-binding-diagnostics-focus-empty">No selectable sandbox target.</small>';
+    }
+    return [
+      '<div class="workbench-binding-diagnostics-targets">',
+      buttons.join(""),
+      '</div>',
+    ].join("");
+  }
+
   function renderHardwareBindingDiagnostics(report) {
     const diagnostics = report || buildHardwareBindingDiagnosticsReport(collectWorkbenchHardwareBindings());
     if (hardwareBindingDiagnosticsStatus) {
@@ -8078,18 +8308,197 @@ function installEditableWorkbenchShell() {
       return diagnostics;
     }
     hardwareBindingDiagnosticsList.setAttribute("data-diagnostics-state", "ready");
-    hardwareBindingDiagnosticsList.innerHTML = issues.slice(0, 8).map((issue) => [
+    hardwareBindingDiagnosticsList.innerHTML = issues.slice(0, 8).map((issue, issueIndex) => [
       '<article',
       'class="workbench-binding-diagnostics-item"',
       `data-severity="${inspectorText(issue.severity || "warning")}"`,
+      `data-rule-id="${inspectorText(issue.rule_id || "hardware_binding_diagnostic")}"`,
+      `data-target-kind="${inspectorText(issue.target_kind || (issue.focus_target && issue.focus_target.target_kind) || "unknown")}"`,
+      `data-target-id="${inspectorText(issue.target_id || (issue.focus_target && issue.focus_target.target_id) || "workbench")}"`,
       '>',
       `<strong>${inspectorText(issue.rule_id || "hardware_binding_diagnostic")}</strong>`,
       `<span>${inspectorText(issue.message || "")}</span>`,
       `<small>${inspectorText(issue.target || "workbench")}</small>`,
       `<em>${inspectorText(issue.suggestion || "Review sandbox evidence before handoff.")}</em>`,
+      renderHardwareDiagnosticFocusTargets(issue, issueIndex),
       '</article>',
     ].join(" ")).join("");
     return diagnostics;
+  }
+
+  function diagnosticFocusTargetFromElement(element) {
+    if (!element) return null;
+    return normalizeHardwareBindingFocusTarget({
+      kind: element.getAttribute("data-diagnostics-target-kind"),
+      target_kind: element.getAttribute("data-diagnostics-target-kind"),
+      target_id: element.getAttribute("data-diagnostics-target-id"),
+      owner_key: element.getAttribute("data-diagnostics-owner-key"),
+      rule_id: element.getAttribute("data-diagnostics-rule-id"),
+      issue_target: element.getAttribute("data-diagnostics-issue-target"),
+      node_id: element.getAttribute("data-diagnostics-node-id"),
+      node_index: element.getAttribute("data-diagnostics-node-index"),
+      edge_id: element.getAttribute("data-diagnostics-edge-id"),
+      edge_index: element.getAttribute("data-diagnostics-edge-index"),
+      signal_id: element.getAttribute("data-diagnostics-signal-id"),
+      source_node_id: element.getAttribute("data-diagnostics-source-node-id"),
+      target_node_id: element.getAttribute("data-diagnostics-target-node-id"),
+    });
+  }
+
+  function diagnosticFocusValueKnown(value) {
+    return Boolean(value && value !== "evidence_gap" && value !== "unknown");
+  }
+
+  function edgeMatchesDiagnosticFocusIdentity(edge, target, options) {
+    if (!edge || !target) return false;
+    const allowIdOnly = Boolean(options && options.allowIdOnly);
+    const signalKnown = diagnosticFocusValueKnown(target.signal_id);
+    const routeKnown = (
+      diagnosticFocusValueKnown(target.source_node_id)
+      && diagnosticFocusValueKnown(target.target_node_id)
+    );
+    if (routeKnown && signalKnown) {
+      return (
+        edge.source === target.source_node_id
+        && edge.target === target.target_node_id
+        && edge.signal_id === target.signal_id
+      );
+    }
+    if (
+      routeKnown
+      && !signalKnown
+      && edge.source === target.source_node_id
+      && edge.target === target.target_node_id
+    ) return true;
+    if (routeKnown) return false;
+    if (signalKnown && edge.signal_id === target.signal_id) return true;
+    if (!signalKnown && !routeKnown && allowIdOnly && diagnosticFocusValueKnown(target.edge_id)) {
+      return edge.id === target.edge_id;
+    }
+    return false;
+  }
+
+  function findEdgeIndexForDiagnosticFocus(focus) {
+    const target = normalizeHardwareBindingFocusTarget(focus || {});
+    const indexed = normalizeDiagnosticEdgeIndex(target.edge_index);
+    if (indexed !== null && draftEdges[indexed]) {
+      const edge = draftEdges[indexed];
+      if (edgeMatchesDiagnosticFocusIdentity(edge, target, { allowIdOnly: false })) {
+        return indexed;
+      }
+    }
+    if (target.edge_id && target.edge_id !== "evidence_gap") {
+      const exactSignalIndex = draftEdges.findIndex((edge) => (
+        edge.id === target.edge_id
+        && edgeMatchesDiagnosticFocusIdentity(edge, target, { allowIdOnly: false })
+      ));
+      if (exactSignalIndex >= 0) return exactSignalIndex;
+      return draftEdges.findIndex((edge) => (
+        edge.id === target.edge_id
+        && edgeMatchesDiagnosticFocusIdentity(edge, target, { allowIdOnly: true })
+      ));
+    }
+    const exactSignalIndex = draftEdges.findIndex((edge) => (
+      edgeMatchesDiagnosticFocusIdentity(edge, target, { allowIdOnly: false })
+    ));
+    if (exactSignalIndex >= 0) return exactSignalIndex;
+    return -1;
+  }
+
+  function currentDiagnosticFocusSummary() {
+    if (!selectedDiagnosticFocus) {
+      return {
+        state: "none",
+        truth_effect: "none",
+      };
+    }
+    return {
+      ...selectedDiagnosticFocus,
+      state: "selected",
+      truth_effect: "none",
+    };
+  }
+
+  function setSelectedDiagnosticFocus(focus) {
+    selectedDiagnosticFocus = {
+      ...normalizeHardwareBindingFocusTarget(focus || {}),
+      selected_at: "browser_local_draft",
+      truth_effect: "none",
+    };
+    return selectedDiagnosticFocus;
+  }
+
+  function focusHardwareBindingDiagnosticTarget(focus) {
+    const target = normalizeHardwareBindingFocusTarget(focus || {});
+    if (target.target_kind === "node") {
+      refreshEditableNodes();
+      const nodeId = target.node_id || target.target_id;
+      const node = nodes.find((candidate) => editableNodeId(candidate) === nodeId);
+      if (!node) {
+        selectedDiagnosticFocus = null;
+        if (graphValidationStatus) {
+          graphValidationStatus.textContent =
+            `Binding diagnostic target missing: node ${nodeId}. Truth effect: none.`;
+        }
+        renderHardwareBindingDiagnostics();
+        return null;
+      }
+      const selectedFocus = setSelectedDiagnosticFocus(target);
+      selectNode(node, { preserveDiagnosticFocus: true });
+      if (graphValidationStatus) {
+        graphValidationStatus.textContent =
+          `Binding diagnostic focused node ${nodeId}. Repair binding in inspector. Truth effect: none.`;
+      }
+      return selectedFocus;
+    }
+    if (target.target_kind === "edge") {
+      const edgeIndex = findEdgeIndexForDiagnosticFocus(target);
+      if (edgeIndex < 0) {
+        selectedDiagnosticFocus = null;
+        if (graphValidationStatus) {
+          graphValidationStatus.textContent =
+            `Binding diagnostic target missing: edge ${target.edge_id || target.target_id}. Truth effect: none.`;
+        }
+        renderHardwareBindingDiagnostics();
+        return null;
+      }
+      const edge = draftEdges[edgeIndex] || {};
+      const selectedFocus = setSelectedDiagnosticFocus({
+        ...target,
+        target_id: edge.id || target.target_id,
+        edge_id: edge.id || target.edge_id || target.target_id,
+        edge_index: edgeIndex,
+        source_node_id: edge.source || target.source_node_id,
+        target_node_id: edge.target || target.target_node_id,
+        signal_id: edge.signal_id || target.signal_id,
+      });
+      selectEditableEdgeByIndex(edgeIndex, { preserveDiagnosticFocus: true });
+      if (graphValidationStatus) {
+        graphValidationStatus.textContent =
+          `Binding diagnostic focused edge ${edge.id || target.target_id}#${edgeIndex}. Repair binding in inspector. Truth effect: none.`;
+      }
+      return selectedFocus;
+    }
+    selectedDiagnosticFocus = null;
+    if (graphValidationStatus) {
+      graphValidationStatus.textContent = "Binding diagnostic has no selectable sandbox target. Truth effect: none.";
+    }
+    return null;
+  }
+
+  function handleHardwareBindingDiagnosticActivation(event) {
+    const trigger = event && event.target instanceof Element
+      ? event.target.closest("[data-diagnostics-focus='true']")
+      : null;
+    if (!trigger || !hardwareBindingDiagnosticsList || !hardwareBindingDiagnosticsList.contains(trigger)) return;
+    if (event.type === "keydown" && event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    event.stopPropagation();
+    const focus = diagnosticFocusTargetFromElement(trigger);
+    focusHardwareBindingDiagnosticTarget(focus);
+    renderHardwareBindingDiagnostics();
+    updateEditableDraftHash();
+    persistDraft();
   }
 
   function collectWorkbenchInterfacePorts() {
@@ -8961,6 +9370,7 @@ function installEditableWorkbenchShell() {
       draftState: shell.getAttribute("data-draft-state") || "baseline",
       selectedNodeId: selectedNode && selectedNode.getAttribute("data-editable-node-id"),
       selectedNodeIds: Array.from(selectedNodeIds),
+      diagnosticFocus: currentDiagnosticFocusSummary(),
       selectedCatalogOp,
       viewportState: viewportStateSnapshot(),
       nodes: nodes.map((node) => editableNodeState(node)),
@@ -9077,6 +9487,12 @@ function installEditableWorkbenchShell() {
     const nextViewportState = state.viewportState && typeof state.viewportState === "object"
       ? state.viewportState
       : defaultViewportState();
+    selectedDiagnosticFocus =
+      state.diagnosticFocus
+      && typeof state.diagnosticFocus === "object"
+      && state.diagnosticFocus.state === "selected"
+        ? normalizeHardwareBindingFocusTarget(state.diagnosticFocus)
+        : null;
     setViewportState({
       scale: nextViewportState.scale,
       panX: nextViewportState.pan_x !== undefined ? nextViewportState.pan_x : nextViewportState.panX,
@@ -9526,6 +9942,7 @@ function installEditableWorkbenchShell() {
     }
     recordEditableHistory(draftNodesToRemove.length > 1 ? "batch_remove_nodes" : "remove_node");
     const removedNodeIds = new Set(draftNodesToRemove.map((node) => editableNodeId(node)));
+    selectedDiagnosticFocus = null;
     for (const node of draftNodesToRemove) {
       node.remove();
     }
@@ -9566,7 +9983,7 @@ function installEditableWorkbenchShell() {
     node.setPointerCapture(event.pointerId);
   }
 
-  function updateEditableGroupDrag(event) {
+  function applyEditableGroupDragPosition(event) {
     if (!groupDragState || !event || event.pointerId !== groupDragState.pointerId) return;
     const current = canvasPointPercent(event);
     const dx = current.x - groupDragState.start.x;
@@ -9592,10 +10009,16 @@ function installEditableWorkbenchShell() {
       graphValidationStatus.textContent =
         `Graph validation: moving ${groupDragState.nodes.length} draft node(s). Truth effect: none.`;
     }
+    return true;
+  }
+
+  function updateEditableGroupDrag(event) {
+    applyEditableGroupDragPosition(event);
   }
 
   function endEditableGroupDrag(event) {
     if (!groupDragState || !event || event.pointerId !== groupDragState.pointerId) return;
+    applyEditableGroupDragPosition(event);
     const movedCount = groupDragState.nodes.length;
     const didMove = groupDragState.moved;
     groupDragState = null;
@@ -9721,6 +10144,7 @@ function installEditableWorkbenchShell() {
         recordEditableHistory("disconnect_selected_edge");
         draftEdges.splice(selectedIndex, 1);
         selectedEdge = null;
+        selectedDiagnosticFocus = null;
         if (draftLabel) draftLabel.textContent = "sandbox_candidate edge edit pending";
         renderEditableEdges();
         renderInspector();
@@ -9737,6 +10161,7 @@ function installEditableWorkbenchShell() {
     const removeIndex = index >= 0 ? index : draftEdges.length - 1;
     recordEditableHistory("disconnect_edge");
     draftEdges.splice(removeIndex, 1);
+    selectedDiagnosticFocus = null;
     if (draftLabel) draftLabel.textContent = "sandbox_candidate edge edit pending";
     renderEditableEdges();
     validateEditableGraph();
@@ -10639,7 +11064,10 @@ function installEditableWorkbenchShell() {
     renderTypedPortEditor();
   }
 
-  function selectEditableEdgeByIndex(edgeIndex) {
+  function selectEditableEdgeByIndex(edgeIndex, options) {
+    if (!options || options.preserveDiagnosticFocus !== true) {
+      selectedDiagnosticFocus = null;
+    }
     selectedEdge = Number.isInteger(edgeIndex) ? draftEdges[edgeIndex] || null : null;
     if (!selectedEdge) return;
     selectedNode = null;
@@ -10666,12 +11094,15 @@ function installEditableWorkbenchShell() {
     persistDraft();
   }
 
-  function selectEditableEdge(edgeId) {
+  function selectEditableEdge(edgeId, options) {
     const edgeIndex = draftEdges.findIndex((edge) => edge.id === edgeId);
-    if (edgeIndex >= 0) selectEditableEdgeByIndex(edgeIndex);
+    if (edgeIndex >= 0) selectEditableEdgeByIndex(edgeIndex, options);
   }
 
   function selectNode(node, options) {
+    if (!options || options.preserveDiagnosticFocus !== true) {
+      selectedDiagnosticFocus = null;
+    }
     selectedEdge = null;
     const nodeId = node && node.getAttribute("data-editable-node-id") || "";
     if (currentEditorTool === "edge" && pendingEdgeSourceId && nodeId && nodeId !== pendingEdgeSourceId) {
@@ -10728,6 +11159,7 @@ function installEditableWorkbenchShell() {
         draftState: payload.draftState || "baseline",
         selectedNodeId: payload.selectedNodeId,
         selectedNodeIds: Array.isArray(payload.selectedNodeIds) ? payload.selectedNodeIds : [],
+        diagnosticFocus: payload.diagnosticFocus || null,
         viewportState: payload.viewportState || defaultViewportState(),
         selectedCatalogOp: payload.selectedCatalogOp,
         nodes: Array.isArray(payload.nodes) ? payload.nodes : [],
@@ -10789,6 +11221,7 @@ function installEditableWorkbenchShell() {
       truth_level_impact: "none",
       dal_pssa_impact: "none",
       controller_truth_modified: false,
+      diagnostic_focus: currentDiagnosticFocusSummary(),
       viewport_state: viewportStateSnapshot(),
       selected_node: selected,
       nodes: nodes.map((node) => editableNodeState(node)),
@@ -10865,6 +11298,7 @@ function installEditableWorkbenchShell() {
       truth_level_impact: "none",
       dal_pssa_impact: "none",
       controller_truth_modified: false,
+      diagnostic_focus: snapshot.diagnostic_focus,
       viewport_state: snapshot.viewport_state,
       selected_node: snapshot.selected_node,
       selected_node_ids: Array.from(selectedNodeIds),
@@ -10964,6 +11398,12 @@ function installEditableWorkbenchShell() {
     ) {
       throw new Error("viewport_state must be an object when present");
     }
+    if (
+      payload.diagnostic_focus !== undefined
+      && (!payload.diagnostic_focus || typeof payload.diagnostic_focus !== "object" || Array.isArray(payload.diagnostic_focus))
+    ) {
+      throw new Error("diagnostic_focus must be an object when present");
+    }
     return payload;
   }
 
@@ -10997,6 +11437,7 @@ function installEditableWorkbenchShell() {
       selectedNodeIds: Array.isArray(validated.selected_node_ids)
         ? validated.selected_node_ids
         : [],
+      diagnosticFocus: validated.diagnostic_focus || null,
       viewportState: validated.viewport_state || defaultViewportState(),
       selectedCatalogOp: importedCatalog.selected_op,
       nodes: validated.nodes.map((node) => ({
@@ -11211,6 +11652,7 @@ function installEditableWorkbenchShell() {
     const bindingCoverage = snapshot.binding_coverage || buildInterfaceBindingCoverageSummary(hardwareBindings);
     const hardwareBindingDiagnostics = snapshot.hardware_binding_diagnostics
       || buildHardwareBindingDiagnosticsReport(hardwareBindings);
+    const diagnosticFocus = snapshot.diagnostic_focus || currentDiagnosticFocusSummary();
     const portContractSummary = snapshot.port_contract_summary || buildPortContractSummary(
       snapshot.typed_ports || [],
       snapshot.edges || [],
@@ -11239,6 +11681,9 @@ function installEditableWorkbenchShell() {
       `${draftSnapshotManifest.snapshot_count} saved snapshots / active=${draftSnapshotManifest.active_snapshot_id || "none"}`;
     const bindingDiagnosticsText =
       `${hardwareBindingDiagnostics.status} / issues=${hardwareBindingDiagnostics.issue_count} / gaps=${hardwareBindingDiagnostics.evidence_gap_field_count}`;
+    const diagnosticFocusText = diagnosticFocus && diagnosticFocus.state === "selected"
+      ? `${diagnosticFocus.target_kind}:${diagnosticFocus.target_id}${diagnosticFocus.edge_index !== undefined ? `#${diagnosticFocus.edge_index}` : ""} / ${diagnosticFocus.rule_id || "hardware_binding_diagnostic"}`
+      : "none";
     const linearIssueBody = [
       "## Outcome",
       `Review sandbox candidate edit for ${node.id || "selected node"} against the certified thrust-reverser baseline.`,
@@ -11262,6 +11707,7 @@ function installEditableWorkbenchShell() {
       "- Hardware/interface binding draft evidence.",
       "- Binding coverage summary.",
       "- Hardware binding diagnostics report.",
+      "- Selected binding diagnostic focus.",
       "- Typed port contract summary.",
       "- Port compatibility report.",
       "- Operation catalog provenance.",
@@ -11281,6 +11727,7 @@ function installEditableWorkbenchShell() {
       `- Hardware/interface bindings: ${bindingSummary}`,
       `- Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
       `- Hardware binding diagnostics: ${bindingDiagnosticsText}`,
+      `- Selected diagnostic focus: ${diagnosticFocusText}`,
       `- Port contract summary: ${portSummary}`,
       `- Port compatibility: ${compatibilitySummary}`,
       `- Operation catalog: ${operationCatalogSummary}`,
@@ -11302,6 +11749,7 @@ function installEditableWorkbenchShell() {
       `Hardware/interface bindings: ${bindingSummary}`,
       `Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
       `Hardware binding diagnostics: ${bindingDiagnosticsText}`,
+      `Selected diagnostic focus: ${diagnosticFocusText}`,
       `Port contract summary: ${portSummary}`,
       `Port compatibility: ${compatibilitySummary}`,
       `Operation catalog: ${operationCatalogSummary}`,
@@ -11317,6 +11765,7 @@ function installEditableWorkbenchShell() {
       gateClaims: buildWorkbenchGateClaims(),
       knownBlockers: buildWorkbenchKnownBlockers(),
       hardwareBindingDiagnostics,
+      diagnosticFocus,
       portContractSummary,
       portCompatibilityReport,
       operationCatalog,
@@ -11347,6 +11796,7 @@ function installEditableWorkbenchShell() {
     const bindingCoverage = buildInterfaceBindingCoverageSummary(hardwareBindings);
     const hardwareBindingDiagnostics =
       modelJson.hardware_binding_diagnostics || buildHardwareBindingDiagnosticsReport(hardwareBindings);
+    const diagnosticFocus = modelJson.diagnostic_focus || currentDiagnosticFocusSummary();
     const typedPorts = modelJson.typed_ports || [];
     const portContractSummary =
       modelJson.port_contract_summary || buildPortContractSummary(typedPorts, modelJson.edges || []);
@@ -11386,6 +11836,7 @@ function installEditableWorkbenchShell() {
       hardware_bindings: hardwareBindings,
       binding_coverage: bindingCoverage,
       hardware_binding_diagnostics: hardwareBindingDiagnostics,
+      diagnostic_focus: diagnosticFocus,
       typed_ports: typedPorts,
       port_contract_summary: portContractSummary,
       port_compatibility_report: portCompatibilityReport,
@@ -11407,6 +11858,7 @@ function installEditableWorkbenchShell() {
       hardware_bindings_checksum: checksumEvidenceArchiveField(hardwareBindings),
       binding_coverage_checksum: checksumEvidenceArchiveField(bindingCoverage),
       hardware_binding_diagnostics_checksum: checksumEvidenceArchiveField(hardwareBindingDiagnostics),
+      diagnostic_focus_checksum: checksumEvidenceArchiveField(diagnosticFocus),
       typed_ports_checksum: checksumEvidenceArchiveField(typedPorts),
       port_contract_summary_checksum: checksumEvidenceArchiveField(portContractSummary),
       port_compatibility_report_checksum: checksumEvidenceArchiveField(portCompatibilityReport),
@@ -11717,6 +12169,10 @@ function installEditableWorkbenchShell() {
       event.preventDefault();
       handleHardwarePaletteItem(target.getAttribute("data-hardware-palette-id") || "");
     });
+  }
+  if (hardwareBindingDiagnosticsList) {
+    hardwareBindingDiagnosticsList.addEventListener("click", handleHardwareBindingDiagnosticActivation);
+    hardwareBindingDiagnosticsList.addEventListener("keydown", handleHardwareBindingDiagnosticActivation);
   }
   if (applyInterfaceBindingBtn) {
     applyInterfaceBindingBtn.addEventListener("click", () => applySelectedInterfaceBinding());
