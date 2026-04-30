@@ -258,12 +258,34 @@ The slice remains sandbox-only:
   YAML change, C919 packet change, truth-level change, DAL change, or PSSA
   change is introduced.
 
+## JER-215 Closure Note
+
+JER-215 connects the JER-214 handoff schema to archive restore/readback. When an
+archive workspace snapshot contains a local evidence archive with
+`changerequest_handoff_packet`, restore now validates that packet before the
+payload is trusted. The readback payload exposes
+`changerequest_handoff_validation` with `pass`, `fail`, or `not_present` status,
+canonical SHA256, browser-compatible `ui_draft_*` checksum, checksum status,
+issues, and `truth_effect: none`.
+
+The slice remains backward-compatible:
+
+- archives without `changerequest_handoff_packet` restore with
+  `status: not_present`;
+- invalid handoff packets or checksum mismatches are reported as invalid archive
+  payloads rather than silently accepted;
+- the checksum compatibility helper mirrors the browser evidence archive hash
+  contract for stable, key-sorted JSON;
+- no live Linear mutation, controller truth mutation, adapter change, frozen
+  YAML change, C919 packet change, truth-level change, DAL change, or PSSA
+  change is introduced.
+
 ## JER-205 Sequencing Contract
 
 JER-205 is the lane-entry contract for v4. It does not add runtime behavior; it
 defines how the next implementation issues become executable.
 
-Before JER-206 through JER-214 are marked `agent:ready`, each issue must state
+Before JER-206 through JER-215 are marked `agent:ready`, each issue must state
 which acceptance state it touches:
 
 - `clarification`: the workbench has enough evidence to ask for missing design
@@ -349,7 +371,12 @@ touch bundles, archives, or API readback:
 - Integrity: `tests/test_archive_integrity.py` for archive checksum and
   manifest consistency.
 - Restore sandbox: `tests/test_archive_restore_sandbox.py` for archive restore
-  path traversal, sandbox violation, and moved-archive recovery behavior.
+  path traversal, sandbox violation, moved-archive recovery behavior, and
+  embedded handoff packet validation.
+- ChangeRequest handoff: `docs/json_schema/workbench_changerequest_handoff_v1.schema.json`,
+  `tests/test_workbench_changerequest_handoff_schema.py`, and
+  `tools/validate_workbench_changerequest_handoff_schema.py` for packet
+  schema, stable hash, archive validation, and checksum compatibility.
 - API readback: `tests/test_demo.py` coverage for `/api/workbench/bootstrap`,
   `/api/workbench/recent-archives`, `/api/workbench/bundle`, and
   `/api/workbench/archive-restore`.

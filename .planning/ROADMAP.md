@@ -27,12 +27,15 @@ Housekeeping bridge:
 - JER-211: Scenario/debug timeline linked to selected graph elements v1 (Done)
 - JER-212: Candidate-to-baseline diff review workflow v2 (Done)
 - JER-213: ChangeRequest handoff packet from editable draft v1 (Done)
-- JER-214: Workbench handoff packet schema and stable serialization hardening (In review)
+- JER-214: Workbench handoff packet schema and stable serialization hardening (Done)
+- JER-215: Evidence archive restore validates ChangeRequest handoff packet (In review)
 
 Workbench v4 seed backlog:
-- JER-214 is the current hardening bridge after v4 handoff. Next v4 planning
-  should decide whether to harden archive restore/API handoff or open the next
-  authoring milestone.
+- JER-215 is the current hardening bridge after v4 handoff. It connects the
+  repo-owned handoff schema to archive restore/readback so local evidence
+  archives with `changerequest_handoff_packet` cannot be silently trusted when
+  invalid. Next v4 planning should decide whether to open the next authoring
+  milestone or keep hardening archive/API evidence surfaces.
 
 Runtime v3 implementation closure:
 

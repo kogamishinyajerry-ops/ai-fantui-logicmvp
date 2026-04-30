@@ -17,8 +17,10 @@ from well_harness.workbench_changerequest_handoff import (  # type: ignore[impor
     CHANGE_REQUEST_HANDOFF_SCHEMA_ID,
     CHANGE_REQUEST_HANDOFF_SCHEMA_PATH,
     CHANGE_REQUEST_HANDOFF_VERSION,
+    changerequest_handoff_ui_checksum,
     changerequest_handoff_hash,
     load_changerequest_handoff_schema,
+    validate_changerequest_handoff_archive_payload,
     validate_changerequest_handoff_packet,
 )
 
@@ -110,6 +112,77 @@ class WorkbenchChangeRequestHandoffSchemaTests(unittest.TestCase):
         }
 
         self.assertEqual(changerequest_handoff_hash(payload), changerequest_handoff_hash(scrambled))
+
+    def test_archive_payload_validates_handoff_packet_and_ui_checksum(self) -> None:
+        payload = sample_changerequest_handoff_packet()
+        archive = {
+            "kind": "well-harness-workbench-evidence-archive",
+            "version": 1,
+            "changerequest_handoff_packet": payload,
+            "checksums": {
+                "changerequest_handoff_packet_checksum": changerequest_handoff_ui_checksum(payload),
+            },
+        }
+
+        report = validate_changerequest_handoff_archive_payload(archive)
+
+        self.assertEqual("pass", report["status"])
+        self.assertEqual("pass", report["checksum_status"])
+        self.assertEqual("changerequest_handoff_packet", report["source_path"])
+        self.assertEqual(changerequest_handoff_hash(payload), report["canonical_hash"])
+        self.assertEqual(changerequest_handoff_ui_checksum(payload), report["ui_checksum"])
+        self.assertEqual([], report["issues"])
+        self.assertEqual("none", report["truth_effect"])
+
+    def test_archive_payload_without_handoff_packet_is_backward_compatible(self) -> None:
+        report = validate_changerequest_handoff_archive_payload(
+            {
+                "kind": "well-harness-workbench-evidence-archive",
+                "version": 1,
+                "model_json": {"kind": "well-harness-workbench-ui-draft"},
+            }
+        )
+
+        self.assertEqual("not_present", report["status"])
+        self.assertEqual(0, report["issue_count"])
+        self.assertIsNone(report["canonical_hash"])
+
+    def test_archive_payload_rejects_invalid_handoff_packet(self) -> None:
+        payload = sample_changerequest_handoff_packet()
+        payload["live_linear_mutation"] = True
+        archive = {
+            "kind": "well-harness-workbench-evidence-archive",
+            "version": 1,
+            "changerequest_handoff_packet": payload,
+            "checksums": {
+                "changerequest_handoff_packet_checksum": changerequest_handoff_ui_checksum(payload),
+            },
+        }
+
+        report = validate_changerequest_handoff_archive_payload(archive)
+
+        self.assertEqual("fail", report["status"])
+        self.assertIn("live_linear_mutation must be False.", " ".join(report["issues"]))
+
+    def test_archive_payload_rejects_handoff_checksum_mismatch(self) -> None:
+        payload = sample_changerequest_handoff_packet()
+        archive = {
+            "kind": "well-harness-workbench-evidence-archive",
+            "version": 1,
+            "model_json": {
+                "kind": "well-harness-workbench-ui-draft",
+                "changerequest_handoff_packet": payload,
+            },
+            "checksums": {
+                "changerequest_handoff_packet_checksum": "ui_draft_00000000",
+            },
+        }
+
+        report = validate_changerequest_handoff_archive_payload(archive)
+
+        self.assertEqual("fail", report["status"])
+        self.assertEqual("mismatch", report["checksum_status"])
+        self.assertIn("checksum mismatch", " ".join(report["issues"]))
 
     def test_standalone_script_json_pass_output(self) -> None:
         env = dict(os.environ)
