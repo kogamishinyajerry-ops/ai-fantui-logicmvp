@@ -741,6 +741,104 @@ def test_workbench_interface_matrix_import_applies_sandbox_bindings_and_rejects_
     assert logic1_after_reject["hardware_binding"]["hardware_id"] == "TR-LRU-APPLIED"
 
 
+def test_workbench_interface_matrix_validation_previews_without_mutating_draft(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.fill("#workbench-interface-hardware-id", "TR-LRU-PREVIEW-BEFORE")
+    page.fill("#workbench-interface-cable", "CBL-PREVIEW-BEFORE")
+    page.fill("#workbench-interface-connector", "J-PREVIEW-BEFORE")
+    page.fill("#workbench-interface-port-local", "logic1:out")
+    page.fill("#workbench-interface-port-peer", "TR-LRU-PREVIEW-BEFORE:J-PREVIEW-BEFORE")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+
+    page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
+    page.fill("#workbench-interface-hardware-id", "EDGE-LRU-PREVIEW-BEFORE")
+    page.fill("#workbench-interface-cable", "EDGE-CBL-PREVIEW-BEFORE")
+    page.fill("#workbench-interface-connector", "EDGE-J-PREVIEW-BEFORE")
+    page.fill("#workbench-interface-port-local", "logic1:out")
+    page.fill("#workbench-interface-port-peer", "logic2:in:ui_edge:logic1")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+
+    page.click("#workbench-export-interface-matrix-btn")
+    matrix = json.loads(page.locator("#workbench-interface-matrix-output").input_value())
+    for row in matrix["rows"]:
+        if row["owner_kind"] == "node" and row["owner_id"] == "logic1":
+            row["hardware_id"] = "TR-LRU-PREVIEW-EDITED"
+            row["cable"] = "evidence_gap"
+            row["connector"] = "J-DUP"
+            row["port_local"] = "logic1:out"
+            row["port_peer"] = "TR-LRU-PREVIEW-EDITED:J-DUP"
+        if row["owner_kind"] == "edge" and row["owner_id"] == "edge_logic1_logic2":
+            row["hardware_id"] = "TR-LRU-PREVIEW-EDITED"
+            row["cable"] = "CBL-DUP"
+            row["connector"] = "J-DUP"
+            row["port_local"] = "logic1:out"
+            row["port_peer"] = "TR-LRU-PREVIEW-EDITED:J-DUP"
+    matrix["rows"].append({
+        "row_id": "interface:ghost-preview",
+        "owner_kind": "edge",
+        "owner_id": "ghost_edge",
+        "hardware_id": "GHOST-LRU",
+        "cable": "GHOST-CBL",
+        "connector": "GHOST-J",
+        "port_local": "ghost:out",
+        "port_peer": "ghost:in",
+        "evidence_status": "ui_draft",
+        "truth_effect": "none",
+    })
+
+    page.fill("#workbench-interface-matrix-output", json.dumps(matrix))
+    page.click("#workbench-validate-interface-matrix-btn")
+    report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
+    assert errors == [], f"page JS errors: {errors}"
+    assert report["kind"] == "well-harness-workbench-interface-matrix-validation-report"
+    assert report["status"] == "warn"
+    assert report["truth_effect"] == "none"
+    assert report["applyable_row_count"] >= 2
+    assert report["skipped_row_count"] >= 1
+    assert report["missing_owner_count"] == 1
+    assert report["evidence_gap_field_count"] >= 1
+    assert report["duplicate_interface_reuse_count"] >= 1
+    assert report["typed_port_conflict_count"] >= 1
+    assert "Matrix validation warn" in page.locator("#workbench-interface-matrix-status").inner_text()
+
+    page.click("#workbench-export-draft-btn")
+    preview_only_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    logic1 = next(node for node in preview_only_draft["nodes"] if node["id"] == "logic1")
+    assert logic1["hardware_binding"]["hardware_id"] == "TR-LRU-PREVIEW-BEFORE"
+    assert preview_only_draft["interface_matrix_validation"]["status"] == "warn"
+
+    page.click("#workbench-generate-handoff-btn")
+    assert "Interface matrix validation: warn" in page.locator("#workbench-pr-proof-output").input_value()
+    assert "Interface matrix validation:" in page.locator("#workbench-linear-handoff-output").input_value()
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["interface_matrix_validation"]["status"] == "warn"
+    assert archive["checksums"]["interface_matrix_validation_checksum"]
+    assert archive["red_line_metadata"]["truth_level_impact"] == "none"
+
+    rejected = json.loads(page.locator("#workbench-interface-matrix-output").input_value())
+    rejected["rows"][0]["truth_effect"] = "certified"
+    rejected["rows"][0]["hardware_id"] = "SHOULD-NOT-APPLY"
+    page.fill("#workbench-interface-matrix-output", json.dumps(rejected))
+    page.click("#workbench-validate-interface-matrix-btn")
+    failed_report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
+    assert failed_report["status"] == "fail"
+    assert failed_report["truth_effect_violation_count"] >= 1
+    page.click("#workbench-apply-interface-matrix-btn")
+    assert "Matrix validation failed" in page.locator("#workbench-interface-matrix-status").inner_text()
+    page.click("#workbench-export-draft-btn")
+    after_reject = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    logic1_after_reject = next(node for node in after_reject["nodes"] if node["id"] == "logic1")
+    assert logic1_after_reject["hardware_binding"]["hardware_id"] == "TR-LRU-PREVIEW-BEFORE"
+
+
 def test_workbench_operation_catalog_adds_typed_sandbox_node(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
