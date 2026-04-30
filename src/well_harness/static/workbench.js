@@ -7612,6 +7612,14 @@ function installEditableWorkbenchShell() {
   const diffScenario = document.getElementById("workbench-diff-scenario");
   const diffModelHash = document.getElementById("workbench-diff-model-hash");
   const diffFirstDivergence = document.getElementById("workbench-diff-first-divergence");
+  const diffReviewV2Panel = document.getElementById("workbench-diff-review-v2");
+  const diffReviewV2Status = document.getElementById("workbench-diff-review-v2-status");
+  const diffReviewV2Target = document.getElementById("workbench-diff-review-v2-target");
+  const diffReviewV2Scenario = document.getElementById("workbench-diff-review-v2-scenario");
+  const diffReviewV2Readiness = document.getElementById("workbench-diff-review-v2-readiness");
+  const diffReviewV2ArchiveState = document.getElementById("workbench-diff-review-v2-archive-state");
+  const diffReviewV2Divergence = document.getElementById("workbench-diff-review-v2-divergence");
+  const diffReviewV2Claim = document.getElementById("workbench-diff-review-v2-claim");
   const timelineStrip = document.getElementById("workbench-sandbox-timeline-strip");
   const selectedDebugTimelineTarget = document.getElementById("workbench-selected-debug-target");
   const selectedDebugTimelineScenario = document.getElementById("workbench-selected-debug-scenario");
@@ -12316,6 +12324,112 @@ function installEditableWorkbenchShell() {
     return packet;
   }
 
+  function normalizeDiffReviewV2Verdict(verdict) {
+    const normalized = String(verdict || "not_run").trim();
+    if (["equivalent", "divergent", "invalid_model", "invalid_scenario"].includes(normalized)) {
+      return normalized;
+    }
+    return "not_run";
+  }
+
+  function diffReviewV2ReadinessState(verdict) {
+    if (verdict === "equivalent") return "ready";
+    if (verdict === "divergent") return "review_required";
+    if (verdict === "invalid_model" || verdict === "invalid_scenario") return "blocked";
+    return "run_required";
+  }
+
+  function diffReviewV2ArchiveStateValue(verdict) {
+    return verdict === "not_run" ? "not_archive_ready" : "archive_ready";
+  }
+
+  function diffReviewV2FirstDivergenceText(diffPayload) {
+    if (!diffPayload) return "not run";
+    const verdict = normalizeDiffReviewV2Verdict(diffPayload.verdict);
+    if (verdict === "invalid_model" || verdict === "invalid_scenario") {
+      const validationText = graphValidationReportText(diffPayload.validation_report);
+      return [
+        diffPayload.error || verdict,
+        validationText,
+      ].filter(Boolean).join(" | ");
+    }
+    return firstDivergenceText(diffPayload.summary && diffPayload.summary.first_divergence);
+  }
+
+  function currentCandidateBaselineDiffReviewV2Report(state, modelHash, sourceDiff) {
+    const diffPayload = sourceDiff || lastSandboxDiff || null;
+    const verdict = normalizeDiffReviewV2Verdict(diffPayload && diffPayload.verdict);
+    const selectedTimeline = currentSelectedDebugTimelinePacket("diff_review");
+    const hardwareEvidence = currentHardwareEvidenceV2Report();
+    const summary = (diffPayload && diffPayload.summary) || {};
+    const firstDivergence =
+      (summary && summary.first_divergence) || null;
+    return {
+      kind: "well-harness-workbench-candidate-baseline-diff-review-v2",
+      version: 1,
+      candidate_state: "sandbox_candidate",
+      workflow_state: state || "review",
+      verdict,
+      allowed_verdicts: ["equivalent", "divergent", "invalid_model", "invalid_scenario"],
+      review_readiness: diffReviewV2ReadinessState(verdict),
+      archive_state: diffReviewV2ArchiveStateValue(verdict),
+      scenario_id: (diffPayload && diffPayload.scenario_id) || selectedWorkbenchScenarioId(),
+      scenario_metadata:
+        (diffPayload && diffPayload.scenario_metadata) || currentWorkbenchScenarioMetadata(),
+      model_hash: modelHash || (diffPayload && diffPayload.model_hash) || "pending",
+      selected_target: selectedTimeline.owner_key || "none:none",
+      selected_debug_trace_link: selectedTimeline.trace_link_status || "selection_only",
+      first_divergence: firstDivergence,
+      first_divergence_text: diffReviewV2FirstDivergenceText(diffPayload),
+      assertion_status: summary.assertion_status || "not_run",
+      frame_count: summary.frame_count || 0,
+      validation_status:
+        (diffPayload && diffPayload.validation_report && diffPayload.validation_report.status) || "not_run",
+      baseline_source: {
+        adapter: "reference-deploy-controller",
+        truth_level: "certified",
+        source: "certified adapter/controller baseline",
+      },
+      candidate_certification_claim: "none",
+      certification_claim: "none",
+      truth_level_impact: "none",
+      dal_pssa_impact: "none",
+      controller_truth_modified: false,
+      frozen_assets_modified: false,
+      hardware_truth_effect: "none",
+      hardware_evidence: {
+        target: `${hardwareEvidence.target_kind || "none"}:${hardwareEvidence.target_id || "none"}`,
+        coverage_status: hardwareEvidence.coverage_status || "missing",
+        evidence_gap_count: hardwareEvidence.evidence_gap_count || 0,
+        truth_effect: "none",
+      },
+      review_guardrails: [
+        "Candidate output is sandbox evidence only.",
+        "Equivalent does not certify the candidate.",
+        "Divergent requires human review before any ChangeRequest.",
+        "Invalid model/scenario must be fixed before implementation.",
+      ],
+      truth_effect: "none",
+    };
+  }
+
+  function renderCandidateBaselineDiffReviewV2(state, modelHash, sourceDiff) {
+    const report = currentCandidateBaselineDiffReviewV2Report(state, modelHash, sourceDiff);
+    if (diffReviewV2Panel) {
+      diffReviewV2Panel.setAttribute("data-review-verdict", report.verdict);
+      diffReviewV2Panel.setAttribute("data-review-readiness", report.review_readiness);
+      diffReviewV2Panel.setAttribute("data-review-truth-effect", "none");
+    }
+    if (diffReviewV2Status) diffReviewV2Status.textContent = report.verdict;
+    if (diffReviewV2Target) diffReviewV2Target.textContent = report.selected_target;
+    if (diffReviewV2Scenario) diffReviewV2Scenario.textContent = report.scenario_id;
+    if (diffReviewV2Readiness) diffReviewV2Readiness.textContent = report.review_readiness;
+    if (diffReviewV2ArchiveState) diffReviewV2ArchiveState.textContent = report.archive_state;
+    if (diffReviewV2Divergence) diffReviewV2Divergence.textContent = report.first_divergence_text;
+    if (diffReviewV2Claim) diffReviewV2Claim.textContent = report.certification_claim;
+    return report;
+  }
+
   function setTimelineState(state) {
     if (!timelineStrip) return;
     const items = Array.from(timelineStrip.querySelectorAll("li"));
@@ -12342,6 +12456,7 @@ function installEditableWorkbenchShell() {
       items[4] && items[4].setAttribute("data-step-state", "active");
     }
     renderSelectedDebugTimeline(state);
+    renderCandidateBaselineDiffReviewV2(state);
   }
 
   function normalizeInspectorLogicNodeId(nodeId) {
@@ -13126,6 +13241,7 @@ function installEditableWorkbenchShell() {
     ].join("");
     renderHardwareEvidenceV2Report(buildHardwareEvidenceV2Report(activeInterfaceBindingTarget(), []));
     renderSelectedDebugTimeline("selection");
+    renderCandidateBaselineDiffReviewV2("selection");
     renderRuleParameterEditor();
     renderInterfaceBindingEditor();
     renderHardwareBindingDiagnostics();
@@ -13152,6 +13268,7 @@ function installEditableWorkbenchShell() {
       evidenceRowsForNode(hardwareEvidenceReport, payload.id),
     ));
     renderSelectedDebugTimeline("selection");
+    renderCandidateBaselineDiffReviewV2("selection");
     renderRuleParameterEditor();
     renderInterfaceBindingEditor();
     renderHardwareBindingDiagnostics();
@@ -13324,6 +13441,7 @@ function installEditableWorkbenchShell() {
     const hardwarePalette = buildHardwarePaletteSummary();
     const hardwareEvidenceV2 = currentHardwareEvidenceV2Report();
     const selectedDebugTimeline = currentSelectedDebugTimelinePacket("snapshot");
+    const candidateBaselineDiffReviewV2 = currentCandidateBaselineDiffReviewV2Report("snapshot");
     const diagnosticRepairActions = repairActionLogSnapshot();
     return {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
@@ -13359,6 +13477,7 @@ function installEditableWorkbenchShell() {
       hardware_palette: hardwarePalette,
       hardware_evidence_v2: hardwareEvidenceV2,
       selected_debug_timeline: selectedDebugTimeline,
+      candidate_baseline_diff_review_v2: candidateBaselineDiffReviewV2,
     };
   }
 
@@ -13410,6 +13529,8 @@ function installEditableWorkbenchShell() {
     const customSnapshot = safeWorkbenchCustomSnapshot() || {};
     const changedModelHash = editableDraftHash(JSON.stringify(snapshot));
     const changeRequestProofPacket = buildChangeRequestProofPacket(snapshot, changedModelHash);
+    const candidateBaselineDiffReviewV2 =
+      currentCandidateBaselineDiffReviewV2Report("export", changedModelHash);
     return {
       kind: "well-harness-workbench-ui-draft",
       version: 1,
@@ -13419,6 +13540,7 @@ function installEditableWorkbenchShell() {
       truth_level_impact: "none",
       dal_pssa_impact: "none",
       controller_truth_modified: false,
+      changed_model_hash: changedModelHash,
       diagnostic_focus: snapshot.diagnostic_focus,
       viewport_state: snapshot.viewport_state,
       selected_node: snapshot.selected_node,
@@ -13443,6 +13565,7 @@ function installEditableWorkbenchShell() {
       hardware_palette: snapshot.hardware_palette,
       hardware_evidence_v2: snapshot.hardware_evidence_v2,
       selected_debug_timeline: snapshot.selected_debug_timeline,
+      candidate_baseline_diff_review_v2: candidateBaselineDiffReviewV2,
       changerequest_proof_packet: changeRequestProofPacket,
       draft_snapshot_manifest: buildDraftSnapshotManifestSummary(),
       selected_scenario_id: selectedWorkbenchScenarioId(),
@@ -13549,6 +13672,27 @@ function installEditableWorkbenchShell() {
       && payload.selected_debug_timeline.truth_effect !== "none"
     ) {
       throw new Error("selected_debug_timeline truth_effect must be none");
+    }
+    if (
+      payload.candidate_baseline_diff_review_v2 !== undefined
+      && (!payload.candidate_baseline_diff_review_v2 || typeof payload.candidate_baseline_diff_review_v2 !== "object" || Array.isArray(payload.candidate_baseline_diff_review_v2))
+    ) {
+      throw new Error("candidate_baseline_diff_review_v2 must be an object when present");
+    }
+    if (payload.candidate_baseline_diff_review_v2 !== undefined) {
+      const review = payload.candidate_baseline_diff_review_v2;
+      if (review.candidate_state !== "sandbox_candidate") {
+        throw new Error("candidate_baseline_diff_review_v2 candidate_state must be sandbox_candidate");
+      }
+      if (review.certification_claim !== "none") {
+        throw new Error("candidate_baseline_diff_review_v2 certification_claim must be none");
+      }
+      if (review.truth_effect !== "none") {
+        throw new Error("candidate_baseline_diff_review_v2 truth_effect must be none");
+      }
+      if (review.controller_truth_modified !== false) {
+        throw new Error("candidate_baseline_diff_review_v2 controller_truth_modified must be false");
+      }
     }
     if (payload.typed_ports !== undefined && !Array.isArray(payload.typed_ports)) {
       throw new Error("typed_ports must be an array when present");
@@ -14253,6 +14397,8 @@ function installEditableWorkbenchShell() {
       sourceSnapshot.hardware_evidence_v2 || currentHardwareEvidenceV2Report();
     const selectedDebugTimeline =
       sourceSnapshot.selected_debug_timeline || currentSelectedDebugTimelinePacket("proof");
+    const candidateBaselineDiffReviewV2 =
+      currentCandidateBaselineDiffReviewV2Report("proof", changedModelHash);
     const repairActions = repairActionLogSnapshotFromSource(sourceSnapshot.repair_action_log || []);
     const portContractSummary =
       sourceSnapshot.port_contract_summary || buildPortContractSummary(
@@ -14276,7 +14422,7 @@ function installEditableWorkbenchShell() {
       version: 1,
       linear: {
         issue: "JER-TBD",
-        project: "AI FANTUI LogicMVP · Editable Workbench Runtime v3",
+        project: "AI FANTUI LogicMVP · Editable Workbench v4 Authoring + Hardware Design",
         live_mutation: false,
         agent_eligible: "No",
       },
@@ -14354,6 +14500,17 @@ function installEditableWorkbenchShell() {
           && selectedDebugTimeline.hardware_overlay.hardware_id
         ) || "evidence_gap",
         checksum: checksumEvidenceArchiveField(selectedDebugTimeline),
+        truth_effect: "none",
+      },
+      candidate_baseline_diff_review_v2_summary: {
+        verdict: candidateBaselineDiffReviewV2.verdict || "not_run",
+        review_readiness: candidateBaselineDiffReviewV2.review_readiness || "run_required",
+        archive_state: candidateBaselineDiffReviewV2.archive_state || "not_archive_ready",
+        scenario_id: candidateBaselineDiffReviewV2.scenario_id || selectedWorkbenchScenarioId(),
+        selected_target: candidateBaselineDiffReviewV2.selected_target || "none:none",
+        first_divergence_text: candidateBaselineDiffReviewV2.first_divergence_text || "not run",
+        certification_claim: candidateBaselineDiffReviewV2.certification_claim || "none",
+        checksum: checksumEvidenceArchiveField(candidateBaselineDiffReviewV2),
         truth_effect: "none",
       },
       selected_focus: diagnosticFocusSummary,
@@ -14438,6 +14595,11 @@ function installEditableWorkbenchShell() {
     return `${summary.target || "none"} / ${summary.scenario_id || "nominal_landing"} / ${summary.diff_verdict || "not_run"} / ${summary.trace_link_status || "selection_only"}`;
   }
 
+  function proofPacketDiffReviewV2Text(packet) {
+    const summary = packet.candidate_baseline_diff_review_v2_summary || {};
+    return `${summary.verdict || "not_run"} / ${summary.review_readiness || "run_required"} / ${summary.archive_state || "not_archive_ready"} / claim=${summary.certification_claim || "none"}`;
+  }
+
   function proofPacketDiagnosticFocusText(packet) {
     const focus = packet.selected_focus || packet.diagnostic_focus || {};
     if (focus.state !== "selected") return "none";
@@ -14470,6 +14632,7 @@ function installEditableWorkbenchShell() {
       "## Evidence Required",
       "- Editable draft JSON export.",
       "- Sandbox baseline diff report.",
+      "- Candidate-to-baseline Diff Review v2 report.",
       "- Selected graph timeline/debug packet.",
       "- Hardware/interface binding draft evidence.",
       "- Hardware Evidence Inspector v2 selected-owner packet.",
@@ -14505,6 +14668,7 @@ function installEditableWorkbenchShell() {
       `- Connector/pin map: ${proofPacketConnectorPinMapText(packet)}`,
       `- Hardware evidence v2: ${proofPacketHardwareEvidenceV2Text(packet)}`,
       `- Selected debug timeline: ${proofPacketSelectedDebugTimelineText(packet)}`,
+      `- Diff review v2: ${proofPacketDiffReviewV2Text(packet)}`,
       `- Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
       `- Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
       `- Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
@@ -14533,6 +14697,7 @@ function installEditableWorkbenchShell() {
       `Connector/pin map: ${proofPacketConnectorPinMapText(packet)}`,
       `Hardware evidence v2: ${proofPacketHardwareEvidenceV2Text(packet)}`,
       `Selected debug timeline: ${proofPacketSelectedDebugTimelineText(packet)}`,
+      `Diff review v2: ${proofPacketDiffReviewV2Text(packet)}`,
       `Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
       `Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
       `Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
@@ -14582,6 +14747,7 @@ function installEditableWorkbenchShell() {
         diffFirstDivergence.textContent = firstDivergenceText(summary && summary.first_divergence);
       }
     }
+    renderCandidateBaselineDiffReviewV2("diff", payload && payload.model_hash, payload);
     setTimelineState("diff");
     if (handoffStatus) {
       handoffStatus.textContent =
@@ -14726,6 +14892,9 @@ function installEditableWorkbenchShell() {
       modelJson.hardware_evidence_v2 || currentHardwareEvidenceV2Report();
     const selectedDebugTimeline =
       modelJson.selected_debug_timeline || currentSelectedDebugTimelinePacket("archive");
+    const candidateBaselineDiffReviewV2 =
+      modelJson.candidate_baseline_diff_review_v2
+      || currentCandidateBaselineDiffReviewV2Report("archive", modelJson.changed_model_hash);
     const diagnosticFocus = modelJson.diagnostic_focus || currentDiagnosticFocusSummary();
     const diagnosticRepairActions = modelJson.repair_action_log || repairActionLogSnapshot();
     const typedPorts = modelJson.typed_ports || [];
@@ -14776,6 +14945,7 @@ function installEditableWorkbenchShell() {
       connector_pin_map: connectorPinMap,
       hardware_evidence_v2: hardwareEvidenceV2,
       selected_debug_timeline: selectedDebugTimeline,
+      candidate_baseline_diff_review_v2: candidateBaselineDiffReviewV2,
       diagnostic_focus: diagnosticFocus,
       repair_action_log: diagnosticRepairActions,
       typed_ports: typedPorts,
@@ -14812,6 +14982,7 @@ function installEditableWorkbenchShell() {
       connector_pin_map_checksum: checksumEvidenceArchiveField(connectorPinMap),
       hardware_evidence_v2_checksum: checksumEvidenceArchiveField(hardwareEvidenceV2),
       selected_debug_timeline_checksum: checksumEvidenceArchiveField(selectedDebugTimeline),
+      candidate_baseline_diff_review_v2_checksum: checksumEvidenceArchiveField(candidateBaselineDiffReviewV2),
       diagnostic_focus_checksum: checksumEvidenceArchiveField(diagnosticFocus),
       repair_action_log_checksum: checksumEvidenceArchiveField(diagnosticRepairActions),
       typed_ports_checksum: checksumEvidenceArchiveField(typedPorts),
