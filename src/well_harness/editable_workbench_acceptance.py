@@ -174,9 +174,9 @@ def _default_known_blockers() -> list[dict[str, str]]:
             "truth_effect": "none",
         },
         {
-            "gate": "mypy --strict",
+            "gate": "PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
             "status": "not_claimed_clean",
-            "evidence": "Official Codex-lane mypy command is not yet defined and passing.",
+            "evidence": "Official Codex-lane mypy gate is defined by JER-171; current full-repo strict gate remains blocked by existing baseline typing errors.",
             "truth_effect": "none",
         },
     ]

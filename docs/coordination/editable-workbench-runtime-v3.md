@@ -16,7 +16,8 @@ and archivable as controlled engineering evidence.
 - JER-167: Scenario selector and custom snapshot sandbox UI (Done, PR #150)
 - JER-168: Port-aware edge inspector v1 (Done, PR #151)
 - JER-169: Runtime v3 acceptance bundle and regression proof (Done, PR #152)
-- JER-170: Workbench e2e networkidle gate normalization (In progress)
+- JER-170: Workbench e2e networkidle gate normalization (Done, PR #153)
+- JER-171: Official mypy strict gate definition (In progress)
 
 ## JER-165 Rule
 
@@ -109,6 +110,21 @@ The gate remains strict:
 - JS error capture and DOM assertions stay intact.
 - Passing this gate does not change truth, DAL/PSSA, adapter, or product LLM
   behavior.
+
+## JER-171 Rule
+
+JER-171 defines a repo-owned mypy strict evidence command without pretending the
+current baseline is clean.
+
+The official evidence command is:
+
+`PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json`
+
+The command emits a machine-readable `well-harness-mypy-gate-report` with
+`status: pass` or `status: blocked`. On the current baseline, `blocked` is the
+expected honest result and points back to the JER-148/JER-171 typing blocker
+record. PR proof packets may cite that JSON, but must not claim `mypy --strict
+clean` until the wrapper reports `pass`.
 
 ## Boundaries
 
