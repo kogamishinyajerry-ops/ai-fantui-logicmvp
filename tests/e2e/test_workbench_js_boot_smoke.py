@@ -334,6 +334,59 @@ def test_workbench_interface_binding_round_trips_through_export_import_and_archi
     assert archive["checksums"]["binding_coverage_checksum"]
 
 
+def test_workbench_hardware_palette_creates_and_applies_sandbox_bindings(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.wait_for_selector('[data-hardware-palette-id="lru:etrac"]')
+
+    page.select_option("#workbench-hardware-palette-action", "apply-binding")
+    page.click('[data-hardware-palette-id="lru:etrac"]')
+    page.click("#workbench-export-draft-btn")
+    lru_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    logic1 = next(node for node in lru_draft["nodes"] if node["id"] == "logic1")
+
+    assert logic1["hardware_binding"]["hardware_id"] == "etrac"
+    assert logic1["hardware_binding"]["source_ref"].startswith("docs/thrust_reverser/")
+    assert lru_draft["hardware_palette"]["source"] == "read_only_hardware_evidence_api"
+    assert lru_draft["hardware_palette"]["truth_effect"] == "none"
+    assert lru_draft["controller_truth_modified"] is False
+
+    page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
+    page.select_option("#workbench-port-value-type", "number")
+    page.click("#workbench-apply-port-contract-btn")
+    page.locator('[data-hardware-palette-id^="signal:SW1"]').first.click()
+    page.click("#workbench-export-draft-btn")
+    edge_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    edge = next(item for item in edge_draft["edges"] if item["id"] == "edge_logic1_logic2")
+    assert edge["signal_id"] == "SW1"
+    assert edge["value_type"] == "number"
+    assert edge["hardware_binding"]["hardware_id"] == "external_throttle_resolver"
+    assert edge["hardware_binding"]["truth_effect"] == "none"
+
+    page.select_option("#workbench-hardware-palette-action", "create-node")
+    page.locator('[data-hardware-palette-id^="signal:SW1"]').first.click()
+    page.click("#workbench-export-draft-btn")
+    node_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    palette_node = next(node for node in node_draft["nodes"] if node["id"] == "draft_node_1")
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert palette_node["draftNode"] is True
+    assert palette_node["sourceRef"].startswith("ui_draft.hardware_palette.signal.signal:SW1")
+    assert palette_node["hardware_binding"]["hardware_id"] == "external_throttle_resolver"
+    assert palette_node["hardware_binding"]["truth_effect"] == "none"
+    assert palette_node["port_contract"]["input_signal_id"] == "SW1"
+    assert palette_node["port_contract"]["truth_effect"] == "none"
+    assert node_draft["truth_level_impact"] == "none"
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["hardware_palette"]["truth_effect"] == "none"
+    assert archive["checksums"]["hardware_palette_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_typed_port_contract_round_trips_through_export_import_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")

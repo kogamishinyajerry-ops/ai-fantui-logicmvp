@@ -5458,12 +5458,81 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-inspector-empty + .workbench-inspector-truth-note {
   margin-top: 0.2rem;
 }
+.workbench-hardware-palette,
 .workbench-rule-parameter-editor,
 .workbench-interface-binding-editor,
 .workbench-typed-port-editor {
   margin-top: 0.7rem;
   padding-top: 0.65rem;
   border-top: 1px solid rgba(150, 173, 190, 0.18);
+}
+.workbench-hardware-palette-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.workbench-hardware-palette-controls .workbench-inspector-field {
+  margin-bottom: 0;
+}
+.workbench-hardware-palette-list {
+  display: grid;
+  gap: 0.4rem;
+  max-height: 210px;
+  margin-top: 0.55rem;
+  overflow: auto;
+}
+.workbench-hardware-palette-list[data-palette-state="empty"],
+.workbench-hardware-palette-list[data-palette-state="loading"] {
+  padding: 0.55rem;
+  border: 1px dashed rgba(150, 173, 190, 0.22);
+  border-radius: 8px;
+  color: rgba(213, 227, 237, 0.68);
+  font-size: 0.7rem;
+}
+.workbench-hardware-palette-item {
+  width: 100%;
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.55rem 0.6rem;
+  border: 1px solid rgba(150, 173, 190, 0.18);
+  border-radius: 8px;
+  background: rgba(4, 10, 16, 0.62);
+  color: #edf8ff;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.workbench-hardware-palette-item:hover,
+.workbench-hardware-palette-item[aria-pressed="true"] {
+  border-color: rgba(125, 215, 194, 0.42);
+  background: rgba(13, 32, 35, 0.78);
+}
+.workbench-hardware-palette-item strong {
+  color: #f5fbff;
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+.workbench-hardware-palette-item span,
+.workbench-hardware-palette-item small {
+  color: rgba(213, 227, 237, 0.66);
+  font-size: 0.66rem;
+  line-height: 1.28;
+  overflow-wrap: anywhere;
+}
+.workbench-hardware-palette-item em {
+  justify-self: start;
+  padding: 0.1rem 0.34rem;
+  border: 1px solid rgba(150, 173, 190, 0.22);
+  border-radius: 999px;
+  color: rgba(253, 241, 205, 0.82);
+  font-size: 0.62rem;
+  font-style: normal;
+}
+.workbench-hardware-palette-item[data-palette-kind="lru"] em {
+  color: #7dd7c2;
+}
+.workbench-hardware-palette-item[data-palette-kind="signal"] em {
+  color: #f0c15b;
 }
 .workbench-rule-parameter-grid,
 .workbench-interface-binding-grid,
