@@ -7623,6 +7623,7 @@ function installEditableWorkbenchShell() {
   const hardwareBindingDiagnosticsGapCount = document.getElementById("workbench-hardware-binding-diagnostics-gap-count");
   const hardwareBindingDiagnosticsList = document.getElementById("workbench-hardware-binding-diagnostics-list");
   const exportInterfaceMatrixBtn = document.getElementById("workbench-export-interface-matrix-btn");
+  const applyInterfaceMatrixBtn = document.getElementById("workbench-apply-interface-matrix-btn");
   const interfaceMatrixOutput = document.getElementById("workbench-interface-matrix-output");
   const interfaceMatrixStatus = document.getElementById("workbench-interface-matrix-status");
   const typedPortOwner = document.getElementById("workbench-typed-port-owner");
@@ -10456,8 +10457,13 @@ function installEditableWorkbenchShell() {
     applyEditableGroupDragPosition(event);
     const movedCount = groupDragState.nodes.length;
     const didMove = groupDragState.moved;
+    const movedNodes = groupDragState.nodes.map((item) => item.node).filter(Boolean);
+    const movedNodeIds = groupDragState.nodes.map((item) => item.id).filter(Boolean);
     groupDragState = null;
     if (!didMove) return;
+    selectedNode = movedNodes[movedNodes.length - 1] || selectedNode;
+    selectedNodeIds = new Set(movedNodeIds);
+    syncEditableNodeSelectionAttributes();
     suppressNextNodeClick = true;
     if (draftLabel) draftLabel.textContent = "sandbox_candidate group move pending";
     validateEditableGraph();
@@ -11984,6 +11990,108 @@ function installEditableWorkbenchShell() {
     return matrix;
   }
 
+  function validateInterfaceMatrixImportPayload(payload) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      throw new Error("interface matrix JSON must be an object");
+    }
+    if (payload.kind !== "well-harness-workbench-interface-matrix") {
+      throw new Error("interface matrix kind must be well-harness-workbench-interface-matrix");
+    }
+    if (payload.truth_effect !== "none") {
+      throw new Error("interface matrix truth_effect must be none");
+    }
+    if (!Array.isArray(payload.rows)) {
+      throw new Error("interface matrix rows must be an array");
+    }
+    for (const row of payload.rows) {
+      if (!row || typeof row !== "object" || Array.isArray(row)) {
+        throw new Error("interface matrix row must be an object");
+      }
+      if (row.truth_effect !== "none") {
+        throw new Error("interface matrix row truth_effect must be none");
+      }
+    }
+    return payload;
+  }
+
+  function interfaceBindingFromMatrixRow(row) {
+    return normalizeInterfaceBinding({
+      hardware_id: row.hardware_id,
+      cable: row.cable,
+      connector: row.connector,
+      port_local: row.port_local,
+      port_peer: row.port_peer,
+      evidence_status: row.evidence_status,
+      source_ref: row.source_ref || `ui_draft.interface_matrix.${row.owner_kind || "unknown"}.${row.owner_id || "unknown"}`,
+    }, row.owner_kind, row.owner_id);
+  }
+
+  function applyInterfaceMatrixRows(rows) {
+    let applied = 0;
+    let skipped = 0;
+    refreshEditableNodes();
+    for (const row of rows) {
+      const ownerKind = normalizedInterfaceField(row.owner_kind);
+      const ownerId = normalizedInterfaceField(row.owner_id);
+      const binding = interfaceBindingFromMatrixRow(row);
+      if (ownerKind === "node") {
+        const node = nodes.find((candidate) => editableNodeId(candidate) === ownerId);
+        if (!node) {
+          skipped += 1;
+          continue;
+        }
+        setNodeInterfaceBinding(node, binding);
+        applied += 1;
+        continue;
+      }
+      if (ownerKind === "edge") {
+        const edge = draftEdges.find((candidate) => (
+          candidate.id === ownerId
+          || `${candidate.source || "unknown"}->${candidate.target || "unknown"}` === ownerId
+        ));
+        if (!edge) {
+          skipped += 1;
+          continue;
+        }
+        setEdgeInterfaceBinding(edge, binding);
+        applied += 1;
+        continue;
+      }
+      skipped += 1;
+    }
+    return { applied, skipped };
+  }
+
+  function applyWorkbenchInterfaceMatrix() {
+    if (!interfaceMatrixOutput) return null;
+    try {
+      const payload = validateInterfaceMatrixImportPayload(
+        JSON.parse(interfaceMatrixOutput.value || "{}"),
+      );
+      recordEditableHistory("interface_matrix_apply");
+      shell.setAttribute("data-draft-state", "derived");
+      const summary = applyInterfaceMatrixRows(payload.rows);
+      if (draftLabel) draftLabel.textContent = "sandbox_candidate interface matrix applied";
+      renderEditableEdges();
+      renderInspector();
+      validateEditableGraph();
+      updateEditableDraftHash();
+      persistDraft();
+      const matrix = exportWorkbenchInterfaceMatrix();
+      if (interfaceMatrixStatus) {
+        interfaceMatrixStatus.textContent =
+          `Applied ${summary.applied} matrix row(s), skipped ${summary.skipped}. Export now has ${matrix.row_count || 0} row(s). Truth effect: none.`;
+      }
+      return summary;
+    } catch (err) {
+      if (interfaceMatrixStatus) {
+        interfaceMatrixStatus.textContent =
+          err && err.message ? err.message : "interface matrix import failed";
+      }
+      return null;
+    }
+  }
+
   function importEditableDraftJson() {
     if (!draftJsonBuffer) return null;
     try {
@@ -12909,6 +13017,9 @@ function installEditableWorkbenchShell() {
   }
   if (exportInterfaceMatrixBtn) {
     exportInterfaceMatrixBtn.addEventListener("click", () => exportWorkbenchInterfaceMatrix());
+  }
+  if (applyInterfaceMatrixBtn) {
+    applyInterfaceMatrixBtn.addEventListener("click", () => applyWorkbenchInterfaceMatrix());
   }
   if (exportDraftBtn) {
     exportDraftBtn.addEventListener("click", () => exportEditableDraftJson());
