@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-204 housekeeping in progress
+status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-205 acceptance model in progress
 last_updated: "2026-05-01T00:00:00.000+08:00"
 last_activity: 2026-05-01
 progress:
@@ -10,7 +10,7 @@ progress:
   completed_phases: 43
   total_plans: 2
   completed_plans: 1
-  notes: "Editable Workbench Core v1 + Interaction v2 + Runtime v3 completed as sandbox editing foundation; v4 now targets engineering-grade authoring plus hardware/interface design evidence. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 defines the Workbench v4 acceptance model and issue sequencing before authoring/hardware implementation slices begin. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
@@ -19,16 +19,17 @@ Last activity: 2026-05-01
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
-**Current position**: JER-204 is the active housekeeping bridge. It refreshes
-the repo roadmap/state and Linear narrative after Runtime v3 completion, then
-opens the next Workbench v4 planning lane.
+**Current position**: JER-204 is merged and Done. JER-205 is the active
+planning slice that turns the Workbench v4 launch note into an executable
+acceptance model and issue sequence.
 
 **Linear control plane**:
 
 - Runtime v3 implementation chain reached JER-203 on `origin/main`.
 - New project created: `AI FANTUI LogicMVP · Editable Workbench v4 Authoring + Hardware Design`.
-- JER-204 is the active housekeeping issue.
-- JER-205 through JER-213 are seeded as v4 backlog issues.
+- JER-204 is Done after PR #186.
+- JER-205 is In Progress.
+- JER-206 through JER-213 are seeded as v4 backlog issues.
 
 **Runtime v3 closure summary**:
 
@@ -53,6 +54,16 @@ edit graph structure, reuse component/subsystem patterns, design hardware
 interface metadata, inspect evidence gaps, run sandbox feedback, compare
 against certified baseline behavior, and generate a controlled ChangeRequest
 handoff packet.
+
+**JER-205 acceptance-model focus**:
+
+- Define the v4 acceptance ladder across authoring fidelity,
+  hardware/interface design fidelity, sandbox feedback fidelity, and review
+  handoff fidelity.
+- Make the JER-206 through JER-213 execution order explicit enough that each
+  issue can be made `agent:ready` only after its local scope is complete.
+- Keep v4 acceptance product-facing and evidence-facing, not
+  certification-facing.
 
 **Hard boundaries**:
 
