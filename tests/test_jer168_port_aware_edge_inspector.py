@@ -13,6 +13,8 @@ def test_workbench_edge_paths_carry_port_and_signal_metadata() -> None:
     assert "source_port_id" in js
     assert "target_port_id" in js
     assert "signal_id" in js
+    assert "function edgeInterfaceBinding" in js
+    assert "function setEdgeInterfaceBinding" in js
 
 
 def test_workbench_edge_selection_renders_evidence_only_inspector() -> None:
@@ -24,6 +26,9 @@ def test_workbench_edge_selection_renders_evidence_only_inspector() -> None:
     assert "truth_effect: none" in js
     assert "evidence_gap" in js
     assert "workbench-inspector-edge-list" in js
+    assert "workbench-interface-binding-owner" in js
+    assert "workbench-interface-port-local" in js
+    assert "workbench-interface-port-peer" in js
     assert ".workbench-editable-edges path[aria-pressed=\"true\"]" in css
     assert ".workbench-inspector-edge-list" in css
 
@@ -34,3 +39,4 @@ def test_workbench_edge_disconnect_prefers_selected_edge() -> None:
     assert "selectedEdge" in js
     assert "selectedEdge.id" in js
     assert "disconnectSelectedEditableEdge" in js
+    assert "applySelectedInterfaceBinding" in js

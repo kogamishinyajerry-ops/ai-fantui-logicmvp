@@ -708,6 +708,56 @@
                 Select a graph node to inspect read-only hardware evidence.
               </div>
               <section
+                id="workbench-interface-binding-editor"
+                class="workbench-interface-binding-editor"
+                aria-labelledby="workbench-interface-binding-title"
+              >
+                <div class="workbench-inspector-header">
+                  <span id="workbench-interface-binding-title">Interface Binding</span>
+                  <strong id="workbench-interface-binding-owner">node:logic1</strong>
+                </div>
+                <div class="workbench-interface-binding-grid">
+                  <label class="workbench-inspector-field" for="workbench-interface-hardware-id">
+                    <span>Hardware ID</span>
+                    <input id="workbench-interface-hardware-id" type="text" placeholder="evidence_gap">
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-interface-cable">
+                    <span>Cable</span>
+                    <input id="workbench-interface-cable" type="text" placeholder="evidence_gap">
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-interface-connector">
+                    <span>Connector</span>
+                    <input id="workbench-interface-connector" type="text" placeholder="evidence_gap">
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-interface-port-local">
+                    <span>Local port</span>
+                    <input id="workbench-interface-port-local" type="text" placeholder="evidence_gap">
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-interface-port-peer">
+                    <span>Peer port</span>
+                    <input id="workbench-interface-port-peer" type="text" placeholder="evidence_gap">
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-interface-evidence-status">
+                    <span>Evidence status</span>
+                    <select id="workbench-interface-evidence-status">
+                      <option value="evidence_gap">evidence_gap</option>
+                      <option value="ui_draft">ui_draft</option>
+                      <option value="not_recorded">not_recorded</option>
+                    </select>
+                  </label>
+                </div>
+                <button
+                  id="workbench-apply-interface-binding-btn"
+                  type="button"
+                  class="workbench-editable-primary workbench-interface-apply"
+                >
+                  Apply binding
+                </button>
+                <p id="workbench-interface-binding-status" class="workbench-handoff-status">
+                  Local sandbox binding only. Truth effect: none.
+                </p>
+              </section>
+              <section
                 id="workbench-sandbox-diff-panel"
                 class="workbench-sandbox-diff-panel"
                 aria-labelledby="workbench-sandbox-diff-title"

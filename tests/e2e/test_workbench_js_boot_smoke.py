@@ -263,3 +263,54 @@ def test_workbench_evidence_archive_exports_gate_claims_and_blockers(demo_server
     assert archive["red_line_metadata"]["live_linear_mutation"] is False
     assert archive["checksums"]["gate_claims_checksum"]
     assert archive["checksums"]["known_blockers_checksum"]
+
+
+def test_workbench_interface_binding_round_trips_through_export_import_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.fill("#workbench-interface-hardware-id", "TR-LRU-001")
+    page.fill("#workbench-interface-cable", "CBL-TR-A")
+    page.fill("#workbench-interface-connector", "J1")
+    page.fill("#workbench-interface-port-local", "logic1:out")
+    page.fill("#workbench-interface-port-peer", "TR-LRU-001:J1")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+
+    first_binding = draft["hardware_bindings"][0]
+    logic1 = next(node for node in draft["nodes"] if node["id"] == "logic1")
+    assert first_binding["owner_kind"] == "node"
+    assert first_binding["owner_id"] == "logic1"
+    assert first_binding["hardware_id"] == "TR-LRU-001"
+    assert first_binding["cable"] == "CBL-TR-A"
+    assert first_binding["connector"] == "J1"
+    assert first_binding["port_local"] == "logic1:out"
+    assert first_binding["port_peer"] == "TR-LRU-001:J1"
+    assert first_binding["evidence_status"] == "ui_draft"
+    assert first_binding["truth_effect"] == "none"
+    assert logic1["hardware_binding"]["hardware_id"] == "TR-LRU-001"
+
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.fill("#workbench-draft-json-buffer", json.dumps(draft))
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    round_trip = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    round_trip_binding = round_trip["hardware_bindings"][0]
+    assert round_trip_binding["hardware_id"] == "TR-LRU-001"
+    assert round_trip_binding["cable"] == "CBL-TR-A"
+    assert round_trip_binding["connector"] == "J1"
+    assert round_trip_binding["port_local"] == "logic1:out"
+    assert round_trip_binding["port_peer"] == "TR-LRU-001:J1"
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert errors == [], f"page JS errors: {errors}"
+    assert archive["hardware_bindings"][0]["hardware_id"] == "TR-LRU-001"
+    assert archive["hardware_bindings"][0]["truth_effect"] == "none"
+    assert archive["checksums"]["hardware_bindings_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False

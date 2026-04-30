@@ -307,6 +307,24 @@
         },
         "source_ref": {
           "$ref": "#/$defs/nonEmptyString"
+        },
+        "owner_kind": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "owner_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "cable": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "connector": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "port_local": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "port_peer": {
+          "$ref": "#/$defs/nonEmptyString"
         }
       }
     },
