@@ -370,15 +370,39 @@ def test_workbench_diagnostic_repair_clear_binding_logs_and_archives(demo_server
     assert repair_log[-1]["target"]["target_id"] == "logic1"
     assert repair_log[-1]["truth_effect"] == "none"
     assert {field["field"] for field in repair_log[-1]["changed_fields"]} >= {"hardware_id", "cable"}
+    packet = draft["changerequest_proof_packet"]
+    assert packet["candidate_state"] == "sandbox_candidate"
+    assert packet["certification_claim"] == "none"
+    assert packet["truth_effect"] == "none"
+    assert packet["controller_truth_modified"] is False
+    assert packet["selected_focus"]["target_id"] == "logic1"
+    assert packet["repair_action_log_summary"]["action_count"] == 1
+    assert packet["repair_action_log_summary"]["last_action_id"] == "clear_binding"
 
     _import_draft(page, draft)
     roundtrip = _export_draft(page)
     assert roundtrip["repair_action_log"] == repair_log
+    assert roundtrip["changerequest_proof_packet"]["repair_action_log_summary"]["action_count"] == 1
 
     archive = _prepare_archive(page)
     assert archive["repair_action_log"] == repair_log
+    archive_packet = archive["changerequest_proof_packet"]
+    assert archive_packet["candidate_state"] == "sandbox_candidate"
+    assert archive_packet["certification_claim"] == "none"
+    assert archive_packet["repair_action_log_summary"]["checksum"]
+    assert archive["selected_focus"]["target_id"] == "logic1"
+    assert archive["repair_action_log_summary"]["action_count"] == 1
+    assert archive["checksums"]["changerequest_proof_packet_checksum"]
+    assert archive["checksums"]["selected_focus_checksum"]
+    assert archive["checksums"]["repair_action_log_summary_checksum"]
     assert archive["checksums"]["repair_action_log_checksum"]
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+    page.click("#workbench-generate-handoff-btn")
+    assert "Candidate state: sandbox_candidate" in page.locator("#workbench-pr-proof-output").input_value()
+    assert "Certification claim: none" in page.locator("#workbench-pr-proof-output").input_value()
+    assert "Proof packet checksum:" in page.locator("#workbench-pr-proof-output").input_value()
+    assert "Diagnostic repair actions:" in page.locator("#workbench-linear-handoff-output").input_value()
     assert errors == [], f"page JS errors: {errors}"
 
 

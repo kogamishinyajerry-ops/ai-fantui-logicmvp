@@ -27,6 +27,9 @@ def test_evidence_archive_manifest_includes_required_checksum_fields() -> None:
     assert "function downloadWorkbenchEvidenceArchive" in js
     assert "model_json_checksum" in js
     assert "diff_summary_checksum" in js
+    assert "changerequest_proof_packet_checksum" in js
+    assert "selected_focus_checksum" in js
+    assert "repair_action_log_summary_checksum" in js
     assert "changerequest_body_checksum" in js
     assert "pr_proof_packet_checksum" in js
     assert "hardware_bindings_checksum" in js
@@ -49,6 +52,14 @@ def test_evidence_archive_is_draft_only_and_records_red_lines() -> None:
     assert "No live Linear mutation" in js
     assert "buildWorkbenchGateClaims" in js
     assert "buildWorkbenchKnownBlockers" in js
+    assert "buildChangeRequestProofPacket" in js
+    assert "linearIssueBodyFromProofPacket" in js
+    assert "prProofTextFromProofPacket" in js
+    assert "changerequest_proof_packet" in js
+    assert "candidate_state: \"sandbox_candidate\"" in js
+    assert "certification_claim: \"none\"" in js
+    assert "repair_action_log_summary" in js
+    assert "selected_focus" in js
     assert "mypy_strict_clean" in js
     assert "PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json" in js
     assert "api.linear.app" not in js
