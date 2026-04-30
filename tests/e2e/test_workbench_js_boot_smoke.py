@@ -706,7 +706,7 @@ def test_workbench_interface_matrix_import_applies_sandbox_bindings_and_rejects_
     page.fill("#workbench-interface-matrix-output", json.dumps(matrix))
     page.click("#workbench-apply-interface-matrix-btn")
     status = page.locator("#workbench-interface-matrix-status").inner_text()
-    assert "Applied 2 matrix row(s), no-op 0, skipped 1" in status
+    assert "Applied 2 matrix row(s), deselected 0, no-op 0, skipped 1" in status
 
     page.click("#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -828,6 +828,15 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     ghost_review = review.locator('[data-interface-matrix-review-owner-id="ghost_edge"]')
     assert ghost_review.get_attribute("data-row-status") == "skipped"
     assert ghost_review.get_attribute("data-row-action") == "skip"
+    node_checkbox = logic1_review.locator('[data-interface-matrix-review-select="true"]')
+    edge_review = review.locator('[data-interface-matrix-review-owner-id="edge_logic1_logic2"]')
+    edge_checkbox = edge_review.locator('[data-interface-matrix-review-select="true"]')
+    ghost_checkbox = ghost_review.locator('[data-interface-matrix-review-select="true"]')
+    assert node_checkbox.is_checked()
+    assert edge_checkbox.is_checked()
+    assert ghost_checkbox.is_disabled()
+    edge_checkbox.uncheck()
+    assert not edge_checkbox.is_checked()
 
     page.click("#workbench-export-draft-btn")
     preview_only_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -846,7 +855,7 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     assert archive["red_line_metadata"]["truth_level_impact"] == "none"
 
     page.click("#workbench-apply-interface-matrix-btn")
-    assert "Applied 2 matrix row(s), no-op 0, skipped 1" in page.locator("#workbench-interface-matrix-status").inner_text()
+    assert "Applied 1 matrix row(s), deselected 1, no-op 0, skipped 1" in page.locator("#workbench-interface-matrix-status").inner_text()
     post_apply_report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
     assert post_apply_report["changed_row_count"] == 0
     assert post_apply_report["noop_row_count"] >= 2
@@ -865,10 +874,12 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     page.click("#workbench-export-draft-btn")
     after_apply = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     logic1_after_apply = next(node for node in after_apply["nodes"] if node["id"] == "logic1")
+    edge_after_apply = next(item for item in after_apply["edges"] if item["id"] == "edge_logic1_logic2")
     assert logic1_after_apply["hardware_binding"]["hardware_id"] == "TR-LRU-PREVIEW-EDITED"
+    assert edge_after_apply["hardware_binding"]["hardware_id"] == "EDGE-LRU-PREVIEW-BEFORE"
 
     page.click("#workbench-apply-interface-matrix-btn")
-    assert "Applied 0 matrix row(s), no-op 2, skipped 0" in page.locator("#workbench-interface-matrix-status").inner_text()
+    assert "Applied 0 matrix row(s), deselected 0, no-op 2, skipped 0" in page.locator("#workbench-interface-matrix-status").inner_text()
     second_apply_report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
     assert second_apply_report["changed_row_count"] == 0
     assert second_apply_report["noop_row_count"] >= 2

@@ -9887,11 +9887,47 @@ function installEditableWorkbenchShell() {
     return cell;
   }
 
-  function renderInterfaceMatrixReviewTable(report) {
+  function interfaceMatrixSelectedApplyRowIdsFromReview() {
+    if (!interfaceMatrixReview) return null;
+    const inputs = Array.from(interfaceMatrixReview.querySelectorAll('[data-interface-matrix-review-select="true"]'));
+    const selectable = inputs.filter((input) => !input.disabled);
+    if (!selectable.length) return null;
+    return new Set(selectable
+      .filter((input) => input.checked)
+      .map((input) => normalizedInterfaceField(input.getAttribute("data-interface-matrix-review-row-id"))));
+  }
+
+  function appendMatrixReviewSelectionCell(rowEl, row, selectedRowIds) {
+    const cell = document.createElement("td");
+    cell.className = "workbench-interface-matrix-review-select-cell";
+    const rowId = normalizedInterfaceField(row.row_id);
+    const rowStatus = normalizedInterfaceField(row.status);
+    const rowAction = normalizedInterfaceField(row.action || "none");
+    const canApply = rowStatus === "applyable" && rowAction === "apply";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.setAttribute("data-interface-matrix-review-select", "true");
+    input.setAttribute("data-interface-matrix-review-row-id", rowId);
+    input.setAttribute("aria-label", `Apply ${rowId}`);
+    input.disabled = !canApply;
+    input.checked = canApply && (!selectedRowIds || selectedRowIds.has(rowId));
+    rowEl.setAttribute("data-row-selected", input.checked ? "true" : "false");
+    input.addEventListener("change", () => {
+      rowEl.setAttribute("data-row-selected", input.checked ? "true" : "false");
+    });
+    cell.appendChild(input);
+    rowEl.appendChild(cell);
+    return cell;
+  }
+
+  function renderInterfaceMatrixReviewTable(report, options) {
     if (!interfaceMatrixReview) return;
     interfaceMatrixReview.innerHTML = "";
     const state = report && typeof report === "object" ? normalizedInterfaceField(report.status) : "empty";
     interfaceMatrixReview.setAttribute("data-review-state", state);
+    const selectedRowIds = options && options.selectedRowIds instanceof Set
+      ? options.selectedRowIds
+      : null;
 
     const summary = document.createElement("p");
     summary.className = "workbench-interface-matrix-review-summary";
@@ -9921,7 +9957,7 @@ function installEditableWorkbenchShell() {
     table.className = "workbench-interface-matrix-review-table";
     const thead = document.createElement("thead");
     const headerRow = document.createElement("tr");
-    ["Row", "Owner", "Status", "Action", "Changes", "Delta"].forEach((label) => {
+    ["Apply", "Row", "Owner", "Status", "Action", "Changes", "Delta"].forEach((label) => {
       const th = document.createElement("th");
       th.textContent = label;
       headerRow.appendChild(th);
@@ -9940,6 +9976,7 @@ function installEditableWorkbenchShell() {
       rowEl.setAttribute("data-interface-matrix-review-owner-kind", normalizedInterfaceField(row.owner_kind));
       rowEl.setAttribute("data-interface-matrix-review-owner-id", normalizedInterfaceField(row.owner_id));
 
+      appendMatrixReviewSelectionCell(rowEl, row, selectedRowIds);
       appendMatrixReviewCell(rowEl, normalizedInterfaceField(row.row_id), "workbench-interface-matrix-review-row-id");
       appendMatrixReviewCell(
         rowEl,
@@ -9966,7 +10003,7 @@ function installEditableWorkbenchShell() {
     if (interfaceMatrixValidationOutput) {
       interfaceMatrixValidationOutput.value = report ? JSON.stringify(report, null, 2) : "";
     }
-    renderInterfaceMatrixReviewTable(report);
+    renderInterfaceMatrixReviewTable(report, options);
     if ((!options || options.updateStatus !== false) && interfaceMatrixStatus && report) {
       interfaceMatrixStatus.textContent =
         `Matrix validation ${report.status}: ${report.applyable_row_count || 0} applyable, ${report.skipped_row_count || 0} skipped, ${report.noop_row_count || 0} no-op, ${report.issue_count || 0} issue(s). Truth effect: none.`;
@@ -12623,13 +12660,15 @@ function installEditableWorkbenchShell() {
     }, row.owner_kind, row.owner_id);
   }
 
-  function applyInterfaceMatrixRows(rows, validationRows) {
+  function applyInterfaceMatrixRows(rows, validationRows, selectedRowIds) {
     let applied = 0;
     let skipped = 0;
     let noop = 0;
+    let deselected = 0;
     let rejected = 0;
     const reports = Array.isArray(validationRows) ? validationRows : [];
     const hasValidationRows = reports.length > 0;
+    const hasSelectedRows = selectedRowIds instanceof Set;
     refreshEditableNodes();
     for (let index = 0; index < rows.length; index += 1) {
       const row = rows[index];
@@ -12649,6 +12688,13 @@ function installEditableWorkbenchShell() {
       if (hasValidationRows && (!report || report.action !== "apply")) {
         skipped += 1;
         continue;
+      }
+      if (report && report.status === "applyable" && report.action === "apply" && hasSelectedRows) {
+        const rowId = normalizedInterfaceField(report.row_id || row.row_id);
+        if (!selectedRowIds.has(rowId)) {
+          deselected += 1;
+          continue;
+        }
       }
       const ownerKind = normalizedInterfaceField(row.owner_kind);
       const ownerId = normalizedInterfaceField(row.owner_id);
@@ -12678,15 +12724,26 @@ function installEditableWorkbenchShell() {
       }
       skipped += 1;
     }
-    return { applied, skipped, noop, rejected };
+    return { applied, skipped, noop, deselected, rejected };
+  }
+
+  function selectedInterfaceMatrixApplyableRowCount(report, selectedRowIds) {
+    const rows = report && Array.isArray(report.rows) ? report.rows : [];
+    const hasSelectedRows = selectedRowIds instanceof Set;
+    return rows.filter((row) => (
+      normalizedInterfaceField(row.status) === "applyable"
+      && normalizedInterfaceField(row.action || "none") === "apply"
+      && (!hasSelectedRows || selectedRowIds.has(normalizedInterfaceField(row.row_id)))
+    )).length;
   }
 
   function applyWorkbenchInterfaceMatrix() {
     if (!interfaceMatrixOutput) return null;
     try {
       const parsedPayload = JSON.parse(interfaceMatrixOutput.value || "{}");
+      const selectedRowIds = interfaceMatrixSelectedApplyRowIdsFromReview();
       const report = buildInterfaceMatrixValidationReport(parsedPayload);
-      renderInterfaceMatrixValidationReport(report, { updateStatus: false });
+      renderInterfaceMatrixValidationReport(report, { updateStatus: false, selectedRowIds });
       if (report.status === "fail") {
         if (interfaceMatrixStatus) {
           const firstError = (report.issues || []).find((issue) => issue.severity === "error");
@@ -12700,11 +12757,11 @@ function installEditableWorkbenchShell() {
         return null;
       }
       const payload = validateInterfaceMatrixImportPayload(parsedPayload);
-      if ((report.applyable_row_count || 0) > 0) {
+      if (selectedInterfaceMatrixApplyableRowCount(report, selectedRowIds) > 0) {
         recordEditableHistory("interface_matrix_apply");
         shell.setAttribute("data-draft-state", "derived");
       }
-      const summary = applyInterfaceMatrixRows(payload.rows, report.rows);
+      const summary = applyInterfaceMatrixRows(payload.rows, report.rows, selectedRowIds);
       if (summary.applied > 0) {
         if (draftLabel) draftLabel.textContent = "sandbox_candidate interface matrix applied";
         renderEditableEdges();
@@ -12717,7 +12774,7 @@ function installEditableWorkbenchShell() {
       validateWorkbenchInterfaceMatrix({ updateStatus: false });
       if (interfaceMatrixStatus) {
         interfaceMatrixStatus.textContent =
-          `Applied ${summary.applied} matrix row(s), no-op ${summary.noop}, skipped ${summary.skipped}. Export now has ${matrix.row_count || 0} row(s). Truth effect: none.`;
+          `Applied ${summary.applied} matrix row(s), deselected ${summary.deselected}, no-op ${summary.noop}, skipped ${summary.skipped}. Export now has ${matrix.row_count || 0} row(s). Truth effect: none.`;
       }
       return summary;
     } catch (err) {
