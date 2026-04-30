@@ -7623,9 +7623,11 @@ function installEditableWorkbenchShell() {
   const hardwareBindingDiagnosticsGapCount = document.getElementById("workbench-hardware-binding-diagnostics-gap-count");
   const hardwareBindingDiagnosticsList = document.getElementById("workbench-hardware-binding-diagnostics-list");
   const exportInterfaceMatrixBtn = document.getElementById("workbench-export-interface-matrix-btn");
+  const validateInterfaceMatrixBtn = document.getElementById("workbench-validate-interface-matrix-btn");
   const applyInterfaceMatrixBtn = document.getElementById("workbench-apply-interface-matrix-btn");
   const interfaceMatrixOutput = document.getElementById("workbench-interface-matrix-output");
   const interfaceMatrixStatus = document.getElementById("workbench-interface-matrix-status");
+  const interfaceMatrixValidationOutput = document.getElementById("workbench-interface-matrix-validation-output");
   const typedPortOwner = document.getElementById("workbench-typed-port-owner");
   const portInputSignalInput = document.getElementById("workbench-port-input-signal");
   const portOutputSignalInput = document.getElementById("workbench-port-output-signal");
@@ -7667,6 +7669,7 @@ function installEditableWorkbenchShell() {
   let lastSandboxDiff = null;
   let selectedDiagnosticFocus = null;
   let repairActionLog = [];
+  let lastInterfaceMatrixValidationReport = null;
   let currentEditorTool = "select";
   let pendingEdgeSourceId = "";
   let nextDraftNodeIndex = 1;
@@ -9421,6 +9424,381 @@ function installEditableWorkbenchShell() {
       rows,
       truth_effect: "none",
     };
+  }
+
+  function pushInterfaceMatrixValidationIssue(issues, issue) {
+    issues.push({
+      severity: "warning",
+      row_id: "matrix",
+      owner_kind: "matrix",
+      owner_id: "matrix",
+      suggestion: "Review the pending interface matrix before applying it to the sandbox draft.",
+      truth_effect: "none",
+      ...issue,
+    });
+  }
+
+  function finalizeInterfaceMatrixValidationReport(report) {
+    const issues = Array.isArray(report.issues) ? report.issues : [];
+    const status = issues.some((issue) => issue.severity === "error")
+      ? "fail"
+      : (issues.length ? "warn" : "pass");
+    return {
+      ...report,
+      status,
+      issue_count: issues.length,
+      error_count: issues.filter((issue) => issue.severity === "error").length,
+      warning_count: issues.filter((issue) => issue.severity !== "error").length,
+      truth_effect: "none",
+    };
+  }
+
+  function emptyInterfaceMatrixValidationReport(status, message) {
+    const issues = [];
+    if (message) {
+      pushInterfaceMatrixValidationIssue(issues, {
+        rule_id: "matrix_parse_error",
+        severity: "error",
+        message,
+        suggestion: "Paste a well-formed well-harness-workbench-interface-matrix JSON object.",
+      });
+    }
+    return finalizeInterfaceMatrixValidationReport({
+      kind: "well-harness-workbench-interface-matrix-validation-report",
+      version: 1,
+      report_scope: "pending_interface_matrix_import",
+      status: status || "fail",
+      matrix_checksum: "unavailable",
+      row_count: 0,
+      applyable_row_count: 0,
+      skipped_row_count: 0,
+      malformed_row_count: message ? 1 : 0,
+      missing_owner_count: 0,
+      evidence_gap_field_count: 0,
+      duplicate_interface_reuse_count: 0,
+      truth_effect_violation_count: 0,
+      typed_port_conflict_count: 0,
+      rows: [],
+      issues,
+      truth_effect: "none",
+    });
+  }
+
+  function interfaceMatrixOwnerExists(ownerKind, ownerId) {
+    refreshEditableNodes();
+    if (ownerKind === "node") {
+      return nodes.some((candidate) => editableNodeId(candidate) === ownerId);
+    }
+    if (ownerKind === "edge") {
+      return draftEdges.some((candidate) => (
+        candidate.id === ownerId
+        || `${candidate.source || "unknown"}->${candidate.target || "unknown"}` === ownerId
+      ));
+    }
+    return false;
+  }
+
+  function matrixTypedPortIssueCount(row, rowId, issues) {
+    const localPort = row && row.local_typed_port && typeof row.local_typed_port === "object"
+      ? row.local_typed_port
+      : null;
+    const peerPort = row && row.peer_typed_port && typeof row.peer_typed_port === "object"
+      ? row.peer_typed_port
+      : null;
+    const localPortId = localPort ? normalizedInterfaceField(localPort.port_id) : "evidence_gap";
+    const peerPortId = peerPort ? normalizedInterfaceField(peerPort.port_id) : "evidence_gap";
+    let issueCount = 0;
+    if (
+      localPort
+      && !isInterfaceEvidenceGap(localPortId)
+      && normalizedInterfaceField(row.port_local) !== localPortId
+    ) {
+      issueCount += 1;
+      pushInterfaceMatrixValidationIssue(issues, {
+        rule_id: "typed_port_metadata_mismatch",
+        row_id: rowId,
+        owner_kind: normalizedInterfaceField(row.owner_kind),
+        owner_id: normalizedInterfaceField(row.owner_id),
+        message: `${rowId} port_local does not match local_typed_port.port_id.`,
+        suggestion: "Refresh/export the matrix after editing port ids, or update typed-port metadata together.",
+      });
+    }
+    if (
+      peerPort
+      && !isInterfaceEvidenceGap(peerPortId)
+      && normalizedInterfaceField(row.port_peer) !== peerPortId
+    ) {
+      issueCount += 1;
+      pushInterfaceMatrixValidationIssue(issues, {
+        rule_id: "typed_port_metadata_mismatch",
+        row_id: rowId,
+        owner_kind: normalizedInterfaceField(row.owner_kind),
+        owner_id: normalizedInterfaceField(row.owner_id),
+        message: `${rowId} port_peer does not match peer_typed_port.port_id.`,
+        suggestion: "Refresh/export the matrix after editing peer port ids, or update typed-port metadata together.",
+      });
+    }
+    if (localPort && peerPort) {
+      const localType = normalizePortValueType(localPort.value_type);
+      const peerType = normalizePortValueType(peerPort.value_type);
+      if (localType !== "unknown" && peerType !== "unknown" && localType !== peerType) {
+        issueCount += 1;
+        pushInterfaceMatrixValidationIssue(issues, {
+          rule_id: "typed_port_value_type_mismatch",
+          row_id: rowId,
+          owner_kind: normalizedInterfaceField(row.owner_kind),
+          owner_id: normalizedInterfaceField(row.owner_id),
+          message: `${rowId} typed-port value mismatch ${localType}->${peerType}.`,
+          suggestion: "Check the edge/source-target port contract before applying the matrix.",
+        });
+      }
+    }
+    return issueCount;
+  }
+
+  function buildInterfaceMatrixValidationReport(payload) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      return emptyInterfaceMatrixValidationReport("fail", "interface matrix JSON must be an object");
+    }
+
+    const issues = [];
+    const rowReports = [];
+    const reusableBindings = [];
+    let malformedRowCount = 0;
+    let missingOwnerCount = 0;
+    let evidenceGapFieldCount = 0;
+    let truthEffectViolationCount = 0;
+    let typedPortConflictCount = 0;
+
+    if (payload.kind !== "well-harness-workbench-interface-matrix") {
+      malformedRowCount += 1;
+      pushInterfaceMatrixValidationIssue(issues, {
+        rule_id: "matrix_kind_invalid",
+        severity: "error",
+        message: "interface matrix kind must be well-harness-workbench-interface-matrix",
+      });
+    }
+    if (payload.version !== 1) {
+      malformedRowCount += 1;
+      pushInterfaceMatrixValidationIssue(issues, {
+        rule_id: "matrix_version_invalid",
+        severity: "error",
+        message: "interface matrix version must be 1",
+      });
+    }
+    if (payload.truth_effect !== "none") {
+      truthEffectViolationCount += 1;
+      pushInterfaceMatrixValidationIssue(issues, {
+        rule_id: "matrix_truth_effect_violation",
+        severity: "error",
+        message: "interface matrix truth_effect must be none",
+        suggestion: "A sandbox matrix cannot claim certified or DAL truth.",
+      });
+    }
+    if (!Array.isArray(payload.rows)) {
+      malformedRowCount += 1;
+      pushInterfaceMatrixValidationIssue(issues, {
+        rule_id: "matrix_rows_invalid",
+        severity: "error",
+        message: "interface matrix rows must be an array",
+      });
+    }
+
+    const rows = Array.isArray(payload.rows) ? payload.rows : [];
+    for (let index = 0; index < rows.length; index += 1) {
+      const row = rows[index];
+      const fallbackRowId = `interface:import:${String(index + 1).padStart(2, "0")}`;
+      if (!row || typeof row !== "object" || Array.isArray(row)) {
+        malformedRowCount += 1;
+        rowReports.push({
+          row_id: fallbackRowId,
+          owner_kind: "invalid",
+          owner_id: "invalid",
+          status: "reject",
+          action: "none",
+          owner_exists: false,
+          evidence_gap_fields: [],
+          issue_count: 1,
+          truth_effect: "none",
+        });
+        pushInterfaceMatrixValidationIssue(issues, {
+          rule_id: "matrix_row_invalid",
+          severity: "error",
+          row_id: fallbackRowId,
+          owner_kind: "invalid",
+          owner_id: "invalid",
+          message: `${fallbackRowId} must be an object`,
+        });
+        continue;
+      }
+
+      const rowId = normalizedInterfaceField(row.row_id || fallbackRowId);
+      const ownerKind = normalizedInterfaceField(row.owner_kind);
+      const ownerId = normalizedInterfaceField(row.owner_id);
+      const binding = interfaceBindingFromMatrixRow(row);
+      const evidenceGapFields = hardwareBindingEvidenceGapFields(binding);
+      const ownerKindValid = ownerKind === "node" || ownerKind === "edge";
+      const ownerIdValid = !isInterfaceEvidenceGap(ownerId);
+      const ownerExists = ownerKindValid && ownerIdValid && interfaceMatrixOwnerExists(ownerKind, ownerId);
+      const rowIssueStart = issues.length;
+
+      if (row.truth_effect !== "none") {
+        truthEffectViolationCount += 1;
+        pushInterfaceMatrixValidationIssue(issues, {
+          rule_id: "row_truth_effect_violation",
+          severity: "error",
+          row_id: rowId,
+          owner_kind: ownerKind,
+          owner_id: ownerId,
+          message: `${rowId} truth_effect must be none`,
+          suggestion: "Remove certified/DAL truth claims from the sandbox matrix before applying.",
+        });
+      }
+      if (!ownerKindValid || !ownerIdValid) {
+        malformedRowCount += 1;
+        pushInterfaceMatrixValidationIssue(issues, {
+          rule_id: "row_owner_invalid",
+          severity: "error",
+          row_id: rowId,
+          owner_kind: ownerKind,
+          owner_id: ownerId,
+          message: `${rowId} must target owner_kind node|edge and a non-empty owner_id.`,
+        });
+      } else if (!ownerExists) {
+        missingOwnerCount += 1;
+        pushInterfaceMatrixValidationIssue(issues, {
+          rule_id: "row_owner_missing",
+          row_id: rowId,
+          owner_kind: ownerKind,
+          owner_id: ownerId,
+          message: `${rowId} targets missing ${ownerKind}:${ownerId}; it will be skipped.`,
+          suggestion: "Create the node/edge first or remove this row from the pending import.",
+        });
+      }
+      evidenceGapFieldCount += evidenceGapFields.length;
+      if (evidenceGapFields.length) {
+        pushInterfaceMatrixValidationIssue(issues, {
+          rule_id: "row_evidence_gap",
+          row_id: rowId,
+          owner_kind: ownerKind,
+          owner_id: ownerId,
+          message: `${rowId} has ${evidenceGapFields.length} evidence-gap field(s): ${evidenceGapFields.join(", ")}`,
+          suggestion: "Leave explicit evidence_gap values if source data is missing; do not invent certified hardware data.",
+        });
+      }
+      typedPortConflictCount += matrixTypedPortIssueCount(row, rowId, issues);
+      reusableBindings.push({ binding, row_id: rowId });
+
+      const rowHasError = issues.slice(rowIssueStart).some((issue) => issue.severity === "error");
+      const action = rowHasError ? "none" : (ownerExists ? "apply" : "skip");
+      rowReports.push({
+        row_id: rowId,
+        owner_kind: ownerKind,
+        owner_id: ownerId,
+        status: rowHasError ? "reject" : (ownerExists ? "applyable" : "skipped"),
+        action,
+        owner_exists: ownerExists,
+        evidence_gap_fields: evidenceGapFields,
+        issue_count: issues.length - rowIssueStart,
+        binding_quality: binding.binding_quality,
+        truth_effect: "none",
+      });
+    }
+
+    const interfaceKeyGroups = new Map();
+    for (const item of reusableBindings) {
+      const interfaceKey = hardwareBindingInterfaceKey(item.binding);
+      if (!interfaceKey) continue;
+      if (!interfaceKeyGroups.has(interfaceKey)) interfaceKeyGroups.set(interfaceKey, []);
+      interfaceKeyGroups.get(interfaceKey).push(item);
+    }
+    let duplicateInterfaceReuseCount = 0;
+    for (const [interfaceKey, grouped] of interfaceKeyGroups.entries()) {
+      const owners = Array.from(new Set(grouped.map((item) => hardwareBindingOwnerKey(item.binding))));
+      if (owners.length <= 1) continue;
+      duplicateInterfaceReuseCount += 1;
+      pushInterfaceMatrixValidationIssue(issues, {
+        rule_id: "connector_port_reuse",
+        row_id: grouped.map((item) => item.row_id).join(","),
+        owner_kind: "mixed",
+        owner_id: owners.join(","),
+        message: `Connector/port reuse detected for ${interfaceKey}.`,
+        suggestion: "Verify shared hardware interface reuse is intentional before applying.",
+        evidence_refs: grouped.map((item) => item.row_id),
+      });
+    }
+
+    return finalizeInterfaceMatrixValidationReport({
+      kind: "well-harness-workbench-interface-matrix-validation-report",
+      version: 1,
+      report_scope: "pending_interface_matrix_import",
+      matrix_checksum: checksumEvidenceArchiveField(payload),
+      matrix_kind: normalizedInterfaceField(payload.kind),
+      row_count: rows.length,
+      applyable_row_count: rowReports.filter((row) => row.status === "applyable").length,
+      skipped_row_count: rowReports.filter((row) => row.status === "skipped").length,
+      malformed_row_count: malformedRowCount,
+      missing_owner_count: missingOwnerCount,
+      evidence_gap_field_count: evidenceGapFieldCount,
+      duplicate_interface_reuse_count: duplicateInterfaceReuseCount,
+      truth_effect_violation_count: truthEffectViolationCount,
+      typed_port_conflict_count: typedPortConflictCount,
+      rows: rowReports,
+      issues,
+      truth_effect: "none",
+    });
+  }
+
+  function interfaceMatrixValidationSummary(report) {
+    const source = report && typeof report === "object" ? report : null;
+    return {
+      status: source ? source.status : "not_run",
+      row_count: source ? source.row_count || 0 : 0,
+      applyable_row_count: source ? source.applyable_row_count || 0 : 0,
+      skipped_row_count: source ? source.skipped_row_count || 0 : 0,
+      issue_count: source ? source.issue_count || 0 : 0,
+      evidence_gap_field_count: source ? source.evidence_gap_field_count || 0 : 0,
+      duplicate_interface_reuse_count: source ? source.duplicate_interface_reuse_count || 0 : 0,
+      truth_effect_violation_count: source ? source.truth_effect_violation_count || 0 : 0,
+      typed_port_conflict_count: source ? source.typed_port_conflict_count || 0 : 0,
+      checksum: source ? checksumEvidenceArchiveField(source) : "not_run",
+      truth_effect: "none",
+    };
+  }
+
+  function renderInterfaceMatrixValidationReport(report, options) {
+    lastInterfaceMatrixValidationReport = report || null;
+    if (interfaceMatrixValidationOutput) {
+      interfaceMatrixValidationOutput.value = report ? JSON.stringify(report, null, 2) : "";
+    }
+    if ((!options || options.updateStatus !== false) && interfaceMatrixStatus && report) {
+      interfaceMatrixStatus.textContent =
+        `Matrix validation ${report.status}: ${report.applyable_row_count || 0} applyable, ${report.skipped_row_count || 0} skipped, ${report.issue_count || 0} issue(s). Truth effect: none.`;
+    }
+    return report;
+  }
+
+  function clearInterfaceMatrixValidationReport(message) {
+    lastInterfaceMatrixValidationReport = null;
+    if (interfaceMatrixValidationOutput) interfaceMatrixValidationOutput.value = "";
+    if (message && interfaceMatrixStatus) {
+      interfaceMatrixStatus.textContent = message;
+    }
+  }
+
+  function validateWorkbenchInterfaceMatrix(options) {
+    if (!interfaceMatrixOutput) return null;
+    let report = null;
+    try {
+      const payload = JSON.parse(interfaceMatrixOutput.value || "{}");
+      report = buildInterfaceMatrixValidationReport(payload);
+    } catch (err) {
+      report = emptyInterfaceMatrixValidationReport(
+        "fail",
+        err && err.message ? err.message : "interface matrix JSON parse failed",
+      );
+    }
+    return renderInterfaceMatrixValidationReport(report, options);
   }
 
   function selectedNodePayload() {
@@ -11685,6 +12063,7 @@ function installEditableWorkbenchShell() {
       binding_coverage: bindingCoverage,
       hardware_binding_diagnostics: hardwareBindingDiagnostics,
       interface_matrix: interfaceMatrix,
+      interface_matrix_validation: lastInterfaceMatrixValidationReport,
       repair_action_log: diagnosticRepairActions,
       port_contract_summary: portContractSummary,
       port_compatibility_report: portCompatibilityReport,
@@ -11763,6 +12142,7 @@ function installEditableWorkbenchShell() {
       binding_coverage: snapshot.binding_coverage,
       hardware_binding_diagnostics: snapshot.hardware_binding_diagnostics,
       interface_matrix: snapshot.interface_matrix,
+      interface_matrix_validation: snapshot.interface_matrix_validation,
       repair_action_log: snapshot.repair_action_log,
       port_contract_summary: snapshot.port_contract_summary,
       port_compatibility_report: snapshot.port_compatibility_report,
@@ -11826,6 +12206,19 @@ function installEditableWorkbenchShell() {
       && payload.interface_matrix.truth_effect !== "none"
     ) {
       throw new Error("interface_matrix truth_effect must be none");
+    }
+    if (
+      payload.interface_matrix_validation !== undefined
+      && payload.interface_matrix_validation !== null
+      && (!payload.interface_matrix_validation || typeof payload.interface_matrix_validation !== "object" || Array.isArray(payload.interface_matrix_validation))
+    ) {
+      throw new Error("interface_matrix_validation must be an object when present");
+    }
+    if (
+      payload.interface_matrix_validation
+      && payload.interface_matrix_validation.truth_effect !== "none"
+    ) {
+      throw new Error("interface_matrix_validation truth_effect must be none");
     }
     if (payload.typed_ports !== undefined && !Array.isArray(payload.typed_ports)) {
       throw new Error("typed_ports must be an array when present");
@@ -11923,6 +12316,12 @@ function installEditableWorkbenchShell() {
         : "";
     recordEditableHistory("import_draft");
     const importedCatalog = validated.operation_catalog || {};
+    lastInterfaceMatrixValidationReport = validated.interface_matrix_validation || null;
+    if (interfaceMatrixValidationOutput) {
+      interfaceMatrixValidationOutput.value = lastInterfaceMatrixValidationReport
+        ? JSON.stringify(lastInterfaceMatrixValidationReport, null, 2)
+        : "";
+    }
     applyEditableState({
       draftState: "derived",
       selectedNodeId: selectedId,
@@ -11983,6 +12382,7 @@ function installEditableWorkbenchShell() {
     if (interfaceMatrixOutput) {
       interfaceMatrixOutput.value = JSON.stringify(matrix, null, 2);
     }
+    clearInterfaceMatrixValidationReport();
     if (interfaceMatrixStatus) {
       interfaceMatrixStatus.textContent =
         `Exported ${matrix.row_count || 0} interface row(s), ${matrix.evidence_gap_field_count || 0} evidence-gap field(s). Truth effect: none.`;
@@ -12065,9 +12465,22 @@ function installEditableWorkbenchShell() {
   function applyWorkbenchInterfaceMatrix() {
     if (!interfaceMatrixOutput) return null;
     try {
-      const payload = validateInterfaceMatrixImportPayload(
-        JSON.parse(interfaceMatrixOutput.value || "{}"),
-      );
+      const parsedPayload = JSON.parse(interfaceMatrixOutput.value || "{}");
+      const report = buildInterfaceMatrixValidationReport(parsedPayload);
+      renderInterfaceMatrixValidationReport(report, { updateStatus: false });
+      if (report.status === "fail") {
+        if (interfaceMatrixStatus) {
+          const firstError = (report.issues || []).find((issue) => issue.severity === "error");
+          interfaceMatrixStatus.textContent =
+            [
+              `Matrix validation failed: ${report.issue_count || 0} issue(s).`,
+              firstError && firstError.message,
+              "No sandbox bindings were changed.",
+            ].filter(Boolean).join(" ");
+        }
+        return null;
+      }
+      const payload = validateInterfaceMatrixImportPayload(parsedPayload);
       recordEditableHistory("interface_matrix_apply");
       shell.setAttribute("data-draft-state", "derived");
       const summary = applyInterfaceMatrixRows(payload.rows);
@@ -12078,12 +12491,17 @@ function installEditableWorkbenchShell() {
       updateEditableDraftHash();
       persistDraft();
       const matrix = exportWorkbenchInterfaceMatrix();
+      validateWorkbenchInterfaceMatrix({ updateStatus: false });
       if (interfaceMatrixStatus) {
         interfaceMatrixStatus.textContent =
           `Applied ${summary.applied} matrix row(s), skipped ${summary.skipped}. Export now has ${matrix.row_count || 0} row(s). Truth effect: none.`;
       }
       return summary;
     } catch (err) {
+      renderInterfaceMatrixValidationReport(emptyInterfaceMatrixValidationReport(
+        "fail",
+        err && err.message ? err.message : "interface matrix import failed",
+      ), { updateStatus: false });
       if (interfaceMatrixStatus) {
         interfaceMatrixStatus.textContent =
           err && err.message ? err.message : "interface matrix import failed";
@@ -12212,6 +12630,9 @@ function installEditableWorkbenchShell() {
         hardwareBindingDiagnostics,
         bindingCoverage,
       );
+    const interfaceMatrixValidation =
+      sourceSnapshot.interface_matrix_validation || lastInterfaceMatrixValidationReport || null;
+    const matrixValidationSummary = interfaceMatrixValidationSummary(interfaceMatrixValidation);
     const repairActions = repairActionLogSnapshotFromSource(sourceSnapshot.repair_action_log || []);
     const portContractSummary =
       sourceSnapshot.port_contract_summary || buildPortContractSummary(
@@ -12287,6 +12708,7 @@ function installEditableWorkbenchShell() {
         checksum: checksumEvidenceArchiveField(interfaceMatrix),
         truth_effect: "none",
       },
+      interface_matrix_validation_summary: matrixValidationSummary,
       selected_focus: diagnosticFocusSummary,
       diagnostic_focus: diagnosticFocusSummary,
       repair_action_log_summary: repairActionLogSummary,
@@ -12349,6 +12771,11 @@ function installEditableWorkbenchShell() {
     return `${summary.row_count || 0} row(s) / typed_ports=${summary.typed_port_count || 0} / gaps=${summary.evidence_gap_field_count || 0}`;
   }
 
+  function proofPacketInterfaceMatrixValidationText(packet) {
+    const summary = packet.interface_matrix_validation_summary || {};
+    return `${summary.status || "not_run"} / applyable=${summary.applyable_row_count || 0} / skipped=${summary.skipped_row_count || 0} / issues=${summary.issue_count || 0}`;
+  }
+
   function proofPacketDiagnosticFocusText(packet) {
     const focus = packet.selected_focus || packet.diagnostic_focus || {};
     if (focus.state !== "selected") return "none";
@@ -12388,6 +12815,7 @@ function installEditableWorkbenchShell() {
       "- Selected binding diagnostic focus.",
       "- Diagnostic repair action log.",
       "- Structured ChangeRequest proof packet.",
+      "- Interface matrix validation preview report.",
       "- Typed port contract summary.",
       "- Port compatibility report.",
       "- Operation catalog provenance.",
@@ -12408,6 +12836,7 @@ function installEditableWorkbenchShell() {
       `- Selected scenario: ${packet.selected_scenario_id}`,
       `- Hardware/interface bindings: ${proofPacketBindingSummaryText(packet)}`,
       `- Interface matrix: ${proofPacketInterfaceMatrixText(packet)}`,
+      `- Interface matrix validation: ${proofPacketInterfaceMatrixValidationText(packet)}`,
       `- Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
       `- Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
       `- Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
@@ -12432,6 +12861,7 @@ function installEditableWorkbenchShell() {
       `Latest sandbox verdict: ${packet.sandbox_diff && packet.sandbox_diff.verdict}`,
       `Hardware/interface bindings: ${proofPacketBindingSummaryText(packet)}`,
       `Interface matrix: ${proofPacketInterfaceMatrixText(packet)}`,
+      `Interface matrix validation: ${proofPacketInterfaceMatrixValidationText(packet)}`,
       `Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
       `Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
       `Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
@@ -12613,6 +13043,8 @@ function installEditableWorkbenchShell() {
         hardwareBindingDiagnostics,
         bindingCoverage,
       );
+    const interfaceMatrixValidation =
+      modelJson.interface_matrix_validation || lastInterfaceMatrixValidationReport || null;
     const diagnosticFocus = modelJson.diagnostic_focus || currentDiagnosticFocusSummary();
     const diagnosticRepairActions = modelJson.repair_action_log || repairActionLogSnapshot();
     const typedPorts = modelJson.typed_ports || [];
@@ -12657,6 +13089,7 @@ function installEditableWorkbenchShell() {
       binding_coverage: bindingCoverage,
       hardware_binding_diagnostics: hardwareBindingDiagnostics,
       interface_matrix: interfaceMatrix,
+      interface_matrix_validation: interfaceMatrixValidation,
       diagnostic_focus: diagnosticFocus,
       repair_action_log: diagnosticRepairActions,
       typed_ports: typedPorts,
@@ -12687,6 +13120,7 @@ function installEditableWorkbenchShell() {
       binding_coverage_checksum: checksumEvidenceArchiveField(bindingCoverage),
       hardware_binding_diagnostics_checksum: checksumEvidenceArchiveField(hardwareBindingDiagnostics),
       interface_matrix_checksum: checksumEvidenceArchiveField(interfaceMatrix),
+      interface_matrix_validation_checksum: checksumEvidenceArchiveField(interfaceMatrixValidation),
       diagnostic_focus_checksum: checksumEvidenceArchiveField(diagnosticFocus),
       repair_action_log_checksum: checksumEvidenceArchiveField(diagnosticRepairActions),
       typed_ports_checksum: checksumEvidenceArchiveField(typedPorts),
@@ -13018,8 +13452,16 @@ function installEditableWorkbenchShell() {
   if (exportInterfaceMatrixBtn) {
     exportInterfaceMatrixBtn.addEventListener("click", () => exportWorkbenchInterfaceMatrix());
   }
+  if (validateInterfaceMatrixBtn) {
+    validateInterfaceMatrixBtn.addEventListener("click", () => validateWorkbenchInterfaceMatrix());
+  }
   if (applyInterfaceMatrixBtn) {
     applyInterfaceMatrixBtn.addEventListener("click", () => applyWorkbenchInterfaceMatrix());
+  }
+  if (interfaceMatrixOutput) {
+    interfaceMatrixOutput.addEventListener("input", () => {
+      clearInterfaceMatrixValidationReport("Matrix edited; validate before apply. Truth effect: none.");
+    });
   }
   if (exportDraftBtn) {
     exportDraftBtn.addEventListener("click", () => exportEditableDraftJson());

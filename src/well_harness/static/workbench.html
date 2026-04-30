@@ -928,6 +928,13 @@
                   Export matrix
                 </button>
                 <button
+                  id="workbench-validate-interface-matrix-btn"
+                  type="button"
+                  class="workbench-editable-primary"
+                >
+                  Validate matrix
+                </button>
+                <button
                   id="workbench-apply-interface-matrix-btn"
                   type="button"
                   class="workbench-editable-primary"
@@ -944,6 +951,14 @@
                 <p id="workbench-interface-matrix-status" class="workbench-handoff-status">
                   Matrix is local sandbox evidence only. Truth effect: none.
                 </p>
+                <label class="workbench-handoff-output" for="workbench-interface-matrix-validation-output">
+                  <span>Matrix validation report</span>
+                  <textarea
+                    id="workbench-interface-matrix-validation-output"
+                    rows="5"
+                    readonly
+                  ></textarea>
+                </label>
               </section>
               <section
                 id="workbench-typed-port-editor"
