@@ -409,6 +409,68 @@ def test_workbench_connector_pin_map_applies_round_trips_and_archives(demo_serve
     assert archive["checksums"]["connector_pin_map_checksum"]
 
 
+def test_workbench_hardware_evidence_v2_tracks_selected_node_and_edge(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.wait_for_selector("#workbench-hardware-evidence-v2")
+    assert page.locator("#workbench-hardware-evidence-v2-target").inner_text() == "node:logic1"
+
+    page.fill("#workbench-interface-hardware-id", "TR-LRU-V2")
+    page.fill("#workbench-interface-cable", "CBL-V2")
+    page.fill("#workbench-interface-connector", "J-V2")
+    page.fill("#workbench-interface-port-local", "logic1:out")
+    page.fill("#workbench-interface-port-peer", "TR-LRU-V2:J-V2")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+
+    node_fields = page.locator("#workbench-hardware-evidence-v2-fields").inner_text()
+    assert "TR-LRU-V2" in node_fields
+    assert "J-V2" in node_fields
+    assert "LOCAL PIN" in node_fields
+    assert "evidence_gap" in node_fields
+    assert "truth_effect: none" in node_fields
+    assert "1 row(s)" in page.locator("#workbench-hardware-evidence-v2-pin-rows").inner_text()
+
+    page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
+    page.fill("#workbench-interface-hardware-id", "EDGE-LRU-V2")
+    page.fill("#workbench-interface-cable", "EDGE-CBL-V2")
+    page.fill("#workbench-interface-connector", "EDGE-J-V2")
+    page.fill("#workbench-interface-port-local", "logic1:out")
+    page.fill("#workbench-interface-port-peer", "logic2:in")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+
+    assert page.locator("#workbench-hardware-evidence-v2-target").inner_text() == "edge:edge_logic1_logic2"
+    edge_fields = page.locator("#workbench-hardware-evidence-v2-fields").inner_text()
+    assert "EDGE-LRU-V2" in edge_fields
+    assert "EDGE-J-V2" in edge_fields
+    assert "LOCAL PIN" in edge_fields
+    assert "evidence_gap" in edge_fields
+
+    page.click("#workbench-generate-handoff-btn")
+    assert "Hardware evidence v2:" in page.locator("#workbench-pr-proof-output").input_value()
+    assert "Hardware evidence v2:" in page.locator("#workbench-linear-handoff-output").input_value()
+
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert draft["hardware_evidence_v2"]["target_kind"] == "edge"
+    assert draft["hardware_evidence_v2"]["target_id"] == "edge_logic1_logic2"
+    assert draft["hardware_evidence_v2"]["selected_binding"]["hardware_id"] == "EDGE-LRU-V2"
+    assert draft["hardware_evidence_v2"]["truth_effect"] == "none"
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert errors == [], f"page JS errors: {errors}"
+    assert archive["hardware_evidence_v2"]["target_kind"] == "edge"
+    assert archive["hardware_evidence_v2"]["truth_effect"] == "none"
+    assert archive["changerequest_proof_packet"]["hardware_evidence_v2_summary"]["target"] == "edge:edge_logic1_logic2"
+    assert archive["checksums"]["hardware_evidence_v2_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_handoff_archive(
     demo_server: str, browser: Any
 ) -> None:

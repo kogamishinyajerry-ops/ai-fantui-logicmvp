@@ -5537,6 +5537,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   margin-top: 0.2rem;
 }
 .workbench-hardware-palette,
+.workbench-hardware-evidence-v2,
 .workbench-subsystem-editor,
 .workbench-rule-parameter-editor,
 .workbench-interface-binding-editor,
@@ -5546,6 +5547,65 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   margin-top: 0.7rem;
   padding-top: 0.65rem;
   border-top: 1px solid rgba(150, 173, 190, 0.18);
+}
+.workbench-hardware-evidence-v2-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin: 0.55rem 0;
+}
+.workbench-hardware-evidence-v2-summary div {
+  display: grid;
+  gap: 0.16rem;
+  padding: 0.46rem;
+  border: 1px solid rgba(150, 173, 190, 0.18);
+  border-radius: 7px;
+  background: rgba(4, 10, 16, 0.44);
+}
+.workbench-hardware-evidence-v2-summary dt {
+  color: rgba(213, 227, 237, 0.58);
+  font-size: 0.64rem;
+}
+.workbench-hardware-evidence-v2-summary dd {
+  margin: 0;
+  color: #eefaff;
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+.workbench-hardware-evidence-v2-fields {
+  display: grid;
+  gap: 0.34rem;
+  margin-top: 0.55rem;
+}
+.workbench-hardware-evidence-v2-row {
+  display: grid;
+  grid-template-columns: minmax(78px, 0.48fr) minmax(0, 1fr) minmax(64px, auto);
+  gap: 0.38rem;
+  align-items: center;
+  padding: 0.38rem 0.44rem;
+  border: 1px solid rgba(150, 173, 190, 0.16);
+  border-radius: 7px;
+  background: rgba(4, 10, 16, 0.42);
+  font-size: 0.68rem;
+}
+.workbench-hardware-evidence-v2-row[data-gap-state="gap"] {
+  border-color: rgba(240, 193, 91, 0.42);
+  background: rgba(71, 48, 9, 0.18);
+}
+.workbench-hardware-evidence-v2-row strong {
+  color: rgba(213, 227, 237, 0.66);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+}
+.workbench-hardware-evidence-v2-row span {
+  color: #f5fbff;
+  overflow-wrap: anywhere;
+}
+.workbench-hardware-evidence-v2-row em {
+  justify-self: end;
+  color: rgba(253, 241, 205, 0.82);
+  font-size: 0.62rem;
+  font-style: normal;
 }
 .workbench-hardware-palette-controls {
   display: grid;

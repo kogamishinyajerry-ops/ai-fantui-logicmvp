@@ -29,6 +29,10 @@ def test_workbench_edge_selection_renders_evidence_only_inspector() -> None:
     assert "workbench-interface-binding-owner" in js
     assert "workbench-interface-port-local" in js
     assert "workbench-interface-port-peer" in js
+    assert "buildHardwareEvidenceV2Report(activeInterfaceBindingTarget(), [])" in js
+    assert "workbench-hardware-evidence-v2-target" in Path(
+        "src/well_harness/static/workbench.html"
+    ).read_text(encoding="utf-8")
     assert ".workbench-editable-edges path[aria-pressed=\"true\"]" in css
     assert ".workbench-inspector-edge-list" in css
 

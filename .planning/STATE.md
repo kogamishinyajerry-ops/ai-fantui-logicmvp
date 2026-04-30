@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-209 connector/pin map editor done
+status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-210 hardware evidence inspector v2 in review
 last_updated: "2026-05-01T00:00:00.000+08:00"
 last_activity: 2026-05-01
 progress:
@@ -10,7 +10,7 @@ progress:
   completed_phases: 43
   total_plans: 2
   completed_plans: 1
-  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates. JER-207 adds sandbox-only subsystem group/rename/ungroup metadata. JER-208 adds sandbox-only hardware interface design schema/loader/validator/hash evidence. JER-209 adds a connector/pin map editor, draft round-trip, and archive checksum. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates. JER-207 adds sandbox-only subsystem group/rename/ungroup metadata. JER-208 adds sandbox-only hardware interface design schema/loader/validator/hash evidence. JER-209 adds a connector/pin map editor, draft round-trip, and archive checksum. JER-210 adds a selected-owner Hardware Evidence Inspector v2 packet for LRU/cable/connector/port/pin coverage and evidence gaps. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
@@ -19,10 +19,11 @@ Last activity: 2026-05-01
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
-**Current position**: JER-204 through JER-209 are merged or ready to merge on
-the v4 line. JER-209 is the first visible connector/pin authoring slice:
-`/workbench` can export, edit, apply, import, and archive sandbox connector/pin
-rows tied to existing node/edge hardware bindings.
+**Current position**: JER-204 through JER-209 are merged on the v4 line and
+JER-210 is in review. JER-210 turns the right inspector into a selected-owner
+hardware evidence review surface: nodes and edges expose LRU, cable,
+connector, port, pin, source, coverage, and evidence-gap status as sandbox
+metadata.
 
 **Linear control plane**:
 
@@ -35,7 +36,8 @@ rows tied to existing node/edge hardware bindings.
 - JER-207 is Done after adding subsystem group/rename/ungroup evidence.
 - JER-208 is Done after adding the hardware interface design model foundation.
 - JER-209 is Done after adding connector/pin map editor evidence.
-- JER-210 through JER-213 remain seeded as v4 backlog issues.
+- JER-210 is in review after adding Hardware Evidence Inspector v2 selected-owner evidence.
+- JER-211 through JER-213 remain seeded as v4 backlog issues.
 
 **Runtime v3 closure summary**:
 
@@ -108,6 +110,21 @@ handoff packet.
   a map updates only existing sandbox node/edge bindings and skips missing
   owners.
 - No backend API, controller truth, adapter, hardware YAML, C919 packet,
+  truth-level, DAL, or PSSA behavior changes are introduced by this slice.
+
+**JER-210 hardware evidence inspector v2 closure**:
+
+- The right inspector now has a Hardware Evidence v2 section that tracks the
+  selected node or edge owner.
+- The selected-owner packet displays LRU/hardware id, cable, connector, local
+  and peer ports, local and peer pins, evidence status, source ref, coverage,
+  connector/pin row count, and evidence-gap counts.
+- Draft export, ChangeRequest proof packet, and local evidence archive carry
+  `hardware_evidence_v2` with `truth_effect: none` and checksum coverage.
+- Node selection keeps the read-only hardware evidence API signal rows; edge
+  selection uses the candidate edge binding only because no certified edge
+  truth map exists.
+- No controller truth, backend truth, adapter, frozen YAML, C919 packet,
   truth-level, DAL, or PSSA behavior changes are introduced by this slice.
 
 **Hard boundaries**:
