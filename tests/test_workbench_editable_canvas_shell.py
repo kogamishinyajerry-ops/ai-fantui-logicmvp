@@ -112,6 +112,19 @@ def test_css_declares_editable_workbench_layout() -> None:
     assert ".workbench-sandbox-timeline-strip" in css
 
 
+def test_component_library_templates_are_exposed_as_sandbox_toolbar_controls() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-component-library"' in html
+    assert 'id="workbench-component-library-status"' in html
+    assert 'data-component-template-id="single_and_gate"' in html
+    assert 'data-component-template-id="compare_guard"' in html
+    assert 'data-component-template-id="two_stage_interlock"' in html
+    assert ".workbench-component-library" in css
+    assert ".workbench-component-library-status" in css
+
+
 def test_js_wires_draft_derivation_node_selection_and_evidence_api() -> None:
     js = _js()
 
@@ -121,6 +134,21 @@ def test_js_wires_draft_derivation_node_selection_and_evidence_api() -> None:
     assert "data-editable-node-id" in js
     assert "workbench-inspector-node-label" in js
     assert "data-evidence-api" in js
+
+
+def test_js_wires_component_library_round_trip_as_sandbox_only_metadata() -> None:
+    js = _js()
+
+    assert "editable-component-library.v1" in js
+    assert "componentLibraryTemplates" in js
+    assert "function instantiateComponentTemplate" in js
+    assert "function buildComponentLibrarySummary" in js
+    assert "ui_draft.component_library" in js
+    assert "component_template" in js
+    assert "component_library" in js
+    assert 'component_library truth_effect must be none' in js
+    assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'truth_effect: "none"' in js
 
 
 def test_js_builds_changerequest_linear_handoff_without_live_linear_mutation() -> None:

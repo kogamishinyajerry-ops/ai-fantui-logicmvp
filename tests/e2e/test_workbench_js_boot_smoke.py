@@ -1051,6 +1051,56 @@ def test_workbench_operation_catalog_adds_typed_sandbox_node(demo_server, browse
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_component_library_inserts_reusable_sandbox_template(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-component-template-id="two_stage_interlock"]')
+    assert "2ST" in page.locator("#workbench-component-library-status").inner_text()
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+
+    created_nodes = [node for node in draft["nodes"] if node["id"].startswith("draft_node_")]
+    created_edges = [
+        edge for edge in draft["edges"]
+        if edge["id"].startswith("edge_component_two_stage_interlock")
+    ]
+    assert errors == [], f"page JS errors: {errors}"
+    assert [node["id"] for node in created_nodes] == ["draft_node_1", "draft_node_2"]
+    assert len(created_edges) == 1
+    assert draft["component_library"]["version"] == "editable-component-library.v1"
+    assert draft["component_library"]["last_template_id"] == "two_stage_interlock"
+    assert draft["component_library"]["truth_effect"] == "none"
+    assert {
+        node["component_template"]["template_id"] for node in created_nodes
+    } == {"two_stage_interlock"}
+    assert all(
+        node["component_template"]["candidate_state"] == "sandbox_candidate"
+        for node in created_nodes
+    )
+    assert created_edges[0]["component_template"]["truth_effect"] == "none"
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    page.fill("#workbench-draft-json-buffer", draft_json)
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    imported_nodes = [node for node in imported["nodes"] if node["id"].startswith("draft_node_")]
+    assert [node["component_template"]["template_id"] for node in imported_nodes] == [
+        "two_stage_interlock",
+        "two_stage_interlock",
+    ]
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["component_library"]["last_template_id"] == "two_stage_interlock"
+    assert archive["component_library"]["truth_effect"] == "none"
+    assert archive["checksums"]["component_library_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_rule_parameter_round_trips_through_export_import_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
