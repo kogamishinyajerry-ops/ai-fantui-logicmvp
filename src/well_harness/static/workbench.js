@@ -11615,6 +11615,8 @@ function installEditableWorkbenchShell() {
   function buildEditableDraftExport() {
     const snapshot = currentDraftSnapshot();
     const customSnapshot = safeWorkbenchCustomSnapshot() || {};
+    const changedModelHash = editableDraftHash(JSON.stringify(snapshot));
+    const changeRequestProofPacket = buildChangeRequestProofPacket(snapshot, changedModelHash);
     return {
       kind: "well-harness-workbench-ui-draft",
       version: 1,
@@ -11641,6 +11643,7 @@ function installEditableWorkbenchShell() {
       operation_catalog: snapshot.operation_catalog,
       rule_parameter_summary: snapshot.rule_parameter_summary,
       hardware_palette: snapshot.hardware_palette,
+      changerequest_proof_packet: changeRequestProofPacket,
       draft_snapshot_manifest: buildDraftSnapshotManifestSummary(),
       selected_scenario_id: selectedWorkbenchScenarioId(),
       custom_snapshot: customSnapshot,
@@ -11733,6 +11736,27 @@ function installEditableWorkbenchShell() {
     }
     if (payload.repair_action_log !== undefined && !Array.isArray(payload.repair_action_log)) {
       throw new Error("repair_action_log must be an array when present");
+    }
+    if (
+      payload.changerequest_proof_packet !== undefined
+      && (!payload.changerequest_proof_packet || typeof payload.changerequest_proof_packet !== "object" || Array.isArray(payload.changerequest_proof_packet))
+    ) {
+      throw new Error("changerequest_proof_packet must be an object when present");
+    }
+    if (payload.changerequest_proof_packet !== undefined) {
+      const packet = payload.changerequest_proof_packet;
+      if (packet.candidate_state !== "sandbox_candidate") {
+        throw new Error("changerequest_proof_packet candidate_state must be sandbox_candidate");
+      }
+      if (packet.certification_claim !== "none") {
+        throw new Error("changerequest_proof_packet certification_claim must be none");
+      }
+      if (packet.truth_effect !== "none") {
+        throw new Error("changerequest_proof_packet truth_effect must be none");
+      }
+      if (packet.controller_truth_modified !== false) {
+        throw new Error("changerequest_proof_packet controller_truth_modified must be false");
+      }
     }
     return payload;
   }
@@ -11873,6 +11897,269 @@ function installEditableWorkbenchShell() {
     ];
   }
 
+  function summarizeRepairActionsForProofPacket(actions) {
+    const rows = repairActionLogSnapshotFromSource(actions);
+    return {
+      action_count: rows.length,
+      action_ids: rows.map((entry) => entry.action_id),
+      last_action_id: rows.length ? rows[rows.length - 1].action_id : null,
+      checksum: checksumEvidenceArchiveField(rows),
+      truth_effect: "none",
+    };
+  }
+
+  function repairActionLogSnapshotFromSource(actions) {
+    return normalizeRepairActionLog(Array.isArray(actions) ? actions : []);
+  }
+
+  function proofPacketBindingDiagnosticsSummary(diagnostics) {
+    const source = diagnostics && typeof diagnostics === "object" ? diagnostics : {};
+    return {
+      status: normalizedInterfaceField(source.status || "unknown"),
+      issue_count: Number.isFinite(Number(source.issue_count)) ? Number(source.issue_count) : 0,
+      evidence_gap_field_count: Number.isFinite(Number(source.evidence_gap_field_count))
+        ? Number(source.evidence_gap_field_count)
+        : 0,
+      checksum: checksumEvidenceArchiveField(source),
+      truth_effect: "none",
+    };
+  }
+
+  function proofPacketDiagnosticFocusSummary(focus) {
+    const source = focus && typeof focus === "object" ? focus : currentDiagnosticFocusSummary();
+    if (source.state === "selected") {
+      return {
+        ...normalizeHardwareBindingFocusTarget(source),
+        state: "selected",
+        truth_effect: "none",
+      };
+    }
+    return {
+      state: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function buildChangeRequestProofPacket(snapshot, changedModelHash) {
+    const sourceSnapshot = snapshot || currentDraftSnapshot();
+    const hardwareBindings = sourceSnapshot.hardware_bindings || [];
+    const bindingCoverage =
+      sourceSnapshot.binding_coverage || buildInterfaceBindingCoverageSummary(hardwareBindings);
+    const hardwareBindingDiagnostics =
+      sourceSnapshot.hardware_binding_diagnostics || buildHardwareBindingDiagnosticsReport(hardwareBindings);
+    const repairActions = repairActionLogSnapshotFromSource(sourceSnapshot.repair_action_log || []);
+    const portContractSummary =
+      sourceSnapshot.port_contract_summary || buildPortContractSummary(
+        sourceSnapshot.typed_ports || [],
+        sourceSnapshot.edges || [],
+      );
+    const portCompatibilityReport =
+      sourceSnapshot.port_compatibility_report || buildPortCompatibilityReport(
+        sourceSnapshot.typed_ports || [],
+        sourceSnapshot.edges || [],
+      );
+    const operationCatalog = sourceSnapshot.operation_catalog || buildOperationCatalogSummary();
+    const ruleParameterSummary = sourceSnapshot.rule_parameter_summary || buildRuleParameterSummary();
+    const draftSnapshotManifest = buildDraftSnapshotManifestSummary();
+    const diffVerdict = (lastSandboxDiff && lastSandboxDiff.verdict) || "not_run";
+    const diagnosticsSummary = proofPacketBindingDiagnosticsSummary(hardwareBindingDiagnostics);
+    const diagnosticFocusSummary = proofPacketDiagnosticFocusSummary(sourceSnapshot.diagnostic_focus);
+    const repairActionLogSummary = summarizeRepairActionsForProofPacket(repairActions);
+    return {
+      kind: "well-harness-workbench-changerequest-proof-packet",
+      version: 1,
+      linear: {
+        issue: "JER-TBD",
+        project: "AI FANTUI LogicMVP · Editable Workbench Runtime v3",
+        live_mutation: false,
+        agent_eligible: "No",
+      },
+      adapter: "thrust-reverser",
+      layer: "L4",
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_level_impact: "none",
+      dal_pssa_impact: "none",
+      red_lines_touched: "none",
+      controller_truth_modified: false,
+      frozen_assets_modified: false,
+      truth_effect: "none",
+      changed_model_hash: changedModelHash || editableDraftHash(JSON.stringify(sourceSnapshot)),
+      selected_scenario_id: selectedWorkbenchScenarioId(),
+      selected_node_id: sourceSnapshot.selected_node && sourceSnapshot.selected_node.id
+        ? sourceSnapshot.selected_node.id
+        : "unknown",
+      sandbox_diff: {
+        verdict: diffVerdict,
+        scenario_id: (lastSandboxDiff && lastSandboxDiff.scenario_id) || selectedWorkbenchScenarioId(),
+        first_divergence: (
+          lastSandboxDiff
+          && lastSandboxDiff.summary
+          && lastSandboxDiff.summary.first_divergence
+        ) || null,
+        truth_level_impact: "none",
+      },
+      hardware_binding_summary: {
+        binding_count: hardwareBindings.length,
+        coverage: {
+          complete: bindingCoverage.complete,
+          partial: bindingCoverage.partial,
+          missing: bindingCoverage.missing,
+        },
+        checksum: checksumEvidenceArchiveField(hardwareBindings),
+        truth_effect: "none",
+      },
+      diagnostics: {
+        hardware_binding: diagnosticsSummary,
+        truth_effect: "none",
+      },
+      hardware_binding_diagnostics_summary: diagnosticsSummary,
+      selected_focus: diagnosticFocusSummary,
+      diagnostic_focus: diagnosticFocusSummary,
+      repair_action_log_summary: repairActionLogSummary,
+      repair_action_log_summary_checksum: repairActionLogSummary.checksum,
+      repair_action_summary: repairActionLogSummary,
+      port_contract_summary: {
+        total_ports: portContractSummary.total_ports,
+        edge_contracts: portContractSummary.edge_contracts,
+        required_ports: portContractSummary.required_ports,
+        truth_effect: "none",
+      },
+      port_compatibility_summary: {
+        status: portCompatibilityReport.status,
+        warning_count: portCompatibilityReport.warning_count,
+        error_count: portCompatibilityReport.error_count,
+        truth_effect: "none",
+      },
+      operation_catalog: {
+        version: operationCatalog.version,
+        selected_op: operationCatalog.selected_op,
+        approved_ops: operationCatalog.approved_ops || [],
+        truth_effect: "none",
+      },
+      rule_parameter_summary: {
+        total_rules: ruleParameterSummary.total_rules,
+        touched_nodes: ruleParameterSummary.touched_nodes || [],
+        truth_effect: "none",
+      },
+      draft_snapshot_manifest: {
+        snapshot_count: draftSnapshotManifest.snapshot_count,
+        active_snapshot_id: draftSnapshotManifest.active_snapshot_id,
+        truth_effect: "none",
+      },
+      gate_claims: buildWorkbenchGateClaims(),
+      known_blockers: buildWorkbenchKnownBlockers(),
+      required_test_evidence: [
+        "targeted pytest",
+        "default pytest",
+        "GSD validation suite",
+        "adversarial 8/8",
+        "full e2e status with known blockers declared",
+        "mypy gate status with JER-171 blocker declared",
+      ],
+    };
+  }
+
+  function proofPacketBindingSummaryText(packet) {
+    const summary = packet.hardware_binding_summary || {};
+    const coverage = summary.coverage || {};
+    return `${summary.binding_count || 0} binding(s) / ${coverage.complete || 0} complete / ${coverage.partial || 0} partial / ${coverage.missing || 0} missing`;
+  }
+
+  function proofPacketDiagnosticsText(packet) {
+    const summary = packet.hardware_binding_diagnostics_summary || {};
+    return `${summary.status || "unknown"} / issues=${summary.issue_count || 0} / gaps=${summary.evidence_gap_field_count || 0}`;
+  }
+
+  function proofPacketDiagnosticFocusText(packet) {
+    const focus = packet.selected_focus || packet.diagnostic_focus || {};
+    if (focus.state !== "selected") return "none";
+    return `${focus.target_kind}:${focus.target_id}${focus.edge_index !== undefined ? `#${focus.edge_index}` : ""} / ${focus.rule_id || "hardware_binding_diagnostic"}`;
+  }
+
+  function proofPacketRepairActionText(packet) {
+    const summary = packet.repair_action_log_summary || packet.repair_action_summary || {};
+    return `${summary.action_count || 0} sandbox repair action(s) / checksum=${summary.checksum || "none"}`;
+  }
+
+  function linearIssueBodyFromProofPacket(packet) {
+    return [
+      "## Outcome",
+      `Review sandbox candidate edit for ${packet.selected_node_id || "selected node"} against the certified thrust-reverser baseline.`,
+      "",
+      "## Context",
+      "Generated by /workbench Evidence Inspector from a sandbox candidate. No live Linear mutation.",
+      "",
+      "## Acceptance",
+      "- Candidate draft hash is recorded.",
+      "- Baseline diff evidence is attached before implementation.",
+      "- Reviewer confirms no certified truth, DAL, PSSA, frozen adapter, or controller semantics changed.",
+      "",
+      "## Boundaries",
+      "- No live Linear mutation from the workbench.",
+      "- No controller.py truth semantics edit.",
+      "- No frozen adapter, C919 reference packet, truth-level, or DAL/PSSA change.",
+      "",
+      "## Evidence Required",
+      "- Editable draft JSON export.",
+      "- Sandbox baseline diff report.",
+      "- Hardware/interface binding draft evidence.",
+      "- Binding coverage summary.",
+      "- Hardware binding diagnostics report.",
+      "- Selected binding diagnostic focus.",
+      "- Diagnostic repair action log.",
+      "- Structured ChangeRequest proof packet.",
+      "- Typed port contract summary.",
+      "- Port compatibility report.",
+      "- Operation catalog provenance.",
+      "- Rule parameter summary.",
+      "- Draft snapshot manifest.",
+      "- Targeted pytest and PR proof packet.",
+      "- Official mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json.",
+      "- e2e 49/49 and mypy --strict clean are not claimed from this local UI archive.",
+      "",
+      "## Metadata",
+      `- Adapter: ${packet.adapter}`,
+      `- Layer: ${packet.layer}`,
+      `- Truth-level impact: ${packet.truth_level_impact}`,
+      `- Red lines touched: ${packet.red_lines_touched}`,
+      `- Candidate state: ${packet.candidate_state}`,
+      `- Certification claim: ${packet.certification_claim}`,
+      `- Changed model hash: ${packet.changed_model_hash}`,
+      `- Selected scenario: ${packet.selected_scenario_id}`,
+      `- Hardware/interface bindings: ${proofPacketBindingSummaryText(packet)}`,
+      `- Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
+      `- Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
+      `- Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
+      `- Sandbox verdict: ${packet.sandbox_diff && packet.sandbox_diff.verdict}`,
+      "- Agent eligible: No",
+    ].join("\n");
+  }
+
+  function prProofTextFromProofPacket(packet) {
+    return [
+      `Linear: ${packet.linear && packet.linear.issue ? packet.linear.issue : "JER-TBD"}`,
+      `Adapter: ${packet.adapter}`,
+      `Layer: ${packet.layer}`,
+      `Truth-level impact: ${packet.truth_level_impact}`,
+      `Red lines touched: ${packet.red_lines_touched}`,
+      "Test delta: targeted pytest pending / default pytest pending / GSD pending / e2e 49/49 not claimed / mypy --strict clean not claimed",
+      "",
+      `Candidate state: ${packet.candidate_state}`,
+      `Certification claim: ${packet.certification_claim}`,
+      `Changed model hash: ${packet.changed_model_hash}`,
+      `Selected scenario: ${packet.selected_scenario_id}`,
+      `Latest sandbox verdict: ${packet.sandbox_diff && packet.sandbox_diff.verdict}`,
+      `Hardware/interface bindings: ${proofPacketBindingSummaryText(packet)}`,
+      `Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
+      `Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
+      `Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
+      `Proof packet checksum: ${checksumEvidenceArchiveField(packet)}`,
+      "Mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
+      "No live Linear mutation; this packet is copy-ready evidence only.",
+    ].join("\n");
+  }
+
   function emptyWorkbenchGraphValidationReport(status) {
     return {
       kind: "well-harness-workbench-graph-validation-report",
@@ -11978,7 +12265,6 @@ function installEditableWorkbenchShell() {
   function buildEditableHandoffPacket() {
     const snapshot = currentDraftSnapshot();
     const changedModelHash = editableDraftHash(JSON.stringify(snapshot));
-    const node = snapshot.selected_node || {};
     const hardwareBindings = snapshot.hardware_bindings || [];
     const bindingCoverage = snapshot.binding_coverage || buildInterfaceBindingCoverageSummary(hardwareBindings);
     const hardwareBindingDiagnostics = snapshot.hardware_binding_diagnostics
@@ -11996,107 +12282,12 @@ function installEditableWorkbenchShell() {
     const operationCatalog = snapshot.operation_catalog || buildOperationCatalogSummary();
     const ruleParameterSummary = snapshot.rule_parameter_summary || buildRuleParameterSummary();
     const draftSnapshotManifest = buildDraftSnapshotManifestSummary();
-    const bindingSummary = hardwareBindings.length
-      ? hardwareBindings
-          .map((binding) => `${binding.owner_kind}:${binding.owner_id} hardware=${binding.hardware_id} cable=${binding.cable} connector=${binding.connector} ports=${binding.port_local}->${binding.port_peer}`)
-          .join("; ")
-      : "none";
-    const portSummary =
-      `${portContractSummary.total_ports} typed ports / ${portContractSummary.edge_contracts} edge contracts / required=${portContractSummary.required_ports}`;
-    const compatibilitySummary =
-      `${portCompatibilityReport.status} / warnings=${portCompatibilityReport.warning_count} / errors=${portCompatibilityReport.error_count}`;
-    const operationCatalogSummary =
-      `${operationCatalog.version} / selected=${operationCatalog.selected_op} / approved=${(operationCatalog.approved_ops || []).join(",")}`;
-    const ruleParameterText =
-      `${ruleParameterSummary.total_rules} sandbox rules / touched=${(ruleParameterSummary.touched_nodes || []).join(",") || "none"}`;
-    const draftSnapshotText =
-      `${draftSnapshotManifest.snapshot_count} saved snapshots / active=${draftSnapshotManifest.active_snapshot_id || "none"}`;
-    const bindingDiagnosticsText =
-      `${hardwareBindingDiagnostics.status} / issues=${hardwareBindingDiagnostics.issue_count} / gaps=${hardwareBindingDiagnostics.evidence_gap_field_count}`;
-    const diagnosticFocusText = diagnosticFocus && diagnosticFocus.state === "selected"
-      ? `${diagnosticFocus.target_kind}:${diagnosticFocus.target_id}${diagnosticFocus.edge_index !== undefined ? `#${diagnosticFocus.edge_index}` : ""} / ${diagnosticFocus.rule_id || "hardware_binding_diagnostic"}`
-      : "none";
-    const repairActionText =
-      `${diagnosticRepairActions.length} sandbox repair action(s) / truth_effect=none`;
-    const linearIssueBody = [
-      "## Outcome",
-      `Review sandbox candidate edit for ${node.id || "selected node"} against the certified thrust-reverser baseline.`,
-      "",
-      "## Context",
-      "Generated by /workbench Evidence Inspector from a sandbox candidate. No live Linear mutation.",
-      "",
-      "## Acceptance",
-      "- Candidate draft hash is recorded.",
-      "- Baseline diff evidence is attached before implementation.",
-      "- Reviewer confirms no certified truth, DAL, PSSA, frozen adapter, or controller semantics changed.",
-      "",
-      "## Boundaries",
-      "- No live Linear mutation from the workbench.",
-      "- No controller.py truth semantics edit.",
-      "- No frozen adapter, C919 reference packet, truth-level, or DAL/PSSA change.",
-      "",
-      "## Evidence Required",
-      "- Editable draft JSON export.",
-      "- Sandbox baseline diff report.",
-      "- Hardware/interface binding draft evidence.",
-      "- Binding coverage summary.",
-      "- Hardware binding diagnostics report.",
-      "- Selected binding diagnostic focus.",
-      "- Diagnostic repair action log.",
-      "- Typed port contract summary.",
-      "- Port compatibility report.",
-      "- Operation catalog provenance.",
-      "- Rule parameter summary.",
-      "- Draft snapshot manifest.",
-      "- Targeted pytest and PR proof packet.",
-      "- Official mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json.",
-      "- e2e 49/49 and mypy --strict clean are not claimed from this local UI archive.",
-      "",
-      "## Metadata",
-      "- Adapter: thrust-reverser",
-      "- Layer: L4",
-      "- Truth-level impact: none",
-      "- Red lines touched: none",
-      `- Changed model hash: ${changedModelHash}`,
-      `- Selected scenario: ${selectedWorkbenchScenarioId()}`,
-      `- Hardware/interface bindings: ${bindingSummary}`,
-      `- Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
-      `- Hardware binding diagnostics: ${bindingDiagnosticsText}`,
-      `- Selected diagnostic focus: ${diagnosticFocusText}`,
-      `- Diagnostic repair actions: ${repairActionText}`,
-      `- Port contract summary: ${portSummary}`,
-      `- Port compatibility: ${compatibilitySummary}`,
-      `- Operation catalog: ${operationCatalogSummary}`,
-      `- Rule parameters: ${ruleParameterText}`,
-      `- Draft snapshots: ${draftSnapshotText}`,
-      "- Agent eligible: No",
-    ].join("\n");
-    const prProofPacket = [
-      "Linear: JER-TBD",
-      "Adapter: thrust-reverser",
-      "Layer: L4",
-      "Truth-level impact: none",
-      "Red lines touched: none",
-      "Test delta: targeted pytest pending / default pytest pending / GSD pending / e2e 49/49 not claimed / mypy --strict clean not claimed",
-      "",
-      `Changed model hash: ${changedModelHash}`,
-      `Selected scenario: ${selectedWorkbenchScenarioId()}`,
-      `Latest sandbox verdict: ${(lastSandboxDiff && lastSandboxDiff.verdict) || "not_run"}`,
-      `Hardware/interface bindings: ${bindingSummary}`,
-      `Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
-      `Hardware binding diagnostics: ${bindingDiagnosticsText}`,
-      `Selected diagnostic focus: ${diagnosticFocusText}`,
-      `Diagnostic repair actions: ${repairActionText}`,
-      `Port contract summary: ${portSummary}`,
-      `Port compatibility: ${compatibilitySummary}`,
-      `Operation catalog: ${operationCatalogSummary}`,
-      `Rule parameters: ${ruleParameterText}`,
-      `Draft snapshots: ${draftSnapshotText}`,
-      "Mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
-      "No live Linear mutation; this packet is copy-ready evidence only.",
-    ].join("\n");
+    const changeRequestProofPacket = buildChangeRequestProofPacket(snapshot, changedModelHash);
+    const linearIssueBody = linearIssueBodyFromProofPacket(changeRequestProofPacket);
+    const prProofPacket = prProofTextFromProofPacket(changeRequestProofPacket);
     return {
       changedModelHash,
+      changerequest_proof_packet: changeRequestProofPacket,
       linearIssueBody,
       prProofPacket,
       gateClaims: buildWorkbenchGateClaims(),
@@ -12156,6 +12347,8 @@ function installEditableWorkbenchShell() {
     const scenarioMetadata =
       (lastSandboxDiff && lastSandboxDiff.scenario_metadata) || currentWorkbenchScenarioMetadata();
     const handoffPacket = buildEditableHandoffPacket();
+    const changeRequestProofPacket =
+      modelJson.changerequest_proof_packet || handoffPacket.changerequest_proof_packet;
     const redLineMetadata = {
       red_lines_touched: "none",
       truth_level_impact: "none",
@@ -12184,6 +12377,9 @@ function installEditableWorkbenchShell() {
       rule_parameter_summary: ruleParameterSummary,
       hardware_palette: hardwarePalette,
       draft_snapshot_manifest: draftSnapshotManifest,
+      changerequest_proof_packet: changeRequestProofPacket,
+      selected_focus: changeRequestProofPacket.selected_focus,
+      repair_action_log_summary: changeRequestProofPacket.repair_action_log_summary,
       changerequest_body: handoffPacket.linearIssueBody,
       pr_proof_packet: handoffPacket.prProofPacket,
       gate_claims: handoffPacket.gateClaims,
@@ -12193,6 +12389,9 @@ function installEditableWorkbenchShell() {
     const checksums = {
       model_json_checksum: checksumEvidenceArchiveField(modelJson),
       diff_summary_checksum: checksumEvidenceArchiveField(diffSummary),
+      changerequest_proof_packet_checksum: checksumEvidenceArchiveField(changeRequestProofPacket),
+      selected_focus_checksum: checksumEvidenceArchiveField(changeRequestProofPacket.selected_focus),
+      repair_action_log_summary_checksum: checksumEvidenceArchiveField(changeRequestProofPacket.repair_action_log_summary),
       changerequest_body_checksum: checksumEvidenceArchiveField(handoffPacket.linearIssueBody),
       pr_proof_packet_checksum: checksumEvidenceArchiveField(handoffPacket.prProofPacket),
       hardware_bindings_checksum: checksumEvidenceArchiveField(hardwareBindings),

@@ -127,8 +127,14 @@ def test_js_builds_changerequest_linear_handoff_without_live_linear_mutation() -
     js = _js()
 
     assert "function buildEditableHandoffPacket" in js
+    assert "function buildChangeRequestProofPacket" in js
+    assert "function linearIssueBodyFromProofPacket" in js
+    assert "function prProofTextFromProofPacket" in js
     assert "workbench-generate-handoff-btn" in js
-    assert "Linear: JER-TBD" in js
-    assert "Truth-level impact: none" in js
-    assert "Red lines touched: none" in js
+    assert "changerequest_proof_packet" in js
+    assert 'issue: "JER-TBD"' in js
+    assert "Candidate state:" in js
+    assert "Certification claim:" in js
+    assert "Truth-level impact:" in js
+    assert "Red lines touched:" in js
     assert "No live Linear mutation" in js
