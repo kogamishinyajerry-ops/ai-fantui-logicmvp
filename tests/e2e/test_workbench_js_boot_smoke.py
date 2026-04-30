@@ -350,6 +350,126 @@ def test_workbench_interface_binding_round_trips_through_export_import_and_archi
     assert archive["checksums"]["binding_coverage_checksum"]
 
 
+def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_handoff_archive(
+    demo_server: str, browser: Any
+) -> None:
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click("#workbench-derive-draft-btn")
+    page.select_option("#workbench-sandbox-scenario-select", "nominal_landing")
+    page.fill("#workbench-interface-hardware-id", "TR-LRU-ACCEPTANCE")
+    page.fill("#workbench-interface-cable", "CBL-TR-ACCEPTANCE")
+    page.fill("#workbench-interface-connector", "J-ACCEPT")
+    page.fill("#workbench-interface-port-local", "logic1:out")
+    page.fill("#workbench-interface-port-peer", "TR-LRU-ACCEPTANCE:J-ACCEPT")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+    assert page.locator("#workbench-interface-binding-quality").inner_text() == "complete"
+
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    binding = draft["hardware_bindings"][0]
+    assert draft["kind"] == "well-harness-workbench-ui-draft"
+    assert draft["system_id"] == "thrust-reverser"
+    assert draft["draft_state"] == "derived"
+    assert draft["truth_level_impact"] == "none"
+    assert draft["dal_pssa_impact"] == "none"
+    assert draft["controller_truth_modified"] is False
+    assert binding["owner_kind"] == "node"
+    assert binding["owner_id"] == "logic1"
+    assert binding["hardware_id"] == "TR-LRU-ACCEPTANCE"
+    assert binding["cable"] == "CBL-TR-ACCEPTANCE"
+    assert binding["connector"] == "J-ACCEPT"
+    assert binding["port_local"] == "logic1:out"
+    assert binding["port_peer"] == "TR-LRU-ACCEPTANCE:J-ACCEPT"
+    assert binding["evidence_status"] == "ui_draft"
+    assert binding["truth_effect"] == "none"
+
+    page.click("#workbench-run-sandbox-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const verdict = document.getElementById('workbench-diff-verdict')?.textContent.trim();
+          return verdict && verdict !== 'running' && verdict !== 'not_run';
+        }
+        """
+    )
+    verdict = page.locator("#workbench-diff-verdict").inner_text()
+    assert verdict in {"equivalent", "divergent", "invalid_model", "invalid_scenario"}
+    assert page.locator("#workbench-diff-scenario").inner_text() == "nominal_landing"
+
+    page.click("#workbench-generate-handoff-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const output = document.getElementById('workbench-pr-proof-output');
+          return output && output.value.includes('Candidate state: sandbox_candidate');
+        }
+        """
+    )
+    linear_body = page.locator("#workbench-linear-handoff-output").input_value()
+    pr_proof = page.locator("#workbench-pr-proof-output").input_value()
+    handoff_status = page.locator("#workbench-handoff-status").inner_text()
+    assert "Candidate state: sandbox_candidate" in pr_proof
+    assert "Certification claim: none" in pr_proof
+    assert "Truth-level impact: none" in pr_proof
+    assert "No live Linear mutation" in pr_proof
+    assert "No live Linear mutation" in handoff_status
+    assert "Diagnostic repair actions:" in linear_body
+
+    page.click("#workbench-prepare-archive-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const output = document.getElementById('workbench-evidence-archive-output');
+          return output && output.value.includes('well-harness-workbench-evidence-archive');
+        }
+        """
+    )
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    packet = archive["changerequest_proof_packet"]
+    red_lines = archive["red_line_metadata"]
+    checksums = archive["checksums"]
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert archive["kind"] == "well-harness-workbench-evidence-archive"
+    assert archive["archive_scope"] == "local_draft_download"
+    assert archive["diff_summary"]["verdict"] == verdict
+    assert archive["diff_summary"]["scenario_id"] == "nominal_landing"
+    assert archive["diff_summary"].get("missing_diff_fallback") is not True
+    assert packet["candidate_state"] == "sandbox_candidate"
+    assert packet["certification_claim"] == "none"
+    assert packet["truth_level_impact"] == "none"
+    assert packet["dal_pssa_impact"] == "none"
+    assert packet["controller_truth_modified"] is False
+    assert packet["frozen_assets_modified"] is False
+    assert packet["truth_effect"] == "none"
+    assert packet["linear"]["live_mutation"] is False
+    assert packet["sandbox_diff"]["verdict"] == verdict
+    assert red_lines["truth_level_impact"] == "none"
+    assert red_lines["dal_pssa_impact"] == "none"
+    assert red_lines["controller_truth_modified"] is False
+    assert red_lines["live_linear_mutation"] is False
+    assert archive["gate_claims"]["e2e_49_49"] == "not_claimed"
+    assert archive["gate_claims"]["mypy_strict_clean"] == "not_claimed"
+    assert archive["known_blockers"]
+    assert checksums["manifest_checksum"]
+    assert checksums["diff_summary_checksum"]
+    assert checksums["changerequest_proof_packet_checksum"]
+    assert checksums["gate_claims_checksum"]
+    assert checksums["known_blockers_checksum"]
+
+
 def test_workbench_hardware_palette_creates_and_applies_sandbox_bindings(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
