@@ -141,6 +141,19 @@ def test_subsystem_group_editor_controls_are_exposed_as_sandbox_only_ui() -> Non
     assert ".workbench-subsystem-editor" in css
 
 
+def test_connector_pin_map_editor_controls_are_sandbox_only_ui() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-connector-pin-map-editor"' in html
+    assert 'id="workbench-export-connector-pin-map-btn"' in html
+    assert 'id="workbench-apply-connector-pin-map-btn"' in html
+    assert 'id="workbench-connector-pin-map-output"' in html
+    assert 'id="workbench-connector-pin-map-status"' in html
+    assert "Connector and pin metadata is local sandbox evidence only. Truth effect: none." in html
+    assert ".workbench-connector-pin-map-editor" in css
+
+
 def test_js_wires_draft_derivation_node_selection_and_evidence_api() -> None:
     js = _js()
 
@@ -179,6 +192,20 @@ def test_js_wires_subsystem_group_round_trip_as_sandbox_only_metadata() -> None:
     assert "subsystem_groups_checksum" in js
     assert "data-subsystem-id" in js
     assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'truth_effect: "none"' in js
+
+
+def test_js_wires_connector_pin_map_round_trip_as_sandbox_only_metadata() -> None:
+    js = _js()
+
+    assert "function buildWorkbenchConnectorPinMap" in js
+    assert "function validateConnectorPinMapPayload" in js
+    assert "function applyWorkbenchConnectorPinMap" in js
+    assert "connector_pin_map" in js
+    assert "connector_pin_map_checksum" in js
+    assert "pin_local" in js
+    assert "pin_peer" in js
+    assert "connector pin map truth_effect must be none" in js
     assert 'truth_effect: "none"' in js
 
 

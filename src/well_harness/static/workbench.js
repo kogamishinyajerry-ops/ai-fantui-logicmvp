@@ -7626,6 +7626,10 @@ function installEditableWorkbenchShell() {
   const interfaceBindingStatus = document.getElementById("workbench-interface-binding-status");
   const interfaceBindingQuality = document.getElementById("workbench-interface-binding-quality");
   const interfaceBindingCoverage = document.getElementById("workbench-interface-binding-coverage");
+  const exportConnectorPinMapBtn = document.getElementById("workbench-export-connector-pin-map-btn");
+  const applyConnectorPinMapBtn = document.getElementById("workbench-apply-connector-pin-map-btn");
+  const connectorPinMapOutput = document.getElementById("workbench-connector-pin-map-output");
+  const connectorPinMapStatus = document.getElementById("workbench-connector-pin-map-status");
   const hardwareBindingDiagnosticsStatus = document.getElementById("workbench-hardware-binding-diagnostics-status");
   const hardwareBindingDiagnosticsCount = document.getElementById("workbench-hardware-binding-diagnostics-count");
   const hardwareBindingDiagnosticsGapCount = document.getElementById("workbench-hardware-binding-diagnostics-gap-count");
@@ -7913,6 +7917,8 @@ function installEditableWorkbenchShell() {
       connector: normalizedInterfaceField(source.connector),
       port_local: normalizedInterfaceField(source.port_local || source.portLocal),
       port_peer: normalizedInterfaceField(source.port_peer || source.portPeer),
+      pin_local: normalizedInterfaceField(source.pin_local || source.pinLocal),
+      pin_peer: normalizedInterfaceField(source.pin_peer || source.pinPeer),
       evidence_status: normalizeEvidenceStatus(source.evidence_status || source.evidenceStatus),
       binding_kind: "ui_interface_binding",
       source_ref: normalizedInterfaceField(source.source_ref || source.sourceRef || "ui_draft.interface_binding"),
@@ -7936,6 +7942,8 @@ function installEditableWorkbenchShell() {
     node.setAttribute("data-interface-connector", normalized.connector);
     node.setAttribute("data-interface-port-local", normalized.port_local);
     node.setAttribute("data-interface-port-peer", normalized.port_peer);
+    node.setAttribute("data-interface-pin-local", normalized.pin_local);
+    node.setAttribute("data-interface-pin-peer", normalized.pin_peer);
     node.setAttribute("data-interface-evidence-status", normalized.evidence_status);
     node.setAttribute("data-interface-source-ref", normalized.source_ref);
     applyNodeBindingQuality(node, normalized);
@@ -7950,6 +7958,8 @@ function installEditableWorkbenchShell() {
       connector: node.getAttribute("data-interface-connector"),
       port_local: node.getAttribute("data-interface-port-local"),
       port_peer: node.getAttribute("data-interface-port-peer"),
+      pin_local: node.getAttribute("data-interface-pin-local"),
+      pin_peer: node.getAttribute("data-interface-pin-peer"),
       evidence_status: node.getAttribute("data-interface-evidence-status"),
       source_ref: node.getAttribute("data-interface-source-ref"),
     }, "node", node.getAttribute("data-editable-node-id") || "unknown");
@@ -7977,6 +7987,7 @@ function installEditableWorkbenchShell() {
     return (
       binding.evidence_status === "ui_draft"
       || ["hardware_id", "cable", "connector", "port_local", "port_peer"]
+        .concat(["pin_local", "pin_peer"])
         .some((key) => binding[key] && binding[key] !== "evidence_gap")
     );
   }
@@ -8023,6 +8034,172 @@ function installEditableWorkbenchShell() {
       focus_target: edgeBindingFocusTarget(edge, index),
     }));
     return [...nodeBindings, ...edgeBindings].filter(meaningfulInterfaceBinding);
+  }
+
+  function connectorPinMapRowFromBinding(binding, index) {
+    const normalized = normalizeInterfaceBinding(
+      binding,
+      binding && binding.owner_kind,
+      binding && binding.owner_id,
+    );
+    return {
+      row_id: `connector-pin:${String(index + 1).padStart(2, "0")}:${normalized.owner_kind}:${normalized.owner_id}`,
+      owner_kind: normalized.owner_kind,
+      owner_id: normalized.owner_id,
+      hardware_id: normalized.hardware_id,
+      cable: normalized.cable,
+      connector: normalized.connector,
+      port_local: normalized.port_local,
+      port_peer: normalized.port_peer,
+      pin_local: normalized.pin_local,
+      pin_peer: normalized.pin_peer,
+      signal_id: normalizedInterfaceField(normalized.signal_id || normalized.owner_id),
+      evidence_status: normalized.evidence_status,
+      source_ref: normalized.source_ref,
+      truth_effect: "none",
+    };
+  }
+
+  function buildWorkbenchConnectorPinMap(bindings) {
+    const rows = (Array.isArray(bindings) ? bindings : [])
+      .map((binding, index) => connectorPinMapRowFromBinding(binding, index));
+    const evidenceGapFieldCount = rows.reduce((total, row) => (
+      total + ["connector", "port_local", "port_peer", "pin_local", "pin_peer"]
+        .filter((fieldName) => isInterfaceEvidenceGap(row[fieldName])).length
+    ), 0);
+    return {
+      kind: "well-harness-workbench-connector-pin-map",
+      version: 1,
+      system_id: "thrust-reverser",
+      map_scope: "sandbox_candidate_interface_design",
+      row_count: rows.length,
+      evidence_gap_field_count: evidenceGapFieldCount,
+      rows,
+      truth_effect: "none",
+    };
+  }
+
+  function validateConnectorPinMapPayload(payload) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      throw new Error("connector pin map JSON must be an object");
+    }
+    if (payload.kind !== "well-harness-workbench-connector-pin-map") {
+      throw new Error("connector pin map kind must be well-harness-workbench-connector-pin-map");
+    }
+    if (payload.truth_effect !== "none") {
+      throw new Error("connector pin map truth_effect must be none");
+    }
+    if (!Array.isArray(payload.rows)) {
+      throw new Error("connector pin map rows must be an array");
+    }
+    for (const row of payload.rows) {
+      if (!row || typeof row !== "object" || Array.isArray(row)) {
+        throw new Error("connector pin map row must be an object");
+      }
+      if (row.truth_effect !== "none") {
+        throw new Error("connector pin map row truth_effect must be none");
+      }
+    }
+    return payload;
+  }
+
+  function connectorPinBindingFromRow(row) {
+    const current = interfaceMatrixCurrentBinding(
+      normalizedInterfaceField(row.owner_kind),
+      normalizedInterfaceField(row.owner_id),
+    ) || {};
+    return normalizeInterfaceBinding({
+      ...current,
+      hardware_id: row.hardware_id,
+      cable: row.cable,
+      connector: row.connector,
+      port_local: row.port_local,
+      port_peer: row.port_peer,
+      pin_local: row.pin_local,
+      pin_peer: row.pin_peer,
+      evidence_status: row.evidence_status,
+      source_ref: row.source_ref || `ui_draft.connector_pin_map.${row.owner_kind || "unknown"}.${row.owner_id || "unknown"}`,
+    }, row.owner_kind, row.owner_id);
+  }
+
+  function exportWorkbenchConnectorPinMap() {
+    const map = buildWorkbenchConnectorPinMap(collectWorkbenchHardwareBindings());
+    if (connectorPinMapOutput) {
+      connectorPinMapOutput.value = JSON.stringify(map, null, 2);
+    }
+    if (connectorPinMapStatus) {
+      connectorPinMapStatus.textContent =
+        `Exported ${map.row_count || 0} connector/pin row(s), ${map.evidence_gap_field_count || 0} evidence-gap field(s). Truth effect: none.`;
+    }
+    return map;
+  }
+
+  function applyConnectorPinMapRows(rows) {
+    let applied = 0;
+    let skipped = 0;
+    refreshEditableNodes();
+    for (const row of rows || []) {
+      const ownerKind = normalizedInterfaceField(row.owner_kind);
+      const ownerId = normalizedInterfaceField(row.owner_id);
+      const binding = connectorPinBindingFromRow(row);
+      if (ownerKind === "node") {
+        const node = nodes.find((candidate) => editableNodeId(candidate) === ownerId);
+        if (!node) {
+          skipped += 1;
+          continue;
+        }
+        setNodeInterfaceBinding(node, binding);
+        applied += 1;
+        continue;
+      }
+      if (ownerKind === "edge") {
+        const edge = draftEdges.find((candidate) => (
+          candidate.id === ownerId
+          || `${candidate.source || "unknown"}->${candidate.target || "unknown"}` === ownerId
+        ));
+        if (!edge) {
+          skipped += 1;
+          continue;
+        }
+        setEdgeInterfaceBinding(edge, binding);
+        applied += 1;
+        continue;
+      }
+      skipped += 1;
+    }
+    return { applied, skipped };
+  }
+
+  function applyWorkbenchConnectorPinMap() {
+    if (!connectorPinMapOutput) return null;
+    try {
+      const payload = validateConnectorPinMapPayload(JSON.parse(connectorPinMapOutput.value || "{}"));
+      if (payload.rows.length) {
+        recordEditableHistory("connector_pin_map_apply");
+        shell.setAttribute("data-draft-state", "derived");
+      }
+      const summary = applyConnectorPinMapRows(payload.rows);
+      if (summary.applied > 0) {
+        if (draftLabel) draftLabel.textContent = "sandbox_candidate connector/pin map applied";
+        renderEditableEdges();
+        renderInspector();
+        validateEditableGraph();
+        updateEditableDraftHash();
+        persistDraft();
+      }
+      const refreshed = exportWorkbenchConnectorPinMap();
+      if (connectorPinMapStatus) {
+        connectorPinMapStatus.textContent =
+          `Applied ${summary.applied} connector/pin row(s), skipped ${summary.skipped}. Export now has ${refreshed.row_count || 0} row(s). Truth effect: none.`;
+      }
+      return summary;
+    } catch (err) {
+      if (connectorPinMapStatus) {
+        connectorPinMapStatus.textContent =
+          err && err.message ? err.message : "connector pin map import failed";
+      }
+      return null;
+    }
   }
 
   function hardwareBindingOwnerKey(binding) {
@@ -12852,6 +13029,7 @@ function installEditableWorkbenchShell() {
       hardwareBindingDiagnostics,
       bindingCoverage,
     );
+    const connectorPinMap = buildWorkbenchConnectorPinMap(hardwareBindings);
     const operationCatalog = buildOperationCatalogSummary();
     const componentLibrary = buildComponentLibrarySummary();
     const subsystemGroupSummary = subsystemGroupsSnapshot();
@@ -12881,6 +13059,7 @@ function installEditableWorkbenchShell() {
       hardware_binding_diagnostics: hardwareBindingDiagnostics,
       interface_matrix: interfaceMatrix,
       interface_matrix_validation: lastInterfaceMatrixValidationReport,
+      connector_pin_map: connectorPinMap,
       repair_action_log: diagnosticRepairActions,
       port_contract_summary: portContractSummary,
       port_compatibility_report: portCompatibilityReport,
@@ -12962,6 +13141,7 @@ function installEditableWorkbenchShell() {
       hardware_binding_diagnostics: snapshot.hardware_binding_diagnostics,
       interface_matrix: snapshot.interface_matrix,
       interface_matrix_validation: snapshot.interface_matrix_validation,
+      connector_pin_map: snapshot.connector_pin_map,
       repair_action_log: snapshot.repair_action_log,
       port_contract_summary: snapshot.port_contract_summary,
       port_compatibility_report: snapshot.port_compatibility_report,
@@ -13040,6 +13220,18 @@ function installEditableWorkbenchShell() {
       && payload.interface_matrix_validation.truth_effect !== "none"
     ) {
       throw new Error("interface_matrix_validation truth_effect must be none");
+    }
+    if (
+      payload.connector_pin_map !== undefined
+      && (!payload.connector_pin_map || typeof payload.connector_pin_map !== "object" || Array.isArray(payload.connector_pin_map))
+    ) {
+      throw new Error("connector_pin_map must be an object when present");
+    }
+    if (
+      payload.connector_pin_map !== undefined
+      && payload.connector_pin_map.truth_effect !== "none"
+    ) {
+      throw new Error("connector_pin_map truth_effect must be none");
     }
     if (payload.typed_ports !== undefined && !Array.isArray(payload.typed_ports)) {
       throw new Error("typed_ports must be an array when present");
@@ -13169,6 +13361,9 @@ function installEditableWorkbenchShell() {
       interfaceMatrixValidationOutput.value = lastInterfaceMatrixValidationReport
         ? JSON.stringify(lastInterfaceMatrixValidationReport, null, 2)
         : "";
+    }
+    if (connectorPinMapOutput && validated.connector_pin_map) {
+      connectorPinMapOutput.value = JSON.stringify(validated.connector_pin_map, null, 2);
     }
     applyEditableState({
       draftState: "derived",
@@ -13735,6 +13930,8 @@ function installEditableWorkbenchShell() {
     const interfaceMatrixValidation =
       sourceSnapshot.interface_matrix_validation || lastInterfaceMatrixValidationReport || null;
     const matrixValidationSummary = interfaceMatrixValidationSummary(interfaceMatrixValidation);
+    const connectorPinMap =
+      sourceSnapshot.connector_pin_map || buildWorkbenchConnectorPinMap(hardwareBindings);
     const repairActions = repairActionLogSnapshotFromSource(sourceSnapshot.repair_action_log || []);
     const portContractSummary =
       sourceSnapshot.port_contract_summary || buildPortContractSummary(
@@ -13811,6 +14008,12 @@ function installEditableWorkbenchShell() {
         truth_effect: "none",
       },
       interface_matrix_validation_summary: matrixValidationSummary,
+      connector_pin_map_summary: {
+        row_count: connectorPinMap.row_count || 0,
+        evidence_gap_field_count: connectorPinMap.evidence_gap_field_count || 0,
+        checksum: checksumEvidenceArchiveField(connectorPinMap),
+        truth_effect: "none",
+      },
       selected_focus: diagnosticFocusSummary,
       diagnostic_focus: diagnosticFocusSummary,
       repair_action_log_summary: repairActionLogSummary,
@@ -13878,6 +14081,11 @@ function installEditableWorkbenchShell() {
     return `${summary.status || "not_run"} / applyable=${summary.applyable_row_count || 0} / skipped=${summary.skipped_row_count || 0} / issues=${summary.issue_count || 0}`;
   }
 
+  function proofPacketConnectorPinMapText(packet) {
+    const summary = packet.connector_pin_map_summary || {};
+    return `${summary.row_count || 0} row(s) / gaps=${summary.evidence_gap_field_count || 0}`;
+  }
+
   function proofPacketDiagnosticFocusText(packet) {
     const focus = packet.selected_focus || packet.diagnostic_focus || {};
     if (focus.state !== "selected") return "none";
@@ -13918,6 +14126,7 @@ function installEditableWorkbenchShell() {
       "- Diagnostic repair action log.",
       "- Structured ChangeRequest proof packet.",
       "- Interface matrix validation preview report.",
+      "- Connector/pin map export.",
       "- Typed port contract summary.",
       "- Port compatibility report.",
       "- Operation catalog provenance.",
@@ -13939,6 +14148,7 @@ function installEditableWorkbenchShell() {
       `- Hardware/interface bindings: ${proofPacketBindingSummaryText(packet)}`,
       `- Interface matrix: ${proofPacketInterfaceMatrixText(packet)}`,
       `- Interface matrix validation: ${proofPacketInterfaceMatrixValidationText(packet)}`,
+      `- Connector/pin map: ${proofPacketConnectorPinMapText(packet)}`,
       `- Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
       `- Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
       `- Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
@@ -13964,6 +14174,7 @@ function installEditableWorkbenchShell() {
       `Hardware/interface bindings: ${proofPacketBindingSummaryText(packet)}`,
       `Interface matrix: ${proofPacketInterfaceMatrixText(packet)}`,
       `Interface matrix validation: ${proofPacketInterfaceMatrixValidationText(packet)}`,
+      `Connector/pin map: ${proofPacketConnectorPinMapText(packet)}`,
       `Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
       `Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
       `Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
@@ -14151,6 +14362,8 @@ function installEditableWorkbenchShell() {
       );
     const interfaceMatrixValidation =
       modelJson.interface_matrix_validation || lastInterfaceMatrixValidationReport || null;
+    const connectorPinMap =
+      modelJson.connector_pin_map || buildWorkbenchConnectorPinMap(hardwareBindings);
     const diagnosticFocus = modelJson.diagnostic_focus || currentDiagnosticFocusSummary();
     const diagnosticRepairActions = modelJson.repair_action_log || repairActionLogSnapshot();
     const typedPorts = modelJson.typed_ports || [];
@@ -14198,6 +14411,7 @@ function installEditableWorkbenchShell() {
       hardware_binding_diagnostics: hardwareBindingDiagnostics,
       interface_matrix: interfaceMatrix,
       interface_matrix_validation: interfaceMatrixValidation,
+      connector_pin_map: connectorPinMap,
       diagnostic_focus: diagnosticFocus,
       repair_action_log: diagnosticRepairActions,
       typed_ports: typedPorts,
@@ -14231,6 +14445,7 @@ function installEditableWorkbenchShell() {
       hardware_binding_diagnostics_checksum: checksumEvidenceArchiveField(hardwareBindingDiagnostics),
       interface_matrix_checksum: checksumEvidenceArchiveField(interfaceMatrix),
       interface_matrix_validation_checksum: checksumEvidenceArchiveField(interfaceMatrixValidation),
+      connector_pin_map_checksum: checksumEvidenceArchiveField(connectorPinMap),
       diagnostic_focus_checksum: checksumEvidenceArchiveField(diagnosticFocus),
       repair_action_log_checksum: checksumEvidenceArchiveField(diagnosticRepairActions),
       typed_ports_checksum: checksumEvidenceArchiveField(typedPorts),
@@ -14614,6 +14829,19 @@ function installEditableWorkbenchShell() {
   }
   if (applyInterfaceBindingBtn) {
     applyInterfaceBindingBtn.addEventListener("click", () => applySelectedInterfaceBinding());
+  }
+  if (exportConnectorPinMapBtn) {
+    exportConnectorPinMapBtn.addEventListener("click", () => exportWorkbenchConnectorPinMap());
+  }
+  if (applyConnectorPinMapBtn) {
+    applyConnectorPinMapBtn.addEventListener("click", () => applyWorkbenchConnectorPinMap());
+  }
+  if (connectorPinMapOutput) {
+    connectorPinMapOutput.addEventListener("input", () => {
+      if (connectorPinMapStatus) {
+        connectorPinMapStatus.textContent = "Connector/pin map edited; apply to update sandbox metadata. Truth effect: none.";
+      }
+    });
   }
   if (applyRuleParameterBtn) {
     applyRuleParameterBtn.addEventListener("click", () => applySelectedRuleParameter());
