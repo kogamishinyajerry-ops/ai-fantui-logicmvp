@@ -5372,18 +5372,21 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-inspector-empty + .workbench-inspector-truth-note {
   margin-top: 0.2rem;
 }
+.workbench-rule-parameter-editor,
 .workbench-interface-binding-editor,
 .workbench-typed-port-editor {
   margin-top: 0.7rem;
   padding-top: 0.65rem;
   border-top: 1px solid rgba(150, 173, 190, 0.18);
 }
+.workbench-rule-parameter-grid,
 .workbench-interface-binding-grid,
 .workbench-typed-port-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem;
 }
+.workbench-rule-parameter-grid .workbench-inspector-field,
 .workbench-interface-binding-grid .workbench-inspector-field,
 .workbench-typed-port-grid .workbench-inspector-field {
   margin-bottom: 0;

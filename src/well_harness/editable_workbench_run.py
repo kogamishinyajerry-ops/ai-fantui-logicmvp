@@ -39,6 +39,16 @@ SUPPORTED_SCENARIOS = {
     "sw1_stuck_at_touchdown": "sw1_stuck_at_touchdown.json",
 }
 PORT_VALUE_TYPES = {"boolean", "number", "string", "state", "unknown"}
+RULE_COMPARISONS = {
+    "==",
+    "!=",
+    "<",
+    "<=",
+    ">",
+    ">=",
+    "between_lower_inclusive",
+    "between_exclusive",
+}
 
 
 class WorkbenchGraphValidationError(EditableControlModelValidationError):
@@ -275,6 +285,56 @@ def _draft_node_source_ref(update: dict[str, Any], node_id: str) -> str:
     return str(source_ref)
 
 
+def _draft_rule_field(value: Any, *, default: str) -> str:
+    text = str(value or "").strip()
+    return text or default
+
+
+def _draft_node_rule(
+    rule: dict[str, Any],
+    *,
+    node_id: str,
+    index: int,
+) -> dict[str, Any]:
+    if str(rule.get("truth_effect", "none")) != "none":
+        raise EditableControlModelValidationError("draft rule truth_effect must be none")
+    comparison = _draft_rule_field(rule.get("comparison"), default="==")
+    if comparison not in RULE_COMPARISONS:
+        raise _graph_validation_error(
+            category="unsafe_op",
+            code="unsupported_rule_comparison",
+            message=f"draft node {node_id} rule comparison is not supported: {comparison}",
+            node_id=node_id,
+            field="comparison",
+        )
+    return {
+        "name": _draft_rule_field(rule.get("name"), default=f"{node_id}_draft_rule_{index}"),
+        "source_signal_id": _draft_rule_field(
+            rule.get("source_signal_id", rule.get("sourceSignalId")),
+            default=node_id,
+        ),
+        "comparison": comparison,
+        "threshold_value": rule.get(
+            "threshold_value",
+            rule.get("thresholdValue", True),
+        ),
+    }
+
+
+def _draft_node_rules(update: dict[str, Any], node_id: str) -> list[dict[str, Any]] | None:
+    raw_rules = update.get("rules")
+    if raw_rules is None:
+        return None
+    if not isinstance(raw_rules, list):
+        raise EditableControlModelValidationError("draft node rules must be an array")
+    rules: list[dict[str, Any]] = []
+    for index, rule in enumerate(raw_rules, start=1):
+        if not isinstance(rule, dict):
+            raise EditableControlModelValidationError("draft node rules must be objects")
+        rules.append(_draft_node_rule(rule, node_id=node_id, index=index))
+    return rules
+
+
 def _draft_node(update: dict[str, Any]) -> dict[str, Any]:
     node_id = _draft_node_id(update.get("id"))
     op = str(update.get("op", "and"))
@@ -291,7 +351,7 @@ def _draft_node(update: dict[str, Any]) -> dict[str, Any]:
         "label": str(update.get("label") or node_id),
         "node_type": "logic",
         "op": op,
-        "rules": [],
+        "rules": _draft_node_rules(update, node_id) or [],
         "source_ref": _draft_node_source_ref(update, node_id),
         "editable": True,
     }
@@ -789,6 +849,9 @@ def canonicalize_workbench_ui_draft(base_model: dict[str, Any], draft: dict[str,
                     field="op",
                 )
             node["op"] = op
+        draft_rules = _draft_node_rules(update, node_id)
+        if draft_rules is not None:
+            node["rules"] = draft_rules
     _apply_ui_typed_ports(model, draft)
     _apply_ui_edges(model, draft)
     _apply_ui_hardware_bindings(model, draft)

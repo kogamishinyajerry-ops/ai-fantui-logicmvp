@@ -727,6 +727,53 @@
                 Select a graph node to inspect read-only hardware evidence.
               </div>
               <section
+                id="workbench-rule-parameter-editor"
+                class="workbench-rule-parameter-editor"
+                aria-labelledby="workbench-rule-parameter-title"
+              >
+                <div class="workbench-inspector-header">
+                  <span id="workbench-rule-parameter-title">Rule Parameters</span>
+                  <strong id="workbench-rule-parameter-owner">node:logic1</strong>
+                </div>
+                <div class="workbench-rule-parameter-grid">
+                  <label class="workbench-inspector-field" for="workbench-rule-name">
+                    <span>Rule name</span>
+                    <input id="workbench-rule-name" type="text" placeholder="draft_rule">
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-rule-source-signal">
+                    <span>Source signal</span>
+                    <input id="workbench-rule-source-signal" type="text" placeholder="tra_deg">
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-rule-comparison">
+                    <span>Comparison</span>
+                    <select id="workbench-rule-comparison">
+                      <option value="==">==</option>
+                      <option value="!=">!=</option>
+                      <option value="<">&lt;</option>
+                      <option value="<=">&lt;=</option>
+                      <option value=">">&gt;</option>
+                      <option value=">=">&gt;=</option>
+                      <option value="between_lower_inclusive">between_lower_inclusive</option>
+                      <option value="between_exclusive">between_exclusive</option>
+                    </select>
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-rule-threshold">
+                    <span>Threshold JSON</span>
+                    <input id="workbench-rule-threshold" type="text" placeholder="true">
+                  </label>
+                </div>
+                <button
+                  id="workbench-apply-rule-parameter-btn"
+                  type="button"
+                  class="workbench-editable-primary workbench-rule-apply"
+                >
+                  Apply rule
+                </button>
+                <p id="workbench-rule-parameter-status" class="workbench-handoff-status">
+                  Local sandbox rule only. Truth effect: none.
+                </p>
+              </section>
+              <section
                 id="workbench-interface-binding-editor"
                 class="workbench-interface-binding-editor"
                 aria-labelledby="workbench-interface-binding-title"

@@ -7575,6 +7575,13 @@ function installEditableWorkbenchShell() {
   const labelInput = document.getElementById("workbench-inspector-node-label");
   const opSelect = document.getElementById("workbench-inspector-node-op");
   const ruleCountSlot = document.getElementById("workbench-inspector-rule-count");
+  const ruleParameterOwner = document.getElementById("workbench-rule-parameter-owner");
+  const ruleNameInput = document.getElementById("workbench-rule-name");
+  const ruleSourceSignalInput = document.getElementById("workbench-rule-source-signal");
+  const ruleComparisonSelect = document.getElementById("workbench-rule-comparison");
+  const ruleThresholdInput = document.getElementById("workbench-rule-threshold");
+  const applyRuleParameterBtn = document.getElementById("workbench-apply-rule-parameter-btn");
+  const ruleParameterStatus = document.getElementById("workbench-rule-parameter-status");
   const evidenceSlot = document.getElementById("workbench-inspector-evidence-status");
   const signalCountSlot = document.getElementById("workbench-inspector-signal-count");
   const sourceRefSlot = document.getElementById("workbench-inspector-source-ref");
@@ -7644,6 +7651,16 @@ function installEditableWorkbenchShell() {
     "connector",
     "port_local",
     "port_peer",
+  ];
+  const approvedRuleComparisons = [
+    "==",
+    "!=",
+    "<",
+    "<=",
+    ">",
+    ">=",
+    "between_lower_inclusive",
+    "between_exclusive",
   ];
   const editableOperationCatalogVersion = "editable-control-ops.v1";
   const approvedOperationCatalog = {
@@ -7961,6 +7978,97 @@ function installEditableWorkbenchShell() {
     }, nodeId);
   }
 
+  function normalizeRuleComparison(value) {
+    const text = String(value === null || value === undefined ? "" : value).trim();
+    return approvedRuleComparisons.includes(text) ? text : "==";
+  }
+
+  function parseRuleThresholdValue(rawValue) {
+    const text = String(rawValue === null || rawValue === undefined ? "" : rawValue).trim();
+    if (!text) return true;
+    try {
+      return JSON.parse(text);
+    } catch (_err) {
+      const numeric = Number(text);
+      if (!Number.isNaN(numeric)) return numeric;
+      return text;
+    }
+  }
+
+  function ruleThresholdInputText(value) {
+    if (value === null || value === undefined) return "";
+    if (typeof value === "string") return value;
+    return JSON.stringify(value);
+  }
+
+  function normalizeNodeDraftRule(rule, nodeId) {
+    const source = rule && typeof rule === "object" ? rule : {};
+    const normalizedNodeId = String(nodeId || "unknown").trim() || "unknown";
+    return {
+      name: normalizePortField(source.name, `${normalizedNodeId}_draft_rule`),
+      source_signal_id: normalizePortField(
+        source.source_signal_id || source.sourceSignalId,
+        normalizedNodeId,
+      ),
+      comparison: normalizeRuleComparison(source.comparison),
+      threshold_value: source.threshold_value !== undefined
+        ? source.threshold_value
+        : parseRuleThresholdValue(source.thresholdValue),
+    };
+  }
+
+  function nodeDraftRulesTouched(node) {
+    return node && node.getAttribute("data-rule-parameters-touched") === "true";
+  }
+
+  function setNodeDraftRules(node, rules) {
+    if (!node) return [];
+    const nodeId = node.getAttribute("data-editable-node-id") || "unknown";
+    const normalizedRules = (Array.isArray(rules) ? rules : [])
+      .map((rule) => normalizeNodeDraftRule(rule, nodeId));
+    if (!normalizedRules.length) {
+      node.removeAttribute("data-rule-name");
+      node.removeAttribute("data-rule-source-signal");
+      node.removeAttribute("data-rule-comparison");
+      node.removeAttribute("data-rule-threshold-json");
+      node.removeAttribute("data-rule-parameters-touched");
+      return [];
+    }
+    const firstRule = normalizedRules[0];
+    node.setAttribute("data-rule-name", firstRule.name);
+    node.setAttribute("data-rule-source-signal", firstRule.source_signal_id);
+    node.setAttribute("data-rule-comparison", firstRule.comparison);
+    node.setAttribute("data-rule-threshold-json", JSON.stringify(firstRule.threshold_value));
+    node.setAttribute("data-rule-parameters-touched", "true");
+    node.setAttribute("data-rule-count", String(normalizedRules.length));
+    updateNodeDisplay(node);
+    return normalizedRules;
+  }
+
+  function nodeDraftRules(node) {
+    if (!node || !nodeDraftRulesTouched(node)) return [];
+    const nodeId = node.getAttribute("data-editable-node-id") || "unknown";
+    return [
+      normalizeNodeDraftRule({
+        name: node.getAttribute("data-rule-name"),
+        source_signal_id: node.getAttribute("data-rule-source-signal"),
+        comparison: node.getAttribute("data-rule-comparison"),
+        threshold_value: parseRuleThresholdValue(node.getAttribute("data-rule-threshold-json")),
+      }, nodeId),
+    ];
+  }
+
+  function buildRuleParameterSummary() {
+    refreshEditableNodes();
+    const totalRules = nodes.reduce((total, node) => total + nodeDraftRules(node).length, 0);
+    return {
+      total_rules: totalRules,
+      touched_nodes: nodes.filter((node) => nodeDraftRulesTouched(node))
+        .map((node) => node.getAttribute("data-editable-node-id") || "unknown"),
+      truth_effect: "none",
+    };
+  }
+
   function nodePortContractTouched(node) {
     return node && node.getAttribute("data-port-contract-touched") === "true";
   }
@@ -8256,6 +8364,9 @@ function installEditableWorkbenchShell() {
     if (nodePortContractTouched(selectedNode)) {
       payload.port_contract = nodePortContract(selectedNode);
     }
+    if (nodeDraftRulesTouched(selectedNode)) {
+      payload.rules = nodeDraftRules(selectedNode);
+    }
     return payload;
   }
 
@@ -8282,6 +8393,9 @@ function installEditableWorkbenchShell() {
     };
     if (nodePortContractTouched(node)) {
       state.port_contract = nodePortContract(node);
+    }
+    if (nodeDraftRulesTouched(node)) {
+      state.rules = nodeDraftRules(node);
     }
     return state;
   }
@@ -8316,6 +8430,9 @@ function installEditableWorkbenchShell() {
     setNodeInterfaceBinding(node, nodeState.hardware_binding || nodeState.hardwareBinding || {});
     if (nodeState.port_contract || nodeState.portContract) {
       setNodePortContract(node, nodeState.port_contract || nodeState.portContract);
+    }
+    if (Array.isArray(nodeState.rules)) {
+      setNodeDraftRules(node, nodeState.rules);
     }
     node.style.setProperty("--node-x", nodeState.x || "50%");
     node.style.setProperty("--node-y", nodeState.y || "50%");
@@ -8362,6 +8479,9 @@ function installEditableWorkbenchShell() {
       setNodeInterfaceBinding(node, nodeState.hardware_binding || nodeState.hardwareBinding || nodeInterfaceBinding(node));
       if (nodeState.port_contract || nodeState.portContract) {
         setNodePortContract(node, nodeState.port_contract || nodeState.portContract);
+      }
+      if (Array.isArray(nodeState.rules)) {
+        setNodeDraftRules(node, nodeState.rules);
       }
       if (typeof nodeState.x === "string") node.style.setProperty("--node-x", nodeState.x);
       if (typeof nodeState.y === "string") node.style.setProperty("--node-y", nodeState.y);
@@ -8845,6 +8965,88 @@ function installEditableWorkbenchShell() {
     return value && value !== "evidence_gap" ? value : "";
   }
 
+  function setRuleEditorDisabledState(disabled) {
+    for (const field of [ruleNameInput, ruleSourceSignalInput, ruleComparisonSelect, ruleThresholdInput]) {
+      if (field) field.disabled = disabled;
+    }
+    if (applyRuleParameterBtn) applyRuleParameterBtn.disabled = disabled;
+  }
+
+  function defaultRuleForNode(node) {
+    const nodeId = node && node.getAttribute("data-editable-node-id") || "unknown";
+    const op = node && node.getAttribute("data-node-op") || "and";
+    const portContract = nodePortContract(node);
+    if (op === "between") {
+      return normalizeNodeDraftRule({
+        name: `${nodeId}_between_window`,
+        source_signal_id: portContract.input_signal_id,
+        comparison: "between_lower_inclusive",
+        threshold_value: [-1, 1],
+      }, nodeId);
+    }
+    if (op === "compare") {
+      return normalizeNodeDraftRule({
+        name: `${nodeId}_threshold`,
+        source_signal_id: portContract.input_signal_id,
+        comparison: ">=",
+        threshold_value: 0,
+      }, nodeId);
+    }
+    return normalizeNodeDraftRule({
+      name: `${nodeId}_draft_rule`,
+      source_signal_id: portContract.input_signal_id,
+      comparison: "==",
+      threshold_value: true,
+    }, nodeId);
+  }
+
+  function renderRuleParameterEditor() {
+    const target = activeInterfaceBindingTarget();
+    const isNode = target.kind === "node" && selectedNode;
+    setRuleEditorDisabledState(!isNode);
+    if (ruleParameterOwner) {
+      ruleParameterOwner.textContent = isNode ? `node:${target.id}` : `${target.kind}:${target.id}`;
+    }
+    const rule = isNode
+      ? (nodeDraftRules(selectedNode)[0] || defaultRuleForNode(selectedNode))
+      : normalizeNodeDraftRule({}, "none");
+    if (ruleNameInput) ruleNameInput.value = rule.name;
+    if (ruleSourceSignalInput) ruleSourceSignalInput.value = rule.source_signal_id;
+    if (ruleComparisonSelect) ruleComparisonSelect.value = rule.comparison;
+    if (ruleThresholdInput) ruleThresholdInput.value = ruleThresholdInputText(rule.threshold_value);
+    if (ruleParameterStatus) {
+      ruleParameterStatus.textContent = isNode
+        ? `Editing sandbox rule for ${target.id}. Truth effect: none.`
+        : "Select a node to edit sandbox rule parameters. Truth effect: none.";
+    }
+  }
+
+  function readRuleParameterForm(node) {
+    const nodeId = node && node.getAttribute("data-editable-node-id") || "unknown";
+    return normalizeNodeDraftRule({
+      name: ruleNameInput && ruleNameInput.value,
+      source_signal_id: ruleSourceSignalInput && ruleSourceSignalInput.value,
+      comparison: ruleComparisonSelect && ruleComparisonSelect.value,
+      threshold_value: parseRuleThresholdValue(ruleThresholdInput && ruleThresholdInput.value),
+    }, nodeId);
+  }
+
+  function applySelectedRuleParameter() {
+    if (!selectedNode || selectedEdge) return null;
+    recordEditableHistory("rule_parameter_edit");
+    const rule = readRuleParameterForm(selectedNode);
+    setNodeDraftRules(selectedNode, [rule]);
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate rule parameter edit pending";
+    renderInspector();
+    if (ruleParameterStatus) {
+      ruleParameterStatus.textContent =
+        `Applied rule ${rule.name} as local sandbox metadata. Truth effect: none.`;
+    }
+    updateEditableDraftHash();
+    persistDraft();
+    return rule;
+  }
+
   function renderInterfaceBindingEditor() {
     const target = activeInterfaceBindingTarget();
     const binding = target.binding;
@@ -9054,6 +9256,7 @@ function installEditableWorkbenchShell() {
       '</dl>',
       '<p class="workbench-inspector-truth-note">truth_effect: none</p>',
     ].join("");
+    renderRuleParameterEditor();
     renderInterfaceBindingEditor();
     renderTypedPortEditor();
   }
@@ -9072,6 +9275,7 @@ function installEditableWorkbenchShell() {
     if (evidenceSlot) evidenceSlot.textContent = payload.evidence;
     if (sourceRefSlot) sourceRefSlot.textContent = payload.sourceRef;
     renderInspectorEvidenceDetails(payload);
+    renderRuleParameterEditor();
     renderInterfaceBindingEditor();
     renderTypedPortEditor();
   }
@@ -9204,6 +9408,7 @@ function installEditableWorkbenchShell() {
     const portContractSummary = buildPortContractSummary(typedPorts, draftEdges);
     const portCompatibilityReport = buildPortCompatibilityReport(typedPorts, draftEdges);
     const operationCatalog = buildOperationCatalogSummary();
+    const ruleParameterSummary = buildRuleParameterSummary();
     return {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
       system_id: "thrust-reverser",
@@ -9225,6 +9430,7 @@ function installEditableWorkbenchShell() {
       port_contract_summary: portContractSummary,
       port_compatibility_report: portCompatibilityReport,
       operation_catalog: operationCatalog,
+      rule_parameter_summary: ruleParameterSummary,
     };
   }
 
@@ -9293,6 +9499,7 @@ function installEditableWorkbenchShell() {
       port_contract_summary: snapshot.port_contract_summary,
       port_compatibility_report: snapshot.port_compatibility_report,
       operation_catalog: snapshot.operation_catalog,
+      rule_parameter_summary: snapshot.rule_parameter_summary,
       selected_scenario_id: selectedWorkbenchScenarioId(),
       custom_snapshot: customSnapshot,
       source_refs: uniqueSourceRefs(),
@@ -9353,6 +9560,12 @@ function installEditableWorkbenchShell() {
       throw new Error("operation_catalog must be an object when present");
     }
     if (
+      payload.rule_parameter_summary !== undefined
+      && (!payload.rule_parameter_summary || typeof payload.rule_parameter_summary !== "object" || Array.isArray(payload.rule_parameter_summary))
+    ) {
+      throw new Error("rule_parameter_summary must be an object when present");
+    }
+    if (
       payload.custom_snapshot !== undefined
       && (!payload.custom_snapshot || typeof payload.custom_snapshot !== "object" || Array.isArray(payload.custom_snapshot))
     ) {
@@ -9397,6 +9610,7 @@ function installEditableWorkbenchShell() {
         evidence: String(node.evidence || "evidence_gap"),
         sourceRef: String(node.sourceRef || node.source_ref || "ui_draft.import"),
         op_catalog_entry: String(node.op_catalog_entry || node.opCatalogEntry || node.op || "and"),
+        rules: Array.isArray(node.rules) ? node.rules : [],
         hardware_binding: node.hardware_binding || node.hardwareBinding || {},
         port_contract: node.port_contract || node.portContract || null,
         x: String(node.x || "50%"),
@@ -9607,6 +9821,7 @@ function installEditableWorkbenchShell() {
       snapshot.edges || [],
     );
     const operationCatalog = snapshot.operation_catalog || buildOperationCatalogSummary();
+    const ruleParameterSummary = snapshot.rule_parameter_summary || buildRuleParameterSummary();
     const bindingSummary = hardwareBindings.length
       ? hardwareBindings
           .map((binding) => `${binding.owner_kind}:${binding.owner_id} hardware=${binding.hardware_id} cable=${binding.cable} connector=${binding.connector} ports=${binding.port_local}->${binding.port_peer}`)
@@ -9618,6 +9833,8 @@ function installEditableWorkbenchShell() {
       `${portCompatibilityReport.status} / warnings=${portCompatibilityReport.warning_count} / errors=${portCompatibilityReport.error_count}`;
     const operationCatalogSummary =
       `${operationCatalog.version} / selected=${operationCatalog.selected_op} / approved=${(operationCatalog.approved_ops || []).join(",")}`;
+    const ruleParameterText =
+      `${ruleParameterSummary.total_rules} sandbox rules / touched=${(ruleParameterSummary.touched_nodes || []).join(",") || "none"}`;
     const linearIssueBody = [
       "## Outcome",
       `Review sandbox candidate edit for ${node.id || "selected node"} against the certified thrust-reverser baseline.`,
@@ -9643,6 +9860,7 @@ function installEditableWorkbenchShell() {
       "- Typed port contract summary.",
       "- Port compatibility report.",
       "- Operation catalog provenance.",
+      "- Rule parameter summary.",
       "- Targeted pytest and PR proof packet.",
       "- Official mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json.",
       "- e2e 49/49 and mypy --strict clean are not claimed from this local UI archive.",
@@ -9659,6 +9877,7 @@ function installEditableWorkbenchShell() {
       `- Port contract summary: ${portSummary}`,
       `- Port compatibility: ${compatibilitySummary}`,
       `- Operation catalog: ${operationCatalogSummary}`,
+      `- Rule parameters: ${ruleParameterText}`,
       "- Agent eligible: No",
     ].join("\n");
     const prProofPacket = [
@@ -9677,6 +9896,7 @@ function installEditableWorkbenchShell() {
       `Port contract summary: ${portSummary}`,
       `Port compatibility: ${compatibilitySummary}`,
       `Operation catalog: ${operationCatalogSummary}`,
+      `Rule parameters: ${ruleParameterText}`,
       "Mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
       "No live Linear mutation; this packet is copy-ready evidence only.",
     ].join("\n");
@@ -9689,6 +9909,7 @@ function installEditableWorkbenchShell() {
       portContractSummary,
       portCompatibilityReport,
       operationCatalog,
+      ruleParameterSummary,
     };
   }
 
@@ -9718,6 +9939,7 @@ function installEditableWorkbenchShell() {
     const portCompatibilityReport =
       modelJson.port_compatibility_report || buildPortCompatibilityReport(typedPorts, modelJson.edges || []);
     const operationCatalog = modelJson.operation_catalog || buildOperationCatalogSummary();
+    const ruleParameterSummary = modelJson.rule_parameter_summary || buildRuleParameterSummary();
     const diffSummary = lastSandboxDiff || {
       verdict: "not_run",
       scenario_id: selectedWorkbenchScenarioId(),
@@ -9750,6 +9972,7 @@ function installEditableWorkbenchShell() {
       port_contract_summary: portContractSummary,
       port_compatibility_report: portCompatibilityReport,
       operation_catalog: operationCatalog,
+      rule_parameter_summary: ruleParameterSummary,
       changerequest_body: handoffPacket.linearIssueBody,
       pr_proof_packet: handoffPacket.prProofPacket,
       gate_claims: handoffPacket.gateClaims,
@@ -9767,6 +9990,7 @@ function installEditableWorkbenchShell() {
       port_contract_summary_checksum: checksumEvidenceArchiveField(portContractSummary),
       port_compatibility_report_checksum: checksumEvidenceArchiveField(portCompatibilityReport),
       operation_catalog_checksum: checksumEvidenceArchiveField(operationCatalog),
+      rule_parameter_summary_checksum: checksumEvidenceArchiveField(ruleParameterSummary),
       gate_claims_checksum: checksumEvidenceArchiveField(handoffPacket.gateClaims),
       known_blockers_checksum: checksumEvidenceArchiveField(handoffPacket.knownBlockers),
     };
@@ -9918,6 +10142,9 @@ function installEditableWorkbenchShell() {
   }
   if (applyInterfaceBindingBtn) {
     applyInterfaceBindingBtn.addEventListener("click", () => applySelectedInterfaceBinding());
+  }
+  if (applyRuleParameterBtn) {
+    applyRuleParameterBtn.addEventListener("click", () => applySelectedRuleParameter());
   }
   if (applyPortContractBtn) {
     applyPortContractBtn.addEventListener("click", () => applySelectedPortContract());
