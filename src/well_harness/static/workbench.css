@@ -5296,6 +5296,24 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-inspector-empty + .workbench-inspector-truth-note {
   margin-top: 0.2rem;
 }
+.workbench-interface-binding-editor {
+  margin-top: 0.7rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(150, 173, 190, 0.18);
+}
+.workbench-interface-binding-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.workbench-interface-binding-grid .workbench-inspector-field {
+  margin-bottom: 0;
+}
+.workbench-interface-apply {
+  width: 100%;
+  min-height: 34px;
+  margin: 0.65rem 0 0.45rem;
+}
 .workbench-sandbox-diff-panel {
   margin-top: 0.7rem;
   padding: 0.62rem;

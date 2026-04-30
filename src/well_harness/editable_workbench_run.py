@@ -343,6 +343,129 @@ def _ensure_ui_target_port(model: dict[str, Any], *, source_node_id: str, target
     return port_id
 
 
+def _draft_binding_field(value: Any, *, default: str = "evidence_gap") -> str:
+    text = str(value or "").strip()
+    return text or default
+
+
+def _draft_binding_status(value: Any) -> str:
+    status = _draft_binding_field(value)
+    if status in {"evidence_gap", "ui_draft", "not_recorded"}:
+        return status
+    return "evidence_gap"
+
+
+def _draft_hardware_binding(
+    *,
+    model: dict[str, Any],
+    binding: dict[str, Any],
+    owner_kind: str,
+    owner_id: str,
+    index: int,
+) -> dict[str, Any]:
+    port_local = _draft_binding_field(
+        binding.get("port_local", binding.get("portLocal"))
+    )
+    port_id: str | None = port_local if _has_port(model, port_local) else None
+    return {
+        "id": _draft_binding_field(
+            binding.get("id"),
+            default=f"ui-hardware-binding:{owner_kind}:{owner_id}:{index}",
+        ),
+        "signal_id": _draft_binding_field(binding.get("signal_id"), default=owner_id),
+        "port_id": port_id,
+        "hardware_id": _draft_binding_field(
+            binding.get("hardware_id", binding.get("hardwareId"))
+        ),
+        "binding_kind": _draft_binding_field(
+            binding.get("binding_kind"), default="ui_interface_binding"
+        ),
+        "evidence_status": _draft_binding_status(
+            binding.get("evidence_status", binding.get("evidenceStatus"))
+        ),
+        "truth_effect": "none",
+        "source_ref": _draft_binding_field(
+            binding.get("source_ref", binding.get("sourceRef")),
+            default="ui_draft.interface_binding",
+        ),
+        "owner_kind": owner_kind,
+        "owner_id": owner_id,
+        "cable": _draft_binding_field(binding.get("cable")),
+        "connector": _draft_binding_field(binding.get("connector")),
+        "port_local": port_local,
+        "port_peer": _draft_binding_field(
+            binding.get("port_peer", binding.get("portPeer"))
+        ),
+    }
+
+
+def _binding_has_ui_evidence(binding: dict[str, Any]) -> bool:
+    return binding["evidence_status"] == "ui_draft" or any(
+        binding[field_name] != "evidence_gap"
+        for field_name in (
+            "hardware_id",
+            "cable",
+            "connector",
+            "port_local",
+            "port_peer",
+        )
+    )
+
+
+def _apply_ui_hardware_bindings(model: dict[str, Any], draft: dict[str, Any]) -> None:
+    seen_ids = {binding["id"] for binding in model["hardware_bindings"]}
+    next_index = 1
+    sources: list[tuple[dict[str, Any], str, str]] = []
+    for node in draft.get("nodes", []):
+        if not isinstance(node, dict):
+            continue
+        binding = node.get("hardware_binding", node.get("hardwareBinding"))
+        if isinstance(binding, dict):
+            sources.append(
+                (
+                    binding,
+                    "node",
+                    _draft_binding_field(node.get("id"), default="unknown_node"),
+                )
+            )
+    for edge in draft.get("edges", []):
+        if not isinstance(edge, dict):
+            continue
+        binding = edge.get("hardware_binding", edge.get("hardwareBinding"))
+        if isinstance(binding, dict):
+            owner_id = _draft_binding_field(
+                edge.get("id"),
+                default=f"{edge.get('source', 'unknown')}->{edge.get('target', 'unknown')}",
+            )
+            sources.append((binding, "edge", owner_id))
+    for binding in draft.get("hardware_bindings", []):
+        if not isinstance(binding, dict):
+            continue
+        owner_kind = _draft_binding_field(
+            binding.get("owner_kind", binding.get("ownerKind")),
+            default="draft",
+        )
+        owner_id = _draft_binding_field(
+            binding.get("owner_id", binding.get("ownerId")),
+            default=f"binding_{next_index}",
+        )
+        sources.append((binding, owner_kind, owner_id))
+
+    for source, owner_kind, owner_id in sources:
+        binding = _draft_hardware_binding(
+            model=model,
+            binding=source,
+            owner_kind=owner_kind,
+            owner_id=owner_id,
+            index=next_index,
+        )
+        next_index += 1
+        if binding["id"] in seen_ids or not _binding_has_ui_evidence(binding):
+            continue
+        seen_ids.add(binding["id"])
+        model["hardware_bindings"].append(binding)
+
+
 def _apply_ui_edges(model: dict[str, Any], draft: dict[str, Any]) -> None:
     node_ids = {node["id"] for node in model["nodes"]}
     for index, edge in enumerate(draft.get("edges", []), start=1):
@@ -465,6 +588,7 @@ def canonicalize_workbench_ui_draft(base_model: dict[str, Any], draft: dict[str,
                 )
             node["op"] = op
     _apply_ui_edges(model, draft)
+    _apply_ui_hardware_bindings(model, draft)
     source_refs = model["evidence_metadata"].setdefault("source_refs", [])
     if "ui_draft.workbench" not in source_refs:
         source_refs.append("ui_draft.workbench")

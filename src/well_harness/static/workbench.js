@@ -7592,6 +7592,15 @@ function installEditableWorkbenchShell() {
   const downloadArchiveBtn = document.getElementById("workbench-download-archive-btn");
   const archiveOutput = document.getElementById("workbench-evidence-archive-output");
   const archiveStatus = document.getElementById("workbench-archive-status");
+  const interfaceBindingOwner = document.getElementById("workbench-interface-binding-owner");
+  const interfaceHardwareIdInput = document.getElementById("workbench-interface-hardware-id");
+  const interfaceCableInput = document.getElementById("workbench-interface-cable");
+  const interfaceConnectorInput = document.getElementById("workbench-interface-connector");
+  const interfacePortLocalInput = document.getElementById("workbench-interface-port-local");
+  const interfacePortPeerInput = document.getElementById("workbench-interface-port-peer");
+  const interfaceEvidenceStatusSelect = document.getElementById("workbench-interface-evidence-status");
+  const applyInterfaceBindingBtn = document.getElementById("workbench-apply-interface-binding-btn");
+  const interfaceBindingStatus = document.getElementById("workbench-interface-binding-status");
   const exportDraftBtn = document.getElementById("workbench-export-draft-btn");
   const importDraftBtn = document.getElementById("workbench-import-draft-btn");
   const draftJsonBuffer = document.getElementById("workbench-draft-json-buffer");
@@ -7614,15 +7623,129 @@ function installEditableWorkbenchShell() {
   const undoStack = [];
   const redoStack = [];
 
+  function normalizedInterfaceField(value) {
+    const text = String(value === null || value === undefined ? "" : value).trim();
+    return text || "evidence_gap";
+  }
+
+  function normalizeEvidenceStatus(value) {
+    const status = normalizedInterfaceField(value);
+    return ["evidence_gap", "ui_draft", "not_recorded"].includes(status)
+      ? status
+      : "evidence_gap";
+  }
+
+  function normalizeInterfaceBinding(binding, ownerKind, ownerId) {
+    const source = binding && typeof binding === "object" ? binding : {};
+    const normalizedOwnerKind = ownerKind || normalizedInterfaceField(source.owner_kind || source.ownerKind);
+    const normalizedOwnerId = ownerId || normalizedInterfaceField(source.owner_id || source.ownerId);
+    return {
+      id: normalizedInterfaceField(source.id || `ui-interface-binding:${normalizedOwnerKind}:${normalizedOwnerId}`),
+      owner_kind: normalizedOwnerKind,
+      owner_id: normalizedOwnerId,
+      hardware_id: normalizedInterfaceField(source.hardware_id || source.hardwareId),
+      cable: normalizedInterfaceField(source.cable),
+      connector: normalizedInterfaceField(source.connector),
+      port_local: normalizedInterfaceField(source.port_local || source.portLocal),
+      port_peer: normalizedInterfaceField(source.port_peer || source.portPeer),
+      evidence_status: normalizeEvidenceStatus(source.evidence_status || source.evidenceStatus),
+      binding_kind: "ui_interface_binding",
+      source_ref: "ui_draft.interface_binding",
+      truth_effect: "none",
+    };
+  }
+
+  function setNodeInterfaceBinding(node, binding) {
+    if (!node) return null;
+    const ownerId = node.getAttribute("data-editable-node-id") || "";
+    const normalized = normalizeInterfaceBinding(binding, "node", ownerId);
+    node.setAttribute("data-interface-hardware-id", normalized.hardware_id);
+    node.setAttribute("data-interface-cable", normalized.cable);
+    node.setAttribute("data-interface-connector", normalized.connector);
+    node.setAttribute("data-interface-port-local", normalized.port_local);
+    node.setAttribute("data-interface-port-peer", normalized.port_peer);
+    node.setAttribute("data-interface-evidence-status", normalized.evidence_status);
+    return normalized;
+  }
+
+  function nodeInterfaceBinding(node) {
+    if (!node) return normalizeInterfaceBinding({}, "node", "unknown");
+    return normalizeInterfaceBinding({
+      hardware_id: node.getAttribute("data-interface-hardware-id"),
+      cable: node.getAttribute("data-interface-cable"),
+      connector: node.getAttribute("data-interface-connector"),
+      port_local: node.getAttribute("data-interface-port-local"),
+      port_peer: node.getAttribute("data-interface-port-peer"),
+      evidence_status: node.getAttribute("data-interface-evidence-status"),
+    }, "node", node.getAttribute("data-editable-node-id") || "unknown");
+  }
+
+  function edgeInterfaceBinding(edge) {
+    const edgeId = edge && (edge.id || `${edge.source || "unknown"}->${edge.target || "unknown"}`);
+    return normalizeInterfaceBinding(
+      edge && (edge.hardware_binding || edge.hardwareBinding || {}),
+      "edge",
+      edgeId || "unknown",
+    );
+  }
+
+  function setEdgeInterfaceBinding(edge, binding) {
+    if (!edge) return null;
+    const normalized = normalizeInterfaceBinding(binding, "edge", edge.id || `${edge.source || "unknown"}->${edge.target || "unknown"}`);
+    edge.hardware_binding = normalized;
+    return normalized;
+  }
+
+  function meaningfulInterfaceBinding(binding) {
+    if (!binding || typeof binding !== "object") return false;
+    return (
+      binding.evidence_status === "ui_draft"
+      || ["hardware_id", "cable", "connector", "port_local", "port_peer"]
+        .some((key) => binding[key] && binding[key] !== "evidence_gap")
+    );
+  }
+
+  function collectWorkbenchHardwareBindings() {
+    refreshEditableNodes();
+    const nodeBindings = nodes.map((node) => nodeInterfaceBinding(node));
+    const edgeBindings = draftEdges.map((edge) => edgeInterfaceBinding(edge));
+    return [...nodeBindings, ...edgeBindings].filter(meaningfulInterfaceBinding);
+  }
+
+  function collectWorkbenchInterfacePorts() {
+    return collectWorkbenchHardwareBindings().flatMap((binding) => [
+      {
+        id: `ui-port:${binding.owner_kind}:${binding.owner_id}:local`,
+        owner_kind: binding.owner_kind,
+        owner_id: binding.owner_id,
+        port_id: binding.port_local,
+        role: "local",
+        evidence_status: binding.evidence_status,
+        truth_effect: "none",
+      },
+      {
+        id: `ui-port:${binding.owner_kind}:${binding.owner_id}:peer`,
+        owner_kind: binding.owner_kind,
+        owner_id: binding.owner_id,
+        port_id: binding.port_peer,
+        role: "peer",
+        evidence_status: binding.evidence_status,
+        truth_effect: "none",
+      },
+    ]).filter((port) => port.port_id && port.port_id !== "evidence_gap");
+  }
+
   function selectedNodePayload() {
     if (!selectedNode) return null;
+    const nodeId = selectedNode.getAttribute("data-editable-node-id") || "";
     return {
-      id: selectedNode.getAttribute("data-editable-node-id") || "",
+      id: nodeId,
       label: selectedNode.getAttribute("data-node-label") || "",
       op: selectedNode.getAttribute("data-node-op") || "and",
       ruleCount: selectedNode.getAttribute("data-rule-count") || "0",
       evidence: selectedNode.getAttribute("data-hardware-evidence") || "evidence_gap",
       sourceRef: selectedNode.getAttribute("data-source-ref") || "unknown",
+      hardware_binding: nodeInterfaceBinding(selectedNode),
     };
   }
 
@@ -7638,6 +7761,7 @@ function installEditableWorkbenchShell() {
       ruleCount: node.getAttribute("data-rule-count") || "0",
       evidence: node.getAttribute("data-hardware-evidence") || "evidence_gap",
       sourceRef: node.getAttribute("data-source-ref") || "ui_draft",
+      hardware_binding: nodeInterfaceBinding(node),
       x: node.style.getPropertyValue("--node-x") || "50%",
       y: node.style.getPropertyValue("--node-y") || "50%",
       draftNode: node.getAttribute("data-draft-node") === "true",
@@ -7666,6 +7790,7 @@ function installEditableWorkbenchShell() {
     node.setAttribute("data-hardware-evidence", nodeState.evidence || "evidence_gap");
     node.setAttribute("data-source-ref", nodeState.sourceRef || "ui_draft.node");
     node.setAttribute("data-draft-node", nodeState.draftNode ? "true" : "false");
+    setNodeInterfaceBinding(node, nodeState.hardware_binding || nodeState.hardwareBinding || {});
     node.style.setProperty("--node-x", nodeState.x || "50%");
     node.style.setProperty("--node-y", nodeState.y || "50%");
     node.setAttribute("aria-pressed", "false");
@@ -7701,6 +7826,7 @@ function installEditableWorkbenchShell() {
       if (typeof nodeState.ruleCount === "string") node.setAttribute("data-rule-count", nodeState.ruleCount);
       if (typeof nodeState.evidence === "string") node.setAttribute("data-hardware-evidence", nodeState.evidence);
       if (typeof nodeState.sourceRef === "string") node.setAttribute("data-source-ref", nodeState.sourceRef);
+      setNodeInterfaceBinding(node, nodeState.hardware_binding || nodeState.hardwareBinding || nodeInterfaceBinding(node));
       if (typeof nodeState.x === "string") node.style.setProperty("--node-x", nodeState.x);
       if (typeof nodeState.y === "string") node.style.setProperty("--node-y", nodeState.y);
       updateNodeDisplay(node);
@@ -7712,6 +7838,12 @@ function installEditableWorkbenchShell() {
             id: String(edge.id || `edge_imported_${index + 1}`),
             source: String(edge.source || ""),
             target: String(edge.target || ""),
+            signal_id: edge.signal_id ? String(edge.signal_id) : undefined,
+            hardware_binding: normalizeInterfaceBinding(
+              edge.hardware_binding || edge.hardwareBinding || {},
+              "edge",
+              String(edge.id || `edge_imported_${index + 1}`),
+            ),
           }))
       : [];
     const selectedId = state.selectedNodeId || (state.selected_node && state.selected_node.id);
@@ -7968,6 +8100,7 @@ function installEditableWorkbenchShell() {
       id: `edge_${sourceId}_${targetId}_${draftEdges.length + 1}`,
       source: sourceId,
       target: targetId,
+      hardware_binding: normalizeInterfaceBinding({}, "edge", `edge_${sourceId}_${targetId}_${draftEdges.length + 1}`),
     });
     if (draftLabel) draftLabel.textContent = "sandbox_candidate edge edit pending";
     renderEditableEdges();
@@ -8018,13 +8151,7 @@ function installEditableWorkbenchShell() {
 
   function persistDraft() {
     try {
-      const payload = {
-        draftState: shell.getAttribute("data-draft-state") || "baseline",
-        selectedNodeId: selectedNode && selectedNode.getAttribute("data-editable-node-id"),
-        nodes: nodes.map((node) => editableNodeState(node)),
-        edges: draftEdges.map((edge) => ({ ...edge })),
-      };
-      window.localStorage.setItem(storageKey, JSON.stringify(payload));
+      window.localStorage.setItem(storageKey, JSON.stringify(serializeEditableState()));
     } catch (_err) {
       // Draft persistence is a convenience. Failure must not block the workbench.
     }
@@ -8129,6 +8256,82 @@ function installEditableWorkbenchShell() {
     evidenceDetail.innerHTML = `<ul>${items}</ul>`;
   }
 
+  function activeInterfaceBindingTarget() {
+    if (selectedEdge) {
+      return {
+        kind: "edge",
+        id: selectedEdge.id || `${selectedEdge.source || "unknown"}->${selectedEdge.target || "unknown"}`,
+        binding: edgeInterfaceBinding(selectedEdge),
+      };
+    }
+    if (selectedNode) {
+      return {
+        kind: "node",
+        id: selectedNode.getAttribute("data-editable-node-id") || "unknown",
+        binding: nodeInterfaceBinding(selectedNode),
+      };
+    }
+    return {
+      kind: "none",
+      id: "none",
+      binding: normalizeInterfaceBinding({}, "none", "none"),
+    };
+  }
+
+  function formValueForInterfaceField(value) {
+    return value && value !== "evidence_gap" ? value : "";
+  }
+
+  function renderInterfaceBindingEditor() {
+    const target = activeInterfaceBindingTarget();
+    const binding = target.binding;
+    if (interfaceBindingOwner) {
+      interfaceBindingOwner.textContent = `${target.kind}:${target.id}`;
+    }
+    if (interfaceHardwareIdInput) interfaceHardwareIdInput.value = formValueForInterfaceField(binding.hardware_id);
+    if (interfaceCableInput) interfaceCableInput.value = formValueForInterfaceField(binding.cable);
+    if (interfaceConnectorInput) interfaceConnectorInput.value = formValueForInterfaceField(binding.connector);
+    if (interfacePortLocalInput) interfacePortLocalInput.value = formValueForInterfaceField(binding.port_local);
+    if (interfacePortPeerInput) interfacePortPeerInput.value = formValueForInterfaceField(binding.port_peer);
+    if (interfaceEvidenceStatusSelect) interfaceEvidenceStatusSelect.value = binding.evidence_status || "evidence_gap";
+    if (interfaceBindingStatus) {
+      interfaceBindingStatus.textContent =
+        `Editing ${target.kind}:${target.id} as sandbox interface evidence. Truth effect: none.`;
+    }
+  }
+
+  function readInterfaceBindingForm(ownerKind, ownerId) {
+    return normalizeInterfaceBinding({
+      hardware_id: interfaceHardwareIdInput && interfaceHardwareIdInput.value,
+      cable: interfaceCableInput && interfaceCableInput.value,
+      connector: interfaceConnectorInput && interfaceConnectorInput.value,
+      port_local: interfacePortLocalInput && interfacePortLocalInput.value,
+      port_peer: interfacePortPeerInput && interfacePortPeerInput.value,
+      evidence_status: interfaceEvidenceStatusSelect && interfaceEvidenceStatusSelect.value,
+    }, ownerKind, ownerId);
+  }
+
+  function applySelectedInterfaceBinding() {
+    const target = activeInterfaceBindingTarget();
+    if (target.kind === "none") return null;
+    recordEditableHistory("interface_binding_edit");
+    const binding = readInterfaceBindingForm(target.kind, target.id);
+    if (target.kind === "edge") {
+      setEdgeInterfaceBinding(selectedEdge, binding);
+    } else if (target.kind === "node") {
+      setNodeInterfaceBinding(selectedNode, binding);
+    }
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate interface binding edit pending";
+    renderInspector();
+    if (interfaceBindingStatus) {
+      interfaceBindingStatus.textContent =
+        `Applied ${target.kind}:${target.id} interface binding as local sandbox evidence. Truth effect: none.`;
+    }
+    updateEditableDraftHash();
+    persistDraft();
+    return binding;
+  }
+
   function renderEdgeInspector(edge) {
     const payload = edgeInspectorPayload(edge || {});
     if (nodeIdSlot) nodeIdSlot.textContent = payload.id;
@@ -8156,6 +8359,7 @@ function installEditableWorkbenchShell() {
       '</dl>',
       '<p class="workbench-inspector-truth-note">truth_effect: none</p>',
     ].join("");
+    renderInterfaceBindingEditor();
   }
 
   function renderInspector() {
@@ -8172,6 +8376,7 @@ function installEditableWorkbenchShell() {
     if (evidenceSlot) evidenceSlot.textContent = payload.evidence;
     if (sourceRefSlot) sourceRefSlot.textContent = payload.sourceRef;
     renderInspectorEvidenceDetails(payload);
+    renderInterfaceBindingEditor();
   }
 
   function selectEditableEdge(edgeId) {
@@ -8294,6 +8499,7 @@ function installEditableWorkbenchShell() {
 
   function currentDraftSnapshot() {
     const selected = selectedNodePayload() || {};
+    const hardwareBindings = collectWorkbenchHardwareBindings();
     return {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
       system_id: "thrust-reverser",
@@ -8303,8 +8509,13 @@ function installEditableWorkbenchShell() {
       controller_truth_modified: false,
       selected_node: selected,
       nodes: nodes.map((node) => editableNodeState(node)),
-      ports: [],
-      edges: draftEdges.map((edge) => ({ ...edge, ...edgeInspectorPayload(edge) })),
+      ports: collectWorkbenchInterfacePorts(),
+      edges: draftEdges.map((edge) => ({
+        ...edge,
+        ...edgeInspectorPayload(edge),
+        hardware_binding: edgeInterfaceBinding(edge),
+      })),
+      hardware_bindings: hardwareBindings,
     };
   }
 
@@ -8367,7 +8578,7 @@ function installEditableWorkbenchShell() {
       nodes: snapshot.nodes,
       ports: snapshot.ports,
       edges: snapshot.edges,
-      hardware_bindings: [],
+      hardware_bindings: snapshot.hardware_bindings,
       selected_scenario_id: selectedWorkbenchScenarioId(),
       custom_snapshot: customSnapshot,
       source_refs: uniqueSourceRefs(),
@@ -8399,6 +8610,12 @@ function installEditableWorkbenchShell() {
     }
     if (!Array.isArray(payload.nodes)) {
       throw new Error("nodes must be an array");
+    }
+    if (payload.edges !== undefined && !Array.isArray(payload.edges)) {
+      throw new Error("edges must be an array when present");
+    }
+    if (payload.hardware_bindings !== undefined && !Array.isArray(payload.hardware_bindings)) {
+      throw new Error("hardware_bindings must be an array when present");
     }
     if (
       payload.custom_snapshot !== undefined
@@ -8442,6 +8659,7 @@ function installEditableWorkbenchShell() {
         ruleCount: String(node.ruleCount || node.rule_count || "0"),
         evidence: String(node.evidence || "evidence_gap"),
         sourceRef: String(node.sourceRef || node.source_ref || "ui_draft.import"),
+        hardware_binding: node.hardware_binding || node.hardwareBinding || {},
         x: String(node.x || "50%"),
         y: String(node.y || "50%"),
         draftNode: Boolean(node.draftNode || node.draft_node || String(node.id || "").startsWith("draft_node_")),
@@ -8639,6 +8857,12 @@ function installEditableWorkbenchShell() {
     const snapshot = currentDraftSnapshot();
     const changedModelHash = editableDraftHash(JSON.stringify(snapshot));
     const node = snapshot.selected_node || {};
+    const hardwareBindings = snapshot.hardware_bindings || [];
+    const bindingSummary = hardwareBindings.length
+      ? hardwareBindings
+          .map((binding) => `${binding.owner_kind}:${binding.owner_id} hardware=${binding.hardware_id} cable=${binding.cable} connector=${binding.connector} ports=${binding.port_local}->${binding.port_peer}`)
+          .join("; ")
+      : "none";
     const linearIssueBody = [
       "## Outcome",
       `Review sandbox candidate edit for ${node.id || "selected node"} against the certified thrust-reverser baseline.`,
@@ -8659,6 +8883,7 @@ function installEditableWorkbenchShell() {
       "## Evidence Required",
       "- Editable draft JSON export.",
       "- Sandbox baseline diff report.",
+      "- Hardware/interface binding draft evidence.",
       "- Targeted pytest and PR proof packet.",
       "- Official mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json.",
       "- e2e 49/49 and mypy --strict clean are not claimed from this local UI archive.",
@@ -8670,6 +8895,7 @@ function installEditableWorkbenchShell() {
       "- Red lines touched: none",
       `- Changed model hash: ${changedModelHash}`,
       `- Selected scenario: ${selectedWorkbenchScenarioId()}`,
+      `- Hardware/interface bindings: ${bindingSummary}`,
       "- Agent eligible: No",
     ].join("\n");
     const prProofPacket = [
@@ -8683,6 +8909,7 @@ function installEditableWorkbenchShell() {
       `Changed model hash: ${changedModelHash}`,
       `Selected scenario: ${selectedWorkbenchScenarioId()}`,
       `Latest sandbox verdict: ${(lastSandboxDiff && lastSandboxDiff.verdict) || "not_run"}`,
+      `Hardware/interface bindings: ${bindingSummary}`,
       "Mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
       "No live Linear mutation; this packet is copy-ready evidence only.",
     ].join("\n");
@@ -8713,6 +8940,7 @@ function installEditableWorkbenchShell() {
 
   function buildWorkbenchEvidenceArchive() {
     const modelJson = buildEditableDraftExport();
+    const hardwareBindings = collectWorkbenchHardwareBindings();
     const diffSummary = lastSandboxDiff || {
       verdict: "not_run",
       scenario_id: selectedWorkbenchScenarioId(),
@@ -8739,6 +8967,7 @@ function installEditableWorkbenchShell() {
       model_json: modelJson,
       diff_summary: diffSummary,
       scenario_metadata: scenarioMetadata,
+      hardware_bindings: hardwareBindings,
       changerequest_body: handoffPacket.linearIssueBody,
       pr_proof_packet: handoffPacket.prProofPacket,
       gate_claims: handoffPacket.gateClaims,
@@ -8750,6 +8979,7 @@ function installEditableWorkbenchShell() {
       diff_summary_checksum: checksumEvidenceArchiveField(diffSummary),
       changerequest_body_checksum: checksumEvidenceArchiveField(handoffPacket.linearIssueBody),
       pr_proof_packet_checksum: checksumEvidenceArchiveField(handoffPacket.prProofPacket),
+      hardware_bindings_checksum: checksumEvidenceArchiveField(hardwareBindings),
       gate_claims_checksum: checksumEvidenceArchiveField(handoffPacket.gateClaims),
       known_blockers_checksum: checksumEvidenceArchiveField(handoffPacket.knownBlockers),
     };
@@ -8887,6 +9117,9 @@ function installEditableWorkbenchShell() {
   }
   if (downloadArchiveBtn) {
     downloadArchiveBtn.addEventListener("click", () => downloadWorkbenchEvidenceArchive());
+  }
+  if (applyInterfaceBindingBtn) {
+    applyInterfaceBindingBtn.addEventListener("click", () => applySelectedInterfaceBinding());
   }
   if (exportDraftBtn) {
     exportDraftBtn.addEventListener("click", () => exportEditableDraftJson());
