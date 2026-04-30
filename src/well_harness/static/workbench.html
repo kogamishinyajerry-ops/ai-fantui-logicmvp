@@ -561,6 +561,25 @@
               <button type="button" data-editor-tool="disconnect" aria-pressed="false" title="Disconnect edge">⨯</button>
               <button type="button" data-editor-tool="undo" aria-pressed="false" title="Undo">↶</button>
               <button type="button" data-editor-tool="redo" aria-pressed="false" title="Redo">↷</button>
+              <div
+                id="workbench-op-catalog"
+                class="workbench-op-catalog"
+                aria-label="Approved sandbox operations"
+              >
+                <button type="button" data-op-catalog-op="and" aria-pressed="true" title="AND">AND</button>
+                <button type="button" data-op-catalog-op="or" aria-pressed="false" title="OR">OR</button>
+                <button type="button" data-op-catalog-op="compare" aria-pressed="false" title="Compare">CMP</button>
+                <button type="button" data-op-catalog-op="between" aria-pressed="false" title="Between">BTW</button>
+                <button type="button" data-op-catalog-op="delay" aria-pressed="false" title="Delay">DLY</button>
+                <button type="button" data-op-catalog-op="latch" aria-pressed="false" title="Latch">LAT</button>
+              </div>
+              <output
+                id="workbench-op-catalog-status"
+                class="workbench-op-catalog-status"
+                aria-live="polite"
+              >
+                AND · boolean
+              </output>
             </aside>
 
             <section

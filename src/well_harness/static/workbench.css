@@ -5071,6 +5071,34 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   background: #f0c15b;
   border-color: rgba(240, 193, 91, 0.95);
 }
+.workbench-op-catalog {
+  width: 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(150, 173, 190, 0.22);
+}
+.workbench-op-catalog button {
+  height: 26px;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.workbench-op-catalog button[aria-pressed="true"] {
+  color: #041018;
+  background: #7dd7c2;
+  border-color: rgba(125, 215, 194, 0.95);
+}
+.workbench-op-catalog-status {
+  width: 34px;
+  color: rgba(213, 227, 237, 0.72);
+  font-size: 0.57rem;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
 .workbench-editable-canvas {
   position: relative;
   min-height: 520px;
