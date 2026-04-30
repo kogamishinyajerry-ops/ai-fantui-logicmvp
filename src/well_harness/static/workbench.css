@@ -5163,6 +5163,31 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-selection-marquee[data-active="true"] {
   display: block;
 }
+.workbench-port-handle {
+  position: absolute;
+  left: var(--node-x);
+  top: var(--node-y);
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 2px solid rgba(237, 248, 255, 0.82);
+  border-radius: 50%;
+  background: #071019;
+  cursor: crosshair;
+  z-index: 5;
+}
+.workbench-port-handle[data-port-handle-direction="in"] {
+  transform: translate(-76px, -50%);
+  border-color: rgba(240, 193, 91, 0.9);
+}
+.workbench-port-handle[data-port-handle-direction="out"] {
+  transform: translate(62px, -50%);
+  border-color: rgba(125, 215, 194, 0.95);
+}
+.workbench-port-handle[data-port-handle-armed="true"] {
+  background: #7dd7c2;
+  box-shadow: 0 0 0 4px rgba(125, 215, 194, 0.22);
+}
 .workbench-editable-node span {
   font-size: 1.02rem;
   font-weight: 800;
