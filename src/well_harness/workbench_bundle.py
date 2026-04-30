@@ -22,6 +22,9 @@ from well_harness.scenario_playback import (
     ScenarioPlaybackReport,
     build_playback_report_from_intake_packet,
 )
+from well_harness.workbench_changerequest_handoff import (
+    assert_valid_changerequest_handoff_archive_payload,
+)
 
 WORKBENCH_BUNDLE_KIND = "well-harness-workbench-bundle"
 WORKBENCH_BUNDLE_VERSION = 1
@@ -212,7 +215,7 @@ def _resolve_selected_id(
 ) -> str | None:
     if not candidates:
         return None
-    candidate_ids = tuple(item.id for item in candidates)
+    candidate_ids = tuple(str(item.id) for item in candidates)
     if requested_id is not None:
         if requested_id not in candidate_ids:
             raise ValueError(f"unknown {label}: {requested_id}")
@@ -372,7 +375,10 @@ def load_workbench_archive_manifest(
     require_existing_files: bool = True,
 ) -> dict[str, Any]:
     path = Path(manifest_path).expanduser().resolve()
-    manifest = json.loads(path.read_text(encoding="utf-8"))
+    manifest_payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(manifest_payload, dict):
+        raise ValueError("archive manifest must be a JSON object.")
+    manifest: dict[str, Any] = manifest_payload
     issues = validate_workbench_archive_manifest(
         manifest,
         manifest_path=path,
@@ -520,6 +526,9 @@ def load_workbench_archive_restore_payload(
             resolved_manifest_path,
             require_existing_files=require_existing_files,
         )
+    changerequest_handoff_validation = assert_valid_changerequest_handoff_archive_payload(
+        workspace_snapshot if isinstance(workspace_snapshot, dict) else {}
+    )
 
     return {
         "manifest_path": str(resolved_manifest_path),
@@ -532,6 +541,7 @@ def load_workbench_archive_restore_payload(
         ),
         "workspace_handoff": workspace_handoff,
         "workspace_snapshot": workspace_snapshot,
+        "changerequest_handoff_validation": changerequest_handoff_validation,
     }
 
 

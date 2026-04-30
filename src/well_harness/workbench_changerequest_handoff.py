@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -19,6 +20,10 @@ CHANGE_REQUEST_HANDOFF_SCHEMA_PATH = (
 )
 CHANGE_REQUEST_HANDOFF_CANONICALIZATION = "json.sort_keys.separators.v1"
 CHANGE_REQUEST_HANDOFF_CHECKSUM_ALGORITHM = "ui_fnv1a32_over_canonical_json"
+CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_NOT_PRESENT = "not_present"
+CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_PASS = "pass"
+CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_FAIL = "fail"
+CHANGE_REQUEST_HANDOFF_UI_CHECKSUM_PREFIX = "ui_draft_"
 
 _CONST_FIELDS: tuple[tuple[str, Any], ...] = (
     ("$schema", CHANGE_REQUEST_HANDOFF_SCHEMA_ID),
@@ -121,6 +126,94 @@ def canonical_changerequest_handoff_json(payload: Mapping[str, Any]) -> str:
 def changerequest_handoff_hash(payload: Mapping[str, Any]) -> str:
     canonical_text = canonical_changerequest_handoff_json(payload)
     return hashlib.sha256(canonical_text.encode("utf-8")).hexdigest()
+
+
+def stable_evidence_archive_json(value: Any) -> str:
+    return json.dumps(
+        _normalize_evidence_archive_value(value),
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+
+
+def changerequest_handoff_ui_checksum(payload: Mapping[str, Any]) -> str:
+    return _ui_draft_fnv1a32(stable_evidence_archive_json(payload))
+
+
+def validate_changerequest_handoff_archive_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, Mapping):
+        return _archive_validation_report(
+            status=CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_FAIL,
+            source_path="archive",
+            issues=("archive payload must be a JSON object.",),
+        )
+
+    source_path = "changerequest_handoff_packet"
+    packet_candidate = payload.get("changerequest_handoff_packet")
+    if packet_candidate is None:
+        model_json = payload.get("model_json")
+        if isinstance(model_json, Mapping) and model_json.get("changerequest_handoff_packet") is not None:
+            source_path = "model_json.changerequest_handoff_packet"
+            packet_candidate = model_json.get("changerequest_handoff_packet")
+
+    if packet_candidate is None:
+        return _archive_validation_report(
+            status=CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_NOT_PRESENT,
+            source_path="changerequest_handoff_packet",
+            issues=(),
+        )
+
+    if not isinstance(packet_candidate, Mapping):
+        return _archive_validation_report(
+            status=CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_FAIL,
+            source_path=source_path,
+            issues=(f"{source_path} must be a JSON object when present.",),
+        )
+
+    issues = list(validate_changerequest_handoff_packet(packet_candidate))
+    expected_ui_checksum = changerequest_handoff_ui_checksum(packet_candidate)
+    recorded_ui_checksum = _recorded_handoff_ui_checksum(payload)
+    checksum_status = "not_recorded"
+
+    if recorded_ui_checksum is None:
+        if payload.get("kind") == "well-harness-workbench-evidence-archive":
+            issues.append(
+                "checksums.changerequest_handoff_packet_checksum is required "
+                "when an evidence archive contains changerequest_handoff_packet."
+            )
+            checksum_status = "missing"
+    elif recorded_ui_checksum != expected_ui_checksum:
+        issues.append(
+            "checksums.changerequest_handoff_packet_checksum mismatch "
+            f"(expected {expected_ui_checksum}, got {recorded_ui_checksum})."
+        )
+        checksum_status = "mismatch"
+    else:
+        checksum_status = "pass"
+
+    status = (
+        CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_FAIL
+        if issues
+        else CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_PASS
+    )
+    return _archive_validation_report(
+        status=status,
+        source_path=source_path,
+        issues=tuple(issues),
+        canonical_hash=changerequest_handoff_hash(packet_candidate),
+        ui_checksum=expected_ui_checksum,
+        recorded_ui_checksum=recorded_ui_checksum,
+        checksum_status=checksum_status,
+    )
+
+
+def assert_valid_changerequest_handoff_archive_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+    report = validate_changerequest_handoff_archive_payload(payload)
+    if report["status"] == CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_FAIL:
+        issues = "; ".join(str(issue) for issue in report["issues"])
+        raise ValueError(f"invalid ChangeRequest handoff archive payload: {issues}")
+    return report
 
 
 def validate_changerequest_handoff_packet(payload: Mapping[str, Any]) -> tuple[str, ...]:
@@ -302,3 +395,63 @@ def _validate_test_delta(value: Any) -> tuple[str, ...]:
     if value.get("truth_effect") != "none":
         issues.append("metadata.test_delta.truth_effect must be 'none'.")
     return tuple(issues)
+
+
+def _normalize_evidence_archive_value(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {
+            str(key): _normalize_evidence_archive_value(value[key])
+            for key in sorted(value, key=lambda item: str(item))
+        }
+    if isinstance(value, tuple):
+        return [_normalize_evidence_archive_value(item) for item in value]
+    if isinstance(value, list):
+        return [_normalize_evidence_archive_value(item) for item in value]
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
+
+
+def _ui_draft_fnv1a32(text: str) -> str:
+    hash_value = 2166136261
+    utf16_units = text.encode("utf-16-le")
+    for index in range(0, len(utf16_units), 2):
+        code_unit = int.from_bytes(utf16_units[index : index + 2], "little")
+        hash_value ^= code_unit
+        hash_value = (hash_value * 16777619) & 0xFFFFFFFF
+    return f"{CHANGE_REQUEST_HANDOFF_UI_CHECKSUM_PREFIX}{hash_value:08x}"
+
+
+def _recorded_handoff_ui_checksum(payload: Mapping[str, Any]) -> str | None:
+    checksums = payload.get("checksums")
+    if not isinstance(checksums, Mapping):
+        return None
+    value = checksums.get("changerequest_handoff_packet_checksum")
+    if isinstance(value, str) and value.strip():
+        return value
+    return None
+
+
+def _archive_validation_report(
+    *,
+    status: str,
+    source_path: str,
+    issues: tuple[str, ...],
+    canonical_hash: str | None = None,
+    ui_checksum: str | None = None,
+    recorded_ui_checksum: str | None = None,
+    checksum_status: str = "not_applicable",
+) -> dict[str, Any]:
+    return {
+        "kind": "well-harness-workbench-changerequest-handoff-archive-validation",
+        "version": 1,
+        "status": status,
+        "source_path": source_path,
+        "issue_count": len(issues),
+        "issues": list(issues),
+        "canonical_hash": canonical_hash,
+        "ui_checksum": ui_checksum,
+        "recorded_ui_checksum": recorded_ui_checksum,
+        "checksum_status": checksum_status,
+        "truth_effect": "none",
+    }

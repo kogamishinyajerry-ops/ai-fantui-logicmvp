@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Optional
 from unittest import mock
 
+from tools.validate_workbench_changerequest_handoff_schema import sample_changerequest_handoff_packet
 from well_harness.demo_server import build_workbench_archive_restore_response, default_workbench_archive_root
 from well_harness.document_intake import load_intake_packet
 from well_harness.workbench_bundle import (
@@ -20,6 +21,7 @@ from well_harness.workbench_bundle import (
     build_workbench_bundle,
     load_workbench_archive_restore_payload,
 )
+from well_harness.workbench_changerequest_handoff import changerequest_handoff_ui_checksum
 
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -47,11 +49,46 @@ def _create_legitimate_archive(archive_root: Path) -> tuple[Path, Path]:
     return manifest_path, Path(archive.archive_dir)
 
 
+def _create_archive_with_workspace_snapshot(
+    archive_root: Path,
+    workspace_snapshot: dict,
+) -> tuple[Path, Path]:
+    """Create a valid archive with a caller-supplied workspace snapshot."""
+    packet = load_intake_packet(SYSTEM_INTAKE_PACKET_PATH)
+    bundle = build_workbench_bundle(
+        packet,
+        confirmed_root_cause="Test cause",
+        repair_action="Test action",
+        validation_after_fix="Test validation",
+        residual_risk="Test risk",
+    )
+    archive = archive_workbench_bundle(
+        bundle,
+        archive_root=archive_root,
+        workspace_handoff={"test": "handoff"},
+        workspace_snapshot=workspace_snapshot,
+    )
+    return Path(archive.manifest_json_path), Path(archive.archive_dir)
+
+
 def _create_legitimate_archive_in_default_root() -> tuple[Path, Path]:
     """Create a valid archive inside default_workbench_archive_root()."""
     archive_root = default_workbench_archive_root()
     archive_root.mkdir(parents=True, exist_ok=True)
     return _create_legitimate_archive(archive_root)
+
+
+def _valid_handoff_evidence_archive() -> dict:
+    handoff_packet = sample_changerequest_handoff_packet()
+    return {
+        "kind": "well-harness-workbench-evidence-archive",
+        "version": 1,
+        "archive_scope": "local_draft_download",
+        "changerequest_handoff_packet": handoff_packet,
+        "checksums": {
+            "changerequest_handoff_packet_checksum": changerequest_handoff_ui_checksum(handoff_packet),
+        },
+    }
 
 
 def _build_valid_manifest(archive_dir_value: str, files: Optional[dict] = None) -> dict:
@@ -257,6 +294,63 @@ class ArchiveRestoreSandboxTests(unittest.TestCase):
         })
         self.assertIsNotNone(response)
         self.assertIsNone(error)
+
+    def test_archive_restore_reports_handoff_validation_for_valid_evidence_archive(self):
+        """Archive restore exposes machine-readable validation for embedded handoff packets."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path, _archive_dir = _create_archive_with_workspace_snapshot(
+                Path(temp_dir),
+                _valid_handoff_evidence_archive(),
+            )
+
+            response, error = build_workbench_archive_restore_response({
+                "manifest_path": str(manifest_path),
+            })
+
+        self.assertIsNotNone(response)
+        self.assertIsNone(error)
+        validation = response["changerequest_handoff_validation"]
+        self.assertEqual("pass", validation["status"])
+        self.assertEqual("pass", validation["checksum_status"])
+        self.assertEqual("none", validation["truth_effect"])
+        self.assertTrue(validation["canonical_hash"])
+
+    def test_archive_restore_rejects_invalid_handoff_packet_in_evidence_archive(self):
+        """Invalid embedded handoff packets fail restore instead of being silently trusted."""
+        evidence_archive = _valid_handoff_evidence_archive()
+        evidence_archive["changerequest_handoff_packet"]["truth_level_impact"] = "certified"
+        evidence_archive["checksums"]["changerequest_handoff_packet_checksum"] = changerequest_handoff_ui_checksum(
+            evidence_archive["changerequest_handoff_packet"]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path, _archive_dir = _create_archive_with_workspace_snapshot(
+                Path(temp_dir),
+                evidence_archive,
+            )
+            response, error = build_workbench_archive_restore_response({
+                "manifest_path": str(manifest_path),
+            })
+
+        self.assertIsNone(response)
+        self.assertIsNotNone(error)
+        self.assertEqual("invalid_workbench_archive", error["error"])
+        self.assertIn("ChangeRequest handoff archive", error["message"])
+        self.assertIn("truth_level_impact must be 'none'", error["message"])
+
+    def test_archive_restore_is_backward_compatible_without_handoff_packet(self):
+        """Archives without handoff packets still restore with explicit not_present status."""
+        manifest_path, _archive_dir = _create_legitimate_archive_in_default_root()
+
+        response, error = build_workbench_archive_restore_response({
+            "manifest_path": str(manifest_path),
+        })
+
+        self.assertIsNotNone(response)
+        self.assertIsNone(error)
+        validation = response["changerequest_handoff_validation"]
+        self.assertEqual("not_present", validation["status"])
+        self.assertEqual(0, validation["issue_count"])
 
     def test_valid_nested_archive_dir(self):
         """Manifest with relative archive_dir='subdir/' should be accepted."""

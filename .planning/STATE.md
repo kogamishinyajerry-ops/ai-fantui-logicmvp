@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-214 handoff schema hardening in review
-last_updated: "2026-05-01T00:00:00.000+08:00"
+status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-215 archive restore handoff validation in review
+last_updated: "2026-05-01T00:30:00.000+08:00"
 last_activity: 2026-05-01
 progress:
   total_phases: 44
   completed_phases: 43
   total_plans: 2
   completed_plans: 1
-  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates. JER-207 adds sandbox-only subsystem group/rename/ungroup metadata. JER-208 adds sandbox-only hardware interface design schema/loader/validator/hash evidence. JER-209 adds a connector/pin map editor, draft round-trip, and archive checksum. JER-210 adds a selected-owner Hardware Evidence Inspector v2 packet for LRU/cable/connector/port/pin coverage and evidence gaps. JER-211 adds a selected graph debug timeline packet linked to current scenario, sandbox diff status, ports, and hardware overlay. JER-212 adds an archive-ready candidate-to-baseline diff review v2 packet that keeps certification claim none. JER-213 adds a structured ChangeRequest handoff packet with Outcome/Acceptance/Boundaries/Evidence/Red lines/Test delta placeholders and no live Linear mutation. JER-214 adds a repo-owned handoff schema, validator, canonical hash contract, validation-suite entry, and stable browser checksum serialization. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates. JER-207 adds sandbox-only subsystem group/rename/ungroup metadata. JER-208 adds sandbox-only hardware interface design schema/loader/validator/hash evidence. JER-209 adds a connector/pin map editor, draft round-trip, and archive checksum. JER-210 adds a selected-owner Hardware Evidence Inspector v2 packet for LRU/cable/connector/port/pin coverage and evidence gaps. JER-211 adds a selected graph debug timeline packet linked to current scenario, sandbox diff status, ports, and hardware overlay. JER-212 adds an archive-ready candidate-to-baseline diff review v2 packet that keeps certification claim none. JER-213 adds a structured ChangeRequest handoff packet with Outcome/Acceptance/Boundaries/Evidence/Red lines/Test delta placeholders and no live Linear mutation. JER-214 adds a repo-owned handoff schema, validator, canonical hash contract, validation-suite entry, and stable browser checksum serialization. JER-215 validates embedded ChangeRequest handoff packets during archive restore/readback and keeps old archives without handoff packets backward-compatible. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
@@ -19,10 +19,10 @@ Last activity: 2026-05-01
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
-**Current position**: JER-204 through JER-213 are merged on the v4 line and
-JER-214 is in review. JER-214 hardens the structured ChangeRequest packet with
-a repo-owned schema, validator, canonical hash contract, validation-suite
-coverage, and stable browser checksum serialization.
+**Current position**: JER-204 through JER-214 are merged on the v4 line and
+JER-215 is in review. JER-215 extends the repo-owned ChangeRequest handoff
+schema into archive restore/readback, so embedded handoff packets are validated
+before the restore payload is trusted.
 
 **Linear control plane**:
 
@@ -39,7 +39,9 @@ coverage, and stable browser checksum serialization.
 - JER-211 is Done after adding selected graph timeline/debug linkage.
 - JER-212 is Done after adding candidate-to-baseline diff review v2 evidence.
 - JER-213 is Done after adding structured ChangeRequest handoff packet evidence.
-- JER-214 is in review after adding handoff schema and stable serialization evidence.
+- JER-214 is Done after adding handoff schema and stable serialization evidence.
+- JER-215 is in review after adding archive restore/readback validation for
+  embedded ChangeRequest handoff packets.
 
 **Runtime v3 closure summary**:
 
@@ -185,6 +187,19 @@ handoff packet.
 - The handoff packet remains draft-only: no live Linear mutation, no controller
   truth mutation, no frozen asset mutation, and no truth-level, DAL, or PSSA
   impact.
+
+**JER-215 archive restore handoff validation closure**:
+
+- Archive restore/readback now emits `changerequest_handoff_validation` with
+  `pass`, `fail`, or `not_present` status.
+- Embedded `changerequest_handoff_packet` payloads are validated with the
+  repo-owned schema helper before restore payloads are trusted.
+- Evidence archive UI checksums are recomputed with the browser-compatible
+  `ui_draft_*` FNV checksum contract and mismatches fail restore.
+- Archives without a handoff packet remain backward-compatible and report
+  `not_present` rather than blocking restore.
+- No controller truth, backend truth, adapter, frozen YAML, C919 packet,
+  truth-level, DAL, or PSSA behavior changes are introduced by this slice.
 
 **Hard boundaries**:
 
