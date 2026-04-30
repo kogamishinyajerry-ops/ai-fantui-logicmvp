@@ -272,12 +272,24 @@ def test_workbench_interface_binding_round_trips_through_export_import_and_archi
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
     page.fill("#workbench-interface-hardware-id", "TR-LRU-001")
+    page.click("#workbench-apply-interface-binding-btn")
+    assert page.locator("#workbench-interface-binding-quality").inner_text() == "partial"
+    assert (
+        page.locator('[data-editable-node-id="logic1"]').get_attribute("data-binding-quality")
+        == "partial"
+    )
+
     page.fill("#workbench-interface-cable", "CBL-TR-A")
     page.fill("#workbench-interface-connector", "J1")
     page.fill("#workbench-interface-port-local", "logic1:out")
     page.fill("#workbench-interface-port-peer", "TR-LRU-001:J1")
     page.select_option("#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
+    assert page.locator("#workbench-interface-binding-quality").inner_text() == "complete"
+    assert (
+        page.locator('[data-editable-node-id="logic1"]').get_attribute("data-binding-quality")
+        == "complete"
+    )
     page.click("#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
 
@@ -292,6 +304,9 @@ def test_workbench_interface_binding_round_trips_through_export_import_and_archi
     assert first_binding["port_peer"] == "TR-LRU-001:J1"
     assert first_binding["evidence_status"] == "ui_draft"
     assert first_binding["truth_effect"] == "none"
+    assert first_binding["binding_quality"] == "complete"
+    assert draft["binding_coverage"]["complete"] == 1
+    assert draft["binding_coverage"]["truth_effect"] == "none"
     assert logic1["hardware_binding"]["hardware_id"] == "TR-LRU-001"
 
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
@@ -306,11 +321,15 @@ def test_workbench_interface_binding_round_trips_through_export_import_and_archi
     assert round_trip_binding["connector"] == "J1"
     assert round_trip_binding["port_local"] == "logic1:out"
     assert round_trip_binding["port_peer"] == "TR-LRU-001:J1"
+    assert round_trip["binding_coverage"]["complete"] == 1
 
     page.click("#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert errors == [], f"page JS errors: {errors}"
     assert archive["hardware_bindings"][0]["hardware_id"] == "TR-LRU-001"
     assert archive["hardware_bindings"][0]["truth_effect"] == "none"
+    assert archive["binding_coverage"]["complete"] == 1
+    assert archive["binding_coverage"]["truth_effect"] == "none"
     assert archive["checksums"]["hardware_bindings_checksum"]
+    assert archive["checksums"]["binding_coverage_checksum"]
     assert archive["red_line_metadata"]["controller_truth_modified"] is False

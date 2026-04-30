@@ -7601,6 +7601,8 @@ function installEditableWorkbenchShell() {
   const interfaceEvidenceStatusSelect = document.getElementById("workbench-interface-evidence-status");
   const applyInterfaceBindingBtn = document.getElementById("workbench-apply-interface-binding-btn");
   const interfaceBindingStatus = document.getElementById("workbench-interface-binding-status");
+  const interfaceBindingQuality = document.getElementById("workbench-interface-binding-quality");
+  const interfaceBindingCoverage = document.getElementById("workbench-interface-binding-coverage");
   const exportDraftBtn = document.getElementById("workbench-export-draft-btn");
   const importDraftBtn = document.getElementById("workbench-import-draft-btn");
   const draftJsonBuffer = document.getElementById("workbench-draft-json-buffer");
@@ -7622,10 +7624,21 @@ function installEditableWorkbenchShell() {
   ];
   const undoStack = [];
   const redoStack = [];
+  const interfaceBindingRequiredFields = [
+    "hardware_id",
+    "cable",
+    "connector",
+    "port_local",
+    "port_peer",
+  ];
 
   function normalizedInterfaceField(value) {
     const text = String(value === null || value === undefined ? "" : value).trim();
     return text || "evidence_gap";
+  }
+
+  function isInterfaceEvidenceGap(value) {
+    return !value || value === "evidence_gap";
   }
 
   function normalizeEvidenceStatus(value) {
@@ -7635,11 +7648,47 @@ function installEditableWorkbenchShell() {
       : "evidence_gap";
   }
 
+  function interfaceBindingQualityReport(binding) {
+    const source = binding && typeof binding === "object" ? binding : {};
+    const missingFields = interfaceBindingRequiredFields
+      .filter((fieldName) => isInterfaceEvidenceGap(source[fieldName]));
+    if (source.evidence_status !== "ui_draft") {
+      missingFields.push("evidence_status");
+    }
+    const completeFields = interfaceBindingRequiredFields.length
+      - missingFields.filter((fieldName) => fieldName !== "evidence_status").length;
+    const hasAnyField = interfaceBindingRequiredFields
+      .some((fieldName) => !isInterfaceEvidenceGap(source[fieldName]));
+    const status = !hasAnyField && source.evidence_status !== "ui_draft"
+      ? "missing"
+      : (missingFields.length ? "partial" : "complete");
+    return {
+      status,
+      label: `HW ${status}`,
+      required_fields: [...interfaceBindingRequiredFields, "evidence_status"],
+      missing_fields: missingFields,
+      complete_fields: completeFields,
+      truth_effect: "none",
+    };
+  }
+
+  function bindQualityToInterfaceBinding(binding) {
+    const quality = interfaceBindingQualityReport(binding);
+    return {
+      ...binding,
+      binding_quality: quality.status,
+      binding_quality_label: quality.label,
+      binding_missing_fields: quality.missing_fields,
+      binding_required_fields: quality.required_fields,
+      binding_complete_fields: quality.complete_fields,
+    };
+  }
+
   function normalizeInterfaceBinding(binding, ownerKind, ownerId) {
     const source = binding && typeof binding === "object" ? binding : {};
     const normalizedOwnerKind = ownerKind || normalizedInterfaceField(source.owner_kind || source.ownerKind);
     const normalizedOwnerId = ownerId || normalizedInterfaceField(source.owner_id || source.ownerId);
-    return {
+    return bindQualityToInterfaceBinding({
       id: normalizedInterfaceField(source.id || `ui-interface-binding:${normalizedOwnerKind}:${normalizedOwnerId}`),
       owner_kind: normalizedOwnerKind,
       owner_id: normalizedOwnerId,
@@ -7652,7 +7701,14 @@ function installEditableWorkbenchShell() {
       binding_kind: "ui_interface_binding",
       source_ref: "ui_draft.interface_binding",
       truth_effect: "none",
-    };
+    });
+  }
+
+  function applyNodeBindingQuality(node, binding) {
+    if (!node) return;
+    const quality = interfaceBindingQualityReport(binding);
+    node.setAttribute("data-binding-quality", quality.status);
+    node.setAttribute("data-binding-quality-label", quality.label);
   }
 
   function setNodeInterfaceBinding(node, binding) {
@@ -7665,6 +7721,7 @@ function installEditableWorkbenchShell() {
     node.setAttribute("data-interface-port-local", normalized.port_local);
     node.setAttribute("data-interface-port-peer", normalized.port_peer);
     node.setAttribute("data-interface-evidence-status", normalized.evidence_status);
+    applyNodeBindingQuality(node, normalized);
     return normalized;
   }
 
@@ -7693,6 +7750,7 @@ function installEditableWorkbenchShell() {
     if (!edge) return null;
     const normalized = normalizeInterfaceBinding(binding, "edge", edge.id || `${edge.source || "unknown"}->${edge.target || "unknown"}`);
     edge.hardware_binding = normalized;
+    edge.binding_quality = normalized.binding_quality;
     return normalized;
   }
 
@@ -7733,6 +7791,27 @@ function installEditableWorkbenchShell() {
         truth_effect: "none",
       },
     ]).filter((port) => port.port_id && port.port_id !== "evidence_gap");
+  }
+
+  function buildInterfaceBindingCoverageSummary(bindings) {
+    const counts = { missing: 0, partial: 0, complete: 0 };
+    for (const binding of bindings || []) {
+      const status = (binding && binding.binding_quality)
+        || interfaceBindingQualityReport(binding).status;
+      counts[status] = (counts[status] || 0) + 1;
+    }
+    return {
+      total_bindings: (bindings || []).length,
+      missing: counts.missing,
+      partial: counts.partial,
+      complete: counts.complete,
+      required_fields: [...interfaceBindingRequiredFields, "evidence_status"],
+      truth_effect: "none",
+    };
+  }
+
+  function bindingCoverageText(summary) {
+    return `Binding coverage: ${summary.complete} complete / ${summary.partial} partial / ${summary.missing} missing. Truth effect: none.`;
   }
 
   function selectedNodePayload() {
@@ -7929,11 +8008,13 @@ function installEditableWorkbenchShell() {
 
   function edgePathMetadata(edge) {
     const payload = edgeInspectorPayload(edge);
+    const binding = edgeInterfaceBinding(edge);
     return [
       `data-source-port-id="${inspectorText(payload.source_port_id)}"`,
       `data-target-port-id="${inspectorText(payload.target_port_id)}"`,
       `data-edge-signal-id="${inspectorText(payload.signal_id)}"`,
       `data-edge-evidence-status="${inspectorText(payload.evidence_status)}"`,
+      `data-binding-quality="${inspectorText(binding.binding_quality)}"`,
     ].join(" ");
   }
 
@@ -8285,8 +8366,13 @@ function installEditableWorkbenchShell() {
   function renderInterfaceBindingEditor() {
     const target = activeInterfaceBindingTarget();
     const binding = target.binding;
+    const quality = interfaceBindingQualityReport(binding);
     if (interfaceBindingOwner) {
       interfaceBindingOwner.textContent = `${target.kind}:${target.id}`;
+    }
+    if (interfaceBindingQuality) {
+      interfaceBindingQuality.textContent = quality.status;
+      interfaceBindingQuality.setAttribute("data-binding-quality", quality.status);
     }
     if (interfaceHardwareIdInput) interfaceHardwareIdInput.value = formValueForInterfaceField(binding.hardware_id);
     if (interfaceCableInput) interfaceCableInput.value = formValueForInterfaceField(binding.cable);
@@ -8297,6 +8383,13 @@ function installEditableWorkbenchShell() {
     if (interfaceBindingStatus) {
       interfaceBindingStatus.textContent =
         `Editing ${target.kind}:${target.id} as sandbox interface evidence. Truth effect: none.`;
+    }
+    if (interfaceBindingCoverage) {
+      const missingText = quality.missing_fields.length
+        ? ` Missing fields: ${quality.missing_fields.join(", ")}.`
+        : " All required sandbox evidence fields are present.";
+      interfaceBindingCoverage.textContent =
+        `${quality.label}. ${missingText} Truth effect: none.`;
     }
   }
 
@@ -8327,6 +8420,7 @@ function installEditableWorkbenchShell() {
       interfaceBindingStatus.textContent =
         `Applied ${target.kind}:${target.id} interface binding as local sandbox evidence. Truth effect: none.`;
     }
+    renderEditableEdges();
     updateEditableDraftHash();
     persistDraft();
     return binding;
@@ -8500,6 +8594,7 @@ function installEditableWorkbenchShell() {
   function currentDraftSnapshot() {
     const selected = selectedNodePayload() || {};
     const hardwareBindings = collectWorkbenchHardwareBindings();
+    const bindingCoverage = buildInterfaceBindingCoverageSummary(hardwareBindings);
     return {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
       system_id: "thrust-reverser",
@@ -8516,6 +8611,7 @@ function installEditableWorkbenchShell() {
         hardware_binding: edgeInterfaceBinding(edge),
       })),
       hardware_bindings: hardwareBindings,
+      binding_coverage: bindingCoverage,
     };
   }
 
@@ -8579,6 +8675,7 @@ function installEditableWorkbenchShell() {
       ports: snapshot.ports,
       edges: snapshot.edges,
       hardware_bindings: snapshot.hardware_bindings,
+      binding_coverage: snapshot.binding_coverage,
       selected_scenario_id: selectedWorkbenchScenarioId(),
       custom_snapshot: customSnapshot,
       source_refs: uniqueSourceRefs(),
@@ -8858,6 +8955,7 @@ function installEditableWorkbenchShell() {
     const changedModelHash = editableDraftHash(JSON.stringify(snapshot));
     const node = snapshot.selected_node || {};
     const hardwareBindings = snapshot.hardware_bindings || [];
+    const bindingCoverage = snapshot.binding_coverage || buildInterfaceBindingCoverageSummary(hardwareBindings);
     const bindingSummary = hardwareBindings.length
       ? hardwareBindings
           .map((binding) => `${binding.owner_kind}:${binding.owner_id} hardware=${binding.hardware_id} cable=${binding.cable} connector=${binding.connector} ports=${binding.port_local}->${binding.port_peer}`)
@@ -8884,6 +8982,7 @@ function installEditableWorkbenchShell() {
       "- Editable draft JSON export.",
       "- Sandbox baseline diff report.",
       "- Hardware/interface binding draft evidence.",
+      "- Binding coverage summary.",
       "- Targeted pytest and PR proof packet.",
       "- Official mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json.",
       "- e2e 49/49 and mypy --strict clean are not claimed from this local UI archive.",
@@ -8896,6 +8995,7 @@ function installEditableWorkbenchShell() {
       `- Changed model hash: ${changedModelHash}`,
       `- Selected scenario: ${selectedWorkbenchScenarioId()}`,
       `- Hardware/interface bindings: ${bindingSummary}`,
+      `- Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
       "- Agent eligible: No",
     ].join("\n");
     const prProofPacket = [
@@ -8910,6 +9010,7 @@ function installEditableWorkbenchShell() {
       `Selected scenario: ${selectedWorkbenchScenarioId()}`,
       `Latest sandbox verdict: ${(lastSandboxDiff && lastSandboxDiff.verdict) || "not_run"}`,
       `Hardware/interface bindings: ${bindingSummary}`,
+      `Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
       "Mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
       "No live Linear mutation; this packet is copy-ready evidence only.",
     ].join("\n");
@@ -8941,6 +9042,7 @@ function installEditableWorkbenchShell() {
   function buildWorkbenchEvidenceArchive() {
     const modelJson = buildEditableDraftExport();
     const hardwareBindings = collectWorkbenchHardwareBindings();
+    const bindingCoverage = buildInterfaceBindingCoverageSummary(hardwareBindings);
     const diffSummary = lastSandboxDiff || {
       verdict: "not_run",
       scenario_id: selectedWorkbenchScenarioId(),
@@ -8968,6 +9070,7 @@ function installEditableWorkbenchShell() {
       diff_summary: diffSummary,
       scenario_metadata: scenarioMetadata,
       hardware_bindings: hardwareBindings,
+      binding_coverage: bindingCoverage,
       changerequest_body: handoffPacket.linearIssueBody,
       pr_proof_packet: handoffPacket.prProofPacket,
       gate_claims: handoffPacket.gateClaims,
@@ -8980,6 +9083,7 @@ function installEditableWorkbenchShell() {
       changerequest_body_checksum: checksumEvidenceArchiveField(handoffPacket.linearIssueBody),
       pr_proof_packet_checksum: checksumEvidenceArchiveField(handoffPacket.prProofPacket),
       hardware_bindings_checksum: checksumEvidenceArchiveField(hardwareBindings),
+      binding_coverage_checksum: checksumEvidenceArchiveField(bindingCoverage),
       gate_claims_checksum: checksumEvidenceArchiveField(handoffPacket.gateClaims),
       known_blockers_checksum: checksumEvidenceArchiveField(handoffPacket.knownBlockers),
     };
