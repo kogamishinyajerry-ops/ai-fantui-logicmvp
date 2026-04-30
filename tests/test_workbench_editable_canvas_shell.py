@@ -125,6 +125,22 @@ def test_component_library_templates_are_exposed_as_sandbox_toolbar_controls() -
     assert ".workbench-component-library-status" in css
 
 
+def test_subsystem_group_editor_controls_are_exposed_as_sandbox_only_ui() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'data-editor-tool="group"' in html
+    assert 'data-editor-tool="ungroup"' in html
+    assert 'id="workbench-subsystem-editor"' in html
+    assert 'id="workbench-subsystem-name"' in html
+    assert 'id="workbench-create-subsystem-btn"' in html
+    assert 'id="workbench-rename-subsystem-btn"' in html
+    assert 'id="workbench-ungroup-subsystem-btn"' in html
+    assert "Subsystem edits are sandbox metadata only. Truth effect: none." in html
+    assert ".workbench-subsystem-overlay" in css
+    assert ".workbench-subsystem-editor" in css
+
+
 def test_js_wires_draft_derivation_node_selection_and_evidence_api() -> None:
     js = _js()
 
@@ -147,6 +163,21 @@ def test_js_wires_component_library_round_trip_as_sandbox_only_metadata() -> Non
     assert "component_template" in js
     assert "component_library" in js
     assert 'component_library truth_effect must be none' in js
+    assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'truth_effect: "none"' in js
+
+
+def test_js_wires_subsystem_group_round_trip_as_sandbox_only_metadata() -> None:
+    js = _js()
+
+    assert "function groupSelectedDraftNodes" in js
+    assert "function renameSelectedSubsystemGroup" in js
+    assert "function ungroupSelectedSubsystem" in js
+    assert "function renderSubsystemOverlays" in js
+    assert "subsystem_groups" in js
+    assert "subsystem_groups truth_effect must be none" in js
+    assert "subsystem_groups_checksum" in js
+    assert "data-subsystem-id" in js
     assert 'candidate_state: "sandbox_candidate"' in js
     assert 'truth_effect: "none"' in js
 

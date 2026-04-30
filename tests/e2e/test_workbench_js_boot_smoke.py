@@ -1101,6 +1101,77 @@ def test_workbench_component_library_inserts_reusable_sandbox_template(demo_serv
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-component-template-id="two_stage_interlock"]')
+    page.click("#workbench-export-draft-btn")
+    before_group = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    before_edge_ids = [edge["id"] for edge in before_group["edges"]]
+    before_port_ids = [port["id"] for port in before_group["typed_ports"]]
+
+    page.fill("#workbench-subsystem-name", "Deploy interlock")
+    page.click("#workbench-create-subsystem-btn")
+    page.click("#workbench-export-draft-btn")
+    grouped = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    subsystem = grouped["subsystem_groups"][0]
+    draft_nodes = [node for node in grouped["nodes"] if node["id"].startswith("draft_node_")]
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert subsystem["name"] == "Deploy interlock"
+    assert subsystem["node_ids"] == ["draft_node_1", "draft_node_2"]
+    assert subsystem["truth_effect"] == "none"
+    assert [node["subsystem_group"]["group_id"] for node in draft_nodes] == [subsystem["id"], subsystem["id"]]
+    assert [edge["id"] for edge in grouped["edges"]] == before_edge_ids
+    assert [port["id"] for port in grouped["typed_ports"]] == before_port_ids
+    assert page.locator(".workbench-subsystem-overlay").count() == 1
+
+    page.fill("#workbench-subsystem-name", "Deploy interlock v2")
+    page.click("#workbench-rename-subsystem-btn")
+    page.click("#workbench-export-draft-btn")
+    renamed = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert renamed["subsystem_groups"][0]["name"] == "Deploy interlock v2"
+    assert all(
+        node["subsystem_group"]["name"] == "Deploy interlock v2"
+        for node in renamed["nodes"]
+        if node["id"].startswith("draft_node_")
+    )
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    page.fill("#workbench-draft-json-buffer", draft_json)
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert imported["subsystem_groups"][0]["name"] == "Deploy interlock v2"
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["subsystem_groups"][0]["truth_effect"] == "none"
+    assert archive["checksums"]["subsystem_groups_checksum"]
+
+    page.click("#workbench-ungroup-subsystem-btn")
+    page.click("#workbench-export-draft-btn")
+    ungrouped = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert ungrouped["subsystem_groups"] == []
+    assert [edge["id"] for edge in ungrouped["edges"]] == before_edge_ids
+    assert [port["id"] for port in ungrouped["typed_ports"]] == before_port_ids
+    assert all("subsystem_group" not in node for node in ungrouped["nodes"] if node["id"].startswith("draft_node_"))
+
+    page.keyboard.press("Control+Z")
+    page.click("#workbench-export-draft-btn")
+    undo = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert undo["subsystem_groups"][0]["name"] == "Deploy interlock v2"
+
+    page.keyboard.press("Control+Shift+Z")
+    page.click("#workbench-export-draft-btn")
+    redo = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert redo["subsystem_groups"] == []
+    assert redo["truth_level_impact"] == "none"
+
+
 def test_workbench_rule_parameter_round_trips_through_export_import_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
