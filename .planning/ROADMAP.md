@@ -2,51 +2,67 @@
 
 ## Current Milestone
 
-**Active milestone — Editable Workbench Runtime v3 (updated 2026-04-30)**
+**Active milestone — Editable Workbench v4 Authoring + Hardware Design
+(launched 2026-05-01)**
 
-Editable Control Workbench Core v1 and Interaction v2 are complete. Runtime v3
-bridges the editable UI surface into canonical sandbox runtime models, so
-engineer edits can move through model validation, scenario diffing, and archive
-handoff without creating certified truth.
+Editable Control Workbench Core v1, Interaction v2, and Runtime v3 are complete
+as the foundation for sandbox-first control-logic editing. The next product
+mainline is Workbench v4: make `/workbench` feel like an engineering authoring
+surface with Figma/Canvas-style editing freedom and Simulink-like control-model
+mental models, while bringing hardware/interface design evidence into the same
+candidate workflow.
 
 Current Linear project:
-`AI FANTUI LogicMVP · Editable Workbench Runtime v3`
+`AI FANTUI LogicMVP · Editable Workbench v4 Authoring + Hardware Design`
 
-Current issue chain:
+Housekeeping bridge:
 
-- JER-165: Canonicalize workbench UI draft into editable_control_model_v1 (Done, PR #148)
-- JER-166: Sandbox graph validation report v1 (Done, PR #149)
-- JER-167: Scenario selector and custom snapshot sandbox UI (Done, PR #150)
-- JER-168: Port-aware edge inspector v1 (Done, PR #151)
-- JER-169: Runtime v3 acceptance bundle and regression proof (Done, PR #152)
-- JER-170: Workbench e2e networkidle gate normalization (Done, PR #153)
-- JER-171: Official mypy strict gate definition (Done, PR #154)
-- JER-172: Workbench acceptance bundle UI archive/export regression (In progress)
+- JER-204: Roadmap and Linear narrative refresh after Runtime v3 closure (In progress)
 
-Completed interaction layer:
+Workbench v4 seed backlog:
 
-- JER-154: Evidence Inspector hardware mapping v1
-- JER-161: Sandbox run panel and baseline diff UI
-- JER-162: Draft import/export JSON round-trip
-- JER-163: Undo/redo and node-edge editing regression v1
-- JER-164: Workbench evidence archive download handoff
+- JER-205: Workbench v4 authoring roadmap and acceptance model
+- JER-206: Component library and reusable subsystem templates v1
+- JER-207: Group/subsystem node editor v1
+- JER-208: Hardware interface design model v1
+- JER-209: Connector/pin map editor v1
+- JER-210: Hardware evidence inspector v2
+- JER-211: Scenario/debug timeline linked to selected graph elements v1
+- JER-212: Candidate-to-baseline diff review workflow v2
+- JER-213: ChangeRequest handoff packet from editable draft v1
 
-Completed pivot foundation:
+Runtime v3 implementation closure:
 
-- JER-155: pivot foundation, editable model/diff schema, validator/hash, derived seed
-- JER-156: sandbox snapshot evaluator and baseline diff
-- JER-157: timeline sandbox integration
-- JER-158: workbench editable canvas shell v1
-- JER-159: ChangeRequest and Linear handoff from draft
-- JER-160: end-to-end acceptance bundle
+- JER-165 through JER-172 closed the canonical runtime bridge, validation
+  report, scenario selector, edge inspector, acceptance bundle, e2e gate
+  normalization, official mypy gate wrapper, and archive/export gate evidence.
+- JER-173 through JER-177 closed hardware interface binding, interface binding
+  validation badges, typed port editing, port compatibility diagnostics, and
+  port compatibility badges.
+- JER-178 through JER-185 closed operation catalog authoring, rule parameter
+  editing, named draft snapshots, duplicate/keyboard editing, multi-select
+  editing, lasso/group move, direct port-handle wiring, and canvas pan/zoom.
+- JER-186 through JER-190 closed hardware interface palette, binding diagnostics
+  map, diagnostics focus/repair affordances, diagnostic repair actions, and the
+  ChangeRequest proof packet object.
+- JER-191 through JER-203 closed the end-to-end acceptance bundle, lasso
+  hardening, interface matrix export/import/validation/diff/selective apply,
+  review table, selected-row apply, group-drag flake hardening, and CSV/TSV
+  bridge.
 
-JER-150 through JER-153 are now a Reference Sample Pack / Hardware Evidence
-Sample Pack track. They feed future evidence inspector surfaces, but they are no
-longer the product mainline by themselves.
+Gate honesty note: JER-171 is done as a repo-owned evidence command. It does not
+mean the historical mypy baseline is clean; the official command may still
+return `status: blocked`, and PRs must not claim `mypy --strict clean` until it
+reports `pass`.
 
-Non-negotiable pivot boundary: editable control models are
-`sandbox_candidate` artifacts only. They do not modify `controller.py`, frozen
-adapters, frozen hardware YAML, C919 reference packet, truth-level, DAL, or PSSA.
+JER-150 through JER-153 remain the Reference Sample Pack / Hardware Evidence
+Sample Pack track. They feed inspector, evidence, and diff surfaces, but they
+are no longer the product mainline by themselves.
+
+Non-negotiable pivot boundary: editable control models and v4 hardware/interface
+design records are `sandbox_candidate` or evidence artifacts only. They do not
+modify `controller.py`, frozen adapters, frozen hardware YAML, C919 reference
+packet, truth-level, DAL, or PSSA.
 
 ## Prior Active Context
 

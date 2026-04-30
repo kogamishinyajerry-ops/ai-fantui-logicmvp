@@ -2,20 +2,74 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Timeline simulator delivered · 4 PRs + 3 Codex-review rounds · main=2e9571b
-last_updated: "2026-04-23T11:55:00.000Z"
-last_activity: 2026-04-23
+status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-204 housekeeping in progress
+last_updated: "2026-05-01T00:00:00.000+08:00"
+last_activity: 2026-05-01
 progress:
   total_phases: 44
   completed_phases: 43
   total_plans: 2
   completed_plans: 1
-  notes: "timeline engine (schema+validator+player) + FANTUI/C919 executors + /api/timeline-simulate + UI with 4 presets · 765 tests green · 0 CRITICAL findings"
+  notes: "Editable Workbench Core v1 + Interaction v2 + Runtime v3 completed as sandbox editing foundation; v4 now targets engineering-grade authoring plus hardware/interface design evidence. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
 
-Last activity: 2026-04-23
+Last activity: 2026-05-01
+
+## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
+
+**Current position**: JER-204 is the active housekeeping bridge. It refreshes
+the repo roadmap/state and Linear narrative after Runtime v3 completion, then
+opens the next Workbench v4 planning lane.
+
+**Linear control plane**:
+
+- Runtime v3 implementation chain reached JER-203 on `origin/main`.
+- New project created: `AI FANTUI LogicMVP · Editable Workbench v4 Authoring + Hardware Design`.
+- JER-204 is the active housekeeping issue.
+- JER-205 through JER-213 are seeded as v4 backlog issues.
+
+**Runtime v3 closure summary**:
+
+- JER-165 through JER-172 established canonical editable model conversion,
+  sandbox validation, scenario selection, port-aware edge inspection, acceptance
+  bundle evidence, e2e gate normalization, official mypy gate evidence, and
+  archive/export gate fields.
+- JER-173 through JER-190 expanded engineering editing freedom: hardware
+  interface binding, typed ports, operation catalog, rule parameters, snapshots,
+  keyboard duplication, multi-select, lasso/group move, direct port handles,
+  canvas pan/zoom, hardware palette, diagnostics, repair actions, and
+  ChangeRequest proof packet.
+- JER-191 through JER-203 closed acceptance journey, lasso hardening, interface
+  matrix export/import/validation/diff/selective apply/review, selected-row
+  apply, group-drag flake hardening, and CSV/TSV bridge.
+
+**Workbench v4 target**:
+
+Workbench v4 turns `/workbench` into a higher-freedom authoring and hardware
+interface design surface. Engineers should be able to derive a sandbox draft,
+edit graph structure, reuse component/subsystem patterns, design hardware
+interface metadata, inspect evidence gaps, run sandbox feedback, compare
+against certified baseline behavior, and generate a controlled ChangeRequest
+handoff packet.
+
+**Hard boundaries**:
+
+- Sandbox edits and hardware/interface design records remain candidate evidence.
+- `src/well_harness/controller.py` truth semantics are not changed by this lane.
+- Frozen adapters, frozen hardware YAML, and the C919 reference packet remain
+  untouched.
+- No truth-level, DAL, or PSSA promotion is made by Codex Daily Lane.
+- Product LLM/chat behavior remains frozen; OpenAI/Codex/Symphony are execution
+  workflow tools, not product truth engines.
+
+**Known gate status**:
+
+- JER-171 defines the official mypy evidence command, but the historical type
+  baseline may still report `status: blocked`.
+- PR proof packets must not claim e2e 49/49 or mypy clean unless those gates are
+  independently restored and verified.
 
 ## 2026-04-23 Session — Timeline Simulator (全流程故障率仿真) · 4-PR delivery
 
