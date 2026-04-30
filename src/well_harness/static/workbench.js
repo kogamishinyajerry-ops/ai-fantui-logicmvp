@@ -9472,6 +9472,8 @@ function installEditableWorkbenchShell() {
       row_count: 0,
       applyable_row_count: 0,
       skipped_row_count: 0,
+      changed_row_count: 0,
+      noop_row_count: 0,
       malformed_row_count: message ? 1 : 0,
       missing_owner_count: 0,
       evidence_gap_field_count: 0,
@@ -9496,6 +9498,70 @@ function installEditableWorkbenchShell() {
       ));
     }
     return false;
+  }
+
+  const interfaceMatrixDiffFields = [
+    "hardware_id",
+    "cable",
+    "connector",
+    "port_local",
+    "port_peer",
+    "evidence_status",
+  ];
+
+  function interfaceMatrixCurrentBinding(ownerKind, ownerId) {
+    refreshEditableNodes();
+    if (ownerKind === "node") {
+      const node = nodes.find((candidate) => editableNodeId(candidate) === ownerId);
+      return node ? nodeInterfaceBinding(node) : null;
+    }
+    if (ownerKind === "edge") {
+      const edge = draftEdges.find((candidate) => (
+        candidate.id === ownerId
+        || `${candidate.source || "unknown"}->${candidate.target || "unknown"}` === ownerId
+      ));
+      return edge ? edgeInterfaceBinding(edge) : null;
+    }
+    return null;
+  }
+
+  function interfaceMatrixDiffBindingFields(binding) {
+    if (!binding || typeof binding !== "object") return null;
+    const result = {
+      owner_kind: normalizedInterfaceField(binding.owner_kind),
+      owner_id: normalizedInterfaceField(binding.owner_id),
+      truth_effect: "none",
+    };
+    for (const fieldName of interfaceMatrixDiffFields) {
+      result[fieldName] = normalizedInterfaceField(binding[fieldName]);
+    }
+    return result;
+  }
+
+  function interfaceMatrixBindingDelta(currentBinding, candidateBinding) {
+    const current = interfaceMatrixDiffBindingFields(currentBinding);
+    const candidate = interfaceMatrixDiffBindingFields(candidateBinding);
+    const changedFields = [];
+    const fieldDeltas = {};
+    if (current && candidate) {
+      for (const fieldName of interfaceMatrixDiffFields) {
+        if (current[fieldName] === candidate[fieldName]) continue;
+        changedFields.push(fieldName);
+        fieldDeltas[fieldName] = {
+          current: current[fieldName],
+          candidate: candidate[fieldName],
+          truth_effect: "none",
+        };
+      }
+    }
+    return {
+      current_binding: current,
+      candidate_binding: candidate,
+      changed_fields: changedFields,
+      field_deltas: fieldDeltas,
+      change_count: changedFields.length,
+      truth_effect: "none",
+    };
   }
 
   function matrixTypedPortIssueCount(row, rowId, issues) {
@@ -9569,6 +9635,8 @@ function installEditableWorkbenchShell() {
     let evidenceGapFieldCount = 0;
     let truthEffectViolationCount = 0;
     let typedPortConflictCount = 0;
+    let changedRowCount = 0;
+    let noopRowCount = 0;
 
     if (payload.kind !== "well-harness-workbench-interface-matrix") {
       malformedRowCount += 1;
@@ -9619,6 +9687,11 @@ function installEditableWorkbenchShell() {
           owner_exists: false,
           evidence_gap_fields: [],
           issue_count: 1,
+          current_binding: null,
+          candidate_binding: null,
+          changed_fields: [],
+          field_deltas: {},
+          change_count: 0,
           truth_effect: "none",
         });
         pushInterfaceMatrixValidationIssue(issues, {
@@ -9690,16 +9763,36 @@ function installEditableWorkbenchShell() {
       reusableBindings.push({ binding, row_id: rowId });
 
       const rowHasError = issues.slice(rowIssueStart).some((issue) => issue.severity === "error");
-      const action = rowHasError ? "none" : (ownerExists ? "apply" : "skip");
+      const delta = rowHasError
+        ? interfaceMatrixBindingDelta(null, null)
+        : interfaceMatrixBindingDelta(
+          ownerExists ? interfaceMatrixCurrentBinding(ownerKind, ownerId) : null,
+          binding,
+        );
+      if (!rowHasError && ownerExists) {
+        if (delta.change_count > 0) changedRowCount += 1;
+        else noopRowCount += 1;
+      }
+      const status = rowHasError
+        ? "reject"
+        : (!ownerExists ? "skipped" : (delta.change_count > 0 ? "applyable" : "no_op"));
+      const action = rowHasError
+        ? "none"
+        : (!ownerExists ? "skip" : (delta.change_count > 0 ? "apply" : "none"));
       rowReports.push({
         row_id: rowId,
         owner_kind: ownerKind,
         owner_id: ownerId,
-        status: rowHasError ? "reject" : (ownerExists ? "applyable" : "skipped"),
+        status,
         action,
         owner_exists: ownerExists,
         evidence_gap_fields: evidenceGapFields,
         issue_count: issues.length - rowIssueStart,
+        current_binding: delta.current_binding,
+        candidate_binding: delta.candidate_binding,
+        changed_fields: delta.changed_fields,
+        field_deltas: delta.field_deltas,
+        change_count: delta.change_count,
         binding_quality: binding.binding_quality,
         truth_effect: "none",
       });
@@ -9737,6 +9830,8 @@ function installEditableWorkbenchShell() {
       row_count: rows.length,
       applyable_row_count: rowReports.filter((row) => row.status === "applyable").length,
       skipped_row_count: rowReports.filter((row) => row.status === "skipped").length,
+      changed_row_count: changedRowCount,
+      noop_row_count: noopRowCount,
       malformed_row_count: malformedRowCount,
       missing_owner_count: missingOwnerCount,
       evidence_gap_field_count: evidenceGapFieldCount,
@@ -9756,6 +9851,8 @@ function installEditableWorkbenchShell() {
       row_count: source ? source.row_count || 0 : 0,
       applyable_row_count: source ? source.applyable_row_count || 0 : 0,
       skipped_row_count: source ? source.skipped_row_count || 0 : 0,
+      changed_row_count: source ? source.changed_row_count || 0 : 0,
+      noop_row_count: source ? source.noop_row_count || 0 : 0,
       issue_count: source ? source.issue_count || 0 : 0,
       evidence_gap_field_count: source ? source.evidence_gap_field_count || 0 : 0,
       duplicate_interface_reuse_count: source ? source.duplicate_interface_reuse_count || 0 : 0,
@@ -9773,7 +9870,7 @@ function installEditableWorkbenchShell() {
     }
     if ((!options || options.updateStatus !== false) && interfaceMatrixStatus && report) {
       interfaceMatrixStatus.textContent =
-        `Matrix validation ${report.status}: ${report.applyable_row_count || 0} applyable, ${report.skipped_row_count || 0} skipped, ${report.issue_count || 0} issue(s). Truth effect: none.`;
+        `Matrix validation ${report.status}: ${report.applyable_row_count || 0} applyable, ${report.skipped_row_count || 0} skipped, ${report.noop_row_count || 0} no-op, ${report.issue_count || 0} issue(s). Truth effect: none.`;
     }
     return report;
   }
