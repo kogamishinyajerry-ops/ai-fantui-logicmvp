@@ -256,6 +256,25 @@ class TestArchiveIntegrityChecksums(unittest.TestCase):
             import shutil
             shutil.rmtree(archive_dir, ignore_errors=True)
 
+    def test_manifest_validation_is_stable_when_files_and_integrity_keys_reordered(self):
+        """Manifest validation must not depend on object key insertion order."""
+        archive_dir, manifest_path = _create_legitimate_archive()
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["files"] = dict(reversed(list(manifest["files"].items())))
+            manifest["integrity"] = dict(reversed(list(manifest["integrity"].items())))
+
+            issues = validate_workbench_archive_manifest(
+                manifest,
+                manifest_path=manifest_path,
+                require_existing_files=True,
+            )
+
+            self.assertEqual([], list(issues))
+        finally:
+            import shutil
+            shutil.rmtree(archive_dir, ignore_errors=True)
+
 
 # Helper to create archive for tests (duplicated to avoid top-level import of shutil above)
 def _create_legitimate_archive() -> tuple[Path, Path]:
