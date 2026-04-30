@@ -11508,7 +11508,7 @@ function installEditableWorkbenchShell() {
   }
 
   function updateEditableDraftHash() {
-    const hash = editableDraftHash(JSON.stringify(currentDraftSnapshot()));
+    const hash = editableDraftHash(stableEvidenceArchiveJson(currentDraftSnapshot()));
     shell.setAttribute("data-draft-hash", hash);
     if (draftHashLabel) draftHashLabel.textContent = hash;
     return hash;
@@ -12017,7 +12017,7 @@ function installEditableWorkbenchShell() {
     if (!draft || !Array.isArray(draft.nodes)) return null;
     const name = normalizeDraftSnapshotName(record.name, fallbackIndex);
     const hash = String(
-      record.draft_hash || editableDraftHash(JSON.stringify({
+      record.draft_hash || editableDraftHash(stableEvidenceArchiveJson({
         draft,
         selected_scenario_id: record.selected_scenario_id || "nominal_landing",
         custom_snapshot: record.custom_snapshot || {},
@@ -12123,7 +12123,7 @@ function installEditableWorkbenchShell() {
     );
     const draft = serializeEditableState();
     const customSnapshot = safeWorkbenchCustomSnapshot() || {};
-    const hash = editableDraftHash(JSON.stringify({
+    const hash = editableDraftHash(stableEvidenceArchiveJson({
       draft,
       selected_scenario_id: selectedWorkbenchScenarioId(),
       custom_snapshot: customSnapshot,
@@ -13528,7 +13528,7 @@ function installEditableWorkbenchShell() {
   function buildEditableDraftExport() {
     const snapshot = currentDraftSnapshot();
     const customSnapshot = safeWorkbenchCustomSnapshot() || {};
-    const changedModelHash = editableDraftHash(JSON.stringify(snapshot));
+    const changedModelHash = editableDraftHash(stableEvidenceArchiveJson(snapshot));
     const changeRequestProofPacket = buildChangeRequestProofPacket(snapshot, changedModelHash);
     const linearIssueBody = linearIssueBodyFromProofPacket(changeRequestProofPacket);
     const prProofPacket = prProofTextFromProofPacket(changeRequestProofPacket);
@@ -13802,6 +13802,9 @@ function installEditableWorkbenchShell() {
     }
     if (payload.changerequest_handoff_packet !== undefined) {
       const packet = payload.changerequest_handoff_packet;
+      if (packet.$schema !== "https://well-harness.local/json_schema/workbench_changerequest_handoff_v1.schema.json") {
+        throw new Error("changerequest_handoff_packet schema must be workbench_changerequest_handoff_v1");
+      }
       if (packet.candidate_state !== "sandbox_candidate") {
         throw new Error("changerequest_handoff_packet candidate_state must be sandbox_candidate");
       }
@@ -13816,6 +13819,12 @@ function installEditableWorkbenchShell() {
       }
       if (packet.controller_truth_modified !== false) {
         throw new Error("changerequest_handoff_packet controller_truth_modified must be false");
+      }
+      if (packet.runtime_mutates_truth !== false) {
+        throw new Error("changerequest_handoff_packet runtime_mutates_truth must be false");
+      }
+      if (!packet.serialization || packet.serialization.canonicalization !== "json.sort_keys.separators.v1") {
+        throw new Error("changerequest_handoff_packet canonicalization must be stable JSON v1");
       }
     }
     return payload;
@@ -14466,7 +14475,7 @@ function installEditableWorkbenchShell() {
       controller_truth_modified: false,
       frozen_assets_modified: false,
       truth_effect: "none",
-      changed_model_hash: changedModelHash || editableDraftHash(JSON.stringify(sourceSnapshot)),
+      changed_model_hash: changedModelHash || editableDraftHash(stableEvidenceArchiveJson(sourceSnapshot)),
       selected_scenario_id: selectedWorkbenchScenarioId(),
       selected_node_id: sourceSnapshot.selected_node && sourceSnapshot.selected_node.id
         ? sourceSnapshot.selected_node.id
@@ -14659,6 +14668,7 @@ function installEditableWorkbenchShell() {
     const prBody = prProofPacket || prProofTextFromProofPacket(packet);
     const testDelta = buildChangeRequestTestDeltaPlaceholders();
     return {
+      "$schema": "https://well-harness.local/json_schema/workbench_changerequest_handoff_v1.schema.json",
       kind: "well-harness-workbench-changerequest-handoff-packet",
       version: 1,
       packet_state: "draft",
@@ -14671,6 +14681,13 @@ function installEditableWorkbenchShell() {
       truth_level_impact: "none",
       dal_pssa_impact: "none",
       red_lines_touched: "none",
+      artifact_scope: "browser_local_draft",
+      truth_scope: "evidence_only",
+      runtime_mutates_truth: false,
+      serialization: {
+        canonicalization: "json.sort_keys.separators.v1",
+        checksum_algorithm: "ui_fnv1a32_over_canonical_json",
+      },
       outcome:
         `Review sandbox candidate edit for ${packet.selected_node_id || "selected node"} against the certified thrust-reverser baseline.`,
       context:
@@ -14953,7 +14970,7 @@ function installEditableWorkbenchShell() {
 
   function buildEditableHandoffPacket() {
     const snapshot = currentDraftSnapshot();
-    const changedModelHash = editableDraftHash(JSON.stringify(snapshot));
+    const changedModelHash = editableDraftHash(stableEvidenceArchiveJson(snapshot));
     const hardwareBindings = snapshot.hardware_bindings || [];
     const bindingCoverage = snapshot.binding_coverage || buildInterfaceBindingCoverageSummary(hardwareBindings);
     const hardwareBindingDiagnostics = snapshot.hardware_binding_diagnostics
@@ -15015,7 +15032,29 @@ function installEditableWorkbenchShell() {
   }
 
   function checksumEvidenceArchiveField(value) {
-    return editableDraftHash(JSON.stringify(value));
+    return editableDraftHash(stableEvidenceArchiveJson(value));
+  }
+
+  function stableEvidenceArchiveJson(value) {
+    return JSON.stringify(normalizeEvidenceArchiveValue(value));
+  }
+
+  function normalizeEvidenceArchiveValue(value) {
+    if (value === undefined || typeof value === "function") return null;
+    if (typeof value === "number" && !Number.isFinite(value)) return null;
+    if (Array.isArray(value)) {
+      return value.map((item) => normalizeEvidenceArchiveValue(item));
+    }
+    if (value && typeof value === "object") {
+      return Object.keys(value)
+        .sort()
+        .reduce((accumulator, key) => {
+          const normalized = normalizeEvidenceArchiveValue(value[key]);
+          if (normalized !== undefined) accumulator[key] = normalized;
+          return accumulator;
+        }, {});
+    }
+    return value;
   }
 
   function buildWorkbenchEvidenceArchive() {

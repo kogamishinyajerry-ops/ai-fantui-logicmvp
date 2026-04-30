@@ -26,11 +26,13 @@ Housekeeping bridge:
 - JER-210: Hardware evidence inspector v2 (Done)
 - JER-211: Scenario/debug timeline linked to selected graph elements v1 (Done)
 - JER-212: Candidate-to-baseline diff review workflow v2 (Done)
-- JER-213: ChangeRequest handoff packet from editable draft v1 (In review)
+- JER-213: ChangeRequest handoff packet from editable draft v1 (Done)
+- JER-214: Workbench handoff packet schema and stable serialization hardening (In review)
 
 Workbench v4 seed backlog:
-- Empty after JER-213 enters review; next v4 planning should decide whether to
-  harden archive restore/API handoff or open the next authoring milestone.
+- JER-214 is the current hardening bridge after v4 handoff. Next v4 planning
+  should decide whether to harden archive restore/API handoff or open the next
+  authoring milestone.
 
 Runtime v3 implementation closure:
 

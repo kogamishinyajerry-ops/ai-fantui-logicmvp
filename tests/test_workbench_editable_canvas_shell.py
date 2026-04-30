@@ -316,6 +316,9 @@ def test_js_builds_changerequest_linear_handoff_without_live_linear_mutation() -
     assert "changerequest_handoff_packet" in js
     assert "changerequest_handoff_packet_checksum" in js
     assert "changerequest_handoff_packet truth_effect must be none" in js
+    assert "workbench_changerequest_handoff_v1.schema.json" in js
+    assert "json.sort_keys.separators.v1" in js
+    assert "function stableEvidenceArchiveJson" in js
     assert 'issue: "JER-TBD"' in js
     assert "Candidate state:" in js
     assert "Certification claim:" in js

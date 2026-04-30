@@ -124,6 +124,10 @@ def build_default_commands(python_executable: str | None = None) -> tuple[Valida
             (python, "tools/validate_workbench_archive_manifest_schema.py", "--format", "json"),
         ),
         ValidationCommand(
+            "workbench_changerequest_handoff_schema",
+            (python, "tools/validate_workbench_changerequest_handoff_schema.py", "--format", "json"),
+        ),
+        ValidationCommand(
             "validation_report_schema",
             (python, "tools/validate_validation_report_schema.py", "--format", "json"),
         ),

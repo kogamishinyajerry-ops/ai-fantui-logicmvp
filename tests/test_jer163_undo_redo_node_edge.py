@@ -40,7 +40,7 @@ def test_editable_canvas_has_undo_redo_and_node_edge_operations() -> None:
     assert "undoStack" in js
     assert "redoStack" in js
     assert "draftEdges" in js
-    assert "editableDraftHash(JSON.stringify(currentDraftSnapshot()))" in js
+    assert "editableDraftHash(stableEvidenceArchiveJson(currentDraftSnapshot()))" in js
 
 
 def test_editable_graph_validation_and_snapshot_remain_truth_neutral() -> None:

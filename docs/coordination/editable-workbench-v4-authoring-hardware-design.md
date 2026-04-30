@@ -24,7 +24,8 @@ controlled ChangeRequest handoff.
 - JER-210: Hardware evidence inspector v2 (Done)
 - JER-211: Scenario/debug timeline linked to selected graph elements v1 (Done)
 - JER-212: Candidate-to-baseline diff review workflow v2 (Done)
-- JER-213: ChangeRequest handoff packet from editable draft v1 (In review)
+- JER-213: ChangeRequest handoff packet from editable draft v1 (Done)
+- JER-214: Workbench handoff packet schema and stable serialization hardening (In review)
 
 ## Product Target
 
@@ -54,6 +55,9 @@ An engineer should be able to:
   archive-ready.
 - **v4.4 handoff**: JER-213 emits a controlled ChangeRequest packet that can be
   used by Linear/PR workflows without claiming certification.
+- **v4.5 handoff hardening**: JER-214 gives the ChangeRequest packet a
+  repo-owned schema, validator, canonical hash contract, and stable browser
+  checksum serialization.
 
 ## Acceptance Model
 
@@ -230,12 +234,36 @@ The slice remains sandbox-only:
 - no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
   DAL, or PSSA behavior is changed.
 
+## JER-214 Closure Note
+
+JER-214 hardens the structured handoff from JER-213. The repo now owns
+`workbench_changerequest_handoff_v1`, a JSON schema and Python validation
+module for the browser-generated `changerequest_handoff_packet`. The validator
+locks the packet to `sandbox_candidate`, `certification_claim: none`,
+`truth_effect: none`, no live Linear mutation, no controller/frozen-asset
+mutation, and no truth-level, DAL, or PSSA impact.
+
+The slice also makes handoff/archive checksum generation stable by hashing
+key-sorted JSON instead of raw browser insertion order. Equivalent packet
+objects with different key ordering keep the same canonical hash.
+
+The slice remains sandbox-only:
+
+- `changerequest_handoff_packet` remains a draft review artifact, not a
+  certified truth object;
+- browser output declares the handoff schema, artifact scope, truth scope, and
+  canonicalization contract;
+- the GSD validation suite now includes the handoff schema validator;
+- no live Linear mutation, controller truth mutation, adapter change, frozen
+  YAML change, C919 packet change, truth-level change, DAL change, or PSSA
+  change is introduced.
+
 ## JER-205 Sequencing Contract
 
 JER-205 is the lane-entry contract for v4. It does not add runtime behavior; it
 defines how the next implementation issues become executable.
 
-Before JER-206 through JER-213 are marked `agent:ready`, each issue must state
+Before JER-206 through JER-214 are marked `agent:ready`, each issue must state
 which acceptance state it touches:
 
 - `clarification`: the workbench has enough evidence to ask for missing design
@@ -273,6 +301,7 @@ hardcoding truth semantics into UI or archive text.
 | JER-211 | Scenario/debug timeline linkage | Scenario output highlights selected nodes, ports, edges, and hardware bindings | JER-206, JER-207, JER-208 |
 | JER-212 | Candidate-to-baseline diff review v2 | Diff review is archive-ready and never marks candidate output certified | JER-211 |
 | JER-213 | ChangeRequest handoff packet | Packet includes candidate model, evidence, tests, boundaries, and red-line metadata | JER-212 |
+| JER-214 | Handoff schema and stable serialization | Packet has repo-owned schema, validator, canonical hash, and stable checksum serialization | JER-213 |
 
 ## Work-Item Contract
 
@@ -288,7 +317,7 @@ and must carry these fields before `agent:ready` is applied:
 - Metadata: repository path, adapter/project, layer, truth-level impact, and
   known gate blockers.
 
-JER-206 through JER-213 should not claim broad v4 completion individually. Each
+JER-206 through JER-214 should not claim broad v4 completion individually. Each
 issue closes one capability slice and updates this coordination note only when
 the v4 acceptance ladder or sequencing changes.
 

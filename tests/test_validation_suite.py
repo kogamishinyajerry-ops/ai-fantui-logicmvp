@@ -49,6 +49,7 @@ class ValidationSuiteTests(unittest.TestCase):
                 "knowledge_artifact_schema",
                 "workbench_bundle_schema",
                 "workbench_archive_manifest_schema",
+                "workbench_changerequest_handoff_schema",
                 "validation_report_schema",
                 "validation_schema_runner_report_schema",
                 "validation_schema_checker_report_schema",
