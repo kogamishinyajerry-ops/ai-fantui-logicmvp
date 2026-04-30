@@ -10245,8 +10245,19 @@ function installEditableWorkbenchShell() {
     return true;
   }
 
+  function pointerEventMatchesState(event, state) {
+    if (!event || !state) return false;
+    const eventPointerId = Number(event.pointerId);
+    const statePointerId = Number(state.pointerId);
+    return !(
+      Number.isFinite(eventPointerId)
+      && Number.isFinite(statePointerId)
+      && eventPointerId !== statePointerId
+    );
+  }
+
   function updateViewportPan(event) {
-    if (!viewportPanState || !event || event.pointerId !== viewportPanState.pointerId) return false;
+    if (!viewportPanState || !pointerEventMatchesState(event, viewportPanState)) return false;
     viewportState.panX = viewportPanState.panX + (event.clientX - viewportPanState.startX);
     viewportState.panY = viewportPanState.panY + (event.clientY - viewportPanState.startY);
     applyViewportTransform("pan", { persist: false });
@@ -10262,7 +10273,7 @@ function installEditableWorkbenchShell() {
   }
 
   function endViewportPan(event) {
-    if (!viewportPanState || !event || event.pointerId !== viewportPanState.pointerId) return false;
+    if (!viewportPanState || !pointerEventMatchesState(event, viewportPanState)) return false;
     clearViewportPanState("pan complete");
     event.preventDefault();
     return true;
@@ -11011,6 +11022,7 @@ function installEditableWorkbenchShell() {
     if (!event || event.button !== 0 || !node) return;
     if (spacePanActive || currentEditorTool !== "select" || isSelectionModifier(event)) return;
     if (node.getAttribute("data-draft-node") !== "true") return;
+    if (groupDragState && pointerEventMatchesState(event, groupDragState)) return;
     if (!selectedNodeIds.has(editableNodeId(node))) {
       setSingleEditableNodeSelection(node);
       renderInspector();
@@ -11028,11 +11040,27 @@ function installEditableWorkbenchShell() {
         position: editableNodePosition(candidate),
       })),
     };
-    node.setPointerCapture(event.pointerId);
+    if (typeof node.setPointerCapture === "function") {
+      try {
+        node.setPointerCapture(event.pointerId);
+      } catch (err) {
+        // Synthetic browser events can report a stale pointer capture target;
+        // window/canvas fallbacks below still carry the active drag state.
+      }
+    }
+  }
+
+  function beginEditableGroupDragFromEventTarget(event) {
+    if (!event || groupDragState) return;
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const node = target.closest(".workbench-editable-node");
+    if (!node) return;
+    beginEditableGroupDrag(event, node);
   }
 
   function applyEditableGroupDragPosition(event) {
-    if (!groupDragState || !event || event.pointerId !== groupDragState.pointerId) return;
+    if (!groupDragState || !pointerEventMatchesState(event, groupDragState)) return;
     const current = canvasPointPercent(event);
     const dx = current.x - groupDragState.start.x;
     const dy = current.y - groupDragState.start.y;
@@ -11065,7 +11093,7 @@ function installEditableWorkbenchShell() {
   }
 
   function endEditableGroupDrag(event) {
-    if (!groupDragState || !event || event.pointerId !== groupDragState.pointerId) return;
+    if (!groupDragState || !pointerEventMatchesState(event, groupDragState)) return;
     applyEditableGroupDragPosition(event);
     const movedCount = groupDragState.nodes.length;
     const didMove = groupDragState.moved;
@@ -11115,7 +11143,7 @@ function installEditableWorkbenchShell() {
 
   function updateCanvasLasso(event) {
     if (updateViewportPan(event)) return;
-    if (!lassoDragState || !event || event.pointerId !== lassoDragState.pointerId) return;
+    if (!lassoDragState || !pointerEventMatchesState(event, lassoDragState)) return;
     const current = canvasPointPercent(event);
     const rect = lassoRectFromPoints(lassoDragState.start, current);
     if (!lassoDragState.active && rect.width + rect.height < 1.2) return;
@@ -11126,7 +11154,7 @@ function installEditableWorkbenchShell() {
 
   function endCanvasLasso(event) {
     if (endViewportPan(event)) return;
-    if (!lassoDragState || !event || event.pointerId !== lassoDragState.pointerId) return;
+    if (!lassoDragState || !pointerEventMatchesState(event, lassoDragState)) return;
     const current = canvasPointPercent(event);
     const rect = lassoRectFromPoints(lassoDragState.start, current);
     const shouldApply = lassoDragState.active && (rect.width + rect.height >= 1.2);
@@ -13486,10 +13514,39 @@ function installEditableWorkbenchShell() {
   }
 
   if (canvas) {
+    canvas.addEventListener("pointerdown", (event) => beginEditableGroupDragFromEventTarget(event), true);
     canvas.addEventListener("pointerdown", (event) => beginCanvasLasso(event));
-    canvas.addEventListener("pointermove", (event) => updateCanvasLasso(event));
-    canvas.addEventListener("pointerup", (event) => endCanvasLasso(event));
-    canvas.addEventListener("pointercancel", (event) => endCanvasLasso(event));
+    canvas.addEventListener("pointermove", (event) => {
+      if (groupDragState) {
+        updateEditableGroupDrag(event);
+        return;
+      }
+      updateCanvasLasso(event);
+    });
+    canvas.addEventListener("pointerup", (event) => {
+      if (groupDragState) {
+        endEditableGroupDrag(event);
+        return;
+      }
+      endCanvasLasso(event);
+    });
+    canvas.addEventListener("pointercancel", (event) => {
+      if (groupDragState) {
+        endEditableGroupDrag(event);
+        return;
+      }
+      endCanvasLasso(event);
+    });
+    window.addEventListener("pointermove", (event) => {
+      if (groupDragState) updateEditableGroupDrag(event);
+    });
+    window.addEventListener("pointerup", (event) => {
+      if (groupDragState) endEditableGroupDrag(event);
+    });
+    window.addEventListener("pointercancel", (event) => {
+      if (groupDragState) endEditableGroupDrag(event);
+    });
+    window.addEventListener("pointerdown", (event) => beginEditableGroupDragFromEventTarget(event), true);
   }
 
   restoreDraft();

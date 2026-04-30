@@ -1204,6 +1204,16 @@ def test_workbench_lasso_selects_and_group_moves_draft_nodes(demo_server, browse
     page.mouse.move(right, bottom, steps=8)
     page.mouse.up()
 
+    page.wait_for_function(
+        """
+        () => {
+          const first = document.querySelector('[data-editable-node-id="draft_node_1"]');
+          const second = document.querySelector('[data-editable-node-id="draft_node_2"]');
+          return first?.getAttribute('data-multi-selected') === 'true'
+            && second?.getAttribute('data-multi-selected') === 'true';
+        }
+        """
+    )
     assert page.locator('[data-editable-node-id="draft_node_1"]').get_attribute("data-multi-selected") == "true"
     assert page.locator('[data-editable-node-id="draft_node_2"]').get_attribute("data-multi-selected") == "true"
 
@@ -1217,6 +1227,27 @@ def test_workbench_lasso_selects_and_group_moves_draft_nodes(demo_server, browse
         steps=8,
     )
     page.mouse.up()
+
+    before_draft_node_1_x, before_draft_node_1_y = before_positions["draft_node_1"]
+    before_draft_node_2_x, before_draft_node_2_y = before_positions["draft_node_2"]
+    page.wait_for_function(
+        f"""
+        () => {{
+          const first = document.querySelector('[data-editable-node-id="draft_node_1"]');
+          const second = document.querySelector('[data-editable-node-id="draft_node_2"]');
+          if (!first || !second) return false;
+          const firstStyle = window.getComputedStyle(first);
+          const secondStyle = window.getComputedStyle(second);
+          return (
+            firstStyle.getPropertyValue('--node-x').trim() !== {json.dumps(before_draft_node_1_x)}
+            || firstStyle.getPropertyValue('--node-y').trim() !== {json.dumps(before_draft_node_1_y)}
+          ) && (
+            secondStyle.getPropertyValue('--node-x').trim() !== {json.dumps(before_draft_node_2_x)}
+            || secondStyle.getPropertyValue('--node-y').trim() !== {json.dumps(before_draft_node_2_y)}
+          );
+        }}
+        """
+    )
 
     page.click("#workbench-export-draft-btn")
     moved = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
