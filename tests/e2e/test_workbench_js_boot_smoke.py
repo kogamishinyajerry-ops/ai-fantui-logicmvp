@@ -884,7 +884,7 @@ def test_workbench_lasso_selects_and_group_moves_draft_nodes(demo_server, browse
     bottom = max(draft_node_1["y"] + draft_node_1["height"], draft_node_2["y"] + draft_node_2["height"]) + 44
     page.mouse.move(left, top)
     page.mouse.down()
-    page.mouse.move(right, bottom)
+    page.mouse.move(right, bottom, steps=8)
     page.mouse.up()
 
     assert page.locator('[data-editable-node-id="draft_node_1"]').get_attribute("data-multi-selected") == "true"
@@ -894,7 +894,11 @@ def test_workbench_lasso_selects_and_group_moves_draft_nodes(demo_server, browse
     assert draft_node_1 is not None
     page.mouse.move(draft_node_1["x"] + draft_node_1["width"] / 2, draft_node_1["y"] + draft_node_1["height"] / 2)
     page.mouse.down()
-    page.mouse.move(draft_node_1["x"] + draft_node_1["width"] / 2 + 90, draft_node_1["y"] + draft_node_1["height"] / 2 + 45)
+    page.mouse.move(
+        draft_node_1["x"] + draft_node_1["width"] / 2 + 90,
+        draft_node_1["y"] + draft_node_1["height"] / 2 + 45,
+        steps=8,
+    )
     page.mouse.up()
 
     page.click("#workbench-export-draft-btn")
