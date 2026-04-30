@@ -16,8 +16,8 @@ controlled ChangeRequest handoff.
 
 ## Seed Backlog
 
-- JER-205: Workbench v4 authoring roadmap and acceptance model
-- JER-206: Component library and reusable subsystem templates v1
+- JER-205: Workbench v4 authoring roadmap and acceptance model (Done)
+- JER-206: Component library and reusable subsystem templates v1 (Done)
 - JER-207: Group/subsystem node editor v1
 - JER-208: Hardware interface design model v1
 - JER-209: Connector/pin map editor v1
@@ -43,8 +43,8 @@ An engineer should be able to:
 
 ## Acceptance Ladder
 
-- **v4.0 planning**: JER-205 defines the acceptance model and issue sequencing.
-- **v4.1 authoring primitives**: JER-206 and JER-207 add reusable templates and
+- **v4.0 planning**: JER-205 defined the acceptance model and issue sequencing.
+- **v4.1 authoring primitives**: JER-206 adds reusable component templates; JER-207 adds
   subsystem grouping while preserving deterministic draft serialization.
 - **v4.2 hardware/interface design**: JER-208 through JER-210 add sandbox-only
   hardware/interface records, connector/pin map editing, and inspector evidence
@@ -76,6 +76,23 @@ authoring loop without changing certified truth:
 The acceptance model is product-facing but not certification-facing. It proves
 that engineers can explore, validate, and package candidate edits. It does not
 certify the candidate, promote truth level, or make DAL/PSSA claims.
+
+## JER-206 Closure Note
+
+JER-206 delivers the first v4 authoring primitive. The `/workbench` editor
+toolbar now includes a reusable component library with `single_and_gate`,
+`compare_guard`, and `two_stage_interlock` templates. Inserting a template
+creates only draft nodes and draft edges; template provenance is serialized as
+`component_template` node/edge metadata and summarized in the draft/export/archive
+`component_library` payload.
+
+The slice remains sandbox-only:
+
+- `truth_effect` remains `none` for component library metadata.
+- template insert does not mutate certified baseline nodes;
+- controller truth, frozen adapters, frozen YAML, and C919 packets are untouched;
+- evidence archive output includes a component-library checksum for review
+  reproducibility.
 
 ## JER-205 Sequencing Contract
 
@@ -112,7 +129,7 @@ hardcoding truth semantics into UI or archive text.
 | Issue | Delivery focus | Primary acceptance | Dependency |
 | --- | --- | --- | --- |
 | JER-205 | v4 roadmap and acceptance model | This document defines the acceptance ladder, work-item sequence, and gate policy | JER-204 merged |
-| JER-206 | Component library and reusable subsystem templates | Template insert/export round-trip preserves sandbox-only metadata | JER-205 |
+| JER-206 | Component library and reusable subsystem templates | Template insert/export/archive round-trip preserves sandbox-only metadata | JER-205 |
 | JER-207 | Group/subsystem node editor | Group, rename, ungroup, and undo/redo preserve ports and edges | JER-206 may run in parallel after model contract is clear |
 | JER-208 | Hardware interface design model | Loader, validator, hash, and schema docs cover candidate hardware/interface records | JER-205 |
 | JER-209 | Connector/pin map editor | UI edits connector/pin rows and preserves explicit `evidence_gap` states | JER-208 |

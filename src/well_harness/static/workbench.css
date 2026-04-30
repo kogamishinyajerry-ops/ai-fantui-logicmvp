@@ -5099,6 +5099,33 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   text-align: center;
   overflow-wrap: anywhere;
 }
+.workbench-component-library {
+  width: 34px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid rgba(150, 173, 190, 0.22);
+}
+.workbench-component-library button {
+  height: 26px;
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.workbench-component-library button:focus-visible {
+  outline: 2px solid #7dd7c2;
+  outline-offset: 2px;
+}
+.workbench-component-library-status {
+  width: 34px;
+  color: rgba(213, 227, 237, 0.72);
+  font-size: 0.55rem;
+  line-height: 1.2;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
 .workbench-viewport-tools {
   width: 34px;
   display: flex;

@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-205 acceptance model in progress
+status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-206 component library done
 last_updated: "2026-05-01T00:00:00.000+08:00"
 last_activity: 2026-05-01
 progress:
@@ -10,7 +10,7 @@ progress:
   completed_phases: 43
   total_plans: 2
   completed_plans: 1
-  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 defines the Workbench v4 acceptance model and issue sequencing before authoring/hardware implementation slices begin. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates that insert reusable draft nodes/edges and round-trip through draft/export/archive metadata. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
@@ -19,17 +19,19 @@ Last activity: 2026-05-01
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
-**Current position**: JER-204 is merged and Done. JER-205 is the active
-planning slice that turns the Workbench v4 launch note into an executable
-acceptance model and issue sequence.
+**Current position**: JER-204 and JER-205 are merged and Done. JER-206 is the
+first v4 implementation slice: `/workbench` now exposes a sandbox-only
+component library for reusable draft nodes/subsystem templates.
 
 **Linear control plane**:
 
 - Runtime v3 implementation chain reached JER-203 on `origin/main`.
 - New project created: `AI FANTUI LogicMVP · Editable Workbench v4 Authoring + Hardware Design`.
 - JER-204 is Done after PR #186.
-- JER-205 is In Progress.
-- JER-206 through JER-213 are seeded as v4 backlog issues.
+- JER-205 is Done after PR #187.
+- JER-206 is Done after adding component-library template insert/export/archive
+  evidence.
+- JER-207 through JER-213 remain seeded as v4 backlog issues.
 
 **Runtime v3 closure summary**:
 
@@ -55,15 +57,17 @@ interface metadata, inspect evidence gaps, run sandbox feedback, compare
 against certified baseline behavior, and generate a controlled ChangeRequest
 handoff packet.
 
-**JER-205 acceptance-model focus**:
+**JER-206 component-library closure**:
 
-- Define the v4 acceptance ladder across authoring fidelity,
-  hardware/interface design fidelity, sandbox feedback fidelity, and review
-  handoff fidelity.
-- Make the JER-206 through JER-213 execution order explicit enough that each
-  issue can be made `agent:ready` only after its local scope is complete.
-- Keep v4 acceptance product-facing and evidence-facing, not
-  certification-facing.
+- The left-side editor toolbar exposes three reusable sandbox templates:
+  `single_and_gate`, `compare_guard`, and `two_stage_interlock`.
+- Template insertion creates draft nodes and internal draft edges only; it does
+  not mutate certified baseline nodes or controller truth.
+- Draft JSON, import/export, and evidence archive payloads carry
+  `component_library` and `component_template` metadata with
+  `truth_effect: none`.
+- Targeted static and Playwright tests cover template exposure, insert,
+  round-trip, and archive checksums.
 
 **Hard boundaries**:
 

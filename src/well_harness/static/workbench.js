@@ -7567,6 +7567,8 @@ function installEditableWorkbenchShell() {
   const viewportButtons = Array.from(shell.querySelectorAll("[data-viewport-tool]"));
   const opCatalogButtons = Array.from(shell.querySelectorAll("[data-op-catalog-op]"));
   const opCatalogStatus = document.getElementById("workbench-op-catalog-status");
+  const componentLibraryButtons = Array.from(shell.querySelectorAll("[data-component-template-id]"));
+  const componentLibraryStatus = document.getElementById("workbench-component-library-status");
   const deriveBtn = document.getElementById("workbench-derive-draft-btn");
   const runSandboxBtn = document.getElementById("workbench-run-sandbox-btn");
   const draftLabel = document.getElementById("workbench-draft-status-label");
@@ -7678,6 +7680,7 @@ function installEditableWorkbenchShell() {
   let pendingEdgeSourceId = "";
   let nextDraftNodeIndex = 1;
   let selectedCatalogOp = "and";
+  let lastComponentTemplateId = "";
   let draftEdges = [
     { id: "edge_logic1_logic2", source: "logic1", target: "logic2" },
     { id: "edge_logic2_logic3", source: "logic2", target: "logic3" },
@@ -7756,6 +7759,39 @@ function installEditableWorkbenchShell() {
       rule_count: "1",
     },
   };
+  const componentLibraryVersion = "editable-component-library.v1";
+  const componentLibraryTemplates = {
+    single_and_gate: {
+      id: "single_and_gate",
+      label: "Single AND",
+      short_label: "AND",
+      nodes: [
+        { label: "Reusable AND gate", op: "and", rule_count: "2", x_offset: 0, y_offset: 0 },
+      ],
+      edges: [],
+    },
+    compare_guard: {
+      id: "compare_guard",
+      label: "Compare guard",
+      short_label: "CMP",
+      nodes: [
+        { label: "Reusable compare guard", op: "compare", rule_count: "1", x_offset: 0, y_offset: 0 },
+      ],
+      edges: [],
+    },
+    two_stage_interlock: {
+      id: "two_stage_interlock",
+      label: "Two-stage interlock",
+      short_label: "2ST",
+      nodes: [
+        { label: "Interlock input gate", op: "and", rule_count: "2", x_offset: -5, y_offset: -4 },
+        { label: "Interlock compare guard", op: "compare", rule_count: "1", x_offset: 11, y_offset: 8 },
+      ],
+      edges: [
+        { source_index: 0, target_index: 1, value_type: "boolean", required: true },
+      ],
+    },
+  };
 
   function operationCatalogEntry(op) {
     return approvedOperationCatalog[op] || approvedOperationCatalog.and;
@@ -7766,6 +7802,25 @@ function installEditableWorkbenchShell() {
       version: editableOperationCatalogVersion,
       approved_ops: Object.keys(approvedOperationCatalog),
       selected_op: selectedCatalogOp,
+      truth_effect: "none",
+    };
+  }
+
+  function componentTemplateById(templateId) {
+    return componentLibraryTemplates[templateId] || null;
+  }
+
+  function componentTemplateIds() {
+    return Object.keys(componentLibraryTemplates).sort();
+  }
+
+  function buildComponentLibrarySummary() {
+    return {
+      version: componentLibraryVersion,
+      template_ids: componentTemplateIds(),
+      template_count: componentTemplateIds().length,
+      last_template_id: lastComponentTemplateId || null,
+      candidate_state: "sandbox_candidate",
       truth_effect: "none",
     };
   }
@@ -10398,7 +10453,49 @@ function installEditableWorkbenchShell() {
     }
   }
 
+  function nodeComponentTemplateMetadata(node) {
+    const templateId = node && node.getAttribute("data-component-template-id");
+    if (!templateId) return null;
+    return {
+      template_id: templateId,
+      template_label: node.getAttribute("data-component-template-label") || templateId,
+      template_node_index: Number.parseInt(
+        node.getAttribute("data-component-template-node-index") || "0",
+        10,
+      ),
+      library_version: node.getAttribute("data-component-library-version") || componentLibraryVersion,
+      source_ref: node.getAttribute("data-component-template-source-ref")
+        || `ui_draft.component_library.${templateId}`,
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    };
+  }
+
+  function setNodeComponentTemplateMetadata(node, metadata) {
+    if (!node || !metadata || typeof metadata !== "object") return;
+    const templateId = String(metadata.template_id || metadata.templateId || "").trim();
+    if (!templateId) return;
+    node.setAttribute("data-component-template-id", templateId);
+    node.setAttribute(
+      "data-component-template-label",
+      String(metadata.template_label || metadata.templateLabel || templateId),
+    );
+    node.setAttribute(
+      "data-component-template-node-index",
+      String(metadata.template_node_index || metadata.templateNodeIndex || 0),
+    );
+    node.setAttribute(
+      "data-component-library-version",
+      String(metadata.library_version || metadata.libraryVersion || componentLibraryVersion),
+    );
+    node.setAttribute(
+      "data-component-template-source-ref",
+      String(metadata.source_ref || metadata.sourceRef || `ui_draft.component_library.${templateId}`),
+    );
+  }
+
   function editableNodeState(node) {
+    const componentTemplate = nodeComponentTemplateMetadata(node);
     const state = {
       id: node.getAttribute("data-editable-node-id") || "",
       label: node.getAttribute("data-node-label") || "",
@@ -10420,6 +10517,9 @@ function installEditableWorkbenchShell() {
     }
     if (nodeDraftRulesTouched(node)) {
       state.rules = nodeDraftRules(node);
+    }
+    if (componentTemplate) {
+      state.component_template = componentTemplate;
     }
     return state;
   }
@@ -10462,6 +10562,10 @@ function installEditableWorkbenchShell() {
     if (Array.isArray(nodeState.rules)) {
       setNodeDraftRules(node, nodeState.rules);
     }
+    setNodeComponentTemplateMetadata(
+      node,
+      nodeState.component_template || nodeState.componentTemplate || null,
+    );
     node.style.setProperty("--node-x", nodeState.x || "50%");
     node.style.setProperty("--node-y", nodeState.y || "50%");
     node.setAttribute("aria-pressed", "false");
@@ -10511,6 +10615,10 @@ function installEditableWorkbenchShell() {
       if (Array.isArray(nodeState.rules)) {
         setNodeDraftRules(node, nodeState.rules);
       }
+      setNodeComponentTemplateMetadata(
+        node,
+        nodeState.component_template || nodeState.componentTemplate || null,
+      );
       if (typeof nodeState.x === "string") node.style.setProperty("--node-x", nodeState.x);
       if (typeof nodeState.y === "string") node.style.setProperty("--node-y", nodeState.y);
       updateNodeDisplay(node);
@@ -10528,6 +10636,12 @@ function installEditableWorkbenchShell() {
             value_type: edge.value_type ? String(edge.value_type) : undefined,
             unit: edge.unit ? String(edge.unit) : "",
             required: Boolean(edge.required),
+            source_ref: edge.source_ref ? String(edge.source_ref) : undefined,
+            component_template: (
+              edge.component_template
+              && typeof edge.component_template === "object"
+              && !Array.isArray(edge.component_template)
+            ) ? edge.component_template : null,
             hardware_binding: normalizeInterfaceBinding(
               edge.hardware_binding || edge.hardwareBinding || {},
               "edge",
@@ -10911,6 +11025,101 @@ function installEditableWorkbenchShell() {
     validateEditableGraph();
     updateEditableDraftHash();
     persistDraft();
+  }
+
+  function componentTemplateNodeState(template, nodeTemplate, index, baseX, baseY) {
+    const nodeId = nextDraftNodeId();
+    const catalogEntry = operationCatalogEntry(nodeTemplate.op || "and");
+    return {
+      id: nodeId,
+      label: nodeTemplate.label || template.label || catalogEntry.label,
+      op: catalogEntry.op,
+      ruleCount: String(nodeTemplate.rule_count || catalogEntry.rule_count || "0"),
+      evidence: "evidence_gap",
+      sourceRef: `ui_draft.component_library.${template.id}.node.${index + 1}`,
+      op_catalog_entry: catalogEntry.op,
+      hardware_binding: normalizeInterfaceBinding({}, "node", nodeId),
+      port_contract: {
+        ...portContractForCatalogNode(nodeId, catalogEntry),
+        source_ref: `ui_draft.component_library.${template.id}.port_contract.${index + 1}`,
+      },
+      component_template: {
+        template_id: template.id,
+        template_label: template.label,
+        template_node_index: index,
+        library_version: componentLibraryVersion,
+        source_ref: `ui_draft.component_library.${template.id}`,
+        candidate_state: "sandbox_candidate",
+        truth_effect: "none",
+      },
+      x: `${Math.max(8, Math.min(92, baseX + (nodeTemplate.x_offset || 0)))}%`,
+      y: `${Math.max(10, Math.min(90, baseY + (nodeTemplate.y_offset || 0)))}%`,
+      draftNode: true,
+    };
+  }
+
+  function instantiateComponentTemplate(templateId) {
+    const template = componentTemplateById(templateId);
+    if (!template) {
+      if (componentLibraryStatus) {
+        componentLibraryStatus.textContent = "Unknown template";
+      }
+      return [];
+    }
+    recordEditableHistory(`component_template_${template.id}`);
+    shell.setAttribute("data-draft-state", "derived");
+    lastComponentTemplateId = template.id;
+    const baseX = 34 + (nextDraftNodeIndex % 5) * 8;
+    const baseY = 26 + (nextDraftNodeIndex % 4) * 10;
+    const createdNodes = (template.nodes || [])
+      .map((nodeTemplate, index) => (
+        createEditableNodeElement(componentTemplateNodeState(template, nodeTemplate, index, baseX, baseY))
+      ))
+      .filter(Boolean);
+    refreshEditableNodes();
+    for (const edgeTemplate of template.edges || []) {
+      const sourceNode = createdNodes[edgeTemplate.source_index];
+      const targetNode = createdNodes[edgeTemplate.target_index];
+      const sourceId = editableNodeId(sourceNode);
+      const targetId = editableNodeId(targetNode);
+      if (!sourceId || !targetId) continue;
+      const edgeId = `edge_component_${template.id}_${sourceId}_${targetId}`;
+      draftEdges.push({
+        id: edgeId,
+        source: sourceId,
+        target: targetId,
+        source_port_id: `${sourceId}:out`,
+        target_port_id: `${targetId}:in`,
+        signal_id: `${sourceId}__to__${targetId}`,
+        value_type: normalizePortValueType(edgeTemplate.value_type || "boolean"),
+        unit: String(edgeTemplate.unit || ""),
+        required: normalizePortRequired(edgeTemplate.required),
+        source_ref: `ui_draft.component_library.${template.id}.edge`,
+        component_template: {
+          template_id: template.id,
+          library_version: componentLibraryVersion,
+          source_ref: `ui_draft.component_library.${template.id}`,
+          candidate_state: "sandbox_candidate",
+          truth_effect: "none",
+        },
+        hardware_binding: normalizeInterfaceBinding({}, "edge", edgeId),
+      });
+    }
+    refreshEditableNodes();
+    selectedNode = createdNodes[createdNodes.length - 1] || selectedNode;
+    selectedNodeIds = new Set(createdNodes.map((node) => editableNodeId(node)).filter(Boolean));
+    syncEditableNodeSelectionAttributes();
+    renderInspector();
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate component template pending";
+    if (componentLibraryStatus) {
+      componentLibraryStatus.textContent = `${template.short_label} · inserted`;
+    }
+    setTimelineState("derived");
+    renderEditableEdges();
+    validateEditableGraph();
+    updateEditableDraftHash();
+    persistDraft();
+    return createdNodes;
   }
 
   function duplicateEditableNodeFromSource(sourceNode, offsetIndex) {
@@ -12303,6 +12512,7 @@ function installEditableWorkbenchShell() {
       bindingCoverage,
     );
     const operationCatalog = buildOperationCatalogSummary();
+    const componentLibrary = buildComponentLibrarySummary();
     const ruleParameterSummary = buildRuleParameterSummary();
     const hardwarePalette = buildHardwarePaletteSummary();
     const diagnosticRepairActions = repairActionLogSnapshot();
@@ -12333,6 +12543,7 @@ function installEditableWorkbenchShell() {
       port_contract_summary: portContractSummary,
       port_compatibility_report: portCompatibilityReport,
       operation_catalog: operationCatalog,
+      component_library: componentLibrary,
       rule_parameter_summary: ruleParameterSummary,
       hardware_palette: hardwarePalette,
     };
@@ -12412,6 +12623,7 @@ function installEditableWorkbenchShell() {
       port_contract_summary: snapshot.port_contract_summary,
       port_compatibility_report: snapshot.port_compatibility_report,
       operation_catalog: snapshot.operation_catalog,
+      component_library: snapshot.component_library,
       rule_parameter_summary: snapshot.rule_parameter_summary,
       hardware_palette: snapshot.hardware_palette,
       changerequest_proof_packet: changeRequestProofPacket,
@@ -12507,6 +12719,15 @@ function installEditableWorkbenchShell() {
       throw new Error("operation_catalog must be an object when present");
     }
     if (
+      payload.component_library !== undefined
+      && (!payload.component_library || typeof payload.component_library !== "object" || Array.isArray(payload.component_library))
+    ) {
+      throw new Error("component_library must be an object when present");
+    }
+    if (payload.component_library && payload.component_library.truth_effect !== "none") {
+      throw new Error("component_library truth_effect must be none");
+    }
+    if (
       payload.rule_parameter_summary !== undefined
       && (!payload.rule_parameter_summary || typeof payload.rule_parameter_summary !== "object" || Array.isArray(payload.rule_parameter_summary))
     ) {
@@ -12581,6 +12802,8 @@ function installEditableWorkbenchShell() {
         : "";
     recordEditableHistory("import_draft");
     const importedCatalog = validated.operation_catalog || {};
+    const importedComponentLibrary = validated.component_library || {};
+    lastComponentTemplateId = String(importedComponentLibrary.last_template_id || "");
     lastInterfaceMatrixValidationReport = validated.interface_matrix_validation || null;
     if (interfaceMatrixValidationOutput) {
       interfaceMatrixValidationOutput.value = lastInterfaceMatrixValidationReport
@@ -12608,6 +12831,7 @@ function installEditableWorkbenchShell() {
         rules: Array.isArray(node.rules) ? node.rules : [],
         hardware_binding: node.hardware_binding || node.hardwareBinding || {},
         port_contract: node.port_contract || node.portContract || null,
+        component_template: node.component_template || node.componentTemplate || null,
         x: String(node.x || "50%"),
         y: String(node.y || "50%"),
         draftNode: Boolean(node.draftNode || node.draft_node || String(node.id || "").startsWith("draft_node_")),
@@ -13507,6 +13731,7 @@ function installEditableWorkbenchShell() {
       snapshot.edges || [],
     );
     const operationCatalog = snapshot.operation_catalog || buildOperationCatalogSummary();
+    const componentLibrary = snapshot.component_library || buildComponentLibrarySummary();
     const ruleParameterSummary = snapshot.rule_parameter_summary || buildRuleParameterSummary();
     const draftSnapshotManifest = buildDraftSnapshotManifestSummary();
     const changeRequestProofPacket = buildChangeRequestProofPacket(snapshot, changedModelHash);
@@ -13525,6 +13750,7 @@ function installEditableWorkbenchShell() {
       portContractSummary,
       portCompatibilityReport,
       operationCatalog,
+      componentLibrary,
       ruleParameterSummary,
       draftSnapshotManifest,
     };
@@ -13569,6 +13795,7 @@ function installEditableWorkbenchShell() {
     const portCompatibilityReport =
       modelJson.port_compatibility_report || buildPortCompatibilityReport(typedPorts, modelJson.edges || []);
     const operationCatalog = modelJson.operation_catalog || buildOperationCatalogSummary();
+    const componentLibrary = modelJson.component_library || buildComponentLibrarySummary();
     const ruleParameterSummary = modelJson.rule_parameter_summary || buildRuleParameterSummary();
     const hardwarePalette = modelJson.hardware_palette || buildHardwarePaletteSummary();
     const draftSnapshotManifest =
@@ -13612,6 +13839,7 @@ function installEditableWorkbenchShell() {
       port_contract_summary: portContractSummary,
       port_compatibility_report: portCompatibilityReport,
       operation_catalog: operationCatalog,
+      component_library: componentLibrary,
       rule_parameter_summary: ruleParameterSummary,
       hardware_palette: hardwarePalette,
       draft_snapshot_manifest: draftSnapshotManifest,
@@ -13643,6 +13871,7 @@ function installEditableWorkbenchShell() {
       port_contract_summary_checksum: checksumEvidenceArchiveField(portContractSummary),
       port_compatibility_report_checksum: checksumEvidenceArchiveField(portCompatibilityReport),
       operation_catalog_checksum: checksumEvidenceArchiveField(operationCatalog),
+      component_library_checksum: checksumEvidenceArchiveField(componentLibrary),
       rule_parameter_summary_checksum: checksumEvidenceArchiveField(ruleParameterSummary),
       hardware_palette_checksum: checksumEvidenceArchiveField(hardwarePalette),
       draft_snapshot_manifest_checksum: checksumEvidenceArchiveField(draftSnapshotManifest),
@@ -13829,6 +14058,13 @@ function installEditableWorkbenchShell() {
         draftLabel.textContent = `sandbox_candidate op catalog selected: ${selectedCatalogOp}`;
       }
       persistDraft();
+    });
+  }
+  for (const button of componentLibraryButtons) {
+    button.addEventListener("click", () => {
+      const templateId = button.getAttribute("data-component-template-id") || "";
+      instantiateComponentTemplate(templateId);
+      setEditorTool("select");
     });
   }
   if (labelInput) {
