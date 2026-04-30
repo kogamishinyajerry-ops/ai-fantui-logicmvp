@@ -5461,6 +5461,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-hardware-palette,
 .workbench-rule-parameter-editor,
 .workbench-interface-binding-editor,
+.workbench-hardware-binding-diagnostics,
 .workbench-typed-port-editor {
   margin-top: 0.7rem;
   padding-top: 0.65rem;
@@ -5574,6 +5575,71 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   font-size: 0.68rem;
   line-height: 1.38;
   overflow-wrap: anywhere;
+}
+.workbench-binding-diagnostics-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin: 0.35rem 0 0.45rem;
+}
+.workbench-binding-diagnostics-summary div {
+  padding: 0.42rem 0.5rem;
+  border: 1px solid rgba(150, 173, 190, 0.16);
+  border-radius: 8px;
+  background: rgba(4, 10, 16, 0.46);
+}
+.workbench-binding-diagnostics-summary dt {
+  color: rgba(213, 227, 237, 0.58);
+  font-size: 0.62rem;
+}
+.workbench-binding-diagnostics-summary dd {
+  margin: 0.12rem 0 0;
+  color: #eefaff;
+  font-size: 0.76rem;
+}
+.workbench-binding-diagnostics-list {
+  display: grid;
+  gap: 0.38rem;
+  max-height: 180px;
+  overflow: auto;
+}
+.workbench-binding-diagnostics-list[data-diagnostics-state="empty"] {
+  padding: 0.55rem;
+  border: 1px dashed rgba(150, 173, 190, 0.22);
+  border-radius: 8px;
+  color: rgba(213, 227, 237, 0.68);
+  font-size: 0.68rem;
+}
+.workbench-binding-diagnostics-item {
+  display: grid;
+  gap: 0.16rem;
+  padding: 0.5rem 0.55rem;
+  border: 1px solid rgba(150, 173, 190, 0.16);
+  border-radius: 8px;
+  background: rgba(4, 10, 16, 0.52);
+}
+.workbench-binding-diagnostics-item[data-severity="warning"] {
+  border-color: rgba(240, 193, 91, 0.36);
+}
+.workbench-binding-diagnostics-item[data-severity="error"] {
+  border-color: rgba(255, 135, 118, 0.42);
+}
+.workbench-binding-diagnostics-item strong {
+  color: #f5fbff;
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
+}
+.workbench-binding-diagnostics-item span,
+.workbench-binding-diagnostics-item small,
+.workbench-binding-diagnostics-item em {
+  color: rgba(213, 227, 237, 0.66);
+  font-size: 0.64rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.workbench-binding-diagnostics-item em {
+  color: rgba(253, 241, 205, 0.82);
+  font-style: normal;
 }
 .workbench-interface-apply,
 .workbench-port-apply {

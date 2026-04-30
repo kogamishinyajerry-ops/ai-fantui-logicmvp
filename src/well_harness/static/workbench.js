@@ -7618,6 +7618,10 @@ function installEditableWorkbenchShell() {
   const interfaceBindingStatus = document.getElementById("workbench-interface-binding-status");
   const interfaceBindingQuality = document.getElementById("workbench-interface-binding-quality");
   const interfaceBindingCoverage = document.getElementById("workbench-interface-binding-coverage");
+  const hardwareBindingDiagnosticsStatus = document.getElementById("workbench-hardware-binding-diagnostics-status");
+  const hardwareBindingDiagnosticsCount = document.getElementById("workbench-hardware-binding-diagnostics-count");
+  const hardwareBindingDiagnosticsGapCount = document.getElementById("workbench-hardware-binding-diagnostics-gap-count");
+  const hardwareBindingDiagnosticsList = document.getElementById("workbench-hardware-binding-diagnostics-list");
   const typedPortOwner = document.getElementById("workbench-typed-port-owner");
   const portInputSignalInput = document.getElementById("workbench-port-input-signal");
   const portOutputSignalInput = document.getElementById("workbench-port-output-signal");
@@ -7906,6 +7910,186 @@ function installEditableWorkbenchShell() {
     const nodeBindings = nodes.map((node) => nodeInterfaceBinding(node));
     const edgeBindings = draftEdges.map((edge) => edgeInterfaceBinding(edge));
     return [...nodeBindings, ...edgeBindings].filter(meaningfulInterfaceBinding);
+  }
+
+  function hardwareBindingOwnerKey(binding) {
+    if (!binding || typeof binding !== "object") return "unknown:unknown";
+    return `${binding.owner_kind || "unknown"}:${binding.owner_id || "unknown"}`;
+  }
+
+  function hardwareBindingEvidenceGapFields(binding) {
+    const source = binding && typeof binding === "object" ? binding : {};
+    const fields = interfaceBindingRequiredFields
+      .filter((fieldName) => isInterfaceEvidenceGap(source[fieldName]));
+    if (source.evidence_status !== "ui_draft") {
+      fields.push("evidence_status");
+    }
+    return fields;
+  }
+
+  function hardwareBindingInterfaceKey(binding) {
+    if (!binding || typeof binding !== "object") return "";
+    const hardwareId = normalizedInterfaceField(binding.hardware_id);
+    const connector = normalizedInterfaceField(binding.connector);
+    const portLocal = normalizedInterfaceField(binding.port_local);
+    const portPeer = normalizedInterfaceField(binding.port_peer);
+    if (
+      isInterfaceEvidenceGap(hardwareId)
+      || isInterfaceEvidenceGap(connector)
+      || isInterfaceEvidenceGap(portLocal)
+      || isInterfaceEvidenceGap(portPeer)
+    ) {
+      return "";
+    }
+    return [hardwareId, connector, portLocal, portPeer].join("|");
+  }
+
+  function pushHardwareBindingDiagnosticIssue(issues, issue) {
+    issues.push({
+      severity: "warning",
+      evidence_refs: [],
+      truth_effect: "none",
+      ...issue,
+    });
+  }
+
+  function buildHardwareBindingDiagnosticsReport(bindings) {
+    const rows = Array.isArray(bindings) ? bindings : [];
+    const coverage = buildInterfaceBindingCoverageSummary(rows);
+    const issues = [];
+    const duplicateOwnerBindings = [];
+    const reusedInterfaceKeys = [];
+    const ownerGroups = new Map();
+    const interfaceKeyGroups = new Map();
+    let evidenceGapFieldCount = 0;
+
+    for (const binding of rows) {
+      const ownerKey = hardwareBindingOwnerKey(binding);
+      if (!ownerGroups.has(ownerKey)) ownerGroups.set(ownerKey, []);
+      ownerGroups.get(ownerKey).push(binding);
+
+      const interfaceKey = hardwareBindingInterfaceKey(binding);
+      if (interfaceKey) {
+        if (!interfaceKeyGroups.has(interfaceKey)) interfaceKeyGroups.set(interfaceKey, []);
+        interfaceKeyGroups.get(interfaceKey).push(binding);
+      }
+
+      const gapFields = hardwareBindingEvidenceGapFields(binding);
+      evidenceGapFieldCount += gapFields.length;
+      if (gapFields.length) {
+        pushHardwareBindingDiagnosticIssue(issues, {
+          rule_id: "evidence_gap_density",
+          target: ownerKey,
+          message: `${ownerKey} has ${gapFields.length} evidence_gap field(s): ${gapFields.join(", ")}`,
+          suggestion: "Record missing hardware/interface evidence before treating this candidate as review-ready.",
+          evidence_refs: [binding.source_ref || "ui_draft.interface_binding"],
+        });
+      }
+    }
+
+    for (const [ownerKey, grouped] of ownerGroups.entries()) {
+      if (grouped.length <= 1) continue;
+      const entry = {
+        owner_key: ownerKey,
+        binding_ids: grouped.map((binding) => binding.id || "unknown"),
+        count: grouped.length,
+        truth_effect: "none",
+      };
+      duplicateOwnerBindings.push(entry);
+      pushHardwareBindingDiagnosticIssue(issues, {
+        rule_id: "duplicate_ownership",
+        severity: "error",
+        target: ownerKey,
+        message: `Duplicate owner binding detected for ${ownerKey}.`,
+        suggestion: "Keep one sandbox binding per node/edge owner or split the owner into separate interface objects.",
+        evidence_refs: grouped.map((binding) => binding.source_ref || binding.id || ownerKey),
+      });
+    }
+
+    for (const [interfaceKey, grouped] of interfaceKeyGroups.entries()) {
+      const ownerKeys = grouped.map((binding) => hardwareBindingOwnerKey(binding));
+      const uniqueOwners = Array.from(new Set(ownerKeys));
+      if (uniqueOwners.length <= 1) continue;
+      const [hardwareId, connector, portLocal, portPeer] = interfaceKey.split("|");
+      const entry = {
+        interface_key: interfaceKey,
+        hardware_id: hardwareId,
+        connector,
+        port_local: portLocal,
+        port_peer: portPeer,
+        owners: uniqueOwners,
+        count: grouped.length,
+        truth_effect: "none",
+      };
+      reusedInterfaceKeys.push(entry);
+      pushHardwareBindingDiagnosticIssue(issues, {
+        rule_id: "connector_port_reuse",
+        severity: "warning",
+        target: interfaceKey,
+        message: `Connector/port reuse detected on ${hardwareId} ${connector} ${portLocal}->${portPeer}.`,
+        suggestion: "Verify whether the shared connector/port is intentional or assign a distinct interface key.",
+        evidence_refs: grouped.map((binding) => binding.source_ref || hardwareBindingOwnerKey(binding)),
+      });
+    }
+
+    const totalEvidenceFields = rows.length * (interfaceBindingRequiredFields.length + 1);
+    const evidenceGapDensity = totalEvidenceFields
+      ? Number((evidenceGapFieldCount / totalEvidenceFields).toFixed(4))
+      : 0;
+    return {
+      kind: "well-harness-workbench-hardware-binding-diagnostics",
+      version: 1,
+      status: issues.some((issue) => issue.severity === "error")
+        ? "fail"
+        : (issues.length ? "warn" : "pass"),
+      binding_count: rows.length,
+      complete_count: coverage.complete,
+      partial_count: coverage.partial,
+      missing_count: coverage.missing,
+      evidence_gap_field_count: evidenceGapFieldCount,
+      evidence_gap_density: evidenceGapDensity,
+      duplicate_owner_bindings: duplicateOwnerBindings,
+      reused_interface_keys: reusedInterfaceKeys,
+      issue_count: issues.length,
+      issues,
+      truth_effect: "none",
+    };
+  }
+
+  function renderHardwareBindingDiagnostics(report) {
+    const diagnostics = report || buildHardwareBindingDiagnosticsReport(collectWorkbenchHardwareBindings());
+    if (hardwareBindingDiagnosticsStatus) {
+      hardwareBindingDiagnosticsStatus.textContent = diagnostics.status;
+    }
+    if (hardwareBindingDiagnosticsCount) {
+      hardwareBindingDiagnosticsCount.textContent = String(diagnostics.binding_count || 0);
+    }
+    if (hardwareBindingDiagnosticsGapCount) {
+      hardwareBindingDiagnosticsGapCount.textContent = String(diagnostics.evidence_gap_field_count || 0);
+    }
+    if (!hardwareBindingDiagnosticsList) return diagnostics;
+    const issues = Array.isArray(diagnostics.issues) ? diagnostics.issues : [];
+    if (!issues.length) {
+      hardwareBindingDiagnosticsList.setAttribute("data-diagnostics-state", "empty");
+      hardwareBindingDiagnosticsList.textContent =
+        diagnostics.binding_count
+          ? "No hardware binding conflicts detected. Truth effect: none."
+          : "No sandbox hardware bindings to diagnose.";
+      return diagnostics;
+    }
+    hardwareBindingDiagnosticsList.setAttribute("data-diagnostics-state", "ready");
+    hardwareBindingDiagnosticsList.innerHTML = issues.slice(0, 8).map((issue) => [
+      '<article',
+      'class="workbench-binding-diagnostics-item"',
+      `data-severity="${inspectorText(issue.severity || "warning")}"`,
+      '>',
+      `<strong>${inspectorText(issue.rule_id || "hardware_binding_diagnostic")}</strong>`,
+      `<span>${inspectorText(issue.message || "")}</span>`,
+      `<small>${inspectorText(issue.target || "workbench")}</small>`,
+      `<em>${inspectorText(issue.suggestion || "Review sandbox evidence before handoff.")}</em>`,
+      '</article>',
+    ].join(" ")).join("");
+    return diagnostics;
   }
 
   function collectWorkbenchInterfacePorts() {
@@ -9004,11 +9188,23 @@ function installEditableWorkbenchShell() {
     if (!edgeSvg) return;
     const paths = Array.from(edgeSvg.querySelectorAll("[data-editable-edge-id]"));
     for (const path of paths) {
-      path.addEventListener("click", () => selectEditableEdge(path.getAttribute("data-editable-edge-id") || ""));
+      path.addEventListener("click", () => {
+        const edgeIndex = Number.parseInt(path.getAttribute("data-editable-edge-index") || "-1", 10);
+        if (edgeIndex >= 0) {
+          selectEditableEdgeByIndex(edgeIndex);
+        } else {
+          selectEditableEdge(path.getAttribute("data-editable-edge-id") || "");
+        }
+      });
       path.addEventListener("keydown", (event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
-          selectEditableEdge(path.getAttribute("data-editable-edge-id") || "");
+          const edgeIndex = Number.parseInt(path.getAttribute("data-editable-edge-index") || "-1", 10);
+          if (edgeIndex >= 0) {
+            selectEditableEdgeByIndex(edgeIndex);
+          } else {
+            selectEditableEdge(path.getAttribute("data-editable-edge-id") || "");
+          }
         }
       });
     }
@@ -9124,7 +9320,8 @@ function installEditableWorkbenchShell() {
     if (!edgeSvg) return;
     refreshEditableNodes();
     const paths = [];
-    for (const edge of draftEdges) {
+    for (let index = 0; index < draftEdges.length; index += 1) {
+      const edge = draftEdges[index];
       const sourceNode = nodes.find((node) => node.getAttribute("data-editable-node-id") === edge.source);
       const targetNode = nodes.find((node) => node.getAttribute("data-editable-node-id") === edge.target);
       const source = editableNodePosition(sourceNode);
@@ -9132,6 +9329,7 @@ function installEditableWorkbenchShell() {
       const midX = (source.x + target.x) / 2;
       paths.push([
         `<path data-editable-edge-id="${inspectorText(edge.id)}"`,
+        `data-editable-edge-index="${index}"`,
         `data-edge-source="${inspectorText(edge.source)}"`,
         `data-edge-target="${inspectorText(edge.target)}"`,
         edgePathMetadata(edge),
@@ -9142,9 +9340,9 @@ function installEditableWorkbenchShell() {
       ].join(" "));
     }
     edgeSvg.innerHTML = paths.join("");
-    const selectedEdgeId = selectedEdge && selectedEdge.id;
-    if (selectedEdgeId) {
-      const path = edgeSvg.querySelector(`[data-editable-edge-id="${CSS.escape(selectedEdgeId)}"]`);
+    const selectedIndex = selectedEdge ? draftEdges.indexOf(selectedEdge) : -1;
+    if (selectedIndex >= 0) {
+      const path = edgeSvg.querySelector(`[data-editable-edge-index="${selectedIndex}"]`);
       if (path) path.setAttribute("aria-pressed", "true");
     }
     syncEditableNodeSelectionAttributes();
@@ -9517,8 +9715,8 @@ function installEditableWorkbenchShell() {
 
   function disconnectSelectedEditableEdge() {
     if (!draftEdges.length) return;
-    if (selectedEdge && selectedEdge.id) {
-      const selectedIndex = draftEdges.findIndex((edge) => edge.id === selectedEdge.id);
+    if (selectedEdge) {
+      const selectedIndex = draftEdges.indexOf(selectedEdge);
       if (selectedIndex >= 0) {
         recordEditableHistory("disconnect_selected_edge");
         draftEdges.splice(selectedIndex, 1);
@@ -10417,6 +10615,7 @@ function installEditableWorkbenchShell() {
     ].join("");
     renderRuleParameterEditor();
     renderInterfaceBindingEditor();
+    renderHardwareBindingDiagnostics();
     renderTypedPortEditor();
   }
 
@@ -10436,11 +10635,12 @@ function installEditableWorkbenchShell() {
     renderInspectorEvidenceDetails(payload);
     renderRuleParameterEditor();
     renderInterfaceBindingEditor();
+    renderHardwareBindingDiagnostics();
     renderTypedPortEditor();
   }
 
-  function selectEditableEdge(edgeId) {
-    selectedEdge = draftEdges.find((edge) => edge.id === edgeId) || null;
+  function selectEditableEdgeByIndex(edgeIndex) {
+    selectedEdge = Number.isInteger(edgeIndex) ? draftEdges[edgeIndex] || null : null;
     if (!selectedEdge) return;
     selectedNode = null;
     selectedNodeIds = new Set();
@@ -10452,7 +10652,7 @@ function installEditableWorkbenchShell() {
       for (const path of Array.from(edgeSvg.querySelectorAll("[data-editable-edge-id]"))) {
         path.setAttribute(
           "aria-pressed",
-          path.getAttribute("data-editable-edge-id") === selectedEdge.id ? "true" : "false",
+          Number.parseInt(path.getAttribute("data-editable-edge-index") || "-1", 10) === edgeIndex ? "true" : "false",
         );
       }
     }
@@ -10464,6 +10664,11 @@ function installEditableWorkbenchShell() {
     }
     updateEditableDraftHash();
     persistDraft();
+  }
+
+  function selectEditableEdge(edgeId) {
+    const edgeIndex = draftEdges.findIndex((edge) => edge.id === edgeId);
+    if (edgeIndex >= 0) selectEditableEdgeByIndex(edgeIndex);
   }
 
   function selectNode(node, options) {
@@ -10569,6 +10774,7 @@ function installEditableWorkbenchShell() {
     const selected = selectedNodePayload() || {};
     const hardwareBindings = collectWorkbenchHardwareBindings();
     const bindingCoverage = buildInterfaceBindingCoverageSummary(hardwareBindings);
+    const hardwareBindingDiagnostics = buildHardwareBindingDiagnosticsReport(hardwareBindings);
     const typedPorts = collectWorkbenchTypedPorts();
     const interfacePorts = collectWorkbenchInterfacePorts();
     const portContractSummary = buildPortContractSummary(typedPorts, draftEdges);
@@ -10595,6 +10801,7 @@ function installEditableWorkbenchShell() {
       })),
       hardware_bindings: hardwareBindings,
       binding_coverage: bindingCoverage,
+      hardware_binding_diagnostics: hardwareBindingDiagnostics,
       port_contract_summary: portContractSummary,
       port_compatibility_report: portCompatibilityReport,
       operation_catalog: operationCatalog,
@@ -10667,6 +10874,7 @@ function installEditableWorkbenchShell() {
       edges: snapshot.edges,
       hardware_bindings: snapshot.hardware_bindings,
       binding_coverage: snapshot.binding_coverage,
+      hardware_binding_diagnostics: snapshot.hardware_binding_diagnostics,
       port_contract_summary: snapshot.port_contract_summary,
       port_compatibility_report: snapshot.port_compatibility_report,
       operation_catalog: snapshot.operation_catalog,
@@ -10710,6 +10918,12 @@ function installEditableWorkbenchShell() {
     }
     if (payload.hardware_bindings !== undefined && !Array.isArray(payload.hardware_bindings)) {
       throw new Error("hardware_bindings must be an array when present");
+    }
+    if (
+      payload.hardware_binding_diagnostics !== undefined
+      && (!payload.hardware_binding_diagnostics || typeof payload.hardware_binding_diagnostics !== "object" || Array.isArray(payload.hardware_binding_diagnostics))
+    ) {
+      throw new Error("hardware_binding_diagnostics must be an object when present");
     }
     if (payload.typed_ports !== undefined && !Array.isArray(payload.typed_ports)) {
       throw new Error("typed_ports must be an array when present");
@@ -10995,6 +11209,8 @@ function installEditableWorkbenchShell() {
     const node = snapshot.selected_node || {};
     const hardwareBindings = snapshot.hardware_bindings || [];
     const bindingCoverage = snapshot.binding_coverage || buildInterfaceBindingCoverageSummary(hardwareBindings);
+    const hardwareBindingDiagnostics = snapshot.hardware_binding_diagnostics
+      || buildHardwareBindingDiagnosticsReport(hardwareBindings);
     const portContractSummary = snapshot.port_contract_summary || buildPortContractSummary(
       snapshot.typed_ports || [],
       snapshot.edges || [],
@@ -11021,6 +11237,8 @@ function installEditableWorkbenchShell() {
       `${ruleParameterSummary.total_rules} sandbox rules / touched=${(ruleParameterSummary.touched_nodes || []).join(",") || "none"}`;
     const draftSnapshotText =
       `${draftSnapshotManifest.snapshot_count} saved snapshots / active=${draftSnapshotManifest.active_snapshot_id || "none"}`;
+    const bindingDiagnosticsText =
+      `${hardwareBindingDiagnostics.status} / issues=${hardwareBindingDiagnostics.issue_count} / gaps=${hardwareBindingDiagnostics.evidence_gap_field_count}`;
     const linearIssueBody = [
       "## Outcome",
       `Review sandbox candidate edit for ${node.id || "selected node"} against the certified thrust-reverser baseline.`,
@@ -11043,6 +11261,7 @@ function installEditableWorkbenchShell() {
       "- Sandbox baseline diff report.",
       "- Hardware/interface binding draft evidence.",
       "- Binding coverage summary.",
+      "- Hardware binding diagnostics report.",
       "- Typed port contract summary.",
       "- Port compatibility report.",
       "- Operation catalog provenance.",
@@ -11061,6 +11280,7 @@ function installEditableWorkbenchShell() {
       `- Selected scenario: ${selectedWorkbenchScenarioId()}`,
       `- Hardware/interface bindings: ${bindingSummary}`,
       `- Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
+      `- Hardware binding diagnostics: ${bindingDiagnosticsText}`,
       `- Port contract summary: ${portSummary}`,
       `- Port compatibility: ${compatibilitySummary}`,
       `- Operation catalog: ${operationCatalogSummary}`,
@@ -11081,6 +11301,7 @@ function installEditableWorkbenchShell() {
       `Latest sandbox verdict: ${(lastSandboxDiff && lastSandboxDiff.verdict) || "not_run"}`,
       `Hardware/interface bindings: ${bindingSummary}`,
       `Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
+      `Hardware binding diagnostics: ${bindingDiagnosticsText}`,
       `Port contract summary: ${portSummary}`,
       `Port compatibility: ${compatibilitySummary}`,
       `Operation catalog: ${operationCatalogSummary}`,
@@ -11095,6 +11316,7 @@ function installEditableWorkbenchShell() {
       prProofPacket,
       gateClaims: buildWorkbenchGateClaims(),
       knownBlockers: buildWorkbenchKnownBlockers(),
+      hardwareBindingDiagnostics,
       portContractSummary,
       portCompatibilityReport,
       operationCatalog,
@@ -11123,6 +11345,8 @@ function installEditableWorkbenchShell() {
     const modelJson = buildEditableDraftExport();
     const hardwareBindings = collectWorkbenchHardwareBindings();
     const bindingCoverage = buildInterfaceBindingCoverageSummary(hardwareBindings);
+    const hardwareBindingDiagnostics =
+      modelJson.hardware_binding_diagnostics || buildHardwareBindingDiagnosticsReport(hardwareBindings);
     const typedPorts = modelJson.typed_ports || [];
     const portContractSummary =
       modelJson.port_contract_summary || buildPortContractSummary(typedPorts, modelJson.edges || []);
@@ -11161,6 +11385,7 @@ function installEditableWorkbenchShell() {
       scenario_metadata: scenarioMetadata,
       hardware_bindings: hardwareBindings,
       binding_coverage: bindingCoverage,
+      hardware_binding_diagnostics: hardwareBindingDiagnostics,
       typed_ports: typedPorts,
       port_contract_summary: portContractSummary,
       port_compatibility_report: portCompatibilityReport,
@@ -11181,6 +11406,7 @@ function installEditableWorkbenchShell() {
       pr_proof_packet_checksum: checksumEvidenceArchiveField(handoffPacket.prProofPacket),
       hardware_bindings_checksum: checksumEvidenceArchiveField(hardwareBindings),
       binding_coverage_checksum: checksumEvidenceArchiveField(bindingCoverage),
+      hardware_binding_diagnostics_checksum: checksumEvidenceArchiveField(hardwareBindingDiagnostics),
       typed_ports_checksum: checksumEvidenceArchiveField(typedPorts),
       port_contract_summary_checksum: checksumEvidenceArchiveField(portContractSummary),
       port_compatibility_report_checksum: checksumEvidenceArchiveField(portCompatibilityReport),
