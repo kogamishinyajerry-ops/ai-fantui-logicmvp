@@ -591,6 +591,71 @@ def test_workbench_typed_port_contract_round_trips_through_export_import_and_arc
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_interface_matrix_exports_node_and_edge_design_rows(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.fill("#workbench-interface-hardware-id", "TR-LRU-MATRIX-A")
+    page.fill("#workbench-interface-cable", "CBL-MATRIX-A")
+    page.fill("#workbench-interface-connector", "J-MATRIX-A")
+    page.fill("#workbench-interface-port-local", "logic1:out")
+    page.fill("#workbench-interface-port-peer", "TR-LRU-MATRIX-A:J-MATRIX-A")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+
+    page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
+    page.fill("#workbench-interface-hardware-id", "TR-LRU-MATRIX-B")
+    page.fill("#workbench-interface-cable", "CBL-MATRIX-B")
+    page.fill("#workbench-interface-connector", "J-MATRIX-B")
+    page.fill("#workbench-interface-port-local", "logic1:out")
+    page.fill("#workbench-interface-port-peer", "logic2:in:ui_edge:logic1")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+
+    page.click("#workbench-export-interface-matrix-btn")
+    matrix = json.loads(page.locator("#workbench-interface-matrix-output").input_value())
+    rows = matrix["rows"]
+    node_row = next(row for row in rows if row["owner_kind"] == "node" and row["owner_id"] == "logic1")
+    edge_row = next(row for row in rows if row["owner_kind"] == "edge" and row["owner_id"] == "edge_logic1_logic2")
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert matrix["kind"] == "well-harness-workbench-interface-matrix"
+    assert matrix["row_count"] >= 2
+    assert matrix["truth_effect"] == "none"
+    assert node_row["hardware_id"] == "TR-LRU-MATRIX-A"
+    assert node_row["cable"] == "CBL-MATRIX-A"
+    assert node_row["connector"] == "J-MATRIX-A"
+    assert node_row["binding_quality"] == "complete"
+    assert node_row["local_typed_port"]["port_id"] == "logic1:out"
+    assert node_row["local_typed_port"]["truth_effect"] == "none"
+    assert edge_row["hardware_id"] == "TR-LRU-MATRIX-B"
+    assert edge_row["port_local"] == "logic1:out"
+    assert edge_row["port_peer"] == "logic2:in:ui_edge:logic1"
+    assert edge_row["binding_quality"] == "complete"
+    assert edge_row["peer_typed_port"]["port_id"] == "logic2:in:ui_edge:logic1"
+    assert "Exported" in page.locator("#workbench-interface-matrix-status").inner_text()
+
+    page.click("#workbench-generate-handoff-btn")
+    assert "Interface matrix:" in page.locator("#workbench-pr-proof-output").input_value()
+    assert "Interface matrix:" in page.locator("#workbench-linear-handoff-output").input_value()
+
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert draft["interface_matrix"]["row_count"] == matrix["row_count"]
+    assert draft["interface_matrix"]["truth_effect"] == "none"
+    assert draft["changerequest_proof_packet"]["interface_matrix_summary"]["row_count"] == matrix["row_count"]
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["interface_matrix"]["row_count"] == matrix["row_count"]
+    assert archive["interface_matrix"]["truth_effect"] == "none"
+    assert archive["changerequest_proof_packet"]["interface_matrix_summary"]["row_count"] == matrix["row_count"]
+    assert archive["checksums"]["interface_matrix_checksum"]
+    assert archive["red_line_metadata"]["truth_level_impact"] == "none"
+
+
 def test_workbench_operation_catalog_adds_typed_sandbox_node(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
