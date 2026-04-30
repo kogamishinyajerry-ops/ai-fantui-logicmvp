@@ -26,7 +26,8 @@ def test_duplicate_and_keyboard_shortcuts_are_sandbox_only() -> None:
     assert 'key === "z"' in js
     assert 'key === "y"' in js
     assert 'event.key === "Delete"' in js
-    assert "recordEditableHistory(\"duplicate_node\")" in js
+    assert "recordEditableHistory(" in js
+    assert "duplicate_node" in js
     assert "ui_draft.duplicate" in js
     assert "controller_truth_modified: false" in js
     assert "api.linear.app" not in js

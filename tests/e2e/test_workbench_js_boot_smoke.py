@@ -605,3 +605,57 @@ def test_workbench_duplicate_keyboard_shortcuts_edit_sandbox_nodes(demo_server, 
         "draft_node_1"
     ]
     assert deleted["truth_level_impact"] == "none"
+
+
+def test_workbench_multi_select_batch_duplicate_delete_and_undo(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-op-catalog-op="compare"]')
+    page.click('[data-editor-tool="node"]')
+    page.click('[data-editor-tool="node"]')
+    page.locator('[data-editable-node-id="draft_node_1"]').click(modifiers=["Shift"])
+    assert page.locator('[data-editable-node-id="draft_node_1"]').get_attribute("data-multi-selected") == "true"
+    assert page.locator('[data-editable-node-id="draft_node_2"]').get_attribute("data-multi-selected") == "true"
+
+    page.keyboard.press("Control+D")
+    page.click("#workbench-export-draft-btn")
+    duplicated = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    draft_ids = [node["id"] for node in duplicated["nodes"] if node["id"].startswith("draft_node_")]
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert draft_ids == ["draft_node_1", "draft_node_2", "draft_node_3", "draft_node_4"]
+    assert duplicated["selected_node_ids"] == ["draft_node_3", "draft_node_4"]
+    assert all(
+        node["sourceRef"].startswith("ui_draft.duplicate.")
+        for node in duplicated["nodes"]
+        if node["id"] in {"draft_node_3", "draft_node_4"}
+    )
+
+    page.keyboard.press("Delete")
+    page.click("#workbench-export-draft-btn")
+    removed = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert [node["id"] for node in removed["nodes"] if node["id"].startswith("draft_node_")] == [
+        "draft_node_1",
+        "draft_node_2",
+    ]
+
+    page.keyboard.press("Control+Z")
+    page.click("#workbench-export-draft-btn")
+    restored = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert [node["id"] for node in restored["nodes"] if node["id"].startswith("draft_node_")] == [
+        "draft_node_1",
+        "draft_node_2",
+        "draft_node_3",
+        "draft_node_4",
+    ]
+    assert restored["truth_level_impact"] == "none"
