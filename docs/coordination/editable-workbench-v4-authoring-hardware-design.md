@@ -20,7 +20,7 @@ controlled ChangeRequest handoff.
 - JER-206: Component library and reusable subsystem templates v1 (Done)
 - JER-207: Group/subsystem node editor v1 (Done)
 - JER-208: Hardware interface design model v1 (Done)
-- JER-209: Connector/pin map editor v1
+- JER-209: Connector/pin map editor v1 (Done)
 - JER-210: Hardware evidence inspector v2
 - JER-211: Scenario/debug timeline linked to selected graph elements v1
 - JER-212: Candidate-to-baseline diff review workflow v2
@@ -131,6 +131,23 @@ The slice remains sandbox-only:
   markers;
 - no UI, API, controller, adapter, frozen YAML, or C919 reference packet changes
   are introduced by this issue.
+
+## JER-209 Closure Note
+
+JER-209 delivers the first visible connector/pin authoring slice. The
+workbench right inspector now has a Connector / Pin Map section that exports
+rows from current sandbox hardware bindings, lets an engineer fill pin-level
+metadata, applies those rows back to existing node/edge owners, and carries the
+map through draft import/export and evidence archive checksums.
+
+The slice remains sandbox-only:
+
+- connector/pin rows are local draft evidence with `truth_effect: none`;
+- missing connector, port, or pin fields stay explicit `evidence_gap` values;
+- applying a map updates only existing sandbox node/edge metadata and skips
+  missing owners;
+- no backend API, controller, adapter, frozen YAML, C919 packet, truth-level,
+  DAL, or PSSA behavior is changed.
 
 ## JER-205 Sequencing Contract
 

@@ -5540,6 +5540,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-subsystem-editor,
 .workbench-rule-parameter-editor,
 .workbench-interface-binding-editor,
+.workbench-connector-pin-map-editor,
 .workbench-hardware-binding-diagnostics,
 .workbench-typed-port-editor {
   margin-top: 0.7rem;
@@ -5639,6 +5640,13 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-interface-binding-grid .workbench-inspector-field,
 .workbench-typed-port-grid .workbench-inspector-field {
   margin-bottom: 0;
+}
+.workbench-connector-pin-map-editor .workbench-handoff-output {
+  margin-top: 0.55rem;
+}
+.workbench-connector-pin-map-editor textarea {
+  min-height: 9rem;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 .workbench-port-required-field input {
   width: auto;

@@ -924,6 +924,40 @@
                 </p>
               </section>
               <section
+                id="workbench-connector-pin-map-editor"
+                class="workbench-connector-pin-map-editor"
+                aria-labelledby="workbench-connector-pin-map-title"
+              >
+                <div class="workbench-inspector-header">
+                  <span id="workbench-connector-pin-map-title">Connector / Pin Map</span>
+                  <strong>sandbox rows</strong>
+                </div>
+                <button
+                  id="workbench-export-connector-pin-map-btn"
+                  type="button"
+                  class="workbench-editable-primary"
+                >
+                  Export pin map
+                </button>
+                <button
+                  id="workbench-apply-connector-pin-map-btn"
+                  type="button"
+                  class="workbench-editable-primary"
+                >
+                  Apply pin map
+                </button>
+                <label class="workbench-handoff-output" for="workbench-connector-pin-map-output">
+                  <span>Connector and pin rows</span>
+                  <textarea
+                    id="workbench-connector-pin-map-output"
+                    rows="6"
+                  ></textarea>
+                </label>
+                <p id="workbench-connector-pin-map-status" class="workbench-handoff-status">
+                  Connector and pin metadata is local sandbox evidence only. Truth effect: none.
+                </p>
+              </section>
+              <section
                 id="workbench-hardware-binding-diagnostics"
                 class="workbench-hardware-binding-diagnostics"
                 aria-labelledby="workbench-hardware-binding-diagnostics-title"

@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-208 hardware interface model done
+status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-209 connector/pin map editor done
 last_updated: "2026-05-01T00:00:00.000+08:00"
 last_activity: 2026-05-01
 progress:
@@ -10,7 +10,7 @@ progress:
   completed_phases: 43
   total_plans: 2
   completed_plans: 1
-  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates. JER-207 adds sandbox-only subsystem group/rename/ungroup metadata. JER-208 adds sandbox-only hardware interface design schema/loader/validator/hash evidence. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates. JER-207 adds sandbox-only subsystem group/rename/ungroup metadata. JER-208 adds sandbox-only hardware interface design schema/loader/validator/hash evidence. JER-209 adds a connector/pin map editor, draft round-trip, and archive checksum. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
@@ -19,10 +19,10 @@ Last activity: 2026-05-01
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
-**Current position**: JER-204 through JER-208 are merged or ready to merge on
-the v4 line. JER-208 is the first hardware/interface-design foundation slice:
-the repo now has a sandbox-only schema, loader, validator, canonical hash, and
-typed model for candidate LRU/cable/connector/port/pin/binding evidence.
+**Current position**: JER-204 through JER-209 are merged or ready to merge on
+the v4 line. JER-209 is the first visible connector/pin authoring slice:
+`/workbench` can export, edit, apply, import, and archive sandbox connector/pin
+rows tied to existing node/edge hardware bindings.
 
 **Linear control plane**:
 
@@ -34,7 +34,8 @@ typed model for candidate LRU/cable/connector/port/pin/binding evidence.
   evidence.
 - JER-207 is Done after adding subsystem group/rename/ungroup evidence.
 - JER-208 is Done after adding the hardware interface design model foundation.
-- JER-209 through JER-213 remain seeded as v4 backlog issues.
+- JER-209 is Done after adding connector/pin map editor evidence.
+- JER-210 through JER-213 remain seeded as v4 backlog issues.
 
 **Runtime v3 closure summary**:
 
@@ -93,6 +94,21 @@ handoff packet.
   rejection, deterministic canonical hashing, and non-certifying boundaries.
 - No UI, API, controller truth, adapter, or hardware YAML behavior changes are
   introduced by this slice.
+
+**JER-209 connector/pin map editor closure**:
+
+- The right inspector exposes a Connector / Pin Map section with export and
+  apply controls for sandbox rows.
+- Rows are derived from existing node/edge hardware bindings and carry owner,
+  hardware, cable, connector, port, pin, signal, evidence, source, and
+  `truth_effect: none` metadata.
+- Draft export/import and evidence archive payloads include
+  `connector_pin_map` with checksum coverage.
+- Missing connector/pin values remain explicit `evidence_gap` fields; applying
+  a map updates only existing sandbox node/edge bindings and skips missing
+  owners.
+- No backend API, controller truth, adapter, hardware YAML, C919 packet,
+  truth-level, DAL, or PSSA behavior changes are introduced by this slice.
 
 **Hard boundaries**:
 

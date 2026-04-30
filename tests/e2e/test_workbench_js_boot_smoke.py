@@ -352,6 +352,63 @@ def test_workbench_interface_binding_round_trips_through_export_import_and_archi
     assert archive["checksums"]["binding_coverage_checksum"]
 
 
+def test_workbench_connector_pin_map_applies_round_trips_and_archives(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.fill("#workbench-interface-hardware-id", "TR-LRU-PIN")
+    page.fill("#workbench-interface-cable", "CBL-TR-PIN")
+    page.fill("#workbench-interface-connector", "J-PIN")
+    page.fill("#workbench-interface-port-local", "logic1:out")
+    page.fill("#workbench-interface-port-peer", "TR-LRU-PIN:J-PIN")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+
+    page.click("#workbench-export-connector-pin-map-btn")
+    pin_map = json.loads(page.locator("#workbench-connector-pin-map-output").input_value())
+    assert pin_map["kind"] == "well-harness-workbench-connector-pin-map"
+    assert pin_map["truth_effect"] == "none"
+    row = pin_map["rows"][0]
+    assert row["owner_kind"] == "node"
+    assert row["owner_id"] == "logic1"
+    assert row["pin_local"] == "evidence_gap"
+    assert row["pin_peer"] == "evidence_gap"
+    row["pin_local"] = "A1"
+    row["pin_peer"] = "B7"
+    row["source_ref"] = "ui_draft.connector_pin_map.test"
+    page.fill("#workbench-connector-pin-map-output", json.dumps(pin_map))
+    page.click("#workbench-apply-connector-pin-map-btn")
+    assert "Applied 1 connector/pin row" in page.locator("#workbench-connector-pin-map-status").inner_text()
+
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert draft["connector_pin_map"]["rows"][0]["pin_local"] == "A1"
+    assert draft["connector_pin_map"]["rows"][0]["pin_peer"] == "B7"
+    assert draft["hardware_bindings"][0]["pin_local"] == "A1"
+    assert draft["hardware_bindings"][0]["pin_peer"] == "B7"
+    logic1 = next(node for node in draft["nodes"] if node["id"] == "logic1")
+    assert logic1["hardware_binding"]["pin_local"] == "A1"
+    assert logic1["hardware_binding"]["pin_peer"] == "B7"
+
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.fill("#workbench-draft-json-buffer", json.dumps(draft))
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-connector-pin-map-btn")
+    imported_map = json.loads(page.locator("#workbench-connector-pin-map-output").input_value())
+    assert imported_map["rows"][0]["pin_local"] == "A1"
+    assert imported_map["rows"][0]["pin_peer"] == "B7"
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert errors == [], f"page JS errors: {errors}"
+    assert archive["connector_pin_map"]["rows"][0]["pin_local"] == "A1"
+    assert archive["connector_pin_map"]["truth_effect"] == "none"
+    assert archive["checksums"]["connector_pin_map_checksum"]
+
+
 def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_handoff_archive(
     demo_server: str, browser: Any
 ) -> None:
