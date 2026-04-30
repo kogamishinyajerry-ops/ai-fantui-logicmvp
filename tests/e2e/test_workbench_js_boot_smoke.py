@@ -659,3 +659,77 @@ def test_workbench_multi_select_batch_duplicate_delete_and_undo(demo_server, bro
         "draft_node_4",
     ]
     assert restored["truth_level_impact"] == "none"
+
+
+def test_workbench_lasso_selects_and_group_moves_draft_nodes(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-editor-tool="node"]')
+    page.click('[data-editor-tool="node"]')
+    page.click("#workbench-export-draft-btn")
+    before = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    before_positions = {
+        node["id"]: (node["x"], node["y"])
+        for node in before["nodes"]
+        if node["id"] in {"logic3", "draft_node_1", "draft_node_2"}
+    }
+
+    page.locator('[data-editable-node-id="draft_node_1"]').scroll_into_view_if_needed()
+    draft_node_1 = page.locator('[data-editable-node-id="draft_node_1"]').bounding_box()
+    draft_node_2 = page.locator('[data-editable-node-id="draft_node_2"]').bounding_box()
+    assert draft_node_1 is not None
+    assert draft_node_2 is not None
+    left = min(draft_node_1["x"], draft_node_2["x"]) - 44
+    top = min(draft_node_1["y"], draft_node_2["y"]) - 44
+    right = max(draft_node_1["x"] + draft_node_1["width"], draft_node_2["x"] + draft_node_2["width"]) + 44
+    bottom = max(draft_node_1["y"] + draft_node_1["height"], draft_node_2["y"] + draft_node_2["height"]) + 44
+    page.mouse.move(left, top)
+    page.mouse.down()
+    page.mouse.move(right, bottom)
+    page.mouse.up()
+
+    assert page.locator('[data-editable-node-id="draft_node_1"]').get_attribute("data-multi-selected") == "true"
+    assert page.locator('[data-editable-node-id="draft_node_2"]').get_attribute("data-multi-selected") == "true"
+
+    draft_node_1 = page.locator('[data-editable-node-id="draft_node_1"]').bounding_box()
+    assert draft_node_1 is not None
+    page.mouse.move(draft_node_1["x"] + draft_node_1["width"] / 2, draft_node_1["y"] + draft_node_1["height"] / 2)
+    page.mouse.down()
+    page.mouse.move(draft_node_1["x"] + draft_node_1["width"] / 2 + 90, draft_node_1["y"] + draft_node_1["height"] / 2 + 45)
+    page.mouse.up()
+
+    page.click("#workbench-export-draft-btn")
+    moved = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    moved_positions = {
+        node["id"]: (node["x"], node["y"])
+        for node in moved["nodes"]
+        if node["id"] in {"logic3", "draft_node_1", "draft_node_2"}
+    }
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert set(moved["selected_node_ids"]) >= {"draft_node_1", "draft_node_2"}
+    assert moved_positions["draft_node_1"] != before_positions["draft_node_1"]
+    assert moved_positions["draft_node_2"] != before_positions["draft_node_2"]
+    assert moved_positions["logic3"] == before_positions["logic3"]
+    assert moved["truth_level_impact"] == "none"
+
+    page.keyboard.press("Control+Z")
+    page.click("#workbench-export-draft-btn")
+    undone = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    undone_positions = {
+        node["id"]: (node["x"], node["y"])
+        for node in undone["nodes"]
+        if node["id"] in {"draft_node_1", "draft_node_2"}
+    }
+    assert undone_positions["draft_node_1"] == before_positions["draft_node_1"]
+    assert undone_positions["draft_node_2"] == before_positions["draft_node_2"]
