@@ -5121,6 +5121,31 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   color: rgba(213, 227, 237, 0.68);
   font-size: 0.68rem;
 }
+.workbench-editable-node::after {
+  content: attr(data-binding-quality-label);
+  position: absolute;
+  right: 0.45rem;
+  bottom: 0.34rem;
+  max-width: calc(100% - 0.9rem);
+  padding: 0.12rem 0.32rem;
+  border-radius: 6px;
+  border: 1px solid rgba(150, 173, 190, 0.18);
+  background: rgba(4, 10, 16, 0.72);
+  color: rgba(213, 227, 237, 0.7);
+  font-size: 0.58rem;
+  line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workbench-editable-node[data-binding-quality="partial"]::after {
+  border-color: rgba(240, 193, 91, 0.42);
+  color: #f0c15b;
+}
+.workbench-editable-node[data-binding-quality="complete"]::after {
+  border-color: rgba(125, 215, 194, 0.44);
+  color: #7dd7c2;
+}
 .workbench-editable-edges {
   position: absolute;
   inset: 0;
@@ -5139,6 +5164,15 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-editable-edges path[aria-pressed="true"] {
   stroke: #f0c15b;
   stroke-width: 1.05;
+}
+.workbench-editable-edges path[data-binding-quality="missing"] {
+  stroke-dasharray: 5 4;
+}
+.workbench-editable-edges path[data-binding-quality="partial"] {
+  stroke: rgba(240, 193, 91, 0.7);
+}
+.workbench-editable-edges path[data-binding-quality="complete"] {
+  stroke: rgba(125, 215, 194, 0.86);
 }
 .workbench-editable-canvas-note {
   position: absolute;
@@ -5308,6 +5342,30 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 }
 .workbench-interface-binding-grid .workbench-inspector-field {
   margin-bottom: 0;
+}
+.workbench-binding-quality {
+  justify-self: end;
+  padding: 0.12rem 0.36rem;
+  border-radius: 6px;
+  border: 1px solid rgba(150, 173, 190, 0.22);
+  color: rgba(213, 227, 237, 0.72);
+  font-size: 0.64rem;
+  font-style: normal;
+}
+.workbench-binding-quality[data-binding-quality="partial"] {
+  border-color: rgba(240, 193, 91, 0.42);
+  color: #f0c15b;
+}
+.workbench-binding-quality[data-binding-quality="complete"] {
+  border-color: rgba(125, 215, 194, 0.44);
+  color: #7dd7c2;
+}
+.workbench-binding-coverage {
+  margin: 0.2rem 0 0;
+  color: rgba(213, 227, 237, 0.66);
+  font-size: 0.68rem;
+  line-height: 1.38;
+  overflow-wrap: anywhere;
 }
 .workbench-interface-apply {
   width: 100%;
