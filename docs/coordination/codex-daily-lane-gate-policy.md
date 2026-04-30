@@ -29,6 +29,23 @@ Until the E2E and mypy blockers are fixed in their own scoped issues, Codex
 Daily Lane PR descriptions must not claim `e2e 49/49` or `mypy --strict clean`.
 They must distinguish pre-existing blockers from the PR's tested delta.
 
+## Official Mypy Gate
+
+JER-171 defines the Codex-lane mypy command as:
+
+`PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json`
+
+Install dependencies with `python3 -m pip install -e '.[typecheck]'`.
+
+The wrapper runs:
+
+`python3 -m mypy --strict --explicit-package-bases src tests tools`
+
+Current status on 2026-04-30: blocked, not clean. The observed wrapper report
+shows 4692 errors in 322 files across 379 checked source files.
+Until that blocker is retired, PRs may attach the wrapper's JSON output as
+evidence, but they must not use it as a passing merge gate.
+
 ## Red-Line Handling
 
 - `src/well_harness/controller.py` truth semantics stay out of Codex Daily Lane

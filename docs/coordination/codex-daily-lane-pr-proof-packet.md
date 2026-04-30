@@ -22,6 +22,9 @@ Test delta: <targeted pytest>; <default pytest>; <GSD validation>; <adversarial 
   The workbench must not perform live Linear mutation or claim PR creation.
 - e2e 49/49 and `mypy --strict clean` must not be claimed unless those commands
   are explicitly run and pass in the current PR.
+- The official mypy evidence command is
+  `PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json`; a `blocked`
+  report is evidence of the current baseline blocker, not a clean gate.
 
 ## Required Evidence
 
