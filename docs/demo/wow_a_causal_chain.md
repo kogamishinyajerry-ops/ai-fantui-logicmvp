@@ -17,7 +17,7 @@
 ### Step 1 — 节拍"早"（浅拉 + 着陆姿态）
 - **URL**：`POST /api/lever-snapshot` on `http://127.0.0.1:8799`
 - **点击目标**：canvas 顶部 `#canvas-global-controls` 区域 → `tra_deg` 拉杆
-- **输入内容**：`tra_deg=-5`，其余维持 landing 默认（`radio_altitude_ft=2, engine_running=true, aircraft_on_ground=true, reverser_inhibited=false, eec_enable=true, n1k=0.8, feedback_mode=auto_scrubber, deploy_position_percent=90`）
+- **输入内容**：`tra_deg=-5.6`，其余维持 landing 默认（`radio_altitude_ft=2, engine_running=true, aircraft_on_ground=true, reverser_inhibited=false, eec_enable=true, n1k=0.8, feedback_mode=auto_scrubber, deploy_position_percent=90`）
 
 ### Step 2 — 节拍"深"（深拉 + 高 N1K）
 - **URL**：同上 `POST /api/lever-snapshot`
@@ -33,7 +33,7 @@
 
 ## 3. 预期 AI 输出（文字描述）
 
-- **Step 1 AI 叙述**：着陆姿态 + TLS unlock 确认 → 前两档亮；TRA 只到 -5° 未达深拉阈值，L3 不放行，plant 保持 0% deploy，logic3/4 按住不动
+- **Step 1 AI 叙述**：着陆姿态 + TLS unlock 确认 → 前两档亮；TRA 进入 tightened L2 SW2 hysteresis threshold（≤ -5.5°），但仍未达 L3 深拉阈值，L3 不放行，plant 保持 0% deploy，logic3/4 按住不动
 - **Step 2 AI 叙述**：深拉过线 → auto_scrubber 在 ~4.4s 内驱动 plant VDT 到 100%，反馈节点 `deploy_90_percent_vdt` 翻位 → 真值引擎一次 POST 内端到端跑完 logic2 → logic3 → logic4 → thr_lock 因果链；logic1 在 deploy 完成后因 `reverser_not_deployed_eec` 翻位而熄灭，这是真值引擎的实时状态机投影，不是 AI 填充
 - **Step 3 AI 叙述**：飞机抬升到空中 → 链路第一道门断裂，不看 TRA 多深，先看姿态；safety-first 的 interlock 严守因果
 
