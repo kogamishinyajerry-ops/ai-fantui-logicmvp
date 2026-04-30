@@ -656,6 +656,91 @@ def test_workbench_interface_matrix_exports_node_and_edge_design_rows(demo_serve
     assert archive["red_line_metadata"]["truth_level_impact"] == "none"
 
 
+def test_workbench_interface_matrix_import_applies_sandbox_bindings_and_rejects_truth_claims(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.fill("#workbench-interface-hardware-id", "TR-LRU-BEFORE")
+    page.fill("#workbench-interface-cable", "CBL-BEFORE")
+    page.fill("#workbench-interface-connector", "J-BEFORE")
+    page.fill("#workbench-interface-port-local", "logic1:out")
+    page.fill("#workbench-interface-port-peer", "TR-LRU-BEFORE:J-BEFORE")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+
+    page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
+    page.fill("#workbench-interface-hardware-id", "EDGE-LRU-BEFORE")
+    page.fill("#workbench-interface-cable", "EDGE-CBL-BEFORE")
+    page.fill("#workbench-interface-connector", "EDGE-J-BEFORE")
+    page.fill("#workbench-interface-port-local", "logic1:out")
+    page.fill("#workbench-interface-port-peer", "logic2:in:ui_edge:logic1")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+
+    page.click("#workbench-export-interface-matrix-btn")
+    matrix = json.loads(page.locator("#workbench-interface-matrix-output").input_value())
+    for row in matrix["rows"]:
+        if row["owner_kind"] == "node" and row["owner_id"] == "logic1":
+            row["hardware_id"] = "TR-LRU-APPLIED"
+            row["cable"] = "evidence_gap"
+            row["connector"] = "J-APPLIED"
+            row["port_peer"] = "TR-LRU-APPLIED:J-APPLIED"
+        if row["owner_kind"] == "edge" and row["owner_id"] == "edge_logic1_logic2":
+            row["hardware_id"] = "EDGE-LRU-APPLIED"
+            row["cable"] = "EDGE-CBL-APPLIED"
+            row["connector"] = "EDGE-J-APPLIED"
+    matrix["rows"].append({
+        "row_id": "interface:ghost",
+        "owner_kind": "node",
+        "owner_id": "ghost_node",
+        "hardware_id": "GHOST-LRU",
+        "cable": "GHOST-CBL",
+        "connector": "GHOST-J",
+        "port_local": "ghost:out",
+        "port_peer": "ghost:peer",
+        "evidence_status": "ui_draft",
+        "truth_effect": "none",
+    })
+    page.fill("#workbench-interface-matrix-output", json.dumps(matrix))
+    page.click("#workbench-apply-interface-matrix-btn")
+    status = page.locator("#workbench-interface-matrix-status").inner_text()
+    assert "Applied 2 matrix row(s), skipped 1" in status
+
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    logic1 = next(node for node in draft["nodes"] if node["id"] == "logic1")
+    edge = next(item for item in draft["edges"] if item["id"] == "edge_logic1_logic2")
+    assert errors == [], f"page JS errors: {errors}"
+    assert logic1["hardware_binding"]["hardware_id"] == "TR-LRU-APPLIED"
+    assert logic1["hardware_binding"]["cable"] == "evidence_gap"
+    assert logic1["hardware_binding"]["connector"] == "J-APPLIED"
+    assert logic1["hardware_binding"]["truth_effect"] == "none"
+    assert edge["hardware_binding"]["hardware_id"] == "EDGE-LRU-APPLIED"
+    assert edge["hardware_binding"]["connector"] == "EDGE-J-APPLIED"
+    assert edge["hardware_binding"]["truth_effect"] == "none"
+    assert draft["interface_matrix"]["coverage"]["complete"] >= 1
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    archive_node = next(row for row in archive["interface_matrix"]["rows"] if row["owner_kind"] == "node" and row["owner_id"] == "logic1")
+    assert archive_node["hardware_id"] == "TR-LRU-APPLIED"
+    assert archive["checksums"]["interface_matrix_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+    rejected = json.loads(page.locator("#workbench-interface-matrix-output").input_value())
+    rejected["rows"][0]["truth_effect"] = "certified"
+    rejected["rows"][0]["hardware_id"] = "SHOULD-NOT-APPLY"
+    page.fill("#workbench-interface-matrix-output", json.dumps(rejected))
+    page.click("#workbench-apply-interface-matrix-btn")
+    assert "truth_effect must be none" in page.locator("#workbench-interface-matrix-status").inner_text()
+    page.click("#workbench-export-draft-btn")
+    after_reject = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    logic1_after_reject = next(node for node in after_reject["nodes"] if node["id"] == "logic1")
+    assert logic1_after_reject["hardware_binding"]["hardware_id"] == "TR-LRU-APPLIED"
+
+
 def test_workbench_operation_catalog_adds_typed_sandbox_node(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
