@@ -805,6 +805,18 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     assert report["evidence_gap_field_count"] >= 1
     assert report["duplicate_interface_reuse_count"] >= 1
     assert report["typed_port_conflict_count"] >= 1
+    assert report["changed_row_count"] >= 2
+    assert report["noop_row_count"] == 0
+    node_preview = next(row for row in report["rows"] if row["owner_kind"] == "node" and row["owner_id"] == "logic1")
+    assert node_preview["current_binding"]["hardware_id"] == "TR-LRU-PREVIEW-BEFORE"
+    assert node_preview["candidate_binding"]["hardware_id"] == "TR-LRU-PREVIEW-EDITED"
+    assert node_preview["field_deltas"]["hardware_id"]["current"] == "TR-LRU-PREVIEW-BEFORE"
+    assert node_preview["field_deltas"]["hardware_id"]["candidate"] == "TR-LRU-PREVIEW-EDITED"
+    assert set(node_preview["changed_fields"]) >= {"hardware_id", "cable", "connector", "port_peer"}
+    assert node_preview["change_count"] >= 4
+    ghost_preview = next(row for row in report["rows"] if row["owner_id"] == "ghost_edge")
+    assert ghost_preview["current_binding"] is None
+    assert ghost_preview["candidate_binding"]["hardware_id"] == "GHOST-LRU"
     assert "Matrix validation warn" in page.locator("#workbench-interface-matrix-status").inner_text()
 
     page.click("#workbench-export-draft-btn")
@@ -823,6 +835,24 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     assert archive["checksums"]["interface_matrix_validation_checksum"]
     assert archive["red_line_metadata"]["truth_level_impact"] == "none"
 
+    page.click("#workbench-apply-interface-matrix-btn")
+    assert "Applied 2 matrix row(s), skipped 1" in page.locator("#workbench-interface-matrix-status").inner_text()
+    post_apply_report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
+    assert post_apply_report["changed_row_count"] == 0
+    assert post_apply_report["noop_row_count"] >= 2
+    node_noop = next(row for row in post_apply_report["rows"] if row["owner_kind"] == "node" and row["owner_id"] == "logic1")
+    assert node_noop["status"] == "no_op"
+    assert node_noop["action"] == "none"
+    assert node_noop["changed_fields"] == []
+    assert node_noop["change_count"] == 0
+    assert node_noop["current_binding"]["hardware_id"] == "TR-LRU-PREVIEW-EDITED"
+    assert node_noop["candidate_binding"]["hardware_id"] == "TR-LRU-PREVIEW-EDITED"
+
+    page.click("#workbench-export-draft-btn")
+    after_apply = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    logic1_after_apply = next(node for node in after_apply["nodes"] if node["id"] == "logic1")
+    assert logic1_after_apply["hardware_binding"]["hardware_id"] == "TR-LRU-PREVIEW-EDITED"
+
     rejected = json.loads(page.locator("#workbench-interface-matrix-output").input_value())
     rejected["rows"][0]["truth_effect"] = "certified"
     rejected["rows"][0]["hardware_id"] = "SHOULD-NOT-APPLY"
@@ -836,7 +866,7 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     page.click("#workbench-export-draft-btn")
     after_reject = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     logic1_after_reject = next(node for node in after_reject["nodes"] if node["id"] == "logic1")
-    assert logic1_after_reject["hardware_binding"]["hardware_id"] == "TR-LRU-PREVIEW-BEFORE"
+    assert logic1_after_reject["hardware_binding"]["hardware_id"] == "TR-LRU-PREVIEW-EDITED"
 
 
 def test_workbench_operation_catalog_adds_typed_sandbox_node(demo_server, browser):  # type: ignore[no-untyped-def]
