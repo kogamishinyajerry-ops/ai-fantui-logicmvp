@@ -1,0 +1,463 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/editable_hardware_interface_design_v1.schema.json",
+  "title": "well_harness.editable_hardware_interface_design v1 JSON payload",
+  "description": "Sandbox-only hardware/interface design evidence model. This payload is a candidate design artifact and cannot modify certified controller truth, adapter truth level, DAL, or PSSA.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "version",
+    "design_id",
+    "system_id",
+    "candidate_state",
+    "truth_level_impact",
+    "dal_pssa_impact",
+    "controller_truth_modified",
+    "runtime_truth_effect",
+    "lrus",
+    "cables",
+    "connectors",
+    "ports",
+    "pins",
+    "bindings",
+    "evidence_gaps",
+    "evidence_metadata",
+    "boundaries"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/editable_hardware_interface_design_v1.schema.json"
+    },
+    "kind": {
+      "const": "well-harness-editable-hardware-interface-design"
+    },
+    "version": {
+      "const": 1
+    },
+    "design_id": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "system_id": {
+      "$ref": "#/$defs/nonEmptyString"
+    },
+    "candidate_state": {
+      "const": "sandbox_candidate"
+    },
+    "truth_level_impact": {
+      "const": "none"
+    },
+    "dal_pssa_impact": {
+      "const": "none"
+    },
+    "controller_truth_modified": {
+      "const": false
+    },
+    "runtime_truth_effect": {
+      "const": "none"
+    },
+    "lrus": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/lru"
+      }
+    },
+    "cables": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/cable"
+      }
+    },
+    "connectors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/connector"
+      }
+    },
+    "ports": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/port"
+      }
+    },
+    "pins": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/pin"
+      }
+    },
+    "bindings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/binding"
+      }
+    },
+    "evidence_gaps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidenceGap"
+      }
+    },
+    "evidence_metadata": {
+      "$ref": "#/$defs/evidenceMetadata"
+    },
+    "boundaries": {
+      "$ref": "#/$defs/boundaries"
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidenceStatus": {
+      "enum": [
+        "recorded",
+        "ui_draft",
+        "evidence_gap",
+        "not_recorded"
+      ]
+    },
+    "lru": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "display_name",
+        "evidence_status",
+        "source_ref"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "display_name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "quantity_per_engine": {
+          "type": [
+            "number",
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "part_number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "location": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "failure_rate_per_hour": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/evidenceStatus"
+        },
+        "source_ref": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "cable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "display_name",
+        "source_lru_id",
+        "target_lru_id",
+        "evidence_status",
+        "source_ref"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "display_name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_lru_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "target_lru_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "cable_type": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/evidenceStatus"
+        },
+        "source_ref": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "connector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "display_name",
+        "lru_id",
+        "connector_type",
+        "evidence_status",
+        "source_ref"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "display_name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "lru_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "connector_type": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/evidenceStatus"
+        },
+        "source_ref": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "port": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "display_name",
+        "connector_id",
+        "direction",
+        "evidence_status",
+        "source_ref"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "display_name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "connector_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "direction": {
+          "enum": [
+            "input",
+            "output",
+            "bidirectional",
+            "unknown"
+          ]
+        },
+        "signal_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "value_type": {
+          "enum": [
+            "boolean",
+            "number",
+            "string",
+            "state",
+            "unknown"
+          ]
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/evidenceStatus"
+        },
+        "source_ref": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "pin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "connector_id",
+        "pin_number",
+        "port_id",
+        "evidence_status",
+        "source_ref"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "connector_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "pin_number": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "port_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "signal_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/evidenceStatus"
+        },
+        "source_ref": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "signal_id",
+        "source_port_id",
+        "target_port_id",
+        "cable_id",
+        "evidence_status",
+        "truth_effect",
+        "source_ref"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "signal_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_port_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "target_port_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "cable_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "redundancy_status": {
+          "type": "string"
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/evidenceStatus"
+        },
+        "truth_effect": {
+          "const": "none"
+        },
+        "source_ref": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "evidenceGap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "subject_id",
+        "field_ref",
+        "severity",
+        "impact",
+        "proposed_fill",
+        "source_ref"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "subject_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "field_ref": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "impact": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "proposed_fill": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "source_ref": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "evidenceMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sample_pack_role",
+        "source_refs"
+      ],
+      "properties": {
+        "sample_pack_role": {
+          "enum": [
+            "hardware_interface_design",
+            "reference_sample_pack"
+          ]
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEmptyString"
+          }
+        }
+      }
+    },
+    "boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime_scope",
+        "hardware_truth_effect",
+        "certified_truth_modified",
+        "dal_pssa_impact"
+      ],
+      "properties": {
+        "runtime_scope": {
+          "const": "sandbox_only"
+        },
+        "hardware_truth_effect": {
+          "const": "none"
+        },
+        "certified_truth_modified": {
+          "const": false
+        },
+        "dal_pssa_impact": {
+          "const": "none"
+        }
+      }
+    }
+  }
+}
