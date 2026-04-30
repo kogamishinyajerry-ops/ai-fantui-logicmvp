@@ -7627,6 +7627,7 @@ function installEditableWorkbenchShell() {
   const applyInterfaceMatrixBtn = document.getElementById("workbench-apply-interface-matrix-btn");
   const interfaceMatrixOutput = document.getElementById("workbench-interface-matrix-output");
   const interfaceMatrixStatus = document.getElementById("workbench-interface-matrix-status");
+  const interfaceMatrixReview = document.getElementById("workbench-interface-matrix-review");
   const interfaceMatrixValidationOutput = document.getElementById("workbench-interface-matrix-validation-output");
   const typedPortOwner = document.getElementById("workbench-typed-port-owner");
   const portInputSignalInput = document.getElementById("workbench-port-input-signal");
@@ -9863,11 +9864,109 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function matrixReviewBindingValue(binding, fieldName) {
+    if (!binding || typeof binding !== "object") return "evidence_gap";
+    return normalizedInterfaceField(binding[fieldName]);
+  }
+
+  function matrixReviewDeltaText(row) {
+    const fields = row && Array.isArray(row.changed_fields) ? row.changed_fields : [];
+    if (!fields.length) return "none";
+    const current = row.current_binding || null;
+    const candidate = row.candidate_binding || null;
+    return fields.map((fieldName) => (
+      `${fieldName}: ${matrixReviewBindingValue(current, fieldName)} -> ${matrixReviewBindingValue(candidate, fieldName)}`
+    )).join("; ");
+  }
+
+  function appendMatrixReviewCell(rowEl, text, className) {
+    const cell = document.createElement("td");
+    if (className) cell.className = className;
+    cell.textContent = text;
+    rowEl.appendChild(cell);
+    return cell;
+  }
+
+  function renderInterfaceMatrixReviewTable(report) {
+    if (!interfaceMatrixReview) return;
+    interfaceMatrixReview.innerHTML = "";
+    const state = report && typeof report === "object" ? normalizedInterfaceField(report.status) : "empty";
+    interfaceMatrixReview.setAttribute("data-review-state", state);
+
+    const summary = document.createElement("p");
+    summary.className = "workbench-interface-matrix-review-summary";
+    if (!report) {
+      summary.textContent = "No matrix validation run yet.";
+      interfaceMatrixReview.appendChild(summary);
+      return;
+    }
+    summary.textContent =
+      `Review ${state}: ${report.applyable_row_count || 0} applyable, ${report.noop_row_count || 0} no-op, ${report.skipped_row_count || 0} skipped, ${report.issue_count || 0} issue(s).`;
+    interfaceMatrixReview.appendChild(summary);
+
+    const rows = Array.isArray(report.rows) ? report.rows : [];
+    if (!rows.length) {
+      const empty = document.createElement("p");
+      empty.className = "workbench-interface-matrix-review-empty";
+      empty.textContent = report.issue_count
+        ? "Matrix-level validation issue. No row preview is available."
+        : "Matrix has no rows to review.";
+      interfaceMatrixReview.appendChild(empty);
+      return;
+    }
+
+    const tableWrap = document.createElement("div");
+    tableWrap.className = "workbench-interface-matrix-review-table-wrap";
+    const table = document.createElement("table");
+    table.className = "workbench-interface-matrix-review-table";
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    ["Row", "Owner", "Status", "Action", "Changes", "Delta"].forEach((label) => {
+      const th = document.createElement("th");
+      th.textContent = label;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    for (const row of rows) {
+      const rowEl = document.createElement("tr");
+      const rowStatus = normalizedInterfaceField(row.status);
+      const rowAction = normalizedInterfaceField(row.action || "none");
+      rowEl.setAttribute("data-row-status", rowStatus);
+      rowEl.setAttribute("data-row-action", rowAction);
+      rowEl.setAttribute("data-interface-matrix-review-row-id", normalizedInterfaceField(row.row_id));
+      rowEl.setAttribute("data-interface-matrix-review-owner-kind", normalizedInterfaceField(row.owner_kind));
+      rowEl.setAttribute("data-interface-matrix-review-owner-id", normalizedInterfaceField(row.owner_id));
+
+      appendMatrixReviewCell(rowEl, normalizedInterfaceField(row.row_id), "workbench-interface-matrix-review-row-id");
+      appendMatrixReviewCell(
+        rowEl,
+        `${normalizedInterfaceField(row.owner_kind)}:${normalizedInterfaceField(row.owner_id)}`,
+        "workbench-interface-matrix-review-owner",
+      );
+      appendMatrixReviewCell(rowEl, rowStatus, "workbench-interface-matrix-review-status");
+      appendMatrixReviewCell(rowEl, rowAction, "workbench-interface-matrix-review-action");
+      appendMatrixReviewCell(
+        rowEl,
+        `${row.change_count || 0} · ${(Array.isArray(row.changed_fields) && row.changed_fields.length) ? row.changed_fields.join(", ") : "none"}`,
+        "workbench-interface-matrix-review-changes",
+      );
+      appendMatrixReviewCell(rowEl, matrixReviewDeltaText(row), "workbench-interface-matrix-review-delta");
+      tbody.appendChild(rowEl);
+    }
+    table.appendChild(tbody);
+    tableWrap.appendChild(table);
+    interfaceMatrixReview.appendChild(tableWrap);
+  }
+
   function renderInterfaceMatrixValidationReport(report, options) {
     lastInterfaceMatrixValidationReport = report || null;
     if (interfaceMatrixValidationOutput) {
       interfaceMatrixValidationOutput.value = report ? JSON.stringify(report, null, 2) : "";
     }
+    renderInterfaceMatrixReviewTable(report);
     if ((!options || options.updateStatus !== false) && interfaceMatrixStatus && report) {
       interfaceMatrixStatus.textContent =
         `Matrix validation ${report.status}: ${report.applyable_row_count || 0} applyable, ${report.skipped_row_count || 0} skipped, ${report.noop_row_count || 0} no-op, ${report.issue_count || 0} issue(s). Truth effect: none.`;
@@ -9878,6 +9977,7 @@ function installEditableWorkbenchShell() {
   function clearInterfaceMatrixValidationReport(message) {
     lastInterfaceMatrixValidationReport = null;
     if (interfaceMatrixValidationOutput) interfaceMatrixValidationOutput.value = "";
+    renderInterfaceMatrixReviewTable(null);
     if (message && interfaceMatrixStatus) {
       interfaceMatrixStatus.textContent = message;
     }
