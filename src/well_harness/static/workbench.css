@@ -5442,6 +5442,22 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   margin-top: 0.7rem;
   padding: 0.62rem;
 }
+.workbench-draft-snapshot-manager {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid rgba(150, 173, 190, 0.18);
+}
+.workbench-draft-snapshot-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin: 0.35rem 0 0.55rem;
+}
+.workbench-draft-snapshot-actions .workbench-editable-primary {
+  min-height: 34px;
+  padding: 0.35rem 0.45rem;
+  font-size: 0.72rem;
+}
 .workbench-draft-json-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

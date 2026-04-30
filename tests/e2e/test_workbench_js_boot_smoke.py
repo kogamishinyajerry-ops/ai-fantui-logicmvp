@@ -491,3 +491,49 @@ def test_workbench_rule_parameter_round_trips_through_export_import_and_archive(
     assert archive["rule_parameter_summary"]["truth_effect"] == "none"
     assert archive["checksums"]["rule_parameter_summary_checksum"]
     assert archive["red_line_metadata"]["truth_level_impact"] == "none"
+
+
+def test_workbench_named_draft_snapshot_save_restore_export_archive(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.select_option("#workbench-sandbox-scenario-select", "sw1_stuck_at_touchdown")
+    page.fill("#workbench-custom-snapshot-json", '{"tra_deg": -12}')
+    page.click('[data-op-catalog-op="compare"]')
+    page.click('[data-editor-tool="node"]')
+    page.fill("#workbench-draft-snapshot-name", "compare-candidate-a")
+    page.click("#workbench-save-draft-snapshot-btn")
+    assert "compare-candidate-a" in page.locator("#workbench-draft-snapshot-select").inner_text()
+
+    page.click('[data-editor-tool="node"]')
+    page.click("#workbench-export-draft-btn")
+    mutated = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert len([node for node in mutated["nodes"] if node["id"].startswith("draft_node_")]) == 2
+
+    page.click("#workbench-restore-draft-snapshot-btn")
+    page.click("#workbench-export-draft-btn")
+    restored = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    draft_nodes = [node for node in restored["nodes"] if node["id"].startswith("draft_node_")]
+    assert errors == [], f"page JS errors: {errors}"
+    assert [node["id"] for node in draft_nodes] == ["draft_node_1"]
+    assert restored["selected_scenario_id"] == "sw1_stuck_at_touchdown"
+    assert restored["custom_snapshot"] == {"tra_deg": -12}
+    assert restored["draft_snapshot_manifest"]["snapshot_count"] == 1
+    assert restored["draft_snapshot_manifest"]["truth_effect"] == "none"
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["model_json"]["draft_snapshot_manifest"]["snapshot_count"] == 1
+    assert archive["draft_snapshot_manifest"]["snapshot_count"] == 1
+    assert archive["draft_snapshot_manifest"]["truth_level_impact"] == "none"
+    assert archive["checksums"]["draft_snapshot_manifest_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
