@@ -90,6 +90,15 @@ Successor issue bridge:
   evidence inspector v2, scenario/debug linkage, diff review v2, and
   ChangeRequest handoff.
 
+## Successor Bridge Note
+
+JER-205 treats this Runtime v3 closure record as execution context only. The
+JER-165 through JER-203 evidence chain proves that editable workbench candidates
+can be modeled, validated, diffed, archived, and restored as sandbox evidence.
+It is not a certification entry point and does not authorize candidate graphs,
+hardware/interface records, bundle kinds, or archive manifests to become
+certified truth.
+
 ## JER-165 Rule
 
 JER-165 converts `/workbench` UI draft snapshots into canonical
