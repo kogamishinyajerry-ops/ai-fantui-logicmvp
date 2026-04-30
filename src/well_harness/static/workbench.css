@@ -5867,6 +5867,21 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-interface-matrix-review-table tr[data-row-status="reject"] {
   background: rgba(255, 95, 110, 0.1);
 }
+.workbench-interface-matrix-review-table tr[data-row-selected="false"][data-row-status="applyable"] {
+  background: rgba(150, 173, 190, 0.05);
+}
+.workbench-interface-matrix-review-select-cell {
+  width: 42px;
+  text-align: center;
+}
+.workbench-interface-matrix-review-select-cell input {
+  width: 16px;
+  height: 16px;
+  accent-color: #6ad7c2;
+}
+.workbench-interface-matrix-review-select-cell input:disabled {
+  opacity: 0.32;
+}
 .workbench-interface-matrix-review-status,
 .workbench-interface-matrix-review-action,
 .workbench-interface-matrix-review-changes {
