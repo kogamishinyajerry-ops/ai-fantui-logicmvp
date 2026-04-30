@@ -332,4 +332,52 @@ def test_workbench_interface_binding_round_trips_through_export_import_and_archi
     assert archive["binding_coverage"]["truth_effect"] == "none"
     assert archive["checksums"]["hardware_bindings_checksum"]
     assert archive["checksums"]["binding_coverage_checksum"]
+
+
+def test_workbench_typed_port_contract_round_trips_through_export_import_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.fill("#workbench-port-input-signal", "logic1_candidate_input")
+    page.fill("#workbench-port-output-signal", "logic1_candidate_output")
+    page.select_option("#workbench-port-value-type", "number")
+    page.fill("#workbench-port-unit", "deg")
+    page.check("#workbench-port-required")
+    page.click("#workbench-apply-port-contract-btn")
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+
+    logic1 = next(node for node in draft["nodes"] if node["id"] == "logic1")
+    typed_ports = {port["id"]: port for port in draft["typed_ports"]}
+    assert logic1["port_contract"]["input_signal_id"] == "logic1_candidate_input"
+    assert logic1["port_contract"]["output_signal_id"] == "logic1_candidate_output"
+    assert logic1["port_contract"]["value_type"] == "number"
+    assert logic1["port_contract"]["unit"] == "deg"
+    assert logic1["port_contract"]["required"] is True
+    assert typed_ports["logic1:out"]["signal_id"] == "logic1_candidate_output"
+    assert typed_ports["logic1:out"]["value_type"] == "number"
+    assert typed_ports["logic1:out"]["unit"] == "deg"
+    assert typed_ports["logic1:out"]["required"] is True
+    assert draft["port_contract_summary"]["total_ports"] >= 2
+    assert draft["port_contract_summary"]["truth_effect"] == "none"
+
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.fill("#workbench-draft-json-buffer", json.dumps(draft))
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    round_trip = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    round_trip_logic1 = next(node for node in round_trip["nodes"] if node["id"] == "logic1")
+    assert round_trip_logic1["port_contract"]["output_signal_id"] == "logic1_candidate_output"
+    assert round_trip["port_contract_summary"]["truth_effect"] == "none"
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert errors == [], f"page JS errors: {errors}"
+    assert archive["typed_ports"]
+    assert archive["port_contract_summary"]["truth_effect"] == "none"
+    assert archive["checksums"]["typed_ports_checksum"]
+    assert archive["checksums"]["port_contract_summary_checksum"]
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
