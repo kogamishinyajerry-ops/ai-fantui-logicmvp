@@ -7627,9 +7627,16 @@ function installEditableWorkbenchShell() {
   const importDraftBtn = document.getElementById("workbench-import-draft-btn");
   const draftJsonBuffer = document.getElementById("workbench-draft-json-buffer");
   const draftJsonStatus = document.getElementById("workbench-draft-json-status");
+  const draftSnapshotNameInput = document.getElementById("workbench-draft-snapshot-name");
+  const draftSnapshotSelect = document.getElementById("workbench-draft-snapshot-select");
+  const saveDraftSnapshotBtn = document.getElementById("workbench-save-draft-snapshot-btn");
+  const restoreDraftSnapshotBtn = document.getElementById("workbench-restore-draft-snapshot-btn");
+  const deleteDraftSnapshotBtn = document.getElementById("workbench-delete-draft-snapshot-btn");
+  const draftSnapshotStatus = document.getElementById("workbench-draft-snapshot-status");
   const scenarioSelect = document.getElementById("workbench-sandbox-scenario-select");
   const customSnapshotInput = document.getElementById("workbench-custom-snapshot-json");
   const storageKey = "well-harness-editable-workbench-draft-v1";
+  const snapshotsStorageKey = "well-harness-editable-workbench-draft-snapshots-v1";
   let selectedNode = nodes.find((node) => node.getAttribute("aria-pressed") === "true") || nodes[0];
   let selectedEdge = null;
   let hardwareEvidenceReport = null;
@@ -8840,6 +8847,192 @@ function installEditableWorkbenchShell() {
     }
   }
 
+  function normalizeDraftSnapshotName(value, fallbackIndex) {
+    const text = String(value === null || value === undefined ? "" : value).trim();
+    return text || `candidate-${fallbackIndex || 1}`;
+  }
+
+  function normalizeDraftSnapshotRecord(record, fallbackIndex) {
+    if (!record || typeof record !== "object" || Array.isArray(record)) return null;
+    const draft = record.draft && typeof record.draft === "object" ? record.draft : null;
+    if (!draft || !Array.isArray(draft.nodes)) return null;
+    const name = normalizeDraftSnapshotName(record.name, fallbackIndex);
+    const hash = String(
+      record.draft_hash || editableDraftHash(JSON.stringify({
+        draft,
+        selected_scenario_id: record.selected_scenario_id || "nominal_landing",
+        custom_snapshot: record.custom_snapshot || {},
+      })),
+    );
+    return {
+      kind: "well-harness-workbench-draft-snapshot",
+      version: 1,
+      id: String(record.id || `${hash}_${fallbackIndex || 1}`),
+      name,
+      saved_at: String(record.saved_at || "browser_local_draft"),
+      draft_hash: hash,
+      draft_state: String(record.draft_state || draft.draftState || "derived"),
+      selected_scenario_id: String(record.selected_scenario_id || "nominal_landing"),
+      custom_snapshot: (
+        record.custom_snapshot
+        && typeof record.custom_snapshot === "object"
+        && !Array.isArray(record.custom_snapshot)
+      ) ? record.custom_snapshot : {},
+      draft,
+      truth_level_impact: "none",
+      dal_pssa_impact: "none",
+      controller_truth_modified: false,
+      truth_effect: "none",
+    };
+  }
+
+  function readNamedDraftSnapshots() {
+    try {
+      const raw = window.localStorage.getItem(snapshotsStorageKey);
+      const payload = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(payload)) return [];
+      return payload
+        .map((record, index) => normalizeDraftSnapshotRecord(record, index + 1))
+        .filter(Boolean);
+    } catch (_err) {
+      return [];
+    }
+  }
+
+  function writeNamedDraftSnapshots(records) {
+    const normalized = (Array.isArray(records) ? records : [])
+      .map((record, index) => normalizeDraftSnapshotRecord(record, index + 1))
+      .filter(Boolean);
+    try {
+      window.localStorage.setItem(snapshotsStorageKey, JSON.stringify(normalized));
+    } catch (_err) {
+      // Snapshot persistence is convenience-only local evidence.
+    }
+    return normalized;
+  }
+
+  function selectedDraftSnapshotId() {
+    return draftSnapshotSelect ? String(draftSnapshotSelect.value || "") : "";
+  }
+
+  function buildDraftSnapshotManifestSummary(records) {
+    const snapshots = Array.isArray(records) ? records : readNamedDraftSnapshots();
+    return {
+      storage_key: snapshotsStorageKey,
+      snapshot_count: snapshots.length,
+      active_snapshot_id: selectedDraftSnapshotId() || null,
+      snapshots: snapshots.map((record) => ({
+        id: record.id,
+        name: record.name,
+        saved_at: record.saved_at,
+        draft_hash: record.draft_hash,
+        draft_state: record.draft_state,
+        selected_scenario_id: record.selected_scenario_id,
+      })),
+      truth_level_impact: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function renderDraftSnapshotManager(selectedId) {
+    if (!draftSnapshotSelect) return buildDraftSnapshotManifestSummary();
+    const records = readNamedDraftSnapshots();
+    const activeId = selectedId || selectedDraftSnapshotId();
+    if (!records.length) {
+      draftSnapshotSelect.innerHTML = '<option value="">No saved snapshots</option>';
+    } else {
+      draftSnapshotSelect.innerHTML = records.map((record) => [
+        `<option value="${inspectorText(record.id)}"`,
+        record.id === activeId ? 'selected="selected"' : "",
+        ">",
+        `${inspectorText(record.name)} · ${inspectorText(record.draft_hash)}`,
+        "</option>",
+      ].join(" ")).join("");
+    }
+    if (draftSnapshotStatus) {
+      draftSnapshotStatus.textContent =
+        `Draft snapshots: ${records.length} local sandbox candidate(s). Truth effect: none.`;
+    }
+    return buildDraftSnapshotManifestSummary(records);
+  }
+
+  function saveNamedDraftSnapshot() {
+    const existing = readNamedDraftSnapshots();
+    const name = normalizeDraftSnapshotName(
+      draftSnapshotNameInput && draftSnapshotNameInput.value,
+      existing.length + 1,
+    );
+    const draft = serializeEditableState();
+    const customSnapshot = safeWorkbenchCustomSnapshot() || {};
+    const hash = editableDraftHash(JSON.stringify({
+      draft,
+      selected_scenario_id: selectedWorkbenchScenarioId(),
+      custom_snapshot: customSnapshot,
+    }));
+    const record = normalizeDraftSnapshotRecord({
+      id: `${hash}_${Date.now().toString(36)}`,
+      name,
+      saved_at: new Date().toISOString(),
+      draft_hash: hash,
+      draft_state: draft.draftState || "derived",
+      selected_scenario_id: selectedWorkbenchScenarioId(),
+      custom_snapshot: customSnapshot,
+      draft,
+    }, existing.length + 1);
+    const saved = writeNamedDraftSnapshots([...existing, record]);
+    renderDraftSnapshotManager(record.id);
+    if (draftSnapshotNameInput) draftSnapshotNameInput.value = name;
+    if (draftSnapshotStatus) {
+      draftSnapshotStatus.textContent =
+        `Saved ${name} (${hash}). Local sandbox evidence only; truth effect: none.`;
+    }
+    return saved;
+  }
+
+  function restoreNamedDraftSnapshot() {
+    const snapshotId = selectedDraftSnapshotId();
+    const record = readNamedDraftSnapshots().find((item) => item.id === snapshotId);
+    if (!record) {
+      if (draftSnapshotStatus) draftSnapshotStatus.textContent = "No draft snapshot selected.";
+      return null;
+    }
+    recordEditableHistory("restore_named_snapshot");
+    if (scenarioSelect) scenarioSelect.value = record.selected_scenario_id || "nominal_landing";
+    if (customSnapshotInput) customSnapshotInput.value = JSON.stringify(record.custom_snapshot || {}, null, 2);
+    applyEditableState({
+      ...record.draft,
+      draftState: record.draft_state || "derived",
+    });
+    if (draftLabel) {
+      draftLabel.textContent = `sandbox_candidate restored from snapshot: ${record.name}`;
+    }
+    setTimelineState("derived");
+    persistDraft();
+    renderDraftSnapshotManager(record.id);
+    if (draftSnapshotStatus) {
+      draftSnapshotStatus.textContent =
+        `Restored ${record.name} (${record.draft_hash}). Truth effect: none.`;
+    }
+    return record;
+  }
+
+  function deleteNamedDraftSnapshot() {
+    const snapshotId = selectedDraftSnapshotId();
+    if (!snapshotId) {
+      if (draftSnapshotStatus) draftSnapshotStatus.textContent = "No draft snapshot selected.";
+      return [];
+    }
+    const remaining = writeNamedDraftSnapshots(
+      readNamedDraftSnapshots().filter((record) => record.id !== snapshotId),
+    );
+    renderDraftSnapshotManager(remaining[0] && remaining[0].id);
+    if (draftSnapshotStatus) {
+      draftSnapshotStatus.textContent =
+        `Deleted local draft snapshot. Remaining: ${remaining.length}. Truth effect: none.`;
+    }
+    return remaining;
+  }
+
   function setTimelineState(state) {
     if (!timelineStrip) return;
     const items = Array.from(timelineStrip.querySelectorAll("li"));
@@ -9500,6 +9693,7 @@ function installEditableWorkbenchShell() {
       port_compatibility_report: snapshot.port_compatibility_report,
       operation_catalog: snapshot.operation_catalog,
       rule_parameter_summary: snapshot.rule_parameter_summary,
+      draft_snapshot_manifest: buildDraftSnapshotManifestSummary(),
       selected_scenario_id: selectedWorkbenchScenarioId(),
       custom_snapshot: customSnapshot,
       source_refs: uniqueSourceRefs(),
@@ -9822,6 +10016,7 @@ function installEditableWorkbenchShell() {
     );
     const operationCatalog = snapshot.operation_catalog || buildOperationCatalogSummary();
     const ruleParameterSummary = snapshot.rule_parameter_summary || buildRuleParameterSummary();
+    const draftSnapshotManifest = buildDraftSnapshotManifestSummary();
     const bindingSummary = hardwareBindings.length
       ? hardwareBindings
           .map((binding) => `${binding.owner_kind}:${binding.owner_id} hardware=${binding.hardware_id} cable=${binding.cable} connector=${binding.connector} ports=${binding.port_local}->${binding.port_peer}`)
@@ -9835,6 +10030,8 @@ function installEditableWorkbenchShell() {
       `${operationCatalog.version} / selected=${operationCatalog.selected_op} / approved=${(operationCatalog.approved_ops || []).join(",")}`;
     const ruleParameterText =
       `${ruleParameterSummary.total_rules} sandbox rules / touched=${(ruleParameterSummary.touched_nodes || []).join(",") || "none"}`;
+    const draftSnapshotText =
+      `${draftSnapshotManifest.snapshot_count} saved snapshots / active=${draftSnapshotManifest.active_snapshot_id || "none"}`;
     const linearIssueBody = [
       "## Outcome",
       `Review sandbox candidate edit for ${node.id || "selected node"} against the certified thrust-reverser baseline.`,
@@ -9861,6 +10058,7 @@ function installEditableWorkbenchShell() {
       "- Port compatibility report.",
       "- Operation catalog provenance.",
       "- Rule parameter summary.",
+      "- Draft snapshot manifest.",
       "- Targeted pytest and PR proof packet.",
       "- Official mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json.",
       "- e2e 49/49 and mypy --strict clean are not claimed from this local UI archive.",
@@ -9878,6 +10076,7 @@ function installEditableWorkbenchShell() {
       `- Port compatibility: ${compatibilitySummary}`,
       `- Operation catalog: ${operationCatalogSummary}`,
       `- Rule parameters: ${ruleParameterText}`,
+      `- Draft snapshots: ${draftSnapshotText}`,
       "- Agent eligible: No",
     ].join("\n");
     const prProofPacket = [
@@ -9897,6 +10096,7 @@ function installEditableWorkbenchShell() {
       `Port compatibility: ${compatibilitySummary}`,
       `Operation catalog: ${operationCatalogSummary}`,
       `Rule parameters: ${ruleParameterText}`,
+      `Draft snapshots: ${draftSnapshotText}`,
       "Mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
       "No live Linear mutation; this packet is copy-ready evidence only.",
     ].join("\n");
@@ -9910,6 +10110,7 @@ function installEditableWorkbenchShell() {
       portCompatibilityReport,
       operationCatalog,
       ruleParameterSummary,
+      draftSnapshotManifest,
     };
   }
 
@@ -9940,6 +10141,8 @@ function installEditableWorkbenchShell() {
       modelJson.port_compatibility_report || buildPortCompatibilityReport(typedPorts, modelJson.edges || []);
     const operationCatalog = modelJson.operation_catalog || buildOperationCatalogSummary();
     const ruleParameterSummary = modelJson.rule_parameter_summary || buildRuleParameterSummary();
+    const draftSnapshotManifest =
+      modelJson.draft_snapshot_manifest || buildDraftSnapshotManifestSummary();
     const diffSummary = lastSandboxDiff || {
       verdict: "not_run",
       scenario_id: selectedWorkbenchScenarioId(),
@@ -9973,6 +10176,7 @@ function installEditableWorkbenchShell() {
       port_compatibility_report: portCompatibilityReport,
       operation_catalog: operationCatalog,
       rule_parameter_summary: ruleParameterSummary,
+      draft_snapshot_manifest: draftSnapshotManifest,
       changerequest_body: handoffPacket.linearIssueBody,
       pr_proof_packet: handoffPacket.prProofPacket,
       gate_claims: handoffPacket.gateClaims,
@@ -9991,6 +10195,7 @@ function installEditableWorkbenchShell() {
       port_compatibility_report_checksum: checksumEvidenceArchiveField(portCompatibilityReport),
       operation_catalog_checksum: checksumEvidenceArchiveField(operationCatalog),
       rule_parameter_summary_checksum: checksumEvidenceArchiveField(ruleParameterSummary),
+      draft_snapshot_manifest_checksum: checksumEvidenceArchiveField(draftSnapshotManifest),
       gate_claims_checksum: checksumEvidenceArchiveField(handoffPacket.gateClaims),
       known_blockers_checksum: checksumEvidenceArchiveField(handoffPacket.knownBlockers),
     };
@@ -10155,7 +10360,17 @@ function installEditableWorkbenchShell() {
   if (importDraftBtn) {
     importDraftBtn.addEventListener("click", () => importEditableDraftJson());
   }
+  if (saveDraftSnapshotBtn) {
+    saveDraftSnapshotBtn.addEventListener("click", () => saveNamedDraftSnapshot());
+  }
+  if (restoreDraftSnapshotBtn) {
+    restoreDraftSnapshotBtn.addEventListener("click", () => restoreNamedDraftSnapshot());
+  }
+  if (deleteDraftSnapshotBtn) {
+    deleteDraftSnapshotBtn.addEventListener("click", () => deleteNamedDraftSnapshot());
+  }
   setSelectedOperationCatalogEntry(selectedCatalogOp);
+  renderDraftSnapshotManager();
   if (selectedNode) {
     selectNode(selectedNode);
   }

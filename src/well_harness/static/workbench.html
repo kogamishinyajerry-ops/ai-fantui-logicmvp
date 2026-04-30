@@ -929,6 +929,52 @@
                   <span id="workbench-draft-json-title">Draft JSON</span>
                   <strong>truth-neutral</strong>
                 </div>
+                <section
+                  id="workbench-draft-snapshot-manager"
+                  class="workbench-draft-snapshot-manager"
+                  aria-labelledby="workbench-draft-snapshot-title"
+                >
+                  <div class="workbench-inspector-header">
+                    <span id="workbench-draft-snapshot-title">Draft Snapshots</span>
+                    <strong>local sandbox</strong>
+                  </div>
+                  <label class="workbench-inspector-field" for="workbench-draft-snapshot-name">
+                    <span>Snapshot name</span>
+                    <input id="workbench-draft-snapshot-name" type="text" placeholder="candidate-a">
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-draft-snapshot-select">
+                    <span>Saved snapshots</span>
+                    <select id="workbench-draft-snapshot-select">
+                      <option value="">No saved snapshots</option>
+                    </select>
+                  </label>
+                  <div class="workbench-draft-snapshot-actions">
+                    <button
+                      id="workbench-save-draft-snapshot-btn"
+                      type="button"
+                      class="workbench-editable-primary"
+                    >
+                      Save
+                    </button>
+                    <button
+                      id="workbench-restore-draft-snapshot-btn"
+                      type="button"
+                      class="workbench-editable-primary"
+                    >
+                      Restore
+                    </button>
+                    <button
+                      id="workbench-delete-draft-snapshot-btn"
+                      type="button"
+                      class="workbench-editable-primary"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                  <p id="workbench-draft-snapshot-status" class="workbench-handoff-status">
+                    Named snapshots are local sandbox evidence only. Truth effect: none.
+                  </p>
+                </section>
                 <div class="workbench-draft-json-actions">
                   <button
                     id="workbench-export-draft-btn"
