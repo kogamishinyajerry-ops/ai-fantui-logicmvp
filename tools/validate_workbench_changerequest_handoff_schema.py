@@ -176,6 +176,12 @@ def schema_negative_cases() -> tuple[dict[str, Any], ...]:
     truth_level["changerequest_proof_packet"]["truth_level_impact"] = "certified"
     cases.append({"name": "truth_level_impact_rejected", "payload": truth_level})
 
+    schema_only_drift = copy.deepcopy(sample_changerequest_handoff_packet())
+    schema_only_drift["unexpected"] = "not allowed"
+    schema_only_drift["serialization"]["checksum_algorithm"] = "raw_json_hash"
+    del schema_only_drift["metadata"]["diff_review_v2"]
+    cases.append({"name": "schema_only_contract_drift_rejected", "payload": schema_only_drift})
+
     missing_field = copy.deepcopy(sample_changerequest_handoff_packet())
     del missing_field["evidence_required"]
     cases.append({"name": "missing_required_field_rejected", "payload": missing_field})

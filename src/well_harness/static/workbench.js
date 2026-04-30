@@ -11508,7 +11508,7 @@ function installEditableWorkbenchShell() {
   }
 
   function updateEditableDraftHash() {
-    const hash = editableDraftHash(JSON.stringify(currentDraftSnapshot()));
+    const hash = editableDraftHash(stableEvidenceArchiveJson(currentDraftSnapshot()));
     shell.setAttribute("data-draft-hash", hash);
     if (draftHashLabel) draftHashLabel.textContent = hash;
     return hash;
@@ -12017,7 +12017,7 @@ function installEditableWorkbenchShell() {
     if (!draft || !Array.isArray(draft.nodes)) return null;
     const name = normalizeDraftSnapshotName(record.name, fallbackIndex);
     const hash = String(
-      record.draft_hash || editableDraftHash(JSON.stringify({
+      record.draft_hash || editableDraftHash(stableEvidenceArchiveJson({
         draft,
         selected_scenario_id: record.selected_scenario_id || "nominal_landing",
         custom_snapshot: record.custom_snapshot || {},
@@ -12123,7 +12123,7 @@ function installEditableWorkbenchShell() {
     );
     const draft = serializeEditableState();
     const customSnapshot = safeWorkbenchCustomSnapshot() || {};
-    const hash = editableDraftHash(JSON.stringify({
+    const hash = editableDraftHash(stableEvidenceArchiveJson({
       draft,
       selected_scenario_id: selectedWorkbenchScenarioId(),
       custom_snapshot: customSnapshot,
@@ -13528,7 +13528,7 @@ function installEditableWorkbenchShell() {
   function buildEditableDraftExport() {
     const snapshot = currentDraftSnapshot();
     const customSnapshot = safeWorkbenchCustomSnapshot() || {};
-    const changedModelHash = editableDraftHash(JSON.stringify(snapshot));
+    const changedModelHash = editableDraftHash(stableEvidenceArchiveJson(snapshot));
     const changeRequestProofPacket = buildChangeRequestProofPacket(snapshot, changedModelHash);
     const linearIssueBody = linearIssueBodyFromProofPacket(changeRequestProofPacket);
     const prProofPacket = prProofTextFromProofPacket(changeRequestProofPacket);

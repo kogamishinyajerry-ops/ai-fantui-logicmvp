@@ -72,6 +72,21 @@ class WorkbenchChangeRequestHandoffSchemaTests(unittest.TestCase):
         self.assertIn("certification_claim must be 'none'.", " ".join(issues))
         self.assertIn("truth_level_impact must be 'none'.", " ".join(issues))
 
+    def test_structural_validator_rejects_schema_only_contract_drift(self) -> None:
+        payload = sample_changerequest_handoff_packet()
+        payload["unexpected"] = "not allowed"
+        payload["serialization"]["checksum_algorithm"] = "raw_json_hash"
+        payload["metadata"]["unexpected"] = "not allowed"
+        del payload["metadata"]["diff_review_v2"]
+
+        issues = validate_changerequest_handoff_packet(payload)
+        issue_text = " ".join(issues)
+
+        self.assertIn("unexpected is not part of ChangeRequest handoff packet version 1.", issue_text)
+        self.assertIn("serialization.checksum_algorithm must be", issue_text)
+        self.assertIn("metadata.unexpected is not part of ChangeRequest handoff packet version 1.", issue_text)
+        self.assertIn("metadata.diff_review_v2 must be a JSON object.", issue_text)
+
     def test_canonical_hash_is_stable_across_key_ordering(self) -> None:
         payload = sample_changerequest_handoff_packet()
         scrambled = copy.deepcopy(payload)

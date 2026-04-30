@@ -18,6 +18,7 @@ CHANGE_REQUEST_HANDOFF_SCHEMA_PATH = (
     / "workbench_changerequest_handoff_v1.schema.json"
 )
 CHANGE_REQUEST_HANDOFF_CANONICALIZATION = "json.sort_keys.separators.v1"
+CHANGE_REQUEST_HANDOFF_CHECKSUM_ALGORITHM = "ui_fnv1a32_over_canonical_json"
 
 _CONST_FIELDS: tuple[tuple[str, Any], ...] = (
     ("$schema", CHANGE_REQUEST_HANDOFF_SCHEMA_ID),
@@ -52,6 +53,52 @@ _REQUIRED_TOP_LEVEL_FIELDS = tuple(field_name for field_name, _expected in _CONS
     "pr_proof_packet",
     "changerequest_proof_packet",
 )
+_ALLOWED_TOP_LEVEL_FIELDS = frozenset(_REQUIRED_TOP_LEVEL_FIELDS)
+_SERIALIZATION_FIELDS = frozenset(("canonicalization", "checksum_algorithm"))
+_RED_LINE_METADATA_FIELDS = frozenset(
+    (
+        "red_lines_touched",
+        "truth_level_impact",
+        "dal_pssa_impact",
+        "controller_truth_modified",
+        "frozen_assets_modified",
+        "live_linear_mutation",
+    )
+)
+_METADATA_FIELDS = frozenset(
+    (
+        "linear_issue",
+        "linear_project",
+        "adapter",
+        "layer",
+        "selected_scenario_id",
+        "selected_node_id",
+        "changed_model_hash",
+        "sandbox_verdict",
+        "diff_review_v2",
+        "test_delta",
+        "agent_eligible",
+    )
+)
+_TEST_DELTA_FIELDS = frozenset(
+    (
+        "targeted_pytest",
+        "default_pytest",
+        "gsd_validation_suite",
+        "adversarial_8_8",
+        "e2e_49_49",
+        "mypy_strict_clean",
+        "truth_effect",
+    )
+)
+_ARTIFACT_FIELDS = frozenset(
+    (
+        "linear_issue_body_checksum",
+        "pr_proof_packet_checksum",
+        "changerequest_proof_packet_checksum",
+        "diff_review_v2_checksum",
+    )
+)
 
 
 def load_changerequest_handoff_schema() -> dict[str, Any]:
@@ -81,6 +128,8 @@ def validate_changerequest_handoff_packet(payload: Mapping[str, Any]) -> tuple[s
     if not isinstance(payload, Mapping):
         return ("ChangeRequest handoff packet root must be a JSON object.",)
 
+    issues.extend(_validate_allowed_keys("root", payload, _ALLOWED_TOP_LEVEL_FIELDS))
+
     for field_name in _REQUIRED_TOP_LEVEL_FIELDS:
         if field_name not in payload:
             issues.append(f"{field_name} is required.")
@@ -93,8 +142,12 @@ def validate_changerequest_handoff_packet(payload: Mapping[str, Any]) -> tuple[s
     serialization = payload.get("serialization")
     if not isinstance(serialization, Mapping):
         issues.append("serialization must be a JSON object.")
-    elif serialization.get("canonicalization") != CHANGE_REQUEST_HANDOFF_CANONICALIZATION:
-        issues.append(f"serialization.canonicalization must be {CHANGE_REQUEST_HANDOFF_CANONICALIZATION!r}.")
+    else:
+        issues.extend(_validate_allowed_keys("serialization", serialization, _SERIALIZATION_FIELDS))
+        if serialization.get("canonicalization") != CHANGE_REQUEST_HANDOFF_CANONICALIZATION:
+            issues.append(f"serialization.canonicalization must be {CHANGE_REQUEST_HANDOFF_CANONICALIZATION!r}.")
+        if serialization.get("checksum_algorithm") != CHANGE_REQUEST_HANDOFF_CHECKSUM_ALGORITHM:
+            issues.append(f"serialization.checksum_algorithm must be {CHANGE_REQUEST_HANDOFF_CHECKSUM_ALGORITHM!r}.")
 
     for field_name in ("outcome", "context", "linear_issue_body", "pr_proof_packet"):
         if not _non_empty_string(payload.get(field_name)):
@@ -104,6 +157,8 @@ def validate_changerequest_handoff_packet(payload: Mapping[str, Any]) -> tuple[s
         issues.extend(_validate_non_empty_string_list(field_name, payload.get(field_name)))
 
     red_line_metadata = payload.get("red_line_metadata")
+    if isinstance(red_line_metadata, Mapping):
+        issues.extend(_validate_allowed_keys("red_line_metadata", red_line_metadata, _RED_LINE_METADATA_FIELDS))
     issues.extend(
         _validate_constant_object(
             "red_line_metadata",
@@ -123,6 +178,7 @@ def validate_changerequest_handoff_packet(payload: Mapping[str, Any]) -> tuple[s
     if not isinstance(metadata, Mapping):
         issues.append("metadata must be a JSON object.")
     else:
+        issues.extend(_validate_allowed_keys("metadata", metadata, _METADATA_FIELDS))
         for field_name in (
             "linear_issue",
             "linear_project",
@@ -136,6 +192,8 @@ def validate_changerequest_handoff_packet(payload: Mapping[str, Any]) -> tuple[s
         ):
             if not _non_empty_string(metadata.get(field_name)):
                 issues.append(f"metadata.{field_name} must be a non-empty string.")
+        if not isinstance(metadata.get("diff_review_v2"), Mapping):
+            issues.append("metadata.diff_review_v2 must be a JSON object.")
         test_delta = metadata.get("test_delta")
         issues.extend(_validate_test_delta(test_delta))
 
@@ -143,6 +201,7 @@ def validate_changerequest_handoff_packet(payload: Mapping[str, Any]) -> tuple[s
     if not isinstance(artifacts, Mapping):
         issues.append("artifacts must be a JSON object.")
     else:
+        issues.extend(_validate_allowed_keys("artifacts", artifacts, _ARTIFACT_FIELDS))
         for field_name in (
             "linear_issue_body_checksum",
             "pr_proof_packet_checksum",
@@ -191,6 +250,19 @@ def _non_empty_string(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
 
 
+def _validate_allowed_keys(
+    field_name: str,
+    value: Mapping[str, Any],
+    allowed_keys: frozenset[str],
+) -> tuple[str, ...]:
+    issues: list[str] = []
+    for key in value:
+        if key not in allowed_keys:
+            prefix = "" if field_name == "root" else f"{field_name}."
+            issues.append(f"{prefix}{key} is not part of ChangeRequest handoff packet version 1.")
+    return tuple(issues)
+
+
 def _validate_non_empty_string_list(field_name: str, value: Any) -> tuple[str, ...]:
     if not isinstance(value, list) or not value:
         return (f"{field_name} must be a non-empty array.",)
@@ -219,15 +291,8 @@ def _validate_test_delta(value: Any) -> tuple[str, ...]:
     if not isinstance(value, Mapping):
         return ("metadata.test_delta must be a JSON object.",)
     issues: list[str] = []
-    for field_name in (
-        "targeted_pytest",
-        "default_pytest",
-        "gsd_validation_suite",
-        "adversarial_8_8",
-        "e2e_49_49",
-        "mypy_strict_clean",
-        "truth_effect",
-    ):
+    issues.extend(_validate_allowed_keys("metadata.test_delta", value, _TEST_DELTA_FIELDS))
+    for field_name in _TEST_DELTA_FIELDS:
         if field_name not in value:
             issues.append(f"metadata.test_delta.{field_name} is required.")
     if value.get("e2e_49_49") != "not_claimed":
