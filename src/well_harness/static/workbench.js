@@ -7603,6 +7603,17 @@ function installEditableWorkbenchShell() {
   const interfaceBindingStatus = document.getElementById("workbench-interface-binding-status");
   const interfaceBindingQuality = document.getElementById("workbench-interface-binding-quality");
   const interfaceBindingCoverage = document.getElementById("workbench-interface-binding-coverage");
+  const typedPortOwner = document.getElementById("workbench-typed-port-owner");
+  const portInputSignalInput = document.getElementById("workbench-port-input-signal");
+  const portOutputSignalInput = document.getElementById("workbench-port-output-signal");
+  const portValueTypeSelect = document.getElementById("workbench-port-value-type");
+  const portUnitInput = document.getElementById("workbench-port-unit");
+  const portRequiredInput = document.getElementById("workbench-port-required");
+  const edgeSignalIdInput = document.getElementById("workbench-edge-signal-id");
+  const edgeSourcePortInput = document.getElementById("workbench-edge-source-port");
+  const edgeTargetPortInput = document.getElementById("workbench-edge-target-port");
+  const applyPortContractBtn = document.getElementById("workbench-apply-port-contract-btn");
+  const portContractStatus = document.getElementById("workbench-port-contract-status");
   const exportDraftBtn = document.getElementById("workbench-export-draft-btn");
   const importDraftBtn = document.getElementById("workbench-import-draft-btn");
   const draftJsonBuffer = document.getElementById("workbench-draft-json-buffer");
@@ -7814,10 +7825,224 @@ function installEditableWorkbenchShell() {
     return `Binding coverage: ${summary.complete} complete / ${summary.partial} partial / ${summary.missing} missing. Truth effect: none.`;
   }
 
+  const portValueTypes = ["boolean", "number", "string", "state", "unknown"];
+
+  function normalizePortValueType(value) {
+    const text = normalizedInterfaceField(value);
+    return portValueTypes.includes(text) ? text : "unknown";
+  }
+
+  function normalizePortRequired(value) {
+    return value === true || value === "true" || value === "required";
+  }
+
+  function normalizePortField(value, defaultValue) {
+    const text = String(value === null || value === undefined ? "" : value).trim();
+    return text || defaultValue;
+  }
+
+  function normalizePortContract(contract, nodeId) {
+    const source = contract && typeof contract === "object" ? contract : {};
+    const normalizedNodeId = normalizePortField(nodeId || source.node_id || source.nodeId, "unknown");
+    return {
+      input_port_id: normalizePortField(
+        source.input_port_id || source.inputPortId,
+        `${normalizedNodeId}:in`,
+      ),
+      output_port_id: normalizePortField(
+        source.output_port_id || source.outputPortId,
+        `${normalizedNodeId}:out`,
+      ),
+      input_signal_id: normalizePortField(
+        source.input_signal_id || source.inputSignalId,
+        normalizedNodeId,
+      ),
+      output_signal_id: normalizePortField(
+        source.output_signal_id || source.outputSignalId,
+        normalizedNodeId,
+      ),
+      value_type: normalizePortValueType(source.value_type || source.valueType || "boolean"),
+      unit: String(source.unit === null || source.unit === undefined ? "" : source.unit).trim(),
+      required: normalizePortRequired(source.required),
+      source_ref: normalizePortField(
+        source.source_ref || source.sourceRef,
+        "ui_draft.port_contract",
+      ),
+      truth_effect: "none",
+    };
+  }
+
+  function nodePortContractTouched(node) {
+    return node && node.getAttribute("data-port-contract-touched") === "true";
+  }
+
+  function setNodePortContract(node, contract) {
+    if (!node) return null;
+    const nodeId = node.getAttribute("data-editable-node-id") || "unknown";
+    const normalized = normalizePortContract(contract, nodeId);
+    node.setAttribute("data-port-input-signal", normalized.input_signal_id);
+    node.setAttribute("data-port-output-signal", normalized.output_signal_id);
+    node.setAttribute("data-port-value-type", normalized.value_type);
+    node.setAttribute("data-port-unit", normalized.unit);
+    node.setAttribute("data-port-required", normalized.required ? "true" : "false");
+    node.setAttribute("data-port-contract-touched", "true");
+    return normalized;
+  }
+
+  function nodePortContract(node) {
+    if (!node) return normalizePortContract({}, "unknown");
+    const nodeId = node.getAttribute("data-editable-node-id") || "unknown";
+    return normalizePortContract({
+      input_signal_id: node.getAttribute("data-port-input-signal") || nodeId,
+      output_signal_id: node.getAttribute("data-port-output-signal") || nodeId,
+      value_type: node.getAttribute("data-port-value-type") || "boolean",
+      unit: node.getAttribute("data-port-unit") || "",
+      required: node.getAttribute("data-port-required") || "false",
+      source_ref: "ui_draft.port_contract",
+    }, nodeId);
+  }
+
+  function portRowsForNodeContract(node) {
+    if (!node || !nodePortContractTouched(node)) return [];
+    const nodeId = node.getAttribute("data-editable-node-id") || "unknown";
+    const contract = nodePortContract(node);
+    return [
+      {
+        id: contract.input_port_id,
+        node_id: nodeId,
+        direction: "in",
+        signal_id: contract.input_signal_id,
+        value_type: contract.value_type,
+        unit: contract.unit,
+        required: contract.required,
+        source_ref: contract.source_ref,
+        truth_effect: "none",
+      },
+      {
+        id: contract.output_port_id,
+        node_id: nodeId,
+        direction: "out",
+        signal_id: contract.output_signal_id,
+        value_type: contract.value_type,
+        unit: contract.unit,
+        required: contract.required,
+        source_ref: contract.source_ref,
+        truth_effect: "none",
+      },
+    ];
+  }
+
+  function edgePortContract(edge) {
+    if (!edge) {
+      return {
+        source_port_id: "evidence_gap",
+        target_port_id: "evidence_gap",
+        signal_id: "evidence_gap",
+        value_type: "unknown",
+        unit: "",
+        required: false,
+        truth_effect: "none",
+      };
+    }
+    const defaultSourcePortId = edge.source ? `${edge.source}:out` : "evidence_gap";
+    const defaultTargetPortId = edgeTargetPortId(edge) || "evidence_gap";
+    return {
+      source_port_id: normalizedInterfaceField(edge.source_port_id || edge.sourcePortId || defaultSourcePortId),
+      target_port_id: normalizedInterfaceField(edge.target_port_id || edge.targetPortId || defaultTargetPortId),
+      signal_id: normalizedInterfaceField(edge.signal_id || edge.signalId || `${edge.source || "unknown"}__to__${edge.target || "unknown"}`),
+      value_type: normalizePortValueType(edge.value_type || edge.valueType || "boolean"),
+      unit: String(edge.unit === null || edge.unit === undefined ? "" : edge.unit).trim(),
+      required: normalizePortRequired(edge.required),
+      truth_effect: "none",
+    };
+  }
+
+  function setEdgePortContract(edge, contract) {
+    if (!edge) return null;
+    const source = contract && typeof contract === "object" ? contract : {};
+    const normalized = edgePortContract({
+      ...edge,
+      source_port_id: source.source_port_id || source.sourcePortId || edge.source_port_id,
+      target_port_id: source.target_port_id || source.targetPortId || edge.target_port_id,
+      signal_id: source.signal_id || source.signalId || edge.signal_id,
+      value_type: source.value_type || source.valueType || edge.value_type,
+      unit: source.unit !== undefined ? source.unit : edge.unit,
+      required: source.required !== undefined ? source.required : edge.required,
+    });
+    edge.source_port_id = normalized.source_port_id;
+    edge.target_port_id = normalized.target_port_id;
+    edge.signal_id = normalized.signal_id;
+    edge.value_type = normalized.value_type;
+    edge.unit = normalized.unit;
+    edge.required = normalized.required;
+    return normalized;
+  }
+
+  function addUniquePortRow(rows, port) {
+    if (!port || !port.id || port.id === "evidence_gap") return;
+    if (rows.some((existing) => existing.id === port.id)) return;
+    rows.push(port);
+  }
+
+  function collectWorkbenchTypedPorts() {
+    refreshEditableNodes();
+    const rows = [];
+    for (const node of nodes) {
+      for (const port of portRowsForNodeContract(node)) {
+        addUniquePortRow(rows, port);
+      }
+    }
+    for (const edge of draftEdges) {
+      const contract = edgePortContract(edge);
+      if (contract.source_port_id && contract.source_port_id !== "evidence_gap") {
+        addUniquePortRow(rows, {
+          id: contract.source_port_id,
+          node_id: edge.source || "unknown",
+          direction: "out",
+          signal_id: contract.signal_id,
+          value_type: contract.value_type,
+          unit: contract.unit,
+          required: contract.required,
+          source_ref: `ui_draft.edges.${edge.id || "unknown"}.source_port`,
+          truth_effect: "none",
+        });
+      }
+      if (contract.target_port_id && contract.target_port_id !== "evidence_gap") {
+        addUniquePortRow(rows, {
+          id: contract.target_port_id,
+          node_id: edge.target || "unknown",
+          direction: "in",
+          signal_id: contract.signal_id,
+          value_type: contract.value_type,
+          unit: contract.unit,
+          required: contract.required,
+          source_ref: `ui_draft.edges.${edge.id || "unknown"}.target_port`,
+          truth_effect: "none",
+        });
+      }
+    }
+    return rows;
+  }
+
+  function buildPortContractSummary(ports, edges) {
+    const typedPorts = ports || [];
+    const edgeContracts = (edges || []).filter((edge) => {
+      const contract = edgePortContract(edge);
+      return contract.source_port_id !== "evidence_gap" && contract.target_port_id !== "evidence_gap";
+    });
+    return {
+      total_ports: typedPorts.length,
+      required_ports: typedPorts.filter((port) => port.required === true).length,
+      edge_contracts: edgeContracts.length,
+      value_types: Array.from(new Set(typedPorts.map((port) => port.value_type))).sort(),
+      truth_effect: "none",
+    };
+  }
+
   function selectedNodePayload() {
     if (!selectedNode) return null;
     const nodeId = selectedNode.getAttribute("data-editable-node-id") || "";
-    return {
+    const payload = {
       id: nodeId,
       label: selectedNode.getAttribute("data-node-label") || "",
       op: selectedNode.getAttribute("data-node-op") || "and",
@@ -7826,6 +8051,10 @@ function installEditableWorkbenchShell() {
       sourceRef: selectedNode.getAttribute("data-source-ref") || "unknown",
       hardware_binding: nodeInterfaceBinding(selectedNode),
     };
+    if (nodePortContractTouched(selectedNode)) {
+      payload.port_contract = nodePortContract(selectedNode);
+    }
+    return payload;
   }
 
   function refreshEditableNodes() {
@@ -7833,7 +8062,7 @@ function installEditableWorkbenchShell() {
   }
 
   function editableNodeState(node) {
-    return {
+    const state = {
       id: node.getAttribute("data-editable-node-id") || "",
       label: node.getAttribute("data-node-label") || "",
       op: node.getAttribute("data-node-op") || "and",
@@ -7845,6 +8074,10 @@ function installEditableWorkbenchShell() {
       y: node.style.getPropertyValue("--node-y") || "50%",
       draftNode: node.getAttribute("data-draft-node") === "true",
     };
+    if (nodePortContractTouched(node)) {
+      state.port_contract = nodePortContract(node);
+    }
+    return state;
   }
 
   function serializeEditableState() {
@@ -7870,6 +8103,9 @@ function installEditableWorkbenchShell() {
     node.setAttribute("data-source-ref", nodeState.sourceRef || "ui_draft.node");
     node.setAttribute("data-draft-node", nodeState.draftNode ? "true" : "false");
     setNodeInterfaceBinding(node, nodeState.hardware_binding || nodeState.hardwareBinding || {});
+    if (nodeState.port_contract || nodeState.portContract) {
+      setNodePortContract(node, nodeState.port_contract || nodeState.portContract);
+    }
     node.style.setProperty("--node-x", nodeState.x || "50%");
     node.style.setProperty("--node-y", nodeState.y || "50%");
     node.setAttribute("aria-pressed", "false");
@@ -7906,6 +8142,9 @@ function installEditableWorkbenchShell() {
       if (typeof nodeState.evidence === "string") node.setAttribute("data-hardware-evidence", nodeState.evidence);
       if (typeof nodeState.sourceRef === "string") node.setAttribute("data-source-ref", nodeState.sourceRef);
       setNodeInterfaceBinding(node, nodeState.hardware_binding || nodeState.hardwareBinding || nodeInterfaceBinding(node));
+      if (nodeState.port_contract || nodeState.portContract) {
+        setNodePortContract(node, nodeState.port_contract || nodeState.portContract);
+      }
       if (typeof nodeState.x === "string") node.style.setProperty("--node-x", nodeState.x);
       if (typeof nodeState.y === "string") node.style.setProperty("--node-y", nodeState.y);
       updateNodeDisplay(node);
@@ -7918,6 +8157,11 @@ function installEditableWorkbenchShell() {
             source: String(edge.source || ""),
             target: String(edge.target || ""),
             signal_id: edge.signal_id ? String(edge.signal_id) : undefined,
+            source_port_id: edge.source_port_id ? String(edge.source_port_id) : undefined,
+            target_port_id: edge.target_port_id ? String(edge.target_port_id) : undefined,
+            value_type: edge.value_type ? String(edge.value_type) : undefined,
+            unit: edge.unit ? String(edge.unit) : "",
+            required: Boolean(edge.required),
             hardware_binding: normalizeInterfaceBinding(
               edge.hardware_binding || edge.hardwareBinding || {},
               "edge",
@@ -7991,8 +8235,8 @@ function installEditableWorkbenchShell() {
     const missing = [];
     if (!sourceNode) missing.push("source_node");
     if (!targetNode) missing.push("target_node");
-    const sourcePortId = edge.source ? `${edge.source}:out` : "";
-    const targetPortId = edgeTargetPortId(edge);
+    const sourcePortId = edge.source_port_id || edge.sourcePortId || (edge.source ? `${edge.source}:out` : "");
+    const targetPortId = edge.target_port_id || edge.targetPortId || edgeTargetPortId(edge);
     return {
       id: edge.id || `${edge.source}->${edge.target}`,
       source_node_id: edge.source || "unknown",
@@ -8000,6 +8244,9 @@ function installEditableWorkbenchShell() {
       source_port_id: sourcePortId || "evidence_gap",
       target_port_id: targetPortId || "evidence_gap",
       signal_id: edge.signal_id || `${edge.source || "unknown"}__to__${edge.target || "unknown"}`,
+      value_type: normalizePortValueType(edge.value_type || edge.valueType || "boolean"),
+      unit: String(edge.unit === null || edge.unit === undefined ? "" : edge.unit).trim(),
+      required: normalizePortRequired(edge.required),
       evidence_status: missing.length ? "evidence_gap" : "ui_draft",
       validation_issue: missing.length ? `evidence_gap:${missing.join("+")}` : "none",
       truth_effect: "none",
@@ -8177,11 +8424,18 @@ function installEditableWorkbenchShell() {
       return;
     }
     recordEditableHistory("connect_edge");
+    const newEdgeId = `edge_${sourceId}_${targetId}_${draftEdges.length + 1}`;
     draftEdges.push({
-      id: `edge_${sourceId}_${targetId}_${draftEdges.length + 1}`,
+      id: newEdgeId,
       source: sourceId,
       target: targetId,
-      hardware_binding: normalizeInterfaceBinding({}, "edge", `edge_${sourceId}_${targetId}_${draftEdges.length + 1}`),
+      source_port_id: `${sourceId}:out`,
+      target_port_id: edgeTargetPortId({ source: sourceId, target: targetId }),
+      signal_id: `${sourceId}__to__${targetId}`,
+      value_type: "boolean",
+      unit: "",
+      required: false,
+      hardware_binding: normalizeInterfaceBinding({}, "edge", newEdgeId),
     });
     if (draftLabel) draftLabel.textContent = "sandbox_candidate edge edit pending";
     renderEditableEdges();
@@ -8426,6 +8680,119 @@ function installEditableWorkbenchShell() {
     return binding;
   }
 
+  function setPortEditorDisabledState(targetKind) {
+    const nodeFields = [portInputSignalInput, portOutputSignalInput];
+    const edgeFields = [edgeSignalIdInput, edgeSourcePortInput, edgeTargetPortInput];
+    for (const field of nodeFields) {
+      if (field) field.disabled = targetKind !== "node";
+    }
+    for (const field of edgeFields) {
+      if (field) field.disabled = targetKind !== "edge";
+    }
+    for (const field of [portValueTypeSelect, portUnitInput, portRequiredInput]) {
+      if (field) field.disabled = targetKind === "none";
+    }
+  }
+
+  function renderTypedPortEditor() {
+    const target = activeInterfaceBindingTarget();
+    setPortEditorDisabledState(target.kind);
+    if (typedPortOwner) {
+      typedPortOwner.textContent = `${target.kind}:${target.id}`;
+    }
+    if (target.kind === "edge") {
+      const contract = edgePortContract(selectedEdge);
+      if (portInputSignalInput) portInputSignalInput.value = "";
+      if (portOutputSignalInput) portOutputSignalInput.value = "";
+      if (edgeSignalIdInput) edgeSignalIdInput.value = contract.signal_id === "evidence_gap" ? "" : contract.signal_id;
+      if (edgeSourcePortInput) edgeSourcePortInput.value = contract.source_port_id === "evidence_gap" ? "" : contract.source_port_id;
+      if (edgeTargetPortInput) edgeTargetPortInput.value = contract.target_port_id === "evidence_gap" ? "" : contract.target_port_id;
+      if (portValueTypeSelect) portValueTypeSelect.value = contract.value_type;
+      if (portUnitInput) portUnitInput.value = contract.unit;
+      if (portRequiredInput) portRequiredInput.checked = contract.required;
+      if (portContractStatus) {
+        portContractStatus.textContent =
+          `Editing edge port metadata ${target.id}. Truth effect: none.`;
+      }
+      return;
+    }
+    if (target.kind === "node") {
+      const contract = nodePortContract(selectedNode);
+      if (portInputSignalInput) portInputSignalInput.value = contract.input_signal_id;
+      if (portOutputSignalInput) portOutputSignalInput.value = contract.output_signal_id;
+      if (edgeSignalIdInput) edgeSignalIdInput.value = "";
+      if (edgeSourcePortInput) edgeSourcePortInput.value = "";
+      if (edgeTargetPortInput) edgeTargetPortInput.value = "";
+      if (portValueTypeSelect) portValueTypeSelect.value = contract.value_type;
+      if (portUnitInput) portUnitInput.value = contract.unit;
+      if (portRequiredInput) portRequiredInput.checked = contract.required;
+      if (portContractStatus) {
+        portContractStatus.textContent =
+          `Editing node typed ports ${target.id}. Local sandbox contract only. Truth effect: none.`;
+      }
+      return;
+    }
+    if (portInputSignalInput) portInputSignalInput.value = "";
+    if (portOutputSignalInput) portOutputSignalInput.value = "";
+    if (edgeSignalIdInput) edgeSignalIdInput.value = "";
+    if (edgeSourcePortInput) edgeSourcePortInput.value = "";
+    if (edgeTargetPortInput) edgeTargetPortInput.value = "";
+    if (portValueTypeSelect) portValueTypeSelect.value = "unknown";
+    if (portUnitInput) portUnitInput.value = "";
+    if (portRequiredInput) portRequiredInput.checked = false;
+    if (portContractStatus) {
+      portContractStatus.textContent = "Select a node or edge to edit sandbox ports. Truth effect: none.";
+    }
+  }
+
+  function readPortContractForm(target) {
+    const valueType = portValueTypeSelect && portValueTypeSelect.value;
+    const unit = portUnitInput && portUnitInput.value;
+    const required = Boolean(portRequiredInput && portRequiredInput.checked);
+    if (target.kind === "edge") {
+      return {
+        source_port_id: edgeSourcePortInput && edgeSourcePortInput.value,
+        target_port_id: edgeTargetPortInput && edgeTargetPortInput.value,
+        signal_id: edgeSignalIdInput && edgeSignalIdInput.value,
+        value_type: valueType,
+        unit,
+        required,
+        truth_effect: "none",
+      };
+    }
+    return normalizePortContract({
+      input_signal_id: portInputSignalInput && portInputSignalInput.value,
+      output_signal_id: portOutputSignalInput && portOutputSignalInput.value,
+      value_type: valueType,
+      unit,
+      required,
+      truth_effect: "none",
+    }, target.id);
+  }
+
+  function applySelectedPortContract() {
+    const target = activeInterfaceBindingTarget();
+    if (target.kind === "none") return null;
+    recordEditableHistory("port_contract_edit");
+    const contract = readPortContractForm(target);
+    if (target.kind === "edge") {
+      setEdgePortContract(selectedEdge, contract);
+    } else if (target.kind === "node") {
+      setNodePortContract(selectedNode, contract);
+    }
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate typed port edit pending";
+    renderInspector();
+    if (portContractStatus) {
+      portContractStatus.textContent =
+        `Applied ${target.kind}:${target.id} typed port metadata as sandbox evidence. Truth effect: none.`;
+    }
+    renderEditableEdges();
+    validateEditableGraph();
+    updateEditableDraftHash();
+    persistDraft();
+    return contract;
+  }
+
   function renderEdgeInspector(edge) {
     const payload = edgeInspectorPayload(edge || {});
     if (nodeIdSlot) nodeIdSlot.textContent = payload.id;
@@ -8454,6 +8821,7 @@ function installEditableWorkbenchShell() {
       '<p class="workbench-inspector-truth-note">truth_effect: none</p>',
     ].join("");
     renderInterfaceBindingEditor();
+    renderTypedPortEditor();
   }
 
   function renderInspector() {
@@ -8471,6 +8839,7 @@ function installEditableWorkbenchShell() {
     if (sourceRefSlot) sourceRefSlot.textContent = payload.sourceRef;
     renderInspectorEvidenceDetails(payload);
     renderInterfaceBindingEditor();
+    renderTypedPortEditor();
   }
 
   function selectEditableEdge(edgeId) {
@@ -8595,6 +8964,9 @@ function installEditableWorkbenchShell() {
     const selected = selectedNodePayload() || {};
     const hardwareBindings = collectWorkbenchHardwareBindings();
     const bindingCoverage = buildInterfaceBindingCoverageSummary(hardwareBindings);
+    const typedPorts = collectWorkbenchTypedPorts();
+    const interfacePorts = collectWorkbenchInterfacePorts();
+    const portContractSummary = buildPortContractSummary(typedPorts, draftEdges);
     return {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
       system_id: "thrust-reverser",
@@ -8604,7 +8976,8 @@ function installEditableWorkbenchShell() {
       controller_truth_modified: false,
       selected_node: selected,
       nodes: nodes.map((node) => editableNodeState(node)),
-      ports: collectWorkbenchInterfacePorts(),
+      ports: [...typedPorts, ...interfacePorts],
+      typed_ports: typedPorts,
       edges: draftEdges.map((edge) => ({
         ...edge,
         ...edgeInspectorPayload(edge),
@@ -8612,6 +8985,7 @@ function installEditableWorkbenchShell() {
       })),
       hardware_bindings: hardwareBindings,
       binding_coverage: bindingCoverage,
+      port_contract_summary: portContractSummary,
     };
   }
 
@@ -8673,9 +9047,11 @@ function installEditableWorkbenchShell() {
       selected_node: snapshot.selected_node,
       nodes: snapshot.nodes,
       ports: snapshot.ports,
+      typed_ports: snapshot.typed_ports,
       edges: snapshot.edges,
       hardware_bindings: snapshot.hardware_bindings,
       binding_coverage: snapshot.binding_coverage,
+      port_contract_summary: snapshot.port_contract_summary,
       selected_scenario_id: selectedWorkbenchScenarioId(),
       custom_snapshot: customSnapshot,
       source_refs: uniqueSourceRefs(),
@@ -8713,6 +9089,15 @@ function installEditableWorkbenchShell() {
     }
     if (payload.hardware_bindings !== undefined && !Array.isArray(payload.hardware_bindings)) {
       throw new Error("hardware_bindings must be an array when present");
+    }
+    if (payload.typed_ports !== undefined && !Array.isArray(payload.typed_ports)) {
+      throw new Error("typed_ports must be an array when present");
+    }
+    if (
+      payload.port_contract_summary !== undefined
+      && (!payload.port_contract_summary || typeof payload.port_contract_summary !== "object" || Array.isArray(payload.port_contract_summary))
+    ) {
+      throw new Error("port_contract_summary must be an object when present");
     }
     if (
       payload.custom_snapshot !== undefined
@@ -8757,6 +9142,7 @@ function installEditableWorkbenchShell() {
         evidence: String(node.evidence || "evidence_gap"),
         sourceRef: String(node.sourceRef || node.source_ref || "ui_draft.import"),
         hardware_binding: node.hardware_binding || node.hardwareBinding || {},
+        port_contract: node.port_contract || node.portContract || null,
         x: String(node.x || "50%"),
         y: String(node.y || "50%"),
         draftNode: Boolean(node.draftNode || node.draft_node || String(node.id || "").startsWith("draft_node_")),
@@ -8956,11 +9342,17 @@ function installEditableWorkbenchShell() {
     const node = snapshot.selected_node || {};
     const hardwareBindings = snapshot.hardware_bindings || [];
     const bindingCoverage = snapshot.binding_coverage || buildInterfaceBindingCoverageSummary(hardwareBindings);
+    const portContractSummary = snapshot.port_contract_summary || buildPortContractSummary(
+      snapshot.typed_ports || [],
+      snapshot.edges || [],
+    );
     const bindingSummary = hardwareBindings.length
       ? hardwareBindings
           .map((binding) => `${binding.owner_kind}:${binding.owner_id} hardware=${binding.hardware_id} cable=${binding.cable} connector=${binding.connector} ports=${binding.port_local}->${binding.port_peer}`)
           .join("; ")
       : "none";
+    const portSummary =
+      `${portContractSummary.total_ports} typed ports / ${portContractSummary.edge_contracts} edge contracts / required=${portContractSummary.required_ports}`;
     const linearIssueBody = [
       "## Outcome",
       `Review sandbox candidate edit for ${node.id || "selected node"} against the certified thrust-reverser baseline.`,
@@ -8983,6 +9375,7 @@ function installEditableWorkbenchShell() {
       "- Sandbox baseline diff report.",
       "- Hardware/interface binding draft evidence.",
       "- Binding coverage summary.",
+      "- Typed port contract summary.",
       "- Targeted pytest and PR proof packet.",
       "- Official mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json.",
       "- e2e 49/49 and mypy --strict clean are not claimed from this local UI archive.",
@@ -8996,6 +9389,7 @@ function installEditableWorkbenchShell() {
       `- Selected scenario: ${selectedWorkbenchScenarioId()}`,
       `- Hardware/interface bindings: ${bindingSummary}`,
       `- Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
+      `- Port contract summary: ${portSummary}`,
       "- Agent eligible: No",
     ].join("\n");
     const prProofPacket = [
@@ -9011,6 +9405,7 @@ function installEditableWorkbenchShell() {
       `Latest sandbox verdict: ${(lastSandboxDiff && lastSandboxDiff.verdict) || "not_run"}`,
       `Hardware/interface bindings: ${bindingSummary}`,
       `Binding coverage: ${bindingCoverage.complete} complete / ${bindingCoverage.partial} partial / ${bindingCoverage.missing} missing`,
+      `Port contract summary: ${portSummary}`,
       "Mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
       "No live Linear mutation; this packet is copy-ready evidence only.",
     ].join("\n");
@@ -9020,6 +9415,7 @@ function installEditableWorkbenchShell() {
       prProofPacket,
       gateClaims: buildWorkbenchGateClaims(),
       knownBlockers: buildWorkbenchKnownBlockers(),
+      portContractSummary,
     };
   }
 
@@ -9043,6 +9439,9 @@ function installEditableWorkbenchShell() {
     const modelJson = buildEditableDraftExport();
     const hardwareBindings = collectWorkbenchHardwareBindings();
     const bindingCoverage = buildInterfaceBindingCoverageSummary(hardwareBindings);
+    const typedPorts = modelJson.typed_ports || [];
+    const portContractSummary =
+      modelJson.port_contract_summary || buildPortContractSummary(typedPorts, modelJson.edges || []);
     const diffSummary = lastSandboxDiff || {
       verdict: "not_run",
       scenario_id: selectedWorkbenchScenarioId(),
@@ -9071,6 +9470,8 @@ function installEditableWorkbenchShell() {
       scenario_metadata: scenarioMetadata,
       hardware_bindings: hardwareBindings,
       binding_coverage: bindingCoverage,
+      typed_ports: typedPorts,
+      port_contract_summary: portContractSummary,
       changerequest_body: handoffPacket.linearIssueBody,
       pr_proof_packet: handoffPacket.prProofPacket,
       gate_claims: handoffPacket.gateClaims,
@@ -9084,6 +9485,8 @@ function installEditableWorkbenchShell() {
       pr_proof_packet_checksum: checksumEvidenceArchiveField(handoffPacket.prProofPacket),
       hardware_bindings_checksum: checksumEvidenceArchiveField(hardwareBindings),
       binding_coverage_checksum: checksumEvidenceArchiveField(bindingCoverage),
+      typed_ports_checksum: checksumEvidenceArchiveField(typedPorts),
+      port_contract_summary_checksum: checksumEvidenceArchiveField(portContractSummary),
       gate_claims_checksum: checksumEvidenceArchiveField(handoffPacket.gateClaims),
       known_blockers_checksum: checksumEvidenceArchiveField(handoffPacket.knownBlockers),
     };
@@ -9224,6 +9627,9 @@ function installEditableWorkbenchShell() {
   }
   if (applyInterfaceBindingBtn) {
     applyInterfaceBindingBtn.addEventListener("click", () => applySelectedInterfaceBinding());
+  }
+  if (applyPortContractBtn) {
+    applyPortContractBtn.addEventListener("click", () => applySelectedPortContract());
   }
   if (exportDraftBtn) {
     exportDraftBtn.addEventListener("click", () => exportEditableDraftJson());

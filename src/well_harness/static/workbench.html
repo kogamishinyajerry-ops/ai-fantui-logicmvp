@@ -768,6 +768,66 @@
                 </p>
               </section>
               <section
+                id="workbench-typed-port-editor"
+                class="workbench-typed-port-editor"
+                aria-labelledby="workbench-typed-port-title"
+              >
+                <div class="workbench-inspector-header">
+                  <span id="workbench-typed-port-title">Typed Ports</span>
+                  <strong id="workbench-typed-port-owner">node:logic1</strong>
+                </div>
+                <div class="workbench-typed-port-grid">
+                  <label class="workbench-inspector-field" for="workbench-port-input-signal">
+                    <span>Input signal</span>
+                    <input id="workbench-port-input-signal" type="text" placeholder="logic1">
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-port-output-signal">
+                    <span>Output signal</span>
+                    <input id="workbench-port-output-signal" type="text" placeholder="logic1">
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-port-value-type">
+                    <span>Value type</span>
+                    <select id="workbench-port-value-type">
+                      <option value="boolean">boolean</option>
+                      <option value="number">number</option>
+                      <option value="string">string</option>
+                      <option value="state">state</option>
+                      <option value="unknown">unknown</option>
+                    </select>
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-port-unit">
+                    <span>Unit</span>
+                    <input id="workbench-port-unit" type="text" placeholder="">
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-edge-source-port">
+                    <span>Source port</span>
+                    <input id="workbench-edge-source-port" type="text" placeholder="logic1:out">
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-edge-target-port">
+                    <span>Target port</span>
+                    <input id="workbench-edge-target-port" type="text" placeholder="logic2:in">
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-edge-signal-id">
+                    <span>Edge signal</span>
+                    <input id="workbench-edge-signal-id" type="text" placeholder="logic1__to__logic2">
+                  </label>
+                  <label class="workbench-inspector-field workbench-port-required-field" for="workbench-port-required">
+                    <span>Required</span>
+                    <input id="workbench-port-required" type="checkbox">
+                  </label>
+                </div>
+                <button
+                  id="workbench-apply-port-contract-btn"
+                  type="button"
+                  class="workbench-editable-primary workbench-port-apply"
+                >
+                  Apply ports
+                </button>
+                <p id="workbench-port-contract-status" class="workbench-handoff-status">
+                  Local sandbox port contract only. Truth effect: none.
+                </p>
+              </section>
+              <section
                 id="workbench-sandbox-diff-panel"
                 class="workbench-sandbox-diff-panel"
                 aria-labelledby="workbench-sandbox-diff-title"

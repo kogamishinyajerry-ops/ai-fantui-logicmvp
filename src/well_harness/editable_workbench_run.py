@@ -38,6 +38,7 @@ SUPPORTED_SCENARIOS = {
     "nominal_landing": "nominal_landing.json",
     "sw1_stuck_at_touchdown": "sw1_stuck_at_touchdown.json",
 }
+PORT_VALUE_TYPES = {"boolean", "number", "string", "state", "unknown"}
 
 
 class WorkbenchGraphValidationError(EditableControlModelValidationError):
@@ -296,31 +297,174 @@ def _draft_node(update: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _draft_node_ports(node_id: str) -> list[dict[str, Any]]:
+def _draft_port_field(value: Any, *, default: str) -> str:
+    text = str(value or "").strip()
+    return text or default
+
+
+def _draft_port_value_type(value: Any, *, default: str = "boolean") -> str:
+    text = str(value or "").strip()
+    if text in PORT_VALUE_TYPES:
+        return text
+    return default if default in PORT_VALUE_TYPES else "unknown"
+
+
+def _draft_port_bool(value: Any, *, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "required"}
+    return bool(value)
+
+
+def _draft_node_port_contract(update: dict[str, Any], node_id: str) -> dict[str, Any] | None:
+    contract = update.get("port_contract", update.get("portContract"))
+    if contract is None:
+        return None
+    if not isinstance(contract, dict):
+        raise EditableControlModelValidationError("port_contract must be an object")
+    if str(contract.get("truth_effect", "none")) != "none":
+        raise EditableControlModelValidationError("port_contract truth_effect must be none")
+    return {
+        "input_port_id": _draft_port_field(
+            contract.get("input_port_id", contract.get("inputPortId")),
+            default=f"{node_id}:in",
+        ),
+        "output_port_id": _draft_port_field(
+            contract.get("output_port_id", contract.get("outputPortId")),
+            default=f"{node_id}:out",
+        ),
+        "input_signal_id": _draft_port_field(
+            contract.get("input_signal_id", contract.get("inputSignalId")),
+            default=node_id,
+        ),
+        "output_signal_id": _draft_port_field(
+            contract.get("output_signal_id", contract.get("outputSignalId")),
+            default=node_id,
+        ),
+        "value_type": _draft_port_value_type(
+            contract.get("value_type", contract.get("valueType")),
+        ),
+        "unit": str(contract.get("unit", "") or "").strip(),
+        "required": _draft_port_bool(contract.get("required")),
+    }
+
+
+def _port_payload(
+    *,
+    port_id: str,
+    node_id: str,
+    direction: str,
+    signal_id: str,
+    value_type: str,
+    unit: str,
+    required: bool,
+) -> dict[str, Any]:
+    return {
+        "id": port_id,
+        "node_id": node_id,
+        "direction": direction,
+        "signal_id": signal_id,
+        "value_type": value_type,
+        "unit": unit,
+        "required": required,
+    }
+
+
+def _draft_node_ports(
+    node_id: str,
+    contract: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    normalized = contract or {
+        "input_port_id": f"{node_id}:in",
+        "output_port_id": f"{node_id}:out",
+        "input_signal_id": node_id,
+        "output_signal_id": node_id,
+        "value_type": "boolean",
+        "unit": "",
+        "required": False,
+    }
     return [
-        {
-            "id": f"{node_id}:in",
-            "node_id": node_id,
-            "direction": "in",
-            "signal_id": node_id,
-            "value_type": "boolean",
-            "unit": "",
-            "required": False,
-        },
-        {
-            "id": f"{node_id}:out",
-            "node_id": node_id,
-            "direction": "out",
-            "signal_id": node_id,
-            "value_type": "boolean",
-            "unit": "",
-            "required": False,
-        },
+        _port_payload(
+            port_id=normalized["input_port_id"],
+            node_id=node_id,
+            direction="in",
+            signal_id=normalized["input_signal_id"],
+            value_type=normalized["value_type"],
+            unit=normalized["unit"],
+            required=normalized["required"],
+        ),
+        _port_payload(
+            port_id=normalized["output_port_id"],
+            node_id=node_id,
+            direction="out",
+            signal_id=normalized["output_signal_id"],
+            value_type=normalized["value_type"],
+            unit=normalized["unit"],
+            required=normalized["required"],
+        ),
     ]
 
 
 def _has_port(model: dict[str, Any], port_id: str) -> bool:
     return any(port["id"] == port_id for port in model["ports"])
+
+
+def _upsert_ui_port(model: dict[str, Any], port: dict[str, Any]) -> None:
+    for existing in model["ports"]:
+        if existing["id"] == port["id"]:
+            existing.update(port)
+            return
+    model["ports"].append(port)
+
+
+def _apply_node_port_contract(
+    model: dict[str, Any],
+    *,
+    node_id: str,
+    contract: dict[str, Any] | None,
+) -> None:
+    if contract is None:
+        return
+    for port in _draft_node_ports(node_id, contract):
+        _upsert_ui_port(model, port)
+
+
+def _apply_ui_typed_ports(model: dict[str, Any], draft: dict[str, Any]) -> None:
+    node_ids = {node["id"] for node in model["nodes"]}
+    candidates = []
+    for key in ("typed_ports", "typedPorts"):
+        raw_ports = draft.get(key)
+        if isinstance(raw_ports, list):
+            candidates.extend(raw_ports)
+    for port in candidates:
+        if not isinstance(port, dict):
+            continue
+        node_id = str(port.get("node_id", port.get("nodeId", ""))).strip()
+        port_id = str(port.get("id", "")).strip()
+        signal_id = str(port.get("signal_id", port.get("signalId", ""))).strip()
+        direction = str(port.get("direction", "")).strip()
+        if not node_id or node_id not in node_ids or not port_id or not signal_id:
+            continue
+        if direction not in {"in", "out"}:
+            continue
+        _upsert_ui_port(
+            model,
+            _port_payload(
+                port_id=port_id,
+                node_id=node_id,
+                direction=direction,
+                signal_id=signal_id,
+                value_type=_draft_port_value_type(
+                    port.get("value_type", port.get("valueType")),
+                    default="unknown",
+                ),
+                unit=str(port.get("unit", "") or "").strip(),
+                required=_draft_port_bool(port.get("required")),
+            ),
+        )
 
 
 def _ensure_ui_target_port(model: dict[str, Any], *, source_node_id: str, target_node_id: str) -> str:
@@ -514,22 +658,78 @@ def _apply_ui_edges(model: dict[str, Any], draft: dict[str, Any]) -> None:
                 edge_id=edge_id,
                 field="target",
             )
-        source_port_id = f"{source_node_id}:out"
-        if not _has_port(model, source_port_id):
-            raise _graph_validation_error(
-                category="dangling_port",
-                code="missing_source_port",
-                message=f"draft edge {edge_id!r} references missing source port {source_port_id!r}",
-                node_id=source_node_id,
-                edge_id=edge_id,
-                port_id=source_port_id,
-                field="source_port_id",
-            )
-        target_port_id = _ensure_ui_target_port(
-            model,
-            source_node_id=source_node_id,
-            target_node_id=target_node_id,
+        edge_signal_id = _draft_port_field(
+            edge.get("signal_id", edge.get("signalId")),
+            default=f"{source_node_id}__to__{target_node_id}",
         )
+        edge_value_type = _draft_port_value_type(
+            edge.get("value_type", edge.get("valueType")),
+        )
+        edge_unit = str(edge.get("unit", "") or "").strip()
+        edge_required = _draft_port_bool(edge.get("required"))
+        raw_source_port_id = edge.get("source_port_id", edge.get("sourcePortId"))
+        has_explicit_source_port = bool(str(raw_source_port_id or "").strip())
+        source_port_id = _draft_port_field(
+            raw_source_port_id,
+            default=f"{source_node_id}:out",
+        )
+        if not _has_port(model, source_port_id):
+            if has_explicit_source_port and source_port_id.startswith(f"{source_node_id}:"):
+                _upsert_ui_port(
+                    model,
+                    _port_payload(
+                        port_id=source_port_id,
+                        node_id=source_node_id,
+                        direction="out",
+                        signal_id=edge_signal_id,
+                        value_type=edge_value_type,
+                        unit=edge_unit,
+                        required=edge_required,
+                    ),
+                )
+            else:
+                raise _graph_validation_error(
+                    category="dangling_port",
+                    code="missing_source_port",
+                    message=f"draft edge {edge_id!r} references missing source port {source_port_id!r}",
+                    node_id=source_node_id,
+                    edge_id=edge_id,
+                    port_id=source_port_id,
+                    field="source_port_id",
+                )
+        raw_target_port_id = edge.get("target_port_id", edge.get("targetPortId"))
+        if raw_target_port_id:
+            target_port_id = _draft_port_field(raw_target_port_id, default="")
+            if not _has_port(model, target_port_id):
+                if target_port_id.startswith(f"{target_node_id}:"):
+                    _upsert_ui_port(
+                        model,
+                        _port_payload(
+                            port_id=target_port_id,
+                            node_id=target_node_id,
+                            direction="in",
+                            signal_id=edge_signal_id,
+                            value_type=edge_value_type,
+                            unit=edge_unit,
+                            required=edge_required,
+                        ),
+                    )
+                else:
+                    raise _graph_validation_error(
+                        category="dangling_port",
+                        code="missing_target_port",
+                        message=f"draft edge {edge_id!r} references missing target port {target_port_id!r}",
+                        node_id=target_node_id,
+                        edge_id=edge_id,
+                        port_id=target_port_id,
+                        field="target_port_id",
+                    )
+        else:
+            target_port_id = _ensure_ui_target_port(
+                model,
+                source_node_id=source_node_id,
+                target_node_id=target_node_id,
+            )
         canonical_edge_id = f"ui-edge:{edge_id}"
         if any(existing["id"] == canonical_edge_id for existing in model["edges"]):
             raise _graph_validation_error(
@@ -567,13 +767,15 @@ def canonicalize_workbench_ui_draft(base_model: dict[str, Any], draft: dict[str,
         if not isinstance(update, dict):
             raise EditableControlModelValidationError("draft nodes must be objects")
         node_id = _draft_node_id(update.get("id"))
+        port_contract = _draft_node_port_contract(update, node_id)
         node = nodes.get(node_id)
         if node is None:
             node = _draft_node(update)
             model["nodes"].append(node)
-            model["ports"].extend(_draft_node_ports(node_id))
+            model["ports"].extend(_draft_node_ports(node_id, port_contract))
             nodes[node_id] = node
             continue
+        _apply_node_port_contract(model, node_id=node_id, contract=port_contract)
         if "label" in update:
             node["label"] = str(update["label"])
         if "op" in update and update["op"] is not None:
@@ -587,6 +789,7 @@ def canonicalize_workbench_ui_draft(base_model: dict[str, Any], draft: dict[str,
                     field="op",
                 )
             node["op"] = op
+    _apply_ui_typed_ports(model, draft)
     _apply_ui_edges(model, draft)
     _apply_ui_hardware_bindings(model, draft)
     source_refs = model["evidence_metadata"].setdefault("source_refs", [])
