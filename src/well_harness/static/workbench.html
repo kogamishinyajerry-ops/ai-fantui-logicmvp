@@ -941,11 +941,32 @@
                 >
                   Apply matrix
                 </button>
+                <button
+                  id="workbench-export-interface-matrix-csv-btn"
+                  type="button"
+                  class="workbench-editable-secondary"
+                >
+                  Export CSV
+                </button>
+                <button
+                  id="workbench-import-interface-matrix-csv-btn"
+                  type="button"
+                  class="workbench-editable-secondary"
+                >
+                  Import CSV
+                </button>
                 <label class="workbench-handoff-output" for="workbench-interface-matrix-output">
                   <span>Hardware/interface design matrix</span>
                   <textarea
                     id="workbench-interface-matrix-output"
                     rows="7"
+                  ></textarea>
+                </label>
+                <label class="workbench-handoff-output" for="workbench-interface-matrix-csv-output">
+                  <span>Spreadsheet matrix rows</span>
+                  <textarea
+                    id="workbench-interface-matrix-csv-output"
+                    rows="5"
                   ></textarea>
                 </label>
                 <p id="workbench-interface-matrix-status" class="workbench-handoff-status">

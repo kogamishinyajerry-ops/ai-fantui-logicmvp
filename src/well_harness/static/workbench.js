@@ -7625,7 +7625,10 @@ function installEditableWorkbenchShell() {
   const exportInterfaceMatrixBtn = document.getElementById("workbench-export-interface-matrix-btn");
   const validateInterfaceMatrixBtn = document.getElementById("workbench-validate-interface-matrix-btn");
   const applyInterfaceMatrixBtn = document.getElementById("workbench-apply-interface-matrix-btn");
+  const exportInterfaceMatrixCsvBtn = document.getElementById("workbench-export-interface-matrix-csv-btn");
+  const importInterfaceMatrixCsvBtn = document.getElementById("workbench-import-interface-matrix-csv-btn");
   const interfaceMatrixOutput = document.getElementById("workbench-interface-matrix-output");
+  const interfaceMatrixCsvOutput = document.getElementById("workbench-interface-matrix-csv-output");
   const interfaceMatrixStatus = document.getElementById("workbench-interface-matrix-status");
   const interfaceMatrixReview = document.getElementById("workbench-interface-matrix-review");
   const interfaceMatrixValidationOutput = document.getElementById("workbench-interface-matrix-validation-output");
@@ -12688,6 +12691,211 @@ function installEditableWorkbenchShell() {
     }, row.owner_kind, row.owner_id);
   }
 
+  const interfaceMatrixSpreadsheetColumns = [
+    "row_id",
+    "owner_kind",
+    "owner_id",
+    "hardware_id",
+    "cable",
+    "connector",
+    "port_local",
+    "port_peer",
+    "evidence_status",
+    "truth_effect",
+    "source_ref",
+  ];
+
+  function spreadsheetCellValue(value, fallback) {
+    const text = value === null || value === undefined ? "" : String(value).trim();
+    return text || fallback;
+  }
+
+  function escapeDelimitedCell(value, delimiter) {
+    const text = value === null || value === undefined ? "" : String(value);
+    if (
+      text.includes("\"")
+      || text.includes("\t")
+      || text.includes("\n")
+      || text.includes("\r")
+      || text.includes(delimiter)
+      || text.trim() !== text
+    ) {
+      return `"${text.replace(/"/g, "\"\"")}"`;
+    }
+    return text;
+  }
+
+  function interfaceMatrixToDelimitedText(matrix, delimiter) {
+    const rows = matrix && Array.isArray(matrix.rows) ? matrix.rows : [];
+    return [
+      interfaceMatrixSpreadsheetColumns.join(delimiter),
+      ...rows.map((row) => interfaceMatrixSpreadsheetColumns
+        .map((column) => escapeDelimitedCell(row && row[column] !== undefined ? row[column] : "", delimiter))
+        .join(delimiter)),
+    ].join("\n");
+  }
+
+  function delimiterCountOutsideQuotes(line, delimiter) {
+    let count = 0;
+    let inQuotes = false;
+    for (let index = 0; index < line.length; index += 1) {
+      const char = line[index];
+      if (char === "\"") {
+        if (inQuotes && line[index + 1] === "\"") {
+          index += 1;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (!inQuotes && char === delimiter) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  function detectSpreadsheetDelimiter(text) {
+    const firstLine = String(text || "").split(/\r?\n/).find((line) => line.trim()) || "";
+    const tabCount = delimiterCountOutsideQuotes(firstLine, "\t");
+    const commaCount = delimiterCountOutsideQuotes(firstLine, ",");
+    return tabCount > commaCount ? "\t" : ",";
+  }
+
+  function parseDelimitedRecords(text, delimiter) {
+    const records = [];
+    let row = [];
+    let cell = "";
+    let inQuotes = false;
+    const source = String(text || "");
+    for (let index = 0; index < source.length; index += 1) {
+      const char = source[index];
+      if (char === "\"") {
+        if (inQuotes && source[index + 1] === "\"") {
+          cell += "\"";
+          index += 1;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (!inQuotes && char === delimiter) {
+        row.push(cell);
+        cell = "";
+      } else if (!inQuotes && (char === "\n" || char === "\r")) {
+        if (char === "\r" && source[index + 1] === "\n") index += 1;
+        row.push(cell);
+        if (row.some((value) => String(value).trim())) records.push(row);
+        row = [];
+        cell = "";
+      } else {
+        cell += char;
+      }
+    }
+    row.push(cell);
+    if (row.some((value) => String(value).trim())) records.push(row);
+    if (inQuotes) throw new Error("interface matrix CSV has an unterminated quoted field");
+    return records;
+  }
+
+  function normalizeSpreadsheetHeader(value) {
+    return String(value || "").replace(/^\uFEFF/, "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  }
+
+  function interfaceMatrixFromDelimitedText(text) {
+    const source = String(text || "").trim();
+    if (!source) throw new Error("interface matrix CSV is empty");
+    const delimiter = detectSpreadsheetDelimiter(source);
+    const records = parseDelimitedRecords(source, delimiter);
+    if (records.length < 2) {
+      throw new Error("interface matrix CSV requires a header row and at least one data row");
+    }
+    const headers = records[0].map(normalizeSpreadsheetHeader);
+    const headerIndex = new Map(headers.map((header, index) => [header, index]));
+    const requiredHeaders = ["owner_kind", "owner_id"];
+    const missingHeaders = requiredHeaders.filter((header) => !headerIndex.has(header));
+    if (missingHeaders.length) {
+      throw new Error(`interface matrix CSV missing required column(s): ${missingHeaders.join(", ")}`);
+    }
+    const readCell = (record, column, fallback) => {
+      const index = headerIndex.get(column);
+      return spreadsheetCellValue(index === undefined ? "" : record[index], fallback);
+    };
+    const rows = records.slice(1).map((record, index) => {
+      const ownerKind = readCell(record, "owner_kind", "evidence_gap");
+      const ownerId = readCell(record, "owner_id", "evidence_gap");
+      return {
+        row_id: readCell(record, "row_id", `interface:csv:${String(index + 1).padStart(2, "0")}`),
+        owner_kind: ownerKind,
+        owner_id: ownerId,
+        hardware_id: readCell(record, "hardware_id", "evidence_gap"),
+        cable: readCell(record, "cable", "evidence_gap"),
+        connector: readCell(record, "connector", "evidence_gap"),
+        port_local: readCell(record, "port_local", "evidence_gap"),
+        port_peer: readCell(record, "port_peer", "evidence_gap"),
+        evidence_status: readCell(record, "evidence_status", "evidence_gap"),
+        truth_effect: readCell(record, "truth_effect", "none"),
+        source_ref: readCell(record, "source_ref", `ui_draft.interface_matrix_csv.${ownerKind}.${ownerId}`),
+      };
+    });
+    return {
+      kind: "well-harness-workbench-interface-matrix",
+      version: 1,
+      system_id: "thrust-reverser",
+      matrix_scope: "sandbox_candidate_interface_design",
+      row_count: rows.length,
+      rows,
+      truth_effect: "none",
+    };
+  }
+
+  function currentInterfaceMatrixPayloadForSpreadsheet() {
+    if (interfaceMatrixOutput && interfaceMatrixOutput.value.trim()) {
+      const parsed = JSON.parse(interfaceMatrixOutput.value);
+      return validateInterfaceMatrixImportPayload(parsed);
+    }
+    return exportWorkbenchInterfaceMatrix();
+  }
+
+  function exportWorkbenchInterfaceMatrixCsv() {
+    if (!interfaceMatrixCsvOutput) return null;
+    try {
+      const matrix = currentInterfaceMatrixPayloadForSpreadsheet();
+      interfaceMatrixCsvOutput.value = interfaceMatrixToDelimitedText(matrix, ",");
+      if (interfaceMatrixStatus) {
+        interfaceMatrixStatus.textContent =
+          `Exported ${matrix.row_count || 0} spreadsheet row(s). Truth effect: none.`;
+      }
+      return matrix;
+    } catch (err) {
+      if (interfaceMatrixStatus) {
+        interfaceMatrixStatus.textContent =
+          err && err.message ? err.message : "interface matrix CSV export failed";
+      }
+      return null;
+    }
+  }
+
+  function importWorkbenchInterfaceMatrixCsv() {
+    if (!interfaceMatrixCsvOutput || !interfaceMatrixOutput) return null;
+    try {
+      const matrix = interfaceMatrixFromDelimitedText(interfaceMatrixCsvOutput.value || "");
+      interfaceMatrixOutput.value = JSON.stringify(matrix, null, 2);
+      const report = validateWorkbenchInterfaceMatrix();
+      if (interfaceMatrixStatus) {
+        interfaceMatrixStatus.textContent =
+          `Imported ${matrix.row_count || 0} spreadsheet row(s). Matrix validation ${report ? report.status : "not_run"}. Truth effect: none.`;
+      }
+      return matrix;
+    } catch (err) {
+      renderInterfaceMatrixValidationReport(emptyInterfaceMatrixValidationReport(
+        "fail",
+        err && err.message ? err.message : "interface matrix CSV import failed",
+      ), { updateStatus: false });
+      if (interfaceMatrixStatus) {
+        interfaceMatrixStatus.textContent =
+          err && err.message ? err.message : "interface matrix CSV import failed";
+      }
+      return null;
+    }
+  }
+
   function applyInterfaceMatrixRows(rows, validationRows, selectedRowIds) {
     let applied = 0;
     let skipped = 0;
@@ -13789,6 +13997,12 @@ function installEditableWorkbenchShell() {
   if (exportInterfaceMatrixBtn) {
     exportInterfaceMatrixBtn.addEventListener("click", () => exportWorkbenchInterfaceMatrix());
   }
+  if (exportInterfaceMatrixCsvBtn) {
+    exportInterfaceMatrixCsvBtn.addEventListener("click", () => exportWorkbenchInterfaceMatrixCsv());
+  }
+  if (importInterfaceMatrixCsvBtn) {
+    importInterfaceMatrixCsvBtn.addEventListener("click", () => importWorkbenchInterfaceMatrixCsv());
+  }
   if (validateInterfaceMatrixBtn) {
     validateInterfaceMatrixBtn.addEventListener("click", () => validateWorkbenchInterfaceMatrix());
   }
@@ -13798,6 +14012,11 @@ function installEditableWorkbenchShell() {
   if (interfaceMatrixOutput) {
     interfaceMatrixOutput.addEventListener("input", () => {
       clearInterfaceMatrixValidationReport("Matrix edited; validate before apply. Truth effect: none.");
+    });
+  }
+  if (interfaceMatrixCsvOutput) {
+    interfaceMatrixCsvOutput.addEventListener("input", () => {
+      clearInterfaceMatrixValidationReport("Spreadsheet matrix edited; import before apply. Truth effect: none.");
     });
   }
   if (exportDraftBtn) {
