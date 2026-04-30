@@ -6081,6 +6081,61 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   border-color: rgba(240, 193, 91, 0.42);
   background: rgba(77, 54, 11, 0.26);
 }
+.workbench-selected-debug-timeline {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.62rem 0.7rem;
+  border: 1px solid rgba(150, 173, 190, 0.2);
+  border-radius: 8px;
+  background: rgba(5, 13, 20, 0.72);
+}
+.workbench-selected-debug-timeline-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  align-items: baseline;
+}
+.workbench-selected-debug-timeline-header span {
+  color: rgba(213, 227, 237, 0.58);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+.workbench-selected-debug-timeline-header strong {
+  color: #f0c15b;
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+.workbench-selected-debug-timeline-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.46rem;
+  margin: 0;
+}
+.workbench-selected-debug-timeline-facts div {
+  display: grid;
+  gap: 0.16rem;
+  padding: 0.42rem;
+  border: 1px solid rgba(150, 173, 190, 0.16);
+  border-radius: 7px;
+  background: rgba(4, 10, 16, 0.5);
+}
+.workbench-selected-debug-timeline-facts dt {
+  color: rgba(213, 227, 237, 0.58);
+  font-size: 0.62rem;
+}
+.workbench-selected-debug-timeline-facts dd {
+  margin: 0;
+  color: #eefaff;
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+.workbench-selected-debug-context {
+  margin: 0;
+  color: rgba(213, 227, 237, 0.72);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
 .workbench-reference-sample-pack {
   padding: 0.55rem;
 }
