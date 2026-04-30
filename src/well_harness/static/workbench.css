@@ -5641,6 +5641,41 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   color: rgba(253, 241, 205, 0.82);
   font-style: normal;
 }
+.workbench-binding-diagnostics-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.2rem;
+}
+.workbench-binding-diagnostics-target,
+.workbench-binding-diagnostics-focus-empty {
+  min-height: 26px;
+  padding: 0.24rem 0.42rem;
+  border: 1px solid rgba(150, 173, 190, 0.24);
+  border-radius: 7px;
+  background: rgba(11, 25, 36, 0.72);
+  color: rgba(232, 244, 250, 0.86);
+  font-size: 0.62rem;
+  line-height: 1.2;
+}
+.workbench-binding-diagnostics-target {
+  cursor: pointer;
+}
+.workbench-binding-diagnostics-target:hover,
+.workbench-binding-diagnostics-target:focus-visible {
+  border-color: rgba(125, 215, 194, 0.55);
+  color: #f5fbff;
+}
+.workbench-binding-diagnostics-target[aria-pressed="true"] {
+  border-color: rgba(125, 215, 194, 0.72);
+  background: rgba(30, 93, 94, 0.42);
+  color: #d9fff7;
+}
+.workbench-binding-diagnostics-focus-empty {
+  display: inline-flex;
+  align-items: center;
+  color: rgba(213, 227, 237, 0.58);
+}
 .workbench-interface-apply,
 .workbench-port-apply {
   width: 100%;

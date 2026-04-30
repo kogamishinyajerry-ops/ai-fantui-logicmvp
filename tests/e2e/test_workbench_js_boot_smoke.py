@@ -28,6 +28,7 @@ binary is missing.
 from __future__ import annotations
 
 import json
+from typing import Any, Iterator
 
 import pytest
 
@@ -36,6 +37,8 @@ pytestmark = pytest.mark.e2e
 # Skip the whole module if Playwright sync API or its browsers are missing.
 playwright_sync_api = pytest.importorskip("playwright.sync_api")
 from playwright.sync_api import sync_playwright  # noqa: E402
+
+_OPEN_PAGES: list[Any] = []
 
 
 @pytest.fixture(scope="module")
@@ -51,8 +54,21 @@ def browser():
             b.close()
 
 
+@pytest.fixture(autouse=True)
+def close_open_pages_after_test() -> Iterator[None]:
+    yield
+    while _OPEN_PAGES:
+        page = _OPEN_PAGES.pop()
+        try:
+            if not page.is_closed():
+                page.close()
+        except Exception:
+            pass
+
+
 def _new_page_with_error_capture(browser):
     page = browser.new_page()
+    _OPEN_PAGES.append(page)
     errors: list[str] = []
     page.on("pageerror", lambda exc: errors.append(str(exc)))
     return page, errors
