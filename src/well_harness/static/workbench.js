@@ -7689,6 +7689,12 @@ function installEditableWorkbenchShell() {
   const applyConnectorPinMapBtn = document.getElementById("workbench-apply-connector-pin-map-btn");
   const connectorPinMapOutput = document.getElementById("workbench-connector-pin-map-output");
   const connectorPinMapStatus = document.getElementById("workbench-connector-pin-map-status");
+  const exportHardwareInterfaceDesignBtn = document.getElementById("workbench-export-hardware-interface-design-btn");
+  const validateHardwareInterfaceDesignBtn = document.getElementById("workbench-validate-hardware-interface-design-btn");
+  const applyHardwareInterfaceDesignBtn = document.getElementById("workbench-apply-hardware-interface-design-btn");
+  const hardwareInterfaceDesignOutput = document.getElementById("workbench-hardware-interface-design-output");
+  const hardwareInterfaceDesignValidationOutput = document.getElementById("workbench-hardware-interface-design-validation-output");
+  const hardwareInterfaceDesignStatus = document.getElementById("workbench-hardware-interface-design-status");
   const hardwareBindingDiagnosticsStatus = document.getElementById("workbench-hardware-binding-diagnostics-status");
   const hardwareBindingDiagnosticsCount = document.getElementById("workbench-hardware-binding-diagnostics-count");
   const hardwareBindingDiagnosticsGapCount = document.getElementById("workbench-hardware-binding-diagnostics-gap-count");
@@ -7756,6 +7762,8 @@ function installEditableWorkbenchShell() {
   let nextSubsystemGroupIndex = 1;
   let subsystemGroups = [];
   let lastPreflightAnalyzerReport = null;
+  let lastHardwareInterfaceDesignerPayload = null;
+  let lastHardwareInterfaceDesignerValidationReport = null;
   const workspaceDocumentKind = "well-harness-workbench-workspace-document";
   const workspaceDocumentVersion = "workbench-workspace-document.v1";
   let workspaceDocumentId = "ui_draft_workspace_document_v1";
@@ -7775,6 +7783,14 @@ function installEditableWorkbenchShell() {
   const candidateDebuggerViewVersion = "workbench-candidate-debugger-view.v1";
   const preflightAnalyzerReportKind = "well-harness-workbench-preflight-analyzer-report";
   const preflightAnalyzerReportVersion = "workbench-preflight-analyzer.v1";
+  const hardwareInterfaceDesignerSchemaId =
+    "https://well-harness.local/json_schema/editable_hardware_interface_design_v1.schema.json";
+  const hardwareInterfaceDesignerKind = "well-harness-editable-hardware-interface-design";
+  const hardwareInterfaceDesignerVersion = 1;
+  const hardwareInterfaceDesignerValidationKind =
+    "well-harness-workbench-hardware-interface-designer-validation-report";
+  const hardwareInterfaceDesignerValidationVersion =
+    "workbench-hardware-interface-designer-validation.v1";
   const edgeRouteMetadataVersion = "workbench-edge-route-metadata.v1";
   let draftEdges = [
     { id: "edge_logic1_logic2", source: "logic1", target: "logic2" },
@@ -8463,6 +8479,482 @@ function installEditableWorkbenchShell() {
       if (connectorPinMapStatus) {
         connectorPinMapStatus.textContent =
           err && err.message ? err.message : "connector pin map import failed";
+      }
+      return null;
+    }
+  }
+
+  function emptyHardwareInterfaceDesignerPayload() {
+    return {
+      $schema: hardwareInterfaceDesignerSchemaId,
+      kind: hardwareInterfaceDesignerKind,
+      version: hardwareInterfaceDesignerVersion,
+      design_id: "ui_draft_hardware_interface_design_v1",
+      system_id: "thrust-reverser",
+      candidate_state: "sandbox_candidate",
+      truth_level_impact: "none",
+      dal_pssa_impact: "none",
+      controller_truth_modified: false,
+      runtime_truth_effect: "none",
+      lrus: [],
+      cables: [],
+      connectors: [],
+      ports: [],
+      pins: [],
+      bindings: [],
+      evidence_gaps: [],
+      evidence_metadata: {
+        sample_pack_role: "hardware_interface_design",
+        source_refs: ["ui_draft.hardware_interface_designer"],
+      },
+      boundaries: {
+        runtime_scope: "sandbox_only",
+        hardware_truth_effect: "none",
+        certified_truth_modified: false,
+        dal_pssa_impact: "none",
+      },
+    };
+  }
+
+  function normalizeHardwareInterfaceDesignerArray(value) {
+    return Array.isArray(value)
+      ? value.filter((item) => item && typeof item === "object" && !Array.isArray(item)).map((item) => ({ ...item }))
+      : [];
+  }
+
+  function normalizeHardwareInterfaceDesignerPayload(payload) {
+    const defaults = emptyHardwareInterfaceDesignerPayload();
+    const source = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+    return {
+      ...defaults,
+      ...source,
+      evidence_metadata: {
+        ...defaults.evidence_metadata,
+        ...(source.evidence_metadata && typeof source.evidence_metadata === "object" && !Array.isArray(source.evidence_metadata)
+          ? source.evidence_metadata
+          : {}),
+      },
+      boundaries: {
+        ...defaults.boundaries,
+        ...(source.boundaries && typeof source.boundaries === "object" && !Array.isArray(source.boundaries)
+          ? source.boundaries
+          : {}),
+      },
+      lrus: normalizeHardwareInterfaceDesignerArray(source.lrus),
+      cables: normalizeHardwareInterfaceDesignerArray(source.cables),
+      connectors: normalizeHardwareInterfaceDesignerArray(source.connectors),
+      ports: normalizeHardwareInterfaceDesignerArray(source.ports),
+      pins: normalizeHardwareInterfaceDesignerArray(source.pins),
+      bindings: normalizeHardwareInterfaceDesignerArray(source.bindings),
+      evidence_gaps: normalizeHardwareInterfaceDesignerArray(source.evidence_gaps),
+    };
+  }
+
+  function hardwareInterfaceDesignerFinding(code, severity, message, path, action) {
+    return {
+      code,
+      severity,
+      message,
+      path: path || "",
+      action: action || "Update sandbox hardware/interface design evidence before review.",
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function hardwareInterfaceDesignerCollectionIds(payload) {
+    const ids = {};
+    for (const collection of ["lrus", "cables", "connectors", "ports", "pins", "bindings", "evidence_gaps"]) {
+      ids[collection] = new Set((payload[collection] || []).map((item) => String(item.id || "")));
+    }
+    return ids;
+  }
+
+  function addHardwareInterfaceDesignerDuplicateFindings(payload, findings) {
+    const seenGlobal = new Map();
+    for (const collection of ["lrus", "cables", "connectors", "ports", "pins", "bindings", "evidence_gaps"]) {
+      const seenLocal = new Map();
+      for (const [index, item] of (payload[collection] || []).entries()) {
+        const itemId = String(item.id || "").trim();
+        if (!itemId) {
+          findings.push(hardwareInterfaceDesignerFinding(
+            "missing_hardware_interface_id",
+            "error",
+            `${collection}[${index}] is missing id.`,
+            `${collection}.${index}.id`,
+            "Add a stable sandbox id before applying.",
+          ));
+          continue;
+        }
+        if (seenLocal.has(itemId)) {
+          findings.push(hardwareInterfaceDesignerFinding(
+            "duplicate_hardware_interface_id",
+            "error",
+            `Duplicate id ${itemId} in ${collection}.`,
+            `${collection}.${index}.id`,
+            "Use one unique id per LRU, cable, connector, port, pin, binding, or evidence gap.",
+          ));
+        }
+        seenLocal.set(itemId, collection);
+        if (seenGlobal.has(itemId)) {
+          findings.push(hardwareInterfaceDesignerFinding(
+            "duplicate_hardware_interface_id",
+            "error",
+            `Duplicate id ${itemId} across ${seenGlobal.get(itemId)} and ${collection}.`,
+            `${collection}.${index}.id`,
+            "Keep hardware/interface ids globally unique inside the sandbox design.",
+          ));
+        } else {
+          seenGlobal.set(itemId, collection);
+        }
+      }
+    }
+  }
+
+  function addHardwareInterfaceDesignerReferenceFinding(findings, item, collection, fieldName, knownIds, index) {
+    const value = String(item[fieldName] || "");
+    const evidenceStatus = String(item.evidence_status || "");
+    if (!value) {
+      findings.push(hardwareInterfaceDesignerFinding(
+        "broken_hardware_interface_reference",
+        "error",
+        `${collection}[${index}].${fieldName} is missing.`,
+        `${collection}.${index}.${fieldName}`,
+        "Fill the reference id or mark it as evidence_gap with evidence_status evidence_gap.",
+      ));
+      return;
+    }
+    if (value === "evidence_gap") {
+      if (evidenceStatus !== "evidence_gap") {
+        findings.push(hardwareInterfaceDesignerFinding(
+          "broken_hardware_interface_reference",
+          "error",
+          `${collection}[${index}].${fieldName} is evidence_gap but evidence_status is ${evidenceStatus || "missing"}.`,
+          `${collection}.${index}.${fieldName}`,
+          "Set evidence_status to evidence_gap for unknown hardware references.",
+        ));
+      }
+      return;
+    }
+    if (!knownIds.has(value)) {
+      findings.push(hardwareInterfaceDesignerFinding(
+        "broken_hardware_interface_reference",
+        "error",
+        `${collection}[${index}].${fieldName} references missing id ${value}.`,
+        `${collection}.${index}.${fieldName}`,
+        "Add the referenced sandbox record or mark the reference as evidence_gap.",
+      ));
+    }
+  }
+
+  function countHardwareInterfaceDesignerEvidenceGaps(payload) {
+    let count = 0;
+    for (const collection of ["lrus", "cables", "connectors", "ports", "pins", "bindings", "evidence_gaps"]) {
+      for (const item of payload[collection] || []) {
+        for (const value of Object.values(item || {})) {
+          if (value === "evidence_gap") count += 1;
+        }
+        if (item && item.evidence_status === "evidence_gap") count += 1;
+      }
+    }
+    return count;
+  }
+
+  function buildHardwareInterfaceDesignerValidationReport(payload) {
+    const normalized = normalizeHardwareInterfaceDesignerPayload(payload);
+    const findings = [];
+    const truthChecks = [
+      ["$schema", hardwareInterfaceDesignerSchemaId],
+      ["kind", hardwareInterfaceDesignerKind],
+      ["version", hardwareInterfaceDesignerVersion],
+      ["candidate_state", "sandbox_candidate"],
+      ["truth_level_impact", "none"],
+      ["dal_pssa_impact", "none"],
+      ["controller_truth_modified", false],
+      ["runtime_truth_effect", "none"],
+    ];
+    for (const [fieldName, expected] of truthChecks) {
+      if (normalized[fieldName] !== expected) {
+        findings.push(hardwareInterfaceDesignerFinding(
+          "hardware_interface_truth_boundary_violation",
+          "error",
+          `hardware_interface_designer ${fieldName} must be ${expected}.`,
+          fieldName,
+          "Restore sandbox-only hardware/interface design constants.",
+        ));
+      }
+    }
+    if (normalized.boundaries.runtime_scope !== "sandbox_only") {
+      findings.push(hardwareInterfaceDesignerFinding(
+        "hardware_interface_truth_boundary_violation",
+        "error",
+        "hardware_interface_designer boundaries.runtime_scope must be sandbox_only.",
+        "boundaries.runtime_scope",
+        "Keep hardware/interface design in sandbox scope only.",
+      ));
+    }
+    if (normalized.boundaries.hardware_truth_effect !== "none") {
+      findings.push(hardwareInterfaceDesignerFinding(
+        "hardware_interface_truth_boundary_violation",
+        "error",
+        "hardware_interface_designer boundaries.hardware_truth_effect must be none.",
+        "boundaries.hardware_truth_effect",
+        "Hardware/interface fields are review evidence only.",
+      ));
+    }
+    if (normalized.boundaries.certified_truth_modified !== false) {
+      findings.push(hardwareInterfaceDesignerFinding(
+        "hardware_interface_truth_boundary_violation",
+        "error",
+        "hardware_interface_designer boundaries.certified_truth_modified must be false.",
+        "boundaries.certified_truth_modified",
+        "Do not mark sandbox design as certified truth.",
+      ));
+    }
+    if (normalized.boundaries.dal_pssa_impact !== "none") {
+      findings.push(hardwareInterfaceDesignerFinding(
+        "hardware_interface_truth_boundary_violation",
+        "error",
+        "hardware_interface_designer boundaries.dal_pssa_impact must be none.",
+        "boundaries.dal_pssa_impact",
+        "DAL/PSSA-impacting changes must leave this sandbox lane.",
+      ));
+    }
+
+    addHardwareInterfaceDesignerDuplicateFindings(normalized, findings);
+    const ids = hardwareInterfaceDesignerCollectionIds(normalized);
+    for (const [index, cable] of normalized.cables.entries()) {
+      addHardwareInterfaceDesignerReferenceFinding(findings, cable, "cables", "source_lru_id", ids.lrus, index);
+      addHardwareInterfaceDesignerReferenceFinding(findings, cable, "cables", "target_lru_id", ids.lrus, index);
+    }
+    for (const [index, connector] of normalized.connectors.entries()) {
+      addHardwareInterfaceDesignerReferenceFinding(findings, connector, "connectors", "lru_id", ids.lrus, index);
+    }
+    for (const [index, port] of normalized.ports.entries()) {
+      addHardwareInterfaceDesignerReferenceFinding(findings, port, "ports", "connector_id", ids.connectors, index);
+    }
+    const portConnectorById = new Map(normalized.ports.map((port) => [String(port.id || ""), String(port.connector_id || "")]));
+    for (const [index, pin] of normalized.pins.entries()) {
+      addHardwareInterfaceDesignerReferenceFinding(findings, pin, "pins", "connector_id", ids.connectors, index);
+      addHardwareInterfaceDesignerReferenceFinding(findings, pin, "pins", "port_id", ids.ports, index);
+      const portConnector = portConnectorById.get(String(pin.port_id || ""));
+      if (
+        pin.port_id !== "evidence_gap"
+        && pin.connector_id !== "evidence_gap"
+        && portConnector
+        && portConnector !== String(pin.connector_id || "")
+      ) {
+        findings.push(hardwareInterfaceDesignerFinding(
+          "broken_hardware_interface_reference",
+          "error",
+          `pins[${index}].connector_id must match its port connector_id.`,
+          `pins.${index}.connector_id`,
+          "Align pin connector_id with the referenced port connector_id.",
+        ));
+      }
+    }
+    for (const [index, binding] of normalized.bindings.entries()) {
+      if (binding.truth_effect !== "none") {
+        findings.push(hardwareInterfaceDesignerFinding(
+          "hardware_interface_truth_boundary_violation",
+          "error",
+          `bindings[${index}].truth_effect must be none.`,
+          `bindings.${index}.truth_effect`,
+          "Signal bindings are sandbox review evidence only.",
+        ));
+      }
+      addHardwareInterfaceDesignerReferenceFinding(findings, binding, "bindings", "source_port_id", ids.ports, index);
+      addHardwareInterfaceDesignerReferenceFinding(findings, binding, "bindings", "target_port_id", ids.ports, index);
+      addHardwareInterfaceDesignerReferenceFinding(findings, binding, "bindings", "cable_id", ids.cables, index);
+    }
+    const evidenceGapCount = countHardwareInterfaceDesignerEvidenceGaps(normalized);
+    if (evidenceGapCount > 0) {
+      findings.push(hardwareInterfaceDesignerFinding(
+        "hardware_interface_evidence_gap",
+        "warning",
+        `${evidenceGapCount} hardware/interface evidence gap marker(s) remain.`,
+        "evidence_gaps",
+        "Keep unknowns explicit as evidence_gap until source evidence is available.",
+      ));
+    }
+    const hasError = findings.some((finding) => finding.severity === "error");
+    const hasWarning = findings.some((finding) => finding.severity === "warning");
+    return {
+      kind: hardwareInterfaceDesignerValidationKind,
+      version: hardwareInterfaceDesignerValidationVersion,
+      design_id: String(normalized.design_id || "ui_draft_hardware_interface_design_v1"),
+      system_id: String(normalized.system_id || "thrust-reverser"),
+      status: hasError ? "fail" : (hasWarning ? "warn" : "pass"),
+      finding_count: findings.length,
+      error_count: findings.filter((finding) => finding.severity === "error").length,
+      warning_count: findings.filter((finding) => finding.severity === "warning").length,
+      evidence_gap_count: evidenceGapCount,
+      counts: {
+        lrus: normalized.lrus.length,
+        cables: normalized.cables.length,
+        connectors: normalized.connectors.length,
+        ports: normalized.ports.length,
+        pins: normalized.pins.length,
+        bindings: normalized.bindings.length,
+        evidence_gaps: normalized.evidence_gaps.length,
+      },
+      findings,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function validateHardwareInterfaceDesignerPayload(payload) {
+    const normalized = normalizeHardwareInterfaceDesignerPayload(payload);
+    const report = buildHardwareInterfaceDesignerValidationReport(normalized);
+    if (report.status === "fail") {
+      const firstFinding = report.findings[0] || {};
+      throw new Error(firstFinding.message || "hardware interface designer validation failed");
+    }
+    return normalized;
+  }
+
+  function renderHardwareInterfaceDesignerValidationReport(report) {
+    const normalizedReport = report || buildHardwareInterfaceDesignerValidationReport(
+      currentHardwareInterfaceDesignerPayload("validation"),
+    );
+    lastHardwareInterfaceDesignerValidationReport = normalizedReport;
+    if (hardwareInterfaceDesignValidationOutput) {
+      hardwareInterfaceDesignValidationOutput.value = JSON.stringify(normalizedReport, null, 2);
+    }
+    if (hardwareInterfaceDesignStatus) {
+      hardwareInterfaceDesignStatus.textContent =
+        `Hardware/interface design ${normalizedReport.status}: ${normalizedReport.finding_count || 0} finding(s). Truth effect: none.`;
+    }
+    return normalizedReport;
+  }
+
+  function normalizeImportedHardwareInterfaceDesignerPayload(payload) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+    return normalizeHardwareInterfaceDesignerPayload(payload);
+  }
+
+  function normalizeImportedHardwareInterfaceDesignerValidation(report) {
+    if (!report || typeof report !== "object" || Array.isArray(report)) return null;
+    return {
+      ...report,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function parseHardwareInterfaceDesignerEditorPayload() {
+    if (!hardwareInterfaceDesignOutput) return null;
+    const raw = String(hardwareInterfaceDesignOutput.value || "").trim();
+    if (!raw) return null;
+    return JSON.parse(raw);
+  }
+
+  function currentHardwareInterfaceDesignerPayload(_state) {
+    if (lastHardwareInterfaceDesignerPayload) {
+      return normalizeHardwareInterfaceDesignerPayload(lastHardwareInterfaceDesignerPayload);
+    }
+    try {
+      const editorPayload = parseHardwareInterfaceDesignerEditorPayload();
+      if (editorPayload) return normalizeHardwareInterfaceDesignerPayload(editorPayload);
+    } catch (_err) {
+      return emptyHardwareInterfaceDesignerPayload();
+    }
+    return emptyHardwareInterfaceDesignerPayload();
+  }
+
+  function currentHardwareInterfaceDesignerValidationReport(state) {
+    const payload = currentHardwareInterfaceDesignerPayload(state || "current");
+    return buildHardwareInterfaceDesignerValidationReport(payload);
+  }
+
+  function exportHardwareInterfaceDesigner() {
+    const payload = currentHardwareInterfaceDesignerPayload("export");
+    const report = buildHardwareInterfaceDesignerValidationReport(payload);
+    lastHardwareInterfaceDesignerPayload = payload;
+    lastHardwareInterfaceDesignerValidationReport = report;
+    if (hardwareInterfaceDesignOutput) {
+      hardwareInterfaceDesignOutput.value = JSON.stringify(payload, null, 2);
+    }
+    renderHardwareInterfaceDesignerValidationReport(report);
+    return payload;
+  }
+
+  function validateHardwareInterfaceDesignerFromEditor() {
+    try {
+      const payload = normalizeHardwareInterfaceDesignerPayload(
+        parseHardwareInterfaceDesignerEditorPayload() || emptyHardwareInterfaceDesignerPayload(),
+      );
+      const report = buildHardwareInterfaceDesignerValidationReport(payload);
+      lastHardwareInterfaceDesignerValidationReport = report;
+      if (hardwareInterfaceDesignValidationOutput) {
+        hardwareInterfaceDesignValidationOutput.value = JSON.stringify(report, null, 2);
+      }
+      if (hardwareInterfaceDesignStatus) {
+        hardwareInterfaceDesignStatus.textContent =
+          `Hardware/interface design ${report.status}: ${report.finding_count || 0} finding(s). Truth effect: none.`;
+      }
+      return report;
+    } catch (err) {
+      const report = {
+        kind: hardwareInterfaceDesignerValidationKind,
+        version: hardwareInterfaceDesignerValidationVersion,
+        design_id: "parse_error",
+        system_id: "thrust-reverser",
+        status: "fail",
+        finding_count: 1,
+        error_count: 1,
+        warning_count: 0,
+        evidence_gap_count: 0,
+        counts: {},
+        findings: [hardwareInterfaceDesignerFinding(
+          "hardware_interface_parse_error",
+          "error",
+          err && err.message ? err.message : "hardware interface design JSON parse failed",
+          "hardware_interface_designer",
+          "Fix JSON syntax before validating.",
+        )],
+        candidate_state: "sandbox_candidate",
+        certification_claim: "none",
+        truth_effect: "none",
+      };
+      renderHardwareInterfaceDesignerValidationReport(report);
+      return report;
+    }
+  }
+
+  function applyHardwareInterfaceDesignerFromEditor() {
+    try {
+      const payload = normalizeHardwareInterfaceDesignerPayload(
+        parseHardwareInterfaceDesignerEditorPayload() || emptyHardwareInterfaceDesignerPayload(),
+      );
+      const report = buildHardwareInterfaceDesignerValidationReport(payload);
+      renderHardwareInterfaceDesignerValidationReport(report);
+      if (report.status === "fail") return null;
+      lastHardwareInterfaceDesignerPayload = validateHardwareInterfaceDesignerPayload(payload);
+      lastHardwareInterfaceDesignerValidationReport = report;
+      if (hardwareInterfaceDesignOutput) {
+        hardwareInterfaceDesignOutput.value = JSON.stringify(lastHardwareInterfaceDesignerPayload, null, 2);
+      }
+      recordEditableHistory("hardware_interface_designer_apply");
+      recordWorkspaceAction("hardware_interface_designer_apply");
+      recordCanvasInteractionAction("hardware_interface_designer_apply");
+      shell.setAttribute("data-draft-state", "derived");
+      if (draftLabel) draftLabel.textContent = "sandbox_candidate hardware/interface design applied";
+      if (hardwareInterfaceDesignStatus) {
+        hardwareInterfaceDesignStatus.textContent =
+          `Applied hardware/interface design with ${report.counts.bindings || 0} binding(s). Truth effect: none.`;
+      }
+      renderWorkspaceDocumentStatus();
+      persistDraft();
+      return lastHardwareInterfaceDesignerPayload;
+    } catch (err) {
+      if (hardwareInterfaceDesignStatus) {
+        hardwareInterfaceDesignStatus.textContent =
+          err && err.message ? err.message : "hardware interface design apply failed";
       }
       return null;
     }
@@ -11866,6 +12358,8 @@ function installEditableWorkbenchShell() {
       sandboxTestRunReport: currentSandboxTestRunReport(),
       candidateDebuggerView: currentCandidateDebuggerView("storage"),
       preflightAnalyzerReport: currentPreflightAnalyzerReport("storage"),
+      hardwareInterfaceDesigner: currentHardwareInterfaceDesignerPayload("storage"),
+      hardwareInterfaceDesignerValidation: currentHardwareInterfaceDesignerValidationReport("storage"),
       subsystemGroups: subsystemGroupsSnapshot(),
       capturedSubsystemTemplates: capturedSubsystemTemplateSnapshot(),
       nodes: nodes.map((node) => editableNodeState(node)),
@@ -11934,6 +12428,22 @@ function installEditableWorkbenchShell() {
     lastPreflightAnalyzerReport = normalizeImportedPreflightAnalyzerReport(
       state.preflightAnalyzerReport || state.preflight_analyzer_report || lastPreflightAnalyzerReport,
     );
+    lastHardwareInterfaceDesignerPayload = normalizeImportedHardwareInterfaceDesignerPayload(
+      state.hardwareInterfaceDesigner
+        || state.hardware_interface_designer
+        || lastHardwareInterfaceDesignerPayload,
+    );
+    lastHardwareInterfaceDesignerValidationReport = normalizeImportedHardwareInterfaceDesignerValidation(
+      state.hardwareInterfaceDesignerValidation
+        || state.hardware_interface_designer_validation
+        || lastHardwareInterfaceDesignerValidationReport,
+    );
+    if (lastHardwareInterfaceDesignerPayload && hardwareInterfaceDesignOutput) {
+      hardwareInterfaceDesignOutput.value = JSON.stringify(lastHardwareInterfaceDesignerPayload, null, 2);
+    }
+    if (lastHardwareInterfaceDesignerValidationReport) {
+      renderHardwareInterfaceDesignerValidationReport(lastHardwareInterfaceDesignerValidationReport);
+    }
     const nodeStates = Array.isArray(state.nodes) ? state.nodes : [];
     subsystemGroups = normalizeSubsystemGroups(
       state.subsystemGroups || state.subsystem_groups || subsystemGroupsFromNodeStates(nodeStates),
@@ -14492,6 +15002,9 @@ function installEditableWorkbenchShell() {
     const sandboxTestRunReport = currentSandboxTestRunReport();
     const candidateDebuggerView = currentCandidateDebuggerView("snapshot");
     const preflightAnalyzerReport = currentPreflightAnalyzerReport("snapshot");
+    const hardwareInterfaceDesigner = currentHardwareInterfaceDesignerPayload("snapshot");
+    const hardwareInterfaceDesignerValidation =
+      currentHardwareInterfaceDesignerValidationReport("snapshot");
     const diagnosticRepairActions = repairActionLogSnapshot();
     const workspaceDocument = currentWorkspaceDocument();
     const canvasInteractionSummary = currentCanvasInteractionSummary();
@@ -14538,6 +15051,8 @@ function installEditableWorkbenchShell() {
       sandbox_test_run_report: sandboxTestRunReport,
       candidate_debugger_view: candidateDebuggerView,
       preflight_analyzer_report: preflightAnalyzerReport,
+      hardware_interface_designer: hardwareInterfaceDesigner,
+      hardware_interface_designer_validation: hardwareInterfaceDesignerValidation,
     };
     snapshot.editable_graph_document = buildEditableGraphDocumentFromSnapshot(snapshot);
     return snapshot;
@@ -14968,6 +15483,9 @@ function installEditableWorkbenchShell() {
     const typedPorts = collectWorkbenchTypedPorts();
     const portCompatibilityReport = buildPortCompatibilityReport(typedPorts, draftEdges);
     const candidateDebuggerView = currentCandidateDebuggerView("preflight");
+    const hardwareInterfaceDesigner = currentHardwareInterfaceDesignerPayload("preflight");
+    const hardwareInterfaceDesignerValidation =
+      currentHardwareInterfaceDesignerValidationReport("preflight");
     const findings = [];
 
     for (const issue of graphIssues) {
@@ -15015,6 +15533,21 @@ function installEditableWorkbenchShell() {
         "Record hardware/interface evidence gaps before review.",
       ));
     }
+    if (hardwareInterfaceDesignerValidation.status === "fail") {
+      findings.push(preflightFinding(
+        "hardware_interface_designer_invalid",
+        "error",
+        "Hardware/interface designer validation failed.",
+        "Fix hardware/interface design records before ChangeRequest handoff.",
+      ));
+    } else if (hardwareInterfaceDesignerValidation.status === "warn") {
+      findings.push(preflightFinding(
+        "hardware_interface_designer_needs_evidence",
+        "warning",
+        "Hardware/interface designer has open evidence warnings.",
+        "Resolve or explicitly archive hardware/interface evidence gaps.",
+      ));
+    }
     if ((portCompatibilityReport.error_count || 0) > 0) {
       findings.push(preflightFinding(
         "port_compatibility_error",
@@ -15041,6 +15574,8 @@ function installEditableWorkbenchShell() {
       required_actions: dedupePreflightActions(findings),
       graph_validation_issues: graphIssues,
       hardware_binding_diagnostics: hardwareDiagnostics,
+      hardware_interface_designer: hardwareInterfaceDesigner,
+      hardware_interface_designer_validation: hardwareInterfaceDesignerValidation,
       port_compatibility_report: portCompatibilityReport,
       sandbox_test_bench: testBench,
       sandbox_test_run_report: sandboxReport,
@@ -15468,6 +16003,8 @@ function installEditableWorkbenchShell() {
       sandbox_test_run_report: snapshot.sandbox_test_run_report,
       candidate_debugger_view: snapshot.candidate_debugger_view,
       preflight_analyzer_report: snapshot.preflight_analyzer_report,
+      hardware_interface_designer: snapshot.hardware_interface_designer,
+      hardware_interface_designer_validation: snapshot.hardware_interface_designer_validation,
       changerequest_proof_packet: changeRequestProofPacket,
       changerequest_handoff_packet: changeRequestHandoffPacket,
       draft_snapshot_manifest: buildDraftSnapshotManifestSummary(),
@@ -15695,6 +16232,56 @@ function installEditableWorkbenchShell() {
       && payload.connector_pin_map.truth_effect !== "none"
     ) {
       throw new Error("connector_pin_map truth_effect must be none");
+    }
+    if (
+      payload.hardware_interface_designer !== undefined
+      && (!payload.hardware_interface_designer || typeof payload.hardware_interface_designer !== "object" || Array.isArray(payload.hardware_interface_designer))
+    ) {
+      throw new Error("hardware_interface_designer must be an object when present");
+    }
+    if (payload.hardware_interface_designer !== undefined) {
+      const designer = normalizeHardwareInterfaceDesignerPayload(payload.hardware_interface_designer);
+      const report = buildHardwareInterfaceDesignerValidationReport(designer);
+      if (designer.kind !== hardwareInterfaceDesignerKind) {
+        throw new Error("hardware_interface_designer kind must be well-harness-editable-hardware-interface-design");
+      }
+      if (designer.$schema !== hardwareInterfaceDesignerSchemaId) {
+        throw new Error("hardware_interface_designer schema must be editable_hardware_interface_design_v1.schema.json");
+      }
+      if (designer.runtime_truth_effect !== "none") {
+        throw new Error("hardware_interface_designer truth_effect must be none");
+      }
+      if (report.status === "fail") {
+        throw new Error("hardware_interface_designer validation must pass before import");
+      }
+    }
+    if (
+      payload.hardware_interface_designer_validation !== undefined
+      && payload.hardware_interface_designer_validation !== null
+      && (!payload.hardware_interface_designer_validation || typeof payload.hardware_interface_designer_validation !== "object" || Array.isArray(payload.hardware_interface_designer_validation))
+    ) {
+      throw new Error("hardware_interface_designer_validation must be an object when present");
+    }
+    if (payload.hardware_interface_designer_validation) {
+      const report = payload.hardware_interface_designer_validation;
+      if (report.kind !== hardwareInterfaceDesignerValidationKind) {
+        throw new Error("hardware_interface_designer_validation kind must be well-harness-workbench-hardware-interface-designer-validation-report");
+      }
+      if (report.version !== hardwareInterfaceDesignerValidationVersion) {
+        throw new Error("hardware_interface_designer_validation version must be workbench-hardware-interface-designer-validation.v1");
+      }
+      if (!["pass", "warn", "fail"].includes(report.status)) {
+        throw new Error("hardware_interface_designer_validation status must be pass, warn, or fail");
+      }
+      if (report.candidate_state !== "sandbox_candidate") {
+        throw new Error("hardware_interface_designer_validation candidate_state must be sandbox_candidate");
+      }
+      if (report.certification_claim !== "none") {
+        throw new Error("hardware_interface_designer_validation certification_claim must be none");
+      }
+      if (report.truth_effect !== "none") {
+        throw new Error("hardware_interface_designer_validation truth_effect must be none");
+      }
     }
     if (
       payload.hardware_evidence_v2 !== undefined
@@ -16083,6 +16670,21 @@ function installEditableWorkbenchShell() {
     if (connectorPinMapOutput && validated.connector_pin_map) {
       connectorPinMapOutput.value = JSON.stringify(validated.connector_pin_map, null, 2);
     }
+    lastHardwareInterfaceDesignerPayload =
+      normalizeImportedHardwareInterfaceDesignerPayload(validated.hardware_interface_designer);
+    lastHardwareInterfaceDesignerValidationReport =
+      normalizeImportedHardwareInterfaceDesignerValidation(validated.hardware_interface_designer_validation)
+      || (
+        lastHardwareInterfaceDesignerPayload
+          ? buildHardwareInterfaceDesignerValidationReport(lastHardwareInterfaceDesignerPayload)
+          : null
+      );
+    if (lastHardwareInterfaceDesignerPayload && hardwareInterfaceDesignOutput) {
+      hardwareInterfaceDesignOutput.value = JSON.stringify(lastHardwareInterfaceDesignerPayload, null, 2);
+    }
+    if (lastHardwareInterfaceDesignerValidationReport) {
+      renderHardwareInterfaceDesignerValidationReport(lastHardwareInterfaceDesignerValidationReport);
+    }
     applyEditableState({
       draftState: "derived",
       selectedNodeId: selectedId,
@@ -16095,6 +16697,8 @@ function installEditableWorkbenchShell() {
       workspaceDocument: validated.workspace_document || null,
       canvasInteractionSummary: validated.canvas_interaction_summary || null,
       preflightAnalyzerReport: validated.preflight_analyzer_report || null,
+      hardwareInterfaceDesigner: validated.hardware_interface_designer || null,
+      hardwareInterfaceDesignerValidation: validated.hardware_interface_designer_validation || null,
       selectedCatalogOp: importedCatalog.selected_op,
       subsystemGroups: validated.subsystem_groups || [],
       nodes: validated.nodes.map((node) => ({
@@ -16653,6 +17257,11 @@ function installEditableWorkbenchShell() {
     const matrixValidationSummary = interfaceMatrixValidationSummary(interfaceMatrixValidation);
     const connectorPinMap =
       sourceSnapshot.connector_pin_map || buildWorkbenchConnectorPinMap(hardwareBindings);
+    const hardwareInterfaceDesigner =
+      sourceSnapshot.hardware_interface_designer || currentHardwareInterfaceDesignerPayload("proof");
+    const hardwareInterfaceDesignerValidation =
+      sourceSnapshot.hardware_interface_designer_validation
+      || currentHardwareInterfaceDesignerValidationReport("proof");
     const hardwareEvidenceV2 =
       sourceSnapshot.hardware_evidence_v2 || currentHardwareEvidenceV2Report();
     const selectedDebugTimeline =
@@ -16741,6 +17350,19 @@ function installEditableWorkbenchShell() {
         row_count: connectorPinMap.row_count || 0,
         evidence_gap_field_count: connectorPinMap.evidence_gap_field_count || 0,
         checksum: checksumEvidenceArchiveField(connectorPinMap),
+        truth_effect: "none",
+      },
+      hardware_interface_designer_summary: {
+        lru_count: (hardwareInterfaceDesigner.lrus || []).length,
+        cable_count: (hardwareInterfaceDesigner.cables || []).length,
+        connector_count: (hardwareInterfaceDesigner.connectors || []).length,
+        port_count: (hardwareInterfaceDesigner.ports || []).length,
+        pin_count: (hardwareInterfaceDesigner.pins || []).length,
+        binding_count: (hardwareInterfaceDesigner.bindings || []).length,
+        validation_status: hardwareInterfaceDesignerValidation.status || "pass",
+        finding_count: hardwareInterfaceDesignerValidation.finding_count || 0,
+        checksum: checksumEvidenceArchiveField(hardwareInterfaceDesigner),
+        validation_checksum: checksumEvidenceArchiveField(hardwareInterfaceDesignerValidation),
         truth_effect: "none",
       },
       hardware_evidence_v2_summary: {
@@ -17328,6 +17950,11 @@ function installEditableWorkbenchShell() {
       modelJson.interface_matrix_validation || lastInterfaceMatrixValidationReport || null;
     const connectorPinMap =
       modelJson.connector_pin_map || buildWorkbenchConnectorPinMap(hardwareBindings);
+    const hardwareInterfaceDesigner =
+      modelJson.hardware_interface_designer || currentHardwareInterfaceDesignerPayload("archive");
+    const hardwareInterfaceDesignerValidation =
+      modelJson.hardware_interface_designer_validation
+      || currentHardwareInterfaceDesignerValidationReport("archive");
     const hardwareEvidenceV2 =
       modelJson.hardware_evidence_v2 || currentHardwareEvidenceV2Report();
     const selectedDebugTimeline =
@@ -17398,6 +18025,8 @@ function installEditableWorkbenchShell() {
       interface_matrix: interfaceMatrix,
       interface_matrix_validation: interfaceMatrixValidation,
       connector_pin_map: connectorPinMap,
+      hardware_interface_designer: hardwareInterfaceDesigner,
+      hardware_interface_designer_validation: hardwareInterfaceDesignerValidation,
       hardware_evidence_v2: hardwareEvidenceV2,
       selected_debug_timeline: selectedDebugTimeline,
       candidate_baseline_diff_review_v2: candidateBaselineDiffReviewV2,
@@ -17445,6 +18074,8 @@ function installEditableWorkbenchShell() {
       interface_matrix_checksum: checksumEvidenceArchiveField(interfaceMatrix),
       interface_matrix_validation_checksum: checksumEvidenceArchiveField(interfaceMatrixValidation),
       connector_pin_map_checksum: checksumEvidenceArchiveField(connectorPinMap),
+      hardware_interface_designer_checksum: checksumEvidenceArchiveField(hardwareInterfaceDesigner),
+      hardware_interface_designer_validation_checksum: checksumEvidenceArchiveField(hardwareInterfaceDesignerValidation),
       hardware_evidence_v2_checksum: checksumEvidenceArchiveField(hardwareEvidenceV2),
       selected_debug_timeline_checksum: checksumEvidenceArchiveField(selectedDebugTimeline),
       candidate_baseline_diff_review_v2_checksum: checksumEvidenceArchiveField(candidateBaselineDiffReviewV2),
@@ -17891,6 +18522,23 @@ function installEditableWorkbenchShell() {
     connectorPinMapOutput.addEventListener("input", () => {
       if (connectorPinMapStatus) {
         connectorPinMapStatus.textContent = "Connector/pin map edited; apply to update sandbox metadata. Truth effect: none.";
+      }
+    });
+  }
+  if (exportHardwareInterfaceDesignBtn) {
+    exportHardwareInterfaceDesignBtn.addEventListener("click", () => exportHardwareInterfaceDesigner());
+  }
+  if (validateHardwareInterfaceDesignBtn) {
+    validateHardwareInterfaceDesignBtn.addEventListener("click", () => validateHardwareInterfaceDesignerFromEditor());
+  }
+  if (applyHardwareInterfaceDesignBtn) {
+    applyHardwareInterfaceDesignBtn.addEventListener("click", () => applyHardwareInterfaceDesignerFromEditor());
+  }
+  if (hardwareInterfaceDesignOutput) {
+    hardwareInterfaceDesignOutput.addEventListener("input", () => {
+      if (hardwareInterfaceDesignStatus) {
+        hardwareInterfaceDesignStatus.textContent =
+          "Hardware/interface design edited; validate before applying. Truth effect: none.";
       }
     });
   }

@@ -6,7 +6,7 @@
 (launched 2026-05-01)**
 
 Editable Control Workbench Core v1, Interaction v2, Runtime v3, and JER-219
-through JER-224 are complete as the foundation for sandbox-first control-logic
+through JER-225 are complete as the foundation for sandbox-first control-logic
 editing. The current product mainline is foundation-first Workbench v4: build
 the base single-user editor, runner, test bench, debugger, and archive loop
 before returning to dedicated thrust-reverser or C919 panel product work.
@@ -49,7 +49,8 @@ Housekeeping bridge:
 - JER-222: Port and wire editing ergonomics v1 (Done, PR #204)
 - JER-223: Sandbox scenario test bench v1 (Done, PR #205)
 - JER-224: Candidate graph debugger view v1 (Done, PR #206)
-- JER-225: Workbench preflight analyzer v1 (In review)
+- JER-225: Workbench preflight analyzer v1 (Done, PR #207)
+- JER-226: Hardware/interface designer foundation v1 (In review)
 
 Workbench v4 foundation-first sequence:
 
@@ -69,11 +70,12 @@ Workbench v4 foundation-first sequence:
 - JER-224 added a probe-focused debugger view for selected nodes and edges:
   watched values, first failure, selected tick, trace availability, hardware
   binding context, and archive checksum coverage.
-- JER-225 adds a preflight analyzer that classifies candidate drafts as
+- JER-225 added a preflight analyzer that classifies candidate drafts as
   ready, needs_evidence, or invalid_candidate before handoff, with operational
   sandbox model-hash freshness checks.
-- JER-226 will deepen hardware/interface editing after the graph and test
-  foundation is stable.
+- JER-226 deepens hardware/interface editing with a sandbox-only designer for
+  LRUs, cables, connectors, ports, pins, signal bindings, evidence gaps,
+  validation findings, preflight input, and archive checksums.
 - JER-227 will package graph, tests, run/debug reports, hardware evidence,
   validation findings, checksums, and Linear/PR-ready proof into one review
   archive.

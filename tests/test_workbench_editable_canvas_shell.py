@@ -192,6 +192,21 @@ def test_hardware_evidence_v2_inspector_controls_are_sandbox_only_ui() -> None:
     assert ".workbench-hardware-evidence-v2-row" in css
 
 
+def test_hardware_interface_designer_controls_are_sandbox_only_ui() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-hardware-interface-designer"' in html
+    assert 'id="workbench-export-hardware-interface-design-btn"' in html
+    assert 'id="workbench-validate-hardware-interface-design-btn"' in html
+    assert 'id="workbench-apply-hardware-interface-design-btn"' in html
+    assert 'id="workbench-hardware-interface-design-output"' in html
+    assert 'id="workbench-hardware-interface-design-validation-output"' in html
+    assert 'id="workbench-hardware-interface-design-status"' in html
+    assert "Hardware/interface design records are sandbox evidence only. Truth effect: none." in html
+    assert ".workbench-hardware-interface-designer" in css
+
+
 def test_selected_debug_timeline_controls_are_sandbox_only_ui() -> None:
     html = _html()
     css = _css()
@@ -469,6 +484,23 @@ def test_js_wires_hardware_evidence_v2_as_sandbox_only_selected_owner_packet() -
     assert "Hardware evidence v2:" in js
     assert 'kind: "well-harness-workbench-hardware-evidence-inspector-v2"' in js
     assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'truth_effect: "none"' in js
+
+
+def test_js_wires_hardware_interface_designer_as_sandbox_only_archive_packet() -> None:
+    js = _js()
+
+    assert "well-harness-editable-hardware-interface-design" in js
+    assert "editable_hardware_interface_design_v1.schema.json" in js
+    assert "function validateHardwareInterfaceDesignerPayload" in js
+    assert "function buildHardwareInterfaceDesignerValidationReport" in js
+    assert "hardware_interface_designer" in js
+    assert "hardware_interface_designer_validation" in js
+    assert "hardware_interface_designer_checksum" in js
+    assert "hardware_interface_designer truth_effect must be none" in js
+    assert "duplicate_hardware_interface_id" in js
+    assert "broken_hardware_interface_reference" in js
+    assert 'runtime_truth_effect: "none"' in js
     assert 'truth_effect: "none"' in js
 
 

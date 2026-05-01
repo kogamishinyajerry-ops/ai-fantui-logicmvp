@@ -5588,6 +5588,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-rule-parameter-editor,
 .workbench-interface-binding-editor,
 .workbench-connector-pin-map-editor,
+.workbench-hardware-interface-designer,
 .workbench-hardware-binding-diagnostics,
 .workbench-typed-port-editor {
   margin-top: 0.7rem;
@@ -5810,7 +5811,22 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-connector-pin-map-editor .workbench-handoff-output {
   margin-top: 0.55rem;
 }
-.workbench-connector-pin-map-editor textarea {
+.workbench-hardware-interface-designer-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.workbench-hardware-interface-designer-actions .workbench-editable-primary {
+  min-width: 0;
+  padding: 0.45rem 0.35rem;
+  font-size: 0.68rem;
+}
+.workbench-hardware-interface-designer .workbench-handoff-output {
+  margin-top: 0.55rem;
+}
+.workbench-connector-pin-map-editor textarea,
+.workbench-hardware-interface-designer textarea {
   min-height: 9rem;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }

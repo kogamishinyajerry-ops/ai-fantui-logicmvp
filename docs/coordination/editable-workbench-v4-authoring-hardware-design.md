@@ -37,8 +37,8 @@ remain reference/sample outputs, not near-term product drivers.
 - JER-222: Port and wire editing ergonomics v1 (Done)
 - JER-223: Sandbox scenario test bench v1 (Done)
 - JER-224: Candidate graph debugger view v1 (Done)
-- JER-225: Workbench preflight analyzer v1 (In review)
-- JER-226: Hardware/interface designer foundation v1 (Planned)
+- JER-225: Workbench preflight analyzer v1 (Done)
+- JER-226: Hardware/interface designer foundation v1 (In review)
 - JER-227: Foundation workbench review archive v1 (Planned)
 
 ## Product Target
@@ -471,7 +471,7 @@ The slice remains sandbox-only:
 - no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
   DAL, or PSSA behavior is changed.
 
-## JER-225 In-Review Note
+## JER-225 Closure Note
 
 JER-225 adds the first local preflight analyzer for candidate graph handoff.
 The right inspector consumes graph validation issues, sandbox test run reports,
@@ -488,6 +488,25 @@ The slice remains sandbox-only:
 - classifications are engineering readiness states, not truth-level or DAL
   claims;
 - ChangeRequest proof packets include preflight summary and checksum evidence;
+- no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
+  DAL, or PSSA behavior is changed.
+
+## JER-226 In-Review Note
+
+JER-226 adds the first UI-facing Hardware / Interface Design authoring surface.
+The right inspector now accepts sandbox JSON for LRUs, cables, connectors,
+ports, pins, signal bindings, and explicit evidence-gap records, validates that
+data in-browser, and preserves the resulting design and validation report
+through draft export/import, browser restore, preflight, ChangeRequest proof,
+and evidence archive checksums.
+
+The slice remains sandbox-only:
+
+- `hardware_interface_designer` is editable review evidence, not certified
+  hardware truth;
+- validation rejects duplicate ids, broken references, invalid evidence-gap
+  semantics, and boundary constants that would imply truth or DAL/PSSA impact;
+- preflight consumes the designer validation report as a readiness input;
 - no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
   DAL, or PSSA behavior is changed.
 

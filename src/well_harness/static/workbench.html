@@ -1088,6 +1088,57 @@
                 </p>
               </section>
               <section
+                id="workbench-hardware-interface-designer"
+                class="workbench-hardware-interface-designer"
+                aria-labelledby="workbench-hardware-interface-design-title"
+              >
+                <div class="workbench-inspector-header">
+                  <span id="workbench-hardware-interface-design-title">Hardware / Interface Design</span>
+                  <strong>sandbox evidence</strong>
+                </div>
+                <div class="workbench-hardware-interface-designer-actions">
+                  <button
+                    id="workbench-export-hardware-interface-design-btn"
+                    type="button"
+                    class="workbench-editable-primary"
+                  >
+                    Export design
+                  </button>
+                  <button
+                    id="workbench-validate-hardware-interface-design-btn"
+                    type="button"
+                    class="workbench-editable-primary"
+                  >
+                    Validate design
+                  </button>
+                  <button
+                    id="workbench-apply-hardware-interface-design-btn"
+                    type="button"
+                    class="workbench-editable-primary"
+                  >
+                    Apply design
+                  </button>
+                </div>
+                <label class="workbench-handoff-output" for="workbench-hardware-interface-design-output">
+                  <span>LRU, cable, connector, port, pin, and binding JSON</span>
+                  <textarea
+                    id="workbench-hardware-interface-design-output"
+                    rows="8"
+                  ></textarea>
+                </label>
+                <label class="workbench-handoff-output" for="workbench-hardware-interface-design-validation-output">
+                  <span>Validation report</span>
+                  <textarea
+                    id="workbench-hardware-interface-design-validation-output"
+                    rows="6"
+                    readonly
+                  ></textarea>
+                </label>
+                <p id="workbench-hardware-interface-design-status" class="workbench-handoff-status">
+                  Hardware/interface design records are sandbox evidence only. Truth effect: none.
+                </p>
+              </section>
+              <section
                 id="workbench-hardware-binding-diagnostics"
                 class="workbench-hardware-binding-diagnostics"
                 aria-labelledby="workbench-hardware-binding-diagnostics-title"
