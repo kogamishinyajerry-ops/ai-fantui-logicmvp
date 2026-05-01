@@ -6,7 +6,7 @@
 (launched 2026-05-01)**
 
 Editable Control Workbench Core v1, Interaction v2, Runtime v3, and JER-219
-through JER-222 are complete as the foundation for sandbox-first control-logic
+through JER-223 are complete as the foundation for sandbox-first control-logic
 editing. The current product mainline is foundation-first Workbench v4: build
 the base single-user editor, runner, test bench, debugger, and archive loop
 before returning to dedicated thrust-reverser or C919 panel product work.
@@ -47,7 +47,8 @@ Housekeeping bridge:
 - JER-220: Foundation-first roadmap reset after JER-219 (Done)
 - JER-221: Canonical editable graph authoring kernel v1 (Done, PR #203)
 - JER-222: Port and wire editing ergonomics v1 (Done, PR #204)
-- JER-223: Sandbox scenario test bench v1 (In review)
+- JER-223: Sandbox scenario test bench v1 (Done, PR #205)
+- JER-224: Candidate graph debugger view v1 (In review)
 
 Workbench v4 foundation-first sequence:
 
@@ -60,13 +61,13 @@ Workbench v4 foundation-first sequence:
 - JER-222 improved explicit port-to-port wiring ergonomics, route
   metadata, edge labels, disconnect/reconnect behavior, and deterministic
   validation findings.
-- JER-223 adds the first-class sandbox scenario test bench for candidate
+- JER-223 added the first-class sandbox scenario test bench for candidate
   graphs: editable inputs over ticks, assertions, expected outputs, and
   pass/fail run reports. Test bench output remains sandbox evidence only with
   `truth_effect: none`.
-- JER-224 will add a probe-focused debugger view for selected nodes, edges,
-  ports, watched values, first failure/divergence, and timeline-linked
-  selection.
+- JER-224 adds a probe-focused debugger view for selected nodes and edges:
+  watched values, first failure, selected tick, trace availability, hardware
+  binding context, and archive checksum coverage.
 - JER-225 will add a preflight analyzer that classifies candidate drafts as
   ready, needs_evidence, or invalid_candidate before handoff.
 - JER-226 will deepen hardware/interface editing after the graph and test

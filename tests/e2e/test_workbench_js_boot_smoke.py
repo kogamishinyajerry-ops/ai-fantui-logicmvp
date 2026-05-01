@@ -2443,6 +2443,81 @@ def test_workbench_sandbox_scenario_test_bench_runs_exports_and_archives(demo_se
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_candidate_debugger_view_tracks_failing_assertion_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-op-catalog-op="compare"]')
+    page.click('[data-editor-tool="node"]')
+    page.fill(
+        "#workbench-test-bench-inputs-json",
+        json.dumps(
+            [
+                {"tick": 0, "inputs": {"draft_node_1:in": 2, "draft_node_1": 2}},
+                {"tick": 1, "inputs": {"draft_node_1:in": 8, "draft_node_1": 8}},
+            ]
+        ),
+    )
+    page.fill(
+        "#workbench-test-bench-assertions-json",
+        json.dumps(
+            [
+                {"tick": 0, "target": "draft_node_1:out", "expected": True},
+                {"tick": 1, "target": "draft_node_1:out", "expected": True},
+            ]
+        ),
+    )
+    page.click("#workbench-run-test-bench-btn")
+    page.wait_for_function(
+        """
+        () => document.getElementById('workbench-candidate-debugger-status')?.textContent.trim() === 'fail'
+        """
+    )
+    page.locator('[data-editable-node-id="draft_node_1"]').click()
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert page.locator("#workbench-candidate-debugger-target").inner_text() == "node:draft_node_1"
+    assert page.locator("#workbench-candidate-debugger-tick").inner_text() == "0"
+    assert "expected=true observed=false" in page.locator("#workbench-candidate-debugger-assertion").inner_text()
+    assert "draft_node_1:out=false" in page.locator("#workbench-candidate-debugger-observed").inner_text()
+    assert page.locator("#workbench-candidate-debugger-trace").inner_text() == "available"
+
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    debugger_view = draft["candidate_debugger_view"]
+    assert debugger_view["kind"] == "well-harness-workbench-candidate-debugger-view"
+    assert debugger_view["target"]["owner_key"] == "node:draft_node_1"
+    assert debugger_view["status"] == "fail"
+    assert debugger_view["selected_tick"] == 0
+    assert debugger_view["first_failing_assertion"]["target"] == "draft_node_1:out"
+    assert debugger_view["observed_values"][0]["value"] is False
+    assert debugger_view["truth_effect"] == "none"
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    page.fill("#workbench-draft-json-buffer", draft_json)
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert imported["candidate_debugger_view"]["target"]["owner_key"] == "node:draft_node_1"
+    assert imported["candidate_debugger_view"]["first_failing_assertion"]["status"] == "fail"
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["candidate_debugger_view"]["truth_effect"] == "none"
+    assert archive["candidate_debugger_view"]["first_failing_assertion"]["target"] == "draft_node_1:out"
+    assert archive["checksums"]["candidate_debugger_view_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_canvas_viewport_pan_zoom_fit_preserves_model_coordinates(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")

@@ -7645,6 +7645,13 @@ function installEditableWorkbenchShell() {
   const runTestBenchBtn = document.getElementById("workbench-run-test-bench-btn");
   const sandboxTestBenchStatus = document.getElementById("workbench-test-bench-status");
   const sandboxTestBenchReportOutput = document.getElementById("workbench-test-bench-report-output");
+  const candidateDebuggerPanel = document.getElementById("workbench-candidate-debugger-view");
+  const candidateDebuggerStatus = document.getElementById("workbench-candidate-debugger-status");
+  const candidateDebuggerTarget = document.getElementById("workbench-candidate-debugger-target");
+  const candidateDebuggerTick = document.getElementById("workbench-candidate-debugger-tick");
+  const candidateDebuggerAssertion = document.getElementById("workbench-candidate-debugger-assertion");
+  const candidateDebuggerObserved = document.getElementById("workbench-candidate-debugger-observed");
+  const candidateDebuggerTrace = document.getElementById("workbench-candidate-debugger-trace");
   const timelineStrip = document.getElementById("workbench-sandbox-timeline-strip");
   const selectedDebugTimelineTarget = document.getElementById("workbench-selected-debug-target");
   const selectedDebugTimelineScenario = document.getElementById("workbench-selected-debug-scenario");
@@ -7757,6 +7764,8 @@ function installEditableWorkbenchShell() {
   const sandboxTestBenchVersion = "workbench-sandbox-test-bench.v1";
   const sandboxTestRunReportKind = "well-harness-workbench-sandbox-test-run-report";
   const sandboxTestRunReportVersion = "workbench-sandbox-test-run-report.v1";
+  const candidateDebuggerViewKind = "well-harness-workbench-candidate-debugger-view";
+  const candidateDebuggerViewVersion = "workbench-candidate-debugger-view.v1";
   const edgeRouteMetadataVersion = "workbench-edge-route-metadata.v1";
   let draftEdges = [
     { id: "edge_logic1_logic2", source: "logic1", target: "logic2" },
@@ -11846,6 +11855,7 @@ function installEditableWorkbenchShell() {
       canvasInteractionSummary: currentCanvasInteractionSummary(),
       sandboxTestBench: safeSandboxTestBenchDefinition(),
       sandboxTestRunReport: currentSandboxTestRunReport(),
+      candidateDebuggerView: currentCandidateDebuggerView("storage"),
       subsystemGroups: subsystemGroupsSnapshot(),
       capturedSubsystemTemplates: capturedSubsystemTemplateSnapshot(),
       nodes: nodes.map((node) => editableNodeState(node)),
@@ -12026,6 +12036,7 @@ function installEditableWorkbenchShell() {
     syncEditableNodeSelectionAttributes();
     renderEditableEdges();
     renderInspector();
+    renderCandidateDebuggerView(currentCandidateDebuggerView("apply_state"));
     updateEditableDraftHash();
     validateEditableGraph();
   }
@@ -14304,6 +14315,7 @@ function installEditableWorkbenchShell() {
     }
     recordCanvasInteractionAction("select_edge");
     renderEdgeInspector(selectedEdge);
+    renderCandidateDebuggerView(currentCandidateDebuggerView("select_edge"));
     if (graphValidationStatus) {
       const payload = edgeInspectorPayload(selectedEdge);
       graphValidationStatus.textContent =
@@ -14345,6 +14357,7 @@ function installEditableWorkbenchShell() {
       }
     }
     renderInspector();
+    renderCandidateDebuggerView(currentCandidateDebuggerView("select_node"));
     updateEditableDraftHash();
     validateEditableGraph();
     persistDraft();
@@ -14463,6 +14476,7 @@ function installEditableWorkbenchShell() {
     const candidateBaselineDiffReviewV2 = currentCandidateBaselineDiffReviewV2Report("snapshot");
     const sandboxTestBench = safeSandboxTestBenchDefinition();
     const sandboxTestRunReport = currentSandboxTestRunReport();
+    const candidateDebuggerView = currentCandidateDebuggerView("snapshot");
     const diagnosticRepairActions = repairActionLogSnapshot();
     const workspaceDocument = currentWorkspaceDocument();
     const canvasInteractionSummary = currentCanvasInteractionSummary();
@@ -14507,6 +14521,7 @@ function installEditableWorkbenchShell() {
       candidate_baseline_diff_review_v2: candidateBaselineDiffReviewV2,
       sandbox_test_bench: sandboxTestBench,
       sandbox_test_run_report: sandboxTestRunReport,
+      candidate_debugger_view: candidateDebuggerView,
     };
     snapshot.editable_graph_document = buildEditableGraphDocumentFromSnapshot(snapshot);
     return snapshot;
@@ -14686,6 +14701,167 @@ function installEditableWorkbenchShell() {
 
   function currentSandboxTestRunReport() {
     return normalizeImportedSandboxTestRunReport(lastSandboxTestRunReport);
+  }
+
+  function candidateDebuggerTargetContext() {
+    if (selectedEdge) {
+      const payload = edgeInspectorPayload(selectedEdge);
+      const binding = edgeInterfaceBinding(selectedEdge);
+      const portIds = [
+        payload.source_port_id,
+        payload.target_port_id,
+        `${payload.source_node_id}:out`,
+        `${payload.target_node_id}:in`,
+      ].filter(Boolean);
+      return {
+        kind: "edge",
+        id: payload.id,
+        owner_key: `edge:${payload.id}`,
+        label: payload.edge_label || `${payload.source_node_id}->${payload.target_node_id}`,
+        port_ids: Array.from(new Set(portIds)),
+        hardware_binding: normalizeInterfaceBinding(binding, "edge", payload.id),
+        truth_effect: "none",
+      };
+    }
+    const payload = selectedNodePayload() || {};
+    const nodeId = payload.id || "unknown";
+    const contract = normalizePortContract(payload.port_contract || {}, nodeId);
+    const binding = payload.hardware_binding || normalizeInterfaceBinding({}, "node", nodeId);
+    const portIds = [
+      contract.output_port_id,
+      `${nodeId}:out`,
+      contract.input_port_id,
+      `${nodeId}:in`,
+      nodeId,
+    ].filter(Boolean);
+    return {
+      kind: "node",
+      id: nodeId,
+      owner_key: `node:${nodeId}`,
+      label: payload.label || nodeId,
+      port_ids: Array.from(new Set(portIds)),
+      hardware_binding: normalizeInterfaceBinding(binding, "node", nodeId),
+      truth_effect: "none",
+    };
+  }
+
+  function debuggerAssertionMatchesTarget(assertion, target) {
+    const assertionTarget = String((assertion && assertion.target) || "");
+    if (!assertionTarget || !target) return false;
+    return assertionTarget === target.id
+      || assertionTarget === target.owner_key
+      || (target.port_ids || []).includes(assertionTarget);
+  }
+
+  function firstDebuggerAssertion(report, target) {
+    const assertions = Array.isArray(report && report.assertions) ? report.assertions : [];
+    return assertions.find((assertion) => (
+      assertion.status === "fail" && debuggerAssertionMatchesTarget(assertion, target)
+    )) || assertions.find((assertion) => assertion.status === "fail") || null;
+  }
+
+  function debuggerTraceFrame(report, tick) {
+    const trace = Array.isArray(report && report.trace) ? report.trace : [];
+    if (tick !== null && tick !== undefined) {
+      const selected = trace.find((frame) => Number(frame.tick) === Number(tick));
+      if (selected) return selected;
+    }
+    return trace[0] || null;
+  }
+
+  function debuggerObservedValues(frame, target) {
+    const values = frame && frame.values && typeof frame.values === "object" ? frame.values : {};
+    return (target.port_ids || []).map((portId) => {
+      const observed = readSandboxValue(values, [portId]);
+      return {
+        port_id: portId,
+        value: normalizeEvidenceArchiveValue(observed),
+        available: observed !== undefined,
+        truth_effect: "none",
+      };
+    });
+  }
+
+  function formatDebuggerValue(value) {
+    if (value === undefined) return "unavailable";
+    if (typeof value === "string") return value;
+    return stableEvidenceArchiveJson(value);
+  }
+
+  function formatDebuggerAssertion(assertion) {
+    if (!assertion) return "not run";
+    return [
+      assertion.target || "unknown",
+      `tick=${assertion.tick}`,
+      `expected=${formatDebuggerValue(assertion.expected)}`,
+      `observed=${formatDebuggerValue(assertion.observed)}`,
+      assertion.status || "unknown",
+    ].join(" ");
+  }
+
+  function formatDebuggerObserved(values) {
+    const available = (values || []).filter((item) => item.available);
+    if (!available.length) return "unavailable";
+    return available
+      .map((item) => `${item.port_id}=${formatDebuggerValue(item.value)}`)
+      .join(" · ");
+  }
+
+  function currentCandidateDebuggerView(state) {
+    const target = candidateDebuggerTargetContext();
+    const report = currentSandboxTestRunReport();
+    const firstFail = firstDebuggerAssertion(report, target);
+    const selectedTick = firstFail
+      ? Number(firstFail.tick)
+      : (
+        report && Array.isArray(report.trace) && report.trace[0]
+          ? Number(report.trace[0].tick)
+          : null
+      );
+    const frame = debuggerTraceFrame(report, selectedTick);
+    const observedValues = frame ? debuggerObservedValues(frame, target) : [];
+    return {
+      kind: candidateDebuggerViewKind,
+      version: candidateDebuggerViewVersion,
+      workflow_state: state || "selection",
+      target,
+      status: report ? (report.status || "not_run") : "not_run",
+      scenario_id: report ? (report.scenario_id || selectedWorkbenchScenarioId()) : selectedWorkbenchScenarioId(),
+      assertion_status: report ? (report.assertion_status || "not_run") : "not_run",
+      selected_tick: selectedTick,
+      trace_available: Boolean(frame),
+      trace_frame_count: report && Array.isArray(report.trace) ? report.trace.length : 0,
+      first_failing_assertion: firstFail ? normalizeEvidenceArchiveValue(firstFail) : null,
+      observed_values: observedValues,
+      report_model_hash: report ? (report.model_hash || "unavailable") : "not_run",
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function renderCandidateDebuggerView(view) {
+    const packet = view || currentCandidateDebuggerView("render");
+    const status = packet.status || "not_run";
+    if (candidateDebuggerPanel) candidateDebuggerPanel.setAttribute("data-debugger-status", status);
+    if (candidateDebuggerStatus) candidateDebuggerStatus.textContent = status;
+    if (candidateDebuggerTarget) candidateDebuggerTarget.textContent = packet.target.owner_key || "none:none";
+    if (candidateDebuggerTick) {
+      candidateDebuggerTick.textContent =
+        packet.selected_tick === null || packet.selected_tick === undefined
+          ? "not_run"
+          : String(packet.selected_tick);
+    }
+    if (candidateDebuggerAssertion) {
+      candidateDebuggerAssertion.textContent = formatDebuggerAssertion(packet.first_failing_assertion);
+    }
+    if (candidateDebuggerObserved) {
+      candidateDebuggerObserved.textContent = formatDebuggerObserved(packet.observed_values);
+    }
+    if (candidateDebuggerTrace) {
+      candidateDebuggerTrace.textContent = packet.trace_available ? "available" : "unavailable";
+    }
+    return packet;
   }
 
   function sandboxValueEquals(left, right) {
@@ -14956,6 +15132,7 @@ function installEditableWorkbenchShell() {
       handoffStatus.textContent =
         `Sandbox test bench ${status}. Truth effect: none. No certification claim.`;
     }
+    renderCandidateDebuggerView(currentCandidateDebuggerView("test_bench"));
     return normalized;
   }
 
@@ -15050,6 +15227,7 @@ function installEditableWorkbenchShell() {
       candidate_baseline_diff_review_v2: candidateBaselineDiffReviewV2,
       sandbox_test_bench: snapshot.sandbox_test_bench,
       sandbox_test_run_report: snapshot.sandbox_test_run_report,
+      candidate_debugger_view: snapshot.candidate_debugger_view,
       changerequest_proof_packet: changeRequestProofPacket,
       changerequest_handoff_packet: changeRequestHandoffPacket,
       draft_snapshot_manifest: buildDraftSnapshotManifestSummary(),
@@ -15377,6 +15555,31 @@ function installEditableWorkbenchShell() {
       }
       if (report.truth_effect !== "none") {
         throw new Error("sandbox_test_run_report truth_effect must be none");
+      }
+    }
+    if (
+      payload.candidate_debugger_view !== undefined
+      && payload.candidate_debugger_view !== null
+      && (!payload.candidate_debugger_view || typeof payload.candidate_debugger_view !== "object" || Array.isArray(payload.candidate_debugger_view))
+    ) {
+      throw new Error("candidate_debugger_view must be an object when present");
+    }
+    if (payload.candidate_debugger_view) {
+      const debuggerView = payload.candidate_debugger_view;
+      if (debuggerView.kind !== candidateDebuggerViewKind) {
+        throw new Error("candidate_debugger_view kind must be well-harness-workbench-candidate-debugger-view");
+      }
+      if (debuggerView.version !== candidateDebuggerViewVersion) {
+        throw new Error("candidate_debugger_view version must be workbench-candidate-debugger-view.v1");
+      }
+      if (debuggerView.candidate_state !== "sandbox_candidate") {
+        throw new Error("candidate_debugger_view candidate_state must be sandbox_candidate");
+      }
+      if (debuggerView.certification_claim !== "none") {
+        throw new Error("candidate_debugger_view certification_claim must be none");
+      }
+      if (debuggerView.truth_effect !== "none") {
+        throw new Error("candidate_debugger_view truth_effect must be none");
       }
     }
     if (payload.typed_ports !== undefined && !Array.isArray(payload.typed_ports)) {
@@ -16839,6 +17042,8 @@ function installEditableWorkbenchShell() {
       modelJson.sandbox_test_bench || safeSandboxTestBenchDefinition();
     const sandboxTestRunReport =
       modelJson.sandbox_test_run_report || currentSandboxTestRunReport();
+    const candidateDebuggerView =
+      modelJson.candidate_debugger_view || currentCandidateDebuggerView("archive");
     const diagnosticFocus = modelJson.diagnostic_focus || currentDiagnosticFocusSummary();
     const diagnosticRepairActions = modelJson.repair_action_log || repairActionLogSnapshot();
     const typedPorts = modelJson.typed_ports || [];
@@ -16899,6 +17104,7 @@ function installEditableWorkbenchShell() {
       candidate_baseline_diff_review_v2: candidateBaselineDiffReviewV2,
       sandbox_test_bench: sandboxTestBench,
       sandbox_test_run_report: sandboxTestRunReport,
+      candidate_debugger_view: candidateDebuggerView,
       diagnostic_focus: diagnosticFocus,
       repair_action_log: diagnosticRepairActions,
       typed_ports: typedPorts,
@@ -16944,6 +17150,7 @@ function installEditableWorkbenchShell() {
       candidate_baseline_diff_review_v2_checksum: checksumEvidenceArchiveField(candidateBaselineDiffReviewV2),
       sandbox_test_bench_checksum: checksumEvidenceArchiveField(sandboxTestBench),
       sandbox_test_run_report_checksum: checksumEvidenceArchiveField(sandboxTestRunReport),
+      candidate_debugger_view_checksum: checksumEvidenceArchiveField(candidateDebuggerView),
       diagnostic_focus_checksum: checksumEvidenceArchiveField(diagnosticFocus),
       repair_action_log_checksum: checksumEvidenceArchiveField(diagnosticRepairActions),
       typed_ports_checksum: checksumEvidenceArchiveField(typedPorts),
@@ -17435,6 +17642,7 @@ function installEditableWorkbenchShell() {
   renderEditableEdges();
   validateEditableGraph();
   updateEditableDraftHash();
+  renderCandidateDebuggerView(currentCandidateDebuggerView("init"));
   renderHardwarePalette();
   hydrateEvidenceSummary();
 }
