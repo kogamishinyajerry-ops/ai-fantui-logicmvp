@@ -27,8 +27,9 @@ controlled ChangeRequest handoff.
 - JER-213: ChangeRequest handoff packet from editable draft v1 (Done)
 - JER-214: Workbench handoff packet schema and stable serialization hardening (Done)
 - JER-215: Evidence archive restore validates ChangeRequest handoff packet (Done)
-- JER-216: Subsystem template capture from editable selection v1 (In review)
-- JER-217: Subsystem interface contract editor v1 (In review)
+- JER-216: Subsystem template capture from editable selection v1 (Done)
+- JER-217: Subsystem interface contract editor v1 (Done)
+- JER-218: Workbench interaction state kernel v1 (In progress)
 
 ## Product Target
 
@@ -67,6 +68,10 @@ An engineer should be able to:
 - **v4.7 subsystem boundary contracts**: JER-217 adds sandbox-only
   input/output port contracts for selected subsystems and preserves them through
   draft export/import, evidence archives, and captured-template reinsertion.
+- **v4.8 interaction-state kernel**: JER-218 adds a sandbox-only
+  `workspace_document` envelope for revision id, action count, action log
+  digest, undo depth, redo depth, draft import/export, browser restore, and
+  evidence archive checksum coverage.
 
 ## Acceptance Model
 

@@ -29,8 +29,9 @@ Housekeeping bridge:
 - JER-213: ChangeRequest handoff packet from editable draft v1 (Done)
 - JER-214: Workbench handoff packet schema and stable serialization hardening (Done)
 - JER-215: Evidence archive restore validates ChangeRequest handoff packet (Done, PR #197)
-- JER-216: Subsystem template capture from editable selection v1 (In review)
-- JER-217: Subsystem interface contract editor v1 (In review)
+- JER-216: Subsystem template capture from editable selection v1 (Done, PR #198)
+- JER-217: Subsystem interface contract editor v1 (Done, PR #199)
+- JER-218: Workbench interaction state kernel v1 (In progress)
 
 Workbench v4 seed backlog:
 - JER-216 is the current authoring-freedom slice after the handoff hardening
@@ -44,6 +45,10 @@ Workbench v4 seed backlog:
   a selected subsystem, preserve those ports through draft export/import,
   archive checksums, and captured-template reinsertion, and keep every contract
   as `sandbox_candidate` metadata with `truth_effect: none`.
+- JER-218 adds the interaction-state foundation for the next authoring slices.
+  It gives each browser-local sandbox draft a `workspace_document` envelope
+  with revision id, action count, action log digest, undo depth, redo depth,
+  draft import/export preservation, and evidence archive checksum coverage.
 
 Runtime v3 implementation closure:
 

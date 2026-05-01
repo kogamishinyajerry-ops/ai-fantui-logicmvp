@@ -1593,6 +1593,57 @@ def test_workbench_subsystem_interface_contract_round_trips_and_templates(demo_s
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_workspace_document_round_trips_with_archive_checksum(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-component-template-id="two_stage_interlock"]')
+    page.fill("#workbench-subsystem-name", "Documented deploy cell")
+    page.click("#workbench-create-subsystem-btn")
+    page.select_option("#workbench-subsystem-interface-direction", "input")
+    page.fill("#workbench-subsystem-interface-label", "Deploy request")
+    page.fill("#workbench-subsystem-interface-signal-id", "deploy_request_cmd")
+    page.click("#workbench-add-subsystem-interface-port-btn")
+
+    page.click("#workbench-export-draft-btn")
+    exported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    workspace_document = exported["workspace_document"]
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert workspace_document["kind"] == "well-harness-workbench-workspace-document"
+    assert workspace_document["version"] == "workbench-workspace-document.v1"
+    assert workspace_document["candidate_state"] == "sandbox_candidate"
+    assert workspace_document["truth_effect"] == "none"
+    assert workspace_document["revision_id"].startswith("ui_draft_")
+    assert workspace_document["action_count"] >= 3
+    assert workspace_document["undo_depth"] >= 3
+    assert workspace_document["redo_depth"] == 0
+    assert page.locator("#workbench-workspace-document-revision").inner_text() == workspace_document["revision_id"]
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    page.fill("#workbench-draft-json-buffer", draft_json)
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert imported["workspace_document"]["document_id"] == workspace_document["document_id"]
+    assert imported["workspace_document"]["action_count"] >= workspace_document["action_count"]
+
+    page.click('[data-editor-tool="undo"]')
+    page.click('[data-editor-tool="redo"]')
+    page.click("#workbench-export-draft-btn")
+    revised = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert revised["workspace_document"]["revision_id"].startswith("ui_draft_")
+    assert revised["workspace_document"]["undo_depth"] >= 1
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["workspace_document"]["truth_effect"] == "none"
+    assert archive["checksums"]["workspace_document_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_captured_template_remaps_overlapping_ids_and_preserves_rules(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")

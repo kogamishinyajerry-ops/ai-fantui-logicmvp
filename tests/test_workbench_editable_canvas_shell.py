@@ -224,6 +224,20 @@ def test_diff_review_v2_controls_are_sandbox_only_archive_ui() -> None:
     assert ".workbench-diff-review-v2-facts" in css
 
 
+def test_workspace_document_status_controls_are_sandbox_only_ui() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-workspace-document-status"' in html
+    assert 'id="workbench-workspace-document-revision"' in html
+    assert 'id="workbench-workspace-document-action-count"' in html
+    assert 'id="workbench-workspace-document-undo-depth"' in html
+    assert 'id="workbench-workspace-document-redo-depth"' in html
+    assert "Workspace document is sandbox evidence only. Truth effect: none." in html
+    assert ".workbench-workspace-document-status" in css
+    assert ".workbench-workspace-document-facts" in css
+
+
 def test_js_wires_draft_derivation_node_selection_and_evidence_api() -> None:
     js = _js()
 
@@ -283,6 +297,20 @@ def test_js_wires_subsystem_interface_contracts_as_sandbox_only_metadata() -> No
     assert "subsystem interface contracts truth_effect must be none" in js
     assert "data-subsystem-interface-port-id" in js
     assert 'kind: "well-harness-workbench-subsystem-interface-contracts"' in js
+    assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'truth_effect: "none"' in js
+
+
+def test_js_wires_workspace_document_round_trip_as_sandbox_only_metadata() -> None:
+    js = _js()
+
+    assert "workbench-workspace-document.v1" in js
+    assert "well-harness-workbench-workspace-document" in js
+    assert "function currentWorkspaceDocument" in js
+    assert "function updateWorkspaceDocumentRevision" in js
+    assert "function renderWorkspaceDocumentStatus" in js
+    assert "workspace_document" in js
+    assert "workspace_document_checksum" in js
     assert 'candidate_state: "sandbox_candidate"' in js
     assert 'truth_effect: "none"' in js
 
