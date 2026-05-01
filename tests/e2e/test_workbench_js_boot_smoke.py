@@ -1449,6 +1449,220 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
     assert redo["truth_level_impact"] == "none"
 
 
+def test_workbench_captures_and_reinserts_subsystem_template(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-component-template-id="two_stage_interlock"]')
+    page.fill("#workbench-subsystem-name", "Reusable deploy cell")
+    page.click("#workbench-create-subsystem-btn")
+    page.click("#workbench-capture-subsystem-template-btn")
+    assert "captured" in page.locator("#workbench-component-library-status").inner_text().lower()
+
+    page.click("#workbench-export-draft-btn")
+    captured = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    library = captured["component_library"]
+    captured_templates = library["captured_templates"]
+    template_id = captured_templates[0]["id"]
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert library["captured_template_count"] == 1
+    assert library["truth_effect"] == "none"
+    assert captured_templates[0]["candidate_state"] == "sandbox_candidate"
+    assert captured_templates[0]["truth_effect"] == "none"
+    assert captured_templates[0]["subsystem"]["name"] == "Reusable deploy cell"
+    assert captured_templates[0]["subsystem"]["node_ids"] == ["draft_node_1", "draft_node_2"]
+    assert [node["original_node_id"] for node in captured_templates[0]["nodes"]] == [
+        "draft_node_1",
+        "draft_node_2",
+    ]
+    assert captured_templates[0]["edges"][0]["source_index"] == 0
+    assert captured_templates[0]["edges"][0]["target_index"] == 1
+
+    page.click("#workbench-insert-captured-template-btn")
+    page.click("#workbench-export-draft-btn")
+    inserted = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    draft_nodes = [node for node in inserted["nodes"] if node["id"].startswith("draft_node_")]
+    inserted_nodes = [node for node in draft_nodes if node["id"] in {"draft_node_3", "draft_node_4"}]
+    inserted_edges = [
+        edge for edge in inserted["edges"]
+        if edge.get("component_template", {}).get("template_id") == template_id
+    ]
+
+    assert [node["id"] for node in inserted_nodes] == ["draft_node_3", "draft_node_4"]
+    assert {node["component_template"]["template_id"] for node in inserted_nodes} == {template_id}
+    assert len(inserted_edges) == 1
+    assert inserted_edges[0]["source"] == "draft_node_3"
+    assert inserted_edges[0]["target"] == "draft_node_4"
+    assert inserted["component_library"]["captured_template_count"] == 1
+    assert inserted["component_library"]["last_template_id"] == template_id
+    assert inserted["component_library"]["captured_templates"][0]["truth_effect"] == "none"
+    assert any(
+        group["name"] == "Reusable deploy cell copy"
+        and group["node_ids"] == ["draft_node_3", "draft_node_4"]
+        and group["truth_effect"] == "none"
+        for group in inserted["subsystem_groups"]
+    )
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    page.fill("#workbench-draft-json-buffer", draft_json)
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert imported["component_library"]["captured_templates"][0]["id"] == template_id
+    assert imported["component_library"]["captured_templates"][0]["truth_effect"] == "none"
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["component_library"]["captured_template_count"] == 1
+    assert archive["component_library"]["captured_templates"][0]["truth_effect"] == "none"
+    assert archive["checksums"]["component_library_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
+def test_workbench_captured_template_remaps_overlapping_ids_and_preserves_rules(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    for _ in range(10):
+        page.click('[data-component-template-id="single_and_gate"]')
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    draft["component_library"]["last_template_id"] = "captured_subsystem_template_overlap"
+    draft["component_library"]["captured_templates"] = [
+        {
+            "id": "captured_subsystem_template_overlap",
+            "kind": "well-harness-workbench-captured-subsystem-template",
+            "version": 1,
+            "template_version": "editable-captured-subsystem-template.v1",
+            "label": "Overlap capture",
+            "short_label": "CAP",
+            "checksum": "stale-imported-checksum",
+            "subsystem": {
+                "id": "subsystem_overlap_capture",
+                "name": "Overlap capture",
+                "node_ids": ["draft_node_1", "draft_node_10"],
+                "candidate_state": "sandbox_candidate",
+                "source_ref": "ui_draft.subsystem_group.overlap",
+                "truth_effect": "none",
+            },
+            "nodes": [
+                {
+                    "original_node_id": "draft_node_1",
+                    "label": "Captured source one",
+                    "op": "and",
+                    "rule_count": "1",
+                    "hardware_binding": {
+                        "hardware_id": "TR-LRU-001",
+                        "port_local": "draft_node_1:A1",
+                        "port_peer": "draft_node_10:B1",
+                        "evidence_status": "ui_draft",
+                    },
+                    "port_contract": {
+                        "input_signal_id": "draft_node_1_input_signal",
+                        "output_signal_id": "draft_node_1_output_signal",
+                        "value_type": "boolean",
+                        "required": False,
+                        "truth_effect": "none",
+                    },
+                    "rules": [
+                        {
+                            "name": "draft_node_1_rule",
+                            "source_signal_id": "draft_node_1_signal",
+                            "comparison": "==",
+                            "threshold_value": True,
+                        }
+                    ],
+                    "candidate_state": "sandbox_candidate",
+                    "truth_effect": "none",
+                },
+                {
+                    "original_node_id": "draft_node_10",
+                    "label": "Captured source ten",
+                    "op": "compare",
+                    "rule_count": "2",
+                    "hardware_binding": {
+                        "hardware_id": "TR-LRU-010",
+                        "port_local": "draft_node_10:A1",
+                        "port_peer": "draft_node_1:B1",
+                        "evidence_status": "ui_draft",
+                    },
+                    "port_contract": {
+                        "input_signal_id": "draft_node_10_input_signal",
+                        "output_signal_id": "draft_node_10_output_signal",
+                        "value_type": "number",
+                        "required": True,
+                        "truth_effect": "none",
+                    },
+                    "rules": [
+                        {
+                            "name": "draft_node_10_lower",
+                            "source_signal_id": "draft_node_10_lower_signal",
+                            "comparison": ">=",
+                            "threshold_value": -32,
+                        },
+                        {
+                            "name": "draft_node_10_upper",
+                            "source_signal_id": "draft_node_10_upper_signal",
+                            "comparison": "<=",
+                            "threshold_value": 0,
+                        },
+                    ],
+                    "candidate_state": "sandbox_candidate",
+                    "truth_effect": "none",
+                },
+            ],
+            "edges": [
+                {
+                    "original_edge_id": "edge_overlap",
+                    "source_index": 0,
+                    "target_index": 1,
+                    "source_port_id": "draft_node_1:out",
+                    "target_port_id": "draft_node_10:in",
+                    "signal_id": "draft_node_1_to_draft_node_10",
+                    "value_type": "boolean",
+                    "required": True,
+                    "candidate_state": "sandbox_candidate",
+                    "truth_effect": "none",
+                }
+            ],
+            "candidate_state": "sandbox_candidate",
+            "certification_claim": "none",
+            "truth_effect": "none",
+        }
+    ]
+
+    page.fill("#workbench-draft-json-buffer", json.dumps(draft))
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-insert-captured-template-btn")
+    page.click("#workbench-export-draft-btn")
+    inserted = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    node_12 = next(node for node in inserted["nodes"] if node["id"] == "draft_node_12")
+    overlap_edge = next(
+        edge for edge in inserted["edges"]
+        if (edge.get("component_template") or {}).get("template_id") == "captured_subsystem_template_overlap"
+    )
+    captured_template = inserted["component_library"]["captured_templates"][0]
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert captured_template["checksum"] != "stale-imported-checksum"
+    assert node_12["port_contract"]["input_signal_id"] == "draft_node_12_input_signal"
+    assert node_12["port_contract"]["output_signal_id"] == "draft_node_12_output_signal"
+    assert node_12["hardware_binding"]["port_local"] == "draft_node_12:A1"
+    assert node_12["hardware_binding"]["port_peer"] == "draft_node_11:B1"
+    assert [rule["source_signal_id"] for rule in node_12["rules"]] == [
+        "draft_node_12_lower_signal",
+        "draft_node_12_upper_signal",
+    ]
+    assert overlap_edge["target_port_id"] == "draft_node_12:in"
+    assert overlap_edge["signal_id"] == "draft_node_11_to_draft_node_12"
+    assert "draft_node_110" not in json.dumps(inserted)
+
+
 def test_workbench_rule_parameter_round_trips_through_export_import_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
