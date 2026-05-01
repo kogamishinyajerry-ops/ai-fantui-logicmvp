@@ -5,19 +5,23 @@
 **Active milestone — Editable Workbench v4 Authoring + Hardware Design
 (launched 2026-05-01)**
 
-Editable Control Workbench Core v1, Interaction v2, and Runtime v3 are complete
-as the foundation for sandbox-first control-logic editing. The next product
-mainline is Workbench v4: make `/workbench` feel like an engineering authoring
-surface with Figma/Canvas-style editing freedom and Simulink-like control-model
-mental models, while bringing hardware/interface design evidence into the same
-candidate workflow.
+Editable Control Workbench Core v1, Interaction v2, Runtime v3, and JER-219
+are complete as the foundation for sandbox-first control-logic editing. The
+current product mainline is now foundation-first Workbench v4: build the base
+single-user editor, runner, test bench, debugger, and archive loop before
+returning to dedicated thrust-reverser or C919 panel product work.
 
 Scope guard: v4 is a single-user engineering authoring workbench. The priority
 is a strong Simulink/Figma-level control-logic panel foundation: graph editing,
-hardware/interface evidence, sandbox feedback, baseline diff, and review
-handoff. Multi-user collaboration, real-time sync, permissions, comments, and
-conflict resolution stay out of scope until the single-user operation panel is
-stable enough to justify that platform layer.
+runner/test execution, debugging feedback, archive/readback, and then
+hardware/interface evidence. Multi-user collaboration, real-time sync,
+permissions, comments, and conflict resolution stay out of scope until the
+single-user operation panel is stable enough to justify that platform layer.
+
+Reference sample guard: thrust-reverser and C919 E-TRAS remain important
+reference/sample packs. They are not the near-term product mainline. Once the
+base editor/runner/test/debug/archive foundation is mature, those systems
+should be quick to rebuild from zero on top of the generic workbench.
 
 Current Linear project:
 `AI FANTUI LogicMVP · Editable Workbench v4 Authoring + Hardware Design`
@@ -39,29 +43,33 @@ Housekeeping bridge:
 - JER-216: Subsystem template capture from editable selection v1 (Done, PR #198)
 - JER-217: Subsystem interface contract editor v1 (Done, PR #199)
 - JER-218: Workbench interaction state kernel v1 (Done, PR #200)
-- JER-219: High-freedom canvas editing layer v1 (In progress)
+- JER-219: High-freedom canvas editing layer v1 (Done, PR #201)
+- JER-220: Foundation-first roadmap reset after JER-219 (In progress)
 
-Workbench v4 seed backlog:
-- JER-216 is the current authoring-freedom slice after the handoff hardening
-  bridge. It lets engineers capture a selected sandbox subsystem or multi-node
-  draft selection as a reusable template, reinsert it with fresh draft ids, and
-  preserve component/subsystem provenance through draft export/import and local
-  evidence archive checksums. The template remains sandbox metadata with
-  `truth_effect: none`.
-- JER-217 extends the subsystem authoring surface with explicit sandbox-only
-  boundary port contracts. Engineers can define input/output contract ports for
-  a selected subsystem, preserve those ports through draft export/import,
-  archive checksums, and captured-template reinsertion, and keep every contract
-  as `sandbox_candidate` metadata with `truth_effect: none`.
-- JER-218 adds the interaction-state foundation for the next authoring slices.
-  It gives each browser-local sandbox draft a `workspace_document` envelope
-  with revision id, action count, action log digest, undo depth, redo depth,
-  draft import/export preservation, and evidence archive checksum coverage.
-- JER-219 makes the existing high-freedom editing gestures auditable as
-  sandbox evidence. Multi-select, duplicate/delete, lasso/group move,
-  selection counts, last action, node position digest, draft import/export, and
-  archive checksums now flow through `canvas_interaction_summary` with
-  `truth_effect: none`.
+Workbench v4 foundation-first sequence:
+
+- JER-220 resets roadmap and Linear narrative after JER-219 so the mainline is
+  editor -> runner -> test bench -> debugger -> archive. It is documentation
+  and control-plane only.
+- JER-221 will make the editable graph the central product object: nodes,
+  ports, edges, positions, subsystem groups, component templates, selected
+  state, and workspace document metadata.
+- JER-222 will improve explicit port-to-port wiring ergonomics, route
+  metadata, edge labels, disconnect/reconnect behavior, and deterministic
+  validation findings.
+- JER-223 will add the first-class sandbox scenario test bench for candidate
+  graphs: editable inputs over ticks, assertions, expected outputs, and
+  pass/fail run reports.
+- JER-224 will add a probe-focused debugger view for selected nodes, edges,
+  ports, watched values, first failure/divergence, and timeline-linked
+  selection.
+- JER-225 will add a preflight analyzer that classifies candidate drafts as
+  ready, needs_evidence, or invalid_candidate before handoff.
+- JER-226 will deepen hardware/interface editing after the graph and test
+  foundation is stable.
+- JER-227 will package graph, tests, run/debug reports, hardware evidence,
+  validation findings, checksums, and Linear/PR-ready proof into one review
+  archive.
 
 Runtime v3 implementation closure:
 
@@ -98,18 +106,22 @@ packet, truth-level, DAL, or PSSA.
 
 ## Prior Active Context
 
-**Previously active on `claude/c919-etras-frozen-v1-migration` — Phase A complete, Phase C in planning (updated 2026-04-22)**
+**Historical context on `claude/c919-etras-frozen-v1-migration` — retained as
+reference, not current product priority (updated 2026-04-22)**
 
 **Historical anchor**: Milestone 9 — Project Freeze (2026-04-15) closed P0-P16. Opus 4.6 adjudicated MVP-达标线 and froze `main`。
 
-**Post-freeze active scope (branch `claude/c919-etras-frozen-v1-migration`)**:
+**Historical post-freeze scope (branch `claude/c919-etras-frozen-v1-migration`)**:
 - **P43-xx**: C919 E-TRAS frozen V1 migration + authority contract R1-R6 + workflow state machine (P43-03 DONE)
 - **Phase A (2026-04-22)**: LLM features (chat/P14/P15/MiniMax/Ollama) shelved to `archive/shelved/llm-features/`. 9 routes removed, 22 files archived. See `archive/shelved/llm-features/SHELVED.md`.
 - **Phase B (in progress)**: chat.html shelved, `/` → `/demo.html`. Done inline with Phase A.
-- **Phase C (next)**: New C919 ETRAS logic control workstation (modeled on demo.html).
-- **Phase D (next)**: New thrust-reverser simulation panel (modeled on c919_etras_panel/).
+- **Phase C (historical candidate, not current mainline)**: New C919 ETRAS logic control workstation (modeled on demo.html).
+- **Phase D (historical candidate, not current mainline)**: New thrust-reverser simulation panel (modeled on c919_etras_panel/).
 
-UI target shape: **3 categories × 2 cases** = 2 logic workstations + 2 simulation panels + 2 static circuit diagrams. See `.planning/STATE.md` for current phase pointer.
+Legacy UI target shape: **3 categories × 2 cases** = 2 logic workstations + 2
+simulation panels + 2 static circuit diagrams. This remains historical planning
+evidence only; JER-220 moves the active mainline to the generic foundation-first
+workbench.
 
 ## Phase P0: Control Tower And GSD Control Plane
 

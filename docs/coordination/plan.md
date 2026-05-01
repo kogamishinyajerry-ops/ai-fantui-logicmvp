@@ -11,12 +11,13 @@
 - 当前证据模式：`repo-doc fallback mode`
 - 证据模式说明：共享 Notion 数据库与活跃控制面页面当前不可达；当前快照由 repo freeze packet 与 handoff docs 恢复。
 - 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
-- 当前结论：当前最高优先级是把 spec-driven workbench 收成统一 engineer-facing workflow，而不是继续做 P6 控制面清理或新增 demo 表面。
+- 当前结论：当前最高优先级是 foundation-first workbench：先把单用户编辑、运行、测试、调试、归档底座做成熟；thrust-reverser / C919 E-TRAS 是 reference sample pack，不是近期专用面板产品主线。
 - 当前唯一人工动作：继续自动开发；当前无需手动触发 Opus 4.6。
 
 ## 当前开发架构与执行规则
 
 - GitHub / repo 是实现真值；Notion 是控制面；`controller.py` 仍然是 reference thrust-reverser 的唯一控制真值。
+- thrust-reverser 是 reference truth anchor；C919 E-TRAS 是 frozen certified reference sample。两者用于回归、样例和证据锚点，不代表当前要优先开发专用逻辑面板。
 - `runner.py` / `SimulationRunner` 继续承担运行时编排职责；不要把 orchestration 重新塞回 controller truth、UI 或持久化层。
 - 新系统 truth 只能通过显式 adapter interface 接入；禁止绕过 adapter 新增 hardcoded truth path。
 - FlyByWire / A320 资料只作为知识参考和设计启发，不直接复制成项目代码真值。
