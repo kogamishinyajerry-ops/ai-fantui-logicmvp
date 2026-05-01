@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench v4 foundation-first active · JER-223 merged · JER-224 candidate debugger in review
-last_updated: "2026-05-01T23:40:00.000+08:00"
+status: Workbench v4 foundation-first active · JER-224 merged · JER-225 preflight analyzer in review
+last_updated: "2026-05-01T23:59:00.000+08:00"
 last_activity: 2026-05-01
 progress:
   total_phases: 44
   completed_phases: 43
   total_plans: 2
   completed_plans: 1
-  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 through JER-219 built the current single-user authoring base: templates, subsystems, hardware/interface evidence, debug/diff/handoff packets, archive validation, workspace_document, and canvas_interaction_summary. JER-220 reset the active roadmap to foundation-first: editor -> runner -> test bench -> debugger -> archive, with thrust-reverser and C919 E-TRAS treated as reference/sample packs. JER-221 and JER-222 closed canonical editable graph and port/wire route metadata. JER-223 closed the first sandbox scenario test bench run report for candidate graph inputs/assertions. JER-224 adds a selected candidate debugger view over run failures, watched values, and archive checksums. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 through JER-219 built the current single-user authoring base: templates, subsystems, hardware/interface evidence, debug/diff/handoff packets, archive validation, workspace_document, and canvas_interaction_summary. JER-220 reset the active roadmap to foundation-first: editor -> runner -> test bench -> debugger -> archive, with thrust-reverser and C919 E-TRAS treated as reference/sample packs. JER-221 and JER-222 closed canonical editable graph and port/wire route metadata. JER-223 closed the first sandbox scenario test bench run report for candidate graph inputs/assertions. JER-224 closed selected candidate debugging over run failures, watched values, and archive checksums. JER-225 adds a sandbox-only preflight analyzer that classifies candidates as ready, needs_evidence, or invalid_candidate before handoff/archive. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
@@ -19,8 +19,8 @@ Last activity: 2026-05-01
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
-**Current position**: JER-204 through JER-223 are merged on the v4 line, and
-JER-224 is in review as the first candidate graph debugger slice. The active
+**Current position**: JER-204 through JER-224 are merged on the v4 line, and
+JER-225 is in review as the first Workbench preflight analyzer slice. The active
 mainline is the generic single-user foundation: editor, runner, test bench,
 debugger, archive, and later hardware/interface designer. The existing
 thrust-reverser and C919 chains are reference samples, not the next dedicated
@@ -52,7 +52,8 @@ product panels.
 - JER-221 is Done after PR #203.
 - JER-222 is Done after PR #204.
 - JER-223 is Done after PR #205.
-- JER-224 is In Review for candidate graph debugger view v1.
+- JER-224 is Done after PR #206.
+- JER-225 is In Review for Workbench preflight analyzer v1.
 
 **Runtime v3 closure summary**:
 
@@ -120,6 +121,23 @@ should be straightforward to rebuild as examples on top of the generic base.
 - Draft export/import, browser restore, and evidence archive carry
   `candidate_debugger_view` with `truth_effect: none` and checksum coverage.
 - The debugger is evidence-only. It does not call controller truth, mutate
+  adapters, write hardware YAML, or make certification claims.
+
+**JER-225 Workbench preflight analyzer slice**:
+
+- The right inspector now exposes a Preflight Analyzer that consumes the
+  candidate graph, graph validation findings, hardware/interface diagnostics,
+  port compatibility, sandbox test run report, and candidate debugger view.
+- The analyzer classifies local candidates as `ready`, `needs_evidence`, or
+  `invalid_candidate` and emits required actions before ChangeRequest/archive
+  handoff.
+- Report freshness is bound to the operational sandbox model hash so imported
+  or restored UI metadata does not falsely invalidate unchanged candidate
+  behavior, while stale or missing run reports remain explicit findings.
+- Draft export/import, browser restore, ChangeRequest proof, and evidence
+  archive carry `preflight_analyzer_report` with `truth_effect: none` and
+  checksum coverage.
+- The analyzer is evidence-only. It does not call controller truth, mutate
   adapters, write hardware YAML, or make certification claims.
 
 **JER-206 component-library closure**:

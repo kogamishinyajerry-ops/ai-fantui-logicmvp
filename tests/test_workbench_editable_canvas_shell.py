@@ -240,6 +240,21 @@ def test_candidate_debugger_view_controls_are_sandbox_only_ui() -> None:
     assert ".workbench-candidate-debugger-facts" in css
 
 
+def test_preflight_analyzer_controls_are_sandbox_only_ui() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-preflight-analyzer"' in html
+    assert 'id="workbench-run-preflight-btn"' in html
+    assert 'id="workbench-preflight-classification"' in html
+    assert 'id="workbench-preflight-findings-count"' in html
+    assert 'id="workbench-preflight-actions"' in html
+    assert 'id="workbench-preflight-output"' in html
+    assert "Preflight analyzer is sandbox evidence only. Truth effect: none." in html
+    assert ".workbench-preflight-analyzer" in css
+    assert ".workbench-preflight-facts" in css
+
+
 def test_workspace_document_status_controls_are_sandbox_only_ui() -> None:
     html = _html()
     css = _css()
@@ -498,6 +513,23 @@ def test_js_wires_candidate_debugger_view_as_sandbox_only_archive_packet() -> No
     assert "candidate_debugger_view truth_effect must be none" in js
     assert "first_failing_assertion" in js
     assert "observed_values" in js
+    assert 'certification_claim: "none"' in js
+    assert 'truth_effect: "none"' in js
+
+
+def test_js_wires_preflight_analyzer_as_sandbox_only_archive_packet() -> None:
+    js = _js()
+
+    assert "well-harness-workbench-preflight-analyzer-report" in js
+    assert "workbench-preflight-analyzer.v1" in js
+    assert "function buildWorkbenchPreflightAnalyzerReport" in js
+    assert "function renderWorkbenchPreflightAnalyzerReport" in js
+    assert "preflight_analyzer_report" in js
+    assert "preflight_analyzer_report_checksum" in js
+    assert "preflight_analyzer_report truth_effect must be none" in js
+    assert "invalid_candidate" in js
+    assert "needs_evidence" in js
+    assert "ready" in js
     assert 'certification_claim: "none"' in js
     assert 'truth_effect: "none"' in js
 

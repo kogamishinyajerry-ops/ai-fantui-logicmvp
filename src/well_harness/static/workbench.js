@@ -7652,6 +7652,12 @@ function installEditableWorkbenchShell() {
   const candidateDebuggerAssertion = document.getElementById("workbench-candidate-debugger-assertion");
   const candidateDebuggerObserved = document.getElementById("workbench-candidate-debugger-observed");
   const candidateDebuggerTrace = document.getElementById("workbench-candidate-debugger-trace");
+  const preflightPanel = document.getElementById("workbench-preflight-analyzer");
+  const runPreflightBtn = document.getElementById("workbench-run-preflight-btn");
+  const preflightClassification = document.getElementById("workbench-preflight-classification");
+  const preflightFindingsCount = document.getElementById("workbench-preflight-findings-count");
+  const preflightActions = document.getElementById("workbench-preflight-actions");
+  const preflightOutput = document.getElementById("workbench-preflight-output");
   const timelineStrip = document.getElementById("workbench-sandbox-timeline-strip");
   const selectedDebugTimelineTarget = document.getElementById("workbench-selected-debug-target");
   const selectedDebugTimelineScenario = document.getElementById("workbench-selected-debug-scenario");
@@ -7749,6 +7755,7 @@ function installEditableWorkbenchShell() {
   let nextCapturedSubsystemTemplateIndex = 1;
   let nextSubsystemGroupIndex = 1;
   let subsystemGroups = [];
+  let lastPreflightAnalyzerReport = null;
   const workspaceDocumentKind = "well-harness-workbench-workspace-document";
   const workspaceDocumentVersion = "workbench-workspace-document.v1";
   let workspaceDocumentId = "ui_draft_workspace_document_v1";
@@ -7766,6 +7773,8 @@ function installEditableWorkbenchShell() {
   const sandboxTestRunReportVersion = "workbench-sandbox-test-run-report.v1";
   const candidateDebuggerViewKind = "well-harness-workbench-candidate-debugger-view";
   const candidateDebuggerViewVersion = "workbench-candidate-debugger-view.v1";
+  const preflightAnalyzerReportKind = "well-harness-workbench-preflight-analyzer-report";
+  const preflightAnalyzerReportVersion = "workbench-preflight-analyzer.v1";
   const edgeRouteMetadataVersion = "workbench-edge-route-metadata.v1";
   let draftEdges = [
     { id: "edge_logic1_logic2", source: "logic1", target: "logic2" },
@@ -11856,6 +11865,7 @@ function installEditableWorkbenchShell() {
       sandboxTestBench: safeSandboxTestBenchDefinition(),
       sandboxTestRunReport: currentSandboxTestRunReport(),
       candidateDebuggerView: currentCandidateDebuggerView("storage"),
+      preflightAnalyzerReport: currentPreflightAnalyzerReport("storage"),
       subsystemGroups: subsystemGroupsSnapshot(),
       capturedSubsystemTemplates: capturedSubsystemTemplateSnapshot(),
       nodes: nodes.map((node) => editableNodeState(node)),
@@ -11921,6 +11931,9 @@ function installEditableWorkbenchShell() {
     if (lastSandboxTestRunReport) {
       renderSandboxTestBenchReport(lastSandboxTestRunReport);
     }
+    lastPreflightAnalyzerReport = normalizeImportedPreflightAnalyzerReport(
+      state.preflightAnalyzerReport || state.preflight_analyzer_report || lastPreflightAnalyzerReport,
+    );
     const nodeStates = Array.isArray(state.nodes) ? state.nodes : [];
     subsystemGroups = normalizeSubsystemGroups(
       state.subsystemGroups || state.subsystem_groups || subsystemGroupsFromNodeStates(nodeStates),
@@ -12037,6 +12050,7 @@ function installEditableWorkbenchShell() {
     renderEditableEdges();
     renderInspector();
     renderCandidateDebuggerView(currentCandidateDebuggerView("apply_state"));
+    renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("apply_state"));
     updateEditableDraftHash();
     validateEditableGraph();
   }
@@ -14477,6 +14491,7 @@ function installEditableWorkbenchShell() {
     const sandboxTestBench = safeSandboxTestBenchDefinition();
     const sandboxTestRunReport = currentSandboxTestRunReport();
     const candidateDebuggerView = currentCandidateDebuggerView("snapshot");
+    const preflightAnalyzerReport = currentPreflightAnalyzerReport("snapshot");
     const diagnosticRepairActions = repairActionLogSnapshot();
     const workspaceDocument = currentWorkspaceDocument();
     const canvasInteractionSummary = currentCanvasInteractionSummary();
@@ -14522,6 +14537,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_bench: sandboxTestBench,
       sandbox_test_run_report: sandboxTestRunReport,
       candidate_debugger_view: candidateDebuggerView,
+      preflight_analyzer_report: preflightAnalyzerReport,
     };
     snapshot.editable_graph_document = buildEditableGraphDocumentFromSnapshot(snapshot);
     return snapshot;
@@ -14864,6 +14880,231 @@ function installEditableWorkbenchShell() {
     return packet;
   }
 
+  function normalizeImportedPreflightAnalyzerReport(report) {
+    if (!report || typeof report !== "object" || Array.isArray(report)) return null;
+    return {
+      ...report,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function preflightCandidateModelSnapshot() {
+    refreshEditableNodes();
+    return {
+      nodes: nodes.map((node) => editableNodeState(node)),
+      edges: draftEdges.map((edge) => ({
+        ...edge,
+        ...edgeInspectorPayload(edge),
+        hardware_binding: edgeInterfaceBinding(edge),
+      })),
+    };
+  }
+
+  function sandboxModelHashPayload(nodesForRun, edgesForRun, definition) {
+    return {
+      nodes: (nodesForRun || []).map((node) => ({
+        id: node && node.id,
+        op: node && (node.op_catalog_entry || node.op || node.opCatalogEntry || "and"),
+        rules: node && Array.isArray(node.rules) ? node.rules : [],
+        port_contract: node && (node.port_contract || node.portContract || null),
+      })),
+      edges: (edgesForRun || []).map((edge) => ({
+        id: edge && edge.id,
+        source: edge && edge.source,
+        target: edge && edge.target,
+        signal_id: edge && (edge.signal_id || edge.signalId || ""),
+        source_port_id: edge && (edge.source_port_id || edge.sourcePortId || ""),
+        target_port_id: edge && (edge.target_port_id || edge.targetPortId || ""),
+        value_type: edge && (edge.value_type || edge.valueType || "boolean"),
+        required: Boolean(edge && edge.required),
+      })),
+      definition,
+    };
+  }
+
+  function sandboxCandidateModelHash(nodesForRun, edgesForRun, definition) {
+    return editableDraftHash(stableEvidenceArchiveJson(
+      sandboxModelHashPayload(nodesForRun, edgesForRun, definition),
+    ));
+  }
+
+  function currentPreflightCandidateModelHash(definition) {
+    const model = preflightCandidateModelSnapshot();
+    const testBench = definition || safeSandboxTestBenchDefinition();
+    return sandboxCandidateModelHash(model.nodes, model.edges, testBench);
+  }
+
+  function preflightFinding(code, severity, message, action) {
+    return {
+      code,
+      severity,
+      message,
+      action,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function dedupePreflightActions(findings) {
+    const actions = [];
+    for (const finding of findings || []) {
+      if (finding && finding.action && actions.indexOf(finding.action) === -1) {
+        actions.push(finding.action);
+      }
+    }
+    return actions.length ? actions : ["Candidate preflight is ready for review packet generation."];
+  }
+
+  function buildWorkbenchPreflightAnalyzerReport(state) {
+    const testBench = safeSandboxTestBenchDefinition();
+    const candidateModelHash = currentPreflightCandidateModelHash(testBench);
+    const sandboxReport = currentSandboxTestRunReport();
+    const graphIssues = validateEditableGraph();
+    const hardwareBindings = collectWorkbenchHardwareBindings();
+    const hardwareDiagnostics = buildHardwareBindingDiagnosticsReport(hardwareBindings);
+    const typedPorts = collectWorkbenchTypedPorts();
+    const portCompatibilityReport = buildPortCompatibilityReport(typedPorts, draftEdges);
+    const candidateDebuggerView = currentCandidateDebuggerView("preflight");
+    const findings = [];
+
+    for (const issue of graphIssues) {
+      findings.push(preflightFinding(
+        "graph_validation_failed",
+        "error",
+        `Graph validation issue: ${issue}`,
+        "Fix dangling ports or duplicate graph edges.",
+      ));
+    }
+    if (!sandboxReport) {
+      findings.push(preflightFinding(
+        "sandbox_test_missing",
+        "warning",
+        "No current sandbox test run report is available.",
+        "Run sandbox scenario tests before handoff.",
+      ));
+    } else if (sandboxReport.model_hash !== candidateModelHash) {
+      findings.push(preflightFinding(
+        "stale_sandbox_test_run_report",
+        "warning",
+        "Sandbox test run report does not match the current candidate model hash.",
+        "Rerun sandbox scenario tests for the current draft.",
+      ));
+    } else if (sandboxReport.status === "invalid_scenario" || (sandboxReport.unsupported_ops || []).length) {
+      findings.push(preflightFinding(
+        "invalid_sandbox_scenario",
+        "error",
+        "Sandbox scenario is invalid or contains unsupported operations.",
+        "Fix invalid scenario inputs or unsupported operations.",
+      ));
+    } else if (sandboxReport.status === "fail" || sandboxReport.assertion_status === "fail") {
+      findings.push(preflightFinding(
+        "sandbox_test_failed",
+        "error",
+        "Sandbox scenario assertions failed.",
+        "Fix failing sandbox assertions before handoff.",
+      ));
+    }
+    if ((hardwareDiagnostics.evidence_gap_field_count || 0) > 0) {
+      findings.push(preflightFinding(
+        "hardware_evidence_gap",
+        "warning",
+        `${hardwareDiagnostics.evidence_gap_field_count} hardware/interface evidence gap field(s) remain.`,
+        "Record hardware/interface evidence gaps before review.",
+      ));
+    }
+    if ((portCompatibilityReport.error_count || 0) > 0) {
+      findings.push(preflightFinding(
+        "port_compatibility_error",
+        "error",
+        `${portCompatibilityReport.error_count} port compatibility error(s) remain.`,
+        "Fix incompatible port links.",
+      ));
+    }
+    const hasError = findings.some((finding) => finding.severity === "error");
+    const classification = hasError
+      ? "invalid_candidate"
+      : (findings.length ? "needs_evidence" : "ready");
+    return {
+      kind: preflightAnalyzerReportKind,
+      version: preflightAnalyzerReportVersion,
+      workflow_state: state || "manual",
+      classification,
+      candidate_model_hash: candidateModelHash,
+      sandbox_report_freshness: (
+        !sandboxReport ? "missing" : (sandboxReport.model_hash === candidateModelHash ? "current" : "stale")
+      ),
+      findings,
+      finding_count: findings.length,
+      required_actions: dedupePreflightActions(findings),
+      graph_validation_issues: graphIssues,
+      hardware_binding_diagnostics: hardwareDiagnostics,
+      port_compatibility_report: portCompatibilityReport,
+      sandbox_test_bench: testBench,
+      sandbox_test_run_report: sandboxReport,
+      candidate_debugger_view: candidateDebuggerView,
+      red_line_risks: [],
+      live_linear_mutation: false,
+      controller_truth_modified: false,
+      frozen_assets_modified: false,
+      truth_level_impact: "none",
+      dal_pssa_impact: "none",
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function currentPreflightAnalyzerReport(state) {
+    const imported = normalizeImportedPreflightAnalyzerReport(lastPreflightAnalyzerReport);
+    const candidateModelHash = currentPreflightCandidateModelHash();
+    if (imported && imported.candidate_model_hash === candidateModelHash) {
+      return {
+        ...imported,
+        workflow_state: state || imported.workflow_state || "current",
+        candidate_state: "sandbox_candidate",
+        certification_claim: "none",
+        truth_effect: "none",
+      };
+    }
+    return buildWorkbenchPreflightAnalyzerReport(state || "derived");
+  }
+
+  function renderWorkbenchPreflightAnalyzerReport(report) {
+    const packet = normalizeImportedPreflightAnalyzerReport(report)
+      || buildWorkbenchPreflightAnalyzerReport("render");
+    lastPreflightAnalyzerReport = packet;
+    const classification = packet.classification || "needs_evidence";
+    if (preflightPanel) preflightPanel.setAttribute("data-preflight-classification", classification);
+    if (preflightClassification) preflightClassification.textContent = classification;
+    if (preflightFindingsCount) preflightFindingsCount.textContent = String(packet.finding_count || 0);
+    if (preflightActions) preflightActions.textContent = (packet.required_actions || []).join(" · ");
+    if (preflightOutput) preflightOutput.value = JSON.stringify(packet, null, 2);
+    if (handoffStatus) {
+      handoffStatus.textContent =
+        `Preflight ${classification}. Truth effect: none. No certification claim.`;
+    }
+    return packet;
+  }
+
+  function runWorkbenchPreflightAnalyzer() {
+    if (runPreflightBtn) runPreflightBtn.disabled = true;
+    let report = null;
+    try {
+      report = buildWorkbenchPreflightAnalyzerReport("manual");
+    } finally {
+      if (runPreflightBtn) runPreflightBtn.disabled = false;
+    }
+    recordWorkspaceAction("run_preflight_analyzer");
+    recordCanvasInteractionAction("run_preflight_analyzer");
+    renderWorkspaceDocumentStatus();
+    renderWorkbenchPreflightAnalyzerReport(report);
+    persistDraft();
+    return report;
+  }
+
   function sandboxValueEquals(left, right) {
     return stableEvidenceArchiveJson(left) === stableEvidenceArchiveJson(right);
   }
@@ -15097,11 +15338,7 @@ function installEditableWorkbenchShell() {
       kind: sandboxTestRunReportKind,
       version: sandboxTestRunReportVersion,
       scenario_id: testBench.scenario_id || selectedWorkbenchScenarioId(),
-      model_hash: editableDraftHash(stableEvidenceArchiveJson({
-        nodes: model.nodes || [],
-        edges: model.edges || [],
-        definition: testBench,
-      })),
+      model_hash: sandboxCandidateModelHash(nodesForRun, edgesForRun, testBench),
       definition: testBench,
       status,
       assertion_status: assertionStatus,
@@ -15133,6 +15370,8 @@ function installEditableWorkbenchShell() {
         `Sandbox test bench ${status}. Truth effect: none. No certification claim.`;
     }
     renderCandidateDebuggerView(currentCandidateDebuggerView("test_bench"));
+    lastPreflightAnalyzerReport = null;
+    renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("test_bench"));
     return normalized;
   }
 
@@ -15228,6 +15467,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_bench: snapshot.sandbox_test_bench,
       sandbox_test_run_report: snapshot.sandbox_test_run_report,
       candidate_debugger_view: snapshot.candidate_debugger_view,
+      preflight_analyzer_report: snapshot.preflight_analyzer_report,
       changerequest_proof_packet: changeRequestProofPacket,
       changerequest_handoff_packet: changeRequestHandoffPacket,
       draft_snapshot_manifest: buildDraftSnapshotManifestSummary(),
@@ -15582,6 +15822,34 @@ function installEditableWorkbenchShell() {
         throw new Error("candidate_debugger_view truth_effect must be none");
       }
     }
+    if (
+      payload.preflight_analyzer_report !== undefined
+      && payload.preflight_analyzer_report !== null
+      && (!payload.preflight_analyzer_report || typeof payload.preflight_analyzer_report !== "object" || Array.isArray(payload.preflight_analyzer_report))
+    ) {
+      throw new Error("preflight_analyzer_report must be an object when present");
+    }
+    if (payload.preflight_analyzer_report) {
+      const report = payload.preflight_analyzer_report;
+      if (report.kind !== preflightAnalyzerReportKind) {
+        throw new Error("preflight_analyzer_report kind must be well-harness-workbench-preflight-analyzer-report");
+      }
+      if (report.version !== preflightAnalyzerReportVersion) {
+        throw new Error("preflight_analyzer_report version must be workbench-preflight-analyzer.v1");
+      }
+      if (!["ready", "needs_evidence", "invalid_candidate"].includes(report.classification)) {
+        throw new Error("preflight_analyzer_report classification must be ready, needs_evidence, or invalid_candidate");
+      }
+      if (report.candidate_state !== "sandbox_candidate") {
+        throw new Error("preflight_analyzer_report candidate_state must be sandbox_candidate");
+      }
+      if (report.certification_claim !== "none") {
+        throw new Error("preflight_analyzer_report certification_claim must be none");
+      }
+      if (report.truth_effect !== "none") {
+        throw new Error("preflight_analyzer_report truth_effect must be none");
+      }
+    }
     if (payload.typed_ports !== undefined && !Array.isArray(payload.typed_ports)) {
       throw new Error("typed_ports must be an array when present");
     }
@@ -15788,6 +16056,10 @@ function installEditableWorkbenchShell() {
     if (lastSandboxTestRunReport) {
       renderSandboxTestBenchReport(lastSandboxTestRunReport);
     }
+    lastPreflightAnalyzerReport = normalizeImportedPreflightAnalyzerReport(validated.preflight_analyzer_report);
+    if (lastPreflightAnalyzerReport) {
+      renderWorkbenchPreflightAnalyzerReport(lastPreflightAnalyzerReport);
+    }
     const selectedId =
       validated.selected_node && typeof validated.selected_node.id === "string"
         ? validated.selected_node.id
@@ -15822,6 +16094,7 @@ function installEditableWorkbenchShell() {
       viewportState: validated.viewport_state || defaultViewportState(),
       workspaceDocument: validated.workspace_document || null,
       canvasInteractionSummary: validated.canvas_interaction_summary || null,
+      preflightAnalyzerReport: validated.preflight_analyzer_report || null,
       selectedCatalogOp: importedCatalog.selected_op,
       subsystemGroups: validated.subsystem_groups || [],
       nodes: validated.nodes.map((node) => ({
@@ -16386,6 +16659,8 @@ function installEditableWorkbenchShell() {
       sourceSnapshot.selected_debug_timeline || currentSelectedDebugTimelinePacket("proof");
     const candidateBaselineDiffReviewV2 =
       currentCandidateBaselineDiffReviewV2Report("proof", changedModelHash);
+    const preflightAnalyzerReport =
+      sourceSnapshot.preflight_analyzer_report || currentPreflightAnalyzerReport("proof");
     const repairActions = repairActionLogSnapshotFromSource(sourceSnapshot.repair_action_log || []);
     const portContractSummary =
       sourceSnapshot.port_contract_summary || buildPortContractSummary(
@@ -16500,6 +16775,14 @@ function installEditableWorkbenchShell() {
         checksum: checksumEvidenceArchiveField(candidateBaselineDiffReviewV2),
         truth_effect: "none",
       },
+      preflight_analyzer_summary: {
+        classification: preflightAnalyzerReport.classification || "needs_evidence",
+        finding_count: preflightAnalyzerReport.finding_count || 0,
+        sandbox_report_freshness: preflightAnalyzerReport.sandbox_report_freshness || "missing",
+        candidate_model_hash: preflightAnalyzerReport.candidate_model_hash || "unavailable",
+        checksum: checksumEvidenceArchiveField(preflightAnalyzerReport),
+        truth_effect: "none",
+      },
       selected_focus: diagnosticFocusSummary,
       diagnostic_focus: diagnosticFocusSummary,
       repair_action_log_summary: repairActionLogSummary,
@@ -16587,6 +16870,11 @@ function installEditableWorkbenchShell() {
     return `${summary.verdict || "not_run"} / ${summary.review_readiness || "run_required"} / ${summary.archive_state || "not_archive_ready"} / claim=${summary.certification_claim || "none"}`;
   }
 
+  function proofPacketPreflightAnalyzerText(packet) {
+    const summary = packet.preflight_analyzer_summary || {};
+    return `${summary.classification || "needs_evidence"} / findings=${summary.finding_count || 0} / freshness=${summary.sandbox_report_freshness || "missing"}`;
+  }
+
   function proofPacketDiagnosticFocusText(packet) {
     const focus = packet.selected_focus || packet.diagnostic_focus || {};
     if (focus.state !== "selected") return "none";
@@ -16660,6 +16948,7 @@ function installEditableWorkbenchShell() {
         "Hardware Evidence Inspector v2 selected-owner packet.",
         "Connector/pin map export.",
         "Interface matrix export and validation preview.",
+        "Workbench preflight analyzer report.",
         "Structured ChangeRequest proof packet.",
         "PR proof packet with test delta.",
       ],
@@ -16683,6 +16972,7 @@ function installEditableWorkbenchShell() {
         changed_model_hash: packet.changed_model_hash,
         sandbox_verdict: packet.sandbox_diff && packet.sandbox_diff.verdict,
         diff_review_v2: packet.candidate_baseline_diff_review_v2_summary || {},
+        preflight_analyzer: packet.preflight_analyzer_summary || {},
         test_delta: testDelta,
         agent_eligible: "No",
       },
@@ -16693,6 +16983,10 @@ function installEditableWorkbenchShell() {
         diff_review_v2_checksum: (
           packet.candidate_baseline_diff_review_v2_summary
           && packet.candidate_baseline_diff_review_v2_summary.checksum
+        ) || "not_available",
+        preflight_analyzer_report_checksum: (
+          packet.preflight_analyzer_summary
+          && packet.preflight_analyzer_summary.checksum
         ) || "not_available",
       },
       linear_issue_body: linearBody,
@@ -16732,6 +17026,7 @@ function installEditableWorkbenchShell() {
       "- Hardware binding diagnostics report.",
       "- Selected binding diagnostic focus.",
       "- Diagnostic repair action log.",
+      "- Workbench preflight analyzer report.",
       "- Structured ChangeRequest proof packet.",
       "- Interface matrix validation preview report.",
       "- Connector/pin map export.",
@@ -16775,6 +17070,7 @@ function installEditableWorkbenchShell() {
       `- Hardware evidence v2: ${proofPacketHardwareEvidenceV2Text(packet)}`,
       `- Selected debug timeline: ${proofPacketSelectedDebugTimelineText(packet)}`,
       `- Diff review v2: ${proofPacketDiffReviewV2Text(packet)}`,
+      `- Preflight analyzer: ${proofPacketPreflightAnalyzerText(packet)}`,
       `- Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
       `- Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
       `- Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
@@ -16804,6 +17100,7 @@ function installEditableWorkbenchShell() {
       `Hardware evidence v2: ${proofPacketHardwareEvidenceV2Text(packet)}`,
       `Selected debug timeline: ${proofPacketSelectedDebugTimelineText(packet)}`,
       `Diff review v2: ${proofPacketDiffReviewV2Text(packet)}`,
+      `Preflight analyzer: ${proofPacketPreflightAnalyzerText(packet)}`,
       `Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
       `Selected diagnostic focus: ${proofPacketDiagnosticFocusText(packet)}`,
       `Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
@@ -17044,6 +17341,8 @@ function installEditableWorkbenchShell() {
       modelJson.sandbox_test_run_report || currentSandboxTestRunReport();
     const candidateDebuggerView =
       modelJson.candidate_debugger_view || currentCandidateDebuggerView("archive");
+    const preflightAnalyzerReport =
+      modelJson.preflight_analyzer_report || currentPreflightAnalyzerReport("archive");
     const diagnosticFocus = modelJson.diagnostic_focus || currentDiagnosticFocusSummary();
     const diagnosticRepairActions = modelJson.repair_action_log || repairActionLogSnapshot();
     const typedPorts = modelJson.typed_ports || [];
@@ -17105,6 +17404,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_bench: sandboxTestBench,
       sandbox_test_run_report: sandboxTestRunReport,
       candidate_debugger_view: candidateDebuggerView,
+      preflight_analyzer_report: preflightAnalyzerReport,
       diagnostic_focus: diagnosticFocus,
       repair_action_log: diagnosticRepairActions,
       typed_ports: typedPorts,
@@ -17151,6 +17451,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_bench_checksum: checksumEvidenceArchiveField(sandboxTestBench),
       sandbox_test_run_report_checksum: checksumEvidenceArchiveField(sandboxTestRunReport),
       candidate_debugger_view_checksum: checksumEvidenceArchiveField(candidateDebuggerView),
+      preflight_analyzer_report_checksum: checksumEvidenceArchiveField(preflightAnalyzerReport),
       diagnostic_focus_checksum: checksumEvidenceArchiveField(diagnosticFocus),
       repair_action_log_checksum: checksumEvidenceArchiveField(diagnosticRepairActions),
       typed_ports_checksum: checksumEvidenceArchiveField(typedPorts),
@@ -17286,6 +17587,9 @@ function installEditableWorkbenchShell() {
   }
   if (runTestBenchBtn) {
     runTestBenchBtn.addEventListener("click", () => runSandboxTestBench());
+  }
+  if (runPreflightBtn) {
+    runPreflightBtn.addEventListener("click", () => runWorkbenchPreflightAnalyzer());
   }
   for (const button of toolbarButtons) {
     button.addEventListener("click", () => {
@@ -17440,16 +17744,20 @@ function installEditableWorkbenchShell() {
   if (sandboxTestBenchInputs) {
     sandboxTestBenchInputs.addEventListener("input", () => {
       lastSandboxTestRunReport = null;
+      lastPreflightAnalyzerReport = null;
       if (sandboxTestBenchStatus) sandboxTestBenchStatus.textContent = "edited";
       if (sandboxTestBenchPanel) sandboxTestBenchPanel.setAttribute("data-test-status", "edited");
+      renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("test_bench_edited"));
       persistDraft();
     });
   }
   if (sandboxTestBenchAssertions) {
     sandboxTestBenchAssertions.addEventListener("input", () => {
       lastSandboxTestRunReport = null;
+      lastPreflightAnalyzerReport = null;
       if (sandboxTestBenchStatus) sandboxTestBenchStatus.textContent = "edited";
       if (sandboxTestBenchPanel) sandboxTestBenchPanel.setAttribute("data-test-status", "edited");
+      renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("test_bench_edited"));
       persistDraft();
     });
   }
@@ -17643,6 +17951,7 @@ function installEditableWorkbenchShell() {
   validateEditableGraph();
   updateEditableDraftHash();
   renderCandidateDebuggerView(currentCandidateDebuggerView("init"));
+  renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("init"));
   renderHardwarePalette();
   hydrateEvidenceSummary();
 }
