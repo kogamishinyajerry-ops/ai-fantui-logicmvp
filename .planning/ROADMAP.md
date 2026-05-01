@@ -30,6 +30,7 @@ Housekeeping bridge:
 - JER-214: Workbench handoff packet schema and stable serialization hardening (Done)
 - JER-215: Evidence archive restore validates ChangeRequest handoff packet (Done, PR #197)
 - JER-216: Subsystem template capture from editable selection v1 (In review)
+- JER-217: Subsystem interface contract editor v1 (In review)
 
 Workbench v4 seed backlog:
 - JER-216 is the current authoring-freedom slice after the handoff hardening
@@ -38,6 +39,11 @@ Workbench v4 seed backlog:
   preserve component/subsystem provenance through draft export/import and local
   evidence archive checksums. The template remains sandbox metadata with
   `truth_effect: none`.
+- JER-217 extends the subsystem authoring surface with explicit sandbox-only
+  boundary port contracts. Engineers can define input/output contract ports for
+  a selected subsystem, preserve those ports through draft export/import,
+  archive checksums, and captured-template reinsertion, and keep every contract
+  as `sandbox_candidate` metadata with `truth_effect: none`.
 
 Runtime v3 implementation closure:
 

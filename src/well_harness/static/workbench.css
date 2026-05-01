@@ -5539,6 +5539,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-hardware-palette,
 .workbench-hardware-evidence-v2,
 .workbench-subsystem-editor,
+.workbench-subsystem-interface-contract,
 .workbench-rule-parameter-editor,
 .workbench-interface-binding-editor,
 .workbench-connector-pin-map-editor,
@@ -5628,6 +5629,66 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-subsystem-actions .workbench-editable-primary:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+.workbench-subsystem-interface-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.workbench-subsystem-interface-grid .workbench-inspector-field {
+  margin-bottom: 0;
+}
+.workbench-subsystem-interface-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.workbench-subsystem-interface-actions .workbench-editable-primary {
+  min-width: 0;
+  padding: 0.45rem 0.35rem;
+  font-size: 0.68rem;
+}
+.workbench-subsystem-interface-actions .workbench-editable-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.workbench-subsystem-interface-contract-list {
+  display: grid;
+  gap: 0.34rem;
+  margin-top: 0.55rem;
+  color: rgba(213, 227, 237, 0.72);
+  font-size: 0.68rem;
+}
+.workbench-subsystem-interface-row {
+  display: grid;
+  grid-template-columns: minmax(46px, auto) minmax(0, 1fr) minmax(68px, auto);
+  gap: 0.38rem;
+  align-items: center;
+  padding: 0.38rem 0.44rem;
+  border: 1px solid rgba(150, 173, 190, 0.16);
+  border-radius: 7px;
+  background: rgba(4, 10, 16, 0.42);
+}
+.workbench-subsystem-interface-row[data-evidence-status="evidence_gap"],
+.workbench-subsystem-interface-row[data-evidence-status="not_recorded"] {
+  border-color: rgba(240, 193, 91, 0.42);
+  background: rgba(71, 48, 9, 0.18);
+}
+.workbench-subsystem-interface-row strong {
+  color: rgba(213, 227, 237, 0.66);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+}
+.workbench-subsystem-interface-row span {
+  color: #f5fbff;
+  overflow-wrap: anywhere;
+}
+.workbench-subsystem-interface-row em {
+  justify-self: end;
+  color: rgba(253, 241, 205, 0.82);
+  font-size: 0.62rem;
+  font-style: normal;
 }
 .workbench-hardware-palette-list {
   display: grid;

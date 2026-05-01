@@ -7593,6 +7593,16 @@ function installEditableWorkbenchShell() {
   const renameSubsystemBtn = document.getElementById("workbench-rename-subsystem-btn");
   const ungroupSubsystemBtn = document.getElementById("workbench-ungroup-subsystem-btn");
   const subsystemStatus = document.getElementById("workbench-subsystem-status");
+  const subsystemInterfaceOwner = document.getElementById("workbench-subsystem-interface-owner");
+  const subsystemInterfaceDirectionSelect = document.getElementById("workbench-subsystem-interface-direction");
+  const subsystemInterfaceLabelInput = document.getElementById("workbench-subsystem-interface-label");
+  const subsystemInterfaceSignalInput = document.getElementById("workbench-subsystem-interface-signal-id");
+  const subsystemInterfaceValueTypeSelect = document.getElementById("workbench-subsystem-interface-value-type");
+  const subsystemInterfaceEvidenceStatusSelect = document.getElementById("workbench-subsystem-interface-evidence-status");
+  const addSubsystemInterfacePortBtn = document.getElementById("workbench-add-subsystem-interface-port-btn");
+  const removeSubsystemInterfacePortBtn = document.getElementById("workbench-remove-subsystem-interface-port-btn");
+  const subsystemInterfaceContractList = document.getElementById("workbench-subsystem-interface-contract-list");
+  const subsystemInterfaceStatus = document.getElementById("workbench-subsystem-interface-status");
   const evidenceSlot = document.getElementById("workbench-inspector-evidence-status");
   const signalCountSlot = document.getElementById("workbench-inspector-signal-count");
   const sourceRefSlot = document.getElementById("workbench-inspector-source-ref");
@@ -10868,6 +10878,56 @@ function installEditableWorkbenchShell() {
     return text || `Draft subsystem ${fallbackIndex || 1}`;
   }
 
+  function normalizeSubsystemInterfaceDirection(value) {
+    const text = String(value === null || value === undefined ? "" : value).trim().toLowerCase();
+    if (["output", "out"].includes(text)) return "output";
+    return "input";
+  }
+
+  function normalizeSubsystemInterfaceContractRecord(record, groupId, fallbackIndex) {
+    if (!record || typeof record !== "object" || Array.isArray(record)) return null;
+    const normalizedGroupId = normalizePortField(
+      groupId || record.group_id || record.groupId,
+      "evidence_gap",
+    );
+    const direction = normalizeSubsystemInterfaceDirection(record.direction || record.port_direction || record.portDirection);
+    const index = Number.parseInt(record.port_index || record.portIndex || fallbackIndex || "1", 10) || 1;
+    const label = normalizePortField(record.label || record.port_label || record.portLabel, `Boundary ${direction} ${index}`);
+    const id = normalizePortField(
+      record.id || record.port_id || record.portId,
+      `${normalizedGroupId}:${direction}:${index}`,
+    );
+    return {
+      id,
+      group_id: normalizedGroupId,
+      direction,
+      port_index: index,
+      label,
+      signal_id: normalizePortField(record.signal_id || record.signalId, "evidence_gap"),
+      value_type: normalizePortValueType(record.value_type || record.valueType || "unknown"),
+      unit: String(record.unit === null || record.unit === undefined ? "" : record.unit).trim(),
+      evidence_status: normalizeEvidenceStatus(record.evidence_status || record.evidenceStatus),
+      source_ref: normalizePortField(
+        record.source_ref || record.sourceRef,
+        `ui_draft.subsystem_interface.${normalizedGroupId}.${direction}.${index}`,
+      ),
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    };
+  }
+
+  function normalizeSubsystemInterfaceContracts(records, groupId) {
+    const normalized = [];
+    const usedIds = new Set();
+    for (const record of Array.isArray(records) ? records : []) {
+      const port = normalizeSubsystemInterfaceContractRecord(record, groupId, normalized.length + 1);
+      if (!port || usedIds.has(port.id)) continue;
+      usedIds.add(port.id);
+      normalized.push(port);
+    }
+    return normalized;
+  }
+
   function normalizeSubsystemGroupRecord(record, fallbackIndex) {
     if (!record || typeof record !== "object" || Array.isArray(record)) return null;
     const id = String(record.id || record.group_id || record.groupId || `subsystem_${fallbackIndex || 1}`).trim();
@@ -10885,6 +10945,10 @@ function installEditableWorkbenchShell() {
       name: normalizeSubsystemGroupName(record.name || record.label, fallbackIndex),
       node_ids: uniqueNodeIds,
       created_at: String(record.created_at || record.createdAt || "browser_local_draft"),
+      interface_contracts: normalizeSubsystemInterfaceContracts(
+        record.interface_contracts || record.interfaceContracts || record.boundary_ports || record.boundaryPorts || [],
+        id,
+      ),
       candidate_state: "sandbox_candidate",
       source_ref: String(record.source_ref || record.sourceRef || `ui_draft.subsystem_group.${id}`),
       truth_effect: "none",
@@ -11010,7 +11074,160 @@ function installEditableWorkbenchShell() {
   }
 
   function subsystemGroupsSnapshot() {
-    return syncSubsystemNodeAttributes().map((group) => ({ ...group, node_ids: [...group.node_ids] }));
+    return syncSubsystemNodeAttributes().map((group) => ({
+      ...group,
+      node_ids: [...group.node_ids],
+      interface_contracts: normalizeSubsystemInterfaceContracts(group.interface_contracts || [], group.id),
+    }));
+  }
+
+  function buildSubsystemInterfaceContractsSummary(groups) {
+    const sourceGroups = Array.isArray(groups) ? groups : subsystemGroupsSnapshot();
+    const contractGroups = sourceGroups.map((group) => ({
+      group_id: group.id,
+      group_name: group.name,
+      node_ids: Array.isArray(group.node_ids) ? [...group.node_ids] : [],
+      port_count: Array.isArray(group.interface_contracts) ? group.interface_contracts.length : 0,
+      interface_contracts: normalizeSubsystemInterfaceContracts(group.interface_contracts || [], group.id),
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    }));
+    return {
+      kind: "well-harness-workbench-subsystem-interface-contracts",
+      version: 1,
+      system_id: "thrust-reverser",
+      contract_scope: "sandbox_subsystem_boundary_ports",
+      group_count: contractGroups.length,
+      port_count: contractGroups.reduce((total, group) => total + group.port_count, 0),
+      groups: contractGroups,
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    };
+  }
+
+  function nextSubsystemInterfaceContractPortId(group, direction) {
+    const ports = Array.isArray(group && group.interface_contracts) ? group.interface_contracts : [];
+    let index = ports.length + 1;
+    const normalizedDirection = normalizeSubsystemInterfaceDirection(direction);
+    const usedIds = new Set(ports.map((port) => port.id));
+    let portId = `${group.id}:${normalizedDirection}:${index}`;
+    while (usedIds.has(portId)) {
+      index += 1;
+      portId = `${group.id}:${normalizedDirection}:${index}`;
+    }
+    return { portId, index };
+  }
+
+  function updateSubsystemGroupInterfaceContracts(groupId, updater) {
+    subsystemGroups = subsystemGroups.map((group) => {
+      if (group.id !== groupId) return group;
+      const currentPorts = normalizeSubsystemInterfaceContracts(group.interface_contracts || [], group.id);
+      const nextPorts = normalizeSubsystemInterfaceContracts(updater(currentPorts), group.id);
+      return { ...group, interface_contracts: nextPorts };
+    });
+    syncSubsystemNodeAttributes();
+    return subsystemGroupById(groupId);
+  }
+
+  function renderSubsystemInterfaceContractEditor() {
+    const group = selectedSubsystemGroup();
+    const ports = group ? normalizeSubsystemInterfaceContracts(group.interface_contracts || [], group.id) : [];
+    if (subsystemInterfaceOwner) {
+      subsystemInterfaceOwner.textContent = group ? `${group.name} · ${ports.length} port(s)` : "none";
+    }
+    const disabled = !group;
+    if (subsystemInterfaceDirectionSelect) subsystemInterfaceDirectionSelect.disabled = disabled;
+    if (subsystemInterfaceLabelInput) subsystemInterfaceLabelInput.disabled = disabled;
+    if (subsystemInterfaceSignalInput) subsystemInterfaceSignalInput.disabled = disabled;
+    if (subsystemInterfaceValueTypeSelect) subsystemInterfaceValueTypeSelect.disabled = disabled;
+    if (subsystemInterfaceEvidenceStatusSelect) subsystemInterfaceEvidenceStatusSelect.disabled = disabled;
+    if (addSubsystemInterfacePortBtn) addSubsystemInterfacePortBtn.disabled = disabled;
+    if (removeSubsystemInterfacePortBtn) removeSubsystemInterfacePortBtn.disabled = disabled || ports.length === 0;
+    if (subsystemInterfaceContractList) {
+      subsystemInterfaceContractList.innerHTML = "";
+      if (!group) {
+        subsystemInterfaceContractList.textContent = "Select a subsystem to define boundary ports.";
+      } else if (!ports.length) {
+        subsystemInterfaceContractList.textContent = "No subsystem boundary ports yet. Truth effect: none.";
+      } else {
+        for (const port of ports) {
+          const row = document.createElement("div");
+          row.className = "workbench-subsystem-interface-row";
+          row.setAttribute("data-subsystem-interface-port-id", port.id);
+          row.setAttribute("data-evidence-status", port.evidence_status);
+          row.setAttribute("data-truth-effect", "none");
+          const direction = document.createElement("strong");
+          direction.textContent = port.direction;
+          const body = document.createElement("span");
+          body.textContent = `${port.label} · ${port.signal_id} · ${port.value_type}`;
+          const evidence = document.createElement("em");
+          evidence.textContent = port.evidence_status;
+          row.append(direction, body, evidence);
+          subsystemInterfaceContractList.appendChild(row);
+        }
+      }
+    }
+    if (subsystemInterfaceStatus) {
+      subsystemInterfaceStatus.textContent = group
+        ? `Subsystem boundary contract: ${ports.length} port(s). Truth effect: none.`
+        : "Select a subsystem before editing boundary ports. Truth effect: none.";
+    }
+  }
+
+  function addSubsystemInterfaceContractPort() {
+    const group = selectedSubsystemGroup();
+    if (!group) {
+      if (subsystemInterfaceStatus) {
+        subsystemInterfaceStatus.textContent = "Select a subsystem before adding boundary ports.";
+      }
+      return null;
+    }
+    recordEditableHistory("add_subsystem_interface_contract_port");
+    const direction = normalizeSubsystemInterfaceDirection(
+      subsystemInterfaceDirectionSelect && subsystemInterfaceDirectionSelect.value,
+    );
+    const next = nextSubsystemInterfaceContractPortId(group, direction);
+    const port = normalizeSubsystemInterfaceContractRecord({
+      id: next.portId,
+      group_id: group.id,
+      direction,
+      port_index: next.index,
+      label: subsystemInterfaceLabelInput && subsystemInterfaceLabelInput.value,
+      signal_id: subsystemInterfaceSignalInput && subsystemInterfaceSignalInput.value,
+      value_type: subsystemInterfaceValueTypeSelect && subsystemInterfaceValueTypeSelect.value,
+      evidence_status: subsystemInterfaceEvidenceStatusSelect && subsystemInterfaceEvidenceStatusSelect.value,
+      source_ref: `ui_draft.subsystem_interface.${group.id}.${direction}.${next.index}`,
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    }, group.id, next.index);
+    updateSubsystemGroupInterfaceContracts(group.id, (ports) => [...ports, port]);
+    shell.setAttribute("data-draft-state", "derived");
+    renderInspector();
+    updateEditableDraftHash();
+    persistDraft();
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate subsystem interface contract pending";
+    return port;
+  }
+
+  function removeSubsystemInterfaceContractPort() {
+    const group = selectedSubsystemGroup();
+    if (!group) {
+      if (subsystemInterfaceStatus) {
+        subsystemInterfaceStatus.textContent = "Select a subsystem before removing boundary ports.";
+      }
+      return null;
+    }
+    const ports = normalizeSubsystemInterfaceContracts(group.interface_contracts || [], group.id);
+    if (!ports.length) return null;
+    recordEditableHistory("remove_subsystem_interface_contract_port");
+    const removed = ports[ports.length - 1];
+    updateSubsystemGroupInterfaceContracts(group.id, (currentPorts) => currentPorts.slice(0, -1));
+    shell.setAttribute("data-draft-state", "derived");
+    renderInspector();
+    updateEditableDraftHash();
+    persistDraft();
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate subsystem interface contract pending";
+    return removed;
   }
 
   function nextSubsystemGroupId() {
@@ -11072,6 +11289,7 @@ function installEditableWorkbenchShell() {
         ? `Subsystem ${group.id}: ${group.node_ids.length} draft node(s). Truth effect: none.`
         : "Select two or more draft nodes to create a subsystem. Truth effect: none.";
     }
+    renderSubsystemInterfaceContractEditor();
   }
 
   function groupSelectedDraftNodes() {
@@ -11867,11 +12085,25 @@ function installEditableWorkbenchShell() {
       });
     }
     if (template.subsystem || template.subsystem_group || template.subsystemGroup) {
+      const templateSubsystem = template.subsystem || template.subsystem_group || template.subsystemGroup || {};
       const groupId = nextSubsystemGroupId();
+      const remappedInterfaceContracts = normalizeSubsystemInterfaceContracts(
+        (templateSubsystem.interface_contracts || templateSubsystem.interfaceContracts || []).map((port, index) => ({
+          ...remapTemplateValue(port, idMap),
+          id: `${groupId}:${normalizeSubsystemInterfaceDirection(port.direction)}:${index + 1}`,
+          group_id: groupId,
+          port_index: index + 1,
+          source_ref: `ui_draft.component_library.${template.id}.subsystem_interface.${index + 1}`,
+          candidate_state: "sandbox_candidate",
+          truth_effect: "none",
+        })),
+        groupId,
+      );
       subsystemGroups.push(normalizeSubsystemGroupRecord({
         id: groupId,
         name: `${normalizeCapturedTemplateLabel(template.label, subsystemGroups.length + 1)} copy`,
         node_ids: createdNodes.map((node) => editableNodeId(node)).filter(Boolean),
+        interface_contracts: remappedInterfaceContracts,
         source_ref: `ui_draft.component_library.${template.id}.subsystem`,
         truth_effect: "none",
       }, subsystemGroups.length + 1));
@@ -11971,6 +12203,7 @@ function installEditableWorkbenchShell() {
         capturedSubsystemTemplates.length + 1,
       ),
       node_ids: sourceNodeIds,
+      interface_contracts: group ? group.interface_contracts || [] : [],
       source_ref: group ? group.source_ref : `ui_draft.component_library.${templateId}.subsystem`,
       truth_effect: "none",
     }, capturedSubsystemTemplates.length + 1);
@@ -13736,6 +13969,13 @@ function installEditableWorkbenchShell() {
         viewportState: payload.viewportState || defaultViewportState(),
         selectedCatalogOp: payload.selectedCatalogOp,
         subsystemGroups: payload.subsystemGroups || payload.subsystem_groups || [],
+        capturedSubsystemTemplates: (
+          payload.capturedSubsystemTemplates
+          || payload.captured_subsystem_templates
+          || payload.capturedTemplates
+          || payload.captured_templates
+          || []
+        ),
         nodes: Array.isArray(payload.nodes) ? payload.nodes : [],
         edges: Array.isArray(payload.edges) ? payload.edges : draftEdges,
       });
@@ -13797,6 +14037,7 @@ function installEditableWorkbenchShell() {
     const operationCatalog = buildOperationCatalogSummary();
     const componentLibrary = buildComponentLibrarySummary();
     const subsystemGroupSummary = subsystemGroupsSnapshot();
+    const subsystemInterfaceContracts = buildSubsystemInterfaceContractsSummary(subsystemGroupSummary);
     const ruleParameterSummary = buildRuleParameterSummary();
     const hardwarePalette = buildHardwarePaletteSummary();
     const hardwareEvidenceV2 = currentHardwareEvidenceV2Report();
@@ -13833,6 +14074,7 @@ function installEditableWorkbenchShell() {
       operation_catalog: operationCatalog,
       component_library: componentLibrary,
       subsystem_groups: subsystemGroupSummary,
+      subsystem_interface_contracts: subsystemInterfaceContracts,
       rule_parameter_summary: ruleParameterSummary,
       hardware_palette: hardwarePalette,
       hardware_evidence_v2: hardwareEvidenceV2,
@@ -13925,6 +14167,7 @@ function installEditableWorkbenchShell() {
       operation_catalog: snapshot.operation_catalog,
       component_library: snapshot.component_library,
       subsystem_groups: snapshot.subsystem_groups,
+      subsystem_interface_contracts: snapshot.subsystem_interface_contracts,
       rule_parameter_summary: snapshot.rule_parameter_summary,
       hardware_palette: snapshot.hardware_palette,
       hardware_evidence_v2: snapshot.hardware_evidence_v2,
@@ -14124,6 +14367,38 @@ function installEditableWorkbenchShell() {
         if (group.truth_effect !== undefined && group.truth_effect !== "none") {
           throw new Error("subsystem_groups truth_effect must be none");
         }
+        if (group.interface_contracts !== undefined && !Array.isArray(group.interface_contracts)) {
+          throw new Error("subsystem_groups interface_contracts must be arrays");
+        }
+        for (const port of Array.isArray(group.interface_contracts) ? group.interface_contracts : []) {
+          if (!port || typeof port !== "object" || Array.isArray(port)) {
+            throw new Error("subsystem interface contract entries must be objects");
+          }
+          if (port.candidate_state !== undefined && port.candidate_state !== "sandbox_candidate") {
+            throw new Error("subsystem interface contract candidate_state must be sandbox_candidate");
+          }
+          if (port.truth_effect !== undefined && port.truth_effect !== "none") {
+            throw new Error("subsystem interface contract truth_effect must be none");
+          }
+        }
+      }
+    }
+    if (
+      payload.subsystem_interface_contracts !== undefined
+      && (!payload.subsystem_interface_contracts || typeof payload.subsystem_interface_contracts !== "object" || Array.isArray(payload.subsystem_interface_contracts))
+    ) {
+      throw new Error("subsystem_interface_contracts must be an object when present");
+    }
+    if (payload.subsystem_interface_contracts !== undefined) {
+      const contracts = payload.subsystem_interface_contracts;
+      if (contracts.candidate_state !== "sandbox_candidate") {
+        throw new Error("subsystem_interface_contracts candidate_state must be sandbox_candidate");
+      }
+      if (contracts.truth_effect !== "none") {
+        throw new Error("subsystem interface contracts truth_effect must be none");
+      }
+      if (!Array.isArray(contracts.groups)) {
+        throw new Error("subsystem_interface_contracts groups must be an array");
       }
     }
     if (
@@ -15374,6 +15649,8 @@ function installEditableWorkbenchShell() {
     const operationCatalog = snapshot.operation_catalog || buildOperationCatalogSummary();
     const componentLibrary = snapshot.component_library || buildComponentLibrarySummary();
     const subsystemGroupSummary = snapshot.subsystem_groups || subsystemGroupsSnapshot();
+    const subsystemInterfaceContracts =
+      snapshot.subsystem_interface_contracts || buildSubsystemInterfaceContractsSummary(subsystemGroupSummary);
     const ruleParameterSummary = snapshot.rule_parameter_summary || buildRuleParameterSummary();
     const draftSnapshotManifest = buildDraftSnapshotManifestSummary();
     const changeRequestProofPacket = buildChangeRequestProofPacket(snapshot, changedModelHash);
@@ -15397,6 +15674,7 @@ function installEditableWorkbenchShell() {
       operationCatalog,
       componentLibrary,
       subsystemGroupSummary,
+      subsystemInterfaceContracts,
       ruleParameterSummary,
       draftSnapshotManifest,
     };
@@ -15477,6 +15755,8 @@ function installEditableWorkbenchShell() {
     const operationCatalog = modelJson.operation_catalog || buildOperationCatalogSummary();
     const componentLibrary = modelJson.component_library || buildComponentLibrarySummary();
     const subsystemGroupSummary = modelJson.subsystem_groups || subsystemGroupsSnapshot();
+    const subsystemInterfaceContracts =
+      modelJson.subsystem_interface_contracts || buildSubsystemInterfaceContractsSummary(subsystemGroupSummary);
     const ruleParameterSummary = modelJson.rule_parameter_summary || buildRuleParameterSummary();
     const hardwarePalette = modelJson.hardware_palette || buildHardwarePaletteSummary();
     const draftSnapshotManifest =
@@ -15528,6 +15808,7 @@ function installEditableWorkbenchShell() {
       operation_catalog: operationCatalog,
       component_library: componentLibrary,
       subsystem_groups: subsystemGroupSummary,
+      subsystem_interface_contracts: subsystemInterfaceContracts,
       rule_parameter_summary: ruleParameterSummary,
       hardware_palette: hardwarePalette,
       draft_snapshot_manifest: draftSnapshotManifest,
@@ -15567,6 +15848,7 @@ function installEditableWorkbenchShell() {
       operation_catalog_checksum: checksumEvidenceArchiveField(operationCatalog),
       component_library_checksum: checksumEvidenceArchiveField(componentLibrary),
       subsystem_groups_checksum: checksumEvidenceArchiveField(subsystemGroupSummary),
+      subsystem_interface_contracts_checksum: checksumEvidenceArchiveField(subsystemInterfaceContracts),
       rule_parameter_summary_checksum: checksumEvidenceArchiveField(ruleParameterSummary),
       hardware_palette_checksum: checksumEvidenceArchiveField(hardwarePalette),
       draft_snapshot_manifest_checksum: checksumEvidenceArchiveField(draftSnapshotManifest),
@@ -15788,6 +16070,12 @@ function installEditableWorkbenchShell() {
   }
   if (ungroupSubsystemBtn) {
     ungroupSubsystemBtn.addEventListener("click", () => ungroupSelectedSubsystem());
+  }
+  if (addSubsystemInterfacePortBtn) {
+    addSubsystemInterfacePortBtn.addEventListener("click", () => addSubsystemInterfaceContractPort());
+  }
+  if (removeSubsystemInterfacePortBtn) {
+    removeSubsystemInterfacePortBtn.addEventListener("click", () => removeSubsystemInterfaceContractPort());
   }
   if (labelInput) {
     labelInput.addEventListener("input", () => {
