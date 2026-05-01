@@ -765,6 +765,69 @@
                   Subsystem edits are sandbox metadata only. Truth effect: none.
                 </p>
               </section>
+              <section
+                id="workbench-subsystem-interface-contract"
+                class="workbench-subsystem-interface-contract"
+                aria-labelledby="workbench-subsystem-interface-title"
+              >
+                <div class="workbench-inspector-header">
+                  <span id="workbench-subsystem-interface-title">Subsystem Interface</span>
+                  <strong id="workbench-subsystem-interface-owner">none</strong>
+                </div>
+                <div class="workbench-subsystem-interface-grid">
+                  <label class="workbench-inspector-field" for="workbench-subsystem-interface-direction">
+                    <span>Direction</span>
+                    <select id="workbench-subsystem-interface-direction">
+                      <option value="input">input</option>
+                      <option value="output">output</option>
+                    </select>
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-subsystem-interface-label">
+                    <span>Port label</span>
+                    <input id="workbench-subsystem-interface-label" type="text" placeholder="evidence_gap">
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-subsystem-interface-signal-id">
+                    <span>Signal id</span>
+                    <input id="workbench-subsystem-interface-signal-id" type="text" placeholder="evidence_gap">
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-subsystem-interface-value-type">
+                    <span>Value type</span>
+                    <select id="workbench-subsystem-interface-value-type">
+                      <option value="boolean">boolean</option>
+                      <option value="number">number</option>
+                      <option value="string">string</option>
+                      <option value="state">state</option>
+                      <option value="unknown">unknown</option>
+                    </select>
+                  </label>
+                  <label class="workbench-inspector-field" for="workbench-subsystem-interface-evidence-status">
+                    <span>Evidence</span>
+                    <select id="workbench-subsystem-interface-evidence-status">
+                      <option value="evidence_gap">evidence_gap</option>
+                      <option value="ui_draft">ui_draft</option>
+                      <option value="not_recorded">not_recorded</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="workbench-subsystem-interface-actions">
+                  <button id="workbench-add-subsystem-interface-port-btn" type="button" class="workbench-editable-primary">
+                    Add port
+                  </button>
+                  <button id="workbench-remove-subsystem-interface-port-btn" type="button" class="workbench-editable-primary">
+                    Remove last
+                  </button>
+                </div>
+                <div
+                  id="workbench-subsystem-interface-contract-list"
+                  class="workbench-subsystem-interface-contract-list"
+                  aria-live="polite"
+                >
+                  Select a subsystem to define boundary ports.
+                </div>
+                <p id="workbench-subsystem-interface-status" class="workbench-handoff-status">
+                  Subsystem boundary ports are sandbox interface contracts only. Truth effect: none.
+                </p>
+              </section>
               <div
                 id="workbench-inspector-evidence-summary"
                 class="workbench-inspector-evidence-summary"

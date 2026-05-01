@@ -28,6 +28,7 @@ controlled ChangeRequest handoff.
 - JER-214: Workbench handoff packet schema and stable serialization hardening (Done)
 - JER-215: Evidence archive restore validates ChangeRequest handoff packet (Done)
 - JER-216: Subsystem template capture from editable selection v1 (In review)
+- JER-217: Subsystem interface contract editor v1 (In review)
 
 ## Product Target
 
@@ -63,6 +64,9 @@ An engineer should be able to:
 - **v4.6 reusable subsystem capture**: JER-216 captures selected sandbox
   subsystems as reusable templates and reinserts them with fresh draft ids while
   preserving template metadata in export/import/archive evidence.
+- **v4.7 subsystem boundary contracts**: JER-217 adds sandbox-only
+  input/output port contracts for selected subsystems and preserves them through
+  draft export/import, evidence archives, and captured-template reinsertion.
 
 ## Acceptance Model
 
@@ -305,12 +309,30 @@ The slice remains sandbox-only:
 - no controller truth mutation, adapter change, frozen YAML change, C919 packet
   change, truth-level change, DAL change, or PSSA change is introduced.
 
+## JER-217 Closure Note
+
+JER-217 extends the JER-216 reusable subsystem path with an explicit boundary
+interface contract editor. A selected sandbox subsystem can carry input/output
+port contracts with label, signal id, value type, evidence status, source ref,
+candidate state, and `truth_effect: none`. These contracts are review evidence
+for engineers designing reusable control blocks; they are not runtime truth and
+do not certify the candidate.
+
+The slice remains sandbox-only:
+
+- `subsystem_interface_contracts` are serialized as local draft evidence;
+- unknown boundary fields remain explicit `evidence_gap` values;
+- captured subsystem templates preserve interface contracts and reinsert them
+  under fresh sandbox group ids;
+- no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
+  DAL, or PSSA behavior is changed.
+
 ## JER-205 Sequencing Contract
 
 JER-205 is the lane-entry contract for v4. It does not add runtime behavior; it
 defines how the next implementation issues become executable.
 
-Before JER-206 through JER-216 are marked `agent:ready`, each issue must state
+Before JER-206 through JER-217 are marked `agent:ready`, each issue must state
 which acceptance state it touches:
 
 - `clarification`: the workbench has enough evidence to ask for missing design
@@ -351,6 +373,7 @@ hardcoding truth semantics into UI or archive text.
 | JER-214 | Handoff schema and stable serialization | Packet has repo-owned schema, validator, canonical hash, and stable checksum serialization | JER-213 |
 | JER-215 | Archive restore handoff validation | Restored evidence archives validate embedded handoff packets before trust | JER-214 |
 | JER-216 | Subsystem template capture | Captured subsystem templates reinsert with fresh draft ids and archive checksum coverage | JER-207 |
+| JER-217 | Subsystem interface contract editor | Selected subsystems expose sandbox-only input/output boundary contracts preserved through export/import/archive/template reuse | JER-216 |
 
 ## Work-Item Contract
 
@@ -366,7 +389,7 @@ and must carry these fields before `agent:ready` is applied:
 - Metadata: repository path, adapter/project, layer, truth-level impact, and
   known gate blockers.
 
-JER-206 through JER-216 should not claim broad v4 completion individually. Each
+JER-206 through JER-217 should not claim broad v4 completion individually. Each
 issue closes one capability slice and updates this coordination note only when
 the v4 acceptance ladder or sequencing changes.
 

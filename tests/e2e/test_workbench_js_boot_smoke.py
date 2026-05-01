@@ -1522,6 +1522,77 @@ def test_workbench_captures_and_reinserts_subsystem_template(demo_server, browse
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_subsystem_interface_contract_round_trips_and_templates(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-component-template-id="two_stage_interlock"]')
+    page.fill("#workbench-subsystem-name", "Ported deploy cell")
+    page.click("#workbench-create-subsystem-btn")
+
+    page.select_option("#workbench-subsystem-interface-direction", "input")
+    page.fill("#workbench-subsystem-interface-label", "Deploy request")
+    page.fill("#workbench-subsystem-interface-signal-id", "deploy_request_cmd")
+    page.select_option("#workbench-subsystem-interface-value-type", "boolean")
+    page.select_option("#workbench-subsystem-interface-evidence-status", "ui_draft")
+    page.click("#workbench-add-subsystem-interface-port-btn")
+
+    page.select_option("#workbench-subsystem-interface-direction", "output")
+    page.fill("#workbench-subsystem-interface-label", "Deploy allowed")
+    page.fill("#workbench-subsystem-interface-signal-id", "deploy_allowed_status")
+    page.select_option("#workbench-subsystem-interface-value-type", "boolean")
+    page.select_option("#workbench-subsystem-interface-evidence-status", "evidence_gap")
+    page.click("#workbench-add-subsystem-interface-port-btn")
+
+    page.click("#workbench-export-draft-btn")
+    contracted = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    group = contracted["subsystem_groups"][0]
+    contracts = contracted["subsystem_interface_contracts"]
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert group["interface_contracts"][0]["direction"] == "input"
+    assert group["interface_contracts"][0]["signal_id"] == "deploy_request_cmd"
+    assert group["interface_contracts"][0]["truth_effect"] == "none"
+    assert group["interface_contracts"][1]["direction"] == "output"
+    assert group["interface_contracts"][1]["evidence_status"] == "evidence_gap"
+    assert contracts["port_count"] == 2
+    assert contracts["truth_effect"] == "none"
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    page.fill("#workbench-draft-json-buffer", draft_json)
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert imported["subsystem_groups"][0]["interface_contracts"][0]["label"] == "Deploy request"
+
+    page.click("#workbench-capture-subsystem-template-btn")
+    page.click("#workbench-insert-captured-template-btn")
+    page.click("#workbench-export-draft-btn")
+    inserted = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    copied_group = next(
+        group for group in inserted["subsystem_groups"]
+        if group["name"] == "Ported deploy cell copy"
+    )
+    copied_ports = copied_group["interface_contracts"]
+
+    assert len(copied_ports) == 2
+    assert copied_ports[0]["group_id"] == copied_group["id"]
+    assert copied_ports[0]["signal_id"] == "deploy_request_cmd"
+    assert copied_ports[0]["truth_effect"] == "none"
+    assert copied_ports[0]["id"].startswith(f"{copied_group['id']}:input:")
+    assert copied_ports[1]["id"].startswith(f"{copied_group['id']}:output:")
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["subsystem_interface_contracts"]["port_count"] == 4
+    assert archive["subsystem_interface_contracts"]["truth_effect"] == "none"
+    assert archive["checksums"]["subsystem_interface_contracts_checksum"]
+    assert archive["component_library"]["captured_templates"][0]["subsystem"]["interface_contracts"][0]["truth_effect"] == "none"
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_captured_template_remaps_overlapping_ids_and_preserves_rules(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")

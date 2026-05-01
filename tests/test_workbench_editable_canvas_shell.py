@@ -145,6 +145,25 @@ def test_subsystem_group_editor_controls_are_exposed_as_sandbox_only_ui() -> Non
     assert ".workbench-subsystem-editor" in css
 
 
+def test_subsystem_interface_contract_editor_controls_are_sandbox_only_ui() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-subsystem-interface-contract"' in html
+    assert 'id="workbench-subsystem-interface-owner"' in html
+    assert 'id="workbench-subsystem-interface-direction"' in html
+    assert 'id="workbench-subsystem-interface-label"' in html
+    assert 'id="workbench-subsystem-interface-signal-id"' in html
+    assert 'id="workbench-subsystem-interface-value-type"' in html
+    assert 'id="workbench-subsystem-interface-evidence-status"' in html
+    assert 'id="workbench-add-subsystem-interface-port-btn"' in html
+    assert 'id="workbench-remove-subsystem-interface-port-btn"' in html
+    assert 'id="workbench-subsystem-interface-contract-list"' in html
+    assert "Subsystem boundary ports are sandbox interface contracts only. Truth effect: none." in html
+    assert ".workbench-subsystem-interface-contract" in css
+    assert ".workbench-subsystem-interface-row" in css
+
+
 def test_connector_pin_map_editor_controls_are_sandbox_only_ui() -> None:
     html = _html()
     css = _css()
@@ -248,6 +267,22 @@ def test_js_wires_subsystem_group_round_trip_as_sandbox_only_metadata() -> None:
     assert "subsystem_groups truth_effect must be none" in js
     assert "subsystem_groups_checksum" in js
     assert "data-subsystem-id" in js
+    assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'truth_effect: "none"' in js
+
+
+def test_js_wires_subsystem_interface_contracts_as_sandbox_only_metadata() -> None:
+    js = _js()
+
+    assert "function normalizeSubsystemInterfaceContractRecord" in js
+    assert "function addSubsystemInterfaceContractPort" in js
+    assert "function removeSubsystemInterfaceContractPort" in js
+    assert "function buildSubsystemInterfaceContractsSummary" in js
+    assert "subsystem_interface_contracts" in js
+    assert "subsystem_interface_contracts_checksum" in js
+    assert "subsystem interface contracts truth_effect must be none" in js
+    assert "data-subsystem-interface-port-id" in js
+    assert 'kind: "well-harness-workbench-subsystem-interface-contracts"' in js
     assert 'candidate_state: "sandbox_candidate"' in js
     assert 'truth_effect: "none"' in js
 
