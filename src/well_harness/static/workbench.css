@@ -6038,6 +6038,43 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   min-height: 34px;
   margin-top: 0.55rem;
 }
+.workbench-candidate-debugger-view {
+  margin-top: 0.7rem;
+  padding: 0.62rem;
+  border-color: rgba(125, 215, 194, 0.24);
+}
+.workbench-candidate-debugger-view[data-debugger-status="fail"] {
+  border-color: rgba(240, 193, 91, 0.48);
+}
+.workbench-candidate-debugger-view[data-debugger-status="pass"] {
+  border-color: rgba(125, 215, 194, 0.42);
+}
+.workbench-candidate-debugger-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.38rem;
+  margin: 0.5rem 0 0;
+}
+.workbench-candidate-debugger-facts div {
+  min-width: 0;
+  padding: 0.42rem;
+  border: 1px solid rgba(150, 173, 190, 0.17);
+  border-radius: 7px;
+  background: rgba(7, 18, 26, 0.54);
+}
+.workbench-candidate-debugger-facts dt {
+  margin-bottom: 0.2rem;
+  color: rgba(213, 227, 237, 0.58);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+}
+.workbench-candidate-debugger-facts dd {
+  margin: 0;
+  color: rgba(241, 248, 252, 0.92);
+  font-size: 0.68rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
 .workbench-diff-review-v2-facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

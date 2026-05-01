@@ -224,6 +224,22 @@ def test_diff_review_v2_controls_are_sandbox_only_archive_ui() -> None:
     assert ".workbench-diff-review-v2-facts" in css
 
 
+def test_candidate_debugger_view_controls_are_sandbox_only_ui() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-candidate-debugger-view"' in html
+    assert 'id="workbench-candidate-debugger-status"' in html
+    assert 'id="workbench-candidate-debugger-target"' in html
+    assert 'id="workbench-candidate-debugger-tick"' in html
+    assert 'id="workbench-candidate-debugger-assertion"' in html
+    assert 'id="workbench-candidate-debugger-observed"' in html
+    assert 'id="workbench-candidate-debugger-trace"' in html
+    assert "Candidate debugger is sandbox evidence only. Truth effect: none." in html
+    assert ".workbench-candidate-debugger-view" in css
+    assert ".workbench-candidate-debugger-facts" in css
+
+
 def test_workspace_document_status_controls_are_sandbox_only_ui() -> None:
     html = _html()
     css = _css()
@@ -466,6 +482,22 @@ def test_js_wires_diff_review_v2_as_sandbox_only_archive_packet() -> None:
     assert "Diff review v2:" in js
     assert 'kind: "well-harness-workbench-candidate-baseline-diff-review-v2"' in js
     assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'certification_claim: "none"' in js
+    assert 'truth_effect: "none"' in js
+
+
+def test_js_wires_candidate_debugger_view_as_sandbox_only_archive_packet() -> None:
+    js = _js()
+
+    assert "well-harness-workbench-candidate-debugger-view" in js
+    assert "workbench-candidate-debugger-view.v1" in js
+    assert "function currentCandidateDebuggerView" in js
+    assert "function renderCandidateDebuggerView" in js
+    assert "candidate_debugger_view" in js
+    assert "candidate_debugger_view_checksum" in js
+    assert "candidate_debugger_view truth_effect must be none" in js
+    assert "first_failing_assertion" in js
+    assert "observed_values" in js
     assert 'certification_claim: "none"' in js
     assert 'truth_effect: "none"' in js
 

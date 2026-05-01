@@ -32,11 +32,11 @@ remain reference/sample outputs, not near-term product drivers.
 - JER-217: Subsystem interface contract editor v1 (Done)
 - JER-218: Workbench interaction state kernel v1 (Done)
 - JER-219: High-freedom canvas editing layer v1 (Done)
-- JER-220: Foundation-first roadmap reset after JER-219 (In progress)
-- JER-221: Canonical editable graph authoring kernel v1 (Planned)
-- JER-222: Port and wire editing ergonomics v1 (Planned)
-- JER-223: Sandbox scenario test bench v1 (Planned)
-- JER-224: Candidate graph debugger view v1 (Planned)
+- JER-220: Foundation-first roadmap reset after JER-219 (Done)
+- JER-221: Canonical editable graph authoring kernel v1 (Done)
+- JER-222: Port and wire editing ergonomics v1 (Done)
+- JER-223: Sandbox scenario test bench v1 (Done)
+- JER-224: Candidate graph debugger view v1 (In review)
 - JER-225: Workbench preflight analyzer v1 (Planned)
 - JER-226: Hardware/interface designer foundation v1 (Planned)
 - JER-227: Foundation workbench review archive v1 (Planned)
@@ -126,8 +126,10 @@ is mature, but they do not determine the next v4 implementation order.
 - **v4.10 foundation-first reset**: JER-220 moves the active roadmap away from
   dedicated reference panels and toward the single-user editor -> runner ->
   test bench -> debugger -> archive foundation.
-- **v4.11 graph/test/debug foundation**: JER-221 through JER-227 are planned as
-  the next implementation sequence for the generic workbench base.
+- **v4.11 graph/test/debug foundation**: JER-221 through JER-224 establish
+  canonical graph, explicit port routing, sandbox scenario runs, and selected
+  candidate debugging; JER-225 through JER-227 remain the next archive-facing
+  foundation slices.
 
 ## Acceptance Model
 
@@ -407,7 +409,7 @@ The slice remains sandbox-only:
 - no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
   DAL, or PSSA behavior is changed.
 
-## JER-219 In-Progress Note
+## JER-219 Closure Note
 
 JER-219 layers reviewable canvas-interaction evidence onto the high-freedom
 editing gestures already present in `/workbench`. The status surface, draft
@@ -424,6 +426,48 @@ The slice remains sandbox-only:
   browser-local draft operations;
 - archive output includes a canvas-interaction checksum for review
   reproducibility;
+- no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
+  DAL, or PSSA behavior is changed.
+
+## JER-223 Closure Note
+
+JER-223 adds the first runnable test-bench surface for candidate graphs. An
+engineer can define tick-based inputs and expected-output assertions in the
+right inspector, run the candidate through the approved sandbox op catalog, and
+inspect a pass/fail run report with trace frames and validation findings.
+Draft export/import, browser restore, and local evidence archives preserve the
+`sandbox_test_bench` and `sandbox_test_run_report` packets with checksum
+coverage.
+
+The slice remains sandbox-only:
+
+- the test bench uses browser-local candidate graph snapshots and does not call
+  controller truth, adapters, dynamic imports, network, or file writes;
+- reports carry `candidate_state: sandbox_candidate`, `certification_claim:
+  none`, and `truth_effect: none`;
+- pass/fail assertions are engineering feedback for a candidate draft, not
+  certification evidence;
+- no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
+  DAL, or PSSA behavior is changed.
+
+## JER-224 In-Review Note
+
+JER-224 adds a selected-target debugger view for candidate graph failures. The
+right inspector now reads the latest sandbox test run report, links it to the
+selected node or edge, identifies the first failing assertion for that target
+when available, and shows selected tick, watched values, trace availability,
+and hardware binding context as review evidence. Draft export/import, browser
+restore, and local evidence archives preserve `candidate_debugger_view` with
+checksum coverage.
+
+The slice remains sandbox-only:
+
+- the debugger view is derived from candidate run reports and current
+  selection state;
+- hardware binding context is evidence overlay only and does not participate in
+  truth evaluation;
+- the packet carries `candidate_state: sandbox_candidate`,
+  `certification_claim: none`, and `truth_effect: none`;
 - no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
   DAL, or PSSA behavior is changed.
 
