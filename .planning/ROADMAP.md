@@ -12,6 +12,13 @@ surface with Figma/Canvas-style editing freedom and Simulink-like control-model
 mental models, while bringing hardware/interface design evidence into the same
 candidate workflow.
 
+Scope guard: v4 is a single-user engineering authoring workbench. The priority
+is a strong Simulink/Figma-level control-logic panel foundation: graph editing,
+hardware/interface evidence, sandbox feedback, baseline diff, and review
+handoff. Multi-user collaboration, real-time sync, permissions, comments, and
+conflict resolution stay out of scope until the single-user operation panel is
+stable enough to justify that platform layer.
+
 Current Linear project:
 `AI FANTUI LogicMVP · Editable Workbench v4 Authoring + Hardware Design`
 
@@ -31,7 +38,8 @@ Housekeeping bridge:
 - JER-215: Evidence archive restore validates ChangeRequest handoff packet (Done, PR #197)
 - JER-216: Subsystem template capture from editable selection v1 (Done, PR #198)
 - JER-217: Subsystem interface contract editor v1 (Done, PR #199)
-- JER-218: Workbench interaction state kernel v1 (In progress)
+- JER-218: Workbench interaction state kernel v1 (Done, PR #200)
+- JER-219: High-freedom canvas editing layer v1 (In progress)
 
 Workbench v4 seed backlog:
 - JER-216 is the current authoring-freedom slice after the handoff hardening
@@ -49,6 +57,11 @@ Workbench v4 seed backlog:
   It gives each browser-local sandbox draft a `workspace_document` envelope
   with revision id, action count, action log digest, undo depth, redo depth,
   draft import/export preservation, and evidence archive checksum coverage.
+- JER-219 makes the existing high-freedom editing gestures auditable as
+  sandbox evidence. Multi-select, duplicate/delete, lasso/group move,
+  selection counts, last action, node position digest, draft import/export, and
+  archive checksums now flow through `canvas_interaction_summary` with
+  `truth_effect: none`.
 
 Runtime v3 implementation closure:
 

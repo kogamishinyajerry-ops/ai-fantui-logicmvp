@@ -29,7 +29,8 @@ controlled ChangeRequest handoff.
 - JER-215: Evidence archive restore validates ChangeRequest handoff packet (Done)
 - JER-216: Subsystem template capture from editable selection v1 (Done)
 - JER-217: Subsystem interface contract editor v1 (Done)
-- JER-218: Workbench interaction state kernel v1 (In progress)
+- JER-218: Workbench interaction state kernel v1 (Done)
+- JER-219: High-freedom canvas editing layer v1 (In progress)
 
 ## Product Target
 
@@ -45,6 +46,24 @@ An engineer should be able to:
 - compare candidate output against the certified adapter/controller baseline;
 - export a review-ready ChangeRequest packet instead of directly mutating
   controller, adapter, DAL, PSSA, or truth-level state.
+
+## Scope Guard
+
+Workbench v4 is single-user first. The near-term target is a strong
+Simulink/Figma-level control-logic operation panel for one engineer working on
+one sandbox draft: high-freedom graph editing, subsystem authoring,
+hardware/interface evidence, sandbox feedback, baseline diff, and review
+handoff.
+
+Out of scope for v4:
+
+- real-time multi-user collaboration;
+- shared cursors, comments, presence, or multiplayer review modes;
+- role/permission models beyond existing repo/PR/Linear governance;
+- conflict resolution and merge semantics for simultaneous draft edits.
+
+Those platform layers can be reconsidered only after the single-user authoring
+surface is stable, testable, and useful end to end.
 
 ## Acceptance Ladder
 
@@ -72,6 +91,10 @@ An engineer should be able to:
   `workspace_document` envelope for revision id, action count, action log
   digest, undo depth, redo depth, draft import/export, browser restore, and
   evidence archive checksum coverage.
+- **v4.9 high-freedom canvas evidence**: JER-219 makes multi-select,
+  duplicate/delete, lasso/group move, selection counts, last action, node
+  position digest, draft import/export, and archive checksums visible as
+  sandbox-only `canvas_interaction_summary` evidence.
 
 ## Acceptance Model
 
@@ -332,12 +355,51 @@ The slice remains sandbox-only:
 - no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
   DAL, or PSSA behavior is changed.
 
+## JER-218 Closure Note
+
+JER-218 adds the interaction-state foundation for the v4 authoring line. Each
+browser-local sandbox draft now carries a `workspace_document` envelope with a
+document id, revision id, parent revision id, action count, action log digest,
+undo depth, redo depth, and archive checksum coverage. Draft export/import,
+browser restore, and local evidence archives preserve the same document
+metadata so an engineer can reason about draft provenance before a
+ChangeRequest handoff.
+
+The slice remains sandbox-only:
+
+- `workspace_document` is always a draft evidence envelope with
+  `candidate_state: sandbox_candidate` and `truth_effect: none`;
+- action counts and undo/redo depths support review traceability, not
+  certification;
+- no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
+  DAL, or PSSA behavior is changed.
+
+## JER-219 In-Progress Note
+
+JER-219 layers reviewable canvas-interaction evidence onto the high-freedom
+editing gestures already present in `/workbench`. The status surface, draft
+export/import, and local evidence archive now carry a
+`canvas_interaction_summary` with selected node/edge counts, last canvas
+action, node counts, edge counts, position digest, workspace action count, and
+undo/redo depth.
+
+The slice remains sandbox-only:
+
+- `canvas_interaction_summary` carries `candidate_state: sandbox_candidate` and
+  `truth_effect: none`;
+- multi-select, duplicate/delete, lasso/group move, and undo/redo remain
+  browser-local draft operations;
+- archive output includes a canvas-interaction checksum for review
+  reproducibility;
+- no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
+  DAL, or PSSA behavior is changed.
+
 ## JER-205 Sequencing Contract
 
 JER-205 is the lane-entry contract for v4. It does not add runtime behavior; it
 defines how the next implementation issues become executable.
 
-Before JER-206 through JER-217 are marked `agent:ready`, each issue must state
+Before JER-206 through JER-219 are marked `agent:ready`, each issue must state
 which acceptance state it touches:
 
 - `clarification`: the workbench has enough evidence to ask for missing design
@@ -379,6 +441,8 @@ hardcoding truth semantics into UI or archive text.
 | JER-215 | Archive restore handoff validation | Restored evidence archives validate embedded handoff packets before trust | JER-214 |
 | JER-216 | Subsystem template capture | Captured subsystem templates reinsert with fresh draft ids and archive checksum coverage | JER-207 |
 | JER-217 | Subsystem interface contract editor | Selected subsystems expose sandbox-only input/output boundary contracts preserved through export/import/archive/template reuse | JER-216 |
+| JER-218 | Workbench interaction state kernel | Workspace document revision/action/undo/redo evidence survives draft export/import, browser restore, and archive checksum coverage | JER-217 |
+| JER-219 | High-freedom canvas editing layer | Canvas selection/action/position evidence is visible, exportable, importable, and archive-checksummed with `truth_effect: none` | JER-218 |
 
 ## Work-Item Contract
 
@@ -394,7 +458,7 @@ and must carry these fields before `agent:ready` is applied:
 - Metadata: repository path, adapter/project, layer, truth-level impact, and
   known gate blockers.
 
-JER-206 through JER-217 should not claim broad v4 completion individually. Each
+JER-206 through JER-219 should not claim broad v4 completion individually. Each
 issue closes one capability slice and updates this coordination note only when
 the v4 acceptance ladder or sequencing changes.
 
