@@ -1390,6 +1390,40 @@
                 </p>
               </section>
               <section
+                id="workbench-preflight-analyzer"
+                class="workbench-preflight-analyzer"
+                aria-labelledby="workbench-preflight-title"
+              >
+                <div class="workbench-inspector-header">
+                  <span id="workbench-preflight-title">Preflight Analyzer</span>
+                  <strong id="workbench-preflight-classification">needs_evidence</strong>
+                </div>
+                <dl class="workbench-preflight-facts">
+                  <div>
+                    <dt>Findings</dt>
+                    <dd id="workbench-preflight-findings-count">0</dd>
+                  </div>
+                  <div>
+                    <dt>Actions</dt>
+                    <dd id="workbench-preflight-actions">Run preflight before handoff.</dd>
+                  </div>
+                </dl>
+                <button
+                  id="workbench-run-preflight-btn"
+                  type="button"
+                  class="workbench-editable-primary workbench-preflight-run"
+                >
+                  Run preflight
+                </button>
+                <label class="workbench-handoff-output" for="workbench-preflight-output">
+                  <span>Preflight report</span>
+                  <textarea id="workbench-preflight-output" rows="7" readonly></textarea>
+                </label>
+                <p class="workbench-inspector-truth-note">
+                  Preflight analyzer is sandbox evidence only. Truth effect: none.
+                </p>
+              </section>
+              <section
                 class="workbench-draft-json-exchange"
                 aria-labelledby="workbench-draft-json-title"
               >

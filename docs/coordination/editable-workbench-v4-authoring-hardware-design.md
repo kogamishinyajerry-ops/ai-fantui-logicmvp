@@ -36,8 +36,8 @@ remain reference/sample outputs, not near-term product drivers.
 - JER-221: Canonical editable graph authoring kernel v1 (Done)
 - JER-222: Port and wire editing ergonomics v1 (Done)
 - JER-223: Sandbox scenario test bench v1 (Done)
-- JER-224: Candidate graph debugger view v1 (In review)
-- JER-225: Workbench preflight analyzer v1 (Planned)
+- JER-224: Candidate graph debugger view v1 (Done)
+- JER-225: Workbench preflight analyzer v1 (In review)
 - JER-226: Hardware/interface designer foundation v1 (Planned)
 - JER-227: Foundation workbench review archive v1 (Planned)
 
@@ -450,7 +450,7 @@ The slice remains sandbox-only:
 - no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
   DAL, or PSSA behavior is changed.
 
-## JER-224 In-Review Note
+## JER-224 Closure Note
 
 JER-224 adds a selected-target debugger view for candidate graph failures. The
 right inspector now reads the latest sandbox test run report, links it to the
@@ -468,6 +468,26 @@ The slice remains sandbox-only:
   truth evaluation;
 - the packet carries `candidate_state: sandbox_candidate`,
   `certification_claim: none`, and `truth_effect: none`;
+- no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
+  DAL, or PSSA behavior is changed.
+
+## JER-225 In-Review Note
+
+JER-225 adds the first local preflight analyzer for candidate graph handoff.
+The right inspector consumes graph validation issues, sandbox test run reports,
+candidate debugger evidence, hardware/interface diagnostics, and port
+compatibility findings, then classifies the draft as `ready`,
+`needs_evidence`, or `invalid_candidate`. The analyzer uses an operational
+sandbox model hash for freshness so metadata-only import/export normalization
+does not invalidate an unchanged candidate, while missing or stale run reports
+remain explicit findings.
+
+The slice remains sandbox-only:
+
+- `preflight_analyzer_report` is serialized as local draft and archive evidence;
+- classifications are engineering readiness states, not truth-level or DAL
+  claims;
+- ChangeRequest proof packets include preflight summary and checksum evidence;
 - no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
   DAL, or PSSA behavior is changed.
 
