@@ -47,6 +47,24 @@ An engineer should be able to:
 - export a review-ready ChangeRequest packet instead of directly mutating
   controller, adapter, DAL, PSSA, or truth-level state.
 
+## Scope Guard
+
+Workbench v4 is single-user first. The near-term target is a strong
+Simulink/Figma-level control-logic operation panel for one engineer working on
+one sandbox draft: high-freedom graph editing, subsystem authoring,
+hardware/interface evidence, sandbox feedback, baseline diff, and review
+handoff.
+
+Out of scope for v4:
+
+- real-time multi-user collaboration;
+- shared cursors, comments, presence, or multiplayer review modes;
+- role/permission models beyond existing repo/PR/Linear governance;
+- conflict resolution and merge semantics for simultaneous draft edits.
+
+Those platform layers can be reconsidered only after the single-user authoring
+surface is stable, testable, and useful end to end.
+
 ## Acceptance Ladder
 
 - **v4.0 planning**: JER-205 defined the acceptance model and issue sequencing.

@@ -12,6 +12,13 @@ surface with Figma/Canvas-style editing freedom and Simulink-like control-model
 mental models, while bringing hardware/interface design evidence into the same
 candidate workflow.
 
+Scope guard: v4 is a single-user engineering authoring workbench. The priority
+is a strong Simulink/Figma-level control-logic panel foundation: graph editing,
+hardware/interface evidence, sandbox feedback, baseline diff, and review
+handoff. Multi-user collaboration, real-time sync, permissions, comments, and
+conflict resolution stay out of scope until the single-user operation panel is
+stable enough to justify that platform layer.
+
 Current Linear project:
 `AI FANTUI LogicMVP · Editable Workbench v4 Authoring + Hardware Design`
 

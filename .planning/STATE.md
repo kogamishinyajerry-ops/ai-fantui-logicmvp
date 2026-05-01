@@ -71,6 +71,15 @@ interface metadata, inspect evidence gaps, run sandbox feedback, compare
 against certified baseline behavior, and generate a controlled ChangeRequest
 handoff packet.
 
+**v4 scope guard**:
+
+The v4 lane is intentionally single-user first. The product priority is the
+Simulink/Figma-level control-logic operation panel: high-freedom graph editing,
+hardware/interface design evidence, sandbox feedback, baseline diff, and
+review handoff for one engineer working on one draft. Multi-user collaboration,
+real-time sync, permissions, comments, and conflict resolution are deferred
+until the single-user panel foundation is stable.
+
 **JER-206 component-library closure**:
 
 - The left-side editor toolbar exposes three reusable sandbox templates:
