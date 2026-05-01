@@ -25,7 +25,9 @@ controlled ChangeRequest handoff.
 - JER-211: Scenario/debug timeline linked to selected graph elements v1 (Done)
 - JER-212: Candidate-to-baseline diff review workflow v2 (Done)
 - JER-213: ChangeRequest handoff packet from editable draft v1 (Done)
-- JER-214: Workbench handoff packet schema and stable serialization hardening (In review)
+- JER-214: Workbench handoff packet schema and stable serialization hardening (Done)
+- JER-215: Evidence archive restore validates ChangeRequest handoff packet (Done)
+- JER-216: Subsystem template capture from editable selection v1 (In review)
 
 ## Product Target
 
@@ -58,6 +60,9 @@ An engineer should be able to:
 - **v4.5 handoff hardening**: JER-214 gives the ChangeRequest packet a
   repo-owned schema, validator, canonical hash contract, and stable browser
   checksum serialization.
+- **v4.6 reusable subsystem capture**: JER-216 captures selected sandbox
+  subsystems as reusable templates and reinserts them with fresh draft ids while
+  preserving template metadata in export/import/archive evidence.
 
 ## Acceptance Model
 
@@ -280,12 +285,32 @@ The slice remains backward-compatible:
   YAML change, C919 packet change, truth-level change, DAL change, or PSSA
   change is introduced.
 
+## JER-216 Closure Note
+
+JER-216 returns v4 to the authoring-freedom track after handoff hardening. The
+component library can now capture the selected sandbox subsystem or a
+multi-selected draft node set as a reusable template. Captured templates retain
+node labels, approved ops, typed port contracts, draft rules, internal edges,
+subsystem metadata, hardware/interface overlay metadata, and sandbox
+provenance.
+
+The slice remains sandbox-only:
+
+- inserting a captured template creates fresh draft node ids and a new
+  subsystem group copy;
+- captured template metadata is serialized through draft export/import and
+  local evidence archives under `component_library`;
+- archive checksums cover captured template metadata for review
+  reproducibility;
+- no controller truth mutation, adapter change, frozen YAML change, C919 packet
+  change, truth-level change, DAL change, or PSSA change is introduced.
+
 ## JER-205 Sequencing Contract
 
 JER-205 is the lane-entry contract for v4. It does not add runtime behavior; it
 defines how the next implementation issues become executable.
 
-Before JER-206 through JER-215 are marked `agent:ready`, each issue must state
+Before JER-206 through JER-216 are marked `agent:ready`, each issue must state
 which acceptance state it touches:
 
 - `clarification`: the workbench has enough evidence to ask for missing design
@@ -324,6 +349,8 @@ hardcoding truth semantics into UI or archive text.
 | JER-212 | Candidate-to-baseline diff review v2 | Diff review is archive-ready and never marks candidate output certified | JER-211 |
 | JER-213 | ChangeRequest handoff packet | Packet includes candidate model, evidence, tests, boundaries, and red-line metadata | JER-212 |
 | JER-214 | Handoff schema and stable serialization | Packet has repo-owned schema, validator, canonical hash, and stable checksum serialization | JER-213 |
+| JER-215 | Archive restore handoff validation | Restored evidence archives validate embedded handoff packets before trust | JER-214 |
+| JER-216 | Subsystem template capture | Captured subsystem templates reinsert with fresh draft ids and archive checksum coverage | JER-207 |
 
 ## Work-Item Contract
 
@@ -339,7 +366,7 @@ and must carry these fields before `agent:ready` is applied:
 - Metadata: repository path, adapter/project, layer, truth-level impact, and
   known gate blockers.
 
-JER-206 through JER-214 should not claim broad v4 completion individually. Each
+JER-206 through JER-216 should not claim broad v4 completion individually. Each
 issue closes one capability slice and updates this coordination note only when
 the v4 acceptance ladder or sequencing changes.
 

@@ -28,14 +28,16 @@ Housekeeping bridge:
 - JER-212: Candidate-to-baseline diff review workflow v2 (Done)
 - JER-213: ChangeRequest handoff packet from editable draft v1 (Done)
 - JER-214: Workbench handoff packet schema and stable serialization hardening (Done)
-- JER-215: Evidence archive restore validates ChangeRequest handoff packet (In review)
+- JER-215: Evidence archive restore validates ChangeRequest handoff packet (Done, PR #197)
+- JER-216: Subsystem template capture from editable selection v1 (In review)
 
 Workbench v4 seed backlog:
-- JER-215 is the current hardening bridge after v4 handoff. It connects the
-  repo-owned handoff schema to archive restore/readback so local evidence
-  archives with `changerequest_handoff_packet` cannot be silently trusted when
-  invalid. Next v4 planning should decide whether to open the next authoring
-  milestone or keep hardening archive/API evidence surfaces.
+- JER-216 is the current authoring-freedom slice after the handoff hardening
+  bridge. It lets engineers capture a selected sandbox subsystem or multi-node
+  draft selection as a reusable template, reinsert it with fresh draft ids, and
+  preserve component/subsystem provenance through draft export/import and local
+  evidence archive checksums. The template remains sandbox metadata with
+  `truth_effect: none`.
 
 Runtime v3 implementation closure:
 

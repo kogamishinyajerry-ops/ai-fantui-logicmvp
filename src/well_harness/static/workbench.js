@@ -7569,6 +7569,8 @@ function installEditableWorkbenchShell() {
   const opCatalogStatus = document.getElementById("workbench-op-catalog-status");
   const componentLibraryButtons = Array.from(shell.querySelectorAll("[data-component-template-id]"));
   const componentLibraryStatus = document.getElementById("workbench-component-library-status");
+  const captureSubsystemTemplateBtn = document.getElementById("workbench-capture-subsystem-template-btn");
+  const insertCapturedTemplateBtn = document.getElementById("workbench-insert-captured-template-btn");
   const deriveBtn = document.getElementById("workbench-derive-draft-btn");
   const runSandboxBtn = document.getElementById("workbench-run-sandbox-btn");
   const draftLabel = document.getElementById("workbench-draft-status-label");
@@ -7712,6 +7714,8 @@ function installEditableWorkbenchShell() {
   let nextDraftNodeIndex = 1;
   let selectedCatalogOp = "and";
   let lastComponentTemplateId = "";
+  let capturedSubsystemTemplates = [];
+  let nextCapturedSubsystemTemplateIndex = 1;
   let nextSubsystemGroupIndex = 1;
   let subsystemGroups = [];
   let draftEdges = [
@@ -7793,6 +7797,7 @@ function installEditableWorkbenchShell() {
     },
   };
   const componentLibraryVersion = "editable-component-library.v1";
+  const capturedSubsystemTemplateVersion = "editable-captured-subsystem-template.v1";
   const componentLibraryTemplates = {
     single_and_gate: {
       id: "single_and_gate",
@@ -7840,22 +7845,204 @@ function installEditableWorkbenchShell() {
   }
 
   function componentTemplateById(templateId) {
-    return componentLibraryTemplates[templateId] || null;
+    const id = String(templateId || "").trim();
+    return componentLibraryTemplates[id] || capturedSubsystemTemplates.find((template) => template.id === id) || null;
   }
 
   function componentTemplateIds() {
-    return Object.keys(componentLibraryTemplates).sort();
+    return [
+      ...Object.keys(componentLibraryTemplates),
+      ...capturedSubsystemTemplates.map((template) => template.id),
+    ].sort();
+  }
+
+  function capturedSubsystemTemplateSnapshot() {
+    return capturedSubsystemTemplates.map((template) => cloneJson(template));
   }
 
   function buildComponentLibrarySummary() {
+    const capturedTemplates = capturedSubsystemTemplateSnapshot();
     return {
       version: componentLibraryVersion,
       template_ids: componentTemplateIds(),
       template_count: componentTemplateIds().length,
       last_template_id: lastComponentTemplateId || null,
+      captured_template_version: capturedSubsystemTemplateVersion,
+      captured_template_ids: capturedTemplates.map((template) => template.id),
+      captured_template_count: capturedTemplates.length,
+      last_captured_template_id: capturedTemplates.length
+        ? capturedTemplates[capturedTemplates.length - 1].id
+        : null,
+      captured_templates: capturedTemplates,
       candidate_state: "sandbox_candidate",
       truth_effect: "none",
     };
+  }
+
+  function refreshCapturedSubsystemTemplateControls() {
+    if (insertCapturedTemplateBtn) {
+      insertCapturedTemplateBtn.disabled = capturedSubsystemTemplates.length === 0;
+    }
+    if (captureSubsystemTemplateBtn) {
+      captureSubsystemTemplateBtn.disabled = false;
+    }
+  }
+
+  function normalizeCapturedTemplateLabel(value, fallbackIndex) {
+    const text = String(value === null || value === undefined ? "" : value).trim();
+    return text || `Captured subsystem ${fallbackIndex || 1}`;
+  }
+
+  function normalizeCapturedTemplateNodeRecord(record, fallbackIndex) {
+    if (!record || typeof record !== "object" || Array.isArray(record)) return null;
+    const op = operationCatalogEntry(record.op || record.op_catalog_entry || record.opCatalogEntry || "and").op;
+    return {
+      original_node_id: String(record.original_node_id || record.originalNodeId || record.id || "").trim(),
+      label: String(record.label || `Captured node ${fallbackIndex || 1}`),
+      op,
+      rule_count: String(record.rule_count || record.ruleCount || operationCatalogEntry(op).rule_count || "0"),
+      evidence: String(record.evidence || "evidence_gap"),
+      source_ref: String(record.source_ref || record.sourceRef || "ui_draft.component_library.capture.node"),
+      op_catalog_entry: op,
+      hardware_binding: normalizeInterfaceBinding(
+        record.hardware_binding || record.hardwareBinding || {},
+        "node_template",
+        String(record.original_node_id || record.originalNodeId || record.id || fallbackIndex || "unknown"),
+      ),
+      port_contract: record.port_contract || record.portContract || null,
+      rules: Array.isArray(record.rules) ? cloneJson(record.rules) : [],
+      x_offset: Number.parseFloat(record.x_offset || record.xOffset || "0") || 0,
+      y_offset: Number.parseFloat(record.y_offset || record.yOffset || "0") || 0,
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    };
+  }
+
+  function normalizeCapturedTemplateEdgeRecord(record, fallbackIndex) {
+    if (!record || typeof record !== "object" || Array.isArray(record)) return null;
+    return {
+      original_edge_id: String(record.original_edge_id || record.originalEdgeId || record.id || "").trim(),
+      source_index: Number.parseInt(record.source_index || record.sourceIndex || "0", 10) || 0,
+      target_index: Number.parseInt(record.target_index || record.targetIndex || "0", 10) || 0,
+      source_port_id: record.source_port_id ? String(record.source_port_id) : undefined,
+      target_port_id: record.target_port_id ? String(record.target_port_id) : undefined,
+      signal_id: record.signal_id ? String(record.signal_id) : undefined,
+      value_type: normalizePortValueType(record.value_type || record.valueType || "boolean"),
+      unit: String(record.unit || ""),
+      required: normalizePortRequired(record.required),
+      source_ref: String(record.source_ref || record.sourceRef || `ui_draft.component_library.capture.edge.${fallbackIndex || 1}`),
+      hardware_binding: normalizeInterfaceBinding(
+        record.hardware_binding || record.hardwareBinding || {},
+        "edge_template",
+        String(record.original_edge_id || record.originalEdgeId || record.id || fallbackIndex || "unknown"),
+      ),
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    };
+  }
+
+  function normalizeCapturedSubsystemTemplateRecord(record, fallbackIndex) {
+    if (!record || typeof record !== "object" || Array.isArray(record)) return null;
+    const id = String(record.id || `captured_subsystem_template_${fallbackIndex || 1}`).trim();
+    if (!id) return null;
+    const nodes = (Array.isArray(record.nodes) ? record.nodes : [])
+      .map((node, index) => normalizeCapturedTemplateNodeRecord(node, index + 1))
+      .filter(Boolean);
+    const edges = (Array.isArray(record.edges) ? record.edges : [])
+      .map((edge, index) => normalizeCapturedTemplateEdgeRecord(edge, index + 1))
+      .filter((edge) => edge && edge.source_index >= 0 && edge.target_index >= 0);
+    const subsystem = normalizeSubsystemGroupRecord(
+      record.subsystem || record.subsystem_group || record.subsystemGroup || {
+        id: `captured_subsystem_${fallbackIndex || 1}`,
+        name: record.label,
+        node_ids: nodes.map((node) => node.original_node_id).filter(Boolean),
+      },
+      fallbackIndex || 1,
+    ) || {
+      id: `captured_subsystem_${fallbackIndex || 1}`,
+      name: normalizeCapturedTemplateLabel(record.label, fallbackIndex),
+      node_ids: nodes.map((node) => node.original_node_id).filter(Boolean),
+      candidate_state: "sandbox_candidate",
+      source_ref: `ui_draft.component_library.${id}.subsystem`,
+      truth_effect: "none",
+    };
+    const normalized = {
+      id,
+      kind: "well-harness-workbench-captured-subsystem-template",
+      version: 1,
+      template_version: capturedSubsystemTemplateVersion,
+      label: normalizeCapturedTemplateLabel(record.label || subsystem.name, fallbackIndex),
+      short_label: String(record.short_label || record.shortLabel || "CAP").slice(0, 4).toUpperCase() || "CAP",
+      captured_at: String(record.captured_at || record.capturedAt || "browser_local_draft"),
+      capture_source: String(record.capture_source || record.captureSource || "ui_draft.component_library.capture"),
+      subsystem,
+      nodes,
+      edges,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+    return {
+      ...normalized,
+      checksum: editableDraftHash(stableEvidenceArchiveJson(normalized)),
+    };
+  }
+
+  function normalizeCapturedSubsystemTemplates(records) {
+    const normalized = [];
+    const usedIds = new Set();
+    for (const record of Array.isArray(records) ? records : []) {
+      const template = normalizeCapturedSubsystemTemplateRecord(record, normalized.length + 1);
+      if (!template || usedIds.has(template.id)) continue;
+      usedIds.add(template.id);
+      normalized.push(template);
+    }
+    nextCapturedSubsystemTemplateIndex = 1;
+    while (usedIds.has(`captured_subsystem_template_${nextCapturedSubsystemTemplateIndex}`)) {
+      nextCapturedSubsystemTemplateIndex += 1;
+    }
+    return normalized;
+  }
+
+  function nextCapturedSubsystemTemplateId() {
+    const usedIds = new Set(capturedSubsystemTemplates.map((template) => template.id));
+    while (usedIds.has(`captured_subsystem_template_${nextCapturedSubsystemTemplateIndex}`)) {
+      nextCapturedSubsystemTemplateIndex += 1;
+    }
+    const templateId = `captured_subsystem_template_${nextCapturedSubsystemTemplateIndex}`;
+    nextCapturedSubsystemTemplateIndex += 1;
+    return templateId;
+  }
+
+  function remapTemplateValue(value, idMap) {
+    if (typeof value === "string") {
+      let remapped = value;
+      const remapEntries = Object.entries(idMap || {})
+        .filter(([sourceId, targetId]) => sourceId && targetId)
+        .sort(([left], [right]) => right.length - left.length);
+      const placeholders = remapEntries.map((_, index) => `__WB_TEMPLATE_REMAP_${index}__`);
+      remapEntries.forEach(([sourceId], index) => {
+        remapped = remapped.split(sourceId).join(placeholders[index]);
+      });
+      remapEntries.forEach(([, targetId], index) => {
+        remapped = remapped.split(placeholders[index]).join(targetId);
+      });
+      for (const placeholder of placeholders) {
+        if (remapped.includes(placeholder)) {
+          remapped = remapped.split(placeholder).join("");
+        }
+      }
+      return remapped;
+    }
+    if (Array.isArray(value)) {
+      return value.map((item) => remapTemplateValue(item, idMap));
+    }
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value).map(([key, item]) => [key, remapTemplateValue(item, idMap)]),
+      );
+    }
+    return value;
   }
 
   function setSelectedOperationCatalogEntry(op) {
@@ -9251,6 +9438,7 @@ function installEditableWorkbenchShell() {
       node.removeAttribute("data-rule-source-signal");
       node.removeAttribute("data-rule-comparison");
       node.removeAttribute("data-rule-threshold-json");
+      node.removeAttribute("data-rules-json");
       node.removeAttribute("data-rule-parameters-touched");
       return [];
     }
@@ -9259,6 +9447,7 @@ function installEditableWorkbenchShell() {
     node.setAttribute("data-rule-source-signal", firstRule.source_signal_id);
     node.setAttribute("data-rule-comparison", firstRule.comparison);
     node.setAttribute("data-rule-threshold-json", JSON.stringify(firstRule.threshold_value));
+    node.setAttribute("data-rules-json", JSON.stringify(normalizedRules));
     node.setAttribute("data-rule-parameters-touched", "true");
     node.setAttribute("data-rule-count", String(normalizedRules.length));
     updateNodeDisplay(node);
@@ -9268,6 +9457,17 @@ function installEditableWorkbenchShell() {
   function nodeDraftRules(node) {
     if (!node || !nodeDraftRulesTouched(node)) return [];
     const nodeId = node.getAttribute("data-editable-node-id") || "unknown";
+    const rulesJson = node.getAttribute("data-rules-json");
+    if (rulesJson) {
+      try {
+        const parsed = JSON.parse(rulesJson);
+        if (Array.isArray(parsed)) {
+          return parsed.map((rule) => normalizeNodeDraftRule(rule, nodeId));
+        }
+      } catch (_err) {
+        // Fall back to the legacy single-rule attributes below.
+      }
+    }
     return [
       normalizeNodeDraftRule({
         name: node.getAttribute("data-rule-name"),
@@ -11056,6 +11256,7 @@ function installEditableWorkbenchShell() {
       selectedCatalogOp,
       viewportState: viewportStateSnapshot(),
       subsystemGroups: subsystemGroupsSnapshot(),
+      capturedSubsystemTemplates: capturedSubsystemTemplateSnapshot(),
       nodes: nodes.map((node) => editableNodeState(node)),
       edges: draftEdges.map((edge) => ({ ...edge })),
     };
@@ -11114,6 +11315,14 @@ function installEditableWorkbenchShell() {
     subsystemGroups = normalizeSubsystemGroups(
       state.subsystemGroups || state.subsystem_groups || subsystemGroupsFromNodeStates(nodeStates),
     );
+    capturedSubsystemTemplates = normalizeCapturedSubsystemTemplates(
+      state.capturedSubsystemTemplates
+        || state.captured_subsystem_templates
+        || state.capturedTemplates
+        || state.captured_templates
+        || capturedSubsystemTemplates,
+    );
+    refreshCapturedSubsystemTemplateControls();
     for (const existing of Array.from(shell.querySelectorAll('[data-draft-node="true"]'))) {
       existing.remove();
     }
@@ -11562,22 +11771,29 @@ function installEditableWorkbenchShell() {
     persistDraft();
   }
 
-  function componentTemplateNodeState(template, nodeTemplate, index, baseX, baseY) {
-    const nodeId = nextDraftNodeId();
+  function componentTemplateNodeState(template, nodeTemplate, index, baseX, baseY, idMap) {
+    const nodeId = nodeTemplate.__new_node_id || nextDraftNodeId();
     const catalogEntry = operationCatalogEntry(nodeTemplate.op || "and");
+    const remappedBinding = remapTemplateValue(nodeTemplate.hardware_binding || nodeTemplate.hardwareBinding || {}, idMap || {});
+    const remappedPortContract = remapTemplateValue(
+      nodeTemplate.port_contract || nodeTemplate.portContract || portContractForCatalogNode(nodeId, catalogEntry),
+      idMap || {},
+    );
+    const remappedRules = remapTemplateValue(nodeTemplate.rules || [], idMap || {});
     return {
       id: nodeId,
       label: nodeTemplate.label || template.label || catalogEntry.label,
       op: catalogEntry.op,
       ruleCount: String(nodeTemplate.rule_count || catalogEntry.rule_count || "0"),
-      evidence: "evidence_gap",
+      evidence: String(nodeTemplate.evidence || "evidence_gap"),
       sourceRef: `ui_draft.component_library.${template.id}.node.${index + 1}`,
       op_catalog_entry: catalogEntry.op,
-      hardware_binding: normalizeInterfaceBinding({}, "node", nodeId),
+      hardware_binding: normalizeInterfaceBinding(remappedBinding, "node", nodeId),
       port_contract: {
-        ...portContractForCatalogNode(nodeId, catalogEntry),
+        ...normalizePortContract(remappedPortContract, nodeId),
         source_ref: `ui_draft.component_library.${template.id}.port_contract.${index + 1}`,
       },
+      rules: Array.isArray(remappedRules) ? remappedRules : [],
       component_template: {
         template_id: template.id,
         template_label: template.label,
@@ -11606,9 +11822,18 @@ function installEditableWorkbenchShell() {
     lastComponentTemplateId = template.id;
     const baseX = 34 + (nextDraftNodeIndex % 5) * 8;
     const baseY = 26 + (nextDraftNodeIndex % 4) * 10;
-    const createdNodes = (template.nodes || [])
+    const preparedNodeTemplates = (template.nodes || []).map((nodeTemplate) => ({
+      ...nodeTemplate,
+      __new_node_id: nextDraftNodeId(),
+    }));
+    const idMap = {};
+    for (const nodeTemplate of preparedNodeTemplates) {
+      const sourceId = String(nodeTemplate.original_node_id || nodeTemplate.originalNodeId || "").trim();
+      if (sourceId) idMap[sourceId] = nodeTemplate.__new_node_id;
+    }
+    const createdNodes = preparedNodeTemplates
       .map((nodeTemplate, index) => (
-        createEditableNodeElement(componentTemplateNodeState(template, nodeTemplate, index, baseX, baseY))
+        createEditableNodeElement(componentTemplateNodeState(template, nodeTemplate, index, baseX, baseY, idMap))
       ))
       .filter(Boolean);
     refreshEditableNodes();
@@ -11619,13 +11844,14 @@ function installEditableWorkbenchShell() {
       const targetId = editableNodeId(targetNode);
       if (!sourceId || !targetId) continue;
       const edgeId = `edge_component_${template.id}_${sourceId}_${targetId}`;
+      const remappedBinding = remapTemplateValue(edgeTemplate.hardware_binding || edgeTemplate.hardwareBinding || {}, idMap);
       draftEdges.push({
         id: edgeId,
         source: sourceId,
         target: targetId,
-        source_port_id: `${sourceId}:out`,
-        target_port_id: `${targetId}:in`,
-        signal_id: `${sourceId}__to__${targetId}`,
+        source_port_id: remapTemplateValue(edgeTemplate.source_port_id || edgeTemplate.sourcePortId || `${sourceId}:out`, idMap),
+        target_port_id: remapTemplateValue(edgeTemplate.target_port_id || edgeTemplate.targetPortId || `${targetId}:in`, idMap),
+        signal_id: remapTemplateValue(edgeTemplate.signal_id || edgeTemplate.signalId || `${sourceId}__to__${targetId}`, idMap),
         value_type: normalizePortValueType(edgeTemplate.value_type || "boolean"),
         unit: String(edgeTemplate.unit || ""),
         required: normalizePortRequired(edgeTemplate.required),
@@ -11637,8 +11863,18 @@ function installEditableWorkbenchShell() {
           candidate_state: "sandbox_candidate",
           truth_effect: "none",
         },
-        hardware_binding: normalizeInterfaceBinding({}, "edge", edgeId),
+        hardware_binding: normalizeInterfaceBinding(remappedBinding, "edge", edgeId),
       });
+    }
+    if (template.subsystem || template.subsystem_group || template.subsystemGroup) {
+      const groupId = nextSubsystemGroupId();
+      subsystemGroups.push(normalizeSubsystemGroupRecord({
+        id: groupId,
+        name: `${normalizeCapturedTemplateLabel(template.label, subsystemGroups.length + 1)} copy`,
+        node_ids: createdNodes.map((node) => editableNodeId(node)).filter(Boolean),
+        source_ref: `ui_draft.component_library.${template.id}.subsystem`,
+        truth_effect: "none",
+      }, subsystemGroups.length + 1));
     }
     refreshEditableNodes();
     selectedNode = createdNodes[createdNodes.length - 1] || selectedNode;
@@ -11655,6 +11891,129 @@ function installEditableWorkbenchShell() {
     updateEditableDraftHash();
     persistDraft();
     return createdNodes;
+  }
+
+  function selectedNodesForSubsystemTemplateCapture() {
+    refreshEditableNodes();
+    const group = selectedSubsystemGroup();
+    if (group && group.node_ids.length) {
+      return group.node_ids
+        .map((nodeId) => nodes.find((node) => editableNodeId(node) === nodeId))
+        .filter((node) => node && node.getAttribute("data-draft-node") === "true");
+    }
+    return selectedEditableDraftNodes();
+  }
+
+  function captureSelectedSubsystemTemplate() {
+    const group = selectedSubsystemGroup();
+    const sourceNodes = selectedNodesForSubsystemTemplateCapture();
+    if (!group && sourceNodes.length < 2) {
+      if (componentLibraryStatus) {
+        componentLibraryStatus.textContent = "Select a subsystem or at least two draft nodes before capture.";
+      }
+      return null;
+    }
+    if (!sourceNodes.length) {
+      if (componentLibraryStatus) {
+        componentLibraryStatus.textContent = "No draft nodes available for capture.";
+      }
+      return null;
+    }
+    recordEditableHistory("capture_subsystem_template");
+    const templateId = nextCapturedSubsystemTemplateId();
+    const sourceNodeIds = sourceNodes.map((node) => editableNodeId(node)).filter(Boolean);
+    const sourceNodeIdSet = new Set(sourceNodeIds);
+    const positions = sourceNodes.map((node) => editableNodePosition(node));
+    const centerX = positions.reduce((total, position) => total + position.x, 0) / positions.length;
+    const centerY = positions.reduce((total, position) => total + position.y, 0) / positions.length;
+    const templateNodes = sourceNodes.map((node, index) => {
+      const state = editableNodeState(node);
+      const position = positions[index];
+      return normalizeCapturedTemplateNodeRecord({
+        original_node_id: state.id,
+        label: state.label,
+        op: state.op,
+        rule_count: state.ruleCount,
+        evidence: state.evidence,
+        source_ref: state.sourceRef,
+        op_catalog_entry: state.op_catalog_entry,
+        hardware_binding: state.hardware_binding,
+        port_contract: state.port_contract || portContractForCatalogNode(state.id, operationCatalogEntry(state.op)),
+        rules: state.rules || [],
+        x_offset: Number((position.x - centerX).toFixed(2)),
+        y_offset: Number((position.y - centerY).toFixed(2)),
+        candidate_state: "sandbox_candidate",
+        truth_effect: "none",
+      }, index + 1);
+    }).filter(Boolean);
+    const templateEdges = draftEdges
+      .filter((edge) => sourceNodeIdSet.has(edge.source) && sourceNodeIdSet.has(edge.target))
+      .map((edge, index) => normalizeCapturedTemplateEdgeRecord({
+        original_edge_id: edge.id,
+        source_index: sourceNodeIds.indexOf(edge.source),
+        target_index: sourceNodeIds.indexOf(edge.target),
+        source_port_id: edge.source_port_id || `${edge.source}:out`,
+        target_port_id: edge.target_port_id || `${edge.target}:in`,
+        signal_id: edge.signal_id || `${edge.source}__to__${edge.target}`,
+        value_type: edge.value_type || "boolean",
+        unit: edge.unit || "",
+        required: edge.required,
+        source_ref: edge.source_ref || `ui_draft.component_library.${templateId}.edge.${index + 1}`,
+        hardware_binding: edgeInterfaceBinding(edge),
+        candidate_state: "sandbox_candidate",
+        truth_effect: "none",
+      }, index + 1))
+      .filter(Boolean);
+    const sourceSubsystem = normalizeSubsystemGroupRecord({
+      id: group ? group.id : `captured_subsystem_${templateId}`,
+      name: group ? group.name : normalizeCapturedTemplateLabel(
+        subsystemNameInput && subsystemNameInput.value,
+        capturedSubsystemTemplates.length + 1,
+      ),
+      node_ids: sourceNodeIds,
+      source_ref: group ? group.source_ref : `ui_draft.component_library.${templateId}.subsystem`,
+      truth_effect: "none",
+    }, capturedSubsystemTemplates.length + 1);
+    const template = normalizeCapturedSubsystemTemplateRecord({
+      id: templateId,
+      label: sourceSubsystem ? sourceSubsystem.name : `Captured subsystem ${capturedSubsystemTemplates.length + 1}`,
+      short_label: "CAP",
+      capture_source: group
+        ? `ui_draft.subsystem_group.${group.id}`
+        : "ui_draft.component_library.multi_select",
+      subsystem: sourceSubsystem,
+      nodes: templateNodes,
+      edges: templateEdges,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    }, capturedSubsystemTemplates.length + 1);
+    if (!template) return null;
+    capturedSubsystemTemplates = normalizeCapturedSubsystemTemplates([...capturedSubsystemTemplates, template]);
+    lastComponentTemplateId = template.id;
+    shell.setAttribute("data-draft-state", "derived");
+    refreshCapturedSubsystemTemplateControls();
+    renderInspector();
+    updateEditableDraftHash();
+    persistDraft();
+    if (draftLabel) draftLabel.textContent = "sandbox_candidate captured subsystem template pending";
+    if (componentLibraryStatus) {
+      componentLibraryStatus.textContent =
+        `${template.short_label} · captured ${template.nodes.length} node(s). Truth effect: none.`;
+    }
+    return template;
+  }
+
+  function insertLatestCapturedSubsystemTemplate() {
+    const latest = capturedSubsystemTemplates[capturedSubsystemTemplates.length - 1];
+    if (!latest) {
+      if (componentLibraryStatus) {
+        componentLibraryStatus.textContent = "No captured subsystem template available.";
+      }
+      refreshCapturedSubsystemTemplateControls();
+      return [];
+    }
+    return instantiateComponentTemplate(latest.id);
   }
 
   function duplicateEditableNodeFromSource(sourceNode, offsetIndex) {
@@ -13730,6 +14089,27 @@ function installEditableWorkbenchShell() {
     if (payload.component_library && payload.component_library.truth_effect !== "none") {
       throw new Error("component_library truth_effect must be none");
     }
+    if (payload.component_library && payload.component_library.captured_templates !== undefined) {
+      if (!Array.isArray(payload.component_library.captured_templates)) {
+        throw new Error("component_library captured_templates must be an array");
+      }
+      for (const template of payload.component_library.captured_templates) {
+        if (!template || typeof template !== "object" || Array.isArray(template)) {
+          throw new Error("component_library captured_templates entries must be objects");
+        }
+        if (template.candidate_state !== "sandbox_candidate") {
+          throw new Error("captured subsystem template candidate_state must be sandbox_candidate");
+        }
+        if (template.truth_effect !== "none") {
+          throw new Error("captured subsystem template truth_effect must be none");
+        }
+      }
+    }
+    if (payload.component_library && payload.component_library.captured_subsystem_templates !== undefined) {
+      if (!Array.isArray(payload.component_library.captured_subsystem_templates)) {
+        throw new Error("component_library captured_subsystem_templates must be an array");
+      }
+    }
     if (payload.subsystem_groups !== undefined && !Array.isArray(payload.subsystem_groups)) {
       throw new Error("subsystem_groups must be an array when present");
     }
@@ -13856,6 +14236,12 @@ function installEditableWorkbenchShell() {
     const importedCatalog = validated.operation_catalog || {};
     const importedComponentLibrary = validated.component_library || {};
     lastComponentTemplateId = String(importedComponentLibrary.last_template_id || "");
+    capturedSubsystemTemplates = normalizeCapturedSubsystemTemplates(
+      importedComponentLibrary.captured_templates
+        || importedComponentLibrary.captured_subsystem_templates
+        || [],
+    );
+    refreshCapturedSubsystemTemplateControls();
     lastInterfaceMatrixValidationReport = validated.interface_matrix_validation || null;
     if (interfaceMatrixValidationOutput) {
       interfaceMatrixValidationOutput.value = lastInterfaceMatrixValidationReport
@@ -15382,6 +15768,18 @@ function installEditableWorkbenchShell() {
       setEditorTool("select");
     });
   }
+  if (captureSubsystemTemplateBtn) {
+    captureSubsystemTemplateBtn.addEventListener("click", () => {
+      captureSelectedSubsystemTemplate();
+      setEditorTool("select");
+    });
+  }
+  if (insertCapturedTemplateBtn) {
+    insertCapturedTemplateBtn.addEventListener("click", () => {
+      insertLatestCapturedSubsystemTemplate();
+      setEditorTool("select");
+    });
+  }
   if (createSubsystemBtn) {
     createSubsystemBtn.addEventListener("click", () => groupSelectedDraftNodes());
   }
@@ -15617,6 +16015,7 @@ function installEditableWorkbenchShell() {
     deleteDraftSnapshotBtn.addEventListener("click", () => deleteNamedDraftSnapshot());
   }
   setSelectedOperationCatalogEntry(selectedCatalogOp);
+  refreshCapturedSubsystemTemplateControls();
   renderDraftSnapshotManager();
   applyViewportTransform();
   if (selectedNode) {

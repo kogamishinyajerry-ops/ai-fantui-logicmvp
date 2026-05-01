@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-215 archive restore handoff validation in review
-last_updated: "2026-05-01T00:30:00.000+08:00"
+status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-216 subsystem template capture in review
+last_updated: "2026-05-01T01:20:00.000+08:00"
 last_activity: 2026-05-01
 progress:
   total_phases: 44
   completed_phases: 43
   total_plans: 2
   completed_plans: 1
-  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates. JER-207 adds sandbox-only subsystem group/rename/ungroup metadata. JER-208 adds sandbox-only hardware interface design schema/loader/validator/hash evidence. JER-209 adds a connector/pin map editor, draft round-trip, and archive checksum. JER-210 adds a selected-owner Hardware Evidence Inspector v2 packet for LRU/cable/connector/port/pin coverage and evidence gaps. JER-211 adds a selected graph debug timeline packet linked to current scenario, sandbox diff status, ports, and hardware overlay. JER-212 adds an archive-ready candidate-to-baseline diff review v2 packet that keeps certification claim none. JER-213 adds a structured ChangeRequest handoff packet with Outcome/Acceptance/Boundaries/Evidence/Red lines/Test delta placeholders and no live Linear mutation. JER-214 adds a repo-owned handoff schema, validator, canonical hash contract, validation-suite entry, and stable browser checksum serialization. JER-215 validates embedded ChangeRequest handoff packets during archive restore/readback and keeps old archives without handoff packets backward-compatible. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates. JER-207 adds sandbox-only subsystem group/rename/ungroup metadata. JER-208 adds sandbox-only hardware interface design schema/loader/validator/hash evidence. JER-209 adds a connector/pin map editor, draft round-trip, and archive checksum. JER-210 adds a selected-owner Hardware Evidence Inspector v2 packet for LRU/cable/connector/port/pin coverage and evidence gaps. JER-211 adds a selected graph debug timeline packet linked to current scenario, sandbox diff status, ports, and hardware overlay. JER-212 adds an archive-ready candidate-to-baseline diff review v2 packet that keeps certification claim none. JER-213 adds a structured ChangeRequest handoff packet with Outcome/Acceptance/Boundaries/Evidence/Red lines/Test delta placeholders and no live Linear mutation. JER-214 adds a repo-owned handoff schema, validator, canonical hash contract, validation-suite entry, and stable browser checksum serialization. JER-215 validates embedded ChangeRequest handoff packets during archive restore/readback and keeps old archives without handoff packets backward-compatible. JER-216 captures selected sandbox subsystems as reusable templates, reinserts them with fresh draft ids, and archives template metadata/checksums with truth_effect none. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
@@ -19,10 +19,10 @@ Last activity: 2026-05-01
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
-**Current position**: JER-204 through JER-214 are merged on the v4 line and
-JER-215 is in review. JER-215 extends the repo-owned ChangeRequest handoff
-schema into archive restore/readback, so embedded handoff packets are validated
-before the restore payload is trusted.
+**Current position**: JER-204 through JER-215 are merged on the v4 line and
+JER-216 is in review. JER-216 extends the authoring surface so selected sandbox
+subsystems can be captured as reusable templates, reinserted with fresh draft
+ids, and carried through draft export/import and evidence archive checksums.
 
 **Linear control plane**:
 
@@ -40,8 +40,10 @@ before the restore payload is trusted.
 - JER-212 is Done after adding candidate-to-baseline diff review v2 evidence.
 - JER-213 is Done after adding structured ChangeRequest handoff packet evidence.
 - JER-214 is Done after adding handoff schema and stable serialization evidence.
-- JER-215 is in review after adding archive restore/readback validation for
-  embedded ChangeRequest handoff packets.
+- JER-215 is Done after adding archive restore/readback validation for embedded
+  ChangeRequest handoff packets.
+- JER-216 is in review after adding subsystem template capture/reinsert
+  evidence.
 
 **Runtime v3 closure summary**:
 
@@ -200,6 +202,20 @@ handoff packet.
   `not_present` rather than blocking restore.
 - No controller truth, backend truth, adapter, frozen YAML, C919 packet,
   truth-level, DAL, or PSSA behavior changes are introduced by this slice.
+
+**JER-216 subsystem template capture closure**:
+
+- The component library now captures a selected subsystem or multi-selected
+  sandbox draft node set as a reusable template.
+- Captured templates preserve node ops, labels, typed ports, rules, internal
+  edges, subsystem metadata, hardware/interface overlay metadata, and explicit
+  sandbox provenance.
+- Inserting a captured template creates fresh draft node ids and a new
+  sandbox-only subsystem group; it does not mutate certified baseline nodes or
+  controller truth.
+- Draft export/import and local evidence archives carry captured template
+  metadata under `component_library` with checksum coverage and
+  `truth_effect: none`.
 
 **Hard boundaries**:
 
