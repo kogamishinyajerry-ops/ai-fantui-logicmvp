@@ -2286,9 +2286,20 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
     assert edge["signal_id"] == "draft_node_1_compare_output__to__draft_node_2_between_input"
     assert edge["value_type"] == "number"
     assert edge["required"] is True
+    assert edge["edge_label"] == "draft_node_1:out -> draft_node_2:in"
+    assert edge["route_metadata"]["version"] == "workbench-edge-route-metadata.v1"
+    assert edge["route_metadata"]["routing_mode"] == "orthogonal"
+    assert edge["route_metadata"]["source_port_id"] == "draft_node_1:out"
+    assert edge["route_metadata"]["target_port_id"] == "draft_node_2:in"
+    assert edge["route_metadata"]["truth_effect"] == "none"
     assert edge["hardware_binding"]["truth_effect"] == "none"
     assert draft["port_contract_summary"]["edge_contracts"] >= 1
+    assert draft["port_compatibility_report"]["status"] == "pass"
     assert draft["truth_level_impact"] == "none"
+    edge_path = page.locator(f'[data-editable-edge-id="{edge["id"]}"]')
+    assert edge_path.get_attribute("data-edge-label") == "draft_node_1:out -> draft_node_2:in"
+    assert edge_path.get_attribute("data-route-mode") == "orthogonal"
+    assert page.locator(f'[data-editable-edge-label-id="{edge["id"]}"]').text_content().strip() == "draft_node_1:out -> draft_node_2:in"
 
     source_handle.click()
     target_handle.click()
@@ -2299,6 +2310,47 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
         if item["source"] == "draft_node_1" and item["target"] == "draft_node_2"
     ]
     assert len(matching_edges) == 1
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    page.fill("#workbench-draft-json-buffer", draft_json)
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    imported_edge = next(
+        item for item in imported["edges"]
+        if item["source"] == "draft_node_1" and item["target"] == "draft_node_2"
+    )
+    assert imported_edge["edge_label"] == edge["edge_label"]
+    assert imported_edge["route_metadata"] == edge["route_metadata"]
+
+    page.locator(f'[data-editable-edge-id="{imported_edge["id"]}"]').dispatch_event("click")
+    edge_detail = page.locator("#workbench-inspector-evidence-detail").inner_text()
+    assert "Route mode" in edge_detail
+    assert "orthogonal" in edge_detail
+    page.click('[data-editor-tool="disconnect"]')
+    page.click("#workbench-export-draft-btn")
+    disconnected = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert not [
+        item for item in disconnected["edges"]
+        if item["source"] == "draft_node_1" and item["target"] == "draft_node_2"
+    ]
+
+    page.locator(
+        '[data-port-handle-owner-id="draft_node_1"][data-port-handle-direction="out"]'
+    ).click()
+    page.locator(
+        '[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="in"]'
+    ).click()
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    archived_edge = next(
+        item for item in archive["model_json"]["edges"]
+        if item["source"] == "draft_node_1" and item["target"] == "draft_node_2"
+    )
+    assert archived_edge["edge_label"] == "draft_node_1:out -> draft_node_2:in"
+    assert archived_edge["route_metadata"]["truth_effect"] == "none"
+    assert archive["port_compatibility_report"]["status"] == "pass"
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
 def test_workbench_canvas_viewport_pan_zoom_fit_preserves_model_coordinates(demo_server, browser):  # type: ignore[no-untyped-def]

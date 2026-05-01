@@ -7746,6 +7746,7 @@ function installEditableWorkbenchShell() {
   let lastCanvasInteractionAction = "init";
   const editableGraphDocumentKind = "well-harness-workbench-editable-graph-document";
   const editableGraphDocumentVersion = "workbench-editable-graph-document.v1";
+  const edgeRouteMetadataVersion = "workbench-edge-route-metadata.v1";
   let draftEdges = [
     { id: "edge_logic1_logic2", source: "logic1", target: "logic2" },
     { id: "edge_logic2_logic3", source: "logic2", target: "logic3" },
@@ -9619,6 +9620,55 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function edgeWireLabel(edge) {
+    const contract = edgePortContract(edge);
+    return normalizedInterfaceField(
+      (edge && (edge.edge_label || edge.edgeLabel))
+      || `${contract.source_port_id} -> ${contract.target_port_id}`,
+    );
+  }
+
+  function normalizeEdgeRouteWaypoint(waypoint) {
+    if (!waypoint || typeof waypoint !== "object" || Array.isArray(waypoint)) {
+      return { x: 0, y: 0 };
+    }
+    return {
+      x: Number.parseFloat(waypoint.x) || 0,
+      y: Number.parseFloat(waypoint.y) || 0,
+    };
+  }
+
+  function normalizeEdgeRouteMetadata(edge, contractRecord) {
+    const contract = contractRecord || edgePortContract(edge);
+    const routeSource =
+      edge && typeof edge === "object" && !Array.isArray(edge)
+        ? (edge.route_metadata || edge.routeMetadata || edge.route || {})
+        : {};
+    const waypoints = Array.isArray(routeSource.waypoints)
+      ? routeSource.waypoints.map((waypoint) => normalizeEdgeRouteWaypoint(waypoint))
+      : [];
+    const routeLabel = normalizedInterfaceField(
+      (edge && (edge.edge_label || edge.edgeLabel))
+      || routeSource.edge_label
+      || routeSource.edgeLabel
+      || routeSource.label
+      || `${contract.source_port_id} -> ${contract.target_port_id}`,
+    );
+    return {
+      version: edgeRouteMetadataVersion,
+      routing_mode: normalizedInterfaceField(routeSource.routing_mode || routeSource.routingMode || "orthogonal"),
+      source_node_id: normalizedInterfaceField(edge && edge.source),
+      target_node_id: normalizedInterfaceField(edge && edge.target),
+      source_port_id: normalizedInterfaceField(contract.source_port_id),
+      target_port_id: normalizedInterfaceField(contract.target_port_id),
+      edge_label: routeLabel,
+      waypoint_count: waypoints.length,
+      waypoints,
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    };
+  }
+
   function setEdgePortContract(edge, contract) {
     if (!edge) return null;
     const source = contract && typeof contract === "object" ? contract : {};
@@ -9637,6 +9687,8 @@ function installEditableWorkbenchShell() {
     edge.value_type = normalized.value_type;
     edge.unit = normalized.unit;
     edge.required = normalized.required;
+    edge.edge_label = edgeWireLabel(edge);
+    edge.route_metadata = normalizeEdgeRouteMetadata(edge, normalized);
     return normalized;
   }
 
@@ -11686,7 +11738,10 @@ function installEditableWorkbenchShell() {
         target: String((edge && edge.target) || ""),
         source_port: String((edge && (edge.source_port || edge.sourcePort)) || ""),
         target_port: String((edge && (edge.target_port || edge.targetPort)) || ""),
-        route: edge && edge.route ? edge.route : null,
+        edge_label: String((edge && (edge.edge_label || edge.edgeLabel)) || ""),
+        route_metadata: edge && (edge.route_metadata || edge.routeMetadata || edge.route)
+          ? normalizeEvidenceArchiveValue(edge.route_metadata || edge.routeMetadata || edge.route)
+          : null,
       }))
       .sort((left, right) => left.id.localeCompare(right.id));
     return {
@@ -11904,6 +11959,8 @@ function installEditableWorkbenchShell() {
             unit: edge.unit ? String(edge.unit) : "",
             required: Boolean(edge.required),
             source_ref: edge.source_ref ? String(edge.source_ref) : undefined,
+            edge_label: edge.edge_label || edge.edgeLabel ? String(edge.edge_label || edge.edgeLabel) : undefined,
+            route_metadata: normalizeEdgeRouteMetadata(edge, edgePortContract(edge)),
             component_template: (
               edge.component_template
               && typeof edge.component_template === "object"
@@ -12017,6 +12074,8 @@ function installEditableWorkbenchShell() {
     const sourcePortId = edge.source_port_id || edge.sourcePortId || (edge.source ? `${edge.source}:out` : "");
     const targetPortId = edge.target_port_id || edge.targetPortId || edgeTargetPortId(edge);
     const compatibility = portCompatibilityForEdge(edge, collectWorkbenchTypedPorts());
+    const contract = edgePortContract(edge);
+    const routeMetadata = normalizeEdgeRouteMetadata(edge, contract);
     return {
       id: edge.id || `${edge.source}->${edge.target}`,
       source_node_id: edge.source || "unknown",
@@ -12024,6 +12083,8 @@ function installEditableWorkbenchShell() {
       source_port_id: sourcePortId || "evidence_gap",
       target_port_id: targetPortId || "evidence_gap",
       signal_id: edge.signal_id || `${edge.source || "unknown"}__to__${edge.target || "unknown"}`,
+      edge_label: edgeWireLabel(edge),
+      route_metadata: routeMetadata,
       value_type: normalizePortValueType(edge.value_type || edge.valueType || "boolean"),
       unit: String(edge.unit === null || edge.unit === undefined ? "" : edge.unit).trim(),
       required: normalizePortRequired(edge.required),
@@ -12045,6 +12106,8 @@ function installEditableWorkbenchShell() {
       `data-source-port-id="${inspectorText(payload.source_port_id)}"`,
       `data-target-port-id="${inspectorText(payload.target_port_id)}"`,
       `data-edge-signal-id="${inspectorText(payload.signal_id)}"`,
+      `data-edge-label="${inspectorText(payload.edge_label)}"`,
+      `data-route-mode="${inspectorText(payload.route_metadata.routing_mode)}"`,
       `data-edge-evidence-status="${inspectorText(payload.evidence_status)}"`,
       `data-port-compatibility="${inspectorText(payload.port_compatibility_status)}"`,
       `data-binding-quality="${inspectorText(binding.binding_quality)}"`,
@@ -12194,6 +12257,8 @@ function installEditableWorkbenchShell() {
       const source = editableNodePosition(sourceNode);
       const target = editableNodePosition(targetNode);
       const midX = (source.x + target.x) / 2;
+      const midY = (source.y + target.y) / 2;
+      const payload = edgeInspectorPayload(edge);
       paths.push([
         `<path data-editable-edge-id="${inspectorText(edge.id)}"`,
         `data-editable-edge-index="${index}"`,
@@ -12204,6 +12269,12 @@ function installEditableWorkbenchShell() {
         'tabindex="0"',
         `aria-label="${inspectorText(`Edge ${edge.source} to ${edge.target}`)}"`,
         `d="M${source.x} ${source.y} C${midX} ${source.y} ${midX} ${target.y} ${target.x} ${target.y}" />`,
+        `<text class="workbench-edge-label" data-editable-edge-label-id="${inspectorText(edge.id)}"`,
+        `data-edge-label="${inspectorText(payload.edge_label)}"`,
+        `data-route-mode="${inspectorText(payload.route_metadata.routing_mode)}"`,
+        `x="${midX}" y="${Math.max(4, midY - 1.5)}">`,
+        inspectorText(payload.edge_label),
+        "</text>",
       ].join(" "));
     }
     edgeSvg.innerHTML = paths.join("");
@@ -12837,7 +12908,7 @@ function installEditableWorkbenchShell() {
     recordEditableHistory("connect_edge");
     const newEdgeId = `edge_${sourceId}_${targetId}_${draftEdges.length + 1}`;
     const metadata = options && typeof options === "object" ? options : {};
-    draftEdges.push({
+    const newEdge = {
       id: newEdgeId,
       source: sourceId,
       target: targetId,
@@ -12851,7 +12922,10 @@ function installEditableWorkbenchShell() {
       required: normalizePortRequired(metadata.required),
       source_ref: normalizedInterfaceField(metadata.source_ref || "ui_draft.edge_tool"),
       hardware_binding: normalizeInterfaceBinding({}, "edge", newEdgeId),
-    });
+    };
+    newEdge.edge_label = edgeWireLabel(newEdge);
+    newEdge.route_metadata = normalizeEdgeRouteMetadata(newEdge, edgePortContract(newEdge));
+    draftEdges.push(newEdge);
     if (draftLabel) draftLabel.textContent = "sandbox_candidate edge edit pending";
     renderEditableEdges();
     validateEditableGraph();
@@ -14140,6 +14214,10 @@ function installEditableWorkbenchShell() {
       `<dd>${inspectorText(`${payload.target_port_direction}/${payload.target_port_value_type}`)}</dd></div>`,
       '<div><dt>Signal</dt>',
       `<dd>${inspectorText(payload.signal_id)}</dd></div>`,
+      '<div><dt>Edge label</dt>',
+      `<dd>${inspectorText(payload.edge_label)}</dd></div>`,
+      '<div><dt>Route mode</dt>',
+      `<dd>${inspectorText(payload.route_metadata.routing_mode)}</dd></div>`,
       '<div><dt>Port compatibility</dt>',
       `<dd>${inspectorText(payload.port_compatibility_status)}</dd></div>`,
       '<div><dt>Validation</dt>',
