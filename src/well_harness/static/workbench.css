@@ -5416,6 +5416,15 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-editable-edges path[aria-pressed="true"][data-port-compatibility="fail"] {
   stroke: #ff7b7b;
 }
+.workbench-edge-label {
+  fill: rgba(213, 227, 237, 0.82);
+  font-size: 2.15px;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: rgba(10, 20, 28, 0.88);
+  stroke-width: 0.6px;
+  text-anchor: middle;
+}
 .workbench-editable-canvas-note {
   position: absolute;
   left: 0.8rem;

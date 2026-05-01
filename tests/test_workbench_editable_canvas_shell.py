@@ -362,6 +362,22 @@ def test_js_wires_editable_graph_document_as_canonical_sandbox_metadata() -> Non
     assert 'truth_effect: "none"' in js
 
 
+def test_js_wires_port_wire_route_metadata_as_sandbox_only_graph_evidence() -> None:
+    js = _js()
+
+    assert "workbench-edge-route-metadata.v1" in js
+    assert "function normalizeEdgeRouteMetadata" in js
+    assert "function edgeWireLabel" in js
+    assert "edge_label" in js
+    assert "route_metadata" in js
+    assert "data-edge-label" in js
+    assert "data-route-mode" in js
+    assert "workbench-edge-label" in js
+    assert "port_compatibility_report" in js
+    assert "port_compatibility_report_checksum" in js
+    assert 'truth_effect: "none"' in js
+
+
 def test_js_wires_connector_pin_map_round_trip_as_sandbox_only_metadata() -> None:
     js = _js()
 
