@@ -7624,6 +7624,10 @@ function installEditableWorkbenchShell() {
   const diffScenario = document.getElementById("workbench-diff-scenario");
   const diffModelHash = document.getElementById("workbench-diff-model-hash");
   const diffFirstDivergence = document.getElementById("workbench-diff-first-divergence");
+  const workspaceDocumentRevisionSlot = document.getElementById("workbench-workspace-document-revision");
+  const workspaceDocumentActionCountSlot = document.getElementById("workbench-workspace-document-action-count");
+  const workspaceDocumentUndoDepthSlot = document.getElementById("workbench-workspace-document-undo-depth");
+  const workspaceDocumentRedoDepthSlot = document.getElementById("workbench-workspace-document-redo-depth");
   const diffReviewV2Panel = document.getElementById("workbench-diff-review-v2");
   const diffReviewV2Status = document.getElementById("workbench-diff-review-v2-status");
   const diffReviewV2Target = document.getElementById("workbench-diff-review-v2-target");
@@ -7728,6 +7732,12 @@ function installEditableWorkbenchShell() {
   let nextCapturedSubsystemTemplateIndex = 1;
   let nextSubsystemGroupIndex = 1;
   let subsystemGroups = [];
+  const workspaceDocumentKind = "well-harness-workbench-workspace-document";
+  const workspaceDocumentVersion = "workbench-workspace-document.v1";
+  let workspaceDocumentId = "ui_draft_workspace_document_v1";
+  let workspaceDocumentRevision = "ui_draft_pending";
+  let workspaceDocumentParentRevision = null;
+  let workspaceActionLog = [];
   let draftEdges = [
     { id: "edge_logic1_logic2", source: "logic1", target: "logic2" },
     { id: "edge_logic2_logic3", source: "logic2", target: "logic3" },
@@ -11429,6 +11439,118 @@ function installEditableWorkbenchShell() {
     );
   }
 
+  function normalizeWorkspaceActionLog(value) {
+    if (!Array.isArray(value)) return [];
+    return value
+      .filter((entry) => entry && typeof entry === "object" && !Array.isArray(entry))
+      .map((entry, index) => ({
+        index: Number.isFinite(Number(entry.index)) ? Number(entry.index) : index + 1,
+        action: String(entry.action || "edit"),
+        recorded_at: String(entry.recorded_at || entry.recordedAt || "browser_local_draft"),
+        parent_revision_id: entry.parent_revision_id || entry.parentRevisionId || null,
+        candidate_state: "sandbox_candidate",
+        truth_effect: "none",
+      }));
+  }
+
+  function normalizeWorkspaceDocumentRecord(record) {
+    if (!record || typeof record !== "object" || Array.isArray(record)) return null;
+    return {
+      document_id: String(record.document_id || record.documentId || workspaceDocumentId),
+      revision_id: String(record.revision_id || record.revisionId || workspaceDocumentRevision),
+      parent_revision_id: record.parent_revision_id || record.parentRevisionId || null,
+      action_log: normalizeWorkspaceActionLog(record.action_log || record.actionLog || []),
+    };
+  }
+
+  function adoptWorkspaceDocumentRecord(record) {
+    const normalized = normalizeWorkspaceDocumentRecord(record);
+    if (!normalized) return;
+    workspaceDocumentId = normalized.document_id || workspaceDocumentId;
+    workspaceDocumentRevision = normalized.revision_id || workspaceDocumentRevision;
+    workspaceDocumentParentRevision = normalized.parent_revision_id || null;
+    workspaceActionLog = normalized.action_log;
+  }
+
+  function workspaceActionLogDigest() {
+    return editableDraftHash(stableEvidenceArchiveJson(workspaceActionLog));
+  }
+
+  function updateWorkspaceDocumentRevision() {
+    const revisionPayload = {
+      document_id: workspaceDocumentId,
+      draft_state: shell.getAttribute("data-draft-state") || "baseline",
+      selected_node_ids: Array.from(selectedNodeIds).sort(),
+      viewport_state: viewportStateSnapshot(),
+      subsystem_groups: subsystemGroupsSnapshot(),
+      captured_subsystem_templates: capturedSubsystemTemplateSnapshot(),
+      nodes: nodes.map((node) => editableNodeState(node)),
+      edges: draftEdges.map((edge) => ({ ...edge })),
+      selected_scenario_id: selectedWorkbenchScenarioId(),
+      action_log_digest: workspaceActionLogDigest(),
+      undo_depth: undoStack.length,
+      redo_depth: redoStack.length,
+    };
+    const nextRevision = editableDraftHash(stableEvidenceArchiveJson(revisionPayload));
+    if (nextRevision !== workspaceDocumentRevision) {
+      workspaceDocumentParentRevision =
+        workspaceDocumentRevision && workspaceDocumentRevision !== "ui_draft_pending"
+          ? workspaceDocumentRevision
+          : workspaceDocumentParentRevision;
+      workspaceDocumentRevision = nextRevision;
+    }
+    return workspaceDocumentRevision;
+  }
+
+  function currentWorkspaceDocument() {
+    const revisionId = updateWorkspaceDocumentRevision();
+    return {
+      kind: workspaceDocumentKind,
+      version: workspaceDocumentVersion,
+      document_id: workspaceDocumentId,
+      revision_id: revisionId,
+      parent_revision_id: workspaceDocumentParentRevision,
+      action_count: workspaceActionLog.length,
+      action_log_digest: workspaceActionLogDigest(),
+      undo_depth: undoStack.length,
+      redo_depth: redoStack.length,
+      action_log: workspaceActionLog.map((entry) => ({ ...entry })),
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    };
+  }
+
+  function renderWorkspaceDocumentStatus(documentRecord) {
+    const record = documentRecord || currentWorkspaceDocument();
+    if (workspaceDocumentRevisionSlot) {
+      workspaceDocumentRevisionSlot.textContent = record.revision_id || "ui_draft_pending";
+    }
+    if (workspaceDocumentActionCountSlot) {
+      workspaceDocumentActionCountSlot.textContent = String(record.action_count || 0);
+    }
+    if (workspaceDocumentUndoDepthSlot) {
+      workspaceDocumentUndoDepthSlot.textContent = String(record.undo_depth || 0);
+    }
+    if (workspaceDocumentRedoDepthSlot) {
+      workspaceDocumentRedoDepthSlot.textContent = String(record.redo_depth || 0);
+    }
+  }
+
+  function recordWorkspaceAction(actionName) {
+    const parentRevision = workspaceDocumentRevision || updateWorkspaceDocumentRevision();
+    workspaceActionLog.push({
+      index: workspaceActionLog.length + 1,
+      action: String(actionName || "edit"),
+      recorded_at: "browser_local_draft",
+      parent_revision_id: parentRevision && parentRevision !== "ui_draft_pending" ? parentRevision : null,
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    });
+    if (workspaceActionLog.length > 100) workspaceActionLog = workspaceActionLog.slice(-100);
+    workspaceDocumentParentRevision =
+      parentRevision && parentRevision !== "ui_draft_pending" ? parentRevision : workspaceDocumentParentRevision;
+  }
+
   function editableNodeState(node) {
     const componentTemplate = nodeComponentTemplateMetadata(node);
     const subsystemGroup = nodeSubsystemMetadata(node);
@@ -11473,6 +11595,7 @@ function installEditableWorkbenchShell() {
       repairActionLog: repairActionLogSnapshot(),
       selectedCatalogOp,
       viewportState: viewportStateSnapshot(),
+      workspaceDocument: currentWorkspaceDocument(),
       subsystemGroups: subsystemGroupsSnapshot(),
       capturedSubsystemTemplates: capturedSubsystemTemplateSnapshot(),
       nodes: nodes.map((node) => editableNodeState(node)),
@@ -11529,6 +11652,7 @@ function installEditableWorkbenchShell() {
     if (typeof state.selectedCatalogOp === "string") {
       setSelectedOperationCatalogEntry(state.selectedCatalogOp);
     }
+    adoptWorkspaceDocumentRecord(state.workspaceDocument || state.workspace_document || null);
     const nodeStates = Array.isArray(state.nodes) ? state.nodes : [];
     subsystemGroups = normalizeSubsystemGroups(
       state.subsystemGroups || state.subsystem_groups || subsystemGroupsFromNodeStates(nodeStates),
@@ -11650,6 +11774,8 @@ function installEditableWorkbenchShell() {
     undoStack.push(serializeEditableState());
     if (undoStack.length > 50) undoStack.shift();
     redoStack.length = 0;
+    recordWorkspaceAction(_actionName || "edit");
+    renderWorkspaceDocumentStatus();
   }
 
   function undoEditableEdit() {
@@ -11661,6 +11787,8 @@ function installEditableWorkbenchShell() {
     }
     redoStack.push(serializeEditableState());
     applyEditableState(undoStack.pop());
+    recordWorkspaceAction("undo_edit");
+    renderWorkspaceDocumentStatus();
     persistDraft();
   }
 
@@ -11673,6 +11801,8 @@ function installEditableWorkbenchShell() {
     }
     undoStack.push(serializeEditableState());
     applyEditableState(redoStack.pop());
+    recordWorkspaceAction("redo_edit");
+    renderWorkspaceDocumentStatus();
     persistDraft();
   }
 
@@ -11938,6 +12068,7 @@ function installEditableWorkbenchShell() {
     const hash = editableDraftHash(stableEvidenceArchiveJson(currentDraftSnapshot()));
     shell.setAttribute("data-draft-hash", hash);
     if (draftHashLabel) draftHashLabel.textContent = hash;
+    renderWorkspaceDocumentStatus();
     return hash;
   }
 
@@ -13967,6 +14098,7 @@ function installEditableWorkbenchShell() {
         diagnosticFocus: payload.diagnosticFocus || null,
         repairActionLog: payload.repairActionLog || payload.repair_action_log || [],
         viewportState: payload.viewportState || defaultViewportState(),
+        workspaceDocument: payload.workspaceDocument || payload.workspace_document || null,
         selectedCatalogOp: payload.selectedCatalogOp,
         subsystemGroups: payload.subsystemGroups || payload.subsystem_groups || [],
         capturedSubsystemTemplates: (
@@ -14044,6 +14176,7 @@ function installEditableWorkbenchShell() {
     const selectedDebugTimeline = currentSelectedDebugTimelinePacket("snapshot");
     const candidateBaselineDiffReviewV2 = currentCandidateBaselineDiffReviewV2Report("snapshot");
     const diagnosticRepairActions = repairActionLogSnapshot();
+    const workspaceDocument = currentWorkspaceDocument();
     return {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
       system_id: "thrust-reverser",
@@ -14051,6 +14184,7 @@ function installEditableWorkbenchShell() {
       truth_level_impact: "none",
       dal_pssa_impact: "none",
       controller_truth_modified: false,
+      workspace_document: workspaceDocument,
       diagnostic_focus: currentDiagnosticFocusSummary(),
       viewport_state: viewportStateSnapshot(),
       selected_node: selected,
@@ -14147,6 +14281,7 @@ function installEditableWorkbenchShell() {
       dal_pssa_impact: "none",
       controller_truth_modified: false,
       changed_model_hash: changedModelHash,
+      workspace_document: snapshot.workspace_document,
       diagnostic_focus: snapshot.diagnostic_focus,
       viewport_state: snapshot.viewport_state,
       selected_node: snapshot.selected_node,
@@ -14204,6 +14339,40 @@ function installEditableWorkbenchShell() {
     }
     if (payload.controller_truth_modified !== false) {
       throw new Error("controller_truth_modified must be false");
+    }
+    if (
+      payload.workspace_document !== undefined
+      && (!payload.workspace_document || typeof payload.workspace_document !== "object" || Array.isArray(payload.workspace_document))
+    ) {
+      throw new Error("workspace_document must be an object when present");
+    }
+    if (payload.workspace_document !== undefined) {
+      const documentRecord = payload.workspace_document;
+      if (documentRecord.kind !== workspaceDocumentKind) {
+        throw new Error("workspace_document kind must be well-harness-workbench-workspace-document");
+      }
+      if (documentRecord.version !== workspaceDocumentVersion) {
+        throw new Error("workspace_document version must be workbench-workspace-document.v1");
+      }
+      if (documentRecord.candidate_state !== "sandbox_candidate") {
+        throw new Error("workspace_document candidate_state must be sandbox_candidate");
+      }
+      if (documentRecord.truth_effect !== "none") {
+        throw new Error("workspace_document truth_effect must be none");
+      }
+      for (const key of ["document_id", "revision_id", "action_log_digest"]) {
+        if (typeof documentRecord[key] !== "string" || !documentRecord[key]) {
+          throw new Error(`workspace_document ${key} must be a non-empty string`);
+        }
+      }
+      for (const key of ["action_count", "undo_depth", "redo_depth"]) {
+        if (!Number.isFinite(Number(documentRecord[key]))) {
+          throw new Error(`workspace_document ${key} must be numeric`);
+        }
+      }
+      if (documentRecord.action_log !== undefined && !Array.isArray(documentRecord.action_log)) {
+        throw new Error("workspace_document action_log must be an array when present");
+      }
     }
     if (!Array.isArray(payload.nodes)) {
       throw new Error("nodes must be an array");
@@ -14535,6 +14704,7 @@ function installEditableWorkbenchShell() {
       diagnosticFocus: validated.diagnostic_focus || null,
       repairActionLog: validated.repair_action_log || [],
       viewportState: validated.viewport_state || defaultViewportState(),
+      workspaceDocument: validated.workspace_document || null,
       selectedCatalogOp: importedCatalog.selected_op,
       subsystemGroups: validated.subsystem_groups || [],
       nodes: validated.nodes.map((node) => ({
@@ -15723,6 +15893,8 @@ function installEditableWorkbenchShell() {
 
   function buildWorkbenchEvidenceArchive() {
     const modelJson = buildEditableDraftExport();
+    const workspaceDocument =
+      modelJson.workspace_document || currentWorkspaceDocument();
     const hardwareBindings = collectWorkbenchHardwareBindings();
     const bindingCoverage = buildInterfaceBindingCoverageSummary(hardwareBindings);
     const hardwareBindingDiagnostics =
@@ -15789,6 +15961,7 @@ function installEditableWorkbenchShell() {
       archive_scope: "local_draft_download",
       generated_at: "browser_local_draft",
       model_json: modelJson,
+      workspace_document: workspaceDocument,
       diff_summary: diffSummary,
       scenario_metadata: scenarioMetadata,
       hardware_bindings: hardwareBindings,
@@ -15824,6 +15997,7 @@ function installEditableWorkbenchShell() {
     };
     const checksums = {
       model_json_checksum: checksumEvidenceArchiveField(modelJson),
+      workspace_document_checksum: checksumEvidenceArchiveField(workspaceDocument),
       diff_summary_checksum: checksumEvidenceArchiveField(diffSummary),
       changerequest_proof_packet_checksum: checksumEvidenceArchiveField(changeRequestProofPacket),
       changerequest_handoff_packet_checksum: checksumEvidenceArchiveField(changeRequestHandoffPacket),
