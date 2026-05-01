@@ -342,6 +342,26 @@ def test_js_wires_canvas_interaction_summary_as_sandbox_only_metadata() -> None:
     assert 'truth_effect: "none"' in js
 
 
+def test_js_wires_editable_graph_document_as_canonical_sandbox_metadata() -> None:
+    js = _js()
+
+    assert "well-harness-workbench-editable-graph-document" in js
+    assert "workbench-editable-graph-document.v1" in js
+    assert "function buildEditableGraphDocumentFromSnapshot" in js
+    assert "editable_graph_document" in js
+    assert "editable_graph_document_checksum" in js
+    assert "editable_graph_document truth_effect must be none" in js
+    assert "editable_graph_document ${key} must match draft payload" in js
+    assert "position_digest" in js
+    assert "node_count" in js
+    assert "edge_count" in js
+    assert "typed_port_count" in js
+    assert "subsystem_group_count" in js
+    assert "selected_state" in js
+    assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'truth_effect: "none"' in js
+
+
 def test_js_wires_connector_pin_map_round_trip_as_sandbox_only_metadata() -> None:
     js = _js()
 

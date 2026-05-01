@@ -1644,6 +1644,82 @@ def test_workbench_workspace_document_round_trips_with_archive_checksum(demo_ser
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_editable_graph_document_round_trips_export_import_archive(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-component-template-id="two_stage_interlock"]')
+    page.fill("#workbench-subsystem-name", "Canonical graph cell")
+    page.click("#workbench-create-subsystem-btn")
+    page.select_option("#workbench-subsystem-interface-direction", "output")
+    page.fill("#workbench-subsystem-interface-label", "Deploy command")
+    page.fill("#workbench-subsystem-interface-signal-id", "deploy_cmd")
+    page.click("#workbench-add-subsystem-interface-port-btn")
+    page.click("#workbench-export-draft-btn")
+    exported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    graph = exported["editable_graph_document"]
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert graph["kind"] == "well-harness-workbench-editable-graph-document"
+    assert graph["version"] == "workbench-editable-graph-document.v1"
+    assert graph["candidate_state"] == "sandbox_candidate"
+    assert graph["truth_effect"] == "none"
+    assert graph["workspace_revision_id"] == exported["workspace_document"]["revision_id"]
+    assert graph["node_count"] == len(exported["nodes"])
+    assert graph["draft_node_count"] == len([node for node in exported["nodes"] if node.get("draftNode")])
+    assert graph["edge_count"] == len(exported["edges"])
+    assert graph["port_count"] == len(exported["ports"])
+    assert graph["typed_port_count"] == len(exported["typed_ports"])
+    assert graph["subsystem_group_count"] == len(exported["subsystem_groups"])
+    assert graph["component_template_count"] == len(exported["component_library"]["captured_templates"])
+    assert graph["selected_state"]["node_ids"] == sorted(exported["selected_node_ids"])
+    assert graph["position_digest"].startswith("ui_draft_")
+    assert graph["node_digest"].startswith("ui_draft_")
+    assert graph["edge_digest"].startswith("ui_draft_")
+    assert graph["port_digest"].startswith("ui_draft_")
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    page.fill("#workbench-draft-json-buffer", draft_json)
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    imported_graph = imported["editable_graph_document"]
+    assert imported_graph["truth_effect"] == "none"
+    assert imported_graph["node_count"] == graph["node_count"]
+    assert imported_graph["edge_count"] == graph["edge_count"]
+    assert imported_graph["port_count"] == graph["port_count"]
+    assert imported_graph["subsystem_group_count"] == graph["subsystem_group_count"]
+    for digest_field in [
+        "position_digest",
+        "node_digest",
+        "edge_digest",
+        "port_digest",
+        "subsystem_digest",
+        "component_library_digest",
+    ]:
+        assert imported_graph[digest_field] == graph[digest_field]
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    first_archive_checksum = archive["checksums"]["editable_graph_document_checksum"]
+    page.click("#workbench-prepare-archive-btn")
+    second_archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["editable_graph_document"]["truth_effect"] == "none"
+    assert archive["editable_graph_document"]["node_count"] == imported_graph["node_count"]
+    assert first_archive_checksum
+    assert second_archive["checksums"]["editable_graph_document_checksum"] == first_archive_checksum
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_captured_template_remaps_overlapping_ids_and_preserves_rules(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
