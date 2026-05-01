@@ -7744,6 +7744,8 @@ function installEditableWorkbenchShell() {
   const canvasInteractionSummaryKind = "well-harness-workbench-canvas-interaction-summary";
   const canvasInteractionSummaryVersion = "workbench-canvas-interaction-summary.v1";
   let lastCanvasInteractionAction = "init";
+  const editableGraphDocumentKind = "well-harness-workbench-editable-graph-document";
+  const editableGraphDocumentVersion = "workbench-editable-graph-document.v1";
   let draftEdges = [
     { id: "edge_logic1_logic2", source: "logic1", target: "logic2" },
     { id: "edge_logic2_logic3", source: "logic2", target: "logic3" },
@@ -11609,6 +11611,120 @@ function installEditableWorkbenchShell() {
     renderCanvasInteractionStatus();
   }
 
+  function sortedEditableGraphIds(records) {
+    if (!Array.isArray(records)) return [];
+    return records
+      .map((record) => String((record && (record.id || record.port_id || record.group_id)) || ""))
+      .filter(Boolean)
+      .sort();
+  }
+
+  function editableGraphDigest(value) {
+    return editableDraftHash(stableEvidenceArchiveJson(value));
+  }
+
+  function sortedEditableGraphRecords(records) {
+    if (!Array.isArray(records)) return [];
+    return records
+      .map((record) => normalizeEvidenceArchiveValue(record))
+      .sort((left, right) => {
+        const leftId = String((left && (left.id || left.port_id || left.group_id)) || "");
+        const rightId = String((right && (right.id || right.port_id || right.group_id)) || "");
+        return leftId.localeCompare(rightId);
+      });
+  }
+
+  function buildEditableGraphDocumentFromSnapshot(snapshot) {
+    const source = snapshot && typeof snapshot === "object" && !Array.isArray(snapshot)
+      ? snapshot
+      : {};
+    const nodeRecords = Array.isArray(source.nodes) ? source.nodes : [];
+    const edgeRecords = Array.isArray(source.edges) ? source.edges : [];
+    const portRecords = Array.isArray(source.ports) ? source.ports : [];
+    const typedPortRecords = Array.isArray(source.typed_ports) ? source.typed_ports : [];
+    const subsystemRecords = Array.isArray(source.subsystem_groups) ? source.subsystem_groups : [];
+    const componentLibrary =
+      source.component_library && typeof source.component_library === "object" && !Array.isArray(source.component_library)
+        ? source.component_library
+        : {};
+    const capturedTemplates = Array.isArray(componentLibrary.captured_templates)
+      ? componentLibrary.captured_templates
+      : [];
+    const workspaceDocument =
+      source.workspace_document && typeof source.workspace_document === "object" && !Array.isArray(source.workspace_document)
+        ? source.workspace_document
+        : currentWorkspaceDocument();
+    const canvasInteractionSummary =
+      source.canvas_interaction_summary
+      && typeof source.canvas_interaction_summary === "object"
+      && !Array.isArray(source.canvas_interaction_summary)
+        ? source.canvas_interaction_summary
+        : currentCanvasInteractionSummary();
+    const nodeIdSet = new Set(sortedEditableGraphIds(nodeRecords));
+    const selectedNodeIdList = (Array.isArray(source.selected_node_ids)
+      ? source.selected_node_ids
+      : Array.from(selectedNodeIds))
+      .map((nodeId) => String(nodeId))
+      .filter((nodeId) => nodeId && nodeIdSet.has(nodeId))
+      .sort();
+    const selectedEdgeId = String(
+      (canvasInteractionSummary && canvasInteractionSummary.selected_edge_id)
+      || (selectedEdge && selectedEdge.id)
+      || "",
+    );
+    const positionRecords = nodeRecords
+      .map((node) => ({
+        id: String((node && node.id) || ""),
+        x: String((node && node.x) || "50%"),
+        y: String((node && node.y) || "50%"),
+      }))
+      .sort((left, right) => left.id.localeCompare(right.id));
+    const edgeRouteRecords = edgeRecords
+      .map((edge) => ({
+        id: String((edge && edge.id) || ""),
+        source: String((edge && edge.source) || ""),
+        target: String((edge && edge.target) || ""),
+        source_port: String((edge && (edge.source_port || edge.sourcePort)) || ""),
+        target_port: String((edge && (edge.target_port || edge.targetPort)) || ""),
+        route: edge && edge.route ? edge.route : null,
+      }))
+      .sort((left, right) => left.id.localeCompare(right.id));
+    return {
+      kind: editableGraphDocumentKind,
+      version: editableGraphDocumentVersion,
+      document_id: String(workspaceDocument.document_id || workspaceDocumentId),
+      workspace_revision_id: String(workspaceDocument.revision_id || workspaceDocumentRevision),
+      workspace_action_count: Number(workspaceDocument.action_count || 0),
+      action_log_digest: String(workspaceDocument.action_log_digest || workspaceActionLogDigest()),
+      node_count: nodeRecords.length,
+      draft_node_count: nodeRecords.filter((node) => Boolean(node && (node.draftNode || node.draft_node))).length,
+      edge_count: edgeRecords.length,
+      port_count: portRecords.length,
+      typed_port_count: typedPortRecords.length,
+      subsystem_group_count: subsystemRecords.length,
+      component_template_count: capturedTemplates.length,
+      selected_node_count: selectedNodeIdList.length,
+      selected_edge_count: selectedEdgeId ? 1 : 0,
+      node_ids: sortedEditableGraphIds(nodeRecords),
+      edge_ids: sortedEditableGraphIds(edgeRecords),
+      port_ids: sortedEditableGraphIds(portRecords),
+      subsystem_group_ids: sortedEditableGraphIds(subsystemRecords),
+      selected_state: {
+        node_ids: selectedNodeIdList,
+        edge_id: selectedEdgeId,
+        truth_effect: "none",
+      },
+      position_digest: editableGraphDigest(positionRecords),
+      node_digest: editableGraphDigest(sortedEditableGraphRecords(nodeRecords)),
+      edge_digest: editableGraphDigest(edgeRouteRecords),
+      port_digest: editableGraphDigest(sortedEditableGraphRecords(portRecords)),
+      subsystem_digest: editableGraphDigest(sortedEditableGraphRecords(subsystemRecords)),
+      component_library_digest: editableGraphDigest(componentLibrary),
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    };
+  }
+
   function adoptCanvasInteractionSummary(record) {
     if (!record || typeof record !== "object" || Array.isArray(record)) return;
     if (record.kind === canvasInteractionSummaryKind && typeof record.last_action === "string") {
@@ -14248,7 +14364,7 @@ function installEditableWorkbenchShell() {
     const diagnosticRepairActions = repairActionLogSnapshot();
     const workspaceDocument = currentWorkspaceDocument();
     const canvasInteractionSummary = currentCanvasInteractionSummary();
-    return {
+    const snapshot = {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
       system_id: "thrust-reverser",
       baseline_adapter: "reference-deploy-controller",
@@ -14260,6 +14376,7 @@ function installEditableWorkbenchShell() {
       diagnostic_focus: currentDiagnosticFocusSummary(),
       viewport_state: viewportStateSnapshot(),
       selected_node: selected,
+      selected_node_ids: Array.from(selectedNodeIds),
       nodes: nodes.map((node) => editableNodeState(node)),
       ports: [...typedPorts, ...interfacePorts],
       typed_ports: typedPorts,
@@ -14287,6 +14404,8 @@ function installEditableWorkbenchShell() {
       selected_debug_timeline: selectedDebugTimeline,
       candidate_baseline_diff_review_v2: candidateBaselineDiffReviewV2,
     };
+    snapshot.editable_graph_document = buildEditableGraphDocumentFromSnapshot(snapshot);
+    return snapshot;
   }
 
   function uniqueSourceRefs() {
@@ -14355,10 +14474,11 @@ function installEditableWorkbenchShell() {
       changed_model_hash: changedModelHash,
       workspace_document: snapshot.workspace_document,
       canvas_interaction_summary: snapshot.canvas_interaction_summary,
+      editable_graph_document: snapshot.editable_graph_document,
       diagnostic_focus: snapshot.diagnostic_focus,
       viewport_state: snapshot.viewport_state,
       selected_node: snapshot.selected_node,
-      selected_node_ids: Array.from(selectedNodeIds),
+      selected_node_ids: snapshot.selected_node_ids,
       nodes: snapshot.nodes,
       ports: snapshot.ports,
       typed_ports: snapshot.typed_ports,
@@ -14473,11 +14593,95 @@ function installEditableWorkbenchShell() {
         }
       }
     }
+    if (
+      payload.editable_graph_document !== undefined
+      && (
+        !payload.editable_graph_document
+        || typeof payload.editable_graph_document !== "object"
+        || Array.isArray(payload.editable_graph_document)
+      )
+    ) {
+      throw new Error("editable_graph_document must be an object when present");
+    }
+    if (payload.editable_graph_document !== undefined) {
+      const graphDocument = payload.editable_graph_document;
+      if (graphDocument.kind !== editableGraphDocumentKind) {
+        throw new Error("editable_graph_document kind must be well-harness-workbench-editable-graph-document");
+      }
+      if (graphDocument.version !== editableGraphDocumentVersion) {
+        throw new Error("editable_graph_document version must be workbench-editable-graph-document.v1");
+      }
+      if (graphDocument.candidate_state !== "sandbox_candidate") {
+        throw new Error("editable_graph_document candidate_state must be sandbox_candidate");
+      }
+      if (graphDocument.truth_effect !== "none") {
+        throw new Error("editable_graph_document truth_effect must be none");
+      }
+      for (const key of ["document_id", "workspace_revision_id", "action_log_digest"]) {
+        if (typeof graphDocument[key] !== "string" || !graphDocument[key]) {
+          throw new Error(`editable_graph_document ${key} must be a non-empty string`);
+        }
+      }
+      for (const key of [
+        "node_count",
+        "draft_node_count",
+        "edge_count",
+        "port_count",
+        "typed_port_count",
+        "subsystem_group_count",
+        "component_template_count",
+        "selected_node_count",
+        "selected_edge_count",
+      ]) {
+        if (!Number.isFinite(Number(graphDocument[key]))) {
+          throw new Error(`editable_graph_document ${key} must be numeric`);
+        }
+      }
+      for (const key of ["node_ids", "edge_ids", "port_ids", "subsystem_group_ids"]) {
+        if (!Array.isArray(graphDocument[key])) {
+          throw new Error(`editable_graph_document ${key} must be an array`);
+        }
+      }
+      if (
+        !graphDocument.selected_state
+        || typeof graphDocument.selected_state !== "object"
+        || Array.isArray(graphDocument.selected_state)
+      ) {
+        throw new Error("editable_graph_document selected_state must be an object");
+      }
+    }
     if (!Array.isArray(payload.nodes)) {
       throw new Error("nodes must be an array");
     }
     if (payload.edges !== undefined && !Array.isArray(payload.edges)) {
       throw new Error("edges must be an array when present");
+    }
+    if (payload.editable_graph_document !== undefined) {
+      const graphDocument = payload.editable_graph_document;
+      const ports = Array.isArray(payload.ports) ? payload.ports : [];
+      const typedPorts = Array.isArray(payload.typed_ports) ? payload.typed_ports : [];
+      const subsystemGroups = Array.isArray(payload.subsystem_groups) ? payload.subsystem_groups : [];
+      const componentLibrary =
+        payload.component_library && typeof payload.component_library === "object" && !Array.isArray(payload.component_library)
+          ? payload.component_library
+          : {};
+      const capturedTemplates = Array.isArray(componentLibrary.captured_templates)
+        ? componentLibrary.captured_templates
+        : [];
+      const graphCountExpectations = {
+        node_count: payload.nodes.length,
+        draft_node_count: payload.nodes.filter((node) => Boolean(node && (node.draftNode || node.draft_node))).length,
+        edge_count: Array.isArray(payload.edges) ? payload.edges.length : 0,
+        port_count: ports.length,
+        typed_port_count: typedPorts.length,
+        subsystem_group_count: subsystemGroups.length,
+        component_template_count: capturedTemplates.length,
+      };
+      for (const [key, expected] of Object.entries(graphCountExpectations)) {
+        if (Number(graphDocument[key]) !== expected) {
+          throw new Error(`editable_graph_document ${key} must match draft payload`);
+        }
+      }
     }
     if (payload.hardware_bindings !== undefined && !Array.isArray(payload.hardware_bindings)) {
       throw new Error("hardware_bindings must be an array when present");
@@ -15997,6 +16201,8 @@ function installEditableWorkbenchShell() {
       modelJson.workspace_document || currentWorkspaceDocument();
     const canvasInteractionSummary =
       modelJson.canvas_interaction_summary || currentCanvasInteractionSummary();
+    const editableGraphDocument =
+      modelJson.editable_graph_document || buildEditableGraphDocumentFromSnapshot(modelJson);
     const hardwareBindings = collectWorkbenchHardwareBindings();
     const bindingCoverage = buildInterfaceBindingCoverageSummary(hardwareBindings);
     const hardwareBindingDiagnostics =
@@ -16065,6 +16271,7 @@ function installEditableWorkbenchShell() {
       model_json: modelJson,
       workspace_document: workspaceDocument,
       canvas_interaction_summary: canvasInteractionSummary,
+      editable_graph_document: editableGraphDocument,
       diff_summary: diffSummary,
       scenario_metadata: scenarioMetadata,
       hardware_bindings: hardwareBindings,
@@ -16102,6 +16309,7 @@ function installEditableWorkbenchShell() {
       model_json_checksum: checksumEvidenceArchiveField(modelJson),
       workspace_document_checksum: checksumEvidenceArchiveField(workspaceDocument),
       canvas_interaction_summary_checksum: checksumEvidenceArchiveField(canvasInteractionSummary),
+      editable_graph_document_checksum: checksumEvidenceArchiveField(editableGraphDocument),
       diff_summary_checksum: checksumEvidenceArchiveField(diffSummary),
       changerequest_proof_packet_checksum: checksumEvidenceArchiveField(changeRequestProofPacket),
       changerequest_handoff_packet_checksum: checksumEvidenceArchiveField(changeRequestHandoffPacket),
