@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-219 high-freedom canvas evidence in progress
-last_updated: "2026-05-01T03:40:00.000+08:00"
+status: Workbench v4 foundation-first reset active · JER-219 merged · JER-220 roadmap reset in progress
+last_updated: "2026-05-01T15:20:00.000+08:00"
 last_activity: 2026-05-01
 progress:
   total_phases: 44
   completed_phases: 43
   total_plans: 2
   completed_plans: 1
-  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates. JER-207 adds sandbox-only subsystem group/rename/ungroup metadata. JER-208 adds sandbox-only hardware interface design schema/loader/validator/hash evidence. JER-209 adds a connector/pin map editor, draft round-trip, and archive checksum. JER-210 adds a selected-owner Hardware Evidence Inspector v2 packet for LRU/cable/connector/port/pin coverage and evidence gaps. JER-211 adds a selected graph debug timeline packet linked to current scenario, sandbox diff status, ports, and hardware overlay. JER-212 adds an archive-ready candidate-to-baseline diff review v2 packet that keeps certification claim none. JER-213 adds a structured ChangeRequest handoff packet with Outcome/Acceptance/Boundaries/Evidence/Red lines/Test delta placeholders and no live Linear mutation. JER-214 adds a repo-owned handoff schema, validator, canonical hash contract, validation-suite entry, and stable browser checksum serialization. JER-215 validates embedded ChangeRequest handoff packets during archive restore/readback and keeps old archives without handoff packets backward-compatible. JER-216 captures selected sandbox subsystems as reusable templates, reinserts them with fresh draft ids, and archives template metadata/checksums with truth_effect none. JER-217 adds sandbox-only subsystem boundary input/output port contracts that round-trip through draft export/import, archive checksums, and captured template reinsertion. JER-218 adds the workspace_document interaction-state envelope for revision/action/undo/redo evidence and archive checksum coverage. JER-219 adds canvas_interaction_summary evidence for high-freedom multi-select, duplicate/delete, lasso/group move, selection counts, last action, position digest, and archive checksum coverage. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 through JER-219 built the current single-user authoring base: templates, subsystems, hardware/interface evidence, debug/diff/handoff packets, archive validation, workspace_document, and canvas_interaction_summary. JER-219 merged PR #201. JER-220 resets the active roadmap to foundation-first: editor -> runner -> test bench -> debugger -> archive, with thrust-reverser and C919 E-TRAS treated as reference/sample packs rather than near-term dedicated panel priorities. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
@@ -19,10 +19,12 @@ Last activity: 2026-05-01
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
-**Current position**: JER-204 through JER-218 are merged on the v4 line, and
-JER-219 is in progress. JER-219 makes high-freedom canvas editing reviewable by
-surfacing selected node/edge counts, last canvas action, position digest, and
-archive checksum evidence without changing certified truth.
+**Current position**: JER-204 through JER-219 are merged on the v4 line, and
+JER-220 is in progress. JER-220 is a documentation/control-plane reset that
+turns the active mainline toward the generic foundation: editor, runner, test
+bench, debugger, archive, and later hardware/interface designer. The existing
+thrust-reverser and C919 chains are reference samples, not the next dedicated
+product panels.
 
 **Linear control plane**:
 
@@ -45,7 +47,8 @@ archive checksum evidence without changing certified truth.
 - JER-216 is Done after PR #198.
 - JER-217 is Done after PR #199.
 - JER-218 is Done after PR #200.
-- JER-219 is In Progress for high-freedom canvas interaction evidence.
+- JER-219 is Done after PR #201.
+- JER-220 is In Progress for the foundation-first roadmap reset.
 
 **Runtime v3 closure summary**:
 
@@ -64,21 +67,29 @@ archive checksum evidence without changing certified truth.
 
 **Workbench v4 target**:
 
-Workbench v4 turns `/workbench` into a higher-freedom authoring and hardware
-interface design surface. Engineers should be able to derive a sandbox draft,
-edit graph structure, reuse component/subsystem patterns, design hardware
-interface metadata, inspect evidence gaps, run sandbox feedback, compare
-against certified baseline behavior, and generate a controlled ChangeRequest
-handoff packet.
+Workbench v4 turns `/workbench` into a higher-freedom single-user authoring,
+running, testing, debugging, and archive surface. Engineers should be able to
+derive a sandbox draft, edit graph structure, reuse component/subsystem
+patterns, wire ports, run sandbox test scenarios, inspect failures, compare
+against baseline behavior, and generate controlled review evidence before any
+ChangeRequest handoff.
 
 **v4 scope guard**:
 
 The v4 lane is intentionally single-user first. The product priority is the
 Simulink/Figma-level control-logic operation panel: high-freedom graph editing,
-hardware/interface design evidence, sandbox feedback, baseline diff, and
-review handoff for one engineer working on one draft. Multi-user collaboration,
-real-time sync, permissions, comments, and conflict resolution are deferred
-until the single-user panel foundation is stable.
+runner/test execution, debugger feedback, archive/readback, and then
+hardware/interface evidence for one engineer working on one draft. Multi-user
+collaboration, real-time sync, permissions, comments, and conflict resolution
+are deferred until the single-user panel foundation is stable.
+
+**Reference sample guard**:
+
+The existing thrust-reverser and C919 E-TRAS logic chains stay available as
+certified/reference samples and regression anchors. They are not the immediate
+product expansion path. Once the foundation workbench can create, run, test,
+debug, and archive arbitrary sandbox control graphs, those specific panels
+should be straightforward to rebuild as examples on top of the generic base.
 
 **JER-206 component-library closure**:
 

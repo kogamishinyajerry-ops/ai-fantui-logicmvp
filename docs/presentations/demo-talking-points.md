@@ -2,6 +2,12 @@
 
 > Historical P19 talking-points draft. Superseded by `docs/demo/pitch_script.md` and related P22 demo materials. Keep only for archive/reference.
 
+> **JER-220 roadmap reset note (2026-05-01):** This is not the current roadmap
+> delivery script. Multi-system demo language and thrust-reverser examples are
+> historical/reference coverage. The active v4 mainline is the single-user
+> foundation workbench: editor, runner, test bench, debugger, archive, and later
+> hardware/interface designer.
+
 **用途**: 汇报人在演示过程中的提示卡
 **版本**: P19 Sprint Final (2026-04-17)
 

@@ -1,10 +1,11 @@
 # Editable Workbench v4 Authoring + Hardware Design
 
-Workbench v4 is the next product mainline after Runtime v3. The goal is to turn
-`/workbench` from a capable sandbox editor into an engineering-grade authoring
-surface: high-freedom graph editing, reusable subsystem authoring,
-hardware/interface design evidence, sandbox feedback, baseline diff review, and
-controlled ChangeRequest handoff.
+Workbench v4 is the next product mainline after Runtime v3. After JER-219, the
+goal is foundation-first: turn `/workbench` from a capable sandbox editor into
+an engineering-grade single-user control-logic workbench with graph authoring,
+runner/test execution, debugger feedback, archive/readback, and then deeper
+hardware/interface design evidence. Dedicated thrust-reverser and C919 panels
+remain reference/sample outputs, not near-term product drivers.
 
 ## Linear Project
 
@@ -30,7 +31,15 @@ controlled ChangeRequest handoff.
 - JER-216: Subsystem template capture from editable selection v1 (Done)
 - JER-217: Subsystem interface contract editor v1 (Done)
 - JER-218: Workbench interaction state kernel v1 (Done)
-- JER-219: High-freedom canvas editing layer v1 (In progress)
+- JER-219: High-freedom canvas editing layer v1 (Done)
+- JER-220: Foundation-first roadmap reset after JER-219 (In progress)
+- JER-221: Canonical editable graph authoring kernel v1 (Planned)
+- JER-222: Port and wire editing ergonomics v1 (Planned)
+- JER-223: Sandbox scenario test bench v1 (Planned)
+- JER-224: Candidate graph debugger view v1 (Planned)
+- JER-225: Workbench preflight analyzer v1 (Planned)
+- JER-226: Hardware/interface designer foundation v1 (Planned)
+- JER-227: Foundation workbench review archive v1 (Planned)
 
 ## Product Target
 
@@ -42,7 +51,9 @@ An engineer should be able to:
 - attach candidate hardware/interface design records to graph elements;
 - edit connector, cable, port, and pin metadata with explicit `evidence_gap`
   states for unknown values;
-- run sandbox scenarios and see feedback linked to selected graph elements;
+- run sandbox scenarios and saved candidate tests with pass/fail assertions;
+- debug failing candidates through selected probes, watched values, and first
+  failure/divergence feedback;
 - compare candidate output against the certified adapter/controller baseline;
 - export a review-ready ChangeRequest packet instead of directly mutating
   controller, adapter, DAL, PSSA, or truth-level state.
@@ -51,9 +62,9 @@ An engineer should be able to:
 
 Workbench v4 is single-user first. The near-term target is a strong
 Simulink/Figma-level control-logic operation panel for one engineer working on
-one sandbox draft: high-freedom graph editing, subsystem authoring,
-hardware/interface evidence, sandbox feedback, baseline diff, and review
-handoff.
+one sandbox draft: high-freedom graph editing, subsystem authoring, runner/test
+execution, debugger feedback, archive/readback, and then hardware/interface
+evidence.
 
 Out of scope for v4:
 
@@ -64,6 +75,23 @@ Out of scope for v4:
 
 Those platform layers can be reconsidered only after the single-user authoring
 surface is stable, testable, and useful end to end.
+
+## Foundation-First Sequence
+
+JER-220 resets the roadmap and narrative. JER-221 through JER-227 then build
+the foundation in this order:
+
+1. Canonical editable graph authoring kernel.
+2. Port and wire editing ergonomics.
+3. Sandbox scenario test bench.
+4. Candidate graph debugger view.
+5. Preflight analyzer.
+6. Hardware/interface designer foundation.
+7. Review archive and ChangeRequest handoff.
+
+Thrust-reverser and C919 E-TRAS stay as certified/reference samples and
+regression anchors. They should be easy to rebuild after the generic foundation
+is mature, but they do not determine the next v4 implementation order.
 
 ## Acceptance Ladder
 
@@ -95,6 +123,11 @@ surface is stable, testable, and useful end to end.
   duplicate/delete, lasso/group move, selection counts, last action, node
   position digest, draft import/export, and archive checksums visible as
   sandbox-only `canvas_interaction_summary` evidence.
+- **v4.10 foundation-first reset**: JER-220 moves the active roadmap away from
+  dedicated reference panels and toward the single-user editor -> runner ->
+  test bench -> debugger -> archive foundation.
+- **v4.11 graph/test/debug foundation**: JER-221 through JER-227 are planned as
+  the next implementation sequence for the generic workbench base.
 
 ## Acceptance Model
 
@@ -399,7 +432,7 @@ The slice remains sandbox-only:
 JER-205 is the lane-entry contract for v4. It does not add runtime behavior; it
 defines how the next implementation issues become executable.
 
-Before JER-206 through JER-219 are marked `agent:ready`, each issue must state
+Before JER-206 through JER-227 are marked `agent:ready`, each issue must state
 which acceptance state it touches:
 
 - `clarification`: the workbench has enough evidence to ask for missing design
@@ -443,6 +476,14 @@ hardcoding truth semantics into UI or archive text.
 | JER-217 | Subsystem interface contract editor | Selected subsystems expose sandbox-only input/output boundary contracts preserved through export/import/archive/template reuse | JER-216 |
 | JER-218 | Workbench interaction state kernel | Workspace document revision/action/undo/redo evidence survives draft export/import, browser restore, and archive checksum coverage | JER-217 |
 | JER-219 | High-freedom canvas editing layer | Canvas selection/action/position evidence is visible, exportable, importable, and archive-checksummed with `truth_effect: none` | JER-218 |
+| JER-220 | Foundation-first roadmap reset | Roadmap, STATE, and coordination docs make editor/runner/test/debug/archive the mainline; reference panels are not near-term product drivers | JER-219 |
+| JER-221 | Canonical editable graph authoring kernel | Draft graph is the central product object across export/import/archive/readback | JER-220 |
+| JER-222 | Port and wire editing ergonomics | Port-to-port wiring, route metadata, edge labels, reconnect/disconnect, and validation findings are explicit | JER-221 |
+| JER-223 | Sandbox scenario test bench | Candidate graphs can run saved scenarios with inputs, assertions, expected outputs, and pass/fail reports | JER-222 |
+| JER-224 | Candidate graph debugger view | Selected nodes/edges/ports expose probes, watched values, first failure/divergence, and timeline-linked feedback | JER-223 |
+| JER-225 | Workbench preflight analyzer | Candidate drafts classify as ready, needs_evidence, or invalid_candidate before handoff | JER-224 |
+| JER-226 | Hardware/interface designer foundation | Sandbox LRUs/connectors/pins/cables/bindings/evidence gaps become editable after graph/test foundation | JER-225 |
+| JER-227 | Foundation workbench review archive | Graph, tests, run/debug reports, hardware evidence, findings, checksums, and PR/Linear proof package into one review bundle | JER-226 |
 
 ## Work-Item Contract
 
@@ -458,7 +499,7 @@ and must carry these fields before `agent:ready` is applied:
 - Metadata: repository path, adapter/project, layer, truth-level impact, and
   known gate blockers.
 
-JER-206 through JER-219 should not claim broad v4 completion individually. Each
+JER-206 through JER-227 should not claim broad v4 completion individually. Each
 issue closes one capability slice and updates this coordination note only when
 the v4 acceptance ladder or sequencing changes.
 

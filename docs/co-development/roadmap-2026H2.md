@@ -7,6 +7,13 @@
 
 > **编号命名空间：** 本文件使用 `H2-XX` 前缀（原 `P23-P27` 编号于 2026-04-20 经 P32 统一去重），表示「2026H2 对外交付路线图」的 Phase。与 `.planning/ROADMAP.md` 中的 `PXX`（内部执行路线图，截至当前 P0-P32）是**两套独立命名空间**，不要混淆。Kogami 2026-04-20 AskUserQuestion 批复：外部改前缀、内部 P24-P30 不动。
 
+> **JER-220 scope note (2026-05-01):** This is an external/co-development
+> planning artifact. It is not the current in-repo v4 execution baseline. The
+> active product mainline is single-user foundation-first workbench development:
+> editor, runner, test bench, debugger, archive, then hardware/interface
+> designer. Multi-party delivery language here must not be read as immediate
+> collaboration-platform product scope.
+
 ---
 
 ## 0. 路线图总览

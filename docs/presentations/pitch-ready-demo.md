@@ -5,6 +5,12 @@
 
 > Historical P19 presentation draft. Superseded by `docs/demo/pitch_script.md` / `docs/demo/faq.md` / `docs/demo/preflight_checklist.md` in P22. Do not use this file as the current pitch baseline.
 
+> **JER-220 roadmap reset note (2026-05-01):** This document is historical
+> demo material. Mentions of thrust-reverser, multi-system panels, or
+> product-forward control-system coverage are reference/demo coverage only. The
+> active product mainline is the single-user foundation workbench: editor,
+> runner, test bench, debugger, archive, and later hardware/interface designer.
+
 **适用场景**: 立项汇报 / 投资人演示 / 技术评审
 **版本**: P19 Sprint Final (2026-04-17)
 **前提条件**: 浏览器打开 `http://localhost:5173/demo.html`，4系统已 onboarded
