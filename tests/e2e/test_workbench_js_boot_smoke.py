@@ -409,6 +409,246 @@ def test_workbench_connector_pin_map_applies_round_trips_and_archives(demo_serve
     assert archive["checksums"]["connector_pin_map_checksum"]
 
 
+def test_workbench_hardware_interface_designer_validates_round_trips_and_archives(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    invalid_payload = {
+        "$schema": "https://well-harness.local/json_schema/editable_hardware_interface_design_v1.schema.json",
+        "kind": "well-harness-editable-hardware-interface-design",
+        "version": 1,
+        "design_id": "ui-hw-design-invalid",
+        "system_id": "sandbox",
+        "candidate_state": "sandbox_candidate",
+        "truth_level_impact": "none",
+        "dal_pssa_impact": "none",
+        "controller_truth_modified": False,
+        "runtime_truth_effect": "none",
+        "lrus": [
+            {
+                "id": "LRU-DUP",
+                "display_name": "LRU Duplicate A",
+                "evidence_status": "ui_draft",
+                "source_ref": "ui_draft.hardware_interface_designer.e2e",
+            },
+            {
+                "id": "LRU-DUP",
+                "display_name": "LRU Duplicate B",
+                "evidence_status": "ui_draft",
+                "source_ref": "ui_draft.hardware_interface_designer.e2e",
+            },
+        ],
+        "cables": [],
+        "connectors": [],
+        "ports": [],
+        "pins": [],
+        "bindings": [],
+        "evidence_gaps": [],
+        "evidence_metadata": {
+            "sample_pack_role": "hardware_interface_design",
+            "source_refs": ["ui_draft.hardware_interface_designer.e2e"],
+        },
+        "boundaries": {
+            "runtime_scope": "sandbox_only",
+            "hardware_truth_effect": "none",
+            "certified_truth_modified": False,
+            "dal_pssa_impact": "none",
+        },
+    }
+    page.fill("#workbench-hardware-interface-design-output", json.dumps(invalid_payload))
+    page.click("#workbench-validate-hardware-interface-design-btn")
+    page.wait_for_function(
+        """
+        () => document.getElementById('workbench-hardware-interface-design-validation-output')
+          ?.value.includes('duplicate_hardware_interface_id')
+        """
+    )
+    invalid_report = json.loads(
+        page.locator("#workbench-hardware-interface-design-validation-output").input_value()
+    )
+    assert invalid_report["status"] == "fail"
+    assert any(finding["code"] == "duplicate_hardware_interface_id" for finding in invalid_report["findings"])
+
+    valid_payload = {
+        "$schema": "https://well-harness.local/json_schema/editable_hardware_interface_design_v1.schema.json",
+        "kind": "well-harness-editable-hardware-interface-design",
+        "version": 1,
+        "design_id": "ui-hw-design-e2e",
+        "system_id": "thrust-reverser",
+        "candidate_state": "sandbox_candidate",
+        "truth_level_impact": "none",
+        "dal_pssa_impact": "none",
+        "controller_truth_modified": False,
+        "runtime_truth_effect": "none",
+        "lrus": [
+            {
+                "id": "LRU-A",
+                "display_name": "LRU A",
+                "evidence_status": "ui_draft",
+                "source_ref": "ui_draft.hardware_interface_designer.e2e",
+            },
+            {
+                "id": "LRU-B",
+                "display_name": "LRU B",
+                "evidence_status": "ui_draft",
+                "source_ref": "ui_draft.hardware_interface_designer.e2e",
+            },
+        ],
+        "cables": [
+            {
+                "id": "CABLE-A-B",
+                "display_name": "Cable A B",
+                "source_lru_id": "LRU-A",
+                "target_lru_id": "LRU-B",
+                "cable_type": "harness",
+                "evidence_status": "ui_draft",
+                "source_ref": "ui_draft.hardware_interface_designer.e2e",
+            }
+        ],
+        "connectors": [
+            {
+                "id": "CONN-A",
+                "display_name": "Connector A",
+                "lru_id": "LRU-A",
+                "connector_type": "MIL-DTL-38999",
+                "evidence_status": "ui_draft",
+                "source_ref": "ui_draft.hardware_interface_designer.e2e",
+            },
+            {
+                "id": "CONN-B",
+                "display_name": "Connector B",
+                "lru_id": "LRU-B",
+                "connector_type": "MIL-DTL-38999",
+                "evidence_status": "ui_draft",
+                "source_ref": "ui_draft.hardware_interface_designer.e2e",
+            },
+        ],
+        "ports": [
+            {
+                "id": "PORT-A-1",
+                "display_name": "A out",
+                "connector_id": "CONN-A",
+                "direction": "output",
+                "signal_id": "sig_a_b",
+                "value_type": "boolean",
+                "evidence_status": "ui_draft",
+                "source_ref": "ui_draft.hardware_interface_designer.e2e",
+            },
+            {
+                "id": "PORT-B-1",
+                "display_name": "B in",
+                "connector_id": "CONN-B",
+                "direction": "input",
+                "signal_id": "sig_a_b",
+                "value_type": "boolean",
+                "evidence_status": "ui_draft",
+                "source_ref": "ui_draft.hardware_interface_designer.e2e",
+            },
+        ],
+        "pins": [
+            {
+                "id": "PIN-A-1",
+                "connector_id": "CONN-A",
+                "pin_number": "A1",
+                "port_id": "PORT-A-1",
+                "signal_id": "sig_a_b",
+                "evidence_status": "ui_draft",
+                "source_ref": "ui_draft.hardware_interface_designer.e2e",
+            },
+            {
+                "id": "PIN-B-1",
+                "connector_id": "CONN-B",
+                "pin_number": "B1",
+                "port_id": "PORT-B-1",
+                "signal_id": "sig_a_b",
+                "evidence_status": "ui_draft",
+                "source_ref": "ui_draft.hardware_interface_designer.e2e",
+            },
+        ],
+        "bindings": [
+            {
+                "id": "BIND-A-B",
+                "signal_id": "sig_a_b",
+                "source_port_id": "PORT-A-1",
+                "target_port_id": "PORT-B-1",
+                "cable_id": "CABLE-A-B",
+                "redundancy_status": "single",
+                "evidence_status": "ui_draft",
+                "truth_effect": "none",
+                "source_ref": "ui_draft.hardware_interface_designer.e2e",
+            }
+        ],
+        "evidence_gaps": [],
+        "evidence_metadata": {
+            "sample_pack_role": "hardware_interface_design",
+            "source_refs": ["ui_draft.hardware_interface_designer.e2e"],
+        },
+        "boundaries": {
+            "runtime_scope": "sandbox_only",
+            "hardware_truth_effect": "none",
+            "certified_truth_modified": False,
+            "dal_pssa_impact": "none",
+        },
+    }
+    page.fill("#workbench-hardware-interface-design-output", json.dumps(valid_payload))
+    page.click("#workbench-apply-hardware-interface-design-btn")
+    page.wait_for_function(
+        """
+        () => document.getElementById('workbench-hardware-interface-design-status')
+          ?.textContent.includes('Applied hardware/interface design')
+        """
+    )
+
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert errors == [], f"page JS errors: {errors}"
+    assert draft["hardware_interface_designer"]["kind"] == "well-harness-editable-hardware-interface-design"
+    assert draft["hardware_interface_designer"]["runtime_truth_effect"] == "none"
+    assert draft["hardware_interface_designer"]["bindings"][0]["id"] == "BIND-A-B"
+    assert draft["hardware_interface_designer_validation"]["status"] == "pass"
+    assert draft["hardware_interface_designer_validation"]["truth_effect"] == "none"
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    page.fill("#workbench-draft-json-buffer", draft_json)
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert imported["hardware_interface_designer"]["bindings"][0]["id"] == "BIND-A-B"
+    assert imported["hardware_interface_designer_validation"]["status"] == "pass"
+
+    stale_validation_draft = dict(imported)
+    stale_validation_draft["hardware_interface_designer_validation"] = dict(
+        imported["hardware_interface_designer_validation"]
+    )
+    stale_validation_draft["hardware_interface_designer_validation"]["counts"] = {
+        **imported["hardware_interface_designer_validation"]["counts"],
+        "lrus": 999,
+    }
+    page.fill("#workbench-draft-json-buffer", json.dumps(stale_validation_draft))
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    recomputed = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert recomputed["hardware_interface_designer_validation"]["counts"]["lrus"] == 2
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["hardware_interface_designer"]["runtime_truth_effect"] == "none"
+    assert archive["hardware_interface_designer_validation"]["truth_effect"] == "none"
+    assert archive["hardware_interface_designer"]["bindings"][0]["truth_effect"] == "none"
+    assert archive["checksums"]["hardware_interface_designer_checksum"]
+    assert archive["checksums"]["hardware_interface_designer_validation_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_hardware_evidence_v2_tracks_selected_node_and_edge(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
