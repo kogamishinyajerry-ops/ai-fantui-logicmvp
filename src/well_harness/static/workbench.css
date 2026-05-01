@@ -6021,6 +6021,23 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-diff-review-v2[data-review-verdict="not_run"] {
   border-color: rgba(150, 173, 190, 0.28);
 }
+.workbench-sandbox-test-bench {
+  margin-top: 0.7rem;
+  padding: 0.62rem;
+  border-color: rgba(125, 215, 194, 0.24);
+}
+.workbench-sandbox-test-bench[data-test-status="pass"] {
+  border-color: rgba(125, 215, 194, 0.42);
+}
+.workbench-sandbox-test-bench[data-test-status="fail"],
+.workbench-sandbox-test-bench[data-test-status="invalid_scenario"] {
+  border-color: rgba(240, 193, 91, 0.48);
+}
+.workbench-test-bench-run {
+  width: 100%;
+  min-height: 34px;
+  margin-top: 0.55rem;
+}
 .workbench-diff-review-v2-facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

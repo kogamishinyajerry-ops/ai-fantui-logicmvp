@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench v4 foundation-first reset active · JER-219 merged · JER-220 roadmap reset in progress
-last_updated: "2026-05-01T15:20:00.000+08:00"
+status: Workbench v4 foundation-first active · JER-221/JER-222 merged · JER-223 sandbox test bench in review
+last_updated: "2026-05-01T23:05:00.000+08:00"
 last_activity: 2026-05-01
 progress:
   total_phases: 44
   completed_phases: 43
   total_plans: 2
   completed_plans: 1
-  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 through JER-219 built the current single-user authoring base: templates, subsystems, hardware/interface evidence, debug/diff/handoff packets, archive validation, workspace_document, and canvas_interaction_summary. JER-219 merged PR #201. JER-220 resets the active roadmap to foundation-first: editor -> runner -> test bench -> debugger -> archive, with thrust-reverser and C919 E-TRAS treated as reference/sample packs rather than near-term dedicated panel priorities. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 through JER-219 built the current single-user authoring base: templates, subsystems, hardware/interface evidence, debug/diff/handoff packets, archive validation, workspace_document, and canvas_interaction_summary. JER-220 reset the active roadmap to foundation-first: editor -> runner -> test bench -> debugger -> archive, with thrust-reverser and C919 E-TRAS treated as reference/sample packs. JER-221 and JER-222 closed canonical editable graph and port/wire route metadata. JER-223 adds the first sandbox scenario test bench run report for candidate graph inputs/assertions. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
@@ -19,10 +19,10 @@ Last activity: 2026-05-01
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
-**Current position**: JER-204 through JER-219 are merged on the v4 line, and
-JER-220 is in progress. JER-220 is a documentation/control-plane reset that
-turns the active mainline toward the generic foundation: editor, runner, test
-bench, debugger, archive, and later hardware/interface designer. The existing
+**Current position**: JER-204 through JER-222 are merged on the v4 line, and
+JER-223 is in review as the first sandbox scenario test bench slice. The active
+mainline is the generic single-user foundation: editor, runner, test bench,
+debugger, archive, and later hardware/interface designer. The existing
 thrust-reverser and C919 chains are reference samples, not the next dedicated
 product panels.
 
@@ -48,7 +48,10 @@ product panels.
 - JER-217 is Done after PR #199.
 - JER-218 is Done after PR #200.
 - JER-219 is Done after PR #201.
-- JER-220 is In Progress for the foundation-first roadmap reset.
+- JER-220 is Done after the foundation-first roadmap reset.
+- JER-221 is Done after PR #203.
+- JER-222 is Done after PR #204.
+- JER-223 is In Review for sandbox scenario test bench v1.
 
 **Runtime v3 closure summary**:
 
@@ -90,6 +93,20 @@ certified/reference samples and regression anchors. They are not the immediate
 product expansion path. Once the foundation workbench can create, run, test,
 debug, and archive arbitrary sandbox control graphs, those specific panels
 should be straightforward to rebuild as examples on top of the generic base.
+
+**JER-223 sandbox scenario test bench slice**:
+
+- The right inspector now exposes a local Scenario Test Bench for editable tick
+  inputs and expected-output assertions.
+- Running the test bench produces a sandbox-only
+  `workbench-sandbox-test-run-report.v1` with pass/fail assertion results,
+  trace frames, validation findings, `certification_claim: none`, and
+  `truth_effect: none`.
+- Draft export/import, browser restore, and evidence archive carry
+  `sandbox_test_bench` and `sandbox_test_run_report` with checksum coverage.
+- The evaluator uses only the approved sandbox op catalog and does not call
+  Python expressions, dynamic imports, network, file writes, adapters, or
+  controller truth mutation.
 
 **JER-206 component-library closure**:
 

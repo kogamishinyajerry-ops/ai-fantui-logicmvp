@@ -1321,6 +1321,40 @@
                 </p>
               </section>
               <section
+                id="workbench-sandbox-test-bench"
+                class="workbench-sandbox-test-bench"
+                aria-labelledby="workbench-sandbox-test-bench-title"
+              >
+                <div class="workbench-inspector-header">
+                  <span id="workbench-sandbox-test-bench-title">Scenario Test Bench</span>
+                  <strong id="workbench-test-bench-status">not_run</strong>
+                </div>
+                <label class="workbench-handoff-output" for="workbench-test-bench-inputs-json">
+                  <span>Tick inputs JSON</span>
+                  <textarea id="workbench-test-bench-inputs-json" rows="5" spellcheck="false">[
+  {"tick": 0, "inputs": {}}
+]</textarea>
+                </label>
+                <label class="workbench-handoff-output" for="workbench-test-bench-assertions-json">
+                  <span>Assertions JSON</span>
+                  <textarea id="workbench-test-bench-assertions-json" rows="5" spellcheck="false">[]</textarea>
+                </label>
+                <button
+                  id="workbench-run-test-bench-btn"
+                  type="button"
+                  class="workbench-editable-primary workbench-test-bench-run"
+                >
+                  Run tests
+                </button>
+                <label class="workbench-handoff-output" for="workbench-test-bench-report-output">
+                  <span>Run report</span>
+                  <textarea id="workbench-test-bench-report-output" rows="7" readonly></textarea>
+                </label>
+                <p class="workbench-inspector-truth-note">
+                  Scenario tests are local sandbox evidence only. Truth effect: none.
+                </p>
+              </section>
+              <section
                 class="workbench-draft-json-exchange"
                 aria-labelledby="workbench-draft-json-title"
               >

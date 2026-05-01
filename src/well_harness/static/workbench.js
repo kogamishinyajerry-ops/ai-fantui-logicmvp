@@ -7639,6 +7639,12 @@ function installEditableWorkbenchShell() {
   const diffReviewV2ArchiveState = document.getElementById("workbench-diff-review-v2-archive-state");
   const diffReviewV2Divergence = document.getElementById("workbench-diff-review-v2-divergence");
   const diffReviewV2Claim = document.getElementById("workbench-diff-review-v2-claim");
+  const sandboxTestBenchPanel = document.getElementById("workbench-sandbox-test-bench");
+  const sandboxTestBenchInputs = document.getElementById("workbench-test-bench-inputs-json");
+  const sandboxTestBenchAssertions = document.getElementById("workbench-test-bench-assertions-json");
+  const runTestBenchBtn = document.getElementById("workbench-run-test-bench-btn");
+  const sandboxTestBenchStatus = document.getElementById("workbench-test-bench-status");
+  const sandboxTestBenchReportOutput = document.getElementById("workbench-test-bench-report-output");
   const timelineStrip = document.getElementById("workbench-sandbox-timeline-strip");
   const selectedDebugTimelineTarget = document.getElementById("workbench-selected-debug-target");
   const selectedDebugTimelineScenario = document.getElementById("workbench-selected-debug-scenario");
@@ -7732,6 +7738,7 @@ function installEditableWorkbenchShell() {
   let selectedCatalogOp = "and";
   let lastComponentTemplateId = "";
   let capturedSubsystemTemplates = [];
+  let lastSandboxTestRunReport = null;
   let nextCapturedSubsystemTemplateIndex = 1;
   let nextSubsystemGroupIndex = 1;
   let subsystemGroups = [];
@@ -7746,6 +7753,10 @@ function installEditableWorkbenchShell() {
   let lastCanvasInteractionAction = "init";
   const editableGraphDocumentKind = "well-harness-workbench-editable-graph-document";
   const editableGraphDocumentVersion = "workbench-editable-graph-document.v1";
+  const sandboxTestBenchKind = "well-harness-workbench-sandbox-test-bench";
+  const sandboxTestBenchVersion = "workbench-sandbox-test-bench.v1";
+  const sandboxTestRunReportKind = "well-harness-workbench-sandbox-test-run-report";
+  const sandboxTestRunReportVersion = "workbench-sandbox-test-run-report.v1";
   const edgeRouteMetadataVersion = "workbench-edge-route-metadata.v1";
   let draftEdges = [
     { id: "edge_logic1_logic2", source: "logic1", target: "logic2" },
@@ -11833,6 +11844,8 @@ function installEditableWorkbenchShell() {
       viewportState: viewportStateSnapshot(),
       workspaceDocument: currentWorkspaceDocument(),
       canvasInteractionSummary: currentCanvasInteractionSummary(),
+      sandboxTestBench: safeSandboxTestBenchDefinition(),
+      sandboxTestRunReport: currentSandboxTestRunReport(),
       subsystemGroups: subsystemGroupsSnapshot(),
       capturedSubsystemTemplates: capturedSubsystemTemplateSnapshot(),
       nodes: nodes.map((node) => editableNodeState(node)),
@@ -11891,6 +11904,13 @@ function installEditableWorkbenchShell() {
     }
     adoptWorkspaceDocumentRecord(state.workspaceDocument || state.workspace_document || null);
     adoptCanvasInteractionSummary(state.canvasInteractionSummary || state.canvas_interaction_summary || null);
+    restoreSandboxTestBenchDefinition(state.sandboxTestBench || state.sandbox_test_bench || null);
+    lastSandboxTestRunReport = normalizeImportedSandboxTestRunReport(
+      state.sandboxTestRunReport || state.sandbox_test_run_report || lastSandboxTestRunReport,
+    );
+    if (lastSandboxTestRunReport) {
+      renderSandboxTestBenchReport(lastSandboxTestRunReport);
+    }
     const nodeStates = Array.isArray(state.nodes) ? state.nodes : [];
     subsystemGroups = normalizeSubsystemGroups(
       state.subsystemGroups || state.subsystem_groups || subsystemGroupsFromNodeStates(nodeStates),
@@ -14363,6 +14383,8 @@ function installEditableWorkbenchShell() {
         viewportState: payload.viewportState || defaultViewportState(),
         workspaceDocument: payload.workspaceDocument || payload.workspace_document || null,
         canvasInteractionSummary: payload.canvasInteractionSummary || payload.canvas_interaction_summary || null,
+        sandboxTestBench: payload.sandboxTestBench || payload.sandbox_test_bench || null,
+        sandboxTestRunReport: payload.sandboxTestRunReport || payload.sandbox_test_run_report || null,
         selectedCatalogOp: payload.selectedCatalogOp,
         subsystemGroups: payload.subsystemGroups || payload.subsystem_groups || [],
         capturedSubsystemTemplates: (
@@ -14439,6 +14461,8 @@ function installEditableWorkbenchShell() {
     const hardwareEvidenceV2 = currentHardwareEvidenceV2Report();
     const selectedDebugTimeline = currentSelectedDebugTimelinePacket("snapshot");
     const candidateBaselineDiffReviewV2 = currentCandidateBaselineDiffReviewV2Report("snapshot");
+    const sandboxTestBench = safeSandboxTestBenchDefinition();
+    const sandboxTestRunReport = currentSandboxTestRunReport();
     const diagnosticRepairActions = repairActionLogSnapshot();
     const workspaceDocument = currentWorkspaceDocument();
     const canvasInteractionSummary = currentCanvasInteractionSummary();
@@ -14481,6 +14505,8 @@ function installEditableWorkbenchShell() {
       hardware_evidence_v2: hardwareEvidenceV2,
       selected_debug_timeline: selectedDebugTimeline,
       candidate_baseline_diff_review_v2: candidateBaselineDiffReviewV2,
+      sandbox_test_bench: sandboxTestBench,
+      sandbox_test_run_report: sandboxTestRunReport,
     };
     snapshot.editable_graph_document = buildEditableGraphDocumentFromSnapshot(snapshot);
     return snapshot;
@@ -14527,6 +14553,449 @@ function installEditableWorkbenchShell() {
       custom_snapshot_keys: Object.keys(customSnapshot).sort(),
       custom_snapshot_truth_effect: "none",
     };
+  }
+
+  function parseSandboxTestBenchArray(input, fallback, label) {
+    const raw = input ? String(input.value || "").trim() : "";
+    if (!raw) return fallback;
+    const payload = JSON.parse(raw);
+    if (!Array.isArray(payload)) {
+      throw new Error(`${label} JSON must be an array`);
+    }
+    return payload;
+  }
+
+  function normalizeSandboxTickRecord(record, fallbackIndex) {
+    if (!record || typeof record !== "object" || Array.isArray(record)) {
+      throw new Error(`scenario tick ${fallbackIndex || 0} must be an object`);
+    }
+    const tick = Number.isFinite(Number(record.tick)) ? Number(record.tick) : fallbackIndex || 0;
+    const inputs = record.inputs && typeof record.inputs === "object" && !Array.isArray(record.inputs)
+      ? normalizeEvidenceArchiveValue(record.inputs)
+      : {};
+    return {
+      tick,
+      inputs,
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    };
+  }
+
+  function normalizeSandboxAssertionRecord(record, fallbackIndex) {
+    if (!record || typeof record !== "object" || Array.isArray(record)) {
+      throw new Error(`scenario assertion ${fallbackIndex || 0} must be an object`);
+    }
+    const target = String(record.target || record.port_id || record.signal_id || "").trim();
+    if (!target) throw new Error(`scenario assertion ${fallbackIndex || 0} target is required`);
+    return {
+      tick: Number.isFinite(Number(record.tick)) ? Number(record.tick) : 0,
+      target,
+      expected: normalizeEvidenceArchiveValue(record.expected),
+      comparator: String(record.comparator || "equals"),
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    };
+  }
+
+  function currentSandboxTestBenchDefinition() {
+    const tickRecords = parseSandboxTestBenchArray(
+      sandboxTestBenchInputs,
+      [{ tick: 0, inputs: {} }],
+      "scenario inputs",
+    ).map((record, index) => normalizeSandboxTickRecord(record, index));
+    const assertionRecords = parseSandboxTestBenchArray(
+      sandboxTestBenchAssertions,
+      [],
+      "scenario assertions",
+    ).map((record, index) => normalizeSandboxAssertionRecord(record, index));
+    return {
+      kind: sandboxTestBenchKind,
+      version: sandboxTestBenchVersion,
+      scenario_id: selectedWorkbenchScenarioId(),
+      ticks: tickRecords,
+      assertions: assertionRecords,
+      tick_count: tickRecords.length,
+      assertion_count: assertionRecords.length,
+      source: "browser_local_draft",
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function fallbackSandboxTestBenchDefinition(errorMessage) {
+    return {
+      kind: sandboxTestBenchKind,
+      version: sandboxTestBenchVersion,
+      scenario_id: selectedWorkbenchScenarioId(),
+      ticks: [],
+      assertions: [],
+      tick_count: 0,
+      assertion_count: 0,
+      validation_error: String(errorMessage || "invalid sandbox test bench JSON"),
+      source: "browser_local_draft",
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function safeSandboxTestBenchDefinition() {
+    try {
+      return currentSandboxTestBenchDefinition();
+    } catch (err) {
+      return fallbackSandboxTestBenchDefinition(err && err.message ? err.message : "invalid sandbox test bench JSON");
+    }
+  }
+
+  function restoreSandboxTestBenchDefinition(definition) {
+    if (!definition || typeof definition !== "object" || Array.isArray(definition)) return;
+    if (sandboxTestBenchInputs && Array.isArray(definition.ticks)) {
+      sandboxTestBenchInputs.value = JSON.stringify(
+        definition.ticks.map((tick) => ({
+          tick: tick.tick,
+          inputs: tick.inputs || {},
+        })),
+        null,
+        2,
+      );
+    }
+    if (sandboxTestBenchAssertions && Array.isArray(definition.assertions)) {
+      sandboxTestBenchAssertions.value = JSON.stringify(
+        definition.assertions.map((assertion) => ({
+          tick: assertion.tick,
+          target: assertion.target,
+          expected: assertion.expected,
+          comparator: assertion.comparator || "equals",
+        })),
+        null,
+        2,
+      );
+    }
+  }
+
+  function normalizeImportedSandboxTestRunReport(report) {
+    if (!report || typeof report !== "object" || Array.isArray(report)) return null;
+    return {
+      ...report,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function currentSandboxTestRunReport() {
+    return normalizeImportedSandboxTestRunReport(lastSandboxTestRunReport);
+  }
+
+  function sandboxValueEquals(left, right) {
+    return stableEvidenceArchiveJson(left) === stableEvidenceArchiveJson(right);
+  }
+
+  function sandboxBoolean(value) {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    if (typeof value === "string") {
+      const normalized = value.trim().toLowerCase();
+      return normalized === "true" || normalized === "1" || normalized === "yes";
+    }
+    return Boolean(value);
+  }
+
+  function sandboxNumber(value) {
+    const numberValue = Number(value);
+    return Number.isFinite(numberValue) ? numberValue : 0;
+  }
+
+  function nodeRuleThreshold(node, fallback) {
+    const rules = Array.isArray(node && node.rules) ? node.rules : [];
+    for (const rule of rules) {
+      if (!rule || typeof rule !== "object") continue;
+      const threshold = rule.threshold_value !== undefined ? rule.threshold_value : rule.threshold;
+      if (threshold !== undefined && Number.isFinite(Number(threshold))) {
+        return Number(threshold);
+      }
+    }
+    return fallback;
+  }
+
+  function compareSandboxNumber(value, comparison, threshold) {
+    const left = sandboxNumber(value);
+    const right = sandboxNumber(threshold);
+    if (comparison === "!=") return left !== right;
+    if (comparison === "<") return left < right;
+    if (comparison === "<=") return left <= right;
+    if (comparison === ">") return left > right;
+    if (comparison === ">=") return left >= right;
+    return left === right;
+  }
+
+  function nodeRuleComparison(node, fallback) {
+    const rules = Array.isArray(node && node.rules) ? node.rules : [];
+    const rule = rules.find((item) => item && typeof item === "object" && item.comparison);
+    return rule ? normalizeRuleComparison(rule.comparison) : fallback;
+  }
+
+  function nodeInputPortId(node) {
+    const contract = node && (node.port_contract || node.portContract);
+    return normalizePortContract(contract, node && node.id).input_port_id;
+  }
+
+  function nodeOutputPortId(node) {
+    const contract = node && (node.port_contract || node.portContract);
+    return normalizePortContract(contract, node && node.id).output_port_id;
+  }
+
+  function readSandboxValue(values, keys) {
+    for (const key of keys || []) {
+      if (key && Object.prototype.hasOwnProperty.call(values, key)) return values[key];
+    }
+    return undefined;
+  }
+
+  function nodeInputValues(node, values, edges) {
+    const nodeId = String((node && node.id) || "");
+    const candidates = [
+      nodeInputPortId(node),
+      `${nodeId}:in`,
+      nodeId,
+    ];
+    const directValue = readSandboxValue(values, candidates);
+    const incoming = (edges || [])
+      .filter((edge) => edge && edge.target === nodeId)
+      .map((edge) => readSandboxValue(values, [
+        edge.target_port_id,
+        edge.targetPortId,
+        `${nodeId}:in`,
+        edge.source_port_id,
+        edge.sourcePortId,
+        `${edge.source}:out`,
+        edge.source,
+      ]))
+      .filter((value) => value !== undefined);
+    if (directValue !== undefined) incoming.unshift(directValue);
+    return incoming;
+  }
+
+  function writeSandboxNodeOutput(values, node, value) {
+    const nodeId = String((node && node.id) || "");
+    const outputPort = nodeOutputPortId(node);
+    values[nodeId] = value;
+    values[`${nodeId}:out`] = value;
+    if (outputPort) values[outputPort] = value;
+  }
+
+  function propagateSandboxEdges(values, edges) {
+    for (const edge of edges || []) {
+      if (!edge) continue;
+      const value = readSandboxValue(values, [
+        edge.source_port_id,
+        edge.sourcePortId,
+        `${edge.source}:out`,
+        edge.source,
+      ]);
+      if (value === undefined) continue;
+      if (edge.target_port_id) values[edge.target_port_id] = value;
+      if (edge.targetPortId) values[edge.targetPortId] = value;
+      if (edge.target) values[`${edge.target}:in`] = value;
+    }
+  }
+
+  function evaluateSandboxNode(node, inputValues, state) {
+    const op = String((node && (node.op_catalog_entry || node.op || node.opCatalogEntry)) || "and");
+    const values = inputValues.length ? inputValues : [false];
+    if (!approvedOperationCatalog[op]) {
+      return {
+        status: "invalid",
+        value: null,
+        finding: {
+          code: "unsupported_op",
+          node_id: node && node.id,
+          op,
+          message: `Unsupported sandbox op ${op}`,
+          truth_effect: "none",
+        },
+      };
+    }
+    if (op === "or") return { status: "ok", value: values.some((value) => sandboxBoolean(value)) };
+    if (op === "compare") {
+      return {
+        status: "ok",
+        value: compareSandboxNumber(
+          values[0],
+          nodeRuleComparison(node, ">="),
+          nodeRuleThreshold(node, 5),
+        ),
+      };
+    }
+    if (op === "between") {
+      const rules = Array.isArray(node && node.rules) ? node.rules : [];
+      const thresholds = rules
+        .map((rule) => rule && (rule.threshold_value !== undefined ? rule.threshold_value : rule.threshold))
+        .filter((value) => Number.isFinite(Number(value)))
+        .map((value) => Number(value));
+      const lower = thresholds.length ? Math.min(...thresholds) : 5;
+      const upper = thresholds.length > 1 ? Math.max(...thresholds) : 10;
+      const value = sandboxNumber(values[0]);
+      return { status: "ok", value: value >= lower && value <= upper };
+    }
+    if (op === "delay") {
+      const delayed = state.previous_outputs[node.id] !== undefined
+        ? state.previous_outputs[node.id]
+        : false;
+      return { status: "ok", value: delayed };
+    }
+    if (op === "latch") {
+      const latched = sandboxBoolean(state.previous_outputs[node.id]) || sandboxBoolean(values[0]);
+      return { status: "ok", value: latched };
+    }
+    return { status: "ok", value: values.every((value) => sandboxBoolean(value)) };
+  }
+
+  function evaluateSandboxTestBench(snapshot, definition) {
+    const model = snapshot && typeof snapshot === "object" && !Array.isArray(snapshot)
+      ? snapshot
+      : currentDraftSnapshot();
+    const testBench = definition || currentSandboxTestBenchDefinition();
+    const nodesForRun = Array.isArray(model.nodes) ? model.nodes : [];
+    const edgesForRun = Array.isArray(model.edges) ? model.edges : [];
+    const validationFindings = [];
+    const trace = [];
+    const state = { previous_outputs: {} };
+    for (const tick of testBench.ticks || []) {
+      const values = { ...(tick.inputs || {}) };
+      const nodeResults = [];
+      for (let pass = 0; pass < Math.max(1, nodesForRun.length); pass += 1) {
+        propagateSandboxEdges(values, edgesForRun);
+        for (const node of nodesForRun) {
+          const result = evaluateSandboxNode(
+            node,
+            nodeInputValues(node, values, edgesForRun),
+            state,
+          );
+          if (result.finding) validationFindings.push(result.finding);
+          writeSandboxNodeOutput(values, node, result.value);
+          nodeResults.push({
+            node_id: node.id,
+            op: node.op || node.op_catalog_entry || "and",
+            value: normalizeEvidenceArchiveValue(result.value),
+            status: result.status,
+            truth_effect: "none",
+          });
+        }
+      }
+      propagateSandboxEdges(values, edgesForRun);
+      trace.push({
+        tick: tick.tick,
+        values: normalizeEvidenceArchiveValue(values),
+        node_results: nodeResults,
+        truth_effect: "none",
+      });
+      state.previous_outputs = { ...values };
+    }
+    const assertions = (testBench.assertions || []).map((assertion) => {
+      const frame = trace.find((item) => Number(item.tick) === Number(assertion.tick));
+      const observed = frame && frame.values
+        ? readSandboxValue(frame.values, [assertion.target])
+        : undefined;
+      const status = sandboxValueEquals(observed, assertion.expected) ? "pass" : "fail";
+      return {
+        tick: assertion.tick,
+        target: assertion.target,
+        expected: assertion.expected,
+        observed: normalizeEvidenceArchiveValue(observed),
+        comparator: assertion.comparator || "equals",
+        status,
+        truth_effect: "none",
+      };
+    });
+    const failCount = assertions.filter((assertion) => assertion.status === "fail").length;
+    const unsupportedOps = validationFindings.filter((finding) => finding.code === "unsupported_op");
+    const assertionStatus = assertions.length === 0
+      ? "not_run"
+      : (failCount ? "fail" : "pass");
+    const status = unsupportedOps.length
+      ? "invalid_scenario"
+      : (failCount ? "fail" : "pass");
+    return {
+      kind: sandboxTestRunReportKind,
+      version: sandboxTestRunReportVersion,
+      scenario_id: testBench.scenario_id || selectedWorkbenchScenarioId(),
+      model_hash: editableDraftHash(stableEvidenceArchiveJson({
+        nodes: model.nodes || [],
+        edges: model.edges || [],
+        definition: testBench,
+      })),
+      definition: testBench,
+      status,
+      assertion_status: assertionStatus,
+      pass_count: assertions.filter((assertion) => assertion.status === "pass").length,
+      fail_count: failCount,
+      assertion_count: assertions.length,
+      trace,
+      assertions,
+      validation_findings: validationFindings,
+      unsupported_ops: unsupportedOps,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_level_impact: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function renderSandboxTestBenchReport(report) {
+    const normalized = normalizeImportedSandboxTestRunReport(report);
+    lastSandboxTestRunReport = normalized;
+    const status = (normalized && normalized.status) || "invalid_scenario";
+    if (sandboxTestBenchPanel) sandboxTestBenchPanel.setAttribute("data-test-status", status);
+    if (sandboxTestBenchStatus) sandboxTestBenchStatus.textContent = status;
+    if (sandboxTestBenchReportOutput) {
+      sandboxTestBenchReportOutput.value = JSON.stringify(normalized, null, 2);
+    }
+    if (handoffStatus) {
+      handoffStatus.textContent =
+        `Sandbox test bench ${status}. Truth effect: none. No certification claim.`;
+    }
+    return normalized;
+  }
+
+  function runSandboxTestBench() {
+    let report = null;
+    if (runTestBenchBtn) runTestBenchBtn.disabled = true;
+    if (sandboxTestBenchStatus) sandboxTestBenchStatus.textContent = "running";
+    try {
+      const definition = currentSandboxTestBenchDefinition();
+      report = evaluateSandboxTestBench(currentDraftSnapshot(), definition);
+    } catch (err) {
+      report = {
+        kind: sandboxTestRunReportKind,
+        version: sandboxTestRunReportVersion,
+        scenario_id: selectedWorkbenchScenarioId(),
+        status: "invalid_scenario",
+        assertion_status: "not_run",
+        pass_count: 0,
+        fail_count: 0,
+        assertion_count: 0,
+        error: err && err.message ? err.message : "sandbox test bench failed",
+        definition: null,
+        trace: [],
+        assertions: [],
+        validation_findings: [],
+        unsupported_ops: [],
+        candidate_state: "sandbox_candidate",
+        certification_claim: "none",
+        truth_level_impact: "none",
+        truth_effect: "none",
+      };
+    } finally {
+      if (runTestBenchBtn) runTestBenchBtn.disabled = false;
+    }
+    recordWorkspaceAction("run_sandbox_test_bench");
+    recordCanvasInteractionAction("run_sandbox_test_bench");
+    renderWorkspaceDocumentStatus();
+    renderSandboxTestBenchReport(report);
+    persistDraft();
+    return report;
   }
 
   function buildEditableDraftExport() {
@@ -14579,6 +15048,8 @@ function installEditableWorkbenchShell() {
       hardware_evidence_v2: snapshot.hardware_evidence_v2,
       selected_debug_timeline: snapshot.selected_debug_timeline,
       candidate_baseline_diff_review_v2: candidateBaselineDiffReviewV2,
+      sandbox_test_bench: snapshot.sandbox_test_bench,
+      sandbox_test_run_report: snapshot.sandbox_test_run_report,
       changerequest_proof_packet: changeRequestProofPacket,
       changerequest_handoff_packet: changeRequestHandoffPacket,
       draft_snapshot_manifest: buildDraftSnapshotManifestSummary(),
@@ -14852,6 +15323,62 @@ function installEditableWorkbenchShell() {
         throw new Error("candidate_baseline_diff_review_v2 controller_truth_modified must be false");
       }
     }
+    if (
+      payload.sandbox_test_bench !== undefined
+      && payload.sandbox_test_bench !== null
+      && (!payload.sandbox_test_bench || typeof payload.sandbox_test_bench !== "object" || Array.isArray(payload.sandbox_test_bench))
+    ) {
+      throw new Error("sandbox_test_bench must be an object when present");
+    }
+    if (payload.sandbox_test_bench) {
+      const testBench = payload.sandbox_test_bench;
+      if (testBench.kind !== sandboxTestBenchKind) {
+        throw new Error("sandbox_test_bench kind must be well-harness-workbench-sandbox-test-bench");
+      }
+      if (testBench.version !== sandboxTestBenchVersion) {
+        throw new Error("sandbox_test_bench version must be workbench-sandbox-test-bench.v1");
+      }
+      if (testBench.candidate_state !== "sandbox_candidate") {
+        throw new Error("sandbox_test_bench candidate_state must be sandbox_candidate");
+      }
+      if (testBench.certification_claim !== "none") {
+        throw new Error("sandbox_test_bench certification_claim must be none");
+      }
+      if (testBench.truth_effect !== "none") {
+        throw new Error("sandbox_test_bench truth_effect must be none");
+      }
+      if (!Array.isArray(testBench.ticks)) {
+        throw new Error("sandbox_test_bench ticks must be an array");
+      }
+      if (!Array.isArray(testBench.assertions)) {
+        throw new Error("sandbox_test_bench assertions must be an array");
+      }
+    }
+    if (
+      payload.sandbox_test_run_report !== undefined
+      && payload.sandbox_test_run_report !== null
+      && (!payload.sandbox_test_run_report || typeof payload.sandbox_test_run_report !== "object" || Array.isArray(payload.sandbox_test_run_report))
+    ) {
+      throw new Error("sandbox_test_run_report must be an object when present");
+    }
+    if (payload.sandbox_test_run_report) {
+      const report = payload.sandbox_test_run_report;
+      if (report.kind !== sandboxTestRunReportKind) {
+        throw new Error("sandbox_test_run_report kind must be well-harness-workbench-sandbox-test-run-report");
+      }
+      if (report.version !== sandboxTestRunReportVersion) {
+        throw new Error("sandbox_test_run_report version must be workbench-sandbox-test-run-report.v1");
+      }
+      if (report.candidate_state !== "sandbox_candidate") {
+        throw new Error("sandbox_test_run_report candidate_state must be sandbox_candidate");
+      }
+      if (report.certification_claim !== "none") {
+        throw new Error("sandbox_test_run_report certification_claim must be none");
+      }
+      if (report.truth_effect !== "none") {
+        throw new Error("sandbox_test_run_report truth_effect must be none");
+      }
+    }
     if (payload.typed_ports !== undefined && !Array.isArray(payload.typed_ports)) {
       throw new Error("typed_ports must be an array when present");
     }
@@ -15052,6 +15579,11 @@ function installEditableWorkbenchShell() {
     }
     if (customSnapshotInput && validated.custom_snapshot) {
       customSnapshotInput.value = JSON.stringify(validated.custom_snapshot, null, 2);
+    }
+    restoreSandboxTestBenchDefinition(validated.sandbox_test_bench);
+    lastSandboxTestRunReport = normalizeImportedSandboxTestRunReport(validated.sandbox_test_run_report);
+    if (lastSandboxTestRunReport) {
+      renderSandboxTestBenchReport(lastSandboxTestRunReport);
     }
     const selectedId =
       validated.selected_node && typeof validated.selected_node.id === "string"
@@ -16303,6 +16835,10 @@ function installEditableWorkbenchShell() {
     const candidateBaselineDiffReviewV2 =
       modelJson.candidate_baseline_diff_review_v2
       || currentCandidateBaselineDiffReviewV2Report("archive", modelJson.changed_model_hash);
+    const sandboxTestBench =
+      modelJson.sandbox_test_bench || safeSandboxTestBenchDefinition();
+    const sandboxTestRunReport =
+      modelJson.sandbox_test_run_report || currentSandboxTestRunReport();
     const diagnosticFocus = modelJson.diagnostic_focus || currentDiagnosticFocusSummary();
     const diagnosticRepairActions = modelJson.repair_action_log || repairActionLogSnapshot();
     const typedPorts = modelJson.typed_ports || [];
@@ -16361,6 +16897,8 @@ function installEditableWorkbenchShell() {
       hardware_evidence_v2: hardwareEvidenceV2,
       selected_debug_timeline: selectedDebugTimeline,
       candidate_baseline_diff_review_v2: candidateBaselineDiffReviewV2,
+      sandbox_test_bench: sandboxTestBench,
+      sandbox_test_run_report: sandboxTestRunReport,
       diagnostic_focus: diagnosticFocus,
       repair_action_log: diagnosticRepairActions,
       typed_ports: typedPorts,
@@ -16404,6 +16942,8 @@ function installEditableWorkbenchShell() {
       hardware_evidence_v2_checksum: checksumEvidenceArchiveField(hardwareEvidenceV2),
       selected_debug_timeline_checksum: checksumEvidenceArchiveField(selectedDebugTimeline),
       candidate_baseline_diff_review_v2_checksum: checksumEvidenceArchiveField(candidateBaselineDiffReviewV2),
+      sandbox_test_bench_checksum: checksumEvidenceArchiveField(sandboxTestBench),
+      sandbox_test_run_report_checksum: checksumEvidenceArchiveField(sandboxTestRunReport),
       diagnostic_focus_checksum: checksumEvidenceArchiveField(diagnosticFocus),
       repair_action_log_checksum: checksumEvidenceArchiveField(diagnosticRepairActions),
       typed_ports_checksum: checksumEvidenceArchiveField(typedPorts),
@@ -16536,6 +17076,9 @@ function installEditableWorkbenchShell() {
   }
   if (runSandboxBtn) {
     runSandboxBtn.addEventListener("click", () => runWorkbenchSandboxDiff());
+  }
+  if (runTestBenchBtn) {
+    runTestBenchBtn.addEventListener("click", () => runSandboxTestBench());
   }
   for (const button of toolbarButtons) {
     button.addEventListener("click", () => {
@@ -16686,6 +17229,22 @@ function installEditableWorkbenchShell() {
   }
   if (downloadArchiveBtn) {
     downloadArchiveBtn.addEventListener("click", () => downloadWorkbenchEvidenceArchive());
+  }
+  if (sandboxTestBenchInputs) {
+    sandboxTestBenchInputs.addEventListener("input", () => {
+      lastSandboxTestRunReport = null;
+      if (sandboxTestBenchStatus) sandboxTestBenchStatus.textContent = "edited";
+      if (sandboxTestBenchPanel) sandboxTestBenchPanel.setAttribute("data-test-status", "edited");
+      persistDraft();
+    });
+  }
+  if (sandboxTestBenchAssertions) {
+    sandboxTestBenchAssertions.addEventListener("input", () => {
+      lastSandboxTestRunReport = null;
+      if (sandboxTestBenchStatus) sandboxTestBenchStatus.textContent = "edited";
+      if (sandboxTestBenchPanel) sandboxTestBenchPanel.setAttribute("data-test-status", "edited");
+      persistDraft();
+    });
   }
 
   function isFormShortcutTarget(target) {

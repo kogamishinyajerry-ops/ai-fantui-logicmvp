@@ -2353,6 +2353,96 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_sandbox_scenario_test_bench_runs_exports_and_archives(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-op-catalog-op="compare"]')
+    page.click('[data-editor-tool="node"]')
+    page.click('[data-op-catalog-op="between"]')
+    page.click('[data-editor-tool="node"]')
+    page.locator(
+        '[data-port-handle-owner-id="draft_node_1"][data-port-handle-direction="out"]'
+    ).click()
+    page.locator(
+        '[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="in"]'
+    ).click()
+
+    page.fill(
+        "#workbench-test-bench-inputs-json",
+        json.dumps(
+            [
+                {"tick": 0, "inputs": {"draft_node_1:in": 2, "draft_node_1": 2}},
+                {"tick": 1, "inputs": {"draft_node_1:in": 8, "draft_node_1": 8}},
+            ]
+        ),
+    )
+    page.fill(
+        "#workbench-test-bench-assertions-json",
+        json.dumps(
+            [
+                {"tick": 0, "target": "draft_node_1:out", "expected": False},
+                {"tick": 1, "target": "draft_node_1:out", "expected": True},
+            ]
+        ),
+    )
+    page.click("#workbench-run-test-bench-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const output = document.getElementById('workbench-test-bench-report-output');
+          return output && output.value.includes('well-harness-workbench-sandbox-test-run-report');
+        }
+        """
+    )
+    report = json.loads(page.locator("#workbench-test-bench-report-output").input_value())
+    assert errors == [], f"page JS errors: {errors}"
+    assert report["kind"] == "well-harness-workbench-sandbox-test-run-report"
+    assert report["version"] == "workbench-sandbox-test-run-report.v1"
+    assert report["candidate_state"] == "sandbox_candidate"
+    assert report["truth_effect"] == "none"
+    assert report["certification_claim"] == "none"
+    assert report["status"] == "pass"
+    assert report["assertion_status"] == "pass"
+    assert report["pass_count"] == 2
+    assert report["fail_count"] == 0
+    assert report["definition"]["kind"] == "well-harness-workbench-sandbox-test-bench"
+    assert report["definition"]["truth_effect"] == "none"
+    assert report["trace"][0]["tick"] == 0
+    assert report["trace"][1]["tick"] == 1
+
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert draft["sandbox_test_bench"]["truth_effect"] == "none"
+    assert draft["sandbox_test_run_report"]["assertion_status"] == "pass"
+    assert draft["sandbox_test_run_report"]["truth_effect"] == "none"
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    page.fill("#workbench-draft-json-buffer", draft_json)
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert imported["sandbox_test_bench"]["assertion_count"] == 2
+    assert imported["sandbox_test_run_report"]["assertion_status"] == "pass"
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["sandbox_test_bench"]["tick_count"] == 2
+    assert archive["sandbox_test_run_report"]["assertion_status"] == "pass"
+    assert archive["checksums"]["sandbox_test_bench_checksum"]
+    assert archive["checksums"]["sandbox_test_run_report_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_canvas_viewport_pan_zoom_fit_preserves_model_coordinates(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
