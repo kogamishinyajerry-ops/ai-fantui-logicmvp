@@ -2,7 +2,7 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-218 workspace state kernel in progress
+status: Workbench Runtime v3 closed through JER-203 · v4 Authoring + Hardware Design launched · JER-219 high-freedom canvas evidence in progress
 last_updated: "2026-05-01T03:40:00.000+08:00"
 last_activity: 2026-05-01
 progress:
@@ -10,7 +10,7 @@ progress:
   completed_phases: 43
   total_plans: 2
   completed_plans: 1
-  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates. JER-207 adds sandbox-only subsystem group/rename/ungroup metadata. JER-208 adds sandbox-only hardware interface design schema/loader/validator/hash evidence. JER-209 adds a connector/pin map editor, draft round-trip, and archive checksum. JER-210 adds a selected-owner Hardware Evidence Inspector v2 packet for LRU/cable/connector/port/pin coverage and evidence gaps. JER-211 adds a selected graph debug timeline packet linked to current scenario, sandbox diff status, ports, and hardware overlay. JER-212 adds an archive-ready candidate-to-baseline diff review v2 packet that keeps certification claim none. JER-213 adds a structured ChangeRequest handoff packet with Outcome/Acceptance/Boundaries/Evidence/Red lines/Test delta placeholders and no live Linear mutation. JER-214 adds a repo-owned handoff schema, validator, canonical hash contract, validation-suite entry, and stable browser checksum serialization. JER-215 validates embedded ChangeRequest handoff packets during archive restore/readback and keeps old archives without handoff packets backward-compatible. JER-216 captures selected sandbox subsystems as reusable templates, reinserts them with fresh draft ids, and archives template metadata/checksums with truth_effect none. JER-217 adds sandbox-only subsystem boundary input/output port contracts that round-trip through draft export/import, archive checksums, and captured template reinsertion. JER-218 adds the workspace_document interaction-state envelope for revision/action/undo/redo evidence and archive checksum coverage. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 adds sandbox-only component templates. JER-207 adds sandbox-only subsystem group/rename/ungroup metadata. JER-208 adds sandbox-only hardware interface design schema/loader/validator/hash evidence. JER-209 adds a connector/pin map editor, draft round-trip, and archive checksum. JER-210 adds a selected-owner Hardware Evidence Inspector v2 packet for LRU/cable/connector/port/pin coverage and evidence gaps. JER-211 adds a selected graph debug timeline packet linked to current scenario, sandbox diff status, ports, and hardware overlay. JER-212 adds an archive-ready candidate-to-baseline diff review v2 packet that keeps certification claim none. JER-213 adds a structured ChangeRequest handoff packet with Outcome/Acceptance/Boundaries/Evidence/Red lines/Test delta placeholders and no live Linear mutation. JER-214 adds a repo-owned handoff schema, validator, canonical hash contract, validation-suite entry, and stable browser checksum serialization. JER-215 validates embedded ChangeRequest handoff packets during archive restore/readback and keeps old archives without handoff packets backward-compatible. JER-216 captures selected sandbox subsystems as reusable templates, reinserts them with fresh draft ids, and archives template metadata/checksums with truth_effect none. JER-217 adds sandbox-only subsystem boundary input/output port contracts that round-trip through draft export/import, archive checksums, and captured template reinsertion. JER-218 adds the workspace_document interaction-state envelope for revision/action/undo/redo evidence and archive checksum coverage. JER-219 adds canvas_interaction_summary evidence for high-freedom multi-select, duplicate/delete, lasso/group move, selection counts, last action, position digest, and archive checksum coverage. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
@@ -19,10 +19,10 @@ Last activity: 2026-05-01
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
-**Current position**: JER-204 through JER-217 are merged on the v4 line, and
-JER-218 is in progress. JER-218 adds a sandbox-only workspace document state
-kernel so draft revision, action count, undo depth, redo depth, and archive
-checksums are reviewable evidence rather than certified truth.
+**Current position**: JER-204 through JER-218 are merged on the v4 line, and
+JER-219 is in progress. JER-219 makes high-freedom canvas editing reviewable by
+surfacing selected node/edge counts, last canvas action, position digest, and
+archive checksum evidence without changing certified truth.
 
 **Linear control plane**:
 
@@ -44,7 +44,8 @@ checksums are reviewable evidence rather than certified truth.
   ChangeRequest handoff packets.
 - JER-216 is Done after PR #198.
 - JER-217 is Done after PR #199.
-- JER-218 is In Progress for workspace document interaction-state evidence.
+- JER-218 is Done after PR #200.
+- JER-219 is In Progress for high-freedom canvas interaction evidence.
 
 **Runtime v3 closure summary**:
 
@@ -227,7 +228,7 @@ handoff packet.
 - Draft export/import, evidence archive checksums, and captured subsystem
   template reinsertion preserve these ports without changing controller truth.
 
-**JER-218 workspace document state kernel in progress**:
+**JER-218 workspace document state kernel closure**:
 
 - The `/workbench` status bar exposes a sandbox-only workspace document
   revision readout with action count, undo depth, and redo depth.
@@ -236,6 +237,19 @@ handoff packet.
   `truth_effect: none`.
 - Evidence archive output includes `workspace_document_checksum` for review
   reproducibility.
+
+**JER-219 high-freedom canvas interaction evidence in progress**:
+
+- The `/workbench` status bar exposes selected node count, selected edge count,
+  and last canvas action as sandbox-only interaction evidence.
+- Draft export/import and local evidence archives carry
+  `canvas_interaction_summary` with `candidate_state: sandbox_candidate` and
+  `truth_effect: none`.
+- Evidence archive output includes `canvas_interaction_summary_checksum` for
+  review reproducibility.
+- Existing multi-select, duplicate/delete, lasso/group move, undo/redo, and
+  workspace document flows remain sandbox-only and do not mutate controller
+  truth.
 
 **Hard boundaries**:
 

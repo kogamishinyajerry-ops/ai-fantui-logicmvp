@@ -2051,6 +2051,7 @@ def test_workbench_lasso_selects_and_group_moves_draft_nodes(demo_server, browse
     assert page.locator('[data-editable-node-id="draft_node_1"]').get_attribute("data-multi-selected") == "true"
     assert page.locator('[data-editable-node-id="draft_node_2"]').get_attribute("data-multi-selected") == "true"
 
+    page.locator('[data-editable-node-id="draft_node_1"]').scroll_into_view_if_needed()
     draft_node_1 = page.locator('[data-editable-node-id="draft_node_1"]').bounding_box()
     assert draft_node_1 is not None
     page.mouse.move(draft_node_1["x"] + draft_node_1["width"] / 2, draft_node_1["y"] + draft_node_1["height"] / 2)
@@ -2108,6 +2109,64 @@ def test_workbench_lasso_selects_and_group_moves_draft_nodes(demo_server, browse
     }
     assert undone_positions["draft_node_1"] == before_positions["draft_node_1"]
     assert undone_positions["draft_node_2"] == before_positions["draft_node_2"]
+
+
+def test_workbench_canvas_interaction_summary_tracks_high_freedom_actions(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-component-template-id="two_stage_interlock"]')
+    page.keyboard.press("Control+D")
+    page.click("#workbench-export-draft-btn")
+    duplicated = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    summary = duplicated["canvas_interaction_summary"]
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert summary["kind"] == "well-harness-workbench-canvas-interaction-summary"
+    assert summary["candidate_state"] == "sandbox_candidate"
+    assert summary["truth_effect"] == "none"
+    assert summary["selected_node_count"] == 2
+    assert summary["selected_edge_count"] == 0
+    assert summary["last_action"] == "batch_duplicate_nodes"
+    assert summary["node_count"] >= 8
+    assert summary["edge_count"] >= 4
+    assert page.locator("#workbench-canvas-selected-node-count").inner_text() == "2"
+    assert page.locator("#workbench-canvas-selected-edge-count").inner_text() == "0"
+    assert page.locator("#workbench-canvas-last-action").inner_text() == "batch_duplicate_nodes"
+    assert duplicated["workspace_document"]["action_count"] >= 2
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    page.fill("#workbench-draft-json-buffer", draft_json)
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    imported_summary = imported["canvas_interaction_summary"]
+    assert imported_summary["last_action"] in {"import_draft", "batch_duplicate_nodes"}
+    assert imported_summary["node_count"] == summary["node_count"]
+    assert imported_summary["edge_count"] == summary["edge_count"]
+    assert imported_summary["truth_effect"] == "none"
+
+    page.keyboard.press("Delete")
+    page.click("#workbench-export-draft-btn")
+    deleted = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert deleted["canvas_interaction_summary"]["last_action"] == "batch_remove_nodes"
+    assert deleted["canvas_interaction_summary"]["selected_node_count"] == 1
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["canvas_interaction_summary"]["truth_effect"] == "none"
+    assert archive["canvas_interaction_summary"]["last_action"] == "batch_remove_nodes"
+    assert archive["checksums"]["canvas_interaction_summary_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
 def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  # type: ignore[no-untyped-def]

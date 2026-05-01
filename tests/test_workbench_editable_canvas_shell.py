@@ -238,6 +238,19 @@ def test_workspace_document_status_controls_are_sandbox_only_ui() -> None:
     assert ".workbench-workspace-document-facts" in css
 
 
+def test_canvas_interaction_status_controls_are_sandbox_only_ui() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-canvas-interaction-status"' in html
+    assert 'id="workbench-canvas-selected-node-count"' in html
+    assert 'id="workbench-canvas-selected-edge-count"' in html
+    assert 'id="workbench-canvas-last-action"' in html
+    assert "Canvas interactions are sandbox evidence only. Truth effect: none." in html
+    assert ".workbench-canvas-interaction-status" in css
+    assert ".workbench-canvas-interaction-facts" in css
+
+
 def test_js_wires_draft_derivation_node_selection_and_evidence_api() -> None:
     js = _js()
 
@@ -311,6 +324,20 @@ def test_js_wires_workspace_document_round_trip_as_sandbox_only_metadata() -> No
     assert "function renderWorkspaceDocumentStatus" in js
     assert "workspace_document" in js
     assert "workspace_document_checksum" in js
+    assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'truth_effect: "none"' in js
+
+
+def test_js_wires_canvas_interaction_summary_as_sandbox_only_metadata() -> None:
+    js = _js()
+
+    assert "well-harness-workbench-canvas-interaction-summary" in js
+    assert "function currentCanvasInteractionSummary" in js
+    assert "function renderCanvasInteractionStatus" in js
+    assert "function recordCanvasInteractionAction" in js
+    assert "canvas_interaction_summary" in js
+    assert "canvas_interaction_summary_checksum" in js
+    assert "canvas_interaction_summary truth_effect must be none" in js
     assert 'candidate_state: "sandbox_candidate"' in js
     assert 'truth_effect: "none"' in js
 

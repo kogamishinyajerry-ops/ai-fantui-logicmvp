@@ -7628,6 +7628,9 @@ function installEditableWorkbenchShell() {
   const workspaceDocumentActionCountSlot = document.getElementById("workbench-workspace-document-action-count");
   const workspaceDocumentUndoDepthSlot = document.getElementById("workbench-workspace-document-undo-depth");
   const workspaceDocumentRedoDepthSlot = document.getElementById("workbench-workspace-document-redo-depth");
+  const canvasSelectedNodeCountSlot = document.getElementById("workbench-canvas-selected-node-count");
+  const canvasSelectedEdgeCountSlot = document.getElementById("workbench-canvas-selected-edge-count");
+  const canvasLastActionSlot = document.getElementById("workbench-canvas-last-action");
   const diffReviewV2Panel = document.getElementById("workbench-diff-review-v2");
   const diffReviewV2Status = document.getElementById("workbench-diff-review-v2-status");
   const diffReviewV2Target = document.getElementById("workbench-diff-review-v2-target");
@@ -7738,6 +7741,9 @@ function installEditableWorkbenchShell() {
   let workspaceDocumentRevision = "ui_draft_pending";
   let workspaceDocumentParentRevision = null;
   let workspaceActionLog = [];
+  const canvasInteractionSummaryKind = "well-harness-workbench-canvas-interaction-summary";
+  const canvasInteractionSummaryVersion = "workbench-canvas-interaction-summary.v1";
+  let lastCanvasInteractionAction = "init";
   let draftEdges = [
     { id: "edge_logic1_logic2", source: "logic1", target: "logic2" },
     { id: "edge_logic2_logic3", source: "logic2", target: "logic3" },
@@ -10565,6 +10571,7 @@ function installEditableWorkbenchShell() {
       node.setAttribute("aria-pressed", isSelected ? "true" : "false");
       node.setAttribute("data-multi-selected", isSelected && selectedCount > 1 ? "true" : "false");
     }
+    renderCanvasInteractionStatus();
   }
 
   function setSingleEditableNodeSelection(node) {
@@ -11551,6 +11558,64 @@ function installEditableWorkbenchShell() {
       parentRevision && parentRevision !== "ui_draft_pending" ? parentRevision : workspaceDocumentParentRevision;
   }
 
+  function currentCanvasInteractionSummary() {
+    refreshEditableNodes();
+    const selectedNodeIdList = Array.from(selectedNodeIds)
+      .filter((nodeId) => nodes.some((node) => editableNodeId(node) === nodeId))
+      .sort();
+    const selectedEdgeId = selectedEdge && selectedEdge.id ? String(selectedEdge.id) : "";
+    const positionDigest = editableDraftHash(stableEvidenceArchiveJson(
+      nodes.map((node) => ({
+        id: editableNodeId(node),
+        x: node.style.getPropertyValue("--node-x") || "50%",
+        y: node.style.getPropertyValue("--node-y") || "50%",
+      })),
+    ));
+    return {
+      kind: canvasInteractionSummaryKind,
+      version: canvasInteractionSummaryVersion,
+      selected_node_count: selectedNodeIdList.length,
+      selected_node_ids: selectedNodeIdList,
+      selected_edge_count: selectedEdgeId ? 1 : 0,
+      selected_edge_id: selectedEdgeId,
+      last_action: lastCanvasInteractionAction || "init",
+      node_count: nodes.length,
+      draft_node_count: nodes.filter((node) => node.getAttribute("data-draft-node") === "true").length,
+      edge_count: draftEdges.length,
+      position_digest: positionDigest,
+      workspace_action_count: workspaceActionLog.length,
+      undo_depth: undoStack.length,
+      redo_depth: redoStack.length,
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    };
+  }
+
+  function renderCanvasInteractionStatus(summaryRecord) {
+    const summary = summaryRecord || currentCanvasInteractionSummary();
+    if (canvasSelectedNodeCountSlot) {
+      canvasSelectedNodeCountSlot.textContent = String(summary.selected_node_count || 0);
+    }
+    if (canvasSelectedEdgeCountSlot) {
+      canvasSelectedEdgeCountSlot.textContent = String(summary.selected_edge_count || 0);
+    }
+    if (canvasLastActionSlot) {
+      canvasLastActionSlot.textContent = summary.last_action || "init";
+    }
+  }
+
+  function recordCanvasInteractionAction(actionName) {
+    lastCanvasInteractionAction = String(actionName || "edit");
+    renderCanvasInteractionStatus();
+  }
+
+  function adoptCanvasInteractionSummary(record) {
+    if (!record || typeof record !== "object" || Array.isArray(record)) return;
+    if (record.kind === canvasInteractionSummaryKind && typeof record.last_action === "string") {
+      lastCanvasInteractionAction = record.last_action || lastCanvasInteractionAction;
+    }
+  }
+
   function editableNodeState(node) {
     const componentTemplate = nodeComponentTemplateMetadata(node);
     const subsystemGroup = nodeSubsystemMetadata(node);
@@ -11596,6 +11661,7 @@ function installEditableWorkbenchShell() {
       selectedCatalogOp,
       viewportState: viewportStateSnapshot(),
       workspaceDocument: currentWorkspaceDocument(),
+      canvasInteractionSummary: currentCanvasInteractionSummary(),
       subsystemGroups: subsystemGroupsSnapshot(),
       capturedSubsystemTemplates: capturedSubsystemTemplateSnapshot(),
       nodes: nodes.map((node) => editableNodeState(node)),
@@ -11653,6 +11719,7 @@ function installEditableWorkbenchShell() {
       setSelectedOperationCatalogEntry(state.selectedCatalogOp);
     }
     adoptWorkspaceDocumentRecord(state.workspaceDocument || state.workspace_document || null);
+    adoptCanvasInteractionSummary(state.canvasInteractionSummary || state.canvas_interaction_summary || null);
     const nodeStates = Array.isArray(state.nodes) ? state.nodes : [];
     subsystemGroups = normalizeSubsystemGroups(
       state.subsystemGroups || state.subsystem_groups || subsystemGroupsFromNodeStates(nodeStates),
@@ -11775,6 +11842,7 @@ function installEditableWorkbenchShell() {
     if (undoStack.length > 50) undoStack.shift();
     redoStack.length = 0;
     recordWorkspaceAction(_actionName || "edit");
+    recordCanvasInteractionAction(_actionName || "edit");
     renderWorkspaceDocumentStatus();
   }
 
@@ -14020,6 +14088,7 @@ function installEditableWorkbenchShell() {
         );
       }
     }
+    recordCanvasInteractionAction("select_edge");
     renderEdgeInspector(selectedEdge);
     if (graphValidationStatus) {
       const payload = edgeInspectorPayload(selectedEdge);
@@ -14099,6 +14168,7 @@ function installEditableWorkbenchShell() {
         repairActionLog: payload.repairActionLog || payload.repair_action_log || [],
         viewportState: payload.viewportState || defaultViewportState(),
         workspaceDocument: payload.workspaceDocument || payload.workspace_document || null,
+        canvasInteractionSummary: payload.canvasInteractionSummary || payload.canvas_interaction_summary || null,
         selectedCatalogOp: payload.selectedCatalogOp,
         subsystemGroups: payload.subsystemGroups || payload.subsystem_groups || [],
         capturedSubsystemTemplates: (
@@ -14177,6 +14247,7 @@ function installEditableWorkbenchShell() {
     const candidateBaselineDiffReviewV2 = currentCandidateBaselineDiffReviewV2Report("snapshot");
     const diagnosticRepairActions = repairActionLogSnapshot();
     const workspaceDocument = currentWorkspaceDocument();
+    const canvasInteractionSummary = currentCanvasInteractionSummary();
     return {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
       system_id: "thrust-reverser",
@@ -14185,6 +14256,7 @@ function installEditableWorkbenchShell() {
       dal_pssa_impact: "none",
       controller_truth_modified: false,
       workspace_document: workspaceDocument,
+      canvas_interaction_summary: canvasInteractionSummary,
       diagnostic_focus: currentDiagnosticFocusSummary(),
       viewport_state: viewportStateSnapshot(),
       selected_node: selected,
@@ -14282,6 +14354,7 @@ function installEditableWorkbenchShell() {
       controller_truth_modified: false,
       changed_model_hash: changedModelHash,
       workspace_document: snapshot.workspace_document,
+      canvas_interaction_summary: snapshot.canvas_interaction_summary,
       diagnostic_focus: snapshot.diagnostic_focus,
       viewport_state: snapshot.viewport_state,
       selected_node: snapshot.selected_node,
@@ -14372,6 +14445,32 @@ function installEditableWorkbenchShell() {
       }
       if (documentRecord.action_log !== undefined && !Array.isArray(documentRecord.action_log)) {
         throw new Error("workspace_document action_log must be an array when present");
+      }
+    }
+    if (
+      payload.canvas_interaction_summary !== undefined
+      && (!payload.canvas_interaction_summary || typeof payload.canvas_interaction_summary !== "object" || Array.isArray(payload.canvas_interaction_summary))
+    ) {
+      throw new Error("canvas_interaction_summary must be an object when present");
+    }
+    if (payload.canvas_interaction_summary !== undefined) {
+      const summary = payload.canvas_interaction_summary;
+      if (summary.kind !== canvasInteractionSummaryKind) {
+        throw new Error("canvas_interaction_summary kind must be well-harness-workbench-canvas-interaction-summary");
+      }
+      if (summary.version !== canvasInteractionSummaryVersion) {
+        throw new Error("canvas_interaction_summary version must be workbench-canvas-interaction-summary.v1");
+      }
+      if (summary.candidate_state !== "sandbox_candidate") {
+        throw new Error("canvas_interaction_summary candidate_state must be sandbox_candidate");
+      }
+      if (summary.truth_effect !== "none") {
+        throw new Error("canvas_interaction_summary truth_effect must be none");
+      }
+      for (const key of ["selected_node_count", "selected_edge_count", "node_count", "edge_count"]) {
+        if (!Number.isFinite(Number(summary[key]))) {
+          throw new Error(`canvas_interaction_summary ${key} must be numeric`);
+        }
       }
     }
     if (!Array.isArray(payload.nodes)) {
@@ -14705,6 +14804,7 @@ function installEditableWorkbenchShell() {
       repairActionLog: validated.repair_action_log || [],
       viewportState: validated.viewport_state || defaultViewportState(),
       workspaceDocument: validated.workspace_document || null,
+      canvasInteractionSummary: validated.canvas_interaction_summary || null,
       selectedCatalogOp: importedCatalog.selected_op,
       subsystemGroups: validated.subsystem_groups || [],
       nodes: validated.nodes.map((node) => ({
@@ -15895,6 +15995,8 @@ function installEditableWorkbenchShell() {
     const modelJson = buildEditableDraftExport();
     const workspaceDocument =
       modelJson.workspace_document || currentWorkspaceDocument();
+    const canvasInteractionSummary =
+      modelJson.canvas_interaction_summary || currentCanvasInteractionSummary();
     const hardwareBindings = collectWorkbenchHardwareBindings();
     const bindingCoverage = buildInterfaceBindingCoverageSummary(hardwareBindings);
     const hardwareBindingDiagnostics =
@@ -15962,6 +16064,7 @@ function installEditableWorkbenchShell() {
       generated_at: "browser_local_draft",
       model_json: modelJson,
       workspace_document: workspaceDocument,
+      canvas_interaction_summary: canvasInteractionSummary,
       diff_summary: diffSummary,
       scenario_metadata: scenarioMetadata,
       hardware_bindings: hardwareBindings,
@@ -15998,6 +16101,7 @@ function installEditableWorkbenchShell() {
     const checksums = {
       model_json_checksum: checksumEvidenceArchiveField(modelJson),
       workspace_document_checksum: checksumEvidenceArchiveField(workspaceDocument),
+      canvas_interaction_summary_checksum: checksumEvidenceArchiveField(canvasInteractionSummary),
       diff_summary_checksum: checksumEvidenceArchiveField(diffSummary),
       changerequest_proof_packet_checksum: checksumEvidenceArchiveField(changeRequestProofPacket),
       changerequest_handoff_packet_checksum: checksumEvidenceArchiveField(changeRequestHandoffPacket),
