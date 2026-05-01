@@ -378,6 +378,39 @@ def test_js_wires_port_wire_route_metadata_as_sandbox_only_graph_evidence() -> N
     assert 'truth_effect: "none"' in js
 
 
+def test_sandbox_scenario_test_bench_controls_are_sandbox_only_ui() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-sandbox-test-bench"' in html
+    assert 'id="workbench-test-bench-inputs-json"' in html
+    assert 'id="workbench-test-bench-assertions-json"' in html
+    assert 'id="workbench-run-test-bench-btn"' in html
+    assert 'id="workbench-test-bench-status"' in html
+    assert 'id="workbench-test-bench-report-output"' in html
+    assert "Scenario tests are local sandbox evidence only. Truth effect: none." in html
+    assert ".workbench-sandbox-test-bench" in css
+
+
+def test_js_wires_sandbox_scenario_test_bench_as_sandbox_only_run_report() -> None:
+    js = _js()
+
+    assert "well-harness-workbench-sandbox-test-bench" in js
+    assert "workbench-sandbox-test-bench.v1" in js
+    assert "well-harness-workbench-sandbox-test-run-report" in js
+    assert "workbench-sandbox-test-run-report.v1" in js
+    assert "function currentSandboxTestBenchDefinition" in js
+    assert "function evaluateSandboxTestBench" in js
+    assert "function renderSandboxTestBenchReport" in js
+    assert "sandbox_test_bench" in js
+    assert "sandbox_test_run_report" in js
+    assert "sandbox_test_bench_checksum" in js
+    assert "sandbox_test_run_report_checksum" in js
+    assert "sandbox_test_run_report truth_effect must be none" in js
+    assert 'certification_claim: "none"' in js
+    assert 'truth_effect: "none"' in js
+
+
 def test_js_wires_connector_pin_map_round_trip_as_sandbox_only_metadata() -> None:
     js = _js()
 

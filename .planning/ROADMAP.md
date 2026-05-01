@@ -6,10 +6,10 @@
 (launched 2026-05-01)**
 
 Editable Control Workbench Core v1, Interaction v2, Runtime v3, and JER-219
-are complete as the foundation for sandbox-first control-logic editing. The
-current product mainline is now foundation-first Workbench v4: build the base
-single-user editor, runner, test bench, debugger, and archive loop before
-returning to dedicated thrust-reverser or C919 panel product work.
+through JER-222 are complete as the foundation for sandbox-first control-logic
+editing. The current product mainline is foundation-first Workbench v4: build
+the base single-user editor, runner, test bench, debugger, and archive loop
+before returning to dedicated thrust-reverser or C919 panel product work.
 
 Scope guard: v4 is a single-user engineering authoring workbench. The priority
 is a strong Simulink/Figma-level control-logic panel foundation: graph editing,
@@ -44,22 +44,26 @@ Housekeeping bridge:
 - JER-217: Subsystem interface contract editor v1 (Done, PR #199)
 - JER-218: Workbench interaction state kernel v1 (Done, PR #200)
 - JER-219: High-freedom canvas editing layer v1 (Done, PR #201)
-- JER-220: Foundation-first roadmap reset after JER-219 (In progress)
+- JER-220: Foundation-first roadmap reset after JER-219 (Done)
+- JER-221: Canonical editable graph authoring kernel v1 (Done, PR #203)
+- JER-222: Port and wire editing ergonomics v1 (Done, PR #204)
+- JER-223: Sandbox scenario test bench v1 (In review)
 
 Workbench v4 foundation-first sequence:
 
-- JER-220 resets roadmap and Linear narrative after JER-219 so the mainline is
+- JER-220 reset roadmap and Linear narrative after JER-219 so the mainline is
   editor -> runner -> test bench -> debugger -> archive. It is documentation
   and control-plane only.
-- JER-221 will make the editable graph the central product object: nodes,
+- JER-221 made the editable graph the central product object: nodes,
   ports, edges, positions, subsystem groups, component templates, selected
   state, and workspace document metadata.
-- JER-222 will improve explicit port-to-port wiring ergonomics, route
+- JER-222 improved explicit port-to-port wiring ergonomics, route
   metadata, edge labels, disconnect/reconnect behavior, and deterministic
   validation findings.
-- JER-223 will add the first-class sandbox scenario test bench for candidate
+- JER-223 adds the first-class sandbox scenario test bench for candidate
   graphs: editable inputs over ticks, assertions, expected outputs, and
-  pass/fail run reports.
+  pass/fail run reports. Test bench output remains sandbox evidence only with
+  `truth_effect: none`.
 - JER-224 will add a probe-focused debugger view for selected nodes, edges,
   ports, watched values, first failure/divergence, and timeline-linked
   selection.
