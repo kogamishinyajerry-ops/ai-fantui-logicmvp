@@ -13,6 +13,41 @@ blockers are retired.
 - Adversarial lane:
   `PYTHONPATH=src python3 src/well_harness/static/adversarial_test.py`
 
+## JER-228 Validation Suite Isolation
+
+The shared validation suite must fail diagnostically instead of hanging
+indefinitely. `tools/run_gsd_validation_suite.py` now applies a default
+per-command timeout and exposes isolation controls:
+
+```bash
+PYTHONPATH=src python3 tools/run_gsd_validation_suite.py --list-checks
+PYTHONPATH=src python3 tools/run_gsd_validation_suite.py --only unit_tests --timeout-seconds 300 --format json
+PYTHONPATH=src python3 tools/run_gsd_validation_suite.py --skip unit_tests --continue-on-failure --format json
+```
+
+If `unit_tests` times out, the report status is `fail`, `failure_kind` is
+`timeout`, `failed_check` names the hung command, and the captured stdout/stderr
+tail is retained for follow-up triage. A timeout is a real gate failure; it is
+not a pass and must not be hidden in PR proof text.
+
+## Clean Worktree Strategy
+
+Workbench v5 and later deep-water slices must start from a fresh worktree based
+on current `origin/main`:
+
+```bash
+git fetch origin main
+git worktree add -b codex/JER-XXX-short-slug \
+  "/Users/Zhuanz/20260407 YJX AI FANTUI LogicMVP-jerXXX-short-slug" origin/main
+```
+
+Do not continue feature work from the historical divergent local `main` or from
+an older issue worktree. Before implementation and before PR, record:
+
+- `git status --short --branch`;
+- `git rev-parse HEAD` and `git rev-parse origin/main`;
+- `git diff --name-only origin/main...HEAD` for red-line review.
+
 ## Known Baseline Blockers
 
 JER-148 established the current `origin/main` gate truth before M2 hardware

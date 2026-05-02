@@ -39,7 +39,8 @@ remain reference/sample outputs, not near-term product drivers.
 - JER-224: Candidate graph debugger view v1 (Done)
 - JER-225: Workbench preflight analyzer v1 (Done)
 - JER-226: Hardware/interface designer foundation v1 (Done, PR #208)
-- JER-227: Foundation workbench review archive v1 (In review)
+- JER-227: Foundation workbench review archive v1 (Done, PR #209)
+- JER-228: Validation suite hang isolation and clean worktree hygiene (In progress)
 
 ## Product Target
 
@@ -88,6 +89,8 @@ the foundation in this order:
 5. Preflight analyzer.
 6. Hardware/interface designer foundation.
 7. Review archive and ChangeRequest handoff.
+8. Gate isolation and clean worktree hygiene before Workbench v5 deep-water
+   implementation.
 
 Thrust-reverser and C919 E-TRAS stay as certified/reference samples and
 regression anchors. They should be easy to rebuild after the generic foundation
@@ -128,8 +131,11 @@ is mature, but they do not determine the next v4 implementation order.
   test bench -> debugger -> archive foundation.
 - **v4.11 graph/test/debug foundation**: JER-221 through JER-224 establish
   canonical graph, explicit port routing, sandbox scenario runs, and selected
-  candidate debugging; JER-225 through JER-227 remain the next archive-facing
-  foundation slices.
+  candidate debugging; JER-225 through JER-227 close preflight, hardware
+  design, and review archive packaging.
+- **v4.12 gate isolation**: JER-228 bounds the shared validation suite with
+  per-command timeouts, adds check selection for hang triage, and records the
+  rule that Workbench v5 slices start from clean `origin/main` worktrees.
 
 ## Acceptance Model
 
@@ -152,6 +158,19 @@ authoring loop without changing certified truth:
 The acceptance model is product-facing but not certification-facing. It proves
 that engineers can explore, validate, and package candidate edits. It does not
 certify the candidate, promote truth level, or make DAL/PSSA claims.
+
+## JER-228 Gate Isolation Note
+
+JER-228 is a stabilization slice before Workbench v5. It does not add product
+UI or truth behavior. It makes the shared GSD validation suite diagnosable by
+adding a per-command timeout, check listing, `--only` / `--skip` isolation, and
+optional `--continue-on-failure` triage mode. A hung child command now returns
+`status: fail`, `failure_kind: timeout`, and the timed-out check name instead
+of blocking the lane indefinitely.
+
+The same slice records clean worktree hygiene for all next issues: fetch
+`origin/main`, create a new `codex/JER-XXX-*` worktree from `origin/main`, and
+avoid continuing from divergent local `main` or stale issue worktrees.
 
 ## JER-206 Closure Note
 
