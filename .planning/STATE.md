@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench v4 foundation-first active · JER-227 merged · JER-228 validation isolation in progress
-last_updated: "2026-05-02T09:06:45.000+08:00"
+status: Workbench v5 deep-water launch active · JER-228 merged · JER-229 planning in progress
+last_updated: "2026-05-02T09:18:10.000+08:00"
 last_activity: 2026-05-02
 progress:
-  total_phases: 45
-  completed_phases: 44
+  total_phases: 55
+  completed_phases: 45
   total_plans: 2
   completed_plans: 1
-  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 through JER-219 built the current single-user authoring base: templates, subsystems, hardware/interface evidence, debug/diff/handoff packets, archive validation, workspace_document, and canvas_interaction_summary. JER-220 reset the active roadmap to foundation-first: editor -> runner -> test bench -> debugger -> archive, with thrust-reverser and C919 E-TRAS treated as reference/sample packs. JER-221 and JER-222 closed canonical editable graph and port/wire route metadata. JER-223 closed the first sandbox scenario test bench run report for candidate graph inputs/assertions. JER-224 closed selected candidate debugging over run failures, watched values, and archive checksums. JER-225 closed a sandbox-only preflight analyzer that classifies candidates as ready, needs_evidence, or invalid_candidate before handoff/archive. JER-226 closed the first UI-facing hardware/interface design authoring surface for sandbox LRUs, cables, connectors, ports, pins, bindings, evidence gaps, validation, and archive checksums. JER-227 closed the foundation review archive bundle. JER-228 is in progress to isolate validation-suite hangs and record clean origin/main worktree hygiene before Workbench v5. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 through JER-219 built the current single-user authoring base: templates, subsystems, hardware/interface evidence, debug/diff/handoff packets, archive validation, workspace_document, and canvas_interaction_summary. JER-220 reset the active roadmap to foundation-first: editor -> runner -> test bench -> debugger -> archive, with thrust-reverser and C919 E-TRAS treated as reference/sample packs. JER-221 and JER-222 closed canonical editable graph and port/wire route metadata. JER-223 closed the first sandbox scenario test bench run report for candidate graph inputs/assertions. JER-224 closed selected candidate debugging over run failures, watched values, and archive checksums. JER-225 closed a sandbox-only preflight analyzer that classifies candidates as ready, needs_evidence, or invalid_candidate before handoff/archive. JER-226 closed the first UI-facing hardware/interface design authoring surface for sandbox LRUs, cables, connectors, ports, pins, bindings, evidence gaps, validation, and archive checksums. JER-227 closed the foundation review archive bundle. JER-228 closed validation-suite timeout isolation and clean origin/main worktree hygiene. JER-229 launches Workbench v5 deep-water planning: empty-canvas graph authoring, canonical graph document v2, port drag wiring, scenario library, runner trace kernel, debug timeline, hardware evidence attachment, command palette ergonomics, and archive restore v3. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
@@ -19,12 +19,11 @@ Last activity: 2026-05-02
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
-**Current position**: JER-204 through JER-227 are merged on the v4 line, and
-JER-228 is the active stabilization bridge before Workbench v5. The active
-mainline is the generic single-user foundation: editor, runner, test bench,
-debugger, archive, and later hardware/interface designer. The existing
-thrust-reverser and C919 chains are reference samples, not the next dedicated
-product panels.
+**Current position**: JER-204 through JER-228 are merged on the v4 line, and
+JER-229 launches Workbench v5 deep-water planning. The active mainline is the
+generic single-user foundation: editor, runner, test bench, debugger, archive,
+and hardware/interface evidence. The existing thrust-reverser and C919 chains
+are reference samples, not the next dedicated product panels.
 
 **Linear control plane**:
 
@@ -56,8 +55,9 @@ product panels.
 - JER-225 is Done after PR #207.
 - JER-226 is Done after PR #208.
 - JER-227 is Done after PR #209.
-- JER-228 is In Progress for validation suite hang isolation and clean worktree
-  hygiene before Workbench v5.
+- JER-228 is Done after PR #210.
+- JER-229 is In Progress for Workbench v5 deep-water roadmap and clean-lane
+  launch.
 
 **Runtime v3 closure summary**:
 
@@ -174,10 +174,10 @@ should be straightforward to rebuild as examples on top of the generic base.
 
 **JER-228 validation suite isolation slice**:
 
-- The next Workbench v5 deep-water slice is blocked until the shared validation
-  gate is bounded and diagnosable.
-- `tools/run_gsd_validation_suite.py` must report a structured timeout instead
-  of hanging indefinitely when a child validation command stalls.
+- The shared validation gate is now bounded and diagnosable before Workbench
+  v5 work begins.
+- `tools/run_gsd_validation_suite.py` reports structured timeout failures
+  instead of hanging indefinitely when a child validation command stalls.
 - The runner exposes check listing and `--only` / `--skip` isolation so Codex
   can separate the full pytest lane from schema/tool validators without editing
   business logic.
@@ -186,6 +186,19 @@ should be straightforward to rebuild as examples on top of the generic base.
 - Linear helper remains `api-read`; live Linear `JER-228` currently resolves to
   an unrelated non-agent issue, so this repo slice must not mutate or close that
   issue until Kogami creates/renumbers the proper validation-suite issue.
+
+**JER-229 Workbench v5 launch slice**:
+
+- Workbench v5 is the deep-water single-user foundation milestone after v4.
+- The v5 queue is: empty-canvas authoring palette, canonical graph document v2,
+  port drag wiring, scenario test case library, sandbox runner trace kernel,
+  debug probe timeline, hardware/interface evidence attachment, editor command
+  palette/inspector ergonomics, and review archive restore v3.
+- v5 keeps thrust-reverser and C919 E-TRAS as reference/sample packs only.
+- v5 excludes multi-user collaboration, product LLM/chat, controller truth
+  edits, frozen asset edits, truth-level promotion, DAL, and PSSA claims.
+- Coordination doc:
+  `docs/coordination/editable-workbench-v5-deep-water.md`.
 
 **JER-206 component-library closure**:
 

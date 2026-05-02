@@ -11,6 +11,10 @@ This remains a digital-twin style interface for control logic, but the main
 product boundary is the workbench foundation: engineers should be able to
 derive a draft graph, edit nodes/ports/edges/hardware bindings, run candidate
 scenarios, and compare against certified adapter/controller baselines.
+Workbench v5 deepens that foundation around a single-user Simulink/Figma-style
+authoring loop: empty-canvas graph construction, canonical graph documents,
+port wiring, scenario libraries, runner traces, debugger probes,
+hardware/interface evidence, and review archives.
 
 ## Product Shape
 
