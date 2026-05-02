@@ -10,7 +10,9 @@ through JER-228 are complete as the foundation and gate-stabilization bridge
 for sandbox-first control-logic editing. The current product mainline is now
 Workbench v5: deepen the single-user editor, runner, test bench, debugger,
 hardware/interface evidence, and archive loop until an engineer can build and
-test a candidate control graph from generic primitives.
+test a candidate control graph from generic primitives. JER-229 launched the v5
+queue, and JER-230 is the first implementation slice for empty-canvas graph
+authoring.
 
 Scope guard: v5 is a single-user engineering authoring workbench. The priority
 is a strong Simulink/Figma-level control-logic panel foundation: graph editing,
@@ -61,11 +63,11 @@ Completed v4 bridge:
 - JER-226: Hardware/interface designer foundation v1 (Done, PR #208)
 - JER-227: Foundation workbench review archive v1 (Done, PR #209)
 - JER-228: Validation suite hang isolation and clean worktree hygiene (Done, PR #210)
+- JER-229: Workbench v5 deep-water roadmap and clean-lane launch (Done, PR #211)
 
 Workbench v5 deep-water sequence:
 
-- JER-229: Workbench v5 deep-water roadmap and clean-lane launch (In progress)
-- JER-230: Empty-canvas graph authoring palette v1
+- JER-230: Empty-canvas graph authoring palette v1 (In progress)
 - JER-231: Canonical graph document v2 and DOM adapter boundary
 - JER-232: Port drag wiring and route diagnostics v2
 - JER-233: Scenario test case library v1
@@ -105,6 +107,12 @@ Workbench v4 foundation-first closure:
 - JER-228 bounds the shared validation suite with per-command timeouts and
   check-selection controls, then records the clean-worktree rule for Workbench
   v5 and later issues.
+- JER-229 records the Workbench v5 deep-water sequence and keeps the new lane
+  single-user, foundation-first, and sandbox-only.
+- JER-230 starts the v5 implementation line by letting engineers clear the
+  reference sample into an empty sandbox draft, add input/output/control
+  primitives, and preserve `canvas_authoring_mode` through export/import and
+  archive evidence.
 
 Workbench v5 acceptance path:
 
