@@ -2830,6 +2830,23 @@ def test_workbench_preflight_analyzer_classifies_failed_candidate_and_archives(d
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["preflight_analyzer_report"]["classification"] == "invalid_candidate"
     assert archive["preflight_analyzer_report"]["findings"][0]["truth_effect"] == "none"
+    assert archive["foundation_review_archive"]["kind"] == "well-harness-workbench-foundation-review-archive"
+    assert archive["foundation_review_archive"]["version"] == "workbench-foundation-review-archive.v1"
+    assert archive["foundation_review_archive"]["candidate_state"] == "sandbox_candidate"
+    assert archive["foundation_review_archive"]["certification_claim"] == "none"
+    assert archive["foundation_review_archive"]["truth_effect"] == "none"
+    assert archive["foundation_review_archive"]["live_linear_mutation"] is False
+    assert archive["foundation_review_archive"]["sections"]["editable_graph_document"]["status"] == "present"
+    assert archive["foundation_review_archive"]["sections"]["sandbox_test_run_report"]["status"] == "present"
+    assert archive["foundation_review_archive"]["sections"]["candidate_debugger_view"]["status"] == "present"
+    assert archive["foundation_review_archive"]["sections"]["preflight_analyzer_report"]["status"] == "present"
+    assert archive["foundation_review_archive"]["sections"]["hardware_interface_designer"]["status"] == "present"
+    assert archive["foundation_review_archive"]["sections"]["changerequest_handoff_packet"]["status"] == "present"
+    assert archive["foundation_review_archive"]["linear_ready"]["live_linear_mutation"] is False
+    assert archive["foundation_review_archive_validation"]["status"] == "pass"
+    assert archive["foundation_review_archive_validation"]["truth_effect"] == "none"
+    assert archive["checksums"]["foundation_review_archive_checksum"]
+    assert archive["checksums"]["foundation_review_archive_validation_checksum"]
     assert archive["checksums"]["preflight_analyzer_report_checksum"]
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 

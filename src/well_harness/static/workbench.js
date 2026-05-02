@@ -17927,6 +17927,242 @@ function installEditableWorkbenchShell() {
     return value;
   }
 
+  const foundationReviewArchiveKind = "well-harness-workbench-foundation-review-archive";
+  const foundationReviewArchiveVersion = "workbench-foundation-review-archive.v1";
+  const foundationReviewArchiveValidationKind =
+    "well-harness-workbench-foundation-review-archive-validation-report";
+  const foundationReviewArchiveValidationVersion =
+    "workbench-foundation-review-archive-validation.v1";
+  const foundationReviewArchiveSectionSpec = [
+    ["workspace_document", "workspace_document_checksum"],
+    ["editable_graph_document", "editable_graph_document_checksum"],
+    ["model_json", "model_json_checksum"],
+    ["diff_summary", "diff_summary_checksum"],
+    ["candidate_baseline_diff_review_v2", "candidate_baseline_diff_review_v2_checksum"],
+    ["sandbox_test_bench", "sandbox_test_bench_checksum"],
+    ["sandbox_test_run_report", "sandbox_test_run_report_checksum"],
+    ["candidate_debugger_view", "candidate_debugger_view_checksum"],
+    ["preflight_analyzer_report", "preflight_analyzer_report_checksum"],
+    ["hardware_bindings", "hardware_bindings_checksum"],
+    ["hardware_evidence_v2", "hardware_evidence_v2_checksum"],
+    ["interface_matrix", "interface_matrix_checksum"],
+    ["connector_pin_map", "connector_pin_map_checksum"],
+    ["hardware_interface_designer", "hardware_interface_designer_checksum"],
+    ["hardware_interface_designer_validation", "hardware_interface_designer_validation_checksum"],
+    ["changerequest_body", "changerequest_body_checksum"],
+    ["pr_proof_packet", "pr_proof_packet_checksum"],
+    ["changerequest_proof_packet", "changerequest_proof_packet_checksum"],
+    ["changerequest_handoff_packet", "changerequest_handoff_packet_checksum"],
+    ["gate_claims", "gate_claims_checksum"],
+    ["known_blockers", "known_blockers_checksum"],
+    ["red_line_metadata", "red_line_metadata_checksum"],
+  ];
+
+  function foundationReviewArchiveSection(archiveCore, checksums, key, checksumKey) {
+    const value = archiveCore[key];
+    const present = value !== undefined && value !== null;
+    return {
+      key,
+      status: present ? "present" : "missing",
+      kind: present && value && typeof value === "object" && !Array.isArray(value)
+        ? String(value.kind || "untyped")
+        : "untyped",
+      version: present && value && typeof value === "object" && !Array.isArray(value)
+        ? String(value.version || "unversioned")
+        : "unversioned",
+      checksum_key: checksumKey,
+      checksum: checksums[checksumKey] || "missing",
+      truth_effect: "none",
+    };
+  }
+
+  function buildFoundationReviewArchiveBundle(archiveCore, checksums) {
+    const sections = {};
+    for (const [key, checksumKey] of foundationReviewArchiveSectionSpec) {
+      sections[key] = foundationReviewArchiveSection(archiveCore, checksums, key, checksumKey);
+    }
+    const missingSections = Object.values(sections)
+      .filter((section) => section.status !== "present")
+      .map((section) => section.key);
+    const preflight = archiveCore.preflight_analyzer_report || {};
+    const handoff = archiveCore.changerequest_handoff_packet || {};
+    return {
+      kind: foundationReviewArchiveKind,
+      version: foundationReviewArchiveVersion,
+      review_scope: "workbench_v4_single_user_foundation",
+      archive_kind: archiveCore.kind || "well-harness-workbench-evidence-archive",
+      archive_version: archiveCore.version || 1,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_level_impact: "none",
+      dal_pssa_impact: "none",
+      controller_truth_modified: false,
+      frozen_assets_modified: false,
+      live_linear_mutation: false,
+      runtime_truth_effect: "none",
+      truth_effect: "none",
+      required_sections: foundationReviewArchiveSectionSpec.map(([key]) => key),
+      missing_sections: missingSections,
+      section_count: Object.keys(sections).length,
+      sections,
+      review_readiness: preflight.classification || "needs_evidence",
+      preflight_summary: {
+        classification: preflight.classification || "needs_evidence",
+        finding_count: preflight.finding_count || 0,
+        candidate_model_hash: preflight.candidate_model_hash || "unavailable",
+        truth_effect: "none",
+      },
+      review_packet: {
+        graph_checksum: checksums.editable_graph_document_checksum || "missing",
+        test_bench_checksum: checksums.sandbox_test_bench_checksum || "missing",
+        run_report_checksum: checksums.sandbox_test_run_report_checksum || "missing",
+        debugger_checksum: checksums.candidate_debugger_view_checksum || "missing",
+        preflight_checksum: checksums.preflight_analyzer_report_checksum || "missing",
+        hardware_evidence_checksum: checksums.hardware_evidence_v2_checksum || "missing",
+        changerequest_handoff_checksum: checksums.changerequest_handoff_packet_checksum || "missing",
+        linear_issue_body_checksum: checksums.changerequest_body_checksum || "missing",
+        pr_proof_packet_checksum: checksums.pr_proof_packet_checksum || "missing",
+        truth_effect: "none",
+      },
+      linear_ready: {
+        issue_body_available: Boolean(archiveCore.changerequest_body),
+        pr_proof_available: Boolean(archiveCore.pr_proof_packet),
+        handoff_packet_available: Boolean(handoff && handoff.kind),
+        live_linear_mutation: false,
+        browser_mutates_linear: false,
+        truth_effect: "none",
+      },
+      restore_contract: {
+        validation_report_key: "foundation_review_archive_validation",
+        restore_payload_key: "foundation_review_archive_validation",
+        requires_handoff_packet_validation: true,
+        browser_archive_only: true,
+        truth_effect: "none",
+      },
+      checksum_manifest: { ...checksums },
+    };
+  }
+
+  function validateFoundationReviewArchiveBundle(bundle) {
+    const findings = [];
+    function addFinding(code, severity, message, path) {
+      findings.push({
+        code,
+        severity,
+        message,
+        path,
+        candidate_state: "sandbox_candidate",
+        certification_claim: "none",
+        truth_effect: "none",
+      });
+    }
+    if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) {
+      addFinding(
+        "foundation_review_archive_invalid",
+        "error",
+        "foundation review archive must be an object",
+        "foundation_review_archive",
+      );
+    } else {
+      if (bundle.kind !== foundationReviewArchiveKind) {
+        addFinding(
+          "foundation_review_archive_invalid",
+          "error",
+          "foundation review archive kind must be well-harness-workbench-foundation-review-archive",
+          "foundation_review_archive.kind",
+        );
+      }
+      if (bundle.version !== foundationReviewArchiveVersion) {
+        addFinding(
+          "foundation_review_archive_invalid",
+          "error",
+          "foundation review archive version must be workbench-foundation-review-archive.v1",
+          "foundation_review_archive.version",
+        );
+      }
+      if (bundle.truth_effect !== "none") {
+        addFinding(
+          "foundation_review_archive_truth_boundary",
+          "error",
+          "foundation review archive truth_effect must be none",
+          "foundation_review_archive.truth_effect",
+        );
+      }
+      if (bundle.certification_claim !== "none") {
+        addFinding(
+          "foundation_review_archive_truth_boundary",
+          "error",
+          "foundation review archive certification_claim must be none",
+          "foundation_review_archive.certification_claim",
+        );
+      }
+      if (bundle.live_linear_mutation !== false) {
+        addFinding(
+          "foundation_review_archive_live_mutation",
+          "error",
+          "foundation review archive live_linear_mutation must be false",
+          "foundation_review_archive.live_linear_mutation",
+        );
+      }
+      const sections = bundle.sections || {};
+      for (const [key, checksumKey] of foundationReviewArchiveSectionSpec) {
+        const section = sections[key];
+        if (!section || section.status !== "present") {
+          addFinding(
+            "foundation_review_archive_missing_section",
+            "error",
+            `Foundation review archive is missing required section ${key}.`,
+            `foundation_review_archive.sections.${key}`,
+          );
+        }
+        if (!section || !section.checksum || section.checksum === "missing") {
+          addFinding(
+            "foundation_review_archive_missing_checksum",
+            "error",
+            `Foundation review archive section ${key} is missing checksum ${checksumKey}.`,
+            `foundation_review_archive.sections.${key}.checksum`,
+          );
+        }
+      }
+      if (!bundle.linear_ready || bundle.linear_ready.live_linear_mutation !== false) {
+        addFinding(
+          "foundation_review_archive_live_mutation",
+          "error",
+          "Foundation review archive linear_ready.live_linear_mutation must be false.",
+          "foundation_review_archive.linear_ready.live_linear_mutation",
+        );
+      }
+      if (!bundle.review_packet || bundle.review_packet.truth_effect !== "none") {
+        addFinding(
+          "foundation_review_archive_review_packet",
+          "error",
+          "Foundation review archive review_packet.truth_effect must be none.",
+          "foundation_review_archive.review_packet.truth_effect",
+        );
+      }
+      if (!bundle.restore_contract || bundle.restore_contract.truth_effect !== "none") {
+        addFinding(
+          "foundation_review_archive_restore_contract",
+          "error",
+          "Foundation review archive restore_contract.truth_effect must be none.",
+          "foundation_review_archive.restore_contract.truth_effect",
+        );
+      }
+    }
+    const hasError = findings.some((finding) => finding.severity === "error");
+    return {
+      kind: foundationReviewArchiveValidationKind,
+      version: foundationReviewArchiveValidationVersion,
+      status: hasError ? "fail" : "pass",
+      finding_count: findings.length,
+      error_count: findings.filter((finding) => finding.severity === "error").length,
+      findings,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
   function buildWorkbenchEvidenceArchive() {
     const modelJson = buildEditableDraftExport();
     const workspaceDocument =
@@ -18097,12 +18333,29 @@ function installEditableWorkbenchShell() {
       draft_snapshot_manifest_checksum: checksumEvidenceArchiveField(draftSnapshotManifest),
       gate_claims_checksum: checksumEvidenceArchiveField(handoffPacket.gateClaims),
       known_blockers_checksum: checksumEvidenceArchiveField(handoffPacket.knownBlockers),
+      red_line_metadata_checksum: checksumEvidenceArchiveField(redLineMetadata),
+    };
+    const foundationReviewArchive = buildFoundationReviewArchiveBundle(archiveCore, checksums);
+    const foundationReviewArchiveValidation =
+      validateFoundationReviewArchiveBundle(foundationReviewArchive);
+    const finalArchiveCore = {
+      ...archiveCore,
+      foundation_review_archive: foundationReviewArchive,
+      foundation_review_archive_validation: foundationReviewArchiveValidation,
+    };
+    const finalChecksums = {
+      ...checksums,
+      foundation_review_archive_checksum: checksumEvidenceArchiveField(foundationReviewArchive),
+      foundation_review_archive_validation_checksum: checksumEvidenceArchiveField(foundationReviewArchiveValidation),
     };
     return {
-      ...archiveCore,
+      ...finalArchiveCore,
       checksums: {
-        ...checksums,
-        manifest_checksum: checksumEvidenceArchiveField({ archiveCore, checksums }),
+        ...finalChecksums,
+        manifest_checksum: checksumEvidenceArchiveField({
+          archiveCore: finalArchiveCore,
+          checksums: finalChecksums,
+        }),
       },
     };
   }

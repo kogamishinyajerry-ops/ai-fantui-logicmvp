@@ -24,6 +24,7 @@ from well_harness.scenario_playback import (
 )
 from well_harness.workbench_changerequest_handoff import (
     assert_valid_changerequest_handoff_archive_payload,
+    assert_valid_foundation_review_archive_payload,
 )
 
 WORKBENCH_BUNDLE_KIND = "well-harness-workbench-bundle"
@@ -529,6 +530,9 @@ def load_workbench_archive_restore_payload(
     changerequest_handoff_validation = assert_valid_changerequest_handoff_archive_payload(
         workspace_snapshot if isinstance(workspace_snapshot, dict) else {}
     )
+    foundation_review_archive_validation = assert_valid_foundation_review_archive_payload(
+        workspace_snapshot if isinstance(workspace_snapshot, dict) else {}
+    )
 
     return {
         "manifest_path": str(resolved_manifest_path),
@@ -542,6 +546,7 @@ def load_workbench_archive_restore_payload(
         "workspace_handoff": workspace_handoff,
         "workspace_snapshot": workspace_snapshot,
         "changerequest_handoff_validation": changerequest_handoff_validation,
+        "foundation_review_archive_validation": foundation_review_archive_validation,
     }
 
 

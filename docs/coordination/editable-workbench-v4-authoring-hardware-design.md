@@ -38,8 +38,8 @@ remain reference/sample outputs, not near-term product drivers.
 - JER-223: Sandbox scenario test bench v1 (Done)
 - JER-224: Candidate graph debugger view v1 (Done)
 - JER-225: Workbench preflight analyzer v1 (Done)
-- JER-226: Hardware/interface designer foundation v1 (In review)
-- JER-227: Foundation workbench review archive v1 (Planned)
+- JER-226: Hardware/interface designer foundation v1 (Done, PR #208)
+- JER-227: Foundation workbench review archive v1 (In review)
 
 ## Product Target
 
@@ -491,7 +491,7 @@ The slice remains sandbox-only:
 - no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
   DAL, or PSSA behavior is changed.
 
-## JER-226 In-Review Note
+## JER-226 Closure Note
 
 JER-226 adds the first UI-facing Hardware / Interface Design authoring surface.
 The right inspector now accepts sandbox JSON for LRUs, cables, connectors,
@@ -507,6 +507,29 @@ The slice remains sandbox-only:
 - validation rejects duplicate ids, broken references, invalid evidence-gap
   semantics, and boundary constants that would imply truth or DAL/PSSA impact;
 - preflight consumes the designer validation report as a readiness input;
+- no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
+  DAL, or PSSA behavior is changed.
+
+## JER-227 In-Review Note
+
+JER-227 turns the local evidence archive into a review-ready bundle for the
+foundation-first workbench. The archive now carries a
+`foundation_review_archive` summary over the editable graph, scenario test
+bench, run report, candidate debugger, preflight analyzer, hardware/interface
+evidence, ChangeRequest handoff packet, Linear issue body, PR proof, red-line
+metadata, and checksums.
+
+The slice adds restore-time validation for that review bundle. If a restored
+evidence archive contains a foundation review archive, the backend verifies the
+bundle constants, required sections, checksums, no live Linear mutation, no
+certification claim, and `truth_effect: none` before returning it as trusted
+restore evidence.
+
+The slice remains sandbox-only:
+
+- `foundation_review_archive` is review evidence, not certified truth;
+- missing legacy review archives remain backward compatible as `not_present`;
+- invalid review archives fail restore instead of being silently trusted;
 - no controller, adapter, backend truth, frozen YAML, C919 packet, truth-level,
   DAL, or PSSA behavior is changed.
 

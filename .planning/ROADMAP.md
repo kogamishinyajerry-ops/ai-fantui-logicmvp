@@ -6,7 +6,7 @@
 (launched 2026-05-01)**
 
 Editable Control Workbench Core v1, Interaction v2, Runtime v3, and JER-219
-through JER-225 are complete as the foundation for sandbox-first control-logic
+through JER-226 are complete as the foundation for sandbox-first control-logic
 editing. The current product mainline is foundation-first Workbench v4: build
 the base single-user editor, runner, test bench, debugger, and archive loop
 before returning to dedicated thrust-reverser or C919 panel product work.
@@ -50,7 +50,8 @@ Housekeeping bridge:
 - JER-223: Sandbox scenario test bench v1 (Done, PR #205)
 - JER-224: Candidate graph debugger view v1 (Done, PR #206)
 - JER-225: Workbench preflight analyzer v1 (Done, PR #207)
-- JER-226: Hardware/interface designer foundation v1 (In review)
+- JER-226: Hardware/interface designer foundation v1 (Done, PR #208)
+- JER-227: Foundation workbench review archive v1 (In review)
 
 Workbench v4 foundation-first sequence:
 
@@ -76,9 +77,9 @@ Workbench v4 foundation-first sequence:
 - JER-226 deepens hardware/interface editing with a sandbox-only designer for
   LRUs, cables, connectors, ports, pins, signal bindings, evidence gaps,
   validation findings, preflight input, and archive checksums.
-- JER-227 will package graph, tests, run/debug reports, hardware evidence,
-  validation findings, checksums, and Linear/PR-ready proof into one review
-  archive.
+- JER-227 packages graph, tests, run/debug reports, hardware evidence,
+  validation findings, checksums, Linear/PR-ready proof, and restore-time
+  validation into one review archive.
 
 Runtime v3 implementation closure:
 

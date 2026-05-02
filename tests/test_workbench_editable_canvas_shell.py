@@ -566,6 +566,30 @@ def test_js_wires_preflight_analyzer_as_sandbox_only_archive_packet() -> None:
     assert 'truth_effect: "none"' in js
 
 
+def test_js_wires_foundation_review_archive_as_sandbox_only_bundle() -> None:
+    js = _js()
+
+    assert "well-harness-workbench-foundation-review-archive" in js
+    assert "workbench-foundation-review-archive.v1" in js
+    assert "function buildFoundationReviewArchiveBundle" in js
+    assert "function validateFoundationReviewArchiveBundle" in js
+    assert "foundation_review_archive" in js
+    assert "foundation_review_archive_validation" in js
+    assert "foundation_review_archive_checksum" in js
+    assert "foundation_review_archive_validation_checksum" in js
+    assert "foundation review archive truth_effect must be none" in js
+    assert "workspace_document" in js
+    assert "editable_graph_document" in js
+    assert "sandbox_test_run_report" in js
+    assert "candidate_debugger_view" in js
+    assert "preflight_analyzer_report" in js
+    assert "hardware_interface_designer" in js
+    assert "changerequest_handoff_packet" in js
+    assert "live_linear_mutation: false" in js
+    assert 'certification_claim: "none"' in js
+    assert 'truth_effect: "none"' in js
+
+
 def test_js_builds_changerequest_linear_handoff_without_live_linear_mutation() -> None:
     js = _js()
 

@@ -24,6 +24,38 @@ CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_NOT_PRESENT = "not_present"
 CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_PASS = "pass"
 CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_FAIL = "fail"
 CHANGE_REQUEST_HANDOFF_UI_CHECKSUM_PREFIX = "ui_draft_"
+FOUNDATION_REVIEW_ARCHIVE_KIND = "well-harness-workbench-foundation-review-archive"
+FOUNDATION_REVIEW_ARCHIVE_VERSION = "workbench-foundation-review-archive.v1"
+FOUNDATION_REVIEW_ARCHIVE_VALIDATION_KIND = (
+    "well-harness-workbench-foundation-review-archive-validation-report"
+)
+FOUNDATION_REVIEW_ARCHIVE_VALIDATION_VERSION = (
+    "workbench-foundation-review-archive-validation.v1"
+)
+FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS = (
+    "workspace_document",
+    "editable_graph_document",
+    "model_json",
+    "diff_summary",
+    "candidate_baseline_diff_review_v2",
+    "sandbox_test_bench",
+    "sandbox_test_run_report",
+    "candidate_debugger_view",
+    "preflight_analyzer_report",
+    "hardware_bindings",
+    "hardware_evidence_v2",
+    "interface_matrix",
+    "connector_pin_map",
+    "hardware_interface_designer",
+    "hardware_interface_designer_validation",
+    "changerequest_body",
+    "pr_proof_packet",
+    "changerequest_proof_packet",
+    "changerequest_handoff_packet",
+    "gate_claims",
+    "known_blockers",
+    "red_line_metadata",
+)
 
 _CONST_FIELDS: tuple[tuple[str, Any], ...] = (
     ("$schema", CHANGE_REQUEST_HANDOFF_SCHEMA_ID),
@@ -214,6 +246,159 @@ def assert_valid_changerequest_handoff_archive_payload(payload: Mapping[str, Any
         issues = "; ".join(str(issue) for issue in report["issues"])
         raise ValueError(f"invalid ChangeRequest handoff archive payload: {issues}")
     return report
+
+
+def validate_foundation_review_archive_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+    if not isinstance(payload, Mapping):
+        return _foundation_archive_validation_report(
+            status=CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_FAIL,
+            source_path="archive",
+            issues=("archive payload must be a JSON object.",),
+        )
+
+    source_path = "foundation_review_archive"
+    review_archive = payload.get("foundation_review_archive")
+    if review_archive is None:
+        model_json = payload.get("model_json")
+        if isinstance(model_json, Mapping) and model_json.get("foundation_review_archive") is not None:
+            source_path = "model_json.foundation_review_archive"
+            review_archive = model_json.get("foundation_review_archive")
+
+    if review_archive is None:
+        return _foundation_archive_validation_report(
+            status=CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_NOT_PRESENT,
+            source_path="foundation_review_archive",
+            issues=(),
+        )
+
+    if not isinstance(review_archive, Mapping):
+        return _foundation_archive_validation_report(
+            status=CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_FAIL,
+            source_path=source_path,
+            issues=(f"{source_path} must be a JSON object when present.",),
+        )
+
+    issues = list(validate_foundation_review_archive_bundle(review_archive))
+    expected_ui_checksum = changerequest_handoff_ui_checksum(review_archive)
+    recorded_ui_checksum = _recorded_foundation_review_archive_ui_checksum(payload)
+    checksum_status = "not_recorded"
+
+    if recorded_ui_checksum is None:
+        if payload.get("kind") == "well-harness-workbench-evidence-archive":
+            issues.append(
+                "checksums.foundation_review_archive_checksum is required "
+                "when an evidence archive contains foundation_review_archive."
+            )
+            checksum_status = "missing"
+    elif recorded_ui_checksum != expected_ui_checksum:
+        issues.append(
+            "checksums.foundation_review_archive_checksum mismatch "
+            f"(expected {expected_ui_checksum}, got {recorded_ui_checksum})."
+        )
+        checksum_status = "mismatch"
+    else:
+        checksum_status = "pass"
+
+    status = (
+        CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_FAIL
+        if issues
+        else CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_PASS
+    )
+    return _foundation_archive_validation_report(
+        status=status,
+        source_path=source_path,
+        issues=tuple(issues),
+        canonical_hash=changerequest_handoff_hash(review_archive),
+        ui_checksum=expected_ui_checksum,
+        recorded_ui_checksum=recorded_ui_checksum,
+        checksum_status=checksum_status,
+    )
+
+
+def assert_valid_foundation_review_archive_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+    report = validate_foundation_review_archive_payload(payload)
+    if report["status"] == CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_FAIL:
+        issues = "; ".join(str(issue) for issue in report["issues"])
+        raise ValueError(f"invalid foundation review archive payload: {issues}")
+    return report
+
+
+def validate_foundation_review_archive_bundle(payload: Mapping[str, Any]) -> tuple[str, ...]:
+    issues: list[str] = []
+    if not isinstance(payload, Mapping):
+        return ("foundation_review_archive must be a JSON object.",)
+
+    expected_constants = {
+        "kind": FOUNDATION_REVIEW_ARCHIVE_KIND,
+        "version": FOUNDATION_REVIEW_ARCHIVE_VERSION,
+        "candidate_state": "sandbox_candidate",
+        "certification_claim": "none",
+        "truth_level_impact": "none",
+        "dal_pssa_impact": "none",
+        "runtime_truth_effect": "none",
+        "truth_effect": "none",
+    }
+    for key, expected_value in expected_constants.items():
+        if payload.get(key) != expected_value:
+            issues.append(f"foundation_review_archive.{key} must be {expected_value!r}.")
+    for key in ("controller_truth_modified", "frozen_assets_modified", "live_linear_mutation"):
+        if payload.get(key) is not False:
+            issues.append(f"foundation_review_archive.{key} must be False.")
+
+    required_sections = payload.get("required_sections")
+    if not isinstance(required_sections, list):
+        issues.append("foundation_review_archive.required_sections must be an array.")
+    else:
+        missing_required_section_names = [
+            section
+            for section in FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS
+            if section not in required_sections
+        ]
+        if missing_required_section_names:
+            issues.append(
+                "foundation_review_archive.required_sections missing "
+                f"{missing_required_section_names!r}."
+            )
+
+    missing_sections = payload.get("missing_sections")
+    if missing_sections not in ([], ()):
+        issues.append("foundation_review_archive.missing_sections must be empty.")
+
+    sections = payload.get("sections")
+    if not isinstance(sections, Mapping):
+        issues.append("foundation_review_archive.sections must be a JSON object.")
+    else:
+        for section_name in FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS:
+            section = sections.get(section_name)
+            if not isinstance(section, Mapping):
+                issues.append(f"foundation_review_archive.sections.{section_name} must be a JSON object.")
+                continue
+            if section.get("status") != "present":
+                issues.append(f"foundation_review_archive.sections.{section_name}.status must be 'present'.")
+            if not _non_empty_string(section.get("checksum")) or section.get("checksum") == "missing":
+                issues.append(f"foundation_review_archive.sections.{section_name}.checksum must be recorded.")
+            if section.get("truth_effect") != "none":
+                issues.append(f"foundation_review_archive.sections.{section_name}.truth_effect must be 'none'.")
+
+    linear_ready = payload.get("linear_ready")
+    if not isinstance(linear_ready, Mapping):
+        issues.append("foundation_review_archive.linear_ready must be a JSON object.")
+    else:
+        if linear_ready.get("live_linear_mutation") is not False:
+            issues.append("foundation_review_archive.linear_ready.live_linear_mutation must be False.")
+        if linear_ready.get("browser_mutates_linear") is not False:
+            issues.append("foundation_review_archive.linear_ready.browser_mutates_linear must be False.")
+        if linear_ready.get("truth_effect") != "none":
+            issues.append("foundation_review_archive.linear_ready.truth_effect must be 'none'.")
+
+    for field_name in ("review_packet", "restore_contract", "preflight_summary"):
+        field_value = payload.get(field_name)
+        if not isinstance(field_value, Mapping):
+            issues.append(f"foundation_review_archive.{field_name} must be a JSON object.")
+        elif field_value.get("truth_effect") != "none":
+            issues.append(f"foundation_review_archive.{field_name}.truth_effect must be 'none'.")
+
+    return tuple(issues)
 
 
 def validate_changerequest_handoff_packet(payload: Mapping[str, Any]) -> tuple[str, ...]:
@@ -432,6 +617,16 @@ def _recorded_handoff_ui_checksum(payload: Mapping[str, Any]) -> str | None:
     return None
 
 
+def _recorded_foundation_review_archive_ui_checksum(payload: Mapping[str, Any]) -> str | None:
+    checksums = payload.get("checksums")
+    if not isinstance(checksums, Mapping):
+        return None
+    value = checksums.get("foundation_review_archive_checksum")
+    if isinstance(value, str) and value.strip():
+        return value
+    return None
+
+
 def _archive_validation_report(
     *,
     status: str,
@@ -453,5 +648,32 @@ def _archive_validation_report(
         "ui_checksum": ui_checksum,
         "recorded_ui_checksum": recorded_ui_checksum,
         "checksum_status": checksum_status,
+        "truth_effect": "none",
+    }
+
+
+def _foundation_archive_validation_report(
+    *,
+    status: str,
+    source_path: str,
+    issues: tuple[str, ...],
+    canonical_hash: str | None = None,
+    ui_checksum: str | None = None,
+    recorded_ui_checksum: str | None = None,
+    checksum_status: str = "not_applicable",
+) -> dict[str, Any]:
+    return {
+        "kind": FOUNDATION_REVIEW_ARCHIVE_VALIDATION_KIND,
+        "version": FOUNDATION_REVIEW_ARCHIVE_VALIDATION_VERSION,
+        "status": status,
+        "source_path": source_path,
+        "issue_count": len(issues),
+        "issues": list(issues),
+        "canonical_hash": canonical_hash,
+        "ui_checksum": ui_checksum,
+        "recorded_ui_checksum": recorded_ui_checksum,
+        "checksum_status": checksum_status,
+        "candidate_state": "sandbox_candidate",
+        "certification_claim": "none",
         "truth_effect": "none",
     }
