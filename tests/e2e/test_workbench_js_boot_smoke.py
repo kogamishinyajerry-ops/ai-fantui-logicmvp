@@ -1960,7 +1960,16 @@ def test_workbench_editable_graph_document_round_trips_export_import_archive(dem
 
     assert errors == [], f"page JS errors: {errors}"
     assert graph["kind"] == "well-harness-workbench-editable-graph-document"
-    assert graph["version"] == "workbench-editable-graph-document.v1"
+    assert graph["version"] == "workbench-editable-graph-document.v2"
+    assert "workbench-editable-graph-document.v1" in graph["accepted_import_versions"]
+    assert graph["canonical_model"]["schema_version"] == "workbench-editable-graph-canonical-model.v1"
+    assert graph["canonical_model"]["nodes"] == exported["nodes"]
+    assert graph["canonical_model"]["edges"] == exported["edges"]
+    assert graph["canonical_model"]["ports"] == exported["ports"]
+    assert graph["canonical_model"]["typed_ports"] == exported["typed_ports"]
+    assert graph["dom_adapter"]["kind"] == "workbench-editable-graph-dom-adapter-boundary"
+    assert graph["dom_adapter"]["source_of_truth"] == "editable_graph_document.canonical_model"
+    assert graph["dom_adapter"]["top_level_compatibility"] is True
     assert graph["candidate_state"] == "sandbox_candidate"
     assert graph["truth_effect"] == "none"
     assert graph["workspace_revision_id"] == exported["workspace_document"]["revision_id"]
@@ -1984,6 +1993,7 @@ def test_workbench_editable_graph_document_round_trips_export_import_archive(dem
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     imported_graph = imported["editable_graph_document"]
     assert imported_graph["truth_effect"] == "none"
+    assert imported_graph["version"] == "workbench-editable-graph-document.v2"
     assert imported_graph["node_count"] == graph["node_count"]
     assert imported_graph["edge_count"] == graph["edge_count"]
     assert imported_graph["port_count"] == graph["port_count"]
@@ -1997,6 +2007,38 @@ def test_workbench_editable_graph_document_round_trips_export_import_archive(dem
         "component_library_digest",
     ]:
         assert imported_graph[digest_field] == graph[digest_field]
+
+    legacy_v1 = json.loads(json.dumps(imported))
+    legacy_v1["editable_graph_document"]["version"] = "workbench-editable-graph-document.v1"
+    legacy_v1["editable_graph_document"].pop("canonical_model")
+    legacy_v1["editable_graph_document"].pop("dom_adapter")
+    legacy_v1["editable_graph_document"].pop("accepted_import_versions")
+    page.fill("#workbench-draft-json-buffer", json.dumps(legacy_v1))
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    migrated = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    migrated_graph = migrated["editable_graph_document"]
+    assert migrated_graph["version"] == "workbench-editable-graph-document.v2"
+    assert migrated_graph["node_count"] == graph["node_count"]
+    assert migrated_graph["edge_count"] == graph["edge_count"]
+    assert migrated_graph["canonical_model"]["nodes"] == imported_graph["canonical_model"]["nodes"]
+
+    canonical_only = dict(imported)
+    canonical_only.pop("nodes")
+    canonical_only.pop("edges")
+    canonical_only.pop("ports")
+    canonical_only.pop("typed_ports")
+    canonical_only.pop("subsystem_groups")
+    page.fill("#workbench-draft-json-buffer", json.dumps(canonical_only))
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    rebuilt = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    rebuilt_graph = rebuilt["editable_graph_document"]
+    assert rebuilt_graph["version"] == "workbench-editable-graph-document.v2"
+    assert rebuilt_graph["node_count"] == graph["node_count"]
+    assert rebuilt_graph["edge_count"] == graph["edge_count"]
+    assert rebuilt_graph["canonical_model"]["nodes"] == imported_graph["canonical_model"]["nodes"]
+    assert rebuilt_graph["dom_adapter"]["top_level_compatibility"] is True
 
     page.click("#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())

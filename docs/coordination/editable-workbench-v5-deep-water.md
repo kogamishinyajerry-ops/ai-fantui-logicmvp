@@ -1,7 +1,7 @@
 # Editable Workbench v5 Deep-Water Plan
 
 Date: 2026-05-02
-Status: Implementation active · JER-230 empty-canvas authoring
+Status: Implementation active · JER-231 canonical graph document v2
 Scope: single-user `/workbench` foundation only
 
 ## Summary
@@ -91,7 +91,7 @@ Acceptance:
 
 ### JER-230 · Empty-canvas graph authoring palette v1
 
-Status: In progress.
+Status: Done after PR #212.
 
 Outcome: Let an engineer build a small graph from primitives without relying on
 the thrust-reverser seed nodes.
@@ -118,6 +118,8 @@ Implementation notes:
 
 ### JER-231 · Canonical graph document v2 and DOM adapter boundary
 
+Status: In progress.
+
 Outcome: Make the canonical editable graph document the source object for
 authoring, serialization, validation, and restore.
 
@@ -129,6 +131,20 @@ Acceptance:
   hardware evidence references, and workspace metadata.
 - The DOM render path can rebuild visible nodes/edges from the document.
 - v1 imports remain accepted through an explicit migration path.
+
+Implementation notes:
+
+- `editable_graph_document.version` advances to
+  `workbench-editable-graph-document.v2`, while
+  `workbench-editable-graph-document.v1` remains in
+  `accepted_import_versions`.
+- v2 carries `canonical_model` for nodes, edges, ports, typed ports,
+  subsystem groups, component library, scenario/test state, hardware evidence
+  references, viewport state, and workspace document reference.
+- v2 carries `dom_adapter` metadata to state that the canvas DOM is a
+  projection of `editable_graph_document.canonical_model`.
+- Import accepts v1 top-level drafts and v2 canonical-only drafts, then exports
+  the restored document as v2 sandbox evidence.
 
 ### JER-232 · Port drag wiring and route diagnostics v2
 

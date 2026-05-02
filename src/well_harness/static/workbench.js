@@ -7776,7 +7776,15 @@ function installEditableWorkbenchShell() {
   const canvasInteractionSummaryVersion = "workbench-canvas-interaction-summary.v1";
   let lastCanvasInteractionAction = "init";
   const editableGraphDocumentKind = "well-harness-workbench-editable-graph-document";
-  const editableGraphDocumentVersion = "workbench-editable-graph-document.v1";
+  const editableGraphDocumentVersionV1 = "workbench-editable-graph-document.v1";
+  const editableGraphDocumentVersion = "workbench-editable-graph-document.v2";
+  const editableGraphDocumentAcceptedImportVersions = [
+    editableGraphDocumentVersionV1,
+    editableGraphDocumentVersion,
+  ];
+  const editableGraphCanonicalModelVersion = "workbench-editable-graph-canonical-model.v1";
+  const editableGraphDomAdapterBoundaryVersion =
+    "workbench-editable-graph-dom-adapter-boundary.v1";
   const sandboxTestBenchKind = "well-harness-workbench-sandbox-test-bench";
   const sandboxTestBenchVersion = "workbench-sandbox-test-bench.v1";
   const sandboxTestRunReportKind = "well-harness-workbench-sandbox-test-run-report";
@@ -12228,6 +12236,87 @@ function installEditableWorkbenchShell() {
       });
   }
 
+  function buildEditableGraphCanonicalModel(source) {
+    const payload = source && typeof source === "object" && !Array.isArray(source)
+      ? source
+      : {};
+    const componentLibrary =
+      payload.component_library && typeof payload.component_library === "object" && !Array.isArray(payload.component_library)
+        ? payload.component_library
+        : {};
+    const sandboxTestBench =
+      payload.sandbox_test_bench && typeof payload.sandbox_test_bench === "object" && !Array.isArray(payload.sandbox_test_bench)
+        ? payload.sandbox_test_bench
+        : null;
+    const hardwareInterfaceDesigner =
+      payload.hardware_interface_designer
+      && typeof payload.hardware_interface_designer === "object"
+      && !Array.isArray(payload.hardware_interface_designer)
+        ? payload.hardware_interface_designer
+        : null;
+    const workspaceDocument =
+      payload.workspace_document && typeof payload.workspace_document === "object" && !Array.isArray(payload.workspace_document)
+        ? payload.workspace_document
+        : {};
+    return {
+      schema_version: editableGraphCanonicalModelVersion,
+      draft_state: String(payload.draft_state || "derived"),
+      canvas_authoring_mode: normalizeCanvasAuthoringMode(payload.canvas_authoring_mode),
+      nodes: normalizeEvidenceArchiveValue(Array.isArray(payload.nodes) ? payload.nodes : []),
+      edges: normalizeEvidenceArchiveValue(Array.isArray(payload.edges) ? payload.edges : []),
+      ports: normalizeEvidenceArchiveValue(Array.isArray(payload.ports) ? payload.ports : []),
+      typed_ports: normalizeEvidenceArchiveValue(Array.isArray(payload.typed_ports) ? payload.typed_ports : []),
+      subsystem_groups: normalizeEvidenceArchiveValue(Array.isArray(payload.subsystem_groups) ? payload.subsystem_groups : []),
+      component_library: normalizeEvidenceArchiveValue(componentLibrary),
+      sandbox_test_bench: normalizeEvidenceArchiveValue(sandboxTestBench),
+      hardware_bindings: normalizeEvidenceArchiveValue(Array.isArray(payload.hardware_bindings) ? payload.hardware_bindings : []),
+      hardware_interface_designer: normalizeEvidenceArchiveValue(hardwareInterfaceDesigner),
+      selected_node_ids: normalizeEvidenceArchiveValue(Array.isArray(payload.selected_node_ids) ? payload.selected_node_ids : []),
+      viewport_state: normalizeEvidenceArchiveValue(
+        payload.viewport_state && typeof payload.viewport_state === "object" && !Array.isArray(payload.viewport_state)
+          ? payload.viewport_state
+          : {},
+      ),
+      workspace_document_ref: {
+        document_id: String(workspaceDocument.document_id || workspaceDocumentId),
+        revision_id: String(workspaceDocument.revision_id || workspaceDocumentRevision),
+      },
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    };
+  }
+
+  function buildEditableGraphDomAdapterBoundary(source, canonicalModel) {
+    const payload = source && typeof source === "object" && !Array.isArray(source)
+      ? source
+      : {};
+    const model = canonicalModel && typeof canonicalModel === "object" && !Array.isArray(canonicalModel)
+      ? canonicalModel
+      : buildEditableGraphCanonicalModel(payload);
+    return {
+      kind: "workbench-editable-graph-dom-adapter-boundary",
+      version: editableGraphDomAdapterBoundaryVersion,
+      source_of_truth: "editable_graph_document.canonical_model",
+      renderer: "workbench.html#workbench-editable-canvas",
+      node_selector: ".workbench-editable-node",
+      edge_selector: ".workbench-editable-edges [data-editable-edge-id]",
+      port_selector: ".workbench-port-handle",
+      projection_fields: [
+        "nodes",
+        "edges",
+        "ports",
+        "typed_ports",
+        "subsystem_groups",
+        "component_library",
+      ],
+      top_level_compatibility: true,
+      node_count: Array.isArray(model.nodes) ? model.nodes.length : 0,
+      edge_count: Array.isArray(model.edges) ? model.edges.length : 0,
+      candidate_state: "sandbox_candidate",
+      truth_effect: "none",
+    };
+  }
+
   function buildEditableGraphDocumentFromSnapshot(snapshot) {
     const source = snapshot && typeof snapshot === "object" && !Array.isArray(snapshot)
       ? snapshot
@@ -12286,9 +12375,14 @@ function installEditableWorkbenchShell() {
           : null,
       }))
       .sort((left, right) => left.id.localeCompare(right.id));
+    const canonicalModel = buildEditableGraphCanonicalModel(source);
+    const domAdapter = buildEditableGraphDomAdapterBoundary(source, canonicalModel);
     return {
       kind: editableGraphDocumentKind,
       version: editableGraphDocumentVersion,
+      accepted_import_versions: [...editableGraphDocumentAcceptedImportVersions],
+      canonical_model: canonicalModel,
+      dom_adapter: domAdapter,
       document_id: String(workspaceDocument.document_id || workspaceDocumentId),
       workspace_revision_id: String(workspaceDocument.revision_id || workspaceDocumentRevision),
       workspace_action_count: Number(workspaceDocument.action_count || 0),
@@ -16100,10 +16194,74 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function graphDocumentDraftState(payload) {
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+    const graphDocument =
+      payload.editable_graph_document
+      && typeof payload.editable_graph_document === "object"
+      && !Array.isArray(payload.editable_graph_document)
+        ? payload.editable_graph_document
+        : null;
+    const canonicalModel =
+      graphDocument
+      && graphDocument.canonical_model
+      && typeof graphDocument.canonical_model === "object"
+      && !Array.isArray(graphDocument.canonical_model)
+        ? graphDocument.canonical_model
+        : null;
+    if (!canonicalModel) return payload;
+    const nextPayload = { ...payload };
+    for (const key of ["nodes", "edges", "ports", "typed_ports", "subsystem_groups", "hardware_bindings"]) {
+      if (!Array.isArray(nextPayload[key]) && Array.isArray(canonicalModel[key])) {
+        nextPayload[key] = canonicalModel[key];
+      }
+    }
+    if (
+      nextPayload.component_library === undefined
+      && canonicalModel.component_library
+      && typeof canonicalModel.component_library === "object"
+      && !Array.isArray(canonicalModel.component_library)
+    ) {
+      nextPayload.component_library = canonicalModel.component_library;
+    }
+    if (
+      nextPayload.sandbox_test_bench === undefined
+      && canonicalModel.sandbox_test_bench
+      && typeof canonicalModel.sandbox_test_bench === "object"
+      && !Array.isArray(canonicalModel.sandbox_test_bench)
+    ) {
+      nextPayload.sandbox_test_bench = canonicalModel.sandbox_test_bench;
+    }
+    if (
+      nextPayload.hardware_interface_designer === undefined
+      && canonicalModel.hardware_interface_designer
+      && typeof canonicalModel.hardware_interface_designer === "object"
+      && !Array.isArray(canonicalModel.hardware_interface_designer)
+    ) {
+      nextPayload.hardware_interface_designer = canonicalModel.hardware_interface_designer;
+    }
+    if (
+      nextPayload.viewport_state === undefined
+      && canonicalModel.viewport_state
+      && typeof canonicalModel.viewport_state === "object"
+      && !Array.isArray(canonicalModel.viewport_state)
+    ) {
+      nextPayload.viewport_state = canonicalModel.viewport_state;
+    }
+    if (nextPayload.canvas_authoring_mode === undefined && canonicalModel.canvas_authoring_mode) {
+      nextPayload.canvas_authoring_mode = canonicalModel.canvas_authoring_mode;
+    }
+    if (!Array.isArray(nextPayload.selected_node_ids) && Array.isArray(canonicalModel.selected_node_ids)) {
+      nextPayload.selected_node_ids = canonicalModel.selected_node_ids;
+    }
+    return nextPayload;
+  }
+
   function validateEditableDraftImport(payload) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
       throw new Error("draft JSON must be an object");
     }
+    payload = graphDocumentDraftState(payload);
     if (payload.kind !== "well-harness-workbench-ui-draft") {
       throw new Error("kind must be well-harness-workbench-ui-draft");
     }
@@ -16203,14 +16361,53 @@ function installEditableWorkbenchShell() {
       if (graphDocument.kind !== editableGraphDocumentKind) {
         throw new Error("editable_graph_document kind must be well-harness-workbench-editable-graph-document");
       }
-      if (graphDocument.version !== editableGraphDocumentVersion) {
-        throw new Error("editable_graph_document version must be workbench-editable-graph-document.v1");
+      if (!editableGraphDocumentAcceptedImportVersions.includes(graphDocument.version)) {
+        throw new Error("editable_graph_document version must be workbench-editable-graph-document.v1 or workbench-editable-graph-document.v2");
       }
       if (graphDocument.candidate_state !== "sandbox_candidate") {
         throw new Error("editable_graph_document candidate_state must be sandbox_candidate");
       }
       if (graphDocument.truth_effect !== "none") {
         throw new Error("editable_graph_document truth_effect must be none");
+      }
+      if (graphDocument.version === editableGraphDocumentVersion) {
+        const canonicalModel = graphDocument.canonical_model;
+        if (!canonicalModel || typeof canonicalModel !== "object" || Array.isArray(canonicalModel)) {
+          throw new Error("editable_graph_document canonical_model must be an object");
+        }
+        if (canonicalModel.schema_version !== editableGraphCanonicalModelVersion) {
+          throw new Error("editable_graph_document canonical_model schema_version must be workbench-editable-graph-canonical-model.v1");
+        }
+        if (canonicalModel.candidate_state !== "sandbox_candidate") {
+          throw new Error("editable_graph_document canonical_model candidate_state must be sandbox_candidate");
+        }
+        if (canonicalModel.truth_effect !== "none") {
+          throw new Error("editable_graph_document canonical_model truth_effect must be none");
+        }
+        for (const key of ["nodes", "edges", "ports", "typed_ports", "subsystem_groups"]) {
+          if (!Array.isArray(canonicalModel[key])) {
+            throw new Error(`editable_graph_document canonical_model ${key} must be an array`);
+          }
+        }
+        const domAdapter = graphDocument.dom_adapter;
+        if (!domAdapter || typeof domAdapter !== "object" || Array.isArray(domAdapter)) {
+          throw new Error("editable_graph_document dom_adapter must be an object");
+        }
+        if (domAdapter.kind !== "workbench-editable-graph-dom-adapter-boundary") {
+          throw new Error("editable_graph_document dom_adapter kind must be workbench-editable-graph-dom-adapter-boundary");
+        }
+        if (domAdapter.version !== editableGraphDomAdapterBoundaryVersion) {
+          throw new Error("editable_graph_document dom_adapter version must be workbench-editable-graph-dom-adapter-boundary.v1");
+        }
+        if (domAdapter.source_of_truth !== "editable_graph_document.canonical_model") {
+          throw new Error("editable_graph_document dom_adapter source_of_truth must be canonical_model");
+        }
+        if (domAdapter.top_level_compatibility !== true) {
+          throw new Error("editable_graph_document dom_adapter top_level_compatibility must be true");
+        }
+        if (domAdapter.truth_effect !== "none") {
+          throw new Error("editable_graph_document dom_adapter truth_effect must be none");
+        }
       }
       for (const key of ["document_id", "workspace_revision_id", "action_log_digest"]) {
         if (typeof graphDocument[key] !== "string" || !graphDocument[key]) {
