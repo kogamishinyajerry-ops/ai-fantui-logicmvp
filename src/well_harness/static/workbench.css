@@ -5337,6 +5337,19 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   background: #7dd7c2;
   box-shadow: 0 0 0 4px rgba(125, 215, 194, 0.22);
 }
+.workbench-port-drag-preview {
+  fill: none;
+  stroke: rgba(125, 215, 194, 0.92);
+  stroke-width: 1.4;
+  stroke-dasharray: 3 2;
+  pointer-events: none;
+}
+.workbench-port-drag-preview[data-port-drag-compatibility="warn"] {
+  stroke: rgba(240, 193, 91, 0.95);
+}
+.workbench-port-drag-preview[data-port-drag-compatibility="fail"] {
+  stroke: rgba(255, 126, 126, 0.95);
+}
 .workbench-editable-node span {
   font-size: 1.02rem;
   font-weight: 800;

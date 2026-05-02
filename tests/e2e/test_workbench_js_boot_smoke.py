@@ -2685,6 +2685,81 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_port_drag_preview_creates_route_diagnostics_edge(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    page.set_viewport_size({"width": 1600, "height": 5600})
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-op-catalog-op="compare"]')
+    page.click('[data-editor-tool="node"]')
+    page.click('[data-op-catalog-op="between"]')
+    page.click('[data-editor-tool="node"]')
+
+    source_handle = page.locator(
+        '[data-port-handle-owner-id="draft_node_1"][data-port-handle-direction="out"]'
+    )
+    target_handle = page.locator(
+        '[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="in"]'
+    )
+    source_handle.scroll_into_view_if_needed()
+    target_handle.scroll_into_view_if_needed()
+    source_box = source_handle.bounding_box()
+    target_box = target_handle.bounding_box()
+    assert source_box is not None
+    assert target_box is not None
+    assert page.evaluate(
+        """
+        ([x, y]) => document.elementFromPoint(x, y)
+          ?.closest('.workbench-port-handle')
+          ?.getAttribute('data-port-handle-owner-id')
+        """,
+        [source_box["x"] + source_box["width"] / 2, source_box["y"] + source_box["height"] / 2],
+    ) == "draft_node_1"
+
+    page.mouse.move(source_box["x"] + source_box["width"] / 2, source_box["y"] + source_box["height"] / 2)
+    page.mouse.down()
+    page.mouse.move(target_box["x"] + target_box["width"] / 2, target_box["y"] + target_box["height"] / 2, steps=8)
+    assert page.locator("#workbench-editable-canvas").get_attribute("data-port-drag-state") == "preview"
+    assert page.locator("#workbench-editable-canvas").get_attribute("data-port-drag-compatibility") == "pass"
+    assert page.locator(".workbench-port-drag-preview").count() == 1
+    page.mouse.up()
+
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    edge = next(
+        item for item in draft["edges"]
+        if item["source"] == "draft_node_1" and item["target"] == "draft_node_2"
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert edge["source_ref"] == "ui_draft.port_drag_wiring"
+    assert edge["route_metadata"]["creation_tool"] == "port_drag_wiring"
+    assert edge["route_metadata"]["compatibility_status"] == "pass"
+    assert edge["route_metadata"]["source_port_id"] == "draft_node_1:out"
+    assert edge["route_metadata"]["target_port_id"] == "draft_node_2:in"
+    assert draft["port_compatibility_report"]["status"] == "pass"
+    assert draft["canvas_interaction_summary"]["last_action"] == "connect_edge"
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    archived_edge = next(
+        item for item in archive["model_json"]["edges"]
+        if item["source"] == "draft_node_1" and item["target"] == "draft_node_2"
+    )
+    assert archived_edge["route_metadata"]["creation_tool"] == "port_drag_wiring"
+    assert archived_edge["route_metadata"]["truth_effect"] == "none"
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_sandbox_scenario_test_bench_runs_exports_and_archives(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")

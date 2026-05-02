@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench v5 deep-water implementation active · JER-230 merged · JER-231 canonical graph document v2 in progress
-last_updated: "2026-05-02T09:18:10.000+08:00"
+status: Workbench v5 deep-water implementation active · JER-231 merged · JER-232 port drag wiring in progress
+last_updated: "2026-05-02T21:04:21.000+08:00"
 last_activity: 2026-05-02
 progress:
   total_phases: 55
   completed_phases: 45
   total_plans: 2
   completed_plans: 1
-  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 through JER-219 built the current single-user authoring base: templates, subsystems, hardware/interface evidence, debug/diff/handoff packets, archive validation, workspace_document, and canvas_interaction_summary. JER-220 reset the active roadmap to foundation-first: editor -> runner -> test bench -> debugger -> archive, with thrust-reverser and C919 E-TRAS treated as reference/sample packs. JER-221 and JER-222 closed canonical editable graph and port/wire route metadata. JER-223 closed the first sandbox scenario test bench run report for candidate graph inputs/assertions. JER-224 closed selected candidate debugging over run failures, watched values, and archive checksums. JER-225 closed a sandbox-only preflight analyzer that classifies candidates as ready, needs_evidence, or invalid_candidate before handoff/archive. JER-226 closed the first UI-facing hardware/interface design authoring surface for sandbox LRUs, cables, connectors, ports, pins, bindings, evidence gaps, validation, and archive checksums. JER-227 closed the foundation review archive bundle. JER-228 closed validation-suite timeout isolation and clean origin/main worktree hygiene. JER-229 launched Workbench v5 deep-water planning: empty-canvas graph authoring, canonical graph document v2, port drag wiring, scenario library, runner trace kernel, debug timeline, hardware evidence attachment, command palette ergonomics, and archive restore v3. JER-230 closed v5 empty-canvas sandbox authoring with input/output primitives and canvas_authoring_mode export/import/archive evidence. JER-231 starts canonical graph document v2 with a canonical_model payload, DOM adapter boundary metadata, v1 import migration, and canonical-only import fallback. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 through JER-219 built the current single-user authoring base: templates, subsystems, hardware/interface evidence, debug/diff/handoff packets, archive validation, workspace_document, and canvas_interaction_summary. JER-220 reset the active roadmap to foundation-first: editor -> runner -> test bench -> debugger -> archive, with thrust-reverser and C919 E-TRAS treated as reference/sample packs. JER-221 and JER-222 closed canonical editable graph and port/wire route metadata. JER-223 closed the first sandbox scenario test bench run report for candidate graph inputs/assertions. JER-224 closed selected candidate debugging over run failures, watched values, and archive checksums. JER-225 closed a sandbox-only preflight analyzer that classifies candidates as ready, needs_evidence, or invalid_candidate before handoff/archive. JER-226 closed the first UI-facing hardware/interface design authoring surface for sandbox LRUs, cables, connectors, ports, pins, bindings, evidence gaps, validation, and archive checksums. JER-227 closed the foundation review archive bundle. JER-228 closed validation-suite timeout isolation and clean origin/main worktree hygiene. JER-229 launched Workbench v5 deep-water planning: empty-canvas graph authoring, canonical graph document v2, port drag wiring, scenario library, runner trace kernel, debug timeline, hardware evidence attachment, command palette ergonomics, and archive restore v3. JER-230 closed v5 empty-canvas sandbox authoring with input/output primitives and canvas_authoring_mode export/import/archive evidence. JER-231 closed canonical graph document v2 with a canonical_model payload, DOM adapter boundary metadata, v1 import migration, and canonical-only import fallback. JER-232 is adding direct port-drag wiring preview, compatibility diagnostics, and route metadata while preserving sandbox-only truth_effect none. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
@@ -21,8 +21,9 @@ Last activity: 2026-05-02
 
 **Current position**: JER-204 through JER-228 are merged on the v4 line, and
 JER-229 has launched Workbench v5 deep-water planning, JER-230 has closed the
-first implementation slice with empty-canvas graph authoring, and JER-231 is
-building the canonical graph document v2 boundary. The active mainline is the
+first implementation slice with empty-canvas graph authoring, JER-231 has
+closed the canonical graph document v2 boundary, and JER-232 is implementing
+direct port-drag wiring with route diagnostics. The active mainline is the
 generic single-user foundation: editor, runner, test bench, debugger, archive,
 and hardware/interface evidence. The existing thrust-reverser and C919 chains
 are reference samples, not the next dedicated product panels.
@@ -60,8 +61,8 @@ are reference samples, not the next dedicated product panels.
 - JER-228 is Done after PR #210.
 - JER-229 is Done after PR #211.
 - JER-230 is Done after PR #212.
-- JER-231 is In Progress for canonical graph document v2 and DOM adapter
-  boundary.
+- JER-231 is Done after PR #213.
+- JER-232 is In Progress for direct port-drag wiring and route diagnostics.
 
 **Runtime v3 closure summary**:
 
@@ -203,6 +204,31 @@ should be straightforward to rebuild as examples on top of the generic base.
   edits, frozen asset edits, truth-level promotion, DAL, and PSSA claims.
 - Coordination doc:
   `docs/coordination/editable-workbench-v5-deep-water.md`.
+
+**JER-231 canonical graph document v2 slice**:
+
+- `editable_graph_document.version` now exports as
+  `workbench-editable-graph-document.v2`.
+- The document carries `canonical_model` for nodes, edges, typed ports,
+  subsystem groups, component-library templates, scenario/test state, hardware
+  evidence refs, viewport state, and workspace document metadata.
+- The document carries `dom_adapter` metadata to state that the browser canvas
+  DOM is a projection of the canonical model, not the graph truth itself.
+- Import accepts v1 drafts and v2 canonical-only drafts, then restores them as
+  v2 sandbox evidence with `truth_effect: none`.
+
+**JER-232 port drag wiring slice**:
+
+- Direct port drag now arms from output handles, previews the candidate route,
+  and records compatibility status on the canvas while dragging.
+- Compatible and warning-level target links create deterministic sandbox edges
+  with `source_ref: ui_draft.port_drag_wiring`.
+- Route metadata records `creation_tool: port_drag_wiring`,
+  `compatibility_status`, source/target port ids, edge labels, and
+  `truth_effect: none`.
+- Drag cancellation or rejected links stay local validation feedback and do not
+  mutate controller truth, adapters, hardware YAML, frozen assets, DAL, or
+  truth-level state.
 
 **JER-206 component-library closure**:
 
