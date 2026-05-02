@@ -21,7 +21,12 @@ from well_harness.workbench_bundle import (
     build_workbench_bundle,
     load_workbench_archive_restore_payload,
 )
-from well_harness.workbench_changerequest_handoff import changerequest_handoff_ui_checksum
+from well_harness.workbench_changerequest_handoff import (
+    FOUNDATION_REVIEW_ARCHIVE_KIND,
+    FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS,
+    FOUNDATION_REVIEW_ARCHIVE_VERSION,
+    changerequest_handoff_ui_checksum,
+)
 
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -89,6 +94,85 @@ def _valid_handoff_evidence_archive() -> dict:
             "changerequest_handoff_packet_checksum": changerequest_handoff_ui_checksum(handoff_packet),
         },
     }
+
+
+def _valid_foundation_review_archive() -> dict:
+    return {
+        "kind": FOUNDATION_REVIEW_ARCHIVE_KIND,
+        "version": FOUNDATION_REVIEW_ARCHIVE_VERSION,
+        "review_scope": "workbench_v4_single_user_foundation",
+        "archive_kind": "well-harness-workbench-evidence-archive",
+        "archive_version": 1,
+        "candidate_state": "sandbox_candidate",
+        "certification_claim": "none",
+        "truth_level_impact": "none",
+        "dal_pssa_impact": "none",
+        "controller_truth_modified": False,
+        "frozen_assets_modified": False,
+        "live_linear_mutation": False,
+        "runtime_truth_effect": "none",
+        "truth_effect": "none",
+        "required_sections": list(FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS),
+        "missing_sections": [],
+        "section_count": len(FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS),
+        "sections": {
+            section_name: {
+                "key": section_name,
+                "status": "present",
+                "kind": "untyped",
+                "version": "unversioned",
+                "checksum_key": f"{section_name}_checksum",
+                "checksum": "ui_draft_11111111",
+                "truth_effect": "none",
+            }
+            for section_name in FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS
+        },
+        "review_readiness": "ready",
+        "preflight_summary": {
+            "classification": "ready",
+            "finding_count": 0,
+            "candidate_model_hash": "ui_draft_11111111",
+            "truth_effect": "none",
+        },
+        "review_packet": {
+            "graph_checksum": "ui_draft_11111111",
+            "test_bench_checksum": "ui_draft_11111111",
+            "run_report_checksum": "ui_draft_11111111",
+            "debugger_checksum": "ui_draft_11111111",
+            "preflight_checksum": "ui_draft_11111111",
+            "hardware_evidence_checksum": "ui_draft_11111111",
+            "changerequest_handoff_checksum": "ui_draft_11111111",
+            "linear_issue_body_checksum": "ui_draft_11111111",
+            "pr_proof_packet_checksum": "ui_draft_11111111",
+            "truth_effect": "none",
+        },
+        "linear_ready": {
+            "issue_body_available": True,
+            "pr_proof_available": True,
+            "handoff_packet_available": True,
+            "live_linear_mutation": False,
+            "browser_mutates_linear": False,
+            "truth_effect": "none",
+        },
+        "restore_contract": {
+            "validation_report_key": "foundation_review_archive_validation",
+            "restore_payload_key": "foundation_review_archive_validation",
+            "requires_handoff_packet_validation": True,
+            "browser_archive_only": True,
+            "truth_effect": "none",
+        },
+        "checksum_manifest": {},
+    }
+
+
+def _valid_review_ready_evidence_archive() -> dict:
+    payload = _valid_handoff_evidence_archive()
+    foundation_review_archive = _valid_foundation_review_archive()
+    payload["foundation_review_archive"] = foundation_review_archive
+    payload["checksums"]["foundation_review_archive_checksum"] = changerequest_handoff_ui_checksum(
+        foundation_review_archive
+    )
+    return payload
 
 
 def _build_valid_manifest(archive_dir_value: str, files: Optional[dict] = None) -> dict:
@@ -315,6 +399,49 @@ class ArchiveRestoreSandboxTests(unittest.TestCase):
         self.assertEqual("none", validation["truth_effect"])
         self.assertTrue(validation["canonical_hash"])
 
+    def test_archive_restore_reports_foundation_review_archive_validation(self):
+        """Review-ready evidence archives expose restore-time foundation validation."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path, _archive_dir = _create_archive_with_workspace_snapshot(
+                Path(temp_dir),
+                _valid_review_ready_evidence_archive(),
+            )
+
+            response, error = build_workbench_archive_restore_response({
+                "manifest_path": str(manifest_path),
+            })
+
+        self.assertIsNotNone(response)
+        self.assertIsNone(error)
+        validation = response["foundation_review_archive_validation"]
+        self.assertEqual("pass", validation["status"])
+        self.assertEqual("pass", validation["checksum_status"])
+        self.assertEqual("none", validation["truth_effect"])
+        self.assertTrue(validation["canonical_hash"])
+
+    def test_archive_restore_rejects_invalid_foundation_review_archive(self):
+        """Invalid review archives fail restore instead of being treated as trusted proof."""
+        evidence_archive = _valid_review_ready_evidence_archive()
+        evidence_archive["foundation_review_archive"]["truth_effect"] = "certified"
+        evidence_archive["checksums"]["foundation_review_archive_checksum"] = changerequest_handoff_ui_checksum(
+            evidence_archive["foundation_review_archive"]
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path, _archive_dir = _create_archive_with_workspace_snapshot(
+                Path(temp_dir),
+                evidence_archive,
+            )
+            response, error = build_workbench_archive_restore_response({
+                "manifest_path": str(manifest_path),
+            })
+
+        self.assertIsNone(response)
+        self.assertIsNotNone(error)
+        self.assertEqual("invalid_workbench_archive", error["error"])
+        self.assertIn("foundation review archive", error["message"])
+        self.assertIn("truth_effect must be 'none'", error["message"])
+
     def test_archive_restore_rejects_invalid_handoff_packet_in_evidence_archive(self):
         """Invalid embedded handoff packets fail restore instead of being silently trusted."""
         evidence_archive = _valid_handoff_evidence_archive()
@@ -351,6 +478,9 @@ class ArchiveRestoreSandboxTests(unittest.TestCase):
         validation = response["changerequest_handoff_validation"]
         self.assertEqual("not_present", validation["status"])
         self.assertEqual(0, validation["issue_count"])
+        foundation_validation = response["foundation_review_archive_validation"]
+        self.assertEqual("not_present", foundation_validation["status"])
+        self.assertEqual(0, foundation_validation["issue_count"])
 
     def test_valid_nested_archive_dir(self):
         """Manifest with relative archive_dir='subdir/' should be accepted."""

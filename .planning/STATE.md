@@ -2,25 +2,25 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench v4 foundation-first active · JER-225 merged · JER-226 hardware/interface designer in review
-last_updated: "2026-05-01T23:59:00.000+08:00"
-last_activity: 2026-05-01
+status: Workbench v4 foundation-first active · JER-226 merged · JER-227 review archive in progress
+last_updated: "2026-05-02T09:10:00.000+08:00"
+last_activity: 2026-05-02
 progress:
   total_phases: 44
   completed_phases: 43
   total_plans: 2
   completed_plans: 1
-  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 through JER-219 built the current single-user authoring base: templates, subsystems, hardware/interface evidence, debug/diff/handoff packets, archive validation, workspace_document, and canvas_interaction_summary. JER-220 reset the active roadmap to foundation-first: editor -> runner -> test bench -> debugger -> archive, with thrust-reverser and C919 E-TRAS treated as reference/sample packs. JER-221 and JER-222 closed canonical editable graph and port/wire route metadata. JER-223 closed the first sandbox scenario test bench run report for candidate graph inputs/assertions. JER-224 closed selected candidate debugging over run failures, watched values, and archive checksums. JER-225 closed a sandbox-only preflight analyzer that classifies candidates as ready, needs_evidence, or invalid_candidate before handoff/archive. JER-226 adds the first UI-facing hardware/interface design authoring surface for sandbox LRUs, cables, connectors, ports, pins, bindings, evidence gaps, validation, and archive checksums. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 through JER-219 built the current single-user authoring base: templates, subsystems, hardware/interface evidence, debug/diff/handoff packets, archive validation, workspace_document, and canvas_interaction_summary. JER-220 reset the active roadmap to foundation-first: editor -> runner -> test bench -> debugger -> archive, with thrust-reverser and C919 E-TRAS treated as reference/sample packs. JER-221 and JER-222 closed canonical editable graph and port/wire route metadata. JER-223 closed the first sandbox scenario test bench run report for candidate graph inputs/assertions. JER-224 closed selected candidate debugging over run failures, watched values, and archive checksums. JER-225 closed a sandbox-only preflight analyzer that classifies candidates as ready, needs_evidence, or invalid_candidate before handoff/archive. JER-226 closed the first UI-facing hardware/interface design authoring surface for sandbox LRUs, cables, connectors, ports, pins, bindings, evidence gaps, validation, and archive checksums. JER-227 is in progress to package graph, tests, run/debug reports, hardware evidence, preflight findings, checksums, Linear/PR proof, and restore-time validation into one review archive. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
 
-Last activity: 2026-05-01
+Last activity: 2026-05-02
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
-**Current position**: JER-204 through JER-225 are merged on the v4 line, and
-JER-226 is in review as the first UI-facing hardware/interface designer slice. The active
+**Current position**: JER-204 through JER-226 are merged on the v4 line, and
+JER-227 is in progress as the foundation review archive slice. The active
 mainline is the generic single-user foundation: editor, runner, test bench,
 debugger, archive, and later hardware/interface designer. The existing
 thrust-reverser and C919 chains are reference samples, not the next dedicated
@@ -54,7 +54,8 @@ product panels.
 - JER-223 is Done after PR #205.
 - JER-224 is Done after PR #206.
 - JER-225 is Done after PR #207.
-- JER-226 is In Review for Hardware/interface designer foundation v1.
+- JER-226 is Done after PR #208.
+- JER-227 is In Progress for Foundation workbench review archive v1.
 
 **Runtime v3 closure summary**:
 
@@ -154,6 +155,20 @@ should be straightforward to rebuild as examples on top of the generic base.
 - The designer is evidence-only. It does not write certified hardware YAML,
   controller truth, adapters, frozen assets, DAL/PSSA status, or truth-level
   claims.
+
+**JER-227 foundation review archive slice**:
+
+- The local evidence archive now includes a `foundation_review_archive` summary
+  that names the graph, test bench, run report, debugger, preflight, hardware
+  evidence, ChangeRequest handoff, Linear issue body, PR proof, and red-line
+  sections required for review.
+- The browser emits a `foundation_review_archive_validation` report and checksum
+  coverage for the review bundle.
+- Archive restore validates the foundation review archive when present and
+  rejects certified/truth mutation claims before returning trusted restore
+  payloads.
+- The archive remains sandbox-only with `truth_effect: none`, no live Linear
+  mutation, no controller truth edits, and no frozen asset changes.
 
 **JER-206 component-library closure**:
 

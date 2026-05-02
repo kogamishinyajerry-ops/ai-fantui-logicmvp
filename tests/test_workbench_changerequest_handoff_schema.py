@@ -17,16 +17,91 @@ from well_harness.workbench_changerequest_handoff import (  # type: ignore[impor
     CHANGE_REQUEST_HANDOFF_SCHEMA_ID,
     CHANGE_REQUEST_HANDOFF_SCHEMA_PATH,
     CHANGE_REQUEST_HANDOFF_VERSION,
+    FOUNDATION_REVIEW_ARCHIVE_KIND,
+    FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS,
+    FOUNDATION_REVIEW_ARCHIVE_VERSION,
     changerequest_handoff_ui_checksum,
     changerequest_handoff_hash,
     load_changerequest_handoff_schema,
     validate_changerequest_handoff_archive_payload,
     validate_changerequest_handoff_packet,
+    validate_foundation_review_archive_bundle,
+    validate_foundation_review_archive_payload,
 )
 
 
 PROJECT_ROOT = Path(__file__).parents[1]
 VALIDATOR_SCRIPT = PROJECT_ROOT / "tools" / "validate_workbench_changerequest_handoff_schema.py"
+
+
+def sample_foundation_review_archive() -> dict:
+    sections = {
+        section_name: {
+            "key": section_name,
+            "status": "present",
+            "kind": "untyped",
+            "version": "unversioned",
+            "checksum_key": f"{section_name}_checksum",
+            "checksum": "ui_draft_11111111",
+            "truth_effect": "none",
+        }
+        for section_name in FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS
+    }
+    return {
+        "kind": FOUNDATION_REVIEW_ARCHIVE_KIND,
+        "version": FOUNDATION_REVIEW_ARCHIVE_VERSION,
+        "review_scope": "workbench_v4_single_user_foundation",
+        "archive_kind": "well-harness-workbench-evidence-archive",
+        "archive_version": 1,
+        "candidate_state": "sandbox_candidate",
+        "certification_claim": "none",
+        "truth_level_impact": "none",
+        "dal_pssa_impact": "none",
+        "controller_truth_modified": False,
+        "frozen_assets_modified": False,
+        "live_linear_mutation": False,
+        "runtime_truth_effect": "none",
+        "truth_effect": "none",
+        "required_sections": list(FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS),
+        "missing_sections": [],
+        "section_count": len(FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS),
+        "sections": sections,
+        "review_readiness": "ready",
+        "preflight_summary": {
+            "classification": "ready",
+            "finding_count": 0,
+            "candidate_model_hash": "ui_draft_11111111",
+            "truth_effect": "none",
+        },
+        "review_packet": {
+            "graph_checksum": "ui_draft_11111111",
+            "test_bench_checksum": "ui_draft_11111111",
+            "run_report_checksum": "ui_draft_11111111",
+            "debugger_checksum": "ui_draft_11111111",
+            "preflight_checksum": "ui_draft_11111111",
+            "hardware_evidence_checksum": "ui_draft_11111111",
+            "changerequest_handoff_checksum": "ui_draft_11111111",
+            "linear_issue_body_checksum": "ui_draft_11111111",
+            "pr_proof_packet_checksum": "ui_draft_11111111",
+            "truth_effect": "none",
+        },
+        "linear_ready": {
+            "issue_body_available": True,
+            "pr_proof_available": True,
+            "handoff_packet_available": True,
+            "live_linear_mutation": False,
+            "browser_mutates_linear": False,
+            "truth_effect": "none",
+        },
+        "restore_contract": {
+            "validation_report_key": "foundation_review_archive_validation",
+            "restore_payload_key": "foundation_review_archive_validation",
+            "requires_handoff_packet_validation": True,
+            "browser_archive_only": True,
+            "truth_effect": "none",
+        },
+        "checksum_manifest": {},
+    }
 
 
 class WorkbenchChangeRequestHandoffSchemaTests(unittest.TestCase):
@@ -183,6 +258,69 @@ class WorkbenchChangeRequestHandoffSchemaTests(unittest.TestCase):
         self.assertEqual("fail", report["status"])
         self.assertEqual("mismatch", report["checksum_status"])
         self.assertIn("checksum mismatch", " ".join(report["issues"]))
+
+    def test_foundation_review_archive_bundle_validates_review_ready_sections(self) -> None:
+        payload = sample_foundation_review_archive()
+
+        self.assertEqual((), validate_foundation_review_archive_bundle(payload))
+
+    def test_foundation_review_archive_payload_validates_checksum(self) -> None:
+        payload = sample_foundation_review_archive()
+        archive = {
+            "kind": "well-harness-workbench-evidence-archive",
+            "version": 1,
+            "foundation_review_archive": payload,
+            "checksums": {
+                "foundation_review_archive_checksum": changerequest_handoff_ui_checksum(payload),
+            },
+        }
+
+        report = validate_foundation_review_archive_payload(archive)
+
+        self.assertEqual("pass", report["status"])
+        self.assertEqual("pass", report["checksum_status"])
+        self.assertEqual("foundation_review_archive", report["source_path"])
+        self.assertEqual(changerequest_handoff_hash(payload), report["canonical_hash"])
+        self.assertEqual(changerequest_handoff_ui_checksum(payload), report["ui_checksum"])
+        self.assertEqual("none", report["truth_effect"])
+
+    def test_foundation_review_archive_payload_rejects_truth_and_linear_mutation_claims(self) -> None:
+        payload = sample_foundation_review_archive()
+        payload["truth_effect"] = "certified"
+        payload["certification_claim"] = "certified"
+        payload["live_linear_mutation"] = True
+        archive = {
+            "kind": "well-harness-workbench-evidence-archive",
+            "version": 1,
+            "foundation_review_archive": payload,
+            "checksums": {
+                "foundation_review_archive_checksum": changerequest_handoff_ui_checksum(payload),
+            },
+        }
+
+        report = validate_foundation_review_archive_payload(archive)
+        issue_text = " ".join(report["issues"])
+
+        self.assertEqual("fail", report["status"])
+        self.assertIn("foundation_review_archive.truth_effect must be 'none'.", issue_text)
+        self.assertIn("foundation_review_archive.certification_claim must be 'none'.", issue_text)
+        self.assertIn("foundation_review_archive.live_linear_mutation must be False.", issue_text)
+
+    def test_foundation_review_archive_payload_rejects_missing_checksum(self) -> None:
+        payload = sample_foundation_review_archive()
+
+        report = validate_foundation_review_archive_payload(
+            {
+                "kind": "well-harness-workbench-evidence-archive",
+                "version": 1,
+                "foundation_review_archive": payload,
+                "checksums": {},
+            }
+        )
+
+        self.assertEqual("fail", report["status"])
+        self.assertEqual("missing", report["checksum_status"])
+        self.assertIn("foundation_review_archive_checksum is required", " ".join(report["issues"]))
 
     def test_standalone_script_json_pass_output(self) -> None:
         env = dict(os.environ)
