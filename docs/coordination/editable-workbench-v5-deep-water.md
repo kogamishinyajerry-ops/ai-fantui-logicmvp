@@ -1,7 +1,7 @@
 # Editable Workbench v5 Deep-Water Plan
 
 Date: 2026-05-02
-Status: Launch planning
+Status: Implementation active · JER-230 empty-canvas authoring
 Scope: single-user `/workbench` foundation only
 
 ## Summary
@@ -77,6 +77,8 @@ Preferred direction:
 
 ### JER-229 · Workbench v5 deep-water roadmap and clean-lane launch
 
+Status: Done after PR #211.
+
 Outcome: Update repo roadmap, state, and coordination docs so v5 has a clear
 single-user foundation-first execution queue after JER-228.
 
@@ -89,6 +91,8 @@ Acceptance:
 
 ### JER-230 · Empty-canvas graph authoring palette v1
 
+Status: In progress.
+
 Outcome: Let an engineer build a small graph from primitives without relying on
 the thrust-reverser seed nodes.
 
@@ -100,6 +104,17 @@ Acceptance:
 - Adding/removing/renaming nodes updates workspace action metadata.
 - Export/import/archive preserve node counts, positions, operation metadata,
   and `truth_effect: none`.
+
+Implementation notes:
+
+- Empty authoring is explicit through `canvas_authoring_mode: empty_authoring`;
+  it is not inferred from a transient DOM clear.
+- The primitive catalog starts with input, output, boolean AND/OR, compare,
+  between, delay, and latch operations.
+- Imported empty-authoring drafts replace the reference sample nodes so
+  `logic1` through `logic4` do not reappear during round-trip restore.
+- Archive output keeps the same sandbox boundary: `truth_effect: none`,
+  `controller_truth_modified: false`, and no certified asset writes.
 
 ### JER-231 · Canonical graph document v2 and DOM adapter boundary
 

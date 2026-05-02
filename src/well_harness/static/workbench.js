@@ -7571,6 +7571,7 @@ function installEditableWorkbenchShell() {
   const componentLibraryStatus = document.getElementById("workbench-component-library-status");
   const captureSubsystemTemplateBtn = document.getElementById("workbench-capture-subsystem-template-btn");
   const insertCapturedTemplateBtn = document.getElementById("workbench-insert-captured-template-btn");
+  const startEmptyDraftBtn = document.getElementById("workbench-start-empty-draft-btn");
   const deriveBtn = document.getElementById("workbench-derive-draft-btn");
   const runSandboxBtn = document.getElementById("workbench-run-sandbox-btn");
   const draftLabel = document.getElementById("workbench-draft-status-label");
@@ -7764,6 +7765,7 @@ function installEditableWorkbenchShell() {
   let lastPreflightAnalyzerReport = null;
   let lastHardwareInterfaceDesignerPayload = null;
   let lastHardwareInterfaceDesignerValidationReport = null;
+  let canvasAuthoringMode = "reference_sample";
   const workspaceDocumentKind = "well-harness-workbench-workspace-document";
   const workspaceDocumentVersion = "workbench-workspace-document.v1";
   let workspaceDocumentId = "ui_draft_workspace_document_v1";
@@ -7827,6 +7829,20 @@ function installEditableWorkbenchShell() {
   ];
   const editableOperationCatalogVersion = "editable-control-ops.v1";
   const approvedOperationCatalog = {
+    "input": {
+      op: "input",
+      label: "Input primitive",
+      short_label: "IN",
+      value_type: "boolean",
+      rule_count: "0",
+    },
+    "output": {
+      op: "output",
+      label: "Output primitive",
+      short_label: "OUT",
+      value_type: "boolean",
+      rule_count: "0",
+    },
     and: {
       op: "and",
       label: "AND gate",
@@ -7916,6 +7932,11 @@ function installEditableWorkbenchShell() {
       selected_op: selectedCatalogOp,
       truth_effect: "none",
     };
+  }
+
+  function normalizeCanvasAuthoringMode(value) {
+    const mode = String(value || "").trim();
+    return mode === "empty_authoring" ? "empty_authoring" : "reference_sample";
   }
 
   function componentTemplateById(templateId) {
@@ -12346,6 +12367,7 @@ function installEditableWorkbenchShell() {
     refreshEditableNodes();
     return {
       draftState: shell.getAttribute("data-draft-state") || "baseline",
+      canvasAuthoringMode,
       selectedNodeId: selectedNode && selectedNode.getAttribute("data-editable-node-id"),
       selectedNodeIds: Array.from(selectedNodeIds),
       diagnosticFocus: currentDiagnosticFocusSummary(),
@@ -12416,6 +12438,9 @@ function installEditableWorkbenchShell() {
     if (typeof state.selectedCatalogOp === "string") {
       setSelectedOperationCatalogEntry(state.selectedCatalogOp);
     }
+    canvasAuthoringMode = normalizeCanvasAuthoringMode(
+      state.canvasAuthoringMode || state.canvas_authoring_mode || canvasAuthoringMode,
+    );
     adoptWorkspaceDocumentRecord(state.workspaceDocument || state.workspace_document || null);
     adoptCanvasInteractionSummary(state.canvasInteractionSummary || state.canvas_interaction_summary || null);
     restoreSandboxTestBenchDefinition(state.sandboxTestBench || state.sandbox_test_bench || null);
@@ -12456,7 +12481,10 @@ function installEditableWorkbenchShell() {
         || capturedSubsystemTemplates,
     );
     refreshCapturedSubsystemTemplateControls();
-    for (const existing of Array.from(shell.querySelectorAll('[data-draft-node="true"]'))) {
+    const removableNodeSelector = canvasAuthoringMode === "empty_authoring"
+      ? ".workbench-editable-node"
+      : '[data-draft-node="true"]';
+    for (const existing of Array.from(shell.querySelectorAll(removableNodeSelector))) {
       existing.remove();
     }
     refreshEditableNodes();
@@ -12465,7 +12493,7 @@ function installEditableWorkbenchShell() {
       let node = nodes.find((candidate) => (
         candidate.getAttribute("data-editable-node-id") === nodeState.id
       ));
-      if (!node && nodeState.draftNode) {
+      if (!node) {
         node = createEditableNodeElement(nodeState);
         refreshEditableNodes();
       }
@@ -12863,13 +12891,15 @@ function installEditableWorkbenchShell() {
       seenEdges.add(edgeKey);
     }
     if (graphValidationStatus) {
-      graphValidationStatus.textContent = issues.length
-        ? `Graph validation: ${issues.join(", ")}`
-        : (
-            selectedNodeIds.size > 1
-              ? `Graph validation: no issues. Multi-select: ${selectedNodeIds.size} nodes.`
-              : "Graph validation: no issues."
-          );
+      let statusText = "Graph validation: no issues.";
+      if (issues.length) {
+        statusText = `Graph validation: ${issues.join(", ")}`;
+      } else if (nodes.length === 0) {
+        statusText = "Graph validation: empty sandbox draft. Add a primitive node. Truth effect: none.";
+      } else if (selectedNodeIds.size > 1) {
+        statusText = `Graph validation: no issues. Multi-select: ${selectedNodeIds.size} nodes.`;
+      }
+      graphValidationStatus.textContent = statusText;
     }
     return issues;
   }
@@ -12902,8 +12932,41 @@ function installEditableWorkbenchShell() {
     return nodeId;
   }
 
+  function startEmptyCanvasDraft() {
+    recordEditableHistory("start_empty_canvas_draft");
+    canvasAuthoringMode = "empty_authoring";
+    shell.setAttribute("data-draft-state", "derived");
+    for (const node of Array.from(shell.querySelectorAll(".workbench-editable-node"))) {
+      node.remove();
+    }
+    nodes = [];
+    draftEdges = [];
+    selectedNode = null;
+    selectedNodeIds = new Set();
+    selectedEdge = null;
+    pendingEdgeSourceId = "";
+    pendingPortHandleSource = null;
+    selectedDiagnosticFocus = null;
+    subsystemGroups = [];
+    nextDraftNodeIndex = 1;
+    if (draftLabel) {
+      draftLabel.textContent = "sandbox_candidate empty graph pending";
+    }
+    if (componentLibraryStatus) {
+      componentLibraryStatus.textContent = "Empty sandbox canvas ready";
+    }
+    setTimelineState("derived");
+    syncEditableNodeSelectionAttributes();
+    renderEditableEdges();
+    renderInspector();
+    validateEditableGraph();
+    updateEditableDraftHash();
+    persistDraft();
+  }
+
   function addEditableNode() {
     recordEditableHistory("add_node");
+    canvasAuthoringMode = normalizeCanvasAuthoringMode(canvasAuthoringMode);
     shell.setAttribute("data-draft-state", "derived");
     const nodeId = nextDraftNodeId();
     const catalogEntry = operationCatalogEntry(selectedCatalogOp);
@@ -14796,7 +14859,26 @@ function installEditableWorkbenchShell() {
       return;
     }
     const payload = selectedNodePayload();
-    if (!payload) return;
+    if (!payload) {
+      if (nodeIdSlot) nodeIdSlot.textContent = "none";
+      if (labelInput) labelInput.value = "";
+      if (opSelect) opSelect.value = selectedCatalogOp;
+      if (ruleCountSlot) ruleCountSlot.textContent = "0";
+      if (evidenceSlot) evidenceSlot.textContent = "evidence_gap";
+      if (sourceRefSlot) sourceRefSlot.textContent = "ui_draft.empty_canvas";
+      if (evidenceDetail) {
+        evidenceDetail.textContent = "Empty sandbox draft. Add a primitive node to inspect graph evidence.";
+      }
+      renderHardwareEvidenceV2Report(buildHardwareEvidenceV2Report(activeInterfaceBindingTarget(), []));
+      renderSelectedDebugTimeline("empty_canvas");
+      renderCandidateBaselineDiffReviewV2("empty_canvas");
+      renderRuleParameterEditor();
+      renderInterfaceBindingEditor();
+      renderHardwareBindingDiagnostics();
+      renderTypedPortEditor();
+      renderSubsystemEditor();
+      return;
+    }
     if (nodeIdSlot) nodeIdSlot.textContent = payload.id;
     if (labelInput) labelInput.value = payload.label;
     if (opSelect) opSelect.value = payload.op;
@@ -14913,6 +14995,7 @@ function installEditableWorkbenchShell() {
       }
       applyEditableState({
         draftState: payload.draftState || "baseline",
+        canvasAuthoringMode: payload.canvasAuthoringMode || payload.canvas_authoring_mode || "reference_sample",
         selectedNodeId: payload.selectedNodeId,
         selectedNodeIds: Array.isArray(payload.selectedNodeIds) ? payload.selectedNodeIds : [],
         diagnosticFocus: payload.diagnosticFocus || null,
@@ -15010,6 +15093,7 @@ function installEditableWorkbenchShell() {
     const canvasInteractionSummary = currentCanvasInteractionSummary();
     const snapshot = {
       draft_state: shell.getAttribute("data-draft-state") || "baseline",
+      canvas_authoring_mode: canvasAuthoringMode,
       system_id: "thrust-reverser",
       baseline_adapter: "reference-deploy-controller",
       truth_level_impact: "none",
@@ -15964,6 +16048,7 @@ function installEditableWorkbenchShell() {
       kind: "well-harness-workbench-ui-draft",
       version: 1,
       draft_state: snapshot.draft_state,
+      canvas_authoring_mode: snapshot.canvas_authoring_mode,
       system_id: snapshot.system_id,
       baseline_adapter: snapshot.baseline_adapter,
       truth_level_impact: "none",
@@ -16036,6 +16121,12 @@ function installEditableWorkbenchShell() {
     }
     if (payload.controller_truth_modified !== false) {
       throw new Error("controller_truth_modified must be false");
+    }
+    if (
+      payload.canvas_authoring_mode !== undefined
+      && !["reference_sample", "empty_authoring"].includes(payload.canvas_authoring_mode)
+    ) {
+      throw new Error("canvas_authoring_mode must be reference_sample or empty_authoring");
     }
     if (
       payload.workspace_document !== undefined
@@ -16687,6 +16778,7 @@ function installEditableWorkbenchShell() {
     }
     applyEditableState({
       draftState: "derived",
+      canvasAuthoringMode: validated.canvas_authoring_mode || "reference_sample",
       selectedNodeId: selectedId,
       selectedNodeIds: Array.isArray(validated.selected_node_ids)
         ? validated.selected_node_ids
@@ -18249,6 +18341,7 @@ function installEditableWorkbenchShell() {
       version: 1,
       archive_scope: "local_draft_download",
       generated_at: "browser_local_draft",
+      canvas_authoring_mode: modelJson.canvas_authoring_mode || canvasAuthoringMode,
       model_json: modelJson,
       workspace_document: workspaceDocument,
       canvas_interaction_summary: canvasInteractionSummary,
@@ -18474,6 +18567,9 @@ function installEditableWorkbenchShell() {
   }
   if (runPreflightBtn) {
     runPreflightBtn.addEventListener("click", () => runWorkbenchPreflightAnalyzer());
+  }
+  if (startEmptyDraftBtn) {
+    startEmptyDraftBtn.addEventListener("click", () => startEmptyCanvasDraft());
   }
   for (const button of toolbarButtons) {
     button.addEventListener("click", () => {

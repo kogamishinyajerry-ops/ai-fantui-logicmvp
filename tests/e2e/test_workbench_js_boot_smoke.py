@@ -1552,6 +1552,8 @@ def test_workbench_operation_catalog_adds_typed_sandbox_node(demo_server, browse
     assert draft["operation_catalog"]["selected_op"] == "between"
     assert draft["operation_catalog"]["truth_effect"] == "none"
     assert set(draft["operation_catalog"]["approved_ops"]) == {
+        "input",
+        "output",
         "and",
         "or",
         "compare",
@@ -1565,6 +1567,54 @@ def test_workbench_operation_catalog_adds_typed_sandbox_node(demo_server, browse
     assert archive["operation_catalog"]["selected_op"] == "between"
     assert archive["operation_catalog"]["truth_effect"] == "none"
     assert archive["checksums"]["operation_catalog_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
+def test_workbench_empty_canvas_palette_round_trips_sandbox_primitives(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click("#workbench-start-empty-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    empty_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert errors == [], f"page JS errors: {errors}"
+    assert empty_draft["canvas_authoring_mode"] == "empty_authoring"
+    assert empty_draft["nodes"] == []
+    assert empty_draft["edges"] == []
+    assert empty_draft["editable_graph_document"]["node_count"] == 0
+    assert empty_draft["editable_graph_document"]["truth_effect"] == "none"
+
+    page.click('[data-op-catalog-op="input"]')
+    page.click('[data-editor-tool="node"]')
+    page.click('[data-op-catalog-op="output"]')
+    page.click('[data-editor-tool="node"]')
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    node_ops = {node["id"]: node["op"] for node in draft["nodes"]}
+
+    assert draft["canvas_authoring_mode"] == "empty_authoring"
+    assert node_ops == {"draft_node_1": "input", "draft_node_2": "output"}
+    assert all(node_id not in node_ops for node_id in ["logic1", "logic2", "logic3", "logic4"])
+    assert draft["workspace_document"]["truth_effect"] == "none"
+    assert draft["workspace_document"]["action_count"] >= 3
+    assert draft["editable_graph_document"]["node_count"] == 2
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    page.fill("#workbench-draft-json-buffer", draft_json)
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    imported_ops = {node["id"]: node["op"] for node in imported["nodes"]}
+    assert imported["canvas_authoring_mode"] == "empty_authoring"
+    assert imported_ops == node_ops
+    assert imported["editable_graph_document"]["node_count"] == 2
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["canvas_authoring_mode"] == "empty_authoring"
+    assert archive["editable_graph_document"]["node_count"] == 2
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 

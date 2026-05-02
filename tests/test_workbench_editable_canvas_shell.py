@@ -129,6 +129,23 @@ def test_component_library_templates_are_exposed_as_sandbox_toolbar_controls() -
     assert ".workbench-component-library-status" in css
 
 
+def test_empty_canvas_authoring_controls_are_exposed_as_sandbox_toolbar_controls() -> None:
+    html = _html()
+    js = _js()
+
+    assert 'id="workbench-start-empty-draft-btn"' in html
+    assert 'data-op-catalog-op="input"' in html
+    assert 'data-op-catalog-op="output"' in html
+    assert '<option value="input">input</option>' in html
+    assert '<option value="output">output</option>' in html
+    assert "startEmptyCanvasDraft" in js
+    assert "start_empty_canvas_draft" in js
+    assert "canvas_authoring_mode" in js
+    assert "empty_authoring" in js
+    assert '"input"' in js
+    assert '"output"' in js
+
+
 def test_subsystem_group_editor_controls_are_exposed_as_sandbox_only_ui() -> None:
     html = _html()
     css = _css()

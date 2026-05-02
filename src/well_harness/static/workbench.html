@@ -591,6 +591,7 @@
               <button type="button" data-editor-tool="disconnect" aria-pressed="false" title="Disconnect edge">⨯</button>
               <button type="button" data-editor-tool="undo" aria-pressed="false" title="Undo">↶</button>
               <button type="button" data-editor-tool="redo" aria-pressed="false" title="Redo">↷</button>
+              <button type="button" id="workbench-start-empty-draft-btn" title="Start empty sandbox draft">∅</button>
               <div
                 id="workbench-viewport-tools"
                 class="workbench-viewport-tools"
@@ -606,6 +607,8 @@
                 class="workbench-op-catalog"
                 aria-label="Approved sandbox operations"
               >
+                <button type="button" data-op-catalog-op="input" aria-pressed="false" title="Input primitive">IN</button>
+                <button type="button" data-op-catalog-op="output" aria-pressed="false" title="Output primitive">OUT</button>
                 <button type="button" data-op-catalog-op="and" aria-pressed="true" title="AND">AND</button>
                 <button type="button" data-op-catalog-op="or" aria-pressed="false" title="OR">OR</button>
                 <button type="button" data-op-catalog-op="compare" aria-pressed="false" title="Compare">CMP</button>
@@ -740,6 +743,8 @@
               <label class="workbench-inspector-field" for="workbench-inspector-node-op">
                 <span>Operation</span>
                 <select id="workbench-inspector-node-op">
+                  <option value="input">input</option>
+                  <option value="output">output</option>
                   <option value="and">and</option>
                   <option value="or">or</option>
                   <option value="compare">compare</option>
