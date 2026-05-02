@@ -409,12 +409,20 @@ def test_js_wires_editable_graph_document_as_canonical_sandbox_metadata() -> Non
     js = _js()
 
     assert "well-harness-workbench-editable-graph-document" in js
+    assert "workbench-editable-graph-document.v2" in js
     assert "workbench-editable-graph-document.v1" in js
     assert "function buildEditableGraphDocumentFromSnapshot" in js
+    assert "function buildEditableGraphCanonicalModel" in js
+    assert "function buildEditableGraphDomAdapterBoundary" in js
+    assert "function graphDocumentDraftState" in js
     assert "editable_graph_document" in js
     assert "editable_graph_document_checksum" in js
     assert "editable_graph_document truth_effect must be none" in js
     assert "editable_graph_document ${key} must match draft payload" in js
+    assert "canonical_model" in js
+    assert "dom_adapter" in js
+    assert "accepted_import_versions" in js
+    assert "top_level_compatibility" in js
     assert "position_digest" in js
     assert "node_count" in js
     assert "edge_count" in js
