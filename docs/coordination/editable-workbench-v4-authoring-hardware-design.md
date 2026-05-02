@@ -40,7 +40,11 @@ remain reference/sample outputs, not near-term product drivers.
 - JER-225: Workbench preflight analyzer v1 (Done)
 - JER-226: Hardware/interface designer foundation v1 (Done, PR #208)
 - JER-227: Foundation workbench review archive v1 (Done, PR #209)
-- JER-228: Validation suite hang isolation and clean worktree hygiene (In progress)
+- JER-228: Validation suite hang isolation and clean worktree hygiene (Done, PR #210)
+
+Next milestone:
+
+- `docs/coordination/editable-workbench-v5-deep-water.md`
 
 ## Product Target
 
@@ -161,7 +165,7 @@ certify the candidate, promote truth level, or make DAL/PSSA claims.
 
 ## JER-228 Gate Isolation Note
 
-JER-228 is a stabilization slice before Workbench v5. It does not add product
+JER-228 was the stabilization slice before Workbench v5. It does not add product
 UI or truth behavior. It makes the shared GSD validation suite diagnosable by
 adding a per-command timeout, check listing, `--only` / `--skip` isolation, and
 optional `--continue-on-failure` triage mode. A hung child command now returns

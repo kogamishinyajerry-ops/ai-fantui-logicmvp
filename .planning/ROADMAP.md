@@ -2,19 +2,17 @@
 
 ## Current Milestone
 
-**Active milestone — Editable Workbench v4 Authoring + Hardware Design
-(launched 2026-05-01)**
+**Active milestone — Editable Workbench v5 Deep-Water Single-User Foundation
+(launched 2026-05-02)**
 
 Editable Control Workbench Core v1, Interaction v2, Runtime v3, and JER-219
-through JER-227 are complete as the foundation for sandbox-first control-logic
-editing. JER-228 is the stabilization bridge before Workbench v5: isolate the
-shared validation suite hang risk and enforce clean `origin/main` worktrees for
-the next deep-water issues. The current product mainline remains
-foundation-first Workbench v4: build the base single-user editor, runner, test
-bench, debugger, and archive loop before returning to dedicated thrust-reverser
-or C919 panel product work.
+through JER-228 are complete as the foundation and gate-stabilization bridge
+for sandbox-first control-logic editing. The current product mainline is now
+Workbench v5: deepen the single-user editor, runner, test bench, debugger,
+hardware/interface evidence, and archive loop until an engineer can build and
+test a candidate control graph from generic primitives.
 
-Scope guard: v4 is a single-user engineering authoring workbench. The priority
+Scope guard: v5 is a single-user engineering authoring workbench. The priority
 is a strong Simulink/Figma-level control-logic panel foundation: graph editing,
 runner/test execution, debugging feedback, archive/readback, and then
 hardware/interface evidence. Multi-user collaboration, real-time sync,
@@ -26,10 +24,17 @@ reference/sample packs. They are not the near-term product mainline. Once the
 base editor/runner/test/debug/archive foundation is mature, those systems
 should be quick to rebuild from zero on top of the generic workbench.
 
-Current Linear project:
+Current Linear project until v5 write setup is available:
 `AI FANTUI LogicMVP · Editable Workbench v4 Authoring + Hardware Design`
 
-Housekeeping bridge:
+Proposed v5 Linear project:
+`AI FANTUI LogicMVP · Editable Workbench v5 Deep-Water Foundation`
+
+v5 launch doc:
+
+- `docs/coordination/editable-workbench-v5-deep-water.md`
+
+Completed v4 bridge:
 
 - JER-204: Roadmap and Linear narrative refresh after Runtime v3 closure (Done, PR #186)
 - JER-205: Workbench v4 authoring roadmap and acceptance model (Done, PR #187)
@@ -55,9 +60,22 @@ Housekeeping bridge:
 - JER-225: Workbench preflight analyzer v1 (Done, PR #207)
 - JER-226: Hardware/interface designer foundation v1 (Done, PR #208)
 - JER-227: Foundation workbench review archive v1 (Done, PR #209)
-- JER-228: Validation suite hang isolation and clean worktree hygiene (In progress)
+- JER-228: Validation suite hang isolation and clean worktree hygiene (Done, PR #210)
 
-Workbench v4 foundation-first sequence:
+Workbench v5 deep-water sequence:
+
+- JER-229: Workbench v5 deep-water roadmap and clean-lane launch (In progress)
+- JER-230: Empty-canvas graph authoring palette v1
+- JER-231: Canonical graph document v2 and DOM adapter boundary
+- JER-232: Port drag wiring and route diagnostics v2
+- JER-233: Scenario test case library v1
+- JER-234: Sandbox runner trace kernel v2
+- JER-235: Debug probe timeline v3
+- JER-236: Hardware/interface evidence attachment v2
+- JER-237: Editor command palette and inspector ergonomics v1
+- JER-238: Review archive restore and regression bundle v3
+
+Workbench v4 foundation-first closure:
 
 - JER-220 reset roadmap and Linear narrative after JER-219 so the mainline is
   editor -> runner -> test bench -> debugger -> archive. It is documentation
@@ -87,6 +105,19 @@ Workbench v4 foundation-first sequence:
 - JER-228 bounds the shared validation suite with per-command timeouts and
   check-selection controls, then records the clean-worktree rule for Workbench
   v5 and later issues.
+
+Workbench v5 acceptance path:
+
+- Create an empty or derived sandbox draft.
+- Add nodes, ports, subsystem groups, and edges from generic primitives.
+- Configure operation parameters and interface contracts through the inspector.
+- Save, restore, export, and import the same canonical graph document.
+- Define tick-based scenarios and assertions.
+- Run the candidate using only the approved sandbox op catalog.
+- Debug selected nodes, ports, edges, and assertions over a timeline.
+- Attach hardware/interface evidence gaps without mutating certified truth.
+- Generate and restore a review archive containing graph, tests, traces,
+  hardware evidence, preflight, ChangeRequest proof, and gate metadata.
 
 Runtime v3 implementation closure:
 
