@@ -268,6 +268,19 @@ GitHub Actions uses the same bridge in `.github/workflows/gsd-automation.yml`; c
 
 `tools/run_gsd_validation_suite.py` is now the single validation entrypoint for local runs and GitHub Actions. It executes the unit-test suite plus the schema validators in a stable order, stops on the first failure, and emits either text or machine-readable JSON.
 
+For JER-228 and later Codex-lane work, the shared validation entrypoint is
+bounded and isolatable rather than allowed to hang forever:
+
+```bash
+python3 tools/run_gsd_validation_suite.py --list-checks
+python3 tools/run_gsd_validation_suite.py --only unit_tests --timeout-seconds 300 --format json
+python3 tools/run_gsd_validation_suite.py --skip unit_tests --continue-on-failure --format json
+```
+
+Timeouts are reported as `status: fail` with `failure_kind: timeout` and the
+hung `failed_check`; they remain gate failures until the underlying test family
+is fixed or explicitly isolated in PR proof.
+
 The active automation plan is no longer hardcoded in the GitHub workflow. `tools/gsd_notion_sync.py run` reads the current default plan from `.planning/notion_control_plane.json`, so phase routing now changes in one place instead of drifting between YAML and Notion.
 
 The workflow also stays on GitHub's current JavaScript action runtime path: it now uses `actions/checkout@v5`, `actions/setup-python@v6`, and opts into `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` so Node24 compatibility is exercised before the platform-wide default switch.

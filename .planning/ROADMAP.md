@@ -6,10 +6,13 @@
 (launched 2026-05-01)**
 
 Editable Control Workbench Core v1, Interaction v2, Runtime v3, and JER-219
-through JER-226 are complete as the foundation for sandbox-first control-logic
-editing. The current product mainline is foundation-first Workbench v4: build
-the base single-user editor, runner, test bench, debugger, and archive loop
-before returning to dedicated thrust-reverser or C919 panel product work.
+through JER-227 are complete as the foundation for sandbox-first control-logic
+editing. JER-228 is the stabilization bridge before Workbench v5: isolate the
+shared validation suite hang risk and enforce clean `origin/main` worktrees for
+the next deep-water issues. The current product mainline remains
+foundation-first Workbench v4: build the base single-user editor, runner, test
+bench, debugger, and archive loop before returning to dedicated thrust-reverser
+or C919 panel product work.
 
 Scope guard: v4 is a single-user engineering authoring workbench. The priority
 is a strong Simulink/Figma-level control-logic panel foundation: graph editing,
@@ -51,7 +54,8 @@ Housekeeping bridge:
 - JER-224: Candidate graph debugger view v1 (Done, PR #206)
 - JER-225: Workbench preflight analyzer v1 (Done, PR #207)
 - JER-226: Hardware/interface designer foundation v1 (Done, PR #208)
-- JER-227: Foundation workbench review archive v1 (In review)
+- JER-227: Foundation workbench review archive v1 (Done, PR #209)
+- JER-228: Validation suite hang isolation and clean worktree hygiene (In progress)
 
 Workbench v4 foundation-first sequence:
 
@@ -80,6 +84,9 @@ Workbench v4 foundation-first sequence:
 - JER-227 packages graph, tests, run/debug reports, hardware evidence,
   validation findings, checksums, Linear/PR-ready proof, and restore-time
   validation into one review archive.
+- JER-228 bounds the shared validation suite with per-command timeouts and
+  check-selection controls, then records the clean-worktree rule for Workbench
+  v5 and later issues.
 
 Runtime v3 implementation closure:
 
