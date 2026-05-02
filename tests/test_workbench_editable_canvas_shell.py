@@ -444,8 +444,16 @@ def test_js_wires_port_wire_route_metadata_as_sandbox_only_graph_evidence() -> N
     assert "data-edge-label" in js
     assert "data-route-mode" in js
     assert "workbench-edge-label" in js
+    assert "function beginPortHandleDrag" in js
+    assert "function updatePortHandleDrag" in js
+    assert "function completePortHandleDrag" in js
+    assert "data-port-drag-state" in js
+    assert "data-port-drag-compatibility" in js
+    assert "workbench-port-drag-preview" in js
+    assert "ui_draft.port_drag_wiring" in js
     assert "port_compatibility_report" in js
     assert "port_compatibility_report_checksum" in js
+    assert ".workbench-port-drag-preview" in _css()
     assert 'truth_effect: "none"' in js
 
 

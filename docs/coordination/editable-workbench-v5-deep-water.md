@@ -1,7 +1,7 @@
 # Editable Workbench v5 Deep-Water Plan
 
 Date: 2026-05-02
-Status: Implementation active · JER-231 canonical graph document v2
+Status: Implementation active · JER-232 port drag wiring and route diagnostics
 Scope: single-user `/workbench` foundation only
 
 ## Summary
@@ -118,7 +118,7 @@ Implementation notes:
 
 ### JER-231 · Canonical graph document v2 and DOM adapter boundary
 
-Status: In progress.
+Status: Done after PR #213.
 
 Outcome: Make the canonical editable graph document the source object for
 authoring, serialization, validation, and restore.
@@ -148,6 +148,8 @@ Implementation notes:
 
 ### JER-232 · Port drag wiring and route diagnostics v2
 
+Status: In progress.
+
 Outcome: Make wiring feel like an engineering editor: select/drag from source
 port to target port, preview compatibility, create or reject edges, and retain
 route metadata.
@@ -158,6 +160,18 @@ Acceptance:
 - Compatible links create deterministic edge records.
 - Dangling or incompatible links become validation findings, not graph truth.
 - Disconnect/reconnect keeps undo/redo and action log metadata consistent.
+
+Implementation notes:
+
+- Drag starts from output port handles and renders a transient
+  `.workbench-port-drag-preview` route with canvas-level compatibility status.
+- Completion over an input port creates sandbox edges with
+  `source_ref: ui_draft.port_drag_wiring`.
+- Route metadata records `creation_tool: port_drag_wiring`,
+  `compatibility_status`, source/target port ids, edge labels, and
+  `truth_effect: none`.
+- Rejected drags remain graph validation feedback and do not mutate controller
+  truth, adapters, hardware YAML, frozen assets, DAL, or truth-level state.
 
 ### JER-233 · Scenario test case library v1
 

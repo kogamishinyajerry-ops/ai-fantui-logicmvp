@@ -11,8 +11,9 @@ for sandbox-first control-logic editing. The current product mainline is now
 Workbench v5: deepen the single-user editor, runner, test bench, debugger,
 hardware/interface evidence, and archive loop until an engineer can build and
 test a candidate control graph from generic primitives. JER-229 launched the v5
-queue, JER-230 closed empty-canvas graph authoring, and JER-231 is establishing
-the canonical graph document v2 plus DOM adapter boundary.
+queue, JER-230 closed empty-canvas graph authoring, JER-231 closed the
+canonical graph document v2 plus DOM adapter boundary, and JER-232 is adding
+direct port-drag wiring with route diagnostics.
 
 Scope guard: v5 is a single-user engineering authoring workbench. The priority
 is a strong Simulink/Figma-level control-logic panel foundation: graph editing,
@@ -68,8 +69,8 @@ Completed v4 bridge:
 
 Workbench v5 deep-water sequence:
 
-- JER-231: Canonical graph document v2 and DOM adapter boundary (In progress)
-- JER-232: Port drag wiring and route diagnostics v2
+- JER-231: Canonical graph document v2 and DOM adapter boundary (Done, PR #213)
+- JER-232: Port drag wiring and route diagnostics v2 (In progress)
 - JER-233: Scenario test case library v1
 - JER-234: Sandbox runner trace kernel v2
 - JER-235: Debug probe timeline v3
@@ -116,6 +117,9 @@ Workbench v4 foundation-first closure:
 - JER-231 makes `editable_graph_document.v2` carry a `canonical_model` and
   `dom_adapter` boundary so document data can drive import/export and restore
   without treating the DOM as the only graph truth.
+- JER-232 adds direct source-port drag preview, compatibility status feedback,
+  deterministic route metadata, and sandbox-only edge creation for port-to-port
+  wiring.
 
 Workbench v5 acceptance path:
 
