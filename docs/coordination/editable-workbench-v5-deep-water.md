@@ -1,7 +1,7 @@
 # Editable Workbench v5 Deep-Water Plan
 
 Date: 2026-05-02
-Status: Implementation active · JER-232 port drag wiring and route diagnostics
+Status: Implementation active · JER-233 scenario test case library complete
 Scope: single-user `/workbench` foundation only
 
 ## Summary
@@ -148,7 +148,7 @@ Implementation notes:
 
 ### JER-232 · Port drag wiring and route diagnostics v2
 
-Status: In progress.
+Status: Done after PR #214.
 
 Outcome: Make wiring feel like an engineering editor: select/drag from source
 port to target port, preview compatibility, create or reject edges, and retain
@@ -175,6 +175,8 @@ Implementation notes:
 
 ### JER-233 · Scenario test case library v1
 
+Status: Done.
+
 Outcome: Turn the sandbox test bench from a single local form into a reusable
 test-case surface.
 
@@ -184,6 +186,18 @@ Acceptance:
 - Each scenario stores tick inputs, assertions, expected outputs, and notes.
 - Run reports reference the scenario id and graph document revision.
 - Import/export/archive preserve the scenario library and last run report.
+
+Implementation notes:
+
+- The browser now emits `scenario_test_case_library` as
+  `workbench-scenario-test-case-library.v1` with selected/active test case ids,
+  saved test cases, expected outputs, notes, and sandbox-only boundary fields.
+- `workbench-sandbox-test-run-report.v1` now records the selected/active test
+  case id, graph document id/version, graph/workspace revision ids, and
+  `scenario_test_case_library_checksum`.
+- Draft export/import, local restore, `editable_graph_document.canonical_model`,
+  evidence archive, and foundation review archive include the library and
+  checksum coverage while legacy single-form test bench imports still restore.
 
 ### JER-234 · Sandbox runner trace kernel v2
 

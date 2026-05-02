@@ -12,8 +12,9 @@ Workbench v5: deepen the single-user editor, runner, test bench, debugger,
 hardware/interface evidence, and archive loop until an engineer can build and
 test a candidate control graph from generic primitives. JER-229 launched the v5
 queue, JER-230 closed empty-canvas graph authoring, JER-231 closed the
-canonical graph document v2 plus DOM adapter boundary, and JER-232 is adding
-direct port-drag wiring with route diagnostics.
+canonical graph document v2 plus DOM adapter boundary, JER-232 closed direct
+port-drag wiring with route diagnostics after PR #214, and JER-233 closed the
+scenario test case library v1 slice.
 
 Scope guard: v5 is a single-user engineering authoring workbench. The priority
 is a strong Simulink/Figma-level control-logic panel foundation: graph editing,
@@ -70,8 +71,8 @@ Completed v4 bridge:
 Workbench v5 deep-water sequence:
 
 - JER-231: Canonical graph document v2 and DOM adapter boundary (Done, PR #213)
-- JER-232: Port drag wiring and route diagnostics v2 (In progress)
-- JER-233: Scenario test case library v1
+- JER-232: Port drag wiring and route diagnostics v2 (Done, PR #214)
+- JER-233: Scenario test case library v1 (Done)
 - JER-234: Sandbox runner trace kernel v2
 - JER-235: Debug probe timeline v3
 - JER-236: Hardware/interface evidence attachment v2
@@ -120,6 +121,9 @@ Workbench v4 foundation-first closure:
 - JER-232 adds direct source-port drag preview, compatibility status feedback,
   deterministic route metadata, and sandbox-only edge creation for port-to-port
   wiring.
+- JER-233 upgrades the sandbox test bench into a reusable saved test case
+  library with stable test case ids, expected outputs, notes, graph/workspace
+  revision-linked run reports, export/import, and archive checksum coverage.
 
 Workbench v5 acceptance path:
 

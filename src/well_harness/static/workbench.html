@@ -1385,6 +1385,30 @@
                   <span id="workbench-sandbox-test-bench-title">Scenario Test Bench</span>
                   <strong id="workbench-test-bench-status">not_run</strong>
                 </div>
+                <label class="workbench-handoff-output" for="workbench-test-case-library-select">
+                  <span>Saved test case</span>
+                  <select id="workbench-test-case-library-select">
+                    <option value="sandbox_test_case_1">Nominal sandbox case</option>
+                  </select>
+                </label>
+                <label class="workbench-handoff-output" for="workbench-test-case-name">
+                  <span>Test case name</span>
+                  <input id="workbench-test-case-name" type="text" value="Nominal sandbox case">
+                </label>
+                <div class="workbench-test-case-library-actions" aria-label="Scenario test case library actions">
+                  <button id="workbench-create-test-case-btn" type="button" class="workbench-editable-primary">
+                    Create
+                  </button>
+                  <button id="workbench-save-test-case-btn" type="button" class="workbench-editable-primary">
+                    Save
+                  </button>
+                  <button id="workbench-duplicate-test-case-btn" type="button" class="workbench-editable-primary">
+                    Duplicate
+                  </button>
+                  <button id="workbench-delete-test-case-btn" type="button" class="workbench-editable-primary">
+                    Delete
+                  </button>
+                </div>
                 <label class="workbench-handoff-output" for="workbench-test-bench-inputs-json">
                   <span>Tick inputs JSON</span>
                   <textarea id="workbench-test-bench-inputs-json" rows="5" spellcheck="false">[
@@ -1394,6 +1418,14 @@
                 <label class="workbench-handoff-output" for="workbench-test-bench-assertions-json">
                   <span>Assertions JSON</span>
                   <textarea id="workbench-test-bench-assertions-json" rows="5" spellcheck="false">[]</textarea>
+                </label>
+                <label class="workbench-handoff-output" for="workbench-test-case-expected-outputs-json">
+                  <span>Expected outputs JSON</span>
+                  <textarea id="workbench-test-case-expected-outputs-json" rows="4" spellcheck="false">[]</textarea>
+                </label>
+                <label class="workbench-handoff-output" for="workbench-test-case-notes">
+                  <span>Notes</span>
+                  <textarea id="workbench-test-case-notes" rows="3" spellcheck="false"></textarea>
                 </label>
                 <button
                   id="workbench-run-test-bench-btn"
@@ -1406,6 +1438,9 @@
                   <span>Run report</span>
                   <textarea id="workbench-test-bench-report-output" rows="7" readonly></textarea>
                 </label>
+                <p id="workbench-test-case-library-status" class="workbench-handoff-status">
+                  Saved test cases are sandbox_candidate evidence only. Truth effect: none.
+                </p>
                 <p class="workbench-inspector-truth-note">
                   Scenario tests are local sandbox evidence only. Truth effect: none.
                 </p>

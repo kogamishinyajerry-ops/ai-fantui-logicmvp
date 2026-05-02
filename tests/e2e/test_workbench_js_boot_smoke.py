@@ -100,6 +100,19 @@ def _goto_bundle_workbench(page, url: str):
     )
 
 
+def _set_draft_buffer_value(page: Any, draft_json: str) -> None:
+    page.evaluate(
+        """
+        (draftJson) => {
+          const buffer = document.getElementById('workbench-draft-json-buffer');
+          buffer.value = draftJson;
+          buffer.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        """,
+        draft_json,
+    )
+
+
 # ─── E11-08 closure: identity affordance JS toggle (4 tests) ─────────
 
 
@@ -618,7 +631,16 @@ def test_workbench_hardware_interface_designer_validates_round_trips_and_archive
     assert draft["hardware_interface_designer_validation"]["truth_effect"] == "none"
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
-    page.fill("#workbench-draft-json-buffer", draft_json)
+    page.evaluate(
+        """
+        (draftJson) => {
+          const buffer = document.getElementById('workbench-draft-json-buffer');
+          buffer.value = draftJson;
+          buffer.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        """,
+        draft_json,
+    )
     page.click("#workbench-import-draft-btn")
     page.click("#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -1602,7 +1624,16 @@ def test_workbench_empty_canvas_palette_round_trips_sandbox_primitives(demo_serv
     assert draft["editable_graph_document"]["node_count"] == 2
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
-    page.fill("#workbench-draft-json-buffer", draft_json)
+    page.evaluate(
+        """
+        (draftJson) => {
+          const buffer = document.getElementById('workbench-draft-json-buffer');
+          buffer.value = draftJson;
+          buffer.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        """,
+        draft_json,
+    )
     page.click("#workbench-import-draft-btn")
     page.click("#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -1650,7 +1681,7 @@ def test_workbench_component_library_inserts_reusable_sandbox_template(demo_serv
     assert created_edges[0]["component_template"]["truth_effect"] == "none"
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
-    page.fill("#workbench-draft-json-buffer", draft_json)
+    _set_draft_buffer_value(page, draft_json)
     page.click("#workbench-import-draft-btn")
     page.click("#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -1708,7 +1739,7 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
     )
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
-    page.fill("#workbench-draft-json-buffer", draft_json)
+    _set_draft_buffer_value(page, draft_json)
     page.click("#workbench-import-draft-btn")
     page.click("#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -1797,7 +1828,7 @@ def test_workbench_captures_and_reinserts_subsystem_template(demo_server, browse
     )
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
-    page.fill("#workbench-draft-json-buffer", draft_json)
+    _set_draft_buffer_value(page, draft_json)
     page.click("#workbench-import-draft-btn")
     page.click("#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -1851,7 +1882,7 @@ def test_workbench_subsystem_interface_contract_round_trips_and_templates(demo_s
     assert contracts["truth_effect"] == "none"
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
-    page.fill("#workbench-draft-json-buffer", draft_json)
+    _set_draft_buffer_value(page, draft_json)
     page.click("#workbench-import-draft-btn")
     page.click("#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -1913,7 +1944,7 @@ def test_workbench_workspace_document_round_trips_with_archive_checksum(demo_ser
     assert page.locator("#workbench-workspace-document-revision").inner_text() == workspace_document["revision_id"]
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
-    page.fill("#workbench-draft-json-buffer", draft_json)
+    _set_draft_buffer_value(page, draft_json)
     page.click("#workbench-import-draft-btn")
     page.click("#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -1987,7 +2018,7 @@ def test_workbench_editable_graph_document_round_trips_export_import_archive(dem
     assert graph["port_digest"].startswith("ui_draft_")
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
-    page.fill("#workbench-draft-json-buffer", draft_json)
+    _set_draft_buffer_value(page, draft_json)
     page.click("#workbench-import-draft-btn")
     page.click("#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -2553,7 +2584,7 @@ def test_workbench_canvas_interaction_summary_tracks_high_freedom_actions(demo_s
     assert duplicated["workspace_document"]["action_count"] >= 2
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
-    page.fill("#workbench-draft-json-buffer", draft_json)
+    _set_draft_buffer_value(page, draft_json)
     page.click("#workbench-import-draft-btn")
     page.click("#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -2644,7 +2675,7 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
     assert len(matching_edges) == 1
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
-    page.fill("#workbench-draft-json-buffer", draft_json)
+    _set_draft_buffer_value(page, draft_json)
     page.click("#workbench-import-draft-btn")
     page.click("#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -2834,7 +2865,7 @@ def test_workbench_sandbox_scenario_test_bench_runs_exports_and_archives(demo_se
     assert draft["sandbox_test_run_report"]["truth_effect"] == "none"
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
-    page.fill("#workbench-draft-json-buffer", draft_json)
+    _set_draft_buffer_value(page, draft_json)
     page.click("#workbench-import-draft-btn")
     page.click("#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -2847,6 +2878,107 @@ def test_workbench_sandbox_scenario_test_bench_runs_exports_and_archives(demo_se
     assert archive["sandbox_test_run_report"]["assertion_status"] == "pass"
     assert archive["checksums"]["sandbox_test_bench_checksum"]
     assert archive["checksums"]["sandbox_test_run_report_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
+def test_workbench_scenario_test_case_library_create_duplicate_select_run_export_import_archive(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click("#workbench-start-empty-draft-btn")
+    page.click('[data-op-catalog-op="input"]')
+    page.click('[data-editor-tool="node"]')
+    page.click('[data-op-catalog-op="output"]')
+    page.click('[data-editor-tool="node"]')
+    page.locator(
+        '[data-port-handle-owner-id="draft_node_1"][data-port-handle-direction="out"]'
+    ).click()
+    page.locator(
+        '[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="in"]'
+    ).click()
+
+    page.fill("#workbench-test-case-name", "Power-on pass case")
+    page.fill("#workbench-test-case-notes", "Library case should survive export/import/archive.")
+    page.fill(
+        "#workbench-test-bench-inputs-json",
+        json.dumps([{"tick": 0, "inputs": {"draft_node_1:out": True, "draft_node_1": True}}]),
+    )
+    page.fill(
+        "#workbench-test-bench-assertions-json",
+        json.dumps([{"tick": 0, "target": "draft_node_2:out", "expected": True}]),
+    )
+    page.fill(
+        "#workbench-test-case-expected-outputs-json",
+        json.dumps([{"tick": 0, "target": "draft_node_2:out", "expected": True}]),
+    )
+    page.click("#workbench-save-test-case-btn")
+    page.click("#workbench-duplicate-test-case-btn")
+    page.fill("#workbench-test-case-name", "Power-on duplicate run case")
+    page.click("#workbench-save-test-case-btn")
+    page.select_option("#workbench-test-case-library-select", label="Power-on pass case")
+    assert page.locator("#workbench-test-case-name").input_value() == "Power-on pass case"
+    page.select_option("#workbench-test-case-library-select", label="Power-on duplicate run case")
+    assert page.locator("#workbench-test-case-name").input_value() == "Power-on duplicate run case"
+
+    page.click("#workbench-run-test-bench-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const output = document.getElementById('workbench-test-bench-report-output');
+          return output && output.value.includes('scenario_test_case_library_checksum');
+        }
+        """
+    )
+    report = json.loads(page.locator("#workbench-test-bench-report-output").input_value())
+    assert errors == [], f"page JS errors: {errors}"
+    assert report["kind"] == "well-harness-workbench-sandbox-test-run-report"
+    assert report["version"] == "workbench-sandbox-test-run-report.v1"
+    assert report["status"] == "pass"
+    assert report["test_case_id"] == report["active_test_case_id"]
+    assert report["selected_test_case_id"] == report["active_test_case_id"]
+    assert report["graph_document_version"] == "workbench-editable-graph-document.v2"
+    assert report["graph_document_revision_id"]
+    assert report["workspace_revision_id"]
+    assert report["scenario_test_case_library_checksum"].startswith("ui_draft_")
+    assert report["truth_effect"] == "none"
+
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    library = draft["scenario_test_case_library"]
+    active_id = library["active_test_case_id"]
+    assert library["kind"] == "well-harness-workbench-scenario-test-case-library"
+    assert library["version"] == "workbench-scenario-test-case-library.v1"
+    assert library["test_case_count"] == 2
+    assert library["selected_test_case_id"] == active_id
+    assert draft["sandbox_test_bench"]["test_case_id"] == active_id
+    assert draft["sandbox_test_run_report"]["test_case_id"] == active_id
+    assert draft["editable_graph_document"]["canonical_model"]["scenario_test_case_library"]["active_test_case_id"] == active_id
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    _set_draft_buffer_value(page, draft_json)
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert imported["scenario_test_case_library"]["test_case_count"] == 2
+    assert imported["scenario_test_case_library"]["active_test_case_id"] == active_id
+    assert imported["sandbox_test_run_report"]["scenario_test_case_library_checksum"].startswith("ui_draft_")
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["scenario_test_case_library"]["test_case_count"] == 2
+    assert archive["scenario_test_case_library"]["truth_effect"] == "none"
+    assert archive["sandbox_test_run_report"]["test_case_id"] == active_id
+    assert archive["checksums"]["scenario_test_case_library_checksum"]
+    assert archive["foundation_review_archive"]["sections"]["scenario_test_case_library"]["status"] == "present"
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
@@ -2910,7 +3042,7 @@ def test_workbench_candidate_debugger_view_tracks_failing_assertion_and_archive(
     assert debugger_view["truth_effect"] == "none"
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
-    page.fill("#workbench-draft-json-buffer", draft_json)
+    _set_draft_buffer_value(page, draft_json)
     page.click("#workbench-import-draft-btn")
     page.click("#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -2986,7 +3118,7 @@ def test_workbench_preflight_analyzer_classifies_failed_candidate_and_archives(d
     assert draft["preflight_analyzer_report"]["candidate_model_hash"] == report["candidate_model_hash"]
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
-    page.fill("#workbench-draft-json-buffer", draft_json)
+    _set_draft_buffer_value(page, draft_json)
     page.click("#workbench-import-draft-btn")
     page.click("#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
