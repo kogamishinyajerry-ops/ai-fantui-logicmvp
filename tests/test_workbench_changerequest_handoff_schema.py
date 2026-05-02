@@ -268,6 +268,8 @@ class WorkbenchChangeRequestHandoffSchemaTests(unittest.TestCase):
         self.assertIn("sandbox_runner_trace_kernel", payload["sections"])
         self.assertIn("debug_probe_timeline", FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS)
         self.assertIn("debug_probe_timeline", payload["sections"])
+        self.assertIn("hardware_evidence_attachment_v2", FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS)
+        self.assertIn("hardware_evidence_attachment_v2", payload["sections"])
         self.assertEqual((), validate_foundation_review_archive_bundle(payload))
 
     def test_foundation_review_archive_payload_validates_checksum(self) -> None:

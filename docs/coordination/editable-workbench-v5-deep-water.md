@@ -1,7 +1,7 @@
 # Editable Workbench v5 Deep-Water Plan
 
 Date: 2026-05-03
-Status: Implementation active · JER-235 debug probe timeline complete locally
+Status: Implementation active · JER-236 hardware/interface evidence attachment complete locally
 Scope: single-user `/workbench` foundation only
 
 ## Summary
@@ -262,6 +262,8 @@ Implementation notes:
 
 ### JER-236 · Hardware/interface evidence attachment v2
 
+Status: Done locally.
+
 Outcome: Attach hardware/interface evidence gaps to generic graph elements
 instead of reference-sample-specific panels.
 
@@ -272,6 +274,18 @@ Acceptance:
 - Duplicate ids and broken references are blocked locally.
 - Unknown values remain explicit `evidence_gap` records.
 - No certified hardware YAML or adapter files are written.
+
+Implementation notes:
+
+- `hardware_evidence_attachment_v2` now packages sandbox attachments for node,
+  port, edge, and subsystem-group owners using the existing hardware/interface
+  binding and designer evidence.
+- Local validation rejects duplicate attachment ids, reports missing graph
+  owners and broken hardware-interface references, and keeps unknown values as
+  explicit `evidence_gap` counts.
+- Draft export/import, ChangeRequest proof text, evidence archive, and
+  foundation review archive carry the attachment packet and checksum coverage
+  with `truth_effect: none`.
 
 ### JER-237 · Editor command palette and inspector ergonomics v1
 

@@ -47,6 +47,7 @@ FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS = (
     "preflight_analyzer_report",
     "hardware_bindings",
     "hardware_evidence_v2",
+    "hardware_evidence_attachment_v2",
     "interface_matrix",
     "connector_pin_map",
     "hardware_interface_designer",
