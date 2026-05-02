@@ -17,7 +17,7 @@ port-drag wiring with route diagnostics after PR #214, JER-233 closed the
 scenario test case library v1 slice after PR #215, JER-234 closed the local
 sandbox runner trace kernel v2 slice, and JER-235 closed the local debug probe
 timeline v3 slice. JER-236 closed the local hardware/interface evidence
-attachment v2 slice.
+attachment v2 slice, and JER-237 closed the local editor command palette slice.
 
 Scope guard: v5 is a single-user engineering authoring workbench. The priority
 is a strong Simulink/Figma-level control-logic panel foundation: graph editing,
@@ -79,7 +79,7 @@ Workbench v5 deep-water sequence:
 - JER-234: Sandbox runner trace kernel v2 (Done locally)
 - JER-235: Debug probe timeline v3 (Done locally)
 - JER-236: Hardware/interface evidence attachment v2 (Done locally)
-- JER-237: Editor command palette and inspector ergonomics v1
+- JER-237: Editor command palette and inspector ergonomics v1 (Done locally)
 - JER-238: Review archive restore and regression bundle v3
 
 Workbench v4 foundation-first closure:
@@ -140,6 +140,10 @@ Workbench v4 foundation-first closure:
   node, port, edge, and subsystem-group attachment rows are exported, restored,
   validated for duplicate ids and broken references, and carried into the
   foundation review archive with `truth_effect: none`.
+- JER-237 adds a local command palette for high-frequency editor actions:
+  create, rename, duplicate, group, wire, run, debug, export, import, and
+  archive commands reuse existing workbench actions and record
+  `command_palette.*` workspace metadata.
 
 Workbench v5 acceptance path:
 

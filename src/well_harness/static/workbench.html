@@ -591,6 +591,7 @@
               <button type="button" data-editor-tool="disconnect" aria-pressed="false" title="Disconnect edge">⨯</button>
               <button type="button" data-editor-tool="undo" aria-pressed="false" title="Undo">↶</button>
               <button type="button" data-editor-tool="redo" aria-pressed="false" title="Redo">↷</button>
+              <button type="button" id="workbench-open-command-palette-btn" title="Command palette">⌘</button>
               <button type="button" id="workbench-start-empty-draft-btn" title="Start empty sandbox draft">∅</button>
               <div
                 id="workbench-viewport-tools"
@@ -648,6 +649,37 @@
               class="workbench-editable-canvas"
               aria-label="Editable control graph canvas"
             >
+              <section
+                id="workbench-command-palette"
+                class="workbench-command-palette"
+                data-command-palette-version="workbench-command-palette.v1"
+                aria-labelledby="workbench-command-palette-title"
+                hidden
+              >
+                <div class="workbench-command-palette-header">
+                  <span id="workbench-command-palette-title">Commands</span>
+                  <button type="button" id="workbench-close-command-palette-btn" aria-label="Close command palette">×</button>
+                </div>
+                <label class="workbench-command-palette-filter" for="workbench-command-palette-filter">
+                  <span>Filter</span>
+                  <input id="workbench-command-palette-filter" type="search" autocomplete="off" spellcheck="false">
+                </label>
+                <div id="workbench-command-palette-list" class="workbench-command-palette-list">
+                  <button type="button" data-command-palette-command="create_node" data-command-palette-keywords="create add node primitive">Create node</button>
+                  <button type="button" data-command-palette-command="rename_subsystem" data-command-palette-keywords="rename subsystem group">Rename subsystem</button>
+                  <button type="button" data-command-palette-command="duplicate_selection" data-command-palette-keywords="duplicate copy selection node">Duplicate selection</button>
+                  <button type="button" data-command-palette-command="group_selection" data-command-palette-keywords="group subsystem selection">Group selection</button>
+                  <button type="button" data-command-palette-command="wire_edge" data-command-palette-keywords="wire edge connect route">Wire edge</button>
+                  <button type="button" data-command-palette-command="run_sandbox" data-command-palette-keywords="run sandbox simulation">Run sandbox</button>
+                  <button type="button" data-command-palette-command="debug_selection" data-command-palette-keywords="debug selection timeline probe">Debug selection</button>
+                  <button type="button" data-command-palette-command="export_draft" data-command-palette-keywords="export draft json">Export draft</button>
+                  <button type="button" data-command-palette-command="import_draft" data-command-palette-keywords="import draft json restore">Import draft</button>
+                  <button type="button" data-command-palette-command="prepare_archive" data-command-palette-keywords="archive evidence prepare handoff">Prepare archive</button>
+                </div>
+                <output id="workbench-command-palette-status" class="workbench-command-palette-status" aria-live="polite">
+                  Command surface idle. No live Linear mutation.
+                </output>
+              </section>
               <div class="workbench-canvas-grid" aria-hidden="true"></div>
               <button
                 type="button"
