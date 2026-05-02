@@ -737,6 +737,31 @@ def test_js_wires_foundation_review_archive_as_sandbox_only_bundle() -> None:
     assert 'truth_effect: "none"' in js
 
 
+def test_review_archive_restore_v3_controls_and_regression_bundle_are_sandbox_only() -> None:
+    html = _html()
+    js = _js()
+
+    assert 'id="workbench-restore-review-archive-btn"' in html
+    assert 'id="workbench-review-archive-restore-output"' in html
+    assert 'id="workbench-regression-bundle-output"' in html
+    assert "well-harness-workbench-review-archive-restore-validation" in js
+    assert "workbench-review-archive-restore.v3" in js
+    assert "well-harness-workbench-review-archive-regression-bundle" in js
+    assert "workbench-review-archive-regression-bundle.v3" in js
+    assert "function validateReviewArchiveRestoreV3" in js
+    assert "function buildReviewArchiveRegressionBundleV3" in js
+    assert "function restoreReviewArchiveFromTextarea" in js
+    assert "review_archive_restore_v3" in js
+    assert "review_archive_restore_v3_checksum" in js
+    assert "review_archive_regression_bundle_v3" in js
+    assert "review_archive_regression_bundle_v3_checksum" in js
+    assert "checksum_mismatch_count" in js
+    assert "full_e2e_49_49_claim" in js
+    assert "mypy_strict_clean_claim" in js
+    assert 'controller_truth_modified: false' in js
+    assert 'truth_effect: "none"' in js
+
+
 def test_js_builds_changerequest_linear_handoff_without_live_linear_mutation() -> None:
     js = _js()
 

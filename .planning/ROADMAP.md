@@ -18,6 +18,7 @@ scenario test case library v1 slice after PR #215, JER-234 closed the local
 sandbox runner trace kernel v2 slice, and JER-235 closed the local debug probe
 timeline v3 slice. JER-236 closed the local hardware/interface evidence
 attachment v2 slice, and JER-237 closed the local editor command palette slice.
+JER-238 closed the local review archive restore and regression bundle slice.
 
 Scope guard: v5 is a single-user engineering authoring workbench. The priority
 is a strong Simulink/Figma-level control-logic panel foundation: graph editing,
@@ -80,7 +81,7 @@ Workbench v5 deep-water sequence:
 - JER-235: Debug probe timeline v3 (Done locally)
 - JER-236: Hardware/interface evidence attachment v2 (Done locally)
 - JER-237: Editor command palette and inspector ergonomics v1 (Done locally)
-- JER-238: Review archive restore and regression bundle v3
+- JER-238: Review archive restore and regression bundle v3 (Done locally)
 
 Workbench v4 foundation-first closure:
 
@@ -144,6 +145,11 @@ Workbench v4 foundation-first closure:
   create, rename, duplicate, group, wire, run, debug, export, import, and
   archive commands reuse existing workbench actions and record
   `command_palette.*` workspace metadata.
+- JER-238 adds browser-local review archive restore/readback validation and a
+  regression bundle: checksums, required sections, red-line metadata,
+  foundation review archive validity, model JSON importability, create/wire/run
+  evidence, debug timeline, hardware attachment evidence, archive preparation,
+  and restore proof are packaged without claiming full e2e 49/49 or mypy clean.
 
 Workbench v5 acceptance path:
 
@@ -157,6 +163,8 @@ Workbench v5 acceptance path:
 - Attach hardware/interface evidence gaps without mutating certified truth.
 - Generate and restore a review archive containing graph, tests, traces,
   hardware evidence, preflight, ChangeRequest proof, and gate metadata.
+- Keep review archive regression proof honest by marking full e2e 49/49 and
+  mypy strict clean as `not_claimed` until official gates report pass.
 
 Runtime v3 implementation closure:
 

@@ -7682,7 +7682,10 @@ function installEditableWorkbenchShell() {
   const changeRequestPacketOutput = document.getElementById("workbench-changerequest-packet-output");
   const prepareArchiveBtn = document.getElementById("workbench-prepare-archive-btn");
   const downloadArchiveBtn = document.getElementById("workbench-download-archive-btn");
+  const restoreReviewArchiveBtn = document.getElementById("workbench-restore-review-archive-btn");
   const archiveOutput = document.getElementById("workbench-evidence-archive-output");
+  const reviewArchiveRestoreOutput = document.getElementById("workbench-review-archive-restore-output");
+  const regressionBundleOutput = document.getElementById("workbench-regression-bundle-output");
   const archiveStatus = document.getElementById("workbench-archive-status");
   const openCommandPaletteBtn = document.getElementById("workbench-open-command-palette-btn");
   const closeCommandPaletteBtn = document.getElementById("workbench-close-command-palette-btn");
@@ -20157,6 +20160,14 @@ function installEditableWorkbenchShell() {
     "well-harness-workbench-foundation-review-archive-validation-report";
   const foundationReviewArchiveValidationVersion =
     "workbench-foundation-review-archive-validation.v1";
+  const reviewArchiveRestoreKind =
+    "well-harness-workbench-review-archive-restore-validation";
+  const reviewArchiveRestoreVersion =
+    "workbench-review-archive-restore.v3";
+  const reviewArchiveRegressionBundleKind =
+    "well-harness-workbench-review-archive-regression-bundle";
+  const reviewArchiveRegressionBundleVersion =
+    "workbench-review-archive-regression-bundle.v3";
   const foundationReviewArchiveSectionSpec = [
     ["workspace_document", "workspace_document_checksum"],
     ["editable_graph_document", "editable_graph_document_checksum"],
@@ -20398,6 +20409,277 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function pushReviewArchiveRestoreFinding(findings, finding) {
+    findings.push({
+      severity: "error",
+      message: "Review archive restore validation failed.",
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+      ...finding,
+    });
+  }
+
+  function reviewArchiveRedLineStatus(archive) {
+    const redLineMetadata = archive && archive.red_line_metadata;
+    if (!redLineMetadata || typeof redLineMetadata !== "object" || Array.isArray(redLineMetadata)) {
+      return "fail";
+    }
+    return (
+      redLineMetadata.red_lines_touched === "none"
+      && redLineMetadata.truth_level_impact === "none"
+      && redLineMetadata.dal_pssa_impact === "none"
+      && redLineMetadata.controller_truth_modified === false
+      && redLineMetadata.frozen_assets_modified === false
+      && redLineMetadata.live_linear_mutation === false
+    ) ? "pass" : "fail";
+  }
+
+  function validateReviewArchiveRestoreV3(archive, options) {
+    const payload = archive && typeof archive === "object" && !Array.isArray(archive)
+      ? archive
+      : null;
+    const findings = [];
+    let checksumCheckedCount = 0;
+    let checksumMismatchCount = 0;
+    let missingRequiredSectionCount = 0;
+    let foundationStatus = "not_present";
+    let redLineStatus = "fail";
+
+    if (!payload) {
+      pushReviewArchiveRestoreFinding(findings, {
+        code: "review_archive_restore_invalid_archive",
+        message: "review archive restore payload must be an object.",
+        path: "review_archive",
+      });
+    } else {
+      if (payload.kind !== "well-harness-workbench-evidence-archive") {
+        pushReviewArchiveRestoreFinding(findings, {
+          code: "review_archive_restore_invalid_kind",
+          message: "review archive kind must be well-harness-workbench-evidence-archive.",
+          path: "kind",
+        });
+      }
+      if (payload.version !== 1) {
+        pushReviewArchiveRestoreFinding(findings, {
+          code: "review_archive_restore_invalid_version",
+          message: "review archive version must be 1.",
+          path: "version",
+        });
+      }
+      redLineStatus = reviewArchiveRedLineStatus(payload);
+      if (redLineStatus !== "pass") {
+        pushReviewArchiveRestoreFinding(findings, {
+          code: "review_archive_restore_red_line_violation",
+          message: "red_line_metadata must prove no controller, frozen asset, live Linear, truth-level, DAL, or PSSA mutation.",
+          path: "red_line_metadata",
+        });
+      }
+      const checksums = payload.checksums && typeof payload.checksums === "object" && !Array.isArray(payload.checksums)
+        ? payload.checksums
+        : {};
+      for (const [key, checksumKey] of foundationReviewArchiveSectionSpec) {
+        const sectionValue = payload[key];
+        const expectedChecksum = checksums[checksumKey];
+        if (sectionValue === undefined || sectionValue === null) {
+          missingRequiredSectionCount += 1;
+          pushReviewArchiveRestoreFinding(findings, {
+            code: "review_archive_restore_missing_section",
+            message: `Review archive is missing required section ${key}.`,
+            path: key,
+          });
+          continue;
+        }
+        if (!expectedChecksum || expectedChecksum === "missing") {
+          checksumMismatchCount += 1;
+          pushReviewArchiveRestoreFinding(findings, {
+            code: "review_archive_restore_missing_checksum",
+            message: `Review archive section ${key} is missing checksum ${checksumKey}.`,
+            path: `checksums.${checksumKey}`,
+          });
+          continue;
+        }
+        checksumCheckedCount += 1;
+        const actualChecksum = checksumEvidenceArchiveField(sectionValue);
+        if (actualChecksum !== expectedChecksum) {
+          checksumMismatchCount += 1;
+          pushReviewArchiveRestoreFinding(findings, {
+            code: "review_archive_restore_checksum_mismatch",
+            message: `Review archive checksum mismatch for ${key}.`,
+            path: `checksums.${checksumKey}`,
+            expected_checksum: expectedChecksum,
+            actual_checksum: actualChecksum,
+          });
+        }
+      }
+      for (const [key, checksumKey] of [
+        ["foundation_review_archive", "foundation_review_archive_checksum"],
+        ["foundation_review_archive_validation", "foundation_review_archive_validation_checksum"],
+        ["review_archive_regression_bundle_v3", "review_archive_regression_bundle_v3_checksum"],
+      ]) {
+        if (payload[key] === undefined || payload[key] === null || !checksums[checksumKey]) continue;
+        checksumCheckedCount += 1;
+        const actualChecksum = checksumEvidenceArchiveField(payload[key]);
+        if (actualChecksum !== checksums[checksumKey]) {
+          checksumMismatchCount += 1;
+          pushReviewArchiveRestoreFinding(findings, {
+            code: "review_archive_restore_checksum_mismatch",
+            message: `Review archive checksum mismatch for ${key}.`,
+            path: `checksums.${checksumKey}`,
+            expected_checksum: checksums[checksumKey],
+            actual_checksum: actualChecksum,
+          });
+        }
+      }
+      const foundationValidation = validateFoundationReviewArchiveBundle(payload.foundation_review_archive);
+      foundationStatus = foundationValidation.status;
+      if (foundationValidation.status !== "pass") {
+        pushReviewArchiveRestoreFinding(findings, {
+          code: "review_archive_restore_foundation_validation_failed",
+          message: "foundation_review_archive must pass restore-time validation.",
+          path: "foundation_review_archive",
+        });
+      }
+      try {
+        validateEditableDraftImport(payload.model_json);
+      } catch (err) {
+        pushReviewArchiveRestoreFinding(findings, {
+          code: "review_archive_restore_model_json_invalid",
+          message: err && err.message ? err.message : "model_json failed draft import validation.",
+          path: "model_json",
+        });
+      }
+    }
+
+    const hasError = findings.some((finding) => finding.severity === "error");
+    return {
+      kind: reviewArchiveRestoreKind,
+      version: reviewArchiveRestoreVersion,
+      restore_mode: options && options.restore_mode ? options.restore_mode : "browser_local_review_archive",
+      status: hasError ? "fail" : "pass",
+      checksum_checked_count: checksumCheckedCount,
+      checksum_mismatch_count: checksumMismatchCount,
+      missing_required_section_count: missingRequiredSectionCount,
+      required_section_count: foundationReviewArchiveSectionSpec.length,
+      foundation_review_archive_status: foundationStatus,
+      red_line_status: redLineStatus,
+      restored_model_json_checksum: payload && payload.model_json
+        ? checksumEvidenceArchiveField(payload.model_json)
+        : "missing",
+      finding_count: findings.length,
+      error_count: findings.filter((finding) => finding.severity === "error").length,
+      findings,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      controller_truth_modified: false,
+      frozen_assets_modified: false,
+      live_linear_mutation: false,
+      truth_level_impact: "none",
+      dal_pssa_impact: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function reviewArchiveRegressionStep(stepId, status, evidenceKey, checksum) {
+    return {
+      step_id: stepId,
+      status,
+      evidence_key: evidenceKey,
+      checksum: checksum || "missing",
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function buildReviewArchiveRegressionBundleV3(archive, validation) {
+    const payload = archive && typeof archive === "object" && !Array.isArray(archive) ? archive : {};
+    const restoreValidation = validation || validateReviewArchiveRestoreV3(payload);
+    const checksums = payload.checksums && typeof payload.checksums === "object" && !Array.isArray(payload.checksums)
+      ? payload.checksums
+      : {};
+    const graphDocument = payload.editable_graph_document || {};
+    const scenarioLibrary = payload.scenario_test_case_library || {};
+    const testRunReport = payload.sandbox_test_run_report || {};
+    const debugTimeline = payload.debug_probe_timeline || {};
+    const hardwareAttachment = payload.hardware_evidence_attachment_v2 || {};
+    const graphNodeCount = Number(graphDocument.node_count || 0);
+    const graphEdgeCount = Number(graphDocument.edge_count || 0);
+    const steps = [
+      reviewArchiveRegressionStep(
+        "create_graph",
+        graphNodeCount > 0 ? "pass" : "needs_evidence",
+        "editable_graph_document",
+        checksums.editable_graph_document_checksum,
+      ),
+      reviewArchiveRegressionStep(
+        "wire_graph",
+        graphEdgeCount > 0 ? "pass" : "needs_evidence",
+        "editable_graph_document",
+        checksums.editable_graph_document_checksum,
+      ),
+      reviewArchiveRegressionStep(
+        "run_sandbox",
+        testRunReport.kind ? "pass" : "not_run",
+        "sandbox_test_run_report",
+        checksums.sandbox_test_run_report_checksum,
+      ),
+      reviewArchiveRegressionStep(
+        "debug_selection",
+        debugTimeline.kind ? "pass" : "not_run",
+        "debug_probe_timeline",
+        checksums.debug_probe_timeline_checksum,
+      ),
+      reviewArchiveRegressionStep(
+        "attach_hardware_evidence",
+        Number(hardwareAttachment.attachment_count || 0) > 0 ? "pass" : "needs_evidence",
+        "hardware_evidence_attachment_v2",
+        checksums.hardware_evidence_attachment_v2_checksum,
+      ),
+      reviewArchiveRegressionStep(
+        "archive_prepare",
+        payload.foundation_review_archive ? "pass" : "fail",
+        "foundation_review_archive",
+        checksums.foundation_review_archive_checksum,
+      ),
+      reviewArchiveRegressionStep(
+        "restore_readback",
+        restoreValidation.status === "pass" ? "pass" : "fail",
+        "review_archive_restore_v3",
+        checksumEvidenceArchiveField(restoreValidation),
+      ),
+    ];
+    return {
+      kind: reviewArchiveRegressionBundleKind,
+      version: reviewArchiveRegressionBundleVersion,
+      bundle_scope: "workbench_v5_authoring_restore_loop",
+      restore_validation_status: restoreValidation.status,
+      checksum_manifest_status: restoreValidation.checksum_mismatch_count === 0 ? "pass" : "fail",
+      restored_graph: {
+        node_count: graphNodeCount,
+        edge_count: graphEdgeCount,
+        selected_node_count: Number(graphDocument.selected_node_count || 0),
+        scenario_test_case_count: Number(scenarioLibrary.test_case_count || 0),
+        hardware_evidence_attachment_count: Number(hardwareAttachment.attachment_count || 0),
+        truth_effect: "none",
+      },
+      regression_steps: steps,
+      regression_step_count: steps.length,
+      regression_pass_count: steps.filter((step) => step.status === "pass").length,
+      e2e_scope: "focused_browser_restore_smoke_only",
+      full_e2e_49_49_claim: "not_claimed",
+      mypy_strict_clean_claim: "not_claimed",
+      controller_truth_modified: false,
+      frozen_assets_modified: false,
+      live_linear_mutation: false,
+      truth_level_impact: "none",
+      dal_pssa_impact: "none",
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
   function buildWorkbenchEvidenceArchive() {
     const modelJson = buildEditableDraftExport();
     const workspaceDocument =
@@ -20603,15 +20885,33 @@ function installEditableWorkbenchShell() {
     const foundationReviewArchive = buildFoundationReviewArchiveBundle(archiveCore, checksums);
     const foundationReviewArchiveValidation =
       validateFoundationReviewArchiveBundle(foundationReviewArchive);
-    const finalArchiveCore = {
+    const archiveWithFoundation = {
       ...archiveCore,
       foundation_review_archive: foundationReviewArchive,
       foundation_review_archive_validation: foundationReviewArchiveValidation,
     };
-    const finalChecksums = {
+    const checksumsWithFoundation = {
       ...checksums,
       foundation_review_archive_checksum: checksumEvidenceArchiveField(foundationReviewArchive),
       foundation_review_archive_validation_checksum: checksumEvidenceArchiveField(foundationReviewArchiveValidation),
+    };
+    const reviewArchiveRestoreV3 = validateReviewArchiveRestoreV3({
+      ...archiveWithFoundation,
+      checksums: checksumsWithFoundation,
+    }, { restore_mode: "archive_prepare_self_check" });
+    const reviewArchiveRegressionBundleV3 = buildReviewArchiveRegressionBundleV3({
+      ...archiveWithFoundation,
+      checksums: checksumsWithFoundation,
+    }, reviewArchiveRestoreV3);
+    const finalArchiveCore = {
+      ...archiveWithFoundation,
+      review_archive_restore_v3: reviewArchiveRestoreV3,
+      review_archive_regression_bundle_v3: reviewArchiveRegressionBundleV3,
+    };
+    const finalChecksums = {
+      ...checksumsWithFoundation,
+      review_archive_restore_v3_checksum: checksumEvidenceArchiveField(reviewArchiveRestoreV3),
+      review_archive_regression_bundle_v3_checksum: checksumEvidenceArchiveField(reviewArchiveRegressionBundleV3),
     };
     return {
       ...finalArchiveCore,
@@ -20628,12 +20928,61 @@ function installEditableWorkbenchShell() {
   function renderWorkbenchEvidenceArchive() {
     const archive = buildWorkbenchEvidenceArchive();
     if (archiveOutput) archiveOutput.value = JSON.stringify(archive, null, 2);
+    if (reviewArchiveRestoreOutput) {
+      reviewArchiveRestoreOutput.value = JSON.stringify(archive.review_archive_restore_v3, null, 2);
+    }
+    if (regressionBundleOutput) {
+      regressionBundleOutput.value = JSON.stringify(archive.review_archive_regression_bundle_v3, null, 2);
+    }
     if (archiveStatus) {
       archiveStatus.textContent =
         `Prepared local draft archive ${archive.checksums.manifest_checksum}. No live Linear mutation.`;
     }
     setTimelineState("handoff");
     return archive;
+  }
+
+  function restoreReviewArchiveFromTextarea() {
+    if (!archiveOutput || !archiveOutput.value.trim()) {
+      if (archiveStatus) {
+        archiveStatus.textContent = "Paste or prepare a review archive before restoring.";
+      }
+      return null;
+    }
+    let archive = null;
+    try {
+      archive = JSON.parse(archiveOutput.value);
+    } catch (err) {
+      if (archiveStatus) {
+        archiveStatus.textContent =
+          `Review archive JSON invalid: ${err && err.message ? err.message : "parse error"}.`;
+      }
+      return null;
+    }
+    const validation = validateReviewArchiveRestoreV3(archive, { restore_mode: "browser_restore_readback" });
+    const regressionBundle = buildReviewArchiveRegressionBundleV3(archive, validation);
+    if (reviewArchiveRestoreOutput) {
+      reviewArchiveRestoreOutput.value = JSON.stringify(validation, null, 2);
+    }
+    if (regressionBundleOutput) {
+      regressionBundleOutput.value = JSON.stringify(regressionBundle, null, 2);
+    }
+    if (validation.status !== "pass") {
+      if (archiveStatus) {
+        archiveStatus.textContent =
+          `Review archive restore blocked: ${validation.error_count} validation error(s).`;
+      }
+      return { validation, regressionBundle };
+    }
+    applyEditableDraftImport(archive.model_json);
+    renderCandidateDebuggerView(currentCandidateDebuggerView("review_archive_restore"));
+    renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("review_archive_restore"));
+    setTimelineState("handoff");
+    if (archiveStatus) {
+      archiveStatus.textContent =
+        `Restored local review archive ${validation.restored_model_json_checksum}. No live Linear mutation.`;
+    }
+    return { validation, regressionBundle };
   }
 
   function downloadWorkbenchEvidenceArchive() {
@@ -21042,6 +21391,9 @@ function installEditableWorkbenchShell() {
   }
   if (downloadArchiveBtn) {
     downloadArchiveBtn.addEventListener("click", () => downloadWorkbenchEvidenceArchive());
+  }
+  if (restoreReviewArchiveBtn) {
+    restoreReviewArchiveBtn.addEventListener("click", () => restoreReviewArchiveFromTextarea());
   }
   if (sandboxTestBenchInputs) {
     sandboxTestBenchInputs.addEventListener("input", () => markScenarioTestCaseLibraryEdited());

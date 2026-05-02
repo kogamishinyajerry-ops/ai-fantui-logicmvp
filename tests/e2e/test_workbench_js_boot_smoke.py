@@ -113,6 +113,19 @@ def _set_draft_buffer_value(page: Any, draft_json: str) -> None:
     )
 
 
+def _set_archive_buffer_value(page: Any, archive_json: str) -> None:
+    page.evaluate(
+        """
+        (archiveJson) => {
+          const buffer = document.getElementById('workbench-evidence-archive-output');
+          buffer.value = archiveJson;
+          buffer.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        """,
+        archive_json,
+    )
+
+
 # ─── E11-08 closure: identity affordance JS toggle (4 tests) ─────────
 
 
@@ -942,6 +955,82 @@ def test_workbench_command_palette_executes_editor_commands_and_records_workspac
     assert archive["workspace_document"]["truth_effect"] == "none"
     assert archive["canvas_interaction_summary"]["last_action"] == "command_palette.prepare_archive"
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
+def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-component-template-id="two_stage_interlock"]')
+    page.locator('[data-editable-edge-id^="edge_component_two_stage_interlock"]').dispatch_event("click")
+    page.fill("#workbench-interface-hardware-id", "LRU-RESTORE-A")
+    page.fill("#workbench-interface-cable", "CABLE-RESTORE-A")
+    page.fill("#workbench-interface-connector", "CONN-RESTORE-A")
+    page.fill("#workbench-interface-port-local", "draft_node_1:out")
+    page.fill("#workbench-interface-port-peer", "draft_node_2:in")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+
+    page.select_option("#workbench-sandbox-scenario-select", "nominal_landing")
+    page.click("#workbench-run-sandbox-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const verdict = document.getElementById('workbench-diff-verdict')?.textContent.trim();
+          return ['equivalent', 'divergent', 'invalid_model', 'invalid_scenario'].includes(verdict);
+        }
+        """
+    )
+    page.click("#workbench-run-test-bench-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const output = document.getElementById('workbench-test-bench-report-output');
+          return output
+            && output.value.includes('well-harness-workbench-sandbox-test-run-report')
+            && output.value.includes('sandbox_runner_trace_kernel');
+        }
+        """
+    )
+    page.keyboard.press("Control+K")
+    page.fill("#workbench-command-palette-filter", "debug")
+    page.click('[data-command-palette-command="debug_selection"]')
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    expected_node_count = archive["editable_graph_document"]["node_count"]
+    expected_edge_count = archive["editable_graph_document"]["edge_count"]
+
+    assert archive["review_archive_regression_bundle_v3"]["kind"] == "well-harness-workbench-review-archive-regression-bundle"
+    assert archive["review_archive_regression_bundle_v3"]["full_e2e_49_49_claim"] == "not_claimed"
+    assert archive["review_archive_regression_bundle_v3"]["mypy_strict_clean_claim"] == "not_claimed"
+    assert archive["checksums"]["review_archive_regression_bundle_v3_checksum"]
+
+    page.click("#workbench-start-empty-draft-btn")
+    page.wait_for_function("() => document.querySelectorAll('.workbench-editable-node').length === 0")
+    _set_archive_buffer_value(page, json.dumps(archive))
+    page.click("#workbench-restore-review-archive-btn")
+
+    validation = json.loads(page.locator("#workbench-review-archive-restore-output").input_value())
+    bundle = json.loads(page.locator("#workbench-regression-bundle-output").input_value())
+    page.click("#workbench-export-draft-btn")
+    restored = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert validation["status"] == "pass"
+    assert validation["checksum_mismatch_count"] == 0
+    assert validation["red_line_status"] == "pass"
+    assert bundle["restore_validation_status"] == "pass"
+    assert bundle["restored_graph"]["node_count"] == expected_node_count
+    assert bundle["restored_graph"]["edge_count"] == expected_edge_count
+    assert bundle["full_e2e_49_49_claim"] == "not_claimed"
+    assert bundle["mypy_strict_clean_claim"] == "not_claimed"
+    assert restored["editable_graph_document"]["node_count"] == expected_node_count
+    assert restored["editable_graph_document"]["edge_count"] == expected_edge_count
+    assert restored["hardware_evidence_attachment_v2"]["attachment_count"] >= 1
+    assert page.locator("#workbench-archive-status").inner_text().startswith("Restored local review archive")
 
 
 def test_workbench_selected_debug_timeline_tracks_selection_diff_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
