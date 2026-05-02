@@ -38,6 +38,7 @@ FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS = (
     "model_json",
     "diff_summary",
     "candidate_baseline_diff_review_v2",
+    "scenario_test_case_library",
     "sandbox_test_bench",
     "sandbox_test_run_report",
     "candidate_debugger_view",

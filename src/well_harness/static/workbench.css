@@ -6055,6 +6055,15 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   padding: 0.62rem;
   border-color: rgba(125, 215, 194, 0.24);
 }
+.workbench-test-case-library-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+}
+.workbench-test-case-library-actions .workbench-editable-primary {
+  min-height: 32px;
+}
 .workbench-sandbox-test-bench[data-test-status="pass"] {
   border-color: rgba(125, 215, 194, 0.42);
 }

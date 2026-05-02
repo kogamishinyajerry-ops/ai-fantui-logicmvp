@@ -462,13 +462,24 @@ def test_sandbox_scenario_test_bench_controls_are_sandbox_only_ui() -> None:
     css = _css()
 
     assert 'id="workbench-sandbox-test-bench"' in html
+    assert 'id="workbench-test-case-library-select"' in html
+    assert 'id="workbench-test-case-name"' in html
+    assert 'id="workbench-create-test-case-btn"' in html
+    assert 'id="workbench-save-test-case-btn"' in html
+    assert 'id="workbench-duplicate-test-case-btn"' in html
+    assert 'id="workbench-delete-test-case-btn"' in html
     assert 'id="workbench-test-bench-inputs-json"' in html
     assert 'id="workbench-test-bench-assertions-json"' in html
+    assert 'id="workbench-test-case-expected-outputs-json"' in html
+    assert 'id="workbench-test-case-notes"' in html
     assert 'id="workbench-run-test-bench-btn"' in html
+    assert 'id="workbench-test-case-library-status"' in html
     assert 'id="workbench-test-bench-status"' in html
     assert 'id="workbench-test-bench-report-output"' in html
     assert "Scenario tests are local sandbox evidence only. Truth effect: none." in html
+    assert "Saved test cases are sandbox_candidate evidence only." in html
     assert ".workbench-sandbox-test-bench" in css
+    assert ".workbench-test-case-library-actions" in css
 
 
 def test_js_wires_sandbox_scenario_test_bench_as_sandbox_only_run_report() -> None:
@@ -478,11 +489,19 @@ def test_js_wires_sandbox_scenario_test_bench_as_sandbox_only_run_report() -> No
     assert "workbench-sandbox-test-bench.v1" in js
     assert "well-harness-workbench-sandbox-test-run-report" in js
     assert "workbench-sandbox-test-run-report.v1" in js
+    assert "well-harness-workbench-scenario-test-case-library" in js
+    assert "workbench-scenario-test-case-library.v1" in js
+    assert "function currentScenarioTestCaseLibrary" in js
+    assert "function restoreScenarioTestCaseLibrary" in js
     assert "function currentSandboxTestBenchDefinition" in js
     assert "function evaluateSandboxTestBench" in js
     assert "function renderSandboxTestBenchReport" in js
+    assert "scenario_test_case_library" in js
+    assert "selected_test_case_id" in js
+    assert "active_test_case_id" in js
     assert "sandbox_test_bench" in js
     assert "sandbox_test_run_report" in js
+    assert "scenario_test_case_library_checksum" in js
     assert "sandbox_test_bench_checksum" in js
     assert "sandbox_test_run_report_checksum" in js
     assert "sandbox_test_run_report truth_effect must be none" in js

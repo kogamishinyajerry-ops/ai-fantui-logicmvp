@@ -7643,6 +7643,15 @@ function installEditableWorkbenchShell() {
   const sandboxTestBenchPanel = document.getElementById("workbench-sandbox-test-bench");
   const sandboxTestBenchInputs = document.getElementById("workbench-test-bench-inputs-json");
   const sandboxTestBenchAssertions = document.getElementById("workbench-test-bench-assertions-json");
+  const scenarioTestCaseSelect = document.getElementById("workbench-test-case-library-select");
+  const scenarioTestCaseNameInput = document.getElementById("workbench-test-case-name");
+  const scenarioTestCaseExpectedOutputs = document.getElementById("workbench-test-case-expected-outputs-json");
+  const scenarioTestCaseNotesInput = document.getElementById("workbench-test-case-notes");
+  const createTestCaseBtn = document.getElementById("workbench-create-test-case-btn");
+  const saveTestCaseBtn = document.getElementById("workbench-save-test-case-btn");
+  const duplicateTestCaseBtn = document.getElementById("workbench-duplicate-test-case-btn");
+  const deleteTestCaseBtn = document.getElementById("workbench-delete-test-case-btn");
+  const scenarioTestCaseLibraryStatus = document.getElementById("workbench-test-case-library-status");
   const runTestBenchBtn = document.getElementById("workbench-run-test-bench-btn");
   const sandboxTestBenchStatus = document.getElementById("workbench-test-bench-status");
   const sandboxTestBenchReportOutput = document.getElementById("workbench-test-bench-report-output");
@@ -7761,6 +7770,9 @@ function installEditableWorkbenchShell() {
   let lastComponentTemplateId = "";
   let capturedSubsystemTemplates = [];
   let lastSandboxTestRunReport = null;
+  let scenarioTestCaseLibrary = null;
+  let selectedScenarioTestCaseId = "sandbox_test_case_1";
+  let nextScenarioTestCaseIndex = 2;
   let nextCapturedSubsystemTemplateIndex = 1;
   let nextSubsystemGroupIndex = 1;
   let subsystemGroups = [];
@@ -7791,6 +7803,8 @@ function installEditableWorkbenchShell() {
   const sandboxTestBenchVersion = "workbench-sandbox-test-bench.v1";
   const sandboxTestRunReportKind = "well-harness-workbench-sandbox-test-run-report";
   const sandboxTestRunReportVersion = "workbench-sandbox-test-run-report.v1";
+  const scenarioTestCaseLibraryKind = "well-harness-workbench-scenario-test-case-library";
+  const scenarioTestCaseLibraryVersion = "workbench-scenario-test-case-library.v1";
   const candidateDebuggerViewKind = "well-harness-workbench-candidate-debugger-view";
   const candidateDebuggerViewVersion = "workbench-candidate-debugger-view.v1";
   const preflightAnalyzerReportKind = "well-harness-workbench-preflight-analyzer-report";
@@ -12258,6 +12272,12 @@ function installEditableWorkbenchShell() {
       payload.sandbox_test_bench && typeof payload.sandbox_test_bench === "object" && !Array.isArray(payload.sandbox_test_bench)
         ? payload.sandbox_test_bench
         : null;
+    const scenarioTestCaseLibraryPayload =
+      payload.scenario_test_case_library
+      && typeof payload.scenario_test_case_library === "object"
+      && !Array.isArray(payload.scenario_test_case_library)
+        ? payload.scenario_test_case_library
+        : null;
     const hardwareInterfaceDesigner =
       payload.hardware_interface_designer
       && typeof payload.hardware_interface_designer === "object"
@@ -12278,6 +12298,7 @@ function installEditableWorkbenchShell() {
       typed_ports: normalizeEvidenceArchiveValue(Array.isArray(payload.typed_ports) ? payload.typed_ports : []),
       subsystem_groups: normalizeEvidenceArchiveValue(Array.isArray(payload.subsystem_groups) ? payload.subsystem_groups : []),
       component_library: normalizeEvidenceArchiveValue(componentLibrary),
+      scenario_test_case_library: normalizeEvidenceArchiveValue(scenarioTestCaseLibraryPayload),
       sandbox_test_bench: normalizeEvidenceArchiveValue(sandboxTestBench),
       hardware_bindings: normalizeEvidenceArchiveValue(Array.isArray(payload.hardware_bindings) ? payload.hardware_bindings : []),
       hardware_interface_designer: normalizeEvidenceArchiveValue(hardwareInterfaceDesigner),
@@ -12318,6 +12339,7 @@ function installEditableWorkbenchShell() {
         "typed_ports",
         "subsystem_groups",
         "component_library",
+        "scenario_test_case_library",
       ],
       top_level_compatibility: true,
       node_count: Array.isArray(model.nodes) ? model.nodes.length : 0,
@@ -12387,6 +12409,12 @@ function installEditableWorkbenchShell() {
       .sort((left, right) => left.id.localeCompare(right.id));
     const canonicalModel = buildEditableGraphCanonicalModel(source);
     const domAdapter = buildEditableGraphDomAdapterBoundary(source, canonicalModel);
+    const scenarioTestCaseLibraryPayload =
+      source.scenario_test_case_library
+      && typeof source.scenario_test_case_library === "object"
+      && !Array.isArray(source.scenario_test_case_library)
+        ? source.scenario_test_case_library
+        : null;
     return {
       kind: editableGraphDocumentKind,
       version: editableGraphDocumentVersion,
@@ -12404,6 +12432,16 @@ function installEditableWorkbenchShell() {
       typed_port_count: typedPortRecords.length,
       subsystem_group_count: subsystemRecords.length,
       component_template_count: capturedTemplates.length,
+      scenario_test_case_count:
+        scenarioTestCaseLibraryPayload && Number.isFinite(Number(scenarioTestCaseLibraryPayload.test_case_count))
+          ? Number(scenarioTestCaseLibraryPayload.test_case_count)
+          : 0,
+      selected_test_case_id: scenarioTestCaseLibraryPayload
+        ? String(scenarioTestCaseLibraryPayload.selected_test_case_id || "")
+        : "",
+      active_test_case_id: scenarioTestCaseLibraryPayload
+        ? String(scenarioTestCaseLibraryPayload.active_test_case_id || "")
+        : "",
       selected_node_count: selectedNodeIdList.length,
       selected_edge_count: selectedEdgeId ? 1 : 0,
       node_ids: sortedEditableGraphIds(nodeRecords),
@@ -12480,6 +12518,7 @@ function installEditableWorkbenchShell() {
       viewportState: viewportStateSnapshot(),
       workspaceDocument: currentWorkspaceDocument(),
       canvasInteractionSummary: currentCanvasInteractionSummary(),
+      scenarioTestCaseLibrary: safeScenarioTestCaseLibrary(),
       sandboxTestBench: safeSandboxTestBenchDefinition(),
       sandboxTestRunReport: currentSandboxTestRunReport(),
       candidateDebuggerView: currentCandidateDebuggerView("storage"),
@@ -12547,7 +12586,10 @@ function installEditableWorkbenchShell() {
     );
     adoptWorkspaceDocumentRecord(state.workspaceDocument || state.workspace_document || null);
     adoptCanvasInteractionSummary(state.canvasInteractionSummary || state.canvas_interaction_summary || null);
-    restoreSandboxTestBenchDefinition(state.sandboxTestBench || state.sandbox_test_bench || null);
+    restoreScenarioTestCaseLibrary(
+      state.scenarioTestCaseLibrary || state.scenario_test_case_library || null,
+      state.sandboxTestBench || state.sandbox_test_bench || null,
+    );
     lastSandboxTestRunReport = normalizeImportedSandboxTestRunReport(
       state.sandboxTestRunReport || state.sandbox_test_run_report || lastSandboxTestRunReport,
     );
@@ -15406,6 +15448,7 @@ function installEditableWorkbenchShell() {
     const hardwareEvidenceV2 = currentHardwareEvidenceV2Report();
     const selectedDebugTimeline = currentSelectedDebugTimelinePacket("snapshot");
     const candidateBaselineDiffReviewV2 = currentCandidateBaselineDiffReviewV2Report("snapshot");
+    const scenarioTestCaseLibrarySnapshot = safeScenarioTestCaseLibrary();
     const sandboxTestBench = safeSandboxTestBenchDefinition();
     const sandboxTestRunReport = currentSandboxTestRunReport();
     const candidateDebuggerView = currentCandidateDebuggerView("snapshot");
@@ -15456,6 +15499,7 @@ function installEditableWorkbenchShell() {
       hardware_evidence_v2: hardwareEvidenceV2,
       selected_debug_timeline: selectedDebugTimeline,
       candidate_baseline_diff_review_v2: candidateBaselineDiffReviewV2,
+      scenario_test_case_library: scenarioTestCaseLibrarySnapshot,
       sandbox_test_bench: sandboxTestBench,
       sandbox_test_run_report: sandboxTestRunReport,
       candidate_debugger_view: candidateDebuggerView,
@@ -15552,25 +15596,515 @@ function installEditableWorkbenchShell() {
     };
   }
 
-  function currentSandboxTestBenchDefinition() {
+  function parseSandboxExpectedOutputsArray(input, fallback, label) {
+    const raw = input ? String(input.value || "").trim() : "";
+    if (!raw) return fallback;
+    const payload = JSON.parse(raw);
+    if (!Array.isArray(payload)) {
+      throw new Error(`${label} JSON must be an array`);
+    }
+    return payload;
+  }
+
+  function normalizeSandboxExpectedOutputRecord(record, fallbackIndex) {
+    if (!record || typeof record !== "object" || Array.isArray(record)) {
+      throw new Error(`scenario expected output ${fallbackIndex || 0} must be an object`);
+    }
+    const target = String(record.target || record.port_id || record.signal_id || "").trim();
+    if (!target) throw new Error(`scenario expected output ${fallbackIndex || 0} target is required`);
+    return {
+      tick: Number.isFinite(Number(record.tick)) ? Number(record.tick) : 0,
+      target,
+      expected: normalizeEvidenceArchiveValue(record.expected),
+      comparator: String(record.comparator || "equals"),
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function normalizeScenarioTestCaseId(value, fallbackIndex) {
+    const cleaned = String(value || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    return cleaned || `sandbox_test_case_${fallbackIndex || 1}`;
+  }
+
+  function selectedScenarioTestCaseIdValue() {
+    return (
+      (scenarioTestCaseSelect && scenarioTestCaseSelect.value)
+      || selectedScenarioTestCaseId
+      || "sandbox_test_case_1"
+    );
+  }
+
+  function normalizeScenarioTestCaseRecord(record, fallbackIndex) {
+    const source = record && typeof record === "object" && !Array.isArray(record) ? record : {};
+    const testCaseId = normalizeScenarioTestCaseId(
+      source.test_case_id || source.testCaseId || source.id,
+      fallbackIndex || 1,
+    );
+    const ticks = Array.isArray(source.ticks)
+      ? source.ticks.map((tick, index) => normalizeSandboxTickRecord(tick, index))
+      : [{ tick: 0, inputs: {}, candidate_state: "sandbox_candidate", truth_effect: "none" }];
+    const assertions = Array.isArray(source.assertions)
+      ? source.assertions.map((assertion, index) => normalizeSandboxAssertionRecord(assertion, index))
+      : [];
+    const expectedOutputs = Array.isArray(source.expected_outputs || source.expectedOutputs)
+      ? (source.expected_outputs || source.expectedOutputs)
+        .map((output, index) => normalizeSandboxExpectedOutputRecord(output, index))
+      : [];
+    return {
+      test_case_id: testCaseId,
+      name: String(source.name || source.label || `Scenario test case ${fallbackIndex || 1}`),
+      scenario_id: String(source.scenario_id || source.scenarioId || selectedWorkbenchScenarioId()),
+      ticks,
+      assertions,
+      expected_outputs: expectedOutputs,
+      notes: String(source.notes || ""),
+      tick_count: ticks.length,
+      assertion_count: assertions.length,
+      expected_output_count: expectedOutputs.length,
+      source: String(source.source || "browser_local_draft"),
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function currentScenarioTestCaseEditorRecord(fallbackId, fallbackName) {
     const tickRecords = parseSandboxTestBenchArray(
       sandboxTestBenchInputs,
       [{ tick: 0, inputs: {} }],
       "scenario inputs",
-    ).map((record, index) => normalizeSandboxTickRecord(record, index));
+    );
     const assertionRecords = parseSandboxTestBenchArray(
       sandboxTestBenchAssertions,
       [],
       "scenario assertions",
-    ).map((record, index) => normalizeSandboxAssertionRecord(record, index));
-    return {
-      kind: sandboxTestBenchKind,
-      version: sandboxTestBenchVersion,
+    );
+    const expectedOutputRecords = parseSandboxExpectedOutputsArray(
+      scenarioTestCaseExpectedOutputs,
+      [],
+      "scenario expected outputs",
+    );
+    return normalizeScenarioTestCaseRecord({
+      test_case_id: fallbackId || selectedScenarioTestCaseIdValue(),
+      name: (scenarioTestCaseNameInput && scenarioTestCaseNameInput.value)
+        || fallbackName
+        || "Nominal sandbox case",
       scenario_id: selectedWorkbenchScenarioId(),
       ticks: tickRecords,
       assertions: assertionRecords,
-      tick_count: tickRecords.length,
-      assertion_count: assertionRecords.length,
+      expected_outputs: expectedOutputRecords,
+      notes: scenarioTestCaseNotesInput ? scenarioTestCaseNotesInput.value : "",
+      source: "browser_local_draft",
+    }, 1);
+  }
+
+  function scenarioTestCaseById(library, testCaseId) {
+    const id = String(testCaseId || "");
+    return (library && Array.isArray(library.test_cases) ? library.test_cases : [])
+      .find((testCase) => testCase && testCase.test_case_id === id) || null;
+  }
+
+  function normalizeScenarioTestCaseLibraryPayload(payload, fallbackDefinition) {
+    const source = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+    const fallback = fallbackDefinition && typeof fallbackDefinition === "object" && !Array.isArray(fallbackDefinition)
+      ? fallbackDefinition
+      : null;
+    const rawCases = Array.isArray(source.test_cases || source.testCases)
+      ? (source.test_cases || source.testCases)
+      : [];
+    const cases = rawCases.map((testCase, index) => normalizeScenarioTestCaseRecord(testCase, index + 1));
+    if (!cases.length && fallback) {
+      cases.push(normalizeScenarioTestCaseRecord({
+        test_case_id: fallback.test_case_id || fallback.active_test_case_id || "sandbox_test_case_1",
+        name: fallback.test_case_name || "Nominal sandbox case",
+        scenario_id: fallback.scenario_id || selectedWorkbenchScenarioId(),
+        ticks: fallback.ticks || [],
+        assertions: fallback.assertions || [],
+        expected_outputs: fallback.expected_outputs || [],
+        notes: fallback.notes || "",
+      }, 1));
+    }
+    if (!cases.length) {
+      cases.push(normalizeScenarioTestCaseRecord({
+        test_case_id: "sandbox_test_case_1",
+        name: "Nominal sandbox case",
+        scenario_id: selectedWorkbenchScenarioId(),
+        ticks: [{ tick: 0, inputs: {} }],
+        assertions: [],
+        expected_outputs: [],
+        notes: "",
+      }, 1));
+    }
+    const requestedSelected = normalizeScenarioTestCaseId(
+      source.selected_test_case_id || source.selectedTestCaseId || source.active_test_case_id || source.activeTestCaseId,
+      1,
+    );
+    const requestedActive = normalizeScenarioTestCaseId(
+      source.active_test_case_id || source.activeTestCaseId || requestedSelected,
+      1,
+    );
+    const selected = scenarioTestCaseById({ test_cases: cases }, requestedSelected)
+      ? requestedSelected
+      : cases[0].test_case_id;
+    const active = scenarioTestCaseById({ test_cases: cases }, requestedActive)
+      ? requestedActive
+      : selected;
+    return {
+      kind: scenarioTestCaseLibraryKind,
+      version: scenarioTestCaseLibraryVersion,
+      selected_test_case_id: selected,
+      active_test_case_id: active,
+      test_cases: cases,
+      test_case_count: cases.length,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function refreshNextScenarioTestCaseIndex(library) {
+    const ids = new Set((library && Array.isArray(library.test_cases) ? library.test_cases : [])
+      .map((testCase) => testCase.test_case_id));
+    let index = Math.max(nextScenarioTestCaseIndex, ids.size + 1, 2);
+    while (ids.has(`sandbox_test_case_${index}`)) index += 1;
+    nextScenarioTestCaseIndex = index;
+  }
+
+  function uniqueScenarioTestCaseId(library) {
+    refreshNextScenarioTestCaseIndex(library);
+    const id = `sandbox_test_case_${nextScenarioTestCaseIndex}`;
+    nextScenarioTestCaseIndex += 1;
+    return id;
+  }
+
+  function scenarioTestCaseLibraryChecksum(library) {
+    return checksumEvidenceArchiveField(library || safeScenarioTestCaseLibrary());
+  }
+
+  function currentScenarioTestCaseLibrary() {
+    const base = normalizeScenarioTestCaseLibraryPayload(scenarioTestCaseLibrary);
+    const activeId = selectedScenarioTestCaseIdValue();
+    const existing = scenarioTestCaseById(base, activeId) || base.test_cases[0];
+    const editorRecord = currentScenarioTestCaseEditorRecord(existing.test_case_id, existing.name);
+    const cases = base.test_cases.map((testCase) => (
+      testCase.test_case_id === existing.test_case_id ? editorRecord : testCase
+    ));
+    if (!cases.some((testCase) => testCase.test_case_id === editorRecord.test_case_id)) {
+      cases.push(editorRecord);
+    }
+    const library = normalizeScenarioTestCaseLibraryPayload({
+      ...base,
+      selected_test_case_id: editorRecord.test_case_id,
+      active_test_case_id: editorRecord.test_case_id,
+      test_cases: cases,
+    });
+    scenarioTestCaseLibrary = library;
+    selectedScenarioTestCaseId = library.active_test_case_id;
+    refreshNextScenarioTestCaseIndex(library);
+    return library;
+  }
+
+  function fallbackScenarioTestCaseLibrary(errorMessage) {
+    return {
+      kind: scenarioTestCaseLibraryKind,
+      version: scenarioTestCaseLibraryVersion,
+      selected_test_case_id: selectedScenarioTestCaseIdValue(),
+      active_test_case_id: selectedScenarioTestCaseIdValue(),
+      test_cases: [],
+      test_case_count: 0,
+      validation_error: String(errorMessage || "invalid scenario test case library JSON"),
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function safeScenarioTestCaseLibrary() {
+    try {
+      return currentScenarioTestCaseLibrary();
+    } catch (err) {
+      return fallbackScenarioTestCaseLibrary(
+        err && err.message ? err.message : "invalid scenario test case library JSON",
+      );
+    }
+  }
+
+  function loadScenarioTestCaseIntoEditor(testCase) {
+    if (!testCase) return;
+    if (scenarioSelect && testCase.scenario_id) {
+      scenarioSelect.value = String(testCase.scenario_id);
+    }
+    if (scenarioTestCaseNameInput) scenarioTestCaseNameInput.value = testCase.name || testCase.test_case_id;
+    if (sandboxTestBenchInputs) {
+      sandboxTestBenchInputs.value = JSON.stringify(
+        (testCase.ticks || []).map((tick) => ({ tick: tick.tick, inputs: tick.inputs || {} })),
+        null,
+        2,
+      );
+    }
+    if (sandboxTestBenchAssertions) {
+      sandboxTestBenchAssertions.value = JSON.stringify(
+        (testCase.assertions || []).map((assertion) => ({
+          tick: assertion.tick,
+          target: assertion.target,
+          expected: assertion.expected,
+          comparator: assertion.comparator || "equals",
+        })),
+        null,
+        2,
+      );
+    }
+    if (scenarioTestCaseExpectedOutputs) {
+      scenarioTestCaseExpectedOutputs.value = JSON.stringify(
+        (testCase.expected_outputs || []).map((output) => ({
+          tick: output.tick,
+          target: output.target,
+          expected: output.expected,
+          comparator: output.comparator || "equals",
+        })),
+        null,
+        2,
+      );
+    }
+    if (scenarioTestCaseNotesInput) scenarioTestCaseNotesInput.value = testCase.notes || "";
+  }
+
+  function renderScenarioTestCaseLibrary(library, options) {
+    const packet = normalizeScenarioTestCaseLibraryPayload(library);
+    scenarioTestCaseLibrary = packet;
+    selectedScenarioTestCaseId = packet.active_test_case_id;
+    refreshNextScenarioTestCaseIndex(packet);
+    if (scenarioTestCaseSelect) {
+      scenarioTestCaseSelect.innerHTML = "";
+      for (const testCase of packet.test_cases) {
+        const option = document.createElement("option");
+        option.value = testCase.test_case_id;
+        option.textContent = testCase.name || testCase.test_case_id;
+        scenarioTestCaseSelect.appendChild(option);
+      }
+      scenarioTestCaseSelect.value = packet.active_test_case_id;
+    }
+    const activeCase = scenarioTestCaseById(packet, packet.active_test_case_id) || packet.test_cases[0];
+    if (!options || options.loadActive !== false) {
+      loadScenarioTestCaseIntoEditor(activeCase);
+    }
+    if (scenarioTestCaseLibraryStatus) {
+      scenarioTestCaseLibraryStatus.textContent =
+        `${packet.test_case_count} saved sandbox test case(s). Active: ${packet.active_test_case_id}. Truth effect: none.`;
+    }
+    return packet;
+  }
+
+  function restoreScenarioTestCaseLibrary(library, legacyTestBench) {
+    return renderScenarioTestCaseLibrary(
+      normalizeScenarioTestCaseLibraryPayload(library, legacyTestBench),
+      { loadActive: true },
+    );
+  }
+
+  function syncActiveScenarioTestCaseFromForm(options) {
+    const base = normalizeScenarioTestCaseLibraryPayload(scenarioTestCaseLibrary);
+    const activeId = (options && options.testCaseId) || selectedScenarioTestCaseIdValue();
+    const existing = scenarioTestCaseById(base, activeId) || base.test_cases[0];
+    const record = currentScenarioTestCaseEditorRecord(existing.test_case_id, existing.name);
+    const cases = base.test_cases.map((testCase) => (
+      testCase.test_case_id === existing.test_case_id ? record : testCase
+    ));
+    if (!cases.some((testCase) => testCase.test_case_id === record.test_case_id)) cases.push(record);
+    const library = normalizeScenarioTestCaseLibraryPayload({
+      ...base,
+      selected_test_case_id: record.test_case_id,
+      active_test_case_id: record.test_case_id,
+      test_cases: cases,
+    });
+    scenarioTestCaseLibrary = library;
+    selectedScenarioTestCaseId = library.active_test_case_id;
+    renderScenarioTestCaseLibrary(library, { loadActive: options && options.loadActive === true });
+    return record;
+  }
+
+  function markScenarioTestCaseLibraryEdited() {
+    lastSandboxTestRunReport = null;
+    lastPreflightAnalyzerReport = null;
+    try {
+      syncActiveScenarioTestCaseFromForm({ loadActive: false });
+      if (scenarioTestCaseLibraryStatus) {
+        scenarioTestCaseLibraryStatus.textContent =
+          `Edited ${selectedScenarioTestCaseIdValue()}. Save before archive if needed. Truth effect: none.`;
+      }
+    } catch (err) {
+      if (scenarioTestCaseLibraryStatus) {
+        scenarioTestCaseLibraryStatus.textContent =
+          err && err.message ? err.message : "scenario test case edit is invalid";
+      }
+    }
+    if (sandboxTestBenchStatus) sandboxTestBenchStatus.textContent = "edited";
+    if (sandboxTestBenchPanel) sandboxTestBenchPanel.setAttribute("data-test-status", "edited");
+    renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("test_case_edited"));
+    persistDraft();
+  }
+
+  function createScenarioTestCase() {
+    try {
+      syncActiveScenarioTestCaseFromForm({ loadActive: false });
+    } catch (_err) {
+      // Keep create available even if the current scratch JSON is invalid.
+    }
+    const base = normalizeScenarioTestCaseLibraryPayload(scenarioTestCaseLibrary);
+    const id = uniqueScenarioTestCaseId(base);
+    const newCase = normalizeScenarioTestCaseRecord({
+      test_case_id: id,
+      name: `Scenario test case ${base.test_case_count + 1}`,
+      scenario_id: selectedWorkbenchScenarioId(),
+      ticks: [{ tick: 0, inputs: {} }],
+      assertions: [],
+      expected_outputs: [],
+      notes: "",
+    }, base.test_case_count + 1);
+    const library = normalizeScenarioTestCaseLibraryPayload({
+      ...base,
+      selected_test_case_id: id,
+      active_test_case_id: id,
+      test_cases: [...base.test_cases, newCase],
+    });
+    renderScenarioTestCaseLibrary(library, { loadActive: true });
+    lastSandboxTestRunReport = null;
+    lastPreflightAnalyzerReport = null;
+    recordWorkspaceAction("create_scenario_test_case");
+    recordCanvasInteractionAction("create_scenario_test_case");
+    renderWorkspaceDocumentStatus();
+    persistDraft();
+    return newCase;
+  }
+
+  function saveScenarioTestCase() {
+    const record = syncActiveScenarioTestCaseFromForm({ loadActive: false });
+    lastSandboxTestRunReport = null;
+    lastPreflightAnalyzerReport = null;
+    if (scenarioTestCaseLibraryStatus) {
+      scenarioTestCaseLibraryStatus.textContent =
+        `Saved ${record.test_case_id}. Truth effect: none.`;
+    }
+    recordWorkspaceAction("save_scenario_test_case");
+    recordCanvasInteractionAction("save_scenario_test_case");
+    renderWorkspaceDocumentStatus();
+    persistDraft();
+    return record;
+  }
+
+  function duplicateScenarioTestCase() {
+    const current = syncActiveScenarioTestCaseFromForm({ loadActive: false });
+    const base = normalizeScenarioTestCaseLibraryPayload(scenarioTestCaseLibrary);
+    const id = uniqueScenarioTestCaseId(base);
+    const duplicate = normalizeScenarioTestCaseRecord({
+      ...current,
+      test_case_id: id,
+      name: `${current.name || current.test_case_id} copy`,
+      source: "browser_local_draft.duplicate",
+    }, base.test_case_count + 1);
+    const library = normalizeScenarioTestCaseLibraryPayload({
+      ...base,
+      selected_test_case_id: id,
+      active_test_case_id: id,
+      test_cases: [...base.test_cases, duplicate],
+    });
+    renderScenarioTestCaseLibrary(library, { loadActive: true });
+    lastSandboxTestRunReport = null;
+    lastPreflightAnalyzerReport = null;
+    recordWorkspaceAction("duplicate_scenario_test_case");
+    recordCanvasInteractionAction("duplicate_scenario_test_case");
+    renderWorkspaceDocumentStatus();
+    persistDraft();
+    return duplicate;
+  }
+
+  function deleteScenarioTestCase() {
+    const base = normalizeScenarioTestCaseLibraryPayload(scenarioTestCaseLibrary);
+    const activeId = selectedScenarioTestCaseIdValue();
+    let cases = base.test_cases.filter((testCase) => testCase.test_case_id !== activeId);
+    if (!cases.length) {
+      cases = [normalizeScenarioTestCaseRecord({
+        test_case_id: "sandbox_test_case_1",
+        name: "Nominal sandbox case",
+        scenario_id: selectedWorkbenchScenarioId(),
+        ticks: [{ tick: 0, inputs: {} }],
+        assertions: [],
+        expected_outputs: [],
+        notes: "",
+      }, 1)];
+    }
+    const nextActive = cases[0].test_case_id;
+    const library = normalizeScenarioTestCaseLibraryPayload({
+      ...base,
+      selected_test_case_id: nextActive,
+      active_test_case_id: nextActive,
+      test_cases: cases,
+    });
+    renderScenarioTestCaseLibrary(library, { loadActive: true });
+    lastSandboxTestRunReport = null;
+    lastPreflightAnalyzerReport = null;
+    recordWorkspaceAction("delete_scenario_test_case");
+    recordCanvasInteractionAction("delete_scenario_test_case");
+    renderWorkspaceDocumentStatus();
+    persistDraft();
+    return library;
+  }
+
+  function selectScenarioTestCase(testCaseId) {
+    try {
+      syncActiveScenarioTestCaseFromForm({
+        testCaseId: selectedScenarioTestCaseId,
+        loadActive: false,
+      });
+    } catch (_err) {
+      // Selection is still allowed; the target case may contain valid saved JSON.
+    }
+    const base = normalizeScenarioTestCaseLibraryPayload(scenarioTestCaseLibrary);
+    const targetId = scenarioTestCaseById(base, testCaseId) ? String(testCaseId) : base.test_cases[0].test_case_id;
+    const library = normalizeScenarioTestCaseLibraryPayload({
+      ...base,
+      selected_test_case_id: targetId,
+      active_test_case_id: targetId,
+      test_cases: base.test_cases,
+    });
+    renderScenarioTestCaseLibrary(library, { loadActive: true });
+    lastSandboxTestRunReport = null;
+    lastPreflightAnalyzerReport = null;
+    recordWorkspaceAction("select_scenario_test_case");
+    recordCanvasInteractionAction("select_scenario_test_case");
+    renderWorkspaceDocumentStatus();
+    persistDraft();
+    return scenarioTestCaseById(library, targetId);
+  }
+
+  function currentSandboxTestBenchDefinition() {
+    const library = currentScenarioTestCaseLibrary();
+    const activeCase =
+      scenarioTestCaseById(library, library.active_test_case_id)
+      || library.test_cases[0]
+      || currentScenarioTestCaseEditorRecord("sandbox_test_case_1", "Nominal sandbox case");
+    return {
+      kind: sandboxTestBenchKind,
+      version: sandboxTestBenchVersion,
+      scenario_id: activeCase.scenario_id || selectedWorkbenchScenarioId(),
+      test_case_id: activeCase.test_case_id,
+      selected_test_case_id: library.selected_test_case_id,
+      active_test_case_id: library.active_test_case_id,
+      test_case_name: activeCase.name,
+      ticks: activeCase.ticks || [],
+      assertions: activeCase.assertions || [],
+      expected_outputs: activeCase.expected_outputs || [],
+      notes: activeCase.notes || "",
+      tick_count: (activeCase.ticks || []).length,
+      assertion_count: (activeCase.assertions || []).length,
+      expected_output_count: (activeCase.expected_outputs || []).length,
+      scenario_test_case_library_checksum: scenarioTestCaseLibraryChecksum(library),
       source: "browser_local_draft",
       candidate_state: "sandbox_candidate",
       certification_claim: "none",
@@ -15583,10 +16117,15 @@ function installEditableWorkbenchShell() {
       kind: sandboxTestBenchKind,
       version: sandboxTestBenchVersion,
       scenario_id: selectedWorkbenchScenarioId(),
+      test_case_id: selectedScenarioTestCaseIdValue(),
+      selected_test_case_id: selectedScenarioTestCaseIdValue(),
+      active_test_case_id: selectedScenarioTestCaseIdValue(),
       ticks: [],
       assertions: [],
+      expected_outputs: [],
       tick_count: 0,
       assertion_count: 0,
+      expected_output_count: 0,
       validation_error: String(errorMessage || "invalid sandbox test bench JSON"),
       source: "browser_local_draft",
       candidate_state: "sandbox_candidate",
@@ -15626,6 +16165,21 @@ function installEditableWorkbenchShell() {
         null,
         2,
       );
+    }
+    if (scenarioTestCaseExpectedOutputs && Array.isArray(definition.expected_outputs)) {
+      scenarioTestCaseExpectedOutputs.value = JSON.stringify(
+        definition.expected_outputs.map((output) => ({
+          tick: output.tick,
+          target: output.target,
+          expected: output.expected,
+          comparator: output.comparator || "equals",
+        })),
+        null,
+        2,
+      );
+    }
+    if (scenarioTestCaseNotesInput && typeof definition.notes === "string") {
+      scenarioTestCaseNotesInput.value = definition.notes;
     }
   }
 
@@ -16218,6 +16772,14 @@ function installEditableWorkbenchShell() {
       ? snapshot
       : currentDraftSnapshot();
     const testBench = definition || currentSandboxTestBenchDefinition();
+    const graphDocument =
+      model.editable_graph_document && typeof model.editable_graph_document === "object" && !Array.isArray(model.editable_graph_document)
+        ? model.editable_graph_document
+        : buildEditableGraphDocumentFromSnapshot(model);
+    const workspaceDocument =
+      model.workspace_document && typeof model.workspace_document === "object" && !Array.isArray(model.workspace_document)
+        ? model.workspace_document
+        : currentWorkspaceDocument();
     const nodesForRun = Array.isArray(model.nodes) ? model.nodes : [];
     const edgesForRun = Array.isArray(model.edges) ? model.edges : [];
     const validationFindings = [];
@@ -16282,6 +16844,15 @@ function installEditableWorkbenchShell() {
       kind: sandboxTestRunReportKind,
       version: sandboxTestRunReportVersion,
       scenario_id: testBench.scenario_id || selectedWorkbenchScenarioId(),
+      test_case_id: testBench.test_case_id || testBench.active_test_case_id || selectedScenarioTestCaseIdValue(),
+      selected_test_case_id: testBench.selected_test_case_id || testBench.test_case_id || selectedScenarioTestCaseIdValue(),
+      active_test_case_id: testBench.active_test_case_id || testBench.test_case_id || selectedScenarioTestCaseIdValue(),
+      graph_document_id: graphDocument.document_id || "ui_draft_workspace_document_v1",
+      graph_document_version: graphDocument.version || editableGraphDocumentVersion,
+      graph_document_revision_id: graphDocument.workspace_revision_id || workspaceDocument.revision_id || "ui_draft_pending",
+      workspace_revision_id: workspaceDocument.revision_id || graphDocument.workspace_revision_id || "ui_draft_pending",
+      scenario_test_case_library_checksum:
+        testBench.scenario_test_case_library_checksum || scenarioTestCaseLibraryChecksum(),
       model_hash: sandboxCandidateModelHash(nodesForRun, edgesForRun, testBench),
       definition: testBench,
       status,
@@ -16324,13 +16895,23 @@ function installEditableWorkbenchShell() {
     if (runTestBenchBtn) runTestBenchBtn.disabled = true;
     if (sandboxTestBenchStatus) sandboxTestBenchStatus.textContent = "running";
     try {
+      syncActiveScenarioTestCaseFromForm({ loadActive: false });
       const definition = currentSandboxTestBenchDefinition();
       report = evaluateSandboxTestBench(currentDraftSnapshot(), definition);
     } catch (err) {
+      const workspaceDocument = currentWorkspaceDocument();
       report = {
         kind: sandboxTestRunReportKind,
         version: sandboxTestRunReportVersion,
         scenario_id: selectedWorkbenchScenarioId(),
+        test_case_id: selectedScenarioTestCaseIdValue(),
+        selected_test_case_id: selectedScenarioTestCaseIdValue(),
+        active_test_case_id: selectedScenarioTestCaseIdValue(),
+        graph_document_id: workspaceDocument.document_id || "ui_draft_workspace_document_v1",
+        graph_document_version: editableGraphDocumentVersion,
+        graph_document_revision_id: workspaceDocument.revision_id || "ui_draft_pending",
+        workspace_revision_id: workspaceDocument.revision_id || "ui_draft_pending",
+        scenario_test_case_library_checksum: scenarioTestCaseLibraryChecksum(safeScenarioTestCaseLibrary()),
         status: "invalid_scenario",
         assertion_status: "not_run",
         pass_count: 0,
@@ -16409,6 +16990,7 @@ function installEditableWorkbenchShell() {
       hardware_evidence_v2: snapshot.hardware_evidence_v2,
       selected_debug_timeline: snapshot.selected_debug_timeline,
       candidate_baseline_diff_review_v2: candidateBaselineDiffReviewV2,
+      scenario_test_case_library: snapshot.scenario_test_case_library,
       sandbox_test_bench: snapshot.sandbox_test_bench,
       sandbox_test_run_report: snapshot.sandbox_test_run_report,
       candidate_debugger_view: snapshot.candidate_debugger_view,
@@ -16462,6 +17044,14 @@ function installEditableWorkbenchShell() {
       && !Array.isArray(canonicalModel.sandbox_test_bench)
     ) {
       nextPayload.sandbox_test_bench = canonicalModel.sandbox_test_bench;
+    }
+    if (
+      nextPayload.scenario_test_case_library === undefined
+      && canonicalModel.scenario_test_case_library
+      && typeof canonicalModel.scenario_test_case_library === "object"
+      && !Array.isArray(canonicalModel.scenario_test_case_library)
+    ) {
+      nextPayload.scenario_test_case_library = canonicalModel.scenario_test_case_library;
     }
     if (
       nextPayload.hardware_interface_designer === undefined
@@ -16815,6 +17405,44 @@ function installEditableWorkbenchShell() {
       throw new Error("hardware_evidence_v2 truth_effect must be none");
     }
     if (
+      payload.scenario_test_case_library !== undefined
+      && payload.scenario_test_case_library !== null
+      && (
+        !payload.scenario_test_case_library
+        || typeof payload.scenario_test_case_library !== "object"
+        || Array.isArray(payload.scenario_test_case_library)
+      )
+    ) {
+      throw new Error("scenario_test_case_library must be an object when present");
+    }
+    if (payload.scenario_test_case_library) {
+      const library = payload.scenario_test_case_library;
+      if (library.kind !== scenarioTestCaseLibraryKind) {
+        throw new Error("scenario_test_case_library kind must be well-harness-workbench-scenario-test-case-library");
+      }
+      if (library.version !== scenarioTestCaseLibraryVersion) {
+        throw new Error("scenario_test_case_library version must be workbench-scenario-test-case-library.v1");
+      }
+      if (typeof library.selected_test_case_id !== "string" || !library.selected_test_case_id) {
+        throw new Error("scenario_test_case_library selected_test_case_id must be a non-empty string");
+      }
+      if (typeof library.active_test_case_id !== "string" || !library.active_test_case_id) {
+        throw new Error("scenario_test_case_library active_test_case_id must be a non-empty string");
+      }
+      if (!Array.isArray(library.test_cases)) {
+        throw new Error("scenario_test_case_library test_cases must be an array");
+      }
+      if (library.candidate_state !== "sandbox_candidate") {
+        throw new Error("scenario_test_case_library candidate_state must be sandbox_candidate");
+      }
+      if (library.certification_claim !== "none") {
+        throw new Error("scenario_test_case_library certification_claim must be none");
+      }
+      if (library.truth_effect !== "none") {
+        throw new Error("scenario_test_case_library truth_effect must be none");
+      }
+    }
+    if (
       payload.selected_debug_timeline !== undefined
       && (!payload.selected_debug_timeline || typeof payload.selected_debug_timeline !== "object" || Array.isArray(payload.selected_debug_timeline))
     ) {
@@ -17157,7 +17785,7 @@ function installEditableWorkbenchShell() {
     if (customSnapshotInput && validated.custom_snapshot) {
       customSnapshotInput.value = JSON.stringify(validated.custom_snapshot, null, 2);
     }
-    restoreSandboxTestBenchDefinition(validated.sandbox_test_bench);
+    restoreScenarioTestCaseLibrary(validated.scenario_test_case_library, validated.sandbox_test_bench);
     lastSandboxTestRunReport = normalizeImportedSandboxTestRunReport(validated.sandbox_test_run_report);
     if (lastSandboxTestRunReport) {
       renderSandboxTestBenchReport(lastSandboxTestRunReport);
@@ -17217,6 +17845,8 @@ function installEditableWorkbenchShell() {
       workspaceDocument: validated.workspace_document || null,
       canvasInteractionSummary: validated.canvas_interaction_summary || null,
       preflightAnalyzerReport: validated.preflight_analyzer_report || null,
+      scenarioTestCaseLibrary: validated.scenario_test_case_library || null,
+      sandboxTestBench: validated.sandbox_test_bench || null,
       hardwareInterfaceDesigner: validated.hardware_interface_designer || null,
       hardwareInterfaceDesignerValidation: validated.hardware_interface_designer_validation || null,
       selectedCatalogOp: importedCatalog.selected_op,
@@ -18459,6 +19089,7 @@ function installEditableWorkbenchShell() {
     ["model_json", "model_json_checksum"],
     ["diff_summary", "diff_summary_checksum"],
     ["candidate_baseline_diff_review_v2", "candidate_baseline_diff_review_v2_checksum"],
+    ["scenario_test_case_library", "scenario_test_case_library_checksum"],
     ["sandbox_test_bench", "sandbox_test_bench_checksum"],
     ["sandbox_test_run_report", "sandbox_test_run_report_checksum"],
     ["candidate_debugger_view", "candidate_debugger_view_checksum"],
@@ -18534,6 +19165,8 @@ function installEditableWorkbenchShell() {
       },
       review_packet: {
         graph_checksum: checksums.editable_graph_document_checksum || "missing",
+        scenario_test_case_library_checksum:
+          checksums.scenario_test_case_library_checksum || "missing",
         test_bench_checksum: checksums.sandbox_test_bench_checksum || "missing",
         run_report_checksum: checksums.sandbox_test_run_report_checksum || "missing",
         debugger_checksum: checksums.candidate_debugger_view_checksum || "missing",
@@ -18718,6 +19351,8 @@ function installEditableWorkbenchShell() {
     const candidateBaselineDiffReviewV2 =
       modelJson.candidate_baseline_diff_review_v2
       || currentCandidateBaselineDiffReviewV2Report("archive", modelJson.changed_model_hash);
+    const scenarioTestCaseLibraryArchive =
+      modelJson.scenario_test_case_library || safeScenarioTestCaseLibrary();
     const sandboxTestBench =
       modelJson.sandbox_test_bench || safeSandboxTestBenchDefinition();
     const sandboxTestRunReport =
@@ -18787,6 +19422,7 @@ function installEditableWorkbenchShell() {
       hardware_evidence_v2: hardwareEvidenceV2,
       selected_debug_timeline: selectedDebugTimeline,
       candidate_baseline_diff_review_v2: candidateBaselineDiffReviewV2,
+      scenario_test_case_library: scenarioTestCaseLibraryArchive,
       sandbox_test_bench: sandboxTestBench,
       sandbox_test_run_report: sandboxTestRunReport,
       candidate_debugger_view: candidateDebuggerView,
@@ -18836,6 +19472,7 @@ function installEditableWorkbenchShell() {
       hardware_evidence_v2_checksum: checksumEvidenceArchiveField(hardwareEvidenceV2),
       selected_debug_timeline_checksum: checksumEvidenceArchiveField(selectedDebugTimeline),
       candidate_baseline_diff_review_v2_checksum: checksumEvidenceArchiveField(candidateBaselineDiffReviewV2),
+      scenario_test_case_library_checksum: checksumEvidenceArchiveField(scenarioTestCaseLibraryArchive),
       sandbox_test_bench_checksum: checksumEvidenceArchiveField(sandboxTestBench),
       sandbox_test_run_report_checksum: checksumEvidenceArchiveField(sandboxTestRunReport),
       candidate_debugger_view_checksum: checksumEvidenceArchiveField(candidateDebuggerView),
@@ -18986,6 +19623,7 @@ function installEditableWorkbenchShell() {
   }
 
   restoreDraft();
+  renderScenarioTestCaseLibrary(safeScenarioTestCaseLibrary(), { loadActive: true });
   for (const node of nodes) {
     attachEditableNodeHandler(node);
   }
@@ -18997,6 +19635,23 @@ function installEditableWorkbenchShell() {
   }
   if (runTestBenchBtn) {
     runTestBenchBtn.addEventListener("click", () => runSandboxTestBench());
+  }
+  if (scenarioTestCaseSelect) {
+    scenarioTestCaseSelect.addEventListener("change", () => {
+      selectScenarioTestCase(scenarioTestCaseSelect.value);
+    });
+  }
+  if (createTestCaseBtn) {
+    createTestCaseBtn.addEventListener("click", () => createScenarioTestCase());
+  }
+  if (saveTestCaseBtn) {
+    saveTestCaseBtn.addEventListener("click", () => saveScenarioTestCase());
+  }
+  if (duplicateTestCaseBtn) {
+    duplicateTestCaseBtn.addEventListener("click", () => duplicateScenarioTestCase());
+  }
+  if (deleteTestCaseBtn) {
+    deleteTestCaseBtn.addEventListener("click", () => deleteScenarioTestCase());
   }
   if (runPreflightBtn) {
     runPreflightBtn.addEventListener("click", () => runWorkbenchPreflightAnalyzer());
@@ -19155,24 +19810,19 @@ function installEditableWorkbenchShell() {
     downloadArchiveBtn.addEventListener("click", () => downloadWorkbenchEvidenceArchive());
   }
   if (sandboxTestBenchInputs) {
-    sandboxTestBenchInputs.addEventListener("input", () => {
-      lastSandboxTestRunReport = null;
-      lastPreflightAnalyzerReport = null;
-      if (sandboxTestBenchStatus) sandboxTestBenchStatus.textContent = "edited";
-      if (sandboxTestBenchPanel) sandboxTestBenchPanel.setAttribute("data-test-status", "edited");
-      renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("test_bench_edited"));
-      persistDraft();
-    });
+    sandboxTestBenchInputs.addEventListener("input", () => markScenarioTestCaseLibraryEdited());
   }
   if (sandboxTestBenchAssertions) {
-    sandboxTestBenchAssertions.addEventListener("input", () => {
-      lastSandboxTestRunReport = null;
-      lastPreflightAnalyzerReport = null;
-      if (sandboxTestBenchStatus) sandboxTestBenchStatus.textContent = "edited";
-      if (sandboxTestBenchPanel) sandboxTestBenchPanel.setAttribute("data-test-status", "edited");
-      renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("test_bench_edited"));
-      persistDraft();
-    });
+    sandboxTestBenchAssertions.addEventListener("input", () => markScenarioTestCaseLibraryEdited());
+  }
+  if (scenarioTestCaseExpectedOutputs) {
+    scenarioTestCaseExpectedOutputs.addEventListener("input", () => markScenarioTestCaseLibraryEdited());
+  }
+  if (scenarioTestCaseNotesInput) {
+    scenarioTestCaseNotesInput.addEventListener("input", () => markScenarioTestCaseLibraryEdited());
+  }
+  if (scenarioTestCaseNameInput) {
+    scenarioTestCaseNameInput.addEventListener("input", () => markScenarioTestCaseLibraryEdited());
   }
 
   function isFormShortcutTarget(target) {

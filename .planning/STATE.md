@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Workbench v5 deep-water implementation active · JER-231 merged · JER-232 port drag wiring in progress
-last_updated: "2026-05-02T21:04:21.000+08:00"
+status: Workbench v5 deep-water implementation active · JER-233 scenario test case library complete
+last_updated: "2026-05-02T23:06:15.000+08:00"
 last_activity: 2026-05-02
 progress:
   total_phases: 55
   completed_phases: 45
   total_plans: 2
   completed_plans: 1
-  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 through JER-219 built the current single-user authoring base: templates, subsystems, hardware/interface evidence, debug/diff/handoff packets, archive validation, workspace_document, and canvas_interaction_summary. JER-220 reset the active roadmap to foundation-first: editor -> runner -> test bench -> debugger -> archive, with thrust-reverser and C919 E-TRAS treated as reference/sample packs. JER-221 and JER-222 closed canonical editable graph and port/wire route metadata. JER-223 closed the first sandbox scenario test bench run report for candidate graph inputs/assertions. JER-224 closed selected candidate debugging over run failures, watched values, and archive checksums. JER-225 closed a sandbox-only preflight analyzer that classifies candidates as ready, needs_evidence, or invalid_candidate before handoff/archive. JER-226 closed the first UI-facing hardware/interface design authoring surface for sandbox LRUs, cables, connectors, ports, pins, bindings, evidence gaps, validation, and archive checksums. JER-227 closed the foundation review archive bundle. JER-228 closed validation-suite timeout isolation and clean origin/main worktree hygiene. JER-229 launched Workbench v5 deep-water planning: empty-canvas graph authoring, canonical graph document v2, port drag wiring, scenario library, runner trace kernel, debug timeline, hardware evidence attachment, command palette ergonomics, and archive restore v3. JER-230 closed v5 empty-canvas sandbox authoring with input/output primitives and canvas_authoring_mode export/import/archive evidence. JER-231 closed canonical graph document v2 with a canonical_model payload, DOM adapter boundary metadata, v1 import migration, and canonical-only import fallback. JER-232 is adding direct port-drag wiring preview, compatibility diagnostics, and route metadata while preserving sandbox-only truth_effect none. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
+  notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 through JER-219 built the current single-user authoring base: templates, subsystems, hardware/interface evidence, debug/diff/handoff packets, archive validation, workspace_document, and canvas_interaction_summary. JER-220 reset the active roadmap to foundation-first: editor -> runner -> test bench -> debugger -> archive, with thrust-reverser and C919 E-TRAS treated as reference/sample packs. JER-221 and JER-222 closed canonical editable graph and port/wire route metadata. JER-223 closed the first sandbox scenario test bench run report for candidate graph inputs/assertions. JER-224 closed selected candidate debugging over run failures, watched values, and archive checksums. JER-225 closed a sandbox-only preflight analyzer that classifies candidates as ready, needs_evidence, or invalid_candidate before handoff/archive. JER-226 closed the first UI-facing hardware/interface design authoring surface for sandbox LRUs, cables, connectors, ports, pins, bindings, evidence gaps, validation, and archive checksums. JER-227 closed the foundation review archive bundle. JER-228 closed validation-suite timeout isolation and clean origin/main worktree hygiene. JER-229 launched Workbench v5 deep-water planning: empty-canvas graph authoring, canonical graph document v2, port drag wiring, scenario library, runner trace kernel, debug timeline, hardware evidence attachment, command palette ergonomics, and archive restore v3. JER-230 closed v5 empty-canvas sandbox authoring with input/output primitives and canvas_authoring_mode export/import/archive evidence. JER-231 closed canonical graph document v2 with a canonical_model payload, DOM adapter boundary metadata, v1 import migration, and canonical-only import fallback. JER-232 closed direct port-drag wiring preview, compatibility diagnostics, and route metadata after PR #214 while preserving sandbox-only truth_effect none. JER-233 closed the sandbox scenario test case library with saved test cases, expected outputs, notes, graph/workspace revision-linked run reports, export/import, and archive checksum coverage. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
@@ -22,8 +22,9 @@ Last activity: 2026-05-02
 **Current position**: JER-204 through JER-228 are merged on the v4 line, and
 JER-229 has launched Workbench v5 deep-water planning, JER-230 has closed the
 first implementation slice with empty-canvas graph authoring, JER-231 has
-closed the canonical graph document v2 boundary, and JER-232 is implementing
-direct port-drag wiring with route diagnostics. The active mainline is the
+closed the canonical graph document v2 boundary, JER-232 closed direct
+port-drag wiring with route diagnostics after PR #214, and JER-233 has closed
+the scenario test case library v1 slice. The active mainline is the
 generic single-user foundation: editor, runner, test bench, debugger, archive,
 and hardware/interface evidence. The existing thrust-reverser and C919 chains
 are reference samples, not the next dedicated product panels.
@@ -62,7 +63,8 @@ are reference samples, not the next dedicated product panels.
 - JER-229 is Done after PR #211.
 - JER-230 is Done after PR #212.
 - JER-231 is Done after PR #213.
-- JER-232 is In Progress for direct port-drag wiring and route diagnostics.
+- JER-232 is Done after PR #214.
+- JER-233 is Done after adding the scenario test case library v1 evidence.
 
 **Runtime v3 closure summary**:
 
@@ -229,6 +231,21 @@ should be straightforward to rebuild as examples on top of the generic base.
 - Drag cancellation or rejected links stay local validation feedback and do not
   mutate controller truth, adapters, hardware YAML, frozen assets, DAL, or
   truth-level state.
+
+**JER-233 scenario test case library slice**:
+
+- The right inspector now turns the sandbox test bench into a saved
+  `scenario_test_case_library` with create, save, duplicate, delete, and select
+  controls.
+- Each saved test case carries a stable id, name, scenario id, tick inputs,
+  assertions, expected outputs, notes, `candidate_state: sandbox_candidate`,
+  `certification_claim: none`, and `truth_effect: none`.
+- Sandbox run reports still use `workbench-sandbox-test-run-report.v1` and now
+  reference the selected/active test case id, graph document id/version,
+  graph/workspace revision ids, and `scenario_test_case_library_checksum`.
+- Draft export/import, browser restore, editable graph document v2 canonical
+  model, evidence archive, and foundation review archive carry the library and
+  checksum coverage while preserving legacy single test bench imports.
 
 **JER-206 component-library closure**:
 
