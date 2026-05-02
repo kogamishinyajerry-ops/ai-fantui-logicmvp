@@ -7803,6 +7803,8 @@ function installEditableWorkbenchShell() {
   const sandboxTestBenchVersion = "workbench-sandbox-test-bench.v1";
   const sandboxTestRunReportKind = "well-harness-workbench-sandbox-test-run-report";
   const sandboxTestRunReportVersion = "workbench-sandbox-test-run-report.v1";
+  const sandboxRunnerTraceKernelKind = "well-harness-workbench-sandbox-runner-trace-kernel";
+  const sandboxRunnerTraceKernelVersion = "workbench-sandbox-runner-trace-kernel.v2";
   const scenarioTestCaseLibraryKind = "well-harness-workbench-scenario-test-case-library";
   const scenarioTestCaseLibraryVersion = "workbench-scenario-test-case-library.v1";
   const candidateDebuggerViewKind = "well-harness-workbench-candidate-debugger-view";
@@ -16185,12 +16187,29 @@ function installEditableWorkbenchShell() {
 
   function normalizeImportedSandboxTestRunReport(report) {
     if (!report || typeof report !== "object" || Array.isArray(report)) return null;
-    return {
+    const normalized = {
       ...report,
       candidate_state: "sandbox_candidate",
       certification_claim: "none",
       truth_effect: "none",
     };
+    if (
+      normalized.sandbox_runner_trace_kernel
+      && typeof normalized.sandbox_runner_trace_kernel === "object"
+      && !Array.isArray(normalized.sandbox_runner_trace_kernel)
+    ) {
+      normalized.sandbox_runner_trace_kernel = {
+        ...normalized.sandbox_runner_trace_kernel,
+        candidate_state: "sandbox_candidate",
+        certification_claim: "none",
+        truth_effect: "none",
+      };
+      if (!normalized.sandbox_runner_trace_kernel_checksum) {
+        normalized.sandbox_runner_trace_kernel_checksum =
+          sandboxRunnerTraceKernelChecksum(normalized.sandbox_runner_trace_kernel);
+      }
+    }
+    return normalized;
   }
 
   function currentSandboxTestRunReport() {
@@ -16668,6 +16687,15 @@ function installEditableWorkbenchShell() {
     return undefined;
   }
 
+  function readSandboxValueRecord(values, keys) {
+    for (const key of keys || []) {
+      if (key && Object.prototype.hasOwnProperty.call(values, key)) {
+        return { key, value: values[key], available: true };
+      }
+    }
+    return { key: "", value: undefined, available: false };
+  }
+
   function nodeInputValues(node, values, edges) {
     const nodeId = String((node && node.id) || "");
     const candidates = [
@@ -16714,6 +16742,351 @@ function installEditableWorkbenchShell() {
       if (edge.targetPortId) values[edge.targetPortId] = value;
       if (edge.target) values[`${edge.target}:in`] = value;
     }
+  }
+
+  function sandboxRunnerFinding(code, message, fields) {
+    const source = fields && typeof fields === "object" && !Array.isArray(fields) ? fields : {};
+    return {
+      code,
+      message,
+      severity: source.severity || (code === "missing_input" ? "warning" : "error"),
+      ...(source.tick !== undefined ? { tick: source.tick } : {}),
+      ...(source.node_id ? { node_id: source.node_id } : {}),
+      ...(source.edge_id ? { edge_id: source.edge_id } : {}),
+      ...(source.port_id ? { port_id: source.port_id } : {}),
+      ...(source.op ? { op: source.op } : {}),
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function normalizeSandboxRunnerNode(node, index) {
+    const nodeId = String((node && node.id) || `sandbox_node_${index + 1}`);
+    const op = String((node && (node.op_catalog_entry || node.op || node.opCatalogEntry)) || "and");
+    return {
+      node,
+      index,
+      node_id: nodeId,
+      op,
+      input_port_id: nodeInputPortId(node),
+      output_port_id: nodeOutputPortId(node),
+    };
+  }
+
+  function normalizeSandboxRunnerEdge(edge, index) {
+    const source = String((edge && edge.source) || "");
+    const target = String((edge && edge.target) || "");
+    return {
+      edge,
+      index,
+      edge_id: String((edge && edge.id) || `sandbox_edge_${index + 1}`),
+      source_node_id: source,
+      target_node_id: target,
+      source_port_id: String((edge && (edge.source_port_id || edge.sourcePortId)) || (source ? `${source}:out` : "")),
+      target_port_id: String((edge && (edge.target_port_id || edge.targetPortId)) || (target ? `${target}:in` : "")),
+    };
+  }
+
+  function prepareSandboxRunnerGraph(nodesForRun, edgesForRun) {
+    const runnerNodes = (Array.isArray(nodesForRun) ? nodesForRun : [])
+      .map((node, index) => normalizeSandboxRunnerNode(node, index));
+    const nodeById = new Map(runnerNodes.map((node) => [node.node_id, node]));
+    const findings = [];
+    for (const node of runnerNodes) {
+      if (!approvedOperationCatalog[node.op]) {
+        findings.push(sandboxRunnerFinding("unsupported_op", `Unsupported sandbox op ${node.op}`, {
+          node_id: node.node_id,
+          op: node.op,
+        }));
+      }
+    }
+    const seenEdges = new Set();
+    const validEdges = [];
+    const runnerEdges = (Array.isArray(edgesForRun) ? edgesForRun : [])
+      .map((edge, index) => normalizeSandboxRunnerEdge(edge, index));
+    for (const edge of runnerEdges) {
+      const key = `${edge.source_node_id}:${edge.source_port_id}->${edge.target_node_id}:${edge.target_port_id}`;
+      const sourceMissing = !edge.source_node_id || !nodeById.has(edge.source_node_id);
+      const targetMissing = !edge.target_node_id || !nodeById.has(edge.target_node_id);
+      if (sourceMissing || targetMissing) {
+        findings.push(sandboxRunnerFinding("dangling_edge", `Dangling edge ${edge.edge_id}`, {
+          edge_id: edge.edge_id,
+          port_id: sourceMissing ? edge.source_port_id : edge.target_port_id,
+        }));
+        continue;
+      }
+      if (seenEdges.has(key)) {
+        findings.push(sandboxRunnerFinding("duplicate_edge", `Duplicate edge ${edge.edge_id}`, {
+          edge_id: edge.edge_id,
+        }));
+        continue;
+      }
+      seenEdges.add(key);
+      if (edge.source_node_id === edge.target_node_id) {
+        findings.push(sandboxRunnerFinding("self_loop", `Self loop edge ${edge.edge_id}`, {
+          edge_id: edge.edge_id,
+          node_id: edge.source_node_id,
+        }));
+        continue;
+      }
+      validEdges.push(edge);
+    }
+
+    const indegree = new Map(runnerNodes.map((node) => [node.node_id, 0]));
+    const outgoing = new Map(runnerNodes.map((node) => [node.node_id, []]));
+    for (const edge of validEdges) {
+      indegree.set(edge.target_node_id, (indegree.get(edge.target_node_id) || 0) + 1);
+      outgoing.get(edge.source_node_id).push(edge);
+    }
+    const ready = runnerNodes
+      .filter((node) => (indegree.get(node.node_id) || 0) === 0)
+      .map((node) => node.node_id);
+    const evaluationOrder = [];
+    while (ready.length) {
+      const nodeId = ready.shift();
+      evaluationOrder.push(nodeId);
+      for (const edge of outgoing.get(nodeId) || []) {
+        const nextIndegree = (indegree.get(edge.target_node_id) || 0) - 1;
+        indegree.set(edge.target_node_id, nextIndegree);
+        if (nextIndegree === 0) ready.push(edge.target_node_id);
+      }
+    }
+    if (evaluationOrder.length !== runnerNodes.length) {
+      const cyclicIds = runnerNodes
+        .map((node) => node.node_id)
+        .filter((nodeId) => !evaluationOrder.includes(nodeId));
+      findings.push(sandboxRunnerFinding("cycle_detected", `Cycle detected across ${cyclicIds.join(", ")}`, {
+        node_id: cyclicIds[0] || "",
+      }));
+      return {
+        nodes: runnerNodes,
+        node_by_id: nodeById,
+        edges: runnerEdges,
+        valid_edges: validEdges,
+        evaluation_order: runnerNodes.map((node) => node.node_id),
+        findings,
+      };
+    }
+    return {
+      nodes: runnerNodes,
+      node_by_id: nodeById,
+      edges: runnerEdges,
+      valid_edges: validEdges,
+      evaluation_order: evaluationOrder,
+      findings,
+    };
+  }
+
+  function sandboxRunnerInputRecords(node, values, incomingEdges, tick) {
+    const records = [];
+    const direct = readSandboxValueRecord(values, [
+      node.input_port_id,
+      `${node.node_id}:in`,
+      node.node_id,
+    ]);
+    if (direct.available) {
+      records.push({
+        source: "direct",
+        port_id: direct.key,
+        value: normalizeEvidenceArchiveValue(direct.value),
+        available: true,
+        truth_effect: "none",
+      });
+    }
+    for (const edge of incomingEdges || []) {
+      const sourceValue = readSandboxValueRecord(values, [
+        edge.source_port_id,
+        `${edge.source_node_id}:out`,
+        edge.source_node_id,
+      ]);
+      if (sourceValue.available) {
+        records.push({
+          source: "edge",
+          edge_id: edge.edge_id,
+          port_id: edge.target_port_id,
+          source_port_id: edge.source_port_id,
+          value: normalizeEvidenceArchiveValue(sourceValue.value),
+          available: true,
+          truth_effect: "none",
+        });
+      }
+    }
+    if (records.length) {
+      return { records, values: records.map((record) => record.value), findings: [] };
+    }
+    const finding = sandboxRunnerFinding("missing_input", `Missing input for ${node.node_id}`, {
+      tick,
+      node_id: node.node_id,
+      port_id: node.input_port_id || `${node.node_id}:in`,
+      severity: "warning",
+    });
+    return {
+      records: [{
+        source: "default",
+        port_id: node.input_port_id || `${node.node_id}:in`,
+        value: false,
+        available: false,
+        truth_effect: "none",
+      }],
+      values: [false],
+      findings: [finding],
+    };
+  }
+
+  function sandboxRunnerPortValues(nodes, values) {
+    const records = [];
+    for (const node of nodes || []) {
+      for (const direction of ["in", "out"]) {
+        const portId = direction === "in" ? node.input_port_id : node.output_port_id;
+        const value = readSandboxValueRecord(values, [
+          portId,
+          `${node.node_id}:${direction}`,
+          direction === "out" ? node.node_id : "",
+        ]);
+        records.push({
+          port_id: portId || `${node.node_id}:${direction}`,
+          owner_id: node.node_id,
+          direction,
+          value: normalizeEvidenceArchiveValue(value.value),
+          available: value.available,
+          truth_effect: "none",
+        });
+      }
+    }
+    return records.sort((left, right) => left.port_id.localeCompare(right.port_id));
+  }
+
+  function sandboxRunnerEdgeValues(edges, values) {
+    return (edges || []).map((edge) => {
+      const sourceValue = readSandboxValueRecord(values, [
+        edge.source_port_id,
+        `${edge.source_node_id}:out`,
+        edge.source_node_id,
+      ]);
+      return {
+        edge_id: edge.edge_id,
+        source_node_id: edge.source_node_id,
+        target_node_id: edge.target_node_id,
+        source_port_id: edge.source_port_id,
+        target_port_id: edge.target_port_id,
+        value: normalizeEvidenceArchiveValue(sourceValue.value),
+        available: sourceValue.available,
+        truth_effect: "none",
+      };
+    }).sort((left, right) => left.edge_id.localeCompare(right.edge_id));
+  }
+
+  function sandboxRunnerAssertionResults(assertions, frame) {
+    return (assertions || [])
+      .filter((assertion) => Number(assertion.tick) === Number(frame.tick))
+      .map((assertion) => {
+        const observed = frame && frame.values
+          ? readSandboxValue(frame.values, [assertion.target])
+          : undefined;
+        const status = sandboxValueEquals(observed, assertion.expected) ? "pass" : "fail";
+        return {
+          tick: assertion.tick,
+          target: assertion.target,
+          expected: assertion.expected,
+          observed: normalizeEvidenceArchiveValue(observed),
+          comparator: assertion.comparator || "equals",
+          status,
+          truth_effect: "none",
+        };
+      });
+  }
+
+  function buildSandboxRunnerTraceKernel(nodesForRun, edgesForRun, testBench) {
+    const graph = prepareSandboxRunnerGraph(nodesForRun, edgesForRun);
+    const findings = [...graph.findings];
+    const frames = [];
+    const state = { previous_outputs: {} };
+    const incomingByNode = new Map(graph.nodes.map((node) => [node.node_id, []]));
+    const outgoingByNode = new Map(graph.nodes.map((node) => [node.node_id, []]));
+    for (const edge of graph.valid_edges) {
+      incomingByNode.get(edge.target_node_id).push(edge);
+      outgoingByNode.get(edge.source_node_id).push(edge);
+    }
+    for (const tick of testBench.ticks || []) {
+      const values = { ...(tick.inputs || {}) };
+      const nodeValues = [];
+      const frameFindings = [];
+      for (const nodeId of graph.evaluation_order) {
+        const node = graph.node_by_id.get(nodeId);
+        if (!node) continue;
+        const input = sandboxRunnerInputRecords(node, values, incomingByNode.get(nodeId), tick.tick);
+        frameFindings.push(...input.findings);
+        findings.push(...input.findings);
+        const result = evaluateSandboxNode(node.node, input.values, state);
+        const resultFindings = result.finding
+          ? [sandboxRunnerFinding(result.finding.code || "runner_node_finding", result.finding.message || "Runner node finding", {
+              tick: tick.tick,
+              node_id: node.node_id,
+              op: node.op,
+            })]
+          : [];
+        frameFindings.push(...resultFindings);
+        findings.push(...resultFindings);
+        writeSandboxNodeOutput(values, node.node, result.value);
+        propagateSandboxEdges(values, (outgoingByNode.get(nodeId) || []).map((edge) => ({
+          source: edge.source_node_id,
+          target: edge.target_node_id,
+          source_port_id: edge.source_port_id,
+          target_port_id: edge.target_port_id,
+        })));
+        nodeValues.push({
+          node_id: node.node_id,
+          op: node.op,
+          input_values: input.records,
+          output_value: normalizeEvidenceArchiveValue(result.value),
+          status: input.findings.length && result.status === "ok" ? "missing_input" : result.status,
+          findings: [...input.findings, ...resultFindings],
+          truth_effect: "none",
+        });
+      }
+      const frame = {
+        tick: tick.tick,
+        input_values: normalizeEvidenceArchiveValue(tick.inputs || {}),
+        values: normalizeEvidenceArchiveValue(values),
+        node_values: nodeValues,
+        node_results: nodeValues,
+        port_values: sandboxRunnerPortValues(graph.nodes, values),
+        edge_values: sandboxRunnerEdgeValues(graph.edges, values),
+        assertion_results: [],
+        findings: frameFindings,
+        truth_effect: "none",
+      };
+      frame.assertion_results = sandboxRunnerAssertionResults(testBench.assertions || [], frame);
+      frames.push(frame);
+      state.previous_outputs = { ...values };
+    }
+    const structuralInvalidCodes = new Set([
+      "unsupported_op",
+      "dangling_edge",
+      "duplicate_edge",
+      "self_loop",
+      "cycle_detected",
+    ]);
+    const structuralInvalid = findings.some((finding) => structuralInvalidCodes.has(finding.code));
+    return {
+      kind: sandboxRunnerTraceKernelKind,
+      version: sandboxRunnerTraceKernelVersion,
+      status: structuralInvalid ? "invalid_scenario" : "pass",
+      evaluation_order: graph.evaluation_order,
+      tick_count: (testBench.ticks || []).length,
+      trace_frame_count: frames.length,
+      finding_count: findings.length,
+      findings,
+      frames,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function sandboxRunnerTraceKernelChecksum(kernel) {
+    return checksumEvidenceArchiveField(kernel);
   }
 
   function evaluateSandboxNode(node, inputValues, state) {
@@ -16782,64 +17155,37 @@ function installEditableWorkbenchShell() {
         : currentWorkspaceDocument();
     const nodesForRun = Array.isArray(model.nodes) ? model.nodes : [];
     const edgesForRun = Array.isArray(model.edges) ? model.edges : [];
-    const validationFindings = [];
-    const trace = [];
-    const state = { previous_outputs: {} };
-    for (const tick of testBench.ticks || []) {
-      const values = { ...(tick.inputs || {}) };
-      const nodeResults = [];
-      for (let pass = 0; pass < Math.max(1, nodesForRun.length); pass += 1) {
-        propagateSandboxEdges(values, edgesForRun);
-        for (const node of nodesForRun) {
-          const result = evaluateSandboxNode(
-            node,
-            nodeInputValues(node, values, edgesForRun),
-            state,
-          );
-          if (result.finding) validationFindings.push(result.finding);
-          writeSandboxNodeOutput(values, node, result.value);
-          nodeResults.push({
-            node_id: node.id,
-            op: node.op || node.op_catalog_entry || "and",
-            value: normalizeEvidenceArchiveValue(result.value),
-            status: result.status,
-            truth_effect: "none",
-          });
-        }
-      }
-      propagateSandboxEdges(values, edgesForRun);
-      trace.push({
-        tick: tick.tick,
-        values: normalizeEvidenceArchiveValue(values),
-        node_results: nodeResults,
-        truth_effect: "none",
-      });
-      state.previous_outputs = { ...values };
-    }
-    const assertions = (testBench.assertions || []).map((assertion) => {
-      const frame = trace.find((item) => Number(item.tick) === Number(assertion.tick));
-      const observed = frame && frame.values
-        ? readSandboxValue(frame.values, [assertion.target])
-        : undefined;
-      const status = sandboxValueEquals(observed, assertion.expected) ? "pass" : "fail";
-      return {
-        tick: assertion.tick,
-        target: assertion.target,
-        expected: assertion.expected,
-        observed: normalizeEvidenceArchiveValue(observed),
-        comparator: assertion.comparator || "equals",
-        status,
-        truth_effect: "none",
-      };
-    });
+    const traceKernel = buildSandboxRunnerTraceKernel(nodesForRun, edgesForRun, testBench);
+    const trace = traceKernel.frames.map((frame) => ({
+      tick: frame.tick,
+      values: frame.values,
+      node_results: frame.node_values,
+      node_values: frame.node_values,
+      port_values: frame.port_values,
+      edge_values: frame.edge_values,
+      assertion_results: frame.assertion_results,
+      findings: frame.findings,
+      truth_effect: "none",
+    }));
+    const assertions = traceKernel.frames.flatMap((frame) => frame.assertion_results || []);
+    const validationFindings = traceKernel.findings || [];
     const failCount = assertions.filter((assertion) => assertion.status === "fail").length;
     const unsupportedOps = validationFindings.filter((finding) => finding.code === "unsupported_op");
+    const structuralInvalidCodes = new Set([
+      "unsupported_op",
+      "dangling_edge",
+      "duplicate_edge",
+      "self_loop",
+      "cycle_detected",
+    ]);
+    const structuralInvalid = validationFindings.some((finding) => structuralInvalidCodes.has(finding.code));
     const assertionStatus = assertions.length === 0
       ? "not_run"
       : (failCount ? "fail" : "pass");
-    const status = unsupportedOps.length
+    const status = structuralInvalid
       ? "invalid_scenario"
       : (failCount ? "fail" : "pass");
+    const traceKernelChecksum = sandboxRunnerTraceKernelChecksum(traceKernel);
     return {
       kind: sandboxTestRunReportKind,
       version: sandboxTestRunReportVersion,
@@ -16853,6 +17199,8 @@ function installEditableWorkbenchShell() {
       workspace_revision_id: workspaceDocument.revision_id || graphDocument.workspace_revision_id || "ui_draft_pending",
       scenario_test_case_library_checksum:
         testBench.scenario_test_case_library_checksum || scenarioTestCaseLibraryChecksum(),
+      sandbox_runner_trace_kernel: traceKernel,
+      sandbox_runner_trace_kernel_checksum: traceKernelChecksum,
       model_hash: sandboxCandidateModelHash(nodesForRun, edgesForRun, testBench),
       definition: testBench,
       status,
@@ -16864,6 +17212,13 @@ function installEditableWorkbenchShell() {
       assertions,
       validation_findings: validationFindings,
       unsupported_ops: unsupportedOps,
+      red_line_metadata: {
+        controller_truth_modified: false,
+        frozen_assets_modified: false,
+        truth_level_impact: "none",
+        dal_pssa_impact: "none",
+        truth_effect: "none",
+      },
       candidate_state: "sandbox_candidate",
       certification_claim: "none",
       truth_level_impact: "none",
@@ -17529,6 +17884,31 @@ function installEditableWorkbenchShell() {
       }
       if (report.truth_effect !== "none") {
         throw new Error("sandbox_test_run_report truth_effect must be none");
+      }
+      if (
+        report.sandbox_runner_trace_kernel !== undefined
+        && report.sandbox_runner_trace_kernel !== null
+        && (!report.sandbox_runner_trace_kernel || typeof report.sandbox_runner_trace_kernel !== "object" || Array.isArray(report.sandbox_runner_trace_kernel))
+      ) {
+        throw new Error("sandbox_runner_trace_kernel must be an object when present");
+      }
+      if (report.sandbox_runner_trace_kernel) {
+        const kernel = report.sandbox_runner_trace_kernel;
+        if (kernel.kind !== sandboxRunnerTraceKernelKind) {
+          throw new Error("sandbox_runner_trace_kernel kind must be well-harness-workbench-sandbox-runner-trace-kernel");
+        }
+        if (kernel.version !== sandboxRunnerTraceKernelVersion) {
+          throw new Error("sandbox_runner_trace_kernel version must be workbench-sandbox-runner-trace-kernel.v2");
+        }
+        if (kernel.candidate_state !== "sandbox_candidate") {
+          throw new Error("sandbox_runner_trace_kernel candidate_state must be sandbox_candidate");
+        }
+        if (kernel.certification_claim !== "none") {
+          throw new Error("sandbox_runner_trace_kernel certification_claim must be none");
+        }
+        if (kernel.truth_effect !== "none") {
+          throw new Error("sandbox_runner_trace_kernel truth_effect must be none");
+        }
       }
     }
     if (
@@ -19092,6 +19472,7 @@ function installEditableWorkbenchShell() {
     ["scenario_test_case_library", "scenario_test_case_library_checksum"],
     ["sandbox_test_bench", "sandbox_test_bench_checksum"],
     ["sandbox_test_run_report", "sandbox_test_run_report_checksum"],
+    ["sandbox_runner_trace_kernel", "sandbox_runner_trace_kernel_checksum"],
     ["candidate_debugger_view", "candidate_debugger_view_checksum"],
     ["preflight_analyzer_report", "preflight_analyzer_report_checksum"],
     ["hardware_bindings", "hardware_bindings_checksum"],
@@ -19169,6 +19550,8 @@ function installEditableWorkbenchShell() {
           checksums.scenario_test_case_library_checksum || "missing",
         test_bench_checksum: checksums.sandbox_test_bench_checksum || "missing",
         run_report_checksum: checksums.sandbox_test_run_report_checksum || "missing",
+        sandbox_runner_trace_kernel_checksum:
+          checksums.sandbox_runner_trace_kernel_checksum || "missing",
         debugger_checksum: checksums.candidate_debugger_view_checksum || "missing",
         preflight_checksum: checksums.preflight_analyzer_report_checksum || "missing",
         hardware_evidence_checksum: checksums.hardware_evidence_v2_checksum || "missing",
@@ -19357,6 +19740,13 @@ function installEditableWorkbenchShell() {
       modelJson.sandbox_test_bench || safeSandboxTestBenchDefinition();
     const sandboxTestRunReport =
       modelJson.sandbox_test_run_report || currentSandboxTestRunReport();
+    const sandboxRunnerTraceKernel =
+      sandboxTestRunReport
+      && sandboxTestRunReport.sandbox_runner_trace_kernel
+      && typeof sandboxTestRunReport.sandbox_runner_trace_kernel === "object"
+      && !Array.isArray(sandboxTestRunReport.sandbox_runner_trace_kernel)
+        ? sandboxTestRunReport.sandbox_runner_trace_kernel
+        : null;
     const candidateDebuggerView =
       modelJson.candidate_debugger_view || currentCandidateDebuggerView("archive");
     const preflightAnalyzerReport =
@@ -19425,6 +19815,7 @@ function installEditableWorkbenchShell() {
       scenario_test_case_library: scenarioTestCaseLibraryArchive,
       sandbox_test_bench: sandboxTestBench,
       sandbox_test_run_report: sandboxTestRunReport,
+      sandbox_runner_trace_kernel: sandboxRunnerTraceKernel,
       candidate_debugger_view: candidateDebuggerView,
       preflight_analyzer_report: preflightAnalyzerReport,
       diagnostic_focus: diagnosticFocus,
@@ -19475,6 +19866,7 @@ function installEditableWorkbenchShell() {
       scenario_test_case_library_checksum: checksumEvidenceArchiveField(scenarioTestCaseLibraryArchive),
       sandbox_test_bench_checksum: checksumEvidenceArchiveField(sandboxTestBench),
       sandbox_test_run_report_checksum: checksumEvidenceArchiveField(sandboxTestRunReport),
+      sandbox_runner_trace_kernel_checksum: checksumEvidenceArchiveField(sandboxRunnerTraceKernel),
       candidate_debugger_view_checksum: checksumEvidenceArchiveField(candidateDebuggerView),
       preflight_analyzer_report_checksum: checksumEvidenceArchiveField(preflightAnalyzerReport),
       diagnostic_focus_checksum: checksumEvidenceArchiveField(diagnosticFocus),

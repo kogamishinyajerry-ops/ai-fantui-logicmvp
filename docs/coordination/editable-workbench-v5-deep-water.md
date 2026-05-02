@@ -1,7 +1,7 @@
 # Editable Workbench v5 Deep-Water Plan
 
-Date: 2026-05-02
-Status: Implementation active · JER-233 scenario test case library complete
+Date: 2026-05-03
+Status: Implementation active · JER-234 sandbox runner trace kernel complete locally
 Scope: single-user `/workbench` foundation only
 
 ## Summary
@@ -175,7 +175,7 @@ Implementation notes:
 
 ### JER-233 · Scenario test case library v1
 
-Status: Done.
+Status: Done after PR #215.
 
 Outcome: Turn the sandbox test bench from a single local form into a reusable
 test-case surface.
@@ -201,6 +201,8 @@ Implementation notes:
 
 ### JER-234 · Sandbox runner trace kernel v2
 
+Status: Done locally.
+
 Outcome: Produce deterministic per-tick traces for candidate nodes, ports,
 edges, and assertions using only the approved sandbox op catalog.
 
@@ -212,6 +214,27 @@ Acceptance:
 - Run output includes node/port/edge values per tick and assertion pass/fail.
 - Hardware/interface evidence is visible context only and does not affect truth
   evaluation.
+
+Implementation notes:
+
+- `workbench-sandbox-test-run-report.v1` stays compatible and now embeds
+  `sandbox_runner_trace_kernel` as
+  `workbench-sandbox-runner-trace-kernel.v2`.
+- The browser prepares a stable graph from the canonical draft, computes
+  source-to-target evaluation order, and records per-tick `node_values`,
+  `port_values`, `edge_values`, and tick-local `assertion_results`.
+- Unsupported ops, dangling edges, duplicate edges, self loops, cycles, and
+  missing inputs become structured sandbox-only findings. Structural graph
+  errors set the run report to `invalid_scenario`; missing inputs use
+  deterministic default values without truth mutation.
+- Draft export/import, browser restore, evidence archive, and foundation review
+  archive carry the last run report trace kernel with
+  `sandbox_runner_trace_kernel_checksum`.
+- Local verification passed focused static/e2e tests, adjacent scenario test
+  bench regressions, full pytest, adversarial tests, JS syntax check, and diff
+  check. The bounded GSD validation suite remains blocked by an external Notion
+  control-plane TLS EOF/timeout, and mypy remains the known JER-171 baseline
+  blocker.
 
 ### JER-235 · Debug probe timeline v3
 
