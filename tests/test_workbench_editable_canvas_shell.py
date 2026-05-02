@@ -625,6 +625,22 @@ def test_js_wires_candidate_debugger_view_as_sandbox_only_archive_packet() -> No
     assert 'truth_effect: "none"' in js
 
 
+def test_js_wires_debug_probe_timeline_as_sandbox_only_archive_packet() -> None:
+    js = _js()
+
+    assert "well-harness-workbench-debug-probe-timeline" in js
+    assert "workbench-debug-probe-timeline.v3" in js
+    assert "function currentDebugProbeTimeline" in js
+    assert "debug_probe_timeline" in js
+    assert "debug_probe_timeline_checksum" in js
+    assert "debug_probe_timeline truth_effect must be none" in js
+    assert "watched_values" in js
+    assert "selection_sync" in js
+    assert "Debug probe timeline:" in js
+    assert 'certification_claim: "none"' in js
+    assert 'truth_effect: "none"' in js
+
+
 def test_js_wires_preflight_analyzer_as_sandbox_only_archive_packet() -> None:
     js = _js()
 

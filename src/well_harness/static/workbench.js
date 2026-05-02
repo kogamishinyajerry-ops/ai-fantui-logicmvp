@@ -7809,6 +7809,8 @@ function installEditableWorkbenchShell() {
   const scenarioTestCaseLibraryVersion = "workbench-scenario-test-case-library.v1";
   const candidateDebuggerViewKind = "well-harness-workbench-candidate-debugger-view";
   const candidateDebuggerViewVersion = "workbench-candidate-debugger-view.v1";
+  const debugProbeTimelineKind = "well-harness-workbench-debug-probe-timeline";
+  const debugProbeTimelineVersion = "workbench-debug-probe-timeline.v3";
   const preflightAnalyzerReportKind = "well-harness-workbench-preflight-analyzer-report";
   const preflightAnalyzerReportVersion = "workbench-preflight-analyzer.v1";
   const hardwareInterfaceDesignerSchemaId =
@@ -15454,6 +15456,7 @@ function installEditableWorkbenchShell() {
     const sandboxTestBench = safeSandboxTestBenchDefinition();
     const sandboxTestRunReport = currentSandboxTestRunReport();
     const candidateDebuggerView = currentCandidateDebuggerView("snapshot");
+    const debugProbeTimeline = candidateDebuggerView.debug_probe_timeline || currentDebugProbeTimeline("snapshot");
     const preflightAnalyzerReport = currentPreflightAnalyzerReport("snapshot");
     const hardwareInterfaceDesigner = currentHardwareInterfaceDesignerPayload("snapshot");
     const hardwareInterfaceDesignerValidation =
@@ -15505,6 +15508,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_bench: sandboxTestBench,
       sandbox_test_run_report: sandboxTestRunReport,
       candidate_debugger_view: candidateDebuggerView,
+      debug_probe_timeline: debugProbeTimeline,
       preflight_analyzer_report: preflightAnalyzerReport,
       hardware_interface_designer: hardwareInterfaceDesigner,
       hardware_interface_designer_validation: hardwareInterfaceDesignerValidation,
@@ -16295,6 +16299,114 @@ function installEditableWorkbenchShell() {
     });
   }
 
+  function debugProbeTimelineFrames(report) {
+    const kernel = report && report.sandbox_runner_trace_kernel;
+    if (
+      kernel
+      && typeof kernel === "object"
+      && !Array.isArray(kernel)
+      && Array.isArray(kernel.frames)
+    ) {
+      return kernel.frames;
+    }
+    return Array.isArray(report && report.trace) ? report.trace : [];
+  }
+
+  function debugProbeWatchedPortIds(target) {
+    const portIds = Array.from(new Set((target && target.port_ids) || []));
+    const outputPorts = portIds.filter((portId) => String(portId).endsWith(":out"));
+    const inputPorts = portIds.filter((portId) => String(portId).endsWith(":in"));
+    const otherPorts = portIds.filter((portId) => !String(portId).includes(":"));
+    if (outputPorts.length || inputPorts.length) {
+      return [...outputPorts, ...inputPorts];
+    }
+    return otherPorts;
+  }
+
+  function buildDebugProbeWatchedValues(report, target) {
+    const frames = debugProbeTimelineFrames(report);
+    const watchedPortIds = debugProbeWatchedPortIds(target);
+    const watchedValues = [];
+    for (const portId of watchedPortIds) {
+      for (const frame of frames) {
+        const values = frame && frame.values && typeof frame.values === "object" ? frame.values : {};
+        const observed = readSandboxValueRecord(values, [portId]);
+        watchedValues.push({
+          tick: Number.isFinite(Number(frame && frame.tick)) ? Number(frame.tick) : null,
+          port_id: portId,
+          owner_key: target && target.owner_key ? target.owner_key : "none:none",
+          value: normalizeEvidenceArchiveValue(observed.value),
+          available: observed.available,
+          truth_effect: "none",
+        });
+      }
+    }
+    return watchedValues;
+  }
+
+  function buildDebugProbeAssertionLink(assertion, target) {
+    if (!assertion) return null;
+    const assertionTarget = String(assertion.target || "");
+    let targetOwnerKey = target && target.owner_key ? target.owner_key : "none:none";
+    let targetKind = target && target.kind ? target.kind : "none";
+    let targetId = target && target.id ? target.id : "none";
+    if (!debuggerAssertionMatchesTarget(assertion, target) && assertionTarget) {
+      const ownerId = assertionTarget.includes(":") ? assertionTarget.split(":")[0] : assertionTarget;
+      targetOwnerKey = `node:${ownerId}`;
+      targetKind = "node";
+      targetId = ownerId;
+    }
+    return {
+      assertion_target: assertionTarget || "unknown",
+      target_owner_key: targetOwnerKey,
+      target_kind: targetKind,
+      target_id: targetId,
+      status: assertion.status || "unknown",
+      tick: Number.isFinite(Number(assertion.tick)) ? Number(assertion.tick) : null,
+      truth_effect: "none",
+    };
+  }
+
+  function currentDebugProbeTimeline(state) {
+    const target = candidateDebuggerTargetContext();
+    const report = currentSandboxTestRunReport();
+    const firstFail = firstDebuggerAssertion(report, target);
+    const frames = debugProbeTimelineFrames(report);
+    const selectedTick = firstFail
+      ? Number(firstFail.tick)
+      : (
+        frames[0] && Number.isFinite(Number(frames[0].tick))
+          ? Number(frames[0].tick)
+          : null
+      );
+    const watchedValues = buildDebugProbeWatchedValues(report, target);
+    return {
+      kind: debugProbeTimelineKind,
+      version: debugProbeTimelineVersion,
+      workflow_state: state || "selection",
+      target,
+      status: report ? (report.status || "not_run") : "not_run",
+      assertion_status: report ? (report.assertion_status || "not_run") : "not_run",
+      scenario_id: report ? (report.scenario_id || selectedWorkbenchScenarioId()) : selectedWorkbenchScenarioId(),
+      selected_tick: selectedTick,
+      trace_available: frames.length > 0,
+      trace_frame_count: frames.length,
+      watched_value_count: watchedValues.length,
+      watched_values: watchedValues,
+      first_failing_assertion: firstFail ? normalizeEvidenceArchiveValue(firstFail) : null,
+      assertion_link: buildDebugProbeAssertionLink(firstFail, target),
+      selection_sync: {
+        graph_selection_owner_key: target.owner_key || "none:none",
+        timeline_selected_tick: selectedTick,
+        synchronized: Boolean(target.owner_key) && selectedTick !== null,
+        truth_effect: "none",
+      },
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
   function formatDebuggerValue(value) {
     if (value === undefined) return "unavailable";
     if (typeof value === "string") return value;
@@ -16320,6 +16432,14 @@ function installEditableWorkbenchShell() {
       .join(" · ");
   }
 
+  function formatDebugProbeWatchedValues(probe) {
+    const available = ((probe && probe.watched_values) || []).filter((item) => item.available);
+    if (!available.length) return "unavailable";
+    return available
+      .map((item) => `${item.port_id}=${formatDebuggerValue(item.value)} @ tick ${item.tick}`)
+      .join(" · ");
+  }
+
   function currentCandidateDebuggerView(state) {
     const target = candidateDebuggerTargetContext();
     const report = currentSandboxTestRunReport();
@@ -16333,6 +16453,7 @@ function installEditableWorkbenchShell() {
       );
     const frame = debuggerTraceFrame(report, selectedTick);
     const observedValues = frame ? debuggerObservedValues(frame, target) : [];
+    const debugProbeTimeline = currentDebugProbeTimeline(state || "selection");
     return {
       kind: candidateDebuggerViewKind,
       version: candidateDebuggerViewVersion,
@@ -16346,6 +16467,8 @@ function installEditableWorkbenchShell() {
       trace_frame_count: report && Array.isArray(report.trace) ? report.trace.length : 0,
       first_failing_assertion: firstFail ? normalizeEvidenceArchiveValue(firstFail) : null,
       observed_values: observedValues,
+      debug_probe_timeline: debugProbeTimeline,
+      debug_probe_timeline_checksum: checksumEvidenceArchiveField(debugProbeTimeline),
       report_model_hash: report ? (report.model_hash || "unavailable") : "not_run",
       candidate_state: "sandbox_candidate",
       certification_claim: "none",
@@ -16369,7 +16492,8 @@ function installEditableWorkbenchShell() {
       candidateDebuggerAssertion.textContent = formatDebuggerAssertion(packet.first_failing_assertion);
     }
     if (candidateDebuggerObserved) {
-      candidateDebuggerObserved.textContent = formatDebuggerObserved(packet.observed_values);
+      candidateDebuggerObserved.textContent =
+        formatDebugProbeWatchedValues(packet.debug_probe_timeline) || formatDebuggerObserved(packet.observed_values);
     }
     if (candidateDebuggerTrace) {
       candidateDebuggerTrace.textContent = packet.trace_available ? "available" : "unavailable";
@@ -17349,6 +17473,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_bench: snapshot.sandbox_test_bench,
       sandbox_test_run_report: snapshot.sandbox_test_run_report,
       candidate_debugger_view: snapshot.candidate_debugger_view,
+      debug_probe_timeline: snapshot.debug_probe_timeline,
       preflight_analyzer_report: snapshot.preflight_analyzer_report,
       hardware_interface_designer: snapshot.hardware_interface_designer,
       hardware_interface_designer_validation: snapshot.hardware_interface_designer_validation,
@@ -17934,6 +18059,44 @@ function installEditableWorkbenchShell() {
       }
       if (debuggerView.truth_effect !== "none") {
         throw new Error("candidate_debugger_view truth_effect must be none");
+      }
+    }
+    if (
+      payload.debug_probe_timeline !== undefined
+      && payload.debug_probe_timeline !== null
+      && (!payload.debug_probe_timeline || typeof payload.debug_probe_timeline !== "object" || Array.isArray(payload.debug_probe_timeline))
+    ) {
+      throw new Error("debug_probe_timeline must be an object when present");
+    }
+    if (payload.debug_probe_timeline) {
+      const probeTimeline = payload.debug_probe_timeline;
+      if (probeTimeline.kind !== debugProbeTimelineKind) {
+        throw new Error("debug_probe_timeline kind must be well-harness-workbench-debug-probe-timeline");
+      }
+      if (probeTimeline.version !== debugProbeTimelineVersion) {
+        throw new Error("debug_probe_timeline version must be workbench-debug-probe-timeline.v3");
+      }
+      if (probeTimeline.candidate_state !== "sandbox_candidate") {
+        throw new Error("debug_probe_timeline candidate_state must be sandbox_candidate");
+      }
+      if (probeTimeline.certification_claim !== "none") {
+        throw new Error("debug_probe_timeline certification_claim must be none");
+      }
+      if (probeTimeline.truth_effect !== "none") {
+        throw new Error("debug_probe_timeline truth_effect must be none");
+      }
+      if (!Array.isArray(probeTimeline.watched_values)) {
+        throw new Error("debug_probe_timeline watched_values must be an array");
+      }
+      if (
+        !probeTimeline.selection_sync
+        || typeof probeTimeline.selection_sync !== "object"
+        || Array.isArray(probeTimeline.selection_sync)
+      ) {
+        throw new Error("debug_probe_timeline selection_sync must be an object");
+      }
+      if (probeTimeline.selection_sync.truth_effect !== "none") {
+        throw new Error("debug_probe_timeline selection_sync truth_effect must be none");
       }
     }
     if (
@@ -18796,6 +18959,8 @@ function installEditableWorkbenchShell() {
       sourceSnapshot.hardware_evidence_v2 || currentHardwareEvidenceV2Report();
     const selectedDebugTimeline =
       sourceSnapshot.selected_debug_timeline || currentSelectedDebugTimelinePacket("proof");
+    const debugProbeTimeline =
+      sourceSnapshot.debug_probe_timeline || currentDebugProbeTimeline("proof");
     const candidateBaselineDiffReviewV2 =
       currentCandidateBaselineDiffReviewV2Report("proof", changedModelHash);
     const preflightAnalyzerReport =
@@ -18916,6 +19081,22 @@ function installEditableWorkbenchShell() {
         checksum: checksumEvidenceArchiveField(selectedDebugTimeline),
         truth_effect: "none",
       },
+      debug_probe_timeline_summary: {
+        target: (debugProbeTimeline.target && debugProbeTimeline.target.owner_key) || "none:none",
+        scenario_id: debugProbeTimeline.scenario_id || selectedWorkbenchScenarioId(),
+        trace_frame_count: debugProbeTimeline.trace_frame_count || 0,
+        watched_value_count: debugProbeTimeline.watched_value_count || 0,
+        first_failing_assertion_target: (
+          debugProbeTimeline.first_failing_assertion
+          && debugProbeTimeline.first_failing_assertion.target
+        ) || "none",
+        assertion_link_target: (
+          debugProbeTimeline.assertion_link
+          && debugProbeTimeline.assertion_link.target_owner_key
+        ) || "none:none",
+        checksum: checksumEvidenceArchiveField(debugProbeTimeline),
+        truth_effect: "none",
+      },
       candidate_baseline_diff_review_v2_summary: {
         verdict: candidateBaselineDiffReviewV2.verdict || "not_run",
         review_readiness: candidateBaselineDiffReviewV2.review_readiness || "run_required",
@@ -19015,6 +19196,11 @@ function installEditableWorkbenchShell() {
   function proofPacketSelectedDebugTimelineText(packet) {
     const summary = packet.selected_debug_timeline_summary || {};
     return `${summary.target || "none"} / ${summary.scenario_id || "nominal_landing"} / ${summary.diff_verdict || "not_run"} / ${summary.trace_link_status || "selection_only"}`;
+  }
+
+  function proofPacketDebugProbeTimelineText(packet) {
+    const summary = packet.debug_probe_timeline_summary || {};
+    return `${summary.target || "none:none"} / ${summary.scenario_id || "nominal_landing"} / frames=${summary.trace_frame_count || 0} / watched=${summary.watched_value_count || 0} / first_fail=${summary.first_failing_assertion_target || "none"}`;
   }
 
   function proofPacketDiffReviewV2Text(packet) {
@@ -19171,6 +19357,7 @@ function installEditableWorkbenchShell() {
       "- Sandbox baseline diff report.",
       "- Candidate-to-baseline Diff Review v2 report.",
       "- Selected graph timeline/debug packet.",
+      "- Debug probe timeline packet.",
       "- Hardware/interface binding draft evidence.",
       "- Hardware Evidence Inspector v2 selected-owner packet.",
       "- Interface matrix export.",
@@ -19221,6 +19408,7 @@ function installEditableWorkbenchShell() {
       `- Connector/pin map: ${proofPacketConnectorPinMapText(packet)}`,
       `- Hardware evidence v2: ${proofPacketHardwareEvidenceV2Text(packet)}`,
       `- Selected debug timeline: ${proofPacketSelectedDebugTimelineText(packet)}`,
+      `- Debug probe timeline: ${proofPacketDebugProbeTimelineText(packet)}`,
       `- Diff review v2: ${proofPacketDiffReviewV2Text(packet)}`,
       `- Preflight analyzer: ${proofPacketPreflightAnalyzerText(packet)}`,
       `- Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
@@ -19251,6 +19439,7 @@ function installEditableWorkbenchShell() {
       `Connector/pin map: ${proofPacketConnectorPinMapText(packet)}`,
       `Hardware evidence v2: ${proofPacketHardwareEvidenceV2Text(packet)}`,
       `Selected debug timeline: ${proofPacketSelectedDebugTimelineText(packet)}`,
+      `Debug probe timeline: ${proofPacketDebugProbeTimelineText(packet)}`,
       `Diff review v2: ${proofPacketDiffReviewV2Text(packet)}`,
       `Preflight analyzer: ${proofPacketPreflightAnalyzerText(packet)}`,
       `Hardware binding diagnostics: ${proofPacketDiagnosticsText(packet)}`,
@@ -19474,6 +19663,7 @@ function installEditableWorkbenchShell() {
     ["sandbox_test_run_report", "sandbox_test_run_report_checksum"],
     ["sandbox_runner_trace_kernel", "sandbox_runner_trace_kernel_checksum"],
     ["candidate_debugger_view", "candidate_debugger_view_checksum"],
+    ["debug_probe_timeline", "debug_probe_timeline_checksum"],
     ["preflight_analyzer_report", "preflight_analyzer_report_checksum"],
     ["hardware_bindings", "hardware_bindings_checksum"],
     ["hardware_evidence_v2", "hardware_evidence_v2_checksum"],
@@ -19553,6 +19743,7 @@ function installEditableWorkbenchShell() {
         sandbox_runner_trace_kernel_checksum:
           checksums.sandbox_runner_trace_kernel_checksum || "missing",
         debugger_checksum: checksums.candidate_debugger_view_checksum || "missing",
+        debug_probe_timeline_checksum: checksums.debug_probe_timeline_checksum || "missing",
         preflight_checksum: checksums.preflight_analyzer_report_checksum || "missing",
         hardware_evidence_checksum: checksums.hardware_evidence_v2_checksum || "missing",
         changerequest_handoff_checksum: checksums.changerequest_handoff_packet_checksum || "missing",
@@ -19749,6 +19940,10 @@ function installEditableWorkbenchShell() {
         : null;
     const candidateDebuggerView =
       modelJson.candidate_debugger_view || currentCandidateDebuggerView("archive");
+    const debugProbeTimeline =
+      modelJson.debug_probe_timeline
+      || candidateDebuggerView.debug_probe_timeline
+      || currentDebugProbeTimeline("archive");
     const preflightAnalyzerReport =
       modelJson.preflight_analyzer_report || currentPreflightAnalyzerReport("archive");
     const diagnosticFocus = modelJson.diagnostic_focus || currentDiagnosticFocusSummary();
@@ -19817,6 +20012,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_run_report: sandboxTestRunReport,
       sandbox_runner_trace_kernel: sandboxRunnerTraceKernel,
       candidate_debugger_view: candidateDebuggerView,
+      debug_probe_timeline: debugProbeTimeline,
       preflight_analyzer_report: preflightAnalyzerReport,
       diagnostic_focus: diagnosticFocus,
       repair_action_log: diagnosticRepairActions,
@@ -19868,6 +20064,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_run_report_checksum: checksumEvidenceArchiveField(sandboxTestRunReport),
       sandbox_runner_trace_kernel_checksum: checksumEvidenceArchiveField(sandboxRunnerTraceKernel),
       candidate_debugger_view_checksum: checksumEvidenceArchiveField(candidateDebuggerView),
+      debug_probe_timeline_checksum: checksumEvidenceArchiveField(debugProbeTimeline),
       preflight_analyzer_report_checksum: checksumEvidenceArchiveField(preflightAnalyzerReport),
       diagnostic_focus_checksum: checksumEvidenceArchiveField(diagnosticFocus),
       repair_action_log_checksum: checksumEvidenceArchiveField(diagnosticRepairActions),

@@ -43,6 +43,7 @@ FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS = (
     "sandbox_test_run_report",
     "sandbox_runner_trace_kernel",
     "candidate_debugger_view",
+    "debug_probe_timeline",
     "preflight_analyzer_report",
     "hardware_bindings",
     "hardware_evidence_v2",

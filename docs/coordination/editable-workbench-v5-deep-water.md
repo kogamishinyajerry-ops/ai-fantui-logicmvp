@@ -1,7 +1,7 @@
 # Editable Workbench v5 Deep-Water Plan
 
 Date: 2026-05-03
-Status: Implementation active · JER-234 sandbox runner trace kernel complete locally
+Status: Implementation active · JER-235 debug probe timeline complete locally
 Scope: single-user `/workbench` foundation only
 
 ## Summary
@@ -238,6 +238,8 @@ Implementation notes:
 
 ### JER-235 · Debug probe timeline v3
 
+Status: Done locally.
+
 Outcome: Make failures explainable through selected graph elements.
 
 Acceptance:
@@ -246,6 +248,17 @@ Acceptance:
 - The first failing assertion links to the related graph element when known.
 - Timeline selection and graph selection stay in sync.
 - Archive output includes debug probe checksums and restore readback.
+
+Implementation notes:
+
+- `debug_probe_timeline` now derives selected node/port watched values from the
+  latest sandbox runner trace across ticks.
+- The packet links the first failing assertion back to the selected graph owner
+  when known, records graph/timeline selection sync, and keeps
+  `truth_effect: none`.
+- Draft export/import, browser restore, ChangeRequest proof text, evidence
+  archive, and foundation review archive carry the debug probe timeline and
+  checksum coverage.
 
 ### JER-236 · Hardware/interface evidence attachment v2
 
