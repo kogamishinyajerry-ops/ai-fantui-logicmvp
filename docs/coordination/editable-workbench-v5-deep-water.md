@@ -1,7 +1,7 @@
 # Editable Workbench v5 Deep-Water Plan
 
 Date: 2026-05-03
-Status: Implementation active · JER-238 review archive restore complete locally
+Status: Merged to main · post-v5 Linear/Symphony bootstrap active
 Scope: single-user `/workbench` foundation only
 
 ## Summary
@@ -201,7 +201,7 @@ Implementation notes:
 
 ### JER-234 · Sandbox runner trace kernel v2
 
-Status: Done locally.
+Status: Done, PR #216.
 
 Outcome: Produce deterministic per-tick traces for candidate nodes, ports,
 edges, and assertions using only the approved sandbox op catalog.
@@ -232,13 +232,13 @@ Implementation notes:
   `sandbox_runner_trace_kernel_checksum`.
 - Local verification passed focused static/e2e tests, adjacent scenario test
   bench regressions, full pytest, adversarial tests, JS syntax check, and diff
-  check. The bounded GSD validation suite remains blocked by an external Notion
-  control-plane TLS EOF/timeout, and mypy remains the known JER-171 baseline
-  blocker.
+  check. Post-v5 main later passed the bounded GSD validation suite 25/25 after
+  PR #221 extended the default timeout budget; mypy remains the known JER-171
+  baseline blocker.
 
 ### JER-235 · Debug probe timeline v3
 
-Status: Done locally.
+Status: Done, PR #217.
 
 Outcome: Make failures explainable through selected graph elements.
 
@@ -262,7 +262,7 @@ Implementation notes:
 
 ### JER-236 · Hardware/interface evidence attachment v2
 
-Status: Done locally.
+Status: Done, PR #218.
 
 Outcome: Attach hardware/interface evidence gaps to generic graph elements
 instead of reference-sample-specific panels.
@@ -289,7 +289,7 @@ Implementation notes:
 
 ### JER-237 · Editor command palette and inspector ergonomics v1
 
-Status: Done locally.
+Status: Done, PR #219.
 
 Outcome: Improve high-frequency single-user editing flow without adding
 collaboration.
@@ -315,7 +315,7 @@ Implementation notes:
 
 ### JER-238 · Review archive restore and regression bundle v3
 
-Status: Done locally.
+Status: Done, PR #220.
 
 Outcome: Close v5 by proving the whole authoring loop can be archived and
 restored.
@@ -365,12 +365,16 @@ Implementation notes:
 Proposed project name:
 `AI FANTUI LogicMVP · Editable Workbench v5 Deep-Water Foundation`
 
-Linear helper mode is currently `api-read`; no live issue creation or state
-mutation is claimed by this launch doc. The visible live `JER-228` identifier is
-not the validation-suite issue and must not be mutated by Codex. If Linear ids
-continue to collide with unrelated work, create the v5 issues under new actual
-Linear identifiers while preserving the repo-local sequence above as the
-implementation order.
+Linear helper access is verified through the direct API path. Live Linear issue
+`JER-229` now exists as the post-v5 Linear/Symphony bootstrap issue and has a
+proof comment attached. Because that live Linear identifier collides with the
+repo-local historical `JER-229` v5 launch slice, future work must name both
+surfaces explicitly when needed: `live Linear JER-229` versus `repo-local
+JER-229`.
+
+Live Linear issues for repo-local JER-234 through JER-238 were not found by the
+Linear API during post-v5 closeout. Their implementation truth is GitHub PR
+#216 through PR #220 and the repo planning state above.
 
 Recommended labels for all v5 implementation issues:
 `adapter:project`, `truth:none`, `phase:workbench-v5`, `red-line:none`, and
