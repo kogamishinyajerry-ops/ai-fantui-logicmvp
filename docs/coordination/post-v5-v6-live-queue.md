@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active seed · live Linear `JER-230`
+Status: active queue · live Linear `JER-230` seeded · live Linear `JER-231` dispatched
 
 ## Purpose
 
@@ -109,3 +109,11 @@ Reason: Workbench v5 ended with archive restore proof. The next useful v6 move
 is to make that proof reusable from the actual workbench surface before adding
 new editing features. This preserves the single-user, sandbox-only v5 boundary
 and creates a visible engineering workflow improvement.
+
+Dispatch record:
+
+- Live Linear issue: `JER-231`
+- URL: `https://linear.app/jerrykogami/issue/JER-231/project-l4-none-dal-tbd-review-archive-library-and-recent-restore`
+- State at dispatch: `In Progress`
+- Identifier rule: `live Linear JER-231` is not the same artifact as the
+  repo-local historical `JER-231` canonical graph document v2 slice.

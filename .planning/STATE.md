@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Post-v5 live Linear queue seeded · v6 dispatch ready
-last_updated: "2026-05-03T12:24:00.000+08:00"
+status: Live Linear JER-231 review archive surface implemented
+last_updated: "2026-05-03T12:43:41.000+08:00"
 last_activity: 2026-05-03
 progress:
   total_phases: 55
   completed_phases: 46
   total_plans: 2
   completed_plans: 1
-  post_v5_closeout: "PR #216 through PR #220 merged JER-234 through JER-238 to main, PR #221 merged validation-suite timeout maintenance, and post-v5 main passed the bounded GSD validation suite 25/25. Live Linear JER-229 is the Linear/Symphony bootstrap issue and live Linear JER-230 is the first post-v5 v6 queue seed; both must be distinguished from repo-local historical JER-229/JER-230 labels."
+  post_v5_closeout: "PR #216 through PR #220 merged JER-234 through JER-238 to main, PR #221 merged validation-suite timeout maintenance, and post-v5 main passed the bounded GSD validation suite 25/25. Live Linear JER-229 is the Linear/Symphony bootstrap issue, live Linear JER-230 is the first post-v5 v6 queue seed, and live Linear JER-231 is the review archive library/recent restore surface slice; live ids must be distinguished from repo-local historical JER labels."
   notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 through JER-219 built the current single-user authoring base: templates, subsystems, hardware/interface evidence, debug/diff/handoff packets, archive validation, workspace_document, and canvas_interaction_summary. JER-220 reset the active roadmap to foundation-first: editor -> runner -> test bench -> debugger -> archive, with thrust-reverser and C919 E-TRAS treated as reference/sample packs. JER-221 and JER-222 closed canonical editable graph and port/wire route metadata. JER-223 closed the first sandbox scenario test bench run report for candidate graph inputs/assertions. JER-224 closed selected candidate debugging over run failures, watched values, and archive checksums. JER-225 closed a sandbox-only preflight analyzer that classifies candidates as ready, needs_evidence, or invalid_candidate before handoff/archive. JER-226 closed the first UI-facing hardware/interface design authoring surface for sandbox LRUs, cables, connectors, ports, pins, bindings, evidence gaps, validation, and archive checksums. JER-227 closed the foundation review archive bundle. JER-228 closed validation-suite timeout isolation and clean origin/main worktree hygiene. JER-229 launched Workbench v5 deep-water planning: empty-canvas graph authoring, canonical graph document v2, port drag wiring, scenario library, runner trace kernel, debug timeline, hardware evidence attachment, command palette ergonomics, and archive restore v3. JER-230 closed v5 empty-canvas sandbox authoring with input/output primitives and canvas_authoring_mode export/import/archive evidence. JER-231 closed canonical graph document v2 with a canonical_model payload, DOM adapter boundary metadata, v1 import migration, and canonical-only import fallback. JER-232 closed direct port-drag wiring preview, compatibility diagnostics, and route metadata after PR #214 while preserving sandbox-only truth_effect none. JER-233 closed the sandbox scenario test case library after PR #215 with saved test cases, expected outputs, notes, graph/workspace revision-linked run reports, export/import, and archive checksum coverage. JER-234 closed the sandbox runner trace kernel v2 implementation with deterministic node/port/edge/assertion frames, structured invalid graph findings, and archive checksum coverage. JER-235 closed the debug probe timeline v3 implementation with selected owner watched values across trace ticks, first failing assertion links, graph/timeline sync metadata, and archive checksum coverage. JER-236 closed the hardware/interface evidence attachment v2 implementation with node/port/edge/subsystem-group owners, duplicate/broken-reference validation, evidence-gap accounting, and archive checksum coverage. JER-237 closed the editor command palette implementation with Ctrl/Cmd+K access, create/rename/duplicate/group/wire/run/debug/export/import/archive commands, command_palette workspace action metadata, and archive-visible canvas sync. JER-238 closed the review archive restore/regression bundle implementation with restore-time checksums, required-section validation, red-line metadata validation, foundation archive validation, model JSON importability, restored graph readback, and honest not_claimed e2e/mypy fields; post-v5 main passed the bounded GSD validation suite 25/25 after PR #221 extended the default timeout budget. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
@@ -43,11 +43,19 @@ Linear JER-229` from `repo-local JER-229`. See
 
 **2026-05-03 live v6 queue seed**: live Linear issue `JER-230`
 (`[project] [L9] [none] [DAL-TBD] Post-v5 v6 live queue seed`) was created in
-the `AI FANTUI LogicMVP · Codex Daily Lane` project and is the current
-implementation issue for post-v5 queue setup. This live Linear id collides with
+the `AI FANTUI LogicMVP · Codex Daily Lane` project and closed the post-v5
+queue setup slice. This live Linear id collides with
 the repo-local historical `JER-230` empty-canvas graph authoring slice, so
 future work must distinguish `live Linear JER-230` from `repo-local JER-230`.
 See `docs/coordination/post-v5-v6-live-queue.md`.
+
+**2026-05-03 live v6 product slice**: live Linear issue `JER-231`
+(`[project] [L4] [none] [DAL-TBD] Review archive library and recent restore
+surface`) was created in the `AI FANTUI LogicMVP · Codex Daily Lane` project
+as the first post-v5 product implementation slice. This live Linear id
+collides with the repo-local historical `JER-231` canonical graph document v2
+slice, so future work must distinguish `live Linear JER-231` from `repo-local
+JER-231`.
 
 **Linear control plane**:
 
@@ -94,6 +102,8 @@ See `docs/coordination/post-v5-v6-live-queue.md`.
   repo-local JER-229 v5 launch slice.
 - Live Linear JER-230 is the post-v5 v6 live queue seed issue, not the
   repo-local JER-230 empty-canvas graph authoring slice.
+- Live Linear JER-231 is the post-v5 review archive library/recent restore
+  surface issue, not the repo-local JER-231 canonical graph document slice.
 
 **Runtime v3 closure summary**:
 

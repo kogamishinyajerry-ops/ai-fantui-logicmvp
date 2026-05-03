@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 import secrets
 from dataclasses import replace
@@ -4194,6 +4195,13 @@ def default_workbench_archive_root() -> Path:
     return (Path.cwd() / "artifacts" / "workbench-bundles").resolve()
 
 
+def _safe_file_sha256(path: Path) -> str:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return ""
+
+
 def reference_workbench_packet_payload() -> dict:
     return json.loads(REFERENCE_PACKET_PATH.read_text(encoding="utf-8"))
 
@@ -4230,14 +4238,61 @@ def recent_workbench_archive_summaries(*, limit: int = 6) -> list[dict]:
             continue
         manifest_path = archive_dir / "archive_manifest.json"
         if not manifest_path.is_file():
+            summaries.append(
+                {
+                    "archive_dir": str(archive_dir.resolve()),
+                    "manifest_path": str(manifest_path.resolve()),
+                    "created_at_utc": "",
+                    "system_id": "unknown_system",
+                    "system_title": "",
+                    "bundle_kind": "",
+                    "ready_for_spec_build": False,
+                    "selected_scenario_id": "",
+                    "selected_fault_mode_id": "",
+                    "has_workspace_handoff": False,
+                    "has_workspace_snapshot": False,
+                    "manifest_status": "missing",
+                    "manifest_issues": ("archive_manifest.json is missing.",),
+                    "manifest_sha256": "",
+                    "checksum_status": "not_checked",
+                    "integrity_file_count": 0,
+                    "restore_available": False,
+                    "truth_effect": "none",
+                    "candidate_state": "sandbox_candidate",
+                }
+            )
             continue
         try:
             manifest = load_workbench_archive_manifest(manifest_path)
-        except (OSError, ValueError, json.JSONDecodeError):
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            summaries.append(
+                {
+                    "archive_dir": str(archive_dir.resolve()),
+                    "manifest_path": str(manifest_path.resolve()),
+                    "created_at_utc": "",
+                    "system_id": "unknown_system",
+                    "system_title": "",
+                    "bundle_kind": "",
+                    "ready_for_spec_build": False,
+                    "selected_scenario_id": "",
+                    "selected_fault_mode_id": "",
+                    "has_workspace_handoff": False,
+                    "has_workspace_snapshot": False,
+                    "manifest_status": "invalid",
+                    "manifest_issues": (str(exc),),
+                    "manifest_sha256": _safe_file_sha256(manifest_path),
+                    "checksum_status": "failed",
+                    "integrity_file_count": 0,
+                    "restore_available": False,
+                    "truth_effect": "none",
+                    "candidate_state": "sandbox_candidate",
+                }
+            )
             continue
 
         bundle = manifest.get("bundle") if isinstance(manifest.get("bundle"), dict) else {}
         files = manifest.get("files") if isinstance(manifest.get("files"), dict) else {}
+        integrity = manifest.get("integrity") if isinstance(manifest.get("integrity"), dict) else {}
         summaries.append(
             {
                 "archive_dir": str(archive_dir.resolve()),
@@ -4251,6 +4306,14 @@ def recent_workbench_archive_summaries(*, limit: int = 6) -> list[dict]:
                 "selected_fault_mode_id": bundle.get("selected_fault_mode_id"),
                 "has_workspace_handoff": files.get("workspace_handoff_json") is not None,
                 "has_workspace_snapshot": files.get("workspace_snapshot_json") is not None,
+                "manifest_status": "valid",
+                "manifest_issues": (),
+                "manifest_sha256": _safe_file_sha256(manifest_path),
+                "checksum_status": "pass" if integrity else "not_present",
+                "integrity_file_count": len(integrity),
+                "restore_available": True,
+                "truth_effect": "none",
+                "candidate_state": "sandbox_candidate",
             }
         )
 
