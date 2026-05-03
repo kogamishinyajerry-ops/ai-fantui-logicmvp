@@ -41,6 +41,7 @@ FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS = (
     "scenario_test_case_library",
     "sandbox_test_bench",
     "sandbox_test_run_report",
+    "sandbox_runner_trace_kernel",
     "candidate_debugger_view",
     "preflight_analyzer_report",
     "hardware_bindings",

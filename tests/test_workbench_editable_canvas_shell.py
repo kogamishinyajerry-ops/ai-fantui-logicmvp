@@ -509,6 +509,30 @@ def test_js_wires_sandbox_scenario_test_bench_as_sandbox_only_run_report() -> No
     assert 'truth_effect: "none"' in js
 
 
+def test_js_wires_sandbox_runner_trace_kernel_v2_as_sandbox_only_report() -> None:
+    js = _js()
+
+    assert "well-harness-workbench-sandbox-runner-trace-kernel" in js
+    assert "workbench-sandbox-runner-trace-kernel.v2" in js
+    assert "function buildSandboxRunnerTraceKernel" in js
+    assert "function prepareSandboxRunnerGraph" in js
+    assert "function sandboxRunnerTraceKernelChecksum" in js
+    assert "sandbox_runner_trace_kernel" in js
+    assert "sandbox_runner_trace_kernel_checksum" in js
+    assert "node_values" in js
+    assert "port_values" in js
+    assert "edge_values" in js
+    assert "assertion_results" in js
+    assert "evaluation_order" in js
+    assert "cycle_detected" in js
+    assert "dangling_edge" in js
+    assert "unsupported_op" in js
+    assert "missing_input" in js
+    assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'certification_claim: "none"' in js
+    assert 'truth_effect: "none"' in js
+
+
 def test_js_wires_connector_pin_map_round_trip_as_sandbox_only_metadata() -> None:
     js = _js()
 
