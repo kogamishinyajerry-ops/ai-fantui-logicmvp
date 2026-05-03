@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-230` seeded · live Linear `JER-232` dispatched
+Status: active queue · live Linear `JER-230` seeded · live Linear `JER-233` dispatched
 
 ## Purpose
 
@@ -127,3 +127,18 @@ Next infrastructure dispatch:
 - Identifier rule: `live Linear JER-232` is not the same artifact as the
   repo-local historical `JER-232` port drag wiring slice.
 - Repo artifact: `docs/coordination/live-linear-issue-factory.md`
+
+Next quality-debt dispatch:
+
+- Live Linear issue: `JER-233`
+- Title: `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche`
+- URL: `https://linear.app/jerrykogami/issue/JER-233/project-l9-none-dal-tbd-jer-171-mypy-baseline-reduction-tranche`
+- State at dispatch: `In Progress`
+- Identifier rule: `live Linear JER-233` is not the same artifact as the
+  repo-local historical `JER-233` scenario test case library slice.
+- Evidence target: type one coherent module family, keep focused behavior tests
+  green, and reduce the official wrapper baseline without claiming full mypy
+  clean. First tranche evidence: live issue factory helper/tests are focused
+  strict-mypy clean, and `tools/run_mypy_gate.py --format json --report-only`
+  run with the declared `typecheck` extra reports 4665 errors in 326 files
+  instead of the captured 4672 errors in 327 files.

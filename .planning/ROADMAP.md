@@ -106,6 +106,11 @@ Post-v5 control-plane bootstrap:
   factory and collision guard` (created 2026-05-03 under `AI FANTUI LogicMVP ·
   Codex Daily Lane`). This is the queue infrastructure slice and is not the
   same artifact as the repo-local historical `JER-232` port drag wiring slice.
+- Live Linear `JER-233`: `[project] [L9] [none] [DAL-TBD] JER-171 mypy
+  baseline reduction tranche` (created 2026-05-03 under `AI FANTUI LogicMVP ·
+  Codex Daily Lane`). This is the first post-v5 quality-debt slice and is not
+  the same artifact as the repo-local historical `JER-233` scenario test case
+  library slice.
 
 Post-v5 product dispatch:
 
@@ -122,6 +127,15 @@ Post-v5 queue infrastructure dispatch:
   future live issue creation uses dry-run first, explicit confirmation for
   writes, environment-only credentials, and live-vs-repo label collision
   language.
+
+Post-v5 quality-debt dispatch:
+
+- `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche`
+  is live Linear `JER-233`. The first tranche types the live issue factory test
+  family so the focused helper/test slice is strict-mypy clean, and the
+  official wrapper run with the declared `typecheck` extra reports 4665 errors
+  in 326 files instead of the captured 4672 errors in 327 files. JER-171
+  remains blocked until the full wrapper reports pass.
 
 Workbench v4 foundation-first closure:
 
