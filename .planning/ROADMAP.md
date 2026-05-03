@@ -102,14 +102,26 @@ Post-v5 control-plane bootstrap:
   LogicMVP · Codex Daily Lane`). This is the first post-v5 product slice and is
   not the same artifact as the repo-local historical `JER-231` canonical graph
   document v2 slice.
+- Live Linear `JER-232`: `[project] [L9] [none] [DAL-TBD] Live Linear issue
+  factory and collision guard` (created 2026-05-03 under `AI FANTUI LogicMVP ·
+  Codex Daily Lane`). This is the queue infrastructure slice and is not the
+  same artifact as the repo-local historical `JER-232` port drag wiring slice.
 
 Post-v5 product dispatch:
 
 - `[project] [L4] [none] [DAL-TBD] Review archive library and recent restore
-  surface` is live Linear `JER-231`. It continues directly from the v5 archive
-  restore proof by making sandbox review archives reusable from the actual
-  workbench surface. It keeps `truth_effect: none`, avoids controller/frozen
-  asset changes, and does not claim e2e 49/49 or mypy strict clean.
+  surface` closed as live Linear `JER-231`. It continued directly from the v5
+  archive restore proof by making sandbox review archives reusable from the
+  actual workbench surface. It kept `truth_effect: none`, avoided controller
+  and frozen asset changes, and did not claim e2e 49/49 or mypy strict clean.
+
+Post-v5 queue infrastructure dispatch:
+
+- `[project] [L9] [none] [DAL-TBD] Live Linear issue factory and collision
+  guard` is live Linear `JER-232`. It adds a repo-local helper/template so
+  future live issue creation uses dry-run first, explicit confirmation for
+  writes, environment-only credentials, and live-vs-repo label collision
+  language.
 
 Workbench v4 foundation-first closure:
 
