@@ -733,6 +733,168 @@ def test_workbench_hardware_evidence_v2_tracks_selected_node_and_edge(demo_serve
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_hardware_evidence_attachment_v2_covers_generic_graph_owners(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-component-template-id="two_stage_interlock"]')
+    page.fill("#workbench-subsystem-name", "Attachable deploy cell")
+    page.click("#workbench-create-subsystem-btn")
+    page.select_option("#workbench-subsystem-interface-direction", "input")
+    page.fill("#workbench-subsystem-interface-label", "Deploy request")
+    page.fill("#workbench-subsystem-interface-signal-id", "deploy_request_cmd")
+    page.select_option("#workbench-subsystem-interface-value-type", "boolean")
+    page.select_option("#workbench-subsystem-interface-evidence-status", "ui_draft")
+    page.click("#workbench-add-subsystem-interface-port-btn")
+    page.select_option("#workbench-subsystem-interface-direction", "output")
+    page.fill("#workbench-subsystem-interface-label", "Deploy allowed")
+    page.fill("#workbench-subsystem-interface-signal-id", "deploy_allowed_status")
+    page.select_option("#workbench-subsystem-interface-value-type", "boolean")
+    page.select_option("#workbench-subsystem-interface-evidence-status", "evidence_gap")
+    page.click("#workbench-add-subsystem-interface-port-btn")
+
+    hardware_design = {
+        "$schema": "https://well-harness.local/json_schema/editable_hardware_interface_design_v1.schema.json",
+        "kind": "well-harness-editable-hardware-interface-design",
+        "version": 1,
+        "design_id": "ui-hw-attachment-v2",
+        "system_id": "thrust-reverser",
+        "candidate_state": "sandbox_candidate",
+        "truth_level_impact": "none",
+        "dal_pssa_impact": "none",
+        "controller_truth_modified": False,
+        "runtime_truth_effect": "none",
+        "lrus": [{"id": "LRU-ATTACH-A", "display_name": "Attach LRU A", "evidence_status": "ui_draft"}],
+        "cables": [{
+            "id": "CABLE-ATTACH-A",
+            "display_name": "Attach cable",
+            "source_lru_id": "LRU-ATTACH-A",
+            "target_lru_id": "LRU-ATTACH-A",
+            "cable_type": "harness",
+            "evidence_status": "ui_draft",
+        }],
+        "connectors": [{
+            "id": "CONN-ATTACH-A",
+            "display_name": "Attach connector",
+            "lru_id": "LRU-ATTACH-A",
+            "connector_type": "MIL-DTL-38999",
+            "evidence_status": "ui_draft",
+        }],
+        "ports": [
+            {
+                "id": "PORT-ATTACH-OUT",
+                "display_name": "Attach out",
+                "connector_id": "CONN-ATTACH-A",
+                "direction": "output",
+                "signal_id": "deploy_request_cmd",
+                "value_type": "boolean",
+                "evidence_status": "ui_draft",
+            },
+            {
+                "id": "PORT-ATTACH-IN",
+                "display_name": "Attach in",
+                "connector_id": "CONN-ATTACH-A",
+                "direction": "input",
+                "signal_id": "deploy_allowed_status",
+                "value_type": "boolean",
+                "evidence_status": "ui_draft",
+            },
+        ],
+        "pins": [
+            {
+                "id": "PIN-ATTACH-A1",
+                "connector_id": "CONN-ATTACH-A",
+                "pin_number": "A1",
+                "port_id": "PORT-ATTACH-OUT",
+                "signal_id": "deploy_request_cmd",
+                "evidence_status": "ui_draft",
+            },
+            {
+                "id": "PIN-ATTACH-A2",
+                "connector_id": "CONN-ATTACH-A",
+                "pin_number": "A2",
+                "port_id": "PORT-ATTACH-IN",
+                "signal_id": "deploy_allowed_status",
+                "evidence_status": "ui_draft",
+            },
+        ],
+        "bindings": [{
+            "id": "BIND-ATTACH-A",
+            "signal_id": "deploy_request_cmd",
+            "source_port_id": "PORT-ATTACH-OUT",
+            "target_port_id": "PORT-ATTACH-IN",
+            "cable_id": "CABLE-ATTACH-A",
+            "redundancy_status": "single",
+            "evidence_status": "ui_draft",
+            "truth_effect": "none",
+        }],
+        "evidence_gaps": [],
+        "evidence_metadata": {"sample_pack_role": "hardware_interface_design", "source_refs": ["ui_draft.attachment_v2"]},
+        "boundaries": {
+            "runtime_scope": "sandbox_only",
+            "hardware_truth_effect": "none",
+            "certified_truth_modified": False,
+            "dal_pssa_impact": "none",
+        },
+    }
+    page.fill("#workbench-hardware-interface-design-output", json.dumps(hardware_design))
+    page.click("#workbench-apply-hardware-interface-design-btn")
+
+    page.locator('[data-editable-node-id="draft_node_1"]').click()
+    page.fill("#workbench-interface-hardware-id", "LRU-ATTACH-A")
+    page.fill("#workbench-interface-cable", "CABLE-ATTACH-A")
+    page.fill("#workbench-interface-connector", "CONN-ATTACH-A")
+    page.fill("#workbench-interface-port-local", "draft_node_1:out")
+    page.fill("#workbench-interface-port-peer", "PORT-ATTACH-OUT")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+
+    page.locator('[data-editable-edge-id^="edge_component_two_stage_interlock"]').dispatch_event("click")
+    page.fill("#workbench-interface-hardware-id", "LRU-ATTACH-A")
+    page.fill("#workbench-interface-cable", "CABLE-ATTACH-A")
+    page.fill("#workbench-interface-connector", "CONN-ATTACH-A")
+    page.fill("#workbench-interface-port-local", "PORT-ATTACH-OUT")
+    page.fill("#workbench-interface-port-peer", "PORT-ATTACH-IN")
+    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    page.click("#workbench-apply-interface-binding-btn")
+
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    attachment = draft["hardware_evidence_attachment_v2"]
+    owner_kinds = {row["owner_kind"] for row in attachment["attachments"]}
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert attachment["kind"] == "well-harness-workbench-hardware-evidence-attachment"
+    assert attachment["version"] == "workbench-hardware-evidence-attachment.v2"
+    assert attachment["candidate_state"] == "sandbox_candidate"
+    assert attachment["truth_effect"] == "none"
+    assert {"node", "port", "edge", "subsystem_group"}.issubset(owner_kinds)
+    assert attachment["validation"]["status"] in {"pass", "warn"}
+    assert attachment["validation"]["duplicate_attachment_id_count"] == 0
+    assert attachment["validation"]["broken_reference_count"] == 0
+    assert attachment["validation"]["evidence_gap_count"] >= 1
+    assert any(row["owner_key"] == "node:draft_node_1" for row in attachment["attachments"])
+    assert any(row["owner_key"] == "port:draft_node_1:out" for row in attachment["attachments"])
+    assert any(row["owner_key"].startswith("edge:edge_component_two_stage_interlock") for row in attachment["attachments"])
+    assert any(row["owner_key"].startswith("subsystem_group:subsystem_") for row in attachment["attachments"])
+
+    _set_draft_buffer_value(page, json.dumps(draft))
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert imported["hardware_evidence_attachment_v2"]["attachment_count"] == attachment["attachment_count"]
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["hardware_evidence_attachment_v2"]["truth_effect"] == "none"
+    assert archive["hardware_evidence_attachment_v2"]["attachment_count"] == attachment["attachment_count"]
+    assert archive["checksums"]["hardware_evidence_attachment_v2_checksum"]
+    assert archive["foundation_review_archive"]["sections"]["hardware_evidence_attachment_v2"]["status"] == "present"
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_selected_debug_timeline_tracks_selection_diff_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")

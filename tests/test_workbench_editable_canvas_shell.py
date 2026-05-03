@@ -563,6 +563,23 @@ def test_js_wires_hardware_evidence_v2_as_sandbox_only_selected_owner_packet() -
     assert 'truth_effect: "none"' in js
 
 
+def test_js_wires_hardware_evidence_attachment_v2_as_sandbox_only_archive_packet() -> None:
+    js = _js()
+
+    assert "well-harness-workbench-hardware-evidence-attachment" in js
+    assert "workbench-hardware-evidence-attachment.v2" in js
+    assert "function currentHardwareEvidenceAttachmentV2Packet" in js
+    assert "function buildHardwareEvidenceAttachmentValidationReport" in js
+    assert "hardware_evidence_attachment_v2" in js
+    assert "hardware_evidence_attachment_v2_checksum" in js
+    assert "duplicate_hardware_evidence_attachment_id" in js
+    assert "broken_hardware_evidence_attachment_reference" in js
+    assert "hardware_evidence_attachment_v2 truth_effect must be none" in js
+    assert "Hardware evidence attachment v2:" in js
+    assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'truth_effect: "none"' in js
+
+
 def test_js_wires_hardware_interface_designer_as_sandbox_only_archive_packet() -> None:
     js = _js()
 
