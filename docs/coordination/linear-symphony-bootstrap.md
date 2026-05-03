@@ -17,10 +17,14 @@ Live Linear issue:
 - `JER-229`: `AI FANTUI LogicMVP · v6 next-queue bootstrap`
 - URL: `https://linear.app/jerrykogami/issue/JER-229/ai-fantui-logicmvp-v6-next-queue-bootstrap`
 - Proof comment: `https://linear.app/jerrykogami/issue/JER-229/ai-fantui-logicmvp-v6-next-queue-bootstrap#comment-09cd9a49`
+- `JER-230`: `[project] [L9] [none] [DAL-TBD] Post-v5 v6 live queue seed`
+- URL: `https://linear.app/jerrykogami/issue/JER-230/project-l9-none-dal-tbd-post-v5-v6-live-queue-seed`
+- Project: `AI FANTUI LogicMVP · Codex Daily Lane`
 
 Important mapping rule:
 
 - Live Linear `JER-229` is not the same artifact as the repo-local historical `JER-229` Workbench v5 launch slice.
+- Live Linear `JER-230` is not the same artifact as the repo-local historical `JER-230` empty-canvas graph authoring slice.
 - When an identifier collides, write both surfaces explicitly: `live Linear JER-229` versus `repo-local JER-229`.
 - Future Symphony/Codex work should prefer the live Linear issue identity when dispatching, then cite repo-local sequence labels only as implementation history.
 
@@ -38,6 +42,7 @@ Important mapping rule:
 
 - Live Linear issues for repo-local JER-234 through JER-238 do not exist in the current Linear API. Direct proof comment dry-runs against those issue keys returned `Entity not found: Issue`.
 - The newly created live Linear `JER-229` issue is a bootstrap/control-plane issue. It should not be used to imply that the repo-local v5 launch slice was reopened.
+- Live Linear `JER-230` is the first post-v5 implementation queue seed. Its repo-side execution record is `docs/coordination/post-v5-v6-live-queue.md`.
 - No Linear state transition was performed; only one proof comment was written.
 
 ## Next Work Policy
