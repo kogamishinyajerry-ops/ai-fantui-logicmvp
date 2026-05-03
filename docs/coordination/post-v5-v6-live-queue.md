@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-230` seeded · live Linear `JER-231` dispatched
+Status: active queue · live Linear `JER-230` seeded · live Linear `JER-232` dispatched
 
 ## Purpose
 
@@ -114,6 +114,16 @@ Dispatch record:
 
 - Live Linear issue: `JER-231`
 - URL: `https://linear.app/jerrykogami/issue/JER-231/project-l4-none-dal-tbd-review-archive-library-and-recent-restore`
-- State at dispatch: `In Progress`
+- State after PR #224: `Done`
 - Identifier rule: `live Linear JER-231` is not the same artifact as the
   repo-local historical `JER-231` canonical graph document v2 slice.
+
+Next infrastructure dispatch:
+
+- Live Linear issue: `JER-232`
+- Title: `[project] [L9] [none] [DAL-TBD] Live Linear issue factory and collision guard`
+- URL: `https://linear.app/jerrykogami/issue/JER-232/project-l9-none-dal-tbd-live-linear-issue-factory-and-collision-guard`
+- State at dispatch: `In Progress`
+- Identifier rule: `live Linear JER-232` is not the same artifact as the
+  repo-local historical `JER-232` port drag wiring slice.
+- Repo artifact: `docs/coordination/live-linear-issue-factory.md`
