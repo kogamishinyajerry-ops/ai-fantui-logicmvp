@@ -3216,6 +3216,88 @@ def test_workbench_candidate_debugger_view_tracks_failing_assertion_and_archive(
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_debug_probe_timeline_tracks_selected_node_over_trace_and_restore(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-op-catalog-op="compare"]')
+    page.click('[data-editor-tool="node"]')
+    page.fill(
+        "#workbench-test-bench-inputs-json",
+        json.dumps(
+            [
+                {"tick": 0, "inputs": {"draft_node_1:in": 2, "draft_node_1": 2}},
+                {"tick": 1, "inputs": {"draft_node_1:in": 8, "draft_node_1": 8}},
+            ]
+        ),
+    )
+    page.fill(
+        "#workbench-test-bench-assertions-json",
+        json.dumps(
+            [
+                {"tick": 0, "target": "draft_node_1:out", "expected": True},
+                {"tick": 1, "target": "draft_node_1:out", "expected": True},
+            ]
+        ),
+    )
+    page.click("#workbench-run-test-bench-btn")
+    page.wait_for_function(
+        """
+        () => document.getElementById('workbench-candidate-debugger-status')?.textContent.trim() === 'fail'
+        """
+    )
+    page.locator('[data-editable-node-id="draft_node_1"]').click()
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert "draft_node_1:out=false @ tick 0" in page.locator("#workbench-candidate-debugger-observed").inner_text()
+    assert "draft_node_1:out=true @ tick 1" in page.locator("#workbench-candidate-debugger-observed").inner_text()
+
+    page.click("#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    probe = draft["debug_probe_timeline"]
+    assert probe["kind"] == "well-harness-workbench-debug-probe-timeline"
+    assert probe["version"] == "workbench-debug-probe-timeline.v3"
+    assert probe["target"]["owner_key"] == "node:draft_node_1"
+    assert probe["selected_tick"] == 0
+    assert probe["watched_value_count"] == 4
+    assert probe["watched_values"][0]["tick"] == 0
+    assert probe["watched_values"][0]["port_id"] == "draft_node_1:out"
+    assert probe["watched_values"][0]["value"] is False
+    assert probe["watched_values"][1]["tick"] == 1
+    assert probe["watched_values"][1]["port_id"] == "draft_node_1:out"
+    assert probe["watched_values"][1]["value"] is True
+    assert probe["first_failing_assertion"]["target"] == "draft_node_1:out"
+    assert probe["assertion_link"]["target_owner_key"] == "node:draft_node_1"
+    assert probe["selection_sync"]["graph_selection_owner_key"] == "node:draft_node_1"
+    assert probe["selection_sync"]["timeline_selected_tick"] == 0
+    assert probe["truth_effect"] == "none"
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    _set_draft_buffer_value(page, draft_json)
+    page.click("#workbench-import-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert imported["debug_probe_timeline"]["target"]["owner_key"] == "node:draft_node_1"
+    assert imported["debug_probe_timeline"]["watched_values"][1]["value"] is True
+
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["debug_probe_timeline"]["truth_effect"] == "none"
+    assert archive["debug_probe_timeline"]["watched_values"][0]["tick"] == 0
+    assert archive["checksums"]["debug_probe_timeline_checksum"]
+    assert archive["foundation_review_archive"]["sections"]["debug_probe_timeline"]["status"] == "present"
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_preflight_analyzer_classifies_failed_candidate_and_archives(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
