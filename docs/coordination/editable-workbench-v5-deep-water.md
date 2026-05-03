@@ -1,7 +1,7 @@
 # Editable Workbench v5 Deep-Water Plan
 
 Date: 2026-05-03
-Status: Implementation active · JER-236 hardware/interface evidence attachment complete locally
+Status: Implementation active · JER-237 editor command palette complete locally
 Scope: single-user `/workbench` foundation only
 
 ## Summary
@@ -289,6 +289,8 @@ Implementation notes:
 
 ### JER-237 · Editor command palette and inspector ergonomics v1
 
+Status: Done locally.
+
 Outcome: Improve high-frequency single-user editing flow without adding
 collaboration.
 
@@ -299,6 +301,17 @@ Acceptance:
 - Inspector sections stay synchronized with the current graph selection.
 - Actions record workspace document metadata.
 - UI changes remain inside `/workbench`.
+
+Implementation notes:
+
+- The editor toolbar now exposes a command palette entry, with Ctrl/Cmd+K
+  opening a local `/workbench` command surface for create, rename, duplicate,
+  group, wire, run, debug, export, import, and archive actions.
+- Command execution reuses existing workbench actions and records
+  `command_palette.*` entries in workspace document metadata with
+  `truth_effect: none`.
+- The palette stays browser-local and does not write Linear, controller truth,
+  adapters, or certified hardware assets.
 
 ### JER-238 · Review archive restore and regression bundle v3
 

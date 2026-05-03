@@ -7684,6 +7684,12 @@ function installEditableWorkbenchShell() {
   const downloadArchiveBtn = document.getElementById("workbench-download-archive-btn");
   const archiveOutput = document.getElementById("workbench-evidence-archive-output");
   const archiveStatus = document.getElementById("workbench-archive-status");
+  const openCommandPaletteBtn = document.getElementById("workbench-open-command-palette-btn");
+  const closeCommandPaletteBtn = document.getElementById("workbench-close-command-palette-btn");
+  const commandPalette = document.getElementById("workbench-command-palette");
+  const commandPaletteFilter = document.getElementById("workbench-command-palette-filter");
+  const commandPaletteList = document.getElementById("workbench-command-palette-list");
+  const commandPaletteStatus = document.getElementById("workbench-command-palette-status");
   const interfaceBindingOwner = document.getElementById("workbench-interface-binding-owner");
   const interfaceHardwareIdInput = document.getElementById("workbench-interface-hardware-id");
   const interfaceCableInput = document.getElementById("workbench-interface-cable");
@@ -7782,6 +7788,7 @@ function installEditableWorkbenchShell() {
   let canvasAuthoringMode = "reference_sample";
   const workspaceDocumentKind = "well-harness-workbench-workspace-document";
   const workspaceDocumentVersion = "workbench-workspace-document.v1";
+  const commandPaletteVersion = "workbench-command-palette.v1";
   let workspaceDocumentId = "ui_draft_workspace_document_v1";
   let workspaceDocumentRevision = "ui_draft_pending";
   let workspaceDocumentParentRevision = null;
@@ -20655,6 +20662,133 @@ function installEditableWorkbenchShell() {
     return archive;
   }
 
+  function workbenchCommandPaletteButtons() {
+    return commandPaletteList
+      ? Array.from(commandPaletteList.querySelectorAll("[data-command-palette-command]"))
+      : [];
+  }
+
+  function renderWorkbenchCommandPalette(filterValue) {
+    const normalizedFilter = normalizedInterfaceField(filterValue || "");
+    let visibleCount = 0;
+    for (const button of workbenchCommandPaletteButtons()) {
+      const commandId = button.getAttribute("data-command-palette-command") || "";
+      const keywords = button.getAttribute("data-command-palette-keywords") || "";
+      const label = button.textContent || "";
+      const haystack = normalizedInterfaceField(`${commandId} ${keywords} ${label}`);
+      const visible = !normalizedFilter || haystack.includes(normalizedFilter);
+      button.hidden = !visible;
+      if (visible) visibleCount += 1;
+    }
+    if (commandPaletteStatus) {
+      commandPaletteStatus.textContent =
+        `${visibleCount} command(s). ${commandPaletteVersion}. No live Linear mutation.`;
+    }
+    return visibleCount;
+  }
+
+  function openWorkbenchCommandPalette() {
+    if (!commandPalette) return;
+    commandPalette.hidden = false;
+    commandPalette.setAttribute("data-command-palette-version", commandPaletteVersion);
+    if (commandPaletteFilter) commandPaletteFilter.value = "";
+    renderWorkbenchCommandPalette("");
+    window.setTimeout(() => {
+      if (commandPaletteFilter) commandPaletteFilter.focus();
+    }, 0);
+  }
+
+  function closeWorkbenchCommandPalette() {
+    if (!commandPalette) return;
+    commandPalette.hidden = true;
+    if (commandPaletteStatus) {
+      commandPaletteStatus.textContent = "Command surface idle. No live Linear mutation.";
+    }
+  }
+
+  function firstVisibleWorkbenchCommandPaletteButton() {
+    return workbenchCommandPaletteButtons().find((button) => !button.hidden) || null;
+  }
+
+  function recordWorkbenchCommandPaletteCommand(commandId) {
+    const actionNames = {
+      create_node: "command_palette.create_node",
+      rename_subsystem: "command_palette.rename_subsystem",
+      duplicate_selection: "command_palette.duplicate_selection",
+      group_selection: "command_palette.group_selection",
+      wire_edge: "command_palette.wire_edge",
+      run_sandbox: "command_palette.run_sandbox",
+      debug_selection: "command_palette.debug_selection",
+      export_draft: "command_palette.export_draft",
+      import_draft: "command_palette.import_draft",
+      prepare_archive: "command_palette.prepare_archive",
+    };
+    const actionName = actionNames[commandId] || "command_palette.unknown";
+    recordWorkspaceAction(actionName);
+    recordCanvasInteractionAction(actionName);
+    renderWorkspaceDocumentStatus();
+  }
+
+  function finishWorkbenchCommandPaletteCommand(commandId, result) {
+    renderInspector();
+    renderCandidateDebuggerView(currentCandidateDebuggerView("command_palette"));
+    updateEditableDraftHash();
+    if (commandPaletteStatus) {
+      commandPaletteStatus.textContent =
+        `Command ${commandId} recorded as sandbox workspace metadata. No live Linear mutation.`;
+    }
+    return result || null;
+  }
+
+  function executeWorkbenchCommandPaletteCommand(commandId) {
+    const commandActions = {
+      create_node: () => addEditableNode(),
+      rename_subsystem: () => renameSelectedSubsystemGroup(),
+      duplicate_selection: () => duplicateSelectedEditableNode(),
+      group_selection: () => groupSelectedDraftNodes(),
+      wire_edge: () => {
+        setEditorTool("edge");
+        if (graphValidationStatus) {
+          graphValidationStatus.textContent = "Graph validation: wire mode armed from command palette.";
+        }
+        return currentEditorTool;
+      },
+      run_sandbox: () => runWorkbenchSandboxDiff(),
+      debug_selection: () => {
+        renderSelectedDebugTimeline("command_palette");
+        renderCandidateDebuggerView(currentCandidateDebuggerView("command_palette"));
+        setTimelineState("debug");
+        return currentDebugProbeTimeline("command_palette");
+      },
+      export_draft: () => exportEditableDraftJson(),
+      import_draft: () => importEditableDraftJson(),
+      prepare_archive: () => renderWorkbenchEvidenceArchive(),
+    };
+    const action = commandActions[commandId];
+    if (!action) {
+      if (commandPaletteStatus) {
+        commandPaletteStatus.textContent = `Unknown command ${commandId || "unknown"}.`;
+      }
+      return null;
+    }
+    recordWorkbenchCommandPaletteCommand(commandId);
+    closeWorkbenchCommandPalette();
+    let result = null;
+    try {
+      result = action();
+    } catch (err) {
+      if (commandPaletteStatus) {
+        commandPaletteStatus.textContent =
+          `Command ${commandId} failed locally: ${err && err.message ? err.message : "unknown error"}.`;
+      }
+      throw err;
+    }
+    if (result && typeof result.then === "function") {
+      return result.then((payload) => finishWorkbenchCommandPaletteCommand(commandId, payload));
+    }
+    return finishWorkbenchCommandPaletteCommand(commandId, result);
+  }
+
   function attachEditableNodeHandler(node) {
     if (!node || node.getAttribute("data-node-handler-attached") === "true") return;
     node.setAttribute("data-node-handler-attached", "true");
@@ -20941,9 +21075,31 @@ function installEditableWorkbenchShell() {
   }
 
   function handleEditableKeyboardShortcut(event) {
-    if (!event || isFormShortcutTarget(event.target)) return;
+    if (!event) return;
     const key = String(event.key || "").toLowerCase();
     const commandKey = event.metaKey || event.ctrlKey;
+    if (commandKey && key === "k") {
+      event.preventDefault();
+      if (commandPalette && !commandPalette.hidden) closeWorkbenchCommandPalette();
+      else openWorkbenchCommandPalette();
+      return;
+    }
+    if (commandPalette && !commandPalette.hidden) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeWorkbenchCommandPalette();
+        return;
+      }
+      if (event.key === "Enter" && event.target === commandPaletteFilter) {
+        const button = firstVisibleWorkbenchCommandPaletteButton();
+        if (button) {
+          event.preventDefault();
+          executeWorkbenchCommandPaletteCommand(button.getAttribute("data-command-palette-command") || "");
+        }
+        return;
+      }
+    }
+    if (isFormShortcutTarget(event.target)) return;
     if (event.code === "Space" || event.key === " ") {
       spacePanActive = true;
       if (canvas) canvas.setAttribute("data-space-pan-active", "true");
@@ -21015,6 +21171,27 @@ function installEditableWorkbenchShell() {
   });
   if (hardwarePaletteFilter) {
     hardwarePaletteFilter.addEventListener("change", () => renderHardwarePalette());
+  }
+  if (openCommandPaletteBtn) {
+    openCommandPaletteBtn.addEventListener("click", () => openWorkbenchCommandPalette());
+  }
+  if (closeCommandPaletteBtn) {
+    closeCommandPaletteBtn.addEventListener("click", () => closeWorkbenchCommandPalette());
+  }
+  if (commandPaletteFilter) {
+    commandPaletteFilter.addEventListener("input", () => {
+      renderWorkbenchCommandPalette(commandPaletteFilter.value);
+    });
+  }
+  if (commandPaletteList) {
+    commandPaletteList.addEventListener("click", (event) => {
+      const target = event.target instanceof Element
+        ? event.target.closest("[data-command-palette-command]")
+        : null;
+      if (!target || target.hidden) return;
+      event.preventDefault();
+      executeWorkbenchCommandPaletteCommand(target.getAttribute("data-command-palette-command") || "");
+    });
   }
   if (hardwarePaletteAction) {
     hardwarePaletteAction.addEventListener("change", () => {

@@ -114,6 +114,31 @@ def test_css_declares_editable_workbench_layout() -> None:
     assert ".workbench-selected-debug-timeline" in css
 
 
+def test_editor_command_palette_controls_are_exposed_as_sandbox_only_ui() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-open-command-palette-btn"' in html
+    assert 'id="workbench-command-palette"' in html
+    assert 'id="workbench-command-palette-filter"' in html
+    assert 'id="workbench-command-palette-status"' in html
+    for command_id in [
+        "create_node",
+        "rename_subsystem",
+        "duplicate_selection",
+        "group_selection",
+        "wire_edge",
+        "run_sandbox",
+        "debug_selection",
+        "export_draft",
+        "import_draft",
+        "prepare_archive",
+    ]:
+        assert f'data-command-palette-command="{command_id}"' in html
+    assert ".workbench-command-palette" in css
+    assert ".workbench-command-palette-list" in css
+
+
 def test_component_library_templates_are_exposed_as_sandbox_toolbar_controls() -> None:
     html = _html()
     css = _css()
@@ -578,6 +603,19 @@ def test_js_wires_hardware_evidence_attachment_v2_as_sandbox_only_archive_packet
     assert "Hardware evidence attachment v2:" in js
     assert 'candidate_state: "sandbox_candidate"' in js
     assert 'truth_effect: "none"' in js
+
+
+def test_js_wires_editor_command_palette_as_sandbox_only_command_surface() -> None:
+    js = _js()
+
+    assert "function openWorkbenchCommandPalette" in js
+    assert "function closeWorkbenchCommandPalette" in js
+    assert "function executeWorkbenchCommandPaletteCommand" in js
+    assert "function renderWorkbenchCommandPalette" in js
+    assert "command_palette.create_node" in js
+    assert "command_palette.prepare_archive" in js
+    assert "workbench-command-palette.v1" in js
+    assert "No live Linear mutation" in js
 
 
 def test_js_wires_hardware_interface_designer_as_sandbox_only_archive_packet() -> None:

@@ -895,6 +895,55 @@ def test_workbench_hardware_evidence_attachment_v2_covers_generic_graph_owners(d
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_command_palette_executes_editor_commands_and_records_workspace_metadata(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    initial_node_count = page.locator(".workbench-editable-node").count()
+    page.keyboard.press("Control+K")
+    page.wait_for_selector("#workbench-command-palette:not([hidden])")
+    page.fill("#workbench-command-palette-filter", "create")
+    page.click('[data-command-palette-command="create_node"]')
+    page.wait_for_function(
+        f"() => document.querySelectorAll('.workbench-editable-node').length === {initial_node_count + 1}",
+    )
+    assert page.locator("#workbench-command-palette").get_attribute("hidden") is not None
+
+    page.keyboard.press("Control+K")
+    page.fill("#workbench-command-palette-filter", "duplicate")
+    page.click('[data-command-palette-command="duplicate_selection"]')
+    page.wait_for_function(
+        f"() => document.querySelectorAll('.workbench-editable-node').length === {initial_node_count + 2}",
+    )
+
+    page.keyboard.press("Control+K")
+    page.fill("#workbench-command-palette-filter", "wire")
+    page.click('[data-command-palette-command="wire_edge"]')
+    assert page.locator('[data-editor-tool="edge"]').get_attribute("aria-pressed") == "true"
+
+    page.keyboard.press("Control+K")
+    page.fill("#workbench-command-palette-filter", "debug")
+    page.click('[data-command-palette-command="debug_selection"]')
+
+    page.keyboard.press("Control+K")
+    page.fill("#workbench-command-palette-filter", "archive")
+    page.click('[data-command-palette-command="prepare_archive"]')
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    actions = [entry["action"] for entry in archive["workspace_document"]["action_log"]]
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert "command_palette.create_node" in actions
+    assert "command_palette.duplicate_selection" in actions
+    assert "command_palette.wire_edge" in actions
+    assert "command_palette.debug_selection" in actions
+    assert "command_palette.prepare_archive" in actions
+    assert archive["workspace_document"]["truth_effect"] == "none"
+    assert archive["canvas_interaction_summary"]["last_action"] == "command_palette.prepare_archive"
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_selected_debug_timeline_tracks_selection_diff_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")

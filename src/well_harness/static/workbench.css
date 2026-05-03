@@ -5177,6 +5177,90 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   font-weight: 800;
   letter-spacing: 0;
 }
+.workbench-command-palette {
+  position: absolute;
+  top: 0.75rem;
+  left: 50%;
+  z-index: 12;
+  width: min(420px, calc(100% - 1.5rem));
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(150, 173, 190, 0.34);
+  border-radius: 8px;
+  background: rgba(7, 15, 22, 0.96);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
+}
+.workbench-command-palette[hidden] {
+  display: none;
+}
+.workbench-command-palette-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: #f5fbff;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+.workbench-command-palette-header button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(150, 173, 190, 0.28);
+  border-radius: 6px;
+  color: #dcecf6;
+  background: rgba(8, 16, 24, 0.78);
+  cursor: pointer;
+}
+.workbench-command-palette-filter {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 0.45rem;
+  align-items: center;
+  color: rgba(213, 227, 237, 0.72);
+  font-size: 0.68rem;
+}
+.workbench-command-palette-filter input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  border: 1px solid rgba(150, 173, 190, 0.28);
+  border-radius: 6px;
+  color: #f5fbff;
+  background: rgba(4, 12, 18, 0.86);
+  font: inherit;
+}
+.workbench-command-palette-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+.workbench-command-palette-list button {
+  min-height: 34px;
+  border: 1px solid rgba(150, 173, 190, 0.24);
+  border-radius: 6px;
+  color: #edf8ff;
+  background: rgba(11, 23, 33, 0.86);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: left;
+  padding: 0.45rem 0.55rem;
+  cursor: pointer;
+}
+.workbench-command-palette-list button:hover,
+.workbench-command-palette-list button:focus-visible {
+  border-color: rgba(125, 215, 194, 0.78);
+  outline: none;
+}
+.workbench-command-palette-status {
+  color: rgba(213, 227, 237, 0.72);
+  font-size: 0.64rem;
+}
 .workbench-editable-canvas {
   position: relative;
   min-height: 520px;
