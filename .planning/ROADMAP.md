@@ -14,11 +14,14 @@ test a candidate control graph from generic primitives. JER-229 launched the v5
 queue, JER-230 closed empty-canvas graph authoring, JER-231 closed the
 canonical graph document v2 plus DOM adapter boundary, JER-232 closed direct
 port-drag wiring with route diagnostics after PR #214, JER-233 closed the
-scenario test case library v1 slice after PR #215, JER-234 closed the local
-sandbox runner trace kernel v2 slice, and JER-235 closed the local debug probe
-timeline v3 slice. JER-236 closed the local hardware/interface evidence
-attachment v2 slice, and JER-237 closed the local editor command palette slice.
-JER-238 closed the local review archive restore and regression bundle slice.
+scenario test case library v1 slice after PR #215, JER-234 closed the sandbox
+runner trace kernel v2 slice after PR #216, and JER-235 closed the debug probe
+timeline v3 slice after PR #217. JER-236 closed the hardware/interface evidence
+attachment v2 slice after PR #218, JER-237 closed the editor command palette
+slice after PR #219, and JER-238 closed the review archive restore and
+regression bundle slice after PR #220. PR #221 closed the validation-suite
+timeout budget maintenance slice, so the default bounded validation command
+passes on post-v5 `main`.
 
 Scope guard: v5 is a single-user engineering authoring workbench. The priority
 is a strong Simulink/Figma-level control-logic panel foundation: graph editing,
@@ -77,11 +80,18 @@ Workbench v5 deep-water sequence:
 - JER-231: Canonical graph document v2 and DOM adapter boundary (Done, PR #213)
 - JER-232: Port drag wiring and route diagnostics v2 (Done, PR #214)
 - JER-233: Scenario test case library v1 (Done, PR #215)
-- JER-234: Sandbox runner trace kernel v2 (Done locally)
-- JER-235: Debug probe timeline v3 (Done locally)
-- JER-236: Hardware/interface evidence attachment v2 (Done locally)
-- JER-237: Editor command palette and inspector ergonomics v1 (Done locally)
-- JER-238: Review archive restore and regression bundle v3 (Done locally)
+- JER-234: Sandbox runner trace kernel v2 (Done, PR #216)
+- JER-235: Debug probe timeline v3 (Done, PR #217)
+- JER-236: Hardware/interface evidence attachment v2 (Done, PR #218)
+- JER-237: Editor command palette and inspector ergonomics v1 (Done, PR #219)
+- JER-238: Review archive restore and regression bundle v3 (Done, PR #220)
+
+Post-v5 control-plane bootstrap:
+
+- Live Linear `JER-229`: `AI FANTUI LogicMVP · v6 next-queue bootstrap`
+  (created 2026-05-03). This is a live Linear control-plane issue and is not
+  the same artifact as the repo-local historical `JER-229` v5 launch slice.
+  See `docs/coordination/linear-symphony-bootstrap.md`.
 
 Workbench v4 foundation-first closure:
 
