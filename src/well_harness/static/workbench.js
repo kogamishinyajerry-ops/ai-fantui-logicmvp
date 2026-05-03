@@ -18266,6 +18266,12 @@ function installEditableWorkbenchShell() {
     }
     if (payload.editable_graph_document !== undefined) {
       const graphDocument = payload.editable_graph_document;
+      const canonicalModel =
+        graphDocument.canonical_model
+        && typeof graphDocument.canonical_model === "object"
+        && !Array.isArray(graphDocument.canonical_model)
+          ? graphDocument.canonical_model
+          : null;
       const ports = Array.isArray(payload.ports) ? payload.ports : [];
       const typedPorts = Array.isArray(payload.typed_ports) ? payload.typed_ports : [];
       const subsystemGroups = Array.isArray(payload.subsystem_groups) ? payload.subsystem_groups : [];
@@ -18276,6 +18282,31 @@ function installEditableWorkbenchShell() {
       const capturedTemplates = Array.isArray(componentLibrary.captured_templates)
         ? componentLibrary.captured_templates
         : [];
+      const canonicalComponentLibrary =
+        canonicalModel
+        && canonicalModel.component_library
+        && typeof canonicalModel.component_library === "object"
+        && !Array.isArray(canonicalModel.component_library)
+          ? canonicalModel.component_library
+          : {};
+      const canonicalCapturedTemplates = Array.isArray(canonicalComponentLibrary.captured_templates)
+        ? canonicalComponentLibrary.captured_templates
+        : [];
+      const canonicalCountExpectations = canonicalModel
+        ? {
+            node_count: Array.isArray(canonicalModel.nodes) ? canonicalModel.nodes.length : undefined,
+            draft_node_count: Array.isArray(canonicalModel.nodes)
+              ? canonicalModel.nodes.filter((node) => Boolean(node && (node.draftNode || node.draft_node))).length
+              : undefined,
+            edge_count: Array.isArray(canonicalModel.edges) ? canonicalModel.edges.length : undefined,
+            port_count: Array.isArray(canonicalModel.ports) ? canonicalModel.ports.length : undefined,
+            typed_port_count: Array.isArray(canonicalModel.typed_ports) ? canonicalModel.typed_ports.length : undefined,
+            subsystem_group_count: Array.isArray(canonicalModel.subsystem_groups)
+              ? canonicalModel.subsystem_groups.length
+              : undefined,
+            component_template_count: canonicalCapturedTemplates.length,
+          }
+        : {};
       const graphCountExpectations = {
         node_count: payload.nodes.length,
         draft_node_count: payload.nodes.filter((node) => Boolean(node && (node.draftNode || node.draft_node))).length,
@@ -18286,7 +18317,14 @@ function installEditableWorkbenchShell() {
         component_template_count: capturedTemplates.length,
       };
       for (const [key, expected] of Object.entries(graphCountExpectations)) {
-        if (Number(graphDocument[key]) !== expected) {
+        const graphCount = Number(graphDocument[key]);
+        const canonicalExpected = canonicalCountExpectations[key];
+        const matchesDraftPayload = graphCount === expected;
+        const matchesCanonicalModel =
+          canonicalExpected !== undefined
+          && Number.isFinite(Number(canonicalExpected))
+          && graphCount === Number(canonicalExpected);
+        if (!matchesDraftPayload && !matchesCanonicalModel) {
           throw new Error(`editable_graph_document ${key} must match draft payload`);
         }
       }
