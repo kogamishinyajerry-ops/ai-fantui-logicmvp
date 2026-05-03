@@ -92,6 +92,19 @@ Post-v5 control-plane bootstrap:
   (created 2026-05-03). This is a live Linear control-plane issue and is not
   the same artifact as the repo-local historical `JER-229` v5 launch slice.
   See `docs/coordination/linear-symphony-bootstrap.md`.
+- Live Linear `JER-230`: `[project] [L9] [none] [DAL-TBD] Post-v5 v6 live
+  queue seed` (created 2026-05-03 under `AI FANTUI LogicMVP · Codex Daily
+  Lane`). This is a live Linear implementation issue and is not the same
+  artifact as the repo-local historical `JER-230` empty-canvas graph authoring
+  slice. See `docs/coordination/post-v5-v6-live-queue.md`.
+
+Post-v5 recommended next dispatch:
+
+- `[project] [L4] [none] [DAL-TBD] Review archive library and recent restore
+  surface`. This continues directly from the v5 archive restore proof by
+  making sandbox review archives reusable from the actual workbench surface.
+  It keeps `truth_effect: none`, avoids controller/frozen-asset changes, and
+  does not claim e2e 49/49 or mypy strict clean.
 
 Workbench v4 foundation-first closure:
 
