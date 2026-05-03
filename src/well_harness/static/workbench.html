@@ -1681,10 +1681,25 @@
                     >
                       Download JSON
                     </button>
+                    <button
+                      id="workbench-restore-review-archive-btn"
+                      type="button"
+                      class="workbench-editable-primary"
+                    >
+                      Restore archive
+                    </button>
                   </div>
                   <label class="workbench-handoff-output" for="workbench-evidence-archive-output">
                     <span>Archive manifest</span>
                     <textarea id="workbench-evidence-archive-output" rows="8" readonly></textarea>
+                  </label>
+                  <label class="workbench-handoff-output" for="workbench-review-archive-restore-output">
+                    <span>Restore validation</span>
+                    <textarea id="workbench-review-archive-restore-output" rows="5" readonly></textarea>
+                  </label>
+                  <label class="workbench-handoff-output" for="workbench-regression-bundle-output">
+                    <span>Regression bundle</span>
+                    <textarea id="workbench-regression-bundle-output" rows="5" readonly></textarea>
                   </label>
                   <p id="workbench-archive-status" class="workbench-handoff-status">
                     Prepare a local draft evidence archive. No live Linear mutation.

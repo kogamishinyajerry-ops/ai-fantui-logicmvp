@@ -1,7 +1,7 @@
 # Editable Workbench v5 Deep-Water Plan
 
 Date: 2026-05-03
-Status: Implementation active · JER-237 editor command palette complete locally
+Status: Implementation active · JER-238 review archive restore complete locally
 Scope: single-user `/workbench` foundation only
 
 ## Summary
@@ -315,6 +315,8 @@ Implementation notes:
 
 ### JER-238 · Review archive restore and regression bundle v3
 
+Status: Done locally.
+
 Outcome: Close v5 by proving the whole authoring loop can be archived and
 restored.
 
@@ -327,6 +329,23 @@ Acceptance:
 - A focused e2e smoke covers create graph -> wire -> run -> debug -> attach
   evidence -> archive -> restore.
 - PR proof remains honest about e2e and mypy baseline blockers.
+
+Implementation notes:
+
+- The evidence archive now emits `review_archive_restore_v3` as a restore-time
+  validation packet for checksum coverage, required sections, red-line metadata,
+  foundation review archive validity, and importable model JSON.
+- The evidence archive also emits `review_archive_regression_bundle_v3` as a
+  readable local proof of create, wire, run, debug, hardware evidence,
+  archive-prepare, and restore-readback steps.
+- `/workbench` exposes local restore validation and regression bundle outputs
+  beside the existing archive JSON. Restore readback uses the existing editable
+  draft import path and remains browser-local.
+- The bundle explicitly keeps `full_e2e_49_49_claim: "not_claimed"` and
+  `mypy_strict_clean_claim: "not_claimed"` until the official gates report
+  pass.
+- No controller truth, adapters, frozen hardware assets, live Linear state,
+  truth-level, DAL, or PSSA state are changed.
 
 ## Test Strategy
 
