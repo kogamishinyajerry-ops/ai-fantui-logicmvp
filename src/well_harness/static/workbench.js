@@ -3385,6 +3385,14 @@ function normalizeRecentWorkbenchArchiveEntries(entries) {
       selected_fault_mode_id: typeof entry.selected_fault_mode_id === "string" ? entry.selected_fault_mode_id : "",
       has_workspace_handoff: Boolean(entry.has_workspace_handoff),
       has_workspace_snapshot: Boolean(entry.has_workspace_snapshot),
+      manifest_status: typeof entry.manifest_status === "string" ? entry.manifest_status : "unknown",
+      manifest_issues: Array.isArray(entry.manifest_issues) ? entry.manifest_issues.map((item) => String(item)) : [],
+      manifest_sha256: typeof entry.manifest_sha256 === "string" ? entry.manifest_sha256 : "",
+      checksum_status: typeof entry.checksum_status === "string" ? entry.checksum_status : "unknown",
+      integrity_file_count: Number.isFinite(Number(entry.integrity_file_count)) ? Number(entry.integrity_file_count) : 0,
+      restore_available: entry.restore_available !== false,
+      truth_effect: typeof entry.truth_effect === "string" ? entry.truth_effect : "none",
+      candidate_state: typeof entry.candidate_state === "string" ? entry.candidate_state : "sandbox_candidate",
     }))
     .filter((entry) => entry.manifest_path || entry.archive_dir);
 }
@@ -3396,10 +3404,13 @@ function summarizeRecentWorkbenchArchive(entry) {
   const workspace = entry.has_workspace_snapshot
     ? "带工作区快照"
     : (entry.has_workspace_handoff ? "仅带交接摘要" : "仅带 bundle");
+  const checksum = entry.manifest_sha256
+    ? `manifest sha256 ${entry.manifest_sha256.slice(0, 12)}`
+    : "manifest sha256 未记录";
   return {
     badge: state === "ready" ? "可恢复 / ready" : "可恢复 / blocked",
     summary: `${scenario} / ${faultMode}`,
-    detail: `${workspace} / ${shortPath(entry.archive_dir || entry.manifest_path)}`,
+    detail: `${workspace} / ${entry.manifest_status} / ${entry.checksum_status} / ${checksum}`,
   };
 }
 
@@ -3421,6 +3432,14 @@ function buildRecentWorkbenchArchiveEntryFromBundlePayload(payload) {
     selected_fault_mode_id: bundle.selected_fault_mode_id || "",
     has_workspace_handoff: Boolean(archive.workspace_handoff_json_path),
     has_workspace_snapshot: Boolean(archive.workspace_snapshot_json_path),
+    manifest_status: "valid",
+    manifest_issues: [],
+    manifest_sha256: "",
+    checksum_status: "not_checked",
+    integrity_file_count: 0,
+    restore_available: true,
+    truth_effect: "none",
+    candidate_state: "sandbox_candidate",
   };
 }
 
@@ -3440,6 +3459,14 @@ function buildRecentWorkbenchArchiveEntryFromRestorePayload(payload) {
     selected_fault_mode_id: bundle.selected_fault_mode_id || "",
     has_workspace_handoff: Boolean(files.workspace_handoff_json),
     has_workspace_snapshot: Boolean(files.workspace_snapshot_json),
+    manifest_status: "valid",
+    manifest_issues: [],
+    manifest_sha256: "",
+    checksum_status: "not_checked",
+    integrity_file_count: 0,
+    restore_available: true,
+    truth_effect: "none",
+    candidate_state: "sandbox_candidate",
   };
 }
 
@@ -3496,7 +3523,17 @@ function renderRecentWorkbenchArchives() {
       ? "workspace"
       : (entry.has_workspace_handoff ? "handoff" : "bundle");
 
-    meta.append(systemChip, stateChip, workspaceChip);
+    const manifestChip = document.createElement("span");
+    manifestChip.className = "workbench-history-chip";
+    manifestChip.dataset.state = entry.manifest_status === "valid" ? "ready" : "blocked";
+    manifestChip.textContent = `manifest ${entry.manifest_status}`;
+
+    const checksumChip = document.createElement("span");
+    checksumChip.className = "workbench-history-chip";
+    checksumChip.dataset.state = entry.checksum_status === "pass" ? "ready" : "idle";
+    checksumChip.textContent = `checksum ${entry.checksum_status}`;
+
+    meta.append(systemChip, stateChip, workspaceChip, manifestChip, checksumChip);
 
     const title = document.createElement("strong");
     title.textContent = entry.system_title
@@ -3510,16 +3547,28 @@ function renderRecentWorkbenchArchives() {
     const detail = document.createElement("p");
     detail.textContent = `${summary.detail} / ${entry.created_at_utc || "时间未知"}`;
 
+    const pathText = document.createElement("p");
+    pathText.textContent = `${shortPath(entry.archive_dir || entry.manifest_path)} / truth_effect ${entry.truth_effect}`;
+
+    const issues = document.createElement("p");
+    issues.textContent = entry.manifest_issues.length
+      ? `manifest issue: ${entry.manifest_issues[0]}`
+      : `integrity files: ${entry.integrity_file_count}`;
+
     const action = document.createElement("button");
     action.type = "button";
     action.className = "workbench-history-return-button workbench-recent-archive-action";
-    action.textContent = "恢复这个 Archive";
+    action.textContent = entry.restore_available ? "恢复这个 Archive" : "不可恢复";
+    action.disabled = !entry.restore_available;
     action.addEventListener("click", () => {
+      if (!entry.restore_available) {
+        return;
+      }
       workbenchElement("workbench-archive-manifest-path").value = entry.archive_dir || entry.manifest_path;
       void restoreWorkbenchArchiveFromManifest();
     });
 
-    card.append(meta, title, summaryText, detail, action);
+    card.append(meta, title, summaryText, detail, pathText, issues, action);
     return card;
   }));
 }

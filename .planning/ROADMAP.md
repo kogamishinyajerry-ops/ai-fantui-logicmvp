@@ -97,14 +97,19 @@ Post-v5 control-plane bootstrap:
   Lane`). This is a live Linear implementation issue and is not the same
   artifact as the repo-local historical `JER-230` empty-canvas graph authoring
   slice. See `docs/coordination/post-v5-v6-live-queue.md`.
+- Live Linear `JER-231`: `[project] [L4] [none] [DAL-TBD] Review archive
+  library and recent restore surface` (created 2026-05-03 under `AI FANTUI
+  LogicMVP · Codex Daily Lane`). This is the first post-v5 product slice and is
+  not the same artifact as the repo-local historical `JER-231` canonical graph
+  document v2 slice.
 
-Post-v5 recommended next dispatch:
+Post-v5 product dispatch:
 
 - `[project] [L4] [none] [DAL-TBD] Review archive library and recent restore
-  surface`. This continues directly from the v5 archive restore proof by
-  making sandbox review archives reusable from the actual workbench surface.
-  It keeps `truth_effect: none`, avoids controller/frozen-asset changes, and
-  does not claim e2e 49/49 or mypy strict clean.
+  surface` is live Linear `JER-231`. It continues directly from the v5 archive
+  restore proof by making sandbox review archives reusable from the actual
+  workbench surface. It keeps `truth_effect: none`, avoids controller/frozen
+  asset changes, and does not claim e2e 49/49 or mypy strict clean.
 
 Workbench v4 foundation-first closure:
 

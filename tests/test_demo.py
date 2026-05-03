@@ -1102,6 +1102,11 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertIn("当前工作区已经具备可交接的 packet、结果和 archive 状态", script)
         self.assertIn("当前工作区已经明确告诉你卡在哪", script)
         self.assertIn("当前只有 packet 和交接备注，还没有结果历史", script)
+        self.assertIn("manifest_status", script)
+        self.assertIn("checksum_status", script)
+        self.assertIn("manifest sha256", script)
+        self.assertIn("truth_effect", script)
+        self.assertIn("不可恢复", script)
         self.assertIn("workspaceSnapshotDownloadName", script)
         self.assertIn("当前工作区快照已导出。", script)
         self.assertIn("已导入工作区快照和结果历史。", script)
@@ -1259,6 +1264,12 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertEqual(str(Path(archive.manifest_json_path).resolve()), recent_archive["manifest_path"])
         self.assertEqual("custom_reverse_control_v1", recent_archive["system_id"])
         self.assertTrue(recent_archive["ready_for_spec_build"])
+        self.assertEqual("valid", recent_archive["manifest_status"])
+        self.assertEqual("pass", recent_archive["checksum_status"])
+        self.assertEqual(64, len(recent_archive["manifest_sha256"]))
+        self.assertGreaterEqual(recent_archive["integrity_file_count"], 3)
+        self.assertTrue(recent_archive["restore_available"])
+        self.assertEqual("none", recent_archive["truth_effect"])
 
     def test_workbench_bootstrap_explain_runtime_returns_shelved_payload(self):
         # Phase A (2026-04-22): LLM features shelved. explain_runtime returns
@@ -1325,6 +1336,59 @@ class DemoIntentLayerTests(unittest.TestCase):
         self.assertEqual(str(archive_root), payload["default_archive_root"])
         self.assertEqual(1, len(payload["recent_archives"]))
         self.assertEqual("custom_reverse_control_v1", payload["recent_archives"][0]["system_id"])
+        self.assertEqual("valid", payload["recent_archives"][0]["manifest_status"])
+        self.assertEqual("pass", payload["recent_archives"][0]["checksum_status"])
+
+    def test_demo_server_recent_archives_api_reports_invalid_metadata_without_crashing(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive_root = Path(temp_dir).resolve()
+            missing_manifest_dir = archive_root / "missing-manifest"
+            invalid_manifest_dir = archive_root / "invalid-manifest"
+            missing_manifest_dir.mkdir(parents=True)
+            invalid_manifest_dir.mkdir(parents=True)
+            (invalid_manifest_dir / "archive_manifest.json").write_text("{not-json", encoding="utf-8")
+
+            with mock.patch.object(demo_server, "default_workbench_archive_root", return_value=archive_root):
+                payload = demo_server.workbench_recent_archives_payload()
+
+        entries_by_dir = {Path(item["archive_dir"]).name: item for item in payload["recent_archives"]}
+        self.assertEqual("missing", entries_by_dir["missing-manifest"]["manifest_status"])
+        self.assertEqual("invalid", entries_by_dir["invalid-manifest"]["manifest_status"])
+        self.assertFalse(entries_by_dir["missing-manifest"]["restore_available"])
+        self.assertFalse(entries_by_dir["invalid-manifest"]["restore_available"])
+        self.assertEqual("none", entries_by_dir["missing-manifest"]["truth_effect"])
+        self.assertEqual("sandbox_candidate", entries_by_dir["invalid-manifest"]["candidate_state"])
+
+    def test_demo_server_recent_archives_restore_readback_keeps_sandbox_truth_effect(self):
+        bundle = build_workbench_bundle(
+            demo_server.intake_packet_from_dict(demo_server.reference_workbench_packet_payload()),
+            confirmed_root_cause="Pressure sensor bias was confirmed during troubleshooting.",
+            repair_action="Recalibrated the sensor path.",
+            validation_after_fix="Acceptance replay completed after the repair.",
+            residual_risk="Watch for future sensor drift.",
+        )
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            archive_root = Path(temp_dir).resolve()
+            with mock.patch.object(demo_server, "default_workbench_archive_root", return_value=archive_root):
+                archive_workbench_bundle(
+                    bundle,
+                    archive_root,
+                    workspace_snapshot={"kind": "well-harness-workbench-browser-workspace", "version": 1},
+                )
+                recent_payload = demo_server.workbench_recent_archives_payload()
+                recent_archive = recent_payload["recent_archives"][0]
+                restore_payload, error = demo_server.build_workbench_archive_restore_response(
+                    {"manifest_path": recent_archive["manifest_path"]}
+                )
+
+        self.assertIsNone(error)
+        self.assertIsNotNone(restore_payload)
+        self.assertEqual("valid", recent_archive["manifest_status"])
+        self.assertTrue(recent_archive["restore_available"])
+        self.assertEqual("custom_reverse_control_v1", restore_payload["bundle"]["system_id"])
+        self.assertEqual("none", restore_payload["changerequest_handoff_validation"]["truth_effect"])
+        self.assertEqual("none", restore_payload["foundation_review_archive_validation"]["truth_effect"])
 
     def test_demo_server_api_returns_workbench_bundle_and_archive_payload(self):
         with tempfile.TemporaryDirectory() as temp_dir:
