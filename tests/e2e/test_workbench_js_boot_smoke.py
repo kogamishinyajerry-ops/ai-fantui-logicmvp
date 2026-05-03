@@ -126,6 +126,96 @@ def _set_archive_buffer_value(page: Any, archive_json: str) -> None:
     )
 
 
+def _large_sandbox_chain_draft(base: dict[str, Any], node_count: int = 16) -> dict[str, Any]:
+    draft = json.loads(json.dumps(base))
+    nodes: list[dict[str, Any]] = []
+    edges: list[dict[str, Any]] = []
+    for index in range(1, node_count + 1):
+        node_id = f"draft_node_{index}"
+        if index == 1:
+            op = "input"
+            label = "Large graph input"
+            rule_count = "0"
+        elif index == node_count:
+            op = "output"
+            label = "Large graph output"
+            rule_count = "0"
+        else:
+            op = "and"
+            label = f"Large graph gate {index}"
+            rule_count = "2"
+        nodes.append(
+            {
+                "id": node_id,
+                "label": label,
+                "op": op,
+                "ruleCount": rule_count,
+                "evidence": "evidence_gap",
+                "sourceRef": f"ui_draft.large_sandbox_graph.node.{index}",
+                "op_catalog_entry": op,
+                "port_contract": {
+                    "input_port_id": f"{node_id}:in",
+                    "output_port_id": f"{node_id}:out",
+                    "input_signal_id": f"{node_id}_{op}_input",
+                    "output_signal_id": f"{node_id}_{op}_output",
+                    "value_type": "boolean",
+                    "required": False,
+                    "source_ref": f"ui_draft.large_sandbox_graph.port_contract.{index}",
+                    "candidate_state": "sandbox_candidate",
+                    "truth_effect": "none",
+                },
+                "rules": [],
+                "x": f"{8 + ((index - 1) % 8) * 11}%",
+                "y": f"{18 + ((index - 1) // 8) * 22}%",
+                "draftNode": True,
+            }
+        )
+    for index in range(1, node_count):
+        source = f"draft_node_{index}"
+        target = f"draft_node_{index + 1}"
+        edges.append(
+            {
+                "id": f"edge_large_chain_{index}_{index + 1}",
+                "source": source,
+                "target": target,
+                "source_port_id": f"{source}:out",
+                "target_port_id": f"{target}:in",
+                "signal_id": f"{source}_to_{target}",
+                "value_type": "boolean",
+                "unit": "",
+                "required": True,
+                "source_ref": f"ui_draft.large_sandbox_graph.edge.{index}",
+                "hardware_binding": {
+                    "owner_kind": "edge",
+                    "owner_id": f"edge_large_chain_{index}_{index + 1}",
+                    "evidence_status": "evidence_gap",
+                    "source_ref": f"ui_draft.large_sandbox_graph.binding.edge.{index}",
+                    "truth_effect": "none",
+                },
+            }
+        )
+    draft["canvas_authoring_mode"] = "empty_authoring"
+    draft["nodes"] = nodes
+    draft["edges"] = edges
+    draft["selected_node_ids"] = [nodes[-1]["id"]]
+    draft["selected_node"] = {"id": nodes[-1]["id"]}
+    draft["hardware_bindings"] = []
+    draft["typed_ports"] = []
+    draft["ports"] = []
+    draft["subsystem_groups"] = []
+    for stale_key in [
+        "editable_graph_document",
+        "sandbox_test_bench",
+        "sandbox_test_run_report",
+        "candidate_debugger_view",
+        "debug_probe_timeline",
+        "preflight_analyzer_report",
+        "hardware_evidence_attachment_v2",
+    ]:
+        draft.pop(stale_key, None)
+    return draft
+
+
 # ─── E11-08 closure: identity affordance JS toggle (4 tests) ─────────
 
 
@@ -3438,6 +3528,175 @@ def test_workbench_sandbox_runner_trace_kernel_reports_invalid_graph_findings(de
     assert kernel["candidate_state"] == "sandbox_candidate"
     assert kernel["certification_claim"] == "none"
     assert report["truth_effect"] == "none"
+    assert report["red_line_metadata"]["controller_truth_modified"] is False
+
+
+def test_workbench_large_sandbox_graph_trace_and_archive_checksums_are_stable(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click("#workbench-start-empty-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    base_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    large_draft = _large_sandbox_chain_draft(base_draft, node_count=16)
+    _set_draft_buffer_value(page, json.dumps(large_draft))
+    page.click("#workbench-import-draft-btn")
+
+    page.fill(
+        "#workbench-test-bench-inputs-json",
+        json.dumps(
+            [
+                {"tick": 0, "inputs": {"draft_node_1": False}},
+                {"tick": 1, "inputs": {"draft_node_1": True}},
+                {"tick": 2, "inputs": {"draft_node_1": True}},
+            ]
+        ),
+    )
+    page.fill(
+        "#workbench-test-bench-assertions-json",
+        json.dumps(
+            [
+                {"tick": 0, "target": "draft_node_16:out", "expected": False},
+                {"tick": 1, "target": "draft_node_16:out", "expected": True},
+                {"tick": 2, "target": "draft_node_16:out", "expected": True},
+            ]
+        ),
+    )
+    page.click("#workbench-run-test-bench-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const output = document.getElementById('workbench-test-bench-report-output');
+          return output && output.value.includes('sandbox_runner_trace_kernel');
+        }
+        """
+    )
+    first_report = json.loads(page.locator("#workbench-test-bench-report-output").input_value())
+    page.click("#workbench-run-test-bench-btn")
+    second_report = json.loads(page.locator("#workbench-test-bench-report-output").input_value())
+    first_kernel = first_report["sandbox_runner_trace_kernel"]
+    second_kernel = second_report["sandbox_runner_trace_kernel"]
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert first_report["status"] == "pass"
+    assert second_report["status"] == "pass"
+    assert first_report["sandbox_runner_trace_kernel_checksum"] == second_report["sandbox_runner_trace_kernel_checksum"]
+    assert first_kernel == second_kernel
+    assert first_kernel["evaluation_order"] == [f"draft_node_{index}" for index in range(1, 17)]
+    assert first_kernel["tick_count"] == 3
+    assert first_kernel["trace_frame_count"] == 3
+    assert first_kernel["finding_count"] == 0
+    assert len(first_kernel["frames"][2]["node_values"]) == 16
+    assert len(first_kernel["frames"][2]["edge_values"]) == 15
+    assert len(first_kernel["frames"][2]["port_values"]) == 32
+    assert first_kernel["frames"][2]["assertion_results"][0]["status"] == "pass"
+    assert first_kernel["truth_effect"] == "none"
+
+    page.click("#workbench-prepare-archive-btn")
+    first_archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    page.click("#workbench-prepare-archive-btn")
+    second_archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    stable_checksum_keys = [
+        "editable_graph_document_checksum",
+        "sandbox_test_bench_checksum",
+        "sandbox_test_run_report_checksum",
+        "sandbox_runner_trace_kernel_checksum",
+        "foundation_review_archive_checksum",
+        "foundation_review_archive_validation_checksum",
+    ]
+    assert first_archive["editable_graph_document"]["node_count"] == 16
+    assert first_archive["editable_graph_document"]["edge_count"] == 15
+    assert first_archive["sandbox_runner_trace_kernel"]["trace_frame_count"] == 3
+    assert first_archive["foundation_review_archive"]["sections"]["sandbox_runner_trace_kernel"]["status"] == "present"
+    assert first_archive["review_archive_restore_v3"]["checksum_mismatch_count"] == 0
+    assert first_archive["red_line_metadata"]["controller_truth_modified"] is False
+    for key in stable_checksum_keys:
+        assert first_archive["checksums"][key]
+        assert first_archive["checksums"][key] == second_archive["checksums"][key]
+
+
+def test_workbench_large_sandbox_graph_invalid_findings_remain_structured(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click("#workbench-start-empty-draft-btn")
+    page.click("#workbench-export-draft-btn")
+    base_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    large_draft = _large_sandbox_chain_draft(base_draft, node_count=12)
+    large_draft["edges"].append({**large_draft["edges"][0], "id": "edge_large_chain_duplicate"})
+    large_draft["edges"].append(
+        {
+            "id": "edge_large_chain_dangling",
+            "source": "draft_node_12",
+            "target": "draft_node_missing",
+            "source_port_id": "draft_node_12:out",
+            "target_port_id": "draft_node_missing:in",
+            "signal_id": "draft_node_12_to_missing",
+            "value_type": "boolean",
+            "required": True,
+            "source_ref": "ui_draft.large_sandbox_graph.invalid.dangling",
+            "truth_effect": "none",
+        }
+    )
+    _set_draft_buffer_value(page, json.dumps(large_draft))
+    page.click("#workbench-import-draft-btn")
+    page.evaluate(
+        """
+        () => {
+          const node = document.querySelector('[data-editable-node-id="draft_node_5"]');
+          node.setAttribute('data-node-op', 'python_eval');
+          node.setAttribute('data-op-catalog-entry', 'python_eval');
+        }
+        """
+    )
+    page.fill(
+        "#workbench-test-bench-inputs-json",
+        json.dumps([{"tick": 0, "inputs": {"draft_node_1": True}}]),
+    )
+    page.fill("#workbench-test-bench-assertions-json", json.dumps([]))
+    page.click("#workbench-run-test-bench-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const output = document.getElementById('workbench-test-bench-report-output');
+          return output && output.value.includes('dangling_edge');
+        }
+        """
+    )
+    report = json.loads(page.locator("#workbench-test-bench-report-output").input_value())
+    kernel = report["sandbox_runner_trace_kernel"]
+    codes = {finding["code"] for finding in kernel["findings"]}
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert report["status"] == "invalid_scenario"
+    assert kernel["status"] == "invalid_scenario"
+    assert {"unsupported_op", "duplicate_edge", "dangling_edge"}.issubset(codes)
+    assert kernel["finding_count"] >= 3
+    assert kernel["candidate_state"] == "sandbox_candidate"
+    assert kernel["certification_claim"] == "none"
+    assert kernel["truth_effect"] == "none"
+    assert all(finding["code"] and finding["message"] for finding in kernel["findings"])
+    assert all(finding["severity"] in {"warning", "error"} for finding in kernel["findings"])
+    assert all(finding["candidate_state"] == "sandbox_candidate" for finding in kernel["findings"])
+    assert all(finding["truth_effect"] == "none" for finding in kernel["findings"])
     assert report["red_line_metadata"]["controller_truth_modified"] is False
 
 
