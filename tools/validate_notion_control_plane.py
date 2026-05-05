@@ -6,7 +6,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
 
 NOTION_VERSION = "2022-06-28"
@@ -61,7 +61,7 @@ def parse_output_format(argv: list[str]) -> str:
 
 def load_config(path: Path = DEFAULT_CONFIG_PATH) -> dict[str, Any]:
     with path.open(encoding="utf-8") as config_file:
-        return json.load(config_file)
+        return cast(dict[str, Any], json.load(config_file))
 
 
 def validate_required_keys(config: dict[str, Any]) -> list[str]:
@@ -101,7 +101,7 @@ def notion_request(token: str, path: str) -> dict[str, Any]:
         method="GET",
     )
     with urllib.request.urlopen(request, timeout=30) as response:
-        return json.load(response)
+        return cast(dict[str, Any], json.load(response))
 
 
 def remote_object_status(kind: str, key: str, payload: dict[str, Any]) -> tuple[str, str | None]:

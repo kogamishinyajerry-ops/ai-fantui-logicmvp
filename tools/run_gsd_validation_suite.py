@@ -8,7 +8,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Sequence, cast
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -367,7 +367,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 
 
 def parse_output_format(argv: list[str]) -> str:
-    return parse_args(argv).format
+    return cast(str, parse_args(argv).format)
 
 
 def emit_text_report(report: dict[str, Any]) -> None:
