@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-243` closed · live Linear `JER-244` implementing local runbook and release manifest
+Status: active queue · live Linear `JER-244` closed · live Linear `JER-245` implementing JER-171 mypy tranche 3
 
 ## Purpose
 
@@ -274,7 +274,7 @@ Current release-operations dispatch:
 - Live Linear issue: `JER-244`
 - Title: `[project] [L6] [none] [DAL-TBD] Local production runbook and release manifest`
 - URL: `https://linear.app/jerrykogami/issue/JER-244/project-l6-none-dal-tbd-local-production-runbook-and-release-manifest`
-- State at dispatch: `In Progress`
+- State after PR #237: `Done`
 - Evidence target: a local production-readiness runbook and a machine-readable
   release evidence manifest that record setup/start/stop/verify commands,
   required environment, unsupported external dependencies, current blockers,
@@ -282,6 +282,19 @@ Current release-operations dispatch:
 - Current branch evidence: `docs/coordination/local-production-runbook.md`
   defines the local release path, and `tools/workbench_release_manifest.py`
   generates and validates the release evidence manifest locally.
+
+Current quality-debt dispatch:
+
+- Live Linear issue: `JER-245`
+- Title: `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 3`
+- URL: `https://linear.app/jerrykogami/issue/JER-245/project-l9-none-dal-tbd-jer-171-mypy-baseline-reduction-tranche-3`
+- State at dispatch: `In Progress`
+- Evidence target: keep `tools/workbench_release_candidate_smoke.py` focused
+  strict-mypy clean by shielding the local `well_harness` import boundary
+  without changing runtime behavior.
+- Current branch evidence: focused strict mypy reports success in 1 source
+  file, focused smoke pytest passes, and the official wrapper moved from 4619
+  errors in 327 files to 4617 errors in 326 files while still blocked.
 
 ## Next Candidate Issue Contracts
 
@@ -338,7 +351,7 @@ Dispatched gate-refresh slice:
    - Priority: `L9` gate confidence, dispatched as live Linear `JER-243`;
      run after the smoke-pack slice or before any production-readiness claim.
 
-Recommended next quality-debt slice:
+Dispatched quality-debt slice:
 
 3. `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 3`
    - Outcome: reduce the official strict mypy baseline again by typing one
@@ -352,8 +365,8 @@ Recommended next quality-debt slice:
      `pass`.
    - Evidence: focused pytest, focused strict mypy command, official wrapper
      report, targeted validation-suite pass.
-   - Priority: `L9` quality debt; keep reducing the known JER-171 blocker in
-     small reversible tranches.
+   - Priority: `L9` quality debt, dispatched as live Linear `JER-245`; keep
+     reducing the known JER-171 blocker in small reversible tranches.
 
 Dispatched release-operations slice:
 

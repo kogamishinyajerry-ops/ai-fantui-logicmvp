@@ -149,7 +149,10 @@ Post-v5 control-plane bootstrap:
   refresh and does not claim production, deployment, certification, or full
   mypy readiness.
 - Live Linear `JER-244`: `[project] [L6] [none] [DAL-TBD] Local production
-  runbook and release manifest` is the current release-operations issue.
+  runbook and release manifest` closed through PR #237. This is the local
+  release-operations runbook and evidence-manifest slice.
+- Live Linear `JER-245`: `[project] [L9] [none] [DAL-TBD] JER-171 mypy
+  baseline reduction tranche 3` is the current quality-debt slice.
 
 Post-v5 product dispatch:
 
@@ -181,6 +184,11 @@ Post-v5 quality-debt dispatch:
   preserving runtime behavior. Current branch evidence reduces the official
   wrapper from 4913 errors in 347 files to 4617 errors in 326 files; PR proof
   must keep the official wrapper status as blocked unless it reports pass.
+- `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 3`
+  is live Linear `JER-245`. It keeps the release-smoke tool focused
+  strict-mypy clean by shielding the local `well_harness` import boundary, and
+  current branch evidence reduces the official wrapper from 4619 errors in 327
+  files to 4617 errors in 326 files while still blocked.
 
 Post-JER-240 production-readiness refresh:
 
