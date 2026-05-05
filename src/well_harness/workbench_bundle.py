@@ -8,21 +8,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from well_harness.document_intake import (
+from well_harness.document_intake import (  # type: ignore[import-untyped]
     ControlSystemIntakePacket,
     assess_intake_packet,
     build_clarification_brief,
 )
-from well_harness.fault_diagnosis import (
+from well_harness.fault_diagnosis import (  # type: ignore[import-untyped]
     FaultDiagnosisReport,
     build_fault_diagnosis_report_from_intake_packet,
 )
-from well_harness.knowledge_capture import KnowledgeArtifact, build_knowledge_artifact
-from well_harness.scenario_playback import (
+from well_harness.knowledge_capture import KnowledgeArtifact, build_knowledge_artifact  # type: ignore[import-untyped]
+from well_harness.scenario_playback import (  # type: ignore[import-untyped]
     ScenarioPlaybackReport,
     build_playback_report_from_intake_packet,
 )
-from well_harness.workbench_changerequest_handoff import (
+from well_harness.workbench_changerequest_handoff import (  # type: ignore[import-untyped]
     assert_valid_changerequest_handoff_archive_payload,
     assert_valid_foundation_review_archive_payload,
 )

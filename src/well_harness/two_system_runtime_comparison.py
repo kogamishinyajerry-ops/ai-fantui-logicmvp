@@ -3,12 +3,15 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any
 
-from well_harness.adapters import build_landing_gear_controller_adapter
-from well_harness.controller_adapter import GenericControllerTruthAdapter, build_reference_controller_adapter
-from well_harness.fault_diagnosis import build_fault_diagnosis_report_from_truth_adapter
-from well_harness.knowledge_capture import build_knowledge_artifact_from_truth_adapter
-from well_harness.scenario_playback import build_playback_report_from_truth_adapter
-from well_harness.system_spec import workbench_spec_from_dict
+from well_harness.adapters import build_landing_gear_controller_adapter  # type: ignore[import-untyped]
+from well_harness.controller_adapter import (  # type: ignore[import-untyped]
+    GenericControllerTruthAdapter,
+    build_reference_controller_adapter,
+)
+from well_harness.fault_diagnosis import build_fault_diagnosis_report_from_truth_adapter  # type: ignore[import-untyped]
+from well_harness.knowledge_capture import build_knowledge_artifact_from_truth_adapter  # type: ignore[import-untyped]
+from well_harness.scenario_playback import build_playback_report_from_truth_adapter  # type: ignore[import-untyped]
+from well_harness.system_spec import workbench_spec_from_dict  # type: ignore[import-untyped]
 
 
 TWO_SYSTEM_RUNTIME_COMPARISON_KIND = "well-harness-two-system-runtime-comparison"
