@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Live Linear JER-258 workbench maturity evidence refresh implementing
-last_updated: "2026-05-05T23:06:00.000+08:00"
-last_activity: 2026-05-05
+status: Live Linear JER-259 workbench start-page honesty refresh implementing
+last_updated: "2026-05-06T00:18:00.000+08:00"
+last_activity: 2026-05-06
 progress:
   total_phases: 55
   completed_phases: 46
@@ -162,9 +162,16 @@ in 307 files to 4548 errors in 305 files while still blocked. live Linear
 issue `JER-258` is the current workbench maturity evidence refresh: the release
 manifest, runbook, and queue/state docs are aligned around a machine-readable
 maturity snapshot without production-ready, cloud, certification, or
-full-mypy-clean claims. Branch evidence keeps the official wrapper blocked at
-4548 errors in 305 files while local release smoke, manifest validation,
-focused tests, and `unit_tests` pass. Do not claim full mypy clean.
+full-mypy-clean claims, and closed through PR #251. Branch evidence keeps the
+official wrapper blocked at 4548 errors in 305 files while local release smoke,
+manifest validation, focused tests, and `unit_tests` pass. live Linear issue
+`JER-259` is the current workbench start-page honesty refresh: `/workbench/start`
+is being aligned with current `/workbench` reality by removing stale E11 roadmap
+language and the removed wow starter-card claim. Branch evidence passes focused
+`/workbench/start` tests, removes the stale strings from the static page, and
+keeps the touched test file focused strict-mypy clean; `unit_tests` passes while
+the official mypy wrapper remains blocked but improved at 4547 errors in 304
+files. Do not claim full mypy clean.
 
 **Linear control plane**:
 
