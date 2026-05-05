@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-248` closed · live Linear `JER-249` implementing JER-171 mypy tranche 7
+Status: active queue · live Linear `JER-249` closed · live Linear `JER-250` implementing JER-171 mypy tranche 8
 
 ## Purpose
 
@@ -343,13 +343,26 @@ Current quality-debt dispatch:
 - Live Linear issue: `JER-249`
 - Title: `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 7`
 - URL: `https://linear.app/jerrykogami/issue/JER-249/project-l9-none-dal-tbd-jer-171-mypy-baseline-reduction-tranche-7`
-- State at dispatch: `In Progress`
+- State after PR #242: `Done`
 - Evidence target: type the workbench live log stream JSON return boundary in
   `src/well_harness/skill_executor/log_stream.py` without changing SSE payload
   fields or runtime behavior.
 - Current branch evidence: focused strict mypy reports success in 1 source
   file, focused log-stream/UI tests pass, and the official wrapper moved from
   4609 errors in 319 files to 4608 errors in 318 files while still blocked.
+
+Current quality-debt dispatch:
+
+- Live Linear issue: `JER-250`
+- Title: `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 8`
+- URL: `https://linear.app/jerrykogami/issue/JER-250/project-l9-none-dal-tbd-jer-171-mypy-baseline-reduction-tranche-8`
+- State at dispatch: `In Progress`
+- Evidence target: type scenario playback import and return-value boundaries in
+  `src/well_harness/scenario_playback.py` without changing replay behavior.
+- Current branch evidence: focused strict mypy reports success in 1 source
+  file, focused scenario playback/dependent tests pass, and the official
+  wrapper moved from 4608 errors in 318 files to 4604 errors in 317 files while
+  still blocked.
 
 ## Next Candidate Issue Contracts
 
@@ -360,7 +373,7 @@ Post-JER-240 production-readiness snapshot:
   the archive/restore/large-graph proof slices from PR #231 and PR #232 are
   merged on `main`.
 - Known blocker: JER-171 full strict mypy remains blocked. The current verified
-  wrapper result is 4608 errors in 318 files, not a clean gate.
+  wrapper result is 4604 errors in 317 files, not a clean gate.
 - Known blocker: the current queue does not yet contain a single release
   smoke/readiness command that starts the workbench and probes the core local
   operator flows as one production-like gate.
