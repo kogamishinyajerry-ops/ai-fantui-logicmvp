@@ -16,7 +16,7 @@ import sys
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from typing import Any, Dict, Mapping, Sequence
+from typing import Any, Dict, Mapping, Sequence, cast
 
 
 PAGE_ID_RE = re.compile(r"([0-9a-fA-F]{32})")
@@ -100,7 +100,7 @@ def post_comment(payload: Mapping[str, Any], *, token: str) -> Dict[str, Any]:
     )
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
-            return json.loads(response.read().decode("utf-8"))
+            return cast(Dict[str, Any], json.loads(response.read().decode("utf-8")))
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace")
         raise NotionApiError(status=exc.code, body=body) from exc

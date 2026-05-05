@@ -11,7 +11,7 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from well_harness.hardware_evidence_report import build_hardware_evidence_report  # noqa: E402
+from well_harness.hardware_evidence_report import build_hardware_evidence_report  # type: ignore[import-untyped]  # noqa: E402
 
 
 OUTPUT_FORMATS = {"text", "json"}
