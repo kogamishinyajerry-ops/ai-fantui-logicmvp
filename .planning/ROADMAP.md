@@ -128,9 +128,12 @@ Post-v5 control-plane bootstrap:
   post-JER-236 queue refresh issue and is not the same artifact as the
   repo-local historical `JER-237` editor command palette slice.
 - Live Linear `JER-238`: `[project] [L4] [none] [DAL-TBD] Review archive
-  restore diff drilldown` is the current product visibility issue and is not
-  the same artifact as the repo-local historical `JER-238` review archive
-  restore/regression bundle v3 slice.
+  restore diff drilldown` closed through PR #231. This is the restore
+  mismatch drilldown product issue and is not the same artifact as the
+  repo-local historical `JER-238` review archive restore/regression bundle v3
+  slice.
+- Live Linear `JER-239`: `[project] [L6] [none] [DAL-TBD] Sandbox scenario
+  stress pack for large graphs` is the current proof hardening issue.
 
 Post-v5 product dispatch:
 
@@ -183,10 +186,18 @@ Post-JER-236 queue refresh:
 Post-JER-237 product dispatch:
 
 - `[project] [L4] [none] [DAL-TBD] Review archive restore diff drilldown` is
-  live Linear `JER-238`. It makes local review archive restore failures
-  actionable by adding section-level checksum drilldown for mutated evidence:
-  section, checksum key, checksum path, expected checksum, actual checksum,
-  affected evidence path, and sandbox-only truth metadata.
+  live Linear `JER-238`. It closed through PR #231 and makes local review
+  archive restore failures actionable by adding section-level checksum
+  drilldown for mutated evidence: section, checksum key, checksum path,
+  expected checksum, actual checksum, affected evidence path, and sandbox-only
+  truth metadata.
+
+Post-JER-238 proof dispatch:
+
+- `[project] [L6] [none] [DAL-TBD] Sandbox scenario stress pack for large
+  graphs` is live Linear `JER-239`. It extracts reusable pass, fail, invalid,
+  and stale-report large-graph fixtures so runner, debugger, preflight, and
+  archive tests stop hand-building synthetic graphs.
 
 Workbench v4 foundation-first closure:
 
