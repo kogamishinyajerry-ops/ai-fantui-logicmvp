@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-240` closed · live Linear `JER-241` implementing production-readiness queue refresh
+Status: active queue · live Linear `JER-241` closed · live Linear `JER-242` implementing release-candidate smoke pack
 
 ## Purpose
 
@@ -231,13 +231,30 @@ Current queue-refresh dispatch:
 - Live Linear issue: `JER-241`
 - Title: `[project] [L9] [none] [DAL-TBD] Post-JER-240 production readiness queue refresh`
 - URL: `https://linear.app/jerrykogami/issue/JER-241/project-l9-none-dal-tbd-post-jer-240-production-readiness-queue`
-- State at dispatch: `In Progress`
+- State after PR #234: `Done`
 - Identifier rule: `live Linear JER-241` is not the same artifact as any
   repo-local historical JER label; use `repo-local post-JER-240 queue refresh`
   when referring to the older planning concept.
 - Evidence target: record the verified post-JER-240 state, name current
   production-readiness blockers, and define the next executable Linear issue
   contracts before more implementation starts.
+
+Current product-readiness dispatch:
+
+- Live Linear issue: `JER-242`
+- Title: `[project] [L4] [none] [DAL-TBD] Release-candidate workbench smoke pack`
+- URL: `https://linear.app/jerrykogami/issue/JER-242/project-l4-none-dal-tbd-release-candidate-workbench-smoke-pack`
+- State at dispatch: `In Progress`
+- Identifier rule: `live Linear JER-242` is not the same artifact as any
+  repo-local historical JER label; use `repo-local release-candidate smoke
+  pack` when referring to the older planning concept.
+- Evidence target: a local smoke gate starts the demo server on an available
+  port, isolates archive storage, and probes `/workbench`, archive
+  bundle/list/restore/readback, lever-snapshot fault injection, and one
+  invalid-input rejection without external services.
+- Current branch evidence: `tools/workbench_release_candidate_smoke.py
+  --format json` passes six steps and `tests/test_workbench_release_candidate_smoke.py`
+  passes.
 
 ## Next Candidate Issue Contracts
 
@@ -259,7 +276,7 @@ Post-JER-240 production-readiness snapshot:
   yet merged as a release gate. The repo is ready for more hardening, not for a
   production-ready claim.
 
-Recommended next product-readiness slice:
+Dispatched product-readiness slice:
 
 1. `[project] [L4] [none] [DAL-TBD] Release-candidate workbench smoke pack`
    - Outcome: add one local release-candidate smoke gate that starts the demo
@@ -273,8 +290,8 @@ Recommended next product-readiness slice:
      C919 packet, public schema, or external platform mutation.
    - Evidence: new/focused pytest or script test for the smoke gate, one manual
      command summary, `git diff --check`, and targeted validation-suite pass.
-   - Priority: `L4` product confidence; first recommended dispatch because a
-     production path needs one repeatable operator smoke gate before more UI
+   - Priority: `L4` product confidence, dispatched as live Linear `JER-242`;
+     a production path needs one repeatable operator smoke gate before more UI
      or release claims.
 
 Recommended next gate-refresh slice:

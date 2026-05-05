@@ -139,7 +139,10 @@ Post-v5 control-plane bootstrap:
   baseline reduction tranche 2` closed through PR #233. This is the second
   JER-171 mypy baseline reduction tranche.
 - Live Linear `JER-241`: `[project] [L9] [none] [DAL-TBD] Post-JER-240
-  production readiness queue refresh` is the current queue refresh issue.
+  production readiness queue refresh` closed through PR #234. This is the
+  post-JER-240 production-readiness queue refresh.
+- Live Linear `JER-242`: `[project] [L4] [none] [DAL-TBD] Release-candidate
+  workbench smoke pack` is the current product-readiness issue.
 
 Post-v5 product dispatch:
 
@@ -179,6 +182,15 @@ Post-JER-240 production-readiness refresh:
   readiness snapshot, keeps the JER-171 full strict mypy blocker honest, and
   defines the next release-candidate smoke, full e2e refresh, mypy tranche, and
   local runbook/manifest contracts before new implementation work starts.
+
+Post-JER-241 product-readiness dispatch:
+
+- `[project] [L4] [none] [DAL-TBD] Release-candidate workbench smoke pack` is
+  live Linear `JER-242`. It adds a local smoke gate for the first
+  production-like operator path: server boot, `/workbench`, archive
+  bundle/list/restore/readback, lever-snapshot fault injection, and one
+  invalid-input rejection. This is a release-candidate local gate, not a cloud
+  deployment or certification claim.
 
 Post-v5 gate and proof dispatch:
 
