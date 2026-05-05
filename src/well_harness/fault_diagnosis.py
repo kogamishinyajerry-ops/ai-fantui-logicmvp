@@ -3,16 +3,24 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any, Callable
 
-from well_harness.controller_adapter import GenericControllerTruthAdapter
-from well_harness.document_intake import ControlSystemIntakePacket, intake_packet_to_workbench_spec
-from well_harness.fault_taxonomy import validate_fault_kind
-from well_harness.scenario_playback import (
+from well_harness.controller_adapter import GenericControllerTruthAdapter  # type: ignore[import-untyped]
+from well_harness.document_intake import (  # type: ignore[import-untyped]
+    ControlSystemIntakePacket,
+    intake_packet_to_workbench_spec,
+)
+from well_harness.fault_taxonomy import validate_fault_kind  # type: ignore[import-untyped]
+from well_harness.scenario_playback import (  # type: ignore[import-untyped]
     PlaybackSeries,
     ScenarioPlaybackReport,
     build_scenario_playback_report,
     playback_report_to_dict,
 )
-from well_harness.system_spec import ComponentSpec, ControlSystemWorkbenchSpec, FaultModeSpec, workbench_spec_from_dict
+from well_harness.system_spec import (  # type: ignore[import-untyped]
+    ComponentSpec,
+    ControlSystemWorkbenchSpec,
+    FaultModeSpec,
+    workbench_spec_from_dict,
+)
 
 FAULT_DIAGNOSIS_KIND = "well-harness-fault-diagnosis"
 FAULT_DIAGNOSIS_VERSION = 1
