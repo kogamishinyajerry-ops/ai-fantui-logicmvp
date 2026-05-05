@@ -8,7 +8,7 @@ import re
 import sys
 from typing import Any
 
-from well_harness.collab.restricted_auth import RestrictedAuthError, validate_push_attempt
+from well_harness.collab.restricted_auth import RestrictedAuthError, validate_push_attempt  # type: ignore[import-untyped]
 
 
 _DIFF_GIT_RE = re.compile(r"^diff --git a/(.*?) b/(.*?)$")

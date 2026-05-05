@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from well_harness.workbench.audit import AuditEventLog
+from well_harness.workbench.audit import AuditEventLog  # type: ignore[import-untyped]
 
 
 def build_merge_close_plan(ticket: dict[str, Any], verdict_report: dict[str, Any], *, actor: str) -> dict[str, Any]:
