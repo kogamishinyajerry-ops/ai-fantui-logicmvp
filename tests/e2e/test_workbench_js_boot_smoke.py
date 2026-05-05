@@ -39,6 +39,9 @@ pytestmark = pytest.mark.e2e
 # Skip the whole module if Playwright sync API or its browsers are missing.
 playwright_sync_api = pytest.importorskip("playwright.sync_api")
 from playwright.sync_api import sync_playwright  # noqa: E402
+from well_harness.workbench_large_graph_stress_pack import (  # noqa: E402
+    large_sandbox_stress_pack,
+)
 
 _OPEN_PAGES: list[Any] = []
 
@@ -124,96 +127,6 @@ def _set_archive_buffer_value(page: Any, archive_json: str) -> None:
         """,
         archive_json,
     )
-
-
-def _large_sandbox_chain_draft(base: dict[str, Any], node_count: int = 16) -> dict[str, Any]:
-    draft = json.loads(json.dumps(base))
-    nodes: list[dict[str, Any]] = []
-    edges: list[dict[str, Any]] = []
-    for index in range(1, node_count + 1):
-        node_id = f"draft_node_{index}"
-        if index == 1:
-            op = "input"
-            label = "Large graph input"
-            rule_count = "0"
-        elif index == node_count:
-            op = "output"
-            label = "Large graph output"
-            rule_count = "0"
-        else:
-            op = "and"
-            label = f"Large graph gate {index}"
-            rule_count = "2"
-        nodes.append(
-            {
-                "id": node_id,
-                "label": label,
-                "op": op,
-                "ruleCount": rule_count,
-                "evidence": "evidence_gap",
-                "sourceRef": f"ui_draft.large_sandbox_graph.node.{index}",
-                "op_catalog_entry": op,
-                "port_contract": {
-                    "input_port_id": f"{node_id}:in",
-                    "output_port_id": f"{node_id}:out",
-                    "input_signal_id": f"{node_id}_{op}_input",
-                    "output_signal_id": f"{node_id}_{op}_output",
-                    "value_type": "boolean",
-                    "required": False,
-                    "source_ref": f"ui_draft.large_sandbox_graph.port_contract.{index}",
-                    "candidate_state": "sandbox_candidate",
-                    "truth_effect": "none",
-                },
-                "rules": [],
-                "x": f"{8 + ((index - 1) % 8) * 11}%",
-                "y": f"{18 + ((index - 1) // 8) * 22}%",
-                "draftNode": True,
-            }
-        )
-    for index in range(1, node_count):
-        source = f"draft_node_{index}"
-        target = f"draft_node_{index + 1}"
-        edges.append(
-            {
-                "id": f"edge_large_chain_{index}_{index + 1}",
-                "source": source,
-                "target": target,
-                "source_port_id": f"{source}:out",
-                "target_port_id": f"{target}:in",
-                "signal_id": f"{source}_to_{target}",
-                "value_type": "boolean",
-                "unit": "",
-                "required": True,
-                "source_ref": f"ui_draft.large_sandbox_graph.edge.{index}",
-                "hardware_binding": {
-                    "owner_kind": "edge",
-                    "owner_id": f"edge_large_chain_{index}_{index + 1}",
-                    "evidence_status": "evidence_gap",
-                    "source_ref": f"ui_draft.large_sandbox_graph.binding.edge.{index}",
-                    "truth_effect": "none",
-                },
-            }
-        )
-    draft["canvas_authoring_mode"] = "empty_authoring"
-    draft["nodes"] = nodes
-    draft["edges"] = edges
-    draft["selected_node_ids"] = [nodes[-1]["id"]]
-    draft["selected_node"] = {"id": nodes[-1]["id"]}
-    draft["hardware_bindings"] = []
-    draft["typed_ports"] = []
-    draft["ports"] = []
-    draft["subsystem_groups"] = []
-    for stale_key in [
-        "editable_graph_document",
-        "sandbox_test_bench",
-        "sandbox_test_run_report",
-        "candidate_debugger_view",
-        "debug_probe_timeline",
-        "preflight_analyzer_report",
-        "hardware_evidence_attachment_v2",
-    ]:
-        draft.pop(stale_key, None)
-    return draft
 
 
 # ─── E11-08 closure: identity affordance JS toggle (4 tests) ─────────
@@ -3568,29 +3481,19 @@ def test_workbench_large_sandbox_graph_trace_and_archive_checksums_are_stable(de
     page.click("#workbench-start-empty-draft-btn")
     page.click("#workbench-export-draft-btn")
     base_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
-    large_draft = _large_sandbox_chain_draft(base_draft, node_count=16)
+    stress_pack = large_sandbox_stress_pack(base_draft)
+    large_case = stress_pack["cases"]["pass"]
+    large_draft = large_case["draft"]
     _set_draft_buffer_value(page, json.dumps(large_draft))
     page.click("#workbench-import-draft-btn")
 
     page.fill(
         "#workbench-test-bench-inputs-json",
-        json.dumps(
-            [
-                {"tick": 0, "inputs": {"draft_node_1": False}},
-                {"tick": 1, "inputs": {"draft_node_1": True}},
-                {"tick": 2, "inputs": {"draft_node_1": True}},
-            ]
-        ),
+        json.dumps(large_case["inputs"]),
     )
     page.fill(
         "#workbench-test-bench-assertions-json",
-        json.dumps(
-            [
-                {"tick": 0, "target": "draft_node_16:out", "expected": False},
-                {"tick": 1, "target": "draft_node_16:out", "expected": True},
-                {"tick": 2, "target": "draft_node_16:out", "expected": True},
-            ]
-        ),
+        json.dumps(large_case["assertions"]),
     )
     page.click("#workbench-run-test-bench-btn")
     page.wait_for_function(
@@ -3661,38 +3564,25 @@ def test_workbench_large_sandbox_graph_invalid_findings_remain_structured(demo_s
     page.click("#workbench-start-empty-draft-btn")
     page.click("#workbench-export-draft-btn")
     base_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
-    large_draft = _large_sandbox_chain_draft(base_draft, node_count=12)
-    large_draft["edges"].append({**large_draft["edges"][0], "id": "edge_large_chain_duplicate"})
-    large_draft["edges"].append(
-        {
-            "id": "edge_large_chain_dangling",
-            "source": "draft_node_12",
-            "target": "draft_node_missing",
-            "source_port_id": "draft_node_12:out",
-            "target_port_id": "draft_node_missing:in",
-            "signal_id": "draft_node_12_to_missing",
-            "value_type": "boolean",
-            "required": True,
-            "source_ref": "ui_draft.large_sandbox_graph.invalid.dangling",
-            "truth_effect": "none",
-        }
-    )
+    invalid_case = large_sandbox_stress_pack(base_draft)["cases"]["invalid_graph"]
+    large_draft = invalid_case["draft"]
     _set_draft_buffer_value(page, json.dumps(large_draft))
     page.click("#workbench-import-draft-btn")
     page.evaluate(
         """
-        () => {
-          const node = document.querySelector('[data-editable-node-id="draft_node_5"]');
-          node.setAttribute('data-node-op', 'python_eval');
-          node.setAttribute('data-op-catalog-entry', 'python_eval');
+        ([nodeId, op]) => {
+          const node = document.querySelector(`[data-editable-node-id="${nodeId}"]`);
+          node.setAttribute('data-node-op', op);
+          node.setAttribute('data-op-catalog-entry', op);
         }
-        """
+        """,
+        [invalid_case["unsupported_node_id"], invalid_case["unsupported_op"]],
     )
     page.fill(
         "#workbench-test-bench-inputs-json",
-        json.dumps([{"tick": 0, "inputs": {"draft_node_1": True}}]),
+        json.dumps(invalid_case["inputs"]),
     )
-    page.fill("#workbench-test-bench-assertions-json", json.dumps([]))
+    page.fill("#workbench-test-bench-assertions-json", json.dumps(invalid_case["assertions"]))
     page.click("#workbench-run-test-bench-btn")
     page.wait_for_function(
         """
@@ -3709,7 +3599,7 @@ def test_workbench_large_sandbox_graph_invalid_findings_remain_structured(demo_s
     assert errors == [], f"page JS errors: {errors}"
     assert report["status"] == "invalid_scenario"
     assert kernel["status"] == "invalid_scenario"
-    assert {"unsupported_op", "duplicate_edge", "dangling_edge"}.issubset(codes)
+    assert set(invalid_case["expected_finding_codes"]).issubset(codes)
     assert kernel["finding_count"] >= 3
     assert kernel["candidate_state"] == "sandbox_candidate"
     assert kernel["certification_claim"] == "none"

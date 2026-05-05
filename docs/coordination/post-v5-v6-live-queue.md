@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-237` closed · live Linear `JER-238` implementing restore diff drilldown
+Status: active queue · live Linear `JER-238` closed · live Linear `JER-239` implementing large-graph stress pack
 
 ## Purpose
 
@@ -186,18 +186,28 @@ Queue refresh dispatch:
   through JER-236 and define the next dispatch contracts before starting new
   ambiguous implementation work.
 
-Current product dispatch:
+Product dispatch:
 
 - Live Linear issue: `JER-238`
 - Title: `[project] [L4] [none] [DAL-TBD] Review archive restore diff drilldown`
 - URL: `https://linear.app/jerrykogami/issue/JER-238/project-l4-none-dal-tbd-review-archive-restore-diff-drilldown`
-- State at dispatch: `In Progress`
+- State after PR #231: `Done`
 - Identifier rule: `live Linear JER-238` is not the same artifact as the
   repo-local historical `JER-238` review archive restore/regression bundle v3
   slice.
 - Evidence target: local review archive restore failures expose section-level
   mismatch drilldown: section, checksum key, checksum path, expected checksum,
   actual checksum, affected evidence path, and sandbox-only truth metadata.
+
+Current proof dispatch:
+
+- Live Linear issue: `JER-239`
+- Title: `[project] [L6] [none] [DAL-TBD] Sandbox scenario stress pack for large graphs`
+- URL: `https://linear.app/jerrykogami/issue/JER-239/project-l6-none-dal-tbd-sandbox-scenario-stress-pack-for-large-graphs`
+- State at dispatch: `In Progress`
+- Evidence target: add reusable large-graph pass, fail, invalid graph, and
+  stale-report fixtures so runner, debugger, preflight, and archive tests can
+  share one deterministic stress pack.
 
 ## Next Candidate Issue Contracts
 
@@ -217,7 +227,7 @@ Dispatched product slice:
      test for drilldown fields; targeted validation-suite pass.
    - Priority: `L4` product visibility, dispatched as live Linear `JER-238`.
 
-Recommended next proof slice:
+Dispatched proof slice:
 
 2. `[project] [L6] [none] [DAL-TBD] Sandbox scenario stress pack for large graphs`
    - Outcome: add reusable large-graph scenario/test-case fixtures so the
@@ -230,7 +240,7 @@ Recommended next proof slice:
      performance or certification claim.
    - Evidence: fixture tests, focused e2e, archive checksum/readback tests,
      targeted validation-suite pass.
-   - Priority: `L6` proof hardening, recommended second dispatch.
+   - Priority: `L6` proof hardening, dispatched as live Linear `JER-239`.
 
 Recommended next debt slice:
 
