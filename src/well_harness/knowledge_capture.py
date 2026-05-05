@@ -4,9 +4,9 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from well_harness.controller_adapter import GenericControllerTruthAdapter
-from well_harness.document_intake import ControlSystemIntakePacket
-from well_harness.fault_diagnosis import (
+from well_harness.controller_adapter import GenericControllerTruthAdapter  # type: ignore[import-untyped]
+from well_harness.document_intake import ControlSystemIntakePacket  # type: ignore[import-untyped]
+from well_harness.fault_diagnosis import (  # type: ignore[import-untyped]
     FaultDiagnosisReport,
     build_fault_diagnosis_report_from_truth_adapter,
     build_fault_diagnosis_report_from_intake_packet,
