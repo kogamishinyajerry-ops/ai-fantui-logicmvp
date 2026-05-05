@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from typing import Any
 
 
 FAULT_TAXONOMY_KIND = "well-harness-fault-taxonomy"
@@ -88,7 +89,7 @@ def validate_fault_kind(fault_kind: str) -> str:
     raise ValueError(f"fault_kind must be one of: {supported}. Received: {fault_kind!r}")
 
 
-def fault_taxonomy_to_dict() -> dict:
+def fault_taxonomy_to_dict() -> dict[str, Any]:
     return {
         "$schema": FAULT_TAXONOMY_SCHEMA_ID,
         "kind": FAULT_TAXONOMY_KIND,

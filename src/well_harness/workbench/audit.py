@@ -36,8 +36,10 @@ class AuditEventLog:
             payload = json.loads(lines[-1])
         except json.JSONDecodeError:
             return hashlib.sha256(lines[-1].encode("utf-8")).hexdigest()
-        if isinstance(payload, dict) and isinstance(payload.get("event_hash"), str):
-            return payload["event_hash"]
+        if isinstance(payload, dict):
+            event_hash = payload.get("event_hash")
+            if isinstance(event_hash, str):
+                return event_hash
         return hashlib.sha256(lines[-1].encode("utf-8")).hexdigest()
 
     def append(
