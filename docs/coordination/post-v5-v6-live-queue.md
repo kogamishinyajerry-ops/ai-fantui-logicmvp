@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-244` closed · live Linear `JER-245` implementing JER-171 mypy tranche 3
+Status: active queue · live Linear `JER-245` closed · live Linear `JER-246` implementing JER-171 mypy tranche 4
 
 ## Purpose
 
@@ -288,13 +288,27 @@ Current quality-debt dispatch:
 - Live Linear issue: `JER-245`
 - Title: `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 3`
 - URL: `https://linear.app/jerrykogami/issue/JER-245/project-l9-none-dal-tbd-jer-171-mypy-baseline-reduction-tranche-3`
-- State at dispatch: `In Progress`
+- State after PR #238: `Done`
 - Evidence target: keep `tools/workbench_release_candidate_smoke.py` focused
   strict-mypy clean by shielding the local `well_harness` import boundary
   without changing runtime behavior.
 - Current branch evidence: focused strict mypy reports success in 1 source
   file, focused smoke pytest passes, and the official wrapper moved from 4619
   errors in 327 files to 4617 errors in 326 files while still blocked.
+
+Current quality-debt dispatch:
+
+- Live Linear issue: `JER-246`
+- Title: `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 4`
+- URL: `https://linear.app/jerrykogami/issue/JER-246/project-l9-none-dal-tbd-jer-171-mypy-baseline-reduction-tranche-4`
+- State at dispatch: `In Progress`
+- Evidence target: type low-risk return boundaries in
+  `tools/run_gsd_validation_suite.py` and `tools/validate_notion_control_plane.py`
+  without changing validation command behavior.
+- Current branch evidence: focused strict mypy reports success in 2 source
+  files, focused validation helper tests pass, and the official wrapper moved
+  from 4617 errors in 326 files to 4614 errors in 324 files while still
+  blocked.
 
 ## Next Candidate Issue Contracts
 

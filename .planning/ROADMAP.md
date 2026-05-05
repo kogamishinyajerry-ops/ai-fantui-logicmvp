@@ -152,7 +152,10 @@ Post-v5 control-plane bootstrap:
   runbook and release manifest` closed through PR #237. This is the local
   release-operations runbook and evidence-manifest slice.
 - Live Linear `JER-245`: `[project] [L9] [none] [DAL-TBD] JER-171 mypy
-  baseline reduction tranche 3` is the current quality-debt slice.
+  baseline reduction tranche 3` closed through PR #238. This is the third
+  JER-171 mypy baseline reduction tranche.
+- Live Linear `JER-246`: `[project] [L9] [none] [DAL-TBD] JER-171 mypy
+  baseline reduction tranche 4` is the current quality-debt slice.
 
 Post-v5 product dispatch:
 
@@ -189,6 +192,11 @@ Post-v5 quality-debt dispatch:
   strict-mypy clean by shielding the local `well_harness` import boundary, and
   current branch evidence reduces the official wrapper from 4619 errors in 327
   files to 4617 errors in 326 files while still blocked.
+- `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 4`
+  is live Linear `JER-246`. It types low-risk return boundaries in validation
+  helpers, keeps the touched tools focused strict-mypy clean, and current
+  branch evidence reduces the official wrapper from 4617 errors in 326 files
+  to 4614 errors in 324 files while still blocked.
 
 Post-JER-240 production-readiness refresh:
 
