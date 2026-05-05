@@ -1,11 +1,21 @@
-import http.client, json, unittest
+from __future__ import annotations
 
-from conftest import with_signoff_if_manual_override  # E11-14
-from tests.test_demo import start_demo_server
+import http.client
+import json
+import threading
+import unittest
+from collections.abc import Callable
+from http.server import ThreadingHTTPServer
+from typing import Any, ClassVar, cast
+
+from conftest import with_signoff_if_manual_override as _with_signoff_if_manual_override  # type: ignore[import-not-found]  # E11-14
+from tests.test_demo import start_demo_server as _start_demo_server
+
+start_demo_server = cast(Callable[[], tuple[ThreadingHTTPServer, threading.Thread]], _start_demo_server)
 
 
 class FaultInjectionTests(unittest.TestCase):
-    BASE_REQUEST = {
+    BASE_REQUEST: ClassVar[dict[str, Any]] = {
         "tra_deg": -14.0,
         "radio_altitude_ft": 5.0,
         "engine_running": True,
@@ -15,21 +25,24 @@ class FaultInjectionTests(unittest.TestCase):
         "n1k": 35.0,
         "max_n1k_deploy_limit": 60.0,
     }
+    server: ClassVar[ThreadingHTTPServer]
+    thread: ClassVar[threading.Thread]
+    port: ClassVar[int]
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         cls.server, cls.thread = start_demo_server()
         cls.port = cls.server.server_port
 
     @classmethod
-    def tearDownClass(cls):
+    def tearDownClass(cls) -> None:
         cls.server.shutdown()
         cls.server.server_close()
         cls.thread.join(timeout=2)
 
-    def _post(self, payload):
+    def _post(self, payload: dict[str, Any]) -> tuple[http.client.HTTPResponse, dict[str, Any]]:
         # E11-14: auto-attach sign-off when feedback_mode = manual_feedback_override
-        payload = with_signoff_if_manual_override(payload)
+        payload = cast(dict[str, Any], _with_signoff_if_manual_override(payload))
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
         try:
             connection.request(
@@ -39,12 +52,12 @@ class FaultInjectionTests(unittest.TestCase):
                 headers={"Content-Type": "application/json"},
             )
             response = connection.getresponse()
-            data = json.loads(response.read().decode("utf-8"))
+            data = cast(dict[str, Any], json.loads(response.read().decode("utf-8")))
             return response, data
         finally:
             connection.close()
 
-    def test_contradiction_on_ground_high_altitude(self):
+    def test_contradiction_on_ground_high_altitude(self) -> None:
         response, payload = self._post(
             {
                 **self.BASE_REQUEST,
@@ -56,7 +69,7 @@ class FaultInjectionTests(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertIn("radio_altitude_ft", payload["logic"]["logic1"]["failed_conditions"])
 
-    def test_contradiction_in_air_low_altitude(self):
+    def test_contradiction_in_air_low_altitude(self) -> None:
         """Fault: aircraft_on_ground=False yet radio_altitude_ft=1.0 (low alt but in-air flag).
 
         altitude_gate = altitude_on_ground or altitude_ft >= 7.0
@@ -77,7 +90,7 @@ class FaultInjectionTests(unittest.TestCase):
         active_ids = {k for k, v in payload["logic"].items() if v["active"]}
         self.assertIn("logic1", active_ids)  # logic1 passes altitude gate
 
-    def test_n1k_just_below_limit(self):
+    def test_n1k_just_below_limit(self) -> None:
         response, payload = self._post(
             {
                 **self.BASE_REQUEST,
@@ -94,7 +107,7 @@ class FaultInjectionTests(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertIn("logic3", active_logic_node_ids)
 
-    def test_n1k_at_exact_limit(self):
+    def test_n1k_at_exact_limit(self) -> None:
         response, payload = self._post(
             {
                 **self.BASE_REQUEST,
@@ -106,7 +119,7 @@ class FaultInjectionTests(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertIn("n1k", payload["logic"]["logic3"]["failed_conditions"])
 
-    def test_tra_at_exact_threshold(self):
+    def test_tra_at_exact_threshold(self) -> None:
         """TRA at exactly -14.0 with on_ground=False should engage SW1/lgic1.
 
         altitude_gate = altitude_on_ground or altitude_ft >= 7.0.
@@ -127,7 +140,7 @@ class FaultInjectionTests(unittest.TestCase):
         self.assertIn("logic1", active_ids,
                        f"TRA=-14 on_air altitude=0 should engage logic1. Got active={active_ids}")
 
-    def test_tra_just_below_threshold(self):
+    def test_tra_just_below_threshold(self) -> None:
         response, payload = self._post(
             {
                 **self.BASE_REQUEST,
@@ -143,7 +156,7 @@ class FaultInjectionTests(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertNotIn("logic1", active_logic_node_ids)
 
-    def test_manual_override_bypasses_sw1_gate(self):
+    def test_manual_override_bypasses_sw1_gate(self) -> None:
         """manual_feedback_override drives VDT90 directly via deploy_position_percent.
 
         This is the key safety-relevant behavior: in manual override mode,
@@ -167,7 +180,7 @@ class FaultInjectionTests(unittest.TestCase):
         self.assertIn("logic4", active_ids,
                        f"manual override should drive VDT90/lgic4 regardless of SW1. Got: {active_ids}")
 
-    def test_reverser_inhibited_blocks_upstream(self):
+    def test_reverser_inhibited_blocks_upstream(self) -> None:
         response, payload = self._post(
             {
                 **self.BASE_REQUEST,
@@ -182,7 +195,7 @@ class FaultInjectionTests(unittest.TestCase):
 
     # ---- P17-03 Fault Injection API Tests ----
 
-    def test_fault_sw1_stuck_off_overrides_switch(self):
+    def test_fault_sw1_stuck_off_overrides_switch(self) -> None:
         """Injecting sw1 stuck_off forces sw1=False even when sw1=True in the input."""
         response, payload = self._post(
             {
@@ -197,7 +210,7 @@ class FaultInjectionTests(unittest.TestCase):
         # sw1 stuck_off should block logic1
         self.assertFalse(payload["logic"]["logic1"]["active"])
 
-    def test_fault_sw2_stuck_off_overrides_switch(self):
+    def test_fault_sw2_stuck_off_overrides_switch(self) -> None:
         """Injecting sw2 stuck_off forces sw2=False even when sw2=True in the input."""
         response, payload = self._post(
             {
@@ -210,7 +223,7 @@ class FaultInjectionTests(unittest.TestCase):
         self.assertIn("sw2", payload.get("active_fault_node_ids", []))
         self.assertFalse(payload["logic"]["logic2"]["active"])
 
-    def test_fault_sw1_stuck_on_is_recorded_and_forces_switch(self):
+    def test_fault_sw1_stuck_on_is_recorded_and_forces_switch(self) -> None:
         """Injecting sw1 stuck_on records it in active_fault_node_ids and forces sw1 node state=active."""
         response, payload = self._post(
             {
@@ -226,7 +239,7 @@ class FaultInjectionTests(unittest.TestCase):
         self.assertEqual(len(sw1_nodes), 1)
         self.assertEqual(sw1_nodes[0].get("state"), "active")
 
-    def test_fault_radio_altitude_sensor_zero_unblocks_logic1(self):
+    def test_fault_radio_altitude_sensor_zero_unblocks_logic1(self) -> None:
         """Injecting radio_altitude_ft sensor_zero forces RA=0, bypassing altitude gate.
 
         With aircraft_on_ground=False and altitude=8.0: altitude gate blocks logic1
@@ -248,7 +261,7 @@ class FaultInjectionTests(unittest.TestCase):
         self.assertTrue(payload["logic"]["logic1"]["active"])
         self.assertEqual(payload["hud"]["radio_altitude_ft"], 0.0)
 
-    def test_fault_invalid_node_returns_400(self):
+    def test_fault_invalid_node_returns_400(self) -> None:
         """Unknown node_id returns 400 with invalid_fault_injection_node error."""
         response, payload = self._post(
             {
@@ -259,7 +272,7 @@ class FaultInjectionTests(unittest.TestCase):
         self.assertEqual(response.status, 400)
         self.assertEqual(payload.get("error"), "invalid_fault_injection_node")
 
-    def test_fault_invalid_type_returns_400(self):
+    def test_fault_invalid_type_returns_400(self) -> None:
         """Unknown fault_type returns 400 with invalid_fault_type error."""
         response, payload = self._post(
             {
@@ -270,13 +283,13 @@ class FaultInjectionTests(unittest.TestCase):
         self.assertEqual(response.status, 400)
         self.assertEqual(payload.get("error"), "invalid_fault_type")
 
-    def test_fault_non_list_returns_400(self):
+    def test_fault_non_list_returns_400(self) -> None:
         """fault_injections must be a list; non-list returns 400."""
         for bad_value in [123, "stuck_off", {"node_id": "sw1"}]:
             response, payload = self._post({**self.BASE_REQUEST, "fault_injections": bad_value})
             self.assertEqual(response.status, 400, msg=f"fault_injections={bad_value!r} should be rejected")
 
-    def test_multiple_faults_injected(self):
+    def test_multiple_faults_injected(self) -> None:
         """Multiple faults can be injected simultaneously."""
         response, payload = self._post(
             {
@@ -293,7 +306,7 @@ class FaultInjectionTests(unittest.TestCase):
         self.assertFalse(payload["logic"]["logic1"]["active"])
         self.assertFalse(payload["logic"]["logic2"]["active"])
 
-    def test_fault_alias_normalizes_sw1_input_to_sw1(self):
+    def test_fault_alias_normalizes_sw1_input_to_sw1(self) -> None:
         """sw1_input is an alias for sw1 and should be accepted and normalized."""
         response, payload = self._post(
             {
@@ -304,7 +317,7 @@ class FaultInjectionTests(unittest.TestCase):
         self.assertEqual(response.status, 200)
         self.assertIn("sw1", payload.get("active_fault_node_ids", []))
 
-    def test_unsupported_fault_combination_is_silently_ignored(self):
+    def test_unsupported_fault_combination_is_silently_ignored(self) -> None:
         """A valid node_id + valid fault_type but unsupported combination (sw1+sensor_zero)
         is accepted by the API but has no effect on logic output — it is a no-op."""
         response, payload = self._post(
@@ -317,14 +330,14 @@ class FaultInjectionTests(unittest.TestCase):
         # The fault is recorded (so API accepted it) but sw1 is a switch, not a sensor
         self.assertIn("sw1", payload.get("active_fault_node_ids", []))
 
-    def test_empty_fault_injections_list_is_accepted(self):
+    def test_empty_fault_injections_list_is_accepted(self) -> None:
         """fault_injections=[] is a valid no-op."""
         response, payload = self._post({**self.BASE_REQUEST, "fault_injections": []})
         self.assertEqual(response.status, 200)
         self.assertNotIn("active_fault_node_ids", payload)
         self.assertNotIn("fault_injections", payload)
 
-    def test_no_fault_injections_excludes_fault_fields(self):
+    def test_no_fault_injections_excludes_fault_fields(self) -> None:
         """Without fault_injections, the response does not include active_fault_node_ids or fault_injections keys."""
         response, payload = self._post(self.BASE_REQUEST)
         self.assertEqual(response.status, 200)
