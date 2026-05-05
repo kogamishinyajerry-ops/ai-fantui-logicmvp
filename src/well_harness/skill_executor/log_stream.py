@@ -44,7 +44,7 @@ class LogEntry:
     level: str  # "info" | "warn" | "error"
     message: str
 
-    def to_json(self) -> dict:
+    def to_json(self) -> dict[str, int | str]:
         return {
             "seq": self.seq,
             "ts": self.ts,
