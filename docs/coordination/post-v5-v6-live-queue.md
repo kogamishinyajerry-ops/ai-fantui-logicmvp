@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-241` closed · live Linear `JER-242` implementing release-candidate smoke pack
+Status: active queue · live Linear `JER-242` closed · live Linear `JER-243` implementing full opt-in e2e refresh
 
 ## Purpose
 
@@ -244,7 +244,7 @@ Current product-readiness dispatch:
 - Live Linear issue: `JER-242`
 - Title: `[project] [L4] [none] [DAL-TBD] Release-candidate workbench smoke pack`
 - URL: `https://linear.app/jerrykogami/issue/JER-242/project-l4-none-dal-tbd-release-candidate-workbench-smoke-pack`
-- State at dispatch: `In Progress`
+- State after PR #235: `Done`
 - Identifier rule: `live Linear JER-242` is not the same artifact as any
   repo-local historical JER label; use `repo-local release-candidate smoke
   pack` when referring to the older planning concept.
@@ -255,6 +255,19 @@ Current product-readiness dispatch:
 - Current branch evidence: `tools/workbench_release_candidate_smoke.py
   --format json` passes six steps and `tests/test_workbench_release_candidate_smoke.py`
   passes.
+
+Current gate-refresh dispatch:
+
+- Live Linear issue: `JER-243`
+- Title: `[project] [L9] [none] [DAL-TBD] Post-JER-240 full opt-in e2e refresh`
+- URL: `https://linear.app/jerrykogami/issue/JER-243/project-l9-none-dal-tbd-post-jer-240-full-opt-in-e2e-refresh`
+- State at dispatch: `In Progress`
+- Evidence target: rerun the official opt-in e2e command on current `main`,
+  record exact pass/fail/deselected counts, and avoid any full e2e green claim
+  unless the command actually passes.
+- Current branch evidence: the official command passed at 93 passed / 3445
+  deselected in 149.97s on `origin/main@9516fa6`; see
+  `docs/coordination/JER-243-e2e-refresh.md`.
 
 ## Next Candidate Issue Contracts
 
@@ -269,9 +282,8 @@ Post-JER-240 production-readiness snapshot:
 - Known blocker: the current queue does not yet contain a single release
   smoke/readiness command that starts the workbench and probes the core local
   operator flows as one production-like gate.
-- Known blocker: full opt-in e2e was last refreshed during the JER-235/JER-236
-  path. Later slices have focused e2e/unit proof, but no post-JER-240 full e2e
-  refresh should be implied.
+- Full opt-in e2e is current as of live Linear `JER-243`: 93 passed / 3445
+  deselected on `origin/main@9516fa6`.
 - Known blocker: deployment, packaging, and operator runbook evidence are not
   yet merged as a release gate. The repo is ready for more hardening, not for a
   production-ready claim.
@@ -294,7 +306,7 @@ Dispatched product-readiness slice:
      a production path needs one repeatable operator smoke gate before more UI
      or release claims.
 
-Recommended next gate-refresh slice:
+Dispatched gate-refresh slice:
 
 2. `[project] [L9] [none] [DAL-TBD] Post-JER-240 full opt-in e2e refresh`
    - Outcome: rerun the official opt-in e2e surface on current `main`, record
@@ -309,8 +321,8 @@ Recommended next gate-refresh slice:
      green unless the command passes.
    - Evidence: e2e command summary, blocker classification, queue update, and
      Linear proof comment.
-   - Priority: `L9` gate confidence; run after the smoke-pack slice or before
-     any production-readiness claim.
+   - Priority: `L9` gate confidence, dispatched as live Linear `JER-243`;
+     run after the smoke-pack slice or before any production-readiness claim.
 
 Recommended next quality-debt slice:
 

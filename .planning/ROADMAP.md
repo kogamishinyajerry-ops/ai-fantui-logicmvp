@@ -142,7 +142,10 @@ Post-v5 control-plane bootstrap:
   production readiness queue refresh` closed through PR #234. This is the
   post-JER-240 production-readiness queue refresh.
 - Live Linear `JER-242`: `[project] [L4] [none] [DAL-TBD] Release-candidate
-  workbench smoke pack` is the current product-readiness issue.
+  workbench smoke pack` closed through PR #235. This is the release-candidate
+  local smoke gate issue.
+- Live Linear `JER-243`: `[project] [L9] [none] [DAL-TBD] Post-JER-240 full
+  opt-in e2e refresh` is the current gate-refresh issue.
 
 Post-v5 product dispatch:
 
@@ -191,6 +194,11 @@ Post-JER-241 product-readiness dispatch:
   bundle/list/restore/readback, lever-snapshot fault injection, and one
   invalid-input rejection. This is a release-candidate local gate, not a cloud
   deployment or certification claim.
+- `[project] [L9] [none] [DAL-TBD] Post-JER-240 full opt-in e2e refresh` is
+  live Linear `JER-243`. The official opt-in e2e command passed on current
+  `main` at 93 passed / 3445 deselected in 149.97s. This refresh supports a
+  current e2e green claim only; it still does not claim production readiness,
+  cloud deployment readiness, certification readiness, or full mypy clean.
 
 Post-v5 gate and proof dispatch:
 
