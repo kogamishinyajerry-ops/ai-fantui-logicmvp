@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-238` closed · live Linear `JER-239` implementing large-graph stress pack
+Status: active queue · live Linear `JER-239` closed · live Linear `JER-240` implementing mypy baseline tranche 2
 
 ## Purpose
 
@@ -199,15 +199,32 @@ Product dispatch:
   mismatch drilldown: section, checksum key, checksum path, expected checksum,
   actual checksum, affected evidence path, and sandbox-only truth metadata.
 
-Current proof dispatch:
+Proof dispatch:
 
 - Live Linear issue: `JER-239`
 - Title: `[project] [L6] [none] [DAL-TBD] Sandbox scenario stress pack for large graphs`
 - URL: `https://linear.app/jerrykogami/issue/JER-239/project-l6-none-dal-tbd-sandbox-scenario-stress-pack-for-large-graphs`
-- State at dispatch: `In Progress`
+- State after PR #232: `Done`
 - Evidence target: add reusable large-graph pass, fail, invalid graph, and
   stale-report fixtures so runner, debugger, preflight, and archive tests can
   share one deterministic stress pack.
+
+Current quality-debt dispatch:
+
+- Live Linear issue: `JER-240`
+- Title: `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 2`
+- URL: `https://linear.app/jerrykogami/issue/JER-240/project-l9-none-dal-tbd-jer-171-mypy-baseline-reduction-tranche-2`
+- State at dispatch: `In Progress`
+- Identifier rule: `live Linear JER-240` is not the same artifact as the
+  repo-local historical `JER-171` mypy wrapper blocker.
+- Evidence target: keep one coherent demo fault-injection test family focused
+  strict-mypy clean, preserve its runtime tests, and reduce the official
+  `tools/run_mypy_gate.py --format json --report-only` baseline without
+  claiming full mypy clean.
+- Current branch evidence: `tests/test_demo_fault_injection.py` is focused
+  strict-mypy clean; the official wrapper remains `blocked` but reports 4617
+  errors in 326 files, down from this branch's starting point of 4913 errors in
+  347 files.
 
 ## Next Candidate Issue Contracts
 
@@ -242,7 +259,7 @@ Dispatched proof slice:
      targeted validation-suite pass.
    - Priority: `L6` proof hardening, dispatched as live Linear `JER-239`.
 
-Recommended next debt slice:
+Dispatched debt slice:
 
 3. `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 2`
    - Outcome: reduce the official strict mypy baseline again by typing one
@@ -256,4 +273,4 @@ Recommended next debt slice:
      `pass`.
    - Evidence: focused pytest, focused strict mypy command, official wrapper
      report, targeted validation-suite pass.
-   - Priority: `L9` quality debt, recommended after one product/proof slice.
+   - Priority: `L9` quality debt, dispatched as live Linear `JER-240`.

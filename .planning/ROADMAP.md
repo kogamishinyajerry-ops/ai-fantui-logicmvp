@@ -133,7 +133,10 @@ Post-v5 control-plane bootstrap:
   repo-local historical `JER-238` review archive restore/regression bundle v3
   slice.
 - Live Linear `JER-239`: `[project] [L6] [none] [DAL-TBD] Sandbox scenario
-  stress pack for large graphs` is the current proof hardening issue.
+  stress pack for large graphs` closed through PR #232. This is the
+  large-graph reusable stress-pack proof issue.
+- Live Linear `JER-240`: `[project] [L9] [none] [DAL-TBD] JER-171 mypy
+  baseline reduction tranche 2` is the current quality-debt issue.
 
 Post-v5 product dispatch:
 
@@ -159,6 +162,12 @@ Post-v5 quality-debt dispatch:
   official wrapper run with the declared `typecheck` extra reports 4665 errors
   in 326 files instead of the captured 4672 errors in 327 files. JER-171
   remains blocked until the full wrapper reports pass.
+- `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 2`
+  is live Linear `JER-240`. The second tranche types the demo fault-injection
+  API test family so the touched test file is focused strict-mypy clean while
+  preserving runtime behavior. Current branch evidence reduces the official
+  wrapper from 4913 errors in 347 files to 4617 errors in 326 files; PR proof
+  must keep the official wrapper status as blocked unless it reports pass.
 
 Post-v5 gate and proof dispatch:
 
