@@ -136,7 +136,10 @@ Post-v5 control-plane bootstrap:
   stress pack for large graphs` closed through PR #232. This is the
   large-graph reusable stress-pack proof issue.
 - Live Linear `JER-240`: `[project] [L9] [none] [DAL-TBD] JER-171 mypy
-  baseline reduction tranche 2` is the current quality-debt issue.
+  baseline reduction tranche 2` closed through PR #233. This is the second
+  JER-171 mypy baseline reduction tranche.
+- Live Linear `JER-241`: `[project] [L9] [none] [DAL-TBD] Post-JER-240
+  production readiness queue refresh` is the current queue refresh issue.
 
 Post-v5 product dispatch:
 
@@ -168,6 +171,14 @@ Post-v5 quality-debt dispatch:
   preserving runtime behavior. Current branch evidence reduces the official
   wrapper from 4913 errors in 347 files to 4617 errors in 326 files; PR proof
   must keep the official wrapper status as blocked unless it reports pass.
+
+Post-JER-240 production-readiness refresh:
+
+- `[project] [L9] [none] [DAL-TBD] Post-JER-240 production readiness queue
+  refresh` is live Linear `JER-241`. It records the current production
+  readiness snapshot, keeps the JER-171 full strict mypy blocker honest, and
+  defines the next release-candidate smoke, full e2e refresh, mypy tranche, and
+  local runbook/manifest contracts before new implementation work starts.
 
 Post-v5 gate and proof dispatch:
 

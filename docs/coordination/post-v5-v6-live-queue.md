@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-239` closed · live Linear `JER-240` implementing mypy baseline tranche 2
+Status: active queue · live Linear `JER-240` closed · live Linear `JER-241` implementing production-readiness queue refresh
 
 ## Purpose
 
@@ -214,7 +214,7 @@ Current quality-debt dispatch:
 - Live Linear issue: `JER-240`
 - Title: `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 2`
 - URL: `https://linear.app/jerrykogami/issue/JER-240/project-l9-none-dal-tbd-jer-171-mypy-baseline-reduction-tranche-2`
-- State at dispatch: `In Progress`
+- State after PR #233: `Done`
 - Identifier rule: `live Linear JER-240` is not the same artifact as the
   repo-local historical `JER-171` mypy wrapper blocker.
 - Evidence target: keep one coherent demo fault-injection test family focused
@@ -226,51 +226,105 @@ Current quality-debt dispatch:
   errors in 326 files, down from this branch's starting point of 4913 errors in
   347 files.
 
+Current queue-refresh dispatch:
+
+- Live Linear issue: `JER-241`
+- Title: `[project] [L9] [none] [DAL-TBD] Post-JER-240 production readiness queue refresh`
+- URL: `https://linear.app/jerrykogami/issue/JER-241/project-l9-none-dal-tbd-post-jer-240-production-readiness-queue`
+- State at dispatch: `In Progress`
+- Identifier rule: `live Linear JER-241` is not the same artifact as any
+  repo-local historical JER label; use `repo-local post-JER-240 queue refresh`
+  when referring to the older planning concept.
+- Evidence target: record the verified post-JER-240 state, name current
+  production-readiness blockers, and define the next executable Linear issue
+  contracts before more implementation starts.
+
 ## Next Candidate Issue Contracts
 
-Dispatched product slice:
+Post-JER-240 production-readiness snapshot:
 
-1. `[project] [L4] [none] [DAL-TBD] Review archive restore diff drilldown`
-   - Outcome: make restore/archive validation actionable by surfacing
-     section-level mismatch details, checksum paths, and affected graph/test
-     evidence after a local review archive restore.
-   - Acceptance: a restored archive with no mismatches still reports pass; a
-     deliberately mutated archive reports the mismatched section, checksum key,
-     expected checksum, actual checksum, and affected evidence path; the
-     surface remains local and `truth_effect: none`.
+- Strong evidence: `unit_tests` passed through the validation-suite gate on PR
+  #233, the focused demo fault-injection test family is strict-mypy clean, and
+  the archive/restore/large-graph proof slices from PR #231 and PR #232 are
+  merged on `main`.
+- Known blocker: JER-171 full strict mypy remains blocked. The current verified
+  wrapper result is 4617 errors in 326 files, not a clean gate.
+- Known blocker: the current queue does not yet contain a single release
+  smoke/readiness command that starts the workbench and probes the core local
+  operator flows as one production-like gate.
+- Known blocker: full opt-in e2e was last refreshed during the JER-235/JER-236
+  path. Later slices have focused e2e/unit proof, but no post-JER-240 full e2e
+  refresh should be implied.
+- Known blocker: deployment, packaging, and operator runbook evidence are not
+  yet merged as a release gate. The repo is ready for more hardening, not for a
+  production-ready claim.
+
+Recommended next product-readiness slice:
+
+1. `[project] [L4] [none] [DAL-TBD] Release-candidate workbench smoke pack`
+   - Outcome: add one local release-candidate smoke gate that starts the demo
+     server on an available port and probes the first production-like operator
+     flows in sequence.
+   - Acceptance: the smoke gate verifies `/workbench` boot, archive list/read
+     path, restore/readback, lever snapshot fault-injection path, and one
+     invalid-input rejection with actionable failure output; it runs without
+     external services and does not claim certification or cloud deployment.
    - Boundaries: no controller truth, frozen adapter, certified hardware YAML,
-     C919 packet, live Linear browser mutation, or collaboration platform work.
-   - Evidence: focused e2e for pass and mutated-archive mismatch; static shell
-     test for drilldown fields; targeted validation-suite pass.
-   - Priority: `L4` product visibility, dispatched as live Linear `JER-238`.
+     C919 packet, public schema, or external platform mutation.
+   - Evidence: new/focused pytest or script test for the smoke gate, one manual
+     command summary, `git diff --check`, and targeted validation-suite pass.
+   - Priority: `L4` product confidence; first recommended dispatch because a
+     production path needs one repeatable operator smoke gate before more UI
+     or release claims.
 
-Dispatched proof slice:
+Recommended next gate-refresh slice:
 
-2. `[project] [L6] [none] [DAL-TBD] Sandbox scenario stress pack for large graphs`
-   - Outcome: add reusable large-graph scenario/test-case fixtures so the
-     runner, debugger, preflight, and archive loop can be exercised without
-     manually building synthetic graphs in each test.
-   - Acceptance: fixture-backed scenarios cover pass, fail, invalid graph, and
-     stale-report cases; archive and restore evidence remains deterministic;
-     full e2e/mypy-clean claims are made only when the real commands pass.
-   - Boundaries: sandbox-only; no adapter/controller truth changes; no
-     performance or certification claim.
-   - Evidence: fixture tests, focused e2e, archive checksum/readback tests,
-     targeted validation-suite pass.
-   - Priority: `L6` proof hardening, dispatched as live Linear `JER-239`.
+2. `[project] [L9] [none] [DAL-TBD] Post-JER-240 full opt-in e2e refresh`
+   - Outcome: rerun the official opt-in e2e surface on current `main`, record
+     exact pass/fail/deselected counts, and create follow-up issues only for
+     real blockers.
+   - Acceptance: the report names the command, selected-test count, first
+     failing test if any, and whether the last known JER-236 e2e evidence still
+     holds on current `main`; no product code changes are made in the audit
+     slice.
+   - Boundaries: audit/report-only unless a follow-up implementation issue is
+     created; do not edit tests to hide failures; do not claim current full e2e
+     green unless the command passes.
+   - Evidence: e2e command summary, blocker classification, queue update, and
+     Linear proof comment.
+   - Priority: `L9` gate confidence; run after the smoke-pack slice or before
+     any production-readiness claim.
 
-Dispatched debt slice:
+Recommended next quality-debt slice:
 
-3. `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 2`
+3. `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 3`
    - Outcome: reduce the official strict mypy baseline again by typing one
-     coherent module/test family without claiming full clean until the wrapper
-     reports pass.
+     coherent fixture/helper family, preferably the smallest family visible in
+     the current wrapper tail.
    - Acceptance: focused strict mypy command passes for the touched family; the
      official wrapper reports fewer errors/files or an explicitly unchanged
-     blocker; runtime behavior tests for touched code pass.
+     blocker; runtime tests for touched helpers pass.
    - Boundaries: no broad refactor, no public schema/interface changes, no
      mypy-clean claim unless `tools/run_mypy_gate.py --format json` reports
      `pass`.
    - Evidence: focused pytest, focused strict mypy command, official wrapper
      report, targeted validation-suite pass.
-   - Priority: `L9` quality debt, dispatched as live Linear `JER-240`.
+   - Priority: `L9` quality debt; keep reducing the known JER-171 blocker in
+     small reversible tranches.
+
+Recommended next release-operations slice:
+
+4. `[project] [L6] [none] [DAL-TBD] Local production runbook and release manifest`
+   - Outcome: add a truthful local production-readiness runbook and a
+     machine-readable release evidence manifest for clean-checkout operation.
+   - Acceptance: the runbook names exact setup/start/stop/verify commands,
+     required env vars, unsupported external dependencies, and current blockers;
+     the manifest records git SHA, verification commands, and not-claimed gates
+     without embedding secrets.
+   - Boundaries: documentation and local artifact generation only; no cloud
+     deploy, no new orchestration platform, no external writes from the
+     workbench.
+   - Evidence: generated manifest test or schema check, doc diff, `git
+     diff --check`, and targeted validation-suite pass.
+   - Priority: `L6` operational readiness; useful after a smoke gate exists so
+     the runbook has a concrete command to reference.
