@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-251` closed · live Linear `JER-252` implementing JER-171 mypy tranche 10
+Status: active queue · live Linear `JER-252` closed · live Linear `JER-253` implementing JER-171 mypy tranche 11
 
 ## Purpose
 
@@ -383,7 +383,7 @@ Current quality-debt dispatch:
 - Live Linear issue: `JER-252`
 - Title: `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 10`
 - URL: `https://linear.app/jerrykogami/issue/JER-252/project-l9-none-dal-tbd-jer-171-mypy-baseline-reduction-tranche-10`
-- State at dispatch: `In Progress`
+- State after PR #245: `Done`
 - Evidence target: shield low-risk report/bundle import boundaries in
   `src/well_harness/two_system_runtime_comparison.py`,
   `src/well_harness/fault_diagnosis.py`, and
@@ -391,6 +391,20 @@ Current quality-debt dispatch:
 - Current branch evidence: focused strict mypy reports success in 3 source
   files, focused report/bundle tests pass, `unit_tests` pass, and the official
   wrapper moved from 4595 errors in 316 files to 4579 errors in 313 files while
+  still blocked.
+
+Current quality-debt dispatch:
+
+- Live Linear issue: `JER-253`
+- Title: `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 11`
+- URL: `https://linear.app/jerrykogami/issue/JER-253/project-l9-none-dal-tbd-jer-171-mypy-baseline-reduction-tranche-11`
+- State at dispatch: `In Progress`
+- Evidence target: type low-risk document intake and control-system spec
+  import/return boundaries in `src/well_harness/document_intake.py` and
+  `src/well_harness/system_spec.py` without changing runtime behavior.
+- Current branch evidence: focused strict mypy reports success in 2 source
+  files, focused document/spec tests pass, `unit_tests` pass, and the official
+  wrapper moved from 4579 errors in 313 files to 4561 errors in 311 files while
   still blocked.
 
 ## Next Candidate Issue Contracts
@@ -402,7 +416,7 @@ Post-JER-240 production-readiness snapshot:
   the archive/restore/large-graph proof slices from PR #231 and PR #232 are
   merged on `main`.
 - Known blocker: JER-171 full strict mypy remains blocked. The current verified
-  wrapper result is 4579 errors in 313 files, not a clean gate.
+  wrapper result is 4561 errors in 311 files, not a clean gate.
 - Known blocker: the current queue does not yet contain a single release
   smoke/readiness command that starts the workbench and probes the core local
   operator flows as one production-like gate.

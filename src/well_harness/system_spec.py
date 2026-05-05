@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from well_harness.controller_adapter import REFERENCE_DEPLOY_CONTROLLER_METADATA
-from well_harness.models import HarnessConfig
+from well_harness.controller_adapter import REFERENCE_DEPLOY_CONTROLLER_METADATA  # type: ignore[import-untyped]
+from well_harness.models import HarnessConfig  # type: ignore[import-untyped]
 
 
 CONTROL_SYSTEM_SPEC_KIND = "well-harness-control-system-spec"
