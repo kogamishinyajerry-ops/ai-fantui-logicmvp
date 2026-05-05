@@ -111,6 +111,22 @@ Post-v5 control-plane bootstrap:
   Codex Daily Lane`). This is the first post-v5 quality-debt slice and is not
   the same artifact as the repo-local historical `JER-233` scenario test case
   library slice.
+- Live Linear `JER-234`: `[project] [L9] [none] [DAL-TBD] Official e2e
+  49/49 readiness audit` closed through PR #227. This is the post-v5 e2e
+  readiness audit and is not the same artifact as the repo-local historical
+  `JER-234` sandbox runner trace kernel v2 slice.
+- Live Linear `JER-235`: `[project] [L4] [none] [DAL-TBD] Enable captured
+  template insertion after draft import` closed through PR #228. This is the
+  captured-template import gate fix and is not the same artifact as the
+  repo-local historical `JER-235` debug probe timeline v3 slice.
+- Live Linear `JER-236`: `[project] [L6] [none] [DAL-TBD] Large sandbox graph
+  trace stability probe` closed through PR #229. This is the large-graph
+  trace/archive proof and is not the same artifact as the repo-local
+  historical `JER-236` hardware/interface evidence attachment v2 slice.
+- Live Linear `JER-237`: `[project] [L9] [none] [DAL-TBD] Post-JER-236 v6
+  queue refresh and next dispatch map` is the current control-plane refresh
+  issue and is not the same artifact as the repo-local historical `JER-237`
+  editor command palette slice.
 
 Post-v5 product dispatch:
 
@@ -136,6 +152,29 @@ Post-v5 quality-debt dispatch:
   official wrapper run with the declared `typecheck` extra reports 4665 errors
   in 326 files instead of the captured 4672 errors in 327 files. JER-171
   remains blocked until the full wrapper reports pass.
+
+Post-v5 gate and proof dispatch:
+
+- `[project] [L9] [none] [DAL-TBD] Official e2e 49/49 readiness audit` closed
+  as live Linear `JER-234` through PR #227. It recorded the real opt-in e2e
+  surface as 91 selected tests, found the captured-template import blocker, and
+  created live Linear `JER-235` as the follow-up without changing product code.
+- `[project] [L4] [none] [DAL-TBD] Enable captured template insertion after
+  draft import` closed as live Linear `JER-235` through PR #228. It restored
+  imported captured-template insertion and made the full opt-in e2e suite green
+  at 91 passed / 3439 deselected.
+- `[project] [L6] [none] [DAL-TBD] Large sandbox graph trace stability probe`
+  closed as live Linear `JER-236` through PR #229. It added e2e proof for
+  deterministic 16-node trace kernels, stable archive checksums, and structured
+  invalid findings; full opt-in e2e passed at 93 passed / 3439 deselected.
+
+Post-JER-236 queue refresh:
+
+- `[project] [L9] [none] [DAL-TBD] Post-JER-236 v6 queue refresh and next
+  dispatch map` is live Linear `JER-237`. It refreshes
+  `docs/coordination/post-v5-v6-live-queue.md` after Daily Lane became empty,
+  records JER-234 through JER-236 closeout, and defines the next product,
+  proof, and debt issue contracts.
 
 Workbench v4 foundation-first closure:
 

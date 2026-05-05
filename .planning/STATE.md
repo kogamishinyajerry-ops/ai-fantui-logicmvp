@@ -2,21 +2,21 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Live Linear JER-233 mypy baseline tranche implemented
-last_updated: "2026-05-03T13:20:00.000+08:00"
-last_activity: 2026-05-03
+status: Live Linear JER-237 post-JER-236 queue refresh implementing
+last_updated: "2026-05-05T13:50:00.000+08:00"
+last_activity: 2026-05-05
 progress:
   total_phases: 55
   completed_phases: 46
   total_plans: 2
   completed_plans: 1
-  post_v5_closeout: "PR #216 through PR #220 merged JER-234 through JER-238 to main, PR #221 merged validation-suite timeout maintenance, and post-v5 main passed the bounded GSD validation suite 25/25. Live Linear JER-229 is the Linear/Symphony bootstrap issue, live Linear JER-230 is the first post-v5 v6 queue seed, live Linear JER-231 is the review archive library/recent restore surface slice, live Linear JER-232 is the issue factory/collision guard slice, and live Linear JER-233 is the first JER-171 mypy baseline reduction tranche; live ids must be distinguished from repo-local historical JER labels."
+  post_v5_closeout: "PR #216 through PR #220 merged repo-local JER-234 through JER-238 to main, PR #221 merged validation-suite timeout maintenance, and post-v5 main passed the bounded GSD validation suite 25/25. Live Linear JER-229 is the Linear/Symphony bootstrap issue, live Linear JER-230 is the first post-v5 v6 queue seed, live Linear JER-231 is the review archive library/recent restore surface slice, live Linear JER-232 is the issue factory/collision guard slice, live Linear JER-233 is the first JER-171 mypy baseline reduction tranche, live Linear JER-234 is the e2e readiness audit, live Linear JER-235 is the captured-template import gate fix, live Linear JER-236 is the large sandbox graph trace stability proof, and live Linear JER-237 is the post-JER-236 queue refresh; live ids must be distinguished from repo-local historical JER labels."
   notes: "JER-204 merged PR #186 and closed Runtime v3 project. JER-205 merged PR #187 with the Workbench v4 acceptance model. JER-206 through JER-219 built the current single-user authoring base: templates, subsystems, hardware/interface evidence, debug/diff/handoff packets, archive validation, workspace_document, and canvas_interaction_summary. JER-220 reset the active roadmap to foundation-first: editor -> runner -> test bench -> debugger -> archive, with thrust-reverser and C919 E-TRAS treated as reference/sample packs. JER-221 and JER-222 closed canonical editable graph and port/wire route metadata. JER-223 closed the first sandbox scenario test bench run report for candidate graph inputs/assertions. JER-224 closed selected candidate debugging over run failures, watched values, and archive checksums. JER-225 closed a sandbox-only preflight analyzer that classifies candidates as ready, needs_evidence, or invalid_candidate before handoff/archive. JER-226 closed the first UI-facing hardware/interface design authoring surface for sandbox LRUs, cables, connectors, ports, pins, bindings, evidence gaps, validation, and archive checksums. JER-227 closed the foundation review archive bundle. JER-228 closed validation-suite timeout isolation and clean origin/main worktree hygiene. JER-229 launched Workbench v5 deep-water planning: empty-canvas graph authoring, canonical graph document v2, port drag wiring, scenario library, runner trace kernel, debug timeline, hardware evidence attachment, command palette ergonomics, and archive restore v3. JER-230 closed v5 empty-canvas sandbox authoring with input/output primitives and canvas_authoring_mode export/import/archive evidence. JER-231 closed canonical graph document v2 with a canonical_model payload, DOM adapter boundary metadata, v1 import migration, and canonical-only import fallback. JER-232 closed direct port-drag wiring preview, compatibility diagnostics, and route metadata after PR #214 while preserving sandbox-only truth_effect none. JER-233 closed the sandbox scenario test case library after PR #215 with saved test cases, expected outputs, notes, graph/workspace revision-linked run reports, export/import, and archive checksum coverage. JER-234 closed the sandbox runner trace kernel v2 implementation with deterministic node/port/edge/assertion frames, structured invalid graph findings, and archive checksum coverage. JER-235 closed the debug probe timeline v3 implementation with selected owner watched values across trace ticks, first failing assertion links, graph/timeline sync metadata, and archive checksum coverage. JER-236 closed the hardware/interface evidence attachment v2 implementation with node/port/edge/subsystem-group owners, duplicate/broken-reference validation, evidence-gap accounting, and archive checksum coverage. JER-237 closed the editor command palette implementation with Ctrl/Cmd+K access, create/rename/duplicate/group/wire/run/debug/export/import/archive commands, command_palette workspace action metadata, and archive-visible canvas sync. JER-238 closed the review archive restore/regression bundle implementation with restore-time checksums, required-section validation, red-line metadata validation, foundation archive validation, model JSON importability, restored graph readback, and honest not_claimed e2e/mypy fields; post-v5 main passed the bounded GSD validation suite 25/25 after PR #221 extended the default timeout budget. JER-171 mypy wrapper remains honest evidence and may report blocked; do not claim mypy clean until it reports pass."
 ---
 
 # State
 
-Last activity: 2026-05-03
+Last activity: 2026-05-05
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
@@ -75,6 +75,25 @@ family and reduced the official strict mypy wrapper baseline, when run with the
 declared `typecheck` extra, from 4672 errors in 327 files to 4665 errors in 326
 files. JER-171 remains a known blocker; this does not claim mypy clean.
 
+**2026-05-03 live v6 gate audit and fix**: live Linear issue `JER-234`
+(`[project] [L9] [none] [DAL-TBD] Official e2e 49/49 readiness audit`) closed
+through PR #227 after recording the real opt-in e2e surface as 91 selected
+tests and finding the captured-template import blocker. live Linear issue
+`JER-235` (`[project] [L4] [none] [DAL-TBD] Enable captured template insertion
+after draft import`) closed through PR #228, restoring imported captured
+subsystem template insertion and bringing the full opt-in e2e suite to 91
+passed / 3439 deselected. These live ids collide with repo-local historical
+`JER-234` and `JER-235`; future reports must use `live Linear` when needed.
+
+**2026-05-05 live v6 scale proof and queue refresh**: live Linear issue
+`JER-236` (`[project] [L6] [none] [DAL-TBD] Large sandbox graph trace
+stability probe`) closed through PR #229 after adding large-graph e2e proof:
+16-node trace kernels are deterministic, key archive checksums are stable, and
+12-node invalid graphs keep structured unsupported-op, duplicate-edge, and
+dangling-edge findings. The full opt-in e2e suite passed at 93 passed / 3439
+deselected. live Linear issue `JER-237` is the current post-JER-236 queue
+refresh and next dispatch map issue.
+
 **Linear control plane**:
 
 - Runtime v3 implementation chain reached JER-203 on `origin/main`.
@@ -126,6 +145,14 @@ files. JER-171 remains a known blocker; this does not claim mypy clean.
   the repo-local JER-232 port drag wiring slice.
 - Live Linear JER-233 is the post-v5 mypy baseline reduction issue, not the
   repo-local JER-233 scenario test case library slice.
+- Live Linear JER-234 is the post-v5 e2e readiness audit issue, not the
+  repo-local JER-234 sandbox runner trace kernel v2 slice.
+- Live Linear JER-235 is the post-v5 captured-template import gate-fix issue,
+  not the repo-local JER-235 debug probe timeline v3 slice.
+- Live Linear JER-236 is the post-v5 large sandbox graph trace stability proof,
+  not the repo-local JER-236 hardware/interface evidence attachment v2 slice.
+- Live Linear JER-237 is the post-JER-236 queue refresh issue, not the
+  repo-local JER-237 editor command palette slice.
 
 **Runtime v3 closure summary**:
 

@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-230` seeded · live Linear `JER-233` dispatched
+Status: active queue · live Linear `JER-236` closed · live Linear `JER-237` refreshing next dispatch map
 
 ## Purpose
 
@@ -99,41 +99,33 @@ Scale/proof slice:
    - Evidence: deterministic trace tests, archive checksum tests, targeted
      validation-suite pass.
 
-## Recommended Next Dispatch
+## Closed Dispatches Through JER-236
 
-Start with the product slice:
-
-`[project] [L4] [none] [DAL-TBD] Review archive library and recent restore surface`
-
-Reason: Workbench v5 ended with archive restore proof. The next useful v6 move
-is to make that proof reusable from the actual workbench surface before adding
-new editing features. This preserves the single-user, sandbox-only v5 boundary
-and creates a visible engineering workflow improvement.
-
-Dispatch record:
+Product dispatch:
 
 - Live Linear issue: `JER-231`
+- Title: `[project] [L4] [none] [DAL-TBD] Review archive library and recent restore surface`
 - URL: `https://linear.app/jerrykogami/issue/JER-231/project-l4-none-dal-tbd-review-archive-library-and-recent-restore`
 - State after PR #224: `Done`
 - Identifier rule: `live Linear JER-231` is not the same artifact as the
   repo-local historical `JER-231` canonical graph document v2 slice.
 
-Next infrastructure dispatch:
+Infrastructure dispatch:
 
 - Live Linear issue: `JER-232`
 - Title: `[project] [L9] [none] [DAL-TBD] Live Linear issue factory and collision guard`
 - URL: `https://linear.app/jerrykogami/issue/JER-232/project-l9-none-dal-tbd-live-linear-issue-factory-and-collision-guard`
-- State at dispatch: `In Progress`
+- State after PR #225: `Done`
 - Identifier rule: `live Linear JER-232` is not the same artifact as the
   repo-local historical `JER-232` port drag wiring slice.
 - Repo artifact: `docs/coordination/live-linear-issue-factory.md`
 
-Next quality-debt dispatch:
+Quality-debt dispatch:
 
 - Live Linear issue: `JER-233`
 - Title: `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche`
 - URL: `https://linear.app/jerrykogami/issue/JER-233/project-l9-none-dal-tbd-jer-171-mypy-baseline-reduction-tranche`
-- State at dispatch: `In Progress`
+- State after PR #226: `Done`
 - Identifier rule: `live Linear JER-233` is not the same artifact as the
   repo-local historical `JER-233` scenario test case library slice.
 - Evidence target: type one coherent module family, keep focused behavior tests
@@ -142,3 +134,103 @@ Next quality-debt dispatch:
   strict-mypy clean, and `tools/run_mypy_gate.py --format json --report-only`
   run with the declared `typecheck` extra reports 4665 errors in 326 files
   instead of the captured 4672 errors in 327 files.
+
+Gate audit dispatch:
+
+- Live Linear issue: `JER-234`
+- Title: `[project] [L9] [none] [DAL-TBD] Official e2e 49/49 readiness audit`
+- URL: `https://linear.app/jerrykogami/issue/JER-234/project-l9-none-dal-tbd-official-e2e-4949-readiness-audit`
+- State after PR #227: `Done`
+- Identifier rule: `live Linear JER-234` is not the same artifact as the
+  repo-local historical `JER-234` sandbox runner trace kernel v2 slice.
+- Evidence target: record the real opt-in e2e command, selected-test count,
+  first blocker, and follow-up recommendation without changing product
+  behavior. The audit found 90 passed / 1 failed / 3439 deselected and created
+  the JER-235 follow-up.
+
+Gate-fix dispatch:
+
+- Live Linear issue: `JER-235`
+- Title: `[project] [L4] [none] [DAL-TBD] Enable captured template insertion after draft import`
+- URL: `https://linear.app/jerrykogami/issue/JER-235/project-l4-none-dal-tbd-enable-captured-template-insertion-after-draft`
+- State after PR #228: `Done`
+- Identifier rule: `live Linear JER-235` is not the same artifact as the
+  repo-local historical `JER-235` debug probe timeline v3 slice.
+- Evidence target: import `component_library.captured_templates`, enable the
+  captured-template insert flow, preserve remapped ids/rules, and rerun the
+  full opt-in e2e command. PR #228 closed with 91 passed / 3439 deselected.
+
+Scale/proof dispatch:
+
+- Live Linear issue: `JER-236`
+- Title: `[project] [L6] [none] [DAL-TBD] Large sandbox graph trace stability probe`
+- URL: `https://linear.app/jerrykogami/issue/JER-236/project-l6-none-dal-tbd-large-sandbox-graph-trace-stability-probe`
+- State after PR #229: `Done`
+- Identifier rule: `live Linear JER-236` is not the same artifact as the
+  repo-local historical `JER-236` hardware/interface evidence attachment v2
+  slice.
+- Evidence target: prove a 16-node sandbox graph produces deterministic trace
+  kernels and stable archive checksums, and prove a 12-node invalid graph keeps
+  structured unsupported-op, duplicate-edge, and dangling-edge findings. PR
+  #229 closed with 93 passed / 3439 deselected in the full opt-in e2e suite.
+
+Current queue refresh:
+
+- Live Linear issue: `JER-237`
+- Title: `[project] [L9] [none] [DAL-TBD] Post-JER-236 v6 queue refresh and next dispatch map`
+- URL: `https://linear.app/jerrykogami/issue/JER-237/project-l9-none-dal-tbd-post-jer-236-v6-queue-refresh-and-next`
+- State at dispatch: `In Progress`
+- Identifier rule: `live Linear JER-237` is not the same artifact as the
+  repo-local historical `JER-237` editor command palette slice.
+- Evidence target: align this repo queue document with live Linear JER-234
+  through JER-236 and define the next dispatch contracts before starting new
+  ambiguous implementation work.
+
+## Next Candidate Issue Contracts
+
+Recommended next product slice:
+
+1. `[project] [L4] [none] [DAL-TBD] Review archive restore diff drilldown`
+   - Outcome: make restore/archive validation actionable by surfacing
+     section-level mismatch details, checksum paths, and affected graph/test
+     evidence after a local review archive restore.
+   - Acceptance: a restored archive with no mismatches still reports pass; a
+     deliberately mutated archive reports the mismatched section, checksum key,
+     expected checksum, actual checksum, and affected evidence path; the
+     surface remains local and `truth_effect: none`.
+   - Boundaries: no controller truth, frozen adapter, certified hardware YAML,
+     C919 packet, live Linear browser mutation, or collaboration platform work.
+   - Evidence: focused e2e for pass and mutated-archive mismatch; static shell
+     test for drilldown fields; targeted validation-suite pass.
+   - Priority: `L4` product visibility, recommended first dispatch.
+
+Recommended next proof slice:
+
+2. `[project] [L6] [none] [DAL-TBD] Sandbox scenario stress pack for large graphs`
+   - Outcome: add reusable large-graph scenario/test-case fixtures so the
+     runner, debugger, preflight, and archive loop can be exercised without
+     manually building synthetic graphs in each test.
+   - Acceptance: fixture-backed scenarios cover pass, fail, invalid graph, and
+     stale-report cases; archive and restore evidence remains deterministic;
+     full e2e/mypy-clean claims are made only when the real commands pass.
+   - Boundaries: sandbox-only; no adapter/controller truth changes; no
+     performance or certification claim.
+   - Evidence: fixture tests, focused e2e, archive checksum/readback tests,
+     targeted validation-suite pass.
+   - Priority: `L6` proof hardening, recommended second dispatch.
+
+Recommended next debt slice:
+
+3. `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 2`
+   - Outcome: reduce the official strict mypy baseline again by typing one
+     coherent module/test family without claiming full clean until the wrapper
+     reports pass.
+   - Acceptance: focused strict mypy command passes for the touched family; the
+     official wrapper reports fewer errors/files or an explicitly unchanged
+     blocker; runtime behavior tests for touched code pass.
+   - Boundaries: no broad refactor, no public schema/interface changes, no
+     mypy-clean claim unless `tools/run_mypy_gate.py --format json` reports
+     `pass`.
+   - Evidence: focused pytest, focused strict mypy command, official wrapper
+     report, targeted validation-suite pass.
+   - Priority: `L9` quality debt, recommended after one product/proof slice.
