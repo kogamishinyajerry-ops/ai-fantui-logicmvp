@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-from well_harness.fault_taxonomy import validate_fault_kind
-from well_harness.system_spec import (
+from well_harness.fault_taxonomy import validate_fault_kind  # type: ignore[import-untyped]
+from well_harness.system_spec import (  # type: ignore[import-untyped]
     AcceptanceScenarioSpec,
     ClarificationItemSpec,
     ComponentSpec,
@@ -318,8 +318,8 @@ def _unique_stub_id(existing_ids: set[str], base_id: str) -> str:
 def _first_component_payload(payload: dict[str, Any]) -> dict[str, Any]:
     components = payload.get("components", [])
     if isinstance(components, list) and components:
-        return components[0]
-    return intake_template_payload()["components"][0]
+        return cast(dict[str, Any], components[0])
+    return cast(dict[str, Any], intake_template_payload()["components"][0])
 
 
 def _default_component_stub() -> dict[str, Any]:
@@ -640,7 +640,7 @@ def build_schema_repair_suggestions(
 
 
 def _apply_schema_repair_suggestion_to_payload(payload: dict[str, Any], suggestion_id: str) -> dict[str, Any]:
-    next_payload = json.loads(json.dumps(payload, ensure_ascii=False))
+    next_payload = cast(dict[str, Any], json.loads(json.dumps(payload, ensure_ascii=False)))
     template_defaults = intake_template_payload()
 
     if suggestion_id == "add_source_document_stub":
