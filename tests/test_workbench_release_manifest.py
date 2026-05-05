@@ -70,8 +70,34 @@ def test_release_manifest_records_truthful_gate_statuses_without_secrets(monkeyp
     assert commands["full_opt_in_e2e"]["status"] == "pass"
     assert "93 passed / 3445 deselected" in commands["full_opt_in_e2e"]["evidence_summary"]
     assert commands["full_strict_mypy"]["status"] == "blocked"
-    assert "4617 errors in 326 files" in commands["full_strict_mypy"]["evidence_summary"]
+    assert "4548 errors in 305 files" in commands["full_strict_mypy"]["evidence_summary"]
     assert all(command["external_services"] == [] for command in commands.values())
+
+    maturity = manifest["workbench_maturity_snapshot"]
+    assert maturity["kind"] == "well-harness-workbench-maturity-snapshot"
+    assert maturity["overall_status"] == "local_release_candidate_not_production_ready"
+    assert maturity["truth_level_impact"] == "none"
+    assert maturity["certification_claim"] == "none"
+    dimensions = {item["id"]: item for item in maturity["dimensions"]}
+    assert {
+        "local_operator_smoke",
+        "release_manifest_validation",
+        "unit_regression_gate",
+        "full_opt_in_e2e_gate",
+        "full_strict_mypy_gate",
+        "deployment_packaging",
+        "cloud_hosting",
+        "certification_authority",
+    } <= set(dimensions)
+    assert dimensions["local_operator_smoke"]["status"] == "pass"
+    assert dimensions["release_manifest_validation"]["status"] == "pass"
+    assert dimensions["unit_regression_gate"]["status"] == "rerun_required"
+    assert dimensions["full_strict_mypy_gate"]["status"] == "blocked"
+    assert "4548 errors in 305 files" in dimensions["full_strict_mypy_gate"]["summary"]
+    assert dimensions["deployment_packaging"]["status"] == "not_claimed"
+    assert dimensions["cloud_hosting"]["status"] == "not_claimed"
+    assert dimensions["certification_authority"]["status"] == "not_claimed"
+    assert all(dimension["external_services"] == [] for dimension in dimensions.values())
 
     not_claimed_ids = {item["id"] for item in manifest["not_claimed_gates"]}
     assert {
@@ -97,6 +123,37 @@ def test_release_manifest_validation_rejects_over_claimed_manifest() -> None:
     assert "local release gates must not require secret environment variables." in issues
 
 
+def test_release_manifest_validation_rejects_over_claimed_maturity_snapshot() -> None:
+    manifest = build_release_manifest(repo_root=Path("/repo"), git_runner=_fake_git, clock=_fixed_clock)
+    manifest["workbench_maturity_snapshot"]["overall_status"] = "production_ready"
+    dimensions = {item["id"]: item for item in manifest["workbench_maturity_snapshot"]["dimensions"]}
+    dimensions["full_strict_mypy_gate"]["status"] = "pass"
+    dimensions["cloud_hosting"]["status"] = "pass"
+    dimensions["certification_authority"]["status"] = "pass"
+    manifest["workbench_maturity_snapshot"]["dimensions"] = [
+        item for item in dimensions.values() if item["id"] != "deployment_packaging"
+    ]
+
+    issues = validate_release_manifest(manifest)
+
+    assert "workbench_maturity_snapshot.overall_status must not claim production_ready." in issues
+    assert "workbench_maturity_snapshot is missing required dimension(s): deployment_packaging." in issues
+    assert "workbench_maturity_snapshot.full_strict_mypy_gate must remain blocked." in issues
+    assert "workbench_maturity_snapshot.cloud_hosting must remain not_claimed." in issues
+    assert "workbench_maturity_snapshot.certification_authority must remain not_claimed." in issues
+
+
+def test_release_manifest_validation_report_handles_invalid_maturity_snapshot_shape() -> None:
+    manifest = build_release_manifest(repo_root=Path("/repo"), git_runner=_fake_git, clock=_fixed_clock)
+    manifest["workbench_maturity_snapshot"] = "bad"
+
+    report = validation_report(manifest)
+
+    assert report["status"] == "fail"
+    assert report["maturity_dimension_count"] == 0
+    assert "workbench_maturity_snapshot is required." in report["issues"]
+
+
 def test_release_manifest_cli_outputs_valid_json() -> None:
     completed = subprocess.run(
         [sys.executable, "tools/workbench_release_manifest.py", "--validate", "--format", "json"],
@@ -111,6 +168,7 @@ def test_release_manifest_cli_outputs_valid_json() -> None:
     assert payload["status"] == "pass"
     assert payload["verification_command_count"] >= 4
     assert payload["not_claimed_gate_count"] >= 4
+    assert payload["maturity_dimension_count"] >= 8
 
 
 def test_release_manifest_validation_flags_secret_like_key_value_strings() -> None:

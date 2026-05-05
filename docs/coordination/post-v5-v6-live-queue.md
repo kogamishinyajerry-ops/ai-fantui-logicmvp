@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-256` closed · live Linear `JER-257` implementing JER-171 mypy tranche 15
+Status: active queue · live Linear `JER-257` closed · live Linear `JER-258` implementing workbench maturity evidence refresh
 
 ## Purpose
 
@@ -456,7 +456,7 @@ Current quality-debt dispatch:
 - Live Linear issue: `JER-257`
 - Title: `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 15`
 - URL: `https://linear.app/jerrykogami/issue/JER-257/project-l9-none-dal-tbd-jer-171-mypy-baseline-reduction-tranche-15`
-- State at dispatch: `In Progress`
+- State after PR #250: `Done`
 - Evidence target: type low-risk PR review and merge-close local import
   boundaries in `src/well_harness/collab/merge_close.py` and
   `src/well_harness/workbench/pr_review.py` without changing review,
@@ -466,24 +466,39 @@ Current quality-debt dispatch:
   official wrapper moved from 4550 errors in 307 files to 4548 errors in 305
   files while still blocked.
 
+Current release-operations dispatch:
+
+- Live Linear issue: `JER-258`
+- Title: `[project] [L6] [none] [DAL-TBD] Workbench maturity evidence refresh`
+- URL: `https://linear.app/jerrykogami/issue/JER-258/project-l6-none-dal-tbd-workbench-maturity-evidence-refresh`
+- State at dispatch: `In Progress`
+- Evidence target: refresh the release evidence manifest, local production
+  runbook, and queue/state docs so the current maturity picture is
+  machine-readable after JER-257.
+- Current branch evidence: manifest validation enforces a
+  `workbench_maturity_snapshot` with pass, rerun-required, blocked, and
+  not-claimed dimensions; focused manifest/smoke tests pass; release-candidate
+  smoke passes 6 steps; touched files are focused strict-mypy clean; the
+  official wrapper remains blocked at 4548 errors in 305 files; `unit_tests`
+  passes; `git diff --check` passes.
+
 ## Next Candidate Issue Contracts
 
-Post-JER-240 production-readiness snapshot:
+Post-JER-257 maturity snapshot:
 
-- Strong evidence: `unit_tests` passed through the validation-suite gate on PR
-  #233, the focused demo fault-injection test family is strict-mypy clean, and
-  the archive/restore/large-graph proof slices from PR #231 and PR #232 are
-  merged on `main`.
+- Strong evidence: local release-candidate smoke exists from live Linear
+  `JER-242`, full opt-in e2e evidence is current from live Linear `JER-243`,
+  and the local production runbook/release manifest exists from live Linear
+  `JER-244`.
 - Known blocker: JER-171 full strict mypy remains blocked. The current verified
   wrapper result is 4548 errors in 305 files, not a clean gate.
-- Known blocker: the current queue does not yet contain a single release
-  smoke/readiness command that starts the workbench and probes the core local
-  operator flows as one production-like gate.
+- Known gate: unit regression must still be rerun on the exact release-candidate
+  SHA before handoff even when prior branch evidence passed.
 - Full opt-in e2e is current as of live Linear `JER-243`: 93 passed / 3445
   deselected on `origin/main@9516fa6`.
-- Known blocker: deployment, packaging, and operator runbook evidence are not
-  yet merged as a release gate. The repo is ready for more hardening, not for a
-  production-ready claim.
+- Known blocker: deployment packaging, cloud hosting, and certification
+  authority remain not-claimed. The repo is ready for more local hardening, not
+  for a production-ready claim.
 
 Dispatched product-readiness slice:
 

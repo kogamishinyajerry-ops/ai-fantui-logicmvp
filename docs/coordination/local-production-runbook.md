@@ -2,6 +2,8 @@
 
 Live Linear issue: `JER-244`
 
+Current maturity refresh: live Linear `JER-258`
+
 ## Scope
 
 This runbook is for a clean local checkout of the Workbench release candidate.
@@ -13,6 +15,8 @@ The current supported release gate is local:
 - boot the standard-library demo/workbench server;
 - run the release-candidate smoke command;
 - generate and validate the release evidence manifest;
+- inspect the manifest's `workbench_maturity_snapshot` for pass,
+  rerun-required, blocked, and not-claimed gates;
 - rerun unit and opt-in e2e gates before handoff.
 
 ## Clean Checkout Setup
@@ -64,6 +68,10 @@ Expected current interpretation:
 
 - Release-candidate smoke: must pass.
 - Release manifest validation: must pass.
+- Workbench maturity snapshot: must keep local smoke and manifest validation as
+  pass evidence, unit regression as rerun-required on the exact candidate SHA,
+  full strict mypy as blocked, and deployment/cloud/certification as
+  not-claimed.
 - Unit validation-suite gate: must pass on the exact release candidate SHA.
 - Full opt-in e2e: must pass before claiming current e2e green.
 - Full strict mypy: currently expected to remain blocked until JER-171 is
@@ -103,7 +111,7 @@ The manifest records variable names only. It must never record secret values.
 ## Current Blockers
 
 - JER-171 full strict mypy remains blocked. Latest recorded wrapper evidence:
-  4617 errors in 326 files.
+  4548 errors in 305 files after live Linear `JER-257` / PR #250.
 - Deployment packaging, service ownership, rollback, and hosted observability
   gates are not merged.
 - Certification authority is not established for sandbox workbench evidence.
@@ -124,6 +132,6 @@ Validate it with:
 uv run --locked --extra dev python tools/workbench_release_manifest.py --validate --format json
 ```
 
-The manifest includes the current git SHA, verification commands, pass and
-blocked gate evidence, unsupported external dependencies, and explicit
-not-claimed gates.
+The manifest includes the current git SHA, verification commands,
+`workbench_maturity_snapshot`, pass/rerun-required/blocked/not-claimed gate
+evidence, unsupported external dependencies, and explicit not-claimed gates.
