@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Live Linear JER-257 JER-171 mypy baseline tranche 15 implementing
-last_updated: "2026-05-05T22:44:58.000+08:00"
+status: Live Linear JER-258 workbench maturity evidence refresh implementing
+last_updated: "2026-05-05T23:06:00.000+08:00"
 last_activity: 2026-05-05
 progress:
   total_phases: 55
@@ -155,10 +155,16 @@ focused strict-mypy clean, and the official wrapper moved from 4556 errors in
 `JER-256` closed through PR #249 as the Monte Carlo typing tranche: the touched
 Monte Carlo module is focused strict-mypy clean, and the official wrapper moved
 from 4551 errors in 307 files to 4550 errors in 307 files while still blocked.
-live Linear issue `JER-257` is the current PR review/merge-close typing
-tranche: the touched PR review and merge-close modules are focused strict-mypy
-clean, and the official wrapper moved from 4550 errors in 307 files to 4548
-errors in 305 files while still blocked. Do not claim full mypy clean.
+live Linear issue `JER-257` closed through PR #250 as the PR
+review/merge-close typing tranche: the touched PR review and merge-close modules
+are focused strict-mypy clean, and the official wrapper moved from 4550 errors
+in 307 files to 4548 errors in 305 files while still blocked. live Linear
+issue `JER-258` is the current workbench maturity evidence refresh: the release
+manifest, runbook, and queue/state docs are aligned around a machine-readable
+maturity snapshot without production-ready, cloud, certification, or
+full-mypy-clean claims. Branch evidence keeps the official wrapper blocked at
+4548 errors in 305 files while local release smoke, manifest validation,
+focused tests, and `unit_tests` pass. Do not claim full mypy clean.
 
 **Linear control plane**:
 

@@ -13,6 +13,24 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_KIND = "well-harness-workbench-release-evidence-manifest"
 MANIFEST_VERSION = 1
 VALIDATION_KIND = "well-harness-workbench-release-evidence-manifest-validation"
+REQUIRED_MATURITY_DIMENSIONS = (
+    "local_operator_smoke",
+    "release_manifest_validation",
+    "unit_regression_gate",
+    "full_opt_in_e2e_gate",
+    "full_strict_mypy_gate",
+    "deployment_packaging",
+    "cloud_hosting",
+    "certification_authority",
+)
+REQUIRED_MATURITY_STATUSES = ("pass", "rerun_required", "blocked", "not_claimed")
+FIXED_MATURITY_STATUSES = {
+    "unit_regression_gate": "rerun_required",
+    "full_strict_mypy_gate": "blocked",
+    "deployment_packaging": "not_claimed",
+    "cloud_hosting": "not_claimed",
+    "certification_authority": "not_claimed",
+}
 SENSITIVE_NAME_PARTS = (
     "api_key",
     "apikey",
@@ -103,8 +121,8 @@ def _verification_commands() -> list[JsonObject]:
                 "uv run --locked --extra typecheck python "
                 "tools/run_mypy_gate.py --format json --report-only"
             ),
-            "evidence_ref": "live Linear JER-240 / PR #233",
-            "evidence_summary": "Blocked: 4617 errors in 326 files. Do not claim mypy clean.",
+            "evidence_ref": "live Linear JER-257 / PR #250",
+            "evidence_summary": "Blocked: 4548 errors in 305 files. Do not claim mypy clean.",
             "external_services": [],
         },
     ]
@@ -192,7 +210,7 @@ def _current_blockers() -> list[JsonObject]:
         {
             "id": "JER-171-full-strict-mypy",
             "status": "blocked",
-            "summary": "Official strict mypy wrapper is still blocked at the latest recorded evidence.",
+            "summary": "Official strict mypy wrapper is still blocked at 4548 errors in 305 files.",
         },
         {
             "id": "deployment-packaging",
@@ -205,6 +223,107 @@ def _current_blockers() -> list[JsonObject]:
             "summary": "Sandbox workbench evidence has truth_effect none and cannot certify controller behavior.",
         },
     ]
+
+
+def _workbench_maturity_snapshot() -> JsonObject:
+    return {
+        "kind": "well-harness-workbench-maturity-snapshot",
+        "version": 1,
+        "live_linear_issue": "JER-258",
+        "overall_status": "local_release_candidate_not_production_ready",
+        "scope": "single_user_local_workbench",
+        "truth_level_impact": "none",
+        "certification_claim": "none",
+        "status_policy": {
+            "pass": "Recorded evidence exists, but exact release-candidate SHA reruns may still be required.",
+            "rerun_required": "The gate must be rerun on the exact release-candidate SHA before handoff.",
+            "blocked": "Known blocker remains active and must not be hidden by other pass evidence.",
+            "not_claimed": "No readiness claim exists for this dimension.",
+        },
+        "dimensions": [
+            {
+                "id": "local_operator_smoke",
+                "status": "pass",
+                "required_for": "local_release_candidate",
+                "command": (
+                    "uv run --locked --extra dev python "
+                    "tools/workbench_release_candidate_smoke.py --format json"
+                ),
+                "evidence_ref": "live Linear JER-242 / PR #235",
+                "summary": "Local smoke covers /workbench boot, archive bundle/list/restore, lever fault injection, and invalid restore input.",
+                "external_services": [],
+            },
+            {
+                "id": "release_manifest_validation",
+                "status": "pass",
+                "required_for": "local_release_candidate",
+                "command": (
+                    "uv run --locked --extra dev python "
+                    "tools/workbench_release_manifest.py --validate --format json"
+                ),
+                "evidence_ref": "live Linear JER-258",
+                "summary": "Manifest validation enforces required maturity dimensions, no secret values, and explicit not-claimed gates.",
+                "external_services": [],
+            },
+            {
+                "id": "unit_regression_gate",
+                "status": "rerun_required",
+                "required_for": "release_handoff",
+                "command": (
+                    "uv run --locked --extra dev python "
+                    "tools/run_gsd_validation_suite.py --only unit_tests --format json"
+                ),
+                "evidence_ref": "live Linear JER-257 / PR #250",
+                "summary": "JER-257 branch evidence passed, but this gate must be rerun on the exact release-candidate SHA before handoff.",
+                "external_services": [],
+            },
+            {
+                "id": "full_opt_in_e2e_gate",
+                "status": "pass",
+                "required_for": "current_browser_e2e_claim",
+                "command": (
+                    "uv run --locked --extra dev --extra e2e python -m pytest "
+                    "tests/ -m e2e -q --tb=short"
+                ),
+                "evidence_ref": "docs/coordination/JER-243-e2e-refresh.md",
+                "summary": "Recorded current-main evidence: 93 passed / 3445 deselected in 149.97s on origin/main@9516fa6.",
+                "external_services": [],
+            },
+            {
+                "id": "full_strict_mypy_gate",
+                "status": "blocked",
+                "required_for": "full_typecheck_clean_claim",
+                "command": (
+                    "uv run --locked --extra typecheck python "
+                    "tools/run_mypy_gate.py --format json --report-only"
+                ),
+                "evidence_ref": "live Linear JER-257 / PR #250",
+                "summary": "Official wrapper remains blocked at 4548 errors in 305 files after tranche 15.",
+                "external_services": [],
+            },
+            {
+                "id": "deployment_packaging",
+                "status": "not_claimed",
+                "required_for": "production_ready_claim",
+                "summary": "No service packaging, rollback, or operator ownership gate is merged.",
+                "external_services": [],
+            },
+            {
+                "id": "cloud_hosting",
+                "status": "not_claimed",
+                "required_for": "cloud_deployment_ready_claim",
+                "summary": "No hosted runtime, service account policy, or cloud deployment artifact is merged.",
+                "external_services": [],
+            },
+            {
+                "id": "certification_authority",
+                "status": "not_claimed",
+                "required_for": "certification_ready_claim",
+                "summary": "Sandbox workbench artifacts have truth_effect none and are not certification evidence.",
+                "external_services": [],
+            },
+        ],
+    }
 
 
 def build_release_manifest(
@@ -232,6 +351,7 @@ def build_release_manifest(
         },
         "required_environment": _required_environment(),
         "verification_commands": _verification_commands(),
+        "workbench_maturity_snapshot": _workbench_maturity_snapshot(),
         "not_claimed_gates": _not_claimed_gates(),
         "unsupported_external_dependencies": _unsupported_external_dependencies(),
         "current_blockers": _current_blockers(),
@@ -298,6 +418,45 @@ def validate_release_manifest(manifest: JsonObject) -> list[str]:
     elif required_environment.get("required_env_vars_for_local_release_gates") != []:
         issues.append("local release gates must not require secret environment variables.")
 
+    maturity_snapshot = manifest.get("workbench_maturity_snapshot")
+    if not isinstance(maturity_snapshot, dict):
+        issues.append("workbench_maturity_snapshot is required.")
+    else:
+        if maturity_snapshot.get("overall_status") == "production_ready":
+            issues.append("workbench_maturity_snapshot.overall_status must not claim production_ready.")
+        dimensions = maturity_snapshot.get("dimensions")
+        if not isinstance(dimensions, list) or not dimensions:
+            issues.append("workbench_maturity_snapshot.dimensions must be a non-empty list.")
+        else:
+            dimension_by_id: dict[str, JsonObject] = {}
+            maturity_statuses: set[str] = set()
+            for item in dimensions:
+                if not isinstance(item, dict) or not item.get("id") or not item.get("status") or not item.get("summary"):
+                    issues.append("each workbench maturity dimension needs id, status, and summary.")
+                    break
+                dimension_id = str(item["id"])
+                status = str(item["status"])
+                dimension_by_id[dimension_id] = item
+                maturity_statuses.add(status)
+                if status not in REQUIRED_MATURITY_STATUSES:
+                    issues.append(f"workbench_maturity_snapshot.{dimension_id} has unsupported status {status!r}.")
+                if item.get("external_services") not in ([], None):
+                    issues.append(f"workbench_maturity_snapshot.{dimension_id} must not require external services.")
+            missing_dimensions = sorted(set(REQUIRED_MATURITY_DIMENSIONS) - set(dimension_by_id))
+            if missing_dimensions:
+                issues.append(
+                    "workbench_maturity_snapshot is missing required dimension(s): "
+                    + ", ".join(missing_dimensions)
+                    + "."
+                )
+            for required_status in REQUIRED_MATURITY_STATUSES:
+                if required_status not in maturity_statuses:
+                    issues.append(f"workbench_maturity_snapshot must include {required_status!r} status evidence.")
+            for dimension_id, expected_status in FIXED_MATURITY_STATUSES.items():
+                actual = dimension_by_id.get(dimension_id, {}).get("status")
+                if actual is not None and actual != expected_status:
+                    issues.append(f"workbench_maturity_snapshot.{dimension_id} must remain {expected_status}.")
+
     strings = _walk_strings(manifest)
     lowered_strings = [text.lower() for text in strings]
     suspicious_literals = []
@@ -312,6 +471,12 @@ def validate_release_manifest(manifest: JsonObject) -> list[str]:
 
 def validation_report(manifest: JsonObject) -> JsonObject:
     issues = validate_release_manifest(manifest)
+    maturity_snapshot = manifest.get("workbench_maturity_snapshot")
+    maturity_dimensions = (
+        maturity_snapshot.get("dimensions", [])
+        if isinstance(maturity_snapshot, dict) and isinstance(maturity_snapshot.get("dimensions"), list)
+        else []
+    )
     return {
         "kind": VALIDATION_KIND,
         "version": 1,
@@ -322,6 +487,7 @@ def validation_report(manifest: JsonObject) -> JsonObject:
         "manifest_git": manifest.get("git", {}),
         "verification_command_count": len(manifest.get("verification_commands", [])),
         "not_claimed_gate_count": len(manifest.get("not_claimed_gates", [])),
+        "maturity_dimension_count": len(maturity_dimensions),
     }
 
 
@@ -329,10 +495,12 @@ def render_text(manifest: JsonObject) -> str:
     git = manifest["git"]
     commands = manifest["verification_commands"]
     not_claimed = manifest["not_claimed_gates"]
+    maturity_dimensions = manifest["workbench_maturity_snapshot"]["dimensions"]
     lines = [
         f"release_manifest: {manifest['kind']} v{manifest['version']}",
         f"git: {git['short_sha']} ({git['branch']})",
         f"verification_commands: {len(commands)}",
+        f"maturity_dimensions: {len(maturity_dimensions)}",
         f"not_claimed_gates: {', '.join(item['id'] for item in not_claimed)}",
     ]
     for command in commands:

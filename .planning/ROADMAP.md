@@ -188,7 +188,10 @@ Post-v5 control-plane bootstrap:
   baseline reduction tranche 14` closed through PR #249. This is the
   fourteenth JER-171 mypy baseline reduction tranche.
 - Live Linear `JER-257`: `[project] [L9] [none] [DAL-TBD] JER-171 mypy
-  baseline reduction tranche 15` is the current quality-debt slice.
+  baseline reduction tranche 15` closed through PR #250. This is the fifteenth
+  JER-171 mypy baseline reduction tranche.
+- Live Linear `JER-258`: `[project] [L6] [none] [DAL-TBD] Workbench maturity
+  evidence refresh` is the current release-operations slice.
 
 Post-v5 product dispatch:
 
@@ -290,6 +293,15 @@ Post-v5 quality-debt dispatch:
   import boundaries, keeps the touched source files focused strict-mypy clean,
   and current branch evidence reduces the official wrapper from 4550 errors in
   307 files to 4548 errors in 305 files while still blocked.
+
+Post-JER-257 release-operations dispatch:
+
+- `[project] [L6] [none] [DAL-TBD] Workbench maturity evidence refresh` is live
+  Linear `JER-258`. It refreshes the release evidence manifest, local production
+  runbook, and queue/state docs so the current local workbench maturity picture
+  is machine-readable. It must keep smoke and manifest validation as pass
+  evidence, unit regression as rerun-required on the exact candidate SHA, strict
+  mypy as blocked, and deployment/cloud/certification as not-claimed.
 
 Post-JER-240 production-readiness refresh:
 
