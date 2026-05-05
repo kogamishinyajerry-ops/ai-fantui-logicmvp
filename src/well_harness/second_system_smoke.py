@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-from well_harness.adapters import LANDING_GEAR_CONTROLLER_METADATA, build_landing_gear_controller_adapter
-from well_harness.controller_adapter import GenericControllerTruthAdapter
-from well_harness.document_intake import load_intake_packet
-from well_harness.fault_diagnosis import build_fault_diagnosis_report_from_truth_adapter
-from well_harness.knowledge_capture import build_knowledge_artifact_from_truth_adapter
-from well_harness.scenario_playback import ScenarioPlaybackReport, build_playback_report_from_truth_adapter
-from well_harness.system_spec import AcceptanceScenarioSpec, ComponentSpec, workbench_spec_from_dict
-from well_harness.workbench_bundle import build_workbench_bundle
+from well_harness.adapters import LANDING_GEAR_CONTROLLER_METADATA, build_landing_gear_controller_adapter  # type: ignore[import-untyped]
+from well_harness.controller_adapter import GenericControllerTruthAdapter  # type: ignore[import-untyped]
+from well_harness.document_intake import load_intake_packet  # type: ignore[import-untyped]
+from well_harness.fault_diagnosis import build_fault_diagnosis_report_from_truth_adapter  # type: ignore[import-untyped]
+from well_harness.knowledge_capture import build_knowledge_artifact_from_truth_adapter  # type: ignore[import-untyped]
+from well_harness.scenario_playback import ScenarioPlaybackReport, build_playback_report_from_truth_adapter  # type: ignore[import-untyped]
+from well_harness.system_spec import AcceptanceScenarioSpec, ComponentSpec, workbench_spec_from_dict  # type: ignore[import-untyped]
+from well_harness.workbench_bundle import build_workbench_bundle  # type: ignore[import-untyped]
 
 
 SECOND_SYSTEM_SMOKE_KIND = "well-harness-second-system-smoke"
@@ -80,7 +80,7 @@ def _resolve_selected_id(
     *,
     preferred_ids: tuple[str, ...] = (),
 ) -> str:
-    candidate_ids = tuple(item.id for item in candidates)
+    candidate_ids = tuple(cast(str, item.id) for item in candidates)
     if not candidate_ids:
         raise ValueError(f"no {label} candidates are available")
     if requested_id is not None:
