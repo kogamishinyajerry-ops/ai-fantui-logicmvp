@@ -11,8 +11,8 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable
 
-from well_harness import demo_server
-from well_harness.demo_server import DemoRequestHandler
+from well_harness import demo_server  # type: ignore[import-untyped]
+from well_harness.demo_server import DemoRequestHandler  # type: ignore[import-untyped]
 
 
 JsonObject = dict[str, Any]
