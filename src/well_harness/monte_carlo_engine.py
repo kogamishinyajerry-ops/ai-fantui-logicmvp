@@ -11,11 +11,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
-import numpy as np
+import numpy as np  # type: ignore[import-not-found]
 
-from well_harness.hardware_schema import (
+from well_harness.hardware_schema import (  # type: ignore[import-untyped]
     ThrustReverserHardware,
     load_thrust_reverser_hardware,
 )
@@ -42,7 +42,7 @@ class ReliabilityResult:
 # ─── Serialization ─────────────────────────────────────────────────────────────
 
 
-def _reliability_result_to_dict(result: ReliabilityResult) -> dict:
+def _reliability_result_to_dict(result: ReliabilityResult) -> dict[str, Any]:
     """Convert a ReliabilityResult to a plain dict for JSON serialization."""
     return {
         "n_trials": result.n_trials,
