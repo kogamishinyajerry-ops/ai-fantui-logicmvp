@@ -124,9 +124,13 @@ Post-v5 control-plane bootstrap:
   trace/archive proof and is not the same artifact as the repo-local
   historical `JER-236` hardware/interface evidence attachment v2 slice.
 - Live Linear `JER-237`: `[project] [L9] [none] [DAL-TBD] Post-JER-236 v6
-  queue refresh and next dispatch map` is the current control-plane refresh
-  issue and is not the same artifact as the repo-local historical `JER-237`
-  editor command palette slice.
+  queue refresh and next dispatch map` closed through PR #230. This is the
+  post-JER-236 queue refresh issue and is not the same artifact as the
+  repo-local historical `JER-237` editor command palette slice.
+- Live Linear `JER-238`: `[project] [L4] [none] [DAL-TBD] Review archive
+  restore diff drilldown` is the current product visibility issue and is not
+  the same artifact as the repo-local historical `JER-238` review archive
+  restore/regression bundle v3 slice.
 
 Post-v5 product dispatch:
 
@@ -171,10 +175,18 @@ Post-v5 gate and proof dispatch:
 Post-JER-236 queue refresh:
 
 - `[project] [L9] [none] [DAL-TBD] Post-JER-236 v6 queue refresh and next
-  dispatch map` is live Linear `JER-237`. It refreshes
+  dispatch map` closed as live Linear `JER-237` through PR #230. It refreshed
   `docs/coordination/post-v5-v6-live-queue.md` after Daily Lane became empty,
   records JER-234 through JER-236 closeout, and defines the next product,
   proof, and debt issue contracts.
+
+Post-JER-237 product dispatch:
+
+- `[project] [L4] [none] [DAL-TBD] Review archive restore diff drilldown` is
+  live Linear `JER-238`. It makes local review archive restore failures
+  actionable by adding section-level checksum drilldown for mutated evidence:
+  section, checksum key, checksum path, expected checksum, actual checksum,
+  affected evidence path, and sandbox-only truth metadata.
 
 Workbench v4 foundation-first closure:
 

@@ -20573,7 +20573,11 @@ function installEditableWorkbenchShell() {
           pushReviewArchiveRestoreFinding(findings, {
             code: "review_archive_restore_missing_section",
             message: `Review archive is missing required section ${key}.`,
+            section: key,
+            checksum_key: checksumKey,
             path: key,
+            checksum_path: `checksums.${checksumKey}`,
+            evidence_path: key,
           });
           continue;
         }
@@ -20582,7 +20586,11 @@ function installEditableWorkbenchShell() {
           pushReviewArchiveRestoreFinding(findings, {
             code: "review_archive_restore_missing_checksum",
             message: `Review archive section ${key} is missing checksum ${checksumKey}.`,
+            section: key,
+            checksum_key: checksumKey,
             path: `checksums.${checksumKey}`,
+            checksum_path: `checksums.${checksumKey}`,
+            evidence_path: key,
           });
           continue;
         }
@@ -20593,9 +20601,13 @@ function installEditableWorkbenchShell() {
           pushReviewArchiveRestoreFinding(findings, {
             code: "review_archive_restore_checksum_mismatch",
             message: `Review archive checksum mismatch for ${key}.`,
+            section: key,
+            checksum_key: checksumKey,
             path: `checksums.${checksumKey}`,
+            checksum_path: `checksums.${checksumKey}`,
             expected_checksum: expectedChecksum,
             actual_checksum: actualChecksum,
+            evidence_path: key,
           });
         }
       }
@@ -20612,9 +20624,13 @@ function installEditableWorkbenchShell() {
           pushReviewArchiveRestoreFinding(findings, {
             code: "review_archive_restore_checksum_mismatch",
             message: `Review archive checksum mismatch for ${key}.`,
+            section: key,
+            checksum_key: checksumKey,
             path: `checksums.${checksumKey}`,
+            checksum_path: `checksums.${checksumKey}`,
             expected_checksum: checksums[checksumKey],
             actual_checksum: actualChecksum,
+            evidence_path: key,
           });
         }
       }

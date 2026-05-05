@@ -62,6 +62,7 @@ from well_harness.workbench_bundle import (
     load_workbench_archive_manifest,
     load_workbench_archive_restore_payload,
 )
+from well_harness.workbench_changerequest_handoff import WorkbenchArchiveValidationError
 STATIC_DIR = Path(__file__).with_name("static")
 REFERENCE_PACKET_DIR = Path(__file__).with_name("reference_packets")
 REFERENCE_PACKET_PATH = REFERENCE_PACKET_DIR / "custom_reverse_control_v1.json"
@@ -4944,6 +4945,13 @@ def build_workbench_archive_restore_response(request_payload: dict) -> tuple[dic
         }
     except SandboxEscapeError as exc:
         return None, {"error": "sandbox_violation", "message": str(exc)}
+    except WorkbenchArchiveValidationError as exc:
+        return None, {
+            "error": "invalid_workbench_archive",
+            "field": "manifest_path",
+            "message": str(exc),
+            exc.report_key: exc.report,
+        }
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         return None, {
             "error": "invalid_workbench_archive",
