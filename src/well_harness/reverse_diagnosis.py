@@ -11,9 +11,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
-from well_harness.hardware_schema import (
+from well_harness.hardware_schema import (  # type: ignore[import-untyped]
     ThrustReverserHardware,
     load_thrust_reverser_hardware,
 )
@@ -180,7 +180,7 @@ class ReverseDiagnosisEngine:
         outcome: str,
         *,
         max_results: int = MAX_COMBINATIONS,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """
         Convenience wrapper: run diagnose() and return a serializable report dict.
 
@@ -208,7 +208,7 @@ class ReverseDiagnosisEngine:
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
 
-def _parameter_snapshot_to_dict(snapshot: ParameterSnapshot) -> dict:
+def _parameter_snapshot_to_dict(snapshot: ParameterSnapshot) -> dict[str, Any]:
     """Convert a ParameterSnapshot to a plain dict for JSON serialization."""
     return {
         "radio_altitude_ft": snapshot.radio_altitude_ft,
@@ -235,11 +235,11 @@ def _sw1_closed(tra_deg: float, hw: ThrustReverserHardware) -> bool:
     sw1 = hw.physical_limits.sw1_window
     lo = min(sw1.near_zero_deg, sw1.deep_reverse_deg)
     hi = max(sw1.near_zero_deg, sw1.deep_reverse_deg)
-    return lo <= tra_deg <= hi
+    return bool(lo <= tra_deg <= hi)
 
 
 def _sw2_closed(tra_deg: float, hw: ThrustReverserHardware) -> bool:
     sw2 = hw.physical_limits.sw2_window
     lo = min(sw2.near_zero_deg, sw2.deep_reverse_deg)
     hi = max(sw2.near_zero_deg, sw2.deep_reverse_deg)
-    return lo <= tra_deg <= hi
+    return bool(lo <= tra_deg <= hi)
