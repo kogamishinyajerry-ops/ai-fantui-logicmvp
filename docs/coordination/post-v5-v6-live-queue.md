@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-245` closed · live Linear `JER-246` implementing JER-171 mypy tranche 4
+Status: active queue · live Linear `JER-246` closed · live Linear `JER-247` implementing JER-171 mypy tranche 5
 
 ## Purpose
 
@@ -301,7 +301,7 @@ Current quality-debt dispatch:
 - Live Linear issue: `JER-246`
 - Title: `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 4`
 - URL: `https://linear.app/jerrykogami/issue/JER-246/project-l9-none-dal-tbd-jer-171-mypy-baseline-reduction-tranche-4`
-- State at dispatch: `In Progress`
+- State after PR #239: `Done`
 - Evidence target: type low-risk return boundaries in
   `tools/run_gsd_validation_suite.py` and `tools/validate_notion_control_plane.py`
   without changing validation command behavior.
@@ -309,6 +309,20 @@ Current quality-debt dispatch:
   files, focused validation helper tests pass, and the official wrapper moved
   from 4617 errors in 326 files to 4614 errors in 324 files while still
   blocked.
+
+Current quality-debt dispatch:
+
+- Live Linear issue: `JER-247`
+- Title: `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 5`
+- URL: `https://linear.app/jerrykogami/issue/JER-247/project-l9-none-dal-tbd-jer-171-mypy-baseline-reduction-tranche-5`
+- State at dispatch: `In Progress`
+- Evidence target: type small coordination/validation tool boundaries in
+  `tools/notion_review_record.py`, `tools/validate_hardware_evidence_report.py`,
+  and `tools/validate_workbench_changerequest_handoff_schema.py` without
+  changing tool behavior.
+- Current branch evidence: focused strict mypy reports success in 3 source
+  files, focused tool tests pass, and the official wrapper moved from 4614
+  errors in 324 files to 4611 errors in 321 files while still blocked.
 
 ## Next Candidate Issue Contracts
 

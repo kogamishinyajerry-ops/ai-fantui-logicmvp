@@ -209,7 +209,7 @@ def validate_workbench_changerequest_handoff_payloads() -> tuple[int, dict[str, 
         return 0, report, [OPTIONAL_JSONSCHEMA_SKIP_MESSAGE]
 
     try:
-        from jsonschema import Draft202012Validator  # type: ignore[import-untyped]
+        from jsonschema import Draft202012Validator
     except ImportError:
         report["reason"] = OPTIONAL_JSONSCHEMA_SKIP_MESSAGE
         report["status"] = "skip"
