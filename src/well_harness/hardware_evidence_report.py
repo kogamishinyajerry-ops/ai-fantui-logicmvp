@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from well_harness.hardware_registry import (
+from well_harness.hardware_registry import (  # type: ignore[import-untyped]
     build_timeline_hardware_evidence_overlay,
     hardware_evidence_summary_to_dict,
     load_hardware_evidence_summary,

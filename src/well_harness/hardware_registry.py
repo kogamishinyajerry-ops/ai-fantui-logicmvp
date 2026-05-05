@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from well_harness.hardware_schema import (
+from well_harness.hardware_schema import (  # type: ignore[import-untyped]
     HardwareValueRef,
     LruInventoryItem,
     SignalCarrierBinding,
