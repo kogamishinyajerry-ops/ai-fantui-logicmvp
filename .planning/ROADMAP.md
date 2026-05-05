@@ -164,7 +164,10 @@ Post-v5 control-plane bootstrap:
   baseline reduction tranche 6` closed through PR #241. This is the sixth
   JER-171 mypy baseline reduction tranche.
 - Live Linear `JER-249`: `[project] [L9] [none] [DAL-TBD] JER-171 mypy
-  baseline reduction tranche 7` is the current quality-debt slice.
+  baseline reduction tranche 7` closed through PR #242. This is the seventh
+  JER-171 mypy baseline reduction tranche.
+- Live Linear `JER-250`: `[project] [L9] [none] [DAL-TBD] JER-171 mypy
+  baseline reduction tranche 8` is the current quality-debt slice.
 
 Post-v5 product dispatch:
 
@@ -222,6 +225,11 @@ Post-v5 quality-debt dispatch:
   boundary, keeps the touched module focused strict-mypy clean, and current
   branch evidence reduces the official wrapper from 4609 errors in 319 files
   to 4608 errors in 318 files while still blocked.
+- `[project] [L9] [none] [DAL-TBD] JER-171 mypy baseline reduction tranche 8`
+  is live Linear `JER-250`. It types scenario playback import and return-value
+  boundaries, keeps the touched module focused strict-mypy clean, and current
+  branch evidence reduces the official wrapper from 4608 errors in 318 files
+  to 4604 errors in 317 files while still blocked.
 
 Post-JER-240 production-readiness refresh:
 

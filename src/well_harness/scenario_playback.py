@@ -3,11 +3,11 @@ from __future__ import annotations
 import math
 import re
 from dataclasses import asdict, dataclass
-from typing import Any, Callable
+from typing import Any, Callable, cast
 
-from well_harness.controller_adapter import GenericControllerTruthAdapter
-from well_harness.document_intake import ControlSystemIntakePacket, intake_packet_to_workbench_spec
-from well_harness.system_spec import (
+from well_harness.controller_adapter import GenericControllerTruthAdapter  # type: ignore[import-untyped]
+from well_harness.document_intake import ControlSystemIntakePacket, intake_packet_to_workbench_spec  # type: ignore[import-untyped]
+from well_harness.system_spec import (  # type: ignore[import-untyped]
     AcceptanceScenarioSpec,
     ComponentSpec,
     ControlSystemWorkbenchSpec,
@@ -143,15 +143,17 @@ def _signal_value_at_time(
         if component.id in steady_signals
         else _component_default_value(component)
     )
-    active_value = baseline
+    active_value: float = baseline
     for transition in transitions.get(component.id, ()):
-        if time_s < transition.start_s:
+        start_s = cast(float, transition.start_s)
+        end_s = cast(float, transition.end_s)
+        if time_s < start_s:
             return active_value
-        if transition.start_s == transition.end_s:
+        if start_s == end_s:
             active_value = _coerce_component_value(component, transition.end_value)
             continue
-        if transition.start_s <= time_s <= transition.end_s:
-            progress = (time_s - transition.start_s) / (transition.end_s - transition.start_s)
+        if start_s <= time_s <= end_s:
+            progress = (time_s - start_s) / (end_s - start_s)
             return _coerce_component_value(component, transition.start_value) + (
                 (
                     _coerce_component_value(component, transition.end_value)
