@@ -418,6 +418,59 @@ class ArchiveRestoreSandboxTests(unittest.TestCase):
         self.assertEqual("pass", validation["checksum_status"])
         self.assertEqual("none", validation["truth_effect"])
         self.assertTrue(validation["canonical_hash"])
+        self.assertEqual(0, validation["checksum_mismatch_count"])
+        self.assertEqual([], validation["checksum_drilldown"])
+
+    def test_archive_restore_reports_section_checksum_drilldown_for_mutated_review_evidence(self):
+        """Mutated review evidence reports the affected section and checksum path."""
+        evidence_archive = _valid_review_ready_evidence_archive()
+        graph_document = {
+            "kind": "well-harness-editable-graph-document",
+            "node_count": 1,
+            "edge_count": 0,
+            "truth_effect": "none",
+        }
+        expected_checksum = changerequest_handoff_ui_checksum(graph_document)
+        evidence_archive["editable_graph_document"] = dict(graph_document)
+        evidence_archive["checksums"]["editable_graph_document_checksum"] = expected_checksum
+        evidence_archive["foundation_review_archive"]["sections"]["editable_graph_document"]["checksum"] = (
+            expected_checksum
+        )
+        evidence_archive["foundation_review_archive"]["sections"]["editable_graph_document"]["checksum_key"] = (
+            "editable_graph_document_checksum"
+        )
+        evidence_archive["checksums"]["foundation_review_archive_checksum"] = changerequest_handoff_ui_checksum(
+            evidence_archive["foundation_review_archive"]
+        )
+        evidence_archive["editable_graph_document"]["node_count"] = 2
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            manifest_path, _archive_dir = _create_archive_with_workspace_snapshot(
+                Path(temp_dir),
+                evidence_archive,
+            )
+            response, error = build_workbench_archive_restore_response({
+                "manifest_path": str(manifest_path),
+            })
+
+        self.assertIsNone(response)
+        self.assertIsNotNone(error)
+        self.assertEqual("invalid_workbench_archive", error["error"])
+        validation = error["foundation_review_archive_validation"]
+        self.assertEqual("fail", validation["status"])
+        self.assertEqual("mismatch", validation["checksum_status"])
+        self.assertEqual(1, validation["checksum_mismatch_count"])
+        mismatch = validation["checksum_drilldown"][0]
+        self.assertEqual("editable_graph_document", mismatch["section"])
+        self.assertEqual("editable_graph_document_checksum", mismatch["checksum_key"])
+        self.assertEqual("checksums.editable_graph_document_checksum", mismatch["checksum_path"])
+        self.assertEqual(expected_checksum, mismatch["expected_checksum"])
+        self.assertEqual(
+            changerequest_handoff_ui_checksum(evidence_archive["editable_graph_document"]),
+            mismatch["actual_checksum"],
+        )
+        self.assertEqual("editable_graph_document", mismatch["evidence_path"])
+        self.assertEqual("none", mismatch["truth_effect"])
 
     def test_archive_restore_rejects_invalid_foundation_review_archive(self):
         """Invalid review archives fail restore instead of being treated as trusted proof."""

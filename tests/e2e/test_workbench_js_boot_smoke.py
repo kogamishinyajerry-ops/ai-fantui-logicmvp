@@ -1122,6 +1122,27 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
     assert restored["hardware_evidence_attachment_v2"]["attachment_count"] >= 1
     assert page.locator("#workbench-archive-status").inner_text().startswith("Restored local review archive")
 
+    mutated_archive = json.loads(json.dumps(archive))
+    mutated_archive["editable_graph_document"]["node_count"] = expected_node_count + 1
+    _set_archive_buffer_value(page, json.dumps(mutated_archive))
+    page.click("#workbench-restore-review-archive-btn")
+    mismatch_validation = json.loads(page.locator("#workbench-review-archive-restore-output").input_value())
+    mismatch = next(
+        finding
+        for finding in mismatch_validation["findings"]
+        if finding.get("section") == "editable_graph_document"
+    )
+
+    assert mismatch_validation["status"] == "fail"
+    assert mismatch_validation["checksum_mismatch_count"] >= 1
+    assert mismatch["checksum_key"] == "editable_graph_document_checksum"
+    assert mismatch["checksum_path"] == "checksums.editable_graph_document_checksum"
+    assert mismatch["expected_checksum"] == archive["checksums"]["editable_graph_document_checksum"]
+    assert mismatch["actual_checksum"] != mismatch["expected_checksum"]
+    assert mismatch["evidence_path"] == "editable_graph_document"
+    assert mismatch["truth_effect"] == "none"
+    assert page.locator("#workbench-archive-status").inner_text().startswith("Review archive restore blocked")
+
 
 def test_workbench_selected_debug_timeline_tracks_selection_diff_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]

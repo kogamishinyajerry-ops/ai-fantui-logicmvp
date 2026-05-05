@@ -756,6 +756,9 @@ def test_review_archive_restore_v3_controls_and_regression_bundle_are_sandbox_on
     assert "review_archive_regression_bundle_v3" in js
     assert "review_archive_regression_bundle_v3_checksum" in js
     assert "checksum_mismatch_count" in js
+    assert "checksum_path" in js
+    assert "checksum_key" in js
+    assert "evidence_path" in js
     assert "full_e2e_49_49_claim" in js
     assert "mypy_strict_clean_claim" in js
     assert 'controller_truth_modified: false' in js

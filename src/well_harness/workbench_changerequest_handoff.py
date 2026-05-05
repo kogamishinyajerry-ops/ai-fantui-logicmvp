@@ -61,6 +61,14 @@ FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS = (
     "red_line_metadata",
 )
 
+
+class WorkbenchArchiveValidationError(ValueError):
+    def __init__(self, message: str, *, report_key: str, report: Mapping[str, Any]) -> None:
+        super().__init__(message)
+        self.report_key = report_key
+        self.report = dict(report)
+
+
 _CONST_FIELDS: tuple[tuple[str, Any], ...] = (
     ("$schema", CHANGE_REQUEST_HANDOFF_SCHEMA_ID),
     ("kind", CHANGE_REQUEST_HANDOFF_KIND),
@@ -283,6 +291,13 @@ def validate_foundation_review_archive_payload(payload: Mapping[str, Any]) -> di
         )
 
     issues = list(validate_foundation_review_archive_bundle(review_archive))
+    checksum_drilldown = list(
+        _foundation_review_archive_checksum_drilldown(
+            payload,
+            review_archive,
+            source_path=source_path,
+        )
+    )
     expected_ui_checksum = changerequest_handoff_ui_checksum(review_archive)
     recorded_ui_checksum = _recorded_foundation_review_archive_ui_checksum(payload)
     checksum_status = "not_recorded"
@@ -295,6 +310,17 @@ def validate_foundation_review_archive_payload(payload: Mapping[str, Any]) -> di
             )
             checksum_status = "missing"
     elif recorded_ui_checksum != expected_ui_checksum:
+        checksum_drilldown.insert(
+            0,
+            _checksum_drilldown_record(
+                section="foundation_review_archive",
+                checksum_key="foundation_review_archive_checksum",
+                checksum_path="checksums.foundation_review_archive_checksum",
+                expected_checksum=recorded_ui_checksum,
+                actual_checksum=expected_ui_checksum,
+                evidence_path=source_path,
+            ),
+        )
         issues.append(
             "checksums.foundation_review_archive_checksum mismatch "
             f"(expected {expected_ui_checksum}, got {recorded_ui_checksum})."
@@ -302,6 +328,18 @@ def validate_foundation_review_archive_payload(payload: Mapping[str, Any]) -> di
         checksum_status = "mismatch"
     else:
         checksum_status = "pass"
+
+    for mismatch in checksum_drilldown:
+        if mismatch["section"] == "foundation_review_archive":
+            continue
+        section = mismatch["section"]
+        checksum_key = mismatch["checksum_key"]
+        issues.append(
+            f"{source_path}.sections.{section}.{checksum_key} mismatch "
+            f"(expected {mismatch['expected_checksum']}, got {mismatch['actual_checksum']})."
+        )
+    if checksum_drilldown:
+        checksum_status = "mismatch"
 
     status = (
         CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_FAIL
@@ -316,6 +354,7 @@ def validate_foundation_review_archive_payload(payload: Mapping[str, Any]) -> di
         ui_checksum=expected_ui_checksum,
         recorded_ui_checksum=recorded_ui_checksum,
         checksum_status=checksum_status,
+        checksum_drilldown=tuple(checksum_drilldown),
     )
 
 
@@ -323,7 +362,11 @@ def assert_valid_foundation_review_archive_payload(payload: Mapping[str, Any]) -
     report = validate_foundation_review_archive_payload(payload)
     if report["status"] == CHANGE_REQUEST_HANDOFF_ARCHIVE_STATUS_FAIL:
         issues = "; ".join(str(issue) for issue in report["issues"])
-        raise ValueError(f"invalid foundation review archive payload: {issues}")
+        raise WorkbenchArchiveValidationError(
+            f"invalid foundation review archive payload: {issues}",
+            report_key="foundation_review_archive_validation",
+            report=report,
+        )
     return report
 
 
@@ -665,7 +708,9 @@ def _foundation_archive_validation_report(
     ui_checksum: str | None = None,
     recorded_ui_checksum: str | None = None,
     checksum_status: str = "not_applicable",
+    checksum_drilldown: tuple[Mapping[str, Any], ...] = (),
 ) -> dict[str, Any]:
+    checksum_drilldown_payload = [dict(item) for item in checksum_drilldown]
     return {
         "kind": FOUNDATION_REVIEW_ARCHIVE_VALIDATION_KIND,
         "version": FOUNDATION_REVIEW_ARCHIVE_VALIDATION_VERSION,
@@ -677,7 +722,86 @@ def _foundation_archive_validation_report(
         "ui_checksum": ui_checksum,
         "recorded_ui_checksum": recorded_ui_checksum,
         "checksum_status": checksum_status,
+        "checksum_mismatch_count": len(checksum_drilldown_payload),
+        "checksum_drilldown": checksum_drilldown_payload,
         "candidate_state": "sandbox_candidate",
         "certification_claim": "none",
         "truth_effect": "none",
     }
+
+
+def _foundation_review_archive_checksum_drilldown(
+    evidence_archive: Mapping[str, Any],
+    review_archive: Mapping[str, Any],
+    *,
+    source_path: str,
+) -> tuple[dict[str, Any], ...]:
+    sections = review_archive.get("sections")
+    checksums = evidence_archive.get("checksums")
+    if not isinstance(sections, Mapping) or not isinstance(checksums, Mapping):
+        return ()
+    evidence_container: Mapping[str, Any] = evidence_archive
+    evidence_prefix = ""
+    if source_path.startswith("model_json."):
+        model_json = evidence_archive.get("model_json")
+        if isinstance(model_json, Mapping):
+            evidence_container = model_json
+            evidence_prefix = "model_json."
+
+    mismatches: list[dict[str, Any]] = []
+    for section_name in FOUNDATION_REVIEW_ARCHIVE_REQUIRED_SECTIONS:
+        section = sections.get(section_name)
+        if not isinstance(section, Mapping):
+            continue
+        checksum_key = section.get("checksum_key")
+        if not _non_empty_string(checksum_key):
+            checksum_key = f"{section_name}_checksum"
+        checksum_key = str(checksum_key)
+        evidence_value = evidence_container.get(section_name)
+        expected_checksum = checksums.get(checksum_key)
+        if not _non_empty_string(expected_checksum):
+            expected_checksum = section.get("checksum")
+        if not _non_empty_string(expected_checksum) or evidence_value is None:
+            continue
+        actual_checksum = changerequest_handoff_ui_checksum(evidence_value)
+        if actual_checksum == expected_checksum:
+            continue
+        mismatches.append(
+            _checksum_drilldown_record(
+                section=section_name,
+                checksum_key=checksum_key,
+                checksum_path=f"checksums.{checksum_key}",
+                expected_checksum=str(expected_checksum),
+                actual_checksum=actual_checksum,
+                evidence_path=f"{evidence_prefix}{section_name}",
+                section_checksum_path=f"{source_path}.sections.{section_name}.checksum",
+            )
+        )
+    return tuple(mismatches)
+
+
+def _checksum_drilldown_record(
+    *,
+    section: str,
+    checksum_key: str,
+    checksum_path: str,
+    expected_checksum: str,
+    actual_checksum: str,
+    evidence_path: str,
+    section_checksum_path: str | None = None,
+) -> dict[str, Any]:
+    record = {
+        "code": "foundation_review_archive_checksum_mismatch",
+        "section": section,
+        "checksum_key": checksum_key,
+        "checksum_path": checksum_path,
+        "expected_checksum": expected_checksum,
+        "actual_checksum": actual_checksum,
+        "evidence_path": evidence_path,
+        "candidate_state": "sandbox_candidate",
+        "certification_claim": "none",
+        "truth_effect": "none",
+    }
+    if section_checksum_path is not None:
+        record["section_checksum_path"] = section_checksum_path
+    return record

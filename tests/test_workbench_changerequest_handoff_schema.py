@@ -291,6 +291,51 @@ class WorkbenchChangeRequestHandoffSchemaTests(unittest.TestCase):
         self.assertEqual(changerequest_handoff_hash(payload), report["canonical_hash"])
         self.assertEqual(changerequest_handoff_ui_checksum(payload), report["ui_checksum"])
         self.assertEqual("none", report["truth_effect"])
+        self.assertEqual(0, report["checksum_mismatch_count"])
+        self.assertEqual([], report["checksum_drilldown"])
+
+    def test_foundation_review_archive_payload_reports_section_checksum_drilldown(self) -> None:
+        payload = sample_foundation_review_archive()
+        graph_document = {
+            "kind": "well-harness-editable-graph-document",
+            "node_count": 1,
+            "edge_count": 0,
+            "truth_effect": "none",
+        }
+        expected_checksum = changerequest_handoff_ui_checksum(graph_document)
+        payload["sections"]["editable_graph_document"]["checksum"] = expected_checksum
+        payload["sections"]["editable_graph_document"]["checksum_key"] = "editable_graph_document_checksum"
+        archive = {
+            "kind": "well-harness-workbench-evidence-archive",
+            "version": 1,
+            "foundation_review_archive": payload,
+            "editable_graph_document": {
+                **graph_document,
+                "node_count": 2,
+            },
+            "checksums": {
+                "foundation_review_archive_checksum": changerequest_handoff_ui_checksum(payload),
+                "editable_graph_document_checksum": expected_checksum,
+            },
+        }
+
+        report = validate_foundation_review_archive_payload(archive)
+
+        self.assertEqual("fail", report["status"])
+        self.assertEqual("mismatch", report["checksum_status"])
+        self.assertEqual(1, report["checksum_mismatch_count"])
+        self.assertIn("editable_graph_document_checksum mismatch", " ".join(report["issues"]))
+        mismatch = report["checksum_drilldown"][0]
+        self.assertEqual("editable_graph_document", mismatch["section"])
+        self.assertEqual("editable_graph_document_checksum", mismatch["checksum_key"])
+        self.assertEqual("checksums.editable_graph_document_checksum", mismatch["checksum_path"])
+        self.assertEqual(expected_checksum, mismatch["expected_checksum"])
+        self.assertEqual(
+            changerequest_handoff_ui_checksum(archive["editable_graph_document"]),
+            mismatch["actual_checksum"],
+        )
+        self.assertEqual("editable_graph_document", mismatch["evidence_path"])
+        self.assertEqual("none", mismatch["truth_effect"])
 
     def test_foundation_review_archive_payload_rejects_truth_and_linear_mutation_claims(self) -> None:
         payload = sample_foundation_review_archive()

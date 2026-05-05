@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-236` closed · live Linear `JER-237` refreshing next dispatch map
+Status: active queue · live Linear `JER-237` closed · live Linear `JER-238` implementing restore diff drilldown
 
 ## Purpose
 
@@ -99,7 +99,7 @@ Scale/proof slice:
    - Evidence: deterministic trace tests, archive checksum tests, targeted
      validation-suite pass.
 
-## Closed Dispatches Through JER-236
+## Closed Dispatches Through JER-237
 
 Product dispatch:
 
@@ -174,21 +174,34 @@ Scale/proof dispatch:
   structured unsupported-op, duplicate-edge, and dangling-edge findings. PR
   #229 closed with 93 passed / 3439 deselected in the full opt-in e2e suite.
 
-Current queue refresh:
+Queue refresh dispatch:
 
 - Live Linear issue: `JER-237`
 - Title: `[project] [L9] [none] [DAL-TBD] Post-JER-236 v6 queue refresh and next dispatch map`
 - URL: `https://linear.app/jerrykogami/issue/JER-237/project-l9-none-dal-tbd-post-jer-236-v6-queue-refresh-and-next`
-- State at dispatch: `In Progress`
+- State after PR #230: `Done`
 - Identifier rule: `live Linear JER-237` is not the same artifact as the
   repo-local historical `JER-237` editor command palette slice.
 - Evidence target: align this repo queue document with live Linear JER-234
   through JER-236 and define the next dispatch contracts before starting new
   ambiguous implementation work.
 
+Current product dispatch:
+
+- Live Linear issue: `JER-238`
+- Title: `[project] [L4] [none] [DAL-TBD] Review archive restore diff drilldown`
+- URL: `https://linear.app/jerrykogami/issue/JER-238/project-l4-none-dal-tbd-review-archive-restore-diff-drilldown`
+- State at dispatch: `In Progress`
+- Identifier rule: `live Linear JER-238` is not the same artifact as the
+  repo-local historical `JER-238` review archive restore/regression bundle v3
+  slice.
+- Evidence target: local review archive restore failures expose section-level
+  mismatch drilldown: section, checksum key, checksum path, expected checksum,
+  actual checksum, affected evidence path, and sandbox-only truth metadata.
+
 ## Next Candidate Issue Contracts
 
-Recommended next product slice:
+Dispatched product slice:
 
 1. `[project] [L4] [none] [DAL-TBD] Review archive restore diff drilldown`
    - Outcome: make restore/archive validation actionable by surfacing
@@ -202,7 +215,7 @@ Recommended next product slice:
      C919 packet, live Linear browser mutation, or collaboration platform work.
    - Evidence: focused e2e for pass and mutated-archive mismatch; static shell
      test for drilldown fields; targeted validation-suite pass.
-   - Priority: `L4` product visibility, recommended first dispatch.
+   - Priority: `L4` product visibility, dispatched as live Linear `JER-238`.
 
 Recommended next proof slice:
 
