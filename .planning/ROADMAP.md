@@ -145,7 +145,11 @@ Post-v5 control-plane bootstrap:
   workbench smoke pack` closed through PR #235. This is the release-candidate
   local smoke gate issue.
 - Live Linear `JER-243`: `[project] [L9] [none] [DAL-TBD] Post-JER-240 full
-  opt-in e2e refresh` is the current gate-refresh issue.
+  opt-in e2e refresh` closed through PR #236. This is the current e2e evidence
+  refresh and does not claim production, deployment, certification, or full
+  mypy readiness.
+- Live Linear `JER-244`: `[project] [L6] [none] [DAL-TBD] Local production
+  runbook and release manifest` is the current release-operations issue.
 
 Post-v5 product dispatch:
 
@@ -199,6 +203,12 @@ Post-JER-241 product-readiness dispatch:
   `main` at 93 passed / 3445 deselected in 149.97s. This refresh supports a
   current e2e green claim only; it still does not claim production readiness,
   cloud deployment readiness, certification readiness, or full mypy clean.
+- `[project] [L6] [none] [DAL-TBD] Local production runbook and release
+  manifest` is live Linear `JER-244`. It adds the local operator runbook and a
+  machine-readable release evidence manifest that records the current git SHA,
+  local verification commands, pass evidence, blocked gates, unsupported
+  external dependencies, and explicit not-claimed gates without embedding
+  secrets.
 
 Post-v5 gate and proof dispatch:
 

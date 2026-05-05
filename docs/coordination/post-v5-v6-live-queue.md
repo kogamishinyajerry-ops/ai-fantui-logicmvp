@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-242` closed · live Linear `JER-243` implementing full opt-in e2e refresh
+Status: active queue · live Linear `JER-243` closed · live Linear `JER-244` implementing local runbook and release manifest
 
 ## Purpose
 
@@ -261,13 +261,27 @@ Current gate-refresh dispatch:
 - Live Linear issue: `JER-243`
 - Title: `[project] [L9] [none] [DAL-TBD] Post-JER-240 full opt-in e2e refresh`
 - URL: `https://linear.app/jerrykogami/issue/JER-243/project-l9-none-dal-tbd-post-jer-240-full-opt-in-e2e-refresh`
-- State at dispatch: `In Progress`
+- State after PR #236: `Done`
 - Evidence target: rerun the official opt-in e2e command on current `main`,
   record exact pass/fail/deselected counts, and avoid any full e2e green claim
   unless the command actually passes.
 - Current branch evidence: the official command passed at 93 passed / 3445
   deselected in 149.97s on `origin/main@9516fa6`; see
   `docs/coordination/JER-243-e2e-refresh.md`.
+
+Current release-operations dispatch:
+
+- Live Linear issue: `JER-244`
+- Title: `[project] [L6] [none] [DAL-TBD] Local production runbook and release manifest`
+- URL: `https://linear.app/jerrykogami/issue/JER-244/project-l6-none-dal-tbd-local-production-runbook-and-release-manifest`
+- State at dispatch: `In Progress`
+- Evidence target: a local production-readiness runbook and a machine-readable
+  release evidence manifest that record setup/start/stop/verify commands,
+  required environment, unsupported external dependencies, current blockers,
+  pass evidence, blocked gates, and not-claimed gates without secret values.
+- Current branch evidence: `docs/coordination/local-production-runbook.md`
+  defines the local release path, and `tools/workbench_release_manifest.py`
+  generates and validates the release evidence manifest locally.
 
 ## Next Candidate Issue Contracts
 
@@ -341,7 +355,7 @@ Recommended next quality-debt slice:
    - Priority: `L9` quality debt; keep reducing the known JER-171 blocker in
      small reversible tranches.
 
-Recommended next release-operations slice:
+Dispatched release-operations slice:
 
 4. `[project] [L6] [none] [DAL-TBD] Local production runbook and release manifest`
    - Outcome: add a truthful local production-readiness runbook and a
@@ -355,5 +369,6 @@ Recommended next release-operations slice:
      workbench.
    - Evidence: generated manifest test or schema check, doc diff, `git
      diff --check`, and targeted validation-suite pass.
-   - Priority: `L6` operational readiness; useful after a smoke gate exists so
-     the runbook has a concrete command to reference.
+   - Priority: `L6` operational readiness, dispatched as live Linear
+     `JER-244`; useful after a smoke gate exists so the runbook has a concrete
+     command to reference.
