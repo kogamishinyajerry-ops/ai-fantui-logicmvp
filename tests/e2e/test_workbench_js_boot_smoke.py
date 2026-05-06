@@ -562,7 +562,26 @@ def test_workbench_canvas_first_default_and_explicit_reference_proof_load(demo_s
             full: path.getAttribute('data-edge-label') || '',
             display: path.getAttribute('data-edge-display-label') || '',
             routeMode: path.getAttribute('data-route-mode') || '',
+            routeGuide: path.getAttribute('data-route-guide') || '',
+            routeGuideEffect: path.getAttribute('data-route-guide-effect') || '',
+            routeGuideTruthEffect: path.getAttribute('data-route-guide-truth-effect') || '',
+            segmentCount: Number.parseInt(path.getAttribute('data-route-segment-count') || '0', 10) || 0,
+            laneAxis: path.getAttribute('data-route-lane-axis') || '',
+            laneX: path.getAttribute('data-route-lane-x') || '',
+            laneY: path.getAttribute('data-route-lane-y') || '',
+            routeDirection: path.getAttribute('data-route-direction') || '',
           }));
+          const routeGuides = Array.from(document.querySelectorAll('.workbench-edge-route-guide'))
+            .map((guide) => ({
+              edgeId: guide.getAttribute('data-route-guide-edge-id') || '',
+              editableEdgeId: guide.getAttribute('data-editable-edge-id') || '',
+              routeGuide: guide.getAttribute('data-route-guide') || '',
+              segmentCount: Number.parseInt(guide.getAttribute('data-route-segment-count') || '0', 10) || 0,
+              truthEffect: guide.getAttribute('data-route-guide-truth-effect') || '',
+              ariaHidden: guide.getAttribute('aria-hidden') || '',
+              focusable: guide.getAttribute('focusable') || '',
+              d: guide.getAttribute('d') || '',
+            }));
           return {
             title: document.querySelector('#workbench-circuit-hero-title')?.textContent.trim() || '',
             graph: document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-graph') || '',
@@ -575,6 +594,7 @@ def test_workbench_canvas_first_default_and_explicit_reference_proof_load(demo_s
             edgeCount: edgePaths.length,
             edgePaths: edgePaths.map((path) => path.getAttribute('d') || ''),
             edgeSummaries,
+            routeGuides,
             proofButtonCount: document.querySelectorAll('[data-reference-proof-target]').length,
           };
         }
@@ -607,6 +627,18 @@ def test_workbench_canvas_first_default_and_explicit_reference_proof_load(demo_s
     assert all(len(item["display"]) <= 10 for item in rendered["edgeSummaries"])
     assert all(item["full"] for item in rendered["edgeSummaries"])
     assert all(item["routeMode"] == "orthogonal" for item in rendered["edgeSummaries"])
+    assert len(rendered["routeGuides"]) == rendered["edgeCount"]
+    assert all(not item["editableEdgeId"] for item in rendered["routeGuides"])
+    assert all(item["routeGuide"] == "orthogonal_lane_guide" for item in rendered["edgeSummaries"])
+    assert all(item["routeGuideEffect"] == "display_only" for item in rendered["edgeSummaries"])
+    assert all(item["routeGuideTruthEffect"] == "none" for item in rendered["edgeSummaries"])
+    assert all(item["segmentCount"] >= 3 for item in rendered["edgeSummaries"])
+    assert all(item["laneAxis"] in {"x", "y", "mixed"} for item in rendered["edgeSummaries"])
+    assert all(item["routeDirection"] in {"forward", "reverse"} for item in rendered["edgeSummaries"])
+    assert all(item["routeGuide"] == "orthogonal_lane_guide" for item in rendered["routeGuides"])
+    assert all(item["truthEffect"] == "none" for item in rendered["routeGuides"])
+    assert all(item["ariaHidden"] == "true" and item["focusable"] == "false" for item in rendered["routeGuides"])
+    assert all("C" not in item["d"] and "L" in item["d"] for item in rendered["routeGuides"])
     assert all("C" not in path for path in rendered["edgePaths"])
     assert all("L" in path for path in rendered["edgePaths"])
 
@@ -4185,9 +4217,21 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
     assert edge_display_label
     assert len(edge_display_label) < len("draft_node_1:out -> draft_node_2:in")
     assert edge_path.get_attribute("data-route-mode") == "orthogonal"
+    assert edge_path.get_attribute("data-route-guide") == "orthogonal_lane_guide"
+    assert edge_path.get_attribute("data-route-guide-effect") == "display_only"
+    assert edge_path.get_attribute("data-route-guide-truth-effect") == "none"
+    assert int(edge_path.get_attribute("data-route-segment-count") or "0") >= 3
+    assert edge_path.get_attribute("data-route-lane-axis") in {"x", "y", "mixed"}
+    assert edge_path.get_attribute("data-route-direction") in {"forward", "reverse"}
     edge_path_d = edge_path.get_attribute("d")
     assert edge_path_d and "C" not in edge_path_d
     assert edge_path_d.count("L") >= 3
+    route_guide = page.locator(f'.workbench-edge-route-guide[data-route-guide-edge-id="{edge["id"]}"]')
+    assert route_guide.count() == 1
+    assert route_guide.get_attribute("data-editable-edge-id") is None
+    assert route_guide.get_attribute("data-route-guide") == "orthogonal_lane_guide"
+    assert route_guide.get_attribute("data-route-guide-truth-effect") == "none"
+    assert route_guide.get_attribute("d") == edge_path_d
     edge_label = page.locator(f'[data-editable-edge-label-id="{edge["id"]}"]')
     assert edge_label.get_attribute("data-edge-label") == "draft_node_1:out -> draft_node_2:in"
     assert edge_label.get_attribute("data-edge-display-label") == edge_display_label

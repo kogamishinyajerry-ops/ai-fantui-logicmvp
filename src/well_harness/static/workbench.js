@@ -13641,8 +13641,35 @@ function installEditableWorkbenchShell() {
     return Object.prototype.hasOwnProperty.call(detours, edgeId) ? detours[edgeId] : null;
   }
 
+  function orthogonalRouteResult(points, labelX, labelY, guide) {
+    const safePoints = points.map((point) => ({
+      x: Math.max(2, Math.min(98, Number(point.x) || 0)),
+      y: Math.max(2, Math.min(98, Number(point.y) || 0)),
+    }));
+    const d = safePoints
+      .map((point, index) => `${index === 0 ? "M" : "L"}${point.x} ${point.y}`)
+      .join(" ");
+    return {
+      d,
+      labelX: Math.max(2, Math.min(98, Number(labelX) || 50)),
+      labelY: Math.max(4, Math.min(96, Number(labelY) || 50)),
+      route_mode: "orthogonal",
+      route_guide: {
+        kind: "orthogonal_lane_guide",
+        segment_count: Math.max(0, safePoints.length - 1),
+        lane_axis: guide && guide.lane_axis ? guide.lane_axis : "x",
+        lane_x: Number.isFinite(Number(guide && guide.lane_x)) ? Number(guide.lane_x) : null,
+        lane_y: Number.isFinite(Number(guide && guide.lane_y)) ? Number(guide.lane_y) : null,
+        route_direction: guide && guide.route_direction ? guide.route_direction : "forward",
+        effect: "display_only",
+        truth_effect: "none",
+      },
+    };
+  }
+
   function orthogonalEdgeRoute(source, target, edge) {
     const routeDirection = Number(target && target.x) >= Number(source && source.x) ? 1 : -1;
+    const routeDirectionLabel = routeDirection >= 0 ? "forward" : "reverse";
     const sourceHalfX = Number.isFinite(Number(source && source.halfXPercent))
       ? Number(source.halfXPercent)
       : 5;
@@ -13656,55 +13683,63 @@ function installEditableWorkbenchShell() {
     const edgeId = String(edge && edge.id || "");
     if (edgeId === "edge_logic1_logic2") {
       const laneY = 12;
-      return {
-        d: [
-          `M${sourceX} ${sourceY}`,
-          `L${sourceX} ${laneY}`,
-          `L${targetX} ${laneY}`,
-          `L${targetX} ${targetY}`,
-        ].join(" "),
-        labelX: Math.max(2, Math.min(98, (sourceX + targetX) / 2)),
-        labelY: Math.max(4, Math.min(96, laneY - 1.5)),
-        route_mode: "orthogonal",
-      };
+      return orthogonalRouteResult(
+        [
+          { x: sourceX, y: sourceY },
+          { x: sourceX, y: laneY },
+          { x: targetX, y: laneY },
+          { x: targetX, y: targetY },
+        ],
+        (sourceX + targetX) / 2,
+        laneY - 1.5,
+        { lane_axis: "y", lane_y: laneY, route_direction: routeDirectionLabel },
+      );
     }
     if (edgeId === "edge_vdt90_logic4") {
       const laneY = 96;
       const laneX = 98;
-      return {
-        d: [
-          `M${sourceX} ${sourceY}`,
-          `L${sourceX} ${laneY}`,
-          `L${laneX} ${laneY}`,
-          `L${laneX} ${targetY}`,
-          `L${targetX} ${targetY}`,
-        ].join(" "),
-        labelX: Math.max(2, Math.min(98, (laneX + targetX) / 2)),
-        labelY: Math.max(4, Math.min(96, targetY - 1.5)),
-      };
+      return orthogonalRouteResult(
+        [
+          { x: sourceX, y: sourceY },
+          { x: sourceX, y: laneY },
+          { x: laneX, y: laneY },
+          { x: laneX, y: targetY },
+          { x: targetX, y: targetY },
+        ],
+        (laneX + targetX) / 2,
+        targetY - 1.5,
+        { lane_axis: "mixed", lane_x: laneX, lane_y: laneY, route_direction: routeDirectionLabel },
+      );
     }
     const laneX = referenceEdgeLaneX(edge);
     const midX = Math.max(2, Math.min(98, Number.isFinite(laneX) ? laneX : (sourceX + targetX) / 2));
     const detourY = referenceEdgeDetourY(edge);
     if (Number.isFinite(detourY)) {
       const laneY = Math.max(2, Math.min(98, detourY));
-      return {
-        d: [
-          `M${sourceX} ${sourceY}`,
-          `L${midX} ${sourceY}`,
-          `L${midX} ${laneY}`,
-          `L${targetX} ${laneY}`,
-          `L${targetX} ${targetY}`,
-        ].join(" "),
-        labelX: Math.max(2, Math.min(98, (midX + targetX) / 2)),
-        labelY: Math.max(4, Math.min(96, laneY - 1.5)),
-      };
+      return orthogonalRouteResult(
+        [
+          { x: sourceX, y: sourceY },
+          { x: midX, y: sourceY },
+          { x: midX, y: laneY },
+          { x: targetX, y: laneY },
+          { x: targetX, y: targetY },
+        ],
+        (midX + targetX) / 2,
+        laneY - 1.5,
+        { lane_axis: "mixed", lane_x: midX, lane_y: laneY, route_direction: routeDirectionLabel },
+      );
     }
-    return {
-      d: `M${sourceX} ${sourceY} L${midX} ${sourceY} L${midX} ${targetY} L${targetX} ${targetY}`,
-      labelX: midX,
-      labelY: Math.max(4, Math.min(96, (sourceY + targetY) / 2 - 1.5)),
-    };
+    return orthogonalRouteResult(
+      [
+        { x: sourceX, y: sourceY },
+        { x: midX, y: sourceY },
+        { x: midX, y: targetY },
+        { x: targetX, y: targetY },
+      ],
+      midX,
+      (sourceY + targetY) / 2 - 1.5,
+      { lane_axis: "x", lane_x: midX, route_direction: routeDirectionLabel },
+    );
   }
 
   function edgeTargetPortId(edge) {
@@ -13750,7 +13785,35 @@ function installEditableWorkbenchShell() {
     };
   }
 
-  function edgePathMetadata(edge) {
+  function edgeRouteGuideMetadata(route) {
+    const guide = route && route.route_guide || {};
+    return {
+      kind: guide.kind || "orthogonal_lane_guide",
+      segment_count: Number.isFinite(Number(guide.segment_count)) ? Number(guide.segment_count) : 0,
+      lane_axis: guide.lane_axis || "x",
+      lane_x: Number.isFinite(Number(guide.lane_x)) ? Number(guide.lane_x) : null,
+      lane_y: Number.isFinite(Number(guide.lane_y)) ? Number(guide.lane_y) : null,
+      route_direction: guide.route_direction || "forward",
+      effect: guide.effect || "display_only",
+      truth_effect: guide.truth_effect || "none",
+    };
+  }
+
+  function edgeRouteGuideAttributes(route) {
+    const guide = edgeRouteGuideMetadata(route);
+    return [
+      `data-route-guide="${inspectorText(guide.kind)}"`,
+      `data-route-guide-effect="${inspectorText(guide.effect)}"`,
+      `data-route-segment-count="${inspectorText(guide.segment_count)}"`,
+      `data-route-lane-axis="${inspectorText(guide.lane_axis)}"`,
+      `data-route-lane-x="${inspectorText(guide.lane_x === null ? "" : guide.lane_x)}"`,
+      `data-route-lane-y="${inspectorText(guide.lane_y === null ? "" : guide.lane_y)}"`,
+      `data-route-direction="${inspectorText(guide.route_direction)}"`,
+      `data-route-guide-truth-effect="${inspectorText(guide.truth_effect)}"`,
+    ].join(" ");
+  }
+
+  function edgePathMetadata(edge, route) {
     const payload = edgeInspectorPayload(edge);
     const binding = edgeInterfaceBinding(edge);
     return [
@@ -13765,6 +13828,7 @@ function installEditableWorkbenchShell() {
       `data-edge-evidence-status="${inspectorText(payload.evidence_status)}"`,
       `data-port-compatibility="${inspectorText(payload.port_compatibility_status)}"`,
       `data-binding-quality="${inspectorText(binding.binding_quality)}"`,
+      edgeRouteGuideAttributes(route),
     ].join(" ");
   }
 
@@ -14126,16 +14190,22 @@ function installEditableWorkbenchShell() {
       const route = orthogonalEdgeRoute(source, target, edge);
       const payload = edgeInspectorPayload(edge);
       const displayLabel = edgeWireDisplayLabel(edge);
+      const routeGuideAttrs = edgeRouteGuideAttributes(route);
       paths.push([
         `<path data-editable-edge-id="${inspectorText(edge.id)}"`,
         `data-editable-edge-index="${index}"`,
         `data-edge-source="${inspectorText(edge.source)}"`,
         `data-edge-target="${inspectorText(edge.target)}"`,
-        edgePathMetadata(edge),
+        edgePathMetadata(edge, route),
         'marker-end="url(#workbench-reference-arrowhead)"',
         'role="button"',
         'tabindex="0"',
         `aria-label="${inspectorText(`信号线 ${edge.source} 到 ${edge.target}`)}"`,
+        `d="${route.d}" />`,
+        `<path class="workbench-edge-route-guide" data-route-guide-edge-id="${inspectorText(edge.id)}"`,
+        routeGuideAttrs,
+        'aria-hidden="true"',
+        'focusable="false"',
         `d="${route.d}" />`,
         `<text class="workbench-edge-label" data-editable-edge-label-id="${inspectorText(edge.id)}"`,
         `data-edge-label="${inspectorText(payload.edge_label)}"`,
