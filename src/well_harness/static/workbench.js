@@ -12542,16 +12542,36 @@ function installEditableWorkbenchShell() {
       const overlay = document.createElement("div");
       overlay.className = "workbench-subsystem-overlay";
       overlay.setAttribute("data-subsystem-id", group.id);
+      overlay.setAttribute("data-subsystem-node-count", String(group.node_ids.length));
       overlay.setAttribute("data-truth-effect", "none");
+      overlay.setAttribute(
+        "aria-label",
+        `${group.name}: ${group.node_ids.length} draft node(s). Sandbox metadata. Truth effect none.`,
+      );
+      overlay.setAttribute(
+        "title",
+        `${group.name}: ${group.node_ids.length} draft node(s). Sandbox metadata. Truth effect none.`,
+      );
       overlay.style.setProperty("--subsystem-left", `${minX}%`);
       overlay.style.setProperty("--subsystem-top", `${minY}%`);
       overlay.style.setProperty("--subsystem-width", `${Math.max(8, maxX - minX)}%`);
       overlay.style.setProperty("--subsystem-height", `${Math.max(8, maxY - minY)}%`);
-      const label = document.createElement("span");
+      const label = document.createElement("strong");
+      label.className = "workbench-subsystem-overlay-label";
       label.textContent = group.name;
       overlay.appendChild(label);
+      const meta = document.createElement("span");
+      meta.className = "workbench-subsystem-overlay-meta";
+      meta.textContent = `${group.node_ids.length} draft node(s) · sandbox · truth effect none`;
+      overlay.appendChild(meta);
       canvas.appendChild(overlay);
     }
+  }
+
+  function setSubsystemStatus(message, tone = "info") {
+    if (!subsystemStatus) return;
+    subsystemStatus.textContent = message;
+    subsystemStatus.setAttribute("data-status-tone", tone);
   }
 
   function renderSubsystemEditor() {
@@ -12568,20 +12588,19 @@ function installEditableWorkbenchShell() {
     if (createSubsystemBtn) createSubsystemBtn.disabled = selectedDraftNodes.length < 2;
     if (renameSubsystemBtn) renameSubsystemBtn.disabled = !group;
     if (ungroupSubsystemBtn) ungroupSubsystemBtn.disabled = !group;
-    if (subsystemStatus) {
-      subsystemStatus.textContent = group
+    setSubsystemStatus(
+      group
         ? `Subsystem ${group.id}: ${group.node_ids.length} draft node(s). Truth effect: none.`
-        : "Select two or more draft nodes to create a subsystem. Truth effect: none.";
-    }
+        : "Select two or more draft nodes to create a subsystem. Truth effect: none.",
+      group ? "success" : "info",
+    );
     renderSubsystemInterfaceContractEditor();
   }
 
   function groupSelectedDraftNodes() {
     const selectedDraftNodes = selectedEditableDraftNodes();
     if (selectedDraftNodes.length < 2) {
-      if (subsystemStatus) {
-        subsystemStatus.textContent = "Select at least two draft nodes before grouping. Truth effect: none.";
-      }
+      setSubsystemStatus("Select at least two draft nodes before grouping. Truth effect: none.", "warn");
       return null;
     }
     recordEditableHistory("create_subsystem_group");
@@ -12610,17 +12629,17 @@ function installEditableWorkbenchShell() {
     updateEditableDraftHash();
     persistDraft();
     if (draftLabel) draftLabel.textContent = "sandbox_candidate subsystem group pending";
-    if (subsystemStatus) {
-      subsystemStatus.textContent =
-        `Created ${group.name} with ${group.node_ids.length} draft node(s). Truth effect: none.`;
-    }
+    setSubsystemStatus(
+      `Created ${group.name} with ${group.node_ids.length} draft node(s). Truth effect: none.`,
+      "success",
+    );
     return group;
   }
 
   function renameSelectedSubsystemGroup() {
     const group = selectedSubsystemGroup();
     if (!group) {
-      if (subsystemStatus) subsystemStatus.textContent = "Select a subsystem before renaming.";
+      setSubsystemStatus("Select a subsystem before renaming.", "warn");
       return null;
     }
     recordEditableHistory("rename_subsystem_group");
@@ -12638,16 +12657,14 @@ function installEditableWorkbenchShell() {
     updateEditableDraftHash();
     persistDraft();
     if (draftLabel) draftLabel.textContent = "sandbox_candidate subsystem rename pending";
-    if (subsystemStatus) {
-      subsystemStatus.textContent = `Renamed subsystem ${group.id} to ${nextName}. Truth effect: none.`;
-    }
+    setSubsystemStatus(`Renamed subsystem ${group.id} to ${nextName}. Truth effect: none.`, "success");
     return subsystemGroupById(group.id);
   }
 
   function ungroupSelectedSubsystem() {
     const group = selectedSubsystemGroup();
     if (!group) {
-      if (subsystemStatus) subsystemStatus.textContent = "Select a subsystem before ungrouping.";
+      setSubsystemStatus("Select a subsystem before ungrouping.", "warn");
       return null;
     }
     recordEditableHistory("ungroup_subsystem_group");
@@ -12666,9 +12683,7 @@ function installEditableWorkbenchShell() {
     updateEditableDraftHash();
     persistDraft();
     if (draftLabel) draftLabel.textContent = "sandbox_candidate subsystem ungroup pending";
-    if (subsystemStatus) {
-      subsystemStatus.textContent = `Ungrouped ${group.name}. Nodes, ports, and edges preserved.`;
-    }
+    setSubsystemStatus(`Ungrouped ${group.name}. Nodes, ports, and edges preserved.`, "success");
     return group;
   }
 

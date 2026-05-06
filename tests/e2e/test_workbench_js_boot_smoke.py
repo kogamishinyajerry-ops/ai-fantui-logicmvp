@@ -3166,12 +3166,26 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
     assert [edge["id"] for edge in grouped["edges"]] == before_edge_ids
     assert [port["id"] for port in grouped["typed_ports"]] == before_port_ids
     assert page.locator(".workbench-subsystem-overlay").count() == 1
+    overlay = page.locator(".workbench-subsystem-overlay")
+    assert overlay.get_attribute("data-subsystem-node-count") == "2"
+    assert overlay.get_attribute("data-truth-effect") == "none"
+    assert "Deploy interlock" in overlay.inner_text()
+    assert "2 draft node(s)" in overlay.inner_text()
+    assert "truth effect none" in overlay.inner_text()
+    assert "Sandbox metadata. Truth effect none." in (overlay.get_attribute("title") or "")
+    status = page.locator("#workbench-subsystem-status")
+    assert "Created Deploy interlock with 2 draft node(s)" in status.inner_text()
+    assert status.get_attribute("data-status-tone") == "success"
 
     _fill_workbench_node_control(page, "#workbench-subsystem-name", "Deploy interlock v2")
     _click_workbench_node_control(page, "#workbench-rename-subsystem-btn")
     _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     renamed = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert renamed["subsystem_groups"][0]["name"] == "Deploy interlock v2"
+    assert "Deploy interlock v2" in page.locator(".workbench-subsystem-overlay").inner_text()
+    assert "Renamed subsystem" in status.inner_text()
+    assert "Deploy interlock v2" in status.inner_text()
+    assert status.get_attribute("data-status-tone") == "success"
     assert all(
         node["subsystem_group"]["name"] == "Deploy interlock v2"
         for node in renamed["nodes"]
@@ -3197,6 +3211,8 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
     assert [edge["id"] for edge in ungrouped["edges"]] == before_edge_ids
     assert [port["id"] for port in ungrouped["typed_ports"]] == before_port_ids
     assert all("subsystem_group" not in node for node in ungrouped["nodes"] if node["id"].startswith("draft_node_"))
+    assert "Ungrouped Deploy interlock v2" in status.inner_text()
+    assert status.get_attribute("data-status-tone") == "success"
 
     page.keyboard.press("Control+Z")
     _click_workbench_handoff_control(page, "#workbench-export-draft-btn")

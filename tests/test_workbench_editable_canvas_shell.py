@@ -650,8 +650,16 @@ def test_subsystem_group_editor_controls_are_exposed_as_sandbox_only_ui() -> Non
     assert 'id="workbench-create-subsystem-btn"' in html
     assert 'id="workbench-rename-subsystem-btn"' in html
     assert 'id="workbench-ungroup-subsystem-btn"' in html
+    assert 'id="workbench-subsystem-status"' in html
+    assert 'role="status"' in html
+    assert 'aria-live="polite"' in html
+    assert 'data-status-tone="info"' in html
     assert "Subsystem edits are sandbox metadata only. Truth effect: none." in html
     assert ".workbench-subsystem-overlay" in css
+    assert ".workbench-subsystem-overlay-label" in css
+    assert ".workbench-subsystem-overlay-meta" in css
+    assert '#workbench-subsystem-status[data-status-tone="success"]' in css
+    assert '#workbench-subsystem-status[data-status-tone="warn"]' in css
     assert ".workbench-subsystem-editor" in css
 
 
@@ -858,10 +866,15 @@ def test_js_wires_subsystem_group_round_trip_as_sandbox_only_metadata() -> None:
     assert "function renameSelectedSubsystemGroup" in js
     assert "function ungroupSelectedSubsystem" in js
     assert "function renderSubsystemOverlays" in js
+    assert "function setSubsystemStatus" in js
+    assert 'setAttribute("data-status-tone", tone)' in js
     assert "subsystem_groups" in js
     assert "subsystem_groups truth_effect must be none" in js
     assert "subsystem_groups_checksum" in js
     assert "data-subsystem-id" in js
+    assert "data-subsystem-node-count" in js
+    assert "Sandbox metadata. Truth effect none." in js
+    assert "truth effect none" in js
     assert 'candidate_state: "sandbox_candidate"' in js
     assert 'truth_effect: "none"' in js
 
