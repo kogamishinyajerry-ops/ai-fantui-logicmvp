@@ -7827,6 +7827,7 @@ function installEditableWorkbenchShell() {
   let selectedNode = nodes.find((node) => node.getAttribute("aria-pressed") === "true") || nodes[0];
   let selectedNodeIds = new Set(selectedNode ? [selectedNode.getAttribute("data-editable-node-id") || ""] : []);
   let selectedEdge = null;
+  let hoveredSubsystemGroupId = "";
   let lassoDragState = null;
   let groupDragState = null;
   let selectionMarquee = null;
@@ -11787,6 +11788,7 @@ function installEditableWorkbenchShell() {
       node.setAttribute("aria-pressed", isSelected ? "true" : "false");
       node.setAttribute("data-multi-selected", isSelected && selectedCount > 1 ? "true" : "false");
     }
+    syncSubsystemActiveAffordance();
     renderCanvasInteractionStatus();
   }
 
@@ -12544,6 +12546,7 @@ function installEditableWorkbenchShell() {
       overlay.setAttribute("data-subsystem-id", group.id);
       overlay.setAttribute("data-subsystem-node-count", String(group.node_ids.length));
       overlay.setAttribute("data-truth-effect", "none");
+      overlay.setAttribute("data-subsystem-active", "false");
       overlay.setAttribute(
         "aria-label",
         `${group.name}: ${group.node_ids.length} draft node(s). Sandbox metadata. Truth effect none.`,
@@ -12566,12 +12569,32 @@ function installEditableWorkbenchShell() {
       overlay.appendChild(meta);
       canvas.appendChild(overlay);
     }
+    syncSubsystemActiveAffordance();
   }
 
   function setSubsystemStatus(message, tone = "info") {
     if (!subsystemStatus) return;
     subsystemStatus.textContent = message;
     subsystemStatus.setAttribute("data-status-tone", tone);
+  }
+
+  function syncSubsystemActiveAffordance() {
+    const activeGroup = selectedSubsystemGroup();
+    const activeGroupId = hoveredSubsystemGroupId || (activeGroup ? activeGroup.id : "");
+    for (const node of nodes) {
+      const groupId = node.getAttribute("data-subsystem-id") || "";
+      node.setAttribute("data-subsystem-active", activeGroupId && groupId === activeGroupId ? "true" : "false");
+    }
+    if (!canvas) return;
+    for (const overlay of Array.from(canvas.querySelectorAll(".workbench-subsystem-overlay"))) {
+      const groupId = overlay.getAttribute("data-subsystem-id") || "";
+      overlay.setAttribute("data-subsystem-active", activeGroupId && groupId === activeGroupId ? "true" : "false");
+    }
+  }
+
+  function setHoveredSubsystemGroupFromNode(node) {
+    hoveredSubsystemGroupId = node ? (node.getAttribute("data-subsystem-id") || "") : "";
+    syncSubsystemActiveAffordance();
   }
 
   function renderSubsystemEditor() {
@@ -22094,6 +22117,18 @@ function installEditableWorkbenchShell() {
     });
     node.addEventListener("pointercancel", (event) => {
       endEditableGroupDrag(event);
+    });
+    node.addEventListener("mouseenter", () => {
+      setHoveredSubsystemGroupFromNode(node);
+    });
+    node.addEventListener("mouseleave", () => {
+      setHoveredSubsystemGroupFromNode(null);
+    });
+    node.addEventListener("focus", () => {
+      setHoveredSubsystemGroupFromNode(node);
+    });
+    node.addEventListener("blur", () => {
+      setHoveredSubsystemGroupFromNode(null);
     });
     node.addEventListener("click", (event) => {
       if (suppressNextNodeClick) {

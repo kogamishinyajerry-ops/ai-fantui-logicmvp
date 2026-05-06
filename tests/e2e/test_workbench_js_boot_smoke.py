@@ -3169,13 +3169,24 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
     overlay = page.locator(".workbench-subsystem-overlay")
     assert overlay.get_attribute("data-subsystem-node-count") == "2"
     assert overlay.get_attribute("data-truth-effect") == "none"
+    assert overlay.get_attribute("data-subsystem-active") == "true"
     assert "Deploy interlock" in overlay.inner_text()
     assert "2 draft node(s)" in overlay.inner_text()
     assert "truth effect none" in overlay.inner_text()
     assert "Sandbox metadata. Truth effect none." in (overlay.get_attribute("title") or "")
+    assert page.locator('[data-editable-node-id="draft_node_1"]').get_attribute("data-subsystem-active") == "true"
+    assert page.locator('[data-editable-node-id="draft_node_2"]').get_attribute("data-subsystem-active") == "true"
     status = page.locator("#workbench-subsystem-status")
     assert "Created Deploy interlock with 2 draft node(s)" in status.inner_text()
     assert status.get_attribute("data-status-tone") == "success"
+    page.locator('[data-editable-node-id="logic1"]').click()
+    assert overlay.get_attribute("data-subsystem-active") == "false"
+    page.locator('[data-editable-node-id="draft_node_1"]').hover()
+    assert overlay.get_attribute("data-subsystem-active") == "true"
+    assert page.locator('[data-editable-node-id="draft_node_1"]').get_attribute("data-subsystem-active") == "true"
+    page.locator('[data-editable-node-id="logic1"]').hover()
+    assert overlay.get_attribute("data-subsystem-active") == "false"
+    page.locator('[data-editable-node-id="draft_node_1"]').click()
 
     _fill_workbench_node_control(page, "#workbench-subsystem-name", "Deploy interlock v2")
     _click_workbench_node_control(page, "#workbench-rename-subsystem-btn")
@@ -3183,6 +3194,7 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
     renamed = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert renamed["subsystem_groups"][0]["name"] == "Deploy interlock v2"
     assert "Deploy interlock v2" in page.locator(".workbench-subsystem-overlay").inner_text()
+    assert page.locator(".workbench-subsystem-overlay").get_attribute("data-subsystem-active") == "true"
     assert "Renamed subsystem" in status.inner_text()
     assert "Deploy interlock v2" in status.inner_text()
     assert status.get_attribute("data-status-tone") == "success"
