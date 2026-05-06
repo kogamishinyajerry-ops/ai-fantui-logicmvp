@@ -57,23 +57,148 @@ def test_editable_canvas_shell_primary_regions_exist() -> None:
     assert "workbench-sandbox-timeline-strip" in ids
 
 
+def test_goal_canvas_panel_exposes_first_screen_engineering_regions() -> None:
+    html = _html()
+    css = _css()
+
+    required_ids = {
+        "workbench-goal-canvas-panel",
+        "workbench-open-onboarding-guide-btn",
+        "workbench-close-onboarding-guide-btn",
+        "workbench-onboarding-title",
+        "workbench-onboarding-detail",
+        "workbench-onboarding-step-list",
+        "workbench-onboarding-progress",
+        "workbench-onboarding-back-btn",
+        "workbench-onboarding-action-btn",
+        "workbench-onboarding-next-btn",
+    }
+    assert required_ids.issubset(_parsed().ids)
+    assert 'data-status-density="compact"' in html
+    assert 'data-onboarding-active-step="overview"' in html
+    assert 'data-onboarding-state="collapsed"' in html
+    assert "新手指引" in html
+    assert "关闭指引" in html
+    assert "workbench-editable-canvas-note" not in html
+    assert "Sandbox candidate canvas · edits here prepare diff evidence" not in html
+    assert html.count("data-onboarding-step=") >= 7
+    for step in (
+        "overview",
+        "inspect_node",
+        "proof_path",
+        "blank_canvas",
+        "add_node",
+        "wire",
+        "run_sandbox",
+    ):
+        assert f'data-onboarding-step="{step}"' in html
+    for copy in (
+        "新手流程",
+        "先看完整反推链路",
+        "点 L1 看规则",
+        "高亮 L4 proof",
+        "进入空白画布",
+        "添加一个 block",
+        "进入连线模式",
+        "运行 sandbox",
+    ):
+        assert copy in html
+    assert ".workbench-goal-canvas-panel" in css
+    assert ".workbench-onboarding-reopen-btn" in css
+    assert ".workbench-goal-canvas-panel[hidden]" in css
+    assert ".workbench-onboarding-step-list" in css
+    assert "[data-onboarding-highlight=\"true\"]" in css
+    assert ".workbench-editable-canvas-note" not in css
+    assert ".workbench-editable-status-bar[data-status-density=\"compact\"]" in css
+    assert ".workbench-editable-status-chip[data-status-visibility=\"secondary\"]" in css
+
+
+def test_reference_visual_and_outsider_tutorial_contracts_are_exposed() -> None:
+    html = _html()
+    css = _css()
+    js = _js()
+
+    required_ids = {
+        "workbench-outsider-circuit-explainer",
+        "workbench-outsider-trigger-flow",
+        "workbench-outsider-fault-notes",
+        "workbench-outsider-simulation-value",
+    }
+    assert required_ids.issubset(_parsed().ids)
+    for copy in (
+        "这个逻辑电路究竟在实现什么功能",
+        "为什么这么画",
+        "输入信号开始每一步会发生什么",
+        "预期会如何触发",
+        "如果遇到故障会发生什么",
+        "仿真按钮按下之后会看到什么",
+        "仿真有什么价值",
+        "THR_LOCK",
+    ):
+        assert copy in html
+    for copy in (
+        "这个电路的功能",
+        "为什么这样画",
+        "触发顺序",
+        "故障会发生什么",
+        "仿真会看到什么",
+        "仿真的价值",
+    ):
+        assert copy in js
+    assert '.workbench-editable-canvas[data-reference-proof-mode="default_visible"] .workbench-editable-edges path' in css
+    assert "stroke-width: 3" in css
+    assert "stroke-dasharray: none" in css
+    assert "stroke-linecap: round" in css
+    assert "referenceEdgeLaneX" in js
+    assert "data-edge-source-id" in js
+    assert "data-edge-target-id" in js
+    assert "well-harness-workbench-onboarding-guide-open-v1" in js
+    assert "setOnboardingGuideExpanded" in js
+
+
 def test_editable_canvas_shell_is_explicitly_sandbox_only() -> None:
     html = _html()
 
     assert "sandbox candidate" in html
     assert "not certified truth" in html
-    assert "Truth impact" in html
-    assert "none · sandbox candidate only" in html
+    assert "真值影响" in html
+    assert "无 · 仅沙箱候选" in html
 
 
 def test_editable_canvas_exposes_reference_logic_nodes() -> None:
     parser = _parsed()
+    html = _html()
 
-    assert parser.node_ids == {"logic1", "logic2", "logic3", "logic4"}
-    for node_id in parser.node_ids:
-        assert f'data-editable-node-id="{node_id}"' in _html()
-    assert 'data-node-op="and"' in _html()
-    assert 'data-hardware-evidence="evidence_gap"' in _html()
+    required_reference_nodes = {
+        "ra_ft",
+        "sw1",
+        "not_inhibited",
+        "not_deployed",
+        "logic1",
+        "tls_unlocked",
+        "sw2",
+        "engine_running",
+        "aircraft_on_ground",
+        "eec_enable",
+        "logic2",
+        "n1k_limit",
+        "tra_deploy",
+        "pls_unlocked",
+        "logic3",
+        "vdt90",
+        "logic4",
+        "thr_lock",
+    }
+    assert required_reference_nodes.issubset(parser.node_ids)
+    for node_id in required_reference_nodes:
+        assert f'data-editable-node-id="{node_id}"' in html
+        assert f'data-reference-proof-node="{node_id}"' in html
+    assert 'data-reference-graph="c919-etras-thrust-reverser-proof"' in html
+    assert 'data-node-op="and"' in html
+    assert 'data-node-op="compare"' in html
+    assert 'data-node-op="latch"' in html
+    assert 'data-node-op="output"' in html
+    assert 'data-hardware-evidence="evidence_gap"' in html
 
 
 def test_evidence_inspector_has_editable_and_read_only_fields() -> None:
@@ -90,17 +215,188 @@ def test_evidence_inspector_has_editable_and_read_only_fields() -> None:
     assert 'data-evidence-api="/api/hardware/evidence?system_id=thrust-reverser"' in html
 
 
-def test_reference_svg_fragment_remains_as_sample_pack_not_primary_canvas() -> None:
+def test_evidence_inspector_declares_mode_tabs_and_default_node_mode() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-inspector-mode-tabs"' in html
+    assert 'data-default-inspector-mode="node"' in html
+    assert 'data-inspector-mode-active="node"' in html
+    for mode, label in {
+        "node": "节点详情",
+        "run": "运行结果",
+        "evidence": "硬件证据",
+        "handoff": "交付包",
+    }.items():
+        assert f'data-inspector-mode="{mode}"' in html
+        assert f'data-inspector-panel="{mode}"' in html
+        assert f'id="workbench-inspector-{mode}-panel"' in html
+        assert f'aria-controls="workbench-inspector-{mode}-panel"' in html
+        assert label in html
+
+    assert ".workbench-inspector-mode-tabs" in css
+    assert '.workbench-inspector-mode-tabs button[aria-selected="true"]' in css
+    assert (
+        '.workbench-evidence-inspector[data-inspector-mode-active="node"] '
+        '[data-inspector-panel]:not([data-inspector-panel="node"])'
+    ) in css
+    assert (
+        '.workbench-evidence-inspector[data-inspector-mode-active="run"] '
+        '[data-inspector-panel]:not([data-inspector-panel="run"])'
+    ) in css
+    assert (
+        '.workbench-evidence-inspector[data-inspector-mode-active="evidence"] '
+        '[data-inspector-panel]:not([data-inspector-panel="evidence"])'
+    ) in css
+    assert (
+        '.workbench-evidence-inspector[data-inspector-mode-active="handoff"] '
+        '[data-inspector-panel]:not([data-inspector-panel="handoff"])'
+    ) in css
+
+
+def test_reference_control_circuit_is_default_first_screen() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-reference-proof-strip"' in html
+    assert 'id="workbench-canvas-first-guide"' in html
+    assert 'id="workbench-canvas-first-start-btn"' in html
+    assert 'id="workbench-load-reference-proof-btn"' in html
+    assert 'id="workbench-reference-circuit-title"' in html
+    assert 'id="workbench-reference-circuit-guide-strip"' in html
+    assert 'data-reference-proof-target="logic1"' in html
+    assert 'data-reference-proof-target="logic3"' in html
+    assert 'data-reference-proof-target="logic4"' in html
+    assert 'data-reference-proof-target="thr_lock"' in html
+    assert 'data-reference-proof-mode="default_visible"' in html
+    assert 'data-reference-proof-mode="canvas_first"' not in html
+    assert "C919 E-TRAS / 反推逻辑控制电路" in html
+    assert "看全图" in html
+    assert "点节点" in html
+    assert "选证明" in html
+    assert "运行" in html
+    assert "空白" in html
+    assert "新建空白电路" in html
+    assert "重置参考图" in html
+    assert "C919 E-TRAS / 反推参考路径" in html
+    assert "C919 E-TRAS 反推参考控制逻辑图 · Sandbox Draft Canvas" not in html
+    assert "Reference sample pack" not in html
+    assert '<details class="workbench-reference-sample-pack">' not in html
+    assert '.workbench-editable-canvas[data-reference-proof-mode="empty_authoring"] .workbench-canvas-first-guide' in css
+    assert '.workbench-reference-circuit-guide-strip' in css
+    assert '.workbench-reference-circuit-title' in css
+
+
+def test_reference_logic_proof_strip_and_highlights_are_styled() -> None:
+    css = _css()
+
+    assert ".workbench-reference-proof-strip" in css
+    assert ".workbench-reference-proof-strip button" in css
+    assert '.workbench-reference-proof-strip button[aria-pressed="true"]' in css
+    assert '.workbench-editable-node[data-proof-highlight="true"]' in css
+    assert '.workbench-editable-edges path[data-edge-proof-highlight="true"]' in css
+    assert "data-edge-proof-highlight" in css
+
+
+def test_reference_logic_rule_summary_has_inspector_surface() -> None:
     html = _html()
 
-    sample_pack = re.search(
-        r'<details class="workbench-reference-sample-pack">(.*?)</details>',
+    assert 'id="workbench-inspector-rule-summary"' in html
+    assert 'data-rule-summary="L4 同时要求' in html
+    assert 'data-rule-summary="L1 同时要求' in html
+
+
+def test_canvas_dominant_viewport_contracts_are_declared() -> None:
+    html = _html()
+    css = _css()
+    js = _js()
+
+    assert 'data-canvas-dominant="true"' in html
+    assert 'data-guide-density="compact"' in html
+    assert 'data-inspector-layout="overlay_rail"' in html
+    assert 'data-free-canvas-pan="enabled"' in html
+    assert '.workbench-editable-main[data-canvas-dominant="true"]' in css
+    assert '.workbench-evidence-inspector[data-inspector-layout="overlay_rail"]' in css
+    assert '.workbench-canvas-first-guide[data-guide-density="compact"]' in css
+    assert "grid-template-columns: minmax(0, 1fr)" in css
+    assert "function shouldBeginViewportPan" in js
+    assert "direct_blank_canvas_drag" in js
+    assert "wheel_mouse_anchor" in js
+
+
+def test_reference_graph_readability_contracts_are_declared() -> None:
+    html = _html()
+    css = _css()
+    js = _js()
+
+    assert 'data-guide-entry="primary"' in html
+    assert "新手指引" in html
+    assert "function nodeDisplayLabel" in js
+    assert "function editableNodeRoutePosition" in js
+    assert "halfXPercent" in js
+    assert "data-node-label" in js
+    assert ".workbench-reference-node-op" in css
+    assert ".workbench-editor-toolstrip" in css
+    assert "bottom: 0.65rem" in css
+    assert ".workbench-reference-proof-strip" in css
+    assert "bottom: 3.45rem" in css
+
+
+def test_reference_graph_chinese_first_wire_visibility_contracts_are_declared() -> None:
+    html = _html()
+    css = _css()
+    js = _js()
+
+    for copy in (
+        "无线电高度低于 6 英尺",
+        "反推未抑制",
+        "L1 高度/SW1 允许门",
+        "L4 部署/油门锁门",
+        "油门锁释放指令",
+        "证据检查器",
+        "候选节点名称",
+        "规则摘要",
+        "运行沙箱",
+        "变更包",
+    ):
+        assert copy in html or copy in js
+
+    assert 'data-inspector-open="false"' in html
+    assert "function setInspectorOpen" in js
+    assert "marker-end" in js
+    assert "--reference-wire-color" in css
+    assert "stroke-width: 5.25" in css
+    assert ".workbench-editable-edges marker" in css
+    for english_copy in (
+        "Evidence Inspector",
+        "Candidate label",
+        "Operation",
+        "Rule summary",
+        "Run sandbox",
+        "ChangeRequest packet",
+        "Baseline loaded",
+        "Draft editable",
+        "Selected Debug Timeline",
+    ):
+        assert english_copy not in html
+
+
+def test_reference_logic_proof_canvas_is_low_text() -> None:
+    html = _html()
+    node_bodies = re.findall(
+        r'<button[^>]+class="workbench-editable-node"[^>]*>(.*?)</button>',
         html,
         re.DOTALL,
     )
-    assert sample_pack is not None
-    assert 'id="workbench-circuit-hero-mount"' in sample_pack.group(0)
-    assert "Reference sample pack" in sample_pack.group(0)
+
+    assert len(node_bodies) >= 18
+    for body in node_bodies:
+        text = re.sub(r"<[^>]+>", " ", body)
+        normalized = " ".join(text.split())
+        assert normalized in {"IN", "OUT", "AND", "OR", "CMP", "BTW", "DLY", "LAT", "LCH"}
+        assert "logic" not in normalized.lower()
+        assert "source" not in normalized.lower()
+        assert len(normalized) <= 4
 
 
 def test_css_declares_editable_workbench_layout() -> None:
@@ -108,10 +404,162 @@ def test_css_declares_editable_workbench_layout() -> None:
 
     assert ".workbench-editable-shell" in css
     assert ".workbench-editable-main" in css
-    assert "grid-template-columns: 46px minmax(420px, 1fr) minmax(260px, 340px)" in css
+    assert "grid-template-rows: minmax(0, 1fr) auto auto" in css
+    assert "grid-template-columns: minmax(0, 1fr)" in css
+    assert '.workbench-editable-main[data-canvas-dominant="true"]' in css
+    assert ".workbench-editor-toolbar" in css
     assert ".workbench-evidence-inspector" in css
+    assert '.workbench-evidence-inspector[data-inspector-layout="overlay_rail"]' in css
+    assert "grid-template-columns: repeat(5, minmax(0, 1fr))" in css
+    assert "height: calc(100vh - 0.8rem)" in css
+    assert "overflow: hidden" in css
+    assert "overflow-y: auto" in css
     assert ".workbench-sandbox-timeline-strip" in css
     assert ".workbench-selected-debug-timeline" in css
+
+
+def test_cockpit_editor_skin_makes_canvas_the_primary_work_surface() -> None:
+    html = _html()
+    css = _css()
+    js = _js()
+
+    assert 'data-workbench-skin="cockpit-editor"' in html
+    assert 'data-hud-role="cockpit-status"' in html
+    assert 'data-hud-primary="canvas"' in html
+    assert 'id="workbench-cockpit-guide-coach"' in html
+    assert 'id="workbench-cockpit-guide-coach-title"' in html
+    assert 'id="workbench-cockpit-guide-coach-detail"' in html
+    assert 'id="workbench-cockpit-inspector-close-btn"' in html
+    assert 'aria-label="关闭检查器"' in html
+    assert "参考控制器 · 已认证" in html
+    assert "初始化" in html
+    assert "动作" in html
+    assert "撤销" in html
+    assert "重做" in html
+    assert "节点" in html
+    assert "连线" in html
+    assert "名义着陆" in html
+    assert "SW1 着陆卡滞" in html
+    assert "未运行" in html
+    assert "仅选择" in html
+    assert "证据缺口" in html
+
+    for internal_copy in (
+        "reference-deploy-controller · certified",
+        ">ui_draft_pending<",
+        ">init<",
+        "actions <b",
+        "undo <b",
+        "redo <b",
+        "nodes <b",
+        "edges <b",
+        ">nominal_landing<",
+        ">sw1_stuck_at_touchdown<",
+        ">not_run<",
+        ">selection_only<",
+        ">evidence_gap<",
+    ):
+        assert internal_copy not in html
+
+    assert "--workbench-cockpit-bg" in css
+    assert "--workbench-cockpit-panel" in css
+    assert "--workbench-cockpit-accent" in css
+    assert "--workbench-cockpit-active" in css
+    assert '.workbench-editable-shell[data-workbench-skin="cockpit-editor"]' in css
+    assert '.workbench-editable-status-bar[data-hud-role="cockpit-status"]' in css
+    assert ".workbench-cockpit-guide-coach" in css
+    assert ".workbench-cockpit-guide-coach[hidden]" in css
+    assert ".workbench-cockpit-inspector-close" in css
+    assert "function displayStatusLabel" in js
+    assert "function renderCockpitGuideCoach" in js
+    assert "function closeCockpitInspectorOverlay" in js
+
+
+def test_phase10_secondary_status_summaries_use_chinese_display_labels() -> None:
+    js = _js()
+
+    for expected in (
+        'displayStatusLabel(summary.status || "unknown")',
+        'displayStatusLabel(summary.status || "not_run")',
+        'displayStatusLabel(summary.coverage_status || "missing")',
+        'displayStatusLabel(summary.validation_status || "not_run")',
+        'displayStatusLabel(summary.scenario_id || "nominal_landing")',
+        'displayStatusLabel(summary.diff_verdict || "not_run")',
+        'displayStatusLabel(summary.trace_link_status || "selection_only")',
+        'displayStatusLabel(summary.verdict || "not_run")',
+        'displayStatusLabel(summary.review_readiness || "run_required")',
+        'displayStatusLabel(summary.archive_state || "not_archive_ready")',
+        'displayStatusLabel(summary.classification || "needs_evidence")',
+        'displayStatusLabel(summary.sandbox_report_freshness || "missing")',
+    ):
+        assert expected in js
+
+    assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'truth_effect: "none"' in js
+
+
+def test_css_declares_compact_simulink_like_canvas_blocks() -> None:
+    css = _css()
+
+    assert "width: 138px" in css
+    assert "width: 96px" in css
+    assert "min-height: 48px" in css
+    assert "border-radius: 3px" in css
+    assert "font-size: 0.62rem" in css
+    assert "width: 10px" in css
+    assert "height: 10px" in css
+    assert "border-radius: 1px" in css
+    assert "data-simulink-skin" in _html()
+    assert "stroke-dasharray: 6 4" in css
+    assert ".workbench-edge-label" in css
+    assert "display: none" in css
+
+
+def test_simulink_blocks_hide_verbose_node_text_in_canvas_body() -> None:
+    html = _html()
+    node_bodies = re.findall(
+        r'<button[^>]+class="workbench-editable-node"[^>]*>(.*?)</button>',
+        html,
+        re.DOTALL,
+    )
+
+    assert node_bodies
+    for body in node_bodies:
+        text = re.sub(r"<[^>]+>", " ", body)
+        assert "rules" not in text
+        assert "control_system_spec" not in text
+        assert "binding" not in text.lower()
+        assert re.search(r"\b(IN|OUT|AND|OR|CMP|BTW|DLY|LAT|LCH)\b", text)
+
+
+def test_main_toolbar_is_compact_with_tooltips_and_deferred_toolstrip() -> None:
+    html = _html()
+    css = _css()
+
+    required_main_tools = {
+        "select": "选择：点选 block 或信号线",
+        "node": "新建 block：使用当前原语添加节点",
+        "edge": "连线：从输出端口拖到输入端口",
+        "pan": "平移/缩放：拖动画布或使用缩放工具",
+        "remove": "删除：移除选中的节点或连线",
+    }
+    for tool, tooltip in required_main_tools.items():
+        assert f'data-editor-tool="{tool}"' in html
+        assert f'data-tool-primary="true"' in html
+        assert f'data-tooltip="{tooltip}"' in html
+    assert 'id="workbench-open-command-palette-btn"' in html
+    assert 'data-tool-primary="true"' in html
+    assert 'data-tooltip="命令面板：搜索并执行工作台命令"' in html
+    assert 'id="workbench-editor-toolstrip"' in html
+    assert 'data-toolstrip-group="edit-history"' in html
+    assert 'data-toolstrip-group="catalog"' in html
+    assert 'data-toolstrip-group="library"' in html
+    assert ".workbench-editor-toolstrip" in css
+    assert ".workbench-tooltip-surface" in css
+    assert 'data-viewport-tool="zoom-in">Z+' not in html
+    assert 'data-viewport-tool="fit-selection">FIT' not in html
+    assert ">CAP</button>" not in html
+    assert ">INS</button>" not in html
 
 
 def test_editor_command_palette_controls_are_exposed_as_sandbox_only_ui() -> None:
@@ -321,7 +769,7 @@ def test_workspace_document_status_controls_are_sandbox_only_ui() -> None:
     assert 'id="workbench-workspace-document-action-count"' in html
     assert 'id="workbench-workspace-document-undo-depth"' in html
     assert 'id="workbench-workspace-document-redo-depth"' in html
-    assert "Workspace document is sandbox evidence only. Truth effect: none." in html
+    assert "工作区文档仅作为沙箱证据。真值影响：无。" in html
     assert ".workbench-workspace-document-status" in css
     assert ".workbench-workspace-document-facts" in css
 
@@ -334,7 +782,7 @@ def test_canvas_interaction_status_controls_are_sandbox_only_ui() -> None:
     assert 'id="workbench-canvas-selected-node-count"' in html
     assert 'id="workbench-canvas-selected-edge-count"' in html
     assert 'id="workbench-canvas-last-action"' in html
-    assert "Canvas interactions are sandbox evidence only. Truth effect: none." in html
+    assert "画布交互仅作为沙箱证据。真值影响：无。" in html
     assert ".workbench-canvas-interaction-status" in css
     assert ".workbench-canvas-interaction-facts" in css
 
@@ -348,6 +796,18 @@ def test_js_wires_draft_derivation_node_selection_and_evidence_api() -> None:
     assert "data-editable-node-id" in js
     assert "workbench-inspector-node-label" in js
     assert "data-evidence-api" in js
+
+
+def test_js_wires_reference_proof_buttons_and_rule_summary() -> None:
+    js = _js()
+
+    assert "const referenceProofButtons" in js
+    assert "function applyReferenceProofPath" in js
+    assert "button.addEventListener(\"click\"" in js
+    assert "applyReferenceProofPath(button.getAttribute(\"data-reference-proof-target\"))" in js
+    assert "workbench-inspector-rule-summary" in js
+    assert "data-rule-summary" in js
+    assert "clearReferenceProofHighlight()" in js
 
 
 def test_js_wires_component_library_round_trip_as_sandbox_only_metadata() -> None:

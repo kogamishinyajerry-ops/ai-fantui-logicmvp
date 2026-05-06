@@ -30,6 +30,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+from pathlib import Path
 from typing import Any, Iterator
 
 import pytest
@@ -44,6 +45,7 @@ from well_harness.workbench_large_graph_stress_pack import (  # noqa: E402
 )
 
 _OPEN_PAGES: list[Any] = []
+_ARTIFACT_DIR = Path("artifacts/workbench-goal-canvas-panel")
 
 
 @pytest.fixture(scope="module")
@@ -77,6 +79,216 @@ def _new_page_with_error_capture(browser):
     errors: list[str] = []
     page.on("pageerror", lambda exc: errors.append(str(exc)))
     return page, errors
+
+
+def _open_workbench_inspector_mode(page: Any, mode: str) -> None:
+    if mode not in {"node", "run", "evidence", "handoff"}:
+        raise ValueError(f"unknown workbench inspector mode: {mode}")
+    page.wait_for_selector("#workbench-evidence-inspector", state="attached")
+    page.evaluate(
+        """
+        (mode) => {
+          const inspector = document.getElementById('workbench-evidence-inspector');
+          if (!inspector) return;
+          inspector.setAttribute('data-inspector-open', 'true');
+          inspector.setAttribute('data-inspector-mode-active', mode);
+          document.body.setAttribute('data-workbench-inspector-open', 'true');
+          for (const button of document.querySelectorAll('[data-inspector-mode]')) {
+            const isActive = button.getAttribute('data-inspector-mode') === mode;
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            button.setAttribute('tabindex', isActive ? '0' : '-1');
+          }
+          for (const panel of document.querySelectorAll('[data-inspector-panel]')) {
+            const isActive = panel.getAttribute('data-inspector-panel') === mode;
+            panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+          }
+        }
+        """,
+        mode,
+    )
+    page.click(f'[data-inspector-mode="{mode}"]')
+    page.wait_for_function(
+        """
+        (mode) => {
+          const inspector = document.getElementById('workbench-evidence-inspector');
+          const panel = document.querySelector(`[data-inspector-panel="${mode}"]`);
+          return inspector
+            && panel
+            && inspector.getAttribute('data-inspector-open') === 'true'
+            && inspector.getAttribute('data-inspector-mode-active') === mode
+            && panel.getAttribute('aria-hidden') === 'false';
+        }
+        """,
+        arg=mode,
+    )
+
+
+def _close_workbench_inspector(page: Any) -> None:
+    page.evaluate(
+        """
+        () => {
+          document.getElementById('workbench-evidence-inspector')
+            ?.setAttribute('data-inspector-open', 'false');
+          document.body.setAttribute('data-workbench-inspector-open', 'false');
+        }
+        """
+    )
+
+
+def _click_workbench_inspector_control(
+    page: Any,
+    mode: str,
+    selector: str,
+    *args: Any,
+    close_after: bool = False,
+    **kwargs: Any,
+) -> Any:
+    _open_workbench_inspector_mode(page, mode)
+    result = page.click(selector, *args, **kwargs)
+    if close_after:
+        _close_workbench_inspector(page)
+    return result
+
+
+def _fill_workbench_inspector_control(
+    page: Any,
+    mode: str,
+    selector: str,
+    *args: Any,
+    **kwargs: Any,
+) -> Any:
+    _open_workbench_inspector_mode(page, mode)
+    return page.fill(selector, *args, **kwargs)
+
+
+def _select_workbench_inspector_control(
+    page: Any,
+    mode: str,
+    selector: str,
+    *args: Any,
+    **kwargs: Any,
+) -> Any:
+    _open_workbench_inspector_mode(page, mode)
+    return page.select_option(selector, *args, **kwargs)
+
+
+def _check_workbench_inspector_control(
+    page: Any,
+    mode: str,
+    selector: str,
+    *args: Any,
+    **kwargs: Any,
+) -> Any:
+    _open_workbench_inspector_mode(page, mode)
+    return page.check(selector, *args, **kwargs)
+
+
+def _wait_for_workbench_inspector_control(
+    page: Any,
+    mode: str,
+    selector: str,
+    *args: Any,
+    **kwargs: Any,
+) -> Any:
+    _open_workbench_inspector_mode(page, mode)
+    return page.wait_for_selector(selector, *args, **kwargs)
+
+
+def _click_with_workbench_inspector_closed(
+    page: Any,
+    selector: str,
+    *args: Any,
+    **kwargs: Any,
+) -> Any:
+    _close_workbench_inspector(page)
+    return page.click(selector, *args, **kwargs)
+
+
+def _fill_workbench_handoff_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _fill_workbench_inspector_control(page, "handoff", selector, *args, **kwargs)
+
+
+def _click_workbench_handoff_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _click_workbench_inspector_control(
+        page,
+        "handoff",
+        selector,
+        *args,
+        close_after=selector == "#workbench-export-draft-btn",
+        **kwargs,
+    )
+
+
+def _wait_for_workbench_handoff_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _wait_for_workbench_inspector_control(page, "handoff", selector, *args, **kwargs)
+
+
+def _select_workbench_handoff_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _select_workbench_inspector_control(page, "handoff", selector, *args, **kwargs)
+
+
+def _check_workbench_handoff_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _check_workbench_inspector_control(page, "handoff", selector, *args, **kwargs)
+
+
+def _fill_workbench_evidence_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _fill_workbench_inspector_control(page, "evidence", selector, *args, **kwargs)
+
+
+def _click_workbench_evidence_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _click_workbench_inspector_control(page, "evidence", selector, *args, **kwargs)
+
+
+def _select_workbench_evidence_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _select_workbench_inspector_control(page, "evidence", selector, *args, **kwargs)
+
+
+def _wait_for_workbench_evidence_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _wait_for_workbench_inspector_control(page, "evidence", selector, *args, **kwargs)
+
+
+def _check_workbench_evidence_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _check_workbench_inspector_control(page, "evidence", selector, *args, **kwargs)
+
+
+def _fill_workbench_run_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _fill_workbench_inspector_control(page, "run", selector, *args, **kwargs)
+
+
+def _click_workbench_run_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _click_workbench_inspector_control(page, "run", selector, *args, **kwargs)
+
+
+def _select_workbench_run_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _select_workbench_inspector_control(page, "run", selector, *args, **kwargs)
+
+
+def _check_workbench_run_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _check_workbench_inspector_control(page, "run", selector, *args, **kwargs)
+
+
+def _wait_for_workbench_run_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _wait_for_workbench_inspector_control(page, "run", selector, *args, **kwargs)
+
+
+def _fill_workbench_node_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _fill_workbench_inspector_control(page, "node", selector, *args, **kwargs)
+
+
+def _click_workbench_node_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _click_workbench_inspector_control(page, "node", selector, *args, **kwargs)
+
+
+def _select_workbench_node_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _select_workbench_inspector_control(page, "node", selector, *args, **kwargs)
+
+
+def _check_workbench_node_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _check_workbench_inspector_control(page, "node", selector, *args, **kwargs)
+
+
+def _wait_for_workbench_node_control(page: Any, selector: str, *args: Any, **kwargs: Any) -> Any:
+    return _wait_for_workbench_inspector_control(page, "node", selector, *args, **kwargs)
 
 
 def _goto_shell_workbench(page, url: str):
@@ -127,6 +339,16 @@ def _set_archive_buffer_value(page: Any, archive_json: str) -> None:
         """,
         archive_json,
     )
+
+
+def _click_workbench_port_handle(page: Any, owner_id: str, direction: str) -> None:
+    selector = (
+        f'[data-port-handle-owner-id="{owner_id}"]'
+        f'[data-port-handle-direction="{direction}"]'
+    )
+    handle = page.locator(selector)
+    handle.scroll_into_view_if_needed()
+    handle.dispatch_event("click")
 
 
 # ─── E11-08 closure: identity affordance JS toggle (4 tests) ─────────
@@ -208,6 +430,610 @@ def test_shell_workbench_boots_without_js_errors(demo_server, browser):
     assert errors == [], f"shell boot threw JS errors: {errors}"
 
 
+def test_workbench_canvas_first_default_and_explicit_reference_proof_load(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    first_load = page.evaluate(
+        """
+        () => {
+          const required = [
+            'ra_ft', 'sw1', 'not_inhibited', 'not_deployed', 'logic1',
+            'tls_unlocked', 'sw2', 'engine_running', 'aircraft_on_ground',
+            'eec_enable', 'logic2', 'n1k_limit', 'tra_deploy',
+            'pls_unlocked', 'logic3', 'vdt90', 'logic4', 'thr_lock',
+          ];
+          const visibleReferenceNodes = required.filter((id) => {
+            const node = document.querySelector(`[data-editable-node-id="${id}"]`);
+            if (!node) return false;
+            const rect = node.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+          });
+          const guide = document.querySelector('#workbench-canvas-first-guide');
+          const guideRect = guide ? guide.getBoundingClientRect() : null;
+          const edgePaths = Array.from(document.querySelectorAll('[data-editable-edge-id]'));
+          const visibleProofButtons = Array.from(document.querySelectorAll('[data-reference-proof-target]'))
+            .filter((button) => {
+              const rect = button.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0;
+            })
+            .map((button) => button.getAttribute('data-reference-proof-target'));
+          return {
+            title: document.querySelector('#workbench-circuit-hero-title')?.textContent.trim() || '',
+            circuitTitle: document.querySelector('#workbench-reference-circuit-title')?.textContent.trim() || '',
+            graph: document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-graph') || '',
+            mode: document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-proof-mode') || '',
+            canvasHeight: document.querySelector('#workbench-editable-canvas')?.getBoundingClientRect().height || 0,
+            onboardingState: document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-state') || '',
+            onboardingPanelHidden: Boolean(document.querySelector('#workbench-goal-canvas-panel')?.hidden),
+            reopenGuideVisible: (() => {
+              const button = document.querySelector('#workbench-open-onboarding-guide-btn');
+              if (!button || button.hidden) return false;
+              const rect = button.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0;
+            })(),
+            onboardingHighlightCount: document.querySelectorAll('[data-onboarding-highlight="true"]').length,
+            canvasNoteCount: document.querySelectorAll('.workbench-editable-canvas-note').length,
+            requiredCount: required.length,
+            visibleReferenceNodes,
+            edgeCount: edgePaths.length,
+            visibleProofButtons,
+            startText: document.querySelector('#workbench-canvas-first-start-btn')?.textContent.trim() || '',
+            loadText: document.querySelector('#workbench-load-reference-proof-btn')?.textContent.trim() || '',
+            guideText: guide?.textContent || '',
+            guideHeight: guideRect ? guideRect.height : 0,
+            guideStripCount: document.querySelectorAll('#workbench-reference-circuit-guide-strip li').length,
+          };
+        }
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert first_load["title"].startswith("控制逻辑画布工作台")
+    assert first_load["circuitTitle"] == "C919 E-TRAS / 反推逻辑控制电路"
+    assert first_load["graph"] == "c919-etras-thrust-reverser-proof"
+    assert first_load["mode"] == "default_visible"
+    assert first_load["canvasHeight"] >= 340
+    assert first_load["onboardingState"] == "collapsed"
+    assert first_load["onboardingPanelHidden"] is True
+    assert first_load["reopenGuideVisible"] is True
+    assert first_load["onboardingHighlightCount"] == 0
+    assert first_load["canvasNoteCount"] == 0
+    assert len(first_load["visibleReferenceNodes"]) == first_load["requiredCount"]
+    assert first_load["edgeCount"] >= 18
+    assert set(first_load["visibleProofButtons"]) == {"logic1", "logic3", "logic4", "thr_lock"}
+    assert "新建空白电路" in first_load["startText"]
+    assert "重置参考图" in first_load["loadText"]
+    assert "看全图" in first_load["guideText"]
+    assert "点节点" in first_load["guideText"]
+    assert "运行" in first_load["guideText"]
+    assert "空白" in first_load["guideText"]
+    assert first_load["guideStripCount"] == 4
+    assert 0 < first_load["guideHeight"] <= 92
+
+    page.click("#workbench-load-reference-proof-btn")
+    rendered = page.evaluate(
+        """
+        () => {
+          const required = [
+            'ra_ft', 'sw1', 'not_inhibited', 'not_deployed', 'logic1',
+            'tls_unlocked', 'sw2', 'engine_running', 'aircraft_on_ground',
+            'eec_enable', 'logic2', 'n1k_limit', 'tra_deploy',
+            'pls_unlocked', 'logic3', 'vdt90', 'logic4', 'thr_lock',
+          ];
+          const nodes = required.map((id) => document.querySelector(`[data-editable-node-id="${id}"]`));
+          const visibleNodes = nodes.filter((node) => {
+            if (!node) return false;
+            const rect = node.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+          });
+          const nodeTexts = Array.from(document.querySelectorAll('.workbench-editable-node'))
+            .map((node) => node.textContent.trim());
+          const edgePaths = Array.from(document.querySelectorAll('[data-editable-edge-id]'));
+          return {
+            title: document.querySelector('#workbench-circuit-hero-title')?.textContent.trim() || '',
+            graph: document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-graph') || '',
+            mode: document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-proof-mode') || '',
+            requiredCount: required.length,
+            visibleCount: visibleNodes.length,
+            nodeTexts,
+            edgeCount: edgePaths.length,
+            edgePaths: edgePaths.map((path) => path.getAttribute('d') || ''),
+            proofButtonCount: document.querySelectorAll('[data-reference-proof-target]').length,
+          };
+        }
+        """
+    )
+
+    assert rendered["title"].startswith("控制逻辑画布工作台")
+    assert rendered["graph"] == "c919-etras-thrust-reverser-proof"
+    assert rendered["mode"] == "default_visible"
+    assert rendered["visibleCount"] == rendered["requiredCount"]
+    assert rendered["edgeCount"] >= 18
+    assert rendered["proofButtonCount"] == 4
+    op_only_labels = {"IN", "OUT", "AND", "OR", "CMP", "BTW", "DLY", "LAT", "LCH"}
+    assert all(text not in op_only_labels for text in rendered["nodeTexts"])
+    assert any("无线电高度" in text and "6" in text for text in rendered["nodeTexts"])
+    assert any("油门锁" in text for text in rendered["nodeTexts"])
+    assert all("C" not in path for path in rendered["edgePaths"])
+    assert all("L" in path for path in rendered["edgePaths"])
+
+    page.click('[data-reference-proof-target="logic4"]')
+    highlighted = page.evaluate(
+        """
+        () => ({
+          buttonPressed: document.querySelector('[data-reference-proof-target="logic4"]')
+            ?.getAttribute('aria-pressed'),
+          highlightedNodes: Array.from(document.querySelectorAll('[data-proof-highlight="true"]'))
+            .map((node) => node.getAttribute('data-editable-node-id'))
+            .filter(Boolean),
+          highlightedEdges: Array.from(document.querySelectorAll('[data-edge-proof-highlight="true"]'))
+            .map((edge) => edge.getAttribute('data-editable-edge-id'))
+            .filter(Boolean),
+          inspectorTarget: document.querySelector('#workbench-inspector-node-id')?.textContent.trim(),
+          ruleSummary: document.querySelector('#workbench-inspector-rule-summary')?.textContent.trim() || '',
+          detail: document.querySelector('#workbench-inspector-evidence-detail')?.textContent || '',
+          status: document.querySelector('#workbench-graph-validation-status')?.textContent || '',
+        })
+        """
+    )
+    assert highlighted["buttonPressed"] == "true"
+    assert {"logic1", "logic2", "logic3", "logic4", "vdt90"}.issubset(set(highlighted["highlightedNodes"]))
+    assert len(highlighted["highlightedEdges"]) >= 4
+    assert highlighted["inspectorTarget"] == "logic4"
+    assert "VDT 达到 90% 展开" in highlighted["ruleSummary"]
+    assert "90% 展开" in highlighted["detail"]
+    assert "proof path logic4" in highlighted["status"]
+
+    page.click("#workbench-start-empty-draft-btn")
+    empty_canvas_state = page.evaluate(
+        """
+        () => ({
+          mode: document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-proof-mode') || '',
+          highlightedNodes: document.querySelectorAll('[data-proof-highlight="true"]').length,
+          highlightedEdges: document.querySelectorAll('[data-edge-proof-highlight="true"]').length,
+          pressedProofButtons: document.querySelectorAll('[data-reference-proof-target][aria-pressed="true"]').length,
+          authoringMode: (() => {
+            const buffer = document.querySelector('#workbench-draft-json-buffer');
+            try {
+              return JSON.parse(buffer?.value || '{}').canvas_authoring_mode || '';
+            } catch (error) {
+              return '';
+            }
+          })(),
+        })
+        """
+    )
+    assert empty_canvas_state["mode"] == "empty_authoring"
+    assert empty_canvas_state["highlightedNodes"] == 0
+    assert empty_canvas_state["highlightedEdges"] == 0
+    assert empty_canvas_state["pressedProofButtons"] == 0
+    assert empty_canvas_state["authoringMode"] == "empty_authoring"
+
+
+def test_workbench_new_engineer_onboarding_guide_highlights_full_flow(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    collapsed = page.evaluate(
+        """
+        () => ({
+          panelHidden: Boolean(document.querySelector('#workbench-goal-canvas-panel')?.hidden),
+          state: document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-state') || '',
+          reopenVisible: (() => {
+            const button = document.querySelector('#workbench-open-onboarding-guide-btn');
+            if (!button || button.hidden) return false;
+            const rect = button.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+          })(),
+          highlightedCount: document.querySelectorAll('[data-onboarding-highlight="true"]').length,
+        })
+        """
+    )
+    assert collapsed == {
+        "panelHidden": True,
+        "state": "collapsed",
+        "reopenVisible": True,
+        "highlightedCount": 0,
+    }
+
+    page.click("#workbench-open-onboarding-guide-btn")
+    page.wait_for_function(
+        "() => !document.querySelector('#workbench-goal-canvas-panel')?.hidden"
+    )
+
+    initial = page.evaluate(
+        """
+        () => {
+          const statusChip = document.querySelector('.workbench-editable-status-chip');
+          const bg = statusChip ? getComputedStyle(statusChip).backgroundColor : '';
+          const rgb = (bg.match(/\\d+(?:\\.\\d+)?/g) || []).slice(0, 3).map(Number);
+          const brightness = rgb.length === 3 ? Math.round((rgb[0] + rgb[1] + rgb[2]) / 3) : 0;
+          return {
+            skin: document.querySelector('#workbench-editable-shell')?.getAttribute('data-workbench-skin') || '',
+            density: document.querySelector('#workbench-editable-status-bar')?.getAttribute('data-status-density') || '',
+            brightness,
+            panelHidden: Boolean(document.querySelector('#workbench-goal-canvas-panel')?.hidden),
+            panelState: document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-state') || '',
+            reopenHidden: Boolean(document.querySelector('#workbench-open-onboarding-guide-btn')?.hidden),
+            activeStep: document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-active-step') || '',
+            progress: document.querySelector('#workbench-onboarding-progress')?.textContent.trim() || '',
+            actionText: document.querySelector('#workbench-onboarding-action-btn')?.textContent.trim() || '',
+            steps: Array.from(document.querySelectorAll('[data-onboarding-step]'))
+              .map((step) => step.getAttribute('data-onboarding-step')),
+            highlightedIds: Array.from(document.querySelectorAll('[data-onboarding-highlight="true"]'))
+              .map((node) => node.id || node.getAttribute('data-editable-node-id') || node.getAttribute('data-reference-proof-target') || node.getAttribute('data-editor-tool') || ''),
+          };
+        }
+        """
+    )
+    assert errors == [], f"page JS errors: {errors}"
+    assert initial["skin"] == "cockpit-editor"
+    assert initial["density"] == "compact"
+    assert initial["brightness"] < 70
+    assert initial["panelHidden"] is False
+    assert initial["panelState"] == "expanded"
+    assert initial["reopenHidden"] is True
+    assert initial["activeStep"] == "overview"
+    assert initial["progress"] == "1 / 7"
+    assert initial["actionText"] == "高亮全图"
+    assert initial["steps"] == [
+        "overview",
+        "inspect_node",
+        "proof_path",
+        "blank_canvas",
+        "add_node",
+        "wire",
+        "run_sandbox",
+    ]
+    assert "workbench-editable-canvas" in initial["highlightedIds"]
+
+    page.click("#workbench-close-onboarding-guide-btn")
+    closed = page.evaluate(
+        """
+        () => ({
+          panelHidden: Boolean(document.querySelector('#workbench-goal-canvas-panel')?.hidden),
+          state: document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-state') || '',
+          reopenHidden: Boolean(document.querySelector('#workbench-open-onboarding-guide-btn')?.hidden),
+          highlightedCount: document.querySelectorAll('[data-onboarding-highlight="true"]').length,
+        })
+        """
+    )
+    assert closed == {
+        "panelHidden": True,
+        "state": "collapsed",
+        "reopenHidden": False,
+        "highlightedCount": 0,
+    }
+    page.click("#workbench-open-onboarding-guide-btn")
+    page.wait_for_function(
+        "() => document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-state') === 'expanded'"
+    )
+
+    page.click("#workbench-onboarding-next-btn")
+    inspect_step = page.evaluate(
+        """
+        () => ({
+          activeStep: document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-active-step') || '',
+          progress: document.querySelector('#workbench-onboarding-progress')?.textContent.trim() || '',
+          highlightedIds: Array.from(document.querySelectorAll('[data-onboarding-highlight="true"]'))
+            .map((node) => node.id || node.getAttribute('data-editable-node-id') || ''),
+        })
+        """
+    )
+    assert inspect_step["activeStep"] == "inspect_node"
+    assert inspect_step["progress"] == "2 / 7"
+    assert "logic1" in inspect_step["highlightedIds"]
+
+    page.click("#workbench-onboarding-action-btn")
+    assert page.locator("#workbench-inspector-node-id").inner_text() == "logic1"
+
+    page.click("#workbench-onboarding-next-btn")
+    assert page.locator("#workbench-goal-canvas-panel").get_attribute("data-onboarding-active-step") == "proof_path"
+    page.click("#workbench-onboarding-action-btn")
+    assert page.locator('[data-reference-proof-target="logic4"]').get_attribute("aria-pressed") == "true"
+    assert page.locator("#workbench-inspector-node-id").inner_text() == "logic4"
+    assert "VDT 达到 90% 展开" in page.locator("#workbench-inspector-rule-summary").inner_text()
+
+    page.click("#workbench-onboarding-next-btn")
+    assert page.locator("#workbench-goal-canvas-panel").get_attribute("data-onboarding-active-step") == "blank_canvas"
+    page.click("#workbench-onboarding-action-btn")
+    page.wait_for_function(
+        "() => document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-proof-mode') === 'empty_authoring'",
+    )
+    assert page.locator('[data-editable-node-id="logic1"]').count() == 0
+
+    page.click("#workbench-onboarding-next-btn")
+    assert page.locator("#workbench-goal-canvas-panel").get_attribute("data-onboarding-active-step") == "add_node"
+    page.click("#workbench-onboarding-action-btn")
+    page.wait_for_function("() => document.querySelectorAll('.workbench-editable-node').length === 1")
+
+    page.click("#workbench-onboarding-next-btn")
+    assert page.locator("#workbench-goal-canvas-panel").get_attribute("data-onboarding-active-step") == "wire"
+    page.click("#workbench-onboarding-action-btn")
+    assert page.locator('[data-editor-tool="edge"]').get_attribute("aria-pressed") == "true"
+    assert "edge" in page.locator("#workbench-graph-validation-status").inner_text().lower()
+
+    page.click("#workbench-onboarding-next-btn")
+    assert page.locator("#workbench-goal-canvas-panel").get_attribute("data-onboarding-active-step") == "run_sandbox"
+    page.click("#workbench-onboarding-action-btn")
+    assert page.locator("#workbench-evidence-inspector").get_attribute("data-inspector-mode-active") == "run"
+    page.wait_for_function(
+        """
+        () => {
+          const verdict = document.getElementById('workbench-diff-verdict')?.textContent.trim();
+          return ['equivalent', 'divergent', 'invalid_model', 'invalid_scenario'].includes(verdict);
+        }
+        """
+    )
+
+
+def test_workbench_reference_visual_edges_and_outsider_tutorial_are_readable(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    visual = page.evaluate(
+        """
+        () => {
+          const edgePaths = Array.from(document.querySelectorAll('[data-editable-edge-id]'));
+          const nodes = Array.from(document.querySelectorAll('[data-reference-proof-node]'));
+          const nodeRects = nodes.map((node) => ({
+            id: node.getAttribute('data-editable-node-id') || '',
+            rect: node.getBoundingClientRect(),
+          }));
+          const overlapSamples = [];
+          for (const path of edgePaths) {
+            if (typeof path.getTotalLength !== 'function' || typeof path.getPointAtLength !== 'function') {
+              continue;
+            }
+            const matrix = path.getScreenCTM();
+            if (!matrix) continue;
+            const sourceId = path.getAttribute('data-edge-source-id') || '';
+            const targetId = path.getAttribute('data-edge-target-id') || '';
+            const length = path.getTotalLength();
+            for (const ratio of [0.2, 0.35, 0.5, 0.65, 0.8]) {
+              const point = path.getPointAtLength(length * ratio);
+              const screenPoint = new DOMPoint(point.x, point.y).matrixTransform(matrix);
+              for (const item of nodeRects) {
+                if (!item.id || item.id === sourceId || item.id === targetId) continue;
+                const rect = item.rect;
+                const inset = 3;
+                if (
+                  screenPoint.x > rect.left + inset
+                  && screenPoint.x < rect.right - inset
+                  && screenPoint.y > rect.top + inset
+                  && screenPoint.y < rect.bottom - inset
+                ) {
+                  overlapSamples.push({
+                    edge: path.getAttribute('data-editable-edge-id') || '',
+                    node: item.id,
+                    x: Math.round(screenPoint.x),
+                    y: Math.round(screenPoint.y),
+                  });
+                }
+              }
+            }
+          }
+          const styles = edgePaths.map((path) => {
+            const style = getComputedStyle(path);
+            return {
+              edge: path.getAttribute('data-editable-edge-id') || '',
+              source: path.getAttribute('data-edge-source-id') || '',
+              target: path.getAttribute('data-edge-target-id') || '',
+              strokeWidth: Number.parseFloat(style.strokeWidth || '0') || 0,
+              dash: style.strokeDasharray,
+            };
+          });
+          const explainerText = document.querySelector('#workbench-outsider-circuit-explainer')?.textContent || '';
+          const guideDetail = document.querySelector('#workbench-onboarding-detail')?.textContent || '';
+          return {
+            mode: document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-proof-mode') || '',
+            edgeCount: edgePaths.length,
+            minStrokeWidth: Math.min(...styles.map((item) => item.strokeWidth)),
+            dashedEdges: styles.filter((item) => !['none', '0px'].includes(item.dash)).map((item) => `${item.edge}:${item.dash}`),
+            missingEndpoints: styles.filter((item) => !item.source || !item.target).map((item) => item.edge),
+            overlapSamples,
+            explainerText,
+            guideDetail,
+          };
+        }
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert visual["mode"] == "default_visible"
+    assert visual["edgeCount"] >= 18
+    assert visual["minStrokeWidth"] >= 3
+    assert visual["dashedEdges"] == []
+    assert visual["missingEndpoints"] == []
+    assert visual["overlapSamples"] == []
+    for copy in (
+        "这个逻辑电路究竟在实现什么功能",
+        "为什么这么画",
+        "输入信号开始每一步会发生什么",
+        "预期会如何触发",
+        "如果遇到故障会发生什么",
+        "仿真按钮按下之后会看到什么",
+        "仿真有什么价值",
+        "THR_LOCK",
+    ):
+        assert copy in visual["explainerText"]
+    assert "这个电路的功能" in visual["guideDetail"]
+
+
+def test_workbench_cockpit_editor_skin_keeps_canvas_primary_and_export_raw_fields(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    page.set_viewport_size({"width": 1440, "height": 980})
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+          window.localStorage.removeItem('well-harness-workbench-onboarding-guide-open-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    desktop = page.evaluate(
+        """
+        () => {
+          const rectFor = (selector) => {
+            const element = document.querySelector(selector);
+            if (!element) return { width: 0, height: 0, left: 0, right: 0, top: 0, bottom: 0 };
+            const rect = element.getBoundingClientRect();
+            return {
+              width: rect.width,
+              height: rect.height,
+              left: rect.left,
+              right: rect.right,
+              top: rect.top,
+              bottom: rect.bottom,
+            };
+          };
+          const shell = document.querySelector('#workbench-editable-shell');
+          const canvas = document.querySelector('#workbench-editable-canvas');
+          const scenarioSelect = document.querySelector('#workbench-sandbox-scenario-select');
+          const selectedOptionText = scenarioSelect
+            ? scenarioSelect.options[scenarioSelect.selectedIndex]?.textContent.trim() || ''
+            : '';
+          const shellRect = rectFor('#workbench-editable-shell');
+          const canvasRect = rectFor('#workbench-editable-canvas');
+          const statusRect = rectFor('#workbench-editable-status-bar');
+          const toolbarRect = rectFor('#workbench-editor-toolbar');
+          const inspectorRect = rectFor('#workbench-evidence-inspector');
+          const coachRect = rectFor('#workbench-cockpit-guide-coach');
+          return {
+            skin: shell?.getAttribute('data-workbench-skin') || '',
+            hudRole: document.querySelector('#workbench-editable-status-bar')?.getAttribute('data-hud-role') || '',
+            hudPrimary: document.querySelector('#workbench-editable-status-bar')?.getAttribute('data-hud-primary') || '',
+            shellRect,
+            canvasRect,
+            canvasAreaRatio: shellRect.width && shellRect.height
+              ? (canvasRect.width * canvasRect.height) / (shellRect.width * shellRect.height)
+              : 0,
+            statusHeight: statusRect.height,
+            toolbarWidth: toolbarRect.width,
+            inspectorOpen: document.querySelector('#workbench-evidence-inspector')?.getAttribute('data-inspector-open') || '',
+            inspectorWidth: inspectorRect.width,
+            coachVisible: Boolean(document.querySelector('#workbench-cockpit-guide-coach')) && coachRect.width > 0 && coachRect.height > 0,
+            coachText: document.querySelector('#workbench-cockpit-guide-coach')?.textContent || '',
+            revision: document.querySelector('#workbench-workspace-document-revision')?.textContent.trim() || '',
+            lastAction: document.querySelector('#workbench-canvas-last-action')?.textContent.trim() || '',
+            scenarioText: selectedOptionText,
+            scenarioValue: scenarioSelect?.value || '',
+            debugScenario: document.querySelector('#workbench-selected-debug-scenario')?.textContent.trim() || '',
+            debugVerdict: document.querySelector('#workbench-selected-debug-verdict')?.textContent.trim() || '',
+            debugLink: document.querySelector('#workbench-selected-debug-link-status')?.textContent.trim() || '',
+            debugHardware: document.querySelector('#workbench-selected-debug-hardware')?.textContent.trim() || '',
+            nodeCount: document.querySelectorAll('[data-reference-proof-node]').length,
+            edgeCount: document.querySelectorAll('[data-editable-edge-id]').length,
+          };
+        }
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert desktop["skin"] == "cockpit-editor"
+    assert desktop["hudRole"] == "cockpit-status"
+    assert desktop["hudPrimary"] == "canvas"
+    assert desktop["canvasAreaRatio"] >= 0.72
+    assert desktop["statusHeight"] <= 48
+    assert desktop["toolbarWidth"] <= 54
+    assert desktop["inspectorOpen"] == "false"
+    assert desktop["inspectorWidth"] <= 4
+    assert desktop["coachVisible"] is True
+    assert "新手" in desktop["coachText"]
+    assert "C919 E-TRAS" in desktop["coachText"]
+    assert desktop["revision"] == "本地草稿"
+    assert desktop["lastAction"] == "初始化"
+    assert desktop["scenarioText"] == "名义着陆"
+    assert desktop["scenarioValue"] == "nominal_landing"
+    assert desktop["debugScenario"] == "名义着陆"
+    assert desktop["debugVerdict"] == "未运行"
+    assert desktop["debugLink"] == "仅选择"
+    assert "证据缺口" in desktop["debugHardware"]
+    assert desktop["nodeCount"] >= 18
+    assert desktop["edgeCount"] >= 18
+
+    page.click("#workbench-open-command-palette-btn")
+    page.click('[data-command-palette-command="export_draft"]')
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert draft["selected_scenario_id"] == "nominal_landing"
+    assert any(
+        node.get("id") == "logic1"
+        and node.get("hardware_binding", {}).get("evidence_status") == "evidence_gap"
+        for node in draft.get("nodes", [])
+    )
+
+    page.click("#workbench-open-onboarding-guide-btn")
+    page.wait_for_function(
+        "() => document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-state') === 'expanded'"
+    )
+    assert page.locator("#workbench-cockpit-guide-coach").is_visible()
+    page.click("#workbench-close-onboarding-guide-btn")
+    page.wait_for_function(
+        "() => document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-state') === 'collapsed'"
+    )
+    assert page.locator("#workbench-open-onboarding-guide-btn").is_visible()
+
+    page.set_viewport_size({"width": 390, "height": 920})
+    page.wait_for_timeout(200)
+    mobile = page.evaluate(
+        """
+        () => {
+          const shell = document.querySelector('#workbench-editable-shell')?.getBoundingClientRect();
+          const canvas = document.querySelector('#workbench-editable-canvas')?.getBoundingClientRect();
+          const toolbar = document.querySelector('#workbench-editor-toolbar')?.getBoundingClientRect();
+          const inspector = document.querySelector('#workbench-evidence-inspector')?.getBoundingClientRect();
+          return {
+            canvasAreaRatio: shell && canvas ? (canvas.width * canvas.height) / (shell.width * shell.height) : 0,
+            toolbarWidth: toolbar ? toolbar.width : 0,
+            inspectorWidth: inspector ? inspector.width : 0,
+            coachVisible: (() => {
+              const coach = document.querySelector('#workbench-cockpit-guide-coach');
+              if (!coach || coach.hidden) return false;
+              const rect = coach.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0;
+            })(),
+          };
+        }
+        """
+    )
+    assert mobile["canvasAreaRatio"] >= 0.66
+    assert mobile["toolbarWidth"] <= 52
+    assert mobile["inspectorWidth"] <= 4
+    assert mobile["coachVisible"] is True
+
+
 def test_bundle_workbench_boots_without_js_errors(demo_server, browser):
     """E11-13: the bundle page must boot fully — sentinel guard does NOT
     block it because #workbench-packet-json IS present on /workbench/bundle."""
@@ -286,7 +1112,7 @@ def test_workbench_evidence_archive_exports_gate_claims_and_blockers(demo_server
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     page.wait_for_function(
         """
         () => {
@@ -301,8 +1127,11 @@ def test_workbench_evidence_archive_exports_gate_claims_and_blockers(demo_server
     assert errors == [], f"page JS errors: {errors}"
     assert archive["kind"] == "well-harness-workbench-evidence-archive"
     assert archive["archive_scope"] == "local_draft_download"
+    assert archive["gate_claims"]["hard_hold_policy"] == "required"
+    assert archive["gate_claims"]["default_pytest"] == "warning"
     assert archive["gate_claims"]["mypy_strict_clean"] == "not_claimed"
     assert archive["gate_claims"]["e2e_49_49"] == "not_claimed"
+    assert "workbench Tier 0 hard holds" in blocker_gates
     assert "PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json" in blocker_gates
     assert archive["red_line_metadata"]["truth_level_impact"] == "none"
     assert archive["red_line_metadata"]["dal_pssa_impact"] == "none"
@@ -318,7 +1147,7 @@ def test_workbench_interface_binding_round_trips_through_export_import_and_archi
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
-    page.fill("#workbench-interface-hardware-id", "TR-LRU-001")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "TR-LRU-001")
     page.click("#workbench-apply-interface-binding-btn")
     assert page.locator("#workbench-interface-binding-quality").inner_text() == "partial"
     assert (
@@ -326,18 +1155,18 @@ def test_workbench_interface_binding_round_trips_through_export_import_and_archi
         == "partial"
     )
 
-    page.fill("#workbench-interface-cable", "CBL-TR-A")
-    page.fill("#workbench-interface-connector", "J1")
-    page.fill("#workbench-interface-port-local", "logic1:out")
-    page.fill("#workbench-interface-port-peer", "TR-LRU-001:J1")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "CBL-TR-A")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "J1")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "logic1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "TR-LRU-001:J1")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
     assert page.locator("#workbench-interface-binding-quality").inner_text() == "complete"
     assert (
         page.locator('[data-editable-node-id="logic1"]').get_attribute("data-binding-quality")
         == "complete"
     )
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
 
     first_binding = draft["hardware_bindings"][0]
@@ -358,9 +1187,9 @@ def test_workbench_interface_binding_round_trips_through_export_import_and_archi
 
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
-    page.fill("#workbench-draft-json-buffer", json.dumps(draft))
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _fill_workbench_handoff_control(page, "#workbench-draft-json-buffer", json.dumps(draft))
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     round_trip = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     round_trip_binding = round_trip["hardware_bindings"][0]
     assert round_trip_binding["hardware_id"] == "TR-LRU-001"
@@ -370,7 +1199,7 @@ def test_workbench_interface_binding_round_trips_through_export_import_and_archi
     assert round_trip_binding["port_peer"] == "TR-LRU-001:J1"
     assert round_trip["binding_coverage"]["complete"] == 1
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert errors == [], f"page JS errors: {errors}"
     assert archive["hardware_bindings"][0]["hardware_id"] == "TR-LRU-001"
@@ -387,15 +1216,15 @@ def test_workbench_connector_pin_map_applies_round_trips_and_archives(demo_serve
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
-    page.fill("#workbench-interface-hardware-id", "TR-LRU-PIN")
-    page.fill("#workbench-interface-cable", "CBL-TR-PIN")
-    page.fill("#workbench-interface-connector", "J-PIN")
-    page.fill("#workbench-interface-port-local", "logic1:out")
-    page.fill("#workbench-interface-port-peer", "TR-LRU-PIN:J-PIN")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "TR-LRU-PIN")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "CBL-TR-PIN")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "J-PIN")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "logic1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "TR-LRU-PIN:J-PIN")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
 
-    page.click("#workbench-export-connector-pin-map-btn")
+    _click_workbench_evidence_control(page, "#workbench-export-connector-pin-map-btn")
     pin_map = json.loads(page.locator("#workbench-connector-pin-map-output").input_value())
     assert pin_map["kind"] == "well-harness-workbench-connector-pin-map"
     assert pin_map["truth_effect"] == "none"
@@ -407,11 +1236,11 @@ def test_workbench_connector_pin_map_applies_round_trips_and_archives(demo_serve
     row["pin_local"] = "A1"
     row["pin_peer"] = "B7"
     row["source_ref"] = "ui_draft.connector_pin_map.test"
-    page.fill("#workbench-connector-pin-map-output", json.dumps(pin_map))
-    page.click("#workbench-apply-connector-pin-map-btn")
+    _fill_workbench_evidence_control(page, "#workbench-connector-pin-map-output", json.dumps(pin_map))
+    _click_workbench_evidence_control(page, "#workbench-apply-connector-pin-map-btn")
     assert "Applied 1 connector/pin row" in page.locator("#workbench-connector-pin-map-status").inner_text()
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert draft["connector_pin_map"]["rows"][0]["pin_local"] == "A1"
     assert draft["connector_pin_map"]["rows"][0]["pin_peer"] == "B7"
@@ -423,14 +1252,14 @@ def test_workbench_connector_pin_map_applies_round_trips_and_archives(demo_serve
 
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
-    page.fill("#workbench-draft-json-buffer", json.dumps(draft))
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-connector-pin-map-btn")
+    _fill_workbench_handoff_control(page, "#workbench-draft-json-buffer", json.dumps(draft))
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_evidence_control(page, "#workbench-export-connector-pin-map-btn")
     imported_map = json.loads(page.locator("#workbench-connector-pin-map-output").input_value())
     assert imported_map["rows"][0]["pin_local"] == "A1"
     assert imported_map["rows"][0]["pin_peer"] == "B7"
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert errors == [], f"page JS errors: {errors}"
     assert archive["connector_pin_map"]["rows"][0]["pin_local"] == "A1"
@@ -493,8 +1322,8 @@ def test_workbench_hardware_interface_designer_validates_round_trips_and_archive
             "dal_pssa_impact": "none",
         },
     }
-    page.fill("#workbench-hardware-interface-design-output", json.dumps(invalid_payload))
-    page.click("#workbench-validate-hardware-interface-design-btn")
+    _fill_workbench_evidence_control(page, "#workbench-hardware-interface-design-output", json.dumps(invalid_payload))
+    _click_workbench_evidence_control(page, "#workbench-validate-hardware-interface-design-btn")
     page.wait_for_function(
         """
         () => document.getElementById('workbench-hardware-interface-design-validation-output')
@@ -628,8 +1457,8 @@ def test_workbench_hardware_interface_designer_validates_round_trips_and_archive
             "dal_pssa_impact": "none",
         },
     }
-    page.fill("#workbench-hardware-interface-design-output", json.dumps(valid_payload))
-    page.click("#workbench-apply-hardware-interface-design-btn")
+    _fill_workbench_evidence_control(page, "#workbench-hardware-interface-design-output", json.dumps(valid_payload))
+    _click_workbench_evidence_control(page, "#workbench-apply-hardware-interface-design-btn")
     page.wait_for_function(
         """
         () => document.getElementById('workbench-hardware-interface-design-status')
@@ -637,7 +1466,7 @@ def test_workbench_hardware_interface_designer_validates_round_trips_and_archive
         """
     )
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert errors == [], f"page JS errors: {errors}"
     assert draft["hardware_interface_designer"]["kind"] == "well-harness-editable-hardware-interface-design"
@@ -657,8 +1486,8 @@ def test_workbench_hardware_interface_designer_validates_round_trips_and_archive
         """,
         draft_json,
     )
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert imported["hardware_interface_designer"]["bindings"][0]["id"] == "BIND-A-B"
     assert imported["hardware_interface_designer_validation"]["status"] == "pass"
@@ -671,13 +1500,13 @@ def test_workbench_hardware_interface_designer_validates_round_trips_and_archive
         **imported["hardware_interface_designer_validation"]["counts"],
         "lrus": 999,
     }
-    page.fill("#workbench-draft-json-buffer", json.dumps(stale_validation_draft))
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _fill_workbench_handoff_control(page, "#workbench-draft-json-buffer", json.dumps(stale_validation_draft))
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     recomputed = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert recomputed["hardware_interface_designer_validation"]["counts"]["lrus"] == 2
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["hardware_interface_designer"]["runtime_truth_effect"] == "none"
     assert archive["hardware_interface_designer_validation"]["truth_effect"] == "none"
@@ -693,15 +1522,15 @@ def test_workbench_hardware_evidence_v2_tracks_selected_node_and_edge(demo_serve
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
-    page.wait_for_selector("#workbench-hardware-evidence-v2")
+    _wait_for_workbench_evidence_control(page, "#workbench-hardware-evidence-v2")
     assert page.locator("#workbench-hardware-evidence-v2-target").inner_text() == "node:logic1"
 
-    page.fill("#workbench-interface-hardware-id", "TR-LRU-V2")
-    page.fill("#workbench-interface-cable", "CBL-V2")
-    page.fill("#workbench-interface-connector", "J-V2")
-    page.fill("#workbench-interface-port-local", "logic1:out")
-    page.fill("#workbench-interface-port-peer", "TR-LRU-V2:J-V2")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "TR-LRU-V2")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "CBL-V2")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "J-V2")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "logic1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "TR-LRU-V2:J-V2")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
 
     node_fields = page.locator("#workbench-hardware-evidence-v2-fields").inner_text()
@@ -713,12 +1542,12 @@ def test_workbench_hardware_evidence_v2_tracks_selected_node_and_edge(demo_serve
     assert "1 row(s)" in page.locator("#workbench-hardware-evidence-v2-pin-rows").inner_text()
 
     page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
-    page.fill("#workbench-interface-hardware-id", "EDGE-LRU-V2")
-    page.fill("#workbench-interface-cable", "EDGE-CBL-V2")
-    page.fill("#workbench-interface-connector", "EDGE-J-V2")
-    page.fill("#workbench-interface-port-local", "logic1:out")
-    page.fill("#workbench-interface-port-peer", "logic2:in")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "EDGE-LRU-V2")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "EDGE-CBL-V2")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "EDGE-J-V2")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "logic1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "logic2:in")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
 
     assert page.locator("#workbench-hardware-evidence-v2-target").inner_text() == "edge:edge_logic1_logic2"
@@ -728,18 +1557,18 @@ def test_workbench_hardware_evidence_v2_tracks_selected_node_and_edge(demo_serve
     assert "LOCAL PIN" in edge_fields
     assert "evidence_gap" in edge_fields
 
-    page.click("#workbench-generate-handoff-btn")
+    _click_workbench_handoff_control(page, "#workbench-generate-handoff-btn")
     assert "Hardware evidence v2:" in page.locator("#workbench-pr-proof-output").input_value()
     assert "Hardware evidence v2:" in page.locator("#workbench-linear-handoff-output").input_value()
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert draft["hardware_evidence_v2"]["target_kind"] == "edge"
     assert draft["hardware_evidence_v2"]["target_id"] == "edge_logic1_logic2"
     assert draft["hardware_evidence_v2"]["selected_binding"]["hardware_id"] == "EDGE-LRU-V2"
     assert draft["hardware_evidence_v2"]["truth_effect"] == "none"
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert errors == [], f"page JS errors: {errors}"
     assert archive["hardware_evidence_v2"]["target_kind"] == "edge"
@@ -756,20 +1585,20 @@ def test_workbench_hardware_evidence_attachment_v2_covers_generic_graph_owners(d
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
     page.click('[data-component-template-id="two_stage_interlock"]')
-    page.fill("#workbench-subsystem-name", "Attachable deploy cell")
-    page.click("#workbench-create-subsystem-btn")
-    page.select_option("#workbench-subsystem-interface-direction", "input")
-    page.fill("#workbench-subsystem-interface-label", "Deploy request")
-    page.fill("#workbench-subsystem-interface-signal-id", "deploy_request_cmd")
-    page.select_option("#workbench-subsystem-interface-value-type", "boolean")
-    page.select_option("#workbench-subsystem-interface-evidence-status", "ui_draft")
-    page.click("#workbench-add-subsystem-interface-port-btn")
-    page.select_option("#workbench-subsystem-interface-direction", "output")
-    page.fill("#workbench-subsystem-interface-label", "Deploy allowed")
-    page.fill("#workbench-subsystem-interface-signal-id", "deploy_allowed_status")
-    page.select_option("#workbench-subsystem-interface-value-type", "boolean")
-    page.select_option("#workbench-subsystem-interface-evidence-status", "evidence_gap")
-    page.click("#workbench-add-subsystem-interface-port-btn")
+    _fill_workbench_node_control(page, "#workbench-subsystem-name", "Attachable deploy cell")
+    _click_workbench_node_control(page, "#workbench-create-subsystem-btn")
+    _select_workbench_node_control(page, "#workbench-subsystem-interface-direction", "input")
+    _fill_workbench_node_control(page, "#workbench-subsystem-interface-label", "Deploy request")
+    _fill_workbench_node_control(page, "#workbench-subsystem-interface-signal-id", "deploy_request_cmd")
+    _select_workbench_node_control(page, "#workbench-subsystem-interface-value-type", "boolean")
+    _select_workbench_node_control(page, "#workbench-subsystem-interface-evidence-status", "ui_draft")
+    _click_workbench_node_control(page, "#workbench-add-subsystem-interface-port-btn")
+    _select_workbench_node_control(page, "#workbench-subsystem-interface-direction", "output")
+    _fill_workbench_node_control(page, "#workbench-subsystem-interface-label", "Deploy allowed")
+    _fill_workbench_node_control(page, "#workbench-subsystem-interface-signal-id", "deploy_allowed_status")
+    _select_workbench_node_control(page, "#workbench-subsystem-interface-value-type", "boolean")
+    _select_workbench_node_control(page, "#workbench-subsystem-interface-evidence-status", "evidence_gap")
+    _click_workbench_node_control(page, "#workbench-add-subsystem-interface-port-btn")
 
     hardware_design = {
         "$schema": "https://well-harness.local/json_schema/editable_hardware_interface_design_v1.schema.json",
@@ -855,28 +1684,28 @@ def test_workbench_hardware_evidence_attachment_v2_covers_generic_graph_owners(d
             "dal_pssa_impact": "none",
         },
     }
-    page.fill("#workbench-hardware-interface-design-output", json.dumps(hardware_design))
-    page.click("#workbench-apply-hardware-interface-design-btn")
+    _fill_workbench_evidence_control(page, "#workbench-hardware-interface-design-output", json.dumps(hardware_design))
+    _click_workbench_evidence_control(page, "#workbench-apply-hardware-interface-design-btn")
 
     page.locator('[data-editable-node-id="draft_node_1"]').click()
-    page.fill("#workbench-interface-hardware-id", "LRU-ATTACH-A")
-    page.fill("#workbench-interface-cable", "CABLE-ATTACH-A")
-    page.fill("#workbench-interface-connector", "CONN-ATTACH-A")
-    page.fill("#workbench-interface-port-local", "draft_node_1:out")
-    page.fill("#workbench-interface-port-peer", "PORT-ATTACH-OUT")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "LRU-ATTACH-A")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "CABLE-ATTACH-A")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "CONN-ATTACH-A")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "draft_node_1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "PORT-ATTACH-OUT")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
 
     page.locator('[data-editable-edge-id^="edge_component_two_stage_interlock"]').dispatch_event("click")
-    page.fill("#workbench-interface-hardware-id", "LRU-ATTACH-A")
-    page.fill("#workbench-interface-cable", "CABLE-ATTACH-A")
-    page.fill("#workbench-interface-connector", "CONN-ATTACH-A")
-    page.fill("#workbench-interface-port-local", "PORT-ATTACH-OUT")
-    page.fill("#workbench-interface-port-peer", "PORT-ATTACH-IN")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "LRU-ATTACH-A")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "CABLE-ATTACH-A")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "CONN-ATTACH-A")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "PORT-ATTACH-OUT")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "PORT-ATTACH-IN")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     attachment = draft["hardware_evidence_attachment_v2"]
     owner_kinds = {row["owner_kind"] for row in attachment["attachments"]}
@@ -897,12 +1726,12 @@ def test_workbench_hardware_evidence_attachment_v2_covers_generic_graph_owners(d
     assert any(row["owner_key"].startswith("subsystem_group:subsystem_") for row in attachment["attachments"])
 
     _set_draft_buffer_value(page, json.dumps(draft))
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert imported["hardware_evidence_attachment_v2"]["attachment_count"] == attachment["attachment_count"]
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["hardware_evidence_attachment_v2"]["truth_effect"] == "none"
     assert archive["hardware_evidence_attachment_v2"]["attachment_count"] == attachment["attachment_count"]
@@ -917,6 +1746,8 @@ def test_workbench_command_palette_executes_editor_commands_and_records_workspac
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
+    page.click("#workbench-start-empty-draft-btn")
+    page.wait_for_function("() => document.querySelectorAll('.workbench-editable-node').length === 0")
     initial_node_count = page.locator(".workbench-editable-node").count()
     page.keyboard.press("Control+K")
     page.wait_for_selector("#workbench-command-palette:not([hidden])")
@@ -968,16 +1799,16 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
 
     page.click('[data-component-template-id="two_stage_interlock"]')
     page.locator('[data-editable-edge-id^="edge_component_two_stage_interlock"]').dispatch_event("click")
-    page.fill("#workbench-interface-hardware-id", "LRU-RESTORE-A")
-    page.fill("#workbench-interface-cable", "CABLE-RESTORE-A")
-    page.fill("#workbench-interface-connector", "CONN-RESTORE-A")
-    page.fill("#workbench-interface-port-local", "draft_node_1:out")
-    page.fill("#workbench-interface-port-peer", "draft_node_2:in")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "LRU-RESTORE-A")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "CABLE-RESTORE-A")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "CONN-RESTORE-A")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "draft_node_1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "draft_node_2:in")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
 
-    page.select_option("#workbench-sandbox-scenario-select", "nominal_landing")
-    page.click("#workbench-run-sandbox-btn")
+    _select_workbench_run_control(page, "#workbench-sandbox-scenario-select", "nominal_landing")
+    _click_workbench_run_control(page, "#workbench-run-sandbox-btn")
     page.wait_for_function(
         """
         () => {
@@ -986,7 +1817,7 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
         }
         """
     )
-    page.click("#workbench-run-test-bench-btn")
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
     page.wait_for_function(
         """
         () => {
@@ -1001,7 +1832,7 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
     page.fill("#workbench-command-palette-filter", "debug")
     page.click('[data-command-palette-command="debug_selection"]')
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     expected_node_count = archive["editable_graph_document"]["node_count"]
     expected_edge_count = archive["editable_graph_document"]["edge_count"]
@@ -1014,15 +1845,15 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
     page.click("#workbench-start-empty-draft-btn")
     page.wait_for_function("() => document.querySelectorAll('.workbench-editable-node').length === 0")
     _set_archive_buffer_value(page, json.dumps(archive))
-    page.click("#workbench-restore-review-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-restore-review-archive-btn")
 
     validation = json.loads(page.locator("#workbench-review-archive-restore-output").input_value())
     bundle = json.loads(page.locator("#workbench-regression-bundle-output").input_value())
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     restored = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
 
     assert errors == [], f"page JS errors: {errors}"
-    assert validation["status"] == "pass"
+    assert validation["status"] == "pass", json.dumps(validation.get("findings"), sort_keys=True)
     assert validation["checksum_mismatch_count"] == 0
     assert validation["red_line_status"] == "pass"
     assert bundle["restore_validation_status"] == "pass"
@@ -1038,7 +1869,7 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
     mutated_archive = json.loads(json.dumps(archive))
     mutated_archive["editable_graph_document"]["node_count"] = expected_node_count + 1
     _set_archive_buffer_value(page, json.dumps(mutated_archive))
-    page.click("#workbench-restore-review-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-restore-review-archive-btn")
     mismatch_validation = json.loads(page.locator("#workbench-review-archive-restore-output").input_value())
     mismatch = next(
         finding
@@ -1063,30 +1894,31 @@ def test_workbench_selected_debug_timeline_tracks_selection_diff_and_archive(dem
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
-    page.wait_for_selector("#workbench-selected-debug-timeline")
+    _wait_for_workbench_run_control(page, "#workbench-selected-debug-timeline")
     assert page.locator("#workbench-selected-debug-target").inner_text() == "node:logic1"
-    assert page.locator("#workbench-selected-debug-verdict").inner_text() == "not_run"
-    assert page.locator("#workbench-selected-debug-link-status").inner_text() == "selection_only"
+    assert page.locator("#workbench-selected-debug-verdict").inner_text() == "未运行"
+    assert page.locator("#workbench-selected-debug-link-status").inner_text() == "仅选择"
 
     page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
-    page.fill("#workbench-interface-hardware-id", "EDGE-LRU-DEBUG")
-    page.fill("#workbench-interface-cable", "EDGE-CBL-DEBUG")
-    page.fill("#workbench-interface-connector", "EDGE-J-DEBUG")
-    page.fill("#workbench-interface-port-local", "logic1:out")
-    page.fill("#workbench-interface-port-peer", "logic2:in")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "EDGE-LRU-DEBUG")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "EDGE-CBL-DEBUG")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "EDGE-J-DEBUG")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "logic1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "logic2:in")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
 
     assert page.locator("#workbench-selected-debug-target").inner_text() == "edge:edge_logic1_logic2"
     assert "EDGE-LRU-DEBUG" in page.locator("#workbench-selected-debug-hardware").inner_text()
     assert "logic1 -> logic2" in page.locator("#workbench-selected-debug-context").inner_text()
 
-    page.select_option("#workbench-sandbox-scenario-select", "nominal_landing")
-    page.click("#workbench-run-sandbox-btn")
+    _select_workbench_run_control(page, "#workbench-sandbox-scenario-select", "nominal_landing")
+    _click_workbench_run_control(page, "#workbench-run-sandbox-btn")
     page.wait_for_function(
         """
         () => {
-          const verdict = document.getElementById('workbench-selected-debug-verdict')?.textContent.trim();
+          const verdict = document.getElementById('workbench-sandbox-timeline-strip')
+            ?.getAttribute('data-debug-verdict');
           return ['equivalent', 'divergent', 'invalid_model', 'invalid_scenario'].includes(verdict);
         }
         """
@@ -1102,7 +1934,7 @@ def test_workbench_selected_debug_timeline_tracks_selection_diff_and_archive(dem
         == "none"
     )
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert draft["selected_debug_timeline"]["target_kind"] == "edge"
     assert draft["selected_debug_timeline"]["target_id"] == "edge_logic1_logic2"
@@ -1110,11 +1942,11 @@ def test_workbench_selected_debug_timeline_tracks_selection_diff_and_archive(dem
     assert draft["selected_debug_timeline"]["hardware_overlay"]["hardware_id"] == "EDGE-LRU-DEBUG"
     assert draft["selected_debug_timeline"]["truth_effect"] == "none"
 
-    page.click("#workbench-generate-handoff-btn")
+    _click_workbench_handoff_control(page, "#workbench-generate-handoff-btn")
     assert "Selected debug timeline:" in page.locator("#workbench-pr-proof-output").input_value()
     assert "Selected debug timeline:" in page.locator("#workbench-linear-handoff-output").input_value()
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert errors == [], f"page JS errors: {errors}"
     assert archive["selected_debug_timeline"]["target_kind"] == "edge"
@@ -1130,25 +1962,27 @@ def test_workbench_diff_review_v2_tracks_diff_handoff_and_archive(demo_server, b
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
-    page.wait_for_selector("#workbench-diff-review-v2")
-    assert page.locator("#workbench-diff-review-v2-status").inner_text() == "not_run"
-    assert page.locator("#workbench-diff-review-v2-readiness").inner_text() == "run_required"
-    assert page.locator("#workbench-diff-review-v2-archive-state").inner_text() == "not_archive_ready"
-    assert page.locator("#workbench-diff-review-v2-claim").inner_text() == "none"
+    _wait_for_workbench_run_control(page, "#workbench-diff-review-v2")
+    diff_review_panel = page.locator("#workbench-diff-review-v2")
+    assert diff_review_panel.get_attribute("data-review-verdict") == "not_run"
+    assert diff_review_panel.get_attribute("data-review-readiness") == "run_required"
+    assert diff_review_panel.get_attribute("data-review-archive-state") == "not_archive_ready"
+    assert diff_review_panel.get_attribute("data-review-certification-claim") == "none"
 
     page.click("#workbench-derive-draft-btn")
-    page.select_option("#workbench-sandbox-scenario-select", "nominal_landing")
-    page.click("#workbench-run-sandbox-btn")
+    _select_workbench_run_control(page, "#workbench-sandbox-scenario-select", "nominal_landing")
+    _click_workbench_run_control(page, "#workbench-run-sandbox-btn")
     page.wait_for_function(
         """
         () => {
-          const verdict = document.getElementById('workbench-diff-review-v2-status')?.textContent.trim();
+          const verdict = document.getElementById('workbench-diff-review-v2')
+            ?.getAttribute('data-review-verdict');
           return ['equivalent', 'divergent', 'invalid_model', 'invalid_scenario'].includes(verdict);
         }
         """
     )
-    verdict = page.locator("#workbench-diff-review-v2-status").inner_text()
-    readiness = page.locator("#workbench-diff-review-v2-readiness").inner_text()
+    verdict = diff_review_panel.get_attribute("data-review-verdict")
+    readiness = diff_review_panel.get_attribute("data-review-readiness")
     expected_readiness = {
         "equivalent": "ready",
         "divergent": "review_required",
@@ -1156,15 +1990,15 @@ def test_workbench_diff_review_v2_tracks_diff_handoff_and_archive(demo_server, b
         "invalid_scenario": "blocked",
     }[verdict]
     assert readiness == expected_readiness
-    assert page.locator("#workbench-diff-review-v2-archive-state").inner_text() == "archive_ready"
-    assert page.locator("#workbench-diff-review-v2-scenario").inner_text() == "nominal_landing"
+    assert diff_review_panel.get_attribute("data-review-archive-state") == "archive_ready"
+    assert page.locator("#workbench-diff-review-v2-scenario").inner_text() == "名义着陆"
     assert (
         page.locator("#workbench-diff-review-v2")
         .get_attribute("data-review-truth-effect")
         == "none"
     )
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     review = draft["candidate_baseline_diff_review_v2"]
     assert review["kind"] == "well-harness-workbench-candidate-baseline-diff-review-v2"
@@ -1176,11 +2010,11 @@ def test_workbench_diff_review_v2_tracks_diff_handoff_and_archive(demo_server, b
     assert review["controller_truth_modified"] is False
     assert review["truth_effect"] == "none"
 
-    page.click("#workbench-generate-handoff-btn")
+    _click_workbench_handoff_control(page, "#workbench-generate-handoff-btn")
     assert "Diff review v2:" in page.locator("#workbench-pr-proof-output").input_value()
     assert "Diff review v2:" in page.locator("#workbench-linear-handoff-output").input_value()
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert errors == [], f"page JS errors: {errors}"
     assert archive["candidate_baseline_diff_review_v2"]["verdict"] == verdict
@@ -1207,17 +2041,17 @@ def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_hando
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
     page.click("#workbench-derive-draft-btn")
-    page.select_option("#workbench-sandbox-scenario-select", "nominal_landing")
-    page.fill("#workbench-interface-hardware-id", "TR-LRU-ACCEPTANCE")
-    page.fill("#workbench-interface-cable", "CBL-TR-ACCEPTANCE")
-    page.fill("#workbench-interface-connector", "J-ACCEPT")
-    page.fill("#workbench-interface-port-local", "logic1:out")
-    page.fill("#workbench-interface-port-peer", "TR-LRU-ACCEPTANCE:J-ACCEPT")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _select_workbench_run_control(page, "#workbench-sandbox-scenario-select", "nominal_landing")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "TR-LRU-ACCEPTANCE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "CBL-TR-ACCEPTANCE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "J-ACCEPT")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "logic1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "TR-LRU-ACCEPTANCE:J-ACCEPT")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
     assert page.locator("#workbench-interface-binding-quality").inner_text() == "complete"
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     binding = draft["hardware_bindings"][0]
     assert draft["kind"] == "well-harness-workbench-ui-draft"
@@ -1236,7 +2070,7 @@ def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_hando
     assert binding["evidence_status"] == "ui_draft"
     assert binding["truth_effect"] == "none"
 
-    page.click("#workbench-run-sandbox-btn")
+    _click_workbench_run_control(page, "#workbench-run-sandbox-btn")
     page.wait_for_function(
         """
         () => {
@@ -1249,7 +2083,7 @@ def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_hando
     assert verdict in {"equivalent", "divergent", "invalid_model", "invalid_scenario"}
     assert page.locator("#workbench-diff-scenario").inner_text() == "nominal_landing"
 
-    page.click("#workbench-generate-handoff-btn")
+    _click_workbench_handoff_control(page, "#workbench-generate-handoff-btn")
     page.wait_for_function(
         """
         () => {
@@ -1284,7 +2118,7 @@ def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_hando
     assert changerequest_packet["metadata"]["test_delta"]["e2e_49_49"] == "not_claimed"
     assert changerequest_packet["red_line_metadata"]["controller_truth_modified"] is False
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     page.wait_for_function(
         """
         () => {
@@ -1326,6 +2160,8 @@ def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_hando
     assert red_lines["live_linear_mutation"] is False
     assert archive["gate_claims"]["e2e_49_49"] == "not_claimed"
     assert archive["gate_claims"]["mypy_strict_clean"] == "not_claimed"
+    assert archive["gate_claims"]["hard_hold_policy"] == "required"
+    assert archive["gate_claims"]["default_pytest"] == "warning"
     assert archive["known_blockers"]
     assert checksums["manifest_checksum"]
     assert checksums["diff_summary_checksum"]
@@ -1340,11 +2176,11 @@ def test_workbench_hardware_palette_creates_and_applies_sandbox_bindings(demo_se
     _goto_shell_workbench(page, f"{demo_server}/workbench")
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
-    page.wait_for_selector('[data-hardware-palette-id="lru:etrac"]')
+    _wait_for_workbench_evidence_control(page, '[data-hardware-palette-id="lru:etrac"]')
 
-    page.select_option("#workbench-hardware-palette-action", "apply-binding")
-    page.click('[data-hardware-palette-id="lru:etrac"]')
-    page.click("#workbench-export-draft-btn")
+    _select_workbench_evidence_control(page, "#workbench-hardware-palette-action", "apply-binding")
+    _click_workbench_evidence_control(page, '[data-hardware-palette-id="lru:etrac"]')
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     lru_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     logic1 = next(node for node in lru_draft["nodes"] if node["id"] == "logic1")
 
@@ -1355,10 +2191,11 @@ def test_workbench_hardware_palette_creates_and_applies_sandbox_bindings(demo_se
     assert lru_draft["controller_truth_modified"] is False
 
     page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
-    page.select_option("#workbench-port-value-type", "number")
+    _select_workbench_run_control(page, "#workbench-port-value-type", "number")
     page.click("#workbench-apply-port-contract-btn")
+    _open_workbench_inspector_mode(page, "evidence")
     page.locator('[data-hardware-palette-id^="signal:SW1"]').first.click()
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     edge_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     edge = next(item for item in edge_draft["edges"] if item["id"] == "edge_logic1_logic2")
     assert edge["signal_id"] == "SW1"
@@ -1366,9 +2203,10 @@ def test_workbench_hardware_palette_creates_and_applies_sandbox_bindings(demo_se
     assert edge["hardware_binding"]["hardware_id"] == "external_throttle_resolver"
     assert edge["hardware_binding"]["truth_effect"] == "none"
 
-    page.select_option("#workbench-hardware-palette-action", "create-node")
+    _select_workbench_evidence_control(page, "#workbench-hardware-palette-action", "create-node")
+    _open_workbench_inspector_mode(page, "evidence")
     page.locator('[data-hardware-palette-id^="signal:SW1"]').first.click()
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     node_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     palette_node = next(node for node in node_draft["nodes"] if node["id"] == "draft_node_1")
 
@@ -1381,7 +2219,7 @@ def test_workbench_hardware_palette_creates_and_applies_sandbox_bindings(demo_se
     assert palette_node["port_contract"]["truth_effect"] == "none"
     assert node_draft["truth_level_impact"] == "none"
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["hardware_palette"]["truth_effect"] == "none"
     assert archive["checksums"]["hardware_palette_checksum"]
@@ -1394,13 +2232,13 @@ def test_workbench_typed_port_contract_round_trips_through_export_import_and_arc
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
-    page.fill("#workbench-port-input-signal", "logic1_candidate_input")
-    page.fill("#workbench-port-output-signal", "logic1_candidate_output")
-    page.select_option("#workbench-port-value-type", "number")
-    page.fill("#workbench-port-unit", "deg")
-    page.check("#workbench-port-required")
+    _fill_workbench_run_control(page, "#workbench-port-input-signal", "logic1_candidate_input")
+    _fill_workbench_run_control(page, "#workbench-port-output-signal", "logic1_candidate_output")
+    _select_workbench_run_control(page, "#workbench-port-value-type", "number")
+    _fill_workbench_run_control(page, "#workbench-port-unit", "deg")
+    _check_workbench_run_control(page, "#workbench-port-required")
     page.click("#workbench-apply-port-contract-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
 
     logic1 = next(node for node in draft["nodes"] if node["id"] == "logic1")
@@ -1435,15 +2273,15 @@ def test_workbench_typed_port_contract_round_trips_through_export_import_and_arc
 
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
-    page.fill("#workbench-draft-json-buffer", json.dumps(draft))
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _fill_workbench_handoff_control(page, "#workbench-draft-json-buffer", json.dumps(draft))
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     round_trip = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     round_trip_logic1 = next(node for node in round_trip["nodes"] if node["id"] == "logic1")
     assert round_trip_logic1["port_contract"]["output_signal_id"] == "logic1_candidate_output"
     assert round_trip["port_contract_summary"]["truth_effect"] == "none"
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert errors == [], f"page JS errors: {errors}"
     assert archive["typed_ports"]
@@ -1462,24 +2300,24 @@ def test_workbench_interface_matrix_exports_node_and_edge_design_rows(demo_serve
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
-    page.fill("#workbench-interface-hardware-id", "TR-LRU-MATRIX-A")
-    page.fill("#workbench-interface-cable", "CBL-MATRIX-A")
-    page.fill("#workbench-interface-connector", "J-MATRIX-A")
-    page.fill("#workbench-interface-port-local", "logic1:out")
-    page.fill("#workbench-interface-port-peer", "TR-LRU-MATRIX-A:J-MATRIX-A")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "TR-LRU-MATRIX-A")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "CBL-MATRIX-A")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "J-MATRIX-A")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "logic1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "TR-LRU-MATRIX-A:J-MATRIX-A")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
 
     page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
-    page.fill("#workbench-interface-hardware-id", "TR-LRU-MATRIX-B")
-    page.fill("#workbench-interface-cable", "CBL-MATRIX-B")
-    page.fill("#workbench-interface-connector", "J-MATRIX-B")
-    page.fill("#workbench-interface-port-local", "logic1:out")
-    page.fill("#workbench-interface-port-peer", "logic2:in:ui_edge:logic1")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "TR-LRU-MATRIX-B")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "CBL-MATRIX-B")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "J-MATRIX-B")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "logic1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "logic2:in:ui_edge:logic1")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
 
-    page.click("#workbench-export-interface-matrix-btn")
+    _click_workbench_evidence_control(page, "#workbench-export-interface-matrix-btn")
     matrix = json.loads(page.locator("#workbench-interface-matrix-output").input_value())
     rows = matrix["rows"]
     node_row = next(row for row in rows if row["owner_kind"] == "node" and row["owner_id"] == "logic1")
@@ -1502,17 +2340,17 @@ def test_workbench_interface_matrix_exports_node_and_edge_design_rows(demo_serve
     assert edge_row["peer_typed_port"]["port_id"] == "logic2:in:ui_edge:logic1"
     assert "Exported" in page.locator("#workbench-interface-matrix-status").inner_text()
 
-    page.click("#workbench-generate-handoff-btn")
+    _click_workbench_handoff_control(page, "#workbench-generate-handoff-btn")
     assert "Interface matrix:" in page.locator("#workbench-pr-proof-output").input_value()
     assert "Interface matrix:" in page.locator("#workbench-linear-handoff-output").input_value()
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert draft["interface_matrix"]["row_count"] == matrix["row_count"]
     assert draft["interface_matrix"]["truth_effect"] == "none"
     assert draft["changerequest_proof_packet"]["interface_matrix_summary"]["row_count"] == matrix["row_count"]
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["interface_matrix"]["row_count"] == matrix["row_count"]
     assert archive["interface_matrix"]["truth_effect"] == "none"
@@ -1527,24 +2365,24 @@ def test_workbench_interface_matrix_import_applies_sandbox_bindings_and_rejects_
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
-    page.fill("#workbench-interface-hardware-id", "TR-LRU-BEFORE")
-    page.fill("#workbench-interface-cable", "CBL-BEFORE")
-    page.fill("#workbench-interface-connector", "J-BEFORE")
-    page.fill("#workbench-interface-port-local", "logic1:out")
-    page.fill("#workbench-interface-port-peer", "TR-LRU-BEFORE:J-BEFORE")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "TR-LRU-BEFORE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "CBL-BEFORE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "J-BEFORE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "logic1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "TR-LRU-BEFORE:J-BEFORE")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
 
     page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
-    page.fill("#workbench-interface-hardware-id", "EDGE-LRU-BEFORE")
-    page.fill("#workbench-interface-cable", "EDGE-CBL-BEFORE")
-    page.fill("#workbench-interface-connector", "EDGE-J-BEFORE")
-    page.fill("#workbench-interface-port-local", "logic1:out")
-    page.fill("#workbench-interface-port-peer", "logic2:in:ui_edge:logic1")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "EDGE-LRU-BEFORE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "EDGE-CBL-BEFORE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "EDGE-J-BEFORE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "logic1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "logic2:in:ui_edge:logic1")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
 
-    page.click("#workbench-export-interface-matrix-btn")
+    _click_workbench_evidence_control(page, "#workbench-export-interface-matrix-btn")
     matrix = json.loads(page.locator("#workbench-interface-matrix-output").input_value())
     for row in matrix["rows"]:
         if row["owner_kind"] == "node" and row["owner_id"] == "logic1":
@@ -1568,12 +2406,12 @@ def test_workbench_interface_matrix_import_applies_sandbox_bindings_and_rejects_
         "evidence_status": "ui_draft",
         "truth_effect": "none",
     })
-    page.fill("#workbench-interface-matrix-output", json.dumps(matrix))
-    page.click("#workbench-apply-interface-matrix-btn")
+    _fill_workbench_evidence_control(page, "#workbench-interface-matrix-output", json.dumps(matrix))
+    _click_workbench_evidence_control(page, "#workbench-apply-interface-matrix-btn")
     status = page.locator("#workbench-interface-matrix-status").inner_text()
     assert "Applied 2 matrix row(s), deselected 0, no-op 0, skipped 1" in status
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     logic1 = next(node for node in draft["nodes"] if node["id"] == "logic1")
     edge = next(item for item in draft["edges"] if item["id"] == "edge_logic1_logic2")
@@ -1587,7 +2425,7 @@ def test_workbench_interface_matrix_import_applies_sandbox_bindings_and_rejects_
     assert edge["hardware_binding"]["truth_effect"] == "none"
     assert draft["interface_matrix"]["coverage"]["complete"] >= 1
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     archive_node = next(row for row in archive["interface_matrix"]["rows"] if row["owner_kind"] == "node" and row["owner_id"] == "logic1")
     assert archive_node["hardware_id"] == "TR-LRU-APPLIED"
@@ -1597,10 +2435,10 @@ def test_workbench_interface_matrix_import_applies_sandbox_bindings_and_rejects_
     rejected = json.loads(page.locator("#workbench-interface-matrix-output").input_value())
     rejected["rows"][0]["truth_effect"] = "certified"
     rejected["rows"][0]["hardware_id"] = "SHOULD-NOT-APPLY"
-    page.fill("#workbench-interface-matrix-output", json.dumps(rejected))
-    page.click("#workbench-apply-interface-matrix-btn")
+    _fill_workbench_evidence_control(page, "#workbench-interface-matrix-output", json.dumps(rejected))
+    _click_workbench_evidence_control(page, "#workbench-apply-interface-matrix-btn")
     assert "truth_effect must be none" in page.locator("#workbench-interface-matrix-status").inner_text()
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     after_reject = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     logic1_after_reject = next(node for node in after_reject["nodes"] if node["id"] == "logic1")
     assert logic1_after_reject["hardware_binding"]["hardware_id"] == "TR-LRU-APPLIED"
@@ -1612,16 +2450,16 @@ def test_workbench_interface_matrix_csv_tsv_bridge_round_trips_sandbox_rows(demo
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
-    page.fill("#workbench-interface-hardware-id", "TR-LRU-CSV-BEFORE")
-    page.fill("#workbench-interface-cable", "CBL-CSV-BEFORE")
-    page.fill("#workbench-interface-connector", "J-CSV-BEFORE")
-    page.fill("#workbench-interface-port-local", "logic1:out")
-    page.fill("#workbench-interface-port-peer", "TR-LRU-CSV-BEFORE:J-CSV-BEFORE")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "TR-LRU-CSV-BEFORE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "CBL-CSV-BEFORE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "J-CSV-BEFORE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "logic1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "TR-LRU-CSV-BEFORE:J-CSV-BEFORE")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
 
-    page.click("#workbench-export-interface-matrix-btn")
-    page.click("#workbench-export-interface-matrix-csv-btn")
+    _click_workbench_evidence_control(page, "#workbench-export-interface-matrix-btn")
+    _click_workbench_evidence_control(page, "#workbench-export-interface-matrix-csv-btn")
     exported_csv = page.locator("#workbench-interface-matrix-csv-output").input_value()
     assert "row_id,owner_kind,owner_id,hardware_id,cable,connector,port_local,port_peer,evidence_status,truth_effect,source_ref" in exported_csv
 
@@ -1635,15 +2473,15 @@ def test_workbench_interface_matrix_csv_tsv_bridge_round_trips_sandbox_rows(demo
     writer = csv.DictWriter(buffer, fieldnames=list(rows[0].keys()))
     writer.writeheader()
     writer.writerows(rows)
-    page.fill("#workbench-interface-matrix-csv-output", buffer.getvalue())
-    page.click("#workbench-import-interface-matrix-csv-btn")
+    _fill_workbench_evidence_control(page, "#workbench-interface-matrix-csv-output", buffer.getvalue())
+    _click_workbench_evidence_control(page, "#workbench-import-interface-matrix-csv-btn")
     report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
     assert report["status"] == "warn"
     assert report["truth_effect"] == "none"
     assert report["evidence_gap_field_count"] >= 1
-    page.click("#workbench-apply-interface-matrix-btn")
+    _click_workbench_evidence_control(page, "#workbench-apply-interface-matrix-btn")
     assert "Applied 1 matrix row(s)" in page.locator("#workbench-interface-matrix-status").inner_text()
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     csv_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     logic1 = next(node for node in csv_draft["nodes"] if node["id"] == "logic1")
     assert errors == [], f"page JS errors: {errors}"
@@ -1678,11 +2516,11 @@ def test_workbench_interface_matrix_csv_tsv_bridge_round_trips_sandbox_rows(demo
         "none",
         "ui_draft.tsv.logic1",
     ])
-    page.fill("#workbench-interface-matrix-csv-output", f"{tsv_header}\n{tsv_row}\n")
-    page.click("#workbench-import-interface-matrix-csv-btn")
+    _fill_workbench_evidence_control(page, "#workbench-interface-matrix-csv-output", f"{tsv_header}\n{tsv_row}\n")
+    _click_workbench_evidence_control(page, "#workbench-import-interface-matrix-csv-btn")
     assert "Matrix validation warn" in page.locator("#workbench-interface-matrix-status").inner_text()
-    page.click("#workbench-apply-interface-matrix-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_evidence_control(page, "#workbench-apply-interface-matrix-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     tsv_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     logic1_tsv = next(node for node in tsv_draft["nodes"] if node["id"] == "logic1")
     assert logic1_tsv["hardware_binding"]["hardware_id"] == "TR-LRU-TSV-APPLIED"
@@ -1691,14 +2529,14 @@ def test_workbench_interface_matrix_csv_tsv_bridge_round_trips_sandbox_rows(demo
     assert logic1_tsv["hardware_binding"]["truth_effect"] == "none"
 
     rejected_row = tsv_row.replace("TR-LRU-TSV-APPLIED", "SHOULD-NOT-APPLY", 1).replace("\tnone\t", "\tcertified\t")
-    page.fill("#workbench-interface-matrix-csv-output", f"{tsv_header}\n{rejected_row}\n")
-    page.click("#workbench-import-interface-matrix-csv-btn")
+    _fill_workbench_evidence_control(page, "#workbench-interface-matrix-csv-output", f"{tsv_header}\n{rejected_row}\n")
+    _click_workbench_evidence_control(page, "#workbench-import-interface-matrix-csv-btn")
     failed_report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
     assert failed_report["status"] == "fail"
     assert failed_report["truth_effect_violation_count"] >= 1
-    page.click("#workbench-apply-interface-matrix-btn")
+    _click_workbench_evidence_control(page, "#workbench-apply-interface-matrix-btn")
     assert "Matrix validation failed" in page.locator("#workbench-interface-matrix-status").inner_text()
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     rejected_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     logic1_after_reject = next(node for node in rejected_draft["nodes"] if node["id"] == "logic1")
     assert logic1_after_reject["hardware_binding"]["hardware_id"] == "TR-LRU-TSV-APPLIED"
@@ -1710,24 +2548,24 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
-    page.fill("#workbench-interface-hardware-id", "TR-LRU-PREVIEW-BEFORE")
-    page.fill("#workbench-interface-cable", "CBL-PREVIEW-BEFORE")
-    page.fill("#workbench-interface-connector", "J-PREVIEW-BEFORE")
-    page.fill("#workbench-interface-port-local", "logic1:out")
-    page.fill("#workbench-interface-port-peer", "TR-LRU-PREVIEW-BEFORE:J-PREVIEW-BEFORE")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "TR-LRU-PREVIEW-BEFORE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "CBL-PREVIEW-BEFORE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "J-PREVIEW-BEFORE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "logic1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "TR-LRU-PREVIEW-BEFORE:J-PREVIEW-BEFORE")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
 
     page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
-    page.fill("#workbench-interface-hardware-id", "EDGE-LRU-PREVIEW-BEFORE")
-    page.fill("#workbench-interface-cable", "EDGE-CBL-PREVIEW-BEFORE")
-    page.fill("#workbench-interface-connector", "EDGE-J-PREVIEW-BEFORE")
-    page.fill("#workbench-interface-port-local", "logic1:out")
-    page.fill("#workbench-interface-port-peer", "logic2:in:ui_edge:logic1")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "EDGE-LRU-PREVIEW-BEFORE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "EDGE-CBL-PREVIEW-BEFORE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "EDGE-J-PREVIEW-BEFORE")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "logic1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "logic2:in:ui_edge:logic1")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
 
-    page.click("#workbench-export-interface-matrix-btn")
+    _click_workbench_evidence_control(page, "#workbench-export-interface-matrix-btn")
     matrix = json.loads(page.locator("#workbench-interface-matrix-output").input_value())
     for row in matrix["rows"]:
         if row["owner_kind"] == "node" and row["owner_id"] == "logic1":
@@ -1755,8 +2593,8 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
         "truth_effect": "none",
     })
 
-    page.fill("#workbench-interface-matrix-output", json.dumps(matrix))
-    page.click("#workbench-validate-interface-matrix-btn")
+    _fill_workbench_evidence_control(page, "#workbench-interface-matrix-output", json.dumps(matrix))
+    _click_workbench_evidence_control(page, "#workbench-validate-interface-matrix-btn")
     report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
     assert errors == [], f"page JS errors: {errors}"
     assert report["kind"] == "well-harness-workbench-interface-matrix-validation-report"
@@ -1801,23 +2639,29 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     edge_checkbox.uncheck()
     assert not edge_checkbox.is_checked()
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     preview_only_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     logic1 = next(node for node in preview_only_draft["nodes"] if node["id"] == "logic1")
     assert logic1["hardware_binding"]["hardware_id"] == "TR-LRU-PREVIEW-BEFORE"
     assert preview_only_draft["interface_matrix_validation"]["status"] == "warn"
 
-    page.click("#workbench-generate-handoff-btn")
-    assert "Interface matrix validation: warn" in page.locator("#workbench-pr-proof-output").input_value()
+    _click_workbench_handoff_control(page, "#workbench-generate-handoff-btn")
+    pr_proof = page.locator("#workbench-pr-proof-output").input_value()
+    change_request_packet = json.loads(page.locator("#workbench-changerequest-packet-output").input_value())
+    assert "Interface matrix validation: 警告" in pr_proof
+    assert (
+        change_request_packet["changerequest_proof_packet"]["interface_matrix_validation_summary"]["status"]
+        == "warn"
+    )
     assert "Interface matrix validation:" in page.locator("#workbench-linear-handoff-output").input_value()
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["interface_matrix_validation"]["status"] == "warn"
     assert archive["checksums"]["interface_matrix_validation_checksum"]
     assert archive["red_line_metadata"]["truth_level_impact"] == "none"
 
-    page.click("#workbench-apply-interface-matrix-btn")
+    _click_workbench_evidence_control(page, "#workbench-apply-interface-matrix-btn")
     assert "Applied 1 matrix row(s), deselected 1, no-op 0, skipped 1" in page.locator("#workbench-interface-matrix-status").inner_text()
     post_apply_report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
     assert post_apply_report["changed_row_count"] == 0
@@ -1834,19 +2678,19 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     assert noop_review.get_attribute("data-row-action") == "none"
     assert "none" in noop_review.inner_text()
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     after_apply = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     logic1_after_apply = next(node for node in after_apply["nodes"] if node["id"] == "logic1")
     edge_after_apply = next(item for item in after_apply["edges"] if item["id"] == "edge_logic1_logic2")
     assert logic1_after_apply["hardware_binding"]["hardware_id"] == "TR-LRU-PREVIEW-EDITED"
     assert edge_after_apply["hardware_binding"]["hardware_id"] == "EDGE-LRU-PREVIEW-BEFORE"
 
-    page.click("#workbench-apply-interface-matrix-btn")
+    _click_workbench_evidence_control(page, "#workbench-apply-interface-matrix-btn")
     assert "Applied 0 matrix row(s), deselected 0, no-op 2, skipped 0" in page.locator("#workbench-interface-matrix-status").inner_text()
     second_apply_report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
     assert second_apply_report["changed_row_count"] == 0
     assert second_apply_report["noop_row_count"] >= 2
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     after_second_apply = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     logic1_after_second_apply = next(node for node in after_second_apply["nodes"] if node["id"] == "logic1")
     assert logic1_after_second_apply["hardware_binding"]["hardware_id"] == "TR-LRU-PREVIEW-EDITED"
@@ -1854,8 +2698,8 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     rejected = json.loads(page.locator("#workbench-interface-matrix-output").input_value())
     rejected["rows"][0]["truth_effect"] = "certified"
     rejected["rows"][0]["hardware_id"] = "SHOULD-NOT-APPLY"
-    page.fill("#workbench-interface-matrix-output", json.dumps(rejected))
-    page.click("#workbench-validate-interface-matrix-btn")
+    _fill_workbench_evidence_control(page, "#workbench-interface-matrix-output", json.dumps(rejected))
+    _click_workbench_evidence_control(page, "#workbench-validate-interface-matrix-btn")
     failed_report = json.loads(page.locator("#workbench-interface-matrix-validation-output").input_value())
     assert failed_report["status"] == "fail"
     assert failed_report["truth_effect_violation_count"] >= 1
@@ -1863,9 +2707,9 @@ def test_workbench_interface_matrix_validation_previews_without_mutating_draft(d
     reject_review = review.locator('[data-interface-matrix-review-owner-id="logic1"]')
     assert reject_review.get_attribute("data-row-status") == "reject"
     assert reject_review.get_attribute("data-row-action") == "none"
-    page.click("#workbench-apply-interface-matrix-btn")
+    _click_workbench_evidence_control(page, "#workbench-apply-interface-matrix-btn")
     assert "Matrix validation failed" in page.locator("#workbench-interface-matrix-status").inner_text()
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     after_reject = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     logic1_after_reject = next(node for node in after_reject["nodes"] if node["id"] == "logic1")
     assert logic1_after_reject["hardware_binding"]["hardware_id"] == "TR-LRU-PREVIEW-EDITED"
@@ -1878,9 +2722,9 @@ def test_workbench_operation_catalog_adds_typed_sandbox_node(demo_server, browse
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
     page.click('[data-op-catalog-op="between"]')
-    assert page.locator("#workbench-op-catalog-status").inner_text() == "BTW · number"
+    assert page.locator("#workbench-op-catalog-status").inner_text() == "BTW · 数值"
     page.click('[data-editor-tool="node"]')
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
 
     node = next(item for item in draft["nodes"] if item["id"] == "draft_node_1")
@@ -1908,7 +2752,7 @@ def test_workbench_operation_catalog_adds_typed_sandbox_node(demo_server, browse
         "latch",
     }
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["operation_catalog"]["selected_op"] == "between"
     assert archive["operation_catalog"]["truth_effect"] == "none"
@@ -1923,7 +2767,8 @@ def test_workbench_empty_canvas_palette_round_trips_sandbox_primitives(demo_serv
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
     page.click("#workbench-start-empty-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _open_workbench_inspector_mode(page, "handoff")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     empty_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert errors == [], f"page JS errors: {errors}"
     assert empty_draft["canvas_authoring_mode"] == "empty_authoring"
@@ -1934,18 +2779,27 @@ def test_workbench_empty_canvas_palette_round_trips_sandbox_primitives(demo_serv
 
     page.click('[data-op-catalog-op="input"]')
     page.click('[data-editor-tool="node"]')
+    page.click('[data-op-catalog-op="compare"]')
+    page.click('[data-editor-tool="node"]')
     page.click('[data-op-catalog-op="output"]')
     page.click('[data-editor-tool="node"]')
-    page.click("#workbench-export-draft-btn")
+    _open_workbench_inspector_mode(page, "handoff")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     node_ops = {node["id"]: node["op"] for node in draft["nodes"]}
 
     assert draft["canvas_authoring_mode"] == "empty_authoring"
-    assert node_ops == {"draft_node_1": "input", "draft_node_2": "output"}
+    assert node_ops == {
+        "draft_node_1": "input",
+        "draft_node_2": "compare",
+        "draft_node_3": "output",
+    }
     assert all(node_id not in node_ops for node_id in ["logic1", "logic2", "logic3", "logic4"])
     assert draft["workspace_document"]["truth_effect"] == "none"
-    assert draft["workspace_document"]["action_count"] >= 3
-    assert draft["editable_graph_document"]["node_count"] == 2
+    assert draft["workspace_document"]["action_count"] >= 4
+    assert draft["editable_graph_document"]["version"] == "workbench-editable-graph-document.v2"
+    assert draft["editable_graph_document"]["node_count"] == 3
+    assert draft["editable_graph_document"]["truth_effect"] == "none"
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     page.evaluate(
@@ -1958,19 +2812,281 @@ def test_workbench_empty_canvas_palette_round_trips_sandbox_primitives(demo_serv
         """,
         draft_json,
     )
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     imported_ops = {node["id"]: node["op"] for node in imported["nodes"]}
     assert imported["canvas_authoring_mode"] == "empty_authoring"
     assert imported_ops == node_ops
-    assert imported["editable_graph_document"]["node_count"] == 2
+    assert imported["editable_graph_document"]["node_count"] == 3
 
-    page.click("#workbench-prepare-archive-btn")
+    _open_workbench_inspector_mode(page, "run")
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const output = document.getElementById('workbench-test-bench-report-output');
+          return output
+            && output.value.includes('well-harness-workbench-sandbox-test-run-report')
+            && output.value.includes('sandbox_runner_trace_kernel');
+        }
+        """
+    )
+    run_report = json.loads(page.locator("#workbench-test-bench-report-output").input_value())
+    assert run_report["truth_effect"] == "none"
+    assert run_report["candidate_state"] == "sandbox_candidate"
+    assert run_report["sandbox_runner_trace_kernel"]["truth_effect"] == "none"
+
+    _open_workbench_inspector_mode(page, "handoff")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["canvas_authoring_mode"] == "empty_authoring"
-    assert archive["editable_graph_document"]["node_count"] == 2
+    assert archive["editable_graph_document"]["node_count"] == 3
+    assert archive["editable_graph_document"]["version"] == "workbench-editable-graph-document.v2"
+    assert archive["editable_graph_document"]["truth_effect"] == "none"
+    assert archive["truth_effect"] == "none"
+    assert archive["candidate_state"] == "sandbox_candidate"
+    assert archive["certification_claim"] == "none"
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+    _set_archive_buffer_value(page, json.dumps(archive))
+    _click_workbench_handoff_control(page, "#workbench-restore-review-archive-btn")
+    validation = json.loads(page.locator("#workbench-review-archive-restore-output").input_value())
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
+    restored = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    restored_ops = {node["id"]: node["op"] for node in restored["nodes"]}
+    assert validation["status"] == "pass", json.dumps(validation.get("findings"), sort_keys=True)
+    assert restored["canvas_authoring_mode"] == "empty_authoring"
+    assert restored_ops == node_ops
+    assert all(node_id not in restored_ops for node_id in ["logic1", "logic2", "logic3", "logic4"])
+
+
+def test_workbench_goal_canvas_panel_geometry_evidence(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    evidence: dict[str, Any] = {}
+
+    for label, viewport in {
+        "desktop": {"width": 1440, "height": 980},
+        "narrow": {"width": 390, "height": 920},
+    }.items():
+        page.set_viewport_size(viewport)
+        _goto_shell_workbench(page, f"{demo_server}/workbench")
+        page.click("#workbench-start-empty-draft-btn")
+        page.click('[data-op-catalog-op="input"]')
+        page.click('[data-editor-tool="node"]')
+        page.click('[data-op-catalog-op="compare"]')
+        page.click('[data-editor-tool="node"]')
+        page.click('[data-op-catalog-op="output"]')
+        page.click('[data-editor-tool="node"]')
+        page.screenshot(path=str(_ARTIFACT_DIR / f"{label}-goal-canvas-panel.png"), full_page=False)
+        evidence[label] = page.evaluate(
+            """
+            () => {
+              const box = (selector) => {
+                const node = document.querySelector(selector);
+                if (!node) return null;
+                const rect = node.getBoundingClientRect();
+                return {
+                  left: rect.left,
+                  top: rect.top,
+                  right: rect.right,
+                  bottom: rect.bottom,
+                  width: rect.width,
+                  height: rect.height,
+                };
+              };
+              return {
+                viewport: {
+                  width: window.innerWidth,
+                  height: window.innerHeight,
+                  scrollHeight: document.documentElement.scrollHeight,
+                  scrollWidth: document.documentElement.scrollWidth,
+                  bodyScrollHeight: document.body.scrollHeight,
+                  bodyScrollWidth: document.body.scrollWidth,
+                    },
+                    panel: box('#workbench-goal-canvas-panel'),
+                    reopenGuide: box('#workbench-open-onboarding-guide-btn'),
+                    toolbar: box('#workbench-editor-toolbar'),
+                canvas: box('#workbench-editable-canvas'),
+                inspector: box('#workbench-evidence-inspector'),
+                inspectorScroll: {
+                  clientHeight: document.querySelector('#workbench-evidence-inspector')?.clientHeight || 0,
+                  scrollHeight: document.querySelector('#workbench-evidence-inspector')?.scrollHeight || 0,
+                },
+                main: box('.workbench-editable-main'),
+                nodeBoxes: Array.from(document.querySelectorAll('.workbench-editable-node')).map((node) => {
+                  const rect = node.getBoundingClientRect();
+                  return {
+                    width: rect.width,
+                    height: rect.height,
+                    left: rect.left,
+                    top: rect.top,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                  };
+                }),
+                nodeCount: document.querySelectorAll('.workbench-editable-node').length,
+                portHandleCount: document.querySelectorAll('.workbench-port-handle').length,
+                archiveVisible: Boolean(document.querySelector('#workbench-evidence-archive')),
+                debugVisible: Boolean(document.querySelector('#workbench-selected-debug-timeline')),
+              };
+            }
+            """
+        )
+
+    (_ARTIFACT_DIR / "goal-canvas-panel-geometry.json").write_text(
+        json.dumps(evidence, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    for label, data in evidence.items():
+        assert data["panel"] is not None, label
+        assert data["panel"]["width"] == 0, label
+        assert data["reopenGuide"]["width"] > 0, label
+        assert data["canvas"]["width"] > 0 and data["canvas"]["height"] > 0, label
+        assert data["main"]["height"] <= data["viewport"]["height"] - 120, label
+        assert data["viewport"]["bodyScrollHeight"] <= data["viewport"]["height"] + 120, label
+        assert data["viewport"]["bodyScrollWidth"] <= data["viewport"]["width"] + 2, label
+        assert data["toolbar"]["left"] >= data["canvas"]["left"], label
+        assert data["toolbar"]["right"] <= data["canvas"]["left"] + 72, label
+        assert data["inspector"]["right"] <= data["viewport"]["width"] + 2, label
+        assert data["inspectorScroll"]["scrollHeight"] >= data["inspectorScroll"]["clientHeight"], label
+        assert all(node["width"] <= 150 for node in data["nodeBoxes"]), label
+        assert all(node["height"] <= 90 for node in data["nodeBoxes"]), label
+        assert all(
+            node["left"] >= data["canvas"]["left"] and node["right"] <= data["canvas"]["right"]
+            for node in data["nodeBoxes"]
+        ), label
+        assert all(
+            node["top"] >= data["canvas"]["top"] and node["bottom"] <= data["canvas"]["bottom"]
+            for node in data["nodeBoxes"]
+        ), label
+        if label == "desktop":
+            assert data["canvas"]["width"] >= data["viewport"]["width"] * 0.78, label
+            assert data["inspector"]["top"] >= data["canvas"]["top"], label
+            assert data["inspector"]["bottom"] <= data["canvas"]["bottom"] + 2, label
+            assert 0 <= data["inspector"]["width"] <= 4, label
+        else:
+            assert data["canvas"]["width"] >= data["viewport"]["width"] * 0.79, label
+            assert data["inspector"]["top"] >= data["canvas"]["top"], label
+            assert data["inspector"]["bottom"] <= data["canvas"]["bottom"] + 2, label
+            assert 0 <= data["inspector"]["width"] <= 4, label
+        assert data["nodeCount"] == 3, label
+        assert data["portHandleCount"] >= 6, label
+        assert data["archiveVisible"] is True, label
+        assert data["debugVisible"] is True, label
+
+
+def test_workbench_inspector_modes_reduce_default_density(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    page.set_viewport_size({"width": 1440, "height": 980})
+    page.goto(f"{demo_server}/workbench", wait_until="domcontentloaded")
+    page.evaluate("localStorage.clear()")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    def inspector_state() -> dict[str, Any]:
+        return page.evaluate(
+            """
+            () => {
+              const isVisible = (node) => {
+                if (!node) return false;
+                const style = window.getComputedStyle(node);
+                return style.display !== 'none'
+                  && style.visibility !== 'hidden'
+                  && node.getClientRects().length > 0;
+              };
+              const box = (selector) => {
+                const node = document.querySelector(selector);
+                if (!node) return null;
+                const rect = node.getBoundingClientRect();
+                return {
+                  left: rect.left,
+                  top: rect.top,
+                  right: rect.right,
+                  bottom: rect.bottom,
+                  width: rect.width,
+                  height: rect.height,
+                };
+              };
+              return {
+                activeMode: document.querySelector('#workbench-evidence-inspector')
+                  ?.getAttribute('data-inspector-mode-active'),
+                selectedTabs: Array.from(document.querySelectorAll('[data-inspector-mode]'))
+                  .filter((button) => button.getAttribute('aria-selected') === 'true')
+                  .map((button) => button.getAttribute('data-inspector-mode')),
+                tabLabels: Array.from(document.querySelectorAll('[data-inspector-mode]'))
+                  .map((button) => button.textContent.trim()),
+                visiblePanels: Array.from(document.querySelectorAll('[data-inspector-panel]'))
+                  .filter((panel) => isVisible(panel))
+                  .map((panel) => panel.getAttribute('data-inspector-panel')),
+                nodeVisible: isVisible(document.querySelector('#workbench-inspector-node-panel')),
+                runVisible: isVisible(document.querySelector('#workbench-sandbox-test-bench')),
+                evidenceVisible: isVisible(document.querySelector('#workbench-hardware-palette')),
+                handoffVisible: isVisible(document.querySelector('.workbench-draft-json-exchange')),
+                canvas: box('#workbench-editable-canvas'),
+                inspector: box('#workbench-evidence-inspector'),
+                main: box('.workbench-editable-main'),
+                viewport: { width: window.innerWidth, height: window.innerHeight },
+              };
+            }
+            """
+        )
+
+    state = inspector_state()
+    assert errors == [], f"page JS errors: {errors}"
+    assert state["activeMode"] == "node"
+    assert state["selectedTabs"] == ["node"]
+    assert state["tabLabels"] == ["节点详情", "运行结果", "硬件证据", "交付包"]
+    assert state["visiblePanels"] == []
+    assert state["nodeVisible"] is False
+    assert state["runVisible"] is False
+    assert state["evidenceVisible"] is False
+    assert state["handoffVisible"] is False
+    assert state["inspector"]["width"] <= 4
+
+    page.click('[data-editable-node-id="logic1"]')
+    state = inspector_state()
+    assert state["visiblePanels"] == ["node"]
+    assert state["nodeVisible"] is True
+
+    _open_workbench_inspector_mode(page, "evidence")
+    state = inspector_state()
+    assert state["activeMode"] == "evidence"
+    assert state["selectedTabs"] == ["evidence"]
+    assert state["visiblePanels"] == ["evidence"]
+    assert state["evidenceVisible"] is True
+
+    _open_workbench_inspector_mode(page, "run")
+    state = inspector_state()
+    assert state["activeMode"] == "run"
+    assert state["visiblePanels"] == ["run"]
+    assert state["runVisible"] is True
+
+    _open_workbench_inspector_mode(page, "handoff")
+    state = inspector_state()
+    assert state["activeMode"] == "handoff"
+    assert state["visiblePanels"] == ["handoff"]
+    assert state["handoffVisible"] is True
+
+    page.set_viewport_size({"width": 390, "height": 920})
+    page.reload(wait_until="domcontentloaded")
+    page.wait_for_selector("#workbench-identity", state="attached")
+    page.click('[data-editable-node-id="logic1"]')
+    _open_workbench_inspector_mode(page, "node")
+    page.wait_for_function(
+        """
+        () => document.getElementById('workbench-evidence-inspector')
+          ?.getBoundingClientRect().width >= 290
+        """
+    )
+    narrow = inspector_state()
+    assert narrow["activeMode"] == "node"
+    assert narrow["inspector"]["width"] >= 290
+    assert narrow["inspector"]["top"] >= narrow["canvas"]["top"]
+    assert narrow["inspector"]["bottom"] <= narrow["canvas"]["bottom"] + 2
+    assert narrow["main"]["height"] <= narrow["viewport"]["height"] - 120
 
 
 def test_workbench_component_library_inserts_reusable_sandbox_template(demo_server, browser):  # type: ignore[no-untyped-def]
@@ -1981,7 +3097,7 @@ def test_workbench_component_library_inserts_reusable_sandbox_template(demo_serv
 
     page.click('[data-component-template-id="two_stage_interlock"]')
     assert "2ST" in page.locator("#workbench-component-library-status").inner_text()
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
 
     created_nodes = [node for node in draft["nodes"] if node["id"].startswith("draft_node_")]
@@ -2006,8 +3122,8 @@ def test_workbench_component_library_inserts_reusable_sandbox_template(demo_serv
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     _set_draft_buffer_value(page, draft_json)
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     imported_nodes = [node for node in imported["nodes"] if node["id"].startswith("draft_node_")]
     assert [node["component_template"]["template_id"] for node in imported_nodes] == [
@@ -2015,7 +3131,7 @@ def test_workbench_component_library_inserts_reusable_sandbox_template(demo_serv
         "two_stage_interlock",
     ]
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["component_library"]["last_template_id"] == "two_stage_interlock"
     assert archive["component_library"]["truth_effect"] == "none"
@@ -2030,14 +3146,14 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
     page.click('[data-component-template-id="two_stage_interlock"]')
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     before_group = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     before_edge_ids = [edge["id"] for edge in before_group["edges"]]
     before_port_ids = [port["id"] for port in before_group["typed_ports"]]
 
-    page.fill("#workbench-subsystem-name", "Deploy interlock")
-    page.click("#workbench-create-subsystem-btn")
-    page.click("#workbench-export-draft-btn")
+    _fill_workbench_node_control(page, "#workbench-subsystem-name", "Deploy interlock")
+    _click_workbench_node_control(page, "#workbench-create-subsystem-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     grouped = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     subsystem = grouped["subsystem_groups"][0]
     draft_nodes = [node for node in grouped["nodes"] if node["id"].startswith("draft_node_")]
@@ -2051,9 +3167,9 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
     assert [port["id"] for port in grouped["typed_ports"]] == before_port_ids
     assert page.locator(".workbench-subsystem-overlay").count() == 1
 
-    page.fill("#workbench-subsystem-name", "Deploy interlock v2")
-    page.click("#workbench-rename-subsystem-btn")
-    page.click("#workbench-export-draft-btn")
+    _fill_workbench_node_control(page, "#workbench-subsystem-name", "Deploy interlock v2")
+    _click_workbench_node_control(page, "#workbench-rename-subsystem-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     renamed = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert renamed["subsystem_groups"][0]["name"] == "Deploy interlock v2"
     assert all(
@@ -2064,18 +3180,18 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     _set_draft_buffer_value(page, draft_json)
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert imported["subsystem_groups"][0]["name"] == "Deploy interlock v2"
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["subsystem_groups"][0]["truth_effect"] == "none"
     assert archive["checksums"]["subsystem_groups_checksum"]
 
-    page.click("#workbench-ungroup-subsystem-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_node_control(page, "#workbench-ungroup-subsystem-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     ungrouped = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert ungrouped["subsystem_groups"] == []
     assert [edge["id"] for edge in ungrouped["edges"]] == before_edge_ids
@@ -2083,12 +3199,12 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
     assert all("subsystem_group" not in node for node in ungrouped["nodes"] if node["id"].startswith("draft_node_"))
 
     page.keyboard.press("Control+Z")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     undo = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert undo["subsystem_groups"][0]["name"] == "Deploy interlock v2"
 
     page.keyboard.press("Control+Shift+Z")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     redo = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert redo["subsystem_groups"] == []
     assert redo["truth_level_impact"] == "none"
@@ -2101,12 +3217,12 @@ def test_workbench_captures_and_reinserts_subsystem_template(demo_server, browse
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
     page.click('[data-component-template-id="two_stage_interlock"]')
-    page.fill("#workbench-subsystem-name", "Reusable deploy cell")
-    page.click("#workbench-create-subsystem-btn")
-    page.click("#workbench-capture-subsystem-template-btn")
+    _fill_workbench_node_control(page, "#workbench-subsystem-name", "Reusable deploy cell")
+    _click_workbench_node_control(page, "#workbench-create-subsystem-btn")
+    _click_with_workbench_inspector_closed(page, "#workbench-capture-subsystem-template-btn")
     assert "captured" in page.locator("#workbench-component-library-status").inner_text().lower()
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     captured = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     library = captured["component_library"]
     captured_templates = library["captured_templates"]
@@ -2126,8 +3242,8 @@ def test_workbench_captures_and_reinserts_subsystem_template(demo_server, browse
     assert captured_templates[0]["edges"][0]["source_index"] == 0
     assert captured_templates[0]["edges"][0]["target_index"] == 1
 
-    page.click("#workbench-insert-captured-template-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_with_workbench_inspector_closed(page, "#workbench-insert-captured-template-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     inserted = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     draft_nodes = [node for node in inserted["nodes"] if node["id"].startswith("draft_node_")]
     inserted_nodes = [node for node in draft_nodes if node["id"] in {"draft_node_3", "draft_node_4"}]
@@ -2153,13 +3269,13 @@ def test_workbench_captures_and_reinserts_subsystem_template(demo_server, browse
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     _set_draft_buffer_value(page, draft_json)
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert imported["component_library"]["captured_templates"][0]["id"] == template_id
     assert imported["component_library"]["captured_templates"][0]["truth_effect"] == "none"
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["component_library"]["captured_template_count"] == 1
     assert archive["component_library"]["captured_templates"][0]["truth_effect"] == "none"
@@ -2174,24 +3290,24 @@ def test_workbench_subsystem_interface_contract_round_trips_and_templates(demo_s
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
     page.click('[data-component-template-id="two_stage_interlock"]')
-    page.fill("#workbench-subsystem-name", "Ported deploy cell")
-    page.click("#workbench-create-subsystem-btn")
+    _fill_workbench_node_control(page, "#workbench-subsystem-name", "Ported deploy cell")
+    _click_workbench_node_control(page, "#workbench-create-subsystem-btn")
 
-    page.select_option("#workbench-subsystem-interface-direction", "input")
-    page.fill("#workbench-subsystem-interface-label", "Deploy request")
-    page.fill("#workbench-subsystem-interface-signal-id", "deploy_request_cmd")
-    page.select_option("#workbench-subsystem-interface-value-type", "boolean")
-    page.select_option("#workbench-subsystem-interface-evidence-status", "ui_draft")
-    page.click("#workbench-add-subsystem-interface-port-btn")
+    _select_workbench_node_control(page, "#workbench-subsystem-interface-direction", "input")
+    _fill_workbench_node_control(page, "#workbench-subsystem-interface-label", "Deploy request")
+    _fill_workbench_node_control(page, "#workbench-subsystem-interface-signal-id", "deploy_request_cmd")
+    _select_workbench_node_control(page, "#workbench-subsystem-interface-value-type", "boolean")
+    _select_workbench_node_control(page, "#workbench-subsystem-interface-evidence-status", "ui_draft")
+    _click_workbench_node_control(page, "#workbench-add-subsystem-interface-port-btn")
 
-    page.select_option("#workbench-subsystem-interface-direction", "output")
-    page.fill("#workbench-subsystem-interface-label", "Deploy allowed")
-    page.fill("#workbench-subsystem-interface-signal-id", "deploy_allowed_status")
-    page.select_option("#workbench-subsystem-interface-value-type", "boolean")
-    page.select_option("#workbench-subsystem-interface-evidence-status", "evidence_gap")
-    page.click("#workbench-add-subsystem-interface-port-btn")
+    _select_workbench_node_control(page, "#workbench-subsystem-interface-direction", "output")
+    _fill_workbench_node_control(page, "#workbench-subsystem-interface-label", "Deploy allowed")
+    _fill_workbench_node_control(page, "#workbench-subsystem-interface-signal-id", "deploy_allowed_status")
+    _select_workbench_node_control(page, "#workbench-subsystem-interface-value-type", "boolean")
+    _select_workbench_node_control(page, "#workbench-subsystem-interface-evidence-status", "evidence_gap")
+    _click_workbench_node_control(page, "#workbench-add-subsystem-interface-port-btn")
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     contracted = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     group = contracted["subsystem_groups"][0]
     contracts = contracted["subsystem_interface_contracts"]
@@ -2207,14 +3323,14 @@ def test_workbench_subsystem_interface_contract_round_trips_and_templates(demo_s
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     _set_draft_buffer_value(page, draft_json)
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert imported["subsystem_groups"][0]["interface_contracts"][0]["label"] == "Deploy request"
 
-    page.click("#workbench-capture-subsystem-template-btn")
-    page.click("#workbench-insert-captured-template-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_with_workbench_inspector_closed(page, "#workbench-capture-subsystem-template-btn")
+    _click_with_workbench_inspector_closed(page, "#workbench-insert-captured-template-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     inserted = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     copied_group = next(
         group for group in inserted["subsystem_groups"]
@@ -2229,7 +3345,7 @@ def test_workbench_subsystem_interface_contract_round_trips_and_templates(demo_s
     assert copied_ports[0]["id"].startswith(f"{copied_group['id']}:input:")
     assert copied_ports[1]["id"].startswith(f"{copied_group['id']}:output:")
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["subsystem_interface_contracts"]["port_count"] == 4
     assert archive["subsystem_interface_contracts"]["truth_effect"] == "none"
@@ -2245,14 +3361,14 @@ def test_workbench_workspace_document_round_trips_with_archive_checksum(demo_ser
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
     page.click('[data-component-template-id="two_stage_interlock"]')
-    page.fill("#workbench-subsystem-name", "Documented deploy cell")
-    page.click("#workbench-create-subsystem-btn")
-    page.select_option("#workbench-subsystem-interface-direction", "input")
-    page.fill("#workbench-subsystem-interface-label", "Deploy request")
-    page.fill("#workbench-subsystem-interface-signal-id", "deploy_request_cmd")
-    page.click("#workbench-add-subsystem-interface-port-btn")
+    _fill_workbench_node_control(page, "#workbench-subsystem-name", "Documented deploy cell")
+    _click_workbench_node_control(page, "#workbench-create-subsystem-btn")
+    _select_workbench_node_control(page, "#workbench-subsystem-interface-direction", "input")
+    _fill_workbench_node_control(page, "#workbench-subsystem-interface-label", "Deploy request")
+    _fill_workbench_node_control(page, "#workbench-subsystem-interface-signal-id", "deploy_request_cmd")
+    _click_workbench_node_control(page, "#workbench-add-subsystem-interface-port-btn")
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     exported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     workspace_document = exported["workspace_document"]
 
@@ -2265,24 +3381,28 @@ def test_workbench_workspace_document_round_trips_with_archive_checksum(demo_ser
     assert workspace_document["action_count"] >= 3
     assert workspace_document["undo_depth"] >= 3
     assert workspace_document["redo_depth"] == 0
-    assert page.locator("#workbench-workspace-document-revision").inner_text() == workspace_document["revision_id"]
+    assert (
+        page.locator("#workbench-workspace-document-revision")
+        .get_attribute("data-workspace-revision-id")
+        == workspace_document["revision_id"]
+    )
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     _set_draft_buffer_value(page, draft_json)
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert imported["workspace_document"]["document_id"] == workspace_document["document_id"]
     assert imported["workspace_document"]["action_count"] >= workspace_document["action_count"]
 
     page.click('[data-editor-tool="undo"]')
     page.click('[data-editor-tool="redo"]')
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     revised = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert revised["workspace_document"]["revision_id"].startswith("ui_draft_")
     assert revised["workspace_document"]["undo_depth"] >= 1
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["workspace_document"]["truth_effect"] == "none"
     assert archive["checksums"]["workspace_document_checksum"]
@@ -2303,13 +3423,13 @@ def test_workbench_editable_graph_document_round_trips_export_import_archive(dem
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
     page.click('[data-component-template-id="two_stage_interlock"]')
-    page.fill("#workbench-subsystem-name", "Canonical graph cell")
-    page.click("#workbench-create-subsystem-btn")
-    page.select_option("#workbench-subsystem-interface-direction", "output")
-    page.fill("#workbench-subsystem-interface-label", "Deploy command")
-    page.fill("#workbench-subsystem-interface-signal-id", "deploy_cmd")
-    page.click("#workbench-add-subsystem-interface-port-btn")
-    page.click("#workbench-export-draft-btn")
+    _fill_workbench_node_control(page, "#workbench-subsystem-name", "Canonical graph cell")
+    _click_workbench_node_control(page, "#workbench-create-subsystem-btn")
+    _select_workbench_node_control(page, "#workbench-subsystem-interface-direction", "output")
+    _fill_workbench_node_control(page, "#workbench-subsystem-interface-label", "Deploy command")
+    _fill_workbench_node_control(page, "#workbench-subsystem-interface-signal-id", "deploy_cmd")
+    _click_workbench_node_control(page, "#workbench-add-subsystem-interface-port-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     exported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     graph = exported["editable_graph_document"]
 
@@ -2343,8 +3463,8 @@ def test_workbench_editable_graph_document_round_trips_export_import_archive(dem
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     _set_draft_buffer_value(page, draft_json)
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     imported_graph = imported["editable_graph_document"]
     assert imported_graph["truth_effect"] == "none"
@@ -2368,9 +3488,9 @@ def test_workbench_editable_graph_document_round_trips_export_import_archive(dem
     legacy_v1["editable_graph_document"].pop("canonical_model")
     legacy_v1["editable_graph_document"].pop("dom_adapter")
     legacy_v1["editable_graph_document"].pop("accepted_import_versions")
-    page.fill("#workbench-draft-json-buffer", json.dumps(legacy_v1))
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _fill_workbench_handoff_control(page, "#workbench-draft-json-buffer", json.dumps(legacy_v1))
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     migrated = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     migrated_graph = migrated["editable_graph_document"]
     assert migrated_graph["version"] == "workbench-editable-graph-document.v2"
@@ -2384,9 +3504,9 @@ def test_workbench_editable_graph_document_round_trips_export_import_archive(dem
     canonical_only.pop("ports")
     canonical_only.pop("typed_ports")
     canonical_only.pop("subsystem_groups")
-    page.fill("#workbench-draft-json-buffer", json.dumps(canonical_only))
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _fill_workbench_handoff_control(page, "#workbench-draft-json-buffer", json.dumps(canonical_only))
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     rebuilt = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     rebuilt_graph = rebuilt["editable_graph_document"]
     assert rebuilt_graph["version"] == "workbench-editable-graph-document.v2"
@@ -2395,10 +3515,10 @@ def test_workbench_editable_graph_document_round_trips_export_import_archive(dem
     assert rebuilt_graph["canonical_model"]["nodes"] == imported_graph["canonical_model"]["nodes"]
     assert rebuilt_graph["dom_adapter"]["top_level_compatibility"] is True
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     first_archive_checksum = archive["checksums"]["editable_graph_document_checksum"]
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     second_archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["editable_graph_document"]["truth_effect"] == "none"
     assert archive["editable_graph_document"]["node_count"] == imported_graph["node_count"]
@@ -2415,7 +3535,7 @@ def test_workbench_captured_template_remaps_overlapping_ids_and_preserves_rules(
 
     for _ in range(10):
         page.click('[data-component-template-id="single_and_gate"]')
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     draft["component_library"]["last_template_id"] = "captured_subsystem_template_overlap"
     draft["component_library"]["captured_templates"] = [
@@ -2521,10 +3641,10 @@ def test_workbench_captured_template_remaps_overlapping_ids_and_preserves_rules(
         }
     ]
 
-    page.fill("#workbench-draft-json-buffer", json.dumps(draft))
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-insert-captured-template-btn")
-    page.click("#workbench-export-draft-btn")
+    _fill_workbench_handoff_control(page, "#workbench-draft-json-buffer", json.dumps(draft))
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_with_workbench_inspector_closed(page, "#workbench-insert-captured-template-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     inserted = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     node_12 = next(node for node in inserted["nodes"] if node["id"] == "draft_node_12")
     overlap_edge = next(
@@ -2556,12 +3676,12 @@ def test_workbench_rule_parameter_round_trips_through_export_import_and_archive(
 
     page.click('[data-op-catalog-op="between"]')
     page.click('[data-editor-tool="node"]')
-    page.fill("#workbench-rule-name", "draft_tra_window")
-    page.fill("#workbench-rule-source-signal", "tra_deg")
-    page.select_option("#workbench-rule-comparison", "between_lower_inclusive")
-    page.fill("#workbench-rule-threshold", "[-32,0]")
+    _fill_workbench_evidence_control(page, "#workbench-rule-name", "draft_tra_window")
+    _fill_workbench_evidence_control(page, "#workbench-rule-source-signal", "tra_deg")
+    _select_workbench_evidence_control(page, "#workbench-rule-comparison", "between_lower_inclusive")
+    _fill_workbench_evidence_control(page, "#workbench-rule-threshold", "[-32,0]")
     page.click("#workbench-apply-rule-parameter-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
 
     node = next(item for item in draft["nodes"] if item["id"] == "draft_node_1")
@@ -2579,15 +3699,15 @@ def test_workbench_rule_parameter_round_trips_through_export_import_and_archive(
 
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
-    page.fill("#workbench-draft-json-buffer", json.dumps(draft))
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _fill_workbench_handoff_control(page, "#workbench-draft-json-buffer", json.dumps(draft))
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     round_trip = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     round_trip_node = next(item for item in round_trip["nodes"] if item["id"] == "draft_node_1")
     assert round_trip_node["rules"][0]["threshold_value"] == [-32, 0]
     assert round_trip["rule_parameter_summary"]["total_rules"] == 1
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["model_json"]["nodes"][-1]["rules"][0]["comparison"] == "between_lower_inclusive"
     assert archive["rule_parameter_summary"]["total_rules"] == 1
@@ -2609,21 +3729,21 @@ def test_workbench_named_draft_snapshot_save_restore_export_archive(demo_server,
     )
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
-    page.select_option("#workbench-sandbox-scenario-select", "sw1_stuck_at_touchdown")
+    _select_workbench_run_control(page, "#workbench-sandbox-scenario-select", "sw1_stuck_at_touchdown")
     page.fill("#workbench-custom-snapshot-json", '{"tra_deg": -12}')
     page.click('[data-op-catalog-op="compare"]')
     page.click('[data-editor-tool="node"]')
-    page.fill("#workbench-draft-snapshot-name", "compare-candidate-a")
-    page.click("#workbench-save-draft-snapshot-btn")
+    _fill_workbench_handoff_control(page, "#workbench-draft-snapshot-name", "compare-candidate-a")
+    _click_workbench_handoff_control(page, "#workbench-save-draft-snapshot-btn")
     assert "compare-candidate-a" in page.locator("#workbench-draft-snapshot-select").inner_text()
 
     page.click('[data-editor-tool="node"]')
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     mutated = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert len([node for node in mutated["nodes"] if node["id"].startswith("draft_node_")]) == 2
 
-    page.click("#workbench-restore-draft-snapshot-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-restore-draft-snapshot-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     restored = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     draft_nodes = [node for node in restored["nodes"] if node["id"].startswith("draft_node_")]
     assert errors == [], f"page JS errors: {errors}"
@@ -2633,7 +3753,7 @@ def test_workbench_named_draft_snapshot_save_restore_export_archive(demo_server,
     assert restored["draft_snapshot_manifest"]["snapshot_count"] == 1
     assert restored["draft_snapshot_manifest"]["truth_effect"] == "none"
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["model_json"]["draft_snapshot_manifest"]["snapshot_count"] == 1
     assert archive["draft_snapshot_manifest"]["snapshot_count"] == 1
@@ -2657,22 +3777,22 @@ def test_workbench_duplicate_keyboard_shortcuts_edit_sandbox_nodes(demo_server, 
 
     page.click('[data-op-catalog-op="compare"]')
     page.click('[data-editor-tool="node"]')
-    page.fill("#workbench-rule-name", "draft_tra_compare")
-    page.fill("#workbench-rule-source-signal", "tra_deg")
-    page.select_option("#workbench-rule-comparison", ">=")
-    page.fill("#workbench-rule-threshold", "-11.74")
+    _fill_workbench_evidence_control(page, "#workbench-rule-name", "draft_tra_compare")
+    _fill_workbench_evidence_control(page, "#workbench-rule-source-signal", "tra_deg")
+    _select_workbench_evidence_control(page, "#workbench-rule-comparison", ">=")
+    _fill_workbench_evidence_control(page, "#workbench-rule-threshold", "-11.74")
     page.click("#workbench-apply-rule-parameter-btn")
-    page.click("#workbench-interface-hardware-id")
-    page.fill("#workbench-interface-hardware-id", "TR-LRU-001")
-    page.fill("#workbench-interface-cable", "CBL-TR-A")
-    page.fill("#workbench-interface-connector", "J1")
-    page.fill("#workbench-interface-port-local", "draft_node_1:out")
-    page.fill("#workbench-interface-port-peer", "TR-LRU-001:J1")
-    page.select_option("#workbench-interface-evidence-status", "ui_draft")
+    _click_workbench_evidence_control(page, "#workbench-interface-hardware-id")
+    _fill_workbench_evidence_control(page, "#workbench-interface-hardware-id", "TR-LRU-001")
+    _fill_workbench_evidence_control(page, "#workbench-interface-cable", "CBL-TR-A")
+    _fill_workbench_evidence_control(page, "#workbench-interface-connector", "J1")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-local", "draft_node_1:out")
+    _fill_workbench_evidence_control(page, "#workbench-interface-port-peer", "TR-LRU-001:J1")
+    _select_workbench_evidence_control(page, "#workbench-interface-evidence-status", "ui_draft")
     page.click("#workbench-apply-interface-binding-btn")
     page.locator('[data-editable-node-id="draft_node_1"]').click()
     page.keyboard.press("Control+D")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     duplicated = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     draft_nodes = [node for node in duplicated["nodes"] if node["id"].startswith("draft_node_")]
 
@@ -2687,14 +3807,14 @@ def test_workbench_duplicate_keyboard_shortcuts_edit_sandbox_nodes(demo_server, 
     assert duplicate["rules"][0]["source_signal_id"] == "tra_deg"
 
     page.keyboard.press("Control+Z")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     undone = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert [node["id"] for node in undone["nodes"] if node["id"].startswith("draft_node_")] == [
         "draft_node_1"
     ]
 
     page.keyboard.press("Control+Shift+Z")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     redone = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert [node["id"] for node in redone["nodes"] if node["id"].startswith("draft_node_")] == [
         "draft_node_1",
@@ -2702,7 +3822,7 @@ def test_workbench_duplicate_keyboard_shortcuts_edit_sandbox_nodes(demo_server, 
     ]
 
     page.keyboard.press("Delete")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     deleted = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert [node["id"] for node in deleted["nodes"] if node["id"].startswith("draft_node_")] == [
         "draft_node_1"
@@ -2731,7 +3851,7 @@ def test_workbench_multi_select_batch_duplicate_delete_and_undo(demo_server, bro
     assert page.locator('[data-editable-node-id="draft_node_2"]').get_attribute("data-multi-selected") == "true"
 
     page.keyboard.press("Control+D")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     duplicated = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     draft_ids = [node["id"] for node in duplicated["nodes"] if node["id"].startswith("draft_node_")]
 
@@ -2745,7 +3865,7 @@ def test_workbench_multi_select_batch_duplicate_delete_and_undo(demo_server, bro
     )
 
     page.keyboard.press("Delete")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     removed = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert [node["id"] for node in removed["nodes"] if node["id"].startswith("draft_node_")] == [
         "draft_node_1",
@@ -2753,7 +3873,7 @@ def test_workbench_multi_select_batch_duplicate_delete_and_undo(demo_server, bro
     ]
 
     page.keyboard.press("Control+Z")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     restored = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert [node["id"] for node in restored["nodes"] if node["id"].startswith("draft_node_")] == [
         "draft_node_1",
@@ -2779,14 +3899,14 @@ def test_workbench_lasso_selects_and_group_moves_draft_nodes(demo_server, browse
 
     page.click('[data-editor-tool="node"]')
     page.click('[data-editor-tool="node"]')
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     before = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     before_positions = {
         node["id"]: (node["x"], node["y"])
         for node in before["nodes"]
-        if node["id"] in {"logic3", "draft_node_1", "draft_node_2"}
     }
 
+    page.click('[data-editor-tool="select"]')
     page.locator('[data-editable-node-id="draft_node_1"]').scroll_into_view_if_needed()
     draft_node_1 = page.locator('[data-editable-node-id="draft_node_1"]').bounding_box()
     draft_node_2 = page.locator('[data-editable-node-id="draft_node_2"]').bounding_box()
@@ -2796,10 +3916,14 @@ def test_workbench_lasso_selects_and_group_moves_draft_nodes(demo_server, browse
     top = min(draft_node_1["y"], draft_node_2["y"]) - 44
     right = max(draft_node_1["x"] + draft_node_1["width"], draft_node_2["x"] + draft_node_2["width"]) + 44
     bottom = max(draft_node_1["y"] + draft_node_1["height"], draft_node_2["y"] + draft_node_2["height"]) + 44
-    page.mouse.move(left, top)
-    page.mouse.down()
-    page.mouse.move(right, bottom, steps=8)
-    page.mouse.up()
+    page.keyboard.down("Shift")
+    try:
+        page.mouse.move(left, top)
+        page.mouse.down()
+        page.mouse.move(right, bottom, steps=8)
+        page.mouse.up()
+    finally:
+        page.keyboard.up("Shift")
 
     page.wait_for_function(
         """
@@ -2847,23 +3971,23 @@ def test_workbench_lasso_selects_and_group_moves_draft_nodes(demo_server, browse
         """
     )
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     moved = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     moved_positions = {
         node["id"]: (node["x"], node["y"])
         for node in moved["nodes"]
-        if node["id"] in {"logic3", "draft_node_1", "draft_node_2"}
     }
 
     assert errors == [], f"page JS errors: {errors}"
     assert set(moved["selected_node_ids"]) >= {"draft_node_1", "draft_node_2"}
     assert moved_positions["draft_node_1"] != before_positions["draft_node_1"]
     assert moved_positions["draft_node_2"] != before_positions["draft_node_2"]
-    assert moved_positions["logic3"] == before_positions["logic3"]
+    for node_id in sorted(set(before_positions) - {"draft_node_1", "draft_node_2"}):
+        assert moved_positions[node_id] == before_positions[node_id]
     assert moved["truth_level_impact"] == "none"
 
     page.keyboard.press("Control+Z")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     undone = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     undone_positions = {
         node["id"]: (node["x"], node["y"])
@@ -2889,7 +4013,7 @@ def test_workbench_canvas_interaction_summary_tracks_high_freedom_actions(demo_s
 
     page.click('[data-component-template-id="two_stage_interlock"]')
     page.keyboard.press("Control+D")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     duplicated = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     summary = duplicated["canvas_interaction_summary"]
 
@@ -2909,8 +4033,8 @@ def test_workbench_canvas_interaction_summary_tracks_high_freedom_actions(demo_s
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     _set_draft_buffer_value(page, draft_json)
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     imported_summary = imported["canvas_interaction_summary"]
     assert imported_summary["last_action"] in {"import_draft", "batch_duplicate_nodes"}
@@ -2919,12 +4043,12 @@ def test_workbench_canvas_interaction_summary_tracks_high_freedom_actions(demo_s
     assert imported_summary["truth_effect"] == "none"
 
     page.keyboard.press("Delete")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     deleted = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert deleted["canvas_interaction_summary"]["last_action"] == "batch_remove_nodes"
     assert deleted["canvas_interaction_summary"]["selected_node_count"] == 1
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["canvas_interaction_summary"]["truth_effect"] == "none"
     assert archive["canvas_interaction_summary"]["last_action"] == "batch_remove_nodes"
@@ -2956,11 +4080,12 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
     target_handle = page.locator(
         '[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="in"]'
     )
-    source_handle.click()
+    _click_workbench_port_handle(page, "draft_node_1", "out")
     assert source_handle.get_attribute("data-port-handle-armed") == "true"
-    target_handle.click()
+    _click_workbench_port_handle(page, "draft_node_2", "in")
 
-    page.click("#workbench-export-draft-btn")
+    _open_workbench_inspector_mode(page, "handoff")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     edge = next(
         item for item in draft["edges"]
@@ -2986,11 +4111,17 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
     edge_path = page.locator(f'[data-editable-edge-id="{edge["id"]}"]')
     assert edge_path.get_attribute("data-edge-label") == "draft_node_1:out -> draft_node_2:in"
     assert edge_path.get_attribute("data-route-mode") == "orthogonal"
-    assert page.locator(f'[data-editable-edge-label-id="{edge["id"]}"]').text_content().strip() == "draft_node_1:out -> draft_node_2:in"
+    edge_path_d = edge_path.get_attribute("d")
+    assert edge_path_d and "C" not in edge_path_d
+    assert edge_path_d.count("L") >= 3
+    edge_label = page.locator(f'[data-editable-edge-label-id="{edge["id"]}"]')
+    assert edge_label.text_content().strip() == "draft_node_1:out -> draft_node_2:in"
+    assert edge_label.is_visible() is False
 
-    source_handle.click()
-    target_handle.click()
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_port_handle(page, "draft_node_1", "out")
+    _click_workbench_port_handle(page, "draft_node_2", "in")
+    _open_workbench_inspector_mode(page, "handoff")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     after_duplicate_attempt = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     matching_edges = [
         item for item in after_duplicate_attempt["edges"]
@@ -3000,8 +4131,8 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     _set_draft_buffer_value(page, draft_json)
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     imported_edge = next(
         item for item in imported["edges"]
@@ -3011,24 +4142,24 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
     assert imported_edge["route_metadata"] == edge["route_metadata"]
 
     page.locator(f'[data-editable-edge-id="{imported_edge["id"]}"]').dispatch_event("click")
+    assert page.locator(f'[data-editable-edge-label-id="{imported_edge["id"]}"]').is_visible() is True
+    _open_workbench_inspector_mode(page, "evidence")
     edge_detail = page.locator("#workbench-inspector-evidence-detail").inner_text()
     assert "Route mode" in edge_detail
     assert "orthogonal" in edge_detail
     page.click('[data-editor-tool="disconnect"]')
-    page.click("#workbench-export-draft-btn")
+    _open_workbench_inspector_mode(page, "handoff")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     disconnected = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert not [
         item for item in disconnected["edges"]
         if item["source"] == "draft_node_1" and item["target"] == "draft_node_2"
     ]
 
-    page.locator(
-        '[data-port-handle-owner-id="draft_node_1"][data-port-handle-direction="out"]'
-    ).click()
-    page.locator(
-        '[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="in"]'
-    ).click()
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_port_handle(page, "draft_node_1", "out")
+    _click_workbench_port_handle(page, "draft_node_2", "in")
+    _open_workbench_inspector_mode(page, "handoff")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     archived_edge = next(
         item for item in archive["model_json"]["edges"]
@@ -3038,6 +4169,66 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
     assert archived_edge["route_metadata"]["truth_effect"] == "none"
     assert archive["port_compatibility_report"]["status"] == "pass"
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
+def test_workbench_simulink_toolbar_tooltips_and_block_labels_render(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click("#workbench-start-empty-draft-btn")
+    page.click('[data-op-catalog-op="compare"]')
+    page.click('[data-editor-tool="node"]')
+
+    rendered = page.evaluate(
+        """
+        () => {
+          const node = document.querySelector('[data-editable-node-id="draft_node_1"]');
+          const wireTool = document.querySelector('[data-editor-tool="edge"]');
+          wireTool.focus();
+          const tooltipStyle = window.getComputedStyle(wireTool, '::after');
+          return {
+            nodeText: node ? node.textContent.trim() : '',
+            nodeDisplayText: node ? (node.querySelector('span')?.textContent.trim() || '') : '',
+            nodeShortLabel: node
+              ? (node.querySelector('.workbench-reference-node-op')?.textContent.trim() || '')
+              : '',
+            nodeTitle: node ? node.getAttribute('title') : '',
+            nodeTooltip: node ? node.getAttribute('data-tooltip') : '',
+            toolTooltip: wireTool ? wireTool.getAttribute('data-tooltip') : '',
+            toolAria: wireTool ? wireTool.getAttribute('aria-label') : '',
+            pseudoContent: tooltipStyle.content,
+            pseudoOpacity: tooltipStyle.opacity,
+            mainToolCount: document.querySelectorAll(
+              '#workbench-editor-toolbar [data-tool-primary="true"]'
+            ).length,
+            deferredToolCount: document.querySelectorAll(
+              '#workbench-editor-toolstrip [data-editor-tool], #workbench-editor-toolstrip [data-op-catalog-op], #workbench-editor-toolstrip [data-component-template-id]'
+            ).length,
+          };
+        }
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert rendered["nodeShortLabel"] == "CMP"
+    assert "Compare threshold" in rendered["nodeDisplayText"]
+    assert "Compare threshold" in rendered["nodeTooltip"]
+    assert "rules" not in rendered["nodeDisplayText"]
+    assert rendered["toolTooltip"] == "连线：从输出端口拖到输入端口"
+    assert rendered["toolAria"] == "连线：从输出端口拖到输入端口"
+    assert "连线" in rendered["pseudoContent"]
+    assert rendered["pseudoOpacity"] == "1"
+    assert rendered["mainToolCount"] == 6
+    assert rendered["deferredToolCount"] >= 12
 
 
 def test_workbench_port_drag_preview_creates_route_diagnostics_edge(demo_server, browser):  # type: ignore[no-untyped-def]
@@ -3088,7 +4279,7 @@ def test_workbench_port_drag_preview_creates_route_diagnostics_edge(demo_server,
     assert page.locator(".workbench-port-drag-preview").count() == 1
     page.mouse.up()
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     edge = next(
         item for item in draft["edges"]
@@ -3104,7 +4295,7 @@ def test_workbench_port_drag_preview_creates_route_diagnostics_edge(demo_server,
     assert draft["port_compatibility_report"]["status"] == "pass"
     assert draft["canvas_interaction_summary"]["last_action"] == "connect_edge"
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     archived_edge = next(
         item for item in archive["model_json"]["edges"]
@@ -3132,15 +4323,11 @@ def test_workbench_sandbox_scenario_test_bench_runs_exports_and_archives(demo_se
     page.click('[data-editor-tool="node"]')
     page.click('[data-op-catalog-op="between"]')
     page.click('[data-editor-tool="node"]')
-    page.locator(
-        '[data-port-handle-owner-id="draft_node_1"][data-port-handle-direction="out"]'
-    ).click()
-    page.locator(
-        '[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="in"]'
-    ).click()
+    _click_workbench_port_handle(page, "draft_node_1", "out")
+    _click_workbench_port_handle(page, "draft_node_2", "in")
 
-    page.fill(
-        "#workbench-test-bench-inputs-json",
+    _open_workbench_inspector_mode(page, "run")
+    _fill_workbench_run_control(page, "#workbench-test-bench-inputs-json",
         json.dumps(
             [
                 {"tick": 0, "inputs": {"draft_node_1:in": 2, "draft_node_1": 2}},
@@ -3148,8 +4335,7 @@ def test_workbench_sandbox_scenario_test_bench_runs_exports_and_archives(demo_se
             ]
         ),
     )
-    page.fill(
-        "#workbench-test-bench-assertions-json",
+    _fill_workbench_run_control(page, "#workbench-test-bench-assertions-json",
         json.dumps(
             [
                 {"tick": 0, "target": "draft_node_1:out", "expected": False},
@@ -3157,7 +4343,7 @@ def test_workbench_sandbox_scenario_test_bench_runs_exports_and_archives(demo_se
             ]
         ),
     )
-    page.click("#workbench-run-test-bench-btn")
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
     page.wait_for_function(
         """
         () => {
@@ -3182,7 +4368,8 @@ def test_workbench_sandbox_scenario_test_bench_runs_exports_and_archives(demo_se
     assert report["trace"][0]["tick"] == 0
     assert report["trace"][1]["tick"] == 1
 
-    page.click("#workbench-export-draft-btn")
+    _open_workbench_inspector_mode(page, "handoff")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert draft["sandbox_test_bench"]["truth_effect"] == "none"
     assert draft["sandbox_test_run_report"]["assertion_status"] == "pass"
@@ -3190,13 +4377,14 @@ def test_workbench_sandbox_scenario_test_bench_runs_exports_and_archives(demo_se
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     _set_draft_buffer_value(page, draft_json)
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert imported["sandbox_test_bench"]["assertion_count"] == 2
     assert imported["sandbox_test_run_report"]["assertion_status"] == "pass"
 
-    page.click("#workbench-prepare-archive-btn")
+    _open_workbench_inspector_mode(page, "handoff")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["sandbox_test_bench"]["tick_count"] == 2
     assert archive["sandbox_test_run_report"]["assertion_status"] == "pass"
@@ -3223,37 +4411,30 @@ def test_workbench_scenario_test_case_library_create_duplicate_select_run_export
     page.click('[data-editor-tool="node"]')
     page.click('[data-op-catalog-op="output"]')
     page.click('[data-editor-tool="node"]')
-    page.locator(
-        '[data-port-handle-owner-id="draft_node_1"][data-port-handle-direction="out"]'
-    ).click()
-    page.locator(
-        '[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="in"]'
-    ).click()
+    _click_workbench_port_handle(page, "draft_node_1", "out")
+    _click_workbench_port_handle(page, "draft_node_2", "in")
 
-    page.fill("#workbench-test-case-name", "Power-on pass case")
-    page.fill("#workbench-test-case-notes", "Library case should survive export/import/archive.")
-    page.fill(
-        "#workbench-test-bench-inputs-json",
+    _fill_workbench_run_control(page, "#workbench-test-case-name", "Power-on pass case")
+    _fill_workbench_run_control(page, "#workbench-test-case-notes", "Library case should survive export/import/archive.")
+    _fill_workbench_run_control(page, "#workbench-test-bench-inputs-json",
         json.dumps([{"tick": 0, "inputs": {"draft_node_1:out": True, "draft_node_1": True}}]),
     )
-    page.fill(
-        "#workbench-test-bench-assertions-json",
+    _fill_workbench_run_control(page, "#workbench-test-bench-assertions-json",
         json.dumps([{"tick": 0, "target": "draft_node_2:out", "expected": True}]),
     )
-    page.fill(
-        "#workbench-test-case-expected-outputs-json",
+    _fill_workbench_run_control(page, "#workbench-test-case-expected-outputs-json",
         json.dumps([{"tick": 0, "target": "draft_node_2:out", "expected": True}]),
     )
-    page.click("#workbench-save-test-case-btn")
-    page.click("#workbench-duplicate-test-case-btn")
-    page.fill("#workbench-test-case-name", "Power-on duplicate run case")
-    page.click("#workbench-save-test-case-btn")
-    page.select_option("#workbench-test-case-library-select", label="Power-on pass case")
+    _click_workbench_run_control(page, "#workbench-save-test-case-btn")
+    _click_workbench_run_control(page, "#workbench-duplicate-test-case-btn")
+    _fill_workbench_run_control(page, "#workbench-test-case-name", "Power-on duplicate run case")
+    _click_workbench_run_control(page, "#workbench-save-test-case-btn")
+    _select_workbench_run_control(page, "#workbench-test-case-library-select", label="Power-on pass case")
     assert page.locator("#workbench-test-case-name").input_value() == "Power-on pass case"
-    page.select_option("#workbench-test-case-library-select", label="Power-on duplicate run case")
+    _select_workbench_run_control(page, "#workbench-test-case-library-select", label="Power-on duplicate run case")
     assert page.locator("#workbench-test-case-name").input_value() == "Power-on duplicate run case"
 
-    page.click("#workbench-run-test-bench-btn")
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
     page.wait_for_function(
         """
         () => {
@@ -3275,7 +4456,7 @@ def test_workbench_scenario_test_case_library_create_duplicate_select_run_export
     assert report["scenario_test_case_library_checksum"].startswith("ui_draft_")
     assert report["truth_effect"] == "none"
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     library = draft["scenario_test_case_library"]
     active_id = library["active_test_case_id"]
@@ -3289,14 +4470,14 @@ def test_workbench_scenario_test_case_library_create_duplicate_select_run_export
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     _set_draft_buffer_value(page, draft_json)
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert imported["scenario_test_case_library"]["test_case_count"] == 2
     assert imported["scenario_test_case_library"]["active_test_case_id"] == active_id
     assert imported["sandbox_test_run_report"]["scenario_test_case_library_checksum"].startswith("ui_draft_")
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["scenario_test_case_library"]["test_case_count"] == 2
     assert archive["scenario_test_case_library"]["truth_effect"] == "none"
@@ -3325,18 +4506,17 @@ def test_workbench_sandbox_runner_trace_kernel_records_node_port_edge_assertion_
     page.click('[data-op-catalog-op="compare"]')
     page.click('[data-editor-tool="node"]')
     page.locator('[data-editable-node-id="draft_node_2"]').click()
-    page.fill("#workbench-rule-threshold", "1")
+    _fill_workbench_evidence_control(page, "#workbench-rule-threshold", "1")
     page.click("#workbench-apply-rule-parameter-btn")
     page.click('[data-op-catalog-op="output"]')
     page.click('[data-editor-tool="node"]')
-    page.locator('[data-port-handle-owner-id="draft_node_1"][data-port-handle-direction="out"]').click()
-    page.locator('[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="in"]').click()
-    page.locator('[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="out"]').click()
-    page.locator('[data-port-handle-owner-id="draft_node_3"][data-port-handle-direction="in"]').click()
+    _click_workbench_port_handle(page, "draft_node_1", "out")
+    _click_workbench_port_handle(page, "draft_node_2", "in")
+    _click_workbench_port_handle(page, "draft_node_2", "out")
+    _click_workbench_port_handle(page, "draft_node_3", "in")
 
-    page.fill("#workbench-test-case-name", "Trace kernel compare case")
-    page.fill(
-        "#workbench-test-bench-inputs-json",
+    _fill_workbench_run_control(page, "#workbench-test-case-name", "Trace kernel compare case")
+    _fill_workbench_run_control(page, "#workbench-test-bench-inputs-json",
         json.dumps(
             [
                 {"tick": 0, "inputs": {"draft_node_1": False}},
@@ -3344,8 +4524,7 @@ def test_workbench_sandbox_runner_trace_kernel_records_node_port_edge_assertion_
             ]
         ),
     )
-    page.fill(
-        "#workbench-test-bench-assertions-json",
+    _fill_workbench_run_control(page, "#workbench-test-bench-assertions-json",
         json.dumps(
             [
                 {"tick": 0, "target": "draft_node_3:out", "expected": False},
@@ -3353,8 +4532,8 @@ def test_workbench_sandbox_runner_trace_kernel_records_node_port_edge_assertion_
             ]
         ),
     )
-    page.click("#workbench-save-test-case-btn")
-    page.click("#workbench-run-test-bench-btn")
+    _click_workbench_run_control(page, "#workbench-save-test-case-btn")
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
     page.wait_for_function(
         """
         () => {
@@ -3384,14 +4563,14 @@ def test_workbench_sandbox_runner_trace_kernel_records_node_port_edge_assertion_
     assert any(item["port_id"] == "draft_node_3:out" and item["value"] is True for item in kernel["frames"][1]["port_values"])
     assert any(item["source_node_id"] == "draft_node_2" and item["target_node_id"] == "draft_node_3" and item["value"] is True for item in kernel["frames"][1]["edge_values"])
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert draft["sandbox_test_run_report"]["sandbox_runner_trace_kernel"]["trace_frame_count"] == 2
     assert draft["sandbox_test_run_report"]["sandbox_runner_trace_kernel_checksum"].startswith("ui_draft_")
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     _set_draft_buffer_value(page, draft_json)
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert imported["sandbox_test_run_report"]["sandbox_runner_trace_kernel"]["evaluation_order"] == [
         "draft_node_1",
@@ -3399,7 +4578,7 @@ def test_workbench_sandbox_runner_trace_kernel_records_node_port_edge_assertion_
         "draft_node_3",
     ]
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["sandbox_test_run_report"]["sandbox_runner_trace_kernel"]["truth_effect"] == "none"
     assert archive["checksums"]["sandbox_runner_trace_kernel_checksum"]
@@ -3425,10 +4604,10 @@ def test_workbench_sandbox_runner_trace_kernel_reports_invalid_graph_findings(de
     page.click('[data-editor-tool="node"]')
     page.click('[data-op-catalog-op="compare"]')
     page.click('[data-editor-tool="node"]')
-    page.locator('[data-port-handle-owner-id="draft_node_1"][data-port-handle-direction="out"]').click()
-    page.locator('[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="in"]').click()
-    page.locator('[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="out"]').click()
-    page.locator('[data-port-handle-owner-id="draft_node_1"][data-port-handle-direction="in"]').click()
+    _click_workbench_port_handle(page, "draft_node_1", "out")
+    _click_workbench_port_handle(page, "draft_node_2", "in")
+    _click_workbench_port_handle(page, "draft_node_2", "out")
+    _click_workbench_port_handle(page, "draft_node_1", "in")
     page.evaluate(
         """
         () => {
@@ -3438,9 +4617,9 @@ def test_workbench_sandbox_runner_trace_kernel_reports_invalid_graph_findings(de
         }
         """
     )
-    page.fill("#workbench-test-bench-inputs-json", json.dumps([{"tick": 0, "inputs": {}}]))
-    page.fill("#workbench-test-bench-assertions-json", json.dumps([]))
-    page.click("#workbench-run-test-bench-btn")
+    _fill_workbench_run_control(page, "#workbench-test-bench-inputs-json", json.dumps([{"tick": 0, "inputs": {}}]))
+    _fill_workbench_run_control(page, "#workbench-test-bench-assertions-json", json.dumps([]))
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
     page.wait_for_function(
         """
         () => {
@@ -3479,23 +4658,21 @@ def test_workbench_large_sandbox_graph_trace_and_archive_checksums_are_stable(de
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
     page.click("#workbench-start-empty-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     base_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     stress_pack = large_sandbox_stress_pack(base_draft)
     large_case = stress_pack["cases"]["pass"]
     large_draft = large_case["draft"]
     _set_draft_buffer_value(page, json.dumps(large_draft))
-    page.click("#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
 
-    page.fill(
-        "#workbench-test-bench-inputs-json",
+    _fill_workbench_run_control(page, "#workbench-test-bench-inputs-json",
         json.dumps(large_case["inputs"]),
     )
-    page.fill(
-        "#workbench-test-bench-assertions-json",
+    _fill_workbench_run_control(page, "#workbench-test-bench-assertions-json",
         json.dumps(large_case["assertions"]),
     )
-    page.click("#workbench-run-test-bench-btn")
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
     page.wait_for_function(
         """
         () => {
@@ -3505,7 +4682,7 @@ def test_workbench_large_sandbox_graph_trace_and_archive_checksums_are_stable(de
         """
     )
     first_report = json.loads(page.locator("#workbench-test-bench-report-output").input_value())
-    page.click("#workbench-run-test-bench-btn")
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
     second_report = json.loads(page.locator("#workbench-test-bench-report-output").input_value())
     first_kernel = first_report["sandbox_runner_trace_kernel"]
     second_kernel = second_report["sandbox_runner_trace_kernel"]
@@ -3525,9 +4702,9 @@ def test_workbench_large_sandbox_graph_trace_and_archive_checksums_are_stable(de
     assert first_kernel["frames"][2]["assertion_results"][0]["status"] == "pass"
     assert first_kernel["truth_effect"] == "none"
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     first_archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     second_archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     stable_checksum_keys = [
         "editable_graph_document_checksum",
@@ -3562,12 +4739,12 @@ def test_workbench_large_sandbox_graph_invalid_findings_remain_structured(demo_s
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
     page.click("#workbench-start-empty-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     base_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     invalid_case = large_sandbox_stress_pack(base_draft)["cases"]["invalid_graph"]
     large_draft = invalid_case["draft"]
     _set_draft_buffer_value(page, json.dumps(large_draft))
-    page.click("#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
     page.evaluate(
         """
         ([nodeId, op]) => {
@@ -3578,12 +4755,11 @@ def test_workbench_large_sandbox_graph_invalid_findings_remain_structured(demo_s
         """,
         [invalid_case["unsupported_node_id"], invalid_case["unsupported_op"]],
     )
-    page.fill(
-        "#workbench-test-bench-inputs-json",
+    _fill_workbench_run_control(page, "#workbench-test-bench-inputs-json",
         json.dumps(invalid_case["inputs"]),
     )
-    page.fill("#workbench-test-bench-assertions-json", json.dumps(invalid_case["assertions"]))
-    page.click("#workbench-run-test-bench-btn")
+    _fill_workbench_run_control(page, "#workbench-test-bench-assertions-json", json.dumps(invalid_case["assertions"]))
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
     page.wait_for_function(
         """
         () => {
@@ -3626,8 +4802,7 @@ def test_workbench_candidate_debugger_view_tracks_failing_assertion_and_archive(
 
     page.click('[data-op-catalog-op="compare"]')
     page.click('[data-editor-tool="node"]')
-    page.fill(
-        "#workbench-test-bench-inputs-json",
+    _fill_workbench_run_control(page, "#workbench-test-bench-inputs-json",
         json.dumps(
             [
                 {"tick": 0, "inputs": {"draft_node_1:in": 2, "draft_node_1": 2}},
@@ -3635,8 +4810,7 @@ def test_workbench_candidate_debugger_view_tracks_failing_assertion_and_archive(
             ]
         ),
     )
-    page.fill(
-        "#workbench-test-bench-assertions-json",
+    _fill_workbench_run_control(page, "#workbench-test-bench-assertions-json",
         json.dumps(
             [
                 {"tick": 0, "target": "draft_node_1:out", "expected": True},
@@ -3644,7 +4818,7 @@ def test_workbench_candidate_debugger_view_tracks_failing_assertion_and_archive(
             ]
         ),
     )
-    page.click("#workbench-run-test-bench-btn")
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
     page.wait_for_function(
         """
         () => document.getElementById('workbench-candidate-debugger-status')?.textContent.trim() === 'fail'
@@ -3659,7 +4833,7 @@ def test_workbench_candidate_debugger_view_tracks_failing_assertion_and_archive(
     assert "draft_node_1:out=false" in page.locator("#workbench-candidate-debugger-observed").inner_text()
     assert page.locator("#workbench-candidate-debugger-trace").inner_text() == "available"
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     debugger_view = draft["candidate_debugger_view"]
     assert debugger_view["kind"] == "well-harness-workbench-candidate-debugger-view"
@@ -3672,13 +4846,13 @@ def test_workbench_candidate_debugger_view_tracks_failing_assertion_and_archive(
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     _set_draft_buffer_value(page, draft_json)
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert imported["candidate_debugger_view"]["target"]["owner_key"] == "node:draft_node_1"
     assert imported["candidate_debugger_view"]["first_failing_assertion"]["status"] == "fail"
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["candidate_debugger_view"]["truth_effect"] == "none"
     assert archive["candidate_debugger_view"]["first_failing_assertion"]["target"] == "draft_node_1:out"
@@ -3701,8 +4875,7 @@ def test_workbench_debug_probe_timeline_tracks_selected_node_over_trace_and_rest
 
     page.click('[data-op-catalog-op="compare"]')
     page.click('[data-editor-tool="node"]')
-    page.fill(
-        "#workbench-test-bench-inputs-json",
+    _fill_workbench_run_control(page, "#workbench-test-bench-inputs-json",
         json.dumps(
             [
                 {"tick": 0, "inputs": {"draft_node_1:in": 2, "draft_node_1": 2}},
@@ -3710,8 +4883,7 @@ def test_workbench_debug_probe_timeline_tracks_selected_node_over_trace_and_rest
             ]
         ),
     )
-    page.fill(
-        "#workbench-test-bench-assertions-json",
+    _fill_workbench_run_control(page, "#workbench-test-bench-assertions-json",
         json.dumps(
             [
                 {"tick": 0, "target": "draft_node_1:out", "expected": True},
@@ -3719,7 +4891,7 @@ def test_workbench_debug_probe_timeline_tracks_selected_node_over_trace_and_rest
             ]
         ),
     )
-    page.click("#workbench-run-test-bench-btn")
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
     page.wait_for_function(
         """
         () => document.getElementById('workbench-candidate-debugger-status')?.textContent.trim() === 'fail'
@@ -3731,7 +4903,7 @@ def test_workbench_debug_probe_timeline_tracks_selected_node_over_trace_and_rest
     assert "draft_node_1:out=false @ tick 0" in page.locator("#workbench-candidate-debugger-observed").inner_text()
     assert "draft_node_1:out=true @ tick 1" in page.locator("#workbench-candidate-debugger-observed").inner_text()
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     probe = draft["debug_probe_timeline"]
     assert probe["kind"] == "well-harness-workbench-debug-probe-timeline"
@@ -3753,13 +4925,13 @@ def test_workbench_debug_probe_timeline_tracks_selected_node_over_trace_and_rest
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     _set_draft_buffer_value(page, draft_json)
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert imported["debug_probe_timeline"]["target"]["owner_key"] == "node:draft_node_1"
     assert imported["debug_probe_timeline"]["watched_values"][1]["value"] is True
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["debug_probe_timeline"]["truth_effect"] == "none"
     assert archive["debug_probe_timeline"]["watched_values"][0]["tick"] == 0
@@ -3783,8 +4955,7 @@ def test_workbench_preflight_analyzer_classifies_failed_candidate_and_archives(d
 
     page.click('[data-op-catalog-op="compare"]')
     page.click('[data-editor-tool="node"]')
-    page.fill(
-        "#workbench-test-bench-inputs-json",
+    _fill_workbench_run_control(page, "#workbench-test-bench-inputs-json",
         json.dumps(
             [
                 {"tick": 0, "inputs": {"draft_node_1:in": 2, "draft_node_1": 2}},
@@ -3792,8 +4963,7 @@ def test_workbench_preflight_analyzer_classifies_failed_candidate_and_archives(d
             ]
         ),
     )
-    page.fill(
-        "#workbench-test-bench-assertions-json",
+    _fill_workbench_run_control(page, "#workbench-test-bench-assertions-json",
         json.dumps(
             [
                 {"tick": 0, "target": "draft_node_1:out", "expected": True},
@@ -3801,8 +4971,8 @@ def test_workbench_preflight_analyzer_classifies_failed_candidate_and_archives(d
             ]
         ),
     )
-    page.click("#workbench-run-test-bench-btn")
-    page.click("#workbench-run-preflight-btn")
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
+    _click_workbench_run_control(page, "#workbench-run-preflight-btn")
     page.wait_for_function(
         """
         () => document.getElementById('workbench-preflight-classification')?.textContent.trim() === 'invalid_candidate'
@@ -3823,20 +4993,20 @@ def test_workbench_preflight_analyzer_classifies_failed_candidate_and_archives(d
     assert report["certification_claim"] == "none"
     assert report["truth_effect"] == "none"
 
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert draft["preflight_analyzer_report"]["classification"] == "invalid_candidate"
     assert draft["preflight_analyzer_report"]["candidate_model_hash"] == report["candidate_model_hash"]
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     _set_draft_buffer_value(page, draft_json)
-    page.click("#workbench-import-draft-btn")
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert imported["preflight_analyzer_report"]["classification"] == "invalid_candidate"
     assert imported["preflight_analyzer_report"]["truth_effect"] == "none"
 
-    page.click("#workbench-prepare-archive-btn")
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["preflight_analyzer_report"]["classification"] == "invalid_candidate"
     assert archive["preflight_analyzer_report"]["findings"][0]["truth_effect"] == "none"
@@ -3877,7 +5047,8 @@ def test_workbench_canvas_viewport_pan_zoom_fit_preserves_model_coordinates(demo
     page.click('[data-editor-tool="node"]')
     page.click('[data-editor-tool="node"]')
     page.locator('[data-editable-node-id="draft_node_1"]').click(modifiers=["Shift"])
-    page.click("#workbench-export-draft-btn")
+    _open_workbench_inspector_mode(page, "handoff")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     before = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     before_positions = {
         node["id"]: (node["x"], node["y"])
@@ -3917,7 +5088,7 @@ def test_workbench_canvas_viewport_pan_zoom_fit_preserves_model_coordinates(demo
     assert float(page.locator("#workbench-editable-canvas").get_attribute("data-viewport-scale") or "1") > 1
 
     page.click('[data-viewport-tool="fit-selection"]')
-    page.click("#workbench-export-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     fitted = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     fitted_positions = {
         node["id"]: (node["x"], node["y"])
@@ -3932,3 +5103,333 @@ def test_workbench_canvas_viewport_pan_zoom_fit_preserves_model_coordinates(demo
 
     page.click('[data-viewport-tool="reset"]')
     assert page.locator("#workbench-editable-canvas").get_attribute("data-viewport-state") == "reset"
+
+
+def test_workbench_canvas_dominates_viewport_and_direct_pan_zoom_tracks_mouse(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    page.set_viewport_size({"width": 1440, "height": 980})
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("localStorage.clear()")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    first_screen = page.evaluate(
+        """
+        () => {
+          const box = (selector) => {
+            const node = document.querySelector(selector);
+            if (!node) return null;
+            const rect = node.getBoundingClientRect();
+            return {
+              left: rect.left,
+              top: rect.top,
+              right: rect.right,
+              bottom: rect.bottom,
+              width: rect.width,
+              height: rect.height,
+            };
+          };
+          const styleValue = (selector, prop) => {
+            const node = document.querySelector(selector);
+            return node ? window.getComputedStyle(node).getPropertyValue(prop) : "";
+          };
+          const guide = document.querySelector('#workbench-canvas-first-guide');
+          return {
+            viewport: { width: window.innerWidth, height: window.innerHeight },
+            main: box('.workbench-editable-main'),
+            canvas: box('#workbench-editable-canvas'),
+            guide: box('#workbench-canvas-first-guide'),
+            guideText: guide ? guide.innerText.replace(/\\s+/g, ' ').trim() : "",
+            mainColumns: styleValue('.workbench-editable-main', 'grid-template-columns'),
+            toolbarPosition: styleValue('#workbench-editor-toolbar', 'position'),
+            inspectorPosition: styleValue('#workbench-evidence-inspector', 'position'),
+          };
+        }
+        """
+    )
+    assert first_screen["canvas"]["width"] >= first_screen["viewport"]["width"] * 0.78
+    assert first_screen["canvas"]["height"] >= first_screen["viewport"]["height"] * 0.62
+    assert first_screen["guide"]["height"] <= 52
+    assert len(first_screen["guideText"]) <= 80
+    assert first_screen["toolbarPosition"] == "absolute"
+    assert first_screen["inspectorPosition"] == "absolute"
+    assert "280px" not in first_screen["mainColumns"]
+    assert "360px" not in first_screen["mainColumns"]
+
+    blank_point = page.evaluate(
+        """
+        () => {
+          const canvas = document.querySelector('#workbench-editable-canvas');
+          const rect = canvas.getBoundingClientRect();
+          const candidates = [
+            [0.50, 0.82],
+            [0.72, 0.82],
+            [0.18, 0.82],
+            [0.50, 0.72],
+            [0.86, 0.70],
+          ];
+          for (const [rx, ry] of candidates) {
+            const x = rect.left + rect.width * rx;
+            const y = rect.top + rect.height * ry;
+            const target = document.elementFromPoint(x, y);
+            if (
+              target
+              && target.closest('#workbench-editable-canvas')
+              && !target.closest('.workbench-editable-node')
+              && !target.closest('[data-editable-edge-id]')
+              && !target.closest('button, input, textarea, select')
+              && !target.closest('#workbench-editor-toolstrip')
+              && !target.closest('#workbench-reference-proof-strip')
+              && !target.closest('#workbench-canvas-first-guide')
+            ) {
+              return { x, y };
+            }
+          }
+          return null;
+        }
+        """
+    )
+    assert blank_point is not None
+    page.mouse.move(blank_point["x"], blank_point["y"])
+    page.mouse.down()
+    page.mouse.move(blank_point["x"] + 116, blank_point["y"] + 72)
+    page.mouse.up()
+    pan_state = page.evaluate(
+        """
+        () => {
+          const canvas = document.querySelector('#workbench-editable-canvas');
+          return {
+            panX: Number(canvas.getAttribute('data-viewport-pan-x') || '0'),
+            panY: Number(canvas.getAttribute('data-viewport-pan-y') || '0'),
+          };
+        }
+        """
+    )
+    assert abs(pan_state["panX"]) >= 90
+    assert abs(pan_state["panY"]) >= 50
+
+    zoom_probe = page.evaluate(
+        """
+        () => {
+          const canvas = document.querySelector('#workbench-editable-canvas');
+          const rect = canvas.getBoundingClientRect();
+          const anchor = { x: rect.width * 0.24, y: rect.height * 0.68 };
+          const before = {
+            scale: Number(canvas.getAttribute('data-viewport-scale') || '1'),
+            panX: Number(canvas.getAttribute('data-viewport-pan-x') || '0'),
+            panY: Number(canvas.getAttribute('data-viewport-pan-y') || '0'),
+          };
+          const worldBefore = {
+            x: (anchor.x - before.panX) / before.scale,
+            y: (anchor.y - before.panY) / before.scale,
+          };
+          canvas.dispatchEvent(new WheelEvent('wheel', {
+            bubbles: true,
+            cancelable: true,
+            deltaY: -240,
+            clientX: rect.left + anchor.x,
+            clientY: rect.top + anchor.y,
+          }));
+          const after = {
+            scale: Number(canvas.getAttribute('data-viewport-scale') || '1'),
+            panX: Number(canvas.getAttribute('data-viewport-pan-x') || '0'),
+            panY: Number(canvas.getAttribute('data-viewport-pan-y') || '0'),
+          };
+          const worldAfter = {
+            x: (anchor.x - after.panX) / after.scale,
+            y: (anchor.y - after.panY) / after.scale,
+          };
+          return {
+            scaleBefore: before.scale,
+            scaleAfter: after.scale,
+            worldDeltaX: Math.abs(worldAfter.x - worldBefore.x),
+            worldDeltaY: Math.abs(worldAfter.y - worldBefore.y),
+          };
+        }
+        """
+    )
+    assert zoom_probe["scaleAfter"] > zoom_probe["scaleBefore"]
+    assert zoom_probe["worldDeltaX"] <= 0.75
+    assert zoom_probe["worldDeltaY"] <= 0.75
+    assert errors == [], f"page JS errors: {errors}"
+
+
+def test_workbench_reference_graph_is_connected_named_and_guide_discoverable(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    page.set_viewport_size({"width": 1440, "height": 980})
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("localStorage.clear()")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.wait_for_function("() => document.querySelectorAll('[data-editable-edge-id]').length >= 18")
+
+    visual = page.evaluate(
+        """
+        () => {
+          const rectOf = (selector) => {
+            const node = document.querySelector(selector);
+            if (!node) return null;
+            const rect = node.getBoundingClientRect();
+            return {
+              left: rect.left,
+              top: rect.top,
+              right: rect.right,
+              bottom: rect.bottom,
+              width: rect.width,
+              height: rect.height,
+            };
+          };
+          const pointTouchesRect = (point, rect, tolerance = 7) => (
+            Boolean(rect)
+            && point.x >= rect.left - tolerance
+            && point.x <= rect.right + tolerance
+            && point.y >= rect.top - tolerance
+            && point.y <= rect.bottom + tolerance
+          );
+          const edgeConnectivity = Array.from(document.querySelectorAll('[data-editable-edge-id]'))
+            .map((path) => {
+              const sourceId = path.getAttribute('data-edge-source-id') || '';
+              const targetId = path.getAttribute('data-edge-target-id') || '';
+              const sourceRect = rectOf(`[data-editable-node-id="${sourceId}"]`);
+              const targetRect = rectOf(`[data-editable-node-id="${targetId}"]`);
+              const matrix = typeof path.getScreenCTM === 'function' ? path.getScreenCTM() : null;
+              if (!matrix || typeof path.getPointAtLength !== 'function' || typeof path.getTotalLength !== 'function') {
+                return { id: path.getAttribute('data-editable-edge-id') || '', sourceConnected: false, targetConnected: false };
+              }
+              const start = new DOMPoint(path.getPointAtLength(0).x, path.getPointAtLength(0).y).matrixTransform(matrix);
+              const end = new DOMPoint(
+                path.getPointAtLength(path.getTotalLength()).x,
+                path.getPointAtLength(path.getTotalLength()).y,
+              ).matrixTransform(matrix);
+              return {
+                id: path.getAttribute('data-editable-edge-id') || '',
+                sourceId,
+                targetId,
+                sourceConnected: pointTouchesRect(start, sourceRect),
+                targetConnected: pointTouchesRect(end, targetRect),
+                startGap: sourceRect ? Math.round(Math.max(0, start.x - sourceRect.right, sourceRect.left - start.x)) : 999,
+                endGap: targetRect ? Math.round(Math.max(0, targetRect.left - end.x, end.x - targetRect.right)) : 999,
+              };
+            });
+          const nodeLabels = Array.from(document.querySelectorAll('[data-reference-proof-node]'))
+            .map((node) => ({
+              id: node.getAttribute('data-editable-node-id') || '',
+              text: node.innerText.replace(/\\s+/g, ' ').trim(),
+              op: node.getAttribute('data-node-op') || '',
+              label: node.getAttribute('data-node-label') || '',
+            }));
+          const opOnlyLabels = nodeLabels.filter((node) => (
+            ['IN', 'OUT', 'AND', 'OR', 'CMP', 'BTW', 'DLY', 'LAT', 'LCH'].includes(node.text)
+          ));
+          const canvas = rectOf('#workbench-editable-canvas');
+          const toolstrip = rectOf('#workbench-editor-toolstrip');
+          const proofStrip = rectOf('#workbench-reference-proof-strip');
+          const compactGuide = rectOf('#workbench-canvas-first-guide');
+          const guideEntry = rectOf('#workbench-open-onboarding-guide-btn');
+          return {
+            canvas,
+            toolstrip,
+            proofStrip,
+            compactGuide,
+            guideEntry,
+            guideEntryText: document.querySelector('#workbench-open-onboarding-guide-btn')?.innerText.trim() || '',
+            guideEntryLabel: document.querySelector('#workbench-open-onboarding-guide-btn')?.getAttribute('aria-label') || '',
+            edgeCount: edgeConnectivity.length,
+            disconnectedEdges: edgeConnectivity
+              .filter((edge) => !edge.sourceConnected || !edge.targetConnected)
+              .slice(0, 8),
+            nodeLabels,
+            opOnlyLabels,
+          };
+        }
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert visual["edgeCount"] >= 18
+    assert visual["disconnectedEdges"] == []
+    assert visual["opOnlyLabels"] == []
+    assert any("无线电高度" in node["text"] and "6" in node["text"] for node in visual["nodeLabels"])
+    assert any("油门锁" in node["text"] for node in visual["nodeLabels"])
+    assert "新手指引" in visual["guideEntryText"] or "新手指引" in visual["guideEntryLabel"]
+    assert visual["guideEntry"]["width"] >= 80
+    assert visual["guideEntry"]["height"] >= 30
+    assert visual["toolstrip"]["top"] >= visual["canvas"]["bottom"] - 84
+    assert visual["compactGuide"]["top"] >= visual["canvas"]["bottom"] - 132
+    assert visual["proofStrip"]["top"] >= visual["canvas"]["bottom"] - 132
+
+
+def test_workbench_reference_first_screen_is_chinese_connected_and_uncovered(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    page.set_viewport_size({"width": 1366, "height": 768})
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("localStorage.clear()")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.wait_for_function("() => document.querySelectorAll('[data-editable-edge-id]').length >= 18")
+
+    first_screen = page.evaluate(
+        """
+        () => {
+          const chinese = /[\\u4e00-\\u9fff]/;
+          const nodeLabels = Array.from(document.querySelectorAll('[data-reference-proof-node]'))
+            .map((node) => node.innerText.replace(/\\s+/g, ' ').trim());
+          const forbiddenEnglishNodeWords = [
+            'Radio altitude', 'Reverser', 'inhibited', 'deployed', 'gate',
+            'feedback', 'Engine running', 'Aircraft on ground', 'enable',
+            'below deploy limit', 'deploy window', 'release command',
+          ];
+          const visibleText = document.body.innerText.replace(/\\s+/g, ' ').trim();
+          const forbiddenVisibleText = [
+            'Evidence Inspector', 'Candidate label', 'Operation', 'Rule summary',
+            'Run sandbox', 'ChangeRequest packet', 'Baseline loaded',
+            'Draft editable', 'Selected Debug Timeline',
+          ];
+          const edgeStyles = Array.from(document.querySelectorAll('[data-editable-edge-id]'))
+            .map((path) => {
+              const style = getComputedStyle(path);
+              return {
+                id: path.getAttribute('data-editable-edge-id') || '',
+                width: Number.parseFloat(style.strokeWidth || '0') || 0,
+                stroke: style.stroke,
+                markerEnd: style.markerEnd || path.getAttribute('marker-end') || '',
+                rect: (() => {
+                  const rect = path.getBoundingClientRect();
+                  return {
+                    left: rect.left,
+                    top: rect.top,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                    width: rect.width,
+                    height: rect.height,
+                  };
+                })(),
+              };
+            });
+          const inspector = document.querySelector('#workbench-evidence-inspector');
+          const inspectorRect = inspector ? inspector.getBoundingClientRect() : null;
+          const inspectorStyle = inspector ? getComputedStyle(inspector) : null;
+          const outputNode = document.querySelector('[data-editable-node-id="thr_lock"]');
+          const outputRect = outputNode ? outputNode.getBoundingClientRect() : null;
+          return {
+            nodeLabels,
+            chineseNodeCount: nodeLabels.filter((label) => chinese.test(label)).length,
+            forbiddenNodeLabels: nodeLabels.filter((label) => forbiddenEnglishNodeWords.some((word) => label.includes(word))),
+            forbiddenVisibleText: forbiddenVisibleText.filter((word) => visibleText.includes(word)),
+            edgeCount: edgeStyles.length,
+            weakEdges: edgeStyles.filter((edge) => edge.width < 5 || !edge.markerEnd || edge.stroke === 'none').slice(0, 8),
+            inspectorOpen: inspector?.getAttribute('data-inspector-open') || '',
+            inspectorWidth: inspectorRect ? inspectorRect.width : 0,
+            inspectorDisplay: inspectorStyle ? inspectorStyle.display : '',
+            outputVisible: Boolean(outputRect && outputRect.left >= 0 && outputRect.right <= window.innerWidth && outputRect.top >= 0 && outputRect.bottom <= window.innerHeight),
+          };
+        }
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert first_screen["chineseNodeCount"] >= 16
+    assert first_screen["forbiddenNodeLabels"] == []
+    assert first_screen["forbiddenVisibleText"] == []
+    assert first_screen["edgeCount"] >= 18
+    assert first_screen["weakEdges"] == []
+    assert first_screen["inspectorOpen"] == "false"
+    assert first_screen["inspectorWidth"] <= 4
+    assert first_screen["outputVisible"] is True

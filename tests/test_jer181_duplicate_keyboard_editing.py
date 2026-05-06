@@ -12,7 +12,7 @@ def test_workbench_exposes_duplicate_toolbar_action() -> None:
     html = WORKBENCH_HTML.read_text(encoding="utf-8")
 
     assert 'data-editor-tool="duplicate"' in html
-    assert 'title="Duplicate draft node"' in html
+    assert 'data-tooltip="复制：复制选中的草稿 block"' in html
 
 
 def test_duplicate_and_keyboard_shortcuts_are_sandbox_only() -> None:

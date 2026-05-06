@@ -1,0 +1,75 @@
+{
+  "desktop": {
+    "title": "控制逻辑画布工作台 · Sandbox Draft Canvas",
+    "mode": "canvas_first",
+    "guideText": "从一张空白电路开始\n新建节点 → 连线 → 运行沙箱\n\n先搭自己的 sandbox 草稿；需要对照旧反推证明时，再加载反推参考片段。\n\n新建节点\n选择 IN / CMP / AND / OUT 原语并放到画布\n连线\n用端口把输出接到输入，检查信号类型\n运行沙箱\n跑本地场景，只生成 sandbox 证据\n新建空白电路\n加载反推参考图",
+    "startText": "新建空白电路",
+    "loadText": "加载反推参考图",
+    "visibleReferenceNodes": [],
+    "visibleProofButtons": [],
+    "visibleButtons": 124,
+    "bodyInnerTextLength": 14531,
+    "canvas": {
+      "left": 124.375,
+      "top": 260.015625,
+      "right": 1061.625,
+      "bottom": 831.65625,
+      "width": 937.25,
+      "height": 571.640625
+    },
+    "guide": {
+      "left": 157.375,
+      "top": 363.40625,
+      "right": 777.375,
+      "bottom": 581.984375,
+      "width": 620,
+      "height": 218.578125
+    },
+    "inspector": {
+      "left": 1068.8125,
+      "top": 260.015625,
+      "right": 1428.8125,
+      "bottom": 831.65625,
+      "width": 360,
+      "height": 571.640625
+    },
+    "guideFitsCanvas": true
+  },
+  "narrow": {
+    "title": "控制逻辑画布工作台 · Sandbox Draft Canvas",
+    "mode": "canvas_first",
+    "guideText": "从一张空白电路开始\n新建节点 → 连线 → 运行沙箱\n新建节点\n连线\n运行沙箱\n新建空白电路\n加载反推参考图",
+    "startText": "新建空白电路",
+    "loadText": "加载反推参考图",
+    "visibleReferenceNodes": [],
+    "visibleProofButtons": [],
+    "visibleButtons": 124,
+    "bodyInnerTextLength": 14288,
+    "canvas": {
+      "left": 109.65625,
+      "top": 326.9375,
+      "right": 266.34375,
+      "bottom": 704.671875,
+      "width": 156.6875,
+      "height": 377.734375
+    },
+    "guide": {
+      "left": 117.375,
+      "top": 379.9375,
+      "right": 258.609375,
+      "bottom": 579.265625,
+      "width": 141.234375,
+      "height": 199.328125
+    },
+    "inspector": {
+      "left": 270.8125,
+      "top": 326.9375,
+      "right": 382.8125,
+      "bottom": 704.671875,
+      "width": 112,
+      "height": 377.734375
+    },
+    "guideFitsCanvas": true
+  },
+  "pageErrors": []
+}

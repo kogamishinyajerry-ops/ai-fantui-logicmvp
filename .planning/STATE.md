@@ -2,8 +2,8 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Live Linear JER-259 workbench start-page honesty refresh implementing
-last_updated: "2026-05-06T00:18:00.000+08:00"
+status: Live Linear JER-259 workbench start-page honesty refresh rebased after PR #256 gate-tier merge
+last_updated: "2026-05-07T00:45:00.000+08:00"
 last_activity: 2026-05-06
 progress:
   total_phases: 55
@@ -16,7 +16,7 @@ progress:
 
 # State
 
-Last activity: 2026-05-05
+Last activity: 2026-05-06
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
@@ -172,6 +172,18 @@ language and the removed wow starter-card claim. Branch evidence passes focused
 keeps the touched test file focused strict-mypy clean; `unit_tests` passes while
 the official mypy wrapper remains blocked but improved at 4547 errors in 304
 files. Do not claim full mypy clean.
+
+**2026-05-06 GitHub PR #253 post-merge follow-up**: GitHub PR #253 merged the
+Workbench goal-canvas panel slice. The post-merge review notes are
+documentation-only:
+proof, handoff, and archive-facing rendered text may now show Chinese display
+labels through `displayStatusLabel()` while raw JSON/export/schema fields remain
+unchanged, so historical byte-for-byte checks of rendered proof text should be
+treated as presentation drift rather than archive contract drift. The
+`tests/e2e/test_workbench_js_boot_smoke.py::_install_workbench_inspector_mode_bridge`
+helper remains a legacy compatibility bridge for the tabbed inspector and should
+only be removed in a dedicated e2e cleanup that explicitly opens the target
+inspector tabs in each test.
 
 **Linear control plane**:
 

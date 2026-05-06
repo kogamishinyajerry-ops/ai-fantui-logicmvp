@@ -33,6 +33,10 @@ Identifier rule:
    YAML, and C919 reference packets read-only.
 5. Publish Linear proof comments after validation; do not paste raw logs,
    secrets, or implicit state transitions.
+6. Use the 2026-05-07 validation tier policy for workbench/Canvas slices:
+   hard hold only on controller truth, certified assets, public schema
+   boundary, or simulation determinism; otherwise record failed broad gates as
+   daily warnings or milestone-only blockers.
 
 ## Candidate v6 Issues
 
@@ -508,7 +512,9 @@ Post-JER-258 maturity snapshot:
 - Known blocker: JER-171 full strict mypy remains blocked. The current verified
   wrapper result is 4548 errors in 305 files, not a clean gate.
 - Known gate: unit regression must still be rerun on the exact release-candidate
-  SHA before handoff even when prior branch evidence passed.
+  SHA before handoff even when prior branch evidence passed. For non-release
+  workbench UI slices, use focused tests first and record full-suite state as
+  milestone evidence.
 - Full opt-in e2e is current as of live Linear `JER-243`: 93 passed / 3445
   deselected on `origin/main@9516fa6`.
 - Known blocker: deployment packaging, cloud hosting, and certification
@@ -517,6 +523,9 @@ Post-JER-258 maturity snapshot:
 - Known product gap: first-entry surfaces must stay aligned with current
   `/workbench` reality. Stale roadmap and removed-surface claims are treated as
   product maturity defects, not harmless documentation drift.
+- Validation policy: full opt-in e2e, full shared validation, and strict mypy
+  clean are milestone gates. They do not stop daily sandbox development unless
+  they reveal a Tier 0 hard hold.
 
 Dispatched product-readiness slice:
 
