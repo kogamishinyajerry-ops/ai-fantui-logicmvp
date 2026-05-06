@@ -539,6 +539,30 @@ def test_workbench_canvas_first_default_and_explicit_reference_proof_load(demo_s
           const nodeTexts = Array.from(document.querySelectorAll('.workbench-editable-node'))
             .map((node) => node.textContent.trim());
           const edgePaths = Array.from(document.querySelectorAll('[data-editable-edge-id]'));
+          const nodeSummaries = nodes.map((node) => ({
+            id: node?.getAttribute('data-editable-node-id') || '',
+            visible: node?.querySelector('span')?.textContent.trim() || '',
+            short: node?.getAttribute('data-node-short-label') || '',
+            full: node?.getAttribute('data-node-label') || '',
+            title: node?.getAttribute('title') || '',
+            aria: node?.getAttribute('aria-label') || '',
+          }));
+          const portHandles = Array.from(document.querySelectorAll('.workbench-port-handle'))
+            .map((handle) => ({
+              owner: handle.getAttribute('data-port-handle-owner-id') || '',
+              direction: handle.getAttribute('data-port-handle-direction') || '',
+              short: handle.getAttribute('data-port-short-label') || '',
+              signalShort: handle.getAttribute('data-port-signal-short-label') || '',
+              signal: handle.getAttribute('data-signal-id') || '',
+              title: handle.getAttribute('title') || '',
+              aria: handle.getAttribute('aria-label') || '',
+            }));
+          const edgeSummaries = edgePaths.map((path) => ({
+            id: path.getAttribute('data-editable-edge-id') || '',
+            full: path.getAttribute('data-edge-label') || '',
+            display: path.getAttribute('data-edge-display-label') || '',
+            routeMode: path.getAttribute('data-route-mode') || '',
+          }));
           return {
             title: document.querySelector('#workbench-circuit-hero-title')?.textContent.trim() || '',
             graph: document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-graph') || '',
@@ -546,8 +570,11 @@ def test_workbench_canvas_first_default_and_explicit_reference_proof_load(demo_s
             requiredCount: required.length,
             visibleCount: visibleNodes.length,
             nodeTexts,
+            nodeSummaries,
+            portHandles,
             edgeCount: edgePaths.length,
             edgePaths: edgePaths.map((path) => path.getAttribute('d') || ''),
+            edgeSummaries,
             proofButtonCount: document.querySelectorAll('[data-reference-proof-target]').length,
           };
         }
@@ -562,8 +589,24 @@ def test_workbench_canvas_first_default_and_explicit_reference_proof_load(demo_s
     assert rendered["proofButtonCount"] == 4
     op_only_labels = {"IN", "OUT", "AND", "OR", "CMP", "BTW", "DLY", "LAT", "LCH"}
     assert all(text not in op_only_labels for text in rendered["nodeTexts"])
-    assert any("无线电高度" in text and "6" in text for text in rendered["nodeTexts"])
-    assert any("油门锁" in text for text in rendered["nodeTexts"])
+    assert all(item["visible"] and item["visible"] == item["short"] for item in rendered["nodeSummaries"])
+    assert all(len(item["visible"]) <= 7 for item in rendered["nodeSummaries"])
+    assert any(item["visible"] == "高度<6ft" for item in rendered["nodeSummaries"])
+    assert any(item["visible"] == "THR锁" for item in rendered["nodeSummaries"])
+    assert any("无线电高度低于 6 英尺" in item["full"] for item in rendered["nodeSummaries"])
+    assert any("油门锁释放指令" in item["full"] for item in rendered["nodeSummaries"])
+    assert all(item["full"] and item["full"] in item["title"] for item in rendered["nodeSummaries"])
+    assert all(item["full"] and item["full"] in item["aria"] for item in rendered["nodeSummaries"])
+    assert len(rendered["portHandles"]) >= rendered["requiredCount"] * 2
+    assert all(item["short"].startswith(("IN:", "OUT:")) for item in rendered["portHandles"])
+    assert any(item["short"] == "OUT:RA<6" for item in rendered["portHandles"])
+    assert any(item["short"] == "IN:TRA" for item in rendered["portHandles"])
+    assert all(item["signalShort"] for item in rendered["portHandles"])
+    assert all("信号" in item["aria"] and "端口" in item["title"] for item in rendered["portHandles"])
+    assert all(item["display"] for item in rendered["edgeSummaries"])
+    assert all(len(item["display"]) <= 10 for item in rendered["edgeSummaries"])
+    assert all(item["full"] for item in rendered["edgeSummaries"])
+    assert all(item["routeMode"] == "orthogonal" for item in rendered["edgeSummaries"])
     assert all("C" not in path for path in rendered["edgePaths"])
     assert all("L" in path for path in rendered["edgePaths"])
 
@@ -4138,12 +4181,17 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
     assert draft["truth_level_impact"] == "none"
     edge_path = page.locator(f'[data-editable-edge-id="{edge["id"]}"]')
     assert edge_path.get_attribute("data-edge-label") == "draft_node_1:out -> draft_node_2:in"
+    edge_display_label = edge_path.get_attribute("data-edge-display-label")
+    assert edge_display_label
+    assert len(edge_display_label) < len("draft_node_1:out -> draft_node_2:in")
     assert edge_path.get_attribute("data-route-mode") == "orthogonal"
     edge_path_d = edge_path.get_attribute("d")
     assert edge_path_d and "C" not in edge_path_d
     assert edge_path_d.count("L") >= 3
     edge_label = page.locator(f'[data-editable-edge-label-id="{edge["id"]}"]')
-    assert edge_label.text_content().strip() == "draft_node_1:out -> draft_node_2:in"
+    assert edge_label.get_attribute("data-edge-label") == "draft_node_1:out -> draft_node_2:in"
+    assert edge_label.get_attribute("data-edge-display-label") == edge_display_label
+    assert edge_label.text_content().strip() == edge_display_label
     assert edge_label.is_visible() is False
 
     _click_workbench_port_handle(page, "draft_node_1", "out")
@@ -5375,8 +5423,10 @@ def test_workbench_reference_graph_is_connected_named_and_guide_discoverable(dem
     assert visual["edgeCount"] >= 18
     assert visual["disconnectedEdges"] == []
     assert visual["opOnlyLabels"] == []
-    assert any("无线电高度" in node["text"] and "6" in node["text"] for node in visual["nodeLabels"])
-    assert any("油门锁" in node["text"] for node in visual["nodeLabels"])
+    assert any("无线电高度" in node["label"] and "6" in node["label"] for node in visual["nodeLabels"])
+    assert any("油门锁" in node["label"] for node in visual["nodeLabels"])
+    assert any(node["text"].startswith("高度<6ft") for node in visual["nodeLabels"])
+    assert any(node["text"].startswith("THR锁") for node in visual["nodeLabels"])
     assert "新手指引" in visual["guideEntryText"] or "新手指引" in visual["guideEntryLabel"]
     assert visual["guideEntry"]["width"] >= 80
     assert visual["guideEntry"]["height"] >= 30
