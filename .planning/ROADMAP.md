@@ -191,7 +191,10 @@ Post-v5 control-plane bootstrap:
   baseline reduction tranche 15` closed through PR #250. This is the fifteenth
   JER-171 mypy baseline reduction tranche.
 - Live Linear `JER-258`: `[project] [L6] [none] [DAL-TBD] Workbench maturity
-  evidence refresh` is the current release-operations slice.
+  evidence refresh` closed through PR #251. This is the workbench maturity
+  evidence refresh.
+- Live Linear `JER-259`: `[project] [L4] [none] [DAL-TBD] Workbench start page
+  honesty refresh` is the current product-honesty slice.
 
 Post-v5 product dispatch:
 
@@ -302,6 +305,15 @@ Post-JER-257 release-operations dispatch:
   is machine-readable. It must keep smoke and manifest validation as pass
   evidence, unit regression as rerun-required on the exact candidate SHA, strict
   mypy as blocked, and deployment/cloud/certification as not-claimed.
+
+Post-JER-258 product-honesty dispatch:
+
+- `[project] [L4] [none] [DAL-TBD] Workbench start page honesty refresh` is live
+  Linear `JER-259`. It aligns `/workbench/start` with the current workbench
+  surface by removing stale internal E11 roadmap language and correcting the
+  removed wow starter-card claim. The slice is static-entry-page only: no
+  controller truth, API contract, route, schema, adapter, runner, or browser
+  behavior changes.
 
 Post-JER-240 production-readiness refresh:
 

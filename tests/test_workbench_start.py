@@ -1,19 +1,17 @@
-"""E11-02 — onboarding landing /workbench/start.
+"""/workbench/start onboarding landing contract.
 
-These tests lock the public contract introduced by sub-phase E11-02:
+These tests lock the public start-page contract:
 
 * `/workbench/start` returns a 200 HTML response with a 5-persona +
   1-role (Kogami) tile selector — 6 entries total.
-* Each tile carries a stable `id` + `data-persona` + `data-intent` so
-  future E2E coverage and ticket templates can target it.
+* Each tile carries a stable `id` + `data-persona` + `data-intent`.
 * Each tile deep-links into `/workbench` with an `intent=` query
   parameter. Hash fragments may only point at ids that actually exist
   in `workbench.html` (no dead anchors that drop users at the page top).
 * Arbitrary `?intent=` payloads must NOT be reflected by `/workbench`.
 * The truth-engine red-line is visible on the onboarding page itself.
 
-Truth-engine surfaces are NOT touched by E11-02, only static assets and
-the demo_server route table.
+Truth-engine surfaces are NOT touched by this start page.
 """
 
 from __future__ import annotations
@@ -28,7 +26,7 @@ from urllib.parse import urlparse
 
 import pytest
 
-from well_harness.demo_server import DemoRequestHandler
+from well_harness.demo_server import DemoRequestHandler  # type: ignore[import-untyped]
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -171,7 +169,7 @@ def test_workbench_start_tiles_deep_link_into_workbench() -> None:
 
 
 def test_workbench_start_tile_hash_targets_exist_or_absent() -> None:
-    """R1-F1: dead hash fragments (#wow_a / #probe / #repro / #audit) had to go.
+    """Dead hash fragments must not return.
 
     Tiles may either omit a hash fragment, or use one that resolves to a real
     id in workbench.html. No dead anchors allowed — they make the tile lie
@@ -216,7 +214,28 @@ def test_workbench_start_displays_redline_section() -> None:
     assert re.search(r"19[- ]node truth engine", body), (
         "onboarding page must call out the 19-node truth engine as read-only"
     )
-    assert "wow_a fixture" in body
+    assert "参考场景与证据包" in body
+
+
+def test_workbench_start_copy_matches_current_surface_truth() -> None:
+    """The start page must not expose stale internal roadmap claims."""
+    body = (STATIC_DIR / "workbench_start.html").read_text(encoding="utf-8")
+    forbidden_fragments = {
+        "E11",
+        "本期",
+        "起手卡片已上线",
+        "起手卡 已在",
+        "workbench</code> 顶部「起手卡」",
+        "角色判定逻辑未实现",
+        "没有 approval-action handler",
+        "后才上线",
+    }
+
+    for fragment in forbidden_fragments:
+        assert fragment not in body
+
+    assert "当前主面板顶部是控制逻辑电路" in body
+    assert "浏览器入口不能绕过证据链" in body
 
 
 def test_workbench_start_explains_persona_vs_role_axis() -> None:
