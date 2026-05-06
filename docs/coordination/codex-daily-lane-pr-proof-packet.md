@@ -20,6 +20,10 @@ Test delta: <targeted pytest>; <default pytest>; <GSD validation>; <adversarial 
   comparison.
 - ChangeRequest/Linear handoff packets are generated as draft evidence only.
   The workbench must not perform live Linear mutation or claim PR creation.
+- Rendered proof-packet text is user-facing evidence, not archive schema truth.
+  Display-only language or label changes can make historical byte comparisons
+  differ even when raw JSON fields, export schemas, checksums, and archive
+  manifests are unchanged.
 - e2e 49/49 and `mypy --strict clean` must not be claimed unless those commands
   are explicitly run and pass in the current PR.
 - The official mypy evidence command is
