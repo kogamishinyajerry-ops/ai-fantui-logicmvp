@@ -6029,7 +6029,7 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   border-radius: 1px;
   background: #ffffff;
   cursor: crosshair;
-  z-index: 3;
+  z-index: 6;
 }
 .workbench-port-handle[data-port-handle-direction="in"] {
   transform:
