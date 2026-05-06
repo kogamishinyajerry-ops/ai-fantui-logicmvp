@@ -1,7 +1,9 @@
+import io
 import json
 import os
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
 
 from tools.validate_notion_control_plane import (
@@ -115,6 +117,98 @@ class ValidateNotionControlPlaneTests(unittest.TestCase):
         self.assertEqual(2, report["checked_legacy_artifacts"])
         self.assertEqual(19, len(seen))
         self.assertIn("PASS: validated 7 pages, 10 databases, and 2 legacy artifacts", text_lines[0])
+
+    def test_validate_control_plane_retries_transient_transport_errors(self):
+        path = self.save(self.base_config)
+        seen = []
+
+        def fake_request(token, path):
+            seen.append((token, path))
+            if len(seen) == 1:
+                raise urllib.error.URLError("EOF occurred in violation of protocol")
+            return {"id": path.rsplit("/", 1)[-1]}
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            exit_code, report, text_lines = validate_control_plane(
+                config_path=path,
+                request_get=fake_request,
+                request_attempts=2,
+                retry_sleep_seconds=0,
+            )
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(0, exit_code)
+        self.assertEqual("pass", report["status"])
+        self.assertEqual(20, len(seen))
+        self.assertEqual(("/v1/pages/dashboard-id", "/v1/pages/dashboard-id"), (seen[0][1], seen[1][1]))
+        self.assertIn("PASS: validated 7 pages, 10 databases, and 2 legacy artifacts", text_lines[0])
+
+    def test_validate_control_plane_does_not_retry_http_errors(self):
+        path = self.save(self.base_config)
+        seen = []
+
+        def fake_request(token, path):
+            seen.append((token, path))
+            raise urllib.error.HTTPError(
+                path,
+                401,
+                "Unauthorized",
+                hdrs=None,
+                fp=io.BytesIO(b'{"object":"error","message":"bad token"}'),
+            )
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            exit_code, report, text_lines = validate_control_plane(
+                config_path=path,
+                request_get=fake_request,
+                request_attempts=3,
+                retry_sleep_seconds=0,
+            )
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(1, exit_code)
+        self.assertEqual("fail", report["status"])
+        self.assertEqual("HTTP 401", report["reason"])
+        self.assertEqual(1, len(seen))
+        self.assertIn("bad token", report["errors"][0])
+        self.assertIn("FAIL: Notion API returned HTTP 401", text_lines[0])
+
+    def test_validate_control_plane_fails_after_transport_retries_are_exhausted(self):
+        path = self.save(self.base_config)
+        seen = []
+
+        def fake_request(token, path):
+            seen.append((token, path))
+            raise urllib.error.URLError("EOF occurred in violation of protocol")
+
+        old_env = dict(os.environ)
+        try:
+            os.environ["NOTION_API_KEY"] = "test-token"
+            exit_code, report, text_lines = validate_control_plane(
+                config_path=path,
+                request_get=fake_request,
+                request_attempts=2,
+                retry_sleep_seconds=0,
+            )
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+
+        self.assertEqual(1, exit_code)
+        self.assertEqual("fail", report["status"])
+        self.assertEqual("notion_transport_unavailable", report["reason"])
+        self.assertEqual(2, len(seen))
+        self.assertIn("/v1/pages/dashboard-id", report["errors"][0])
+        self.assertIn("2 attempts", report["errors"][0])
+        self.assertIn("FAIL: notion_transport_unavailable", text_lines[0])
 
     def test_validate_control_plane_reports_dashboard_only_degraded_mode_for_archived_active_pages(self):
         path = self.save(self.base_config)

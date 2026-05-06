@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 STATIC = ROOT / "src" / "well_harness" / "static"
 
 
-APPROVED_OPS = ("and", "or", "compare", "between", "delay", "latch")
+APPROVED_OPS = ("input", "output", "and", "or", "compare", "between", "delay", "latch")
 
 
 def _html() -> str:
@@ -36,7 +36,8 @@ def test_operation_catalog_palette_exposes_only_approved_sandbox_ops() -> None:
     for op in APPROVED_OPS:
         assert f'data-op-catalog-op="{op}"' in html
     assert "python" not in html.lower()
-    assert "import" not in html.lower().split('id="workbench-op-catalog"', 1)[1].split("</aside>", 1)[0]
+    op_catalog = html.lower().split('id="workbench-op-catalog"', 1)[1].split("</div>", 1)[0]
+    assert "import" not in op_catalog
 
 
 def test_operation_catalog_js_preserves_sandbox_contract_metadata() -> None:

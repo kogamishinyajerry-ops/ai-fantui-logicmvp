@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import os
+import ssl
 import sys
+import time
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -13,6 +15,14 @@ NOTION_VERSION = "2022-06-28"
 DEFAULT_CONFIG_PATH = Path(".planning/notion_control_plane.json")
 OUTPUT_FORMATS = {"text", "json"}
 SKIP_REASON = "SKIP: NOTION_API_KEY is not set; control-plane access check was not run."
+DEFAULT_REQUEST_ATTEMPTS = 3
+DEFAULT_RETRY_SLEEP_SECONDS = 1.0
+TRANSIENT_TRANSPORT_ERRORS = (
+    urllib.error.URLError,
+    ssl.SSLError,
+    ConnectionError,
+    TimeoutError,
+)
 REQUIRED_DATABASE_KEYS = (
     "roadmap",
     "tasks",
@@ -49,6 +59,16 @@ DEGRADED_ACTIVE_PAGE_KEYS = (
     "opus_brief",
     "freeze_packet",
 )
+
+
+class NotionTransportError(RuntimeError):
+    def __init__(self, path: str, attempts: int, original: BaseException) -> None:
+        self.path = path
+        self.attempts = attempts
+        self.original = original
+        super().__init__(
+            f"notion_transport_unavailable after {attempts} attempts for {path}: {original}"
+        )
 
 
 def parse_output_format(argv: list[str]) -> str:
@@ -104,6 +124,28 @@ def notion_request(token: str, path: str) -> dict[str, Any]:
         return cast(dict[str, Any], json.load(response))
 
 
+def request_with_retries(
+    token: str,
+    path: str,
+    *,
+    request_get: Callable[[str, str], dict[str, Any]],
+    attempts: int = DEFAULT_REQUEST_ATTEMPTS,
+    sleep_seconds: float = DEFAULT_RETRY_SLEEP_SECONDS,
+) -> dict[str, Any]:
+    attempts = max(1, attempts)
+    for attempt in range(1, attempts + 1):
+        try:
+            return request_get(token, path)
+        except urllib.error.HTTPError:
+            raise
+        except TRANSIENT_TRANSPORT_ERRORS as exc:
+            if attempt >= attempts:
+                raise NotionTransportError(path, attempts, exc) from exc
+            if sleep_seconds > 0:
+                time.sleep(sleep_seconds)
+    raise AssertionError("unreachable")
+
+
 def remote_object_status(kind: str, key: str, payload: dict[str, Any]) -> tuple[str, str | None]:
     archived = bool(payload.get("archived")) or bool(payload.get("in_trash"))
     if kind == "page" and key == "dashboard" and archived:
@@ -119,13 +161,21 @@ def check_remote_objects(
     config: dict[str, Any],
     *,
     request_get: Callable[[str, str], dict[str, Any]] = notion_request,
+    request_attempts: int = DEFAULT_REQUEST_ATTEMPTS,
+    retry_sleep_seconds: float = DEFAULT_RETRY_SLEEP_SECONDS,
 ) -> list[dict[str, str]]:
     token = os.environ["NOTION_API_KEY"]
     results: list[dict[str, str]] = []
 
     for key in REQUIRED_PAGE_KEYS:
         page_id = config["pages"][key]
-        payload = request_get(token, f"/v1/pages/{page_id}")
+        payload = request_with_retries(
+            token,
+            f"/v1/pages/{page_id}",
+            request_get=request_get,
+            attempts=request_attempts,
+            sleep_seconds=retry_sleep_seconds,
+        )
         status, reason = remote_object_status("page", key, payload)
         results.append(
             {
@@ -141,7 +191,13 @@ def check_remote_objects(
 
     for key in REQUIRED_DATABASE_KEYS:
         database_id = config["databases"][key]
-        payload = request_get(token, f"/v1/databases/{database_id}")
+        payload = request_with_retries(
+            token,
+            f"/v1/databases/{database_id}",
+            request_get=request_get,
+            attempts=request_attempts,
+            sleep_seconds=retry_sleep_seconds,
+        )
         status, reason = remote_object_status("database", key, payload)
         results.append(
             {
@@ -157,7 +213,13 @@ def check_remote_objects(
 
     for index, artifact in enumerate(config.get("legacy_review_artifacts", [])):
         artifact_id = artifact["id"]
-        payload = request_get(token, f"/v1/pages/{artifact_id}")
+        payload = request_with_retries(
+            token,
+            f"/v1/pages/{artifact_id}",
+            request_get=request_get,
+            attempts=request_attempts,
+            sleep_seconds=retry_sleep_seconds,
+        )
         status, reason = remote_object_status("legacy_review_artifact", artifact["kind"], payload)
         results.append(
             {
@@ -179,6 +241,8 @@ def validate_control_plane(
     *,
     config_path: Path = DEFAULT_CONFIG_PATH,
     request_get: Callable[[str, str], dict[str, Any]] = notion_request,
+    request_attempts: int = DEFAULT_REQUEST_ATTEMPTS,
+    retry_sleep_seconds: float = DEFAULT_RETRY_SLEEP_SECONDS,
 ) -> tuple[int, dict[str, Any], list[str]]:
     config = load_config(config_path)
     key_errors = validate_required_keys(config)
@@ -207,13 +271,24 @@ def validate_control_plane(
         return 0, report, text_lines
 
     try:
-        results = check_remote_objects(config, request_get=request_get)
+        results = check_remote_objects(
+            config,
+            request_get=request_get,
+            request_attempts=request_attempts,
+            retry_sleep_seconds=retry_sleep_seconds,
+        )
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", "replace")
         report["status"] = "fail"
         report["reason"] = f"HTTP {exc.code}"
         report["errors"] = [detail]
         text_lines.append(f"FAIL: Notion API returned HTTP {exc.code}")
+        return 1, report, text_lines
+    except NotionTransportError as exc:
+        report["status"] = "fail"
+        report["reason"] = "notion_transport_unavailable"
+        report["errors"] = [str(exc)]
+        text_lines.append(f"FAIL: {exc}")
         return 1, report, text_lines
     except Exception as exc:  # pragma: no cover - defensive path
         report["status"] = "fail"

@@ -7610,19 +7610,40 @@ function installEditableWorkbenchShell() {
   if (!shell) return;
 
   let nodes = Array.from(shell.querySelectorAll("[data-editable-node-id]"));
+  const evidenceInspector = document.getElementById("workbench-evidence-inspector");
+  const inspectorModeButtons = Array.from(shell.querySelectorAll("[data-inspector-mode]"));
+  const inspectorPanels = Array.from(shell.querySelectorAll("[data-inspector-panel]"));
   const canvas = document.getElementById("workbench-editable-canvas");
   const edgeSvg = shell.querySelector(".workbench-editable-edges");
   const toolbarButtons = Array.from(shell.querySelectorAll("[data-editor-tool]"));
   const viewportButtons = Array.from(shell.querySelectorAll("[data-viewport-tool]"));
   const opCatalogButtons = Array.from(shell.querySelectorAll("[data-op-catalog-op]"));
+  const referenceProofButtons = Array.from(shell.querySelectorAll("[data-reference-proof-target]"));
   const opCatalogStatus = document.getElementById("workbench-op-catalog-status");
   const componentLibraryButtons = Array.from(shell.querySelectorAll("[data-component-template-id]"));
   const componentLibraryStatus = document.getElementById("workbench-component-library-status");
   const captureSubsystemTemplateBtn = document.getElementById("workbench-capture-subsystem-template-btn");
   const insertCapturedTemplateBtn = document.getElementById("workbench-insert-captured-template-btn");
   const startEmptyDraftBtn = document.getElementById("workbench-start-empty-draft-btn");
+  const canvasFirstStartBtn = document.getElementById("workbench-canvas-first-start-btn");
+  const loadReferenceProofBtn = document.getElementById("workbench-load-reference-proof-btn");
+  const referenceProofStrip = document.getElementById("workbench-reference-proof-strip");
   const deriveBtn = document.getElementById("workbench-derive-draft-btn");
   const runSandboxBtn = document.getElementById("workbench-run-sandbox-btn");
+  const onboardingPanel = document.getElementById("workbench-goal-canvas-panel");
+  const onboardingTitle = document.getElementById("workbench-onboarding-title");
+  const onboardingDetail = document.getElementById("workbench-onboarding-detail");
+  const onboardingProgress = document.getElementById("workbench-onboarding-progress");
+  const onboardingBackBtn = document.getElementById("workbench-onboarding-back-btn");
+  const onboardingActionBtn = document.getElementById("workbench-onboarding-action-btn");
+  const onboardingNextBtn = document.getElementById("workbench-onboarding-next-btn");
+  const onboardingOpenBtn = document.getElementById("workbench-open-onboarding-guide-btn");
+  const onboardingCloseBtn = document.getElementById("workbench-close-onboarding-guide-btn");
+  const onboardingStepButtons = Array.from(shell.querySelectorAll("[data-onboarding-step]"));
+  const cockpitGuideCoach = document.getElementById("workbench-cockpit-guide-coach");
+  const cockpitGuideCoachTitle = document.getElementById("workbench-cockpit-guide-coach-title");
+  const cockpitGuideCoachDetail = document.getElementById("workbench-cockpit-guide-coach-detail");
+  const cockpitInspectorCloseBtn = document.getElementById("workbench-cockpit-inspector-close-btn");
   const draftLabel = document.getElementById("workbench-draft-status-label");
   const draftHashLabel = document.getElementById("workbench-draft-hash-label");
   const graphValidationStatus = document.getElementById("workbench-graph-validation-status");
@@ -7630,6 +7651,7 @@ function installEditableWorkbenchShell() {
   const labelInput = document.getElementById("workbench-inspector-node-label");
   const opSelect = document.getElementById("workbench-inspector-node-op");
   const ruleCountSlot = document.getElementById("workbench-inspector-rule-count");
+  const ruleSummarySlot = document.getElementById("workbench-inspector-rule-summary");
   const ruleParameterOwner = document.getElementById("workbench-rule-parameter-owner");
   const ruleNameInput = document.getElementById("workbench-rule-name");
   const ruleSourceSignalInput = document.getElementById("workbench-rule-source-signal");
@@ -7823,6 +7845,7 @@ function installEditableWorkbenchShell() {
   let lastInterfaceMatrixValidationReport = null;
   let currentEditorTool = "select";
   let pendingEdgeSourceId = "";
+  let activeReferenceProofTarget = "";
   let nextDraftNodeIndex = 1;
   let selectedCatalogOp = "and";
   let lastComponentTemplateId = "";
@@ -7838,6 +7861,62 @@ function installEditableWorkbenchShell() {
   let lastHardwareInterfaceDesignerPayload = null;
   let lastHardwareInterfaceDesignerValidationReport = null;
   let canvasAuthoringMode = "reference_sample";
+  let referenceProofVisible = canvas
+    ? canvas.getAttribute("data-reference-proof-mode") === "default_visible"
+    : false;
+  let onboardingStepIndex = 0;
+  const onboardingGuideStorageKey = "well-harness-workbench-onboarding-guide-open-v1";
+  const onboardingSteps = [
+    {
+      id: "overview",
+      title: "先看完整反推链路",
+      detail: "这个电路的功能是保护反推释放顺序：从输入信号开始，只有 RA、SW1、禁止/展开状态、地面/发动机、TRA、TLS/PLS、VDT 90% 这些条件按顺序成立，THR_LOCK 才能释放。",
+      target: "#workbench-editable-canvas",
+      actionLabel: "高亮全图",
+    },
+    {
+      id: "inspect_node",
+      title: "点 L1 看规则",
+      detail: "为什么这样画：L1 是第一道门，它把 RA < 6 ft、SW1、not inhibited、not deployed 合在一起。点中 L1 后，右侧 inspector 会说明这一步在等哪些输入。",
+      target: "[data-editable-node-id='logic1']",
+      actionLabel: "选中 L1",
+    },
+    {
+      id: "proof_path",
+      title: "高亮 L4 proof",
+      detail: "触发顺序会一路走到 L4：L1 放行 TLS，L2 确认地面/发动机/SW2/EEC，L3 确认 TRA/N1k/PLS，L4 再用 VDT 90% deploy 和 TRA 锁释放窗口决定 THR_LOCK。",
+      target: "[data-reference-proof-target='logic4']",
+      actionLabel: "高亮 L4 proof",
+    },
+    {
+      id: "blank_canvas",
+      title: "进入空白画布",
+      detail: "进入空白画布后，参考节点会清掉。你可以从零画自己的候选逻辑，但这里仍然是 sandbox 草稿，不会修改 certified controller truth。",
+      target: "#workbench-start-empty-draft-btn",
+      actionLabel: "进入空白画布",
+    },
+    {
+      id: "add_node",
+      title: "添加一个 block",
+      detail: "添加 block 的意思是放一个逻辑步骤，例如输入、AND 门、比较器或窗口判断。先放节点，再给它命名和设置规则，右侧 inspector 会总结当前规则。",
+      target: "[data-editor-tool='node']",
+      actionLabel: "添加一个 block",
+    },
+    {
+      id: "wire",
+      title: "进入连线模式",
+      detail: "连线表示信号从上一步传到下一步。选输出端口，再连到输入端口；故障会发生什么：如果条件不满足，信号会在对应节点停住，后续 block 不应被触发。",
+      target: "[data-editor-tool='edge']",
+      actionLabel: "进入连线模式",
+    },
+    {
+      id: "run_sandbox",
+      title: "运行 sandbox",
+      detail: "仿真会看到什么：按下运行后右侧显示 verdict、first divergence、trace 和调试时间线。仿真的价值是先验证草稿触发顺序和故障阻断效果，再决定是否进入人工审查。",
+      target: "#workbench-run-sandbox-btn",
+      actionLabel: "运行 sandbox",
+    },
+  ];
   const workspaceDocumentKind = "well-harness-workbench-workspace-document";
   const workspaceDocumentVersion = "workbench-workspace-document.v1";
   const commandPaletteVersion = "workbench-command-palette.v1";
@@ -7890,10 +7969,77 @@ function installEditableWorkbenchShell() {
     "workbench-hardware-evidence-attachment-validation.v1";
   const edgeRouteMetadataVersion = "workbench-edge-route-metadata.v1";
   let draftEdges = [
-    { id: "edge_logic1_logic2", source: "logic1", target: "logic2" },
-    { id: "edge_logic2_logic3", source: "logic2", target: "logic3" },
-    { id: "edge_logic3_logic4", source: "logic3", target: "logic4" },
+    { id: "edge_ra_logic1", source: "ra_ft", target: "logic1", signal_id: "ra_below_6ft" },
+    { id: "edge_sw1_logic1", source: "sw1", target: "logic1", signal_id: "sw1_latched" },
+    { id: "edge_inhibit_logic1", source: "not_inhibited", target: "logic1", signal_id: "not_inhibited" },
+    { id: "edge_not_deployed_logic1", source: "not_deployed", target: "logic1", signal_id: "reverser_not_deployed_eec" },
+    { id: "edge_logic1_tls", source: "logic1", target: "tls_unlocked", signal_id: "logic1_to_tls_unlock" },
+    { id: "edge_logic1_logic2", source: "logic1", target: "logic2", signal_id: "logic1_active" },
+    { id: "edge_sw2_logic2", source: "sw2", target: "logic2", signal_id: "sw2_latched" },
+    { id: "edge_engine_logic2", source: "engine_running", target: "logic2", signal_id: "engine_running" },
+    { id: "edge_ground_logic2", source: "aircraft_on_ground", target: "logic2", signal_id: "aircraft_on_ground" },
+    { id: "edge_inhibit_logic2", source: "not_inhibited", target: "logic2", signal_id: "not_inhibited" },
+    { id: "edge_eec_logic2", source: "eec_enable", target: "logic2", signal_id: "eec_enable" },
+    { id: "edge_logic2_logic3", source: "logic2", target: "logic3", signal_id: "logic2_active" },
+    { id: "edge_tls_logic3", source: "tls_unlocked", target: "logic3", signal_id: "tls_unlocked" },
+    { id: "edge_n1k_logic3", source: "n1k_limit", target: "logic3", signal_id: "n1k_below_limit" },
+    { id: "edge_tra_logic3", source: "tra_deploy", target: "logic3", signal_id: "tra_deploy_window" },
+    { id: "edge_pls_logic3", source: "pls_unlocked", target: "logic3", signal_id: "pls_unlocked" },
+    { id: "edge_engine_logic3", source: "engine_running", target: "logic3", signal_id: "engine_running" },
+    { id: "edge_ground_logic3", source: "aircraft_on_ground", target: "logic3", signal_id: "aircraft_on_ground" },
+    { id: "edge_inhibit_logic3", source: "not_inhibited", target: "logic3", signal_id: "not_inhibited" },
+    { id: "edge_logic3_vdt90", source: "logic3", target: "vdt90", signal_id: "deploy_motion_command" },
+    { id: "edge_vdt90_logic4", source: "vdt90", target: "logic4", signal_id: "deploy_90_percent_vdt" },
+    { id: "edge_tra_logic4", source: "tra_deploy", target: "logic4", signal_id: "tra_lock_release_window" },
+    { id: "edge_ground_logic4", source: "aircraft_on_ground", target: "logic4", signal_id: "aircraft_on_ground" },
+    { id: "edge_engine_logic4", source: "engine_running", target: "logic4", signal_id: "engine_running" },
+    { id: "edge_logic4_thr_lock", source: "logic4", target: "thr_lock", signal_id: "throttle_lock_release_cmd" },
   ];
+  const referenceProofPaths = {
+    logic1: {
+      target: "logic1",
+      nodes: ["ra_ft", "sw1", "not_inhibited", "not_deployed", "logic1"],
+      edges: ["edge_ra_logic1", "edge_sw1_logic1", "edge_inhibit_logic1", "edge_not_deployed_logic1"],
+    },
+    logic3: {
+      target: "logic3",
+      nodes: [
+        "logic1",
+        "logic2",
+        "tls_unlocked",
+        "n1k_limit",
+        "tra_deploy",
+        "pls_unlocked",
+        "logic3",
+      ],
+      edges: [
+        "edge_logic1_tls",
+        "edge_logic1_logic2",
+        "edge_logic2_logic3",
+        "edge_tls_logic3",
+        "edge_n1k_logic3",
+        "edge_tra_logic3",
+        "edge_pls_logic3",
+      ],
+    },
+    logic4: {
+      target: "logic4",
+      nodes: ["logic1", "logic2", "logic3", "vdt90", "logic4"],
+      edges: ["edge_logic1_tls", "edge_logic1_logic2", "edge_logic2_logic3", "edge_logic3_vdt90", "edge_vdt90_logic4"],
+    },
+    thr_lock: {
+      target: "thr_lock",
+      nodes: ["logic1", "logic2", "logic3", "vdt90", "logic4", "thr_lock"],
+      edges: [
+        "edge_logic1_tls",
+        "edge_logic1_logic2",
+        "edge_logic2_logic3",
+        "edge_logic3_vdt90",
+        "edge_vdt90_logic4",
+        "edge_logic4_thr_lock",
+      ],
+    },
+  };
   const undoStack = [];
   const redoStack = [];
   const viewportState = {
@@ -8020,6 +8166,104 @@ function installEditableWorkbenchShell() {
     return approvedOperationCatalog[op] || approvedOperationCatalog.and;
   }
 
+  function shortBlockLabelForOp(op) {
+    const entry = operationCatalogEntry(op || "and");
+    return String(entry.short_label || entry.op || "BLK").slice(0, 4).toUpperCase();
+  }
+
+  function valueTypeDisplayLabel(value) {
+    const normalized = String(value || "").trim();
+    const labels = {
+      boolean: "布尔",
+      number: "数值",
+      string: "文本",
+      state: "状态",
+      unknown: "未知",
+    };
+    return labels[normalized] || normalized || "未知";
+  }
+
+  function displayStatusLabel(value) {
+    const key = String(value === null || value === undefined ? "" : value).trim();
+    if (!key) return "未记录";
+    if (key === "ui_draft_pending" || /^ui_draft_[0-9a-f]{8}$/i.test(key)) {
+      return "本地草稿";
+    }
+    const labels = {
+      ui_draft: "本地草稿",
+      browser_local_draft: "浏览器本地草稿",
+      sandbox_candidate: "沙箱候选",
+      certified: "已认证",
+      init: "初始化",
+      selection: "选择",
+      running: "运行中",
+      not_run: "未运行",
+      not_recorded: "未记录",
+      not_archive_ready: "未就绪",
+      archive_ready: "归档就绪",
+      run_required: "需要运行",
+      ready: "就绪",
+      review_required: "需要审查",
+      blocked: "阻塞",
+      equivalent: "一致",
+      divergent: "不一致",
+      invalid_model: "模型无效",
+      invalid_scenario: "场景无效",
+      pass: "通过",
+      warn: "警告",
+      fail: "失败",
+      missing: "缺失",
+      needs_evidence: "需要证据",
+      unavailable: "不可用",
+      partial: "部分",
+      complete: "完整",
+      selection_only: "仅选择",
+      linked_to_latest_diff: "已连接最新差异",
+      evidence_gap: "证据缺口",
+      none: "无",
+      nominal_landing: "名义着陆",
+      sw1_stuck_at_touchdown: "SW1 着陆卡滞",
+    };
+    return labels[key] || key;
+  }
+
+  function displayScenarioLabel(value) {
+    return displayStatusLabel(value || "nominal_landing");
+  }
+
+  function compactNodeNameLabel(value) {
+    return String(value || "")
+      .replace(/\s+/g, " ")
+      .replace(/^Radio altitude below 6 ft$/i, "无线电高度低于 6 英尺")
+      .replace(/^Reverser not inhibited$/i, "反推未抑制")
+      .replace(/^Reverser not fully deployed$/i, "反推尚未完全展开")
+      .replace(/^logic1 RA\/SW1 inhibit gate$/i, "L1 高度/SW1 允许门")
+      .replace(/^logic2 ground\/SW2\/EEC gate$/i, "L2 地面/SW2 允许门")
+      .replace(/^logic3 TLS\/N1K\/TRA deploy gate$/i, "L3 TLS/N1K/TRA 展开门")
+      .replace(/^logic4 VDT90 \/ THR_LOCK release gate$/i, "L4 部署/油门锁门")
+      .replace(/^Throttle lock release command$/i, "油门锁释放指令")
+      .trim();
+  }
+
+  function nodeDisplayLabel(node) {
+    if (!node) return "草稿节点";
+    const explicit = node.getAttribute("data-node-display-label")
+      || node.getAttribute("data-node-label")
+      || node.getAttribute("data-editable-node-id")
+      || "草稿节点";
+    return compactNodeNameLabel(explicit) || "草稿节点";
+  }
+
+  function nodeTooltipText(node) {
+    if (!node) return "";
+    const op = node.getAttribute("data-node-op") || "and";
+    const entry = operationCatalogEntry(op);
+    const label = nodeDisplayLabel(node);
+    const rules = node.getAttribute("data-rule-count") || "0";
+    const sourceRef = node.getAttribute("data-source-ref") || "ui_draft.node";
+    return `${label} · ${entry.label || op} · ${rules} rules · ${sourceRef}`;
+  }
+
   function buildOperationCatalogSummary() {
     return {
       version: editableOperationCatalogVersion,
@@ -8032,6 +8276,207 @@ function installEditableWorkbenchShell() {
   function normalizeCanvasAuthoringMode(value) {
     const mode = String(value || "").trim();
     return mode === "empty_authoring" ? "empty_authoring" : "reference_sample";
+  }
+
+  function syncReferenceProofModeAttribute() {
+    if (!canvas) return;
+    const mode = canvasAuthoringMode === "empty_authoring"
+      ? "empty_authoring"
+      : (referenceProofVisible ? "default_visible" : "canvas_first");
+    canvas.setAttribute("data-reference-proof-mode", mode);
+    if (referenceProofStrip) {
+      referenceProofStrip.hidden = mode !== "default_visible";
+    }
+  }
+
+  function setInspectorOpen(open) {
+    if (!evidenceInspector) return false;
+    const isOpen = open === true;
+    evidenceInspector.setAttribute("data-inspector-open", isOpen ? "true" : "false");
+    document.body.setAttribute("data-workbench-inspector-open", isOpen ? "true" : "false");
+    return isOpen;
+  }
+
+  function closeCockpitInspectorOverlay() {
+    return setInspectorOpen(false);
+  }
+
+  function setInspectorMode(mode, options) {
+    if (!evidenceInspector) return "node";
+    if (options && options.open === true) setInspectorOpen(true);
+    const requestedMode = String(mode || "").trim();
+    const availableModes = inspectorModeButtons
+      .map((button) => button.getAttribute("data-inspector-mode") || "")
+      .filter(Boolean);
+    const defaultMode =
+      evidenceInspector.getAttribute("data-default-inspector-mode") || availableModes[0] || "node";
+    const activeMode = availableModes.includes(requestedMode) ? requestedMode : defaultMode;
+    evidenceInspector.setAttribute("data-inspector-mode-active", activeMode);
+    for (const button of inspectorModeButtons) {
+      const buttonMode = button.getAttribute("data-inspector-mode") || "";
+      const isActive = buttonMode === activeMode;
+      button.setAttribute("aria-selected", isActive ? "true" : "false");
+      button.setAttribute("tabindex", isActive ? "0" : "-1");
+    }
+    for (const panel of inspectorPanels) {
+      const panelMode = panel.getAttribute("data-inspector-panel") || "";
+      panel.setAttribute("aria-hidden", panelMode === activeMode ? "false" : "true");
+    }
+    return activeMode;
+  }
+
+  function currentOnboardingStep() {
+    return onboardingSteps[Math.max(0, Math.min(onboardingStepIndex, onboardingSteps.length - 1))]
+      || onboardingSteps[0];
+  }
+
+  function renderCockpitGuideCoach(step) {
+    if (!cockpitGuideCoach) return null;
+    const activeStep = step || currentOnboardingStep();
+    cockpitGuideCoach.hidden = false;
+    cockpitGuideCoach.setAttribute("data-coach-state", activeStep && activeStep.id ? activeStep.id : "overview");
+    if (cockpitGuideCoachTitle) {
+      cockpitGuideCoachTitle.textContent = "新手导引 · C919 E-TRAS";
+    }
+    if (cockpitGuideCoachDetail) {
+      const detail = activeStep && activeStep.detail
+        ? activeStep.detail
+        : "先看完整反推链路，再按新手指引学习节点、连线、故障和仿真。";
+      cockpitGuideCoachDetail.textContent = detail;
+    }
+    return activeStep;
+  }
+
+  function clearOnboardingHighlights() {
+    for (const element of Array.from(shell.querySelectorAll("[data-onboarding-highlight='true']"))) {
+      element.removeAttribute("data-onboarding-highlight");
+    }
+  }
+
+  function isOnboardingGuideExpanded() {
+    return Boolean(onboardingPanel && !onboardingPanel.hidden);
+  }
+
+  function setOnboardingGuideExpanded(expanded, options) {
+    const shouldExpand = Boolean(expanded);
+    if (onboardingPanel) {
+      onboardingPanel.hidden = !shouldExpand;
+      onboardingPanel.setAttribute("data-onboarding-state", shouldExpand ? "expanded" : "collapsed");
+    }
+    if (onboardingOpenBtn) {
+      onboardingOpenBtn.hidden = shouldExpand;
+      onboardingOpenBtn.setAttribute("aria-expanded", shouldExpand ? "true" : "false");
+    }
+    if (onboardingCloseBtn) {
+      onboardingCloseBtn.setAttribute("aria-expanded", shouldExpand ? "true" : "false");
+    }
+    try {
+      window.localStorage.setItem(onboardingGuideStorageKey, shouldExpand ? "true" : "false");
+    } catch (_err) {
+      // localStorage can be unavailable in strict browser contexts; the button state still works.
+    }
+    if (!shouldExpand) {
+      clearOnboardingHighlights();
+      return;
+    }
+    if (!options || !options.skipRender) {
+      renderOnboardingStep(onboardingStepIndex);
+    }
+  }
+
+  function onboardingTargetElement(step) {
+    if (!step || !step.target) return null;
+    try {
+      return shell.querySelector(step.target) || document.querySelector(step.target);
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function renderOnboardingStep(index) {
+    if (!onboardingPanel || !onboardingSteps.length) return null;
+    onboardingStepIndex = Math.max(0, Math.min(Number(index) || 0, onboardingSteps.length - 1));
+    const step = currentOnboardingStep();
+    onboardingPanel.setAttribute("data-onboarding-active-step", step.id);
+    if (onboardingTitle) onboardingTitle.textContent = step.title;
+    if (onboardingDetail) onboardingDetail.textContent = step.detail;
+    if (onboardingProgress) {
+      onboardingProgress.textContent = `${onboardingStepIndex + 1} / ${onboardingSteps.length}`;
+    }
+    if (onboardingActionBtn) onboardingActionBtn.textContent = step.actionLabel;
+    renderCockpitGuideCoach(step);
+    if (onboardingBackBtn) onboardingBackBtn.disabled = onboardingStepIndex === 0;
+    if (onboardingNextBtn) onboardingNextBtn.disabled = onboardingStepIndex >= onboardingSteps.length - 1;
+    for (const button of onboardingStepButtons) {
+      const isActive = button.getAttribute("data-onboarding-step") === step.id;
+      if (isActive) {
+        button.setAttribute("aria-current", "step");
+      } else {
+        button.removeAttribute("aria-current");
+      }
+    }
+    clearOnboardingHighlights();
+    const target = onboardingTargetElement(step);
+    if (target && isOnboardingGuideExpanded()) target.setAttribute("data-onboarding-highlight", "true");
+    return step;
+  }
+
+  function setOnboardingStepById(stepId) {
+    const index = onboardingSteps.findIndex((step) => step.id === stepId);
+    if (index >= 0) renderOnboardingStep(index);
+  }
+
+  function selectReferenceNodeForOnboarding(nodeId) {
+    loadReferenceProofView();
+    const targetNode = shell.querySelector(`[data-editable-node-id="${nodeId}"]`);
+    if (!targetNode) return;
+    selectedEdge = null;
+    setSingleEditableNodeSelection(targetNode);
+    setInspectorMode("node");
+    renderInspector();
+    recordCanvasInteractionAction(`onboarding_select_${nodeId}`);
+    if (graphValidationStatus) {
+      graphValidationStatus.textContent =
+        `Graph validation: onboarding selected ${nodeId}. Truth effect: none.`;
+    }
+  }
+
+  function runOnboardingStepAction() {
+    const step = currentOnboardingStep();
+    if (!step) return;
+    if (step.id === "overview") {
+      loadReferenceProofView();
+      clearReferenceProofHighlight();
+      setInspectorMode("node");
+      if (graphValidationStatus) {
+        graphValidationStatus.textContent =
+          "Graph validation: onboarding overview highlights the full reference circuit. Truth effect: none.";
+      }
+    } else if (step.id === "inspect_node") {
+      selectReferenceNodeForOnboarding("logic1");
+    } else if (step.id === "proof_path") {
+      applyReferenceProofPath("logic4");
+    } else if (step.id === "blank_canvas") {
+      startEmptyCanvasDraft();
+    } else if (step.id === "add_node") {
+      if (canvasAuthoringMode !== "empty_authoring") {
+        startEmptyCanvasDraft();
+      }
+      addEditableNode();
+      setEditorTool("select");
+    } else if (step.id === "wire") {
+      refreshEditableNodes();
+      if (!selectedNode && nodes[0]) {
+        setSingleEditableNodeSelection(nodes[0]);
+      }
+      pendingEdgeSourceId = selectedNode && selectedNode.getAttribute("data-editable-node-id") || "";
+      setEditorTool("edge");
+      beginEditableEdgeConnect();
+    } else if (step.id === "run_sandbox") {
+      setInspectorMode("run");
+      runWorkbenchSandboxDiff();
+    }
+    renderOnboardingStep(onboardingStepIndex);
   }
 
   function componentTemplateById(templateId) {
@@ -8245,7 +8690,7 @@ function installEditableWorkbenchShell() {
       );
     }
     if (opCatalogStatus) {
-      opCatalogStatus.textContent = `${entry.short_label} · ${entry.value_type}`;
+      opCatalogStatus.textContent = `${entry.short_label} · ${valueTypeDisplayLabel(entry.value_type)}`;
     }
     return entry;
   }
@@ -11233,6 +11678,7 @@ function installEditableWorkbenchShell() {
       label: selectedNode.getAttribute("data-node-label") || "",
       op: selectedNode.getAttribute("data-node-op") || "and",
       ruleCount: selectedNode.getAttribute("data-rule-count") || "0",
+      ruleSummary: selectedNode.getAttribute("data-rule-summary") || "No rule summary recorded.",
       evidence: selectedNode.getAttribute("data-hardware-evidence") || "evidence_gap",
       sourceRef: selectedNode.getAttribute("data-source-ref") || "unknown",
       op_catalog_entry: selectedNode.getAttribute("data-op-catalog-entry")
@@ -11259,6 +11705,77 @@ function installEditableWorkbenchShell() {
 
   function editableNodeId(node) {
     return node && (node.getAttribute("data-editable-node-id") || "");
+  }
+
+  function referenceProofPath(targetId) {
+    const key = String(targetId || "").trim();
+    return referenceProofPaths[key] || null;
+  }
+
+  function syncReferenceProofHighlights() {
+    const proof = referenceProofPath(activeReferenceProofTarget);
+    const proofNodeIds = new Set(proof ? proof.nodes : []);
+    const proofEdgeIds = new Set(proof ? proof.edges : []);
+    for (const button of referenceProofButtons) {
+      button.setAttribute(
+        "aria-pressed",
+        button.getAttribute("data-reference-proof-target") === activeReferenceProofTarget ? "true" : "false",
+      );
+    }
+    refreshEditableNodes();
+    for (const node of nodes) {
+      const nodeId = editableNodeId(node);
+      if (proofNodeIds.has(nodeId)) {
+        node.setAttribute("data-proof-highlight", "true");
+      } else {
+        node.removeAttribute("data-proof-highlight");
+      }
+    }
+    if (edgeSvg) {
+      for (const path of Array.from(edgeSvg.querySelectorAll("[data-editable-edge-id]"))) {
+        const edgeId = path.getAttribute("data-editable-edge-id") || "";
+        if (proofEdgeIds.has(edgeId)) {
+          path.setAttribute("data-edge-proof-highlight", "true");
+        } else {
+          path.removeAttribute("data-edge-proof-highlight");
+        }
+      }
+    }
+  }
+
+  function clearReferenceProofHighlight() {
+    activeReferenceProofTarget = "";
+    syncReferenceProofHighlights();
+  }
+
+  function applyReferenceProofPath(targetId) {
+    const proof = referenceProofPath(targetId);
+    if (!proof) return;
+    canvasAuthoringMode = "reference_sample";
+    referenceProofVisible = true;
+    syncReferenceProofModeAttribute();
+    activeReferenceProofTarget = String(targetId || "").trim();
+    const targetNode = nodes.find((node) => editableNodeId(node) === proof.target);
+    if (targetNode) {
+      selectedNode = targetNode;
+      selectedNodeIds = new Set([proof.target]);
+      selectedEdge = null;
+    }
+    syncEditableNodeSelectionAttributes();
+    if (edgeSvg) {
+      for (const path of Array.from(edgeSvg.querySelectorAll("[data-editable-edge-id]"))) {
+        path.setAttribute("aria-pressed", "false");
+      }
+    }
+    syncReferenceProofHighlights();
+    recordCanvasInteractionAction(`reference_proof_${activeReferenceProofTarget}`);
+    setInspectorOpen(true);
+    renderInspector();
+    renderCandidateDebuggerView(currentCandidateDebuggerView("reference_proof"));
+    if (graphValidationStatus) {
+      graphValidationStatus.textContent =
+        `Graph validation: proof path ${activeReferenceProofTarget} highlighted ${proof.nodes.length} block(s), ${proof.edges.length} signal line(s). Truth effect: none.`;
+    }
   }
 
   function syncEditableNodeSelectionAttributes() {
@@ -11398,11 +11915,11 @@ function installEditableWorkbenchShell() {
     return selected.length ? selected : nodes;
   }
 
-  function fitViewportToSelection() {
+  function fitViewportToNodes(fitNodes, actionName, options) {
     if (!canvas) return viewportStateSnapshot();
-    const fitNodes = selectedNodesForViewportFit();
     if (!fitNodes.length) return viewportStateSnapshot();
     const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return viewportStateSnapshot();
     const positions = fitNodes.map((node) => editableNodePosition(node));
     const minX = Math.min(...positions.map((position) => position.x));
     const maxX = Math.max(...positions.map((position) => position.x));
@@ -11420,21 +11937,69 @@ function installEditableWorkbenchShell() {
     viewportState.scale = scale;
     viewportState.panX = rect.width / 2 - centerX * scale;
     viewportState.panY = rect.height / 2 - centerY * scale;
-    return applyViewportTransform(`fit ${fitNodes.length} node(s)`);
+    return applyViewportTransform(actionName || `fit ${fitNodes.length} node(s)`, options);
+  }
+
+  function fitViewportToSelection() {
+    return fitViewportToNodes(selectedNodesForViewportFit());
+  }
+
+  function fitViewportToAllNodes(options) {
+    refreshEditableNodes();
+    return fitViewportToNodes(nodes, "fit all", options);
+  }
+
+  function shouldBeginViewportPan(event) {
+    if (!canvas || !event) return { active: false, reason: "no_canvas" };
+    if (event.button !== 0 && event.button !== 1) return { active: false, reason: "unsupported_button" };
+    const target = event.target instanceof Element ? event.target : null;
+    if (target && !target.closest("#workbench-editable-canvas")) {
+      return { active: false, reason: "outside_canvas" };
+    }
+    const blocksPan = Boolean(
+      target
+      && target.closest(
+        [
+          ".workbench-editable-node",
+          ".workbench-port-handle",
+          "[data-editable-edge-id]",
+          "button",
+          "input",
+          "textarea",
+          "select",
+          "#workbench-editor-toolstrip",
+          "#workbench-reference-proof-strip",
+          "#workbench-canvas-first-guide",
+          "#workbench-command-palette",
+        ].join(", "),
+      )
+    );
+    const directBlankDrag = event.button === 0
+      && !blocksPan
+      && !isSelectionModifier(event)
+      && (currentEditorTool === "select" || currentEditorTool === "pan");
+    if (directBlankDrag) return { active: true, reason: "direct_blank_canvas_drag" };
+    if (event.button === 1) return { active: true, reason: "middle_button_pan" };
+    if (spacePanActive) return { active: true, reason: "space_pan" };
+    if (currentEditorTool === "pan" && !blocksPan) return { active: true, reason: "toolbar_pan" };
+    return { active: false, reason: blocksPan ? "interactive_target" : "select_lasso" };
   }
 
   function beginViewportPan(event) {
     if (!canvas || !event) return false;
-    if (!(event.button === 1 || spacePanActive)) return false;
+    const panIntent = shouldBeginViewportPan(event);
+    if (!panIntent.active) return false;
     viewportPanState = {
       pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
       panX: viewportState.panX,
       panY: viewportState.panY,
+      reason: panIntent.reason,
     };
     canvas.setPointerCapture(event.pointerId);
     canvas.setAttribute("data-viewport-panning", "true");
+    canvas.setAttribute("data-viewport-pan-reason", panIntent.reason);
     event.preventDefault();
     return true;
   }
@@ -11462,7 +12027,10 @@ function installEditableWorkbenchShell() {
   function clearViewportPanState(actionName) {
     if (!viewportPanState) return;
     viewportPanState = null;
-    if (canvas) canvas.removeAttribute("data-viewport-panning");
+    if (canvas) {
+      canvas.removeAttribute("data-viewport-panning");
+      canvas.removeAttribute("data-viewport-pan-reason");
+    }
     applyViewportTransform(actionName || "pan complete");
   }
 
@@ -12229,7 +12797,8 @@ function installEditableWorkbenchShell() {
   function renderWorkspaceDocumentStatus(documentRecord) {
     const record = documentRecord || currentWorkspaceDocument();
     if (workspaceDocumentRevisionSlot) {
-      workspaceDocumentRevisionSlot.textContent = record.revision_id || "ui_draft_pending";
+      workspaceDocumentRevisionSlot.setAttribute("data-workspace-revision-id", record.revision_id || "ui_draft_pending");
+      workspaceDocumentRevisionSlot.textContent = displayStatusLabel(record.revision_id || "ui_draft_pending");
     }
     if (workspaceDocumentActionCountSlot) {
       workspaceDocumentActionCountSlot.textContent = String(record.action_count || 0);
@@ -12299,7 +12868,7 @@ function installEditableWorkbenchShell() {
       canvasSelectedEdgeCountSlot.textContent = String(summary.selected_edge_count || 0);
     }
     if (canvasLastActionSlot) {
-      canvasLastActionSlot.textContent = summary.last_action || "init";
+      canvasLastActionSlot.textContent = displayStatusLabel(summary.last_action || "init");
     }
   }
 
@@ -12651,10 +13220,8 @@ function installEditableWorkbenchShell() {
     node.style.setProperty("--node-y", nodeState.y || "50%");
     node.setAttribute("aria-pressed", "false");
     const label = document.createElement("span");
-    label.textContent = nodeState.id;
-    const small = document.createElement("small");
-    small.textContent = `${(nodeState.op || "and").toUpperCase()} · ${nodeState.ruleCount || "0"} rules`;
-    node.append(label, small);
+    node.append(label);
+    updateNodeDisplay(node);
     canvas.appendChild(node);
     attachEditableNodeHandler(node);
     return node;
@@ -12668,6 +13235,10 @@ function installEditableWorkbenchShell() {
     canvasAuthoringMode = normalizeCanvasAuthoringMode(
       state.canvasAuthoringMode || state.canvas_authoring_mode || canvasAuthoringMode,
     );
+    syncReferenceProofModeAttribute();
+    if (canvasAuthoringMode === "empty_authoring") {
+      clearReferenceProofHighlight();
+    }
     adoptWorkspaceDocumentRecord(state.workspaceDocument || state.workspace_document || null);
     adoptCanvasInteractionSummary(state.canvasInteractionSummary || state.canvas_interaction_summary || null);
     restoreScenarioTestCaseLibrary(
@@ -12869,6 +13440,133 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function editableNodeRoutePosition(node) {
+    const position = editableNodePosition(node);
+    const fallback = { ...position, halfXPercent: 5, halfYPercent: 3 };
+    if (!node || !canvas) return fallback;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return fallback;
+    const halfXPercent = Math.max(2, Math.min(16, ((node.offsetWidth || 100) / rect.width) * 50));
+    const halfYPercent = Math.max(2, Math.min(8, ((node.offsetHeight || 48) / rect.height) * 50));
+    return { ...position, halfXPercent, halfYPercent };
+  }
+
+  function referenceEdgeLaneX(edge) {
+    const edgeId = String(edge && edge.id || "");
+    const lanes = {
+      edge_ra_logic1: 18,
+      edge_sw1_logic1: 18,
+      edge_inhibit_logic1: 18,
+      edge_not_deployed_logic1: 18,
+      edge_logic1_tls: 32,
+      edge_logic1_logic2: 42,
+      edge_sw2_logic2: 49,
+      edge_engine_logic2: 49,
+      edge_ground_logic2: 49,
+      edge_inhibit_logic2: 16,
+      edge_eec_logic2: 49,
+      edge_logic2_logic3: 60,
+      edge_tls_logic3: 58,
+      edge_n1k_logic3: 74,
+      edge_tra_logic3: 74,
+      edge_pls_logic3: 74,
+      edge_engine_logic3: 52,
+      edge_ground_logic3: 32,
+      edge_inhibit_logic3: 16,
+      edge_logic3_vdt90: 75,
+      edge_vdt90_logic4: 85,
+      edge_tra_logic4: 86,
+      edge_ground_logic4: 32,
+      edge_engine_logic4: 52,
+      edge_logic4_thr_lock: 96,
+    };
+    return Object.prototype.hasOwnProperty.call(lanes, edgeId) ? lanes[edgeId] : null;
+  }
+
+  function referenceEdgeDetourY(edge) {
+    const edgeId = String(edge && edge.id || "");
+    const detours = {
+      edge_inhibit_logic2: 6,
+      edge_logic1_logic2: 12,
+      edge_logic2_logic3: 6,
+      edge_tls_logic3: 14,
+      edge_engine_logic3: 6,
+      edge_ground_logic3: 6,
+      edge_inhibit_logic3: 6,
+      edge_vdt90_logic4: 40,
+      edge_tra_logic4: 6,
+      edge_ground_logic4: 6,
+      edge_engine_logic4: 6,
+    };
+    return Object.prototype.hasOwnProperty.call(detours, edgeId) ? detours[edgeId] : null;
+  }
+
+  function orthogonalEdgeRoute(source, target, edge) {
+    const routeDirection = Number(target && target.x) >= Number(source && source.x) ? 1 : -1;
+    const sourceHalfX = Number.isFinite(Number(source && source.halfXPercent))
+      ? Number(source.halfXPercent)
+      : 5;
+    const targetHalfX = Number.isFinite(Number(target && target.halfXPercent))
+      ? Number(target.halfXPercent)
+      : 5;
+    const sourceX = Math.max(2, Math.min(98, Number(source && source.x) + routeDirection * sourceHalfX));
+    const sourceY = Math.max(2, Math.min(98, Number(source && source.y)));
+    const targetX = Math.max(2, Math.min(98, Number(target && target.x) - routeDirection * targetHalfX));
+    const targetY = Math.max(2, Math.min(98, Number(target && target.y)));
+    const edgeId = String(edge && edge.id || "");
+    if (edgeId === "edge_logic1_logic2") {
+      const laneY = 12;
+      return {
+        d: [
+          `M${sourceX} ${sourceY}`,
+          `L${sourceX} ${laneY}`,
+          `L${targetX} ${laneY}`,
+          `L${targetX} ${targetY}`,
+        ].join(" "),
+        labelX: Math.max(2, Math.min(98, (sourceX + targetX) / 2)),
+        labelY: Math.max(4, Math.min(96, laneY - 1.5)),
+        route_mode: "orthogonal",
+      };
+    }
+    if (edgeId === "edge_vdt90_logic4") {
+      const laneY = 96;
+      const laneX = 98;
+      return {
+        d: [
+          `M${sourceX} ${sourceY}`,
+          `L${sourceX} ${laneY}`,
+          `L${laneX} ${laneY}`,
+          `L${laneX} ${targetY}`,
+          `L${targetX} ${targetY}`,
+        ].join(" "),
+        labelX: Math.max(2, Math.min(98, (laneX + targetX) / 2)),
+        labelY: Math.max(4, Math.min(96, targetY - 1.5)),
+      };
+    }
+    const laneX = referenceEdgeLaneX(edge);
+    const midX = Math.max(2, Math.min(98, Number.isFinite(laneX) ? laneX : (sourceX + targetX) / 2));
+    const detourY = referenceEdgeDetourY(edge);
+    if (Number.isFinite(detourY)) {
+      const laneY = Math.max(2, Math.min(98, detourY));
+      return {
+        d: [
+          `M${sourceX} ${sourceY}`,
+          `L${midX} ${sourceY}`,
+          `L${midX} ${laneY}`,
+          `L${targetX} ${laneY}`,
+          `L${targetX} ${targetY}`,
+        ].join(" "),
+        labelX: Math.max(2, Math.min(98, (midX + targetX) / 2)),
+        labelY: Math.max(4, Math.min(96, laneY - 1.5)),
+      };
+    }
+    return {
+      d: `M${sourceX} ${sourceY} L${midX} ${sourceY} L${midX} ${targetY} L${targetX} ${targetY}`,
+      labelX: midX,
+      labelY: Math.max(4, Math.min(96, (sourceY + targetY) / 2 - 1.5)),
+    };
+  }
+
   function edgeTargetPortId(edge) {
     if (!edge || !edge.target) return "";
     const targetNode = nodes.find((node) => node.getAttribute("data-editable-node-id") === edge.target);
@@ -12918,6 +13616,8 @@ function installEditableWorkbenchShell() {
     return [
       `data-source-port-id="${inspectorText(payload.source_port_id)}"`,
       `data-target-port-id="${inspectorText(payload.target_port_id)}"`,
+      `data-edge-source-id="${inspectorText(payload.source_node_id)}"`,
+      `data-edge-target-id="${inspectorText(payload.target_node_id)}"`,
       `data-edge-signal-id="${inspectorText(payload.signal_id)}"`,
       `data-edge-label="${inspectorText(payload.edge_label)}"`,
       `data-route-mode="${inspectorText(payload.route_metadata.routing_mode)}"`,
@@ -13041,16 +13741,15 @@ function installEditableWorkbenchShell() {
       preview.remove();
     }
     const sourceNode = nodes.find((node) => editableNodeId(node) === portDragState.sourcePayload.node_id);
-    const source = editableNodePosition(sourceNode);
+    const source = editableNodeRoutePosition(sourceNode);
     const target = currentPoint || portDragState.current || source;
-    const midX = (source.x + target.x) / 2;
-    const midY = (source.y + target.y) / 2;
+    const route = orthogonalEdgeRoute(source, target);
     const status = compatibility && compatibility.status || "pending";
     edgeSvg.insertAdjacentHTML(
       "beforeend",
       [
         `<path class="workbench-port-drag-preview" data-port-drag-compatibility="${inspectorText(status)}"`,
-        `d="M${source.x} ${source.y} C${midX} ${source.y} ${midX} ${target.y} ${target.x} ${target.y}" />`,
+        `d="${route.d}" />`,
       ].join(" "),
     );
     if (canvas) {
@@ -13275,10 +13974,9 @@ function installEditableWorkbenchShell() {
       const edge = draftEdges[index];
       const sourceNode = nodes.find((node) => node.getAttribute("data-editable-node-id") === edge.source);
       const targetNode = nodes.find((node) => node.getAttribute("data-editable-node-id") === edge.target);
-      const source = editableNodePosition(sourceNode);
-      const target = editableNodePosition(targetNode);
-      const midX = (source.x + target.x) / 2;
-      const midY = (source.y + target.y) / 2;
+      const source = editableNodeRoutePosition(sourceNode);
+      const target = editableNodeRoutePosition(targetNode);
+      const route = orthogonalEdgeRoute(source, target, edge);
       const payload = edgeInspectorPayload(edge);
       paths.push([
         `<path data-editable-edge-id="${inspectorText(edge.id)}"`,
@@ -13286,19 +13984,27 @@ function installEditableWorkbenchShell() {
         `data-edge-source="${inspectorText(edge.source)}"`,
         `data-edge-target="${inspectorText(edge.target)}"`,
         edgePathMetadata(edge),
+        'marker-end="url(#workbench-reference-arrowhead)"',
         'role="button"',
         'tabindex="0"',
-        `aria-label="${inspectorText(`Edge ${edge.source} to ${edge.target}`)}"`,
-        `d="M${source.x} ${source.y} C${midX} ${source.y} ${midX} ${target.y} ${target.x} ${target.y}" />`,
+        `aria-label="${inspectorText(`信号线 ${edge.source} 到 ${edge.target}`)}"`,
+        `d="${route.d}" />`,
         `<text class="workbench-edge-label" data-editable-edge-label-id="${inspectorText(edge.id)}"`,
         `data-edge-label="${inspectorText(payload.edge_label)}"`,
         `data-route-mode="${inspectorText(payload.route_metadata.routing_mode)}"`,
-        `x="${midX}" y="${Math.max(4, midY - 1.5)}">`,
+        `x="${route.labelX}" y="${route.labelY}">`,
         inspectorText(payload.edge_label),
         "</text>",
       ].join(" "));
     }
-    edgeSvg.innerHTML = paths.join("");
+    edgeSvg.innerHTML = [
+      '<defs>',
+      '<marker id="workbench-reference-arrowhead" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse">',
+      '<path d="M0 0 L8 4 L0 8 Z"></path>',
+      '</marker>',
+      '</defs>',
+      paths.join(""),
+    ].join("");
     const selectedIndex = selectedEdge ? draftEdges.indexOf(selectedEdge) : -1;
     if (selectedIndex >= 0) {
       const path = edgeSvg.querySelector(`[data-editable-edge-index="${selectedIndex}"]`);
@@ -13308,6 +14014,7 @@ function installEditableWorkbenchShell() {
     attachEditableEdgeHandlers();
     renderSubsystemOverlays();
     renderEditablePortHandles();
+    syncReferenceProofHighlights();
   }
 
   function validateEditableGraph() {
@@ -13345,7 +14052,7 @@ function installEditableWorkbenchShell() {
   function updateEditableDraftHash() {
     const hash = editableDraftHash(stableEvidenceArchiveJson(currentDraftSnapshot()));
     shell.setAttribute("data-draft-hash", hash);
-    if (draftHashLabel) draftHashLabel.textContent = hash;
+    if (draftHashLabel) draftHashLabel.textContent = displayStatusLabel(hash);
     renderWorkspaceDocumentStatus();
     return hash;
   }
@@ -13373,6 +14080,9 @@ function installEditableWorkbenchShell() {
   function startEmptyCanvasDraft() {
     recordEditableHistory("start_empty_canvas_draft");
     canvasAuthoringMode = "empty_authoring";
+    referenceProofVisible = false;
+    syncReferenceProofModeAttribute();
+    clearReferenceProofHighlight();
     shell.setAttribute("data-draft-state", "derived");
     for (const node of Array.from(shell.querySelectorAll(".workbench-editable-node"))) {
       node.remove();
@@ -13400,14 +14110,55 @@ function installEditableWorkbenchShell() {
     validateEditableGraph();
     updateEditableDraftHash();
     persistDraft();
+    exportEditableDraftJson();
+  }
+
+  function loadReferenceProofView() {
+    canvasAuthoringMode = "reference_sample";
+    referenceProofVisible = true;
+    syncReferenceProofModeAttribute();
+    refreshEditableNodes();
+    if (!selectedNode) {
+      selectedNode = nodes.find((node) => editableNodeId(node) === "logic1") || nodes[0] || null;
+      selectedNodeIds = new Set(selectedNode ? [editableNodeId(selectedNode)] : []);
+    }
+    renderEditableEdges();
+    renderInspector();
+    validateEditableGraph();
+    updateEditableDraftHash();
+    if (draftLabel) {
+      draftLabel.textContent = "Reference proof loaded on demand";
+    }
+    if (graphValidationStatus) {
+      graphValidationStatus.textContent =
+        "Graph validation: reference proof loaded by explicit user action. Truth effect: none.";
+    }
   }
 
   function addEditableNode() {
+    if (
+      canvas
+      && (
+        canvas.getAttribute("data-reference-proof-mode") === "canvas_first"
+        || canvas.getAttribute("data-reference-proof-mode") === "default_visible"
+      )
+    ) {
+      startEmptyCanvasDraft();
+    }
     recordEditableHistory("add_node");
     canvasAuthoringMode = normalizeCanvasAuthoringMode(canvasAuthoringMode);
     shell.setAttribute("data-draft-state", "derived");
     const nodeId = nextDraftNodeId();
+    const draftSlot = Math.max(0, Number.parseInt(nodeId.replace("draft_node_", ""), 10) - 1);
     const catalogEntry = operationCatalogEntry(selectedCatalogOp);
+    const draftColumn = draftSlot % 2;
+    const draftRow = Math.floor(draftSlot / 2);
+    const nodeX = canvasAuthoringMode === "empty_authoring"
+      ? 32 + draftColumn * 36
+      : 22 + draftColumn * 36;
+    const nodeY = canvasAuthoringMode === "empty_authoring"
+      ? 34 + draftRow * 22
+      : Math.min(88, 74 + draftRow * 12);
     const node = createEditableNodeElement({
       id: nodeId,
       label: `Draft ${catalogEntry.label}`,
@@ -13417,12 +14168,12 @@ function installEditableWorkbenchShell() {
       sourceRef: `ui_draft.op_catalog.${catalogEntry.op}.${nodeId}`,
       op_catalog_entry: catalogEntry.op,
       port_contract: portContractForCatalogNode(nodeId, catalogEntry),
-      x: `${42 + (nextDraftNodeIndex % 5) * 8}%`,
-      y: `${24 + (nextDraftNodeIndex % 4) * 10}%`,
+      x: `${nodeX}%`,
+      y: `${nodeY}%`,
       draftNode: true,
     });
     refreshEditableNodes();
-    if (node) selectNode(node);
+    if (node) selectNode(node, { keepInspectorCollapsed: true });
     if (draftLabel) draftLabel.textContent = "sandbox_candidate node edit pending";
     setTimelineState("derived");
     renderEditableEdges();
@@ -13770,6 +14521,10 @@ function installEditableWorkbenchShell() {
   }
 
   function removeSelectedEditableNode() {
+    if (selectedEdge) {
+      disconnectSelectedEditableEdge();
+      return;
+    }
     const draftNodesToRemove = selectedEditableDraftNodes();
     if (!draftNodesToRemove.length) {
       if (graphValidationStatus) {
@@ -14245,6 +15000,7 @@ function installEditableWorkbenchShell() {
   function selectedDebugTimelineVerdictValue() {
     if (lastSandboxDiff && lastSandboxDiff.verdict) return lastSandboxDiff.verdict;
     const rendered = diffVerdict && String(diffVerdict.textContent || "").trim();
+    if (rendered === "未运行") return "not_run";
     return rendered || "not_run";
   }
 
@@ -14358,19 +15114,25 @@ function installEditableWorkbenchShell() {
       timelineStrip.setAttribute("data-debug-truth-effect", "none");
     }
     if (selectedDebugTimelineTarget) selectedDebugTimelineTarget.textContent = packet.owner_key;
-    if (selectedDebugTimelineScenario) selectedDebugTimelineScenario.textContent = packet.scenario_id;
-    if (selectedDebugTimelineVerdict) selectedDebugTimelineVerdict.textContent = packet.diff_verdict;
+    if (selectedDebugTimelineScenario) selectedDebugTimelineScenario.textContent = displayScenarioLabel(packet.scenario_id);
+    if (selectedDebugTimelineVerdict) selectedDebugTimelineVerdict.textContent = displayStatusLabel(packet.diff_verdict);
     if (selectedDebugTimelineLinkStatus) {
-      selectedDebugTimelineLinkStatus.textContent = packet.trace_link_status;
+      selectedDebugTimelineLinkStatus.textContent = displayStatusLabel(packet.trace_link_status);
     }
     if (selectedDebugTimelineHardware) {
       const overlay = packet.hardware_overlay || {};
+      const hardwareId = isInterfaceEvidenceGap(overlay.hardware_id)
+        ? displayStatusLabel("evidence_gap")
+        : overlay.hardware_id;
+      const connector = isInterfaceEvidenceGap(overlay.connector)
+        ? displayStatusLabel("evidence_gap")
+        : overlay.connector;
       selectedDebugTimelineHardware.textContent =
-        `${overlay.hardware_id || "evidence_gap"} / ${overlay.connector || "evidence_gap"} / gaps=${(overlay.evidence_gap_fields || []).length}`;
+        `${hardwareId} / ${connector} / 缺口=${(overlay.evidence_gap_fields || []).length}`;
     }
     if (selectedDebugTimelineContext) {
       selectedDebugTimelineContext.textContent =
-        `${packet.context_label} · ${packet.trace_link_status} · truth_effect: none`;
+        `${packet.context_label} · ${displayStatusLabel(packet.trace_link_status)} · 真值影响：无`;
     }
     return packet;
   }
@@ -14469,15 +15231,17 @@ function installEditableWorkbenchShell() {
     if (diffReviewV2Panel) {
       diffReviewV2Panel.setAttribute("data-review-verdict", report.verdict);
       diffReviewV2Panel.setAttribute("data-review-readiness", report.review_readiness);
+      diffReviewV2Panel.setAttribute("data-review-archive-state", report.archive_state);
+      diffReviewV2Panel.setAttribute("data-review-certification-claim", report.certification_claim);
       diffReviewV2Panel.setAttribute("data-review-truth-effect", "none");
     }
-    if (diffReviewV2Status) diffReviewV2Status.textContent = report.verdict;
+    if (diffReviewV2Status) diffReviewV2Status.textContent = displayStatusLabel(report.verdict);
     if (diffReviewV2Target) diffReviewV2Target.textContent = report.selected_target;
-    if (diffReviewV2Scenario) diffReviewV2Scenario.textContent = report.scenario_id;
-    if (diffReviewV2Readiness) diffReviewV2Readiness.textContent = report.review_readiness;
-    if (diffReviewV2ArchiveState) diffReviewV2ArchiveState.textContent = report.archive_state;
+    if (diffReviewV2Scenario) diffReviewV2Scenario.textContent = displayScenarioLabel(report.scenario_id);
+    if (diffReviewV2Readiness) diffReviewV2Readiness.textContent = displayStatusLabel(report.review_readiness);
+    if (diffReviewV2ArchiveState) diffReviewV2ArchiveState.textContent = displayStatusLabel(report.archive_state);
     if (diffReviewV2Divergence) diffReviewV2Divergence.textContent = report.first_divergence_text;
-    if (diffReviewV2Claim) diffReviewV2Claim.textContent = report.certification_claim;
+    if (diffReviewV2Claim) diffReviewV2Claim.textContent = displayStatusLabel(report.certification_claim);
     return report;
   }
 
@@ -14551,12 +15315,24 @@ function installEditableWorkbenchShell() {
     const rows = evidenceRowsForNode(hardwareEvidenceReport, payload && payload.id);
     if (signalCountSlot) signalCountSlot.textContent = String(rows.length);
     if (!evidenceDetail) return;
+    const ruleSummaryMarkup = payload && payload.ruleSummary
+      ? [
+        '<p class="workbench-inspector-rule-summary">',
+        '<strong>Rule summary</strong>',
+        `<span>${inspectorText(payload.ruleSummary)}</span>`,
+        '</p>',
+      ].join("")
+      : "";
     if (!hardwareEvidenceReport) {
-      evidenceDetail.textContent = "Hardware evidence loading. Truth effect remains none.";
+      evidenceDetail.innerHTML = [
+        ruleSummaryMarkup,
+        '<p class="workbench-inspector-truth-note">Hardware evidence loading. Truth effect remains none.</p>',
+      ].join("");
       return;
     }
     if (!rows.length) {
       evidenceDetail.innerHTML = [
+        ruleSummaryMarkup,
         '<p class="workbench-inspector-empty">No hardware signal binding is recorded for this node.</p>',
         '<p class="workbench-inspector-truth-note">truth_effect: none</p>',
       ].join("");
@@ -14579,7 +15355,7 @@ function installEditableWorkbenchShell() {
         '</li>',
       ].join("");
     }).join("");
-    evidenceDetail.innerHTML = `<ul>${items}</ul>`;
+    evidenceDetail.innerHTML = `${ruleSummaryMarkup}<ul>${items}</ul>`;
   }
 
   function hardwareEvidenceV2GapFields(binding) {
@@ -15742,6 +16518,7 @@ function installEditableWorkbenchShell() {
       if (labelInput) labelInput.value = "";
       if (opSelect) opSelect.value = selectedCatalogOp;
       if (ruleCountSlot) ruleCountSlot.textContent = "0";
+      if (ruleSummarySlot) ruleSummarySlot.textContent = "Empty canvas. Add rules on sandbox nodes only.";
       if (evidenceSlot) evidenceSlot.textContent = "evidence_gap";
       if (sourceRefSlot) sourceRefSlot.textContent = "ui_draft.empty_canvas";
       if (evidenceDetail) {
@@ -15761,6 +16538,7 @@ function installEditableWorkbenchShell() {
     if (labelInput) labelInput.value = payload.label;
     if (opSelect) opSelect.value = payload.op;
     if (ruleCountSlot) ruleCountSlot.textContent = payload.ruleCount;
+    if (ruleSummarySlot) ruleSummarySlot.textContent = payload.ruleSummary;
     if (evidenceSlot) evidenceSlot.textContent = payload.evidence;
     if (sourceRefSlot) sourceRefSlot.textContent = payload.sourceRef;
     renderInspectorEvidenceDetails(payload);
@@ -15798,6 +16576,7 @@ function installEditableWorkbenchShell() {
       }
     }
     recordCanvasInteractionAction("select_edge");
+    setInspectorOpen(true);
     renderEdgeInspector(selectedEdge);
     renderCandidateDebuggerView(currentCandidateDebuggerView("select_edge"));
     if (graphValidationStatus) {
@@ -15841,6 +16620,9 @@ function installEditableWorkbenchShell() {
       }
     }
     renderInspector();
+    if (!options || options.keepInspectorCollapsed !== true) {
+      setInspectorOpen(true);
+    }
     renderCandidateDebuggerView(currentCandidateDebuggerView("select_node"));
     updateEditableDraftHash();
     validateEditableGraph();
@@ -18871,12 +19653,25 @@ function installEditableWorkbenchShell() {
 
   function updateNodeDisplay(node) {
     if (!node) return;
-    const small = node.querySelector("small");
-    if (small) {
-      const op = node.getAttribute("data-node-op") || "and";
-      const ruleCount = node.getAttribute("data-rule-count") || "0";
-      small.textContent = `${op.toUpperCase()} · ${ruleCount} rules`;
+    let label = node.querySelector("span");
+    if (!label) {
+      label = document.createElement("span");
+      node.prepend(label);
     }
+    label.textContent = nodeDisplayLabel(node);
+    let opTag = node.querySelector(".workbench-reference-node-op");
+    if (!opTag) {
+      opTag = document.createElement("small");
+      opTag.className = "workbench-reference-node-op";
+      label.after(opTag);
+    }
+    opTag.textContent = shortBlockLabelForOp(node.getAttribute("data-node-op") || "and");
+    for (const detail of Array.from(node.querySelectorAll("small:not(.workbench-reference-node-op)"))) {
+      detail.remove();
+    }
+    const tooltip = nodeTooltipText(node);
+    node.setAttribute("data-tooltip", tooltip);
+    node.setAttribute("title", tooltip);
   }
 
   function applyEditableDraftImport(payload) {
@@ -19753,7 +20548,8 @@ function installEditableWorkbenchShell() {
 
   function proofPacketDiagnosticsText(packet) {
     const summary = packet.hardware_binding_diagnostics_summary || {};
-    return `${summary.status || "unknown"} / issues=${summary.issue_count || 0} / gaps=${summary.evidence_gap_field_count || 0}`;
+    const statusLabel = displayStatusLabel(summary.status || "unknown");
+    return `${statusLabel} / 问题=${summary.issue_count || 0} / 缺口=${summary.evidence_gap_field_count || 0}`;
   }
 
   function proofPacketInterfaceMatrixText(packet) {
@@ -19763,7 +20559,8 @@ function installEditableWorkbenchShell() {
 
   function proofPacketInterfaceMatrixValidationText(packet) {
     const summary = packet.interface_matrix_validation_summary || {};
-    return `${summary.status || "not_run"} / applyable=${summary.applyable_row_count || 0} / skipped=${summary.skipped_row_count || 0} / issues=${summary.issue_count || 0}`;
+    const statusLabel = displayStatusLabel(summary.status || "not_run");
+    return `${statusLabel} / 可应用=${summary.applyable_row_count || 0} / 跳过=${summary.skipped_row_count || 0} / 问题=${summary.issue_count || 0}`;
   }
 
   function proofPacketConnectorPinMapText(packet) {
@@ -19773,7 +20570,8 @@ function installEditableWorkbenchShell() {
 
   function proofPacketHardwareEvidenceV2Text(packet) {
     const summary = packet.hardware_evidence_v2_summary || {};
-    return `${summary.target || "none"} / ${summary.coverage_status || "missing"} / selected gaps=${summary.selected_gap_count || 0} / reference signals=${summary.reference_signal_count || 0}`;
+    const coverageLabel = displayStatusLabel(summary.coverage_status || "missing");
+    return `${summary.target || "none"} / ${coverageLabel} / 已选缺口=${summary.selected_gap_count || 0} / 参考信号=${summary.reference_signal_count || 0}`;
   }
 
   function proofPacketHardwareEvidenceAttachmentV2Text(packet) {
@@ -19781,12 +20579,16 @@ function installEditableWorkbenchShell() {
     const ownerKinds = Array.isArray(summary.owner_kinds)
       ? summary.owner_kinds.join(",")
       : "none";
-    return `${summary.attachment_count || 0} attachment(s) / owners=${ownerKinds || "none"} / ${summary.validation_status || "not_run"} / gaps=${summary.evidence_gap_count || 0}`;
+    const validationLabel = displayStatusLabel(summary.validation_status || "not_run");
+    return `${summary.attachment_count || 0} 个附件 / owner=${ownerKinds || "none"} / ${validationLabel} / 缺口=${summary.evidence_gap_count || 0}`;
   }
 
   function proofPacketSelectedDebugTimelineText(packet) {
     const summary = packet.selected_debug_timeline_summary || {};
-    return `${summary.target || "none"} / ${summary.scenario_id || "nominal_landing"} / ${summary.diff_verdict || "not_run"} / ${summary.trace_link_status || "selection_only"}`;
+    const scenarioLabel = displayStatusLabel(summary.scenario_id || "nominal_landing");
+    const diffLabel = displayStatusLabel(summary.diff_verdict || "not_run");
+    const traceLabel = displayStatusLabel(summary.trace_link_status || "selection_only");
+    return `${summary.target || "none"} / ${scenarioLabel} / ${diffLabel} / ${traceLabel}`;
   }
 
   function proofPacketDebugProbeTimelineText(packet) {
@@ -19796,12 +20598,18 @@ function installEditableWorkbenchShell() {
 
   function proofPacketDiffReviewV2Text(packet) {
     const summary = packet.candidate_baseline_diff_review_v2_summary || {};
-    return `${summary.verdict || "not_run"} / ${summary.review_readiness || "run_required"} / ${summary.archive_state || "not_archive_ready"} / claim=${summary.certification_claim || "none"}`;
+    const verdictLabel = displayStatusLabel(summary.verdict || "not_run");
+    const readinessLabel = displayStatusLabel(summary.review_readiness || "run_required");
+    const archiveLabel = displayStatusLabel(summary.archive_state || "not_archive_ready");
+    const claimLabel = displayStatusLabel(summary.certification_claim || "none");
+    return `${verdictLabel} / ${readinessLabel} / ${archiveLabel} / 认证声明=${claimLabel}`;
   }
 
   function proofPacketPreflightAnalyzerText(packet) {
     const summary = packet.preflight_analyzer_summary || {};
-    return `${summary.classification || "needs_evidence"} / findings=${summary.finding_count || 0} / freshness=${summary.sandbox_report_freshness || "missing"}`;
+    const classificationLabel = displayStatusLabel(summary.classification || "needs_evidence");
+    const freshnessLabel = displayStatusLabel(summary.sandbox_report_freshness || "missing");
+    return `${classificationLabel} / 发现=${summary.finding_count || 0} / 新鲜度=${freshnessLabel}`;
   }
 
   function proofPacketDiagnosticFocusText(packet) {
@@ -20891,6 +21699,9 @@ function installEditableWorkbenchShell() {
       archive_scope: "local_draft_download",
       generated_at: "browser_local_draft",
       canvas_authoring_mode: modelJson.canvas_authoring_mode || canvasAuthoringMode,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
       model_json: modelJson,
       workspace_document: workspaceDocument,
       canvas_interaction_summary: canvasInteractionSummary,
@@ -21121,7 +21932,9 @@ function installEditableWorkbenchShell() {
   }
 
   function renderWorkbenchCommandPalette(filterValue) {
-    const normalizedFilter = normalizedInterfaceField(filterValue || "");
+    const normalizedFilter = String(filterValue === null || filterValue === undefined ? "" : filterValue)
+      .trim()
+      .toLowerCase();
     let visibleCount = 0;
     for (const button of workbenchCommandPaletteButtons()) {
       const commandId = button.getAttribute("data-command-palette-command") || "";
@@ -21308,6 +22121,15 @@ function installEditableWorkbenchShell() {
     window.addEventListener("pointerdown", (event) => beginEditableGroupDragFromEventTarget(event), true);
   }
 
+  for (const button of inspectorModeButtons) {
+    button.addEventListener("click", () => {
+      setInspectorMode(button.getAttribute("data-inspector-mode"), { open: true });
+    });
+  }
+  if (cockpitInspectorCloseBtn) {
+    cockpitInspectorCloseBtn.addEventListener("click", () => closeCockpitInspectorOverlay());
+  }
+  setInspectorMode(evidenceInspector && evidenceInspector.getAttribute("data-default-inspector-mode"));
   restoreDraft();
   renderScenarioTestCaseLibrary(safeScenarioTestCaseLibrary(), { loadActive: true });
   for (const node of nodes) {
@@ -21317,10 +22139,16 @@ function installEditableWorkbenchShell() {
     deriveBtn.addEventListener("click", () => deriveDraft());
   }
   if (runSandboxBtn) {
-    runSandboxBtn.addEventListener("click", () => runWorkbenchSandboxDiff());
+    runSandboxBtn.addEventListener("click", () => {
+      setInspectorMode("run", { open: true });
+      runWorkbenchSandboxDiff();
+    });
   }
   if (runTestBenchBtn) {
-    runTestBenchBtn.addEventListener("click", () => runSandboxTestBench());
+    runTestBenchBtn.addEventListener("click", () => {
+      setInspectorMode("run", { open: true });
+      runSandboxTestBench();
+    });
   }
   if (scenarioTestCaseSelect) {
     scenarioTestCaseSelect.addEventListener("change", () => {
@@ -21340,10 +22168,47 @@ function installEditableWorkbenchShell() {
     deleteTestCaseBtn.addEventListener("click", () => deleteScenarioTestCase());
   }
   if (runPreflightBtn) {
-    runPreflightBtn.addEventListener("click", () => runWorkbenchPreflightAnalyzer());
+    runPreflightBtn.addEventListener("click", () => {
+      setInspectorMode("run", { open: true });
+      runWorkbenchPreflightAnalyzer();
+    });
   }
   if (startEmptyDraftBtn) {
     startEmptyDraftBtn.addEventListener("click", () => startEmptyCanvasDraft());
+  }
+  if (canvasFirstStartBtn) {
+    canvasFirstStartBtn.addEventListener("click", () => startEmptyCanvasDraft());
+  }
+  if (loadReferenceProofBtn) {
+    loadReferenceProofBtn.addEventListener("click", () => {
+      setInspectorMode("node");
+      loadReferenceProofView();
+    });
+  }
+  for (const button of referenceProofButtons) {
+    button.addEventListener("click", () => {
+      applyReferenceProofPath(button.getAttribute("data-reference-proof-target"));
+    });
+  }
+  for (const button of onboardingStepButtons) {
+    button.addEventListener("click", () => {
+      setOnboardingStepById(button.getAttribute("data-onboarding-step") || "");
+    });
+  }
+  if (onboardingBackBtn) {
+    onboardingBackBtn.addEventListener("click", () => renderOnboardingStep(onboardingStepIndex - 1));
+  }
+  if (onboardingNextBtn) {
+    onboardingNextBtn.addEventListener("click", () => renderOnboardingStep(onboardingStepIndex + 1));
+  }
+  if (onboardingActionBtn) {
+    onboardingActionBtn.addEventListener("click", () => runOnboardingStepAction());
+  }
+  if (onboardingOpenBtn) {
+    onboardingOpenBtn.addEventListener("click", () => setOnboardingGuideExpanded(true));
+  }
+  if (onboardingCloseBtn) {
+    onboardingCloseBtn.addEventListener("click", () => setOnboardingGuideExpanded(false));
   }
   for (const button of toolbarButtons) {
     button.addEventListener("click", () => {
@@ -21364,6 +22229,12 @@ function installEditableWorkbenchShell() {
       } else if (tool === "edge") {
         setEditorTool("edge");
         beginEditableEdgeConnect();
+      } else if (tool === "pan") {
+        pendingEdgeSourceId = "";
+        setEditorTool("pan");
+        if (graphValidationStatus) {
+          graphValidationStatus.textContent = "Graph validation: pan/zoom mode active. Truth effect: none.";
+        }
       } else if (tool === "remove") {
         removeSelectedEditableNode();
         setEditorTool("select");
@@ -21398,11 +22269,28 @@ function installEditableWorkbenchShell() {
   }
   if (canvas) {
     canvas.addEventListener("wheel", (event) => {
-      if (!event.ctrlKey && !event.metaKey) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (
+        target
+        && target.closest(
+          [
+            "button",
+            "input",
+            "textarea",
+            "select",
+            "#workbench-editor-toolstrip",
+            "#workbench-reference-proof-strip",
+            "#workbench-canvas-first-guide",
+            "#workbench-command-palette",
+          ].join(", "),
+        )
+      ) {
+        return;
+      }
       const anchor = canvasViewportPoint(event);
       const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
       event.preventDefault();
-      zoomViewportAt(factor, anchor, "wheel zoom");
+      zoomViewportAt(factor, anchor, "wheel_mouse_anchor");
     }, { passive: false });
   }
   for (const button of opCatalogButtons) {
@@ -21458,9 +22346,8 @@ function installEditableWorkbenchShell() {
       }
       selectedNode.setAttribute("data-node-label", labelInput.value);
       const small = selectedNode.querySelector("small");
-      if (small) {
-        small.textContent = `${(opSelect && opSelect.value) || "and"} · draft`;
-      }
+      if (small) small.remove();
+      updateNodeDisplay(selectedNode);
       if (draftLabel) draftLabel.textContent = "sandbox_candidate label edit pending";
       validateEditableGraph();
       updateEditableDraftHash();
@@ -21477,9 +22364,8 @@ function installEditableWorkbenchShell() {
       selectedNode.setAttribute("data-node-op", opSelect.value);
       selectedNode.setAttribute("data-op-catalog-entry", operationCatalogEntry(opSelect.value).op);
       const small = selectedNode.querySelector("small");
-      if (small) {
-        small.textContent = `${opSelect.value} · ${selectedNode.getAttribute("data-rule-count") || "0"} rules`;
-      }
+      if (small) small.remove();
+      updateNodeDisplay(selectedNode);
       if (draftLabel) draftLabel.textContent = "sandbox_candidate op edit pending";
       validateEditableGraph();
       updateEditableDraftHash();
@@ -21487,16 +22373,28 @@ function installEditableWorkbenchShell() {
     });
   }
   if (handoffBtn) {
-    handoffBtn.addEventListener("click", () => renderEditableHandoffPacket());
+    handoffBtn.addEventListener("click", () => {
+      setInspectorMode("handoff");
+      renderEditableHandoffPacket();
+    });
   }
   if (prepareArchiveBtn) {
-    prepareArchiveBtn.addEventListener("click", () => renderWorkbenchEvidenceArchive());
+    prepareArchiveBtn.addEventListener("click", () => {
+      setInspectorMode("handoff");
+      renderWorkbenchEvidenceArchive();
+    });
   }
   if (downloadArchiveBtn) {
-    downloadArchiveBtn.addEventListener("click", () => downloadWorkbenchEvidenceArchive());
+    downloadArchiveBtn.addEventListener("click", () => {
+      setInspectorMode("handoff");
+      downloadWorkbenchEvidenceArchive();
+    });
   }
   if (restoreReviewArchiveBtn) {
-    restoreReviewArchiveBtn.addEventListener("click", () => restoreReviewArchiveFromTextarea());
+    restoreReviewArchiveBtn.addEventListener("click", () => {
+      setInspectorMode("handoff");
+      restoreReviewArchiveFromTextarea();
+    });
   }
   if (sandboxTestBenchInputs) {
     sandboxTestBenchInputs.addEventListener("input", () => markScenarioTestCaseLibraryEdited());
@@ -21738,10 +22636,16 @@ function installEditableWorkbenchShell() {
     });
   }
   if (exportDraftBtn) {
-    exportDraftBtn.addEventListener("click", () => exportEditableDraftJson());
+    exportDraftBtn.addEventListener("click", () => {
+      setInspectorMode("handoff");
+      exportEditableDraftJson();
+    });
   }
   if (importDraftBtn) {
-    importDraftBtn.addEventListener("click", () => importEditableDraftJson());
+    importDraftBtn.addEventListener("click", () => {
+      setInspectorMode("handoff");
+      importEditableDraftJson();
+    });
   }
   if (saveDraftSnapshotBtn) {
     saveDraftSnapshotBtn.addEventListener("click", () => saveNamedDraftSnapshot());
@@ -21753,11 +22657,14 @@ function installEditableWorkbenchShell() {
     deleteDraftSnapshotBtn.addEventListener("click", () => deleteNamedDraftSnapshot());
   }
   setSelectedOperationCatalogEntry(selectedCatalogOp);
+  for (const node of nodes) {
+    updateNodeDisplay(node);
+  }
   refreshCapturedSubsystemTemplateControls();
   renderDraftSnapshotManager();
   applyViewportTransform();
   if (selectedNode) {
-    selectNode(selectedNode);
+    selectNode(selectedNode, { keepInspectorCollapsed: true });
   }
   renderEditableEdges();
   validateEditableGraph();
@@ -21766,6 +22673,8 @@ function installEditableWorkbenchShell() {
   renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("init"));
   renderHardwarePalette();
   hydrateEvidenceSummary();
+  setOnboardingGuideExpanded(false, { skipRender: true });
+  renderOnboardingStep(onboardingStepIndex);
 }
 
 if (typeof document !== "undefined") {
@@ -21842,6 +22751,10 @@ if (typeof document !== "undefined") {
         statusEl.textContent =
           `已收到创建请求 · created (template=${tplId}, name="${name}")`;
         statusEl.setAttribute("data-status", "success");
+      }
+      if (tplId === "blank") {
+        const startEmptyBtn = document.getElementById("workbench-start-empty-draft-btn");
+        if (startEmptyBtn) startEmptyBtn.click();
       }
       // Auto-dismiss the drawer after a beat so the user sees the
       // confirmation but isn't left staring at a stale form.

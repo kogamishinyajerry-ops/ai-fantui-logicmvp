@@ -80,13 +80,16 @@ def server():
         # `test_workbench_no_annotation_overlay_2026_04_26.py` contract,
         # so this anchor is intentionally no longer required here.
         'id="workbench-circuit-hero-title"',
-        # JER-158 pivot copy: the circuit hero is now the editable
-        # sandbox workbench. The original SVG still mounts below as a
-        # read-only reference sample pack.
+        # Phase 3: the circuit hero defaults to the complete C919 E-TRAS
+        # reference proof view, with one-click escape into blank sandbox
+        # authoring. The legacy SVG mount remains hidden for fragment
+        # compatibility.
         "可编辑控制工作台 · EDITABLE CONTROL WORKBENCH",
-        "Sandbox Draft Canvas · Baseline Diff Workbench",
-        "Sandbox candidate canvas",
-        "Reference sample pack · read-only SVG circuit",
+        "控制逻辑画布工作台 · 沙箱草稿画布",
+        "新手指引",
+        "默认显示完整 C919 E-TRAS / 反推参考电路",
+        "C919 E-TRAS / 反推逻辑控制电路",
+        "重置参考图",
         "正在加载控制逻辑面板",
     ],
 )
@@ -247,8 +250,11 @@ def test_workbench_route_serves_new_hero_shell(server) -> None:
     assert 'id="workbench-editable-shell"' in body
     assert 'id="workbench-evidence-inspector"' in body
     assert 'data-circuit-fragment-endpoint="/api/workbench/circuit-fragment"' in body
-    assert "Sandbox Draft Canvas · Baseline Diff Workbench" in body
-    assert "Reference sample pack · read-only SVG circuit" in body
+    assert "控制逻辑画布工作台 · 沙箱草稿画布" in body
+    assert "默认显示完整 C919 E-TRAS / 反推参考电路" in body
+    assert "C919 E-TRAS / 反推逻辑控制电路" in body
+    assert "重置参考图" in body
+    assert "Reference sample pack · read-only SVG circuit" not in body
     # Old wrong-abstraction sentinels must not appear in the live response.
     assert 'class="workbench-collab-grid"' not in body
     assert "一键运行 wow_a" not in body

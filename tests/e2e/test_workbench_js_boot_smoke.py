@@ -30,6 +30,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+from pathlib import Path
 from typing import Any, Iterator
 
 import pytest
@@ -44,6 +45,7 @@ from well_harness.workbench_large_graph_stress_pack import (  # noqa: E402
 )
 
 _OPEN_PAGES: list[Any] = []
+_ARTIFACT_DIR = Path("artifacts/workbench-goal-canvas-panel")
 
 
 @pytest.fixture(scope="module")
@@ -76,7 +78,170 @@ def _new_page_with_error_capture(browser):
     _OPEN_PAGES.append(page)
     errors: list[str] = []
     page.on("pageerror", lambda exc: errors.append(str(exc)))
+    _install_workbench_inspector_mode_bridge(page)
     return page, errors
+
+
+def _workbench_inspector_mode_for_selector(selector: Any) -> str:
+    if not isinstance(selector, str):
+        return ""
+    handoff_prefixes = (
+        "#workbench-draft-json",
+        "#workbench-draft-snapshot",
+        "#workbench-export-draft-btn",
+        "#workbench-import-draft-btn",
+        "#workbench-generate-handoff-btn",
+        "#workbench-linear-handoff-output",
+        "#workbench-pr-proof-output",
+        "#workbench-changerequest-packet-output",
+        "#workbench-prepare-archive-btn",
+        "#workbench-download-archive-btn",
+        "#workbench-restore-review-archive-btn",
+        "#workbench-evidence-archive-output",
+        "#workbench-review-archive-restore-output",
+        "#workbench-regression-bundle-output",
+    )
+    evidence_prefixes = (
+        "#workbench-interface-",
+        "#workbench-connector-pin-map",
+        "#workbench-export-connector-pin-map",
+        "#workbench-apply-connector-pin-map",
+        "#workbench-hardware-interface-design",
+        "#workbench-validate-hardware-interface-design",
+        "#workbench-apply-hardware-interface-design",
+        "#workbench-hardware-evidence-v2",
+        "#workbench-hardware-palette",
+        "[data-hardware-palette-id",
+        "#workbench-rule-",
+        "#workbench-export-interface-matrix",
+        "#workbench-validate-interface-matrix",
+        "#workbench-apply-interface-matrix",
+        "#workbench-import-interface-matrix",
+        "#workbench-interface-matrix",
+    )
+    run_prefixes = (
+        "#workbench-port-",
+        "#workbench-edge-",
+        "#workbench-sandbox-",
+        "#workbench-run-sandbox-btn",
+        "#workbench-run-test-bench-btn",
+        "#workbench-test-bench",
+        "#workbench-diff-",
+        "#workbench-selected-debug",
+        "#workbench-preflight",
+    )
+    node_prefixes = (
+        "#workbench-subsystem-",
+        "#workbench-create-subsystem-btn",
+        "#workbench-rename-subsystem-btn",
+        "#workbench-ungroup-subsystem-btn",
+        "#workbench-add-subsystem-interface-port-btn",
+        "#workbench-remove-subsystem-interface-port-btn",
+    )
+    for mode, prefixes in (
+        ("handoff", handoff_prefixes),
+        ("evidence", evidence_prefixes),
+        ("run", run_prefixes),
+        ("node", node_prefixes),
+    ):
+        if selector.startswith(prefixes):
+            return mode
+    return ""
+
+
+def _activate_workbench_inspector_mode(page: Any, mode: str) -> None:
+    if mode not in {"node", "run", "evidence", "handoff"}:
+        return
+    page.evaluate(
+        """
+        (mode) => {
+          const inspector = document.getElementById('workbench-evidence-inspector');
+          if (!inspector) return;
+          inspector.setAttribute('data-inspector-open', 'true');
+          inspector.setAttribute('data-inspector-mode-active', mode);
+          document.body.setAttribute('data-workbench-inspector-open', 'true');
+          for (const button of document.querySelectorAll('[data-inspector-mode]')) {
+            const isActive = button.getAttribute('data-inspector-mode') === mode;
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            button.setAttribute('tabindex', isActive ? '0' : '-1');
+          }
+          for (const panel of document.querySelectorAll('[data-inspector-panel]')) {
+            const isActive = panel.getAttribute('data-inspector-panel') === mode;
+            panel.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+          }
+        }
+        """,
+        mode,
+    )
+
+
+def _install_workbench_inspector_mode_bridge(page: Any) -> None:
+    """Keep legacy e2e actions honest after the inspector became tabbed."""
+    original_click = page.click
+    original_fill = page.fill
+    original_select_option = page.select_option
+    original_check = page.check
+    original_wait_for_selector = page.wait_for_selector
+
+    def ensure_mode(selector: Any) -> None:
+        _activate_workbench_inspector_mode(
+            page, _workbench_inspector_mode_for_selector(selector)
+        )
+
+    def click(selector: Any, *args: Any, **kwargs: Any) -> Any:
+        for mode in ("node", "run", "evidence", "handoff"):
+            if selector == f'[data-inspector-mode="{mode}"]':
+                original_wait_for_selector("#workbench-evidence-inspector", state="attached")
+                _activate_workbench_inspector_mode(page, mode)
+                return None
+        if selector in {
+            "#workbench-capture-subsystem-template-btn",
+            "#workbench-insert-captured-template-btn",
+        }:
+            page.evaluate(
+                """
+                () => {
+                  document.getElementById('workbench-evidence-inspector')
+                    ?.setAttribute('data-inspector-open', 'false');
+                  document.body.setAttribute('data-workbench-inspector-open', 'false');
+                }
+                """
+            )
+        ensure_mode(selector)
+        result = original_click(selector, *args, **kwargs)
+        if selector == "#workbench-export-draft-btn":
+            page.evaluate(
+                """
+                () => {
+                  document.getElementById('workbench-evidence-inspector')
+                    ?.setAttribute('data-inspector-open', 'false');
+                  document.body.setAttribute('data-workbench-inspector-open', 'false');
+                }
+                """
+            )
+        return result
+
+    def fill(selector: Any, *args: Any, **kwargs: Any) -> Any:
+        ensure_mode(selector)
+        return original_fill(selector, *args, **kwargs)
+
+    def select_option(selector: Any, *args: Any, **kwargs: Any) -> Any:
+        ensure_mode(selector)
+        return original_select_option(selector, *args, **kwargs)
+
+    def check(selector: Any, *args: Any, **kwargs: Any) -> Any:
+        ensure_mode(selector)
+        return original_check(selector, *args, **kwargs)
+
+    def wait_for_selector(selector: Any, *args: Any, **kwargs: Any) -> Any:
+        ensure_mode(selector)
+        return original_wait_for_selector(selector, *args, **kwargs)
+
+    page.click = click
+    page.fill = fill
+    page.select_option = select_option
+    page.check = check
+    page.wait_for_selector = wait_for_selector
 
 
 def _goto_shell_workbench(page, url: str):
@@ -206,6 +371,610 @@ def test_shell_workbench_boots_without_js_errors(demo_server, browser):
     _goto_shell_workbench(page, f"{demo_server}/workbench")
     page.wait_for_timeout(500)
     assert errors == [], f"shell boot threw JS errors: {errors}"
+
+
+def test_workbench_canvas_first_default_and_explicit_reference_proof_load(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    first_load = page.evaluate(
+        """
+        () => {
+          const required = [
+            'ra_ft', 'sw1', 'not_inhibited', 'not_deployed', 'logic1',
+            'tls_unlocked', 'sw2', 'engine_running', 'aircraft_on_ground',
+            'eec_enable', 'logic2', 'n1k_limit', 'tra_deploy',
+            'pls_unlocked', 'logic3', 'vdt90', 'logic4', 'thr_lock',
+          ];
+          const visibleReferenceNodes = required.filter((id) => {
+            const node = document.querySelector(`[data-editable-node-id="${id}"]`);
+            if (!node) return false;
+            const rect = node.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+          });
+          const guide = document.querySelector('#workbench-canvas-first-guide');
+          const guideRect = guide ? guide.getBoundingClientRect() : null;
+          const edgePaths = Array.from(document.querySelectorAll('[data-editable-edge-id]'));
+          const visibleProofButtons = Array.from(document.querySelectorAll('[data-reference-proof-target]'))
+            .filter((button) => {
+              const rect = button.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0;
+            })
+            .map((button) => button.getAttribute('data-reference-proof-target'));
+          return {
+            title: document.querySelector('#workbench-circuit-hero-title')?.textContent.trim() || '',
+            circuitTitle: document.querySelector('#workbench-reference-circuit-title')?.textContent.trim() || '',
+            graph: document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-graph') || '',
+            mode: document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-proof-mode') || '',
+            canvasHeight: document.querySelector('#workbench-editable-canvas')?.getBoundingClientRect().height || 0,
+            onboardingState: document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-state') || '',
+            onboardingPanelHidden: Boolean(document.querySelector('#workbench-goal-canvas-panel')?.hidden),
+            reopenGuideVisible: (() => {
+              const button = document.querySelector('#workbench-open-onboarding-guide-btn');
+              if (!button || button.hidden) return false;
+              const rect = button.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0;
+            })(),
+            onboardingHighlightCount: document.querySelectorAll('[data-onboarding-highlight="true"]').length,
+            canvasNoteCount: document.querySelectorAll('.workbench-editable-canvas-note').length,
+            requiredCount: required.length,
+            visibleReferenceNodes,
+            edgeCount: edgePaths.length,
+            visibleProofButtons,
+            startText: document.querySelector('#workbench-canvas-first-start-btn')?.textContent.trim() || '',
+            loadText: document.querySelector('#workbench-load-reference-proof-btn')?.textContent.trim() || '',
+            guideText: guide?.textContent || '',
+            guideHeight: guideRect ? guideRect.height : 0,
+            guideStripCount: document.querySelectorAll('#workbench-reference-circuit-guide-strip li').length,
+          };
+        }
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert first_load["title"].startswith("控制逻辑画布工作台")
+    assert first_load["circuitTitle"] == "C919 E-TRAS / 反推逻辑控制电路"
+    assert first_load["graph"] == "c919-etras-thrust-reverser-proof"
+    assert first_load["mode"] == "default_visible"
+    assert first_load["canvasHeight"] >= 340
+    assert first_load["onboardingState"] == "collapsed"
+    assert first_load["onboardingPanelHidden"] is True
+    assert first_load["reopenGuideVisible"] is True
+    assert first_load["onboardingHighlightCount"] == 0
+    assert first_load["canvasNoteCount"] == 0
+    assert len(first_load["visibleReferenceNodes"]) == first_load["requiredCount"]
+    assert first_load["edgeCount"] >= 18
+    assert set(first_load["visibleProofButtons"]) == {"logic1", "logic3", "logic4", "thr_lock"}
+    assert "新建空白电路" in first_load["startText"]
+    assert "重置参考图" in first_load["loadText"]
+    assert "看全图" in first_load["guideText"]
+    assert "点节点" in first_load["guideText"]
+    assert "运行" in first_load["guideText"]
+    assert "空白" in first_load["guideText"]
+    assert first_load["guideStripCount"] == 4
+    assert 0 < first_load["guideHeight"] <= 92
+
+    page.click("#workbench-load-reference-proof-btn")
+    rendered = page.evaluate(
+        """
+        () => {
+          const required = [
+            'ra_ft', 'sw1', 'not_inhibited', 'not_deployed', 'logic1',
+            'tls_unlocked', 'sw2', 'engine_running', 'aircraft_on_ground',
+            'eec_enable', 'logic2', 'n1k_limit', 'tra_deploy',
+            'pls_unlocked', 'logic3', 'vdt90', 'logic4', 'thr_lock',
+          ];
+          const nodes = required.map((id) => document.querySelector(`[data-editable-node-id="${id}"]`));
+          const visibleNodes = nodes.filter((node) => {
+            if (!node) return false;
+            const rect = node.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+          });
+          const nodeTexts = Array.from(document.querySelectorAll('.workbench-editable-node'))
+            .map((node) => node.textContent.trim());
+          const edgePaths = Array.from(document.querySelectorAll('[data-editable-edge-id]'));
+          return {
+            title: document.querySelector('#workbench-circuit-hero-title')?.textContent.trim() || '',
+            graph: document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-graph') || '',
+            mode: document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-proof-mode') || '',
+            requiredCount: required.length,
+            visibleCount: visibleNodes.length,
+            nodeTexts,
+            edgeCount: edgePaths.length,
+            edgePaths: edgePaths.map((path) => path.getAttribute('d') || ''),
+            proofButtonCount: document.querySelectorAll('[data-reference-proof-target]').length,
+          };
+        }
+        """
+    )
+
+    assert rendered["title"].startswith("控制逻辑画布工作台")
+    assert rendered["graph"] == "c919-etras-thrust-reverser-proof"
+    assert rendered["mode"] == "default_visible"
+    assert rendered["visibleCount"] == rendered["requiredCount"]
+    assert rendered["edgeCount"] >= 18
+    assert rendered["proofButtonCount"] == 4
+    op_only_labels = {"IN", "OUT", "AND", "OR", "CMP", "BTW", "DLY", "LAT", "LCH"}
+    assert all(text not in op_only_labels for text in rendered["nodeTexts"])
+    assert any("无线电高度" in text and "6" in text for text in rendered["nodeTexts"])
+    assert any("油门锁" in text for text in rendered["nodeTexts"])
+    assert all("C" not in path for path in rendered["edgePaths"])
+    assert all("L" in path for path in rendered["edgePaths"])
+
+    page.click('[data-reference-proof-target="logic4"]')
+    highlighted = page.evaluate(
+        """
+        () => ({
+          buttonPressed: document.querySelector('[data-reference-proof-target="logic4"]')
+            ?.getAttribute('aria-pressed'),
+          highlightedNodes: Array.from(document.querySelectorAll('[data-proof-highlight="true"]'))
+            .map((node) => node.getAttribute('data-editable-node-id'))
+            .filter(Boolean),
+          highlightedEdges: Array.from(document.querySelectorAll('[data-edge-proof-highlight="true"]'))
+            .map((edge) => edge.getAttribute('data-editable-edge-id'))
+            .filter(Boolean),
+          inspectorTarget: document.querySelector('#workbench-inspector-node-id')?.textContent.trim(),
+          ruleSummary: document.querySelector('#workbench-inspector-rule-summary')?.textContent.trim() || '',
+          detail: document.querySelector('#workbench-inspector-evidence-detail')?.textContent || '',
+          status: document.querySelector('#workbench-graph-validation-status')?.textContent || '',
+        })
+        """
+    )
+    assert highlighted["buttonPressed"] == "true"
+    assert {"logic1", "logic2", "logic3", "logic4", "vdt90"}.issubset(set(highlighted["highlightedNodes"]))
+    assert len(highlighted["highlightedEdges"]) >= 4
+    assert highlighted["inspectorTarget"] == "logic4"
+    assert "VDT 达到 90% 展开" in highlighted["ruleSummary"]
+    assert "90% 展开" in highlighted["detail"]
+    assert "proof path logic4" in highlighted["status"]
+
+    page.click("#workbench-start-empty-draft-btn")
+    empty_canvas_state = page.evaluate(
+        """
+        () => ({
+          mode: document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-proof-mode') || '',
+          highlightedNodes: document.querySelectorAll('[data-proof-highlight="true"]').length,
+          highlightedEdges: document.querySelectorAll('[data-edge-proof-highlight="true"]').length,
+          pressedProofButtons: document.querySelectorAll('[data-reference-proof-target][aria-pressed="true"]').length,
+          authoringMode: (() => {
+            const buffer = document.querySelector('#workbench-draft-json-buffer');
+            try {
+              return JSON.parse(buffer?.value || '{}').canvas_authoring_mode || '';
+            } catch (error) {
+              return '';
+            }
+          })(),
+        })
+        """
+    )
+    assert empty_canvas_state["mode"] == "empty_authoring"
+    assert empty_canvas_state["highlightedNodes"] == 0
+    assert empty_canvas_state["highlightedEdges"] == 0
+    assert empty_canvas_state["pressedProofButtons"] == 0
+    assert empty_canvas_state["authoringMode"] == "empty_authoring"
+
+
+def test_workbench_new_engineer_onboarding_guide_highlights_full_flow(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    collapsed = page.evaluate(
+        """
+        () => ({
+          panelHidden: Boolean(document.querySelector('#workbench-goal-canvas-panel')?.hidden),
+          state: document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-state') || '',
+          reopenVisible: (() => {
+            const button = document.querySelector('#workbench-open-onboarding-guide-btn');
+            if (!button || button.hidden) return false;
+            const rect = button.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+          })(),
+          highlightedCount: document.querySelectorAll('[data-onboarding-highlight="true"]').length,
+        })
+        """
+    )
+    assert collapsed == {
+        "panelHidden": True,
+        "state": "collapsed",
+        "reopenVisible": True,
+        "highlightedCount": 0,
+    }
+
+    page.click("#workbench-open-onboarding-guide-btn")
+    page.wait_for_function(
+        "() => !document.querySelector('#workbench-goal-canvas-panel')?.hidden"
+    )
+
+    initial = page.evaluate(
+        """
+        () => {
+          const statusChip = document.querySelector('.workbench-editable-status-chip');
+          const bg = statusChip ? getComputedStyle(statusChip).backgroundColor : '';
+          const rgb = (bg.match(/\\d+(?:\\.\\d+)?/g) || []).slice(0, 3).map(Number);
+          const brightness = rgb.length === 3 ? Math.round((rgb[0] + rgb[1] + rgb[2]) / 3) : 0;
+          return {
+            skin: document.querySelector('#workbench-editable-shell')?.getAttribute('data-workbench-skin') || '',
+            density: document.querySelector('#workbench-editable-status-bar')?.getAttribute('data-status-density') || '',
+            brightness,
+            panelHidden: Boolean(document.querySelector('#workbench-goal-canvas-panel')?.hidden),
+            panelState: document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-state') || '',
+            reopenHidden: Boolean(document.querySelector('#workbench-open-onboarding-guide-btn')?.hidden),
+            activeStep: document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-active-step') || '',
+            progress: document.querySelector('#workbench-onboarding-progress')?.textContent.trim() || '',
+            actionText: document.querySelector('#workbench-onboarding-action-btn')?.textContent.trim() || '',
+            steps: Array.from(document.querySelectorAll('[data-onboarding-step]'))
+              .map((step) => step.getAttribute('data-onboarding-step')),
+            highlightedIds: Array.from(document.querySelectorAll('[data-onboarding-highlight="true"]'))
+              .map((node) => node.id || node.getAttribute('data-editable-node-id') || node.getAttribute('data-reference-proof-target') || node.getAttribute('data-editor-tool') || ''),
+          };
+        }
+        """
+    )
+    assert errors == [], f"page JS errors: {errors}"
+    assert initial["skin"] == "cockpit-editor"
+    assert initial["density"] == "compact"
+    assert initial["brightness"] < 70
+    assert initial["panelHidden"] is False
+    assert initial["panelState"] == "expanded"
+    assert initial["reopenHidden"] is True
+    assert initial["activeStep"] == "overview"
+    assert initial["progress"] == "1 / 7"
+    assert initial["actionText"] == "高亮全图"
+    assert initial["steps"] == [
+        "overview",
+        "inspect_node",
+        "proof_path",
+        "blank_canvas",
+        "add_node",
+        "wire",
+        "run_sandbox",
+    ]
+    assert "workbench-editable-canvas" in initial["highlightedIds"]
+
+    page.click("#workbench-close-onboarding-guide-btn")
+    closed = page.evaluate(
+        """
+        () => ({
+          panelHidden: Boolean(document.querySelector('#workbench-goal-canvas-panel')?.hidden),
+          state: document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-state') || '',
+          reopenHidden: Boolean(document.querySelector('#workbench-open-onboarding-guide-btn')?.hidden),
+          highlightedCount: document.querySelectorAll('[data-onboarding-highlight="true"]').length,
+        })
+        """
+    )
+    assert closed == {
+        "panelHidden": True,
+        "state": "collapsed",
+        "reopenHidden": False,
+        "highlightedCount": 0,
+    }
+    page.click("#workbench-open-onboarding-guide-btn")
+    page.wait_for_function(
+        "() => document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-state') === 'expanded'"
+    )
+
+    page.click("#workbench-onboarding-next-btn")
+    inspect_step = page.evaluate(
+        """
+        () => ({
+          activeStep: document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-active-step') || '',
+          progress: document.querySelector('#workbench-onboarding-progress')?.textContent.trim() || '',
+          highlightedIds: Array.from(document.querySelectorAll('[data-onboarding-highlight="true"]'))
+            .map((node) => node.id || node.getAttribute('data-editable-node-id') || ''),
+        })
+        """
+    )
+    assert inspect_step["activeStep"] == "inspect_node"
+    assert inspect_step["progress"] == "2 / 7"
+    assert "logic1" in inspect_step["highlightedIds"]
+
+    page.click("#workbench-onboarding-action-btn")
+    assert page.locator("#workbench-inspector-node-id").inner_text() == "logic1"
+
+    page.click("#workbench-onboarding-next-btn")
+    assert page.locator("#workbench-goal-canvas-panel").get_attribute("data-onboarding-active-step") == "proof_path"
+    page.click("#workbench-onboarding-action-btn")
+    assert page.locator('[data-reference-proof-target="logic4"]').get_attribute("aria-pressed") == "true"
+    assert page.locator("#workbench-inspector-node-id").inner_text() == "logic4"
+    assert "VDT 达到 90% 展开" in page.locator("#workbench-inspector-rule-summary").inner_text()
+
+    page.click("#workbench-onboarding-next-btn")
+    assert page.locator("#workbench-goal-canvas-panel").get_attribute("data-onboarding-active-step") == "blank_canvas"
+    page.click("#workbench-onboarding-action-btn")
+    page.wait_for_function(
+        "() => document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-proof-mode') === 'empty_authoring'",
+    )
+    assert page.locator('[data-editable-node-id="logic1"]').count() == 0
+
+    page.click("#workbench-onboarding-next-btn")
+    assert page.locator("#workbench-goal-canvas-panel").get_attribute("data-onboarding-active-step") == "add_node"
+    page.click("#workbench-onboarding-action-btn")
+    page.wait_for_function("() => document.querySelectorAll('.workbench-editable-node').length === 1")
+
+    page.click("#workbench-onboarding-next-btn")
+    assert page.locator("#workbench-goal-canvas-panel").get_attribute("data-onboarding-active-step") == "wire"
+    page.click("#workbench-onboarding-action-btn")
+    assert page.locator('[data-editor-tool="edge"]').get_attribute("aria-pressed") == "true"
+    assert "edge" in page.locator("#workbench-graph-validation-status").inner_text().lower()
+
+    page.click("#workbench-onboarding-next-btn")
+    assert page.locator("#workbench-goal-canvas-panel").get_attribute("data-onboarding-active-step") == "run_sandbox"
+    page.click("#workbench-onboarding-action-btn")
+    assert page.locator("#workbench-evidence-inspector").get_attribute("data-inspector-mode-active") == "run"
+    page.wait_for_function(
+        """
+        () => {
+          const verdict = document.getElementById('workbench-diff-verdict')?.textContent.trim();
+          return ['equivalent', 'divergent', 'invalid_model', 'invalid_scenario'].includes(verdict);
+        }
+        """
+    )
+
+
+def test_workbench_reference_visual_edges_and_outsider_tutorial_are_readable(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    visual = page.evaluate(
+        """
+        () => {
+          const edgePaths = Array.from(document.querySelectorAll('[data-editable-edge-id]'));
+          const nodes = Array.from(document.querySelectorAll('[data-reference-proof-node]'));
+          const nodeRects = nodes.map((node) => ({
+            id: node.getAttribute('data-editable-node-id') || '',
+            rect: node.getBoundingClientRect(),
+          }));
+          const overlapSamples = [];
+          for (const path of edgePaths) {
+            if (typeof path.getTotalLength !== 'function' || typeof path.getPointAtLength !== 'function') {
+              continue;
+            }
+            const matrix = path.getScreenCTM();
+            if (!matrix) continue;
+            const sourceId = path.getAttribute('data-edge-source-id') || '';
+            const targetId = path.getAttribute('data-edge-target-id') || '';
+            const length = path.getTotalLength();
+            for (const ratio of [0.2, 0.35, 0.5, 0.65, 0.8]) {
+              const point = path.getPointAtLength(length * ratio);
+              const screenPoint = new DOMPoint(point.x, point.y).matrixTransform(matrix);
+              for (const item of nodeRects) {
+                if (!item.id || item.id === sourceId || item.id === targetId) continue;
+                const rect = item.rect;
+                const inset = 3;
+                if (
+                  screenPoint.x > rect.left + inset
+                  && screenPoint.x < rect.right - inset
+                  && screenPoint.y > rect.top + inset
+                  && screenPoint.y < rect.bottom - inset
+                ) {
+                  overlapSamples.push({
+                    edge: path.getAttribute('data-editable-edge-id') || '',
+                    node: item.id,
+                    x: Math.round(screenPoint.x),
+                    y: Math.round(screenPoint.y),
+                  });
+                }
+              }
+            }
+          }
+          const styles = edgePaths.map((path) => {
+            const style = getComputedStyle(path);
+            return {
+              edge: path.getAttribute('data-editable-edge-id') || '',
+              source: path.getAttribute('data-edge-source-id') || '',
+              target: path.getAttribute('data-edge-target-id') || '',
+              strokeWidth: Number.parseFloat(style.strokeWidth || '0') || 0,
+              dash: style.strokeDasharray,
+            };
+          });
+          const explainerText = document.querySelector('#workbench-outsider-circuit-explainer')?.textContent || '';
+          const guideDetail = document.querySelector('#workbench-onboarding-detail')?.textContent || '';
+          return {
+            mode: document.querySelector('#workbench-editable-canvas')?.getAttribute('data-reference-proof-mode') || '',
+            edgeCount: edgePaths.length,
+            minStrokeWidth: Math.min(...styles.map((item) => item.strokeWidth)),
+            dashedEdges: styles.filter((item) => !['none', '0px'].includes(item.dash)).map((item) => `${item.edge}:${item.dash}`),
+            missingEndpoints: styles.filter((item) => !item.source || !item.target).map((item) => item.edge),
+            overlapSamples,
+            explainerText,
+            guideDetail,
+          };
+        }
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert visual["mode"] == "default_visible"
+    assert visual["edgeCount"] >= 18
+    assert visual["minStrokeWidth"] >= 3
+    assert visual["dashedEdges"] == []
+    assert visual["missingEndpoints"] == []
+    assert visual["overlapSamples"] == []
+    for copy in (
+        "这个逻辑电路究竟在实现什么功能",
+        "为什么这么画",
+        "输入信号开始每一步会发生什么",
+        "预期会如何触发",
+        "如果遇到故障会发生什么",
+        "仿真按钮按下之后会看到什么",
+        "仿真有什么价值",
+        "THR_LOCK",
+    ):
+        assert copy in visual["explainerText"]
+    assert "这个电路的功能" in visual["guideDetail"]
+
+
+def test_workbench_cockpit_editor_skin_keeps_canvas_primary_and_export_raw_fields(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    page.set_viewport_size({"width": 1440, "height": 980})
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+          window.localStorage.removeItem('well-harness-workbench-onboarding-guide-open-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    desktop = page.evaluate(
+        """
+        () => {
+          const rectFor = (selector) => {
+            const element = document.querySelector(selector);
+            if (!element) return { width: 0, height: 0, left: 0, right: 0, top: 0, bottom: 0 };
+            const rect = element.getBoundingClientRect();
+            return {
+              width: rect.width,
+              height: rect.height,
+              left: rect.left,
+              right: rect.right,
+              top: rect.top,
+              bottom: rect.bottom,
+            };
+          };
+          const shell = document.querySelector('#workbench-editable-shell');
+          const canvas = document.querySelector('#workbench-editable-canvas');
+          const scenarioSelect = document.querySelector('#workbench-sandbox-scenario-select');
+          const selectedOptionText = scenarioSelect
+            ? scenarioSelect.options[scenarioSelect.selectedIndex]?.textContent.trim() || ''
+            : '';
+          const shellRect = rectFor('#workbench-editable-shell');
+          const canvasRect = rectFor('#workbench-editable-canvas');
+          const statusRect = rectFor('#workbench-editable-status-bar');
+          const toolbarRect = rectFor('#workbench-editor-toolbar');
+          const inspectorRect = rectFor('#workbench-evidence-inspector');
+          const coachRect = rectFor('#workbench-cockpit-guide-coach');
+          return {
+            skin: shell?.getAttribute('data-workbench-skin') || '',
+            hudRole: document.querySelector('#workbench-editable-status-bar')?.getAttribute('data-hud-role') || '',
+            hudPrimary: document.querySelector('#workbench-editable-status-bar')?.getAttribute('data-hud-primary') || '',
+            shellRect,
+            canvasRect,
+            canvasAreaRatio: shellRect.width && shellRect.height
+              ? (canvasRect.width * canvasRect.height) / (shellRect.width * shellRect.height)
+              : 0,
+            statusHeight: statusRect.height,
+            toolbarWidth: toolbarRect.width,
+            inspectorOpen: document.querySelector('#workbench-evidence-inspector')?.getAttribute('data-inspector-open') || '',
+            inspectorWidth: inspectorRect.width,
+            coachVisible: Boolean(document.querySelector('#workbench-cockpit-guide-coach')) && coachRect.width > 0 && coachRect.height > 0,
+            coachText: document.querySelector('#workbench-cockpit-guide-coach')?.textContent || '',
+            revision: document.querySelector('#workbench-workspace-document-revision')?.textContent.trim() || '',
+            lastAction: document.querySelector('#workbench-canvas-last-action')?.textContent.trim() || '',
+            scenarioText: selectedOptionText,
+            scenarioValue: scenarioSelect?.value || '',
+            debugScenario: document.querySelector('#workbench-selected-debug-scenario')?.textContent.trim() || '',
+            debugVerdict: document.querySelector('#workbench-selected-debug-verdict')?.textContent.trim() || '',
+            debugLink: document.querySelector('#workbench-selected-debug-link-status')?.textContent.trim() || '',
+            debugHardware: document.querySelector('#workbench-selected-debug-hardware')?.textContent.trim() || '',
+            nodeCount: document.querySelectorAll('[data-reference-proof-node]').length,
+            edgeCount: document.querySelectorAll('[data-editable-edge-id]').length,
+          };
+        }
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert desktop["skin"] == "cockpit-editor"
+    assert desktop["hudRole"] == "cockpit-status"
+    assert desktop["hudPrimary"] == "canvas"
+    assert desktop["canvasAreaRatio"] >= 0.72
+    assert desktop["statusHeight"] <= 48
+    assert desktop["toolbarWidth"] <= 54
+    assert desktop["inspectorOpen"] == "false"
+    assert desktop["inspectorWidth"] <= 4
+    assert desktop["coachVisible"] is True
+    assert "新手" in desktop["coachText"]
+    assert "C919 E-TRAS" in desktop["coachText"]
+    assert desktop["revision"] == "本地草稿"
+    assert desktop["lastAction"] == "初始化"
+    assert desktop["scenarioText"] == "名义着陆"
+    assert desktop["scenarioValue"] == "nominal_landing"
+    assert desktop["debugScenario"] == "名义着陆"
+    assert desktop["debugVerdict"] == "未运行"
+    assert desktop["debugLink"] == "仅选择"
+    assert "证据缺口" in desktop["debugHardware"]
+    assert desktop["nodeCount"] >= 18
+    assert desktop["edgeCount"] >= 18
+
+    page.click("#workbench-open-command-palette-btn")
+    page.click('[data-command-palette-command="export_draft"]')
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert draft["selected_scenario_id"] == "nominal_landing"
+    assert any(
+        node.get("id") == "logic1"
+        and node.get("hardware_binding", {}).get("evidence_status") == "evidence_gap"
+        for node in draft.get("nodes", [])
+    )
+
+    page.click("#workbench-open-onboarding-guide-btn")
+    page.wait_for_function(
+        "() => document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-state') === 'expanded'"
+    )
+    assert page.locator("#workbench-cockpit-guide-coach").is_visible()
+    page.click("#workbench-close-onboarding-guide-btn")
+    page.wait_for_function(
+        "() => document.querySelector('#workbench-goal-canvas-panel')?.getAttribute('data-onboarding-state') === 'collapsed'"
+    )
+    assert page.locator("#workbench-open-onboarding-guide-btn").is_visible()
+
+    page.set_viewport_size({"width": 390, "height": 920})
+    page.wait_for_timeout(200)
+    mobile = page.evaluate(
+        """
+        () => {
+          const shell = document.querySelector('#workbench-editable-shell')?.getBoundingClientRect();
+          const canvas = document.querySelector('#workbench-editable-canvas')?.getBoundingClientRect();
+          const toolbar = document.querySelector('#workbench-editor-toolbar')?.getBoundingClientRect();
+          const inspector = document.querySelector('#workbench-evidence-inspector')?.getBoundingClientRect();
+          return {
+            canvasAreaRatio: shell && canvas ? (canvas.width * canvas.height) / (shell.width * shell.height) : 0,
+            toolbarWidth: toolbar ? toolbar.width : 0,
+            inspectorWidth: inspector ? inspector.width : 0,
+            coachVisible: (() => {
+              const coach = document.querySelector('#workbench-cockpit-guide-coach');
+              if (!coach || coach.hidden) return false;
+              const rect = coach.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0;
+            })(),
+          };
+        }
+        """
+    )
+    assert mobile["canvasAreaRatio"] >= 0.66
+    assert mobile["toolbarWidth"] <= 52
+    assert mobile["inspectorWidth"] <= 4
+    assert mobile["coachVisible"] is True
 
 
 def test_bundle_workbench_boots_without_js_errors(demo_server, browser):
@@ -917,6 +1686,8 @@ def test_workbench_command_palette_executes_editor_commands_and_records_workspac
     page.evaluate("() => window.localStorage.removeItem('well-harness-editable-workbench-draft-v1')")
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
+    page.click("#workbench-start-empty-draft-btn")
+    page.wait_for_function("() => document.querySelectorAll('.workbench-editable-node').length === 0")
     initial_node_count = page.locator(".workbench-editable-node").count()
     page.keyboard.press("Control+K")
     page.wait_for_selector("#workbench-command-palette:not([hidden])")
@@ -1022,7 +1793,7 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
     restored = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
 
     assert errors == [], f"page JS errors: {errors}"
-    assert validation["status"] == "pass"
+    assert validation["status"] == "pass", json.dumps(validation.get("findings"), sort_keys=True)
     assert validation["checksum_mismatch_count"] == 0
     assert validation["red_line_status"] == "pass"
     assert bundle["restore_validation_status"] == "pass"
@@ -1065,8 +1836,8 @@ def test_workbench_selected_debug_timeline_tracks_selection_diff_and_archive(dem
 
     page.wait_for_selector("#workbench-selected-debug-timeline")
     assert page.locator("#workbench-selected-debug-target").inner_text() == "node:logic1"
-    assert page.locator("#workbench-selected-debug-verdict").inner_text() == "not_run"
-    assert page.locator("#workbench-selected-debug-link-status").inner_text() == "selection_only"
+    assert page.locator("#workbench-selected-debug-verdict").inner_text() == "未运行"
+    assert page.locator("#workbench-selected-debug-link-status").inner_text() == "仅选择"
 
     page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
     page.fill("#workbench-interface-hardware-id", "EDGE-LRU-DEBUG")
@@ -1086,7 +1857,8 @@ def test_workbench_selected_debug_timeline_tracks_selection_diff_and_archive(dem
     page.wait_for_function(
         """
         () => {
-          const verdict = document.getElementById('workbench-selected-debug-verdict')?.textContent.trim();
+          const verdict = document.getElementById('workbench-sandbox-timeline-strip')
+            ?.getAttribute('data-debug-verdict');
           return ['equivalent', 'divergent', 'invalid_model', 'invalid_scenario'].includes(verdict);
         }
         """
@@ -1131,10 +1903,11 @@ def test_workbench_diff_review_v2_tracks_diff_handoff_and_archive(demo_server, b
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
     page.wait_for_selector("#workbench-diff-review-v2")
-    assert page.locator("#workbench-diff-review-v2-status").inner_text() == "not_run"
-    assert page.locator("#workbench-diff-review-v2-readiness").inner_text() == "run_required"
-    assert page.locator("#workbench-diff-review-v2-archive-state").inner_text() == "not_archive_ready"
-    assert page.locator("#workbench-diff-review-v2-claim").inner_text() == "none"
+    diff_review_panel = page.locator("#workbench-diff-review-v2")
+    assert diff_review_panel.get_attribute("data-review-verdict") == "not_run"
+    assert diff_review_panel.get_attribute("data-review-readiness") == "run_required"
+    assert diff_review_panel.get_attribute("data-review-archive-state") == "not_archive_ready"
+    assert diff_review_panel.get_attribute("data-review-certification-claim") == "none"
 
     page.click("#workbench-derive-draft-btn")
     page.select_option("#workbench-sandbox-scenario-select", "nominal_landing")
@@ -1142,13 +1915,14 @@ def test_workbench_diff_review_v2_tracks_diff_handoff_and_archive(demo_server, b
     page.wait_for_function(
         """
         () => {
-          const verdict = document.getElementById('workbench-diff-review-v2-status')?.textContent.trim();
+          const verdict = document.getElementById('workbench-diff-review-v2')
+            ?.getAttribute('data-review-verdict');
           return ['equivalent', 'divergent', 'invalid_model', 'invalid_scenario'].includes(verdict);
         }
         """
     )
-    verdict = page.locator("#workbench-diff-review-v2-status").inner_text()
-    readiness = page.locator("#workbench-diff-review-v2-readiness").inner_text()
+    verdict = diff_review_panel.get_attribute("data-review-verdict")
+    readiness = diff_review_panel.get_attribute("data-review-readiness")
     expected_readiness = {
         "equivalent": "ready",
         "divergent": "review_required",
@@ -1156,8 +1930,8 @@ def test_workbench_diff_review_v2_tracks_diff_handoff_and_archive(demo_server, b
         "invalid_scenario": "blocked",
     }[verdict]
     assert readiness == expected_readiness
-    assert page.locator("#workbench-diff-review-v2-archive-state").inner_text() == "archive_ready"
-    assert page.locator("#workbench-diff-review-v2-scenario").inner_text() == "nominal_landing"
+    assert diff_review_panel.get_attribute("data-review-archive-state") == "archive_ready"
+    assert page.locator("#workbench-diff-review-v2-scenario").inner_text() == "名义着陆"
     assert (
         page.locator("#workbench-diff-review-v2")
         .get_attribute("data-review-truth-effect")
@@ -1357,6 +2131,7 @@ def test_workbench_hardware_palette_creates_and_applies_sandbox_bindings(demo_se
     page.locator('[data-editable-edge-id="edge_logic1_logic2"]').dispatch_event("click")
     page.select_option("#workbench-port-value-type", "number")
     page.click("#workbench-apply-port-contract-btn")
+    page.click('[data-inspector-mode="evidence"]')
     page.locator('[data-hardware-palette-id^="signal:SW1"]').first.click()
     page.click("#workbench-export-draft-btn")
     edge_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -1367,6 +2142,7 @@ def test_workbench_hardware_palette_creates_and_applies_sandbox_bindings(demo_se
     assert edge["hardware_binding"]["truth_effect"] == "none"
 
     page.select_option("#workbench-hardware-palette-action", "create-node")
+    page.click('[data-inspector-mode="evidence"]')
     page.locator('[data-hardware-palette-id^="signal:SW1"]').first.click()
     page.click("#workbench-export-draft-btn")
     node_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -1878,7 +2654,7 @@ def test_workbench_operation_catalog_adds_typed_sandbox_node(demo_server, browse
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
     page.click('[data-op-catalog-op="between"]')
-    assert page.locator("#workbench-op-catalog-status").inner_text() == "BTW · number"
+    assert page.locator("#workbench-op-catalog-status").inner_text() == "BTW · 数值"
     page.click('[data-editor-tool="node"]')
     page.click("#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -1923,6 +2699,7 @@ def test_workbench_empty_canvas_palette_round_trips_sandbox_primitives(demo_serv
     _goto_shell_workbench(page, f"{demo_server}/workbench")
 
     page.click("#workbench-start-empty-draft-btn")
+    page.click('[data-inspector-mode="handoff"]')
     page.click("#workbench-export-draft-btn")
     empty_draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert errors == [], f"page JS errors: {errors}"
@@ -1934,18 +2711,27 @@ def test_workbench_empty_canvas_palette_round_trips_sandbox_primitives(demo_serv
 
     page.click('[data-op-catalog-op="input"]')
     page.click('[data-editor-tool="node"]')
+    page.click('[data-op-catalog-op="compare"]')
+    page.click('[data-editor-tool="node"]')
     page.click('[data-op-catalog-op="output"]')
     page.click('[data-editor-tool="node"]')
+    page.click('[data-inspector-mode="handoff"]')
     page.click("#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     node_ops = {node["id"]: node["op"] for node in draft["nodes"]}
 
     assert draft["canvas_authoring_mode"] == "empty_authoring"
-    assert node_ops == {"draft_node_1": "input", "draft_node_2": "output"}
+    assert node_ops == {
+        "draft_node_1": "input",
+        "draft_node_2": "compare",
+        "draft_node_3": "output",
+    }
     assert all(node_id not in node_ops for node_id in ["logic1", "logic2", "logic3", "logic4"])
     assert draft["workspace_document"]["truth_effect"] == "none"
-    assert draft["workspace_document"]["action_count"] >= 3
-    assert draft["editable_graph_document"]["node_count"] == 2
+    assert draft["workspace_document"]["action_count"] >= 4
+    assert draft["editable_graph_document"]["version"] == "workbench-editable-graph-document.v2"
+    assert draft["editable_graph_document"]["node_count"] == 3
+    assert draft["editable_graph_document"]["truth_effect"] == "none"
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     page.evaluate(
@@ -1964,13 +2750,275 @@ def test_workbench_empty_canvas_palette_round_trips_sandbox_primitives(demo_serv
     imported_ops = {node["id"]: node["op"] for node in imported["nodes"]}
     assert imported["canvas_authoring_mode"] == "empty_authoring"
     assert imported_ops == node_ops
-    assert imported["editable_graph_document"]["node_count"] == 2
+    assert imported["editable_graph_document"]["node_count"] == 3
 
+    page.click('[data-inspector-mode="run"]')
+    page.click("#workbench-run-test-bench-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const output = document.getElementById('workbench-test-bench-report-output');
+          return output
+            && output.value.includes('well-harness-workbench-sandbox-test-run-report')
+            && output.value.includes('sandbox_runner_trace_kernel');
+        }
+        """
+    )
+    run_report = json.loads(page.locator("#workbench-test-bench-report-output").input_value())
+    assert run_report["truth_effect"] == "none"
+    assert run_report["candidate_state"] == "sandbox_candidate"
+    assert run_report["sandbox_runner_trace_kernel"]["truth_effect"] == "none"
+
+    page.click('[data-inspector-mode="handoff"]')
     page.click("#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["canvas_authoring_mode"] == "empty_authoring"
-    assert archive["editable_graph_document"]["node_count"] == 2
+    assert archive["editable_graph_document"]["node_count"] == 3
+    assert archive["editable_graph_document"]["version"] == "workbench-editable-graph-document.v2"
+    assert archive["editable_graph_document"]["truth_effect"] == "none"
+    assert archive["truth_effect"] == "none"
+    assert archive["candidate_state"] == "sandbox_candidate"
+    assert archive["certification_claim"] == "none"
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+    _set_archive_buffer_value(page, json.dumps(archive))
+    page.click("#workbench-restore-review-archive-btn")
+    validation = json.loads(page.locator("#workbench-review-archive-restore-output").input_value())
+    page.click("#workbench-export-draft-btn")
+    restored = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    restored_ops = {node["id"]: node["op"] for node in restored["nodes"]}
+    assert validation["status"] == "pass", json.dumps(validation.get("findings"), sort_keys=True)
+    assert restored["canvas_authoring_mode"] == "empty_authoring"
+    assert restored_ops == node_ops
+    assert all(node_id not in restored_ops for node_id in ["logic1", "logic2", "logic3", "logic4"])
+
+
+def test_workbench_goal_canvas_panel_geometry_evidence(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _ARTIFACT_DIR.mkdir(parents=True, exist_ok=True)
+    evidence: dict[str, Any] = {}
+
+    for label, viewport in {
+        "desktop": {"width": 1440, "height": 980},
+        "narrow": {"width": 390, "height": 920},
+    }.items():
+        page.set_viewport_size(viewport)
+        _goto_shell_workbench(page, f"{demo_server}/workbench")
+        page.click("#workbench-start-empty-draft-btn")
+        page.click('[data-op-catalog-op="input"]')
+        page.click('[data-editor-tool="node"]')
+        page.click('[data-op-catalog-op="compare"]')
+        page.click('[data-editor-tool="node"]')
+        page.click('[data-op-catalog-op="output"]')
+        page.click('[data-editor-tool="node"]')
+        page.screenshot(path=str(_ARTIFACT_DIR / f"{label}-goal-canvas-panel.png"), full_page=False)
+        evidence[label] = page.evaluate(
+            """
+            () => {
+              const box = (selector) => {
+                const node = document.querySelector(selector);
+                if (!node) return null;
+                const rect = node.getBoundingClientRect();
+                return {
+                  left: rect.left,
+                  top: rect.top,
+                  right: rect.right,
+                  bottom: rect.bottom,
+                  width: rect.width,
+                  height: rect.height,
+                };
+              };
+              return {
+                viewport: {
+                  width: window.innerWidth,
+                  height: window.innerHeight,
+                  scrollHeight: document.documentElement.scrollHeight,
+                  scrollWidth: document.documentElement.scrollWidth,
+                  bodyScrollHeight: document.body.scrollHeight,
+                  bodyScrollWidth: document.body.scrollWidth,
+                    },
+                    panel: box('#workbench-goal-canvas-panel'),
+                    reopenGuide: box('#workbench-open-onboarding-guide-btn'),
+                    toolbar: box('#workbench-editor-toolbar'),
+                canvas: box('#workbench-editable-canvas'),
+                inspector: box('#workbench-evidence-inspector'),
+                inspectorScroll: {
+                  clientHeight: document.querySelector('#workbench-evidence-inspector')?.clientHeight || 0,
+                  scrollHeight: document.querySelector('#workbench-evidence-inspector')?.scrollHeight || 0,
+                },
+                main: box('.workbench-editable-main'),
+                nodeBoxes: Array.from(document.querySelectorAll('.workbench-editable-node')).map((node) => {
+                  const rect = node.getBoundingClientRect();
+                  return {
+                    width: rect.width,
+                    height: rect.height,
+                    left: rect.left,
+                    top: rect.top,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                  };
+                }),
+                nodeCount: document.querySelectorAll('.workbench-editable-node').length,
+                portHandleCount: document.querySelectorAll('.workbench-port-handle').length,
+                archiveVisible: Boolean(document.querySelector('#workbench-evidence-archive')),
+                debugVisible: Boolean(document.querySelector('#workbench-selected-debug-timeline')),
+              };
+            }
+            """
+        )
+
+    (_ARTIFACT_DIR / "goal-canvas-panel-geometry.json").write_text(
+        json.dumps(evidence, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    for label, data in evidence.items():
+        assert data["panel"] is not None, label
+        assert data["panel"]["width"] == 0, label
+        assert data["reopenGuide"]["width"] > 0, label
+        assert data["canvas"]["width"] > 0 and data["canvas"]["height"] > 0, label
+        assert data["main"]["height"] <= data["viewport"]["height"] - 120, label
+        assert data["viewport"]["bodyScrollHeight"] <= data["viewport"]["height"] + 120, label
+        assert data["viewport"]["bodyScrollWidth"] <= data["viewport"]["width"] + 2, label
+        assert data["toolbar"]["left"] >= data["canvas"]["left"], label
+        assert data["toolbar"]["right"] <= data["canvas"]["left"] + 72, label
+        assert data["inspector"]["right"] <= data["viewport"]["width"] + 2, label
+        assert data["inspectorScroll"]["scrollHeight"] >= data["inspectorScroll"]["clientHeight"], label
+        assert all(node["width"] <= 150 for node in data["nodeBoxes"]), label
+        assert all(node["height"] <= 90 for node in data["nodeBoxes"]), label
+        assert all(
+            node["left"] >= data["canvas"]["left"] and node["right"] <= data["canvas"]["right"]
+            for node in data["nodeBoxes"]
+        ), label
+        assert all(
+            node["top"] >= data["canvas"]["top"] and node["bottom"] <= data["canvas"]["bottom"]
+            for node in data["nodeBoxes"]
+        ), label
+        if label == "desktop":
+            assert data["canvas"]["width"] >= data["viewport"]["width"] * 0.78, label
+            assert data["inspector"]["top"] >= data["canvas"]["top"], label
+            assert data["inspector"]["bottom"] <= data["canvas"]["bottom"] + 2, label
+            assert 0 <= data["inspector"]["width"] <= 4, label
+        else:
+            assert data["canvas"]["width"] >= data["viewport"]["width"] * 0.79, label
+            assert data["inspector"]["top"] >= data["canvas"]["top"], label
+            assert data["inspector"]["bottom"] <= data["canvas"]["bottom"] + 2, label
+            assert 0 <= data["inspector"]["width"] <= 4, label
+        assert data["nodeCount"] == 3, label
+        assert data["portHandleCount"] >= 6, label
+        assert data["archiveVisible"] is True, label
+        assert data["debugVisible"] is True, label
+
+
+def test_workbench_inspector_modes_reduce_default_density(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    page.set_viewport_size({"width": 1440, "height": 980})
+    page.goto(f"{demo_server}/workbench", wait_until="domcontentloaded")
+    page.evaluate("localStorage.clear()")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    def inspector_state() -> dict[str, Any]:
+        return page.evaluate(
+            """
+            () => {
+              const isVisible = (node) => {
+                if (!node) return false;
+                const style = window.getComputedStyle(node);
+                return style.display !== 'none'
+                  && style.visibility !== 'hidden'
+                  && node.getClientRects().length > 0;
+              };
+              const box = (selector) => {
+                const node = document.querySelector(selector);
+                if (!node) return null;
+                const rect = node.getBoundingClientRect();
+                return {
+                  left: rect.left,
+                  top: rect.top,
+                  right: rect.right,
+                  bottom: rect.bottom,
+                  width: rect.width,
+                  height: rect.height,
+                };
+              };
+              return {
+                activeMode: document.querySelector('#workbench-evidence-inspector')
+                  ?.getAttribute('data-inspector-mode-active'),
+                selectedTabs: Array.from(document.querySelectorAll('[data-inspector-mode]'))
+                  .filter((button) => button.getAttribute('aria-selected') === 'true')
+                  .map((button) => button.getAttribute('data-inspector-mode')),
+                tabLabels: Array.from(document.querySelectorAll('[data-inspector-mode]'))
+                  .map((button) => button.textContent.trim()),
+                visiblePanels: Array.from(document.querySelectorAll('[data-inspector-panel]'))
+                  .filter((panel) => isVisible(panel))
+                  .map((panel) => panel.getAttribute('data-inspector-panel')),
+                nodeVisible: isVisible(document.querySelector('#workbench-inspector-node-panel')),
+                runVisible: isVisible(document.querySelector('#workbench-sandbox-test-bench')),
+                evidenceVisible: isVisible(document.querySelector('#workbench-hardware-palette')),
+                handoffVisible: isVisible(document.querySelector('.workbench-draft-json-exchange')),
+                canvas: box('#workbench-editable-canvas'),
+                inspector: box('#workbench-evidence-inspector'),
+                main: box('.workbench-editable-main'),
+                viewport: { width: window.innerWidth, height: window.innerHeight },
+              };
+            }
+            """
+        )
+
+    state = inspector_state()
+    assert errors == [], f"page JS errors: {errors}"
+    assert state["activeMode"] == "node"
+    assert state["selectedTabs"] == ["node"]
+    assert state["tabLabels"] == ["节点详情", "运行结果", "硬件证据", "交付包"]
+    assert state["visiblePanels"] == []
+    assert state["nodeVisible"] is False
+    assert state["runVisible"] is False
+    assert state["evidenceVisible"] is False
+    assert state["handoffVisible"] is False
+    assert state["inspector"]["width"] <= 4
+
+    page.click('[data-editable-node-id="logic1"]')
+    state = inspector_state()
+    assert state["visiblePanels"] == ["node"]
+    assert state["nodeVisible"] is True
+
+    page.click('[data-inspector-mode="evidence"]')
+    state = inspector_state()
+    assert state["activeMode"] == "evidence"
+    assert state["selectedTabs"] == ["evidence"]
+    assert state["visiblePanels"] == ["evidence"]
+    assert state["evidenceVisible"] is True
+
+    page.click('[data-inspector-mode="run"]')
+    state = inspector_state()
+    assert state["activeMode"] == "run"
+    assert state["visiblePanels"] == ["run"]
+    assert state["runVisible"] is True
+
+    page.click('[data-inspector-mode="handoff"]')
+    state = inspector_state()
+    assert state["activeMode"] == "handoff"
+    assert state["visiblePanels"] == ["handoff"]
+    assert state["handoffVisible"] is True
+
+    page.set_viewport_size({"width": 390, "height": 920})
+    page.reload(wait_until="domcontentloaded")
+    page.wait_for_selector("#workbench-identity", state="attached")
+    page.click('[data-editable-node-id="logic1"]')
+    page.click('[data-inspector-mode="node"]')
+    page.wait_for_function(
+        """
+        () => document.getElementById('workbench-evidence-inspector')
+          ?.getBoundingClientRect().width >= 290
+        """
+    )
+    narrow = inspector_state()
+    assert narrow["activeMode"] == "node"
+    assert narrow["inspector"]["width"] >= 290
+    assert narrow["inspector"]["top"] >= narrow["canvas"]["top"]
+    assert narrow["inspector"]["bottom"] <= narrow["canvas"]["bottom"] + 2
+    assert narrow["main"]["height"] <= narrow["viewport"]["height"] - 120
 
 
 def test_workbench_component_library_inserts_reusable_sandbox_template(demo_server, browser):  # type: ignore[no-untyped-def]
@@ -2265,7 +3313,11 @@ def test_workbench_workspace_document_round_trips_with_archive_checksum(demo_ser
     assert workspace_document["action_count"] >= 3
     assert workspace_document["undo_depth"] >= 3
     assert workspace_document["redo_depth"] == 0
-    assert page.locator("#workbench-workspace-document-revision").inner_text() == workspace_document["revision_id"]
+    assert (
+        page.locator("#workbench-workspace-document-revision")
+        .get_attribute("data-workspace-revision-id")
+        == workspace_document["revision_id"]
+    )
 
     draft_json = page.locator("#workbench-draft-json-buffer").input_value()
     _set_draft_buffer_value(page, draft_json)
@@ -2787,6 +3839,7 @@ def test_workbench_lasso_selects_and_group_moves_draft_nodes(demo_server, browse
         if node["id"] in {"logic3", "draft_node_1", "draft_node_2"}
     }
 
+    page.click('[data-editor-tool="select"]')
     page.locator('[data-editable-node-id="draft_node_1"]').scroll_into_view_if_needed()
     draft_node_1 = page.locator('[data-editable-node-id="draft_node_1"]').bounding_box()
     draft_node_2 = page.locator('[data-editable-node-id="draft_node_2"]').bounding_box()
@@ -2960,6 +4013,7 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
     assert source_handle.get_attribute("data-port-handle-armed") == "true"
     target_handle.click()
 
+    page.click('[data-inspector-mode="handoff"]')
     page.click("#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     edge = next(
@@ -2986,10 +4040,16 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
     edge_path = page.locator(f'[data-editable-edge-id="{edge["id"]}"]')
     assert edge_path.get_attribute("data-edge-label") == "draft_node_1:out -> draft_node_2:in"
     assert edge_path.get_attribute("data-route-mode") == "orthogonal"
-    assert page.locator(f'[data-editable-edge-label-id="{edge["id"]}"]').text_content().strip() == "draft_node_1:out -> draft_node_2:in"
+    edge_path_d = edge_path.get_attribute("d")
+    assert edge_path_d and "C" not in edge_path_d
+    assert edge_path_d.count("L") >= 3
+    edge_label = page.locator(f'[data-editable-edge-label-id="{edge["id"]}"]')
+    assert edge_label.text_content().strip() == "draft_node_1:out -> draft_node_2:in"
+    assert edge_label.is_visible() is False
 
     source_handle.click()
     target_handle.click()
+    page.click('[data-inspector-mode="handoff"]')
     page.click("#workbench-export-draft-btn")
     after_duplicate_attempt = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     matching_edges = [
@@ -3011,10 +4071,13 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
     assert imported_edge["route_metadata"] == edge["route_metadata"]
 
     page.locator(f'[data-editable-edge-id="{imported_edge["id"]}"]').dispatch_event("click")
+    assert page.locator(f'[data-editable-edge-label-id="{imported_edge["id"]}"]').is_visible() is True
+    page.click('[data-inspector-mode="evidence"]')
     edge_detail = page.locator("#workbench-inspector-evidence-detail").inner_text()
     assert "Route mode" in edge_detail
     assert "orthogonal" in edge_detail
     page.click('[data-editor-tool="disconnect"]')
+    page.click('[data-inspector-mode="handoff"]')
     page.click("#workbench-export-draft-btn")
     disconnected = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert not [
@@ -3028,6 +4091,7 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
     page.locator(
         '[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="in"]'
     ).click()
+    page.click('[data-inspector-mode="handoff"]')
     page.click("#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     archived_edge = next(
@@ -3038,6 +4102,61 @@ def test_workbench_port_handles_create_typed_draft_edge(demo_server, browser):  
     assert archived_edge["route_metadata"]["truth_effect"] == "none"
     assert archive["port_compatibility_report"]["status"] == "pass"
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
+def test_workbench_simulink_toolbar_tooltips_and_block_labels_render(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click("#workbench-start-empty-draft-btn")
+    page.click('[data-op-catalog-op="compare"]')
+    page.click('[data-editor-tool="node"]')
+
+    rendered = page.evaluate(
+        """
+        () => {
+          const node = document.querySelector('[data-editable-node-id="draft_node_1"]');
+          const wireTool = document.querySelector('[data-editor-tool="edge"]');
+          wireTool.focus();
+          const tooltipStyle = window.getComputedStyle(wireTool, '::after');
+          return {
+            nodeText: node ? node.textContent.trim() : '',
+            nodeTitle: node ? node.getAttribute('title') : '',
+            nodeTooltip: node ? node.getAttribute('data-tooltip') : '',
+            toolTooltip: wireTool ? wireTool.getAttribute('data-tooltip') : '',
+            toolAria: wireTool ? wireTool.getAttribute('aria-label') : '',
+            pseudoContent: tooltipStyle.content,
+            pseudoOpacity: tooltipStyle.opacity,
+            mainToolCount: document.querySelectorAll(
+              '#workbench-editor-toolbar [data-tool-primary="true"]'
+            ).length,
+            deferredToolCount: document.querySelectorAll(
+              '#workbench-editor-toolstrip [data-editor-tool], #workbench-editor-toolstrip [data-op-catalog-op], #workbench-editor-toolstrip [data-component-template-id]'
+            ).length,
+          };
+        }
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert rendered["nodeText"] == "CMP"
+    assert "Compare threshold" in rendered["nodeTooltip"]
+    assert "rules" not in rendered["nodeText"]
+    assert rendered["toolTooltip"] == "连线：从输出端口拖到输入端口"
+    assert rendered["toolAria"] == "连线：从输出端口拖到输入端口"
+    assert "连线" in rendered["pseudoContent"]
+    assert rendered["pseudoOpacity"] == "1"
+    assert rendered["mainToolCount"] == 6
+    assert rendered["deferredToolCount"] >= 12
 
 
 def test_workbench_port_drag_preview_creates_route_diagnostics_edge(demo_server, browser):  # type: ignore[no-untyped-def]
@@ -3139,6 +4258,7 @@ def test_workbench_sandbox_scenario_test_bench_runs_exports_and_archives(demo_se
         '[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="in"]'
     ).click()
 
+    page.click('[data-inspector-mode="run"]')
     page.fill(
         "#workbench-test-bench-inputs-json",
         json.dumps(
@@ -3182,6 +4302,7 @@ def test_workbench_sandbox_scenario_test_bench_runs_exports_and_archives(demo_se
     assert report["trace"][0]["tick"] == 0
     assert report["trace"][1]["tick"] == 1
 
+    page.click('[data-inspector-mode="handoff"]')
     page.click("#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     assert draft["sandbox_test_bench"]["truth_effect"] == "none"
@@ -3196,6 +4317,7 @@ def test_workbench_sandbox_scenario_test_bench_runs_exports_and_archives(demo_se
     assert imported["sandbox_test_bench"]["assertion_count"] == 2
     assert imported["sandbox_test_run_report"]["assertion_status"] == "pass"
 
+    page.click('[data-inspector-mode="handoff"]')
     page.click("#workbench-prepare-archive-btn")
     archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
     assert archive["sandbox_test_bench"]["tick_count"] == 2
@@ -3877,6 +4999,7 @@ def test_workbench_canvas_viewport_pan_zoom_fit_preserves_model_coordinates(demo
     page.click('[data-editor-tool="node"]')
     page.click('[data-editor-tool="node"]')
     page.locator('[data-editable-node-id="draft_node_1"]').click(modifiers=["Shift"])
+    page.click('[data-inspector-mode="handoff"]')
     page.click("#workbench-export-draft-btn")
     before = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
     before_positions = {
@@ -3932,3 +5055,333 @@ def test_workbench_canvas_viewport_pan_zoom_fit_preserves_model_coordinates(demo
 
     page.click('[data-viewport-tool="reset"]')
     assert page.locator("#workbench-editable-canvas").get_attribute("data-viewport-state") == "reset"
+
+
+def test_workbench_canvas_dominates_viewport_and_direct_pan_zoom_tracks_mouse(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    page.set_viewport_size({"width": 1440, "height": 980})
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("localStorage.clear()")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    first_screen = page.evaluate(
+        """
+        () => {
+          const box = (selector) => {
+            const node = document.querySelector(selector);
+            if (!node) return null;
+            const rect = node.getBoundingClientRect();
+            return {
+              left: rect.left,
+              top: rect.top,
+              right: rect.right,
+              bottom: rect.bottom,
+              width: rect.width,
+              height: rect.height,
+            };
+          };
+          const styleValue = (selector, prop) => {
+            const node = document.querySelector(selector);
+            return node ? window.getComputedStyle(node).getPropertyValue(prop) : "";
+          };
+          const guide = document.querySelector('#workbench-canvas-first-guide');
+          return {
+            viewport: { width: window.innerWidth, height: window.innerHeight },
+            main: box('.workbench-editable-main'),
+            canvas: box('#workbench-editable-canvas'),
+            guide: box('#workbench-canvas-first-guide'),
+            guideText: guide ? guide.innerText.replace(/\\s+/g, ' ').trim() : "",
+            mainColumns: styleValue('.workbench-editable-main', 'grid-template-columns'),
+            toolbarPosition: styleValue('#workbench-editor-toolbar', 'position'),
+            inspectorPosition: styleValue('#workbench-evidence-inspector', 'position'),
+          };
+        }
+        """
+    )
+    assert first_screen["canvas"]["width"] >= first_screen["viewport"]["width"] * 0.78
+    assert first_screen["canvas"]["height"] >= first_screen["viewport"]["height"] * 0.62
+    assert first_screen["guide"]["height"] <= 52
+    assert len(first_screen["guideText"]) <= 80
+    assert first_screen["toolbarPosition"] == "absolute"
+    assert first_screen["inspectorPosition"] == "absolute"
+    assert "280px" not in first_screen["mainColumns"]
+    assert "360px" not in first_screen["mainColumns"]
+
+    blank_point = page.evaluate(
+        """
+        () => {
+          const canvas = document.querySelector('#workbench-editable-canvas');
+          const rect = canvas.getBoundingClientRect();
+          const candidates = [
+            [0.50, 0.82],
+            [0.72, 0.82],
+            [0.18, 0.82],
+            [0.50, 0.72],
+            [0.86, 0.70],
+          ];
+          for (const [rx, ry] of candidates) {
+            const x = rect.left + rect.width * rx;
+            const y = rect.top + rect.height * ry;
+            const target = document.elementFromPoint(x, y);
+            if (
+              target
+              && target.closest('#workbench-editable-canvas')
+              && !target.closest('.workbench-editable-node')
+              && !target.closest('[data-editable-edge-id]')
+              && !target.closest('button, input, textarea, select')
+              && !target.closest('#workbench-editor-toolstrip')
+              && !target.closest('#workbench-reference-proof-strip')
+              && !target.closest('#workbench-canvas-first-guide')
+            ) {
+              return { x, y };
+            }
+          }
+          return null;
+        }
+        """
+    )
+    assert blank_point is not None
+    page.mouse.move(blank_point["x"], blank_point["y"])
+    page.mouse.down()
+    page.mouse.move(blank_point["x"] + 116, blank_point["y"] + 72)
+    page.mouse.up()
+    pan_state = page.evaluate(
+        """
+        () => {
+          const canvas = document.querySelector('#workbench-editable-canvas');
+          return {
+            panX: Number(canvas.getAttribute('data-viewport-pan-x') || '0'),
+            panY: Number(canvas.getAttribute('data-viewport-pan-y') || '0'),
+          };
+        }
+        """
+    )
+    assert abs(pan_state["panX"]) >= 90
+    assert abs(pan_state["panY"]) >= 50
+
+    zoom_probe = page.evaluate(
+        """
+        () => {
+          const canvas = document.querySelector('#workbench-editable-canvas');
+          const rect = canvas.getBoundingClientRect();
+          const anchor = { x: rect.width * 0.24, y: rect.height * 0.68 };
+          const before = {
+            scale: Number(canvas.getAttribute('data-viewport-scale') || '1'),
+            panX: Number(canvas.getAttribute('data-viewport-pan-x') || '0'),
+            panY: Number(canvas.getAttribute('data-viewport-pan-y') || '0'),
+          };
+          const worldBefore = {
+            x: (anchor.x - before.panX) / before.scale,
+            y: (anchor.y - before.panY) / before.scale,
+          };
+          canvas.dispatchEvent(new WheelEvent('wheel', {
+            bubbles: true,
+            cancelable: true,
+            deltaY: -240,
+            clientX: rect.left + anchor.x,
+            clientY: rect.top + anchor.y,
+          }));
+          const after = {
+            scale: Number(canvas.getAttribute('data-viewport-scale') || '1'),
+            panX: Number(canvas.getAttribute('data-viewport-pan-x') || '0'),
+            panY: Number(canvas.getAttribute('data-viewport-pan-y') || '0'),
+          };
+          const worldAfter = {
+            x: (anchor.x - after.panX) / after.scale,
+            y: (anchor.y - after.panY) / after.scale,
+          };
+          return {
+            scaleBefore: before.scale,
+            scaleAfter: after.scale,
+            worldDeltaX: Math.abs(worldAfter.x - worldBefore.x),
+            worldDeltaY: Math.abs(worldAfter.y - worldBefore.y),
+          };
+        }
+        """
+    )
+    assert zoom_probe["scaleAfter"] > zoom_probe["scaleBefore"]
+    assert zoom_probe["worldDeltaX"] <= 0.75
+    assert zoom_probe["worldDeltaY"] <= 0.75
+    assert errors == [], f"page JS errors: {errors}"
+
+
+def test_workbench_reference_graph_is_connected_named_and_guide_discoverable(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    page.set_viewport_size({"width": 1440, "height": 980})
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("localStorage.clear()")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.wait_for_function("() => document.querySelectorAll('[data-editable-edge-id]').length >= 18")
+
+    visual = page.evaluate(
+        """
+        () => {
+          const rectOf = (selector) => {
+            const node = document.querySelector(selector);
+            if (!node) return null;
+            const rect = node.getBoundingClientRect();
+            return {
+              left: rect.left,
+              top: rect.top,
+              right: rect.right,
+              bottom: rect.bottom,
+              width: rect.width,
+              height: rect.height,
+            };
+          };
+          const pointTouchesRect = (point, rect, tolerance = 7) => (
+            Boolean(rect)
+            && point.x >= rect.left - tolerance
+            && point.x <= rect.right + tolerance
+            && point.y >= rect.top - tolerance
+            && point.y <= rect.bottom + tolerance
+          );
+          const edgeConnectivity = Array.from(document.querySelectorAll('[data-editable-edge-id]'))
+            .map((path) => {
+              const sourceId = path.getAttribute('data-edge-source-id') || '';
+              const targetId = path.getAttribute('data-edge-target-id') || '';
+              const sourceRect = rectOf(`[data-editable-node-id="${sourceId}"]`);
+              const targetRect = rectOf(`[data-editable-node-id="${targetId}"]`);
+              const matrix = typeof path.getScreenCTM === 'function' ? path.getScreenCTM() : null;
+              if (!matrix || typeof path.getPointAtLength !== 'function' || typeof path.getTotalLength !== 'function') {
+                return { id: path.getAttribute('data-editable-edge-id') || '', sourceConnected: false, targetConnected: false };
+              }
+              const start = new DOMPoint(path.getPointAtLength(0).x, path.getPointAtLength(0).y).matrixTransform(matrix);
+              const end = new DOMPoint(
+                path.getPointAtLength(path.getTotalLength()).x,
+                path.getPointAtLength(path.getTotalLength()).y,
+              ).matrixTransform(matrix);
+              return {
+                id: path.getAttribute('data-editable-edge-id') || '',
+                sourceId,
+                targetId,
+                sourceConnected: pointTouchesRect(start, sourceRect),
+                targetConnected: pointTouchesRect(end, targetRect),
+                startGap: sourceRect ? Math.round(Math.max(0, start.x - sourceRect.right, sourceRect.left - start.x)) : 999,
+                endGap: targetRect ? Math.round(Math.max(0, targetRect.left - end.x, end.x - targetRect.right)) : 999,
+              };
+            });
+          const nodeLabels = Array.from(document.querySelectorAll('[data-reference-proof-node]'))
+            .map((node) => ({
+              id: node.getAttribute('data-editable-node-id') || '',
+              text: node.innerText.replace(/\\s+/g, ' ').trim(),
+              op: node.getAttribute('data-node-op') || '',
+              label: node.getAttribute('data-node-label') || '',
+            }));
+          const opOnlyLabels = nodeLabels.filter((node) => (
+            ['IN', 'OUT', 'AND', 'OR', 'CMP', 'BTW', 'DLY', 'LAT', 'LCH'].includes(node.text)
+          ));
+          const canvas = rectOf('#workbench-editable-canvas');
+          const toolstrip = rectOf('#workbench-editor-toolstrip');
+          const proofStrip = rectOf('#workbench-reference-proof-strip');
+          const compactGuide = rectOf('#workbench-canvas-first-guide');
+          const guideEntry = rectOf('#workbench-open-onboarding-guide-btn');
+          return {
+            canvas,
+            toolstrip,
+            proofStrip,
+            compactGuide,
+            guideEntry,
+            guideEntryText: document.querySelector('#workbench-open-onboarding-guide-btn')?.innerText.trim() || '',
+            guideEntryLabel: document.querySelector('#workbench-open-onboarding-guide-btn')?.getAttribute('aria-label') || '',
+            edgeCount: edgeConnectivity.length,
+            disconnectedEdges: edgeConnectivity
+              .filter((edge) => !edge.sourceConnected || !edge.targetConnected)
+              .slice(0, 8),
+            nodeLabels,
+            opOnlyLabels,
+          };
+        }
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert visual["edgeCount"] >= 18
+    assert visual["disconnectedEdges"] == []
+    assert visual["opOnlyLabels"] == []
+    assert any("无线电高度" in node["text"] and "6" in node["text"] for node in visual["nodeLabels"])
+    assert any("油门锁" in node["text"] for node in visual["nodeLabels"])
+    assert "新手指引" in visual["guideEntryText"] or "新手指引" in visual["guideEntryLabel"]
+    assert visual["guideEntry"]["width"] >= 80
+    assert visual["guideEntry"]["height"] >= 30
+    assert visual["toolstrip"]["top"] >= visual["canvas"]["bottom"] - 84
+    assert visual["compactGuide"]["top"] >= visual["canvas"]["bottom"] - 132
+    assert visual["proofStrip"]["top"] >= visual["canvas"]["bottom"] - 132
+
+
+def test_workbench_reference_first_screen_is_chinese_connected_and_uncovered(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    page.set_viewport_size({"width": 1366, "height": 768})
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate("localStorage.clear()")
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.wait_for_function("() => document.querySelectorAll('[data-editable-edge-id]').length >= 18")
+
+    first_screen = page.evaluate(
+        """
+        () => {
+          const chinese = /[\\u4e00-\\u9fff]/;
+          const nodeLabels = Array.from(document.querySelectorAll('[data-reference-proof-node]'))
+            .map((node) => node.innerText.replace(/\\s+/g, ' ').trim());
+          const forbiddenEnglishNodeWords = [
+            'Radio altitude', 'Reverser', 'inhibited', 'deployed', 'gate',
+            'feedback', 'Engine running', 'Aircraft on ground', 'enable',
+            'below deploy limit', 'deploy window', 'release command',
+          ];
+          const visibleText = document.body.innerText.replace(/\\s+/g, ' ').trim();
+          const forbiddenVisibleText = [
+            'Evidence Inspector', 'Candidate label', 'Operation', 'Rule summary',
+            'Run sandbox', 'ChangeRequest packet', 'Baseline loaded',
+            'Draft editable', 'Selected Debug Timeline',
+          ];
+          const edgeStyles = Array.from(document.querySelectorAll('[data-editable-edge-id]'))
+            .map((path) => {
+              const style = getComputedStyle(path);
+              return {
+                id: path.getAttribute('data-editable-edge-id') || '',
+                width: Number.parseFloat(style.strokeWidth || '0') || 0,
+                stroke: style.stroke,
+                markerEnd: style.markerEnd || path.getAttribute('marker-end') || '',
+                rect: (() => {
+                  const rect = path.getBoundingClientRect();
+                  return {
+                    left: rect.left,
+                    top: rect.top,
+                    right: rect.right,
+                    bottom: rect.bottom,
+                    width: rect.width,
+                    height: rect.height,
+                  };
+                })(),
+              };
+            });
+          const inspector = document.querySelector('#workbench-evidence-inspector');
+          const inspectorRect = inspector ? inspector.getBoundingClientRect() : null;
+          const inspectorStyle = inspector ? getComputedStyle(inspector) : null;
+          const outputNode = document.querySelector('[data-editable-node-id="thr_lock"]');
+          const outputRect = outputNode ? outputNode.getBoundingClientRect() : null;
+          return {
+            nodeLabels,
+            chineseNodeCount: nodeLabels.filter((label) => chinese.test(label)).length,
+            forbiddenNodeLabels: nodeLabels.filter((label) => forbiddenEnglishNodeWords.some((word) => label.includes(word))),
+            forbiddenVisibleText: forbiddenVisibleText.filter((word) => visibleText.includes(word)),
+            edgeCount: edgeStyles.length,
+            weakEdges: edgeStyles.filter((edge) => edge.width < 5 || !edge.markerEnd || edge.stroke === 'none').slice(0, 8),
+            inspectorOpen: inspector?.getAttribute('data-inspector-open') || '',
+            inspectorWidth: inspectorRect ? inspectorRect.width : 0,
+            inspectorDisplay: inspectorStyle ? inspectorStyle.display : '',
+            outputVisible: Boolean(outputRect && outputRect.left >= 0 && outputRect.right <= window.innerWidth && outputRect.top >= 0 && outputRect.bottom <= window.innerHeight),
+          };
+        }
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert first_screen["chineseNodeCount"] >= 16
+    assert first_screen["forbiddenNodeLabels"] == []
+    assert first_screen["forbiddenVisibleText"] == []
+    assert first_screen["edgeCount"] >= 18
+    assert first_screen["weakEdges"] == []
+    assert first_screen["inspectorOpen"] == "false"
+    assert first_screen["inspectorWidth"] <= 4
+    assert first_screen["outputVisible"] is True
