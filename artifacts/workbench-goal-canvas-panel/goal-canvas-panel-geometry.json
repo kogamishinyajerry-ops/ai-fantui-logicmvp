@@ -1,0 +1,186 @@
+{
+  "desktop": {
+    "archiveVisible": true,
+    "canvas": {
+      "bottom": 835.34375,
+      "height": 828.15625,
+      "left": 73.59375,
+      "right": 1430.40625,
+      "top": 7.1875,
+      "width": 1356.8125
+    },
+    "debugVisible": true,
+    "inspector": {
+      "bottom": 824.953125,
+      "height": 767.375,
+      "left": 1419.609375,
+      "right": 1421.609375,
+      "top": 57.578125,
+      "width": 2
+    },
+    "inspectorScroll": {
+      "clientHeight": 765,
+      "scrollHeight": 765
+    },
+    "main": {
+      "bottom": 835.34375,
+      "height": 828.15625,
+      "left": 73.59375,
+      "right": 1430.40625,
+      "top": 7.1875,
+      "width": 1356.8125
+    },
+    "nodeBoxes": [
+      {
+        "bottom": 316.078125,
+        "height": 54,
+        "left": 439.125,
+        "right": 577.125,
+        "top": 262.078125,
+        "width": 138
+      },
+      {
+        "bottom": 316.078125,
+        "height": 54,
+        "left": 926.859375,
+        "right": 1064.859375,
+        "top": 262.078125,
+        "width": 138
+      },
+      {
+        "bottom": 497.828125,
+        "height": 54,
+        "left": 439.125,
+        "right": 577.125,
+        "top": 443.828125,
+        "width": 138
+      }
+    ],
+    "nodeCount": 3,
+    "panel": {
+      "bottom": 0,
+      "height": 0,
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "width": 0
+    },
+    "portHandleCount": 6,
+    "reopenGuide": {
+      "bottom": 39.671875,
+      "height": 32,
+      "left": 72.796875,
+      "right": 156.796875,
+      "top": 7.671875,
+      "width": 84
+    },
+    "toolbar": {
+      "bottom": 824.15625,
+      "height": 768.96875,
+      "left": 81.59375,
+      "right": 123.59375,
+      "top": 55.1875,
+      "width": 42
+    },
+    "viewport": {
+      "bodyScrollHeight": 980,
+      "bodyScrollWidth": 1440,
+      "height": 980,
+      "scrollHeight": 980,
+      "scrollWidth": 1440,
+      "width": 1440
+    }
+  },
+  "narrow": {
+    "archiveVisible": true,
+    "canvas": {
+      "bottom": 737.359375,
+      "height": 730.171875,
+      "left": 71.1875,
+      "right": 382.8125,
+      "top": 7.1875,
+      "width": 311.625
+    },
+    "debugVisible": true,
+    "inspector": {
+      "bottom": 729.359375,
+      "height": 674.171875,
+      "left": 374.09375,
+      "right": 376.09375,
+      "top": 55.1875,
+      "width": 2
+    },
+    "inspectorScroll": {
+      "clientHeight": 672,
+      "scrollHeight": 672
+    },
+    "main": {
+      "bottom": 737.359375,
+      "height": 730.171875,
+      "left": 71.1875,
+      "right": 382.8125,
+      "top": 7.1875,
+      "width": 311.625
+    },
+    "nodeBoxes": [
+      {
+        "bottom": 278.765625,
+        "height": 46,
+        "left": 123.265625,
+        "right": 219.265625,
+        "top": 232.765625,
+        "width": 96
+      },
+      {
+        "bottom": 278.765625,
+        "height": 46,
+        "left": 234.71875,
+        "right": 330.71875,
+        "top": 232.765625,
+        "width": 96
+      },
+      {
+        "bottom": 438.953125,
+        "height": 46,
+        "left": 123.265625,
+        "right": 219.265625,
+        "top": 392.953125,
+        "width": 96
+      }
+    ],
+    "nodeCount": 3,
+    "panel": {
+      "bottom": 0,
+      "height": 0,
+      "left": 0,
+      "right": 0,
+      "top": 0,
+      "width": 0
+    },
+    "portHandleCount": 6,
+    "reopenGuide": {
+      "bottom": 39.671875,
+      "height": 32,
+      "left": 72.796875,
+      "right": 144.796875,
+      "top": 7.671875,
+      "width": 72
+    },
+    "toolbar": {
+      "bottom": 726.171875,
+      "height": 670.984375,
+      "left": 79.1875,
+      "right": 121.1875,
+      "top": 55.1875,
+      "width": 42
+    },
+    "viewport": {
+      "bodyScrollHeight": 920,
+      "bodyScrollWidth": 390,
+      "height": 920,
+      "scrollHeight": 920,
+      "scrollWidth": 390,
+      "width": 390
+    }
+  }
+}

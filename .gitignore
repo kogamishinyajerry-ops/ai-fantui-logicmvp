@@ -24,6 +24,10 @@ build/
 artifacts/workbench-bundles/
 onboarding验证/
 
+# Goal canvas panel process screenshots; keep the curated evidence images tracked explicitly.
+artifacts/workbench-current-complaint-inspect.png
+artifacts/workbench-goal-canvas-panel/current-user-complaint.png
+
 # Generated process artifacts (archived to GitHub 2026-04-24, keep gitignored locally)
 tmp/
 output/

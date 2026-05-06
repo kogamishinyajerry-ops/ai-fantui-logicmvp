@@ -488,75 +488,80 @@
       >
         <header class="workbench-circuit-hero-header">
           <p class="eyebrow">可编辑控制工作台 · EDITABLE CONTROL WORKBENCH</p>
-          <h2 id="workbench-circuit-hero-title">Sandbox Draft Canvas · Baseline Diff Workbench</h2>
+          <h2 id="workbench-circuit-hero-title">控制逻辑画布工作台 · 沙箱草稿画布</h2>
           <p class="workbench-circuit-hero-sub">
-            编辑 sandbox candidate 图，不改 certified baseline；运行结果只用于 diff 与 ChangeRequest 准备 ·
-            Edit a sandbox candidate graph, never the certified baseline; runs only prepare diffs and ChangeRequests.
+            默认显示完整 C919 E-TRAS / 反推参考电路；新建空白电路进入 sandbox 草稿。
           </p>
         </header>
         <div
           id="workbench-editable-shell"
           class="workbench-editable-shell"
           data-draft-state="baseline"
+          data-workbench-skin="cockpit-editor"
           aria-label="Editable sandbox control workbench shell"
         >
           <div
             id="workbench-editable-status-bar"
             class="workbench-editable-status-bar"
+            data-status-density="compact"
+            data-hud-role="cockpit-status"
+            data-hud-primary="canvas"
             aria-label="Draft and baseline status"
           >
-            <span class="workbench-editable-status-chip" data-status-kind="draft">
-              <span>Draft</span>
-              <strong id="workbench-draft-status-label">Reference view loaded</strong>
+            <span class="workbench-editable-status-chip" data-status-kind="draft" data-status-visibility="secondary">
+              <span>草稿</span>
+              <strong id="workbench-draft-status-label">画布就绪</strong>
             </span>
-            <span class="workbench-editable-status-chip" data-status-kind="baseline">
-              <span>Baseline</span>
-              <strong>reference-deploy-controller · certified</strong>
+            <span class="workbench-editable-status-chip" data-status-kind="baseline" data-status-visibility="secondary">
+              <span>基线</span>
+              <strong>参考控制器 · 已认证</strong>
             </span>
-            <span class="workbench-editable-status-chip" data-status-kind="hash">
-              <span>Draft hash</span>
-              <strong id="workbench-draft-hash-label">ui_draft_pending</strong>
+            <span class="workbench-editable-status-chip" data-status-kind="hash" data-status-visibility="secondary">
+              <span>草稿哈希</span>
+              <strong id="workbench-draft-hash-label">本地草稿</strong>
             </span>
             <span
               id="workbench-workspace-document-status"
               class="workbench-editable-status-chip workbench-workspace-document-status"
               data-status-kind="workspace-document"
+              data-status-visibility="secondary"
             >
-              <span>Workspace document</span>
-              <strong id="workbench-workspace-document-revision">ui_draft_pending</strong>
+              <span>工作区文档</span>
+              <strong id="workbench-workspace-document-revision">本地草稿</strong>
               <small class="workbench-workspace-document-facts">
-                actions <b id="workbench-workspace-document-action-count">0</b>
-                · undo <b id="workbench-workspace-document-undo-depth">0</b>
-                · redo <b id="workbench-workspace-document-redo-depth">0</b>
+                动作 <b id="workbench-workspace-document-action-count">0</b>
+                · 撤销 <b id="workbench-workspace-document-undo-depth">0</b>
+                · 重做 <b id="workbench-workspace-document-redo-depth">0</b>
               </small>
-              <em>Workspace document is sandbox evidence only. Truth effect: none.</em>
+              <em>工作区文档仅作为沙箱证据。真值影响：无。</em>
             </span>
             <span
               id="workbench-canvas-interaction-status"
               class="workbench-editable-status-chip workbench-canvas-interaction-status"
               data-status-kind="canvas-interaction"
+              data-status-visibility="secondary"
             >
-              <span>Canvas interaction</span>
-              <strong id="workbench-canvas-last-action">init</strong>
+              <span>画布交互</span>
+              <strong id="workbench-canvas-last-action">初始化</strong>
               <small class="workbench-canvas-interaction-facts">
-                nodes <b id="workbench-canvas-selected-node-count">1</b>
-                · edges <b id="workbench-canvas-selected-edge-count">0</b>
+                节点 <b id="workbench-canvas-selected-node-count">1</b>
+                · 连线 <b id="workbench-canvas-selected-edge-count">0</b>
               </small>
-              <em>Canvas interactions are sandbox evidence only. Truth effect: none.</em>
+              <em>画布交互仅作为沙箱证据。真值影响：无。</em>
             </span>
-            <span class="workbench-editable-status-chip" data-status-kind="truth">
-              <span>Truth impact</span>
-              <strong>none · sandbox candidate only</strong>
+            <span class="workbench-editable-status-chip" data-status-kind="truth" data-status-visibility="secondary">
+              <span>真值影响</span>
+              <strong>无 · 仅沙箱候选</strong>
             </span>
-            <label class="workbench-sandbox-control" for="workbench-sandbox-scenario-select">
-              <span>Scenario</span>
+            <label class="workbench-sandbox-control" for="workbench-sandbox-scenario-select" data-status-visibility="secondary">
+              <span>场景</span>
               <select id="workbench-sandbox-scenario-select">
-                <option value="nominal_landing" selected>nominal_landing</option>
-                <option value="sw1_stuck_at_touchdown">sw1_stuck_at_touchdown</option>
+                <option value="nominal_landing" selected>名义着陆</option>
+                <option value="sw1_stuck_at_touchdown">SW1 着陆卡滞</option>
               </select>
             </label>
-            <label class="workbench-sandbox-control" for="workbench-custom-snapshot-json">
-              <span>Snapshot JSON</span>
+            <label class="workbench-sandbox-control" for="workbench-custom-snapshot-json" data-status-visibility="secondary">
+              <span>快照 JSON</span>
               <textarea id="workbench-custom-snapshot-json" rows="1" spellcheck="false">{}</textarea>
             </label>
             <button
@@ -564,91 +569,320 @@
               type="button"
               class="workbench-editable-primary"
             >
-              Derive draft
+              生成草稿
             </button>
             <button
               id="workbench-run-sandbox-btn"
               type="button"
               class="workbench-editable-primary"
             >
-              Run sandbox
+              运行沙箱
             </button>
           </div>
 
-          <div class="workbench-editable-main">
+          <section
+            id="workbench-cockpit-guide-coach"
+            class="workbench-cockpit-guide-coach"
+            data-coach-state="overview"
+            aria-labelledby="workbench-cockpit-guide-coach-title"
+          >
+            <div>
+              <strong id="workbench-cockpit-guide-coach-title">新手导引 · C919 E-TRAS</strong>
+              <p id="workbench-cockpit-guide-coach-detail">
+                先看完整反推链路：输入信号经 L1/L2/L3/L4 放行后，才会触发 THR_LOCK 油门锁释放；点“新手指引”可逐步学习节点、连线、故障和仿真。
+              </p>
+            </div>
+          </section>
+
+          <button
+            id="workbench-open-onboarding-guide-btn"
+            type="button"
+            class="workbench-onboarding-reopen-btn"
+            data-guide-entry="primary"
+            aria-controls="workbench-goal-canvas-panel"
+            aria-expanded="false"
+            aria-label="新手指引：打开全流程教程"
+          >
+            新手指引
+          </button>
+
+          <section
+            id="workbench-goal-canvas-panel"
+            class="workbench-goal-canvas-panel"
+            aria-label="新入职控制逻辑工程师全流程引导"
+            data-onboarding-active-step="overview"
+            data-onboarding-state="collapsed"
+            data-canvas-authoring-mode="empty_authoring"
+            data-candidate-state="sandbox_candidate"
+            data-truth-effect="none"
+            data-certification-claim="none"
+            hidden
+          >
+            <div class="workbench-onboarding-guide-copy">
+              <span>新手流程</span>
+              <strong id="workbench-onboarding-title">先看完整反推链路</strong>
+              <p id="workbench-onboarding-detail">
+                这个电路的功能是把多个安全条件串成逐级放行链路：先确认反推允许，再确认飞机和发动机状态，再确认 TRA/TLS/PLS/VDT 反馈，最后才允许 THR_LOCK 释放。
+              </p>
+              <button
+                id="workbench-close-onboarding-guide-btn"
+                type="button"
+                class="workbench-onboarding-close-btn"
+                aria-controls="workbench-goal-canvas-panel"
+                aria-expanded="true"
+              >
+                关闭指引
+              </button>
+            </div>
+            <section
+              id="workbench-outsider-circuit-explainer"
+              class="workbench-outsider-circuit-explainer"
+              aria-label="反推逻辑电路外行说明"
+            >
+              <article id="workbench-outsider-trigger-flow">
+                <strong>这个逻辑电路究竟在实现什么功能</strong>
+                <p>
+                  它不是在控制整架飞机，而是在做一件很具体的事：判断 C919 E-TRAS 反推系统是否已经满足安全条件，并在条件全部成立后让 THR_LOCK 释放。为什么这么画：图从左到右表示输入信号开始每一步会发生什么，左侧是传感器和开关，中间是 L1 到 L4 的放行门，右侧是最终输出。
+                </p>
+                <p>
+                  预期会如何触发：RA 低高度、SW1、未禁止、未展开先让 L1 通过；TLS/SW2、发动机运行、飞机在地面、EEC enable 让 L2 通过；N1k、TRA deploy window、PLS 让 L3 通过；VDT 到 90% deploy 加上 TRA 锁释放窗口让 L4 通过，然后才输出 THR_LOCK。
+                </p>
+              </article>
+              <article id="workbench-outsider-fault-notes">
+                <strong>如果遇到故障会发生什么</strong>
+                <p>
+                  任一输入信号不满足，后级逻辑门就保持 false，后面的连线不会把放行传下去。例如 SW2 没有闭合、飞机不在地面、VDT 没到 90%，都会阻断后续步骤，THR_LOCK 不应释放。右侧 inspector 用来告诉你当前节点在等哪些条件。
+                </p>
+              </article>
+              <article id="workbench-outsider-simulation-value">
+                <strong>仿真按钮按下之后会看到什么</strong>
+                <p>
+                  运行 sandbox 后，右侧会切到运行结果，显示 equivalent、divergent 或 invalid_model 这类 verdict，并给出 first divergence、trace 和调试时间线。仿真有什么价值：在不改 certified controller truth 的前提下，先看草稿电路是否按预期触发，哪里断开，哪里和参考链路不一致。
+                </p>
+              </article>
+            </section>
+            <ol id="workbench-onboarding-step-list" class="workbench-onboarding-step-list">
+              <li>
+                <button type="button" data-onboarding-step="overview" data-onboarding-target="#workbench-editable-canvas" aria-current="step">
+                  <span>1</span><strong>看全图</strong><small>输入到 THR_LOCK</small>
+                </button>
+              </li>
+              <li>
+                <button type="button" data-onboarding-step="inspect_node" data-onboarding-target="[data-editable-node-id='logic1']">
+                  <span>2</span><strong>看规则</strong><small>点 L1 看规则</small>
+                </button>
+              </li>
+              <li>
+                <button type="button" data-onboarding-step="proof_path" data-onboarding-target="[data-reference-proof-target='logic4']">
+                  <span>3</span><strong>看 proof</strong><small>高亮 L4 proof</small>
+                </button>
+              </li>
+              <li>
+                <button type="button" data-onboarding-step="blank_canvas" data-onboarding-target="#workbench-start-empty-draft-btn">
+                  <span>4</span><strong>空白画布</strong><small>进入空白画布</small>
+                </button>
+              </li>
+              <li>
+                <button type="button" data-onboarding-step="add_node" data-onboarding-target="[data-editor-tool='node']">
+                  <span>5</span><strong>加 block</strong><small>添加一个 block</small>
+                </button>
+              </li>
+              <li>
+                <button type="button" data-onboarding-step="wire" data-onboarding-target="[data-editor-tool='edge']">
+                  <span>6</span><strong>连线</strong><small>进入连线模式</small>
+                </button>
+              </li>
+              <li>
+                <button type="button" data-onboarding-step="run_sandbox" data-onboarding-target="#workbench-run-sandbox-btn">
+                  <span>7</span><strong>运行</strong><small>运行 sandbox</small>
+                </button>
+              </li>
+            </ol>
+            <div class="workbench-onboarding-actions">
+              <output id="workbench-onboarding-progress" aria-live="polite">1 / 7</output>
+              <button type="button" id="workbench-onboarding-back-btn" disabled>上一步</button>
+              <button type="button" id="workbench-onboarding-action-btn">高亮全图</button>
+              <button type="button" id="workbench-onboarding-next-btn">下一步</button>
+            </div>
+          </section>
+
+          <div class="workbench-editable-main" data-canvas-dominant="true">
             <aside
               id="workbench-editor-toolbar"
               class="workbench-editor-toolbar"
               aria-label="Editor tools"
             >
-              <button type="button" data-editor-tool="select" aria-pressed="true" title="Select">⌖</button>
-              <button type="button" data-editor-tool="node" aria-pressed="false" title="Add node">＋</button>
-              <button type="button" data-editor-tool="duplicate" aria-pressed="false" title="Duplicate draft node">⧉</button>
-              <button type="button" data-editor-tool="group" aria-pressed="false" title="Group selected draft nodes">▣</button>
-              <button type="button" data-editor-tool="ungroup" aria-pressed="false" title="Ungroup selected subsystem">□</button>
-              <button type="button" data-editor-tool="edge" aria-pressed="false" title="Connect">↔</button>
-              <button type="button" data-editor-tool="remove" aria-pressed="false" title="Remove draft node">−</button>
-              <button type="button" data-editor-tool="disconnect" aria-pressed="false" title="Disconnect edge">⨯</button>
-              <button type="button" data-editor-tool="undo" aria-pressed="false" title="Undo">↶</button>
-              <button type="button" data-editor-tool="redo" aria-pressed="false" title="Redo">↷</button>
-              <button type="button" id="workbench-open-command-palette-btn" title="Command palette">⌘</button>
-              <button type="button" id="workbench-start-empty-draft-btn" title="Start empty sandbox draft">∅</button>
-              <div
-                id="workbench-viewport-tools"
-                class="workbench-viewport-tools"
-                aria-label="Canvas viewport"
-              >
-                <button type="button" data-viewport-tool="zoom-in" title="Zoom in">Z+</button>
-                <button type="button" data-viewport-tool="zoom-out" title="Zoom out">Z-</button>
-                <button type="button" data-viewport-tool="reset" title="Reset viewport">1:1</button>
-                <button type="button" data-viewport-tool="fit-selection" title="Fit selected nodes">FIT</button>
-              </div>
-              <div
-                id="workbench-op-catalog"
-                class="workbench-op-catalog"
-                aria-label="Approved sandbox operations"
-              >
-                <button type="button" data-op-catalog-op="input" aria-pressed="false" title="Input primitive">IN</button>
-                <button type="button" data-op-catalog-op="output" aria-pressed="false" title="Output primitive">OUT</button>
-                <button type="button" data-op-catalog-op="and" aria-pressed="true" title="AND">AND</button>
-                <button type="button" data-op-catalog-op="or" aria-pressed="false" title="OR">OR</button>
-                <button type="button" data-op-catalog-op="compare" aria-pressed="false" title="Compare">CMP</button>
-                <button type="button" data-op-catalog-op="between" aria-pressed="false" title="Between">BTW</button>
-                <button type="button" data-op-catalog-op="delay" aria-pressed="false" title="Delay">DLY</button>
-                <button type="button" data-op-catalog-op="latch" aria-pressed="false" title="Latch">LAT</button>
-              </div>
-              <output
-                id="workbench-op-catalog-status"
-                class="workbench-op-catalog-status"
-                aria-live="polite"
-              >
-                AND · boolean
-              </output>
-              <div
-                id="workbench-component-library"
-                class="workbench-component-library"
-                aria-label="Reusable sandbox components"
-              >
-                <button type="button" data-component-template-id="single_and_gate" title="Single AND template">AND</button>
-                <button type="button" data-component-template-id="compare_guard" title="Compare guard template">CMP</button>
-                <button type="button" data-component-template-id="two_stage_interlock" title="Two-stage interlock template">2ST</button>
-                <button type="button" id="workbench-capture-subsystem-template-btn" title="Capture selected subsystem template">CAP</button>
-                <button type="button" id="workbench-insert-captured-template-btn" title="Insert latest captured subsystem template" disabled>INS</button>
-              </div>
-              <output
-                id="workbench-component-library-status"
-                class="workbench-component-library-status"
-                aria-live="polite"
-              >
-                Library · sandbox
-              </output>
+              <button
+                type="button"
+                class="workbench-tooltip-surface"
+                data-editor-tool="select"
+                data-tool-primary="true"
+                data-tool-label="选择"
+                data-tooltip="选择：点选 block 或信号线"
+                aria-label="选择：点选 block 或信号线"
+                aria-pressed="true"
+                title="选择：点选 block 或信号线"
+              >⌖</button>
+              <button
+                type="button"
+                class="workbench-tooltip-surface"
+                data-editor-tool="node"
+                data-tool-primary="true"
+                data-tool-label="新建"
+                data-tooltip="新建 block：使用当前原语添加节点"
+                aria-label="新建 block：使用当前原语添加节点"
+                aria-pressed="false"
+                title="新建 block：使用当前原语添加节点"
+              >＋</button>
+              <button
+                type="button"
+                class="workbench-tooltip-surface"
+                data-editor-tool="edge"
+                data-tool-primary="true"
+                data-tool-label="连线"
+                data-tooltip="连线：从输出端口拖到输入端口"
+                aria-label="连线：从输出端口拖到输入端口"
+                aria-pressed="false"
+                title="连线：从输出端口拖到输入端口"
+              >↦</button>
+              <button
+                type="button"
+                class="workbench-tooltip-surface"
+                data-editor-tool="pan"
+                data-tool-primary="true"
+                data-tool-label="平移"
+                data-tooltip="平移/缩放：拖动画布或使用缩放工具"
+                aria-label="平移/缩放：拖动画布或使用缩放工具"
+                aria-pressed="false"
+                title="平移/缩放：拖动画布或使用缩放工具"
+              >✥</button>
+              <button
+                type="button"
+                class="workbench-tooltip-surface"
+                data-editor-tool="remove"
+                data-tool-primary="true"
+                data-tool-label="删除"
+                data-tooltip="删除：移除选中的节点或连线"
+                aria-label="删除：移除选中的节点或连线"
+                aria-pressed="false"
+                title="删除：移除选中的节点或连线"
+              >⌫</button>
+              <button
+                type="button"
+                id="workbench-open-command-palette-btn"
+                class="workbench-tooltip-surface"
+                data-tool-primary="true"
+                data-tool-label="命令"
+                data-tooltip="命令面板：搜索并执行工作台命令"
+                aria-label="命令面板：搜索并执行工作台命令"
+                title="命令面板：搜索并执行工作台命令"
+              >⌘</button>
             </aside>
 
             <section
               id="workbench-editable-canvas"
               class="workbench-editable-canvas"
+              data-simulink-skin="v2"
+              data-reference-graph="c919-etras-thrust-reverser-proof"
+              data-reference-proof-mode="default_visible"
+              data-free-canvas-pan="enabled"
               aria-label="Editable control graph canvas"
             >
+              <div
+                id="workbench-editor-toolstrip"
+                class="workbench-editor-toolstrip"
+                aria-label="Deferred editor tools"
+              >
+                <div class="workbench-toolstrip-group" data-toolstrip-group="edit-history" aria-label="Edit history">
+                  <button type="button" id="workbench-start-empty-draft-btn" class="workbench-tooltip-surface" data-tooltip="空白画布：清空示例并开始 sandbox 草稿" aria-label="空白画布：清空示例并开始 sandbox 草稿" title="空白画布：清空示例并开始 sandbox 草稿">∅</button>
+                  <button type="button" class="workbench-tooltip-surface" data-editor-tool="duplicate" aria-pressed="false" data-tooltip="复制：复制选中的草稿 block" aria-label="复制：复制选中的草稿 block" title="复制：复制选中的草稿 block">⧉</button>
+                  <button type="button" class="workbench-tooltip-surface" data-editor-tool="group" aria-pressed="false" data-tooltip="分组：把多选 block 建成子系统" aria-label="分组：把多选 block 建成子系统" title="分组：把多选 block 建成子系统">▣</button>
+                  <button type="button" class="workbench-tooltip-surface" data-editor-tool="ungroup" aria-pressed="false" data-tooltip="取消分组：移除当前子系统边界" aria-label="取消分组：移除当前子系统边界" title="取消分组：移除当前子系统边界">□</button>
+                  <button type="button" class="workbench-tooltip-surface" data-editor-tool="disconnect" aria-pressed="false" data-tooltip="断开：移除选中的信号线" aria-label="断开：移除选中的信号线" title="断开：移除选中的信号线">⨯</button>
+                  <button type="button" class="workbench-tooltip-surface" data-editor-tool="undo" aria-pressed="false" data-tooltip="撤销：回到上一步草稿" aria-label="撤销：回到上一步草稿" title="撤销：回到上一步草稿">↶</button>
+                  <button type="button" class="workbench-tooltip-surface" data-editor-tool="redo" aria-pressed="false" data-tooltip="重做：恢复下一步草稿" aria-label="重做：恢复下一步草稿" title="重做：恢复下一步草稿">↷</button>
+                </div>
+                <div
+                  id="workbench-viewport-tools"
+                  class="workbench-viewport-tools workbench-toolstrip-group"
+                  data-toolstrip-group="viewport"
+                  aria-label="Canvas viewport"
+                >
+                  <button type="button" class="workbench-tooltip-surface" data-viewport-tool="zoom-in" data-tooltip="放大：提高画布缩放" aria-label="放大：提高画布缩放" title="放大：提高画布缩放">⌕＋</button>
+                  <button type="button" class="workbench-tooltip-surface" data-viewport-tool="zoom-out" data-tooltip="缩小：降低画布缩放" aria-label="缩小：降低画布缩放" title="缩小：降低画布缩放">⌕−</button>
+                  <button type="button" class="workbench-tooltip-surface" data-viewport-tool="reset" data-tooltip="原始比例：恢复 1:1 视图" aria-label="原始比例：恢复 1:1 视图" title="原始比例：恢复 1:1 视图">1</button>
+                  <button type="button" class="workbench-tooltip-surface" data-viewport-tool="fit-selection" data-tooltip="适配：缩放到当前选择" aria-label="适配：缩放到当前选择" title="适配：缩放到当前选择">⛶</button>
+                </div>
+                <div
+                  id="workbench-op-catalog"
+                  class="workbench-op-catalog workbench-toolstrip-group"
+                  data-toolstrip-group="catalog"
+                  aria-label="Approved sandbox operations"
+                >
+                  <button type="button" class="workbench-tooltip-surface" data-op-catalog-op="input" aria-pressed="false" data-tooltip="输入原语：创建输入 block" aria-label="输入原语：创建输入 block" title="输入原语：创建输入 block">IN</button>
+                  <button type="button" class="workbench-tooltip-surface" data-op-catalog-op="output" aria-pressed="false" data-tooltip="输出原语：创建输出 block" aria-label="输出原语：创建输出 block" title="输出原语：创建输出 block">OUT</button>
+                  <button type="button" class="workbench-tooltip-surface" data-op-catalog-op="and" aria-pressed="true" data-tooltip="AND：布尔与 block" aria-label="AND：布尔与 block" title="AND：布尔与 block">AND</button>
+                  <button type="button" class="workbench-tooltip-surface" data-op-catalog-op="or" aria-pressed="false" data-tooltip="OR：布尔或 block" aria-label="OR：布尔或 block" title="OR：布尔或 block">OR</button>
+                  <button type="button" class="workbench-tooltip-surface" data-op-catalog-op="compare" aria-pressed="false" data-tooltip="CMP：阈值比较 block" aria-label="CMP：阈值比较 block" title="CMP：阈值比较 block">CMP</button>
+                  <button type="button" class="workbench-tooltip-surface" data-op-catalog-op="between" aria-pressed="false" data-tooltip="BTW：区间判断 block" aria-label="BTW：区间判断 block" title="BTW：区间判断 block">BTW</button>
+                  <button type="button" class="workbench-tooltip-surface" data-op-catalog-op="delay" aria-pressed="false" data-tooltip="DLY：延时 block" aria-label="DLY：延时 block" title="DLY：延时 block">DLY</button>
+                  <button type="button" class="workbench-tooltip-surface" data-op-catalog-op="latch" aria-pressed="false" data-tooltip="LAT：锁存 block" aria-label="LAT：锁存 block" title="LAT：锁存 block">LAT</button>
+                </div>
+                <output
+                  id="workbench-op-catalog-status"
+                  class="workbench-op-catalog-status"
+                  aria-live="polite"
+                >
+                  AND · 布尔
+                </output>
+                <div
+                  id="workbench-component-library"
+                  class="workbench-component-library workbench-toolstrip-group"
+                  data-toolstrip-group="library"
+                  aria-label="Reusable sandbox components"
+                >
+                  <button type="button" class="workbench-tooltip-surface" data-component-template-id="single_and_gate" data-tooltip="组件：单个 AND block" aria-label="组件：单个 AND block" title="组件：单个 AND block">AND</button>
+                  <button type="button" class="workbench-tooltip-surface" data-component-template-id="compare_guard" data-tooltip="组件：比较保护 block" aria-label="组件：比较保护 block" title="组件：比较保护 block">CMP</button>
+                  <button type="button" class="workbench-tooltip-surface" data-component-template-id="two_stage_interlock" data-tooltip="组件：两级联锁模板" aria-label="组件：两级联锁模板" title="组件：两级联锁模板">2ST</button>
+                  <button type="button" id="workbench-capture-subsystem-template-btn" class="workbench-tooltip-surface" data-tooltip="捕获：保存当前子系统模板" aria-label="捕获：保存当前子系统模板" title="捕获：保存当前子系统模板">⤓</button>
+                  <button type="button" id="workbench-insert-captured-template-btn" class="workbench-tooltip-surface" data-tooltip="插入：放入最近捕获的模板" aria-label="插入：放入最近捕获的模板" title="插入：放入最近捕获的模板" disabled>⤒</button>
+                </div>
+                <output
+                  id="workbench-component-library-status"
+                  class="workbench-component-library-status"
+                  aria-live="polite"
+                >
+                  组件库 · 沙箱
+                </output>
+              </div>
+              <section
+                id="workbench-canvas-first-guide"
+                class="workbench-canvas-first-guide"
+                data-guide-density="compact"
+                aria-label="C919 E-TRAS / 反推参考控制电路操作指南"
+              >
+                <div class="workbench-canvas-first-guide-copy">
+                  <span>参考证明</span>
+                  <strong id="workbench-reference-circuit-title">C919 E-TRAS / 反推逻辑控制电路</strong>
+                </div>
+                <ol
+                  id="workbench-reference-circuit-guide-strip"
+                  class="workbench-canvas-first-guide-steps workbench-reference-circuit-guide-strip"
+                >
+                  <li><strong>看全图</strong><span>L1 → L4 → THR</span></li>
+                  <li><strong>点节点</strong><span>右侧看规则</span></li>
+                  <li><strong>选证明</strong><span>L1 / L3 / L4 / THR</span></li>
+                  <li><strong>运行</strong><span>沙箱证据</span></li>
+                </ol>
+                <div class="workbench-canvas-first-guide-actions">
+                  <button type="button" id="workbench-canvas-first-start-btn">
+                    新建空白电路
+                  </button>
+                  <button type="button" id="workbench-load-reference-proof-btn">
+                    重置参考图
+                  </button>
+                </div>
+              </section>
               <section
                 id="workbench-command-palette"
                 class="workbench-command-palette"
@@ -657,103 +891,101 @@
                 hidden
               >
                 <div class="workbench-command-palette-header">
-                  <span id="workbench-command-palette-title">Commands</span>
+                  <span id="workbench-command-palette-title">命令</span>
                   <button type="button" id="workbench-close-command-palette-btn" aria-label="Close command palette">×</button>
                 </div>
                 <label class="workbench-command-palette-filter" for="workbench-command-palette-filter">
-                  <span>Filter</span>
+                  <span>筛选</span>
                   <input id="workbench-command-palette-filter" type="search" autocomplete="off" spellcheck="false">
                 </label>
                 <div id="workbench-command-palette-list" class="workbench-command-palette-list">
-                  <button type="button" data-command-palette-command="create_node" data-command-palette-keywords="create add node primitive">Create node</button>
+                  <button type="button" data-command-palette-command="create_node" data-command-palette-keywords="create add node primitive">创建节点</button>
                   <button type="button" data-command-palette-command="rename_subsystem" data-command-palette-keywords="rename subsystem group">Rename subsystem</button>
                   <button type="button" data-command-palette-command="duplicate_selection" data-command-palette-keywords="duplicate copy selection node">Duplicate selection</button>
                   <button type="button" data-command-palette-command="group_selection" data-command-palette-keywords="group subsystem selection">Group selection</button>
                   <button type="button" data-command-palette-command="wire_edge" data-command-palette-keywords="wire edge connect route">Wire edge</button>
-                  <button type="button" data-command-palette-command="run_sandbox" data-command-palette-keywords="run sandbox simulation">Run sandbox</button>
+                  <button type="button" data-command-palette-command="run_sandbox" data-command-palette-keywords="run sandbox simulation">运行沙箱</button>
                   <button type="button" data-command-palette-command="debug_selection" data-command-palette-keywords="debug selection timeline probe">Debug selection</button>
-                  <button type="button" data-command-palette-command="export_draft" data-command-palette-keywords="export draft json">Export draft</button>
-                  <button type="button" data-command-palette-command="import_draft" data-command-palette-keywords="import draft json restore">Import draft</button>
-                  <button type="button" data-command-palette-command="prepare_archive" data-command-palette-keywords="archive evidence prepare handoff">Prepare archive</button>
+                  <button type="button" data-command-palette-command="export_draft" data-command-palette-keywords="export draft json">导出草稿</button>
+                  <button type="button" data-command-palette-command="import_draft" data-command-palette-keywords="import draft json restore">导入草稿</button>
+                  <button type="button" data-command-palette-command="prepare_archive" data-command-palette-keywords="archive evidence prepare handoff">准备归档</button>
                 </div>
                 <output id="workbench-command-palette-status" class="workbench-command-palette-status" aria-live="polite">
-                  Command surface idle. No live Linear mutation.
+                  命令面板空闲。不会执行实时 Linear 写入。
                 </output>
               </section>
+              <section
+                id="workbench-reference-proof-strip"
+                class="workbench-reference-proof-strip"
+                aria-label="参考证明路径控制"
+              >
+                <span>C919 E-TRAS / 反推参考路径</span>
+                <button type="button" data-reference-proof-target="logic1" aria-pressed="false">L1</button>
+                <button type="button" data-reference-proof-target="logic3" aria-pressed="false">L3</button>
+                <button type="button" data-reference-proof-target="logic4" aria-pressed="false">L4</button>
+                <button type="button" data-reference-proof-target="thr_lock" aria-pressed="false">THR</button>
+              </section>
               <div class="workbench-canvas-grid" aria-hidden="true"></div>
-              <button
-                type="button"
-                class="workbench-editable-node"
-                data-editable-node-id="logic1"
-                data-node-label="L1 RA/SW1 inhibit gate"
-                data-node-op="and"
-                data-rule-count="4"
-                data-hardware-evidence="evidence_gap"
-                data-source-ref="control_system_spec.logic_nodes.logic1"
-                style="--node-x: 13%; --node-y: 24%;"
-                aria-pressed="true"
-              >
-                <span>L1</span>
-                <small>AND · 4 rules</small>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="ra_ft" data-editable-node-id="ra_ft" data-node-label="无线电高度低于 6 英尺" data-node-op="compare" data-rule-count="1" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.inputs.radio_altitude_ft" data-rule-summary="无线电高度 RA &lt; 6 英尺时，反推允许进入第一道门。" data-tooltip="无线电高度低于 6 英尺 · 比较 · control_system_spec.inputs.radio_altitude_ft" data-port-contract-touched="true" data-port-input-signal="radio_altitude_ft" data-port-output-signal="ra_below_6ft" data-port-value-type="boolean" data-port-unit="ft" data-port-required="true" style="--node-x: 10%; --node-y: 22%;" aria-pressed="false" title="无线电高度低于 6 英尺 · 比较">
+                <span>CMP</span>
               </button>
-              <button
-                type="button"
-                class="workbench-editable-node"
-                data-editable-node-id="logic2"
-                data-node-label="L2 ground/SW2/EEC gate"
-                data-node-op="and"
-                data-rule-count="6"
-                data-hardware-evidence="evidence_gap"
-                data-source-ref="control_system_spec.logic_nodes.logic2"
-                style="--node-x: 38%; --node-y: 33%;"
-                aria-pressed="false"
-              >
-                <span>L2</span>
-                <small>AND · 6 rules</small>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="sw1" data-editable-node-id="sw1" data-node-label="SW1 锁存窗口" data-node-op="latch" data-rule-count="1" data-hardware-evidence="evidence_gap" data-source-ref="switches.LatchedThrottleSwitches.sw1" data-rule-summary="反推手柄进入触发角度后，SW1 锁存保持第一道允许信号。" data-tooltip="SW1 锁存窗口 · 锁存 · switches.LatchedThrottleSwitches" data-port-contract-touched="true" data-port-input-signal="tra_deg" data-port-output-signal="sw1_latched" data-port-value-type="boolean" data-port-unit="" data-port-required="true" style="--node-x: 10%; --node-y: 36%;" aria-pressed="false" title="SW1 锁存窗口 · 锁存">
+                <span>LAT</span>
               </button>
-              <button
-                type="button"
-                class="workbench-editable-node"
-                data-editable-node-id="logic3"
-                data-node-label="L3 TLS/N1K/TRA deploy gate"
-                data-node-op="and"
-                data-rule-count="6"
-                data-hardware-evidence="evidence_gap"
-                data-source-ref="control_system_spec.logic_nodes.logic3"
-                style="--node-x: 61%; --node-y: 46%;"
-                aria-pressed="false"
-              >
-                <span>L3</span>
-                <small>AND · 6 rules</small>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="not_inhibited" data-editable-node-id="not_inhibited" data-node-label="反推未抑制" data-node-op="input" data-rule-count="1" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.inputs.reverser_inhibited" data-rule-summary="反推抑制信号必须为 false，否则后级全部阻断。" data-tooltip="反推未抑制 · 输入 · control_system_spec.inputs.reverser_inhibited" data-port-contract-touched="true" data-port-input-signal="reverser_inhibited" data-port-output-signal="not_inhibited" data-port-value-type="boolean" data-port-unit="" data-port-required="true" style="--node-x: 10%; --node-y: 50%;" aria-pressed="false" title="反推未抑制 · 输入">
+                <span>IN</span>
               </button>
-              <button
-                type="button"
-                class="workbench-editable-node"
-                data-editable-node-id="logic4"
-                data-node-label="L4 VDT90 / THR_LOCK release gate"
-                data-node-op="and"
-                data-rule-count="4"
-                data-hardware-evidence="evidence_gap"
-                data-source-ref="control_system_spec.logic_nodes.logic4"
-                style="--node-x: 82%; --node-y: 62%;"
-                aria-pressed="false"
-              >
-                <span>L4</span>
-                <small>AND · 4 rules</small>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="not_deployed" data-editable-node-id="not_deployed" data-node-label="反推尚未完全展开" data-node-op="input" data-rule-count="1" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.inputs.reverser_not_deployed_eec" data-rule-summary="EEC 反馈确认反推尚未完全展开，避免重复释放。" data-tooltip="反推尚未完全展开 · 输入 · EEC 展开信号" data-port-contract-touched="true" data-port-input-signal="reverser_deployed_eec" data-port-output-signal="reverser_not_deployed_eec" data-port-value-type="boolean" data-port-unit="" data-port-required="true" style="--node-x: 10%; --node-y: 64%;" aria-pressed="false" title="反推尚未完全展开 · 输入">
+                <span>IN</span>
+              </button>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="logic1" data-editable-node-id="logic1" data-node-label="L1 高度/SW1 允许门" data-node-op="and" data-rule-count="4" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.logic_nodes.logic1" data-rule-summary="L1 同时要求：RA &lt; 6 英尺、SW1 已锁存、反推未抑制、反推尚未完全展开。" data-tooltip="L1 高度/SW1 允许门 · 与门 · 4 条规则 · control_system_spec.logic_nodes.logic1" data-port-contract-touched="true" data-port-input-signal="logic1_inputs" data-port-output-signal="logic1_active" data-port-value-type="boolean" data-port-unit="" data-port-required="true" style="--node-x: 25%; --node-y: 43%;" aria-pressed="true" title="L1 高度/SW1 允许门 · 与门">
+                <span>AND</span>
+              </button>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="tls_unlocked" data-editable-node-id="tls_unlocked" data-node-label="TLS 解锁反馈" data-node-op="input" data-rule-count="1" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.feedback.tls_ls" data-rule-summary="TLS 解锁来自 TLS 限位开关反馈。" data-tooltip="TLS 解锁反馈 · 输入 · TLS LS" data-port-contract-touched="true" data-port-input-signal="tls_ls" data-port-output-signal="tls_unlocked" data-port-value-type="boolean" data-port-unit="" data-port-required="true" style="--node-x: 40%; --node-y: 24%;" aria-pressed="false" title="TLS 解锁反馈 · 输入">
+                <span>IN</span>
+              </button>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="sw2" data-editable-node-id="sw2" data-node-label="SW2 锁存窗口" data-node-op="latch" data-rule-count="1" data-hardware-evidence="evidence_gap" data-source-ref="switches.LatchedThrottleSwitches.sw2" data-rule-summary="反推手柄保持触发角度时，SW2 锁存第二道允许信号。" data-tooltip="SW2 锁存窗口 · 锁存 · switches.LatchedThrottleSwitches" data-port-contract-touched="true" data-port-input-signal="tra_deg" data-port-output-signal="sw2_latched" data-port-value-type="boolean" data-port-unit="" data-port-required="true" style="--node-x: 40%; --node-y: 38%;" aria-pressed="false" title="SW2 锁存窗口 · 锁存">
+                <span>LAT</span>
+              </button>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="engine_running" data-editable-node-id="engine_running" data-node-label="发动机运行中" data-node-op="input" data-rule-count="1" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.inputs.engine_running" data-rule-summary="发动机运行信号必须为 true。" data-tooltip="发动机运行中 · 输入 · control_system_spec.inputs.engine_running" data-port-contract-touched="true" data-port-input-signal="engine_running" data-port-output-signal="engine_running" data-port-value-type="boolean" data-port-unit="" data-port-required="true" style="--node-x: 40%; --node-y: 52%;" aria-pressed="false" title="发动机运行中 · 输入">
+                <span>IN</span>
+              </button>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="aircraft_on_ground" data-editable-node-id="aircraft_on_ground" data-node-label="飞机在地面" data-node-op="input" data-rule-count="1" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.inputs.aircraft_on_ground" data-rule-summary="地面信号必须为 true，空中不允许释放反推链路。" data-tooltip="飞机在地面 · 输入 · control_system_spec.inputs.aircraft_on_ground" data-port-contract-touched="true" data-port-input-signal="aircraft_on_ground" data-port-output-signal="aircraft_on_ground" data-port-value-type="boolean" data-port-unit="" data-port-required="true" style="--node-x: 40%; --node-y: 66%;" aria-pressed="false" title="飞机在地面 · 输入">
+                <span>IN</span>
+              </button>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="eec_enable" data-editable-node-id="eec_enable" data-node-label="EEC 允许" data-node-op="input" data-rule-count="1" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.inputs.eec_enable" data-rule-summary="EEC 允许必须为 true，L2 才能继续放行。" data-tooltip="EEC 允许 · 输入 · control_system_spec.inputs.eec_enable" data-port-contract-touched="true" data-port-input-signal="eec_enable" data-port-output-signal="eec_enable" data-port-value-type="boolean" data-port-unit="" data-port-required="true" style="--node-x: 40%; --node-y: 80%;" aria-pressed="false" title="EEC 允许 · 输入">
+                <span>IN</span>
+              </button>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="logic2" data-editable-node-id="logic2" data-node-label="L2 地面/SW2 允许门" data-node-op="and" data-rule-count="6" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.logic_nodes.logic2" data-rule-summary="L2 同时要求：发动机运行、飞机在地面、反推未抑制、SW2 已锁存、EEC 允许。" data-tooltip="L2 地面/SW2 允许门 · 与门 · 6 条规则 · control_system_spec.logic_nodes.logic2" data-port-contract-touched="true" data-port-input-signal="logic2_inputs" data-port-output-signal="logic2_active" data-port-value-type="boolean" data-port-unit="" data-port-required="true" style="--node-x: 56%; --node-y: 55%;" aria-pressed="false" title="L2 地面/SW2 允许门 · 与门">
+                <span>AND</span>
+              </button>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="n1k_limit" data-editable-node-id="n1k_limit" data-node-label="N1k 低于展开上限" data-node-op="compare" data-rule-count="1" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.inputs.n1k" data-rule-summary="N1k 必须低于最大反推展开上限。" data-tooltip="N1k 低于展开上限 · 比较 · control_system_spec.inputs.n1k" data-port-contract-touched="true" data-port-input-signal="n1k" data-port-output-signal="n1k_below_limit" data-port-value-type="boolean" data-port-unit="rpm" data-port-required="true" style="--node-x: 68%; --node-y: 28%;" aria-pressed="false" title="N1k 低于展开上限 · 比较">
+                <span>CMP</span>
+              </button>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="tra_deploy" data-editable-node-id="tra_deploy" data-node-label="TRA 反推角度窗口" data-node-op="between" data-rule-count="2" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.inputs.tra_deg" data-rule-summary="L3 要求 TRA &lt;= -11.74 deg；L4 要求 -32 deg &lt; TRA &lt; 0 deg。" data-tooltip="TRA 反推角度窗口 · 区间 · control_system_spec.inputs.tra_deg" data-port-contract-touched="true" data-port-input-signal="tra_deg" data-port-output-signal="tra_deploy_window" data-port-value-type="boolean" data-port-unit="deg" data-port-required="true" style="--node-x: 68%; --node-y: 42%;" aria-pressed="false" title="TRA 反推角度窗口 · 区间">
+                <span>BTW</span>
+              </button>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="pls_unlocked" data-editable-node-id="pls_unlocked" data-node-label="PLS 解锁反馈" data-node-op="input" data-rule-count="1" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.feedback.pls_ls" data-rule-summary="PLS 解锁来自 PLS 限位开关反馈。" data-tooltip="PLS 解锁反馈 · 输入 · PLS LS" data-port-contract-touched="true" data-port-input-signal="pls_ls" data-port-output-signal="pls_unlocked" data-port-value-type="boolean" data-port-unit="" data-port-required="true" style="--node-x: 68%; --node-y: 56%;" aria-pressed="false" title="PLS 解锁反馈 · 输入">
+                <span>IN</span>
+              </button>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="logic3" data-editable-node-id="logic3" data-node-label="L3 TLS/N1K/TRA 展开门" data-node-op="and" data-rule-count="6" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.logic_nodes.logic3" data-rule-summary="L3 同时要求：发动机运行、飞机在地面、反推未抑制、TLS 解锁、N1k 低于上限、TRA 到达展开角。" data-tooltip="L3 TLS/N1K/TRA 展开门 · 与门 · 6 条规则 · control_system_spec.logic_nodes.logic3" data-port-contract-touched="true" data-port-input-signal="logic3_inputs" data-port-output-signal="logic3_active" data-port-value-type="boolean" data-port-unit="" data-port-required="true" style="--node-x: 80%; --node-y: 44%;" aria-pressed="false" title="L3 TLS/N1K/TRA 展开门 · 与门">
+                <span>AND</span>
+              </button>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="vdt90" data-editable-node-id="vdt90" data-node-label="VDT 展开达到 90%" data-node-op="compare" data-rule-count="1" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.feedback.vdt" data-rule-summary="90% 展开来自作动筒 VDT 位置反馈。" data-tooltip="VDT 展开达到 90% · 比较 · 作动筒 VDT" data-port-contract-touched="true" data-port-input-signal="deploy_position_percent" data-port-output-signal="deploy_90_percent_vdt" data-port-value-type="boolean" data-port-unit="percent" data-port-required="true" style="--node-x: 80%; --node-y: 68%;" aria-pressed="false" title="VDT 展开达到 90% · 比较">
+                <span>CMP</span>
+              </button>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="logic4" data-editable-node-id="logic4" data-node-label="L4 部署/油门锁门" data-node-op="and" data-rule-count="4" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.logic_nodes.logic4" data-rule-summary="L4 同时要求：VDT 达到 90% 展开、TRA 在释放窗口、飞机在地面、发动机运行。" data-tooltip="L4 部署/油门锁门 · 与门 · 4 条规则 · control_system_spec.logic_nodes.logic4" data-port-contract-touched="true" data-port-input-signal="logic4_inputs" data-port-output-signal="logic4_active" data-port-value-type="boolean" data-port-unit="" data-port-required="true" style="--node-x: 91%; --node-y: 58%;" aria-pressed="false" title="L4 部署/油门锁门 · 与门">
+                <span>AND</span>
+              </button>
+              <button type="button" class="workbench-editable-node" data-reference-proof-node="thr_lock" data-editable-node-id="thr_lock" data-node-label="油门锁释放指令" data-node-op="output" data-rule-count="1" data-hardware-evidence="evidence_gap" data-source-ref="control_system_spec.outputs.throttle_lock_release_cmd" data-rule-summary="L4 放行后驱动 THR_LOCK 释放指令。" data-tooltip="油门锁释放指令 · 输出 · throttle_lock_release_cmd" data-port-contract-touched="true" data-port-input-signal="logic4_active" data-port-output-signal="throttle_lock_release_cmd" data-port-value-type="boolean" data-port-unit="" data-port-required="true" style="--node-x: 91%; --node-y: 78%;" aria-pressed="false" title="油门锁释放指令 · 输出">
+                <span>OUT</span>
               </button>
               <svg
                 class="workbench-editable-edges"
                 viewBox="0 0 100 100"
                 preserveAspectRatio="none"
                 aria-hidden="true"
-              >
-                <path d="M21 31 C29 31 30 38 38 40" />
-                <path d="M46 40 C53 40 54 50 61 53" />
-                <path d="M69 53 C75 55 76 66 82 69" />
-              </svg>
-              <p class="workbench-editable-canvas-note">
-                Sandbox candidate canvas · edits here prepare diff evidence, not certified truth.
-              </p>
+              ></svg>
               <p id="workbench-graph-validation-status" class="workbench-graph-validation-status">
                 Graph validation: no issues.
               </p>
@@ -763,48 +995,119 @@
               id="workbench-evidence-inspector"
               class="workbench-evidence-inspector"
               aria-label="Evidence inspector"
+              data-default-inspector-mode="node"
+              data-inspector-mode-active="node"
+              data-inspector-layout="overlay_rail"
+              data-inspector-open="false"
             >
               <div class="workbench-inspector-header">
-                <span>Evidence Inspector</span>
+                <span>证据检查器</span>
                 <strong id="workbench-inspector-node-id">logic1</strong>
+                <button
+                  id="workbench-cockpit-inspector-close-btn"
+                  class="workbench-cockpit-inspector-close"
+                  type="button"
+                  aria-label="关闭检查器"
+                  title="关闭检查器"
+                >
+                  ×
+                </button>
               </div>
+              <div
+                id="workbench-inspector-mode-tabs"
+                class="workbench-inspector-mode-tabs"
+                role="tablist"
+                aria-label="Inspector mode"
+              >
+                <button
+                  id="workbench-inspector-mode-node"
+                  type="button"
+                  role="tab"
+                  aria-selected="true"
+                  aria-controls="workbench-inspector-node-panel"
+                  data-inspector-mode="node"
+                >
+                  节点详情
+                </button>
+                <button
+                  id="workbench-inspector-mode-run"
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="workbench-inspector-run-panel"
+                  data-inspector-mode="run"
+                >
+                  运行结果
+                </button>
+                <button
+                  id="workbench-inspector-mode-evidence"
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="workbench-inspector-evidence-panel"
+                  data-inspector-mode="evidence"
+                >
+                  硬件证据
+                </button>
+                <button
+                  id="workbench-inspector-mode-handoff"
+                  type="button"
+                  role="tab"
+                  aria-selected="false"
+                  aria-controls="workbench-inspector-handoff-panel"
+                  data-inspector-mode="handoff"
+                >
+                  交付包
+                </button>
+              </div>
+              <section
+                id="workbench-inspector-node-panel"
+                class="workbench-inspector-panel"
+                role="tabpanel"
+                aria-labelledby="workbench-inspector-mode-node"
+                data-inspector-panel="node"
+              >
               <label class="workbench-inspector-field" for="workbench-inspector-node-label">
-                <span>Candidate label</span>
-                <input id="workbench-inspector-node-label" type="text" value="L1 RA/SW1 inhibit gate">
+                <span>候选节点名称</span>
+                <input id="workbench-inspector-node-label" type="text" value="L1 高度/SW1 允许门">
               </label>
               <label class="workbench-inspector-field" for="workbench-inspector-node-op">
-                <span>Operation</span>
+                <span>逻辑类型</span>
                 <select id="workbench-inspector-node-op">
-                  <option value="input">input</option>
-                  <option value="output">output</option>
-                  <option value="and">and</option>
-                  <option value="or">or</option>
-                  <option value="compare">compare</option>
-                  <option value="between">between</option>
-                  <option value="delay">delay</option>
-                  <option value="latch">latch</option>
+                  <option value="input">输入</option>
+                  <option value="output">输出</option>
+                  <option value="and">与门</option>
+                  <option value="or">或门</option>
+                  <option value="compare">比较</option>
+                  <option value="between">区间</option>
+                  <option value="delay">延时</option>
+                  <option value="latch">锁存</option>
                 </select>
               </label>
               <dl class="workbench-inspector-facts">
                 <div>
-                  <dt>Rules</dt>
+                  <dt>规则数</dt>
                   <dd id="workbench-inspector-rule-count">4</dd>
                 </div>
                 <div>
-                  <dt>Hardware evidence</dt>
-                  <dd id="workbench-inspector-evidence-status">evidence_gap</dd>
+                  <dt>规则摘要</dt>
+                  <dd id="workbench-inspector-rule-summary">L1 同时要求：RA &lt; 6 英尺、SW1 已锁存、反推未抑制、反推尚未完全展开。</dd>
                 </div>
                 <div>
-                  <dt>Mapped signals</dt>
+                  <dt>硬件证据</dt>
+                  <dd id="workbench-inspector-evidence-status">证据缺口</dd>
+                </div>
+                <div>
+                  <dt>已映射信号</dt>
                   <dd id="workbench-inspector-signal-count">0</dd>
                 </div>
                 <div>
-                  <dt>Source ref</dt>
+                  <dt>来源引用</dt>
                   <dd id="workbench-inspector-source-ref">control_system_spec.logic_nodes.logic1</dd>
                 </div>
                 <div>
-                  <dt>Truth effect</dt>
-                  <dd>none</dd>
+                  <dt>真值影响</dt>
+                  <dd>无</dd>
                 </div>
               </dl>
               <section
@@ -867,9 +1170,9 @@
                   <label class="workbench-inspector-field" for="workbench-subsystem-interface-evidence-status">
                     <span>Evidence</span>
                     <select id="workbench-subsystem-interface-evidence-status">
-                      <option value="evidence_gap">evidence_gap</option>
-                      <option value="ui_draft">ui_draft</option>
-                      <option value="not_recorded">not_recorded</option>
+                      <option value="evidence_gap">证据缺口</option>
+                      <option value="ui_draft">本地草稿</option>
+                      <option value="not_recorded">未记录</option>
                     </select>
                   </label>
                 </div>
@@ -892,6 +1195,15 @@
                   Subsystem boundary ports are sandbox interface contracts only. Truth effect: none.
                 </p>
               </section>
+              </section>
+              <section
+                id="workbench-inspector-evidence-panel"
+                class="workbench-inspector-panel"
+                role="tabpanel"
+                aria-labelledby="workbench-inspector-mode-evidence"
+                data-inspector-panel="evidence"
+                aria-hidden="true"
+              >
               <div
                 id="workbench-inspector-evidence-summary"
                 class="workbench-inspector-evidence-summary"
@@ -1070,9 +1382,9 @@
                   <label class="workbench-inspector-field" for="workbench-interface-evidence-status">
                     <span>Evidence status</span>
                     <select id="workbench-interface-evidence-status">
-                      <option value="evidence_gap">evidence_gap</option>
-                      <option value="ui_draft">ui_draft</option>
-                      <option value="not_recorded">not_recorded</option>
+                      <option value="evidence_gap">证据缺口</option>
+                      <option value="ui_draft">本地草稿</option>
+                      <option value="not_recorded">未记录</option>
                     </select>
                   </label>
                 </div>
@@ -1281,6 +1593,15 @@
                   ></textarea>
                 </label>
               </section>
+              </section>
+              <section
+                id="workbench-inspector-run-panel"
+                class="workbench-inspector-panel"
+                role="tabpanel"
+                aria-labelledby="workbench-inspector-mode-run"
+                data-inspector-panel="run"
+                aria-hidden="true"
+              >
               <section
                 id="workbench-typed-port-editor"
                 class="workbench-typed-port-editor"
@@ -1347,13 +1668,13 @@
                 aria-labelledby="workbench-sandbox-diff-title"
               >
                 <div class="workbench-inspector-header">
-                  <span id="workbench-sandbox-diff-title">Baseline Diff</span>
-                  <strong id="workbench-diff-verdict">not_run</strong>
+                  <span id="workbench-sandbox-diff-title">基线差异</span>
+                  <strong id="workbench-diff-verdict">未运行</strong>
                 </div>
                 <dl class="workbench-inspector-facts">
                   <div>
-                    <dt>Scenario</dt>
-                    <dd id="workbench-diff-scenario">nominal_landing</dd>
+                    <dt>场景</dt>
+                    <dd id="workbench-diff-scenario">名义着陆</dd>
                   </div>
                   <div>
                     <dt>Model hash</dt>
@@ -1376,7 +1697,7 @@
               >
                 <div class="workbench-inspector-header">
                   <span id="workbench-diff-review-v2-title">Diff Review v2</span>
-                  <strong id="workbench-diff-review-v2-status">not_run</strong>
+                  <strong id="workbench-diff-review-v2-status">未运行</strong>
                 </div>
                 <dl class="workbench-diff-review-v2-facts">
                   <div>
@@ -1385,7 +1706,7 @@
                   </div>
                   <div>
                     <dt>Scenario</dt>
-                    <dd id="workbench-diff-review-v2-scenario">nominal_landing</dd>
+                    <dd id="workbench-diff-review-v2-scenario">名义着陆</dd>
                   </div>
                   <div>
                     <dt>Readiness</dt>
@@ -1415,7 +1736,7 @@
               >
                 <div class="workbench-inspector-header">
                   <span id="workbench-sandbox-test-bench-title">Scenario Test Bench</span>
-                  <strong id="workbench-test-bench-status">not_run</strong>
+                  <strong id="workbench-test-bench-status">未运行</strong>
                 </div>
                 <label class="workbench-handoff-output" for="workbench-test-case-library-select">
                   <span>Saved test case</span>
@@ -1484,7 +1805,7 @@
               >
                 <div class="workbench-inspector-header">
                   <span id="workbench-candidate-debugger-title">Candidate Debugger</span>
-                  <strong id="workbench-candidate-debugger-status">not_run</strong>
+                  <strong id="workbench-candidate-debugger-status">未运行</strong>
                 </div>
                 <dl class="workbench-candidate-debugger-facts">
                   <div>
@@ -1493,7 +1814,7 @@
                   </div>
                   <div>
                     <dt>Tick</dt>
-                    <dd id="workbench-candidate-debugger-tick">not_run</dd>
+                    <dd id="workbench-candidate-debugger-tick">未运行</dd>
                   </div>
                   <div>
                     <dt>Assertion</dt>
@@ -1546,6 +1867,15 @@
                   Preflight analyzer is sandbox evidence only. Truth effect: none.
                 </p>
               </section>
+              </section>
+              <section
+                id="workbench-inspector-handoff-panel"
+                class="workbench-inspector-panel"
+                role="tabpanel"
+                aria-labelledby="workbench-inspector-mode-handoff"
+                data-inspector-panel="handoff"
+                aria-hidden="true"
+              >
               <section
                 class="workbench-draft-json-exchange"
                 aria-labelledby="workbench-draft-json-title"
@@ -1655,10 +1985,11 @@
                   <textarea id="workbench-pr-proof-output" rows="7" readonly></textarea>
                 </label>
                 <label class="workbench-handoff-output" for="workbench-changerequest-packet-output">
-                  <span>ChangeRequest packet JSON</span>
+                  <span>变更包 JSON</span>
                   <textarea id="workbench-changerequest-packet-output" rows="8" readonly></textarea>
                 </label>
                 <section
+                  id="workbench-evidence-archive"
                   class="workbench-evidence-archive"
                   aria-labelledby="workbench-evidence-archive-title"
                 >
@@ -1706,6 +2037,7 @@
                   </p>
                 </section>
               </section>
+              </section>
             </aside>
           </div>
 
@@ -1714,11 +2046,11 @@
             class="workbench-sandbox-timeline-strip"
             aria-label="Sandbox workflow timeline"
           >
-            <li data-step-state="done">Baseline loaded</li>
-            <li data-step-state="active">Draft editable</li>
-            <li data-step-state="idle">Run sandbox</li>
-            <li data-step-state="idle">View diff</li>
-            <li data-step-state="idle">ChangeRequest packet</li>
+            <li data-step-state="done">基线已载入</li>
+            <li data-step-state="active">草稿可编辑</li>
+            <li data-step-state="idle">运行沙箱</li>
+            <li data-step-state="idle">查看差异</li>
+            <li data-step-state="idle">变更包</li>
           </ol>
           <section
             id="workbench-selected-debug-timeline"
@@ -1726,47 +2058,45 @@
             aria-labelledby="workbench-selected-debug-timeline-title"
           >
             <div class="workbench-selected-debug-timeline-header">
-              <span id="workbench-selected-debug-timeline-title">Selected Debug Timeline</span>
+              <span id="workbench-selected-debug-timeline-title">已选调试时间线</span>
               <strong id="workbench-selected-debug-target">node:logic1</strong>
             </div>
             <dl class="workbench-selected-debug-timeline-facts">
               <div>
-                <dt>Scenario</dt>
-                <dd id="workbench-selected-debug-scenario">nominal_landing</dd>
+                <dt>场景</dt>
+                <dd id="workbench-selected-debug-scenario">名义着陆</dd>
               </div>
               <div>
-                <dt>Diff state</dt>
-                <dd id="workbench-selected-debug-verdict">not_run</dd>
+                <dt>差异状态</dt>
+                <dd id="workbench-selected-debug-verdict">未运行</dd>
               </div>
               <div>
-                <dt>Trace link</dt>
-                <dd id="workbench-selected-debug-link-status">selection_only</dd>
+                <dt>跟踪链接</dt>
+                <dd id="workbench-selected-debug-link-status">仅选择</dd>
               </div>
               <div>
-                <dt>Hardware overlay</dt>
-                <dd id="workbench-selected-debug-hardware">evidence_gap</dd>
+                <dt>硬件覆盖</dt>
+                <dd id="workbench-selected-debug-hardware">证据缺口</dd>
               </div>
             </dl>
             <p id="workbench-selected-debug-context" class="workbench-selected-debug-context">
-              Select a graph node or edge to bind timeline/debug context. Truth effect: none.
+              选择图中的节点或连线后，这里绑定调试时间线。真值影响：无。
             </p>
           </section>
 
-          <details class="workbench-reference-sample-pack">
-            <summary>Reference sample pack · read-only SVG circuit</summary>
-            <div
-              id="workbench-circuit-hero-mount"
-              class="workbench-circuit-hero-mount"
-              role="img"
-              aria-label="反推逻辑链路 L1 → L4 SVG circuit (loading…)"
-              data-circuit-fragment-endpoint="/api/workbench/circuit-fragment"
-              data-circuit-fragment-status="pending"
-            >
-              <p class="workbench-circuit-hero-loading">
-                正在加载控制逻辑面板… · Loading control logic panel…
-              </p>
-            </div>
-          </details>
+          <div
+            id="workbench-circuit-hero-mount"
+            class="workbench-circuit-hero-mount workbench-reference-fragment-mount"
+            role="img"
+            aria-label="反推逻辑链路 L1 → L4 SVG circuit (loading…)"
+            data-circuit-fragment-endpoint="/api/workbench/circuit-fragment"
+            data-circuit-fragment-status="pending"
+            hidden
+          >
+            <p class="workbench-circuit-hero-loading">
+              正在加载控制逻辑面板… · Loading control logic panel…
+            </p>
+          </div>
         </div>
         <noscript>
           <p class="workbench-circuit-hero-noscript">
