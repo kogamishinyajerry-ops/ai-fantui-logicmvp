@@ -6229,9 +6229,26 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   cursor: pointer;
   pointer-events: stroke;
 }
+.workbench-edge-route-guide {
+  fill: none;
+  stroke: rgba(29, 78, 216, 0.22);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 6.8;
+  opacity: 0;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+  transition: opacity 120ms ease;
+}
 .workbench-editable-edges path:hover,
 .workbench-editable-edges path:focus-visible {
   stroke-width: 1.7;
+}
+.workbench-editable-edges path:hover + .workbench-edge-route-guide,
+.workbench-editable-edges path:focus-visible + .workbench-edge-route-guide,
+.workbench-editable-edges path[aria-pressed="true"] + .workbench-edge-route-guide,
+.workbench-editable-edges path[data-edge-proof-highlight="true"] + .workbench-edge-route-guide {
+  opacity: 1;
 }
 .workbench-editable-edges path[aria-pressed="true"] {
   stroke: #1d4ed8;
@@ -6331,6 +6348,10 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.workbench-editable-canvas[data-reference-proof-mode="default_visible"] .workbench-edge-route-guide {
+  stroke: rgba(37, 99, 235, 0.2);
+  stroke-width: 9;
+}
 .workbench-editable-canvas[data-reference-proof-mode="default_visible"] .workbench-editable-edges path:hover,
 .workbench-editable-canvas[data-reference-proof-mode="default_visible"] .workbench-editable-edges path:focus-visible {
   stroke-width: 6.1;
@@ -6358,6 +6379,11 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-editable-edges path:hover + .workbench-edge-label,
 .workbench-editable-edges path:focus + .workbench-edge-label,
 .workbench-editable-edges path[aria-pressed="true"] + .workbench-edge-label {
+  display: block;
+}
+.workbench-editable-edges path:hover + .workbench-edge-route-guide + .workbench-edge-label,
+.workbench-editable-edges path:focus + .workbench-edge-route-guide + .workbench-edge-label,
+.workbench-editable-edges path[aria-pressed="true"] + .workbench-edge-route-guide + .workbench-edge-label {
   display: block;
 }
 .workbench-graph-validation-status {

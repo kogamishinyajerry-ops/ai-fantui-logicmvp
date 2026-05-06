@@ -975,12 +975,24 @@ def test_js_wires_port_wire_route_metadata_as_sandbox_only_graph_evidence() -> N
     assert "function normalizeEdgeRouteMetadata" in js
     assert "function edgeWireLabel" in js
     assert "function edgeWireDisplayLabel" in js
+    assert "function orthogonalRouteResult" in js
+    assert "function edgeRouteGuideMetadata" in js
+    assert "function edgeRouteGuideAttributes" in js
     assert "edge_label" in js
     assert "route_metadata" in js
     assert "data-edge-label" in js
     assert "data-edge-display-label" in js
     assert "data-route-mode" in js
+    assert "data-route-guide" in js
+    assert "data-route-guide-effect" in js
+    assert "data-route-segment-count" in js
+    assert "data-route-lane-axis" in js
+    assert "data-route-direction" in js
+    assert "data-route-guide-truth-effect" in js
     assert "workbench-edge-label" in js
+    assert "workbench-edge-route-guide" in js
+    assert ".workbench-edge-route-guide" in _css()
+    assert 'data-route-guide-edge-id' in js
     assert "function beginPortHandleDrag" in js
     assert "function updatePortHandleDrag" in js
     assert "function completePortHandleDrag" in js
