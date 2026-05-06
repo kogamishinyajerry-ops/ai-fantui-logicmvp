@@ -5983,20 +5983,33 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   pointer-events: none;
   z-index: 1;
 }
-.workbench-subsystem-overlay span {
+.workbench-subsystem-overlay-label,
+.workbench-subsystem-overlay-meta {
   position: absolute;
   left: 0.55rem;
-  top: 0.42rem;
   max-width: calc(100% - 1.1rem);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workbench-subsystem-overlay-label {
+  top: 0.42rem;
   padding: 0.08rem 0.28rem;
   border-radius: 3px;
   background: rgba(24, 13, 42, 0.86);
   color: rgba(236, 230, 255, 0.9);
   font-size: 0.52rem;
   font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+.workbench-subsystem-overlay-meta {
+  top: 1.38rem;
+  padding: 0.07rem 0.24rem;
+  border: 1px solid rgba(184, 151, 255, 0.26);
+  border-radius: 3px;
+  background: rgba(18, 30, 45, 0.76);
+  color: rgba(236, 245, 255, 0.82);
+  font-size: 0.46rem;
+  line-height: 1.15;
 }
 .workbench-selection-marquee {
   position: absolute;
@@ -6647,6 +6660,16 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-subsystem-actions .workbench-editable-primary:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+#workbench-subsystem-status[data-status-tone="success"] {
+  border-color: rgba(73, 222, 128, 0.32);
+  background: rgba(22, 101, 52, 0.18);
+  color: rgba(220, 252, 231, 0.9);
+}
+#workbench-subsystem-status[data-status-tone="warn"] {
+  border-color: rgba(245, 158, 11, 0.36);
+  background: rgba(120, 53, 15, 0.18);
+  color: rgba(254, 243, 199, 0.92);
 }
 .workbench-subsystem-interface-grid {
   display: grid;

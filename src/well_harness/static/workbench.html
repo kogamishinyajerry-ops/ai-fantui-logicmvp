@@ -1128,7 +1128,13 @@
                   <button id="workbench-rename-subsystem-btn" type="button" class="workbench-editable-primary">Rename</button>
                   <button id="workbench-ungroup-subsystem-btn" type="button" class="workbench-editable-primary">Ungroup</button>
                 </div>
-                <p id="workbench-subsystem-status" class="workbench-handoff-status">
+                <p
+                  id="workbench-subsystem-status"
+                  class="workbench-handoff-status"
+                  role="status"
+                  aria-live="polite"
+                  data-status-tone="info"
+                >
                   Subsystem edits are sandbox metadata only. Truth effect: none.
                 </p>
               </section>
