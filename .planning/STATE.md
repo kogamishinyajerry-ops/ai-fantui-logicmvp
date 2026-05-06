@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Live Linear JER-259 workbench start-page honesty refresh rebased after PR #256 gate-tier merge
-last_updated: "2026-05-07T00:45:00.000+08:00"
-last_activity: 2026-05-06
+status: Functional milestone + Codex/Linear/Symphony goal workflow defining after PR #257
+last_updated: "2026-05-07T01:10:00.000+08:00"
+last_activity: 2026-05-07
 progress:
   total_phases: 55
   completed_phases: 46
@@ -159,19 +159,19 @@ live Linear issue `JER-257` closed through PR #250 as the PR
 review/merge-close typing tranche: the touched PR review and merge-close modules
 are focused strict-mypy clean, and the official wrapper moved from 4550 errors
 in 307 files to 4548 errors in 305 files while still blocked. live Linear
-issue `JER-258` is the current workbench maturity evidence refresh: the release
-manifest, runbook, and queue/state docs are aligned around a machine-readable
-maturity snapshot without production-ready, cloud, certification, or
-full-mypy-clean claims, and closed through PR #251. Branch evidence keeps the
-official wrapper blocked at 4548 errors in 305 files while local release smoke,
-manifest validation, focused tests, and `unit_tests` pass. live Linear issue
-`JER-259` is the current workbench start-page honesty refresh: `/workbench/start`
-is being aligned with current `/workbench` reality by removing stale E11 roadmap
-language and the removed wow starter-card claim. Branch evidence passes focused
-`/workbench/start` tests, removes the stale strings from the static page, and
-keeps the touched test file focused strict-mypy clean; `unit_tests` passes while
-the official mypy wrapper remains blocked but improved at 4547 errors in 304
-files. Do not claim full mypy clean.
+issue `JER-258` closed through PR #251 as the workbench maturity evidence
+refresh: the release manifest, runbook, and queue/state docs are aligned around
+a machine-readable maturity snapshot without production-ready, cloud,
+certification, or full-mypy-clean claims. Branch evidence kept the official
+wrapper blocked at 4548 errors in 305 files while local release smoke, manifest
+validation, focused tests, and `unit_tests` passed. live Linear issue `JER-259`
+closed through PR #252 as the workbench start-page honesty refresh:
+`/workbench/start` was aligned with current `/workbench` reality by removing
+stale E11 roadmap language and the removed wow starter-card claim. Branch
+evidence passed focused `/workbench/start` tests, removed the stale strings from
+the static page, and kept the touched test file focused strict-mypy clean;
+`unit_tests` passed while the official mypy wrapper remained blocked but
+improved at 4547 errors in 304 files. Do not claim full mypy clean.
 
 **2026-05-06 GitHub PR #253 post-merge follow-up**: GitHub PR #253 merged the
 Workbench goal-canvas panel slice. The post-merge review notes are
@@ -184,6 +184,17 @@ treated as presentation drift rather than archive contract drift. The
 helper remains a legacy compatibility bridge for the tabbed inspector and should
 only be removed in a dedicated e2e cleanup that explicitly opens the target
 inspector tabs in each test.
+
+**2026-05-07 functional milestone workflow**: PR #257 merged the command
+palette Chinese-first label slice and kept command ids, search keywords, export
+contracts, schemas, controller truth, runner, and adapters unchanged. The next
+control-plane change is to stop treating the future backlog as a flat JER list:
+`docs/coordination/functional-milestone-symphony-goal-workflow.md` groups
+future work into five functional milestones: Canvas authoring; simulation,
+test, and debug; evidence, archive, and handoff; runtime generalization; and
+release maturity/local operations. Each eligible Linear issue should map to one
+milestone and one bounded Codex `/goal` run, with Opus 4.7 review required for
+milestone closeout or high-risk truth/schema/release claims.
 
 **Linear control plane**:
 

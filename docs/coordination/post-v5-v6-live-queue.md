@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-258` closed · live Linear `JER-259` implementing workbench start-page honesty refresh
+Status: active queue · live Linear `JER-259` closed · functional milestone workflow proposed after PR #257
 
 ## Purpose
 
@@ -8,6 +8,12 @@ Post-v5 work must dispatch from live Linear issues, not from repo-local
 historical JER labels alone. This document seeds the first executable v6 queue
 after the merged Workbench v5 foundation and records the next candidate slices
 in a form that Codex/Symphony can turn into live Linear issues.
+
+For new work, prefer the functional milestone operating model in
+`docs/coordination/functional-milestone-symphony-goal-workflow.md`. That
+document groups future work into Canvas authoring, simulation/test/debug,
+archive/handoff, runtime generalization, and release maturity milestones, then
+turns each eligible Linear issue into one bounded Codex `/goal` run.
 
 ## Live Issue
 
@@ -37,8 +43,23 @@ Identifier rule:
    hard hold only on controller truth, certified assets, public schema
    boundary, or simulation determinism; otherwise record failed broad gates as
    daily warnings or milestone-only blockers.
+7. Map every new issue to exactly one functional milestone from
+   `functional-milestone-symphony-goal-workflow.md`.
+8. Use `/goal` for long-running implementation. Include Objective, Scope,
+   Constraints, Done when, and Stop if; include token budget in Constraints.
+9. Route milestone closeout, adapter/runtime truth, public schema, production,
+   or certification claims to Claude Opus 4.7 review before merge/claim.
 
 ## Candidate v6 Issues
+
+The historical candidate list below is retained for traceability. New dispatch
+should use milestone-prefixed issues:
+
+- `[M1] Canvas authoring ...`
+- `[M2] Simulation test debug ...`
+- `[M3] Evidence archive handoff ...`
+- `[M4] Runtime generalization ...`
+- `[M5] Release maturity ...`
 
 Recommended first product slice:
 
