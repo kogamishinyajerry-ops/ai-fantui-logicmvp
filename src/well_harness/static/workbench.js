@@ -8246,6 +8246,48 @@ function installEditableWorkbenchShell() {
       .trim();
   }
 
+  function truncateWorkbenchDisplayLabel(value, maxLength) {
+    const text = String(value || "").trim();
+    const limit = Number.isFinite(Number(maxLength)) ? Number(maxLength) : 12;
+    if (text.length <= limit) return text;
+    return `${text.slice(0, Math.max(1, limit - 1))}…`;
+  }
+
+  function nodeShortDisplayLabel(node) {
+    if (!node) return "草稿";
+    const nodeId = node.getAttribute("data-editable-node-id") || "";
+    const op = node.getAttribute("data-node-op") || "";
+    const fullLabel = nodeDisplayLabel(node);
+    if (node.getAttribute("data-draft-node") === "true") {
+      return fullLabel || nodeId || "草稿";
+    }
+    const referenceLabels = {
+      ra_ft: "高度<6ft",
+      sw1: "SW1锁存",
+      not_inhibited: "未抑制",
+      not_deployed: "未展开",
+      logic1: "L1允许",
+      tls_unlocked: "TLS解锁",
+      sw2: "SW2锁存",
+      engine_running: "发动机",
+      aircraft_on_ground: "在地",
+      eec_enable: "EEC允许",
+      logic2: "L2允许",
+      n1k_limit: "N1K限",
+      tra_deploy: "TRA窗",
+      pls_unlocked: "PLS解锁",
+      logic3: "L3展开",
+      vdt90: "VDT90",
+      logic4: "L4锁门",
+      thr_lock: "THR锁",
+    };
+    if (Object.prototype.hasOwnProperty.call(referenceLabels, nodeId)) {
+      return referenceLabels[nodeId];
+    }
+    if (op && !fullLabel) return shortBlockLabelForOp(op);
+    return truncateWorkbenchDisplayLabel(fullLabel || nodeId || "草稿", 12);
+  }
+
   function nodeDisplayLabel(node) {
     if (!node) return "草稿节点";
     const explicit = node.getAttribute("data-node-display-label")
@@ -10678,6 +10720,57 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function compactSignalDisplayLabel(value) {
+    const text = String(value || "").trim();
+    const signalLabels = {
+      aircraft_on_ground: "GND",
+      deploy_90_percent_vdt: "VDT90",
+      deploy_position_percent: "VDT",
+      eec_enable: "EEC",
+      engine_running: "ENG",
+      logic1_active: "L1",
+      logic1_inputs: "L1IN",
+      logic2_active: "L2",
+      logic2_inputs: "L2IN",
+      logic3_active: "L3",
+      logic3_inputs: "L3IN",
+      logic4_active: "L4",
+      logic4_inputs: "L4IN",
+      n1k: "N1K",
+      n1k_below_limit: "N1K",
+      not_inhibited: "INH",
+      pls_ls: "PLS",
+      pls_unlocked: "PLS",
+      ra_below_6ft: "RA<6",
+      radio_altitude_ft: "RA",
+      reverser_deployed_eec: "EECDEP",
+      reverser_inhibited: "INH",
+      reverser_not_deployed_eec: "NDEP",
+      sw1_latched: "SW1",
+      sw2_latched: "SW2",
+      throttle_lock_release_cmd: "THR",
+      tls_ls: "TLS",
+      tls_unlocked: "TLS",
+      tra_deg: "TRA",
+      tra_deploy_window: "TRA",
+    };
+    if (Object.prototype.hasOwnProperty.call(signalLabels, text)) {
+      return signalLabels[text];
+    }
+    const compact = text
+      .split(/[^A-Za-z0-9]+/)
+      .filter(Boolean)
+      .map((part) => part.slice(0, 3).toUpperCase())
+      .join("_");
+    return truncateWorkbenchDisplayLabel(compact || text || "SIG", 10);
+  }
+
+  function portShortDisplayLabel(payload) {
+    if (!payload) return "PORT";
+    const direction = payload.direction === "out" ? "OUT" : "IN";
+    return `${direction}:${compactSignalDisplayLabel(payload.signal_id || payload.port_id)}`;
+  }
+
   function edgePortContract(edge) {
     if (!edge) {
       return {
@@ -10708,6 +10801,15 @@ function installEditableWorkbenchShell() {
     return normalizedInterfaceField(
       (edge && (edge.edge_label || edge.edgeLabel))
       || `${contract.source_port_id} -> ${contract.target_port_id}`,
+    );
+  }
+
+  function edgeWireDisplayLabel(edge) {
+    const contract = edgePortContract(edge);
+    return compactSignalDisplayLabel(
+      (edge && (edge.signal_id || edge.signalId))
+      || contract.signal_id
+      || edgeWireLabel(edge),
     );
   }
 
@@ -13658,6 +13760,7 @@ function installEditableWorkbenchShell() {
       `data-edge-target-id="${inspectorText(payload.target_node_id)}"`,
       `data-edge-signal-id="${inspectorText(payload.signal_id)}"`,
       `data-edge-label="${inspectorText(payload.edge_label)}"`,
+      `data-edge-display-label="${inspectorText(edgeWireDisplayLabel(edge))}"`,
       `data-route-mode="${inspectorText(payload.route_metadata.routing_mode)}"`,
       `data-edge-evidence-status="${inspectorText(payload.evidence_status)}"`,
       `data-port-compatibility="${inspectorText(payload.port_compatibility_status)}"`,
@@ -13984,9 +14087,15 @@ function installEditableWorkbenchShell() {
         handle.setAttribute("data-signal-id", payload.signal_id);
         handle.setAttribute("data-value-type", payload.value_type);
         handle.setAttribute("data-truth-effect", "none");
+        handle.setAttribute("data-port-short-label", portShortDisplayLabel(payload));
+        handle.setAttribute("data-port-signal-short-label", compactSignalDisplayLabel(payload.signal_id));
+        handle.setAttribute(
+          "title",
+          `${direction === "out" ? "输出" : "输入"}端口 ${payload.port_id} · 信号 ${payload.signal_id}`,
+        );
         handle.setAttribute(
           "aria-label",
-          `${direction === "out" ? "Output" : "Input"} port ${payload.port_id}`,
+          `${direction === "out" ? "输出" : "输入"}端口 ${payload.port_id}，信号 ${payload.signal_id}`,
         );
         handle.style.setProperty("--node-x", formatCanvasPercent(position.x));
         handle.style.setProperty("--node-y", formatCanvasPercent(position.y));
@@ -14016,6 +14125,7 @@ function installEditableWorkbenchShell() {
       const target = editableNodeRoutePosition(targetNode);
       const route = orthogonalEdgeRoute(source, target, edge);
       const payload = edgeInspectorPayload(edge);
+      const displayLabel = edgeWireDisplayLabel(edge);
       paths.push([
         `<path data-editable-edge-id="${inspectorText(edge.id)}"`,
         `data-editable-edge-index="${index}"`,
@@ -14029,9 +14139,10 @@ function installEditableWorkbenchShell() {
         `d="${route.d}" />`,
         `<text class="workbench-edge-label" data-editable-edge-label-id="${inspectorText(edge.id)}"`,
         `data-edge-label="${inspectorText(payload.edge_label)}"`,
+        `data-edge-display-label="${inspectorText(displayLabel)}"`,
         `data-route-mode="${inspectorText(payload.route_metadata.routing_mode)}"`,
         `x="${route.labelX}" y="${route.labelY}">`,
-        inspectorText(payload.edge_label),
+        inspectorText(displayLabel),
         "</text>",
       ].join(" "));
     }
@@ -19691,12 +19802,16 @@ function installEditableWorkbenchShell() {
 
   function updateNodeDisplay(node) {
     if (!node) return;
+    const fullLabel = nodeDisplayLabel(node);
+    const shortLabel = nodeShortDisplayLabel(node);
     let label = node.querySelector("span");
     if (!label) {
       label = document.createElement("span");
       node.prepend(label);
     }
-    label.textContent = nodeDisplayLabel(node);
+    label.textContent = shortLabel;
+    node.setAttribute("data-node-short-label", shortLabel);
+    node.setAttribute("data-node-full-label", fullLabel);
     let opTag = node.querySelector(".workbench-reference-node-op");
     if (!opTag) {
       opTag = document.createElement("small");
@@ -19710,6 +19825,7 @@ function installEditableWorkbenchShell() {
     const tooltip = nodeTooltipText(node);
     node.setAttribute("data-tooltip", tooltip);
     node.setAttribute("title", tooltip);
+    node.setAttribute("aria-label", tooltip);
   }
 
   function applyEditableDraftImport(payload) {

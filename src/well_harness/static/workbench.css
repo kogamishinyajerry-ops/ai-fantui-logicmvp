@@ -6063,6 +6063,31 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   cursor: crosshair;
   z-index: 6;
 }
+.workbench-port-handle::after {
+  content: attr(data-port-short-label);
+  position: absolute;
+  left: 50%;
+  top: -1.2rem;
+  min-width: max-content;
+  padding: 0.08rem 0.18rem;
+  border: 1px solid rgba(31, 41, 55, 0.28);
+  border-radius: 3px;
+  background: rgba(248, 250, 252, 0.96);
+  color: #111827;
+  font-size: 0.46rem;
+  font-weight: 800;
+  line-height: 1.1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity 120ms ease;
+  white-space: nowrap;
+}
+.workbench-port-handle:hover::after,
+.workbench-port-handle:focus-visible::after,
+.workbench-port-handle[data-port-handle-armed="true"]::after {
+  opacity: 1;
+}
 .workbench-port-handle[data-port-handle-direction="in"] {
   transform:
     translate(var(--viewport-pan-x, 0px), var(--viewport-pan-y, 0px))
@@ -6097,11 +6122,19 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   stroke: rgba(255, 126, 126, 0.95);
 }
 .workbench-editable-node span {
+  max-width: 100%;
   font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1.12;
+  overflow: hidden;
   overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workbench-editable-node[data-node-short-label] span {
+  font-size: 0.7rem;
+  line-height: 1.05;
 }
 .workbench-editable-node small {
   display: block;
@@ -6143,6 +6176,9 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   .workbench-editable-node span {
     font-size: 0.54rem;
   }
+  .workbench-editable-node[data-node-short-label] span {
+    font-size: 0.6rem;
+  }
   .workbench-editable-node small {
     font-size: 0.44rem;
   }
@@ -6152,6 +6188,10 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   .workbench-port-handle {
     width: 8px;
     height: 8px;
+  }
+  .workbench-port-handle::after {
+    top: -1.05rem;
+    font-size: 0.4rem;
   }
   .workbench-port-handle[data-port-handle-direction="in"] {
     transform:
@@ -6188,6 +6228,10 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   vector-effect: non-scaling-stroke;
   cursor: pointer;
   pointer-events: stroke;
+}
+.workbench-editable-edges path:hover,
+.workbench-editable-edges path:focus-visible {
+  stroke-width: 1.7;
 }
 .workbench-editable-edges path[aria-pressed="true"] {
   stroke: #1d4ed8;
@@ -6287,6 +6331,10 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.workbench-editable-canvas[data-reference-proof-mode="default_visible"] .workbench-editable-edges path:hover,
+.workbench-editable-canvas[data-reference-proof-mode="default_visible"] .workbench-editable-edges path:focus-visible {
+  stroke-width: 6.1;
+}
 .workbench-editable-canvas[data-reference-proof-mode="default_visible"] .workbench-editable-edges path[data-binding-quality="missing"],
 .workbench-editable-canvas[data-reference-proof-mode="default_visible"] .workbench-editable-edges path[data-port-compatibility="warn"],
 .workbench-editable-canvas[data-reference-proof-mode="default_visible"] .workbench-editable-edges path[data-port-compatibility="fail"] {
@@ -6299,11 +6347,12 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-edge-label {
   display: none;
   fill: rgba(17, 24, 39, 0.82);
-  font-size: 1.75px;
+  font-size: 2.35px;
+  font-weight: 800;
   paint-order: stroke;
   pointer-events: none;
   stroke: rgba(248, 250, 252, 0.92);
-  stroke-width: 0.6px;
+  stroke-width: 0.85px;
   text-anchor: middle;
 }
 .workbench-editable-edges path:hover + .workbench-edge-label,
