@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Live Linear JER-258 workbench maturity evidence refresh implementing
-last_updated: "2026-05-05T23:06:00.000+08:00"
-last_activity: 2026-05-05
+status: GitHub PR #253 post-merge follow-up documentation after workbench goal-canvas panel merge
+last_updated: "2026-05-06T23:19:30.000+08:00"
+last_activity: 2026-05-06
 progress:
   total_phases: 55
   completed_phases: 46
@@ -16,7 +16,7 @@ progress:
 
 # State
 
-Last activity: 2026-05-05
+Last activity: 2026-05-06
 
 ## 2026-05-01 Session — Workbench Runtime v3 Closure And v4 Launch
 
@@ -165,6 +165,18 @@ maturity snapshot without production-ready, cloud, certification, or
 full-mypy-clean claims. Branch evidence keeps the official wrapper blocked at
 4548 errors in 305 files while local release smoke, manifest validation,
 focused tests, and `unit_tests` pass. Do not claim full mypy clean.
+
+**2026-05-06 GitHub PR #253 post-merge follow-up**: GitHub PR #253 merged the
+Workbench goal-canvas panel slice. The post-merge review notes are
+documentation-only:
+proof, handoff, and archive-facing rendered text may now show Chinese display
+labels through `displayStatusLabel()` while raw JSON/export/schema fields remain
+unchanged, so historical byte-for-byte checks of rendered proof text should be
+treated as presentation drift rather than archive contract drift. The
+`tests/e2e/test_workbench_js_boot_smoke.py::_install_workbench_inspector_mode_bridge`
+helper remains a legacy compatibility bridge for the tabbed inspector and should
+only be removed in a dedicated e2e cleanup that explicitly opens the target
+inspector tabs in each test.
 
 **Linear control plane**:
 
