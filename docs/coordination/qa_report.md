@@ -5,8 +5,8 @@
 
 - 结论：PASS；当前稳定基线由 GitHub-backed validation evidence 支撑。
 - 当前阶段：`P43 Control Logic Workbench end-to-end milestone`
-- 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`P46-03 PR #46 merged (P46 series closes the loop: P46-01 dev-server startup script + make dev — one-command boot, MiniMax key resolved from env / ~/.zshrc / ~/.minimax_key, port-killer + state-dir setup baked in / P46-02 per-system gate synonyms — rules interpreter now covers all 4 systems with domain-honest vocabularies (L1..L4 / G1..G4 / V1..V2 / E1..E3) and unknown-system fallback / P46-03 /gsd-execute-phase-from-brief Claude Code skill spec + dev-queue brief contract test — last manual gap closed: skill picks brief, plans, asks before edit, branches + PRs; 16-test contract locks every brief field the skill parses incl. HTML schema marker for version drift; truth-engine red line preserved by always-ask + always-PR safeguards; 1348/1348 full suite, 56/56 new P46-01..03 tests; Self-Gate via Executor-即-Gate v3.2) — 2026-04-26`
+- 当前已验证 Plan：`JER-261 functional milestone Symphony workflow`
+- 最近成功执行证据：`PR #258 post-merge proof — functional milestone workflow`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - Open Gap 数量：`0`
