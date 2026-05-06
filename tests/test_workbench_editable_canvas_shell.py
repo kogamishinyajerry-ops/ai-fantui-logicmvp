@@ -565,24 +565,44 @@ def test_main_toolbar_is_compact_with_tooltips_and_deferred_toolstrip() -> None:
 def test_editor_command_palette_controls_are_exposed_as_sandbox_only_ui() -> None:
     html = _html()
     css = _css()
+    palette_match = re.search(
+        r'<section\s+id="workbench-command-palette"[\s\S]*?</section>',
+        html,
+    )
+    assert palette_match is not None
+    palette_html = palette_match.group(0)
 
     assert 'id="workbench-open-command-palette-btn"' in html
     assert 'id="workbench-command-palette"' in html
     assert 'id="workbench-command-palette-filter"' in html
     assert 'id="workbench-command-palette-status"' in html
-    for command_id in [
-        "create_node",
-        "rename_subsystem",
-        "duplicate_selection",
-        "group_selection",
-        "wire_edge",
-        "run_sandbox",
-        "debug_selection",
-        "export_draft",
-        "import_draft",
-        "prepare_archive",
-    ]:
+    assert 'aria-label="关闭命令面板"' in palette_html
+    assert "命令面板空闲。不会执行实时 Linear 写入。" in palette_html
+    expected_commands = [
+        ("create_node", "创建节点", "create add node primitive"),
+        ("rename_subsystem", "重命名子系统", "rename subsystem group"),
+        ("duplicate_selection", "复制选择", "duplicate copy selection node"),
+        ("group_selection", "封装为子系统", "group subsystem selection"),
+        ("wire_edge", "连接端口", "wire edge connect route"),
+        ("run_sandbox", "运行沙箱", "run sandbox simulation"),
+        ("debug_selection", "调试选择", "debug selection timeline probe"),
+        ("export_draft", "导出草稿", "export draft json"),
+        ("import_draft", "导入草稿", "import draft json restore"),
+        ("prepare_archive", "准备归档", "archive evidence prepare handoff"),
+    ]
+    for command_id, label, keywords in expected_commands:
         assert f'data-command-palette-command="{command_id}"' in html
+        assert f'data-command-palette-keywords="{keywords}"' in html
+        assert f">{label}</button>" in palette_html
+    for stale_label in (
+        "Close command palette",
+        "Rename subsystem",
+        "Duplicate selection",
+        "Group selection",
+        "Wire edge",
+        "Debug selection",
+    ):
+        assert stale_label not in palette_html
     assert ".workbench-command-palette" in css
     assert ".workbench-command-palette-list" in css
 
@@ -1076,6 +1096,11 @@ def test_js_wires_editor_command_palette_as_sandbox_only_command_surface() -> No
     assert "command_palette.prepare_archive" in js
     assert "workbench-command-palette.v1" in js
     assert "No live Linear mutation" in js
+    assert "个命令" in js
+    assert "命令面板空闲" in js
+    assert "已记录为沙箱工作台元数据" in js
+    assert "图验证：已从命令面板进入连线模式" in js
+    assert "本地执行失败" in js
 
 
 def test_js_wires_hardware_interface_designer_as_sandbox_only_archive_packet() -> None:
