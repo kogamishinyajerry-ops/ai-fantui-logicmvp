@@ -1127,8 +1127,11 @@ def test_workbench_evidence_archive_exports_gate_claims_and_blockers(demo_server
     assert errors == [], f"page JS errors: {errors}"
     assert archive["kind"] == "well-harness-workbench-evidence-archive"
     assert archive["archive_scope"] == "local_draft_download"
+    assert archive["gate_claims"]["hard_hold_policy"] == "required"
+    assert archive["gate_claims"]["default_pytest"] == "warning"
     assert archive["gate_claims"]["mypy_strict_clean"] == "not_claimed"
     assert archive["gate_claims"]["e2e_49_49"] == "not_claimed"
+    assert "workbench Tier 0 hard holds" in blocker_gates
     assert "PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json" in blocker_gates
     assert archive["red_line_metadata"]["truth_level_impact"] == "none"
     assert archive["red_line_metadata"]["dal_pssa_impact"] == "none"
@@ -2157,6 +2160,8 @@ def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_hando
     assert red_lines["live_linear_mutation"] is False
     assert archive["gate_claims"]["e2e_49_49"] == "not_claimed"
     assert archive["gate_claims"]["mypy_strict_clean"] == "not_claimed"
+    assert archive["gate_claims"]["hard_hold_policy"] == "required"
+    assert archive["gate_claims"]["default_pytest"] == "warning"
     assert archive["known_blockers"]
     assert checksums["manifest_checksum"]
     assert checksums["diff_summary_checksum"]

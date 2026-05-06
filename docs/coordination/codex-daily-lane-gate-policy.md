@@ -4,7 +4,25 @@ Date: 2026-04-29
 Scope: JER-141 through JER-145 and later Codex Daily Lane PRs until the baseline
 blockers are retired.
 
-## Current Enforceable Gates
+## Current Validation Tiers
+
+Daily Lane validation is tiered. Do not treat every test or proof artifact as a
+hard stop.
+
+### Tier 0 Hard Holds
+
+Only these failures must stop daily workbench development immediately:
+
+- controller truth or adapter semantics changed without an explicit
+  higher-authority task;
+- frozen adapters, certified hardware YAML, or C919 reference packets changed;
+- public schema/import/export/archive contracts broken at a repo boundary;
+- simulation determinism broken for the same circuit plus the same input trace.
+
+### Tier 1 Daily Warnings
+
+Run focused evidence for the touched surface and disclose failures, but do not
+turn these into controller-truth holds unless they reveal a Tier 0 issue:
 
 - Shared validation suite:
   `PYTHONPATH=src python3 tools/run_gsd_validation_suite.py --format json`
@@ -12,6 +30,17 @@ blockers are retired.
   `PYTHONPATH=src python3 -m pytest tests/ -q --tb=no`
 - Adversarial lane:
   `PYTHONPATH=src python3 src/well_harness/static/adversarial_test.py`
+
+For narrow workbench/Canvas slices, a targeted pytest/e2e subset plus
+`git diff --check` is acceptable daily evidence when the PR explicitly states
+that full suite, full e2e, and strict mypy are milestone-only or not claimed.
+
+### Tier 2 Milestone Gates
+
+Full opt-in e2e, full shared validation, strict mypy clean, release manifests,
+and Opus/Kogami architecture or UX review are release/maturity gates. They block
+release or certification claims, not ordinary sandbox UI iteration, unless a
+Tier 0 hard hold is observed.
 
 ## JER-228 Validation Suite Isolation
 
@@ -27,8 +56,10 @@ PYTHONPATH=src python3 tools/run_gsd_validation_suite.py --skip unit_tests --con
 
 If `unit_tests` times out, the report status is `fail`, `failure_kind` is
 `timeout`, `failed_check` names the hung command, and the captured stdout/stderr
-tail is retained for follow-up triage. A timeout is a real gate failure; it is
-not a pass and must not be hidden in PR proof text.
+tail is retained for follow-up triage. A timeout is not a pass and must not be
+hidden in PR proof text. It blocks the current PR only when it is on the touched
+surface or exposes a Tier 0 hard hold; otherwise record it as a milestone
+blocker/follow-up.
 
 ## Clean Worktree Strategy
 
@@ -62,7 +93,10 @@ coupling work:
 
 Until the E2E and mypy blockers are fixed in their own scoped issues, Codex
 Daily Lane PR descriptions must not claim `e2e 49/49` or `mypy --strict clean`.
-They must distinguish pre-existing blockers from the PR's tested delta.
+They must distinguish pre-existing blockers from the PR's tested delta. These
+are milestone/release blockers, not daily hard holds, unless they identify a
+controller-truth, certified-asset, schema-boundary, or simulation-determinism
+regression.
 
 ## Official Mypy Gate
 

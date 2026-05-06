@@ -3,6 +3,7 @@
 > **版本变更记录：**
 > - v2 (2026-04-15): Milestone 9 Project Freeze 时治理整改重建版
 > - **v2.1 (2026-04-20, P32 W6 刷新):** 追加 v5.2 Solo Mode 纪律段 + Milestone 9 Lifted 追认段 + 联邦 Level 1/2 未验证状态明示；8 条绝对边界主体不变；已验证能力表补完 P17-P30 新增条目。详见 `.planning/constitution.md` 完整叙述。
+> - **v2.2 (2026-05-07, Workbench gate 瘦身):** 将日常 Canvas/workbench 开发从重治理 gate 中解耦；硬门只覆盖 controller truth、certified assets、schema boundary 和 simulation determinism。
 
 ## 项目定义
 
@@ -34,9 +35,19 @@
 3. **Canvas 只听 truth engine**：AI 只能在 Canvas 旁加注释，不能控制节点状态。
 4. **跨域关联需人工确认**：`cross_domain_links.json` 是唯一跨域关联注册表，AI 不能自动推断关联。
 5. **无外部用户时不开发**：没有真实用户反馈前，不进行新功能扩展。
-6. **GSD 自动化保护回归**：所有变更必须通过 23-command validation suite。
+6. **验证分层而非一刀切**：硬门只覆盖 controller truth、certified assets、schema boundary 和 simulation determinism；日常 UI/workbench 迭代使用 focused tests + warning 记录，完整 validation suite 属于里程碑/发布门。
 7. **Opus 4.6 是唯一主观裁判**：架构/UX 决策通过 Opus 4.6 审查 Gate。
 8. **冻结期不做新功能**：Project Freeze 期间只做治理维护和 UI 质量改进。
+
+## Validation Tier Policy（v2.2）
+
+当前项目不再把所有 validation gate 都等同于硬门。可靠逻辑电路仿真工作台的日常开发主路径按三层执行：
+
+- **Tier 0 hard holds**：controller truth / adapter semantics、frozen/certified assets、public schema/import/export/archive boundary、simulation determinism。触发即停。
+- **Tier 1 daily warnings**：focused pytest、默认 pytest 或 validation-suite 子集、adversarial/fault-injection 子集、workbench smoke/e2e 子集。失败必须披露，但只有证明 Tier 0 受损时才阻止继续迭代。
+- **Tier 2 milestone gates**：full opt-in e2e、full shared validation suite、full strict mypy clean、release manifest、Opus/Kogami 架构或 UX 审查。它们阻止 release/certification/milestone claim，不阻止普通 sandbox UX 切片。
+
+执行细则见 `docs/coordination/workbench-validation-tier-policy.md`。
 
 ## 已验证能力
 
@@ -46,7 +57,7 @@
 - ✅ AI 辅助文档分析（spec → ambiguity → clarification → structured prompt）
 - ✅ 文档 → diagnosis 端到端 pipeline
 - ✅ Playwright headless smoke 测试覆盖 UI 关键路径
-- ✅ 23-command GSD validation suite 全自动回归保护（P0-P16 基线）
+- ✅ 分层 validation 策略：日常开发走 focused tests / warning；完整 GSD validation suite 用作里程碑/发布证据
 - ✅ Fault injection UI + 后端 overrides 桥接（P17, 2026-04-15；P18 退场后实验室保留）
 - ✅ Hardware partial unfreeze — YAML schema + Monte Carlo + 反诊断（P19, 2026-04-17）
 - ✅ Three-track test discipline — pytest 默认 684/1skip + opt-in e2e 49 + adversarial 8/8（P31 re-land baseline 2026-04-20）
@@ -97,4 +108,4 @@ v5.2 红线 **不替代** 8 条绝对边界，两者是正交的：
 
 ---
 
-*v1 已废止。v2 为 2026-04-15 治理整改重建版；v2.1 为 2026-04-20 P32 W6 刷新，补 Milestone 9 Lifted 叙述 + v5.2 Solo Mode 纪律。*
+*v1 已废止。v2 为 2026-04-15 治理整改重建版；v2.1 为 2026-04-20 P32 W6 刷新，补 Milestone 9 Lifted 叙述 + v5.2 Solo Mode 纪律；v2.2 为 2026-05-07 validation tier 瘦身。*
