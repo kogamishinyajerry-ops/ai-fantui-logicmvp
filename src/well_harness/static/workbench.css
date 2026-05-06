@@ -5950,6 +5950,13 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
 .workbench-editable-node[data-subsystem-id] {
   border-color: rgba(184, 151, 255, 0.72);
 }
+.workbench-editable-node[data-subsystem-id]:hover,
+.workbench-editable-node[data-subsystem-active="true"] {
+  border-color: rgba(37, 99, 235, 0.9);
+  box-shadow:
+    0 0 0 2px rgba(37, 99, 235, 0.2),
+    0 10px 24px rgba(15, 23, 42, 0.16);
+}
 .workbench-editable-node[data-subsystem-id]::before {
   content: attr(data-subsystem-label);
   position: absolute;
@@ -5967,6 +5974,12 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.workbench-editable-node[data-subsystem-id]:hover::before,
+.workbench-editable-node[data-subsystem-active="true"]::before {
+  border-color: rgba(191, 219, 254, 0.58);
+  background: rgba(29, 78, 216, 0.88);
+  color: rgba(239, 246, 255, 0.96);
+}
 .workbench-subsystem-overlay {
   position: absolute;
   left: var(--subsystem-left, 0%);
@@ -5982,6 +5995,12 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   background: rgba(184, 151, 255, 0.07);
   pointer-events: none;
   z-index: 1;
+}
+.workbench-subsystem-overlay[data-subsystem-active="true"] {
+  border-color: rgba(37, 99, 235, 0.86);
+  border-style: solid;
+  background: rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
 }
 .workbench-subsystem-overlay-label,
 .workbench-subsystem-overlay-meta {
