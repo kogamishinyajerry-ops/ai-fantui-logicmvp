@@ -20217,9 +20217,10 @@ function installEditableWorkbenchShell() {
 
   function buildWorkbenchGateClaims() {
     return {
-      default_pytest: "required",
-      gsd_validation: "required",
-      adversarial: "required",
+      hard_hold_policy: "required",
+      default_pytest: "warning",
+      gsd_validation: "warning",
+      adversarial: "warning",
       e2e_49_49: "not_claimed",
       mypy_strict_clean: "not_claimed",
     };
@@ -20228,15 +20229,21 @@ function installEditableWorkbenchShell() {
   function buildWorkbenchKnownBlockers() {
     return [
       {
-        gate: "e2e 49/49",
-        status: "not_claimed_clean",
-        evidence: "Workbench archive is local draft evidence; e2e 49/49 is not claimed from this UI export.",
+        gate: "workbench Tier 0 hard holds",
+        status: "policy_guard",
+        evidence: "Stop only for controller truth, frozen/certified assets, public schema boundary, or simulation determinism regressions.",
+        truth_effect: "none",
+      },
+      {
+        gate: "full opt-in e2e",
+        status: "milestone_only_not_claimed",
+        evidence: "Workbench archive is local draft evidence; full opt-in e2e is release/milestone evidence, not claimed from this UI export.",
         truth_effect: "none",
       },
       {
         gate: "PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
-        status: "known_baseline_blocker",
-        evidence: "JER-171 defines the official mypy evidence command; current full-repo strict gate is blocked, not clean.",
+        status: "milestone_only_known_blocker",
+        evidence: "JER-171 defines the official mypy evidence command; current full-repo strict gate is milestone-only and not clean.",
         truth_effect: "none",
       },
     ];
@@ -20531,11 +20538,11 @@ function installEditableWorkbenchShell() {
       known_blockers: buildWorkbenchKnownBlockers(),
       required_test_evidence: [
         "targeted pytest",
-        "default pytest",
-        "GSD validation suite",
-        "adversarial 8/8",
-        "full e2e status with known blockers declared",
-        "mypy gate status with JER-171 blocker declared",
+        "Tier 0 hard-hold disclosure",
+        "default pytest or GSD slice as daily warning when relevant",
+        "adversarial/fault lane as daily warning when relevant",
+        "full e2e status as milestone-only when not run",
+        "mypy gate status as milestone-only with JER-171 blocker declared",
       ],
     };
   }
@@ -20689,6 +20696,7 @@ function installEditableWorkbenchShell() {
         "Workbench preflight analyzer report.",
         "Structured ChangeRequest proof packet.",
         "PR proof packet with test delta.",
+        "Tier 0 hard-hold disclosure: controller truth, frozen/certified assets, schema boundary, and simulation determinism.",
       ],
       red_line_metadata: {
         red_lines_touched: "none",
@@ -20776,8 +20784,9 @@ function installEditableWorkbenchShell() {
       "- Rule parameter summary.",
       "- Draft snapshot manifest.",
       "- Targeted pytest and PR proof packet.",
+      "- Tier 0 hard-hold disclosure: controller truth, frozen/certified assets, schema boundary, and simulation determinism.",
       "- Official mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json.",
-      "- e2e 49/49 and mypy --strict clean are not claimed from this local UI archive.",
+      "- Full e2e and mypy --strict clean are milestone-only and are not claimed from this local UI archive.",
       "",
       "## Red Lines",
       `- Red lines touched: ${packet.red_lines_touched}`,
@@ -20788,11 +20797,12 @@ function installEditableWorkbenchShell() {
       "",
       "## Test Delta",
       "- targeted pytest: pending",
-      "- default pytest: pending",
-      "- GSD validation suite: pending",
-      "- adversarial 8/8: pending",
-      "- e2e 49/49: not claimed",
-      "- mypy --strict clean: not claimed",
+      "- Tier 0 hard holds: none disclosed",
+      "- default pytest: daily warning unless run on the PR",
+      "- GSD validation suite: daily warning unless run on the PR",
+      "- adversarial/fault lane: daily warning unless relevant and run",
+      "- full e2e: milestone-only / not claimed",
+      "- mypy --strict clean: milestone-only / not claimed",
       "",
       "## Metadata",
       `- Adapter: ${packet.adapter}`,
@@ -20828,7 +20838,7 @@ function installEditableWorkbenchShell() {
       `Layer: ${packet.layer}`,
       `Truth-level impact: ${packet.truth_level_impact}`,
       `Red lines touched: ${packet.red_lines_touched}`,
-      "Test delta: targeted pytest pending / default pytest pending / GSD pending / e2e 49/49 not claimed / mypy --strict clean not claimed",
+      "Test delta: targeted pytest pending / Tier 0 hard holds none disclosed / broad gates warning-or-milestone-only / mypy --strict clean not claimed",
       "",
       `Candidate state: ${packet.candidate_state}`,
       `Certification claim: ${packet.certification_claim}`,
@@ -20850,6 +20860,7 @@ function installEditableWorkbenchShell() {
       `Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
       `Proof packet checksum: ${checksumEvidenceArchiveField(packet)}`,
       "Mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
+      "Gate policy: only controller truth, certified assets, schema boundary, and simulation determinism are hard holds.",
       "No live Linear mutation; this packet is copy-ready evidence only.",
     ].join("\n");
   }
