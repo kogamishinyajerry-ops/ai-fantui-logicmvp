@@ -21958,7 +21958,7 @@ function installEditableWorkbenchShell() {
     }
     if (commandPaletteStatus) {
       commandPaletteStatus.textContent =
-        `${visibleCount} command(s). ${commandPaletteVersion}. No live Linear mutation.`;
+        `${visibleCount} 个命令 · ${commandPaletteVersion} · 无实时 Linear 写入 · No live Linear mutation.`;
     }
     return visibleCount;
   }
@@ -21978,7 +21978,7 @@ function installEditableWorkbenchShell() {
     if (!commandPalette) return;
     commandPalette.hidden = true;
     if (commandPaletteStatus) {
-      commandPaletteStatus.textContent = "Command surface idle. No live Linear mutation.";
+      commandPaletteStatus.textContent = "命令面板空闲。无实时 Linear 写入 · No live Linear mutation.";
     }
   }
 
@@ -22011,7 +22011,7 @@ function installEditableWorkbenchShell() {
     updateEditableDraftHash();
     if (commandPaletteStatus) {
       commandPaletteStatus.textContent =
-        `Command ${commandId} recorded as sandbox workspace metadata. No live Linear mutation.`;
+        `命令 ${commandId} 已记录为沙箱工作台元数据。无实时 Linear 写入 · No live Linear mutation.`;
     }
     return result || null;
   }
@@ -22025,7 +22025,7 @@ function installEditableWorkbenchShell() {
       wire_edge: () => {
         setEditorTool("edge");
         if (graphValidationStatus) {
-          graphValidationStatus.textContent = "Graph validation: wire mode armed from command palette.";
+          graphValidationStatus.textContent = "图验证：已从命令面板进入连线模式。";
         }
         return currentEditorTool;
       },
@@ -22043,7 +22043,7 @@ function installEditableWorkbenchShell() {
     const action = commandActions[commandId];
     if (!action) {
       if (commandPaletteStatus) {
-        commandPaletteStatus.textContent = `Unknown command ${commandId || "unknown"}.`;
+        commandPaletteStatus.textContent = `未知命令 ${commandId || "unknown"}。`;
       }
       return null;
     }
@@ -22055,7 +22055,7 @@ function installEditableWorkbenchShell() {
     } catch (err) {
       if (commandPaletteStatus) {
         commandPaletteStatus.textContent =
-          `Command ${commandId} failed locally: ${err && err.message ? err.message : "unknown error"}.`;
+          `命令 ${commandId} 本地执行失败：${err && err.message ? err.message : "unknown error"}。`;
       }
       throw err;
     }
