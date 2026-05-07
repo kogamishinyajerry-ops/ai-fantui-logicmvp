@@ -695,6 +695,81 @@ def test_workbench_canvas_first_default_and_explicit_reference_proof_load(demo_s
     assert empty_canvas_state["authoringMode"] == "empty_authoring"
 
 
+def test_workbench_system_toggle_updates_adapter_backed_runtime_proof_rail(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    initial = page.evaluate(
+        """
+        () => {
+          const rail = document.getElementById('workbench-runtime-generalization-proof');
+          return {
+            system: rail?.getAttribute('data-runtime-proof-system') || '',
+            adapter: document.getElementById('workbench-runtime-proof-adapter-id')?.textContent.trim() || '',
+            source: document.getElementById('workbench-runtime-proof-source')?.textContent.trim() || '',
+            contracts: document.getElementById('workbench-runtime-proof-contracts')?.textContent.trim() || '',
+            boundary: document.getElementById('workbench-runtime-proof-boundary')?.textContent.trim() || '',
+            uiOnlyTruthPath: rail?.getAttribute('data-ui-only-truth-path') || '',
+            truthEffect: rail?.getAttribute('data-truth-effect') || '',
+            controllerTruthModified: rail?.getAttribute('data-controller-truth-modified') || '',
+          };
+        }
+        """
+    )
+
+    assert initial["system"] == "thrust-reverser"
+    assert initial["adapter"] == "reference-deploy-controller"
+    assert initial["source"] == "src/well_harness/controller.py"
+    assert "playback_report" in initial["contracts"]
+    assert "knowledge_artifact" in initial["contracts"]
+    assert "truth_effect: none" in initial["boundary"]
+    assert initial["uiOnlyTruthPath"] == "false"
+    assert initial["truthEffect"] == "none"
+    assert initial["controllerTruthModified"] == "false"
+
+    page.click('[data-circuit-system="c919-etras"]')
+    page.wait_for_function(
+        """
+        () => {
+          const rail = document.getElementById('workbench-runtime-generalization-proof');
+          return rail?.getAttribute('data-runtime-proof-system') === 'c919-etras'
+            && document.getElementById('workbench-runtime-proof-adapter-id')?.textContent.trim()
+              === 'c919-etras-controller-adapter';
+        }
+        """
+    )
+    c919 = page.evaluate(
+        """
+        () => {
+          const rail = document.getElementById('workbench-runtime-generalization-proof');
+          return {
+            system: rail?.getAttribute('data-runtime-proof-system') || '',
+            label: document.getElementById('workbench-runtime-proof-system-label')?.textContent.trim() || '',
+            adapter: document.getElementById('workbench-runtime-proof-adapter-id')?.textContent.trim() || '',
+            source: document.getElementById('workbench-runtime-proof-source')?.textContent.trim() || '',
+            contracts: document.getElementById('workbench-runtime-proof-contracts')?.textContent.trim() || '',
+            boundary: document.getElementById('workbench-runtime-proof-boundary')?.textContent.trim() || '',
+            uiOnlyTruthPath: rail?.getAttribute('data-ui-only-truth-path') || '',
+            truthEffect: rail?.getAttribute('data-truth-effect') || '',
+            controllerTruthModified: rail?.getAttribute('data-controller-truth-modified') || '',
+          };
+        }
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert c919["system"] == "c919-etras"
+    assert "C919 E-TRAS" in c919["label"]
+    assert c919["adapter"] == "c919-etras-controller-adapter"
+    assert c919["source"] == "src/well_harness/adapters/c919_etras_adapter.py"
+    assert "controller_truth_metadata" in c919["contracts"]
+    assert "fault_diagnosis_report" in c919["contracts"]
+    assert "UI-only truth path: false" in c919["boundary"]
+    assert c919["uiOnlyTruthPath"] == "false"
+    assert c919["truthEffect"] == "none"
+    assert c919["controllerTruthModified"] == "false"
+
+
 def test_workbench_new_engineer_onboarding_guide_highlights_full_flow(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
@@ -1214,6 +1289,27 @@ def test_workbench_evidence_archive_exports_gate_claims_and_blockers(demo_server
     assert archive["red_line_metadata"]["live_linear_mutation"] is False
     assert archive["checksums"]["gate_claims_checksum"]
     assert archive["checksums"]["known_blockers_checksum"]
+
+
+def test_workbench_release_maturity_rail_renders_local_operations_gates(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.wait_for_selector("#workbench-release-maturity-rail")
+    rail = page.locator("#workbench-release-maturity-rail")
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert rail.get_attribute("data-release-maturity-scope") == "local_only"
+    assert rail.get_attribute("data-release-maturity-truth-effect") == "none"
+    assert rail.get_attribute("data-release-maturity-controller-truth-modified") == "false"
+    assert rail.get_attribute("data-release-maturity-certification-claim") == "none"
+    assert page.locator('[data-release-gate-id="local_smoke"]').get_attribute("data-release-gate-status") == "rerun_required"
+    assert page.locator('[data-release-gate-id="targeted_e2e"]').get_attribute("data-release-gate-status") == "warning"
+    assert page.locator('[data-release-gate-id="full_gsd"]').get_attribute("data-release-gate-status") == "warning"
+    assert page.locator('[data-release-gate-id="mypy_strict_clean"]').get_attribute("data-release-gate-status") == "not_claimed"
+    assert page.locator('[data-release-gate-id="controller_truth"]').get_attribute("data-release-gate-status") == "pass"
+    assert "仅本地证据" in rail.inner_text()
+    assert "controller truth unchanged" in rail.inner_text()
 
 
 def test_workbench_interface_binding_round_trips_through_export_import_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
@@ -1915,6 +2011,12 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
     assert archive["review_archive_regression_bundle_v3"]["kind"] == "well-harness-workbench-review-archive-regression-bundle"
     assert archive["review_archive_regression_bundle_v3"]["full_e2e_49_49_claim"] == "not_claimed"
     assert archive["review_archive_regression_bundle_v3"]["mypy_strict_clean_claim"] == "not_claimed"
+    assert archive["review_archive_regression_bundle_v3"]["restore_review_checklist"]["kind"] == (
+        "well-harness-workbench-archive-restore-review-checklist"
+    )
+    assert archive["review_archive_regression_bundle_v3"]["restore_review_checklist"]["status"] == "pass"
+    assert archive["review_archive_regression_bundle_v3"]["restore_review_checklist"]["items"]["graph_review"]["status"] == "pass"
+    assert archive["review_archive_regression_bundle_v3"]["restore_review_checklist"]["items"]["checksums_review"]["status"] == "pass"
     assert archive["checksums"]["review_archive_regression_bundle_v3_checksum"]
 
     page.click("#workbench-start-empty-draft-btn")
@@ -1932,6 +2034,13 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
     assert validation["checksum_mismatch_count"] == 0
     assert validation["red_line_status"] == "pass"
     assert bundle["restore_validation_status"] == "pass"
+    assert bundle["restore_review_checklist"]["status"] == "pass"
+    assert bundle["restore_review_checklist"]["items"]["graph_review"]["status"] == "pass"
+    assert bundle["restore_review_checklist"]["items"]["tests_review"]["status"] == "pass"
+    assert bundle["restore_review_checklist"]["items"]["traces_review"]["status"] == "pass"
+    assert bundle["restore_review_checklist"]["items"]["evidence_review"]["status"] == "pass"
+    assert bundle["restore_review_checklist"]["items"]["checksums_review"]["status"] == "pass"
+    assert bundle["restore_review_checklist"]["items"]["handoff_review"]["status"] == "pass"
     assert bundle["restored_graph"]["node_count"] == expected_node_count
     assert bundle["restored_graph"]["edge_count"] == expected_edge_count
     assert bundle["full_e2e_49_49_claim"] == "not_claimed"
@@ -1939,6 +2048,10 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
     assert restored["editable_graph_document"]["node_count"] == expected_node_count
     assert restored["editable_graph_document"]["edge_count"] == expected_edge_count
     assert restored["hardware_evidence_attachment_v2"]["attachment_count"] >= 1
+    assert page.locator("#workbench-archive-review-checklist-status").inner_text() == "通过"
+    assert page.locator('[data-archive-review-check="graph"]').get_attribute("data-check-status") == "pass"
+    assert page.locator('[data-archive-review-check="checksums"]').get_attribute("data-check-status") == "pass"
+    assert page.locator('[data-archive-review-check="handoff"]').get_attribute("data-check-status") == "pass"
     assert page.locator("#workbench-archive-status").inner_text().startswith("Restored local review archive")
 
     mutated_archive = json.loads(json.dumps(archive))
@@ -1960,6 +2073,17 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
     assert mismatch["actual_checksum"] != mismatch["expected_checksum"]
     assert mismatch["evidence_path"] == "editable_graph_document"
     assert mismatch["truth_effect"] == "none"
+    mismatch_bundle = json.loads(page.locator("#workbench-regression-bundle-output").input_value())
+    assert mismatch_bundle["restore_review_checklist"]["status"] == "fail"
+    assert mismatch_bundle["restore_review_checklist"]["items"]["checksums_review"]["status"] == "fail"
+    assert mismatch_bundle["restore_review_checklist"]["items"]["checksums_review"]["path"] == (
+        "checksums.editable_graph_document_checksum"
+    )
+    assert page.locator("#workbench-archive-review-checklist-status").inner_text() == "阻塞"
+    assert page.locator('[data-archive-review-check="checksums"]').get_attribute("data-check-status") == "fail"
+    assert "checksums.editable_graph_document_checksum" in page.locator(
+        '[data-archive-review-check="checksums"]'
+    ).inner_text()
     assert page.locator("#workbench-archive-status").inner_text().startswith("Review archive restore blocked")
 
 
@@ -3245,6 +3369,13 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
     assert overlay.get_attribute("data-subsystem-node-count") == "2"
     assert overlay.get_attribute("data-truth-effect") == "none"
     assert overlay.get_attribute("data-subsystem-active") == "true"
+    assert overlay.get_attribute("data-subsystem-workflow-state") == "grouped"
+    assert overlay.get_attribute("data-subsystem-name") == "Deploy interlock"
+    assert page.locator("#workbench-subsystem-editor").get_attribute("data-subsystem-workflow-state") == "grouped"
+    assert page.locator("#workbench-subsystem-editor").get_attribute("data-subsystem-selected-count") == "2"
+    assert page.locator("#workbench-subsystem-selection-count").inner_text() == "已选 2"
+    assert page.locator("#workbench-subsystem-active-name").inner_text() == "Deploy interlock"
+    assert page.locator("#workbench-subsystem-workflow-state").inner_text() == "已封装"
     assert "Deploy interlock" in overlay.inner_text()
     assert "2 draft node(s)" in overlay.inner_text()
     assert "truth effect none" in overlay.inner_text()
@@ -3270,6 +3401,11 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
     assert renamed["subsystem_groups"][0]["name"] == "Deploy interlock v2"
     assert "Deploy interlock v2" in page.locator(".workbench-subsystem-overlay").inner_text()
     assert page.locator(".workbench-subsystem-overlay").get_attribute("data-subsystem-active") == "true"
+    assert page.locator(".workbench-subsystem-overlay").get_attribute("data-subsystem-workflow-state") == "renamed"
+    assert page.locator(".workbench-subsystem-overlay").get_attribute("data-subsystem-name") == "Deploy interlock v2"
+    assert page.locator("#workbench-subsystem-editor").get_attribute("data-subsystem-workflow-state") == "renamed"
+    assert page.locator("#workbench-subsystem-active-name").inner_text() == "Deploy interlock v2"
+    assert page.locator("#workbench-subsystem-workflow-state").inner_text() == "已重命名"
     assert "Renamed subsystem" in status.inner_text()
     assert "Deploy interlock v2" in status.inner_text()
     assert status.get_attribute("data-status-tone") == "success"
@@ -3298,6 +3434,10 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
     assert [edge["id"] for edge in ungrouped["edges"]] == before_edge_ids
     assert [port["id"] for port in ungrouped["typed_ports"]] == before_port_ids
     assert all("subsystem_group" not in node for node in ungrouped["nodes"] if node["id"].startswith("draft_node_"))
+    assert page.locator("#workbench-subsystem-editor").get_attribute("data-subsystem-workflow-state") == "ungrouped"
+    assert page.locator("#workbench-subsystem-selection-count").inner_text() == "已选 2"
+    assert page.locator("#workbench-subsystem-active-name").inner_text() == "无"
+    assert page.locator("#workbench-subsystem-workflow-state").inner_text() == "已解除"
     assert "Ungrouped Deploy interlock v2" in status.inner_text()
     assert status.get_attribute("data-status-tone") == "success"
 
@@ -4977,6 +5117,92 @@ def test_workbench_candidate_debugger_view_tracks_failing_assertion_and_archive(
     assert archive["candidate_debugger_view"]["truth_effect"] == "none"
     assert archive["candidate_debugger_view"]["first_failing_assertion"]["target"] == "draft_node_1:out"
     assert archive["checksums"]["candidate_debugger_view_checksum"]
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
+def test_workbench_scenario_failure_explanation_links_assertion_frame_owner_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-op-catalog-op="compare"]')
+    page.click('[data-editor-tool="node"]')
+    _fill_workbench_run_control(page, "#workbench-test-bench-inputs-json",
+        json.dumps(
+            [
+                {"tick": 0, "inputs": {"draft_node_1:in": 2, "draft_node_1": 2}},
+                {"tick": 1, "inputs": {"draft_node_1:in": 8, "draft_node_1": 8}},
+            ]
+        ),
+    )
+    _fill_workbench_run_control(page, "#workbench-test-bench-assertions-json",
+        json.dumps(
+            [
+                {"tick": 0, "target": "draft_node_1:out", "expected": True},
+                {"tick": 1, "target": "draft_node_1:out", "expected": True},
+            ]
+        ),
+    )
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
+    page.wait_for_function(
+        """
+        () => document.getElementById('workbench-failure-explanation-status')?.textContent.trim() === 'fail'
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert page.locator("#workbench-scenario-failure-explanation").get_attribute("data-explanation-status") == "fail"
+    assert page.locator("#workbench-scenario-failure-explanation").get_attribute("data-explanation-truth-effect") == "none"
+    assert "draft_node_1:out" in page.locator("#workbench-failure-explanation-assertion").inner_text()
+    assert "tick=0" in page.locator("#workbench-failure-explanation-frame").inner_text()
+    assert "node:draft_node_1" in page.locator("#workbench-failure-explanation-owner").inner_text()
+    assert "port:draft_node_1:out" in page.locator("#workbench-failure-explanation-owner").inner_text()
+    assert page.locator("#workbench-failure-explanation-current").inner_text() == "false"
+    assert page.locator("#workbench-failure-explanation-expected").inner_text() == "true"
+    assert "draft_node_1:in=2" in page.locator("#workbench-failure-explanation-upstream").inner_text()
+    assert page.locator("#workbench-failure-explanation-truth-effect").inner_text() == "none"
+
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    explanation = draft["scenario_failure_explanation"]
+    assert explanation["kind"] == "well-harness-workbench-scenario-failure-explanation"
+    assert explanation["version"] == "workbench-scenario-failure-explanation.v1"
+    assert explanation["status"] == "fail"
+    assert explanation["assertion"]["target"] == "draft_node_1:out"
+    assert explanation["timeline_frame"]["tick"] == 0
+    assert explanation["target"]["owner_key"] == "node:draft_node_1"
+    assert explanation["target"]["port_id"] == "draft_node_1:out"
+    assert explanation["current_value"] is False
+    assert explanation["expected_value"] is True
+    assert explanation["upstream_dependencies"][0]["port_id"] == "draft_node_1:in"
+    assert explanation["upstream_dependencies"][0]["value"] == 2
+    assert explanation["candidate_state"] == "sandbox_candidate"
+    assert explanation["certification_claim"] == "none"
+    assert explanation["truth_effect"] == "none"
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    _set_draft_buffer_value(page, draft_json)
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert imported["scenario_failure_explanation"]["target"]["owner_key"] == "node:draft_node_1"
+    assert imported["scenario_failure_explanation"]["upstream_dependencies"][0]["truth_effect"] == "none"
+
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["scenario_failure_explanation"]["truth_effect"] == "none"
+    assert archive["scenario_failure_explanation"]["assertion"]["target"] == "draft_node_1:out"
+    assert archive["checksums"]["scenario_failure_explanation_checksum"]
+    assert archive["foundation_review_archive"]["sections"]["scenario_failure_explanation"]["status"] == "present"
+    assert archive["review_archive_restore_v3"]["status"] == "pass"
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 

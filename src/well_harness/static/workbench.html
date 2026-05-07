@@ -157,6 +157,42 @@
         aria-pressed="false"
       >C919 E-TRAS</button>
     </div>
+    <section
+      id="workbench-runtime-generalization-proof"
+      class="workbench-runtime-generalization-proof"
+      aria-label="适配器运行证明 · Adapter-backed runtime proof"
+      data-runtime-proof-system="thrust-reverser"
+      data-ui-only-truth-path="false"
+      data-truth-effect="none"
+      data-controller-truth-modified="false"
+    >
+      <div class="workbench-runtime-proof-heading">
+        <span>适配器运行证明</span>
+        <strong id="workbench-runtime-proof-system-label">反推参考系统</strong>
+      </div>
+      <dl class="workbench-runtime-proof-grid">
+        <div>
+          <dt>Adapter</dt>
+          <dd id="workbench-runtime-proof-adapter-id">reference-deploy-controller</dd>
+        </div>
+        <div>
+          <dt>Source</dt>
+          <dd id="workbench-runtime-proof-source">src/well_harness/controller.py</dd>
+        </div>
+        <div>
+          <dt>Contracts</dt>
+          <dd id="workbench-runtime-proof-contracts">
+            controller_truth_metadata · control_system_spec · playback_report · fault_diagnosis_report · knowledge_artifact
+          </dd>
+        </div>
+        <div>
+          <dt>Boundary</dt>
+          <dd id="workbench-runtime-proof-boundary">
+            UI-only truth path: false · truth_effect: none · controller truth unchanged
+          </dd>
+        </div>
+      </dl>
+    </section>
     <main class="shell workbench-shell">
       <!-- P52-07 (2026-04-27): new-circuit creation flow.
            Replaces the P52-01 "Coming soon" stub with a real template
@@ -422,6 +458,73 @@
         </span>
         <span class="workbench-sow-flag" aria-hidden="false">
           仅参考，非真值引擎实时读数 · advisory · not a live truth-engine reading
+        </span>
+      </section>
+
+      <section
+        id="workbench-release-maturity-rail"
+        class="workbench-release-maturity-rail"
+        aria-label="Release maturity and local operations status"
+        data-release-maturity-scope="local_only"
+        data-release-maturity-truth-effect="none"
+        data-release-maturity-controller-truth-modified="false"
+        data-release-maturity-certification-claim="none"
+      >
+        <span class="workbench-release-maturity-eyebrow">发布成熟度</span>
+        <span
+          class="workbench-release-gate"
+          data-release-gate-id="controller_truth"
+          data-release-gate-status="pass"
+        >
+          <span class="workbench-release-gate-label">真值边界</span>
+          <strong data-release-gate-value="controller_truth">pass</strong>
+        </span>
+        <span
+          class="workbench-release-gate"
+          data-release-gate-id="local_smoke"
+          data-release-gate-status="rerun_required"
+        >
+          <span class="workbench-release-gate-label">本地运行</span>
+          <strong data-release-gate-value="local_smoke">rerun-required</strong>
+        </span>
+        <span
+          class="workbench-release-gate"
+          data-release-gate-id="targeted_e2e"
+          data-release-gate-status="warning"
+        >
+          <span class="workbench-release-gate-label">目标 e2e</span>
+          <strong data-release-gate-value="targeted_e2e">warning</strong>
+        </span>
+        <span
+          class="workbench-release-gate"
+          data-release-gate-id="full_gsd"
+          data-release-gate-status="warning"
+        >
+          <span class="workbench-release-gate-label">GSD 套件</span>
+          <strong data-release-gate-value="full_gsd">warning</strong>
+        </span>
+        <span
+          class="workbench-release-gate"
+          data-release-gate-id="release_manifest"
+          data-release-gate-status="blocked"
+        >
+          <span class="workbench-release-gate-label">manifest</span>
+          <strong data-release-gate-value="release_manifest">blocked</strong>
+        </span>
+        <span
+          class="workbench-release-gate"
+          data-release-gate-id="mypy_strict_clean"
+          data-release-gate-status="not_claimed"
+        >
+          <span class="workbench-release-gate-label">mypy strict</span>
+          <strong data-release-gate-value="mypy_strict_clean">未声明</strong>
+        </span>
+        <span
+          id="workbench-release-maturity-summary"
+          class="workbench-release-maturity-summary"
+          data-release-maturity-summary="local_only"
+        >
+          仅本地证据 · controller truth unchanged · no certification claim
         </span>
       </section>
 
@@ -1114,19 +1217,35 @@
                 id="workbench-subsystem-editor"
                 class="workbench-subsystem-editor"
                 aria-labelledby="workbench-subsystem-title"
+                data-subsystem-workflow-state="idle"
+                data-subsystem-selected-count="0"
               >
                 <div class="workbench-inspector-header">
-                  <span id="workbench-subsystem-title">Subsystem</span>
+                  <span id="workbench-subsystem-title">子系统封装 / Subsystem</span>
                   <strong id="workbench-subsystem-owner">none</strong>
                 </div>
+                <dl class="workbench-subsystem-workflow-summary" aria-label="Subsystem workflow summary">
+                  <div>
+                    <dt>选择</dt>
+                    <dd id="workbench-subsystem-selection-count">已选 0</dd>
+                  </div>
+                  <div>
+                    <dt>当前子系统</dt>
+                    <dd id="workbench-subsystem-active-name">无</dd>
+                  </div>
+                  <div>
+                    <dt>流程状态</dt>
+                    <dd id="workbench-subsystem-workflow-state">未选择</dd>
+                  </div>
+                </dl>
                 <label class="workbench-inspector-field" for="workbench-subsystem-name">
-                  <span>Subsystem name</span>
+                  <span>子系统名称</span>
                   <input id="workbench-subsystem-name" type="text" value="Draft subsystem">
                 </label>
                 <div class="workbench-subsystem-actions">
-                  <button id="workbench-create-subsystem-btn" type="button" class="workbench-editable-primary">Group</button>
-                  <button id="workbench-rename-subsystem-btn" type="button" class="workbench-editable-primary">Rename</button>
-                  <button id="workbench-ungroup-subsystem-btn" type="button" class="workbench-editable-primary">Ungroup</button>
+                  <button id="workbench-create-subsystem-btn" type="button" class="workbench-editable-primary">封装</button>
+                  <button id="workbench-rename-subsystem-btn" type="button" class="workbench-editable-primary">重命名</button>
+                  <button id="workbench-ungroup-subsystem-btn" type="button" class="workbench-editable-primary">解除封装</button>
                 </div>
                 <p
                   id="workbench-subsystem-status"
@@ -1135,7 +1254,7 @@
                   aria-live="polite"
                   data-status-tone="info"
                 >
-                  Subsystem edits are sandbox metadata only. Truth effect: none.
+                  子系统编辑仅写入 sandbox metadata。Truth effect: none.
                 </p>
               </section>
               <section
@@ -1840,6 +1959,51 @@
                 </p>
               </section>
               <section
+                id="workbench-scenario-failure-explanation"
+                class="workbench-scenario-failure-explanation"
+                aria-labelledby="workbench-failure-explanation-title"
+                data-explanation-status="not_run"
+                data-explanation-truth-effect="none"
+              >
+                <div class="workbench-inspector-header">
+                  <span id="workbench-failure-explanation-title">失败解释 / Failure Explanation</span>
+                  <strong id="workbench-failure-explanation-status">未运行</strong>
+                </div>
+                <dl class="workbench-failure-explanation-facts">
+                  <div>
+                    <dt>Assertion</dt>
+                    <dd id="workbench-failure-explanation-assertion">not run</dd>
+                  </div>
+                  <div>
+                    <dt>Timeline frame</dt>
+                    <dd id="workbench-failure-explanation-frame">not run</dd>
+                  </div>
+                  <div>
+                    <dt>Owner</dt>
+                    <dd id="workbench-failure-explanation-owner">not run</dd>
+                  </div>
+                  <div>
+                    <dt>Current value</dt>
+                    <dd id="workbench-failure-explanation-current">not run</dd>
+                  </div>
+                  <div>
+                    <dt>Expected value</dt>
+                    <dd id="workbench-failure-explanation-expected">not run</dd>
+                  </div>
+                  <div>
+                    <dt>Upstream</dt>
+                    <dd id="workbench-failure-explanation-upstream">not run</dd>
+                  </div>
+                  <div>
+                    <dt>Truth effect</dt>
+                    <dd id="workbench-failure-explanation-truth-effect">none</dd>
+                  </div>
+                </dl>
+                <p class="workbench-inspector-truth-note">
+                  Failure explanation is sandbox evidence only. Truth effect: none.
+                </p>
+              </section>
+              <section
                 id="workbench-preflight-analyzer"
                 class="workbench-preflight-analyzer"
                 aria-labelledby="workbench-preflight-title"
@@ -2034,6 +2198,49 @@
                     <span>Restore validation</span>
                     <textarea id="workbench-review-archive-restore-output" rows="5" readonly></textarea>
                   </label>
+                  <section
+                    class="workbench-archive-restore-review"
+                    aria-labelledby="workbench-archive-restore-review-title"
+                  >
+                    <div class="workbench-archive-restore-review-heading">
+                      <span id="workbench-archive-restore-review-title">恢复审查清单</span>
+                      <strong id="workbench-archive-review-checklist-status">待恢复</strong>
+                    </div>
+                    <ol
+                      id="workbench-archive-restore-review-checklist"
+                      class="workbench-archive-restore-review-checklist"
+                      data-checklist-status="idle"
+                      aria-label="恢复审查清单"
+                    >
+                      <li data-archive-review-check="graph" data-check-status="idle">
+                        <strong>图</strong>
+                        <span>等待 archive restore</span>
+                      </li>
+                      <li data-archive-review-check="tests" data-check-status="idle">
+                        <strong>测试</strong>
+                        <span>等待 archive restore</span>
+                      </li>
+                      <li data-archive-review-check="traces" data-check-status="idle">
+                        <strong>轨迹</strong>
+                        <span>等待 archive restore</span>
+                      </li>
+                      <li data-archive-review-check="evidence" data-check-status="idle">
+                        <strong>证据</strong>
+                        <span>等待 archive restore</span>
+                      </li>
+                      <li data-archive-review-check="checksums" data-check-status="idle">
+                        <strong>校验</strong>
+                        <span>等待 archive restore</span>
+                      </li>
+                      <li data-archive-review-check="handoff" data-check-status="idle">
+                        <strong>签批</strong>
+                        <span>等待 archive restore</span>
+                      </li>
+                    </ol>
+                    <p class="workbench-archive-restore-review-note">
+                      浏览器本地审查证据 · truth effect: none · controller truth unchanged
+                    </p>
+                  </section>
                   <label class="workbench-handoff-output" for="workbench-regression-bundle-output">
                     <span>Regression bundle</span>
                     <textarea id="workbench-regression-bundle-output" rows="5" readonly></textarea>

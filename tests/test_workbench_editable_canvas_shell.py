@@ -215,6 +215,37 @@ def test_evidence_inspector_has_editable_and_read_only_fields() -> None:
     assert 'data-evidence-api="/api/hardware/evidence?system_id=thrust-reverser"' in html
 
 
+def test_runtime_generalization_proof_rail_is_adapter_backed_and_read_only() -> None:
+    html = _html()
+    css = _css()
+    js = _js()
+
+    assert 'id="workbench-runtime-generalization-proof"' in html
+    assert 'id="workbench-runtime-proof-system-label"' in html
+    assert 'id="workbench-runtime-proof-adapter-id"' in html
+    assert 'id="workbench-runtime-proof-source"' in html
+    assert 'id="workbench-runtime-proof-contracts"' in html
+    assert 'id="workbench-runtime-proof-boundary"' in html
+    assert 'data-runtime-proof-system="thrust-reverser"' in html
+    assert "适配器运行证明" in html
+    assert ".workbench-runtime-generalization-proof" in css
+    assert ".workbench-runtime-proof-grid" in css
+    assert "runtimeGeneralizationProofCatalog" in js
+    assert "function renderRuntimeGeneralizationProofRail" in js
+    assert "reference-deploy-controller" in js
+    assert "c919-etras-controller-adapter" in js
+    assert "src/well_harness/controller.py" in js
+    assert "src/well_harness/adapters/c919_etras_adapter.py" in js
+    assert "controller_truth_metadata" in js
+    assert "control_system_spec" in js
+    assert "playback_report" in js
+    assert "fault_diagnosis_report" in js
+    assert "knowledge_artifact" in js
+    assert "ui_only_truth_path: false" in js
+    assert "controller_truth_modified: false" in js
+    assert 'truth_effect: "none"' in js
+
+
 def test_evidence_inspector_declares_mode_tabs_and_default_node_mode() -> None:
     html = _html()
     css = _css()
@@ -424,6 +455,24 @@ def test_css_declares_editable_workbench_layout() -> None:
     assert "overflow-y: auto" in css
     assert ".workbench-sandbox-timeline-strip" in css
     assert ".workbench-selected-debug-timeline" in css
+
+
+def test_workbench_shell_exposes_local_release_maturity_rail() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-release-maturity-rail"' in html
+    assert 'data-release-maturity-scope="local_only"' in html
+    assert 'data-release-maturity-truth-effect="none"' in html
+    assert "发布成熟度" in html
+    assert "本地运行" in html
+    assert "未声明" in html
+    assert "仅本地证据" in html
+    assert "controller truth unchanged" in html
+    for status in ("pass", "warning", "blocked", "rerun_required", "not_claimed"):
+        assert f'data-release-gate-status="{status}"' in html
+        assert f'[data-release-gate-status="{status}"]' in css
+    assert ".workbench-release-maturity-rail" in css
 
 
 def test_cockpit_editor_skin_makes_canvas_the_primary_work_surface() -> None:
@@ -654,21 +703,35 @@ def test_subsystem_group_editor_controls_are_exposed_as_sandbox_only_ui() -> Non
     assert 'data-editor-tool="group"' in html
     assert 'data-editor-tool="ungroup"' in html
     assert 'id="workbench-subsystem-editor"' in html
+    assert 'data-subsystem-workflow-state="idle"' in html
+    assert "子系统封装" in html
+    assert 'id="workbench-subsystem-selection-count"' in html
+    assert 'id="workbench-subsystem-active-name"' in html
+    assert 'id="workbench-subsystem-workflow-state"' in html
     assert 'id="workbench-subsystem-name"' in html
+    assert "子系统名称" in html
     assert 'id="workbench-create-subsystem-btn"' in html
     assert 'id="workbench-rename-subsystem-btn"' in html
     assert 'id="workbench-ungroup-subsystem-btn"' in html
+    assert ">封装<" in html
+    assert ">重命名<" in html
+    assert ">解除封装<" in html
     assert 'id="workbench-subsystem-status"' in html
     assert 'role="status"' in html
     assert 'aria-live="polite"' in html
     assert 'data-status-tone="info"' in html
-    assert "Subsystem edits are sandbox metadata only. Truth effect: none." in html
+    assert "子系统编辑仅写入 sandbox metadata。Truth effect: none." in html
+    assert ".workbench-subsystem-workflow-summary" in css
     assert ".workbench-subsystem-overlay" in css
     assert '.workbench-subsystem-overlay[data-subsystem-active="true"]' in css
+    assert '.workbench-subsystem-overlay[data-subsystem-workflow-state="grouped"]' in css
     assert ".workbench-subsystem-overlay-label" in css
     assert ".workbench-subsystem-overlay-meta" in css
     assert '.workbench-editable-node[data-subsystem-id]:hover' in css
     assert '.workbench-editable-node[data-subsystem-active="true"]' in css
+    assert '#workbench-subsystem-editor[data-subsystem-workflow-state="ready_to_group"]' in css
+    assert '#workbench-subsystem-editor[data-subsystem-workflow-state="grouped"]' in css
+    assert '#workbench-subsystem-editor[data-subsystem-workflow-state="ungrouped"]' in css
     assert '#workbench-subsystem-status[data-status-tone="success"]' in css
     assert '#workbench-subsystem-status[data-status-tone="warn"]' in css
     assert ".workbench-subsystem-editor" in css
@@ -784,6 +847,24 @@ def test_candidate_debugger_view_controls_are_sandbox_only_ui() -> None:
     assert ".workbench-candidate-debugger-facts" in css
 
 
+def test_scenario_failure_explanation_controls_are_sandbox_only_ui() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-scenario-failure-explanation"' in html
+    assert 'id="workbench-failure-explanation-status"' in html
+    assert 'id="workbench-failure-explanation-assertion"' in html
+    assert 'id="workbench-failure-explanation-frame"' in html
+    assert 'id="workbench-failure-explanation-owner"' in html
+    assert 'id="workbench-failure-explanation-current"' in html
+    assert 'id="workbench-failure-explanation-expected"' in html
+    assert 'id="workbench-failure-explanation-upstream"' in html
+    assert 'id="workbench-failure-explanation-truth-effect"' in html
+    assert "Failure explanation is sandbox evidence only. Truth effect: none." in html
+    assert ".workbench-scenario-failure-explanation" in css
+    assert ".workbench-failure-explanation-facts" in css
+
+
 def test_preflight_analyzer_controls_are_sandbox_only_ui() -> None:
     html = _html()
     css = _css()
@@ -876,6 +957,8 @@ def test_js_wires_subsystem_group_round_trip_as_sandbox_only_metadata() -> None:
     assert "function groupSelectedDraftNodes" in js
     assert "function renameSelectedSubsystemGroup" in js
     assert "function ungroupSelectedSubsystem" in js
+    assert "function updateSubsystemWorkflowSummary" in js
+    assert "function setSubsystemWorkflowState" in js
     assert "function renderSubsystemOverlays" in js
     assert "function setSubsystemStatus" in js
     assert "function syncSubsystemActiveAffordance" in js
@@ -884,6 +967,13 @@ def test_js_wires_subsystem_group_round_trip_as_sandbox_only_metadata() -> None:
     assert 'addEventListener("mouseenter"' in js
     assert 'addEventListener("mouseleave"' in js
     assert 'setAttribute("data-status-tone", tone)' in js
+    assert 'setAttribute("data-subsystem-workflow-state", state)' in js
+    assert 'setAttribute("data-subsystem-selected-count"' in js
+    assert 'setAttribute("data-subsystem-name"' in js
+    assert '"ready_to_group"' in js
+    assert '"grouped"' in js
+    assert '"renamed"' in js
+    assert '"ungrouped"' in js
     assert "subsystem_groups" in js
     assert "subsystem_groups truth_effect must be none" in js
     assert "subsystem_groups_checksum" in js
@@ -1213,6 +1303,23 @@ def test_js_wires_candidate_debugger_view_as_sandbox_only_archive_packet() -> No
     assert 'truth_effect: "none"' in js
 
 
+def test_js_wires_scenario_failure_explanation_as_sandbox_only_archive_packet() -> None:
+    js = _js()
+
+    assert "well-harness-workbench-scenario-failure-explanation" in js
+    assert "workbench-scenario-failure-explanation.v1" in js
+    assert "function currentScenarioFailureExplanation" in js
+    assert "function renderScenarioFailureExplanation" in js
+    assert "scenario_failure_explanation" in js
+    assert "scenario_failure_explanation_checksum" in js
+    assert "scenario_failure_explanation truth_effect must be none" in js
+    assert "upstream_dependencies" in js
+    assert "timeline_frame" in js
+    assert 'candidate_state: "sandbox_candidate"' in js
+    assert 'certification_claim: "none"' in js
+    assert 'truth_effect: "none"' in js
+
+
 def test_js_wires_debug_probe_timeline_as_sandbox_only_archive_packet() -> None:
     js = _js()
 
@@ -1242,6 +1349,26 @@ def test_js_wires_preflight_analyzer_as_sandbox_only_archive_packet() -> None:
     assert "invalid_candidate" in js
     assert "needs_evidence" in js
     assert "ready" in js
+    assert 'certification_claim: "none"' in js
+    assert 'truth_effect: "none"' in js
+
+
+def test_js_builds_release_maturity_snapshot_as_local_only_not_truth_claim() -> None:
+    js = _js()
+
+    assert "function buildWorkbenchReleaseMaturitySnapshot" in js
+    assert "function renderWorkbenchReleaseMaturitySnapshot" in js
+    assert "well-harness-workbench-release-maturity-snapshot" in js
+    assert "workbench-release-maturity.v1" in js
+    assert "local_operator_runbook" in js
+    assert "local_only" in js
+    assert "pass" in js
+    assert "warning" in js
+    assert "blocked" in js
+    assert "rerun_required" in js
+    assert "not_claimed" in js
+    assert 'controller_truth_modified: false' in js
+    assert 'candidate_state: "sandbox_candidate"' in js
     assert 'certification_claim: "none"' in js
     assert 'truth_effect: "none"' in js
 
@@ -1277,17 +1404,37 @@ def test_review_archive_restore_v3_controls_and_regression_bundle_are_sandbox_on
     assert 'id="workbench-restore-review-archive-btn"' in html
     assert 'id="workbench-review-archive-restore-output"' in html
     assert 'id="workbench-regression-bundle-output"' in html
+    assert 'id="workbench-archive-restore-review-checklist"' in html
+    assert 'id="workbench-archive-review-checklist-status"' in html
+    assert 'data-archive-review-check="graph"' in html
+    assert 'data-archive-review-check="tests"' in html
+    assert 'data-archive-review-check="traces"' in html
+    assert 'data-archive-review-check="evidence"' in html
+    assert 'data-archive-review-check="checksums"' in html
+    assert 'data-archive-review-check="handoff"' in html
+    assert "恢复审查清单" in html
     assert "well-harness-workbench-review-archive-restore-validation" in js
     assert "workbench-review-archive-restore.v3" in js
     assert "well-harness-workbench-review-archive-regression-bundle" in js
     assert "workbench-review-archive-regression-bundle.v3" in js
+    assert "well-harness-workbench-archive-restore-review-checklist" in js
+    assert "workbench-archive-restore-review-checklist.v1" in js
     assert "function validateReviewArchiveRestoreV3" in js
+    assert "function buildArchiveRestoreReviewChecklist" in js
+    assert "function renderArchiveRestoreReviewChecklist" in js
     assert "function buildReviewArchiveRegressionBundleV3" in js
     assert "function restoreReviewArchiveFromTextarea" in js
     assert "review_archive_restore_v3" in js
     assert "review_archive_restore_v3_checksum" in js
     assert "review_archive_regression_bundle_v3" in js
     assert "review_archive_regression_bundle_v3_checksum" in js
+    assert "restore_review_checklist" in js
+    assert "graph_review" in js
+    assert "tests_review" in js
+    assert "traces_review" in js
+    assert "evidence_review" in js
+    assert "checksums_review" in js
+    assert "handoff_review" in js
     assert "checksum_mismatch_count" in js
     assert "checksum_path" in js
     assert "checksum_key" in js
