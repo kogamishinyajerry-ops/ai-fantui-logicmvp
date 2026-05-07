@@ -5199,6 +5199,44 @@ def test_workbench_scenario_failure_explanation_links_assertion_frame_owner_and_
     assert page.locator("#workbench-failure-explanation-expected").inner_text() == "true"
     assert "draft_node_1:in=2" in page.locator("#workbench-failure-explanation-upstream").inner_text()
     assert page.locator("#workbench-failure-explanation-truth-effect").inner_text() == "none"
+    assert page.locator("#workbench-scenario-failure-explanation").get_attribute(
+        "data-explanation-navigation-ready"
+    ) == "true"
+    assert page.locator("#workbench-scenario-failure-explanation").get_attribute(
+        "data-explanation-navigation-owner"
+    ) == "node:draft_node_1"
+    assert page.locator("#workbench-failure-explanation-focus-frame-btn").is_enabled()
+    assert page.locator("#workbench-failure-explanation-focus-owner-btn").is_enabled()
+
+    _click_workbench_run_control(page, "#workbench-failure-explanation-focus-frame-btn")
+    assert page.locator("#workbench-sandbox-timeline-strip").get_attribute(
+        "data-failure-navigation"
+    ) == "timeline_frame"
+    assert page.locator("#workbench-sandbox-timeline-strip").get_attribute(
+        "data-failure-frame-tick"
+    ) == "0"
+    assert page.locator("#workbench-sandbox-timeline-strip").get_attribute(
+        "data-failure-navigation-owner"
+    ) == "node:draft_node_1"
+    assert page.locator("#workbench-selected-debug-link-status").inner_text() == "失败帧"
+    assert "tick=0" in page.locator("#workbench-failure-explanation-navigation-status").inner_text()
+
+    _click_workbench_run_control(page, "#workbench-failure-explanation-focus-owner-btn")
+    page.wait_for_function(
+        """
+        () => document.querySelector('[data-editable-node-id="draft_node_1"]')?.getAttribute('aria-pressed') === 'true'
+        """
+    )
+    assert page.locator("#workbench-scenario-failure-explanation").get_attribute(
+        "data-failure-navigation"
+    ) == "owner"
+    assert page.locator("#workbench-sandbox-timeline-strip").get_attribute(
+        "data-failure-navigation"
+    ) == "owner"
+    assert page.locator("#workbench-selected-debug-target").inner_text() == "node:draft_node_1"
+    assert "node:draft_node_1" in page.locator(
+        "#workbench-failure-explanation-navigation-status"
+    ).inner_text()
 
     _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())

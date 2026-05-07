@@ -7935,6 +7935,12 @@ function installEditableWorkbenchShell() {
     document.getElementById("workbench-failure-explanation-upstream");
   const scenarioFailureExplanationTruthEffect =
     document.getElementById("workbench-failure-explanation-truth-effect");
+  const scenarioFailureFocusOwnerBtn =
+    document.getElementById("workbench-failure-explanation-focus-owner-btn");
+  const scenarioFailureFocusFrameBtn =
+    document.getElementById("workbench-failure-explanation-focus-frame-btn");
+  const scenarioFailureNavigationStatus =
+    document.getElementById("workbench-failure-explanation-navigation-status");
   const preflightPanel = document.getElementById("workbench-preflight-analyzer");
   const runPreflightBtn = document.getElementById("workbench-run-preflight-btn");
   const preflightClassification = document.getElementById("workbench-preflight-classification");
@@ -8059,6 +8065,7 @@ function installEditableWorkbenchShell() {
   let lastComponentTemplateId = "";
   let capturedSubsystemTemplates = [];
   let lastSandboxTestRunReport = null;
+  let lastScenarioFailureExplanationPacket = null;
   let scenarioTestCaseLibrary = null;
   let selectedScenarioTestCaseId = "sandbox_test_case_1";
   let nextScenarioTestCaseIndex = 2;
@@ -18476,6 +18483,144 @@ function installEditableWorkbenchShell() {
     return formatDebuggerValue(explanation[key]);
   }
 
+  function scenarioFailureHasActionableFailure(packet) {
+    return Boolean(packet && packet.assertion && packet.status === "fail");
+  }
+
+  function scenarioFailureNavigationPacket() {
+    return lastScenarioFailureExplanationPacket || currentScenarioFailureExplanation("navigation");
+  }
+
+  function setScenarioFailureNavigationStatus(text) {
+    if (scenarioFailureNavigationStatus) {
+      scenarioFailureNavigationStatus.textContent = text;
+    }
+  }
+
+  function setScenarioFailureNavigationControlState(packet) {
+    const target = (packet && packet.target) || {};
+    const frame = (packet && packet.timeline_frame) || {};
+    const hasFailure = scenarioFailureHasActionableFailure(packet);
+    const ownerReady = hasFailure
+      && target.owner_kind !== "none"
+      && Boolean(target.owner_id || target.owner_key || target.edge_id);
+    const frameReady = hasFailure && frame.trace_available === true;
+    if (scenarioFailureFocusOwnerBtn) {
+      scenarioFailureFocusOwnerBtn.disabled = !ownerReady;
+      scenarioFailureFocusOwnerBtn.setAttribute("aria-disabled", ownerReady ? "false" : "true");
+    }
+    if (scenarioFailureFocusFrameBtn) {
+      scenarioFailureFocusFrameBtn.disabled = !frameReady;
+      scenarioFailureFocusFrameBtn.setAttribute("aria-disabled", frameReady ? "false" : "true");
+    }
+    if (scenarioFailureExplanationPanel) {
+      scenarioFailureExplanationPanel.setAttribute(
+        "data-explanation-navigation-ready",
+        ownerReady || frameReady ? "true" : "false",
+      );
+      scenarioFailureExplanationPanel.setAttribute(
+        "data-explanation-navigation-owner",
+        target.owner_key || "none:none",
+      );
+      scenarioFailureExplanationPanel.setAttribute(
+        "data-explanation-navigation-frame-tick",
+        frame.tick === null || frame.tick === undefined ? "none" : String(frame.tick),
+      );
+    }
+    setScenarioFailureNavigationStatus(
+      ownerReady || frameReady
+        ? "可定位失败上下文。真值影响：无。"
+        : "等待失败证据",
+    );
+  }
+
+  function markScenarioFailureNavigation(kind, packet) {
+    const target = (packet && packet.target) || {};
+    const frame = (packet && packet.timeline_frame) || {};
+    const attrs = {
+      "data-failure-navigation": kind || "none",
+      "data-failure-navigation-owner": target.owner_key || "none:none",
+      "data-failure-frame-tick": frame.tick === null || frame.tick === undefined ? "none" : String(frame.tick),
+      "data-failure-frame-index":
+        frame.frame_index === null || frame.frame_index === undefined ? "none" : String(frame.frame_index),
+      "data-failure-frame-count": String(frame.trace_frame_count || 0),
+      "data-failure-truth-effect": "none",
+    };
+    for (const element of [scenarioFailureExplanationPanel, timelineStrip]) {
+      if (!element) continue;
+      for (const [name, value] of Object.entries(attrs)) {
+        element.setAttribute(name, value);
+      }
+    }
+  }
+
+  function focusScenarioFailureFrame() {
+    const packet = scenarioFailureNavigationPacket();
+    const frame = (packet && packet.timeline_frame) || {};
+    if (!scenarioFailureHasActionableFailure(packet) || frame.trace_available !== true) {
+      setScenarioFailureNavigationStatus("没有可标记的失败时间帧。先运行失败场景。");
+      return null;
+    }
+    markScenarioFailureNavigation("timeline_frame", packet);
+    renderSelectedDebugTimeline("scenario_failure_frame");
+    if (selectedDebugTimelineLinkStatus) {
+      selectedDebugTimelineLinkStatus.textContent = "失败帧";
+    }
+    if (selectedDebugTimelineContext) {
+      selectedDebugTimelineContext.textContent =
+        `${formatScenarioFailureFrame(packet)} · ${packet.target.owner_key || "none:none"} · 真值影响：无`;
+    }
+    setScenarioFailureNavigationStatus(`已标记 ${formatScenarioFailureFrame(packet)}。真值影响：无。`);
+    return packet;
+  }
+
+  function focusScenarioFailureOwner() {
+    const packet = scenarioFailureNavigationPacket();
+    const target = (packet && packet.target) || {};
+    if (!scenarioFailureHasActionableFailure(packet)) {
+      setScenarioFailureNavigationStatus("没有可定位的失败断言。先运行失败场景。");
+      return null;
+    }
+    if (target.owner_kind === "edge") {
+      const edgeId = String(target.edge_id || target.owner_id || "").trim();
+      const edgeIndex = draftEdges.findIndex((edge) => String(edge.id || "") === edgeId);
+      if (edgeIndex < 0) {
+        setScenarioFailureNavigationStatus(`找不到责任连线 ${edgeId || "unknown"}。`);
+        return null;
+      }
+      selectEditableEdgeByIndex(edgeIndex, { preserveDiagnosticFocus: true });
+      markScenarioFailureNavigation("owner", packet);
+      renderSelectedDebugTimeline("scenario_failure_owner");
+      renderCandidateDebuggerView(currentCandidateDebuggerView("scenario_failure_owner"));
+      setScenarioFailureNavigationStatus(`已定位 ${target.owner_key || `edge:${edgeId}`}。真值影响：无。`);
+      return packet;
+    }
+
+    const ownerId = String(target.owner_id || "").trim();
+    refreshEditableNodes();
+    const node = nodes.find((candidate) => editableNodeId(candidate) === ownerId);
+    if (!node) {
+      setScenarioFailureNavigationStatus(`找不到责任节点 ${ownerId || "unknown"}。`);
+      return null;
+    }
+    selectNode(node, { preserveDiagnosticFocus: true, keepInspectorCollapsed: true });
+    if (typeof node.scrollIntoView === "function") {
+      node.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    }
+    if (typeof node.focus === "function") {
+      try {
+        node.focus({ preventScroll: true });
+      } catch (err) {
+        node.focus();
+      }
+    }
+    markScenarioFailureNavigation("owner", packet);
+    renderSelectedDebugTimeline("scenario_failure_owner");
+    renderCandidateDebuggerView(currentCandidateDebuggerView("scenario_failure_owner"));
+    setScenarioFailureNavigationStatus(`已定位 ${target.owner_key || `node:${ownerId}`}。真值影响：无。`);
+    return packet;
+  }
+
   function currentCandidateDebuggerView(state) {
     const target = candidateDebuggerTargetContext();
     const report = currentSandboxTestRunReport();
@@ -18539,6 +18684,7 @@ function installEditableWorkbenchShell() {
 
   function renderScenarioFailureExplanation(explanation) {
     const packet = explanation || currentScenarioFailureExplanation("render");
+    lastScenarioFailureExplanationPacket = packet;
     const status = packet.status || "not_run";
     if (scenarioFailureExplanationPanel) {
       scenarioFailureExplanationPanel.setAttribute("data-explanation-status", status);
@@ -18569,6 +18715,7 @@ function installEditableWorkbenchShell() {
     if (scenarioFailureExplanationTruthEffect) {
       scenarioFailureExplanationTruthEffect.textContent = packet.truth_effect || "none";
     }
+    setScenarioFailureNavigationControlState(packet);
     return packet;
   }
 
@@ -23327,6 +23474,12 @@ function installEditableWorkbenchShell() {
   }
   if (deleteTestCaseBtn) {
     deleteTestCaseBtn.addEventListener("click", () => deleteScenarioTestCase());
+  }
+  if (scenarioFailureFocusFrameBtn) {
+    scenarioFailureFocusFrameBtn.addEventListener("click", () => focusScenarioFailureFrame());
+  }
+  if (scenarioFailureFocusOwnerBtn) {
+    scenarioFailureFocusOwnerBtn.addEventListener("click", () => focusScenarioFailureOwner());
   }
   if (runPreflightBtn) {
     runPreflightBtn.addEventListener("click", () => {

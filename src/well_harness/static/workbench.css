@@ -7363,6 +7363,41 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
+.workbench-failure-explanation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+.workbench-failure-explanation-actions button {
+  min-height: 1.75rem;
+  padding: 0.32rem 0.58rem;
+  border: 1px solid rgba(125, 215, 194, 0.34);
+  border-radius: 6px;
+  background: rgba(18, 45, 54, 0.72);
+  color: rgba(235, 247, 244, 0.94);
+  font: inherit;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+.workbench-failure-explanation-actions button:hover:not(:disabled),
+.workbench-failure-explanation-actions button:focus-visible:not(:disabled) {
+  border-color: rgba(125, 215, 194, 0.62);
+  background: rgba(24, 67, 74, 0.86);
+}
+.workbench-failure-explanation-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+.workbench-failure-explanation-actions span {
+  flex: 1 1 12rem;
+  min-width: 0;
+  color: rgba(213, 227, 237, 0.72);
+  font-size: 0.65rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
 .workbench-preflight-analyzer {
   margin-top: 0.7rem;
   padding: 0.62rem;
