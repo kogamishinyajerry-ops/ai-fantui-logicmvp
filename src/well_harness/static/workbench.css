@@ -7352,6 +7352,80 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   padding-top: 0.75rem;
   border-top: 1px solid rgba(150, 173, 190, 0.18);
 }
+.workbench-archive-restore-review {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+  padding: 0.62rem;
+  border: 1px solid rgba(150, 173, 190, 0.2);
+  border-radius: 7px;
+  background: rgba(6, 14, 22, 0.72);
+}
+.workbench-archive-restore-review-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+.workbench-archive-restore-review-heading span {
+  color: rgba(245, 251, 255, 0.88);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.workbench-archive-restore-review-heading strong {
+  min-width: 3.1rem;
+  border: 1px solid rgba(150, 173, 190, 0.24);
+  border-radius: 999px;
+  color: rgba(245, 251, 255, 0.74);
+  padding: 0.13rem 0.42rem;
+  text-align: center;
+  font-size: 0.66rem;
+}
+.workbench-archive-restore-review-checklist {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.36rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.workbench-archive-restore-review-checklist li {
+  display: grid;
+  gap: 0.16rem;
+  min-height: 3.1rem;
+  border: 1px solid rgba(150, 173, 190, 0.18);
+  border-radius: 6px;
+  background: color-mix(in lch, var(--contrast) 3.5%, transparent);
+  padding: 0.42rem;
+}
+.workbench-archive-restore-review-checklist li[data-check-status="pass"] {
+  border-color: rgba(86, 195, 143, 0.5);
+  background: rgba(29, 97, 70, 0.2);
+}
+.workbench-archive-restore-review-checklist li[data-check-status="needs_evidence"] {
+  border-color: rgba(232, 181, 83, 0.48);
+  background: rgba(116, 80, 24, 0.2);
+}
+.workbench-archive-restore-review-checklist li[data-check-status="fail"] {
+  border-color: rgba(235, 105, 105, 0.54);
+  background: rgba(112, 36, 36, 0.2);
+}
+.workbench-archive-restore-review-checklist strong {
+  color: rgba(245, 251, 255, 0.82);
+  font-size: 0.66rem;
+}
+.workbench-archive-restore-review-checklist span {
+  color: rgba(213, 227, 237, 0.66);
+  font-size: 0.62rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.workbench-archive-restore-review-note {
+  margin: 0;
+  color: rgba(213, 227, 237, 0.54);
+  font-size: 0.62rem;
+  line-height: 1.35;
+}
 .workbench-handoff-generate {
   width: 100%;
   min-height: 36px;

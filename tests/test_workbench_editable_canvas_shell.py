@@ -1335,17 +1335,37 @@ def test_review_archive_restore_v3_controls_and_regression_bundle_are_sandbox_on
     assert 'id="workbench-restore-review-archive-btn"' in html
     assert 'id="workbench-review-archive-restore-output"' in html
     assert 'id="workbench-regression-bundle-output"' in html
+    assert 'id="workbench-archive-restore-review-checklist"' in html
+    assert 'id="workbench-archive-review-checklist-status"' in html
+    assert 'data-archive-review-check="graph"' in html
+    assert 'data-archive-review-check="tests"' in html
+    assert 'data-archive-review-check="traces"' in html
+    assert 'data-archive-review-check="evidence"' in html
+    assert 'data-archive-review-check="checksums"' in html
+    assert 'data-archive-review-check="handoff"' in html
+    assert "恢复审查清单" in html
     assert "well-harness-workbench-review-archive-restore-validation" in js
     assert "workbench-review-archive-restore.v3" in js
     assert "well-harness-workbench-review-archive-regression-bundle" in js
     assert "workbench-review-archive-regression-bundle.v3" in js
+    assert "well-harness-workbench-archive-restore-review-checklist" in js
+    assert "workbench-archive-restore-review-checklist.v1" in js
     assert "function validateReviewArchiveRestoreV3" in js
+    assert "function buildArchiveRestoreReviewChecklist" in js
+    assert "function renderArchiveRestoreReviewChecklist" in js
     assert "function buildReviewArchiveRegressionBundleV3" in js
     assert "function restoreReviewArchiveFromTextarea" in js
     assert "review_archive_restore_v3" in js
     assert "review_archive_restore_v3_checksum" in js
     assert "review_archive_regression_bundle_v3" in js
     assert "review_archive_regression_bundle_v3_checksum" in js
+    assert "restore_review_checklist" in js
+    assert "graph_review" in js
+    assert "tests_review" in js
+    assert "traces_review" in js
+    assert "evidence_review" in js
+    assert "checksums_review" in js
+    assert "handoff_review" in js
     assert "checksum_mismatch_count" in js
     assert "checksum_path" in js
     assert "checksum_key" in js

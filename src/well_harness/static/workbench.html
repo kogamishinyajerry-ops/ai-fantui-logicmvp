@@ -2095,6 +2095,49 @@
                     <span>Restore validation</span>
                     <textarea id="workbench-review-archive-restore-output" rows="5" readonly></textarea>
                   </label>
+                  <section
+                    class="workbench-archive-restore-review"
+                    aria-labelledby="workbench-archive-restore-review-title"
+                  >
+                    <div class="workbench-archive-restore-review-heading">
+                      <span id="workbench-archive-restore-review-title">恢复审查清单</span>
+                      <strong id="workbench-archive-review-checklist-status">待恢复</strong>
+                    </div>
+                    <ol
+                      id="workbench-archive-restore-review-checklist"
+                      class="workbench-archive-restore-review-checklist"
+                      data-checklist-status="idle"
+                      aria-label="恢复审查清单"
+                    >
+                      <li data-archive-review-check="graph" data-check-status="idle">
+                        <strong>图</strong>
+                        <span>等待 archive restore</span>
+                      </li>
+                      <li data-archive-review-check="tests" data-check-status="idle">
+                        <strong>测试</strong>
+                        <span>等待 archive restore</span>
+                      </li>
+                      <li data-archive-review-check="traces" data-check-status="idle">
+                        <strong>轨迹</strong>
+                        <span>等待 archive restore</span>
+                      </li>
+                      <li data-archive-review-check="evidence" data-check-status="idle">
+                        <strong>证据</strong>
+                        <span>等待 archive restore</span>
+                      </li>
+                      <li data-archive-review-check="checksums" data-check-status="idle">
+                        <strong>校验</strong>
+                        <span>等待 archive restore</span>
+                      </li>
+                      <li data-archive-review-check="handoff" data-check-status="idle">
+                        <strong>签批</strong>
+                        <span>等待 archive restore</span>
+                      </li>
+                    </ol>
+                    <p class="workbench-archive-restore-review-note">
+                      浏览器本地审查证据 · truth effect: none · controller truth unchanged
+                    </p>
+                  </section>
                   <label class="workbench-handoff-output" for="workbench-regression-bundle-output">
                     <span>Regression bundle</span>
                     <textarea id="workbench-regression-bundle-output" rows="5" readonly></textarea>

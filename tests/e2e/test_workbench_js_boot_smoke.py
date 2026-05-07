@@ -1915,6 +1915,12 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
     assert archive["review_archive_regression_bundle_v3"]["kind"] == "well-harness-workbench-review-archive-regression-bundle"
     assert archive["review_archive_regression_bundle_v3"]["full_e2e_49_49_claim"] == "not_claimed"
     assert archive["review_archive_regression_bundle_v3"]["mypy_strict_clean_claim"] == "not_claimed"
+    assert archive["review_archive_regression_bundle_v3"]["restore_review_checklist"]["kind"] == (
+        "well-harness-workbench-archive-restore-review-checklist"
+    )
+    assert archive["review_archive_regression_bundle_v3"]["restore_review_checklist"]["status"] == "pass"
+    assert archive["review_archive_regression_bundle_v3"]["restore_review_checklist"]["items"]["graph_review"]["status"] == "pass"
+    assert archive["review_archive_regression_bundle_v3"]["restore_review_checklist"]["items"]["checksums_review"]["status"] == "pass"
     assert archive["checksums"]["review_archive_regression_bundle_v3_checksum"]
 
     page.click("#workbench-start-empty-draft-btn")
@@ -1932,6 +1938,13 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
     assert validation["checksum_mismatch_count"] == 0
     assert validation["red_line_status"] == "pass"
     assert bundle["restore_validation_status"] == "pass"
+    assert bundle["restore_review_checklist"]["status"] == "pass"
+    assert bundle["restore_review_checklist"]["items"]["graph_review"]["status"] == "pass"
+    assert bundle["restore_review_checklist"]["items"]["tests_review"]["status"] == "pass"
+    assert bundle["restore_review_checklist"]["items"]["traces_review"]["status"] == "pass"
+    assert bundle["restore_review_checklist"]["items"]["evidence_review"]["status"] == "pass"
+    assert bundle["restore_review_checklist"]["items"]["checksums_review"]["status"] == "pass"
+    assert bundle["restore_review_checklist"]["items"]["handoff_review"]["status"] == "pass"
     assert bundle["restored_graph"]["node_count"] == expected_node_count
     assert bundle["restored_graph"]["edge_count"] == expected_edge_count
     assert bundle["full_e2e_49_49_claim"] == "not_claimed"
@@ -1939,6 +1952,10 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
     assert restored["editable_graph_document"]["node_count"] == expected_node_count
     assert restored["editable_graph_document"]["edge_count"] == expected_edge_count
     assert restored["hardware_evidence_attachment_v2"]["attachment_count"] >= 1
+    assert page.locator("#workbench-archive-review-checklist-status").inner_text() == "通过"
+    assert page.locator('[data-archive-review-check="graph"]').get_attribute("data-check-status") == "pass"
+    assert page.locator('[data-archive-review-check="checksums"]').get_attribute("data-check-status") == "pass"
+    assert page.locator('[data-archive-review-check="handoff"]').get_attribute("data-check-status") == "pass"
     assert page.locator("#workbench-archive-status").inner_text().startswith("Restored local review archive")
 
     mutated_archive = json.loads(json.dumps(archive))
@@ -1960,6 +1977,17 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
     assert mismatch["actual_checksum"] != mismatch["expected_checksum"]
     assert mismatch["evidence_path"] == "editable_graph_document"
     assert mismatch["truth_effect"] == "none"
+    mismatch_bundle = json.loads(page.locator("#workbench-regression-bundle-output").input_value())
+    assert mismatch_bundle["restore_review_checklist"]["status"] == "fail"
+    assert mismatch_bundle["restore_review_checklist"]["items"]["checksums_review"]["status"] == "fail"
+    assert mismatch_bundle["restore_review_checklist"]["items"]["checksums_review"]["path"] == (
+        "checksums.editable_graph_document_checksum"
+    )
+    assert page.locator("#workbench-archive-review-checklist-status").inner_text() == "阻塞"
+    assert page.locator('[data-archive-review-check="checksums"]').get_attribute("data-check-status") == "fail"
+    assert "checksums.editable_graph_document_checksum" in page.locator(
+        '[data-archive-review-check="checksums"]'
+    ).inner_text()
     assert page.locator("#workbench-archive-status").inner_text().startswith("Review archive restore blocked")
 
 

@@ -7778,6 +7778,8 @@ function installEditableWorkbenchShell() {
   const restoreReviewArchiveBtn = document.getElementById("workbench-restore-review-archive-btn");
   const archiveOutput = document.getElementById("workbench-evidence-archive-output");
   const reviewArchiveRestoreOutput = document.getElementById("workbench-review-archive-restore-output");
+  const archiveRestoreReviewChecklist = document.getElementById("workbench-archive-restore-review-checklist");
+  const archiveReviewChecklistStatus = document.getElementById("workbench-archive-review-checklist-status");
   const regressionBundleOutput = document.getElementById("workbench-regression-bundle-output");
   const archiveStatus = document.getElementById("workbench-archive-status");
   const openCommandPaletteBtn = document.getElementById("workbench-open-command-palette-btn");
@@ -21714,6 +21716,10 @@ function installEditableWorkbenchShell() {
     "well-harness-workbench-review-archive-regression-bundle";
   const reviewArchiveRegressionBundleVersion =
     "workbench-review-archive-regression-bundle.v3";
+  const archiveRestoreReviewChecklistKind =
+    "well-harness-workbench-archive-restore-review-checklist";
+  const archiveRestoreReviewChecklistVersion =
+    "workbench-archive-restore-review-checklist.v1";
   const foundationReviewArchiveSectionSpec = [
     ["workspace_document", "workspace_document_checksum"],
     ["editable_graph_document", "editable_graph_document_checksum"],
@@ -22157,6 +22163,248 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function firstArchiveRestoreFinding(validation, predicate) {
+    const findings = validation && Array.isArray(validation.findings)
+      ? validation.findings
+      : [];
+    return findings.find((finding) => finding && predicate(finding)) || null;
+  }
+
+  function reviewArchiveMissingSectionFinding(validation, sectionKey) {
+    return firstArchiveRestoreFinding(
+      validation,
+      (finding) => (
+        finding.code === "review_archive_restore_missing_section"
+        && finding.section === sectionKey
+      ),
+    );
+  }
+
+  function reviewArchiveChecksumFinding(validation) {
+    return firstArchiveRestoreFinding(
+      validation,
+      (finding) => (
+        typeof finding.code === "string"
+        && (
+          finding.code.includes("checksum")
+          || finding.code === "review_archive_restore_missing_section"
+        )
+      ),
+    );
+  }
+
+  function archiveRestoreReviewItem(itemId, status, evidenceKey, summary, options) {
+    const itemOptions = options || {};
+    return {
+      item_id: itemId,
+      status,
+      evidence_key: evidenceKey,
+      summary,
+      path: itemOptions.path || evidenceKey,
+      checksum_key: itemOptions.checksum_key || "not_applicable",
+      checksum: itemOptions.checksum || "missing",
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      controller_truth_modified: false,
+      truth_effect: "none",
+    };
+  }
+
+  function archiveRestoreReviewStatus(items, validation) {
+    const itemValues = Object.values(items);
+    if ((validation && validation.status === "fail") || itemValues.some((item) => item.status === "fail")) {
+      return "fail";
+    }
+    if (itemValues.some((item) => item.status === "needs_evidence")) {
+      return "needs_evidence";
+    }
+    return "pass";
+  }
+
+  function buildArchiveRestoreReviewChecklist(archive, validation) {
+    const payload = archive && typeof archive === "object" && !Array.isArray(archive) ? archive : {};
+    const restoreValidation = validation || validateReviewArchiveRestoreV3(payload);
+    const checksums = payload.checksums && typeof payload.checksums === "object" && !Array.isArray(payload.checksums)
+      ? payload.checksums
+      : {};
+    const graphDocument = payload.editable_graph_document || {};
+    const scenarioLibrary = payload.scenario_test_case_library || {};
+    const sandboxTestRunReport = payload.sandbox_test_run_report || {};
+    const debugTimeline = payload.debug_probe_timeline || {};
+    const traceKernel = payload.sandbox_runner_trace_kernel || {};
+    const hardwareAttachment = payload.hardware_evidence_attachment_v2 || {};
+    const handoffPacket = payload.changerequest_handoff_packet || {};
+    const graphMissing = reviewArchiveMissingSectionFinding(restoreValidation, "editable_graph_document");
+    const testsMissing =
+      reviewArchiveMissingSectionFinding(restoreValidation, "scenario_test_case_library")
+      || reviewArchiveMissingSectionFinding(restoreValidation, "sandbox_test_run_report");
+    const tracesMissing =
+      reviewArchiveMissingSectionFinding(restoreValidation, "debug_probe_timeline")
+      || reviewArchiveMissingSectionFinding(restoreValidation, "sandbox_runner_trace_kernel");
+    const evidenceMissing =
+      reviewArchiveMissingSectionFinding(restoreValidation, "hardware_evidence_attachment_v2")
+      || reviewArchiveMissingSectionFinding(restoreValidation, "hardware_evidence_v2");
+    const handoffMissing = reviewArchiveMissingSectionFinding(restoreValidation, "changerequest_handoff_packet");
+    const checksumFinding = reviewArchiveChecksumFinding(restoreValidation);
+    const graphNodeCount = Number(graphDocument.node_count || 0);
+    const graphEdgeCount = Number(graphDocument.edge_count || 0);
+    const testCaseCount = Number(scenarioLibrary.test_case_count || 0);
+    const traceFrameCount = Number(debugTimeline.frame_count || traceKernel.frame_count || 0);
+    const hardwareAttachmentCount = Number(hardwareAttachment.attachment_count || 0);
+    const items = {
+      graph_review: archiveRestoreReviewItem(
+        "graph_review",
+        graphMissing ? "fail" : graphNodeCount > 0 ? "pass" : "needs_evidence",
+        "editable_graph_document",
+        graphMissing
+          ? `图证据缺失: ${graphMissing.path || "editable_graph_document"}`
+          : `${graphNodeCount} nodes / ${graphEdgeCount} edges`,
+        {
+          checksum_key: "editable_graph_document_checksum",
+          checksum: checksums.editable_graph_document_checksum,
+          path: graphMissing ? graphMissing.path : "editable_graph_document",
+        },
+      ),
+      tests_review: archiveRestoreReviewItem(
+        "tests_review",
+        testsMissing ? "fail" : sandboxTestRunReport.kind ? "pass" : "needs_evidence",
+        "sandbox_test_run_report",
+        testsMissing
+          ? `测试证据缺失: ${testsMissing.path || "sandbox_test_run_report"}`
+          : `${testCaseCount} scenarios / ${sandboxTestRunReport.verdict || "not_run"}`,
+        {
+          checksum_key: testsMissing
+            ? testsMissing.checksum_key
+            : "sandbox_test_run_report_checksum",
+          checksum: checksums.sandbox_test_run_report_checksum,
+          path: testsMissing ? testsMissing.path : "sandbox_test_run_report",
+        },
+      ),
+      traces_review: archiveRestoreReviewItem(
+        "traces_review",
+        tracesMissing ? "fail" : (debugTimeline.kind || traceKernel.kind) ? "pass" : "needs_evidence",
+        "debug_probe_timeline",
+        tracesMissing
+          ? `轨迹证据缺失: ${tracesMissing.path || "debug_probe_timeline"}`
+          : `${traceFrameCount} frames / node-port-edge trace`,
+        {
+          checksum_key: tracesMissing ? tracesMissing.checksum_key : "debug_probe_timeline_checksum",
+          checksum: checksums.debug_probe_timeline_checksum,
+          path: tracesMissing ? tracesMissing.path : "debug_probe_timeline",
+        },
+      ),
+      evidence_review: archiveRestoreReviewItem(
+        "evidence_review",
+        evidenceMissing ? "fail" : hardwareAttachmentCount > 0 ? "pass" : "needs_evidence",
+        "hardware_evidence_attachment_v2",
+        evidenceMissing
+          ? `硬件证据缺失: ${evidenceMissing.path || "hardware_evidence_attachment_v2"}`
+          : `${hardwareAttachmentCount} hardware evidence attachment(s)`,
+        {
+          checksum_key: evidenceMissing
+            ? evidenceMissing.checksum_key
+            : "hardware_evidence_attachment_v2_checksum",
+          checksum: checksums.hardware_evidence_attachment_v2_checksum,
+          path: evidenceMissing ? evidenceMissing.path : "hardware_evidence_attachment_v2",
+        },
+      ),
+      checksums_review: archiveRestoreReviewItem(
+        "checksums_review",
+        checksumFinding ? "fail" : "pass",
+        "checksums",
+        checksumFinding
+          ? `校验失败: ${checksumFinding.checksum_path || checksumFinding.path || "checksums"}`
+          : `${restoreValidation.checksum_checked_count || 0} checksums verified`,
+        {
+          checksum_key: checksumFinding ? checksumFinding.checksum_key : "manifest_checksum",
+          checksum: checksums.manifest_checksum,
+          path: checksumFinding ? (checksumFinding.checksum_path || checksumFinding.path) : "checksums",
+        },
+      ),
+      handoff_review: archiveRestoreReviewItem(
+        "handoff_review",
+        handoffMissing ? "fail" : handoffPacket.kind ? "pass" : "needs_evidence",
+        "changerequest_handoff_packet",
+        handoffMissing
+          ? `签批包缺失: ${handoffMissing.path || "changerequest_handoff_packet"}`
+          : `${handoffPacket.issue || "JER-TBD"} handoff packet ready`,
+        {
+          checksum_key: handoffMissing
+            ? handoffMissing.checksum_key
+            : "changerequest_handoff_packet_checksum",
+          checksum: checksums.changerequest_handoff_packet_checksum,
+          path: handoffMissing ? handoffMissing.path : "changerequest_handoff_packet",
+        },
+      ),
+    };
+    const status = archiveRestoreReviewStatus(items, restoreValidation);
+    return {
+      kind: archiveRestoreReviewChecklistKind,
+      version: archiveRestoreReviewChecklistVersion,
+      status,
+      review_scope: "browser_local_archive_restore_readback",
+      restore_validation_status: restoreValidation.status,
+      checksum_mismatch_count: restoreValidation.checksum_mismatch_count || 0,
+      missing_required_section_count: restoreValidation.missing_required_section_count || 0,
+      mismatch_paths: (restoreValidation.findings || []).map((finding) => ({
+        code: finding.code || "review_archive_restore_finding",
+        section: finding.section || "archive",
+        path: finding.path || "review_archive",
+        checksum_path: finding.checksum_path || finding.path || "review_archive",
+        evidence_path: finding.evidence_path || finding.path || "review_archive",
+        truth_effect: "none",
+      })),
+      items,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      controller_truth_modified: false,
+      frozen_assets_modified: false,
+      live_linear_mutation: false,
+      truth_level_impact: "none",
+      dal_pssa_impact: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function renderArchiveRestoreReviewChecklist(checklist) {
+    const payload = checklist && typeof checklist === "object" && !Array.isArray(checklist)
+      ? checklist
+      : {
+        status: "idle",
+        items: {},
+      };
+    const statusLabel = {
+      pass: "通过",
+      fail: "阻塞",
+      needs_evidence: "补证",
+      idle: "待恢复",
+    }[payload.status] || "待恢复";
+    if (archiveReviewChecklistStatus) {
+      archiveReviewChecklistStatus.textContent = statusLabel;
+    }
+    if (archiveRestoreReviewChecklist) {
+      archiveRestoreReviewChecklist.setAttribute("data-checklist-status", payload.status || "idle");
+      const itemKeys = {
+        graph: "graph_review",
+        tests: "tests_review",
+        traces: "traces_review",
+        evidence: "evidence_review",
+        checksums: "checksums_review",
+        handoff: "handoff_review",
+      };
+      for (const [domKey, itemKey] of Object.entries(itemKeys)) {
+        const node = archiveRestoreReviewChecklist.querySelector(`[data-archive-review-check="${domKey}"]`);
+        if (!node) continue;
+        const item = payload.items ? payload.items[itemKey] : null;
+        const status = item && item.status ? item.status : "idle";
+        const summary = item && item.summary ? item.summary : "等待 archive restore";
+        node.setAttribute("data-check-status", status);
+        const summaryNode = node.querySelector("span");
+        if (summaryNode) summaryNode.textContent = summary;
+      }
+    }
+  }
+
   function buildReviewArchiveRegressionBundleV3(archive, validation) {
     const payload = archive && typeof archive === "object" && !Array.isArray(archive) ? archive : {};
     const restoreValidation = validation || validateReviewArchiveRestoreV3(payload);
@@ -22170,6 +22418,7 @@ function installEditableWorkbenchShell() {
     const hardwareAttachment = payload.hardware_evidence_attachment_v2 || {};
     const graphNodeCount = Number(graphDocument.node_count || 0);
     const graphEdgeCount = Number(graphDocument.edge_count || 0);
+    const restoreReviewChecklist = buildArchiveRestoreReviewChecklist(payload, restoreValidation);
     const steps = [
       reviewArchiveRegressionStep(
         "create_graph",
@@ -22220,6 +22469,8 @@ function installEditableWorkbenchShell() {
       bundle_scope: "workbench_v5_authoring_restore_loop",
       restore_validation_status: restoreValidation.status,
       checksum_manifest_status: restoreValidation.checksum_mismatch_count === 0 ? "pass" : "fail",
+      restore_review_checklist: restoreReviewChecklist,
+      restore_review_checklist_status: restoreReviewChecklist.status,
       restored_graph: {
         node_count: graphNodeCount,
         edge_count: graphEdgeCount,
@@ -22506,6 +22757,9 @@ function installEditableWorkbenchShell() {
     if (regressionBundleOutput) {
       regressionBundleOutput.value = JSON.stringify(archive.review_archive_regression_bundle_v3, null, 2);
     }
+    renderArchiveRestoreReviewChecklist(
+      archive.review_archive_regression_bundle_v3.restore_review_checklist,
+    );
     if (archiveStatus) {
       archiveStatus.textContent =
         `Prepared local draft archive ${archive.checksums.manifest_checksum}. No live Linear mutation.`;
@@ -22539,6 +22793,7 @@ function installEditableWorkbenchShell() {
     if (regressionBundleOutput) {
       regressionBundleOutput.value = JSON.stringify(regressionBundle, null, 2);
     }
+    renderArchiveRestoreReviewChecklist(regressionBundle.restore_review_checklist);
     if (validation.status !== "pass") {
       if (archiveStatus) {
         archiveStatus.textContent =
