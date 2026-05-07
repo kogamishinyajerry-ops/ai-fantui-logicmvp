@@ -1373,6 +1373,28 @@ def test_js_builds_release_maturity_snapshot_as_local_only_not_truth_claim() -> 
     assert 'truth_effect: "none"' in js
 
 
+def test_workbench_exposes_local_release_readiness_packet_export() -> None:
+    html = _html()
+    js = _js()
+
+    assert 'id="workbench-generate-release-readiness-btn"' in html
+    assert 'id="workbench-release-readiness-output"' in html
+    assert "生成本地发布包" in html
+    assert "Release readiness packet" in html
+    assert "function buildWorkbenchReleaseReadinessPacket" in js
+    assert "function renderWorkbenchReleaseReadinessPacket" in js
+    assert "well-harness-workbench-release-readiness-packet" in js
+    assert "workbench-release-readiness.v1" in js
+    assert "local_operator_commands" in js
+    assert "PYTHONPATH=src python3 tools/run_gsd_validation_suite.py --format json" in js
+    assert "PYTHONPATH=src python3 -m pytest -q -m e2e tests/e2e/test_workbench_js_boot_smoke.py" in js
+    assert "release_maturity_snapshot_checksum" in js
+    assert "gate_status_counts" in js
+    assert 'controller_truth_modified: false' in js
+    assert 'certification_claim: "none"' in js
+    assert 'truth_effect: "none"' in js
+
+
 def test_js_wires_foundation_review_archive_as_sandbox_only_bundle() -> None:
     js = _js()
 

@@ -2143,6 +2143,13 @@
                 >
                   Generate handoff
                 </button>
+                <button
+                  id="workbench-generate-release-readiness-btn"
+                  type="button"
+                  class="workbench-editable-primary workbench-handoff-generate"
+                >
+                  生成本地发布包
+                </button>
                 <p id="workbench-handoff-status" class="workbench-handoff-status">
                   No live Linear mutation. Generate copy-ready evidence from the current sandbox draft.
                 </p>
@@ -2157,6 +2164,10 @@
                 <label class="workbench-handoff-output" for="workbench-changerequest-packet-output">
                   <span>变更包 JSON</span>
                   <textarea id="workbench-changerequest-packet-output" rows="8" readonly></textarea>
+                </label>
+                <label class="workbench-handoff-output" for="workbench-release-readiness-output">
+                  <span>Release readiness packet</span>
+                  <textarea id="workbench-release-readiness-output" rows="8" readonly></textarea>
                 </label>
                 <section
                   id="workbench-evidence-archive"
