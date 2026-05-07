@@ -7675,6 +7675,10 @@ body[data-workbench-inspector-open="true"] .workbench-system-toggle {
   opacity: 0.34;
   pointer-events: none;
 }
+body[data-workbench-inspector-open="true"] .workbench-runtime-generalization-proof {
+  opacity: 0.28;
+  pointer-events: none;
+}
 .workbench-system-toggle-btn,
 .workbench-circuit-system-btn {
   appearance: none;
@@ -7705,6 +7709,68 @@ body[data-workbench-inspector-open="true"] .workbench-system-toggle {
 .workbench-circuit-system-btn:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+.workbench-runtime-generalization-proof {
+  position: fixed;
+  top: 3.35rem;
+  right: 1rem;
+  display: grid;
+  gap: 0.32rem;
+  width: min(21rem, calc(100vw - 2rem));
+  max-height: 7.2rem;
+  overflow: hidden;
+  border: 1px solid var(--wb-hairline);
+  border-radius: 8px;
+  background: color-mix(in lch, var(--base) 86%, transparent);
+  color: var(--contrast);
+  padding: 0.46rem 0.54rem;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.24);
+  pointer-events: none;
+  z-index: 49;
+}
+.workbench-runtime-proof-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+.workbench-runtime-proof-heading span {
+  color: color-mix(in lch, var(--contrast) 78%, transparent);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.workbench-runtime-proof-heading strong {
+  border: 1px solid color-mix(in lch, var(--accent) 36%, transparent);
+  border-radius: 999px;
+  color: var(--accent);
+  padding: 0.1rem 0.38rem;
+  font-size: 0.58rem;
+  white-space: nowrap;
+}
+.workbench-runtime-proof-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.22rem;
+  margin: 0;
+}
+.workbench-runtime-proof-grid div {
+  min-width: 0;
+}
+.workbench-runtime-proof-grid dt {
+  margin: 0 0 0.12rem;
+  color: color-mix(in lch, var(--contrast) 52%, transparent);
+  font-size: 0.58rem;
+  text-transform: uppercase;
+}
+.workbench-runtime-proof-grid dd {
+  margin: 0;
+  color: color-mix(in lch, var(--contrast) 82%, transparent);
+  font: 0.62rem/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+.workbench-runtime-proof-grid div:nth-child(3),
+.workbench-runtime-proof-grid div:nth-child(4) {
+  grid-column: auto;
 }
 
 /* P54-03: iframe-embed views (sim / cockpit / requirements) host

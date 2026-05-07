@@ -215,6 +215,37 @@ def test_evidence_inspector_has_editable_and_read_only_fields() -> None:
     assert 'data-evidence-api="/api/hardware/evidence?system_id=thrust-reverser"' in html
 
 
+def test_runtime_generalization_proof_rail_is_adapter_backed_and_read_only() -> None:
+    html = _html()
+    css = _css()
+    js = _js()
+
+    assert 'id="workbench-runtime-generalization-proof"' in html
+    assert 'id="workbench-runtime-proof-system-label"' in html
+    assert 'id="workbench-runtime-proof-adapter-id"' in html
+    assert 'id="workbench-runtime-proof-source"' in html
+    assert 'id="workbench-runtime-proof-contracts"' in html
+    assert 'id="workbench-runtime-proof-boundary"' in html
+    assert 'data-runtime-proof-system="thrust-reverser"' in html
+    assert "适配器运行证明" in html
+    assert ".workbench-runtime-generalization-proof" in css
+    assert ".workbench-runtime-proof-grid" in css
+    assert "runtimeGeneralizationProofCatalog" in js
+    assert "function renderRuntimeGeneralizationProofRail" in js
+    assert "reference-deploy-controller" in js
+    assert "c919-etras-controller-adapter" in js
+    assert "src/well_harness/controller.py" in js
+    assert "src/well_harness/adapters/c919_etras_adapter.py" in js
+    assert "controller_truth_metadata" in js
+    assert "control_system_spec" in js
+    assert "playback_report" in js
+    assert "fault_diagnosis_report" in js
+    assert "knowledge_artifact" in js
+    assert "ui_only_truth_path: false" in js
+    assert "controller_truth_modified: false" in js
+    assert 'truth_effect: "none"' in js
+
+
 def test_evidence_inspector_declares_mode_tabs_and_default_node_mode() -> None:
     html = _html()
     css = _css()

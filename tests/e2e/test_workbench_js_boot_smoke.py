@@ -695,6 +695,81 @@ def test_workbench_canvas_first_default_and_explicit_reference_proof_load(demo_s
     assert empty_canvas_state["authoringMode"] == "empty_authoring"
 
 
+def test_workbench_system_toggle_updates_adapter_backed_runtime_proof_rail(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    initial = page.evaluate(
+        """
+        () => {
+          const rail = document.getElementById('workbench-runtime-generalization-proof');
+          return {
+            system: rail?.getAttribute('data-runtime-proof-system') || '',
+            adapter: document.getElementById('workbench-runtime-proof-adapter-id')?.textContent.trim() || '',
+            source: document.getElementById('workbench-runtime-proof-source')?.textContent.trim() || '',
+            contracts: document.getElementById('workbench-runtime-proof-contracts')?.textContent.trim() || '',
+            boundary: document.getElementById('workbench-runtime-proof-boundary')?.textContent.trim() || '',
+            uiOnlyTruthPath: rail?.getAttribute('data-ui-only-truth-path') || '',
+            truthEffect: rail?.getAttribute('data-truth-effect') || '',
+            controllerTruthModified: rail?.getAttribute('data-controller-truth-modified') || '',
+          };
+        }
+        """
+    )
+
+    assert initial["system"] == "thrust-reverser"
+    assert initial["adapter"] == "reference-deploy-controller"
+    assert initial["source"] == "src/well_harness/controller.py"
+    assert "playback_report" in initial["contracts"]
+    assert "knowledge_artifact" in initial["contracts"]
+    assert "truth_effect: none" in initial["boundary"]
+    assert initial["uiOnlyTruthPath"] == "false"
+    assert initial["truthEffect"] == "none"
+    assert initial["controllerTruthModified"] == "false"
+
+    page.click('[data-circuit-system="c919-etras"]')
+    page.wait_for_function(
+        """
+        () => {
+          const rail = document.getElementById('workbench-runtime-generalization-proof');
+          return rail?.getAttribute('data-runtime-proof-system') === 'c919-etras'
+            && document.getElementById('workbench-runtime-proof-adapter-id')?.textContent.trim()
+              === 'c919-etras-controller-adapter';
+        }
+        """
+    )
+    c919 = page.evaluate(
+        """
+        () => {
+          const rail = document.getElementById('workbench-runtime-generalization-proof');
+          return {
+            system: rail?.getAttribute('data-runtime-proof-system') || '',
+            label: document.getElementById('workbench-runtime-proof-system-label')?.textContent.trim() || '',
+            adapter: document.getElementById('workbench-runtime-proof-adapter-id')?.textContent.trim() || '',
+            source: document.getElementById('workbench-runtime-proof-source')?.textContent.trim() || '',
+            contracts: document.getElementById('workbench-runtime-proof-contracts')?.textContent.trim() || '',
+            boundary: document.getElementById('workbench-runtime-proof-boundary')?.textContent.trim() || '',
+            uiOnlyTruthPath: rail?.getAttribute('data-ui-only-truth-path') || '',
+            truthEffect: rail?.getAttribute('data-truth-effect') || '',
+            controllerTruthModified: rail?.getAttribute('data-controller-truth-modified') || '',
+          };
+        }
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert c919["system"] == "c919-etras"
+    assert "C919 E-TRAS" in c919["label"]
+    assert c919["adapter"] == "c919-etras-controller-adapter"
+    assert c919["source"] == "src/well_harness/adapters/c919_etras_adapter.py"
+    assert "controller_truth_metadata" in c919["contracts"]
+    assert "fault_diagnosis_report" in c919["contracts"]
+    assert "UI-only truth path: false" in c919["boundary"]
+    assert c919["uiOnlyTruthPath"] == "false"
+    assert c919["truthEffect"] == "none"
+    assert c919["controllerTruthModified"] == "false"
+
+
 def test_workbench_new_engineer_onboarding_guide_highlights_full_flow(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")

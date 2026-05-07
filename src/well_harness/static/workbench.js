@@ -70,6 +70,68 @@ function currentWorkbenchSystem() {
   return (select && select.value) || "thrust-reverser";
 }
 
+const sharedRuntimeProofContracts = [
+  "controller_truth_metadata",
+  "control_system_spec",
+  "playback_report",
+  "fault_diagnosis_report",
+  "knowledge_artifact",
+];
+
+const runtimeGeneralizationProofCatalog = {
+  "thrust-reverser": {
+    system_label: "反推参考系统",
+    adapter_id: "reference-deploy-controller",
+    source_of_truth: "src/well_harness/controller.py",
+    proof_mode: "reference_truth_adapter",
+    sample_pack_role: "Reference Truth",
+    shared_contracts: sharedRuntimeProofContracts,
+    ui_only_truth_path: false,
+    controller_truth_modified: false,
+    truth_effect: "none",
+  },
+  "c919-etras": {
+    system_label: "C919 E-TRAS",
+    adapter_id: "c919-etras-controller-adapter",
+    source_of_truth: "src/well_harness/adapters/c919_etras_adapter.py",
+    proof_mode: "python_generic_truth_adapter",
+    sample_pack_role: "Adapter-backed sample pack",
+    shared_contracts: sharedRuntimeProofContracts,
+    ui_only_truth_path: false,
+    controller_truth_modified: false,
+    truth_effect: "none",
+  },
+};
+
+function renderRuntimeGeneralizationProofRail(system) {
+  const activeSystem = system || currentWorkbenchSystem();
+  const proof =
+    runtimeGeneralizationProofCatalog[activeSystem] ||
+    runtimeGeneralizationProofCatalog["thrust-reverser"];
+  const rail = document.getElementById("workbench-runtime-generalization-proof");
+  if (!rail) return proof;
+  rail.setAttribute("data-runtime-proof-system", activeSystem);
+  rail.setAttribute("data-runtime-proof-mode", proof.proof_mode);
+  rail.setAttribute("data-ui-only-truth-path", proof.ui_only_truth_path ? "true" : "false");
+  rail.setAttribute("data-truth-effect", proof.truth_effect);
+  rail.setAttribute("data-controller-truth-modified", proof.controller_truth_modified ? "true" : "false");
+  const label = document.getElementById("workbench-runtime-proof-system-label");
+  const adapter = document.getElementById("workbench-runtime-proof-adapter-id");
+  const source = document.getElementById("workbench-runtime-proof-source");
+  const contracts = document.getElementById("workbench-runtime-proof-contracts");
+  const boundary = document.getElementById("workbench-runtime-proof-boundary");
+  if (label) label.textContent = proof.system_label;
+  if (adapter) adapter.textContent = proof.adapter_id;
+  if (source) source.textContent = proof.source_of_truth;
+  if (contracts) contracts.textContent = proof.shared_contracts.join(" · ");
+  if (boundary) {
+    boundary.textContent =
+      `UI-only truth path: ${proof.ui_only_truth_path ? "true" : "false"} · `
+      + `truth_effect: ${proof.truth_effect} · controller truth unchanged`;
+  }
+  return proof;
+}
+
 async function bootWorkbenchCircuitHero() {
   const mount = workbenchElement("workbench-circuit-hero-mount");
   if (!mount) {
@@ -153,6 +215,7 @@ function bootWorkbenchShell() {
   // Fire-and-forget: the hero hydrates asynchronously so the rest of the
   // workbench chrome (topbar, state-of-world bar, approval center)
   // renders immediately without waiting on the fragment request.
+  renderRuntimeGeneralizationProofRail(currentWorkbenchSystem());
   bootWorkbenchCircuitHero();
   installSuggestionFlow();
   installProposalInbox();
@@ -169,6 +232,7 @@ function installSystemSelectorReload() {
   const select = document.getElementById("workbench-system-select");
   if (!select) return;
   select.addEventListener("change", () => {
+    renderRuntimeGeneralizationProofRail(currentWorkbenchSystem());
     reloadWorkbenchCircuitHero();
     loadProposalsInbox();
   });
@@ -7538,6 +7602,9 @@ function _wbLiveLogConnect() {
     for (const btn of buttons) {
       const isActive = btn.getAttribute("data-circuit-system") === current;
       btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+    }
+    if (typeof renderRuntimeGeneralizationProofRail === "function") {
+      renderRuntimeGeneralizationProofRail(current);
     }
     swapIframes(current);
   }
