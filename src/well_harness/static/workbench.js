@@ -7328,7 +7328,7 @@ function buildWorkbenchReleaseMaturitySnapshot(stateOfWorld) {
         gate_id: "mypy_strict_clean",
         label: "mypy strict",
         status: "not_claimed",
-        evidence: "Full strict mypy clean is milestone-only and not claimed from the local workbench UI.",
+        evidence: "full strict mypy clean is milestone-only and not claimed from the local workbench UI.",
         truth_effect: "none",
       },
       {
@@ -7949,10 +7949,12 @@ function installEditableWorkbenchShell() {
   const selectedDebugTimelineHardware = document.getElementById("workbench-selected-debug-hardware");
   const selectedDebugTimelineContext = document.getElementById("workbench-selected-debug-context");
   const handoffBtn = document.getElementById("workbench-generate-handoff-btn");
+  const releaseReadinessBtn = document.getElementById("workbench-generate-release-readiness-btn");
   const handoffStatus = document.getElementById("workbench-handoff-status");
   const linearHandoffOutput = document.getElementById("workbench-linear-handoff-output");
   const prProofOutput = document.getElementById("workbench-pr-proof-output");
   const changeRequestPacketOutput = document.getElementById("workbench-changerequest-packet-output");
+  const releaseReadinessOutput = document.getElementById("workbench-release-readiness-output");
   const prepareArchiveBtn = document.getElementById("workbench-prepare-archive-btn");
   const downloadArchiveBtn = document.getElementById("workbench-download-archive-btn");
   const restoreReviewArchiveBtn = document.getElementById("workbench-restore-review-archive-btn");
@@ -21856,6 +21858,59 @@ function installEditableWorkbenchShell() {
     return packet;
   }
 
+  function buildWorkbenchReleaseReadinessPacket() {
+    const releaseMaturitySnapshot = buildWorkbenchReleaseMaturitySnapshot();
+    const gateStatusCounts = {};
+    const notClaimedGates = [];
+    const blockedGates = [];
+    for (const gate of releaseMaturitySnapshot.gates || []) {
+      const status = gate.status || "not_claimed";
+      gateStatusCounts[status] = (gateStatusCounts[status] || 0) + 1;
+      if (status === "not_claimed") {
+        notClaimedGates.push(`${gate.label || gate.gate_id}: ${gate.evidence || "full strict mypy clean not claimed"}`);
+      }
+      if (status === "blocked") {
+        blockedGates.push(`${gate.label || gate.gate_id}: ${gate.evidence || "blocked"}`);
+      }
+    }
+    return {
+      kind: "well-harness-workbench-release-readiness-packet",
+      version: "workbench-release-readiness.v1",
+      scope: "local_only",
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      controller_truth_modified: false,
+      truth_effect: "none",
+      release_maturity_snapshot: releaseMaturitySnapshot,
+      gate_status_counts: gateStatusCounts,
+      not_claimed_gates: notClaimedGates,
+      blocked_gates: blockedGates,
+      local_operator_commands: [
+        "PYTHONPATH=src python3 -m pytest -q tests/test_workbench_editable_canvas_shell.py -k \"release_maturity or release_readiness\"",
+        "PYTHONPATH=src python3 -m pytest -q -m e2e tests/e2e/test_workbench_js_boot_smoke.py -k \"release_maturity or release_readiness\"",
+        "PYTHONPATH=src python3 -m pytest -q -m e2e tests/e2e/test_workbench_js_boot_smoke.py",
+        "PYTHONPATH=src python3 tools/run_gsd_validation_suite.py --format json",
+        "git diff --check",
+        "node --check src/well_harness/static/workbench.js",
+      ],
+      checksums: {
+        release_maturity_snapshot_checksum: checksumEvidenceArchiveField(releaseMaturitySnapshot),
+        gate_status_counts_checksum: checksumEvidenceArchiveField(gateStatusCounts),
+      },
+    };
+  }
+
+  function renderWorkbenchReleaseReadinessPacket() {
+    const packet = buildWorkbenchReleaseReadinessPacket();
+    if (releaseReadinessOutput) releaseReadinessOutput.value = JSON.stringify(packet, null, 2);
+    if (handoffStatus) {
+      handoffStatus.textContent =
+        `Prepared local release readiness packet. Scope: local_only. Truth effect: none. Not claimed gates: ${packet.gate_status_counts.not_claimed || 0}.`;
+    }
+    setTimelineState("handoff");
+    return packet;
+  }
+
   function checksumEvidenceArchiveField(value) {
     return editableDraftHash(stableEvidenceArchiveJson(value));
   }
@@ -23482,6 +23537,12 @@ function installEditableWorkbenchShell() {
     handoffBtn.addEventListener("click", () => {
       setInspectorMode("handoff");
       renderEditableHandoffPacket();
+    });
+  }
+  if (releaseReadinessBtn) {
+    releaseReadinessBtn.addEventListener("click", () => {
+      setInspectorMode("handoff");
+      renderWorkbenchReleaseReadinessPacket();
     });
   }
   if (prepareArchiveBtn) {

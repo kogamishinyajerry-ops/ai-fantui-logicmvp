@@ -1312,6 +1312,36 @@ def test_workbench_release_maturity_rail_renders_local_operations_gates(demo_ser
     assert "controller truth unchanged" in rail.inner_text()
 
 
+def test_workbench_release_readiness_packet_exports_local_only_gate_evidence(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    _click_workbench_handoff_control(page, "#workbench-generate-release-readiness-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const output = document.getElementById('workbench-release-readiness-output');
+          return output && output.value.includes('well-harness-workbench-release-readiness-packet');
+        }
+        """
+    )
+    packet = json.loads(page.locator("#workbench-release-readiness-output").input_value())
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert packet["kind"] == "well-harness-workbench-release-readiness-packet"
+    assert packet["version"] == "workbench-release-readiness.v1"
+    assert packet["scope"] == "local_only"
+    assert packet["release_maturity_snapshot"]["truth_effect"] == "none"
+    assert packet["gate_status_counts"]["not_claimed"] >= 1
+    assert packet["gate_status_counts"]["blocked"] >= 1
+    assert packet["controller_truth_modified"] is False
+    assert packet["certification_claim"] == "none"
+    assert packet["truth_effect"] == "none"
+    assert "PYTHONPATH=src python3 tools/run_gsd_validation_suite.py --format json" in packet["local_operator_commands"]
+    assert "full strict mypy clean" in " ".join(packet["not_claimed_gates"])
+    assert packet["checksums"]["release_maturity_snapshot_checksum"]
+
+
 def test_workbench_interface_binding_round_trips_through_export_import_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
