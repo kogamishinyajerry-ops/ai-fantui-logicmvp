@@ -7262,6 +7262,117 @@ if (typeof window !== "undefined") {
 // placeholders so there is no flash of the wrong content).
 const WORKBENCH_STATE_OF_WORLD_PATH = "/api/workbench/state-of-world";
 
+function releaseMaturityStatusLabel(status) {
+  const normalized = String(status || "not_claimed").trim();
+  const labels = {
+    pass: "pass",
+    warning: "warning",
+    blocked: "blocked",
+    rerun_required: "rerun-required",
+    not_claimed: "未声明",
+  };
+  return labels[normalized] || normalized;
+}
+
+function buildWorkbenchReleaseMaturitySnapshot(stateOfWorld) {
+  const source = stateOfWorld && typeof stateOfWorld === "object" ? stateOfWorld : {};
+  const recentE2e = source.recent_e2e_label || "rerun required";
+  const adversarial = source.adversarial_label || "warning";
+  return {
+    kind: "well-harness-workbench-release-maturity-snapshot",
+    version: "workbench-release-maturity.v1",
+    scope: "local_only",
+    local_operator_runbook: "Start local server, run smoke/e2e/manifest/GSD gates, then attach local evidence.",
+    local_only: true,
+    candidate_state: "sandbox_candidate",
+    certification_claim: "none",
+    controller_truth_modified: false,
+    truth_effect: "none",
+    gates: [
+      {
+        gate_id: "controller_truth",
+        label: "真值边界",
+        status: "pass",
+        evidence: "controller truth unchanged",
+        truth_effect: "none",
+      },
+      {
+        gate_id: "local_smoke",
+        label: "本地运行",
+        status: "rerun_required",
+        evidence: "Run local demo/workbench smoke before release handoff.",
+        truth_effect: "none",
+      },
+      {
+        gate_id: "targeted_e2e",
+        label: "目标 e2e",
+        status: "warning",
+        evidence: recentE2e,
+        truth_effect: "none",
+      },
+      {
+        gate_id: "full_gsd",
+        label: "GSD 套件",
+        status: "warning",
+        evidence: "Run PYTHONPATH=src python3 tools/run_gsd_validation_suite.py --format json for release evidence.",
+        truth_effect: "none",
+      },
+      {
+        gate_id: "release_manifest",
+        label: "manifest",
+        status: "blocked",
+        evidence: "Release manifest must be generated and reviewed before handoff.",
+        truth_effect: "none",
+      },
+      {
+        gate_id: "mypy_strict_clean",
+        label: "mypy strict",
+        status: "not_claimed",
+        evidence: "Full strict mypy clean is milestone-only and not claimed from the local workbench UI.",
+        truth_effect: "none",
+      },
+      {
+        gate_id: "adversarial",
+        label: "对抗样本",
+        status: "warning",
+        evidence: adversarial,
+        truth_effect: "none",
+      },
+    ],
+  };
+}
+
+function renderWorkbenchReleaseMaturitySnapshot(snapshot) {
+  const rail = document.getElementById("workbench-release-maturity-rail");
+  if (!rail) return null;
+  const payload = snapshot || buildWorkbenchReleaseMaturitySnapshot();
+  rail.setAttribute("data-release-maturity-scope", payload.scope || "local_only");
+  rail.setAttribute("data-release-maturity-truth-effect", payload.truth_effect || "none");
+  rail.setAttribute(
+    "data-release-maturity-controller-truth-modified",
+    payload.controller_truth_modified ? "true" : "false",
+  );
+  rail.setAttribute("data-release-maturity-certification-claim", payload.certification_claim || "none");
+  for (const gate of payload.gates || []) {
+    const gateId = String(gate.gate_id || "");
+    const slot = rail.querySelector(`[data-release-gate-id="${gateId}"]`);
+    if (!slot) continue;
+    const status = String(gate.status || "not_claimed");
+    slot.setAttribute("data-release-gate-status", status);
+    slot.setAttribute("title", `${gate.label || gateId}: ${gate.evidence || status}`);
+    const value = slot.querySelector(`[data-release-gate-value="${gateId}"]`);
+    if (value) value.textContent = releaseMaturityStatusLabel(status);
+  }
+  const summary = document.getElementById("workbench-release-maturity-summary");
+  if (summary) {
+    const blockedCount = (payload.gates || []).filter((gate) => gate.status === "blocked").length;
+    const notClaimedCount = (payload.gates || []).filter((gate) => gate.status === "not_claimed").length;
+    summary.textContent =
+      `仅本地证据 · blocked=${blockedCount} · not claimed=${notClaimedCount} · controller truth unchanged · no certification claim`;
+  }
+  return payload;
+}
+
 async function hydrateStateOfWorldBar() {
   const bar = document.getElementById("workbench-state-of-world-bar");
   if (!bar) {
@@ -7289,6 +7400,7 @@ async function hydrateStateOfWorldBar() {
     writeField("recent_e2e_label", payload.recent_e2e_label);
     writeField("adversarial_label", payload.adversarial_label);
     writeField("open_known_issues_count", payload.open_known_issues_count);
+    renderWorkbenchReleaseMaturitySnapshot(buildWorkbenchReleaseMaturitySnapshot(payload));
   } catch (_err) {
     // Silent — the bar already shows "…" placeholders, which renders as
     // a benign "still loading" state instead of a broken half-page.
@@ -7301,6 +7413,7 @@ window.addEventListener("DOMContentLoaded", () => {
   installFeedbackModeAffordance();
   installWowStarters();
   installRecommendationCopyHandler();  // P59-03 work-order copy button
+  renderWorkbenchReleaseMaturitySnapshot(buildWorkbenchReleaseMaturitySnapshot());
   void hydrateStateOfWorldBar();
   // E11-08: apply role affordance after DOM is ready. Honors
   // ?identity=<name> URL param so demos / tests can flip identity

@@ -457,6 +457,24 @@ def test_css_declares_editable_workbench_layout() -> None:
     assert ".workbench-selected-debug-timeline" in css
 
 
+def test_workbench_shell_exposes_local_release_maturity_rail() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-release-maturity-rail"' in html
+    assert 'data-release-maturity-scope="local_only"' in html
+    assert 'data-release-maturity-truth-effect="none"' in html
+    assert "发布成熟度" in html
+    assert "本地运行" in html
+    assert "未声明" in html
+    assert "仅本地证据" in html
+    assert "controller truth unchanged" in html
+    for status in ("pass", "warning", "blocked", "rerun_required", "not_claimed"):
+        assert f'data-release-gate-status="{status}"' in html
+        assert f'[data-release-gate-status="{status}"]' in css
+    assert ".workbench-release-maturity-rail" in css
+
+
 def test_cockpit_editor_skin_makes_canvas_the_primary_work_surface() -> None:
     html = _html()
     css = _css()
@@ -1331,6 +1349,26 @@ def test_js_wires_preflight_analyzer_as_sandbox_only_archive_packet() -> None:
     assert "invalid_candidate" in js
     assert "needs_evidence" in js
     assert "ready" in js
+    assert 'certification_claim: "none"' in js
+    assert 'truth_effect: "none"' in js
+
+
+def test_js_builds_release_maturity_snapshot_as_local_only_not_truth_claim() -> None:
+    js = _js()
+
+    assert "function buildWorkbenchReleaseMaturitySnapshot" in js
+    assert "function renderWorkbenchReleaseMaturitySnapshot" in js
+    assert "well-harness-workbench-release-maturity-snapshot" in js
+    assert "workbench-release-maturity.v1" in js
+    assert "local_operator_runbook" in js
+    assert "local_only" in js
+    assert "pass" in js
+    assert "warning" in js
+    assert "blocked" in js
+    assert "rerun_required" in js
+    assert "not_claimed" in js
+    assert 'controller_truth_modified: false' in js
+    assert 'candidate_state: "sandbox_candidate"' in js
     assert 'certification_claim: "none"' in js
     assert 'truth_effect: "none"' in js
 

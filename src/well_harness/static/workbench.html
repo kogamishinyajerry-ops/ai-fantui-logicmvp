@@ -461,6 +461,73 @@
         </span>
       </section>
 
+      <section
+        id="workbench-release-maturity-rail"
+        class="workbench-release-maturity-rail"
+        aria-label="Release maturity and local operations status"
+        data-release-maturity-scope="local_only"
+        data-release-maturity-truth-effect="none"
+        data-release-maturity-controller-truth-modified="false"
+        data-release-maturity-certification-claim="none"
+      >
+        <span class="workbench-release-maturity-eyebrow">发布成熟度</span>
+        <span
+          class="workbench-release-gate"
+          data-release-gate-id="controller_truth"
+          data-release-gate-status="pass"
+        >
+          <span class="workbench-release-gate-label">真值边界</span>
+          <strong data-release-gate-value="controller_truth">pass</strong>
+        </span>
+        <span
+          class="workbench-release-gate"
+          data-release-gate-id="local_smoke"
+          data-release-gate-status="rerun_required"
+        >
+          <span class="workbench-release-gate-label">本地运行</span>
+          <strong data-release-gate-value="local_smoke">rerun-required</strong>
+        </span>
+        <span
+          class="workbench-release-gate"
+          data-release-gate-id="targeted_e2e"
+          data-release-gate-status="warning"
+        >
+          <span class="workbench-release-gate-label">目标 e2e</span>
+          <strong data-release-gate-value="targeted_e2e">warning</strong>
+        </span>
+        <span
+          class="workbench-release-gate"
+          data-release-gate-id="full_gsd"
+          data-release-gate-status="warning"
+        >
+          <span class="workbench-release-gate-label">GSD 套件</span>
+          <strong data-release-gate-value="full_gsd">warning</strong>
+        </span>
+        <span
+          class="workbench-release-gate"
+          data-release-gate-id="release_manifest"
+          data-release-gate-status="blocked"
+        >
+          <span class="workbench-release-gate-label">manifest</span>
+          <strong data-release-gate-value="release_manifest">blocked</strong>
+        </span>
+        <span
+          class="workbench-release-gate"
+          data-release-gate-id="mypy_strict_clean"
+          data-release-gate-status="not_claimed"
+        >
+          <span class="workbench-release-gate-label">mypy strict</span>
+          <strong data-release-gate-value="mypy_strict_clean">未声明</strong>
+        </span>
+        <span
+          id="workbench-release-maturity-summary"
+          class="workbench-release-maturity-summary"
+          data-release-maturity-summary="local_only"
+        >
+          仅本地证据 · controller truth unchanged · no certification claim
+        </span>
+      </section>
+
       <!-- P44-01 (2026-04-26): WOW starter cards moved off /workbench. The
            workbench is now centered on the control logic panel itself
            (mounted below at #workbench-circuit-hero); demo scenario

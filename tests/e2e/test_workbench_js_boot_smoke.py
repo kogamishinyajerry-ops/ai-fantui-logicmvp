@@ -1291,6 +1291,27 @@ def test_workbench_evidence_archive_exports_gate_claims_and_blockers(demo_server
     assert archive["checksums"]["known_blockers_checksum"]
 
 
+def test_workbench_release_maturity_rail_renders_local_operations_gates(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.wait_for_selector("#workbench-release-maturity-rail")
+    rail = page.locator("#workbench-release-maturity-rail")
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert rail.get_attribute("data-release-maturity-scope") == "local_only"
+    assert rail.get_attribute("data-release-maturity-truth-effect") == "none"
+    assert rail.get_attribute("data-release-maturity-controller-truth-modified") == "false"
+    assert rail.get_attribute("data-release-maturity-certification-claim") == "none"
+    assert page.locator('[data-release-gate-id="local_smoke"]').get_attribute("data-release-gate-status") == "rerun_required"
+    assert page.locator('[data-release-gate-id="targeted_e2e"]').get_attribute("data-release-gate-status") == "warning"
+    assert page.locator('[data-release-gate-id="full_gsd"]').get_attribute("data-release-gate-status") == "warning"
+    assert page.locator('[data-release-gate-id="mypy_strict_clean"]').get_attribute("data-release-gate-status") == "not_claimed"
+    assert page.locator('[data-release-gate-id="controller_truth"]').get_attribute("data-release-gate-status") == "pass"
+    assert "仅本地证据" in rail.inner_text()
+    assert "controller truth unchanged" in rail.inner_text()
+
+
 def test_workbench_interface_binding_round_trips_through_export_import_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
