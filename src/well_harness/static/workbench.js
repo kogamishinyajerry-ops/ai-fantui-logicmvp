@@ -7737,6 +7737,24 @@ function installEditableWorkbenchShell() {
   const candidateDebuggerAssertion = document.getElementById("workbench-candidate-debugger-assertion");
   const candidateDebuggerObserved = document.getElementById("workbench-candidate-debugger-observed");
   const candidateDebuggerTrace = document.getElementById("workbench-candidate-debugger-trace");
+  const scenarioFailureExplanationPanel =
+    document.getElementById("workbench-scenario-failure-explanation");
+  const scenarioFailureExplanationStatus =
+    document.getElementById("workbench-failure-explanation-status");
+  const scenarioFailureExplanationAssertion =
+    document.getElementById("workbench-failure-explanation-assertion");
+  const scenarioFailureExplanationFrame =
+    document.getElementById("workbench-failure-explanation-frame");
+  const scenarioFailureExplanationOwner =
+    document.getElementById("workbench-failure-explanation-owner");
+  const scenarioFailureExplanationCurrent =
+    document.getElementById("workbench-failure-explanation-current");
+  const scenarioFailureExplanationExpected =
+    document.getElementById("workbench-failure-explanation-expected");
+  const scenarioFailureExplanationUpstream =
+    document.getElementById("workbench-failure-explanation-upstream");
+  const scenarioFailureExplanationTruthEffect =
+    document.getElementById("workbench-failure-explanation-truth-effect");
   const preflightPanel = document.getElementById("workbench-preflight-analyzer");
   const runPreflightBtn = document.getElementById("workbench-run-preflight-btn");
   const preflightClassification = document.getElementById("workbench-preflight-classification");
@@ -7953,6 +7971,10 @@ function installEditableWorkbenchShell() {
   const scenarioTestCaseLibraryVersion = "workbench-scenario-test-case-library.v1";
   const candidateDebuggerViewKind = "well-harness-workbench-candidate-debugger-view";
   const candidateDebuggerViewVersion = "workbench-candidate-debugger-view.v1";
+  const scenarioFailureExplanationKind =
+    "well-harness-workbench-scenario-failure-explanation";
+  const scenarioFailureExplanationVersion =
+    "workbench-scenario-failure-explanation.v1";
   const debugProbeTimelineKind = "well-harness-workbench-debug-probe-timeline";
   const debugProbeTimelineVersion = "workbench-debug-probe-timeline.v3";
   const preflightAnalyzerReportKind = "well-harness-workbench-preflight-analyzer-report";
@@ -13583,6 +13605,7 @@ function installEditableWorkbenchShell() {
     renderEditableEdges();
     renderInspector();
     renderCandidateDebuggerView(currentCandidateDebuggerView("apply_state"));
+    renderScenarioFailureExplanation(currentScenarioFailureExplanation("apply_state"));
     renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("apply_state"));
     updateEditableDraftHash();
     validateEditableGraph();
@@ -17018,6 +17041,7 @@ function installEditableWorkbenchShell() {
     const sandboxTestBench = safeSandboxTestBenchDefinition();
     const sandboxTestRunReport = currentSandboxTestRunReport();
     const candidateDebuggerView = currentCandidateDebuggerView("snapshot");
+    const scenarioFailureExplanation = currentScenarioFailureExplanation("snapshot");
     const debugProbeTimeline = candidateDebuggerView.debug_probe_timeline || currentDebugProbeTimeline("snapshot");
     const preflightAnalyzerReport = currentPreflightAnalyzerReport("snapshot");
     const hardwareInterfaceDesigner = currentHardwareInterfaceDesignerPayload("snapshot");
@@ -17077,6 +17101,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_bench: sandboxTestBench,
       sandbox_test_run_report: sandboxTestRunReport,
       candidate_debugger_view: candidateDebuggerView,
+      scenario_failure_explanation: scenarioFailureExplanation,
       debug_probe_timeline: debugProbeTimeline,
       preflight_analyzer_report: preflightAnalyzerReport,
       hardware_interface_designer: hardwareInterfaceDesigner,
@@ -17976,6 +18001,234 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function scenarioFailureReportFrames(report) {
+    const kernel = report && report.sandbox_runner_trace_kernel;
+    if (
+      kernel
+      && typeof kernel === "object"
+      && !Array.isArray(kernel)
+      && Array.isArray(kernel.frames)
+    ) {
+      return kernel.frames;
+    }
+    return Array.isArray(report && report.trace) ? report.trace : [];
+  }
+
+  function firstScenarioFailureAssertion(report) {
+    const assertions = Array.isArray(report && report.assertions) ? report.assertions : [];
+    return assertions.find((assertion) => assertion && assertion.status === "fail") || null;
+  }
+
+  function scenarioFailureFrameForAssertion(report, assertion) {
+    const frames = scenarioFailureReportFrames(report);
+    if (assertion && assertion.tick !== null && assertion.tick !== undefined) {
+      const matched = frames.find((frame) => Number(frame && frame.tick) === Number(assertion.tick));
+      if (matched) return matched;
+    }
+    return frames[0] || null;
+  }
+
+  function scenarioFailureFrameIndex(report, frame) {
+    if (!frame) return -1;
+    return scenarioFailureReportFrames(report).findIndex((candidate) => candidate === frame);
+  }
+
+  function scenarioFailureTarget(assertion, frame) {
+    const rawTarget = String((assertion && assertion.target) || "");
+    if (!rawTarget) {
+      return {
+        target_id: "none",
+        owner_kind: "none",
+        owner_id: "none",
+        owner_key: "none:none",
+        port_id: "",
+        edge_id: "",
+        signal_level: "none",
+        truth_effect: "none",
+      };
+    }
+    const portValues = Array.isArray(frame && frame.port_values) ? frame.port_values : [];
+    const edgeValues = Array.isArray(frame && frame.edge_values) ? frame.edge_values : [];
+    const edgeRecord = edgeValues.find((edge) => (
+      edge
+      && (
+        String(edge.edge_id || "") === rawTarget
+        || String(edge.source_port_id || "") === rawTarget
+        || String(edge.target_port_id || "") === rawTarget
+      )
+    ));
+    if (edgeRecord && String(edgeRecord.edge_id || "") === rawTarget) {
+      return {
+        target_id: rawTarget || "unknown",
+        owner_kind: "edge",
+        owner_id: String(edgeRecord.edge_id || rawTarget),
+        owner_key: `edge:${edgeRecord.edge_id || rawTarget}`,
+        port_id: String(edgeRecord.source_port_id || edgeRecord.target_port_id || ""),
+        edge_id: String(edgeRecord.edge_id || rawTarget),
+        signal_level: "edge",
+        truth_effect: "none",
+      };
+    }
+    const portRecord = portValues.find((port) => port && String(port.port_id || "") === rawTarget);
+    const ownerId = rawTarget.includes(":")
+      ? rawTarget.split(":")[0]
+      : String((portRecord && portRecord.owner_id) || rawTarget || "unknown");
+    return {
+      target_id: rawTarget || "unknown",
+      owner_kind: "node",
+      owner_id: ownerId,
+      owner_key: `node:${ownerId}`,
+      port_id: String((portRecord && portRecord.port_id) || rawTarget || ""),
+      edge_id: edgeRecord ? String(edgeRecord.edge_id || "") : "",
+      signal_level: rawTarget.includes(":") ? "port" : "node",
+      truth_effect: "none",
+    };
+  }
+
+  function pushScenarioFailureDependency(dependencies, dependency) {
+    if (!dependency) return;
+    const key = [
+      dependency.kind || "unknown",
+      dependency.edge_id || "",
+      dependency.port_id || "",
+      dependency.owner_key || "",
+    ].join("|");
+    if (dependencies.some((item) => item._dedupe_key === key)) return;
+    dependencies.push({
+      ...dependency,
+      _dedupe_key: key,
+      value: normalizeEvidenceArchiveValue(dependency.value),
+      available: Boolean(dependency.available),
+      truth_effect: "none",
+    });
+  }
+
+  function scenarioFailureUpstreamDependencies(frame, target) {
+    const dependencies = [];
+    const nodeValues = Array.isArray(frame && frame.node_values)
+      ? frame.node_values
+      : (Array.isArray(frame && frame.node_results) ? frame.node_results : []);
+    const edgeValues = Array.isArray(frame && frame.edge_values) ? frame.edge_values : [];
+    if (target && target.owner_kind === "node") {
+      const nodeValue = nodeValues.find((node) => (
+        node && String(node.node_id || "") === String(target.owner_id || "")
+      ));
+      for (const input of Array.isArray(nodeValue && nodeValue.input_values) ? nodeValue.input_values : []) {
+        pushScenarioFailureDependency(dependencies, {
+          kind: "port",
+          relation: "node_input",
+          owner_id: String((input && input.owner_id) || target.owner_id || ""),
+          owner_key: `node:${String((input && input.owner_id) || target.owner_id || "")}`,
+          port_id: String((input && input.port_id) || ""),
+          direction: String((input && input.direction) || "in"),
+          value: input && input.value,
+          available: Boolean(input && input.available),
+        });
+      }
+      for (const edge of edgeValues.filter((item) => (
+        item && String(item.target_node_id || "") === String(target.owner_id || "")
+      ))) {
+        pushScenarioFailureDependency(dependencies, {
+          kind: "edge",
+          relation: "incoming_edge",
+          owner_id: String(edge.source_node_id || ""),
+          owner_key: `edge:${String(edge.edge_id || "")}`,
+          edge_id: String(edge.edge_id || ""),
+          port_id: String(edge.source_port_id || ""),
+          value: edge.value,
+          available: Boolean(edge.available),
+        });
+      }
+    } else if (target && target.owner_kind === "edge") {
+      const edge = edgeValues.find((item) => item && String(item.edge_id || "") === String(target.edge_id || ""));
+      if (edge) {
+        pushScenarioFailureDependency(dependencies, {
+          kind: "port",
+          relation: "edge_source",
+          owner_id: String(edge.source_node_id || ""),
+          owner_key: `node:${String(edge.source_node_id || "")}`,
+          edge_id: String(edge.edge_id || ""),
+          port_id: String(edge.source_port_id || ""),
+          value: edge.value,
+          available: Boolean(edge.available),
+        });
+      }
+    }
+    return dependencies
+      .map(({ _dedupe_key, ...dependency }) => dependency)
+      .slice(0, 8);
+  }
+
+  function scenarioFailureCurrentValue(assertion, frame, target) {
+    if (assertion && Object.prototype.hasOwnProperty.call(assertion, "observed")) {
+      return normalizeEvidenceArchiveValue(assertion.observed);
+    }
+    const values = frame && frame.values && typeof frame.values === "object" ? frame.values : {};
+    const observed = readSandboxValue(values, [
+      target && target.port_id,
+      target && target.target_id,
+      target && target.owner_id,
+    ]);
+    return normalizeEvidenceArchiveValue(observed);
+  }
+
+  function currentScenarioFailureExplanation(state) {
+    const report = currentSandboxTestRunReport();
+    const assertion = firstScenarioFailureAssertion(report);
+    const frame = scenarioFailureFrameForAssertion(report, assertion);
+    const frameIndex = scenarioFailureFrameIndex(report, frame);
+    const target = scenarioFailureTarget(assertion, frame);
+    const upstreamDependencies = scenarioFailureUpstreamDependencies(frame, target);
+    const currentValue = scenarioFailureCurrentValue(assertion, frame, target);
+    const expectedValue = assertion
+      ? normalizeEvidenceArchiveValue(assertion.expected)
+      : null;
+    const status = report
+      ? (assertion ? "fail" : (report.status || "not_run"))
+      : "not_run";
+    const tick =
+      assertion && Number.isFinite(Number(assertion.tick))
+        ? Number(assertion.tick)
+        : (
+          frame && Number.isFinite(Number(frame.tick))
+            ? Number(frame.tick)
+            : null
+        );
+    return {
+      kind: scenarioFailureExplanationKind,
+      version: scenarioFailureExplanationVersion,
+      workflow_state: state || "run_result",
+      status,
+      failure_status: assertion ? "fail" : "none",
+      scenario_id: report ? (report.scenario_id || selectedWorkbenchScenarioId()) : selectedWorkbenchScenarioId(),
+      test_case_id: report ? (report.test_case_id || selectedScenarioTestCaseIdValue()) : selectedScenarioTestCaseIdValue(),
+      assertion_status: report ? (report.assertion_status || "not_run") : "not_run",
+      assertion: assertion ? normalizeEvidenceArchiveValue(assertion) : null,
+      timeline_frame: {
+        tick,
+        frame_index: frameIndex < 0 ? null : frameIndex,
+        trace_available: Boolean(frame),
+        trace_frame_count: scenarioFailureReportFrames(report).length,
+        truth_effect: "none",
+      },
+      target,
+      current_value: currentValue,
+      expected_value: expectedValue,
+      comparator: assertion ? (assertion.comparator || "equals") : "none",
+      upstream_dependency_count: upstreamDependencies.length,
+      upstream_dependencies: upstreamDependencies,
+      explanation_summary: assertion
+        ? `Assertion ${assertion.target || "unknown"} failed at tick ${tick}.`
+        : "No failing scenario assertion is available.",
+      action_hint: assertion
+        ? "Inspect the owner node/port and upstream dependency values before handoff."
+        : "Run a sandbox scenario with assertions to build failure evidence.",
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
   function formatDebuggerValue(value) {
     if (value === undefined) return "unavailable";
     if (typeof value === "string") return value;
@@ -18007,6 +18260,36 @@ function installEditableWorkbenchShell() {
     return available
       .map((item) => `${item.port_id}=${formatDebuggerValue(item.value)} @ tick ${item.tick}`)
       .join(" · ");
+  }
+
+  function formatScenarioFailureFrame(explanation) {
+    const frame = explanation && explanation.timeline_frame ? explanation.timeline_frame : {};
+    if (!frame.trace_available) return "unavailable";
+    const indexLabel = frame.frame_index === null || frame.frame_index === undefined
+      ? "unknown"
+      : String(Number(frame.frame_index) + 1);
+    return `tick=${frame.tick} · frame=${indexLabel}/${frame.trace_frame_count || 0}`;
+  }
+
+  function formatScenarioFailureOwner(explanation) {
+    const target = explanation && explanation.target ? explanation.target : {};
+    const parts = [target.owner_key || "none:none"];
+    if (target.port_id) parts.push(`port:${target.port_id}`);
+    if (target.edge_id) parts.push(`edge:${target.edge_id}`);
+    return parts.join(" · ");
+  }
+
+  function formatScenarioFailureUpstream(dependencies) {
+    const available = (dependencies || []).filter((item) => item.available);
+    if (!available.length) return "unavailable";
+    return available
+      .map((item) => `${item.port_id || item.edge_id || item.owner_key}=${formatDebuggerValue(item.value)}`)
+      .join(" · ");
+  }
+
+  function formatScenarioFailureValue(explanation, key) {
+    if (!explanation || !explanation.assertion) return "not run";
+    return formatDebuggerValue(explanation[key]);
   }
 
   function currentCandidateDebuggerView(state) {
@@ -18066,6 +18349,41 @@ function installEditableWorkbenchShell() {
     }
     if (candidateDebuggerTrace) {
       candidateDebuggerTrace.textContent = packet.trace_available ? "available" : "unavailable";
+    }
+    return packet;
+  }
+
+  function renderScenarioFailureExplanation(explanation) {
+    const packet = explanation || currentScenarioFailureExplanation("render");
+    const status = packet.status || "not_run";
+    if (scenarioFailureExplanationPanel) {
+      scenarioFailureExplanationPanel.setAttribute("data-explanation-status", status);
+      scenarioFailureExplanationPanel.setAttribute("data-explanation-truth-effect", packet.truth_effect || "none");
+    }
+    if (scenarioFailureExplanationStatus) scenarioFailureExplanationStatus.textContent = status;
+    if (scenarioFailureExplanationAssertion) {
+      scenarioFailureExplanationAssertion.textContent = formatDebuggerAssertion(packet.assertion);
+    }
+    if (scenarioFailureExplanationFrame) {
+      scenarioFailureExplanationFrame.textContent = formatScenarioFailureFrame(packet);
+    }
+    if (scenarioFailureExplanationOwner) {
+      scenarioFailureExplanationOwner.textContent = formatScenarioFailureOwner(packet);
+    }
+    if (scenarioFailureExplanationCurrent) {
+      scenarioFailureExplanationCurrent.textContent =
+        formatScenarioFailureValue(packet, "current_value");
+    }
+    if (scenarioFailureExplanationExpected) {
+      scenarioFailureExplanationExpected.textContent =
+        formatScenarioFailureValue(packet, "expected_value");
+    }
+    if (scenarioFailureExplanationUpstream) {
+      scenarioFailureExplanationUpstream.textContent =
+        formatScenarioFailureUpstream(packet.upstream_dependencies);
+    }
+    if (scenarioFailureExplanationTruthEffect) {
+      scenarioFailureExplanationTruthEffect.textContent = packet.truth_effect || "none";
     }
     return packet;
   }
@@ -18933,6 +19251,7 @@ function installEditableWorkbenchShell() {
         `Sandbox test bench ${status}. Truth effect: none. No certification claim.`;
     }
     renderCandidateDebuggerView(currentCandidateDebuggerView("test_bench"));
+    renderScenarioFailureExplanation(currentScenarioFailureExplanation("test_bench"));
     lastPreflightAnalyzerReport = null;
     renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("test_bench"));
     return normalized;
@@ -19043,6 +19362,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_bench: snapshot.sandbox_test_bench,
       sandbox_test_run_report: snapshot.sandbox_test_run_report,
       candidate_debugger_view: snapshot.candidate_debugger_view,
+      scenario_failure_explanation: snapshot.scenario_failure_explanation,
       debug_probe_timeline: snapshot.debug_probe_timeline,
       preflight_analyzer_report: snapshot.preflight_analyzer_report,
       hardware_interface_designer: snapshot.hardware_interface_designer,
@@ -19673,6 +19993,48 @@ function installEditableWorkbenchShell() {
       }
       if (debuggerView.truth_effect !== "none") {
         throw new Error("candidate_debugger_view truth_effect must be none");
+      }
+    }
+    if (
+      payload.scenario_failure_explanation !== undefined
+      && payload.scenario_failure_explanation !== null
+      && (
+        !payload.scenario_failure_explanation
+        || typeof payload.scenario_failure_explanation !== "object"
+        || Array.isArray(payload.scenario_failure_explanation)
+      )
+    ) {
+      throw new Error("scenario_failure_explanation must be an object when present");
+    }
+    if (payload.scenario_failure_explanation) {
+      const explanation = payload.scenario_failure_explanation;
+      if (explanation.kind !== scenarioFailureExplanationKind) {
+        throw new Error("scenario_failure_explanation kind must be well-harness-workbench-scenario-failure-explanation");
+      }
+      if (explanation.version !== scenarioFailureExplanationVersion) {
+        throw new Error("scenario_failure_explanation version must be workbench-scenario-failure-explanation.v1");
+      }
+      if (explanation.candidate_state !== "sandbox_candidate") {
+        throw new Error("scenario_failure_explanation candidate_state must be sandbox_candidate");
+      }
+      if (explanation.certification_claim !== "none") {
+        throw new Error("scenario_failure_explanation certification_claim must be none");
+      }
+      if (explanation.truth_effect !== "none") {
+        throw new Error("scenario_failure_explanation truth_effect must be none");
+      }
+      if (!Array.isArray(explanation.upstream_dependencies)) {
+        throw new Error("scenario_failure_explanation upstream_dependencies must be an array");
+      }
+      if (
+        !explanation.timeline_frame
+        || typeof explanation.timeline_frame !== "object"
+        || Array.isArray(explanation.timeline_frame)
+      ) {
+        throw new Error("scenario_failure_explanation timeline_frame must be an object");
+      }
+      if (explanation.timeline_frame.truth_effect !== "none") {
+        throw new Error("scenario_failure_explanation timeline_frame truth_effect must be none");
       }
     }
     if (
@@ -21363,6 +21725,7 @@ function installEditableWorkbenchShell() {
     ["sandbox_test_run_report", "sandbox_test_run_report_checksum"],
     ["sandbox_runner_trace_kernel", "sandbox_runner_trace_kernel_checksum"],
     ["candidate_debugger_view", "candidate_debugger_view_checksum"],
+    ["scenario_failure_explanation", "scenario_failure_explanation_checksum"],
     ["debug_probe_timeline", "debug_probe_timeline_checksum"],
     ["preflight_analyzer_report", "preflight_analyzer_report_checksum"],
     ["hardware_bindings", "hardware_bindings_checksum"],
@@ -21444,6 +21807,8 @@ function installEditableWorkbenchShell() {
         sandbox_runner_trace_kernel_checksum:
           checksums.sandbox_runner_trace_kernel_checksum || "missing",
         debugger_checksum: checksums.candidate_debugger_view_checksum || "missing",
+        scenario_failure_explanation_checksum:
+          checksums.scenario_failure_explanation_checksum || "missing",
         debug_probe_timeline_checksum: checksums.debug_probe_timeline_checksum || "missing",
         preflight_checksum: checksums.preflight_analyzer_report_checksum || "missing",
         hardware_evidence_checksum: checksums.hardware_evidence_v2_checksum || "missing",
@@ -21938,6 +22303,8 @@ function installEditableWorkbenchShell() {
         : null;
     const candidateDebuggerView =
       modelJson.candidate_debugger_view || currentCandidateDebuggerView("archive");
+    const scenarioFailureExplanation =
+      modelJson.scenario_failure_explanation || currentScenarioFailureExplanation("archive");
     const debugProbeTimeline =
       modelJson.debug_probe_timeline
       || candidateDebuggerView.debug_probe_timeline
@@ -22014,6 +22381,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_run_report: sandboxTestRunReport,
       sandbox_runner_trace_kernel: sandboxRunnerTraceKernel,
       candidate_debugger_view: candidateDebuggerView,
+      scenario_failure_explanation: scenarioFailureExplanation,
       debug_probe_timeline: debugProbeTimeline,
       preflight_analyzer_report: preflightAnalyzerReport,
       diagnostic_focus: diagnosticFocus,
@@ -22067,6 +22435,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_run_report_checksum: checksumEvidenceArchiveField(sandboxTestRunReport),
       sandbox_runner_trace_kernel_checksum: checksumEvidenceArchiveField(sandboxRunnerTraceKernel),
       candidate_debugger_view_checksum: checksumEvidenceArchiveField(candidateDebuggerView),
+      scenario_failure_explanation_checksum: checksumEvidenceArchiveField(scenarioFailureExplanation),
       debug_probe_timeline_checksum: checksumEvidenceArchiveField(debugProbeTimeline),
       preflight_analyzer_report_checksum: checksumEvidenceArchiveField(preflightAnalyzerReport),
       diagnostic_focus_checksum: checksumEvidenceArchiveField(diagnosticFocus),
@@ -22179,6 +22548,7 @@ function installEditableWorkbenchShell() {
     }
     applyEditableDraftImport(archive.model_json);
     renderCandidateDebuggerView(currentCandidateDebuggerView("review_archive_restore"));
+    renderScenarioFailureExplanation(currentScenarioFailureExplanation("review_archive_restore"));
     renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("review_archive_restore"));
     setTimelineState("handoff");
     if (archiveStatus) {
@@ -22971,6 +23341,7 @@ function installEditableWorkbenchShell() {
   validateEditableGraph();
   updateEditableDraftHash();
   renderCandidateDebuggerView(currentCandidateDebuggerView("init"));
+  renderScenarioFailureExplanation(currentScenarioFailureExplanation("init"));
   renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("init"));
   renderHardwarePalette();
   hydrateEvidenceSummary();

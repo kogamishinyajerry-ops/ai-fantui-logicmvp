@@ -798,6 +798,24 @@ def test_candidate_debugger_view_controls_are_sandbox_only_ui() -> None:
     assert ".workbench-candidate-debugger-facts" in css
 
 
+def test_scenario_failure_explanation_controls_are_sandbox_only_ui() -> None:
+    html = _html()
+    css = _css()
+
+    assert 'id="workbench-scenario-failure-explanation"' in html
+    assert 'id="workbench-failure-explanation-status"' in html
+    assert 'id="workbench-failure-explanation-assertion"' in html
+    assert 'id="workbench-failure-explanation-frame"' in html
+    assert 'id="workbench-failure-explanation-owner"' in html
+    assert 'id="workbench-failure-explanation-current"' in html
+    assert 'id="workbench-failure-explanation-expected"' in html
+    assert 'id="workbench-failure-explanation-upstream"' in html
+    assert 'id="workbench-failure-explanation-truth-effect"' in html
+    assert "Failure explanation is sandbox evidence only. Truth effect: none." in html
+    assert ".workbench-scenario-failure-explanation" in css
+    assert ".workbench-failure-explanation-facts" in css
+
+
 def test_preflight_analyzer_controls_are_sandbox_only_ui() -> None:
     html = _html()
     css = _css()
@@ -1232,6 +1250,23 @@ def test_js_wires_candidate_debugger_view_as_sandbox_only_archive_packet() -> No
     assert "candidate_debugger_view truth_effect must be none" in js
     assert "first_failing_assertion" in js
     assert "observed_values" in js
+    assert 'certification_claim: "none"' in js
+    assert 'truth_effect: "none"' in js
+
+
+def test_js_wires_scenario_failure_explanation_as_sandbox_only_archive_packet() -> None:
+    js = _js()
+
+    assert "well-harness-workbench-scenario-failure-explanation" in js
+    assert "workbench-scenario-failure-explanation.v1" in js
+    assert "function currentScenarioFailureExplanation" in js
+    assert "function renderScenarioFailureExplanation" in js
+    assert "scenario_failure_explanation" in js
+    assert "scenario_failure_explanation_checksum" in js
+    assert "scenario_failure_explanation truth_effect must be none" in js
+    assert "upstream_dependencies" in js
+    assert "timeline_frame" in js
+    assert 'candidate_state: "sandbox_candidate"' in js
     assert 'certification_claim: "none"' in js
     assert 'truth_effect: "none"' in js
 

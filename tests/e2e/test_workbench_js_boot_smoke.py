@@ -4996,6 +4996,92 @@ def test_workbench_candidate_debugger_view_tracks_failing_assertion_and_archive(
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_scenario_failure_explanation_links_assertion_frame_owner_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click('[data-op-catalog-op="compare"]')
+    page.click('[data-editor-tool="node"]')
+    _fill_workbench_run_control(page, "#workbench-test-bench-inputs-json",
+        json.dumps(
+            [
+                {"tick": 0, "inputs": {"draft_node_1:in": 2, "draft_node_1": 2}},
+                {"tick": 1, "inputs": {"draft_node_1:in": 8, "draft_node_1": 8}},
+            ]
+        ),
+    )
+    _fill_workbench_run_control(page, "#workbench-test-bench-assertions-json",
+        json.dumps(
+            [
+                {"tick": 0, "target": "draft_node_1:out", "expected": True},
+                {"tick": 1, "target": "draft_node_1:out", "expected": True},
+            ]
+        ),
+    )
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
+    page.wait_for_function(
+        """
+        () => document.getElementById('workbench-failure-explanation-status')?.textContent.trim() === 'fail'
+        """
+    )
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert page.locator("#workbench-scenario-failure-explanation").get_attribute("data-explanation-status") == "fail"
+    assert page.locator("#workbench-scenario-failure-explanation").get_attribute("data-explanation-truth-effect") == "none"
+    assert "draft_node_1:out" in page.locator("#workbench-failure-explanation-assertion").inner_text()
+    assert "tick=0" in page.locator("#workbench-failure-explanation-frame").inner_text()
+    assert "node:draft_node_1" in page.locator("#workbench-failure-explanation-owner").inner_text()
+    assert "port:draft_node_1:out" in page.locator("#workbench-failure-explanation-owner").inner_text()
+    assert page.locator("#workbench-failure-explanation-current").inner_text() == "false"
+    assert page.locator("#workbench-failure-explanation-expected").inner_text() == "true"
+    assert "draft_node_1:in=2" in page.locator("#workbench-failure-explanation-upstream").inner_text()
+    assert page.locator("#workbench-failure-explanation-truth-effect").inner_text() == "none"
+
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
+    draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    explanation = draft["scenario_failure_explanation"]
+    assert explanation["kind"] == "well-harness-workbench-scenario-failure-explanation"
+    assert explanation["version"] == "workbench-scenario-failure-explanation.v1"
+    assert explanation["status"] == "fail"
+    assert explanation["assertion"]["target"] == "draft_node_1:out"
+    assert explanation["timeline_frame"]["tick"] == 0
+    assert explanation["target"]["owner_key"] == "node:draft_node_1"
+    assert explanation["target"]["port_id"] == "draft_node_1:out"
+    assert explanation["current_value"] is False
+    assert explanation["expected_value"] is True
+    assert explanation["upstream_dependencies"][0]["port_id"] == "draft_node_1:in"
+    assert explanation["upstream_dependencies"][0]["value"] == 2
+    assert explanation["candidate_state"] == "sandbox_candidate"
+    assert explanation["certification_claim"] == "none"
+    assert explanation["truth_effect"] == "none"
+
+    draft_json = page.locator("#workbench-draft-json-buffer").input_value()
+    _set_draft_buffer_value(page, draft_json)
+    _click_workbench_handoff_control(page, "#workbench-import-draft-btn")
+    _click_workbench_handoff_control(page, "#workbench-export-draft-btn")
+    imported = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
+    assert imported["scenario_failure_explanation"]["target"]["owner_key"] == "node:draft_node_1"
+    assert imported["scenario_failure_explanation"]["upstream_dependencies"][0]["truth_effect"] == "none"
+
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+    assert archive["scenario_failure_explanation"]["truth_effect"] == "none"
+    assert archive["scenario_failure_explanation"]["assertion"]["target"] == "draft_node_1:out"
+    assert archive["checksums"]["scenario_failure_explanation_checksum"]
+    assert archive["foundation_review_archive"]["sections"]["scenario_failure_explanation"]["status"] == "present"
+    assert archive["review_archive_restore_v3"]["status"] == "pass"
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
+
+
 def test_workbench_debug_probe_timeline_tracks_selected_node_over_trace_and_restore(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
