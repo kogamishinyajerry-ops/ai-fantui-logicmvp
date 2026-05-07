@@ -7659,8 +7659,12 @@ function installEditableWorkbenchShell() {
   const ruleThresholdInput = document.getElementById("workbench-rule-threshold");
   const applyRuleParameterBtn = document.getElementById("workbench-apply-rule-parameter-btn");
   const ruleParameterStatus = document.getElementById("workbench-rule-parameter-status");
+  const subsystemEditor = document.getElementById("workbench-subsystem-editor");
   const subsystemNameInput = document.getElementById("workbench-subsystem-name");
   const subsystemOwner = document.getElementById("workbench-subsystem-owner");
+  const subsystemSelectionCount = document.getElementById("workbench-subsystem-selection-count");
+  const subsystemActiveName = document.getElementById("workbench-subsystem-active-name");
+  const subsystemWorkflowStateSlot = document.getElementById("workbench-subsystem-workflow-state");
   const createSubsystemBtn = document.getElementById("workbench-create-subsystem-btn");
   const renameSubsystemBtn = document.getElementById("workbench-rename-subsystem-btn");
   const ungroupSubsystemBtn = document.getElementById("workbench-ungroup-subsystem-btn");
@@ -7828,6 +7832,7 @@ function installEditableWorkbenchShell() {
   let selectedNodeIds = new Set(selectedNode ? [selectedNode.getAttribute("data-editable-node-id") || ""] : []);
   let selectedEdge = null;
   let hoveredSubsystemGroupId = "";
+  let subsystemWorkflowState = "idle";
   let lassoDragState = null;
   let groupDragState = null;
   let selectionMarquee = null;
@@ -12649,6 +12654,8 @@ function installEditableWorkbenchShell() {
       overlay.setAttribute("data-subsystem-node-count", String(group.node_ids.length));
       overlay.setAttribute("data-truth-effect", "none");
       overlay.setAttribute("data-subsystem-active", "false");
+      overlay.setAttribute("data-subsystem-workflow-state", subsystemWorkflowState);
+      overlay.setAttribute("data-subsystem-name", group.name);
       overlay.setAttribute(
         "aria-label",
         `${group.name}: ${group.node_ids.length} draft node(s). Sandbox metadata. Truth effect none.`,
@@ -12678,6 +12685,48 @@ function installEditableWorkbenchShell() {
     if (!subsystemStatus) return;
     subsystemStatus.textContent = message;
     subsystemStatus.setAttribute("data-status-tone", tone);
+  }
+
+  function subsystemWorkflowStateLabel(state) {
+    if (state === "ready_to_group") return "可封装";
+    if (state === "grouped") return "已封装";
+    if (state === "renamed") return "已重命名";
+    if (state === "ungrouped") return "已解除";
+    return "未选择";
+  }
+
+  function derivedSubsystemWorkflowState(group, selectedDraftCount) {
+    if (group && subsystemWorkflowState === "renamed") return "renamed";
+    if (!group && subsystemWorkflowState === "ungrouped") return "ungrouped";
+    if (group) return "grouped";
+    if (selectedDraftCount >= 2) return "ready_to_group";
+    return "idle";
+  }
+
+  function updateSubsystemWorkflowSummary(group, selectedDraftCount) {
+    const selectedCount = Number.isFinite(Number(selectedDraftCount)) ? Number(selectedDraftCount) : 0;
+    const state = derivedSubsystemWorkflowState(group, selectedCount);
+    subsystemWorkflowState = state;
+    if (subsystemEditor) {
+      subsystemEditor.setAttribute("data-subsystem-workflow-state", state);
+      subsystemEditor.setAttribute("data-subsystem-selected-count", String(selectedCount));
+      subsystemEditor.setAttribute("data-subsystem-name", group ? group.name : "");
+    }
+    if (subsystemSelectionCount) subsystemSelectionCount.textContent = `已选 ${selectedCount}`;
+    if (subsystemActiveName) subsystemActiveName.textContent = group ? group.name : "无";
+    if (subsystemWorkflowStateSlot) subsystemWorkflowStateSlot.textContent = subsystemWorkflowStateLabel(state);
+    for (const overlay of Array.from(canvas ? canvas.querySelectorAll(".workbench-subsystem-overlay") : [])) {
+      const groupId = overlay.getAttribute("data-subsystem-id") || "";
+      const isCurrentGroup = Boolean(group && groupId === group.id);
+      overlay.setAttribute("data-subsystem-workflow-state", isCurrentGroup ? state : "grouped");
+      overlay.setAttribute("data-subsystem-name", overlay.getAttribute("data-subsystem-name") || "");
+    }
+    return state;
+  }
+
+  function setSubsystemWorkflowState(state, group, selectedDraftCount) {
+    subsystemWorkflowState = state || "idle";
+    return updateSubsystemWorkflowSummary(group || selectedSubsystemGroup(), selectedDraftCount);
   }
 
   function syncSubsystemActiveAffordance() {
@@ -12713,10 +12762,11 @@ function installEditableWorkbenchShell() {
     if (createSubsystemBtn) createSubsystemBtn.disabled = selectedDraftNodes.length < 2;
     if (renameSubsystemBtn) renameSubsystemBtn.disabled = !group;
     if (ungroupSubsystemBtn) ungroupSubsystemBtn.disabled = !group;
+    updateSubsystemWorkflowSummary(group, selectedDraftNodes.length);
     setSubsystemStatus(
       group
-        ? `Subsystem ${group.id}: ${group.node_ids.length} draft node(s). Truth effect: none.`
-        : "Select two or more draft nodes to create a subsystem. Truth effect: none.",
+        ? `已选择子系统 ${group.name}: ${group.node_ids.length} draft node(s). Truth effect: none.`
+        : "选择两个或更多 draft nodes 后可封装为子系统。Truth effect: none.",
       group ? "success" : "info",
     );
     renderSubsystemInterfaceContractEditor();
@@ -12755,9 +12805,10 @@ function installEditableWorkbenchShell() {
     persistDraft();
     if (draftLabel) draftLabel.textContent = "sandbox_candidate subsystem group pending";
     setSubsystemStatus(
-      `Created ${group.name} with ${group.node_ids.length} draft node(s). Truth effect: none.`,
+      `已封装 · Created ${group.name} with ${group.node_ids.length} draft node(s). Truth effect: none.`,
       "success",
     );
+    setSubsystemWorkflowState("grouped", group, group.node_ids.length);
     return group;
   }
 
@@ -12782,8 +12833,10 @@ function installEditableWorkbenchShell() {
     updateEditableDraftHash();
     persistDraft();
     if (draftLabel) draftLabel.textContent = "sandbox_candidate subsystem rename pending";
-    setSubsystemStatus(`Renamed subsystem ${group.id} to ${nextName}. Truth effect: none.`, "success");
-    return subsystemGroupById(group.id);
+    const renamedGroup = subsystemGroupById(group.id);
+    setSubsystemStatus(`已重命名 · Renamed subsystem ${group.id} to ${nextName}. Truth effect: none.`, "success");
+    setSubsystemWorkflowState("renamed", renamedGroup, renamedGroup ? renamedGroup.node_ids.length : 0);
+    return renamedGroup;
   }
 
   function ungroupSelectedSubsystem() {
@@ -12808,7 +12861,8 @@ function installEditableWorkbenchShell() {
     updateEditableDraftHash();
     persistDraft();
     if (draftLabel) draftLabel.textContent = "sandbox_candidate subsystem ungroup pending";
-    setSubsystemStatus(`Ungrouped ${group.name}. Nodes, ports, and edges preserved.`, "success");
+    setSubsystemStatus(`已解除 · Ungrouped ${group.name}. Nodes, ports, and edges preserved.`, "success");
+    setSubsystemWorkflowState("ungrouped", null, selectedNodeIds.size);
     return group;
   }
 

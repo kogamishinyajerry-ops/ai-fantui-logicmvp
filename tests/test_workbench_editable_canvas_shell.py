@@ -654,21 +654,35 @@ def test_subsystem_group_editor_controls_are_exposed_as_sandbox_only_ui() -> Non
     assert 'data-editor-tool="group"' in html
     assert 'data-editor-tool="ungroup"' in html
     assert 'id="workbench-subsystem-editor"' in html
+    assert 'data-subsystem-workflow-state="idle"' in html
+    assert "子系统封装" in html
+    assert 'id="workbench-subsystem-selection-count"' in html
+    assert 'id="workbench-subsystem-active-name"' in html
+    assert 'id="workbench-subsystem-workflow-state"' in html
     assert 'id="workbench-subsystem-name"' in html
+    assert "子系统名称" in html
     assert 'id="workbench-create-subsystem-btn"' in html
     assert 'id="workbench-rename-subsystem-btn"' in html
     assert 'id="workbench-ungroup-subsystem-btn"' in html
+    assert ">封装<" in html
+    assert ">重命名<" in html
+    assert ">解除封装<" in html
     assert 'id="workbench-subsystem-status"' in html
     assert 'role="status"' in html
     assert 'aria-live="polite"' in html
     assert 'data-status-tone="info"' in html
-    assert "Subsystem edits are sandbox metadata only. Truth effect: none." in html
+    assert "子系统编辑仅写入 sandbox metadata。Truth effect: none." in html
+    assert ".workbench-subsystem-workflow-summary" in css
     assert ".workbench-subsystem-overlay" in css
     assert '.workbench-subsystem-overlay[data-subsystem-active="true"]' in css
+    assert '.workbench-subsystem-overlay[data-subsystem-workflow-state="grouped"]' in css
     assert ".workbench-subsystem-overlay-label" in css
     assert ".workbench-subsystem-overlay-meta" in css
     assert '.workbench-editable-node[data-subsystem-id]:hover' in css
     assert '.workbench-editable-node[data-subsystem-active="true"]' in css
+    assert '#workbench-subsystem-editor[data-subsystem-workflow-state="ready_to_group"]' in css
+    assert '#workbench-subsystem-editor[data-subsystem-workflow-state="grouped"]' in css
+    assert '#workbench-subsystem-editor[data-subsystem-workflow-state="ungrouped"]' in css
     assert '#workbench-subsystem-status[data-status-tone="success"]' in css
     assert '#workbench-subsystem-status[data-status-tone="warn"]' in css
     assert ".workbench-subsystem-editor" in css
@@ -876,6 +890,8 @@ def test_js_wires_subsystem_group_round_trip_as_sandbox_only_metadata() -> None:
     assert "function groupSelectedDraftNodes" in js
     assert "function renameSelectedSubsystemGroup" in js
     assert "function ungroupSelectedSubsystem" in js
+    assert "function updateSubsystemWorkflowSummary" in js
+    assert "function setSubsystemWorkflowState" in js
     assert "function renderSubsystemOverlays" in js
     assert "function setSubsystemStatus" in js
     assert "function syncSubsystemActiveAffordance" in js
@@ -884,6 +900,13 @@ def test_js_wires_subsystem_group_round_trip_as_sandbox_only_metadata() -> None:
     assert 'addEventListener("mouseenter"' in js
     assert 'addEventListener("mouseleave"' in js
     assert 'setAttribute("data-status-tone", tone)' in js
+    assert 'setAttribute("data-subsystem-workflow-state", state)' in js
+    assert 'setAttribute("data-subsystem-selected-count"' in js
+    assert 'setAttribute("data-subsystem-name"' in js
+    assert '"ready_to_group"' in js
+    assert '"grouped"' in js
+    assert '"renamed"' in js
+    assert '"ungrouped"' in js
     assert "subsystem_groups" in js
     assert "subsystem_groups truth_effect must be none" in js
     assert "subsystem_groups_checksum" in js

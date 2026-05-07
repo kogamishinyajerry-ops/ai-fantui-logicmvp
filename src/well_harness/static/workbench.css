@@ -6002,6 +6002,10 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   background: rgba(37, 99, 235, 0.1);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
 }
+.workbench-subsystem-overlay[data-subsystem-workflow-state="grouped"],
+.workbench-subsystem-overlay[data-subsystem-workflow-state="renamed"] {
+  border-style: solid;
+}
 .workbench-subsystem-overlay-label,
 .workbench-subsystem-overlay-meta {
   position: absolute;
@@ -6745,6 +6749,40 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.4rem;
+}
+.workbench-subsystem-workflow-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.34rem;
+  margin: 0.5rem 0;
+}
+.workbench-subsystem-workflow-summary div {
+  min-width: 0;
+  padding: 0.36rem;
+  border: 1px solid rgba(150, 173, 190, 0.16);
+  border-radius: 6px;
+  background: rgba(4, 10, 16, 0.42);
+}
+.workbench-subsystem-workflow-summary dt {
+  margin-bottom: 0.16rem;
+  color: rgba(213, 227, 237, 0.58);
+  font-size: 0.58rem;
+}
+.workbench-subsystem-workflow-summary dd {
+  margin: 0;
+  color: rgba(241, 248, 252, 0.92);
+  font-size: 0.66rem;
+  overflow-wrap: anywhere;
+}
+#workbench-subsystem-editor[data-subsystem-workflow-state="ready_to_group"] {
+  border-color: rgba(125, 215, 194, 0.3);
+}
+#workbench-subsystem-editor[data-subsystem-workflow-state="grouped"],
+#workbench-subsystem-editor[data-subsystem-workflow-state="renamed"] {
+  border-color: rgba(37, 99, 235, 0.34);
+}
+#workbench-subsystem-editor[data-subsystem-workflow-state="ungrouped"] {
+  border-color: rgba(245, 158, 11, 0.32);
 }
 .workbench-subsystem-actions .workbench-editable-primary {
   min-width: 0;

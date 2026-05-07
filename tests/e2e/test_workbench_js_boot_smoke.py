@@ -3245,6 +3245,13 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
     assert overlay.get_attribute("data-subsystem-node-count") == "2"
     assert overlay.get_attribute("data-truth-effect") == "none"
     assert overlay.get_attribute("data-subsystem-active") == "true"
+    assert overlay.get_attribute("data-subsystem-workflow-state") == "grouped"
+    assert overlay.get_attribute("data-subsystem-name") == "Deploy interlock"
+    assert page.locator("#workbench-subsystem-editor").get_attribute("data-subsystem-workflow-state") == "grouped"
+    assert page.locator("#workbench-subsystem-editor").get_attribute("data-subsystem-selected-count") == "2"
+    assert page.locator("#workbench-subsystem-selection-count").inner_text() == "已选 2"
+    assert page.locator("#workbench-subsystem-active-name").inner_text() == "Deploy interlock"
+    assert page.locator("#workbench-subsystem-workflow-state").inner_text() == "已封装"
     assert "Deploy interlock" in overlay.inner_text()
     assert "2 draft node(s)" in overlay.inner_text()
     assert "truth effect none" in overlay.inner_text()
@@ -3270,6 +3277,11 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
     assert renamed["subsystem_groups"][0]["name"] == "Deploy interlock v2"
     assert "Deploy interlock v2" in page.locator(".workbench-subsystem-overlay").inner_text()
     assert page.locator(".workbench-subsystem-overlay").get_attribute("data-subsystem-active") == "true"
+    assert page.locator(".workbench-subsystem-overlay").get_attribute("data-subsystem-workflow-state") == "renamed"
+    assert page.locator(".workbench-subsystem-overlay").get_attribute("data-subsystem-name") == "Deploy interlock v2"
+    assert page.locator("#workbench-subsystem-editor").get_attribute("data-subsystem-workflow-state") == "renamed"
+    assert page.locator("#workbench-subsystem-active-name").inner_text() == "Deploy interlock v2"
+    assert page.locator("#workbench-subsystem-workflow-state").inner_text() == "已重命名"
     assert "Renamed subsystem" in status.inner_text()
     assert "Deploy interlock v2" in status.inner_text()
     assert status.get_attribute("data-status-tone") == "success"
@@ -3298,6 +3310,10 @@ def test_workbench_subsystem_group_rename_ungroup_round_trips_sandbox_metadata(d
     assert [edge["id"] for edge in ungrouped["edges"]] == before_edge_ids
     assert [port["id"] for port in ungrouped["typed_ports"]] == before_port_ids
     assert all("subsystem_group" not in node for node in ungrouped["nodes"] if node["id"].startswith("draft_node_"))
+    assert page.locator("#workbench-subsystem-editor").get_attribute("data-subsystem-workflow-state") == "ungrouped"
+    assert page.locator("#workbench-subsystem-selection-count").inner_text() == "已选 2"
+    assert page.locator("#workbench-subsystem-active-name").inner_text() == "无"
+    assert page.locator("#workbench-subsystem-workflow-state").inner_text() == "已解除"
     assert "Ungrouped Deploy interlock v2" in status.inner_text()
     assert status.get_attribute("data-status-tone") == "success"
 
