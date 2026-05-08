@@ -860,9 +860,15 @@ def test_scenario_failure_explanation_controls_are_sandbox_only_ui() -> None:
     assert 'id="workbench-failure-explanation-expected"' in html
     assert 'id="workbench-failure-explanation-upstream"' in html
     assert 'id="workbench-failure-explanation-truth-effect"' in html
+    assert 'id="workbench-failure-explanation-focus-owner-btn"' in html
+    assert 'id="workbench-failure-explanation-focus-frame-btn"' in html
+    assert 'id="workbench-failure-explanation-navigation-status"' in html
+    assert "定位责任元件" in html
+    assert "标记时间帧" in html
     assert "Failure explanation is sandbox evidence only. Truth effect: none." in html
     assert ".workbench-scenario-failure-explanation" in css
     assert ".workbench-failure-explanation-facts" in css
+    assert ".workbench-failure-explanation-actions" in css
 
 
 def test_preflight_analyzer_controls_are_sandbox_only_ui() -> None:
@@ -1310,11 +1316,15 @@ def test_js_wires_scenario_failure_explanation_as_sandbox_only_archive_packet() 
     assert "workbench-scenario-failure-explanation.v1" in js
     assert "function currentScenarioFailureExplanation" in js
     assert "function renderScenarioFailureExplanation" in js
+    assert "function focusScenarioFailureOwner" in js
+    assert "function focusScenarioFailureFrame" in js
     assert "scenario_failure_explanation" in js
     assert "scenario_failure_explanation_checksum" in js
     assert "scenario_failure_explanation truth_effect must be none" in js
     assert "upstream_dependencies" in js
     assert "timeline_frame" in js
+    assert "data-failure-navigation" in js
+    assert "data-failure-frame-tick" in js
     assert 'candidate_state: "sandbox_candidate"' in js
     assert 'certification_claim: "none"' in js
     assert 'truth_effect: "none"' in js
