@@ -1,52 +1,89 @@
 {
-  "kind": "blueprint40-final-target-screenshots",
-  "style": "codex-minimal-workbench",
-  "source_artifact_dir": "artifacts/blueprint40-complete-circuit-alignment-20260515-codex",
-  "selection_rule": "Canonical targets are current desktop-1366x768 Codex minimal workbench screenshots; desktop-1280x820 captures are responsive guards only.",
-  "selected_count": 5,
+  "kind": "blueprint-final-target-screenshots",
+  "source_artifact_dir": "artifacts/deepseek-live-full-chain-ui-blueprint/final-ui-blueprint-screenshots-20260514/selected-final-set",
+  "supporting_manifest": "artifacts/deepseek-live-full-chain-ui-blueprint/final-ui-blueprint-screenshots-20260514/MANIFEST.md",
+  "supporting_brief": "artifacts/deepseek-live-full-chain-ui-blueprint/final-ui-blueprint-screenshots-20260514/BLUEPRINT_UI_DEVELOPMENT_BRIEF.md",
+  "selection_rule": "The 14 screenshots in selected-final-set are the correct final UI blueprint targets; blueprint40 current captures are implementation comparison evidence only.",
+  "selected_count": 14,
   "selected": [
     {
       "id": "T01",
-      "route_key": "requirements-intake",
-      "viewport": "desktop-1366x768",
-      "file": "requirements-intake--desktop-1366x768.png",
-      "role": "Source intake and transition into drawing"
+      "file": "14-selected-overview-board.png",
+      "role": "Overall IA, route sequence, and final handoff board"
     },
     {
       "id": "T02",
-      "route_key": "logic-builder",
-      "viewport": "desktop-1366x768",
-      "file": "logic-builder--desktop-1366x768.png",
-      "role": "Real circuit canvas with full 20 node / 23 wire renderer"
+      "file": "27-global-nav-default-workbench.png",
+      "role": "Default compact workbench with five exposed entries"
     },
     {
       "id": "T03",
-      "route_key": "fault-injection-prepare",
-      "viewport": "desktop-1366x768",
-      "file": "fault-injection-prepare--desktop-1366x768.png",
-      "role": "Fault candidate matrix and right inspector balance"
+      "file": "28-command-palette-advanced-entry.png",
+      "role": "Advanced actions through command palette"
     },
     {
       "id": "T04",
-      "route_key": "fault-injection-sandbox-default",
-      "viewport": "desktop-1366x768",
-      "file": "fault-injection-sandbox-default--desktop-1366x768.png",
-      "role": "Default sandbox workbench with status-only right rail"
+      "file": "29-blank-canvas-template-entry.png",
+      "role": "Blank canvas, DOCX template, and restore entry states"
     },
     {
       "id": "T05",
-      "route_key": "fault-injection-sandbox",
-      "viewport": "desktop-1366x768",
-      "file": "fault-injection-sandbox--desktop-1366x768.png",
-      "role": "Explicit report package preview and export state"
+      "file": "30-docx-template-generated-canvas.png",
+      "role": "Generated logic canvas target"
+    },
+    {
+      "id": "T06",
+      "file": "31-running-signal-propagation.png",
+      "role": "Running simulation target"
+    },
+    {
+      "id": "T07",
+      "file": "32-parameter-drawer-final.png",
+      "role": "Bottom parameter drawer target"
+    },
+    {
+      "id": "T08",
+      "file": "33-fault-injection-final.png",
+      "role": "Fault injection target"
+    },
+    {
+      "id": "T09",
+      "file": "34-failure-diagnosis-path.png",
+      "role": "Failure diagnosis path target"
+    },
+    {
+      "id": "T10",
+      "file": "35-evidence-trace-final.png",
+      "role": "Evidence trace target"
+    },
+    {
+      "id": "T11",
+      "file": "36-sandbox-review-final.png",
+      "role": "Sandbox review target"
+    },
+    {
+      "id": "T12",
+      "file": "37-replay-report-final.png",
+      "role": "Replay report target"
+    },
+    {
+      "id": "T13",
+      "file": "38-panel-state-strategy-final.png",
+      "role": "Panel state strategy target"
+    },
+    {
+      "id": "T14",
+      "file": "39-concept-video-storyboard.png",
+      "role": "Narrative storyboard reference"
     }
   ],
-  "guard_only": [
-    "requirements-intake--desktop-1280x820.png",
-    "logic-builder--desktop-1280x820.png",
-    "fault-injection-prepare--desktop-1280x820.png",
-    "fault-injection-sandbox-default--desktop-1280x820.png",
-    "fault-injection-sandbox--desktop-1280x820.png",
+  "implementation_evidence_dir": "artifacts/blueprint40-complete-circuit-alignment-20260515-codex",
+  "implementation_evidence": [
+    "requirements-intake--desktop-1366x768.png",
+    "logic-builder--desktop-1366x768.png",
+    "fault-injection-prepare--desktop-1366x768.png",
+    "fault-injection-sandbox-default--desktop-1366x768.png",
+    "fault-injection-sandbox--desktop-1366x768.png",
     "reference-current-contact-sheet.png"
   ]
 }

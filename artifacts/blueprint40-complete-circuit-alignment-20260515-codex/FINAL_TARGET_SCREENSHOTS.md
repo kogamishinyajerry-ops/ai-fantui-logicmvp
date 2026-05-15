@@ -1,32 +1,44 @@
 # Final Target Screenshots
 
-Source artifact: `artifacts/blueprint40-complete-circuit-alignment-20260515-codex`.
+Canonical blueprint source:
 
-Selection rule: use the current Codex minimal workbench screenshots at `desktop-1366x768` as the canonical visual targets. The `desktop-1280x820` captures remain responsive guard evidence only.
+`artifacts/deepseek-live-full-chain-ui-blueprint/final-ui-blueprint-screenshots-20260514/selected-final-set`
+
+Selection rule: the 14 screenshots in `selected-final-set/` are the correct final UI blueprint targets. The current captures under `artifacts/blueprint40-complete-circuit-alignment-20260515-codex/` are implementation comparison evidence only, not the target source of truth.
 
 ## Selected Target Set
 
-| ID | Route state | Target screenshot | Acceptance role |
-|---|---|---|---|
-| T01 | Requirements intake default | `requirements-intake--desktop-1366x768.png` | Source intake, provider/status rhythm, and first transition into drawing. |
-| T02 | Logic builder real circuit canvas | `logic-builder--desktop-1366x768.png` | Primary real graph renderer target: full `20 circuit nodes / 23 wires`, compact stream chip, and canvas-first layout. |
-| T03 | Fault injection preparation | `fault-injection-prepare--desktop-1366x768.png` | Candidate fault matrix, compact top process, selected candidate path, and right inspector balance. |
-| T04 | Sandbox default workbench | `fault-injection-sandbox-default--desktop-1366x768.png` | Main sandbox target: replay canvas, active path, status-only right report rail, and compact evidence trace. |
-| T05 | Sandbox report package preview | `fault-injection-sandbox--desktop-1366x768.png` | Explicit export/report package state with full review, evidence, and report rows. |
+| ID | Blueprint screenshot | Acceptance role |
+|---|---|---|
+| T01 | `14-selected-overview-board.png` | Overall IA, route sequence, and final handoff board. |
+| T02 | `27-global-nav-default-workbench.png` | Default compact workbench: five exposed entries, collapsed rails, bottom run strip. |
+| T03 | `28-command-palette-advanced-entry.png` | Advanced actions through command palette instead of persistent surface clutter. |
+| T04 | `29-blank-canvas-template-entry.png` | Blank canvas, DOCX L1-L4 template, and restore entry states. |
+| T05 | `30-docx-template-generated-canvas.png` | Generated logic canvas with readable nodes, source badges, and run-ready strip. |
+| T06 | `31-running-signal-propagation.png` | Running simulation state, active wires, timeline ticks, and output verdict. |
+| T07 | `32-parameter-drawer-final.png` | Bottom parameter/simulation drawer with compact controls and collapse behavior. |
+| T08 | `33-fault-injection-final.png` | Fault injection surface and candidate matrix target. |
+| T09 | `34-failure-diagnosis-path.png` | Failure diagnosis path, focused graph state, and selected fault explanation. |
+| T10 | `35-evidence-trace-final.png` | Evidence trace surface and source linkage target. |
+| T11 | `36-sandbox-review-final.png` | Sandbox review rows, dry-run truth boundary, and gate review target. |
+| T12 | `37-replay-report-final.png` | Replay report target with timeline, report state, and export readiness. |
+| T13 | `38-panel-state-strategy-final.png` | Panel state strategy: collapsible rails, drawer behavior, and one major auxiliary surface at a time. |
+| T14 | `39-concept-video-storyboard.png` | Narrative storyboard reference for explaining the target workflow. |
 
-## Guard-Only Captures
+## Supporting Files
 
-These files are not final visual targets, but keep the selected targets honest across viewport and audit contexts:
+- `artifacts/deepseek-live-full-chain-ui-blueprint/final-ui-blueprint-screenshots-20260514/MANIFEST.md`
+- `artifacts/deepseek-live-full-chain-ui-blueprint/final-ui-blueprint-screenshots-20260514/BLUEPRINT_UI_DEVELOPMENT_BRIEF.md`
+- `artifacts/blueprint40-complete-circuit-alignment-20260515-codex/reference-current-contact-sheet.png`
 
-- `requirements-intake--desktop-1280x820.png`
-- `logic-builder--desktop-1280x820.png`
-- `fault-injection-prepare--desktop-1280x820.png`
-- `fault-injection-sandbox-default--desktop-1280x820.png`
-- `fault-injection-sandbox--desktop-1280x820.png`
-- `reference-current-contact-sheet.png`
+## Implementation Evidence
 
-## Style Lock
+The blueprint40 screenshots remain useful as current-state evidence:
 
-- The selected target set is Codex minimal workbench style: white shell, restrained blue/green state color, compact nav/process bars, and no decorative mock illustration.
-- Targets are current UI captures, not manually mocked V2 images.
-- `visual-acceptance-summary.json` reports all five selected route states as `ok=true` at `desktop-1366x768`.
+- `requirements-intake--desktop-1366x768.png`
+- `logic-builder--desktop-1366x768.png`
+- `fault-injection-prepare--desktop-1366x768.png`
+- `fault-injection-sandbox-default--desktop-1366x768.png`
+- `fault-injection-sandbox--desktop-1366x768.png`
+
+Use those current captures to measure implementation progress against the 14 target blueprint screenshots above.

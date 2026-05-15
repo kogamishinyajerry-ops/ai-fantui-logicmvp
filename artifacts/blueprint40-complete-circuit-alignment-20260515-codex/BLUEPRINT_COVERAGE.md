@@ -1,10 +1,12 @@
 # Blueprint 40 Coverage
 
-Source reference list: `artifacts/blueprint-ui-detail-audit-20260515-codex/README.md`.
+Correct final blueprint source: `artifacts/deepseek-live-full-chain-ui-blueprint/final-ui-blueprint-screenshots-20260514/selected-final-set`.
+
+Current implementation comparison source: `artifacts/blueprint-ui-detail-audit-20260515-codex/README.md`.
 
 Acceptance summary: `visual-acceptance-summary.json` reports `ok=true`, `route_count=5`, and `screenshot_count=10`.
 
-Final selected targets: `FINAL_TARGET_SCREENSHOTS.md` narrows the canonical Codex minimal target set to five `desktop-1366x768` screenshots.
+Final selected targets: `FINAL_TARGET_SCREENSHOTS.md` records the 14 selected-final-set screenshots as the canonical blueprint targets.
 
 ## Reference To Current Mapping
 
