@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>逻辑链路绘制 · FANTUI LogicMVP</title>
+<link rel="stylesheet" href="/unified-nav.css">
+<link rel="stylesheet" href="/logic_builder/logic_builder.css?v=workflow4">
+<script src="/logic_builder/logic_builder.js?v=workflow2" defer></script>
+</head>
+<body class="unified-nav-enabled" data-nav-current="logic-builder" data-primary-flow="deepseek-v4-pro-ui-workbench" data-canvas-status="degraded-backup">
+<header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
+  <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div id="deepseek-nav-mainline" class="unified-nav-group unified-nav-mainline" aria-label="DeepSeek 四步主线" data-ux-main-flow="four-step">
+      <span class="unified-nav-group-label">主流程</span>
+      <a href="/requirements-intake" class="unified-nav-link" data-nav-key="requirements-intake">1 需求解析</a>
+      <a href="/logic-builder" class="unified-nav-link is-active" data-nav-key="logic-builder">2 逻辑复刻</a>
+      <a href="/fault-injection-prepare" class="unified-nav-link" data-nav-key="fault-injection-prepare">3 故障准备</a>
+      <a href="/fault-injection-sandbox" class="unified-nav-link" data-nav-key="fault-injection-sandbox">4 沙盒审查</a>
+    </div>
+    <details id="deepseek-nav-advanced-modules" class="unified-nav-advanced">
+      <summary>更多模块</summary>
+      <div class="unified-nav-advanced-links">
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">旧工作台</span>
+          <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">反推逻辑</a>
+          <a href="/c919_etras_workstation.html" class="unified-nav-link" data-nav-key="etras">C919 E-TRAS</a>
+        </div>
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">电路图</span>
+          <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
+          <a href="/c919_etras_panel/circuit.html" class="unified-nav-link" data-nav-key="etras-circuit">E-TRAS 电路</a>
+        </div>
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">仿真</span>
+          <a href="/fan_console.html" class="unified-nav-link" data-nav-key="fan-console">反推操作台</a>
+          <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
+        </div>
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">文档</span>
+          <a href="/fantui_requirements.html" class="unified-nav-link" data-nav-key="fantui-req">FANTUI 需求</a>
+          <a href="/c919_requirements.html" class="unified-nav-link" data-nav-key="c919-req">C919 需求</a>
+        </div>
+      </div>
+    </details>
+  </div>
+</header>
+
+<main class="logic-shell logic-cockpit-shell" data-ui-skin="codex-minimal" data-logic-experience="cockpit-annotation-stream" data-workstation-shell="canvas-first" data-workstation-state="primary" data-blueprint-phase="phase-1-shell" data-blueprint-source="selected-final-set-20260514" data-blueprint-targets="27-global-nav-default-workbench 28-command-palette-advanced-entry 30-docx-template-generated-canvas 31-running-signal-propagation 32-parameter-drawer-final 38-panel-state-strategy-final" data-blueprint27-rhythm="compact-canvas" data-panel-default="collapsed" data-panel-strategy="single-auxiliary" data-left-rail-state="collapsed" data-right-inspector-state="collapsed" data-bottom-drawer-state="closed" data-command-palette-state="closed" data-active-aux-panel="none" data-unified-inspector-state="none">
+  <div class="logic-cockpit-canopy" data-cockpit-role="canopy-frame" aria-hidden="true">
+    <span class="logic-cockpit-canopy-window"></span>
+    <span class="logic-cockpit-canopy-window"></span>
+    <span class="logic-cockpit-canopy-window"></span>
+  </div>
+
+  <section id="logic-page-system-strip" class="logic-command-strip logic-page-system-strip logic-cockpit-header deepseek-command-strip" aria-label="命令与页面状态" data-command-strip="deepseek-step" data-command-step="2" data-cockpit-role="status-banner" data-blueprint-surface="compact-top-bar" data-blueprint27-compact-topbar="step-progress-workflow" data-blueprint27-rhythm="compact-topband">
+    <div class="logic-command-title">
+      <p class="logic-kicker deepseek-step-kicker">STEP 2/4</p>
+      <h1>逻辑绘制</h1>
+    </div>
+
+    <section id="logic-process" class="logic-process" aria-live="polite">
+      <div class="logic-process-head">
+        <div>
+          <p class="logic-kicker">TASK PROGRESS</p>
+          <h2 id="logic-process-title">等待模型绘制</h2>
+        </div>
+        <span id="logic-process-elapsed">00:00</span>
+      </div>
+      <div class="logic-track"><div id="logic-process-fill" class="logic-process-fill"></div></div>
+      <div id="logic-generation-stream" class="logic-steps generation-stream" data-generation-stream="deepseek" aria-label="DeepSeek 生成流">
+        <span id="logic-step-load" class="logic-step generation-stream-step" data-stream-step="load" data-state="idle">读取需求</span>
+        <span id="logic-step-model" class="logic-step generation-stream-step" data-stream-step="model" data-state="idle">DeepSeek 绘图</span>
+        <span id="logic-step-layout" class="logic-step generation-stream-step" data-stream-step="layout" data-state="idle">结构复核</span>
+        <span id="logic-step-render" class="logic-step generation-stream-step" data-stream-step="render" data-state="idle">渲染电路</span>
+      </div>
+      <p id="logic-process-detail">从需求理解页进入后会自动开始。</p>
+      <div id="logic-stream-chunks" class="stream-chunks" data-stream-chunks="deepseek" aria-label="DeepSeek 分块输出"></div>
+    </section>
+
+    <section id="logic-workflow-overview" class="logic-workflow-overview logic-cockpit-mission-strip" data-cockpit-role="mission-strip" aria-label="流程总览">
+      <div class="logic-workflow-copy">
+        <p class="logic-kicker">WORKFLOW</p>
+        <h2 id="logic-workflow-stage">等待需求输入</h2>
+        <p id="logic-workflow-detail" data-usage-path-cue="logic">先从需求理解页进入；本步产出候选逻辑图，下一页生成故障矩阵。</p>
+      </div>
+      <div id="logic-workflow-steps" class="logic-workflow-steps" data-ux-main-flow="four-step">
+        <span class="logic-workflow-step is-complete" data-workflow-step="requirements">1 需求解析</span>
+        <span class="logic-workflow-step is-active" data-workflow-step="drawing">2 逻辑复刻</span>
+        <span class="logic-workflow-step" data-workflow-step="fault">3 故障准备</span>
+        <span class="logic-workflow-step" data-workflow-step="sandbox">4 沙盒审查</span>
+      </div>
+    </section>
+
+    <div id="logic-command-controls" class="logic-controls">
+      <label for="logic-provider">模型</label>
+      <select id="logic-provider">
+        <option value="deepseek" selected>DeepSeek V4 Pro</option>
+        <option value="minimax">MiniMax-M2.7-highspeed</option>
+      </select>
+      <div class="logic-control-actions">
+        <button id="logic-regenerate" type="button" class="secondary" data-ux-action-tier="secondary" aria-label="重新绘制逻辑图">检查：重新绘制</button>
+        <button id="logic-fault-next" type="button" class="primary-next-action" data-primary-next-action="true" data-ux-action-tier="primary" aria-label="下一步：进入故障准备">下一步：进入故障准备</button>
+        <button id="logic-back" type="button" class="secondary" data-ux-action-tier="secondary" aria-label="返回需求理解">更多：返回需求</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="logic-layout">
+    <aside class="logic-inspector logic-cockpit-control-console" data-cockpit-role="control-console" data-workstation-inspector="engineering-rail" data-unified-aux-panel="left-rail" data-unified-panel-state="closed">
+      <section id="logic-engineering-rail" class="logic-panel logic-engineering-rail" aria-label="工程状态与输入">
+        <p class="logic-kicker">ENGINEERING RAIL</p>
+        <div class="logic-engineering-head">
+          <h2>状态 / 输入</h2>
+          <span>可信度 · preset · TRA/RA/N1K/VDT</span>
+        </div>
+        <section id="logic-status-rail" class="logic-status-rail logic-burden-summary">
+          <div class="logic-status-rail-section" data-status-rail-section="trust">
+            <span class="logic-status-label">可信度 / 来源</span>
+            <h2 id="logic-source-trust-summary">来源待确认</h2>
+            <div class="logic-status-source-counts" aria-label="来源计数">
+              <span>正文 <strong id="logic-status-source-count">0</strong></span>
+              <span>本地 <strong id="logic-status-local-count">0</strong></span>
+              <span>假设 <strong id="logic-status-assumption-count">0</strong></span>
+            </div>
+            <p id="logic-burden-action" class="logic-status-action">等待图纸</p>
+            <ul id="logic-burden-outputs" class="logic-notes logic-status-notes">
+              <li>本页只突出节点、连线和来源 3 项。</li>
+            </ul>
+          </div>
+          <details id="logic-rail-detail-details" class="logic-rail-details">
+            <summary>
+              <span>文档 / 图纸详情</span>
+              <span>按需展开</span>
+            </summary>
+            <div class="logic-rail-detail-body">
+              <div class="logic-status-rail-section" data-status-rail-section="source">
+                <span class="logic-status-label">文档来源</span>
+                <h2 id="logic-input-title">尚未载入</h2>
+                <p id="logic-input-summary" class="muted">请先在需求理解页完成澄清。</p>
+              </div>
+              <div class="logic-status-rail-section" data-status-rail-section="drawing">
+                <span class="logic-status-label">图纸状态</span>
+                <h2 id="logic-result-state">尚未绘制</h2>
+                <p id="logic-result-summary" class="muted">等待大模型生成坐标、连线和参数面板。</p>
+                <div id="logic-result-flags" class="logic-flags"></div>
+              </div>
+            </div>
+          </details>
+        </section>
+        <section id="logic-circuit-eval-panel" class="logic-circuit-eval-panel" hidden>
+          <div class="logic-circuit-status-row">
+            <span id="logic-circuit-status-badge" class="logic-circuit-status-badge" data-state="idle">IDLE</span>
+            <span id="logic-circuit-preset-status" class="logic-circuit-preset-status">未选择预设</span>
+          </div>
+          <p id="logic-circuit-status-summary" class="muted">接入同一组杆位快照后会同步点亮电路图。</p>
+          <div id="logic-circuit-core-inputs" class="logic-circuit-core-inputs" aria-label="核心电路输入">
+            <span data-core-input="tra">TRA <strong id="logic-core-tra-value">0.0°</strong></span>
+            <span data-core-input="ra">RA <strong id="logic-core-ra-value">100 ft</strong></span>
+            <span data-core-input="n1k">N1K <strong id="logic-core-n1k-value">35%</strong></span>
+            <span data-core-input="vdt">VDT <strong id="logic-core-vdt-value">0%</strong></span>
+          </div>
+          <div id="logic-circuit-preset-menu" class="logic-circuit-preset-menu" aria-label="电路状态预设">
+            <label for="logic-circuit-preset-select">Preset</label>
+            <select id="logic-circuit-preset-select">
+              <option value="">选择场景</option>
+              <option value="nominal-fwd">默认前向</option>
+              <option value="landing-deploy">着陆展开</option>
+              <option value="max-reverse">最大反推</option>
+              <option value="stow-return">收起回杆</option>
+              <option value="inhibit-block">抑制阻塞</option>
+            </select>
+          </div>
+          <details id="logic-circuit-input-details" class="logic-circuit-input-details logic-cockpit-control-deck" data-cockpit-role="control-deck">
+            <summary>
+              <span>输入调节</span>
+              <span>TRA / RA / N1K / VDT</span>
+            </summary>
+            <div class="logic-circuit-input-grid">
+              <label>
+                <span>TRA</span>
+                <output id="logic-circuit-tra-value">0.0°</output>
+                <input type="range" id="logic-circuit-tra" min="-32" max="0" step="0.5" value="0">
+              </label>
+              <label>
+                <span>RA</span>
+                <output id="logic-circuit-ra-value">100 ft</output>
+                <input type="range" id="logic-circuit-ra" min="0" max="100" step="1" value="100">
+              </label>
+              <label>
+                <span>N1K</span>
+                <output id="logic-circuit-n1k-value">35%</output>
+                <input type="range" id="logic-circuit-n1k" min="0" max="110" step="1" value="35">
+              </label>
+              <label>
+                <span>VDT</span>
+                <output id="logic-circuit-vdt-value">0%</output>
+                <input type="range" id="logic-circuit-vdt" min="0" max="100" step="1" value="0">
+              </label>
+            </div>
+            <div class="logic-circuit-check-grid">
+              <label><input type="checkbox" id="logic-circuit-engine-running" checked> engine_running</label>
+              <label><input type="checkbox" id="logic-circuit-aircraft-on-ground"> aircraft_on_ground</label>
+              <label><input type="checkbox" id="logic-circuit-reverser-inhibited"> reverser_inhibited</label>
+              <label><input type="checkbox" id="logic-circuit-eec-enable" checked> eec_enable</label>
+            </div>
+            <details id="logic-circuit-status-details" class="logic-circuit-status-details">
+              <summary>
+                <span>状态明细</span>
+                <span>SW / TLS / L1-L4</span>
+              </summary>
+              <dl class="logic-circuit-hud">
+                <div><dt>SW1</dt><dd id="logic-circuit-hud-sw1">—</dd></div>
+                <div><dt>SW2</dt><dd id="logic-circuit-hud-sw2">—</dd></div>
+                <div><dt>TLS</dt><dd id="logic-circuit-hud-tls">—</dd></div>
+                <div><dt>VDT90</dt><dd id="logic-circuit-hud-vdt90">—</dd></div>
+                <div><dt>L1-L4</dt><dd id="logic-circuit-hud-logic">—</dd></div>
+                <div><dt>THR_LOCK</dt><dd id="logic-circuit-hud-thr-lock">—</dd></div>
+              </dl>
+            </details>
+          </details>
+        </section>
+      </section>
+    </aside>
+
+    <section class="logic-canvas-wrap logic-cockpit-primary-display" data-cockpit-role="primary-display" data-experience="annotation-stream" data-workstation-surface="primary-canvas-stage" data-workstation-stage="primary-canvas" data-blueprint29-rhythm="primary-canvas-stage">
+      <div id="logic-canvas-compact-toolbar" class="logic-canvas-compact-toolbar" aria-label="画布工具区">
+        <span id="logic-canvas-counts" class="logic-canvas-counts">0 nodes · 0 edges · 0 panels</span>
+        <div id="logic-provenance-filter" class="logic-provenance-filter" role="toolbar" aria-label="来源筛选" hidden>
+          <button type="button" data-provenance-filter="all" aria-pressed="true">
+            <span class="logic-provenance-dot is-all" aria-hidden="true"></span>
+            全部 <span data-provenance-count>0</span>
+          </button>
+          <button type="button" data-provenance-filter="source" aria-pressed="false">
+            <span class="logic-provenance-dot is-source" aria-hidden="true"></span>
+            原文锚点 <span data-provenance-count>0</span>
+          </button>
+          <button type="button" data-provenance-filter="assumption" aria-pressed="false">
+            <span class="logic-provenance-dot is-assumption" aria-hidden="true"></span>
+            模型假设 <span data-provenance-count>0</span>
+          </button>
+          <button type="button" data-provenance-filter="local" aria-pressed="false">
+            <span class="logic-provenance-dot is-local" aria-hidden="true"></span>
+            本地补齐 <span data-provenance-count>0</span>
+          </button>
+        </div>
+        <span id="logic-canvas-source" class="logic-canvas-source">来源待确认</span>
+        <button id="logic-command-palette-open" type="button" class="logic-command-palette-trigger" data-blueprint-advanced-entry="command-palette" aria-haspopup="dialog" aria-controls="logic-command-palette" aria-label="打开命令面板">⌘K</button>
+      </div>
+      <nav id="logic-mode-dock" class="logic-mode-dock" data-workstation-surface="default-mode-dock" data-blueprint27-rhythm="five-entry-dock" aria-label="默认五入口">
+        <button type="button" data-logic-mode="canvas" aria-pressed="true">画布</button>
+        <button type="button" data-logic-mode="run" aria-pressed="false">运行</button>
+        <button type="button" data-logic-mode="parameters" aria-pressed="false">参数</button>
+        <button type="button" data-logic-mode="evidence" aria-pressed="false">证据</button>
+        <button type="button" data-logic-mode="report" aria-pressed="false">报告</button>
+      </nav>
+      <section id="logic-command-palette" class="logic-command-palette" role="dialog" aria-modal="false" aria-labelledby="logic-command-palette-title" data-blueprint-surface="command-palette" data-unified-aux-panel="command-palette" data-unified-panel-state="closed" hidden>
+        <div class="logic-command-palette-head">
+          <div>
+            <p class="logic-kicker">COMMAND</p>
+            <h2 id="logic-command-palette-title">命令面板</h2>
+          </div>
+          <button id="logic-command-palette-close" type="button" class="secondary">关闭</button>
+        </div>
+        <input id="logic-command-palette-filter" type="search" placeholder="搜索：参数 / 运行 / 证据 / 报告 / 故障 / 沙盒">
+        <div id="logic-command-palette-list" class="logic-command-palette-list" role="listbox" aria-label="高级命令">
+          <button type="button" data-command-run-action="run">运行仿真</button>
+          <button type="button" data-command-open-mode="parameters">打开参数抽屉</button>
+          <button type="button" data-command-open-mode="run">打开运行时间线</button>
+          <button type="button" data-command-open-mode="evidence">打开证据追溯</button>
+          <button type="button" data-command-open-mode="report">打开报告预览</button>
+          <button type="button" data-command-run-action="step">单步回放</button>
+          <button type="button" data-command-template-action="blank">空白画布</button>
+          <button type="button" data-command-template-action="docx">DOCX L1-L4 模板</button>
+          <button type="button" data-command-template-action="restore">恢复最近沙盒</button>
+          <button type="button" data-panel-toggle="left">展开左侧工程栏</button>
+          <button type="button" data-panel-toggle="right">展开右侧检查器</button>
+          <button type="button" data-command-focus-canvas="true">主画布专注</button>
+          <button type="button" data-command-close-panels="true">收起全部面板</button>
+          <a href="/requirements-intake">返回需求解析</a>
+          <a href="/fault-injection-prepare">进入故障准备</a>
+          <a href="/fault-injection-sandbox">进入沙盒审查</a>
+          <a href="/fault-injection-prepare#fault-matrix">注入故障</a>
+          <a href="/fault-injection-sandbox#failure-path">打开失败路径</a>
+          <a href="/fault-injection-sandbox#review-package">导出审查包</a>
+        </div>
+        <p id="logic-command-palette-status" class="muted">高级入口统一收纳在这里；默认画布保持低干扰。</p>
+      </section>
+      <section id="logic-reconstruction-mode-panel" class="logic-reconstruction-mode-panel" aria-label="演示舱对齐状态">
+        <span id="logic-reconstruction-mode">当前模式：等待图纸</span>
+        <strong id="logic-reconstruction-fidelity">链路覆盖：未启用</strong>
+        <a id="logic-demo-bridge" class="logic-demo-bridge" href="/demo-reconstruction">打开对齐视图</a>
+      </section>
+      <section id="logic-drawing-stream-timeline" class="logic-drawing-stream-timeline" data-ai-stream="logic-drawing-replay" aria-label="DeepSeek 绘图回放">
+        <div class="logic-stream-head">
+          <p class="logic-kicker">DEEPSEEK STREAM</p>
+          <strong>DeepSeek 绘图回放</strong>
+        </div>
+        <ol id="logic-drawing-stream-events" class="logic-stream-events">
+          <li class="logic-stream-event is-empty">等待图纸生成过程。</li>
+        </ol>
+      </section>
+      <section id="logic-annotation-popover" class="logic-annotation-popover" data-annotation-mode="multi-target" aria-label="选中对象批注" hidden>
+        <div class="logic-annotation-popover-head">
+          <p class="logic-kicker">ANNOTATE</p>
+          <strong id="logic-selected-target-label">未选择</strong>
+        </div>
+        <div class="logic-annotation-context-grid" aria-label="选中对象上下文">
+          <section>
+            <span>来源</span>
+            <p id="logic-annotation-source">选择节点或连线后显示来源。</p>
+          </section>
+          <section>
+            <span>参数</span>
+            <p id="logic-annotation-params">暂无参数。</p>
+          </section>
+        </div>
+        <label for="logic-node-comment-text">对当前选中对象的标注意见</label>
+        <textarea id="logic-node-comment-text" rows="3" placeholder="直接写这个节点或连线需要怎么改，不需要重复描述位置。"></textarea>
+        <button id="logic-add-annotation" type="button" class="secondary" data-ux-action-tier="secondary" disabled>暂存这条批注</button>
+      </section>
+      <nav id="logic-collapsed-tool-rail" class="logic-collapsed-tool-rail" aria-label="左侧折叠工具栏" data-blueprint-surface="collapsed-left-rail">
+        <button type="button" title="左栏" data-panel-toggle="left">左</button>
+        <button type="button" title="右栏" data-panel-toggle="right">右</button>
+        <button type="button" title="来源" data-workbench-tab="notes">源</button>
+        <button type="button" title="历史" data-workbench-tab="history">史</button>
+        <button type="button" title="批注" data-workbench-tab="change">批</button>
+      </nav>
+      <nav id="logic-right-inspector-rail" class="logic-right-inspector-rail" aria-label="右侧折叠检查器" data-blueprint-surface="collapsed-right-inspector" data-blueprint38-rhythm="collapsed-inspector-rail">
+        <button type="button" title="来源" data-panel-toggle="right">源</button>
+        <button type="button" title="节点" data-panel-toggle="right">点</button>
+        <button type="button" title="仿真" data-bottom-drawer-tab="run">仿</button>
+        <button type="button" title="审查" data-workbench-tab="history">审</button>
+      </nav>
+      <aside id="logic-object-context-drawer" class="logic-object-context-drawer" data-on-demand-drawer="selected-object" data-unified-aux-panel="right-inspector" data-unified-panel-state="closed" aria-label="节点上下文" hidden>
+        <div class="logic-object-context-head">
+          <p class="logic-kicker">CONTEXT</p>
+          <strong id="logic-context-title">节点上下文</strong>
+        </div>
+        <section class="logic-context-section">
+          <span>来源</span>
+          <p id="logic-context-source">选择节点或连线后显示来源。</p>
+        </section>
+        <section class="logic-context-section">
+          <span>参数</span>
+          <p id="logic-context-params">暂无参数。</p>
+        </section>
+        <section class="logic-context-section">
+          <span>批注</span>
+          <button id="logic-context-comment-shortcut" type="button" class="logic-context-comment-shortcut" data-ux-action-tier="secondary">在此对象上标注</button>
+        </section>
+      </aside>
+      <div id="logic-canvas" class="logic-canvas" data-workstation-canvas="logic-drawing" data-blueprint30-surface="docx-template-circuit" aria-label="模型生成的逻辑链路图" tabindex="-1">
+        <section id="logic-template-entry" class="logic-template-entry" data-blueprint-surface="blank-canvas-template-entry" data-blueprint29-rhythm="blank-canvas-template-entry" aria-label="空白画布模板入口">
+          <div class="logic-template-copy">
+            <p class="logic-kicker">BLANK CANVAS</p>
+            <h2>空白画布</h2>
+            <p>从空白开始构建，或使用模板快速复刻 C919 反推 L1-L4 链路。</p>
+          </div>
+          <div class="logic-template-actions">
+            <button id="logic-start-blank-canvas" type="button" data-template-action="blank">
+              <span>+</span>
+              <strong>从空白画布开始</strong>
+              <small>手动添加元件并连线</small>
+            </button>
+            <button id="logic-load-docx-template" type="button" data-template-action="docx">
+              <span>DOCX</span>
+              <strong>使用 DOCX L1-L4 官方模板</strong>
+              <small>基于官方模板快速复刻</small>
+            </button>
+            <button id="logic-restore-recent-sandbox" type="button" data-template-action="restore">
+              <span>⟳</span>
+              <strong>从最近沙盒恢复</strong>
+              <small>继续上次未完成的分析</small>
+            </button>
+          </div>
+          <ol class="logic-template-guide" aria-label="新手引导">
+            <li><span>1</span><strong>添加输入</strong><small>拖拽输入元件到画布</small></li>
+            <li><span>2</span><strong>连接逻辑</strong><small>添加并连接判断与门控</small></li>
+            <li><span>3</span><strong>运行沙盒</strong><small>验证逻辑与仿真结果</small></li>
+          </ol>
+        </section>
+        <svg id="logic-circuit-svg" class="logic-circuit-svg" aria-label="确定性 L1-L4 控制电路图" hidden></svg>
+        <svg id="logic-svg" class="logic-svg" aria-hidden="true"></svg>
+        <div id="logic-node-layer" class="logic-node-layer"></div>
+        <div id="logic-panel-layer" class="logic-panel-layer"></div>
+      </div>
+      <section id="logic-bottom-run-strip" class="logic-bottom-run-strip" data-blueprint-surface="bottom-run-strip" data-workstation-surface="bottom-run-strip" data-blueprint38-rhythm="bottom-run-strip" aria-label="底部运行条">
+        <div class="logic-bottom-run-actions" aria-label="运行控制">
+          <button type="button" data-run-action="run">运行</button>
+          <button type="button" data-run-action="pause">暂停</button>
+          <button type="button" data-run-action="step">单步</button>
+          <button type="button" data-run-action="reset">复位</button>
+        </div>
+        <div class="logic-bottom-run-meter" aria-label="运行进度">
+          <span id="logic-bottom-run-state">就绪</span>
+          <div class="logic-bottom-run-track"><span id="logic-bottom-run-cursor"></span></div>
+          <span id="logic-bottom-run-time">00:00 / 00:20</span>
+        </div>
+        <div class="logic-bottom-run-metrics" aria-label="图纸运行指标">
+          <span id="logic-bottom-run-node-count">节点 0/0</span>
+          <span id="logic-bottom-run-edge-count">连线 0/0</span>
+          <span>truth_effect:none</span>
+          <span>controller_truth_modified:false</span>
+        </div>
+      </section>
+      <section id="logic-run-parameter-drawer" class="logic-run-parameter-drawer" data-active-tab="none" data-run-mode="dry-run" data-drawer-pinned="false" data-blueprint31-surface="run-signal-propagation" data-blueprint32-surface="parameter-drawer-final" data-unified-aux-panel="bottom-drawer" data-unified-panel-state="closed" aria-label="底部参数与仿真抽屉" hidden>
+        <div class="logic-bottom-drawer-tabbar" role="tablist" aria-label="底部抽屉">
+          <button type="button" role="tab" data-bottom-drawer-tab="parameters" aria-selected="false">参数</button>
+          <button type="button" role="tab" data-bottom-drawer-tab="run" aria-selected="false">运行</button>
+          <button type="button" role="tab" data-bottom-drawer-tab="evidence" aria-selected="false">证据</button>
+          <button type="button" role="tab" data-bottom-drawer-tab="report" aria-selected="false">报告</button>
+          <button id="logic-drawer-pin" type="button" class="secondary" aria-pressed="false">固定</button>
+          <button id="logic-bottom-drawer-close" type="button" class="secondary">收起</button>
+        </div>
+        <div class="logic-drawer-actions" aria-label="参数抽屉操作">
+          <button id="logic-drawer-apply" type="button">应用</button>
+          <button id="logic-drawer-reset" type="button" class="secondary">重置</button>
+        </div>
+        <section class="logic-bottom-drawer-panel" data-bottom-drawer-panel="parameters" hidden>
+          <div class="logic-parameter-grid">
+            <label><span>RA</span><output id="logic-drawer-ra-value">235 ft</output><input id="logic-drawer-ra" type="range" min="0" max="1000" step="1" value="235"></label>
+            <label><span>TRA</span><output id="logic-drawer-tra-value">0.0°</output><input id="logic-drawer-tra" type="range" min="-32" max="0" step="0.5" value="0"></label>
+            <label><span id="logic-drawer-vdt-label">VDT 地速</span><output id="logic-drawer-vdt-value">132 kt</output><input id="logic-drawer-vdt" type="range" min="0" max="400" step="1" value="132"></label>
+            <label><span>TRA threshold</span><output id="logic-drawer-tra-threshold-value">350 ft</output><input id="logic-drawer-tra-threshold" type="range" min="50" max="1000" step="10" value="350"></label>
+            <label><span>采样率</span><output id="logic-drawer-sampling-rate-value">50 Hz</output><input id="logic-drawer-sampling-rate" type="range" min="10" max="200" step="10" value="50"></label>
+            <label><span>步长</span><output id="logic-drawer-step-size-value">20 ms</output><input id="logic-drawer-step-size" type="range" min="5" max="100" step="5" value="20"></label>
+            <label class="logic-drawer-switch"><input id="logic-drawer-sw1" type="checkbox" checked><span>SW1 有效</span></label>
+            <label class="logic-drawer-switch"><input id="logic-drawer-sw2" type="checkbox" checked><span>SW2 有效</span></label>
+            <label class="logic-drawer-preset"><span>预设场景</span><select id="logic-drawer-preset"><option value="">手动</option><option value="landing-deploy">着陆展开</option><option value="max-reverse">最大反推</option><option value="stow-return">收起回杆</option><option value="inhibit-block">抑制阻塞</option></select></label>
+          </div>
+          <div id="logic-drawer-run-mode" class="logic-drawer-mode-toggle" role="group" aria-label="仿真模式">
+            <button id="logic-drawer-run-mode-dry" type="button" data-drawer-run-mode="dry-run" aria-pressed="true">dry-run（不写入真值）</button>
+            <button id="logic-drawer-run-mode-real" type="button" data-drawer-run-mode="real-value" aria-pressed="false">real-value（写入）</button>
+          </div>
+        </section>
+        <section class="logic-bottom-drawer-panel" data-bottom-drawer-panel="run" hidden>
+          <div class="logic-run-controls" aria-label="仿真运行控制">
+            <button type="button" data-run-action="run">运行</button>
+            <button type="button" data-run-action="pause">暂停</button>
+            <button type="button" data-run-action="step">单步</button>
+            <button type="button" data-run-action="reset">复位</button>
+            <span id="logic-run-state">等待运行</span>
+          </div>
+          <div class="logic-run-signal-summary" data-blueprint31-surface="run-signal-propagation" aria-label="运行信号概览">
+            <span id="logic-run-frame">当前帧：00:00.00</span>
+            <strong id="logic-run-verdict">等待运行</strong>
+            <div id="logic-run-signals" class="logic-run-signal-grid" aria-label="当前信号值">
+              <span>RA --</span>
+              <span>TRA --</span>
+              <span>VDT --</span>
+            </div>
+          </div>
+          <ol id="logic-run-timeline" class="logic-run-timeline" aria-label="仿真时间线">
+            <li>00:00 画布待运行，参数抽屉保留当前输入。</li>
+          </ol>
+        </section>
+        <section class="logic-bottom-drawer-panel" data-bottom-drawer-panel="evidence" hidden>
+          <div class="logic-trace-grid">
+            <a href="/requirements-intake">原文锚点</a>
+            <button type="button" data-workbench-tab="notes">画布节点</button>
+            <button type="button" data-bottom-drawer-tab="run">运行记录</button>
+            <a href="/fault-injection-sandbox">沙盒审查</a>
+          </div>
+          <p class="muted">证据追溯以节点、来源、运行和审查的链接为主，不要求用户阅读 raw JSON。</p>
+        </section>
+        <section class="logic-bottom-drawer-panel" data-bottom-drawer-panel="report" hidden>
+          <div class="logic-report-preview">
+            <strong>回放报告预览</strong>
+            <p>本报告汇总需求锚点、逻辑图、参数运行、故障候选、沙盒审查和回放状态。</p>
+            <dl>
+              <div><dt>truth_effect</dt><dd>none</dd></div>
+              <div><dt>candidate_state</dt><dd>sandbox_candidate</dd></div>
+              <div><dt>certification_claim</dt><dd>none</dd></div>
+              <div><dt>controller_truth_modified</dt><dd>false</dd></div>
+            </dl>
+          </div>
+        </section>
+      </section>
+      <section id="logic-annotation-submit-bar" class="logic-annotation-submit-bar" data-annotation-mode="multi-target" aria-label="本次图纸标注意见提交栏">
+        <label for="logic-bottom-provider">模型</label>
+        <select id="logic-bottom-provider" aria-label="选择用于处理标注意见的模型">
+          <option value="deepseek" selected>DeepSeek V4 Pro</option>
+          <option value="minimax">MiniMax-M2.7-highspeed</option>
+        </select>
+        <div class="logic-annotation-batch">
+          <span id="logic-annotation-count">0 条标注意见</span>
+          <ol id="logic-annotation-list" class="logic-annotation-list" aria-label="已暂存标注意见"></ol>
+        </div>
+        <span id="logic-annotation-submit-state" class="logic-annotation-submit-state">选择节点或连线后添加批注</span>
+        <button id="logic-submit-annotations" type="button" disabled>提交此次标注意见</button>
+      </section>
+      <section id="logic-batch-interpretation-panel" class="logic-batch-interpretation-panel" aria-label="AI 修订建议" hidden>
+        <div class="logic-batch-interpretation-head">
+          <p class="logic-kicker">AI REVISION</p>
+          <h2>AI 修订建议</h2>
+        </div>
+        <div class="logic-batch-interpretation-grid">
+          <article>
+            <strong>批注归并</strong>
+            <p id="logic-batch-summary">等待提交标注意见。</p>
+          </article>
+          <article>
+            <strong>冲突判断</strong>
+            <p id="logic-batch-conflict-summary">等待 AI 判断。</p>
+          </article>
+        </div>
+        <ol id="logic-batch-proposed-changes" class="logic-batch-proposed-changes" aria-label="结构化修订建议"></ol>
+        <p id="logic-batch-confirmation-question" class="logic-batch-confirmation-question"></p>
+        <div class="logic-batch-actions">
+          <button id="logic-batch-confirm-update" type="button" disabled>确认生成修订版</button>
+          <button id="logic-batch-dismiss" type="button" class="secondary" data-ux-action-tier="secondary">继续标注</button>
+        </div>
+      </section>
+      <section id="logic-workbench-drawers" class="logic-workbench-drawers" aria-label="图纸工作台" data-active-tab="none">
+        <section id="logic-detail-decision-board" class="logic-detail-decision-board" data-decision-board="logic-details" aria-label="图纸详情判断">
+          <article class="logic-detail-card" data-detail-card="selection">
+            <p class="logic-kicker">SELECT</p>
+            <h2>当前选择</h2>
+            <code id="logic-detail-selected-node">未选择</code>
+            <p class="muted">点击节点后再批注。</p>
+          </article>
+          <article class="logic-detail-card" data-detail-card="source">
+            <p class="logic-kicker">SOURCE</p>
+            <h2>来源判断</h2>
+            <strong id="logic-detail-source-summary">来源待确认</strong>
+            <p class="muted">来源筛选在画布工具条。</p>
+          </article>
+          <article class="logic-detail-card" data-detail-card="next">
+            <p class="logic-kicker">NEXT</p>
+            <h2>下一步</h2>
+            <p id="logic-detail-next-action" class="muted">等待图纸</p>
+          </article>
+        </section>
+        <div class="logic-workbench-tabbar" role="tablist" aria-label="图纸工作台">
+          <button id="logic-workbench-tab-notes" class="logic-workbench-tab" type="button" role="tab" data-workbench-tab="notes" aria-selected="false" aria-controls="logic-drawing-notes-details">
+            <span class="logic-side-summary-copy">
+              <span class="logic-kicker">NOTES</span>
+              <strong>说明</strong>
+            </span>
+            <span class="logic-side-summary-meta">折叠</span>
+          </button>
+          <button id="logic-workbench-tab-change" class="logic-workbench-tab" type="button" role="tab" data-workbench-tab="change" aria-selected="false" aria-controls="logic-change-loop-details">
+            <span class="logic-side-summary-copy">
+              <span class="logic-kicker">CHANGE</span>
+              <strong>批注</strong>
+            </span>
+            <span class="logic-side-summary-meta">节点</span>
+          </button>
+          <button id="logic-workbench-tab-history" class="logic-workbench-tab" type="button" role="tab" data-workbench-tab="history" aria-selected="false" aria-controls="logic-change-history-details">
+            <span class="logic-side-summary-copy">
+              <span class="logic-kicker">HISTORY</span>
+              <strong>记录</strong>
+            </span>
+            <span id="logic-change-history-count" class="logic-side-summary-meta">0 changes</span>
+          </button>
+        </div>
+        <section id="logic-drawing-notes-details" class="logic-panel logic-side-details logic-workbench-tab-panel" role="tabpanel" aria-labelledby="logic-workbench-tab-notes" data-workbench-panel="notes" tabindex="0" hidden>
+          <div class="logic-side-details-body">
+            <ul id="logic-notes" class="logic-notes"></ul>
+          </div>
+        </section>
+        <section id="logic-change-loop-details" class="logic-panel logic-edit-panel logic-side-details logic-workbench-tab-panel" role="tabpanel" aria-labelledby="logic-workbench-tab-change" data-workbench-panel="change" tabindex="0" hidden>
+          <div class="logic-side-details-body logic-edit-body">
+            <div id="logic-revision-handoff" class="logic-revision-handoff" hidden>
+              <strong id="logic-revision-handoff-title">来自沙盒审查</strong>
+              <p id="logic-revision-handoff-summary">请根据沙盒审查结论填写修改意见。</p>
+              <span id="logic-revision-handoff-metrics">等待审查摘要</span>
+              <button id="logic-fill-handoff-draft" type="button" class="secondary" data-ux-action-tier="secondary">生成修改意见草稿</button>
+            </div>
+            <div class="logic-selection-row">
+              <span>选中节点</span>
+              <code id="logic-selected-node">未选择</code>
+            </div>
+            <label for="logic-change-text">修改意见</label>
+            <textarea id="logic-change-text" rows="4" placeholder="例如：选中 RA 节点，把高度门限改成 7ft，并同步旁边参数面板。"></textarea>
+            <div class="logic-edit-actions">
+              <button id="logic-submit-change" type="button" disabled>理解修改意图</button>
+              <button id="logic-clear-change" type="button" class="secondary" data-ux-action-tier="advanced">清空</button>
+            </div>
+            <div id="logic-interpretation-box" class="logic-interpretation-box" hidden>
+              <p id="logic-interpretation-state" class="logic-kicker">WAITING</p>
+              <p id="logic-interpretation-summary"></p>
+              <p id="logic-interpretation-match" class="muted"></p>
+              <ul id="logic-proposed-changes" class="logic-notes"></ul>
+              <p id="logic-interpretation-question" class="logic-question"></p>
+              <div class="logic-edit-actions">
+                <button id="logic-confirm-change" type="button" disabled>确认并更新图纸</button>
+                <button id="logic-cancel-change" type="button" class="secondary" data-ux-action-tier="advanced">取消</button>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section id="logic-change-history-details" class="logic-panel logic-change-history logic-side-details logic-workbench-tab-panel" role="tabpanel" aria-labelledby="logic-workbench-tab-history" data-workbench-panel="history" tabindex="0" hidden>
+          <div id="logic-change-history" class="logic-side-details-body">
+            <div id="logic-change-history-list" class="logic-change-history-list">
+              <p class="muted">每次批注、模型理解、用户确认和图纸更新都会记录在这里。</p>
+            </div>
+          </div>
+        </section>
+      </section>
+    </section>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,237 @@
+{
+  "$schema": "https://well-harness.local/json_schema/requirements_intake_analysis_v1.schema.json",
+  "kind": "ai-fantui-requirements-intake-analysis",
+  "version": 1,
+  "status": "ready_for_logic_builder",
+  "source_document": {
+    "name": "deepseek-v4-pro-live-demo.md",
+    "text_chars": 331,
+    "sha256": "70d5ccd89c3de1c60de0d010cc991f0137db8278000a3acca52b7fc067eb12a7"
+  },
+  "analysis_input": {
+    "input_chars": 331,
+    "original_chars": 331,
+    "compacted": false,
+    "strategy": "full_text"
+  },
+  "llm": {
+    "provider": "deepseek",
+    "model": "deepseek-v4-pro",
+    "api_base": "https://api.deepseek.com",
+    "key_source": "env:DEEPSEEK_API_KEY",
+    "response_source": "live_llm"
+  },
+  "truth_effect": "none",
+  "candidate_state": "concept_only",
+  "certification_claim": "none",
+  "controller_truth_modified": false,
+  "summary_zh": "演示级反推逻辑：RA<6ft、TRA在反推区、SW1与SW2均有效、发动机运行、EEC允许且无抑制时，释放油门锁。",
+  "document_assumptions": [
+    "TRA反推区间为-1.4°到-11.74°",
+    "SW1与SW2逻辑关系为AND",
+    "reverser_inhibited为系统抑制信号，true时禁止释放",
+    "RA门限、TRA区间、SW1/SW2状态和EEC enable为可解释参数"
+  ],
+  "open_questions": [],
+  "concept_logic_nodes": [
+    {
+      "id": "ra",
+      "label": "无线电高度RA",
+      "node_kind": "input",
+      "description_zh": "无线电高度输入，门限6ft",
+      "parameters": [
+        {
+          "id": "param_1",
+          "label": "param_1",
+          "unit": "",
+          "min": null,
+          "max": null,
+          "default": null,
+          "source_hint": ""
+        }
+      ]
+    },
+    {
+      "id": "tra",
+      "label": "TRA角度",
+      "node_kind": "input",
+      "description_zh": "油门杆角度输入",
+      "parameters": [
+        {
+          "id": "param_1",
+          "label": "param_1",
+          "unit": "",
+          "min": null,
+          "max": null,
+          "default": null,
+          "source_hint": ""
+        }
+      ]
+    },
+    {
+      "id": "sw1",
+      "label": "SW1状态",
+      "node_kind": "input",
+      "description_zh": "开关1有效状态",
+      "parameters": []
+    },
+    {
+      "id": "sw2",
+      "label": "SW2状态",
+      "node_kind": "input",
+      "description_zh": "开关2有效状态",
+      "parameters": []
+    },
+    {
+      "id": "eng_run",
+      "label": "发动机运行",
+      "node_kind": "input",
+      "description_zh": "发动机运行状态",
+      "parameters": []
+    },
+    {
+      "id": "eec_enable",
+      "label": "EEC允许",
+      "node_kind": "input",
+      "description_zh": "EEC使能信号",
+      "parameters": []
+    },
+    {
+      "id": "rev_inhib",
+      "label": "反推抑制",
+      "node_kind": "input",
+      "description_zh": "系统抑制信号，true时禁止",
+      "parameters": []
+    },
+    {
+      "id": "ra_comp",
+      "label": "RA<6ft判断",
+      "node_kind": "logic",
+      "description_zh": "比较RA是否小于6ft",
+      "parameters": []
+    },
+    {
+      "id": "tra_zone",
+      "label": "TRA反推区判断",
+      "node_kind": "logic",
+      "description_zh": "判断TRA是否在反推区间内",
+      "parameters": []
+    },
+    {
+      "id": "sw_and",
+      "label": "SW1 AND SW2",
+      "node_kind": "logic",
+      "description_zh": "SW1与SW2逻辑与",
+      "parameters": []
+    },
+    {
+      "id": "not_inhib",
+      "label": "无抑制",
+      "node_kind": "logic",
+      "description_zh": "对reverser_inhibited取反",
+      "parameters": []
+    },
+    {
+      "id": "all_cond",
+      "label": "全部条件AND",
+      "node_kind": "logic",
+      "description_zh": "所有条件逻辑与",
+      "parameters": []
+    },
+    {
+      "id": "thr_lock_rel",
+      "label": "THR_LOCK release",
+      "node_kind": "output",
+      "description_zh": "油门锁释放输出",
+      "parameters": []
+    }
+  ],
+  "concept_edges": [
+    {
+      "id": "e1",
+      "source": "ra",
+      "target": "ra_comp",
+      "label": "高度值",
+      "endpoint_status": "resolved"
+    },
+    {
+      "id": "e2",
+      "source": "tra",
+      "target": "tra_zone",
+      "label": "角度值",
+      "endpoint_status": "resolved"
+    },
+    {
+      "id": "e3",
+      "source": "sw1",
+      "target": "sw_and",
+      "label": "状态",
+      "endpoint_status": "resolved"
+    },
+    {
+      "id": "e4",
+      "source": "sw2",
+      "target": "sw_and",
+      "label": "状态",
+      "endpoint_status": "resolved"
+    },
+    {
+      "id": "e5",
+      "source": "rev_inhib",
+      "target": "not_inhib",
+      "label": "抑制信号",
+      "endpoint_status": "resolved"
+    },
+    {
+      "id": "e6",
+      "source": "ra_comp",
+      "target": "all_cond",
+      "label": "满足",
+      "endpoint_status": "resolved"
+    },
+    {
+      "id": "e7",
+      "source": "tra_zone",
+      "target": "all_cond",
+      "label": "满足",
+      "endpoint_status": "resolved"
+    },
+    {
+      "id": "e8",
+      "source": "sw_and",
+      "target": "all_cond",
+      "label": "有效",
+      "endpoint_status": "resolved"
+    },
+    {
+      "id": "e9",
+      "source": "eng_run",
+      "target": "all_cond",
+      "label": "运行",
+      "endpoint_status": "resolved"
+    },
+    {
+      "id": "e10",
+      "source": "eec_enable",
+      "target": "all_cond",
+      "label": "允许",
+      "endpoint_status": "resolved"
+    },
+    {
+      "id": "e11",
+      "source": "not_inhib",
+      "target": "all_cond",
+      "label": "未禁止",
+      "endpoint_status": "resolved"
+    },
+    {
+      "id": "e12",
+      "source": "all_cond",
+      "target": "thr_lock_rel",
+      "label": "释放",
+      "endpoint_status": "resolved"
+    }
+  ],
+  "ready_for_logic_builder": true,
+  "reconstruction_target": ""
+}

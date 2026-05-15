@@ -1,0 +1,89 @@
+{
+  "kind": "blueprint-final-target-screenshots",
+  "source_artifact_dir": "artifacts/deepseek-live-full-chain-ui-blueprint/final-ui-blueprint-screenshots-20260514/selected-final-set",
+  "supporting_manifest": "artifacts/deepseek-live-full-chain-ui-blueprint/final-ui-blueprint-screenshots-20260514/MANIFEST.md",
+  "supporting_brief": "artifacts/deepseek-live-full-chain-ui-blueprint/final-ui-blueprint-screenshots-20260514/BLUEPRINT_UI_DEVELOPMENT_BRIEF.md",
+  "selection_rule": "The 14 screenshots in selected-final-set are the correct final UI blueprint targets; blueprint40 current captures are implementation comparison evidence only.",
+  "selected_count": 14,
+  "selected": [
+    {
+      "id": "T01",
+      "file": "14-selected-overview-board.png",
+      "role": "Overall IA, route sequence, and final handoff board"
+    },
+    {
+      "id": "T02",
+      "file": "27-global-nav-default-workbench.png",
+      "role": "Default compact workbench with five exposed entries"
+    },
+    {
+      "id": "T03",
+      "file": "28-command-palette-advanced-entry.png",
+      "role": "Advanced actions through command palette"
+    },
+    {
+      "id": "T04",
+      "file": "29-blank-canvas-template-entry.png",
+      "role": "Blank canvas, DOCX template, and restore entry states"
+    },
+    {
+      "id": "T05",
+      "file": "30-docx-template-generated-canvas.png",
+      "role": "Generated logic canvas target"
+    },
+    {
+      "id": "T06",
+      "file": "31-running-signal-propagation.png",
+      "role": "Running simulation target"
+    },
+    {
+      "id": "T07",
+      "file": "32-parameter-drawer-final.png",
+      "role": "Bottom parameter drawer target"
+    },
+    {
+      "id": "T08",
+      "file": "33-fault-injection-final.png",
+      "role": "Fault injection target"
+    },
+    {
+      "id": "T09",
+      "file": "34-failure-diagnosis-path.png",
+      "role": "Failure diagnosis path target"
+    },
+    {
+      "id": "T10",
+      "file": "35-evidence-trace-final.png",
+      "role": "Evidence trace target"
+    },
+    {
+      "id": "T11",
+      "file": "36-sandbox-review-final.png",
+      "role": "Sandbox review target"
+    },
+    {
+      "id": "T12",
+      "file": "37-replay-report-final.png",
+      "role": "Replay report target"
+    },
+    {
+      "id": "T13",
+      "file": "38-panel-state-strategy-final.png",
+      "role": "Panel state strategy target"
+    },
+    {
+      "id": "T14",
+      "file": "39-concept-video-storyboard.png",
+      "role": "Narrative storyboard reference"
+    }
+  ],
+  "implementation_evidence_dir": "artifacts/blueprint40-complete-circuit-alignment-20260515-codex",
+  "implementation_evidence": [
+    "requirements-intake--desktop-1366x768.png",
+    "logic-builder--desktop-1366x768.png",
+    "fault-injection-prepare--desktop-1366x768.png",
+    "fault-injection-sandbox-default--desktop-1366x768.png",
+    "fault-injection-sandbox--desktop-1366x768.png",
+    "reference-current-contact-sheet.png"
+  ]
+}

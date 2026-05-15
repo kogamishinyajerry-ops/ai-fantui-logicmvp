@@ -3,15 +3,12 @@
 #
 # What this script does, in order:
 #   1. Picks a port (default 8780; override with PORT=xxxx).
-#   2. Resolves the MiniMax API key. Order of preference (matches
-#      _resolve_minimax_api_key in demo_server.py):
-#        a) $MINIMAX_API_KEY already in this shell
-#        b) $Minimax_API_key already in this shell
-#        c) export Minimax_API_key="..." line in ~/.zshrc
-#        d) ~/.minimax_key file
-#      If none resolve, the LLM interpreter strategy will fall back
-#      to rules; the server still starts so the demo works without
-#      a key.
+#   2. Resolves DeepSeek + MiniMax API keys. Order of preference:
+#        a) already-exported environment variables
+#        b) matching export lines in ~/.zshrc
+#        c) legacy local key files where available
+#      If none resolve, the server still starts and the UI shows the
+#      missing provider status explicitly.
 #   3. Sets WORKBENCH_PROPOSALS_DIR + WORKBENCH_DEV_QUEUE_DIR to
 #      .planning/proposals + .planning/dev_queue under the repo
 #      root so the on-disk state (gitignored) lives with the repo.
@@ -34,7 +31,39 @@ cd "$REPO_ROOT"
 
 PORT="${PORT:-8780}"
 
-# ── Step 2: resolve MiniMax key (best-effort; non-fatal if missing).
+# ── Step 2: resolve provider keys (best-effort; non-fatal if missing).
+resolve_deepseek_key() {
+    if [[ -n "${DEEPSEEK_API_KEY:-}" ]]; then
+        printf '%s' "$DEEPSEEK_API_KEY"
+        return 0
+    fi
+    if [[ -n "${DeepSeek_API_key:-}" ]]; then
+        printf '%s' "$DeepSeek_API_key"
+        return 0
+    fi
+    if [[ -f "$HOME/.zshrc" ]]; then
+        local from_zshrc
+        from_zshrc=$(grep -E '^export[[:space:]]+(DEEPSEEK_API_KEY|DeepSeek_API_key)=' "$HOME/.zshrc" \
+            | tail -n 1 \
+            | sed -E 's/^export[[:space:]]+(DEEPSEEK_API_KEY|DeepSeek_API_key)=//' \
+            | sed -E 's/^"(.*)"$/\1/' \
+            | sed -E "s/^'(.*)'\$/\1/")
+        if [[ -n "$from_zshrc" ]]; then
+            printf '%s' "$from_zshrc"
+            return 0
+        fi
+    fi
+    if [[ -f "$HOME/.deepseek_key" ]]; then
+        local from_file
+        from_file=$(tr -d '[:space:]' < "$HOME/.deepseek_key")
+        if [[ -n "$from_file" ]]; then
+            printf '%s' "$from_file"
+            return 0
+        fi
+    fi
+    return 1
+}
+
 resolve_minimax_key() {
     if [[ -n "${MINIMAX_API_KEY:-}" ]]; then
         printf '%s' "$MINIMAX_API_KEY"
@@ -69,6 +98,13 @@ resolve_minimax_key() {
     return 1
 }
 
+if KEY=$(resolve_deepseek_key); then
+    export DEEPSEEK_API_KEY="$KEY"
+    echo "[dev-serve] DeepSeek key found (${#KEY} chars)"
+else
+    echo "[dev-serve] no DeepSeek key found; requirements UI will show provider not connected"
+fi
+
 if KEY=$(resolve_minimax_key); then
     export MINIMAX_API_KEY="$KEY"
     echo "[dev-serve] MINIMAX_API_KEY resolved (${#KEY} chars, prefix ${KEY:0:8}…)"
@@ -89,7 +125,7 @@ if existing=$(lsof -ti:"$PORT" 2>/dev/null); then
     sleep 1
 fi
 
-echo "[dev-serve] starting demo server on http://127.0.0.1:$PORT/workbench"
+echo "[dev-serve] starting demo server on http://127.0.0.1:$PORT/index.html"
 echo "[dev-serve]   proposals dir : $WORKBENCH_PROPOSALS_DIR"
 echo "[dev-serve]   dev_queue dir : $WORKBENCH_DEV_QUEUE_DIR"
 exec env PYTHONPATH=src python3 -m well_harness.demo_server --port "$PORT"

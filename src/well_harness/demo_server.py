@@ -63,6 +63,19 @@ from well_harness.workbench_bundle import (
     load_workbench_archive_restore_payload,
 )
 from well_harness.workbench_changerequest_handoff import WorkbenchArchiveValidationError
+from well_harness.requirements_intake import (
+    RequirementsIntakeError,
+    analyze_requirements_text,
+    build_local_preparse_payload,
+    build_logic_drawing,
+    extract_document_text_from_payload,
+    interpret_logic_change,
+    prepare_fault_injection,
+    prepare_fault_injection_sandbox_plan,
+    resolve_provider_status,
+    update_logic_drawing,
+)
+from well_harness.requirements_intake.logic_builder import _build_l1_l4_circuit_view
 STATIC_DIR = Path(__file__).with_name("static")
 REFERENCE_PACKET_DIR = Path(__file__).with_name("reference_packets")
 REFERENCE_PACKET_PATH = REFERENCE_PACKET_DIR / "custom_reverse_control_v1.json"
@@ -212,6 +225,37 @@ HARDWARE_SCHEMA_PATH = "/api/hardware/schema"
 # Hardware evidence report (JER-153): read-only audit/report payload.
 HARDWARE_EVIDENCE_PATH = "/api/hardware/evidence"
 WORKBENCH_EDITABLE_SANDBOX_RUN_PATH = "/api/workbench/editable-sandbox-run"
+REQUIREMENTS_INTAKE_ANALYZE_PATH = "/api/requirements-intake/analyze"
+REQUIREMENTS_LOCAL_PREPARSE_PATH = "/api/requirements-intake/local-preparse"
+REQUIREMENTS_LOGIC_DRAWING_PATH = "/api/requirements-intake/draw-logic"
+REQUIREMENTS_LOGIC_CHANGE_INTERPRET_PATH = "/api/requirements-intake/interpret-logic-change"
+REQUIREMENTS_LOGIC_UPDATE_PATH = "/api/requirements-intake/update-logic-drawing"
+REQUIREMENTS_FAULT_INJECTION_PREPARE_PATH = "/api/requirements-intake/prepare-fault-injection"
+REQUIREMENTS_FAULT_INJECTION_SANDBOX_PATH = "/api/requirements-intake/prepare-fault-injection/sandbox"
+REQUIREMENTS_LIVE_DEMO_REPLAY_PATH = "/api/requirements-intake/deepseek-live-demo-replay"
+REQUIREMENTS_PROVIDER_STATUS_PATH = "/api/requirements-intake/provider-status"
+DEEPSEEK_LIVE_DEMO_ARTIFACT_DIR = Path(__file__).resolve().parents[2] / "artifacts" / "deepseek-live-full-chain"
+DEEPSEEK_REPLAY_LOCAL_STORAGE_KEYS = {
+    "requirements": "ai-fantui-requirements-intake-ready-v1",
+    "drawing": "ai-fantui-logic-builder-drawing-v1",
+    "change_history": "ai-fantui-logic-builder-change-history-v1",
+    "fault": "ai-fantui-fault-injection-preparation-v1",
+    "sandbox": "ai-fantui-fault-injection-sandbox-plan-v1",
+}
+REQUIREMENTS_INTAKE_FALLBACK_ERROR_CODES = frozenset(
+    {
+        "llm_http_error",
+        "llm_network_error",
+        "llm_timeout",
+        "llm_protocol_error",
+        "llm_empty_response",
+        "llm_json_error",
+        "logic_drawing_json_error",
+        "logic_change_json_error",
+        "fault_injection_json_error",
+        "fault_injection_sandbox_json_error",
+    }
+)
 SENSITIVITY_SWEEP_PATH = "/api/sensitivity-sweep"
 # FANTUI stateful tick endpoints — live counterpart to C919 /api/tick.
 # The existing /api/lever-snapshot stays stateless; this triad is separate
@@ -331,6 +375,183 @@ _FANTUI_SYSTEM = FantuiTickSystem()
 _FANTUI_LOCK = _FANTUI_SYSTEM._lock
 
 
+def _read_deepseek_replay_json(artifact_dir: Path, filename: str) -> dict[str, Any]:
+    path = artifact_dir / filename
+    if not path.exists():
+        raise FileNotFoundError(filename)
+    with path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    if not isinstance(payload, dict):
+        raise ValueError(f"{filename} must contain a JSON object")
+    return payload
+
+
+def _list_count(payload: dict[str, Any], key: str) -> int:
+    value = payload.get(key)
+    return len(value) if isinstance(value, list) else 0
+
+
+def _deepseek_replay_boundary_answers(fault_payload: dict[str, Any]) -> list[dict[str, str]]:
+    existing = fault_payload.get("boundary_answers")
+    if isinstance(existing, list) and existing:
+        return [
+            {
+                "id": str(item.get("id") or item.get("question_id") or f"boundary_{index}"),
+                "prompt_zh": str(item.get("prompt_zh") or item.get("prompt") or ""),
+                "answer_zh": str(item.get("answer_zh") or item.get("answer") or ""),
+            }
+            for index, item in enumerate(existing, start=1)
+            if isinstance(item, dict) and str(item.get("answer_zh") or item.get("answer") or "").strip()
+        ]
+    answers: list[dict[str, str]] = []
+    questions = fault_payload.get("boundary_questions")
+    if not isinstance(questions, list):
+        return answers
+    for index, question in enumerate(questions, start=1):
+        if not isinstance(question, dict):
+            continue
+        prompt = str(question.get("prompt_zh") or question.get("prompt") or question.get("id") or f"boundary_{index}")
+        answers.append(
+            {
+                "id": str(question.get("id") or f"boundary_{index}"),
+                "prompt_zh": prompt,
+                "answer_zh": "真实 DeepSeek 回放导入：确认该边界仅用于 dry-run 沙盒演示，不触发真实控制或仿真。",
+            }
+        )
+    return answers
+
+
+def _deepseek_replay_generated_at(artifact_dir: Path, run_summary: dict[str, Any]) -> str:
+    for key in ("completed_at", "generated_at", "created_at", "timestamp"):
+        value = run_summary.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    try:
+        mtime = (artifact_dir / "run_summary.json").stat().st_mtime
+    except OSError:
+        mtime = artifact_dir.stat().st_mtime
+    return datetime.fromtimestamp(mtime, timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _deepseek_replay_current_drawing(requirements: dict[str, Any], drawing: dict[str, Any]) -> dict[str, Any]:
+    if not isinstance(drawing, dict):
+        return drawing
+    circuit_view = _build_l1_l4_circuit_view(requirements)
+    if not circuit_view:
+        return drawing
+    updated = dict(drawing)
+    updated["circuit_view"] = circuit_view
+    if not updated.get("source_requirements_sha256"):
+        updated["source_requirements_sha256"] = circuit_view.get("source_requirements_sha256")
+    return updated
+
+
+def _deepseek_replay_drawing_stage_count(drawing: dict[str, Any]) -> dict[str, Any]:
+    circuit_view = drawing.get("circuit_view")
+    if isinstance(circuit_view, dict) and circuit_view.get("kind") == "ai-fantui-l1-l4-circuit-view":
+        nodes = _list_count(circuit_view, "nodes")
+        wires = _list_count(circuit_view, "wires")
+        return {
+            "id": "drawing",
+            "label_zh": "逻辑图",
+            "primary": nodes,
+            "secondary": wires,
+            "summary_zh": f"{nodes} circuit nodes / {wires} wires",
+        }
+    return {
+        "id": "drawing",
+        "label_zh": "逻辑图",
+        "primary": _list_count(drawing, "nodes"),
+        "secondary": _list_count(drawing, "edges"),
+        "summary_zh": (
+            f"{_list_count(drawing, 'nodes')} nodes / "
+            f"{_list_count(drawing, 'edges')} edges / "
+            f"{_list_count(drawing, 'parameter_panels')} panels"
+        ),
+    }
+
+
+def _deepseek_replay_summary(
+    artifact_dir: Path,
+    run_summary: dict[str, Any],
+    requirements: dict[str, Any],
+    drawing: dict[str, Any],
+    fault: dict[str, Any],
+    sandbox: dict[str, Any],
+) -> dict[str, Any]:
+    model = run_summary.get("model")
+    if not isinstance(model, str) or not model.strip():
+        llm = sandbox.get("llm") if isinstance(sandbox.get("llm"), dict) else {}
+        model = str(llm.get("model") or "deepseek-v4-pro")
+    stage_counts = [
+        {
+            "id": "requirements",
+            "label_zh": "需求理解",
+            "primary": _list_count(requirements, "concept_logic_nodes"),
+            "secondary": _list_count(requirements, "concept_edges"),
+            "summary_zh": (
+                f"{_list_count(requirements, 'concept_logic_nodes')} concepts / "
+                f"{_list_count(requirements, 'concept_edges')} edges"
+            ),
+        },
+        _deepseek_replay_drawing_stage_count(drawing),
+        {
+            "id": "fault",
+            "label_zh": "故障准备",
+            "primary": _list_count(fault, "fault_scenarios"),
+            "secondary": _list_count(fault, "injection_points"),
+            "summary_zh": (
+                f"{_list_count(fault, 'fault_scenarios')} scenarios / "
+                f"{_list_count(fault, 'injection_points')} points / "
+                f"{_list_count(fault, 'boundary_questions')} questions"
+            ),
+        },
+        {
+            "id": "sandbox",
+            "label_zh": "沙盒计划",
+            "primary": _list_count(sandbox, "sandbox_injection_plan"),
+            "secondary": _list_count(sandbox, "observation_points"),
+            "summary_zh": (
+                f"{_list_count(sandbox, 'sandbox_injection_plan')} plans / "
+                f"{_list_count(sandbox, 'observation_points')} observations / "
+                f"{_list_count(sandbox, 'review_checklist')} reviews"
+            ),
+        },
+    ]
+    return {
+        "ok": bool(run_summary.get("ok")),
+        "model": model,
+        "generated_at": _deepseek_replay_generated_at(artifact_dir, run_summary),
+        "stage_counts": stage_counts,
+    }
+
+
+def deepseek_live_demo_replay_payload(artifact_dir: Path | None = None) -> dict[str, Any]:
+    source_dir = artifact_dir or DEEPSEEK_LIVE_DEMO_ARTIFACT_DIR
+    requirements = _read_deepseek_replay_json(source_dir, "01_requirements_intake.json")
+    drawing = _read_deepseek_replay_json(source_dir, "02_logic_drawing.json")
+    drawing = _deepseek_replay_current_drawing(requirements, drawing)
+    fault = _read_deepseek_replay_json(source_dir, "03_fault_preparation.json")
+    sandbox = _read_deepseek_replay_json(source_dir, "04_sandbox_plan.json")
+    run_summary = _read_deepseek_replay_json(source_dir, "run_summary.json")
+    boundary_answers = _deepseek_replay_boundary_answers(fault)
+    return {
+        "kind": "ai-fantui-deepseek-live-demo-replay",
+        "version": 1,
+        "source": "artifacts/deepseek-live-full-chain",
+        "artifact_dir": str(source_dir),
+        "local_storage_keys": dict(DEEPSEEK_REPLAY_LOCAL_STORAGE_KEYS),
+        "requirements_payload": requirements,
+        "drawing_payload": drawing,
+        "change_history": [],
+        "fault_preparation_payload": fault,
+        "boundary_answers": boundary_answers,
+        "sandbox_plan_payload": sandbox,
+        "replay_summary": _deepseek_replay_summary(source_dir, run_summary, requirements, drawing, fault, sandbox),
+        "run_summary": run_summary,
+    }
+
+
 class DemoRequestHandler(BaseHTTPRequestHandler):
     """Serve the static demo shell and a thin JSON API around DemoAnswer."""
 
@@ -371,6 +592,34 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             # packet), not a live test run.
             self._send_json(200, workbench_state_of_world_payload())
             return
+        if parsed.path == REQUIREMENTS_PROVIDER_STATUS_PATH:
+            provider = parse_qs(parsed.query).get("provider", ["deepseek"])[0]
+            try:
+                self._send_json(200, resolve_provider_status(provider))
+            except RequirementsIntakeError as exc:
+                self._send_json(exc.status_code, exc.to_payload())
+            return
+        if parsed.path == REQUIREMENTS_LIVE_DEMO_REPLAY_PATH:
+            try:
+                self._send_json(200, deepseek_live_demo_replay_payload())
+            except FileNotFoundError as exc:
+                self._send_json(
+                    404,
+                    {
+                        "error": "deepseek_live_demo_replay_missing",
+                        "missing_file": str(exc),
+                        "artifact_dir": str(DEEPSEEK_LIVE_DEMO_ARTIFACT_DIR),
+                    },
+                )
+            except (json.JSONDecodeError, ValueError) as exc:
+                self._send_json(
+                    500,
+                    {
+                        "error": "deepseek_live_demo_replay_invalid",
+                        "detail": str(exc),
+                    },
+                )
+            return
 
         # Default entry: unified landing page with 2x3 card grid
         # (Phase A: chat.html shelved; Phase UI-C: root now serves index.html
@@ -383,6 +632,10 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             self._serve_static("demo.html")
             return
 
+        if parsed.path in ("/demo-reconstruction", "/demo-reconstruction/", "/demo_reconstruction.html"):
+            self._serve_static("demo_reconstruction/index.html")
+            return
+
         if parsed.path in ("/workbench/start", "/workbench/start.html"):
             self._serve_static("workbench_start.html")
             return
@@ -393,6 +646,38 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
 
         if parsed.path in ("/workbench", "/workbench.html", "/expert/workbench.html"):
             self._serve_static("workbench.html")
+            return
+
+        if parsed.path in (
+            "/requirements-intake",
+            "/requirements-intake/",
+            "/requirements_intake.html",
+        ):
+            self._serve_static("requirements_intake/index.html")
+            return
+
+        if parsed.path in (
+            "/logic-builder",
+            "/logic-builder/",
+            "/logic_builder.html",
+        ):
+            self._serve_static("logic_builder/index.html")
+            return
+
+        if parsed.path in (
+            "/fault-injection-prepare",
+            "/fault-injection-prepare/",
+            "/fault_injection_prepare.html",
+        ):
+            self._serve_static("fault_injection_prepare/index.html")
+            return
+
+        if parsed.path in (
+            "/fault-injection-sandbox",
+            "/fault-injection-sandbox/",
+            "/fault_injection_sandbox.html",
+        ):
+            self._serve_static("fault_injection_sandbox/index.html")
             return
 
         # P44-01 (2026-04-26): control-logic circuit fragment for /workbench
@@ -609,6 +894,13 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             WORKBENCH_REPAIR_PATH,
             WORKBENCH_ARCHIVE_RESTORE_PATH,
             WORKBENCH_EDITABLE_SANDBOX_RUN_PATH,
+            REQUIREMENTS_LOCAL_PREPARSE_PATH,
+            REQUIREMENTS_INTAKE_ANALYZE_PATH,
+            REQUIREMENTS_LOGIC_DRAWING_PATH,
+            REQUIREMENTS_LOGIC_CHANGE_INTERPRET_PATH,
+            REQUIREMENTS_LOGIC_UPDATE_PATH,
+            REQUIREMENTS_FAULT_INJECTION_PREPARE_PATH,
+            REQUIREMENTS_FAULT_INJECTION_SANDBOX_PATH,
             DIAGNOSIS_RUN_PATH,
             MONTE_CARLO_RUN_PATH,
             HARDWARE_SCHEMA_PATH,
@@ -786,6 +1078,62 @@ class DemoRequestHandler(BaseHTTPRequestHandler):
             response_payload, error_payload = build_workbench_sandbox_run_response(request_payload)
             if error_payload is not None:
                 self._send_json(400, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+
+        if parsed.path == REQUIREMENTS_LOCAL_PREPARSE_PATH:
+            response_payload, error_payload, status_code = build_requirements_local_preparse_response(request_payload)
+            if error_payload is not None:
+                self._send_json(status_code, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+
+        if parsed.path == REQUIREMENTS_INTAKE_ANALYZE_PATH:
+            response_payload, error_payload, status_code = build_requirements_intake_analysis_response(request_payload)
+            if error_payload is not None:
+                self._send_json(status_code, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+
+        if parsed.path == REQUIREMENTS_LOGIC_DRAWING_PATH:
+            response_payload, error_payload, status_code = build_requirements_logic_drawing_response(request_payload)
+            if error_payload is not None:
+                self._send_json(status_code, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+
+        if parsed.path == REQUIREMENTS_LOGIC_CHANGE_INTERPRET_PATH:
+            response_payload, error_payload, status_code = build_requirements_logic_change_response(request_payload)
+            if error_payload is not None:
+                self._send_json(status_code, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+
+        if parsed.path == REQUIREMENTS_LOGIC_UPDATE_PATH:
+            response_payload, error_payload, status_code = build_requirements_logic_update_response(request_payload)
+            if error_payload is not None:
+                self._send_json(status_code, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+
+        if parsed.path == REQUIREMENTS_FAULT_INJECTION_PREPARE_PATH:
+            response_payload, error_payload, status_code = build_requirements_fault_injection_prepare_response(request_payload)
+            if error_payload is not None:
+                self._send_json(status_code, error_payload)
+                return
+            self._send_json(200, response_payload)
+            return
+
+        if parsed.path == REQUIREMENTS_FAULT_INJECTION_SANDBOX_PATH:
+            response_payload, error_payload, status_code = build_requirements_fault_injection_sandbox_response(request_payload)
+            if error_payload is not None:
+                self._send_json(status_code, error_payload)
                 return
             self._send_json(200, response_payload)
             return
@@ -4917,6 +5265,591 @@ def build_workbench_safe_repair_response(request_payload: dict) -> tuple[dict | 
         "intake_assessment": assess_intake_packet(repaired_packet),
         "clarification_brief": build_clarification_brief(repaired_packet),
     }, None
+
+
+def build_requirements_intake_analysis_response(
+    request_payload: dict,
+) -> tuple[dict | None, dict | None, int]:
+    document_name_raw = request_payload.get("document_name", "")
+    if document_name_raw is not None and not isinstance(document_name_raw, str):
+        return None, {
+            "error": "invalid_document_name",
+            "field": "document_name",
+            "message": "document_name must be a string when present.",
+        }, 400
+    provider_raw = request_payload.get("provider", "deepseek")
+    if not isinstance(provider_raw, str):
+        return None, {
+            "error": "invalid_provider",
+            "field": "provider",
+            "message": "provider must be a string.",
+        }, 400
+    try:
+        document_text, document_name = extract_document_text_from_payload(request_payload)
+        document_text = _append_requirements_clarifications(document_text, request_payload)
+        payload = analyze_requirements_text(
+            document_text,
+            document_name=document_name,
+            provider=provider_raw or "deepseek",
+        )
+        payload = _apply_requirements_clarification_resolution(payload, request_payload)
+    except RequirementsIntakeError as exc:
+        allow_fallback = request_payload.get("allow_fallback", True)
+        if (
+            (provider_raw or "deepseek").strip().lower() == "deepseek"
+            and allow_fallback is not False
+            and exc.code in REQUIREMENTS_INTAKE_FALLBACK_ERROR_CODES
+        ):
+            try:
+                fallback_payload = analyze_requirements_text(
+                    document_text,
+                    document_name=document_name,
+                    provider="minimax",
+                )
+                fallback_payload = _apply_requirements_clarification_resolution(
+                    fallback_payload,
+                    request_payload,
+                )
+            except RequirementsIntakeError as fallback_exc:
+                original_payload = exc.to_payload()
+                original_payload["fallback"] = {
+                    "attempted": True,
+                    "provider": "minimax",
+                    "error": fallback_exc.code,
+                    "message": fallback_exc.message,
+                    "details": fallback_exc.details,
+                }
+                return None, original_payload, exc.status_code
+            fallback_payload["llm"]["fallback_from"] = "deepseek"
+            fallback_payload["llm"]["fallback_reason"] = exc.code
+            fallback_payload["llm"]["primary_error"] = {
+                "error": exc.code,
+                "message": exc.message,
+                "details": exc.details,
+            }
+            return fallback_payload, None, 200
+        return None, exc.to_payload(), exc.status_code
+    return payload, None, 200
+
+
+def build_requirements_local_preparse_response(
+    request_payload: dict,
+) -> tuple[dict | None, dict | None, int]:
+    document_name_raw = request_payload.get("document_name", "")
+    if document_name_raw is not None and not isinstance(document_name_raw, str):
+        return None, {
+            "error": "invalid_document_name",
+            "field": "document_name",
+            "message": "document_name must be a string when present.",
+        }, 400
+    try:
+        document_text, document_name = extract_document_text_from_payload(request_payload)
+        document_text = _append_requirements_clarifications(document_text, request_payload)
+        payload = build_local_preparse_payload(document_text, document_name=document_name)
+    except RequirementsIntakeError as exc:
+        return None, exc.to_payload(), exc.status_code
+    return payload, None, 200
+
+
+def _append_requirements_clarifications(document_text: str, request_payload: dict) -> str:
+    answers = request_payload.get("clarification_answers")
+    if not isinstance(answers, list) or not answers:
+        return document_text
+
+    lines = [
+        "",
+        "",
+        "[工程师澄清回答]",
+        "以下回答来自需求理解工作台的澄清交互窗口，应作为本轮需求理解的补充输入；如果回答仍不完整，请继续提问。",
+    ]
+    for index, item in enumerate(answers, start=1):
+        if not isinstance(item, dict):
+            continue
+        prompt = str(item.get("prompt_zh") or item.get("prompt") or item.get("question_id") or f"q{index}").strip()
+        answer = str(item.get("answer_zh") or item.get("answer") or "").strip()
+        if not answer:
+            continue
+        lines.append(f"{index}. 问题：{prompt}")
+        lines.append(f"   回答：{answer}")
+    if len(lines) <= 4:
+        return document_text
+    return document_text.rstrip() + "\n".join(lines)
+
+
+def _requirements_text_key(value: object) -> str:
+    return re.sub(r"[\W_]+", "", str(value or "").strip().lower())
+
+
+def _answered_requirements_clarifications(request_payload: dict) -> tuple[set[str], set[str]]:
+    answers = request_payload.get("clarification_answers")
+    if not isinstance(answers, list):
+        return set(), set()
+    answered_ids: set[str] = set()
+    answered_prompts: set[str] = set()
+    for item in answers:
+        if not isinstance(item, dict):
+            continue
+        answer = str(item.get("answer_zh") or item.get("answer") or "").strip()
+        if not answer:
+            continue
+        question_id = _requirements_text_key(item.get("question_id") or item.get("id"))
+        prompt = _requirements_text_key(item.get("prompt_zh") or item.get("prompt"))
+        if question_id:
+            answered_ids.add(question_id)
+        if prompt:
+            answered_prompts.add(prompt)
+    return answered_ids, answered_prompts
+
+
+def _apply_requirements_clarification_resolution(payload: dict, request_payload: dict) -> dict:
+    answered_ids, answered_prompts = _answered_requirements_clarifications(request_payload)
+    if not answered_ids and not answered_prompts:
+        return payload
+
+    questions = payload.get("open_questions")
+    if not isinstance(questions, list) or not questions:
+        return payload
+
+    filtered_questions = []
+    for index, item in enumerate(questions, start=1):
+        if not isinstance(item, dict):
+            filtered_questions.append(item)
+            continue
+        question_id = _requirements_text_key(item.get("id") or f"q{index}")
+        prompt = _requirements_text_key(item.get("prompt_zh") or item.get("prompt"))
+        if question_id in answered_ids or (prompt and prompt in answered_prompts):
+            continue
+        filtered_questions.append(item)
+
+    if len(filtered_questions) == len(questions):
+        return payload
+
+    resolved = dict(payload)
+    resolved["open_questions"] = filtered_questions
+    resolved["clarification_resolution"] = {
+        "answered_question_count": len(answered_ids),
+        "filtered_repeated_question_count": len(questions) - len(filtered_questions),
+    }
+    if not filtered_questions and resolved.get("concept_logic_nodes") and resolved.get("concept_edges"):
+        resolved["status"] = "ready_for_logic_builder"
+        resolved["ready_for_logic_builder"] = True
+    elif not filtered_questions:
+        missing_fields = []
+        if not resolved.get("summary_zh"):
+            missing_fields.append("summary_zh")
+        if not resolved.get("concept_logic_nodes"):
+            missing_fields.append("concept_logic_nodes")
+        if not resolved.get("concept_edges"):
+            missing_fields.append("concept_edges")
+        resolved["status"] = "needs_clarification"
+        resolved["ready_for_logic_builder"] = False
+        resolved["recovery_state"] = {
+            "status": "invalid_model_output",
+            "reason_zh": "模型没有给出新的阻塞问题，也没有产出可绘制的节点/连线。",
+            "missing_fields": missing_fields,
+            "actions": [
+                "retry_model",
+                "use_deterministic_preparse",
+                "show_missing_fields",
+                "reopen_previous_questions",
+            ],
+        }
+    return resolved
+
+
+def build_requirements_logic_drawing_response(
+    request_payload: dict,
+) -> tuple[dict | None, dict | None, int]:
+    provider_raw = request_payload.get("provider", "deepseek")
+    if not isinstance(provider_raw, str):
+        return None, {
+            "error": "invalid_provider",
+            "field": "provider",
+            "message": "provider must be a string.",
+        }, 400
+    requirements_payload = request_payload.get("requirements_payload")
+    if not isinstance(requirements_payload, dict):
+        return None, {
+            "error": "invalid_requirements_payload",
+            "field": "requirements_payload",
+            "message": "requirements_payload must be an object.",
+        }, 400
+    try:
+        payload = build_logic_drawing(
+            requirements_payload,
+            provider=provider_raw or "deepseek",
+        )
+    except RequirementsIntakeError as exc:
+        allow_fallback = request_payload.get("allow_fallback", True)
+        if (
+            (provider_raw or "deepseek").strip().lower() == "deepseek"
+            and allow_fallback is not False
+            and exc.code in REQUIREMENTS_INTAKE_FALLBACK_ERROR_CODES
+        ):
+            try:
+                fallback_payload = build_logic_drawing(
+                    requirements_payload,
+                    provider="minimax",
+                )
+            except RequirementsIntakeError as fallback_exc:
+                original_payload = exc.to_payload()
+                original_payload["fallback"] = {
+                    "attempted": True,
+                    "provider": "minimax",
+                    "error": fallback_exc.code,
+                    "message": fallback_exc.message,
+                    "details": fallback_exc.details,
+                }
+                return None, original_payload, exc.status_code
+            fallback_payload["llm"]["fallback_from"] = "deepseek"
+            fallback_payload["llm"]["fallback_reason"] = exc.code
+            fallback_payload["llm"]["primary_error"] = {
+                "error": exc.code,
+                "message": exc.message,
+                "details": exc.details,
+            }
+            return fallback_payload, None, 200
+        return None, exc.to_payload(), exc.status_code
+    return payload, None, 200
+
+
+def build_requirements_logic_change_response(
+    request_payload: dict,
+) -> tuple[dict | None, dict | None, int]:
+    provider_raw = request_payload.get("provider", "deepseek")
+    if not isinstance(provider_raw, str):
+        return None, {
+            "error": "invalid_provider",
+            "field": "provider",
+            "message": "provider must be a string.",
+        }, 400
+    requirements_payload = request_payload.get("requirements_payload")
+    if not isinstance(requirements_payload, dict):
+        return None, {
+            "error": "invalid_requirements_payload",
+            "field": "requirements_payload",
+            "message": "requirements_payload must be an object.",
+        }, 400
+    drawing_payload = request_payload.get("drawing_payload")
+    if not isinstance(drawing_payload, dict):
+        return None, {
+            "error": "invalid_drawing_payload",
+            "field": "drawing_payload",
+            "message": "drawing_payload must be an object.",
+        }, 400
+    annotation_text = request_payload.get("annotation_text")
+    if not isinstance(annotation_text, str) or not annotation_text.strip():
+        return None, {
+            "error": "missing_logic_change_annotation",
+            "field": "annotation_text",
+            "message": "annotation_text must be a non-empty string.",
+        }, 400
+    target_node_id = request_payload.get("target_node_id", "")
+    if target_node_id is not None and not isinstance(target_node_id, str):
+        return None, {
+            "error": "invalid_target_node_id",
+            "field": "target_node_id",
+            "message": "target_node_id must be a string when present.",
+        }, 400
+    annotation_batch_raw = request_payload.get("annotation_batch", [])
+    if annotation_batch_raw is None:
+        annotation_batch_raw = []
+    if not isinstance(annotation_batch_raw, list):
+        return None, {
+            "error": "invalid_annotation_batch",
+            "field": "annotation_batch",
+            "message": "annotation_batch must be a list when present.",
+        }, 400
+    annotation_batch: list[dict[str, str]] = []
+    for index, item in enumerate(annotation_batch_raw, start=1):
+        if not isinstance(item, dict):
+            return None, {
+                "error": "invalid_annotation_batch",
+                "field": "annotation_batch",
+                "message": f"annotation_batch[{index - 1}] must be an object.",
+            }, 400
+        annotation_batch.append(
+            {
+                "id": str(item.get("id") or f"annotation_{index}"),
+                "target_type": str(item.get("target_type") or "node"),
+                "target_id": str(item.get("target_id") or ""),
+                "target_label": str(item.get("target_label") or item.get("target_id") or ""),
+                "text": str(item.get("text") or item.get("annotation_text") or ""),
+                "provider": str(item.get("provider") or provider_raw or "deepseek"),
+                "created_at": str(item.get("created_at") or ""),
+            }
+        )
+    selected_nodes_raw = request_payload.get("selected_nodes", [])
+    selected_edges_raw = request_payload.get("selected_edges", [])
+    if selected_nodes_raw is None:
+        selected_nodes_raw = []
+    if selected_edges_raw is None:
+        selected_edges_raw = []
+    if not isinstance(selected_nodes_raw, list) or not all(isinstance(item, str) for item in selected_nodes_raw):
+        return None, {
+            "error": "invalid_selected_nodes",
+            "field": "selected_nodes",
+            "message": "selected_nodes must be a list of strings when present.",
+        }, 400
+    if not isinstance(selected_edges_raw, list) or not all(isinstance(item, str) for item in selected_edges_raw):
+        return None, {
+            "error": "invalid_selected_edges",
+            "field": "selected_edges",
+            "message": "selected_edges must be a list of strings when present.",
+        }, 400
+    try:
+        payload = interpret_logic_change(
+            requirements_payload,
+            drawing_payload,
+            annotation_text,
+            target_node_id=target_node_id or "",
+            annotation_batch=annotation_batch,
+            selected_nodes=selected_nodes_raw,
+            selected_edges=selected_edges_raw,
+            provider=provider_raw or "deepseek",
+        )
+    except RequirementsIntakeError as exc:
+        allow_fallback = request_payload.get("allow_fallback", True)
+        if (
+            (provider_raw or "deepseek").strip().lower() == "deepseek"
+            and allow_fallback is not False
+            and exc.code in REQUIREMENTS_INTAKE_FALLBACK_ERROR_CODES
+        ):
+            try:
+                fallback_payload = interpret_logic_change(
+                    requirements_payload,
+                    drawing_payload,
+                    annotation_text,
+                    target_node_id=target_node_id or "",
+                    annotation_batch=annotation_batch,
+                    selected_nodes=selected_nodes_raw,
+                    selected_edges=selected_edges_raw,
+                    provider="minimax",
+                )
+            except RequirementsIntakeError as fallback_exc:
+                original_payload = exc.to_payload()
+                original_payload["fallback"] = {
+                    "attempted": True,
+                    "provider": "minimax",
+                    "error": fallback_exc.code,
+                    "message": fallback_exc.message,
+                    "details": fallback_exc.details,
+                }
+                return None, original_payload, exc.status_code
+            fallback_payload["llm"]["fallback_from"] = "deepseek"
+            fallback_payload["llm"]["fallback_reason"] = exc.code
+            fallback_payload["llm"]["primary_error"] = {
+                "error": exc.code,
+                "message": exc.message,
+                "details": exc.details,
+            }
+            return fallback_payload, None, 200
+        return None, exc.to_payload(), exc.status_code
+    return payload, None, 200
+
+
+def build_requirements_logic_update_response(
+    request_payload: dict,
+) -> tuple[dict | None, dict | None, int]:
+    provider_raw = request_payload.get("provider", "deepseek")
+    if not isinstance(provider_raw, str):
+        return None, {
+            "error": "invalid_provider",
+            "field": "provider",
+            "message": "provider must be a string.",
+        }, 400
+    drawing_payload = request_payload.get("drawing_payload")
+    if not isinstance(drawing_payload, dict):
+        return None, {
+            "error": "invalid_drawing_payload",
+            "field": "drawing_payload",
+            "message": "drawing_payload must be an object.",
+        }, 400
+    interpretation_payload = request_payload.get("interpretation_payload")
+    if not isinstance(interpretation_payload, dict):
+        return None, {
+            "error": "invalid_logic_change_interpretation",
+            "field": "interpretation_payload",
+            "message": "interpretation_payload must be an object.",
+        }, 400
+    try:
+        payload = update_logic_drawing(
+            drawing_payload,
+            interpretation_payload,
+            provider=provider_raw or "deepseek",
+        )
+    except RequirementsIntakeError as exc:
+        allow_fallback = request_payload.get("allow_fallback", True)
+        if (
+            (provider_raw or "deepseek").strip().lower() == "deepseek"
+            and allow_fallback is not False
+            and exc.code in REQUIREMENTS_INTAKE_FALLBACK_ERROR_CODES
+        ):
+            try:
+                fallback_payload = update_logic_drawing(
+                    drawing_payload,
+                    interpretation_payload,
+                    provider="minimax",
+                )
+            except RequirementsIntakeError as fallback_exc:
+                original_payload = exc.to_payload()
+                original_payload["fallback"] = {
+                    "attempted": True,
+                    "provider": "minimax",
+                    "error": fallback_exc.code,
+                    "message": fallback_exc.message,
+                    "details": fallback_exc.details,
+                }
+                return None, original_payload, exc.status_code
+            fallback_payload["llm"]["fallback_from"] = "deepseek"
+            fallback_payload["llm"]["fallback_reason"] = exc.code
+            fallback_payload["llm"]["primary_error"] = {
+                "error": exc.code,
+                "message": exc.message,
+                "details": exc.details,
+            }
+            return fallback_payload, None, 200
+        return None, exc.to_payload(), exc.status_code
+    return payload, None, 200
+
+
+def build_requirements_fault_injection_prepare_response(
+    request_payload: dict,
+) -> tuple[dict | None, dict | None, int]:
+    provider_raw = request_payload.get("provider", "deepseek")
+    if not isinstance(provider_raw, str):
+        return None, {
+            "error": "invalid_provider",
+            "field": "provider",
+            "message": "provider must be a string.",
+        }, 400
+    requirements_payload = request_payload.get("requirements_payload")
+    if not isinstance(requirements_payload, dict):
+        return None, {
+            "error": "invalid_requirements_payload",
+            "field": "requirements_payload",
+            "message": "requirements_payload must be an object.",
+        }, 400
+    drawing_payload = request_payload.get("drawing_payload")
+    if not isinstance(drawing_payload, dict):
+        return None, {
+            "error": "invalid_drawing_payload",
+            "field": "drawing_payload",
+            "message": "drawing_payload must be an object.",
+        }, 400
+    change_history = request_payload.get("change_history", [])
+    if change_history is not None and not isinstance(change_history, list):
+        return None, {
+            "error": "invalid_change_history",
+            "field": "change_history",
+            "message": "change_history must be a list when present.",
+        }, 400
+    try:
+        payload = prepare_fault_injection(
+            requirements_payload,
+            drawing_payload,
+            change_history=change_history or [],
+            provider=provider_raw or "deepseek",
+        )
+    except RequirementsIntakeError as exc:
+        allow_fallback = request_payload.get("allow_fallback", True)
+        if (
+            (provider_raw or "deepseek").strip().lower() == "deepseek"
+            and allow_fallback is not False
+            and exc.code in REQUIREMENTS_INTAKE_FALLBACK_ERROR_CODES
+        ):
+            try:
+                fallback_payload = prepare_fault_injection(
+                    requirements_payload,
+                    drawing_payload,
+                    change_history=change_history or [],
+                    provider="minimax",
+                )
+            except RequirementsIntakeError as fallback_exc:
+                original_payload = exc.to_payload()
+                original_payload["fallback"] = {
+                    "attempted": True,
+                    "provider": "minimax",
+                    "error": fallback_exc.code,
+                    "message": fallback_exc.message,
+                    "details": fallback_exc.details,
+                }
+                return None, original_payload, exc.status_code
+            fallback_payload["llm"]["fallback_from"] = "deepseek"
+            fallback_payload["llm"]["fallback_reason"] = exc.code
+            fallback_payload["llm"]["primary_error"] = {
+                "error": exc.code,
+                "message": exc.message,
+                "details": exc.details,
+            }
+            return fallback_payload, None, 200
+        return None, exc.to_payload(), exc.status_code
+    return payload, None, 200
+
+
+def build_requirements_fault_injection_sandbox_response(
+    request_payload: dict,
+) -> tuple[dict | None, dict | None, int]:
+    provider_raw = request_payload.get("provider", "deepseek")
+    if not isinstance(provider_raw, str):
+        return None, {
+            "error": "invalid_provider",
+            "field": "provider",
+            "message": "provider must be a string.",
+        }, 400
+    preparation_payload = request_payload.get("fault_injection_preparation_payload")
+    if not isinstance(preparation_payload, dict):
+        return None, {
+            "error": "invalid_fault_injection_preparation_payload",
+            "field": "fault_injection_preparation_payload",
+            "message": "fault_injection_preparation_payload must be an object.",
+        }, 400
+    boundary_answers = request_payload.get("boundary_answers", [])
+    if boundary_answers is not None and not isinstance(boundary_answers, list):
+        return None, {
+            "error": "invalid_boundary_answers",
+            "field": "boundary_answers",
+            "message": "boundary_answers must be a list when present.",
+        }, 400
+    try:
+        payload = prepare_fault_injection_sandbox_plan(
+            preparation_payload,
+            boundary_answers=boundary_answers or [],
+            provider=provider_raw or "deepseek",
+        )
+    except RequirementsIntakeError as exc:
+        allow_fallback = request_payload.get("allow_fallback", True)
+        if (
+            (provider_raw or "deepseek").strip().lower() == "deepseek"
+            and allow_fallback is not False
+            and exc.code in REQUIREMENTS_INTAKE_FALLBACK_ERROR_CODES
+        ):
+            try:
+                fallback_payload = prepare_fault_injection_sandbox_plan(
+                    preparation_payload,
+                    boundary_answers=boundary_answers or [],
+                    provider="minimax",
+                )
+            except RequirementsIntakeError as fallback_exc:
+                original_payload = exc.to_payload()
+                original_payload["fallback"] = {
+                    "attempted": True,
+                    "provider": "minimax",
+                    "error": fallback_exc.code,
+                    "message": fallback_exc.message,
+                    "details": fallback_exc.details,
+                }
+                return None, original_payload, exc.status_code
+            fallback_payload["llm"]["fallback_from"] = "deepseek"
+            fallback_payload["llm"]["fallback_reason"] = exc.code
+            fallback_payload["llm"]["primary_error"] = {
+                "error": exc.code,
+                "message": exc.message,
+                "details": exc.details,
+            }
+            return fallback_payload, None, 200
+        return None, exc.to_payload(), exc.status_code
+    return payload, None, 200
 
 
 def build_workbench_archive_restore_response(request_payload: dict) -> tuple[dict | None, dict | None]:

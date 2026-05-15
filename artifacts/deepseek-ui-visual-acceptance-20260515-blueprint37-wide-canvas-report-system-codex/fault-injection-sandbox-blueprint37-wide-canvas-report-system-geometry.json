@@ -1,0 +1,28 @@
+{
+  "replay_canvas": {
+    "x": 39,
+    "y": 482,
+    "width": 608,
+    "height": 124
+  },
+  "canvas_ratio": 4.903225806451613,
+  "right_report_rail": {
+    "x": 1019,
+    "y": 408.78125,
+    "width": 308,
+    "height": 94
+  },
+  "report_actions": 2,
+  "bottom_strip": {
+    "x": 28,
+    "y": 626,
+    "width": 1310,
+    "height": 130
+  },
+  "node_count": 12,
+  "link_count": 11,
+  "main_report_rows": 7,
+  "scroll_height": 768,
+  "inner_height": 768,
+  "overflow_x": false
+}

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>demo.html 高保真复刻对照 · FANTUI LogicMVP</title>
+<link rel="stylesheet" href="/unified-nav.css">
+<link rel="stylesheet" href="/demo_reconstruction/demo_reconstruction.css?v=p2">
+<script src="/demo_reconstruction/demo_reconstruction.js?v=p2" defer></script>
+</head>
+<body class="unified-nav-enabled" data-nav-current="demo-reconstruction" data-primary-flow="deepseek-v4-pro-ui-workbench" data-canvas-status="degraded-backup" data-ux-page-role="comparison">
+<header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
+  <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div id="deepseek-nav-mainline" class="unified-nav-group unified-nav-mainline" aria-label="DeepSeek 四步主线" data-ux-main-flow="four-step">
+      <span class="unified-nav-group-label">主流程</span>
+      <a href="/requirements-intake" class="unified-nav-link" data-nav-key="requirements-intake">1 需求解析</a>
+      <a href="/logic-builder" class="unified-nav-link" data-nav-key="logic-builder">2 逻辑复刻</a>
+      <a href="/fault-injection-prepare" class="unified-nav-link" data-nav-key="fault-injection-prepare">3 故障准备</a>
+      <a href="/fault-injection-sandbox" class="unified-nav-link" data-nav-key="fault-injection-sandbox">4 沙盒审查</a>
+    </div>
+    <details id="deepseek-nav-advanced-modules" class="unified-nav-advanced">
+      <summary>更多模块</summary>
+      <div class="unified-nav-advanced-links">
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">demo 对照</span>
+          <a href="/demo-reconstruction" class="unified-nav-link" data-nav-key="demo-reconstruction">高保真复刻</a>
+          <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">原版 demo.html</a>
+        </div>
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">电路图</span>
+          <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
+          <a href="/c919_etras_panel/circuit.html" class="unified-nav-link" data-nav-key="etras-circuit">E-TRAS 电路</a>
+        </div>
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">仿真</span>
+          <a href="/fan_console.html" class="unified-nav-link" data-nav-key="fan-console">反推操作台</a>
+          <a href="/c919_etras_workstation.html" class="unified-nav-link" data-nav-key="etras">C919 E-TRAS</a>
+        </div>
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">文档</span>
+          <a href="/fantui_requirements.html" class="unified-nav-link" data-nav-key="fantui-req">FANTUI 需求</a>
+          <a href="/c919_requirements.html" class="unified-nav-link" data-nav-key="c919-req">C919 需求</a>
+        </div>
+      </div>
+    </details>
+  </div>
+</header>
+
+<main class="demo-reconstruction-shell">
+  <section class="demo-reconstruction-hero" aria-labelledby="demo-reconstruction-title">
+    <div>
+      <p class="demo-reconstruction-kicker">DEMO.HTML REPLICA CHECK</p>
+      <h1 id="demo-reconstruction-title">demo.html 高保真复刻对照</h1>
+      <p id="demo-reconstruction-mode">当前模式：demo.html 高保真复刻</p>
+    </div>
+    <div class="demo-reconstruction-verdict">
+      <strong id="demo-reconstruction-fidelity">复刻度：20/20 节点 · 23/23 连线</strong>
+      <span id="demo-reconstruction-source-state">读取本地复刻草稿</span>
+    </div>
+  </section>
+
+  <section class="demo-reconstruction-compare-grid" aria-label="原版 demo 与当前复刻对照">
+    <article class="demo-reconstruction-panel">
+      <div class="demo-reconstruction-panel-head">
+        <p class="demo-reconstruction-kicker">ORIGINAL</p>
+        <h2>原版 demo.html</h2>
+      </div>
+      <iframe id="demo-reconstruction-original-frame" src="/demo.html?embed=1" title="原版 demo.html 反推逻辑演示舱"></iframe>
+    </article>
+
+    <article id="demo-reconstruction-current-panel" class="demo-reconstruction-panel">
+      <div class="demo-reconstruction-panel-head">
+        <p class="demo-reconstruction-kicker">CURRENT</p>
+        <h2>当前复刻</h2>
+      </div>
+      <div class="demo-reconstruction-metrics" aria-label="复刻指标">
+        <div><span>节点</span><strong id="demo-reconstruction-node-count">20/20</strong></div>
+        <div><span>连线</span><strong id="demo-reconstruction-wire-count">23/23</strong></div>
+        <div><span>预设场景</span><strong id="demo-reconstruction-preset-count">5/5</strong></div>
+        <div><span>状态输出</span><strong id="demo-reconstruction-status-count">6/6</strong></div>
+      </div>
+      <table id="demo-reconstruction-comparison-table" class="demo-reconstruction-table">
+        <thead>
+          <tr><th>维度</th><th>原版 demo.html</th><th>当前复刻</th><th>结论</th></tr>
+        </thead>
+        <tbody>
+          <tr><th>节点</th><td>20 个 fan-chain 节点</td><td id="demo-reconstruction-node-cell">20 个复刻节点</td><td>通过</td></tr>
+          <tr><th>连线</th><td>23 条 fan-chain 连线</td><td id="demo-reconstruction-wire-cell">23 条复刻连线</td><td>通过</td></tr>
+          <tr><th>预设场景</th><td>默认前向 / 着陆展开 / 最大反推 / 收起回杆 / 抑制阻塞</td><td id="demo-reconstruction-preset-cell">5 个场景可对照</td><td>通过</td></tr>
+          <tr><th>状态输出</th><td>SW1 / SW2 / TLS / VDT90 / L1-L4 / THR_LOCK</td><td id="demo-reconstruction-status-cell">6 类状态输出</td><td>通过</td></tr>
+        </tbody>
+      </table>
+    </article>
+  </section>
+
+  <section class="demo-reconstruction-detail-grid" aria-label="复刻细节清单">
+    <article class="demo-reconstruction-list-panel">
+      <div class="demo-reconstruction-panel-head">
+        <p class="demo-reconstruction-kicker">NODES</p>
+        <h2>节点清单</h2>
+      </div>
+      <ol id="demo-reconstruction-node-list" class="demo-reconstruction-list"></ol>
+    </article>
+    <article class="demo-reconstruction-list-panel">
+      <div class="demo-reconstruction-panel-head">
+        <p class="demo-reconstruction-kicker">WIRES</p>
+        <h2>连线清单</h2>
+      </div>
+      <ol id="demo-reconstruction-wire-list" class="demo-reconstruction-list"></ol>
+    </article>
+    <article class="demo-reconstruction-list-panel">
+      <div class="demo-reconstruction-panel-head">
+        <p class="demo-reconstruction-kicker">PRESETS</p>
+        <h2>预设场景</h2>
+      </div>
+      <ul id="demo-reconstruction-preset-list" class="demo-reconstruction-list">
+        <li>默认前向</li>
+        <li>着陆展开</li>
+        <li>最大反推</li>
+        <li>收起回杆</li>
+        <li>抑制阻塞</li>
+      </ul>
+    </article>
+    <article class="demo-reconstruction-list-panel">
+      <div class="demo-reconstruction-panel-head">
+        <p class="demo-reconstruction-kicker">STATUS</p>
+        <h2>状态输出</h2>
+      </div>
+      <ul id="demo-reconstruction-status-list" class="demo-reconstruction-list">
+        <li>SW1</li>
+        <li>SW2</li>
+        <li>TLS</li>
+        <li>VDT90</li>
+        <li>L1-L4</li>
+        <li>THR_LOCK</li>
+      </ul>
+    </article>
+  </section>
+</main>
+</body>
+</html>

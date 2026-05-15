@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>沙盒故障注入 · FANTUI LogicMVP</title>
+<link rel="stylesheet" href="/unified-nav.css">
+<link rel="stylesheet" href="/fault_injection_sandbox/fault_injection_sandbox.css?v=sandbox6">
+<script src="/fault_injection_sandbox/fault_injection_sandbox.js?v=sandbox6" defer></script>
+</head>
+<body class="unified-nav-enabled" data-nav-current="fault-injection-sandbox" data-primary-flow="deepseek-v4-pro-ui-workbench" data-canvas-status="degraded-backup">
+<header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
+  <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div id="deepseek-nav-mainline" class="unified-nav-group unified-nav-mainline" aria-label="DeepSeek 四步主线" data-ux-main-flow="four-step">
+      <span class="unified-nav-group-label">主流程</span>
+      <a href="/requirements-intake" class="unified-nav-link" data-nav-key="requirements-intake">1 需求解析</a>
+      <a href="/logic-builder" class="unified-nav-link" data-nav-key="logic-builder">2 逻辑复刻</a>
+      <a href="/fault-injection-prepare" class="unified-nav-link" data-nav-key="fault-injection-prepare">3 故障准备</a>
+      <a href="/fault-injection-sandbox" class="unified-nav-link is-active" data-nav-key="fault-injection-sandbox">4 沙盒审查</a>
+    </div>
+    <details id="deepseek-nav-advanced-modules" class="unified-nav-advanced">
+      <summary>更多模块</summary>
+      <div class="unified-nav-advanced-links">
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">旧工作台</span>
+          <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">反推逻辑</a>
+          <a href="/c919_etras_workstation.html" class="unified-nav-link" data-nav-key="etras">C919 E-TRAS</a>
+        </div>
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">电路图</span>
+          <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
+          <a href="/c919_etras_panel/circuit.html" class="unified-nav-link" data-nav-key="etras-circuit">E-TRAS 电路</a>
+        </div>
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">仿真</span>
+          <a href="/fan_console.html" class="unified-nav-link" data-nav-key="fan-console">反推操作台</a>
+          <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
+        </div>
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">文档</span>
+          <a href="/fantui_requirements.html" class="unified-nav-link" data-nav-key="fantui-req">FANTUI 需求</a>
+          <a href="/c919_requirements.html" class="unified-nav-link" data-nav-key="c919-req">C919 需求</a>
+        </div>
+      </div>
+    </details>
+  </div>
+</header>
+
+<main class="sandbox-shell" data-blueprint-phase="sandbox-review-final" data-blueprint37-top-density="compressed-progress-gates" data-panel-default="collapsed" data-panel-strategy="single-auxiliary" data-active-aux-panel="none" data-unified-inspector-state="none">
+  <section class="sandbox-topbar deepseek-command-strip" data-command-strip="deepseek-step" data-command-step="4" data-blueprint-surface="compact-top-bar">
+    <div>
+      <p class="sandbox-kicker deepseek-step-kicker">STEP 4/4</p>
+      <h1>沙盒注入</h1>
+    </div>
+    <div class="sandbox-controls">
+      <label for="fault-sandbox-provider">模型</label>
+      <select id="fault-sandbox-provider">
+        <option value="deepseek" selected>DeepSeek V4 Pro</option>
+        <option value="minimax">MiniMax-M2.7-highspeed</option>
+      </select>
+      <button id="fault-sandbox-generate" type="button" class="secondary" data-ux-action-tier="secondary" aria-label="生成沙盒配置">检查：生成配置</button>
+      <button id="fault-sandbox-revision-next" type="button" class="primary-next-action" data-primary-next-action="true" data-ux-action-tier="primary" aria-label="下一步：生成逻辑修订单">下一步：生成逻辑修订单</button>
+      <span id="fault-sandbox-review-gate" class="sandbox-review-gate" role="status">等待配置</span>
+      <button id="fault-sandbox-back" type="button" class="secondary" data-ux-action-tier="secondary" aria-label="返回故障准备">更多：返回故障准备</button>
+    </div>
+  </section>
+
+  <section id="failure-path" class="sandbox-primary-surface" data-blueprint-surface="failure-diagnosis-path" data-blueprint37-layout="replay-canvas-report-rail-default" data-blueprint36-contract="path_nodes-first_abnormal-input_snapshot-evidence-review_report-revision_action" aria-label="沙盒一级判断">
+    <section id="fault-sandbox-decision-board" class="sandbox-decision-board" data-decision-board="sandbox-review" aria-label="沙盒审查判断">
+      <article class="sandbox-decision-card" data-sandbox-card="conclusion">
+        <p class="sandbox-kicker">CONCLUSION</p>
+        <h2>当前结论</h2>
+        <strong id="fault-sandbox-decision-conclusion">等待配置</strong>
+        <p class="muted">先确认 dry-run 合同是否可审查。</p>
+      </article>
+      <article class="sandbox-decision-card" data-sandbox-card="gates">
+        <p class="sandbox-kicker">GATES</p>
+        <h2>审查闸门</h2>
+        <strong id="fault-sandbox-decision-gates">0/3 已确认</strong>
+        <p class="muted">细项默认折叠，只看一级判断。</p>
+      </article>
+      <article class="sandbox-decision-card" data-sandbox-card="next">
+        <p class="sandbox-kicker">NEXT</p>
+        <h2>下一步</h2>
+        <p id="fault-sandbox-decision-next-action" class="muted" data-usage-path-cue="sandbox">等待配置：生成后得到审查包、证据链和回放报告。</p>
+        <button id="fault-sandbox-toggle-detail-panel" type="button" class="secondary sandbox-detail-toggle" data-ux-action-tier="secondary" aria-expanded="false" aria-controls="fault-sandbox-detail-drawer">证据/审查</button>
+      </article>
+    </section>
+
+    <section class="sandbox-panel sandbox-review-gate-panel" aria-labelledby="fault-sandbox-primary-gates-title">
+      <div class="sandbox-section-head">
+        <div>
+          <p class="sandbox-kicker">PRIMARY REVIEW GATES</p>
+          <h2 id="fault-sandbox-primary-gates-title">三级审查闸门</h2>
+        </div>
+        <span id="fault-sandbox-primary-gate-count">0/3 gates</span>
+      </div>
+      <div id="fault-sandbox-primary-gates" class="sandbox-primary-gates">
+        <label class="sandbox-primary-gate" data-gate-card="dry-run">
+          <input type="checkbox" data-sandbox-confirm="dry-run" data-sandbox-primary-gate="dry-run">
+          <span>
+            <strong>dry-run 合同</strong>
+            <small id="fault-sandbox-gate-dry-run-detail">等待配置生成。</small>
+          </span>
+        </label>
+        <label class="sandbox-primary-gate" data-gate-card="coverage">
+          <input type="checkbox" data-sandbox-confirm="coverage" data-sandbox-primary-gate="coverage">
+          <span>
+            <strong>覆盖完整性</strong>
+            <small id="fault-sandbox-gate-coverage-detail">等待计划和观测点计数。</small>
+          </span>
+        </label>
+        <label class="sandbox-primary-gate" data-gate-card="risk">
+          <input type="checkbox" data-sandbox-confirm="risk" data-sandbox-primary-gate="risk">
+          <span>
+            <strong>例外/风险已读</strong>
+            <small id="fault-sandbox-gate-exception-detail">等待审查清单摘要。</small>
+          </span>
+        </label>
+      </div>
+    </section>
+
+    <section id="fault-sandbox-review-row-panel" class="sandbox-panel sandbox-review-row-panel" data-blueprint-surface="sandbox-review-rows" data-blueprint37-surface="replay-main-canvas" data-default-role="replay-canvas-primary" aria-labelledby="fault-sandbox-review-row-title">
+      <div class="sandbox-section-head">
+        <div>
+          <p class="sandbox-kicker">REVIEW ROWS</p>
+          <h2 id="fault-sandbox-review-row-title">沙盒审查结果行</h2>
+        </div>
+        <span id="fault-sandbox-review-row-count">0 rows</span>
+      </div>
+      <div id="fault-sandbox-replay-canvas-main" class="sandbox-replay-canvas-main" data-blueprint37-contract="state-nodes-verified-path-warning-boundary" data-blueprint37-density="wide-replay-canvas" aria-label="回放主画布">
+        <div id="fault-sandbox-replay-canvas-links" class="sandbox-replay-canvas-links" aria-hidden="true"></div>
+        <div id="fault-sandbox-replay-canvas-nodes" class="sandbox-replay-canvas-nodes" role="list">
+          <p class="muted">暂无回放节点。生成沙盒配置后显示候选回放主路径。</p>
+        </div>
+        <div id="fault-sandbox-replay-canvas-metrics" class="sandbox-replay-canvas-metrics" aria-label="回放主画布统计">
+          <span>节点 0/0</span>
+          <span>连线 0/0</span>
+          <span>冲突 0</span>
+          <span>待确认 0</span>
+        </div>
+      </div>
+      <div id="fault-sandbox-review-rows" class="sandbox-review-row-list" role="table" aria-label="沙盒审查结果行" data-blueprint-row-contract="checkbox-id-gate-status-evidence-source-hazard-action" data-blueprint36-contract="checkbox-id-gate-status-evidence-source-hazard_action-trace_report-action" data-blueprint-density="compact-workbench">
+        <div class="sandbox-review-row-header" role="row" aria-hidden="true">
+          <span data-blueprint-col="checkbox">选</span>
+          <span data-blueprint-col="id">ID</span>
+          <span data-blueprint-col="gate">闸门</span>
+          <span data-blueprint-col="status">状态</span>
+          <span data-blueprint-col="evidence">证据</span>
+          <span data-blueprint-col="source">来源</span>
+          <span data-blueprint-col="hazard-decision">风险 / 说明</span>
+          <span data-blueprint-col="trace-report">回链</span>
+          <span data-blueprint-col="action">操作</span>
+        </div>
+        <p class="muted">暂无审查结果。生成沙盒配置后显示 7 条蓝图审查行。</p>
+      </div>
+    </section>
+
+    <aside id="fault-sandbox-diagnosis-inspector" class="sandbox-panel sandbox-diagnosis-inspector" data-blueprint-surface="failure-diagnosis-inspector" data-blueprint37-panel="right-report-rail" data-blueprint37-system="replay-report-shared" data-blueprint37-right-density="layered-report-evidence" data-blueprint37-report-mode="replay-report-final" data-blueprint36-contract="path_nodes-first_abnormal-input_snapshot-evidence-review_report-revision_action" data-unified-inspector="right-inspector" data-inspector-role="failure-diagnosis" aria-labelledby="fault-sandbox-diagnosis-title">
+      <div class="sandbox-section-head">
+        <div>
+          <p class="sandbox-kicker">DIAGNOSIS</p>
+          <h2 id="fault-sandbox-diagnosis-title">失败诊断路径</h2>
+        </div>
+        <span id="fault-sandbox-diagnosis-state">等待配置</span>
+      </div>
+      <p id="fault-sandbox-diagnosis-summary" class="sandbox-diagnosis-summary">等待沙盒配置后定位首个候选异常。</p>
+      <div id="fault-sandbox-review-package-summary" class="sandbox-review-package-summary" data-blueprint-surface="active-review-package-summary" data-blueprint37-right-section="active-package" data-blueprint36-contract="active_review-trace-report-unresolved-fix-evidence" data-package-state="empty" aria-label="当前审查包摘要" hidden></div>
+      <section id="fault-sandbox-main-report-rail" class="sandbox-main-report-rail" data-blueprint37-panel="right-report-rail" data-blueprint37-system="replay-report-shared" data-blueprint37-right-section="report-preview" data-blueprint39-default="status-only" aria-labelledby="fault-sandbox-main-report-title">
+        <div class="sandbox-main-report-head">
+          <div>
+            <p class="sandbox-kicker">REPORT RAIL</p>
+            <h3 id="fault-sandbox-main-report-title">报告状态</h3>
+          </div>
+          <span id="fault-sandbox-main-report-count">0 sections</span>
+        </div>
+        <div id="fault-sandbox-main-report-actions" class="sandbox-main-report-actions" aria-label="报告导出操作">
+          <button type="button" data-main-report-action="revision" data-ux-action-tier="secondary">生成报告</button>
+          <button type="button" data-main-report-action="export" data-report-primary-action="review-package" data-ux-action-tier="primary">导出全部</button>
+        </div>
+        <div id="fault-sandbox-main-report-rows" class="sandbox-main-report-rows" role="list">
+          <p class="muted">暂无报告章节。</p>
+        </div>
+      </section>
+      <div class="sandbox-diagnosis-path" aria-label="失败路径定位" data-blueprint37-right-section="diagnosis-summary" data-blueprint36-contract="affected_path-first_abnormal-input_snapshot">
+        <div data-blueprint-col="affected-path">
+          <span>受影响路径</span>
+          <strong id="fault-sandbox-affected-path">待识别</strong>
+        </div>
+        <div data-blueprint-col="first-abnormal">
+          <span>首个异常节点</span>
+          <strong id="fault-sandbox-first-abnormal-node">待识别</strong>
+        </div>
+        <div data-blueprint-col="input-snapshot">
+          <span>输入快照</span>
+          <strong id="fault-sandbox-input-snapshot">待载入</strong>
+        </div>
+      </div>
+      <div id="fault-sandbox-diagnosis-chain" class="sandbox-diagnosis-chain" data-blueprint37-right-section="failure-path" data-blueprint36-surface="failure-chain-nodes" role="list" aria-label="候选失败路径节点">
+        <p class="muted">生成沙盒配置后显示路径节点、证据回链和修订动作。</p>
+      </div>
+      <div class="sandbox-diagnosis-block" data-blueprint37-right-section="repair-suggestions">
+        <span class="sandbox-diagnosis-label">建议修复</span>
+        <ul id="fault-sandbox-repair-suggestions" class="sandbox-diagnosis-list">
+          <li>生成沙盒配置后给出候选修订方向。</li>
+        </ul>
+      </div>
+      <div class="sandbox-diagnosis-block" data-blueprint37-right-section="evidence-links">
+        <span class="sandbox-diagnosis-label">证据链接</span>
+        <div id="fault-sandbox-diagnosis-evidence-links" class="sandbox-diagnosis-links">
+          <button type="button" class="secondary" disabled>等待证据</button>
+        </div>
+      </div>
+      <section id="fault-sandbox-evidence-trace" class="sandbox-panel sandbox-evidence-trace" data-blueprint-surface="evidence-trace-links" data-blueprint37-right-section="evidence-trace" data-blueprint37-right-rail="inspector-companion" data-blueprint36-contract="id-stage-review_report-evidence-action" aria-labelledby="fault-sandbox-evidence-trace-title">
+        <div class="sandbox-section-head">
+          <div>
+            <p class="sandbox-kicker">EVIDENCE TRACE</p>
+            <h2 id="fault-sandbox-evidence-trace-title">证据追踪链</h2>
+          </div>
+          <span id="fault-sandbox-evidence-trace-count">0 links</span>
+        </div>
+        <div id="fault-sandbox-evidence-trace-rows" class="sandbox-evidence-trace-rows" role="list" data-blueprint36-contract="id-stage-review_report-evidence-action">
+          <p class="muted">暂无证据追踪。生成沙盒配置后显示来源、运行、审查与报告回链。</p>
+        </div>
+      </section>
+    </aside>
+  </section>
+
+  <section id="fault-sandbox-process" class="sandbox-process" aria-live="polite">
+    <div class="sandbox-process-head">
+      <div>
+        <p class="sandbox-kicker">TASK PROGRESS</p>
+        <h2 id="fault-sandbox-process-title">等待沙盒配置</h2>
+      </div>
+      <span id="fault-sandbox-process-elapsed">00:00</span>
+    </div>
+    <div class="sandbox-track"><div id="fault-sandbox-process-fill" class="sandbox-process-fill"></div></div>
+    <div id="sandbox-generation-stream" class="sandbox-steps generation-stream" data-generation-stream="deepseek" aria-label="DeepSeek 生成流">
+      <span id="fault-sandbox-step-load" class="sandbox-step generation-stream-step" data-stream-step="load" data-state="idle">读取准备</span>
+      <span id="fault-sandbox-step-model" class="sandbox-step generation-stream-step" data-stream-step="model" data-state="idle">DeepSeek 沙盒配置</span>
+      <span id="fault-sandbox-step-plan" class="sandbox-step generation-stream-step" data-stream-step="plan" data-state="idle">整理观测点</span>
+      <span id="fault-sandbox-step-review" class="sandbox-step generation-stream-step" data-stream-step="review" data-state="idle">审查清单</span>
+    </div>
+    <p id="fault-sandbox-process-detail">读取故障准备页保存的边界回答后开始。</p>
+    <div id="sandbox-stream-chunks" class="stream-chunks" data-stream-chunks="deepseek" aria-label="DeepSeek 分块输出"></div>
+  </section>
+
+  <section id="fault-sandbox-workflow-overview" class="sandbox-workflow-overview" aria-label="流程总览">
+    <div class="sandbox-workflow-copy">
+      <p class="sandbox-kicker">WORKFLOW</p>
+      <h2 id="fault-sandbox-workflow-stage">等待故障准备草稿</h2>
+      <p id="fault-sandbox-workflow-detail">先完成故障候选和边界确认，再生成沙盒配置建议。</p>
+    </div>
+    <div id="fault-sandbox-workflow-steps" class="sandbox-workflow-steps" data-ux-main-flow="four-step">
+      <span class="sandbox-workflow-step is-complete" data-workflow-step="requirements">1 需求解析</span>
+      <span class="sandbox-workflow-step is-complete" data-workflow-step="drawing">2 逻辑复刻</span>
+      <span class="sandbox-workflow-step is-complete" data-workflow-step="fault">3 故障准备</span>
+      <span class="sandbox-workflow-step is-active" data-workflow-step="sandbox">4 沙盒审查</span>
+    </div>
+  </section>
+
+  <section id="fault-sandbox-detail-drawer" class="sandbox-layout" data-blueprint-surface="review-package" data-unified-aux-panel="detail-drawer" data-inspector-role="detail-drawer" data-unified-panel-state="closed" aria-label="沙盒证据与审查抽屉" aria-hidden="true">
+    <span id="review-package" class="sandbox-anchor" aria-hidden="true"></span>
+    <aside class="sandbox-sidebar">
+      <section class="sandbox-panel">
+        <p class="sandbox-kicker">SOURCE</p>
+        <h2 id="fault-sandbox-source-title">尚未载入</h2>
+        <p id="fault-sandbox-source-summary" class="muted">需要先保存故障注入准备草稿。</p>
+        <div id="fault-sandbox-source-metrics" class="sandbox-metrics">0 scenarios · 0 answers</div>
+      </section>
+      <section class="sandbox-panel">
+        <p class="sandbox-kicker">DRY-RUN CONTRACT</p>
+        <div id="fault-sandbox-contract" class="sandbox-contract">
+          <span class="sandbox-contract-pill">run_tick:false</span>
+          <span class="sandbox-contract-pill">simulate:false</span>
+          <span class="sandbox-contract-pill">dry_run_only:true</span>
+        </div>
+      </section>
+      <section class="sandbox-panel">
+        <p class="sandbox-kicker">MODEL OUTPUT</p>
+        <h2 id="fault-sandbox-result-state">尚未生成</h2>
+        <p id="fault-sandbox-result-summary" class="muted">等待模型返回沙盒配置建议。</p>
+        <div id="fault-sandbox-result-flags" class="sandbox-flags"></div>
+        <p id="fault-sandbox-quality-summary" class="sandbox-quality-summary">等待质量摘要。</p>
+        <details id="fault-sandbox-repair-details" class="sandbox-repair-details" hidden>
+          <summary id="fault-sandbox-repair-summary">模型自修复详情</summary>
+          <div id="fault-sandbox-repair-body" class="sandbox-repair-body"></div>
+        </details>
+      </section>
+      <section class="sandbox-panel sandbox-burden-summary">
+        <p class="sandbox-kicker">READING LOAD</p>
+        <h2 id="fault-sandbox-burden-action">等待配置</h2>
+        <ul id="fault-sandbox-burden-outputs" class="sandbox-burden-list">
+          <li>本页只先看 dry-run 合同和审查项。</li>
+        </ul>
+      </section>
+      <section id="fault-sandbox-plan-coverage-evidence" class="sandbox-panel sandbox-plan-coverage-evidence" hidden>
+        <p class="sandbox-kicker">AUTO COMPLETION</p>
+        <h2>自动补齐证据</h2>
+        <div id="fault-sandbox-plan-coverage-list" class="sandbox-coverage-list"></div>
+      </section>
+    </aside>
+
+    <section class="sandbox-main">
+      <section id="fault-sandbox-evidence-panel" class="sandbox-panel sandbox-evidence-panel" data-blueprint-surface="evidence-trace-final" aria-label="沙盒证据总览">
+        <div class="sandbox-section-head">
+          <div>
+            <p class="sandbox-kicker">EVIDENCE TILES</p>
+            <h2 id="fault-sandbox-evidence-title">证据总览</h2>
+          </div>
+          <span id="fault-sandbox-evidence-count">0 tiles</span>
+        </div>
+        <div id="sandbox-evidence-tiles" class="sandbox-evidence-tiles">
+          <p class="muted">暂无审查证据。</p>
+        </div>
+      </section>
+
+      <section id="fault-sandbox-checklist-strip" class="sandbox-panel sandbox-checklist-strip-panel" aria-label="人工审查快览">
+        <div class="sandbox-section-head">
+          <div>
+            <p class="sandbox-kicker">COMPACT CHECKLIST</p>
+            <h2>人工审查快览</h2>
+          </div>
+          <span id="fault-sandbox-checklist-count">0 checks</span>
+        </div>
+        <div id="sandbox-checklist-strip" class="sandbox-checklist-strip"></div>
+      </section>
+
+      <div id="fault-sandbox-detail-groups" class="sandbox-detail-groups" aria-label="折叠的沙盒细项">
+      <details id="fault-sandbox-plan-details" class="sandbox-panel sandbox-detail-section">
+        <summary>
+        <div class="sandbox-section-head">
+          <div>
+            <p class="sandbox-kicker">INJECTION PLAN</p>
+            <h2>沙盒注入配置建议</h2>
+          </div>
+          <span id="fault-sandbox-plan-count">0 plans</span>
+        </div>
+        </summary>
+        <div id="fault-sandbox-injection-plan" class="sandbox-plan-list">
+          <p class="muted">暂无配置建议。</p>
+        </div>
+      </details>
+
+      <details id="fault-sandbox-observation-details" class="sandbox-panel sandbox-detail-section">
+        <summary>
+        <div class="sandbox-section-head">
+          <div>
+            <p class="sandbox-kicker">OBSERVATION POINTS</p>
+            <h2>预期观测点</h2>
+          </div>
+          <span id="fault-sandbox-observation-count">0 points</span>
+        </div>
+        </summary>
+        <div id="fault-sandbox-observation-points" class="sandbox-observation-grid">
+          <p class="muted">暂无观测点。</p>
+        </div>
+      </details>
+
+      <details id="fault-sandbox-review-details" class="sandbox-panel sandbox-detail-section">
+        <summary>
+        <div class="sandbox-section-head">
+          <div>
+            <p class="sandbox-kicker">REVIEW CHECKLIST</p>
+            <h2>人工审查清单</h2>
+          </div>
+          <span id="fault-sandbox-review-count">0 checks</span>
+        </div>
+        </summary>
+        <div id="fault-sandbox-review-checklist" class="sandbox-review-list">
+          <p class="muted">暂无审查项。</p>
+        </div>
+      </details>
+      </div>
+    </section>
+  </section>
+
+  <section id="sandbox-report-strip" class="sandbox-report-strip" data-blueprint-surface="replay-report-final" data-blueprint37-surface="replay-report-workbench" data-blueprint37-system="replay-report-shared" data-blueprint37-contract="controls-timeline-report-preview-candidate-footer" data-inspector-role="bottom-report-strip" data-replay-state="paused" aria-label="回放与报告底部操作条">
+    <section id="fault-sandbox-replay-workbench" class="sandbox-replay-workbench" data-blueprint-surface="replay-timeline-workbench" aria-labelledby="fault-sandbox-replay-title">
+      <div class="sandbox-replay-head">
+        <div>
+          <p class="sandbox-kicker">TIMELINE</p>
+          <h2 id="fault-sandbox-replay-title">回放视图</h2>
+        </div>
+        <span id="fault-sandbox-replay-clock">00:00:00 / 00:20:00</span>
+      </div>
+      <div id="fault-sandbox-replay-controls" class="sandbox-replay-controls" role="toolbar" aria-label="回放控制">
+        <button type="button" data-replay-control="pause" data-ux-action-tier="secondary">暂停</button>
+        <button type="button" data-replay-control="stop" data-ux-action-tier="secondary">停止</button>
+        <button type="button" data-replay-control="step" data-ux-action-tier="secondary">单步</button>
+        <button type="button" data-replay-control="reset" data-ux-action-tier="secondary">重置</button>
+      </div>
+      <div id="fault-sandbox-replay-timeline" class="sandbox-replay-timeline" role="list" data-blueprint37-contract="time-markers-sr-et-rp-linkage">
+        <p class="muted">暂无回放时间线。</p>
+      </div>
+      <div id="fault-sandbox-replay-metrics" class="sandbox-replay-metrics" aria-label="回放统计">
+        <span>节点 0/0</span>
+        <span>连线 0/0</span>
+        <span>冲突 0</span>
+        <span>待确认 0</span>
+      </div>
+    </section>
+    <section id="fault-sandbox-report-preview" class="sandbox-report-preview" data-blueprint-surface="replay-report-preview" data-blueprint37-panel="report-preview-rail" aria-labelledby="fault-sandbox-report-preview-title">
+      <div class="sandbox-report-preview-head">
+        <div>
+          <p class="sandbox-kicker">REPORT PREVIEW</p>
+          <h2 id="fault-sandbox-report-preview-title">回放报告预览</h2>
+        </div>
+        <span id="fault-sandbox-report-preview-count">0 sections</span>
+      </div>
+      <div id="fault-sandbox-report-section-rows" class="sandbox-report-section-rows" role="list" data-blueprint36-contract="id-section-decision-evidence-source-trace_report-action">
+        <p class="muted">暂无报告章节。生成沙盒配置后显示可回链的报告预览。</p>
+      </div>
+    </section>
+    <div class="sandbox-report-actions">
+      <button type="button" class="sandbox-report-secondary" data-sandbox-report-action="rerun" data-ux-action-tier="secondary">重新运行沙盒</button>
+      <button type="button" class="sandbox-report-secondary" data-sandbox-report-action="evidence" data-ux-action-tier="secondary">查看证据</button>
+      <button type="button" class="sandbox-report-secondary" data-sandbox-report-action="revision" data-ux-action-tier="secondary">生成修订单</button>
+      <button type="button" class="sandbox-report-primary" data-sandbox-report-action="export" data-report-primary-action="review-package" data-ux-action-tier="primary">导出审查包</button>
+    </div>
+    <div class="sandbox-report-invariants" aria-label="候选态边界">
+      <span>sandbox_candidate</span>
+      <span>truth_effect:none</span>
+      <span>certification_claim:none</span>
+      <span>controller_truth_modified:false</span>
+    </div>
+  </section>
+
+  <section id="sandbox-evidence-popover" class="sandbox-evidence-popover" data-blueprint-surface="unified-inspector-popover" data-unified-aux-panel="evidence-popover" data-unified-panel-state="closed" aria-hidden="true" hidden>
+    <div class="sandbox-evidence-card">
+      <header class="sandbox-evidence-head">
+        <p class="sandbox-kicker">EVIDENCE DETAIL</p>
+        <h2 id="sandbox-evidence-title">证据详情</h2>
+        <button id="sandbox-evidence-close" type="button" class="sandbox-evidence-close" data-ux-action-tier="secondary" aria-label="关闭证据详情">×</button>
+      </header>
+      <div id="sandbox-evidence-body" class="sandbox-evidence-body"></div>
+    </div>
+  </section>
+
+  <section id="sandbox-review-package-panel" class="sandbox-review-package-panel" role="dialog" aria-modal="false" aria-labelledby="sandbox-review-package-title" aria-hidden="true" data-blueprint-surface="review-package-export-preview" data-blueprint36-contract="id-section-decision-evidence-source-trace_report-action" data-unified-aux-panel="review-package" data-inspector-role="review-package-export" data-unified-panel-state="closed" hidden>
+    <div class="sandbox-review-package-card">
+      <header class="sandbox-review-package-head">
+        <div>
+          <p class="sandbox-kicker">REVIEW PACKAGE</p>
+          <h2 id="sandbox-review-package-title">审查包导出预览</h2>
+        </div>
+        <button id="sandbox-review-package-close" type="button" class="sandbox-review-package-close" data-ux-action-tier="secondary" aria-label="关闭审查包预览">×</button>
+      </header>
+      <div id="sandbox-review-package-invariants" class="sandbox-review-package-invariants" aria-label="候选态边界">
+        <span>sandbox_candidate</span>
+        <span>truth_effect:none</span>
+        <span>certification_claim:none</span>
+        <span>controller_truth_modified:false</span>
+      </div>
+      <div class="sandbox-review-package-counts" aria-label="审查包计数">
+        <span id="sandbox-review-package-review-count">0 review rows</span>
+        <span id="sandbox-review-package-evidence-count">0 evidence links</span>
+        <span id="sandbox-review-package-report-count">0 report sections</span>
+      </div>
+      <div class="sandbox-review-package-grid">
+        <section class="sandbox-review-package-column" aria-labelledby="sandbox-review-package-review-title">
+          <h3 id="sandbox-review-package-review-title">Review rows</h3>
+          <div id="sandbox-review-package-review-rows" class="sandbox-review-package-list" data-package-list="review-rows"></div>
+        </section>
+        <section class="sandbox-review-package-column" aria-labelledby="sandbox-review-package-evidence-title">
+          <h3 id="sandbox-review-package-evidence-title">Evidence trace</h3>
+          <div id="sandbox-review-package-evidence-rows" class="sandbox-review-package-list" data-package-list="evidence-trace"></div>
+        </section>
+        <section class="sandbox-review-package-column" aria-labelledby="sandbox-review-package-report-title">
+          <h3 id="sandbox-review-package-report-title">Report sections</h3>
+          <div id="sandbox-review-package-report-rows" class="sandbox-review-package-list" data-package-list="report-sections"></div>
+        </section>
+      </div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

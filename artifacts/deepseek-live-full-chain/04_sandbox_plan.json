@@ -1,0 +1,48 @@
+{
+  "$schema": "https://ai-fantui.local/schemas/fault-injection-sandbox-plan.v1.json",
+  "kind": "ai-fantui-fault-injection-sandbox-plan",
+  "version": 1,
+  "status": "source_deferred",
+  "truth_effect": "candidate_only",
+  "candidate_state": "source_deferred",
+  "certification_claim": "none",
+  "controller_truth_modified": false,
+  "summary_zh": "源文档声明故障注入暂缓，未生成沙盒注入计划。",
+  "source_scope": {
+    "fault_injection": {
+      "status": "source_deferred",
+      "reason_zh": "源文档声明故障注入本轮暂不考虑。",
+      "source_anchors": [
+        {
+          "id": "B91",
+          "kind": "范围约束",
+          "origin": "docx_body",
+          "quote_zh": "故障注入目前暂时不考虑，很复杂。"
+        }
+      ]
+    }
+  },
+  "execution_contract": {
+    "run_tick": false,
+    "simulate": false,
+    "dry_run_only": true,
+    "reason_zh": "源文档暂缓故障注入，默认不进入沙盒执行。"
+  },
+  "sandbox_injection_plan": [],
+  "observation_points": [],
+  "review_checklist": [],
+  "plan_completion": {
+    "status": "source_deferred",
+    "completed_scenario_ids": [],
+    "missing_scenario_ids": [],
+    "strategy": "source_scope_deferred",
+    "semantic_gate": "fault_injection_source_deferred"
+  },
+  "llm": {
+    "provider": "deepseek",
+    "model": "deepseek-v4-pro",
+    "api_base": "https://api.deepseek.com",
+    "key_source": "env:DEEPSEEK_API_KEY",
+    "response_source": "live_llm"
+  }
+}

@@ -1,0 +1,3456 @@
+{
+  "$schema": "https://well-harness.local/json_schema/requirements_logic_drawing_v1.schema.json",
+  "kind": "ai-fantui-logic-link-drawing",
+  "version": 1,
+  "status": "draft_ready",
+  "truth_effect": "none",
+  "candidate_state": "concept_logic_drawing",
+  "certification_claim": "none",
+  "controller_truth_modified": false,
+  "source_requirements_sha256": "628e94778ea68114b870ac064788f1980f4394ea8c64682327c2a0335f6e3ae8",
+  "summary_zh": "反推控制逻辑链路图：L1-L4 分层，输入在左，逻辑居中，输出在右，参数面板依附节点外侧。",
+  "canvas": {
+    "width": 1280.0,
+    "height": 760.0
+  },
+  "nodes": [
+    {
+      "id": "ra_lt_6ft",
+      "label": "RA<6ft",
+      "node_kind": "input",
+      "x": 40.0,
+      "y": 60.0,
+      "width": 138.0,
+      "height": 72.0,
+      "description_zh": "无线电高度低于 6ft 的放行门限。",
+      "source_anchors": [],
+      "provenance": "model_assumption"
+    },
+    {
+      "id": "sw1",
+      "label": "SW1",
+      "node_kind": "input",
+      "x": 40.0,
+      "y": 180.0,
+      "width": 120.0,
+      "height": 72.0,
+      "description_zh": "反推手柄第一开关/区间条件。",
+      "source_anchors": [
+        {
+          "id": "B65",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "SW1 和SW2 开关信号（0 1信号）"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "sw2",
+      "label": "SW2",
+      "node_kind": "input",
+      "x": 40.0,
+      "y": 300.0,
+      "width": 120.0,
+      "height": 72.0,
+      "description_zh": "反推手柄第二开关/区间条件。",
+      "source_anchors": [],
+      "provenance": "model_assumption"
+    },
+    {
+      "id": "tra_reverse_range",
+      "label": "TRA反推区",
+      "node_kind": "input",
+      "x": 40.0,
+      "y": 420.0,
+      "width": 138.0,
+      "height": 72.0,
+      "description_zh": "TRA 区间或小于 -11.74deg 的反推手柄条件。",
+      "source_anchors": [
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B87",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "接收信号满足如下条件接通：1、发动机处于运行状态信号；2、飞机处于地面状态信号；3、反推处于非抑制状态信号；4、TLS已解锁信号；5、发动机N1k小于最大N1k展开限制信号；6、油门杆解析角度≤-11.74°信号"
+        },
+        {
+          "id": "B89",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "接收信号满足如下条件接通：1、反推完全展开信号；2、油门杆位于反推行程（-32°<TRA<0°）信号；3、飞机处于地面状态信号；4、发动机处于运行状态信号"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "logic1",
+      "label": "L1",
+      "node_kind": "logic",
+      "x": 280.0,
+      "y": 100.0,
+      "width": 120.0,
+      "height": 72.0,
+      "description_zh": "工作逻辑1：根据 RA/SW1 等条件生成 TLS 解锁链路。",
+      "source_anchors": [
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B82",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑1："
+        },
+        {
+          "id": "B65",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "SW1 和SW2 开关信号（0 1信号）"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "logic2",
+      "label": "L2",
+      "node_kind": "logic",
+      "x": 280.0,
+      "y": 280.0,
+      "width": 120.0,
+      "height": 72.0,
+      "description_zh": "工作逻辑2：根据 SW2 等条件生成 ETRAC 链路。",
+      "source_anchors": [
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B84",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑2："
+        },
+        {
+          "id": "B18",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "第三锁定系统（TLS）"
+        },
+        {
+          "id": "B55",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "tls_cmd",
+      "label": "TLS",
+      "node_kind": "output",
+      "x": 520.0,
+      "y": 100.0,
+      "width": 120.0,
+      "height": 72.0,
+      "description_zh": "TLS/115VAC 解锁或供电命令。",
+      "source_anchors": [
+        {
+          "id": "B18",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "第三锁定系统（TLS）"
+        },
+        {
+          "id": "B55",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+        },
+        {
+          "id": "B69",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+        },
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "etrac_cmd",
+      "label": "ETRAC",
+      "node_kind": "output",
+      "x": 520.0,
+      "y": 280.0,
+      "width": 131.0,
+      "height": 72.0,
+      "description_zh": "ETRAC/540VDC 相关命令。",
+      "source_anchors": [
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B84",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑2："
+        },
+        {
+          "id": "B18",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "第三锁定系统（TLS）"
+        },
+        {
+          "id": "B55",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "logic3",
+      "label": "L3",
+      "node_kind": "logic",
+      "x": 760.0,
+      "y": 180.0,
+      "width": 120.0,
+      "height": 72.0,
+      "description_zh": "工作逻辑3：汇合 TLS/PLS/执行链路。",
+      "source_anchors": [
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B86",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑3："
+        },
+        {
+          "id": "B18",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "第三锁定系统（TLS）"
+        },
+        {
+          "id": "B55",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "pls_pdu_cmd",
+      "label": "PLS/PDU",
+      "node_kind": "output",
+      "x": 1000.0,
+      "y": 180.0,
+      "width": 145.0,
+      "height": 72.0,
+      "description_zh": "PLS 供电与 PDU 电机执行链路。",
+      "source_anchors": [
+        {
+          "id": "B21",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "主锁定系统（PLS）"
+        },
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B86",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑3："
+        },
+        {
+          "id": "B18",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "第三锁定系统（TLS）"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "vdt_90",
+      "label": "VDT 90%",
+      "node_kind": "component",
+      "x": 1000.0,
+      "y": 340.0,
+      "width": 145.0,
+      "height": 72.0,
+      "description_zh": "VDT 反馈达到 90% 展开。",
+      "source_anchors": [
+        {
+          "id": "B24",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "位移传感器（VDT）"
+        },
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "logic4",
+      "label": "L4",
+      "node_kind": "logic",
+      "x": 760.0,
+      "y": 420.0,
+      "width": 120.0,
+      "height": 72.0,
+      "description_zh": "工作逻辑4：确认展开反馈后释放 THR_LOCK。",
+      "source_anchors": [
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B88",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑4："
+        },
+        {
+          "id": "B24",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "位移传感器（VDT）"
+        },
+        {
+          "id": "B87",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "接收信号满足如下条件接通：1、发动机处于运行状态信号；2、飞机处于地面状态信号；3、反推处于非抑制状态信号；4、TLS已解锁信号；5、发动机N1k小于最大N1k展开限制信号；6、油门杆解析角度≤-11.74°信号"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "thr_lock_release",
+      "label": "THR_LOCK release",
+      "node_kind": "output",
+      "x": 1000.0,
+      "y": 500.0,
+      "width": 208.0,
+      "height": 72.0,
+      "description_zh": "油门锁释放输出。",
+      "source_anchors": [],
+      "provenance": "model_assumption"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge_ra_l1",
+      "source": "ra_lt_6ft",
+      "target": "logic1",
+      "label": "高度门限",
+      "route": [
+        {
+          "x": 160.0,
+          "y": 90.0
+        },
+        {
+          "x": 220.0,
+          "y": 90.0
+        },
+        {
+          "x": 220.0,
+          "y": 130.0
+        },
+        {
+          "x": 280.0,
+          "y": 130.0
+        }
+      ],
+      "source_anchors": [
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B82",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑1："
+        },
+        {
+          "id": "B65",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "SW1 和SW2 开关信号（0 1信号）"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "edge_sw1_l1",
+      "source": "sw1",
+      "target": "logic1",
+      "label": "SW1 条件",
+      "route": [
+        {
+          "x": 160.0,
+          "y": 210.0
+        },
+        {
+          "x": 220.0,
+          "y": 210.0
+        },
+        {
+          "x": 220.0,
+          "y": 130.0
+        },
+        {
+          "x": 280.0,
+          "y": 130.0
+        }
+      ],
+      "source_anchors": [
+        {
+          "id": "B65",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "SW1 和SW2 开关信号（0 1信号）"
+        },
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B82",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑1："
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "edge_l1_tls",
+      "source": "logic1",
+      "target": "tls_cmd",
+      "label": "TLS 输出",
+      "route": [
+        {
+          "x": 400.0,
+          "y": 130.0
+        },
+        {
+          "x": 460.0,
+          "y": 130.0
+        },
+        {
+          "x": 520.0,
+          "y": 130.0
+        }
+      ],
+      "source_anchors": [
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B82",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑1："
+        },
+        {
+          "id": "B65",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "SW1 和SW2 开关信号（0 1信号）"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "edge_sw2_l2",
+      "source": "sw2",
+      "target": "logic2",
+      "label": "SW2 条件",
+      "route": [
+        {
+          "x": 160.0,
+          "y": 330.0
+        },
+        {
+          "x": 220.0,
+          "y": 330.0
+        },
+        {
+          "x": 220.0,
+          "y": 310.0
+        },
+        {
+          "x": 280.0,
+          "y": 310.0
+        }
+      ],
+      "source_anchors": [
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B84",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑2："
+        },
+        {
+          "id": "B18",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "第三锁定系统（TLS）"
+        },
+        {
+          "id": "B55",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "edge_l2_etrac",
+      "source": "logic2",
+      "target": "etrac_cmd",
+      "label": "ETRAC 输出",
+      "route": [
+        {
+          "x": 400.0,
+          "y": 310.0
+        },
+        {
+          "x": 460.0,
+          "y": 310.0
+        },
+        {
+          "x": 520.0,
+          "y": 310.0
+        }
+      ],
+      "source_anchors": [
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B84",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑2："
+        },
+        {
+          "id": "B18",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "第三锁定系统（TLS）"
+        },
+        {
+          "id": "B55",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "edge_tls_l3",
+      "source": "tls_cmd",
+      "target": "logic3",
+      "label": "TLS 反馈",
+      "route": [
+        {
+          "x": 640.0,
+          "y": 130.0
+        },
+        {
+          "x": 700.0,
+          "y": 130.0
+        },
+        {
+          "x": 700.0,
+          "y": 210.0
+        },
+        {
+          "x": 760.0,
+          "y": 210.0
+        }
+      ],
+      "source_anchors": [
+        {
+          "id": "B18",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "第三锁定系统（TLS）"
+        },
+        {
+          "id": "B55",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+        },
+        {
+          "id": "B69",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+        },
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "edge_l2_l3",
+      "source": "logic2",
+      "target": "logic3",
+      "label": "执行链汇合",
+      "route": [
+        {
+          "x": 400.0,
+          "y": 310.0
+        },
+        {
+          "x": 460.0,
+          "y": 310.0
+        },
+        {
+          "x": 460.0,
+          "y": 210.0
+        },
+        {
+          "x": 760.0,
+          "y": 210.0
+        }
+      ],
+      "source_anchors": [
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B84",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑2："
+        },
+        {
+          "id": "B18",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "第三锁定系统（TLS）"
+        },
+        {
+          "id": "B55",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "edge_l3_pls_pdu",
+      "source": "logic3",
+      "target": "pls_pdu_cmd",
+      "label": "PLS/PDU 输出",
+      "route": [
+        {
+          "x": 880.0,
+          "y": 210.0
+        },
+        {
+          "x": 940.0,
+          "y": 210.0
+        },
+        {
+          "x": 1000.0,
+          "y": 210.0
+        }
+      ],
+      "source_anchors": [
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B86",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑3："
+        },
+        {
+          "id": "B18",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "第三锁定系统（TLS）"
+        },
+        {
+          "id": "B55",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "edge_pls_pdu_vdt",
+      "source": "pls_pdu_cmd",
+      "target": "vdt_90",
+      "label": "展开反馈",
+      "route": [
+        {
+          "x": 1060.0,
+          "y": 240.0
+        },
+        {
+          "x": 1060.0,
+          "y": 290.0
+        },
+        {
+          "x": 1060.0,
+          "y": 340.0
+        }
+      ],
+      "source_anchors": [
+        {
+          "id": "B21",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "主锁定系统（PLS）"
+        },
+        {
+          "id": "B24",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "位移传感器（VDT）"
+        },
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "edge_vdt_l4",
+      "source": "vdt_90",
+      "target": "logic4",
+      "label": "90% 反馈",
+      "route": [
+        {
+          "x": 1000.0,
+          "y": 370.0
+        },
+        {
+          "x": 880.0,
+          "y": 370.0
+        },
+        {
+          "x": 880.0,
+          "y": 450.0
+        },
+        {
+          "x": 880.0,
+          "y": 450.0
+        }
+      ],
+      "source_anchors": [
+        {
+          "id": "B24",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "位移传感器（VDT）"
+        },
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B88",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑4："
+        },
+        {
+          "id": "B87",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "接收信号满足如下条件接通：1、发动机处于运行状态信号；2、飞机处于地面状态信号；3、反推处于非抑制状态信号；4、TLS已解锁信号；5、发动机N1k小于最大N1k展开限制信号；6、油门杆解析角度≤-11.74°信号"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "edge_tra_l4",
+      "source": "tra_reverse_range",
+      "target": "logic4",
+      "label": "TRA 锁释放门限",
+      "route": [
+        {
+          "x": 160.0,
+          "y": 450.0
+        },
+        {
+          "x": 220.0,
+          "y": 450.0
+        },
+        {
+          "x": 220.0,
+          "y": 450.0
+        },
+        {
+          "x": 760.0,
+          "y": 450.0
+        }
+      ],
+      "source_anchors": [
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B87",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "接收信号满足如下条件接通：1、发动机处于运行状态信号；2、飞机处于地面状态信号；3、反推处于非抑制状态信号；4、TLS已解锁信号；5、发动机N1k小于最大N1k展开限制信号；6、油门杆解析角度≤-11.74°信号"
+        },
+        {
+          "id": "B89",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "接收信号满足如下条件接通：1、反推完全展开信号；2、油门杆位于反推行程（-32°<TRA<0°）信号；3、飞机处于地面状态信号；4、发动机处于运行状态信号"
+        },
+        {
+          "id": "B88",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑4："
+        }
+      ],
+      "provenance": "docx_body_condition"
+    },
+    {
+      "id": "edge_l4_thr_lock",
+      "source": "logic4",
+      "target": "thr_lock_release",
+      "label": "释放",
+      "route": [
+        {
+          "x": 880.0,
+          "y": 450.0
+        },
+        {
+          "x": 940.0,
+          "y": 450.0
+        },
+        {
+          "x": 940.0,
+          "y": 530.0
+        },
+        {
+          "x": 1000.0,
+          "y": 530.0
+        }
+      ],
+      "source_anchors": [
+        {
+          "id": "B81",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+        },
+        {
+          "id": "B88",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "工作逻辑4："
+        },
+        {
+          "id": "B24",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "位移传感器（VDT）"
+        },
+        {
+          "id": "B87",
+          "kind": "正文条件",
+          "origin": "docx_body",
+          "quote_zh": "接收信号满足如下条件接通：1、发动机处于运行状态信号；2、飞机处于地面状态信号；3、反推处于非抑制状态信号；4、TLS已解锁信号；5、发动机N1k小于最大N1k展开限制信号；6、油门杆解析角度≤-11.74°信号"
+        }
+      ],
+      "provenance": "docx_body_condition"
+    }
+  ],
+  "parameter_panels": [
+    {
+      "id": "panel_ra",
+      "node_id": "ra_lt_6ft",
+      "label": "RA门限",
+      "unit": "ft",
+      "min": 0.0,
+      "max": 20.0,
+      "default": 6.0,
+      "x": 176.0,
+      "y": 60.0,
+      "width": 120.0,
+      "height": 76.0
+    },
+    {
+      "id": "panel_tra",
+      "node_id": "tra_reverse_range",
+      "label": "TRA锁释放门限",
+      "unit": "deg",
+      "min": -20.0,
+      "max": 0.0,
+      "default": -11.74,
+      "x": 176.0,
+      "y": 420.0,
+      "width": 120.0,
+      "height": 76.0
+    },
+    {
+      "id": "panel_vdt",
+      "node_id": "vdt_90",
+      "label": "VDT展开",
+      "unit": "%",
+      "min": 0.0,
+      "max": 100.0,
+      "default": 90.0,
+      "x": 1000.0,
+      "y": 416.0,
+      "width": 120.0,
+      "height": 76.0
+    }
+  ],
+  "drawing_notes": [
+    "节点按 L1-L4 垂直分层：L1/L2 在左中，L3/L4 在右中，输出靠右。",
+    "输入节点位于最左侧，参数面板依附在右侧，避免覆盖节点本体。",
+    "连线采用正交折线，绕过节点文字区域，确保可读性。",
+    "VDT 90% 作为组件节点，参数面板置于其下方，符合布局规则。"
+  ],
+  "llm": {
+    "provider": "deepseek",
+    "model": "deepseek-v4-pro",
+    "api_base": "https://api.deepseek.com",
+    "key_source": "env:DEEPSEEK_API_KEY",
+    "response_source": "live_llm"
+  },
+  "circuit_view": {
+    "kind": "ai-fantui-l1-l4-circuit-view",
+    "version": 1,
+    "layout": "deterministic_l1_l4_circuit_v1",
+    "canvas": {
+      "width": 900,
+      "height": 400
+    },
+    "source_requirements_sha256": "628e94778ea68114b870ac064788f1980f4394ea8c64682327c2a0335f6e3ae8",
+    "source_scope": {
+      "fault_injection": {
+        "status": "source_deferred",
+        "reason_zh": "源文档声明故障注入本轮暂不考虑。",
+        "source_anchors": [
+          {
+            "id": "B91",
+            "kind": "范围约束",
+            "origin": "docx_body",
+            "quote_zh": "故障注入目前暂时不考虑，很复杂。"
+          }
+        ]
+      }
+    },
+    "rows": [
+      {
+        "id": "logic1",
+        "label": "L1",
+        "title_zh": "工作逻辑1：根据 RA/SW1 等条件生成 TLS 解锁链路。",
+        "center_y": 89.0,
+        "inputs": [
+          "sw1",
+          "radio_altitude_ft",
+          "reverser_inhibited"
+        ],
+        "outputs": [
+          "tls115"
+        ],
+        "gate": {
+          "id": "logic1",
+          "label": "L1",
+          "gate_type": "AND",
+          "x": 260.0,
+          "y": 70.0,
+          "width": 160.0,
+          "height": 38.0,
+          "source_anchors": [
+            {
+              "id": "B81",
+              "kind": "正文条件",
+              "origin": "docx_body",
+              "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+            },
+            {
+              "id": "B82",
+              "kind": "正文条件",
+              "origin": "docx_body",
+              "quote_zh": "工作逻辑1："
+            },
+            {
+              "id": "B65",
+              "kind": "正文条件",
+              "origin": "docx_body",
+              "quote_zh": "SW1 和SW2 开关信号（0 1信号）"
+            }
+          ],
+          "source_anchor_ids": [
+            "B81",
+            "B82",
+            "B65"
+          ]
+        },
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B82",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑1："
+          },
+          {
+            "id": "B65",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "SW1 和SW2 开关信号（0 1信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B82",
+          "B65"
+        ]
+      },
+      {
+        "id": "logic2",
+        "label": "L2",
+        "title_zh": "工作逻辑2：根据 SW2 等条件生成 ETRAC 链路。",
+        "center_y": 189.0,
+        "inputs": [
+          "aircraft_on_ground",
+          "sw2",
+          "engine_running",
+          "eec_enable",
+          "reverser_inhibited"
+        ],
+        "outputs": [
+          "etrac_540v"
+        ],
+        "gate": {
+          "id": "logic2",
+          "label": "L2",
+          "gate_type": "AND",
+          "x": 260.0,
+          "y": 170.0,
+          "width": 160.0,
+          "height": 38.0,
+          "source_anchors": [
+            {
+              "id": "B81",
+              "kind": "正文条件",
+              "origin": "docx_body",
+              "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+            },
+            {
+              "id": "B84",
+              "kind": "正文条件",
+              "origin": "docx_body",
+              "quote_zh": "工作逻辑2："
+            },
+            {
+              "id": "B18",
+              "kind": "正文条件",
+              "origin": "docx_body",
+              "quote_zh": "第三锁定系统（TLS）"
+            },
+            {
+              "id": "B55",
+              "kind": "正文条件",
+              "origin": "docx_body",
+              "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+            }
+          ],
+          "source_anchor_ids": [
+            "B81",
+            "B84",
+            "B18",
+            "B55"
+          ]
+        },
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B84",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑2："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B84",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "logic3",
+        "label": "L3",
+        "title_zh": "工作逻辑3：汇合 TLS/PLS/执行链路。",
+        "center_y": 285.0,
+        "inputs": [
+          "tls_unlocked",
+          "n1k",
+          "engine_running",
+          "aircraft_on_ground",
+          "reverser_inhibited"
+        ],
+        "outputs": [
+          "eec_deploy",
+          "pls_power",
+          "pdu_motor",
+          "logic4"
+        ],
+        "gate": {
+          "id": "logic3",
+          "label": "L3",
+          "gate_type": "AND",
+          "x": 260.0,
+          "y": 260.0,
+          "width": 160.0,
+          "height": 50.0,
+          "source_anchors": [
+            {
+              "id": "B81",
+              "kind": "正文条件",
+              "origin": "docx_body",
+              "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+            },
+            {
+              "id": "B86",
+              "kind": "正文条件",
+              "origin": "docx_body",
+              "quote_zh": "工作逻辑3："
+            },
+            {
+              "id": "B18",
+              "kind": "正文条件",
+              "origin": "docx_body",
+              "quote_zh": "第三锁定系统（TLS）"
+            },
+            {
+              "id": "B55",
+              "kind": "正文条件",
+              "origin": "docx_body",
+              "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+            }
+          ],
+          "source_anchor_ids": [
+            "B81",
+            "B86",
+            "B18",
+            "B55"
+          ]
+        },
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B86",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑3："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B86",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "logic4",
+        "label": "L4",
+        "title_zh": "工作逻辑4：确认展开反馈后释放 THR_LOCK。",
+        "center_y": 149.0,
+        "inputs": [
+          "vdt90",
+          "logic3"
+        ],
+        "outputs": [
+          "thr_lock"
+        ],
+        "gate": {
+          "id": "logic4",
+          "label": "L4",
+          "gate_type": "AND",
+          "x": 720.0,
+          "y": 130.0,
+          "width": 160.0,
+          "height": 38.0,
+          "source_anchors": [
+            {
+              "id": "B81",
+              "kind": "正文条件",
+              "origin": "docx_body",
+              "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+            },
+            {
+              "id": "B88",
+              "kind": "正文条件",
+              "origin": "docx_body",
+              "quote_zh": "工作逻辑4："
+            },
+            {
+              "id": "B24",
+              "kind": "正文条件",
+              "origin": "docx_body",
+              "quote_zh": "位移传感器（VDT）"
+            },
+            {
+              "id": "B87",
+              "kind": "正文条件",
+              "origin": "docx_body",
+              "quote_zh": "接收信号满足如下条件接通：1、发动机处于运行状态信号；2、飞机处于地面状态信号；3、反推处于非抑制状态信号；4、TLS已解锁信号；5、发动机N1k小于最大N1k展开限制信号；6、油门杆解析角度≤-11.74°信号"
+            }
+          ],
+          "source_anchor_ids": [
+            "B81",
+            "B88",
+            "B24",
+            "B87"
+          ]
+        },
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B88",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑4："
+          },
+          {
+            "id": "B24",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "位移传感器（VDT）"
+          },
+          {
+            "id": "B87",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "接收信号满足如下条件接通：1、发动机处于运行状态信号；2、飞机处于地面状态信号；3、反推处于非抑制状态信号；4、TLS已解锁信号；5、发动机N1k小于最大N1k展开限制信号；6、油门杆解析角度≤-11.74°信号"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B88",
+          "B24",
+          "B87"
+        ]
+      }
+    ],
+    "nodes": [
+      {
+        "id": "sw1",
+        "linked_node_id": "sw1",
+        "row_id": "",
+        "circuit_role": "input",
+        "label": "SW1 · TRA [-1.4°,-6.2°]",
+        "node_kind": "input",
+        "description_zh": "反推手柄第一开关/区间条件。",
+        "x": 10.0,
+        "y": 40.0,
+        "width": 160.0,
+        "height": 28.0,
+        "state": "idle",
+        "source_anchors": [
+          {
+            "id": "B65",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "SW1 和SW2 开关信号（0 1信号）"
+          },
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B87",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "接收信号满足如下条件接通：1、发动机处于运行状态信号；2、飞机处于地面状态信号；3、反推处于非抑制状态信号；4、TLS已解锁信号；5、发动机N1k小于最大N1k展开限制信号；6、油门杆解析角度≤-11.74°信号"
+          },
+          {
+            "id": "B89",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "接收信号满足如下条件接通：1、反推完全展开信号；2、油门杆位于反推行程（-32°<TRA<0°）信号；3、飞机处于地面状态信号；4、发动机处于运行状态信号"
+          }
+        ],
+        "source_anchor_ids": [
+          "B65",
+          "B81",
+          "B87",
+          "B89"
+        ],
+        "provenance": "docx_body"
+      },
+      {
+        "id": "aircraft_on_ground",
+        "linked_node_id": "",
+        "row_id": "",
+        "circuit_role": "input",
+        "label": "aircraft_on_ground",
+        "node_kind": "input",
+        "description_zh": "",
+        "x": 10.0,
+        "y": 76.0,
+        "width": 160.0,
+        "height": 28.0,
+        "state": "active",
+        "source_anchors": [],
+        "source_anchor_ids": [],
+        "provenance": "demo_cabin_context"
+      },
+      {
+        "id": "radio_altitude_ft",
+        "linked_node_id": "ra_lt_6ft",
+        "row_id": "",
+        "circuit_role": "input",
+        "label": "RA < 6 ft",
+        "node_kind": "input",
+        "description_zh": "无线电高度低于 6ft 的放行门限。",
+        "x": 10.0,
+        "y": 112.0,
+        "width": 160.0,
+        "height": 28.0,
+        "state": "active",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B82",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑1："
+          },
+          {
+            "id": "B65",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "SW1 和SW2 开关信号（0 1信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B82",
+          "B65"
+        ],
+        "provenance": "docx_body"
+      },
+      {
+        "id": "sw2",
+        "linked_node_id": "sw2",
+        "row_id": "",
+        "circuit_role": "input",
+        "label": "SW2 · TRA [-5°,-9.8°]",
+        "node_kind": "input",
+        "description_zh": "反推手柄第二开关/区间条件。",
+        "x": 10.0,
+        "y": 156.0,
+        "width": 160.0,
+        "height": 28.0,
+        "state": "idle",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B87",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "接收信号满足如下条件接通：1、发动机处于运行状态信号；2、飞机处于地面状态信号；3、反推处于非抑制状态信号；4、TLS已解锁信号；5、发动机N1k小于最大N1k展开限制信号；6、油门杆解析角度≤-11.74°信号"
+          },
+          {
+            "id": "B89",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "接收信号满足如下条件接通：1、反推完全展开信号；2、油门杆位于反推行程（-32°<TRA<0°）信号；3、飞机处于地面状态信号；4、发动机处于运行状态信号"
+          },
+          {
+            "id": "B84",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑2："
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B87",
+          "B89",
+          "B84"
+        ],
+        "provenance": "docx_body"
+      },
+      {
+        "id": "engine_running",
+        "linked_node_id": "",
+        "row_id": "",
+        "circuit_role": "input",
+        "label": "engine_running",
+        "node_kind": "input",
+        "description_zh": "",
+        "x": 10.0,
+        "y": 192.0,
+        "width": 160.0,
+        "height": 28.0,
+        "state": "active",
+        "source_anchors": [],
+        "source_anchor_ids": [],
+        "provenance": "demo_cabin_context"
+      },
+      {
+        "id": "n1k",
+        "linked_node_id": "",
+        "row_id": "",
+        "circuit_role": "input",
+        "label": "N1K < max_n1k",
+        "node_kind": "input",
+        "description_zh": "",
+        "x": 10.0,
+        "y": 234.0,
+        "width": 160.0,
+        "height": 28.0,
+        "state": "idle",
+        "source_anchors": [],
+        "source_anchor_ids": [],
+        "provenance": "demo_cabin_context"
+      },
+      {
+        "id": "eec_enable",
+        "linked_node_id": "",
+        "row_id": "",
+        "circuit_role": "input",
+        "label": "eec_enable",
+        "node_kind": "input",
+        "description_zh": "",
+        "x": 10.0,
+        "y": 270.0,
+        "width": 160.0,
+        "height": 28.0,
+        "state": "active",
+        "source_anchors": [],
+        "source_anchor_ids": [],
+        "provenance": "demo_cabin_context"
+      },
+      {
+        "id": "reverser_inhibited",
+        "linked_node_id": "",
+        "row_id": "",
+        "circuit_role": "input",
+        "label": "NOT reverser_inhibited",
+        "node_kind": "input",
+        "description_zh": "",
+        "x": 10.0,
+        "y": 306.0,
+        "width": 160.0,
+        "height": 28.0,
+        "state": "idle",
+        "source_anchors": [],
+        "source_anchor_ids": [],
+        "provenance": "demo_cabin_context"
+      },
+      {
+        "id": "logic1",
+        "linked_node_id": "logic1",
+        "row_id": "logic1",
+        "circuit_role": "gate",
+        "label": "L1",
+        "node_kind": "logic",
+        "description_zh": "工作逻辑1：根据 RA/SW1 等条件生成 TLS 解锁链路。",
+        "x": 260.0,
+        "y": 70.0,
+        "width": 160.0,
+        "height": 38.0,
+        "state": "blocked",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B82",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑1："
+          },
+          {
+            "id": "B65",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "SW1 和SW2 开关信号（0 1信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B82",
+          "B65"
+        ],
+        "provenance": "docx_body"
+      },
+      {
+        "id": "logic2",
+        "linked_node_id": "logic2",
+        "row_id": "logic2",
+        "circuit_role": "gate",
+        "label": "L2",
+        "node_kind": "logic",
+        "description_zh": "工作逻辑2：根据 SW2 等条件生成 ETRAC 链路。",
+        "x": 260.0,
+        "y": 170.0,
+        "width": 160.0,
+        "height": 38.0,
+        "state": "blocked",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B84",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑2："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B84",
+          "B18",
+          "B55"
+        ],
+        "provenance": "docx_body"
+      },
+      {
+        "id": "logic3",
+        "linked_node_id": "logic3",
+        "row_id": "logic3",
+        "circuit_role": "gate",
+        "label": "L3",
+        "node_kind": "logic",
+        "description_zh": "工作逻辑3：汇合 TLS/PLS/执行链路。",
+        "x": 260.0,
+        "y": 260.0,
+        "width": 160.0,
+        "height": 50.0,
+        "state": "blocked",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B86",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑3："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B86",
+          "B18",
+          "B55"
+        ],
+        "provenance": "docx_body"
+      },
+      {
+        "id": "tls115",
+        "linked_node_id": "tls_cmd",
+        "row_id": "",
+        "circuit_role": "intermediate",
+        "label": "TLS 115VAC cmd",
+        "node_kind": "component",
+        "description_zh": "TLS/115VAC 解锁或供电命令。",
+        "x": 500.0,
+        "y": 56.0,
+        "width": 160.0,
+        "height": 28.0,
+        "state": "idle",
+        "source_anchors": [
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          },
+          {
+            "id": "B69",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          },
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          }
+        ],
+        "source_anchor_ids": [
+          "B18",
+          "B55",
+          "B69",
+          "B81"
+        ],
+        "provenance": "docx_body"
+      },
+      {
+        "id": "tls_unlocked",
+        "linked_node_id": "tls_cmd",
+        "row_id": "",
+        "circuit_role": "intermediate",
+        "label": "TLS_Unlocked LS",
+        "node_kind": "component",
+        "description_zh": "TLS/115VAC 解锁或供电命令。",
+        "x": 500.0,
+        "y": 92.0,
+        "width": 160.0,
+        "height": 28.0,
+        "state": "idle",
+        "source_anchors": [
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          },
+          {
+            "id": "B69",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          },
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          }
+        ],
+        "source_anchor_ids": [
+          "B18",
+          "B55",
+          "B69",
+          "B81"
+        ],
+        "provenance": "docx_body"
+      },
+      {
+        "id": "vdt90",
+        "linked_node_id": "vdt_90",
+        "row_id": "",
+        "circuit_role": "intermediate",
+        "label": "VDT90 (>=90% deploy)",
+        "node_kind": "component",
+        "description_zh": "VDT 反馈达到 90% 展开。",
+        "x": 500.0,
+        "y": 128.0,
+        "width": 160.0,
+        "height": 28.0,
+        "state": "idle",
+        "source_anchors": [
+          {
+            "id": "B24",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "位移传感器（VDT）"
+          },
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B88",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑4："
+          },
+          {
+            "id": "B87",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "接收信号满足如下条件接通：1、发动机处于运行状态信号；2、飞机处于地面状态信号；3、反推处于非抑制状态信号；4、TLS已解锁信号；5、发动机N1k小于最大N1k展开限制信号；6、油门杆解析角度≤-11.74°信号"
+          }
+        ],
+        "source_anchor_ids": [
+          "B24",
+          "B81",
+          "B88",
+          "B87"
+        ],
+        "provenance": "docx_body"
+      },
+      {
+        "id": "etrac_540v",
+        "linked_node_id": "etrac_cmd",
+        "row_id": "",
+        "circuit_role": "intermediate",
+        "label": "ETRAC 540VDC cmd",
+        "node_kind": "component",
+        "description_zh": "ETRAC/540VDC 相关命令。",
+        "x": 500.0,
+        "y": 156.0,
+        "width": 160.0,
+        "height": 28.0,
+        "state": "idle",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B84",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑2："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B84",
+          "B18",
+          "B55"
+        ],
+        "provenance": "docx_body"
+      },
+      {
+        "id": "eec_deploy",
+        "linked_node_id": "pls_pdu_cmd",
+        "row_id": "",
+        "circuit_role": "intermediate",
+        "label": "EEC_deploy cmd",
+        "node_kind": "output",
+        "description_zh": "PLS 供电与 PDU 电机执行链路。",
+        "x": 500.0,
+        "y": 246.0,
+        "width": 160.0,
+        "height": 28.0,
+        "state": "idle",
+        "source_anchors": [
+          {
+            "id": "B21",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "主锁定系统（PLS）"
+          },
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B86",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑3："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B21",
+          "B81",
+          "B86",
+          "B18"
+        ],
+        "provenance": "docx_body"
+      },
+      {
+        "id": "pls_power",
+        "linked_node_id": "pls_pdu_cmd",
+        "row_id": "",
+        "circuit_role": "intermediate",
+        "label": "PLS power",
+        "node_kind": "output",
+        "description_zh": "PLS 供电与 PDU 电机执行链路。",
+        "x": 500.0,
+        "y": 282.0,
+        "width": 160.0,
+        "height": 28.0,
+        "state": "idle",
+        "source_anchors": [
+          {
+            "id": "B21",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "主锁定系统（PLS）"
+          },
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B86",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑3："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B21",
+          "B81",
+          "B86",
+          "B18"
+        ],
+        "provenance": "docx_body"
+      },
+      {
+        "id": "pdu_motor",
+        "linked_node_id": "pls_pdu_cmd",
+        "row_id": "",
+        "circuit_role": "intermediate",
+        "label": "PDU motor cmd",
+        "node_kind": "output",
+        "description_zh": "PLS 供电与 PDU 电机执行链路。",
+        "x": 500.0,
+        "y": 318.0,
+        "width": 160.0,
+        "height": 28.0,
+        "state": "idle",
+        "source_anchors": [
+          {
+            "id": "B21",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "主锁定系统（PLS）"
+          },
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B86",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑3："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B21",
+          "B81",
+          "B86",
+          "B18"
+        ],
+        "provenance": "docx_body"
+      },
+      {
+        "id": "logic4",
+        "linked_node_id": "logic4",
+        "row_id": "logic4",
+        "circuit_role": "gate",
+        "label": "L4",
+        "node_kind": "logic",
+        "description_zh": "工作逻辑4：确认展开反馈后释放 THR_LOCK。",
+        "x": 720.0,
+        "y": 130.0,
+        "width": 160.0,
+        "height": 38.0,
+        "state": "blocked",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B88",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑4："
+          },
+          {
+            "id": "B24",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "位移传感器（VDT）"
+          },
+          {
+            "id": "B87",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "接收信号满足如下条件接通：1、发动机处于运行状态信号；2、飞机处于地面状态信号；3、反推处于非抑制状态信号；4、TLS已解锁信号；5、发动机N1k小于最大N1k展开限制信号；6、油门杆解析角度≤-11.74°信号"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B88",
+          "B24",
+          "B87"
+        ],
+        "provenance": "docx_body"
+      },
+      {
+        "id": "thr_lock",
+        "linked_node_id": "thr_lock_release",
+        "row_id": "",
+        "circuit_role": "final_output",
+        "label": "THR_LOCK release",
+        "node_kind": "output",
+        "description_zh": "油门锁释放输出。",
+        "x": 720.0,
+        "y": 200.0,
+        "width": 160.0,
+        "height": 34.0,
+        "state": "blocked",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B88",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑4："
+          },
+          {
+            "id": "B24",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "位移传感器（VDT）"
+          },
+          {
+            "id": "B87",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "接收信号满足如下条件接通：1、发动机处于运行状态信号；2、飞机处于地面状态信号；3、反推处于非抑制状态信号；4、TLS已解锁信号；5、发动机N1k小于最大N1k展开限制信号；6、油门杆解析角度≤-11.74°信号"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B88",
+          "B24",
+          "B87"
+        ],
+        "provenance": "docx_body"
+      }
+    ],
+    "wires": [
+      {
+        "id": "wire_sw1_logic1",
+        "source": "sw1",
+        "target": "logic1",
+        "label": "",
+        "route": [
+          {
+            "x": 170.0,
+            "y": 54.0
+          },
+          {
+            "x": 232.0,
+            "y": 54.0
+          },
+          {
+            "x": 232.0,
+            "y": 78.0
+          },
+          {
+            "x": 260.0,
+            "y": 78.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B65",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "SW1 和SW2 开关信号（0 1信号）"
+          },
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B82",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑1："
+          }
+        ],
+        "source_anchor_ids": [
+          "B65",
+          "B81",
+          "B82"
+        ]
+      },
+      {
+        "id": "wire_ground_logic2",
+        "source": "aircraft_on_ground",
+        "target": "logic2",
+        "label": "",
+        "route": [
+          {
+            "x": 170.0,
+            "y": 90.0
+          },
+          {
+            "x": 238.0,
+            "y": 90.0
+          },
+          {
+            "x": 238.0,
+            "y": 184.0
+          },
+          {
+            "x": 260.0,
+            "y": 184.0
+          }
+        ],
+        "state": "active",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B84",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑2："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B84",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "wire_ra_logic1",
+        "source": "radio_altitude_ft",
+        "target": "logic1",
+        "label": "",
+        "route": [
+          {
+            "x": 170.0,
+            "y": 126.0
+          },
+          {
+            "x": 232.0,
+            "y": 126.0
+          },
+          {
+            "x": 232.0,
+            "y": 98.0
+          },
+          {
+            "x": 260.0,
+            "y": 98.0
+          }
+        ],
+        "state": "active",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B82",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑1："
+          },
+          {
+            "id": "B65",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "SW1 和SW2 开关信号（0 1信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B82",
+          "B65"
+        ]
+      },
+      {
+        "id": "wire_logic1_tls115",
+        "source": "logic1",
+        "target": "tls115",
+        "label": "",
+        "route": [
+          {
+            "x": 420.0,
+            "y": 89.0
+          },
+          {
+            "x": 460.0,
+            "y": 89.0
+          },
+          {
+            "x": 460.0,
+            "y": 70.0
+          },
+          {
+            "x": 500.0,
+            "y": 70.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B82",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑1："
+          },
+          {
+            "id": "B65",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "SW1 和SW2 开关信号（0 1信号）"
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B82",
+          "B65",
+          "B18"
+        ]
+      },
+      {
+        "id": "wire_tls115_tls_unlocked",
+        "source": "tls115",
+        "target": "tls_unlocked",
+        "label": "",
+        "route": [
+          {
+            "x": 580.0,
+            "y": 84.0
+          },
+          {
+            "x": 580.0,
+            "y": 92.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B82",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑1："
+          },
+          {
+            "id": "B65",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "SW1 和SW2 开关信号（0 1信号）"
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B82",
+          "B65",
+          "B18"
+        ]
+      },
+      {
+        "id": "wire_sw2_logic2",
+        "source": "sw2",
+        "target": "logic2",
+        "label": "",
+        "route": [
+          {
+            "x": 170.0,
+            "y": 170.0
+          },
+          {
+            "x": 234.0,
+            "y": 170.0
+          },
+          {
+            "x": 234.0,
+            "y": 180.0
+          },
+          {
+            "x": 260.0,
+            "y": 180.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B84",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑2："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B84",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "wire_engine_logic2",
+        "source": "engine_running",
+        "target": "logic2",
+        "label": "",
+        "route": [
+          {
+            "x": 170.0,
+            "y": 206.0
+          },
+          {
+            "x": 234.0,
+            "y": 206.0
+          },
+          {
+            "x": 234.0,
+            "y": 196.0
+          },
+          {
+            "x": 260.0,
+            "y": 196.0
+          }
+        ],
+        "state": "active",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B84",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑2："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B84",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "wire_tls_unlocked_logic3",
+        "source": "tls_unlocked",
+        "target": "logic3",
+        "label": "",
+        "route": [
+          {
+            "x": 660.0,
+            "y": 106.0
+          },
+          {
+            "x": 702.0,
+            "y": 106.0
+          },
+          {
+            "x": 702.0,
+            "y": 28.0
+          },
+          {
+            "x": 246.0,
+            "y": 28.0
+          },
+          {
+            "x": 246.0,
+            "y": 276.0
+          },
+          {
+            "x": 260.0,
+            "y": 276.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          },
+          {
+            "id": "B69",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          },
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          }
+        ],
+        "source_anchor_ids": [
+          "B18",
+          "B55",
+          "B69",
+          "B81"
+        ]
+      },
+      {
+        "id": "wire_logic2_etrac",
+        "source": "logic2",
+        "target": "etrac_540v",
+        "label": "",
+        "route": [
+          {
+            "x": 420.0,
+            "y": 189.0
+          },
+          {
+            "x": 460.0,
+            "y": 189.0
+          },
+          {
+            "x": 460.0,
+            "y": 170.0
+          },
+          {
+            "x": 500.0,
+            "y": 170.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B84",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑2："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B84",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "wire_n1k_logic3",
+        "source": "n1k",
+        "target": "logic3",
+        "label": "",
+        "route": [
+          {
+            "x": 170.0,
+            "y": 248.0
+          },
+          {
+            "x": 230.0,
+            "y": 248.0
+          },
+          {
+            "x": 230.0,
+            "y": 270.0
+          },
+          {
+            "x": 260.0,
+            "y": 270.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B86",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑3："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B86",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "wire_eec_logic2",
+        "source": "eec_enable",
+        "target": "logic2",
+        "label": "",
+        "route": [
+          {
+            "x": 170.0,
+            "y": 284.0
+          },
+          {
+            "x": 240.0,
+            "y": 284.0
+          },
+          {
+            "x": 240.0,
+            "y": 200.0
+          },
+          {
+            "x": 260.0,
+            "y": 200.0
+          }
+        ],
+        "state": "active",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B84",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑2："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B84",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "wire_engine_logic3",
+        "source": "engine_running",
+        "target": "logic3",
+        "label": "",
+        "route": [
+          {
+            "x": 244.0,
+            "y": 281.0
+          },
+          {
+            "x": 260.0,
+            "y": 281.0
+          }
+        ],
+        "state": "active",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B86",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑3："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B86",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "wire_ground_logic3",
+        "source": "aircraft_on_ground",
+        "target": "logic3",
+        "label": "",
+        "route": [
+          {
+            "x": 244.0,
+            "y": 290.0
+          },
+          {
+            "x": 260.0,
+            "y": 290.0
+          }
+        ],
+        "state": "active",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B86",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑3："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B86",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "wire_inh_logic1",
+        "source": "reverser_inhibited",
+        "target": "logic1",
+        "label": "",
+        "route": [
+          {
+            "x": 170.0,
+            "y": 320.0
+          },
+          {
+            "x": 226.0,
+            "y": 320.0
+          },
+          {
+            "x": 226.0,
+            "y": 88.0
+          },
+          {
+            "x": 260.0,
+            "y": 88.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B82",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑1："
+          },
+          {
+            "id": "B65",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "SW1 和SW2 开关信号（0 1信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B82",
+          "B65"
+        ]
+      },
+      {
+        "id": "wire_inh_logic2",
+        "source": "reverser_inhibited",
+        "target": "logic2",
+        "label": "",
+        "route": [
+          {
+            "x": 226.0,
+            "y": 188.0
+          },
+          {
+            "x": 260.0,
+            "y": 188.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B84",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑2："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B84",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "wire_inh_logic3",
+        "source": "reverser_inhibited",
+        "target": "logic3",
+        "label": "",
+        "route": [
+          {
+            "x": 226.0,
+            "y": 304.0
+          },
+          {
+            "x": 260.0,
+            "y": 304.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B86",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑3："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B86",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "wire_logic3_eec",
+        "source": "logic3",
+        "target": "eec_deploy",
+        "label": "",
+        "route": [
+          {
+            "x": 420.0,
+            "y": 279.0
+          },
+          {
+            "x": 465.0,
+            "y": 279.0
+          },
+          {
+            "x": 465.0,
+            "y": 260.0
+          },
+          {
+            "x": 500.0,
+            "y": 260.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B86",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑3："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B86",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "wire_logic3_pls",
+        "source": "logic3",
+        "target": "pls_power",
+        "label": "",
+        "route": [
+          {
+            "x": 465.0,
+            "y": 279.0
+          },
+          {
+            "x": 465.0,
+            "y": 296.0
+          },
+          {
+            "x": 500.0,
+            "y": 296.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B86",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑3："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B86",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "wire_logic3_pdu",
+        "source": "logic3",
+        "target": "pdu_motor",
+        "label": "",
+        "route": [
+          {
+            "x": 465.0,
+            "y": 296.0
+          },
+          {
+            "x": 465.0,
+            "y": 332.0
+          },
+          {
+            "x": 500.0,
+            "y": 332.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B86",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑3："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B86",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "wire_pdu_vdt90",
+        "source": "pdu_motor",
+        "target": "vdt90",
+        "label": "",
+        "route": [
+          {
+            "x": 660.0,
+            "y": 332.0
+          },
+          {
+            "x": 690.0,
+            "y": 332.0
+          },
+          {
+            "x": 690.0,
+            "y": 142.0
+          },
+          {
+            "x": 660.0,
+            "y": 142.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B21",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "主锁定系统（PLS）"
+          },
+          {
+            "id": "B24",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "位移传感器（VDT）"
+          },
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B86",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑3："
+          }
+        ],
+        "source_anchor_ids": [
+          "B21",
+          "B24",
+          "B81",
+          "B86"
+        ]
+      },
+      {
+        "id": "wire_vdt90_logic4",
+        "source": "vdt90",
+        "target": "logic4",
+        "label": "",
+        "route": [
+          {
+            "x": 660.0,
+            "y": 142.0
+          },
+          {
+            "x": 720.0,
+            "y": 142.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B24",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "位移传感器（VDT）"
+          },
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B88",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑4："
+          },
+          {
+            "id": "B87",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "接收信号满足如下条件接通：1、发动机处于运行状态信号；2、飞机处于地面状态信号；3、反推处于非抑制状态信号；4、TLS已解锁信号；5、发动机N1k小于最大N1k展开限制信号；6、油门杆解析角度≤-11.74°信号"
+          }
+        ],
+        "source_anchor_ids": [
+          "B24",
+          "B81",
+          "B88",
+          "B87"
+        ]
+      },
+      {
+        "id": "wire_logic3_logic4",
+        "source": "logic3",
+        "target": "logic4",
+        "label": "",
+        "route": [
+          {
+            "x": 420.0,
+            "y": 298.0
+          },
+          {
+            "x": 440.0,
+            "y": 298.0
+          },
+          {
+            "x": 440.0,
+            "y": 368.0
+          },
+          {
+            "x": 690.0,
+            "y": 368.0
+          },
+          {
+            "x": 690.0,
+            "y": 162.0
+          },
+          {
+            "x": 720.0,
+            "y": 162.0
+          }
+        ],
+        "state": "idle",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B86",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑3："
+          },
+          {
+            "id": "B18",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "第三锁定系统（TLS）"
+          },
+          {
+            "id": "B55",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "电源RPDU的115 VAC供电（电压信号）"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B86",
+          "B18",
+          "B55"
+        ]
+      },
+      {
+        "id": "wire_logic4_thr_lock",
+        "source": "logic4",
+        "target": "thr_lock",
+        "label": "",
+        "route": [
+          {
+            "x": 800.0,
+            "y": 168.0
+          },
+          {
+            "x": 800.0,
+            "y": 200.0
+          }
+        ],
+        "state": "blocked",
+        "provenance": "docx_body",
+        "source_anchors": [
+          {
+            "id": "B81",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "飞机离地小于6ft时，DIU发出TLS解锁指令（控制逻辑1）；飞机着陆后，飞行员操纵拉动反推力杆，油门台内微动开关1在油门杆角度[-1.4°, -6.2°]区间内触发，DIU控制115VAC单相电继电器闭合（控制逻辑1），TLS通电后解锁。"
+          },
+          {
+            "id": "B88",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "工作逻辑4："
+          },
+          {
+            "id": "B24",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "位移传感器（VDT）"
+          },
+          {
+            "id": "B87",
+            "kind": "正文条件",
+            "origin": "docx_body",
+            "quote_zh": "接收信号满足如下条件接通：1、发动机处于运行状态信号；2、飞机处于地面状态信号；3、反推处于非抑制状态信号；4、TLS已解锁信号；5、发动机N1k小于最大N1k展开限制信号；6、油门杆解析角度≤-11.74°信号"
+          }
+        ],
+        "source_anchor_ids": [
+          "B81",
+          "B88",
+          "B24",
+          "B87"
+        ]
+      }
+    ],
+    "junctions": [
+      {
+        "x": 226,
+        "y": 188,
+        "source": "reverser_inhibited",
+        "state": "idle"
+      },
+      {
+        "x": 226,
+        "y": 304,
+        "source": "reverser_inhibited",
+        "state": "idle"
+      },
+      {
+        "x": 465,
+        "y": 279,
+        "source": "logic3",
+        "state": "idle"
+      },
+      {
+        "x": 465,
+        "y": 296,
+        "source": "logic3",
+        "state": "idle"
+      }
+    ],
+    "badges": [
+      {
+        "id": "fault_injection_deferred",
+        "label_zh": "故障注入暂缓",
+        "source_anchor_ids": [
+          "B91"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,3276 @@
+:root {
+  --logic-bg: #06111d;
+  --logic-panel: #0c1826;
+  --logic-panel-2: #101f30;
+  --logic-border: #263a52;
+  --logic-text: #d8e4f2;
+  --logic-muted: #8192a7;
+  --logic-accent: #36c6d8;
+  --logic-ok: #19d28f;
+  --logic-warn: #f5c85b;
+  --logic-danger: #ff7a90;
+}
+
+* { box-sizing: border-box; }
+html, body {
+  min-height: 100vh;
+  margin: 0;
+  background: var(--logic-bg);
+  color: var(--logic-text);
+  font-family: "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", sans-serif;
+}
+body.unified-nav-enabled { padding-top: 48px; }
+
+.logic-shell {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 14px 28px 40px;
+}
+.logic-cockpit-shell {
+  position: relative;
+  isolation: isolate;
+  max-width: 1640px;
+  padding-top: 12px;
+  background:
+    linear-gradient(180deg, rgba(17, 34, 56, 0.34), rgba(5, 17, 28, 0.12) 160px, transparent 520px),
+    repeating-linear-gradient(90deg, rgba(54, 198, 216, 0.045) 0 1px, transparent 1px 132px);
+}
+.logic-cockpit-shell::before {
+  content: "";
+  position: absolute;
+  inset: 8px 12px 18px;
+  z-index: -1;
+  border: 1px solid rgba(47, 74, 114, 0.76);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(0, 200, 245, 0.10), transparent 12%, transparent 88%, rgba(0, 200, 245, 0.10)),
+    rgba(5, 17, 28, 0.58);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.025),
+    inset 0 18px 40px rgba(0, 200, 245, 0.035),
+    0 18px 44px rgba(0,0,0,0.24);
+  pointer-events: none;
+}
+.logic-cockpit-canopy {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 1fr;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 6px;
+  border: 1px solid rgba(47, 74, 114, 0.8);
+  border-radius: 8px 8px 4px 4px;
+  background:
+    linear-gradient(180deg, rgba(12, 24, 38, 0.92), rgba(5, 17, 28, 0.66)),
+    linear-gradient(90deg, rgba(54, 198, 216, 0.12), transparent, rgba(245, 200, 91, 0.08));
+}
+.logic-cockpit-canopy-window {
+  min-height: 24px;
+  border: 1px solid rgba(47, 74, 114, 0.72);
+  border-radius: 4px;
+  background:
+    linear-gradient(145deg, rgba(54, 198, 216, 0.16), rgba(54, 198, 216, 0.02) 42%, rgba(0,0,0,0.18)),
+    #071421;
+  clip-path: polygon(7% 0, 93% 0, 100% 100%, 0 100%);
+  box-shadow: inset 0 0 24px rgba(54, 198, 216, 0.05);
+}
+.logic-cockpit-header,
+.logic-cockpit-mission-strip,
+.logic-cockpit-control-console .logic-panel,
+.logic-cockpit-primary-display {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.035),
+    0 14px 28px rgba(0,0,0,0.18);
+}
+.logic-kicker {
+  margin: 0 0 6px;
+  color: var(--logic-accent);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: 0; font-size: 24px; font-weight: 600; }
+h2 { margin-bottom: 8px; font-size: 17px; font-weight: 600; }
+.muted { color: var(--logic-muted); line-height: 1.6; }
+
+.logic-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logic-controls label {
+  color: var(--logic-muted);
+  font-size: 12px;
+}
+select, button, textarea {
+  min-height: 38px;
+  border: 1px solid var(--logic-border);
+  border-radius: 6px;
+  background: #071421;
+  color: var(--logic-text);
+  font: inherit;
+  padding: 8px 10px;
+}
+textarea {
+  width: 100%;
+  min-height: 112px;
+  resize: vertical;
+  line-height: 1.5;
+}
+button {
+  border-color: rgba(54, 198, 216, 0.55);
+  background: rgba(54, 198, 216, 0.14);
+  cursor: pointer;
+}
+button.secondary {
+  border-color: var(--logic-border);
+  background: transparent;
+  color: var(--logic-muted);
+}
+button.primary-next-action {
+  border-color: rgba(25, 210, 143, 0.72);
+  background: rgba(25, 210, 143, 0.18);
+  color: var(--logic-text);
+  font-weight: 700;
+}
+button.primary-next-action:hover {
+  border-color: var(--logic-ok);
+  background: rgba(25, 210, 143, 0.26);
+}
+button:disabled { cursor: not-allowed; opacity: 0.58; }
+
+.logic-command-strip {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.14fr) minmax(320px, 0.30fr) minmax(300px, 1fr) minmax(250px, 0.30fr);
+  align-items: stretch;
+  gap: 10px;
+  border: 1px solid var(--logic-border);
+  border-radius: 8px;
+  background: rgba(12, 24, 38, 0.78);
+  padding: 9px 10px;
+}
+.logic-cockpit-header {
+  border-color: rgba(47, 74, 114, 0.92);
+  background:
+    linear-gradient(180deg, rgba(17, 34, 56, 0.90), rgba(7, 20, 33, 0.88)),
+    rgba(12, 24, 38, 0.78);
+}
+.logic-command-title {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+}
+.logic-command-title .logic-kicker {
+  margin-bottom: 4px;
+  font-size: 10px;
+}
+.logic-command-title h1 {
+  font-size: 20px;
+  line-height: 1.15;
+}
+.logic-command-strip .logic-controls {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: center;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.logic-command-strip .logic-controls label {
+  font-size: 11px;
+}
+.logic-command-strip .logic-controls select,
+.logic-command-strip .logic-controls button {
+  min-height: 28px;
+  padding: 4px 7px;
+  font-size: 11px;
+  line-height: 1.12;
+}
+.logic-control-actions {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(92px, 0.85fr) minmax(136px, 1.15fr);
+  gap: 4px;
+}
+.logic-control-actions button {
+  overflow-wrap: anywhere;
+}
+.logic-process {
+  border: 1px solid var(--logic-border);
+  background: rgba(7, 20, 33, 0.64);
+  padding: 7px 8px;
+  border-radius: 6px;
+}
+.logic-process.is-complete { border-color: rgba(25, 210, 143, 0.42); }
+.logic-process.is-error { border-color: rgba(255, 122, 144, 0.62); }
+.logic-process-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+#logic-process-title {
+  margin-bottom: 0;
+  font-size: 13px;
+  line-height: 1.25;
+}
+.logic-process .logic-kicker,
+.logic-workflow-copy .logic-kicker {
+  margin-bottom: 3px;
+  font-size: 9px;
+}
+#logic-process-elapsed {
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+.logic-track {
+  height: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(54, 198, 216, 0.22);
+  border-radius: 999px;
+  background: #06111d;
+}
+.logic-process-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--logic-accent), var(--logic-ok));
+  transition: width 0.35s ease;
+}
+.logic-process:not(.is-complete):not(.is-error) .logic-process-fill::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.36), transparent);
+  animation: logic-sheen 1.25s linear infinite;
+}
+@keyframes logic-sheen {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100%); }
+}
+.logic-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+  margin-top: 6px;
+}
+.logic-step {
+  overflow: hidden;
+  border: 1px solid var(--logic-border);
+  border-radius: 999px;
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 9px;
+  text-align: center;
+  padding: 3px 4px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logic-step.is-active {
+  border-color: rgba(54, 198, 216, 0.62);
+  color: var(--logic-accent);
+  background: rgba(54, 198, 216, 0.08);
+}
+.logic-step.is-complete {
+  border-color: rgba(25, 210, 143, 0.44);
+  color: var(--logic-ok);
+}
+#logic-process-detail {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  margin: 6px 0 0;
+  color: #b8c9dc;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.logic-page-system-strip #logic-process-detail {
+  display: none;
+}
+.logic-workflow-overview {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.30fr) minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--logic-border);
+  background: rgba(7, 20, 33, 0.52);
+  border-radius: 6px;
+  padding: 7px 8px;
+}
+.logic-cockpit-mission-strip {
+  border-color: rgba(47, 74, 114, 0.84);
+  background:
+    linear-gradient(90deg, rgba(54, 198, 216, 0.08), rgba(7, 20, 33, 0.74) 34%, rgba(245, 200, 91, 0.035)),
+    rgba(7, 20, 33, 0.52);
+}
+.logic-workflow-copy h2 {
+  margin-bottom: 3px;
+  color: var(--logic-text);
+  font-size: 13px;
+  line-height: 1.25;
+}
+.logic-workflow-copy p:last-child {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin: 0;
+  color: #b8c9dc;
+  font-size: 10px;
+  line-height: 1.35;
+}
+.logic-workflow-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+.logic-workflow-step {
+  border: 1px solid var(--logic-border);
+  border-radius: 999px;
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 9px;
+  text-align: center;
+  padding: 4px 5px;
+  white-space: nowrap;
+}
+.logic-workflow-step.is-active {
+  border-color: rgba(54, 198, 216, 0.68);
+  color: var(--logic-accent);
+  background: rgba(54, 198, 216, 0.10);
+}
+.logic-workflow-step.is-complete {
+  border-color: rgba(25, 210, 143, 0.44);
+  color: var(--logic-ok);
+}
+.logic-workflow-step.is-locked {
+  opacity: 0.66;
+}
+
+.logic-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+  margin-top: 14px;
+}
+.logic-inspector {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  order: 2;
+}
+.logic-panel,
+.logic-canvas-wrap {
+  border: 1px solid var(--logic-border);
+  background: var(--logic-panel);
+}
+.logic-cockpit-control-console .logic-panel,
+.logic-cockpit-primary-display {
+  border-color: rgba(47, 74, 114, 0.86);
+  border-radius: 4px;
+}
+.logic-cockpit-control-console .logic-panel {
+  background:
+    linear-gradient(180deg, rgba(11, 22, 36, 0.96), rgba(7, 20, 33, 0.92)),
+    var(--logic-panel);
+}
+.logic-cockpit-primary-display {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 0, rgba(54, 198, 216, 0.10), transparent 34%),
+    linear-gradient(180deg, rgba(17, 34, 56, 0.90), rgba(7, 20, 33, 0.92)),
+    var(--logic-panel);
+}
+.logic-cockpit-primary-display::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  top: 10px;
+  z-index: 1;
+  height: 2px;
+  background: linear-gradient(90deg, var(--logic-accent), rgba(25, 210, 143, 0.64), transparent);
+  opacity: 0.72;
+  pointer-events: none;
+}
+[data-workstation-shell="canvas-first"] [data-workstation-stage="primary-canvas"],
+[data-workstation-shell="canvas-first"] [data-workstation-surface="primary-canvas-stage"] {
+  position: relative;
+}
+[data-workstation-shell="canvas-first"] [data-workstation-stage="primary-canvas"] {
+  border-color: rgba(54, 198, 216, 0.56);
+  box-shadow: 0 0 0 1px rgba(54, 198, 216, 0.10) inset, inset 3px 0 0 rgba(54, 198, 216, 0.42);
+}
+[data-workstation-shell="canvas-first"] [data-workstation-inspector="engineering-rail"] .logic-panel {
+  box-shadow: inset 3px 0 0 rgba(25, 210, 143, 0.26);
+}
+[data-workstation-shell="canvas-first"] [data-workstation-surface="default-mode-dock"] {
+  border-left: 1px solid rgba(54, 198, 216, 0.14);
+  padding-left: 6px;
+}
+[data-workstation-shell="canvas-first"] [data-unified-panel-state="open"] {
+  border-color: rgba(54, 198, 216, 0.58);
+}
+.logic-panel {
+  padding: 14px;
+}
+.logic-side-details {
+  padding: 0;
+  overflow: hidden;
+}
+.logic-side-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  list-style: none;
+  cursor: pointer;
+  padding: 12px 14px;
+}
+.logic-side-details > summary::-webkit-details-marker {
+  display: none;
+}
+.logic-side-details > summary:hover {
+  background: rgba(54, 198, 216, 0.045);
+}
+.logic-side-summary-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.logic-side-summary-copy .logic-kicker {
+  margin: 0;
+}
+.logic-side-summary-copy strong {
+  color: var(--logic-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.logic-side-summary-meta,
+.logic-side-details > summary #logic-change-history-count {
+  border: 1px solid var(--logic-border);
+  border-radius: 999px;
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+.logic-side-details[open] .logic-side-summary-meta {
+  color: var(--logic-accent);
+  border-color: rgba(54, 198, 216, 0.46);
+}
+.logic-workbench-drawers {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid rgba(38, 58, 82, 0.82);
+  background: rgba(6, 17, 29, 0.72);
+}
+.logic-detail-decision-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.logic-workbench-drawers[data-active-tab="none"] .logic-detail-decision-board {
+  display: none;
+}
+.logic-detail-card {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  min-width: 0;
+  min-height: 0;
+  border: 1px solid rgba(38, 58, 82, 0.82);
+  border-radius: 8px;
+  background: rgba(12, 24, 38, 0.76);
+  padding: 8px 9px;
+}
+.logic-detail-card .logic-kicker,
+.logic-workbench-tab .logic-kicker {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1;
+}
+.logic-detail-card h2 {
+  margin: 0;
+  color: var(--logic-text);
+  font-size: 13px;
+}
+.logic-detail-card code,
+.logic-detail-card strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--logic-accent);
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logic-detail-card .muted {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.logic-workbench-tabbar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.logic-workbench-tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  border-color: var(--logic-border);
+  background: rgba(12, 24, 38, 0.84);
+  padding: 8px 10px;
+  text-align: left;
+}
+.logic-workbench-tab[aria-selected="true"] {
+  border-color: rgba(54, 198, 216, 0.68);
+  background: rgba(54, 198, 216, 0.12);
+}
+.logic-workbench-tab[aria-selected="true"] .logic-side-summary-meta {
+  color: var(--logic-accent);
+  border-color: rgba(54, 198, 216, 0.46);
+}
+.logic-workbench-tab-panel {
+  min-width: 0;
+  padding: 0;
+}
+.logic-workbench-tab-panel[hidden] {
+  display: none;
+}
+.logic-workbench-tab-panel .logic-side-details-body {
+  padding: 12px 14px;
+  border-top: 0;
+}
+.logic-side-details-body {
+  padding: 0 14px 14px;
+  border-top: 1px solid rgba(38, 58, 82, 0.58);
+}
+.logic-status-rail {
+  display: grid;
+  gap: 9px;
+}
+.logic-engineering-rail {
+  display: grid;
+  gap: 8px;
+  border-color: rgba(25, 210, 143, 0.30);
+  padding: 12px;
+}
+.logic-cockpit-control-console .logic-engineering-rail {
+  gap: 10px;
+}
+.logic-engineering-head {
+  display: grid;
+  gap: 3px;
+}
+.logic-engineering-head h2 {
+  margin-bottom: 0;
+  font-size: 15px;
+}
+.logic-engineering-head span {
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  line-height: 1.35;
+}
+.logic-burden-summary {
+  border-color: rgba(25, 210, 143, 0.30);
+}
+.logic-rail-details {
+  overflow: hidden;
+  border: 1px solid rgba(38, 58, 82, 0.82);
+  border-radius: 6px;
+  background: rgba(7, 20, 33, 0.42);
+}
+.logic-rail-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  list-style: none;
+  cursor: pointer;
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  padding: 8px 9px;
+}
+.logic-rail-details > summary::-webkit-details-marker {
+  display: none;
+}
+.logic-rail-details > summary span:first-child {
+  color: var(--logic-text);
+}
+.logic-rail-details[open] > summary {
+  border-bottom: 1px solid rgba(38, 58, 82, 0.72);
+}
+.logic-rail-detail-body {
+  display: grid;
+  gap: 9px;
+  padding: 9px;
+}
+.logic-status-rail-section {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding-top: 9px;
+  border-top: 1px solid rgba(38, 58, 82, 0.62);
+}
+.logic-status-rail-section:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+.logic-status-rail-section h2 {
+  margin-bottom: 0;
+  font-size: 15px;
+}
+.logic-status-rail-section .muted {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  margin-bottom: 0;
+  font-size: 12px;
+}
+.logic-status-label {
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+.logic-status-source-counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.logic-status-source-counts span {
+  border: 1px solid var(--logic-border);
+  border-radius: 999px;
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  padding: 5px 7px;
+  text-align: center;
+  white-space: nowrap;
+}
+.logic-status-source-counts strong {
+  color: var(--logic-text);
+  font-weight: 700;
+}
+#logic-source-trust-summary,
+#logic-burden-action {
+  color: var(--logic-ok);
+}
+.logic-status-action {
+  margin-bottom: 0;
+  color: var(--logic-ok);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.logic-status-notes {
+  display: none;
+}
+.logic-status-notes li {
+  font-size: 12px;
+}
+.logic-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.logic-flags span {
+  border: 1px solid var(--logic-border);
+  border-radius: 999px;
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  padding: 5px 8px;
+}
+.logic-circuit-eval-panel {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(54, 198, 216, 0.26);
+}
+.logic-circuit-eval-panel[hidden] {
+  display: none;
+}
+.logic-circuit-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.logic-circuit-status-badge,
+.logic-circuit-preset-status {
+  border: 1px solid var(--logic-border);
+  border-radius: 999px;
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  padding: 5px 8px;
+}
+.logic-circuit-status-badge[data-state="idle"] { color: var(--logic-muted); }
+.logic-circuit-status-badge[data-state="ready"] { color: var(--logic-accent); border-color: rgba(54, 198, 216, 0.55); }
+.logic-circuit-status-badge[data-state="deploying"] { color: var(--logic-warn); border-color: rgba(245, 200, 91, 0.62); }
+.logic-circuit-status-badge[data-state="deployed"] { color: var(--logic-ok); border-color: rgba(25, 210, 143, 0.62); }
+.logic-circuit-status-badge[data-state="fault"] { color: var(--logic-danger); border-color: rgba(255, 122, 144, 0.62); }
+.logic-circuit-preset-status {
+  color: var(--logic-muted);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logic-circuit-eval-panel > .muted {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  margin-bottom: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.logic-circuit-core-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.logic-circuit-core-inputs span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid rgba(54, 198, 216, 0.25);
+  border-radius: 6px;
+  background: rgba(54, 198, 216, 0.06);
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  padding: 6px 7px;
+}
+.logic-circuit-core-inputs strong {
+  color: var(--logic-text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.logic-circuit-preset-menu {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.logic-circuit-preset-menu label {
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+.logic-circuit-preset-menu select {
+  width: 100%;
+  min-height: 30px;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.logic-circuit-input-grid {
+  display: grid;
+  gap: 9px;
+  overflow: hidden;
+}
+.logic-circuit-input-grid label {
+  display: grid;
+  grid-template-columns: 42px 58px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  color: #b8c9dc;
+  font-size: 11px;
+}
+.logic-circuit-input-grid output {
+  color: var(--logic-accent);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  text-align: right;
+}
+.logic-circuit-input-grid input[type="range"] {
+  min-width: 0;
+  width: 100%;
+  accent-color: var(--logic-accent);
+}
+.logic-circuit-check-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+.logic-circuit-check-grid label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #b8c9dc;
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+.logic-circuit-input-details,
+.logic-circuit-status-details {
+  border: 1px solid rgba(38, 58, 82, 0.82);
+  border-radius: 6px;
+  background: rgba(7, 20, 33, 0.42);
+  overflow: hidden;
+}
+.logic-cockpit-control-deck {
+  border-color: rgba(54, 198, 216, 0.36);
+  background:
+    linear-gradient(180deg, rgba(54, 198, 216, 0.065), rgba(7, 20, 33, 0.50)),
+    rgba(7, 20, 33, 0.42);
+}
+.logic-cockpit-control-deck[open] {
+  box-shadow: inset 0 0 0 1px rgba(54, 198, 216, 0.06);
+}
+.logic-circuit-input-details > summary,
+.logic-circuit-status-details > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  list-style: none;
+  cursor: pointer;
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  padding: 8px 9px;
+}
+.logic-circuit-input-details > summary::-webkit-details-marker,
+.logic-circuit-status-details > summary::-webkit-details-marker {
+  display: none;
+}
+.logic-circuit-input-details > summary span:first-child,
+.logic-circuit-status-details > summary span:first-child {
+  color: var(--logic-text);
+}
+.logic-circuit-input-details[open] > summary,
+.logic-circuit-status-details[open] > summary {
+  border-bottom: 1px solid rgba(38, 58, 82, 0.72);
+}
+.logic-circuit-input-details[open] {
+  display: grid;
+  gap: 9px;
+}
+.logic-circuit-input-details[open] > .logic-circuit-input-grid {
+  padding: 8px 9px 0;
+}
+.logic-circuit-input-details[open] > .logic-circuit-check-grid {
+  padding: 0 9px;
+}
+.logic-circuit-input-details[open] > .logic-circuit-status-details {
+  margin: 0 9px 9px;
+}
+.logic-circuit-hud {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 8px;
+}
+.logic-circuit-hud div {
+  border: 1px solid rgba(38, 58, 82, 0.82);
+  border-radius: 6px;
+  background: rgba(7, 20, 33, 0.62);
+  padding: 7px;
+}
+.logic-circuit-hud dt {
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+}
+.logic-circuit-hud dd {
+  margin: 4px 0 0;
+  color: var(--logic-text);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.logic-notes {
+  margin: 0;
+  padding-left: 18px;
+  color: #b8c9dc;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.logic-edit-panel {
+  display: grid;
+  gap: 0;
+}
+.logic-edit-body {
+  display: grid;
+  gap: 10px;
+}
+.logic-edit-body textarea {
+  min-height: 96px;
+}
+.logic-revision-handoff {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(245, 200, 91, 0.36);
+  border-radius: 8px;
+  background: rgba(245, 200, 91, 0.07);
+  padding: 10px;
+}
+.logic-revision-handoff[hidden] {
+  display: none;
+}
+.logic-revision-handoff strong {
+  color: var(--logic-warn);
+  font-size: 13px;
+}
+.logic-revision-handoff p {
+  margin: 0;
+  color: #d8e4f2;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.logic-revision-handoff span {
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+.logic-revision-handoff button {
+  justify-self: start;
+}
+.logic-edit-panel label,
+.logic-selection-row span {
+  color: var(--logic-muted);
+  font-size: 12px;
+}
+.logic-selection-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--logic-border);
+  border-radius: 6px;
+  background: #071421;
+}
+.logic-selection-row code {
+  color: var(--logic-accent);
+  font-size: 11px;
+}
+.logic-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.logic-edit-actions button {
+  flex: 1 1 130px;
+}
+.logic-interpretation-box {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(54, 198, 216, 0.34);
+  border-radius: 8px;
+  background: rgba(54, 198, 216, 0.06);
+}
+.logic-interpretation-box[hidden] {
+  display: none;
+}
+#logic-interpretation-summary,
+.logic-question {
+  margin: 0;
+  line-height: 1.55;
+}
+.logic-question {
+  color: var(--logic-warn);
+}
+.logic-change-history {
+  display: grid;
+  gap: 10px;
+}
+.logic-history-head,
+.logic-change-card-head,
+.logic-change-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logic-history-head,
+.logic-change-card-head {
+  justify-content: space-between;
+}
+#logic-change-history-count,
+.logic-change-card-head span,
+.logic-change-meta span {
+  border: 1px solid var(--logic-border);
+  border-radius: 999px;
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  padding: 4px 7px;
+}
+.logic-change-history-list {
+  display: grid;
+  gap: 10px;
+}
+.logic-change-card {
+  border: 1px solid var(--logic-border);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.025);
+  padding: 10px;
+}
+.logic-change-card[data-status="updated"] {
+  border-color: rgba(25, 210, 143, 0.44);
+}
+.logic-change-card[data-status="cancelled"] {
+  border-color: rgba(129, 146, 167, 0.44);
+}
+.logic-change-card[data-status="failed"] {
+  border-color: rgba(255, 122, 144, 0.62);
+}
+.logic-change-card-head strong {
+  color: var(--logic-text);
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+.logic-change-meta {
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.logic-change-annotation,
+.logic-change-understanding,
+.logic-change-question,
+.logic-change-updated {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.logic-change-annotation {
+  color: #d3e2f1;
+}
+.logic-change-understanding {
+  color: #b8c9dc;
+}
+.logic-change-question {
+  color: var(--logic-warn);
+}
+.logic-change-updated {
+  color: var(--logic-ok);
+}
+.logic-change-card details {
+  border-top: 1px solid rgba(38, 58, 82, 0.72);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.logic-change-card summary {
+  cursor: pointer;
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+.logic-change-card ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: #b8c9dc;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.logic-canvas-wrap {
+  position: relative;
+  min-width: 0;
+  order: -1;
+  padding: 14px;
+}
+.logic-canvas-wrap[data-experience="annotation-stream"] {
+  min-height: 0;
+}
+.logic-canvas-compact-toolbar {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  line-height: 1.3;
+  margin-bottom: 6px;
+}
+.logic-canvas-counts,
+.logic-canvas-source {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logic-mode-dock {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  min-height: 34px;
+  margin-bottom: 6px;
+}
+.logic-mode-dock button {
+  min-width: 0;
+  min-height: 30px;
+  border-color: rgba(54, 198, 216, 0.30);
+  background: rgba(7, 20, 33, 0.74);
+  color: var(--logic-muted);
+  font-size: 12px;
+  font-weight: 650;
+  padding: 5px 7px;
+}
+.logic-mode-dock button[aria-pressed="true"] {
+  border-color: rgba(25, 210, 143, 0.62);
+  background: rgba(25, 210, 143, 0.12);
+  color: var(--logic-text);
+}
+.logic-command-palette-trigger {
+  min-width: 46px;
+  min-height: 28px;
+  border-color: rgba(245, 200, 91, 0.42);
+  background: rgba(245, 200, 91, 0.08);
+  color: var(--logic-warn);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+}
+.logic-command-palette {
+  position: absolute;
+  top: 54px;
+  left: 50%;
+  z-index: 20;
+  display: grid;
+  gap: 10px;
+  width: min(560px, calc(100% - 48px));
+  transform: translateX(-50%);
+  border: 1px solid rgba(54, 198, 216, 0.46);
+  border-radius: 10px;
+  background: rgba(5, 17, 28, 0.97);
+  padding: 12px;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.42);
+}
+.logic-command-palette[hidden] {
+  display: none;
+}
+.logic-command-palette-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.logic-command-palette-head h2 {
+  margin: 0;
+  font-size: 15px;
+}
+#logic-command-palette-filter {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid var(--logic-border);
+  border-radius: 6px;
+  background: #071421;
+  color: var(--logic-text);
+  font: inherit;
+  padding: 7px 10px;
+}
+.logic-command-palette-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.logic-command-palette-list button,
+.logic-command-palette-list a {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  border: 1px solid rgba(38, 58, 82, 0.86);
+  border-radius: 7px;
+  background: rgba(12, 24, 38, 0.82);
+  color: var(--logic-text);
+  font-size: 12px;
+  padding: 7px 9px;
+  text-decoration: none;
+}
+.logic-command-palette-list button:hover,
+.logic-command-palette-list a:hover {
+  border-color: rgba(54, 198, 216, 0.62);
+  background: rgba(54, 198, 216, 0.10);
+}
+.logic-provenance-filter {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+}
+.logic-provenance-filter[hidden] {
+  display: none;
+}
+.logic-reconstruction-mode-panel[hidden] {
+  display: none;
+}
+.logic-reconstruction-mode-panel {
+  position: absolute;
+  top: 92px;
+  right: 22px;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  max-width: min(560px, calc(100% - 44px));
+  overflow: hidden;
+  border: 1px solid rgba(54, 198, 216, 0.42);
+  border-radius: 6px;
+  background: rgba(7, 20, 33, 0.86);
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  line-height: 1.25;
+  padding: 5px 7px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.22);
+}
+.logic-reconstruction-mode-panel[data-mode="demo-reconstruction"] {
+  border-color: rgba(25, 210, 143, 0.54);
+}
+.logic-reconstruction-mode-panel strong {
+  color: var(--logic-ok);
+  font-weight: 700;
+}
+.logic-demo-bridge {
+  overflow: hidden;
+  border: 1px solid rgba(54, 198, 216, 0.40);
+  border-radius: 999px;
+  color: var(--logic-accent);
+  padding: 2px 6px;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logic-demo-bridge:hover {
+  border-color: rgba(54, 198, 216, 0.72);
+  background: rgba(54, 198, 216, 0.10);
+}
+.logic-provenance-filter button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 4px 8px;
+  border: 1px solid rgba(82, 107, 134, 0.55);
+  border-radius: 6px;
+  background: rgba(7, 20, 33, 0.72);
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 9px;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.logic-provenance-filter button[aria-pressed="true"] {
+  border-color: rgba(54, 198, 216, 0.68);
+  background: rgba(54, 198, 216, 0.10);
+  color: var(--logic-text);
+}
+.logic-provenance-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #526b86;
+  box-shadow: 0 0 0 1px rgba(216, 228, 242, 0.12);
+}
+.logic-provenance-dot.is-source { background: #19d28f; }
+.logic-provenance-dot.is-assumption { background: #f5c85b; }
+.logic-provenance-dot.is-local { background: #36c6d8; }
+.logic-canvas {
+  position: relative;
+  width: 100%;
+  min-height: 760px;
+  overflow: auto;
+  border: 1px solid var(--logic-border);
+  background:
+    linear-gradient(rgba(54,198,216,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(54,198,216,0.04) 1px, transparent 1px),
+    #071421;
+  background-size: 32px 32px;
+}
+.logic-drawing-stream-timeline[hidden] {
+  display: none;
+}
+.logic-drawing-stream-timeline {
+  position: absolute;
+  left: 26px;
+  top: 92px;
+  z-index: 6;
+  width: min(360px, calc(100% - 52px));
+  max-height: 188px;
+  overflow: hidden;
+  border: 1px solid rgba(54, 198, 216, 0.36);
+  border-radius: 6px;
+  background: rgba(7, 20, 33, 0.86);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.26);
+  pointer-events: none;
+}
+.logic-drawing-stream-timeline[data-blueprint39-stream="compact-complete"] {
+  left: auto;
+  right: 36px;
+  top: 18px;
+  width: min(226px, calc(100% - 52px));
+  max-height: 32px;
+  border-color: rgba(25, 210, 143, 0.42);
+  background: rgba(7, 20, 33, 0.74);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+}
+.logic-stream-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid rgba(38, 58, 82, 0.78);
+}
+.logic-stream-head .logic-kicker {
+  margin: 0;
+}
+.logic-stream-head strong {
+  color: var(--logic-text);
+  font-size: 12px;
+}
+.logic-drawing-stream-timeline[data-blueprint39-stream="compact-complete"] .logic-stream-head {
+  padding: 6px 8px;
+  border-bottom: 0;
+}
+.logic-drawing-stream-timeline[data-blueprint39-stream="compact-complete"] .logic-stream-head .logic-kicker {
+  display: none;
+}
+.logic-drawing-stream-timeline[data-blueprint39-stream="compact-complete"] .logic-stream-head strong {
+  overflow: hidden;
+  color: var(--logic-ok);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logic-stream-events {
+  display: grid;
+  gap: 5px;
+  max-height: 138px;
+  margin: 0;
+  overflow: auto;
+  padding: 8px 10px 10px;
+}
+.logic-stream-event {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  color: #b8c9dc;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.logic-stream-event span {
+  color: var(--logic-accent);
+  font-family: "Courier New", monospace;
+}
+.logic-stream-event p {
+  margin: 0;
+}
+.logic-stream-event.is-empty {
+  display: block;
+  color: var(--logic-muted);
+}
+.logic-drawing-stream-timeline[data-blueprint39-stream="compact-complete"] .logic-stream-events {
+  display: none;
+}
+.logic-annotation-popover {
+  position: absolute;
+  top: var(--annotation-popover-top, 64px);
+  left: var(--annotation-popover-left, auto);
+  right: auto;
+  z-index: 7;
+  display: grid;
+  gap: 7px;
+  width: min(320px, calc(100% - 48px));
+  border: 1px solid rgba(25, 210, 143, 0.48);
+  border-radius: 8px;
+  background: rgba(7, 20, 33, 0.94);
+  padding: 10px;
+  box-shadow: 0 14px 28px rgba(0,0,0,0.32);
+}
+.logic-annotation-popover[hidden] {
+  display: none;
+}
+.logic-annotation-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.logic-annotation-popover-head .logic-kicker {
+  margin: 0;
+}
+#logic-selected-target-label {
+  overflow: hidden;
+  color: var(--logic-ok);
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logic-annotation-popover label {
+  color: var(--logic-muted);
+  font-size: 11px;
+}
+.logic-annotation-popover textarea {
+  min-height: 68px;
+  background: rgba(6, 17, 29, 0.94);
+}
+.logic-annotation-context-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.logic-annotation-context-grid section {
+  min-width: 0;
+  border: 1px solid rgba(38, 58, 82, 0.72);
+  border-radius: 7px;
+  background: rgba(8, 22, 36, 0.64);
+  padding: 6px 7px;
+}
+.logic-annotation-context-grid span {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--logic-accent);
+  font-size: 10px;
+  font-weight: 700;
+}
+.logic-annotation-context-grid p {
+  display: -webkit-box;
+  min-height: 30px;
+  margin: 0;
+  overflow: hidden;
+  color: #b8c9dc;
+  font-size: 10.5px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.logic-annotation-submit-bar[hidden] {
+  display: none;
+}
+.logic-annotation-submit-bar {
+  position: sticky;
+  bottom: 14px;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: auto minmax(128px, 0.18fr) minmax(240px, 1fr) minmax(180px, 0.28fr) minmax(170px, 0.22fr);
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  border: 1px solid rgba(54, 198, 216, 0.42);
+  border-radius: 10px;
+  background: rgba(6, 17, 29, 0.94);
+  padding: 10px;
+  box-shadow: 0 -10px 28px rgba(0,0,0,0.28);
+}
+.logic-annotation-submit-bar label {
+  color: var(--logic-muted);
+  font-size: 12px;
+}
+.logic-annotation-submit-bar select,
+.logic-annotation-submit-bar button {
+  min-height: 34px;
+}
+.logic-annotation-submit-bar button {
+  border-color: rgba(25, 210, 143, 0.72);
+  background: rgba(25, 210, 143, 0.18);
+  color: var(--logic-text);
+  font-weight: 700;
+}
+.logic-run-parameter-drawer {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 86px;
+  z-index: 9;
+  display: grid;
+  gap: 8px;
+  max-height: 286px;
+  overflow: auto;
+  border: 1px solid rgba(54, 198, 216, 0.42);
+  border-radius: 10px;
+  background: rgba(5, 17, 28, 0.96);
+  padding: 10px;
+  box-shadow: 0 18px 42px rgba(0,0,0,0.34);
+}
+.logic-run-parameter-drawer[hidden] {
+  display: none;
+}
+.logic-bottom-drawer-tabbar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(70px, 0.55fr) minmax(70px, 0.55fr);
+  gap: 7px;
+}
+.logic-bottom-drawer-tabbar button {
+  min-height: 30px;
+  font-size: 11px;
+}
+.logic-bottom-drawer-tabbar button[aria-selected="true"] {
+  border-color: rgba(25, 210, 143, 0.64);
+  background: rgba(25, 210, 143, 0.13);
+}
+.logic-bottom-drawer-panel[hidden] {
+  display: none;
+}
+.logic-run-parameter-drawer[data-drawer-pinned="true"] {
+  border-color: rgba(30, 103, 255, 0.56);
+  box-shadow: 0 18px 42px rgba(30, 103, 255, 0.14);
+}
+.logic-drawer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.logic-drawer-actions button {
+  min-height: 30px;
+  min-width: 72px;
+  font-size: 11px;
+}
+.logic-parameter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.logic-parameter-grid label {
+  display: grid;
+  grid-template-columns: 44px 62px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid rgba(38, 58, 82, 0.78);
+  border-radius: 7px;
+  background: rgba(7, 20, 33, 0.72);
+  color: #b8c9dc;
+  font-size: 11px;
+  padding: 7px;
+}
+.logic-parameter-grid output {
+  color: var(--logic-accent);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  text-align: right;
+  white-space: nowrap;
+}
+.logic-parameter-grid input[type="range"] {
+  min-width: 0;
+  width: 100%;
+  accent-color: var(--logic-accent);
+}
+.logic-parameter-grid .logic-drawer-switch,
+.logic-parameter-grid .logic-drawer-preset {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+.logic-drawer-switch input {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  accent-color: var(--logic-accent);
+}
+.logic-drawer-preset select {
+  min-height: 28px;
+  padding: 4px 7px;
+}
+.logic-drawer-mode-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.logic-drawer-mode-toggle button {
+  min-height: 30px;
+  border-color: rgba(38, 58, 82, 0.82);
+  background: rgba(7, 20, 33, 0.72);
+  color: #b8c9dc;
+  font-size: 11px;
+}
+.logic-drawer-mode-toggle button[aria-pressed="true"] {
+  border-color: rgba(30, 103, 255, 0.68);
+  background: rgba(30, 103, 255, 0.18);
+  color: var(--logic-text);
+}
+.logic-run-controls {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 92px)) minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.logic-run-controls button {
+  min-height: 30px;
+  font-size: 11px;
+}
+#logic-run-state {
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+.logic-run-signal-summary {
+  display: grid;
+  grid-template-columns: minmax(98px, 0.48fr) minmax(92px, 0.38fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  border: 1px solid rgba(38, 58, 82, 0.78);
+  border-radius: 7px;
+  background: rgba(7, 20, 33, 0.70);
+  color: #b8c9dc;
+  font-size: 11px;
+  padding: 8px;
+}
+.logic-run-signal-summary strong {
+  color: var(--logic-ok);
+  white-space: nowrap;
+}
+.logic-run-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+.logic-run-signal-grid span {
+  min-width: 0;
+  border: 1px solid rgba(38, 58, 82, 0.72);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--logic-text);
+  overflow: hidden;
+  padding: 5px 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logic-run-timeline {
+  display: grid;
+  gap: 5px;
+  max-height: 126px;
+  margin: 9px 0 0;
+  overflow: auto;
+  padding: 0;
+  list-style: none;
+}
+.logic-run-timeline li {
+  border: 1px solid rgba(38, 58, 82, 0.78);
+  border-radius: 6px;
+  background: rgba(7, 20, 33, 0.70);
+  color: #b8c9dc;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  padding: 6px 8px;
+}
+.logic-trace-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.logic-trace-grid a,
+.logic-trace-grid button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  border: 1px solid rgba(38, 58, 82, 0.82);
+  border-radius: 7px;
+  background: rgba(12, 24, 38, 0.78);
+  color: var(--logic-text);
+  font-size: 12px;
+  text-decoration: none;
+}
+.logic-report-preview {
+  display: grid;
+  gap: 8px;
+}
+.logic-report-preview strong {
+  color: var(--logic-ok);
+  font-size: 14px;
+}
+.logic-report-preview p {
+  margin: 0;
+  color: #b8c9dc;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.logic-report-preview dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.logic-report-preview div {
+  border: 1px solid rgba(38, 58, 82, 0.82);
+  border-radius: 7px;
+  background: rgba(7, 20, 33, 0.70);
+  padding: 7px;
+}
+.logic-report-preview dt {
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+}
+.logic-report-preview dd {
+  margin: 4px 0 0;
+  color: var(--logic-text);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+.logic-annotation-batch {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+#logic-annotation-count,
+.logic-annotation-submit-state {
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+.logic-annotation-list {
+  display: flex;
+  gap: 6px;
+  min-height: 20px;
+  margin: 0;
+  overflow: hidden;
+  padding: 0;
+  list-style: none;
+}
+.logic-annotation-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 220px;
+  border: 1px solid rgba(38, 58, 82, 0.86);
+  border-radius: 999px;
+  color: var(--logic-muted);
+  font-size: 10px;
+  padding: 3px 7px;
+}
+.logic-annotation-item strong {
+  color: var(--logic-accent);
+  font-family: "Courier New", monospace;
+  font-weight: 600;
+}
+.logic-annotation-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logic-batch-interpretation-panel {
+  position: absolute;
+  right: 22px;
+  bottom: 88px;
+  z-index: 9;
+  display: grid;
+  gap: 9px;
+  width: min(520px, calc(100% - 44px));
+  max-height: min(310px, calc(100% - 132px));
+  margin-top: 0;
+  overflow: auto;
+  border: 1px solid rgba(54, 198, 216, 0.32);
+  border-radius: 10px;
+  background: rgba(7, 16, 27, 0.95);
+  padding: 11px;
+  box-shadow: 0 14px 34px rgba(0,0,0,0.22);
+}
+.logic-batch-interpretation-panel[hidden] {
+  display: none;
+}
+.logic-batch-interpretation-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.logic-batch-interpretation-head h2 {
+  margin: 0;
+  color: var(--logic-text);
+  font-size: 14px;
+  letter-spacing: 0;
+}
+.logic-batch-interpretation-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.logic-batch-interpretation-grid article {
+  min-width: 0;
+  border: 1px solid rgba(38, 58, 82, 0.86);
+  border-radius: 8px;
+  background: rgba(8, 22, 36, 0.68);
+  padding: 10px;
+}
+.logic-batch-interpretation-grid strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--logic-accent);
+  font-size: 12px;
+}
+.logic-batch-interpretation-grid p,
+.logic-batch-confirmation-question {
+  margin: 0;
+  color: var(--logic-text);
+  font-size: 11.5px;
+  line-height: 1.42;
+}
+.logic-batch-proposed-changes {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--logic-text);
+  font-size: 11.5px;
+  line-height: 1.42;
+}
+.logic-batch-confirmation-question {
+  border-top: 1px solid rgba(38, 58, 82, 0.72);
+  padding-top: 10px;
+  color: var(--logic-ok);
+}
+.logic-batch-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.logic-batch-actions button {
+  min-height: 30px;
+  font-size: 11px;
+}
+.logic-collapsed-tool-rail {
+  position: absolute;
+  z-index: 7;
+  left: 14px;
+  top: 162px;
+  display: grid;
+  gap: 6px;
+  width: 36px;
+  padding: 6px;
+  border: 1px solid rgba(38, 58, 82, 0.86);
+  border-radius: 10px;
+  background: rgba(5, 17, 28, 0.9);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.28);
+}
+.logic-collapsed-tool-rail button {
+  display: grid;
+  place-items: center;
+  min-height: 24px;
+  border: 1px solid rgba(54, 198, 216, 0.22);
+  border-radius: 6px;
+  background: rgba(54, 198, 216, 0.08);
+  color: var(--logic-muted);
+  font-size: 11px;
+  padding: 0;
+}
+.logic-collapsed-tool-rail button:hover {
+  color: var(--logic-accent);
+  border-color: rgba(54, 198, 216, 0.56);
+}
+.logic-object-context-drawer {
+  position: absolute;
+  z-index: 6;
+  right: 376px;
+  top: 150px;
+  display: grid;
+  gap: 10px;
+  width: 310px;
+  border: 1px solid rgba(54, 198, 216, 0.42);
+  border-radius: 10px;
+  background: rgba(5, 17, 28, 0.96);
+  padding: 12px;
+  box-shadow: 0 18px 42px rgba(0,0,0,0.34);
+}
+.logic-object-context-drawer[hidden] {
+  display: none;
+}
+.logic-object-context-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.logic-object-context-head strong {
+  overflow: hidden;
+  color: var(--logic-text);
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.logic-context-section {
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgba(38, 58, 82, 0.76);
+  border-radius: 8px;
+  background: rgba(8, 22, 36, 0.7);
+  padding: 9px;
+}
+.logic-context-section span {
+  color: var(--logic-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+.logic-context-section p {
+  margin: 0;
+  color: #b8c9dc;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.logic-context-comment-shortcut {
+  min-height: 30px;
+  border-color: rgba(54, 198, 216, 0.42);
+  background: rgba(54, 198, 216, 0.12);
+  color: var(--logic-text);
+  font-size: 12px;
+}
+.logic-circuit-svg,
+.logic-svg,
+.logic-node-layer,
+.logic-panel-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+.logic-circuit-svg { overflow: visible; }
+.logic-svg { pointer-events: none; overflow: visible; }
+.logic-panel-layer { pointer-events: none; }
+.logic-canvas[data-view-mode="circuit"] .logic-svg,
+.logic-canvas[data-view-mode="circuit"] .logic-node-layer,
+.logic-canvas[data-view-mode="circuit"] .logic-panel-layer {
+  display: none;
+}
+.logic-canvas[data-view-mode="model"] .logic-circuit-svg {
+  display: none;
+}
+.logic-circuit-column-label,
+.logic-circuit-footer-label,
+.logic-circuit-node text {
+  font-family: "Courier New", monospace;
+}
+.logic-circuit-column-label {
+  fill: #526b86;
+  font-size: 10px;
+}
+.logic-circuit-footer-label {
+  fill: #3e526c;
+  font-size: 9px;
+}
+.logic-circuit-lane-guide {
+  pointer-events: none;
+}
+.logic-circuit-lane-band {
+  fill: rgba(54, 198, 216, 0.045);
+  stroke: rgba(54, 198, 216, 0.18);
+  stroke-width: 0.8;
+  stroke-dasharray: 5 4;
+}
+.logic-circuit-lane-label {
+  fill: #8fbdd2;
+  font-family: "Courier New", monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.logic-circuit-wire {
+  fill: none;
+  stroke: #46597a;
+  stroke-width: 1.3;
+  stroke-linecap: butt;
+  stroke-linejoin: miter;
+  cursor: pointer;
+  pointer-events: bounding-box;
+}
+.logic-circuit-wire[data-readable-lane="sw"] {
+  stroke-width: 1.6;
+}
+.logic-circuit-wire.is-active {
+  stroke: #00e5a0;
+  stroke-width: 1.8;
+}
+.logic-circuit-wire.is-blocked,
+.logic-circuit-wire.is-fault {
+  stroke: #e05555;
+  stroke-width: 1.8;
+}
+.logic-circuit-junction {
+  fill: #46597a;
+}
+.logic-circuit-junction.is-active {
+  fill: #00e5a0;
+}
+.logic-circuit-junction.is-blocked {
+  fill: #e05555;
+}
+.logic-circuit-junction.is-fault {
+  fill: #e05555;
+}
+.logic-circuit-node {
+  cursor: pointer;
+  outline: none;
+}
+.logic-circuit-node.is-provenance-muted,
+.logic-circuit-wire.is-provenance-muted,
+.logic-circuit-junction.is-provenance-muted {
+  opacity: 0.18;
+}
+.logic-circuit-node.is-provenance-match .logic-circuit-node-box,
+.logic-circuit-node.is-provenance-match .logic-circuit-gate-box {
+  stroke: var(--logic-accent);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 7px rgba(54, 198, 216, 0.36));
+}
+.logic-circuit-wire.is-provenance-match {
+  stroke-width: 2.2;
+  filter: drop-shadow(0 0 5px rgba(54, 198, 216, 0.32));
+}
+.logic-circuit-wire.is-selected {
+  stroke: var(--logic-accent);
+  stroke-width: 2.4;
+  filter: drop-shadow(0 0 7px rgba(54, 198, 216, 0.42));
+}
+.logic-circuit-junction.is-provenance-match {
+  filter: drop-shadow(0 0 5px rgba(54, 198, 216, 0.42));
+}
+.logic-circuit-node[data-readable-lane="sw"] .logic-circuit-node-box {
+  stroke-width: 1.55;
+}
+.logic-circuit-node-box {
+  fill: rgba(13, 34, 54, 0.96);
+  stroke-width: 1.1;
+}
+.logic-circuit-node[data-state="active"] .logic-circuit-node-box {
+  fill: rgba(0, 229, 160, 0.08);
+  stroke: #00e5a0;
+  stroke-width: 1.8;
+}
+.logic-circuit-node[data-state="active"] .logic-circuit-node-title {
+  fill: #00e5a0;
+}
+.logic-circuit-node[data-state="blocked"] .logic-circuit-node-box,
+.logic-circuit-node[data-state="blocked"] .logic-circuit-gate-box {
+  fill: rgba(224, 85, 85, 0.08);
+  stroke: #e05555;
+  stroke-width: 1.8;
+}
+.logic-circuit-node[data-state="blocked"] .logic-circuit-node-title,
+.logic-circuit-node[data-state="blocked"] .logic-circuit-gate-label,
+.logic-circuit-node[data-state="blocked"] .logic-circuit-gate-type {
+  fill: #e05555;
+}
+.logic-circuit-node[data-circuit-role="final_output"] .logic-circuit-node-box {
+  stroke: #e05555;
+  stroke-width: 1.8;
+}
+.logic-circuit-node.is-selected .logic-circuit-node-box,
+.logic-circuit-node.is-selected .logic-circuit-gate-box {
+  stroke: var(--logic-accent);
+  stroke-width: 2.2;
+  filter: drop-shadow(0 0 8px rgba(54, 198, 216, 0.42));
+}
+.logic-circuit-node-title {
+  fill: var(--logic-text);
+  font-size: 10px;
+  font-weight: 500;
+}
+.logic-circuit-short-label {
+  letter-spacing: 0;
+}
+.logic-circuit-node[data-readable-lane="sw"] .logic-circuit-node-title {
+  font-size: 11px;
+  font-weight: 700;
+}
+.logic-circuit-node-title.is-final {
+  fill: #e05555;
+  font-size: 10px;
+}
+.logic-circuit-node-subtitle {
+  fill: var(--logic-muted);
+  font-size: 8.5px;
+}
+.logic-circuit-node-details {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+.logic-circuit-node:hover .logic-circuit-node-details,
+.logic-circuit-node:focus .logic-circuit-node-details,
+.logic-circuit-node.is-selected .logic-circuit-node-details {
+  opacity: 1;
+}
+.logic-circuit-tech-id {
+  fill: #8fa4ba;
+  font-size: 7px;
+  font-family: "Courier New", monospace;
+}
+.logic-circuit-gate-box {
+  fill: rgba(26, 13, 30, 0.92);
+  stroke: #e05555;
+  stroke-width: 1.1;
+}
+.logic-circuit-gate-shape {
+  fill: rgba(7, 20, 33, 0.95);
+  stroke: #e05555;
+  stroke-width: 1;
+}
+.logic-circuit-gate-type {
+  fill: #e05555;
+  font-size: 9px;
+  font-weight: 600;
+}
+.logic-circuit-gate-label {
+  fill: #e05555;
+  font-size: 11px;
+  font-weight: 700;
+}
+.logic-circuit-gate-caption {
+  fill: var(--logic-muted);
+  font-size: 8.5px;
+}
+.logic-circuit-anchor-badge {
+  fill: rgba(54, 198, 216, 0.12);
+  stroke: rgba(54, 198, 216, 0.5);
+  stroke-width: 0.7;
+}
+.logic-circuit-anchor-text {
+  fill: var(--logic-accent);
+  font-size: 6.5px;
+  font-weight: 600;
+}
+.logic-circuit-badge rect {
+  fill: rgba(245, 200, 91, 0.10);
+  stroke: rgba(245, 200, 91, 0.62);
+}
+.logic-circuit-badge text {
+  fill: var(--logic-warn);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  font-weight: 600;
+}
+.logic-node,
+.logic-param-panel {
+  position: absolute;
+  border-radius: 8px;
+  background: var(--logic-panel-2);
+}
+.logic-node {
+  border: 1px solid var(--logic-border);
+  padding: 10px 12px;
+  overflow: visible;
+  cursor: pointer;
+}
+.logic-node.is-selected {
+  border-color: var(--logic-accent);
+  box-shadow: 0 0 0 2px rgba(54, 198, 216, 0.18), 0 0 22px rgba(54, 198, 216, 0.18);
+}
+.logic-node[data-kind="input"] { border-color: rgba(54, 198, 216, 0.48); }
+.logic-node[data-kind="logic"] { border-color: rgba(25, 210, 143, 0.46); }
+.logic-node[data-kind="output"] { border-color: rgba(245, 200, 91, 0.56); }
+.logic-node[data-kind="component"] { border-color: rgba(176, 122, 245, 0.46); }
+.logic-node-kind {
+  display: block;
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.logic-node-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+.logic-node-title strong {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.logic-node-title code {
+  color: var(--logic-muted);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.logic-node-desc {
+  color: #b8c9dc;
+  font-size: 12px;
+  line-height: 1.42;
+  overflow-wrap: anywhere;
+}
+.logic-node-anchor {
+  display: none;
+  margin-top: 6px;
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.logic-node:hover .logic-node-anchor,
+.logic-node.is-selected .logic-node-anchor {
+  display: block;
+}
+.logic-param-panel {
+  border: 1px solid rgba(54, 198, 216, 0.55);
+  background: rgba(54, 198, 216, 0.10);
+  padding: 8px;
+  overflow: hidden;
+}
+.logic-param-panel strong {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.logic-param-panel input[type="range"] {
+  width: 100%;
+  accent-color: var(--logic-accent);
+}
+.logic-param-panel code {
+  color: var(--logic-muted);
+  font-size: 10px;
+}
+
+@media (max-width: 1080px) {
+  .logic-layout { grid-template-columns: 1fr; }
+  .logic-canvas-wrap {
+    display: flex;
+    flex-direction: column;
+    order: -1;
+  }
+  .logic-workbench-drawers {
+    order: -1;
+    margin-top: 0;
+    margin-bottom: 10px;
+  }
+  .logic-inspector {
+    order: 1;
+  }
+  .logic-command-strip {
+    grid-template-columns: minmax(82px, 0.12fr) minmax(150px, 0.2fr) minmax(210px, 1fr) minmax(250px, 0.38fr);
+    gap: 8px;
+    padding: 9px 10px;
+  }
+  .logic-command-title h1 {
+    font-size: 18px;
+  }
+  .logic-process,
+  .logic-workflow-overview {
+    padding: 6px 7px;
+  }
+  .logic-workflow-copy p:last-child {
+    display: none;
+  }
+  .logic-step,
+  .logic-workflow-step {
+    overflow: hidden;
+    padding: 3px 3px;
+    text-overflow: ellipsis;
+  }
+  .logic-command-strip .logic-controls {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .logic-control-actions {
+    grid-template-columns: minmax(92px, 0.85fr) minmax(126px, 1.15fr);
+  }
+  .logic-workflow-overview { grid-template-columns: 1fr; }
+  .logic-workflow-steps { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .logic-canvas-compact-toolbar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+  .logic-provenance-filter {
+    justify-content: flex-start;
+    overflow-x: auto;
+  }
+  .logic-canvas-source {
+    white-space: normal;
+  }
+  .logic-drawing-stream-timeline {
+    position: absolute;
+    left: 18px;
+    top: 92px;
+    width: min(320px, calc(100% - 36px));
+    max-height: 132px;
+    margin-bottom: 0;
+  }
+  .logic-annotation-popover {
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  .logic-annotation-submit-bar {
+    grid-template-columns: auto minmax(120px, 1fr);
+  }
+  .logic-annotation-batch,
+  .logic-annotation-submit-state,
+  #logic-submit-annotations {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .logic-command-strip {
+    grid-template-columns: 1fr;
+  }
+  .logic-command-strip .logic-controls,
+  .logic-control-actions {
+    grid-template-columns: 1fr;
+  }
+  .logic-annotation-submit-bar {
+    grid-template-columns: 1fr;
+  }
+  .logic-workflow-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .logic-shell { padding: 16px; }
+  .logic-steps { grid-template-columns: repeat(2, 1fr); }
+  .logic-control-actions { grid-template-columns: 1fr; }
+  .logic-detail-decision-board,
+  .logic-workbench-tabbar { grid-template-columns: 1fr; }
+}
+
+@media (min-width: 1081px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body.unified-nav-enabled {
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .logic-shell {
+    display: grid;
+    grid-template-rows: 32px 104px minmax(0, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: none;
+    height: calc(100vh - 48px);
+    overflow: hidden;
+    padding: 8px 28px 12px;
+  }
+
+  .logic-cockpit-canopy {
+    min-height: 0;
+    margin: 0;
+    padding: 5px;
+  }
+
+  .logic-cockpit-canopy-window {
+    min-height: 20px;
+  }
+
+  .logic-command-strip {
+    min-height: 0;
+    padding: 8px 10px;
+  }
+
+  .logic-layout {
+    min-height: 0;
+    height: 100%;
+    margin-top: 0;
+    overflow: hidden;
+  }
+
+  .logic-canvas-wrap {
+    display: grid;
+    grid-template-rows: 32px 34px minmax(0, 1fr);
+    gap: 6px;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+    padding: 10px;
+  }
+
+  .logic-canvas {
+    min-height: 0 !important;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .logic-drawing-stream-timeline {
+    left: 22px;
+    top: 92px;
+    width: 328px;
+    max-height: 132px;
+  }
+
+  .logic-stream-events {
+    max-height: 96px;
+  }
+
+  .logic-annotation-submit-bar {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    z-index: 8;
+    margin-top: 0;
+    grid-template-columns: auto minmax(132px, 0.16fr) minmax(240px, 1fr) minmax(180px, 0.24fr) minmax(188px, 0.20fr);
+    background: rgba(6, 17, 29, 0.86);
+    backdrop-filter: blur(8px);
+  }
+
+  .logic-workbench-drawers {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 86px;
+    z-index: 9;
+    max-height: 260px;
+    overflow: auto;
+    margin: 0;
+    box-shadow: 0 18px 42px rgba(0,0,0,0.34);
+  }
+
+  .logic-workbench-drawers[data-active-tab="none"] {
+    display: none;
+  }
+
+  .logic-inspector {
+    position: absolute;
+    left: 28px;
+    right: 28px;
+    top: calc(100% - 1px);
+    z-index: 11;
+    display: grid;
+    height: 1px;
+    max-height: 1px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    margin: 0;
+  }
+
+  .logic-shell.is-left-open .logic-inspector {
+    left: 12px;
+    right: auto;
+    top: 154px;
+    bottom: 102px;
+    width: min(324px, calc(100% - 48px));
+    height: auto;
+    max-height: none;
+    opacity: 1;
+    overflow: auto;
+    pointer-events: auto;
+  }
+
+  .logic-collapsed-tool-rail {
+    top: 88px;
+  }
+
+  .logic-object-context-drawer {
+    display: none;
+  }
+
+  .logic-shell.is-right-open .logic-object-context-drawer,
+  .logic-object-context-drawer:not([hidden]) {
+    right: 22px;
+    top: 154px;
+    display: grid;
+    max-height: calc(100% - 250px);
+    overflow: auto;
+  }
+
+  .logic-annotation-popover {
+    top: var(--annotation-popover-top, 58px);
+    left: var(--annotation-popover-left, auto);
+    width: 304px;
+  }
+
+  body {
+    font-size: 12px;
+  }
+
+  h1 {
+    font-size: 18px;
+  }
+
+  h2,
+  #logic-workflow-stage {
+    font-size: 13px;
+  }
+
+  .muted {
+    line-height: 1.35;
+  }
+
+  select,
+  button,
+  textarea {
+    min-height: 28px;
+    padding: 5px 8px;
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  textarea {
+    min-height: 68px;
+  }
+
+  button.primary-next-action {
+    font-size: 12px;
+  }
+
+  .logic-command-title h1 {
+    font-size: 18px;
+  }
+
+  .logic-kicker {
+    margin-bottom: 3px;
+    font-size: 9px;
+  }
+
+  .logic-process {
+    padding: 6px 8px;
+  }
+
+  .logic-step,
+  .logic-workflow-step {
+    font-size: 9px;
+    padding: 3px 5px;
+  }
+
+  .logic-canvas-compact-toolbar,
+  .logic-canvas-counts,
+  .logic-canvas-source {
+    font-size: 9.5px;
+  }
+
+  .logic-annotation-submit-bar {
+    grid-template-columns: auto minmax(116px, 0.14fr) minmax(220px, 1fr) minmax(160px, 0.22fr) minmax(160px, 0.18fr);
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .logic-annotation-popover-head strong {
+    font-size: 11px;
+  }
+
+  .logic-parameter-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.logic-right-inspector-rail {
+  position: absolute;
+  z-index: 7;
+  right: 14px;
+  top: 162px;
+  display: grid;
+  gap: 8px;
+  width: 40px;
+  padding: 8px 6px;
+  border: 1px solid rgba(38, 58, 82, 0.86);
+  border-radius: 10px;
+  background: rgba(5, 17, 28, 0.9);
+  box-shadow: 0 14px 30px rgba(0,0,0,0.28);
+}
+
+.logic-right-inspector-rail button {
+  display: grid;
+  place-items: center;
+  min-height: 28px;
+  border: 1px solid rgba(82, 107, 134, 0.42);
+  border-radius: 7px;
+  background: rgba(7, 20, 33, 0.74);
+  color: var(--logic-muted);
+  font-size: 11px;
+  padding: 0;
+}
+
+.logic-right-inspector-rail button:hover {
+  color: var(--logic-accent);
+  border-color: rgba(54, 198, 216, 0.56);
+}
+
+.logic-bottom-run-strip {
+  display: grid;
+  grid-template-columns: minmax(248px, 0.42fr) minmax(280px, 1fr) minmax(360px, 0.9fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 54px;
+  border: 1px solid rgba(54, 198, 216, 0.38);
+  border-radius: 10px;
+  background: rgba(5, 17, 28, 0.94);
+  padding: 8px 10px;
+  box-shadow: 0 -10px 28px rgba(0,0,0,0.22);
+}
+
+.logic-bottom-run-actions,
+.logic-bottom-run-metrics {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.logic-bottom-run-actions {
+  gap: 7px;
+}
+
+.logic-bottom-run-actions button {
+  min-height: 30px;
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+.logic-bottom-run-actions button:first-child {
+  border-color: rgba(25, 210, 143, 0.72);
+  background: rgba(25, 210, 143, 0.18);
+  color: var(--logic-text);
+  font-weight: 700;
+}
+
+.logic-bottom-run-meter {
+  display: grid;
+  grid-template-columns: minmax(72px, auto) minmax(120px, 1fr) minmax(92px, auto);
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  color: var(--logic-muted);
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+}
+
+.logic-bottom-run-track {
+  height: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(54, 198, 216, 0.26);
+  border-radius: 999px;
+  background: rgba(6, 17, 29, 0.82);
+}
+
+.logic-bottom-run-track span {
+  display: block;
+  width: 0%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--logic-accent), var(--logic-ok));
+  transition: width 0.2s ease;
+}
+
+.logic-bottom-run-metrics {
+  justify-content: flex-end;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.logic-bottom-run-metrics span {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(38, 58, 82, 0.82);
+  border-radius: 999px;
+  color: #b8c9dc;
+  font-family: "Courier New", monospace;
+  font-size: 10px;
+  padding: 4px 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logic-template-entry {
+  position: absolute;
+  inset: 80px 72px 96px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  grid-template-rows: auto auto auto;
+  gap: 22px;
+  pointer-events: auto;
+}
+
+.logic-template-entry[hidden] {
+  display: none;
+}
+
+.logic-template-copy {
+  max-width: 520px;
+  text-align: center;
+}
+
+.logic-template-copy h2 {
+  margin-bottom: 6px;
+  font-size: 24px;
+}
+
+.logic-template-copy p:last-child {
+  margin: 0;
+  color: var(--logic-muted);
+}
+
+.logic-template-actions {
+  position: relative;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  gap: 18px;
+  width: min(720px, 100%);
+  pointer-events: auto;
+}
+
+.logic-template-actions button {
+  position: relative;
+  z-index: 9;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  min-height: 118px;
+  border-color: rgba(30, 103, 255, 0.18);
+  background: rgba(255, 255, 255, 0.88);
+  color: #17233c;
+  text-align: center;
+  box-shadow: 0 12px 28px rgba(25, 41, 78, 0.08);
+}
+
+.logic-template-actions button:hover {
+  border-color: rgba(30, 103, 255, 0.55);
+  background: #ffffff;
+}
+
+.logic-template-actions button span {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  min-height: 34px;
+  border: 2px solid rgba(30, 103, 255, 0.62);
+  border-radius: 8px;
+  color: #1e67ff;
+  font-weight: 800;
+}
+
+.logic-template-actions button strong {
+  font-size: 13px;
+}
+
+.logic-template-actions button small {
+  color: #66738d;
+  font-size: 11px;
+}
+
+.logic-template-guide {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  width: min(760px, 100%);
+  margin: 18px 0 0;
+  padding: 14px 20px;
+  border: 1px dashed rgba(30, 103, 255, 0.32);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.76);
+  list-style: none;
+}
+
+.logic-template-guide li {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: center;
+  color: #17233c;
+}
+
+.logic-template-guide li + li {
+  border-left: 1px solid rgba(30, 103, 255, 0.14);
+  padding-left: 18px;
+}
+
+.logic-template-guide span {
+  display: grid;
+  place-items: center;
+  grid-row: span 2;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: rgba(30, 103, 255, 0.10);
+  color: #1e67ff;
+  font-weight: 800;
+}
+
+.logic-template-guide strong {
+  font-size: 12px;
+}
+
+.logic-template-guide small {
+  color: #66738d;
+  font-size: 11px;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] {
+  --logic-bg: #f6f8fc;
+  --logic-panel: #ffffff;
+  --logic-panel-2: #f8fbff;
+  --logic-border: #dce3ef;
+  --logic-text: #13223a;
+  --logic-muted: #66738d;
+  --logic-accent: #1e67ff;
+  --logic-ok: #16a765;
+  --logic-warn: #f59f00;
+  --logic-danger: #e5484d;
+  background: var(--logic-bg);
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-cockpit-shell {
+  max-width: none;
+  background: #f6f8fc;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-cockpit-shell::before,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-cockpit-canopy {
+  display: none;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-command-strip,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-process,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-workflow-overview,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-panel,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-canvas-wrap,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-workbench-drawers,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-run-parameter-drawer,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-bottom-run-strip {
+  border-color: var(--logic-border);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 26px rgba(25, 41, 78, 0.06);
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-cockpit-primary-display::before {
+  display: none;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] select,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] button,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] textarea,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-command-palette-filter {
+  border-color: var(--logic-border);
+  background: #ffffff;
+  color: var(--logic-text);
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] button {
+  border-color: rgba(30, 103, 255, 0.28);
+  background: rgba(30, 103, 255, 0.06);
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] button.secondary {
+  background: #ffffff;
+  color: var(--logic-muted);
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] button.primary-next-action {
+  border-color: rgba(30, 103, 255, 0.55);
+  background: #1e67ff;
+  color: #ffffff;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-mode-dock button,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-command-palette-trigger,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-command-palette-list button,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-command-palette-list a,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-provenance-filter button,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-right-inspector-rail button,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-collapsed-tool-rail button {
+  border-color: var(--logic-border);
+  background: #ffffff;
+  color: var(--logic-muted);
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-mode-dock button[aria-pressed="true"] {
+  border-color: rgba(30, 103, 255, 0.46);
+  background: rgba(30, 103, 255, 0.08);
+  color: #1e67ff;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] [data-workstation-shell="canvas-first"] [data-workstation-stage="primary-canvas"] {
+  border-color: rgba(30, 103, 255, 0.36);
+  box-shadow: 0 0 0 1px rgba(30, 103, 255, 0.06) inset, inset 3px 0 0 rgba(30, 103, 255, 0.36);
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] [data-workstation-shell="canvas-first"] [data-workstation-inspector="engineering-rail"] .logic-panel {
+  box-shadow: inset 3px 0 0 rgba(25, 210, 143, 0.24);
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-canvas {
+  border-color: var(--logic-border);
+  background:
+    radial-gradient(circle, rgba(30, 103, 255, 0.10) 1px, transparent 1.2px),
+    #fbfdff;
+  background-size: 16px 16px;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-command-palette,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-reconstruction-mode-panel,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-drawing-stream-timeline,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-collapsed-tool-rail,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-right-inspector-rail,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-object-context-drawer,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-annotation-popover {
+  border-color: var(--logic-border);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 42px rgba(25, 41, 78, 0.12);
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-bottom-run-metrics span,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-side-summary-meta,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-detail-card,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-trace-grid a,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-trace-grid button {
+  border-color: var(--logic-border);
+  background: #ffffff;
+  color: var(--logic-muted);
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-node,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-param-panel {
+  border-color: var(--logic-border);
+  background: #ffffff;
+  color: var(--logic-text);
+  box-shadow: 0 8px 20px rgba(25, 41, 78, 0.08);
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-node-desc,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-context-section p,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-workflow-copy p:last-child,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-process-detail {
+  color: var(--logic-muted);
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-circuit-node-box {
+  fill: #ffffff;
+  stroke: #cbd5e6;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-circuit-gate-box,
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-circuit-gate-shape {
+  fill: #ffffff;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-circuit-node-title {
+  fill: #13223a;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-cockpit-canopy {
+  display: grid;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-canvas:not([data-view-mode]) .logic-template-entry {
+  position: relative;
+  inset: auto;
+  min-height: 420px;
+  padding: 56px 72px;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-page-system-strip[data-blueprint27-compact-topbar="step-progress-workflow"] {
+  min-height: 0;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-shell[data-blueprint27-rhythm="compact-canvas"] .logic-canvas-wrap[data-blueprint29-rhythm="primary-canvas-stage"] {
+  padding: 10px;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-mode-dock[data-blueprint27-rhythm="five-entry-dock"] {
+  gap: 5px;
+  min-height: 30px;
+  margin-bottom: 5px;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] .logic-mode-dock[data-blueprint27-rhythm="five-entry-dock"] button {
+  min-height: 28px;
+  padding: 4px 6px;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-right-inspector-rail[data-blueprint38-rhythm="collapsed-inspector-rail"] {
+  gap: 6px;
+  padding: 7px 6px;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-bottom-run-strip[data-blueprint38-rhythm="bottom-run-strip"] {
+  min-height: 50px;
+  gap: 10px;
+  padding: 7px 10px;
+}
+
+body[data-primary-flow="deepseek-v4-pro-ui-workbench"] #logic-template-entry[data-blueprint29-rhythm="blank-canvas-template-entry"] {
+  gap: 18px;
+}
+
+.logic-shell[data-ui-skin="codex-minimal"] {
+  min-height: calc(100vh - 48px);
+  max-width: none;
+  padding: 8px 14px 10px;
+  background: #f6f8fc;
+  color: var(--logic-text);
+}
+
+.logic-shell[data-ui-skin="codex-minimal"] .logic-cockpit-canopy {
+  display: none;
+}
+
+.logic-shell[data-ui-skin="codex-minimal"] .logic-command-strip,
+.logic-shell[data-ui-skin="codex-minimal"] .logic-process,
+.logic-shell[data-ui-skin="codex-minimal"] .logic-workflow-overview,
+.logic-shell[data-ui-skin="codex-minimal"] .logic-panel,
+.logic-shell[data-ui-skin="codex-minimal"] .logic-canvas-wrap,
+.logic-shell[data-ui-skin="codex-minimal"] .logic-workbench-drawers,
+.logic-shell[data-ui-skin="codex-minimal"] .logic-run-parameter-drawer,
+.logic-shell[data-ui-skin="codex-minimal"] .logic-bottom-run-strip {
+  border-color: #dce3ef;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 8px 24px rgba(25, 41, 78, 0.06);
+}
+
+.logic-shell[data-ui-skin="codex-minimal"] .logic-command-strip {
+  border-radius: 8px;
+}
+
+.logic-shell[data-ui-skin="codex-minimal"] .logic-canvas-wrap {
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(30, 103, 255, 0.05);
+}
+
+.logic-shell[data-ui-skin="codex-minimal"] .logic-canvas {
+  border-color: #dce3ef;
+  background:
+    radial-gradient(circle, rgba(30, 103, 255, 0.12) 1px, transparent 1.2px),
+    #fbfdff;
+  background-size: 16px 16px;
+}
+
+.logic-shell[data-ui-skin="codex-minimal"] .logic-annotation-submit-bar {
+  border-color: #dce3ef;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 -8px 22px rgba(25, 41, 78, 0.10);
+}
+
+.logic-shell[data-ui-skin="codex-minimal"] .logic-command-palette {
+  border-color: #dce3ef;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 22px 58px rgba(25, 41, 78, 0.18);
+}
+
+.logic-shell[data-ui-skin="codex-minimal"] .logic-command-palette-list button,
+.logic-shell[data-ui-skin="codex-minimal"] .logic-command-palette-list a {
+  border-color: #dce3ef;
+  background: #ffffff;
+  color: var(--logic-text);
+}
+
+.logic-shell[data-ui-skin="codex-minimal"] .logic-bottom-run-strip {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.logic-shell[data-ui-skin="codex-minimal"][data-left-rail-state="collapsed"] .logic-inspector {
+  max-height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.logic-shell[data-ui-skin="codex-minimal"][data-right-inspector-state="collapsed"] .logic-object-context-drawer {
+  max-height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.logic-shell[data-ui-skin="codex-minimal"][data-bottom-drawer-state="closed"] .logic-run-parameter-drawer,
+.logic-shell[data-ui-skin="codex-minimal"][data-command-palette-state="closed"] .logic-command-palette {
+  pointer-events: none;
+}
+
+.logic-shell[data-ui-skin="codex-minimal"][data-command-palette-state="open"] .logic-command-palette,
+.logic-shell[data-ui-skin="codex-minimal"][data-bottom-drawer-state="open"] .logic-run-parameter-drawer,
+.logic-shell[data-ui-skin="codex-minimal"][data-right-inspector-state="expanded"] .logic-object-context-drawer {
+  border-color: rgba(30, 103, 255, 0.42);
+}
+
+@media (min-width: 1081px) {
+  .logic-shell[data-blueprint-phase="phase-1-shell"] {
+    grid-template-rows: 10px 82px minmax(0, 1fr);
+    gap: 4px;
+    padding-top: 6px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-command-strip {
+    grid-template-columns: minmax(118px, 0.14fr) minmax(284px, 0.28fr) minmax(300px, 1fr) minmax(220px, 0.28fr);
+    gap: 6px;
+    max-height: 82px;
+    padding: 5px 7px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-command-strip > * {
+    min-height: 0;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-cockpit-canopy {
+    gap: 5px;
+    padding: 2px 5px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-cockpit-canopy-window {
+    min-height: 6px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-command-title .logic-kicker {
+    margin-bottom: 2px;
+    font-size: 9px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-command-title h1 {
+    font-size: 18px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-process,
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-workflow-overview {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    padding: 4px 5px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] #logic-process-title,
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-workflow-copy h2 {
+    font-size: 11px;
+    line-height: 1.14;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-track {
+    height: 3px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-steps {
+    gap: 3px;
+    margin-top: 3px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-step,
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-workflow-step {
+    padding: 1px 4px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-workflow-copy p:last-child {
+    -webkit-line-clamp: 1;
+    line-height: 1.25;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-workflow-copy,
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-workflow-steps {
+    min-height: 0;
+    min-width: 0;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-workflow-copy h2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-command-strip .logic-controls select,
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-command-strip .logic-controls button {
+    min-height: 22px;
+    padding: 2px 5px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-control-actions {
+    grid-template-columns: minmax(78px, 0.82fr) minmax(118px, 1.18fr);
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-canvas-wrap {
+    grid-template-rows: 28px 30px minmax(0, 1fr) 52px;
+    gap: 5px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-run-parameter-drawer,
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-workbench-drawers {
+    bottom: 76px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-annotation-submit-bar {
+    bottom: 76px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-collapsed-tool-rail,
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-right-inspector-rail {
+    top: 100px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-command-palette {
+    top: 48px;
+    width: min(520px, calc(100% - 120px));
+    max-height: min(580px, calc(100vh - 144px));
+    overflow: auto;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-command-palette-list {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-command-palette-list button,
+  .logic-shell[data-blueprint-phase="phase-1-shell"] .logic-command-palette-list a {
+    min-height: 30px;
+  }
+
+  .logic-shell[data-ui-skin="codex-minimal"][data-blueprint-phase="phase-1-shell"] {
+    grid-template-rows: 82px minmax(0, 1fr);
+  }
+
+  .logic-shell[data-ui-skin="codex-minimal"][data-blueprint-phase="phase-1-shell"] .logic-layout {
+    height: 100%;
+  }
+
+  .logic-shell[data-ui-skin="codex-minimal"][data-blueprint-phase="phase-1-shell"] .logic-canvas-wrap {
+    max-height: min(100%, 800px);
+  }
+}
+
+@media (max-width: 1080px) {
+  .logic-right-inspector-rail {
+    right: 10px;
+    top: 180px;
+  }
+
+  .logic-bottom-run-strip {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .logic-bottom-run-metrics {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}

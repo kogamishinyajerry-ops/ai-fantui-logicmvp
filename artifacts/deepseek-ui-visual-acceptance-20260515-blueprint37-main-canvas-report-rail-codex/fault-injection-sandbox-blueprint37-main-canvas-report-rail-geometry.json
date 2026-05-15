@@ -1,0 +1,32 @@
+{
+  "primary_surface": {
+    "x": 28,
+    "y": 304,
+    "width": 1310,
+    "height": 448
+  },
+  "replay_canvas": {
+    "x": 39,
+    "y": 482,
+    "width": 608,
+    "height": 96
+  },
+  "right_report_rail": {
+    "x": 1019,
+    "y": 408.78125,
+    "width": 308,
+    "height": 102
+  },
+  "evidence_trace": {
+    "x": 666,
+    "y": 466,
+    "width": 330,
+    "height": 150
+  },
+  "node_count": 12,
+  "link_count": 11,
+  "main_report_rows": 7,
+  "scroll_height": 768,
+  "inner_height": 768,
+  "overflow_x": false
+}
