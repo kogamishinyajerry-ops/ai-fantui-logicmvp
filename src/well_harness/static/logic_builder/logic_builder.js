@@ -489,6 +489,19 @@
     Object.entries(logicAuxPanels).forEach(([key, element]) => {
       if (element) element.dataset.unifiedPanelState = key === panelName ? "open" : "closed";
     });
+    syncPanelStateContract();
+  }
+
+  function syncPanelStateContract() {
+    if (!logicShell) return;
+    const leftRailState = logicShell.classList.contains("is-left-open") ? "expanded" : "collapsed";
+    const rightInspectorState = logicShell.classList.contains("is-right-open") ? "expanded" : "collapsed";
+    const bottomDrawerState = bottomDrawer && !bottomDrawer.hidden ? "open" : "closed";
+    const commandPaletteState = commandPalette && !commandPalette.hidden ? "open" : "closed";
+    logicShell.dataset.leftRailState = leftRailState;
+    logicShell.dataset.rightInspectorState = rightInspectorState;
+    logicShell.dataset.bottomDrawerState = bottomDrawerState;
+    logicShell.dataset.commandPaletteState = commandPaletteState;
   }
 
   function hideObjectContextDrawer() {
@@ -523,6 +536,7 @@
       const mode = button.dataset.logicMode || "canvas";
       button.setAttribute("aria-pressed", (activeTab === "none" ? mode === "canvas" : mode === activeTab) ? "true" : "false");
     });
+    syncPanelStateContract();
   }
 
   function closeAuxiliaryPanels() {
@@ -549,6 +563,7 @@
       commandPaletteFilter.focus();
     }
     if (commandPaletteStatus) commandPaletteStatus.textContent = "命令面板已打开。";
+    syncPanelStateContract();
   }
 
   function closeCommandPalette() {
@@ -558,6 +573,7 @@
       setActiveAuxPanel("none");
     }
     if (commandPaletteStatus) commandPaletteStatus.textContent = "命令面板空闲。";
+    syncPanelStateContract();
   }
 
   function filterCommandPalette(query) {
@@ -582,6 +598,7 @@
       logicShell.classList.remove("is-right-open");
       hideObjectContextDrawer();
       setActiveAuxPanel(shouldOpen ? "left-rail" : "none");
+      syncPanelStateContract();
       return;
     }
     if (which === "right") {
@@ -595,6 +612,7 @@
         hideObjectContextDrawer();
         setActiveAuxPanel("none");
       }
+      syncPanelStateContract();
     }
   }
 

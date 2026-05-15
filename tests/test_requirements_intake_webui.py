@@ -4425,7 +4425,7 @@ def test_logic_builder_exposes_cockpit_annotation_stream_surface():
     stylesheet = (STATIC_ROOT / "logic_builder" / "logic_builder.css").read_text(encoding="utf-8")
     script = (STATIC_ROOT / "logic_builder" / "logic_builder.js").read_text(encoding="utf-8")
 
-    assert 'data-ui-skin="demo-cockpit"' in html
+    assert 'data-ui-skin="codex-minimal"' in html
     assert 'data-logic-experience="cockpit-annotation-stream"' in html
     assert 'id="logic-drawing-stream-timeline"' in html
     assert 'data-ai-stream="logic-drawing-replay"' in html
@@ -4604,6 +4604,46 @@ def test_logic_builder_exposes_five_entry_mode_dock_command_palette_and_bottom_d
         assert token in script
 
 
+def test_logic_builder_uses_selected_final_codex_minimal_blueprint_skin():
+    html = (STATIC_ROOT / "logic_builder" / "index.html").read_text(encoding="utf-8")
+    stylesheet = (STATIC_ROOT / "logic_builder" / "logic_builder.css").read_text(encoding="utf-8")
+    script = (STATIC_ROOT / "logic_builder" / "logic_builder.js").read_text(encoding="utf-8")
+
+    assert 'data-ui-skin="codex-minimal"' in html
+    assert 'data-blueprint-source="selected-final-set-20260514"' in html
+    for target in [
+        "27-global-nav-default-workbench",
+        "28-command-palette-advanced-entry",
+        "38-panel-state-strategy-final",
+    ]:
+        assert target in html
+
+    assert 'data-left-rail-state="collapsed"' in html
+    assert 'data-right-inspector-state="collapsed"' in html
+    assert 'data-bottom-drawer-state="closed"' in html
+    assert 'data-command-palette-state="closed"' in html
+    assert 'data-panel-default="collapsed"' in html
+    assert 'data-panel-strategy="single-auxiliary"' in html
+
+    for selector in [
+        '.logic-shell[data-ui-skin="codex-minimal"]',
+        '.logic-shell[data-ui-skin="codex-minimal"][data-left-rail-state="collapsed"] .logic-inspector',
+        '.logic-shell[data-ui-skin="codex-minimal"][data-right-inspector-state="collapsed"] .logic-object-context-drawer',
+        '.logic-shell[data-ui-skin="codex-minimal"] .logic-command-palette',
+        '.logic-shell[data-ui-skin="codex-minimal"] .logic-bottom-run-strip',
+    ]:
+        assert selector in stylesheet
+
+    for token in [
+        "syncPanelStateContract",
+        "leftRailState",
+        "rightInspectorState",
+        "bottomDrawerState",
+        "commandPaletteState",
+    ]:
+        assert token in script
+
+
 def test_panel_state_strategy_hooks_are_declared_across_deepseek_routes():
     route_files = [
         STATIC_ROOT / "requirements_intake" / "index.html",
@@ -4628,12 +4668,12 @@ def test_panel_state_strategy_hooks_are_declared_across_deepseek_routes():
         assert token in sandbox_script
 
 
-def test_logic_builder_uses_demo_cockpit_display_and_control_console():
+def test_logic_builder_keeps_cockpit_role_hooks_inside_codex_minimal_skin():
     html = (STATIC_ROOT / "logic_builder" / "index.html").read_text(encoding="utf-8")
     stylesheet = (STATIC_ROOT / "logic_builder" / "logic_builder.css").read_text(encoding="utf-8")
     script = (STATIC_ROOT / "logic_builder" / "logic_builder.js").read_text(encoding="utf-8")
 
-    assert 'data-ui-skin="demo-cockpit"' in html
+    assert 'data-ui-skin="codex-minimal"' in html
     for role in [
         "canopy-frame",
         "status-banner",

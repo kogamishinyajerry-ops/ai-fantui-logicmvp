@@ -1771,13 +1771,16 @@ def test_desktop_logic_builder_draws_cockpit_control_console_and_main_display(
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="domcontentloaded")
-        cockpit = page.locator('[data-ui-skin="demo-cockpit"]')
+        cockpit = page.locator('[data-ui-skin="codex-minimal"]')
         console = page.locator('[data-cockpit-role="control-console"]')
         display = page.locator('[data-cockpit-role="primary-display"]')
         expect(cockpit).to_be_visible()
-        expect(page.locator('[data-cockpit-role="canopy-frame"]')).to_be_visible()
+        expect(cockpit).to_have_attribute("data-left-rail-state", "collapsed")
+        expect(page.locator('[data-cockpit-role="canopy-frame"]')).to_be_hidden()
         expect(page.locator('[data-cockpit-role="status-banner"]')).to_be_visible()
         expect(page.locator('[data-cockpit-role="mission-strip"]')).to_be_visible()
+        page.click('#logic-collapsed-tool-rail [data-panel-toggle="left"]')
+        expect(cockpit).to_have_attribute("data-left-rail-state", "expanded")
         expect(console).to_be_visible()
         expect(display).to_be_visible()
         expect(page.locator(".logic-cockpit-canopy-window")).to_have_count(3)
@@ -2432,8 +2435,28 @@ def test_phase1_blueprint_shell_defaults_fit_1366x768(demo_server: str, browser:
         expect(page.locator("#logic-command-palette-open")).to_have_attribute(
             "data-blueprint-advanced-entry", "command-palette"
         )
+        command_box = page.locator("#logic-command-palette-open").bounding_box()
+        dock_box = page.locator("#logic-mode-dock").bounding_box()
+        assert command_box is not None
+        assert dock_box is not None
+        assert (
+            command_box["x"] + command_box["width"] <= dock_box["x"]
+            or dock_box["x"] + dock_box["width"] <= command_box["x"]
+            or command_box["y"] + command_box["height"] <= dock_box["y"]
+            or dock_box["y"] + dock_box["height"] <= command_box["y"]
+        )
         expect(page.locator("#logic-run-parameter-drawer")).to_be_hidden()
         expect(page.locator("#logic-object-context-drawer")).to_be_hidden()
+        expect(page.locator("#logic-command-palette")).to_be_hidden()
+        left_rail_geometry = page.locator(".logic-inspector").evaluate(
+            """el => {
+              const style = getComputedStyle(el);
+              const rect = el.getBoundingClientRect();
+              return {height: rect.height, opacity: style.opacity, pointerEvents: style.pointerEvents};
+            }"""
+        )
+        assert left_rail_geometry["height"] <= 1 or left_rail_geometry["opacity"] == "0"
+        assert left_rail_geometry["pointerEvents"] == "none"
         assert shell.evaluate("el => !el.classList.contains('is-left-open') && !el.classList.contains('is-right-open')")
 
         page.click('#logic-collapsed-tool-rail [data-panel-toggle="left"]')
@@ -2449,6 +2472,8 @@ def test_phase1_blueprint_shell_defaults_fit_1366x768(demo_server: str, browser:
         page.click('[data-command-close-panels="true"]')
         assert shell.evaluate("el => !el.classList.contains('is-left-open') && !el.classList.contains('is-right-open')")
         expect(page.locator("#logic-run-parameter-drawer")).to_be_hidden()
+        expect(page.locator("#logic-object-context-drawer")).to_be_hidden()
+        expect(page.locator("#logic-command-palette")).to_be_hidden()
     finally:
         page.close()
 
@@ -2475,6 +2500,12 @@ def test_panel_state_strategy_keeps_one_auxiliary_panel_open(
         expect(logic_shell).to_have_attribute("data-active-aux-panel", "none")
         expect(logic_shell).to_have_attribute("data-unified-inspector-state", "none")
         expect(logic_shell).to_have_attribute("data-workstation-state", "primary")
+        expect(logic_shell).to_have_attribute("data-ui-skin", "codex-minimal")
+        expect(logic_shell).to_have_attribute("data-blueprint-source", "selected-final-set-20260514")
+        expect(logic_shell).to_have_attribute("data-left-rail-state", "collapsed")
+        expect(logic_shell).to_have_attribute("data-right-inspector-state", "collapsed")
+        expect(logic_shell).to_have_attribute("data-bottom-drawer-state", "closed")
+        expect(logic_shell).to_have_attribute("data-command-palette-state", "closed")
         expect(page.locator("#logic-run-parameter-drawer")).to_be_hidden()
         expect(page.locator("#logic-run-parameter-drawer")).to_have_attribute("data-unified-panel-state", "closed")
         expect(page.locator("#logic-object-context-drawer")).to_be_hidden()
@@ -2489,6 +2520,10 @@ def test_panel_state_strategy_keeps_one_auxiliary_panel_open(
         page.click('#logic-right-inspector-rail [data-panel-toggle="right"]')
         expect(logic_shell).to_have_attribute("data-active-aux-panel", "right-inspector")
         expect(logic_shell).to_have_attribute("data-unified-inspector-state", "right-inspector")
+        expect(logic_shell).to_have_attribute("data-left-rail-state", "collapsed")
+        expect(logic_shell).to_have_attribute("data-right-inspector-state", "expanded")
+        expect(logic_shell).to_have_attribute("data-bottom-drawer-state", "closed")
+        expect(logic_shell).to_have_attribute("data-command-palette-state", "closed")
         expect(page.locator("#logic-object-context-drawer")).to_be_visible()
         expect(page.locator("#logic-object-context-drawer")).to_have_attribute("data-unified-panel-state", "open")
         expect(page.locator("#logic-run-parameter-drawer")).to_be_hidden()
@@ -2496,6 +2531,10 @@ def test_panel_state_strategy_keeps_one_auxiliary_panel_open(
         page.click('#logic-mode-dock [data-logic-mode="parameters"]')
         expect(logic_shell).to_have_attribute("data-active-aux-panel", "bottom-drawer")
         expect(logic_shell).to_have_attribute("data-unified-inspector-state", "bottom-drawer")
+        expect(logic_shell).to_have_attribute("data-left-rail-state", "collapsed")
+        expect(logic_shell).to_have_attribute("data-right-inspector-state", "collapsed")
+        expect(logic_shell).to_have_attribute("data-bottom-drawer-state", "open")
+        expect(logic_shell).to_have_attribute("data-command-palette-state", "closed")
         expect(page.locator("#logic-run-parameter-drawer")).to_be_visible()
         expect(page.locator("#logic-run-parameter-drawer")).to_have_attribute("data-unified-panel-state", "open")
         expect(page.locator("#logic-object-context-drawer")).to_be_hidden()
@@ -2505,6 +2544,10 @@ def test_panel_state_strategy_keeps_one_auxiliary_panel_open(
         page.click("#logic-command-palette-open")
         expect(logic_shell).to_have_attribute("data-active-aux-panel", "command-palette")
         expect(logic_shell).to_have_attribute("data-unified-inspector-state", "command-palette")
+        expect(logic_shell).to_have_attribute("data-left-rail-state", "collapsed")
+        expect(logic_shell).to_have_attribute("data-right-inspector-state", "collapsed")
+        expect(logic_shell).to_have_attribute("data-bottom-drawer-state", "closed")
+        expect(logic_shell).to_have_attribute("data-command-palette-state", "open")
         expect(page.locator("#logic-command-palette")).to_be_visible()
         expect(page.locator("#logic-command-palette")).to_have_attribute("data-unified-panel-state", "open")
         expect(page.locator("#logic-run-parameter-drawer")).to_be_hidden()
@@ -3379,6 +3422,8 @@ def test_logic_builder_circuit_inputs_default_to_compact_details(demo_server: st
         )
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        page.click('#logic-collapsed-tool-rail [data-panel-toggle="left"]')
+        expect(page.locator("main.logic-shell")).to_have_attribute("data-left-rail-state", "expanded")
         expect(page.locator("#logic-circuit-eval-panel")).to_be_visible()
         expect(page.locator("#logic-circuit-status-badge")).to_be_visible()
         expect(page.locator("#logic-circuit-preset-select")).to_be_visible()
@@ -3635,7 +3680,8 @@ def test_logic_builder_cockpit_stream_replay_and_direct_annotations(
 
         page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
         expect(page.locator("main.logic-cockpit-shell")).to_have_attribute("data-logic-experience", "cockpit-annotation-stream")
-        expect(page.locator(".logic-cockpit-canopy")).to_be_visible()
+        expect(page.locator("main.logic-cockpit-shell")).to_have_attribute("data-ui-skin", "codex-minimal")
+        expect(page.locator(".logic-cockpit-canopy")).to_be_hidden()
         expect(page.locator("#logic-canvas")).to_be_visible()
         expect(page.locator("#logic-drawing-stream-timeline")).to_be_visible()
         expect(page.locator("#logic-drawing-stream-timeline")).to_have_attribute("data-ai-stream", "logic-drawing-replay")
