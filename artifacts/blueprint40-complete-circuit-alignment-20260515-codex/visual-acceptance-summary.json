@@ -1,0 +1,3091 @@
+{
+  "kind": "deepseek-ui-visual-acceptance",
+  "generated_at": "2026-05-15T02:24:46Z",
+  "base_url": "http://127.0.0.1:8822",
+  "viewports": [
+    {
+      "name": "desktop-1366x768",
+      "width": 1366,
+      "height": 768
+    },
+    {
+      "name": "desktop-1280x820",
+      "width": 1280,
+      "height": 820
+    }
+  ],
+  "route_count": 5,
+  "screenshot_count": 10,
+  "ok": true,
+  "failures": [],
+  "pages": [
+    {
+      "route": "/requirements-intake",
+      "route_key": "requirements-intake",
+      "viewport": {
+        "name": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "screenshot": "requirements-intake--desktop-1366x768.png",
+      "ok": true,
+      "geometry": {
+        "viewport": {
+          "name": "desktop-1366x768",
+          "width": 1366,
+          "height": 768
+        },
+        "scroll_height": 768,
+        "scroll_width": 1366,
+        "window_inner_height": 768,
+        "window_inner_width": 1366,
+        "vertical_scroll_ok": true,
+        "horizontal_overflow_count": 0,
+        "horizontal_overflow_nodes": [],
+        "topbar_height": 64,
+        "logic_top_band_height": 86,
+        "panel_strategy": "single-auxiliary",
+        "active_aux_panel": "none"
+      },
+      "blueprint_geometry": {
+        "failures": [],
+        "text_overflow": []
+      },
+      "visible_surfaces": {
+        "compact_top_bar": {
+          "selector": "[data-command-strip=\"deepseek-step\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 70,
+            "width": 1310,
+            "height": 64
+          }
+        },
+        "requirements_blueprint14_shell": {
+          "selector": ".requirements-shell[data-blueprint14-rhythm=\"compact-canvas\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 0,
+            "y": 48,
+            "width": 1366,
+            "height": 720
+          }
+        },
+        "requirements_blueprint14_topbar": {
+          "selector": "[data-blueprint14-compact-topbar=\"step-provider-next\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 70,
+            "width": 1310,
+            "height": 64
+          }
+        },
+        "canvas_first_shell": {
+          "selector": ".requirements-shell[data-workstation-shell=\"canvas-first\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 0,
+            "y": 48,
+            "width": 1366,
+            "height": 720
+          }
+        },
+        "primary_canvas_stage": {
+          "selector": ".clarification-primary[data-workstation-stage=\"primary-canvas\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 378.84375,
+            "y": 385,
+            "width": 948.15625,
+            "height": 360
+          }
+        },
+        "requirements_primary_canvas_rhythm": {
+          "selector": ".clarification-primary[data-blueprint14-canvas-rhythm=\"expanded-first-screen\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 378.84375,
+            "y": 385,
+            "width": 948.15625,
+            "height": 360
+          }
+        },
+        "source_input_inspector": {
+          "selector": ".requirements-input-panel[data-workstation-inspector=\"source-input\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 374,
+            "width": 329.84375,
+            "height": 382
+          }
+        },
+        "requirements_source_inspector_rhythm": {
+          "selector": ".requirements-input-panel[data-blueprint14-inspector=\"source-document-input\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 374,
+            "width": 329.84375,
+            "height": 382
+          }
+        },
+        "requirements_decision_board": {
+          "selector": "#requirements-preflight-panel",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 140,
+            "width": 1310,
+            "height": 136
+          }
+        },
+        "requirements_decision_density": {
+          "selector": "#requirements-preflight-panel[data-blueprint14-density=\"compact-decision-board\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 140,
+            "width": 1310,
+            "height": 136
+          }
+        },
+        "requirements_single_provider_chip": {
+          "selector": ".requirements-provider-live[data-blueprint39-status=\"single-chip\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 795.96875,
+            "y": 90.078125,
+            "width": 112.421875,
+            "height": 24.84375
+          }
+        },
+        "usage_path_cue": {
+          "selector": "#next-step-copy[data-usage-path-cue=\"requirements\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 885.671875,
+            "y": 184,
+            "width": 439.328125,
+            "height": 13.1875
+          }
+        },
+        "choice_checklist": {
+          "selector": "#requirements-confirmation-checklist",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 319,
+            "width": 1288,
+            "height": 44
+          }
+        },
+        "primary_workbench": {
+          "selector": ".clarification-primary",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 378.84375,
+            "y": 385,
+            "width": 948.15625,
+            "height": 360
+          }
+        }
+      },
+      "existing_surfaces": {
+        "workflow": {
+          "selector": "#requirements-workflow-overview",
+          "count": 1,
+          "visible": false,
+          "box": null
+        },
+        "generation_stream": {
+          "selector": "#requirements-generation-stream",
+          "count": 1,
+          "visible": false,
+          "box": null
+        }
+      },
+      "clip_surfaces": {
+        "requirements_preflight_panel": {
+          "selector": "#requirements-preflight-panel",
+          "count": 1,
+          "visible": true,
+          "clipped": false,
+          "scrollHeight": 134,
+          "clientHeight": 134,
+          "scrollWidth": 1308,
+          "clientWidth": 1308,
+          "overflow": "hidden",
+          "overflowX": "hidden",
+          "overflowY": "hidden"
+        }
+      },
+      "clipped_surfaces": [],
+      "logic_top_band_ok": true,
+      "max_logic_top_band_height": null,
+      "missing_visible_surfaces": [],
+      "missing_existing_surfaces": []
+    },
+    {
+      "route": "/logic-builder",
+      "route_key": "logic-builder",
+      "viewport": {
+        "name": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "screenshot": "logic-builder--desktop-1366x768.png",
+      "ok": true,
+      "geometry": {
+        "viewport": {
+          "name": "desktop-1366x768",
+          "width": 1366,
+          "height": 768
+        },
+        "scroll_height": 768,
+        "scroll_width": 1366,
+        "window_inner_height": 768,
+        "window_inner_width": 1366,
+        "vertical_scroll_ok": true,
+        "horizontal_overflow_count": 0,
+        "horizontal_overflow_nodes": [],
+        "topbar_height": 82,
+        "logic_top_band_height": 102,
+        "panel_strategy": "single-auxiliary",
+        "active_aux_panel": "none"
+      },
+      "blueprint_geometry": {
+        "failures": [],
+        "text_overflow": []
+      },
+      "visible_surfaces": {
+        "compact_top_bar": {
+          "selector": "[data-command-strip=\"deepseek-step\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 68,
+            "width": 1310,
+            "height": 82
+          }
+        },
+        "compact_logic_top_band": {
+          "selector": "#logic-page-system-strip[data-blueprint27-compact-topbar=\"step-progress-workflow\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 68,
+            "width": 1310,
+            "height": 82
+          }
+        },
+        "logic_blueprint27_shell": {
+          "selector": ".logic-shell[data-blueprint27-rhythm=\"compact-canvas\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 0,
+            "y": 48,
+            "width": 1366,
+            "height": 720
+          }
+        },
+        "logic_blueprint27_topband": {
+          "selector": "#logic-page-system-strip[data-blueprint27-rhythm=\"compact-topband\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 68,
+            "width": 1310,
+            "height": 82
+          }
+        },
+        "usage_path_cue": {
+          "selector": "#logic-workflow-detail[data-usage-path-cue=\"logic\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 456,
+            "y": 118.15625,
+            "width": 145.828125,
+            "height": 12.5
+          }
+        },
+        "canvas_first_shell": {
+          "selector": ".logic-shell[data-workstation-shell=\"canvas-first\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 0,
+            "y": 48,
+            "width": 1366,
+            "height": 720
+          }
+        },
+        "primary_canvas_stage": {
+          "selector": ".logic-canvas-wrap[data-workstation-stage=\"primary-canvas\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 154,
+            "width": 1310,
+            "height": 602
+          }
+        },
+        "logic_blueprint29_canvas_rhythm": {
+          "selector": ".logic-canvas-wrap[data-blueprint29-rhythm=\"primary-canvas-stage\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 154,
+            "width": 1310,
+            "height": 602
+          }
+        },
+        "canvas_workstation": {
+          "selector": "#logic-canvas[data-workstation-canvas=\"logic-drawing\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 233,
+            "width": 1288,
+            "height": 455
+          }
+        },
+        "primary_canvas": {
+          "selector": "#logic-canvas",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 233,
+            "width": 1288,
+            "height": 455
+          }
+        },
+        "collapsed_left_rail": {
+          "selector": "#logic-collapsed-tool-rail",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 43,
+            "y": 255,
+            "width": 36,
+            "height": 158
+          }
+        },
+        "collapsed_right_rail": {
+          "selector": "#logic-right-inspector-rail[data-blueprint38-rhythm=\"collapsed-inspector-rail\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1283,
+            "y": 255,
+            "width": 40,
+            "height": 146
+          }
+        },
+        "mode_dock": {
+          "selector": "#logic-mode-dock[data-blueprint27-rhythm=\"five-entry-dock\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 198,
+            "width": 1288,
+            "height": 30
+          }
+        },
+        "command_palette_advanced_entry": {
+          "selector": "#logic-command-palette-open[data-blueprint-advanced-entry=\"command-palette\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1281,
+            "y": 168,
+            "width": 46,
+            "height": 28
+          }
+        },
+        "bottom_run_strip": {
+          "selector": "#logic-bottom-run-strip[data-blueprint38-rhythm=\"bottom-run-strip\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 693,
+            "width": 1288,
+            "height": 52
+          }
+        },
+        "compact_drawing_stream": {
+          "selector": "#logic-drawing-stream-timeline[data-blueprint39-stream=\"compact-complete\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1075,
+            "y": 173,
+            "width": 226,
+            "height": 28
+          }
+        }
+      },
+      "existing_surfaces": {
+        "command_palette": {
+          "selector": "#logic-command-palette",
+          "count": 1,
+          "visible": false,
+          "box": null
+        },
+        "blank_canvas_entry": {
+          "selector": "#logic-template-entry",
+          "count": 1,
+          "visible": false,
+          "box": null
+        },
+        "blank_canvas_template_rhythm": {
+          "selector": "#logic-template-entry[data-blueprint29-rhythm=\"blank-canvas-template-entry\"]",
+          "count": 1,
+          "visible": false,
+          "box": null
+        }
+      },
+      "clip_surfaces": {},
+      "clipped_surfaces": [],
+      "logic_top_band_ok": true,
+      "max_logic_top_band_height": 104,
+      "missing_visible_surfaces": [],
+      "missing_existing_surfaces": []
+    },
+    {
+      "route": "/fault-injection-prepare",
+      "route_key": "fault-injection-prepare",
+      "viewport": {
+        "name": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "screenshot": "fault-injection-prepare--desktop-1366x768.png",
+      "ok": true,
+      "geometry": {
+        "viewport": {
+          "name": "desktop-1366x768",
+          "width": 1366,
+          "height": 768
+        },
+        "scroll_height": 768,
+        "scroll_width": 1366,
+        "window_inner_height": 768,
+        "window_inner_width": 1366,
+        "vertical_scroll_ok": true,
+        "horizontal_overflow_count": 0,
+        "horizontal_overflow_nodes": [],
+        "topbar_height": 86,
+        "logic_top_band_height": 104,
+        "panel_strategy": "single-auxiliary",
+        "active_aux_panel": "none"
+      },
+      "blueprint_geometry": {
+        "failures": [],
+        "text_overflow": []
+      },
+      "visible_surfaces": {
+        "compact_top_bar": {
+          "selector": "[data-command-strip=\"deepseek-step\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 66,
+            "width": 1310,
+            "height": 86
+          }
+        },
+        "fault_matrix_shell": {
+          "selector": "#fault-matrix",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 304,
+            "width": 1310,
+            "height": 448
+          }
+        },
+        "fault_decision_board": {
+          "selector": "#fault-decision-board",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 304,
+            "width": 978,
+            "height": 91.59375
+          }
+        },
+        "usage_path_cue": {
+          "selector": "#fault-decision-next-action[data-usage-path-cue=\"fault\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 695.328125,
+            "y": 350,
+            "width": 300.65625,
+            "height": 31.1875
+          }
+        },
+        "fault_candidate_matrix": {
+          "selector": "#fault-candidate-matrix-panel",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 405.59375,
+            "width": 978,
+            "height": 214.96875
+          }
+        },
+        "fault_matrix_density_shell": {
+          "selector": ".fault-candidate-matrix[data-blueprint-density=\"compact-workbench\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 40,
+            "y": 466.59375,
+            "width": 954,
+            "height": 141.96875
+          }
+        },
+        "fault_matrix_rows": {
+          "selector": "#fault-candidate-matrix-body [data-blueprint-fault-row=\"matrix\"]",
+          "count": 2,
+          "visible": true,
+          "box": {
+            "x": 40,
+            "y": 496.6875,
+            "width": 954,
+            "height": 56.1875
+          }
+        },
+        "fault_matrix_blueprint33_rows": {
+          "selector": "#fault-candidate-matrix-body [data-blueprint33-row=\"fault-matrix\"]",
+          "count": 2,
+          "visible": true,
+          "box": {
+            "x": 40,
+            "y": 496.6875,
+            "width": 954,
+            "height": 56.1875
+          }
+        },
+        "fault_matrix_density_rows": {
+          "selector": "#fault-candidate-matrix-body [data-blueprint-density=\"compact-workbench\"]",
+          "count": 2,
+          "visible": true,
+          "box": {
+            "x": 40,
+            "y": 496.6875,
+            "width": 954,
+            "height": 56.1875
+          }
+        },
+        "fault_matrix_shared_rows": {
+          "selector": "#fault-candidate-matrix-body [data-blueprint-row-pattern=\"shared-v1\"]",
+          "count": 2,
+          "visible": true,
+          "box": {
+            "x": 40,
+            "y": 496.6875,
+            "width": 954,
+            "height": 56.1875
+          }
+        },
+        "fault_matrix_path_summary": {
+          "selector": "#fault-candidate-matrix-body .fault-matrix-path-summary",
+          "count": 2,
+          "visible": true,
+          "box": {
+            "x": 715.28125,
+            "y": 516.03125,
+            "width": 66.015625,
+            "height": 17.5
+          }
+        },
+        "fault_matrix_path_tokens": {
+          "selector": "#fault-candidate-matrix-body .fault-matrix-path-token",
+          "count": 6,
+          "visible": true,
+          "box": {
+            "x": 719.28125,
+            "y": 530.53125,
+            "width": 10,
+            "height": 16
+          }
+        },
+        "fault_matrix_shared_tokens": {
+          "selector": "#fault-candidate-matrix-body .blueprint-row-token",
+          "count": 12,
+          "visible": true,
+          "box": {
+            "x": 82.9375,
+            "y": 515.984375,
+            "width": 56.515625,
+            "height": 17.59375
+          }
+        },
+        "fault_matrix_shared_chips": {
+          "selector": "#fault-candidate-matrix-body .blueprint-row-chip",
+          "count": 6,
+          "visible": true,
+          "box": {
+            "x": 295.546875,
+            "y": 514.78125,
+            "width": 68.015625,
+            "height": 20
+          }
+        },
+        "fault_matrix_risk_chips": {
+          "selector": "#fault-candidate-matrix-body .fault-matrix-risk",
+          "count": 2,
+          "visible": true,
+          "box": {
+            "x": 887.03125,
+            "y": 515.984375,
+            "width": 38,
+            "height": 17.59375
+          }
+        },
+        "fault_matrix_state_chips": {
+          "selector": "#fault-candidate-matrix-body .fault-matrix-status",
+          "count": 2,
+          "visible": true,
+          "box": {
+            "x": 939.171875,
+            "y": 515.984375,
+            "width": 42,
+            "height": 17.59375
+          }
+        },
+        "fault_unified_inspector": {
+          "selector": ".fault-sidebar[data-unified-inspector=\"right-inspector\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1018,
+            "y": 304,
+            "width": 320,
+            "height": 380
+          }
+        },
+        "bottom_action_strip": {
+          "selector": "#fault-bottom-action-strip",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 702,
+            "width": 1310,
+            "height": 54
+          }
+        }
+      },
+      "existing_surfaces": {
+        "candidate_details": {
+          "selector": "#fault-candidate-details",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 630.5625,
+            "width": 978,
+            "height": 79
+          }
+        },
+        "injection_point_details": {
+          "selector": "#fault-injection-point-details",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 719.5625,
+            "width": 978,
+            "height": 79
+          }
+        }
+      },
+      "clip_surfaces": {
+        "fault_candidate_details": {
+          "selector": "#fault-candidate-details",
+          "count": 1,
+          "visible": true,
+          "clipped": false,
+          "scrollHeight": 77,
+          "clientHeight": 77,
+          "scrollWidth": 976,
+          "clientWidth": 976,
+          "overflow": "visible",
+          "overflowX": "visible",
+          "overflowY": "visible"
+        },
+        "fault_injection_point_details": {
+          "selector": "#fault-injection-point-details",
+          "count": 1,
+          "visible": true,
+          "clipped": false,
+          "scrollHeight": 77,
+          "clientHeight": 77,
+          "scrollWidth": 976,
+          "clientWidth": 976,
+          "overflow": "visible",
+          "overflowX": "visible",
+          "overflowY": "visible"
+        }
+      },
+      "clipped_surfaces": [],
+      "logic_top_band_ok": true,
+      "max_logic_top_band_height": null,
+      "missing_visible_surfaces": [],
+      "missing_existing_surfaces": []
+    },
+    {
+      "route": "/fault-injection-sandbox",
+      "route_key": "fault-injection-sandbox-default",
+      "viewport": {
+        "name": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "screenshot": "fault-injection-sandbox-default--desktop-1366x768.png",
+      "ok": true,
+      "geometry": {
+        "viewport": {
+          "name": "desktop-1366x768",
+          "width": 1366,
+          "height": 768
+        },
+        "scroll_height": 768,
+        "scroll_width": 1366,
+        "window_inner_height": 768,
+        "window_inner_width": 1366,
+        "vertical_scroll_ok": true,
+        "horizontal_overflow_count": 0,
+        "horizontal_overflow_nodes": [],
+        "topbar_height": 72,
+        "logic_top_band_height": 86,
+        "panel_strategy": "single-auxiliary",
+        "active_aux_panel": "none"
+      },
+      "blueprint_geometry": {
+        "failures": [],
+        "text_overflow": []
+      },
+      "visible_surfaces": {
+        "compact_top_bar": {
+          "selector": "[data-command-strip=\"deepseek-step\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 62,
+            "width": 1310,
+            "height": 72
+          }
+        },
+        "failure_path": {
+          "selector": "#failure-path",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 224,
+            "width": 1310,
+            "height": 532
+          }
+        },
+        "usage_path_cue": {
+          "selector": "#fault-sandbox-decision-next-action[data-usage-path-cue=\"sandbox\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 692.65625,
+            "y": 232,
+            "width": 238,
+            "height": 29.75
+          }
+        },
+        "review_rows": {
+          "selector": "#fault-sandbox-review-row-panel",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 342,
+            "width": 972,
+            "height": 282
+          }
+        },
+        "review_row_density_shell": {
+          "selector": "#fault-sandbox-review-rows[data-blueprint-density=\"compact-workbench\"] [data-blueprint36-row=\"sandbox-review\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 623,
+            "width": 950,
+            "height": 40
+          }
+        },
+        "review_row_link_sr06": {
+          "selector": "#fault-sandbox-review-rows [data-blueprint-review-row=\"SR-06\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 843,
+            "width": 950,
+            "height": 40
+          }
+        },
+        "diagnosis_inspector": {
+          "selector": "#fault-sandbox-diagnosis-inspector",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1008,
+            "y": 224,
+            "width": 330,
+            "height": 400
+          }
+        },
+        "diagnosis_unified_inspector": {
+          "selector": "#fault-sandbox-diagnosis-inspector[data-unified-inspector=\"right-inspector\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1008,
+            "y": 224,
+            "width": 330,
+            "height": 400
+          }
+        },
+        "active_path_summary": {
+          "selector": "#fault-sandbox-review-package-summary[data-package-state=\"active\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1019,
+            "y": 291,
+            "width": 308,
+            "height": 52
+          }
+        },
+        "status_only_report_rail": {
+          "selector": "#fault-sandbox-main-report-rail[data-blueprint39-default=\"status-only\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1019,
+            "y": 346,
+            "width": 308,
+            "height": 88
+          }
+        },
+        "active_path_text": {
+          "selector": "#fault-sandbox-affected-path",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1025,
+            "y": 453.28125,
+            "width": 88,
+            "height": 10.71875
+          }
+        },
+        "diagnosis_chain_nodes": {
+          "selector": "#fault-sandbox-diagnosis-chain [data-blueprint36-chain-node=\"failure-path\"]",
+          "count": 3,
+          "visible": true,
+          "box": {
+            "x": 1019,
+            "y": 470,
+            "width": 100,
+            "height": 32
+          }
+        },
+        "evidence_trace": {
+          "selector": "#fault-sandbox-evidence-trace",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1019,
+            "y": 524,
+            "width": 308,
+            "height": 89
+          }
+        },
+        "report_strip": {
+          "selector": "#sandbox-report-strip",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 626,
+            "width": 1310,
+            "height": 130
+          }
+        },
+        "report_strip_inspector_role": {
+          "selector": "#sandbox-report-strip[data-inspector-role=\"bottom-report-strip\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 626,
+            "width": 1310,
+            "height": 130
+          }
+        },
+        "replay_report_preview": {
+          "selector": "#fault-sandbox-report-preview",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 692.3125,
+            "y": 632,
+            "width": 504.6875,
+            "height": 92
+          }
+        }
+      },
+      "existing_surfaces": {
+        "review_package_drawer": {
+          "selector": "#fault-sandbox-detail-drawer",
+          "count": 1,
+          "visible": false,
+          "box": null
+        },
+        "evidence_popover": {
+          "selector": "#sandbox-evidence-popover",
+          "count": 1,
+          "visible": false,
+          "box": null
+        }
+      },
+      "clip_surfaces": {},
+      "clipped_surfaces": [],
+      "logic_top_band_ok": true,
+      "max_logic_top_band_height": null,
+      "missing_visible_surfaces": [],
+      "missing_existing_surfaces": []
+    },
+    {
+      "route": "/fault-injection-sandbox",
+      "route_key": "fault-injection-sandbox",
+      "viewport": {
+        "name": "desktop-1366x768",
+        "width": 1366,
+        "height": 768
+      },
+      "screenshot": "fault-injection-sandbox--desktop-1366x768.png",
+      "ok": true,
+      "geometry": {
+        "viewport": {
+          "name": "desktop-1366x768",
+          "width": 1366,
+          "height": 768
+        },
+        "scroll_height": 768,
+        "scroll_width": 1366,
+        "window_inner_height": 768,
+        "window_inner_width": 1366,
+        "vertical_scroll_ok": true,
+        "horizontal_overflow_count": 0,
+        "horizontal_overflow_nodes": [],
+        "topbar_height": 72,
+        "logic_top_band_height": 86,
+        "panel_strategy": "single-auxiliary",
+        "active_aux_panel": "review-package"
+      },
+      "blueprint_geometry": {
+        "failures": [],
+        "text_overflow": []
+      },
+      "visible_surfaces": {
+        "compact_top_bar": {
+          "selector": "[data-command-strip=\"deepseek-step\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 62,
+            "width": 1310,
+            "height": 72
+          }
+        },
+        "failure_path": {
+          "selector": "#failure-path",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 224,
+            "width": 1310,
+            "height": 532
+          }
+        },
+        "usage_path_cue": {
+          "selector": "#fault-sandbox-decision-next-action[data-usage-path-cue=\"sandbox\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 692.65625,
+            "y": 232,
+            "width": 238,
+            "height": 29.75
+          }
+        },
+        "review_rows": {
+          "selector": "#fault-sandbox-review-row-panel",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 342,
+            "width": 972,
+            "height": 282
+          }
+        },
+        "review_row_density_shell": {
+          "selector": "#fault-sandbox-review-rows[data-blueprint-density=\"compact-workbench\"] [data-blueprint36-row=\"sandbox-review\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 623,
+            "width": 950,
+            "height": 40
+          }
+        },
+        "review_row_contract": {
+          "selector": "#fault-sandbox-review-rows [data-blueprint-review-row]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 623,
+            "width": 950,
+            "height": 40
+          }
+        },
+        "review_row_blueprint36": {
+          "selector": "#fault-sandbox-review-rows [data-blueprint36-row=\"sandbox-review\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 623,
+            "width": 950,
+            "height": 40
+          }
+        },
+        "review_row_density_rows": {
+          "selector": "#fault-sandbox-review-rows [data-blueprint-density=\"compact-workbench\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 623,
+            "width": 950,
+            "height": 40
+          }
+        },
+        "review_row_shared_pattern": {
+          "selector": "#fault-sandbox-review-rows [data-blueprint-row-pattern=\"shared-v1\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 623,
+            "width": 950,
+            "height": 40
+          }
+        },
+        "review_row_shared_tokens": {
+          "selector": "#fault-sandbox-review-rows .blueprint-row-token",
+          "count": 21,
+          "visible": true,
+          "box": {
+            "x": 74,
+            "y": 637.5,
+            "width": 42,
+            "height": 11
+          }
+        },
+        "review_row_decision_chips": {
+          "selector": "#fault-sandbox-review-rows .sandbox-review-row-decision",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 583.328125,
+            "y": 634,
+            "width": 33.609375,
+            "height": 18
+          }
+        },
+        "review_row_trace_report_col": {
+          "selector": "#fault-sandbox-review-rows [data-blueprint36-row=\"sandbox-review\"] [data-blueprint-col=\"trace-report\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 788.78125,
+            "y": 634,
+            "width": 151.203125,
+            "height": 18
+          }
+        },
+        "review_row_link_tokens": {
+          "selector": "#fault-sandbox-review-rows .sandbox-review-row-link-token",
+          "count": 14,
+          "visible": true,
+          "box": {
+            "x": 788.78125,
+            "y": 634,
+            "width": 74.09375,
+            "height": 18
+          }
+        },
+        "review_row_link_sr06": {
+          "selector": "#fault-sandbox-review-rows [data-blueprint-review-row=\"SR-06\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 843,
+            "width": 950,
+            "height": 40
+          }
+        },
+        "diagnosis_inspector": {
+          "selector": "#fault-sandbox-diagnosis-inspector",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1008,
+            "y": 224,
+            "width": 330,
+            "height": 400
+          }
+        },
+        "diagnosis_unified_inspector": {
+          "selector": "#fault-sandbox-diagnosis-inspector[data-unified-inspector=\"right-inspector\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1008,
+            "y": 224,
+            "width": 330,
+            "height": 400
+          }
+        },
+        "active_path_summary": {
+          "selector": "#fault-sandbox-review-package-summary[data-package-state=\"active\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1019,
+            "y": 291,
+            "width": 308,
+            "height": 52
+          }
+        },
+        "status_only_report_rail": {
+          "selector": "#fault-sandbox-main-report-rail[data-blueprint39-default=\"status-only\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1019,
+            "y": 346,
+            "width": 308,
+            "height": 88
+          }
+        },
+        "diagnosis_chain_nodes": {
+          "selector": "#fault-sandbox-diagnosis-chain [data-blueprint36-chain-node=\"failure-path\"]",
+          "count": 3,
+          "visible": true,
+          "box": {
+            "x": 1019,
+            "y": 470,
+            "width": 100,
+            "height": 32
+          }
+        },
+        "diagnosis_chain_shared_pattern": {
+          "selector": "#fault-sandbox-diagnosis-chain [data-blueprint-row-pattern=\"shared-v1\"]",
+          "count": 3,
+          "visible": true,
+          "box": {
+            "x": 1019,
+            "y": 470,
+            "width": 100,
+            "height": 32
+          }
+        },
+        "diagnosis_chain_link_tokens": {
+          "selector": "#fault-sandbox-diagnosis-chain .sandbox-diagnosis-chain-link-token",
+          "count": 6,
+          "visible": true,
+          "box": {
+            "x": 1025,
+            "y": 484,
+            "width": 42,
+            "height": 14
+          }
+        },
+        "diagnosis_evidence_links": {
+          "selector": "#fault-sandbox-diagnosis-evidence-links [data-blueprint36-evidence-link=\"diagnosis\"]",
+          "count": 3,
+          "visible": true,
+          "box": {
+            "x": 1019,
+            "y": 505,
+            "width": 100,
+            "height": 16
+          }
+        },
+        "evidence_trace": {
+          "selector": "#fault-sandbox-evidence-trace",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1019,
+            "y": 524,
+            "width": 308,
+            "height": 89
+          }
+        },
+        "evidence_trace_report_link": {
+          "selector": "#fault-sandbox-evidence-trace-rows [data-evidence-trace-id=\"ET-04\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1024,
+            "y": 555.546875,
+            "width": 298,
+            "height": 52
+          }
+        },
+        "evidence_trace_blueprint36_rows": {
+          "selector": "#fault-sandbox-evidence-trace-rows [data-blueprint36-evidence-row=\"evidence-chain\"]",
+          "count": 4,
+          "visible": true,
+          "box": {
+            "x": 1024,
+            "y": 555.546875,
+            "width": 298,
+            "height": 52
+          }
+        },
+        "evidence_trace_shared_pattern": {
+          "selector": "#fault-sandbox-evidence-trace-rows [data-blueprint-row-pattern=\"shared-v1\"]",
+          "count": 4,
+          "visible": true,
+          "box": {
+            "x": 1024,
+            "y": 555.546875,
+            "width": 298,
+            "height": 52
+          }
+        },
+        "evidence_trace_link_tokens": {
+          "selector": "#fault-sandbox-evidence-trace-rows .sandbox-evidence-trace-link-token",
+          "count": 8,
+          "visible": true,
+          "box": {
+            "x": 1069,
+            "y": 586.046875,
+            "width": 100,
+            "height": 14
+          }
+        },
+        "evidence_trace_report_token": {
+          "selector": "#fault-sandbox-evidence-trace-rows [data-evidence-trace-id=\"ET-04\"] [data-link-kind=\"report\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1173,
+            "y": 586.046875,
+            "width": 100,
+            "height": 14
+          }
+        },
+        "report_strip": {
+          "selector": "#sandbox-report-strip",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 626,
+            "width": 1310,
+            "height": 130
+          }
+        },
+        "report_strip_inspector_role": {
+          "selector": "#sandbox-report-strip[data-inspector-role=\"bottom-report-strip\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 626,
+            "width": 1310,
+            "height": 130
+          }
+        },
+        "replay_report_preview": {
+          "selector": "#fault-sandbox-report-preview",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 692.3125,
+            "y": 632,
+            "width": 504.6875,
+            "height": 92
+          }
+        },
+        "replay_report_rows": {
+          "selector": "#fault-sandbox-report-section-rows [data-blueprint-report-row=\"review-package-section\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 692.3125,
+            "y": 658,
+            "width": 251.34375,
+            "height": 15
+          }
+        },
+        "replay_report_blueprint36_rows": {
+          "selector": "#fault-sandbox-report-section-rows [data-blueprint36-report-row=\"replay-report\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 692.3125,
+            "y": 658,
+            "width": 251.34375,
+            "height": 15
+          }
+        },
+        "replay_report_shared_pattern": {
+          "selector": "#fault-sandbox-report-section-rows [data-blueprint-row-pattern=\"shared-v1\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 692.3125,
+            "y": 658,
+            "width": 251.34375,
+            "height": 15
+          }
+        },
+        "replay_report_decision_chips": {
+          "selector": "#fault-sandbox-report-section-rows .sandbox-report-section-decision",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 804.65625,
+            "y": 658.5,
+            "width": 36,
+            "height": 14
+          }
+        },
+        "replay_report_link_tokens": {
+          "selector": "#fault-sandbox-report-section-rows .sandbox-report-link-token",
+          "count": 14,
+          "visible": true,
+          "box": {
+            "x": 892.65625,
+            "y": 658.5,
+            "width": 21.5,
+            "height": 14
+          }
+        },
+        "replay_report_review_link": {
+          "selector": "#fault-sandbox-report-section-rows [data-report-section-id=\"RP-06\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 945.65625,
+            "y": 692,
+            "width": 251.34375,
+            "height": 15
+          }
+        },
+        "review_package_export_preview": {
+          "selector": "#sandbox-review-package-panel",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1366,
+            "height": 768
+          }
+        },
+        "review_package_unified_panel": {
+          "selector": "#sandbox-review-package-panel[data-unified-aux-panel=\"review-package\"][data-unified-panel-state=\"open\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1366,
+            "height": 768
+          }
+        },
+        "review_package_shared_pattern": {
+          "selector": "#sandbox-review-package-panel [data-blueprint-row-pattern=\"shared-v1\"]",
+          "count": 18,
+          "visible": true,
+          "box": {
+            "x": 178,
+            "y": 180,
+            "width": 358.75,
+            "height": 75
+          }
+        },
+        "review_package_blueprint36_review_rows": {
+          "selector": "#sandbox-review-package-review-rows [data-blueprint36-package-row=\"review-package-review\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 178,
+            "y": 180,
+            "width": 358.75,
+            "height": 75
+          }
+        },
+        "review_package_blueprint36_report_rows": {
+          "selector": "#sandbox-review-package-report-rows [data-blueprint36-package-row=\"review-package-report\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 876.59375,
+            "y": 180,
+            "width": 311.40625,
+            "height": 75
+          }
+        },
+        "review_package_shared_tokens": {
+          "selector": "#sandbox-review-package-panel .blueprint-row-token",
+          "count": 54,
+          "visible": true,
+          "box": {
+            "x": 186,
+            "y": 189.5,
+            "width": 36,
+            "height": 10
+          }
+        },
+        "review_package_link_tokens": {
+          "selector": "#sandbox-review-package-panel .sandbox-review-package-link-token",
+          "count": 36,
+          "visible": true,
+          "box": {
+            "x": 186,
+            "y": 232,
+            "width": 169.375,
+            "height": 17
+          }
+        }
+      },
+      "existing_surfaces": {
+        "review_package_drawer": {
+          "selector": "#fault-sandbox-detail-drawer",
+          "count": 1,
+          "visible": false,
+          "box": null
+        },
+        "evidence_popover": {
+          "selector": "#sandbox-evidence-popover",
+          "count": 1,
+          "visible": false,
+          "box": null
+        }
+      },
+      "clip_surfaces": {
+        "review_package_card": {
+          "selector": ".sandbox-review-package-card",
+          "count": 1,
+          "visible": true,
+          "clipped": false,
+          "scrollHeight": 736,
+          "clientHeight": 722,
+          "scrollWidth": 1058,
+          "clientWidth": 1058,
+          "overflow": "auto",
+          "overflowX": "auto",
+          "overflowY": "auto"
+        }
+      },
+      "clipped_surfaces": [],
+      "logic_top_band_ok": true,
+      "max_logic_top_band_height": null,
+      "missing_visible_surfaces": [],
+      "missing_existing_surfaces": []
+    },
+    {
+      "route": "/requirements-intake",
+      "route_key": "requirements-intake",
+      "viewport": {
+        "name": "desktop-1280x820",
+        "width": 1280,
+        "height": 820
+      },
+      "screenshot": "requirements-intake--desktop-1280x820.png",
+      "ok": true,
+      "geometry": {
+        "viewport": {
+          "name": "desktop-1280x820",
+          "width": 1280,
+          "height": 820
+        },
+        "scroll_height": 820,
+        "scroll_width": 1280,
+        "window_inner_height": 820,
+        "window_inner_width": 1280,
+        "vertical_scroll_ok": true,
+        "horizontal_overflow_count": 0,
+        "horizontal_overflow_nodes": [],
+        "topbar_height": 64,
+        "logic_top_band_height": 86,
+        "panel_strategy": "single-auxiliary",
+        "active_aux_panel": "none"
+      },
+      "blueprint_geometry": {
+        "failures": [],
+        "text_overflow": []
+      },
+      "visible_surfaces": {
+        "compact_top_bar": {
+          "selector": "[data-command-strip=\"deepseek-step\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 70,
+            "width": 1224,
+            "height": 64
+          }
+        },
+        "requirements_blueprint14_shell": {
+          "selector": ".requirements-shell[data-blueprint14-rhythm=\"compact-canvas\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 0,
+            "y": 48,
+            "width": 1280,
+            "height": 772
+          }
+        },
+        "requirements_blueprint14_topbar": {
+          "selector": "[data-blueprint14-compact-topbar=\"step-provider-next\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 70,
+            "width": 1224,
+            "height": 64
+          }
+        },
+        "canvas_first_shell": {
+          "selector": ".requirements-shell[data-workstation-shell=\"canvas-first\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 0,
+            "y": 48,
+            "width": 1280,
+            "height": 772
+          }
+        },
+        "primary_canvas_stage": {
+          "selector": ".clarification-primary[data-workstation-stage=\"primary-canvas\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 369,
+            "y": 385,
+            "width": 872,
+            "height": 412
+          }
+        },
+        "requirements_primary_canvas_rhythm": {
+          "selector": ".clarification-primary[data-blueprint14-canvas-rhythm=\"expanded-first-screen\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 369,
+            "y": 385,
+            "width": 872,
+            "height": 412
+          }
+        },
+        "source_input_inspector": {
+          "selector": ".requirements-input-panel[data-workstation-inspector=\"source-input\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 374,
+            "width": 320,
+            "height": 434
+          }
+        },
+        "requirements_source_inspector_rhythm": {
+          "selector": ".requirements-input-panel[data-blueprint14-inspector=\"source-document-input\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 374,
+            "width": 320,
+            "height": 434
+          }
+        },
+        "requirements_decision_board": {
+          "selector": "#requirements-preflight-panel",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 140,
+            "width": 1224,
+            "height": 136
+          }
+        },
+        "requirements_decision_density": {
+          "selector": "#requirements-preflight-panel[data-blueprint14-density=\"compact-decision-board\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 140,
+            "width": 1224,
+            "height": 136
+          }
+        },
+        "requirements_single_provider_chip": {
+          "selector": ".requirements-provider-live[data-blueprint39-status=\"single-chip\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 709.96875,
+            "y": 90.078125,
+            "width": 112.421875,
+            "height": 24.84375
+          }
+        },
+        "usage_path_cue": {
+          "selector": "#next-step-copy[data-usage-path-cue=\"requirements\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 830.171875,
+            "y": 184,
+            "width": 408.828125,
+            "height": 13.1875
+          }
+        },
+        "choice_checklist": {
+          "selector": "#requirements-confirmation-checklist",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 319,
+            "width": 1202,
+            "height": 44
+          }
+        },
+        "primary_workbench": {
+          "selector": ".clarification-primary",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 369,
+            "y": 385,
+            "width": 872,
+            "height": 412
+          }
+        }
+      },
+      "existing_surfaces": {
+        "workflow": {
+          "selector": "#requirements-workflow-overview",
+          "count": 1,
+          "visible": false,
+          "box": null
+        },
+        "generation_stream": {
+          "selector": "#requirements-generation-stream",
+          "count": 1,
+          "visible": false,
+          "box": null
+        }
+      },
+      "clip_surfaces": {
+        "requirements_preflight_panel": {
+          "selector": "#requirements-preflight-panel",
+          "count": 1,
+          "visible": true,
+          "clipped": false,
+          "scrollHeight": 134,
+          "clientHeight": 134,
+          "scrollWidth": 1222,
+          "clientWidth": 1222,
+          "overflow": "hidden",
+          "overflowX": "hidden",
+          "overflowY": "hidden"
+        }
+      },
+      "clipped_surfaces": [],
+      "logic_top_band_ok": true,
+      "max_logic_top_band_height": null,
+      "missing_visible_surfaces": [],
+      "missing_existing_surfaces": []
+    },
+    {
+      "route": "/logic-builder",
+      "route_key": "logic-builder",
+      "viewport": {
+        "name": "desktop-1280x820",
+        "width": 1280,
+        "height": 820
+      },
+      "screenshot": "logic-builder--desktop-1280x820.png",
+      "ok": true,
+      "geometry": {
+        "viewport": {
+          "name": "desktop-1280x820",
+          "width": 1280,
+          "height": 820
+        },
+        "scroll_height": 820,
+        "scroll_width": 1280,
+        "window_inner_height": 820,
+        "window_inner_width": 1280,
+        "vertical_scroll_ok": true,
+        "horizontal_overflow_count": 0,
+        "horizontal_overflow_nodes": [],
+        "topbar_height": 82,
+        "logic_top_band_height": 102,
+        "panel_strategy": "single-auxiliary",
+        "active_aux_panel": "none"
+      },
+      "blueprint_geometry": {
+        "failures": [],
+        "text_overflow": []
+      },
+      "visible_surfaces": {
+        "compact_top_bar": {
+          "selector": "[data-command-strip=\"deepseek-step\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 68,
+            "width": 1224,
+            "height": 82
+          }
+        },
+        "compact_logic_top_band": {
+          "selector": "#logic-page-system-strip[data-blueprint27-compact-topbar=\"step-progress-workflow\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 68,
+            "width": 1224,
+            "height": 82
+          }
+        },
+        "logic_blueprint27_shell": {
+          "selector": ".logic-shell[data-blueprint27-rhythm=\"compact-canvas\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 0,
+            "y": 48,
+            "width": 1280,
+            "height": 772
+          }
+        },
+        "logic_blueprint27_topband": {
+          "selector": "#logic-page-system-strip[data-blueprint27-rhythm=\"compact-topband\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 68,
+            "width": 1224,
+            "height": 82
+          }
+        },
+        "usage_path_cue": {
+          "selector": "#logic-workflow-detail[data-usage-path-cue=\"logic\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 456,
+            "y": 118.15625,
+            "width": 140,
+            "height": 12.5
+          }
+        },
+        "canvas_first_shell": {
+          "selector": ".logic-shell[data-workstation-shell=\"canvas-first\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 0,
+            "y": 48,
+            "width": 1280,
+            "height": 772
+          }
+        },
+        "primary_canvas_stage": {
+          "selector": ".logic-canvas-wrap[data-workstation-stage=\"primary-canvas\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 154,
+            "width": 1224,
+            "height": 654
+          }
+        },
+        "logic_blueprint29_canvas_rhythm": {
+          "selector": ".logic-canvas-wrap[data-blueprint29-rhythm=\"primary-canvas-stage\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 154,
+            "width": 1224,
+            "height": 654
+          }
+        },
+        "canvas_workstation": {
+          "selector": "#logic-canvas[data-workstation-canvas=\"logic-drawing\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 233,
+            "width": 1202,
+            "height": 507
+          }
+        },
+        "primary_canvas": {
+          "selector": "#logic-canvas",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 233,
+            "width": 1202,
+            "height": 507
+          }
+        },
+        "collapsed_left_rail": {
+          "selector": "#logic-collapsed-tool-rail",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 43,
+            "y": 255,
+            "width": 36,
+            "height": 158
+          }
+        },
+        "collapsed_right_rail": {
+          "selector": "#logic-right-inspector-rail[data-blueprint38-rhythm=\"collapsed-inspector-rail\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1197,
+            "y": 255,
+            "width": 40,
+            "height": 146
+          }
+        },
+        "mode_dock": {
+          "selector": "#logic-mode-dock[data-blueprint27-rhythm=\"five-entry-dock\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 198,
+            "width": 1202,
+            "height": 30
+          }
+        },
+        "command_palette_advanced_entry": {
+          "selector": "#logic-command-palette-open[data-blueprint-advanced-entry=\"command-palette\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1195,
+            "y": 168,
+            "width": 46,
+            "height": 28
+          }
+        },
+        "bottom_run_strip": {
+          "selector": "#logic-bottom-run-strip[data-blueprint38-rhythm=\"bottom-run-strip\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 745,
+            "width": 1202,
+            "height": 52
+          }
+        },
+        "compact_drawing_stream": {
+          "selector": "#logic-drawing-stream-timeline[data-blueprint39-stream=\"compact-complete\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 989,
+            "y": 173,
+            "width": 226,
+            "height": 28
+          }
+        }
+      },
+      "existing_surfaces": {
+        "command_palette": {
+          "selector": "#logic-command-palette",
+          "count": 1,
+          "visible": false,
+          "box": null
+        },
+        "blank_canvas_entry": {
+          "selector": "#logic-template-entry",
+          "count": 1,
+          "visible": false,
+          "box": null
+        },
+        "blank_canvas_template_rhythm": {
+          "selector": "#logic-template-entry[data-blueprint29-rhythm=\"blank-canvas-template-entry\"]",
+          "count": 1,
+          "visible": false,
+          "box": null
+        }
+      },
+      "clip_surfaces": {},
+      "clipped_surfaces": [],
+      "logic_top_band_ok": true,
+      "max_logic_top_band_height": 104,
+      "missing_visible_surfaces": [],
+      "missing_existing_surfaces": []
+    },
+    {
+      "route": "/fault-injection-prepare",
+      "route_key": "fault-injection-prepare",
+      "viewport": {
+        "name": "desktop-1280x820",
+        "width": 1280,
+        "height": 820
+      },
+      "screenshot": "fault-injection-prepare--desktop-1280x820.png",
+      "ok": true,
+      "geometry": {
+        "viewport": {
+          "name": "desktop-1280x820",
+          "width": 1280,
+          "height": 820
+        },
+        "scroll_height": 820,
+        "scroll_width": 1280,
+        "window_inner_height": 820,
+        "window_inner_width": 1280,
+        "vertical_scroll_ok": true,
+        "horizontal_overflow_count": 0,
+        "horizontal_overflow_nodes": [],
+        "topbar_height": 86,
+        "logic_top_band_height": 104,
+        "panel_strategy": "single-auxiliary",
+        "active_aux_panel": "none"
+      },
+      "blueprint_geometry": {
+        "failures": [],
+        "text_overflow": []
+      },
+      "visible_surfaces": {
+        "compact_top_bar": {
+          "selector": "[data-command-strip=\"deepseek-step\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 66,
+            "width": 1224,
+            "height": 86
+          }
+        },
+        "fault_matrix_shell": {
+          "selector": "#fault-matrix",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 304,
+            "width": 1224,
+            "height": 500
+          }
+        },
+        "fault_decision_board": {
+          "selector": "#fault-decision-board",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 304,
+            "width": 892,
+            "height": 91.59375
+          }
+        },
+        "usage_path_cue": {
+          "selector": "#fault-decision-next-action[data-usage-path-cue=\"fault\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 638,
+            "y": 350,
+            "width": 272,
+            "height": 31.1875
+          }
+        },
+        "fault_candidate_matrix": {
+          "selector": "#fault-candidate-matrix-panel",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 405.59375,
+            "width": 892,
+            "height": 214.96875
+          }
+        },
+        "fault_matrix_density_shell": {
+          "selector": ".fault-candidate-matrix[data-blueprint-density=\"compact-workbench\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 40,
+            "y": 466.59375,
+            "width": 868,
+            "height": 141.96875
+          }
+        },
+        "fault_matrix_rows": {
+          "selector": "#fault-candidate-matrix-body [data-blueprint-fault-row=\"matrix\"]",
+          "count": 2,
+          "visible": true,
+          "box": {
+            "x": 40,
+            "y": 496.6875,
+            "width": 868,
+            "height": 56.1875
+          }
+        },
+        "fault_matrix_blueprint33_rows": {
+          "selector": "#fault-candidate-matrix-body [data-blueprint33-row=\"fault-matrix\"]",
+          "count": 2,
+          "visible": true,
+          "box": {
+            "x": 40,
+            "y": 496.6875,
+            "width": 868,
+            "height": 56.1875
+          }
+        },
+        "fault_matrix_density_rows": {
+          "selector": "#fault-candidate-matrix-body [data-blueprint-density=\"compact-workbench\"]",
+          "count": 2,
+          "visible": true,
+          "box": {
+            "x": 40,
+            "y": 496.6875,
+            "width": 868,
+            "height": 56.1875
+          }
+        },
+        "fault_matrix_shared_rows": {
+          "selector": "#fault-candidate-matrix-body [data-blueprint-row-pattern=\"shared-v1\"]",
+          "count": 2,
+          "visible": true,
+          "box": {
+            "x": 40,
+            "y": 496.6875,
+            "width": 868,
+            "height": 56.1875
+          }
+        },
+        "fault_matrix_path_summary": {
+          "selector": "#fault-candidate-matrix-body .fault-matrix-path-summary",
+          "count": 2,
+          "visible": true,
+          "box": {
+            "x": 654.28125,
+            "y": 516.03125,
+            "width": 66.015625,
+            "height": 17.5
+          }
+        },
+        "fault_matrix_path_tokens": {
+          "selector": "#fault-candidate-matrix-body .fault-matrix-path-token",
+          "count": 6,
+          "visible": true,
+          "box": {
+            "x": 658.28125,
+            "y": 530.53125,
+            "width": 10,
+            "height": 16
+          }
+        },
+        "fault_matrix_shared_tokens": {
+          "selector": "#fault-candidate-matrix-body .blueprint-row-token",
+          "count": 12,
+          "visible": true,
+          "box": {
+            "x": 80,
+            "y": 515.984375,
+            "width": 51,
+            "height": 17.59375
+          }
+        },
+        "fault_matrix_shared_chips": {
+          "selector": "#fault-candidate-matrix-body .blueprint-row-chip",
+          "count": 6,
+          "visible": true,
+          "box": {
+            "x": 273.734375,
+            "y": 514.78125,
+            "width": 68.015625,
+            "height": 20
+          }
+        },
+        "fault_matrix_risk_chips": {
+          "selector": "#fault-candidate-matrix-body .fault-matrix-risk",
+          "count": 2,
+          "visible": true,
+          "box": {
+            "x": 810,
+            "y": 515.984375,
+            "width": 38,
+            "height": 17.59375
+          }
+        },
+        "fault_matrix_state_chips": {
+          "selector": "#fault-candidate-matrix-body .fault-matrix-status",
+          "count": 2,
+          "visible": true,
+          "box": {
+            "x": 858,
+            "y": 515.984375,
+            "width": 42,
+            "height": 17.59375
+          }
+        },
+        "fault_unified_inspector": {
+          "selector": ".fault-sidebar[data-unified-inspector=\"right-inspector\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 932,
+            "y": 304,
+            "width": 320,
+            "height": 432
+          }
+        },
+        "bottom_action_strip": {
+          "selector": "#fault-bottom-action-strip",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 754,
+            "width": 1224,
+            "height": 54
+          }
+        }
+      },
+      "existing_surfaces": {
+        "candidate_details": {
+          "selector": "#fault-candidate-details",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 630.5625,
+            "width": 892,
+            "height": 79
+          }
+        },
+        "injection_point_details": {
+          "selector": "#fault-injection-point-details",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 719.5625,
+            "width": 892,
+            "height": 79
+          }
+        }
+      },
+      "clip_surfaces": {
+        "fault_candidate_details": {
+          "selector": "#fault-candidate-details",
+          "count": 1,
+          "visible": true,
+          "clipped": false,
+          "scrollHeight": 77,
+          "clientHeight": 77,
+          "scrollWidth": 890,
+          "clientWidth": 890,
+          "overflow": "visible",
+          "overflowX": "visible",
+          "overflowY": "visible"
+        },
+        "fault_injection_point_details": {
+          "selector": "#fault-injection-point-details",
+          "count": 1,
+          "visible": true,
+          "clipped": false,
+          "scrollHeight": 77,
+          "clientHeight": 77,
+          "scrollWidth": 890,
+          "clientWidth": 890,
+          "overflow": "visible",
+          "overflowX": "visible",
+          "overflowY": "visible"
+        }
+      },
+      "clipped_surfaces": [],
+      "logic_top_band_ok": true,
+      "max_logic_top_band_height": null,
+      "missing_visible_surfaces": [],
+      "missing_existing_surfaces": []
+    },
+    {
+      "route": "/fault-injection-sandbox",
+      "route_key": "fault-injection-sandbox-default",
+      "viewport": {
+        "name": "desktop-1280x820",
+        "width": 1280,
+        "height": 820
+      },
+      "screenshot": "fault-injection-sandbox-default--desktop-1280x820.png",
+      "ok": true,
+      "geometry": {
+        "viewport": {
+          "name": "desktop-1280x820",
+          "width": 1280,
+          "height": 820
+        },
+        "scroll_height": 820,
+        "scroll_width": 1280,
+        "window_inner_height": 820,
+        "window_inner_width": 1280,
+        "vertical_scroll_ok": true,
+        "horizontal_overflow_count": 0,
+        "horizontal_overflow_nodes": [],
+        "topbar_height": 72,
+        "logic_top_band_height": 86,
+        "panel_strategy": "single-auxiliary",
+        "active_aux_panel": "none"
+      },
+      "blueprint_geometry": {
+        "failures": [],
+        "text_overflow": []
+      },
+      "visible_surfaces": {
+        "compact_top_bar": {
+          "selector": "[data-command-strip=\"deepseek-step\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 62,
+            "width": 1224,
+            "height": 72
+          }
+        },
+        "failure_path": {
+          "selector": "#failure-path",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 224,
+            "width": 1224,
+            "height": 584
+          }
+        },
+        "usage_path_cue": {
+          "selector": "#fault-sandbox-decision-next-action[data-usage-path-cue=\"sandbox\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 635.328125,
+            "y": 232,
+            "width": 209.3125,
+            "height": 29.75
+          }
+        },
+        "review_rows": {
+          "selector": "#fault-sandbox-review-row-panel",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 342,
+            "width": 886,
+            "height": 334
+          }
+        },
+        "review_row_density_shell": {
+          "selector": "#fault-sandbox-review-rows[data-blueprint-density=\"compact-workbench\"] [data-blueprint36-row=\"sandbox-review\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 675,
+            "width": 864,
+            "height": 40
+          }
+        },
+        "review_row_link_sr06": {
+          "selector": "#fault-sandbox-review-rows [data-blueprint-review-row=\"SR-06\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 895,
+            "width": 864,
+            "height": 40
+          }
+        },
+        "diagnosis_inspector": {
+          "selector": "#fault-sandbox-diagnosis-inspector",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 922,
+            "y": 224,
+            "width": 330,
+            "height": 452
+          }
+        },
+        "diagnosis_unified_inspector": {
+          "selector": "#fault-sandbox-diagnosis-inspector[data-unified-inspector=\"right-inspector\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 922,
+            "y": 224,
+            "width": 330,
+            "height": 452
+          }
+        },
+        "active_path_summary": {
+          "selector": "#fault-sandbox-review-package-summary[data-package-state=\"active\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 933,
+            "y": 291,
+            "width": 308,
+            "height": 52
+          }
+        },
+        "status_only_report_rail": {
+          "selector": "#fault-sandbox-main-report-rail[data-blueprint39-default=\"status-only\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 933,
+            "y": 346,
+            "width": 308,
+            "height": 88
+          }
+        },
+        "active_path_text": {
+          "selector": "#fault-sandbox-affected-path",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 939,
+            "y": 453.28125,
+            "width": 88,
+            "height": 10.71875
+          }
+        },
+        "diagnosis_chain_nodes": {
+          "selector": "#fault-sandbox-diagnosis-chain [data-blueprint36-chain-node=\"failure-path\"]",
+          "count": 3,
+          "visible": true,
+          "box": {
+            "x": 933,
+            "y": 470,
+            "width": 100,
+            "height": 32
+          }
+        },
+        "evidence_trace": {
+          "selector": "#fault-sandbox-evidence-trace",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 933,
+            "y": 524,
+            "width": 308,
+            "height": 141
+          }
+        },
+        "report_strip": {
+          "selector": "#sandbox-report-strip",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 678,
+            "width": 1224,
+            "height": 130
+          }
+        },
+        "report_strip_inspector_role": {
+          "selector": "#sandbox-report-strip[data-inspector-role=\"bottom-report-strip\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 678,
+            "width": 1224,
+            "height": 130
+          }
+        },
+        "replay_report_preview": {
+          "selector": "#fault-sandbox-report-preview",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 643.984375,
+            "y": 684,
+            "width": 467.015625,
+            "height": 92
+          }
+        }
+      },
+      "existing_surfaces": {
+        "review_package_drawer": {
+          "selector": "#fault-sandbox-detail-drawer",
+          "count": 1,
+          "visible": false,
+          "box": null
+        },
+        "evidence_popover": {
+          "selector": "#sandbox-evidence-popover",
+          "count": 1,
+          "visible": false,
+          "box": null
+        }
+      },
+      "clip_surfaces": {},
+      "clipped_surfaces": [],
+      "logic_top_band_ok": true,
+      "max_logic_top_band_height": null,
+      "missing_visible_surfaces": [],
+      "missing_existing_surfaces": []
+    },
+    {
+      "route": "/fault-injection-sandbox",
+      "route_key": "fault-injection-sandbox",
+      "viewport": {
+        "name": "desktop-1280x820",
+        "width": 1280,
+        "height": 820
+      },
+      "screenshot": "fault-injection-sandbox--desktop-1280x820.png",
+      "ok": true,
+      "geometry": {
+        "viewport": {
+          "name": "desktop-1280x820",
+          "width": 1280,
+          "height": 820
+        },
+        "scroll_height": 820,
+        "scroll_width": 1280,
+        "window_inner_height": 820,
+        "window_inner_width": 1280,
+        "vertical_scroll_ok": true,
+        "horizontal_overflow_count": 0,
+        "horizontal_overflow_nodes": [],
+        "topbar_height": 72,
+        "logic_top_band_height": 86,
+        "panel_strategy": "single-auxiliary",
+        "active_aux_panel": "review-package"
+      },
+      "blueprint_geometry": {
+        "failures": [],
+        "text_overflow": []
+      },
+      "visible_surfaces": {
+        "compact_top_bar": {
+          "selector": "[data-command-strip=\"deepseek-step\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 62,
+            "width": 1224,
+            "height": 72
+          }
+        },
+        "failure_path": {
+          "selector": "#failure-path",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 224,
+            "width": 1224,
+            "height": 584
+          }
+        },
+        "usage_path_cue": {
+          "selector": "#fault-sandbox-decision-next-action[data-usage-path-cue=\"sandbox\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 635.328125,
+            "y": 232,
+            "width": 209.3125,
+            "height": 29.75
+          }
+        },
+        "review_rows": {
+          "selector": "#fault-sandbox-review-row-panel",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 342,
+            "width": 886,
+            "height": 334
+          }
+        },
+        "review_row_density_shell": {
+          "selector": "#fault-sandbox-review-rows[data-blueprint-density=\"compact-workbench\"] [data-blueprint36-row=\"sandbox-review\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 675,
+            "width": 864,
+            "height": 40
+          }
+        },
+        "review_row_contract": {
+          "selector": "#fault-sandbox-review-rows [data-blueprint-review-row]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 675,
+            "width": 864,
+            "height": 40
+          }
+        },
+        "review_row_blueprint36": {
+          "selector": "#fault-sandbox-review-rows [data-blueprint36-row=\"sandbox-review\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 675,
+            "width": 864,
+            "height": 40
+          }
+        },
+        "review_row_density_rows": {
+          "selector": "#fault-sandbox-review-rows [data-blueprint-density=\"compact-workbench\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 675,
+            "width": 864,
+            "height": 40
+          }
+        },
+        "review_row_shared_pattern": {
+          "selector": "#fault-sandbox-review-rows [data-blueprint-row-pattern=\"shared-v1\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 675,
+            "width": 864,
+            "height": 40
+          }
+        },
+        "review_row_shared_tokens": {
+          "selector": "#fault-sandbox-review-rows .blueprint-row-token",
+          "count": 21,
+          "visible": true,
+          "box": {
+            "x": 74,
+            "y": 689.5,
+            "width": 42,
+            "height": 11
+          }
+        },
+        "review_row_decision_chips": {
+          "selector": "#fault-sandbox-review-rows .sandbox-review-row-decision",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 538.09375,
+            "y": 686,
+            "width": 33.609375,
+            "height": 18
+          }
+        },
+        "review_row_trace_report_col": {
+          "selector": "#fault-sandbox-review-rows [data-blueprint36-row=\"sandbox-review\"] [data-blueprint-col=\"trace-report\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 720.3125,
+            "y": 686,
+            "width": 133.671875,
+            "height": 18
+          }
+        },
+        "review_row_link_tokens": {
+          "selector": "#fault-sandbox-review-rows .sandbox-review-row-link-token",
+          "count": 14,
+          "visible": true,
+          "box": {
+            "x": 720.3125,
+            "y": 686,
+            "width": 65.328125,
+            "height": 18
+          }
+        },
+        "review_row_link_sr06": {
+          "selector": "#fault-sandbox-review-rows [data-blueprint-review-row=\"SR-06\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 39,
+            "y": 895,
+            "width": 864,
+            "height": 40
+          }
+        },
+        "diagnosis_inspector": {
+          "selector": "#fault-sandbox-diagnosis-inspector",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 922,
+            "y": 224,
+            "width": 330,
+            "height": 452
+          }
+        },
+        "diagnosis_unified_inspector": {
+          "selector": "#fault-sandbox-diagnosis-inspector[data-unified-inspector=\"right-inspector\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 922,
+            "y": 224,
+            "width": 330,
+            "height": 452
+          }
+        },
+        "active_path_summary": {
+          "selector": "#fault-sandbox-review-package-summary[data-package-state=\"active\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 933,
+            "y": 291,
+            "width": 308,
+            "height": 52
+          }
+        },
+        "status_only_report_rail": {
+          "selector": "#fault-sandbox-main-report-rail[data-blueprint39-default=\"status-only\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 933,
+            "y": 346,
+            "width": 308,
+            "height": 88
+          }
+        },
+        "diagnosis_chain_nodes": {
+          "selector": "#fault-sandbox-diagnosis-chain [data-blueprint36-chain-node=\"failure-path\"]",
+          "count": 3,
+          "visible": true,
+          "box": {
+            "x": 933,
+            "y": 470,
+            "width": 100,
+            "height": 32
+          }
+        },
+        "diagnosis_chain_shared_pattern": {
+          "selector": "#fault-sandbox-diagnosis-chain [data-blueprint-row-pattern=\"shared-v1\"]",
+          "count": 3,
+          "visible": true,
+          "box": {
+            "x": 933,
+            "y": 470,
+            "width": 100,
+            "height": 32
+          }
+        },
+        "diagnosis_chain_link_tokens": {
+          "selector": "#fault-sandbox-diagnosis-chain .sandbox-diagnosis-chain-link-token",
+          "count": 6,
+          "visible": true,
+          "box": {
+            "x": 939,
+            "y": 484,
+            "width": 42,
+            "height": 14
+          }
+        },
+        "diagnosis_evidence_links": {
+          "selector": "#fault-sandbox-diagnosis-evidence-links [data-blueprint36-evidence-link=\"diagnosis\"]",
+          "count": 3,
+          "visible": true,
+          "box": {
+            "x": 933,
+            "y": 505,
+            "width": 100,
+            "height": 16
+          }
+        },
+        "evidence_trace": {
+          "selector": "#fault-sandbox-evidence-trace",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 933,
+            "y": 524,
+            "width": 308,
+            "height": 141
+          }
+        },
+        "evidence_trace_report_link": {
+          "selector": "#fault-sandbox-evidence-trace-rows [data-evidence-trace-id=\"ET-04\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 938,
+            "y": 581.546875,
+            "width": 298,
+            "height": 52
+          }
+        },
+        "evidence_trace_blueprint36_rows": {
+          "selector": "#fault-sandbox-evidence-trace-rows [data-blueprint36-evidence-row=\"evidence-chain\"]",
+          "count": 4,
+          "visible": true,
+          "box": {
+            "x": 938,
+            "y": 581.546875,
+            "width": 298,
+            "height": 52
+          }
+        },
+        "evidence_trace_shared_pattern": {
+          "selector": "#fault-sandbox-evidence-trace-rows [data-blueprint-row-pattern=\"shared-v1\"]",
+          "count": 4,
+          "visible": true,
+          "box": {
+            "x": 938,
+            "y": 581.546875,
+            "width": 298,
+            "height": 52
+          }
+        },
+        "evidence_trace_link_tokens": {
+          "selector": "#fault-sandbox-evidence-trace-rows .sandbox-evidence-trace-link-token",
+          "count": 8,
+          "visible": true,
+          "box": {
+            "x": 983,
+            "y": 612.046875,
+            "width": 100,
+            "height": 14
+          }
+        },
+        "evidence_trace_report_token": {
+          "selector": "#fault-sandbox-evidence-trace-rows [data-evidence-trace-id=\"ET-04\"] [data-link-kind=\"report\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 1087,
+            "y": 612.046875,
+            "width": 100,
+            "height": 14
+          }
+        },
+        "report_strip": {
+          "selector": "#sandbox-report-strip",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 678,
+            "width": 1224,
+            "height": 130
+          }
+        },
+        "report_strip_inspector_role": {
+          "selector": "#sandbox-report-strip[data-inspector-role=\"bottom-report-strip\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 28,
+            "y": 678,
+            "width": 1224,
+            "height": 130
+          }
+        },
+        "replay_report_preview": {
+          "selector": "#fault-sandbox-report-preview",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 643.984375,
+            "y": 684,
+            "width": 467.015625,
+            "height": 92
+          }
+        },
+        "replay_report_rows": {
+          "selector": "#fault-sandbox-report-section-rows [data-blueprint-report-row=\"review-package-section\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 643.984375,
+            "y": 710,
+            "width": 232.5,
+            "height": 15
+          }
+        },
+        "replay_report_blueprint36_rows": {
+          "selector": "#fault-sandbox-report-section-rows [data-blueprint36-report-row=\"replay-report\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 643.984375,
+            "y": 710,
+            "width": 232.5,
+            "height": 15
+          }
+        },
+        "replay_report_shared_pattern": {
+          "selector": "#fault-sandbox-report-section-rows [data-blueprint-row-pattern=\"shared-v1\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 643.984375,
+            "y": 710,
+            "width": 232.5,
+            "height": 15
+          }
+        },
+        "replay_report_decision_chips": {
+          "selector": "#fault-sandbox-report-section-rows .sandbox-report-section-decision",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 737.484375,
+            "y": 710.5,
+            "width": 36,
+            "height": 14
+          }
+        },
+        "replay_report_link_tokens": {
+          "selector": "#fault-sandbox-report-section-rows .sandbox-report-link-token",
+          "count": 14,
+          "visible": true,
+          "box": {
+            "x": 825.484375,
+            "y": 710.5,
+            "width": 21.5,
+            "height": 14
+          }
+        },
+        "replay_report_review_link": {
+          "selector": "#fault-sandbox-report-section-rows [data-report-section-id=\"RP-06\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 878.484375,
+            "y": 744,
+            "width": 232.515625,
+            "height": 15
+          }
+        },
+        "review_package_export_preview": {
+          "selector": "#sandbox-review-package-panel",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1280,
+            "height": 820
+          }
+        },
+        "review_package_unified_panel": {
+          "selector": "#sandbox-review-package-panel[data-unified-aux-panel=\"review-package\"][data-unified-panel-state=\"open\"]",
+          "count": 1,
+          "visible": true,
+          "box": {
+            "x": 0,
+            "y": 0,
+            "width": 1280,
+            "height": 820
+          }
+        },
+        "review_package_shared_pattern": {
+          "selector": "#sandbox-review-package-panel [data-blueprint-row-pattern=\"shared-v1\"]",
+          "count": 18,
+          "visible": true,
+          "box": {
+            "x": 135,
+            "y": 199,
+            "width": 358.75,
+            "height": 75
+          }
+        },
+        "review_package_blueprint36_review_rows": {
+          "selector": "#sandbox-review-package-review-rows [data-blueprint36-package-row=\"review-package-review\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 135,
+            "y": 199,
+            "width": 358.75,
+            "height": 75
+          }
+        },
+        "review_package_blueprint36_report_rows": {
+          "selector": "#sandbox-review-package-report-rows [data-blueprint36-package-row=\"review-package-report\"]",
+          "count": 7,
+          "visible": true,
+          "box": {
+            "x": 833.59375,
+            "y": 199,
+            "width": 311.40625,
+            "height": 75
+          }
+        },
+        "review_package_shared_tokens": {
+          "selector": "#sandbox-review-package-panel .blueprint-row-token",
+          "count": 54,
+          "visible": true,
+          "box": {
+            "x": 143,
+            "y": 208.5,
+            "width": 36,
+            "height": 10
+          }
+        },
+        "review_package_link_tokens": {
+          "selector": "#sandbox-review-package-panel .sandbox-review-package-link-token",
+          "count": 36,
+          "visible": true,
+          "box": {
+            "x": 143,
+            "y": 251,
+            "width": 169.375,
+            "height": 17
+          }
+        }
+      },
+      "existing_surfaces": {
+        "review_package_drawer": {
+          "selector": "#fault-sandbox-detail-drawer",
+          "count": 1,
+          "visible": false,
+          "box": null
+        },
+        "evidence_popover": {
+          "selector": "#sandbox-evidence-popover",
+          "count": 1,
+          "visible": false,
+          "box": null
+        }
+      },
+      "clip_surfaces": {
+        "review_package_card": {
+          "selector": ".sandbox-review-package-card",
+          "count": 1,
+          "visible": true,
+          "clipped": false,
+          "scrollHeight": 736,
+          "clientHeight": 736,
+          "scrollWidth": 1058,
+          "clientWidth": 1058,
+          "overflow": "auto",
+          "overflowX": "auto",
+          "overflowY": "auto"
+        }
+      },
+      "clipped_surfaces": [],
+      "logic_top_band_ok": true,
+      "max_logic_top_band_height": null,
+      "missing_visible_surfaces": [],
+      "missing_existing_surfaces": []
+    }
+  ]
+}

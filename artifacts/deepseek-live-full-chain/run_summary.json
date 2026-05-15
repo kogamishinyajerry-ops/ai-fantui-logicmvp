@@ -1,0 +1,116 @@
+{
+  "ok": true,
+  "artifact_dir": "artifacts/deepseek-live-full-chain",
+  "document_name": "20260409-thrust-reverser-control-logic.docx",
+  "document_text_chars": 1654,
+  "document_line_count": 91,
+  "local_preparse": {
+    "available": true,
+    "node_count": 13,
+    "edge_count": 12,
+    "groups": [
+      "logic1",
+      "logic2",
+      "logic3",
+      "logic4"
+    ],
+    "fault_scope": "source_deferred",
+    "detected": {
+      "logic_ids": [
+        "logic1",
+        "logic2",
+        "logic3",
+        "logic4"
+      ],
+      "signal_ids": [
+        "sw1",
+        "tra",
+        "tls",
+        "pls",
+        "vdt90"
+      ],
+      "anchor_count": 91
+    }
+  },
+  "steps": [
+    {
+      "name": "requirements_intake",
+      "ok": true,
+      "elapsed_sec": 73.24,
+      "status": "ready_for_logic_builder",
+      "ready_for_logic_builder": true,
+      "llm": {
+        "provider": "deepseek",
+        "model": "deepseek-v4-pro",
+        "api_base": "https://api.deepseek.com",
+        "key_source": "env:DEEPSEEK_API_KEY",
+        "response_source": "live_llm"
+      },
+      "counts": {
+        "concept_nodes": 13,
+        "concept_edges": 12,
+        "open_questions": 0,
+        "nodes": 0,
+        "edges": 0,
+        "parameter_panels": 0
+      },
+      "deterministic_preparse": {
+        "available": true,
+        "applied": true,
+        "reason": "model_output_empty",
+        "node_count": 13,
+        "edge_count": 12
+      },
+      "fault_scope": "source_deferred"
+    },
+    {
+      "name": "logic_drawing",
+      "ok": true,
+      "elapsed_sec": 96.89,
+      "status": "draft_ready",
+      "llm": {
+        "provider": "deepseek",
+        "model": "deepseek-v4-pro",
+        "api_base": "https://api.deepseek.com",
+        "key_source": "env:DEEPSEEK_API_KEY",
+        "response_source": "live_llm"
+      },
+      "counts": {
+        "concept_nodes": 0,
+        "concept_edges": 0,
+        "open_questions": 0,
+        "nodes": 13,
+        "edges": 12,
+        "parameter_panels": 3
+      },
+      "source_anchor_nodes": 10,
+      "source_anchor_edges": 12
+    },
+    {
+      "name": "fault_preparation_default",
+      "ok": true,
+      "kind": "ai-fantui-fault-injection-source-deferred-check",
+      "status": "skipped_by_source_scope",
+      "reason_zh": "源文档声明故障注入本轮暂不考虑。",
+      "next_action_zh": "UI 应默认显示源文档暂缓，仅在工程师显式点击后生成 dry-run 候选。"
+    }
+  ],
+  "final_assertions": {
+    "real_docx_used": true,
+    "live_deepseek_used": true,
+    "requirements_ready": true,
+    "no_zero_question_zero_graph_dead_end": true,
+    "fault_deferred_by_source": true,
+    "drawing_generated": true
+  },
+  "source_artifact_dir": "artifacts/deepseek-live-real-docx-20260513-122103",
+  "generated_at": "2026-05-13T10:48:15.048476Z",
+  "default_replay_refresh": {
+    "from_real_docx_artifact": "deepseek-live-real-docx-20260513-122103",
+    "circuit_nodes": 20,
+    "circuit_wires": 23,
+    "source_anchor_nodes": 15,
+    "model_assumption_nodes": 0,
+    "fault_scope": "source_deferred"
+  }
+}

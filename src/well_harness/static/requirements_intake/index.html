@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>需求理解工作台 · FANTUI LogicMVP</title>
+<link rel="stylesheet" href="/unified-nav.css">
+<link rel="stylesheet" href="/requirements_intake/requirements_intake.css?v=workflow5">
+<script src="/requirements_intake/requirements_intake.js?v=workflow2" defer></script>
+</head>
+<body class="unified-nav-enabled" data-nav-current="requirements-intake" data-primary-flow="deepseek-v4-pro-ui-workbench" data-canvas-status="degraded-backup">
+<header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
+  <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div id="deepseek-nav-mainline" class="unified-nav-group unified-nav-mainline" aria-label="DeepSeek 四步主线" data-ux-main-flow="four-step">
+      <span class="unified-nav-group-label">主流程</span>
+      <a href="/requirements-intake" class="unified-nav-link is-active" data-nav-key="requirements-intake">1 需求解析</a>
+      <a href="/logic-builder" class="unified-nav-link" data-nav-key="logic-builder">2 逻辑复刻</a>
+      <a href="/fault-injection-prepare" class="unified-nav-link" data-nav-key="fault-injection-prepare">3 故障准备</a>
+      <a href="/fault-injection-sandbox" class="unified-nav-link" data-nav-key="fault-injection-sandbox">4 沙盒审查</a>
+    </div>
+    <details id="deepseek-nav-advanced-modules" class="unified-nav-advanced">
+      <summary>更多模块</summary>
+      <div class="unified-nav-advanced-links">
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">旧工作台</span>
+          <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">反推逻辑</a>
+          <a href="/c919_etras_workstation.html" class="unified-nav-link" data-nav-key="etras">C919 E-TRAS</a>
+        </div>
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">电路图</span>
+          <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
+          <a href="/c919_etras_panel/circuit.html" class="unified-nav-link" data-nav-key="etras-circuit">E-TRAS 电路</a>
+        </div>
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">仿真</span>
+          <a href="/fan_console.html" class="unified-nav-link" data-nav-key="fan-console">反推操作台</a>
+          <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
+        </div>
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">文档</span>
+          <a href="/fantui_requirements.html" class="unified-nav-link" data-nav-key="fantui-req">FANTUI 需求</a>
+          <a href="/c919_requirements.html" class="unified-nav-link" data-nav-key="c919-req">C919 需求</a>
+        </div>
+      </div>
+    </details>
+  </div>
+</header>
+
+<main class="requirements-shell requirements-cockpit-shell" data-ui-skin="demo-cockpit" data-workstation-shell="canvas-first" data-workstation-state="primary" data-blueprint14-rhythm="compact-canvas" data-panel-default="collapsed" data-panel-strategy="single-auxiliary" data-active-aux-panel="none" data-unified-inspector-state="none">
+  <div class="requirements-cockpit-canopy" data-cockpit-role="canopy-frame" aria-hidden="true">
+    <span class="requirements-cockpit-canopy-window"></span>
+    <span class="requirements-cockpit-canopy-window"></span>
+    <span class="requirements-cockpit-canopy-window"></span>
+  </div>
+
+  <section class="requirements-topbar requirements-cockpit-header deepseek-command-strip" aria-labelledby="requirements-title" data-command-strip="deepseek-step" data-command-step="1" data-cockpit-role="status-banner" data-blueprint14-compact-topbar="step-provider-next">
+    <div>
+      <p class="requirements-kicker deepseek-step-kicker">STEP 1/4</p>
+      <h1 id="requirements-title">需求理解</h1>
+    </div>
+    <div class="requirements-provider-panel" aria-label="模型接入状态">
+      <div class="requirements-provider-box">
+        <label for="requirements-provider">模型</label>
+        <select id="requirements-provider">
+          <option value="deepseek" selected>DeepSeek V4 Pro</option>
+          <option value="minimax">MiniMax-M2.7-highspeed</option>
+        </select>
+      </div>
+      <div class="requirements-provider-live" data-blueprint39-status="single-chip">
+        <span id="requirements-provider-status" class="provider-status" data-state="checking">检查 DeepSeek 接入</span>
+        <span id="requirements-provider-key-source" class="provider-key-source">key 未检查</span>
+        <label class="requirements-live-only-row">
+          <input id="requirements-live-only" type="checkbox" checked>
+          <span>仅 DeepSeek</span>
+        </label>
+      </div>
+      <div class="requirements-command-actions">
+        <button id="requirements-analyze" type="submit" form="requirements-form" class="secondary" data-ux-action-tier="secondary" aria-label="分析需求">检查：分析需求</button>
+        <button id="logic-builder-next" type="button" class="primary-next-action" data-primary-next-action="true" data-ux-action-tier="primary" aria-label="下一步：进入逻辑链路绘制" disabled>下一步：进入逻辑链路绘制</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="requirements-preflight-panel" class="requirements-decision-board requirements-cockpit-instrument-rail" data-decision-board="requirements" data-cockpit-role="instrument-rail" data-blueprint14-density="compact-decision-board" aria-label="首次使用预检：路径选择与当前结论">
+    <article class="requirements-decision-card" data-decision-card="path">
+      <p class="requirements-kicker">PATH</p>
+      <h2>路径</h2>
+      <div id="requirements-preflight-live-card" class="requirements-path-option" data-state="checking">
+        <span>DeepSeek</span>
+        <p id="requirements-preflight-live-state">检查中</p>
+      </div>
+      <div class="requirements-path-actions">
+        <button id="requirements-replay-import" type="button" class="secondary" data-ux-action-tier="secondary" aria-label="使用真实回放演示">回放</button>
+        <button id="requirements-offline-action" type="button" class="secondary" data-ux-action-tier="secondary" aria-label="离线本地预解析">本地</button>
+      </div>
+      <div class="requirements-path-notes">
+        <span id="requirements-preflight-replay-state" class="requirements-path-note">回放可用</span>
+        <span id="requirements-preflight-offline-state" class="requirements-path-note">本地候选</span>
+      </div>
+    </article>
+
+    <article class="requirements-decision-card" data-decision-card="verdict">
+      <p class="requirements-kicker">VERDICT</p>
+      <h2>当前结论</h2>
+      <div class="requirements-compact-verdict">
+        <h3 id="result-state">尚未生成</h3>
+        <div class="result-flags" id="result-flags">
+          <span>未改控制逻辑</span>
+          <span>概念输出</span>
+        </div>
+      </div>
+      <p id="requirements-summary" class="requirements-compact-summary muted">等待模型返回需求结果。</p>
+    </article>
+
+    <article class="requirements-decision-card" data-decision-card="next">
+      <p class="requirements-kicker">NEXT</p>
+      <h2>下一步</h2>
+      <p id="next-step-copy" class="requirements-compact-summary muted" data-usage-path-cue="requirements">先上传需求并点击分析；本步产出需求候选与澄清清单，下一页生成逻辑画布。</p>
+      <div class="requirements-compact-burden">
+        <span id="requirements-burden-action">等待分析</span>
+        <ul id="requirements-burden-outputs" class="burden-output-list">
+          <li>本页会把关键输出限制在 3 项以内。</li>
+        </ul>
+      </div>
+    </article>
+  </section>
+
+  <section class="requirements-layout" data-desktop-workbench="input-clarification" data-workstation-layout="primary-canvas-plus-inspector" data-blueprint14-layout="source-inspector-primary-canvas">
+  <section id="requirements-choice-canvas" class="requirements-choice-canvas" data-blueprint-stage="requirements-choice-checklist" data-blueprint14-checklist="compact-four-anchor" data-workstation-surface="decision-overlay" aria-label="需求确认清单">
+    <div class="requirements-choice-head">
+      <div>
+        <p class="requirements-kicker">CONFIRM</p>
+        <h2>需求确认清单</h2>
+      </div>
+      <button id="requirements-manual-toggle" type="button" class="requirements-chip-button" data-ux-action-tier="secondary" aria-controls="requirements-manual-bubble" aria-expanded="false">手动补充</button>
+    </div>
+    <div id="requirements-confirmation-checklist" class="requirements-confirmation-checklist">
+      <button type="button" class="requirements-choice-row" data-requirement-choice-row="l1" data-source="正文条件：RA、TRA、SW 与 EEC 共同进入 L1 判断。" data-params="TRA / RA / SW1 / SW2 / EEC" data-uncertain="无阻塞，等待模型核对。">
+        <span class="requirements-choice-title">L1 条件</span>
+        <span class="requirements-choice-options"><span>采用原文</span><span>需澄清</span><span>手动补充</span></span>
+        <strong id="requirements-choice-l1">待确认</strong>
+      </button>
+      <button type="button" class="requirements-choice-row" data-requirement-choice-row="ra" data-source="正文条件：RA 小于门限时允许进入逻辑链路。" data-params="RA threshold · ft" data-uncertain="需要确认 6ft 是否为唯一门限。">
+        <span class="requirements-choice-title">RA 门限</span>
+        <span class="requirements-choice-options"><span>6 ft</span><span>7 ft</span><span>手动</span></span>
+        <strong id="requirements-choice-ra">待确认</strong>
+      </button>
+      <button type="button" class="requirements-choice-row" data-requirement-choice-row="sw" data-source="正文条件：SW1 / SW2 均为反推链路输入。" data-params="SW1 / SW2 latch" data-uncertain="Visio 结构只作辅助，不替代正文条件。">
+        <span class="requirements-choice-title">SW 信号</span>
+        <span class="requirements-choice-options"><span>双开关</span><span>单开关</span><span>手动</span></span>
+        <strong id="requirements-choice-sw">待确认</strong>
+      </button>
+      <button type="button" class="requirements-choice-row" data-requirement-choice-row="vdt" data-source="正文条件：VDT 达到部署状态后进入后续联锁。" data-params="VDT90 / deploy feedback" data-uncertain="物理执行器细节仍保持沙盒候选。">
+        <span class="requirements-choice-title">VDT 状态</span>
+        <span class="requirements-choice-options"><span>90%</span><span>反馈缺失</span><span>手动</span></span>
+        <strong id="requirements-choice-vdt">待确认</strong>
+      </button>
+    </div>
+    <aside id="requirements-row-popover" class="requirements-floating-popover" data-on-demand-popover="requirements-source" data-unified-aux-panel="source-popover" data-unified-panel-state="closed" hidden>
+      <p class="requirements-kicker">SOURCE</p>
+      <strong id="requirements-popover-title">未选择</strong>
+      <dl>
+        <div><dt>来源</dt><dd id="requirements-popover-source">等待选择。</dd></div>
+        <div><dt>参数</dt><dd id="requirements-popover-params">等待选择。</dd></div>
+        <div><dt>不确定项</dt><dd id="requirements-popover-uncertain">等待选择。</dd></div>
+      </dl>
+    </aside>
+    <aside id="requirements-manual-bubble" class="requirements-manual-bubble" data-unified-aux-panel="manual-bubble" data-unified-panel-state="closed" hidden>
+      <label for="requirements-manual-note">手动补充</label>
+      <textarea id="requirements-manual-note" rows="2" placeholder="只写缺失条件或门限，不需要重复全文。"></textarea>
+    </aside>
+  </section>
+
+    <form class="requirements-input-panel requirements-cockpit-input-bay" id="requirements-form" data-cockpit-role="input-bay" data-workstation-inspector="source-input" data-blueprint14-inspector="source-document-input">
+      <div
+        id="requirements-dropzone"
+        class="requirements-dropzone"
+        role="button"
+        tabindex="0"
+        aria-label="上传需求文档"
+      >
+        <input id="requirements-file" type="file" accept=".docx,.txt,.md,.markdown,.json,.yaml,.yml,.csv,.xml" hidden>
+        <div class="dropzone-primary">拖入需求文档</div>
+        <div class="dropzone-secondary">DOCX / TXT / MD / JSON / YAML</div>
+      </div>
+
+      <div class="requirements-field-row">
+        <label class="requirements-field">
+          <span>文档名</span>
+          <input id="requirements-document-name" type="text" value="requirements.md">
+        </label>
+        <div class="requirements-file-state" id="requirements-file-state">未选择文件</div>
+      </div>
+
+      <label class="requirements-field requirements-editor">
+        <span>需求文本</span>
+        <textarea id="requirements-text" spellcheck="false">当 RA 小于 6ft，TRA 进入反推区，SW1 与 SW2 均有效，并且 EEC 允许时，释放油门锁；RA 阈值和 TRA 门限需要作为概念参数保留。</textarea>
+      </label>
+
+      <div class="requirements-actions">
+        <button id="requirements-clear" type="button" class="secondary" data-ux-action-tier="advanced">清空</button>
+        <span id="requirements-status" role="status">待分析</span>
+      </div>
+    </form>
+
+    <section class="requirements-result-panel requirements-cockpit-mission-console" data-cockpit-role="mission-console" data-workstation-surface="primary-canvas-stage" data-blueprint14-primary-canvas="clarification-stage" aria-label="需求理解结果">
+      <div class="clarification-workbench clarification-primary" data-workstation-stage="primary-canvas" data-blueprint14-canvas-rhythm="expanded-first-screen">
+        <div class="graph-heading">
+          <h3>澄清交互窗口</h3>
+          <span id="clarification-progress">0/0 已回答</span>
+        </div>
+        <p class="clarification-hint">
+          先回答下方问题；全部回答后提交，模型会重新判断是否可进入绘图。
+        </p>
+        <div id="clarification-list" class="clarification-list">
+          <p class="muted">分析后会在这里出现需要工程师回答的问题和输入框。</p>
+        </div>
+        <div class="clarification-actions">
+          <button id="clarification-resubmit" type="button" disabled>提交澄清并继续</button>
+        </div>
+      </div>
+
+      <div id="requirements-secondary-panels" class="requirements-workbench-secondary" data-workstation-surface="secondary-drawer" aria-label="次要输出">
+        <details class="result-section clarification-trace workbench-secondary-panel" id="clarification-trace">
+          <summary>
+            <span>澄清轮次</span>
+            <span id="clarification-trace-count">0 rounds</span>
+          </summary>
+          <div id="clarification-trace-list" class="clarification-trace-list">
+            <p class="muted">每轮模型分析完成后，会在这里记录问题、回答和下一步判断。</p>
+          </div>
+        </details>
+
+        <details class="result-section workbench-secondary-panel" id="requirements-questions-panel">
+          <summary>
+            <span>澄清问题</span>
+            <span>清单</span>
+          </summary>
+          <ol id="requirements-questions" class="requirements-questions"></ol>
+        </details>
+
+        <details class="result-section graph-section workbench-secondary-panel" id="requirements-concept-graph-panel">
+          <summary>
+            <span>概念逻辑图</span>
+            <span id="graph-counts">0 nodes · 0 edges</span>
+          </summary>
+          <div id="requirements-graph" class="requirements-graph"></div>
+        </details>
+
+        <details class="result-section workbench-secondary-panel" id="requirements-edges-panel">
+          <summary>
+            <span>逻辑链路候选</span>
+            <span>连线</span>
+          </summary>
+          <div id="requirements-edges" class="requirements-edges"></div>
+        </details>
+      </div>
+
+    </section>
+  </section>
+
+  <section id="process-panel" class="process-panel" aria-live="polite" aria-label="任务进度">
+    <div class="process-head">
+      <div>
+        <p class="requirements-kicker">TASK PROGRESS</p>
+        <h2 id="process-title">等待任务</h2>
+      </div>
+      <span id="process-elapsed">00:00</span>
+    </div>
+    <div class="process-track" aria-hidden="true">
+      <div id="process-fill" class="process-fill"></div>
+    </div>
+    <div id="requirements-generation-stream" class="process-steps generation-stream" data-generation-stream="deepseek" aria-label="DeepSeek 生成流">
+      <span id="process-step-read" class="process-step generation-stream-step" data-stream-step="read" data-state="idle">读取需求</span>
+      <span id="process-step-parse" class="process-step generation-stream-step" data-stream-step="parse" data-state="idle">本地预解析</span>
+      <span id="process-step-send" class="process-step generation-stream-step" data-stream-step="send" data-state="idle">DeepSeek 增强</span>
+      <span id="process-step-render" class="process-step generation-stream-step" data-stream-step="render" data-state="idle">生成下一步</span>
+    </div>
+    <p id="process-detail" class="process-detail">上传或粘贴需求后开始分析。</p>
+    <div id="requirements-stream-chunks" class="stream-chunks" data-stream-chunks="deepseek" aria-label="DeepSeek 分块输出"></div>
+  </section>
+
+  <section id="requirements-workflow-overview" class="workflow-overview requirements-cockpit-mission-strip" data-cockpit-role="mission-strip" aria-label="流程总览">
+    <div class="workflow-copy">
+      <p class="requirements-kicker">WORKFLOW</p>
+      <h2 id="requirements-workflow-stage">需求澄清待开始</h2>
+      <p id="requirements-workflow-detail">上传需求文档后，模型会先判断是否需要澄清。</p>
+    </div>
+    <div id="requirements-workflow-steps" class="workflow-steps" data-ux-main-flow="four-step">
+      <span class="workflow-step is-active" data-workflow-step="requirements">1 需求解析</span>
+      <span class="workflow-step" data-workflow-step="drawing">2 逻辑复刻</span>
+      <span class="workflow-step" data-workflow-step="fault">3 故障准备</span>
+      <span class="workflow-step" data-workflow-step="sandbox">4 沙盒审查</span>
+    </div>
+  </section>
+</main>
+</body>
+</html>

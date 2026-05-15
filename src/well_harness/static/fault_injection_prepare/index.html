@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>故障注入准备 · FANTUI LogicMVP</title>
+<link rel="stylesheet" href="/unified-nav.css">
+<link rel="stylesheet" href="/fault_injection_prepare/fault_injection_prepare.css?v=faultprep4">
+<script src="/fault_injection_prepare/fault_injection_prepare.js?v=faultprep4" defer></script>
+</head>
+<body class="unified-nav-enabled" data-nav-current="fault-injection-prepare" data-primary-flow="deepseek-v4-pro-ui-workbench" data-canvas-status="degraded-backup">
+<header class="unified-nav" role="navigation" aria-label="FANTUI LogicMVP 主导航">
+  <a href="/index.html" class="unified-nav-brand" aria-label="返回主入口">FANTUI LogicMVP</a>
+  <div class="unified-nav-groups">
+    <div id="deepseek-nav-mainline" class="unified-nav-group unified-nav-mainline" aria-label="DeepSeek 四步主线" data-ux-main-flow="four-step">
+      <span class="unified-nav-group-label">主流程</span>
+      <a href="/requirements-intake" class="unified-nav-link" data-nav-key="requirements-intake">1 需求解析</a>
+      <a href="/logic-builder" class="unified-nav-link" data-nav-key="logic-builder">2 逻辑复刻</a>
+      <a href="/fault-injection-prepare" class="unified-nav-link is-active" data-nav-key="fault-injection-prepare">3 故障准备</a>
+      <a href="/fault-injection-sandbox" class="unified-nav-link" data-nav-key="fault-injection-sandbox">4 沙盒审查</a>
+    </div>
+    <details id="deepseek-nav-advanced-modules" class="unified-nav-advanced">
+      <summary>更多模块</summary>
+      <div class="unified-nav-advanced-links">
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">旧工作台</span>
+          <a href="/demo.html" class="unified-nav-link" data-nav-key="demo">反推逻辑</a>
+          <a href="/c919_etras_workstation.html" class="unified-nav-link" data-nav-key="etras">C919 E-TRAS</a>
+        </div>
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">电路图</span>
+          <a href="/fantui_circuit.html" class="unified-nav-link" data-nav-key="fantui-circuit">反推电路</a>
+          <a href="/c919_etras_panel/circuit.html" class="unified-nav-link" data-nav-key="etras-circuit">E-TRAS 电路</a>
+        </div>
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">仿真</span>
+          <a href="/fan_console.html" class="unified-nav-link" data-nav-key="fan-console">反推操作台</a>
+          <a href="http://127.0.0.1:9191/" class="unified-nav-link unified-nav-link-ext" data-nav-key="panel-9191">C919 MFD :9191</a>
+        </div>
+        <div class="unified-nav-advanced-group">
+          <span class="unified-nav-advanced-group-label">文档</span>
+          <a href="/fantui_requirements.html" class="unified-nav-link" data-nav-key="fantui-req">FANTUI 需求</a>
+          <a href="/c919_requirements.html" class="unified-nav-link" data-nav-key="c919-req">C919 需求</a>
+        </div>
+      </div>
+    </details>
+  </div>
+</header>
+
+<main class="fault-shell" data-blueprint-phase="fault-injection-final" data-panel-default="collapsed" data-panel-strategy="single-auxiliary" data-active-aux-panel="none" data-unified-inspector-state="none">
+  <section class="fault-topbar deepseek-command-strip" data-command-strip="deepseek-step" data-command-step="3" data-blueprint-surface="compact-top-bar">
+    <div>
+      <p class="fault-kicker deepseek-step-kicker">STEP 3/4</p>
+      <h1>故障准备</h1>
+    </div>
+    <div class="fault-controls">
+      <label for="fault-provider">模型</label>
+      <select id="fault-provider">
+        <option value="deepseek" selected>DeepSeek V4 Pro</option>
+        <option value="minimax">MiniMax-M2.7-highspeed</option>
+      </select>
+      <button id="fault-generate" type="button" class="secondary" data-ux-action-tier="secondary" aria-label="生成故障候选">检查：生成候选</button>
+      <button id="fault-sandbox-next" type="button" class="primary-next-action" data-primary-next-action="true" data-ux-action-tier="primary" aria-label="下一步：进入沙盒审查">下一步：进入沙盒审查</button>
+      <span id="fault-sandbox-gate" class="fault-sandbox-gate" role="status">等待候选</span>
+      <button id="fault-back" type="button" class="secondary" data-ux-action-tier="secondary" aria-label="返回逻辑绘制">更多：返回绘图</button>
+    </div>
+  </section>
+
+  <section id="fault-matrix" class="fault-layout" data-blueprint-surface="fault-matrix">
+    <section class="fault-main">
+      <section id="fault-decision-board" class="fault-decision-board" data-decision-board="fault-prepare" aria-label="故障准备判断">
+        <article class="fault-decision-card" data-fault-card="candidate">
+          <p class="fault-kicker">CANDIDATE</p>
+          <h2>候选状态</h2>
+          <strong id="fault-decision-candidate-summary">等待候选</strong>
+          <p class="muted">场景和注入点折叠为参考。</p>
+        </article>
+        <article class="fault-decision-card" data-fault-card="boundary">
+          <p class="fault-kicker">BOUNDARY</p>
+          <h2>边界确认</h2>
+          <strong id="fault-decision-boundary-summary">0/0 已回答</strong>
+          <p class="muted">只回答进入沙盒前的限制。</p>
+        </article>
+        <article class="fault-decision-card" data-fault-card="next">
+          <p class="fault-kicker">NEXT</p>
+          <h2>下一步</h2>
+          <p id="fault-decision-next-action" class="muted" data-usage-path-cue="fault">等待候选：生成后得到故障矩阵与沙盒入口。</p>
+          <div id="fault-blueprint-candidate-actions" class="fault-source-defer-actions" hidden>
+            <button id="fault-load-blueprint-candidate" type="button" class="secondary" data-ux-action-tier="secondary">载入蓝图候选演示</button>
+            <span id="fault-blueprint-candidate-status">不改变源文档范围</span>
+          </div>
+        </article>
+      </section>
+
+      <section id="fault-candidate-matrix-panel" class="fault-panel fault-candidate-matrix-panel" data-blueprint-surface="fault-matrix-rows" aria-labelledby="fault-candidate-matrix-title">
+        <div class="fault-section-head">
+          <div>
+            <p class="fault-kicker">FAULT MATRIX</p>
+            <h2 id="fault-candidate-matrix-title">故障注入矩阵</h2>
+          </div>
+          <span id="fault-candidate-matrix-count">0 rows</span>
+        </div>
+        <div class="fault-candidate-matrix-wrap" data-blueprint-density="compact-workbench">
+          <table class="fault-candidate-matrix" aria-label="故障注入矩阵" data-blueprint-row-contract="checkbox-id-injection-path-hazard-state" data-blueprint33-contract="checkbox-id-injection-position-covered-path-risk_state" data-blueprint-density="compact-workbench">
+            <colgroup data-blueprint33-density="compact-workbench">
+              <col data-blueprint-col="checkbox">
+              <col data-blueprint-col="id">
+              <col data-blueprint-col="injection-position">
+              <col data-blueprint-col="fault-type">
+              <col data-blueprint-col="trigger">
+              <col data-blueprint-col="expected-effect">
+              <col data-blueprint-col="covered-path">
+              <col data-blueprint-col="risk">
+              <col data-blueprint-col="state">
+            </colgroup>
+            <thead>
+              <tr>
+                <th data-blueprint-col="checkbox"><input type="checkbox" aria-label="选择全部故障候选" disabled></th>
+                <th data-blueprint-col="id">ID</th>
+                <th data-blueprint-col="injection-position">注入位置</th>
+                <th data-blueprint-col="fault-type">故障类型</th>
+                <th data-blueprint-col="trigger">触发条件</th>
+                <th data-blueprint-col="expected-effect">预期影响</th>
+                <th data-blueprint-col="covered-path">覆盖路径</th>
+                <th data-blueprint-col="risk">风险</th>
+                <th data-blueprint-col="state">状态</th>
+              </tr>
+            </thead>
+            <tbody id="fault-candidate-matrix-body">
+              <tr>
+                <td colspan="9" class="fault-candidate-matrix-empty">暂无候选。等待模型或蓝图候选演示。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <details id="fault-candidate-details" class="fault-panel fault-reference-details">
+        <summary class="fault-section-head">
+          <div>
+            <p class="fault-kicker">FAULT SCENARIOS</p>
+            <h2>故障场景候选</h2>
+          </div>
+          <span id="fault-scenario-count">0 scenarios</span>
+        </summary>
+        <div id="fault-scenarios" class="fault-scenario-map">
+          <div id="fault-scenario-chips" class="fault-scenario-chips"></div>
+          <details class="fault-compact-list">
+            <summary>展开场景明细</summary>
+            <div id="fault-scenario-card-list" class="fault-scenario-grid">
+              <p class="muted">暂无候选。点击“生成故障候选”后由模型输出。</p>
+            </div>
+          </details>
+        </div>
+      </details>
+
+      <details id="fault-injection-point-details" class="fault-panel fault-reference-details">
+        <summary class="fault-section-head">
+          <div>
+            <p class="fault-kicker">INJECTION POINTS</p>
+            <h2>建议注入点</h2>
+          </div>
+          <span id="fault-point-count">0 points</span>
+        </summary>
+        <div id="fault-injection-points" class="fault-point-map">
+          <div id="fault-point-map" class="fault-point-chip-strip"></div>
+          <details class="fault-compact-list">
+            <summary>展开注入点明细</summary>
+            <div id="fault-point-card-list" class="fault-point-list">
+              <p class="muted">暂无注入点。</p>
+            </div>
+          </details>
+        </div>
+      </details>
+
+      <section class="fault-panel">
+        <div class="fault-section-head">
+          <div>
+            <p class="fault-kicker">BOUNDARY CONFIRMATION</p>
+            <h2>边界确认问题</h2>
+          </div>
+          <span id="fault-boundary-progress">0/0 已回答</span>
+        </div>
+        <div id="fault-boundary-list" class="fault-boundary-list">
+          <p class="muted">模型会列出进入故障注入前必须确认的范围和安全边界。</p>
+        </div>
+        <div class="fault-actions">
+          <button id="fault-save-boundaries" type="button" class="secondary" data-ux-action-tier="secondary">保存边界草稿</button>
+          <span id="fault-save-state" role="status">未保存</span>
+        </div>
+      </section>
+    </section>
+
+    <aside class="fault-sidebar" data-unified-inspector="right-inspector" data-inspector-role="fault-preparation-summary">
+      <section class="fault-panel">
+        <p class="fault-kicker">SOURCE</p>
+        <h2 id="fault-source-title">尚未载入</h2>
+        <p id="fault-source-summary" class="muted">需要先从逻辑绘制页生成图纸。</p>
+        <div id="fault-source-metrics" class="fault-metrics">0 nodes · 0 edges · 0 panels</div>
+      </section>
+      <section class="fault-panel">
+        <p class="fault-kicker">MODEL OUTPUT</p>
+        <h2 id="fault-result-state">尚未生成</h2>
+        <p id="fault-result-summary" class="muted">等待大模型返回故障场景、注入点和边界问题。</p>
+        <div id="fault-result-flags" class="fault-flags"></div>
+        <p id="fault-quality-summary" class="fault-quality-summary">等待质量摘要。</p>
+        <details id="fault-repair-details" class="fault-repair-details" hidden>
+          <summary id="fault-repair-summary">模型自修复详情</summary>
+          <div id="fault-repair-body" class="fault-repair-body"></div>
+        </details>
+      </section>
+      <section id="fault-source-defer" class="fault-panel fault-source-defer" hidden>
+        <p class="fault-kicker">SOURCE SCOPE</p>
+        <h2>源文档声明暂缓</h2>
+        <p id="fault-source-defer-summary">故障注入本轮不强制推进。</p>
+      </section>
+      <section class="fault-panel fault-burden-summary">
+        <p class="fault-kicker">READING LOAD</p>
+        <h2 id="fault-burden-action">等待候选</h2>
+        <ul id="fault-burden-outputs" class="fault-notes">
+          <li>本页只先看源文档是否允许推进故障注入。</li>
+        </ul>
+      </section>
+      <section id="fault-coverage-evidence" class="fault-panel fault-coverage-evidence" hidden>
+        <p class="fault-kicker">AUTO COMPLETION</p>
+        <h2>自动补齐证据</h2>
+        <div id="fault-coverage-evidence-list" class="fault-coverage-list"></div>
+      </section>
+      <section class="fault-panel">
+        <p class="fault-kicker">WORKFLOW NOTES</p>
+        <ul id="fault-workflow-notes" class="fault-notes">
+          <li class="muted">模型输出后会显示后续进入沙盒注入前需要确认的事项。</li>
+        </ul>
+      </section>
+      <section class="fault-panel fault-source-map-note">
+        <p class="fault-kicker">INJECTION CONTEXT MAP</p>
+        <h2>故障点上下文</h2>
+        <p class="muted">点选左侧场景芯片或注入点以查看“故障点上下文”浮窗。</p>
+      </section>
+    </aside>
+  </section>
+
+  <section id="fault-bottom-action-strip" class="fault-bottom-action-strip" data-blueprint-surface="fault-bottom-action-strip" aria-label="故障准备底部操作条">
+    <div class="fault-bottom-actions">
+      <button type="button" class="fault-bottom-primary" data-fault-bottom-action="add">添加故障</button>
+      <button type="button" data-fault-bottom-action="batch">批量生成</button>
+      <button type="button" data-fault-bottom-action="recommend">智能推荐</button>
+      <a href="/fault-injection-sandbox" data-fault-bottom-action="run-sandbox">运行沙盒</a>
+      <a href="/fault-injection-sandbox#review-package" data-fault-bottom-action="coverage">查看覆盖</a>
+    </div>
+    <div class="fault-bottom-invariants" aria-label="候选态边界">
+      <span>sandbox_candidate</span>
+      <span>truth_effect:none</span>
+      <span>controller_truth_modified:false</span>
+    </div>
+  </section>
+
+  <section id="fault-process" class="fault-process" aria-live="polite">
+    <div class="fault-process-head">
+      <div>
+        <p class="fault-kicker">TASK PROGRESS</p>
+        <h2 id="fault-process-title">等待故障准备</h2>
+      </div>
+      <span id="fault-process-elapsed">00:00</span>
+    </div>
+    <div class="fault-track"><div id="fault-process-fill" class="fault-process-fill"></div></div>
+    <div id="fault-generation-stream" class="fault-steps generation-stream" data-generation-stream="deepseek" aria-label="DeepSeek 生成流">
+      <span id="fault-step-load" class="fault-step generation-stream-step" data-stream-step="load" data-state="idle">读取图纸</span>
+      <span id="fault-step-model" class="fault-step generation-stream-step" data-stream-step="model" data-state="idle">DeepSeek 故障准备</span>
+      <span id="fault-step-candidates" class="fault-step generation-stream-step" data-stream-step="candidates" data-state="idle">整理候选</span>
+      <span id="fault-step-boundary" class="fault-step generation-stream-step" data-stream-step="boundary" data-state="idle">边界确认</span>
+    </div>
+    <p id="fault-process-detail">从逻辑绘制页进入后会读取已保存的模型图纸。</p>
+    <div id="fault-stream-chunks" class="stream-chunks" data-stream-chunks="deepseek" aria-label="DeepSeek 分块输出"></div>
+  </section>
+
+  <section id="fault-injection-workflow-overview" class="fault-workflow-overview" aria-label="流程总览">
+    <div class="fault-workflow-copy">
+      <p class="fault-kicker">WORKFLOW</p>
+      <h2 id="fault-injection-workflow-stage">等待逻辑图纸</h2>
+      <p id="fault-injection-workflow-detail">先完成需求澄清和初版逻辑绘制，再让模型准备故障候选。</p>
+    </div>
+    <div id="fault-workflow-steps" class="fault-workflow-steps" data-ux-main-flow="four-step">
+      <span class="fault-workflow-step is-complete" data-workflow-step="requirements">1 需求解析</span>
+      <span class="fault-workflow-step is-complete" data-workflow-step="drawing">2 逻辑复刻</span>
+      <span class="fault-workflow-step is-active" data-workflow-step="fault">3 故障准备</span>
+      <span class="fault-workflow-step" data-workflow-step="sandbox">4 沙盒审查</span>
+    </div>
+  </section>
+
+  <section id="fault-context-popover" class="fault-context-popover" data-blueprint-surface="unified-inspector-popover" data-unified-aux-panel="fault-context-popover" data-unified-panel-state="closed" aria-hidden="true" hidden>
+    <div class="fault-context-card">
+      <header class="fault-context-head">
+        <p class="fault-kicker">FAULT CONTEXT</p>
+        <h2 id="fault-context-title">详情</h2>
+        <button id="fault-context-close" type="button" class="fault-context-close" data-ux-action-tier="secondary" aria-label="关闭上下文浮窗">×</button>
+      </header>
+      <div id="fault-context-body" class="fault-context-body"></div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

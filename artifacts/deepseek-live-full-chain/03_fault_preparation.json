@@ -1,0 +1,39 @@
+{
+  "$schema": "https://ai-fantui.local/schemas/fault-injection-preparation.v1.json",
+  "kind": "ai-fantui-fault-injection-preparation",
+  "version": 1,
+  "status": "source_deferred",
+  "truth_effect": "candidate_only",
+  "candidate_state": "source_deferred",
+  "certification_claim": "none",
+  "controller_truth_modified": false,
+  "source_requirements_sha256": "628e94778ea68114b870ac064788f1980f4394ea8c64682327c2a0335f6e3ae8",
+  "source_drawing_sha256": "",
+  "source_change_history_sha256": "",
+  "summary_zh": "源文档声明故障注入本轮暂不考虑。",
+  "source_scope": {
+    "fault_injection": {
+      "status": "source_deferred",
+      "reason_zh": "源文档声明故障注入本轮暂不考虑。",
+      "source_anchors": [
+        {
+          "id": "B91",
+          "kind": "范围约束",
+          "origin": "docx_body",
+          "quote_zh": "故障注入目前暂时不考虑，很复杂。"
+        }
+      ]
+    }
+  },
+  "fault_scenarios": [],
+  "injection_points": [],
+  "boundary_questions": [],
+  "boundary_answers": [],
+  "llm": {
+    "provider": "deepseek",
+    "model": "deepseek-v4-pro",
+    "api_base": "https://api.deepseek.com",
+    "key_source": "env:DEEPSEEK_API_KEY",
+    "response_source": "live_llm"
+  }
+}
