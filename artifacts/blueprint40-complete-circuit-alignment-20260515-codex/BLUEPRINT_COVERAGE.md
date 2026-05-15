@@ -4,6 +4,8 @@ Source reference list: `artifacts/blueprint-ui-detail-audit-20260515-codex/READM
 
 Acceptance summary: `visual-acceptance-summary.json` reports `ok=true`, `route_count=5`, and `screenshot_count=10`.
 
+Final selected targets: `FINAL_TARGET_SCREENSHOTS.md` narrows the canonical Codex minimal target set to five `desktop-1366x768` screenshots.
+
 ## Reference To Current Mapping
 
 | # | Reference screenshot | Current counterpart |

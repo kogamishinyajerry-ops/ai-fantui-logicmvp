@@ -1,0 +1,52 @@
+{
+  "kind": "blueprint40-final-target-screenshots",
+  "style": "codex-minimal-workbench",
+  "source_artifact_dir": "artifacts/blueprint40-complete-circuit-alignment-20260515-codex",
+  "selection_rule": "Canonical targets are current desktop-1366x768 Codex minimal workbench screenshots; desktop-1280x820 captures are responsive guards only.",
+  "selected_count": 5,
+  "selected": [
+    {
+      "id": "T01",
+      "route_key": "requirements-intake",
+      "viewport": "desktop-1366x768",
+      "file": "requirements-intake--desktop-1366x768.png",
+      "role": "Source intake and transition into drawing"
+    },
+    {
+      "id": "T02",
+      "route_key": "logic-builder",
+      "viewport": "desktop-1366x768",
+      "file": "logic-builder--desktop-1366x768.png",
+      "role": "Real circuit canvas with full 20 node / 23 wire renderer"
+    },
+    {
+      "id": "T03",
+      "route_key": "fault-injection-prepare",
+      "viewport": "desktop-1366x768",
+      "file": "fault-injection-prepare--desktop-1366x768.png",
+      "role": "Fault candidate matrix and right inspector balance"
+    },
+    {
+      "id": "T04",
+      "route_key": "fault-injection-sandbox-default",
+      "viewport": "desktop-1366x768",
+      "file": "fault-injection-sandbox-default--desktop-1366x768.png",
+      "role": "Default sandbox workbench with status-only right rail"
+    },
+    {
+      "id": "T05",
+      "route_key": "fault-injection-sandbox",
+      "viewport": "desktop-1366x768",
+      "file": "fault-injection-sandbox--desktop-1366x768.png",
+      "role": "Explicit report package preview and export state"
+    }
+  ],
+  "guard_only": [
+    "requirements-intake--desktop-1280x820.png",
+    "logic-builder--desktop-1280x820.png",
+    "fault-injection-prepare--desktop-1280x820.png",
+    "fault-injection-sandbox-default--desktop-1280x820.png",
+    "fault-injection-sandbox--desktop-1280x820.png",
+    "reference-current-contact-sheet.png"
+  ]
+}
