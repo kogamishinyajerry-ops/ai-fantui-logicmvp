@@ -2659,8 +2659,10 @@ def test_logic_builder_blank_canvas_template_entry_can_seed_local_blueprint_cand
 
         page.click("#logic-load-docx-template")
         expect(page.locator("#logic-template-entry")).to_be_hidden()
-        expect(page.locator("#logic-result-state")).to_have_text("模型已完成绘制")
-        expect(page.locator("#logic-bottom-run-node-count")).to_contain_text("节点 6/6")
+        expect(page.locator("#logic-result-state")).to_have_text("电路图已完成绘制")
+        expect(page.locator('#logic-canvas[data-view-mode="circuit"]')).to_be_visible()
+        expect(page.locator("#logic-bottom-run-node-count")).to_contain_text("节点 20/20")
+        expect(page.locator("#logic-bottom-run-edge-count")).to_contain_text("连线 23/23")
         stored = page.evaluate(
             """
             () => {
@@ -2672,6 +2674,8 @@ def test_logic_builder_blank_canvas_template_entry_can_seed_local_blueprint_cand
                 controller_truth_modified: payload.controller_truth_modified,
                 node_count: payload.nodes.length,
                 edge_count: payload.edges.length,
+                circuit_node_count: payload.circuit_view.nodes.length,
+                circuit_wire_count: payload.circuit_view.wires.length,
               };
             }
             """
@@ -2683,6 +2687,8 @@ def test_logic_builder_blank_canvas_template_entry_can_seed_local_blueprint_cand
             "controller_truth_modified": False,
             "node_count": 6,
             "edge_count": 5,
+            "circuit_node_count": 20,
+            "circuit_wire_count": 23,
         }
         assert model_calls == []
     finally:
@@ -2711,7 +2717,7 @@ def test_docx_template_entry_carries_usage_path_cues_to_fault_and_sandbox(
         expect(page.locator("#logic-template-entry")).to_be_visible()
         page.click("#logic-load-docx-template")
         expect(page.locator("#logic-template-entry")).to_be_hidden()
-        expect(page.locator("#logic-result-state")).to_have_text("模型已完成绘制")
+        expect(page.locator("#logic-result-state")).to_have_text("电路图已完成绘制")
         expect(page.locator("#logic-result-summary")).to_contain_text("DOCX L1-L4")
         expect(page.locator("#logic-workflow-detail")).to_contain_text("故障矩阵")
         expect(page.locator("#logic-fault-next")).to_be_enabled()
@@ -2800,6 +2806,59 @@ def test_docx_template_entry_carries_usage_path_cues_to_fault_and_sandbox(
         expect(page.locator("#sandbox-review-package-invariants")).to_contain_text("truth_effect:none")
         assert model_calls == []
         assert tick_calls == []
+    finally:
+        page.close()
+
+
+def test_logic_builder_run_and_parameter_drawer_match_selected_final_31_32(
+    demo_server: str, browser: Any
+) -> None:
+    page = browser.new_page(viewport={"width": 1366, "height": 768})
+    try:
+        page.goto(f"{demo_server}/index.html", wait_until="domcontentloaded")
+        page.evaluate("() => localStorage.clear()")
+        page.goto(f"{demo_server}/logic-builder", wait_until="networkidle")
+        page.click("#logic-load-docx-template")
+        expect(page.locator('#logic-canvas[data-view-mode="circuit"]')).to_be_visible()
+
+        page.click('#logic-mode-dock [data-logic-mode="parameters"]')
+        drawer = page.locator("#logic-run-parameter-drawer")
+        expect(drawer).to_be_visible()
+        expect(drawer).to_have_attribute("data-blueprint32-surface", "parameter-drawer-final")
+        expect(page.locator("#logic-drawer-tra-threshold")).to_be_visible()
+        expect(page.locator("#logic-drawer-tra-threshold-value")).to_have_text("350 ft")
+        expect(page.locator("#logic-drawer-vdt-label")).to_contain_text("VDT 地速")
+        expect(page.locator("#logic-drawer-run-mode")).to_be_visible()
+        expect(page.locator("#logic-drawer-run-mode-dry")).to_have_attribute("aria-pressed", "true")
+        expect(page.locator("#logic-drawer-run-mode-real")).to_have_attribute("aria-pressed", "false")
+        for control_id in ["logic-drawer-apply", "logic-drawer-reset", "logic-drawer-pin", "logic-bottom-drawer-close"]:
+            expect(page.locator(f"#{control_id}")).to_be_visible()
+
+        page.click("#logic-drawer-run-mode-real")
+        expect(drawer).to_have_attribute("data-run-mode", "real-value")
+        expect(page.locator("#logic-drawer-run-mode-real")).to_have_attribute("aria-pressed", "true")
+        page.click("#logic-drawer-pin")
+        expect(drawer).to_have_attribute("data-drawer-pinned", "true")
+        page.click("#logic-drawer-apply")
+        expect(page.locator("#logic-run-verdict")).to_contain_text("参数已应用")
+
+        page.click('#logic-mode-dock [data-logic-mode="run"]')
+        expect(drawer).to_have_attribute("data-active-tab", "run")
+        expect(drawer).to_have_attribute("data-blueprint31-surface", "run-signal-propagation")
+        expect(page.locator("#logic-run-frame")).to_be_visible()
+        expect(page.locator("#logic-run-verdict")).to_be_visible()
+        expect(page.locator("#logic-run-signals")).to_be_visible()
+        page.click('#logic-run-parameter-drawer [data-run-action="run"]')
+        expect(page.locator("#logic-run-frame")).to_contain_text("00:03.24")
+        expect(page.locator("#logic-run-verdict")).to_contain_text("运行正常")
+        expect(page.locator("#logic-run-signals")).to_contain_text("RA 235")
+        expect(page.locator("#logic-run-signals")).to_contain_text("TRA 350")
+        expect(page.locator("#logic-run-signals")).to_contain_text("VDT 132")
+
+        page.click("#logic-drawer-reset")
+        expect(page.locator("#logic-drawer-tra-threshold-value")).to_have_text("350 ft")
+        expect(page.locator("#logic-drawer-run-mode-dry")).to_have_attribute("aria-pressed", "true")
+        expect(drawer).to_have_attribute("data-run-mode", "dry-run")
     finally:
         page.close()
 

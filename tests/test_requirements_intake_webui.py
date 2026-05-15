@@ -4614,6 +4614,9 @@ def test_logic_builder_uses_selected_final_codex_minimal_blueprint_skin():
     for target in [
         "27-global-nav-default-workbench",
         "28-command-palette-advanced-entry",
+        "30-docx-template-generated-canvas",
+        "31-running-signal-propagation",
+        "32-parameter-drawer-final",
         "38-panel-state-strategy-final",
     ]:
         assert target in html
@@ -4640,6 +4643,52 @@ def test_logic_builder_uses_selected_final_codex_minimal_blueprint_skin():
         "rightInspectorState",
         "bottomDrawerState",
         "commandPaletteState",
+    ]:
+        assert token in script
+
+
+def test_logic_builder_declares_selected_final_30_31_32_runtime_surfaces():
+    html = (STATIC_ROOT / "logic_builder" / "index.html").read_text(encoding="utf-8")
+    stylesheet = (STATIC_ROOT / "logic_builder" / "logic_builder.css").read_text(encoding="utf-8")
+    script = (STATIC_ROOT / "logic_builder" / "logic_builder.js").read_text(encoding="utf-8")
+
+    for token in [
+        'data-blueprint30-surface="docx-template-circuit"',
+        'data-blueprint31-surface="run-signal-propagation"',
+        'data-blueprint32-surface="parameter-drawer-final"',
+        'id="logic-run-frame"',
+        'id="logic-run-verdict"',
+        'id="logic-run-signals"',
+        'id="logic-drawer-tra-threshold"',
+        'id="logic-drawer-tra-threshold-value"',
+        'id="logic-drawer-run-mode"',
+        'id="logic-drawer-run-mode-dry"',
+        'id="logic-drawer-run-mode-real"',
+        'id="logic-drawer-apply"',
+        'id="logic-drawer-reset"',
+        'id="logic-drawer-pin"',
+    ]:
+        assert token in html
+
+    for selector in [
+        ".logic-run-signal-summary",
+        ".logic-run-signal-grid",
+        ".logic-drawer-mode-toggle",
+        ".logic-drawer-actions",
+        ".logic-run-parameter-drawer[data-drawer-pinned=\"true\"]",
+    ]:
+        assert selector in stylesheet
+
+    for token in [
+        "buildDocxTemplateCircuitView",
+        "renderRunSignalSummary",
+        "logicRunFrame",
+        "logicRunVerdict",
+        "logicRunSignals",
+        "drawerRunModeButtons",
+        "drawerApplyButton",
+        "drawerResetButton",
+        "drawerPinButton",
     ]:
         assert token in script
 

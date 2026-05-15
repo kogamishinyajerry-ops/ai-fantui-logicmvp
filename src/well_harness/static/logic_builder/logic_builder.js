@@ -193,6 +193,9 @@
   const bottomDrawerClose = $("logic-bottom-drawer-close");
   const runTimeline = $("logic-run-timeline");
   const runState = $("logic-run-state");
+  const logicRunFrame = $("logic-run-frame");
+  const logicRunVerdict = $("logic-run-verdict");
+  const logicRunSignals = $("logic-run-signals");
   const bottomRunState = $("logic-bottom-run-state");
   const bottomRunTime = $("logic-bottom-run-time");
   const bottomRunCursor = $("logic-bottom-run-cursor");
@@ -209,6 +212,7 @@
     ra: $("logic-drawer-ra"),
     tra: $("logic-drawer-tra"),
     vdt: $("logic-drawer-vdt"),
+    traThreshold: $("logic-drawer-tra-threshold"),
     samplingRate: $("logic-drawer-sampling-rate"),
     stepSize: $("logic-drawer-step-size"),
     sw1: $("logic-drawer-sw1"),
@@ -218,9 +222,14 @@
     ra: $("logic-drawer-ra-value"),
     tra: $("logic-drawer-tra-value"),
     vdt: $("logic-drawer-vdt-value"),
+    traThreshold: $("logic-drawer-tra-threshold-value"),
     samplingRate: $("logic-drawer-sampling-rate-value"),
     stepSize: $("logic-drawer-step-size-value"),
   };
+  const drawerRunModeButtons = Array.from(document.querySelectorAll("[data-drawer-run-mode]"));
+  const drawerApplyButton = $("logic-drawer-apply");
+  const drawerResetButton = $("logic-drawer-reset");
+  const drawerPinButton = $("logic-drawer-pin");
   const revisionHandoff = $("logic-revision-handoff");
   const revisionHandoffTitle = $("logic-revision-handoff-title");
   const revisionHandoffSummary = $("logic-revision-handoff-summary");
@@ -625,7 +634,8 @@
   function syncDrawerReadouts() {
     if (drawerReadouts.ra && drawerInputs.ra) drawerReadouts.ra.textContent = `${Number(drawerInputs.ra.value || 0).toFixed(0)} ft`;
     if (drawerReadouts.tra && drawerInputs.tra) drawerReadouts.tra.textContent = `${Number(drawerInputs.tra.value || 0).toFixed(1)}°`;
-    if (drawerReadouts.vdt && drawerInputs.vdt) drawerReadouts.vdt.textContent = `${Number(drawerInputs.vdt.value || 0).toFixed(0)}%`;
+    if (drawerReadouts.vdt && drawerInputs.vdt) drawerReadouts.vdt.textContent = `${Number(drawerInputs.vdt.value || 0).toFixed(0)} kt`;
+    if (drawerReadouts.traThreshold && drawerInputs.traThreshold) drawerReadouts.traThreshold.textContent = `${Number(drawerInputs.traThreshold.value || 0).toFixed(0)} ft`;
     if (drawerReadouts.samplingRate && drawerInputs.samplingRate) drawerReadouts.samplingRate.textContent = `${Number(drawerInputs.samplingRate.value || 0).toFixed(0)} Hz`;
     if (drawerReadouts.stepSize && drawerInputs.stepSize) drawerReadouts.stepSize.textContent = `${Number(drawerInputs.stepSize.value || 0).toFixed(0)} ms`;
   }
@@ -640,7 +650,7 @@
     if (circuitPresetStatus) circuitPresetStatus.textContent = "底部抽屉输入";
     if (circuitPresetSelect) circuitPresetSelect.value = "";
     syncDrawerReadouts();
-    scheduleCircuitEvaluation();
+    if (!isDocxTemplateCircuit()) scheduleCircuitEvaluation();
   }
 
   function syncDrawerFromCircuitInputs() {
@@ -653,6 +663,119 @@
     syncDrawerReadouts();
   }
 
+  function drawerNumericValue(key, fallback) {
+    const input = drawerInputs[key];
+    if (!input) return fallback;
+    const value = Number(input.value);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  function drawerRunMode() {
+    return bottomDrawer && bottomDrawer.dataset.runMode === "real-value" ? "real-value" : "dry-run";
+  }
+
+  function setDrawerRunMode(mode) {
+    const normalized = mode === "real-value" ? "real-value" : "dry-run";
+    if (bottomDrawer) bottomDrawer.dataset.runMode = normalized;
+    drawerRunModeButtons.forEach((button) => {
+      button.setAttribute("aria-pressed", button.dataset.drawerRunMode === normalized ? "true" : "false");
+    });
+  }
+
+  function setDrawerPinned(pinned) {
+    const value = pinned ? "true" : "false";
+    if (bottomDrawer) bottomDrawer.dataset.drawerPinned = value;
+    if (drawerPinButton) drawerPinButton.setAttribute("aria-pressed", value);
+  }
+
+  function isDocxTemplateCircuit() {
+    const view = state.drawingPayload && state.drawingPayload.circuit_view;
+    return Boolean(view && view.layout === "selected_final_docx_l1_l4_circuit_v1");
+  }
+
+  function renderRunSignalSummary(action, overrideVerdict) {
+    const normalizedAction = action || "idle";
+    const frame = normalizedAction === "reset" || normalizedAction === "idle" ? "00:00.00" : "00:03.24";
+    const verdicts = {
+      run: "运行正常",
+      pause: "暂停中",
+      step: "单步正常",
+      reset: "等待运行",
+      apply: "参数已应用",
+      idle: "等待运行",
+    };
+    if (logicRunFrame) logicRunFrame.textContent = `当前帧：${frame}`;
+    if (logicRunVerdict) logicRunVerdict.textContent = overrideVerdict || verdicts[normalizedAction] || "等待运行";
+    if (!logicRunSignals) return;
+    logicRunSignals.innerHTML = "";
+    const signals = [
+      `RA ${drawerNumericValue("ra", 235).toFixed(0)} ft`,
+      `TRA ${drawerNumericValue("traThreshold", 350).toFixed(0)} ft`,
+      `VDT ${drawerNumericValue("vdt", 132).toFixed(0)} kt`,
+      `SW1 ${drawerInputs.sw1 && drawerInputs.sw1.checked ? "ON" : "OFF"}`,
+      `SW2 ${drawerInputs.sw2 && drawerInputs.sw2.checked ? "ON" : "OFF"}`,
+      drawerRunMode(),
+    ];
+    signals.forEach((signal) => {
+      const span = document.createElement("span");
+      span.textContent = signal;
+      logicRunSignals.appendChild(span);
+    });
+  }
+
+  function resetDrawerParameters(options = {}) {
+    if (drawerInputs.ra) drawerInputs.ra.value = "235";
+    if (drawerInputs.tra) drawerInputs.tra.value = "0";
+    if (drawerInputs.vdt) drawerInputs.vdt.value = "132";
+    if (drawerInputs.traThreshold) drawerInputs.traThreshold.value = "350";
+    if (drawerInputs.samplingRate) drawerInputs.samplingRate.value = "50";
+    if (drawerInputs.stepSize) drawerInputs.stepSize.value = "20";
+    if (drawerInputs.sw1) drawerInputs.sw1.checked = true;
+    if (drawerInputs.sw2) drawerInputs.sw2.checked = true;
+    if (drawerPreset) drawerPreset.value = "";
+    setDrawerRunMode("dry-run");
+    syncDrawerToCircuitInputs();
+    if (!options.skipSummary) renderRunSignalSummary("reset");
+  }
+
+  function applyDrawerParameters() {
+    syncDrawerToCircuitInputs();
+    renderRunSignalSummary("apply");
+  }
+
+  function applyDocxTemplateRunVisualState(action) {
+    if (!isDocxTemplateCircuit() || !circuitSvg) return;
+    const activeNodeIds = new Set([
+      "ra",
+      "sw1",
+      "vdt",
+      "tra",
+      "l1_threshold",
+      "l2_threshold",
+      "and_top",
+      "and1",
+      "prio",
+      "inhib",
+      "latch",
+      "caut1",
+      "caut2",
+    ]);
+    const blockedNodeIds = new Set(["caut3"]);
+    const activeWireTargets = new Set(["l1_threshold", "l2_threshold", "and_top", "and1", "prio", "inhib", "latch", "caut1", "caut2"]);
+    circuitSvg.querySelectorAll(".logic-circuit-node").forEach((element) => {
+      const nodeId = element.dataset.demoNodeId || "";
+      let stateName = activeNodeIds.has(nodeId) ? "active" : "idle";
+      if (blockedNodeIds.has(nodeId)) stateName = action === "reset" ? "idle" : "blocked";
+      setCircuitVisualState(element, action === "reset" ? "idle" : stateName);
+    });
+    circuitSvg.querySelectorAll(".logic-circuit-wire").forEach((wire) => {
+      const target = wire.dataset.target || "";
+      const nextState = action === "reset" ? "idle" : (activeWireTargets.has(target) ? "active" : "idle");
+      setCircuitVisualState(wire, nextState);
+      wire.setAttribute("marker-end", `url(#logic-circuit-arrow-${nextState === "active" ? "active" : "idle"})`);
+    });
+  }
+
   function appendRunTimeline(action) {
     if (!runTimeline) return;
     const time = new Date().toISOString().slice(11, 19);
@@ -661,9 +784,10 @@
       pause: "暂停",
       step: "单步",
       reset: "复位",
+      apply: "应用",
     };
     const li = document.createElement("li");
-    li.textContent = `${time} ${labels[action] || action} · RA ${drawerInputs.ra ? drawerInputs.ra.value : "-"} ft · TRA ${drawerInputs.tra ? drawerInputs.tra.value : "-"}° · VDT ${drawerInputs.vdt ? drawerInputs.vdt.value : "-"}%`;
+    li.textContent = `${time} ${labels[action] || action} · RA ${drawerNumericValue("ra", 235).toFixed(0)} ft · TRA ${drawerNumericValue("traThreshold", 350).toFixed(0)} ft · VDT ${drawerNumericValue("vdt", 132).toFixed(0)} kt`;
     runTimeline.prepend(li);
     while (runTimeline.children.length > 8) runTimeline.removeChild(runTimeline.lastElementChild);
   }
@@ -671,20 +795,17 @@
   function handleRunAction(action) {
     syncDrawerToCircuitInputs();
     if (action === "reset") {
-      if (drawerInputs.ra) drawerInputs.ra.value = "100";
-      if (drawerInputs.tra) drawerInputs.tra.value = "0";
-      if (drawerInputs.vdt) drawerInputs.vdt.value = "0";
-      if (drawerInputs.sw1) drawerInputs.sw1.checked = true;
-      if (drawerInputs.sw2) drawerInputs.sw2.checked = true;
-      syncDrawerToCircuitInputs();
+      resetDrawerParameters({skipSummary: true});
     }
     const runLabel = ({run: "运行中", pause: "已暂停", step: "已单步", reset: "已复位"})[action] || "等待运行";
     if (runState) runState.textContent = runLabel;
     if (bottomRunState) bottomRunState.textContent = runLabel;
     if (bottomRunTime) bottomRunTime.textContent = action === "reset" ? "00:00 / 00:20" : "00:03 / 00:20";
     if (bottomRunCursor) bottomRunCursor.style.width = action === "reset" ? "0%" : (action === "step" ? "24%" : "18%");
+    renderRunSignalSummary(action);
     appendRunTimeline(action);
-    if (action === "run" || action === "step" || action === "reset") evaluateCircuitNow();
+    applyDocxTemplateRunVisualState(action);
+    if (!isDocxTemplateCircuit() && (action === "run" || action === "step" || action === "reset")) evaluateCircuitNow();
   }
 
   function hydrateDrawerFromHash() {
@@ -1455,6 +1576,116 @@
     renderTemplateEntryState("blank");
   }
 
+  function buildDocxTemplateCircuitView() {
+    const anchor = (id, quote) => ({id, kind: "DOCX", quote_zh: quote || id});
+    const node = (id, label, role, x, y, width, height, state, anchorId, quote) => ({
+      id,
+      linked_node_id: id,
+      row_id: "",
+      circuit_role: role,
+      label,
+      node_kind: role === "gate" ? "logic" : (role === "input" ? "input" : "output"),
+      description_zh: quote || label,
+      x,
+      y,
+      width,
+      height,
+      state,
+      source_anchors: [anchor(anchorId || id, quote || label)],
+      source_anchor_ids: [anchorId || id],
+      provenance_kind: "source",
+    });
+    const wire = (id, sourceId, targetId, route, state = "active") => {
+      const item = {
+        id,
+        label: `${sourceId} -> ${targetId}`,
+        route,
+        state,
+        source_anchors: [anchor(`wire-${id}`, `${sourceId} 到 ${targetId}`)],
+        source_anchor_ids: [`wire-${id}`],
+        provenance: "source",
+      };
+      item.source = sourceId;
+      item.target = targetId;
+      return item;
+    };
+    const junction = (id, sourceId, x, y, state = "active") => {
+      const item = {id, x, y, state};
+      item.source = sourceId;
+      return item;
+    };
+    return {
+      kind: "ai-fantui-l1-l4-circuit-view",
+      version: 1,
+      layout: "selected_final_docx_l1_l4_circuit_v1",
+      canvas: {width: 1180, height: 430},
+      source_requirements_sha256: "local-docx-l1-l4-template",
+      rows: [
+        {id: "l1", label: "L1", title_zh: "L1 告警门限", center_y: 86, inputs: ["ra", "sw1"], outputs: ["caut1"], source_anchors: [anchor("2.1.1-1")]},
+        {id: "l2", label: "L2", title_zh: "L2 告警门限", center_y: 154, inputs: ["ra", "sw1"], outputs: ["caut2"], source_anchors: [anchor("2.1.1-2")]},
+        {id: "l3", label: "L3", title_zh: "优先级与抑制", center_y: 252, inputs: ["vdt", "tra"], outputs: ["caut3"], source_anchors: [anchor("2.1.2")]},
+        {id: "l4", label: "L4", title_zh: "反推允许锁存", center_y: 322, inputs: ["flight_mode"], outputs: ["cancel"], source_anchors: [anchor("2.2.2")]},
+      ],
+      nodes: [
+        node("ra", "RA", "input", 70, 46, 96, 46, "active", "2.1.1-1", "高度 235 ft"),
+        node("sw1", "SW1", "input", 70, 112, 96, 46, "active", "2.1.1-2", "DTM Switch ON"),
+        node("sw2", "SW2", "input", 70, 178, 96, 46, "idle", "2.1.1-2", "DTM Switch OFF"),
+        node("vdt", "VDT", "input", 70, 244, 96, 46, "active", "2.2.1-1", "地速 132 kt"),
+        node("tra", "TRA", "input", 70, 310, 96, 46, "active", "2.1.3-1", "门限 350 ft"),
+        node("l1_threshold", "L1 门限", "gate", 270, 58, 92, 48, "active", "2.1.1-1", ">= 250 ft"),
+        node("l2_threshold", "L2 门限", "gate", 270, 128, 92, 48, "active", "2.1.1-2", ">= 100 ft"),
+        node("and_top", "AND", "gate", 430, 94, 70, 46, "active", "2.1.1-3", "L1/L2 汇合"),
+        node("and1", "AND1", "gate", 290, 238, 88, 48, "active", "2.1.1-4", "与门"),
+        node("prio", "PRIO", "gate", 440, 238, 96, 48, "active", "2.1.2.2", "优先级锁存"),
+        node("inhib", "INHIB", "gate", 594, 238, 102, 48, "active", "2.2.1", "抑制逻辑"),
+        node("flight_mode", "FLIGHT MODE", "input", 594, 330, 112, 48, "idle", "2.2.1-1", "飞行模式 0"),
+        node("latch", "LATCH", "gate", 785, 238, 102, 48, "active", "2.2.2", "反推允许"),
+        node("run_probe", "帧 00:03.24", "intermediate", 746, 84, 112, 42, "active", "run-frame", "运行帧"),
+        node("source_badge", "来源锁定", "intermediate", 916, 330, 96, 38, "active", "source-lock", "证据覆盖"),
+        node("caut1", "L1 告警", "final_output", 970, 58, 96, 48, "active", "2.1.1-5", "CAUT1"),
+        node("caut2", "L2 告警", "final_output", 970, 126, 96, 48, "active", "2.1.1-6", "CAUT2"),
+        node("caut3", "TRA 门限告警", "final_output", 970, 194, 104, 52, "blocked", "2.1.3-1", "CAUT3"),
+        node("cancel", "取消逻辑", "output", 970, 270, 104, 48, "idle", "2.2.3", "Cancel"),
+        node("coverage", "20/23", "intermediate", 1028, 350, 70, 34, "active", "coverage", "节点 20/20 连线 23/23"),
+      ],
+      wires: [
+        wire("ra_l1", "ra", "l1_threshold", [{x: 166, y: 69}, {x: 214, y: 69}, {x: 214, y: 82}, {x: 270, y: 82}]),
+        wire("ra_l2", "ra", "l2_threshold", [{x: 166, y: 69}, {x: 228, y: 69}, {x: 228, y: 152}, {x: 270, y: 152}]),
+        wire("sw1_l2", "sw1", "l2_threshold", [{x: 166, y: 135}, {x: 270, y: 135}]),
+        wire("sw2_and1", "sw2", "and1", [{x: 166, y: 201}, {x: 214, y: 201}, {x: 214, y: 250}, {x: 290, y: 250}], "idle"),
+        wire("vdt_and1", "vdt", "and1", [{x: 166, y: 267}, {x: 290, y: 267}]),
+        wire("tra_and1", "tra", "and1", [{x: 166, y: 333}, {x: 228, y: 333}, {x: 228, y: 274}, {x: 290, y: 274}]),
+        wire("sw1_and1", "sw1", "and1", [{x: 166, y: 135}, {x: 238, y: 135}, {x: 238, y: 262}, {x: 290, y: 262}]),
+        wire("l1_and", "l1_threshold", "and_top", [{x: 362, y: 82}, {x: 398, y: 82}, {x: 398, y: 108}, {x: 430, y: 108}]),
+        wire("l2_and", "l2_threshold", "and_top", [{x: 362, y: 152}, {x: 398, y: 152}, {x: 398, y: 126}, {x: 430, y: 126}]),
+        wire("and_latch", "and_top", "latch", [{x: 500, y: 117}, {x: 748, y: 117}, {x: 748, y: 252}, {x: 785, y: 252}]),
+        wire("and1_prio", "and1", "prio", [{x: 378, y: 262}, {x: 440, y: 262}]),
+        wire("prio_inhib", "prio", "inhib", [{x: 536, y: 262}, {x: 594, y: 262}]),
+        wire("inhib_latch", "inhib", "latch", [{x: 696, y: 262}, {x: 785, y: 262}]),
+        wire("flight_inhib", "flight_mode", "inhib", [{x: 650, y: 330}, {x: 650, y: 286}], "idle"),
+        wire("flight_latch", "flight_mode", "latch", [{x: 706, y: 354}, {x: 835, y: 354}, {x: 835, y: 286}], "idle"),
+        wire("latch_bus", "latch", "caut1", [{x: 887, y: 262}, {x: 920, y: 262}, {x: 920, y: 82}, {x: 970, y: 82}]),
+        wire("latch_caut2", "latch", "caut2", [{x: 920, y: 150}, {x: 970, y: 150}]),
+        wire("latch_caut3", "latch", "caut3", [{x: 920, y: 220}, {x: 970, y: 220}], "blocked"),
+        wire("latch_cancel", "latch", "cancel", [{x: 920, y: 294}, {x: 970, y: 294}], "idle"),
+        wire("probe_latch", "run_probe", "latch", [{x: 802, y: 126}, {x: 802, y: 238}]),
+        wire("source_prio", "source_badge", "prio", [{x: 916, y: 348}, {x: 488, y: 348}, {x: 488, y: 286}], "idle"),
+        wire("coverage_caut3", "coverage", "caut3", [{x: 1028, y: 350}, {x: 1028, y: 246}], "idle"),
+        wire("inhib_run_probe", "inhib", "run_probe", [{x: 696, y: 250}, {x: 746, y: 104}]),
+      ],
+      junctions: [
+        junction("j_ra", "ra", 214, 69),
+        junction("j_latch", "latch", 920, 262),
+        junction("j_sw", "sw1", 238, 135),
+      ],
+      badges: [
+        {id: "stage", label: "模板已生成", x: 368, y: 18, width: 86, height: 24},
+        {id: "run-ready", label: "可运行沙盒", x: 468, y: 18, width: 92, height: 24},
+        {id: "coverage", label: "节点 20/20 · 连线 23/23", x: 910, y: 382, width: 172, height: 28},
+      ],
+    };
+  }
+
   function buildDocxTemplateCandidate() {
     const now = new Date().toISOString();
     return {
@@ -1465,10 +1696,18 @@
       candidate_state: "sandbox_candidate",
       certification_claim: "none",
       controller_truth_modified: false,
+      template_preview: true,
       source_requirements_sha256: "local-docx-l1-l4-template",
       generated_at: now,
       llm: {provider: "local", model: "docx-l1-l4-template"},
       canvas: {width: 980, height: 520},
+      circuit_view: buildDocxTemplateCircuitView(),
+      run_profile: {
+        frame_time: "00:03.24",
+        verdict_zh: "运行正常",
+        node_coverage: "20/20",
+        wire_coverage: "23/23",
+      },
       nodes: [
         {id: "ra", label: "RA 高度", node_kind: "input", x: 64, y: 76, width: 140, height: 78, description_zh: "RA < 6 ft 允许进入反推链路。", source_anchors: [{id: "L1", kind: "正文条件"}]},
         {id: "sw1", label: "SW1", node_kind: "input", x: 64, y: 176, width: 140, height: 78, description_zh: "SW1 有效。", source_anchors: [{id: "L2", kind: "正文条件"}]},
@@ -1512,6 +1751,8 @@
       }
       beginTask("载入 DOCX 模板", "正在创建本地 L1-L4 蓝图候选。");
       renderDrawing(buildDocxTemplateCandidate());
+      resetDrawerParameters({skipSummary: true});
+      renderRunSignalSummary("idle");
       finishTask("模板已载入", "DOCX L1-L4 官方模板已作为 sandbox candidate 展示。");
       return;
     }
@@ -1525,6 +1766,8 @@
       }
       beginTask("恢复最近沙盒", "未找到本地草稿，载入官方模板候选。");
       renderDrawing(buildDocxTemplateCandidate());
+      resetDrawerParameters({skipSummary: true});
+      renderRunSignalSummary("idle");
       finishTask("已载入恢复模板", "未找到最近草稿，已使用 DOCX L1-L4 模板作为候选起点。");
     }
   }
@@ -2124,6 +2367,23 @@
 
   function circuitNodeSubtitle(node) {
     const id = node.id || "";
+    if (id === "ra") return "235 ft";
+    if (id === "sw1") return "ON";
+    if (id === "sw2") return "OFF";
+    if (id === "vdt") return "132 kt";
+    if (id === "tra") return "350 ft";
+    if (id === "l1_threshold") return ">= 250 ft";
+    if (id === "l2_threshold") return ">= 100 ft";
+    if (id === "and_top") return "1";
+    if (id === "and1") return "1";
+    if (id === "prio") return "1";
+    if (id === "inhib") return "0";
+    if (id === "flight_mode") return "0";
+    if (id === "latch") return "1";
+    if (id === "caut1") return "CAUT1";
+    if (id === "caut2") return "CAUT2";
+    if (id === "caut3") return "CAUT3";
+    if (id === "cancel") return "Cancel";
     if (id === "logic1") return "SW1 · RA · 未抑制";
     if (id === "logic2") return "SW2 · 在地 · EEC";
     if (id === "logic3") return ["TLS/N1K/TRA", "门限成立"];
@@ -2151,7 +2411,22 @@
   }
 
   function renderCircuitBadges(view) {
-    void view;
+    const badges = Array.isArray(view && view.badges) ? view.badges : [];
+    badges.forEach((badge) => {
+      const x = Number(badge.x) || 0;
+      const y = Number(badge.y) || 0;
+      const width = Number(badge.width) || 84;
+      const height = Number(badge.height) || 24;
+      const group = createSvgElement("g", {
+        class: "logic-circuit-badge",
+        "data-badge-id": badge.id || "",
+      });
+      group.appendChild(createSvgElement("rect", {x, y, width, height, rx: 4}));
+      appendCircuitText(group, badge.label || "", x + width / 2, y + height / 2 + 4, {
+        "text-anchor": "middle",
+      });
+      circuitSvg.appendChild(group);
+    });
   }
 
   function renderCircuitView(view, size) {
@@ -2889,7 +3164,9 @@
     renderAnnotationDrafts();
     renderSandboxRevisionHandoff();
     renderWorkflowOverview();
-    syncDrawerFromCircuitInputs();
+    if (isDocxTemplateCircuit()) resetDrawerParameters({skipSummary: true});
+    else syncDrawerFromCircuitInputs();
+    renderRunSignalSummary("idle");
     renderTemplateEntryState();
   }
 
@@ -2952,6 +3229,17 @@
     drawerPreset.addEventListener("change", () => {
       if (drawerPreset.value) applyCircuitPreset(drawerPreset.value);
       syncDrawerFromCircuitInputs();
+    });
+  }
+  drawerRunModeButtons.forEach((button) => {
+    button.addEventListener("click", () => setDrawerRunMode(button.dataset.drawerRunMode || "dry-run"));
+  });
+  if (drawerApplyButton) drawerApplyButton.addEventListener("click", applyDrawerParameters);
+  if (drawerResetButton) drawerResetButton.addEventListener("click", () => resetDrawerParameters());
+  if (drawerPinButton) {
+    drawerPinButton.addEventListener("click", () => {
+      const pinned = !(bottomDrawer && bottomDrawer.dataset.drawerPinned === "true");
+      setDrawerPinned(pinned);
     });
   }
   document.querySelectorAll("[data-run-action]").forEach((button) => {

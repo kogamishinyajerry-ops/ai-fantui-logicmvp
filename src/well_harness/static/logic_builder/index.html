@@ -47,7 +47,7 @@
   </div>
 </header>
 
-<main class="logic-shell logic-cockpit-shell" data-ui-skin="codex-minimal" data-logic-experience="cockpit-annotation-stream" data-workstation-shell="canvas-first" data-workstation-state="primary" data-blueprint-phase="phase-1-shell" data-blueprint-source="selected-final-set-20260514" data-blueprint-targets="27-global-nav-default-workbench 28-command-palette-advanced-entry 38-panel-state-strategy-final" data-blueprint27-rhythm="compact-canvas" data-panel-default="collapsed" data-panel-strategy="single-auxiliary" data-left-rail-state="collapsed" data-right-inspector-state="collapsed" data-bottom-drawer-state="closed" data-command-palette-state="closed" data-active-aux-panel="none" data-unified-inspector-state="none">
+<main class="logic-shell logic-cockpit-shell" data-ui-skin="codex-minimal" data-logic-experience="cockpit-annotation-stream" data-workstation-shell="canvas-first" data-workstation-state="primary" data-blueprint-phase="phase-1-shell" data-blueprint-source="selected-final-set-20260514" data-blueprint-targets="27-global-nav-default-workbench 28-command-palette-advanced-entry 30-docx-template-generated-canvas 31-running-signal-propagation 32-parameter-drawer-final 38-panel-state-strategy-final" data-blueprint27-rhythm="compact-canvas" data-panel-default="collapsed" data-panel-strategy="single-auxiliary" data-left-rail-state="collapsed" data-right-inspector-state="collapsed" data-bottom-drawer-state="closed" data-command-palette-state="closed" data-active-aux-panel="none" data-unified-inspector-state="none">
   <div class="logic-cockpit-canopy" data-cockpit-role="canopy-frame" aria-hidden="true">
     <span class="logic-cockpit-canopy-window"></span>
     <span class="logic-cockpit-canopy-window"></span>
@@ -351,7 +351,7 @@
           <button id="logic-context-comment-shortcut" type="button" class="logic-context-comment-shortcut" data-ux-action-tier="secondary">在此对象上标注</button>
         </section>
       </aside>
-      <div id="logic-canvas" class="logic-canvas" data-workstation-canvas="logic-drawing" aria-label="模型生成的逻辑链路图" tabindex="-1">
+      <div id="logic-canvas" class="logic-canvas" data-workstation-canvas="logic-drawing" data-blueprint30-surface="docx-template-circuit" aria-label="模型生成的逻辑链路图" tabindex="-1">
         <section id="logic-template-entry" class="logic-template-entry" data-blueprint-surface="blank-canvas-template-entry" data-blueprint29-rhythm="blank-canvas-template-entry" aria-label="空白画布模板入口">
           <div class="logic-template-copy">
             <p class="logic-kicker">BLANK CANVAS</p>
@@ -405,24 +405,34 @@
           <span>controller_truth_modified:false</span>
         </div>
       </section>
-      <section id="logic-run-parameter-drawer" class="logic-run-parameter-drawer" data-active-tab="none" data-unified-aux-panel="bottom-drawer" data-unified-panel-state="closed" aria-label="底部参数与仿真抽屉" hidden>
+      <section id="logic-run-parameter-drawer" class="logic-run-parameter-drawer" data-active-tab="none" data-run-mode="dry-run" data-drawer-pinned="false" data-blueprint31-surface="run-signal-propagation" data-blueprint32-surface="parameter-drawer-final" data-unified-aux-panel="bottom-drawer" data-unified-panel-state="closed" aria-label="底部参数与仿真抽屉" hidden>
         <div class="logic-bottom-drawer-tabbar" role="tablist" aria-label="底部抽屉">
           <button type="button" role="tab" data-bottom-drawer-tab="parameters" aria-selected="false">参数</button>
           <button type="button" role="tab" data-bottom-drawer-tab="run" aria-selected="false">运行</button>
           <button type="button" role="tab" data-bottom-drawer-tab="evidence" aria-selected="false">证据</button>
           <button type="button" role="tab" data-bottom-drawer-tab="report" aria-selected="false">报告</button>
+          <button id="logic-drawer-pin" type="button" class="secondary" aria-pressed="false">固定</button>
           <button id="logic-bottom-drawer-close" type="button" class="secondary">收起</button>
+        </div>
+        <div class="logic-drawer-actions" aria-label="参数抽屉操作">
+          <button id="logic-drawer-apply" type="button">应用</button>
+          <button id="logic-drawer-reset" type="button" class="secondary">重置</button>
         </div>
         <section class="logic-bottom-drawer-panel" data-bottom-drawer-panel="parameters" hidden>
           <div class="logic-parameter-grid">
-            <label><span>RA</span><output id="logic-drawer-ra-value">100 ft</output><input id="logic-drawer-ra" type="range" min="0" max="100" step="1" value="100"></label>
+            <label><span>RA</span><output id="logic-drawer-ra-value">235 ft</output><input id="logic-drawer-ra" type="range" min="0" max="1000" step="1" value="235"></label>
             <label><span>TRA</span><output id="logic-drawer-tra-value">0.0°</output><input id="logic-drawer-tra" type="range" min="-32" max="0" step="0.5" value="0"></label>
-            <label><span>VDT</span><output id="logic-drawer-vdt-value">0%</output><input id="logic-drawer-vdt" type="range" min="0" max="100" step="1" value="0"></label>
+            <label><span id="logic-drawer-vdt-label">VDT 地速</span><output id="logic-drawer-vdt-value">132 kt</output><input id="logic-drawer-vdt" type="range" min="0" max="400" step="1" value="132"></label>
+            <label><span>TRA threshold</span><output id="logic-drawer-tra-threshold-value">350 ft</output><input id="logic-drawer-tra-threshold" type="range" min="50" max="1000" step="10" value="350"></label>
             <label><span>采样率</span><output id="logic-drawer-sampling-rate-value">50 Hz</output><input id="logic-drawer-sampling-rate" type="range" min="10" max="200" step="10" value="50"></label>
             <label><span>步长</span><output id="logic-drawer-step-size-value">20 ms</output><input id="logic-drawer-step-size" type="range" min="5" max="100" step="5" value="20"></label>
             <label class="logic-drawer-switch"><input id="logic-drawer-sw1" type="checkbox" checked><span>SW1 有效</span></label>
             <label class="logic-drawer-switch"><input id="logic-drawer-sw2" type="checkbox" checked><span>SW2 有效</span></label>
             <label class="logic-drawer-preset"><span>预设场景</span><select id="logic-drawer-preset"><option value="">手动</option><option value="landing-deploy">着陆展开</option><option value="max-reverse">最大反推</option><option value="stow-return">收起回杆</option><option value="inhibit-block">抑制阻塞</option></select></label>
+          </div>
+          <div id="logic-drawer-run-mode" class="logic-drawer-mode-toggle" role="group" aria-label="仿真模式">
+            <button id="logic-drawer-run-mode-dry" type="button" data-drawer-run-mode="dry-run" aria-pressed="true">dry-run（不写入真值）</button>
+            <button id="logic-drawer-run-mode-real" type="button" data-drawer-run-mode="real-value" aria-pressed="false">real-value（写入）</button>
           </div>
         </section>
         <section class="logic-bottom-drawer-panel" data-bottom-drawer-panel="run" hidden>
@@ -432,6 +442,15 @@
             <button type="button" data-run-action="step">单步</button>
             <button type="button" data-run-action="reset">复位</button>
             <span id="logic-run-state">等待运行</span>
+          </div>
+          <div class="logic-run-signal-summary" data-blueprint31-surface="run-signal-propagation" aria-label="运行信号概览">
+            <span id="logic-run-frame">当前帧：00:00.00</span>
+            <strong id="logic-run-verdict">等待运行</strong>
+            <div id="logic-run-signals" class="logic-run-signal-grid" aria-label="当前信号值">
+              <span>RA --</span>
+              <span>TRA --</span>
+              <span>VDT --</span>
+            </div>
           </div>
           <ol id="logic-run-timeline" class="logic-run-timeline" aria-label="仿真时间线">
             <li>00:00 画布待运行，参数抽屉保留当前输入。</li>
