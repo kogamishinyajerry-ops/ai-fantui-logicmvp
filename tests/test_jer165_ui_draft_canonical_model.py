@@ -327,6 +327,110 @@ def test_backend_between_rule_uses_declared_array_threshold_window() -> None:
     assert upper_bound["asserted_component_values"]["draft_output"] is False
 
 
+def test_backend_snapshot_preserves_multiple_incoming_edge_values_for_logic_primitives() -> None:
+    base = build_reference_editable_control_model()
+    model = canonicalize_workbench_ui_draft(
+        base,
+        {
+            "system_id": "thrust-reverser",
+            "truth_level_impact": "none",
+            "controller_truth_modified": False,
+            "nodes": [
+                {"id": "draft_left", "label": "Left", "op": "input", "draftNode": True},
+                {"id": "draft_right", "label": "Right", "op": "input", "draftNode": True},
+                {"id": "draft_and", "label": "AND", "op": "and", "draftNode": True},
+                {"id": "draft_output", "label": "Output", "op": "output", "draftNode": True},
+            ],
+            "edges": [
+                {"id": "edge_left_and", "source": "draft_left", "target": "draft_and"},
+                {"id": "edge_right_and", "source": "draft_right", "target": "draft_and"},
+                {"id": "edge_and_output", "source": "draft_and", "target": "draft_output"},
+            ],
+        },
+    )
+
+    blocked = evaluate_editable_snapshot(
+        model,
+        {**FULL_CHAIN_SNAPSHOT, "draft_left": True, "draft_right": False},
+    )
+    active = evaluate_editable_snapshot(
+        model,
+        {**FULL_CHAIN_SNAPSHOT, "draft_left": True, "draft_right": True},
+    )
+
+    assert blocked["asserted_component_values"]["draft_and"] is False
+    assert blocked["asserted_component_values"]["draft_output"] is False
+    assert active["asserted_component_values"]["draft_and"] is True
+    assert active["asserted_component_values"]["draft_output"] is True
+
+
+def test_backend_snapshot_preserves_delay_and_latch_state_across_frames() -> None:
+    base = build_reference_editable_control_model()
+    model = canonicalize_workbench_ui_draft(
+        base,
+        {
+            "system_id": "thrust-reverser",
+            "truth_level_impact": "none",
+            "controller_truth_modified": False,
+            "nodes": [
+                {"id": "draft_input", "label": "Input", "op": "input", "draftNode": True},
+                {"id": "draft_delay", "label": "Delay", "op": "delay", "draftNode": True},
+                {"id": "draft_latch", "label": "Latch", "op": "latch", "draftNode": True},
+                {
+                    "id": "draft_delay_output",
+                    "label": "Delay output",
+                    "op": "output",
+                    "draftNode": True,
+                },
+                {
+                    "id": "draft_latch_output",
+                    "label": "Latch output",
+                    "op": "output",
+                    "draftNode": True,
+                },
+            ],
+            "edges": [
+                {"id": "edge_input_delay", "source": "draft_input", "target": "draft_delay"},
+                {"id": "edge_input_latch", "source": "draft_input", "target": "draft_latch"},
+                {
+                    "id": "edge_delay_output",
+                    "source": "draft_delay",
+                    "target": "draft_delay_output",
+                },
+                {
+                    "id": "edge_latch_output",
+                    "source": "draft_latch",
+                    "target": "draft_latch_output",
+                },
+            ],
+        },
+    )
+    state: dict[str, object] = {}
+
+    first = evaluate_editable_snapshot(
+        model,
+        {**FULL_CHAIN_SNAPSHOT, "draft_input": True},
+        state=state,
+    )
+    second = evaluate_editable_snapshot(
+        model,
+        {**FULL_CHAIN_SNAPSHOT, "draft_input": False},
+        state=state,
+    )
+    third = evaluate_editable_snapshot(
+        model,
+        {**FULL_CHAIN_SNAPSHOT, "draft_input": False},
+        state=state,
+    )
+
+    assert first["asserted_component_values"]["draft_delay_output"] is False
+    assert first["asserted_component_values"]["draft_latch_output"] is True
+    assert second["asserted_component_values"]["draft_delay_output"] is True
+    assert second["asserted_component_values"]["draft_latch_output"] is True
+    assert third["asserted_component_values"]["draft_delay_output"] is False
+    assert third["asserted_component_values"]["draft_latch_output"] is True
+
+
 def test_ui_draft_invalid_edge_is_reported_as_invalid_model_not_truth_change() -> None:
     response, error = build_workbench_sandbox_run_response(
         {
