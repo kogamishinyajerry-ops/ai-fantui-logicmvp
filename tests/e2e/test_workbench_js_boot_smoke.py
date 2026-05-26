@@ -2230,6 +2230,54 @@ def test_workbench_candidate_debugger_ignores_stale_diff_after_draft_change(demo
     assert archive["selected_debug_timeline"]["trace_link_status"] == "selection_only"
 
 
+def test_workbench_candidate_debugger_ignores_stale_diff_after_custom_snapshot_change(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click("#workbench-start-empty-draft-btn")
+    page.click('[data-op-catalog-op="and"]')
+    page.click('[data-editor-tool="node"]')
+    page.click('[data-op-catalog-op="output"]')
+    page.click('[data-editor-tool="node"]')
+    _click_workbench_port_handle(page, "draft_node_1", "out")
+    _click_workbench_port_handle(page, "draft_node_2", "in")
+
+    page.select_option("#workbench-sandbox-scenario-select", "nominal_landing")
+    page.fill("#workbench-custom-snapshot-json", '{"tra_deg": -12}')
+    page.click("#workbench-run-sandbox-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const verdict = document.getElementById('workbench-sandbox-diff-panel')?.getAttribute('data-verdict');
+          return ['equivalent', 'divergent', 'invalid_model', 'invalid_scenario'].includes(verdict);
+        }
+        """
+    )
+    page.fill("#workbench-custom-snapshot-json", '{"tra_deg": -8}')
+
+    _click_workbench_handoff_control(page, "#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert archive["model_json"]["custom_snapshot"] == {"tra_deg": -8}
+    assert archive["sandbox_test_run_report"]["status"] == "not_run"
+    assert archive["candidate_debugger_view"]["status"] == "not_run"
+    assert archive["candidate_debugger_view"]["assertion_status"] == "not_run"
+    assert archive["debug_probe_timeline"]["status"] == "not_run"
+    assert archive["debug_probe_timeline"]["assertion_status"] == "not_run"
+    assert archive["selected_debug_timeline"]["diff_verdict"] == "not_run"
+    assert archive["selected_debug_timeline"]["trace_link_status"] == "selection_only"
+
+
 def test_workbench_selected_debug_timeline_tracks_selection_diff_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")

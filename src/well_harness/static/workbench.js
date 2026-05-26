@@ -18877,10 +18877,14 @@ function installEditableWorkbenchShell() {
     ));
   }
 
-  function currentSandboxDiffClientModelHash() {
+  function currentSandboxDiffClientModelHash(customSnapshotOverride) {
     refreshEditableNodes();
+    const customSnapshot = customSnapshotOverride !== undefined
+      ? (customSnapshotOverride || {})
+      : (safeWorkbenchCustomSnapshot() || {});
     return editableDraftHash(stableEvidenceArchiveJson({
       scenario_id: selectedWorkbenchScenarioId(),
+      custom_snapshot: normalizeEvidenceArchiveValue(customSnapshot),
       nodes: nodes.map((node) => {
         const state = editableNodeState(node);
         return {
@@ -22066,9 +22070,9 @@ function installEditableWorkbenchShell() {
     };
   }
 
-  function renderWorkbenchSandboxDiff(payload) {
+  function renderWorkbenchSandboxDiff(payload, clientModelHash) {
     lastSandboxDiff = payload || null;
-    lastSandboxDiffClientModelHash = payload ? currentSandboxDiffClientModelHash() : "";
+    lastSandboxDiffClientModelHash = payload ? (clientModelHash || currentSandboxDiffClientModelHash()) : "";
     const verdict = (payload && payload.verdict) || "invalid_scenario";
     if (diffPanel) diffPanel.setAttribute("data-verdict", verdict);
     if (diffVerdict) diffVerdict.textContent = displayStatusLabel(verdict);
@@ -22115,10 +22119,11 @@ function installEditableWorkbenchShell() {
         validation_report: emptyWorkbenchGraphValidationReport("fail"),
         summary: { first_divergence: null, assertion_status: "not_run", frame_count: 0 },
       };
-      renderWorkbenchSandboxDiff(payload);
+      renderWorkbenchSandboxDiff(payload, currentSandboxDiffClientModelHash(null));
       runSandboxBtn.disabled = false;
       return Promise.resolve(payload);
     }
+    const clientModelHash = currentSandboxDiffClientModelHash(customSnapshot);
     const requestBody = {
       scenario_id: selectedWorkbenchScenarioId(),
       draft: currentDraftSnapshot(),
@@ -22131,7 +22136,7 @@ function installEditableWorkbenchShell() {
     })
       .then((response) => response.json())
       .then((payload) => {
-        renderWorkbenchSandboxDiff(payload);
+        renderWorkbenchSandboxDiff(payload, clientModelHash);
         return payload;
       })
       .catch((err) => {
@@ -22144,7 +22149,7 @@ function installEditableWorkbenchShell() {
           validation_report: emptyWorkbenchGraphValidationReport("fail"),
           summary: { first_divergence: null, assertion_status: "not_run", frame_count: 0 },
         };
-        renderWorkbenchSandboxDiff(payload);
+        renderWorkbenchSandboxDiff(payload, clientModelHash);
         return payload;
       })
       .finally(() => {
