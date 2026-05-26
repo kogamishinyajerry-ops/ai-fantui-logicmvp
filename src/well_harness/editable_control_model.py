@@ -30,7 +30,7 @@ EDITABLE_CONTROL_MODEL_DIFF_SCHEMA_ID = (
 EDITABLE_CONTROL_MODEL_KIND = "well-harness-editable-control-model"
 EDITABLE_CONTROL_MODEL_DIFF_KIND = "well-harness-editable-control-model-diff"
 EDITABLE_CONTROL_MODEL_VERSION = 1
-APPROVED_OPS = ("and", "or", "compare", "between", "delay", "latch")
+APPROVED_OPS = ("input", "output", "and", "or", "compare", "between", "delay", "latch")
 OP_CATALOG_VERSION = "editable-control-ops.v1"
 REFERENCE_MODEL_ID = "thrust-reverser-derived-view-v1"
 
@@ -491,6 +491,85 @@ def _evaluate_rule(rule: dict[str, Any], signals: dict[str, Any]) -> tuple[bool,
     raise EditableControlModelValidationError(f"unsupported comparison {comparison}")
 
 
+def _snapshot_bool(value: Any) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "active", "on"}
+    return bool(value)
+
+
+def _snapshot_number(value: Any) -> float:
+    if isinstance(value, bool):
+        return 1.0 if value else 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _node_input_values(
+    node: dict[str, Any],
+    signals: dict[str, Any],
+    ports_by_id: dict[str, dict[str, Any]],
+) -> list[Any]:
+    values: list[Any] = []
+    seen: set[str] = set()
+    candidate_keys = [node["id"], f"{node['id']}:in"]
+    for port in ports_by_id.values():
+        if port["node_id"] == node["id"] and port["direction"] == "in":
+            candidate_keys.extend([port["id"], port["signal_id"]])
+    for key in candidate_keys:
+        if key in seen:
+            continue
+        seen.add(key)
+        if key in signals:
+            values.append(signals[key])
+    return values
+
+
+def _evaluate_supported_node(
+    node: dict[str, Any],
+    signals: dict[str, Any],
+    ports_by_id: dict[str, dict[str, Any]],
+) -> tuple[Any, list[dict[str, Any]]]:
+    op = node["op"]
+    rules = node["rules"]
+    inputs = _node_input_values(node, signals, ports_by_id)
+    if op in {"and", "or", "compare", "between"} and rules:
+        rule_results = []
+        failed_rules = []
+        for rule in rules:
+            passed, current_value, threshold = _evaluate_rule(rule, signals)
+            rule_results.append(passed)
+            if not passed:
+                failed_rules.append(
+                    {
+                        "name": rule["name"],
+                        "current_value": current_value,
+                        "comparison": rule["comparison"],
+                        "threshold_value": threshold,
+                    }
+                )
+        if op == "or":
+            return any(rule_results), failed_rules
+        return all(rule_results), failed_rules
+    if op == "or":
+        return any(_snapshot_bool(value) for value in (inputs or [False])), []
+    if op == "compare":
+        return _snapshot_number((inputs or [False])[0]) >= 5.0, []
+    if op == "between":
+        value = _snapshot_number((inputs or [False])[0])
+        return 5.0 <= value <= 10.0, []
+    if op == "delay":
+        return False, []
+    if op == "latch":
+        return any(_snapshot_bool(value) for value in (inputs or [False])), []
+    if op == "input":
+        return (inputs or [False])[0], []
+    if op == "output":
+        return all(_snapshot_bool(value) for value in (inputs or [False])), []
+    return all(_snapshot_bool(value) for value in (inputs or [False])), []
+
+
 def evaluate_editable_snapshot(
     model: dict[str, Any],
     snapshot: dict[str, Any],
@@ -509,35 +588,18 @@ def evaluate_editable_snapshot(
     port_by_id = {port["id"]: port for port in model["ports"]}
 
     for node in model["nodes"]:
-        if node["node_type"] != "logic":
-            continue
         op = node["op"]
-        if op not in ("and", "or"):
-            raise EditableControlModelValidationError(
-                f"snapshot evaluator only supports and/or logic nodes, got op {op}"
-            )
-        rule_results = []
-        failed_rules = []
-        for rule in node["rules"]:
-            passed, current_value, threshold = _evaluate_rule(rule, signals)
-            rule_results.append(passed)
-            if not passed:
-                failed_rules.append(
-                    {
-                        "name": rule["name"],
-                        "current_value": current_value,
-                        "comparison": rule["comparison"],
-                        "threshold_value": threshold,
-                    }
-                )
-        active = all(rule_results) if op == "and" else any(rule_results)
-        signals[node["id"]] = active
-        asserted_component_values[node["id"]] = active
+        if op is None:
+            continue
+        value, failed_rules = _evaluate_supported_node(node, signals, port_by_id)
+        active = _snapshot_bool(value)
+        signals[node["id"]] = value
+        asserted_component_values[node["id"]] = value
         logic_states[node["id"]] = {
             "state": "active" if active else "blocked",
             "failed_rules": failed_rules,
         }
-        if active:
+        if node["node_type"] == "logic" and active:
             active_logic_node_ids.append(node["id"])
         else:
             blocked_reasons.extend(f"{node['id']}:{rule['name']}" for rule in failed_rules)
@@ -547,8 +609,8 @@ def evaluate_editable_snapshot(
             if edge["source_port_id"] != source_port_id:
                 continue
             target_signal = port_by_id[edge["target_port_id"]]["signal_id"]
-            signals[target_signal] = active
-            asserted_component_values[target_signal] = active
+            signals[target_signal] = value
+            asserted_component_values[target_signal] = value
 
     return {
         "model_id": model["model_id"],

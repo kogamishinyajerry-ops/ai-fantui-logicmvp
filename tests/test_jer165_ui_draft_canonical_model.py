@@ -122,6 +122,96 @@ def test_sandbox_run_exposes_canonical_model_evidence_for_ui_draft() -> None:
     assert any(node["id"] == "draft_node_1" for node in response["canonical_model"]["nodes"])
 
 
+def test_sandbox_run_accepts_ui_catalog_input_and_output_primitives() -> None:
+    response, error = build_workbench_sandbox_run_response(
+        {
+            "scenario_id": "nominal_landing",
+            "draft": {
+                "system_id": "thrust-reverser",
+                "truth_level_impact": "none",
+                "controller_truth_modified": False,
+                "nodes": [
+                    {
+                        "id": "draft_node_1",
+                        "label": "Draft input",
+                        "op": "input",
+                        "draftNode": True,
+                        "op_catalog_entry": "input",
+                    },
+                    {
+                        "id": "draft_node_2",
+                        "label": "Draft output",
+                        "op": "output",
+                        "draftNode": True,
+                        "op_catalog_entry": "output",
+                    },
+                ],
+                "edges": [
+                    {
+                        "id": "edge_draft_input_output",
+                        "source": "draft_node_1",
+                        "target": "draft_node_2",
+                    }
+                ],
+            },
+        }
+    )
+
+    assert error is None
+    assert response["verdict"] != "invalid_model"
+    nodes = {node["id"]: node for node in response["canonical_model"]["nodes"]}
+    assert nodes["draft_node_1"]["op"] == "input"
+    assert nodes["draft_node_1"]["node_type"] == "input"
+    assert nodes["draft_node_2"]["op"] == "output"
+    assert nodes["draft_node_2"]["node_type"] == "output"
+    assert response["validation_report"]["status"] == "pass"
+    assert response["truth_level_impact"] == "none"
+
+
+def test_sandbox_run_accepts_ui_catalog_compare_and_between_primitives() -> None:
+    response, error = build_workbench_sandbox_run_response(
+        {
+            "scenario_id": "nominal_landing",
+            "draft": {
+                "system_id": "thrust-reverser",
+                "truth_level_impact": "none",
+                "controller_truth_modified": False,
+                "nodes": [
+                    {
+                        "id": "draft_node_1",
+                        "label": "Draft compare",
+                        "op": "compare",
+                        "draftNode": True,
+                        "op_catalog_entry": "compare",
+                    },
+                    {
+                        "id": "draft_node_2",
+                        "label": "Draft between",
+                        "op": "between",
+                        "draftNode": True,
+                        "op_catalog_entry": "between",
+                    },
+                ],
+                "edges": [
+                    {
+                        "id": "edge_draft_compare_between",
+                        "source": "draft_node_1",
+                        "target": "draft_node_2",
+                    }
+                ],
+            },
+        }
+    )
+
+    assert error is None
+    assert response["verdict"] != "invalid_model"
+    nodes = {node["id"]: node for node in response["canonical_model"]["nodes"]}
+    assert nodes["draft_node_1"]["op"] == "compare"
+    assert nodes["draft_node_2"]["op"] == "between"
+    assert response["validation_report"]["status"] == "pass"
+    assert response["truth_level_impact"] == "none"
+
+
 def test_ui_draft_invalid_edge_is_reported_as_invalid_model_not_truth_change() -> None:
     response, error = build_workbench_sandbox_run_response(
         {

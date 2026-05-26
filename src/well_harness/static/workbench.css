@@ -6029,7 +6029,8 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   border-radius: 1px;
   background: #ffffff;
   cursor: crosshair;
-  z-index: 3;
+  pointer-events: auto;
+  z-index: 12;
 }
 .workbench-port-handle[data-port-handle-direction="in"] {
   transform:
@@ -6070,12 +6071,14 @@ body:not([data-active-view]) [data-canvas-view="circuit"] {
   letter-spacing: 0;
   line-height: 1.12;
   overflow-wrap: anywhere;
+  pointer-events: none;
 }
 .workbench-editable-node small {
   display: block;
   color: rgba(51, 65, 85, 0.68);
   font-size: 0.5rem;
   font-weight: 750;
+  pointer-events: none;
   line-height: 1.1;
   margin-top: 0.12rem;
   text-transform: uppercase;

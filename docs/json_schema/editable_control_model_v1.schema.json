@@ -130,6 +130,8 @@
             },
             {
               "enum": [
+                "input",
+                "output",
                 "and",
                 "or",
                 "compare",

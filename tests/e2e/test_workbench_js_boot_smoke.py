@@ -722,7 +722,7 @@ def test_workbench_new_engineer_onboarding_guide_highlights_full_flow(demo_serve
     page.wait_for_function(
         """
         () => {
-          const verdict = document.getElementById('workbench-diff-verdict')?.textContent.trim();
+          const verdict = document.getElementById('workbench-sandbox-diff-panel')?.getAttribute('data-verdict');
           return ['equivalent', 'divergent', 'invalid_model', 'invalid_scenario'].includes(verdict);
         }
         """
@@ -1752,7 +1752,7 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
     page.wait_for_function(
         """
         () => {
-          const verdict = document.getElementById('workbench-diff-verdict')?.textContent.trim();
+          const verdict = document.getElementById('workbench-sandbox-diff-panel')?.getAttribute('data-verdict');
           return ['equivalent', 'divergent', 'invalid_model', 'invalid_scenario'].includes(verdict);
         }
         """
@@ -1826,6 +1826,72 @@ def test_workbench_review_archive_restore_v3_round_trips_regression_bundle(demo_
     assert mismatch["evidence_path"] == "editable_graph_document"
     assert mismatch["truth_effect"] == "none"
     assert page.locator("#workbench-archive-status").inner_text().startswith("Review archive restore blocked")
+
+
+def test_workbench_archive_after_sandbox_run_has_structured_not_run_test_sections(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click("#workbench-start-empty-draft-btn")
+    page.click('[data-op-catalog-op="and"]')
+    page.click('[data-editor-tool="node"]')
+    page.click('[data-op-catalog-op="output"]')
+    page.click('[data-editor-tool="node"]')
+    page.locator(
+        '[data-port-handle-owner-id="draft_node_1"][data-port-handle-direction="out"]'
+    ).click()
+    page.locator(
+        '[data-port-handle-owner-id="draft_node_2"][data-port-handle-direction="in"]'
+    ).click()
+
+    page.select_option("#workbench-sandbox-scenario-select", "nominal_landing")
+    page.click("#workbench-run-sandbox-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const verdict = document.getElementById('workbench-sandbox-diff-panel')?.getAttribute('data-verdict');
+          return ['equivalent', 'divergent', 'invalid_model', 'invalid_scenario'].includes(verdict);
+        }
+        """
+    )
+    page.click("#workbench-prepare-archive-btn")
+    archive = json.loads(page.locator("#workbench-evidence-archive-output").input_value())
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert archive["diff_summary"]["verdict"] in {"equivalent", "divergent"}
+    assert archive["sandbox_test_run_report"]["status"] == "not_run"
+    assert archive["sandbox_test_run_report"]["assertion_status"] == "not_run"
+    assert archive["sandbox_runner_trace_kernel"]["status"] == "not_run"
+    assert archive["candidate_debugger_view"]["status"] == archive["diff_summary"]["verdict"]
+    assert archive["candidate_debugger_view"]["trace_available"] is False
+    assert archive["debug_probe_timeline"]["status"] == archive["diff_summary"]["verdict"]
+    assert archive["foundation_review_archive"]["sections"]["sandbox_test_run_report"]["status"] == "present"
+    assert archive["foundation_review_archive"]["sections"]["sandbox_runner_trace_kernel"]["status"] == "present"
+    assert archive["foundation_review_archive_validation"]["status"] == "pass"
+    assert archive["review_archive_restore_v3"]["status"] == "pass"
+    assert archive["review_archive_regression_bundle_v3"]["restore_validation_status"] == "pass"
+    run_step = next(
+        step for step in archive["review_archive_regression_bundle_v3"]["regression_steps"]
+        if step["step_id"] == "run_sandbox"
+    )
+    scenario_step = next(
+        step for step in archive["review_archive_regression_bundle_v3"]["regression_steps"]
+        if step["step_id"] == "run_scenario_tests"
+    )
+    assert run_step["status"] == "pass"
+    assert run_step["evidence_key"] == "diff_summary"
+    assert scenario_step["status"] == "not_run"
+    assert scenario_step["evidence_key"] == "sandbox_test_run_report"
+    assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
 def test_workbench_selected_debug_timeline_tracks_selection_diff_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]
@@ -2014,14 +2080,14 @@ def test_workbench_journey_acceptance_bundle_derivation_binding_sandboxrun_hando
     page.wait_for_function(
         """
         () => {
-          const verdict = document.getElementById('workbench-diff-verdict')?.textContent.trim();
+          const verdict = document.getElementById('workbench-sandbox-diff-panel')?.getAttribute('data-verdict');
           return verdict && verdict !== 'running' && verdict !== 'not_run';
         }
         """
     )
-    verdict = page.locator("#workbench-diff-verdict").inner_text()
+    verdict = page.locator("#workbench-sandbox-diff-panel").get_attribute("data-verdict")
     assert verdict in {"equivalent", "divergent", "invalid_model", "invalid_scenario"}
-    assert page.locator("#workbench-diff-scenario").inner_text() == "nominal_landing"
+    assert page.locator("#workbench-diff-scenario").inner_text() == "名义着陆"
 
     page.click("#workbench-generate-handoff-btn")
     page.wait_for_function(
@@ -4769,7 +4835,7 @@ def test_workbench_candidate_debugger_view_tracks_failing_assertion_and_archive(
     page.click("#workbench-run-test-bench-btn")
     page.wait_for_function(
         """
-        () => document.getElementById('workbench-candidate-debugger-status')?.textContent.trim() === 'fail'
+        () => document.getElementById('workbench-candidate-debugger-view')?.getAttribute('data-debugger-status') === 'fail'
         """
     )
     page.locator('[data-editable-node-id="draft_node_1"]').click()
@@ -4779,7 +4845,7 @@ def test_workbench_candidate_debugger_view_tracks_failing_assertion_and_archive(
     assert page.locator("#workbench-candidate-debugger-tick").inner_text() == "0"
     assert "expected=true observed=false" in page.locator("#workbench-candidate-debugger-assertion").inner_text()
     assert "draft_node_1:out=false" in page.locator("#workbench-candidate-debugger-observed").inner_text()
-    assert page.locator("#workbench-candidate-debugger-trace").inner_text() == "available"
+    assert page.locator("#workbench-candidate-debugger-trace").inner_text() == "可用"
 
     page.click("#workbench-export-draft-btn")
     draft = json.loads(page.locator("#workbench-draft-json-buffer").input_value())
@@ -4844,7 +4910,7 @@ def test_workbench_debug_probe_timeline_tracks_selected_node_over_trace_and_rest
     page.click("#workbench-run-test-bench-btn")
     page.wait_for_function(
         """
-        () => document.getElementById('workbench-candidate-debugger-status')?.textContent.trim() === 'fail'
+        () => document.getElementById('workbench-candidate-debugger-view')?.getAttribute('data-debugger-status') === 'fail'
         """
     )
     page.locator('[data-editable-node-id="draft_node_1"]').click()
@@ -4927,7 +4993,7 @@ def test_workbench_preflight_analyzer_classifies_failed_candidate_and_archives(d
     page.click("#workbench-run-preflight-btn")
     page.wait_for_function(
         """
-        () => document.getElementById('workbench-preflight-classification')?.textContent.trim() === 'invalid_candidate'
+        () => document.getElementById('workbench-preflight-analyzer')?.getAttribute('data-preflight-classification') === 'invalid_candidate'
         """
     )
 
