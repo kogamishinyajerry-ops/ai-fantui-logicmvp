@@ -188,6 +188,47 @@ page. The full suite remains non-green until the Notion objects are restored,
 shared with the active integration, or intentionally migrated in a separate
 control-plane maintenance slice.
 
+## Post-Main Merge Validation Refresh
+
+After PR #268 was opened, `origin/main` advanced and GitHub reported the PR as
+conflicting. The branch was updated by merging `origin/main` into
+`codex/goal-canvas-panel`.
+
+Merge conflict resolution:
+
+- Conflicts were limited to:
+  - `src/well_harness/static/workbench.css`
+  - `src/well_harness/static/workbench.html`
+  - `src/well_harness/static/workbench.js`
+- Resolution kept mainline subsystem workflow / restore-checklist updates and
+  retained the goal-canvas archive/status behavior from this slice.
+- Goal-canvas screenshot and geometry evidence was refreshed after the merge.
+
+Post-merge focused validation:
+
+- `node --check src/well_harness/static/workbench.js` -> pass.
+- `python3 -m py_compile tools/validate_notion_control_plane.py tools/run_gsd_validation_suite.py` -> pass.
+- `PYTHONPATH=src:. python3 -m pytest -q tests/test_workbench_editable_canvas_shell.py tests/test_jer165_ui_draft_canonical_model.py` -> `72 passed`.
+- `PYTHONPATH=src:. python3 -m pytest -q -m e2e tests/e2e/test_workbench_js_boot_smoke.py -k "goal_canvas_panel_geometry_evidence or review_archive_restore_v3_round_trips_regression_bundle"` -> `2 passed, 65 deselected`.
+- `git diff --check` and `git diff --cached --check` -> pass.
+
+Post-merge full validation:
+
+- `PYTHONPATH=src:. python3 tools/run_gsd_validation_suite.py --format json` -> `status: fail`.
+- `command_count`: `25`.
+- `completed_commands`: `25`.
+- `unit_tests`: pass; `python3 -m pytest tests/ -q --tb=no`; duration `327.889s`.
+- First/only failed check: `notion_control_plane`.
+- Notion failure reason remains `HTTP 404` for configured `pages.constitution`
+  (`33cc6894-2bed-8148-b2c5-ec68c440f5ef`), with Notion request id
+  `012d0434-20f1-40dc-8751-21e00e07b121`.
+
+Post-merge GitHub state:
+
+- PR #268 became `mergeable=MERGEABLE`, `mergeStateStatus=CLEAN`.
+- GitHub `audit-gate` reported `SKIPPED`, so it is not counted as a green
+  validation signal.
+
 ## Browser Screenshot / Geometry Gate
 
 Command:
