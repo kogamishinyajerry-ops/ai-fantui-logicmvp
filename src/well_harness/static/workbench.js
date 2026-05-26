@@ -19611,6 +19611,7 @@ function installEditableWorkbenchShell() {
         },
       };
     }
+    if (op === "input") return { status: "ok", value: values[0] };
     const ruleValue = evaluateSandboxNodeRules(node, values, op, allValues);
     if (ruleValue !== null) return { status: "ok", value: ruleValue };
     if (op === "or") return { status: "ok", value: values.some((value) => sandboxBoolean(value)) };

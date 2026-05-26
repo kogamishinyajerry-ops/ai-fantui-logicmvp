@@ -5021,6 +5021,75 @@ def test_workbench_sandbox_runner_between_rule_uses_array_threshold_window(demo_
     )
 
 
+def test_workbench_sandbox_runner_input_preserves_numeric_values(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click("#workbench-start-empty-draft-btn")
+    for op in ["input", "compare", "output"]:
+        page.click(f'[data-op-catalog-op="{op}"]')
+        page.click('[data-editor-tool="node"]')
+    _click_workbench_port_handle(page, "draft_node_1", "out")
+    _click_workbench_port_handle(page, "draft_node_2", "in")
+    _click_workbench_port_handle(page, "draft_node_2", "out")
+    _click_workbench_port_handle(page, "draft_node_3", "in")
+
+    _fill_workbench_run_control(page, "#workbench-test-case-name", "Numeric input pass-through")
+    _fill_workbench_run_control(
+        page,
+        "#workbench-test-bench-inputs-json",
+        json.dumps(
+            [
+                {"tick": 0, "inputs": {"draft_node_1": 6}},
+                {"tick": 1, "inputs": {"draft_node_1": 4}},
+            ]
+        ),
+    )
+    _fill_workbench_run_control(
+        page,
+        "#workbench-test-bench-assertions-json",
+        json.dumps(
+            [
+                {"tick": 0, "target": "draft_node_3:out", "expected": True},
+                {"tick": 1, "target": "draft_node_3:out", "expected": False},
+            ]
+        ),
+    )
+    _click_workbench_run_control(page, "#workbench-save-test-case-btn")
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const output = document.getElementById('workbench-test-bench-report-output');
+          return output && output.value.includes('sandbox_runner_trace_kernel');
+        }
+        """
+    )
+    report = json.loads(page.locator("#workbench-test-bench-report-output").input_value())
+    kernel = report["sandbox_runner_trace_kernel"]
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert report["status"] == "pass"
+    assert report["assertion_status"] == "pass"
+    assert [
+        next(item for item in frame["node_values"] if item["node_id"] == "draft_node_1")["output_value"]
+        for frame in kernel["frames"]
+    ] == [6, 4]
+    assert [
+        next(item for item in frame["node_values"] if item["node_id"] == "draft_node_2")["output_value"]
+        for frame in kernel["frames"]
+    ] == [True, False]
+
+
 def test_workbench_sandbox_runner_multi_rule_fallback_uses_matching_input(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")
