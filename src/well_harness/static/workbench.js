@@ -19095,11 +19095,15 @@ function installEditableWorkbenchShell() {
     return fallback;
   }
 
-  function sandboxRuleThreshold(rule, fallback) {
+  function sandboxRuleThreshold(rule, fallback, values) {
     if (!rule || typeof rule !== "object") return fallback;
-    if (rule.threshold_value !== undefined) return rule.threshold_value;
-    if (rule.threshold !== undefined) return rule.threshold;
-    return fallback;
+    const threshold = rule.threshold_value !== undefined ? rule.threshold_value : rule.threshold;
+    if (threshold === undefined) return fallback;
+    if (typeof threshold === "string") {
+      const thresholdValue = readSandboxValue(values || {}, [threshold]);
+      if (thresholdValue !== undefined) return thresholdValue;
+    }
+    return threshold;
   }
 
   function sandboxBetweenBounds(threshold, fallbackLower = 5, fallbackUpper = 10) {
@@ -19131,7 +19135,7 @@ function installEditableWorkbenchShell() {
 
   function evaluateSandboxRule(rule, value, allValues) {
     const comparison = normalizeRuleComparison(rule && rule.comparison);
-    const threshold = sandboxRuleThreshold(rule, true);
+    const threshold = sandboxRuleThreshold(rule, true, allValues);
     const currentValue = sandboxRuleSourceValue(rule, value, allValues);
     if (comparison === "==") return sandboxValueEquals(currentValue, threshold);
     if (comparison === "!=") return !sandboxValueEquals(currentValue, threshold);
