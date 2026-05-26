@@ -30,7 +30,7 @@ EDITABLE_CONTROL_MODEL_DIFF_SCHEMA_ID = (
 EDITABLE_CONTROL_MODEL_KIND = "well-harness-editable-control-model"
 EDITABLE_CONTROL_MODEL_DIFF_KIND = "well-harness-editable-control-model-diff"
 EDITABLE_CONTROL_MODEL_VERSION = 1
-APPROVED_OPS = ("and", "or", "compare", "between", "delay", "latch")
+APPROVED_OPS = ("input", "output", "and", "or", "compare", "between", "delay", "latch")
 OP_CATALOG_VERSION = "editable-control-ops.v1"
 REFERENCE_MODEL_ID = "thrust-reverser-derived-view-v1"
 
@@ -491,34 +491,68 @@ def _evaluate_rule(rule: dict[str, Any], signals: dict[str, Any]) -> tuple[bool,
     raise EditableControlModelValidationError(f"unsupported comparison {comparison}")
 
 
-def evaluate_editable_snapshot(
-    model: dict[str, Any],
-    snapshot: dict[str, Any],
-) -> dict[str, Any]:
-    """Evaluate one sandbox candidate graph snapshot.
+def _snapshot_bool(value: Any) -> bool:
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "active", "on"}
+    return bool(value)
 
-    This evaluator is intentionally small and deterministic. It produces a
-    candidate result for comparison; it is not certified control truth.
-    """
-    validate_editable_control_model(model)
-    signals = dict(snapshot)
-    asserted_component_values: dict[str, Any] = dict(snapshot)
-    active_logic_node_ids: list[str] = []
-    blocked_reasons: list[str] = []
-    logic_states: dict[str, dict[str, Any]] = {}
-    port_by_id = {port["id"]: port for port in model["ports"]}
 
-    for node in model["nodes"]:
-        if node["node_type"] != "logic":
+def _snapshot_number(value: Any) -> float:
+    if isinstance(value, bool):
+        return 1.0 if value else 0.0
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _node_input_values(
+    node: dict[str, Any],
+    signals: dict[str, Any],
+    ports_by_id: dict[str, dict[str, Any]],
+    edge_values_by_node_id: dict[str, list[Any]] | None = None,
+    direct_signals: dict[str, Any] | None = None,
+) -> list[Any]:
+    edge_values = (edge_values_by_node_id or {}).get(node["id"], [])
+    values: list[Any] = []
+    seen: set[str] = set()
+    direct_source = direct_signals if direct_signals is not None else signals
+    candidate_keys = [node["id"], f"{node['id']}:in"]
+    for port in ports_by_id.values():
+        if port["node_id"] == node["id"] and port["direction"] == "in":
+            candidate_keys.extend([port["id"], port["signal_id"]])
+    for key in candidate_keys:
+        if key in seen:
             continue
-        op = node["op"]
-        if op not in ("and", "or"):
-            raise EditableControlModelValidationError(
-                f"snapshot evaluator only supports and/or logic nodes, got op {op}"
-            )
+        seen.add(key)
+        if key in direct_source:
+            values.append(direct_source[key])
+    values.extend(edge_values)
+    return values
+
+
+def _evaluate_supported_node(
+    node: dict[str, Any],
+    signals: dict[str, Any],
+    ports_by_id: dict[str, dict[str, Any]],
+    edge_values_by_node_id: dict[str, list[Any]] | None = None,
+    previous_inputs: dict[str, Any] | None = None,
+    latch_outputs: dict[str, Any] | None = None,
+    direct_signals: dict[str, Any] | None = None,
+) -> tuple[Any, list[dict[str, Any]], list[Any]]:
+    op = node["op"]
+    rules = node["rules"]
+    inputs = _node_input_values(
+        node,
+        signals,
+        ports_by_id,
+        edge_values_by_node_id,
+        direct_signals,
+    )
+    if op in {"and", "or", "compare", "between"} and rules:
         rule_results = []
         failed_rules = []
-        for rule in node["rules"]:
+        for rule in rules:
             passed, current_value, threshold = _evaluate_rule(rule, signals)
             rule_results.append(passed)
             if not passed:
@@ -530,25 +564,179 @@ def evaluate_editable_snapshot(
                         "threshold_value": threshold,
                     }
                 )
-        active = all(rule_results) if op == "and" else any(rule_results)
-        signals[node["id"]] = active
-        asserted_component_values[node["id"]] = active
+        if op == "or":
+            return any(rule_results), failed_rules, inputs
+        return all(rule_results), failed_rules, inputs
+    if op == "or":
+        return any(_snapshot_bool(value) for value in (inputs or [False])), [], inputs
+    if op == "compare":
+        return _snapshot_number((inputs or [False])[0]) >= 5.0, [], inputs
+    if op == "between":
+        value = _snapshot_number((inputs or [False])[0])
+        return 5.0 <= value <= 10.0, [], inputs
+    if op == "delay":
+        return (previous_inputs or {}).get(node["id"], False), [], inputs
+    if op == "latch":
+        latched = _snapshot_bool((latch_outputs or {}).get(node["id"])) or any(
+            _snapshot_bool(value) for value in (inputs or [False])
+        )
+        return latched, [], inputs
+    if op == "input":
+        return (inputs or [False])[0], [], inputs
+    if op == "output":
+        return all(_snapshot_bool(value) for value in (inputs or [False])), [], inputs
+    return all(_snapshot_bool(value) for value in (inputs or [False])), [], inputs
+
+
+def _propagate_node_value(
+    node_id: str,
+    value: Any,
+    edges: list[dict[str, Any]],
+    ports_by_id: dict[str, dict[str, Any]],
+    signals: dict[str, Any],
+    asserted_component_values: dict[str, Any],
+    edge_values_by_node_id: dict[str, list[Any]],
+) -> None:
+    source_port_id = f"{node_id}:out"
+    for edge in edges:
+        if edge["source_port_id"] != source_port_id:
+            continue
+        target_port = ports_by_id[edge["target_port_id"]]
+        target_signal = target_port["signal_id"]
+        edge_values_by_node_id.setdefault(target_port["node_id"], []).append(value)
+        signals[target_signal] = value
+        asserted_component_values[target_signal] = value
+
+
+def _topological_node_order(
+    nodes: list[dict[str, Any]],
+    edges: list[dict[str, Any]],
+    ports_by_id: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    node_by_id = {node["id"]: node for node in nodes}
+    node_index = {node["id"]: index for index, node in enumerate(nodes)}
+    indegree = {node["id"]: 0 for node in nodes}
+    outgoing: dict[str, list[str]] = {node["id"]: [] for node in nodes}
+    seen_edges: set[tuple[str, str]] = set()
+
+    for edge in edges:
+        source_port = ports_by_id.get(edge["source_port_id"])
+        target_port = ports_by_id.get(edge["target_port_id"])
+        if not source_port or not target_port:
+            continue
+        source_node_id = source_port["node_id"]
+        target_node_id = target_port["node_id"]
+        if source_node_id == target_node_id:
+            continue
+        edge_key = (source_node_id, target_node_id)
+        if edge_key in seen_edges:
+            continue
+        seen_edges.add(edge_key)
+        if source_node_id not in node_by_id or target_node_id not in node_by_id:
+            continue
+        outgoing[source_node_id].append(target_node_id)
+        indegree[target_node_id] += 1
+
+    ready = sorted(
+        (node_id for node_id, degree in indegree.items() if degree == 0),
+        key=lambda node_id: node_index[node_id],
+    )
+    ordered_ids: list[str] = []
+    while ready:
+        node_id = ready.pop(0)
+        ordered_ids.append(node_id)
+        for target_node_id in sorted(outgoing[node_id], key=lambda item: node_index[item]):
+            indegree[target_node_id] -= 1
+            if indegree[target_node_id] == 0:
+                ready.append(target_node_id)
+                ready.sort(key=lambda item: node_index[item])
+
+    if len(ordered_ids) != len(nodes):
+        ordered = set(ordered_ids)
+        ordered_ids.extend(node["id"] for node in nodes if node["id"] not in ordered)
+
+    return [node_by_id[node_id] for node_id in ordered_ids]
+
+
+def evaluate_editable_snapshot(
+    model: dict[str, Any],
+    snapshot: dict[str, Any],
+    *,
+    state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Evaluate one sandbox candidate graph snapshot.
+
+    This evaluator is intentionally small and deterministic. It produces a
+    candidate result for comparison; it is not certified control truth.
+    """
+    validate_editable_control_model(model)
+    signals = dict(snapshot)
+    direct_signals = dict(snapshot)
+    asserted_component_values: dict[str, Any] = dict(snapshot)
+    active_logic_node_ids: list[str] = []
+    blocked_reasons: list[str] = []
+    logic_states: dict[str, dict[str, Any]] = {}
+    port_by_id = {port["id"]: port for port in model["ports"]}
+    edge_values_by_node_id: dict[str, list[Any]] = {}
+    previous_inputs = dict((state or {}).get("previous_inputs", {}))
+    latch_outputs = dict((state or {}).get("latch_outputs", {}))
+    next_inputs: dict[str, Any] = {}
+    next_outputs: dict[str, Any] = {}
+    next_latch_outputs = dict(latch_outputs)
+
+    for node in _topological_node_order(model["nodes"], model["edges"], port_by_id):
+        op = node["op"]
+        if op is None:
+            if node["id"] in signals:
+                _propagate_node_value(
+                    node["id"],
+                    signals[node["id"]],
+                    model["edges"],
+                    port_by_id,
+                    signals,
+                    asserted_component_values,
+                    edge_values_by_node_id,
+                )
+            continue
+        value, failed_rules, inputs = _evaluate_supported_node(
+            node,
+            signals,
+            port_by_id,
+            edge_values_by_node_id,
+            previous_inputs,
+            latch_outputs,
+            direct_signals,
+        )
+        active = _snapshot_bool(value)
+        signals[node["id"]] = value
+        asserted_component_values[node["id"]] = value
+        next_inputs[node["id"]] = (inputs or [False])[0]
+        next_outputs[node["id"]] = value
+        if op == "latch":
+            next_latch_outputs[node["id"]] = value
         logic_states[node["id"]] = {
             "state": "active" if active else "blocked",
             "failed_rules": failed_rules,
         }
-        if active:
+        if node["node_type"] == "logic" and active:
             active_logic_node_ids.append(node["id"])
         else:
             blocked_reasons.extend(f"{node['id']}:{rule['name']}" for rule in failed_rules)
 
-        source_port_id = f"{node['id']}:out"
-        for edge in model["edges"]:
-            if edge["source_port_id"] != source_port_id:
-                continue
-            target_signal = port_by_id[edge["target_port_id"]]["signal_id"]
-            signals[target_signal] = active
-            asserted_component_values[target_signal] = active
+        _propagate_node_value(
+            node["id"],
+            value,
+            model["edges"],
+            port_by_id,
+            signals,
+            asserted_component_values,
+            edge_values_by_node_id,
+        )
+
+    if state is not None:
+        state["previous_inputs"] = next_inputs
+        state["previous_outputs"] = next_outputs
+        state["latch_outputs"] = next_latch_outputs
 
     return {
         "model_id": model["model_id"],

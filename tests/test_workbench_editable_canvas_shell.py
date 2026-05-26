@@ -555,6 +555,46 @@ def test_phase10_secondary_status_summaries_use_chinese_display_labels() -> None
     assert 'truth_effect: "none"' in js
 
 
+def test_phase10_secondary_status_initial_html_uses_chinese_labels() -> None:
+    html = _html()
+
+    for expected in (
+        'id="workbench-subsystem-owner">无</strong>',
+        'id="workbench-subsystem-interface-owner">无</strong>',
+        'placeholder="证据缺口"',
+        'id="workbench-hardware-evidence-v2-coverage">缺失</dd>',
+        'id="workbench-diff-model-hash">待生成</dd>',
+        'id="workbench-diff-first-divergence">未运行</dd>',
+        'id="workbench-diff-review-v2-readiness">需要运行</dd>',
+        'id="workbench-diff-review-v2-archive-state">未就绪</dd>',
+        'id="workbench-diff-review-v2-divergence">未运行</dd>',
+        'id="workbench-diff-review-v2-claim">无</dd>',
+        'id="workbench-candidate-debugger-assertion">未运行</dd>',
+        'id="workbench-candidate-debugger-observed">未运行</dd>',
+        'id="workbench-candidate-debugger-trace">不可用</dd>',
+        'id="workbench-preflight-classification">需要证据</strong>',
+    ):
+        assert expected in html
+
+    for internal_copy in (
+        'id="workbench-subsystem-owner">none</strong>',
+        'id="workbench-subsystem-interface-owner">none</strong>',
+        'placeholder="evidence_gap"',
+        'id="workbench-hardware-evidence-v2-coverage">missing</dd>',
+        'id="workbench-diff-model-hash">pending</dd>',
+        'id="workbench-diff-first-divergence">not run</dd>',
+        'id="workbench-diff-review-v2-readiness">run_required</dd>',
+        'id="workbench-diff-review-v2-archive-state">not_archive_ready</dd>',
+        'id="workbench-diff-review-v2-divergence">not run</dd>',
+        'id="workbench-diff-review-v2-claim">none</dd>',
+        'id="workbench-candidate-debugger-assertion">not run</dd>',
+        'id="workbench-candidate-debugger-observed">not run</dd>',
+        'id="workbench-candidate-debugger-trace">unavailable</dd>',
+        'id="workbench-preflight-classification">needs_evidence</strong>',
+    ):
+        assert internal_copy not in html
+
+
 def test_css_declares_compact_simulink_like_canvas_blocks() -> None:
     css = _css()
 

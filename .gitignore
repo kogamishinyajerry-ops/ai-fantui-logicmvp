@@ -28,6 +28,9 @@ onboarding验证/
 artifacts/workbench-current-complaint-inspect.png
 artifacts/workbench-goal-canvas-panel/current-user-complaint.png
 
+# Broad local usability probes; curated workbench evidence remains tracked explicitly.
+artifacts/agent-usability/
+
 # Generated process artifacts (archived to GitHub 2026-04-24, keep gitignored locally)
 tmp/
 output/

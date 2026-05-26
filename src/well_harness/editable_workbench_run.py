@@ -335,6 +335,14 @@ def _draft_node_rules(update: dict[str, Any], node_id: str) -> list[dict[str, An
     return rules
 
 
+def _draft_node_type_for_op(op: str) -> str:
+    if op == "input":
+        return "input"
+    if op == "output":
+        return "output"
+    return "logic"
+
+
 def _draft_node(update: dict[str, Any]) -> dict[str, Any]:
     node_id = _draft_node_id(update.get("id"))
     op = str(update.get("op", "and"))
@@ -349,7 +357,7 @@ def _draft_node(update: dict[str, Any]) -> dict[str, Any]:
     return {
         "id": node_id,
         "label": str(update.get("label") or node_id),
-        "node_type": "logic",
+        "node_type": _draft_node_type_for_op(op),
         "op": op,
         "rules": _draft_node_rules(update, node_id) or [],
         "source_ref": _draft_node_source_ref(update, node_id),
@@ -849,6 +857,7 @@ def canonicalize_workbench_ui_draft(base_model: dict[str, Any], draft: dict[str,
                     field="op",
                 )
             node["op"] = op
+            node["node_type"] = _draft_node_type_for_op(op)
         draft_rules = _draft_node_rules(update, node_id)
         if draft_rules is not None:
             node["rules"] = draft_rules

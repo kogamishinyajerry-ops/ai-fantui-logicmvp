@@ -134,9 +134,10 @@ def run_editable_timeline_candidate(
     model_hash = editable_control_model_hash(model)
     frames: list[dict[str, Any]] = []
     assertions: list[AssertionResult] = []
+    candidate_state: dict[str, Any] = {}
 
     for frame in baseline.frames:
-        candidate_result = evaluate_editable_snapshot(model, frame.inputs)
+        candidate_result = evaluate_editable_snapshot(model, frame.inputs, state=candidate_state)
         outputs = _candidate_outputs(candidate_result)
         logic_states = _candidate_logic_states(candidate_result)
         assertions.extend(

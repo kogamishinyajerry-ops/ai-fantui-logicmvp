@@ -8054,6 +8054,7 @@ function installEditableWorkbenchShell() {
   let hardwarePaletteItems = [];
   let selectedHardwarePaletteItemId = "";
   let lastSandboxDiff = null;
+  let lastSandboxDiffClientModelHash = "";
   let selectedDiagnosticFocus = null;
   let repairActionLog = [];
   let lastInterfaceMatrixValidationReport = null;
@@ -8416,7 +8417,9 @@ function installEditableWorkbenchShell() {
       init: "初始化",
       selection: "选择",
       running: "运行中",
+      pending: "待生成",
       not_run: "未运行",
+      "not run": "未运行",
       not_recorded: "未记录",
       not_archive_ready: "未就绪",
       archive_ready: "归档就绪",
@@ -8428,12 +8431,14 @@ function installEditableWorkbenchShell() {
       divergent: "不一致",
       invalid_model: "模型无效",
       invalid_scenario: "场景无效",
+      invalid_candidate: "候选无效",
       pass: "通过",
       warn: "警告",
       fail: "失败",
       missing: "缺失",
       needs_evidence: "需要证据",
       unavailable: "不可用",
+      available: "可用",
       partial: "部分",
       complete: "完整",
       selection_only: "仅选择",
@@ -15485,10 +15490,9 @@ function installEditableWorkbenchShell() {
   }
 
   function selectedDebugTimelineVerdictValue() {
-    if (lastSandboxDiff && lastSandboxDiff.verdict) return lastSandboxDiff.verdict;
-    const rendered = diffVerdict && String(diffVerdict.textContent || "").trim();
-    if (rendered === "未运行") return "not_run";
-    return rendered || "not_run";
+    const currentDiff = currentSandboxDiffForCurrentCandidate();
+    if (currentDiff && currentDiff.verdict) return currentDiff.verdict;
+    return "not_run";
   }
 
   function selectedDebugTimelineState(verdict) {
@@ -15551,7 +15555,7 @@ function installEditableWorkbenchShell() {
     const verdict = selectedDebugTimelineVerdictValue();
     const binding = context.binding || normalizeInterfaceBinding({}, context.target_kind, context.target_id);
     const gapFields = hardwareEvidenceV2GapFields(binding);
-    const latestDiff = lastSandboxDiff || null;
+    const latestDiff = currentSandboxDiffForCurrentCandidate();
     return {
       kind: "well-harness-workbench-selected-debug-timeline",
       version: 1,
@@ -15727,7 +15731,7 @@ function installEditableWorkbenchShell() {
     if (diffReviewV2Scenario) diffReviewV2Scenario.textContent = displayScenarioLabel(report.scenario_id);
     if (diffReviewV2Readiness) diffReviewV2Readiness.textContent = displayStatusLabel(report.review_readiness);
     if (diffReviewV2ArchiveState) diffReviewV2ArchiveState.textContent = displayStatusLabel(report.archive_state);
-    if (diffReviewV2Divergence) diffReviewV2Divergence.textContent = report.first_divergence_text;
+    if (diffReviewV2Divergence) diffReviewV2Divergence.textContent = displayStatusLabel(report.first_divergence_text);
     if (diffReviewV2Claim) diffReviewV2Claim.textContent = displayStatusLabel(report.certification_claim);
     return report;
   }
@@ -15939,14 +15943,14 @@ function installEditableWorkbenchShell() {
   function renderHardwareEvidenceV2Report(report) {
     const payload = report || currentHardwareEvidenceV2Report();
     if (hardwareEvidenceV2Status) {
-      hardwareEvidenceV2Status.textContent = payload.coverage_status || "missing";
+      hardwareEvidenceV2Status.textContent = displayStatusLabel(payload.coverage_status || "missing");
     }
     if (hardwareEvidenceV2Target) {
       hardwareEvidenceV2Target.textContent = `${payload.target_kind}:${payload.target_id}`;
     }
     if (hardwareEvidenceV2Coverage) {
       hardwareEvidenceV2Coverage.textContent =
-        `${payload.coverage_label || payload.coverage_status} · truth_effect: none`;
+        `${payload.coverage_label || displayStatusLabel(payload.coverage_status)} · truth_effect: none`;
     }
     if (hardwareEvidenceV2GapCount) {
       hardwareEvidenceV2GapCount.textContent =
@@ -18001,8 +18005,76 @@ function installEditableWorkbenchShell() {
     return normalized;
   }
 
+  function notRunSandboxRunnerTraceKernel(nodesForRun) {
+    return {
+      kind: sandboxRunnerTraceKernelKind,
+      version: sandboxRunnerTraceKernelVersion,
+      status: "not_run",
+      evaluation_order: (nodesForRun || [])
+        .map((node) => String((node && node.id) || ""))
+        .filter(Boolean),
+      tick_count: 0,
+      trace_frame_count: 0,
+      finding_count: 0,
+      findings: [],
+      frames: [],
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function notRunSandboxTestRunReport() {
+    refreshEditableNodes();
+    const testBench = safeSandboxTestBenchDefinition();
+    const workspaceDocument = currentWorkspaceDocument();
+    const nodesForRun = nodes.map((node) => editableNodeState(node));
+    const edgesForRun = draftEdges.map((edge) => ({ ...edge }));
+    const traceKernel = notRunSandboxRunnerTraceKernel(nodesForRun);
+    const traceKernelChecksum = sandboxRunnerTraceKernelChecksum(traceKernel);
+    return normalizeImportedSandboxTestRunReport({
+      kind: sandboxTestRunReportKind,
+      version: sandboxTestRunReportVersion,
+      scenario_id: testBench.scenario_id || selectedWorkbenchScenarioId(),
+      test_case_id: testBench.test_case_id || testBench.active_test_case_id || selectedScenarioTestCaseIdValue(),
+      selected_test_case_id: testBench.selected_test_case_id || testBench.test_case_id || selectedScenarioTestCaseIdValue(),
+      active_test_case_id: testBench.active_test_case_id || testBench.test_case_id || selectedScenarioTestCaseIdValue(),
+      graph_document_id: workspaceDocument.document_id || "ui_draft_workspace_document_v1",
+      graph_document_version: editableGraphDocumentVersion,
+      graph_document_revision_id: workspaceDocument.revision_id || "ui_draft_pending",
+      workspace_revision_id: workspaceDocument.revision_id || "ui_draft_pending",
+      scenario_test_case_library_checksum:
+        testBench.scenario_test_case_library_checksum || scenarioTestCaseLibraryChecksum(),
+      sandbox_runner_trace_kernel: traceKernel,
+      sandbox_runner_trace_kernel_checksum: traceKernelChecksum,
+      model_hash: sandboxCandidateModelHash(nodesForRun, edgesForRun, testBench),
+      definition: testBench,
+      status: "not_run",
+      assertion_status: "not_run",
+      pass_count: 0,
+      fail_count: 0,
+      assertion_count: 0,
+      trace: [],
+      assertions: [],
+      validation_findings: [],
+      unsupported_ops: [],
+      red_line_metadata: {
+        controller_truth_modified: false,
+        frozen_assets_modified: false,
+        truth_level_impact: "none",
+        dal_pssa_impact: "none",
+        truth_effect: "none",
+      },
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_level_impact: "none",
+      truth_effect: "none",
+    });
+  }
+
   function currentSandboxTestRunReport() {
-    return normalizeImportedSandboxTestRunReport(lastSandboxTestRunReport);
+    return normalizeImportedSandboxTestRunReport(lastSandboxTestRunReport)
+      || notRunSandboxTestRunReport();
   }
 
   function candidateDebuggerTargetContext() {
@@ -18108,6 +18180,42 @@ function installEditableWorkbenchShell() {
     return otherPorts;
   }
 
+  function latestDebuggerStatus(report) {
+    const reportStatus = report ? (report.status || "not_run") : "not_run";
+    const currentDiff = currentDebuggerDiff(report);
+    const diffVerdict = currentDiff && currentDiff.verdict
+      ? String(currentDiff.verdict)
+      : "not_run";
+    return reportStatus === "not_run" && diffVerdict !== "not_run"
+      ? diffVerdict
+      : reportStatus;
+  }
+
+  function latestDebuggerAssertionStatus(report) {
+    const reportStatus = report ? (report.assertion_status || "not_run") : "not_run";
+    const currentDiff = currentDebuggerDiff(report);
+    const summary = currentDiff && currentDiff.summary;
+    const diffAssertionStatus = summary && summary.assertion_status
+      ? String(summary.assertion_status)
+      : "not_run";
+    return reportStatus === "not_run" && diffAssertionStatus !== "not_run"
+      ? diffAssertionStatus
+      : reportStatus;
+  }
+
+  function currentDebuggerDiff(report) {
+    return currentSandboxDiffForCurrentCandidate();
+  }
+
+  function currentSandboxDiffForCurrentCandidate() {
+    if (!lastSandboxDiff || typeof lastSandboxDiff !== "object" || Array.isArray(lastSandboxDiff)) {
+      return null;
+    }
+    const currentModelHash = currentSandboxDiffClientModelHash();
+    if (!lastSandboxDiffClientModelHash || currentModelHash !== lastSandboxDiffClientModelHash) return null;
+    return lastSandboxDiff;
+  }
+
   function buildDebugProbeWatchedValues(report, target) {
     const frames = debugProbeTimelineFrames(report);
     const watchedPortIds = debugProbeWatchedPortIds(target);
@@ -18170,8 +18278,8 @@ function installEditableWorkbenchShell() {
       version: debugProbeTimelineVersion,
       workflow_state: state || "selection",
       target,
-      status: report ? (report.status || "not_run") : "not_run",
-      assertion_status: report ? (report.assertion_status || "not_run") : "not_run",
+      status: latestDebuggerStatus(report),
+      assertion_status: latestDebuggerAssertionStatus(report),
       scenario_id: report ? (report.scenario_id || selectedWorkbenchScenarioId()) : selectedWorkbenchScenarioId(),
       selected_tick: selectedTick,
       trace_available: frames.length > 0,
@@ -18421,13 +18529,13 @@ function installEditableWorkbenchShell() {
   }
 
   function formatDebuggerValue(value) {
-    if (value === undefined) return "unavailable";
+    if (value === undefined) return displayStatusLabel("unavailable");
     if (typeof value === "string") return value;
     return stableEvidenceArchiveJson(value);
   }
 
   function formatDebuggerAssertion(assertion) {
-    if (!assertion) return "not run";
+    if (!assertion) return displayStatusLabel("not_run");
     return [
       assertion.target || "unknown",
       `tick=${assertion.tick}`,
@@ -18439,7 +18547,7 @@ function installEditableWorkbenchShell() {
 
   function formatDebuggerObserved(values) {
     const available = (values || []).filter((item) => item.available);
-    if (!available.length) return "unavailable";
+    if (!available.length) return displayStatusLabel("unavailable");
     return available
       .map((item) => `${item.port_id}=${formatDebuggerValue(item.value)}`)
       .join(" · ");
@@ -18447,7 +18555,7 @@ function installEditableWorkbenchShell() {
 
   function formatDebugProbeWatchedValues(probe) {
     const available = ((probe && probe.watched_values) || []).filter((item) => item.available);
-    if (!available.length) return "unavailable";
+    if (!available.length) return displayStatusLabel("unavailable");
     return available
       .map((item) => `${item.port_id}=${formatDebuggerValue(item.value)} @ tick ${item.tick}`)
       .join(" · ");
@@ -18640,9 +18748,9 @@ function installEditableWorkbenchShell() {
       version: candidateDebuggerViewVersion,
       workflow_state: state || "selection",
       target,
-      status: report ? (report.status || "not_run") : "not_run",
+      status: latestDebuggerStatus(report),
       scenario_id: report ? (report.scenario_id || selectedWorkbenchScenarioId()) : selectedWorkbenchScenarioId(),
-      assertion_status: report ? (report.assertion_status || "not_run") : "not_run",
+      assertion_status: latestDebuggerAssertionStatus(report),
       selected_tick: selectedTick,
       trace_available: Boolean(frame),
       trace_frame_count: report && Array.isArray(report.trace) ? report.trace.length : 0,
@@ -18661,12 +18769,12 @@ function installEditableWorkbenchShell() {
     const packet = view || currentCandidateDebuggerView("render");
     const status = packet.status || "not_run";
     if (candidateDebuggerPanel) candidateDebuggerPanel.setAttribute("data-debugger-status", status);
-    if (candidateDebuggerStatus) candidateDebuggerStatus.textContent = status;
+    if (candidateDebuggerStatus) candidateDebuggerStatus.textContent = displayStatusLabel(status);
     if (candidateDebuggerTarget) candidateDebuggerTarget.textContent = packet.target.owner_key || "none:none";
     if (candidateDebuggerTick) {
       candidateDebuggerTick.textContent =
         packet.selected_tick === null || packet.selected_tick === undefined
-          ? "not_run"
+          ? displayStatusLabel("not_run")
           : String(packet.selected_tick);
     }
     if (candidateDebuggerAssertion) {
@@ -18677,7 +18785,7 @@ function installEditableWorkbenchShell() {
         formatDebugProbeWatchedValues(packet.debug_probe_timeline) || formatDebuggerObserved(packet.observed_values);
     }
     if (candidateDebuggerTrace) {
-      candidateDebuggerTrace.textContent = packet.trace_available ? "available" : "unavailable";
+      candidateDebuggerTrace.textContent = displayStatusLabel(packet.trace_available ? "available" : "unavailable");
     }
     return packet;
   }
@@ -18769,6 +18877,36 @@ function installEditableWorkbenchShell() {
     ));
   }
 
+  function currentSandboxDiffClientModelHash(customSnapshotOverride) {
+    refreshEditableNodes();
+    const customSnapshot = customSnapshotOverride !== undefined
+      ? (customSnapshotOverride || {})
+      : (safeWorkbenchCustomSnapshot() || {});
+    return editableDraftHash(stableEvidenceArchiveJson({
+      scenario_id: selectedWorkbenchScenarioId(),
+      custom_snapshot: normalizeEvidenceArchiveValue(customSnapshot),
+      nodes: nodes.map((node) => {
+        const state = editableNodeState(node);
+        return {
+          id: state.id,
+          op: state.op_catalog_entry || state.op || state.opCatalogEntry || "and",
+          rules: Array.isArray(state.rules) ? state.rules : [],
+          port_contract: state.port_contract || state.portContract || null,
+        };
+      }),
+      edges: draftEdges.map((edge) => ({
+        id: edge && edge.id,
+        source: edge && edge.source,
+        target: edge && edge.target,
+        signal_id: edge && (edge.signal_id || edge.signalId || ""),
+        source_port_id: edge && (edge.source_port_id || edge.sourcePortId || ""),
+        target_port_id: edge && (edge.target_port_id || edge.targetPortId || ""),
+        value_type: edge && (edge.value_type || edge.valueType || "boolean"),
+        required: Boolean(edge && edge.required),
+      })),
+    }));
+  }
+
   function currentPreflightCandidateModelHash(definition) {
     const model = preflightCandidateModelSnapshot();
     const testBench = definition || safeSandboxTestBenchDefinition();
@@ -18825,6 +18963,13 @@ function installEditableWorkbenchShell() {
         "sandbox_test_missing",
         "warning",
         "No current sandbox test run report is available.",
+        "Run sandbox scenario tests before handoff.",
+      ));
+    } else if (sandboxReport.status === "not_run" || sandboxReport.assertion_status === "not_run") {
+      findings.push(preflightFinding(
+        "sandbox_test_not_run",
+        "warning",
+        "Sandbox test run report is present but has not executed any scenario assertions.",
         "Run sandbox scenario tests before handoff.",
       ));
     } else if (sandboxReport.model_hash !== candidateModelHash) {
@@ -18937,13 +19082,13 @@ function installEditableWorkbenchShell() {
     lastPreflightAnalyzerReport = packet;
     const classification = packet.classification || "needs_evidence";
     if (preflightPanel) preflightPanel.setAttribute("data-preflight-classification", classification);
-    if (preflightClassification) preflightClassification.textContent = classification;
+    if (preflightClassification) preflightClassification.textContent = displayStatusLabel(classification);
     if (preflightFindingsCount) preflightFindingsCount.textContent = String(packet.finding_count || 0);
     if (preflightActions) preflightActions.textContent = (packet.required_actions || []).join(" · ");
     if (preflightOutput) preflightOutput.value = JSON.stringify(packet, null, 2);
     if (handoffStatus) {
       handoffStatus.textContent =
-        `Preflight ${classification}. Truth effect: none. No certification claim.`;
+        `Preflight ${displayStatusLabel(classification)}. Truth effect: none. No certification claim.`;
     }
     return packet;
   }
@@ -18973,7 +19118,7 @@ function installEditableWorkbenchShell() {
     if (typeof value === "number") return value !== 0;
     if (typeof value === "string") {
       const normalized = value.trim().toLowerCase();
-      return normalized === "true" || normalized === "1" || normalized === "yes";
+      return ["true", "1", "yes", "active", "on"].includes(normalized);
     }
     return Boolean(value);
   }
@@ -18995,6 +19140,26 @@ function installEditableWorkbenchShell() {
     return fallback;
   }
 
+  function sandboxRuleThreshold(rule, fallback, values) {
+    if (!rule || typeof rule !== "object") return fallback;
+    const threshold = rule.threshold_value !== undefined ? rule.threshold_value : rule.threshold;
+    if (threshold === undefined) return fallback;
+    if (typeof threshold === "string") {
+      const thresholdValue = readSandboxValue(values || {}, [threshold]);
+      if (thresholdValue !== undefined) return thresholdValue;
+    }
+    return threshold;
+  }
+
+  function sandboxBetweenBounds(threshold, fallbackLower = 5, fallbackUpper = 10) {
+    if (Array.isArray(threshold) && threshold.length >= 2) {
+      const lower = sandboxNumber(threshold[0]);
+      const upper = sandboxNumber(threshold[1]);
+      return [lower, upper];
+    }
+    return [fallbackLower, fallbackUpper];
+  }
+
   function compareSandboxNumber(value, comparison, threshold) {
     const left = sandboxNumber(value);
     const right = sandboxNumber(threshold);
@@ -19004,6 +19169,44 @@ function installEditableWorkbenchShell() {
     if (comparison === ">") return left > right;
     if (comparison === ">=") return left >= right;
     return left === right;
+  }
+
+  function sandboxRuleSourceValue(rule, fallback, values) {
+    const sourceSignalId = rule && (rule.source_signal_id || rule.sourceSignalId);
+    if (!sourceSignalId) return fallback;
+    const sourceValue = readSandboxValue(values || {}, [sourceSignalId]);
+    return sourceValue !== undefined ? sourceValue : fallback;
+  }
+
+  function evaluateSandboxRule(rule, value, allValues) {
+    const comparison = normalizeRuleComparison(rule && rule.comparison);
+    const threshold = sandboxRuleThreshold(rule, true, allValues);
+    const currentValue = sandboxRuleSourceValue(rule, value, allValues);
+    if (comparison === "==") return sandboxValueEquals(currentValue, threshold);
+    if (comparison === "!=") return !sandboxValueEquals(currentValue, threshold);
+    if (comparison === "between_lower_inclusive") {
+      const [lower, upper] = sandboxBetweenBounds(threshold);
+      const current = sandboxNumber(currentValue);
+      return lower <= current && current < upper;
+    }
+    if (comparison === "between_exclusive") {
+      const [lower, upper] = sandboxBetweenBounds(threshold);
+      const current = sandboxNumber(currentValue);
+      return lower < current && current < upper;
+    }
+    return compareSandboxNumber(currentValue, comparison, threshold);
+  }
+
+  function evaluateSandboxNodeRules(node, values, op, allValues) {
+    const rules = Array.isArray(node && node.rules) ? node.rules : [];
+    if (!rules.length || !["and", "or", "compare", "between"].includes(op)) return null;
+    const ruleResults = rules.map((rule, index) => {
+      const fallbackValue = values[index] !== undefined
+        ? values[index]
+        : (values.length ? values[0] : false);
+      return evaluateSandboxRule(rule, fallbackValue, allValues);
+    });
+    return op === "or" ? ruleResults.some(Boolean) : ruleResults.every(Boolean);
   }
 
   function nodeRuleComparison(node, fallback) {
@@ -19343,7 +19546,11 @@ function installEditableWorkbenchShell() {
     const graph = prepareSandboxRunnerGraph(nodesForRun, edgesForRun);
     const findings = [...graph.findings];
     const frames = [];
-    const state = { previous_outputs: {} };
+    const state = {
+      previous_inputs: {},
+      previous_outputs: {},
+      latch_outputs: {},
+    };
     const incomingByNode = new Map(graph.nodes.map((node) => [node.node_id, []]));
     const outgoingByNode = new Map(graph.nodes.map((node) => [node.node_id, []]));
     for (const edge of graph.valid_edges) {
@@ -19354,13 +19561,15 @@ function installEditableWorkbenchShell() {
       const values = { ...(tick.inputs || {}) };
       const nodeValues = [];
       const frameFindings = [];
+      const nextInputs = {};
+      const nextLatchOutputs = { ...state.latch_outputs };
       for (const nodeId of graph.evaluation_order) {
         const node = graph.node_by_id.get(nodeId);
         if (!node) continue;
         const input = sandboxRunnerInputRecords(node, values, incomingByNode.get(nodeId), tick.tick);
         frameFindings.push(...input.findings);
         findings.push(...input.findings);
-        const result = evaluateSandboxNode(node.node, input.values, state);
+        const result = evaluateSandboxNode(node.node, input.values, state, values);
         const resultFindings = result.finding
           ? [sandboxRunnerFinding(result.finding.code || "runner_node_finding", result.finding.message || "Runner node finding", {
               tick: tick.tick,
@@ -19371,6 +19580,8 @@ function installEditableWorkbenchShell() {
         frameFindings.push(...resultFindings);
         findings.push(...resultFindings);
         writeSandboxNodeOutput(values, node.node, result.value);
+        nextInputs[nodeId] = input.values.length ? input.values[0] : false;
+        if (node.op === "latch") nextLatchOutputs[nodeId] = result.value;
         propagateSandboxEdges(values, (outgoingByNode.get(nodeId) || []).map((edge) => ({
           source: edge.source_node_id,
           target: edge.target_node_id,
@@ -19401,7 +19612,9 @@ function installEditableWorkbenchShell() {
       };
       frame.assertion_results = sandboxRunnerAssertionResults(testBench.assertions || [], frame);
       frames.push(frame);
+      state.previous_inputs = nextInputs;
       state.previous_outputs = { ...values };
+      state.latch_outputs = nextLatchOutputs;
     }
     const structuralInvalidCodes = new Set([
       "unsupported_op",
@@ -19431,7 +19644,7 @@ function installEditableWorkbenchShell() {
     return checksumEvidenceArchiveField(kernel);
   }
 
-  function evaluateSandboxNode(node, inputValues, state) {
+  function evaluateSandboxNode(node, inputValues, state, allValues) {
     const op = String((node && (node.op_catalog_entry || node.op || node.opCatalogEntry)) || "and");
     const values = inputValues.length ? inputValues : [false];
     if (!approvedOperationCatalog[op]) {
@@ -19447,6 +19660,9 @@ function installEditableWorkbenchShell() {
         },
       };
     }
+    if (op === "input") return { status: "ok", value: values[0] };
+    const ruleValue = evaluateSandboxNodeRules(node, values, op, allValues);
+    if (ruleValue !== null) return { status: "ok", value: ruleValue };
     if (op === "or") return { status: "ok", value: values.some((value) => sandboxBoolean(value)) };
     if (op === "compare") {
       return {
@@ -19470,13 +19686,13 @@ function installEditableWorkbenchShell() {
       return { status: "ok", value: value >= lower && value <= upper };
     }
     if (op === "delay") {
-      const delayed = state.previous_outputs[node.id] !== undefined
-        ? state.previous_outputs[node.id]
+      const delayed = state.previous_inputs[node.id] !== undefined
+        ? state.previous_inputs[node.id]
         : false;
       return { status: "ok", value: delayed };
     }
     if (op === "latch") {
-      const latched = sandboxBoolean(state.previous_outputs[node.id]) || sandboxBoolean(values[0]);
+      const latched = sandboxBoolean(state.latch_outputs[node.id]) || sandboxBoolean(values[0]);
       return { status: "ok", value: latched };
     }
     return { status: "ok", value: values.every((value) => sandboxBoolean(value)) };
@@ -21854,15 +22070,16 @@ function installEditableWorkbenchShell() {
     };
   }
 
-  function renderWorkbenchSandboxDiff(payload) {
+  function renderWorkbenchSandboxDiff(payload, clientModelHash) {
     lastSandboxDiff = payload || null;
+    lastSandboxDiffClientModelHash = payload ? (clientModelHash || currentSandboxDiffClientModelHash()) : "";
     const verdict = (payload && payload.verdict) || "invalid_scenario";
     if (diffPanel) diffPanel.setAttribute("data-verdict", verdict);
-    if (diffVerdict) diffVerdict.textContent = verdict;
-    if (diffScenario) diffScenario.textContent = (payload && payload.scenario_id) || "nominal_landing";
+    if (diffVerdict) diffVerdict.textContent = displayStatusLabel(verdict);
+    if (diffScenario) diffScenario.textContent = displayScenarioLabel((payload && payload.scenario_id) || "nominal_landing");
     if (diffModelHash) {
       const hash = payload && payload.model_hash;
-      diffModelHash.textContent = hash ? String(hash).slice(0, 16) : "unavailable";
+      diffModelHash.textContent = hash ? String(hash).slice(0, 16) : displayStatusLabel("unavailable");
     }
     if (diffFirstDivergence) {
       const summary = payload && payload.summary;
@@ -21873,7 +22090,7 @@ function installEditableWorkbenchShell() {
           validationText,
         ].filter(Boolean).join(" | ");
       } else {
-        diffFirstDivergence.textContent = firstDivergenceText(summary && summary.first_divergence);
+        diffFirstDivergence.textContent = displayStatusLabel(firstDivergenceText(summary && summary.first_divergence));
       }
     }
     renderCandidateBaselineDiffReviewV2("diff", payload && payload.model_hash, payload);
@@ -21902,10 +22119,11 @@ function installEditableWorkbenchShell() {
         validation_report: emptyWorkbenchGraphValidationReport("fail"),
         summary: { first_divergence: null, assertion_status: "not_run", frame_count: 0 },
       };
-      renderWorkbenchSandboxDiff(payload);
+      renderWorkbenchSandboxDiff(payload, currentSandboxDiffClientModelHash(null));
       runSandboxBtn.disabled = false;
       return Promise.resolve(payload);
     }
+    const clientModelHash = currentSandboxDiffClientModelHash(customSnapshot);
     const requestBody = {
       scenario_id: selectedWorkbenchScenarioId(),
       draft: currentDraftSnapshot(),
@@ -21918,7 +22136,7 @@ function installEditableWorkbenchShell() {
     })
       .then((response) => response.json())
       .then((payload) => {
-        renderWorkbenchSandboxDiff(payload);
+        renderWorkbenchSandboxDiff(payload, clientModelHash);
         return payload;
       })
       .catch((err) => {
@@ -21931,7 +22149,7 @@ function installEditableWorkbenchShell() {
           validation_report: emptyWorkbenchGraphValidationReport("fail"),
           summary: { first_divergence: null, assertion_status: "not_run", frame_count: 0 },
         };
-        renderWorkbenchSandboxDiff(payload);
+        renderWorkbenchSandboxDiff(payload, clientModelHash);
         return payload;
       })
       .finally(() => {
@@ -22796,10 +23014,18 @@ function installEditableWorkbenchShell() {
     const graphDocument = payload.editable_graph_document || {};
     const scenarioLibrary = payload.scenario_test_case_library || {};
     const testRunReport = payload.sandbox_test_run_report || {};
+    const diffSummary = payload.diff_summary || {};
     const debugTimeline = payload.debug_probe_timeline || {};
     const hardwareAttachment = payload.hardware_evidence_attachment_v2 || {};
     const graphNodeCount = Number(graphDocument.node_count || 0);
     const graphEdgeCount = Number(graphDocument.edge_count || 0);
+    const diffVerdict = String(diffSummary.verdict || "not_run");
+    const sandboxDiffStatus = ["equivalent", "divergent"].includes(diffVerdict)
+      ? "pass"
+      : (["invalid_model", "invalid_scenario"].includes(diffVerdict) ? "fail" : "not_run");
+    const scenarioTestStatus = testRunReport.kind
+      ? String(testRunReport.status || "not_run")
+      : "not_run";
     const restoreReviewChecklist = buildArchiveRestoreReviewChecklist(payload, restoreValidation);
     const steps = [
       reviewArchiveRegressionStep(
@@ -22816,7 +23042,13 @@ function installEditableWorkbenchShell() {
       ),
       reviewArchiveRegressionStep(
         "run_sandbox",
-        testRunReport.kind ? "pass" : "not_run",
+        sandboxDiffStatus,
+        "diff_summary",
+        checksums.diff_summary_checksum,
+      ),
+      reviewArchiveRegressionStep(
+        "run_scenario_tests",
+        scenarioTestStatus,
         "sandbox_test_run_report",
         checksums.sandbox_test_run_report_checksum,
       ),

@@ -1,0 +1,14 @@
+{
+  "selected": {
+    "diff_verdict": "未运行",
+    "diff_review_readiness": "需要运行",
+    "diff_review_archive_state": "未就绪",
+    "candidate_debugger_status": "未运行",
+    "candidate_debugger_trace": "不可用",
+    "preflight_classification": "需要证据"
+  },
+  "raw_visible_tokens": [],
+  "diff_raw_verdict": null,
+  "preflight_raw_classification": "needs_evidence",
+  "debugger_raw_status": "not_run"
+}
