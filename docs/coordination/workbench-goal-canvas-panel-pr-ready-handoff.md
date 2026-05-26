@@ -89,6 +89,13 @@ The Notion control plane is reachable with the terminal `NOTION_API_KEY`, but `o
 
 Transient TLS/EOF failures are now retried by `tools/validate_notion_control_plane.py`; if all attempts fail, the script still exits non-zero with `reason="notion_transport_unavailable"`.
 
+## Post-Merge Review Notes
+
+Claude Opus 4.7 accepted GitHub PR #253 for merge and left two non-blocking follow-up notes:
+
+- Phase 10 changes only user-facing rendered proof/debug/handoff summaries. Raw JSON/export/schema fields are unchanged, but historical byte-for-byte comparisons of rendered proof or archive-facing text can differ because enum-like values now display Chinese labels through `displayStatusLabel()`. Treat those differences as presentation drift unless a raw field, schema, checksum, or archive manifest changes.
+- `_install_workbench_inspector_mode_bridge()` in `tests/e2e/test_workbench_js_boot_smoke.py` is still intentional compatibility scaffolding for legacy e2e actions after the workbench inspector became tabbed. Do not delete it opportunistically; clean it up only in a dedicated e2e maintenance slice that opens the target inspector tabs explicitly in the affected tests.
+
 ## Next Slice
 
 Do not expand into controller truth, certified adapters, YAML, schemas, or new frontend frameworks.

@@ -1,6 +1,6 @@
 # Post-v5 v6 Live Queue
 
-Status: active queue · live Linear `JER-257` closed · live Linear `JER-258` implementing workbench maturity evidence refresh
+Status: active queue · live Linear `JER-259` closed · functional milestone workflow proposed after PR #257
 
 ## Purpose
 
@@ -8,6 +8,12 @@ Post-v5 work must dispatch from live Linear issues, not from repo-local
 historical JER labels alone. This document seeds the first executable v6 queue
 after the merged Workbench v5 foundation and records the next candidate slices
 in a form that Codex/Symphony can turn into live Linear issues.
+
+For new work, prefer the functional milestone operating model in
+`docs/coordination/functional-milestone-symphony-goal-workflow.md`. That
+document groups future work into Canvas authoring, simulation/test/debug,
+archive/handoff, runtime generalization, and release maturity milestones, then
+turns each eligible Linear issue into one bounded Codex `/goal` run.
 
 ## Live Issue
 
@@ -33,8 +39,27 @@ Identifier rule:
    YAML, and C919 reference packets read-only.
 5. Publish Linear proof comments after validation; do not paste raw logs,
    secrets, or implicit state transitions.
+6. Use the 2026-05-07 validation tier policy for workbench/Canvas slices:
+   hard hold only on controller truth, certified assets, public schema
+   boundary, or simulation determinism; otherwise record failed broad gates as
+   daily warnings or milestone-only blockers.
+7. Map every new issue to exactly one functional milestone from
+   `functional-milestone-symphony-goal-workflow.md`.
+8. Use `/goal` for long-running implementation. Include Objective, Scope,
+   Constraints, Done when, and Stop if; include token budget in Constraints.
+9. Route milestone closeout, adapter/runtime truth, public schema, production,
+   or certification claims to Claude Opus 4.7 review before merge/claim.
 
 ## Candidate v6 Issues
+
+The historical candidate list below is retained for traceability. New dispatch
+should use milestone-prefixed issues:
+
+- `[M1] Canvas authoring ...`
+- `[M2] Simulation test debug ...`
+- `[M3] Evidence archive handoff ...`
+- `[M4] Runtime generalization ...`
+- `[M5] Release maturity ...`
 
 Recommended first product slice:
 
@@ -471,7 +496,7 @@ Current release-operations dispatch:
 - Live Linear issue: `JER-258`
 - Title: `[project] [L6] [none] [DAL-TBD] Workbench maturity evidence refresh`
 - URL: `https://linear.app/jerrykogami/issue/JER-258/project-l6-none-dal-tbd-workbench-maturity-evidence-refresh`
-- State at dispatch: `In Progress`
+- State after PR #251: `Done`
 - Evidence target: refresh the release evidence manifest, local production
   runbook, and queue/state docs so the current maturity picture is
   machine-readable after JER-257.
@@ -482,9 +507,24 @@ Current release-operations dispatch:
   official wrapper remains blocked at 4548 errors in 305 files; `unit_tests`
   passes; `git diff --check` passes.
 
+Current product-honesty dispatch:
+
+- Live Linear issue: `JER-259`
+- Title: `[project] [L4] [none] [DAL-TBD] Workbench start page honesty refresh`
+- URL: `https://linear.app/jerrykogami/issue/JER-259/project-l4-none-dal-tbd-workbench-start-page-honesty-refresh`
+- State at dispatch: `In Progress`
+- Evidence target: make `/workbench/start` accurately route engineers into the
+  current workbench surface by removing stale internal E11 roadmap language and
+  correcting the removed wow starter-card claim.
+- Current branch evidence: focused `/workbench/start` tests pass at 11 passed,
+  static inspection shows the stale strings are absent, touched test file is
+  focused strict-mypy clean, the official wrapper remains blocked but improves
+  to 4547 errors in 304 files, `unit_tests` passes, and `git diff --check`
+  passes.
+
 ## Next Candidate Issue Contracts
 
-Post-JER-257 maturity snapshot:
+Post-JER-258 maturity snapshot:
 
 - Strong evidence: local release-candidate smoke exists from live Linear
   `JER-242`, full opt-in e2e evidence is current from live Linear `JER-243`,
@@ -493,12 +533,20 @@ Post-JER-257 maturity snapshot:
 - Known blocker: JER-171 full strict mypy remains blocked. The current verified
   wrapper result is 4548 errors in 305 files, not a clean gate.
 - Known gate: unit regression must still be rerun on the exact release-candidate
-  SHA before handoff even when prior branch evidence passed.
+  SHA before handoff even when prior branch evidence passed. For non-release
+  workbench UI slices, use focused tests first and record full-suite state as
+  milestone evidence.
 - Full opt-in e2e is current as of live Linear `JER-243`: 93 passed / 3445
   deselected on `origin/main@9516fa6`.
 - Known blocker: deployment packaging, cloud hosting, and certification
   authority remain not-claimed. The repo is ready for more local hardening, not
   for a production-ready claim.
+- Known product gap: first-entry surfaces must stay aligned with current
+  `/workbench` reality. Stale roadmap and removed-surface claims are treated as
+  product maturity defects, not harmless documentation drift.
+- Validation policy: full opt-in e2e, full shared validation, and strict mypy
+  clean are milestone gates. They do not stop daily sandbox development unless
+  they reveal a Tier 0 hard hold.
 
 Dispatched product-readiness slice:
 

@@ -2,20 +2,20 @@
   "desktop": {
     "archiveVisible": true,
     "canvas": {
-      "bottom": 835.34375,
+      "bottom": 911.921875,
       "height": 828.15625,
       "left": 73.59375,
       "right": 1430.40625,
-      "top": 7.1875,
+      "top": 83.765625,
       "width": 1356.8125
     },
     "debugVisible": true,
     "inspector": {
-      "bottom": 824.953125,
+      "bottom": 901.53125,
       "height": 767.375,
       "left": 1419.609375,
       "right": 1421.609375,
-      "top": 57.578125,
+      "top": 134.15625,
       "width": 2
     },
     "inspectorScroll": {
@@ -23,36 +23,36 @@
       "scrollHeight": 765
     },
     "main": {
-      "bottom": 835.34375,
+      "bottom": 911.921875,
       "height": 828.15625,
       "left": 73.59375,
       "right": 1430.40625,
-      "top": 7.1875,
+      "top": 83.765625,
       "width": 1356.8125
     },
     "nodeBoxes": [
       {
-        "bottom": 316.078125,
+        "bottom": 392.65625,
         "height": 54,
         "left": 439.125,
         "right": 577.125,
-        "top": 262.078125,
+        "top": 338.65625,
         "width": 138
       },
       {
-        "bottom": 316.078125,
+        "bottom": 392.65625,
         "height": 54,
         "left": 926.859375,
         "right": 1064.859375,
-        "top": 262.078125,
+        "top": 338.65625,
         "width": 138
       },
       {
-        "bottom": 497.828125,
+        "bottom": 574.40625,
         "height": 54,
         "left": 439.125,
         "right": 577.125,
-        "top": 443.828125,
+        "top": 520.40625,
         "width": 138
       }
     ],
@@ -67,26 +67,26 @@
     },
     "portHandleCount": 6,
     "reopenGuide": {
-      "bottom": 39.671875,
+      "bottom": 116.25,
       "height": 32,
       "left": 72.796875,
       "right": 156.796875,
-      "top": 7.671875,
+      "top": 84.25,
       "width": 84
     },
     "toolbar": {
-      "bottom": 824.15625,
+      "bottom": 900.734375,
       "height": 768.96875,
       "left": 81.59375,
       "right": 123.59375,
-      "top": 55.1875,
+      "top": 131.765625,
       "width": 42
     },
     "viewport": {
-      "bodyScrollHeight": 980,
+      "bodyScrollHeight": 1049,
       "bodyScrollWidth": 1440,
       "height": 980,
-      "scrollHeight": 980,
+      "scrollHeight": 1044,
       "scrollWidth": 1440,
       "width": 1440
     }
@@ -94,20 +94,20 @@
   "narrow": {
     "archiveVisible": true,
     "canvas": {
-      "bottom": 737.359375,
+      "bottom": 774.15625,
       "height": 730.171875,
       "left": 71.1875,
       "right": 382.8125,
-      "top": 7.1875,
+      "top": 43.984375,
       "width": 311.625
     },
     "debugVisible": true,
     "inspector": {
-      "bottom": 729.359375,
+      "bottom": 766.15625,
       "height": 674.171875,
       "left": 374.09375,
       "right": 376.09375,
-      "top": 55.1875,
+      "top": 91.984375,
       "width": 2
     },
     "inspectorScroll": {
@@ -115,36 +115,36 @@
       "scrollHeight": 672
     },
     "main": {
-      "bottom": 737.359375,
+      "bottom": 774.15625,
       "height": 730.171875,
       "left": 71.1875,
       "right": 382.8125,
-      "top": 7.1875,
+      "top": 43.984375,
       "width": 311.625
     },
     "nodeBoxes": [
       {
-        "bottom": 278.765625,
+        "bottom": 315.5625,
         "height": 46,
         "left": 123.265625,
         "right": 219.265625,
-        "top": 232.765625,
+        "top": 269.5625,
         "width": 96
       },
       {
-        "bottom": 278.765625,
+        "bottom": 315.5625,
         "height": 46,
         "left": 234.71875,
         "right": 330.71875,
-        "top": 232.765625,
+        "top": 269.5625,
         "width": 96
       },
       {
-        "bottom": 438.953125,
+        "bottom": 475.75,
         "height": 46,
         "left": 123.265625,
         "right": 219.265625,
-        "top": 392.953125,
+        "top": 429.75,
         "width": 96
       }
     ],
@@ -159,26 +159,26 @@
     },
     "portHandleCount": 6,
     "reopenGuide": {
-      "bottom": 39.671875,
+      "bottom": 76.46875,
       "height": 32,
       "left": 72.796875,
       "right": 144.796875,
-      "top": 7.671875,
+      "top": 44.46875,
       "width": 72
     },
     "toolbar": {
-      "bottom": 726.171875,
+      "bottom": 762.96875,
       "height": 670.984375,
       "left": 79.1875,
       "right": 121.1875,
-      "top": 55.1875,
+      "top": 91.984375,
       "width": 42
     },
     "viewport": {
-      "bodyScrollHeight": 920,
+      "bodyScrollHeight": 951,
       "bodyScrollWidth": 390,
       "height": 920,
-      "scrollHeight": 920,
+      "scrollHeight": 944,
       "scrollWidth": 390,
       "width": 390
     }

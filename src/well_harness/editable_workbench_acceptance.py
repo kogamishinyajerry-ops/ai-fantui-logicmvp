@@ -168,15 +168,27 @@ def _default_validation_report() -> dict[str, Any]:
 def _default_known_blockers() -> list[dict[str, str]]:
     return [
         {
-            "gate": "opt-in e2e workbench smoke",
-            "status": "known_baseline_blocker",
-            "evidence": 'Page.goto(... wait_until="networkidle") timeout; e2e 49/49 is not claimed.',
+            "gate": "workbench Tier 0 hard holds",
+            "status": "policy_guard",
+            "evidence": (
+                "Stop only for controller truth, frozen/certified assets, "
+                "public schema boundary, or simulation determinism regressions."
+            ),
+            "truth_effect": "none",
+        },
+        {
+            "gate": "full opt-in e2e",
+            "status": "milestone_only_not_claimed",
+            "evidence": "Full opt-in e2e is release/milestone evidence and is not claimed from this archive.",
             "truth_effect": "none",
         },
         {
             "gate": "PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
-            "status": "not_claimed_clean",
-            "evidence": "Official Codex-lane mypy gate is defined by JER-171; current full-repo strict gate remains blocked by existing baseline typing errors.",
+            "status": "milestone_only_known_blocker",
+            "evidence": (
+                "Official Codex-lane mypy gate is defined by JER-171; "
+                "current full-repo strict gate remains milestone-only and not clean."
+            ),
             "truth_effect": "none",
         },
     ]
@@ -308,9 +320,10 @@ def _build_acceptance_bundle_from_artifacts(
         "pr_proof_packet": pr_proof_packet,
         "known_blockers": blockers,
         "gate_claims": {
-            "default_pytest": "required",
-            "gsd_validation": "required",
-            "adversarial": "required",
+            "hard_hold_policy": "required",
+            "default_pytest": "warning",
+            "gsd_validation": "warning",
+            "adversarial": "warning",
             "e2e_49_49": "not_claimed",
             "mypy_strict_clean": "not_claimed",
         },

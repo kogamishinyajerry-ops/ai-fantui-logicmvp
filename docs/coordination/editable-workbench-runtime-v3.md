@@ -75,7 +75,10 @@ The closure is intentionally evidence-scoped:
 
 JER-171 remains a gate-honesty boundary: the official command exists and may
 return `status: blocked`. Runtime v3 closure does not certify a clean mypy
-baseline.
+baseline. Under the 2026-05-07 validation tier policy, this is a
+milestone/release blocker rather than a daily workbench hard hold unless a
+typing failure exposes a controller-truth, schema-boundary, or simulation
+determinism regression.
 
 ## Successor
 
@@ -215,11 +218,17 @@ The browser archive must include:
 
 - `gate_claims` with `e2e_49_49: not_claimed` and
   `mypy_strict_clean: not_claimed`.
-- `known_blockers` that cite the official JER-171 mypy evidence command.
+- `known_blockers` / policy notes that cite the official JER-171 mypy evidence
+  command as milestone-only and keep Tier 0 hard holds explicit.
 - `red_line_metadata` proving no controller truth, frozen asset, live Linear,
   truth-level, DAL, or PSSA mutation.
 - Checksums for both `gate_claims` and `known_blockers` so the local JSON export
   has integrity coverage for gate evidence.
+
+Daily workbench archives should mark default pytest, GSD validation, and
+adversarial lanes as warnings when they were not run on the exact local UI
+draft. Full opt-in e2e and full strict mypy stay `not_claimed` until their
+official commands pass for the release or milestone SHA.
 
 ## Boundaries
 

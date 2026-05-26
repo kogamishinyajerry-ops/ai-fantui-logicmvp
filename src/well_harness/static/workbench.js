@@ -70,6 +70,68 @@ function currentWorkbenchSystem() {
   return (select && select.value) || "thrust-reverser";
 }
 
+const sharedRuntimeProofContracts = [
+  "controller_truth_metadata",
+  "control_system_spec",
+  "playback_report",
+  "fault_diagnosis_report",
+  "knowledge_artifact",
+];
+
+const runtimeGeneralizationProofCatalog = {
+  "thrust-reverser": {
+    system_label: "反推参考系统",
+    adapter_id: "reference-deploy-controller",
+    source_of_truth: "src/well_harness/controller.py",
+    proof_mode: "reference_truth_adapter",
+    sample_pack_role: "Reference Truth",
+    shared_contracts: sharedRuntimeProofContracts,
+    ui_only_truth_path: false,
+    controller_truth_modified: false,
+    truth_effect: "none",
+  },
+  "c919-etras": {
+    system_label: "C919 E-TRAS",
+    adapter_id: "c919-etras-controller-adapter",
+    source_of_truth: "src/well_harness/adapters/c919_etras_adapter.py",
+    proof_mode: "python_generic_truth_adapter",
+    sample_pack_role: "Adapter-backed sample pack",
+    shared_contracts: sharedRuntimeProofContracts,
+    ui_only_truth_path: false,
+    controller_truth_modified: false,
+    truth_effect: "none",
+  },
+};
+
+function renderRuntimeGeneralizationProofRail(system) {
+  const activeSystem = system || currentWorkbenchSystem();
+  const proof =
+    runtimeGeneralizationProofCatalog[activeSystem] ||
+    runtimeGeneralizationProofCatalog["thrust-reverser"];
+  const rail = document.getElementById("workbench-runtime-generalization-proof");
+  if (!rail) return proof;
+  rail.setAttribute("data-runtime-proof-system", activeSystem);
+  rail.setAttribute("data-runtime-proof-mode", proof.proof_mode);
+  rail.setAttribute("data-ui-only-truth-path", proof.ui_only_truth_path ? "true" : "false");
+  rail.setAttribute("data-truth-effect", proof.truth_effect);
+  rail.setAttribute("data-controller-truth-modified", proof.controller_truth_modified ? "true" : "false");
+  const label = document.getElementById("workbench-runtime-proof-system-label");
+  const adapter = document.getElementById("workbench-runtime-proof-adapter-id");
+  const source = document.getElementById("workbench-runtime-proof-source");
+  const contracts = document.getElementById("workbench-runtime-proof-contracts");
+  const boundary = document.getElementById("workbench-runtime-proof-boundary");
+  if (label) label.textContent = proof.system_label;
+  if (adapter) adapter.textContent = proof.adapter_id;
+  if (source) source.textContent = proof.source_of_truth;
+  if (contracts) contracts.textContent = proof.shared_contracts.join(" · ");
+  if (boundary) {
+    boundary.textContent =
+      `UI-only truth path: ${proof.ui_only_truth_path ? "true" : "false"} · `
+      + `truth_effect: ${proof.truth_effect} · controller truth unchanged`;
+  }
+  return proof;
+}
+
 async function bootWorkbenchCircuitHero() {
   const mount = workbenchElement("workbench-circuit-hero-mount");
   if (!mount) {
@@ -153,6 +215,7 @@ function bootWorkbenchShell() {
   // Fire-and-forget: the hero hydrates asynchronously so the rest of the
   // workbench chrome (topbar, state-of-world bar, approval center)
   // renders immediately without waiting on the fragment request.
+  renderRuntimeGeneralizationProofRail(currentWorkbenchSystem());
   bootWorkbenchCircuitHero();
   installSuggestionFlow();
   installProposalInbox();
@@ -169,6 +232,7 @@ function installSystemSelectorReload() {
   const select = document.getElementById("workbench-system-select");
   if (!select) return;
   select.addEventListener("change", () => {
+    renderRuntimeGeneralizationProofRail(currentWorkbenchSystem());
     reloadWorkbenchCircuitHero();
     loadProposalsInbox();
   });
@@ -7198,6 +7262,117 @@ if (typeof window !== "undefined") {
 // placeholders so there is no flash of the wrong content).
 const WORKBENCH_STATE_OF_WORLD_PATH = "/api/workbench/state-of-world";
 
+function releaseMaturityStatusLabel(status) {
+  const normalized = String(status || "not_claimed").trim();
+  const labels = {
+    pass: "pass",
+    warning: "warning",
+    blocked: "blocked",
+    rerun_required: "rerun-required",
+    not_claimed: "未声明",
+  };
+  return labels[normalized] || normalized;
+}
+
+function buildWorkbenchReleaseMaturitySnapshot(stateOfWorld) {
+  const source = stateOfWorld && typeof stateOfWorld === "object" ? stateOfWorld : {};
+  const recentE2e = source.recent_e2e_label || "rerun required";
+  const adversarial = source.adversarial_label || "warning";
+  return {
+    kind: "well-harness-workbench-release-maturity-snapshot",
+    version: "workbench-release-maturity.v1",
+    scope: "local_only",
+    local_operator_runbook: "Start local server, run smoke/e2e/manifest/GSD gates, then attach local evidence.",
+    local_only: true,
+    candidate_state: "sandbox_candidate",
+    certification_claim: "none",
+    controller_truth_modified: false,
+    truth_effect: "none",
+    gates: [
+      {
+        gate_id: "controller_truth",
+        label: "真值边界",
+        status: "pass",
+        evidence: "controller truth unchanged",
+        truth_effect: "none",
+      },
+      {
+        gate_id: "local_smoke",
+        label: "本地运行",
+        status: "rerun_required",
+        evidence: "Run local demo/workbench smoke before release handoff.",
+        truth_effect: "none",
+      },
+      {
+        gate_id: "targeted_e2e",
+        label: "目标 e2e",
+        status: "warning",
+        evidence: recentE2e,
+        truth_effect: "none",
+      },
+      {
+        gate_id: "full_gsd",
+        label: "GSD 套件",
+        status: "warning",
+        evidence: "Run PYTHONPATH=src python3 tools/run_gsd_validation_suite.py --format json for release evidence.",
+        truth_effect: "none",
+      },
+      {
+        gate_id: "release_manifest",
+        label: "manifest",
+        status: "blocked",
+        evidence: "Release manifest must be generated and reviewed before handoff.",
+        truth_effect: "none",
+      },
+      {
+        gate_id: "mypy_strict_clean",
+        label: "mypy strict",
+        status: "not_claimed",
+        evidence: "full strict mypy clean is milestone-only and not claimed from the local workbench UI.",
+        truth_effect: "none",
+      },
+      {
+        gate_id: "adversarial",
+        label: "对抗样本",
+        status: "warning",
+        evidence: adversarial,
+        truth_effect: "none",
+      },
+    ],
+  };
+}
+
+function renderWorkbenchReleaseMaturitySnapshot(snapshot) {
+  const rail = document.getElementById("workbench-release-maturity-rail");
+  if (!rail) return null;
+  const payload = snapshot || buildWorkbenchReleaseMaturitySnapshot();
+  rail.setAttribute("data-release-maturity-scope", payload.scope || "local_only");
+  rail.setAttribute("data-release-maturity-truth-effect", payload.truth_effect || "none");
+  rail.setAttribute(
+    "data-release-maturity-controller-truth-modified",
+    payload.controller_truth_modified ? "true" : "false",
+  );
+  rail.setAttribute("data-release-maturity-certification-claim", payload.certification_claim || "none");
+  for (const gate of payload.gates || []) {
+    const gateId = String(gate.gate_id || "");
+    const slot = rail.querySelector(`[data-release-gate-id="${gateId}"]`);
+    if (!slot) continue;
+    const status = String(gate.status || "not_claimed");
+    slot.setAttribute("data-release-gate-status", status);
+    slot.setAttribute("title", `${gate.label || gateId}: ${gate.evidence || status}`);
+    const value = slot.querySelector(`[data-release-gate-value="${gateId}"]`);
+    if (value) value.textContent = releaseMaturityStatusLabel(status);
+  }
+  const summary = document.getElementById("workbench-release-maturity-summary");
+  if (summary) {
+    const blockedCount = (payload.gates || []).filter((gate) => gate.status === "blocked").length;
+    const notClaimedCount = (payload.gates || []).filter((gate) => gate.status === "not_claimed").length;
+    summary.textContent =
+      `仅本地证据 · blocked=${blockedCount} · not claimed=${notClaimedCount} · controller truth unchanged · no certification claim`;
+  }
+  return payload;
+}
+
 async function hydrateStateOfWorldBar() {
   const bar = document.getElementById("workbench-state-of-world-bar");
   if (!bar) {
@@ -7225,6 +7400,7 @@ async function hydrateStateOfWorldBar() {
     writeField("recent_e2e_label", payload.recent_e2e_label);
     writeField("adversarial_label", payload.adversarial_label);
     writeField("open_known_issues_count", payload.open_known_issues_count);
+    renderWorkbenchReleaseMaturitySnapshot(buildWorkbenchReleaseMaturitySnapshot(payload));
   } catch (_err) {
     // Silent — the bar already shows "…" placeholders, which renders as
     // a benign "still loading" state instead of a broken half-page.
@@ -7237,6 +7413,7 @@ window.addEventListener("DOMContentLoaded", () => {
   installFeedbackModeAffordance();
   installWowStarters();
   installRecommendationCopyHandler();  // P59-03 work-order copy button
+  renderWorkbenchReleaseMaturitySnapshot(buildWorkbenchReleaseMaturitySnapshot());
   void hydrateStateOfWorldBar();
   // E11-08: apply role affordance after DOM is ready. Honors
   // ?identity=<name> URL param so demos / tests can flip identity
@@ -7539,6 +7716,9 @@ function _wbLiveLogConnect() {
       const isActive = btn.getAttribute("data-circuit-system") === current;
       btn.setAttribute("aria-pressed", isActive ? "true" : "false");
     }
+    if (typeof renderRuntimeGeneralizationProofRail === "function") {
+      renderRuntimeGeneralizationProofRail(current);
+    }
     swapIframes(current);
   }
 
@@ -7659,8 +7839,12 @@ function installEditableWorkbenchShell() {
   const ruleThresholdInput = document.getElementById("workbench-rule-threshold");
   const applyRuleParameterBtn = document.getElementById("workbench-apply-rule-parameter-btn");
   const ruleParameterStatus = document.getElementById("workbench-rule-parameter-status");
+  const subsystemEditor = document.getElementById("workbench-subsystem-editor");
   const subsystemNameInput = document.getElementById("workbench-subsystem-name");
   const subsystemOwner = document.getElementById("workbench-subsystem-owner");
+  const subsystemSelectionCount = document.getElementById("workbench-subsystem-selection-count");
+  const subsystemActiveName = document.getElementById("workbench-subsystem-active-name");
+  const subsystemWorkflowStateSlot = document.getElementById("workbench-subsystem-workflow-state");
   const createSubsystemBtn = document.getElementById("workbench-create-subsystem-btn");
   const renameSubsystemBtn = document.getElementById("workbench-rename-subsystem-btn");
   const ungroupSubsystemBtn = document.getElementById("workbench-ungroup-subsystem-btn");
@@ -7733,6 +7917,30 @@ function installEditableWorkbenchShell() {
   const candidateDebuggerAssertion = document.getElementById("workbench-candidate-debugger-assertion");
   const candidateDebuggerObserved = document.getElementById("workbench-candidate-debugger-observed");
   const candidateDebuggerTrace = document.getElementById("workbench-candidate-debugger-trace");
+  const scenarioFailureExplanationPanel =
+    document.getElementById("workbench-scenario-failure-explanation");
+  const scenarioFailureExplanationStatus =
+    document.getElementById("workbench-failure-explanation-status");
+  const scenarioFailureExplanationAssertion =
+    document.getElementById("workbench-failure-explanation-assertion");
+  const scenarioFailureExplanationFrame =
+    document.getElementById("workbench-failure-explanation-frame");
+  const scenarioFailureExplanationOwner =
+    document.getElementById("workbench-failure-explanation-owner");
+  const scenarioFailureExplanationCurrent =
+    document.getElementById("workbench-failure-explanation-current");
+  const scenarioFailureExplanationExpected =
+    document.getElementById("workbench-failure-explanation-expected");
+  const scenarioFailureExplanationUpstream =
+    document.getElementById("workbench-failure-explanation-upstream");
+  const scenarioFailureExplanationTruthEffect =
+    document.getElementById("workbench-failure-explanation-truth-effect");
+  const scenarioFailureFocusOwnerBtn =
+    document.getElementById("workbench-failure-explanation-focus-owner-btn");
+  const scenarioFailureFocusFrameBtn =
+    document.getElementById("workbench-failure-explanation-focus-frame-btn");
+  const scenarioFailureNavigationStatus =
+    document.getElementById("workbench-failure-explanation-navigation-status");
   const preflightPanel = document.getElementById("workbench-preflight-analyzer");
   const runPreflightBtn = document.getElementById("workbench-run-preflight-btn");
   const preflightClassification = document.getElementById("workbench-preflight-classification");
@@ -7747,15 +7955,19 @@ function installEditableWorkbenchShell() {
   const selectedDebugTimelineHardware = document.getElementById("workbench-selected-debug-hardware");
   const selectedDebugTimelineContext = document.getElementById("workbench-selected-debug-context");
   const handoffBtn = document.getElementById("workbench-generate-handoff-btn");
+  const releaseReadinessBtn = document.getElementById("workbench-generate-release-readiness-btn");
   const handoffStatus = document.getElementById("workbench-handoff-status");
   const linearHandoffOutput = document.getElementById("workbench-linear-handoff-output");
   const prProofOutput = document.getElementById("workbench-pr-proof-output");
   const changeRequestPacketOutput = document.getElementById("workbench-changerequest-packet-output");
+  const releaseReadinessOutput = document.getElementById("workbench-release-readiness-output");
   const prepareArchiveBtn = document.getElementById("workbench-prepare-archive-btn");
   const downloadArchiveBtn = document.getElementById("workbench-download-archive-btn");
   const restoreReviewArchiveBtn = document.getElementById("workbench-restore-review-archive-btn");
   const archiveOutput = document.getElementById("workbench-evidence-archive-output");
   const reviewArchiveRestoreOutput = document.getElementById("workbench-review-archive-restore-output");
+  const archiveRestoreReviewChecklist = document.getElementById("workbench-archive-restore-review-checklist");
+  const archiveReviewChecklistStatus = document.getElementById("workbench-archive-review-checklist-status");
   const regressionBundleOutput = document.getElementById("workbench-regression-bundle-output");
   const archiveStatus = document.getElementById("workbench-archive-status");
   const openCommandPaletteBtn = document.getElementById("workbench-open-command-palette-btn");
@@ -7827,6 +8039,8 @@ function installEditableWorkbenchShell() {
   let selectedNode = nodes.find((node) => node.getAttribute("aria-pressed") === "true") || nodes[0];
   let selectedNodeIds = new Set(selectedNode ? [selectedNode.getAttribute("data-editable-node-id") || ""] : []);
   let selectedEdge = null;
+  let hoveredSubsystemGroupId = "";
+  let subsystemWorkflowState = "idle";
   let lassoDragState = null;
   let groupDragState = null;
   let selectionMarquee = null;
@@ -7851,6 +8065,7 @@ function installEditableWorkbenchShell() {
   let lastComponentTemplateId = "";
   let capturedSubsystemTemplates = [];
   let lastSandboxTestRunReport = null;
+  let lastScenarioFailureExplanationPacket = null;
   let scenarioTestCaseLibrary = null;
   let selectedScenarioTestCaseId = "sandbox_test_case_1";
   let nextScenarioTestCaseIndex = 2;
@@ -7947,6 +8162,10 @@ function installEditableWorkbenchShell() {
   const scenarioTestCaseLibraryVersion = "workbench-scenario-test-case-library.v1";
   const candidateDebuggerViewKind = "well-harness-workbench-candidate-debugger-view";
   const candidateDebuggerViewVersion = "workbench-candidate-debugger-view.v1";
+  const scenarioFailureExplanationKind =
+    "well-harness-workbench-scenario-failure-explanation";
+  const scenarioFailureExplanationVersion =
+    "workbench-scenario-failure-explanation.v1";
   const debugProbeTimelineKind = "well-harness-workbench-debug-probe-timeline";
   const debugProbeTimelineVersion = "workbench-debug-probe-timeline.v3";
   const preflightAnalyzerReportKind = "well-harness-workbench-preflight-analyzer-report";
@@ -8247,6 +8466,48 @@ function installEditableWorkbenchShell() {
       .replace(/^logic4 VDT90 \/ THR_LOCK release gate$/i, "L4 部署/油门锁门")
       .replace(/^Throttle lock release command$/i, "油门锁释放指令")
       .trim();
+  }
+
+  function truncateWorkbenchDisplayLabel(value, maxLength) {
+    const text = String(value || "").trim();
+    const limit = Number.isFinite(Number(maxLength)) ? Number(maxLength) : 12;
+    if (text.length <= limit) return text;
+    return `${text.slice(0, Math.max(1, limit - 1))}…`;
+  }
+
+  function nodeShortDisplayLabel(node) {
+    if (!node) return "草稿";
+    const nodeId = node.getAttribute("data-editable-node-id") || "";
+    const op = node.getAttribute("data-node-op") || "";
+    const fullLabel = nodeDisplayLabel(node);
+    if (node.getAttribute("data-draft-node") === "true") {
+      return fullLabel || nodeId || "草稿";
+    }
+    const referenceLabels = {
+      ra_ft: "高度<6ft",
+      sw1: "SW1锁存",
+      not_inhibited: "未抑制",
+      not_deployed: "未展开",
+      logic1: "L1允许",
+      tls_unlocked: "TLS解锁",
+      sw2: "SW2锁存",
+      engine_running: "发动机",
+      aircraft_on_ground: "在地",
+      eec_enable: "EEC允许",
+      logic2: "L2允许",
+      n1k_limit: "N1K限",
+      tra_deploy: "TRA窗",
+      pls_unlocked: "PLS解锁",
+      logic3: "L3展开",
+      vdt90: "VDT90",
+      logic4: "L4锁门",
+      thr_lock: "THR锁",
+    };
+    if (Object.prototype.hasOwnProperty.call(referenceLabels, nodeId)) {
+      return referenceLabels[nodeId];
+    }
+    if (op && !fullLabel) return shortBlockLabelForOp(op);
+    return truncateWorkbenchDisplayLabel(fullLabel || nodeId || "草稿", 12);
   }
 
   function nodeDisplayLabel(node) {
@@ -10681,6 +10942,57 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function compactSignalDisplayLabel(value) {
+    const text = String(value || "").trim();
+    const signalLabels = {
+      aircraft_on_ground: "GND",
+      deploy_90_percent_vdt: "VDT90",
+      deploy_position_percent: "VDT",
+      eec_enable: "EEC",
+      engine_running: "ENG",
+      logic1_active: "L1",
+      logic1_inputs: "L1IN",
+      logic2_active: "L2",
+      logic2_inputs: "L2IN",
+      logic3_active: "L3",
+      logic3_inputs: "L3IN",
+      logic4_active: "L4",
+      logic4_inputs: "L4IN",
+      n1k: "N1K",
+      n1k_below_limit: "N1K",
+      not_inhibited: "INH",
+      pls_ls: "PLS",
+      pls_unlocked: "PLS",
+      ra_below_6ft: "RA<6",
+      radio_altitude_ft: "RA",
+      reverser_deployed_eec: "EECDEP",
+      reverser_inhibited: "INH",
+      reverser_not_deployed_eec: "NDEP",
+      sw1_latched: "SW1",
+      sw2_latched: "SW2",
+      throttle_lock_release_cmd: "THR",
+      tls_ls: "TLS",
+      tls_unlocked: "TLS",
+      tra_deg: "TRA",
+      tra_deploy_window: "TRA",
+    };
+    if (Object.prototype.hasOwnProperty.call(signalLabels, text)) {
+      return signalLabels[text];
+    }
+    const compact = text
+      .split(/[^A-Za-z0-9]+/)
+      .filter(Boolean)
+      .map((part) => part.slice(0, 3).toUpperCase())
+      .join("_");
+    return truncateWorkbenchDisplayLabel(compact || text || "SIG", 10);
+  }
+
+  function portShortDisplayLabel(payload) {
+    if (!payload) return "PORT";
+    const direction = payload.direction === "out" ? "OUT" : "IN";
+    return `${direction}:${compactSignalDisplayLabel(payload.signal_id || payload.port_id)}`;
+  }
+
   function edgePortContract(edge) {
     if (!edge) {
       return {
@@ -10711,6 +11023,15 @@ function installEditableWorkbenchShell() {
     return normalizedInterfaceField(
       (edge && (edge.edge_label || edge.edgeLabel))
       || `${contract.source_port_id} -> ${contract.target_port_id}`,
+    );
+  }
+
+  function edgeWireDisplayLabel(edge) {
+    const contract = edgePortContract(edge);
+    return compactSignalDisplayLabel(
+      (edge && (edge.signal_id || edge.signalId))
+      || contract.signal_id
+      || edgeWireLabel(edge),
     );
   }
 
@@ -11791,6 +12112,7 @@ function installEditableWorkbenchShell() {
       node.setAttribute("aria-pressed", isSelected ? "true" : "false");
       node.setAttribute("data-multi-selected", isSelected && selectedCount > 1 ? "true" : "false");
     }
+    syncSubsystemActiveAffordance();
     renderCanvasInteractionStatus();
   }
 
@@ -12546,16 +12868,101 @@ function installEditableWorkbenchShell() {
       const overlay = document.createElement("div");
       overlay.className = "workbench-subsystem-overlay";
       overlay.setAttribute("data-subsystem-id", group.id);
+      overlay.setAttribute("data-subsystem-node-count", String(group.node_ids.length));
       overlay.setAttribute("data-truth-effect", "none");
+      overlay.setAttribute("data-subsystem-active", "false");
+      overlay.setAttribute("data-subsystem-workflow-state", subsystemWorkflowState);
+      overlay.setAttribute("data-subsystem-name", group.name);
+      overlay.setAttribute(
+        "aria-label",
+        `${group.name}: ${group.node_ids.length} draft node(s). Sandbox metadata. Truth effect none.`,
+      );
+      overlay.setAttribute(
+        "title",
+        `${group.name}: ${group.node_ids.length} draft node(s). Sandbox metadata. Truth effect none.`,
+      );
       overlay.style.setProperty("--subsystem-left", `${minX}%`);
       overlay.style.setProperty("--subsystem-top", `${minY}%`);
       overlay.style.setProperty("--subsystem-width", `${Math.max(8, maxX - minX)}%`);
       overlay.style.setProperty("--subsystem-height", `${Math.max(8, maxY - minY)}%`);
-      const label = document.createElement("span");
+      const label = document.createElement("strong");
+      label.className = "workbench-subsystem-overlay-label";
       label.textContent = group.name;
       overlay.appendChild(label);
+      const meta = document.createElement("span");
+      meta.className = "workbench-subsystem-overlay-meta";
+      meta.textContent = `${group.node_ids.length} draft node(s) · sandbox · truth effect none`;
+      overlay.appendChild(meta);
       canvas.appendChild(overlay);
     }
+    syncSubsystemActiveAffordance();
+  }
+
+  function setSubsystemStatus(message, tone = "info") {
+    if (!subsystemStatus) return;
+    subsystemStatus.textContent = message;
+    subsystemStatus.setAttribute("data-status-tone", tone);
+  }
+
+  function subsystemWorkflowStateLabel(state) {
+    if (state === "ready_to_group") return "可封装";
+    if (state === "grouped") return "已封装";
+    if (state === "renamed") return "已重命名";
+    if (state === "ungrouped") return "已解除";
+    return "未选择";
+  }
+
+  function derivedSubsystemWorkflowState(group, selectedDraftCount) {
+    if (group && subsystemWorkflowState === "renamed") return "renamed";
+    if (!group && subsystemWorkflowState === "ungrouped") return "ungrouped";
+    if (group) return "grouped";
+    if (selectedDraftCount >= 2) return "ready_to_group";
+    return "idle";
+  }
+
+  function updateSubsystemWorkflowSummary(group, selectedDraftCount) {
+    const selectedCount = Number.isFinite(Number(selectedDraftCount)) ? Number(selectedDraftCount) : 0;
+    const state = derivedSubsystemWorkflowState(group, selectedCount);
+    subsystemWorkflowState = state;
+    if (subsystemEditor) {
+      subsystemEditor.setAttribute("data-subsystem-workflow-state", state);
+      subsystemEditor.setAttribute("data-subsystem-selected-count", String(selectedCount));
+      subsystemEditor.setAttribute("data-subsystem-name", group ? group.name : "");
+    }
+    if (subsystemSelectionCount) subsystemSelectionCount.textContent = `已选 ${selectedCount}`;
+    if (subsystemActiveName) subsystemActiveName.textContent = group ? group.name : "无";
+    if (subsystemWorkflowStateSlot) subsystemWorkflowStateSlot.textContent = subsystemWorkflowStateLabel(state);
+    for (const overlay of Array.from(canvas ? canvas.querySelectorAll(".workbench-subsystem-overlay") : [])) {
+      const groupId = overlay.getAttribute("data-subsystem-id") || "";
+      const isCurrentGroup = Boolean(group && groupId === group.id);
+      overlay.setAttribute("data-subsystem-workflow-state", isCurrentGroup ? state : "grouped");
+      overlay.setAttribute("data-subsystem-name", overlay.getAttribute("data-subsystem-name") || "");
+    }
+    return state;
+  }
+
+  function setSubsystemWorkflowState(state, group, selectedDraftCount) {
+    subsystemWorkflowState = state || "idle";
+    return updateSubsystemWorkflowSummary(group || selectedSubsystemGroup(), selectedDraftCount);
+  }
+
+  function syncSubsystemActiveAffordance() {
+    const activeGroup = selectedSubsystemGroup();
+    const activeGroupId = hoveredSubsystemGroupId || (activeGroup ? activeGroup.id : "");
+    for (const node of nodes) {
+      const groupId = node.getAttribute("data-subsystem-id") || "";
+      node.setAttribute("data-subsystem-active", activeGroupId && groupId === activeGroupId ? "true" : "false");
+    }
+    if (!canvas) return;
+    for (const overlay of Array.from(canvas.querySelectorAll(".workbench-subsystem-overlay"))) {
+      const groupId = overlay.getAttribute("data-subsystem-id") || "";
+      overlay.setAttribute("data-subsystem-active", activeGroupId && groupId === activeGroupId ? "true" : "false");
+    }
+  }
+
+  function setHoveredSubsystemGroupFromNode(node) {
+    hoveredSubsystemGroupId = node ? (node.getAttribute("data-subsystem-id") || "") : "";
+    syncSubsystemActiveAffordance();
   }
 
   function renderSubsystemEditor() {
@@ -12572,20 +12979,20 @@ function installEditableWorkbenchShell() {
     if (createSubsystemBtn) createSubsystemBtn.disabled = selectedDraftNodes.length < 2;
     if (renameSubsystemBtn) renameSubsystemBtn.disabled = !group;
     if (ungroupSubsystemBtn) ungroupSubsystemBtn.disabled = !group;
-    if (subsystemStatus) {
-      subsystemStatus.textContent = group
-        ? `Subsystem ${group.id}: ${group.node_ids.length} draft node(s). Truth effect: none.`
-        : "Select two or more draft nodes to create a subsystem. Truth effect: none.";
-    }
+    updateSubsystemWorkflowSummary(group, selectedDraftNodes.length);
+    setSubsystemStatus(
+      group
+        ? `已选择子系统 ${group.name}: ${group.node_ids.length} draft node(s). Truth effect: none.`
+        : "选择两个或更多 draft nodes 后可封装为子系统。Truth effect: none.",
+      group ? "success" : "info",
+    );
     renderSubsystemInterfaceContractEditor();
   }
 
   function groupSelectedDraftNodes() {
     const selectedDraftNodes = selectedEditableDraftNodes();
     if (selectedDraftNodes.length < 2) {
-      if (subsystemStatus) {
-        subsystemStatus.textContent = "Select at least two draft nodes before grouping. Truth effect: none.";
-      }
+      setSubsystemStatus("Select at least two draft nodes before grouping. Truth effect: none.", "warn");
       return null;
     }
     recordEditableHistory("create_subsystem_group");
@@ -12614,17 +13021,18 @@ function installEditableWorkbenchShell() {
     updateEditableDraftHash();
     persistDraft();
     if (draftLabel) draftLabel.textContent = "sandbox_candidate subsystem group pending";
-    if (subsystemStatus) {
-      subsystemStatus.textContent =
-        `Created ${group.name} with ${group.node_ids.length} draft node(s). Truth effect: none.`;
-    }
+    setSubsystemStatus(
+      `已封装 · Created ${group.name} with ${group.node_ids.length} draft node(s). Truth effect: none.`,
+      "success",
+    );
+    setSubsystemWorkflowState("grouped", group, group.node_ids.length);
     return group;
   }
 
   function renameSelectedSubsystemGroup() {
     const group = selectedSubsystemGroup();
     if (!group) {
-      if (subsystemStatus) subsystemStatus.textContent = "Select a subsystem before renaming.";
+      setSubsystemStatus("Select a subsystem before renaming.", "warn");
       return null;
     }
     recordEditableHistory("rename_subsystem_group");
@@ -12642,16 +13050,16 @@ function installEditableWorkbenchShell() {
     updateEditableDraftHash();
     persistDraft();
     if (draftLabel) draftLabel.textContent = "sandbox_candidate subsystem rename pending";
-    if (subsystemStatus) {
-      subsystemStatus.textContent = `Renamed subsystem ${group.id} to ${nextName}. Truth effect: none.`;
-    }
-    return subsystemGroupById(group.id);
+    const renamedGroup = subsystemGroupById(group.id);
+    setSubsystemStatus(`已重命名 · Renamed subsystem ${group.id} to ${nextName}. Truth effect: none.`, "success");
+    setSubsystemWorkflowState("renamed", renamedGroup, renamedGroup ? renamedGroup.node_ids.length : 0);
+    return renamedGroup;
   }
 
   function ungroupSelectedSubsystem() {
     const group = selectedSubsystemGroup();
     if (!group) {
-      if (subsystemStatus) subsystemStatus.textContent = "Select a subsystem before ungrouping.";
+      setSubsystemStatus("Select a subsystem before ungrouping.", "warn");
       return null;
     }
     recordEditableHistory("ungroup_subsystem_group");
@@ -12670,9 +13078,8 @@ function installEditableWorkbenchShell() {
     updateEditableDraftHash();
     persistDraft();
     if (draftLabel) draftLabel.textContent = "sandbox_candidate subsystem ungroup pending";
-    if (subsystemStatus) {
-      subsystemStatus.textContent = `Ungrouped ${group.name}. Nodes, ports, and edges preserved.`;
-    }
+    setSubsystemStatus(`已解除 · Ungrouped ${group.name}. Nodes, ports, and edges preserved.`, "success");
+    setSubsystemWorkflowState("ungrouped", null, selectedNodeIds.size);
     return group;
   }
 
@@ -13393,6 +13800,7 @@ function installEditableWorkbenchShell() {
     renderEditableEdges();
     renderInspector();
     renderCandidateDebuggerView(currentCandidateDebuggerView("apply_state"));
+    renderScenarioFailureExplanation(currentScenarioFailureExplanation("apply_state"));
     renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("apply_state"));
     updateEditableDraftHash();
     validateEditableGraph();
@@ -13505,8 +13913,35 @@ function installEditableWorkbenchShell() {
     return Object.prototype.hasOwnProperty.call(detours, edgeId) ? detours[edgeId] : null;
   }
 
+  function orthogonalRouteResult(points, labelX, labelY, guide) {
+    const safePoints = points.map((point) => ({
+      x: Math.max(2, Math.min(98, Number(point.x) || 0)),
+      y: Math.max(2, Math.min(98, Number(point.y) || 0)),
+    }));
+    const d = safePoints
+      .map((point, index) => `${index === 0 ? "M" : "L"}${point.x} ${point.y}`)
+      .join(" ");
+    return {
+      d,
+      labelX: Math.max(2, Math.min(98, Number(labelX) || 50)),
+      labelY: Math.max(4, Math.min(96, Number(labelY) || 50)),
+      route_mode: "orthogonal",
+      route_guide: {
+        kind: "orthogonal_lane_guide",
+        segment_count: Math.max(0, safePoints.length - 1),
+        lane_axis: guide && guide.lane_axis ? guide.lane_axis : "x",
+        lane_x: Number.isFinite(Number(guide && guide.lane_x)) ? Number(guide.lane_x) : null,
+        lane_y: Number.isFinite(Number(guide && guide.lane_y)) ? Number(guide.lane_y) : null,
+        route_direction: guide && guide.route_direction ? guide.route_direction : "forward",
+        effect: "display_only",
+        truth_effect: "none",
+      },
+    };
+  }
+
   function orthogonalEdgeRoute(source, target, edge) {
     const routeDirection = Number(target && target.x) >= Number(source && source.x) ? 1 : -1;
+    const routeDirectionLabel = routeDirection >= 0 ? "forward" : "reverse";
     const sourceHalfX = Number.isFinite(Number(source && source.halfXPercent))
       ? Number(source.halfXPercent)
       : 5;
@@ -13520,55 +13955,63 @@ function installEditableWorkbenchShell() {
     const edgeId = String(edge && edge.id || "");
     if (edgeId === "edge_logic1_logic2") {
       const laneY = 12;
-      return {
-        d: [
-          `M${sourceX} ${sourceY}`,
-          `L${sourceX} ${laneY}`,
-          `L${targetX} ${laneY}`,
-          `L${targetX} ${targetY}`,
-        ].join(" "),
-        labelX: Math.max(2, Math.min(98, (sourceX + targetX) / 2)),
-        labelY: Math.max(4, Math.min(96, laneY - 1.5)),
-        route_mode: "orthogonal",
-      };
+      return orthogonalRouteResult(
+        [
+          { x: sourceX, y: sourceY },
+          { x: sourceX, y: laneY },
+          { x: targetX, y: laneY },
+          { x: targetX, y: targetY },
+        ],
+        (sourceX + targetX) / 2,
+        laneY - 1.5,
+        { lane_axis: "y", lane_y: laneY, route_direction: routeDirectionLabel },
+      );
     }
     if (edgeId === "edge_vdt90_logic4") {
       const laneY = 96;
       const laneX = 98;
-      return {
-        d: [
-          `M${sourceX} ${sourceY}`,
-          `L${sourceX} ${laneY}`,
-          `L${laneX} ${laneY}`,
-          `L${laneX} ${targetY}`,
-          `L${targetX} ${targetY}`,
-        ].join(" "),
-        labelX: Math.max(2, Math.min(98, (laneX + targetX) / 2)),
-        labelY: Math.max(4, Math.min(96, targetY - 1.5)),
-      };
+      return orthogonalRouteResult(
+        [
+          { x: sourceX, y: sourceY },
+          { x: sourceX, y: laneY },
+          { x: laneX, y: laneY },
+          { x: laneX, y: targetY },
+          { x: targetX, y: targetY },
+        ],
+        (laneX + targetX) / 2,
+        targetY - 1.5,
+        { lane_axis: "mixed", lane_x: laneX, lane_y: laneY, route_direction: routeDirectionLabel },
+      );
     }
     const laneX = referenceEdgeLaneX(edge);
     const midX = Math.max(2, Math.min(98, Number.isFinite(laneX) ? laneX : (sourceX + targetX) / 2));
     const detourY = referenceEdgeDetourY(edge);
     if (Number.isFinite(detourY)) {
       const laneY = Math.max(2, Math.min(98, detourY));
-      return {
-        d: [
-          `M${sourceX} ${sourceY}`,
-          `L${midX} ${sourceY}`,
-          `L${midX} ${laneY}`,
-          `L${targetX} ${laneY}`,
-          `L${targetX} ${targetY}`,
-        ].join(" "),
-        labelX: Math.max(2, Math.min(98, (midX + targetX) / 2)),
-        labelY: Math.max(4, Math.min(96, laneY - 1.5)),
-      };
+      return orthogonalRouteResult(
+        [
+          { x: sourceX, y: sourceY },
+          { x: midX, y: sourceY },
+          { x: midX, y: laneY },
+          { x: targetX, y: laneY },
+          { x: targetX, y: targetY },
+        ],
+        (midX + targetX) / 2,
+        laneY - 1.5,
+        { lane_axis: "mixed", lane_x: midX, lane_y: laneY, route_direction: routeDirectionLabel },
+      );
     }
-    return {
-      d: `M${sourceX} ${sourceY} L${midX} ${sourceY} L${midX} ${targetY} L${targetX} ${targetY}`,
-      labelX: midX,
-      labelY: Math.max(4, Math.min(96, (sourceY + targetY) / 2 - 1.5)),
-    };
+    return orthogonalRouteResult(
+      [
+        { x: sourceX, y: sourceY },
+        { x: midX, y: sourceY },
+        { x: midX, y: targetY },
+        { x: targetX, y: targetY },
+      ],
+      midX,
+      (sourceY + targetY) / 2 - 1.5,
+      { lane_axis: "x", lane_x: midX, route_direction: routeDirectionLabel },
+    );
   }
 
   function edgeTargetPortId(edge) {
@@ -13614,7 +14057,35 @@ function installEditableWorkbenchShell() {
     };
   }
 
-  function edgePathMetadata(edge) {
+  function edgeRouteGuideMetadata(route) {
+    const guide = route && route.route_guide || {};
+    return {
+      kind: guide.kind || "orthogonal_lane_guide",
+      segment_count: Number.isFinite(Number(guide.segment_count)) ? Number(guide.segment_count) : 0,
+      lane_axis: guide.lane_axis || "x",
+      lane_x: Number.isFinite(Number(guide.lane_x)) ? Number(guide.lane_x) : null,
+      lane_y: Number.isFinite(Number(guide.lane_y)) ? Number(guide.lane_y) : null,
+      route_direction: guide.route_direction || "forward",
+      effect: guide.effect || "display_only",
+      truth_effect: guide.truth_effect || "none",
+    };
+  }
+
+  function edgeRouteGuideAttributes(route) {
+    const guide = edgeRouteGuideMetadata(route);
+    return [
+      `data-route-guide="${inspectorText(guide.kind)}"`,
+      `data-route-guide-effect="${inspectorText(guide.effect)}"`,
+      `data-route-segment-count="${inspectorText(guide.segment_count)}"`,
+      `data-route-lane-axis="${inspectorText(guide.lane_axis)}"`,
+      `data-route-lane-x="${inspectorText(guide.lane_x === null ? "" : guide.lane_x)}"`,
+      `data-route-lane-y="${inspectorText(guide.lane_y === null ? "" : guide.lane_y)}"`,
+      `data-route-direction="${inspectorText(guide.route_direction)}"`,
+      `data-route-guide-truth-effect="${inspectorText(guide.truth_effect)}"`,
+    ].join(" ");
+  }
+
+  function edgePathMetadata(edge, route) {
     const payload = edgeInspectorPayload(edge);
     const binding = edgeInterfaceBinding(edge);
     return [
@@ -13624,10 +14095,12 @@ function installEditableWorkbenchShell() {
       `data-edge-target-id="${inspectorText(payload.target_node_id)}"`,
       `data-edge-signal-id="${inspectorText(payload.signal_id)}"`,
       `data-edge-label="${inspectorText(payload.edge_label)}"`,
+      `data-edge-display-label="${inspectorText(edgeWireDisplayLabel(edge))}"`,
       `data-route-mode="${inspectorText(payload.route_metadata.routing_mode)}"`,
       `data-edge-evidence-status="${inspectorText(payload.evidence_status)}"`,
       `data-port-compatibility="${inspectorText(payload.port_compatibility_status)}"`,
       `data-binding-quality="${inspectorText(binding.binding_quality)}"`,
+      edgeRouteGuideAttributes(route),
     ].join(" ");
   }
 
@@ -13950,9 +14423,15 @@ function installEditableWorkbenchShell() {
         handle.setAttribute("data-signal-id", payload.signal_id);
         handle.setAttribute("data-value-type", payload.value_type);
         handle.setAttribute("data-truth-effect", "none");
+        handle.setAttribute("data-port-short-label", portShortDisplayLabel(payload));
+        handle.setAttribute("data-port-signal-short-label", compactSignalDisplayLabel(payload.signal_id));
+        handle.setAttribute(
+          "title",
+          `${direction === "out" ? "输出" : "输入"}端口 ${payload.port_id} · 信号 ${payload.signal_id}`,
+        );
         handle.setAttribute(
           "aria-label",
-          `${direction === "out" ? "Output" : "Input"} port ${payload.port_id}`,
+          `${direction === "out" ? "输出" : "输入"}端口 ${payload.port_id}，信号 ${payload.signal_id}`,
         );
         handle.style.setProperty("--node-x", formatCanvasPercent(position.x));
         handle.style.setProperty("--node-y", formatCanvasPercent(position.y));
@@ -13982,22 +14461,30 @@ function installEditableWorkbenchShell() {
       const target = editableNodeRoutePosition(targetNode);
       const route = orthogonalEdgeRoute(source, target, edge);
       const payload = edgeInspectorPayload(edge);
+      const displayLabel = edgeWireDisplayLabel(edge);
+      const routeGuideAttrs = edgeRouteGuideAttributes(route);
       paths.push([
         `<path data-editable-edge-id="${inspectorText(edge.id)}"`,
         `data-editable-edge-index="${index}"`,
         `data-edge-source="${inspectorText(edge.source)}"`,
         `data-edge-target="${inspectorText(edge.target)}"`,
-        edgePathMetadata(edge),
+        edgePathMetadata(edge, route),
         'marker-end="url(#workbench-reference-arrowhead)"',
         'role="button"',
         'tabindex="0"',
         `aria-label="${inspectorText(`信号线 ${edge.source} 到 ${edge.target}`)}"`,
         `d="${route.d}" />`,
+        `<path class="workbench-edge-route-guide" data-route-guide-edge-id="${inspectorText(edge.id)}"`,
+        routeGuideAttrs,
+        'aria-hidden="true"',
+        'focusable="false"',
+        `d="${route.d}" />`,
         `<text class="workbench-edge-label" data-editable-edge-label-id="${inspectorText(edge.id)}"`,
         `data-edge-label="${inspectorText(payload.edge_label)}"`,
+        `data-edge-display-label="${inspectorText(displayLabel)}"`,
         `data-route-mode="${inspectorText(payload.route_metadata.routing_mode)}"`,
         `x="${route.labelX}" y="${route.labelY}">`,
-        inspectorText(payload.edge_label),
+        inspectorText(displayLabel),
         "</text>",
       ].join(" "));
     }
@@ -16749,6 +17236,7 @@ function installEditableWorkbenchShell() {
     const sandboxTestBench = safeSandboxTestBenchDefinition();
     const sandboxTestRunReport = currentSandboxTestRunReport();
     const candidateDebuggerView = currentCandidateDebuggerView("snapshot");
+    const scenarioFailureExplanation = currentScenarioFailureExplanation("snapshot");
     const debugProbeTimeline = candidateDebuggerView.debug_probe_timeline || currentDebugProbeTimeline("snapshot");
     const preflightAnalyzerReport = currentPreflightAnalyzerReport("snapshot");
     const hardwareInterfaceDesigner = currentHardwareInterfaceDesignerPayload("snapshot");
@@ -16808,6 +17296,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_bench: sandboxTestBench,
       sandbox_test_run_report: sandboxTestRunReport,
       candidate_debugger_view: candidateDebuggerView,
+      scenario_failure_explanation: scenarioFailureExplanation,
       debug_probe_timeline: debugProbeTimeline,
       preflight_analyzer_report: preflightAnalyzerReport,
       hardware_interface_designer: hardwareInterfaceDesigner,
@@ -17796,6 +18285,234 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function scenarioFailureReportFrames(report) {
+    const kernel = report && report.sandbox_runner_trace_kernel;
+    if (
+      kernel
+      && typeof kernel === "object"
+      && !Array.isArray(kernel)
+      && Array.isArray(kernel.frames)
+    ) {
+      return kernel.frames;
+    }
+    return Array.isArray(report && report.trace) ? report.trace : [];
+  }
+
+  function firstScenarioFailureAssertion(report) {
+    const assertions = Array.isArray(report && report.assertions) ? report.assertions : [];
+    return assertions.find((assertion) => assertion && assertion.status === "fail") || null;
+  }
+
+  function scenarioFailureFrameForAssertion(report, assertion) {
+    const frames = scenarioFailureReportFrames(report);
+    if (assertion && assertion.tick !== null && assertion.tick !== undefined) {
+      const matched = frames.find((frame) => Number(frame && frame.tick) === Number(assertion.tick));
+      if (matched) return matched;
+    }
+    return frames[0] || null;
+  }
+
+  function scenarioFailureFrameIndex(report, frame) {
+    if (!frame) return -1;
+    return scenarioFailureReportFrames(report).findIndex((candidate) => candidate === frame);
+  }
+
+  function scenarioFailureTarget(assertion, frame) {
+    const rawTarget = String((assertion && assertion.target) || "");
+    if (!rawTarget) {
+      return {
+        target_id: "none",
+        owner_kind: "none",
+        owner_id: "none",
+        owner_key: "none:none",
+        port_id: "",
+        edge_id: "",
+        signal_level: "none",
+        truth_effect: "none",
+      };
+    }
+    const portValues = Array.isArray(frame && frame.port_values) ? frame.port_values : [];
+    const edgeValues = Array.isArray(frame && frame.edge_values) ? frame.edge_values : [];
+    const edgeRecord = edgeValues.find((edge) => (
+      edge
+      && (
+        String(edge.edge_id || "") === rawTarget
+        || String(edge.source_port_id || "") === rawTarget
+        || String(edge.target_port_id || "") === rawTarget
+      )
+    ));
+    if (edgeRecord && String(edgeRecord.edge_id || "") === rawTarget) {
+      return {
+        target_id: rawTarget || "unknown",
+        owner_kind: "edge",
+        owner_id: String(edgeRecord.edge_id || rawTarget),
+        owner_key: `edge:${edgeRecord.edge_id || rawTarget}`,
+        port_id: String(edgeRecord.source_port_id || edgeRecord.target_port_id || ""),
+        edge_id: String(edgeRecord.edge_id || rawTarget),
+        signal_level: "edge",
+        truth_effect: "none",
+      };
+    }
+    const portRecord = portValues.find((port) => port && String(port.port_id || "") === rawTarget);
+    const ownerId = rawTarget.includes(":")
+      ? rawTarget.split(":")[0]
+      : String((portRecord && portRecord.owner_id) || rawTarget || "unknown");
+    return {
+      target_id: rawTarget || "unknown",
+      owner_kind: "node",
+      owner_id: ownerId,
+      owner_key: `node:${ownerId}`,
+      port_id: String((portRecord && portRecord.port_id) || rawTarget || ""),
+      edge_id: edgeRecord ? String(edgeRecord.edge_id || "") : "",
+      signal_level: rawTarget.includes(":") ? "port" : "node",
+      truth_effect: "none",
+    };
+  }
+
+  function pushScenarioFailureDependency(dependencies, dependency) {
+    if (!dependency) return;
+    const key = [
+      dependency.kind || "unknown",
+      dependency.edge_id || "",
+      dependency.port_id || "",
+      dependency.owner_key || "",
+    ].join("|");
+    if (dependencies.some((item) => item._dedupe_key === key)) return;
+    dependencies.push({
+      ...dependency,
+      _dedupe_key: key,
+      value: normalizeEvidenceArchiveValue(dependency.value),
+      available: Boolean(dependency.available),
+      truth_effect: "none",
+    });
+  }
+
+  function scenarioFailureUpstreamDependencies(frame, target) {
+    const dependencies = [];
+    const nodeValues = Array.isArray(frame && frame.node_values)
+      ? frame.node_values
+      : (Array.isArray(frame && frame.node_results) ? frame.node_results : []);
+    const edgeValues = Array.isArray(frame && frame.edge_values) ? frame.edge_values : [];
+    if (target && target.owner_kind === "node") {
+      const nodeValue = nodeValues.find((node) => (
+        node && String(node.node_id || "") === String(target.owner_id || "")
+      ));
+      for (const input of Array.isArray(nodeValue && nodeValue.input_values) ? nodeValue.input_values : []) {
+        pushScenarioFailureDependency(dependencies, {
+          kind: "port",
+          relation: "node_input",
+          owner_id: String((input && input.owner_id) || target.owner_id || ""),
+          owner_key: `node:${String((input && input.owner_id) || target.owner_id || "")}`,
+          port_id: String((input && input.port_id) || ""),
+          direction: String((input && input.direction) || "in"),
+          value: input && input.value,
+          available: Boolean(input && input.available),
+        });
+      }
+      for (const edge of edgeValues.filter((item) => (
+        item && String(item.target_node_id || "") === String(target.owner_id || "")
+      ))) {
+        pushScenarioFailureDependency(dependencies, {
+          kind: "edge",
+          relation: "incoming_edge",
+          owner_id: String(edge.source_node_id || ""),
+          owner_key: `edge:${String(edge.edge_id || "")}`,
+          edge_id: String(edge.edge_id || ""),
+          port_id: String(edge.source_port_id || ""),
+          value: edge.value,
+          available: Boolean(edge.available),
+        });
+      }
+    } else if (target && target.owner_kind === "edge") {
+      const edge = edgeValues.find((item) => item && String(item.edge_id || "") === String(target.edge_id || ""));
+      if (edge) {
+        pushScenarioFailureDependency(dependencies, {
+          kind: "port",
+          relation: "edge_source",
+          owner_id: String(edge.source_node_id || ""),
+          owner_key: `node:${String(edge.source_node_id || "")}`,
+          edge_id: String(edge.edge_id || ""),
+          port_id: String(edge.source_port_id || ""),
+          value: edge.value,
+          available: Boolean(edge.available),
+        });
+      }
+    }
+    return dependencies
+      .map(({ _dedupe_key, ...dependency }) => dependency)
+      .slice(0, 8);
+  }
+
+  function scenarioFailureCurrentValue(assertion, frame, target) {
+    if (assertion && Object.prototype.hasOwnProperty.call(assertion, "observed")) {
+      return normalizeEvidenceArchiveValue(assertion.observed);
+    }
+    const values = frame && frame.values && typeof frame.values === "object" ? frame.values : {};
+    const observed = readSandboxValue(values, [
+      target && target.port_id,
+      target && target.target_id,
+      target && target.owner_id,
+    ]);
+    return normalizeEvidenceArchiveValue(observed);
+  }
+
+  function currentScenarioFailureExplanation(state) {
+    const report = currentSandboxTestRunReport();
+    const assertion = firstScenarioFailureAssertion(report);
+    const frame = scenarioFailureFrameForAssertion(report, assertion);
+    const frameIndex = scenarioFailureFrameIndex(report, frame);
+    const target = scenarioFailureTarget(assertion, frame);
+    const upstreamDependencies = scenarioFailureUpstreamDependencies(frame, target);
+    const currentValue = scenarioFailureCurrentValue(assertion, frame, target);
+    const expectedValue = assertion
+      ? normalizeEvidenceArchiveValue(assertion.expected)
+      : null;
+    const status = report
+      ? (assertion ? "fail" : (report.status || "not_run"))
+      : "not_run";
+    const tick =
+      assertion && Number.isFinite(Number(assertion.tick))
+        ? Number(assertion.tick)
+        : (
+          frame && Number.isFinite(Number(frame.tick))
+            ? Number(frame.tick)
+            : null
+        );
+    return {
+      kind: scenarioFailureExplanationKind,
+      version: scenarioFailureExplanationVersion,
+      workflow_state: state || "run_result",
+      status,
+      failure_status: assertion ? "fail" : "none",
+      scenario_id: report ? (report.scenario_id || selectedWorkbenchScenarioId()) : selectedWorkbenchScenarioId(),
+      test_case_id: report ? (report.test_case_id || selectedScenarioTestCaseIdValue()) : selectedScenarioTestCaseIdValue(),
+      assertion_status: report ? (report.assertion_status || "not_run") : "not_run",
+      assertion: assertion ? normalizeEvidenceArchiveValue(assertion) : null,
+      timeline_frame: {
+        tick,
+        frame_index: frameIndex < 0 ? null : frameIndex,
+        trace_available: Boolean(frame),
+        trace_frame_count: scenarioFailureReportFrames(report).length,
+        truth_effect: "none",
+      },
+      target,
+      current_value: currentValue,
+      expected_value: expectedValue,
+      comparator: assertion ? (assertion.comparator || "equals") : "none",
+      upstream_dependency_count: upstreamDependencies.length,
+      upstream_dependencies: upstreamDependencies,
+      explanation_summary: assertion
+        ? `Assertion ${assertion.target || "unknown"} failed at tick ${tick}.`
+        : "No failing scenario assertion is available.",
+      action_hint: assertion
+        ? "Inspect the owner node/port and upstream dependency values before handoff."
+        : "Run a sandbox scenario with assertions to build failure evidence.",
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      truth_effect: "none",
+    };
+  }
+
   function formatDebuggerValue(value) {
     if (value === undefined) return displayStatusLabel("unavailable");
     if (typeof value === "string") return value;
@@ -17827,6 +18544,174 @@ function installEditableWorkbenchShell() {
     return available
       .map((item) => `${item.port_id}=${formatDebuggerValue(item.value)} @ tick ${item.tick}`)
       .join(" · ");
+  }
+
+  function formatScenarioFailureFrame(explanation) {
+    const frame = explanation && explanation.timeline_frame ? explanation.timeline_frame : {};
+    if (!frame.trace_available) return "unavailable";
+    const indexLabel = frame.frame_index === null || frame.frame_index === undefined
+      ? "unknown"
+      : String(Number(frame.frame_index) + 1);
+    return `tick=${frame.tick} · frame=${indexLabel}/${frame.trace_frame_count || 0}`;
+  }
+
+  function formatScenarioFailureOwner(explanation) {
+    const target = explanation && explanation.target ? explanation.target : {};
+    const parts = [target.owner_key || "none:none"];
+    if (target.port_id) parts.push(`port:${target.port_id}`);
+    if (target.edge_id) parts.push(`edge:${target.edge_id}`);
+    return parts.join(" · ");
+  }
+
+  function formatScenarioFailureUpstream(dependencies) {
+    const available = (dependencies || []).filter((item) => item.available);
+    if (!available.length) return "unavailable";
+    return available
+      .map((item) => `${item.port_id || item.edge_id || item.owner_key}=${formatDebuggerValue(item.value)}`)
+      .join(" · ");
+  }
+
+  function formatScenarioFailureValue(explanation, key) {
+    if (!explanation || !explanation.assertion) return "not run";
+    return formatDebuggerValue(explanation[key]);
+  }
+
+  function scenarioFailureHasActionableFailure(packet) {
+    return Boolean(packet && packet.assertion && packet.status === "fail");
+  }
+
+  function scenarioFailureNavigationPacket() {
+    return lastScenarioFailureExplanationPacket || currentScenarioFailureExplanation("navigation");
+  }
+
+  function setScenarioFailureNavigationStatus(text) {
+    if (scenarioFailureNavigationStatus) {
+      scenarioFailureNavigationStatus.textContent = text;
+    }
+  }
+
+  function setScenarioFailureNavigationControlState(packet) {
+    const target = (packet && packet.target) || {};
+    const frame = (packet && packet.timeline_frame) || {};
+    const hasFailure = scenarioFailureHasActionableFailure(packet);
+    const ownerReady = hasFailure
+      && target.owner_kind !== "none"
+      && Boolean(target.owner_id || target.owner_key || target.edge_id);
+    const frameReady = hasFailure && frame.trace_available === true;
+    if (scenarioFailureFocusOwnerBtn) {
+      scenarioFailureFocusOwnerBtn.disabled = !ownerReady;
+      scenarioFailureFocusOwnerBtn.setAttribute("aria-disabled", ownerReady ? "false" : "true");
+    }
+    if (scenarioFailureFocusFrameBtn) {
+      scenarioFailureFocusFrameBtn.disabled = !frameReady;
+      scenarioFailureFocusFrameBtn.setAttribute("aria-disabled", frameReady ? "false" : "true");
+    }
+    if (scenarioFailureExplanationPanel) {
+      scenarioFailureExplanationPanel.setAttribute(
+        "data-explanation-navigation-ready",
+        ownerReady || frameReady ? "true" : "false",
+      );
+      scenarioFailureExplanationPanel.setAttribute(
+        "data-explanation-navigation-owner",
+        target.owner_key || "none:none",
+      );
+      scenarioFailureExplanationPanel.setAttribute(
+        "data-explanation-navigation-frame-tick",
+        frame.tick === null || frame.tick === undefined ? "none" : String(frame.tick),
+      );
+    }
+    setScenarioFailureNavigationStatus(
+      ownerReady || frameReady
+        ? "可定位失败上下文。真值影响：无。"
+        : "等待失败证据",
+    );
+  }
+
+  function markScenarioFailureNavigation(kind, packet) {
+    const target = (packet && packet.target) || {};
+    const frame = (packet && packet.timeline_frame) || {};
+    const attrs = {
+      "data-failure-navigation": kind || "none",
+      "data-failure-navigation-owner": target.owner_key || "none:none",
+      "data-failure-frame-tick": frame.tick === null || frame.tick === undefined ? "none" : String(frame.tick),
+      "data-failure-frame-index":
+        frame.frame_index === null || frame.frame_index === undefined ? "none" : String(frame.frame_index),
+      "data-failure-frame-count": String(frame.trace_frame_count || 0),
+      "data-failure-truth-effect": "none",
+    };
+    for (const element of [scenarioFailureExplanationPanel, timelineStrip]) {
+      if (!element) continue;
+      for (const [name, value] of Object.entries(attrs)) {
+        element.setAttribute(name, value);
+      }
+    }
+  }
+
+  function focusScenarioFailureFrame() {
+    const packet = scenarioFailureNavigationPacket();
+    const frame = (packet && packet.timeline_frame) || {};
+    if (!scenarioFailureHasActionableFailure(packet) || frame.trace_available !== true) {
+      setScenarioFailureNavigationStatus("没有可标记的失败时间帧。先运行失败场景。");
+      return null;
+    }
+    markScenarioFailureNavigation("timeline_frame", packet);
+    renderSelectedDebugTimeline("scenario_failure_frame");
+    if (selectedDebugTimelineLinkStatus) {
+      selectedDebugTimelineLinkStatus.textContent = "失败帧";
+    }
+    if (selectedDebugTimelineContext) {
+      selectedDebugTimelineContext.textContent =
+        `${formatScenarioFailureFrame(packet)} · ${packet.target.owner_key || "none:none"} · 真值影响：无`;
+    }
+    setScenarioFailureNavigationStatus(`已标记 ${formatScenarioFailureFrame(packet)}。真值影响：无。`);
+    return packet;
+  }
+
+  function focusScenarioFailureOwner() {
+    const packet = scenarioFailureNavigationPacket();
+    const target = (packet && packet.target) || {};
+    if (!scenarioFailureHasActionableFailure(packet)) {
+      setScenarioFailureNavigationStatus("没有可定位的失败断言。先运行失败场景。");
+      return null;
+    }
+    if (target.owner_kind === "edge") {
+      const edgeId = String(target.edge_id || target.owner_id || "").trim();
+      const edgeIndex = draftEdges.findIndex((edge) => String(edge.id || "") === edgeId);
+      if (edgeIndex < 0) {
+        setScenarioFailureNavigationStatus(`找不到责任连线 ${edgeId || "unknown"}。`);
+        return null;
+      }
+      selectEditableEdgeByIndex(edgeIndex, { preserveDiagnosticFocus: true });
+      markScenarioFailureNavigation("owner", packet);
+      renderSelectedDebugTimeline("scenario_failure_owner");
+      renderCandidateDebuggerView(currentCandidateDebuggerView("scenario_failure_owner"));
+      setScenarioFailureNavigationStatus(`已定位 ${target.owner_key || `edge:${edgeId}`}。真值影响：无。`);
+      return packet;
+    }
+
+    const ownerId = String(target.owner_id || "").trim();
+    refreshEditableNodes();
+    const node = nodes.find((candidate) => editableNodeId(candidate) === ownerId);
+    if (!node) {
+      setScenarioFailureNavigationStatus(`找不到责任节点 ${ownerId || "unknown"}。`);
+      return null;
+    }
+    selectNode(node, { preserveDiagnosticFocus: true, keepInspectorCollapsed: true });
+    if (typeof node.scrollIntoView === "function") {
+      node.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    }
+    if (typeof node.focus === "function") {
+      try {
+        node.focus({ preventScroll: true });
+      } catch (err) {
+        node.focus();
+      }
+    }
+    markScenarioFailureNavigation("owner", packet);
+    renderSelectedDebugTimeline("scenario_failure_owner");
+    renderCandidateDebuggerView(currentCandidateDebuggerView("scenario_failure_owner"));
+    setScenarioFailureNavigationStatus(`已定位 ${target.owner_key || `node:${ownerId}`}。真值影响：无。`);
+    return packet;
   }
 
   function currentCandidateDebuggerView(state) {
@@ -17887,6 +18772,43 @@ function installEditableWorkbenchShell() {
     if (candidateDebuggerTrace) {
       candidateDebuggerTrace.textContent = displayStatusLabel(packet.trace_available ? "available" : "unavailable");
     }
+    return packet;
+  }
+
+  function renderScenarioFailureExplanation(explanation) {
+    const packet = explanation || currentScenarioFailureExplanation("render");
+    lastScenarioFailureExplanationPacket = packet;
+    const status = packet.status || "not_run";
+    if (scenarioFailureExplanationPanel) {
+      scenarioFailureExplanationPanel.setAttribute("data-explanation-status", status);
+      scenarioFailureExplanationPanel.setAttribute("data-explanation-truth-effect", packet.truth_effect || "none");
+    }
+    if (scenarioFailureExplanationStatus) scenarioFailureExplanationStatus.textContent = status;
+    if (scenarioFailureExplanationAssertion) {
+      scenarioFailureExplanationAssertion.textContent = formatDebuggerAssertion(packet.assertion);
+    }
+    if (scenarioFailureExplanationFrame) {
+      scenarioFailureExplanationFrame.textContent = formatScenarioFailureFrame(packet);
+    }
+    if (scenarioFailureExplanationOwner) {
+      scenarioFailureExplanationOwner.textContent = formatScenarioFailureOwner(packet);
+    }
+    if (scenarioFailureExplanationCurrent) {
+      scenarioFailureExplanationCurrent.textContent =
+        formatScenarioFailureValue(packet, "current_value");
+    }
+    if (scenarioFailureExplanationExpected) {
+      scenarioFailureExplanationExpected.textContent =
+        formatScenarioFailureValue(packet, "expected_value");
+    }
+    if (scenarioFailureExplanationUpstream) {
+      scenarioFailureExplanationUpstream.textContent =
+        formatScenarioFailureUpstream(packet.upstream_dependencies);
+    }
+    if (scenarioFailureExplanationTruthEffect) {
+      scenarioFailureExplanationTruthEffect.textContent = packet.truth_effect || "none";
+    }
+    setScenarioFailureNavigationControlState(packet);
     return packet;
   }
 
@@ -18760,6 +19682,7 @@ function installEditableWorkbenchShell() {
         `Sandbox test bench ${status}. Truth effect: none. No certification claim.`;
     }
     renderCandidateDebuggerView(currentCandidateDebuggerView("test_bench"));
+    renderScenarioFailureExplanation(currentScenarioFailureExplanation("test_bench"));
     lastPreflightAnalyzerReport = null;
     renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("test_bench"));
     return normalized;
@@ -18870,6 +19793,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_bench: snapshot.sandbox_test_bench,
       sandbox_test_run_report: snapshot.sandbox_test_run_report,
       candidate_debugger_view: snapshot.candidate_debugger_view,
+      scenario_failure_explanation: snapshot.scenario_failure_explanation,
       debug_probe_timeline: snapshot.debug_probe_timeline,
       preflight_analyzer_report: snapshot.preflight_analyzer_report,
       hardware_interface_designer: snapshot.hardware_interface_designer,
@@ -19503,6 +20427,48 @@ function installEditableWorkbenchShell() {
       }
     }
     if (
+      payload.scenario_failure_explanation !== undefined
+      && payload.scenario_failure_explanation !== null
+      && (
+        !payload.scenario_failure_explanation
+        || typeof payload.scenario_failure_explanation !== "object"
+        || Array.isArray(payload.scenario_failure_explanation)
+      )
+    ) {
+      throw new Error("scenario_failure_explanation must be an object when present");
+    }
+    if (payload.scenario_failure_explanation) {
+      const explanation = payload.scenario_failure_explanation;
+      if (explanation.kind !== scenarioFailureExplanationKind) {
+        throw new Error("scenario_failure_explanation kind must be well-harness-workbench-scenario-failure-explanation");
+      }
+      if (explanation.version !== scenarioFailureExplanationVersion) {
+        throw new Error("scenario_failure_explanation version must be workbench-scenario-failure-explanation.v1");
+      }
+      if (explanation.candidate_state !== "sandbox_candidate") {
+        throw new Error("scenario_failure_explanation candidate_state must be sandbox_candidate");
+      }
+      if (explanation.certification_claim !== "none") {
+        throw new Error("scenario_failure_explanation certification_claim must be none");
+      }
+      if (explanation.truth_effect !== "none") {
+        throw new Error("scenario_failure_explanation truth_effect must be none");
+      }
+      if (!Array.isArray(explanation.upstream_dependencies)) {
+        throw new Error("scenario_failure_explanation upstream_dependencies must be an array");
+      }
+      if (
+        !explanation.timeline_frame
+        || typeof explanation.timeline_frame !== "object"
+        || Array.isArray(explanation.timeline_frame)
+      ) {
+        throw new Error("scenario_failure_explanation timeline_frame must be an object");
+      }
+      if (explanation.timeline_frame.truth_effect !== "none") {
+        throw new Error("scenario_failure_explanation timeline_frame truth_effect must be none");
+      }
+    }
+    if (
       payload.debug_probe_timeline !== undefined
       && payload.debug_probe_timeline !== null
       && (!payload.debug_probe_timeline || typeof payload.debug_probe_timeline !== "object" || Array.isArray(payload.debug_probe_timeline))
@@ -19753,12 +20719,16 @@ function installEditableWorkbenchShell() {
 
   function updateNodeDisplay(node) {
     if (!node) return;
+    const fullLabel = nodeDisplayLabel(node);
+    const shortLabel = nodeShortDisplayLabel(node);
     let label = node.querySelector("span");
     if (!label) {
       label = document.createElement("span");
       node.prepend(label);
     }
-    label.textContent = nodeDisplayLabel(node);
+    label.textContent = shortLabel;
+    node.setAttribute("data-node-short-label", shortLabel);
+    node.setAttribute("data-node-full-label", fullLabel);
     let opTag = node.querySelector(".workbench-reference-node-op");
     if (!opTag) {
       opTag = document.createElement("small");
@@ -19772,6 +20742,7 @@ function installEditableWorkbenchShell() {
     const tooltip = nodeTooltipText(node);
     node.setAttribute("data-tooltip", tooltip);
     node.setAttribute("title", tooltip);
+    node.setAttribute("aria-label", tooltip);
   }
 
   function applyEditableDraftImport(payload) {
@@ -20317,9 +21288,10 @@ function installEditableWorkbenchShell() {
 
   function buildWorkbenchGateClaims() {
     return {
-      default_pytest: "required",
-      gsd_validation: "required",
-      adversarial: "required",
+      hard_hold_policy: "required",
+      default_pytest: "warning",
+      gsd_validation: "warning",
+      adversarial: "warning",
       e2e_49_49: "not_claimed",
       mypy_strict_clean: "not_claimed",
     };
@@ -20328,15 +21300,21 @@ function installEditableWorkbenchShell() {
   function buildWorkbenchKnownBlockers() {
     return [
       {
-        gate: "e2e 49/49",
-        status: "not_claimed_clean",
-        evidence: "Workbench archive is local draft evidence; e2e 49/49 is not claimed from this UI export.",
+        gate: "workbench Tier 0 hard holds",
+        status: "policy_guard",
+        evidence: "Stop only for controller truth, frozen/certified assets, public schema boundary, or simulation determinism regressions.",
+        truth_effect: "none",
+      },
+      {
+        gate: "full opt-in e2e",
+        status: "milestone_only_not_claimed",
+        evidence: "Workbench archive is local draft evidence; full opt-in e2e is release/milestone evidence, not claimed from this UI export.",
         truth_effect: "none",
       },
       {
         gate: "PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
-        status: "known_baseline_blocker",
-        evidence: "JER-171 defines the official mypy evidence command; current full-repo strict gate is blocked, not clean.",
+        status: "milestone_only_known_blocker",
+        evidence: "JER-171 defines the official mypy evidence command; current full-repo strict gate is milestone-only and not clean.",
         truth_effect: "none",
       },
     ];
@@ -20631,11 +21609,11 @@ function installEditableWorkbenchShell() {
       known_blockers: buildWorkbenchKnownBlockers(),
       required_test_evidence: [
         "targeted pytest",
-        "default pytest",
-        "GSD validation suite",
-        "adversarial 8/8",
-        "full e2e status with known blockers declared",
-        "mypy gate status with JER-171 blocker declared",
+        "Tier 0 hard-hold disclosure",
+        "default pytest or GSD slice as daily warning when relevant",
+        "adversarial/fault lane as daily warning when relevant",
+        "full e2e status as milestone-only when not run",
+        "mypy gate status as milestone-only with JER-171 blocker declared",
       ],
     };
   }
@@ -20789,6 +21767,7 @@ function installEditableWorkbenchShell() {
         "Workbench preflight analyzer report.",
         "Structured ChangeRequest proof packet.",
         "PR proof packet with test delta.",
+        "Tier 0 hard-hold disclosure: controller truth, frozen/certified assets, schema boundary, and simulation determinism.",
       ],
       red_line_metadata: {
         red_lines_touched: "none",
@@ -20876,8 +21855,9 @@ function installEditableWorkbenchShell() {
       "- Rule parameter summary.",
       "- Draft snapshot manifest.",
       "- Targeted pytest and PR proof packet.",
+      "- Tier 0 hard-hold disclosure: controller truth, frozen/certified assets, schema boundary, and simulation determinism.",
       "- Official mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json.",
-      "- e2e 49/49 and mypy --strict clean are not claimed from this local UI archive.",
+      "- Full e2e and mypy --strict clean are milestone-only and are not claimed from this local UI archive.",
       "",
       "## Red Lines",
       `- Red lines touched: ${packet.red_lines_touched}`,
@@ -20888,11 +21868,12 @@ function installEditableWorkbenchShell() {
       "",
       "## Test Delta",
       "- targeted pytest: pending",
-      "- default pytest: pending",
-      "- GSD validation suite: pending",
-      "- adversarial 8/8: pending",
-      "- e2e 49/49: not claimed",
-      "- mypy --strict clean: not claimed",
+      "- Tier 0 hard holds: none disclosed",
+      "- default pytest: daily warning unless run on the PR",
+      "- GSD validation suite: daily warning unless run on the PR",
+      "- adversarial/fault lane: daily warning unless relevant and run",
+      "- full e2e: milestone-only / not claimed",
+      "- mypy --strict clean: milestone-only / not claimed",
       "",
       "## Metadata",
       `- Adapter: ${packet.adapter}`,
@@ -20928,7 +21909,7 @@ function installEditableWorkbenchShell() {
       `Layer: ${packet.layer}`,
       `Truth-level impact: ${packet.truth_level_impact}`,
       `Red lines touched: ${packet.red_lines_touched}`,
-      "Test delta: targeted pytest pending / default pytest pending / GSD pending / e2e 49/49 not claimed / mypy --strict clean not claimed",
+      "Test delta: targeted pytest pending / Tier 0 hard holds none disclosed / broad gates warning-or-milestone-only / mypy --strict clean not claimed",
       "",
       `Candidate state: ${packet.candidate_state}`,
       `Certification claim: ${packet.certification_claim}`,
@@ -20950,6 +21931,7 @@ function installEditableWorkbenchShell() {
       `Diagnostic repair actions: ${proofPacketRepairActionText(packet)}`,
       `Proof packet checksum: ${checksumEvidenceArchiveField(packet)}`,
       "Mypy evidence command: PYTHONPATH=src:. python3 tools/run_mypy_gate.py --format json",
+      "Gate policy: only controller truth, certified assets, schema boundary, and simulation determinism are hard holds.",
       "No live Linear mutation; this packet is copy-ready evidence only.",
     ].join("\n");
   }
@@ -21123,6 +22105,59 @@ function installEditableWorkbenchShell() {
     return packet;
   }
 
+  function buildWorkbenchReleaseReadinessPacket() {
+    const releaseMaturitySnapshot = buildWorkbenchReleaseMaturitySnapshot();
+    const gateStatusCounts = {};
+    const notClaimedGates = [];
+    const blockedGates = [];
+    for (const gate of releaseMaturitySnapshot.gates || []) {
+      const status = gate.status || "not_claimed";
+      gateStatusCounts[status] = (gateStatusCounts[status] || 0) + 1;
+      if (status === "not_claimed") {
+        notClaimedGates.push(`${gate.label || gate.gate_id}: ${gate.evidence || "full strict mypy clean not claimed"}`);
+      }
+      if (status === "blocked") {
+        blockedGates.push(`${gate.label || gate.gate_id}: ${gate.evidence || "blocked"}`);
+      }
+    }
+    return {
+      kind: "well-harness-workbench-release-readiness-packet",
+      version: "workbench-release-readiness.v1",
+      scope: "local_only",
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      controller_truth_modified: false,
+      truth_effect: "none",
+      release_maturity_snapshot: releaseMaturitySnapshot,
+      gate_status_counts: gateStatusCounts,
+      not_claimed_gates: notClaimedGates,
+      blocked_gates: blockedGates,
+      local_operator_commands: [
+        "PYTHONPATH=src python3 -m pytest -q tests/test_workbench_editable_canvas_shell.py -k \"release_maturity or release_readiness\"",
+        "PYTHONPATH=src python3 -m pytest -q -m e2e tests/e2e/test_workbench_js_boot_smoke.py -k \"release_maturity or release_readiness\"",
+        "PYTHONPATH=src python3 -m pytest -q -m e2e tests/e2e/test_workbench_js_boot_smoke.py",
+        "PYTHONPATH=src python3 tools/run_gsd_validation_suite.py --format json",
+        "git diff --check",
+        "node --check src/well_harness/static/workbench.js",
+      ],
+      checksums: {
+        release_maturity_snapshot_checksum: checksumEvidenceArchiveField(releaseMaturitySnapshot),
+        gate_status_counts_checksum: checksumEvidenceArchiveField(gateStatusCounts),
+      },
+    };
+  }
+
+  function renderWorkbenchReleaseReadinessPacket() {
+    const packet = buildWorkbenchReleaseReadinessPacket();
+    if (releaseReadinessOutput) releaseReadinessOutput.value = JSON.stringify(packet, null, 2);
+    if (handoffStatus) {
+      handoffStatus.textContent =
+        `Prepared local release readiness packet. Scope: local_only. Truth effect: none. Not claimed gates: ${packet.gate_status_counts.not_claimed || 0}.`;
+    }
+    setTimelineState("handoff");
+    return packet;
+  }
+
   function checksumEvidenceArchiveField(value) {
     return editableDraftHash(stableEvidenceArchiveJson(value));
   }
@@ -21163,6 +22198,10 @@ function installEditableWorkbenchShell() {
     "well-harness-workbench-review-archive-regression-bundle";
   const reviewArchiveRegressionBundleVersion =
     "workbench-review-archive-regression-bundle.v3";
+  const archiveRestoreReviewChecklistKind =
+    "well-harness-workbench-archive-restore-review-checklist";
+  const archiveRestoreReviewChecklistVersion =
+    "workbench-archive-restore-review-checklist.v1";
   const foundationReviewArchiveSectionSpec = [
     ["workspace_document", "workspace_document_checksum"],
     ["editable_graph_document", "editable_graph_document_checksum"],
@@ -21174,6 +22213,7 @@ function installEditableWorkbenchShell() {
     ["sandbox_test_run_report", "sandbox_test_run_report_checksum"],
     ["sandbox_runner_trace_kernel", "sandbox_runner_trace_kernel_checksum"],
     ["candidate_debugger_view", "candidate_debugger_view_checksum"],
+    ["scenario_failure_explanation", "scenario_failure_explanation_checksum"],
     ["debug_probe_timeline", "debug_probe_timeline_checksum"],
     ["preflight_analyzer_report", "preflight_analyzer_report_checksum"],
     ["hardware_bindings", "hardware_bindings_checksum"],
@@ -21255,6 +22295,8 @@ function installEditableWorkbenchShell() {
         sandbox_runner_trace_kernel_checksum:
           checksums.sandbox_runner_trace_kernel_checksum || "missing",
         debugger_checksum: checksums.candidate_debugger_view_checksum || "missing",
+        scenario_failure_explanation_checksum:
+          checksums.scenario_failure_explanation_checksum || "missing",
         debug_probe_timeline_checksum: checksums.debug_probe_timeline_checksum || "missing",
         preflight_checksum: checksums.preflight_analyzer_report_checksum || "missing",
         hardware_evidence_checksum: checksums.hardware_evidence_v2_checksum || "missing",
@@ -21603,6 +22645,248 @@ function installEditableWorkbenchShell() {
     };
   }
 
+  function firstArchiveRestoreFinding(validation, predicate) {
+    const findings = validation && Array.isArray(validation.findings)
+      ? validation.findings
+      : [];
+    return findings.find((finding) => finding && predicate(finding)) || null;
+  }
+
+  function reviewArchiveMissingSectionFinding(validation, sectionKey) {
+    return firstArchiveRestoreFinding(
+      validation,
+      (finding) => (
+        finding.code === "review_archive_restore_missing_section"
+        && finding.section === sectionKey
+      ),
+    );
+  }
+
+  function reviewArchiveChecksumFinding(validation) {
+    return firstArchiveRestoreFinding(
+      validation,
+      (finding) => (
+        typeof finding.code === "string"
+        && (
+          finding.code.includes("checksum")
+          || finding.code === "review_archive_restore_missing_section"
+        )
+      ),
+    );
+  }
+
+  function archiveRestoreReviewItem(itemId, status, evidenceKey, summary, options) {
+    const itemOptions = options || {};
+    return {
+      item_id: itemId,
+      status,
+      evidence_key: evidenceKey,
+      summary,
+      path: itemOptions.path || evidenceKey,
+      checksum_key: itemOptions.checksum_key || "not_applicable",
+      checksum: itemOptions.checksum || "missing",
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      controller_truth_modified: false,
+      truth_effect: "none",
+    };
+  }
+
+  function archiveRestoreReviewStatus(items, validation) {
+    const itemValues = Object.values(items);
+    if ((validation && validation.status === "fail") || itemValues.some((item) => item.status === "fail")) {
+      return "fail";
+    }
+    if (itemValues.some((item) => item.status === "needs_evidence")) {
+      return "needs_evidence";
+    }
+    return "pass";
+  }
+
+  function buildArchiveRestoreReviewChecklist(archive, validation) {
+    const payload = archive && typeof archive === "object" && !Array.isArray(archive) ? archive : {};
+    const restoreValidation = validation || validateReviewArchiveRestoreV3(payload);
+    const checksums = payload.checksums && typeof payload.checksums === "object" && !Array.isArray(payload.checksums)
+      ? payload.checksums
+      : {};
+    const graphDocument = payload.editable_graph_document || {};
+    const scenarioLibrary = payload.scenario_test_case_library || {};
+    const sandboxTestRunReport = payload.sandbox_test_run_report || {};
+    const debugTimeline = payload.debug_probe_timeline || {};
+    const traceKernel = payload.sandbox_runner_trace_kernel || {};
+    const hardwareAttachment = payload.hardware_evidence_attachment_v2 || {};
+    const handoffPacket = payload.changerequest_handoff_packet || {};
+    const graphMissing = reviewArchiveMissingSectionFinding(restoreValidation, "editable_graph_document");
+    const testsMissing =
+      reviewArchiveMissingSectionFinding(restoreValidation, "scenario_test_case_library")
+      || reviewArchiveMissingSectionFinding(restoreValidation, "sandbox_test_run_report");
+    const tracesMissing =
+      reviewArchiveMissingSectionFinding(restoreValidation, "debug_probe_timeline")
+      || reviewArchiveMissingSectionFinding(restoreValidation, "sandbox_runner_trace_kernel");
+    const evidenceMissing =
+      reviewArchiveMissingSectionFinding(restoreValidation, "hardware_evidence_attachment_v2")
+      || reviewArchiveMissingSectionFinding(restoreValidation, "hardware_evidence_v2");
+    const handoffMissing = reviewArchiveMissingSectionFinding(restoreValidation, "changerequest_handoff_packet");
+    const checksumFinding = reviewArchiveChecksumFinding(restoreValidation);
+    const graphNodeCount = Number(graphDocument.node_count || 0);
+    const graphEdgeCount = Number(graphDocument.edge_count || 0);
+    const testCaseCount = Number(scenarioLibrary.test_case_count || 0);
+    const traceFrameCount = Number(debugTimeline.frame_count || traceKernel.frame_count || 0);
+    const hardwareAttachmentCount = Number(hardwareAttachment.attachment_count || 0);
+    const items = {
+      graph_review: archiveRestoreReviewItem(
+        "graph_review",
+        graphMissing ? "fail" : graphNodeCount > 0 ? "pass" : "needs_evidence",
+        "editable_graph_document",
+        graphMissing
+          ? `图证据缺失: ${graphMissing.path || "editable_graph_document"}`
+          : `${graphNodeCount} nodes / ${graphEdgeCount} edges`,
+        {
+          checksum_key: "editable_graph_document_checksum",
+          checksum: checksums.editable_graph_document_checksum,
+          path: graphMissing ? graphMissing.path : "editable_graph_document",
+        },
+      ),
+      tests_review: archiveRestoreReviewItem(
+        "tests_review",
+        testsMissing ? "fail" : sandboxTestRunReport.kind ? "pass" : "needs_evidence",
+        "sandbox_test_run_report",
+        testsMissing
+          ? `测试证据缺失: ${testsMissing.path || "sandbox_test_run_report"}`
+          : `${testCaseCount} scenarios / ${sandboxTestRunReport.verdict || "not_run"}`,
+        {
+          checksum_key: testsMissing
+            ? testsMissing.checksum_key
+            : "sandbox_test_run_report_checksum",
+          checksum: checksums.sandbox_test_run_report_checksum,
+          path: testsMissing ? testsMissing.path : "sandbox_test_run_report",
+        },
+      ),
+      traces_review: archiveRestoreReviewItem(
+        "traces_review",
+        tracesMissing ? "fail" : (debugTimeline.kind || traceKernel.kind) ? "pass" : "needs_evidence",
+        "debug_probe_timeline",
+        tracesMissing
+          ? `轨迹证据缺失: ${tracesMissing.path || "debug_probe_timeline"}`
+          : `${traceFrameCount} frames / node-port-edge trace`,
+        {
+          checksum_key: tracesMissing ? tracesMissing.checksum_key : "debug_probe_timeline_checksum",
+          checksum: checksums.debug_probe_timeline_checksum,
+          path: tracesMissing ? tracesMissing.path : "debug_probe_timeline",
+        },
+      ),
+      evidence_review: archiveRestoreReviewItem(
+        "evidence_review",
+        evidenceMissing ? "fail" : hardwareAttachmentCount > 0 ? "pass" : "needs_evidence",
+        "hardware_evidence_attachment_v2",
+        evidenceMissing
+          ? `硬件证据缺失: ${evidenceMissing.path || "hardware_evidence_attachment_v2"}`
+          : `${hardwareAttachmentCount} hardware evidence attachment(s)`,
+        {
+          checksum_key: evidenceMissing
+            ? evidenceMissing.checksum_key
+            : "hardware_evidence_attachment_v2_checksum",
+          checksum: checksums.hardware_evidence_attachment_v2_checksum,
+          path: evidenceMissing ? evidenceMissing.path : "hardware_evidence_attachment_v2",
+        },
+      ),
+      checksums_review: archiveRestoreReviewItem(
+        "checksums_review",
+        checksumFinding ? "fail" : "pass",
+        "checksums",
+        checksumFinding
+          ? `校验失败: ${checksumFinding.checksum_path || checksumFinding.path || "checksums"}`
+          : `${restoreValidation.checksum_checked_count || 0} checksums verified`,
+        {
+          checksum_key: checksumFinding ? checksumFinding.checksum_key : "manifest_checksum",
+          checksum: checksums.manifest_checksum,
+          path: checksumFinding ? (checksumFinding.checksum_path || checksumFinding.path) : "checksums",
+        },
+      ),
+      handoff_review: archiveRestoreReviewItem(
+        "handoff_review",
+        handoffMissing ? "fail" : handoffPacket.kind ? "pass" : "needs_evidence",
+        "changerequest_handoff_packet",
+        handoffMissing
+          ? `签批包缺失: ${handoffMissing.path || "changerequest_handoff_packet"}`
+          : `${handoffPacket.issue || "JER-TBD"} handoff packet ready`,
+        {
+          checksum_key: handoffMissing
+            ? handoffMissing.checksum_key
+            : "changerequest_handoff_packet_checksum",
+          checksum: checksums.changerequest_handoff_packet_checksum,
+          path: handoffMissing ? handoffMissing.path : "changerequest_handoff_packet",
+        },
+      ),
+    };
+    const status = archiveRestoreReviewStatus(items, restoreValidation);
+    return {
+      kind: archiveRestoreReviewChecklistKind,
+      version: archiveRestoreReviewChecklistVersion,
+      status,
+      review_scope: "browser_local_archive_restore_readback",
+      restore_validation_status: restoreValidation.status,
+      checksum_mismatch_count: restoreValidation.checksum_mismatch_count || 0,
+      missing_required_section_count: restoreValidation.missing_required_section_count || 0,
+      mismatch_paths: (restoreValidation.findings || []).map((finding) => ({
+        code: finding.code || "review_archive_restore_finding",
+        section: finding.section || "archive",
+        path: finding.path || "review_archive",
+        checksum_path: finding.checksum_path || finding.path || "review_archive",
+        evidence_path: finding.evidence_path || finding.path || "review_archive",
+        truth_effect: "none",
+      })),
+      items,
+      candidate_state: "sandbox_candidate",
+      certification_claim: "none",
+      controller_truth_modified: false,
+      frozen_assets_modified: false,
+      live_linear_mutation: false,
+      truth_level_impact: "none",
+      dal_pssa_impact: "none",
+      truth_effect: "none",
+    };
+  }
+
+  function renderArchiveRestoreReviewChecklist(checklist) {
+    const payload = checklist && typeof checklist === "object" && !Array.isArray(checklist)
+      ? checklist
+      : {
+        status: "idle",
+        items: {},
+      };
+    const statusLabel = {
+      pass: "通过",
+      fail: "阻塞",
+      needs_evidence: "补证",
+      idle: "待恢复",
+    }[payload.status] || "待恢复";
+    if (archiveReviewChecklistStatus) {
+      archiveReviewChecklistStatus.textContent = statusLabel;
+    }
+    if (archiveRestoreReviewChecklist) {
+      archiveRestoreReviewChecklist.setAttribute("data-checklist-status", payload.status || "idle");
+      const itemKeys = {
+        graph: "graph_review",
+        tests: "tests_review",
+        traces: "traces_review",
+        evidence: "evidence_review",
+        checksums: "checksums_review",
+        handoff: "handoff_review",
+      };
+      for (const [domKey, itemKey] of Object.entries(itemKeys)) {
+        const node = archiveRestoreReviewChecklist.querySelector(`[data-archive-review-check="${domKey}"]`);
+        if (!node) continue;
+        const item = payload.items ? payload.items[itemKey] : null;
+        const status = item && item.status ? item.status : "idle";
+        const summary = item && item.summary ? item.summary : "等待 archive restore";
+        node.setAttribute("data-check-status", status);
+        const summaryNode = node.querySelector("span");
+        if (summaryNode) summaryNode.textContent = summary;
+      }
+    }
+  }
+
   function buildReviewArchiveRegressionBundleV3(archive, validation) {
     const payload = archive && typeof archive === "object" && !Array.isArray(archive) ? archive : {};
     const restoreValidation = validation || validateReviewArchiveRestoreV3(payload);
@@ -21624,6 +22908,7 @@ function installEditableWorkbenchShell() {
     const scenarioTestStatus = testRunReport.kind
       ? String(testRunReport.status || "not_run")
       : "not_run";
+    const restoreReviewChecklist = buildArchiveRestoreReviewChecklist(payload, restoreValidation);
     const steps = [
       reviewArchiveRegressionStep(
         "create_graph",
@@ -21680,6 +22965,8 @@ function installEditableWorkbenchShell() {
       bundle_scope: "workbench_v5_authoring_restore_loop",
       restore_validation_status: restoreValidation.status,
       checksum_manifest_status: restoreValidation.checksum_mismatch_count === 0 ? "pass" : "fail",
+      restore_review_checklist: restoreReviewChecklist,
+      restore_review_checklist_status: restoreReviewChecklist.status,
       restored_graph: {
         node_count: graphNodeCount,
         edge_count: graphEdgeCount,
@@ -21763,6 +23050,8 @@ function installEditableWorkbenchShell() {
         : null;
     const candidateDebuggerView =
       modelJson.candidate_debugger_view || currentCandidateDebuggerView("archive");
+    const scenarioFailureExplanation =
+      modelJson.scenario_failure_explanation || currentScenarioFailureExplanation("archive");
     const debugProbeTimeline =
       modelJson.debug_probe_timeline
       || candidateDebuggerView.debug_probe_timeline
@@ -21839,6 +23128,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_run_report: sandboxTestRunReport,
       sandbox_runner_trace_kernel: sandboxRunnerTraceKernel,
       candidate_debugger_view: candidateDebuggerView,
+      scenario_failure_explanation: scenarioFailureExplanation,
       debug_probe_timeline: debugProbeTimeline,
       preflight_analyzer_report: preflightAnalyzerReport,
       diagnostic_focus: diagnosticFocus,
@@ -21892,6 +23182,7 @@ function installEditableWorkbenchShell() {
       sandbox_test_run_report_checksum: checksumEvidenceArchiveField(sandboxTestRunReport),
       sandbox_runner_trace_kernel_checksum: checksumEvidenceArchiveField(sandboxRunnerTraceKernel),
       candidate_debugger_view_checksum: checksumEvidenceArchiveField(candidateDebuggerView),
+      scenario_failure_explanation_checksum: checksumEvidenceArchiveField(scenarioFailureExplanation),
       debug_probe_timeline_checksum: checksumEvidenceArchiveField(debugProbeTimeline),
       preflight_analyzer_report_checksum: checksumEvidenceArchiveField(preflightAnalyzerReport),
       diagnostic_focus_checksum: checksumEvidenceArchiveField(diagnosticFocus),
@@ -21962,6 +23253,9 @@ function installEditableWorkbenchShell() {
     if (regressionBundleOutput) {
       regressionBundleOutput.value = JSON.stringify(archive.review_archive_regression_bundle_v3, null, 2);
     }
+    renderArchiveRestoreReviewChecklist(
+      archive.review_archive_regression_bundle_v3.restore_review_checklist,
+    );
     if (archiveStatus) {
       archiveStatus.textContent =
         `Prepared local draft archive ${archive.checksums.manifest_checksum}. No live Linear mutation.`;
@@ -21995,6 +23289,7 @@ function installEditableWorkbenchShell() {
     if (regressionBundleOutput) {
       regressionBundleOutput.value = JSON.stringify(regressionBundle, null, 2);
     }
+    renderArchiveRestoreReviewChecklist(regressionBundle.restore_review_checklist);
     if (validation.status !== "pass") {
       if (archiveStatus) {
         archiveStatus.textContent =
@@ -22004,6 +23299,7 @@ function installEditableWorkbenchShell() {
     }
     applyEditableDraftImport(archive.model_json);
     renderCandidateDebuggerView(currentCandidateDebuggerView("review_archive_restore"));
+    renderScenarioFailureExplanation(currentScenarioFailureExplanation("review_archive_restore"));
     renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("review_archive_restore"));
     setTimelineState("handoff");
     if (archiveStatus) {
@@ -22061,7 +23357,7 @@ function installEditableWorkbenchShell() {
     }
     if (commandPaletteStatus) {
       commandPaletteStatus.textContent =
-        `${visibleCount} command(s). ${commandPaletteVersion}. No live Linear mutation.`;
+        `${visibleCount} 个命令 · ${commandPaletteVersion} · 无实时 Linear 写入 · No live Linear mutation.`;
     }
     return visibleCount;
   }
@@ -22081,7 +23377,7 @@ function installEditableWorkbenchShell() {
     if (!commandPalette) return;
     commandPalette.hidden = true;
     if (commandPaletteStatus) {
-      commandPaletteStatus.textContent = "Command surface idle. No live Linear mutation.";
+      commandPaletteStatus.textContent = "命令面板空闲。无实时 Linear 写入 · No live Linear mutation.";
     }
   }
 
@@ -22114,7 +23410,7 @@ function installEditableWorkbenchShell() {
     updateEditableDraftHash();
     if (commandPaletteStatus) {
       commandPaletteStatus.textContent =
-        `Command ${commandId} recorded as sandbox workspace metadata. No live Linear mutation.`;
+        `命令 ${commandId} 已记录为沙箱工作台元数据。无实时 Linear 写入 · No live Linear mutation.`;
     }
     return result || null;
   }
@@ -22128,7 +23424,7 @@ function installEditableWorkbenchShell() {
       wire_edge: () => {
         setEditorTool("edge");
         if (graphValidationStatus) {
-          graphValidationStatus.textContent = "Graph validation: wire mode armed from command palette.";
+          graphValidationStatus.textContent = "图验证：已从命令面板进入连线模式。";
         }
         return currentEditorTool;
       },
@@ -22146,7 +23442,7 @@ function installEditableWorkbenchShell() {
     const action = commandActions[commandId];
     if (!action) {
       if (commandPaletteStatus) {
-        commandPaletteStatus.textContent = `Unknown command ${commandId || "unknown"}.`;
+        commandPaletteStatus.textContent = `未知命令 ${commandId || "unknown"}。`;
       }
       return null;
     }
@@ -22158,7 +23454,7 @@ function installEditableWorkbenchShell() {
     } catch (err) {
       if (commandPaletteStatus) {
         commandPaletteStatus.textContent =
-          `Command ${commandId} failed locally: ${err && err.message ? err.message : "unknown error"}.`;
+          `命令 ${commandId} 本地执行失败：${err && err.message ? err.message : "unknown error"}。`;
       }
       throw err;
     }
@@ -22182,6 +23478,18 @@ function installEditableWorkbenchShell() {
     });
     node.addEventListener("pointercancel", (event) => {
       endEditableGroupDrag(event);
+    });
+    node.addEventListener("mouseenter", () => {
+      setHoveredSubsystemGroupFromNode(node);
+    });
+    node.addEventListener("mouseleave", () => {
+      setHoveredSubsystemGroupFromNode(null);
+    });
+    node.addEventListener("focus", () => {
+      setHoveredSubsystemGroupFromNode(node);
+    });
+    node.addEventListener("blur", () => {
+      setHoveredSubsystemGroupFromNode(null);
     });
     node.addEventListener("click", (event) => {
       if (suppressNextNodeClick) {
@@ -22280,6 +23588,12 @@ function installEditableWorkbenchShell() {
   }
   if (deleteTestCaseBtn) {
     deleteTestCaseBtn.addEventListener("click", () => deleteScenarioTestCase());
+  }
+  if (scenarioFailureFocusFrameBtn) {
+    scenarioFailureFocusFrameBtn.addEventListener("click", () => focusScenarioFailureFrame());
+  }
+  if (scenarioFailureFocusOwnerBtn) {
+    scenarioFailureFocusOwnerBtn.addEventListener("click", () => focusScenarioFailureOwner());
   }
   if (runPreflightBtn) {
     runPreflightBtn.addEventListener("click", () => {
@@ -22490,6 +23804,12 @@ function installEditableWorkbenchShell() {
     handoffBtn.addEventListener("click", () => {
       setInspectorMode("handoff");
       renderEditableHandoffPacket();
+    });
+  }
+  if (releaseReadinessBtn) {
+    releaseReadinessBtn.addEventListener("click", () => {
+      setInspectorMode("handoff");
+      renderWorkbenchReleaseReadinessPacket();
     });
   }
   if (prepareArchiveBtn) {
@@ -22784,6 +24104,7 @@ function installEditableWorkbenchShell() {
   validateEditableGraph();
   updateEditableDraftHash();
   renderCandidateDebuggerView(currentCandidateDebuggerView("init"));
+  renderScenarioFailureExplanation(currentScenarioFailureExplanation("init"));
   renderWorkbenchPreflightAnalyzerReport(currentPreflightAnalyzerReport("init"));
   renderHardwarePalette();
   hydrateEvidenceSummary();

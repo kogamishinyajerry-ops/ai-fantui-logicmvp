@@ -88,7 +88,8 @@ def test_acceptance_bundle_covers_full_editable_workbench_happy_path() -> None:
     assert bundle["candidate_trace"]["frame_count"] == 180
     assert bundle["validation_report"]["status"] == "pass"
     assert bundle["sandbox_run"]["kind"] == "well-harness-workbench-sandbox-run"
-    assert bundle["known_blockers"][0]["gate"] == "opt-in e2e workbench smoke"
+    assert bundle["known_blockers"][0]["gate"] == "workbench Tier 0 hard holds"
+    assert bundle["known_blockers"][0]["status"] == "policy_guard"
     assert bundle["gate_claims"]["e2e_49_49"] == "not_claimed"
     assert bundle["gate_claims"]["mypy_strict_clean"] == "not_claimed"
     assert bundle["diff_report"]["verdict"] == "equivalent"
@@ -167,8 +168,9 @@ def test_runtime_v3_acceptance_bundle_from_ui_draft_covers_required_artifacts() 
     assert bundle["diff_report"]["verdict"] == "equivalent"
     assert "Linear: JER-169" in bundle["pr_proof_packet"]
     assert "e2e 49/49 not claimed" in bundle["pr_proof_packet"]
-    assert bundle["gate_claims"]["default_pytest"] == "required"
-    assert bundle["gate_claims"]["adversarial"] == "required"
+    assert bundle["gate_claims"]["hard_hold_policy"] == "required"
+    assert bundle["gate_claims"]["default_pytest"] == "warning"
+    assert bundle["gate_claims"]["adversarial"] == "warning"
     assert bundle["known_blockers"][0]["truth_effect"] == "none"
 
 

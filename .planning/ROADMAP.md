@@ -44,6 +44,25 @@ Proposed v5 Linear project:
 v5 launch doc:
 
 - `docs/coordination/editable-workbench-v5-deep-water.md`
+- `docs/coordination/functional-milestone-symphony-goal-workflow.md`
+
+Functional milestone operating model:
+
+- M1 Canvas Authoring Workbench: create, edit, wire, group, and inspect a
+  generic control-logic graph from the first workbench screen.
+- M2 Simulation, Test, and Debug Loop: run saved scenarios, produce
+  deterministic traces, and explain node/port/edge/assertion failures.
+- M3 Evidence, Archive, and Handoff Loop: generate, restore, inspect, and hand
+  off sandbox review packets without mutating certified truth.
+- M4 Runtime Generalization Proof: prove adapter-backed reuse without hidden
+  rule engines or UI-only truth paths.
+- M5 Release Maturity and Local Operations: keep local smoke, e2e,
+  validation, mypy, release manifest, and production-readiness claims honest.
+
+Execution model: one eligible Linear issue maps to one functional milestone and
+one bounded Codex `/goal` run. OpenAI Symphony coordinates issue/run flow,
+GitHub/repo remains code truth, Notion mirrors control state, and Claude Opus
+4.7 reviews milestone closeouts or high-risk truth/schema/release claims.
 
 Completed v4 bridge:
 
@@ -191,7 +210,10 @@ Post-v5 control-plane bootstrap:
   baseline reduction tranche 15` closed through PR #250. This is the fifteenth
   JER-171 mypy baseline reduction tranche.
 - Live Linear `JER-258`: `[project] [L6] [none] [DAL-TBD] Workbench maturity
-  evidence refresh` is the current release-operations slice.
+  evidence refresh` closed through PR #251. This is the workbench maturity
+  evidence refresh.
+- Live Linear `JER-259`: `[project] [L4] [none] [DAL-TBD] Workbench start page
+  honesty refresh` is the current product-honesty slice.
 
 Post-v5 product dispatch:
 
@@ -302,6 +324,15 @@ Post-JER-257 release-operations dispatch:
   is machine-readable. It must keep smoke and manifest validation as pass
   evidence, unit regression as rerun-required on the exact candidate SHA, strict
   mypy as blocked, and deployment/cloud/certification as not-claimed.
+
+Post-JER-258 product-honesty dispatch:
+
+- `[project] [L4] [none] [DAL-TBD] Workbench start page honesty refresh` is live
+  Linear `JER-259`. It aligns `/workbench/start` with the current workbench
+  surface by removing stale internal E11 roadmap language and correcting the
+  removed wow starter-card claim. The slice is static-entry-page only: no
+  controller truth, API contract, route, schema, adapter, runner, or browser
+  behavior changes.
 
 Post-JER-240 production-readiness refresh:
 

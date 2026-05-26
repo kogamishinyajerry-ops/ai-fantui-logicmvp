@@ -4,20 +4,19 @@
 ## 当前自动同步快照
 
 - 当前阶段：`P43 Control Logic Workbench end-to-end milestone`
-- 当前已验证 Plan：`P43-02-00 P43-02 Batch — Orchestrator + Document Pipeline + Freeze Gate`
-- 最近成功执行证据：`P46-03 PR #46 merged (P46 series closes the loop: P46-01 dev-server startup script + make dev — one-command boot, MiniMax key resolved from env / ~/.zshrc / ~/.minimax_key, port-killer + state-dir setup baked in / P46-02 per-system gate synonyms — rules interpreter now covers all 4 systems with domain-honest vocabularies (L1..L4 / G1..G4 / V1..V2 / E1..E3) and unknown-system fallback / P46-03 /gsd-execute-phase-from-brief Claude Code skill spec + dev-queue brief contract test — last manual gap closed: skill picks brief, plans, asks before edit, branches + PRs; 16-test contract locks every brief field the skill parses incl. HTML schema marker for version drift; truth-engine red line preserved by always-ask + always-PR safeguards; 1348/1348 full suite, 56/56 new P46-01..03 tests; Self-Gate via Executor-即-Gate v3.2) — 2026-04-26`
+- 当前已验证 Plan：`JER-261 functional milestone Symphony workflow`
+- 最近成功执行证据：`PR #258 post-merge proof — functional milestone workflow`
 - 当前 Gate：`OPUS-4.6 周期审查 Gate (Approved)`
 - 当前 Opus 状态：`当前无需 Opus 审查`
 - 当前证据模式：`repo-doc fallback mode`
 - 证据模式说明：共享 Notion 数据库与活跃控制面页面当前不可达；当前快照由 repo freeze packet 与 handoff docs 恢复。
 - 当前 QA 摘要：`PASS. 175 tests OK, 10 demo smoke scenarios pass, and 8/8 shared validation checks pass.`
-- 当前结论：当前最高优先级是 foundation-first workbench：先把单用户编辑、运行、测试、调试、归档底座做成熟；thrust-reverser / C919 E-TRAS 是 reference sample pack，不是近期专用面板产品主线。
+- 当前结论：当前最高优先级是把 spec-driven workbench 收成统一 engineer-facing workflow，而不是继续做 P6 控制面清理或新增 demo 表面。
 - 当前唯一人工动作：继续自动开发；当前无需手动触发 Opus 4.6。
 
 ## 当前开发架构与执行规则
 
 - GitHub / repo 是实现真值；Notion 是控制面；`controller.py` 仍然是 reference thrust-reverser 的唯一控制真值。
-- thrust-reverser 是 reference truth anchor；C919 E-TRAS 是 frozen certified reference sample。两者用于回归、样例和证据锚点，不代表当前要优先开发专用逻辑面板。
 - `runner.py` / `SimulationRunner` 继续承担运行时编排职责；不要把 orchestration 重新塞回 controller truth、UI 或持久化层。
 - 新系统 truth 只能通过显式 adapter interface 接入；禁止绕过 adapter 新增 hardcoded truth path。
 - FlyByWire / A320 资料只作为知识参考和设计启发，不直接复制成项目代码真值。
@@ -39,8 +38,8 @@
 ## 当前证据入口
 
 - [Notion 控制塔](https://www.notion.so/AI-FANTUI-LogicMVP-33cc68942bed8136b5c9f9ba5b4b44ec)
-- [01 当前状态（自动同步）](https://www.notion.so/346c6894-2bed-81cf-afd0-d060768d56d7)
-- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/34dc6894-2bed-81fb-bf60-ea687dff25e7)
+- [01 当前状态（自动同步）](https://www.notion.so/358c6894-2bed-8178-acb8-e8721574e1f7)
+- [09C 当前 Opus 4.6 审查简报](https://www.notion.so/358c6894-2bed-8168-a81a-d25d3974886b)
 - [10 Freeze Demo Packet](https://www.notion.so/34ac6894-2bed-8159-aec4-e99f7b3d2f51)
 - [GitHub Repo](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp)
 - [GitHub Actions](https://github.com/kogamishinyajerry-ops/ai-fantui-logicmvp/actions)
