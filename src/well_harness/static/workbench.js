@@ -18182,8 +18182,9 @@ function installEditableWorkbenchShell() {
 
   function latestDebuggerStatus(report) {
     const reportStatus = report ? (report.status || "not_run") : "not_run";
-    const diffVerdict = lastSandboxDiff && lastSandboxDiff.verdict
-      ? String(lastSandboxDiff.verdict)
+    const currentDiff = currentDebuggerDiff(report);
+    const diffVerdict = currentDiff && currentDiff.verdict
+      ? String(currentDiff.verdict)
       : "not_run";
     return reportStatus === "not_run" && diffVerdict !== "not_run"
       ? diffVerdict
@@ -18192,13 +18193,24 @@ function installEditableWorkbenchShell() {
 
   function latestDebuggerAssertionStatus(report) {
     const reportStatus = report ? (report.assertion_status || "not_run") : "not_run";
-    const summary = lastSandboxDiff && lastSandboxDiff.summary;
+    const currentDiff = currentDebuggerDiff(report);
+    const summary = currentDiff && currentDiff.summary;
     const diffAssertionStatus = summary && summary.assertion_status
       ? String(summary.assertion_status)
       : "not_run";
     return reportStatus === "not_run" && diffAssertionStatus !== "not_run"
       ? diffAssertionStatus
       : reportStatus;
+  }
+
+  function currentDebuggerDiff(report) {
+    if (!lastSandboxDiff || typeof lastSandboxDiff !== "object" || Array.isArray(lastSandboxDiff)) {
+      return null;
+    }
+    const reportModelHash = report && report.model_hash ? String(report.model_hash) : "";
+    const diffModelHash = lastSandboxDiff.model_hash ? String(lastSandboxDiff.model_hash) : "";
+    if (!reportModelHash || !diffModelHash || reportModelHash !== diffModelHash) return null;
+    return lastSandboxDiff;
   }
 
   function buildDebugProbeWatchedValues(report, target) {
@@ -19073,7 +19085,7 @@ function installEditableWorkbenchShell() {
     if (typeof value === "number") return value !== 0;
     if (typeof value === "string") {
       const normalized = value.trim().toLowerCase();
-      return normalized === "true" || normalized === "1" || normalized === "yes";
+      return ["true", "1", "yes", "active", "on"].includes(normalized);
     }
     return Boolean(value);
   }
