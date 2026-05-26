@@ -19497,7 +19497,11 @@ function installEditableWorkbenchShell() {
     const graph = prepareSandboxRunnerGraph(nodesForRun, edgesForRun);
     const findings = [...graph.findings];
     const frames = [];
-    const state = { previous_outputs: {} };
+    const state = {
+      previous_inputs: {},
+      previous_outputs: {},
+      latch_outputs: {},
+    };
     const incomingByNode = new Map(graph.nodes.map((node) => [node.node_id, []]));
     const outgoingByNode = new Map(graph.nodes.map((node) => [node.node_id, []]));
     for (const edge of graph.valid_edges) {
@@ -19508,6 +19512,8 @@ function installEditableWorkbenchShell() {
       const values = { ...(tick.inputs || {}) };
       const nodeValues = [];
       const frameFindings = [];
+      const nextInputs = {};
+      const nextLatchOutputs = { ...state.latch_outputs };
       for (const nodeId of graph.evaluation_order) {
         const node = graph.node_by_id.get(nodeId);
         if (!node) continue;
@@ -19525,6 +19531,8 @@ function installEditableWorkbenchShell() {
         frameFindings.push(...resultFindings);
         findings.push(...resultFindings);
         writeSandboxNodeOutput(values, node.node, result.value);
+        nextInputs[nodeId] = input.values.length ? input.values[0] : false;
+        if (node.op === "latch") nextLatchOutputs[nodeId] = result.value;
         propagateSandboxEdges(values, (outgoingByNode.get(nodeId) || []).map((edge) => ({
           source: edge.source_node_id,
           target: edge.target_node_id,
@@ -19555,7 +19563,9 @@ function installEditableWorkbenchShell() {
       };
       frame.assertion_results = sandboxRunnerAssertionResults(testBench.assertions || [], frame);
       frames.push(frame);
+      state.previous_inputs = nextInputs;
       state.previous_outputs = { ...values };
+      state.latch_outputs = nextLatchOutputs;
     }
     const structuralInvalidCodes = new Set([
       "unsupported_op",
@@ -19626,13 +19636,13 @@ function installEditableWorkbenchShell() {
       return { status: "ok", value: value >= lower && value <= upper };
     }
     if (op === "delay") {
-      const delayed = state.previous_outputs[node.id] !== undefined
-        ? state.previous_outputs[node.id]
+      const delayed = state.previous_inputs[node.id] !== undefined
+        ? state.previous_inputs[node.id]
         : false;
       return { status: "ok", value: delayed };
     }
     if (op === "latch") {
-      const latched = sandboxBoolean(state.previous_outputs[node.id]) || sandboxBoolean(values[0]);
+      const latched = sandboxBoolean(state.latch_outputs[node.id]) || sandboxBoolean(values[0]);
       return { status: "ok", value: latched };
     }
     return { status: "ok", value: values.every((value) => sandboxBoolean(value)) };
