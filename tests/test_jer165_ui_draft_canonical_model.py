@@ -294,7 +294,7 @@ def test_backend_between_rule_uses_declared_array_threshold_window() -> None:
                     "rules": [
                         {
                             "name": "draft_between_window",
-                            "source_signal_id": "draft_between",
+                            "source_signal_id": "tra_deg",
                             "comparison": "between_lower_inclusive",
                             "threshold_value": [-1, 1],
                         }
@@ -314,8 +314,14 @@ def test_backend_between_rule_uses_declared_array_threshold_window() -> None:
         },
     )
 
-    in_window = evaluate_editable_snapshot(model, {**FULL_CHAIN_SNAPSHOT, "draft_input": 0})
-    upper_bound = evaluate_editable_snapshot(model, {**FULL_CHAIN_SNAPSHOT, "draft_input": 1})
+    in_window = evaluate_editable_snapshot(
+        model,
+        {**FULL_CHAIN_SNAPSHOT, "draft_input": 42, "tra_deg": 0},
+    )
+    upper_bound = evaluate_editable_snapshot(
+        model,
+        {**FULL_CHAIN_SNAPSHOT, "draft_input": 42, "tra_deg": 1},
+    )
 
     assert in_window["asserted_component_values"]["draft_output"] is True
     assert upper_bound["asserted_component_values"]["draft_output"] is False

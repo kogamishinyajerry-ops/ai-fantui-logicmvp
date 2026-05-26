@@ -4961,6 +4961,7 @@ def test_workbench_sandbox_runner_between_rule_uses_array_threshold_window(demo_
     page.click('[data-op-catalog-op="between"]')
     page.click('[data-editor-tool="node"]')
     page.locator('[data-editable-node-id="draft_node_2"]').click()
+    _fill_workbench_evidence_control(page, "#workbench-rule-source-signal", "tra_deg")
     _select_workbench_evidence_control(page, "#workbench-rule-comparison", "between_lower_inclusive")
     _fill_workbench_evidence_control(page, "#workbench-rule-threshold", "[-1,1]")
     page.click("#workbench-apply-rule-parameter-btn")
@@ -4977,8 +4978,8 @@ def test_workbench_sandbox_runner_between_rule_uses_array_threshold_window(demo_
         "#workbench-test-bench-inputs-json",
         json.dumps(
             [
-                {"tick": 0, "inputs": {"draft_node_1": 0}},
-                {"tick": 1, "inputs": {"draft_node_1": 1}},
+                {"tick": 0, "inputs": {"draft_node_1": 42, "tra_deg": 0}},
+                {"tick": 1, "inputs": {"draft_node_1": 42, "tra_deg": 1}},
             ]
         ),
     )

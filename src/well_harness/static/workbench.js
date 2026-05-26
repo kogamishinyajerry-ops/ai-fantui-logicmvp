@@ -19122,29 +19122,37 @@ function installEditableWorkbenchShell() {
     return left === right;
   }
 
-  function evaluateSandboxRule(rule, value) {
+  function sandboxRuleSourceValue(rule, fallback, values) {
+    const sourceSignalId = rule && (rule.source_signal_id || rule.sourceSignalId);
+    if (!sourceSignalId) return fallback;
+    const sourceValue = readSandboxValue(values || {}, [sourceSignalId]);
+    return sourceValue !== undefined ? sourceValue : fallback;
+  }
+
+  function evaluateSandboxRule(rule, value, allValues) {
     const comparison = normalizeRuleComparison(rule && rule.comparison);
     const threshold = sandboxRuleThreshold(rule, true);
-    if (comparison === "==") return sandboxValueEquals(value, threshold);
-    if (comparison === "!=") return !sandboxValueEquals(value, threshold);
+    const currentValue = sandboxRuleSourceValue(rule, value, allValues);
+    if (comparison === "==") return sandboxValueEquals(currentValue, threshold);
+    if (comparison === "!=") return !sandboxValueEquals(currentValue, threshold);
     if (comparison === "between_lower_inclusive") {
       const [lower, upper] = sandboxBetweenBounds(threshold);
-      const current = sandboxNumber(value);
+      const current = sandboxNumber(currentValue);
       return lower <= current && current < upper;
     }
     if (comparison === "between_exclusive") {
       const [lower, upper] = sandboxBetweenBounds(threshold);
-      const current = sandboxNumber(value);
+      const current = sandboxNumber(currentValue);
       return lower < current && current < upper;
     }
-    return compareSandboxNumber(value, comparison, threshold);
+    return compareSandboxNumber(currentValue, comparison, threshold);
   }
 
-  function evaluateSandboxNodeRules(node, values, op) {
+  function evaluateSandboxNodeRules(node, values, op, allValues) {
     const rules = Array.isArray(node && node.rules) ? node.rules : [];
     if (!rules.length || !["and", "or", "compare", "between"].includes(op)) return null;
     const currentValue = values.length ? values[0] : false;
-    const ruleResults = rules.map((rule) => evaluateSandboxRule(rule, currentValue));
+    const ruleResults = rules.map((rule) => evaluateSandboxRule(rule, currentValue, allValues));
     return op === "or" ? ruleResults.some(Boolean) : ruleResults.every(Boolean);
   }
 
@@ -19502,7 +19510,7 @@ function installEditableWorkbenchShell() {
         const input = sandboxRunnerInputRecords(node, values, incomingByNode.get(nodeId), tick.tick);
         frameFindings.push(...input.findings);
         findings.push(...input.findings);
-        const result = evaluateSandboxNode(node.node, input.values, state);
+        const result = evaluateSandboxNode(node.node, input.values, state, values);
         const resultFindings = result.finding
           ? [sandboxRunnerFinding(result.finding.code || "runner_node_finding", result.finding.message || "Runner node finding", {
               tick: tick.tick,
@@ -19573,7 +19581,7 @@ function installEditableWorkbenchShell() {
     return checksumEvidenceArchiveField(kernel);
   }
 
-  function evaluateSandboxNode(node, inputValues, state) {
+  function evaluateSandboxNode(node, inputValues, state, allValues) {
     const op = String((node && (node.op_catalog_entry || node.op || node.opCatalogEntry)) || "and");
     const values = inputValues.length ? inputValues : [false];
     if (!approvedOperationCatalog[op]) {
@@ -19589,7 +19597,7 @@ function installEditableWorkbenchShell() {
         },
       };
     }
-    const ruleValue = evaluateSandboxNodeRules(node, values, op);
+    const ruleValue = evaluateSandboxNodeRules(node, values, op, allValues);
     if (ruleValue !== null) return { status: "ok", value: ruleValue };
     if (op === "or") return { status: "ok", value: values.some((value) => sandboxBoolean(value)) };
     if (op === "compare") {
