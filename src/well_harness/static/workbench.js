@@ -19151,8 +19151,12 @@ function installEditableWorkbenchShell() {
   function evaluateSandboxNodeRules(node, values, op, allValues) {
     const rules = Array.isArray(node && node.rules) ? node.rules : [];
     if (!rules.length || !["and", "or", "compare", "between"].includes(op)) return null;
-    const currentValue = values.length ? values[0] : false;
-    const ruleResults = rules.map((rule) => evaluateSandboxRule(rule, currentValue, allValues));
+    const ruleResults = rules.map((rule, index) => {
+      const fallbackValue = values[index] !== undefined
+        ? values[index]
+        : (values.length ? values[0] : false);
+      return evaluateSandboxRule(rule, fallbackValue, allValues);
+    });
     return op === "or" ? ruleResults.some(Boolean) : ruleResults.every(Boolean);
   }
 
