@@ -2226,6 +2226,8 @@ def test_workbench_candidate_debugger_ignores_stale_diff_after_draft_change(demo
     assert archive["candidate_debugger_view"]["assertion_status"] == "not_run"
     assert archive["debug_probe_timeline"]["status"] == "not_run"
     assert archive["debug_probe_timeline"]["assertion_status"] == "not_run"
+    assert archive["selected_debug_timeline"]["diff_verdict"] == "not_run"
+    assert archive["selected_debug_timeline"]["trace_link_status"] == "selection_only"
 
 
 def test_workbench_selected_debug_timeline_tracks_selection_diff_and_archive(demo_server, browser):  # type: ignore[no-untyped-def]

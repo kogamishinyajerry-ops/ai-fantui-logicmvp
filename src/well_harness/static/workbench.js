@@ -8054,6 +8054,7 @@ function installEditableWorkbenchShell() {
   let hardwarePaletteItems = [];
   let selectedHardwarePaletteItemId = "";
   let lastSandboxDiff = null;
+  let lastSandboxDiffClientModelHash = "";
   let selectedDiagnosticFocus = null;
   let repairActionLog = [];
   let lastInterfaceMatrixValidationReport = null;
@@ -15489,10 +15490,9 @@ function installEditableWorkbenchShell() {
   }
 
   function selectedDebugTimelineVerdictValue() {
-    if (lastSandboxDiff && lastSandboxDiff.verdict) return lastSandboxDiff.verdict;
-    const rendered = diffVerdict && String(diffVerdict.textContent || "").trim();
-    if (rendered === "未运行") return "not_run";
-    return rendered || "not_run";
+    const currentDiff = currentSandboxDiffForCurrentCandidate();
+    if (currentDiff && currentDiff.verdict) return currentDiff.verdict;
+    return "not_run";
   }
 
   function selectedDebugTimelineState(verdict) {
@@ -15555,7 +15555,7 @@ function installEditableWorkbenchShell() {
     const verdict = selectedDebugTimelineVerdictValue();
     const binding = context.binding || normalizeInterfaceBinding({}, context.target_kind, context.target_id);
     const gapFields = hardwareEvidenceV2GapFields(binding);
-    const latestDiff = lastSandboxDiff || null;
+    const latestDiff = currentSandboxDiffForCurrentCandidate();
     return {
       kind: "well-harness-workbench-selected-debug-timeline",
       version: 1,
@@ -18204,12 +18204,15 @@ function installEditableWorkbenchShell() {
   }
 
   function currentDebuggerDiff(report) {
+    return currentSandboxDiffForCurrentCandidate();
+  }
+
+  function currentSandboxDiffForCurrentCandidate() {
     if (!lastSandboxDiff || typeof lastSandboxDiff !== "object" || Array.isArray(lastSandboxDiff)) {
       return null;
     }
-    const reportModelHash = report && report.model_hash ? String(report.model_hash) : "";
-    const diffModelHash = lastSandboxDiff.model_hash ? String(lastSandboxDiff.model_hash) : "";
-    if (!reportModelHash || !diffModelHash || reportModelHash !== diffModelHash) return null;
+    const currentModelHash = currentSandboxDiffClientModelHash();
+    if (!lastSandboxDiffClientModelHash || currentModelHash !== lastSandboxDiffClientModelHash) return null;
     return lastSandboxDiff;
   }
 
@@ -18872,6 +18875,32 @@ function installEditableWorkbenchShell() {
     return editableDraftHash(stableEvidenceArchiveJson(
       sandboxModelHashPayload(nodesForRun, edgesForRun, definition),
     ));
+  }
+
+  function currentSandboxDiffClientModelHash() {
+    refreshEditableNodes();
+    return editableDraftHash(stableEvidenceArchiveJson({
+      scenario_id: selectedWorkbenchScenarioId(),
+      nodes: nodes.map((node) => {
+        const state = editableNodeState(node);
+        return {
+          id: state.id,
+          op: state.op_catalog_entry || state.op || state.opCatalogEntry || "and",
+          rules: Array.isArray(state.rules) ? state.rules : [],
+          port_contract: state.port_contract || state.portContract || null,
+        };
+      }),
+      edges: draftEdges.map((edge) => ({
+        id: edge && edge.id,
+        source: edge && edge.source,
+        target: edge && edge.target,
+        signal_id: edge && (edge.signal_id || edge.signalId || ""),
+        source_port_id: edge && (edge.source_port_id || edge.sourcePortId || ""),
+        target_port_id: edge && (edge.target_port_id || edge.targetPortId || ""),
+        value_type: edge && (edge.value_type || edge.valueType || "boolean"),
+        required: Boolean(edge && edge.required),
+      })),
+    }));
   }
 
   function currentPreflightCandidateModelHash(definition) {
@@ -22039,6 +22068,7 @@ function installEditableWorkbenchShell() {
 
   function renderWorkbenchSandboxDiff(payload) {
     lastSandboxDiff = payload || null;
+    lastSandboxDiffClientModelHash = payload ? currentSandboxDiffClientModelHash() : "";
     const verdict = (payload && payload.verdict) || "invalid_scenario";
     if (diffPanel) diffPanel.setAttribute("data-verdict", verdict);
     if (diffVerdict) diffVerdict.textContent = displayStatusLabel(verdict);
