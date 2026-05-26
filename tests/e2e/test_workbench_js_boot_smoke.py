@@ -4942,6 +4942,84 @@ def test_workbench_sandbox_runner_trace_kernel_records_node_port_edge_assertion_
     assert archive["red_line_metadata"]["controller_truth_modified"] is False
 
 
+def test_workbench_sandbox_runner_between_rule_uses_array_threshold_window(demo_server, browser):  # type: ignore[no-untyped-def]
+    page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+    page.evaluate(
+        """
+        () => {
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-v1');
+          window.localStorage.removeItem('well-harness-editable-workbench-draft-snapshots-v1');
+        }
+        """
+    )
+    _goto_shell_workbench(page, f"{demo_server}/workbench")
+
+    page.click("#workbench-start-empty-draft-btn")
+    page.click('[data-op-catalog-op="input"]')
+    page.click('[data-editor-tool="node"]')
+    page.click('[data-op-catalog-op="between"]')
+    page.click('[data-editor-tool="node"]')
+    page.locator('[data-editable-node-id="draft_node_2"]').click()
+    _select_workbench_evidence_control(page, "#workbench-rule-comparison", "between_lower_inclusive")
+    _fill_workbench_evidence_control(page, "#workbench-rule-threshold", "[-1,1]")
+    page.click("#workbench-apply-rule-parameter-btn")
+    page.click('[data-op-catalog-op="output"]')
+    page.click('[data-editor-tool="node"]')
+    _click_workbench_port_handle(page, "draft_node_1", "out")
+    _click_workbench_port_handle(page, "draft_node_2", "in")
+    _click_workbench_port_handle(page, "draft_node_2", "out")
+    _click_workbench_port_handle(page, "draft_node_3", "in")
+
+    _fill_workbench_run_control(page, "#workbench-test-case-name", "Between threshold parity")
+    _fill_workbench_run_control(
+        page,
+        "#workbench-test-bench-inputs-json",
+        json.dumps(
+            [
+                {"tick": 0, "inputs": {"draft_node_1": 0}},
+                {"tick": 1, "inputs": {"draft_node_1": 1}},
+            ]
+        ),
+    )
+    _fill_workbench_run_control(
+        page,
+        "#workbench-test-bench-assertions-json",
+        json.dumps(
+            [
+                {"tick": 0, "target": "draft_node_3:out", "expected": True},
+                {"tick": 1, "target": "draft_node_3:out", "expected": False},
+            ]
+        ),
+    )
+    _click_workbench_run_control(page, "#workbench-save-test-case-btn")
+    _click_workbench_run_control(page, "#workbench-run-test-bench-btn")
+    page.wait_for_function(
+        """
+        () => {
+          const output = document.getElementById('workbench-test-bench-report-output');
+          return output && output.value.includes('sandbox_runner_trace_kernel');
+        }
+        """
+    )
+    report = json.loads(page.locator("#workbench-test-bench-report-output").input_value())
+    kernel = report["sandbox_runner_trace_kernel"]
+
+    assert errors == [], f"page JS errors: {errors}"
+    assert report["status"] == "pass"
+    assert report["assertion_status"] == "pass"
+    assert kernel["frames"][0]["assertion_results"][0]["status"] == "pass"
+    assert kernel["frames"][1]["assertion_results"][0]["status"] == "pass"
+    assert any(
+        item["node_id"] == "draft_node_2" and item["output_value"] is True
+        for item in kernel["frames"][0]["node_values"]
+    )
+    assert any(
+        item["node_id"] == "draft_node_2" and item["output_value"] is False
+        for item in kernel["frames"][1]["node_values"]
+    )
+
+
 def test_workbench_sandbox_runner_trace_kernel_reports_invalid_graph_findings(demo_server, browser):  # type: ignore[no-untyped-def]
     page, errors = _new_page_with_error_capture(browser)  # type: ignore[no-untyped-call]
     _goto_shell_workbench(page, f"{demo_server}/workbench")

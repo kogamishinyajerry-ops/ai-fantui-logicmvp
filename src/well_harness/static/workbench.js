@@ -19095,6 +19095,22 @@ function installEditableWorkbenchShell() {
     return fallback;
   }
 
+  function sandboxRuleThreshold(rule, fallback) {
+    if (!rule || typeof rule !== "object") return fallback;
+    if (rule.threshold_value !== undefined) return rule.threshold_value;
+    if (rule.threshold !== undefined) return rule.threshold;
+    return fallback;
+  }
+
+  function sandboxBetweenBounds(threshold, fallbackLower = 5, fallbackUpper = 10) {
+    if (Array.isArray(threshold) && threshold.length >= 2) {
+      const lower = sandboxNumber(threshold[0]);
+      const upper = sandboxNumber(threshold[1]);
+      return [lower, upper];
+    }
+    return [fallbackLower, fallbackUpper];
+  }
+
   function compareSandboxNumber(value, comparison, threshold) {
     const left = sandboxNumber(value);
     const right = sandboxNumber(threshold);
@@ -19104,6 +19120,32 @@ function installEditableWorkbenchShell() {
     if (comparison === ">") return left > right;
     if (comparison === ">=") return left >= right;
     return left === right;
+  }
+
+  function evaluateSandboxRule(rule, value) {
+    const comparison = normalizeRuleComparison(rule && rule.comparison);
+    const threshold = sandboxRuleThreshold(rule, true);
+    if (comparison === "==") return sandboxValueEquals(value, threshold);
+    if (comparison === "!=") return !sandboxValueEquals(value, threshold);
+    if (comparison === "between_lower_inclusive") {
+      const [lower, upper] = sandboxBetweenBounds(threshold);
+      const current = sandboxNumber(value);
+      return lower <= current && current < upper;
+    }
+    if (comparison === "between_exclusive") {
+      const [lower, upper] = sandboxBetweenBounds(threshold);
+      const current = sandboxNumber(value);
+      return lower < current && current < upper;
+    }
+    return compareSandboxNumber(value, comparison, threshold);
+  }
+
+  function evaluateSandboxNodeRules(node, values, op) {
+    const rules = Array.isArray(node && node.rules) ? node.rules : [];
+    if (!rules.length || !["and", "or", "compare", "between"].includes(op)) return null;
+    const currentValue = values.length ? values[0] : false;
+    const ruleResults = rules.map((rule) => evaluateSandboxRule(rule, currentValue));
+    return op === "or" ? ruleResults.some(Boolean) : ruleResults.every(Boolean);
   }
 
   function nodeRuleComparison(node, fallback) {
@@ -19547,6 +19589,8 @@ function installEditableWorkbenchShell() {
         },
       };
     }
+    const ruleValue = evaluateSandboxNodeRules(node, values, op);
+    if (ruleValue !== null) return { status: "ok", value: ruleValue };
     if (op === "or") return { status: "ok", value: values.some((value) => sandboxBoolean(value)) };
     if (op === "compare") {
       return {

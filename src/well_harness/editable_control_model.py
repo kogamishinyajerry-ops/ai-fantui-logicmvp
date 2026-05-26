@@ -570,6 +570,56 @@ def _evaluate_supported_node(
     return all(_snapshot_bool(value) for value in (inputs or [False])), []
 
 
+def _topological_node_order(
+    nodes: list[dict[str, Any]],
+    edges: list[dict[str, Any]],
+    ports_by_id: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    node_by_id = {node["id"]: node for node in nodes}
+    node_index = {node["id"]: index for index, node in enumerate(nodes)}
+    indegree = {node["id"]: 0 for node in nodes}
+    outgoing: dict[str, list[str]] = {node["id"]: [] for node in nodes}
+    seen_edges: set[tuple[str, str]] = set()
+
+    for edge in edges:
+        source_port = ports_by_id.get(edge["source_port_id"])
+        target_port = ports_by_id.get(edge["target_port_id"])
+        if not source_port or not target_port:
+            continue
+        source_node_id = source_port["node_id"]
+        target_node_id = target_port["node_id"]
+        if source_node_id == target_node_id:
+            continue
+        edge_key = (source_node_id, target_node_id)
+        if edge_key in seen_edges:
+            continue
+        seen_edges.add(edge_key)
+        if source_node_id not in node_by_id or target_node_id not in node_by_id:
+            continue
+        outgoing[source_node_id].append(target_node_id)
+        indegree[target_node_id] += 1
+
+    ready = sorted(
+        (node_id for node_id, degree in indegree.items() if degree == 0),
+        key=lambda node_id: node_index[node_id],
+    )
+    ordered_ids: list[str] = []
+    while ready:
+        node_id = ready.pop(0)
+        ordered_ids.append(node_id)
+        for target_node_id in sorted(outgoing[node_id], key=lambda item: node_index[item]):
+            indegree[target_node_id] -= 1
+            if indegree[target_node_id] == 0:
+                ready.append(target_node_id)
+                ready.sort(key=lambda item: node_index[item])
+
+    if len(ordered_ids) != len(nodes):
+        ordered = set(ordered_ids)
+        ordered_ids.extend(node["id"] for node in nodes if node["id"] not in ordered)
+
+    return [node_by_id[node_id] for node_id in ordered_ids]
+
+
 def evaluate_editable_snapshot(
     model: dict[str, Any],
     snapshot: dict[str, Any],
@@ -587,7 +637,7 @@ def evaluate_editable_snapshot(
     logic_states: dict[str, dict[str, Any]] = {}
     port_by_id = {port["id"]: port for port in model["ports"]}
 
-    for node in model["nodes"]:
+    for node in _topological_node_order(model["nodes"], model["edges"], port_by_id):
         op = node["op"]
         if op is None:
             continue

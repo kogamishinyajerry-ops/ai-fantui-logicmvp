@@ -3,12 +3,33 @@ from __future__ import annotations
 from well_harness.editable_control_model import (
     build_reference_editable_control_model,
     editable_control_model_hash,
+    evaluate_editable_snapshot,
     validate_editable_control_model,
 )
 from well_harness.editable_workbench_run import (
     build_workbench_sandbox_run_response,
     canonicalize_workbench_ui_draft,
 )
+
+
+FULL_CHAIN_SNAPSHOT = {
+    "radio_altitude_ft": 5.0,
+    "tra_deg": -14.0,
+    "sw1": True,
+    "sw2": True,
+    "engine_running": True,
+    "aircraft_on_ground": True,
+    "reverser_inhibited": False,
+    "eec_enable": True,
+    "n1k": 50.0,
+    "max_n1k_deploy_limit": 60.0,
+    "tls_unlocked_ls": True,
+    "all_pls_unlocked_ls": True,
+    "reverser_not_deployed_eec": True,
+    "reverser_fully_deployed_eec": False,
+    "deploy_position_percent": 95.0,
+    "deploy_90_percent_vdt": True,
+}
 
 
 def test_ui_draft_dynamic_node_and_edge_become_schema_valid_model() -> None:
@@ -210,6 +231,94 @@ def test_sandbox_run_accepts_ui_catalog_compare_and_between_primitives() -> None
     assert nodes["draft_node_2"]["op"] == "between"
     assert response["validation_report"]["status"] == "pass"
     assert response["truth_level_impact"] == "none"
+
+
+def test_backend_snapshot_evaluates_ui_nodes_in_topological_order() -> None:
+    base = build_reference_editable_control_model()
+    model = canonicalize_workbench_ui_draft(
+        base,
+        {
+            "system_id": "thrust-reverser",
+            "truth_level_impact": "none",
+            "controller_truth_modified": False,
+            "nodes": [
+                {
+                    "id": "draft_output",
+                    "label": "Draft output",
+                    "op": "output",
+                    "draftNode": True,
+                },
+                {
+                    "id": "draft_input",
+                    "label": "Draft input",
+                    "op": "input",
+                    "draftNode": True,
+                },
+            ],
+            "edges": [
+                {
+                    "id": "edge_draft_input_output",
+                    "source": "draft_input",
+                    "target": "draft_output",
+                }
+            ],
+        },
+    )
+
+    result = evaluate_editable_snapshot(model, {**FULL_CHAIN_SNAPSHOT, "draft_input": True})
+
+    assert result["truth_status"] == "sandbox_candidate"
+    assert result["asserted_component_values"]["draft_output"] is True
+
+
+def test_backend_between_rule_uses_declared_array_threshold_window() -> None:
+    base = build_reference_editable_control_model()
+    model = canonicalize_workbench_ui_draft(
+        base,
+        {
+            "system_id": "thrust-reverser",
+            "truth_level_impact": "none",
+            "controller_truth_modified": False,
+            "nodes": [
+                {
+                    "id": "draft_input",
+                    "label": "Draft input",
+                    "op": "input",
+                    "draftNode": True,
+                },
+                {
+                    "id": "draft_between",
+                    "label": "Draft between",
+                    "op": "between",
+                    "draftNode": True,
+                    "rules": [
+                        {
+                            "name": "draft_between_window",
+                            "source_signal_id": "draft_between",
+                            "comparison": "between_lower_inclusive",
+                            "threshold_value": [-1, 1],
+                        }
+                    ],
+                },
+                {
+                    "id": "draft_output",
+                    "label": "Draft output",
+                    "op": "output",
+                    "draftNode": True,
+                },
+            ],
+            "edges": [
+                {"id": "edge_input_between", "source": "draft_input", "target": "draft_between"},
+                {"id": "edge_between_output", "source": "draft_between", "target": "draft_output"},
+            ],
+        },
+    )
+
+    in_window = evaluate_editable_snapshot(model, {**FULL_CHAIN_SNAPSHOT, "draft_input": 0})
+    upper_bound = evaluate_editable_snapshot(model, {**FULL_CHAIN_SNAPSHOT, "draft_input": 1})
+
+    assert in_window["asserted_component_values"]["draft_output"] is True
+    assert upper_bound["asserted_component_values"]["draft_output"] is False
 
 
 def test_ui_draft_invalid_edge_is_reported_as_invalid_model_not_truth_change() -> None:
