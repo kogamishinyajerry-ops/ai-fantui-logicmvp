@@ -511,13 +511,12 @@ def _node_input_values(
     signals: dict[str, Any],
     ports_by_id: dict[str, dict[str, Any]],
     edge_values_by_node_id: dict[str, list[Any]] | None = None,
+    direct_signals: dict[str, Any] | None = None,
 ) -> list[Any]:
     edge_values = (edge_values_by_node_id or {}).get(node["id"], [])
-    if edge_values:
-        return list(edge_values)
-
     values: list[Any] = []
     seen: set[str] = set()
+    direct_source = direct_signals if direct_signals is not None else signals
     candidate_keys = [node["id"], f"{node['id']}:in"]
     for port in ports_by_id.values():
         if port["node_id"] == node["id"] and port["direction"] == "in":
@@ -526,8 +525,9 @@ def _node_input_values(
         if key in seen:
             continue
         seen.add(key)
-        if key in signals:
-            values.append(signals[key])
+        if key in direct_source:
+            values.append(direct_source[key])
+    values.extend(edge_values)
     return values
 
 
@@ -538,10 +538,17 @@ def _evaluate_supported_node(
     edge_values_by_node_id: dict[str, list[Any]] | None = None,
     previous_inputs: dict[str, Any] | None = None,
     latch_outputs: dict[str, Any] | None = None,
+    direct_signals: dict[str, Any] | None = None,
 ) -> tuple[Any, list[dict[str, Any]], list[Any]]:
     op = node["op"]
     rules = node["rules"]
-    inputs = _node_input_values(node, signals, ports_by_id, edge_values_by_node_id)
+    inputs = _node_input_values(
+        node,
+        signals,
+        ports_by_id,
+        edge_values_by_node_id,
+        direct_signals,
+    )
     if op in {"and", "or", "compare", "between"} and rules:
         rule_results = []
         failed_rules = []
@@ -664,6 +671,7 @@ def evaluate_editable_snapshot(
     """
     validate_editable_control_model(model)
     signals = dict(snapshot)
+    direct_signals = dict(snapshot)
     asserted_component_values: dict[str, Any] = dict(snapshot)
     active_logic_node_ids: list[str] = []
     blocked_reasons: list[str] = []
@@ -697,6 +705,7 @@ def evaluate_editable_snapshot(
             edge_values_by_node_id,
             previous_inputs,
             latch_outputs,
+            direct_signals,
         )
         active = _snapshot_bool(value)
         signals[node["id"]] = value

@@ -364,6 +364,35 @@ def test_backend_snapshot_preserves_multiple_incoming_edge_values_for_logic_prim
     assert active["asserted_component_values"]["draft_output"] is True
 
 
+def test_backend_snapshot_preserves_direct_node_values_with_incoming_edges() -> None:
+    base = build_reference_editable_control_model()
+    model = canonicalize_workbench_ui_draft(
+        base,
+        {
+            "system_id": "thrust-reverser",
+            "truth_level_impact": "none",
+            "controller_truth_modified": False,
+            "nodes": [
+                {"id": "draft_source", "label": "Source", "op": "input", "draftNode": True},
+                {"id": "draft_and", "label": "AND", "op": "and", "draftNode": True},
+                {"id": "draft_output", "label": "Output", "op": "output", "draftNode": True},
+            ],
+            "edges": [
+                {"id": "edge_source_and", "source": "draft_source", "target": "draft_and"},
+                {"id": "edge_and_output", "source": "draft_and", "target": "draft_output"},
+            ],
+        },
+    )
+
+    result = evaluate_editable_snapshot(
+        model,
+        {**FULL_CHAIN_SNAPSHOT, "draft_source": True, "draft_and": False},
+    )
+
+    assert result["asserted_component_values"]["draft_and"] is False
+    assert result["asserted_component_values"]["draft_output"] is False
+
+
 def test_backend_snapshot_preserves_delay_and_latch_state_across_frames() -> None:
     base = build_reference_editable_control_model()
     model = canonicalize_workbench_ui_draft(
