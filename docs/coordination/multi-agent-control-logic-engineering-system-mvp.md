@@ -74,6 +74,7 @@ gates decide what survives.`
 | M24 validation/PR preflight gate | Chief Engineer PR Preflight Gate | `make multi-agent-pr-preflight` | M23 package order plus the M24 preflight package are converted into 19 validation commands, 7 explicit stage commands, browser geometry markers, Notion blocker text, and a copy-ready PR body |
 | M25 validation evidence capture gate | Chief Engineer Evidence Gate | `make multi-agent-validation-evidence` | M24's 19 validation commands are executed and recorded into bounded JSON/Markdown/HTML evidence, then the latest 8 explicit stage commands add the M25 evidence package without touching excluded dirty paths |
 | M28 v0.2 status-surface refresh | Chief Engineer Packaging Gate | `make multi-agent-pr-preflight` | Project Manager Status, Project Visibility, UltraWork Monitor, M22 cockpit, M23 packaging, M24 preflight, and M25 validation evidence now consume the v0.2 ledger/cursor baseline with `RUN-QUEUE-011` as the current queue cursor |
+| M29 merge-readiness packet | Chief Engineer Review Handoff Gate | `make multi-agent-merge-readiness` | M25 validation evidence, desktop/mobile geometry screenshots, PR mergeability, no-checks status, no-review state, and the Notion external blocker are consolidated into one read-only review handoff |
 
 ## Contract Boundary
 
@@ -1124,10 +1125,10 @@ not a multi-agent engineering-chain code blocker.
 
 ## Next Step
 
-M28 closes the read-only status-surface refresh. The next work should run the
-full focused validation evidence capture, browser geometry gate, and explicit
-pathspec packaging pass, then commit the M28 slice without touching unrelated
-dirty worktree state.
+M29 closes the PR review handoff layer. The next work should monitor PR #269
+for comments or checks; if none appear, keep the code scope unchanged and ask
+for reviewer attention rather than adding another local feature slice inside
+this PR.
 
 For compact-failure-safe continuation, read
 `docs/coordination/multi-agent-continuation-checkpoint.md` first and refresh
