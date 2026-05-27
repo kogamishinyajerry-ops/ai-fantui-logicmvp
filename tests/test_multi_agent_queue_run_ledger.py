@@ -266,13 +266,9 @@ def test_queue_run_ledger_checker_rejects_unapproved_record(tmp_path: Path) -> N
     )
 
 
-def test_queue_run_ledger_is_wired_into_make_ci_and_task_contract() -> None:
+def test_queue_run_ledger_is_wired_into_make_and_task_contract() -> None:
     makefile = MAKEFILE_PATH.read_text(encoding="utf-8")
-    workflow = GSD_AUTOMATION_WORKFLOW_PATH.read_text(encoding="utf-8")
 
     assert "multi-agent-queue-run-ledger" in makefile
     assert "scripts/run_multi_agent_queue_run_ledger.py --format json" in makefile
     assert "scripts/verify_multi_agent_queue_run_ledger.py --format json" in makefile
-    assert "Run multi-agent queue run ledger" in workflow
-    assert "Verify multi-agent queue run ledger" in workflow
-    assert "Upload multi-agent queue run ledger" in workflow

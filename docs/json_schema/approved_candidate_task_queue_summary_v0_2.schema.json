@@ -1,0 +1,339 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/approved_candidate_task_queue_summary_v0_2.schema.json",
+  "title": "Approved Candidate Task Queue Summary v0.2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "status",
+    "gate_id",
+    "queue_id",
+    "task_count",
+    "ready_for_long_running_development",
+    "queue_order",
+    "append_only",
+    "items",
+    "deterministic_gates",
+    "aggregate",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/approved_candidate_task_queue_summary_v0_2.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-approved-candidate-task-queue-summary"
+    },
+    "status": {
+      "const": "pass"
+    },
+    "gate_id": {
+      "const": "approved-candidate-task-queue-v0-2"
+    },
+    "queue_id": {
+      "const": "approved-candidate-task-queue-v0.2"
+    },
+    "task_count": {
+      "const": 4
+    },
+    "ready_for_long_running_development": {
+      "const": true
+    },
+    "queue_order": {
+      "type": "array",
+      "prefixItems": [
+        {"const": "queue-safety-priority-repair"},
+        {"const": "queue-evidence-simulation-result-repair"},
+        {"const": "queue-evidence-test-result-missing-repair"},
+        {"const": "queue-requirement-ambiguity-repair"}
+      ],
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "append_only": {
+      "$ref": "#/$defs/appendOnly"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/queueItem"
+      },
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "deterministic_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "m6_template_contract",
+        "append_only_prefix",
+        "preflight_readiness",
+        "approved_task_shell",
+        "child_review_exports",
+        "requirement_repair_slice",
+        "local_gate"
+      ],
+      "properties": {
+        "m6_template_contract": {"const": "pass"},
+        "append_only_prefix": {"const": "pass"},
+        "preflight_readiness": {"const": "pass"},
+        "approved_task_shell": {"const": "pass"},
+        "child_review_exports": {"const": "pass"},
+        "requirement_repair_slice": {"const": "pass"},
+        "local_gate": {"const": "pass"}
+      }
+    },
+    "aggregate": {
+      "$ref": "#/$defs/aggregate"
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "queue_summary"
+      ],
+      "properties": {
+        "queue_summary": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "appendOnly": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "previous_queue_id",
+        "previous_task_count",
+        "preserved_prefix_count",
+        "new_task_count",
+        "template_id"
+      ],
+      "properties": {
+        "previous_queue_id": {
+          "const": "approved-candidate-task-queue-v0.1"
+        },
+        "previous_task_count": {
+          "const": 3
+        },
+        "preserved_prefix_count": {
+          "const": 3
+        },
+        "new_task_count": {
+          "const": 1
+        },
+        "template_id": {
+          "const": "approved-candidate-repair-task-template-v0.1"
+        }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_count",
+        "passed",
+        "preflight_passed",
+        "executed_limited",
+        "converged",
+        "open_findings",
+        "controller_truth_modified",
+        "ui_layout_modified"
+      ],
+      "properties": {
+        "task_count": {"const": 4},
+        "passed": {"const": 4},
+        "preflight_passed": {"const": 4},
+        "executed_limited": {"const": 4},
+        "converged": {"const": 4},
+        "open_findings": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "controller_truth_modified": {"const": false},
+        "ui_layout_modified": {"const": false}
+      }
+    },
+    "queueItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "queue_item_id",
+        "slice_id",
+        "status",
+        "queue_contract",
+        "preflight",
+        "execution",
+        "approved_task_shell",
+        "selected_task",
+        "boundary",
+        "artifact_paths"
+      ],
+      "properties": {
+        "queue_item_id": {"$ref": "#/$defs/nonEmptyString"},
+        "slice_id": {"$ref": "#/$defs/nonEmptyString"},
+        "status": {"const": "pass"},
+        "queue_contract": {"$ref": "#/$defs/queueContract"},
+        "preflight": {"$ref": "#/$defs/preflight"},
+        "execution": {"$ref": "#/$defs/execution"},
+        "approved_task_shell": {"$ref": "#/$defs/approvedTaskShell"},
+        "selected_task": {"$ref": "#/$defs/selectedTask"},
+        "boundary": {"$ref": "#/$defs/boundary"},
+        "artifact_paths": {"$ref": "#/$defs/childArtifactPaths"}
+      }
+    },
+    "queueContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "template_id",
+        "source_finding_code",
+        "task_class",
+        "target_agent",
+        "task_type",
+        "approval_id",
+        "readiness_command",
+        "runner_contract"
+      ],
+      "properties": {
+        "template_id": {
+          "const": "approved-candidate-repair-task-template-v0.1"
+        },
+        "source_finding_code": {"$ref": "#/$defs/nonEmptyString"},
+        "task_class": {
+          "enum": [
+            "SafetyRepairTask",
+            "EvidenceRepairTask",
+            "RequirementRepairTask"
+          ]
+        },
+        "target_agent": {"$ref": "#/$defs/nonEmptyString"},
+        "task_type": {"$ref": "#/$defs/nonEmptyString"},
+        "approval_id": {"$ref": "#/$defs/nonEmptyString"},
+        "readiness_command": {
+          "const": "make multi-agent-construction-readiness"
+        },
+        "runner_contract": {
+          "const": "candidate_review_packet_export_v0_1"
+        }
+      }
+    },
+    "preflight": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "status",
+        "returncode",
+        "readiness_id",
+        "ready_for_long_running_development",
+        "artifact_paths",
+        "stderr"
+      ],
+      "properties": {
+        "command": {"const": "make multi-agent-construction-readiness"},
+        "status": {"const": "pass"},
+        "returncode": {"const": 0},
+        "readiness_id": {"const": "multi-agent-construction-readiness-v0.1"},
+        "ready_for_long_running_development": {"const": true},
+        "artifact_paths": {"type": "object"},
+        "stderr": {"type": "string"}
+      }
+    },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "slice_status",
+        "reviewer_status",
+        "finding_chain_statuses"
+      ],
+      "properties": {
+        "status": {"const": "pass"},
+        "slice_status": {"const": "pass"},
+        "reviewer_status": {"const": "converged"},
+        "finding_chain_statuses": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"const": "converged"}
+        },
+        "reason": {"type": "string"}
+      }
+    },
+    "approvedTaskShell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "approval_status",
+        "selected_task_id"
+      ],
+      "properties": {
+        "status": {"const": "executed_limited"},
+        "approval_status": {"const": "approved"},
+        "selected_task_id": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    },
+    "selectedTask": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "target_agent",
+        "task_type",
+        "approval_status"
+      ],
+      "properties": {
+        "task_id": {"$ref": "#/$defs/nonEmptyString"},
+        "target_agent": {"$ref": "#/$defs/nonEmptyString"},
+        "task_type": {"$ref": "#/$defs/nonEmptyString"},
+        "approval_status": {"const": "approved"}
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "truth_effect",
+        "controller_truth_modified",
+        "ui_layout_modified"
+      ],
+      "properties": {
+        "truth_effect": {"const": "none"},
+        "controller_truth_modified": {"const": false},
+        "ui_layout_modified": {"const": false}
+      }
+    },
+    "childArtifactPaths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repaired_candidate_packet",
+        "candidate_review_packet",
+        "candidate_review_packet_export",
+        "repair_loop_result"
+      ],
+      "properties": {
+        "repaired_candidate_packet": {"$ref": "#/$defs/nonEmptyString"},
+        "candidate_review_packet": {"$ref": "#/$defs/nonEmptyString"},
+        "candidate_review_packet_export": {"$ref": "#/$defs/nonEmptyString"},
+        "repair_loop_result": {"$ref": "#/$defs/nonEmptyString"}
+      }
+    }
+  },
+  "x-well-harness-approved-candidate-task-queue-summary": {
+    "schema_version": "0.2",
+    "scope": "append-only CI artifact summary for approved candidate repair queue",
+    "previous_queue_id": "approved-candidate-task-queue-v0.1",
+    "truth_effect": "none",
+    "controller_truth_modified": false
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "$schema": "https://well-harness.local/json_schema/multi_agent_m5_construction_control_plane_v0_1.schema.json",
+  "aggregate": {
+    "active_stop_conditions": [],
+    "approved_task_count": 3,
+    "child_package_count": 3,
+    "controller_truth_modified": false,
+    "milestone_count": 4,
+    "open_findings": [],
+    "queue_task_count": 3,
+    "ready_for_long_running_construction": true,
+    "ui_layout_modified": false
+  },
+  "artifact_paths": {
+    "approved_candidate_task_queue_summary": "/tmp/ai-fantui-multi-agent-m5-construction-control-plane/approved-candidate-task-queue/approved_candidate_task_queue_summary.json",
+    "construction_readiness_packet": "/tmp/ai-fantui-multi-agent-m5-construction-control-plane/multi-agent-construction-readiness/readiness_packet.json",
+    "control_plane_package": "/tmp/ai-fantui-multi-agent-m5-construction-control-plane/multi_agent_m5_construction_control_plane_v0_1.json",
+    "engineering_system_mvp_doc": "docs/coordination/multi-agent-control-logic-engineering-system-mvp.md",
+    "m4_external_review_handoff": "/tmp/ai-fantui-multi-agent-m5-construction-control-plane/m4-external-review-handoff/multi_agent_m4_external_review_handoff_v0_1.json",
+    "operator_runbook": "/tmp/ai-fantui-multi-agent-m5-construction-control-plane/construction_control_plane_runbook.md",
+    "project_manager_plan": "docs/coordination/multi-agent-deliverable-plan-for-project-manager.md"
+  },
+  "child_packages": {
+    "approved_candidate_task_queue": {
+      "checker_status": "pass",
+      "key": "approved_candidate_task_queue",
+      "package_id": "approved-candidate-task-queue-v0.1",
+      "path": "/tmp/ai-fantui-multi-agent-m5-construction-control-plane/approved-candidate-task-queue/approved_candidate_task_queue_summary.json",
+      "status": "pass"
+    },
+    "construction_readiness": {
+      "checker_status": "pass",
+      "key": "construction_readiness",
+      "package_id": "multi-agent-construction-readiness-v0.1",
+      "path": "/tmp/ai-fantui-multi-agent-m5-construction-control-plane/multi-agent-construction-readiness/readiness_packet.json",
+      "status": "pass"
+    },
+    "m4_external_review_handoff": {
+      "checker_status": "pass",
+      "key": "m4_external_review_handoff",
+      "package_id": "multi-agent-m4-external-review-handoff-v0.1",
+      "path": "/tmp/ai-fantui-multi-agent-m5-construction-control-plane/m4-external-review-handoff/multi_agent_m4_external_review_handoff_v0_1.json",
+      "status": "pass"
+    }
+  },
+  "control_plane_summary": {
+    "entrypoint": "make multi-agent-construction-control-plane",
+    "included_milestones": [
+      "M1",
+      "M2",
+      "M3",
+      "M4"
+    ],
+    "readiness_status": "ready_for_long_running_construction",
+    "single_entrypoint": true
+  },
+  "deterministic_gates": {
+    "approved_candidate_task_queue": "pass",
+    "approved_candidate_task_queue_artifact": "pass",
+    "construction_readiness": "pass",
+    "failure_recovery_runbook": "pass",
+    "local_gate_entrypoint": "pass",
+    "m4_external_review_handoff": "pass",
+    "phase_review_stop_conditions": "pass"
+  },
+  "execution_policy": {
+    "approved_only": true,
+    "deterministic_gates_after_execution": true,
+    "requires_explicit_approval": true,
+    "restricted_execution": true,
+    "workspace_writes_performed_by_shell": false
+  },
+  "failure_recovery": [
+    {
+      "action": "Stop execution, inspect the checker mismatches, repair the smallest failing artifact, then rerun the M5 entrypoint.",
+      "id": "FR-GATE-001",
+      "resume_command": "make multi-agent-construction-control-plane",
+      "stop_condition": "Do not continue queue execution while deterministic_gates.local_gate_entrypoint is fail.",
+      "trigger": "Any deterministic gate in the M5 package reports fail."
+    },
+    {
+      "action": "Rerun the queue artifact checker and update only append-only expansion contracts for new task types.",
+      "id": "FR-QUEUE-001",
+      "resume_command": "make verify-approved-candidate-task-queue-artifact",
+      "stop_condition": "Do not weaken approved_candidate_task_queue_summary_v0_1.",
+      "trigger": "Approved candidate task queue summary drifts from the fixed v0.1 contract."
+    },
+    {
+      "action": "Stop the construction loop and request human review before any further execution.",
+      "id": "FR-BOUNDARY-001",
+      "resume_command": "git diff --name-only -- src/well_harness/controller.py src/well_harness/editable_control_model.py src/well_harness/static/requirements_intake",
+      "stop_condition": "Any restricted path appears in the diff output.",
+      "trigger": "A diff appears in controller truth, editable model truth, or requirements-intake UI layout paths."
+    },
+    {
+      "action": "Regenerate the specific child package first, then rebuild the M4 handoff and M5 control plane.",
+      "id": "FR-CHILD-001",
+      "resume_command": "make multi-agent-m4-external-review-handoff",
+      "stop_condition": "Do not mark M5 ready if child_packages.*.checker_status is not pass.",
+      "trigger": "M1, M2, M3, or M4 child review package cannot be regenerated or verified."
+    }
+  ],
+  "kind": "ai-fantui-multi-agent-m5-construction-control-plane",
+  "milestone": {
+    "budget": 40,
+    "claim": "candidate-only long-running construction control plane",
+    "effort_unit": "施工队工时",
+    "id": "M5",
+    "name": "长时间开工控制面"
+  },
+  "package_id": "multi-agent-m5-construction-control-plane-v0.1",
+  "phase_review_stop_conditions": [
+    {
+      "action": "Block restricted execution and keep the task in proposed or pending_review state.",
+      "blocking": true,
+      "condition": "A selected task lacks explicit matching approval metadata.",
+      "id": "STOP-APPROVAL-MISSING"
+    },
+    {
+      "action": "Stop and escalate to human review; do not auto-repair controller truth.",
+      "blocking": true,
+      "condition": "git diff includes src/well_harness/controller.py or src/well_harness/editable_control_model.py.",
+      "id": "STOP-CONTROLLER-TRUTH-DIFF"
+    },
+    {
+      "action": "Stop this construction loop because M5 is not a UI layout polish slice.",
+      "blocking": true,
+      "condition": "git diff includes src/well_harness/static/requirements_intake/.",
+      "id": "STOP-UI-LAYOUT-DIFF"
+    },
+    {
+      "action": "Reject the package and restore certification_claim to none.",
+      "blocking": true,
+      "condition": "Any package claims certification readiness, DAL readiness, or trusted control-law promotion.",
+      "id": "STOP-CERTIFICATION-CLAIM"
+    },
+    {
+      "action": "Stop long-running work until the failing gate is repaired and rerun.",
+      "blocking": true,
+      "condition": "Any schema, checker, convergence, or boundary gate returns fail.",
+      "id": "STOP-DETERMINISTIC-GATE-FAIL"
+    }
+  ],
+  "queue_snapshot": {
+    "converged": 3,
+    "executed_limited": 3,
+    "open_findings": [],
+    "passed": 3,
+    "preflight_passed": 3,
+    "queue_id": "approved-candidate-task-queue-v0.1",
+    "ready_for_long_running_development": true,
+    "task_count": 3
+  },
+  "review_boundaries": {
+    "certification_claim": "none",
+    "controller_truth_modified": false,
+    "restricted_paths": [
+      "src/well_harness/controller.py",
+      "src/well_harness/editable_control_model.py",
+      "src/well_harness/static/requirements_intake/"
+    ],
+    "truth_effect": "none",
+    "ui_layout_modified": false
+  },
+  "status": "pass"
+}

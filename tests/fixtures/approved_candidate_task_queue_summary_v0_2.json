@@ -1,0 +1,262 @@
+{
+  "$schema": "https://well-harness.local/json_schema/approved_candidate_task_queue_summary_v0_2.schema.json",
+  "aggregate": {
+    "controller_truth_modified": false,
+    "converged": 4,
+    "executed_limited": 4,
+    "open_findings": [],
+    "passed": 4,
+    "preflight_passed": 4,
+    "task_count": 4,
+    "ui_layout_modified": false
+  },
+  "append_only": {
+    "new_task_count": 1,
+    "preserved_prefix_count": 3,
+    "previous_queue_id": "approved-candidate-task-queue-v0.1",
+    "previous_task_count": 3,
+    "template_id": "approved-candidate-repair-task-template-v0.1"
+  },
+  "artifact_paths": {
+    "queue_summary": "<queue_summary>"
+  },
+  "deterministic_gates": {
+    "append_only_prefix": "pass",
+    "approved_task_shell": "pass",
+    "child_review_exports": "pass",
+    "local_gate": "pass",
+    "m6_template_contract": "pass",
+    "preflight_readiness": "pass",
+    "requirement_repair_slice": "pass"
+  },
+  "gate_id": "approved-candidate-task-queue-v0-2",
+  "items": [
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001",
+        "status": "executed_limited"
+      },
+      "artifact_paths": {
+        "candidate_review_packet": "<candidate_review_packet>",
+        "candidate_review_packet_export": "<candidate_review_packet_export>",
+        "repair_loop_result": "<repair_loop_result>",
+        "repaired_candidate_packet": "<repaired_candidate_packet>"
+      },
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "execution": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "slice_status": "pass",
+        "status": "pass"
+      },
+      "preflight": {
+        "artifact_paths": {},
+        "command": "make multi-agent-construction-readiness",
+        "readiness_id": "multi-agent-construction-readiness-v0.1",
+        "ready_for_long_running_development": true,
+        "returncode": 0,
+        "status": "pass",
+        "stderr": ""
+      },
+      "queue_contract": {
+        "approval_id": "APPROVAL-FIRST-CANDIDATE-REPAIR-SLICE-001",
+        "readiness_command": "make multi-agent-construction-readiness",
+        "runner_contract": "candidate_review_packet_export_v0_1",
+        "source_finding_code": "CHECK_SAFETY_PRIORITY_001",
+        "target_agent": "LogicIRRepairAgent",
+        "task_class": "SafetyRepairTask",
+        "task_type": "repair_candidate_logic_ir",
+        "template_id": "approved-candidate-repair-task-template-v0.1"
+      },
+      "queue_item_id": "queue-safety-priority-repair",
+      "selected_task": {
+        "approval_status": "approved",
+        "target_agent": "LogicIRRepairAgent",
+        "task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001",
+        "task_type": "repair_candidate_logic_ir"
+      },
+      "slice_id": "first-approved-candidate-repair-slice",
+      "status": "pass"
+    },
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-EV-SIMULATION-RESULT-FAILED",
+        "status": "executed_limited"
+      },
+      "artifact_paths": {
+        "candidate_review_packet": "<candidate_review_packet>",
+        "candidate_review_packet_export": "<candidate_review_packet_export>",
+        "repair_loop_result": "<repair_loop_result>",
+        "repaired_candidate_packet": "<repaired_candidate_packet>"
+      },
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "execution": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "slice_status": "pass",
+        "status": "pass"
+      },
+      "preflight": {
+        "artifact_paths": {},
+        "command": "make multi-agent-construction-readiness",
+        "readiness_id": "multi-agent-construction-readiness-v0.1",
+        "ready_for_long_running_development": true,
+        "returncode": 0,
+        "status": "pass",
+        "stderr": ""
+      },
+      "queue_contract": {
+        "approval_id": "APPROVAL-EVIDENCE-CANDIDATE-REPAIR-SLICE-001",
+        "readiness_command": "make multi-agent-construction-readiness",
+        "runner_contract": "candidate_review_packet_export_v0_1",
+        "source_finding_code": "EV_SIMULATION_RESULT_FAILED",
+        "target_agent": "SimulationTestRepairAgent",
+        "task_class": "EvidenceRepairTask",
+        "task_type": "repair_candidate_test_oracle",
+        "template_id": "approved-candidate-repair-task-template-v0.1"
+      },
+      "queue_item_id": "queue-evidence-simulation-result-repair",
+      "selected_task": {
+        "approval_status": "approved",
+        "target_agent": "SimulationTestRepairAgent",
+        "task_id": "TASK-CE-EV-SIMULATION-RESULT-FAILED",
+        "task_type": "repair_candidate_test_oracle"
+      },
+      "slice_id": "evidence-approved-candidate-repair-slice",
+      "status": "pass"
+    },
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-EV-TEST-RESULT-MISSING",
+        "status": "executed_limited"
+      },
+      "artifact_paths": {
+        "candidate_review_packet": "<candidate_review_packet>",
+        "candidate_review_packet_export": "<candidate_review_packet_export>",
+        "repair_loop_result": "<repair_loop_result>",
+        "repaired_candidate_packet": "<repaired_candidate_packet>"
+      },
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "execution": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "slice_status": "pass",
+        "status": "pass"
+      },
+      "preflight": {
+        "artifact_paths": {},
+        "command": "make multi-agent-construction-readiness",
+        "readiness_id": "multi-agent-construction-readiness-v0.1",
+        "ready_for_long_running_development": true,
+        "returncode": 0,
+        "status": "pass",
+        "stderr": ""
+      },
+      "queue_contract": {
+        "approval_id": "APPROVAL-MISSING-TEST-RESULT-CANDIDATE-REPAIR-SLICE-001",
+        "readiness_command": "make multi-agent-construction-readiness",
+        "runner_contract": "candidate_review_packet_export_v0_1",
+        "source_finding_code": "EV_TEST_RESULT_MISSING",
+        "target_agent": "SimulationTestRepairAgent",
+        "task_class": "EvidenceRepairTask",
+        "task_type": "repair_candidate_test_oracle",
+        "template_id": "approved-candidate-repair-task-template-v0.1"
+      },
+      "queue_item_id": "queue-evidence-test-result-missing-repair",
+      "selected_task": {
+        "approval_status": "approved",
+        "target_agent": "SimulationTestRepairAgent",
+        "task_id": "TASK-CE-EV-TEST-RESULT-MISSING",
+        "task_type": "repair_candidate_test_oracle"
+      },
+      "slice_id": "missing-test-result-approved-candidate-repair-slice",
+      "status": "pass"
+    },
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-REQ-AMBIGUITY-UNRESOLVED",
+        "status": "executed_limited"
+      },
+      "artifact_paths": {
+        "candidate_review_packet": "<candidate_review_packet>",
+        "candidate_review_packet_export": "<candidate_review_packet_export>",
+        "repair_loop_result": "<repair_loop_result>",
+        "repaired_candidate_packet": "<repaired_candidate_packet>"
+      },
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "execution": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "slice_status": "pass",
+        "status": "pass"
+      },
+      "preflight": {
+        "artifact_paths": {},
+        "command": "make multi-agent-construction-readiness",
+        "readiness_id": "multi-agent-construction-readiness-v0.1",
+        "ready_for_long_running_development": true,
+        "returncode": 0,
+        "status": "pass",
+        "stderr": ""
+      },
+      "queue_contract": {
+        "approval_id": "APPROVAL-REQUIREMENT-AMBIGUITY-REPAIR-SLICE-001",
+        "readiness_command": "make multi-agent-construction-readiness",
+        "runner_contract": "candidate_review_packet_export_v0_1",
+        "source_finding_code": "REQ_AMBIGUITY_UNRESOLVED",
+        "target_agent": "RequirementRepairAgent",
+        "task_class": "RequirementRepairTask",
+        "task_type": "repair_structured_requirement_candidate",
+        "template_id": "approved-candidate-repair-task-template-v0.1"
+      },
+      "queue_item_id": "queue-requirement-ambiguity-repair",
+      "selected_task": {
+        "approval_status": "approved",
+        "target_agent": "RequirementRepairAgent",
+        "task_id": "TASK-CE-REQ-AMBIGUITY-UNRESOLVED",
+        "task_type": "repair_structured_requirement_candidate"
+      },
+      "slice_id": "requirement-approved-candidate-repair-slice",
+      "status": "pass"
+    }
+  ],
+  "kind": "ai-fantui-approved-candidate-task-queue-summary",
+  "queue_id": "approved-candidate-task-queue-v0.2",
+  "queue_order": [
+    "queue-safety-priority-repair",
+    "queue-evidence-simulation-result-repair",
+    "queue-evidence-test-result-missing-repair",
+    "queue-requirement-ambiguity-repair"
+  ],
+  "ready_for_long_running_development": true,
+  "status": "pass",
+  "task_count": 4
+}

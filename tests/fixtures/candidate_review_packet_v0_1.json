@@ -1,0 +1,64 @@
+{
+  "$schema": "https://well-harness.local/json_schema/candidate_review_packet_v0_1.schema.json",
+  "kind": "ai-fantui-candidate-review-packet",
+  "reviewer": {
+    "agent_name": "CandidateReviewPacketAgent",
+    "status": "blocked_pending_approval",
+    "loop_count": 1
+  },
+  "boundary": {
+    "candidate_state": "sandbox_candidate",
+    "truth_effect": "none",
+    "controller_truth_modified": false,
+    "certification_claim": "none"
+  },
+  "source_artifacts": {
+    "logic_ir_agent": "LogicIRAgent",
+    "logic_ir_task_id": "TASK-2026-001",
+    "task_package_status": "tasks_ready_for_review",
+    "execution_plan_status": "dry_run_ready",
+    "execution_evidence_status": "blocked_missing_approval"
+  },
+  "summary": {
+    "total_findings": 1,
+    "loop_count": 1,
+    "converged_loops": 0,
+    "blocked_loops": 1,
+    "needs_followup_loops": 0,
+    "open_findings": [
+      "CHECK_SAFETY_PRIORITY_001"
+    ]
+  },
+  "finding_chains": [
+    {
+      "loop_kind": "ai-fantui-safety-repair-loop",
+      "status": "blocked_missing_approval",
+      "finding": {
+        "code": "CHECK_SAFETY_PRIORITY_001",
+        "severity": "critical",
+        "task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001",
+        "transition_id": "T004"
+      },
+      "approval": {
+        "status": "missing",
+        "approval_id": "",
+        "approved_task_id": "",
+        "approved_by": ""
+      },
+      "repair": {
+        "actions": [],
+        "performed": false
+      },
+      "before": {
+        "safety_status": "fail",
+        "evidence_status": "pass",
+        "task_package_status": "tasks_ready_for_review",
+        "execution_plan_status": "dry_run_ready",
+        "execution_evidence_status": "blocked_missing_approval"
+      },
+      "after": {},
+      "convergence": {}
+    }
+  ],
+  "human_review_required": true
+}

@@ -1,0 +1,158 @@
+{
+  "$schema": "https://well-harness.local/json_schema/approved_candidate_task_queue_summary_v0_1.schema.json",
+  "aggregate": {
+    "controller_truth_modified": false,
+    "converged": 3,
+    "executed_limited": 3,
+    "open_findings": [],
+    "passed": 3,
+    "preflight_passed": 3,
+    "task_count": 3,
+    "ui_layout_modified": false
+  },
+  "artifact_path_keys": [
+    "queue_summary"
+  ],
+  "deterministic_gates": {
+    "approved_task_shell": "pass",
+    "child_review_exports": "pass",
+    "local_gate": "pass",
+    "preflight_readiness": "pass"
+  },
+  "gate_id": "approved-candidate-task-queue",
+  "items": [
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001",
+        "status": "executed_limited"
+      },
+      "artifact_path_keys": [
+        "candidate_review_packet",
+        "candidate_review_packet_export",
+        "repair_loop_result",
+        "repaired_candidate_packet"
+      ],
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "execution": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "slice_status": "pass",
+        "status": "pass"
+      },
+      "preflight": {
+        "command": "make multi-agent-construction-readiness",
+        "ready_for_long_running_development": true,
+        "returncode": 0,
+        "status": "pass"
+      },
+      "queue_item_id": "queue-safety-priority-repair",
+      "selected_task": {
+        "approval_status": "approved",
+        "target_agent": "LogicIRRepairAgent",
+        "task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001",
+        "task_type": "repair_candidate_logic_ir"
+      },
+      "slice_id": "first-approved-candidate-repair-slice",
+      "status": "pass"
+    },
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-EV-SIMULATION-RESULT-FAILED",
+        "status": "executed_limited"
+      },
+      "artifact_path_keys": [
+        "candidate_review_packet",
+        "candidate_review_packet_export",
+        "repair_loop_result",
+        "repaired_candidate_packet"
+      ],
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "execution": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "slice_status": "pass",
+        "status": "pass"
+      },
+      "preflight": {
+        "command": "make multi-agent-construction-readiness",
+        "ready_for_long_running_development": true,
+        "returncode": 0,
+        "status": "pass"
+      },
+      "queue_item_id": "queue-evidence-simulation-result-repair",
+      "selected_task": {
+        "approval_status": "approved",
+        "target_agent": "SimulationTestRepairAgent",
+        "task_id": "TASK-CE-EV-SIMULATION-RESULT-FAILED",
+        "task_type": "repair_candidate_test_oracle"
+      },
+      "slice_id": "evidence-approved-candidate-repair-slice",
+      "status": "pass"
+    },
+    {
+      "approved_task_shell": {
+        "approval_status": "approved",
+        "selected_task_id": "TASK-CE-EV-TEST-RESULT-MISSING",
+        "status": "executed_limited"
+      },
+      "artifact_path_keys": [
+        "candidate_review_packet",
+        "candidate_review_packet_export",
+        "repair_loop_result",
+        "repaired_candidate_packet"
+      ],
+      "boundary": {
+        "controller_truth_modified": false,
+        "truth_effect": "none",
+        "ui_layout_modified": false
+      },
+      "execution": {
+        "finding_chain_statuses": [
+          "converged"
+        ],
+        "reviewer_status": "converged",
+        "slice_status": "pass",
+        "status": "pass"
+      },
+      "preflight": {
+        "command": "make multi-agent-construction-readiness",
+        "ready_for_long_running_development": true,
+        "returncode": 0,
+        "status": "pass"
+      },
+      "queue_item_id": "queue-evidence-test-result-missing-repair",
+      "selected_task": {
+        "approval_status": "approved",
+        "target_agent": "SimulationTestRepairAgent",
+        "task_id": "TASK-CE-EV-TEST-RESULT-MISSING",
+        "task_type": "repair_candidate_test_oracle"
+      },
+      "slice_id": "missing-test-result-approved-candidate-repair-slice",
+      "status": "pass"
+    }
+  ],
+  "kind": "ai-fantui-approved-candidate-task-queue-summary",
+  "queue_id": "approved-candidate-task-queue-v0.1",
+  "queue_order": [
+    "queue-safety-priority-repair",
+    "queue-evidence-simulation-result-repair",
+    "queue-evidence-test-result-missing-repair"
+  ],
+  "ready_for_long_running_development": true,
+  "status": "pass",
+  "task_count": 3
+}

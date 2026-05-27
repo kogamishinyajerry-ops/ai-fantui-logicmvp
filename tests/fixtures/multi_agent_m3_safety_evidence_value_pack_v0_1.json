@@ -1,0 +1,219 @@
+{
+  "$schema": "https://well-harness.local/json_schema/multi_agent_m3_safety_evidence_value_pack_v0_1.schema.json",
+  "aggregate": {
+    "controller_truth_modified": false,
+    "converged": 4,
+    "open_findings": [],
+    "passed": 4,
+    "slice_count": 4,
+    "ui_layout_modified": false
+  },
+  "artifact_paths": {
+    "evidence_failed_result_summary": "/tmp/ai-fantui-m3-check/evidence-failed-result/slice_summary.json",
+    "evidence_missing_result_summary": "/tmp/ai-fantui-m3-check/evidence-missing-result/slice_summary.json",
+    "package": "/tmp/ai-fantui-m3-check/multi_agent_m3_safety_evidence_value_pack_v0_1.json",
+    "safety_priority_summary": "/tmp/ai-fantui-m3-check/safety-priority/slice_summary.json",
+    "safety_undefined_signal_summary": "/tmp/ai-fantui-m3-check/safety-undefined-signal/slice_summary.json"
+  },
+  "deterministic_gates": {
+    "evidence_failed_result_slice": "pass",
+    "evidence_missing_result_slice": "pass",
+    "local_gate": "pass",
+    "review_packet_exports": "pass",
+    "safety_priority_slice": "pass",
+    "safety_undefined_signal_slice": "pass"
+  },
+  "finding_classes": {
+    "evidence": [
+      "EV_SIMULATION_RESULT_FAILED",
+      "EV_TEST_RESULT_MISSING"
+    ],
+    "safety": [
+      "CHECK_SAFETY_PRIORITY_001",
+      "CHECK_UNDEFINED_SIGNAL_001"
+    ]
+  },
+  "kind": "ai-fantui-multi-agent-m3-safety-evidence-value-pack",
+  "milestone": {
+    "budget": 48,
+    "claim": "candidate-only deterministic finding value pack",
+    "effort_unit": "施工队工时",
+    "id": "M3",
+    "name": "Safety/Evidence 工程价值增强包"
+  },
+  "package_id": "multi-agent-m3-safety-evidence-value-pack-v0.1",
+  "review_exports": {
+    "count": 4,
+    "export_ids": [
+      "m3-safety-priority-repair",
+      "m3-safety-undefined-signal-repair",
+      "m3-evidence-simulation-result-failed-repair",
+      "m3-evidence-test-result-missing-repair"
+    ],
+    "finding_chain_statuses": [
+      [
+        "converged"
+      ],
+      [
+        "converged"
+      ],
+      [
+        "converged"
+      ],
+      [
+        "converged"
+      ]
+    ],
+    "reviewer_statuses": [
+      "converged",
+      "converged",
+      "converged",
+      "converged"
+    ]
+  },
+  "slice_order": [
+    "m3-safety-priority-repair",
+    "m3-safety-undefined-signal-repair",
+    "m3-evidence-simulation-result-failed-repair",
+    "m3-evidence-test-result-missing-repair"
+  ],
+  "slices": [
+    {
+      "artifact_paths": {
+        "candidate_packet_before": "/tmp/ai-fantui-m3-check/safety-priority/candidate_packet_before.json",
+        "candidate_review_packet": "/tmp/ai-fantui-m3-check/safety-priority/candidate_review_packet_v0_1.json",
+        "candidate_review_packet_export": "/tmp/ai-fantui-m3-check/safety-priority/candidate_review_packet_export_v0_1.json",
+        "evidence_agent_report": "/tmp/ai-fantui-m3-check/safety-priority/evidence_agent_report.json",
+        "repair_loop_result": "/tmp/ai-fantui-m3-check/safety-priority/repair_loop_result.json",
+        "repaired_candidate_packet": "/tmp/ai-fantui-m3-check/safety-priority/repaired_candidate_packet.json",
+        "safety_guardian_report": "/tmp/ai-fantui-m3-check/safety-priority/safety_guardian_report.json",
+        "slice_summary": "/tmp/ai-fantui-m3-check/safety-priority/slice_summary.json",
+        "task_package": "/tmp/ai-fantui-m3-check/safety-priority/chief_engineer_task_package.json"
+      },
+      "convergence": {
+        "after_findings": [],
+        "before_findings": [
+          "CHECK_SAFETY_PRIORITY_001"
+        ],
+        "controller_truth_modified": false,
+        "execution_evidence_status": "no_task_available",
+        "execution_plan_status": "no_task_available",
+        "task_package_status": "no_tasks_required",
+        "ui_layout_modified": false
+      },
+      "finding_chain_statuses": [
+        "converged"
+      ],
+      "repair_loop_kind": "ai-fantui-safety-repair-loop",
+      "reviewer_status": "converged",
+      "selected_finding_code": "CHECK_SAFETY_PRIORITY_001",
+      "selected_task_agent": "LogicIRRepairAgent",
+      "selected_task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001",
+      "slice_id": "m3-safety-priority-repair",
+      "status": "pass"
+    },
+    {
+      "artifact_paths": {
+        "candidate_packet_before": "/tmp/ai-fantui-m3-check/safety-undefined-signal/candidate_packet_before.json",
+        "candidate_review_packet": "/tmp/ai-fantui-m3-check/safety-undefined-signal/candidate_review_packet_v0_1.json",
+        "candidate_review_packet_export": "/tmp/ai-fantui-m3-check/safety-undefined-signal/candidate_review_packet_export_v0_1.json",
+        "evidence_agent_report": "/tmp/ai-fantui-m3-check/safety-undefined-signal/evidence_agent_report.json",
+        "repair_loop_result": "/tmp/ai-fantui-m3-check/safety-undefined-signal/repair_loop_result.json",
+        "repaired_candidate_packet": "/tmp/ai-fantui-m3-check/safety-undefined-signal/repaired_candidate_packet.json",
+        "safety_guardian_report": "/tmp/ai-fantui-m3-check/safety-undefined-signal/safety_guardian_report.json",
+        "slice_summary": "/tmp/ai-fantui-m3-check/safety-undefined-signal/slice_summary.json",
+        "task_package": "/tmp/ai-fantui-m3-check/safety-undefined-signal/chief_engineer_task_package.json"
+      },
+      "convergence": {
+        "after_findings": [],
+        "before_findings": [
+          "CHECK_UNDEFINED_SIGNAL_001"
+        ],
+        "controller_truth_modified": false,
+        "execution_evidence_status": "no_task_available",
+        "execution_plan_status": "no_task_available",
+        "task_package_status": "no_tasks_required",
+        "ui_layout_modified": false
+      },
+      "finding_chain_statuses": [
+        "converged"
+      ],
+      "repair_loop_kind": "ai-fantui-safety-repair-loop",
+      "reviewer_status": "converged",
+      "selected_finding_code": "CHECK_UNDEFINED_SIGNAL_001",
+      "selected_task_agent": "LogicIRRepairAgent",
+      "selected_task_id": "TASK-CE-CHECK-UNDEFINED-SIGNAL-001",
+      "slice_id": "m3-safety-undefined-signal-repair",
+      "status": "pass"
+    },
+    {
+      "artifact_paths": {
+        "candidate_packet_before": "/tmp/ai-fantui-m3-check/evidence-failed-result/candidate_packet_before.json",
+        "candidate_review_packet": "/tmp/ai-fantui-m3-check/evidence-failed-result/candidate_review_packet_v0_1.json",
+        "candidate_review_packet_export": "/tmp/ai-fantui-m3-check/evidence-failed-result/candidate_review_packet_export_v0_1.json",
+        "evidence_agent_report": "/tmp/ai-fantui-m3-check/evidence-failed-result/evidence_agent_report.json",
+        "repair_loop_result": "/tmp/ai-fantui-m3-check/evidence-failed-result/repair_loop_result.json",
+        "repaired_candidate_packet": "/tmp/ai-fantui-m3-check/evidence-failed-result/repaired_candidate_packet.json",
+        "safety_guardian_report": "/tmp/ai-fantui-m3-check/evidence-failed-result/safety_guardian_report.json",
+        "slice_summary": "/tmp/ai-fantui-m3-check/evidence-failed-result/slice_summary.json",
+        "task_package": "/tmp/ai-fantui-m3-check/evidence-failed-result/chief_engineer_task_package.json"
+      },
+      "convergence": {
+        "after_findings": [],
+        "before_findings": [
+          "EV_SIMULATION_RESULT_FAILED"
+        ],
+        "controller_truth_modified": false,
+        "execution_evidence_status": "no_task_available",
+        "execution_plan_status": "no_task_available",
+        "task_package_status": "no_tasks_required",
+        "ui_layout_modified": false
+      },
+      "finding_chain_statuses": [
+        "converged"
+      ],
+      "repair_loop_kind": "ai-fantui-evidence-repair-loop",
+      "reviewer_status": "converged",
+      "selected_finding_code": "EV_SIMULATION_RESULT_FAILED",
+      "selected_task_agent": "SimulationTestRepairAgent",
+      "selected_task_id": "TASK-CE-EV-SIMULATION-RESULT-FAILED",
+      "slice_id": "m3-evidence-simulation-result-failed-repair",
+      "status": "pass"
+    },
+    {
+      "artifact_paths": {
+        "candidate_packet_before": "/tmp/ai-fantui-m3-check/evidence-missing-result/candidate_packet_before.json",
+        "candidate_review_packet": "/tmp/ai-fantui-m3-check/evidence-missing-result/candidate_review_packet_v0_1.json",
+        "candidate_review_packet_export": "/tmp/ai-fantui-m3-check/evidence-missing-result/candidate_review_packet_export_v0_1.json",
+        "evidence_agent_report": "/tmp/ai-fantui-m3-check/evidence-missing-result/evidence_agent_report.json",
+        "repair_loop_result": "/tmp/ai-fantui-m3-check/evidence-missing-result/repair_loop_result.json",
+        "repaired_candidate_packet": "/tmp/ai-fantui-m3-check/evidence-missing-result/repaired_candidate_packet.json",
+        "safety_guardian_report": "/tmp/ai-fantui-m3-check/evidence-missing-result/safety_guardian_report.json",
+        "slice_summary": "/tmp/ai-fantui-m3-check/evidence-missing-result/slice_summary.json",
+        "task_package": "/tmp/ai-fantui-m3-check/evidence-missing-result/chief_engineer_task_package.json"
+      },
+      "convergence": {
+        "after_findings": [],
+        "before_findings": [
+          "EV_TEST_RESULT_MISSING"
+        ],
+        "controller_truth_modified": false,
+        "execution_evidence_status": "no_task_available",
+        "execution_plan_status": "no_task_available",
+        "task_package_status": "no_tasks_required",
+        "ui_layout_modified": false
+      },
+      "finding_chain_statuses": [
+        "converged"
+      ],
+      "repair_loop_kind": "ai-fantui-evidence-repair-loop",
+      "reviewer_status": "converged",
+      "selected_finding_code": "EV_TEST_RESULT_MISSING",
+      "selected_task_agent": "SimulationTestRepairAgent",
+      "selected_task_id": "TASK-CE-EV-TEST-RESULT-MISSING",
+      "slice_id": "m3-evidence-test-result-missing-repair",
+      "status": "pass"
+    }
+  ],
+  "status": "pass"
+}

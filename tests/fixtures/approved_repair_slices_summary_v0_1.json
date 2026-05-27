@@ -1,0 +1,85 @@
+{
+  "$schema": "https://well-harness.local/json_schema/approved_repair_slices_summary_v0_1.schema.json",
+  "aggregate": {
+    "controller_truth_modified": false,
+    "converged": 2,
+    "open_findings": [],
+    "passed": 2,
+    "slice_count": 2,
+    "ui_layout_modified": false
+  },
+  "artifact_paths": {
+    "evidence_summary": "/tmp/ai-fantui-approved-repair-slices/evidence/slice_summary.json",
+    "safety_summary": "/tmp/ai-fantui-approved-repair-slices/safety/slice_summary.json",
+    "summary": "/tmp/ai-fantui-approved-repair-slices/approved_repair_slices_summary.json"
+  },
+  "deterministic_gates": {
+    "evidence_slice": "pass",
+    "local_gate": "pass",
+    "review_packet_exports": "pass",
+    "safety_slice": "pass"
+  },
+  "gate_id": "approved-repair-slices",
+  "kind": "ai-fantui-approved-repair-slices-summary",
+  "slice_order": [
+    "first-approved-candidate-repair-slice",
+    "evidence-approved-candidate-repair-slice"
+  ],
+  "slices": [
+    {
+      "artifact_paths": {
+        "candidate_review_packet": "/tmp/ai-fantui-approved-repair-slices/safety/candidate_review_packet_v0_1.json",
+        "candidate_review_packet_export": "/tmp/ai-fantui-approved-repair-slices/safety/candidate_review_packet_export_v0_1.json",
+        "repair_loop_result": "/tmp/ai-fantui-approved-repair-slices/safety/repair_loop_result.json",
+        "repaired_candidate_packet": "/tmp/ai-fantui-approved-repair-slices/safety/repaired_candidate_packet.json"
+      },
+      "convergence": {
+        "after_findings": [],
+        "before_findings": [
+          "CHECK_SAFETY_PRIORITY_001"
+        ],
+        "controller_truth_modified": false,
+        "execution_evidence_status": "no_task_available",
+        "execution_plan_status": "no_task_available",
+        "task_package_status": "no_tasks_required",
+        "ui_layout_modified": false
+      },
+      "finding_chain_statuses": [
+        "converged"
+      ],
+      "reviewer_status": "converged",
+      "selected_task_agent": "LogicIRRepairAgent",
+      "selected_task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001",
+      "slice_id": "first-approved-candidate-repair-slice",
+      "status": "pass"
+    },
+    {
+      "artifact_paths": {
+        "candidate_review_packet": "/tmp/ai-fantui-approved-repair-slices/evidence/candidate_review_packet_v0_1.json",
+        "candidate_review_packet_export": "/tmp/ai-fantui-approved-repair-slices/evidence/candidate_review_packet_export_v0_1.json",
+        "repair_loop_result": "/tmp/ai-fantui-approved-repair-slices/evidence/repair_loop_result.json",
+        "repaired_candidate_packet": "/tmp/ai-fantui-approved-repair-slices/evidence/repaired_candidate_packet.json"
+      },
+      "convergence": {
+        "after_findings": [],
+        "before_findings": [
+          "EV_SIMULATION_RESULT_FAILED"
+        ],
+        "controller_truth_modified": false,
+        "execution_evidence_status": "no_task_available",
+        "execution_plan_status": "no_task_available",
+        "task_package_status": "no_tasks_required",
+        "ui_layout_modified": false
+      },
+      "finding_chain_statuses": [
+        "converged"
+      ],
+      "reviewer_status": "converged",
+      "selected_task_agent": "SimulationTestRepairAgent",
+      "selected_task_id": "TASK-CE-EV-SIMULATION-RESULT-FAILED",
+      "slice_id": "evidence-approved-candidate-repair-slice",
+      "status": "pass"
+    }
+  ],
+  "status": "pass"
+}

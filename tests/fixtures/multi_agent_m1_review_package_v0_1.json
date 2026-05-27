@@ -1,0 +1,105 @@
+{
+  "$schema": "https://well-harness.local/json_schema/multi_agent_m1_review_package_v0_1.schema.json",
+  "acceptance_commands": [
+    "make multi-agent-m1-review-package",
+    "make verify-approved-candidate-task-queue-expansion-contract",
+    "make verify-approved-candidate-task-queue-artifact",
+    "make verify-approved-repair-slices-artifact",
+    "make test",
+    "PYTHONPATH=src:. python3 tools/run_gsd_validation_suite.py --format json --skip notion_control_plane",
+    "git diff --check"
+  ],
+  "aggregate": {
+    "approved_queue_task_count": 3,
+    "approved_repair_slice_count": 2,
+    "controller_truth_modified": false,
+    "converged_queue_tasks": 3,
+    "open_findings": [],
+    "ready_for_long_running_development": true,
+    "ui_layout_modified": false
+  },
+  "artifact_paths": {
+    "review_package": "/tmp/ai-fantui-multi-agent-m1-review-package/multi_agent_m1_review_package_v0_1.json"
+  },
+  "child_artifacts": {
+    "approved_candidate_task_queue_summary": "/tmp/ai-fantui-multi-agent-m1-review-package/approved-candidate-task-queue/approved_candidate_task_queue_summary.json",
+    "approved_repair_slices_summary": "/tmp/ai-fantui-multi-agent-m1-review-package/approved-repair-slices/approved_repair_slices_summary.json",
+    "construction_readiness_packet": "/tmp/ai-fantui-multi-agent-m1-review-package/multi-agent-construction-readiness/readiness_packet.json",
+    "project_manager_plan": "docs/coordination/multi-agent-deliverable-plan-for-project-manager.md",
+    "queue_expansion_contract": "tests/fixtures/approved_candidate_task_queue_expansion_contract_v0_1.json"
+  },
+  "deliverables": [
+    {
+      "evidence": [
+        "docs/json_schema/approved_candidate_task_queue_expansion_contract_v0_1.schema.json"
+      ],
+      "id": "S1",
+      "name": "queue expansion contract",
+      "status": "pass"
+    },
+    {
+      "evidence": [
+        "scripts/verify_approved_candidate_task_queue_expansion_contract.py",
+        "make verify-approved-candidate-task-queue-expansion-contract"
+      ],
+      "id": "S2",
+      "name": "expansion contract checker",
+      "status": "pass"
+    },
+    {
+      "evidence": [
+        "scripts/verify_approved_candidate_task_queue_artifact.py",
+        "make verify-approved-candidate-task-queue-artifact"
+      ],
+      "id": "S3",
+      "name": "approved queue artifact checker",
+      "status": "pass"
+    },
+    {
+      "evidence": [
+        "scripts/run_multi_agent_m1_review_package.py",
+        "scripts/verify_multi_agent_m1_review_package.py",
+        "make multi-agent-m1-review-package"
+      ],
+      "id": "S4",
+      "name": "review package local gate",
+      "status": "pass"
+    },
+    {
+      "evidence": [
+        "PYTHONPATH=src:. python3 tools/run_gsd_validation_suite.py --format json --skip notion_control_plane"
+      ],
+      "id": "S5",
+      "name": "GSD blocking validation reference",
+      "status": "pass"
+    }
+  ],
+  "deterministic_gates": {
+    "approved_candidate_task_queue_artifact": "pass",
+    "approved_repair_slices_artifact": "pass",
+    "construction_readiness": "pass",
+    "local_gate_entrypoint": "pass",
+    "queue_expansion_contract": "pass"
+  },
+  "kind": "ai-fantui-multi-agent-m1-review-package",
+  "milestone": {
+    "budget": 18,
+    "claim": "candidate-only engineering-chain milestone",
+    "effort_unit": "施工队工时",
+    "id": "M1",
+    "name": "可审查自动开发闭环样板"
+  },
+  "package_id": "multi-agent-m1-review-package-v0.1",
+  "review_boundaries": {
+    "certification_claim": "none",
+    "controller_truth_modified": false,
+    "restricted_paths": [
+      "src/well_harness/controller.py",
+      "src/well_harness/editable_control_model.py",
+      "src/well_harness/static/requirements_intake/"
+    ],
+    "truth_effect": "none",
+    "ui_layout_modified": false
+  },
+  "status": "pass"
+}

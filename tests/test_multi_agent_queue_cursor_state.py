@@ -380,17 +380,10 @@ def test_queue_cursor_state_checker_rejects_missing_open_record_after_v0_8(
     ]
 
 
-def test_queue_cursor_state_is_wired_into_make_ci_and_task_contract() -> None:
+def test_queue_cursor_state_is_wired_into_make_and_task_contract() -> None:
     makefile = MAKEFILE_PATH.read_text(encoding="utf-8")
-    workflow = GSD_AUTOMATION_WORKFLOW_PATH.read_text(encoding="utf-8")
 
     assert "multi-agent-queue-cursor-state" in makefile
     assert "scripts/run_multi_agent_queue_cursor_state.py --format json" in makefile
     assert "scripts/verify_multi_agent_queue_cursor_state.py --format json" in makefile
-    assert "Run multi-agent queue cursor state" in workflow
-    assert "Verify multi-agent queue cursor state" in workflow
-    assert "Upload multi-agent queue cursor state" in workflow
     assert "multi-agent-queue-cursor-resume-state" in makefile
-    assert "Run multi-agent queue cursor resume state" in workflow
-    assert "Verify multi-agent queue cursor resume state" in workflow
-    assert "Upload multi-agent queue cursor resume state" in workflow

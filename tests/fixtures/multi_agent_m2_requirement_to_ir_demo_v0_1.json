@@ -1,0 +1,77 @@
+{
+  "$schema": "https://well-harness.local/json_schema/multi_agent_m2_requirement_to_ir_demo_v0_1.schema.json",
+  "aggregate": {
+    "controller_truth_modified": false,
+    "open_findings": [],
+    "ready_for_m2_review": true,
+    "ui_layout_modified": false
+  },
+  "artifact_paths": {
+    "candidate_agent_output": "/tmp/ai-fantui-multi-agent-m2-requirement-to-ir-demo/candidate_agent_output_contract_v0_1.json",
+    "candidate_review_packet_export": "/tmp/ai-fantui-multi-agent-m2-requirement-to-ir-demo/candidate_review_packet_export_v0_1.json",
+    "demo_package": "/tmp/ai-fantui-multi-agent-m2-requirement-to-ir-demo/multi_agent_m2_requirement_to_ir_demo_v0_1.json",
+    "source_requirement": "/tmp/ai-fantui-multi-agent-m2-requirement-to-ir-demo/source_requirement.json",
+    "task_package": "/tmp/ai-fantui-multi-agent-m2-requirement-to-ir-demo/chief_engineer_task_package.json"
+  },
+  "deterministic_gates": {
+    "agent_output_contract": "pass",
+    "approved_task_shell": "pass",
+    "candidate_review_export": "pass",
+    "repair_loop_converged": "pass",
+    "requirement_traceability": "pass",
+    "safety_finding_detected": "pass"
+  },
+  "kind": "ai-fantui-multi-agent-m2-requirement-to-ir-demo",
+  "milestone": {
+    "budget": 36,
+    "claim": "candidate-only requirement-to-ir demo",
+    "effort_unit": "施工队工时",
+    "id": "M2",
+    "name": "Requirement to IR 最小产品演示包"
+  },
+  "package_id": "multi-agent-m2-requirement-to-ir-demo-v0.1",
+  "pipeline": {
+    "candidate_ir": {
+      "id": "ENG_START_CTRL_M2",
+      "state_count": 6,
+      "transition_count": 5
+    },
+    "evidence_findings_before": [],
+    "safety_findings_before": [
+      "CHECK_SAFETY_PRIORITY_001"
+    ],
+    "signal_count": 10,
+    "structured_requirement_count": 4
+  },
+  "review_export": {
+    "export_id": "multi-agent-m2-requirement-to-ir-demo",
+    "finding_chain_statuses": [
+      "converged"
+    ],
+    "reviewer_status": "converged"
+  },
+  "source_requirement": {
+    "domain": "engine_start_control",
+    "fixture_id": "engine-start-control-requirement-v0.1",
+    "text": "When the start switch is opened, engage the starter. When N2 reaches 25 percent, open the fuel valve and turn ignition on. If EGT exceeds 900 degC, abort the start. If no light-off is detected within 20 seconds, abort the start."
+  },
+  "status": "pass",
+  "structured_requirements": {
+    "ambiguities": [
+      "light-off debounce time is not defined",
+      "abort reset and restart policy is not defined"
+    ],
+    "ids": [
+      "REQ-START-001",
+      "REQ-START-002",
+      "REQ-SAFE-001",
+      "REQ-SAFE-002"
+    ]
+  },
+  "task_package": {
+    "selected_agent": "LogicIRRepairAgent",
+    "selected_task_id": "TASK-CE-CHECK-SAFETY-PRIORITY-001",
+    "status": "tasks_ready_for_review",
+    "task_count": 1
+  }
+}

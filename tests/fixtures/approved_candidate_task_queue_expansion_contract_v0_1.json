@@ -1,0 +1,41 @@
+{
+  "$schema": "https://well-harness.local/json_schema/approved_candidate_task_queue_expansion_contract_v0_1.schema.json",
+  "kind": "ai-fantui-approved-candidate-task-queue-expansion-contract",
+  "current_queue_contract": {
+    "fixed_item_count": 3,
+    "mutable": false,
+    "queue_id": "approved-candidate-task-queue-v0.1",
+    "summary_artifact_name": "approved_candidate_task_queue_summary.json",
+    "summary_schema": "https://well-harness.local/json_schema/approved_candidate_task_queue_summary_v0_1.schema.json"
+  },
+  "expansion_policy": {
+    "append_only": true,
+    "new_task_requires": [
+      "schema_update",
+      "fixture_update",
+      "checker_update",
+      "focused_test",
+      "make_target",
+      "ci_checker_step",
+      "child_review_packet_export",
+      "readiness_preflight",
+      "approved_task_shell",
+      "boundary_check"
+    ],
+    "next_queue_id": "approved-candidate-task-queue-v0.2",
+    "review_rule": "new approved queue items must be added by versioned contract, never by weakening v0.1 checks"
+  },
+  "forbidden_files": [
+    "src/well_harness/controller.py",
+    "src/well_harness/editable_control_model.py",
+    "src/well_harness/static/requirements_intake/requirements_intake.css",
+    "src/well_harness/static/requirements_intake/requirements_intake.js",
+    "src/well_harness/static/requirements_intake/index.html"
+  ],
+  "verification_commands": [
+    "make verify-approved-candidate-task-queue-expansion-contract",
+    "make verify-approved-candidate-task-queue-artifact",
+    "make test",
+    "git diff --check"
+  ]
+}

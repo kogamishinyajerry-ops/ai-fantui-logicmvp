@@ -1,0 +1,381 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/multi_agent_m4_external_review_handoff_v0_1.schema.json",
+  "title": "Multi-Agent M4 External Review Handoff v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "package_id",
+    "status",
+    "milestone",
+    "review_summary",
+    "child_packages",
+    "deterministic_gates",
+    "residual_risks",
+    "acceptance_checklist",
+    "review_boundaries",
+    "aggregate",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/multi_agent_m4_external_review_handoff_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-multi-agent-m4-external-review-handoff"
+    },
+    "package_id": {
+      "const": "multi-agent-m4-external-review-handoff-v0.1"
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "budget",
+        "effort_unit",
+        "claim"
+      ],
+      "properties": {
+        "id": {
+          "const": "M4"
+        },
+        "name": {
+          "const": "外部审查交付包"
+        },
+        "budget": {
+          "const": 32
+        },
+        "effort_unit": {
+          "const": "施工队工时"
+        },
+        "claim": {
+          "const": "candidate-only external review handoff"
+        }
+      }
+    },
+    "review_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "readiness_status",
+        "milestones_included",
+        "machine_readable_package_count",
+        "human_readable_report_count"
+      ],
+      "properties": {
+        "readiness_status": {
+          "const": "ready_for_external_review"
+        },
+        "milestones_included": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "M1"
+            },
+            {
+              "const": "M2"
+            },
+            {
+              "const": "M3"
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3
+        },
+        "machine_readable_package_count": {
+          "const": 3
+        },
+        "human_readable_report_count": {
+          "const": 2
+        }
+      }
+    },
+    "child_packages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "m1_review_package",
+        "m2_requirement_to_ir_demo",
+        "m3_safety_evidence_value_pack"
+      ],
+      "properties": {
+        "m1_review_package": {
+          "$ref": "#/$defs/childPackage"
+        },
+        "m2_requirement_to_ir_demo": {
+          "$ref": "#/$defs/childPackage"
+        },
+        "m3_safety_evidence_value_pack": {
+          "$ref": "#/$defs/childPackage"
+        }
+      }
+    },
+    "deterministic_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "m1_review_package",
+        "m2_requirement_to_ir_demo",
+        "m3_safety_evidence_value_pack",
+        "residual_risk_register",
+        "acceptance_checklist",
+        "human_review_report",
+        "local_gate_entrypoint"
+      ],
+      "properties": {
+        "m1_review_package": {
+          "const": "pass"
+        },
+        "m2_requirement_to_ir_demo": {
+          "const": "pass"
+        },
+        "m3_safety_evidence_value_pack": {
+          "const": "pass"
+        },
+        "residual_risk_register": {
+          "const": "pass"
+        },
+        "acceptance_checklist": {
+          "const": "pass"
+        },
+        "human_review_report": {
+          "const": "pass"
+        },
+        "local_gate_entrypoint": {
+          "const": "pass"
+        }
+      }
+    },
+    "residual_risks": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "$ref": "#/$defs/residualRisk"
+      }
+    },
+    "acceptance_checklist": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "$ref": "#/$defs/checklistItem"
+      }
+    },
+    "review_boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "truth_effect",
+        "certification_claim",
+        "controller_truth_modified",
+        "ui_layout_modified",
+        "restricted_paths"
+      ],
+      "properties": {
+        "truth_effect": {
+          "const": "none"
+        },
+        "certification_claim": {
+          "const": "none"
+        },
+        "controller_truth_modified": {
+          "type": "boolean"
+        },
+        "ui_layout_modified": {
+          "type": "boolean"
+        },
+        "restricted_paths": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "milestone_count",
+        "child_package_count",
+        "residual_risk_count",
+        "blocking_residual_risk_count",
+        "open_findings",
+        "controller_truth_modified",
+        "ui_layout_modified",
+        "ready_for_external_review"
+      ],
+      "properties": {
+        "milestone_count": {
+          "const": 3
+        },
+        "child_package_count": {
+          "const": 3
+        },
+        "residual_risk_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocking_residual_risk_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "open_findings": {
+          "type": "array"
+        },
+        "controller_truth_modified": {
+          "type": "boolean"
+        },
+        "ui_layout_modified": {
+          "type": "boolean"
+        },
+        "ready_for_external_review": {
+          "type": "boolean"
+        }
+      }
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "handoff_package",
+        "human_review_report",
+        "project_manager_plan",
+        "engineering_system_mvp_doc"
+      ],
+      "properties": {
+        "handoff_package": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "human_review_report": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "project_manager_plan": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "engineering_system_mvp_doc": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "childPackage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "package_id",
+        "status",
+        "checker_status",
+        "path"
+      ],
+      "properties": {
+        "key": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "package_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "status": {
+          "const": "pass"
+        },
+        "checker_status": {
+          "const": "pass"
+        },
+        "path": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "residualRisk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "severity",
+        "status",
+        "blocking",
+        "owner",
+        "mitigation"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "title": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "severity": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "status": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "blocking": {
+          "type": "boolean"
+        },
+        "owner": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "mitigation": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "checklistItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "text",
+        "status",
+        "evidence"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "text": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "status": {
+          "const": "pass"
+        },
+        "evidence": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    }
+  },
+  "x-well-harness-m4-external-review-handoff": {
+    "schema_version": "0.1",
+    "scope": "M4 machine-readable external review handoff package",
+    "truth_effect": "none",
+    "controller_truth_modified": false
+  }
+}

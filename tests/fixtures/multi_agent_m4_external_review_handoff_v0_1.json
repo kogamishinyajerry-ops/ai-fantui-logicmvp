@@ -1,0 +1,178 @@
+{
+  "$schema": "https://well-harness.local/json_schema/multi_agent_m4_external_review_handoff_v0_1.schema.json",
+  "acceptance_checklist": [
+    {
+      "evidence": [
+        "make multi-agent-m1-review-package"
+      ],
+      "id": "AC-M4-001",
+      "status": "pass",
+      "text": "M1 external review package is generated and verified."
+    },
+    {
+      "evidence": [
+        "make multi-agent-m2-requirement-to-ir-demo"
+      ],
+      "id": "AC-M4-002",
+      "status": "pass",
+      "text": "M2 Requirement-to-IR demo package is generated and verified."
+    },
+    {
+      "evidence": [
+        "make multi-agent-m3-safety-evidence-value-pack"
+      ],
+      "id": "AC-M4-003",
+      "status": "pass",
+      "text": "M3 Safety/Evidence value pack is generated and verified."
+    },
+    {
+      "evidence": [
+        "residual_risks[*].blocking == false"
+      ],
+      "id": "AC-M4-004",
+      "status": "pass",
+      "text": "Residual risks are explicit and non-blocking for external review handoff."
+    },
+    {
+      "evidence": [
+        "review_boundaries.controller_truth_modified == false"
+      ],
+      "id": "AC-M4-005",
+      "status": "pass",
+      "text": "Candidate-only boundaries remain intact."
+    },
+    {
+      "evidence": [
+        "external_review_handoff_report.md"
+      ],
+      "id": "AC-M4-006",
+      "status": "pass",
+      "text": "Human-readable handoff report is emitted with the package."
+    },
+    {
+      "evidence": [
+        ".github/workflows/gsd-automation.yml"
+      ],
+      "id": "AC-M4-007",
+      "status": "pass",
+      "text": "CI can upload the M4 handoff artifact tree."
+    }
+  ],
+  "aggregate": {
+    "blocking_residual_risk_count": 0,
+    "child_package_count": 3,
+    "controller_truth_modified": false,
+    "milestone_count": 3,
+    "open_findings": [],
+    "ready_for_external_review": true,
+    "residual_risk_count": 4,
+    "ui_layout_modified": false
+  },
+  "artifact_paths": {
+    "engineering_system_mvp_doc": "docs/coordination/multi-agent-control-logic-engineering-system-mvp.md",
+    "handoff_package": "/tmp/ai-fantui-m4-check/multi_agent_m4_external_review_handoff_v0_1.json",
+    "human_review_report": "/tmp/ai-fantui-m4-check/external_review_handoff_report.md",
+    "project_manager_plan": "docs/coordination/multi-agent-deliverable-plan-for-project-manager.md"
+  },
+  "child_packages": {
+    "m1_review_package": {
+      "checker_status": "pass",
+      "key": "m1_review_package",
+      "package_id": "multi-agent-m1-review-package-v0.1",
+      "path": "/tmp/ai-fantui-m4-check/m1-review-package/multi_agent_m1_review_package_v0_1.json",
+      "status": "pass"
+    },
+    "m2_requirement_to_ir_demo": {
+      "checker_status": "pass",
+      "key": "m2_requirement_to_ir_demo",
+      "package_id": "multi-agent-m2-requirement-to-ir-demo-v0.1",
+      "path": "/tmp/ai-fantui-m4-check/m2-requirement-to-ir-demo/multi_agent_m2_requirement_to_ir_demo_v0_1.json",
+      "status": "pass"
+    },
+    "m3_safety_evidence_value_pack": {
+      "checker_status": "pass",
+      "key": "m3_safety_evidence_value_pack",
+      "package_id": "multi-agent-m3-safety-evidence-value-pack-v0.1",
+      "path": "/tmp/ai-fantui-m4-check/m3-safety-evidence-value-pack/multi_agent_m3_safety_evidence_value_pack_v0_1.json",
+      "status": "pass"
+    }
+  },
+  "deterministic_gates": {
+    "acceptance_checklist": "pass",
+    "human_review_report": "pass",
+    "local_gate_entrypoint": "pass",
+    "m1_review_package": "pass",
+    "m2_requirement_to_ir_demo": "pass",
+    "m3_safety_evidence_value_pack": "pass",
+    "residual_risk_register": "pass"
+  },
+  "kind": "ai-fantui-multi-agent-m4-external-review-handoff",
+  "milestone": {
+    "budget": 32,
+    "claim": "candidate-only external review handoff",
+    "effort_unit": "施工队工时",
+    "id": "M4",
+    "name": "外部审查交付包"
+  },
+  "package_id": "multi-agent-m4-external-review-handoff-v0.1",
+  "residual_risks": [
+    {
+      "blocking": false,
+      "id": "RR-CERT-001",
+      "mitigation": "Keep certification_claim fixed to none and require future certification planning as a separate gate.",
+      "owner": "HumanReviewAgent",
+      "severity": "high",
+      "status": "accepted_for_m4_review",
+      "title": "Candidate-only artifacts do not claim certification readiness."
+    },
+    {
+      "blocking": false,
+      "id": "RR-SIGNAL-001",
+      "mitigation": "Treat Safety repair signal stubs as review-required candidates, not approved interface truth.",
+      "owner": "InterfaceSignalAgent",
+      "severity": "high",
+      "status": "accepted_for_m4_review",
+      "title": "Generated signal stubs require ICD or signal-table confirmation."
+    },
+    {
+      "blocking": false,
+      "id": "RR-SCOPE-001",
+      "mitigation": "Use the M4 handoff as phase evidence and require new approved slices for broader control domains.",
+      "owner": "ChiefEngineerAgent",
+      "severity": "medium",
+      "status": "accepted_for_m4_review",
+      "title": "M2/M3 examples prove the chain, not a complete engine-control product."
+    },
+    {
+      "blocking": false,
+      "id": "RR-CONTROL-PLANE-001",
+      "mitigation": "Keep repo-local artifacts as the review truth and handle Notion or external sharing permissions separately.",
+      "owner": "ProjectManager",
+      "severity": "medium",
+      "status": "accepted_for_m4_review",
+      "title": "External control-plane sharing is separate from blocking code gates."
+    }
+  ],
+  "review_boundaries": {
+    "certification_claim": "none",
+    "controller_truth_modified": false,
+    "restricted_paths": [
+      "src/well_harness/controller.py",
+      "src/well_harness/editable_control_model.py",
+      "src/well_harness/static/requirements_intake/"
+    ],
+    "truth_effect": "none",
+    "ui_layout_modified": false
+  },
+  "review_summary": {
+    "human_readable_report_count": 2,
+    "machine_readable_package_count": 3,
+    "milestones_included": [
+      "M1",
+      "M2",
+      "M3"
+    ],
+    "readiness_status": "ready_for_external_review"
+  },
+  "status": "pass"
+}

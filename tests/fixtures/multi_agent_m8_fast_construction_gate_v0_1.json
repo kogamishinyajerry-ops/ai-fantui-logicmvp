@@ -1,0 +1,150 @@
+{
+  "$schema": "https://well-harness.local/json_schema/multi_agent_m8_fast_construction_gate_v0_1.schema.json",
+  "aggregate": {
+    "child_review_exports_valid": true,
+    "controller_truth_modified": false,
+    "fast_gate_check_count": 5,
+    "full_pytest_excluded_from_fast_gate": true,
+    "open_findings": [],
+    "queue_v0_2_converged": 4,
+    "queue_v0_2_task_count": 4,
+    "ready_for_slice_preflight": true,
+    "ui_layout_modified": false
+  },
+  "artifact_paths": {
+    "engineering_system_mvp_doc": "docs/coordination/multi-agent-control-logic-engineering-system-mvp.md",
+    "fast_gate_package": "/tmp/ai-fantui-multi-agent-m8-fast-construction-gate/multi_agent_m8_fast_construction_gate_v0_1.json",
+    "m6_template_package": "/tmp/ai-fantui-multi-agent-m8-fast-construction-gate/multi-agent-m6-queue-extension-template/multi_agent_m6_queue_extension_template_v0_1.json",
+    "project_manager_plan": "docs/coordination/multi-agent-deliverable-plan-for-project-manager.md",
+    "queue_v0_2_summary": "/tmp/ai-fantui-multi-agent-m8-fast-construction-gate/approved-candidate-task-queue-v0-2/approved_candidate_task_queue_summary_v0_2.json"
+  },
+  "critical_artifacts": {
+    "candidate_review_packet_export_fixture": "tests/fixtures/candidate_review_packet_export_v0_1.json",
+    "m6_template_package": "/tmp/ai-fantui-multi-agent-m8-fast-construction-gate/multi-agent-m6-queue-extension-template/multi_agent_m6_queue_extension_template_v0_1.json",
+    "m6_template_schema": "docs/json_schema/multi_agent_m6_queue_extension_template_v0_1.schema.json",
+    "queue_expansion_contract_fixture": "tests/fixtures/approved_candidate_task_queue_expansion_contract_v0_1.json",
+    "queue_v0_2_schema": "docs/json_schema/approved_candidate_task_queue_summary_v0_2.schema.json",
+    "queue_v0_2_summary": "/tmp/ai-fantui-multi-agent-m8-fast-construction-gate/approved-candidate-task-queue-v0-2/approved_candidate_task_queue_summary_v0_2.json"
+  },
+  "deterministic_gates": {
+    "boundary": "pass",
+    "candidate_review_packet_export": "pass",
+    "local_gate": "pass",
+    "m6_template_contract": "pass",
+    "queue_expansion_contract": "pass",
+    "queue_v0_2_artifact_checker": "pass",
+    "queue_v0_2_fixture_preflight": "pass"
+  },
+  "fast_checks": [
+    {
+      "command": "python3 scripts/verify_candidate_review_packet_export.py --format json",
+      "evidence": {
+        "fixture_match": true,
+        "reviewer_status": "blocked_pending_approval",
+        "schema_valid": true
+      },
+      "name": "candidate_review_packet_export",
+      "returncode": 0,
+      "status": "pass"
+    },
+    {
+      "command": "python3 scripts/run_approved_candidate_task_queue_v0_2.py --format json --artifact-dir /tmp/ai-fantui-multi-agent-m8-fast-construction-gate/approved-candidate-task-queue-v0-2",
+      "evidence": {
+        "converged": 4,
+        "preflight_mode": "fixture",
+        "queue_id": "approved-candidate-task-queue-v0.2",
+        "task_count": 4
+      },
+      "name": "queue_v0_2_fixture_preflight",
+      "returncode": 0,
+      "status": "pass"
+    },
+    {
+      "command": "python3 scripts/verify_approved_candidate_task_queue_v0_2_artifact.py --format json --artifact-dir /tmp/ai-fantui-multi-agent-m8-fast-construction-gate/approved-candidate-task-queue-v0-2",
+      "evidence": {
+        "aggregate": {
+          "controller_truth_modified": false,
+          "converged": 4,
+          "executed_limited": 4,
+          "open_findings": [],
+          "passed": 4,
+          "preflight_passed": 4,
+          "task_count": 4,
+          "ui_layout_modified": false
+        },
+        "append_only_valid": true,
+        "child_review_exports_valid": true,
+        "summary_schema_valid": true
+      },
+      "name": "queue_v0_2_artifact_checker",
+      "returncode": 0,
+      "status": "pass"
+    },
+    {
+      "command": "python3 scripts/verify_approved_candidate_task_queue_expansion_contract.py --format json",
+      "evidence": {
+        "append_only_ready": true,
+        "contract_schema_valid": true
+      },
+      "name": "queue_expansion_contract",
+      "returncode": 0,
+      "status": "pass"
+    },
+    {
+      "command": "python3 scripts/verify_multi_agent_m6_queue_extension_template.py --format json --package /tmp/ai-fantui-multi-agent-m8-fast-construction-gate/multi-agent-m6-queue-extension-template/multi_agent_m6_queue_extension_template_v0_1.json",
+      "evidence": {
+        "boundary_valid": true,
+        "m6_run_returncode": 0,
+        "schema_valid": true,
+        "task_class_matrix_valid": true
+      },
+      "name": "m6_template_contract",
+      "returncode": 0,
+      "status": "pass"
+    }
+  ],
+  "gate_policy": {
+    "entrypoint": "make multi-agent-fast-construction-gate",
+    "full_pytest_excluded": true,
+    "full_validation_reference": "PYTHONPATH=src:. python3 tools/run_gsd_validation_suite.py --format json --skip notion_control_plane",
+    "max_expected_runtime_seconds": 60,
+    "not_a_release_gate": true,
+    "purpose": "per-slice fast preflight before approved-task shell execution"
+  },
+  "kind": "ai-fantui-multi-agent-m8-fast-construction-gate",
+  "milestone": {
+    "budget": 30,
+    "claim": "candidate-only fast construction gate before approved task execution",
+    "effort_unit": "施工队工时",
+    "id": "M8",
+    "name": "快速施工 gate 拆分"
+  },
+  "package_id": "multi-agent-m8-fast-construction-gate-v0.1",
+  "preconditions": {
+    "requires_append_only_contract": true,
+    "requires_boundary_check": true,
+    "requires_child_review_exports": true,
+    "requires_queue_id": "approved-candidate-task-queue-v0.2",
+    "requires_queue_task_count": 4
+  },
+  "review_boundaries": {
+    "certification_claim": "none",
+    "controller_truth_modified": false,
+    "restricted_paths": [
+      "src/well_harness/controller.py",
+      "src/well_harness/editable_control_model.py",
+      "src/well_harness/static/requirements_intake/"
+    ],
+    "truth_effect": "none",
+    "ui_layout_modified": false
+  },
+  "status": "pass",
+  "validation_budget": {
+    "fast_gate_expected_seconds_under": 60,
+    "full_pytest_is_per_milestone_gate": true,
+    "last_full_validation_unit_tests_seconds": 404.227,
+    "reason": "Use this fast gate before each approved slice; keep full pytest and GSD validation as milestone or release gates.",
+    "remaining_margin_seconds": 75.773,
+    "unit_tests_timeout_seconds": 480
+  }
+}

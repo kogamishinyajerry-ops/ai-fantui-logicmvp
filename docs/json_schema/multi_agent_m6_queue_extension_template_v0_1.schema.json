@@ -1,0 +1,371 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/multi_agent_m6_queue_extension_template_v0_1.schema.json",
+  "title": "Multi-Agent M6 Queue Extension Template v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "package_id",
+    "status",
+    "milestone",
+    "template_summary",
+    "preconditions",
+    "queue_item_template",
+    "task_class_matrix",
+    "append_only_controls",
+    "deterministic_gates",
+    "review_boundaries",
+    "aggregate",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/multi_agent_m6_queue_extension_template_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-multi-agent-m6-queue-extension-template"
+    },
+    "package_id": {
+      "const": "multi-agent-m6-queue-extension-template-v0.1"
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "budget",
+        "effort_unit",
+        "claim"
+      ],
+      "properties": {
+        "id": {
+          "const": "M6"
+        },
+        "name": {
+          "const": "队列扩展模板"
+        },
+        "budget": {
+          "const": 32
+        },
+        "effort_unit": {
+          "const": "施工队工时"
+        },
+        "claim": {
+          "const": "candidate-only approved queue extension template"
+        }
+      }
+    },
+    "template_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "readiness_status",
+        "template_id",
+        "next_queue_id",
+        "supported_task_classes"
+      ],
+      "properties": {
+        "readiness_status": {
+          "const": "ready_for_append_only_queue_growth"
+        },
+        "template_id": {
+          "const": "approved-candidate-repair-task-template-v0.1"
+        },
+        "next_queue_id": {
+          "const": "approved-candidate-task-queue-v0.2"
+        },
+        "supported_task_classes": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "SafetyRepairTask"
+            },
+            {
+              "const": "EvidenceRepairTask"
+            },
+            {
+              "const": "RequirementRepairTask"
+            }
+          ],
+          "minItems": 3,
+          "maxItems": 3
+        }
+      }
+    },
+    "preconditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_entrypoint",
+        "required_contract",
+        "v0_1_queue_is_fixed"
+      ],
+      "properties": {
+        "required_entrypoint": {
+          "const": "make multi-agent-construction-control-plane"
+        },
+        "required_contract": {
+          "const": "approved_candidate_task_queue_expansion_contract_v0_1"
+        },
+        "v0_1_queue_is_fixed": {
+          "const": true
+        }
+      }
+    },
+    "queue_item_template": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "template_id",
+        "required_fields",
+        "required_gates",
+        "required_artifacts",
+        "forbidden_effects"
+      ],
+      "properties": {
+        "template_id": {
+          "const": "approved-candidate-repair-task-template-v0.1"
+        },
+        "required_fields": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "required_gates": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "required_artifacts": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "forbidden_effects": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "task_class_matrix": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "$ref": "#/$defs/taskClassRoute"
+      }
+    },
+    "append_only_controls": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "current_queue_id",
+        "next_queue_id",
+        "preserve_existing_queue_order",
+        "requires_new_summary_schema",
+        "requires_fixture_migration",
+        "requires_checker_update",
+        "requires_child_review_export"
+      ],
+      "properties": {
+        "current_queue_id": {
+          "const": "approved-candidate-task-queue-v0.1"
+        },
+        "next_queue_id": {
+          "const": "approved-candidate-task-queue-v0.2"
+        },
+        "preserve_existing_queue_order": {
+          "const": true
+        },
+        "requires_new_summary_schema": {
+          "const": true
+        },
+        "requires_fixture_migration": {
+          "const": true
+        },
+        "requires_checker_update": {
+          "const": true
+        },
+        "requires_child_review_export": {
+          "const": true
+        }
+      }
+    },
+    "deterministic_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "m5_control_plane_entrypoint",
+        "queue_expansion_contract",
+        "template_schema",
+        "append_only_controls",
+        "task_class_matrix",
+        "operator_template_guide",
+        "local_gate_entrypoint"
+      ],
+      "properties": {
+        "m5_control_plane_entrypoint": {
+          "const": "pass"
+        },
+        "queue_expansion_contract": {
+          "const": "pass"
+        },
+        "template_schema": {
+          "const": "pass"
+        },
+        "append_only_controls": {
+          "const": "pass"
+        },
+        "task_class_matrix": {
+          "const": "pass"
+        },
+        "operator_template_guide": {
+          "const": "pass"
+        },
+        "local_gate_entrypoint": {
+          "const": "pass"
+        }
+      }
+    },
+    "review_boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "truth_effect",
+        "certification_claim",
+        "controller_truth_modified",
+        "ui_layout_modified",
+        "restricted_paths"
+      ],
+      "properties": {
+        "truth_effect": {
+          "const": "none"
+        },
+        "certification_claim": {
+          "const": "none"
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "ui_layout_modified": {
+          "const": false
+        },
+        "restricted_paths": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "template_count",
+        "supported_task_class_count",
+        "open_findings",
+        "controller_truth_modified",
+        "ui_layout_modified",
+        "ready_for_queue_expansion"
+      ],
+      "properties": {
+        "template_count": {
+          "const": 1
+        },
+        "supported_task_class_count": {
+          "const": 3
+        },
+        "open_findings": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "ui_layout_modified": {
+          "const": false
+        },
+        "ready_for_queue_expansion": {
+          "const": true
+        }
+      }
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "template_package",
+        "operator_template_guide",
+        "expansion_contract",
+        "project_manager_plan",
+        "engineering_system_mvp_doc"
+      ],
+      "properties": {
+        "template_package": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "operator_template_guide": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "expansion_contract": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "project_manager_plan": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "engineering_system_mvp_doc": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "taskClassRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_class",
+        "finding_selector",
+        "target_agent",
+        "task_type",
+        "repair_loop_kind",
+        "required_review_export"
+      ],
+      "properties": {
+        "task_class": {
+          "enum": [
+            "SafetyRepairTask",
+            "EvidenceRepairTask",
+            "RequirementRepairTask"
+          ]
+        },
+        "finding_selector": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "target_agent": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "task_type": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "repair_loop_kind": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "required_review_export": {
+          "const": "candidate_review_packet_export_v0_1"
+        }
+      }
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      },
+      "minItems": 1
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

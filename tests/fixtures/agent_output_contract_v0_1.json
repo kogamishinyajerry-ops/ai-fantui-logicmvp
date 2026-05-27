@@ -1,0 +1,163 @@
+{
+  "$schema": "https://well-harness.local/json_schema/agent_output_contract_v0_1.schema.json",
+  "agent_output": {
+    "agent_name": "LogicIRAgent",
+    "task_id": "TASK-2026-001",
+    "input_artifacts": [
+      "REQ_SET_v0.1",
+      "SIGNAL_TABLE_v0.1"
+    ],
+    "output_artifacts": [
+      "LOGIC_IR_v0.1"
+    ],
+    "assumptions": [
+      "EGT_START_LIMIT source is not confirmed by an approved signal table."
+    ],
+    "open_issues": [
+      "Safety abort priority must be reviewed before any candidate promotion."
+    ],
+    "confidence": {
+      "level": "medium",
+      "reason": "The candidate IR is structurally complete but one safety priority is intentionally failed."
+    },
+    "validation": {
+      "schema_valid": true,
+      "deterministic_checks_passed": false,
+      "failed_checks": [
+        {
+          "code": "CHECK_SAFETY_PRIORITY_001",
+          "severity": "critical",
+          "message": "Transition T004 is a safety transition but is not marked with safety priority.",
+          "transition_id": "T004"
+        }
+      ]
+    },
+    "boundary": {
+      "candidate_state": "sandbox_candidate",
+      "truth_effect": "none",
+      "controller_truth_modified": false,
+      "certification_claim": "none"
+    },
+    "human_review_required": true,
+    "payload": {
+      "requirements": [
+        {
+          "id": "REQ-START-001",
+          "text": "When start command is active, enter the start sequence."
+        },
+        {
+          "id": "REQ-SAFE-001",
+          "text": "If EGT exceeds the start limit, abort the start."
+        }
+      ],
+      "signals": [
+        {
+          "name": "start_command",
+          "type": "boolean"
+        },
+        {
+          "name": "EGT",
+          "type": "float",
+          "unit": "degC"
+        },
+        {
+          "name": "EGT_START_LIMIT",
+          "type": "float",
+          "unit": "degC"
+        }
+      ],
+      "logic_ir": {
+        "id": "ENG_START_CTRL",
+        "type": "state_machine",
+        "states": [
+          "IDLE",
+          "START_REQUESTED",
+          "FUEL_ON",
+          "ABORTED"
+        ],
+        "transitions": [
+          {
+            "id": "T001",
+            "from": "IDLE",
+            "to": "START_REQUESTED",
+            "guard": "start_command == true",
+            "guard_signals": [
+              "start_command"
+            ],
+            "priority": "normal",
+            "trace": {
+              "requirements": [
+                "REQ-START-001"
+              ]
+            }
+          },
+          {
+            "id": "T003",
+            "from": "START_REQUESTED",
+            "to": "FUEL_ON",
+            "guard": "N2 > N2_FUEL_ON_THRESHOLD",
+            "guard_signals": [],
+            "priority": "normal",
+            "trace": {
+              "requirements": [
+                "REQ-START-001"
+              ]
+            }
+          },
+          {
+            "id": "T004",
+            "from": "FUEL_ON",
+            "to": "ABORTED",
+            "guard": "EGT > EGT_START_LIMIT",
+            "guard_signals": [
+              "EGT",
+              "EGT_START_LIMIT"
+            ],
+            "priority": "normal",
+            "safety_condition": true,
+            "trace": {
+              "requirements": [
+                "REQ-SAFE-001"
+              ]
+            }
+          }
+        ],
+        "invariants": [
+          {
+            "id": "INV001",
+            "expression": "EGT > EGT_START_LIMIT implies state == ABORTED",
+            "trace": {
+              "requirements": [
+                "REQ-SAFE-001"
+              ]
+            }
+          }
+        ]
+      },
+      "test_scenarios": [
+        {
+          "id": "TC-NORMAL-START-001",
+          "covers": [
+            "REQ-START-001"
+          ]
+        },
+        {
+          "id": "TC-HOT-START-ABORT-001",
+          "covers": [
+            "REQ-SAFE-001"
+          ]
+        }
+      ],
+      "simulation_results": [
+        {
+          "scenario_id": "TC-NORMAL-START-001",
+          "status": "pass"
+        },
+        {
+          "scenario_id": "TC-HOT-START-ABORT-001",
+          "status": "pass"
+        }
+      ]
+    }
+  }
+}

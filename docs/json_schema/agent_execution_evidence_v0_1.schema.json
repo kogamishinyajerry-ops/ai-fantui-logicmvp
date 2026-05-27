@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/agent_execution_evidence_v0_1.schema.json",
+  "title": "well_harness agent execution evidence v0.1",
+  "description": "Machine-readable evidence package for explicitly approved, restricted Chief Engineer task execution.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "executor",
+    "approval",
+    "execution_boundary",
+    "selected_task",
+    "file_operations",
+    "deterministic_gates",
+    "verification_commands",
+    "evidence_package"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/agent_execution_evidence_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-agent-execution-evidence"
+    },
+    "executor": {
+      "$ref": "#/$defs/executor"
+    },
+    "approval": {
+      "$ref": "#/$defs/approval"
+    },
+    "execution_boundary": {
+      "$ref": "#/$defs/executionBoundary"
+    },
+    "selected_task": {
+      "type": "object"
+    },
+    "file_operations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/fileOperation"
+      }
+    },
+    "deterministic_gates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/deterministicGate"
+      }
+    },
+    "verification_commands": {
+      "$ref": "#/$defs/stringArray"
+    },
+    "evidence_package": {
+      "$ref": "#/$defs/evidencePackage"
+    }
+  },
+  "x-well-harness-agent-execution-evidence": {
+    "schema_name": "well_harness.agent_execution_shell",
+    "schema_version": "0.1",
+    "approval_required_before_restricted_execution": true,
+    "controller_truth_boundary": "forbidden"
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "executor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_name",
+        "source_task_package_id",
+        "status",
+        "selected_task_id"
+      ],
+      "properties": {
+        "agent_name": {
+          "const": "ApprovedTaskExecutionShell"
+        },
+        "source_task_package_id": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "executed_limited",
+            "blocked_missing_approval",
+            "blocked_task_mismatch",
+            "blocked_boundary_violation",
+            "no_task_available"
+          ]
+        },
+        "selected_task_id": {
+          "type": "string"
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "approval_id",
+        "approved_task_id",
+        "approved_by",
+        "approved_at"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "approved",
+            "missing",
+            "rejected",
+            "task_mismatch"
+          ]
+        },
+        "approval_id": {
+          "type": "string"
+        },
+        "approved_task_id": {
+          "type": "string"
+        },
+        "approved_by": {
+          "type": "string"
+        },
+        "approved_at": {
+          "type": "string"
+        }
+      }
+    },
+    "executionBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "restricted_execution",
+        "restricted_execution_performed",
+        "workspace_writes_performed",
+        "controller_truth_modified",
+        "ui_layout_modified"
+      ],
+      "properties": {
+        "restricted_execution": {
+          "type": "boolean"
+        },
+        "restricted_execution_performed": {
+          "type": "boolean"
+        },
+        "workspace_writes_performed": {
+          "type": "boolean"
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "ui_layout_modified": {
+          "const": false
+        }
+      }
+    },
+    "fileOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation",
+        "path",
+        "allowed",
+        "execution_status",
+        "reason"
+      ],
+      "properties": {
+        "operation": {
+          "const": "restricted_candidate_execution"
+        },
+        "path": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "allowed": {
+          "type": "boolean"
+        },
+        "execution_status": {
+          "enum": [
+            "executed",
+            "blocked",
+            "skipped"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "deterministicGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "status",
+        "detail"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "block",
+            "fail",
+            "pending"
+          ]
+        },
+        "detail": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "verificationSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "total",
+        "passed",
+        "failed",
+        "pending"
+      ],
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "passed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pending": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "evidencePackage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_package_hash",
+        "execution_plan_hash",
+        "evidence_material_hash",
+        "machine_readable",
+        "human_review_required",
+        "verification_summary",
+        "notes"
+      ],
+      "properties": {
+        "task_package_hash": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "execution_plan_hash": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "evidence_material_hash": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "machine_readable": {
+          "const": true
+        },
+        "human_review_required": {
+          "type": "boolean"
+        },
+        "verification_summary": {
+          "$ref": "#/$defs/verificationSummary"
+        },
+        "notes": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    }
+  }
+}

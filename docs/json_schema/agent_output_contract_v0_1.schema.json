@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/agent_output_contract_v0_1.schema.json",
+  "title": "well_harness agent output contract v0.1",
+  "description": "Machine-readable structure reference for candidate-only multi-agent engineering packets.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "agent_output"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/agent_output_contract_v0_1.schema.json"
+    },
+    "agent_output": {
+      "$ref": "#/$defs/agentOutput"
+    }
+  },
+  "x-well-harness-agent-output-contract": {
+    "schema_name": "well_harness.agent_output_contract",
+    "schema_version": "0.1",
+    "top_level_fields": [
+      "$schema",
+      "agent_output"
+    ],
+    "agent_output_fields": [
+      "agent_name",
+      "task_id",
+      "input_artifacts",
+      "output_artifacts",
+      "assumptions",
+      "open_issues",
+      "confidence",
+      "validation",
+      "boundary",
+      "human_review_required",
+      "payload"
+    ],
+    "boundary_fields": [
+      "candidate_state",
+      "truth_effect",
+      "controller_truth_modified",
+      "certification_claim"
+    ]
+  },
+  "$defs": {
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      }
+    },
+    "agentOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_name",
+        "task_id",
+        "input_artifacts",
+        "output_artifacts",
+        "assumptions",
+        "open_issues",
+        "confidence",
+        "validation",
+        "boundary",
+        "human_review_required",
+        "payload"
+      ],
+      "properties": {
+        "agent_name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "task_id": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "input_artifacts": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "output_artifacts": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "assumptions": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "open_issues": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "confidence": {
+          "$ref": "#/$defs/confidence"
+        },
+        "validation": {
+          "$ref": "#/$defs/validation"
+        },
+        "boundary": {
+          "$ref": "#/$defs/boundary"
+        },
+        "human_review_required": {
+          "type": "boolean"
+        },
+        "payload": {
+          "type": "object"
+        }
+      }
+    },
+    "confidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "reason"
+      ],
+      "properties": {
+        "level": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "reason": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_valid",
+        "deterministic_checks_passed",
+        "failed_checks"
+      ],
+      "properties": {
+        "schema_valid": {
+          "type": "boolean"
+        },
+        "deterministic_checks_passed": {
+          "type": "boolean"
+        },
+        "failed_checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/finding"
+          }
+        }
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_state",
+        "truth_effect",
+        "controller_truth_modified",
+        "certification_claim"
+      ],
+      "properties": {
+        "candidate_state": {
+          "enum": [
+            "sandbox_candidate",
+            "fault_injection_preparation",
+            "logic_ir_candidate",
+            "requirements_candidate"
+          ]
+        },
+        "truth_effect": {
+          "const": "none"
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "certification_claim": {
+          "const": "none"
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "integer"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "required": [
+        "code",
+        "severity",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warning",
+            "high",
+            "critical"
+          ]
+        },
+        "message": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  }
+}

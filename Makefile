@@ -9,6 +9,7 @@ EVIDENCE_UNKNOWN_REQUIREMENT_CANDIDATE_REPAIR_SLICE_ARTIFACT_DIR ?= /tmp/ai-fant
 EVIDENCE_UNKNOWN_TRACE_CANDIDATE_REPAIR_SLICE_ARTIFACT_DIR ?= /tmp/ai-fantui-evidence-unknown-trace-candidate-repair-slice
 SAFETY_TRANSITION_ENDPOINT_CANDIDATE_REPAIR_SLICE_ARTIFACT_DIR ?= /tmp/ai-fantui-safety-transition-endpoint-candidate-repair-slice
 SAFETY_UNREACHABLE_STATE_CANDIDATE_REPAIR_SLICE_ARTIFACT_DIR ?= /tmp/ai-fantui-safety-unreachable-state-candidate-repair-slice
+SAFETY_OUTPUT_COMMAND_CONFLICT_CANDIDATE_REPAIR_SLICE_ARTIFACT_DIR ?= /tmp/ai-fantui-safety-output-command-conflict-candidate-repair-slice
 APPROVED_REPAIR_SLICES_ARTIFACT_DIR ?= /tmp/ai-fantui-approved-repair-slices
 MULTI_AGENT_CONSTRUCTION_READINESS_ARTIFACT_DIR ?= /tmp/ai-fantui-multi-agent-construction-readiness
 APPROVED_CANDIDATE_TASK_QUEUE_ARTIFACT_DIR ?= /tmp/ai-fantui-approved-candidate-task-queue
@@ -19,6 +20,7 @@ APPROVED_CANDIDATE_TASK_QUEUE_V0_5_ARTIFACT_DIR ?= /tmp/ai-fantui-approved-candi
 APPROVED_CANDIDATE_TASK_QUEUE_V0_6_ARTIFACT_DIR ?= /tmp/ai-fantui-approved-candidate-task-queue-v0-6
 APPROVED_CANDIDATE_TASK_QUEUE_V0_7_ARTIFACT_DIR ?= /tmp/ai-fantui-approved-candidate-task-queue-v0-7
 APPROVED_CANDIDATE_TASK_QUEUE_V0_8_ARTIFACT_DIR ?= /tmp/ai-fantui-approved-candidate-task-queue-v0-8
+APPROVED_CANDIDATE_TASK_QUEUE_V0_9_ARTIFACT_DIR ?= /tmp/ai-fantui-approved-candidate-task-queue-v0-9
 MULTI_AGENT_QUEUE_RUN_LEDGER_ARTIFACT_DIR ?= /tmp/ai-fantui-multi-agent-queue-run-ledger
 MULTI_AGENT_QUEUE_CURSOR_STATE_ARTIFACT_DIR ?= /tmp/ai-fantui-multi-agent-queue-cursor-state
 MULTI_AGENT_QUEUE_CURSOR_RESUME_STATE_ARTIFACT_DIR ?= /tmp/ai-fantui-multi-agent-queue-cursor-resume-state
@@ -59,7 +61,7 @@ PROJECT_OWNER_FINAL_DECISION_PACKET_PATH ?= /tmp/ai-fantui-project-owner-externa
 PROJECT_OWNER_FINAL_DECISION_PATH ?= /tmp/ai-fantui-project-owner-external-review-handoff/project_owner_final_decision.json
 MULTI_AGENT_M21_STREAMED_LOGIC_AUTHORING_PLAN_ARTIFACT_DIR ?= /tmp/ai-fantui-multi-agent-m21-streamed-logic-authoring-plan
 
-.PHONY: dev test demo-html-reconstruction-mvp demo-html-reconstruction-browser-acceptance phase1-demo-mvp-review-package verify-phase1-demo-mvp-review-package verify-phase1-demo-mvp-ci-artifact phase1-demo-mvp-release-checklist phase1-demo-mvp-gate verify-phase1-demo-mvp-gate-artifact review-packet-export-regression first-candidate-repair-slice evidence-candidate-repair-slice missing-test-result-candidate-repair-slice evidence-unknown-requirement-candidate-repair-slice evidence-unknown-trace-candidate-repair-slice safety-transition-endpoint-candidate-repair-slice safety-unreachable-state-candidate-repair-slice approved-repair-slices verify-approved-repair-slices-artifact multi-agent-construction-readiness approved-candidate-task-queue verify-approved-candidate-task-queue-artifact verify-approved-candidate-task-queue-expansion-contract approved-candidate-task-queue-v0-2 verify-approved-candidate-task-queue-v0-2-artifact approved-candidate-task-queue-v0-3 verify-approved-candidate-task-queue-v0-3-artifact approved-candidate-task-queue-v0-4 verify-approved-candidate-task-queue-v0-4-artifact approved-candidate-task-queue-v0-5 verify-approved-candidate-task-queue-v0-5-artifact approved-candidate-task-queue-v0-6 verify-approved-candidate-task-queue-v0-6-artifact approved-candidate-task-queue-v0-7 verify-approved-candidate-task-queue-v0-7-artifact approved-candidate-task-queue-v0-8 verify-approved-candidate-task-queue-v0-8-artifact multi-agent-queue-run-ledger verify-multi-agent-queue-run-ledger multi-agent-queue-cursor-state verify-multi-agent-queue-cursor-state multi-agent-queue-cursor-resume-state verify-multi-agent-queue-cursor-resume-state project-manager-status-summary project-visibility-mvp-gate m21-streamed-authoring-revision-gate m21-streamed-authoring-multistep-queue-gate m21-streamed-authoring-c919-queue-gate m21-streamed-authoring-c919-raw-intake-gate m21-streamed-authoring-c919-real-doc-raw-intake-gate m21-streamed-authoring-c919-cmd3-apwtla-real-doc-raw-intake-gate m21-streamed-authoring-c919-deploy-cmd1-real-doc-raw-intake-gate m21-streamed-authoring-c919-deploy-cmd1-thr-idle-lock-release-real-doc-raw-intake-gate m21-streamed-authoring-c919-mlg-wow-cmd2-cmd3-fanout-real-doc-raw-intake-gate m21-streamed-authoring-demo-fanout-junction-gate customer-demo-mvp-closeout project-owner-acceptance-review-packet project-owner-external-review-handoff project-owner-external-review-result project-owner-final-decision multi-agent-m21-streamed-logic-authoring-plan multi-agent-m1-review-package multi-agent-m2-requirement-to-ir-demo multi-agent-m3-safety-evidence-value-pack multi-agent-m4-external-review-handoff multi-agent-construction-control-plane multi-agent-queue-extension-template multi-agent-fast-construction-gate ultrawork-monitor-dashboard verify-ultrawork-monitor-dashboard multi-agent-operator-cockpit verify-multi-agent-operator-cockpit multi-agent-packaging-consolidation verify-multi-agent-packaging-consolidation multi-agent-pr-preflight verify-multi-agent-pr-preflight multi-agent-validation-evidence verify-multi-agent-validation-evidence help
+.PHONY: dev test demo-html-reconstruction-mvp demo-html-reconstruction-browser-acceptance phase1-demo-mvp-review-package verify-phase1-demo-mvp-review-package verify-phase1-demo-mvp-ci-artifact phase1-demo-mvp-release-checklist phase1-demo-mvp-gate verify-phase1-demo-mvp-gate-artifact review-packet-export-regression first-candidate-repair-slice evidence-candidate-repair-slice missing-test-result-candidate-repair-slice evidence-unknown-requirement-candidate-repair-slice evidence-unknown-trace-candidate-repair-slice safety-transition-endpoint-candidate-repair-slice safety-unreachable-state-candidate-repair-slice safety-output-command-conflict-candidate-repair-slice approved-repair-slices verify-approved-repair-slices-artifact multi-agent-construction-readiness approved-candidate-task-queue verify-approved-candidate-task-queue-artifact verify-approved-candidate-task-queue-expansion-contract approved-candidate-task-queue-v0-2 verify-approved-candidate-task-queue-v0-2-artifact approved-candidate-task-queue-v0-3 verify-approved-candidate-task-queue-v0-3-artifact approved-candidate-task-queue-v0-4 verify-approved-candidate-task-queue-v0-4-artifact approved-candidate-task-queue-v0-5 verify-approved-candidate-task-queue-v0-5-artifact approved-candidate-task-queue-v0-6 verify-approved-candidate-task-queue-v0-6-artifact approved-candidate-task-queue-v0-7 verify-approved-candidate-task-queue-v0-7-artifact approved-candidate-task-queue-v0-8 verify-approved-candidate-task-queue-v0-8-artifact approved-candidate-task-queue-v0-9 verify-approved-candidate-task-queue-v0-9-artifact multi-agent-queue-run-ledger verify-multi-agent-queue-run-ledger multi-agent-queue-cursor-state verify-multi-agent-queue-cursor-state multi-agent-queue-cursor-resume-state verify-multi-agent-queue-cursor-resume-state project-manager-status-summary project-visibility-mvp-gate m21-streamed-authoring-revision-gate m21-streamed-authoring-multistep-queue-gate m21-streamed-authoring-c919-queue-gate m21-streamed-authoring-c919-raw-intake-gate m21-streamed-authoring-c919-real-doc-raw-intake-gate m21-streamed-authoring-c919-cmd3-apwtla-real-doc-raw-intake-gate m21-streamed-authoring-c919-deploy-cmd1-real-doc-raw-intake-gate m21-streamed-authoring-c919-deploy-cmd1-thr-idle-lock-release-real-doc-raw-intake-gate m21-streamed-authoring-c919-mlg-wow-cmd2-cmd3-fanout-real-doc-raw-intake-gate m21-streamed-authoring-demo-fanout-junction-gate customer-demo-mvp-closeout project-owner-acceptance-review-packet project-owner-external-review-handoff project-owner-external-review-result project-owner-final-decision multi-agent-m21-streamed-logic-authoring-plan multi-agent-m1-review-package multi-agent-m2-requirement-to-ir-demo multi-agent-m3-safety-evidence-value-pack multi-agent-m4-external-review-handoff multi-agent-construction-control-plane multi-agent-queue-extension-template multi-agent-fast-construction-gate ultrawork-monitor-dashboard verify-ultrawork-monitor-dashboard multi-agent-operator-cockpit verify-multi-agent-operator-cockpit multi-agent-packaging-consolidation verify-multi-agent-packaging-consolidation multi-agent-pr-preflight verify-multi-agent-pr-preflight multi-agent-validation-evidence verify-multi-agent-validation-evidence help
 
 help:
 	@echo "Targets:"
@@ -79,6 +81,7 @@ help:
 	@echo "  make evidence-unknown-trace-candidate-repair-slice — run unknown requirement IR trace Evidence slice"
 	@echo "  make safety-transition-endpoint-candidate-repair-slice — run missing state endpoint Safety slice"
 	@echo "  make safety-unreachable-state-candidate-repair-slice — run unreachable state Safety slice"
+	@echo "  make safety-output-command-conflict-candidate-repair-slice — run output command conflict Safety slice"
 	@echo "  make approved-repair-slices         — run Safety + Evidence approved repair slices"
 	@echo "  make verify-approved-repair-slices-artifact — validate approved repair slices CI artifact"
 	@echo "  make multi-agent-construction-readiness — emit long-run multi-agent preflight packet"
@@ -99,6 +102,8 @@ help:
 	@echo "  make verify-approved-candidate-task-queue-v0-7-artifact — validate v0.7 approved candidate queue CI artifact"
 	@echo "  make approved-candidate-task-queue-v0-8 — append and execute unreachable state Safety queue item"
 	@echo "  make verify-approved-candidate-task-queue-v0-8-artifact — validate v0.8 approved candidate queue CI artifact"
+	@echo "  make approved-candidate-task-queue-v0-9 — append and execute output command conflict Safety queue item"
+	@echo "  make verify-approved-candidate-task-queue-v0-9-artifact — validate v0.9 approved candidate queue artifact"
 	@echo "  make multi-agent-queue-run-ledger — run the v0.8 queue scheduler and validate the run ledger"
 	@echo "  make verify-multi-agent-queue-run-ledger — validate the v0.8 queue run ledger CI artifact"
 	@echo "  make multi-agent-queue-cursor-state — run the v0.8 queue cursor state and validate resume status"
@@ -199,6 +204,9 @@ safety-transition-endpoint-candidate-repair-slice:
 safety-unreachable-state-candidate-repair-slice:
 	@PYTHONPATH=src:. python3 scripts/run_safety_unreachable_state_candidate_repair_slice.py --format json --artifact-dir "$(SAFETY_UNREACHABLE_STATE_CANDIDATE_REPAIR_SLICE_ARTIFACT_DIR)"
 
+safety-output-command-conflict-candidate-repair-slice:
+	@PYTHONPATH=src:. python3 scripts/run_safety_output_command_conflict_candidate_repair_slice.py --format json --artifact-dir "$(SAFETY_OUTPUT_COMMAND_CONFLICT_CANDIDATE_REPAIR_SLICE_ARTIFACT_DIR)"
+
 approved-repair-slices:
 	@PYTHONPATH=src:. python3 scripts/run_approved_repair_slices.py --format json --artifact-dir "$(APPROVED_REPAIR_SLICES_ARTIFACT_DIR)"
 
@@ -267,6 +275,13 @@ approved-candidate-task-queue-v0-8:
 verify-approved-candidate-task-queue-v0-8-artifact:
 	@PYTHONPATH=src:. python3 scripts/run_approved_candidate_task_queue_v0_8.py --format json --artifact-dir "$(APPROVED_CANDIDATE_TASK_QUEUE_V0_8_ARTIFACT_DIR)" >/dev/null
 	@PYTHONPATH=src:. python3 scripts/verify_approved_candidate_task_queue_v0_8_artifact.py --format json --artifact-dir "$(APPROVED_CANDIDATE_TASK_QUEUE_V0_8_ARTIFACT_DIR)"
+
+approved-candidate-task-queue-v0-9:
+	@PYTHONPATH=src:. python3 scripts/run_approved_candidate_task_queue_v0_9.py --format json --artifact-dir "$(APPROVED_CANDIDATE_TASK_QUEUE_V0_9_ARTIFACT_DIR)"
+
+verify-approved-candidate-task-queue-v0-9-artifact:
+	@PYTHONPATH=src:. python3 scripts/run_approved_candidate_task_queue_v0_9.py --format json --artifact-dir "$(APPROVED_CANDIDATE_TASK_QUEUE_V0_9_ARTIFACT_DIR)" >/dev/null
+	@PYTHONPATH=src:. python3 scripts/verify_approved_candidate_task_queue_v0_9_artifact.py --format json --artifact-dir "$(APPROVED_CANDIDATE_TASK_QUEUE_V0_9_ARTIFACT_DIR)"
 
 multi-agent-queue-run-ledger:
 	@PYTHONPATH=src:. python3 scripts/run_multi_agent_queue_run_ledger.py --format json --artifact-dir "$(MULTI_AGENT_QUEUE_RUN_LEDGER_ARTIFACT_DIR)"
@@ -414,5 +429,5 @@ multi-agent-validation-evidence:
 verify-multi-agent-validation-evidence:
 	@PYTHONPATH=src:. python3 scripts/verify_multi_agent_validation_evidence.py --format json --artifact-dir "$(MULTI_AGENT_VALIDATION_EVIDENCE_ARTIFACT_DIR)"
 
-test: demo-html-reconstruction-mvp review-packet-export-regression verify-approved-repair-slices-artifact verify-approved-candidate-task-queue-artifact verify-approved-candidate-task-queue-expansion-contract verify-approved-candidate-task-queue-v0-2-artifact verify-approved-candidate-task-queue-v0-3-artifact verify-approved-candidate-task-queue-v0-4-artifact verify-approved-candidate-task-queue-v0-5-artifact verify-approved-candidate-task-queue-v0-6-artifact verify-approved-candidate-task-queue-v0-7-artifact verify-approved-candidate-task-queue-v0-8-artifact verify-multi-agent-queue-run-ledger verify-multi-agent-queue-cursor-state verify-multi-agent-queue-cursor-resume-state m21-streamed-authoring-c919-queue-gate m21-streamed-authoring-c919-raw-intake-gate m21-streamed-authoring-c919-real-doc-raw-intake-gate multi-agent-m1-review-package multi-agent-m2-requirement-to-ir-demo multi-agent-m3-safety-evidence-value-pack multi-agent-m4-external-review-handoff multi-agent-construction-control-plane multi-agent-queue-extension-template multi-agent-fast-construction-gate
+test: demo-html-reconstruction-mvp review-packet-export-regression verify-approved-repair-slices-artifact verify-approved-candidate-task-queue-artifact verify-approved-candidate-task-queue-expansion-contract verify-approved-candidate-task-queue-v0-2-artifact verify-approved-candidate-task-queue-v0-3-artifact verify-approved-candidate-task-queue-v0-4-artifact verify-approved-candidate-task-queue-v0-5-artifact verify-approved-candidate-task-queue-v0-6-artifact verify-approved-candidate-task-queue-v0-7-artifact verify-approved-candidate-task-queue-v0-8-artifact verify-approved-candidate-task-queue-v0-9-artifact verify-multi-agent-queue-run-ledger verify-multi-agent-queue-cursor-state verify-multi-agent-queue-cursor-resume-state m21-streamed-authoring-c919-queue-gate m21-streamed-authoring-c919-raw-intake-gate m21-streamed-authoring-c919-real-doc-raw-intake-gate multi-agent-m1-review-package multi-agent-m2-requirement-to-ir-demo multi-agent-m3-safety-evidence-value-pack multi-agent-m4-external-review-handoff multi-agent-construction-control-plane multi-agent-queue-extension-template multi-agent-fast-construction-gate
 	@PYTHONPATH=src python3 -m pytest tests/

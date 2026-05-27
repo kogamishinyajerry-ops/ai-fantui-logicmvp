@@ -1,7 +1,7 @@
 # Multi-Agent Control Logic Engineering System MVP
 
-Date: 2026-05-22
-Status: active-route contract, Chief Engineer task-package, dry-run planner, approved execution shell, Safety/Evidence/Requirement repair loops, candidate review packet, stable review-packet export, approved repair slices, external artifact checkers, versioned summary schemas, long-run readiness gate, approved candidate task queue, queue expansion contract, M1 deliverable plan, M1 external review package, M2 Requirement-to-IR demo package, M3 Safety/Evidence value pack, M4 external review handoff, M5 long-running construction control plane, M6 queue extension template, M7 append-only v0.2 queue item, M8 fast construction gate, M9 v0.3 fast-gated queue item, M10 queue run ledger, M11 queue cursor state, M12 ready-to-resume cursor sample, M13 demo.html reconstruction MVP golden gate, M14 browser MVP acceptance, M15 v0.4 resumed approved queue item, M16 v0.4 ledger/cursor closeout with compact-safe continuation checkpoint, M17 v0.5 unknown-requirement coverage repair queue item, M18 v0.6 unknown IR trace repair queue item, M19 v0.7 transition endpoint repair queue item, M20 v0.8 unreachable-state repair queue item, M22 read-only multi-agent operator cockpit package, M23 explicit pathspec packaging consolidation gate, M24 validation/PR preflight gate, and M25 validation evidence capture gate
+Date: 2026-05-27
+Status: active-route contract, Chief Engineer task-package, dry-run planner, approved execution shell, Safety/Evidence/Requirement repair loops, candidate review packet, stable review-packet export, approved repair slices, external artifact checkers, versioned summary schemas, long-run readiness gate, approved candidate task queue, queue expansion contract, M1 deliverable plan, M1 external review package, M2 Requirement-to-IR demo package, M3 Safety/Evidence value pack, M4 external review handoff, M5 long-running construction control plane, M6 queue extension template, M7 append-only v0.2 queue item, M8 fast construction gate, M9 v0.3 fast-gated queue item, M10 queue run ledger, M11 queue cursor state, M12 ready-to-resume cursor sample, M13 demo.html reconstruction MVP golden gate, M14 browser MVP acceptance, M15 v0.4 resumed approved queue item, M16 v0.4 ledger/cursor closeout with compact-safe continuation checkpoint, M17 v0.5 unknown-requirement coverage repair queue item, M18 v0.6 unknown IR trace repair queue item, M19 v0.7 transition endpoint repair queue item, M20 v0.8 unreachable-state repair queue item, M22 read-only multi-agent operator cockpit package, M23 explicit pathspec packaging consolidation gate, M24 validation/PR preflight gate, M25 validation evidence capture gate, and M26 v0.9 output-command-conflict repair queue item
 Scope: active DeepSeek V4 Pro UI workbench route
 
 ## Goal
@@ -67,6 +67,7 @@ gates decide what survives.`
 | M18 approved queue v0.6 item | Chief Engineer Queue Runner + EvidenceRepairAgent | `make approved-candidate-task-queue-v0-6` | v0.5 queue prefix preserved, `RUN-QUEUE-008` / `EV_IR_TRACE_UNKNOWN_REQUIREMENT` removes only the unknown candidate IR trace from `T001` and converges through fast-gate preflight, approved shell, repair loop, and review export |
 | M19 approved queue v0.7 item | Chief Engineer Queue Runner + LogicIRRepairAgent | `make approved-candidate-task-queue-v0-7` | v0.6 queue prefix preserved, `RUN-QUEUE-009` / `CHECK_TRANSITION_ENDPOINT_001` adds only the missing candidate state stub and converges through fast-gate preflight, approved shell, repair loop, and review export |
 | M20 approved queue v0.8 item | Chief Engineer Queue Runner + LogicIRRepairAgent | `make approved-candidate-task-queue-v0-8` | v0.7 queue prefix preserved, `RUN-QUEUE-010` / `CHECK_UNREACHABLE_STATE_001` removes only the seeded candidate orphan state and converges through fast-gate preflight, approved shell, repair loop, and review export |
+| M26 approved queue v0.9 item | Chief Engineer Queue Runner + LogicIRRepairAgent | `make approved-candidate-task-queue-v0-9` | v0.8 queue prefix preserved, `RUN-QUEUE-011` / `CHECK_OUTPUT_COMMAND_CONFLICT_001` resolves only the seeded candidate output-command conflict by marking the conflicting transition as safety-priority and converges through fast-gate preflight, approved shell, repair loop, and review export |
 | M22 operator cockpit package | Chief Engineer Operator Cockpit | `make multi-agent-operator-cockpit` | Project Manager Status + UltraWork Monitor + queue/cursor health + Notion external blocker + pathspec boundary collected into one read-only JSON/Markdown/HTML cockpit |
 | M23 packaging consolidation gate | Chief Engineer Packaging Gate | `make multi-agent-packaging-consolidation` | Multi-agent cursor baseline, project-manager status, UltraWork Monitor, M22 cockpit, and M23 packaging docs are ordered into explicit pathspec staging groups with excluded dirty-context guards |
 | M24 validation/PR preflight gate | Chief Engineer PR Preflight Gate | `make multi-agent-pr-preflight` | M23 package order plus the M24 preflight package are converted into 18 validation commands, 7 explicit stage commands, browser geometry markers, Notion blocker text, and a copy-ready PR body |
@@ -868,6 +869,17 @@ when these repo-local gates pass:
     then `queue-safety-unreachable-state-repair` appends a
     `SafetyRepairTask`. The repair removes `UNREACHABLE_REVIEW` from candidate
     `logic_ir.states` and keeps controller truth and UI layout untouched.
+- `make safety-output-command-conflict-candidate-repair-slice`
+  - Runs the M26 Safety output-command-conflict slice. It seeds
+    `CHECK_OUTPUT_COMMAND_CONFLICT_001`, selects
+    `TASK-CE-CHECK-OUTPUT-COMMAND-CONFLICT-001`, and changes only the
+    candidate `T_CONFLICT_OPEN` transition priority to `safety`.
+- `make approved-candidate-task-queue-v0-9`
+  - Runs the M26 append-only queue. The v0.8 queue is preserved as the prefix,
+    then `queue-safety-output-command-conflict-repair` appends a
+    `SafetyRepairTask`. The repair converges
+    `CHECK_OUTPUT_COMMAND_CONFLICT_001` and the paired overlap finding without
+    controller-truth, adapter, or UI-layout writes.
 - `make multi-agent-queue-run-ledger`
   - Runs the M10 queue scheduler and ledger checker. The source queue is now
     `approved-candidate-task-queue-v0.8`; the ledger selects the newest
@@ -1046,6 +1058,15 @@ Latest local run-through on 2026-05-22:
   `TASK-CE-CHECK-UNREACHABLE-STATE-001`, ran through
   `LogicIRRepairAgent`, and converged by removing `UNREACHABLE_REVIEW` from
   candidate `logic_ir.states` only.
+- `make safety-output-command-conflict-candidate-repair-slice`: pass; generated
+  and validated the M26 child review export with
+  `CHECK_OUTPUT_COMMAND_CONFLICT_001` converged by changing only
+  `T_CONFLICT_OPEN.priority` from `normal` to `safety`.
+- `make verify-approved-candidate-task-queue-v0-9-artifact`: pass; generated
+  and validated
+  `/tmp/ai-fantui-approved-candidate-task-queue-v0-9/approved_candidate_task_queue_summary_v0_9.json`
+  with the v0.8 queue prefix preserved, 11/11 queue items passed,
+  `RUN-QUEUE-011` appended, and all child review exports converged.
 - `make demo-html-reconstruction-mvp`: pass; validated the old
   `src/well_harness/static/demo.html#fan-chain-svg` as the golden MVP
   contract with `20` nodes, `23` wires, `5` presets, `6` HUD status outputs,
@@ -1074,12 +1095,12 @@ not a multi-agent engineering-chain code blocker.
 
 ## Next Step
 
-M20 closes the next append-only queue item by making the scheduler consume
-v0.8, recording `RUN-QUEUE-010` as converged, and keeping the compact-safe
-checkpoint idle when no approved open record remains. The next work should
-append a new queue item through the queue extension contract, or improve visual
-fidelity inside the `/demo-reconstruction` console shell only when browser
-acceptance screenshots show a concrete mismatch.
+M26 closes the next append-only queue item at the queue-summary layer by
+preserving the v0.8 prefix and appending `RUN-QUEUE-011` /
+`queue-safety-output-command-conflict-repair`. The next work should promote
+v0.9 into the queue run ledger and cursor state as a schema-versioned M27
+slice, so compact-safe continuation advances beyond the current v0.8 ledger
+cursor without weakening the existing checkpoint proof.
 
 For compact-failure-safe continuation, read
 `docs/coordination/multi-agent-continuation-checkpoint.md` first and refresh

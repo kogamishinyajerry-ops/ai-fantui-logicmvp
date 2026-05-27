@@ -1,0 +1,382 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/multi_agent_m8_fast_construction_gate_v0_1.schema.json",
+  "title": "Multi-Agent M8 Fast Construction Gate v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "package_id",
+    "status",
+    "milestone",
+    "gate_policy",
+    "preconditions",
+    "fast_checks",
+    "deterministic_gates",
+    "critical_artifacts",
+    "validation_budget",
+    "review_boundaries",
+    "aggregate",
+    "artifact_paths"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/multi_agent_m8_fast_construction_gate_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-multi-agent-m8-fast-construction-gate"
+    },
+    "package_id": {
+      "const": "multi-agent-m8-fast-construction-gate-v0.1"
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "fail"
+      ]
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "budget",
+        "effort_unit",
+        "claim"
+      ],
+      "properties": {
+        "id": {
+          "const": "M8"
+        },
+        "name": {
+          "const": "快速施工 gate 拆分"
+        },
+        "budget": {
+          "const": 30
+        },
+        "effort_unit": {
+          "const": "施工队工时"
+        },
+        "claim": {
+          "const": "candidate-only fast construction gate before approved task execution"
+        }
+      }
+    },
+    "gate_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "entrypoint",
+        "purpose",
+        "full_validation_reference",
+        "full_pytest_excluded",
+        "not_a_release_gate",
+        "max_expected_runtime_seconds"
+      ],
+      "properties": {
+        "entrypoint": {
+          "const": "make multi-agent-fast-construction-gate"
+        },
+        "purpose": {
+          "const": "per-slice fast preflight before approved-task shell execution"
+        },
+        "full_validation_reference": {
+          "const": "PYTHONPATH=src:. python3 tools/run_gsd_validation_suite.py --format json --skip notion_control_plane"
+        },
+        "full_pytest_excluded": {
+          "const": true
+        },
+        "not_a_release_gate": {
+          "const": true
+        },
+        "max_expected_runtime_seconds": {
+          "const": 60
+        }
+      }
+    },
+    "preconditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requires_queue_id",
+        "requires_queue_task_count",
+        "requires_child_review_exports",
+        "requires_append_only_contract",
+        "requires_boundary_check"
+      ],
+      "properties": {
+        "requires_queue_id": {
+          "const": "approved-candidate-task-queue-v0.2"
+        },
+        "requires_queue_task_count": {
+          "const": 4
+        },
+        "requires_child_review_exports": {
+          "const": true
+        },
+        "requires_append_only_contract": {
+          "const": true
+        },
+        "requires_boundary_check": {
+          "const": true
+        }
+      }
+    },
+    "fast_checks": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "$ref": "#/$defs/fastCheck"
+      }
+    },
+    "deterministic_gates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_review_packet_export",
+        "queue_v0_2_fixture_preflight",
+        "queue_v0_2_artifact_checker",
+        "queue_expansion_contract",
+        "m6_template_contract",
+        "boundary",
+        "local_gate"
+      ],
+      "properties": {
+        "candidate_review_packet_export": {
+          "const": "pass"
+        },
+        "queue_v0_2_fixture_preflight": {
+          "const": "pass"
+        },
+        "queue_v0_2_artifact_checker": {
+          "const": "pass"
+        },
+        "queue_expansion_contract": {
+          "const": "pass"
+        },
+        "m6_template_contract": {
+          "const": "pass"
+        },
+        "boundary": {
+          "const": "pass"
+        },
+        "local_gate": {
+          "const": "pass"
+        }
+      }
+    },
+    "critical_artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_review_packet_export_fixture",
+        "queue_v0_2_schema",
+        "queue_v0_2_summary",
+        "queue_expansion_contract_fixture",
+        "m6_template_schema",
+        "m6_template_package"
+      ],
+      "properties": {
+        "candidate_review_packet_export_fixture": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "queue_v0_2_schema": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "queue_v0_2_summary": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "queue_expansion_contract_fixture": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "m6_template_schema": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "m6_template_package": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "validation_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unit_tests_timeout_seconds",
+        "last_full_validation_unit_tests_seconds",
+        "remaining_margin_seconds",
+        "fast_gate_expected_seconds_under",
+        "full_pytest_is_per_milestone_gate",
+        "reason"
+      ],
+      "properties": {
+        "unit_tests_timeout_seconds": {
+          "const": 480
+        },
+        "last_full_validation_unit_tests_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "remaining_margin_seconds": {
+          "type": "number"
+        },
+        "fast_gate_expected_seconds_under": {
+          "const": 60
+        },
+        "full_pytest_is_per_milestone_gate": {
+          "const": true
+        },
+        "reason": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    },
+    "review_boundaries": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "truth_effect",
+        "certification_claim",
+        "controller_truth_modified",
+        "ui_layout_modified",
+        "restricted_paths"
+      ],
+      "properties": {
+        "truth_effect": {
+          "const": "none"
+        },
+        "certification_claim": {
+          "const": "none"
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "ui_layout_modified": {
+          "const": false
+        },
+        "restricted_paths": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ready_for_slice_preflight",
+        "fast_gate_check_count",
+        "queue_v0_2_task_count",
+        "queue_v0_2_converged",
+        "child_review_exports_valid",
+        "open_findings",
+        "controller_truth_modified",
+        "ui_layout_modified",
+        "full_pytest_excluded_from_fast_gate"
+      ],
+      "properties": {
+        "ready_for_slice_preflight": {
+          "const": true
+        },
+        "fast_gate_check_count": {
+          "const": 5
+        },
+        "queue_v0_2_task_count": {
+          "const": 4
+        },
+        "queue_v0_2_converged": {
+          "const": 4
+        },
+        "child_review_exports_valid": {
+          "const": true
+        },
+        "open_findings": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "ui_layout_modified": {
+          "const": false
+        },
+        "full_pytest_excluded_from_fast_gate": {
+          "const": true
+        }
+      }
+    },
+    "artifact_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fast_gate_package",
+        "queue_v0_2_summary",
+        "m6_template_package",
+        "project_manager_plan",
+        "engineering_system_mvp_doc"
+      ],
+      "properties": {
+        "fast_gate_package": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "queue_v0_2_summary": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "m6_template_package": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "project_manager_plan": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "engineering_system_mvp_doc": {
+          "$ref": "#/$defs/nonEmptyString"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "fastCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "command",
+        "status",
+        "returncode",
+        "evidence"
+      ],
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "command": {
+          "$ref": "#/$defs/nonEmptyString"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "returncode": {
+          "type": "integer"
+        },
+        "evidence": {
+          "type": "object"
+        }
+      }
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/nonEmptyString"
+      },
+      "minItems": 1
+    },
+    "nonEmptyString": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

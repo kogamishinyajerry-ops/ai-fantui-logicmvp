@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://well-harness.local/json_schema/candidate_review_packet_export_v0_1.schema.json",
+  "title": "Candidate Review Packet Export v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "kind",
+    "exporter",
+    "review_packet_ref",
+    "boundary",
+    "review_packet",
+    "machine_readable",
+    "human_review_required"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://well-harness.local/json_schema/candidate_review_packet_export_v0_1.schema.json"
+    },
+    "kind": {
+      "const": "ai-fantui-candidate-review-packet-export"
+    },
+    "exporter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_name",
+        "schema_version",
+        "export_id",
+        "source_route",
+        "export_route",
+        "storage",
+        "status"
+      ],
+      "properties": {
+        "agent_name": {
+          "const": "CandidateReviewPacketExportAgent"
+        },
+        "schema_version": {
+          "const": "0.1"
+        },
+        "export_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_route": {
+          "type": "string",
+          "pattern": "^/"
+        },
+        "export_route": {
+          "type": "string",
+          "pattern": "^/"
+        },
+        "storage": {
+          "enum": [
+            "reference_packet",
+            "artifact_file"
+          ]
+        },
+        "status": {
+          "enum": [
+            "available"
+          ]
+        }
+      }
+    },
+    "review_packet_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "kind",
+        "reviewer_status"
+      ],
+      "properties": {
+        "schema": {
+          "const": "https://well-harness.local/json_schema/candidate_review_packet_v0_1.schema.json"
+        },
+        "kind": {
+          "const": "ai-fantui-candidate-review-packet"
+        },
+        "reviewer_status": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_state",
+        "truth_effect",
+        "controller_truth_modified",
+        "certification_claim"
+      ],
+      "properties": {
+        "candidate_state": {
+          "type": "string"
+        },
+        "truth_effect": {
+          "const": "none"
+        },
+        "controller_truth_modified": {
+          "const": false
+        },
+        "certification_claim": {
+          "const": "none"
+        }
+      }
+    },
+    "review_packet": {
+      "type": "object",
+      "required": [
+        "$schema",
+        "kind",
+        "reviewer",
+        "boundary",
+        "source_artifacts",
+        "summary",
+        "finding_chains",
+        "human_review_required"
+      ]
+    },
+    "machine_readable": {
+      "const": true
+    },
+    "human_review_required": {
+      "type": "boolean"
+    }
+  },
+  "x-well-harness-candidate-review-packet-export": {
+    "schema_version": "0.1",
+    "scope": "file-backed external export for candidate review packets",
+    "truth_effect": "none",
+    "controller_truth_modified": false
+  }
+}
