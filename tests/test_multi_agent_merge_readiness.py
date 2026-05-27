@@ -144,6 +144,15 @@ def test_multi_agent_merge_readiness_schema_validates_payload(tmp_path: Path) ->
     assert payload["summary"]["passed_command_count"] == 19
     assert payload["summary"]["remote_checks_state"] == "no_checks_reported"
     assert payload["summary"]["review_state"] == "no_reviews_or_comments"
+    assert payload["agent_team"]["mode"] == "five_agent_context_cap"
+    assert payload["agent_team"]["team_size"] == 5
+    assert [item["name"] for item in payload["agent_team"]["active_agents"]] == [
+        "ChiefEngineerOrchestrator",
+        "LogicIRRepairAgent",
+        "EvidenceValidationAgent",
+        "SafetyRequirementsReviewer",
+        "PackagingPRReadinessAgent",
+    ]
     assert payload["gates"]["validation_evidence"] == "pass"
     assert payload["gates"]["remote_checks"] == "warning"
     assert payload["gates"]["review_state"] == "warning"
@@ -161,6 +170,9 @@ def test_multi_agent_merge_readiness_html_exposes_review_handoff(tmp_path: Path)
     html = render_multi_agent_merge_readiness_html(payload)
 
     assert "Multi-Agent Merge Readiness" in html
+    assert "five_agent_context_cap" in html
+    assert "ChiefEngineerOrchestrator" in html
+    assert "PackagingPRReadinessAgent" in html
     assert "RUN-QUEUE-011" in html
     assert "19 validation commands passed" in html
     assert "notion-control-plane-404" in html
@@ -257,6 +269,7 @@ def test_multi_agent_merge_readiness_is_wired_into_docs_and_makefile() -> None:
         "docs/json_schema/multi_agent_merge_readiness_v0_1.schema.json",
         "scripts/run_multi_agent_merge_readiness.py",
         "scripts/verify_multi_agent_merge_readiness.py",
+        "src/well_harness/multi_agent_team.py",
         "src/well_harness/multi_agent_merge_readiness.py",
         "tests/test_multi_agent_merge_readiness.py",
     ]
@@ -265,5 +278,7 @@ def test_multi_agent_merge_readiness_is_wired_into_docs_and_makefile() -> None:
 
     assert "notion-control-plane-404" in doc
     assert "19 validation commands" in doc
+    assert "five-agent active team" in doc
     assert "M29" in mvp_doc
+    assert "five-agent active team" in mvp_doc
     assert "make multi-agent-merge-readiness" in mvp_doc

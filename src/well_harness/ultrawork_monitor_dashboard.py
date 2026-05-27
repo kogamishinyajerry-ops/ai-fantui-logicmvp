@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from well_harness.multi_agent_team import active_agent_team_payload, canonical_agent_for_text
+
 
 SCHEMA_ID = "https://well-harness.local/json_schema/ultrawork_monitor_dashboard_v0_1.schema.json"
 KIND = "ai-fantui-ultrawork-monitor-dashboard"
@@ -22,18 +24,12 @@ def _utc_now() -> str:
 
 
 def _agent_for_record(record: dict[str, Any]) -> str:
-    queue_item_id = str(record.get("queue_item_id", ""))
-    task_id = str(record.get("task_id", ""))
-    combined = f"{queue_item_id} {task_id}".lower()
-    if "simulation" in combined or "test-result" in combined:
-        return "SimulationTestAgent"
-    if "evidence" in combined:
-        return "EvidenceRepairAgent"
-    if "requirement" in combined:
-        return "RequirementRepairAgent"
-    if "safety" in combined or "logic" in combined or "state" in combined:
-        return "LogicIRRepairAgent"
-    return "GeneralRepairAgent"
+    return canonical_agent_for_text(
+        record.get("queue_item_id", ""),
+        record.get("task_id", ""),
+        record.get("target_agent", ""),
+        record.get("finding_code", ""),
+    )
 
 
 def _lane_from_record(record: dict[str, Any]) -> dict[str, Any]:
@@ -128,6 +124,7 @@ def build_ultrawork_monitor_dashboard(
             "parallelism_model": "queue_cursor_plus_project_subagents",
             "operator_role": "human_or_codex_primary_orchestrator",
         },
+        "agent_team": active_agent_team_payload(),
         "summary": {
             "status": status,
             "next_action": next_action,
@@ -169,6 +166,7 @@ def _badge(status: str) -> str:
 def render_ultrawork_dashboard_html(dashboard: dict[str, Any]) -> str:
     """Render a static HTML dashboard for browser viewing."""
     summary = dashboard.get("summary", {})
+    agent_team = dashboard.get("agent_team", {})
     lanes = dashboard.get("agent_lanes", [])
     blockers = dashboard.get("blockers", [])
     gates = dashboard.get("gates", {})
@@ -194,6 +192,14 @@ def render_ultrawork_dashboard_html(dashboard: dict[str, Any]) -> str:
         f"{html.escape(str(item.get('message', '')))}</li>"
         for item in blockers
         if isinstance(item, dict)
+    )
+    team_rows = "\n".join(
+        "<tr>"
+        f"<td>{html.escape(str(agent.get('name', '')))}</td>"
+        f"<td>{html.escape(str(agent.get('scope', '')))}</td>"
+        "</tr>"
+        for agent in agent_team.get("active_agents", [])
+        if isinstance(agent, dict)
     )
     return f"""<!doctype html>
 <html lang="en">
@@ -236,9 +242,20 @@ def render_ultrawork_dashboard_html(dashboard: dict[str, Any]) -> str:
     <div class="grid">
       <div class="metric">Status<strong>{html.escape(str(summary.get('status', '')))}</strong></div>
       <div class="metric">Next action<strong>{html.escape(str(summary.get('next_action', '')))}</strong></div>
+      <div class="metric">Active team<strong>{html.escape(str(agent_team.get('team_size', 0)))}</strong></div>
       <div class="metric">Completed<strong>{html.escape(str(summary.get('completed_count', 0)))}</strong></div>
       <div class="metric">Open approved<strong>{html.escape(str(summary.get('open_approved_count', 0)))}</strong></div>
     </div>
+    <section>
+      <h2>Active Agent Team</h2>
+      <p>Mode: <code>{html.escape(str(agent_team.get('mode', '')))}</code>. {html.escape(str(agent_team.get('retired_role_policy', '')))}</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Agent</th><th>Scope</th></tr></thead>
+          <tbody>{team_rows}</tbody>
+        </table>
+      </div>
+    </section>
     <section>
       <h2>Resume Decision</h2>
       <p>{html.escape(str(summary.get('reason', '')))}</p>

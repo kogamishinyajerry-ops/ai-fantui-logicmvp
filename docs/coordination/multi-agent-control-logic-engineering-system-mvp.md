@@ -21,7 +21,28 @@ The system principle is:
 verifiable, traceable control-logic candidates; deterministic tools and human
 gates decide what survives.`
 
+## Canonical Active Team
+
+The current development lane uses a five-agent active team to keep context
+bounded. Historical queue `target_agent` values and milestone role names remain
+artifact/task labels only; they do not create extra active prompt participants.
+
+| Active Agent | Scope |
+| --- | --- |
+| ChiefEngineerOrchestrator | Queue selection, stop conditions, and cross-surface coordination |
+| LogicIRRepairAgent | Candidate IR, state, transition, and safety-priority repairs |
+| EvidenceValidationAgent | Tests, simulation evidence, trace coverage, and validation proof |
+| SafetyRequirementsReviewer | Safety findings, requirement ambiguity, and unresolved requirement risk |
+| PackagingPRReadinessAgent | Pathspec staging, PR readiness, browser geometry, and release evidence |
+
+The UltraWork Monitor, M22 cockpit, and M29 merge-readiness packets expose this
+same five-agent active team under `agent_team.mode = five_agent_context_cap`.
+
 ## Active Route Mapping
+
+The `Agent` column below is the route's legacy task-label vocabulary. It is
+preserved for artifact continuity and mapped onto the five active agents above
+when rendered in current dashboards.
 
 | MVP responsibility | Agent | Current route surface | First deterministic evidence |
 | --- | --- | --- | --- |

@@ -88,6 +88,27 @@ def verify_ultrawork_monitor_dashboard(dashboard_path: Path) -> dict[str, Any]:
     ):
         mismatches.append("Notion 404 must remain recorded as an external blocker")
 
+    agent_team = payload.get("agent_team", {})
+    expected_agents = {
+        "ChiefEngineerOrchestrator",
+        "LogicIRRepairAgent",
+        "EvidenceValidationAgent",
+        "SafetyRequirementsReviewer",
+        "PackagingPRReadinessAgent",
+    }
+    if not isinstance(agent_team, dict):
+        mismatches.append("agent_team must be present")
+    else:
+        active_agents = agent_team.get("active_agents", [])
+        if isinstance(active_agents, list):
+            names = {item.get("name") for item in active_agents if isinstance(item, dict)}
+        else:
+            names = set()
+        if agent_team.get("mode") != "five_agent_context_cap":
+            mismatches.append("agent_team.mode must be five_agent_context_cap")
+        if agent_team.get("team_size") != 5 or names != expected_agents:
+            mismatches.append("agent_team must define exactly five active agents")
+
     summary = payload.get("summary", {})
     lanes = payload.get("agent_lanes", [])
     if isinstance(summary, dict) and isinstance(lanes, list):
@@ -96,6 +117,13 @@ def verify_ultrawork_monitor_dashboard(dashboard_path: Path) -> dict[str, Any]:
         )
         if len(lanes) < expected_minimum:
             mismatches.append("agent_lanes must cover completed and open approved records")
+        lane_agents = {
+            item.get("agent")
+            for item in lanes
+            if isinstance(item, dict)
+        }
+        if not lane_agents.issubset(expected_agents):
+            mismatches.append("agent_lanes must only use the capped five-agent team")
 
     return {
         "status": "pass" if not mismatches else "fail",

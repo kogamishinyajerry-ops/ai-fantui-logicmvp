@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from well_harness.multi_agent_team import active_agent_team_payload
+
 
 SCHEMA_ID = "https://well-harness.local/json_schema/multi_agent_operator_cockpit_v0_1.schema.json"
 KIND = "ai-fantui-multi-agent-operator-cockpit"
@@ -64,6 +66,29 @@ def _copy_blockers(ultrawork_dashboard: dict[str, Any]) -> list[dict[str, str]]:
     return copied
 
 
+def _copy_agent_team(ultrawork_dashboard: dict[str, Any]) -> dict[str, Any]:
+    agent_team = ultrawork_dashboard.get("agent_team", {})
+    if not isinstance(agent_team, dict):
+        return active_agent_team_payload()
+    active_agents = agent_team.get("active_agents", [])
+    if not isinstance(active_agents, list) or len(active_agents) != 5:
+        return active_agent_team_payload()
+    return {
+        "mode": str(agent_team.get("mode", "")),
+        "team_size": int(agent_team.get("team_size", 0) or 0),
+        "active_agents": [
+            {
+                "agent_id": str(agent.get("agent_id", "")),
+                "name": str(agent.get("name", "")),
+                "scope": str(agent.get("scope", "")),
+            }
+            for agent in active_agents
+            if isinstance(agent, dict)
+        ],
+        "retired_role_policy": str(agent_team.get("retired_role_policy", "")),
+    }
+
+
 def build_multi_agent_operator_cockpit(
     *,
     project_status: dict[str, Any],
@@ -113,6 +138,7 @@ def build_multi_agent_operator_cockpit(
             "claim": "read_only_operator_dashboard_package",
             "activation_status": "ready_for_pr_packaging_m21_implementation_still_owner_gated",
         },
+        "agent_team": _copy_agent_team(ultrawork_dashboard),
         "summary": {
             "headline": "Multi-agent construction line is monitorable and packageable.",
             "project_status": str(project_status.get("status", "")),
@@ -180,6 +206,10 @@ def render_multi_agent_operator_cockpit_markdown(cockpit: dict[str, Any]) -> str
         f"- {item['blocker_id']} ({item['status']}): {item['message']}"
         for item in cockpit["blockers"]
     )
+    team = "\n".join(
+        f"- {item['name']}: {item['scope']}"
+        for item in cockpit["agent_team"]["active_agents"]
+    )
     views = "\n".join(
         f"- {view['label']}: `{view['html']}`"
         for view in cockpit["operator_views"]
@@ -198,6 +228,9 @@ def render_multi_agent_operator_cockpit_markdown(cockpit: dict[str, Any]) -> str
         f"- Recommended next step: {summary['recommended_next_step']}\n\n"
         "## Operator Views\n\n"
         f"{views}\n\n"
+        "## Active Agent Team\n\n"
+        f"Mode: `{cockpit['agent_team']['mode']}`; size: `{cockpit['agent_team']['team_size']}`\n\n"
+        f"{team}\n\n"
         "## Gates\n\n"
         f"{gates}\n\n"
         "## Blockers\n\n"
@@ -232,6 +265,13 @@ def render_multi_agent_operator_cockpit_html(cockpit: dict[str, Any]) -> str:
         f"{_escape(item['message'])}"
         "</li>"
         for item in cockpit["blockers"]
+    )
+    team = "\n".join(
+        "<tr>"
+        f"<td>{_escape(item['name'])}</td>"
+        f"<td>{_escape(item['scope'])}</td>"
+        "</tr>"
+        for item in cockpit["agent_team"]["active_agents"]
     )
     excluded = "\n".join(
         f"<li><code>{_escape(path)}</code></li>"
@@ -368,6 +408,11 @@ def render_multi_agent_operator_cockpit_html(cockpit: dict[str, Any]) -> str:
     <section>
       <h2>Operator Views</h2>
       <div class="grid views">{views}</div>
+    </section>
+    <section>
+      <h2>Active Agent Team</h2>
+      <p>Mode <code>{_escape(cockpit['agent_team']['mode'])}</code>, team size <code>{_escape(cockpit['agent_team']['team_size'])}</code>. {_escape(cockpit['agent_team']['retired_role_policy'])}</p>
+      <table><tbody>{team}</tbody></table>
     </section>
     <section>
       <h2>Gates</h2>

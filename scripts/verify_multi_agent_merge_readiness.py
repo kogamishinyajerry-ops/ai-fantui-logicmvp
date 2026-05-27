@@ -125,6 +125,27 @@ def verify_multi_agent_merge_readiness(package_path: Path) -> dict[str, Any]:
     ):
         mismatches.append("Notion 404 must remain an external blocker")
 
+    expected_agents = {
+        "ChiefEngineerOrchestrator",
+        "LogicIRRepairAgent",
+        "EvidenceValidationAgent",
+        "SafetyRequirementsReviewer",
+        "PackagingPRReadinessAgent",
+    }
+    agent_team = payload.get("agent_team", {})
+    if not isinstance(agent_team, dict):
+        mismatches.append("agent_team must be present")
+    else:
+        active_agents = agent_team.get("active_agents", [])
+        if isinstance(active_agents, list):
+            names = {item.get("name") for item in active_agents if isinstance(item, dict)}
+        else:
+            names = set()
+        if agent_team.get("mode") != "five_agent_context_cap":
+            mismatches.append("agent_team.mode must be five_agent_context_cap")
+        if agent_team.get("team_size") != 5 or names != expected_agents:
+            mismatches.append("agent_team must define exactly five active agents")
+
     artifact_paths = payload.get("artifact_paths", {})
     if not isinstance(artifact_paths, dict):
         artifact_paths = {}
@@ -138,6 +159,8 @@ def verify_multi_agent_merge_readiness(package_path: Path) -> dict[str, Any]:
         html = Path(str(artifact_paths["readiness_html"])).read_text(encoding="utf-8")
         for marker in [
             "Multi-Agent Merge Readiness",
+            "five_agent_context_cap",
+            "PackagingPRReadinessAgent",
             "RUN-QUEUE-011",
             "19 validation commands passed",
             "notion-control-plane-404",

@@ -109,6 +109,27 @@ def verify_multi_agent_operator_cockpit(cockpit_path: Path) -> dict[str, Any]:
     ):
         mismatches.append("Notion 404 must remain an external blocker")
 
+    expected_agents = {
+        "ChiefEngineerOrchestrator",
+        "LogicIRRepairAgent",
+        "EvidenceValidationAgent",
+        "SafetyRequirementsReviewer",
+        "PackagingPRReadinessAgent",
+    }
+    agent_team = payload.get("agent_team", {})
+    if not isinstance(agent_team, dict):
+        mismatches.append("agent_team must be present")
+    else:
+        active_agents = agent_team.get("active_agents", [])
+        if isinstance(active_agents, list):
+            names = {item.get("name") for item in active_agents if isinstance(item, dict)}
+        else:
+            names = set()
+        if agent_team.get("mode") != "five_agent_context_cap":
+            mismatches.append("agent_team.mode must be five_agent_context_cap")
+        if agent_team.get("team_size") != 5 or names != expected_agents:
+            mismatches.append("agent_team must define exactly five active agents")
+
     gates = payload.get("gates", {})
     if not isinstance(gates, dict) or any(value != "pass" for value in gates.values()):
         mismatches.append("all cockpit gates must pass")
@@ -139,6 +160,8 @@ def verify_multi_agent_operator_cockpit(cockpit_path: Path) -> dict[str, Any]:
             "Multi-Agent Operator Cockpit",
             "Project Manager Status",
             "UltraWork Monitor",
+            "five_agent_context_cap",
+            "PackagingPRReadinessAgent",
             "notion-control-plane-404",
             "RUN-QUEUE-011",
         ]:

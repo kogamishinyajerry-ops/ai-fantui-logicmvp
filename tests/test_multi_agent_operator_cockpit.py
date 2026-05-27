@@ -107,6 +107,15 @@ def test_multi_agent_operator_cockpit_schema_validates_payload(tmp_path: Path) -
     assert cockpit["milestone"]["id"] == "M22"
     assert cockpit["summary"]["completed_count"] == 11
     assert cockpit["summary"]["selected_next_record_id"] == "RUN-QUEUE-011"
+    assert cockpit["agent_team"]["mode"] == "five_agent_context_cap"
+    assert cockpit["agent_team"]["team_size"] == 5
+    assert [item["name"] for item in cockpit["agent_team"]["active_agents"]] == [
+        "ChiefEngineerOrchestrator",
+        "LogicIRRepairAgent",
+        "EvidenceValidationAgent",
+        "SafetyRequirementsReviewer",
+        "PackagingPRReadinessAgent",
+    ]
     assert cockpit["dependency_boundary"]["controller_truth_modified"] is False
     assert cockpit["dependency_boundary"]["ui_layout_modified"] is False
 
@@ -120,6 +129,9 @@ def test_multi_agent_operator_cockpit_html_exposes_operator_views(tmp_path: Path
     html = render_multi_agent_operator_cockpit_html(cockpit)
 
     assert "Multi-Agent Operator Cockpit" in html
+    assert "five_agent_context_cap" in html
+    assert "ChiefEngineerOrchestrator" in html
+    assert "PackagingPRReadinessAgent" in html
     assert "Project Manager Status" in html
     assert "UltraWork Monitor" in html
     assert "RUN-QUEUE-011" in html
@@ -198,6 +210,7 @@ def test_multi_agent_operator_cockpit_is_wired_into_docs_and_makefile() -> None:
         "docs/json_schema/multi_agent_operator_cockpit_v0_1.schema.json",
         "scripts/run_multi_agent_operator_cockpit.py",
         "scripts/verify_multi_agent_operator_cockpit.py",
+        "src/well_harness/multi_agent_team.py",
         "src/well_harness/multi_agent_operator_cockpit.py",
         "tests/test_multi_agent_operator_cockpit.py",
     ]
@@ -209,5 +222,7 @@ def test_multi_agent_operator_cockpit_is_wired_into_docs_and_makefile() -> None:
     assert "src/well_harness/static/**" in doc
     assert ".planning/**" in doc
     assert "artifacts/**" in doc
+    assert "five-agent active team" in doc
     assert "M22" in mvp_doc
+    assert "five-agent active team" in mvp_doc
     assert "make multi-agent-operator-cockpit" in mvp_doc

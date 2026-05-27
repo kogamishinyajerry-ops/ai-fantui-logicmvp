@@ -15,6 +15,9 @@ The packet answers four questions:
 3. Is PR #269 mergeable, and are there reviews/comments/checks to address?
 4. Is the Notion 404 still classified as an external control-plane blocker?
 
+The packet also carries the five-agent active team cap so PR review does not
+inflate historical task labels into extra live agents.
+
 ## Local Entry
 
 ```sh
@@ -45,6 +48,7 @@ git add -- \
   docs/json_schema/multi_agent_merge_readiness_v0_1.schema.json \
   scripts/run_multi_agent_merge_readiness.py \
   scripts/verify_multi_agent_merge_readiness.py \
+  src/well_harness/multi_agent_team.py \
   src/well_harness/multi_agent_merge_readiness.py \
   tests/test_multi_agent_merge_readiness.py
 ```
@@ -78,6 +82,7 @@ Notion page permissions.
 
 ```sh
 python3 -m py_compile \
+  src/well_harness/multi_agent_team.py \
   src/well_harness/multi_agent_merge_readiness.py \
   scripts/run_multi_agent_merge_readiness.py \
   scripts/verify_multi_agent_merge_readiness.py
@@ -90,6 +95,6 @@ make verify-multi-agent-merge-readiness
 ```
 
 Browser gate: open the generated HTML and verify it shows `Multi-Agent Merge
-Readiness`, `RUN-QUEUE-011`, `19 validation commands passed`,
-`notion-control-plane-404`, and `MERGEABLE` without desktop or mobile layout
-overflow.
+Readiness`, `five_agent_context_cap`, `PackagingPRReadinessAgent`,
+`RUN-QUEUE-011`, `19 validation commands passed`, `notion-control-plane-404`,
+and `MERGEABLE` without desktop or mobile layout overflow.

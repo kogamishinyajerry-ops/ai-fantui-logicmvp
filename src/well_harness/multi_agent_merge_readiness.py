@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from well_harness.multi_agent_team import active_agent_team_payload
+
 
 SCHEMA_ID = "https://well-harness.local/json_schema/multi_agent_merge_readiness_v0_1.schema.json"
 KIND = "ai-fantui-multi-agent-merge-readiness"
@@ -166,6 +168,7 @@ def build_multi_agent_merge_readiness(
             "name": "Merge Readiness Packet",
             "claim": "read_only_pr_review_and_merge_readiness_handoff",
         },
+        "agent_team": active_agent_team_payload(),
         "inputs": {
             "validation_evidence_id": str(validation_evidence.get("evidence_id", "")),
             "validation_status": str(validation_evidence.get("status", "")),
@@ -236,6 +239,10 @@ def render_multi_agent_merge_readiness_markdown(payload: dict[str, Any]) -> str:
         for item in payload["geometry_results"]
     )
     risks = "\n".join(f"- {item}" for item in payload["risk_notes"])
+    team = "\n".join(
+        f"- {item['name']}: {item['scope']}"
+        for item in payload["agent_team"]["active_agents"]
+    )
     summary = payload["summary"]
     return (
         "# Multi-Agent Merge Readiness\n\n"
@@ -250,6 +257,9 @@ def render_multi_agent_merge_readiness_markdown(payload: dict[str, Any]) -> str:
         f"- Recommended next action: `{summary['recommended_next_action']}`\n\n"
         "## Gates\n\n"
         f"{gates}\n\n"
+        "## Active Agent Team\n\n"
+        f"Mode: `{payload['agent_team']['mode']}`; size: `{payload['agent_team']['team_size']}`\n\n"
+        f"{team}\n\n"
         "## Geometry Evidence\n\n"
         f"{geometry}\n\n"
         "## PR\n\n"
@@ -286,6 +296,13 @@ def render_multi_agent_merge_readiness_html(payload: dict[str, Any]) -> str:
         for item in payload["geometry_results"]
     )
     risks = "\n".join(f"<li>{_escape(item)}</li>" for item in payload["risk_notes"])
+    team_rows = "\n".join(
+        "<tr>"
+        f"<td>{_escape(item['name'])}</td>"
+        f"<td>{_escape(item['scope'])}</td>"
+        "</tr>"
+        for item in payload["agent_team"]["active_agents"]
+    )
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -387,6 +404,16 @@ def render_multi_agent_merge_readiness_html(payload: dict[str, Any]) -> str:
         <table>
           <thead><tr><th>Gate</th><th>Status</th></tr></thead>
           <tbody>{gate_rows}</tbody>
+        </table>
+      </div>
+    </section>
+    <section>
+      <h2>Active Agent Team</h2>
+      <p>Mode <code>{_escape(payload['agent_team']['mode'])}</code>, team size <code>{_escape(payload['agent_team']['team_size'])}</code>. {_escape(payload['agent_team']['retired_role_policy'])}</p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Agent</th><th>Scope</th></tr></thead>
+          <tbody>{team_rows}</tbody>
         </table>
       </div>
     </section>

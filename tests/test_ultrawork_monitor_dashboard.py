@@ -13,6 +13,7 @@ from well_harness.ultrawork_monitor_dashboard import (
     build_ultrawork_monitor_dashboard,
     render_ultrawork_dashboard_html,
 )
+from well_harness.multi_agent_team import ACTIVE_AGENT_NAMES, FIVE_AGENT_TEAM_MODE
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -80,6 +81,13 @@ def test_ultrawork_dashboard_schema_validates_ready_resume_payload(tmp_path: Pat
     assert dashboard["summary"]["next_action"] == "resume_next_open_record"
     assert dashboard["selected_next_record"]["record_id"] == "RUN-QUEUE-011"
     assert dashboard["selected_next_record"]["agent"] == "LogicIRRepairAgent"
+    assert dashboard["agent_team"]["mode"] == FIVE_AGENT_TEAM_MODE
+    assert dashboard["agent_team"]["team_size"] == 5
+    assert len(dashboard["agent_team"]["active_agents"]) == 5
+    assert {lane["agent"] for lane in dashboard["agent_lanes"]}.issubset(ACTIVE_AGENT_NAMES)
+    assert "EvidenceRepairAgent" not in {lane["agent"] for lane in dashboard["agent_lanes"]}
+    assert "RequirementRepairAgent" not in {lane["agent"] for lane in dashboard["agent_lanes"]}
+    assert "SimulationTestAgent" not in {lane["agent"] for lane in dashboard["agent_lanes"]}
     assert any(
         blocker["blocker_id"] == "notion-control-plane-404"
         and blocker["status"] == "external_blocker"
@@ -113,6 +121,9 @@ def test_ultrawork_dashboard_html_exposes_lanes_gates_and_blockers(tmp_path: Pat
     html = render_ultrawork_dashboard_html(dashboard)
 
     assert "UltraWork Monitor" in html
+    assert "five_agent_context_cap" in html
+    assert "ChiefEngineerOrchestrator" in html
+    assert "PackagingPRReadinessAgent" in html
     assert "RUN-QUEUE-011" in html
     assert "LogicIRRepairAgent" in html
     assert "notion-control-plane-404" in html
@@ -189,6 +200,7 @@ def test_ultrawork_monitor_local_entry_and_pathspec_package_are_bounded() -> Non
         "docs/json_schema/ultrawork_monitor_dashboard_v0_1.schema.json",
         "scripts/run_ultrawork_monitor_dashboard.py",
         "scripts/verify_ultrawork_monitor_dashboard.py",
+        "src/well_harness/multi_agent_team.py",
         "src/well_harness/ultrawork_monitor_dashboard.py",
         "tests/test_ultrawork_monitor_dashboard.py",
         ".claude/agents/ultrawork-orchestrator.md",
@@ -204,6 +216,7 @@ def test_ultrawork_monitor_local_entry_and_pathspec_package_are_bounded() -> Non
     assert "src/well_harness/static/**" in package
     assert ".planning/**" in package
     assert "Notion 404 remains an external control-plane blocker" in package
+    assert "five-agent active team" in package
 
 
 def test_project_claude_code_subagents_define_ultrawork_team() -> None:

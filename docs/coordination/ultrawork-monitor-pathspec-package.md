@@ -4,6 +4,11 @@
 
 This package adds a read-only local UltraWork Monitor entry for the multi-agent lane without changing controller truth, runtime truth, Notion control-plane configuration, or existing browser routes.
 
+The monitor now exposes a five-agent active team under
+`agent_team.mode = five_agent_context_cap`. Legacy queue role labels such as
+`EvidenceRepairAgent`, `RequirementRepairAgent`, and `SimulationTestAgent` are
+rendered as task categories, not additional live agents.
+
 Local entry:
 
 ```sh
@@ -23,6 +28,7 @@ git add -- \
   docs/json_schema/ultrawork_monitor_dashboard_v0_1.schema.json \
   scripts/run_ultrawork_monitor_dashboard.py \
   scripts/verify_ultrawork_monitor_dashboard.py \
+  src/well_harness/multi_agent_team.py \
   src/well_harness/ultrawork_monitor_dashboard.py \
   tests/test_ultrawork_monitor_dashboard.py
 
@@ -83,6 +89,7 @@ Run these commands after pathspec staging:
 
 ```sh
 python3 -m py_compile \
+  src/well_harness/multi_agent_team.py \
   src/well_harness/ultrawork_monitor_dashboard.py \
   scripts/run_ultrawork_monitor_dashboard.py \
   scripts/verify_ultrawork_monitor_dashboard.py
@@ -94,4 +101,4 @@ make ultrawork-monitor-dashboard
 make verify-ultrawork-monitor-dashboard
 ```
 
-Browser gate: open `/tmp/ai-fantui-ultrawork-monitor-dashboard/ultrawork_monitor_dashboard_v0_1.html` and verify the page shows `UltraWork Monitor`, `RUN-QUEUE-011`, `LogicIRRepairAgent`, and `notion-control-plane-404`.
+Browser gate: open `/tmp/ai-fantui-ultrawork-monitor-dashboard/ultrawork_monitor_dashboard_v0_1.html` and verify the page shows `UltraWork Monitor`, `five_agent_context_cap`, `RUN-QUEUE-011`, `LogicIRRepairAgent`, `PackagingPRReadinessAgent`, and `notion-control-plane-404`.

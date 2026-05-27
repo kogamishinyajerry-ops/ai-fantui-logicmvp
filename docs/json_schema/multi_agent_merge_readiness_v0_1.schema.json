@@ -11,6 +11,7 @@
     "status",
     "generated_at",
     "milestone",
+    "agent_team",
     "inputs",
     "summary",
     "gates",
@@ -52,6 +53,9 @@
           "const": "read_only_pr_review_and_merge_readiness_handoff"
         }
       }
+    },
+    "agent_team": {
+      "$ref": "#/$defs/agent_team"
     },
     "inputs": {
       "type": "object",
@@ -256,6 +260,55 @@
     }
   },
   "$defs": {
+    "agent_team": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "team_size", "active_agents", "retired_role_policy"],
+      "properties": {
+        "mode": {
+          "const": "five_agent_context_cap"
+        },
+        "team_size": {
+          "const": 5
+        },
+        "active_agents": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "$ref": "#/$defs/agent_team_member"
+          }
+        },
+        "retired_role_policy": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "agent_team_member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent_id", "name", "scope"],
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "enum": [
+            "ChiefEngineerOrchestrator",
+            "LogicIRRepairAgent",
+            "EvidenceValidationAgent",
+            "SafetyRequirementsReviewer",
+            "PackagingPRReadinessAgent"
+          ]
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "gate_status": {
       "enum": ["pass", "warning", "fail"]
     },
